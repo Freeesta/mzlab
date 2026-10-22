@@ -33,8 +33,10 @@ async function search(/** @type {HTMLElement} */ out, /** @type {any} */ file, /
 }
 
 /** The row «Search lab library» (with the largest precursor difference for analogs, 0 = exact only) and the place of the result. */
-export function searchRow(/** @type {HTMLElement} */ host, /** @type {any} */ file) {
+export function searchRow(/** @type {HTMLElement} */ host, /** @type {any} */ file, /** @type {boolean} */ auto = false) {
   host.innerHTML = h`<div class="row ig-find-r"><label>${I18N.t("msngrafo.find.delta")} <input type="number" id="ig-delta" min="0" max="500" step="1" value="0" title="${I18N.t("msngrafo.find.delta.tip")}"></label><button type="button" class="bt" id="ig-find-go" title="${I18N.t("msngrafo.find.tip")}">${I18N.t("msngrafo.find")}</button></div><div id="ig-find-out" aria-live="polite"></div>`;
   const out = /** @type {HTMLElement} */ (host.querySelector("#ig-find-out"));
-  host.querySelector("#ig-find-go")?.addEventListener("click", () => search(out, file, Math.max(0, Number(/** @type {HTMLInputElement} */ (host.querySelector("#ig-delta")).value) || 0)));
+  const go = () => search(out, file, Math.max(0, Number(/** @type {HTMLInputElement} */ (host.querySelector("#ig-delta")).value) || 0));
+  host.querySelector("#ig-find-go")?.addEventListener("click", go);
+  if (auto) go().then(() => out.scrollIntoView({ block: "nearest" }));
 }

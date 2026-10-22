@@ -5,6 +5,7 @@
 
 /** Texts of the evidences, of the parity of the electrons and of the warnings, spelled out so the catalogue check sees every key used. */
 export const TXT = {
+  conf: { high: "msngrafo.int.high", medium: "msngrafo.int.medium", low: "msngrafo.int.low" },
   prove: { perdita: "msngrafo.prove.perdita", isotopi: "msngrafo.prove.isotopi", msn: "msngrafo.prove.msn" },
   elettroni: { pari: "msngrafo.e.pari", dispari: "msngrafo.e.dispari" },
   // Errors of the library route, named by the engine through error_key.
@@ -34,6 +35,8 @@ export const G = {
   /** @type {any} */ j: null,
   /** @type {string | null} */ sel: null,
   /** @type {string | null} */ error: null,
+  /** «Run MSn workflow» asked for the library search right after the next graph is drawn (read once). */
+  auto: false,
   /** The answer is for the request with this key. */
   key: "",
 };
@@ -77,9 +80,12 @@ export function query(/** @type {number} */ k) {
 /** The URL of the graph for the state and the options of the precursor tree. */
 export const graphUrl = (/** @type {number} */ k) => "api/msn_grafo?" + query(k);
 
+/** The URL the tab draws from: the graph plus the interpretation of the losses (evidence for the panel of a node; exports and the library do not carry it). */
+const viewUrl = (/** @type {number} */ k) => graphUrl(k) + "&interpreta=1";
+
 /** Asks for the graph of the file; keeps the answer in G.j or the error in G.error. @returns {Promise<boolean>} false when a newer request took over. */
 export async function fetchGraph(/** @type {number} */ k) {
-  const url = graphUrl(k);
+  const url = viewUrl(k);
   G.key = url;
   try {
     const j = await J(url);

@@ -21,7 +21,7 @@ Tabella di lavoro del Flow grafico (`docs/agenti/flow-grafica.md`). Dice cosa es
 | Alignment: join aligner | `features.align`, modalità «per ione» e «per famiglia»; `untargeted/join.rs` | step, motore |
 | Alignment: RANSAC, correzione dell'RT tra campioni | `features.align`, parametro `rt_warp` (`piecewise`, `loess`, `ransac`; `crates/mzlab-feat/src/rtwarp.rs`): ancore da un allineamento grossolano (`rt_coarse_gap`), curva per file, RT riportato a quello comune prima del raggruppamento; `off` di default | step |
 | Gap filling (stesso RT e m/z) | `features.gapfill`; `untargeted/gapfill.rs` | step, motore |
-| Duplicate feature filter | nessuno; l'allineamento scarta i lobi FT | nessuno |
+| Duplicate feature filter | `table.filter`, parametri `dup_ppm` e `dup_rt` (regola `duplicati`, `filters.rs`): tiene la riga più forte entro la finestra; l'allineamento scarta già i lobi FT | step |
 | Feature list rows filter | `table.filter` (campioni minimi, area, altezza, rapporto al bianco, MS2 richiesta) | step |
 | Blank subtraction | `table.filter`, parametro `blank_ratio`; `bianco.js` nella vista Dati HR | step |
 | Normalization | `table.filter`, parametro `normalize` | step |

@@ -204,3 +204,26 @@ fn the_options_of_a_request_have_defaults_and_a_bad_number_is_a_keyed_error() {
     assert_eq!(e.key, "err.request.badNumber");
     assert!(opzioni_cerca(&q(&[("tol_mz", "-1")])).is_err());
 }
+
+/// The same ion fragmented at the same last energy after two different upstream energies: two spectra with the same shape and the same energy.
+fn two_routes() -> String {
+    let base = graph(305.1, 1, &MS2, &DEEP);
+    let extra = "{\"albero\":\"305@cid20\",\"livello\":2,\"att\":\"cid\",\"ce\":20,\"precursore\":\"n0\",\"picchi\":[{\"mz\":261.1,\"rel\":100,\"nodo\":\"n1\"},{\"mz\":244.1,\"rel\":50,\"nodo\":\"n2\"}]},\
+        {\"albero\":\"305@cid20>261@cid35\",\"livello\":3,\"att\":\"cid\",\"ce\":35,\"precursore\":\"n1\",\"picchi\":[{\"mz\":150.0,\"rel\":100,\"nodo\":null},{\"mz\":120.0,\"rel\":50,\"nodo\":null}]}";
+    let cut = base.rfind("]}").unwrap();
+    format!("{},{extra}{}", &base[..cut], &base[cut..])
+}
+
+#[test]
+fn a_tree_scores_one_against_itself_when_two_spectra_share_shape_and_energy() {
+    let a = two_routes();
+    let lib = library(&[("STD-A", &a, 1)]);
+    let found = candidates(&lib, &a, &OpzioniCerca::default());
+    let c = &found[0];
+    assert!(
+        (score(c, "albero").unwrap() - 1.0).abs() < 1e-9,
+        "{:?}",
+        score(c, "albero")
+    );
+    assert!((score(c, "ms2").unwrap() - 1.0).abs() < 1e-9);
+}

@@ -10,7 +10,9 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out};
 use mzlab_core::lettori_mzml::Picchi;
 use mzlab_core::msnalbero::Raggruppa;
-use mzlab_core::msngrafo::{esporta, grafo_json, Formato, Grafo, Opzioni};
+use mzlab_core::msngrafo::{
+    con_interpretazione, esporta, grafo_json, Formato, Grafo, Opzioni, PPM_PERDITA,
+};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
 
@@ -24,6 +26,9 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --smiles TEXT        written back in the JSON; with --strutture, the structure that is cleaved
   --strutture NODO     add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
                        ppm and the peaks of its spectrum that the same piece explains)
+  --interpreta         add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
+                       activations that observed it
+  --ppm-perdita N      window of the loss match by mass, ppm of the precursor m/z (10)
   --ppm-struttura N    window of those cleavages, ppm (10)
   --ppm-formula N      window of the sub-formulas, ppm (10)
   --mz-basso N         below this m/z the window may widen (150)
@@ -52,6 +57,7 @@ pub struct Args {
     riassunto: bool,
     export: Option<(Formato, bool, Option<String>)>,
     strutture: Option<(String, f64)>,
+    interpreta: Option<f64>,
     pub out: Option<PathBuf>,
 }
 
@@ -68,6 +74,7 @@ pub fn parse_args(
     let (mut verita, mut riassunto, mut out) = (None, false, None);
     let (mut export, mut pulito, mut nodo) = (None, false, None);
     let (mut strutture, mut ppm_struttura) = (None, PPM_STRUTTURA);
+    let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -95,6 +102,8 @@ pub fn parse_args(
             "--pulito" => pulito = true,
             "--nodo" => nodo = a.next(),
             "--strutture" => strutture = a.next(),
+            "--interpreta" => interpreta = true,
+            "--ppm-perdita" => ppm_perdita = numero(a.next(), &x)?,
             "--ppm-struttura" => ppm_struttura = numero(a.next(), &x)?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
@@ -107,6 +116,7 @@ pub fn parse_args(
     }
     let export = export.map(|f| (f, pulito, nodo));
     let strutture = strutture.map(|n| (n, ppm_struttura));
+    let interpreta = interpreta.then_some(ppm_perdita);
     Ok(Some(Args {
         file,
         o,
@@ -114,6 +124,7 @@ pub fn parse_args(
         riassunto,
         export,
         strutture,
+        interpreta,
         out,
     }))
 }
@@ -259,7 +270,10 @@ pub fn strutture_testo(
 
 /// The text the command prints: the graph, or the line of numbers.
 pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
-    let (g, j) = grafo(&a.file, &a.o, tmp)?;
+    let (g, mut j) = grafo(&a.file, &a.o, tmp)?;
+    if let Some(ppm) = a.interpreta {
+        j = con_interpretazione(&j, &g, ppm);
+    }
     if let Some((f, pulito, nodo)) = &a.export {
         return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
     }

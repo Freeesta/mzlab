@@ -1,9 +1,9 @@
-//! Text export of an `msnlib/1` library for `mzlab-cli msn-lib export`: one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
-//! the path of precursors in the comment). With `annota` each peak a node explains carries its formula and the neutral loss from the precursor. Used by
-//! `msn_lib` and by the Flow step `msn.library_export`.
+//! Text export of an `msnlib/1` library (`mzlab-cli msn-lib export`, the Flow step `msn.library_export` and the page): one record per spectrum of every entry, as MSP or as MassBank `.txt` (MS_TYPE MS2, MS3, ...,
+//! the path of precursors in the comment). With `annota` each peak a node explains carries its formula and the neutral loss from the precursor. Used by the CLI and
+//! the `.wasm` of the page, so both write the same bytes.
 
-use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{parse, Value};
+use crate::error::{Error, Result};
+use crate::json::{parse, Value};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Formato {

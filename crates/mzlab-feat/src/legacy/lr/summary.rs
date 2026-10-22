@@ -119,6 +119,7 @@ struct Row<'a> {
     insource: bool,
     isf: Option<&'a IsfVerdict>,
     ms2: usize,
+    coelutes: Option<super::coelute::Coel>,
     /// Total cosine of the MS2 with the parent's (`ms2sim`).
     sim: Option<f64>,
 }
@@ -183,6 +184,17 @@ fn row_json(o: &mut Out, r: &Row, p_mz: f64, tp_name: &str, parent_formula: &str
     o.raw(",\"insource\":")
         .raw(if r.insource { "true" } else { "false" });
     o.raw(",\"ms2\":").int(r.ms2 as i64);
+    if let Some(c) = &r.coelutes {
+        o.raw(",\"coelutes\":{\"id\":")
+            .int(c.id)
+            .raw(",\"mz\":")
+            .num(round(c.mz, 4))
+            .raw(",\"delta_mz\":")
+            .num(round(c.delta_mz, 2))
+            .raw(",\"delta_rt\":")
+            .num(round(c.delta_rt, 2))
+            .raw("}");
+    }
     if let Some(v) = r.sim {
         o.raw(",\"sim\":").num(round(v, 3));
     }
@@ -214,6 +226,7 @@ fn ordered(d: &LrDig) -> Vec<Row<'_>> {
             let isf = d.isf.iter().find(|x| x.0 == e.id).map(|x| &x.1);
             Row {
                 insource: insource(d, e, p_rt, isf),
+                coelutes: super::coelute::of(d, e),
                 ms2: d.links.as_ref().map_or(0, |l| l.of(e.id).count()),
                 sim: d
                     .links

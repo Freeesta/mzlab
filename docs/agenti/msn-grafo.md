@@ -1,5 +1,5 @@
 # Grafo di frammentazione MSn (`msngrafo/1`) e libreria di alberi degli standard (`msnlib/1`)
-Contratto delle PR che lo realizzano (§9): le parti già nel codice descrivono il codice, le altre il progetto. Area vicina: infusione MSn in `alta-risoluzione.md`, rotte `msn_albero`/`msntree` in `rust-rotte.md`, costruttore `msnalbero.rs` in `rust.md`. Esempi solo sintetici (`TP_Mine/tests/msn_synth.py`, `tests/golden/ref/msntree_rotta/`): i file veri e i loro nomi restano in mzlab-dati.
+Contratto delle PR che lo realizzano (§9): le parti già nel codice descrivono il codice, le altre il progetto. Area vicina: infusione MSn in `alta-risoluzione.md`, rotte `msn_albero`/`msntree` in `rust-rotte.md`, costruttore `msnalbero.rs` in `rust.md`. Esempi solo sintetici (`TP_Mine/tests/msn_synth.py`, `tests/golden/ref/msntree_rotta/`): i file veri e i loro nomi restano in mzlab-dati. Regole di frammentazione CID/HCD dalla letteratura (studio e piano): `docs/studi/regole-frammentazione-cid-hcd.md`.
 
 ## 0. Sintesi delle scelte
 1. **Cosa è**: dai nodi dell'albero dei precursori (`msnalbero::albero`, un nodo per cammino ed energia) si costruisce un GRAFO di ioni: un nodo = uno ione frammento visto in uno o più spettri, a qualunque livello ed energia; un arco = precursore → frammento osservato nello spettro MSn di quel precursore, con la perdita neutra. È un DAG, non un albero: lo stesso ione può venire da più precursori.
@@ -92,3 +92,5 @@ Formato `msnlib/1`, ricerca, protocollo di acquisizione, gestione dei dati e con
 | 5 · file veri | solo mzlab-dati e prova locale (chat Mac: `msn-graph --verita … --riassunto` sul timololo) | percorsi della verità tutti trovati, formula giusta fra i candidati, ppm ≤ 10 (20 con prove sotto m/z 150); soglie corrette con il loro perché |
 | 6 · `msnlib/1` | `msngrafo/libreria.rs` e `mzlab-cli msn-lib add/build/export` (fatti, MSP); da fare: `docs/schemi/msnlib-1.json`, export MassBank, `msn-graph compare` | dopo il «via» sul protocollo: libreria sintetica di 3 voci costruita dal manifest, export MassBank letto da `mzlab-lib`, convalida d1/d2 sintetica |
 | 7 · ricerca | `msngrafo::cerca`, pannello «Search lab library», prova `evid/1` | sintetico: lo standard giusto primo, un analogo spostato trovato con Δ |
+
+Interpretazione delle perdite per arco (`interpretazione`, `--interpreta`): `msn-interpreta.md`.

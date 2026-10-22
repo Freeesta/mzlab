@@ -55,7 +55,7 @@ def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     if veloce:
         p.append(("hash CSP", [PY, "tools/csp_hash.py", "--check"]))
         if cambiato(*RUST):
-            p.append(("cargo fmt", ["cargo", "fmt", "--all", "--check"]))
+            p.append(("cargo fmt contro la base", [PY, "tools/controlla_rust.py", "--solo-fmt"]))
         p.append(("e2e che verrebbero eseguiti", SELEZIONE_E2E))
         return p
     if cambiato(*RUST):

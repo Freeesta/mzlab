@@ -198,3 +198,18 @@ def test_file_conflitto_merge_tree(tmp_path):
     sh(c, "commit", "-qam", "main")
     sh(c, "push", "-q", "origin", "HEAD:main")
     assert s.dati_ci.file_conflitto(3, str(c)) == ["a.txt"]
+
+
+def test_timeout_tipizzato_e_giornaliero():
+    lungo = job("tipi (tsc)", "cancelled", "2026-10-21T10:00:00Z", "2026-10-21T10:05:30Z", [("tsc", "cancelled")])
+    corto = job("browser", "cancelled", "2026-10-21T10:00:00Z", "2026-10-21T10:01:00Z")
+    assert s.categoria(lungo) == ("timeout", "tsc")
+    assert s.categoria(lungo, run_annullato=True)[0] == "annullato"
+    assert s.categoria(corto)[0] == "annullato"
+    ev = [{"ts_utc": "2026-10-21T10:00:00Z", "tipo": "run", "run_attempt": 2, "coda_s": 40},
+          {"ts_utc": "2026-10-21T10:01:00Z", "tipo": "job_fallito", "categoria": "timeout"},
+          {"ts_utc": "2026-10-21T08:00:00Z", "tipo": "pr", "azione": "aperta"},
+          {"ts_utc": "2026-10-21T11:00:00Z", "tipo": "pr", "azione": "unita", "aperta_s": 10800, "verde_a_unione_s": 600, "commit_n": 4}]
+    g = s.dati_ci.giornaliero(ev)
+    assert len(g) == 1 and (g[0]["run"], g[0]["rilanci"], g[0]["coda_media_s"], g[0]["rossi_timeout"]) == (1, 1, 40, 1)
+    assert (g[0]["pr_aperte"], g[0]["pr_unite"], g[0]["verde_a_unione_media_s"], g[0]["commit_per_pr_media"]) == (1, 1, 600, 4.0)

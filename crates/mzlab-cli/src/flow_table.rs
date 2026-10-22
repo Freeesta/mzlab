@@ -42,6 +42,15 @@ pub fn spec_text(job: &Job) -> String {
     let qc_files = number(job, "qc_min_files").unwrap_or(QC_MIN_FILES as f64);
     let extra = format!(",\"qc_min_files\":{qc_files}");
     rule("qc_cv_max", number(job, "qc_cv_max"), &extra);
+    if let Some(ppm) = number(job, "dup_ppm") {
+        let rt = number(job, "dup_rt").unwrap_or(0.1);
+        let mut o = Out::default();
+        o.raw("{\"regola\":\"duplicati\",\"ppm\":")
+            .num(ppm)
+            .raw(",\"rt_min\":")
+            .num(rt);
+        rules.push(format!("{}}}", o.0));
+    }
     if param(job, "require_ms2").and_then(|v| v.bool()) == Some(true) {
         rules.push("{\"regola\":\"ms2\"}".to_string());
     }

@@ -8,19 +8,27 @@ mod candidati;
 mod cerca;
 mod esporta;
 mod formule;
+mod interpreta;
 mod json;
 mod leggi;
+mod lib_export;
 mod libreria;
 mod posa;
 mod radice;
 mod rotta;
 mod strutture;
+mod tabelle;
 mod unisci;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
 pub use esporta::{da_richiesta_export, esporta, Formato};
+pub use interpreta::{
+    con_interpretazione, interpreta, interpretazione_json, perdite_note, InterpArco, PerditaArco,
+    PerditaNota, PPM as PPM_PERDITA,
+};
 pub use json::json;
 pub use leggi::{leggi, Letto};
+pub use lib_export::{export_text, Formato as LibFormato};
 pub use libreria::aggiungi;
 pub use radice::{candidati_radice, CandidatoRadice};
 pub use rotta::{da_richiesta, grafo_json};
@@ -28,6 +36,7 @@ pub use strutture::{
     con_strutture, strutture_json, CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture,
     Taglio,
 };
+pub use tabelle::{library_text, table_text};
 
 use crate::msnalbero::Albero;
 
@@ -292,3 +301,5 @@ mod tests;
 mod tests_cerca;
 #[cfg(test)]
 mod tests_formule;
+#[cfg(test)]
+mod tests_interpreta;

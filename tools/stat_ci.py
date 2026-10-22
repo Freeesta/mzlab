@@ -35,7 +35,8 @@ FUSIONE_S = 300
 RILETTURA_S = 60
 OK = ("success", "skipped", "neutral")
 CHIAVE = ("tipo", "run_id", "run_attempt", "job", "pr", "azione", "sha", "k")
-VERSIONE = 1          # field `v` of every line; bump when a field changes meaning
+TIMEOUT_S = 240       # a cancelled job running at least this long, inside a run that was not cancelled, is counted as a timeout
+VERSIONE = 1        # field `v` of every line; bump when a field changes meaning
 
 # Category of a failed job from the name of its failed step (no log is read).
 CATEGORIE = [
@@ -76,13 +77,16 @@ def adesso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def categoria(job: dict) -> tuple[str, str | None]:
-    """(category, failed step name) of a job that did not succeed."""
+def categoria(job: dict, run_annullato: bool = False) -> tuple[str, str | None]:
+    """(category, failed step name) of a job that did not succeed; `run_annullato`: the whole run was cancelled (concurrency)."""
     if job.get("conclusion") == "timed_out":
         return "timeout", None
-    passo = next((s["name"] for s in job.get("steps", []) if s.get("conclusion") in ("failure", "timed_out")), None)
+    ferma = ("failure", "timed_out", "cancelled") if job.get("conclusion") == "cancelled" else ("failure", "timed_out")
+    passo = next((s["name"] for s in job.get("steps", []) if s.get("conclusion") in ferma), None)
     if job.get("conclusion") == "cancelled":
-        return "annullato", passo
+        # a job cancelled while its run went on (or after a long run) hit its own timeout, e.g. a stuck npx install; a short one was replaced by a newer push
+        lungo = (secs(job.get("started_at"), job.get("completed_at")) or 0) >= TIMEOUT_S
+        return ("timeout" if lungo and not run_annullato else "annullato"), passo
     for nome, rx in CATEGORIE:
         if passo and re.search(rx, passo, re.I):
             return nome, passo
@@ -104,7 +108,7 @@ def righe_run_obj(run: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
             "attivo_s": sum(durate.values()), "coda_s": max(code, default=0), "jobs": durate, **base}]
     for j in jobs:
         if j.get("status") == "completed" and j.get("conclusion") not in OK:
-            cat, passo = categoria(j)
+            cat, passo = categoria(j, run.get("conclusion") == "cancelled")
             out.append({"ts_utc": j["completed_at"], "tipo": "job_fallito", "workflow": run["name"], "job": j["name"],
                         "esito": j["conclusion"], "durata_s": durate[j["name"]], "categoria": cat, "passo": passo, **base})
     out += dati_ci.righe_job(run, jobs, base) + dati_ci.righe_cache(run, jobs, base, fetch)
@@ -172,7 +176,7 @@ def righe_pr(evento: dict, api=api_get) -> list[dict]:
     if azione != "closed":
         return []
     fine = pr.get("merged_at") or pr["closed_at"]
-    riga |= {"ts_utc": fine, "azione": "unita" if pr.get("merged") else "chiusa", "aperta_s": secs(pr["created_at"], fine),
+    riga |= {"ts_utc": fine, "azione": "unita" if pr.get("merged") else "chiusa", "aperta_s": secs(pr["created_at"], fine), "commit_n": pr.get("commits"),
              "cause_commit": (cause := cause_commit(pr["number"], api)), "merge_main": cause.get("merge di main", 0)}
     riga |= dati_ci.forma_pr(pr["number"], pr, api, file_pr)
     if pr.get("merged"):
