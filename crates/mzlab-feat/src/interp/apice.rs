@@ -7,13 +7,16 @@ use super::build::Res;
 use crate::axis::half;
 use crate::sweep::windows;
 
+/// Intensities of M, M+1 and M+2 and the m/z of M.
+pub(super) type Apex = ([f64; 3], f64);
+
 /// Intensities of M, M+1 and M+2 and the m/z of M in the MS1 scan nearest to the apex, for every `(m/z, apex)` of `reqs` (singly charged, as everything
 /// in HR here): one sweep of the MS1 section for all of them, each gets what a sweep of its own would give.
 pub(super) fn apex_ms1_many<R: ReadAt>(
     ix: &mut Index<R>,
     pol: i8,
     reqs: &[(f64, f64)],
-) -> Res<Vec<Option<([f64; 3], f64)>>> {
+) -> Res<Vec<Option<Apex>>> {
     let none = || vec![None; reqs.len()];
     let Some(si) = ix.section_of(1, Some(pol)) else {
         return Ok(none());
