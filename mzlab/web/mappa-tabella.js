@@ -44,8 +44,9 @@ const MAPFORME = c => {
     const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
       [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${grpTol()} min`],
       [T("mappa.meta.snap"), "± 0.2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString(LOCALE)]];
-    (csv ? dlc : dlx)(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
-      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }], { p, table: "map-points" });
+    const name = `${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, sheets = [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
+      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }];
+    if (csv) dlc(name, sheets, { p, table: "map-points" }); else dlx(name, sheets, { p, table: "map-points" });
   }
   async function copyRows(p) {
     const txt = await PROV.tsv([headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n"), { p, table: "map-points" });
