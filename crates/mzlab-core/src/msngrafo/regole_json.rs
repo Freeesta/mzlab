@@ -1,5 +1,6 @@
 //! The text of the key `regole` of `msngrafo/1` (schema `docs/schemi/msngrafo-1.json`) from an evaluation (`regole_valuta`): fixed key order, rounded numbers.
 
+use super::regole::tabella;
 use super::regole_valuta::{valuta, Applicata, ParamRegole, ValArco, Valutazione, VERSIONE};
 use super::{Grafo, Opzioni};
 use crate::json::{round, Out};
@@ -27,6 +28,8 @@ fn applicata_json(o: &mut Out, r: &Applicata) {
         .int(r.priorita as i64)
         .raw(",\"energia\":")
         .str(r.energia)
+        .raw(",\"perche\":")
+        .str(r.perche)
         .raw(",\"refs\":");
     lista(o, &r.refs);
     o.raw("}");
@@ -52,6 +55,72 @@ fn arco_json(o: &mut Out, g: &Grafo, i: usize, a: &ValArco) {
         .raw(",\"avvisi\":");
     lista(o, &a.avvisi);
     o.raw("}");
+}
+
+fn testo_opz(o: &mut Out, v: Option<&str>) {
+    match v {
+        Some(x) => o.str(x),
+        None => o.raw("null"),
+    };
+}
+
+/// `fonti` (the references the rules of the arcs and the thresholds cite, by key, with their DOI and PMID) and `soglie` (the numeric thresholds of the table
+/// with their origin and whether they are still to be calibrated): what the page shows next to a rule, so it does not carry the table.
+fn fonti_e_soglie(o: &mut Out, v: &Valutazione) {
+    let t = tabella();
+    let mut chiavi: Vec<&str> = vec![];
+    let citate = v
+        .archi
+        .iter()
+        .flat_map(|a| a.regole.iter().flat_map(|r| r.refs.iter().copied()));
+    let delle_soglie = t
+        .globali
+        .soglie
+        .iter()
+        .flat_map(|s| s.refs.iter().map(|r| r.key.as_str()));
+    for k in citate.chain(delle_soglie) {
+        if !chiavi.contains(&k) {
+            chiavi.push(k);
+        }
+    }
+    o.raw(",\"fonti\":[");
+    let tutte = t
+        .regole
+        .iter()
+        .flat_map(|r| r.refs.iter())
+        .chain(t.globali.soglie.iter().flat_map(|s| s.refs.iter()));
+    for (i, k) in chiavi.iter().enumerate() {
+        let Some(r) = tutte.clone().find(|r| r.key == *k) else {
+            continue;
+        };
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"key\":")
+            .str(k)
+            .raw(",\"doi\":");
+        testo_opz(o, r.doi.as_deref());
+        o.raw(",\"pmid\":");
+        testo_opz(o, r.pmid.as_deref());
+        o.raw("}");
+    }
+    o.raw("],\"soglie\":[");
+    for (i, s) in t.globali.soglie.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"id\":")
+            .str(&s.id)
+            .raw(",\"valore\":")
+            .num(s.valore)
+            .raw(",\"perche\":")
+            .str(&s.perche)
+            .raw(",\"origine\":");
+        testo_opz(o, s.origine.as_deref());
+        o.raw(",\"da_calibrare\":")
+            .raw(if s.da_calibrare { "true" } else { "false" })
+            .raw(",\"refs\":");
+        let ks: Vec<&str> = s.refs.iter().map(|r| r.key.as_str()).collect();
+        lista(o, &ks);
+        o.raw("}");
+    }
+    o.raw("]");
 }
 
 /// The value of the key `regole` (see `docs/schemi/msngrafo-1.json`): keys in a fixed order, rounded numbers.
@@ -103,7 +172,9 @@ pub fn regole_json(g: &Grafo, v: &Valutazione, p: &ParamRegole) -> String {
         .int(v.senza_regola as i64)
         .raw(",\"intensita_spiegata\":")
         .num(round(v.intensita_spiegata, 3))
-        .raw("}}");
+        .raw("}");
+    fonti_e_soglie(&mut o, v);
+    o.raw("}");
     o.0
 }
 
