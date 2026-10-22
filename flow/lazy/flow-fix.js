@@ -93,7 +93,7 @@
     // the base group of a step the plan lacks (the MSn template has no feature table) is not drawn; without the import group the raw files stay visible
     const present = (/** @type {any} */ g) => g.steps.some((/** @type {string} */ s) => F.findStep(plan, s));
     const lone = (/** @type {any} */ f) => !(simple && f.type === "raw" && present(F.BASE[0]));
-    for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your files. Chosen when the plan is run.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
+    for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your data files.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
     const groups = simple ? F.BASE : [];
     for (const g of groups) {
       const insts = g.steps.map((/** @type {string} */ s) => F.findStep(plan, s)).filter(Boolean);
@@ -132,6 +132,7 @@
   F.nodeState = (S, node) => {
     if (F.nodeProblems(S, node).length) return { ok: false, word: "Needs input" };
     if (node.key === "import" && !F.dataFiles().length) return { ok: false, word: "No data" };
+    if (node.kind === "input" && node.file.type !== "samples" && !F.dataFiles().length) return { ok: false, word: "Add a file" };
     return { ok: true, word: "Runs" };
   };
   /** the first problem of a node, plain @param {any} S @param {any} node */

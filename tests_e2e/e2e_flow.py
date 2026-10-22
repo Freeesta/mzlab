@@ -465,10 +465,10 @@ try:
                 window.__jobs = [{ id: plan.steps[0].id, item: null, ms: 900, cached: false, error: null }]; await new Promise(r => setTimeout(r, 2200));
                 const activity = {}; plan.steps.forEach((x, i) => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'], ...(i === plan.steps.length - 1 ? { cached: true } : {}) }; });
                 return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: { k: { type: 'table', label: 't.csv' } }, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
-            pg.click('button[aria-label="Export the plan and run it"]'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
-            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
+            pg.click('#flx-run'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
+            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3
             go = 'button[aria-label="Run the plan on this computer"]'
-            pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
+            attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")      # Run started the first run by itself
             pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
             assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")

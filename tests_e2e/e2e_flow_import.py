@@ -55,6 +55,12 @@ try:
         pg.focus(".flx-split"); pg.keyboard.press("ArrowLeft"); pg.keyboard.press("ArrowLeft")
         check("split", pg.evaluate("document.querySelector('.flx-insp').getBoundingClientRect().width") > w0 + 50, str(w0))
         pg.click('button[data-tab="list"]'); pg.click('button[data-tab="canvas"]')
+        pg.click('#flx-cli-show'); attendi(pg, "!!document.querySelector('.fl-cli textarea')")
+        check("cli box", pg.locator(".fl-cli textarea").input_value().startswith("#") or "mzlab-cli" in pg.locator(".fl-cli textarea").input_value(), pg.locator(".fl-cli textarea").input_value()[:80])
+        pg.fill(".fl-cli textarea", "echo edited"); check("cli box editable", pg.locator(".fl-cli textarea").input_value() == "echo edited")
+        pg.click('button[aria-label="Copy the command to run the plan in a terminal"]'); attendi(pg, "/Copied|Could not copy/.test(document.querySelector('#flx-live').textContent)")
+        check("no panel from Run on CLI", pg.locator(".fl-cli").count() == 1)
+        pg.click('#flx-cli-show'); check("arrow hides", pg.locator(".fl-cli").count() == 0)
         check("no molecules button", pg.locator("#mol-btn").count() == 0)
         b.close()
 finally:

@@ -37,6 +37,7 @@
     let simple = true, tab = "canvas", selected = "";
     try { simple = localStorage.getItem("mzlab.flow.mode") !== "advanced"; } catch (_) { /* private mode */ }
     const live = el("div", { class: "flx-toast", role: "status", id: "flx-live" });
+    const toast = (/** @type {string} */ msg) => { say(msg, null); setTimeout(() => { if (live.textContent === msg) live.replaceChildren(); }, 2500); };
     const say = (/** @type {string} */ msg, /** @type {(() => void) | null} */ undo) => { live.replaceChildren(el("span", { text: msg }), undo ? btn("undo", "Undo", () => { undo(); }, "Undo") : null); };
     /** a change made by the canvas: edit, then let the shared refresh redraw everything @param {() => void} fn @param {string} [focus] */
     const go = (fn, focus) => { fn(); S.refresh(focus === undefined ? null : focus); };
@@ -110,21 +111,20 @@
       const items = S.problems.map((/** @type {any} */ p) => { const f = F.friendly(S, p), n = nodeOfStep(p.instance); return { label: `${n ? n.title : p.instance}: ${f.text}`, line: "Show me", run: () => { if (n) { selected = n.key; redraw(); cv.reveal(n.key); } } }; });
       F.menu(/** @type {HTMLElement} */ (e.currentTarget), items, root);
     }, "Checklist");
-    const run = btn("run", "Export the plan and run it", () => showRun(), "Run");
+    const run = btn("run", "Start the run", () => start(), "Run");
     run.classList.add("flx-run"); run.id = "flx-run";
-    const showRun = async () => {
-      // the runners come with the late modules: wait here, with a small mark on this one button
-      if (F.whenLate) { run.setAttribute("aria-busy", "true"); try { await F.whenLate; } catch (_) { return; } finally { run.removeAttribute("aria-busy"); } }
-      const r = await F.runners.cli.run(S);
-      planView.hidden = false;
-      const box = el("div", { class: "fl-cli" }, el("strong", { text: r.title }), el("p", { text: F.runners.desktop.available() || F.runners.web.available() ? "Run it here, or download the plan and use the command line:" : "On the web Flow exports the plan. Download it, put it in a folder with your files and run it with the native runner:" }), el("code", { text: r.text }),
-        el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => navigator.clipboard && navigator.clipboard.writeText(r.text), "Copy command"), btn("x", "Close", () => box.remove(), "Close")));
-      if (F.runners.desktop.available()) box.append(F.desktopRunUi(S));
-      else if (F.runners.web.available()) box.append(F.webRunUi(S));
-      root.querySelectorAll(".fl-cli").forEach(n => n.remove()); bar.after(box);
+    // the run buttons live in flow-run-ui.js, a late module: wait here, with a small mark on the button that was pressed
+    /** @type {any} */ let acts = null;
+    const actions = async (/** @type {HTMLElement} */ b) => {
+      if (F.whenLate) { b.setAttribute("aria-busy", "true"); try { await F.whenLate; } catch (_) { return null; } finally { b.removeAttribute("aria-busy"); } }
+      return acts || (acts = F.runActions(S, { place: (/** @type {HTMLElement} */ n) => bar.after(n), root, say: toast }));
     };
+    const start = async () => { const a = await actions(run); if (a) a.start(); };
+    const cliBtn = btn("copy", "Copy the command to run the plan in a terminal", async () => { const a = await actions(cliBtn); if (a) a.copy(); }, "Run on CLI");
+    const arrow = el("button", { type: "button", class: "fl-b", id: "flx-cli-show", "aria-label": "Show the command", "aria-expanded": "false", text: "▾",
+      onclick: async () => { const a = await actions(arrow); if (a) a.toggle(arrow); } });
     const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
-    const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, check, open, run, status);
+    const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, check, open, run, cliBtn, arrow, status);
     const tabs = ["canvas", "list", "plan"].map(t => el("button", { type: "button", "aria-pressed": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : t === "list" ? "List view" : "Plan (JSON)" })));
     const issuesHost = el("div", { class: "flx-issues-host" });
     // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
