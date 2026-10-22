@@ -1,0 +1,381 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "ispezione/1",
+ "title": "ispezione/1: what the engine found in the open files, for the assistant",
+ "description": "Format «ispezione/1» (crates/mzlab-llm/src/inspect.rs, docs/agenti/llm.md): per file the type, polarity, resolution class, levels, acquisition, ranges, cycle and the method fields the engine already read, plus the series sections (`qc/1` drift of the QC files, blank signals). Built only from a whitelist of fields: never paths, operator, serial, computer name, raw bytes or spectra. Numbers rounded to four significant digits; `truncated` names the sections dropped to fit the budget. Only the «ricerca» profile has it.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema",
+  "profile",
+  "budget_tokens",
+  "truncated",
+  "files"
+ ],
+ "properties": {
+  "schema": {
+   "const": "ispezione/1"
+  },
+  "profile": {
+   "const": "ricerca"
+  },
+  "budget_tokens": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "truncated": {
+   "type": "array",
+   "items": {
+    "enum": [
+     "tic",
+     "bpc",
+     "gradient",
+     "isolation",
+     "parts",
+     "qc",
+     "blanks"
+    ]
+   }
+  },
+  "files": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "alias",
+     "status"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "alias": {
+      "type": "string",
+      "pattern": "^f[0-9]+$"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "absent when the page hides names; path stripped"
+     },
+     "status": {
+      "enum": [
+       "ok",
+       "unreadable",
+       "no_data"
+      ]
+     },
+     "error_key": {
+      "type": "string"
+     },
+     "format": {
+      "type": "string"
+     },
+     "vendor": {
+      "type": "string"
+     },
+     "model": {
+      "type": "string"
+     },
+     "source": {
+      "type": "string"
+     },
+     "class": {
+      "enum": [
+       "high",
+       "unit",
+       "unknown"
+      ]
+     },
+     "class_ms2": {
+      "enum": [
+       "high",
+       "unit",
+       "unknown"
+      ]
+     },
+     "class_basis": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "resolving_power": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "number"
+      }
+     },
+     "polarity": {
+      "enum": [
+       "positive",
+       "negative",
+       "alternating"
+      ]
+     },
+     "mode": {
+      "type": "string"
+     },
+     "levels": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     },
+     "acquisition": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "parts": {
+      "type": "array",
+      "items": {
+       "type": "object"
+      }
+     },
+     "rt_range_min": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+     },
+     "mz_range": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+     },
+     "mz2_range": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+     },
+     "cycle_ms1_s": {
+      "type": "number"
+     },
+     "ms2_per_cycle": {
+      "type": "number"
+     },
+     "isolation": {
+      "type": "object"
+     },
+     "mrm": {
+      "type": "object"
+     },
+     "tic": {
+      "type": "array"
+     },
+     "bpc": {
+      "type": "array"
+     },
+     "gradient": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+       "type": "object",
+       "required": [
+        "t_min",
+        "B_pct"
+       ]
+      }
+     },
+     "flow_uL_min": {
+      "type": "number"
+     },
+     "oven_C": {
+      "type": "number"
+     },
+     "dead_min": {
+      "type": "number"
+     },
+     "noise": {
+      "type": "number"
+     },
+     "mass_error": {
+      "type": "object"
+     },
+     "peak_width": {
+      "type": "object"
+     },
+     "role": {
+      "type": "string"
+     },
+     "role_source": {
+      "enum": [
+       "proposed",
+       "confirmed"
+      ]
+     },
+     "order": {
+      "type": "number"
+     },
+     "warnings": {
+      "type": "array",
+      "items": {
+       "enum": [
+        "alternating_polarity",
+        "profile_data_centroid_first"
+       ]
+      }
+     }
+    }
+   }
+  },
+  "series": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "files": {
+     "type": "integer"
+    },
+    "readable": {
+     "type": "integer"
+    },
+    "polarities": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "classes": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "roles": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    },
+    "qc": {
+     "$ref": "#/$defs/qc"
+    },
+    "blanks": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "alias",
+       "signals"
+      ],
+      "properties": {
+       "alias": {
+        "type": "string"
+       },
+       "signals": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "required": [
+          "mz",
+          "rt",
+          "area",
+          "in_samples"
+         ],
+         "properties": {
+          "mz": {
+           "type": "number"
+          },
+          "rt": {
+           "type": "number"
+          },
+          "area": {
+           "type": "number"
+          },
+          "in_samples": {
+           "type": "boolean"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "$defs": {
+  "qc": {
+   "type": "object",
+   "required": [
+    "schema",
+    "qc",
+    "order",
+    "order_from",
+    "common_signals"
+   ],
+   "properties": {
+    "schema": {
+     "const": "qc/1"
+    },
+    "qc": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "order": {
+     "type": "array",
+     "items": {
+      "type": "number"
+     }
+    },
+    "order_from": {
+     "enum": [
+      "sample_table",
+      "list_position"
+     ]
+    },
+    "common_signals": {
+     "type": "integer"
+    },
+    "signals": {
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "rt_drift_min": {
+     "type": "object"
+    },
+    "area_drift": {
+     "type": "object"
+    },
+    "fwhm_median_min": {
+     "type": "number"
+    },
+    "proposal": {
+     "type": "object",
+     "properties": {
+      "features.align.rt_gap": {
+       "type": "number"
+      },
+      "features.align.rt_warp": {
+       "type": "boolean"
+      }
+     }
+    },
+    "missing": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "confidence": {
+     "enum": [
+      "medium",
+      "high"
+     ]
+    }
+   }
+  }
+ }
+}
