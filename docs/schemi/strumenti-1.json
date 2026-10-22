@@ -880,6 +880,8 @@
                   "algorithm",
                   "tol_da",
                   "precursor_ppm",
+                  "precursor_da",
+                  "name_contains",
                   "top_n",
                   "decoys",
                   "score_terms",
@@ -907,11 +909,21 @@
                     "default":10,
                     "description":"Library precursor against the precursor of the feature"
                   },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
                   {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
                   {
                     "enum":["none","spectrum"],
                     "default":"none",
-                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs a text library and the spectral entropy; none leaves the hits as they are"
+                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs the spectral entropy (an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
                   },
                   {
                     "type":"boolean",
