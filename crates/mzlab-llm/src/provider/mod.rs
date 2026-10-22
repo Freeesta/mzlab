@@ -3,9 +3,15 @@
 //! functions on text; the transport (fetch in the site, `ureq` in the desktop) lives elsewhere.
 
 mod anthropic;
+mod errors;
 mod gemini;
 mod openai;
+mod options;
 pub mod sse;
+
+pub(crate) use errors::api_error;
+pub use errors::{http_error, retry_delay, MAX_RATE_RETRIES};
+pub use options::{CacheTtl, Effort, Options};
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
@@ -28,13 +34,25 @@ pub enum ToolMode {
     None,
 }
 
-/// Price per million tokens; 0 = unknown.
+/// Rates that apply to a whole request whose prompt has more than `above_tokens` tokens.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PriceOver {
+    pub above_tokens: u64,
+    pub rates: Price,
+}
+
+/// Price per million tokens; 0 = unknown. With a known `input`, the cache rates are those of the file or, when it has none, the usual ones
+/// (`cache_read` = `input`, writes 1.25× and 2× `input`). `as_of` is the date the price was checked on the vendor's page.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Price {
     pub input: f64,
     pub output: f64,
+    pub cache_read: f64,
+    pub write_5m: f64,
+    pub write_1h: f64,
     pub as_of: String,
     pub currency: String,
+    pub over: Option<Box<PriceOver>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -154,7 +172,6 @@ fn model(v: &Value) -> Result<Model> {
     let price = v
         .get("price_per_mtok")
         .ok_or_else(|| bad("price_per_mtok"))?;
-    let p = |k: &str| price.get(k).and_then(Value::f64).unwrap_or(0.0);
     let tools = match v.get("tools").and_then(Value::str) {
         Some("native") => ToolMode::Native,
         Some("prompted") => ToolMode::Prompted,
@@ -171,21 +188,37 @@ fn model(v: &Value) -> Result<Model> {
         max_output_tokens: num("max_output_tokens")? as u32,
         tools,
         vision: v.get("vision").and_then(Value::bool).unwrap_or(false),
-        price: Price {
-            input: p("in"),
-            output: p("out"),
-            as_of: price
-                .get("as_of")
-                .and_then(Value::str)
-                .unwrap_or("")
-                .to_string(),
-            currency: price
-                .get("currency")
-                .and_then(Value::str)
-                .unwrap_or("USD")
-                .to_string(),
-        },
+        price: price_of(price),
     })
+}
+
+fn price_of(v: &Value) -> Price {
+    let p = |k: &str| v.get(k).and_then(Value::f64);
+    let input = p("in").unwrap_or(0.0);
+    let known = input > 0.0;
+    Price {
+        input,
+        output: p("out").unwrap_or(0.0),
+        cache_read: p("cache_read").unwrap_or(if known { input } else { 0.0 }),
+        write_5m: p("write_5m").unwrap_or(input * 1.25),
+        write_1h: p("write_1h").unwrap_or(input * 2.0),
+        as_of: v
+            .get("as_of")
+            .and_then(Value::str)
+            .unwrap_or("")
+            .to_string(),
+        currency: v
+            .get("currency")
+            .and_then(Value::str)
+            .unwrap_or("USD")
+            .to_string(),
+        over: v.get("over").map(|o| {
+            Box::new(PriceOver {
+                above_tokens: o.get("above_tokens").and_then(Value::f64).unwrap_or(0.0) as u64,
+                rates: price_of(o),
+            })
+        }),
+    }
 }
 
 /// The text of `data/fornitori-1.json`, for a page that lists the providers and models without parsing them again.
@@ -203,11 +236,26 @@ pub fn builtin() -> Vec<Provider> {
 
 /// Builds the request of the next turn. A `prompted` model gets the tool schemas in the system text, a `none` model gets no tools.
 pub fn request(p: &Provider, c: &Conversation, tools: &[Tool]) -> Result<Request> {
+    request_with(p, c, tools, &Options::default())
+}
+
+/// `request` with the per-role knobs of `Options` (cache, effort, thinking, strict tools, answer schema).
+pub fn request_with(
+    p: &Provider,
+    c: &Conversation,
+    tools: &[Tool],
+    opts: &Options,
+) -> Result<Request> {
     let err = |f: &str| Error::new("err.llm.conversation").with("field", f);
     if c.provider != p.id {
         return Err(err("provider"));
     }
     let m = p.model(&c.model).ok_or_else(|| err("model"))?;
+    if let Some(f) = &opts.format_schema {
+        if !tools.is_empty() || parse(f.as_bytes()).is_err() {
+            return Err(err("format"));
+        }
+    }
     if !m.vision
         && c.messages
             .iter()
@@ -231,6 +279,7 @@ pub fn request(p: &Provider, c: &Conversation, tools: &[Tool]) -> Result<Request
         system,
         tools: native,
         max: c.max_output_tokens.unwrap_or(m.max_output_tokens),
+        opts,
     };
     let (url, body) = match p.adapter {
         Adapter::Anthropic => (format!("{}/v1/messages", p.base_url), anthropic::body(&ctx)),
@@ -266,6 +315,7 @@ pub(crate) struct Ctx<'a> {
     pub system: String,
     pub tools: &'a [Tool],
     pub max: u32,
+    pub opts: &'a Options,
 }
 
 pub(crate) fn json_text(v: &Value) -> String {
@@ -296,81 +346,6 @@ fn prompted_system(base: &str, tools: &[Tool]) -> String {
         ));
     }
     s
-}
-
-/// An error from the status and the body of a failed HTTP answer.
-pub fn http_error(status: u16, body: &str) -> Event {
-    let (kind, msg) = error_fields(body);
-    api_error(status, &kind, &msg)
-}
-
-fn error_fields(body: &str) -> (String, String) {
-    let Ok(v) = parse(body.as_bytes()) else {
-        return (String::new(), body.chars().take(200).collect());
-    };
-    let e = v.get("error").unwrap_or(&v);
-    let kind = ["type", "status", "code"]
-        .iter()
-        .find_map(|k| e.get(k).and_then(Value::str))
-        .unwrap_or("");
-    let msg = e
-        .get("message")
-        .or_else(|| v.get("message"))
-        .and_then(Value::str)
-        .or(e.str())
-        .unwrap_or("");
-    (kind.to_string(), msg.chars().take(200).collect())
-}
-
-/// Maps the HTTP status (0 inside a stream) and the vendor's own words to an `err.llm.*` event. A message that looks like a key is dropped.
-pub(crate) fn api_error(status: u16, kind: &str, msg: &str) -> Event {
-    let text = format!("{kind} {msg}").to_lowercase();
-    let has = |w: &[&str]| w.iter().any(|x| text.contains(x));
-    let key = if status == 401
-        || status == 403
-        || has(&[
-            "authentication",
-            "unauthenticated",
-            "permission_denied",
-            "api key",
-            "api_key",
-        ]) {
-        "err.llm.auth"
-    } else if status == 429
-        || status == 529
-        || has(&[
-            "rate_limit",
-            "rate limit",
-            "overloaded",
-            "resource_exhausted",
-            "quota",
-        ])
-    {
-        "err.llm.rate"
-    } else if status == 413
-        || has(&[
-            "context length",
-            "context window",
-            "too long",
-            "too many tokens",
-            "token limit",
-            "maximum context",
-        ])
-    {
-        "err.llm.context"
-    } else if status == 408 || status >= 500 {
-        "err.llm.network"
-    } else {
-        "err.llm.bad_response"
-    };
-    let mut params = Vec::new();
-    if status != 0 {
-        params.push(("status", status.to_string()));
-    }
-    if !msg.is_empty() && !crate::log::has_secret(msg) {
-        params.push(("message", msg.to_string()));
-    }
-    Event::error(key, &params)
 }
 
 /// The decoder of one vendor: frames in, events out.

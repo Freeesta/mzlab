@@ -170,6 +170,7 @@ impl Decoder for Dec {
                 input: n("promptTokenCount").saturating_sub(cached),
                 output: n("candidatesTokenCount"),
                 cache_read: cached,
+                ..Usage::default()
             });
         }
     }
