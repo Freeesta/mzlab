@@ -51,10 +51,10 @@ const c = F.candidates(plan, reg, "index", port);
 eq(c.map(x => [x.ref, x.fit]), [["file:input1.raw", "ok"], ["convert.mzml", "ok"]]);
 assert.ok(F.candidates(plan, reg, "convert", F.ports(reg.byId.get("convert.mzml").in)[0]).every(x => x.ref !== "index.mzidx"));
 
-// the goal: from raw files alone the identification cannot be reached; with spectra and a library it can
+// the goal: from raw files alone the identification cannot be reached (the library is always the user's; the query could come from an MSn graph); with spectra and a library it can
 plan = F.newPlan(); F.addStep(plan, reg, "convert.mzml");
 let g = F.goal(plan, reg);
-eq([g.reached, g.canReach, g.missing], [false, false, ["spectra", "library"]]);
+eq([g.reached, g.canReach, g.missing], [false, false, ["library"]]);
 F.addInput(plan, "spectra"); F.addInput(plan, "library");
 g = F.goal(plan, reg);
 eq([g.reached, g.canReach], [false, true]);

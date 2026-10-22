@@ -133,8 +133,7 @@ pub(super) fn match_spectra() -> Step {
             Port::new("query", DataType::Spectra, "Query spectra")
                 .accepts(&[DataType::Report])
                 .requires(ms2()),
-            Port::new("library", DataType::Library, "Spectral library")
-                .accepts(&[DataType::Report]),
+            Port::new("library", DataType::Library, "Spectral library"),
         ],
         outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per feature")],
         params: vec![
@@ -186,7 +185,7 @@ fn tree() -> Algorithm {
     Algorithm {
         applicability: Applicability {
             ms_levels: vec![2, 3, 4],
-            note: "The query port takes the msngrafo/1 graph and the library port an msnlib/1 file; precursor_ppm, tol_da and top_n are the windows and the cut of the search. decoys, name_contains and precursor_da do not apply",
+            note: "The query port takes the msngrafo/1 graph and the library port an msnlib/1 file declared as a library; precursor_ppm, tol_da and top_n are the windows and the cut of the search. decoys, name_contains and precursor_da do not apply",
             ..Applicability::default()
         },
         params: vec![Param::integer("min_prove", "Minimum shared peaks")

@@ -119,7 +119,7 @@ fn tree_writes_the_search_of_the_msn_library() {
     std::fs::write(&graph, &g.stdout).unwrap();
     std::fs::create_dir_all(dir.join("work")).unwrap();
     let direct = cli(&["msn-lib", "search", l, graph.to_str().unwrap()]);
-    let p = r#"{"format":"mzflow/2","inputs":[{"name":"g.json","type":"report"},{"name":"lib.json","type":"report"}],"steps":[
+    let p = r#"{"format":"mzflow/2","inputs":[{"name":"g.json","type":"report"},{"name":"lib.json","type":"library"}],"steps":[
         {"id":"m","step":"spectra.match@1","in":{"query":"file:g.json","library":"file:lib.json"},"algorithm":"tree","params":{"precursor_ppm":10,"tol_da":0.01,"top_n":10}}]}"#;
     let (run, prov) =
         crate::flow::run_plan(p.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
