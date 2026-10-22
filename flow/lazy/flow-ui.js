@@ -83,6 +83,7 @@
       "err.flow.msn.open": `Open the infusion ${q.input || "of the plan"} in the Data tab first, then run again.`,
       "err.flow.msn.desktop": "This file is too big for this browser. Run the plan in the desktop app or with the command line.",
       "err.flow.msn.empty": "This file has no MSn spectra (MS2 or deeper). The plan needs an MSn infusion: open one in the Data tab.",
+      "err.flow.msn.library": "The MSn library is empty. In the Data tab, open the Fragmentation graph card of a standard and add it to the library, then run again.",
       "err.flow.msn.molecule": "Give the ion of the root (for example C8H9NO2 [M+H]+): a molecule name needs the molecules list, which this browser does not read. Use the desktop app or the command line for a name.",
       "err.flow.input.missing": `Open the file ${q.input} in the Data tab first, then run again.`,
       "err.flow.check": `The plan has problems: ${q.problems}.`,
