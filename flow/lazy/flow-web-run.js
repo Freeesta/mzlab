@@ -148,6 +148,7 @@
    * @param {any} S @param {{ onEvent?: (e: any) => void, askMore?: (i: any) => Promise<boolean> }} [opts] */
   const run = async (S, opts = {}) => {
     const o = { askMore: G.mzlabAskMore, ...opts }, plan = S.plan;
+    if (F.webMsn && F.webMsn.handles(plan)) return F.webMsn.run(S, o);
     const files = await listIdx();
     if (!files.length) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     for (const inst of plan.steps) emit(o, { passo: inst.id, stato: "waiting", via: KNOWN.includes(base(inst)) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
@@ -169,7 +170,7 @@
 
   /** the estimate of the alignment when every detection is already kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
   const preflight = async (S) => {
-    if (!available()) return null;
+    if (!available() || (F.webMsn && F.webMsn.handles(S.plan))) return null;
     const detectInst = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.detect");
     const detectRecipe = recipeOf(S.plan, detectInst), recipe = recipeOf(S.plan);
     const files = await listIdx(), p = await getPool();

@@ -14,7 +14,6 @@ use crate::flow::{one_input, write_made, FileRunner};
 
 /// `spectra.msn_graph@1`: one graph per infusion file.
 pub fn msn_graph_step() -> Step {
-    let d = Opzioni::default();
     Step {
         ins: vec![
             Port::new("source", DataType::Raw, "Vendor file or mzML of an MSn infusion").accepts(&[DataType::Mzml]),
@@ -25,7 +24,25 @@ pub fn msn_graph_step() -> Step {
             },
         ],
         outs: vec![Port::new("graph", DataType::Report, "Fragmentation graph (msngrafo/1)")],
-        params: vec![
+        params: params(),
+        runs_in: RunsIn {
+            wasm: Some("wasip1 (mzlab-cli)"),
+            native: true,
+            ..RunsIn::default()
+        },
+        errors: vec!["err.file.numpress"],
+        ..Step::core(
+            "spectra.msn_graph",
+            "MSn fragmentation graph",
+            "Merges the MSn spectra of an infusion into one graph of ions and neutral losses, with the sub-formulas of the fragments when the ion of the root is given. It proposes candidates; it does not identify.",
+        )
+    }
+}
+
+/// The parameters of the step: one per option of the command.
+fn params() -> Vec<Param> {
+    let d = Opzioni::default();
+    vec![
             Param::text("formula", "Ion of the root")
                 .default_str("")
                 .doc("C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; empty = masses only, no sub-formulas"),
@@ -70,22 +87,18 @@ pub fn msn_graph_step() -> Step {
                 .default_num(crate::msn_graph::PPM_STRUTTURA)
                 .unit("ppm")
                 .doc("Distance of a cleaved piece from the m/z of the node"),
+            Param::boolean("interpreta", "Interpret the losses")
+                .default_bool(false)
+                .doc("Adds the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"),
+            Param::number("ppm_perdita", "Loss window")
+                .min(0.0)
+                .default_num(mzlab_core::msngrafo::PPM_PERDITA)
+                .unit("ppm")
+                .doc("Window of the loss match by mass, ppm of the precursor m/z"),
             Param::text("scelte", "Chosen formulas")
                 .default_str("")
                 .doc("MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"),
-        ],
-        runs_in: RunsIn {
-            wasm: Some("wasip1 (mzlab-cli)"),
-            native: true,
-            ..RunsIn::default()
-        },
-        errors: vec!["err.file.numpress"],
-        ..Step::core(
-            "spectra.msn_graph",
-            "MSn fragmentation graph",
-            "Merges the MSn spectra of an infusion into one graph of ions and neutral losses, with the sub-formulas of the fragments when the ion of the root is given. It proposes candidates; it does not identify.",
-        )
-    }
+        ]
 }
 
 fn text(job: &Job, name: &str) -> Option<String> {
@@ -172,7 +185,16 @@ pub fn msn_graph_text(
     tmp: &Path,
 ) -> Result<String> {
     let o = opzioni(job, molecules)?;
-    let (g, json) = crate::msn_graph::grafo(file, &o, tmp)?;
+    let (g, mut json) = crate::msn_graph::grafo(file, &o, tmp)?;
+    if job
+        .resolved
+        .params
+        .iter()
+        .any(|(k, v)| k == "interpreta" && v.bool() == Some(true))
+    {
+        let ppm = number(job, "ppm_perdita", mzlab_core::msngrafo::PPM_PERDITA);
+        json = mzlab_core::msngrafo::con_interpretazione(&json, &g, ppm);
+    }
     match text(job, "strutture_nodo") {
         Some(nodo) => {
             let ppm = number(job, "ppm_struttura", crate::msn_graph::PPM_STRUTTURA);
