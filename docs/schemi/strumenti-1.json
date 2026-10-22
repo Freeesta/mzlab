@@ -394,10 +394,10 @@
                   "rt_coarse_gap",
                   "rt_span",
                   "rt_inlier",
+                  "weak_files",
                   "link_rt",
                   "max_span",
-                  "min_dependent",
-                  "weak_files"
+                  "min_dependent"
                 ]
               },
               "value":{
@@ -452,6 +452,12 @@
                     "description":"Largest distance of an anchor from the line to agree with it (ransac)"
                   },
                   {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier"
+                  },
+                  {
                     "type":"number",
                     "minimum":0,
                     "default":0.2,
@@ -468,12 +474,6 @@
                     "minimum":1,
                     "default":1,
                     "description":"Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files"
-                  },
-                  {
-                    "type":"integer",
-                    "minimum":0,
-                    "default":5,
-                    "description":"Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier"
                   }
                 ]
               }
