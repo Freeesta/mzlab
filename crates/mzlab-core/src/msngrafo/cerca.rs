@@ -36,13 +36,13 @@ impl Default for Opzioni {
 }
 
 /// One spectrum of a graph: its path of precursors, activation, energy, precursor node and peaks `(mz, rel, node)`.
-struct Sp {
-    path: String,
-    level: i64,
-    act: String,
-    ce: f64,
-    prec: String,
-    peaks: Vec<(f64, f64, Option<String>)>,
+pub(super) struct Sp {
+    pub(super) path: String,
+    pub(super) level: i64,
+    pub(super) act: String,
+    pub(super) ce: f64,
+    pub(super) prec: String,
+    pub(super) peaks: Vec<(f64, f64, Option<String>)>,
 }
 
 /// A neutral loss between two ions: the formula when the graph proposed one.
@@ -52,11 +52,11 @@ struct Loss {
 }
 
 /// What the search needs of a graph.
-struct G {
-    pol: f64,
-    mz: f64,
+pub(super) struct G {
+    pub(super) pol: f64,
+    pub(super) mz: f64,
     nodes: HashMap<String, f64>,
-    spectra: Vec<Sp>,
+    pub(super) spectra: Vec<Sp>,
     losses: Vec<Loss>,
 }
 
@@ -80,15 +80,15 @@ pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Opzi
     })
 }
 
-fn bad() -> Error {
+pub(super) fn bad() -> Error {
     Error::new("err.msnlib.bad")
 }
 
-fn text(v: Option<&Value>) -> String {
+pub(super) fn text(v: Option<&Value>) -> String {
     v.and_then(|x| x.str()).unwrap_or("").to_string()
 }
 
-fn read_graph(g: &Value) -> Result<G> {
+pub(super) fn read_graph(g: &Value) -> Result<G> {
     let nodes: HashMap<String, f64> = g
         .get("nodi")
         .map_or(&[][..], |x| x.arr())
@@ -175,7 +175,11 @@ fn shape(path: &str) -> String {
 
 /// The entropy similarity and the shared peaks of `u` against the spectrum of `list` at the nearest energy; among spectra at the same distance
 /// (the same ion reached by different upstream energies) the most similar one, so a tree always finds itself.
-fn best_of<'a>(u: &Sp, list: impl Iterator<Item = &'a Sp>, tol: f64) -> Option<(f64, usize)> {
+pub(super) fn best_of<'a>(
+    u: &Sp,
+    list: impl Iterator<Item = &'a Sp>,
+    tol: f64,
+) -> Option<(f64, usize)> {
     let cand: Vec<&Sp> = list.filter(|e| !e.peaks.is_empty()).collect();
     let near = cand
         .iter()
@@ -387,61 +391,6 @@ fn hits(lib: &Value, u: &G, o: &Opzioni) -> Result<Vec<Hit>> {
             .then(a.id.cmp(&b.id))
     });
     out.truncate(o.top);
-    Ok(out)
-}
-
-/// An MSn library entry whose MS2 resembles the MS2 of a feature: the entropy similarity of its best MS2 and the peaks they share.
-pub struct Ms2Hit {
-    pub id: String,
-    pub ion: String,
-    pub entropy: f64,
-    pub shared: usize,
-}
-
-/// The entries of an `msnlib/1` text whose precursor is within `ppm` of `mz` (same polarity) and whose best MS2, at any activation or energy, shares
-/// at least `min_shared` peaks with `peaks` `(m/z, intensity)`; most similar first. A feature has no activation label, so every MS2 of the entry counts.
-pub fn cerca_ms2(
-    libreria: &str,
-    mz: f64,
-    positive: bool,
-    peaks: &[(f64, f64)],
-    ppm: f64,
-    tol: f64,
-    min_shared: usize,
-) -> Result<Vec<Ms2Hit>> {
-    let lib = parse(libreria.as_bytes())?;
-    let u = Sp {
-        path: String::new(),
-        level: 2,
-        act: String::new(),
-        ce: 0.0,
-        prec: String::new(),
-        peaks: peaks.iter().map(|p| (p.0, p.1, None)).collect(),
-    };
-    let mut out = Vec::new();
-    for v in lib.get("voci").map_or(&[][..], |x| x.arr()) {
-        let e = read_graph(v.get("grafo").ok_or_else(bad)?)?;
-        if (e.pol >= 0.0) != positive || ((e.mz - mz) / mz * 1e6).abs() > ppm {
-            continue;
-        }
-        let best = e
-            .spectra
-            .iter()
-            .filter(|x| x.level == 2)
-            .filter_map(|x| best_of(&u, std::iter::once(x), tol))
-            .max_by(|a, b| a.0.total_cmp(&b.0));
-        if let Some((entropy, shared)) = best.filter(|b| b.1 >= min_shared) {
-            out.push(Ms2Hit {
-                id: text(v.get("id")),
-                ion: text(v.get("ione").and_then(|i| i.get("formula"))),
-                entropy,
-                shared,
-            });
-        }
-    }
-    crate::sortc::slice_by(&mut out, |a, b| {
-        b.entropy.total_cmp(&a.entropy).then(a.id.cmp(&b.id))
-    });
     Ok(out)
 }
 
