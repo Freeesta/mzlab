@@ -1078,6 +1078,8 @@
                   "isotopi",
                   "strutture_nodo",
                   "ppm_struttura",
+                  "interpreta",
+                  "ppm_perdita",
                   "scelte"
                 ]
               },
@@ -1142,6 +1144,17 @@
                     "minimum":0,
                     "default":10,
                     "description":"Distance of a cleaved piece from the m/z of the node"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the activations that saw it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Window of the loss match by mass, ppm of the precursor m/z"
                   },
                   {
                     "type":"string",

@@ -273,30 +273,17 @@ fn report_weak(rows: &[&lr::Entry]) {
     println!("non-strong candidates by failed criteria: {why:?}");
 }
 
-/// Strong unexpected ions that co-elute (0.1 min) with a heavier strong candidate: probable fragments of it.
-fn report_coelution(rows: &[&lr::Entry]) {
-    let strong: Vec<&&lr::Entry> = rows
-        .iter()
-        .filter(|e| !e.unexpected && e.label == "forte")
-        .collect();
+/// Strong unexpected ions with a `coelutes` mark (same RT as a heavier strong or possible candidate: probable fragments of it).
+fn report_coelution(d: &lr::LrDig, rows: &[&lr::Entry]) {
     let (mut coel, mut tot) = (0, 0);
     for u in rows.iter().filter(|e| e.unexpected && e.label == "forte") {
         tot += 1;
-        let ru = u.ref_rt.unwrap_or(-9.0);
-        let hit = strong
-            .iter()
-            .find(|c| c.mz > u.mz + 3.0 && (c.ref_rt.unwrap_or(0.0) - ru).abs() <= 0.1);
-        if let Some(c) = hit {
+        if let Some(c) = lr::coelute::of(d, u) {
             coel += 1;
-            println!(
-                "coeluting unexpected {:.2}@{ru:.2} under candidate {:.2} (loss {:.2})",
-                u.mz,
-                c.mz,
-                c.mz - u.mz
-            );
+            println!("coeluting unexpected {:.2} under candidate {:.2} (delta m/z {:.2}, delta RT {:.2})", u.mz, c.mz, c.delta_mz, c.delta_rt);
         }
     }
-    println!("unexpected strong {tot}, co-eluting and lighter than a strong candidate: {coel}");
+    println!("unexpected strong {tot}, with a co-elution mark: {coel}");
 }
 
 fn report_decoys() {
@@ -351,7 +338,7 @@ fn report() {
     let rows = table_order(&f);
     report_rows(&rows);
     report_weak(&rows);
-    report_coelution(&rows);
+    report_coelution(&f, &rows);
     println!("proposed formulas: {}", proposed(&f).len());
     report_decoys();
     let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
