@@ -130,8 +130,11 @@ fn ms2() -> Facets {
 pub(super) fn match_spectra() -> Step {
     Step {
         ins: vec![
-            Port::new("query", DataType::Spectra, "Query spectra").requires(ms2()),
-            Port::new("library", DataType::Library, "Spectral library"),
+            Port::new("query", DataType::Spectra, "Query spectra")
+                .accepts(&[DataType::Report])
+                .requires(ms2()),
+            Port::new("library", DataType::Library, "Spectral library")
+                .accepts(&[DataType::Report]),
         ],
         outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per feature")],
         params: vec![
@@ -166,7 +169,7 @@ pub(super) fn match_spectra() -> Step {
             wasm_ceiling_bytes: None,
             native: true,
         },
-        algorithms: vec![spectral_entropy(), cosine(), modified_cosine()],
+        algorithms: vec![spectral_entropy(), cosine(), modified_cosine(), tree()],
         default_algorithm: Some("spectral_entropy"),
         per_item: true,
         errors: vec!["error.memoryBudget"],
@@ -174,6 +177,27 @@ pub(super) fn match_spectra() -> Step {
             "spectra.match",
             "Compare MS2 spectra",
             "Scores each query MS2 spectrum against a spectral library inside the precursor window and keeps the best candidates per feature. A candidate is a hit with its scores and shared peaks, never an identity: the level is decided by annot.level.",
+        )
+    }
+}
+
+/// `tree`: the fragmentation graph of an infusion (`msngrafo/1`, `spectra.msn_graph`) against an MSn library (`msnlib/1`), `msngrafo::cerca`.
+fn tree() -> Algorithm {
+    Algorithm {
+        applicability: Applicability {
+            ms_levels: vec![2, 3, 4],
+            note: "The query port takes the msngrafo/1 graph and the library port an msnlib/1 file; precursor_ppm, tol_da and top_n are the windows and the cut of the search. decoys, name_contains and precursor_da do not apply",
+            ..Applicability::default()
+        },
+        params: vec![Param::integer("min_prove", "Minimum shared peaks")
+            .min(0.0)
+            .default_num(1.0)
+            .doc("A candidate needs this many peaks shared with the unknown in its best MS2 pair")],
+        ..algorithm(
+            "tree",
+            "MSn tree",
+            "Compares an unknown MSn graph with the entries of an MSn library whose precursor is inside the window; the MS2 entropy, the tree and the shared losses stay apart as three scores with their proofs (msngrafo/cerca.rs). The output is msncerca/1, which annot.level does not read: nothing is called a match.",
+            Status::Available,
         )
     }
 }

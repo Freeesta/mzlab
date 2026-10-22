@@ -100,3 +100,37 @@ fn name_contains_filters_the_candidates() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `tree`: a graph `msngrafo/1` against an `msnlib/1` library gives the `msncerca/1` text of `mzlab-cli msn-lib search`, byte for byte.
+#[test]
+fn tree_writes_the_search_of_the_msn_library() {
+    let dir = std::env::temp_dir().join(format!("mzlab_match_tree_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mzml = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/golden/ref/msntree_rotta/msn.mzML");
+    let cli = |a: &[&str]| crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+    let (lib, graph) = (dir.join("lib.json"), dir.join("g.json"));
+    let (l, f) = (lib.to_str().unwrap(), mzml.to_str().unwrap());
+    let ion = ["--formula", "C14H15N3O5+"];
+    let add = ["msn-lib", "add", l, f, "--id", "STD-1"];
+    assert_eq!(cli(&[&add[..], &ion[..]].concat()).code, 0);
+    let g = cli(&[&["msn-graph", f][..], &ion[..]].concat());
+    std::fs::write(&graph, &g.stdout).unwrap();
+    std::fs::create_dir_all(dir.join("work")).unwrap();
+    let direct = cli(&["msn-lib", "search", l, graph.to_str().unwrap()]);
+    let p = r#"{"format":"mzflow/2","inputs":[{"name":"g.json","type":"report"},{"name":"lib.json","type":"report"}],"steps":[
+        {"id":"m","step":"spectra.match@1","in":{"query":"file:g.json","library":"file:lib.json"},"algorithm":"tree","params":{"precursor_ppm":10,"tol_da":0.01,"top_n":10}}]}"#;
+    let (run, prov) =
+        crate::flow::run_plan(p.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    let made = std::fs::read(dir.join("work/m.json")).unwrap();
+    assert_eq!(made, direct.stdout);
+    assert!(String::from_utf8(made)
+        .unwrap()
+        .contains("\"id\":\"STD-1\""));
+    let _ = std::fs::remove_dir_all(&dir);
+}
