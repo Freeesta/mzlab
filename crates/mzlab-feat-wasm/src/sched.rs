@@ -2,7 +2,7 @@
 //! JavaScript. Used by `flow/lazy/worker-flow-web.js` and by `tests/flow_sched_nodo.js` (parity on `sched_cases.json`). Design: `docs/agenti/flow-live.md`.
 
 use mzlab_core::error::Error;
-use mzlab_core::flow::sched::{Command, Done, JobId, Landed, Limits, Sched};
+use mzlab_core::flow::sched::{Command, Done, JobId, JobSpec, Landed, Limits, NodeView, Sched};
 use mzlab_core::flow::{parse, Plan};
 use mzlab_core::json::{self, Out, Value};
 use mzlab_core::step::{DataType, Param, Port, Step};
@@ -136,7 +136,29 @@ impl FlowSched {
         self.inner.set_resources(&job_from(job)?, names.collect());
         Ok(())
     }
+}
 
+fn spec_json(o: &mut Out, j: &JobSpec) {
+    o.raw("{\"instance\":")
+        .str(&j.id.instance)
+        .raw(",\"item\":");
+    match &j.id.item {
+        Some(n) => o.str(n),
+        None => o.raw("null"),
+    };
+    o.raw(",\"key\":")
+        .str(&j.key)
+        .raw(",\"mb\":")
+        .num(j.mb)
+        .raw(",\"resources\":[");
+    for (k, r) in j.resources.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" }).str(r);
+    }
+    o.raw("]}");
+}
+
+#[wasm_bindgen]
+impl FlowSched {
     /// `limits_json`: `{"slots","mem_mb","mb":{"<instance>|<item>": estimate},"mb_default"}`; returns `[{"instance","item","key","mb","resources"}]`.
     pub fn next(&self, limits_json: &str) -> Result<String, JsValue> {
         let v = json::parse(limits_json.as_bytes()).map_err(|e| bad(e.key))?;
@@ -161,26 +183,32 @@ impl FlowSched {
         o.raw("[");
         for (i, j) in self.inner.next(&limits, estimate).iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" });
-            o.raw("{\"instance\":")
-                .str(&j.id.instance)
-                .raw(",\"item\":");
-            match &j.id.item {
-                Some(n) => o.str(n),
-                None => o.raw("null"),
-            };
-            o.raw(",\"key\":")
-                .str(&j.key)
-                .raw(",\"mb\":")
-                .num(j.mb)
-                .raw(",\"resources\":[");
-            for (k, r) in j.resources.iter().enumerate() {
-                o.raw(if k > 0 { "," } else { "" }).str(r);
-            }
-            o.raw("]}");
+            spec_json(&mut o, j);
         }
         Ok(o.raw("]").0.clone())
     }
+}
 
+/// `{"ms"}` is a job that is done, `{"error_key","params":{}}` one that failed.
+fn result_of(r: &Value) -> Result<Done, Error> {
+    match r.get("error_key").and_then(Value::str) {
+        Some(k) => {
+            let mut e = Error::new(leak(k));
+            if let Some(Value::Obj(kv)) = r.get("params") {
+                for (name, v) in kv {
+                    e = e.with(leak(name), v.str().unwrap_or(""));
+                }
+            }
+            Err(e)
+        }
+        None => Ok(Done {
+            ms: r.get("ms").and_then(Value::f64).unwrap_or(0.0),
+        }),
+    }
+}
+
+#[wasm_bindgen]
+impl FlowSched {
     pub fn started(&mut self, job: &str) -> Result<bool, JsValue> {
         Ok(self.inner.started(&job_from(job)?))
     }
@@ -190,24 +218,10 @@ impl FlowSched {
         Ok(())
     }
 
-    /// `result_json`: `{"ms"}` for a job that is done, `{"error_key","params":{}}` for one that failed; returns `accepted`, `discarded:<key>` or `unknown`.
+    /// `result_json` as in `result_of`; returns `accepted`, `discarded:<key>` or `unknown`.
     pub fn finished(&mut self, job: &str, result_json: &str) -> Result<String, JsValue> {
         let r = json::parse(result_json.as_bytes()).map_err(|e| bad(e.key))?;
-        let result = match r.get("error_key").and_then(Value::str) {
-            Some(k) => {
-                let mut e = Error::new(leak(k));
-                if let Some(Value::Obj(kv)) = r.get("params") {
-                    for (name, v) in kv {
-                        e = e.with(leak(name), v.str().unwrap_or(""));
-                    }
-                }
-                Err(e)
-            }
-            None => Ok(Done {
-                ms: r.get("ms").and_then(Value::f64).unwrap_or(0.0),
-            }),
-        };
-        Ok(match self.inner.finished(&job_from(job)?, result) {
+        Ok(match self.inner.finished(&job_from(job)?, result_of(&r)) {
             Landed::Accepted => "accepted".to_string(),
             Landed::Discarded { key } => format!("discarded:{key}"),
             Landed::Unknown => "unknown".to_string(),
@@ -240,7 +254,19 @@ impl FlowSched {
     pub fn resume(&mut self) {
         self.inner.resume();
     }
+}
 
+fn node_json(o: &mut Out, n: &NodeView) {
+    o.raw("{\"instance\":").str(&n.instance);
+    o.raw(",\"state\":").str(n.state.name());
+    o.raw(",\"frac\":").opt(n.frac);
+    o.raw(",\"parte\":").int(n.parte as i64);
+    o.raw(",\"di\":").int(n.di as i64);
+    o.raw(",\"ms\":").num(n.ms).raw("}");
+}
+
+#[wasm_bindgen]
+impl FlowSched {
     /// `[{"instance","item","state"}]` in the order of the plan.
     pub fn jobs(&self) -> String {
         let mut o = Out::default();
@@ -260,16 +286,7 @@ impl FlowSched {
         o.raw("[");
         for (i, n) in self.inner.nodes().iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" });
-            o.raw("{\"instance\":")
-                .str(&n.instance)
-                .raw(",\"state\":")
-                .str(n.state.name());
-            o.raw(",\"frac\":").opt(n.frac);
-            o.raw(",\"parte\":")
-                .int(n.parte as i64)
-                .raw(",\"di\":")
-                .int(n.di as i64);
-            o.raw(",\"ms\":").num(n.ms).raw("}");
+            node_json(&mut o, n);
         }
         o.raw("]").0.clone()
     }

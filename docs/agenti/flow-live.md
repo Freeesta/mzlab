@@ -47,7 +47,8 @@ I problemi di `flow::check` bloccano (`blocked`) i lavori dell'istanza interessa
 - Il registro è copiato in `Sched::new` (nessun prestito); i passi con versione assente o parametri non risolvibili hanno un lavoro `blocked` con `plan.problem`.
 
 ## Nel `.wasm` del sito
-- `crates/mzlab-feat-wasm/src/sched.rs` (dietro la feature `detect`, nessuna feature nuova) esporta `FlowSched` con wasm-bindgen: `new(plan, registry, versione, identità)`, `update`, `next`, `started`, `progress`, `finished`, `cached`, `block`/`unblock`, `retry`, `pause`/`resume`, `jobs`, `nodes`, `events_since`, tutto testo JSON (`mzlab_core::json`); un lavoro è `{"instance","item"}`. `registry` vuoto = i passi compilati di `mzlab_feat::steps::registry()`; altrimenti i passi dei casi condivisi come dati (girano su entrambe le piattaforme). `flow/lazy/worker-flow-web.js` lo ospita con i messaggi `{op: "sched.<metodo>", args}` e non sceglie nulla.
+- `crates/mzlab-feat-wasm/src/sched.rs` (dietro la feature `detect`, nessuna feature nuova) esporta `FlowSched` con wasm-bindgen: `new(plan, registry, versione, identità)`, `update`, `next`, `started`, `progress`, `finished`, `cached`, `block`/`unblock`, `retry`, `pause`/`resume`, `jobs`, `nodes`, `events_since`, tutto testo JSON (`mzlab_core::json`); un lavoro è `{"instance","item"}`. `registry` vuoto = i passi compilati di `mzlab_feat::steps::registry()`; altrimenti i passi dei casi condivisi come dati (girano su entrambe le piattaforme).
+- `flow/lazy/worker-flow-web.js` lo ospita con i messaggi `{op: "sched.<metodo>", args}` e non sceglie nulla.
 - Parità: `tests/test_flow_sched_wasm.py` esegue `tests/flow_sched_nodo.js` sui casi di `sched_cases.json` (SKIP senza cargo, wasm-bindgen o node).
 - Misura nel modulo `hr` (wasm-opt -Oz): 1 173 665 B senza lo scheduler, 1 289 931 B con (1 251 365 B senza il registro compilato), contro il tetto `limit_hr` 1 212 416: SOPRA il tetto (decisione D4 di Federico: nessun tetto alzato).
 

@@ -44,10 +44,8 @@ pub mod stima;
 pub mod state;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
-
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
-
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
     o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
