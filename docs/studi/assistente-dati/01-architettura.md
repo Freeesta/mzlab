@@ -31,11 +31,12 @@ Principio: Rust misura e controlla, il modello interpreta, domanda e spiega. Il 
 |---|---|---|---|---|
 | CLI `mzlab-cli assist` | `curl` con intestazioni su stdin (come `tutor eval`), mai la chiave negli argomenti | file `--key-file` (0600) o stdin | da costruire | nessuna |
 | App desktop | rotte `llm/send`, `llm/poll` (`ureq`, esistono) | `llm-chiavi.json` 0600, la legge solo Rust | esiste il trasporto | nessuna |
-| Sito | iframe `llm/trasporto.html` (esiste) | in memoria dell'iframe o IndexedDB cifrata | oggi solo `localhost` e `replay` | V1 |
+| Sito, chiave propria | iframe `llm/trasporto.html` (esiste) verso `api.anthropic.com` con `anthropic-dangerous-direct-browser-access` | dell'utente, nell'IndexedDB dell'iframe | oggi solo `localhost` e `replay`; CSP in W2 | V1a (data) |
+| Sito e desktop, invito | lo stesso iframe verso il Worker (`09-worker.md`) | condivisa, solo segreto del Worker; l'utente ha un codice d'invito | da costruire (W1, W2) | V2a (data) |
 
 - Per il test con la chiave dedicata si usa la CLI: nessun cambio di CSP, nessun server, ripetibile da una sessione cloud o dal Mac di Federico.
 - La chiave arriva solo con il flusso di richiesta della credenziale dell'ambiente (variabile o file fuori dal repository); mai in chat, in un commit, in un argomento di processo, in `llmlog/1`, in `prov/1`. `log::has_secret` e `tests/test_llm_chiavi.py` restano le guardie.
-- Il sito (V1a) usa la chiave dell'utente: il tetto per persona coincide con la chiave. Una chiave condivisa nel sito non è mai ammessa (si leggerebbe dalla pagina); per una chiave condivisa serve V2a.
+- Con la chiave propria (V1a) il tetto per persona coincide con il limite della chiave nella Console, più il contatore locale di 10 $ per sessione. Una chiave condivisa nella pagina non è mai ammessa (si leggerebbe): la chiave condivisa vive solo nel Worker (V2a), che tiene i contatori per persona e per sessione.
 - Profilo `corso`: l'assistente non esiste (nessun byte scaricato), come oggi per `llm/`. L'assistente vive dove vive il Flow.
 
 ## 3. Cosa si manda al modello

@@ -20,7 +20,7 @@
 | metodo | `mzlab-core::metodo` (`metodo/1`) | gradiente, sorgente, esperimenti, ordine |
 | ruoli | `mzlab-core::campioni` (`campioni/2`) | bianchi, QC, standard proposti |
 | statistica | `table.stats`, `table.pca`, `table.kmd` | controlli di `tabcheck/1` |
-| trasporti | desktop `llm/*`, sito `llm/trasporto.html` | invariati (il sito aspetta V1) |
+| trasporti | desktop `llm/*`, sito `llm/trasporto.html` | chiave propria verso `api.anthropic.com` (V1a) o invito verso il Worker (V2a); CSP in W2 |
 | pannello | `flow/lazy/flow-llm.js`, `flow-llm-tools.js` | carte nuove: domande, letture, proposte |
 
 ## 2. Cosa si inventa
@@ -38,7 +38,7 @@
 | sottocomando | `mzlab-cli assist run|eval|replay` | `assist-caso/1` |
 | casi d'oro | `tests/data/assist/oro/`, registrazioni `tests/data/assist/reg/` | – |
 
-Nessun crate nuovo, nessuna dipendenza nuova, nessun cambio a `Cargo.toml`, workflow o `pages.yml`.
+Nessun crate nuovo, nessuna dipendenza nuova, nessun cambio a `Cargo.toml`, workflow o `pages.yml` in A1–A8. Il Worker (`09-worker.md`) è l'eccezione da decidere in W0; la CSP cambia solo in W2. Codice del Worker e CSP stanno in PR DEV separate con via esplicita del Coordinatore.
 
 ## 3. Correzioni al codice esistente (in A1)
 
@@ -67,7 +67,10 @@ Nessun crate nuovo, nessuna dipendenza nuova, nessun cambio a `Cargo.toml`, work
 | A7 | `mzlab-cli assist run|eval|replay` e casi d'oro | `mzlab-cli`, `tests/data/assist/` | A6 | solo a mano |
 | T | Test con la chiave (`prompt/00_esecuzione-test.md`) | nessun codice; risultati nel privato | A7 | sì, chiave dedicata |
 | A8 | Pannello dell'assistente nel desktop (carte domande, letture, proposte) | `flow/lazy/flow-llm*.js`, `lang/` | T | no |
-| A9 | Sito | `llm/trasporto.html` | V1 | – |
+| W0 | Decisione: `spend` del Worker in `.wasm` (a, Cargo e workflow) o in JS con parità (b) | nessun codice | A1 | – |
+| W1 | Worker portabile, adattatore Cloudflare, `assist invito` | nuova cartella del Worker, `mzlab-cli` | A1, W0 | no (prove con fornitore finto) |
+| W2 | CSP di `llm/trasporto.html` (`api.anthropic.com` e host del Worker), scelta chiave/invito nel pannello | `llm/`, `lang/` | W1, indirizzo del Worker da Federico | – |
+| A9 | Sito: pannello dell'assistente come in A8 | `flow/lazy/flow-llm*.js` | A8, W2 | – |
 
 Prompt per le chat DEV: `08-prompt-dev.md`. A1–A7 sono la stessa chat DEV (zona `mzlab-llm`), A8 una seconda chat (zona pagina). Il test T lo lancia una chat con la chiave, mai una chat DEV.
 

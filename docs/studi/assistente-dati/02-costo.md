@@ -9,7 +9,7 @@
 | `claude-haiku-5-5` (prompt > 100 000 token) | 0,50 | 0,625 | 1,00 | 0,05 | 2,50 |
 | `claude-opus-5-5` (solo giudice facoltativo) | 4,00 | 5,00 | 8,00 | 0,20 | 20,00 |
 
-- Batch API: −50 % su ingresso e uscita, si somma alla cache (via V3). `inference_geo: "us"` costa ×1,1: non si usa.
+- Batch API: −50 % su ingresso e uscita, si somma alla cache (via V3a, scelta: si usa per le valutazioni a chiamata singola T1–T8; la lettura della cache nei lotti è possibile ma non garantita). `inference_geo: "us"` costa ×1,1: non si usa.
 - Uso degli strumenti: +286 token di sistema per richiesta con strumenti (`tool_choice` `auto`) su Sonnet 5.5 e Haiku 5.5.
 - Il ragionamento (thinking adattivo, sempre attivo su Sonnet 5.5) si paga come uscita: con effort `medium` l'uscita per turno include il ragionamento; `max_tokens` per ruolo lo limita.
 - Prefisso minimo per la cache: 512 token su Sonnet 5.5 e Haiku 5.5. La cache conta solo prefissi identici: strumenti → sistema → messaggi.
@@ -53,7 +53,7 @@ Ipotesi: 12 file, una corsa, 25 turni dell'orchestratore, 5 grafici. Prefisso st
 - Prima di ogni chiamata: costo massimo = ingresso stimato (`ceil(byte/3)`, prudente) × prezzo pieno + `max_tokens` × prezzo di uscita. Se speso + massimo > tetto la chiamata non parte (`err.llm.limit.spend`): il tetto non si supera mai, anche con una stima sbagliata dei token in uscita.
 - Arresto morbido: all'80 % (8 $) l'assistente lo dice una volta e propone di riassumere; al 100 % nessuna chiamata nuova, la risposta in corso finisce, restano attive le parti Rust (ispezione, proposte, controlli, grafici predefiniti) e l'esportazione della conversazione.
 - `max_tokens` per ruolo: router 200, grafici 1 000, subagenti 4 000, orchestratore 3 000 (più lunghi solo per un piano intero: 6 000).
-- Per persona: con chiave propria (sito V1a, desktop) il limite è quello della persona nella Console; con chiave condivisa serve la via V2. Nel test c'è una sola persona (Federico): tetto per sessione nel client + limite di spesa del workspace dedicato (200 $) nella Console; il 400 «specified workspace API usage limits» diventa `err.llm.limit.workspace` e ferma tutto senza ritentare.
+- Per persona: con chiave propria (sito V1a, desktop) il limite è quello della persona nella Console; con chiave condivisa i contatori per persona e per sessione li tiene il Worker (V2a, `09-worker.md`), con riserva del costo massimo prima dell'inoltro e saldo con `usage`. Nel test c'è una sola persona (Federico): tetto per sessione nel client + limite di spesa del workspace dedicato (200 $) nella Console; il 400 «specified workspace API usage limits» diventa `err.llm.limit.workspace` e ferma tutto senza ritentare.
 - Il 429 di frequenza con `retry-after` si ritenta al più 2 volte; il 429 senza `retry-after` (`enforced_spend_limit_reached`) non si ritenta mai.
 
 ## 5. Piano del test con 200 $ (ogni sessione ≤ 10 $)
@@ -73,13 +73,13 @@ Ipotesi: 12 file, una corsa, 25 turni dell'orchestratore, 5 grafici. Prefisso st
 | T10–T19 | 10 sessioni intere simulate (utente a copione, `prompt/00`) | tutti | ≈ 60 ciascuna | 10 × 1,00 | 10 ciascuna |
 | T20–T29 | 10 sessioni di Federico con file veri (risultati solo nel privato) | tutti | – | 10 × 2,50 | 10 ciascuna |
 | – | Giudice Opus facoltativo su 40 risposte aperte | Opus low | 40 | 1,00 | 5 |
-| | **Totale previsto** | | | **≈ 50 $** | |
+| | **Totale previsto** (con Batch su T1–T8: ≈ 44 $) | | | **≈ 50 $** | |
 | | Riserva per rifare T1–T9 dopo correzioni dei prompt (due giri) | | | ≈ 30 $ | |
 | | Margine non speso | | | ≈ 120 $ | |
 
 - La spesa reale si confronta con la stima dopo T0 e dopo T1: se lo scarto supera il 50 % si ricalcola la tabella prima di andare avanti.
-- Con la via V3 (Batch) T1–T9 costano la metà, ma i risultati arrivano entro 24 h.
-- Data limite dei crediti: 16/11/2026. Ordine pensato perché T0–T9 (≈ 14 $) dicano entro pochi giorni se l'architettura regge.
+- Con la Batch API (V3a) T1–T8 costano la metà (≈ 11,9 $ → ≈ 6 $) e i risultati arrivano entro 24 h (di solito meno di un'ora); T0, T9 e le sessioni intere restano chiamate dirette perché hanno più turni.
+- Data limite dei crediti: 16/11/2026. Ordine pensato perché T0–T9 (≈ 14 $, ≈ 8 $ con Batch) dicano entro pochi giorni se l'architettura regge.
 
 ## 6. Costo per compito (metrica del test)
 

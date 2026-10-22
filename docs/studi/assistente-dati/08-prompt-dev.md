@@ -50,8 +50,20 @@ Leggi: `docs/agenti/tutor.md` (modo con chiave), `06-valutazione.md`, `prompt/00
 1. `assist run DIR --replay R | --provider anthropic --key-file F [--yes] [--cap-usd 10] [--copione C]`: una sessione su una cartella di file (utente a copione per il test), stima prima, conferma, contatore, registro livello a.
 2. `assist eval CASI (--replay DIR | --provider … --yes)`: una riga JSON per caso, riassunto con costo; uscita 1 se una soglia di `06-valutazione.md` non passa.
 3. Trasporto `curl` con chiave e intestazioni su stdin, come `tutor eval`; nessun test lo raggiunge.
-Accettazione: `cargo test -p mzlab-cli --lib assist` con le registrazioni; nessuna chiave nelle uscite; il tetto ferma una sessione finta prima di superarlo.
+4. `assist eval --batch`: i casi a chiamata singola vanno in un lotto della Batch API (V3a), con stima e tetto contati prima dell'invio, attesa con interrogazioni distanziate (≥ 60 s) e risultati per `custom_id`; registrazioni `llmreg/1` del lotto per le prove.
+Accettazione: `cargo test -p mzlab-cli --lib assist` con le registrazioni (anche del lotto); nessuna chiave nelle uscite; il tetto ferma una sessione finta prima di superarlo.
 
 ## A8 — Pannello nel desktop
 Leggi: `docs/agenti/llm.md` §Pannello, `docs/agenti/flow-grafica.md`, `docs/agenti/lingue.md`. Tocca: `flow/lazy/flow-llm.js`, `flow-llm-tools.js`, nuovi `flow/lazy/flow-llm-cards.js` (domande, letture, proposte con «Apply»/«Discard», contatore di spesa), `lang/it.js`, `lang/en.js`, `tests_e2e/e2e_llm_assist.py`, `tour.js` se cambia un bersaglio.
 Accettazione: e2e con `replay`: carte visibili, «Apply» = una voce di `S.undo`, contatore che si ferma al tetto, «rules only» senza rete, axe 0 gravi.
+
+## W1 — Worker portabile (dopo W0 e via del Coordinatore)
+Leggi: `09-worker.md`, `02-costo.md` §4, `05-sicurezza.md`. Tocca: nuova cartella del Worker (`assist-proxy.js`, `adapters/cloudflare.js`, `adapters/memoria.js`, `wrangler.toml` senza segreti, prove), `crates/mzlab-cli/src/assist.rs` (sottocomando `invito`), `docs/agenti/assistente-dati.md`.
+1. Logica in un modulo con Request/Response standard; l'adattatore dà `secret` e `store` (riserva e saldo atomici, un Durable Object per persona).
+2. Regole di `09-worker.md` §2–4, con le chiavi d'errore in `lang/` per il pannello.
+3. Costo come deciso in W0.
+Accettazione: prove di `09-worker.md` §6 con fornitore finto e store in memoria; misura della CPU per richiesta su un flusso registrato lungo (≤ 10 ms o via dichiarata); nessuna chiave in nessun file; nessun deploy (lo fa Federico).
+
+## W2 — CSP e scelta chiave/invito
+Leggi: `09-worker.md` §7, `docs/agenti/llm.md` (trasporto), `docs/agenti/lingue.md`, `docs/agenti/accessibilita.md`. Tocca: `mzlab/web/llm/trasporto.html` (CSP `connect-src` con `https://api.anthropic.com` e l'host del Worker dato da Federico), pannello (scelta «My API key» / «Invitation code»), `lang/it.js`, `lang/en.js`, e2e.
+Accettazione: e2e con `replay` e con un Worker finto su `localhost`; CSP senza altri host; chiave e codice solo nell'iframe del trasporto; axe 0 gravi.

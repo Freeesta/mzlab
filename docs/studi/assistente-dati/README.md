@@ -16,6 +16,7 @@ Questo studio non contiene codice di prodotto e non ha fatto chiamate all'API. C
 | `06-valutazione.md` | compiti d'oro sui file sintetici, metriche, soglie di accettazione |
 | `07-mappa-codice.md` | cosa riusare, cosa inventare, tetti `.wasm`, piano di PR |
 | `08-prompt-dev.md` | un prompt per chat DEV, in ordine |
+| `09-worker.md` | Worker portabile per la chiave condivisa: invito, riserva e saldo, contatori per persona, cosa non registra |
 | `prompt/` | i prompt per l'API (sistema, router, subagenti, valutazione) e `00_esecuzione-test.md` |
 
 ## Cosa farebbe un professionista (e non era chiesto)
@@ -43,18 +44,40 @@ Questo studio non contiene codice di prodotto e non ha fatto chiamate all'API. C
 
 ## Decisioni principali (dettagli nei file)
 
-- Client: CLI (`mzlab-cli assist`, chiave da file, come `tutor eval`) e app desktop (trasporto `llm/*` esistente) subito; sito solo dopo la via V1.
+- Client: CLI (`mzlab-cli assist`, chiave da file, come `tutor eval`) e app desktop (trasporto `llm/*` esistente) subito; sito con la chiave dell'utente (V1a) o con un codice d'invito verso il Worker (V2a, `09-worker.md`).
 - Modelli: `claude-sonnet-5-5` a effort `medium` per analisi e dialogo; `claude-haiku-5-5` per instradamento e specifiche dei grafici; Opus mai nel prodotto, solo come giudice facoltativo nel test.
 - Niente codice libero: il modello propone piani `mzflow/2`, parametri e `grafico/1`, Rust valida, la pagina esegue e disegna.
-- Nessuna modifica a `Cargo.toml`, workflow, `pages.yml`: i moduli nuovi stanno in `mzlab-llm` e `mzlab-cli`.
+- Nessuna modifica a `Cargo.toml`, workflow, `pages.yml` in A1–A8: i moduli nuovi stanno in `mzlab-llm` e `mzlab-cli`. Worker e CSP in PR separate (W0–W2) con via del Coordinatore.
 
-## Vie da chiedere a Federico
+## Host per le prove del Worker (gratuiti, letti il 22/10/2026)
 
-| Via | Opzione a | Opzione b |
+| Host | Richieste gratuite | Flusso SSE di 60–120 s | Contatori atomici | Limiti d'uso | Segreto |
+|---|---|---|---|---|---|
+| Cloudflare Workers Free | 100 000/giorno | sì, finché il client è collegato; CPU 10 ms (l'attesa non conta) | Durable Objects SQLite: 100 000 righe/giorno; KV no (1 000 scritture/giorno) | nessuno | `npx wrangler secret put ANTHROPIC_KEY` o cruscotto |
+| Deno Deploy Free | 1 000 000/mese, CPU 10 h/mese | durata non scritta nelle pagine lette | Deno KV con transazioni atomiche: 500 000 unità di scrittura/mese | «for personal use and smaller projects» | variabili d'ambiente del progetto (comando non verificato) |
+| Vercel Hobby | 1 000 000 invocazioni/mese | sì: 300 s per funzione | troppo piccolo (Blob 2 000 scritture/mese) senza un servizio esterno | solo uso personale non commerciale: escluso per un corso | variabili del progetto |
+| Netlify Free | a crediti (300) | no: le funzioni in flusso si fermano a 60 s | Blobs senza controllo di concorrenza | nessuno trovato | variabili del sito |
+
+Fonti: pagine ufficiali di limiti e prezzi di ciascun host (Cloudflare: workers/platform/limits, durable-objects/platform/pricing, workers/configuration/secrets; Deno: deploy/pricing; Vercel: docs/limits, pricing; Netlify: functions/api, netlify-blobs). Non verificati: regione dei dati e scelta UE (nessuno dei quattro la dice nelle pagine lette per il piano gratuito); da controllare prima di dare inviti a studenti.
+
+**Consiglio: Cloudflare Workers Free con un Durable Object per persona.** È l'unico dei quattro con flusso lungo, contatori fortemente coerenti (un oggetto per persona serializza riserva e saldo) e nessun limite d'uso. Una richiesta scrive 2–3 righe: 100 000 righe/giorno bastano per ≈ 30 000 richieste.
+
+Rischio da misurare in W1: i 10 ms di CPU per richiesta con la lettura dell'`usage` dal flusso (si cercano solo gli eventi `message_start` e `message_delta`, senza decodificare il resto). Il passaggio a un piano a pagamento (Cloudflare Workers Paid o un altro host con il suo adattatore) non cambia la logica. Seconda scelta: Deno Deploy (KV atomico, ma durata del flusso da verificare).
+
+Passi di Federico (nessuno li fa una chat):
+1. Creare un account Cloudflare (piano gratuito) e installare `wrangler` sul Mac.
+2. Creare nella Console Anthropic un workspace «assistente» con limite di spesa (190 $) e una chiave solo per quel workspace.
+3. Dopo l'unione di W1: `npx wrangler secret put ANTHROPIC_KEY` (incolla la chiave quando la chiede) e `npx wrangler deploy` dalla cartella del Worker.
+4. Mandare al Coordinatore solo l'indirizzo pubblico del Worker (serve alla CSP di W2), mai la chiave.
+5. Creare gli inviti con `mzlab-cli assist invito nuovo` e darli alle persone a voce o per posta; revocarli a fine prova.
+
+## Vie (decise da Federico il 22/10/2026: V1a, V2a, V3a; V4 aperta)
+
+| Via | Scelta (a) | Alternativa scartata (b) |
 |---|---|---|
 | V1 sito | `api.anthropic.com` nella CSP di `llm/trasporto.html`, chiave dell'utente nel browser (intestazione `anthropic-dangerous-direct-browser-access`) | nessun host: l'assistente solo in desktop e CLI |
-| V2 tetto per persona con chiave condivisa | Worker con contatori per persona (Cloudflare: non dato) | una chiave o un workspace per persona con limite di spesa della Console; nessun server |
+| V2 tetto per persona con chiave condivisa | Worker portabile con contatori per persona (`09-worker.md`), prima su un host gratuito per le prove, poi a pagamento | una chiave o un workspace per persona con limite di spesa della Console; nessun server |
 | V3 valutazioni | Batch API con la chiave di test (−50 %, risultati entro 24 h) | solo chiamate dirette |
 | V4 livello b dei registri | dopo il parere del responsabile privacy | resta spento (stato attuale) |
 
-Il test con la chiave dedicata (via già data) non ha bisogno di V1, V2 o V3: gira dalla CLI con contatore locale e limite di spesa del workspace.
+Il test con la chiave dedicata gira dalla CLI con contatore locale e limite di spesa del workspace; le valutazioni a chiamata singola (T1–T8) passano dalla Batch API (V3a). Il Worker non serve al test: serve quando più persone usano la chiave condivisa.

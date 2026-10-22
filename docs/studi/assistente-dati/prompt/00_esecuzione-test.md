@@ -27,7 +27,7 @@ Lista ORDINATA delle sessioni del test T (`07-mappa-codice.md` §5). La lancia u
 | # | Comando (forma) | Casi | Prompt | Tetto | Stima | Decide |
 |---|---|---|---|---|---|---|
 | T0 | `assist eval casi/fumo` | 10 chiamate: Haiku e Sonnet, due turni con cache, un `max_tokens` basso voluto, un `refusal` provocato da un caso sintetico innocuo che chiede la chiave | 01, 02 | 1 $ | 0,30 $ | prezzi, `usage`, cache |
-| T1 | `assist eval oro --solo G01-G24 --ripeti 3 --ruolo metadati` | 72 | 03 | 10 $ | 2,90 $ | esattezza dei metadati |
+| T1 | `assist eval oro --solo G01-G24 --ripeti 3 --ruolo metadati --batch` | 72 | 03 | 10 $ | 2,90 $ | esattezza dei metadati |
 | T2 | come T1 con `--modello haiku --effort low` | 72 | 03 | 2 $ | 0,15 $ | Haiku basta? |
 | T3 | `--ruolo cromatografia`, 12 casi × 3 | 36 | 04 | 5 $ | 1,10 $ | lettura dei QC |
 | T4 | `--ruolo parametri`, G15–G22 e 8 varianti × 3 | 48 | 05 | 10 $ | 2,45 $ | errori nei parametri |
@@ -41,7 +41,9 @@ Lista ORDINATA delle sessioni del test T (`07-mappa-codice.md` §5). La lancia u
 | T10–T19 | `assist run OUT/serie-N --copione copioni/N.json` (sessioni intere simulate: apertura → domande → piano → corsa → tabella → 2 grafici) | 10 sessioni | 01–08 | 10 $ ciascuna | ≈ 1 $ ciascuna | TTL della cache, catalogo intero o ridotto |
 | T20–T29 | Federico con i suoi file, a mano | 10 sessioni | 01–08 | 10 $ ciascuna | ≈ 2,5 $ ciascuna | confronto con il chimico (`06-valutazione.md` §4) |
 
-Totale stimato ≈ 50 $ più la riserva di ≈ 30 $; margine non speso ≈ 120 $ entro il 16/11/2026.
+Le stime della tabella sono in chiamate dirette; T1–T8 si lanciano con `--batch`.
+
+Totale stimato ≈ 50 $ in chiamate dirette, ≈ 44 $ con T1–T8 sulla Batch API (V3a: `assist eval --batch`, −50 %, risultati entro 24 h, stessi tetti contati prima dell'invio del lotto); più la riserva di ≈ 30 $; margine non speso ≈ 125 $ entro il 16/11/2026. T0, T9 e T10–T29 restano chiamate dirette (più turni).
 
 ## 4. Copioni delle sessioni T10–T19 (dati sintetici)
 

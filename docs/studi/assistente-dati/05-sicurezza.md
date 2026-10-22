@@ -14,6 +14,7 @@ Difese (in ordine di forza):
 
 ## 2. Chiave e limiti
 
+- Chiave condivisa per gli inviti: solo segreto del Worker (`09-worker.md`), mai nella pagina, con limite di spesa del suo workspace; chiave propria dell'utente: solo nell'iframe del trasporto.
 - Chiave dedicata al test con limite di spesa del workspace (200 $), consegnata solo dal flusso di richiesta della credenziale, revocata a fine test. Mai in chat, nel repository, nei log, negli argomenti di processo (`curl` la legge da stdin come in `tutor eval`).
 - Guardie esistenti: `log::has_secret` (rifiuta `sk-`, `sk-ant-`, `AIza`), `tests/test_llm_chiavi.py`; la CLI nuova aggiunge un test che l'uscita di `assist` non contiene la chiave di prova finta.
 - Limiti di frequenza: un solo turno alla volta per sessione; al più 4 subagenti in parallelo; 429 con `retry-after` → 2 ritentativi; 429 di limite di spesa e 400 di limite del workspace → stop senza ritentativi (`02-costo.md` §4).
