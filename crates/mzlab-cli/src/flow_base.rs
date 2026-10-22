@@ -38,7 +38,7 @@ fn item_path(r: &FileRunner, job: &Job) -> PathBuf {
 }
 
 pub(crate) fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
-    match job.item {
+    match &job.item_root {
         Some(k) => r.work.join(format!("{}-{k}.{ext}", job.instance.id)),
         None => r.work.join(format!("{}.{ext}", job.instance.id)),
     }
@@ -270,9 +270,9 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
     })
 }
 
-/// The file `convert.mzml` writes in the work folder for item `item` of the instance `instance`.
-pub(crate) fn convert_file(instance: &str, item: usize) -> String {
-    format!("{instance}-{item}.mzML")
+/// The file `convert.mzml` writes in the work folder for the input whose file-name root is `root` (`Job::item_root`) of the instance `instance`.
+pub(crate) fn convert_file(instance: &str, root: &str) -> String {
+    format!("{instance}-{root}.mzML")
 }
 
 /// A parameter of the job as a number, `default` when the plan does not carry it.
@@ -294,9 +294,10 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
             .any(|(k, v)| k == "numpress" && v.bool() == Some(true)),
         ..Opzioni::default()
     };
-    let out = r
-        .work
-        .join(convert_file(&job.instance.id, job.item.unwrap_or(0)));
+    let out = r.work.join(convert_file(
+        &job.instance.id,
+        job.item_root.as_deref().unwrap_or("0"),
+    ));
     let peaks = match job
         .resolved
         .params

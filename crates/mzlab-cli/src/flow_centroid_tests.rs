@@ -92,7 +92,7 @@ fn a_profile_file_gets_the_centres_of_its_peaks_and_the_bytes_of_the_archive_con
         run.skipped.is_empty() && !prov.contains("\"error\""),
         "{prov}"
     );
-    let got = std::fs::read(d.join("w/c-0.mzML")).unwrap();
+    let got = std::fs::read(d.join("w/c-p.mzML")).unwrap();
     let mut want = Vec::new();
     mzlab_core::centroidi::mzml_to_centroids(
         || Ok(src.as_slice()),
@@ -121,7 +121,7 @@ fn a_profile_file_gets_the_centres_of_its_peaks_and_the_bytes_of_the_archive_con
 
 fn run_again(d: &Path, first: &[u8]) {
     run(d, &plan("{}"), "w2");
-    assert_eq!(std::fs::read(d.join("w2/c-0.mzML")).unwrap(), first);
+    assert_eq!(std::fs::read(d.join("w2/c-p.mzML")).unwrap(), first);
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn the_parameters_reach_the_centroider() {
     run(&d, &plan("{}"), "w");
     // a threshold no peak reaches leaves no centroid: the value of --set is the one used
     run(&d, &plan(r#"{"threshold":1e9}"#), "hi");
-    let strict = centres(&std::fs::read(d.join("hi/c-0.mzML")).unwrap());
+    let strict = centres(&std::fs::read(d.join("hi/c-p.mzML")).unwrap());
     assert!(strict.iter().all(Vec::is_empty), "{strict:?}");
     let wide = run(&d, &plan(r#"{"fwhm":0.9}"#), "wide").1;
     assert!(wide.contains("0.9"), "{wide}");
@@ -173,7 +173,7 @@ fn a_centroid_file_goes_through_and_the_table_is_the_same_as_without_the_step() 
     run(&d, &chain(&refs_in.join(","), false), "plain");
     run(&d, &chain(r#""cen.mzml""#, true), "cen");
     for (n, b) in &files {
-        let k = files.iter().position(|f| f.0 == *n).unwrap();
+        let k = n.trim_end_matches(".mzML");
         assert_eq!(
             std::fs::read(d.join(format!("cen/cen-{k}.mzML"))).unwrap(),
             *b,
@@ -199,7 +199,7 @@ fn the_index_after_the_step_holds_centroids_and_the_one_without_it_profile() {
     run(&d, plain, "a");
     run(&d, after, "b");
     let profile_of = |w: &str| {
-        let f = std::fs::File::open(d.join(w).join("i-0.mzidx")).unwrap();
+        let f = std::fs::File::open(d.join(w).join("i-p.mzidx")).unwrap();
         let size = f.metadata().unwrap().len();
         let idx = mzlab_core::idxread::Index::open(f, size).unwrap();
         idx.scans.iter().all(|s| s.profile)

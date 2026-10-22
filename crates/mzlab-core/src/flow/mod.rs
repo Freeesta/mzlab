@@ -22,7 +22,7 @@ pub use parse::parse;
 pub use prov::{
     prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
-pub use run::{execute, Artifact, Job, Outcome, Run, Runner};
+pub use run::{execute, file_roots, Artifact, Job, Outcome, Run, Runner};
 pub use write::plan_json;
 
 use crate::json::Value;

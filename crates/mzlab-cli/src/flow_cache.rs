@@ -1,5 +1,5 @@
 //! The cache of a run folder: what each job made, under its `flow::cache_key` (inputs by SHA-256, step, algorithm, canonical parameters) plus the
-//! instance, the item and the version of the program. A job whose key is in `cache/index.json` and whose files are still there with the same SHA-256 is
+//! instance and the version of the program (the file of an item is in its inputs). A job whose key is in `cache/index.json` and whose files are still there with the same SHA-256 is
 //! not run again: its outcome says `cached`. Used by the `FileRunner` of `flow.rs` (`flow run`, the route `flow/run` of the desktop app).
 
 use std::collections::HashMap;
@@ -60,10 +60,9 @@ impl Cache {
             .flat_map(|(port, v)| v.iter().map(move |a| format!("{port}={}", a.sha256)))
             .collect();
         let who = format!(
-            "{} {} {:?} {} {}",
+            "{} {} {} {}",
             job.instance.step_ref(),
             job.instance.id,
-            job.item,
             env!("CARGO_PKG_VERSION"),
             option_env!("MZLAB_COMMIT").unwrap_or("")
         );
@@ -88,7 +87,14 @@ impl Cache {
             return None;
         }
         if let Some(l) = &e.lineage {
-            r.trace(&a, l.clone());
+            // the position of the file in the plan may have changed since the entry was made
+            r.trace(
+                &a,
+                Lineage {
+                    item: job.item,
+                    ..l.clone()
+                },
+            );
         }
         let port = job.step.outs.iter().find(|p| p.name == e.port)?.name;
         self.now
