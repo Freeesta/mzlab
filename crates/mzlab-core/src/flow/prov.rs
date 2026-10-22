@@ -43,6 +43,8 @@ pub struct Activity {
     pub params_sha256: String,
     /// Parameter, proof of the estimate.
     pub estimates: Vec<(String, Value)>,
+    /// Input of the plan, what the step says of it: only the per-file steps that tell write it.
+    pub files: Vec<(String, Value)>,
     pub used: Vec<String>,
     pub generated: Vec<String>,
     pub ms: f64,
@@ -92,6 +94,10 @@ fn activity(o: &mut Out, a: &Activity) {
     if !a.estimates.is_empty() {
         o.raw(",\"estimates\":");
         object(o, &a.estimates);
+    }
+    if !a.files.is_empty() {
+        o.raw(",\"files\":");
+        object(o, &a.files);
     }
     o.raw(",\"used\":");
     strs(o, &a.used);

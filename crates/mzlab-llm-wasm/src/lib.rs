@@ -40,6 +40,30 @@ pub fn inspect_build(sources_json: &str, budget_tokens: u32) -> Result<String, S
     mzlab_llm::inspect::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
 }
 
+/// The named views of the sources (`chart_views::views_json`): the list the drawing prompt gets.
+#[wasm_bindgen]
+pub fn chart_views(sources_json: &str) -> Result<String, String> {
+    let views = mzlab_llm::chart_views::views_of(sources_json).map_err(fail)?;
+    Ok(mzlab_llm::chart_views::views_json(&views))
+}
+
+/// A `grafico/1` of the model, validated and filled with its rows (`chart::make`), or the `err.llm.chart.*` for the model.
+#[wasm_bindgen]
+pub fn chart_validate(spec_json: &str, sources_json: &str) -> Result<String, String> {
+    let views = mzlab_llm::chart_views::views_of(sources_json).map_err(fail)?;
+    mzlab_llm::chart::make(spec_json, &views).map_err(fail)
+}
+
+/// The charts that need no model, as a JSON array of `grafico/1` with their rows.
+#[wasm_bindgen]
+pub fn chart_presets(sources_json: &str) -> Result<String, String> {
+    let views = mzlab_llm::chart_views::views_of(sources_json).map_err(fail)?;
+    Ok(format!(
+        "[{}]",
+        mzlab_llm::chart_views::presets(&views).join(",")
+    ))
+}
+
 pub(crate) fn fail(e: Error) -> String {
     let mut o = mzlab_core::json::Out::default();
     o.raw("{\"error\":")

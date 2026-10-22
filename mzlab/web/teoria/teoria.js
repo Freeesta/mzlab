@@ -105,7 +105,7 @@ const TP = (() => {
       `<a id="tab-teoria" href="index.html" class="on" aria-current="page">${TAB.teoria}</a></nav>`;
     top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" :
       `<a id="logo" href="${!prog ? "index.html" : PHONE ? "../../" : "../../#/data"}" aria-label="${!prog ? "Teoria: introduzione" : PHONE ? APP : APP + ": Dati"}"><img src="../logo-64.png" alt="m/z" width="28" height="28"></a>` + tabs + `<span class="sp"></span>`);
-    document.body.prepend(top);
+    document.body.prepend(top); document.body.classList.add("hdr");   // the blank box that stood in for the header (teoria.css) is gone
     const side = $("#side"); side.setAttribute("aria-label", "Indice dei capitoli e della pagina");
     // «Salta al contenuto»: first thing reached with Tab, visible only on focus
     const mn = $("main"); mn.id = mn.id || "contenuto"; mn.tabIndex = -1;

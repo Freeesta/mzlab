@@ -58,9 +58,13 @@ fn the_cleavage_that_gives_the_node_is_found_with_its_ppm_and_atoms() {
 fn the_graph_without_the_key_does_not_change_and_the_answer_is_deterministic() {
     let base = text(run(&["--smiles", SMILES]));
     let con = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
-    let prefisso = base.trim_end().strip_suffix('}').unwrap();
+    let (prefisso, vista) = base.trim_end().split_once(",\"vista\":").unwrap();
     assert!(con.starts_with(prefisso), "the graph part keeps its bytes");
     assert!(con[prefisso.len()..].starts_with(",\"strutture\":{"));
+    assert!(
+        con.trim_end().ends_with(&format!(",\"vista\":{vista}")),
+        "the view stays the last key"
+    );
     assert_eq!(con, text(run(&["--smiles", SMILES, "--strutture", "3"])));
 }
 
@@ -110,4 +114,84 @@ fn a_missing_structure_node_or_a_bad_smiles_is_a_keyed_error() {
         assert_ne!(o.code, 0, "{extra:?}");
         assert!(o.stderr.contains(key), "{extra:?}: {}", o.stderr);
     }
+}
+
+#[test]
+fn every_node_of_level_two_or_more_with_a_cleavage_is_in_strutture_tutti() {
+    let t = text(run(&["--smiles", SMILES, "--strutture", "tutti"]));
+    let v = mzlab_core::json::parse(t.as_bytes()).unwrap();
+    assert!(v.get("strutture").is_none());
+    let nodi: Vec<&str> = v
+        .get("strutture_tutti")
+        .unwrap()
+        .arr()
+        .iter()
+        .filter_map(|s| s.get("nodo")?.str())
+        .collect();
+    assert!(nodi.contains(&"n3"), "{nodi:?}");
+    assert!(!nodi.contains(&"n0"), "the root is level 1");
+    // the same cleavages as asking node by node
+    let uno = text(run(&["--smiles", SMILES, "--strutture", "n3"]));
+    let uno = mzlab_core::json::parse(uno.as_bytes()).unwrap();
+    let in_tutti = v
+        .get("strutture_tutti")
+        .unwrap()
+        .arr()
+        .iter()
+        .find(|s| s.get("nodo").unwrap().str() == Some("n3"))
+        .unwrap();
+    assert_eq!(in_tutti, uno.get("strutture").unwrap());
+    assert_eq!(t, text(run(&["--smiles", SMILES, "--strutture", "tutti"])));
+}
+
+#[test]
+fn the_molfile_is_written_back_and_complete_adds_the_view_to_an_old_graph() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_molfile_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mol = dir.join("x.mol");
+    std::fs::write(
+        &mol,
+        "\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\nM  END\n",
+    )
+    .unwrap();
+    let con = text(run(&[
+        "--smiles",
+        SMILES,
+        "--molfile",
+        mol.to_str().unwrap(),
+    ]));
+    let v = mzlab_core::json::parse(con.as_bytes()).unwrap();
+    assert!(v
+        .get("opzioni")
+        .unwrap()
+        .get("molfile")
+        .unwrap()
+        .str()
+        .unwrap()
+        .contains("M  END"));
+    // an old graph (no view) is completed with the bytes the engine writes
+    let vecchio = dir.join("old.json");
+    let (testa, _) = con.trim_end().split_once(",\"vista\":").unwrap();
+    std::fs::write(&vecchio, format!("{testa}}}")).unwrap();
+    let o = execute(&[
+        "msn-graph".to_string(),
+        "complete".into(),
+        vecchio.to_str().unwrap().into(),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert_eq!(String::from_utf8(o.stdout).unwrap(), con);
+    // what is not an msngrafo/1 is a keyed error
+    std::fs::write(&vecchio, "{\"formato\":\"msnlib/1\"}").unwrap();
+    let o = execute(&[
+        "msn-graph".to_string(),
+        "complete".into(),
+        vecchio.to_str().unwrap().into(),
+    ]);
+    assert_eq!(o.code, 2);
+    assert!(
+        o.stderr.contains("badGraph") || o.stderr.contains("msngrafo"),
+        "{}",
+        o.stderr
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

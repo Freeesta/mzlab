@@ -1172,6 +1172,7 @@
                   "molecule",
                   "adduct",
                   "smiles",
+                  "molfile",
                   "ppm_formula",
                   "mz_basso",
                   "ppm_basso",
@@ -1211,6 +1212,11 @@
                     "description":"Written back in the graph; it does not change the numbers"
                   },
                   {
+                    "type":"string",
+                    "default":"",
+                    "description":"The 2D structure as a molfile, written back in the graph for the drawings; it does not change the numbers"
+                  },
+                  {
                     "type":"number",
                     "minimum":0,
                     "default":10,
@@ -1242,7 +1248,7 @@
                   {
                     "type":"string",
                     "default":"",
-                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); empty = none"
+                    "description":"Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `tutti` = the key `strutture_tutti` for every node of level 2 or more; empty = none"
                   },
                   {
                     "type":"number",

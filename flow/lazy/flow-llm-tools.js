@@ -62,7 +62,16 @@
     try { AZ.esegui(id, a.args); return good({ shown: a.show }); } catch (_) { return bad("err.llm.tool.unavailable", { tool: a.show }); }
   };
 
-  /** the tools bound to one Flow page; `ctx`: {S, select(instance), propose(plan, note), edited(label)}, `ctx.runs` the states of the steps of the last run @param {any} ctx */
+  /** a chart of the model: Rust checks the specification against the views and fills the rows; a rejection goes back to the model with the views that exist @param {any} ctx @param {{spec: any}} a */
+  const chartTool = async (ctx, a) => {
+    const r = await ctx.chart(a.spec);
+    if (!r.ok) return bad(r.key, { ...r.params, views: await ctx.chartViews().then((/** @type {any[]} */ v) => v.map(x => x.ref)).catch(() => []) });
+    ctx.showChart(r.chart);
+    if (r.chart.error === "no_view") return good({ shown: false, error: "no_view", why: r.chart.why });
+    return good({ shown: true, title: r.chart.title, mark: r.chart.mark, rows: r.chart.data.rows.length, reduced: r.chart.data.reduced });
+  };
+
+  /** the tools bound to one Flow page; `ctx`: {S, select(instance), propose(plan, note), edited(label), chart(spec), chartViews(), showChart(chart)}, `ctx.runs` the states of the steps of the last run @param {any} ctx */
   const llmTools = ctx => {
     const S = ctx.S;
     const problems = (/** @type {any} */ plan) => F.validate(plan, S.reg).map((/** @type {any} */ p) => ({ error_key: p.key, instance: p.instance || "", port: p.port || "", params: p.params || {} }));
@@ -129,7 +138,7 @@
     T.flow_run = a => runTool(ctx, a, problems);
 
     T.ui_show = a => showTool(ctx, a);
-    for (const n of ["data_summary", "chart_make", "code_export"]) T[n] = () => bad("err.llm.tool.unavailable", { tool: n });
+    T.chart_make = a => chartTool(ctx, a); for (const n of ["data_summary", "code_export"]) T[n] = () => bad("err.llm.tool.unavailable", { tool: n });
 
     return {
       /** one call of the model: {ok, content}; a tool that throws is a failed call, never a broken page @param {string} name @param {any} args */

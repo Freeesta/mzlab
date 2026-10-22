@@ -269,3 +269,45 @@ fn two_aligns_on_the_same_peaks_give_the_family_table_and_the_ion_table() {
     assert!(!fam.is_empty() && !ion.is_empty() && fam != ion);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn a_mixed_series_centroids_the_profile_files_only_and_the_record_says_which() {
+    let cen = centroid_mzml(10.0);
+    let d = dir(
+        "mix",
+        &[
+            ("p.mzML", profile(20, &PEAKS)),
+            ("s_t010.mzML", cen.clone()),
+        ],
+    );
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"p.mzML","type":"raw"},{"name":"s_t010.mzML","type":"raw"}],"steps":[
+        {"id":"c","step":"spectra.centroid@1","in":{"source":["file:p.mzML","file:s_t010.mzML"]}}]}"#;
+    let (run, prov) = run(&d, plan, "w");
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    assert_eq!(std::fs::read(d.join("w/c-s_t010.mzML")).unwrap(), cen);
+    assert!(!centres(&std::fs::read(d.join("w/c-p.mzML")).unwrap())[0].is_empty());
+    let files = prov.split("\"files\":").nth(1).expect(&prov);
+    let (p, s) = (
+        files.find("\"p.mzML\"").unwrap(),
+        files.find("\"s_t010.mzML\"").unwrap(),
+    );
+    assert!(
+        files[p..s.max(p)].contains("\"via\":\"centroided\""),
+        "{files}"
+    );
+    assert!(files[s..].contains("\"via\":\"passthrough\""), "{files}");
+    // a second run takes both from the cache and says the same
+    let again = run_cached(&d, plan);
+    assert!(
+        again.contains("\"via\":\"centroided\"") && again.contains("\"via\":\"passthrough\""),
+        "{again}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+fn run_cached(d: &Path, plan: &str) -> String {
+    run(d, plan, "w").1
+}

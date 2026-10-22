@@ -28,6 +28,8 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
 | mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`) |
 | scandump, oracolo RFR | `docs/agenti/scandump.md` |
+| velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_banco`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
+| tabella cumulativa dei guadagni di velocità (data · PR · passo · prima · dopo · %) | `docs/agenti/misure-velocita.md` |
 | lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
 | lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
 | Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
@@ -66,7 +68,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
-| misure dei motori | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; esportazioni: `misure-esporta.md`) |
+| misure dei motori | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |

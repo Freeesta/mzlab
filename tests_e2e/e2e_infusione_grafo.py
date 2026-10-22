@@ -30,7 +30,9 @@ STAND_IN = """(fx) => {
       const j = JSON.parse(JSON.stringify(fx));
       if (!q.get("formula")) { j.ione = null; j.nodi.forEach(n => { n.formula = null; }); }
       (JSON.parse(q.get("scelte") || "[]")).forEach(c => { const n = j.nodi.find(x => Math.abs(x.mz - c.mz) < 1e-3); if (n && n.formula) { n.formula.scelta = c.formula; n.formula.fonte = "utente"; } });
-      const sx = j._sx; delete j._sx; if (sx && q.get("strutture")) j.strutture = Object.assign({}, sx, { nodo: q.get("strutture") });
+      const sx = j._sx; delete j._sx;
+      if (sx && q.get("strutture") === "tutti") j.strutture_tutti = [Object.assign({}, sx, { nodo: "n2" })];
+      else if (sx && q.get("strutture")) j.strutture = Object.assign({}, sx, { nodo: q.get("strutture") });
       if (q.get("interpreta") === "1") j.interpretazione = { versione: 1, ppm: 10, archi: j.archi.map(a => ({ da: a.da, a: a.a, attivazioni: ["cid"], perdita: { nome: "Carbon dioxide", formula: "CO2", massa: 43.98983, errore_ppm: 0.4, fonte: "formula", confidenza: "high", alternative: [] } })) };
       j.avvisi = [{ chiave: "warn.msngrafo.isolation", albero: "x", nodo: "n1" }];
       return Promise.resolve(jr(j));
@@ -104,7 +106,9 @@ try:
             pg.click(".ig-node[data-id=n0]"); pg.wait_for_selector(".ig-draw", timeout=10000)
             assert pg.locator(".ig-cuts").count() == 0
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-cuts .ig-cut", timeout=10000)
-            assert any("strutture=n2" in r[1] and "smiles=" in r[1] for r in pg.evaluate("window.__REQ")), pg.evaluate("window.__REQ.map(r=>r[1])")
+            reqs = [r[1] for r in pg.evaluate("window.__REQ")]
+            assert any("strutture=tutti" in r and "smiles=" in r and "molfile=" in r for r in reqs), reqs[-3:]
+            assert not any("strutture=n2" in r for r in reqs), "the cuts of every ion come in the one graph request"
             txt = pg.inner_text(".ig-str")
             assert "C2-O3" in txt and "-0.35 ppm" in txt.replace("−", "-") and "226.0499" in txt and "hypothesis" in txt or pg.evaluate("I18N.lang") != "en", txt
             assert pg.locator(".ig-cuts caption").count() == 1 and pg.locator(".ig-cuts th[scope=col]").count() == 6
@@ -118,6 +122,70 @@ try:
             assert pg.evaluate("TPDraw.mark([[1, 2]])") == 1 and pg.evaluate("TPDraw.mark([[0, 9]])") == 0
             pg.evaluate("setView('data')"); drawer(pg, "gra"); pg.wait_for_selector(".ig-node", timeout=15000)
         step("a node with a SMILES lists the cut candidates with ppm; one opens Draw and marks the bond", cuts)
+        TEXTS = """() => { const w = document.createTreeWalker(document.querySelector('.ig-svg'), NodeFilter.SHOW_TEXT); const out = []; while (w.nextNode()) { const t = w.currentNode.nodeValue.replace(/MS\\d/g, ''); if (/[A-Z][a-z]?[0-9]/.test(t)) out.push(t); } return out; }"""
+        OVERLAP = """() => { const r = [...document.querySelectorAll('.ig-svg .ig-box')].map(e => e.getBoundingClientRect()); let n = 0; for (let i = 0; i < r.length; i++) for (let k = i + 1; k < r.length; k++) { const a = r[i], b = r[k]; if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) n++; } return n; }"""
+        ids = lambda: pg.evaluate("[...document.querySelectorAll('.ig-node')].map(n => n.dataset.id).sort()")
+        V = fx["vista"]
+        def labels():
+            pg.click("#ig-vt"); pg.wait_for_selector(".ig-svg[data-mode=tree]")
+            txt = lambda i: pg.evaluate("i => document.querySelector(`.ig-node[data-id=${i}]`).textContent", i)
+            assert "23.4 %" in txt("n1") and "MS2" in txt("n1"), txt("n1")
+            assert "%" not in txt("n0").split("m/z")[1].split("MS1")[0] and "MS1" in txt("n0"), txt("n0")
+            assert "MS2, MS3" in txt("n2"), txt("n2")
+            assert not pg.evaluate(TEXTS), pg.evaluate(TEXTS)
+            lab = pg.get_attribute(".ig-node[data-id=n0]", "aria-label")
+            assert "305.1000" in lab and "C14H15N3O5+" in lab and "MS1" in lab, lab
+            assert pg.locator(".ig-node.common").count() == 2 and "×2" in txt("n2")
+            best = sum(1 for a in V["archi"] if a["best"])
+            assert pg.locator(".ig-arc.best").count() == best and pg.locator(".ig-arc.alt").count() == len(V["archi"]) - best
+            assert pg.evaluate("document.querySelector('.ig-svg').textContent").count("Δ 87.980 Da") >= 1
+            assert "Shortest observed path" in pg.inner_text("#ig-bp") or pg.evaluate("I18N.lang") != "en"
+            assert pg.evaluate(OVERLAP) == 0
+        step("labels: m/z, % of the base peak, MS levels, losses as Δ Da, subscripts apart, plain aria-label, doubled border for common ions", labels)
+        def views():
+            pg.click(".ig-node[data-id=n2]"); pg.click("#ig-vr"); pg.wait_for_selector(".ig-svg[data-mode=radial]", timeout=5000)
+            assert pg.get_attribute("#ig-vr", "aria-pressed") == "true" and pg.get_attribute("#ig-vt", "aria-pressed") == "false"
+            assert len(ids()) == len(fx["nodi"]) and pg.evaluate("INFG.G.sel") == "n2"
+            assert pg.locator(".ig-node.sel[data-id=n2]").count() == 1 and pg.evaluate(OVERLAP) == 0
+            assert not pg.evaluate(TEXTS), pg.evaluate(TEXTS)
+            c = pg.evaluate("(() => { const b = id => { const r = document.querySelector(`.ig-node[data-id=${id}] .ig-box`).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }; const ring = document.querySelector('.ig-ring').getBoundingClientRect(); return [b('n0'), [ring.x + ring.width / 2, ring.y + ring.height / 2]]; })()")
+            assert abs(c[0][0] - c[1][0]) < 3 and abs(c[0][1] - c[1][1]) < 3, c
+            sizes = pg.evaluate("[...document.querySelectorAll('#ig-bar2 .bt, #ig-bar2 input:not([type=checkbox]), #ig-bar2 select, #ig-bar2 label')].map(b=>{const r=b.getBoundingClientRect();return Math.min(r.width,r.height)})")
+            assert min(sizes) >= 24, sizes
+            pg.focus(".ig-node[data-id=n0]"); pg.keyboard.press("ArrowRight"); attendi(pg, "INFG.G.sel === 'n3'")
+            pg.keyboard.press("ArrowDown"); attendi(pg, "INFG.G.sel === 'n2'"); pg.keyboard.press("ArrowLeft"); attendi(pg, "INFG.G.sel === 'n0'")
+            pg.click("#ig-vt"); pg.wait_for_selector(".ig-svg[data-mode=tree]"); assert pg.evaluate("INFG.G.sel") == "n0" and len(ids()) == len(fx["nodi"])
+        step("the Tree / Radial switch keeps the ion, puts the precursor in the middle, no box over another; arrows follow the rings", views)
+        def filters():
+            n = len(fx["nodi"])
+            pg.check("#ig-best"); assert pg.locator(".ig-arc").count() == sum(1 for a in V["archi"] if a["best"]); pg.uncheck("#ig-best")
+            pg.fill("#ig-minrel", "30"); pg.dispatch_event("#ig-minrel", "change")
+            assert "n1" not in ids() and "n4" not in ids() and len(ids()) == n - 2, ids()
+            pg.fill("#ig-minrel", "0"); pg.dispatch_event("#ig-minrel", "change")
+            pg.select_option("#ig-lvl", "2"); assert ids() == ["n0", "n1", "n2", "n3"], ids(); pg.select_option("#ig-lvl", "0")
+            pg.click(".ig-node[data-id=n2]"); pg.click("#ig-collapse")
+            assert "n5" not in ids() and "n6" in ids() and pg.get_attribute("#ig-collapse", "aria-pressed") == "true", ids()
+            assert "closed" in (pg.text_content(".ig-node[data-id=n2]") or "") or pg.evaluate("I18N.lang") != "en"
+            pg.click("#ig-collapse"); assert len(ids()) == n
+        step("filters: best path only, min %, highest MS level, close and open a subtree", filters)
+        def structures():
+            assert pg.locator(".ig-node[data-id=n0] .ig-thumb").count() == 1, "the molecule is drawn at the root"
+            assert pg.locator(".ig-node[data-id=n1] .ig-thumb").count() == 0, "no drawing without cuts"
+            hl = pg.evaluate("[...document.querySelectorAll('.ig-node[data-id=n2] .ig-thumb .ig-hl')].map(c => +c.getAttribute('data-atom')).sort((a, b) => a - b)")
+            assert hl == SX["candidati"][0]["tagli"][0]["pezzo"], (hl, pg.evaluate("document.querySelector('.ig-node[data-id=n2] .ig-thumb .ig-hl').outerHTML"))
+            assert pg.locator(".ig-node[data-id=n2] .ig-hyp").count() == 1
+            pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-hypo svg .ig-hl", timeout=10000)
+            assert pg.locator(".ig-hypo svg .ig-hl").count() == len(hl)
+            pg.uncheck("#ig-structs"); assert pg.locator(".ig-thumb").count() == 0; pg.check("#ig-structs"); assert pg.locator(".ig-thumb").count() == 2
+            pg.click("#ig-vr"); pg.wait_for_selector(".ig-svg[data-mode=radial] .ig-thumb"); assert pg.evaluate(OVERLAP) == 0; pg.click("#ig-vt")
+        step("drawings: the molecule at the root, the piece of the best cut highlighted (atoms = pezzo) only where there are cuts", structures)
+        def axe():
+            ax = axe_path()
+            if not ax: return
+            pg.add_script_tag(path=ax)
+            v = pg.evaluate("axe.run('#ig-wrap, #ig-bar2, #ig-node', {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length]))")
+            assert not v, v
+        step("axe-core: the graph, the view bar and the node panel have no violation (when axe is installed)", axe)
         def exports():
             pg.click(".ig-node[data-id=n2]")
             got = []
@@ -156,8 +224,8 @@ try:
             assert "interpreta=1" in pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]")
             assert all("interpreta" not in r[1] for r in json.loads(pg.evaluate("JSON.stringify(window.__REQ.filter(r=>r[0]==='api/msn_grafo/export'))")))
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-int li", timeout=10000)
-            t = pg.inner_text(".ig-int"); assert "Carbon dioxide" in t and "CO2" in t and "high confidence" in t, t
-            assert "Activation and energy: CID 35" in pg.inner_text(".ig-act"), pg.inner_text("#ig-node") if pg.query_selector("#ig-node") else ""
+            t = pg.inner_text(".ig-int"); assert "Carbon dioxide" in t and "CO₂" in t and pg.evaluate("I18N.t('msngrafo.int.high')") in t, t
+            assert pg.evaluate("I18N.t('msngrafo.act.line', { list: 'CID 35' })") in pg.inner_text(".ig-act"), pg.inner_text(".ig-act")
         step("The panel of a node shows the neutral loss as evidence", interp)
         def data():
             pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
@@ -215,6 +283,8 @@ try:
             assert "N2-C3" in txt and "138.066" in txt and "ppm" in txt, txt
             assert pg4.locator(".ig-cuts caption").count() == 1 and pg4.locator(".ig-cuts th[scope=col]").count() == 6
             assert not [m for m in pg4.evaluate("window.MZLAB_LR_MISS || []") if "msn_grafo" in m], pg4.evaluate("window.MZLAB_LR_MISS")
+            pg4.wait_for_selector(".ig-node[data-id=n3] .ig-thumb .ig-hl", timeout=30000)
+            assert pg4.locator(".ig-node[data-id=n0] .ig-thumb").count() == 1
         step("the real engine answers the cut table of a node (no stand-in)", real_cuts)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)

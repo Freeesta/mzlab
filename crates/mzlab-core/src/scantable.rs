@@ -610,20 +610,28 @@ fn read_walked<R: ReadAt>(
         if let Some(b) = budget {
             stima::check_walk(b, rows.len(), a, size)?;
         }
-        // find "</spectrum>" after a
+        // find "</spectrum>" after a: in the buffer that holds `a` when the spectrum ends inside it, else by reading ahead
+        let from = (a - buf_off) as usize;
         let mut n: u64 = 1 << 16;
-        let b = loop {
-            let chunk = src.read(a, a + n)?;
-            if let Some(p) = find(&chunk, b"</spectrum>") {
-                let b = a + p as u64 + 11;
-                let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
-                push(rows, a, b, &chunk[..hdr_end]);
-                break Some(b);
+        let b = if let Some(p) = find(&buf[from..], b"</spectrum>") {
+            let chunk = &buf[from..from + p];
+            let hdr_end = find(chunk, b"<binaryDataArrayList").unwrap_or(p);
+            push(rows, a, a + p as u64 + 11, &chunk[..hdr_end]);
+            Some(a + p as u64 + 11)
+        } else {
+            loop {
+                let chunk = src.read(a, a + n)?;
+                if let Some(p) = find(&chunk, b"</spectrum>") {
+                    let b = a + p as u64 + 11;
+                    let hdr_end = find(&chunk[..p], b"<binaryDataArrayList").unwrap_or(p);
+                    push(rows, a, b, &chunk[..hdr_end]);
+                    break Some(b);
+                }
+                if a + n >= size {
+                    break None;
+                }
+                n *= 4;
             }
-            if a + n >= size {
-                break None;
-            }
-            n *= 4;
         };
         let Some(b) = b else { break };
         last_end = b;

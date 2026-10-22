@@ -22,11 +22,13 @@ Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro
 - `chromatogram`: `id`, `kind` (tic, bpc, pressure, analog, pda, ...), `unit`, `time[]`, `values[]`.
 - `status`: `scan`, `rt`, `values{etichetta: testo}`, campionata (al massimo 16 istanti).
 - `error`: `rt`, `message` (una per voce del registro errori).
+- `sequence`: la riga di sequenza (`row_number`, `injection_vial`, `injection_volume`, `sample_weight`, `sample_volume`, `istd_amount`, `dilution_factor`, `id`, `comment`, `instrument_method`, `processing_method`, `raw_file_name`, `path`, `vial`, `user_text[]`).
+  Il nostro lettore aggiunge `unknown_numbers{}` e `unknown_texts{}` per posizione (campi di cui non si conosce il significato, extra per il comparatore: servono ad accoppiarli con Sample Type, Level, calibrazione del dump RFR). `asinfo`: `preamble` (24 byte in esadecimale), `text`.
 - `method`: `block` (indice del blocco di testo), `length`, `sha256`, e `text` solo con `--text`.
-- `tune`: `values{etichetta: testo}` (il nostro lettore non la espone ancora: omessa).
+- `tune`: `values{etichetta: testo}` (il nostro lettore non la espone ancora: omessa; il punto del file con i valori di tune per segmento non è stato trovato senza un dump RFR).
 
 ## Soglie del confronto (F.2)
-RT 1e-4 min; m/z 0,5 ppm (`--tol hr`) o 1e-3 Da (`--tol lr`); intensità 1e-5 relativo; testo uguale dopo normalizzazione (spazi, maiuscole, due punti finali delle etichette). Un campo presente solo in B (nostro) è `extra`, non un errore.
+RT 1e-4 min; m/z 0,5 ppm (`--tol hr`) o 1e-3 Da (`--tol lr`); intensità 1e-5 relativo; testo uguale dopo normalizzazione (spazi, maiuscole, due punti finali delle etichette). Un campo presente solo in B (nostro) è `extra`, non un errore. Le righe che non sono scansioni (`sequence`, `asinfo`, `error`, `status`, `tune`) si confrontano chiave per chiave come il trailer (`<tipo>.<chiave>`; `status` per istante campionato).
 
 ## Comandi
 ```
@@ -34,4 +36,8 @@ cargo run --release -p mzlab-lettori --features thermo --example thermo_scandump
 python3 tools/rosina/scandump_compare.py RFR.jsonl.gz NOSTRO.jsonl.gz [--tol hr|lr] [--out report.json] [--aggregate DIR]
 python3 tools/rosina/verita_scandump.py DUMP.jsonl.gz > FILE.verita.json
 ```
-`--aggregate DIR` riunisce i `report.json` della cartella in una tabella campo × file (solo conteggi, nessun nome di file privato nel pubblico). Le reazioni del nostro dump sono quelle che `opentfraw` espone oggi (una per scansione); quando la catena per reazione entra nel lettore, `reactions_of` nell'example le allarga.
+`--aggregate DIR` riunisce i `report.json` della cartella in una tabella campo × file (solo conteggi, nessun nome di file privato nel pubblico). Il nostro dump scrive in `reactions[]` un elemento per passo della catena (`PrecursorInfo::reactions`, MS2…MS8): `iso_width` solo per il passo finale (dal trailer), `multiple` per i precursori simultanei (MSX, multibanda), `sps_precursors` e `faims_cv` dal trailer.
+Gli elementi non finali portano anche `raw_double` e `raw_long2` (extra del banco, non di RFR). Per le MS3+ il comparatore scrive anche i campi per livello `reactions.<campo>@ms3…@ms8` e confronta l'`iso_width` / `iso_offset` di RFR con `raw_double` / `raw_long2` dei passi non finali (`reactions.iso_width~raw_double@ms3`): quando un livello è uguale su tutto il corpus, `raw_double` diventa `isolation_width` per ogni passo (`reaction.rs`); finché non ci sono dump RFR di MS3+ (R-03) restano «non verificati contro RFR».
+
+## Stato dei confronti per livello (MSn)
+Nessun dump RFR di MS3+ è ancora in `scratchpad/rfr/`: i campi `reactions.*@ms3…@ms8`, `sps_precursors`, `faims_cv` e le attivazioni diverse da CID/HCD (ETD, ECD, PQD, UVPD, MPD) sono provati solo su eventi costruiti nei test (`reaction.rs`, `scan_filter.rs`, `mzml.rs`, `tests/test_scandump_compare.py`) e `VERIFICATI` resta vuoto. Il filtro per passo cambia solo le MSn con attivazioni diverse tra i passi. Dump richiesti alla chat locale (accession, non nomi di file): infusione MSn fino a MS8, Fusion/Tribrid DDA con CID+HCD, SPS-MS3 (TMT), ETD/EThcD/UVPD/PQD se nel corpus, FAIMS.
