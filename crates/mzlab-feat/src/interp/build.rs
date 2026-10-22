@@ -10,6 +10,7 @@ use super::disegno::{self, Drawing};
 use super::filtri::{self, FileCal, RowFacts};
 use super::modifica::{self, Candidate, IsoCheck};
 use super::ms2link::{self, Isomers, LinkParams, Ms2Scan, Pooled};
+use super::prof::{report, time};
 use super::sito::{self, SiteReport};
 use crate::axis::half;
 use crate::chem::posizioni::{Peak, Pol};
@@ -183,7 +184,7 @@ fn read_file<R: ReadAt>(
 ) -> Res<(Vec<Ms2Scan>, Option<f64>)> {
     let t = inp.table;
     let mut all: Vec<(usize, Ms2Scan)> = vec![];
-    let m2 = Ms2Sorted::of(ix);
+    let m2 = time("ms2 index", || Ms2Sorted::of(ix));
     let rows = work
         .iter()
         .map(|w| w.row)
@@ -194,16 +195,18 @@ fn read_file<R: ReadAt>(
             _ => (row, work[wi].limits[k]),
         };
         if lim.0.is_finite() {
-            all.extend(
+            let picked = time("pick scans", || {
                 ms2link::pick_scans_in(ix, &m2, k, t.mz[r], lim, inp.link)
-                    .into_iter()
-                    .map(|s| (wi, s)),
-            );
+            });
+            all.extend(picked.into_iter().map(|s| (wi, s)));
         }
     }
     let mut scans: Vec<Ms2Scan> = all.iter().map(|x| x.1.clone()).collect();
-    ms2link::fill_purity_with(ix, inp.polarity, &mut scans, inp.link).map_err(|e| e.to_string())?;
-    ms2link::fill_peaks(ix, &mut scans).map_err(|e| e.to_string())?;
+    time("purity", || {
+        ms2link::fill_purity_with(ix, inp.polarity, &mut scans, inp.link)
+    })
+    .map_err(|e| e.to_string())?;
+    time("peaks", || ms2link::fill_peaks(ix, &mut scans)).map_err(|e| e.to_string())?;
     let mut parent_scans = vec![];
     for ((wi, _), s) in all.iter().zip(scans) {
         match work.get_mut(*wi) {
@@ -218,15 +221,17 @@ fn read_file<R: ReadAt>(
         } else {
             t.rt[w.row]
         };
-        w.iso = apex_ms1(ix, inp.polarity, t.mz[w.row], apex)?;
+        w.iso = time("apex ms1", || apex_ms1(ix, inp.polarity, t.mz[w.row], apex))?;
     }
     let perr = match parent_row.filter(|&p| limits(t, p, k).0.is_finite()) {
         Some(p) => {
             let apex = f64::from(t.apex_rt[p * t.n_files + k]);
             let apex = if apex.is_finite() { apex } else { t.rt[p] };
-            apex_ms1(ix, inp.polarity, inp.parent.mz, apex)?
-                .filter(|m| m.1.is_finite())
-                .map(|m| ppm(m.1, inp.parent.mz))
+            time("apex ms1", || {
+                apex_ms1(ix, inp.polarity, inp.parent.mz, apex)
+            })?
+            .filter(|m| m.1.is_finite())
+            .map(|m| ppm(m.1, inp.parent.mz))
         }
         None => None,
     };
@@ -264,14 +269,14 @@ pub fn build<R: ReadAt>(
     let parent_row = (t.tp.parent_row != NO_PARENT).then_some(t.tp.parent_row as usize);
     let (mut parent_scans, mut perr) = (vec![], vec![None; t.n_files]);
     for (k, slot) in perr.iter_mut().enumerate() {
-        let mut ix = open(k)?;
+        let mut ix = time("open", || open(k))?;
         let (ps, pe) = read_file(&mut ix, k, inp, &mut work, parent_row)?;
         parent_scans.push(ps);
         *slot = pe;
     }
     let all_parent: Vec<Ms2Scan> = parent_scans.iter().flatten().cloned().collect();
     let dda = ms2link::pool_with(&all_parent, inp.link).consensus;
-    let (nodes, entries, ctx) = albero::library_of(infusion, inp.parent, &dda)?;
+    let (nodes, entries, ctx) = time("library", || albero::library_of(infusion, inp.parent, &dda))?;
     let cals: Vec<FileCal> = (0..t.n_files)
         .map(|k| {
             let mut e = fragment_errors(&parent_scans[k], &entries);
@@ -297,7 +302,10 @@ pub fn build<R: ReadAt>(
             )
         })
         .collect();
-    registry.decoys = filtri::table_decoys(inp.hyps, &t.mz, &t.tp.status, &facts);
+    registry.decoys = time("decoys", || {
+        filtri::table_decoys(inp.hyps, &t.mz, &t.tp.status, &facts)
+    });
+    report();
     Ok(Output {
         rows,
         registry,
@@ -324,7 +332,9 @@ fn interpret(
 ) -> RowInterp {
     let t = inp.table;
     let mz = t.mz[w.row];
-    let change = modifica::candidates_with(mz, &inp.parent.neutral, hyps, inp.link.match_ppm);
+    let change = time("candidates", || {
+        modifica::candidates_with(mz, &inp.parent.neutral, hyps, inp.link.match_ppm)
+    });
     let iso = change
         .first()
         .and_then(|c| w.iso.and_then(|i| modifica::iso_check(&c.ion_formula, i.0)));
@@ -347,7 +357,7 @@ fn interpret(
     if hidden.is_some() {
         registry.hidden[4].push(t.id(w.row));
     }
-    let pooled = ms2link::pool_with(&w.scans, inp.link);
+    let pooled = time("pool", || ms2link::pool_with(&w.scans, inp.link));
     let files_with_ms2 = w
         .scans
         .iter()
@@ -355,16 +365,20 @@ fn interpret(
         .collect::<std::collections::BTreeSet<_>>()
         .len();
     let delta = delta_mass(&inp.parent.neutral, change.first(), mz, inp.parent.mz);
-    let (vs_parent, tree) = compare(inp, dda, nodes, entries, &w.scans, &pooled, mz, delta);
-    let (site, drawing) = position(
-        inp,
-        ctx,
-        !dda.mz.is_empty(),
-        &w.scans,
-        &pooled,
-        change.first(),
-        mz,
-    );
+    let (vs_parent, tree) = time("compare", || {
+        compare(inp, dda, nodes, entries, &w.scans, &pooled, mz, delta)
+    });
+    let (site, drawing) = time("position", || {
+        position(
+            inp,
+            ctx,
+            !dda.mz.is_empty(),
+            &w.scans,
+            &pooled,
+            change.first(),
+            mz,
+        )
+    });
     RowInterp {
         row: w.row,
         id: t.id(w.row),
