@@ -10558,3 +10558,4 @@
 {"v":1,"ts_utc":"2026-10-22T22:44:24Z","tipo":"job","k":"120131937039","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"0e0502ad90a4c2d7bd058ce930562b4e013f4216","run_id":39867062700,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T22:44:24Z","tipo":"job","k":"120131937130","workflow":"rust","job":"rust-misc-a","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"0e0502ad90a4c2d7bd058ce930562b4e013f4216","run_id":39867062700,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T22:44:39Z","tipo":"carico","k":"2026-10-22T22:4","job_in_coda":0,"job_in_corso":14}
+{"v":1,"ts_utc":"2026-10-22T22:46:37Z","azione":"push","titolo":"Bench: fix clippy findings of the example","merge_main":false,"aree":{"rust":4},"tipo":"pr","pr":1550,"sha":"b6a9ea7a063b4f53e7953b1cf6b1a05a6a13df04"}
