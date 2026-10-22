@@ -33,8 +33,13 @@
       go.dataset.busy = "1"; go.disabled = true; note.textContent = "Running…"; reset();
       document.addEventListener("flow:web-step", onStep);
       try {
-        await R.run(S);
+        const res = await R.run(S);
         note.textContent = "Finished. The results are kept in this browser (OPFS).";
+        // the MSn steps give their texts: one link each to save them
+        for (const f of (res && res.files) || []) {
+          const a = el("a", { href: URL.createObjectURL(new Blob([f.text], { type: "text/plain" })), download: f.name, text: f.name });
+          slots.get(f.id)?.append(" · ", a);
+        }
       } catch (e) { note.textContent = F.message(/** @type {any} */ (e)); }
       document.removeEventListener("flow:web-step", onStep);
       go.dataset.busy = ""; gate();

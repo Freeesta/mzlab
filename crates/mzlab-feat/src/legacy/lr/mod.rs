@@ -3,6 +3,7 @@
 //! `TP_Mine/js/20_tpmine.js` reads. The rows of the table are the peaks: no second peak search. MS2, MRM and the in-source fragments come later.
 
 pub mod chance;
+pub mod coelute;
 pub mod cond;
 pub mod detail;
 pub mod gruppi_out;

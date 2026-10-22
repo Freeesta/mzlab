@@ -94,7 +94,6 @@ mod llm_ctx;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
-mod msn_lib_export;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
