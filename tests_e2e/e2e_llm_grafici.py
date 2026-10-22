@@ -68,12 +68,12 @@ try:
         def tic():
             pg = fresh(TIC_REC); ask(pg, "Show me the TIC of all the files.")
             pg.wait_for_selector("#flx-llm figure.flx-chart[data-mark=line]", timeout=30000)
-            assert pg.locator("#flx-llm figure.flx-chart svg path.sr").count() == N_FILES, "one line per file"
+            assert pg.locator("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr").count() == N_FILES, "one line per file"
             rows = rows_of(pg, "#flx-llm figure.flx-chart")
             assert 0 < len(rows) <= 5000 and len(rows) == N_FILES * N_POINTS, len(rows)
             assert sum(float(r[1]) for r in rows) == TIC_SUM, "the table has the numbers of the data"
             assert {r[2] for r in rows} == {x["name"] for x in FILES}
-            svg_vals = pg.evaluate("[...document.querySelectorAll('#flx-llm figure.flx-chart svg path.sr')].map(p => (p.getAttribute('d').match(/[ML]/g) || []).length)")
+            svg_vals = pg.evaluate("[...document.querySelectorAll('#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr')].map(p => (p.getAttribute('d').match(/[ML]/g) || []).length)")
             assert svg_vals == [N_POINTS] * N_FILES, svg_vals
             lab = pg.get_attribute("#flx-llm figure.flx-chart", "aria-label"); assert "T line" in lab and "Test chart." in lab, lab
             with pg.expect_download() as d: pg.click('#flx-llm figure.flx-chart button[aria-label="Download CSV"]')
@@ -119,24 +119,24 @@ try:
 
         def look():
             pg = fresh(TIC_REC); ask(pg, "TIC please.")
-            pg.wait_for_selector("#flx-llm figure.flx-chart svg path.sr", timeout=30000)
+            pg.wait_for_selector("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", timeout=30000)
             bad = pg.evaluate("""() => [...document.querySelectorAll('#flx-llm figure.flx-chart svg *')].flatMap(e => ['fill', 'stroke'].map(a => [e.tagName, a, e.getAttribute(a)]))
                 .filter(x => x[2] && !/^(none|var\\(--[a-z0-9-]+\\)|currentColor)$/.test(x[2]))""")
             assert not bad, bad[:5]
-            dash = pg.evaluate("[...document.querySelectorAll('#flx-llm figure.flx-chart svg path.sr')].map(p => p.getAttribute('stroke-dasharray') || '')")
+            dash = pg.evaluate("[...document.querySelectorAll('#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr')].map(p => p.getAttribute('stroke-dasharray') || '')")
             assert len(set(dash)) == N_FILES, dash
             pg.context.close()
         step("colours only from CSS variables; each series also has its own dash", look)
 
         def zoom():
             pg = fresh(TIC_REC); ask(pg, "TIC please.")
-            pg.wait_for_selector("#flx-llm figure.flx-chart svg path.sr", timeout=30000)
-            d0 = pg.get_attribute("#flx-llm figure.flx-chart svg path.sr", "d")
+            pg.wait_for_selector("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", timeout=30000)
+            d0 = pg.get_attribute("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", "d")
             pg.focus("#flx-llm figure.flx-chart"); pg.keyboard.press("+")
-            d1 = pg.get_attribute("#flx-llm figure.flx-chart svg path.sr", "d"); assert d1 != d0 and len(d1) < len(d0), "zoom with a key"
+            d1 = pg.get_attribute("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", "d"); assert d1 != d0 and len(d1) < len(d0), "zoom with a key"
             assert "Showing" in pg.inner_text("#flx-llm figure.flx-chart [role=status]")
-            pg.keyboard.press("]"); d2 = pg.get_attribute("#flx-llm figure.flx-chart svg path.sr", "d"); assert d2 != d1, "pan with a key"
-            pg.click('#flx-llm figure.flx-chart button[aria-label="Reset zoom"]'); assert pg.get_attribute("#flx-llm figure.flx-chart svg path.sr", "d") == d0
+            pg.keyboard.press("]"); d2 = pg.get_attribute("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", "d"); assert d2 != d1, "pan with a key"
+            pg.click('#flx-llm figure.flx-chart button[aria-label="Reset zoom"]'); assert pg.get_attribute("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", "d") == d0
             assert len(rows_of(pg, "#flx-llm figure.flx-chart")) == N_FILES * N_POINTS, "the table keeps every row when zoomed"
             pg.context.close()
         step("zoom and pan with buttons and keys, no dragging", zoom)
@@ -144,7 +144,7 @@ try:
         def a11y():
             for coarse in (False, True):
                 pg = fresh(TIC_REC, reduced=True, coarse=coarse); ask(pg, "TIC please.")
-                pg.wait_for_selector("#flx-llm figure.flx-chart svg path.sr", timeout=30000)
+                pg.wait_for_selector("#flx-llm figure.flx-chart svg:not([aria-hidden]) path.sr", timeout=30000)
                 need = 40 if coarse else 24
                 small = pg.evaluate("n => [...document.querySelectorAll('#flx-llm figure.flx-chart button, #flx-llm figure.flx-chart summary')].filter(e => e.offsetParent).map(e => [e.getAttribute('aria-label') || e.textContent, e.getBoundingClientRect()]).filter(x => x[1].width < n || x[1].height < n).map(x => x[0] + ' ' + Math.round(x[1].width) + 'x' + Math.round(x[1].height))", need)
                 assert not small, (coarse, small)
