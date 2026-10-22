@@ -73,6 +73,8 @@
           graph = graphQuery(inst, k);
           // the command writes the graph followed by a newline
           name = inst.id + ".json"; text = (await ask("api/msn_grafo?" + graph)) + "\n";
+          const j = JSON.parse(text);
+          if (!Array.isArray(j.nodi) || !j.nodi.length) throw fail("err.flow.msn.empty");
         } else {
           // the graph of the first spectra.msn_graph of the plan (a plan without one asks for the graph with the defaults)
           const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph"), q = new URLSearchParams(graph || graphQuery(first || { params: {} }, k));
