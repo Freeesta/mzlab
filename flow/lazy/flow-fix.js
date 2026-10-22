@@ -120,7 +120,7 @@
     const baseSteps = new Set(F.BASE.flatMap((/** @type {any} */ g) => g.steps));
     // the base group of a step the plan lacks (the MSn template has no feature table) is not drawn; without the import group the raw files stay visible
     const present = (/** @type {any} */ g) => g.steps.some((/** @type {string} */ s) => F.findStep(plan, s));
-    const lone = (/** @type {any} */ f) => !(simple && f.type === "raw" && present(F.BASE[0]));
+    const lone = (/** @type {any} */ f) => !(simple && (f.type === "raw" || f.type === "mzml") && present(F.BASE[0]));
     for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your data files.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
     const groups = simple ? F.BASE : [];
     for (const g of groups) {
@@ -135,7 +135,7 @@
       nodes.push({ key: inst.id, kind: "step", title: name, why, cat, ids: [inst.id], locked: baseSteps.has(id) });
       owner.set(inst.id, inst.id);
     }
-    if (simple) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw")) owner.set("file:" + f.name, "import");
+    if (simple) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) owner.set("file:" + f.name, "import");
     for (const inst of plan.steps) for (const [, v] of Object.entries(inst.in || {})) for (const r of [].concat(/** @type {any} */ (v))) {
       const src = r.startsWith("file:") ? owner.get(r) : owner.get(r.split(".")[0]), dst = owner.get(inst.id);
       if (src && dst && src !== dst) edges.add(src + "\u0000" + dst);
