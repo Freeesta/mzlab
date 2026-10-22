@@ -596,6 +596,7 @@ I18N.add("it", {
   "err.file.unknown": "Il programma non ha ricevuto il file ({detail}): riprova a caricarlo.",
   "err.file.index": "Non si riesce a costruire l'indice del file ({detail}).",
   "err.file.raw": "Il file .raw (Thermo) o la cartella .raw (Waters) non si legge: serve il file intero, con tutti i suoi file ({detail}).",
+  "err.file.rawTruncated": "Il file .raw (Thermo) è troncato: è lungo {size} byte e la parte «{stage}» ne richiede almeno {needed}, quindi nessuna scansione si può leggere. Copia di nuovo il file per intero.",
   "err.file.rawVersion": "La versione {version} del formato .raw Thermo non è ancora supportata: converti il file in mzML con msconvert.",
   "err.file.notAgilentD": "La cartella {name} non contiene AcqData/MSScan.bin e AcqData/MSPeak.bin (né il file data.ms): serve la cartella .D intera, con la sua sottocartella AcqData.",
   "err.file.agilentNoEngine": "Le cartelle Agilent .D si aprono solo con il motore Rust del programma ({name}).", "err.file.brukerBaf": "Le cartelle Bruker con solo analysis.baf non si leggono senza l'SDK di Bruker: esporta in mzML con Bruker DataAnalysis o msconvert.", "err.file.brukerNoBin": "La cartella {name} non contiene {file}: serve la cartella .d intera di Bruker.",

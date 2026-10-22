@@ -6,7 +6,9 @@ use crate::error_log::ErrorEntry;
 use crate::generic_data::{GenericDataHeader, GenericRecord, GenericRecordStream, GenericValue};
 use crate::header::FileHeader;
 use crate::raw_file_info::RawFileInfo;
+use crate::robust::{self, Warning};
 use crate::run_header::RunHeader;
+use crate::sample_info::SampleInfo;
 use crate::scan_data::{
     read_flat_peaks, read_scan_srm_v66, search_v63_transition, Peak, ScanDataPacket,
 };
@@ -350,8 +352,12 @@ pub struct RawFileReader {
     pub inst_log: Vec<GenericRecord>,
     /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
     pub status_log: Option<crate::status_log::StatusLog>,
-    /// Raw file version from the header.
+    /// Layout the file is read with: the version in the header when documented, else the nearest documented one (`declared_version` has the number written).
     pub version: u32,
+    /// The version number written in the file header.
+    pub declared_version: u32,
+    /// What `open` left out or assumed (a cut file, an undocumented version, a structure that could not be read); empty for a sound file.
+    pub warnings: Vec<Warning>,
     /// Number of scans.
     pub num_scans: u32,
     /// Data stream base address (for computing absolute scan offsets).
@@ -456,22 +462,47 @@ pub struct ControllerInfo {
 
 impl RawFileReader {
     /// Open and parse a RAW file from a reader.
+    ///
+    /// A version number that is not documented is read with the nearest documented layout when the scan index then looks sound (`Warning::UnverifiedVersion`);
+    /// otherwise the error is `Error::UnsupportedVersion` with the number written. A file that stops inside the scan data opens with the scans that are whole
+    /// (`Warning::Truncated`); one that stops before its scan index is `Error::Truncated`. Every other error names the structure, the version and the file size.
     pub fn open<R: Read + Seek>(source: R) -> Result<Self> {
+        let mut undocumented = None;
+        match Self::open_with(source, &mut undocumented) {
+            Err(e) if !matches!(e, Error::UnsupportedVersion(_)) => match undocumented {
+                Some(v) => Err(Error::UnsupportedVersion(v)),
+                None => Err(e),
+            },
+            other => other,
+        }
+    }
+
+    /// `open`; `undocumented` receives the header version when it is not a documented one.
+    fn open_with<R: Read + Seek>(source: R, undocumented: &mut Option<u32>) -> Result<Self> {
         let mut r = BinaryReader::new(source);
+        let file_len = r.length()?;
+        let mut warnings: Vec<Warning> = Vec::new();
 
         // 1. FileHeader
-        let header = FileHeader::read(&mut r)?;
+        let header = FileHeader::read(&mut r)
+            .map_err(|e| robust::stage_error("FileHeader", 0, file_len, e))?;
         let version = header.version;
+        let header_declared = header.declared_version;
+        if header.declared_version != version {
+            *undocumented = Some(header.declared_version);
+        }
+        let stage = |name: &'static str, e: Error| robust::stage_error(name, version, file_len, e);
 
         // 2. SeqRow
-        let seq_row = SeqRow::read(&mut r, version)?;
+        let seq_row = SeqRow::read(&mut r, version).map_err(|e| stage("SeqRow", e))?;
 
         // 3. ASInfo (read and discard preamble + string)
-        let _as_preamble = r.read_bytes(24)?; // ASInfoPreamble: 24 bytes
-        let _as_text = r.read_pascal_string()?;
+        let _as_preamble = r.read_bytes(24).map_err(|e| stage("ASInfo", e))?; // ASInfoPreamble: 24 bytes
+        let _as_text = r.read_pascal_string().map_err(|e| stage("ASInfo", e))?;
 
         // 4. RawFileInfo
-        let raw_file_info = RawFileInfo::read(&mut r, version)?;
+        let raw_file_info =
+            RawFileInfo::read(&mut r, version).map_err(|e| stage("RawFileInfo", e))?;
 
         // 5. Extract addresses
         let data_addr = raw_file_info.preamble.data_addr;
@@ -487,8 +518,9 @@ impl RawFileReader {
                 if addr == 0 {
                     continue;
                 }
+                cut_check("RunHeader", addr, file_len, SampleInfo::SIZE as u64, 0)?;
                 r.seek_to(addr)?;
-                let rh = RunHeader::read(&mut r, version)?;
+                let rh = RunHeader::read(&mut r, version).map_err(|e| stage("RunHeader", e))?;
                 // Heuristic for identifying the MS controller:
                 // 1. For v64+: ntrailer > 0 (scan events present) - catches most instruments.
                 // 2. For all versions: RunHeader.data_addr == preamble.data_addr - the MS
@@ -510,8 +542,10 @@ impl RawFileReader {
             match chosen {
                 Some(found) => found,
                 None => {
-                    r.seek_to(addrs[0])?;
-                    let rh = RunHeader::read(&mut r, version)?;
+                    let addr = addrs.first().copied().unwrap_or(0);
+                    cut_check("RunHeader", addr, file_len, SampleInfo::SIZE as u64, 0)?;
+                    r.seek_to(addr)?;
+                    let rh = RunHeader::read(&mut r, version).map_err(|e| stage("RunHeader", e))?;
                     (rh, r.position())
                 }
             }
@@ -521,25 +555,118 @@ impl RawFileReader {
         let last_scan = run_header.sample_info.last_scan_number;
         let num_scans = compute_num_scans(first_scan, last_scan);
 
-        // 7. Scan index
-        r.seek_to(run_header.scan_index_addr)?;
-        r.check_count(
-            num_scans as u64,
-            ScanIndexEntry::min_size_for_version(version),
+        // 7. Scan index. A file cut inside the index keeps the entries that are whole.
+        let entry_size = ScanIndexEntry::min_size_for_version(version);
+        let first_entry = if num_scans > 0 { entry_size } else { 0 };
+        cut_check(
+            "ScanIndex",
+            run_header.scan_index_addr,
+            file_len,
+            first_entry,
+            num_scans,
         )?;
-        let mut scan_index = Vec::with_capacity(num_scans as usize);
-        for _ in 0..num_scans {
-            scan_index.push(ScanIndexEntry::read(&mut r, version)?);
+        r.seek_to(run_header.scan_index_addr)?;
+        let on_disk = r.remaining()? / entry_size.max(1);
+        if on_disk < u64::from(num_scans) {
+            warnings.push(Warning::Truncated {
+                file_len,
+                cut_at: run_header.scan_index_addr + on_disk * entry_size,
+                scans_declared: num_scans,
+                scans_readable: on_disk as u32,
+            });
+        }
+        let n_index = u64::from(num_scans).min(on_disk) as u32;
+        let mut scan_index = Vec::with_capacity(n_index as usize);
+        for _ in 0..n_index {
+            scan_index
+                .push(ScanIndexEntry::read(&mut r, version).map_err(|e| stage("ScanIndex", e))?);
+        }
+        if n_index < num_scans {
+            // bytes after a cut index belong to other structures: keep the entries that are in order
+            scan_index.truncate(robust::ordered_prefix(&scan_index));
+            if let Some(Warning::Truncated { scans_readable, .. }) = warnings.last_mut() {
+                *scans_readable = scan_index.len() as u32;
+            }
+            if scan_index.is_empty() {
+                return Err(Error::Truncated {
+                    stage: "ScanIndex",
+                    file_len,
+                    needed: run_header.scan_index_addr + u64::from(num_scans) * entry_size,
+                    readable: 0,
+                    declared: num_scans,
+                });
+            }
+        }
+        if let Some(declared) = *undocumented {
+            if !robust::plausible_index(&scan_index, data_addr, file_len) {
+                return Err(Error::UnsupportedVersion(declared));
+            }
+            warnings.push(Warning::UnverifiedVersion {
+                declared,
+                used: version,
+            });
         }
 
-        // 8. Scan event trailer
-        r.seek_to(run_header.scan_trailer_addr)?;
-        let n_events = if version >= 64 {
-            // v64+: first u32 is a preamble (not count); use ntrailer from RunHeader
-            let _preamble = r.read_u32()?;
-            run_header.ntrailer
-        } else {
-            r.read_u32()?
+        // Flat-peak (TSQ/SRM) layout: a run without scan events, or a first record too small to be a packet.
+        let flat_peaks = run_header.ntrailer == 0
+            || scan_index
+                .first()
+                .map(|e| e.data_size < 100)
+                .unwrap_or(false);
+        let scan_format = crate::scan_format::ScanDataFormat::detect(version, flat_peaks);
+
+        // Scans whose data the file does not hold whole (a copy or an acquisition that stopped early) are left out of the index.
+        let streams = [
+            run_header.scan_index_addr,
+            run_header.inst_log_addr,
+            run_header.error_log_addr,
+            run_header.unk_addr,
+            run_header.scan_trailer_addr,
+            run_header.scan_params_addr,
+        ];
+        let (whole, cut_at) =
+            robust::whole_prefix(&scan_index, scan_format, data_addr, &streams, file_len);
+        if let Some(cut_at) = cut_at {
+            if whole == 0 {
+                return Err(Error::Truncated {
+                    stage: "ScanData",
+                    file_len,
+                    needed: cut_at,
+                    readable: 0,
+                    declared: num_scans,
+                });
+            }
+            warnings.retain(|w| !matches!(w, Warning::Truncated { .. }));
+            warnings.push(Warning::Truncated {
+                file_len,
+                cut_at,
+                scans_declared: num_scans,
+                scans_readable: whole as u32,
+            });
+            scan_index.truncate(whole);
+        }
+        let num_scans = scan_index.len() as u32;
+
+        // 8. Scan event trailer. Without it the scans keep their index (time, size) and lose level, polarity and filter.
+        let events_start = r.seek_to(run_header.scan_trailer_addr).and_then(|()| {
+            if version >= 64 {
+                // v64+: first u32 is a preamble (not count); use ntrailer from RunHeader
+                r.read_u32().map(|_| run_header.ntrailer)
+            } else {
+                r.read_u32()
+            }
+        });
+        let n_events = match events_start {
+            Ok(n) => n,
+            Err(e) => {
+                skipped(
+                    &mut warnings,
+                    "ScanEvents",
+                    run_header.scan_trailer_addr,
+                    &e,
+                );
+                0
+            }
         };
         // For v66, compute per-event body sizes from the stream's address range.
         // The scan event stream spans [scan_trailer_addr+4 .. scan_params_addr).
@@ -598,32 +725,49 @@ impl RawFileReader {
         };
         // Each event consumes at least its preamble on disk (the body may add
         // more, but the preamble alone is a safe lower bound for the count check).
-        r.check_count(n_events as u64, preamble_size as u64)?;
-        let mut scan_events = ScanEventTable::with_capacity(n_events as usize);
-        for _ in 0..n_events {
-            scan_events.push(ScanEvent::read(&mut r, version, sizes)?);
+        let mut scan_events = ScanEventTable::with_capacity(0);
+        match r.check_count(n_events as u64, preamble_size as u64) {
+            Ok(()) => {
+                scan_events = ScanEventTable::with_capacity(n_events as usize);
+                for _ in 0..n_events {
+                    match ScanEvent::read(&mut r, version, sizes) {
+                        Ok(ev) => scan_events.push(ev),
+                        Err(e) => {
+                            skipped(&mut warnings, "ScanEvents", r.position(), &e);
+                            break;
+                        }
+                    }
+                }
+            }
+            Err(e) => skipped(&mut warnings, "ScanEvents", r.position(), &e),
         }
 
         // 9. Error log
         let n_errors = run_header.sample_info.error_log_length;
-        let error_log = if n_errors > 0 {
-            r.seek_to(run_header.error_log_addr)?;
-            if version >= 64 {
-                let _preamble = r.read_u32()?;
+        let mut error_log = Vec::new();
+        let _ = r.seek_to(run_header.error_log_addr);
+        if n_errors > 0 {
+            let read = (|| -> Result<Vec<ErrorEntry>> {
+                if version >= 64 {
+                    let _preamble = r.read_u32()?;
+                }
+                // Minimum on-disk size of one entry: f32 time (4) + u32 pascal
+                // string char count (4), i.e. an empty message.
+                r.check_count(n_errors as u64, 8)?;
+                let mut log = Vec::with_capacity(n_errors as usize);
+                for _ in 0..n_errors {
+                    log.push(ErrorEntry::read(&mut r)?);
+                }
+                Ok(log)
+            })();
+            match read {
+                Ok(log) => error_log = log,
+                Err(e) => {
+                    skipped(&mut warnings, "ErrorLog", run_header.error_log_addr, &e);
+                    let _ = r.seek_to(run_header.error_log_addr);
+                }
             }
-            // Minimum on-disk size of one entry: f32 time (4) + u32 pascal
-            // string char count (4), i.e. an empty message.
-            r.check_count(n_errors as u64, 8)?;
-            let mut log = Vec::with_capacity(n_errors as usize);
-            for _ in 0..n_errors {
-                log.push(ErrorEntry::read(&mut r)?);
-            }
-            log
-        } else {
-            // Ensure reader is positioned at error_log_addr even when empty.
-            r.seek_to(run_header.error_log_addr)?;
-            Vec::new()
-        };
+        }
         // The GDH for scan parameters immediately follows the error-log entries.
         // Do NOT seek back to error_log_addr - doing so would cause find_forward
         // to scan over the scan_index (which may sit between error_log and
@@ -637,59 +781,79 @@ impl RawFileReader {
         //     with NO stream preamble - records begin directly at
         //     scan_params_addr. Any bytes after the last record are trailing
         //     padding and can be ignored.
-        let (scan_parameters_header, scan_parameters) = if version >= 64 {
-            // Search from after the error log entries up to scan_trailer.
-            // This skips any scan_index data that may sit in between.
-            let scan_distance = run_header.scan_trailer_addr.saturating_sub(after_error_log);
-            // Estimate per-record size from the tail of the file using integer
-            // division. Any remainder bytes are trailing data, not a preamble.
-            let file_size = r.length()?;
-            let tail = file_size.saturating_sub(run_header.scan_params_addr);
-            let expected_record_size = if num_scans > 0 && tail > 0 {
-                let per_scan = tail / num_scans as u64;
-                if per_scan >= 4 {
-                    Some(per_scan as usize)
+        let trailer = (|| -> Result<(GenericDataHeader, GenericRecordStream)> {
+            Ok(if version >= 64 {
+                // Search from after the error log entries up to scan_trailer.
+                // This skips any scan_index data that may sit in between.
+                let scan_distance = run_header.scan_trailer_addr.saturating_sub(after_error_log);
+                // Estimate per-record size from the tail of the file using integer
+                // division. Any remainder bytes are trailing data, not a preamble.
+                let file_size = r.length()?;
+                let tail = file_size.saturating_sub(run_header.scan_params_addr);
+                let expected_record_size = if num_scans > 0 && tail > 0 {
+                    let per_scan = tail / num_scans as u64;
+                    if per_scan >= 4 {
+                        Some(per_scan as usize)
+                    } else {
+                        None
+                    }
                 } else {
                     None
+                };
+                match GenericDataHeader::find_forward(&mut r, scan_distance, expected_record_size)?
+                {
+                    // A schema whose records do not fit between scan_params_addr and the end of the
+                    // file is not the trailer schema (e.g. a TSQ GC file keeps a few bytes per scan
+                    // there and the search lands on the tune-file schema): the trailer is absent.
+                    Some(hdr) if !trailer_records_fit(tail, num_scans, hdr.fixed_record_size()) => {
+                        (
+                            GenericDataHeader { fields: Vec::new() },
+                            GenericRecordStream::empty(),
+                        )
+                    }
+                    Some(hdr) => {
+                        // Records start directly at scan_params_addr - no stream preamble. They stay in the
+                        // file (`scan_parameters` reads one when asked): a DDA file has 600 bytes of them per scan.
+                        let params = GenericRecordStream::new(
+                            &mut r,
+                            &hdr,
+                            run_header.scan_params_addr,
+                            num_scans as usize,
+                        )?;
+                        (hdr, params)
+                    }
+                    None => (
+                        GenericDataHeader { fields: Vec::new() },
+                        GenericRecordStream::empty(),
+                    ),
                 }
             } else {
-                None
-            };
-            match GenericDataHeader::find_forward(&mut r, scan_distance, expected_record_size)? {
-                // A schema whose records do not fit between scan_params_addr and the end of the
-                // file is not the trailer schema (e.g. a TSQ GC file keeps a few bytes per scan
-                // there and the search lands on the tune-file schema): the trailer is absent.
-                Some(hdr) if !trailer_records_fit(tail, num_scans, hdr.fixed_record_size()) => (
+                (
                     GenericDataHeader { fields: Vec::new() },
                     GenericRecordStream::empty(),
-                ),
-                Some(hdr) => {
-                    // Records start directly at scan_params_addr - no stream preamble. They stay in the
-                    // file (`scan_parameters` reads one when asked): a DDA file has 600 bytes of them per scan.
-                    let params = GenericRecordStream::new(
-                        &mut r,
-                        &hdr,
-                        run_header.scan_params_addr,
-                        num_scans as usize,
-                    )?;
-                    (hdr, params)
-                }
-                None => (
-                    GenericDataHeader { fields: Vec::new() },
-                    GenericRecordStream::empty(),
-                ),
-            }
-        } else {
+                )
+            })
+        })();
+        let (scan_parameters_header, scan_parameters) = trailer.unwrap_or_else(|e| {
+            skipped(
+                &mut warnings,
+                "ScanTrailer",
+                run_header.scan_params_addr,
+                &e,
+            );
             (
                 GenericDataHeader { fields: Vec::new() },
                 GenericRecordStream::empty(),
             )
-        };
+        });
 
         // 11. Instrument log - GenericData format in v64+
-        let (inst_log_header, inst_log) = if version >= 64 {
+        let inst = (|| -> Result<(GenericDataHeader, Vec<GenericRecord>)> {
+            if version < 64 {
+                return Ok((GenericDataHeader { fields: Vec::new() }, Vec::new()));
+            }
             r.seek_to(run_header.inst_log_addr)?;
-            match GenericDataHeader::try_read(&mut r)? {
+            Ok(match GenericDataHeader::try_read(&mut r)? {
                 Some(hdr) => {
                     let n_inst = run_header.sample_info.inst_log_length;
                     r.check_count(n_inst as u64, hdr.fixed_record_size().max(1) as u64)?;
@@ -700,26 +864,20 @@ impl RawFileReader {
                     (hdr, log)
                 }
                 None => (GenericDataHeader { fields: Vec::new() }, Vec::new()),
-            }
-        } else {
+            })
+        })();
+        let (inst_log_header, inst_log) = inst.unwrap_or_else(|e| {
+            skipped(&mut warnings, "InstrumentLog", run_header.inst_log_addr, &e);
             (GenericDataHeader { fields: Vec::new() }, Vec::new())
-        };
+        });
 
-        let status_log = Self::read_status_log(&mut r, &run_header, &inst_log_header, &inst_log)?;
+        let status_log = Self::read_status_log(&mut r, &run_header, &inst_log_header, &inst_log)
+            .unwrap_or_else(|e| {
+                skipped(&mut warnings, "StatusLog", run_header.inst_log_addr, &e);
+                None
+            });
 
-        // Detect flat-peak (TSQ/SRM) format.
-        // Reliable indicator: ntrailer == 0 means no scan event trailer was written, which
-        // is the case for all TSQ/triple-quad SRM instruments.
-        // Fallback: first scan data_size < 100 (catches edge cases with tiny SRM windows).
-        // In the flat format, data_size is the number of MRM peaks, not bytes.
-        let flat_peaks = run_header.ntrailer == 0
-            || scan_index
-                .first()
-                .map(|e| e.data_size < 100)
-                .unwrap_or(false);
-
-        // Classify scan format and device family.
-        let scan_format = crate::scan_format::ScanDataFormat::detect(version, flat_peaks);
+        // Classify the device family.
         let first_analyzer = scan_events.first().and_then(|e| e.preamble.analyzer());
 
         // For SRM (flat-peak) files, read the entire pre-scan-data region so that
@@ -884,6 +1042,8 @@ impl RawFileReader {
             inst_log,
             status_log,
             version,
+            declared_version: header_declared,
+            warnings,
             num_scans,
             data_addr,
             flat_peaks,
@@ -915,6 +1075,85 @@ impl RawFileReader {
         let region = next.checked_sub(addr).unwrap_or(0);
         let n = run_header.sample_info.inst_log_length;
         Ok(crate::status_log::read_before(r, addr, n, region).unwrap_or(None))
+    }
+
+    /// The structures of a file that does not open, one line each, for a person with the file at hand: the header, the addresses of the RawFileInfo, and for every
+    /// run header the scan range, the counts and the stream addresses, then what `open` says. No scan is read; never fails.
+    pub fn describe<R: Read + Seek>(source: R) -> String {
+        use std::fmt::Write as _;
+        let mut out = String::new();
+        let mut r = BinaryReader::new(source);
+        let len = r.length().unwrap_or(0);
+        let _ = writeln!(out, "file: {len} bytes");
+        let Ok(header) = FileHeader::read(&mut r) else {
+            let _ = writeln!(out, "FileHeader: not readable");
+            return out;
+        };
+        let v = header.version;
+        let _ = writeln!(
+            out,
+            "FileHeader: declared v{} read as v{v}",
+            header.declared_version
+        );
+        let info = (|| -> Result<RawFileInfo> {
+            SeqRow::read(&mut r, v)?;
+            r.read_bytes(24)?;
+            r.read_pascal_string()?;
+            RawFileInfo::read(&mut r, v)
+        })();
+        match info {
+            Err(e) => {
+                let _ = writeln!(out, "SeqRow/ASInfo/RawFileInfo: {e}");
+            }
+            Ok(i) => {
+                let p = &i.preamble;
+                let _ = writeln!(
+                    out,
+                    "RawFileInfo: data at {}, {} controllers, run headers at {:?}",
+                    p.data_addr, p.controller_count, p.run_header_addrs
+                );
+                for (k, &addr) in p.run_header_addrs.iter().enumerate().take(16) {
+                    if addr == 0 {
+                        continue;
+                    }
+                    let rh = r.seek_to(addr).and_then(|()| RunHeader::read(&mut r, v));
+                    match rh {
+                        Ok(h) => {
+                            let s = &h.sample_info;
+                            let _ = writeln!(
+                                out,
+                                "RunHeader {k} at {addr}: scans {}..{}, events {}, params {}, segments {}, index {}, data {}, inst log {} ({}), error log {} ({}), trailer {}, params at {}",
+                                s.first_scan_number, s.last_scan_number, h.ntrailer, h.nparams, h.nsegs,
+                                h.scan_index_addr, h.data_addr, h.inst_log_addr, s.inst_log_length,
+                                h.error_log_addr, s.error_log_length, h.scan_trailer_addr, h.scan_params_addr
+                            );
+                        }
+                        Err(e) => {
+                            let _ = writeln!(out, "RunHeader {k} at {addr}: {e}");
+                        }
+                    }
+                }
+            }
+        }
+        let mut inner = r.into_inner();
+        let _ = inner.seek(SeekFrom::Start(0));
+        match Self::open(inner) {
+            Ok(f) => {
+                let _ = writeln!(
+                    out,
+                    "open: {} scans, {} warnings",
+                    f.num_scans,
+                    f.warnings.len()
+                );
+                for w in &f.warnings {
+                    let _ = writeln!(out, "  {}", w.text());
+                }
+            }
+            Err(e) => {
+                let _ = writeln!(out, "open: {e}");
+            }
+        }
+        out
     }
 
     /// Open a RAW file from a path.
@@ -2001,6 +2240,35 @@ impl<'a> StatusLogEntry<'a> {
 }
 
 /// True when `num_scans` records of `record_size` bytes fit in the `tail` bytes after `scan_params_addr`.
+/// `Error::Truncated` when the structure `stage` (at least `min_bytes` long) cannot start inside a file of `file_len` bytes.
+fn cut_check(
+    stage: &'static str,
+    addr: u64,
+    file_len: u64,
+    min_bytes: u64,
+    declared: u32,
+) -> Result<()> {
+    if addr.saturating_add(min_bytes) > file_len {
+        return Err(Error::Truncated {
+            stage,
+            file_len,
+            needed: addr,
+            readable: 0,
+            declared,
+        });
+    }
+    Ok(())
+}
+
+/// A structure the scans do not depend on could not be read: the file opens without it and the warning says which and why.
+fn skipped(warnings: &mut Vec<Warning>, stage: &'static str, offset: u64, e: &Error) {
+    warnings.push(Warning::Skipped {
+        stage,
+        offset,
+        detail: e.to_string(),
+    });
+}
+
 fn trailer_records_fit(tail: u64, num_scans: u32, record_size: usize) -> bool {
     (num_scans as u64).saturating_mul(record_size as u64) <= tail
 }
