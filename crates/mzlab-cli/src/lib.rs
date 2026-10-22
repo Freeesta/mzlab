@@ -58,6 +58,7 @@ mod flow_link_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
+mod flow_match_tree;
 #[cfg(test)]
 mod flow_match_tests;
 mod flow_ms2;

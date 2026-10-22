@@ -277,11 +277,13 @@ fn from_hits(files: &[&[u8]]) -> Result<Vec<(String, Evidence)>> {
                 continue;
             }
             let score = get("score");
+            // the tree search scores its MS2 with the entropy similarity too
+            let is_entropy = algorithm == "spectral_entropy" || algorithm == "tree";
             all[n].1.cands.push(Cand {
                 name,
                 ik: text(h, "inchikey"),
-                ent: score.filter(|_| algorithm == "spectral_entropy"),
-                cos: score.filter(|_| algorithm != "spectral_entropy"),
+                ent: score.filter(|_| is_entropy),
+                cos: score.filter(|_| !is_entropy),
                 shared: get("shared"),
                 dprec: get("mass_ppm"),
                 nlib: get("library_peaks"),
