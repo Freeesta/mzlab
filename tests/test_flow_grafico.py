@@ -119,3 +119,7 @@ def test_the_import_card_reads_a_metadata_table_and_lays_it_over_the_files():
 
 def test_the_xlsx_reader_gives_the_first_sheet_of_a_workbook():
     assert node("flow_xlsx.js").strip() == "ok"
+
+
+def test_the_cli_box_puts_the_folder_in_the_command_once_and_quoted():
+    assert node("flow_cli_fill.js").strip() == "ok"

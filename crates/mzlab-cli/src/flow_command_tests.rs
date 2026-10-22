@@ -39,17 +39,20 @@ fn the_copied_command_reruns_the_plan_with_the_same_bytes() {
 
     let args = std::fs::read_to_string(work.join("args.txt")).unwrap();
     let args: Vec<&str> = args.lines().collect();
-    let written = work.join("mzlab-run/plan.json");
+    // the run folder is new every time (a stamp), never an existing folder
+    let run = args[2].strip_suffix("/plan.json").unwrap();
+    assert!(run.starts_with("mzlab-run-"), "{run}");
+    let written = work.join(run).join("plan.json");
     assert_eq!(
         args,
         [
             "flow",
             "run",
-            "mzlab-run/plan.json",
+            args[2],
             "--in",
             p(&data),
             "--out",
-            "mzlab-run/out"
+            &format!("{run}/out")
         ]
     );
     // the plan the shell wrote is the canonical text, which parses and checks like the original
@@ -58,7 +61,7 @@ fn the_copied_command_reruns_the_plan_with_the_same_bytes() {
     assert_eq!(String::from_utf8(canon).unwrap(), again);
 
     // running what the script asks for gives the same files as running the original plan
-    let (a, b) = (dir.join("out_a"), work.join("mzlab-run/out"));
+    let (a, b) = (dir.join("out_a"), work.join(run).join("out"));
     let o = flow_run(&[p(&plan), "--in", p(&data), "--out", p(&a)]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let o = flow_run(&[p(&written), "--in", p(&data), "--out", p(&b)]);

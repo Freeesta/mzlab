@@ -6,7 +6,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   /** where a plan can run: each runner has a name and a function; the desktop and web runners plug in here later */
-  F.runners = { cli: { name: "Command line", run: async (/** @type {any} */ S) => ({ title: "Run with the command line", text: await F.cliCommand(S.plan).catch((/** @type {Error} */ e) => "The command could not be built: " + e.message), plan: S }) } };
+  F.runners = { cli: { name: "Command line", run: async (/** @type {any} */ S) => ({ title: "Run with the command line", text: await F.cliCommand(F.runPlanFromData ? F.runPlanFromData(S).plan : S.plan).catch((/** @type {Error} */ e) => "The command could not be built: " + e.message), plan: S }) } };
 
   /** a small menu under `anchor`; items {label, line, on?, run}. Closes on Escape, on a click outside and after a choice @param {HTMLElement} anchor @param {any[]} items @param {HTMLElement} host */
   F.menu = (anchor, items, host) => {
