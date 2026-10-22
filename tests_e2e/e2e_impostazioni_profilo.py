@@ -32,7 +32,7 @@ try:
             if not pg.locator("#uipset").count(): pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.evaluate("document.querySelectorAll('#uipset details.imp-g').forEach(g => g.open = true)")
             for w in (1500, 380):
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(200)
+                pg.set_viewport_size({"width": w, "height": 900});
                 m = pg.evaluate("""[...document.querySelectorAll('#uipset .imp-b>fieldset')].map(f => [parseFloat(getComputedStyle(f).marginTop), parseFloat(getComputedStyle(f.querySelector(':scope>legend')).marginBottom), !!f.previousElementSibling])""")
                 assert m, "sections found"
                 for top, bot, has_prev in m:
