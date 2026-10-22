@@ -208,3 +208,64 @@ fn the_index_after_the_step_holds_centroids_and_the_one_without_it_profile() {
     assert!(!profile_of("b"));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_progress_is_monotone_ends_at_the_total_and_leaves_the_bytes_alone() {
+    let src = profile(300, &PEAKS);
+    let mut plain = Vec::new();
+    mzlab_core::centroidi::mzml_to_centroids(
+        || Ok(src.as_slice()),
+        &mut plain,
+        "p.mzML",
+        &mut |_, _| {},
+    )
+    .unwrap();
+    let (mut seen, mut with) = (Vec::new(), Vec::new());
+    {
+        let mut sink = |d, t| seen.push((d, t));
+        let mut pace = mzlab_core::pace::Pace::new(&mut sink);
+        mzlab_core::centroidi::mzml_to_centroids(
+            || Ok(src.as_slice()),
+            &mut with,
+            "p.mzML",
+            &mut |d, t| pace.at(d, t),
+        )
+        .unwrap();
+    }
+    assert_eq!(plain, with, "the callback does not change a byte");
+    assert!(seen.len() <= 101 && seen.windows(2).all(|w| w[0].0 < w[1].0));
+    assert_eq!(seen.last(), Some(&(300, 300)));
+}
+
+#[test]
+fn two_aligns_on_the_same_peaks_give_the_family_table_and_the_ion_table() {
+    let files: Vec<(String, Vec<u8>)> = [0.0, 10.0]
+        .iter()
+        .map(|&t| (format!("s_t{:03}.mzML", t as u32), centroid_mzml(t)))
+        .collect();
+    let refs: Vec<(&str, Vec<u8>)> = files.iter().map(|(n, b)| (n.as_str(), b.clone())).collect();
+    let d = dir("fi", &refs);
+    let inputs: Vec<String> = files
+        .iter()
+        .map(|(n, _)| format!(r#"{{"name":"{n}","type":"raw"}}"#))
+        .collect();
+    let sources: Vec<String> = files
+        .iter()
+        .map(|(n, _)| format!(r#""file:{n}""#))
+        .collect();
+    let plan = format!(
+        r#"{{"format":"mzflow/2","inputs":[{}],"steps":[
+        {{"id":"idx","step":"index.mzidx@1","in":{{"source":[{}]}}}},
+        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}}},
+        {{"id":"fam","step":"features.align@1","in":{{"peaks":["det.peaks"]}}}},
+        {{"id":"ion","step":"features.align@1","in":{{"peaks":["det.peaks"]}},"params":{{"mode":"ion"}}}}]}}"#,
+        inputs.join(","),
+        sources.join(",")
+    );
+    run(&d, &plan, "w");
+    // the detection is shared; the family table keeps the members of each row, the ion table has one row per ion
+    let fam = std::fs::read(d.join("w/fam.mzfeat")).unwrap();
+    let ion = std::fs::read(d.join("w/ion.mzfeat")).unwrap();
+    assert!(!fam.is_empty() && !ion.is_empty() && fam != ion);
+    let _ = std::fs::remove_dir_all(&d);
+}

@@ -144,6 +144,15 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
 
 /// Ion traces of the MS1 scans of an index (one polarity, or all).
 pub fn detect<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<FileFeatures> {
+    detect_with(index, p, &mut |_, _| {})
+}
+
+/// `detect` telling `progress(done, total)` how many peaks it has gone through; the traces are the same with any `progress`.
+pub fn detect_with<R: ReadAt>(
+    index: &mut Index<R>,
+    p: &Params,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<FileFeatures> {
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(FileFeatures::default());
     };
@@ -190,6 +199,7 @@ pub fn detect<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<FileFeature
             slab.pos.push(pos);
         }
         a = b;
+        progress(a as usize, n_peaks as usize);
     }
     run_slab(&slab, &rt, dt, p, &mut rows)?;
     drop(slab);

@@ -244,3 +244,18 @@ fn unit_preview_proposes_the_window_and_the_tolerance_of_rt() {
         .and_then(|x| x.get("value"))
         .is_none_or(|x| x.f64().is_none()));
 }
+
+#[test]
+fn detection_progress_is_monotone_ends_at_the_total_and_leaves_the_traces_alone() {
+    let idxs = series();
+    let r = Recipe::for_index(&mut open(&idxs[1])).unwrap();
+    let plain = mzlab_feat::trace::detect(&mut open(&idxs[0]), &r.detect).unwrap();
+    let mut seen = Vec::new();
+    let with = mzlab_feat::trace::detect_with(&mut open(&idxs[0]), &r.detect, &mut |d, t| {
+        seen.push((d, t))
+    })
+    .unwrap();
+    assert_eq!(plain, with);
+    assert!(!seen.is_empty() && seen.windows(2).all(|w| w[0].0 <= w[1].0));
+    assert!(seen.last().is_some_and(|&(d, t)| d == t));
+}

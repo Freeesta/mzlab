@@ -1,5 +1,5 @@
 """pytest plugin of the CI (`-p ci_pytest_tempi` with PYTHONPATH=tools): per test file, the seconds spent in setup, call and teardown and the
-xdist worker that ran it, written to tempi-test.json for tools/stat_ci.py. Runs in the xdist controller only; no test is added or dropped."""
+xdist worker that ran it, written to tempi-test.json for tools/ci_metrics.py. Runs in the xdist controller only; no test is added or dropped."""
 import json
 import os
 from collections import defaultdict

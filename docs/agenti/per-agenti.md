@@ -24,6 +24,9 @@ Per un agente che gira sul computer dell'utente (Claude Code, Claude Cowork o al
 ```
 È il piano `BASE` di `crates/mzlab-cli/src/flow_run_tests.rs`. Un parametro si cambia senza toccare il file, per esempio `--set det.polarity=-1` o `--set det.min_height=5000`; `--set det.algorithm=centwave` sceglie il modello a onde (parametri `ppm`, `peak_width_s`, `snr` solo con quell'algoritmo); un algoritmo `planned` del descrittore (oggi `threshold` di `features.detect`) dà `err.flow.algorithm.unavailable`; il nome di un'istanza unica può essere l'id del passo.
 
+Tabella per famiglie e tabella per ioni: due `features.align` sullo stesso `det.peaks`, il secondo con `"params":{"mode":"ion"}` (o `--set ion.mode=ion`); il detect è condiviso. In modo famiglie un ione assorbito nella famiglia del genitore (ISF, addotto) non ha riga e compare solo fra i membri; in modo ioni ha la sua riga con le aree per campione.
+Per la tabella a ioni di una serie con deriva di RT fra i campioni (TiO2, circa 0,2 min) conviene `ion.mode=ion`, `ion.rt_warp=piecewise` e `ion.rt_gap=0.3`: sulla serie di 12 file le righe in vista passano da 235 a 134 e il rango mediano da 31 a 20,5. Non vale per la tabella a famiglie: con gli stessi valori perde dei prodotti (assorbiti come membri), lì restano i valori di default.
+
 ## Regole per l'agente
 - La CLI non usa la rete e legge e scrive solo in `--in` e `--out`; non cancellare file dell'utente: la cartella di corsa è l'unico posto di scrittura.
 - A risoluzione unitaria un m/z è un candidato, non un'identificazione; i passi di identificazione richiedono dati `hr`.
