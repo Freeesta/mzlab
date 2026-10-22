@@ -1,5 +1,5 @@
-//! Co-elution of an unexpected ion with a heavier strong or possible candidate: a measurement (same RT, lighter by the difference), not a verdict.
-//! Used by `summary` for the key `coelutes` of the rows of unexpected ions; a probable in-source fragment of that candidate shows up here.
+//! Co-elution of an unexpected ion or a strong/possible candidate with a heavier strong or possible candidate: a measurement (same RT, lighter by the difference), not a verdict.
+//! Used by `summary` for the key `coelutes`; a candidate that carries it is to verify as a possible in-source fragment of the heavier one, never dropped.
 
 use super::{Entry, LrDig};
 
@@ -16,9 +16,10 @@ pub struct Coel {
     pub delta_rt: f64,
 }
 
-/// The strong or possible candidate heavier than `e` by at least `MIN_LOSS` whose RT is within half the RT tolerance of the ion, the closest in RT.
+/// The strong or possible candidate heavier than `e` by at least `MIN_LOSS` whose RT is within half the RT tolerance of the row, the closest in RT.
+/// `e` is an unexpected ion or itself a strong or possible candidate (never the parent or a weak row).
 pub fn of(d: &LrDig, e: &Entry) -> Option<Coel> {
-    if !e.unexpected {
+    if e.id == 0 || !(e.unexpected || matches!(e.label, "forte" | "possibile")) {
         return None;
     }
     let cands = d

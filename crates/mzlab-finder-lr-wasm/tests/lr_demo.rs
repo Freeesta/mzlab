@@ -156,6 +156,17 @@ fn the_right_parent_keeps_its_products() {
         "{pf:?}"
     );
     assert!(pf.len() <= 6, "{pf:?}");
+    // the strong candidates that co-elute with a heavier one are marked to verify; the three documented products and the isomer at another RT are not
+    let marked: Vec<(i64, f64)> = candidates(&d, "forte")
+        .iter()
+        .filter(|e| lr::coelute::of(&d, e).is_some())
+        .map(|e| (e.mz.round() as i64, e.ref_rt.unwrap()))
+        .collect();
+    assert_eq!(marked.len(), 2, "{marked:?}");
+    assert!(
+        marked.iter().all(|m| [322, 338].contains(&m.0)),
+        "{marked:?}"
+    );
     for e in candidates(&d, "forte") {
         let peak = e.criteria.iter().find(|c| c.name == lr::peakchk::PEAK);
         assert!(
