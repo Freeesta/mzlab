@@ -5,6 +5,7 @@ still triggers are lowered to warnings so that they are counted instead of stopp
 that is not in tools/clippy_base.json, or more of one than its base, or when a file that fmt accepted is no longer accepted.
 
     python3 tools/controlla_rust.py             # report + exit 1 if worse than the base
+    python3 tools/controlla_rust.py --solo-fmt  # only the fmt half against the base (no clippy; used by the pre-push hook through pre_pr.py --veloce)
     python3 tools/controlla_rust.py --aggiorna  # rewrite the base from the current code; refuses if anything got worse (the first run, without a base, writes it)
 """
 from __future__ import annotations
@@ -68,10 +69,13 @@ def peggiori(now: dict, base: dict) -> list[str]:
 
 
 def main() -> int:
-    now = {"clippy": clippy(), "fmt": fmt()}
+    solo_fmt = "--solo-fmt" in sys.argv
+    if solo_fmt and "--aggiorna" in sys.argv:
+        sys.exit("--solo-fmt cannot rewrite the base: it would drop the clippy counts")
+    now = {"clippy": {} if solo_fmt else clippy(), "fmt": fmt()}
     base = json.loads(BASE.read_text(encoding="utf-8")) if BASE.exists() else {"clippy": {}, "fmt": []}
     bad = peggiori(now, base)
-    print(f"clippy: {sum(now['clippy'].values())} in base {sum(base['clippy'].values())}; fmt: {len(now['fmt'])} files not formatted, base {len(base['fmt'])}")
+    print(("clippy: skipped; " if solo_fmt else f"clippy: {sum(now['clippy'].values())} in base {sum(base['clippy'].values())}; ") + f"fmt: {len(now['fmt'])} files not formatted, base {len(base['fmt'])}")
     if "--aggiorna" in sys.argv:
         if bad and BASE.exists():
             print("refusing to update, worse than the base:\n" + "\n".join(bad))

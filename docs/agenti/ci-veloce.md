@@ -36,7 +36,7 @@ Prima di aprire la PR: `python3 tools/pre_pr.py --veloce` (circa 30 s: solo i co
 3. **HTML dal codice** sempre con il tag `h` dei template (`h\`...\``), che esegue l'escape; mai concatenare testi dei file nell'HTML.
 4. **Testi** come chiavi di `lang/it.js` e `lang/en.js`; Tabui (mzFinder) solo in inglese e senza chiavi `lang/`; Teoria e Pratica solo in italiano (`controlla_i18n.py`).
 5. **Tipi**: `// @ts-check` nei file nuovi, il file sta in un progetto di `tools/tipi/` e dopo ogni nome globale nuovo `python3 tools/tipi/genera_globali.py`.
-6. **Rust**: `cargo fmt --all` e `python3 tools/controlla_rust.py` (fmt e clippy contro la base) prima del push.
+6. **Rust**: `cargo fmt --all` e `python3 tools/controlla_rust.py` (fmt e clippy contro la base) prima del push. L'hook pre-push (`pre_pr.py --veloce`) lancia solo la metà fmt, `controlla_rust.py --solo-fmt`, contro la stessa base: blocca solo i file nuovi non formattati.
 7. **Memoria nei `.wasm`**: nessuna funzione esportata restituisce un `Vec<u8>` intero (usa un `WriteAt`; `tools/api_byte_ammesse.txt` ammette solo l'esistente) e per ordinare si usa il modulo `mzlab_core::sortc` (`sortc::by`, `by_key`, `ord`, …) al posto di `sort*` della libreria standard, che pesa nel `.wasm`.
 8. **e2e**: si attende lo STATO, non l'orologio: `ready(pg)`, `attendi(pg, espr)`, `saved(pg)` prima di ogni `reload()` che deve riprendere la sessione; mai `wait_for_timeout` nuovi (`tools/attese_base.json` scende soltanto).
 9. **Cancellare o rinominare un file**: cerca i chiamanti anche in `crates/*/tests`, `tests_e2e`, `tools` e `.github/workflows` (`grep -rn nome`); `tools/controlla_import.py` prende gli import Python spariti.
