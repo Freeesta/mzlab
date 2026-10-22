@@ -79,3 +79,7 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
   - Identity = candidati da `detail.candidates` (Rust: candidato della riga e alternative della stessa m/z nominale con «[M+H]+ formula» e Δm/z, prove dai criteri e dalla MS2) e, nel riquadro «Details» chiuso, `.lr-idx`: criteri ✓/✗, specificità, alternative, «Product ions (MS2)», similarità, transizioni, posizione (`TPPOS`) e albero (`#tp-alb`); Quality = criteri isotopo e in-source. Il nodo `#tp-det` è unico e sta sotto la riga (`tr.tpt-exp`).
 - **`show(id)`**: passa alla vista Table se serve, apre la riga con `T.open(id)`; se i gettoni la nascondono accende quello che serve (`T.setChip`), altrimenti `T.reset()`.
 - Prova: `tests_e2e/e2e_tpmine_lr_tabella.py` (colonne, progenitore fissato, gettoni, riga aperta, frecce, Esc, nodo della mappa, nessun `.confetti` con movimento ridotto, axe, schermate).
+
+## Rapporto di risultati sul demo flufenacet
+- `cargo test --release -p mzlab-finder-lr-wasm --test lr_demo -- --ignored --nocapture report` (~20 s) stampa sui cinque FullScan demo: feature per file dopo il rilevamento, righe allineate, tempi, picco di memoria, voci per etichetta, rango dei tre prodotti documentati, i dodici primi nell'ordine della tabella, motivi dei non forti, ioni inattesi forti che coeluiscono (≤ 0,1 min) con un candidato forte più pesante, e i falsi positivi di sette genitori decoy.
+- Stesso rapporto su una serie propria: ripetere `demo()` con i file e i tempi della serie (nessun percorso o nome nel repository pubblico) e leggere solo i conteggi.
