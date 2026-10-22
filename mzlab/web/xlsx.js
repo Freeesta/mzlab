@@ -5,6 +5,7 @@
 //
 //   xlsxBuild([{ name: "Dati", head: ["RT (min)", "Intensità (cps)"], rows: [[1.2, 3400], ...], widths: [14, 18] }, ...]) -> Uint8Array
 //   dlx("nome.xlsx", sheets)       downloads it (works in the local program and in the browser version: Blob)
+//   dlc("nome.xlsx", sheets)       the first sheet as .csv (same name, same data)
 //
 // A cell is a number (NaN/Infinity/null/"" = empty cell), a string, or { v, b: true } for bold. `head` is written in bold and frozen.
 
@@ -88,4 +89,17 @@ async function dlx(name, sheets, prov = undefined) {
   if (prov !== false) sheets = await PROV.sheets(sheets, prov || {});
   dl(/\.xlsx$/i.test(name) ? name : name + ".xlsx", xlsxBuild(sheets), XLSX_MIME);
 }
-if (typeof module !== "undefined") module.exports = { xlsxBuild, zipStore, xlsxCrc32 };
+// CSV of the FIRST sheet (the data: the extra sheets, metadata and provenance, are not repeated; the provenance line opens the file): UTF-8 with BOM, comma, dot decimal
+/** @param {{ head?: any[], rows: any[][] }} sheet */
+function csvBuild(sheet) {
+  /** @param {any} v */
+  const cell = v => { if (v && typeof v === "object") v = v.v; const t = typeof v === "number" ? (isFinite(v) ? String(v) : "") : v == null ? "" : String(v); return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  return [...(sheet.head ? [sheet.head] : []), ...sheet.rows].map(r => r.map(cell).join(",")).join("\n") + "\n";
+}
+/** download the first sheet as .csv (same name as the .xlsx, same provenance rule as dlx) @param {string} name @param {any[]} sheets @param {any} [prov] */
+async function dlc(name, sheets, prov = undefined) {
+  let text = csvBuild(sheets[0]);
+  if (prov !== false) text = await PROV.tsv(text, prov || {});
+  dl(name.replace(/\.xlsx$/i, "") + ".csv", "\ufeff" + text, "text/csv;charset=utf-8", false);
+}
+if (typeof module !== "undefined") module.exports = { xlsxBuild, zipStore, xlsxCrc32, csvBuild };

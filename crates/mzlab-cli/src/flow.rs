@@ -226,6 +226,8 @@ pub(crate) struct Made {
     pub artifact: Artifact,
     pub estimates: Vec<(String, Value, Value)>,
     pub warnings: Vec<String>,
+    /// What a per-file step says of its file (`{"via": "centroided" | "passthrough", ...}`).
+    pub file: Option<Value>,
 }
 
 impl Made {
@@ -235,6 +237,7 @@ impl Made {
             artifact,
             estimates: Vec::new(),
             warnings: Vec::new(),
+            file: None,
         }
     }
 }
@@ -484,6 +487,7 @@ impl Runner for FileRunner {
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
             mem,
             warnings: made.warnings,
+            file: made.file,
             cached,
         })
     }

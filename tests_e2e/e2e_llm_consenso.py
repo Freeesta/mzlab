@@ -1,4 +1,4 @@
-"""Assistant (settings → «Assistant»): the profile «corso» loads nothing of llm/; «ricerca» with the switch off loads nothing either; turning it on asks the consent
+"""Assistant (settings → «Assistant»): without the administrator mode nothing of the assistant exists and nothing of llm/ loads; with it («ricerca») nothing of llm/; with the switch off nothing loads either; turning it on asks the consent
 (dialog: focus inside, Esc closes), then the preview «What will be sent», the transport document and the recording served from 'self'. No request leaves the site
 (any other host fails the test) and axe finds no serious violation in the section."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,11 +21,10 @@ try:
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.evaluate("document.getElementById('uip-g-app').open = true")
             assert pg.locator("#uip-llm").count() == 0, "no LLM element with the profile corso"
-            assert pg.evaluate("localStorage.getItem('mzlab.profilo')") in (None, "corso")
             assert not llm_urls(), llm_urls()
         step("corso: no LLM element and no llm/ file", corso)
         def ricerca_spento():
-            pg.evaluate("localStorage.setItem('mzlab.profilo','ricerca'); localStorage.setItem('mzlab.lang','en')"); pg.reload(); ready(pg)
+            pg.evaluate("localStorage.setItem('mzlab.admin','1'); localStorage.setItem('mzlab.lang','en')"); pg.reload(); ready(pg)
             pg.click("#np-set"); pg.wait_for_selector("#uipset")
             pg.evaluate("document.getElementById('uip-g-llm').open = true")
             pg.wait_for_selector("#uip-llm #llm-on")

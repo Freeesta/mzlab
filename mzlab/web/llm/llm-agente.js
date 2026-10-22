@@ -99,6 +99,12 @@ export class AgentRun {
   async log() { return (await this.rpc({ op: "agent.in", kind: "log" })).log; }
   /** @param {string} sources JSON of the sources of the page @param {number} [budget] @returns {Promise<string>} a contesto/1 text */
   async context(sources, budget = 4000) { return (await this.rpc({ op: "context", sources, budget })).context; }
+  /** @param {string} sources JSON of the sources of the charts @returns {Promise<any[]>} the views that exist now: {ref, description, fields, rows} */
+  async chartViews(sources) { return JSON.parse((await this.rpc({ op: "chart.views", sources })).views); }
+  /** a `grafico/1` of the model, checked and filled with its rows by Rust; a rejection is an error {key, params} @param {string} spec @param {string} sources @returns {Promise<any>} */
+  async chartMake(spec, sources) { return JSON.parse((await this.rpc({ op: "chart.make", spec, sources })).chart); }
+  /** the charts that need no model @param {string} sources @returns {Promise<any[]>} */
+  async chartPresets(sources) { return JSON.parse((await this.rpc({ op: "chart.presets", sources })).charts); }
   close() { this.worker.terminate(); if (this.client && this.client.close) this.client.close(); }
 }
 

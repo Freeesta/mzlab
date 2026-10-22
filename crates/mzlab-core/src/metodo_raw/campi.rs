@@ -184,6 +184,13 @@ fn container(raw: &RawFileReader) -> Vec<Campo> {
             .unwrap_or_else(|| format!("UserLabel{n}"));
         v.push(Campo::new("thermo-raw:SeqRow/UserLabels", &name, value).id());
     }
+    if !raw.as_info.text.trim().is_empty() {
+        v.push(Campo::new(
+            "thermo-raw:ASInfo",
+            "Text",
+            raw.as_info.text.trim(),
+        ));
+    }
     let r = "thermo-raw:RawFileInfo";
     v.push(
         Campo::new(r, "ComputerName", &raw.raw_file_info.computer_name)

@@ -1,7 +1,7 @@
 // @ts-check
 // Worker of the assistant (module worker): loads the Rust module `wasm-feat/llm/` (manifest, SHA-256 checked) on the first message and only then. Builds each request and decodes
 // each answer with it; the bytes travel over a MessagePort to/from the iframe `llm/trasporto.html`, which owns the key. The transport `replay` answers from a recording and never uses the iframe.
-// Page -> worker: init, port, request, send, abort, replay.load, replay.reset, agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
+// Page -> worker: init, port, request, send, abort, replay.load, replay.reset, chart.views, chart.make, chart.presets (charts: grafico/1, docs/agenti/llm.md), agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.
 /** @typedef {{request: (conv: string) => string, replay_load: (text: string, strict: boolean) => number, replay_respond: (conv: string) => string, replay_reset: () => void}} Llm */
 /** @typedef {{push: (b: Uint8Array) => string, finish: () => string}} Dec */
 
@@ -93,6 +93,9 @@ onmessage = async ev => {
     else if (m.op === "replay.reset") { llm.replay_reset(); postMessage({ id: m.id, ok: true }); }
     else if (m.op === "send") await send(m);
     else if (m.op === "context") postMessage({ id: m.id, ok: true, context: mod.context_build(m.sources, m.budget || 4000) });
+    else if (m.op === "chart.views") postMessage({ id: m.id, ok: true, views: mod.chart_views(m.sources) });
+    else if (m.op === "chart.make") postMessage({ id: m.id, ok: true, chart: mod.chart_validate(m.spec, m.sources) });
+    else if (m.op === "chart.presets") postMessage({ id: m.id, ok: true, charts: mod.chart_presets(m.sources) });
     else if (m.op === "agent.new") {
       agent = new mod.Agent(toolsText, m.provider, m.model, m.level, !!m.research);
       if (m.replay) agent.replay_load(m.replay, !!m.strict);
