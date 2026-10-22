@@ -45,7 +45,7 @@ Vincoli: niente Cargo.toml/Cargo.lock, workflow, CSP, tetti; AGENTS.md e cli.md 
 ## L3 · Esecutore nativo live, `--jsonl` e rotte desktop
 
 ```text
-Pacchetto L3 dello studio Flow-Live (docs/studi/flow-live/README.md §2.5-2.8, §1.3; docs/agenti/flow-live.md, rust-flow.md, rust-desktop.md). Ramo claude/flow-live-3 da origin/main (L1, L2 e L7 uniti; se #1481 L7b non è ancora unita, fai il fold appena entra: tocca flow_base.rs); NON unire: PR e SHA a CI verde al COO.
+Pacchetto L3 dello studio Flow-Live (docs/studi/flow-live/README.md §2.5-2.8, §1.3; docs/agenti/flow-live.md, rust-flow.md, rust-desktop.md). Ramo claude/flow-live-3 da origin/main (L1, L2 e L7 uniti). I punti 2-4 partono subito; i punti 1 (writer di sched_route) e 5 (rotte desktop uguali al sito) dopo che L4 è unita: fai il fold appena entra, e così per #1481 L7b (tocca flow_base.rs); NON unire: PR e SHA a CI verde al COO.
 
 Obiettivo: sul computer il piano gira in continuo e accetta modifiche mentre gira, con lo STESSO scheduler e gli STESSI testi JSON del sito.
 1. Riuso, nessun secondo motore: crates/mzlab-core/src/flow/run_sched.rs (flow::execute sopra Sched, L2) e sched_route.rs (L4: testi JSON di JobSpec, NodeView, comandi, risultati). Se servono i writer di sched_route fuori dal crate, rendili pub senza cambiarne i byte (i casi di tests/flow_sched_nodo.js restano identici). Niente copia del loop di run_sched: estrai la parte comune (scegli lavoro → esegui → riporta) in una funzione che execute e LiveRun usano entrambi; prov/1 di flow run invariato (test_flow_determinismo.py senza costanti nuove).
