@@ -88,7 +88,7 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block]) -> Result<Vec<Option<(f
         });
     }
     let mut out = vec![None; blocks.len()];
-    for k in 0..files.len() {
+    for (k, file) in files.iter_mut().enumerate() {
         for polarity in [1i8, -1] {
             let mut mine: Vec<usize> = (0..blocks.len())
                 .filter(|&i| found[i].is_some_and(|f| f.0 == k) && blocks[i].polarity == polarity)
@@ -98,7 +98,7 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block]) -> Result<Vec<Option<(f
                 .iter()
                 .map(|&i| {
                     let g = found[i].map_or(0, |f| f.1);
-                    let s = &files[k].scans[g];
+                    let s = &file.scans[g];
                     Ms2Scan {
                         file: k,
                         scan: g,
@@ -117,7 +117,7 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block]) -> Result<Vec<Option<(f
             if scans.is_empty() {
                 continue;
             }
-            fill_purity(&mut files[k], polarity, &mut scans)?;
+            fill_purity(file, polarity, &mut scans)?;
             for (&i, s) in mine.iter().zip(&scans) {
                 out[i] = Some((s.purity, s.chimeric));
             }
