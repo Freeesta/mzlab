@@ -226,6 +226,56 @@ fn peak_scans(scans: &Scans, full: bool) -> Vec<usize> {
     pick
 }
 
+/// The sequence row of the file: the fields with a known meaning by their label, the others by position (`unknown_numbers`, `unknown_texts`) so they can be matched against another reader's fields.
+fn sequence_row(raw: &RawFileReader) -> Value {
+    let (s, i) = (&raw.seq_row, &raw.seq_row.injection);
+    let mut o = Map::new();
+    o.insert("type".into(), "sequence".into());
+    o.insert("row_number".into(), i.row_number.into());
+    o.insert("injection_vial".into(), i.vial.trim().into());
+    for (k, v) in [
+        ("injection_volume", i.injection_volume),
+        ("sample_weight", i.sample_weight),
+        ("sample_volume", i.sample_volume),
+        ("istd_amount", i.istd_amount),
+        ("dilution_factor", i.dilution_factor),
+    ] {
+        o.insert(k.into(), v.into());
+    }
+    for (k, v) in [
+        ("id", &s.id),
+        ("comment", &s.comment),
+        ("instrument_method", &s.inst_method),
+        ("processing_method", &s.proc_method),
+        ("raw_file_name", &s.file_name),
+        ("path", &s.path),
+        ("vial", &s.vial),
+    ] {
+        o.insert(k.into(), v.trim().into());
+    }
+    o.insert(
+        "user_text".into(),
+        s.user_labels
+            .iter()
+            .map(|t| t.trim())
+            .collect::<Vec<_>>()
+            .into(),
+    );
+    let numbers: Map<String, Value> = s
+        .unknown_numbers
+        .iter()
+        .map(|(k, v)| ((*k).into(), (*v).into()))
+        .collect();
+    let texts: Map<String, Value> = s
+        .unknown_texts
+        .iter()
+        .map(|(k, v)| ((*k).into(), v.trim().into()))
+        .collect();
+    o.insert("unknown_numbers".into(), numbers.into());
+    o.insert("unknown_texts".into(), texts.into());
+    o.into()
+}
+
 /// The optional rows after the scans: chromatograms, status, errors, method.
 fn write_extras(
     out: &mut Sink,
@@ -251,6 +301,8 @@ fn write_extras(
             out.row(&Value::Object(o));
         }
     }
+    out.row(&sequence_row(raw));
+    out.row(&json!({"type": "asinfo", "preamble": hex(&raw.as_info.preamble), "text": raw.as_info.text.trim()}));
     for e in &raw.error_log {
         out.row(&json!({"type": "error", "rt": f64::from(e.time), "message": e.message.trim()}));
     }

@@ -333,10 +333,19 @@ fn scan_number_to_index(scan_number: u32, first_scan_number: u32) -> Option<usiz
         .map(|v| v as usize)
 }
 
+/// The autosampler block (ASInfo): its 24-byte preamble (meaning not decoded) and its text.
+#[derive(Debug, Clone, Default)]
+pub struct AsInfo {
+    pub preamble: Vec<u8>,
+    pub text: String,
+}
+
 /// A parsed Thermo Fisher RAW file.
 pub struct RawFileReader {
     pub header: FileHeader,
     pub seq_row: SeqRow,
+    /// The autosampler block that follows the sequence row.
+    pub as_info: AsInfo,
     pub raw_file_info: RawFileInfo,
     pub run_header: RunHeader,
     pub scan_index: Vec<ScanIndexEntry>,
@@ -466,9 +475,13 @@ impl RawFileReader {
         // 2. SeqRow
         let seq_row = SeqRow::read(&mut r, version)?;
 
-        // 3. ASInfo (read and discard preamble + string)
-        let _as_preamble = r.read_bytes(24)?; // ASInfoPreamble: 24 bytes
-        let _as_text = r.read_pascal_string()?;
+        // 3. ASInfo (autosampler): 24-byte preamble and a text, kept as they are
+        let as_preamble = r.read_bytes(24)?;
+        let as_text = r.read_pascal_string()?;
+        let as_info = AsInfo {
+            preamble: as_preamble,
+            text: as_text,
+        };
 
         // 4. RawFileInfo
         let raw_file_info = RawFileInfo::read(&mut r, version)?;
@@ -873,6 +886,7 @@ impl RawFileReader {
         Ok(Self {
             header,
             seq_row,
+            as_info,
             raw_file_info,
             run_header,
             scan_index,

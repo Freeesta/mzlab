@@ -25,7 +25,7 @@ Scopo: il lettore Thermo di mzLab (`vendor/opentfraw` 2.0.0 modificato, Rust pur
 9. ✔ **File che non si aprono**: 11 su 41 (`RAW_VELOCE.md` §2.5); ? versioni non dichiarate (v65, v67+, LTQ v8-v47) e file **troncati** (acquisizione interrotta): oggi errore, RFR legge fino all'ultima scansione intera.
 10. ✔ **UV/PDA 3D** (572 B per istante) non letto; ? canali analogici contro RFR.
 11. ✔ **Metodo dello strumento**: euristica UTF-16, OLE non letto (RV-09). ? Testo per dispositivo contro `GetInstrumentMethod(i)`.
-12. ? **Trailer, status log, error log, tune**: tutti i campi per etichetta e tipo contro RFR (oggi `opentfraw.trailer.<etichetta>`).
+12. ? **Trailer, status log, error log, tune**: il dump nostro scrive trailer, status, error, sequenza e ASInfo con tutte le etichette e il comparatore li confronta chiave per chiave; ? da confrontare con RFR sul corpus (T-4 senza dump: «non verificato contro RFR»); tune per segmento non trovato nel file.
 13. ✔ **MSn a 8 livelli** (#1235 in main): da riverificare su un'infusione reale con il dump.
 
 ## 3. Metodo oracolo: due dump simmetrici e un comparatore
