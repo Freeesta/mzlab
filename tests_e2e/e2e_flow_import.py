@@ -30,6 +30,18 @@ try:
         attendi(pg, "!!document.querySelector('.fl-insp .fl-data') && /in Data/.test(document.querySelector('.fl-insp .fl-data').textContent)")
         t = pg.inner_text(".fl-insp")
         check("files", "2 files in Data: a.mzML, b.mzML" in t and "No file loaded" not in t, t)
+        # the card states: yellow without data, green with them; one views selector; the template toggle; the divider widens the settings
+        check("state", pg.locator(".fln:has-text('Import data') .fln-chip.ok").count() == 1 and "Runs" in pg.inner_text(".fln:has-text('Import data')"))
+        pg.evaluate("E.files.length = 0"); pg.click('.fln:has-text("Build feature table")'); pg.click('.fln:has-text("Import data")')
+        check("warn", pg.locator(".fln:has-text('Import data') .fln-chip.warn").count() == 1 and "No data" in pg.inner_text(".fln:has-text('Import data')"))
+        check("views", pg.locator(".flx-views button").count() == 3 and pg.locator(".flx-views [aria-pressed=true]").count() == 1)
+        attendi(pg, "!!document.querySelector('.flx-tpl.show')")      # shown on the first screen: the button hides it, then shows it again
+        pg.click('button[aria-label="Start from a template"]'); attendi(pg, "!document.querySelector('.flx-tpl.show')")
+        pg.click('button[aria-label="Start from a template"]'); attendi(pg, "!!document.querySelector('.flx-tpl.show')")
+        w0 = pg.evaluate("document.querySelector('.flx-insp').getBoundingClientRect().width")
+        pg.focus(".flx-split"); pg.keyboard.press("ArrowLeft"); pg.keyboard.press("ArrowLeft")
+        check("split", pg.evaluate("document.querySelector('.flx-insp').getBoundingClientRect().width") > w0 + 50, str(w0))
+        pg.click('button[data-tab="list"]'); pg.click('button[data-tab="canvas"]')
         b.close()
 finally:
     srv.terminate()

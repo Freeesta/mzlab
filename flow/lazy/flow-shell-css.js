@@ -8,12 +8,11 @@
 .flw.flx{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}.flx *{box-sizing:border-box}
 .flx .flx-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.flx .flx-bar h2{margin:0;font-size:16px;margin-right:4px}
 .flx .flx-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.flx .flx-seg button{border:0;background:var(--panel);color:var(--ink);min-height:28px;padding:2px 12px;cursor:pointer}
-.flx .flx-seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}.flx .flx-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.flx .flx-views{align-self:flex-start}.flx .flx-seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}.flx .flx-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .flx button[aria-busy=true]{cursor:progress;opacity:.6}@media (prefers-reduced-motion:no-preference){.flx button[aria-busy=true]{animation:flBusy 1s ease-in-out infinite alternate}}@keyframes flBusy{to{opacity:.35}}
 .flx .flx-run{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}.flx .flx-run:hover:not(:disabled){background:var(--accent);filter:brightness(1.1)}
-.flx .flx-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}.flx .flx-tabs button{border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);min-height:28px;padding:2px 12px;cursor:pointer}
-.flx .flx-tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}.flx .flx-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.flx .flx-body{width:100%;align-self:stretch;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;align-items:start}.flx .flx-body.flx-adv{grid-template-columns:200px minmax(0,1fr) 340px}
+.flx .flx-body{--insp:340px;width:100%;align-self:stretch;display:grid;grid-template-columns:minmax(0,1fr) 24px var(--insp);gap:4px;align-items:start}.flx .flx-body.flx-adv{grid-template-columns:200px minmax(0,1fr) 24px var(--insp)}
+.flx .flx-split{align-self:stretch;min-height:120px;cursor:col-resize;background:linear-gradient(var(--line),var(--line)) center/4px 100% no-repeat;touch-action:none}.flx .flx-split:hover,.flx .flx-split:focus-visible,.flx .flx-split.drag{background:linear-gradient(var(--accent),var(--accent)) center/4px 100% no-repeat;outline:none}
 .flx .fl-cv{position:relative;border:1px solid var(--line);border-radius:10px;background-color:var(--panel);background-image:radial-gradient(color-mix(in srgb,var(--line) 45%,transparent) 1px,transparent 1.5px);background-size:20px 20px;height:min(70vh,640px);min-height:340px;overflow:hidden}
 .flx .fl-view{position:absolute;inset:0;overflow:hidden;cursor:grab;touch-action:none}.flx .fl-view.fl-pan{cursor:grabbing}.flx .fl-view:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .flx .fl-stage{position:absolute;left:0;top:0;transform-origin:0 0}.flx .fl-stage.fl-soft{transition:transform var(--t-med,180ms) var(--ease-out,ease-out)}
@@ -24,7 +23,7 @@
 .flx .fln-ic{flex:none;color:var(--cc);display:inline-flex}.flx .fln-tx{display:flex;flex-direction:column;min-width:0;flex:1}.flx .fln-t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .flx .fln-s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .flx .fln-chip{position:absolute;top:-9px;right:8px;display:inline-flex;gap:3px;align-items:center;font-size:12px;padding:0 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel)}
-.flx .fln-chip.ok{color:var(--ok)}.flx .fln-chip.bad{color:var(--bad);border-color:var(--bad)}
+.flx .fln-chip.ok{color:var(--ok)}.flx .fln-chip.bad{color:var(--bad);border-color:var(--bad)}.flx .fln-chip.warn{color:var(--warn);border-color:var(--warn)}
 .flx .fln-next{position:absolute;right:-14px;top:50%;margin-top:-12px;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:none;place-items:center;cursor:pointer;padding:0}
 .flx .fln:hover .fln-next,.flx .fln.sel .fln-next,.flx .fln:focus-within .fln-next{display:grid}.flx .fln-next:hover{border-color:var(--accent);color:var(--accent)}.flx .fln-next:focus-visible{outline:2px solid var(--accent)}
 .flx .fl-zoom{position:absolute;left:8px;bottom:8px;display:flex;gap:4px}
@@ -48,8 +47,8 @@
 .flx .flx-res h3{flex:1;margin:0;overflow-wrap:anywhere}.flx .flx-tablewrap{max-height:50vh;overflow:auto;margin-top:6px}.flx .flx-table{border-collapse:collapse;font-size:12px}
 .flx .flx-sticks{width:100%;max-width:640px;height:auto;display:block}.flx .flx-stick{stroke:var(--accent);stroke-width:2}.flx .flx-prec{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}.flx .flx-ax{stroke:var(--line);stroke-width:1}.flx .flx-tick{fill:var(--muted);font-size:11px}.flx{--gv1:#0072B2;--gv2:#E69F00;--gv3:#009E73;--gv4:#D55E00;--gv5:#CC79A7;--gv6:#56B4E9;--gv7:#F0E442;--gv8:var(--ink)}.flx .flx-one{margin-top:6px}
 .flx .flx-qc{margin-top:6px}.flx .flx-qc summary{cursor:pointer;min-height:24px}.flx .flx-table th[scope=row]{background:none;position:static;font-weight:600}.flx .flx-table caption{text-align:left;color:var(--muted);padding:4px 0}.flx .flx-table th,.flx .flx-table td{border:1px solid var(--line);padding:3px 8px;text-align:left;white-space:nowrap}.flx .flx-table th{position:sticky;top:0;background:var(--soft)}
-@media (max-width:900px){.flx .flx-body,.flx .flx-body.flx-adv{grid-template-columns:minmax(0,1fr)}.flx .fl-insp{max-height:none}}
-@media (pointer:coarse){.flx .fln-next{width:40px;height:40px;right:-20px;margin-top:-20px}.flx .flx-seg button,.flx .flx-tabs button{min-height:40px}}
+@media (max-width:900px){.flx .flx-body,.flx .flx-body.flx-adv{grid-template-columns:minmax(0,1fr)}.flx .flx-split{display:none}.flx .fl-insp{max-height:none}}
+@media (pointer:coarse){.flx .fln-next{width:40px;height:40px;right:-20px;margin-top:-20px}.flx .flx-seg button{min-height:40px}.flx .flx-split{min-width:24px}}
 @media (prefers-reduced-motion:reduce){.flx .fln,.flx .fl-insp,.flx .flx-pop{animation:none}.flx .fl-stage.fl-soft,.flx .fln{transition:none}}
 :root[data-a11y-reduce] .flx .fln,:root[data-a11y-reduce] .flx .fl-insp,:root[data-a11y-reduce] .flx .flx-pop{animation:none}:root[data-a11y-reduce] .flx .fl-stage.fl-soft,:root[data-a11y-reduce] .flx .fln{transition:none}`;
   F.injectShellCss = () => {

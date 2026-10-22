@@ -14,9 +14,8 @@
 
   /** the files open in the Data tab, as the Import data card shows them: «No file loaded» with a way to Data, or the count and the first names @param {any} el */
   const dataState = el => {
-    const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.filter((/** @type {any} */ f) => f && !f.gone && f.file) : [];
-    if (!open.length) return el("p", { class: "fl-note fl-data" }, el("span", { text: "No file loaded. " }), F.btn("import", "Go to the Data tab to open files", () => { const b = document.querySelector('#nav [data-v="data"]'); if (b) /** @type {HTMLElement} */ (b).click(); }, "Open Data"));
-    const names = [...new Set(open.map((/** @type {any} */ f) => String(f.file).split("#")[0]))];
+    const names = F.dataFiles();
+    if (!names.length) return el("p", { class: "fl-note fl-data" }, el("span", { text: "No file loaded. " }), F.btn("import", "Go to the Data tab to open files", () => { const b = document.querySelector('#nav [data-v="data"]'); if (b) /** @type {HTMLElement} */ (b).click(); }, "Open Data"));
     return el("p", { class: "fl-note fl-data", text: `${names.length} file${names.length > 1 ? "s" : ""} in Data: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ", …" : ""}` });
   };
 
