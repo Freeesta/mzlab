@@ -187,9 +187,10 @@ try:
             assert not r, r
         step("the cards and the table of files say what the steps did, by keyboard, with no axe violation", cards)
 
-        # --- C. a mixed series: a profile file, a centroid file, a profile file whose centroid index Data holds
+        # --- C. a mixed series: a profile file whose centroid index Data holds (first: the recipe of the series is taken from the first file), a centroid file, a profile file without one
         MODES = """(names) => { const rows = names.map((n, k) => ({ name: n.replace(/\\.mzidx$/, '.mzML'), spectrum_mode: k === 1 ? 'centroid' : 'profile', group: 'sample', kind: 'full', use: true }));
-          ST.files = rows; E.files = rows.map(r => ({ file: r.name, name: r.name, type: 'sample', kind: 'full', group: 'sample' })); return rows.map(r => r.name); }"""
+          const open = rows.map((r, k) => ({ file: r.name, name: r.name, label: r.name, k, type: 'sample', kind: 'full', group: 'sample', vis: false }));
+          Object.defineProperty(ST, 'files', { get: () => rows, set: () => {}, configurable: true }); Object.defineProperty(E, 'files', { get: () => open, set: () => {}, configurable: true }); return rows.map(r => r.name); }"""
         PUT_CEN = """async (n) => { let d = await navigator.storage.getDirectory(); for (const p of ["mzlab", "idx"]) d = await d.getDirectoryHandle(p, { create: true });
           const h = await d.getFileHandle(n.replace('.mzidx', '.cen.mzidx') + '.part', { create: true }); await (await fetch("static/dati_flow_live/" + n)).body.pipeTo(await h.createWritable()); await h.move(n.replace('.mzidx', '.cen.mzidx')); }"""
         JOBS = """async (id) => (await (await fetch('api/flow/sched/jobs', { method: 'POST', body: '{}' })).json()).filter(j => j.instance === id).map(j => [j.item, j.state])"""
@@ -197,7 +198,7 @@ try:
         def jobs_until(pg, step_id, cond, timeout=60):
             """the jobs [item, state] of an instance, polled in the scheduler until `cond` (an expression on `j`) holds"""
             until(pg, "async (id) => { const j = await (" + JOBS + ")(id); return " + cond + "; }", step_id, timeout)
-        pg = page(); pg.wait_for_function("typeof ST !== 'undefined' && typeof E !== 'undefined'", timeout=120000); inputs = pg.evaluate(MODES, names); pg.evaluate(PUT, names); pg.evaluate(PUT_CEN, names[2]); open_flow(pg)
+        pg = page(); pg.wait_for_function("typeof ST !== 'undefined' && typeof E !== 'undefined'", timeout=120000); inputs = pg.evaluate(MODES, names); pg.evaluate(PUT, names); pg.evaluate(PUT_CEN, names[0]); open_flow(pg)
         cen = pg.evaluate(STEP, "spectra.centroid"); det = pg.evaluate(STEP, "features.detect")
         def mixed():
             assert cen and pg.evaluate(STEP, "index.mzidx"), "the base plan holds the centroid step"
@@ -205,7 +206,7 @@ try:
             # the profile file without a centroid index stays with the computer: its detection does not run, the other two are detected
             jobs_until(pg, det, "j.filter(x => x[1] === 'done' || x[1] === 'reused').length >= 2")
             states = dict(pg.evaluate(JOBS, det))
-            assert states.get(inputs[0]) not in ("done", "reused", "running"), states
+            assert states.get(inputs[2]) not in ("done", "reused", "running"), states
             pg.focus(CARD % cen); pg.keyboard.press("Enter")
             until(pg, "() => { const t = document.querySelector('.fl-insp .fln-files'); return t && !t.hidden && t.querySelectorAll('tbody tr').length > 0; }")
             rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody tr')].map(r => [...r.children].map(c => c.textContent))")
