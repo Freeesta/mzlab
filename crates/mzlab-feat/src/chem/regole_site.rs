@@ -9,12 +9,6 @@ use mzlab_core::elements::fmt;
 /// What a `site` gives for a rule: nothing (absent), the site only (the rule's own formula holds) or products with their formula; `true` = an ion.
 pub(super) type Prodotti = Vec<(Option<String>, bool)>;
 
-fn push_unique(out: &mut Prodotti, f: String, ione: bool) {
-    if !out.iter().any(|(x, _)| x.as_deref() == Some(&f)) {
-        out.push((Some(f), ione));
-    }
-}
-
 /// The names of the sites; a rule of the table that names another is rejected by the test of the table.
 pub const SITI: [&str; 17] = [
     "amide_nh2",
@@ -494,5 +488,11 @@ impl Mol {
                     })
             });
         Some(gluc)
+    }
+}
+
+fn push_unique(out: &mut Prodotti, f: String, ione: bool) {
+    if !out.iter().any(|(x, _)| x.as_deref() == Some(&f)) {
+        out.push((Some(f), ione));
     }
 }
