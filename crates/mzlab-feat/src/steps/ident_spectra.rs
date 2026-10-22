@@ -16,7 +16,7 @@ pub(super) fn chimeric() -> Step {
         ..Port::new(
             "features",
             DataType::Table,
-            "Aligned feature table (for the intruders)",
+            "Aligned feature table, the whole one and not a filtered view (for the intruders)",
         )
         .requires(hr())
     };

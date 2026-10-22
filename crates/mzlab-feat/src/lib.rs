@@ -80,6 +80,7 @@ pub mod trace;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod view;
+pub mod weakfile;
 
 /// Version of the feature table and of the rules that produce it (changes when the output of `detect` changes).
 pub const FEAT_VERSION: u32 = 3;

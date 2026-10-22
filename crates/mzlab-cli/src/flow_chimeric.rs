@@ -149,7 +149,7 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block], chim_rel: Option<f64>) 
 /// The feature rows of the `.mzfeat` as points: id, m/z and RT (min).
 fn points(table: &[u8]) -> Result<Vec<FeaturePoint>> {
     if table.first() == Some(&b'{') {
-        return Err(Error::new("err.flow.export.view"));
+        return Err(Error::new("err.flow.export.view").with("port", "features"));
     }
     let (t, _) = read_table_from(&mut Slice(table), table.len() as u64)?;
     Ok((0..t.len())

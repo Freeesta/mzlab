@@ -145,8 +145,12 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     // Each file takes its own base recipe, as the page does (`detect_file`): on the unit axis the mass defect and the floor come from the file.
     let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&path)?)?)?;
     let name = r.source_name(input);
-    let bytes = run::detect(&mut open(&path)?, &name, &recipe)?;
+    let mut index = open(&path)?;
+    let bytes = run::detect(&mut index, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
+    // The weak candidates are made here, with the other files of the level at the same time, so the alignment and the gap filling do not detect again.
+    let weak = run::detect_weak(&mut index, &recipe)?;
+    std::fs::write(weak_path(&out), weak).map_err(io)?;
     std::fs::write(&out, bytes).map_err(io)?;
     let a = r.keep(out, DataType::Peaks)?;
     let layers = vec![(job.step.id.to_string(), written(job))];
@@ -175,6 +179,16 @@ impl Stored for Files {
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
         std::fs::read(&self.0[k]).map_err(io)
     }
+    fn weak(&mut self, k: usize) -> Result<Option<Vec<u8>>> {
+        Ok(std::fs::read(weak_path(&self.0[k])).ok())
+    }
+}
+
+/// The file beside a `.mzfeatf` that holds the weak candidates of its file (`mzlab_feat::weakfile`).
+fn weak_path(peaks: &Path) -> PathBuf {
+    let mut p = peaks.as_os_str().to_owned();
+    p.push(".weak");
+    PathBuf::from(p)
 }
 
 /// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the

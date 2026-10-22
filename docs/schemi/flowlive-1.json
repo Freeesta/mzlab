@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flowlive/1",
+  "title": "flowlive/1: one event of the live Flow scheduler",
+  "description": "What mzlab_core::flow::sched writes through events_since: one event for every change of state of a job (kind job), of an instance (kind node, the card) and of a plan that cannot be scheduled (kind plan). Code: crates/mzlab-core/src/flow/sched_events.rs.",
+  "type": "object",
+  "required": ["format", "seq", "rev", "kind", "instance", "state"],
+  "additionalProperties": false,
+  "properties": {
+    "format": { "const": "flowlive/1" },
+    "seq": { "type": "integer", "minimum": 1, "description": "Grows by one with every event of a scheduler." },
+    "rev": { "type": "integer", "minimum": 0, "description": "Number of updates of the plan so far; an event of an older revision is dropped by the page." },
+    "kind": { "enum": ["job", "node", "plan"] },
+    "instance": { "type": "string", "description": "Instance id of the plan; empty for kind plan." },
+    "item": { "type": ["string", "null"], "description": "Name of the plan input that drives the job (never an index); null for a step that is not per_item and for kind node." },
+    "state": { "enum": ["waiting", "ready", "running", "done", "reused", "stale", "cancelled", "error", "refused", "blocked", "skipped", "paused"] },
+    "frac": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Share done (a card: the mean over its jobs); null = not known." },
+    "parte": { "type": ["integer", "null"], "minimum": 0, "description": "kind node: jobs done or reused." },
+    "di": { "type": ["integer", "null"], "minimum": 0, "description": "kind node: jobs in all." },
+    "ms": { "type": ["number", "null"], "minimum": 0, "description": "kind job: time of the finished job as the executor reported it, null until done; kind node: the sum over its done jobs." },
+    "key": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "kind job: plan_key of the job (SHA-256)." },
+    "blocked_by": { "type": ["string", "null"], "description": "State blocked: what it waits for (permission.memory, platform.computer, plan.problem)." },
+    "error": {
+      "type": ["object", "null"],
+      "required": ["error_key"],
+      "additionalProperties": false,
+      "properties": { "error_key": { "type": "string" }, "params": { "type": "object", "additionalProperties": { "type": "string" } } }
+    }
+  }
+}

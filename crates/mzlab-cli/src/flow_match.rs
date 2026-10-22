@@ -331,6 +331,7 @@ fn write_cand(
             o.raw(",\"decoy_targets_ge\":")
                 .int(f.fdr.n_target_ge as i64);
             o.raw(",\"decoy_ge\":").int(f.fdr.n_decoy_ge as i64);
+            o.raw(",\"best_decoy\":").num(r(f.best.decoy as f64));
         } else {
             o.raw(",\"decoy_q\":null");
         }
