@@ -862,3 +862,4 @@
 {"v":1,"ts_utc":"2026-10-22T04:37:00Z","azione":"aperta","tipo":"pr","pr":1424,"sha":"5605ffe9b81105e0f82a69120f9a302a3f3e88e7"}
 {"v":1,"ts_utc":"2026-10-22T04:42:03Z","azione":"aperta","tipo":"pr","pr":1425,"sha":"6eb0f6fee0d7b59b7a845bb45c95059dbd698428"}
 {"v":1,"ts_utc":"2026-10-22T04:42:09Z","azione":"aperta","tipo":"pr","pr":1426,"sha":"6b94448cf551cac03dd94f6e087dc7106e8b6fc0"}
+{"v":1,"tipo":"pr","pr":1425,"sha":"6eb0f6fee0d7b59b7a845bb45c95059dbd698428","ts_utc":"2026-10-22T04:52:07Z","azione":"unita","aperta_s":604,"commit_n":4,"cause_commit":{"merge di main":2,"altro":1},"merge_main":2,"righe_piu":42,"righe_meno":6,"file_n":3,"file":["crates/mzlab-feat/src/centwave.rs","crates/mzlab-feat/tests/centwave.rs","docs/agenti/mzfeat.md"],"aree":{"rust":2,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
