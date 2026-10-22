@@ -916,6 +916,110 @@
      }
     }
    }
+  },
+  "interpretazione": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Present only when asked (mzlab-cli msn-graph --interpreta): for each arc the neutral loss as evidence (name, formula, exact mass, ppm, source, confidence) and the activations that observed it. Never a verdict. The rest of the document keeps its bytes without it.",
+   "required": [
+    "versione",
+    "ppm",
+    "archi"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "ppm": {
+     "type": "number"
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "attivazioni",
+       "perdita"
+      ],
+      "properties": {
+       "da": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "a": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "attivazioni": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "perdita": {
+        "type": [
+         "object",
+         "null"
+        ],
+        "additionalProperties": false,
+        "required": [
+         "nome",
+         "formula",
+         "massa",
+         "errore_ppm",
+         "fonte",
+         "confidenza",
+         "alternative"
+        ],
+        "properties": {
+         "nome": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "description": "Common name of a known loss; null when the formula is not in the table"
+         },
+         "formula": {
+          "type": [
+           "string",
+           "null"
+          ]
+         },
+         "massa": {
+          "type": "number"
+         },
+         "errore_ppm": {
+          "type": "number"
+         },
+         "fonte": {
+          "enum": [
+           "formula",
+           "mass"
+          ]
+         },
+         "confidenza": {
+          "enum": [
+           "high",
+           "medium",
+           "low"
+          ]
+         },
+         "alternative": {
+          "type": "array",
+          "items": {
+           "type": "string"
+          },
+          "description": "Other known losses within the window, by mass only"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
   }
  }
 }
