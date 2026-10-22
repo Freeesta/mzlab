@@ -15,7 +15,8 @@ pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--p
   --ppm N        mass window of a row for an expected m/z (default 5)
   --rt-tol MIN   RT window in minutes (default 0.3)
 output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
-  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt";
+  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt,
+  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size";
 
 struct Args {
     table: String,
@@ -70,6 +71,10 @@ struct Best {
     drt: f64,
 }
 
+fn kin(t: &Aligned, r: usize) -> u8 {
+    t.tp.kinship.get(r).copied().unwrap_or(0)
+}
+
 fn cells(t: &Aligned, row: usize) -> (usize, usize, f32, f64) {
     let (mut det, mut fil, mut h, mut a) = (0, 0, 0.0f32, 0.0f64);
     for f in 0..t.n_files {
@@ -85,15 +90,42 @@ fn cells(t: &Aligned, row: usize) -> (usize, usize, f32, f64) {
     (det, fil, h, a)
 }
 
+/// What every line reads of the table: the facts of the filters and the place of each row in the view (rows of status 0 by kinship, then area).
+struct Cx<'a> {
+    t: &'a Aligned,
+    facts: Vec<mzlab_feat::interp::filtri::RowFacts>,
+    rank: Vec<Option<usize>>,
+    view: usize,
+}
+
+impl<'a> Cx<'a> {
+    fn new(t: &'a Aligned) -> Self {
+        let mut rows: Vec<usize> = (0..t.len())
+            .filter(|&r| t.tp.status.get(r) == Some(&0))
+            .collect();
+        let area = |r: usize| cells(t, r).3;
+        rows.sort_by(|&x, &y| {
+            t.tp.kinship[y]
+                .cmp(&t.tp.kinship[x])
+                .then(area(y).total_cmp(&area(x)))
+                .then(x.cmp(&y))
+        });
+        let mut rank = vec![None; t.len()];
+        for (i, &r) in rows.iter().enumerate() {
+            rank[r] = Some(i + 1);
+        }
+        Cx {
+            t,
+            facts: row_facts(t),
+            rank,
+            view: rows.len(),
+        }
+    }
+}
+
 /// One line of the report for the expected product (`mz`, `rt`).
-fn explain(
-    t: &Aligned,
-    facts: &[mzlab_feat::interp::filtri::RowFacts],
-    id: &str,
-    mz: f64,
-    rt: f64,
-    a: &Args,
-) -> String {
+fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
+    let (t, facts) = (cx.t, &cx.facts);
     let dist = |r: usize| ((t.mz[r] - mz) / mz * 1e6, t.rt[r] - rt);
     let in_mz: Vec<usize> = (0..t.len()).filter(|&r| dist(r).0.abs() <= a.ppm).collect();
     let rows_in: Vec<usize> = in_mz
@@ -114,7 +146,7 @@ fn explain(
     let near = (0..t.len()).min_by(|&x, &y| dist(x).0.abs().total_cmp(&dist(y).0.abs()));
     let (np, nd) = near.map_or((f64::NAN, f64::NAN), dist);
     let mut s = format!("{id},{mz:.4},{rt:.2},{},{}", in_mz.len(), rows_in.len());
-    match best {
+    match &best {
         Some(b) => {
             let (det, fil, h, ar) = cells(t, b.row);
             let stage = first_hidden(&facts[b.row]).map_or("view", |i| STAGES[i].0);
@@ -134,6 +166,19 @@ fn explain(
         }
     }
     let _ = write!(s, ",{np:.1},{nd:.2}");
+    match &best {
+        Some(b) => {
+            let q = if t.meta.is_empty() {
+                None
+            } else {
+                Some(t.meta.get(b.row))
+            };
+            let (sh, sn) = q.map_or((f32::NAN, f32::NAN), |q| (q.q_shape, q.q_snr));
+            let rank = cx.rank[b.row].map_or(String::new(), |r| r.to_string());
+            let _ = write!(s, ",{},{sh:.2},{sn:.1},{rank},{}", kin(t, b.row), cx.view);
+        }
+        None => s.push_str(&format!(",,,,,{}", cx.view)),
+    }
     s
 }
 
@@ -146,10 +191,10 @@ pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f6
         rt_tol,
         out: None,
     };
-    let facts = row_facts(t);
-    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt\n");
+    let cx = Cx::new(t);
+    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size\n");
     for (id, mz, rt) in expected {
-        out.push_str(&explain(t, &facts, id, *mz, *rt, &a));
+        out.push_str(&explain(&cx, id, *mz, *rt, &a));
         out.push('\n');
     }
     out
@@ -196,6 +241,7 @@ mod tests {
             CELL_DETECTED,
         ];
         t.tp.status = vec![0, 0, 1];
+        t.tp.kinship = vec![2, 3, 0];
         t
     }
 
