@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use mzlab_core::flow::{parse, plan_json};
+use mzlab_core::flow::{file_roots, parse, plan_json};
 use mzlab_core::json::Out;
 use mzlab_core::lettori::Limiti;
 
@@ -269,8 +269,8 @@ fn place(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::hard_link(from, to).or_else(|_| std::fs::copy(from, to).map(|_| ()))
 }
 
-/// The `--report` item of entry `k` after its job `ended`, with the mzML placed in `out`.
-fn item(k: usize, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path)) -> Item {
+/// The `--report` item of an entry (its file-name root in the work folder is `root`) after its job `ended`, with the mzML placed in `out`.
+fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path)) -> Item {
     let input = e.input.display().to_string();
     let (seconds, skipped) = match ended {
         Some((ms, cached, None)) => (ms / 1e3, *cached),
@@ -288,7 +288,7 @@ fn item(k: usize, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path))
         }
     };
     let to = out.join(&e.out);
-    let made = place(&work.join(convert_file("conv", k)), &to)
+    let made = place(&work.join(convert_file("conv", root)), &to)
         .map_err(|err| err.to_string())
         .and_then(|_| digest(&to).map_err(|err| err.to_string()));
     match made {
@@ -475,10 +475,11 @@ pub fn run(args: Vec<String>) -> Outcome {
         return fail(3, &e.to_string(), "this is a bug of mzlab-cli convert");
     }
     let ended = ended.lock().unwrap_or_else(|e| e.into_inner());
+    let roots = file_roots(&plan);
     let items: Vec<Item> = list
         .iter()
         .enumerate()
-        .map(|(k, e)| item(k, e, ended[k].as_ref(), (&work, &out)))
+        .map(|(k, e)| item(&roots[k], e, ended[k].as_ref(), (&work, &out)))
         .collect();
     if let Some(path) = &a.report {
         if let Err(e) = std::fs::write(path, report(&items)) {

@@ -301,13 +301,16 @@ fn one_worker_or_many_give_the_same_record_but_the_clock() {
     assert_eq!(one, many);
     let ids: Vec<&str> = one.activities.iter().map(|a| a.instance.as_str()).collect();
     assert_eq!(ids, ["imp", "idx", "det", "est", "ali", "gap"]);
-    // the outputs of a per_item step are gathered by index of the input
+    // the outputs of a per_item step are gathered in the order of the inputs and keyed by their name
     let imp = &one.activities[0];
     assert_eq!(imp.used, ["file:a.raw", "file:b.raw", "file:c.raw"]);
-    assert_eq!(imp.generated, ["imp.raw[0]", "imp.raw[1]", "imp.raw[2]"]);
+    assert_eq!(
+        imp.generated,
+        ["imp.raw[a.raw]", "imp.raw[b.raw]", "imp.raw[c.raw]"]
+    );
     assert_eq!(
         one.activities[4].used,
-        ["det.peaks[0]", "det.peaks[1]", "det.peaks[2]"]
+        ["det.peaks[a.raw]", "det.peaks[b.raw]", "det.peaks[c.raw]"]
     );
     assert_eq!(one_text, many_text);
 }
