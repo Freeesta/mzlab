@@ -4,8 +4,10 @@
 
 mod core_steps;
 pub mod json;
+mod read;
 
 pub use core_steps::core_steps;
+pub use read::registry_from_value;
 
 use crate::json::Value;
 

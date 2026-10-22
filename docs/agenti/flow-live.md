@@ -39,7 +39,7 @@ I problemi di `flow::check` bloccano (`blocked`) i lavori dell'istanza interessa
 `events_since(seq)` = array JSON degli eventi con `seq` maggiore; `seq` cresce di 1 da 1, `rev` = numero di `update` finora (0 alla creazione). Un evento `job` a ogni cambio di stato, chiave o tempo di un lavoro, un evento `node` a ogni cambio della scheda, un evento `plan` per un piano non pianificabile. Il registro tiene gli ultimi 8192. Schema: `docs/schemi/flowlive-1.json`; prova `tests/test_flowlive_schema.py` sugli eventi registrati in un caso. Scritto con `json::Out`, senza serde.
 
 ## Casi condivisi
-`crates/mzlab-core/tests/data/sched_cases.json`: passi (come dati), piano, chiamate e risposta di ognuna (`expect`); `sched_cases.rs` li riproduce. Rigenerare le risposte con `MZLAB_UPDATE_SCHED_CASES=1 cargo test -p mzlab-core --lib flow::sched` e rileggere il diff (la risposta è il contratto). Serviranno alla parità del `.wasm`.
+`crates/mzlab-core/tests/data/sched_cases.json`: passi (come dati), piano, chiamate e risposta di ognuna (`expect`); `sched_cases.rs` li riproduce. Rigenerare le risposte con `MZLAB_UPDATE_SCHED_CASES=1 cargo test -p mzlab-core --lib flow::sched` e rileggere il diff (la risposta è il contratto). Servono alla parità del `.wasm`.
 
 ## `flow::execute` sopra lo scheduler
 `run.rs::execute` crea `Sched`, chiede `next` (slots 1, memoria illimitata) un lavoro alla volta, `started`, esegue con `Runner::run` su `workers` thread (pool con `Condvar`; sul wasm in sequenza), riporta `finished` e tiene i risultati per `JobId`. Gli ingressi di un lavoro si leggono dai risultati dei lavori a monte (la porta guida prende solo l'elemento di quel lavoro).
@@ -57,3 +57,10 @@ Prove: `flow/run_tests.rs` (10 semi × 1 e 4 thread), `crates/mzlab-feat/tests/f
 - `finished` per un lavoro cancellato o scomparso risponde `Discarded{key}`: va messo in cache, non usato. Un risultato di un `JobId` sconosciuto dà `Unknown`.
 - `set_identity` e `set_resources` valgono dal `update` o dal `next` successivo; le risorse restano legate al `JobId`.
 - Il registro è copiato in `Sched::new` (nessun prestito); i passi con versione assente o parametri non risolvibili hanno un lavoro `blocked` con `plan.problem`.
+
+## Nel `.wasm` del sito
+- Lo scheduler gira nel motore `mzlab-wasm` (non nei moduli `hr`: il margine di `limit_hr` non lo regge, e nessun tetto è alzato), in un oggetto per sessione (`thread_local`) dietro la funzione `flow_sched(op, body)` (`crates/mzlab-wasm/src/campioni.rs`, `mzlab_core::flow::sched_route`). Il worker del motore (`rust-worker.js`, op `lr_flow_sched`) la serve alla rotta `api/flow/sched/<op>` (`statRoute` in `lr-map.js`); un errore è `{error_key, params}`.
+- Operazioni (testo JSON in e out; un lavoro è `{"instance","item"}`): `new` (`{plan, registry, version, identities}`), `drop`, `update`, `next` (`{slots, mem_mb, mb:{"istanza|voce":stima}, mb_default}`), `started`, `progress`, `finished` (`{job, result:{ms}|{error_key,params}}`: `"accepted"`, `"discarded:<chiave>"` o `"unknown"`), `cached`, `block`/`unblock`, `retry`, `pause`/`resume`, `jobs`, `nodes`, `events` (`{since}`), `rev`, `set_identity`, `set_resources`.
+- Il registro non è compilato nel motore: arriva come JSON dei passi `step/1` dal piano della pagina (`F.registry`) ed è riletto da `mzlab_core::step::registry_from_value` (porte, parametri, algoritmi, preset, dove gira un passo; i testi per le persone restano vuoti). Il motore è lo stesso che serve già `api/flow/command`: la pagina non lo aspetta.
+- Parità: `tests/test_flow_sched_wasm.py` costruisce il motore per Node e `tests/flow_sched_nodo.js` esegue i casi di `sched_cases.json` (SKIP senza cargo, wasm-bindgen o node); i test nativi di `sched_route` e della rilettura del registro stanno in `flow/sched_route_tests.rs`.
+- Misura del motore (wasm-opt -Oz): 1 610 624 B prima, 1 678 813 B con lo scheduler e il lettore del registro, contro il tetto 1 703 936 (residuo 25 123 B).
