@@ -4167,3 +4167,4 @@
 {"v":1,"ts_utc":"2026-10-22T10:14:59Z","tipo":"job","k":"119767079505","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"a6fb53a4d443159073dbe8ed61d8aa0a41de7f73","run_id":39761640980,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T10:14:59Z","tipo":"job","k":"119767079590","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"a6fb53a4d443159073dbe8ed61d8aa0a41de7f73","run_id":39761640980,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T10:15:15Z","tipo":"carico","k":"2026-10-22T10:1","job_in_coda":0,"job_in_corso":10}
+{"v":1,"ts_utc":"2026-10-22T10:18:11Z","azione":"push","titolo":"Flow-Live L4: formattazione dei test della rotta","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1477,"sha":"ba333ab826b3bd37974310dc83e5c7a4dfdc2840"}
