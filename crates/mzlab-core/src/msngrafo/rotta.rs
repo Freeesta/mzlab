@@ -2,7 +2,7 @@
 //! tree, the scans and their spectra become the `msngrafo/1`. Used by the `.wasm` module of the page and by the command line, so both
 //! write the same bytes.
 
-use super::{con_regole, costruisci, json, leggi, Grafo, Ingresso, Opzioni, ParamRegole};
+use super::{con_regole, costruisci, json, leggi, Attesa, Grafo, Ingresso, Opzioni, ParamRegole};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::parse;
@@ -51,6 +51,23 @@ fn scelte(testo: &str) -> Result<Vec<(f64, String)>> {
         .collect()
 }
 
+/// `[["loss_h2o","H2O",0], ...]`: the expectations of the structure (`Attesa`: rule, formula, 1 = ion), computed by the `.wasm` `msnregole`.
+fn attese(testo: &str) -> Result<Vec<Attesa>> {
+    let bad = || Error::new("err.request.badNumber").with("name", "attese");
+    let v = parse(testo.as_bytes()).map_err(|_| bad())?;
+    v.arr()
+        .iter()
+        .map(|a| {
+            let campo = |i: usize| a.at(i).and_then(|x| x.str()).map(String::from);
+            Ok(Attesa {
+                regola: campo(0).ok_or_else(bad)?,
+                formula: campo(1).ok_or_else(bad)?,
+                ione: a.at(2).and_then(|x| x.f64()).ok_or_else(bad)? != 0.0,
+            })
+        })
+        .collect()
+}
+
 /// The options and the grouping of a request; `get(name)` is the value of a parameter, the defaults are those of `Opzioni::default()`.
 pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Opzioni, Raggruppa)> {
     let d = Opzioni::default();
@@ -65,6 +82,7 @@ pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Opzioni, Ra
         formula: testo("formula"),
         smiles: testo("smiles"),
         scelte: testo("scelte").map_or(Ok(vec![]), |t| scelte(&t))?,
+        attese: testo("attese").map_or(Ok(vec![]), |t| attese(&t))?,
         regole: if get("regole").as_deref() == Some("1") {
             let r = ParamRegole::default();
             Some(ParamRegole {

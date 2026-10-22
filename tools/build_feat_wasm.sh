@@ -16,7 +16,8 @@ limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
-limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 500237 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
+limit_msnregole=168960   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
+limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 502447 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
 limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
 limit_llm=286720   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent) and the context builder, loaded only after the user turned it on and agreed; measured 258709 (+10 %, multiple of 4 KiB)
 out=${1:-site/static}/wasm-feat
@@ -54,6 +55,9 @@ wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter"
 # the fragmentation graph of an MSn infusion (crates/mzlab-msngrafo-wasm: msngrafo/1), loaded by the worker of the engine on the first request of /api/msn_grafo
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-msngrafo-wasm
 wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo"
+# the structure rules of that graph (crates/mzlab-msnregole-wasm: SMILES -> attese), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-msnregole-wasm
+wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnregole"
 # the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js only after the opt-in; never fused with another module
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
 wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant"
@@ -119,6 +123,8 @@ m["llm"] = {"js": "llm/mzlab_llm_wasm.js", "wasm": "llm/mzlab_llm_wasm_bg.wasm",
             "sha256": hashlib.sha256(open(f"{o}/llm/mzlab_llm_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/msngrafo/mzlab_msngrafo_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["msnregole"] = {"js": "msnregole/mzlab_msnregole_wasm.js", "wasm": "msnregole/mzlab_msnregole_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/msnregole/mzlab_msnregole_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 def attributio(dirname):
