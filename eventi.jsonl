@@ -5931,3 +5931,4 @@
 {"v":1,"ts_utc":"2026-10-22T14:01:52Z","tipo":"carico","k":"2026-10-22T14:0","job_in_coda":10,"job_in_corso":12}
 {"v":1,"ts_utc":"2026-10-22T14:13:23Z","azione":"aperta","tipo":"pr","pr":1504,"sha":"922d5356abd5701c18b6a9837a9feaacdeda09fa"}
 {"v":1,"ts_utc":"2026-10-22T14:13:57Z","azione":"aperta","tipo":"pr","pr":1505,"sha":"f29b957acdb539d7566808ab0ac7f3fb507ef975"}
+{"v":1,"tipo":"pr","pr":1503,"sha":"793d79d5b28d5c00e44cf4b19222a8a8eab27e12","ts_utc":"2026-10-22T14:13:54Z","azione":"unita","aperta_s":1018,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":4,"righe_meno":3,"file_n":3,"file":["docs/agenti/flow-grafica.md","flow/lazy/flow-issues.js","tests_e2e/e2e_flow.py"],"aree":{"docs":1,"altro":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
