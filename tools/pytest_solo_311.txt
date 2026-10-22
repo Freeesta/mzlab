@@ -9,6 +9,9 @@ tests/test_verita_identificazione.py
 tests/test_bench.py
 tests/test_cancello.py
 tests/test_pipeline_contract.py
+tests/test_convalida_regole.py
+tests/test_msnregole_wasm.py
+tests/test_feat_table_wasm.py
 tests/test_valida_lr.py::test_native_run_on_the_synthetic_series
 tests/test_valida_lr.py::test_native_run_a_broken_growth_and_a_flat_transition_fail_the_growth_criterion
 tests/test_valida_hr.py::test_robustness_end_to_end_on_files_named_like_the_dda_ones
