@@ -413,12 +413,13 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ),
 ];
 
-/// `EXECUTORS` and the steps that keep their own list (`flow_msnlib::EXECUTORS`, `flow_tablematch::EXECUTORS`, so that this file stays short).
+/// `EXECUTORS` and the steps that keep their own list (`flow_msnlib::EXECUTORS`, `flow_tablematch::EXECUTORS`, `flow_chimeric::EXECUTORS`, so that this file stays short).
 fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
     EXECUTORS
         .iter()
         .chain(crate::flow_msnlib::EXECUTORS)
         .chain(crate::flow_tablematch::EXECUTORS)
+        .chain(crate::flow_chimeric::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?
