@@ -64,7 +64,8 @@
       const save = (/** @type {string} */ name, /** @type {string} */ type, /** @type {string} */ body) => { const a = el("a", { href: URL.createObjectURL(new Blob([body], { type })), download: name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
       host.append(el("div", { class: "fl-meta" },
         F.btn("export", `Download ${label}`, () => save(label, "application/json", JSON.stringify(g, null, 1)), "JSON"),
-        F.btn("export", "Download the graph as an image", () => { const s = wrap.querySelector("svg"); if (s) save(label.replace(/\.json$/i, "") + ".svg", "image/svg+xml", new XMLSerializer().serializeToString(s)); }, "SVG")));
+        F.btn("export", "Download the graph as an SVG image", () => { const s = wrap.querySelector("svg"); if (s) app("msngrafo-immagine.js").then(m => save(label.replace(/\.json$/i, "") + ".svg", "image/svg+xml", m.svgAutonomo(s))); }, "SVG"),
+        F.btn("export", "Download the graph as a PNG image", () => { const s = wrap.querySelector("svg"); if (s) app("msngrafo-immagine.js").then(async m => { const b = await m.pngDa(m.svgAutonomo(s), 2); const a = el("a", { href: URL.createObjectURL(b), download: label.replace(/\.json$/i, "") + ".png" }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }); }, "PNG")));
     } catch (_) { wrap.replaceWith(el("p", { class: "fl-note", text: "The graph could not be drawn here: the tables show the same data." })); }
   };
 })();

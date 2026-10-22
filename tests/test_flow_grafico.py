@@ -123,3 +123,7 @@ def test_the_xlsx_reader_gives_the_first_sheet_of_a_workbook():
 
 def test_the_cli_box_puts_the_folder_in_the_command_once_and_quoted():
     assert node("flow_cli_fill.js").strip() == "ok"
+
+
+def test_the_rust_figure_of_the_msn_graph_has_the_labels_of_the_drawer():
+    assert node("msn_figura_parita.js").strip() == "ok"

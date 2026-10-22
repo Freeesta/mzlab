@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fragmentation graph</title>
+<style>
+:root{--bg:#ffffff;--panel:#ffffff;--ink:#1a1a1a;--muted:#4d4d4d;--line:#595959;--accent:#0072B2;--accent2:#D55E00;--sel:#e3eef7;--warn:#E69F00;--btn:#f2f2f2}
+@media (prefers-color-scheme:dark){:root{--bg:#121212;--panel:#1e1e1e;--ink:#f2f2f2;--muted:#c8c8c8;--line:#a0a0a0;--accent:#56B4E9;--accent2:#E69F00;--sel:#1d3446;--warn:#F0E442;--btn:#2a2a2a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:12px 0 6px}
+p{margin:4px 0}.note{color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+button{font:inherit;color:var(--ink);background:var(--btn);border:1px solid var(--line);border-radius:6px;min-height:32px;min-width:32px;padding:4px 12px;cursor:pointer}
+button[aria-pressed=true]{background:var(--sel);border-color:var(--accent);border-width:2px;font-weight:700}
+button:focus-visible,.wrap:focus-visible,summary:focus-visible,.ig-node:focus-visible .ig-box{outline:3px solid var(--accent);outline-offset:2px}
+@media (pointer:coarse){button{min-height:40px;min-width:40px}}
+.wrap{overflow:auto;border:1px solid var(--line);border-radius:6px;max-height:70vh;background:var(--bg)}
+.ig-svg{display:block}
+.ig-box{fill:var(--panel);stroke:var(--line);stroke-width:1.5}.ig-node{cursor:pointer;outline:none}
+.ig-node.sel .ig-box{stroke:var(--accent);stroke-width:3;fill:var(--sel)}.ig-node.hot .ig-box{stroke:var(--accent2)}
+.ig-mz{font:700 12px sans-serif;fill:var(--ink)}.ig-cand{font:11px sans-serif;fill:var(--muted)}.ig-cand.on{fill:var(--ink);font-weight:700}
+.ig-lvl{font:11px sans-serif;fill:var(--muted)}.ig-com{font:700 11px sans-serif;fill:var(--ink)}.ig-box2{fill:none;stroke:var(--line);stroke-width:1.5}.ig-node.common .ig-box{stroke:var(--ink)}
+.ig-arc{fill:none;stroke:var(--line)}.ig-arc.alt{stroke-dasharray:4 3}.ig-arc.best{stroke:var(--accent)}.ig-arc.on{stroke:var(--accent2)}
+.ig-ring{fill:none;stroke:var(--line);stroke-dasharray:2 4;opacity:.6}.ig-headp{fill:var(--line)}
+.ig-loss,.ig-rule{font:10px sans-serif;fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:3px}
+.ig-amb{fill:var(--warn);stroke:var(--ink)}.ig-hyp{font:italic 10px sans-serif;fill:var(--muted)}.ig-thumb{overflow:visible}
+table{border-collapse:collapse;width:100%;font-size:13px}caption{text-align:left;font-weight:700;padding:4px 0}
+th,td{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}td.num{text-align:right}
+.tablewrap{overflow:auto;max-height:50vh}
+summary{cursor:pointer;min-height:32px;display:flex;align-items:center;font-weight:700}
+.status{min-height:1.4em;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Fragmentation graph</h1>
+<p class="note">Ions are merged across MS levels and energies; the candidate formulas are proposals from the masses, not identifications.</p>
+<div class="bar" role="toolbar" aria-label="Graph controls">
+<span id="views" role="group" aria-label="Graph view">
+<button type="button" id="v-tree" aria-pressed="true" title="Columns by MS level">Tree</button>
+<button type="button" id="v-radial" aria-pressed="false" title="The precursor in the centre, one ring per step of the best path">Radial</button>
+</span>
+<span role="group" aria-label="Zoom">
+<button type="button" id="z-out" aria-label="Zoom out" title="Zoom out">−</button>
+<button type="button" id="z-reset" aria-label="Reset zoom" title="Reset zoom">100 %</button>
+<button type="button" id="z-in" aria-label="Zoom in" title="Zoom in">+</button>
+</span>
+<button type="button" id="dl-svg">Download SVG</button>
+<button type="button" id="dl-png">Download PNG</button>
+<span id="status" class="status" role="status" aria-live="polite"></span>
+</div>
+<div id="graph" class="wrap" tabindex="0" role="region" aria-label="Fragmentation graph, scrollable. Arrow keys move between ions, Enter shows the candidates."></div>
+<section id="side" aria-live="polite" aria-label="Selected ion"></section>
+<details id="data">
+<summary>Data</summary>
+<div class="bar"><button type="button" id="copy">Copy data</button></div>
+<div class="tablewrap" id="table" tabindex="0" role="region" aria-label="Graph data table, scrollable"></div>
+</details>
+</main>
+<script type="application/json" id="mzlab-graph">/*DATA*/</script>
+<script type="text/plain" id="mzlab-root">/*ROOT*/</script>
+<script type="text/plain" id="mzlab-svg-tree">/*SVG_TREE*/</script>
+<script type="text/plain" id="mzlab-svg-radial">/*SVG_RADIAL*/</script>
+<script>
+(() => {
+"use strict";
+/*VISTA_JS*/
+/*PAGE_JS*/
+})();
+</script>
+</body>
+</html>
