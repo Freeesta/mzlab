@@ -65,6 +65,24 @@ pub(super) fn align() -> Step {
             .unit("min")
             .doc("Largest distance of an anchor from the line to agree with it (ransac)")
             .advanced(),
+        Param::number("link_rt", "Family link RT")
+            .min(0.0)
+            .default_num(0.2)
+            .unit("min")
+            .doc("Family mode: largest RT distance between an ion and the root of its family in one file for the two rows to be joined")
+            .advanced(),
+        Param::number("max_span", "Family row span")
+            .min(0.0)
+            .default_num(0.5)
+            .unit("min")
+            .doc("Family mode: largest RT span of the groups joined in one row")
+            .advanced(),
+        Param::integer("min_dependent", "Family link files")
+            .min(1.0)
+            .default_num(1.0)
+            .unit("files")
+            .doc("Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files")
+            .advanced(),
         Param::integer("weak_files", "Weak tier files")
             .min(0.0)
             .default_num(5.0)
