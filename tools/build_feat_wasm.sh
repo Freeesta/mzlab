@@ -19,7 +19,7 @@ limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 
 limit_msnregole=168960   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
 limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 505993 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
 limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
-limit_llm=286720   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent) and the context builder, loaded only after the user turned it on and agreed; measured 258709 (+10 %, multiple of 4 KiB)
+limit_llm=327680   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent), the context builder and the inspection builder (ispezione/1), loaded only after the user turned it on and agreed; multiple of 4 KiB, ~10 % over the size with inspect
 out=${1:-site/static}/wasm-feat
 R=target/wasm32-unknown-unknown/release
 # the wasm-bindgen + wasm-opt of each module run in the background while cargo builds the next one (tools/wasm_paralleli.sh); wasm_wait below joins them

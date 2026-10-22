@@ -34,6 +34,12 @@ pub fn context_build(sources_json: &str, budget_tokens: u32) -> Result<String, S
     mzlab_llm::context::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
 }
 
+/// The `ispezione/1` text (what each file is, QC and blank checks) for the sources the page collected (`mzlab_llm::inspect::build_text`), within `budget_tokens`.
+#[wasm_bindgen]
+pub fn inspect_build(sources_json: &str, budget_tokens: u32) -> Result<String, String> {
+    mzlab_llm::inspect::build_text(sources_json, u64::from(budget_tokens)).map_err(fail)
+}
+
 pub(crate) fn fail(e: Error) -> String {
     let mut o = mzlab_core::json::Out::default();
     o.raw("{\"error\":")
