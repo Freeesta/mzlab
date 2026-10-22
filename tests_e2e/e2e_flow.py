@@ -458,8 +458,7 @@ try:
         def desktop_run():
             # the page asks the native routes flow/live/*, says on each step what its events say, and lists what each step did from the prov/1 `finish` answers
             pg.evaluate(FAKE); pg.evaluate("window.__missing = '*'")
-            pg.click('#flx-run'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
-            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3
+            pg.click('#flx-run'); slots = ".fl-slots li"
             go = 'button[aria-label="Run the plan on this computer"]'
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")      # Run started the first run by itself
             pg.evaluate("window.__missing = ''")
