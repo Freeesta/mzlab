@@ -157,3 +157,43 @@ fn massbank_export_reads_back_like_the_msp_one_and_carries_ms_type_and_path() {
     );
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn search_finds_the_entry_of_the_same_infusion_and_its_options_and_errors_work() {
+    let d = dir("search");
+    let (lib, graph) = (d.join("lib.json"), d.join("g.json"));
+    let (l, gp, f) = (lib.to_str().unwrap(), graph.to_str().unwrap(), msn());
+    let ion = ["--formula", "C14H15N3O5+"];
+    let add = ["msn-lib", "add", l, f.to_str().unwrap(), "--id", "STD-1"];
+    assert_eq!(run(&[&add[..], &ion[..]].concat()).code, 0);
+    let g = run(&[&["msn-graph", f.to_str().unwrap()][..], &ion[..]].concat());
+    std::fs::write(&graph, &g.stdout).unwrap();
+    let o = run(&["msn-lib", "search", l, gp]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let t = String::from_utf8(o.stdout).unwrap();
+    assert!(t.starts_with("{\"formato\":\"msncerca/1\""), "{t}");
+    assert!(
+        t.contains("\"id\":\"STD-1\"") && t.contains("\"analogo\":null"),
+        "{t}"
+    );
+    // the same graph is its own best candidate, written to a file with --out and cut by --top
+    let out = d.join("r.json");
+    let o = run(&[
+        "msn-lib",
+        "search",
+        l,
+        gp,
+        "--top",
+        "0",
+        "--out",
+        out.to_str().unwrap(),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    assert!(std::fs::read_to_string(&out)
+        .unwrap()
+        .contains("\"candidati\":[]"));
+    assert_eq!(run(&["msn-lib", "search", l]).code, 2);
+    assert_eq!(run(&["msn-lib", "search", l, gp, "--ppm", "x"]).code, 2);
+    assert_eq!(run(&["msn-lib", "search", l, gp, "--nope"]).code, 2);
+    let _ = std::fs::remove_dir_all(&d);
+}

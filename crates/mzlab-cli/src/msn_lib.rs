@@ -5,7 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::msngrafo::{aggiungi, Opzioni};
+use mzlab_core::msngrafo::{aggiungi, cerca, Opzioni, OpzioniCerca};
 
 use crate::msn_lib_export::{export_text, Formato};
 
@@ -13,14 +13,19 @@ pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
 
 usage: mzlab-cli msn-lib add LIB.json FILE.mzML --id ID --formula ION [msn-graph options] [--out PATH]
        mzlab-cli msn-lib build MANIFEST.tsv [--dir DIR] [--out LIB.json]
-       mzlab-cli msn-lib export LIB.json [--pulito] [--tutti] [--formato msp|massbank] [--out PATH]
+       mzlab-cli msn-lib export LIB.json [--pulito] [--tutti] [--annota] [--formato msp|massbank] [--out PATH]
+       mzlab-cli msn-lib search LIB.json GRAPH.json [--ppm N] [--tol N] [--min-prove N] [--top N] [--out PATH]
 
   add     adds the entry of the infusion to LIB (created when absent); the same entry twice is left as it is. LIB is rewritten unless --out.
           The options are those of `msn-graph` (--help of that command)
   build   one entry per row of the manifest (tab separated, header): id, formula_neutra, addotto_atteso, file (relative to DIR, by default the folder
           of the manifest); optional smiles, attivazione. The ion is \"<formula_neutra> <addotto_atteso>\". Writes LIB.json next to the manifest unless --out
   export  the MS2 spectra of every entry as MSP text (--tutti: every MS level); --pulito keeps the peaks a node of the graph explains;
-          --formato massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)";
+          --annota writes the formula and the neutral loss of each explained peak (MSP: quoted note; MassBank: PK$ANNOTATION and a COMMENT);
+          --formato massbank writes MassBank records (MS_TYPE MS2, MS3, ... and the path of precursors in the comment)
+  search  the entries of LIB whose precursor is within --ppm (10) of the root of GRAPH (the output of `msn-graph`) and of the same polarity, as the JSON
+          msncerca/1: three separate scores (MS2 entropy, tree, shared losses) and their proofs, no verdict. --tol: Da window of the peaks (0.01);
+          --min-prove: peaks shared in the best MS2 pair (1); --top: candidates kept (10)";
 
 fn io(e: std::io::Error) -> Error {
     Error::new("err.file.index").with("detail", e)
@@ -134,13 +139,14 @@ fn build(args: Vec<String>, tmp: &Path) -> Result<String> {
 
 fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
     let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
-    let (mut lib, mut out, mut pulito, mut tutti) = (None, None, false, false);
+    let (mut lib, mut out, mut pulito, mut tutti, mut annota) = (None, None, false, false, false);
     let mut formato = Formato::Msp;
     let mut it = args.into_iter();
     while let Some(x) = it.next() {
         match x.as_str() {
             "--pulito" => pulito = true,
             "--tutti" => tutti = true,
+            "--annota" => annota = true,
             "--formato" => formato = Formato::parse(&it.next().unwrap_or_default())?,
             "--out" => out = it.next().map(PathBuf::from),
             _ if lib.is_none() => lib = Some(PathBuf::from(x)),
@@ -152,11 +158,49 @@ fn export(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
         export_text(
             &std::fs::read_to_string(&lib).map_err(io)?,
             formato,
-            pulito,
-            tutti,
+            (pulito, tutti, annota),
         )?,
         out,
     ))
+}
+
+/// `search LIB GRAPH [options]`: the text of `msncerca/1` and the file it goes to, if any.
+fn search(args: Vec<String>) -> Result<(String, Option<PathBuf>)> {
+    let bad = |m: &str| Error::new("err.flow.param.type").with("detail", m);
+    let (mut files, mut out, mut o) = (Vec::new(), None, OpzioniCerca::default());
+    let mut it = args.into_iter();
+    while let Some(x) = it.next() {
+        let mut number = || {
+            let v = it.next().unwrap_or_default();
+            v.parse::<f64>()
+                .map_err(|_| bad(&format!("{x} needs a number, not {v}")))
+        };
+        match x.as_str() {
+            "--ppm" => o.ppm_prec = number()?,
+            "--tol" => o.tol_mz = number()?,
+            "--min-prove" => o.min_prove = number()? as usize,
+            "--top" => o.top = number()? as usize,
+            "--out" => out = it.next().map(PathBuf::from),
+            _ if !x.starts_with("--") => files.push(PathBuf::from(x)),
+            _ => return Err(bad(&format!("unknown argument {x}"))),
+        }
+    }
+    let [lib, graph] = files.as_slice() else {
+        return Err(bad("a library file and a graph file are needed"));
+    };
+    let read = |p: &Path| std::fs::read_to_string(p).map_err(io);
+    Ok((cerca(&read(lib)?, &read(graph)?, &o)?, out))
+}
+
+/// The text to a file or to stdout.
+fn deliver(t: String, out: Option<PathBuf>) -> Result<(Vec<u8>, String)> {
+    match out {
+        Some(p) => {
+            std::fs::write(&p, t).map_err(io)?;
+            Ok((Vec::new(), String::new()))
+        }
+        None => Ok((t.into_bytes(), String::new())),
+    }
 }
 
 /// The command: (bytes for stdout, notice for stderr); `--help` gives the help on stdout.
@@ -172,15 +216,13 @@ pub fn run(args: Vec<String>, tmp: &Path) -> Result<(Vec<u8>, String)> {
         "build" => Ok((Vec::new(), build(rest, tmp)?)),
         "export" => {
             let (t, out) = export(rest)?;
-            match out {
-                Some(p) => {
-                    std::fs::write(&p, t).map_err(io)?;
-                    Ok((Vec::new(), String::new()))
-                }
-                None => Ok((t.into_bytes(), String::new())),
-            }
+            deliver(t, out)
+        }
+        "search" => {
+            let (t, out) = search(rest)?;
+            deliver(t, out)
         }
         _ => Err(Error::new("err.flow.param.type")
-            .with("detail", "usage: mzlab-cli msn-lib add|build|export")),
+            .with("detail", "usage: mzlab-cli msn-lib add|build|export|search")),
     }
 }

@@ -67,19 +67,19 @@ pub(crate) fn fixture(tag: &str) -> PathBuf {
     dir
 }
 
-fn plan(algorithm: &str, params: &str) -> String {
+pub(crate) fn plan(algorithm: &str, params: &str) -> String {
     format!(
         r#"{{"format":"mzflow/2","inputs":[{{"name":"q.mgf","type":"spectra"}},{{"name":"lib.msp","type":"library"}}],"steps":[
         {{"id":"m","step":"spectra.match@1","in":{{"query":"file:q.mgf","library":"file:lib.msp"}},"algorithm":"{algorithm}","params":{params}}}]}}"#
     )
 }
 
-fn hits(dir: &std::path::Path) -> mzlab_core::json::Value {
+pub(crate) fn hits(dir: &std::path::Path) -> mzlab_core::json::Value {
     let t = std::fs::read(dir.join("work/m.json")).unwrap();
     mzlab_core::json::parse(&t).unwrap()
 }
 
-fn run(dir: &std::path::Path, algorithm: &str, params: &str) -> String {
+pub(crate) fn run(dir: &std::path::Path, algorithm: &str, params: &str) -> String {
     let (run, prov) = crate::flow::run_plan(
         plan(algorithm, params).as_bytes(),
         dir,
@@ -296,7 +296,7 @@ fn formula_chain_finds_the_formula_and_explains_the_fragments() {
 
 /// A synthetic mix of standards: 80 library spectra and 90 queries (noisy copies of every library spectrum but the last ten, then wrong spectra at a
 /// library precursor), as MSP and MGF in a fresh folder.
-fn mix_fixture(tag: &str) -> PathBuf {
+pub(crate) fn mix_fixture(tag: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_decoy_{tag}_{}", std::process::id()));
     std::fs::create_dir_all(dir.join("work")).unwrap();
     let mut seed = 42u64;
@@ -423,7 +423,7 @@ fn decoys_spectrum_gives_the_q_values_of_search_fdr() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-fn is_null(x: &mzlab_core::json::Value, key: &str) -> bool {
+pub(crate) fn is_null(x: &mzlab_core::json::Value, key: &str) -> bool {
     x.get(key).is_none_or(|v| v.f64().is_none())
 }
 

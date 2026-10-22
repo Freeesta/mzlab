@@ -30,6 +30,9 @@ def test_the_nine_steps_in_order_and_all_need_high_resolution():
     assert [s["id"] for s in STEPS] == IDS
     for s in STEPS:
         assert s["package"] == "attributio" and s["schema"] == "step/1"
+        # spectra.match also runs on unit-resolution spectra (precursor_da)
+        if s["id"] == "spectra.match":
+            continue
         assert any(p.get("requires", {}).get("resolution") == ["hr"] for p in s["in"].values()), s["id"]
 
 
