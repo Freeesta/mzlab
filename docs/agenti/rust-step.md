@@ -46,7 +46,7 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - `tests/test_step_descrittori.py`: every descriptor of `docs/schemi/steps-1.json` validates against `$defs/step` of the contract (`jsonschema`, a test-only dependency in `pyproject.toml`), agrees with the study sketch, and every error key is a string of the code.
 
 - `cargo test -p mzlab-feat --test steps_attributio`: order and package of the nine steps, defaults inside their limits, export equal to `docs/schemi/steps-attributio-1.json` and `records-1.json` (same `MZLAB_UPDATE_STEPS=1`). `--features attributio,untargeted --test steps_attributio_parity` compares every default with the engine structs.
-- `tests/test_step_identificazione.py`: the nine descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study, the only `planned` algorithm is `library_deconvolution`, every error key is a string of the code.
+- `tests/test_step_identificazione.py`: the nine descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study, no algorithm is `planned`, every error key is a string of the code.
 
 - `cargo test -p mzlab-chem --test steps_tabui`: order and package of the eight steps, defaults inside their limits, export equal to `docs/schemi/steps-tabui-1.json` (same `MZLAB_UPDATE_STEPS=1`). `cargo test -p mzlab-feat --features interp --test steps_tabui_parity` compares the defaults of `tp.generate`, `tp.filter`, `tp.link`, `tp.position` and `tp.network` with the engine.
 - `tests/test_step_tabui.py`: the eight descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study and agree with the identification chain, every error key is a string of the code.

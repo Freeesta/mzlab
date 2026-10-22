@@ -30,6 +30,7 @@
           "msn.table_export",
           "quant.calibrate",
           "spectra.centroid",
+          "spectra.chimeric",
           "spectra.insilico",
           "spectra.match",
           "spectra.ms2",
@@ -849,14 +850,23 @@
           {
             "properties":{
               "step":{"const":"spectra.chimeric@1"},
-              "name":{"enum":["algorithm","window","rt_tol","chim_rel","chim_cap"]},
+              "name":{"enum":["algorithm","window","rt_tol","chim_rel","chim_cap","tol_da","min_share"]},
               "value":{
                 "anyOf":[
                   {"enum":["purity_flag","intruders","ms1_window","library_deconvolution"]},
                   {
-                    "type":"number",
-                    "minimum":0,
-                    "description":"Absent: the instrument of the campaign decides, 3.0 for a Fusion and 1.5 for the others (default_window); a feature is co-isolated within half of it"
+                    "anyOf":[
+                      {
+                        "type":"number",
+                        "minimum":0,
+                        "description":"Absent: the instrument of the campaign decides, 3.0 for a Fusion and 1.5 for the others (default_window); a feature is co-isolated within half of it"
+                      },
+                      {
+                        "type":"number",
+                        "minimum":0,
+                        "description":"Absent: the instrument of the campaign decides (default_window); library spectra whose precursor lies within half of it are candidates"
+                      }
+                    ]
                   },
                   {
                     "type":"number",
@@ -877,6 +887,19 @@
                     "maximum":1,
                     "default":0.5,
                     "description":"A co-isolated ion this large caps the proposal of the review (propose.rs); the level stays the chemist's"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.02,
+                    "description":"A library peak explains a peak of the spectrum within this distance"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.05,
+                    "description":"A library spectrum that explains less of the spectrum than this is not listed"
                   }
                 ]
               }

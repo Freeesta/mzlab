@@ -15,7 +15,8 @@ pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--p
   --ppm N        mass window of a row for an expected m/z (default 5)
   --rt-tol MIN   RT window in minutes (default 0.3)
 output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
-  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt";
+  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt,
+  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape)";
 
 struct Args {
     table: String,
@@ -70,6 +71,10 @@ struct Best {
     drt: f64,
 }
 
+fn kin(t: &Aligned, r: usize) -> u8 {
+    t.tp.kinship.get(r).copied().unwrap_or(0)
+}
+
 fn cells(t: &Aligned, row: usize) -> (usize, usize, f32, f64) {
     let (mut det, mut fil, mut h, mut a) = (0, 0, 0.0f32, 0.0f64);
     for f in 0..t.n_files {
@@ -85,15 +90,73 @@ fn cells(t: &Aligned, row: usize) -> (usize, usize, f32, f64) {
     (det, fil, h, a)
 }
 
+/// What every line reads of the table: the facts of the filters and the place of each row in the view (rows of status 0 by kinship, then area).
+struct Cx<'a> {
+    t: &'a Aligned,
+    facts: Vec<mzlab_feat::interp::filtri::RowFacts>,
+    /// Place of each row of the view under `KEYS` (`None` = not in the view).
+    rank: Vec<[Option<usize>; KEYS]>,
+    view: usize,
+}
+
+/// Number of orderings compared: 0 = kinship then largest area (the order of the view), 1 = + peaks detected, 2 = + sources agreeing, 3 = a continuous score.
+const KEYS: usize = 4;
+
+/// The sort key of a row under ordering `k`, larger first; kinship always comes first.
+fn key(t: &Aligned, r: usize, k: usize) -> [f64; 3] {
+    let (det, _, _, area) = cells(t, r);
+    let kn = f64::from(kin(t, r));
+    let via = f64::from(t.tp.via.get(r).copied().unwrap_or(0).count_ones());
+    let shape = if t.meta.is_empty() {
+        0.0
+    } else {
+        f64::from(t.meta.get(r).q_shape).clamp(0.0, 1.0)
+    };
+    let seen = det as f64 / t.n_files.max(1) as f64;
+    match k {
+        0 => [kn, area, 0.0],
+        1 => [kn, det as f64, area],
+        2 => [kn, via, det as f64 + area.max(1.0).log10() * 1e-3],
+        _ => [
+            kn,
+            area.max(1.0).log10() + 1.5 * seen + 0.5 * via + shape,
+            0.0,
+        ],
+    }
+}
+
+impl<'a> Cx<'a> {
+    fn new(t: &'a Aligned) -> Self {
+        let rows: Vec<usize> = (0..t.len())
+            .filter(|&r| t.tp.status.get(r) == Some(&0))
+            .collect();
+        let mut rank = vec![[None; KEYS]; t.len()];
+        (0..KEYS).for_each(|k| {
+            let mut o = rows.clone();
+            o.sort_by(|&x, &y| {
+                let (a, b) = (key(t, x, k), key(t, y, k));
+                b.iter()
+                    .zip(&a)
+                    .map(|(bi, ai)| bi.total_cmp(ai))
+                    .find(|c| c.is_ne())
+                    .unwrap_or(x.cmp(&y))
+            });
+            for (i, &r) in o.iter().enumerate() {
+                rank[r][k] = Some(i + 1);
+            }
+        });
+        Cx {
+            t,
+            facts: row_facts(t),
+            rank,
+            view: rows.len(),
+        }
+    }
+}
+
 /// One line of the report for the expected product (`mz`, `rt`).
-fn explain(
-    t: &Aligned,
-    facts: &[mzlab_feat::interp::filtri::RowFacts],
-    id: &str,
-    mz: f64,
-    rt: f64,
-    a: &Args,
-) -> String {
+fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
+    let (t, facts) = (cx.t, &cx.facts);
     let dist = |r: usize| ((t.mz[r] - mz) / mz * 1e6, t.rt[r] - rt);
     let in_mz: Vec<usize> = (0..t.len()).filter(|&r| dist(r).0.abs() <= a.ppm).collect();
     let rows_in: Vec<usize> = in_mz
@@ -114,7 +177,7 @@ fn explain(
     let near = (0..t.len()).min_by(|&x, &y| dist(x).0.abs().total_cmp(&dist(y).0.abs()));
     let (np, nd) = near.map_or((f64::NAN, f64::NAN), dist);
     let mut s = format!("{id},{mz:.4},{rt:.2},{},{}", in_mz.len(), rows_in.len());
-    match best {
+    match &best {
         Some(b) => {
             let (det, fil, h, ar) = cells(t, b.row);
             let stage = first_hidden(&facts[b.row]).map_or("view", |i| STAGES[i].0);
@@ -134,6 +197,28 @@ fn explain(
         }
     }
     let _ = write!(s, ",{np:.1},{nd:.2}");
+    match &best {
+        Some(b) => {
+            let q = if t.meta.is_empty() {
+                None
+            } else {
+                Some(t.meta.get(b.row))
+            };
+            let (sh, sn) = q.map_or((f32::NAN, f32::NAN), |q| (q.q_shape, q.q_snr));
+            let rk = |k: usize| cx.rank[b.row][k].map_or(String::new(), |r| r.to_string());
+            let _ = write!(
+                s,
+                ",{},{sh:.2},{sn:.1},{},{}",
+                kin(t, b.row),
+                rk(0),
+                cx.view
+            );
+            // the bits of `quality::Q_*` that made F1 hide the row: 1 shape, 2 signal-to-noise, 4 points
+            let _ = write!(s, ",{}", q.map_or(0, |q| q.qreason));
+            let _ = write!(s, ",{},{},{}", rk(1), rk(2), rk(3));
+        }
+        None => s.push_str(&format!(",,,,,{},,,,", cx.view)),
+    }
     s
 }
 
@@ -146,10 +231,10 @@ pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f6
         rt_tol,
         out: None,
     };
-    let facts = row_facts(t);
-    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt\n");
+    let cx = Cx::new(t);
+    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3\n");
     for (id, mz, rt) in expected {
-        out.push_str(&explain(t, &facts, id, *mz, *rt, &a));
+        out.push_str(&explain(&cx, id, *mz, *rt, &a));
         out.push('\n');
     }
     out
@@ -196,6 +281,7 @@ mod tests {
             CELL_DETECTED,
         ];
         t.tp.status = vec![0, 0, 1];
+        t.tp.kinship = vec![2, 3, 0];
         t
     }
 
@@ -216,5 +302,9 @@ mod tests {
             [col(1), col(2), col(3), col(4)],
             ["view", "rt_off", "F3", "no_row_mz"]
         );
+        let n = r.lines().next().unwrap().split(',').count();
+        assert!(r.lines().all(|l| l.split(',').count() == n));
+        // rank_now of the first expected product: kinship 3 outranks kinship 2
+        assert_eq!(r.lines().nth(1).unwrap().split(',').nth(18), Some("2"));
     }
 }

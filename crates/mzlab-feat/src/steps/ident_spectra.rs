@@ -25,6 +25,14 @@ pub(super) fn chimeric() -> Step {
             Port::new("spectra", DataType::Spectra, "MS2 spectra").requires(hr_ms2()),
             Port::new("index", DataType::Mzidx, "Scan index (MS1 around each MS2)").many(),
             features,
+            Port {
+                optional: true,
+                ..Port::new(
+                    "library",
+                    DataType::Library,
+                    "Spectral library (for the deconvolution)",
+                )
+            },
         ],
         outs: vec![Port::new("spectra", DataType::Spectra, "Spectra with purity and intruders")],
         algorithms: vec![purity_flag(), intruders(), ms1_window(), library_deconvolution()],
@@ -102,6 +110,23 @@ fn library_deconvolution() -> Algorithm {
             citation_key: "stancliffe2021decoid",
             note: "library-assisted deconvolution of chimeric MS2 spectra",
         }],
+        params: vec![
+            Param::number("window", "Isolation window")
+                .min(0.0)
+                .unit("Da")
+                .doc("Absent: the instrument of the campaign decides (default_window); library spectra whose precursor lies within half of it are candidates"),
+            Param::number("tol_da", "Fragment tolerance")
+                .min(0.0)
+                .default_num(0.02)
+                .unit("Da")
+                .doc("A library peak explains a peak of the spectrum within this distance"),
+            Param::number("min_share", "Smallest share listed")
+                .min(0.0)
+                .max(1.0)
+                .default_num(0.05)
+                .unit("fraction")
+                .doc("A library spectrum that explains less of the spectrum than this is not listed"),
+        ],
         applicability: Applicability {
             resolution: vec!["hr"],
             ms_levels: vec![2],
@@ -112,8 +137,8 @@ fn library_deconvolution() -> Algorithm {
         ..algorithm(
             "library_deconvolution",
             "Library-assisted deconvolution",
-            "Explains the spectrum as a non-negative mix of the library spectra of the precursor and of the intruders and returns the residual as the cleaned spectrum. Not written yet.",
-            Status::Planned,
+            "Explains the spectrum as a non-negative mix of the library spectra whose precursor lies in its isolation window and writes the share of each and the share left unexplained; the spectrum stays as it is (ms2_engine/deconv.rs).",
+            Status::Available,
         )
     }
 }

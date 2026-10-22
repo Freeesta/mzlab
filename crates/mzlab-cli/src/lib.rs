@@ -25,6 +25,9 @@ mod flow_cache;
 mod flow_centroid;
 #[cfg(test)]
 mod flow_centroid_tests;
+mod flow_chimeric;
+#[cfg(test)]
+mod flow_chimeric_tests;
 mod flow_compare;
 mod flow_digl;
 mod flow_drift;
@@ -98,6 +101,7 @@ mod llm_ctx;
 pub mod msn_graph;
 mod msn_graph_compare;
 mod msn_lib;
+mod msn_rules;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -117,6 +121,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
 
@@ -396,13 +401,14 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 4] = ["llm", "steps", "tutor", "explain-missing"];
+const PLAIN: [&str; 5] = ["llm", "steps", "tutor", "explain-missing", "msn-rules"];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     match command {
         "llm" => llm::run(args),
         "steps" => steps_cmd::run(args),
         "explain-missing" => flow_explain::run(args),
+        "msn-rules" => msn_rules::run(args),
         _ => tutor::run(args),
     }
 }

@@ -10,6 +10,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # merge queue: the required checks must report on the queue branch too (the base of a pull request is not set there: the jobs run everything)
+  merge_group:
 
 permissions:
   contents: read
@@ -44,7 +46,7 @@ jobs:
       - id: doppi
         if: steps.solo.outputs.solo != 'true' && matrix.python == '3.11'
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           if [ -n "$BASE" ]; then git fetch --no-tags --depth=1 origin "$BASE" || BASE=; fi
           python3 tools/ci_pytest_doppi.py "$BASE"
@@ -264,7 +266,7 @@ jobs:
   tipi:
     name: tipi (tsc)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

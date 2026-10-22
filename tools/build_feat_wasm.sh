@@ -7,6 +7,7 @@ part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 # Limit of every other .wasm after wasm-opt -Oz, bytes (the rule of the project: it does not go up; measured: detect 418400, proofs 450711, finder 436274, attributio 432347, finder_msn 296579, mrm 226834, grafo 199697).
 limit=512000
+limit_table=614400   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
 limit_hr=1212416   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1099407 (+10 %); the six separate ones measured 2037856 under 6 x 512000); the only cap of the group (docs/agenti/wasm-tetti.md)
 limit_attributio=1388544   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1258944 (+10 %); the four separate ones measured 2494394 under 512000 + 942080 + 659456 + 479232); the only cap of the group (docs/agenti/misure.md)
 limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
@@ -15,7 +16,7 @@ limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS
 limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=512000   # interp: the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
-limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 407036 (with the structure cleavages of mzlab-feat, feature chem only)
+limit_msngrafo=512000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 500237 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
 limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
 limit_llm=286720   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent) and the context builder, loaded only after the user turned it on and agreed; measured 258709 (+10 %, multiple of 4 KiB)
 out=${1:-site/static}/wasm-feat
@@ -40,7 +41,7 @@ done
 if want a; then
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
-wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit "mzFinder table"
+wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit_table "mzFinder table"
 # the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
 wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo"

@@ -108,7 +108,7 @@ fn usage(i: u64, o: u64) -> Usage {
     Usage {
         input: i,
         output: o,
-        cache_read: 0,
+        ..Usage::default()
     }
 }
 
@@ -255,7 +255,8 @@ fn charge_counts_in_integer_micro_dollars() {
                 &Usage {
                     input: 1000,
                     output: 100,
-                    cache_read: 10_000
+                    cache_read: 10_000,
+                    ..Usage::default()
                 }
             )
             .unwrap(),

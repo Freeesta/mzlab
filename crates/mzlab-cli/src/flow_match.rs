@@ -32,6 +32,16 @@ pub(crate) fn read_spectra((name, bytes): Named) -> Result<Vec<Spectrum>> {
     Ok(parse_all(fmt, bytes).0)
 }
 
+/// The target spectra of the library file of a step, whichever its format.
+pub(crate) fn library_spectra(file: Named) -> Result<Vec<Spectrum>> {
+    if file.0.ends_with(".mzlib") {
+        let lib = Library::open(file.1.to_vec(), CACHE_BYTES).map_err(bad)?;
+        lib_spectra(&lib).map_err(bad)
+    } else {
+        read_spectra(file)
+    }
+}
+
 /// The library of the step; with `decoys` every entry gets a decoy beside it (text libraries only: an `.mzlib` is read as it is).
 fn bad<E>(_: E) -> Error {
     Error::new("err.flow.match.library")

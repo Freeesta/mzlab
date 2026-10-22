@@ -7,6 +7,7 @@ mod annota;
 mod candidati;
 mod cerca;
 mod cerca_ms2;
+mod da_picchi;
 mod esporta;
 mod formule;
 mod interpreta;
@@ -17,6 +18,7 @@ mod libreria;
 mod posa;
 mod radice;
 mod regole;
+mod regole_json;
 mod regole_valuta;
 mod rotta;
 mod strutture;
@@ -25,6 +27,7 @@ mod unisci;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
 pub use cerca_ms2::{cerca_ms2, Ms2Hit};
+pub use da_picchi::grafo_da_picchi;
 pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use interpreta::{
     con_interpretazione, interpreta, interpretazione_json, perdite_note, InterpArco, PerditaArco,
@@ -35,10 +38,9 @@ pub use leggi::{leggi, Letto};
 pub use lib_export::{export_text, Formato as LibFormato};
 pub use libreria::aggiungi;
 pub use radice::{candidati_radice, CandidatoRadice};
-pub use regole::{leggi_tabella, tabella as tabella_regole, Regola, Tabella};
-pub use regole_valuta::{
-    con_regole, regole_json, valuta as valuta_regole, ParamRegole, Valutazione,
-};
+pub use regole::{leggi_tabella, tabella as tabella_regole, Regola, Tabella, Tipo};
+pub use regole_json::{con_regole, regole_json};
+pub use regole_valuta::{valuta as valuta_regole, Attesa, ParamRegole, Valutazione};
 pub use rotta::{da_richiesta, grafo_json};
 pub use strutture::{
     con_strutture, strutture_json, CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture,
@@ -77,6 +79,8 @@ pub struct Opzioni {
     pub scelte: Vec<(f64, String)>,
     /// The rules of `fragrules/1` (key `regole` and the evidence `regola` of the candidates); `None` = off.
     pub regole: Option<ParamRegole>,
+    /// What the structure of the user expects of the rules (`mzlab_feat::chem::regole::attese`); empty = no structure given.
+    pub attese: Vec<Attesa>,
 }
 
 impl Default for Opzioni {
@@ -96,6 +100,7 @@ impl Default for Opzioni {
             prove_min: 1,
             scelte: vec![],
             regole: None,
+            attese: vec![],
         }
     }
 }
@@ -316,3 +321,5 @@ mod tests_formule;
 mod tests_interpreta;
 #[cfg(test)]
 mod tests_regole;
+#[cfg(test)]
+mod tests_regole_struttura;

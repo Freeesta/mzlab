@@ -213,3 +213,8 @@ def test_timeout_tipizzato_e_giornaliero():
     g = s.dati_ci.giornaliero(ev)
     assert len(g) == 1 and (g[0]["run"], g[0]["rilanci"], g[0]["coda_media_s"], g[0]["rossi_timeout"]) == (1, 1, 40, 1)
     assert (g[0]["pr_aperte"], g[0]["pr_unite"], g[0]["verde_a_unione_media_s"], g[0]["commit_per_pr_media"]) == (1, 1, 600, 4.0)
+
+
+def test_rust_ok_e_aggregato():
+    ok = job("rust-ok", "failure", "2026-10-21T10:00:00Z", "2026-10-21T10:00:34Z", [("Every Rust job passed, or all were skipped because no Rust path changed", "failure")])
+    assert s.categoria(ok)[0] == "aggregato"

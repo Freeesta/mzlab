@@ -6,6 +6,7 @@
 
 pub mod chimeric;
 pub mod compile;
+pub mod deconv;
 pub mod generate;
 pub mod hits;
 pub mod insilico;
