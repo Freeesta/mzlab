@@ -1,7 +1,7 @@
 //! The JSON route of the live scheduler: the registry read back from `step/1` JSON drives it like the compiled one, and a short session answers as the Flow page expects.
 
-use crate::flow::sched::tests::{plan_text, registry};
 use super::route;
+use crate::flow::sched::tests::{plan_text, registry};
 use crate::json;
 use crate::step::json::registry_json;
 use crate::step::registry_from_value;
