@@ -44,9 +44,17 @@ pub(crate) fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
     }
 }
 
-/// What the plan writes for `job`: the values of its preset, then its own parameters (descriptor names).
+/// What the plan writes for `job`: the algorithm it chose, the values of its preset, then its own parameters (descriptor names).
 fn written(job: &Job) -> Vec<(String, Value)> {
     let mut v: Vec<(String, Value)> = Vec::new();
+    if let Some(a) = job
+        .instance
+        .algorithm
+        .as_deref()
+        .filter(|_| job.step.id == "features.detect")
+    {
+        v.push(("algorithm".to_string(), Value::Str(a.into())));
+    }
     let preset = job.instance.preset.as_deref();
     let presets = job.step.presets.iter().filter(|p| Some(p.id) == preset);
     for (k, x) in presets.flat_map(|p| p.params.iter()) {

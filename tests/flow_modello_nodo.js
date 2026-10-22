@@ -23,7 +23,7 @@ eq(detect.params, { floor: 5000 });
 F.setParam(detect, step, "floor", 20000);
 assert.strictEqual(detect.params, undefined);
 // a planned algorithm is a problem; changing the algorithm drops the parameters it does not declare
-F.setAlgorithm(detect, step, "centwave"); F.setParam(detect, step, "snr", 7);
+F.setAlgorithm(detect, step, "threshold"); F.setParam(detect, step, "smooth", 7);
 assert.ok(problems(plan).some(l => l.includes("err.flow.algorithm.unavailable")));
 F.setAlgorithm(detect, step, "masstrace");
 assert.strictEqual(detect.params, undefined);
