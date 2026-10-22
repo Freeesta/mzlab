@@ -85,7 +85,14 @@ Fonti: API Actions, con 700 run di `test.yml` e 700 di `rust.yml` (20-21/10: 179
 - Selezione per percorso dei 19 file lenti (crate cambiati e loro dipendenti): 3.11 da 18,6 a 14,0 min di mediana.
 - Più 2 shard: 13,1 min. Più i 3 file di convalida solo di notte: 13,1 min.
 - Nessuna variante scende sotto 8 min finché le build si cancellano a vicenda: il limite è il singolo file che aspetta il lock.
-- Con la correzione delle target-dir il tempo atteso è la somma dei tempi da soli diviso 4 worker, cioè 3-4 min anche senza selezione (da verificare con P8).
+- Con la correzione delle target-dir il tempo atteso è la somma dei tempi da soli diviso 4 worker, cioè 3-4 min anche senza selezione.
+
+**Misura dopo P8 e la chiave della cache con l'hash dello shim** (job `pytest 3.11`, passo Unit tests / job intero).
+- Prima: 925-1040 s / 19-20 min.
+- Cache calda: PR di misura 186 s / 4 min 32 s (run intero 5 min 36 s); push di `main` che salva la cache 293 s / 7 min 05 s.
+- Cartelle `target/fam/*` fredde (run partiti prima che `main` salvasse la cache): 416-592 s / 8,5-10,5 min.
+- Il salvataggio della cache parte solo se la chiave manca: ogni modifica di ciò che entra nella cache cambia anche la chiave, altrimenti le PR restano fredde.
+- Ora il più lento è `rust.yml` sulle PR Rust: 10 min 50 s dal push al verde (`rust-wasm` 9 min 12 s, `rust-misc` 8 min 13 s, `rust-core` 7 min 25 s). Sotto 8 min si scende solo con R3.
 - In `rust.yml`, `rust-core` sarebbe superfluo in 92 delle 158 PR Rust: i crate cambiati non sono fra i dipendenti di core, lettori, lib, libro, mol e target.
 
 | Intervento | Minuti risparmiati per run di PR | Rischio | Prova |
@@ -94,7 +101,7 @@ Fonti: API Actions, con 700 run di `test.yml` e 700 di `rust.yml` (20-21/10: 179
 | P9 · niente doppioni fra 3.11 e `rust-wasm` | ~2 (400 s-worker) | basso: gli stessi test girano in `rust-wasm` quando cambia Rust | elenco dei test eseguiti dal 3.11 più `rust-wasm` uguale a prima (`--collect-only`) |
 | P2 · PR di soli documenti | ~17 sulle PR di soli documenti (13 su 179) | basso | test della selezione; PR di prova verde in ≤ 3 min |
 | Selezione per percorso dei file lenti | ~4 (dopo P8 quasi 0) | medio: un test saltato può nascondere un errore fino alla notte | solo se P8 non basta |
-| R3 · `rust.yml` per crate toccati | ~5-7 sulle PR Rust (`rust-core` saltato in 58 %) | medio | stessa cosa per `cargo test`: unione delle selezioni uguale all'insieme intero su `main` |
+| R3 · `rust.yml` in tre interventi | ~4 sulle PR Rust (da 10,8 a ~6,5) | medio | simulazione sulle 158 PR Rust ed errore messo apposta in `mzlab-core` |
 | stat-ci ogni 10 min invece che a ogni `workflow_run` | coda: −40 % dei run | basso | stessi eventi registrati |
 
 **Prova esterna chiesta a ogni prompt**:
@@ -114,5 +121,5 @@ Accettazione: le prove (a)-(d); in CI il 3.11 ≤ 6 min su PR con cache calda; n
 
 **P9 · CI: niente doppioni con `rust-wasm`** (via già dato per `test.yml`). Il 3.11 deseleziona `test_guardie_memoria.py`, `test_feat_wasm.py` e `test_flow_determinismo.py` quando la PR cambia un percorso Rust (la stessa regola di `changes` in `rust.yml`, letta da uno script comune `tools/ci_percorsi_rust.py`); altrimenti li esegue. Accettazione: test della regola con elenchi di file; prova (b).
 
-**R3 · `rust.yml` per crate toccati.** Cosa: `changes` calcola i crate cambiati e i loro dipendenti (`cargo metadata`); `rust-core`, `rust-misc` e `rust` testano solo quelli; ogni notte tutto; `rust-lint`, `deny` e `changes` in un solo job. I nomi richiesti (`rust-ok`) restano.
-Guadagno: ~5-7 min sulle PR Rust e 2 runner in meno per push. Rischio: un crate dipendente dimenticato; si prova con l'unione delle selezioni uguale a `cargo test --workspace` su main e con un errore messo apposta.
+**R3 · `rust.yml` in tre interventi** (via di Federico chiesto). (a) Il determinismo esce da `rust-wasm` in un job suo: da 9,2 a circa 5,5 min. (b) `rust-core` gira solo se cambiano `crates/mzlab-{core,lettori,lib,libro,mol,target}/` (crate senza altre dipendenze del progetto), `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml` o `tests/golden/`: saltato in 92 PR Rust su 158. (c) `rust-misc` in 2 job per crate: da 8,2 a circa 4,5 min. Una PR Rust passa da 10,8 a circa 6,5 min; `rust-ok` resta il solo nome richiesto e aspetta anche i job nuovi.
+Rischio: +2 job per push, un po' più di coda nelle ore piene; ogni notte `notte.yml` esegue tutto. Prova: simulazione delle regole sulle 158 PR Rust passate, un errore messo apposta in `mzlab-core` preso dalla PR, tempi veri via API su 3 PR.
