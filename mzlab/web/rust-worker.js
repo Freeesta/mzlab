@@ -13,6 +13,7 @@ import { createNativo } from "./rust-nativo.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca } from "./rust-msngrafo.js";
+import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
 const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
@@ -172,6 +173,29 @@ function scanOp({ op, id, slot, path, query, blob }) {
   postMessage({ id, op, n: 0, info, buf: null, len: 0 });
 }
 
+const derivata = createDerivata({ nativo, ARCH, indexPlain });
+async function indexPlain(name, blob, onProgress) {                             // the index of an mzML that is no file of the page (the one made for the graph of a maker's sample)
+  const part = name + ".mzidx.part", inputs = Array.from(prepare_upload(blob.size, readerFor(blob), name, undefined, undefined, BUDGET_MB)).slice(0, 8);
+  const res = await idxPool().build({ name, blob, inputs, part, cap: BUDGET_MB, onProgress });
+  if (!res.ok) {
+    await ARCH.remove("idx", part);
+    let key = ""; try { key = JSON.parse(res.text).error_key || ""; } catch (_) { /* not JSON */ }
+    throw key ? res.text : JSON.stringify({ error_key: res.reason === "memory" ? "error.memoryBudget" : "err.engine.indexWhy", params: { detail: String(res.text || res.reason).slice(0, 200) } });
+  }
+  await ARCH.promote("idx", part, name + ".mzidx");
+  return await ARCH.get("idx", name + ".mzidx");
+}
+async function msnGrafoOp(m, id) {                                              // the graph, the library entry or the library search; the page gets `progress` messages while it works
+  const name = tileName.get(m.slot) || "";
+  let nat = false;
+  const annuncia = p => postMessage({ op: "progress", id, ...p, frac: fraz(nat, p.phase, p.frac) });
+  annuncia({ phase: "load", frac: 0 });
+  const d = await derivata(name, p => { nat = true; annuncia(p); });
+  const blob = d ? d.mzml : m.blob, rd = conAvanzamento(readerFor, blob, annuncia), idx = d ? d.idx : undefined;
+  if (m.cerca) return msnLibCerca(name, blob, m.query || "", m.libreria || "", rd, idx);
+  if (m.libreria == null) return msnGrafo(name, blob, m.query || "", rd, !!m.esporta, idx);
+  return msnLibAggiungi(name, blob, m.query || "", m.libreria, m.molecola || "", rd, idx);
+}
 const labOp = createLabOps({ engine: () => engine, ARCH, fileOf, lrOpen, slotOf, readerFor, jerr });      // methods (.dam) and the routes of one item about its acquisition
 async function lrMigrate() {                                              // what an earlier visit left in IndexedDB passes to OPFS
   for (const n of (await safe(() => tx("files", "readonly", s => s.getAllKeys()))) || []) {
@@ -408,7 +432,7 @@ async function handle(ev) {
       case "diff": info = engine.diff_traces(m.path, m.query || ""); break;               // api/chrom, api/xic with ref: "" = Python's, "E" + JSON = the user's error
       case "qaqc": info = engine.qaqc_ion(m.query || ""); break;                          // api/qaqc over the files at the slots of the query: "" = Python's, "E" + JSON = the user's error
       case "mrmdiff": info = mrm_diff_post(m.files, m.ref, m.query || ""); break;        // api/mrm with ref, from the transitions of the files
-      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await (m.cerca ? msnLibCerca(tileName.get(m.slot) || "", m.blob, m.query || "", m.libreria || "", readerFor) : m.libreria == null ? msnGrafo(tileName.get(m.slot) || "", m.blob, m.query || "", readerFor, !!m.esporta) : msnLibAggiungi(tileName.get(m.slot) || "", m.blob, m.query || "", m.libreria, m.molecola || "", readerFor)); break;   // api/msn_grafo over the .mzidx and the mzML of the slot
+      case "idxxic": info = engine.index_xic(m.slot, m.level, m.mz, m.tol); break;   case "msngrafo": info = await msnGrafoOp(m, id); break;   // api/msn_grafo over the .mzidx and the mzML of the slot (of a maker's sample: the mzML made from it)
       case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
