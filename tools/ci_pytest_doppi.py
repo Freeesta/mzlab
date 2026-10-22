@@ -1,6 +1,6 @@
 """Test files that rust.yml (job rust-wasm) already runs whenever it runs, so the 3.11 pytest job of test.yml can leave them out.
 `python3 tools/ci_pytest_doppi.py <base sha>` writes `ignore=--ignore=tests/a.py ...` (empty when the files must run here) to $GITHUB_OUTPUT.
-rust-wasm runs when the diff matches the Rust path filter of rust.yml (read from there, so the two never drift); no base or a git failure keeps every test.""" Used by the 3.11 job only.
+rust-wasm runs when the diff matches the Rust path filter of rust.yml (read from there, so the two never drift); no base or a git failure keeps every test (3.11 job only)."""
 import os
 import re
 import subprocess
