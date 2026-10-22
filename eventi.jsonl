@@ -4738,3 +4738,4 @@
 {"v":1,"ts_utc":"2026-10-22T11:37:09Z","azione":"aperta","tipo":"pr","pr":1492,"sha":"30f83c3895cbd353c1243199aaf17ca61e8af372"}
 {"v":1,"ts_utc":"2026-10-22T11:38:02Z","azione":"aperta","tipo":"pr","pr":1493,"sha":"ba973ccffa7bfc348cb65fe6a320f36ffef95082"}
 {"v":1,"ts_utc":"2026-10-22T11:39:56Z","azione":"push","titolo":"Fusione di main in claude/perf-maxgap","merge_main":false,"aree":{"workflow":1,"rust":45,"docs":12,"web":3,"test":6,"tools":4},"tipo":"pr","pr":1491,"sha":"3fa5b394a0c8de1eedeabea8cb83d3d65188f8c4"}
+{"v":1,"ts_utc":"2026-10-22T11:40:27Z","azione":"push","titolo":"docs: atteso assorbito da famiglia e modo ioni","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1493,"sha":"0727ac85a921453933b76c3fa8ef6254d70474aa"}
