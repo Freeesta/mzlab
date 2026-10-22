@@ -1,5 +1,5 @@
-//! Sub-phase timers of the interpretation pass, summed by name and printed on stderr when `MZLAB_PHASES` is set (for profiling real runs).
-//! Native builds only: the `.wasm` has no clock, there `time` just runs the closure. `build` uses it.
+//! Sub-phase timers of the passes of `tp.link` (proofs, interpretation), summed by name and printed on stderr when `MZLAB_PHASES` is set (for
+//! profiling real runs). Native builds only: the `.wasm` has no clock, there `time` just runs the closure. `interp::build` and the proofs step use it.
 
 #[cfg(not(target_arch = "wasm32"))]
 mod imp {
@@ -29,13 +29,13 @@ mod imp {
         out
     }
 
-    pub fn report() {
+    pub fn report(label: &str) {
         if !on() {
             return;
         }
         if let Ok(mut v) = TOTALS.lock() {
             for (name, d) in v.drain(..) {
-                eprintln!("interp phase {name}: {:.2} s", d.as_secs_f64());
+                eprintln!("{label} phase {name}: {:.2} s", d.as_secs_f64());
             }
         }
     }
@@ -48,7 +48,7 @@ mod imp {
         f()
     }
 
-    pub fn report() {}
+    pub fn report(_label: &str) {}
 }
 
 pub use imp::{report, time};
