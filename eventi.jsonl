@@ -8035,3 +8035,4 @@
 {"v":1,"ts_utc":"2026-10-22T19:48:46Z","tipo":"conflitto","pr":1524,"sha":"8a65ac62b185df4932aa65f39435ef7ee4bf8789","pr_unita":1526,"file_comuni":[],"n_file_comuni":0,"file_conflitto":["crates/mzlab-feat/src/interp/build.rs","docs/agenti/interp.md"]}
 {"v":1,"ts_utc":"2026-10-22T19:53:13Z","azione":"aperta","tipo":"pr","pr":1527,"sha":"ce0ba9a63bf664c4c5cebc65ebd184292c866fae"}
 {"v":1,"ts_utc":"2026-10-22T19:54:04Z","azione":"push","titolo":"Merge main into perf-evidence","merge_main":true,"aree":{"workflow":1,"rust":24,"docs":24,"web":10,"test":6,"tools":3},"tipo":"pr","pr":1524,"sha":"31dc828ed7f18f838258c526234bd8903971310a"}
+{"v":1,"ts_utc":"2026-10-22T19:55:59Z","azione":"aperta","tipo":"pr","pr":1528,"sha":"080cb823da1d0733bb5a1c18f289d12235d227c7"}
