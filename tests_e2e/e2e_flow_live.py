@@ -197,7 +197,7 @@ try:
         def jobs_until(pg, step_id, cond, timeout=60):
             """the jobs [item, state] of an instance, polled in the scheduler until `cond` (an expression on `j`) holds"""
             until(pg, "async (id) => { const j = await (" + JOBS + ")(id); return " + cond + "; }", step_id, timeout)
-        pg = page(); inputs = pg.evaluate(MODES, names); pg.evaluate(PUT, names); pg.evaluate(PUT_CEN, names[2]); open_flow(pg)
+        pg = page(); pg.wait_for_function("typeof ST !== 'undefined' && typeof E !== 'undefined'", timeout=120000); inputs = pg.evaluate(MODES, names); pg.evaluate(PUT, names); pg.evaluate(PUT_CEN, names[2]); open_flow(pg)
         cen = pg.evaluate(STEP, "spectra.centroid"); det = pg.evaluate(STEP, "features.detect")
         def mixed():
             assert cen and pg.evaluate(STEP, "index.mzidx"), "the base plan holds the centroid step"
