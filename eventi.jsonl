@@ -9696,3 +9696,4 @@
 {"v":1,"ts_utc":"2026-10-22T21:56:46Z","azione":"push","titolo":"Keep a literal dlx call in the map table export for the provenance guard","merge_main":false,"aree":{"web":1},"tipo":"pr","pr":1547,"sha":"00d486b2feebfd720a8045b4af081191e72e12e1"}
 {"v":1,"ts_utc":"2026-10-22T21:59:37Z","azione":"aperta","tipo":"pr","pr":1553,"sha":"1bd1f1d46093aa71c3aed4e42c54db5d342ed3ee"}
 {"v":1,"ts_utc":"2026-10-22T22:01:26Z","azione":"aperta","tipo":"pr","pr":1554,"sha":"9e296da24ccde595f024077887b5426f85efd57c"}
+{"v":1,"ts_utc":"2026-10-22T22:02:31Z","azione":"push","titolo":"Skip lone-peak channels in the trace segmentation","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1542,"sha":"521334107c8e8e2ff2450256a8526bfeb1f1b72d"}
