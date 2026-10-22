@@ -14,9 +14,10 @@ on:
 permissions:
   contents: read
 
-# a new push stops the run still going on the same branch / pull request
+# a new push stops the run still going on the same pull request; a push to main has a group of its own (run_id), because a run waiting in a shared group is replaced
+# by the next one even without cancel-in-progress, and the cache of the run that is lost is never saved
 concurrency:
-  group: test-${{ github.ref }}
+  group: test-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:

@@ -51,6 +51,8 @@ mod flow_link_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
+#[cfg(test)]
+mod flow_match_tests;
 mod flow_ms2;
 mod flow_msngraph;
 mod flow_msnlib;
@@ -67,6 +69,9 @@ mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
 mod flow_quant;
+mod flow_reactivity;
+#[cfg(test)]
+mod flow_reactivity_tests;
 mod flow_read;
 mod flow_refilter;
 #[cfg(test)]
