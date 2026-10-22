@@ -6221,3 +6221,4 @@
 {"v":1,"ts_utc":"2026-10-22T15:35:11Z","tipo":"carico","k":"2026-10-22T15:3","job_in_coda":0,"job_in_corso":18}
 {"v":1,"ts_utc":"2026-10-22T15:36:50Z","azione":"push","titolo":"Fondi main in flow-ui-xlsx","merge_main":false,"aree":{"altro":6,"rust":5,"docs":3,"test":1,"tools":1},"tipo":"pr","pr":1509,"sha":"9b83d20e38ccfbd28dcf82046ff2eb573a19749d"}
 {"v":1,"ts_utc":"2026-10-22T15:41:02Z","azione":"aperta","tipo":"pr","pr":1510,"sha":"512796bf4475cf60fdd20eee80b58f03c9ca70de"}
+{"v":1,"ts_utc":"2026-10-22T15:41:06Z","azione":"aperta","tipo":"pr","pr":1511,"sha":"9955b0dbe371bdd677e12a13130823751173671b"}
