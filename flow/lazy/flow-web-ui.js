@@ -14,6 +14,7 @@
       case "running": return (ev.di > 1 ? `working, file ${ev.parte} of ${ev.di}` : "working") + mem;
       case "done": return "done" + mem;
       case "reused": return "reused (nothing changed)";
+      case "blocked": return `needs about ${Math.ceil(ev.mb || 0)} MB, more than the memory in use: Run asks before using more`;
       case "refused": return `needs about ${Math.ceil(ev.mb || 0)} MB, more than this browser gives`;
       case "error": return "failed";
       default: return ev.via === "computer" ? "left out: this step needs a computer" : "skipped";
@@ -60,6 +61,9 @@
     const box = el("div", { class: "fl-meta" }, go, why, note, list);
     R.preflight(S).then((/** @type {any} */ x) => { est = x; gate(); }).catch(() => { /* no estimate yet: the run decides */ });
     document.addEventListener("flow:changed", gate); gate();
+    // the live session keeps the detections: the estimate follows them
+    let again = 0;
+    document.addEventListener("flow:web-step", () => { clearTimeout(again); again = setTimeout(() => { R.preflight(S).then((/** @type {any} */ x) => { est = x; gate(); }).catch(() => {}); }, 400); });
     return box;
   };
 })();
