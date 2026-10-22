@@ -1,18 +1,20 @@
 // @ts-check
-// Flow (administrator mode): the «This browser» runner of the MSn steps (spectra.msn_graph, msn.library_export, msn.table_export). The infusion is the file the plan names that is open in the Data tab;
+// Flow (administrator mode): the «This browser» runner of the MSn steps (spectra.msn_graph, msn.library_export, msn.table_export, and spectra.match with the `tree` algorithm). The infusion is the file the plan names that is open in the Data tab;
 // the graph, the library and the tables come from the routes of the engine of the page (`api/msn_grafo`, `api/msn_grafo/export`: the .wasm msngrafo, the same functions as `mzlab-cli msn-graph`
-// and `msn-lib export`), so the bytes are the ones of the command. Reports the same events as flow-web-run.js, keeps each result in OPFS (mzlab/flow/) and resolves with the texts. Docs: docs/agenti/flow-web.md.
+// and `msn-lib export`; the library search posts the library of the user, the one the Fragmentation graph card keeps, to `api/msnlib/cerca`), so the bytes are the ones of the command. Reports the same events as flow-web-run.js, keeps each result in OPFS (mzlab/flow/) and resolves with the texts. Docs: docs/agenti/flow-web.md.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const STEPS = ["spectra.msn_graph", "msn.library_export", "msn.table_export"], DIR = "mzlab/flow/";
+  const STEPS = ["spectra.msn_graph", "msn.library_export", "msn.table_export", "spectra.match"], DIR = "mzlab/flow/";
+  // the library the Fragmentation graph card keeps in OPFS (msnlib/1), and the defaults of spectra.match that the command applies
+  const LIB_FILE = "msnlib.json", MATCH = { precursor_ppm: 10, tol_da: 0.02, top_n: 5, min_prove: 3 };
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   const fail = (/** @type {string} */ key, params = {}) => Object.assign(new Error(key), { key, params });
   /** @param {any} o @param {any} ev */
   const emit = (o, ev) => { if (o.onEvent) o.onEvent(ev); document.dispatchEvent(new CustomEvent("flow:web-step", { detail: ev })); };
 
   /** a plan made of the MSn steps only: no .mzidx, so the runner of the series is not the one to ask @param {any} plan */
-  const handles = plan => plan.steps.length > 0 && plan.steps.every((/** @type {any} */ i) => STEPS.includes(base(i)));
+  const handles = plan => plan.steps.length > 0 && plan.steps.every((/** @type {any} */ i) => STEPS.includes(base(i)) && (base(i) !== "spectra.match" || i.algorithm === "tree"));
 
   /** the query of the graph of `inst` for the file number `k`: the parameters of the step under the names of the route @param {any} inst @param {number} k */
   const graphQuery = (inst, k) => {
@@ -42,6 +44,25 @@
       const key = j.error_key || "err.flow.run";
       throw /memory/i.test(key) ? fail("err.flow.msn.desktop") : fail(key, j.params || {});
     }
+    return t;
+  };
+
+  /** the library of the user (msnlib/1), "" when there is none yet */
+  const library = async () => {
+    try { return await (await (await (await navigator.storage.getDirectory()).getFileHandle(LIB_FILE)).getFile()).text(); } catch (_) { return ""; }
+  };
+
+  /** the candidates (msncerca/1) of the library for the graph of `q`, with the options of the step @param {URLSearchParams} q @param {any} p */
+  const search = async (q, p) => {
+    const lib = await library();
+    if (!lib) throw fail("err.flow.msn.library");
+    const body = /** @type {Record<string, any>} */ ({ libreria: lib });
+    for (const [n, v] of q) if (!["interpreta", "ppm_perdita", "strutture", "ppm_struttura"].includes(n)) body[n] = n === "k" ? Number(v) : v;
+    const o = (/** @type {string} */ n) => (typeof p[n] === "number" ? p[n] : /** @type {Record<string, number>} */ (MATCH)[n]);
+    Object.assign(body, { ppm_prec: o("precursor_ppm"), tol_mz: o("tol_da"), top: o("top_n"), min_prove: o("min_prove") });
+    let t;
+    try { t = await (await fetch("api/msnlib/cerca", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).text(); } catch (_) { throw fail("error.engineFallback"); }
+    if (/^\s*\{\s*"error/.test(t)) { const j = JSON.parse(t), key = j.error_key || "err.flow.run"; throw /memory/i.test(key) ? fail("err.flow.msn.desktop") : fail(key, j.params || {}); }
     return t;
   };
 
@@ -75,6 +96,9 @@
           name = inst.id + ".json"; text = (await ask("api/msn_grafo?" + graph)) + "\n";
           const j = JSON.parse(text);
           if (!Array.isArray(j.nodi) || !j.nodi.length) throw fail("err.flow.msn.empty");
+        } else if (id === "spectra.match") {
+          const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph");
+          name = inst.id + ".json"; text = await search(graph || graphQuery(first || { params: {} }, k), p);
         } else {
           // the graph of the first spectra.msn_graph of the plan (a plan without one asks for the graph with the defaults)
           const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph"), q = new URLSearchParams(graph || graphQuery(first || { params: {} }, k));

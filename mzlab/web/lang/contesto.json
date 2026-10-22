@@ -651,6 +651,7 @@
   "msngrafo.unexp": "Quanti picchi degli spettri dello ione il grafo non ha spiegato ({n}); segue l'elenco dei più intensi.",
   "msngrafo.use.tip": "Suggerimento del pulsante «Usa»: {f} = formula candidata scelta per lo ione.",
   "msngrafo.int.line": "Riga della perdita neutra verso uno ione: {name} = nome, {f} = formula, {mass} = massa esatta, {ppm} = errore, {conf} = confidenza (alta/media/bassa), {act} = attivazioni che l'hanno vista.",
+  "msngrafo.act.line": "Riga del pannello di uno ione: {list} = attivazione (CID o HCD) ed energia di collisione degli spettri in cui lo ione compare, separate da un punto a mezza altezza.",
   "msngrafo.int.alt": "Altre perdite note entro la finestra di massa: {list} = elenco di formule.",
   "msngrafo.find.analog": "Tipo di voce trovata nella libreria: {d} = differenza del precursore in Da (analogo, con frammenti spostati).",
   "msngrafo.find.proofs": "Prove di una voce trovata: {p} = picchi comuni, {n} = nodi allineati, {t} = nodi dell'albero ignoto, {l} = perdite comuni.",

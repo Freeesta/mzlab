@@ -64,6 +64,23 @@ try:
             assert p["formula"].split(" ")[0] and "[M" in p["formula"] and p.get("adduct") and p.get("molecule"), p
             pg.evaluate("document.querySelector('#tmpform').remove()")
         step("the molecule box of the step fills the ion, the adduct, the name and the SMILES", molecule_box)
+        def search():
+            added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ libreria: '', molecola_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.libreria })()""" % ION)
+            assert isinstance(added, str), added
+            put = """async (t) => { const d = await navigator.storage.getDirectory(), w = await (await d.getFileHandle('msnlib.json', { create: true })).createWritable(); await w.write(t); await w.close() }"""
+            pg.evaluate(put, "")
+            x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow, ev = [];
+              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
+              try { await FLOW.runners.web.run(S); return { ok: 1 } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+            assert x.get("key") == "err.flow.msn.library", x
+            pg.evaluate(put, added)
+            x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow;
+              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
+              try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+            assert "text" in x, x
+            j = json.loads(x["text"])
+            assert j["formato"] == "msncerca/1" and j["opzioni"]["min_prove"] == 3 and j["candidati"], x["text"][:300]
+        step("the library search of spectra.match (tree) posts the library of the card and gives msncerca/1", search)
         def library():
             t = got["r"]["files"][1]["text"]
             assert "Name:" in t and "Num Peaks:" in t and "C8H11N4O2" in t, t[:300]

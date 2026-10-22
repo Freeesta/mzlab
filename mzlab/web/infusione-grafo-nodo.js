@@ -57,6 +57,17 @@ function lossLine(/** @type {any} */ n) {
   return h`<div class="ig-int"><b class="sm">${I18N.t("msngrafo.int.title")}</b><ul class="sm">${rows.map((/** @type {string} */ r) => raw(r))}</ul><p class="muted sm">${I18N.t("msngrafo.int.hyp")}</p></div>`;
 }
 
+/** How the ion was reached: the activation (CID/HCD) and the collision energy of each spectrum where it shows, from `misure` of the arcs that end in the node. */
+function activationLine(/** @type {any} */ n) {
+  const seen = new Set();
+  for (const a of G.j.archi) if (a.a === n.id) for (const m of a.misure || []) {
+    const act = m.att ? String(m.att).toUpperCase() : "";
+    seen.add(`${act || "?"}${m.ce != null ? " " + m.ce : ""}`);
+  }
+  if (!seen.size) return "";
+  return h`<p class="sm ig-act">${I18N.t("msngrafo.act.line", { list: [...seen].join(" · ") })}</p>`;
+}
+
 const warnings = (/** @type {any} */ n) => G.j.avvisi.filter((/** @type {any} */ a) => a.nodo === n.id).map((/** @type {any} */ a) => h`<p class="sm ig-warn">${I18N.t(/** @type {any} */ (TXT.warn)[a.chiave], { node: n.mz.toFixed(4) })}</p>`).join("");
 
 /** The drawing box: the saved fragment (picture from MOLUI) with Draw / Save drawing / Remove. */
@@ -120,7 +131,7 @@ async function saveDrawing(/** @type {any} */ n) {
 /** Fills the panel of a node. `redo` asks for the graph again (a candidate was chosen), `again` draws the panel again. */
 export function nodePanel(/** @type {HTMLElement} */ host, /** @type {any} */ n, /** @type {{ redo: () => void, again: () => void }} */ cb) {
   if (!n) { host.innerHTML = h`<p class="muted sm">${I18N.t("msngrafo.pick")}</p>`; return; }
-  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + lossLine(n) + isolation(n) + unexplained(n) + warnings(n) + drawBox(n);
+  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + activationLine(n) + lossLine(n) + isolation(n) + unexplained(n) + warnings(n) + drawBox(n);
   fillCuts(host, n);
   host.querySelectorAll(".ig-use").forEach(b => b.addEventListener("click", () => {
     useCandidate(n, /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.f)); cb.redo();
