@@ -1,7 +1,7 @@
 // Web Worker of the Rust engine (?motore=rust): mzlab-wasm opens mzML files in blocks and answers TIC, XIC and single scans as
 // Float64Arrays that are moved (not copied) to the page. The page gives the arrays back ("recycle") once drawn, so a frame
 // allocates nothing. If this worker dies, rust-bridge.js starts a new one (the WASM instance cannot be reused after a trap).
-import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, budget_down, formula_mz, provenance, composition, stat_post, campioni, molecules, flow_command, mrm_diff_post, ricerca_numero } from "./wasm/mzlab_wasm.js";
+import init, { Engine, native_samples, native_to_mzml, native_srm, native_external, Passata, version, prepare_upload, budget_choice, budget_down, formula_mz, provenance, composition, stat_post, campioni, molecules, flow_command, flow_sched, mrm_diff_post, ricerca_numero } from "./wasm/mzlab_wasm.js";
 import * as ARCH from "./archivio.js";
 import { lab } from "./qqq-db.js";
 import { migra, rowOf } from "./migra.js";
@@ -299,6 +299,7 @@ async function lrOp(m) {
     case "lr_stat": return { info: stat_post(m.path || "", m.body || "") };               // the statistics routes; "E" + JSON = an error, "" = not one of them
     case "lr_provenance": return { info: provenance(m.ctx || "") };
     case "lr_flow_command": return { info: flow_command(m.body || "") };                            // the copyable shell command of a mzflow/2 plan; "E" + JSON = an error
+    case "lr_flow_sched": return { info: flow_sched(m.sop || "", m.body || "") };                   // the live scheduler of the Flow (sched_route): JSON in, JSON out
     case "lr_campioni": return { info: campioni(m.cop || "", m.body || "") };                       // campioni/2 (proponi, valida, ...): JSON in, JSON out
     case "lr_molecules": return { info: molecules(m.mop || "", m.body || "") };                     // molecules/1 (carica, cerca, get, da_csv, ...): JSON in, JSON out
     case "lr_molecole_archivio": return { info: await molecole(m.mop || "", m.body || "") };     // the molecules of the user, kept in the browser (IndexedDB) or, in the app, in a file

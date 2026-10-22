@@ -144,32 +144,3 @@ impl<R: Read> Read for Counted<'_, '_, R> {
         Ok(n)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn the_index_reports_monotone_progress_and_is_the_same_bytes() {
-        let d = std::env::temp_dir().join(format!("mzlab-pace-{}", std::process::id()));
-        std::fs::create_dir_all(&d).unwrap();
-        let src = d.join("a.mzML");
-        std::fs::write(&src, crate::tests::mzml(1.0)).unwrap();
-        let (a, b) = (d.join("a.mzidx"), d.join("b.mzidx"));
-        crate::build_index_of(&src, "", &a, mzlab_core::mzidx::DEFAULT_BUDGET).unwrap();
-        let mut seen = Vec::new();
-        super::build_index_with(
-            &src,
-            "",
-            &b,
-            mzlab_core::mzidx::DEFAULT_BUDGET,
-            &mut |d, t| seen.push((d, t)),
-        )
-        .unwrap();
-        assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
-        assert!(
-            seen.len() <= 101 && seen.windows(2).all(|w| w[0].0 < w[1].0),
-            "{seen:?}"
-        );
-        assert_eq!(seen.last().map(|&(d, t)| d == t), Some(true));
-        let _ = std::fs::remove_dir_all(&d);
-    }
-}

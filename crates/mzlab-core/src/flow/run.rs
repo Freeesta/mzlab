@@ -1,15 +1,21 @@
-//! Execution of a checked plan: instances in plan order, the independent ones (same level, and the items of a `per_item` step) on `workers` threads, the
-//! outputs gathered by index so that the record does not depend on who finished first. A `Runner` runs one job; the library has no files and no clock.
+//! Execution of a checked plan: the jobs come from the live scheduler (`flow::sched`) and go to `workers` threads as soon as their inputs are made, the
+//! outputs are gathered in the order of the plan inputs so that the record does not depend on who finished first. A `Runner` runs one job; the library has
+//! no files and no clock.
 //! An error stops only the descendants of the instance that failed: its activity carries the error, the descendants are listed in `Run::skipped`.
 
 use super::canon::{canonical, Resolved};
 use super::check::{check, Platform};
 use super::order::levels;
 use super::prov::{Activity, ErrorRecord, Mem};
-use super::{Instance, Plan, Ref};
+use super::{FileInput, Instance, Plan, Ref};
 use crate::error::{Error, Result};
 use crate::json::Value;
 use crate::step::{DataType, Step};
+
+#[path = "run_sched.rs"]
+mod live;
+
+pub use live::file_roots;
 
 /// A file the plan reads or a step made, identified by its content.
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +35,10 @@ pub struct Job<'a> {
     /// For every port written in the file, what it reads; the driving port of a `per_item` job holds its one item.
     pub inputs: Vec<(String, Vec<Artifact>)>,
     pub item: Option<usize>,
+    /// For a `per_item` job: the name of the plan input that drives it (never an index).
+    pub item_name: Option<String>,
+    /// `item_name` as a file-name root, the same for the same name and different for every input of the plan.
+    pub item_root: Option<String>,
 }
 
 /// What a job made and measured.
@@ -66,32 +76,20 @@ type Keyed = (String, Artifact);
 /// Output port and what it holds, keyed.
 type Made = Vec<(String, Vec<Keyed>)>;
 
-fn run_all(runner: &dyn Runner, jobs: &[Job], workers: usize) -> Vec<Result<Outcome>> {
-    #[cfg(not(target_family = "wasm"))]
-    if workers > 1 && jobs.len() > 1 {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        use std::sync::Mutex;
-        let next = AtomicUsize::new(0);
-        let slots: Mutex<Vec<Option<Result<Outcome>>>> =
-            Mutex::new((0..jobs.len()).map(|_| None).collect());
-        std::thread::scope(|s| {
-            for _ in 0..workers.min(jobs.len()) {
-                s.spawn(|| loop {
-                    let k = next.fetch_add(1, Ordering::Relaxed);
-                    let Some(job) = jobs.get(k) else { break };
-                    let r = runner.run(job);
-                    slots.lock().unwrap_or_else(|e| e.into_inner())[k] = Some(r);
-                });
-            }
-        });
-        let slots = slots.into_inner().unwrap_or_else(|e| e.into_inner());
-        return slots
-            .into_iter()
-            .map(|r| r.unwrap_or_else(|| Err(Error::new("err.flow.worker"))))
-            .collect();
+/// A file of the plan as an artifact, typed by the plan or else by the port that reads it.
+fn file_artifact(step: &Step, port: &str, f: &FileInput) -> Artifact {
+    let want = step.ins.iter().find(|p| p.name == port).map(|p| p.ty);
+    let ty =
+        f.ty.as_deref()
+            .and_then(DataType::from_name)
+            .or(want)
+            .unwrap_or(DataType::Raw);
+    Artifact {
+        sha256: f.sha256.clone(),
+        bytes: f.bytes.unwrap_or(0),
+        ty,
+        label: Some(f.name.clone()),
     }
-    let _ = workers;
-    jobs.iter().map(|j| runner.run(j)).collect()
 }
 
 /// What the instance reads on each port, keyed; `done` holds what the instances before it made.
@@ -103,19 +101,7 @@ fn read(plan: &Plan, step: &Step, inst: &Instance, done: &[Option<Made>]) -> Mad
             match r {
                 Ref::File(name) => {
                     if let Some(f) = plan.input(name) {
-                        let want = step.ins.iter().find(|p| p.name == port).map(|p| p.ty);
-                        let ty =
-                            f.ty.as_deref()
-                                .and_then(DataType::from_name)
-                                .or(want)
-                                .unwrap_or(DataType::Raw);
-                        let a = Artifact {
-                            sha256: f.sha256.clone(),
-                            bytes: f.bytes.unwrap_or(0),
-                            ty,
-                            label: Some(f.name.clone()),
-                        };
-                        got.push((format!("file:{name}"), a));
+                        got.push((format!("file:{name}"), file_artifact(step, port, f)));
                     }
                 }
                 Ref::Out {
@@ -138,47 +124,6 @@ fn read(plan: &Plan, step: &Step, inst: &Instance, done: &[Option<Made>]) -> Mad
     all
 }
 
-/// The jobs of an instance: one, or one per item of the first `many` port it reads when the step is `per_item`.
-fn jobs<'a>(
-    inst: &'a Instance,
-    step: &'a Step,
-    resolved: &'a Resolved,
-    read: &[(String, Vec<Keyed>)],
-) -> Vec<Job<'a>> {
-    let plain = |r: &[(String, Vec<Keyed>)]| {
-        r.iter()
-            .map(|(p, v)| (p.clone(), v.iter().map(|k| k.1.clone()).collect()))
-            .collect::<Vec<_>>()
-    };
-    let driver = step
-        .ins
-        .iter()
-        .filter(|p| p.many)
-        .find_map(|p| read.iter().position(|(n, v)| n == p.name && !v.is_empty()));
-    match driver {
-        Some(d) if step.per_item => (0..read[d].1.len())
-            .map(|i| {
-                let mut inputs = plain(read);
-                inputs[d].1 = vec![read[d].1[i].1.clone()];
-                Job {
-                    instance: inst,
-                    step,
-                    resolved,
-                    inputs,
-                    item: Some(i),
-                }
-            })
-            .collect(),
-        _ => vec![Job {
-            instance: inst,
-            step,
-            resolved,
-            inputs: plain(read),
-            item: None,
-        }],
-    }
-}
-
 fn references(step: &Step, algorithm: Option<&str>) -> Vec<String> {
     let own = algorithm.and_then(|id| step.algorithms.iter().find(|a| a.id == id));
     let mut keys: Vec<String> = Vec::new();
@@ -194,16 +139,28 @@ fn references(step: &Step, algorithm: Option<&str>) -> Vec<String> {
     keys
 }
 
-/// What the outcomes made, port by port in declaration order, and the keys of all of it.
-fn gather(inst: &Instance, step: &Step, outcomes: &[Outcome]) -> (Made, Vec<String>) {
+/// What the outcomes made, port by port in declaration order, and the keys of all of it. `names` holds the plan input of each outcome (`per_item` jobs): a
+/// `many` output is keyed by it, else by its position.
+fn gather(
+    inst: &Instance,
+    step: &Step,
+    outcomes: &[Outcome],
+    names: &[Option<String>],
+) -> (Made, Vec<String>) {
     let mut made: Made = Vec::new();
     let mut generated = Vec::new();
     for port in &step.outs {
         let mut list: Vec<Keyed> = Vec::new();
-        for o in outcomes {
-            for (name, a) in o.outputs.iter().filter(|(n, _)| n == port.name) {
+        for (o, item) in outcomes.iter().zip(names) {
+            let mine = o.outputs.iter().filter(|(n, _)| n == port.name);
+            let several = mine.clone().count() > 1;
+            for (k, (name, a)) in mine.enumerate() {
                 let key = if port.many {
-                    format!("{}.{name}[{}]", inst.id, list.len())
+                    match item {
+                        Some(i) if several => format!("{}.{name}[{i}#{k}]", inst.id),
+                        Some(i) => format!("{}.{name}[{i}]", inst.id),
+                        None => format!("{}.{name}[{}]", inst.id, list.len()),
+                    }
                 } else {
                     format!("{}.{name}", inst.id)
                 };
@@ -222,7 +179,7 @@ fn settle(
     step: &Step,
     resolved: &Resolved,
     used: Vec<String>,
-    results: Vec<Result<Outcome>>,
+    results: Vec<(Option<String>, Result<Outcome>)>,
 ) -> (Activity, Option<Made>) {
     let algorithm = resolved
         .algorithm
@@ -247,9 +204,13 @@ fn settle(
         cached: !results.is_empty(),
     };
     let mut outcomes = Vec::new();
-    for r in results {
+    let mut names = Vec::new();
+    for (item, r) in results {
         match r {
-            Ok(o) => outcomes.push(o),
+            Ok(o) => {
+                outcomes.push(o);
+                names.push(item);
+            }
             Err(e) => {
                 act.cached = false;
                 act.error = Some(ErrorRecord {
@@ -264,7 +225,7 @@ fn settle(
             }
         }
     }
-    let (made, generated) = gather(inst, step, &outcomes);
+    let (made, generated) = gather(inst, step, &outcomes, &names);
     act.generated = generated;
     for o in &outcomes {
         act.ms += o.ms;
@@ -306,7 +267,7 @@ fn merged(a: Option<Mem>, b: Option<Mem>) -> Option<Mem> {
 }
 
 /// Runs `plan` with `workers` threads (1 = in order; the record is the same for any number). The plan is checked first; an instance that fails stops its
-/// descendants only.
+/// descendants only. The jobs run in the order of the scheduler, the record is written afterwards in the order of the levels of the plan.
 pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usize) -> Result<Run> {
     let problems = check(plan, registry, Platform::current());
     if let Some(p) = problems.first() {
@@ -315,10 +276,12 @@ pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usi
             .with("instance", &p.instance)
             .with("error_key", p.error_key));
     }
+    let waves = levels(plan)?;
+    let (ids, mut results) = live::run_jobs(plan, registry, runner, workers)?;
     let mut run = Run::default();
     let mut done: Vec<Option<Made>> = vec![None; plan.steps.len()];
-    for wave in levels(plan)? {
-        // resolve and read in file order, run the whole wave together, settle in file order
+    for wave in waves {
+        // resolve and read in file order, settle in file order
         let mut ready = Vec::new();
         for k in wave {
             let inst = &plan.steps[k];
@@ -338,15 +301,7 @@ pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usi
             let resolved = canonical(inst, step)?;
             ready.push((k, step, resolved, read(plan, step, inst, &done)));
         }
-        let all_jobs: Vec<Vec<Job>> = ready
-            .iter()
-            .map(|(k, step, resolved, rd)| jobs(&plan.steps[*k], step, resolved, rd))
-            .collect();
-        let counts: Vec<usize> = all_jobs.iter().map(Vec::len).collect();
-        let flat: Vec<Job> = all_jobs.into_iter().flatten().collect();
-        let mut results = run_all(runner, &flat, workers).into_iter();
-        drop(flat);
-        for ((k, step, resolved, rd), n) in ready.iter().zip(counts) {
+        for (k, step, resolved, rd) in &ready {
             let inst = &plan.steps[*k];
             let mut used: Vec<String> = Vec::new();
             for (key, a) in rd.iter().flat_map(|(_, v)| v) {
@@ -357,7 +312,19 @@ pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usi
                     used.push(key.clone());
                 }
             }
-            let mine: Vec<Result<Outcome>> = results.by_ref().take(n).collect();
+            let mut mine: Vec<(Option<String>, Result<Outcome>)> = ids[*k]
+                .iter()
+                .map(|j| {
+                    let r = results.remove(j);
+                    (
+                        j.item.clone(),
+                        r.unwrap_or_else(|| Err(Error::new("err.flow.worker"))),
+                    )
+                })
+                .collect();
+            if mine.is_empty() {
+                mine.push((None, Err(Error::new("err.flow.worker"))));
+            }
             let (act, made) = settle(inst, step, resolved, used, mine);
             for (key, a) in made.iter().flatten().flat_map(|(_, v)| v) {
                 run.entities.push((key.clone(), a.clone()));
@@ -368,3 +335,7 @@ pub fn execute(plan: &Plan, registry: &[Step], runner: &dyn Runner, workers: usi
     }
     Ok(run)
 }
+
+#[cfg(test)]
+#[path = "run_tests.rs"]
+mod tests;

@@ -11,6 +11,7 @@ mod parse;
 mod prov;
 mod run;
 pub mod sched;
+mod sched_route;
 mod write;
 
 pub use canon::{cache_key, canonical, value_text, Resolved};
@@ -22,7 +23,8 @@ pub use parse::parse;
 pub use prov::{
     prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
-pub use run::{execute, Artifact, Job, Outcome, Run, Runner};
+pub use run::{execute, file_roots, Artifact, Job, Outcome, Run, Runner};
+pub use sched_route::route as sched_route;
 pub use write::plan_json;
 
 use crate::json::Value;
