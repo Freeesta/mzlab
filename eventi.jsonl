@@ -7009,3 +7009,4 @@
 {"v":1,"ts_utc":"2026-10-22T16:58:02Z","tipo":"job","k":"119963238274","workflow":"pages","job":"deploy","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"8f45acdcb0ab2b578b855a3791d2022ebfc54a37","run_id":39817990192,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T16:58:03Z","tipo":"annullamento","k":"39817990192","workflow":"pages","minuti_runner":3.7,"sostituito_da":null,"pr":null,"sha":"8f45acdcb0ab2b578b855a3791d2022ebfc54a37","run_id":39817990192,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T16:59:05Z","azione":"aperta","tipo":"pr","pr":1515,"sha":"0651eff457ed26e533d30b29b5ba7bc772eaca8e"}
+{"v":1,"ts_utc":"2026-10-22T17:11:04Z","azione":"aperta","tipo":"pr","pr":1516,"sha":"67ac46d45ebf7ff0d505462daaf80bfbcd70ec4f"}
