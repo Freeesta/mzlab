@@ -3821,3 +3821,4 @@
 {"v":1,"ts_utc":"2026-10-22T09:40:24Z","azione":"push","titolo":"Test dei passi CLI: aggiunge spectra.lookup all'elenco","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1480,"sha":"599d37aead51c75148b3091a897d74bc25a754df"}
 {"v":1,"ts_utc":"2026-10-22T09:40:54Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/flow-live-2","merge_main":true,"aree":{"rust":1},"tipo":"pr","pr":1482,"sha":"49b648366eeb4e8bce4b19b904008fba4e2e77e0"}
 {"v":1,"ts_utc":"2026-10-22T09:53:03Z","azione":"push","titolo":"Flow-Live L2: nome del file nel test desktop, alias per il tipo del lavoro","merge_main":false,"aree":{"rust":2},"tipo":"pr","pr":1482,"sha":"e856141ca5297c853fabb827fc871b42eee6a8ec"}
+{"v":1,"ts_utc":"2026-10-22T09:54:22Z","azione":"aperta","tipo":"pr","pr":1483,"sha":"034b95eb9f9b745f0f527f66cb5a7e6fc89f6452"}
