@@ -99,6 +99,13 @@
      ],
      "description": "The structure of the molecule, written back for the drawing of the fragments"
     },
+    "molfile": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "The structure as a molfile (alternative to smiles), written back for the drawing of the fragments; the key is there only when it was given"
+    },
     "ppm_formula": {
      "type": "number",
      "default": 10,
@@ -1309,6 +1316,185 @@
     }
    },
    "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
+  },
+  "strutture_tutti": {
+   "type": "array",
+   "description": "Present only when asked (strutture=tutti): the `strutture` value of every node of level 2 or more that has candidates, in the order of the nodes",
+   "items": {
+    "type": "object"
+   }
+  },
+  "vista": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Always the last key. What a drawer needs and the graph does not say outright, computed only from the fields above (so `completa` adds it to an older graph with the same bytes). Abstract coordinates: pixels and styles belong to the drawer. A proposal of a rule, never a mechanism.",
+   "required": [
+    "versione",
+    "algoritmo",
+    "regola",
+    "ordine",
+    "nodi",
+    "archi"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "algoritmo": {
+     "const": "best-path/1"
+    },
+    "regola": {
+     "type": "string",
+     "description": "The rule of the best path in plain words"
+    },
+    "ordine": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     },
+     "description": "Node ids in the order of the tree layout (column, then row)"
+    },
+    "nodi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "id",
+       "livelli",
+       "rel",
+       "rel_max",
+       "best",
+       "entranti",
+       "comune",
+       "albero",
+       "radiale"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "livelli": {
+        "type": "array",
+        "items": {
+         "type": "integer"
+        },
+        "description": "MS levels of the measures in which the ion really is"
+       },
+       "rel": {
+        "type": [
+         "number",
+         "null"
+        ],
+        "description": "Intensity in the spectrum of its parent on the best path, % of the base peak (a root: its rel_max)"
+       },
+       "rel_max": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "best": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "da",
+         "passi",
+         "costo"
+        ],
+        "properties": {
+         "da": {
+          "type": [
+           "string",
+           "null"
+          ],
+          "description": "Parent on the best path, null for a root"
+         },
+         "passi": {
+          "type": "integer"
+         },
+         "costo": {
+          "type": "array",
+          "description": "[steps, smallest rel along the path | null, isolated arcs]",
+          "items": {
+           "type": [
+            "number",
+            "null"
+           ]
+          }
+         }
+        }
+       },
+       "entranti": {
+        "type": "integer",
+        "description": "Number of different precursors"
+       },
+       "comune": {
+        "type": "boolean",
+        "description": "Two or more precursors"
+       },
+       "albero": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "col",
+         "riga"
+        ],
+        "properties": {
+         "col": {
+          "type": "integer"
+         },
+         "riga": {
+          "type": "integer"
+         }
+        }
+       },
+       "radiale": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "anello",
+         "angolo"
+        ],
+        "properties": {
+         "anello": {
+          "type": "integer",
+          "description": "Ring = steps of the best path"
+         },
+         "angolo": {
+          "type": "number",
+          "description": "Degrees, 2 decimals"
+         }
+        }
+       }
+      }
+     }
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "best"
+      ],
+      "properties": {
+       "da": {
+        "type": "string"
+       },
+       "a": {
+        "type": "string"
+       },
+       "best": {
+        "type": "boolean",
+        "description": "The arc is the best entering arc of its target"
+       }
+      }
+     }
+    }
+   }
   }
  }
 }

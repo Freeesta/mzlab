@@ -5,18 +5,17 @@ use mzlab_core::elements::{mass, parse_formula, Formula};
 use mzlab_core::idxread::{Index, ReadAt};
 
 use super::albero::{self, LibNode, NodeState, TreeCtx};
+use super::apice::apex_ms1_many;
 use super::confronto::{self, VsParent};
 use super::disegno::{self, Drawing};
 use super::filtri::{self, FileCal, RowFacts};
 use super::modifica::{self, Candidate, IsoCheck};
 use super::ms2link::{self, Isomers, LinkParams, Ms2Scan, Pooled};
 use super::sito::{self, SiteReport};
-use crate::axis::half;
 use crate::chem::posizioni::{Peak, Pol};
 use crate::legacy::ms2::{Consensus, Ms2Sorted};
 use crate::legacy::series::{Hyp, Parent};
 use crate::prof::{report, time};
-use crate::sweep::windows;
 use crate::table::{Aligned, CELL_ABSENT};
 use crate::tp::{NO_PARENT, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 
@@ -103,47 +102,6 @@ fn best_file(t: &Aligned, row: usize) -> usize {
         .unwrap_or(0)
 }
 
-/// Intensities of M, M+1 and M+2 and the m/z of M in the MS1 scan nearest to `apex` (singly charged, as everything in HR here).
-fn apex_ms1<R: ReadAt>(
-    ix: &mut Index<R>,
-    pol: i8,
-    mz: f64,
-    apex: f64,
-) -> Res<Option<([f64; 3], f64)>> {
-    let Some(si) = ix.section_of(1, Some(pol)) else {
-        return Ok(None);
-    };
-    let rt = ix.arrays(si).map_err(|e| e.to_string())?.rt.clone();
-    if rt.is_empty() {
-        return Ok(None);
-    }
-    let p = rt.partition_point(|&t| t < apex);
-    let p = if p > 0 && (p == rt.len() || apex - rt[p - 1] < rt[p] - apex) {
-        p - 1
-    } else {
-        p.min(rt.len() - 1)
-    };
-    let mut out = ([0.0; 3], f64::NAN);
-    let tol = half(mz, 10.0);
-    let c13 = 1.003355;
-    windows(ix, si, &[(mz - tol, mz + 2.2)], 1 << 20, |_, a, b, slab| {
-        for j in (a..b).filter(|&j| slab.pos[j] == p as u32) {
-            let d = slab.mz[j] - mz;
-            if d.abs() <= tol && slab.it[j] > out.0[0] {
-                out.0[0] = slab.it[j];
-                out.1 = slab.mz[j];
-            } else if (d - c13).abs() <= 0.01 {
-                out.0[1] = out.0[1].max(slab.it[j]);
-            } else if (d - 2.0).abs() <= 0.015 {
-                out.0[2] += slab.it[j];
-            }
-        }
-        Ok(())
-    })
-    .map_err(|e| e.to_string())?;
-    Ok(Some(out))
-}
-
 fn ppm(obs: f64, theo: f64) -> f64 {
     (obs - theo) / theo * 1e6
 }
@@ -214,27 +172,33 @@ fn read_file<R: ReadAt>(
             None => parent_scans.push(s),
         }
     }
-    for w in work.iter_mut().filter(|w| w.best == k) {
-        let cell = w.row * t.n_files + k;
-        let apex = if t.apex_rt[cell].is_finite() {
-            f64::from(t.apex_rt[cell])
+    let apex_of = |row: usize| {
+        let a = t.apex_rt[row * t.n_files + k];
+        if a.is_finite() {
+            f64::from(a)
         } else {
-            t.rt[w.row]
-        };
-        w.iso = time("apex ms1", || apex_ms1(ix, inp.polarity, t.mz[w.row], apex))?;
-    }
-    let perr = match parent_row.filter(|&p| limits(t, p, k).0.is_finite()) {
-        Some(p) => {
-            let apex = f64::from(t.apex_rt[p * t.n_files + k]);
-            let apex = if apex.is_finite() { apex } else { t.rt[p] };
-            time("apex ms1", || {
-                apex_ms1(ix, inp.polarity, inp.parent.mz, apex)
-            })?
-            .filter(|m| m.1.is_finite())
-            .map(|m| ppm(m.1, inp.parent.mz))
+            t.rt[row]
         }
+    };
+    let own: Vec<usize> = (0..work.len()).filter(|&i| work[i].best == k).collect();
+    let mut reqs: Vec<(f64, f64)> = own
+        .iter()
+        .map(|&i| (t.mz[work[i].row], apex_of(work[i].row)))
+        .collect();
+    let parent_at = parent_row.filter(|&p| limits(t, p, k).0.is_finite());
+    reqs.extend(parent_at.map(|p| (inp.parent.mz, apex_of(p))));
+    let mut got = time("apex ms1", || apex_ms1_many(ix, inp.polarity, &reqs))?;
+    let perr = match parent_at {
+        Some(_) => got
+            .pop()
+            .flatten()
+            .filter(|m| m.1.is_finite())
+            .map(|m| ppm(m.1, inp.parent.mz)),
         None => None,
     };
+    for (i, g) in own.into_iter().zip(got) {
+        work[i].iso = g;
+    }
     Ok((parent_scans, perr))
 }
 

@@ -7,6 +7,8 @@
 export const TXT = {
   conf: { high: "msngrafo.int.high", medium: "msngrafo.int.medium", low: "msngrafo.int.low" },
   prove: { perdita: "msngrafo.prove.perdita", isotopi: "msngrafo.prove.isotopi", msn: "msngrafo.prove.msn" },
+  prog: { load: "msngrafo.prog.load", convert: "msngrafo.prog.convert", index: "msngrafo.prog.index", graph: "msngrafo.prog.graph" },
+  stalled: { load: "msngrafo.stalled.load", convert: "msngrafo.stalled.convert", index: "msngrafo.stalled.index", graph: "msngrafo.stalled.graph" },
   elettroni: { pari: "msngrafo.e.pari", dispari: "msngrafo.e.dispari" },
   // Errors of the library route, named by the engine through error_key.
   err: { noIon: "err.msnlib.noIon", bad: "err.msnlib.bad" },
@@ -35,6 +37,7 @@ export const G = {
   /** @type {any} */ j: null,
   /** @type {string | null} */ sel: null,
   /** @type {string | null} */ error: null,
+  /** @type {any} */ errorObj: null,
   /** «Run MSn workflow» asked for the library search right after the next graph is drawn (read once). */
   auto: false,
   /** Show only the losses a fragmentation rule explains (the filter of the toolbar). */
@@ -93,11 +96,11 @@ export async function fetchGraph(/** @type {number} */ k) {
     const j = await J(url);
     if (G.key !== url) return false;
     if (G.j == null) { const o = j.opzioni || {}; for (const n of /** @type {const} */ (["ppm_formula", "mz_basso", "ppm_basso", "prove_min"])) if (typeof o[n] === "number") G.o[n] = o[n]; }
-    G.j = j; G.error = null; G.k = k;
+    G.j = j; G.error = null; G.errorObj = null; G.k = k;
     if (G.sel && !j.nodi.some((/** @type {any} */ n) => n.id === G.sel)) G.sel = null;
   } catch (e) {
     if (G.key !== url) return false;
-    G.error = /** @type {any} */ (e).message || String(e);
+    G.error = /** @type {any} */ (e).message || String(e); G.errorObj = e;
   }
   return true;
 }

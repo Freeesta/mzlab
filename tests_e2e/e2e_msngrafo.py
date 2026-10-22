@@ -1,6 +1,6 @@
 """api/msn_grafo on the built site: the .wasm msngrafo (crates/mzlab-msngrafo-wasm, wasm-feat/msngrafo/) answers the graph of a synthetic MSn infusion from the .mzidx and the
 mzML in OPFS, with the same bytes as `mzlab-cli msn-graph` (only the SHA-256 of the index may differ), a bad number is a keyed error, the export route gives CSV, MGF or MSP text, api/msnlib/aggiungi adds an entry to the library once,
-MZLAB_LR_MISS stays empty and the .wasm is under 512000 bytes. Needs the site (python3 tools/prepara_sito.py); the module is built here when it is not in site/static/wasm-feat."""
+MZLAB_LR_MISS stays empty and the .wasm is under 545000 bytes. Needs the site (python3 tools/prepara_sito.py); the module is built here when it is not in site/static/wasm-feat."""
 import hashlib, json, re, shutil, subprocess, sys
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 from lib import *
@@ -13,22 +13,8 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
 
-feat = ROOT / "site" / "static" / "wasm-feat"
-mod = feat / "msngrafo"
-if not (mod / "mzlab_msngrafo_wasm_bg.wasm").exists():
-    sh = lambda *a: subprocess.run(a, cwd=ROOT, check=True, capture_output=True)
-    sh("cargo", "build", "--locked", "--release", "--target", "wasm32-unknown-unknown", "-p", "mzlab-msngrafo-wasm")
-    mod.mkdir(parents=True, exist_ok=True)
-    sh("wasm-bindgen", "--target", "web", "--no-typescript", "--out-dir", str(mod), "target/wasm32-unknown-unknown/release/mzlab_msngrafo_wasm.wasm")
-    if shutil.which("wasm-opt"):
-        bg = str(mod / "mzlab_msngrafo_wasm_bg.wasm")
-        sh("wasm-opt", "-Oz", "--enable-bulk-memory", "--enable-sign-ext", "--enable-mutable-globals", "--enable-nontrapping-float-to-int", "-o", bg, bg)
-    mp = feat / "manifest.json"
-    m = json.loads(mp.read_text()) if mp.exists() else {}
-    m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzlab_msngrafo_wasm_bg.wasm", "sha256": hashlib.sha256((mod / "mzlab_msngrafo_wasm_bg.wasm").read_bytes()).hexdigest()}
-    mp.write_text(json.dumps(m, indent=1))
-for f in ("rust-msngrafo.js", "rust-msngrafo-pagina.js", "rust-worker.js", "rust-bridge.js", "browser.js"):
-    shutil.copy(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
+import lib_msngrafo
+lib_msngrafo.prepara()
 
 D = synth("msngrafo")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
@@ -82,7 +68,7 @@ try:
             assert st == 400 and err["error_key"] == "err.msnlib.noIon", (st, err)
         step("the library gets an entry once, the same one is a duplicate and a graph without ion is a keyed error", library)
         def search():
-            post = "(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
+            post = "([u,b])=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
             body = {"libreria": "", "molecola_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "scelte": []}
             st, a = pg.evaluate(post, ["api/msnlib/aggiungi", body])
             assert st == 200, (st, a)

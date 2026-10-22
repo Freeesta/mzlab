@@ -53,6 +53,8 @@ jobs:
             *) exit 0 ;;
           esac
           python3 tools/ci_metrics.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl --cursore cursore-nuovo.json
+          # best-effort backfill of the green-to-merge time of old rows, 30 per poll (a lost publish race just repeats it)
+          case "$GITHUB_EVENT_NAME" in schedule|workflow_dispatch|push) python3 tools/ci_metrics.py riempi-verde --dati dati/eventi.jsonl || true ;; esac
           # GitHub fires the cron only a few times a day: every push to main also polls the completed runs (rows are deduplicated, the cursor only advances)
           if [ "$GITHUB_EVENT_NAME" = push ]; then
             python3 tools/ci_metrics.py registra-recenti --dati dati/eventi.jsonl --nuovi nuovi-recenti.jsonl --cursore cursore-nuovo.json

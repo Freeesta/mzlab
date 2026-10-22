@@ -180,9 +180,5 @@ pub fn regole_json(g: &Grafo, v: &Valutazione, p: &ParamRegole) -> String {
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `regole` added at the end; the text of a graph without it does not change.
 pub fn con_regole(grafo: &str, g: &Grafo, o: &Opzioni, p: &ParamRegole) -> String {
-    let testa = grafo.strip_suffix('}').unwrap_or(grafo);
-    format!(
-        "{testa},\"regole\":{}}}",
-        regole_json(g, &valuta(g, o, p), p)
-    )
+    super::vista::con_chiave(grafo, "regole", &regole_json(g, &valuta(g, o, p), p))
 }

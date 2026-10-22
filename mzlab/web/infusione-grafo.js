@@ -10,6 +10,7 @@ import { exportRow } from "./infusione-grafo-esporta.js";
 import { searchRow } from "./infusione-grafo-cerca.js";
 import { filtered, arcCells } from "./infusione-grafo-regole.js";
 import { addStyle } from "./infusione-grafo-css.js";
+import { guarda, mostraErrore } from "./infusione-grafo-avanza.js";
 
 /** @type {{ el: HTMLElement | null, svg: SVGSVGElement | null, scale: number }} */
 const V = { el: null, svg: null, scale: 1 };
@@ -108,10 +109,18 @@ function drawBody(/** @type {HTMLElement} */ b, /** @type {any} */ file, /** @ty
 /** Asks for the graph with the state in force and draws the answer. */
 async function run(/** @type {HTMLElement} */ b, /** @type {any} */ file) {
   const mine = ++tokenNow;
-  const ok = await fetchGraph(file.k);
-  if (!ok || mine !== tokenNow || !b.isConnected) return;
   const msg = /** @type {HTMLElement} */ (b.querySelector("#ig-msg"));
-  msg.innerHTML = G.error ? h`<p class="fail sm" role="alert">${G.error}</p>` : summary() + warnLines();
+  let hung = false;
+  const stop = guarda(msg, (s, phase) => {                                  // no news for 30 s: an error with its diagnosis, the late answer is ignored
+    hung = true; tokenNow++;
+    const text = I18N.t("msngrafo.stalled", { s, phase: I18N.t(/** @type {Record<string, string>} */ (TXT.stalled)[phase]) });
+    mostraErrore(msg, text, { key: "err.msngrafo.stalled", params: { s, phase } }, file, phase);
+  });
+  const ok = await fetchGraph(file.k);
+  stop();
+  if (hung || !ok || mine !== tokenNow || !b.isConnected) return;
+  if (G.error) mostraErrore(msg, G.error, G.errorObj, file);
+  else msg.innerHTML = summary() + warnLines();
   drawBody(b, file, false);
 }
 

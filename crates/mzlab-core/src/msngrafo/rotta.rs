@@ -81,6 +81,7 @@ pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Opzioni, Ra
         attivazione: testo("attivazione"),
         formula: testo("formula"),
         smiles: testo("smiles"),
+        molfile: testo("molfile"),
         scelte: testo("scelte").map_or(Ok(vec![]), |t| scelte(&t))?,
         attese: testo("attese").map_or(Ok(vec![]), |t| attese(&t))?,
         regole: if get("regole").as_deref() == Some("1") {
