@@ -13,6 +13,8 @@ use std::sync::{Condvar, Mutex, MutexGuard};
 
 /// Results by job.
 pub(super) type Results = HashMap<JobId, Result<Outcome>>;
+/// What a job reads: for each input port, the artifacts it gets.
+type Ins = Vec<(String, Vec<Artifact>)>;
 
 impl Ctx<'_> {
     fn position(&self, instance: &str) -> Option<usize> {
@@ -51,7 +53,7 @@ impl Ctx<'_> {
     }
 
     /// The most urgent job that is ready, marked as started, with what it reads.
-    fn pick(&self, g: &mut Core) -> Option<(JobId, Vec<(String, Vec<Artifact>)>)> {
+    fn pick(&self, g: &mut Core) -> Option<(JobId, Ins)> {
         let limits = Limits {
             slots: 1,
             mem_mb: f64::INFINITY,
@@ -62,7 +64,7 @@ impl Ctx<'_> {
         Some((id, inputs))
     }
 
-    fn job(&self, id: &JobId, inputs: Vec<(String, Vec<Artifact>)>) -> Job<'_> {
+    fn job(&self, id: &JobId, inputs: Ins) -> Job<'_> {
         let k = self.position(&id.instance).unwrap_or(0);
         let item = id
             .item
@@ -87,7 +89,7 @@ impl Ctx<'_> {
 
 impl Ctx<'_> {
     /// What the job reads on each port written in the file; the driving port of a `per_item` job holds its one item.
-    fn inputs(&self, id: &JobId, results: &Results) -> Vec<(String, Vec<Artifact>)> {
+    fn inputs(&self, id: &JobId, results: &Results) -> Ins {
         let k = self.position(&id.instance).unwrap_or(0);
         let (inst, step) = (&self.plan.steps[k], self.steps[k]);
         let driver = id.item.as_ref().and_then(|_| {
