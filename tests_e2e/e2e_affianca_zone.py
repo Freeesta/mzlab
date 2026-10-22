@@ -60,6 +60,13 @@ try:
             assert z[0] > z[1], z
             pg.keyboard.press("Escape"); pg.mouse.up()
         step("the preview stays above panels raised by many clicks", over)
+        def widen():
+            # closing one of two side-by-side panels gives the other the whole row
+            assert [len(x) for x in rows()] == [2], rows()
+            pg.evaluate("chiudiPannello(stackOrder()[1])"); attendi(pg, "stackOrder().length === 1")
+            w = pg.evaluate("[stackOrder()[0].el.getBoundingClientRect().width, document.querySelector('#dpanels').getBoundingClientRect().width]")
+            assert abs(w[0] - w[1]) < 2, w
+        step("the panel left alone in its row returns to the full width", widen)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

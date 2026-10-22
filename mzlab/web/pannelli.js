@@ -137,6 +137,9 @@ function ptitle(s) {                                    // the title to show
 }
 function closePanel(p) {
   if (!p) return;
+  // the last mate of a row goes back to the full width (a panel resized alone is not touched: it has no mates)
+  const mates = E.panels.filter(q => q !== p && q.full && q.tab === p.tab && q.riga != null && q.riga === p.riga);
+  if (mates.length === 1) { mates[0].quota = null; mates[0].x = 0; mates[0].w = hostWidth(); }
   if (window.DDA) DDA.onClose(p);
   fsInert(null, p);
   if (p._ro) p._ro();
