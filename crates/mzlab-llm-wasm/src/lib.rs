@@ -52,7 +52,10 @@ pub fn chart_validate(spec_json: &str, sources_json: &str) -> Result<String, Str
 #[wasm_bindgen]
 pub fn chart_presets(sources_json: &str) -> Result<String, String> {
     let views = mzlab_llm::chart_views::views_of(sources_json).map_err(fail)?;
-    Ok(format!("[{}]", mzlab_llm::chart_views::presets(&views).join(",")))
+    Ok(format!(
+        "[{}]",
+        mzlab_llm::chart_views::presets(&views).join(",")
+    ))
 }
 
 pub(crate) fn fail(e: Error) -> String {
