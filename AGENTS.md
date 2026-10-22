@@ -18,14 +18,14 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 
 ## 2. Regole di lavoro
 - **Consegna = sito pubblicato**: il lavoro è finito quando è in `main` e il workflow «pages» di quel commit è riuscito.
-- **Flusso**: ramo `claude/<argomento>` da `origin/main` → PR sempre aperta, mai unita dalla chat: il Coordinatore unisce con squash a CI verde dopo un combine locale (mai rebase né push forzato). PR già unita: ricrea il ramo da `origin/main`. Prima: `tools/fondi_main.py`, conflitti risolti tenendo il lavoro di tutti; se perde un comportamento, domanda al Coordinatore.
+- **Flusso**: ramo `claude/<argomento>` da `origin/main` → PR sempre aperta, mai unita dalla chat: il Coordinatore unisce con squash a CI verde dopo un combine locale (mai rebase né push forzato). PR già unita: ricrea il ramo da `origin/main`. Main si fonde nel ramo SOLO se la PR è in conflitto (`tools/fondi_main.py`, conflitti risolti tenendo il lavoro di tutti; se perde un comportamento, domanda al Coordinatore): una PR pulita non si aggiorna (ogni fusione costa un giro di CI).
 - **Meno conflitti**: (a) una PR alla volta per area se toccano gli stessi file (Flow: `flow.rs`, `lib.rs`, elenco dei docs); (b) ogni nuovo passo del Flow sta in un `flow_*.rs` proprio, in `flow.rs` solo la riga che lo registra (limite 500 righe); (c) dopo l'ultima fusione di main e prima di spingere, `tools/pre_pr.py` completo; (d) i file generati (es. `strumenti-1.json`) si rigenerano con lo strumento solo a fine fusione, mai a mano.
-- **Perimetro**: ogni chat tocca solo ciò che dice il suo prompt; a fine lavoro UN messaggio al Coordinatore (≤5 righe: PR, SHA a CI verde, cosa resta). Rosso o decisione: PR aperta con spiegazione.
+- **Perimetro**: ogni chat tocca solo ciò che dice il suo prompt; a fine PR UN messaggio al Coordinatore (≤5 righe: PR, SHA di 40 caratteri a CI verde, cosa resta). Rosso o decisione: PR aperta con spiegazione. Eventi della PR (CI, conflitti, revisioni): skill `steward`.
 - **Commenti**: in inglese come tutto il codice e i nomi; brevi, sul perché; intestazione di modulo di 2-4 righe (cosa fa, chi lo usa); niente codice commentato; JSDoc/rustdoc/docstring solo sulle API usate da altri file; commento sopra la riga, aggiornato con il codice. I testi per l'utente stanno solo in lang/.
-- **Commit**: titolo breve in italiano + 1-3 righe + attribuzione. Mai nomi di modelli.
+- **Commit e PR**: in inglese; titolo breve + 1-3 righe + l'attribuzione data dall'ambiente.
 - **Documenti**: AGENTS.md e `docs/agenti/` descrivono solo lo stato attuale. Se cambi un comportamento, RISCRIVI la riga che lo descrive (niente «ora…», «prima era…», numeri di PR, date); funzione nuova = una riga nel file d'area; una riga di documento ≤ 600 caratteri, un file d'area ≤ 25 KB.
 - **Consumo di token**: una chat lunga costa più di due corte. Una sessione per pacchetto; leggi solo il file d'area che ti serve; `grep -n` e letture a intervalli; niente screenshot nel contesto salvo un giudizio visivo; raggruppa le modifiche e prova una volta alla fine.
-  **Consegna**: alla fine della PR in corso, se il contesto supera 250k token (mai oltre 300k), manda al Coordinatore il blocco di consegna (≤15 righe: prompt, ramo, PR e CI, fatto, prossimo passo esatto, decisioni, trappole file:riga, comandi di prova con atteso, cosa non rileggere) e fermati. I lavori piccoli vanno in chat NUOVE: costano meno.
+  **Consegna**: alla fine della PR in corso, se il contesto supera 200k token, manda al Coordinatore il blocco di consegna (≤15 righe: prompt, ramo, PR e CI, fatto, prossimo passo esatto, decisioni, trappole file:riga, comandi di prova con atteso, cosa non rileggere) e fermati. I lavori piccoli vanno in chat NUOVE: costano meno.
 - **Subagenti Haiku** (`.claude/agents/`): le mani, non la testa; compiti meccanici con ingresso esatto, in un messaggio se indipendenti: `verificatore`, `controllo-github`, `cercatore` (`file:riga`), `inventario-testi`, `sostituzioni` (vecchio → nuovo), `archivista` (`git mv`), `estrattore` (passaggi su un argomento), `stato-sessioni`. Al posto di Explore: `cercatore`. Controlla sempre il risultato; due errori = lo fa la chat.
   Mai a un subagente: decisioni, codice nuovo, testi di Teoria, asserzioni dei test, commit, push, merge.
 - **Agente locale** (Mac di Federico): commit e push su `main`; non cancella, sposta in `~/mzLab/_cestino/<data>_<motivo>/`.
@@ -53,85 +53,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 - **Smartphone** (`telefono.js`): su telefono (`?telefono=1|0` forza) non si scaricano Dati, Disegno, Pratica né motore: arriva `telefono-scheda.js`. Un file di script nuovo di Dati va nella lista `L` di `carica.js` (`docs/agenti/dati.md`).
 
 ## 5. File d'area
-| Se tocchi… | Leggi |
-|---|---|
-| vista Dati in bassa risoluzione: caricamento, schede, TIC/XIC/spettro, integrazione | `docs/agenti/dati.md` |
-| primo caricamento di più file (si apre solo il primo), campi della tabella di carico | `docs/agenti/dati-carico.md` |
-| barra laterale della vista Dati, strumenti, suggerimenti, tour | `docs/agenti/dati-barra.md` |
-| affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
-| esportazioni a pezzi in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenienza, pulizia di `export/`) | `docs/agenti/dati-esporta.md` |
-| azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
-| voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
-| animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
-| header (schermo intero, logo, (i)), area e tabella di caricamento, avvio progressivo (`AVVIO`), regola «interfaccia subito» | `docs/agenti/intestazione.md`, `avvio.md`, `avvio-rapido.md` |
-| barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
-| carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
-| mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
-| velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
-| liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
-| fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
-| mondo HR: Banco, formule, isotopi, librerie, albero MSn | `docs/agenti/alta-risoluzione.md` |
-| statistica in HR: tabella delle feature, bianco, differenza dal riferimento, PCA | `docs/agenti/alta-risoluzione-statistica.md` |
-| formato `.mzlib`, parser delle librerie, indici e punteggi (`crates/mzlab-lib`) | `docs/agenti/librerie.md` |
-| Disegno (Ketcher) | `docs/agenti/disegno.md` |
-| Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (assistente: `assistente-teoria.md`; `teoria/LEGGIMI.md` se scrivi capitoli) |
-| accessibilità dell'intera applicazione (WCAG 2.1/2.2 AA, axe-core, controlli) | `docs/agenti/accessibilita.md` (lacune note: `a11y-da-sistemare.md`) |
-| testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
-| metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
-| mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
-| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`) |
-| scandump, oracolo RFR | `docs/agenti/scandump.md` |
-| lettore `.wiff` + `.wiff.scan` (`crates/mzlab-core/src/wiff/`) | `docs/agenti/wiff.md` (altri strumenti SCIEX, sMRM, PIS/NL, DAD, feature `estesi`: `wiff-varianti.md`; specifica binaria: `wiff_specifica_completa.md`) |
-| lettore cartelle Agilent `.D` (`crates/mzlab-core/src/agilent/`) | `docs/agenti/agilent.md` |
-| Agilent `.D` LC/MS: QqQ MRM/dMRM, Q-TOF profilo/centroidi/MS2, metodo LC/MS, DAD (`crates/mzlab-core/src/agilent_ext/`, feature `estesi`) | `docs/agenti/agilent-lcms.md` |
-| lettore Bruker timsTOF `.d` (`crates/mzlab-lettori/src/bruker/`: SQLite minimo, zstd, `tdf_bin`/`tsf_bin`, calibrazione m/z, `BrukerD` in `agilent-d.js`) | `docs/agenti/bruker.md` |
-| lettore Shimadzu `.qgd` e `.lcd` (`crates/mzlab-lettori/src/shimadzu/`, modulo `shimadzu`) | `docs/agenti/shimadzu.md` |
-| lettore cartelle Waters MassLynx `.raw` (`crates/mzlab-lettori/src/waters/`, modulo `waters`, raggruppamento in `waters-raw.js`) | `docs/agenti/waters.md` |
-| benchmark di mzFinder contro altri strumenti (`tools/bench/`, tabella `bench/1`, metriche P1-P5, statistica) | `docs/agenti/mzfinder-benchmark.md` |
-| pipeline delle feature a bassa risoluzione (full scan, asse in Da, profilo `lr`: `recipe_lr.rs`, `axis.rs`) | `docs/agenti/mzfeat-lr.md` |
-| ingresso di mzFinder: `.mzidx` per ogni file scelto o da IndexedDB (`TP_Mine/files/finder-idx.js`), lista di trasformazioni dell'utente in Rust | `docs/agenti/mzfinder-ingresso.md` |
-| Feature table nella Pipeline (passi 5-6: QC, barra dei filtri, `PIPET` con `TPTAB` e riga espansa `TPRIGA`) | `docs/agenti/mzfeat-tabella-vista.md` |
-| pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`) |
-| Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` (binario MZ: `attributio-mz.md`; isotopi: `attributio-isotopi.md`; Banco 2b: `attributio-banco.md`; esportazioni: `attributio-export.md`; abbinamento: `attributio-abbinamento.md`; identità: `attributio-identita.md`; revisione: `attributio-revisione.md`; pannello: `attributio-pannello.md`; formule: `attributio-formula.md`) |
-| vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (studio: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`) |
-| grafo di frammentazione MSn dell'infusione (`msngrafo/1`: ioni uniti fra livelli ed energie, formule proposte dei frammenti, scheda «Fragmentation graph») e libreria di alberi MSn degli standard (`msnlib/1`, protocollo di acquisizione) | `docs/agenti/msn-grafo.md` (libreria: `msnlib.md`; scheda «Fragmentation graph» nella vista Dati: `infusione-grafo.md`; tagli della struttura per un nodo: `msn-grafo-strutture.md`) |
-| motore MS2 sperimentale, frammentazione in silico alla MetFrag, attribuzione dei frammenti alla MS-FINDER, previsione dell'RT (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
-| interpretazione per riga dei TP (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, blocco `interp` nel `.mzfeat`, `.wasm` `interp`, rotte `table_interp`) | `docs/agenti/interp.md` |
-| rete dei prodotti (`crates/mzlab-feat/src/rete/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
-| posizione della sostituzione negli isomeri dei TP (classi compatibili con la MS2, `chem/posizioni.rs`, `posiz/1`) | `docs/agenti/posizioni.md` |
-| motore di reattività del genitore (crates/mzlab-chem, .wasm chem, reatt/1, viewer 3D di Tabui) | `docs/agenti/reattivita.md` (validazione sui siti sperimentali ed esperimenti scartati: `reattivita-studi.md`) |
-| classi chimiche da regole (`crates/mzlab-feat/src/classi/`, tabella `data/classi-1.json`, `classi/1`: frammenti diagnostici e perdite neutre) | `docs/agenti/classi.md` |
-| livelli di identificazione (scala di Schymanski 2a/2b/3a/3b, scala di previsione, etichette «L3» e «Prev. 2», Tabui, Attributio, untargeted) | `docs/agenti/livelli.md` |
-| gruppi di esperimenti in Tabui: condizioni, `gruppi/1`, `crates/mzlab-feat/src/gruppi/` | `docs/agenti/gruppi.md` |
-| statistica come passi: Welch/ANOVA con BH, PCA e KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |
-| liste dell'utente (trasformazioni, addotti, sospetti: CSV con errori per riga, `liste/1`, SHA-256 per `prov/1`) | `docs/agenti/liste.md` |
-| database delle molecole (`crates/mzlab-core/src/molecules/`, `molecules/1`: record, CSV e JSON canonico, ricerca, livelli catalogo/importata/utente, catalogo `mzlab/web/molecole/catalogo.csv`, rotte `api/molecules/*`) | `docs/agenti/molecules.md` (studio e piano a PR: `docs/studi/molecules/README.md`) |
-| ruoli dei file e tempi dei campioni (`campioni/2`, `mzlab-core/src/campioni/`: proposte dai nomi, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
-| derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
-| tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
-| contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
-| formato `.mzidx` | `docs/agenti/mzidx.md` |
-| cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
-| errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
-| assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` |
-| riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` |
-| agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
-| lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
-| motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
-| record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
-| misure dei motori | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; esportazioni: `misure-esporta.md`) |
-| struttura dei test, test nuovi | `docs/agenti/test.md` |
-| workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
-| contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
-| modulo «aperti» (mzML con numpress, mzXML: `crates/mzlab-lettori/src/aperti/`, `numpress.rs`) | `docs/agenti/lettori-aperti.md` |
-| modulo «andi» (netCDF/ANDI `.cdf`: `crates/mzlab-lettori/src/andi/`) | `docs/agenti/lettori-andi.md` |
-| moduli lettori, uno per famiglia (`crates/mzlab-lettori*`, `.wasm` a parte in `wasm-lettori/<famiglia>/`, feature `estesi`, `LETTORI_FAM`, regola R in `shell.js`, `LETTORI_MOD`, `?lettori=modulo`, tetti) | `docs/agenti/lettori-modulo.md` |
-| rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
-| Flow grafico (scheda amministratore: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`; copertura di Tabui: `flow-copertura-tabui.md`, `flow-pacchetto-tabui.md`) |
-| esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
-| Libro: convertitore (`tools/libro/`, dialetto Markdown, fixture CC0, `--pubblico`) e pagina editor admin (`mzlab/web/libro/`, token, salvataggio nel repository privato) | `docs/agenti/libro.md` |
-| tutor sulla Teoria (`mzlab-tutor`: blocchi, BM25) | `docs/agenti/tutor.md` |
-| lanciare la verifica nel container cloud (Chromium, `--setup`, test col sito costruito) | `docs/agenti/ambiente-cloud.md` |
+La tabella «se tocchi… leggi…» sta in `docs/agenti/INDICE.md`: `grep -n '<parola>' docs/agenti/INDICE.md`, poi leggi solo il file d'area indicato (di solito il prompt lo nomina già). File d'area nuovo = una riga lì.
 
 ## 6. Trappole generali
 - Service worker, anteprime dei link, `title` su iframe, `ask()`: in fondo a `docs/agenti/dati.md`.
