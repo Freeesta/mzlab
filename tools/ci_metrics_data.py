@@ -124,7 +124,7 @@ def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
                 per_file[f][1] += t
                 if t > LENTO_S:
                     lenti.append([f"{cn}::{tc.get('name')}", round(t, 1)])
-        riga = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": nome_art, "workflow": run["name"], "python": nome_art[6:],
+        riga = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": nome_art, "workflow": run["name"], "python": nome_art[6:].split("-")[0], **({"parte": nome_art.split("-", 2)[2]} if nome_art.count("-") > 1 else {}),
                 "file": {f: [n, round(s, 1)] for f, (n, s) in sorted(per_file.items())}, "lenti": sorted(lenti, key=lambda x: -x[1])[:30], **base}
         if "tempi-test.json" in z.namelist():
             tempi = json.loads(z.read("tempi-test.json"))
