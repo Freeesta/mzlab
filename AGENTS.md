@@ -32,7 +32,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 - **Regola Tutto in Rust**: ogni calcolo, elaborazione numerica o logica di motore sta solo in Rust (`crates/`, anche `.wasm`), con il suo test di parità; Python solo per test, `tools/` e riferimento; JS solo interfaccia. `tests/test_guardie_regole.py` e `tests/test_regola_rust.py` rifiutano script Python di calcolo runtime non autorizzati in `mzlab/` (lista chiusa, solo in calo); da migrare: `docs/inventari/PYTHON_DA_MIGRARE.md`.
 - **Regola CLI**: ogni modulo nuovo nasce con la riga di comando e ogni parametro del suo descrittore `step/1` ha il suo `--set ISTANZA.NOME=VALORE`; lista di controllo in `docs/agenti/cli.md` (un solo registro `mzlab_cli::flow::steps()`, esecutore in `FileRunner`, parità CLI = pagina, `flow_rule_tests.rs` verde, buchi noti in `BUCHI`).
 - **Regola Tabui solo in inglese**: il modulo Tabui (`TP_Mine/`) adotta esclusivamente la lingua inglese per stringhe utente, tooltip ed esportazioni. Non usa cataloghi `lang/` (niente chiavi `lang/`, niente `I18N`) e rispetta la regola aurea: la parola «formula» non compare mai da sola (sempre «Neutral formula», «[M+H]+ formula», «Ion formula»). Guardie in `tests/test_guardie_regole.py` e `tests/test_tabui_inglese.py`.
-- Front end non provato nel browser = rotto. Niente `pkill -f`: ferma i server con il PID.
+- Front end non provato = rotto. Niente `pkill -f`: ferma i server con il PID.
 
 ## 3. Verifica e test
 - **Verifica**: `python3 tools/verifica.py` (~9 min con 4 CPU; `--cambiati` = solo gli e2e dei file cambiati rispetto a `origin/main`). Prima del merge: `--cambiati` + la CI della PR (`test.yml`, 4 job obbligatori); ogni notte `notte.yml`. Livelli, mappa (`tools/indice.py`), soglie (`tools/controlla.py`) e `noti_rossi.txt`: `docs/agenti/test.md`.
@@ -63,7 +63,7 @@ Questo file è già nel tuo contesto: non rileggerlo. Leggi il file d'area del t
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
 | voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
-| header (schermo intero, logo, (i)), area e tabella di caricamento, avvio progressivo (`AVVIO`), regola «interfaccia subito» di ogni pagina | `docs/agenti/intestazione.md`, `avvio.md`, `avvio-rapido.md` |
+| header (schermo intero, logo, (i)), area e tabella di caricamento, avvio progressivo (`AVVIO`), regola «interfaccia subito» | `docs/agenti/intestazione.md`, `avvio.md`, `avvio-rapido.md` |
 | barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
 | mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
