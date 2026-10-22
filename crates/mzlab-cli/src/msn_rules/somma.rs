@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::msngrafo::tabella_regole;
+use mzlab_core::msngrafo::{tabella_regole, Tipo};
 
 use crate::Outcome;
 
@@ -13,13 +13,17 @@ use crate::Outcome;
 const MINIME: usize = 20;
 /// A rule whose decoy rate is above this goes to priority 3.
 const TASSO_MAX: f64 = 0.30;
-/// The coverage (c) of the true records must be this much above the decoys, on average.
-const DIFFERENZA_MIN: f64 = 0.20;
+/// The coverage (c) of the true records must lose at most this share of itself against every decoy that applies, on average.
+const DIFFERENZA_MIN: f64 = 0.5;
+/// A record with a smaller share of its intensity explained by sub-formulas (a) is nominal mass: counted apart, outside the 10 ppm test.
+const NOMINALE: f64 = 0.5;
 const DECOY: [&str; 3] = ["ds", "dp", "dl"];
 
 #[derive(Default)]
 struct Strato {
     registri: usize,
+    /// Records of nominal mass (a below `NOMINALE`), left out of everything else.
+    nominali: usize,
     /// Mean-to-be fractions of the intensity: (a), (b), (c) of the true record.
     frazioni: Vec<[f64; 3]>,
     /// Per decoy kind: (c of the true record, c of the decoy) of the records that have it.
@@ -56,16 +60,17 @@ fn aggiungi_regole(s: &mut Strato, m: &Value, posto: usize) {
 
 fn leggi_riga(s: &mut Strato, v: &Value) {
     let Some(vero) = v.get("v") else { return };
+    let a = frazione(vero, "ia").unwrap_or(0.0);
+    if a < NOMINALE {
+        s.nominali += 1;
+        return;
+    }
     s.registri += 1;
     aggiungi_regole(s, vero, 0);
     let Some(c) = frazione(vero, "ic") else {
         return;
     };
-    s.frazioni.push([
-        frazione(vero, "ia").unwrap_or(0.0),
-        frazione(vero, "ib").unwrap_or(0.0),
-        c,
-    ]);
+    s.frazioni.push([a, frazione(vero, "ib").unwrap_or(0.0), c]);
     for (k, nome) in DECOY.iter().enumerate() {
         if let Some(d) = v.get(nome) {
             aggiungi_regole(s, d, k + 1);
@@ -74,13 +79,14 @@ fn leggi_riga(s: &mut Strato, v: &Value) {
     }
 }
 
-/// The decoy rate of a rule: the largest of decoys / true among the decoys that apply to it (the rewired structure only to a rule that reads one).
+/// The decoy rate of a rule: the largest of decoys / true among the decoys that apply to it (the rewired structure only to a rule with a site or a
+/// cleavage: a rule that asks for a group or an element passes it by construction, the rewiring keeps the groups).
 fn tasso(id: &str, n: &[usize; 4]) -> f64 {
     let legge = tabella_regole()
         .regole
         .iter()
         .find(|r| r.id == id)
-        .is_none_or(|r| r.legge_struttura());
+        .is_none_or(|r| r.site.is_some() || r.tipo == Tipo::Cleavage);
     (1..4)
         .filter(|&k| k > 1 || legge)
         .map(|k| n[k] as f64 / n[0].max(1) as f64)
@@ -102,6 +108,7 @@ fn scrivi_strato(o: &mut Out, (strato, pol): &(String, i64), s: &Strato) {
     let col = |i: usize| media(s.frazioni.iter().map(|f| f[i]));
     o.raw("{\"strato\":").str(strato).raw(",\"pol\":").int(*pol);
     o.raw(",\"registri\":").int(s.registri as i64);
+    o.raw(",\"nominali\":").int(s.nominali as i64);
     o.raw(",\"copertura\":{\"a\":").num(r3(col(0)));
     o.raw(",\"b\":")
         .num(r3(col(1)))
@@ -117,7 +124,7 @@ fn scrivi_strato(o: &mut Out, (strato, pol): &(String, i64), s: &Strato) {
         o.raw(",\"vero\":").num(r3(v)).raw(",\"decoy\":").num(r3(d));
         o.raw(",\"differenza\":").num(r3(v - d)).raw("}");
         if !c.is_empty() {
-            passa = Some(passa.unwrap_or(true) && v - d >= DIFFERENZA_MIN);
+            passa = Some(passa.unwrap_or(true) && v - d >= DIFFERENZA_MIN * v);
         }
     }
     o.raw("},\"soglia_copertura\":");

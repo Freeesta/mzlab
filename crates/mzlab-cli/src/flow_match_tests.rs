@@ -134,3 +134,51 @@ fn tree_writes_the_search_of_the_msn_library() {
         .contains("\"id\":\"STD-1\""));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `tree_output=candidates` writes the `candidates/1` of the other algorithms; `name_contains` and `precursor_da` apply to the tree too.
+#[test]
+fn tree_candidates_carry_the_scores_apart_and_obey_the_filters() {
+    let dir = std::env::temp_dir().join(format!("mzlab_match_tree_c_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("work")).unwrap();
+    let mzml = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/golden/ref/msntree_rotta/msn.mzML");
+    let cli = |a: &[&str]| crate::execute(&a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+    let (lib, graph) = (dir.join("lib.json"), dir.join("g.json"));
+    let (l, f) = (lib.to_str().unwrap(), mzml.to_str().unwrap());
+    let ion = ["--formula", "C14H15N3O5+"];
+    let add = ["msn-lib", "add", l, f, "--id", "STD-1"];
+    assert_eq!(cli(&[&add[..], &ion[..]].concat()).code, 0);
+    std::fs::write(
+        &graph,
+        &cli(&[&["msn-graph", f][..], &ion[..]].concat()).stdout,
+    )
+    .unwrap();
+    let run = |params: &str| {
+        let p = format!(
+            r#"{{"format":"mzflow/2","inputs":[{{"name":"g.json","type":"report"}},{{"name":"lib.json","type":"library"}}],"steps":[
+            {{"id":"m","step":"spectra.match@1","in":{{"query":"file:g.json","library":"file:lib.json"}},"algorithm":"tree","params":{params}}}]}}"#
+        );
+        let (_, prov) =
+            crate::flow::run_plan(p.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+        assert!(!prov.contains("\"error\""), "{prov}");
+        std::fs::read_to_string(dir.join("work/m.json")).unwrap()
+    };
+    let out = run(r#"{"tree_output":"candidates","tol_da":0.01}"#);
+    assert!(out.starts_with("{\"format\":\"candidates/1\""), "{out}");
+    assert!(
+        out.contains("\"id\":\"STD-1\"") && out.contains("\"tree\":{\"ion\""),
+        "{out}"
+    );
+    assert!(out.contains("\"algorithm\":\"tree\""), "{out}");
+    // a name that no entry has leaves no hit
+    assert!(run(r#"{"tree_output":"candidates","name_contains":"zzz"}"#).contains("\"hits\":[]"));
+    assert!(run(r#"{"tree_output":"candidates","name_contains":"std-1"}"#).contains("STD-1"));
+    // the entry is the unknown itself, so a window in Da cannot drop it: the window echoed by msncerca/1 shows the conversion
+    let narrow = run(r#"{"precursor_da":0.5}"#);
+    assert!(
+        narrow.contains("STD-1") && !narrow.contains("\"ppm_prec\":10,"),
+        "{narrow}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

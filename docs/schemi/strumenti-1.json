@@ -32,6 +32,7 @@
           "spectra.centroid",
           "spectra.chimeric",
           "spectra.insilico",
+          "spectra.lookup",
           "spectra.match",
           "spectra.ms2",
           "spectra.msn_graph",
@@ -87,6 +88,7 @@
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
+              "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
               "spectra.msn_graph@1",
@@ -177,6 +179,7 @@
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
+              "spectra.lookup@1",
               "spectra.match@1",
               "spectra.ms2@1",
               "spectra.msn_graph@1",
@@ -939,6 +942,40 @@
           },
           {
             "properties":{
+              "step":{"const":"spectra.lookup@1"},
+              "name":{"enum":["by","value","exact","ppm","top_n"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["name","formula","inchikey","accession","precursor_mz"],
+                    "default":"name",
+                    "description":"The field of the library entries that value is compared with; precursor_mz takes a number and the window ppm"
+                  },
+                  {"type":"string","description":"The text to find (for precursor_mz, the m/z); required"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"By name: the name must be the whole value, not only contain it (any case); the other fields are always compared whole"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"By precursor_mz: the entries whose precursor is this close to the value"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":50,
+                    "description":"The first entries in the order of the library; the rest are not written"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"spectra.match@1"},
               "name":{
                 "enum":[
@@ -957,7 +994,8 @@
                   "analog_min_shift_da",
                   "exact_ppm",
                   "delta_formula_mda",
-                  "min_prove"
+                  "min_prove",
+                  "tree_output"
                 ]
               },
               "value":{
@@ -1044,6 +1082,11 @@
                     "minimum":0,
                     "default":1,
                     "description":"A candidate needs this many peaks shared with the unknown in its best MS2 pair"
+                  },
+                  {
+                    "enum":["msncerca","candidates"],
+                    "default":"msncerca",
+                    "description":"msncerca: the msncerca/1 text of msn-lib search. candidates: the candidates/1 of the other algorithms (score = MS2 entropy similarity; the tree and loss scores and the proofs in the tree block), which annot.level reads"
                   }
                 ]
               }

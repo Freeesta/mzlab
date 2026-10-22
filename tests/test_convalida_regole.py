@@ -22,7 +22,7 @@ def sommario(tmp_path_factory):
 
 
 def test_the_strata_are_kept_apart_and_the_thresholds_are_declared(sommario):
-    assert sommario["soglie"] == {"minime": 20, "tasso_max": 0.3, "differenza_min": 0.2}
+    assert sommario["soglie"] == {"minime": 20, "tasso_max": 0.3, "differenza_min": 0.5}
     nomi = {(s["strato"], s["pol"]) for s in sommario["strati"]}
     assert ("hcd", 1) in nomi and ("cid_trappola", 1) in nomi and ("qtof", 1) in nomi
     assert sum(s["registri"] for s in sommario["strati"]) >= 20
