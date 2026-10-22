@@ -40,12 +40,17 @@
   function removeFiles(o) {
     const { st } = o, gone = o.idx.map(i => st.files[i]).filter(Boolean); if (!gone.length) return;
     if (o.busy()) return o.say("Wait for the Dig to finish before removing files.", true);
-    const first = Math.min(...o.idx);
+    const first = Math.min(...o.idx), at = o.idx.filter(i => st.files[i]).sort((a, b) => a - b);
+    gone.sort((a, b) => st.files.indexOf(a) - st.files.indexOf(b));
     st.files = st.files.filter((/** @type {any} */ f) => !gone.includes(f)); if (!st.files.length) st.noAuto = true;
     o.redraw();
     const next = /** @type {HTMLElement|null} */ (document.querySelector(`#tp-files [data-rm="${Math.min(first, st.files.length - 1)}"]`)); (next || o.pick).focus();
     undos.push(() => {
-      st.files = st.files.concat(gone.filter((/** @type {any} */ f) => !st.files.some((/** @type {any} */ x) => o.key(x.name) === o.key(f.name)))); st.noAuto = false; o.sort(); o.redraw();
+      // back at the old positions (the sort is stable: rows with equal kind and time keep their place)
+      gone.forEach((/** @type {any} */ f, /** @type {number} */ i) => {
+        if (!st.files.some((/** @type {any} */ x) => o.key(x.name) === o.key(f.name))) st.files.splice(Math.min(at[i], st.files.length), 0, f);
+      });
+      st.noAuto = false; o.sort(); o.redraw();
       say(gone.length === 1 ? `Restored ${o.label(gone[0].name)}` : `Restored ${gone.length} files`);
     });
     if (undos.length > 20) undos.shift();

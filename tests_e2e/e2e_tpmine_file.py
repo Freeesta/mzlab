@@ -60,7 +60,15 @@ try:
             assert rows() == N and len(set(names())) == N, (rows(), N)
         step("a sample read twice (again, or with a doubled .mzML) is one row, shown once without the extension", unique)
 
+        def settle():
+            last = None
+            for _ in range(40):
+                cur = names()
+                if cur == last: return
+                last = cur; pg.wait_for_timeout(750)
+
         def one():
+            settle()
             b = pg.locator("#tp-files [data-rm]").first; box = b.bounding_box()
             assert box["width"] >= 24 and box["height"] >= 24 and b.get_attribute("aria-label").startswith("Remove "), (box, b.get_attribute("aria-label"))
             before = names(); b.focus(); pg.keyboard.press("Enter")
@@ -72,10 +80,12 @@ try:
         step("«Remove» on a row (keyboard) shows no Undo notice and Ctrl+Z restores it in place", one)
 
         def allgone():
+            settle()
             before = names(); pg.click("#tp-rmall")
-            assert rows() == 0 and pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
+            assert pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
+            pg.wait_for_timeout(200)
             assert f"{N} files" in pg.inner_text(".sr-only[role=status]"), pg.inner_text(".sr-only[role=status]")
-            pg.locator("body").press("Control+z")
+            pg.keyboard.press("Control+z"); pg.wait_for_timeout(300)
             assert names() == before and pg.is_visible("#tp-rmall")
         step("«Remove all» empties the list and Ctrl+Z brings all the files back", allgone)
 
