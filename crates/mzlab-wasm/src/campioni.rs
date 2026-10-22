@@ -13,3 +13,9 @@ pub fn campioni(op: &str, input: &str) -> Result<String, JsValue> {
 pub fn flow_command(plan: &str) -> Result<String, JsValue> {
     mzlab_core::flow::command_route(plan).map_err(|e| crate::error_json(&e))
 }
+
+/// The live scheduler of the Flow (`mzlab_core::flow::sched_route`): `op` is one of its operations, JSON in, JSON out.
+#[wasm_bindgen]
+pub fn flow_sched(op: &str, body: &str) -> Result<String, JsValue> {
+    mzlab_core::flow::sched_route(op, body).map_err(|e| crate::error_json(&e))
+}

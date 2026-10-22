@@ -58,7 +58,7 @@ fn run(tag: &str, set: &[&str]) -> (std::path::PathBuf, String) {
     }
     let o = flow_run(&a);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    let mzml = std::fs::read_to_string(out.join("c-0.mzML")).unwrap();
+    let mzml = std::fs::read_to_string(out.join("c-a.mzML")).unwrap();
     (out, mzml)
 }
 

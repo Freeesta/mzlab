@@ -21,3 +21,12 @@ def test_ordine_per_media_e_soglia():
 
 def test_senza_dati_lista_vuota():
     assert c.lenti([{"tipo": "run"}]) == []
+
+
+def test_gli_shard_della_stessa_corsa_si_uniscono():
+    def riga(run, parte, fasi):
+        return {"tipo": "test_durate", "python": "3.11", "parte": parte, "run_id": run, "ts_utc": f"2026-10-22T0{run}:00:00Z", "fasi": fasi}
+
+    ev = [riga(1, "rest", {"tests/a.py": [0, 6, 0]}), riga(1, "solo311", {"tests/b.py": [0, 9, 0]}),
+          riga(2, "rest", {"tests/a.py": [0, 4, 0]}), riga(2, "solo311", {"tests/b.py": [0, 7, 0]})]
+    assert c.lenti(ev, ultimi=8, minimo=5.0) == ["tests/b.py", "tests/a.py"]

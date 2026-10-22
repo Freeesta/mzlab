@@ -200,3 +200,18 @@ fn exported_json_is_standard_json_and_is_the_committed_file() {
         .expect("docs/schemi/steps-1.json (MZLAB_UPDATE_STEPS=1 writes it)");
     assert_eq!(committed, text, "docs/schemi/steps-1.json is stale: MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-feat --test steps");
 }
+
+/// The three parameters of the family link reach the recipe of the alignment.
+#[test]
+fn the_family_link_parameters_reach_the_recipe() {
+    let mut r = Recipe::default();
+    let set = vec![
+        ("link_rt".to_string(), Value::Num(0.1)),
+        ("max_span".to_string(), Value::Num(0.3)),
+        ("min_dependent".to_string(), Value::Num(3.0)),
+    ];
+    recipe_map::apply(&mut r, "features.align", &set).unwrap();
+    assert_eq!(r.align.link_rt, 0.1);
+    assert_eq!(r.align.max_span, 0.3);
+    assert_eq!(r.align.min_dependent, 3);
+}

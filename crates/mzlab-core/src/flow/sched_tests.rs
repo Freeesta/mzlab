@@ -53,12 +53,12 @@ fn registry_from(spec: &Value) -> Vec<Step> {
         .collect()
 }
 
-fn registry() -> Vec<Step> {
+pub(in crate::flow) fn registry() -> Vec<Step> {
     registry_from(&json::parse(STEPS.as_bytes()).unwrap())
 }
 
 /// The chain over `files`, with the `q` of detect and of align.
-fn plan_text(files: &[&str], dq: u32, aq: u32) -> String {
+pub(in crate::flow) fn plan_text(files: &[&str], dq: u32, aq: u32) -> String {
     let inputs: Vec<String> = files
         .iter()
         .map(|f| format!("{{\"name\":\"{f}\",\"sha256\":\"sha-{f}\"}}"))

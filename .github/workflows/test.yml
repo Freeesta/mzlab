@@ -23,12 +23,17 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
-  pytest:
-    name: pytest (ubuntu-latest, ${{ matrix.python }})   # same names as before: required checks of the ruleset
+  # Three parallel shards: 3.14 and 3.11 `rest` run every test except tools/pytest_solo_311.txt, 3.11 `solo311` runs exactly those (slow tests where Python only
+  # drives the Rust binaries and .wasm). Together the 3.11 shards cover the whole suite once. The `pytest` job below is the gate that keeps the required names.
+  pytest-shard:
+    name: pytest-shard (${{ matrix.python }}, ${{ matrix.parte }})
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11", "3.14"]
+        include:
+          - {python: "3.11", parte: rest}
+          - {python: "3.11", parte: solo311}
+          - {python: "3.14", parte: rest}
     runs-on: ubuntu-latest
     # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
     timeout-minutes: 30
@@ -61,7 +66,7 @@ jobs:
         run: |
           rustup show
           rustup target add wasm32-unknown-unknown
-      # Only the 3.11 job saves the cache: it is the one that runs the release builds of the slow tests (tools/pytest_solo_311.txt), which 3.14 skips.
+      # Only the 3.11 shards save a cache, one per shard (`solo311` runs the release builds of the slow tests, which 3.14 skips). The unprefixed key is the one saved before the shards existed.
       # Every run restores the newest cache; only main saves one (a pull request too, but only while the newest cache has no tree record, tools/ci_cargo_mtime.py), keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
       # already compiled and rebuilds only what it changed. A cache saved on a pull request is seen by no other pull request.
       - id: rcache
@@ -73,8 +78,10 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pytest-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py', 'tools/ci_cargo/cargo') }}-rel
-          restore-keys: pytest-wasm-${{ runner.os }}-
+          key: pytest-wasm-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py', 'tools/ci_cargo/cargo') }}-rel
+          restore-keys: |
+            pytest-wasm-${{ matrix.parte }}-${{ runner.os }}-
+            pytest-wasm-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -88,10 +95,11 @@ jobs:
             cargo install wasm-bindgen-cli --version "$ver" --locked --force
           fi
       - name: Install
+        if: steps.solo.outputs.solo != 'true' || matrix.parte != 'solo311'
         run: python -m pip install -e ".[test]" pytest-xdist
       # the tests spread over the 4 CPUs of the runner; --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once);
       # the slowest files go first (tools/ci_pytest_ordine.py). The 3.14 job skips tools/pytest_solo_311.txt: tests where Python only drives the Rust
-      # binaries and .wasm and compares their output, identical on every Python; 3.11 runs them all.
+      # binaries and .wasm and compares their output, identical on every Python; the 3.11 `solo311` shard runs only them, minus the files that rust-wasm runs on the same diff.
       - name: Unit tests
         if: steps.solo.outputs.solo != 'true'
         env:
@@ -100,25 +108,31 @@ jobs:
         run: |
           # `cargo run` holds the build-directory lock until the program ends: tools/ci_cargo/cargo builds, releases the lock and then runs the binary
           export PATH="$PWD/tools/ci_cargo:$PATH"
-          skip=()
-          if [ "${{ matrix.python }}" != "3.11" ]; then
+          skip=(); alvo=(tests)
+          ign=" ${{ steps.doppi.outputs.ignore }} "
+          if [ "${{ matrix.parte }}" = solo311 ]; then
+            # --ignore does not drop a file named on the command line, so the files rust-wasm already runs are left out of the list here
+            alvo=()
+            while read -r t; do case "$ign" in *" --ignore=${t%%::*} "*) ;; *) alvo+=("$t") ;; esac; done < tools/pytest_solo_311.txt
+            if [ ${#alvo[@]} -eq 0 ]; then echo "every solo311 test is run by rust-wasm"; exit 0; fi
+          else
             while read -r t; do skip+=(--deselect "$t"); done < tools/pytest_solo_311.txt
           fi
-          python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} tests
+          python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}-${{ matrix.parte }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} "${alvo[@]}"
       # time per test file for tools/ci_metrics.py (small, kept 3 days)
       - name: Test durations
-        if: ${{ !cancelled() && hashFiles(format('junit-{0}.xml', matrix.python)) != '' }}
+        if: ${{ !cancelled() && hashFiles(format('junit-{0}-{1}.xml', matrix.python, matrix.parte)) != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: junit-${{ matrix.python }}
+          name: junit-${{ matrix.python }}-${{ matrix.parte }}
           path: |
-            junit-${{ matrix.python }}.xml
+            junit-${{ matrix.python }}-${{ matrix.parte }}.xml
             tempi-test.json
           if-no-files-found: ignore
           retention-days: 3
       # Teoria-only pull request: the chapter, Libro and forbidden-names tests (the list is in tools/ci_solo_teoria.py); documents-only: tools/ci_solo_doc.py
       - name: Unit tests (Teoria or documents only)
-        if: steps.solo.outputs.solo == 'true'
+        if: steps.solo.outputs.solo == 'true' && matrix.parte != 'solo311'
         env:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
         run: python -m pytest -q -n auto --dist loadfile $(python tools/ci_solo_doc.py --pytest "${{ steps.solo.outputs.kind }}")
@@ -134,6 +148,23 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: ${{ steps.rcache.outputs.cache-primary-key }}
+
+  # Gate with the names of the required checks of the "main protetto" ruleset: green only when every shard is green (a skipped or cancelled shard is not).
+  pytest:
+    name: pytest (ubuntu-latest, ${{ matrix.python }})
+    needs: pytest-shard
+    if: ${{ always() }}
+    strategy:
+      matrix:
+        python: ["3.11", "3.14"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          ESITO: ${{ needs.pytest-shard.result }}
+        run: |
+          echo "pytest-shard: $ESITO"
+          [ "$ESITO" = success ]
 
   # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server.
   # No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").

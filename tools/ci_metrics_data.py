@@ -124,7 +124,7 @@ def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
                 per_file[f][1] += t
                 if t > LENTO_S:
                     lenti.append([f"{cn}::{tc.get('name')}", round(t, 1)])
-        riga = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": nome_art, "workflow": run["name"], "python": nome_art[6:],
+        riga = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": nome_art, "workflow": run["name"], "python": nome_art[6:].split("-")[0], **({"parte": nome_art.split("-", 2)[2]} if nome_art.count("-") > 1 else {}),
                 "file": {f: [n, round(s, 1)] for f, (n, s) in sorted(per_file.items())}, "lenti": sorted(lenti, key=lambda x: -x[1])[:30], **base}
         if "tempi-test.json" in z.namelist():
             tempi = json.loads(z.read("tempi-test.json"))
@@ -326,6 +326,38 @@ def tabelle(ev: list[dict], out=print) -> None:
     car = [r for r in ev if r["tipo"] == "carico"]
     if car:
         out(f"\nRunner load: max {max(r['job_in_corso'] for r in car)} jobs running, max {max(r['job_in_coda'] for r in car)} queued ({len(car)} readings)")
+
+
+def percorso_critico(ev: list[dict], dal: str = "") -> dict[str, dict]:
+    """Per PR type (docs / Rust / site+other): median and max minutes from push to the last required check, and the slowest jobs, over merged PRs.
+
+    The critical path of a head sha is the longest run among `test` and `rust` (first attempt, green); `dal` is an ISO timestamp lower bound.
+    """
+    unite = {x["sha"]: x for x in ev if x.get("tipo") == "pr" and x.get("azione") == "unita"}
+    corse: dict[str, dict[str, dict]] = defaultdict(dict)
+    for x in ev:
+        if x.get("tipo") == "run" and not x.get("main") and x.get("sha") in unite and x.get("workflow") in ("test", "rust") \
+                and x.get("run_attempt") == 1 and x.get("esito") == "success" and x["ts_utc"] >= dal:
+            corse[x["sha"]][x["workflow"]] = x
+    durate: dict[str, list[float]] = defaultdict(list)
+    jobs: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for sha, r in corse.items():
+        if "test" not in r:
+            continue
+        pr = unite[sha]
+        tipo = "docs" if pr.get("solo_doc") else "rust" if (pr.get("aree") or {}).get("rust") else "site/other"
+        durate[tipo].append(max(x["durata_s"] for x in r.values()) / 60)
+        for x in r.values():
+            for nome, d in x["jobs"].items():
+                jobs[tipo][nome].append(d / 60)
+
+    def med(v):
+        v = sorted(v)
+        return v[len(v) // 2] if len(v) % 2 else (v[len(v) // 2 - 1] + v[len(v) // 2]) / 2
+
+    return {t: {"n": len(v), "mediana": round(med(v), 1), "max": round(max(v), 1),
+                "lenti": [(n, round(med(d), 1)) for n, d in sorted(jobs[t].items(), key=lambda kv: -med(kv[1]))[:4]]}
+            for t, v in durate.items()}
 
 
 def adesso_dt() -> datetime:

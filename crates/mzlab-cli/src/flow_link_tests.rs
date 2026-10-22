@@ -121,8 +121,14 @@ pub(crate) fn run(dir: &Path, params: &str) -> Result<Vec<u8>, String> {
 /// The calls of the page on the files the base chain left in the work folder.
 fn by_hand(dir: &Path) -> Vec<u8> {
     let w = dir.join("work");
-    let idx: Vec<PathBuf> = (0..6).map(|k| w.join(format!("idx-{k}.mzidx"))).collect();
-    let peaks: Vec<PathBuf> = (0..6).map(|k| w.join(format!("det-{k}.mzfeatf"))).collect();
+    let idx: Vec<PathBuf> = NAMES
+        .iter()
+        .map(|k| w.join(format!("idx-{k}.mzidx")))
+        .collect();
+    let peaks: Vec<PathBuf> = NAMES
+        .iter()
+        .map(|k| w.join(format!("det-{k}.mzfeatf")))
+        .collect();
     let open = |p: &PathBuf| {
         let f = std::fs::File::open(p).unwrap();
         let n = f.metadata().unwrap().len();

@@ -397,7 +397,10 @@
                   "rt_coarse_gap",
                   "rt_span",
                   "rt_inlier",
-                  "weak_files"
+                  "weak_files",
+                  "link_rt",
+                  "max_span",
+                  "min_dependent"
                 ]
               },
               "value":{
@@ -456,6 +459,24 @@
                     "minimum":0,
                     "default":5,
                     "description":"Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Family mode: largest RT distance between an ion and the root of its family in one file for the two rows to be joined"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"Family mode: largest RT span of the groups joined in one row"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":1,
+                    "description":"Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files"
                   }
                 ]
               }
@@ -1035,7 +1056,7 @@
                   {
                     "enum":["none","spectrum"],
                     "default":"none",
-                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs the spectral entropy (an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
                   },
                   {
                     "type":"boolean",
@@ -1465,7 +1486,7 @@
                   {
                     "enum":["none","spectrum"],
                     "default":"none",
-                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs the spectral entropy (an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
                   },
                   {
                     "type":"boolean",

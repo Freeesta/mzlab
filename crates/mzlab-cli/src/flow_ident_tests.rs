@@ -415,9 +415,9 @@ fn decoys_spectrum_gives_the_q_values_of_search_fdr() {
         checked += 1;
     }
     assert!(checked >= 50, "{checked} queries checked");
-    // the other algorithms have no decoy score: refused, not silently ignored
+    // the tree search has no decoy score: refused, not silently ignored
     let refused = crate::flow::run_plan(
-        plan("cosine", r#"{"decoys":"spectrum"}"#).as_bytes(),
+        plan("tree", r#"{"decoys":"spectrum"}"#).as_bytes(),
         &dir,
         &dir.join("work"),
         1,

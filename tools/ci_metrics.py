@@ -11,6 +11,7 @@ Standard library only. The data file `eventi.jsonl` lives on the orphan branch `
     python3 tools/ci_metrics.py accoda N.jsonl --dati D.jsonl [--cursore C.json]   # append without duplicates (every line gets `v`)
     python3 tools/ci_metrics.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
     python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type
+    python3 tools/ci_metrics.py percorso [--dati D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
     python3 tools/ci_metrics.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: git show origin/stat-ci:eventi.jsonl
 """
 from __future__ import annotations
@@ -387,7 +388,7 @@ def scrivi_righe(path: str, righe: list[dict]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "accoda", "compatta", "esporta", "riepilogo"])
+    ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "accoda", "compatta", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
     ap.add_argument("--dati", help="events file (default: eventi.jsonl; riepilogo and esporta: origin/stat-ci)")
@@ -397,7 +398,7 @@ def main() -> int:
     ap.add_argument("--giorni", type=int, default=14, help="compatta: rows older than this lose their heavy fields")
     ap.add_argument("--da")
     a = ap.parse_args()
-    if a.comando in ("riepilogo", "esporta"):
+    if a.comando in ("riepilogo", "esporta", "percorso"):
         if a.dati:
             ev = leggi(a.dati)
         else:
@@ -405,6 +406,9 @@ def main() -> int:
             ev = [json.loads(x) for x in txt.splitlines() if x.strip()]
         if a.comando == "esporta":
             print("\n".join(dati_ci.esporta(ev, a.out)))
+        elif a.comando == "percorso":
+            for tipo, r in dati_ci.percorso_critico(ev, a.da or "").items():
+                print(f"{tipo}: n={r['n']} median {r['mediana']} min, max {r['max']}; slowest jobs: " + ", ".join(f"{n} {m}" for n, m in r["lenti"]))
         else:
             riepilogo(ev, a.da)
         return 0
