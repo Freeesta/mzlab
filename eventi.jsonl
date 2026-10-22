@@ -7576,3 +7576,4 @@
 {"v":1,"ts_utc":"2026-10-22T18:48:04Z","tipo":"job","k":"120019246263","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"62e84481ab9343cf4451e27c8f70753c59118d86","run_id":39834491474,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T18:48:19Z","tipo":"carico","k":"2026-10-22T18:4","job_in_coda":1,"job_in_corso":22}
 {"v":1,"ts_utc":"2026-10-22T18:54:13Z","azione":"aperta","tipo":"pr","pr":1523,"sha":"e6c2424396f3632fef04eba202c9223555665e4a"}
+{"v":1,"ts_utc":"2026-10-22T18:59:42Z","azione":"aperta","tipo":"pr","pr":1524,"sha":"20f757e94e9593d4f757526ed0988aa6d905cf46"}
