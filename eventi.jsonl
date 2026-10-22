@@ -4284,3 +4284,4 @@
 {"v":1,"ts_utc":"2026-10-22T10:40:00Z","azione":"push","titolo":"Fondi main","merge_main":false,"aree":{"rust":30,"docs":6,"test":2,"tools":2},"tipo":"pr","pr":1483,"sha":"185dbb4b5a1b92dc916e342814f1c9f8ffe8dad7"}
 {"v":1,"ts_utc":"2026-10-22T10:42:31Z","azione":"aperta","tipo":"pr","pr":1485,"sha":"b89653f43dcb379a72d12ba2599c8b4e69f6d04f"}
 {"v":1,"ts_utc":"2026-10-22T10:45:46Z","azione":"aperta","tipo":"pr","pr":1486,"sha":"54c7510020c85236838c5d5002568432be7ea6f2"}
+{"v":1,"tipo":"pr","pr":1485,"sha":"b89653f43dcb379a72d12ba2599c8b4e69f6d04f","ts_utc":"2026-10-22T10:46:37Z","azione":"unita","aperta_s":246,"commit_n":3,"cause_commit":{"altro":2},"merge_main":0,"righe_piu":25,"righe_meno":19,"file_n":2,"file":["docs/studi/flow-live/PROMPTS.md","docs/studi/flow-live/README.md"],"aree":{"docs":2},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
