@@ -369,20 +369,8 @@ impl Lettore for LettoreRaw {
     }
 
     fn mancanti(&mut self, _c: usize) -> usize {
-        self.raw
-            .warnings
-            .iter()
-            .map(|w| match w {
-                opentfraw::Warning::Truncated {
-                    scans_declared,
-                    scans_readable,
-                    ..
-                } => scans_declared.saturating_sub(*scans_readable) as usize,
-                _ => 0,
-            })
-            .sum()
+        crate::raw::cut_scans(&self.raw)
     }
-
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))

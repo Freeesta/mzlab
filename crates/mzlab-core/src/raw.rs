@@ -10,6 +10,21 @@ use opentfraw::{iter_spectra, Polarity, RawFileReader, ScanMode, SpectrumRecord}
 use crate::error::{Error, Result};
 use crate::mzml::{Run, Spectrum};
 
+/// Scans the index lists that the file is too short to hold (a cut copy).
+pub(crate) fn cut_scans(raw: &RawFileReader) -> usize {
+    raw.warnings
+        .iter()
+        .map(|w| match w {
+            opentfraw::Warning::Truncated {
+                scans_declared,
+                scans_readable,
+                ..
+            } => scans_declared.saturating_sub(*scans_readable) as usize,
+            _ => 0,
+        })
+        .sum()
+}
+
 /// Maps an OpenTFRaw error to the key the page shows: a format version the reader does not know has its own message (`err.file.rawVersion`), so has a file that
 /// stops before its scans (`err.file.rawTruncated`); anything else keeps the generic `err.file.raw` with the reader's text, which names the structure, the
 /// format version and the file size.

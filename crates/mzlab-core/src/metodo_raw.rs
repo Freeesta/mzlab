@@ -189,6 +189,14 @@ fn open_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
         .collect()
 }
 
+/// Every warning the file itself raises: the open, the trailer and the status log.
+fn file_warnings(raw: &RawFileReader) -> Vec<Option<V>> {
+    let mut w = status_warning(raw);
+    w.extend(trailer_warning(raw));
+    w.extend(open_warnings(raw));
+    w
+}
+
 /// The warning that the status log is there and was not decoded.
 fn status_warning(raw: &RawFileReader) -> Vec<Option<V>> {
     let missing = raw.status_log.is_none() && raw.run_header.sample_info.inst_log_length > 0;
@@ -311,9 +319,7 @@ pub fn from_raw<R: Read + Seek>(raw: &RawFileReader, source: &mut R, src: &Sourc
         }
         v
     });
-    warn.extend(status_warning(raw));
-    warn.extend(trailer_warning(raw));
-    warn.extend(open_warnings(raw));
+    warn.extend(file_warnings(raw));
     let (exps, settings) = experiments_of(&blocks, &items, &mut warn);
     if rivelatori::has_3d_field(&blocks) {
         warn.push(obj(vec![
