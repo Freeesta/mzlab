@@ -1,6 +1,6 @@
 //! The native executor of `spectra.chimeric@1`: for every MS2 spectrum of an MGF, the purity of its precursor in the MS1 scans around it (`fill_purity`,
 //! the one of `tp.link`) and, with a feature table, the features co-isolated in its window (`ms2_engine::chimeric::intruders`). The spectrum is written
-//! as it came, with the header lines `PURITY`, `CHIMERIC`, `INTRUDERS` and, for the `ms1_window` algorithm, `MS1_COISOLATED*` added; nothing is removed from it.
+//! as it came, with the header lines `PURITY`, `PURITY_BAND`, `CHIMERIC`, `INTRUDERS` and, for the `ms1_window` algorithm, `MS1_COISOLATED*` added; nothing is removed from it.
 
 use std::fmt::Write as _;
 
@@ -11,7 +11,9 @@ use mzlab_core::step::DataType;
 use mzlab_feat::attributio::ms2_engine::chimeric::{default_window, intruders, FeaturePoint};
 use mzlab_feat::attributio::ms2_engine::deconv::{deconvolve, Candidate};
 use mzlab_feat::attributio::review::raw::Ms1Metrics;
-use mzlab_feat::interp::ms2link::{fill_purity, ms1_window_metrics, Ms2Scan};
+use mzlab_feat::interp::ms2link::{
+    fill_purity_with, ms1_window_metrics, LinkParams, Ms2Scan, PURITY_MIN,
+};
 use mzlab_feat::legacy::ms2::Ms2Index;
 use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_lib::spec::Spectrum;
@@ -67,6 +69,9 @@ fn block(lines: Vec<&str>) -> Block<'_> {
         lines,
     }
 }
+
+/// Purity under which a spectrum is in the `low` band, whatever the chimeric limit.
+const LOW_PURITY: f64 = 0.5;
 
 fn param(job: &Job, name: &str) -> Option<f64> {
     let found = job.resolved.params.iter().find(|(k, _)| k == name);
@@ -129,7 +134,11 @@ fn purities(r: &FileRunner, job: &Job, blocks: &[Block], chim_rel: Option<f64>) 
             if scans.is_empty() {
                 continue;
             }
-            fill_purity(file, polarity, &mut scans)?;
+            let link = LinkParams {
+                purity_min: param(job, "purity_min").unwrap_or(PURITY_MIN),
+                ..LinkParams::default()
+            };
+            fill_purity_with(file, polarity, &mut scans, &link)?;
             for (&i, s) in mine.iter().zip(&scans) {
                 out[i] = Some((s.purity, s.chimeric));
             }
@@ -192,9 +201,15 @@ pub(crate) fn chimeric_text(
         if let Some(lines) = extra.get(n) {
             out.push_str(lines);
         }
-        if let Some((purity, chimeric)) = p {
+        if let Some(&(purity, chimeric)) = p.as_ref() {
             if purity.is_finite() {
                 let _ = writeln!(out, "PURITY={purity:.4}");
+                let band = match purity {
+                    p if p < LOW_PURITY => "low",
+                    _ if chimeric => "medium",
+                    _ => "high",
+                };
+                let _ = writeln!(out, "PURITY_BAND={band}");
             }
             let _ = writeln!(out, "CHIMERIC={chimeric}");
         }

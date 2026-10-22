@@ -37,6 +37,8 @@ pub struct Params {
     pub min_height: f64,
     pub max_gap: u32,
     pub long_trace: u32,
+    /// Two rows of different grids are one ion when their scans overlap by this share of the shorter one (0 = only the apex and edges test of `merge_grids`).
+    pub merge_overlap: f64,
     /// Axis of the channels of m/z (`Da` = unit resolution).
     pub axis: MassAxis,
     /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
@@ -57,6 +59,9 @@ impl std::fmt::Debug for Params {
             .field("long_trace", &self.long_trace)
             .field("axis", &self.axis)
             .field("budget", &self.budget);
+        if self.merge_overlap != 0.0 {
+            d.field("merge_overlap", &self.merge_overlap);
+        }
         if self.peak != Peak::Minima {
             d.field("peak", &self.peak);
         }
@@ -73,6 +78,7 @@ impl Default for Params {
             min_height: MIN_HEIGHT,
             max_gap: MAX_GAP,
             long_trace: LONG_TRACE,
+            merge_overlap: 0.0,
             axis: MassAxis::Ppm,
             budget: SLAB_PEAKS * BYTES_PER_PEAK,
             peak: Peak::Minima,
@@ -204,7 +210,7 @@ pub fn detect_with<R: ReadAt>(
     run_slab(&slab, &rt, dt, p, &mut rows)?;
     drop(slab);
 
-    finish(rows, dt, p.axis)
+    finish(rows, dt, p.axis, p.merge_overlap)
 }
 
 #[cfg(test)]

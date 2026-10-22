@@ -1,0 +1,150 @@
+{
+ "regole": {
+  "versione": 1,
+  "tabella": "fragrules/1",
+  "cutoff_q": 0.25,
+  "toll_perdita_mda": 3,
+  "addotto": "[M+H]+",
+  "archi": [
+   {
+    "da": "n0",
+    "a": "n1",
+    "regole": [],
+    "composta": [],
+    "stepped": false,
+    "avvisi": []
+   },
+   {
+    "da": "n0",
+    "a": "n2",
+    "regole": [],
+    "composta": [
+     [
+      "loss_co2",
+      "loss_nh3_amide"
+     ]
+    ],
+    "stepped": false,
+    "avvisi": []
+   },
+   {
+    "da": "n0",
+    "a": "n3",
+    "regole": [
+     {
+      "id": "loss_co2",
+      "formula": "CO2",
+      "massa": 43.98983,
+      "errore_mda": 0.16,
+      "radicale": false,
+      "priorita": 1,
+      "energia": "mid",
+      "perche": "A carboxylic acid or an ester can lose carbon dioxide.",
+      "refs": [
+       "DEM16"
+      ]
+     }
+    ],
+    "composta": [],
+    "stepped": false,
+    "avvisi": []
+   },
+   {
+    "da": "n2",
+    "a": "n5",
+    "regole": [],
+    "composta": [],
+    "stepped": false,
+    "avvisi": []
+   },
+   {
+    "da": "n2",
+    "a": "n6",
+    "regole": [],
+    "composta": [],
+    "stepped": false,
+    "avvisi": []
+   },
+   {
+    "da": "n3",
+    "a": "n2",
+    "regole": [
+     {
+      "id": "loss_nh3_amide",
+      "formula": "NH3",
+      "massa": 17.02655,
+      "errore_mda": -0.5,
+      "radicale": false,
+      "priorita": 3,
+      "energia": "low",
+      "perche": "Weak rule: in the validation on public spectra the decoys explain more than 30 % as many applications.",
+      "refs": [
+       "MAR97",
+       "DEM16"
+      ]
+     }
+    ],
+    "composta": [],
+    "stepped": true,
+    "avvisi": []
+   },
+   {
+    "da": "n3",
+    "a": "n4",
+    "regole": [],
+    "composta": [],
+    "stepped": false,
+    "avvisi": []
+   },
+   {
+    "da": "n3",
+    "a": "n6",
+    "regole": [],
+    "composta": [],
+    "stepped": false,
+    "avvisi": [
+     "warn.msngrafo.belowCutoff"
+    ]
+   }
+  ],
+  "ioni": [],
+  "non_osservabili": [],
+  "conteggi": {
+   "archi_spiegati": 3,
+   "archi_senza_regola": 5,
+   "intensita_spiegata": 0.4
+  },
+  "fonti": [
+   {
+    "key": "DEM16",
+    "doi": "10.1039/c5np00073d",
+    "pmid": "26673733"
+   },
+   {
+    "key": "MAR97",
+    "doi": "10.1002/(SICI)1096-9888(199704)32:4<351::AID-JMS512>3.0.CO;2-Y",
+    "pmid": null
+   }
+  ],
+  "soglie": [
+   {
+    "id": "trap_cutoff",
+    "valore": 0.25,
+    "perche": "Trap CID cut-off.",
+    "origine": "q = 0.25 is the usual default of the linear ion trap; to be calibrated on the instrument.",
+    "da_calibrare": true,
+    "refs": [
+     "MAR97"
+    ]
+   },
+   {
+    "id": "loss_tolerance_mda",
+    "valore": 3,
+    "perche": "Absolute tolerance of a loss against a rule, in mDa.",
+    "origine": "Choice of mzLab.",
+    "da_calibrare": true,
+    "refs": []
+   }
+  ]
+ }
+}

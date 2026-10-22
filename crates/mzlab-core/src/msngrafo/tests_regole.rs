@@ -172,6 +172,31 @@ fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
     let r = v.get("regole").unwrap();
     assert_eq!(r.get("tabella").and_then(|x| x.str()), Some("fragrules/1"));
     assert_eq!(r.get("archi").unwrap().arr().len(), g.archi.len());
+    // the thresholds say where their value comes from and that it is still to be calibrated
+    let soglie = r.get("soglie").unwrap().arr();
+    assert!(soglie
+        .iter()
+        .any(|s| s.get("id").and_then(|x| x.str()) == Some("trap_cutoff")));
+    assert!(soglie.iter().all(
+        |s| s.get("da_calibrare").and_then(|x| x.bool()) == Some(true)
+            && s.get("origine").and_then(|x| x.str()).is_some()
+    ));
+    // every reference cited by a rule of an arc has its source
+    let fonti: Vec<&str> = r
+        .get("fonti")
+        .unwrap()
+        .arr()
+        .iter()
+        .filter_map(|f| f.get("key").and_then(|x| x.str()))
+        .collect();
+    for a in r.get("archi").unwrap().arr() {
+        for x in a.get("regole").unwrap().arr() {
+            assert!(x.get("perche").and_then(|p| p.str()).is_some());
+            for k in x.get("refs").unwrap().arr() {
+                assert!(fonti.contains(&k.str().unwrap()));
+            }
+        }
+    }
     let senza = Opzioni {
         regole: None,
         ..o.clone()

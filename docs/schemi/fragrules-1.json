@@ -255,6 +255,14 @@
      },
      "why": {
       "type": "string"
+     },
+     "origine": {
+      "type": "string",
+      "description": "Where the value of a numeric threshold comes from (literature or a choice of mzLab); shown next to it in the rule detail"
+     },
+     "da_calibrare": {
+      "type": "boolean",
+      "description": "The threshold is still to be calibrated on spectra: the page says so"
      }
     }
    }

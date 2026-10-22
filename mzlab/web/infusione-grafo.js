@@ -8,6 +8,7 @@ import { drawGraph } from "./infusione-grafo-svg.js";
 import { nodePanel } from "./infusione-grafo-nodo.js";
 import { exportRow } from "./infusione-grafo-esporta.js";
 import { searchRow } from "./infusione-grafo-cerca.js";
+import { filtered, arcCells } from "./infusione-grafo-regole.js";
 
 const CSS = `.ig-field{align-items:flex-end;gap:8px}.ig-field input[type=text]{min-width:14ch}.ig-set summary{cursor:pointer;min-height:24px}.ig-set input[type=number]{width:7ch}.ig-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:6px 0}.ig-bar .bt{min-width:28px;min-height:28px}.ig-cut{min-height:28px}.ig-cuts{border-collapse:collapse}.ig-cuts th,.ig-cuts td{padding:2px 6px;text-align:left}
 @media (pointer:coarse){.ig-bar .bt,.ig-use,.ig-cut{min-width:40px;min-height:40px}}
@@ -16,6 +17,7 @@ const CSS = `.ig-field{align-items:flex-end;gap:8px}.ig-field input[type=text]{m
 .ig-node.sel .ig-box{fill:var(--sel)}.ig-mz{font:700 12px sans-serif;fill:var(--ink)}.ig-cand{font:11px sans-serif;fill:var(--muted)}.ig-cand.on{fill:var(--ink);font-weight:700}
 .ig-arc{fill:none;stroke:var(--muted);opacity:.6}.ig-arc.on{stroke:var(--accent2);opacity:1}.ig-arc.iso{stroke-dasharray:0}.ig-headp{fill:var(--muted)}.ig-loss{font:10px sans-serif;fill:var(--muted)}.ig-amb{fill:var(--warn);stroke:var(--ink)}
 .ig-cands{border-collapse:collapse;width:100%;font-size:12px}.ig-cands th,.ig-cands td{border-bottom:1px solid var(--line);padding:2px 6px;text-align:left}.ig-cands tr.on{background:var(--sel)}.ig-cands .num{text-align:right}
+.ig-rule{font:10px sans-serif;fill:var(--ink)}.ig-weak{border:1px solid var(--line);border-radius:4px;padding:0 4px;font-weight:700}.ig-cal{color:var(--warn)}.ig-rl{margin-top:8px}.ig-src{display:inline-block;min-height:24px;min-width:24px}.ig-flt{display:inline-flex;align-items:center;gap:4px;min-height:24px}
 .ig-warn{color:var(--warn)}.ig-unexp{color:var(--muted)}.ig-draw{border:1px solid var(--line);border-radius:6px;padding:6px;margin-top:8px;max-width:340px}.ig-pic svg{max-width:100%;height:auto}`;
 
 /** @type {{ el: HTMLElement | null, svg: SVGSVGElement | null, scale: number }} */
@@ -31,10 +33,10 @@ const nodeLabel = (/** @type {any} */ n) => `MS${n.livello} ${n.mz.toFixed(4)}`;
 
 /** The rows of «the data of the chart»: one per ion with the formula and the candidates, then one per loss. */
 function dataTable() {
-  const j = G.j, byId = new Map(j.nodi.map((/** @type {any} */ n) => [n.id, n]));
-  const rows = j.nodi.map((/** @type {any} */ n) => [n.id, n.livello, n.mz.toFixed(5), chosen(n) || "", n.formula ? n.formula.candidati.map((/** @type {any} */ c) => `${c.formula} ${c.ppm} ppm`).join("; ") : "", n.isolato ? I18N.t("msngrafo.yes") : "", n.osservazioni]);
-  const arcs = j.archi.map((/** @type {any} */ a) => [`${a.da}>${a.a}`, "", `${(/** @type {any} */ (byId.get(a.a))).mz.toFixed(5)}`, a.perdita.formula || "", `${a.perdita.da_massa.toFixed(5)} Da`, a.misure.map((/** @type {any} */ m) => `CE ${m.ce ?? ""} ${m.rel}%`).join("; "), a.misure.length]);
-  return { title: I18N.t("msngrafo.data.title"), head: ["id", I18N.t("msngrafo.col.level"), "m/z", I18N.t("msngrafo.col.chosen"), I18N.t("msngrafo.col.cand"), I18N.t("msngrafo.col.iso"), I18N.t("msngrafo.col.n")], rows: [...rows, ...arcs], rowHeader: true };
+  const j = filtered(G.j, G.rf), byId = new Map(j.nodi.map((/** @type {any} */ n) => [n.id, n]));
+  const rows = j.nodi.map((/** @type {any} */ n) => [n.id, n.livello, n.mz.toFixed(5), chosen(n) || "", n.formula ? n.formula.candidati.map((/** @type {any} */ c) => `${c.formula} ${c.ppm} ppm`).join("; ") : "", n.isolato ? I18N.t("msngrafo.yes") : "", n.osservazioni, "", "", ""]);
+  const arcs = j.archi.map((/** @type {any} */ a) => [`${a.da}>${a.a}`, "", `${(/** @type {any} */ (byId.get(a.a))).mz.toFixed(5)}`, a.perdita.formula || "", `${a.perdita.da_massa.toFixed(5)} Da`, a.misure.map((/** @type {any} */ m) => `CE ${m.ce ?? ""} ${m.rel}%`).join("; "), a.misure.length, ...arcCells(j, a)]);
+  return { title: I18N.t("msngrafo.data.title"), head: ["id", I18N.t("msngrafo.col.level"), "m/z", I18N.t("msngrafo.col.chosen"), I18N.t("msngrafo.col.cand"), I18N.t("msngrafo.col.iso"), I18N.t("msngrafo.col.n"), I18N.t("msngrafo.col.rule"), I18N.t("msngrafo.col.source"), I18N.t("msngrafo.col.priority")], rows: [...rows, ...arcs], rowHeader: true };
 }
 
 async function copyData() {
@@ -50,14 +52,15 @@ function openSpectrum(/** @type {string} */ id) {
   if (tree && cell) INF.pick(cell, tree);
 }
 
-function zoomBar(/** @type {HTMLElement} */ bar, /** @type {HTMLElement} */ wrap) {
+function zoomBar(/** @type {HTMLElement} */ bar, /** @type {HTMLElement} */ wrap, /** @type {() => void} */ redraw) {
   const act = { in: () => setScale(V.scale * 1.25), out: () => setScale(V.scale / 1.25), fit: () => setScale(1), l: () => wrap.scrollBy(-80, 0), r: () => wrap.scrollBy(80, 0), u: () => wrap.scrollBy(0, -80), d: () => wrap.scrollBy(0, 80) };
   const defs = [["in", "+", "msngrafo.zoom.in"], ["out", "−", "msngrafo.zoom.out"], ["fit", "1:1", "msngrafo.zoom.fit"], ["l", "←", "msngrafo.pan.l"], ["r", "→", "msngrafo.pan.r"], ["u", "↑", "msngrafo.pan.u"], ["d", "↓", "msngrafo.pan.d"]];
   bar.innerHTML = defs.map(([a, t, k]) => h`<button type="button" class="bt" data-z="${a}" aria-label="${I18N.t(k)}" title="${I18N.t(k)}">${t}</button>`).join("") +
-    h`<button type="button" class="bt" id="ig-data" title="${I18N.t("tdati.btn.title")}">${I18N.t("tdati.btn")}</button><button type="button" class="bt" id="ig-copyd">${I18N.t("msngrafo.copydata")}</button>`;
+    h`<button type="button" class="bt" id="ig-data" title="${I18N.t("tdati.btn.title")}">${I18N.t("tdati.btn")}</button><button type="button" class="bt" id="ig-copyd">${I18N.t("msngrafo.copydata")}</button><label class="ig-flt" title="${I18N.t("msngrafo.rule.filter.tip")}"><input type="checkbox" id="ig-rf"${raw(G.rf ? " checked" : "")} aria-label="${I18N.t("msngrafo.rule.filter.aria")}"> ${I18N.t("msngrafo.rule.filter")}</label>`;
   bar.querySelectorAll("[data-z]").forEach(b => b.addEventListener("click", () => /** @type {any} */ (act)[/** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.z)]()));
   bar.querySelector("#ig-data")?.addEventListener("click", () => G.j && TDATI.table(dataTable()));
   bar.querySelector("#ig-copyd")?.addEventListener("click", () => G.j && copyData());
+  bar.querySelector("#ig-rf")?.addEventListener("change", e => { G.rf = /** @type {HTMLInputElement} */ (e.target).checked; if (G.j) redraw(); });
 }
 
 function setScale(/** @type {number} */ s) {
@@ -106,7 +109,7 @@ function drawBody(/** @type {HTMLElement} */ b, /** @type {any} */ file, /** @ty
   const wrap = /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), pan = /** @type {HTMLElement} */ (b.querySelector("#ig-node")), exp = /** @type {HTMLElement} */ (b.querySelector("#ig-exp")), find = /** @type {HTMLElement} */ (b.querySelector("#ig-find"));
   if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; G.auto = false; return; }
   const redo = () => run(b, file);
-  V.svg = drawGraph(wrap, G.j, { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: openSpectrum });
+  V.svg = drawGraph(wrap, filtered(G.j, G.rf), { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: openSpectrum });
   setScale(V.scale);
   if (keepFocus && G.sel) /** @type {HTMLElement | null} */ (wrap.querySelector(`.ig-node[data-id="${G.sel}"]`))?.focus();
   nodePanel(pan, nodeOf(G.sel), { redo, again: () => drawBody(b, file, false) });
@@ -137,7 +140,7 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
   const go = () => { G.scelte = []; run(b, file); };
   drawField(/** @type {HTMLElement} */ (b.querySelector("#ig-field")), file, go);
   wireSettings(b, () => run(b, file));
-  zoomBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar")), /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")));
+  zoomBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar")), /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), () => drawBody(b, file, false));
   if (G.j && G.k === file.k) { const msg = /** @type {HTMLElement} */ (b.querySelector("#ig-msg")); msg.innerHTML = summary() + warnLines(); drawBody(b, file, !!focusId); return; }
   await run(b, file);
   void tok; void p;

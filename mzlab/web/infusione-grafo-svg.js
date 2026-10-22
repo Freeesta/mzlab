@@ -2,6 +2,7 @@
 // The graph of the «Fragmentation graph» tab as an SVG: columns by MS level and rows as the engine placed them (pos), a box per ion with its m/z and its
 // candidate formulas with ppm, an arrow per loss. Selection, path from the root, keys ← → ↑ ↓ Enter Esc, zoom and move with buttons. Colours: CSS variables.
 import { G, TXT, chosen } from "./infusione-grafo-stato.js";
+import { arcLabel } from "./infusione-grafo-regole.js";
 
 const W = 176, LH = 14, GAP_X = 96, GAP_Y = 20, MAXC = 4;
 const NS = "http://www.w3.org/2000/svg";
@@ -56,6 +57,8 @@ function drawArcs(/** @type {Element} */ g, /** @type {any} */ j, /** @type {Map
     el("path", { d: `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, class: "ig-arc" + (hot ? " on" : "") + (a.isolamento ? " iso" : ""), "stroke-width": (1 + Math.log10(1 + rel) * 1.2).toFixed(2), "marker-end": "url(#ig-head)" }, g);
     const lbl = a.perdita.formula ? `−${a.perdita.formula}` : `−${a.perdita.da_massa.toFixed(3)} Da`;
     el("text", { x: mx, y: (y1 + y2) / 2 - 3, class: "ig-loss", "text-anchor": "middle" }, g, lbl);
+    const rule = arcLabel(j, a);
+    if (rule) el("text", { x: mx, y: (y1 + y2) / 2 + 9, class: "ig-rule", "text-anchor": "middle" }, g, rule);
   });
 }
 

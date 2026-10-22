@@ -107,6 +107,14 @@ fn the_ion_beside_the_precursor_makes_the_spectrum_chimeric() {
     assert!((purity("chi.5") - 1.0).abs() < 1e-9, "{mgf}");
     assert_eq!(header(&mgf, "chi.2", "CHIMERIC=").as_deref(), Some("true"));
     assert_eq!(header(&mgf, "chi.5", "CHIMERIC=").as_deref(), Some("false"));
+    assert_eq!(
+        header(&mgf, "chi.2", "PURITY_BAND=").as_deref(),
+        Some("medium")
+    );
+    assert_eq!(
+        header(&mgf, "chi.5", "PURITY_BAND=").as_deref(),
+        Some("high")
+    );
     // the peaks are untouched
     assert!(mgf.contains("100.05000 400.0\n120.08000 900.0\n"), "{mgf}");
     // the same bytes on a second run
@@ -236,4 +244,32 @@ fn purity_follows_the_real_isolation_window() {
     assert!((purity_at(0.2).unwrap() - 1.0).abs() < 1e-9);
     assert!((purity_at(0.5).unwrap() - 0.5).abs() < 1e-9);
     assert!((purity_at(1.5).unwrap() - 0.5).abs() < 1e-9);
+}
+
+/// `purity_min` moves the chimeric limit (the purity of 0.5 stays at the limit, not below it) and the bands follow it.
+#[test]
+fn purity_min_is_a_parameter_of_the_flag() {
+    let flag = |extra: &str| {
+        let dir = fixture(&format!("chimeric_min{}", extra.len()));
+        std::fs::write(dir.join("chi.mzML"), dda_mzml()).unwrap();
+        let plan = format!(
+            r#"{{"format":"mzflow/2","inputs":[{{"name":"chi.mzML","type":"mzml"}}],"steps":[
+            {{"id":"idx","step":"index.mzidx@1","in":{{"source":["file:chi.mzML"]}}}},
+            {{"id":"s","step":"spectra.ms2@1","in":{{"source":["file:chi.mzML"]}}}},
+            {{"id":"c","step":"spectra.chimeric@1","in":{{"spectra":"s.spectra","index":["idx.index"]}},"params":{{{extra}}}}}]}}"#
+        );
+        let (_, prov) =
+            crate::flow::run_plan(plan.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+        assert!(!prov.contains("\"error\""), "{prov}");
+        let mgf = std::fs::read_to_string(dir.join("work/c.mgf")).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        let get = |k: &str| header(&mgf, "chi.2", k).unwrap();
+        (get("CHIMERIC="), get("PURITY_BAND="))
+    };
+    assert_eq!(flag(""), ("true".into(), "medium".into()));
+    assert_eq!(flag(r#""purity_min":0.5"#), ("false".into(), "high".into()));
+    assert_eq!(
+        flag(r#""purity_min":0.9"#),
+        ("true".into(), "medium".into())
+    );
 }

@@ -170,6 +170,12 @@ fn masstrace() -> Algorithm {
                 .unit("scans")
                 .doc("A trace longer than this is background and is not taken")
                 .advanced(),
+            Param::number("merge_overlap", "Merge overlap")
+                .min(0.0)
+                .max(1.0)
+                .default_num(0.0)
+                .doc("Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges")
+                .advanced(),
         ],
         status: Status::Available,
     }

@@ -1,7 +1,7 @@
 //! Classes of the rows `detect` emits for one `.mzidx`: points per trace, gaps, height, background flag, rows that share an ion within 5 ppm.
 //! Used to see why a file gives many more rows than a chromatogram builder that needs consecutive scans.
 //!
-//!     cargo run --release -p mzlab-feat --example rowstats -- <file.mzidx>... [--floor X] [--min-height X] [--min-points N] [--max-gap N]
+//!     cargo run --release -p mzlab-feat --example rowstats -- <file.mzidx>... [--floor X] [--min-height X] [--min-points N] [--max-gap N] [--merge-overlap X]
 
 use mzlab_core::idxread::Index;
 use mzlab_feat::table::{FileFeatures, FLAG_BACKGROUND};
@@ -121,6 +121,7 @@ fn main() {
             "--min-height" => p.min_height = num(),
             "--min-points" => p.min_points = num() as u32,
             "--max-gap" => p.max_gap = num() as u32,
+            "--merge-overlap" => p.merge_overlap = num(),
             _ => files.push(a),
         }
     }
