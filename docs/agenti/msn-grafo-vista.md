@@ -1,0 +1,16 @@
+# Grafo MSn: la chiave `vista` (`msngrafo/1`)
+
+Codice: `crates/mzlab-core/src/msngrafo/vista.rs`, `posa.rs`, `posa_radiale.rs`. Schema: `docs/schemi/msngrafo-1.json` (`vista` facoltativa, versione 1). Il formato resta `msngrafo/1`: `vista` è una chiave in coda che i lettori vecchi ignorano.
+
+- **Che cos'è**: ciò che chi disegna il grafo serve e il grafo non dice apertamente, calcolato SOLO dai campi già presenti (`nodi`, `archi`, `misure`), quindi `completa(json)` aggiunge a un grafo vecchio gli stessi byte del grafo costruito oggi (prova: costruito = completato). Coordinate astratte (colonne, righe, anelli, gradi): pixel e stili sono del disegno. Una proposta di regola scritta nel JSON (`regola`), mai un meccanismo.
+- **Posizione**: sempre ultima; `strutture`, `strutture_tutti`, `regole` e `interpretazione` si inseriscono prima di essa (`vista::con_chiave`).
+- **Testa**: `{versione: 1, algoritmo: "best-path/1", regola (a parole), ordine (id per colonna e riga dell'albero), nodi, archi}`.
+- **`nodi[]`** (stesso ordine del grafo): `id`; `livelli` (MS delle misure in cui il frammento c'è davvero, `rel` > 0; la radice [1]); `rel` (intensità nello spettro del padre sul cammino migliore, % del picco base; radice: `rel_max`) | null; `rel_max`; `best {da (id) | null, passi, costo [passi, rel minima lungo il cammino | null, archi isolati]}`; `entranti` (precursori diversi); `comune` (entranti ≥ 2); `albero {col, riga}`; `radiale {anello, angolo}`.
+- **`archi[]`**: `{da, a, best}`; `best` true se è l'arco entrante scelto per `a`.
+- **Cammino migliore** (`best-path/1`, `vista::percorsi`): programmazione dinamica sul DAG in ordine topologico (il più piccolo indice fra i pronti). Fra gli archi entranti vince: meno passi dalla radice; poi la rel minima lungo il cammino più alta (di ogni arco conta la misura più intensa); poi più archi isolati; poi l'id del precursore più piccolo. Prova: il numero di nodi in cui il cammino differisce da un albero ricoprente di costo minimo (Chu-Liu/Edmonds degenerato, solo nei test) è quello atteso sul sintetico.
+- **Albero** (`posa::albero`): fino a 8 giri di baricentro (si tiene quello con meno incroci), poi scambi di righe adiacenti finché tolgono più incroci di quanti ne fanno (contano solo le coppie d'archi dei due nodi); `pos` del nodo resta il baricentro semplice.
+- **Radiale** (`posa_radiale.rs`): anello = passi del cammino migliore; angolo proporzionale alle foglie del sottoalbero di `best.da`, in gradi a 2 decimali, senza trigonometria.
+- **`completa`**: `mzlab-cli msn-graph complete IN.json [--out F]`, funzione `completa` del `.wasm` msngrafo, `msnCompleta` in `rust-msngrafo.js`; errore con chiave `err.msngrafo.badGraph` se il testo non è un `msngrafo/1`; un grafo con `vista` torna com'è.
+- **Opzioni collegate**: `molfile` (come `smiles`, `--molfile FILE`, parametro del passo con `--set`) e `strutture=tutti` (la chiave `strutture_tutti`: un valore `strutture` per ogni nodo di livello ≥ 2 con candidati).
+- **Perdita**: `perdita.formula` usa i nomi consueti (H2O, NH3, HNCO, HF, HCl, H3PO4, HPO3; il resto in ordine di Hill, es. C4H8).
+- **Dove gira**: nel builder (`json` aggiunge `vista` in coda, quindi CLI, Flow e pagina scrivono gli stessi byte) e nel `.wasm` msngrafo (`completa`); il suo peso e il tetto stanno in `wasm-tetti.md`.
