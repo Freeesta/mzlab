@@ -1,0 +1,87 @@
+# Grafo di frammentazione MSn v2: a chi serve, criteri di accettazione, architettura
+Studio (passo 1) dell'ARCH MSn-grafo v2. Base: `docs/agenti/msn-grafo.md` (contratto `msngrafo/1`), `infusione-grafo.md` (scheda), `msn-grafo-strutture.md` (tagli), `flow-grafica.md` (vista del Flow), note di Federico del 22/10 nel CODA di mzlab-dati. Obiettivo: un grafo CORRETTO E VERIFICABILE, poi più leggibile. Dopo l'ok: prompt DEV in `PROMPTS.md` (G1-G5).
+
+## 1. A chi serve e per cosa
+| Chi | Caso d'uso | Cosa deve poter fare senza aiuto |
+|---|---|---|
+| Federico (PhD, standard di riferimento, libreria `msnlib/1`) | infusione MSn di uno standard (es. timololo, 8 livelli, CID in trappola) → albero di riferimento da pubblicare e confrontare | leggere per ogni frammento formula, ppm, intensità %, livelli, perdita come formula; vedere i frammenti comuni a più percorsi; esportare figura (SVG/PNG) e HTML da `flow run` senza aprire l'app |
+| Studenti del corso (mondo HR, strumento di ricerca) | capire come uno ione si rompe livello dopo livello | seguire un cammino, distinguere fatto osservato (m/z, intensità, livello) da proposta (sottoformula, taglio della struttura, «best path») |
+| Agenti e CLI (`mzlab-cli`, Flow) | catena ripetibile da grezzo a figura | stessi byte da pagina, CLI e Flow; nessun passo a mano |
+| Revisori/lettori di una tesi o articolo | verificare la figura | aprire l'HTML autonomo, vedere i numeri sotto ogni nodo, scaricare i dati |
+
+Principio: nel mondo HR sottoformule, tagli e «best path» sono **candidati con prove**, mai verità. Il «best path» è il cammino osservato più corto secondo una regola dichiarata, non il meccanismo di frammentazione: la pagina lo dice così («Shortest observed path»).
+
+## 2. Stato di partenza (verificato nel codice e nel CODA)
+- `msngrafo/1` ha già: `nodi[].livello` (solo il primo), `rel_max`, `archi[].misure[] {livello, att, ce, rel}`, `perdita.formula` (con formula dello ione), `formula.candidati` con ppm, `pos {col, riga}` (baricentro), `spettri[]`, `strutture` per UN nodo. Mancano: livelli multipli per nodo, intensità del nodo nel suo spettro come campo unico, best path, coordinate radiali, frammenti comuni, disegni.
+- Disegno di molecole: nella pagina c'è OpenChemLib (`MOLUI.svg` in `molui.js`); in Rust NON c'è un generatore di coordinate 2D (`structure.render@1` disegna solo i siti dei TP, `drawings/1`; `mzlab-mol` legge molfile con coordinate). Quindi la CLI può disegnare una molecola solo da un molfile.
+- Rendering: solo JS (`drawGraph` in `infusione-grafo-svg.js`, riusato da `flow/lazy/flow-msn-graph.js`); dipende da `G`, `I18N`, `arcLabel`. La CLI non produce SVG/PNG/HTML.
+- `.wasm` `msngrafo`: 505 993 B misurati contro il tetto 512 000 (circa 6 KB di margine, il tetto NON si alza).
+- Discrepanza da spiegare prima di tutto: sul timololo (INF-A) la CLI dà 55 nodi / 101 archi dal .raw, la pagina 26 nodi dal mzML convertito (screenshot del loc COO). Probabile differenza di opzioni (formula sì/no, `interpreta`, attivazione) o di lettura: finché non è spiegata, nessuna prova esterna vale.
+- Energie Thermo: il lettore marca 25/30/35 come eV (`energy_is_nce=false`) mentre il filtro dice `cid25.00` (NCE %): da correggere o da etichettare prima di mostrarle.
+- Bug: .raw dell'infusione (9000 scansioni) caricato direttamente nel browser si pianta oltre 8 min senza errore; lo stesso file in mzML va; CLI dal .raw 3,5 s.
+
+## 3. Architettura (decisioni)
+- **D1 · Dati e vista separati, un solo documento.** `msngrafo/1` resta il dato (osservazioni, formule, archi). Si aggiunge in coda una chiave **`vista`** (estensione retrocompatibile, `formato` resta `msngrafo/1`, `vista.versione: 1`), calcolata in Rust SOLO da quello che il JSON contiene già: chi legge `msngrafo/1` senza `vista` continua a funzionare, e un g.json vecchio si completa con la stessa funzione (`msngrafo::vista::completa(json) -> json`, nativo e nel `.wasm` `msngrafo`).
+- **D1b · Perché non `msngrafo/2`**: nessun campo esistente cambia significato, e `error.newerFormat` bloccherebbe i file della CLI che Federico ha già.
+- **D2 · Contenuto di `vista`** (ordine fisso, numeri arrotondati come il resto): per nodo `{id, livelli: [n…] (livelli MS degli spettri in cui lo ione compare, da `misure`), rel (intensità % nello spettro del genitore sul best path, alla misura più intensa; radice: nello spettro MS1 o null), rel_max, best {da (id) | null, passi, costo}, entranti (numero di precursori distinti), comune (entranti ≥ 2), radiale, albero}` (sotto).
+- **D2a · `vista`, coordinate del nodo**: `radiale {anello, angolo (gradi, 2 decimali)}`, `albero {col, riga}` (stessa forma di `pos`, ordine di D4).
+- **D2b · `vista`, archi e testa**: per arco `{da, a, best (bool)}`; `algoritmo: "best-path/1"` con la regola scritta (sotto); `ordine` dei nodi per la vista ad albero (sotto). Le coordinate sono numeri astratti (colonna/riga, anello/angolo): pixel e stili li decide il disegnatore.
+- **D3 · Algoritmo del best path (`best-path/1`)**: albero dei cammini minimi sul DAG (programmazione dinamica in ordine topologico, O(V+E)), costo **lessicografico** per cammino dalla radice: (1) meno passi; (2) a parità, maggiore la minima intensità relativa lungo il cammino (`rel` della misura più intensa di ogni arco); (3) a parità, più archi con `isolamento` true (prova MSn diretta); (4) a parità, id del precursore minore. 
+- **D3b · Perché questa regola**: si spiega a uno studente in una riga, non ha pesi da calibrare, è deterministica. Confronto dichiarato (non usato): l'arborescenza di costo minimo (Chu-Liu/Edmonds) su un DAG si riduce al «miglior arco entrante» per nodo, cioè una scelta locale; la si calcola solo nella prova G5 per contare quanti nodi cambierebbero genitore.
+- **D4 · Viste**: (a) albero = colonne per livello come oggi, righe con baricentro più una passata di riduzione degli incroci (scambi adiacenti) e i frammenti comuni allineati
+- **D4b · Vista radiale**: molecola al centro, anello = `passi` del best path, angolo assegnato per sottoalbero in proporzione alle foglie (layout radiale di Reingold-Tilford semplificato), archi del best path pieni, gli altri sottili tratteggiati; nodi `comune` con doppio bordo e numero dei precursori. Entrambe le coordinate in Rust (`posa.rs` e `posa_radiale.rs`), così figura CLI e pagina coincidono.
+- **D5 · Due disegnatori, una scena**: interattivo JS (`msngrafo-vista.js`, modulo ES puro senza globali, ricavato da `drawGraph`: testi passati da fuori) usato da scheda, Flow e HTML autonomo (la CLI lo incorpora con `include_str!`); statico Rust (`mzlab-cli`, nativo, NON nel `.wasm`) per la figura SVG della CLI. Le etichette (m/z, formula con pedici, ppm, %, livelli, perdita) seguono una tabella di regole unica in questo studio (§4.3); una prova di parità confronta i testi di nodi e archi dei due SVG sullo stesso JSON.
+- **D6 · PNG**: nella pagina e nel Flow del browser da SVG con `canvas` (nessuna dipendenza); nella CLI serve un rasterizzatore (`resvg`, Rust puro): dipendenza nuova = decisione di Federico/COO; fino ad allora la CLI scrive SVG e HTML, e il PNG lo fa il loc COO con Chromium/Playwright dallo SVG. Proposta: feature cargo `png` facoltativa.
+- **D7 · Disegni**: molecola dal molfile 2D (dato da OpenChemLib nella pagina al momento della scelta della molecola e salvato nelle opzioni come `molfile`, o `--molfile` in CLI); frammento = disegno del genitore con gli atomi del `pezzo` di `strutture` evidenziati (colore Okabe-Ito + tratteggio, leggibile senza colore), etichetta «hypothesis». Per avere i tagli di tutti i nodi: opzione `strutture=tutti` (oggi uno per volta). Senza molfile: nessun disegno nella figura CLI e una riga «no 2D coordinates». Un generatore di coordinate in Rust NON si fa ora (troppo grande per il beneficio).
+- **D8 · Pedici**: solo nella presentazione (SVG, HTML, tabelle visibili, tooltip): cifre in `<tspan baseline-shift>`/`<sub>` e carica in apice, testo accessibile (`aria-label`) in forma piana «C13H25N4O3S+». CSV, MGF, MSP, JSON e «Copy data» restano ASCII (li leggono le macchine).
+
+## 4. Criteri di accettazione per punto
+Prove sui sintetici (`tests_e2e/fixtures/msngrafo_esempio.json`, `msn_synth`) in CI; sul timololo vero solo dal loc COO (mzlab-dati) con soli aggregati nel pubblico.
+
+| # | Richiesta | Criterio misurabile | Soglia e perché |
+|---|---|---|---|
+| 0 | discrepanza 55 vs 26 nodi | stesso file, stesse opzioni → stesso numero di nodi e archi da .raw e da mzML, CLI e pagina; differenza residua spiegata riga per riga | 0 differenze non spiegate: senza questo nessun numero sotto è credibile |
+| 1 | intensità % | ogni nodo non radice mostra `rel` (1 decimale, %) e il tooltip elenca `rel` per ogni misura (livello, att, CE); valori uguali a `misure[].rel` del JSON | 100 % dei nodi; scarto 0 (è lo stesso numero) |
+| 2 | perdita come formula | ogni arco fra due nodi con una scelta mostra la formula della perdita (nome solito, `H2O`, `NH3`, `C4H8`); senza scelta «Δ 18.011 Da (compatible with H2O)» | 100 % degli archi con scelta; sul timololo atteso ≥ 90 % degli archi annotati (gli altri restano Δ) |
+| 3 | pedici | nessun testo visibile di grafo, tabella o tooltip corrisponde a `[A-Z][a-z]?[0-9]` fuori da m/z e numeri; `aria-label` in forma piana | 0 occorrenze (prova automatica sul DOM e sullo SVG CLI) |
+| 4 | livello MSn | ogni nodo mostra «MS2», o «MS2, MS3» se visto in più livelli; uguale a `vista.livelli` | 100 % |
+| 5 | disegni | radice disegnata quando c'è un molfile; per ogni nodo con ≥ 1 taglio un disegno con atomi evidenziati = `pezzo`; nessun disegno senza tagli | 100 %; prova: indici evidenziati uguali a `pezzo` |
+| 6 | due viste | pulsante (tastiera, 24×24 px) commuta albero/radiale mantenendo il nodo scelto; radiale: radice al centro, anello = `passi`, archi best pieni, nodi `comune` marcati | 100 % dei nodi presenti in entrambe; 0 sovrapposizioni |
+| 7 | ordine oltre ~26 nodi | sul timololo (55 nodi) e su un sintetico di 80 nodi: 0 riquadri sovrapposti; incroci d'arco nella vista ad albero ≤ 50 % di quelli del baricentro di oggi; filtri «min %», livelli, «best path only», sottoalbero chiudibile | 0 sovrapposizioni; −50 % incroci (misura semplice e oggettiva della confusione; si riporta il numero anche se non arriva) |
+| 8 | un solo documento | albero, radiale, figura CLI, Flow e HTML leggono SOLO il JSON (prova: nessuna richiesta ad `api/` dopo il caricamento del JSON, salvo spettri e strutture su richiesta) | 0 richieste |
+| 9 | Flow/CLI figura e HTML | `flow run` e `mzlab-cli msn-graph --figura svg,html` scrivono SVG e HTML; l'HTML è un file unico senza risorse esterne, interattivo (due viste, clic, tastiera), con tabella dei dati (TDATI) e «Copy data»; axe-core 0 violazioni AA; PNG come D6 | 0 violazioni; HTML ≤ 2 MB a 55 nodi; apribile offline |
+| 10 | apri g.json | trascinare un `msngrafo/1` (con o senza `vista`) nell'area dati o nella scheda apre il grafo senza grezzo; funzioni che servono il grezzo (spettro del nodo) spente con un perché; JSON non valido → errore con chiave; formato più nuovo → `error.newerFormat` | 100 % dei 3 casi (vecchio, nuovo, rotto) |
+| 11 | .raw nel browser | l'infusione a 9000 scansioni caricata come .raw arriva al grafo, con la barra di avanzamento che sale; se fallisce, un errore con chiave entro 30 s dall'ultimo progresso, mai silenzio | sul Mac di Federico ≤ 60 s (≈ 15× la CLI, il margine del motore WASM sul nativo); stesso JSON del mzML |
+| 12 | energie | per i file Thermo l'energia si scrive «NCE 25 %» quando il filtro la dà normalizzata | 100 % degli spettri di INF-A |
+
+## 5. Prove esterne (piano, esecutore, soglie)
+I numeri si riportano anche se la soglia fallisce. Ogni fonte con ID e data di accesso, verificata nella fonte, mai a memoria.
+
+| Prova | Metodo | Soglia (perché) | Chi/dove |
+|---|---|---|---|
+| (a) frammenti pubblicati | spettri MS2 pubblici del timololo ([M+H]+, C13H25N4O3S+): MassBank (record con formule annotate), mzCloud (manuale), NIST (licenza: solo se Federico la ha); per ogni frammento pubblicato con rel ≥ 5 %, cercare un nodo (qualunque livello) con la stessa sottoformula (± 10 ppm); tabella fonte, ID, CE, attivazione, trovato sì/no | richiamo ≥ 80 % (non 100 %: le fonti sono quasi tutte HCD a fascio, la nostra è CID in trappola; ogni mancante va spiegato per attivazione o soglia) | cloud: MassBank (raggiungibile) e confronto; mzCloud/NIST: Federico |
+| (b) SIRIUS / MS-FINDER | MGF del nodo MS2 (e MSn uniti) esportato dal nostro grafo; albero di frammentazione SIRIUS e annotazione MS-FINDER sugli stessi picchi | ≥ 95 % dei picchi spiegati da entrambi con la stessa sottoformula; i diversi elencati con ppm (sotto 150 m/z si accettano differenze motivate dalla finestra larga) | Mac (release GitHub di SIRIUS bloccate nel cloud; MS-FINDER è Windows/.NET); MetFrag/CFM-ID: facoltativi |
+| (c) falsi positivi | target-decoy (Elias e Gygi 2007): (i) picchi esca = m/z dei frammenti spostate di +0,02…+0,05 Da (fuori tolleranza, dentro la stessa massa nominale) e rilanciate; (ii) formula esca della radice (stessa m/z entro 5 ppm, composizione diversa da `compose`); frazione di esche che riceve una sottoformula | FDR stimato ≤ 10 % sopra m/z 150 e riportato a parte sotto (dove la finestra larga lo alza); con la formula esca ≤ 50 % dei frammenti spiegati contro quelli della formula vera | cloud sul sintetico; loc COO sul timololo (solo aggregati) |
+| (d) byte identici | SHA-256 del JSON (con `vista`) da pagina (`.wasm`), CLI nativa, Flow nativo e Flow del browser, da .raw e da mzML, stesse opzioni | 100 % identici (stessi ingressi = stessi byte è già il contratto) | cloud sul sintetico (mzML); loc COO su INF-A (.raw e mzML) |
+| (e) utenti | 5 persone (dottorandi/studenti), 3 compiti per vista (trovare i frammenti comuni a ≥ 2 percorsi; dire la perdita fra due nodi; dire i livelli di un nodo), vista di oggi vs v2, ordine alternato | descrittiva (n = 5): errori v2 ≤ oggi e tempo mediano −30 %; se no, si cambia la vista prima di chiudere | Federico (persone vere) |
+| (f) coerenza col grezzo | dal .raw con scandump/RFR: per ogni nodo isolato, catena di filtro, attivazione, NCE e numero di scansioni uguali a quelli del JSON | 100 % | loc COO |
+
+## 6. Cosa si esegue dove
+- **Cloud (chat DEV/ARCH)**: tutto il codice Rust/JS, sintetici, e2e e axe, MassBank via web, RDKit (PyPI raggiungibile; solo strumento di prova in `tools/`, mai nel sito), MetFrag (Java c'è), confronto byte sul sintetico.
+- **Loc COO (Mac, via `coordinamento/CODA.md`)**: INF-A (.raw e mzML), tempi del .raw nel browser, SIRIUS, MS-FINDER, scandump/RFR, PNG con Playwright finché la CLI non ha `png`.
+- **Federico**: mzCloud/NIST, decisione D6 (`resvg`), conferma NCE vs eV, test utenti, ok finale sulla figura.
+
+## 7. Rischi
+| Rischio | Effetto | Mitigazione |
+|---|---|---|
+| R1 tetto `.wasm` `msngrafo` (≈ 6 KB di margine) | `vista` + `completa` non ci stanno | codice piccolo (DP e anelli ≈ 150 righe), niente trigonometria in Rust per la radiale (angolo in gradi da frazioni), misura a ogni PR; se sfora si toglie codice morto del modulo (il motore principale non ha margine), mai si alza il tetto |
+| R2 due disegnatori divergono | figura CLI ≠ pagina | regole di etichetta uniche (§3 D5) e prova di parità dei testi |
+| R3 best path letto come meccanismo | errore didattico | nome «Shortest observed path», regola scritta sotto la vista, archi non best sempre visibili |
+| R4 sottoformule sotto m/z 150 | falsi positivi | prova (c) per fascia; prove `perdita/isotopi/msn` già nel contratto |
+| R5 CID vs HCD nelle fonti pubbliche | richiamo basso «falso» | soglia 80 % e spiegazione per mancante |
+| R6 dati privati | nomi o spettri nel pubblico | solo aggregati; esempi sintetici; `test_esempi_anonimi.py` |
+| R7 .raw nel browser | causa ignota (lettura, indice, memoria) | G4 inizia con una diagnosi riproducibile (log di avanzamento per fase) prima del fix |
+| R8 hash dei test cambiano con `vista` | rossi nei golden | un solo aggiornamento, in G1, con il perché nel commit |
+
+## 8. Ordine delle PR (dettaglio nei prompt del passo 2)
+G1 dati: `vista`, best path, livelli, rel, perdite come formula ovunque, `completa`, energie NCE (+ discrepanza 55/26) → G2 scheda: modulo `msngrafo-vista.js`, albero/radiale, pedici, filtri, disegni (dipende da G1) → G3 Flow/CLI: SVG Rust, HTML autonomo, PNG nel browser (dipende da G1, usa il modulo di G2) → G4 apri g.json + fix .raw browser (G4b indipendente, può partire subito) → G5 prove esterne (a-f) sul codice di G1-G3.
