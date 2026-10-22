@@ -1,4 +1,4 @@
-"""Window «Molecole» (header button #mol-btn, molecole-ui.js) and the search box (molecole-campo.js), on INVENTED molecules only (Esempina, Provolone B): lazy loading, open and close
+"""Window «Molecole» (molecole-ui.js, opened by the «Manage» link) and the search box (molecole-campo.js), on INVENTED molecules only (Esempina, Provolone B): lazy loading, open and close
 with the keyboard, add / edit / delete, a catalogue molecule edited as a copy of the user, import of CSV and JSON with one error per wrong row, export CSV and JSON, the molecules
 surviving a reload (IndexedDB store «molecole»), the migration of the database 3 -> 4 without losing files / kv / liste_utente / manifest, the ARIA combobox with the keyboard, axe.
 Needs the built site (tools/prepara_sito.py). Run from the repo root: python3 tests_e2e/e2e_molecole_ui.py"""
@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 
 AXE = axe_path()
+OPEN = "carica('m:molecole-ui.js').then(() => window.MOLDB.apri())"   # the window opens from the «Manage» link of a search box; here directly
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -36,23 +37,21 @@ try:
             assert not v, (what, v)
 
         def lazy():
-            b = pg.locator("#mol-btn"); assert b.count() == 1 and b.is_visible() and b.locator("svg").count() == 1
-            assert b.get_attribute("aria-label") == b.get_attribute("title") and "Molecole" in b.get_attribute("aria-label")
+            assert pg.locator("#mol-btn").count() == 0, "the header has no Molecules button"
             assert pg.evaluate("typeof window.MOLDB") == "undefined", "the window is lazy: not loaded before the first click"
-        step("button in the header with label and tooltip; window not loaded at start", lazy)
+        step("no button in the header; window not loaded at start", lazy)
 
         def opens():
-            pg.focus("#mol-btn"); pg.keyboard.press("Enter"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
+            pg.evaluate(OPEN); pg.wait_for_selector("#moldlg .mol-box", state="visible")
             assert pg.get_attribute("#moldlg .mol-box", "role") == "dialog" and pg.get_attribute("#moldlg .mol-box", "aria-modal") == "true"
             assert pg.inner_text("#mol-h") == "Molecole"
             pg.wait_for_function("document.activeElement && document.activeElement.closest('#mol-q')", timeout=10000)
             assert pg.inner_text("#mol-cap").startswith("Le tue molecole: 0") and "Non hai ancora" in pg.inner_text("#mol-st")
             pg.keyboard.press("Escape"); pg.wait_for_selector("#moldlg", state="hidden")
-            assert pg.evaluate("document.activeElement.id") == "mol-btn", "the focus goes back to the button"
-        step("Enter opens the window on the search box, Esc closes it and gives the focus back", opens)
+        step("the window opens on the search box and Esc closes it", opens)
 
         def tab_trap():
-            pg.click("#mol-btn"); pg.wait_for_selector("#moldlg .mol-box", state="visible")
+            pg.evaluate(OPEN); pg.wait_for_selector("#moldlg .mol-box", state="visible")
             for _ in range(14):
                 pg.keyboard.press("Tab")
                 assert pg.evaluate("!!document.activeElement.closest('#moldlg')"), "Tab left the window"
@@ -136,7 +135,7 @@ try:
 
         def persists():
             pg.keyboard.press("Escape"); pg.reload(); pg.wait_for_function('window.qqReady===true', timeout=60000)
-            pg.click("#mol-btn"); pg.wait_for_selector("#mol-body tr")
+            pg.evaluate(OPEN); pg.wait_for_selector("#mol-body tr")
             assert sorted(names()) == ["Esempina", "Provolone C"], names()
             v = pg.evaluate("""async () => { const dbs = await indexedDB.databases(); const d = dbs.find(x => x.name === 'mzlab_lab');
               const db = await new Promise(ok => { const q = indexedDB.open('mzlab_lab'); q.onsuccess = () => ok(q.result); });
