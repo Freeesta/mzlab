@@ -15,8 +15,8 @@ pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--p
   --ppm N        mass window of a row for an expected m/z (default 5)
   --rt-tol MIN   RT window in minutes (default 0.3)
 output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
-  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt,
-  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape), kin_rank / kin_size (place of the best row among the view rows of its own kinship, in view order, and the size of that group), singles_above (rows above it in the view seen in one file only), view_single_pct (percent of the whole view seen in one file only)";
+  detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | absorbed | no_row_mz | rt_off), nearest_ppm, nearest_drt,
+  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape), kin_rank / kin_size (place of the best row among the view rows of its own kinship, in view order, and the size of that group), singles_above (rows above it in the view seen in one file only), view_single_pct (percent of the whole view seen in one file only), absorbed_row / absorbed_mz / absorbed_rt (stage absorbed: the family row that holds the expected ion as a member although its own m/z or RT is outside the windows; empty otherwise)";
 
 struct Args {
     table: String,
@@ -198,6 +198,11 @@ fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
             ppm: dist(row).0,
             drt: dist(row).1,
         });
+    let absorbed = if best.is_none() {
+        absorber(t, mz, rt, a)
+    } else {
+        None
+    };
     let near = (0..t.len()).min_by(|&x, &y| dist(x).0.abs().total_cmp(&dist(y).0.abs()));
     let (np, nd) = near.map_or((f64::NAN, f64::NAN), dist);
     let mut s = format!("{id},{mz:.4},{rt:.2},{},{}", in_mz.len(), rows_in.len());
@@ -212,12 +217,7 @@ fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
             );
         }
         None => {
-            let stage = if in_mz.is_empty() {
-                "no_row_mz"
-            } else {
-                "rt_off"
-            };
-            let _ = write!(s, ",,,,,,,,{stage}");
+            let _ = write!(s, ",,,,,,,,{}", lost_stage(absorbed, in_mz.is_empty()));
         }
     }
     let _ = write!(s, ",{np:.1},{nd:.2}");
@@ -250,25 +250,34 @@ fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
         None => s.push_str(&format!(",,,,,{},,,,,,,", cx.view)),
     }
     let _ = write!(s, ",{:.1}", cx.single_pct());
+    s.push_str(&absorbed_cols(t, absorbed));
     s
 }
 
-/// The whole report (header and one line per expected product).
-pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f64) -> String {
-    let a = Args {
-        table: String::new(),
-        expected: String::new(),
-        ppm,
-        rt_tol,
-        out: None,
-    };
-    let cx = Cx::new(t);
-    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3,kin_rank,kin_size,singles_above,view_single_pct\n");
-    for (id, mz, rt) in expected {
-        out.push_str(&explain(&cx, id, *mz, *rt, &a));
-        out.push('\n');
+/// The stage of an expected product that has no row in both windows.
+fn lost_stage(absorbed: Option<usize>, no_mass: bool) -> &'static str {
+    match (absorbed, no_mass) {
+        (Some(_), _) => "absorbed",
+        (None, true) => "no_row_mz",
+        (None, false) => "rt_off",
     }
-    out
+}
+
+/// The `absorbed_*` columns: the family row and its reference m/z and RT, or three empty fields.
+fn absorbed_cols(t: &Aligned, row: Option<usize>) -> String {
+    row.map_or(",,,".into(), |r| {
+        format!(",{r},{:.4},{:.2}", t.mz[r], t.rt[r])
+    })
+}
+
+/// The first family row that lists the expected ion (`mz`, `rt`) among its members while its own reference ion is outside the windows.
+fn absorber(t: &Aligned, mz: f64, rt: f64, a: &Args) -> Option<usize> {
+    (0..t.len()).find(|&r| {
+        t.members(r).any(|m| {
+            ((t.member_mz[m] - mz) / mz * 1e6).abs() <= a.ppm
+                && (f64::from(t.member_rt[m]) - rt).abs() <= a.rt_tol
+        })
+    })
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
@@ -291,55 +300,24 @@ pub fn run(args: Vec<String>) -> Outcome {
     go().unwrap_or_else(|e| Outcome::fail(&e))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn table() -> Aligned {
-        let mut t = Aligned::with_capacity(2, 3);
-        t.n_files = 2;
-        // row 0: in view; row 1: same mass, wrong RT; row 2: a control row
-        t.mz = vec![300.0, 400.0, 500.0];
-        t.rt = vec![5.0, 9.0, 7.0];
-        t.area = vec![10.0, 0.0, 5.0, 6.0, 7.0, 8.0];
-        t.height = vec![1.0, 0.0, 2.0, 3.0, 4.0, 5.0];
-        t.state = vec![
-            CELL_DETECTED,
-            3,
-            CELL_DETECTED,
-            CELL_FILLED,
-            CELL_DETECTED,
-            CELL_DETECTED,
-        ];
-        t.tp.status = vec![0, 0, 1];
-        t.tp.kinship = vec![2, 3, 0];
-        t
+/// The whole report (header and one line per expected product).
+pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f64) -> String {
+    let a = Args {
+        table: String::new(),
+        expected: String::new(),
+        ppm,
+        rt_tol,
+        out: None,
+    };
+    let cx = Cx::new(t);
+    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3,kin_rank,kin_size,singles_above,view_single_pct,absorbed_row,absorbed_mz,absorbed_rt\n");
+    for (id, mz, rt) in expected {
+        out.push_str(&explain(&cx, id, *mz, *rt, &a));
+        out.push('\n');
     }
-
-    #[test]
-    fn stages_are_named_by_the_first_filter() {
-        let e = read_expected("id,mz,rt\na,300.0005,5.1\nb,400.0,5.0\nc,500.0,7.0\nd,600.0,5.0\n");
-        let r = report(&table(), &e, 5.0, 0.3);
-        let col = |l: usize| {
-            r.lines()
-                .nth(l)
-                .unwrap()
-                .split(',')
-                .nth(12)
-                .unwrap()
-                .to_string()
-        };
-        assert_eq!(
-            [col(1), col(2), col(3), col(4)],
-            ["view", "rt_off", "F3", "no_row_mz"]
-        );
-        let n = r.lines().next().unwrap().split(',').count();
-        assert!(r.lines().all(|l| l.split(',').count() == n));
-        // rank_now of the first expected product: kinship 3 outranks kinship 2
-        assert_eq!(r.lines().nth(1).unwrap().split(',').nth(18), Some("2"));
-        // the first product is alone in its kinship group, with one single-file row above it; the whole view was seen in one file
-        let l1: Vec<&str> = r.lines().nth(1).unwrap().split(',').collect();
-        assert_eq!(l1[24..27], ["1", "1", "1"]);
-        assert_eq!(l1[27], "100.0");
-    }
+    out
 }
+
+#[cfg(test)]
+#[path = "flow_explain_tests.rs"]
+mod tests;
