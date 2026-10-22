@@ -4,16 +4,21 @@
 use mzlab_core::budget::{MemBudget, WriteAt};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
+use mzlab_core::json::Value;
 use mzlab_feat::evid::producers::{FeatIndex, Peaks};
 use mzlab_feat::evid::rowfacts::{row_facts, row_near};
-use mzlab_feat::evid::rowproofs::row_signs;
-use mzlab_feat::evid::{build_graph, graph_json, Facts, GraphStream, Inputs, Kinetics};
+use mzlab_feat::evid::rowproofs::{row_signs, signs_of, Signs};
+use mzlab_feat::evid::{
+    graph_json, identities, sort_graph, Facts, GraphStream, Identity, Inputs, Kinetics, PointsTable,
+};
 use mzlab_feat::hypo::{Hypothesis, Rules};
 use mzlab_feat::kinetic::{parent_kinetics, ChainBank, FormBank, Setup, K_PARENT_MIN};
+use mzlab_feat::prof::{report, time};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::Stored;
 use mzlab_feat::store::origin_from_meta;
-use mzlab_feat::store::{read_file, read_table_from, write_table_tp, Slice};
+use mzlab_feat::store::{read_file, read_table_from, write_table_tp, Origin, Slice};
+use mzlab_feat::table::Aligned;
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpParams, TpRoles};
 
@@ -68,9 +73,9 @@ fn measured_facts<O: ReadAt>(
     let mut feats = Vec::new();
     let mut held = 0;
     for k in 0..stored.count() {
-        let bytes = stored.bytes(k)?;
+        let bytes = time("proofs: read stored", || stored.bytes(k))?;
         held += bytes.len();
-        feats.push(read_file(&bytes)?.0);
+        feats.push(time("proofs: parse stored", || read_file(&bytes))?.0);
     }
     let _g = budget.reserve("proofs", held)?;
     let ctx = mzlab_feat::export::Ctx {
@@ -93,15 +98,18 @@ fn measured_facts<O: ReadAt>(
         ..spec.0.ms2.clone()
     };
     let blanks = spec.1.map_or(&[][..], |x| &x.blank[..]);
-    let spectra: Vec<Option<(Peaks, f32)>> =
-        mzlab_feat::ms2spec::spectra_with(&ctx, &mut open, &ms2, blanks)?
-            .0
-            .into_iter()
-            .enumerate()
-            .map(|(row, m)| m.map(|m| (Peaks { mz: m.mz, it: m.it }, purity(row))))
-            .collect();
+    let spectra: Vec<Option<(Peaks, f32)>> = time("proofs: ms2 spectra", || {
+        mzlab_feat::ms2spec::spectra_with(&ctx, &mut open, &ms2, blanks)
+    })?
+    .0
+    .into_iter()
+    .enumerate()
+    .map(|(row, m)| m.map(|m| (Peaks { mz: m.mz, it: m.it }, purity(row))))
+    .collect();
     let idx: Vec<FeatIndex> = feats.iter().map(FeatIndex::new).collect();
-    let (facts, parent_spec) = row_facts(aligned, &hypo.registry, parent, &spectra, &idx, unit);
+    let (facts, parent_spec) = time("proofs: row facts", || {
+        row_facts(aligned, &hypo.registry, parent, &spectra, &idx, unit)
+    });
     Ok((facts, parent_spec.map(|p| p.mz)))
 }
 
@@ -137,12 +145,8 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
     src: Option<RowSources<O>>,
     sink: &mut W,
 ) -> Result<()> {
-    let (mut aligned, meta) = read_table_from(table, size)?;
-    hypo.result
-        .add_missing_to(&mut aligned, &JoinParams::default());
-    aligned.sort_rows();
+    let (aligned, meta, points) = read_aligned(table, size, hypo)?;
     let origin = origin_from_meta(&meta);
-    let points = points_and_identity(&mut aligned, hypo, &meta)?;
     let minutes = roles.map_or(minutes, |ro| &ro.minutes);
     let (treated, controls) = TpRoles::kinetic_files(minutes, roles);
     let times: Vec<f64> = treated.iter().map(|&k| minutes[k]).collect();
@@ -182,25 +186,96 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
         }),
         parent,
     };
-    let tp = tp_block(
-        &inp,
-        minutes,
-        roles,
-        &hypo.registry.hyps,
-        parent,
-        fragments.as_deref(),
-        hypo.rules()?.as_ref(),
-        is_unit(&meta),
-    );
+    let rules = hypo.rules()?;
+    let (mut ids, signs) = identities_and_signs(&inp, budget, parent.is_some());
+    let tp = time("proofs: tp view", || {
+        tp_block(
+            &inp,
+            minutes,
+            roles,
+            &hypo.registry.hyps,
+            parent,
+            fragments.as_deref(),
+            rules.as_ref(),
+            is_unit(&meta),
+            &signs,
+        )
+    });
     let held = aligned.heap_bytes() + tp.heap_bytes();
-    if budget.in_memory(held + aligned.len() * IDENTITY_BYTES) {
-        let json = graph_json(&build_graph(&inp), &points);
-        return write_table_tp(sink, &aligned, &tp, r, &origin, &mut json.as_bytes());
+    if !budget.in_memory(held + aligned.len() * IDENTITY_BYTES) {
+        ids = None;
     }
-    let need = held + aligned.len() * GraphStream::bytes_per_row();
-    let _g = budget.reserve("proofs", need)?;
-    let mut graph = GraphStream::new(&inp);
-    write_table_tp(sink, &aligned, &tp, r, &origin, &mut graph)
+    let out = emit(sink, budget, ids, &inp, (&points, &tp), (r, &origin), held);
+    report("evidence");
+    out
+}
+
+/// The table of the series with the rows of the hypotheses added, in order, and its points table.
+fn read_aligned<R: ReadAt>(
+    table: &mut R,
+    size: u64,
+    hypo: &HypoRun,
+) -> Result<(Aligned, Value, PointsTable)> {
+    let (mut aligned, meta) = time("proofs: read table", || read_table_from(table, size))?;
+    time("proofs: add missing", || {
+        hypo.result
+            .add_missing_to(&mut aligned, &JoinParams::default());
+        aligned.sort_rows();
+    });
+    let points = time("proofs: points", || {
+        points_and_identity(&mut aligned, hypo, &meta)
+    })?;
+    Ok((aligned, meta, points))
+}
+
+/// The identity of every row when they fit in memory (one identity per row serves both the signs of the view of the products and the graph: the same
+/// pure function of the row), and the signs of the proofs of the rows (none without a parent in the table).
+fn identities_and_signs(
+    inp: &Inputs,
+    budget: &MemBudget,
+    has_parent: bool,
+) -> (Option<Vec<Identity>>, Vec<Signs>) {
+    let ids = budget
+        .in_memory(inp.aligned.heap_bytes() + inp.aligned.len() * IDENTITY_BYTES)
+        .then(|| time("proofs: identities", || identities(inp)));
+    let signs = match (&ids, has_parent) {
+        (_, false) => Vec::new(),
+        (Some(v), _) => v.iter().map(signs_of).collect(),
+        (None, _) => time("proofs: row signs", || row_signs(inp)),
+    };
+    (ids, signs)
+}
+
+/// The table with the view of the products and the graph of the proofs: from `ids` (the identities already made, in the order of the rows) when
+/// they fit in memory, in pieces otherwise.
+#[allow(clippy::too_many_arguments)]
+fn emit<W: WriteAt>(
+    sink: &mut W,
+    budget: &MemBudget,
+    ids: Option<Vec<Identity>>,
+    inp: &Inputs,
+    (points, tp): (&PointsTable, &TpBlock),
+    (r, origin): (&Recipe, &Origin),
+    held: usize,
+) -> Result<()> {
+    let aligned = inp.aligned;
+    match ids {
+        Some(mut ids) => {
+            sort_graph(&mut ids);
+            let json = time("proofs: graph", || graph_json(&ids, points));
+            time("proofs: write", || {
+                write_table_tp(sink, aligned, tp, r, origin, &mut json.as_bytes())
+            })
+        }
+        None => {
+            let need = held + aligned.len() * GraphStream::bytes_per_row();
+            let _g = budget.reserve("proofs", need)?;
+            let mut graph = GraphStream::new(inp);
+            time("proofs: write", || {
+                write_table_tp(sink, aligned, tp, r, origin, &mut graph)
+            })
+        }
+    }
 }
 
 /// The view of the products of the table (`tp/1`): empty without a parent in the table or without controls to read the gates against.
@@ -214,11 +289,11 @@ fn tp_block(
     fragments: Option<&[f64]>,
     rules: Option<&Rules>,
     unit: bool,
+    signs: &[Signs],
 ) -> TpBlock {
     let Some(parent) = parent else {
         return TpBlock::default();
     };
-    let signs = row_signs(inp);
     let params = TpParams {
         ppm: if unit {
             -mzlab_feat::axis::LR_TOL
@@ -231,7 +306,7 @@ fn tp_block(
         aligned: inp.aligned,
         minutes,
         hyps,
-        signs: &signs,
+        signs,
         parent,
         fragments,
         params: &params,

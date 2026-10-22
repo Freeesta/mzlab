@@ -68,7 +68,8 @@ fn the_json_key_is_deterministic_and_leaves_the_graph_untouched() {
     let a = con_interpretazione(&j, &g, PPM);
     let (g2, j2) = grafo_spostato(&con(Some("C8H10N4O2+H")), &[3, 2, 1, 0], false, 0.0);
     assert_eq!(a, con_interpretazione(&j2, &g2, PPM));
-    assert!(a.starts_with(j.strip_suffix('}').unwrap()));
+    assert!(a.starts_with(j.split(",\"vista\":").next().unwrap()));
+    assert!(a.ends_with(&j[j.find(",\"vista\":").unwrap()..]));
     assert!(a.contains(",\"interpretazione\":{\"versione\":1,\"ppm\":10,\"archi\":["));
     assert!(a.contains("\"nome\":\"carbon monoxide\""));
 }

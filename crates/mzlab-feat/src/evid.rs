@@ -17,8 +17,8 @@ pub mod rowproofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
 pub use graph::{
-    build_graph, match_hypotheses, match_hypotheses_in, Edge, EdgeKind, ExternalHit, Facts,
-    Identity, Inputs, Kinetics, LibHit, Member, Node, HYPOTHESIS_PPM,
+    build_graph, identities, match_hypotheses, match_hypotheses_in, sort_graph, Edge, EdgeKind,
+    ExternalHit, Facts, Identity, Inputs, Kinetics, LibHit, Member, Node, HYPOTHESIS_PPM,
 };
 pub use out::{graph_json, GraphStream, EVID_GRAPH_FORMAT};
 
