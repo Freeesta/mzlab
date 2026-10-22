@@ -92,3 +92,18 @@ await out(async () => {
 });""" % RUN)
     assert got["keys"] == ["error.featMemory:1400:1", "error.featMemory:4000:1", "error.featMemory:1400:1"]
     assert got["seen"] == [512, 512, 512]                        # never run at the high budget without the yes
+
+
+def test_progress_from_inside_a_call_reaches_the_step_callback_and_the_call_still_resolves():
+    body = """
+class W { postMessage(m) { setTimeout(() => {
+  if (m.op === "init" || m.op === "alias") return this.onmessage({ data: { id: m.id, ok: true, crate: "x" } });
+  this.onmessage({ data: { id: m.id, progress: [1, 4] } });
+  this.onmessage({ data: { id: m.id, progress: [4, 4] } });
+  this.onmessage({ data: { id: m.id, ok: true, bytes: new Uint8Array(1), mem: 1 } });
+}, 1); } terminate() {} }
+const steps = [];
+const p = createFeatPool({ workerUrl: "x", size: 1, idleMs: 0, wasm, WorkerClass: W, onStep: s => steps.push([s.name, s.done, s.total]) });
+await out(async () => { const r = await p.detectAll([{ name: "a", path: "a" }], "{}"); return { n: r.length, steps }; });
+"""
+    assert run(body) == {"n": 1, "steps": [["a", 1, 4], ["a", 4, 4]]}

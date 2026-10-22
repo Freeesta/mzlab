@@ -128,6 +128,29 @@ fn the_decoys_explain_less_and_the_same_seed_gives_the_same_lines() {
     // two records with the same nominal precursor but another structure give each other the spectrum
     let l2 = righe(&run(&["msn-rules", &a, &b, "--regole", "--decoy", "5"]));
     assert!(l2.iter().all(|l| l.get("dp").is_some()));
+    // the same compound at another energy (same neutral formula) is not a decoy
+    let a2 = scrivi(
+        "d3.txt",
+        &registro("SYN-D3", "LC-ESI-QFT", "HCD", "[M+H]+", "CC(=O)Nc1ccccc1"),
+    );
+    let l3 = righe(&run(&["msn-rules", &a, &a2, "--regole", "--decoy", "5"]));
+    assert!(l3.iter().all(|l| l.get("dp").is_none()));
+}
+
+#[test]
+fn a_nominal_mass_record_is_counted_apart() {
+    let m = |a: f64| {
+        format!("{{\"n\":2,\"it\":100,\"a\":1,\"ia\":{a},\"b\":0,\"ib\":0,\"c\":0,\"ic\":0,\"r\":{{}}}}")
+    };
+    let t = format!(
+        "{{\"id\":\"N\",\"strato\":\"fascio\",\"pol\":1,\"v\":{}}}\n{{\"id\":\"H\",\"strato\":\"fascio\",\"pol\":1,\"v\":{}}}\n",
+        m(20.0),
+        m(90.0)
+    );
+    let s = parse(somma(&t).unwrap().as_bytes()).unwrap();
+    let st = &s.get("strati").unwrap().arr()[0];
+    assert_eq!(st.get("nominali").unwrap().f64(), Some(1.0));
+    assert_eq!(st.get("registri").unwrap().f64(), Some(1.0));
 }
 
 #[test]
