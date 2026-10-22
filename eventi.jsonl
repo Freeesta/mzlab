@@ -1382,3 +1382,4 @@
 {"v":1,"tipo":"pr","pr":1451,"sha":"83ea2c1934806e9294e2b728c414960f38cd249f","ts_utc":"2026-10-22T07:21:15Z","azione":"unita","aperta_s":534,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":7,"righe_meno":1,"file_n":3,"file":["docs/agenti/ci-veloce.md","tests/test_stat_ci.py","tools/stat_ci.py"],"aree":{"docs":1,"test":1,"tools":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
 {"v":1,"ts_utc":"2026-10-22T07:24:24Z","azione":"aperta","tipo":"pr","pr":1455,"sha":"0355ebd74b9d29907151295566830e10d715dbcb"}
 {"v":1,"ts_utc":"2026-10-22T07:25:08Z","azione":"aperta","tipo":"pr","pr":1456,"sha":"1112a6b033f5230cde595b8f121505352306537e"}
+{"v":1,"ts_utc":"2026-10-22T07:25:32Z","azione":"push","titolo":"Studio Flow-Live: frase del test di L1 chiarita","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1455,"sha":"fb518895df2331505160aab1a734a188cf05eaa9"}
