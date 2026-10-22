@@ -44,7 +44,8 @@ def test_pr_unita():
                     {"parents": [1, 2], "commit": {"message": "Merge branch 'main' into claude/x"}},
                     {"parents": [1], "commit": {"message": "fix"}}, {"parents": [1], "commit": {"message": "cargo fmt"}}]
         return {"check_runs": [{"id": 1, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:30:00Z"},
-                               {"id": 2, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:40:00Z"}]}
+                               {"id": 2, "name": "a", "status": "completed", "conclusion": "success", "completed_at": "2026-10-21T10:40:00Z"},
+                               {"id": 3, "name": "registra", "status": "in_progress", "conclusion": None, "completed_at": None}]}
     r = s.righe_pr({"action": "closed", "pull_request": pr}, api)[0]
     assert (r["azione"], r["aperta_s"], r["merge_main"], r["verde_a_unione_s"]) == ("unita", 10800, 1, 1200)
     assert r["cause_commit"] == {"merge di main": 1, "altro": 1, "fmt/clippy": 1}

@@ -55,12 +55,13 @@ def api_get(path: str):
     if os.environ.get("GITHUB_TOKEN"):
         headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     req = urllib.request.Request(f"{base}/repos/{repo}{path}", headers=headers)
-    for i in range(4):
+    # 503 "Egress is over the account limit" lasts longer than a few seconds: back off up to about a minute
+    for i in range(6):
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 return json.load(r)
         except Exception:
-            if i == 3:
+            if i == 5:
                 raise
             time.sleep(2**i)
 
@@ -159,10 +160,12 @@ def cause_commit(n: int, api) -> dict[str, int]:
 
 
 def verde_il(sha: str, api) -> str | None:
-    """Time at which the last check of `sha` finished, when all the latest checks passed; None otherwise."""
+    """Time at which the last check of `sha` finished, when all the latest checks passed; None otherwise.
+    The `registra` job of stat-ci is left out: the event being recorded is that job itself, still running."""
     latest = {}
     for c in sorted(api(f"/commits/{sha}/check-runs?per_page=100")["check_runs"], key=lambda c: c["id"]):
-        latest[c["name"]] = c
+        if c["name"] != "registra":
+            latest[c["name"]] = c
     if not latest or any(c["status"] != "completed" or c["conclusion"] not in OK for c in latest.values()):
         return None
     return max(c["completed_at"] for c in latest.values())
