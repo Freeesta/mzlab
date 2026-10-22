@@ -881,3 +881,4 @@
 {"v":1,"ts_utc":"2026-10-22T05:36:56Z","azione":"aperta","tipo":"pr","pr":1433,"sha":"fe678f7c1c0649cdda31cc0b4c64f90f7880baf4"}
 {"v":1,"ts_utc":"2026-10-22T05:44:09Z","azione":"push","titolo":"Fondi main","merge_main":false,"aree":{"altro":7,"rust":14,"docs":7,"test":1,"tools":1},"tipo":"pr","pr":1431,"sha":"40c5850f35e5eb2d56661f53e9e24a66b25431e9"}
 {"v":1,"ts_utc":"2026-10-22T05:44:16Z","azione":"aperta","tipo":"pr","pr":1434,"sha":"560d909d59ec69991beddf3678ea21e1f82ce394"}
+{"v":1,"ts_utc":"2026-10-22T05:46:18Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/match-tabella","merge_main":true,"aree":{"altro":7,"rust":14,"docs":7,"test":1,"tools":1},"tipo":"pr","pr":1427,"sha":"bb9ddf16c4fafc1b8b20941d99108f9d3ea0fc1f"}
