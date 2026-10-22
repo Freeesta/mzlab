@@ -5552,3 +5552,4 @@
 {"v":1,"ts_utc":"2026-10-22T12:44:29Z","tipo":"carico","k":"2026-10-22T12:4","job_in_coda":0,"job_in_corso":16}
 {"v":1,"ts_utc":"2026-10-22T13:14:12Z","azione":"aperta","tipo":"pr","pr":1498,"sha":"b4213b01e70db72d667d07a235c8aaf49e13902c"}
 {"v":1,"ts_utc":"2026-10-22T13:29:37Z","azione":"push","titolo":"Test del Flow: Templates ora è un interruttore, apri le schede solo se chiuse","merge_main":false,"aree":{"test":2},"tipo":"pr","pr":1498,"sha":"88e37bb9f92bdcec0ec58099a059fa9098acfec3"}
+{"v":1,"ts_utc":"2026-10-22T13:35:33Z","azione":"aperta","tipo":"pr","pr":1499,"sha":"fcdc0a14c2b11d8b35902213fea74ffd7958e790"}
