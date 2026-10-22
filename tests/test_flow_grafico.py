@@ -115,3 +115,7 @@ def test_the_msn_graph_view_reads_the_modifications_and_the_ions():
 
 def test_the_import_card_reads_a_metadata_table_and_lays_it_over_the_files():
     assert node("flow_import_meta.js").strip() == "ok"
+
+
+def test_the_xlsx_reader_gives_the_first_sheet_of_a_workbook():
+    assert node("flow_xlsx.js").strip() == "ok"

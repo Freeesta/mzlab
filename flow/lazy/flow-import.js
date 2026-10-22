@@ -62,9 +62,11 @@
     const input = (S.plan.inputs || []).find((/** @type {any} */ i) => i.type === "samples") || (S.metaInput = S.metaInput || { name: "metadata", sha256: "", type: "samples" });
     const click = (/** @type {string} */ id) => { const n = document.getElementById(id); if (n) n.click(); else say.textContent = "The Data tab has no loader here."; };
     const drawTable = () => table.replaceChildren(F.samplesEditor ? F.samplesEditor(S, input) : "");
-    const upload = el("input", { type: "file", accept: ".csv,.tsv,.txt,text/csv,text/tab-separated-values", hidden: true, "aria-label": "Metadata table (CSV or TSV)", onchange: async (/** @type {any} */ e) => {
+    const upload = el("input", { type: "file", accept: ".csv,.tsv,.txt,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", hidden: true, "aria-label": "Metadata table (CSV, TSV or XLSX)", onchange: async (/** @type {any} */ e) => {
       const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
-      const r = F.parseMetadata(await f.text(), G.CDOC ? G.CDOC.KINDS : []);
+      let text = "";
+      try { text = /\.xlsx$/i.test(f.name) ? await F.xlsxToText(await f.arrayBuffer()) : await f.text(); } catch (err) { say.textContent = `${f.name}: ${(/** @type {any} */ (err)).message || err}`; return; }
+      const r = F.parseMetadata(text, G.CDOC ? G.CDOC.KINDS : []);
       if (r.error) { say.textContent = `${f.name}: ${r.error}`; return; }
       const cur = (S.samples && S.samples[input.name]) || F.samplesFromData() || { schema: "campioni/2", campioni: [] };
       await F.samplesSet(S, input, F.applyMetadata(cur, r.rows));
@@ -77,8 +79,8 @@
         F.btn("plus", "Add data files from the computer", () => click("pick"), "Add files"),
         F.btn("file", "Add a whole folder of data files", () => click("pickdir"), "Add a folder")),
       el("h4", { text: "Metadata" }),
-      el("p", { class: "fl-note", text: "Generate them from the files in Data, upload a CSV or TSV table (columns File, Role, Time, Series, Replicate), then fix what is missing in the table." }),
-      el("div", { class: "fl-meta" }, F.btn("import", "Upload a CSV or TSV metadata table", () => upload.click(), "Upload table"), upload), say, table);
+      el("p", { class: "fl-note", text: "Generate them from the files in Data, upload a CSV, TSV or XLSX table (first sheet; columns File, Role, Time, Series, Replicate), then fix what is missing in the table." }),
+      el("div", { class: "fl-meta" }, F.btn("import", "Upload a CSV, TSV or XLSX metadata table", () => upload.click(), "Upload table"), upload), say, table);
     drawTable();
     // the files are added by the Data loaders, which tell nobody: look for a change while the card is on the page
     let seen = F.dataFiles().join("\n");
