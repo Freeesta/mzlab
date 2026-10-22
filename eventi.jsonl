@@ -831,3 +831,4 @@
 {"v":1,"ts_utc":"2026-10-22T02:54:20Z","azione":"aperta","tipo":"pr","pr":1411,"sha":"8a651895919546af98f2764abbd1baa9a1331c6e"}
 {"v":1,"ts_utc":"2026-10-22T03:06:31Z","azione":"aperta","tipo":"pr","pr":1412,"sha":"6fb2575b77c94c78fa499cca3fc2cd682fb95384"}
 {"v":1,"ts_utc":"2026-10-22T03:17:04Z","azione":"push","titolo":"Fondo main","merge_main":false,"aree":{"workflow":1,"docs":1,"test":1,"tools":4},"tipo":"pr","pr":1412,"sha":"547f20baf32d499d996641f4a48ca57c36631560"}
+{"v":1,"ts_utc":"2026-10-22T03:29:39Z","azione":"aperta","tipo":"pr","pr":1413,"sha":"239a01524ab8525937e089be396b30bcef801ba5"}
