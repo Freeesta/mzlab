@@ -25,7 +25,7 @@ r = Run(port=8979, wd="/tmp/wd_msngrafo_apri")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1500})
-        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_timeout(1500)
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); attendi(pg, "typeof INFGAPRI !== 'x' && !!document.querySelector('#pick')")
         api_before = lambda: pg.evaluate("(window.__qqU||[]).filter(u=>/api\\//.test(u)).length")
         base = api_before()
         def opened(path, via="pick"):
