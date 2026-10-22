@@ -55,6 +55,9 @@ mod flow_level;
 mod flow_link;
 #[cfg(test)]
 mod flow_link_tests;
+mod flow_lookup;
+#[cfg(test)]
+mod flow_lookup_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
