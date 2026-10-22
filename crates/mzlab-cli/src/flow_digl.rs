@@ -23,6 +23,7 @@ pub fn cli_steps() -> Vec<Step> {
         crate::flow_msnlib::library_step(),
         crate::flow_msnlib::table_step(),
         crate::flow_compare::compare_step(),
+        mzlab_feat::steps::table_match(),
         dig_lr_step(),
     ]
 }

@@ -90,6 +90,9 @@ mod flow_stats;
 mod flow_table;
 #[cfg(test)]
 mod flow_table_tests;
+mod flow_tablematch;
+#[cfg(test)]
+mod flow_tablematch_tests;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_graph;

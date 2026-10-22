@@ -358,8 +358,9 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
     let name = text_param(job, "name_contains").to_lowercase();
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
-    o.raw("{\"format\":\"candidates/1\",\"step\":\"spectra.match@1\",\"algorithm\":")
-        .str(&alg);
+    o.raw("{\"format\":\"candidates/1\",\"step\":")
+        .str(&format!("{}@1", job.step.id));
+    o.raw(",\"algorithm\":").str(&alg);
     if decoys {
         o.raw(",\"decoys\":\"spectrum\",\"fdr_note\":")
             .str(fdr_note());
@@ -420,7 +421,7 @@ fn tree_text(job: &Job, query: Named, library: Named) -> Result<String> {
     cerca(text(library)?, text(query)?, &o)
 }
 
-fn text(f: Named) -> Result<&str> {
+fn text<'a>(f: Named<'a>) -> Result<&'a str> {
     std::str::from_utf8(f.1).map_err(|_| Error::new("err.flow.match.format").with("file", f.0))
 }
 

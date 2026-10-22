@@ -10,7 +10,7 @@ use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_feat_table_wasm::core::table_file;
 
 /// Polarity the detection of the table ran in: the recipe in its meta is text (`detect=Params { .. polarity: Some(-1) .. }`); positive when it names none.
-fn polarity(table: &[u8]) -> Result<i32> {
+pub(crate) fn polarity(table: &[u8]) -> Result<i32> {
     let (_, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
     let recipe = meta.get("recipe").and_then(|r| r.str()).unwrap_or("");
     Ok(if recipe.contains("polarity: Some(-1)") {
