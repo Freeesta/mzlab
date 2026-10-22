@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the sample list of a plan (input type `samples`, a campioni/2 document) filled in place: «From Data» takes the roles and times of the files open in the Data tab, «Edit» is an inline table
+// Flow (administrator mode): the sample list of a plan (input type `samples`, a campioni/2 document) filled in place: «Generate metadata» takes the roles and times of the files open in the Data tab, «Edit» is an inline table
 // (file, role, time, series, replicate). The document lives in memory (S.samples[input name]) and the input keeps its SHA-256 (the canonical form of the Rust of mzlab-core), which the plan records.
 (() => {
   "use strict";
@@ -53,7 +53,7 @@
   };
 
   /** an empty entry of the table @param {number} i */
-  const blank = i => ({ composto: "", concentrazione: null, file: "", istd: false, note: "", ordine_iniezione: i + 1, replica: 1, serie: "", sha256: "", tempo: null, tempo_confermato: false, tempo_min: null, tipo: "sample", tipo_bianco: null, unita: null, unita_tempo: "min" });
+  const blank = F.sampleBlank = i => ({ composto: "", concentrazione: null, file: "", istd: false, note: "", ordine_iniezione: i + 1, replica: 1, serie: "", sha256: "", tempo: null, tempo_confermato: false, tempo_min: null, tipo: "sample", tipo_bianco: null, unita: null, unita_tempo: "min" });
 
   /** the inline editor of one sample list @param {any} S @param {any} input the input of the plan */
   F.samplesEditor = (S, input) => {
@@ -67,7 +67,7 @@
       const data = F.samplesFromData();
       const sha = el("code", { class: "flx-smp-sha", title: input.sha256 || "", text: input.sha256 ? input.sha256.slice(0, 12) + "…" : "not saved yet" });
       box.append(el("div", { class: "fl-meta" },
-        F.btn("import", "Take the roles and times of the files open in Data", async () => { const x = F.samplesFromData(); if (x) await save(x); }, "From Data"),
+        F.btn("import", "Take the roles and times of the files open in Data", async () => { const x = F.samplesFromData(); if (x) await save(x); }, "Generate metadata"),
         F.btn("plus", "Add a file to the list", () => { const n = { ...d, campioni: [...rows, blank(rows.length)] }; void save(n); }, "Add a file"),
         F.btn("export", "Download the sample list as JSON", () => { const j = S.samplesJson && S.samplesJson[input.name]; if (j) G.ATTRIBUTIO_CORE.download(input.name, j, "application/json"); }, "Download"),
         el("span", { class: "fl-note", text: "SHA-256 " }), sha), say);
