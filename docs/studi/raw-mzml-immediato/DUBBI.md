@@ -10,12 +10,12 @@
 - **D7 Lettori di terzi**: accettano array non standard, `arrayLength` diversi nello stesso spettro, zlib a blocchi stored e nessuna compressione? Prova E6 (RM-7). Ripiego: colonne per picco in un file accanto (`.mzidx` con il blocco colonnare di T-7, decisione già presa) e mzML solo standard.
 - **D8 Perché più thread rallentano**: l'ipotesi è il memset del `reset` per array (≈ 33 000 array su LAB-B) che satura la banda della memoria, più il produttore seriale. Si chiude con RM-0 (callgrind per thread, contatori di banda) e RM-3 (senza reset).
 - **D9 SHA-1**: quello del `.raw` (provenienza) va sul percorso critico solo se il file non è già letto per intero; quello dell'uscita è seriale per definizione. RM-3 misura un thread dedicato; se T_min è dominato dall'SHA-1 su file da diversi GB, si dichiara il limite.
-- **D10 Attivazione**: mappatura dal filtro (`@cid`, `@hcd`, `@etd`, `@ethcd`, `@uvpd`, `@sa`) e dal trailer ai termini CV come msconvert. Oggi `@cid` diventa HCD (LAB-B scansione 2). Prova F5 su tutto il corpus (RM-1).
+- **D10 Attivazione**: mappatura dal filtro (`@cid`, `@hcd`, `@etd`, `@ethcd`, `@uvpd`, `@sa`) e dal trailer ai termini CV come msconvert. Oggi `@cid` diventa HCD: 16 038 MS2 su 16 038 di LAB-B (msconvert: MS:1000133). Prova F5 su tutto il corpus (RM-1).
 - **D11 Costo della CLI**: `convert` impiega 5,97 s contro 2,87 s dello scrittore nel banco, e il livello 0 cambia solo 0,23 s. Va scomposto in RM-0 (SHA-256 per la cache, indicizzazione, copia/collegamento, chiavi `conv/1`).
 
 ## Decisioni chieste al Coordinatore (con raccomandazione)
 1. **Uscita senza perdite**:
-   - **Raccomando**: un nuovo valore `--peaks tutto`. Lo spettro porta il profilo come array standard e la lista con le colonne per picco come array non standard, con `arrayLength`.
+   - **Raccomando**: un nuovo valore `--peaks tutto`. Lo spettro porta il profilo come array standard, la lista come array non standard e le colonne per picco con i termini CV standard (charge, resolution, noise, baseline, sampled noise), con `arrayLength`.
    - Il valore di base `file` resta com'è finché E6 non passa.
    - In alternativa: due mzML (profilo e centroidi). Più semplice per i lettori, ma doppio disco.
 2. **Zeri**: di base i soli punti del file (niente inventato); `--set conv.zeri=rfr` per la parità con msconvert e RFR (F3). **Raccomando** questa.

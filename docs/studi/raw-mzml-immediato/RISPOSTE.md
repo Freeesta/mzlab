@@ -70,10 +70,11 @@ L'errore di −1,4 ppm è dello strumento, non della centroidatura.
 - inventare un valore che il file non ha (un campo mancante resta assente);
 - scrivere un mzML che dipende dal numero di thread o dalla macchina.
 
-Oggi abbiamo tre perdite:
+Oggi abbiamo quattro perdite (la quarta trovata nella valutazione delle idee Gemini, `VALUTAZIONE_GEMINI.md` M2: il potere risolutivo MS:1000800 non è scritto come termine CV):
 - `peaks=file` su LAB-B scrive la lista e butta il profilo;
 - le colonne per picco sono scartate (lo stream del descrittore viene saltato);
-- l'attivazione `@cid` di LAB-B esce come HCD.
+- l'attivazione `@cid` esce come HCD su tutte le 16 038 MS2 di LAB-B;
+- MS:1000800 manca (c'è solo un `userParam`).
 
 ### 1.3 «Il più veloce possibile»: il limite fisico
 Il tempo minimo è il massimo fra quattro pavimenti, che non si sommano perché gli stadi si sovrappongono a flusso:

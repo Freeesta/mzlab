@@ -12,7 +12,8 @@ Questo studio risponde al compito: convertire un `.raw` Thermo HRMS in mzML nel 
   - E: prove esterne.
 - **`DUBBI.md`**: i dubbi D1-D11 e cinque decisioni per il Coordinatore, ognuna con una raccomandazione.
 - **`RICHIESTE_LOCALE.md`**: le richieste R-a…R-e per la chat locale (RFR, msconvert, calibranti, validatori, file pubblici), da copiare in `SCAMBIO_LOC.md`.
-- **`prompt/`**: le regole comuni (`COMUNI.md`) e i prompt RM-0…RM-8 per le chat DEV.
+- **`VALUTAZIONE_GEMINI.md`**: verdetti, con le prove, sulle idee e sul codice del documento Gemini del repository privato, e cosa entra nei prompt.
+- **`prompt/`**: le regole comuni (`COMUNI.md`) e i prompt RM-0…RM-9 per le chat DEV.
 
 ## Tesi in quattro righe
 1. **Centroidi.** Nelle scansioni FT i centroidi giusti sono quelli che lo strumento ha già scritto nel file. Si copiano al bit (costo ~0) insieme alle colonne per picco che oggi buttiamo. La nostra centroidatura serve solo dove la lista manca, misurata contro simulati, calibranti e lista dello strumento.
@@ -32,6 +33,7 @@ Questo studio risponde al compito: convertire un `.raw` Thermo HRMS in mzML nel 
 | RM-6 | banco della centroidatura | RM-0 | tutti | banco nuovo in `mzlab-core` |
 | RM-7 | prove esterne con la locale | RM-2, RM-3, RM-4 (si ripete) | – | `tools/` |
 | RM-8 | fuzzing e casi limite | RM-4 | RM-5, RM-7 | test e bersagli di fuzzing |
+| RM-9 | Numpress veloce (opzione con perdita) | RM-3, RM-0 (denso) | RM-5…RM-8 | `numpress.rs`, `mzmlwrite/codifica.rs` |
 
 - Una PR alla volta per gruppo di file: RM-1 e RM-2 su `rawlettore.rs`; RM-3 e RM-4 su `mzmlwrite`.
 - T-7 resta il prompt del lettore. RM-2 e T-7b si toccano su `scan_data.rs` (decisione 4 di `DUBBI.md`). RM-6 è il banco di T-7e (B4).

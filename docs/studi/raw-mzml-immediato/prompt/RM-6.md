@@ -24,6 +24,15 @@ Pacchetto RM-6 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
 4. **C3**: timololo (317,16419; ³⁴S 319,15998; ¹³C 318,16754) in LAB-B, e i calibranti di R-a quando arrivano.
 5. **C4**: scansioni IT solo profilo (small.RAW, IT-HCD-SPS) contro msconvert `peakPicking vendor` (R-c).
 
+6. **Varianti da misurare** (`VALUTAZIONE_GEMINI.md` K9-K13, G14):
+   - logaritmo senza libm, deterministico (F9), con l'errore dichiarato;
+   - altezza all'apice con l'esponenziale del vertice, non al primo ordine;
+   - fit nel dominio della frequenza (bin uniformi), convertito poi con la formula m/z;
+   - soglia dal rumore interpolato dai nodi del file invece di una soglia unica;
+   - limiti di δ e FWHM che dichiarano i fit cattivi invece di nasconderli.
+   
+   Il rilevatore SIMD a blocchi entra solo dopo che lo scalare passa C1, con la via scalare uguale al bit e il guadagno ≥ 10 %.
+
 ## Accettazione
 Tabella C1-C4 con tutti i numeri, anche quelli che falliscono; per ogni fallimento la causa e una proposta (un parametro nuovo spento di base). Nessun byte dell'uscita di base cambia (F10).
 

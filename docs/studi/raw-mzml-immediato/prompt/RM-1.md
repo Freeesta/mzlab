@@ -17,7 +17,10 @@ Pacchetto RM-1 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
 
 ## Passi
 1. **Confronto dei metadati**: scrivi un confronto (strumento in `tools/`, Python ammesso: legge due mzML e confronta i termini CV per spettro) del nostro mzML con quello di msconvert per LAB-A e LAB-B. Confronta: livello MS, polarità, analizzatore, attivazione ed energia, precursore (m/z, carica, finestra), RT, TIC/BPC. Tabella delle differenze.
-2. **Attivazione** (D10): mappa il filtro e il trailer ai termini CV come msconvert: `@cid` → MS:1000133, `@hcd` → MS:1000422, `@etd`, `@ethcd`, `@uvpd`, supplementare. Oggi `@cid26` di LAB-B scansione 2 esce come HCD: è il primo caso del test.
+2. **Attivazione** (D10): mappa il filtro e il trailer ai termini CV come msconvert: `@cid` → MS:1000133, `@hcd` → MS:1000422, `@etd`, `@ethcd`, `@uvpd`, supplementare. Oggi tutte le 16 038 MS2 `@cid` di LAB-B escono come HCD (MS:1000422): è il primo caso del test.
+5. **Potere risolutivo**: MS:1000800 per scansione, come msconvert (oggi solo `userParam` `opentfraw.resolution`).
+6. **Precursore**: ripiego quando `Monoisotopic M/Z` del trailer vale 0, confrontato con msconvert su tutto il corpus.
+7. **Cromatogrammi non MS**: oltre alla pressione (MS:1003019, già scritta), controlla sul corpus temperatura (MS:1002715) e UV/PDA; scrivi ciò che il file ha. Fonte delle idee 5-7: `VALUTAZIONE_GEMINI.md` M2, M4, M11.
 3. **`opentfraw.is_dia`**: oggi vale true su una MS2 mirata di LAB-B. Trova la regola giusta (finestra larga, msx, filtro DIA) o togli il campo se non è nel file.
 4. Controlla che **ogni campo del trailer** e dello stato sia scritto (nessuno filtrato) e che un campo assente resti assente (F7).
 

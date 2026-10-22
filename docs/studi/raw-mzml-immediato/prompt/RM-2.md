@@ -24,7 +24,8 @@ Pacchetto RM-2 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
 1. **Descrittore** (D1): decodifica indice, carica e flag per picco; esponili nel `Lettore` e in `scandump/1`, poi confronta con Charges e Flags di RFR (R-b). Un campo verificato su tutto il corpus entra in `VERIFICATI` di `crates/mzlab-lettori/tests/scandump_thermo.rs`.
 2. **Risoluzione, rumore e linea di base**: la risoluzione dallo stream «unknown»; per rumore e linea di base, i nodi oppure i valori per picco come RFR (D4), con la formula verificata al bit.
 3. **Zeri** (D2): ricava la regola dai dump RFR del profilo. Opzione `--set conv.zeri=file|rfr` (base `file`): con `rfr` l'array è uguale a msconvert (F3) e ogni spettro dichiara quanti zeri aggiunti.
-4. **`--peaks tutto`**: il profilo come array standard; la lista e le colonne come `binaryDataArray` non standard (MS:1000786 con nome: `centroid m/z`, `centroid intensity`, `charge`, `flags`, `resolution`, `noise`, `baseline`), con `arrayLength`. Coefficienti e fudge per scansione in `userParam` per F4.
+4. **`--peaks tutto`**: il profilo come array standard. La lista come array non standard (MS:1000786: `centroid m/z`, `centroid intensity`) e le colonne con i termini CV standard (MS:1000516 charge, MS:1002529 resolution, MS:1002742 noise, MS:1002530 baseline; i nodi con MS:1002743/1002744/1002745; i flag come MS:1000786 `flags`), con `arrayLength`.
+   Con `--peaks file` le stesse colonne si aggiungono agli spettri centroidi con la stessa lunghezza (niente `arrayLength`). Verifica dei termini: `crates/mzlab-core/data/psims-cv.json`; `VALUTAZIONE_GEMINI.md` M9. Coefficienti e fudge per scansione in `userParam` per F4.
 5. **F4**: un test che dall'mzML ricalcola i bin del file per il 100 % dei punti di LAB-B.
 
 ## Accettazione

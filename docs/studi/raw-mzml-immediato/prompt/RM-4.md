@@ -24,6 +24,8 @@ Pacchetto RM-4 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
 3. Scrittore ordinato: riceve spettri finiti in qualunque ordine e scrive nell'ordine del file, con gli offset; budget in byte (back-pressure).
 4. Misura 1/2/4/N thread su LAB-A, LAB-B, BAF e il denso; curva di Amdahl con la parte seriale misurata.
 
+5. **Errori da non ripetere** (`VALUTAZIONE_GEMINI.md` K3-K6): la finestra dello scrittore ordinato è limitata a k+W lotti e un worker prende il buffer prima del lotto, così che il blocco descritto in K4 non può avvenire (test con thread rallentati a caso, 10⁴ giri); gli offset puntano a `<`; nessun `expect` né `unwrap` sul percorso dei dati; nessun `&mut [u8]` su memoria non inizializzata.
+
 ## Accettazione
 - V1 ≤ 0,6 s, V2 ≤ 0,5 s, V3 ≤ 3× T_min e V4 sul container a 4 core.
 - V5 ≥ 0,7·N fino a 4 core, oppure la roofline che mostra disco o SHA-1 saturi.
