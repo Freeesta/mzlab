@@ -11,6 +11,7 @@ import { searchRow } from "./infusione-grafo-cerca.js";
 import { filtered, arcCells } from "./infusione-grafo-regole.js";
 import { addStyle } from "./infusione-grafo-css.js";
 import { guarda, mostraErrore } from "./infusione-grafo-avanza.js";
+import { openRow, dropZone } from "./infusione-grafo-apri.js";
 import { prepareMolfile } from "./infusione-grafo-mol.js";
 import { prettyFormula, splitCharge, vistaOf } from "./msngrafo-vista.js";
 
@@ -54,7 +55,7 @@ function zoomBar(/** @type {HTMLElement} */ bar, /** @type {HTMLElement} */ wrap
   const act = { in: () => setScale(V.scale * 1.25), out: () => setScale(V.scale / 1.25), fit: () => setScale(1), l: () => wrap.scrollBy(-80, 0), r: () => wrap.scrollBy(80, 0), u: () => wrap.scrollBy(0, -80), d: () => wrap.scrollBy(0, 80) };
   const defs = [["in", "+", "msngrafo.zoom.in"], ["out", "−", "msngrafo.zoom.out"], ["fit", "1:1", "msngrafo.zoom.fit"], ["l", "←", "msngrafo.pan.l"], ["r", "→", "msngrafo.pan.r"], ["u", "↑", "msngrafo.pan.u"], ["d", "↓", "msngrafo.pan.d"]];
   bar.innerHTML = defs.map(([a, t, k]) => h`<button type="button" class="bt" data-z="${a}" aria-label="${I18N.t(k)}" title="${I18N.t(k)}">${t}</button>`).join("") +
-    h`<button type="button" class="bt" id="ig-data" title="${I18N.t("tdati.btn.title")}">${I18N.t("tdati.btn")}</button><button type="button" class="bt" id="ig-copyd">${I18N.t("msngrafo.copydata")}</button><label class="ig-flt" title="${I18N.t("msngrafo.rule.filter.tip")}"><input type="checkbox" id="ig-rf"${raw(G.rf ? " checked" : "")} aria-label="${I18N.t("msngrafo.rule.filter.aria")}"> ${I18N.t("msngrafo.rule.filter")}</label>`;
+    h`<button type="button" class="bt" id="ig-data" title="${I18N.t("tdati.btn.title")}">${I18N.t("tdati.btn")}</button><button type="button" class="bt" id="ig-copyd">${I18N.t("msngrafo.copydata")}</button><label class="ig-flt" title="${I18N.t("msngrafo.rule.filter.tip")}"><input type="checkbox" id="ig-rf"${raw(G.rf ? " checked" : "")}${raw(G.ro && !(G.j && G.j.regole) ? ' disabled title="' + EH(I18N.t("msngrafo.file.off")) + '"' : "")} aria-label="${I18N.t("msngrafo.rule.filter.aria")}"> ${I18N.t("msngrafo.rule.filter")}</label>`;
   bar.querySelectorAll("[data-z]").forEach(b => b.addEventListener("click", () => /** @type {any} */ (act)[/** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.z)]()));
   bar.querySelector("#ig-data")?.addEventListener("click", () => G.j && TDATI.table(dataTable(true)));
   bar.querySelector("#ig-copyd")?.addEventListener("click", () => G.j && copyData());
@@ -145,13 +146,15 @@ function drawBody(/** @type {HTMLElement} */ b, /** @type {any} */ file, /** @ty
   if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; G.auto = false; return; }
   const redo = () => run(b, file);
   syncBar(b);
-  V.svg = drawGraph(wrap, filtered(G.j, G.rf), { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: openSpectrum });
+  V.svg = drawGraph(wrap, filtered(G.j, G.rf), { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: G.ro ? () => {} : openSpectrum });
   setScale(V.scale);
   if (keepFocus && G.sel) /** @type {HTMLElement | null} */ (wrap.querySelector(`.ig-node[data-id="${G.sel}"]`))?.focus();
   nodePanel(pan, nodeOf(G.sel), { redo, again: () => drawBody(b, file, false) });
-  exportRow(exp, file, G.sel);
-  const auto = G.auto; G.auto = false;
-  searchRow(find, file, auto);
+  if (G.ro) { exp.innerHTML = ""; find.innerHTML = ""; } else {
+    exportRow(exp, file, G.sel);
+    const auto = G.auto; G.auto = false;
+    searchRow(find, file, auto);
+  }
   if (window.TDATI && V.svg) { V.svg.setAttribute("aria-describedby", "ig-sum"); TDATI.attach(/** @type {any} */ (V.svg), () => dataTable(true)); }
 }
 
@@ -180,8 +183,9 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
   const focusId = (document.activeElement instanceof Element && document.activeElement.closest(".ig-node")?.getAttribute("data-id")) || null;
   const file = E.files.find(INF.isInf);
   if (!file) { b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`; return; }
-  b.innerHTML = h`<div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><p class="sm ig-bp" id="ig-bp"></p><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div><div id="ig-find"></div>`;
+  b.innerHTML = h`<div id="ig-open"></div><div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><p class="sm ig-bp" id="ig-bp"></p><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div><div id="ig-find"></div>`;
   V.el = b;
+  openRow(/** @type {HTMLElement} */ (b.querySelector("#ig-open"))); dropZone(b);
   const go = () => { G.scelte = []; run(b, file); };
   drawField(/** @type {HTMLElement} */ (b.querySelector("#ig-field")), file, go);
   wireSettings(b, () => run(b, file));
@@ -192,4 +196,15 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
   void tok; void p;
 }
 
-window.INFG = { render, G };
+/** Body of the window of a graph file opened without raw data: the same graph and panel of a node, read-only (G.ro), no field, settings, export or search. */
+async function renderRo(/** @type {HTMLElement} */ b, /** @type {string} */ name) {
+  addStyle();
+  b.innerHTML = h`<p class="muted sm" id="ig-ro-note">${I18N.t("msngrafo.file.ro", { name })}</p><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-bar" id="ig-bar2" role="toolbar" aria-label="${I18N.t("msngrafo.v.view.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><p class="sm ig-bp" id="ig-bp"></p><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div><div id="ig-find"></div>`;
+  V.el = b;
+  viewBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar2")), () => drawBody(b, null, false));
+  zoomBar(/** @type {HTMLElement} */ (b.querySelector("#ig-bar")), /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), () => drawBody(b, null, false));
+  /** @type {HTMLElement} */ (b.querySelector("#ig-msg")).innerHTML = summary() + warnLines();
+  drawBody(b, null, false);
+}
+
+window.INFG = { render, renderRo, G };

@@ -35,6 +35,7 @@ declare var FIG: any;
 declare var GRADIENTE: any;
 declare var I18N: any;
 declare var INFG: any;
+declare var INFGAPRI: any;
 declare var KMDCALC: any;
 declare var LETTORI_FAM: any;
 declare var LETTORI_MOD: any;

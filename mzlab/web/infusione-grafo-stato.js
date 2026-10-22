@@ -51,6 +51,8 @@ export const G = {
   bestOnly: false,
   /** @type {Set<string>} */ collapsed: new Set(),
   structs: true,
+  /** @type {string | null} The name of the graph file shown read-only (no raw data, no engine requests), else null. */
+  ro: null,
   /** The 2D molfile of the SMILES of the tab (OpenChemLib, infusione-grafo-mol.js), sent back to the graph for the drawings; "" = none. */
   molfile: "",
 };
@@ -127,7 +129,7 @@ const cuts = new Map();
  * Null when there is no SMILES, no ion, the node is a root, the engine answers without the key or the request fails.
  */
 export async function fetchStrutture(/** @type {any} */ n) {
-  if (!G.smiles || !G.j || !ionText() || n.livello < 2) return null;
+  if (G.ro || !G.smiles || !G.j || !ionText() || n.livello < 2) return null;
   if (G.j.strutture_tutti) return G.j.strutture_tutti.find((/** @type {any} */ s) => s.nodo === n.id) || null;
   const url = graphUrl(G.k) + "&strutture=" + n.id;
   if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.strutture || null).catch(() => null));
