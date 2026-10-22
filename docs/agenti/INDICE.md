@@ -66,7 +66,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
 | motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
-| misure dei motori | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; esportazioni: `misure-esporta.md`) |
+| misure dei motori | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
