@@ -11,7 +11,7 @@
   const CORE = ["flow-registry.js", "flow-check.js", "flow-plan.js", "flow-inputs.js", "flow-ui.js", "flow-palette.js", "flow-form.js", "flow-compare.js", "flow-chain.js", "flow-page.js", "flow-names.js", "flow-fix.js", "flow-canvas.js", "flow-inspect.js", "flow-issues.js", "flow-shell-css.js", "flow-shell.js"];
   // what is used only after a click or when a result arrives; the shell hooks guard for it and redraw when it is there (F.whenLate)
   const LATE = ["flow-results.js", "flow-run-end.js", "flow-samples.js", "flow-import.js", "flow-xlsx.js", "flow-report.js", "flow-select.js", "flow-views-attributio.js", "flow-views-msn.js", "flow-msn-graph.js", "flow-web-msn.js", "flow-msn-molecule.js", "flow-campaign.js", "flow-digest.js", "flow-review.js", "flow-family-proofs.js", "flow-views-features.js", "flow-views-tabui.js", "flow-desktop.js", "flow-web-run.js", "flow-live-view.js", "flow-live-card.js", "flow-live-bar.js", "flow-live-desktop.js", "flow-live-jobs.js", "flow-live.js", "flow-web-ui.js", "flow-run-ui.js"];
-  // not in these lists: flow-llm-tools.js and flow-llm.js (the assistant) are fetched by flow-shell.js only when the profile, the settings and the consent allow it
+  // not in these lists: flow-llm-chart.js, flow-llm-chart-ui.js, flow-llm-tools.js and flow-llm.js (the assistant) are fetched by flow-shell.js only when the profile, the settings and the consent allow it
   const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"];
   const idle = (/** @type {() => void} */ fn) => { if ("requestIdleCallback" in window) /** @type {any} */ (window).requestIdleCallback(fn, { timeout: 1500 }); else setTimeout(fn, 150); };
   /** @type {Promise<any[][]> | null} */ let listsP = null;

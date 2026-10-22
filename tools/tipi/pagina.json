@@ -232,6 +232,8 @@
     "../../flow/lazy/flow-web-msn.js",
     "../../flow/lazy/flow-msn-molecule.js",
     "../../flow/lazy/flow-llm.js",
+    "../../flow/lazy/flow-llm-chart.js",
+    "../../flow/lazy/flow-llm-chart-ui.js",
     "../../flow/lazy/flow-llm-tools.js",
     "../../flow/lazy/flow-web-ui.js"
   ]
