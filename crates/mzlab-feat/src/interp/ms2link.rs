@@ -10,7 +10,7 @@ use crate::attributio::review::raw::{ms1_metrics, Ms1Metrics, ScanInfo};
 #[cfg(feature = "attributio")]
 use crate::attributio::review::settings::ReviewSettings;
 use crate::axis::half;
-use crate::legacy::ms2::{consensus, read_scans, select, Consensus, Ms2Index};
+use crate::legacy::ms2::{consensus, read_scans, Consensus, Ms2Sorted};
 use crate::sweep::windows;
 
 /// Isolation centre within this many ppm of the m/z of the row (as mzFinder pools the MS2).
@@ -112,8 +112,19 @@ pub fn pick_scans_with<R: ReadAt>(
     limits: (f64, f64),
     p: &LinkParams,
 ) -> Vec<Ms2Scan> {
-    let m2 = Ms2Index::of(ix);
-    select(&[m2], mz, &[limits], p.select_ppm)
+    pick_scans_in(ix, &Ms2Sorted::of(ix), k, mz, limits, p)
+}
+
+/// `pick_scans_with` for a file whose `Ms2Sorted` is already built (one per file for all the rows).
+pub fn pick_scans_in<R: ReadAt>(
+    ix: &Index<R>,
+    m2: &Ms2Sorted,
+    k: usize,
+    mz: f64,
+    limits: (f64, f64),
+    p: &LinkParams,
+) -> Vec<Ms2Scan> {
+    m2.select_file(k, mz, limits, p.select_ppm)
         .into_iter()
         .map(|(_, g, rt)| {
             let s = &ix.scans[g];
@@ -171,7 +182,9 @@ pub fn fill_purity_with<R: ReadAt>(
     }
     asks.sort_by(|a, b| a.0.total_cmp(&b.0));
     let ranges: Vec<(f64, f64)> = asks.iter().map(|a| (a.0, a.1)).collect();
-    let mut found: Vec<(usize, bool, f64)> = Vec::new();
+    // purity before / after each scan; the first window found for a scan stays
+    let mut before_v: Vec<Option<f64>> = vec![None; scans.len()];
+    let mut after_v: Vec<Option<f64>> = vec![None; scans.len()];
     windows(ix, si, &ranges, 1 << 20, |k, a, b, slab| {
         let (_, _, i, before, pos) = asks[k];
         let prec = scans[i].precursor;
@@ -184,7 +197,12 @@ pub fn fill_purity_with<R: ReadAt>(
             }
         }
         if total > 0.0 {
-            found.push((i, before, own / total));
+            let slot = if before {
+                &mut before_v[i]
+            } else {
+                &mut after_v[i]
+            };
+            slot.get_or_insert(own / total);
         }
         Ok(())
     })?;
@@ -192,7 +210,7 @@ pub fn fill_purity_with<R: ReadAt>(
         let at = |before: bool| {
             let p = rt.partition_point(|&t| t <= s.rt);
             let pos = if before { p.checked_sub(1) } else { Some(p) };
-            let v = found.iter().find(|f| f.0 == i && f.1 == before)?.2;
+            let v = (if before { before_v[i] } else { after_v[i] })?;
             pos.and_then(|p| rt.get(p)).map(|&t| (t, v))
         };
         s.purity = interpolate(s.rt, at(true), at(false));
