@@ -16,7 +16,7 @@ pub const HELP: &str = "mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--p
   --rt-tol MIN   RT window in minutes (default 0.3)
 output: one CSV line per expected product: id, mz, rt, rows_mz (rows within the mass window), rows_in (also within the RT window), best_ppm, best_drt,
   detected, filled (cells of the best row), max_height, max_area, tp_status, stage (view | F1..F5 | no_row_mz | rt_off), nearest_ppm, nearest_drt,
-  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape)";
+  kinship (0-4), q_shape, q_snr (peak quality of the best row), rank_now (place of the best row in the view: kinship, then largest area), view_size, q_reason (bits 1 shape, 2 S/N, 4 points: why F1 hides the row), rank_k1..k3 (other orderings of the view: k1 kinship, peaks detected, area; k2 kinship, sources agreeing (`via`), peaks detected; k3 kinship, then log10 area + 1.5 x share of files detected + 0.5 x sources + peak shape), kin_rank / kin_size (place of the best row among the view rows of its own kinship, in view order, and the size of that group), singles_above (rows above it in the view seen in one file only), view_single_pct (percent of the whole view seen in one file only)";
 
 struct Args {
     table: String,
@@ -126,6 +126,30 @@ fn key(t: &Aligned, r: usize, k: usize) -> [f64; 3] {
 }
 
 impl<'a> Cx<'a> {
+    /// Place of `r` among the view rows of its own kinship (in view order), the size of that group, and how many rows above `r` in the view were seen in one file only.
+    fn group(&self, r: usize) -> Option<(usize, usize, usize)> {
+        let mine = self.rank[r][0]?;
+        let kn = kin(self.t, r);
+        let (mut place, mut size, mut singles) = (1, 0, 0);
+        for q in (0..self.t.len()).filter(|&q| self.rank[q][0].is_some()) {
+            let above = self.rank[q][0] < Some(mine);
+            if kin(self.t, q) == kn {
+                size += 1;
+                place += usize::from(above);
+            }
+            singles += usize::from(above && cells(self.t, q).0 == 1);
+        }
+        Some((place, size, singles))
+    }
+
+    /// Percent of the view rows seen in one file only.
+    fn single_pct(&self) -> f64 {
+        let n = (0..self.t.len())
+            .filter(|&q| self.rank[q][0].is_some() && cells(self.t, q).0 == 1)
+            .count();
+        100.0 * n as f64 / self.view.max(1) as f64
+    }
+
     fn new(t: &'a Aligned) -> Self {
         let rows: Vec<usize> = (0..t.len())
             .filter(|&r| t.tp.status.get(r) == Some(&0))
@@ -216,9 +240,16 @@ fn explain(cx: &Cx, id: &str, mz: f64, rt: f64, a: &Args) -> String {
             // the bits of `quality::Q_*` that made F1 hide the row: 1 shape, 2 signal-to-noise, 4 points
             let _ = write!(s, ",{}", q.map_or(0, |q| q.qreason));
             let _ = write!(s, ",{},{},{}", rk(1), rk(2), rk(3));
+            match cx.group(b.row) {
+                Some((p, n, g)) => {
+                    let _ = write!(s, ",{p},{n},{g}");
+                }
+                None => s.push_str(",,,"),
+            }
         }
-        None => s.push_str(&format!(",,,,,{},,,,", cx.view)),
+        None => s.push_str(&format!(",,,,,{},,,,,,,", cx.view)),
     }
+    let _ = write!(s, ",{:.1}", cx.single_pct());
     s
 }
 
@@ -232,7 +263,7 @@ pub fn report(t: &Aligned, expected: &[(String, f64, f64)], ppm: f64, rt_tol: f6
         out: None,
     };
     let cx = Cx::new(t);
-    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3\n");
+    let mut out = String::from("id,mz,rt,rows_mz,rows_in,best_ppm,best_drt,detected,filled,max_height,max_area,tp_status,stage,nearest_ppm,nearest_drt,kinship,q_shape,q_snr,rank_now,view_size,q_reason,rank_k1,rank_k2,rank_k3,kin_rank,kin_size,singles_above,view_single_pct\n");
     for (id, mz, rt) in expected {
         out.push_str(&explain(&cx, id, *mz, *rt, &a));
         out.push('\n');
@@ -306,5 +337,9 @@ mod tests {
         assert!(r.lines().all(|l| l.split(',').count() == n));
         // rank_now of the first expected product: kinship 3 outranks kinship 2
         assert_eq!(r.lines().nth(1).unwrap().split(',').nth(18), Some("2"));
+        // the first product is alone in its kinship group, with one single-file row above it; the whole view was seen in one file
+        let l1: Vec<&str> = r.lines().nth(1).unwrap().split(',').collect();
+        assert_eq!(l1[24..27], ["1", "1", "1"]);
+        assert_eq!(l1[27], "100.0");
     }
 }
