@@ -119,7 +119,26 @@ pub(crate) fn job_with(
     );
     let mut made = Made::new("mzml", a);
     let proof = Value::Str("estimated on the profile scans of the file".into());
+    let mut said = vec![(
+        "via".to_string(),
+        Value::Str(
+            if used.is_some() {
+                "centroided"
+            } else {
+                "passthrough"
+            }
+            .into(),
+        ),
+    )];
     if let Some(p) = used {
+        said.push((
+            "fwhm".into(),
+            Value::Num(number(job, "fwhm").unwrap_or(p.w)),
+        ));
+        said.push((
+            "threshold".into(),
+            Value::Num(number(job, "threshold").unwrap_or(p.k)),
+        ));
         for (k, v) in [("fwhm", p.w), ("threshold", p.k)] {
             if number(job, k).is_none() {
                 made.estimates
@@ -127,5 +146,6 @@ pub(crate) fn job_with(
             }
         }
     }
+    made.file = Some(Value::Obj(said));
     Ok(made)
 }

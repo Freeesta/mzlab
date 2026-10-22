@@ -57,6 +57,8 @@ pub struct Outcome {
     pub warnings: Vec<String>,
     /// The output came from the cache key (`cache_key`), the step did not run.
     pub cached: bool,
+    /// What a per-file step says of its file for the record of the run (`{"via": "centroided"|"passthrough", ...}`).
+    pub file: Option<Value>,
 }
 
 /// The owner of the files and the clock: runs the step of a job. It must not read the clock or unseeded randomness to decide a result.
@@ -195,6 +197,7 @@ fn settle(
         params: resolved.params.clone(),
         params_sha256: resolved.params_sha256(),
         estimates: Vec::new(),
+        files: Vec::new(),
         used,
         generated: Vec::new(),
         ms: 0.0,
@@ -228,7 +231,10 @@ fn settle(
     }
     let (made, generated) = gather(inst, step, &outcomes, &names);
     act.generated = generated;
-    for o in &outcomes {
+    for (o, name) in outcomes.iter().zip(&names) {
+        if let Some(v) = &o.file {
+            act.files.push((name.clone().unwrap_or_default(), v.clone()));
+        }
         act.ms += o.ms;
         act.cached &= o.cached;
         act.heap_peak_bytes = act.heap_peak_bytes.max(o.heap_peak_bytes);
