@@ -7,6 +7,7 @@ import { drawField } from "./infusione-grafo-campo.js";
 import { drawGraph } from "./infusione-grafo-svg.js";
 import { nodePanel } from "./infusione-grafo-nodo.js";
 import { exportRow } from "./infusione-grafo-esporta.js";
+import { searchRow } from "./infusione-grafo-cerca.js";
 
 const CSS = `.ig-field{align-items:flex-end;gap:8px}.ig-field input[type=text]{min-width:14ch}.ig-set summary{cursor:pointer;min-height:24px}.ig-set input[type=number]{width:7ch}.ig-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:6px 0}.ig-bar .bt{min-width:28px;min-height:28px}.ig-cut{min-height:28px}.ig-cuts{border-collapse:collapse}.ig-cuts th,.ig-cuts td{padding:2px 6px;text-align:left}
 @media (pointer:coarse){.ig-bar .bt,.ig-use,.ig-cut{min-width:40px;min-height:40px}}
@@ -102,14 +103,15 @@ function wireSettings(/** @type {HTMLElement} */ b, /** @type {() => void} */ go
 
 /** Draws the graph, the panel of the node and the export row from the answer in G.j. */
 function drawBody(/** @type {HTMLElement} */ b, /** @type {any} */ file, /** @type {boolean} */ keepFocus) {
-  const wrap = /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), pan = /** @type {HTMLElement} */ (b.querySelector("#ig-node")), exp = /** @type {HTMLElement} */ (b.querySelector("#ig-exp"));
-  if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; return; }
+  const wrap = /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), pan = /** @type {HTMLElement} */ (b.querySelector("#ig-node")), exp = /** @type {HTMLElement} */ (b.querySelector("#ig-exp")), find = /** @type {HTMLElement} */ (b.querySelector("#ig-find"));
+  if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; return; }
   const redo = () => run(b, file);
   V.svg = drawGraph(wrap, G.j, { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: openSpectrum });
   setScale(V.scale);
   if (keepFocus && G.sel) /** @type {HTMLElement | null} */ (wrap.querySelector(`.ig-node[data-id="${G.sel}"]`))?.focus();
   nodePanel(pan, nodeOf(G.sel), { redo, again: () => drawBody(b, file, false) });
   exportRow(exp, file, G.sel);
+  searchRow(find, file);
   if (window.TDATI && V.svg) { V.svg.setAttribute("aria-describedby", "ig-sum"); TDATI.attach(/** @type {any} */ (V.svg), dataTable); }
 }
 
@@ -129,7 +131,7 @@ async function render(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @t
   const focusId = (document.activeElement instanceof Element && document.activeElement.closest(".ig-node")?.getAttribute("data-id")) || null;
   const file = E.files.find(INF.isInf);
   if (!file) { b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`; return; }
-  b.innerHTML = h`<div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div>`;
+  b.innerHTML = h`<div id="ig-field"></div><div id="ig-set">${raw(settings(file))}</div><div id="ig-msg" aria-live="polite"></div><div class="ig-bar" id="ig-bar" role="toolbar" aria-label="${I18N.t("msngrafo.zoom.aria")}"></div><div class="ig-wrap" id="ig-wrap" tabindex="0" role="region" aria-label="${I18N.t("msngrafo.graph.aria")}"></div><div id="ig-node" aria-live="polite"></div><div id="ig-exp"></div><div id="ig-find"></div>`;
   V.el = b;
   const go = () => { G.scelte = []; run(b, file); };
   drawField(/** @type {HTMLElement} */ (b.querySelector("#ig-field")), file, go);

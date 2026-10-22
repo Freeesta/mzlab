@@ -1,5 +1,5 @@
 # Libreria di alberi MSn degli standard (`msnlib/1`)
-Seconda parte del progetto di `docs/agenti/msn-grafo.md` (grafo `msngrafo/1`, piano delle PR in §9 di quel file). Fatti: formato, `mzlab-cli msn-lib add|build|export`, `msn-graph compare` i passi del Flow `msn.library_export` / `msn.table_export` (`rust-flow.md`) e la ricerca per albero (§2: `msn-lib search`, `mzlab_core::msngrafo::cerca`); da fare: gli analoghi (§2), la rotta e il pannello della pagina.
+Seconda parte del progetto di `docs/agenti/msn-grafo.md` (grafo `msngrafo/1`, piano delle PR in §9 di quel file). Fatti: formato, `mzlab-cli msn-lib add|build|export`, `msn-graph compare` i passi del Flow `msn.library_export` / `msn.table_export` (`rust-flow.md`) e la ricerca per albero (§2: `msn-lib search`, `mzlab_core::msngrafo::cerca`) e gli analoghi con la rotta `msnlib/cerca`; il pannello della pagina è in `infusione-grafo.md`.
 Obiettivo: misurare in laboratorio gli alberi MSn degli standard disponibili (idea di spectral trees, ma aperta e nostra) e cercarvi gli ioni sconosciuti.
 ## 1. Formato
 - **File**: un documento JSON `msnlib/1` (`*.msnlib.json`, schema `docs/schemi/msnlib-1.json`, provato da `tests/test_msnlib_schema.py` sulla libreria di `msn-lib build`), testa `{formato, versione_libreria, creata, motore, voci: [...]}`; voci ordinate per `id`, poi ione, poi attivazione: deterministico come `msngrafo/1`. Una libreria di 1000 standard con 4 livelli sta in poche decine di MB: si comprime a parte (zstd come `.mzlib`) solo se serve.
@@ -15,7 +15,7 @@ Obiettivo: misurare in laboratorio gli alberi MSn degli standard disponibili (id
 - **Analoghi cercati**: `analogo` è nullo per le voci esatte, altrimenti `{delta_da, spostati, non_spostati, copertura}`; si cercano con `delta_max` > 0 (`--delta N`, Da): voci con il precursore a più di `ppm_prec` e al più `delta_max` di distanza, nella miglior coppia MS2 ogni picco dell'ignoto è «non spostato» (m/z di un picco della voce) o «spostato» (m/z della voce + Δ, Δ = ignoto − voce); servono ≥1 spostato e `min_prove` picchi; vengono dopo le voci esatte, per copertura (intensità spiegata) decrescente.
 - Prova: `msngrafo::tests_cerca` (grafi sintetici) e `msn_lib_tests`.
 - **Rotta**: POST `api/msnlib/cerca` (`rust-rotte.md`), nel `.wasm` `msngrafo` (`msnlib_cerca`); prova in `tests_e2e/e2e_msngrafo.py`.
-- **Da fare**: il pannello «Search lab library» nella scheda del grafo; una prova per Attributio (`msn-grafo.md` §6).
+- **Da fare**: una prova per Attributio (`msn-grafo.md` §6).
 ## 3. Protocollo di acquisizione (Orbitrap, infusione diretta)
 - **Soluzione**: 0,1-1 µg/mL (≈ 0,5-5 µM) in MeOH/H2O 50:50 con 0,1 % di acido formico (ESI+) o 5 mM di acetato d'ammonio (ESI−); siringa a 3-5 µL/min; spruzzo stabile prima dell'MSn (TIC dell'MS1 con RSD < 15 % su 1 min).
 - **MS1**: 1 min a 120 000 (m/z 200): controllo dello ione atteso, degli addotti e dei frammenti in sorgente (annotati nel manifest).
