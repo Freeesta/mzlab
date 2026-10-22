@@ -454,21 +454,14 @@ try:
             assert pg.locator(".flx-res-body .flx-table td").nth(6).inner_text() == "0.333"
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("results: a products file shows its table, the conditions with a chart and its data, and a reactivity file shows its atoms", tabui_views)
+        FAKE = "".join(l for l in (HERE / "flow_desktop_fake.js").open() if not l.startswith("//"))      # the app is faked at the native routes flow/live/*
         def desktop_run():
-            # the app is faked: the page asks the native route flow/run and lists what each step did from the prov/1 it answers
-            pg.evaluate("""() => { window.MZLAB_DESKTOP = true; window.__runs = 0; const real = window.fetch.bind(window);
-              window.fetch = async (u, o) => { if (!String(u).includes('/rpc')) return real(u, o);
-                if (JSON.parse(o.body).op === 'flow/read') return new Response('a,b\\n1,2\\n', { status: 200 });
-                if (JSON.parse(o.body).op === 'flow/progress') return new Response(JSON.stringify({ jobs: window.__jobs || [] }), { status: 200 });
-                const plan = JSON.parse(JSON.parse(o.body).plan || '{"steps":[]}'); window.__runs++;
-                if (window.__runs === 1) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'a.mzML' } }), { status: 400 });
-                window.__jobs = [{ id: plan.steps[0].id, item: null, ms: 900, cached: false, error: null }]; await new Promise(r => setTimeout(r, 2200));
-                const activity = {}; plan.steps.forEach((x, i) => { activity[x.id] = { step: x.step, ms: 1200, used: [], generated: ['k'], ...(i === plan.steps.length - 1 ? { cached: true } : {}) }; });
-                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: { k: { type: 'table', label: 't.csv' } }, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
-            pg.click('#flx-run'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
-            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3
+            # the page asks the native routes flow/live/*, says on each step what its events say, and lists what each step did from the prov/1 `finish` answers
+            pg.evaluate(FAKE); pg.evaluate("window.__missing = '*'")
+            pg.click('#flx-run'); slots = ".fl-slots li"
             go = 'button[aria-label="Run the plan on this computer"]'
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")      # Run started the first run by itself
+            pg.evaluate("window.__missing = ''")
             pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
             assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
@@ -476,14 +469,20 @@ try:
             pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
             attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
+        def desktop_cards():
+            attendi(pg, "[...document.querySelectorAll('.fln-lw')].some(n => n.textContent === 'done in 1.2 s')")
+            assert pg.evaluate("[...document.querySelectorAll('.fln-live')].every(n => n.hidden || n.querySelector('.fln-lm svg'))")
+            assert "flow/live/events" in pg.evaluate("window.__ops") and "flow/progress" not in pg.evaluate("window.__ops")
+            pg.click("#flx-live-pause"); attendi(pg, "window.__ops.includes('flow/live/pause')")
+            assert pg.get_attribute("#flx-live-pause", "aria-pressed") == "true" and "Resume" in pg.inner_text("#flx-live-pause")
+            pg.click("#flx-live-pause"); attendi(pg, "window.__ops.includes('flow/live/resume')")
+            pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps[S.plan.steps.length - 1]; i.params = i.params || {}; i.params.min_height = 7; S.refresh(); }"); attendi(pg, "window.__ops.includes('flow/live/update')")
+            pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps[S.plan.steps.length - 1]; delete i.params.min_height; S.refresh(); }")
+        step("desktop: the cards say what each step does, a change goes to the engine as an update, Pause and Resume reach it", desktop_cards)
         def desktop_data_files():
-            # the files open in the Data tab become the scan inputs; the app holds a.mzML only, so b.mzML is left out and said so, the run goes on
-            pg.evaluate("""() => { if (typeof E === 'undefined') window.E = { files: [] }; E.files = [{ file: 'a.mzML' }, { file: 'b.mzML' }]; window.__sent = []; const real = window.fetch;
-              window.fetch = async (u, o) => { if (!String(u).includes('/rpc') || JSON.parse(o.body).op !== 'flow/run') return real(u, o);
-                const plan = JSON.parse(JSON.parse(o.body).plan); window.__sent.push(plan.inputs.map(i => i.name).join(','));
-                if (plan.inputs.some(i => i.name === 'b.mzML')) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: 'b.mzML' } }), { status: 400 });
-                const activity = {}; plan.steps.forEach(x => { activity[x.id] = { step: x.step, ms: 5, used: [], generated: [] }; });
-                return new Response(JSON.stringify({ prov: JSON.stringify({ schema: 'prov/1', entity: {}, activity }), dir: '/tmp/mzlab-flow/out' }), { status: 200 }); }; }""")
+            # the files open in Data become the scan inputs; the app holds a.mzML only, so b.mzML is left out and said so, the run goes on
+            pg.evaluate("async () => { await FLOW.desktopLive.drop(); }")
+            pg.evaluate(FAKE); pg.evaluate("() => { if (typeof E === 'undefined') window.E = { files: [] }; E.files = [{ file: 'a.mzML' }, { file: 'b.mzML' }]; window.__missing = 'b.mzML'; window.__quick = true; }")
             pg.click('button[aria-label="Run the plan on this computer"]'); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             note = pg.inner_text(".fl-cli .fl-note"); sent = pg.evaluate("window.__sent")
             assert "1 file excluded" in note and "b.mzML" in note, note

@@ -17,10 +17,10 @@
 .flx .fl-view{position:absolute;inset:0;overflow:hidden;cursor:grab;touch-action:none}.flx .fl-view.fl-pan{cursor:grabbing}.flx .fl-view:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .flx .fl-stage{position:absolute;left:0;top:0;transform-origin:0 0}.flx .fl-stage.fl-soft{transition:transform var(--t-med,180ms) var(--ease-out,ease-out)}
 .flx .fl-lines{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}.flx .fle{fill:none;stroke:var(--muted);stroke-width:2}.flx .fle.hot{stroke:var(--accent);stroke-width:3}
-.flx .fln{position:absolute;width:220px;height:64px;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 10px;border:1px solid var(--line);border-left:4px solid var(--cc);border-radius:10px;background:var(--panel);color:var(--ink);cursor:pointer;transition:border-color var(--t-fast,120ms)}
+.flx .fln{position:absolute;width:220px;height:80px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:6px 8px 6px 10px;border:1px solid var(--line);border-left:4px solid var(--cc);border-radius:10px;background:var(--panel);color:var(--ink);cursor:pointer;transition:border-color var(--t-fast,120ms)}
 .flx .fln:hover{border-color:color-mix(in srgb,var(--accent) 60%,var(--line));border-left-color:var(--cc)}.flx .fln:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .flx .fln.fl-new{animation:flIn var(--t-med,180ms) var(--ease-out,ease-out) both}.flx .fln.sel{outline:2px solid var(--accent);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}.flx .fln.bad{border-color:var(--bad);border-left-color:var(--cc)}
-.flx .fln-ic{flex:none;color:var(--cc);display:inline-flex}.flx .fln-tx{display:flex;flex-direction:column;min-width:0;flex:1}.flx .fln-t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flx .fln-top{display:flex;align-items:center;gap:8px;min-width:0}.flx .fln-ic{flex:none;color:var(--cc);display:inline-flex}.flx .fln-tx{display:flex;flex-direction:column;min-width:0;flex:1}.flx .fln-t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .flx .fln-s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .flx .fln-chip{position:absolute;top:-9px;right:8px;display:inline-flex;gap:3px;align-items:center;font-size:12px;padding:0 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel)}
 .flx .fln-chip.ok{color:var(--ok)}.flx .fln-chip.bad{color:var(--bad);border-color:var(--bad)}.flx .fln-chip.warn{color:var(--warn);border-color:var(--warn)}
@@ -47,10 +47,19 @@
 .flx .flx-res h3{flex:1;margin:0;overflow-wrap:anywhere}.flx .flx-tablewrap{max-height:50vh;overflow:auto;margin-top:6px}.flx .flx-table{border-collapse:collapse;font-size:12px}
 .flx .flx-sticks{width:100%;max-width:640px;height:auto;display:block}.flx .flx-stick{stroke:var(--accent);stroke-width:2}.flx .flx-prec{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}.flx .flx-ax{stroke:var(--line);stroke-width:1}.flx .flx-tick{fill:var(--muted);font-size:11px}.flx{--gv1:#0072B2;--gv2:#E69F00;--gv3:#009E73;--gv4:#D55E00;--gv5:#CC79A7;--gv6:#56B4E9;--gv7:#F0E442;--gv8:var(--ink)}.flx .flx-one{margin-top:6px}
 .flx .flx-qc{margin-top:6px}.flx .flx-qc summary{cursor:pointer;min-height:24px}.flx .flx-table th[scope=row]{background:none;position:static;font-weight:600}.flx .flx-table caption{text-align:left;color:var(--muted);padding:4px 0}.flx .flx-table th,.flx .flx-table td{border:1px solid var(--line);padding:3px 8px;text-align:left;white-space:nowrap}.flx .flx-table th{position:sticky;top:0;background:var(--soft)}
+.flx .fln-live{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;min-height:20px;font-size:12px;color:var(--muted)}.flx .fln-live[hidden],.flx .fln-bar[hidden],.flx .fln-files[hidden]{display:none}
+.flx .fln-lm{display:inline-flex;flex:none}.flx .fln-lw{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flx .fln-live[data-tone=ok]{color:var(--ok)}.flx .fln-live[data-tone=run]{color:var(--accent)}.flx .fln-live[data-tone=warn]{color:var(--warn)}.flx .fln-live[data-tone=bad]{color:var(--bad)}
+.flx .fln-bar{flex-basis:100%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}.flx .fln-bar i{display:block;height:100%;width:var(--p,0%);background:var(--accent)}
+.flx .fln-bar.indet i{width:40%;background:repeating-linear-gradient(90deg,var(--accent) 0 6px,transparent 6px 10px)}
+.flx .fln[data-live=stale]{border-style:dashed}.flx .fln[data-live=error],.flx .fln[data-live=refused]{border-color:var(--bad);border-left-color:var(--cc)}
+.flx .fln-files{margin-top:8px}.flx .fln-files .flx-tablewrap{max-height:240px}
+@media (prefers-reduced-motion:no-preference){.flx .fln-bar.indet i{animation:flSlide 1.2s linear infinite}}@keyframes flSlide{from{margin-left:-40%}to{margin-left:100%}}
+.flx .flx-live-ctl{display:inline-flex;gap:4px;align-items:center}.flx .flx-live-ctl button{min-height:28px;min-width:24px}.flx .flx-live-ctl button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}
 @media (max-width:900px){.flx .flx-body,.flx .flx-body.flx-adv{grid-template-columns:minmax(0,1fr)}.flx .flx-split{display:none}.flx .fl-insp{max-height:none}}
-@media (pointer:coarse){.flx .fln-next{width:40px;height:40px;right:-20px;margin-top:-20px}.flx .flx-seg button{min-height:40px}.flx .flx-split{min-width:24px}}
-@media (prefers-reduced-motion:reduce){.flx .fln,.flx .fl-insp,.flx .flx-pop{animation:none}.flx .fl-stage.fl-soft,.flx .fln{transition:none}}
-:root[data-a11y-reduce] .flx .fln,:root[data-a11y-reduce] .flx .fl-insp,:root[data-a11y-reduce] .flx .flx-pop{animation:none}:root[data-a11y-reduce] .flx .fl-stage.fl-soft,:root[data-a11y-reduce] .flx .fln{transition:none}`;
+@media (pointer:coarse){.flx .flx-live-ctl button{min-height:40px}.flx .fln-next{width:40px;height:40px;right:-20px;margin-top:-20px}.flx .flx-seg button{min-height:40px}.flx .flx-split{min-width:24px}}
+@media (prefers-reduced-motion:reduce){.flx .fln,.flx .fl-insp,.flx .flx-pop{animation:none}.flx .fl-stage.fl-soft,.flx .fln{transition:none}.flx .fln-bar.indet i{animation:none}}
+:root[data-a11y-reduce] .flx .fln,:root[data-a11y-reduce] .flx .fl-insp,:root[data-a11y-reduce] .flx .flx-pop{animation:none}:root[data-a11y-reduce] .flx .fl-stage.fl-soft,:root[data-a11y-reduce] .flx .fln{transition:none}:root[data-a11y-reduce] .flx .fln-bar.indet i{animation:none}`;
   F.injectShellCss = () => {
     if (document.getElementById("flx-css")) return;
     const s = document.createElement("style"); s.id = "flx-css"; s.textContent = CSS; document.head.append(s);

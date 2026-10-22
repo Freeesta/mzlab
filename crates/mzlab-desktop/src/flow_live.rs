@@ -1,6 +1,7 @@
 //! The routes `flow/live/<op>` of `rpc`: a plan that runs on this computer and takes changes while it runs (`mzlab_cli::flow::live::LiveRun`), with the
 //! very bodies and answers of `api/flow/sched/<op>` of the site (`new` is `start`) and `cancel`. The conversions the background queue (`conv_coda.rs`)
-//! makes are the `convert.mzml` jobs of the plan: the workers leave them to the queue, which tells how they stand (`sync_coda`). One run at a time.
+//! makes are the `convert.mzml` jobs of the plan: the workers leave them to the queue, which tells how they stand (`sync_coda`). One run at a time; its folders
+//! are the ones of `flow/run`, so `flow/read` and `flow/report` read what it made, and `finish` gives the `prov/1` of the plan as it stands.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -20,6 +21,9 @@ use crate::rpc::{io_error, text, Answer};
 struct Live {
     run: LiveRun,
     inputs: PathBuf,
+    work: PathBuf,
+    /// The plan as the run holds it now (the text `update` last sent).
+    plan: String,
 }
 
 static LIVE: Mutex<Option<Live>> = Mutex::new(None);
@@ -31,7 +35,8 @@ fn lock() -> std::sync::MutexGuard<'static, Option<Live>> {
 impl State {
     /// One call: `start {plan, files?, fresh?}` runs the plan (the inputs are staged as `flow/run` does); `update {plan, files?}` replaces it and
     /// answers the jobs to cancel; `events {since}`, `nodes`, `jobs`, `rev`, `pause`, `resume`, `retry {job}`, `unblock {job}` are the calls of the
-    /// scheduler of the site; `cancel` stops what runs (the jobs end at their next piece; `retry` runs them again); `drop` forgets the run.
+    /// scheduler of the site; `cancel` stops what runs (the jobs end at their next piece; `retry` runs them again); `finish {llm?}` answers `{prov, dir}` as `flow/run`
+    /// does, once no job is left to run; `drop` forgets the run.
     pub(crate) fn flow_live(&self, op: &str, p: &Value) -> Result<Answer> {
         match op {
             "start" | "new" => return self.live_start(p, default_workers()),
@@ -50,6 +55,9 @@ impl State {
             live.run.cancel_all();
             return text("{}");
         }
+        if op == "finish" {
+            return finish(live, p);
+        }
         self.sync_coda(&live.run);
         let body = mzlab_core::json::parse(p.to_string().as_bytes())?;
         let answer = live
@@ -65,7 +73,7 @@ impl State {
         let parsed = parse(plan.as_bytes())?;
         // the last run ends first: its threads stop and its folders are free
         *lock() = None;
-        let root = std::env::temp_dir().join("mzlab-flow").join("live");
+        let root = std::env::temp_dir().join("mzlab-flow");
         let (inputs, work) = (root.join("in"), root.join("out"));
         let _ = std::fs::remove_dir_all(&inputs);
         if p["fresh"].as_bool().unwrap_or(false) {
@@ -85,13 +93,30 @@ impl State {
             workers,
             &claim,
         )?;
-        *lock() = Some(Live { run, inputs });
+        *lock() = Some(Live {
+            run,
+            inputs,
+            work,
+            plan,
+        });
         text("{}")
     }
 }
 
 fn no_run() -> Error {
     Error::new("err.flow.sched")
+}
+
+/// The record of the run as `flow/run` answers it: `prov/1` written to the folder (a run folder for `flow/report`) and the folder.
+fn finish(live: &Live, p: &Value) -> Result<Answer> {
+    let run = live.run.finish()?;
+    let prov = mzlab_cli::flow::prov_text(live.plan.as_bytes(), &run);
+    let prov = match crate::flow_run::llm_ref(&p["llm"]) {
+        Some(l) => mzlab_core::flow::prov_with_llm(&prov, &l),
+        None => prov,
+    };
+    std::fs::write(live.work.join("prov.json"), &prov).map_err(|e| io_error(&e))?;
+    text(serde_json::json!({ "prov": prov, "dir": live.work.to_string_lossy() }).to_string())
 }
 
 impl State {
@@ -110,6 +135,7 @@ impl State {
             .collect();
         self.stage(&new, p, &live.inputs)?;
         let cancels = live.run.update(plan.as_bytes(), &self.claims(&parsed))?;
+        live.plan = plan;
         text(cancels)
     }
 
