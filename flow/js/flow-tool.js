@@ -53,6 +53,7 @@
       } catch (e) { sec.textContent = "Flow failed to load: " + (e && /** @type {any} */ (e).message || e); }
     },
   });
-  // in the background, after the first draw of the page: the descriptors and the files of the shell are downloaded at low priority, so opening the tab finds them in the cache
-  idle(() => { const L = /** @type {any} */ (window).TPLAZY; if (!L || !T.ctx) return; getLists(T.ctx).catch(() => {}); L.warm(CORE); L.warm(LATE, true); });
+  // at once, before the page's own scripts queue up: the descriptors and the modules of the shell are fetched and run (they only define things), so the first click draws
+  // from what is already there; the late modules are downloaded at low priority when the page is idle
+  { const L = /** @type {any} */ (window).TPLAZY; if (L && T.ctx) { getLists(T.ctx).catch(() => {}); L.loadNow(...CORE).catch(() => {}); idle(() => L.warm(LATE, true)); } }
 })();

@@ -108,6 +108,15 @@ try:
             r = pg.evaluate("axe.run('#v-flow', {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag22aa']}}).then(x => x.violations.map(v => v.id + ': ' + v.nodes.length))")
             assert not r, r
         step("axe: no violation in the Flow page", axe)
+        def primed():
+            pg2 = c.new_page(); pg2.on("pageerror", lambda e: errs.append(str(e)))
+            pg2.goto(f"http://127.0.0.1:{PORT}/"); pg2.wait_for_selector(TAB, timeout=120000)
+            # CORE and the lists are fetched and run as soon as the tab registers, not at the click: the click finds the shell modules there and draws the real shell
+            attendi(pg2, "typeof FLOW !== 'undefined' && typeof FLOW.shell === 'function'", 60000)
+            pg2.click(TAB); pg2.wait_for_selector("#flx-root", timeout=30000)
+            assert pg2.locator("#flx-sk").count() == 0 and pg2.locator("#flx-run").count() == 1
+            pg2.close()
+        step("the shell modules are already there at the click (primed when the tab registers)", primed)
         b.close()
 finally:
     srv.terminate()
