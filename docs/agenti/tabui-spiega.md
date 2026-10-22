@@ -1,0 +1,6 @@
+# Dove la tabella di Tabui perde un prodotto atteso (`explain-missing`)
+
+- Comando: `mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv [--ppm 5] [--rt-tol 0.3] [--out FILE]` (`crates/mzlab-cli/src/flow_explain.rs`, `--help` per le colonne). `TABLE.mzfeat` è la tabella di una corsa (uscita di `tp.link` o successivi); `EXPECTED.csv` ha una riga `id,mz,rt` per prodotto atteso (l'intestazione è saltata).
+- Uscita: una riga CSV per prodotto, solo numeri e sigle, mai nomi: righe entro la finestra di massa (`rows_mz`) e anche di RT (`rows_in`), errore in ppm e ΔRT della riga migliore (quella di area massima), celle rilevate e riempite, altezza e area massime, `tp_status` di `tp/1` e `stage`.
+- `stage`: `view` = la riga passa tutti i filtri; `F1`..`F4` = primo filtro di `filtri/1` che la nasconde (F5, errore di massa, non è misurabile dalla sola tabella); `rt_off` = esiste una riga con quella massa ma fuori dalla finestra di RT; `no_row_mz` = nessuna riga a quella massa (perso prima: rilevamento, allineamento o ipotesi). `nearest_ppm` e `nearest_drt` danno la riga più vicina in massa quando non c'è corrispondenza.
+- Uso con la serie locale: dopo la corsa del piano, `mzlab-cli explain-missing RUNDIR/<tabella>.mzfeat attesi.csv --out conteggi.csv`; riportare solo i conteggi per `stage`, mai percorsi o nomi dei composti.
