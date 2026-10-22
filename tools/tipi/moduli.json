@@ -51,6 +51,7 @@
     "../../mzlab/web/infusione-grafo-cerca.js",
     "../../mzlab/web/infusione-grafo-esporta.js",
     "../../mzlab/web/infusione-grafo-nodo.js",
+    "../../mzlab/web/infusione-grafo-regole.js",
     "../../mzlab/web/infusione-grafo-stato.js",
     "../../mzlab/web/infusione-grafo-svg.js",
     "../../mzlab/web/lr-map.js",

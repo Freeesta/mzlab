@@ -14,7 +14,7 @@ export const TXT = {
     "warn.msngrafo.isolation": "warn.msngrafo.isolation", "warn.msngrafo.precNotFound": "warn.msngrafo.precNotFound", "warn.msngrafo.polarity": "warn.msngrafo.polarity",
     "warn.msngrafo.badFormula": "warn.msngrafo.badFormula", "warn.msngrafo.rootMissing": "warn.msngrafo.rootMissing", "warn.msngrafo.fixedNotFound": "warn.msngrafo.fixedNotFound",
     "warn.msngrafo.userConflict": "warn.msngrafo.userConflict", "warn.msngrafo.isolatedUnexplained": "warn.msngrafo.isolatedUnexplained",
-    "warn.msngrafo.structMixture": "warn.msngrafo.structMixture",
+    "warn.msngrafo.structMixture": "warn.msngrafo.structMixture", "warn.msngrafo.radicalLoss": "warn.msngrafo.radicalLoss", "warn.msngrafo.belowCutoff": "warn.msngrafo.belowCutoff",
   },
 };
 
@@ -37,6 +37,8 @@ export const G = {
   /** @type {string | null} */ error: null,
   /** «Run MSn workflow» asked for the library search right after the next graph is drawn (read once). */
   auto: false,
+  /** Show only the losses a fragmentation rule explains (the filter of the toolbar). */
+  rf: false,
   /** The answer is for the request with this key. */
   key: "",
 };
@@ -80,8 +82,8 @@ export function query(/** @type {number} */ k) {
 /** The URL of the graph for the state and the options of the precursor tree. */
 export const graphUrl = (/** @type {number} */ k) => "api/msn_grafo?" + query(k);
 
-/** The URL the tab draws from: the graph plus the interpretation of the losses (evidence for the panel of a node; exports and the library do not carry it). */
-const viewUrl = (/** @type {number} */ k) => graphUrl(k) + "&interpreta=1";
+/** The URL the tab draws from: the graph plus the interpretation of the losses and the fragmentation rules (evidence for the arcs and the panel of a node; exports and the library do not carry them). */
+const viewUrl = (/** @type {number} */ k) => graphUrl(k) + "&interpreta=1&regole=1";
 
 /** Asks for the graph of the file; keeps the answer in G.j or the error in G.error. @returns {Promise<boolean>} false when a newer request took over. */
 export async function fetchGraph(/** @type {number} */ k) {

@@ -1033,7 +1033,9 @@
     "archi",
     "ioni",
     "non_osservabili",
-    "conteggi"
+    "conteggi",
+    "fonti",
+    "soglie"
    ],
    "properties": {
     "versione": {
@@ -1090,6 +1092,7 @@
           "radicale",
           "priorita",
           "energia",
+          "perche",
           "refs"
          ],
          "properties": {
@@ -1123,6 +1126,10 @@
            "items": {
             "type": "string"
            }
+          },
+          "perche": {
+           "type": "string",
+           "description": "Why the rule explains a loss (the `why` of the table); a rule of priority 3 says here why it is weak"
           }
          }
         }
@@ -1225,6 +1232,78 @@
       },
       "intensita_spiegata": {
        "type": "number"
+      }
+     }
+    },
+    "fonti": {
+     "type": "array",
+     "description": "References cited by the rules of the arcs and by the thresholds, with their DOI and PMID",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "key",
+       "doi",
+       "pmid"
+      ],
+      "properties": {
+       "key": {
+        "type": "string"
+       },
+       "doi": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "pmid": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      }
+     }
+    },
+    "soglie": {
+     "type": "array",
+     "description": "Numeric thresholds of the table (trap cut-off, loss tolerance) with their origin and whether they are still to be calibrated",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "id",
+       "valore",
+       "perche",
+       "origine",
+       "da_calibrare",
+       "refs"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "valore": {
+        "type": "number"
+       },
+       "perche": {
+        "type": "string"
+       },
+       "origine": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "da_calibrare": {
+        "type": "boolean"
+       },
+       "refs": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       }
       }
      }
     }

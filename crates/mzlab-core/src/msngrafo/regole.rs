@@ -81,9 +81,21 @@ impl Regola {
     }
 }
 
+/// A numeric threshold of the global rules with what the table says of it: why, where its value comes from and whether it is still to be calibrated.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Soglia {
+    pub id: String,
+    pub valore: f64,
+    pub perche: String,
+    pub origine: Option<String>,
+    pub da_calibrare: bool,
+    pub refs: Vec<Rif>,
+}
+
 /// The global rules with their values (the defaults of the study when the table omits one).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Globali {
+    pub soglie: Vec<Soglia>,
     pub even_electron: bool,
     pub trap_cutoff_q: f64,
     pub beam_composite: bool,
@@ -233,6 +245,7 @@ fn regola(v: &Value) -> Result<Regola> {
 
 fn globali(v: &Value) -> Result<Globali> {
     let mut g = Globali {
+        soglie: vec![],
         even_electron: true,
         trap_cutoff_q: 0.25,
         beam_composite: true,
@@ -240,10 +253,25 @@ fn globali(v: &Value) -> Result<Globali> {
         loss_tolerance_mda: 3.0,
     };
     for x in v.arr() {
-        solo(x, &["id", "value", "refs", "why"], "globals")?;
+        solo(
+            x,
+            &["id", "value", "refs", "why", "origine", "da_calibrare"],
+            "globals",
+        )?;
         let valore = x.get("value");
         let (num, flag) = (valore.and_then(Value::f64), valore.and_then(Value::bool));
-        match testo(x, "id", "globals")?.as_str() {
+        let id = testo(x, "id", "globals")?;
+        if let (true, Some(valore)) = (id == "trap_cutoff" || id == "loss_tolerance_mda", num) {
+            g.soglie.push(Soglia {
+                valore,
+                perche: testo(x, "why", &id)?,
+                origine: opzionale(x.get("origine")),
+                da_calibrare: x.get("da_calibrare").and_then(Value::bool).unwrap_or(false),
+                refs: riferimenti(x, &id)?,
+                id: id.clone(),
+            });
+        }
+        match id.as_str() {
             "even_electron" => g.even_electron = flag.unwrap_or(true),
             "trap_cutoff" => g.trap_cutoff_q = num.unwrap_or(g.trap_cutoff_q),
             "beam_composite" => g.beam_composite = flag.unwrap_or(true),
