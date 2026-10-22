@@ -6,8 +6,7 @@ use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::align::align;
-use crate::famalign::align_families;
+use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
 use crate::gapfill::fill_file;
 use crate::isotopes::group;
@@ -81,7 +80,7 @@ pub fn align_and_fill<R: ReadAt>(
 ) -> Result<(Aligned, usize)> {
     let refs: Vec<&FileFeatures> = files.iter().collect();
     let table = match r.mode {
-        Mode::Ion => align(&refs, &r.align.ion)?,
+        Mode::Ion => align_ions(&refs, &r.align, &r.rt)?,
         Mode::Family => align_families(&refs, &r.align)?,
     };
     let pos = |k: usize| {

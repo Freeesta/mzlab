@@ -378,7 +378,21 @@
           {
             "properties":{
               "step":{"const":"features.align@1"},
-              "name":{"enum":["mode","ppm","rt_gap","max_ppm_span","drop_artefacts","split_gap","weak_files"]},
+              "name":{
+                "enum":[
+                  "mode",
+                  "ppm",
+                  "rt_gap",
+                  "max_ppm_span",
+                  "drop_artefacts",
+                  "split_gap",
+                  "rt_warp",
+                  "rt_coarse_gap",
+                  "rt_span",
+                  "rt_inlier",
+                  "weak_files"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {
@@ -405,6 +419,30 @@
                     "minimum":0,
                     "default":0.03,
                     "description":"A row with two features of one file (close isomers) is cut at the RT gaps above this"
+                  },
+                  {
+                    "enum":["off","piecewise","loess","ransac"],
+                    "default":"off",
+                    "description":"Brings the RT of every file to a common one before the features are grouped, from anchors (peaks every file shows) found by a coarse alignment: piecewise (medians by blocks), loess (local regression), ransac (a line robust to wrong anchors); off: the RT as the files give it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"RT gap of the coarse alignment that finds the anchors, and the widest spread of an anchor over the files: the drift between files the correction can follow"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"Fraction of the anchors each local fit takes (loess)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.05,
+                    "description":"Largest distance of an anchor from the line to agree with it (ransac)"
                   },
                   {
                     "type":"integer",

@@ -13,10 +13,10 @@ use mzlab_core::budget::MemBudget;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::align::{align, align_grouped};
-use crate::famalign::{align_families, assemble, rt_map, Collector};
+use crate::align::align_grouped;
+use crate::famalign::{align_families, align_ions, assemble, rt_map, Collector};
 use crate::recipe::{Mode, Recipe};
-use crate::rtmap::RtMap;
+use crate::rtmap::{RtMap, RtParams};
 use crate::series::finish;
 use crate::sortc;
 use crate::spill::Spill;
@@ -197,7 +197,20 @@ pub fn align_and_fill_spilling<R: ReadAt>(
         family_slabs(src, &mut s, budget, r, widest * 3 / 2)?
     } else {
         let cuts = cuts(&mut s.all, slab_rows(budget.left() / 4), r.align.ion.ppm);
-        slabs(src, &cuts, budget, r, None, None, Plan::default())?
+        let map = if r.align.warp.on() {
+            first_map(src, &cuts, budget, r, &r.rt, Plan::default())?
+        } else {
+            RtMap::default()
+        };
+        slabs(
+            src,
+            &cuts,
+            budget,
+            r,
+            map.ok().then_some(&map),
+            None,
+            Plan::default(),
+        )?
     };
     drop(s);
     let (mut table, filled) = finish(
@@ -226,7 +239,7 @@ fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
         .collect::<Result<Vec<_>>>()?;
     let refs: Vec<&FileFeatures> = files.iter().collect();
     Ok(match r.mode {
-        Mode::Ion => align(&refs, &r.align.ion)?,
+        Mode::Ion => align_ions(&refs, &r.align, &r.rt)?,
         Mode::Family => align_families(&refs, &r.align)?,
     })
 }
@@ -298,6 +311,29 @@ fn slabs(
     Ok(table)
 }
 
+/// The curves of RT of the first alignment, slab by slab: with `r.align.warp` the alignment is the coarse one that finds the anchors for `rtwarp`,
+/// else the one of the recipe and the map of `rtmap`.
+fn first_map(
+    src: &mut dyn Stored,
+    cuts: &[f64],
+    budget: &MemBudget,
+    r: &Recipe,
+    rt: &RtParams,
+    plan: Plan,
+) -> Result<RtMap> {
+    let w = &r.align.warp;
+    let mut first_recipe = r.clone();
+    if w.on() {
+        first_recipe.align.ion = crate::rtwarp::coarse(&r.align.ion, w);
+    }
+    let first = slabs(src, cuts, budget, &first_recipe, None, None, plan)?;
+    Ok(if w.on() {
+        crate::rtwarp::map_from_table(&first, rt, w)
+    } else {
+        rt_map(&first, &r.align)
+    })
+}
+
 /// "Per family" mode in slabs: the same steps as `align_families`, with the groups of ions made slab by slab and the votes read a file at a time.
 fn family_slabs(
     src: &mut dyn Stored,
@@ -318,9 +354,7 @@ fn family_slabs(
         slab_bytes: Some(slab_bytes),
         table_rows: Some(table_rows),
     };
-    let first = slabs(src, &cuts, budget, r, None, None, plan)?;
-    let map = rt_map(&first, p);
-    drop(first);
+    let map = first_map(src, &cuts, budget, r, &r.align.rt, plan)?;
     let mut group_of = s
         .rows
         .iter()

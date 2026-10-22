@@ -198,6 +198,47 @@ fn slabs_give_the_bytes_of_the_alignment_in_memory() {
     }
 }
 
+/// The series of `file_of(k, CLUSTERS, false)` with every RT moved by `0.15 * k` minutes (more than the RT gap).
+fn drifted_series() -> Counting {
+    let r = Recipe::default();
+    Counting(
+        (0..FILES)
+            .map(|k| {
+                let mut f = file_of(k, CLUSTERS, false);
+                for v in [&mut f.rt, &mut f.left, &mut f.right] {
+                    v.iter_mut().for_each(|x| *x += 0.15 * k as f32);
+                }
+                write_file(&f, &r, &Origin::default())
+            })
+            .collect(),
+        0,
+    )
+}
+
+#[test]
+fn the_rt_correction_in_slabs_gives_the_bytes_of_the_correction_in_memory() {
+    let mut r = recipe(Mode::Ion);
+    r.rt.min_height = 1e4;
+    let plain = aligned_bytes(&mut drifted_series(), 1024.0, &r).unwrap();
+    r.align.warp = mzlab_feat::rtwarp::WarpParams {
+        method: mzlab_feat::rtwarp::Method::Loess,
+        coarse_gap: 1.0,
+        ..Default::default()
+    };
+    let reference = aligned_bytes(&mut drifted_series(), 1024.0, &r).unwrap();
+    let rows = |b: &[u8]| mzlab_feat::store::read_table(b).unwrap().0.len();
+    assert!(
+        rows(&reference) < rows(&plain),
+        "{} rows corrected, {} not",
+        rows(&reference),
+        rows(&plain)
+    );
+    for mb in [0.3, 0.4] {
+        let got = aligned_bytes(&mut drifted_series(), mb, &r).unwrap();
+        assert!(got == reference, "{mb} MB: different bytes");
+    }
+}
+
 #[test]
 fn the_families_in_slabs_give_the_bytes_of_the_families_in_memory() {
     let r = recipe(Mode::Family);

@@ -68,6 +68,15 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
             r.align.ion.drop_artefacts = v.bool().ok_or_else(|| bad(step, k))?
         }
         ("features.align", "split_gap") => r.align.ion.split_gap = Some(num()?),
+        ("features.align", "rt_warp") => {
+            r.align.warp.method = v
+                .str()
+                .and_then(crate::rtwarp::Method::parse)
+                .ok_or_else(|| bad(step, k))?
+        }
+        ("features.align", "rt_coarse_gap") => r.align.warp.coarse_gap = num()?,
+        ("features.align", "rt_span") => r.align.warp.span = num()?,
+        ("features.align", "rt_inlier") => r.align.warp.inlier = num()?,
         ("features.align", "weak_files") => r.weak_files = int()?,
         ("features.gapfill", "floor") => r.fill.floor = num()?,
         ("features.gapfill", "ppm") => r.fill.ppm = num()?,
@@ -120,6 +129,10 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
             ("max_ppm_span", n(r.align.ion.max_ppm_span)),
             ("drop_artefacts", Value::Bool(r.align.ion.drop_artefacts)),
             ("split_gap", r.align.ion.split_gap.map_or(Value::Null, n)),
+            ("rt_warp", Value::Str(r.align.warp.method.name().into())),
+            ("rt_coarse_gap", n(r.align.warp.coarse_gap)),
+            ("rt_span", n(r.align.warp.span)),
+            ("rt_inlier", n(r.align.warp.inlier)),
             ("weak_files", n(r.weak_files as f64)),
         ],
         "features.gapfill" => vec![

@@ -57,7 +57,7 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
 }
 
 /// Median of the non-NaN values (NaN when there are none), like `np.nanmedian`.
-fn nanmedian(v: impl Iterator<Item = f64>) -> f64 {
+pub(crate) fn nanmedian(v: impl Iterator<Item = f64>) -> f64 {
     let mut a: Vec<f64> = v.filter(|x| !x.is_nan()).collect();
     if a.is_empty() {
         return f64::NAN;
@@ -122,7 +122,7 @@ pub fn isolated(al: &Aligned, ppm: f64, rt: f64) -> Vec<bool> {
 }
 
 /// Rows that anchor the map: strong, narrow in RT across files, isolated, seen in all files (or in 75 % when too few).
-fn anchors(al: &Aligned, p: &RtParams) -> Vec<usize> {
+pub(crate) fn anchors(al: &Aligned, p: &RtParams) -> Vec<usize> {
     let nf = al.n_files;
     let iso = isolated(al, p.crowd_ppm, p.crowd_rt);
     let base: Vec<usize> = (0..al.len())
@@ -232,7 +232,12 @@ pub fn build(al: &Aligned, p: &RtParams) -> RtMap {
 }
 
 /// Root mean square of the anchors of a file against its curve (0 without anchors in that file).
-fn residual(rows: &[(f64, usize)], grid: &[f64], curve: &[f64], d: impl Fn(usize) -> f64) -> f64 {
+pub(crate) fn residual(
+    rows: &[(f64, usize)],
+    grid: &[f64],
+    curve: &[f64],
+    d: impl Fn(usize) -> f64,
+) -> f64 {
     let (mut s, mut n) = (0.0, 0usize);
     for (i, r) in rows.iter().enumerate() {
         let v = d(i);

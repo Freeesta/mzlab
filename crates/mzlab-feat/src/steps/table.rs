@@ -44,6 +44,27 @@ pub(super) fn align() -> Step {
             .unit("min")
             .doc("A row with two features of one file (close isomers) is cut at the RT gaps above this")
             .advanced(),
+        Param::choice("rt_warp", "RT correction", &["off", "piecewise", "loess", "ransac"])
+            .default_str("off")
+            .doc("Brings the RT of every file to a common one before the features are grouped, from anchors (peaks every file shows) found by a coarse alignment: piecewise (medians by blocks), loess (local regression), ransac (a line robust to wrong anchors); off: the RT as the files give it"),
+        Param::number("rt_coarse_gap", "Coarse RT gap")
+            .min(0.0)
+            .default_num(0.5)
+            .unit("min")
+            .doc("RT gap of the coarse alignment that finds the anchors, and the widest spread of an anchor over the files: the drift between files the correction can follow")
+            .advanced(),
+        Param::number("rt_span", "LOESS span")
+            .min(0.05)
+            .max(1.0)
+            .default_num(0.5)
+            .doc("Fraction of the anchors each local fit takes (loess)")
+            .advanced(),
+        Param::number("rt_inlier", "RANSAC distance")
+            .min(0.0)
+            .default_num(0.05)
+            .unit("min")
+            .doc("Largest distance of an anchor from the line to agree with it (ransac)")
+            .advanced(),
         Param::integer("weak_files", "Weak tier files")
             .min(0.0)
             .default_num(5.0)
