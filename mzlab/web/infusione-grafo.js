@@ -104,14 +104,15 @@ function wireSettings(/** @type {HTMLElement} */ b, /** @type {() => void} */ go
 /** Draws the graph, the panel of the node and the export row from the answer in G.j. */
 function drawBody(/** @type {HTMLElement} */ b, /** @type {any} */ file, /** @type {boolean} */ keepFocus) {
   const wrap = /** @type {HTMLElement} */ (b.querySelector("#ig-wrap")), pan = /** @type {HTMLElement} */ (b.querySelector("#ig-node")), exp = /** @type {HTMLElement} */ (b.querySelector("#ig-exp")), find = /** @type {HTMLElement} */ (b.querySelector("#ig-find"));
-  if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; return; }
+  if (!G.j || !G.j.nodi.length) { wrap.textContent = ""; pan.innerHTML = ""; exp.innerHTML = ""; find.innerHTML = ""; G.auto = false; return; }
   const redo = () => run(b, file);
   V.svg = drawGraph(wrap, G.j, { onSelect: id => { G.sel = id; drawBody(b, file, true); }, onOpen: openSpectrum });
   setScale(V.scale);
   if (keepFocus && G.sel) /** @type {HTMLElement | null} */ (wrap.querySelector(`.ig-node[data-id="${G.sel}"]`))?.focus();
   nodePanel(pan, nodeOf(G.sel), { redo, again: () => drawBody(b, file, false) });
   exportRow(exp, file, G.sel);
-  searchRow(find, file);
+  const auto = G.auto; G.auto = false;
+  searchRow(find, file, auto);
   if (window.TDATI && V.svg) { V.svg.setAttribute("aria-describedby", "ig-sum"); TDATI.attach(/** @type {any} */ (V.svg), dataTable); }
 }
 

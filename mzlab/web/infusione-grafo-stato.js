@@ -34,6 +34,8 @@ export const G = {
   /** @type {any} */ j: null,
   /** @type {string | null} */ sel: null,
   /** @type {string | null} */ error: null,
+  /** «Run MSn workflow» asked for the library search right after the next graph is drawn (read once). */
+  auto: false,
   /** The answer is for the request with this key. */
   key: "",
 };

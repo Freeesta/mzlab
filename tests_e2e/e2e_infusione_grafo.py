@@ -146,6 +146,11 @@ try:
             assert body["libreria"] and body["delta_max"] == 20 and body["formula"].startswith("C14H15N3O5"), body
             assert pg.locator(".ig-find-t tbody tr").nth(1).inner_text().count("14.0157") == 1
         step("Search lab library: candidates with the scores apart, the analog marked", find)
+        def workflow():
+            n0 = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length")
+            pg.click("#ig-flow"); attendi(pg, f"window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length > {n0}")
+            pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
+        step("Run MSn workflow: graph and library search with one click", workflow)
         def data():
             pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert "n2" in clip and "C13H10NO4" in clip, clip[:200]
