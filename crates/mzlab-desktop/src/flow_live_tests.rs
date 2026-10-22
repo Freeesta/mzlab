@@ -5,6 +5,9 @@ use serde_json::{json, Value};
 
 use crate::engine::State;
 
+/// The run is one for the whole app: the tests that start it go one after the other.
+static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 const PLAN: &str = r#"{"format":"mzflow/2","inputs":[{"name":"s_t000.mzML","type":"raw"},{"name":"s_t010.mzML","type":"raw"}],"steps":[
 {"id":"idx","step":"index.mzidx@1","in":{"source":["file:s_t000.mzML","file:s_t010.mzML"]}},
 {"id":"det","step":"features.detect@1","in":{"index":["idx.index"]}},
@@ -31,6 +34,7 @@ fn answer(r: crate::rpc::Answer) -> String {
 
 #[test]
 fn the_routes_answer_as_the_scheduler_of_the_site() {
+    let _one = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let changed = PLAN.replace(
         r#""id":"det","step":"features.detect@1","#,
         r#""id":"det","step":"features.detect@1","params":{"min_height":50000},"#,
@@ -72,4 +76,17 @@ fn the_routes_answer_as_the_scheduler_of_the_site() {
     assert!(st.flow_live("nope", &json!({})).is_err());
     st.flow_live("drop", &json!({})).unwrap();
     assert!(st.flow_live("jobs", &json!({})).is_err());
+}
+
+#[test]
+fn finish_answers_the_record_of_the_plan_it_holds() {
+    let _one = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let st = State::new();
+    assert!(st.flow_live("finish", &json!({})).is_err());
+    let files = json!({ "s_t000.mzML": "a", "s_t010.mzML": "b" });
+    st.live_start(&json!({ "plan": PLAN, "files": files }), 0)
+        .unwrap();
+    // with no worker nothing has run: the record is the one of a plan whose jobs are all unfinished, or an error, but never a panic
+    let _ = st.flow_live("finish", &json!({}));
+    st.flow_live("drop", &json!({})).unwrap();
 }

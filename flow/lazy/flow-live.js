@@ -12,6 +12,10 @@
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   const budgetMb = () => Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0;
   /** @type {any} */ let x = null;
+  // the two switches of the bar: Live (the plan is followed and its jobs start by themselves, on by default) and the user's Pause
+  const LIVE_KEY = "mzlab.flow.live";
+  let following = true, held = false;
+  try { following = localStorage.getItem(LIVE_KEY) !== "0"; } catch (_) { /* private mode: Live stays on */ }
 
   /** one live session: the plan sent, the items (one per .mzidx), the keys and the states the scheduler reported @param {any} S */
   const session = S => ({
@@ -55,6 +59,7 @@
     // the last file counted before the end, as the runner of a plan has always reported
     if (stato === "done" && was && was.stato === "running" && was.parte < ev.di) { const last = { ...was, parte: ev.di }; x.last.set(n.instance, last); emitWeb(x, last); }
     x.last.set(n.instance, ev);
+    if (ev.mb) view()?.memory(n.instance, ev.mb);
     emitWeb(x, ev);
   };
 
@@ -64,12 +69,13 @@
     if (e.kind === "job" && (e.state === "done" || e.state === "reused" || e.state === "error")) x.allowed.delete(jk(e));
     if (e.kind === "node") { x.nodes.set(e.instance, e); fromNode(x, e); }
   };
+  const view = () => F.liveView;
   const wake = (/** @type {any} */ x) => { const w = x.waiters.splice(0); for (const f of w) f(); };
   /** the events of the scheduler since the last read @param {any} x */
   const drain = async x => {
     const list = await call(x, "events", { since: x.seq });
     for (const e of list) { x.seq = Math.max(x.seq, e.seq); onEvent(x, e); }
-    if (list.length) wake(x);
+    if (list.length) { view()?.ingest(list); wake(x); }
   };
 
   /** the plan the scheduler works on: the plan of the page with the placeholder scan input replaced by one input per .mzidx of OPFS (or loading in Data), as `runPlanFromData` does for the app;
@@ -168,8 +174,10 @@
     const text = JSON.stringify(F.exportPlan(b.plan));
     if (!x.started) {
       if (!x.registry) x.registry = JSON.parse(JSON.stringify(x.S.reg.steps));
+      view()?.clear();
       await call(x, "new", { plan: JSON.parse(text), registry: x.registry, version: String(G.MZLAB_VERSION || ""), identities: b.ids });
       x.started = 1; x.sent = text; x.ok = true; x.ids = b.ids;
+      if (!following || held) await call(x, "pause");
       for (const inst of b.plan.steps) emitWeb(x, { passo: inst.id, stato: "waiting", via: kit().KNOWN.includes(base(inst)) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
       return;
     }
@@ -217,6 +225,7 @@
   const restart = async x => {
     await call(x, "drop");
     Object.assign(x, { started: 0, seq: 0, ok: false, sent: "", pooled: 0, nodes: new Map() });
+    view()?.clear();
     x.keys.clear(); x.memAsk.clear(); x.allowed.clear();
     await replan(x);
   };
@@ -244,6 +253,8 @@
   const run = async (S, opts = {}) => {
     const o = { askMore: G.mzlabAskMore, ...opts };
     const live = await attach(S, true);
+    // Run is a request to get the plan done: it follows the plan again and goes on if it was paused
+    if (live && live.ok && (!following || held)) { following = true; held = false; await hold(live); }
     if (!live || !live.ok) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     await replan(live);
     if (!live.items.length) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
@@ -286,10 +297,32 @@
     return kit().stima(stored, kit().recipeOf(S.plan));
   };
 
+  // ------------------------------------------------------------------ the controls of the bar
+  const said = () => document.dispatchEvent(new CustomEvent("flow:live-ctl"));
+  /** the scheduler starts jobs only while the plan is followed and the user has not paused @param {any} live */
+  const hold = async live => {
+    if (!live || !live.ok) return;
+    const go = following && !held;
+    await call(live, go ? "resume" : "pause");
+    await drain(live);
+    if (go) await pump(live);
+    said();
+  };
+  const setHeld = async (/** @type {boolean} */ on) => { held = on; await hold(x); said(); };
+  const setLive = async (/** @type {boolean} */ on) => {
+    following = on;
+    try { localStorage.setItem(LIVE_KEY, on ? "1" : "0"); } catch (_) { /* private mode */ }
+    if (on) change();
+    await hold(x); said();
+  };
+  /** the user agrees to more memory (the only question the live run asks) */
+  const runNow = async () => { if (x && x.memAsk.size) await answerAsks(x, { askMore: G.mzlabAskMore }); };
+
   // ------------------------------------------------------------------ events of the page
   /** @type {any} */ let timer = 0;
   const change = () => {
     clearTimeout(timer);
+    if (!following) return;
     timer = setTimeout(async () => {
       const S = /** @type {any} */ (document.querySelector(".flx-list"))?.__flow;
       if (!S) return;
@@ -306,6 +339,6 @@
     for (const [key, spec] of x.observing) { const it = x.item(spec.item); if (it && it.stem === stem) progress(x, key, Math.min(0.99, d.frac || 0)); }
     if (!was || d.frac >= 1) change();
   });
-  F.live = { run, preflight, attach, change, state: () => x };
+  F.live = { run, preflight, attach, change, state: () => x, following: () => following, held: () => held, setLive, setHeld, runNow, active: () => !!(x && x.ok) };
   change();
 })();

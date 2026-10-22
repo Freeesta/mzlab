@@ -58,7 +58,7 @@ Pagina per costruire, controllare ed esportare un piano `mzflow/2` (formato e co
 - **Copertura di Tabui**: quali funzioni di Tabui sono coperte da passi o modelli di Flow e quali si eseguono (app, CLI, sito): `docs/agenti/flow-copertura-tabui.md`.
 
 - **Cronologia e corsa**: Annulla e Ripeti (`S.undo`, `S.redo`; Ctrl+Z, Ctrl+Y o Ctrl+Maiusc+Z fuori dai campi di testo; Ripeti si svuota a ogni modifica nuova).  Il pulsante «Run on this computer» resta spento finché il piano ha problemi e la nota accanto dice quanti sono. I colori su sfondo `--accent` usano `--on-accent`; le lettere dei marcatori mzidx e library sono bianche per il contrasto.
-- **Avanzamento della corsa**: durante la corsa nell'app la pagina chiede ogni 0,7 s la rotta `flow/progress` (`{jobs:[{id,item,ms,cached,error}]}`, riempita da `run_plan_notify` di `mzlab-cli` dopo ogni lavoro) e mostra ogni passo finito («done in X s», «reused», l'errore; un passo per file conta i file fatti).
+- **Avanzamento della corsa**: sul sito e nell'app le schede dicono ciò che dicono gli eventi `flowlive/1` (riga di stato, barra, tabella «Files» del pannello, Live/Pause/Run now nella barra): `flow-live.md`, «Schede e barra di stato».
 
 ## Avvio
 - **Regola**: nulla di pesante prima del primo disegno. La scheda Flow (`flow/js/flow-tool.js`) è lo script `early` di `indice.json`: il caricatore (`tpmine-loader.js`) lo esegue subito dopo l'indice, prima dei file di dati e degli altri script di Tabui (non ne usa nessuno), quindi la scheda esiste mentre il resto scarica.

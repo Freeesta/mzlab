@@ -157,7 +157,10 @@
     tplCards(); planView.hidden = true; undoBtn.disabled = true; redoBtn.disabled = true;
     selected = tableKey(); redraw(); requestAnimationFrame(() => cv.fit());
     // the late modules (results, review, runners) arrive after the first draw: draw again so the inspector gets its result cards
-    if (F.whenLate) F.whenLate.then(() => { if (root.isConnected) redraw(); }, () => say("Some parts of Flow could not be loaded. Reload the page.", null));
+    // the live controls of the bar (Live, Pause, Run now) come with the late modules
+    const mountLive = () => { if (F.liveBar && root.isConnected) F.liveBar.mount(bar, run, { say: (/** @type {string} */ m) => say(m, null), titleOf: (/** @type {string} */ id) => { const i = F.instanceOf(S.plan, id); return i ? F.nameOf(String(i.step).split("@")[0])[0] : id; } }); };
+    mountLive();
+    if (F.whenLate) F.whenLate.then(() => { if (root.isConnected) { mountLive(); redraw(); } }, () => say("Some parts of Flow could not be loaded. Reload the page.", null));
     S.redraw = redraw; /** @type {any} */ (sec).__flow = S; /** @type {any} */ (sec).__shell = { select: cvUi.select, model };
   };
 })();
