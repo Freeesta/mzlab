@@ -51,6 +51,8 @@ mod flow_link_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
+#[cfg(test)]
+mod flow_match_tests;
 mod flow_ms2;
 mod flow_msngraph;
 mod flow_msnlib;
@@ -67,6 +69,9 @@ mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
 mod flow_quant;
+mod flow_reactivity;
+#[cfg(test)]
+mod flow_reactivity_tests;
 mod flow_read;
 mod flow_refilter;
 #[cfg(test)]
@@ -104,7 +109,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli tutor eval CASES --blocchi F (--replay DIR | --solo-recupero)   score the Teoria tutor on the eval cases (tutor --help)
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
-       mzlab-cli msn-lib add|build|export ...                the library of MSn trees (msn-lib --help)
+       mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
 

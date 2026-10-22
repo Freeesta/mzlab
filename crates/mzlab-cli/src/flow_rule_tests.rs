@@ -18,7 +18,6 @@ const BUCHI: &[&str] = &[
     "rt.predict",
     "annot.regulatory",
     "annot.hazard",
-    "structure.reactivity",
 ];
 
 fn default_num(p: &Param) -> Option<f64> {
