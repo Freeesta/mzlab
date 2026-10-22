@@ -1368,3 +1368,4 @@
 {"v":1,"ts_utc":"2026-10-22T07:05:42Z","azione":"push","titolo":"Fonde main","merge_main":false,"aree":{"rust":5,"docs":4,"web":1,"test":1},"tipo":"pr","pr":1448,"sha":"12970956597d9309a820ce5c3208e2e8427dd18a"}
 {"v":1,"ts_utc":"2026-10-22T07:06:35Z","azione":"aperta","tipo":"pr","pr":1449,"sha":"25b64464141ea38379dbc2d8e95d429543bbc740"}
 {"v":1,"ts_utc":"2026-10-22T07:06:58Z","azione":"aperta","tipo":"pr","pr":1450,"sha":"bc118fa0c3da0699f6cfa1dc72734b10efd29601"}
+{"v":1,"ts_utc":"2026-10-22T07:10:53Z","azione":"push","titolo":"Schema delle regole: righe allineate alla tabella; la pagina applica le regole di formula","merge_main":false,"aree":{"docs":2},"tipo":"pr","pr":1450,"sha":"41848936686ca771c46e77952a0e53ad49346623"}
