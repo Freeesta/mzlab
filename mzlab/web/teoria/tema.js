@@ -6,6 +6,8 @@
   function eff(x) { return x === "dark" || (x !== "light" && mq && mq.matches) ? "dark" : "light"; }
   function apply(x) { pref = x; R.setAttribute("data-theme", eff(x)); R.style.colorScheme = eff(x); }
   apply(parentPref());
+  // CSS reserves the header only for the standalone page: inside the app (iframe) it is not drawn
+  try { if (parent !== window) R.classList.add("tp-emb"); } catch (e) { R.classList.add("tp-emb"); }
   // «Lettura facilitata»: the choices (localStorage «mzlab.a11y», JSON of codes) become data-a11y-* attributes of <html> before the page is drawn; the rules are in teoria.css, the panel in impostazioni.js
   var A11Y_KEYS = { font: ["atkinson", "dyslexic"], bg: ["cream", "blue", "hc"], motion: ["auto", "always"] };
   function a11yRead() { var o = {}; try { var raw = localStorage.getItem("mzlab.a11y"); if (raw === null) raw = localStorage.getItem("qqq.a11y"); o = JSON.parse(raw || "{}") || {}; } catch (e) { /* no storage: defaults */ } return o; }

@@ -1,7 +1,6 @@
-# Tabella cumulativa delle velocità
+# Tabella cumulativa delle misure di velocità
 
-Una riga per PR di velocità del Flow: % sul passo e sul totale (muro, 4 worker), mediana di 5 giri, output byte-identico (`tools/confronta_profili.py`). Il banco è `tools/misura_formati.py` (serie sintetica di 12 file, profilo `cli`).
+Una riga per ogni intervento di velocità (lettori, Flow, motore), dal più vecchio al più nuovo; la riga si aggiunge nella stessa PR che fa l'intervento. Regola del 22/10: anche i guadagni di pochi punti percento contano (dipendenza nuova da ≥ 3 % sul suo bersaglio). Un guadagno entra solo se supera il rumore misurato (`noise` del banco, `thermo-velocita.md`); prima e dopo con lo stesso binario di banco, la stessa macchina, il giro più veloce (`best`) su ≥ 15 giri e lo SHA di 40 caratteri di `main` per la misura «prima».
 
-| leva | bersaglio | passo | totale |
-|---|---|---|---|
-| mzXML: TIC e picco base in una sola lettura delle scansioni (`LettoreMzxml::completa`) | mzXML zlib / raw | index 2.77 → 2.11 s (−24 %) / 1.86 → 1.54 s (−17 %) | 1.28 → 1.06 s (−17 %) / 1.10 → 1.02 s (−7 %) |
+| Data | PR | Passo | Prima | Dopo | % |
+|---|---|---|---|---|---|

@@ -100,9 +100,10 @@ function uipReset(d) {
 // Administrator mode (5 clicks on the logo): the exit row shows only while it is on; the flag is shared with the Teoria
 function uipAdminOn() { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } }
 
-// Profile of the program (`mzlab.profilo`): «corso» (students; the assistant does not exist: no element, nothing downloaded) or «ricerca» (the assistant can be turned on in the settings).
-// A didactic setting, not a lock. The site starts as «corso», the desktop app as «ricerca».
-function uipProfile() { let v = null; try { v = localStorage.getItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ } return v === "corso" || v === "ricerca" ? v : (window.MZLAB_DESKTOP ? "ricerca" : "corso"); }
+// Profile of the program, never a setting: «ricerca» (the assistant can be turned on) when the administrator mode is on or in the desktop app, else «corso» (the assistant does not exist: no element, nothing downloaded).
+// The old explicit choice `mzlab.profilo` ("corso"/"ricerca", a plain string) is dropped; the same key now also holds the JSON state of the time profile (profilo.js), which is left alone.
+function uipProfile() { return uipAdminOn() || window.MZLAB_DESKTOP ? "ricerca" : "corso"; }
+try { const v = localStorage.getItem(NOMI.KEY("profilo")); if (v === "corso" || v === "ricerca") localStorage.removeItem(NOMI.KEY("profilo")); } catch (_) { /* blocked */ }
 
 // known contaminants on HR spectra: off by default; on only if explicitly turned on (read from the same key as liste.js, which may not be loaded yet)
 function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.on")) === "true"; } catch (_) { return false; } }
@@ -135,8 +136,7 @@ function uipOpen(btn) {
       + fld(T("settings.hrDec"), T("settings.hrDec.title"), `<input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:56px" aria-label="${esc(T("settings.hrDec"))}">`) : "") + cen;
   const tourOn = !(window.BANCO && BANCO.on());
   const prof = uipProfile();
-  const profile = C.section(T("settings.profile.label"), C.opts("seg2", C.radios("uip-prof", [["corso", T("settings.profile.corso"), T("settings.profile.title")], ["ricerca", T("settings.profile.ricerca"), T("settings.profile.title")]], prof, "seg")));
-  const app = profile + (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
+  const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
     + (tourOn ? `<div class="imp-fld"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "");
   const grp = (id, icon, title, body, dflt) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt)) : "";
   d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}">&times;</button></div>`
@@ -152,9 +152,8 @@ function uipOpen(btn) {
   if (mem) mem.bind(d);
   const on = (/** @type {string} */ sel, /** @type {string} */ ev, /** @type {(e: any) => void} */ fn) => { const el = d.querySelector(sel); if (el) el.addEventListener(ev, fn); };
   const radio = (/** @type {string} */ name, /** @type {(v: string) => void} */ fn) => d.querySelectorAll(`input[name="${name}"]`).forEach(r => r.addEventListener("change", e => { if (/** @type {HTMLInputElement} */ (e.target).checked) fn(/** @type {HTMLInputElement} */ (e.target).value); }));
-  radio("uip-prof", v => { try { localStorage.setItem(NOMI.KEY("profilo"), v); } catch (_) { /* not remembered */ } d.remove(); uipOpen(btn); });
   const llmBox = /** @type {HTMLElement | null} */ (d.querySelector("#uip-llm"));
-  if (llmBox) {         // only in the profile «ricerca», and only a switch: the module llm/ is fetched when the assistant is on or the user turns it on
+  if (llmBox) {         // only with the administrator mode (or in the desktop app), and only a switch: the module llm/ is fetched when the assistant is on or the user turns it on
     const go = (/** @type {boolean} */ turnOn) => import("./llm/llm-impostazioni.js").then(m => m.mount(llmBox, { C, T }, turnOn)).catch(() => { llmBox.textContent = T("err.llm.module"); });
     const wasOn = lsObj(NOMI.KEY("llm")).on === true;
     const html = C.sw(T("llm.on.label"), T("llm.on.title"), 'id="llm-on"', wasOn, "") + `<div class="hint" role="status">${T("llm.off.hint")}</div>`;

@@ -58,35 +58,68 @@ pub(crate) fn put<T: Into<Value>>(m: &mut Map<String, Value>, k: &str, v: Option
     }
 }
 
-/// The reactions the reader exposes today: one element, from the same values the mzML writer uses. When the reader gives one per reaction this is the line to widen.
+/// One element per step of the chain (`PrecursorInfo::reactions`), as the dump of RFR lists them. `iso_width` is the final step's (from the trailer): the earlier
+/// steps carry `raw_double` and `raw_long2` instead, extras of the bench that `scandump_compare.py` sets against RFR's width and offset until their meaning is proved.
 fn reactions_of(meta: &ScanMetadata, params: Option<&ScanParams<'_>>) -> Vec<Value> {
     let Some(p) = meta.precursor.as_ref() else {
         return Vec::new();
     };
-    let mut r = Map::new();
-    put(&mut r, "precursor", p.target_mz);
-    put(&mut r, "iso_width", p.isolation_width);
-    put(&mut r, "activation", p.activation.map(|a| format!("{a:?}")));
-    put(&mut r, "energy", p.collision_energy);
-    // the unit is known only when the energy comes from the trailer
+    // a scan without a chain (SRM, no event) keeps the single reaction the mzML writer uses
+    let single;
+    let steps = if p.reactions.is_empty() {
+        single = [opentfraw::ReactionInfo {
+            precursor_mz: p.target_mz.unwrap_or_default(),
+            isolation_width: p.isolation_width,
+            activation: p.activation,
+            energy: p.collision_energy,
+            energy_is_nce: p.ce_is_nce,
+            ..Default::default()
+        }];
+        &single[..]
+    } else {
+        &p.reactions[..]
+    };
     let from_trailer = params
         .and_then(|q| q.activation_energy())
         .is_some_and(|e| e > 0.0);
-    if p.collision_energy.is_some() && from_trailer {
-        r.insert(
-            "energy_unit".into(),
-            if p.ce_is_nce { "NCE" } else { "eV" }.into(),
+    let last = steps.len() - 1;
+    let mut out = Vec::new();
+    for (i, st) in steps.iter().enumerate() {
+        let mut r = Map::new();
+        // the final step keeps the isolation target the dump has always given; a simultaneous precursor is its own reaction's
+        let mz = match p.target_mz {
+            Some(t) if i == last && !st.multiple => t,
+            _ => st.precursor_mz,
+        };
+        put(&mut r, "precursor", (mz > 0.0).then_some(mz));
+        put(&mut r, "iso_width", st.isolation_width);
+        put(
+            &mut r,
+            "activation",
+            st.activation.map(|a| format!("{a:?}")),
         );
+        put(&mut r, "energy", st.energy);
+        // the unit is known only when the energy comes from the trailer (the final step) or the trailer says NCE
+        if st.energy.is_some() {
+            if st.energy_is_nce {
+                r.insert("energy_unit".into(), "NCE".into());
+            } else if i == last && from_trailer {
+                r.insert("energy_unit".into(), "eV".into());
+            }
+        }
+        put(&mut r, "supplemental", st.supplemental_energy);
+        if st.multiple {
+            r.insert("multiple".into(), true.into());
+        }
+        if p.reactions.len() > 1 && i != last {
+            r.insert("raw_double".into(), st.raw_double.into());
+            r.insert("raw_long2".into(), st.raw_long2.into());
+        }
+        if !r.is_empty() {
+            out.push(Value::Object(r));
+        }
     }
-    put(
-        &mut r,
-        "supplemental",
-        params.and_then(|q| q.supplemental_activation_energy()),
-    );
-    if r.is_empty() {
-        return Vec::new();
-    }
-    vec![Value::Object(r)]
+    out
 }
 
 fn scan_row(
@@ -153,9 +186,7 @@ fn scan_row(
         Value::Array(reactions_of(&meta, params.as_ref())),
     );
     if let Some(p) = params.as_ref() {
-        let sps: Vec<f64> = (0..64)
-            .map_while(|c| p.sps_mass(c).map(f64::from).filter(|&x| x > 0.0))
-            .collect();
+        let sps = opentfraw::mzml::sps_masses(p);
         if !sps.is_empty() {
             m.insert("sps_precursors".into(), json!(sps));
         }

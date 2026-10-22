@@ -13,12 +13,11 @@
 - **D10 Attivazione**: mappatura dal filtro (`@cid`, `@hcd`, `@etd`, `@ethcd`, `@uvpd`, `@sa`) e dal trailer ai termini CV come msconvert. Oggi `@cid` diventa HCD: 16 038 MS2 su 16 038 di LAB-B (msconvert: MS:1000133). Prova F5 su tutto il corpus (RM-1).
 - **D11 Costo della CLI**: `convert` impiega 5,97 s contro 2,87 s dello scrittore nel banco, e il livello 0 cambia solo 0,23 s. Va scomposto in RM-0 (SHA-256 per la cache, indicizzazione, copia/collegamento, chiavi `conv/1`).
 
-## Decisioni chieste al Coordinatore (con raccomandazione)
+## Decisioni del Coordinatore (tutte accettate come raccomandate)
 1. **Uscita senza perdite**:
-   - **Raccomando**: un nuovo valore `--peaks tutto`. Lo spettro porta il profilo come array standard, la lista come array non standard e le colonne per picco con i termini CV standard (charge, resolution, noise, baseline, sampled noise), con `arrayLength`.
+   - **Deciso**: un nuovo valore `--peaks tutto`. Lo spettro porta il profilo come array standard, la lista come array non standard e le colonne per picco con i termini CV standard (charge, resolution, noise, baseline, sampled noise), con `arrayLength`.
    - Il valore di base `file` resta com'è finché E6 non passa.
-   - In alternativa: due mzML (profilo e centroidi). Più semplice per i lettori, ma doppio disco.
-2. **Zeri**: di base i soli punti del file (niente inventato); `--set conv.zeri=rfr` per la parità con msconvert e RFR (F3). **Raccomando** questa.
-3. **mzML indicizzato anche da `scrivi`** (la CLI lo è già): **raccomando** sì, nella stessa passata con gli offset e l'SHA-1 (RM-3).
-4. **Sovrapposizione con T-7b**: le colonne per picco nel lettore (`vendor/opentfraw`) sono lavoro di T-7b (A3). **Raccomando**: RM-2 fa la decodifica del descrittore solo se T-7b non è aperto; altrimenti RM-2 usa ciò che T-7b espone e fa solo l'mzML. Una sola PR per volta su `scan_data.rs`.
-5. **Libreria di compressione**: passare a zlib-rs (già nel `Cargo.lock` come backend di flate2) cambia i byte dei file compressi. **Raccomando** una versione `conv/1` nuova e il prima/dopo nella PR (F10).
+2. **Zeri**: di base i soli punti del file (niente inventato); `--set conv.zeri=rfr` per la parità con msconvert e RFR (F3). **Deciso**.
+3. **mzML indicizzato anche da `scrivi`** (la CLI lo è già): **deciso** sì, nella stessa passata con gli offset e l'SHA-1 (RM-3).
+4. **Sovrapposizione con T-7b**: le colonne per picco nel lettore (`vendor/opentfraw`) sono lavoro di T-7b (A3). **Deciso**: RM-2 fa la decodifica del descrittore solo se T-7b non è aperto; altrimenti RM-2 usa ciò che T-7b espone e fa solo l'mzML. Una sola PR per volta su `scan_data.rs`.
+5. **Libreria di compressione**: passare a zlib-rs (già nel `Cargo.lock` come backend di flate2) cambia i byte dei file compressi. **Deciso**: una versione `conv/1` nuova e il prima/dopo nella PR (F10).

@@ -19,9 +19,14 @@ pub struct ReactionInfo {
     /// Stepped NCE (`20,35,60`): every step, `energy` keeps the single value the trailer gives.
     pub energy_steps: Vec<f64>,
     pub supplemental_energy: Option<f64>,
+    /// `unknown_double` of the reaction. Its meaning is NOT confirmed (isolation width of an earlier step is the candidate): it becomes
+    /// `isolation_width` for every step only when `scandump_compare.py` shows it equal to RFR's width on the MS3+ dumps; unverified against RFR.
     pub raw_double: f64,
     pub raw_flags: u32,
+    /// `unknown_long2` of the reaction; unverified against RFR (isolation offset? multiplex count?).
     pub raw_long2: u32,
+    /// Several precursors isolated together at this level (MSX, multi-band DIA): more steps than the level has, so they are not a chain.
+    pub multiple: bool,
 }
 
 /// What the trailer says about the final reaction.
@@ -36,7 +41,8 @@ pub struct FinalReaction {
 
 impl Reaction {
     /// Activation coded in `unknown_long1`: bit 0 says the energy is set, the rest is the Thermo activation type (0 CID, 1 MPD, 2 ECD, 3 PQD, 4 ETD,
-    /// 5 HCD, 11 UVPD). Only CID (1) and HCD (11) are seen in the corpus, the others come from the public Thermo enumeration.
+    /// 5 HCD, 11 UVPD). Only CID (1) and HCD (11) are seen in the corpus, the others come from the public Thermo enumeration and are
+    /// unverified against RFR (tests build one event per code).
     pub fn activation(&self) -> Option<Activation> {
         if self.unknown_long1 & 1 == 0 {
             return None;
@@ -68,6 +74,17 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
         ..Default::default()
     };
     let valid = rs.iter().filter(|r| r.precursor_mz > 0.0).count();
+    // an MSn scan has n-1 isolation steps; more valid reactions than that are simultaneous precursors
+    let multiple = match event.preamble.ms_power() {
+        Some(MsPower::Ms2) => valid > 1,
+        Some(MsPower::Ms3) => valid > 2,
+        Some(MsPower::Ms4) => valid > 3,
+        Some(MsPower::Ms5) => valid > 4,
+        Some(MsPower::Ms6) => valid > 5,
+        Some(MsPower::Ms7) => valid > 6,
+        Some(MsPower::Ms8) => valid > 7,
+        _ => false,
+    };
     let tribrid_ethcd = event.preamble.ms_power() == Some(MsPower::Ms2)
         && rs.len() >= 2
         && valid == 1
@@ -94,7 +111,10 @@ pub fn chain(event: &ScanEvent, fin: &FinalReaction) -> Vec<ReactionInfo> {
         .enumerate()
         .filter(|(_, r)| r.precursor_mz > 0.0)
         .map(|(i, rx)| {
-            let mut out = info(rx);
+            let mut out = ReactionInfo {
+                multiple,
+                ..info(rx)
+            };
             if i != last {
                 out.activation = rx.activation().or(act);
                 out.energy_is_nce = fin.energy_is_nce;
@@ -296,5 +316,65 @@ mod tests {
                 (300.0, Some(Activation::HCD), Some(40.0))
             ]
         );
+    }
+
+    #[test]
+    fn every_activation_code_has_an_event_that_reads_back() {
+        // flags: bit 0 = energy set, the rest the Thermo activation type; each code builds one MS2 event
+        for (code, want) in [
+            (0u32, Activation::CID),
+            (1, Activation::MPID),
+            (2, Activation::ECD),
+            (3, Activation::PQD),
+            (4, Activation::ETD),
+            (5, Activation::HCD),
+            (11, Activation::UVPD),
+        ] {
+            let r = rx(500.0, 20.0, code << 1 | 1);
+            assert_eq!(r.activation(), Some(want), "code {code}");
+            let c = chain(&event(2, 0, 4, vec![r]), &fin(20.0, false));
+            assert_eq!(c[0].raw_flags, code << 1 | 1);
+        }
+        assert_eq!(rx(500.0, 20.0, 0).activation(), None);
+        assert_eq!(rx(500.0, 20.0, 13 << 1 | 1).activation(), None);
+    }
+
+    #[test]
+    fn an_ion_trap_ms3_keeps_etd_and_pqd_of_the_early_steps() {
+        let e = event(
+            3,
+            0,
+            4,
+            vec![rx(600.0, 100.0, 4 << 1 | 1), rx(400.0, 30.0, 3 << 1 | 1)],
+        );
+        let c = chain(&e, &fin(30.0, false));
+        assert_eq!(c[0].activation, Some(Activation::ETD));
+        assert_eq!(c[0].energy, Some(100.0));
+        assert!(!c[0].multiple && !c[1].multiple);
+    }
+
+    #[test]
+    fn simultaneous_precursors_are_marked_multiple_and_a_chain_is_not() {
+        let msx = chain(
+            &event(
+                2,
+                4,
+                1,
+                vec![rx(400.0, 0.0, 11), rx(410.0, 0.0, 11), rx(420.0, 0.0, 11)],
+            ),
+            &fin(30.0, true),
+        );
+        assert_eq!(msx.len(), 3);
+        assert!(msx.iter().all(|r| r.multiple));
+        let ms3 = chain(
+            &event(3, 4, 4, vec![rx(500.0, 35.0, 1), rx(300.0, 0.0, 11)]),
+            &fin(40.0, true),
+        );
+        assert!(ms3.iter().all(|r| !r.multiple));
+        let tribrid = chain(
+            &event(2, 4, 1, vec![rx(649.1, 0.0, 0), rx(0.0, 0.0, 11)]),
+            &fin(28.0, true),
+        );
+        assert!(!tribrid[0].multiple);
     }
 }

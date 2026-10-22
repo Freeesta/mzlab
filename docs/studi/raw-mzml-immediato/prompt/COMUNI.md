@@ -36,7 +36,8 @@ Ogni prompt RM-n dice di leggere questo file per primo. Insieme formano il promp
   - un test;
   - il fuzzing (`cargo fuzz` o equivalente nel CI notturno; un workflow nuovo solo passando dal Coordinatore);
   - una versione sicura accanto, che un test confronta al bit sulle stesse entrate.
-- **Dipendenza nuova** solo con un guadagno misurato ≥ 10 % sul suo bersaglio e una licenza permissiva (MIT, Apache-2.0, BSD, Zlib). Nella PR: le righe aggiunte di `Cargo.toml`/`Cargo.lock`, la licenza e i numeri prima/dopo. Già nel `Cargo.lock`: `memmap2`, `rayon`, `crossbeam-channel`, `itoa`, `sha1`, `base64`, `flate2` con `miniz_oxide` e `zlib-rs`.
+- **Ogni guadagno conta**, anche di pochi punti percento: è ammesso se misurato oltre il rumore (5 giri, mediana, scarto interquartile dichiarato, stesso risultato ripetendo) e il codice resta piccolo e leggibile. In ogni PR: il guadagno in % sul passo e sul totale, il rumore di misura e una riga nella tabella cumulativa `docs/agenti/misure-velocita.md` (chi la trova assente la crea, con la riga in `docs/agenti/INDICE.md`).
+- **Dipendenza nuova** solo con un guadagno misurato ≥ 3 % sul suo bersaglio (sotto il 3 % si scarta o si riscrive senza dipendenza) e una licenza permissiva (MIT, Apache-2.0, BSD, Zlib). Nella PR: le righe aggiunte di `Cargo.toml`/`Cargo.lock`, la licenza e i numeri prima/dopo. Già nel `Cargo.lock`: `memmap2`, `rayon`, `crossbeam-channel`, `itoa`, `sha1`, `base64`, `flate2` con `miniz_oxide` e `zlib-rs`.
 - **Contratto `Lettore`**: ogni numero letto dal file passa da `Limiti` prima di allocare; gli errori sono chiavi `err.file.*`, mai panico; ciò che il file non ha è assente.
 - Ogni modifica a `vendor/opentfraw` è una riga in `vendor/opentfraw/MODIFICHE-MZLAB.md` (Apache-2.0).
 - Ogni opzione nuova del passo `convert.mzml` ha il suo `--set conv.NOME=VALORE` (regola CLI, `docs/agenti/cli.md`).
