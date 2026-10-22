@@ -1384,3 +1384,4 @@
 {"v":1,"ts_utc":"2026-10-22T07:25:08Z","azione":"aperta","tipo":"pr","pr":1456,"sha":"1112a6b033f5230cde595b8f121505352306537e"}
 {"v":1,"ts_utc":"2026-10-22T07:25:32Z","azione":"push","titolo":"Studio Flow-Live: frase del test di L1 chiarita","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1455,"sha":"fb518895df2331505160aab1a734a188cf05eaa9"}
 {"v":1,"ts_utc":"2026-10-22T07:29:31Z","azione":"push","titolo":"Clippy: confronto dei ranghi senza ciclo a indice","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1454,"sha":"89abd6524f4b2f3063bae06f7424840fe3b12c3c"}
+{"v":1,"ts_utc":"2026-10-22T07:33:09Z","azione":"push","titolo":"Avvio Dati: stili e preload dopo il blocco del tema","merge_main":false,"aree":{"web":1},"tipo":"pr","pr":1456,"sha":"8ae57cfa528a321e2901f5a500014c1800007f1b"}
