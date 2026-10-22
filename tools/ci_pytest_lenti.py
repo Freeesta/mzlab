@@ -19,11 +19,15 @@ LISTA = Path(__file__).with_name("pytest_lenti.txt")
 
 def lenti(ev: list[dict], ultimi: int = 8, minimo: float = 5.0) -> list[str]:
     """Test files whose mean time over the last `ultimi` 3.11 runs with phase data is at least `minimo` seconds, slowest first."""
-    runs = [r for r in ev if r.get("tipo") == "test_durate" and r.get("python") == "3.11" and isinstance(r.get("fasi"), dict)]
-    runs = sorted(runs, key=lambda r: r["ts_utc"])[-ultimi:]
+    # since the 3.11 job runs as shards, a run has several rows (one per shard) with disjoint files: they are merged per run
+    righe = [r for r in ev if r.get("tipo") == "test_durate" and r.get("python") == "3.11" and isinstance(r.get("fasi"), dict)]
+    per_run: dict = {}
+    for r in sorted(righe, key=lambda r: r["ts_utc"]):
+        per_run.setdefault(r.get("run_id", r["ts_utc"]), {}).update(r["fasi"])
+    runs = list(per_run.values())[-ultimi:]
     tempi: dict[str, list[float]] = defaultdict(list)
-    for r in runs:
-        for f, fasi in r["fasi"].items():
+    for fasi_run in runs:
+        for f, fasi in fasi_run.items():
             tempi[f].append(sum(fasi))
     media = {f: sum(v) / len(runs) for f, v in tempi.items()}
     return [f for f, s in sorted(media.items(), key=lambda x: (-x[1], x[0])) if s >= minimo]
