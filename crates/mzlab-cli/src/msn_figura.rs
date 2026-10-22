@@ -15,8 +15,12 @@ mod scena;
 #[path = "msn_figura_tests.rs"]
 mod tests;
 
+#[path = "msn_figura_testi.rs"]
+mod testi_;
+
 use disegno::*;
 use scena::*;
+use testi_::*;
 
 /// The two views of the graph.
 #[derive(Clone, Copy, PartialEq, Debug)]
