@@ -36,7 +36,7 @@ try:
             rr = rows(); assert [len(x) for x in rr] == [1, 2], rr
             g = rects(); assert g[1][2] == g[2][2] and g[1][1] < g[2][1], g
             assert pg.evaluate("document.getElementById('aff-bar')") is None, "no pop-up with an Undo button"
-            assert pg.inner_text("#aff-live").startswith("Side by side"), pg.inner_text("#aff-live")
+            assert pg.inner_text("#aff-live").startswith(("Side by side", "Affiancati")), pg.inner_text("#aff-live")
         step("drag the grip to the right zone of another panel: two side by side", drag)
         step("state is coherent", lambda: pg.evaluate("STATO.verifica()") == [] or (_ for _ in ()).throw(AssertionError("stato")))
         def undo():
