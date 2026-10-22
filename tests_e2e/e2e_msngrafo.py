@@ -68,7 +68,7 @@ try:
             assert st == 400 and err["error_key"] == "err.msnlib.noIon", (st, err)
         step("the library gets an entry once, the same one is a duplicate and a graph without ion is a keyed error", library)
         def search():
-            post = "(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
+            post = "([u,b])=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
             body = {"libreria": "", "molecola_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "scelte": []}
             st, a = pg.evaluate(post, ["api/msnlib/aggiungi", body])
             assert st == 200, (st, a)
