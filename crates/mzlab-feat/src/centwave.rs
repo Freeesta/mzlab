@@ -1,0 +1,235 @@
+//! CentWave peak model for the ion traces of `trace` (`features.detect`, algorithm `centwave`): each region of interest (a stitched trace) is
+//! rebuilt as an intensity series per scan and cut into peaks with a continuous wavelet transform (Ricker wavelet) over the expected widths.
+//! Sums run in a fixed order and `exp` comes from `libm`: native and WASM give the same bits.
+
+use mzlab_core::error::Result;
+
+use crate::channels::Seg;
+use crate::trace::{filled, reserve, Params};
+
+/// How the segments of a slab become peaks: the cut of the runs at their gaps (`masstrace`) or the wavelet model.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum Peak {
+    #[default]
+    Minima,
+    CentWave(CentWave),
+}
+
+/// Parameters of the wavelet model (descriptor `features.detect`, algorithm `centwave`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CentWave {
+    /// Half window of m/z (ppm; on the Da axis 0.5 Da) around a trace where its intensities are summed per scan.
+    pub ppm: f64,
+    /// Range of the full width at half maximum of the peaks, seconds.
+    pub width_s: (f64, f64),
+    /// Minimum height over the baseline, in units of the noise of the trace (never less than `Params::floor`).
+    pub snr: f64,
+}
+
+impl Default for CentWave {
+    fn default() -> Self {
+        CentWave {
+            ppm: 25.0,
+            width_s: (5.0, 30.0),
+            snr: 10.0,
+        }
+    }
+}
+
+/// Number of scales between the narrowest and the widest peak.
+const SCALES: usize = 6;
+/// FWHM of a Gaussian over its standard deviation.
+const FWHM: f64 = 2.354_820_045_030_949_3;
+/// Half width of a peak, in standard deviations of the scale that found it.
+const REACH: f64 = 2.5;
+/// Two neighbouring apexes are two peaks only if the valley between them is lower than this fraction of the lower apex.
+const RESOLVED: f64 = 0.9;
+
+fn ricker(x: f64) -> f64 {
+    let x2 = x * x;
+    (1.0 - x2) * libm::exp(-0.5 * x2)
+}
+
+/// Standard deviations (scans) of the wavelets: geometric between the narrowest and the widest peak.
+fn scales(width_s: (f64, f64), dt: f64) -> Vec<f64> {
+    let lo = (width_s.0 / dt / FWHM).max(0.8);
+    let hi = (width_s.1 / dt / FWHM).max(lo);
+    if hi <= lo * 1.01 {
+        return vec![lo];
+    }
+    let k = libm::pow(hi / lo, 1.0 / (SCALES - 1) as f64);
+    (0..SCALES).map(|i| lo * libm::pow(k, i as f64)).collect()
+}
+
+/// Responses of the Ricker wavelet of standard deviation `s` (scans) over `y`.
+fn response(y: &[f64], s: f64) -> Result<Vec<f64>> {
+    let n = y.len();
+    let half = libm::ceil(4.0 * s) as isize;
+    let kernel: Vec<f64> = (-half..=half).map(|d| ricker(d as f64 / s)).collect();
+    let norm = 1.0 / libm::sqrt(s);
+    let mut r = filled(n, 0.0f64)?;
+    for (t, out) in r.iter_mut().enumerate() {
+        let mut acc = 0.0;
+        for (j, w) in kernel.iter().enumerate() {
+            let i = t as isize + j as isize - half;
+            if i >= 0 && (i as usize) < n {
+                acc += y[i as usize] * w;
+            }
+        }
+        *out = acc * norm;
+    }
+    Ok(r)
+}
+
+/// Apexes (index, scale) of the series: the local maxima of the response at each scale, narrowest scale first; a wider scale adds only what the narrower
+/// ones did not find nearby. The apex is the highest point of `y` within one standard deviation of the maximum.
+fn apexes(y: &[f64], sigma: &[f64]) -> Result<Vec<(usize, f64)>> {
+    let n = y.len();
+    let mut found: Vec<(usize, f64)> = Vec::new();
+    for &s in sigma {
+        let r = response(y, s)?;
+        let reach = libm::ceil(s) as usize;
+        for t in 0..n {
+            let left = t == 0 || r[t] >= r[t - 1];
+            let right = t + 1 == n || r[t] > r[t + 1];
+            if r[t] > 0.0 && left && right {
+                let (a, z) = (t.saturating_sub(reach), (t + reach).min(n - 1));
+                let mut apex = a;
+                for i in a..=z {
+                    if y[i] > y[apex] {
+                        apex = i;
+                    }
+                }
+                if !found.iter().any(|&(f, _)| f.abs_diff(apex) <= reach) {
+                    found.push((apex, s));
+                }
+            }
+        }
+    }
+    found.sort_by_key(|f| f.0);
+    Ok(found)
+}
+
+/// Joins the neighbours that no valley of at least `1 - RESOLVED` of the lower apex separates: the higher apex stays, with the wider scale.
+fn resolve(y: &[f64], found: Vec<(usize, f64)>) -> Vec<(usize, f64)> {
+    let mut out: Vec<(usize, f64)> = Vec::new();
+    for f in found {
+        match out.last_mut() {
+            Some(last) if y[valley(y, last.0, f.0)] > RESOLVED * y[last.0].min(y[f.0]) => {
+                if y[f.0] > y[last.0] {
+                    last.0 = f.0;
+                }
+                last.1 = last.1.max(f.1);
+            }
+            _ => out.push(f),
+        }
+    }
+    out
+}
+
+/// Peaks of the series `y` as (first, apex, last) indexes, ordered by apex; adjacent peaks meet at the lowest point between their apexes.
+fn peaks(y: &[f64], sigma: &[f64], snr: f64, floor: f64) -> Result<Vec<(usize, usize, usize)>> {
+    let n = y.len();
+    let found = resolve(y, apexes(y, sigma)?);
+    let mut out: Vec<(usize, usize, usize)> = Vec::new();
+    for (k, &(apex, s)) in found.iter().enumerate() {
+        let reach = libm::ceil(REACH * s) as usize;
+        let mut lo = apex.saturating_sub(reach);
+        let mut hi = (apex + reach).min(n - 1);
+        if k > 0 {
+            lo = lo.max(valley(y, found[k - 1].0, apex));
+        }
+        if let Some(next) = found.get(k + 1) {
+            hi = hi.min(valley(y, apex, next.0));
+        }
+        out.push((lo, apex, hi));
+    }
+    Ok(keep_above_noise(y, out, snr, floor))
+}
+
+/// Index of the lowest point of `y` between two apexes (the first one if several).
+fn valley(y: &[f64], a: usize, b: usize) -> usize {
+    let mut at = a;
+    for i in a..=b {
+        if y[i] < y[at] {
+            at = i;
+        }
+    }
+    at
+}
+
+/// The peaks whose height over the baseline is `snr` times the noise of the points that no peak covers (at least `floor`).
+fn keep_above_noise(
+    y: &[f64],
+    found: Vec<(usize, usize, usize)>,
+    snr: f64,
+    floor: f64,
+) -> Vec<(usize, usize, usize)> {
+    let (mut sum, mut sum2, mut m) = (0.0, 0.0, 0.0);
+    for (i, &v) in y.iter().enumerate() {
+        if !found.iter().any(|&(lo, _, hi)| i >= lo && i <= hi) {
+            sum += v;
+            sum2 += v * v;
+            m += 1.0;
+        }
+    }
+    let sd = if m >= 3.0 {
+        libm::sqrt(((sum2 - sum * sum / m) / (m - 1.0)).max(0.0))
+    } else {
+        0.0
+    };
+    let noise = sd.max(floor);
+    found
+        .into_iter()
+        .filter(|&(lo, apex, hi)| (y[apex] - y[lo].min(y[hi])) >= snr * noise)
+        .collect()
+}
+
+/// Cuts every segment into the peaks of its series: the intensities of the slab inside the window of m/z of the segment, summed per scan.
+/// `mz` ascending; `dt` is the median interval between scans, seconds.
+pub(crate) fn refine(
+    segs: Vec<Seg>,
+    mz: &[f64],
+    it: &[f64],
+    pos: &[u32],
+    dt: f64,
+    p: &Params,
+    cw: &CentWave,
+) -> Result<Vec<Seg>> {
+    let sigma = scales(cw.width_s, dt);
+    let mut out: Vec<Seg> = Vec::new();
+    for s in segs {
+        let half = match p.axis {
+            crate::axis::MassAxis::Ppm => s.mzc * cw.ppm * 1e-6,
+            crate::axis::MassAxis::Da { .. } => 0.5,
+        };
+        let from = mz.partition_point(|&m| m < s.mzc - half);
+        let to = mz.partition_point(|&m| m <= s.mzc + half);
+        let len = (s.z - s.a + 1) as usize;
+        let mut y = filled(len, 0.0f64)?;
+        let mut weighted = filled(len, 0.0f64)?;
+        for i in from..to {
+            if pos[i] >= s.a && pos[i] <= s.z {
+                let k = (pos[i] - s.a) as usize;
+                y[k] += it[i];
+                weighted[k] += it[i] * mz[i];
+            }
+        }
+        for (lo, apex, hi) in peaks(&y, &sigma, cw.snr, p.floor)? {
+            let tot: f64 = y[lo..=hi].iter().sum();
+            let w: f64 = weighted[lo..=hi].iter().sum();
+            reserve(&mut out, 1)?;
+            out.push(Seg {
+                chan: s.chan,
+                mzc: w / tot,
+                apex: s.a + apex as u32,
+                n: y[lo..=hi].iter().filter(|&&v| v > 0.0).count() as u32,
+                mx: y[apex],
+                tot,
+                a: s.a + lo as u32,
+                z: s.a + hi as u32,
+            });
+        }
+    }
+    Ok(out)
+}

@@ -200,7 +200,7 @@ fn centwave() -> Algorithm {
                 .unit("s"),
             Param::number("snr", "Signal to noise").min(0.0).default_num(10.0),
         ],
-        status: Status::Planned,
+        status: Status::Available,
     }
 }
 

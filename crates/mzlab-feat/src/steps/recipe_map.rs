@@ -6,6 +6,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Value;
 
 use crate::axis::MassAxis;
+use crate::centwave::{CentWave, Peak};
 use crate::recipe::{Mode, Recipe};
 
 fn bad(step: &str, name: &str) -> Error {
@@ -14,12 +15,39 @@ fn bad(step: &str, name: &str) -> Error {
         .with("param", name)
 }
 
-/// Writes `params` (descriptor names, any order; `axis` is applied before `mass_defect`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
+/// Writes `params` (descriptor names, any order; `algorithm` and `axis` are applied before the rest; `algorithm` is `centwave` or `masstrace` for `features.detect`) of `step` onto `r`. An unknown name is `err.flow.param.unknown`.
 pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<()> {
     let mut sorted: Vec<&(String, Value)> = params.iter().collect();
-    mzlab_core::sortc::slice_by_key(&mut sorted, |(k, _)| k.as_str() != "axis");
+    mzlab_core::sortc::slice_by_key(&mut sorted, |(k, _)| {
+        !matches!(k.as_str(), "algorithm" | "axis")
+    });
     for (k, v) in sorted {
         set(r, step, k, v)?;
+    }
+    Ok(())
+}
+
+/// The peak model of `features.detect`: the algorithm, and the parameters that only the wavelet model has.
+fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
+    if k == "algorithm" {
+        r.detect.peak = match v.str() {
+            Some("centwave") => Peak::CentWave(CentWave::default()),
+            Some("masstrace") => Peak::Minima,
+            _ => return Err(bad(step, k)),
+        };
+        return Ok(());
+    }
+    let Peak::CentWave(c) = &mut r.detect.peak else {
+        return Err(Error::new("err.flow.param.unknown").with("param", k));
+    };
+    let num = v.f64().ok_or_else(|| bad(step, k));
+    match k {
+        "ppm" => c.ppm = num?,
+        "snr" => c.snr = num?,
+        _ => match (v.at(0).and_then(Value::f64), v.at(1).and_then(Value::f64)) {
+            (Some(a), Some(b)) => c.width_s = (a, b),
+            _ => return Err(bad(step, k)),
+        },
     }
     Ok(())
 }
@@ -54,6 +82,9 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
+        ("features.detect", "algorithm" | "ppm" | "peak_width_s" | "snr") => {
+            set_peak(r, step, k, v)?
+        }
         ("features.align", "mode") => {
             r.mode = match v.str() {
                 Some("family") => Mode::Family,
@@ -110,6 +141,12 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("max_gap", n(f64::from(r.detect.max_gap))),
                 ("long_trace", n(f64::from(r.detect.long_trace))),
             ];
+            if let Peak::CentWave(c) = &r.detect.peak {
+                let (a, b) = c.width_s;
+                v.push(("ppm", n(c.ppm)));
+                v.push(("peak_width_s", Value::Arr(vec![n(a), n(b)])));
+                v.push(("snr", n(c.snr)));
+            }
             match r.detect.axis {
                 MassAxis::Ppm => v.push(("axis", Value::Str("ppm".into()))),
                 MassAxis::Da { defect } => {
