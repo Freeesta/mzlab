@@ -14,9 +14,33 @@ fn feat_runs_in() -> RunsIn {
     }
 }
 
+/// The parameters of the family link of `famalign::link` (family mode only).
+fn family_link_params() -> Vec<Param> {
+    vec![
+        Param::number("link_rt", "Family link RT")
+            .min(0.0)
+            .default_num(0.2)
+            .unit("min")
+            .doc("Family mode: largest RT distance between an ion and the root of its family in one file for the two rows to be joined")
+            .advanced(),
+        Param::number("max_span", "Family row span")
+            .min(0.0)
+            .default_num(0.5)
+            .unit("min")
+            .doc("Family mode: largest RT span of the groups joined in one row")
+            .advanced(),
+        Param::integer("min_dependent", "Family link files")
+            .min(1.0)
+            .default_num(1.0)
+            .unit("files")
+            .doc("Family mode: an ion that is mostly the base of its own family joins a family only if it follows its root in this many files")
+            .advanced(),
+    ]
+}
+
 /// `features.align`: joins the features of the files into the rows of the table (`famalign::align_families`, `align::align`).
 pub(super) fn align() -> Step {
-    let params = vec![
+    let mut params = vec![
         Param::choice("mode", "Rows", &["family", "ion"])
             .default_str("family")
             .doc("One row per family of ions (isotopologues, adducts, in-source fragments) or one per ion"),
@@ -72,6 +96,7 @@ pub(super) fn align() -> Step {
             .doc("Features from 0.3 of the minimum height up are kept as rows only if this many files in a run show them; 0 = no weak tier")
             .advanced(),
     ];
+    params.extend(family_link_params());
     Step {
         ins: vec![Port::new("peaks", DataType::Peaks, "Features of each file").many()],
         outs: vec![Port::new("table", DataType::Table, "Aligned feature table")],
