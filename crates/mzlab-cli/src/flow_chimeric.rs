@@ -9,10 +9,14 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 use mzlab_feat::attributio::ms2_engine::chimeric::{default_window, intruders, FeaturePoint};
+use mzlab_feat::attributio::ms2_engine::deconv::{deconvolve, Candidate};
 use mzlab_feat::attributio::review::raw::Ms1Metrics;
 use mzlab_feat::interp::ms2link::{fill_purity, ms1_window_metrics, Ms2Scan};
 use mzlab_feat::legacy::ms2::Ms2Index;
 use mzlab_feat::store::{read_table_from, Slice};
+use mzlab_lib::spec::Spectrum;
+
+use crate::flow_match::{library_spectra, Named};
 
 /// The executor of the step, read by the runner after its own list.
 pub(crate) const EXECUTORS: &[(&str, Exec)] =
@@ -164,6 +168,7 @@ pub(crate) fn chimeric_text(
     spectra: &[u8],
     (pure, ms1): Seen,
     chim_cap: f64,
+    extra: &[String],
     table: Option<&[FeaturePoint]>,
 ) -> String {
     let text = String::from_utf8_lossy(spectra);
@@ -183,6 +188,9 @@ pub(crate) fn chimeric_text(
             let _ = writeln!(out, "MS1_COISOLATED={}", list.join(";"));
             let _ = writeln!(out, "MS1_COISOLATED_N={}", m.chim_n);
             let _ = writeln!(out, "MS1_CAPPED={}", m.chim_max >= chim_cap);
+        }
+        if let Some(lines) = extra.get(n) {
+            out.push_str(lines);
         }
         if let Some((purity, chimeric)) = p {
             if purity.is_finite() {
@@ -211,6 +219,63 @@ pub(crate) fn chimeric_text(
     out
 }
 
+/// `DECONV=name:share;…` and `DECONV_RESIDUAL=` for every block: the library spectra whose precursor lies within half of `window` of the block's, as
+/// a non-negative mix of its peaks. Empty for a block without precursor or peaks.
+fn deconvolutions(job: &Job, library: Named, text: &str, window: f64) -> Result<Vec<String>> {
+    let lib = library_spectra(library)?;
+    let tol = param(job, "tol_da").unwrap_or(0.02);
+    let min_share = param(job, "min_share").unwrap_or(0.05);
+    let (_, blocks) = parse(text);
+    let mut out = Vec::with_capacity(blocks.len());
+    for b in &blocks {
+        let (mz, it) = peaks(&b.lines);
+        let cands: Vec<&Spectrum> = lib
+            .iter()
+            .filter(|s| s.pol == b.polarity && (s.prec - b.prec).abs() <= window / 2.0)
+            .collect();
+        let view: Vec<Candidate> = cands
+            .iter()
+            .map(|s| Candidate {
+                mz: &s.mz,
+                it: &s.it,
+            })
+            .collect();
+        let Some(d) = b
+            .prec
+            .is_finite()
+            .then(|| deconvolve(&mz, &it, &view, tol))
+            .flatten()
+        else {
+            out.push(String::new());
+            continue;
+        };
+        let list: Vec<String> = cands
+            .iter()
+            .zip(&d.shares)
+            .filter(|(_, &x)| x >= min_share)
+            .map(|(s, x)| format!("{}:{x:.3}", s.meta.name.replace([';', ':'], " ")))
+            .collect();
+        out.push(format!(
+            "DECONV={}\nDECONV_RESIDUAL={:.3}\n",
+            list.join(";"),
+            d.residual
+        ));
+    }
+    Ok(out)
+}
+
+/// The `mz intensity` lines of a block.
+fn peaks(lines: &[&str]) -> (Vec<f64>, Vec<f64>) {
+    let pair = |l: &&str| {
+        let mut f = l.split_whitespace();
+        Some((
+            f.next()?.parse::<f64>().ok()?,
+            f.next()?.parse::<f64>().ok()?,
+        ))
+    };
+    lines.iter().filter_map(pair).unzip()
+}
+
 fn chimeric_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let spectra = read_one(r, job, "spectra")?;
     if read_all(r, job, "index")?.is_empty() {
@@ -231,11 +296,21 @@ fn chimeric_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         param(job, "window").unwrap_or_else(|| default_window("")),
         param(job, "rt_tol").unwrap_or(0.1),
     );
+    let extra = if job.instance.algorithm.as_deref() == Some("library_deconvolution") {
+        if !job.inputs.iter().any(|(p, _)| p == "library") {
+            return Err(Error::new("err.flow.port.missing").with("port", "library"));
+        }
+        let library = read_one(r, job, "library")?;
+        deconvolutions(job, (&library.0, &library.1), &text, tol.0)?
+    } else {
+        vec![]
+    };
     let text = chimeric_text(
         tol,
         &spectra.1,
         (&pure, &ms1),
         param(job, "chim_cap").unwrap_or(0.50),
+        &extra,
         all.as_deref(),
     );
     let out = r.work.join(format!("{}.mgf", job.instance.id));
