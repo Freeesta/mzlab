@@ -42,7 +42,7 @@ Scopo: il lettore Thermo di mzLab (`vendor/opentfraw` 2.0.0 modificato, Rust pur
 
 ## 4. Dove battere RFR
 - **Ovunque**: RFR richiede .NET (niente browser, niente iPad); il nostro gira nativo e in `.wasm`, i file non lasciano il computer.
-- **Velocità**: accesso casuale per scansione (63-99 µs in `.wasm`), tabella + `.mzidx` del BAF 3,6-5,3 s; il dump registra i tempi di RFR (apertura, tutte le scansioni, una a caso) sullo stesso Mac: obiettivo uguale o meglio nativo, ≤ 1,7× nel browser.
+- **Velocità**: accesso casuale per scansione (63-99 µs in `.wasm`), tabella + `.mzidx` del BAF 3,6-5,3 s; il dump registra i tempi di RFR (apertura, tutte le scansioni, una a caso) sullo stesso Mac: obiettivo uguale o meglio nativo, ≤ 1,7× nel browser. Criteri, banco e numeri di partenza (ogni numero con lo SHA di `main`): `docs/agenti/thermo-velocita.md`.
 - **Robustezza**: un file troncato o in acquisizione si apre fino all'ultima scansione intera con un avviso; versione non dichiarata letta con lo schema più vicino e avviso «non verificata»; fuzz ≥ 300 s, nessun panico (F7).
 - **Etichette pulite**: per reazione attivazione (CID, HCD, ETD, EThcD, UVPD, ETciD), energia con unità (NCE/eV), NCE a gradini come lista, precursori SPS, CV FAIMS; RFR le dà sparse tra filtro, `GetScanEventForScanNumber` e trailer.
 - **Campi extra**: ASInfo, error log nel tempo, status log come serie, lista d'inclusione e impostazioni dd-MS2 strutturate (RV-09, RV-10).
