@@ -7011,3 +7011,4 @@
 {"v":1,"ts_utc":"2026-10-22T16:59:05Z","azione":"aperta","tipo":"pr","pr":1515,"sha":"0651eff457ed26e533d30b29b5ba7bc772eaca8e"}
 {"v":1,"ts_utc":"2026-10-22T17:11:04Z","azione":"aperta","tipo":"pr","pr":1516,"sha":"67ac46d45ebf7ff0d505462daaf80bfbcd70ec4f"}
 {"v":1,"tipo":"pr","pr":1515,"sha":"0651eff457ed26e533d30b29b5ba7bc772eaca8e","ts_utc":"2026-10-22T17:17:32Z","azione":"unita","aperta_s":1107,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":53,"righe_meno":14,"file_n":7,"file":["crates/mzlab-cli/src/flow_command_tests.rs","crates/mzlab-core/src/flow/command.rs","docs/agenti/cli.md","flow/lazy/flow-run-ui.js","flow/lazy/flow-shell.js","tests/flow_cli_fill.js","tests/test_flow_grafico.py"],"aree":{"rust":2,"docs":1,"altro":2,"test":2},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
+{"v":1,"ts_utc":"2026-10-22T17:43:16Z","azione":"aperta","tipo":"pr","pr":1517,"sha":"2605eeaf744ff0c415c0887861e3e11f872daefd"}
