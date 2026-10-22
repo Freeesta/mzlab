@@ -6215,3 +6215,4 @@
 {"v":1,"ts_utc":"2026-10-22T15:12:17Z","tipo":"conflitto","pr":1506,"sha":"bf740958228de2c3755487944ca0826d85836081","pr_unita":1507,"file_comuni":["flow/js/flow-tool.js","tools/tipi/pagina.json"],"n_file_comuni":2,"file_conflitto":["flow/js/flow-tool.js"]}
 {"v":1,"ts_utc":"2026-10-22T15:12:17Z","tipo":"carico","k":"2026-10-22T15:1","job_in_coda":7,"job_in_corso":20}
 {"v":1,"ts_utc":"2026-10-22T15:16:18Z","azione":"aperta","tipo":"pr","pr":1509,"sha":"c48b63fc9a9cc239e7a591b8d611fd3421374ef4"}
+{"v":1,"ts_utc":"2026-10-22T15:22:29Z","azione":"push","titolo":"Unisce di nuovo main in claude/flow-live-5","merge_main":false,"aree":{"docs":2,"altro":4,"test":3,"tools":1},"tipo":"pr","pr":1506,"sha":"6685c5d10378383a9e8153712caac91dee779eff"}
