@@ -458,10 +458,10 @@ try:
         def desktop_run():
             # the page asks the native routes flow/live/*, says on each step what its events say, and lists what each step did from the prov/1 `finish` answers
             pg.evaluate(FAKE); pg.evaluate("window.__missing = '*'")
-            pg.click('button[aria-label="Export the plan and run it"]'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
-            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3 and "waiting" in pg.inner_text(slots + ":first-child")
+            pg.click('#flx-run'); attendi(pg, "document.querySelectorAll('.fl-slots li').length >= 3")
+            slots = ".fl-slots li"; assert pg.locator(slots).count() >= 3
             go = 'button[aria-label="Run the plan on this computer"]'
-            pg.click(go); attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")
+            attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")      # Run started the first run by itself
             pg.evaluate("window.__missing = ''")
             pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
             assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")

@@ -426,6 +426,11 @@ fn header_fields(
                 .map(|v| field("charge state", v, None, Some("MS:1000041"))),
         );
     }
+    out.extend(
+        m.precursor
+            .iter()
+            .flat_map(crate::rawlettore_reazioni::reaction_fields),
+    );
     out.extend(m.ion_injection_time_ms.map(|v| {
         field(
             "ion injection time",

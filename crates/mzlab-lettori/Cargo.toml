@@ -31,3 +31,10 @@ ruzstd = { version = "0.9", optional = true, default-features = false, features 
 [dev-dependencies]
 # the tests check the keys of metodo/1 against its schema
 serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
+# the scandump example (tools of the Thermo oracle bench, docs/agenti/scandump.md) reads the file with the same functions as the `thermo` module; never part of a .wasm
+opentfraw = { path = "../../vendor/opentfraw" }
+sha2 = { version = "0.11", default-features = false }
+
+[[example]]
+name = "thermo_scandump"
+required-features = ["thermo"]

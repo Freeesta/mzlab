@@ -89,6 +89,7 @@
       "err.flow.check": `The plan has problems: ${q.problems}.`,
       "err.flow.read.big": `${q.name} is too big to show here.`,
       "err.flow.run": "The run could not start.",
+      "err.scan.outside": "The file has no scan the step can read. Open an MSn infusion (MS2 or deeper) in the Data tab, wait until it is read, then run again.",
       "err.flow.compare.few": "A comparison needs at least two variants.",
     };
     return M[p.key] || p.key;

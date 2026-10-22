@@ -38,7 +38,7 @@ try:
             pg.evaluate("document.querySelector('#tmpform').remove()")
         step("the molecule typed in the box fills the ion, the adduct and the SMILES", prepare)
         def one_click():
-            pg.click("#flx-run"); pg.click('button[aria-label="Run the plan in this browser"]')
+            pg.click("#flx-run")
             try: pg.wait_for_function("(document.querySelector('.fl-note[role=status]')||{}).textContent && document.querySelector('.fl-note[role=status]').textContent.startsWith('Finished')", timeout=120000)
             except Exception: raise AssertionError("note: " + pg.inner_text(".fl-note[role=status]") + " | " + pg.inner_text(".fl-slots"))
             links = pg.evaluate("[...document.querySelectorAll('.fl-slots a[download]')].map(a => a.download)")
