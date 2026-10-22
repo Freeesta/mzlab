@@ -6,7 +6,7 @@
   - solo Rust nel prodotto, nativo e `.wasm`;
   - .NET, C e C++ solo come oracolo locale;
   - `unsafe` in moduli piccoli, con fuzzing e versione sicura;
-  - dipendenze solo con un guadagno ≥ 10 % e licenza permissiva;
+  - ogni guadagno misurato oltre il rumore conta; dipendenze nuove solo con un guadagno ≥ 3 % e licenza permissiva;
   - zero perdite, con la prova.
 - **Verdetti**:
   - **V** vero;
@@ -36,7 +36,7 @@
 | G14 | Un rilevatore di massimi SIMD lavora a ~12-15 GB/s | NP | Il rifiuto a blocchi può avvicinarsi alla banda; il costo vero sta nel raffinamento per picco. Si misura in RM-6. |
 | G15 | Con `flate2` e il backend zlib-ng: 2,5-4× più veloce e byte identici a zlib | **F** sui byte; **VN** sul backend | zlib-ng emette byte diversi da zlib (altro motore, `deflate_quick` al livello 1). È C, quindi niente `.wasm` puro. L'alternativa Rust è zlib-rs (feature `zlib-rs`, già nel `Cargo.lock`). Misura: 1,5× più veloce di miniz sui centroidi, ma espande i profili al livello 1 (1,039; `MISURE.md` §3). |
 | G16 | Numpress Linear + zlib: −60 % degli m/z, errore < 10⁻⁴ ppm | Dimensione NP; **F** sull'errore | L'errore massimo è 0,5/fp. Con fp ≈ 2³¹/m/z_max, a m/z 100 vale ~5·10⁻³ ppm, sopra 10⁻⁴. È comunque con perdita: solo opzione dichiarata (§3). |
-| G17 | base64-simd a 15 GB/s | V plausibile; **VN** oggi | base64 è ~1 % del tempo (16 MB su LAB-B); sotto la soglia del 10 %. Da riprovare sul caso denso (RM-0). |
+| G17 | base64-simd a 15 GB/s | V plausibile; **VN** oggi | base64 è ~1 % del tempo (16 MB su LAB-B); il guadagno sul totale di LAB-B sarebbe < 1 %, sotto la soglia del 3 % per una dipendenza nuova. Da riprovare sul caso denso (RM-0). |
 | G18 | Usare itoa e ryu, non `format!`/`write!` | itoa **V**; ryu cambia i byte | Il formato di ryu (`1E-7`, `100.0`) è diverso da `Display`: cambierebbe tutti i file (F10). `write!` in un `Vec` riusato non alloca. Il costo misurato è in `format!` e `String` (5,6 % + malloc ~10 %). |
 | G19 | XML fatto con pezzi statici | V | Va in RM-3 (XML senza allocare). |
 | G20 | SHA-1 accelerato con la feature `asm` di `sha1` | F per la versione; **GIÀ** | `sha1` 0.11 non ha `asm`: la 0.10 lo aveva, ma in C. La 0.11 sceglie SHA-NI / ARMv8 con `cpufeatures` (nel `Cargo.lock`). |
@@ -115,8 +115,8 @@
 
 ## 6. Cosa entra nei prompt, in ordine di priorità
 1. **RM-1**: attivazione (M5), MS:1000800 (M2), ripiego del monoisotopico (M4), cromatogrammi non MS (M11).
-2. **RM-3**: livello per dimensione dell'array e zlib-rs a flusso riusato (G15, G22); XML con pezzi statici e itoa, float con il formato di oggi (G18, G19); base64-simd solo se il denso mostra ≥ 10 % (G17).
+2. **RM-3**: livello per dimensione dell'array e zlib-rs a flusso riusato (G15, G22); XML con pezzi statici e itoa, float con il formato di oggi (G18, G19); base64-simd solo se il denso mostra ≥ 3 % (G17).
 3. **RM-2**: array CV standard (M9) e FWHM non standard solo per i centroidi nostri (M10).
 4. **RM-4**: scrittore ordinato con finestra limitata e test del blocco (K4), offset su `<` (K6), nessun `expect` (K3).
 5. **RM-6**: le varianti K9-K13 misurate contro C1-C4. Il kernel SIMD (G14) entra solo dopo che lo scalare passa C1, con la versione scalare uguale al bit.
-6. **RM-9** (nuovo, ultimo): Numpress veloce come opzione con perdita, byte uguali al riferimento (K14-K17), solo con un guadagno ≥ 10 % sul denso.
+6. **RM-9** (nuovo, ultimo): Numpress veloce come opzione con perdita, byte uguali al riferimento (K14-K17), solo con un guadagno sul denso oltre il rumore di misura.

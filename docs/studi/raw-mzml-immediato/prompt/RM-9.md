@@ -1,6 +1,6 @@
 # RM-9 — Numpress veloce (opzione con perdita, byte uguali al riferimento)
 
-Prompt per una chat DEV: copia tutto ciò che segue la riga «---». Ultimo per priorità: solo dopo RM-3 e solo se il banco di RM-0 sul caso denso mostra che Numpress pesa ≥ 10 % del tempo con `--numpress`.
+Prompt per una chat DEV: copia tutto ciò che segue la riga «---». Ultimo per priorità: solo dopo RM-3 e solo se il banco di RM-0 sul caso denso mostra che la codifica Numpress pesa una parte misurabile del tempo con `--numpress`.
 
 ---
 
@@ -19,5 +19,5 @@ Pacchetto RM-9 del convertitore Thermo `.raw` → mzML di mzLab. Leggi prima `do
 
 ## Accettazione
 - Byte identici al riferimento su tutto il fuzzing e sul corpus.
-- Guadagno ≥ 10 % sul tempo totale con `--numpress` sul denso, altrimenti la PR si chiude con i numeri.
+- Guadagno sul passo e sul totale con `--numpress` sul denso, oltre il rumore di misura (regole comuni), altrimenti la PR si chiude con i numeri.
 - Errore massimo dichiarato: 0,5/fp per valore, cioè per m/z il valore in ppm alla m/z più piccola e alla più grande del file.
