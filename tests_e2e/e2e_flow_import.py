@@ -30,6 +30,14 @@ try:
         pg.set_input_files(".flx-imp input[type=file]", files=[{"name": "meta.csv", "mimeType": "text/csv", "buffer": b"File,Role,Time (min)\na.mzML,sample,10\nb.mzML,blank,\n"}])
         attendi(pg, "document.querySelectorAll('.flx-imp .flx-table tbody tr').length === 2")
         check("table", pg.locator(".flx-imp .flx-table input[aria-label^='Time of a.mzML']").input_value() == "10" and "2 rows read from meta.csv" in pg.inner_text(".flx-imp"), pg.inner_text(".flx-imp"))
+        import io, zipfile
+        xb = io.BytesIO()
+        with zipfile.ZipFile(xb, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("xl/sharedStrings.xml", "<sst><si><t>File</t></si><si><t>Series</t></si><si><t>a.mzML</t></si><si><t>S9</t></si></sst>")
+            zf.writestr("xl/worksheets/sheet1.xml", '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s"><v>3</v></c></row></sheetData></worksheet>')
+        pg.set_input_files(".flx-imp input[type=file]", files=[{"name": "meta.xlsx", "mimeType": "application/octet-stream", "buffer": xb.getvalue()}])
+        attendi(pg, "/rows read from meta.xlsx/.test(document.querySelector('.flx-imp').textContent)")
+        check("xlsx", pg.locator(".flx-imp .flx-table input[aria-label^='Series of a.mzML']").input_value() == "S9", pg.inner_text(".flx-imp"))
         pg.evaluate("E.files.push({file: 'a.mzML', name: 'a'}, {file: 'b.mzML', name: 'b'})")
         pg.click('.fln:has-text("Build feature table")'); pg.click('.fln:has-text("Import data")')
         attendi(pg, "!!document.querySelector('.fl-insp .fl-data') && /in Data/.test(document.querySelector('.fl-insp .fl-data').textContent)")
