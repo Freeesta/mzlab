@@ -34,6 +34,7 @@ pub mod finder_edge;
 pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
+pub mod progress_js;
 pub mod run;
 pub mod spill_js;
 pub mod run_evid;
@@ -190,18 +191,14 @@ pub fn detect_file(
 }
 
 #[cfg(feature = "detect")]
-/// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`.
+/// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`. `progress(done, total)` (optional) is called at most once per 1 % of the peaks.
 #[wasm_bindgen]
 pub fn detect_file_to(
-    read: Function,
-    size: f64,
-    name: &str,
-    recipe: &str,
-    write: Function,
+    read: Function, size: f64, name: &str, recipe: &str, write: Function, progress: Option<Function>,
 ) -> std::result::Result<String, JsValue> {
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
-    to_sink(write, |sink| run::detect_to(&mut ix, name, &r, sink))
+    to_sink(write, |sink| progress_js::detect_to(&mut ix, name, &r, sink, progress))
 }
 
 #[cfg(feature = "detect")]

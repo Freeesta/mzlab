@@ -10,7 +10,9 @@ use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
-use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256, weak_candidates};
+use mzlab_feat::series::{
+    align_and_fill, analyse_file, analyse_file_with, source_sha256, weak_candidates,
+};
 use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
@@ -160,7 +162,18 @@ pub fn detect_to<R: ReadAt, W: WriteAt>(
     r: &Recipe,
     sink: &mut W,
 ) -> Result<()> {
-    let f = analyse_file(index, r)?;
+    detect_to_with(index, name, r, sink, &mut |_, _| {})
+}
+
+/// `detect_to` telling `progress(done, total)` how far the detection is; the bytes written are the same with any `progress`.
+pub fn detect_to_with<R: ReadAt, W: WriteAt>(
+    index: &mut Index<R>,
+    name: &str,
+    r: &Recipe,
+    sink: &mut W,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<()> {
+    let f = analyse_file_with(index, r, progress)?;
     let o = Origin {
         inputs: vec![(name.to_string(), source_sha256(index))],
         ..Origin::default()

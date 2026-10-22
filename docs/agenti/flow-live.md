@@ -50,8 +50,9 @@ Prove: `flow/run_tests.rs` (10 semi × 1 e 4 thread), `crates/mzlab-feat/tests/f
 ## Avanzamento dentro i lavori (`mzlab_core::pace`)
 - `Pace::new(sink).at(done, total)` inoltra `(done, total)` al massimo una volta per percento intero, mai all'indietro; l'ultimo richiamo è `(total, total)` (un lavoro vuoto dà `(0, 0)` una volta). I byte prodotti non dipendono dalla callback.
 - Chi lo usa: `flow_centroid::job_with` (scansioni scritte da `mzml_to_centroids_with`), `flow_pace::build_index_with` (scansioni decodificate dal lettore, `Scans`, o byte letti di un mzML, `Counted`; `build_index_of` è il caso senza callback), `flow_base::write_mzml_with` (scansioni scritte da `Conversione::scrivi`), `mzlab_feat::trace::detect_with` (picchi esaminati, per blocco). Prove: `flow_centroid_tests.rs`, `flow_pace_tests.rs`, `lr_fullscan.rs`.
-- Nel browser il worker di `TP_Mine/files/feat-worker.js` manda `{id, progress:[done,total]}` e il pool lo gira a `opts.onStep({phase, name, done, total})`; il `.wasm` `feat` deve ancora richiamare il 6° argomento di `detect_file_to`.
+- Nel browser il worker di `TP_Mine/files/feat-worker.js` manda `{id, progress:[done,total]}` e il pool lo gira a `opts.onStep({phase, name, done, total})`; il `.wasm` `feat` richiama il 6° argomento di `detect_file_to` (`progress(done, total)`, `Pace`; `analyse_with`, `analyse_file_with`, `detect_to_with` portano la callback) e il pool lo gira come `{job, frac}` allo scheduler (`progress`).
 - Da collegare: `FileRunner` (l'esecutore passa a `job_with`, `build_index_with` e `write_mzml_with` una callback vuota: `convert_job`, `index_job` e `msn_graph` usano le forme senza callback), l'allineamento (per file letto).
+- Il client del sito è `flow/lazy/flow-live.js` + `flow-live-jobs.js` (`docs/agenti/flow-web.md`): rilevamento e allineamento passano dal pool di `feat-worker.js`, l'MSn resta a `F.webMsn` fuori dallo scheduler, `cancel(JobId)` è `pool.cancelJob`.
 
 ## Trappole
 - `finished` per un lavoro cancellato o scomparso risponde `Discarded{key}`: va messo in cache, non usato. Un risultato di un `JobId` sconosciuto dà `Unknown`.

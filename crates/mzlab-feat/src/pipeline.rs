@@ -8,7 +8,7 @@ use crate::ms2::{link, Ms2Links, Ms2Params};
 use crate::quality::{assess, QParams};
 use crate::resolve::{assess_and_resolve, mark_mixtures, ResolveParams};
 use crate::table::FileFeatures;
-use crate::trace::{detect, Params};
+use crate::trace::{detect_with, Params};
 
 /// Parameters of the steps after the detection.
 #[derive(Debug, Clone)]
@@ -39,7 +39,17 @@ pub fn analyse<R: ReadAt>(
     p: &Params,
     s: &Steps,
 ) -> Result<(FileFeatures, Ms2Links)> {
-    let mut f = detect(index, p)?;
+    analyse_with(index, p, s, &mut |_, _| {})
+}
+
+/// `analyse` telling `progress(done, total)` how far the detection is; the result is the same with any `progress`.
+pub fn analyse_with<R: ReadAt>(
+    index: &mut Index<R>,
+    p: &Params,
+    s: &Steps,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<(FileFeatures, Ms2Links)> {
+    let mut f = detect_with(index, p, progress)?;
     let multi = if s.split {
         assess_and_resolve(index, &mut f, p, &s.quality, &s.resolve)?.multi
     } else {

@@ -219,6 +219,8 @@
     "../../flow/lazy/flow-views-tabui.js",
     "../../flow/lazy/flow-desktop.js",
     "../../flow/lazy/flow-web-run.js",
+    "../../flow/lazy/flow-live-jobs.js",
+    "../../flow/lazy/flow-live.js",
     "../../flow/lazy/flow-web-msn.js",
     "../../flow/lazy/flow-msn-molecule.js",
     "../../flow/lazy/flow-llm.js",
