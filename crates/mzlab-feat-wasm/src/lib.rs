@@ -35,6 +35,8 @@ pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod run;
+#[cfg(feature = "detect")]
+pub mod sched;
 pub mod spill_js;
 pub mod run_evid;
 pub mod stima;
