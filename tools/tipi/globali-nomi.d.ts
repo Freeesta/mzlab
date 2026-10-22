@@ -80,7 +80,6 @@ declare var HR: any;
 declare var HSEQ: any;
 declare var ICN: any;
 declare var IC_AUTO: any;
-declare var IC_DATA: any;
 declare var IC_DEL_INT: any;
 declare var IC_DL: any;
 declare var IC_FIT: any;
