@@ -440,6 +440,8 @@ mod flow_kmd_tests;
 #[cfg(test)]
 mod flow_level_tests;
 #[cfg(test)]
+mod flow_match_decoy_tests;
+#[cfg(test)]
 mod flow_ms2_tests;
 #[cfg(test)]
 mod flow_msngraph_tests;

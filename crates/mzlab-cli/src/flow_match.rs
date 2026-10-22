@@ -359,12 +359,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .params
         .iter()
         .any(|(k, v)| k == "decoys" && v.str() == Some("spectrum"));
-    if decoys
-        && !matches!(
-            alg.as_str(),
-            "spectral_entropy" | "cosine" | "modified_cosine"
-        )
-    {
+    if decoys && alg == "tree" {
         return Err(Error::new("err.flow.match.decoysAlgorithm"));
     }
     let terms = job
