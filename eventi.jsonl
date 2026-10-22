@@ -8577,3 +8577,4 @@
 {"v":1,"ts_utc":"2026-10-22T20:47:22Z","azione":"push","titolo":"Study raw-mzml: assess the Gemini proposals, CV-standard peak arrays","merge_main":false,"aree":{"docs":11},"tipo":"pr","pr":1536,"sha":"1c16cc552e51e2be52b6f48927995c3a5a7e8e5f"}
 {"v":1,"ts_utc":"2026-10-22T20:51:04Z","azione":"aperta","tipo":"pr","pr":1538,"sha":"c606a35f4d6a49a505307481a7b5eb60ae52d4b9"}
 {"v":1,"ts_utc":"2026-10-22T20:51:01Z","azione":"aperta","tipo":"pr","pr":1537,"sha":"c289f1b95b3090b707247cf2e59f9023191c2989"}
+{"v":1,"ts_utc":"2026-10-22T20:52:42Z","azione":"push","titolo":"Merge origin/main into claude/assist-a5","merge_main":true,"aree":{"workflow":1,"rust":44,"docs":41,"web":5,"test":5,"tools":4},"tipo":"pr","pr":1527,"sha":"38ce1dc7f82562362ffecf71bac1389acdf9eaf6"}
