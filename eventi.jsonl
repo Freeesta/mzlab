@@ -1375,3 +1375,4 @@
 {"v":1,"ts_utc":"2026-10-22T07:13:03Z","azione":"aperta","tipo":"pr","pr":1452,"sha":"e2b4d7df793f4c1df847b106b86dbaee4bac9bd5"}
 {"v":1,"ts_utc":"2026-10-22T07:14:37Z","azione":"aperta","tipo":"pr","pr":1453,"sha":"2b0bc6f53b741a2418fe01f2fffa3b2090511d53"}
 {"v":1,"ts_utc":"2026-10-22T07:15:40Z","azione":"push","titolo":"ms1_window_metrics solo con la feature attributio","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1452,"sha":"1cfff208d2bb222bbb5afb449ca8180d4cac4ee4"}
+{"v":1,"ts_utc":"2026-10-22T07:19:47Z","azione":"aperta","tipo":"pr","pr":1454,"sha":"8a05c1ea284b16694c6e6d3207fdfa4a4a6a9fc6"}
