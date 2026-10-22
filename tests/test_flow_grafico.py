@@ -107,3 +107,7 @@ def test_every_step_of_the_base_has_a_valid_theory_anchor():
     for step, (file, anchor) in entries.items():
         html = (ROOT / "mzlab" / "web" / "teoria" / file).read_text(encoding="utf-8")
         assert f'id="{anchor}"' in html, (step, file, anchor)
+
+
+def test_the_msn_graph_view_reads_the_modifications_and_the_ions():
+    assert node("flow_msn_view.js").strip() == "ok"

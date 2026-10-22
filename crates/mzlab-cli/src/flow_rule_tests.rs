@@ -14,11 +14,9 @@ const BUCHI: &[&str] = &[
     // included in features.detect (pipeline::analyse links the MS2 in the same pass), not separable without changing the bytes
     "features.ms2_link",
     "spectra.chimeric",
-    "spectra.insilico",
     "rt.predict",
     "annot.regulatory",
     "annot.hazard",
-    "structure.reactivity",
 ];
 
 fn default_num(p: &Param) -> Option<f64> {

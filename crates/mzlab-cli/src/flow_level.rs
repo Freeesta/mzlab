@@ -252,6 +252,10 @@ fn from_hits(files: &[&[u8]]) -> Result<Vec<(String, Evidence)>> {
     for f in files {
         let doc = json::parse(f)?;
         for h in doc.get("hits").map(Value::arr).unwrap_or(&[]) {
+            // an in silico hit is a hypothesis, never library evidence
+            if text(h, "source") == "insilico" {
+                continue;
+            }
             let id = text(h, "query");
             let n = match all.iter().position(|(q, _)| *q == id) {
                 Some(n) => n,
