@@ -139,7 +139,7 @@ function uipOpen(btn) {
   const app = (window.DESKUPD ? DESKUPD.row() : "") + (window.DESKDEF ? DESKDEF.row() : "") + (window.MZLAB_DESKTOP ? C.sw(T("settings.ext"), T("settings.ext.title"), 'id="uip-ext"', false, "ext") : "")
     + (tourOn ? `<div class="imp-fld"><button id="uip-tour" type="button"><span class="ic">${C.GICON.play}</span>${T(files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>` : "");
   const grp = (id, icon, title, body, dflt) => body ? C.group(id, icon, T(title), body, uipGroupOpen(id, dflt)) : "";
-  d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}">&times;</button></div>`
+  d.innerHTML = `<div class="a-hd"><h2>${T("settings.title")}</h2><button type="button" class="x" id="uip-x" aria-label="${esc(T("settings.close"))}"></button></div>`
     + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
     + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
     + grp("uip-g-app", "app", "settings.g.app", app, false)
