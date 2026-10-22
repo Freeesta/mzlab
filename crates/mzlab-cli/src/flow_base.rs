@@ -116,9 +116,8 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let label = job.inputs[0].1[0].label.clone().unwrap_or_default();
     let gate = r.gate(job);
     let mut pace = gate.pace();
-    let built = crate::flow_pace::build_index_with(
-        &source, &label, &out, budget, &mut pace, &gate.stop,
-    );
+    let built =
+        crate::flow_pace::build_index_with(&source, &label, &out, budget, &mut pace, &gate.stop);
     if let Err(e) = built {
         let _ = std::fs::remove_file(&out);
         return Err(e);
@@ -374,10 +373,8 @@ pub(crate) fn write_mzml_with(
     };
     let written = File::create(out).map_err(io).and_then(|f| {
         let sink = BufWriter::new(Stopping::new(f, stop.clone()));
-        conv.scrivi(&mut *reader, sample, sink, &mut |d, t| {
-            pace.at(d, t)
-        })
-        .and_then(|mut w| w.flush().map_err(io))
+        conv.scrivi(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))
+            .and_then(|mut w| w.flush().map_err(io))
     });
     if let Err(e) = written {
         let _ = std::fs::remove_file(out);

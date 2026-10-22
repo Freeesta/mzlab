@@ -169,7 +169,9 @@ pub(crate) fn build_index_with(
         let p = prepare(&mut File::open(path).map_err(io)?, size, &name)?;
         build_mzml_spill(
             &p.table,
-            BufReader::new(Counted::new(File::open(path).map_err(io)?, size, &mut pace).stopping(stop)),
+            BufReader::new(
+                Counted::new(File::open(path).map_err(io)?, size, &mut pace).stopping(stop),
+            ),
             &mut out,
             budget,
             None,
