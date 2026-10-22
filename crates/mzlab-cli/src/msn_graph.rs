@@ -160,6 +160,7 @@ pub fn grafo(file: &Path, o: &Opzioni, tmp: &Path) -> Result<(Grafo, String)> {
     let sha = sha256_hex(&std::fs::read(&idx).map_err(io)?);
     let scans = crate::open(&idx)?.scans;
     let mut m = std::fs::File::open(source).map_err(io)?;
+    let o = &mzlab_feat::chem::regole::con_attese(o);
     grafo_json(&scans, &mut m, (&nome, &sha), (o, &Raggruppa::default()))
 }
 

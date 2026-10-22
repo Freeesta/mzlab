@@ -1229,7 +1229,7 @@
      }
     }
    },
-   "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide, as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
+   "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide and, when the options give a SMILES, those its structure allows (groups, sites, cleavages), as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
   }
  }
 }
