@@ -6,7 +6,7 @@ Studio del flusso PR → CI → unione → sito. Fonti: `stat-ci` (217 eventi, 4
 
 | # | Collo di bottiglia | Misura | Minuti persi stimati al giorno |
 |---|---|---|---|
-| 1 | `pytest (3.11)` è il percorso critico di ogni run | Unit tests 19 min 06 s su `main` (gli altri job ≤ 3 min, 3.14 70 s). Tre file valgono da soli il minimo: `test_valida_lr` 890 s in un test, `test_cancello` 650 s (3 test), `test_valida_hr` 559 s; con `--dist loadfile` ogni file sta su un worker, quindi il run non scende sotto 15 min | ~13 min per run × ~80 run delle PR = **~17 h di attesa delle PR**, più ~13 min per ogni unione in fila del Coordinatore |
+| 1 | `pytest (3.11)` è il percorso critico di ogni run | Unit tests 19 min 06 s su `main` (gli altri job ≤ 3 min, 3.14 70 s). Causa misurata in (e): le build cargo dei test si cancellano a vicenda nello stesso `target/` (i 4 file più lenti durano 7-25 s da soli, 535-968 s insieme) | ~13 min per run × ~80 run delle PR = **~17 h di attesa delle PR**, più ~13 min per ogni unione in fila del Coordinatore |
 | 2 | Push di rilavorazione | 2,2 push per PR, 1,6 run di `test` per PR; 160 min di runner annullati in 4,5 h. Cause lette nei commit: «accorcia cli.md sotto il limite», «funzioni più corte», fmt/clippy (`rust-lint` 2), soglie (`javascript` 2), tipi 1 | 0,6 run in più × 20 min × 50 = **~10 h** |
 | 3 | Conflitti veri sulle liste | 3 in 4,5 h, sempre gli stessi file: `crates/mzlab-cli/src/lib.rs` (17 dei 52 merge), `docs/agenti/cli.md` (16, a 25 563/25 600 B), `docs/schemi/strumenti-1.json` (13), `flow-copertura-tabui.md` (10), `flow.rs` (10, 477/500 righe), `flow-pacchetto-tabui.md` (9), `AGENTS.md` (8, 25 570/25 600 B), `flow_rule_tests.rs` (7), `steps-cli-1.json` (4). Le PR del Flow restano aperte 5-6 h, le altre ~1 h | ~8 conflitti × 15 min + 0,4 merge di main per PR × 5 min × 50 = **~4 h**, più un giro di CI ciascuno |
 | 4 | Lavoro manuale del Coordinatore | Per PR: CI sullo SHA di testa, combine locale, `controlla.py`, controllo del diff (Cargo, workflow, `.wasm`, CSP, desktop), squash con `expectedHeadSha`, notifica, archivio | ~5-8 min e ~15-30k token per PR = **~5 h e ~1M token** |
@@ -18,7 +18,7 @@ Quello che NON è un problema: la coda dei runner (0 s), `rust` (job più lungo 
 
 ## (b) Ipotesi per ciascun collo di bottiglia
 
-1. **pytest 3.11.** (i) Misurare prima: il test da 890 s compila con cargo? Se sì, il tempo è attesa del lock di `target/` dietro le build degli altri worker; una build unica di tutti i binari prima di pytest lo riduce al solo calcolo. (ii) Lotto lento: `test_valida_lr`, `test_valida_hr`, `test_cancello` girano ogni notte (`notte.yml` esegue già tutto `tests/`) e nelle PR solo se cambiano i percorsi che provano (lista accanto a `tools/pytest_solo_311.txt`). (iii) Due shard bilanciati per tempo (dalle `--durations` salvate), con un job riassuntivo che tiene il nome obbligatorio `pytest (ubuntu-latest, 3.11)` del ruleset. Atteso: ~6 min.
+1. **pytest 3.11.** La causa e la correzione (una target-dir per famiglia di feature) sono in (e); tagli e shard non servono più.
 2. **Rilavorazione.** Hook `pre-push` che lancia `pre_pr.py --veloce` (30 s) e rifiuta il push se è rosso; avviso di `controlla.py` dal 90 % del tetto sui file caldi; i file caldi divisi prima che sforino (sotto). Regola: un push per PR dopo il verde locale; i commit intermedi restano locali.
 3. **Conflitti sulle liste.** Le liste in cui ogni PR aggiunge una riga diventano file in cui l'unione è automatica: (i) i `mod flow_*;` di `lib.rs` in `flow_mods.rs` (incluso con `include!`), con i test dentro il modulo (`#[cfg(test)] #[path = "flow_x_tests.rs"] mod tests;`) così ogni passo aggiunge una riga sola; (ii) `.gitattributes` con `merge=union` (driver interno di git, nessuna configurazione) solo per file che sono liste pure di righe indipendenti; (iii) la tabella dei passi di `cli.md` in un file d'area a parte, una riga per passo in ordine alfabetico; (iv) `tools/fondi_main.py`: `git merge origin/main`, i file generati in conflitto si prendono da main e si rigenerano con il loro strumento, poi `pre_pr.py --veloce`. GitHub non applica `merge=union` lato server, ma il merge locale del DEV e il combine del Coordinatore sì: il «dirty» sparisce prima del push.
 4. **Coordinatore.** `tools/coo_unisci.py <PR> <sha>`: legge da `stat-ci` (`eventi.jsonl`) l'esito dei run su quello SHA (niente API, niente token), fa il combine in un worktree, lancia `controlla.py` e `indice.py --controlla`, segnala i percorsi a rischio (`Cargo.*`, `.github/workflows/`, `*.wasm`, meta CSP di `index.html`, `crates/mzlab-desktop/`) e stampa una riga di verdetto con i parametri della chiamata di squash. Notifica e archivio restano al Coordinatore, ma da un modello di 3 righe; lo stato delle chat lo legge `stato-sessioni`.
@@ -30,7 +30,7 @@ Quello che NON è un problema: la coda dei runner (0 s), `rust` (job più lungo 
 
 | Ondata | Intervento | Prompt | Via | Guadagno al giorno |
 |---|---|---|---|---|
-| 1 (subito, in parallelo) | pytest 3.11 a ~6 min | P1 | già dato (`test.yml`) | ~17 h di attesa delle PR, ~2 h di fila del Coordinatore |
+| 1 (subito, in parallelo) | pytest 3.11 a ≤ 6 min | P8 (sostituisce P1) | già dato (`test.yml`) | ~17 h di attesa delle PR, ~2 h di fila del Coordinatore |
 | 1 | Misura senza falsi conflitti | P6 | già dato (`stat-ci.yml`) | misura giusta per le ondate dopo |
 | 1 | Percorso dei soli documenti | P2 | già dato (`test.yml`) | ~1,5 h |
 | 2 (a Flow fermo: nessuna PR del Flow aperta) | Liste senza conflitti | P3 | no | ~4 h + ~8 run di CI |
@@ -43,7 +43,7 @@ Quello che NON è un problema: la coda dei runner (0 s), `rust` (job più lungo 
 
 Regole comuni a tutti: ramo `claude/<argomento>` da `origin/main`, nessun dato reale, nessun nome di composto, nessun percorso personale, nessun segreto; prima del push `git merge origin/main` e `python3 tools/pre_pr.py`; una PR aperta e un messaggio di ≤5 righe al Coordinatore (COO 11).
 
-**P1 · CI: pytest 3.11 sotto 8 minuti** (via già dato per `test.yml`). Il job `pytest (ubuntu-latest, 3.11)` dura 19 min di Unit tests; `--durations` del run 39676193146 su main: `test_valida_lr::test_native_run_on_the_synthetic_series` 890 s, `test_cancello` 650 s in 3 test, `test_valida_hr` 559 s. (1) Misura in locale se quel tempo è compilazione o attesa del lock di cargo; se lo è, costruisci i binari che questi test usano una volta sola prima di pytest (`tools/ci_cargo/`). (2) Metti i tre file in una lista `tools/pytest_lenti.txt` con i percorsi che provano: in PR si saltano se nessuno di quei percorsi cambia; `notte.yml` li esegue già (`pytest -q tests` intero). (3) Dividi il 3.11 in 2 shard bilanciati per tempo; il nome `pytest (ubuntu-latest, 3.11)` resta a un job riassuntivo che fallisce se uno shard fallisce. File: `.github/workflows/test.yml`, `tools/ci_pytest_ordine.py`, `tools/pytest_lenti.txt`, `docs/agenti/ci-veloce.md` (una riga). Accettazione: run di una PR che tocca `crates/` con Unit tests 3.11 ≤ 8 min; l'unione degli shard esegue gli stessi test di prima (conta «passed» uguale); i nomi dei 4 controlli obbligatori invariati.
+**P1 · sostituito da P8** (la causa misurata in (e) non è la durata dei test).
 
 **P2 · CI: PR di soli documenti** (via già dato per `test.yml`). Estendi `tools/ci_solo_teoria.py` (o un `tools/ci_solo_doc.py` gemello) con il caso «ogni file cambiato è sotto `docs/` o è un `*.md` o è sotto `.claude/`»: `pytest` esegue solo `test_esempi_anonimi.py`, i test della mappa e delle soglie e i controlli i18n dei documenti; `browser` salta con esito verde. Un file qualunque fuori lista = tutto. File: `tools/ci_solo_*.py`, `.github/workflows/test.yml`, test in `tests/`, una riga in `ci-veloce.md`. Accettazione: test pytest con elenchi di file (solo doc → vero; doc + un `.py` → falso; `AGENTS.md` → vero); PR di prova docs-only con `test` verde in ≤ 3 min.
 
@@ -63,3 +63,56 @@ Regole comuni a tutti: ramo `claude/<argomento>` da `origin/main`, nessun dato r
 
 **R2 · Merge queue.** Disponibile solo se il repository passa a un'organizzazione GitHub. Darebbe l'ordine automatico e il test sul main combinato senza conflitti di gara. Da valutare solo se R1 e P3 non bastano.
 
+## (e) Studio profondo del tempo di CI (dati grezzi)
+
+Fonti: API Actions, con 700 run di `test.yml` e 700 di `rust.yml` (20-21/10: 179 PR unite con run); log dei job con `--durations`; tre run locali di tutto `tests/` su `origin/main`, con 4 CPU come il runner e `-n auto --dist loadfile`.
+
+**Misure**
+- `pytest 3.11`, Unit tests: mediana 400-560 s il 20/10 e 925-1040 s dal 21/10 alle 00 UTC (arrivo di `test_msngrafo_wasm`).
+- Push → verde di `test.yml` su PR: mediana 982 s, p90 1553 s. `rust.yml` sulle PR Rust: mediana 955 s, p90 1877 s. `sito-rust`: 490 s. `pages` (push → sito): 980 s.
+- Run di `test` annullati: 33 % (233 su 700), pari a 2261 min di runner in 2 giorni. Le PR hanno in media 2,16 SHA e 0,07 run falliti: si rilancia per i push, quasi mai per un rosso.
+- Coda dei job: mediana 30 s, p90 circa 10 min nelle ore piene. Una push di una PR Rust accende circa 20 job: test 5, rust 8, sito-rust 5, stat-ci 1-3. È circa il limite di job concorrenti del piano gratuito. stat-ci è il 46 % dei run del repository.
+- Cache cargo di pytest: è salita da 272 MB a 1,3 GB e poi scesa a 1,1 GB. La salva il job 3.14, che dalla #1365 salta i test di `tools/pytest_solo_311.txt`. Non è la causa: un run con la cache piena è durato comunque 886 s.
+- **Causa misurata**: lanciati da soli a target caldo, `test_msngrafo_wasm` dura 7 s, `test_valida_lr` 16 s, `test_valida_hr` 25 s e `test_cancello` 14 s. Insieme con `-n 4` durano 794, 968, 615 e 535 s: tutto pytest 18 min 33 s in locale, quanto in CI. Senza `wasm-bindgen` (i test wasm saltati) il run da zero dura 8 min 42 s.
+  `mzlab-feat-wasm` è `cdylib`+`rlib`: la sua libreria ha un nome fisso e ogni famiglia di feature la sovrascrive. Le famiglie sono `-p mzlab-cli` (che lo usa senza default, con detect, proofs, finder e untargeted), `-p mzlab-feat-wasm` (default) e `--features untargeted`. Ogni alternanza ricompila: cli 65 s → nativo_mrm 12 s → cli 66 s, a target caldo, in fila dietro il lock di cargo.
+  Rischio in più: un test può eseguire un binario compilato da un altro worker con feature diverse.
+  Si sovrascrivono solo i prodotti finali con nome fisso (binari e `cdylib`): le `rlib` di ogni insieme di feature restano accanto, con il loro hash. Prova a target caldo: `cargo test --no-run -p mzlab-feat` 70 s, `--features record` 47 s, `record,interp` 51 s, di nuovo senza feature 0 s.
+- `rust.yml` non ha questo difetto: ogni job chiama cargo in fila, mai due processi insieme, e i suoi cambi di feature toccano solo `rlib` o la foglia `mzlab-feat-wasm` (wasm32: detect 48 s, ancora detect 0 s, proofs 3 s, di nuovo detect 3 s). Ogni insieme di feature costa una compilazione sola, e resta nella cache.
+- Doppioni: `test_guardie_memoria.py`, `test_feat_wasm.py` e `test_flow_determinismo.py` girano sia nel 3.11 sia in `rust-wasm` (`rust.yml`, righe 137-146).
+- Controlli obbligatori del ruleset: `javascript`, `pytest (ubuntu-latest, 3.11)`, `pytest (ubuntu-latest, 3.14)`, `browser (ubuntu-latest, chromium)`, `rust-ok`, `tipi (tsc)`. «Strict» è spento: la PR non deve essere aggiornata a main.
+
+**Simulazione sulle 179 PR** (tempi del log del 21/10, calibrati sul run misurato; script nel blocco di consegna).
+- Selezione per percorso dei 19 file lenti (crate cambiati e loro dipendenti): 3.11 da 18,6 a 14,0 min di mediana.
+- Più 2 shard: 13,1 min. Più i 3 file di convalida solo di notte: 13,1 min.
+- Nessuna variante scende sotto 8 min finché le build si cancellano a vicenda: il limite è il singolo file che aspetta il lock.
+- Con la correzione delle target-dir il tempo atteso è la somma dei tempi da soli diviso 4 worker, cioè 3-4 min anche senza selezione (da verificare con P8).
+- In `rust.yml`, `rust-core` sarebbe superfluo in 92 delle 158 PR Rust: i crate cambiati non sono fra i dipendenti di core, lettori, lib, libro, mol e target.
+
+| Intervento | Minuti risparmiati per run di PR | Rischio | Prova |
+|---|---|---|---|
+| P8 · target-dir per famiglia di feature | ~13 (19 → ≤ 6) | basso: cambiano i percorsi dei binari, non i test | pytest `-n 4` a target caldo < 5 min in locale; «passed» uguale; 3.11 in CI ≤ 6 min su 3 PR reali |
+| P9 · niente doppioni fra 3.11 e `rust-wasm` | ~2 (400 s-worker) | basso: gli stessi test girano in `rust-wasm` quando cambia Rust | elenco dei test eseguiti dal 3.11 più `rust-wasm` uguale a prima (`--collect-only`) |
+| P2 · PR di soli documenti | ~17 sulle PR di soli documenti (13 su 179) | basso | test della selezione; PR di prova verde in ≤ 3 min |
+| Selezione per percorso dei file lenti | ~4 (dopo P8 quasi 0) | medio: un test saltato può nascondere un errore fino alla notte | solo se P8 non basta |
+| R3 · `rust.yml` per crate toccati | ~5-7 sulle PR Rust (`rust-core` saltato in 58 %) | medio | stessa cosa per `cargo test`: unione delle selezioni uguale all'insieme intero su `main` |
+| stat-ci ogni 10 min invece che a ogni `workflow_run` | coda: −40 % dei run | basso | stessi eventi registrati |
+
+**Prova esterna chiesta a ogni prompt**:
+- (a) la simulazione sopra rifatta con i tempi nuovi;
+- (b) unione delle selezioni o degli shard uguale a `pytest --collect-only -q tests`, con un test pytest;
+- (c) tempi veri via API su 3 PR reali dopo l'unione: `pytest 3.11`, passo Unit tests, prima (mediana 925-1040 s) e dopo, con `tools/stat_ci.py riepilogo`;
+- (d) un errore messo apposta in un ramo di prova: una costante in `mzlab-feat` e una riga in `flow_*.rs`. Deve essere preso dalla CI veloce o da `notte.yml`, e il ramo non si unisce.
+
+**P8 · CI: una target-dir per famiglia di feature** (via già dato per `test.yml`; niente Cargo).
+1. Misura prima, a target caldo: tutto pytest `-n 4`, poi i quattro file della tabella da soli.
+2. Nello shim `tools/ci_cargo/cargo` (per `build` e `run`), ogni invocazione riceve `--target-dir target/fam-<nome>` secondo la sua famiglia: `cli` (`-p mzlab-cli`), `feat` (`-p mzlab-feat-wasm` di default), `untargeted`, e `wasm32-<pacchetto>-<feature>`. Le altre restano su `target/`.
+3. I percorsi scritti a mano (`tools/valida/*.py`, `tests/*.py`: `target/release/examples/…`, `target/wasm32-unknown-unknown/release/…`) passano per una funzione `tools/cargo_uscita.py` che chiede a cargo il percorso dell'eseguibile (`--message-format=json`). Vale anche in locale e in `verifica.py`.
+4. La cache di pytest salva tutte le `target/fam-*` dal job 3.11.
+
+File: `tools/ci_cargo/cargo`, `tools/cargo_uscita.py`, `tools/valida/*.py`, i test che costruiscono, `.github/workflows/test.yml`, una riga in `docs/agenti/ci-veloce.md`.
+Accettazione: le prove (a)-(d); in CI il 3.11 ≤ 6 min su PR con cache calda; nessun test saltato in più.
+
+**P9 · CI: niente doppioni con `rust-wasm`** (via già dato per `test.yml`). Il 3.11 deseleziona `test_guardie_memoria.py`, `test_feat_wasm.py` e `test_flow_determinismo.py` quando la PR cambia un percorso Rust (la stessa regola di `changes` in `rust.yml`, letta da uno script comune `tools/ci_percorsi_rust.py`); altrimenti li esegue. Accettazione: test della regola con elenchi di file; prova (b).
+
+**R3 · `rust.yml` per crate toccati.** Cosa: `changes` calcola i crate cambiati e i loro dipendenti (`cargo metadata`); `rust-core`, `rust-misc` e `rust` testano solo quelli; ogni notte tutto; `rust-lint`, `deny` e `changes` in un solo job. I nomi richiesti (`rust-ok`) restano.
+Guadagno: ~5-7 min sulle PR Rust e 2 runner in meno per push. Rischio: un crate dipendente dimenticato; si prova con l'unione delle selezioni uguale a `cargo test --workspace` su main e con un errore messo apposta.

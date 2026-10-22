@@ -20,6 +20,7 @@ use crate::flow_estimate::estimate_job;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
 use crate::flow_stats::stats_job;
@@ -333,7 +334,7 @@ fn ms2_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
 }
 
 /// How a step runs natively: an executor that makes one file for `port`, or one that says itself what it made.
-enum Exec {
+pub(crate) enum Exec {
     File(&'static str, fn(&FileRunner, &Job) -> Result<Artifact>),
     Made(fn(&FileRunner, &Job) -> Result<Made>),
 }
@@ -390,6 +391,10 @@ const EXECUTORS: &[(&str, Exec)] = &[
         Exec::File("drawing", crate::flow_render::render_job),
     ),
     (
+        "structure.reactivity",
+        Exec::File("reactivity", reactivity_job),
+    ),
+    (
         "meta.compare",
         Exec::File("comparison", crate::flow_compare::compare_job),
     ),
@@ -408,13 +413,18 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ),
 ];
 
+/// `EXECUTORS` and the steps that keep their own list (`flow_msnlib::EXECUTORS`, so that this file stays short).
+fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
+    EXECUTORS.iter().chain(crate::flow_msnlib::EXECUTORS)
+}
+
 /// Does the native runner execute the step `id`?
 pub fn executable(id: &str) -> bool {
-    EXECUTORS.iter().any(|(k, _)| *k == id)
+    all_executors().any(|(k, _)| *k == id)
 }
 
 fn dispatch(r: &FileRunner, job: &Job) -> Result<Made> {
-    let exec = EXECUTORS.iter().find(|(k, _)| *k == job.step.id);
+    let exec = all_executors().find(|(k, _)| *k == job.step.id);
     match exec.map(|e| &e.1) {
         Some(Exec::File(port, f)) => Ok(Made::new(port, f(r, job)?)),
         Some(Exec::Made(f)) => f(r, job),
