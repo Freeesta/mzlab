@@ -2,7 +2,7 @@
 //! tree, the scans and their spectra become the `msngrafo/1`. Used by the `.wasm` module of the page and by the command line, so both
 //! write the same bytes.
 
-use super::{costruisci, json, leggi, Grafo, Ingresso, Opzioni};
+use super::{con_regole, costruisci, json, leggi, Grafo, Ingresso, Opzioni, ParamRegole};
 use crate::error::{Error, Result};
 use crate::idxread::Scan;
 use crate::json::parse;
@@ -65,6 +65,15 @@ pub fn da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<(Opzioni, Ra
         formula: testo("formula"),
         smiles: testo("smiles"),
         scelte: testo("scelte").map_or(Ok(vec![]), |t| scelte(&t))?,
+        regole: if get("regole").as_deref() == Some("1") {
+            let r = ParamRegole::default();
+            Some(ParamRegole {
+                cutoff_q: numero(get, "cutoff_q", r.cutoff_q)?,
+                toll_mda: numero(get, "toll_perdita_mda", r.toll_mda)?,
+            })
+        } else {
+            None
+        },
         ..d
     };
     let r = Raggruppa {
@@ -93,6 +102,10 @@ pub fn grafo_json<M: Scansioni + ?Sized>(
         o,
     );
     let j = json(&g, o, Some((nome, sha)));
+    let j = match &o.regole {
+        Some(p) => con_regole(&j, &g, o, p),
+        None => j,
+    };
     Ok((g, j))
 }
 
