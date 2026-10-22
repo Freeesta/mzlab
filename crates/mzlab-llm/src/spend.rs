@@ -46,21 +46,6 @@ fn bad(field: &str) -> Error {
     Error::new("err.llm.prices").with("field", field)
 }
 
-/// USD per million tokens to micro-dollars per million tokens.
-fn micro(usd: f64) -> u64 {
-    (usd * 1e6).round() as u64
-}
-
-fn rates_of(p: &Price) -> Rates {
-    Rates {
-        input: micro(p.input),
-        output: micro(p.output),
-        cache_read: micro(p.cache_read),
-        write_5m: micro(p.write_5m),
-        write_1h: micro(p.write_1h),
-    }
-}
-
 impl Prices {
     /// The models of the providers that have a price (input and output above 0); unknown prices are left out, so they never count as free.
     pub fn from_providers(all: &[Provider]) -> Prices {
@@ -144,6 +129,21 @@ impl Prices {
         let total = u128::from(est_input) * u128::from(input)
             + u128::from(max_tokens) * u128::from(r.output);
         Ok(total.div_ceil(1_000_000) as u64)
+    }
+}
+
+/// USD per million tokens to micro-dollars per million tokens.
+fn micro(usd: f64) -> u64 {
+    (usd * 1e6).round() as u64
+}
+
+fn rates_of(p: &Price) -> Rates {
+    Rates {
+        input: micro(p.input),
+        output: micro(p.output),
+        cache_read: micro(p.cache_read),
+        write_5m: micro(p.write_5m),
+        write_1h: micro(p.write_1h),
     }
 }
 
