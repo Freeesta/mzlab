@@ -142,7 +142,9 @@ fn the_trap_cutoff_hides_what_is_below_it_and_follows_q() {
     let radice = g.radici[0];
     let della_radice = |q: f64| {
         let v = con_q(q);
-        v.into_iter().filter(|x| x.nodo == radice).collect::<Vec<_>>()
+        v.into_iter()
+            .filter(|x| x.nodo == radice)
+            .collect::<Vec<_>>()
     };
     assert!(della_radice(0.25).is_empty());
     let n = della_radice(0.5);
