@@ -27,15 +27,9 @@ fn at(cand: &Candidate, mz: f64, tol: f64) -> f64 {
         .fold(0.0, f64::max)
 }
 
-/// `None` when the query has no intensity. Query and candidates are scaled to a maximum of 1 first.
-pub fn deconvolve(mz: &[f64], it: &[f64], cands: &[Candidate], tol: f64) -> Option<Deconv> {
-    let top = it.iter().copied().fold(0.0, f64::max);
-    if mz.is_empty() || top <= 0.0 {
-        return None;
-    }
-    let q: Vec<f64> = it.iter().map(|v| v / top).collect();
-    let total: f64 = q.iter().sum();
-    let cols: Vec<Vec<f64>> = cands
+/// The candidates as columns over the query peaks, each scaled to a maximum of 1.
+fn columns(mz: &[f64], cands: &[Candidate], tol: f64) -> Vec<Vec<f64>> {
+    cands
         .iter()
         .map(|c| {
             let hi =
@@ -45,7 +39,11 @@ pub fn deconvolve(mz: &[f64], it: &[f64], cands: &[Candidate], tol: f64) -> Opti
                     .max(f64::MIN_POSITIVE);
             mz.iter().map(|&m| at(c, m, tol) / hi).collect()
         })
-        .collect();
+        .collect()
+}
+
+/// Non-negative weights of the columns that fit `q`, and the fit.
+fn descend(q: &[f64], cols: &[Vec<f64>]) -> (Vec<f64>, Vec<f64>) {
     let norm: Vec<f64> = cols.iter().map(|c| c.iter().map(|v| v * v).sum()).collect();
     let mut w = vec![0.0; cols.len()];
     let mut fit = vec![0.0; q.len()];
@@ -69,6 +67,19 @@ pub fn deconvolve(mz: &[f64], it: &[f64], cands: &[Candidate], tol: f64) -> Opti
             break;
         }
     }
+    (w, fit)
+}
+
+/// `None` when the query has no intensity. Query and candidates are scaled to a maximum of 1 first.
+pub fn deconvolve(mz: &[f64], it: &[f64], cands: &[Candidate], tol: f64) -> Option<Deconv> {
+    let top = it.iter().copied().fold(0.0, f64::max);
+    if mz.is_empty() || top <= 0.0 {
+        return None;
+    }
+    let q: Vec<f64> = it.iter().map(|v| v / top).collect();
+    let total: f64 = q.iter().sum();
+    let cols = columns(mz, cands, tol);
+    let (w, fit) = descend(&q, &cols);
     let shares = cols
         .iter()
         .zip(&w)
