@@ -5555,3 +5555,4 @@
 {"v":1,"ts_utc":"2026-10-22T13:35:33Z","azione":"aperta","tipo":"pr","pr":1499,"sha":"fcdc0a14c2b11d8b35902213fea74ffd7958e790"}
 {"v":1,"ts_utc":"2026-10-22T13:47:56Z","azione":"aperta","tipo":"pr","pr":1500,"sha":"806ad2015b3076d82eaa1f3af720cdc8af11df39"}
 {"v":1,"ts_utc":"2026-10-22T13:48:32Z","azione":"aperta","tipo":"pr","pr":1501,"sha":"210ea3fe013c09c19e7e4ac21340fb54514df7a9"}
+{"v":1,"ts_utc":"2026-10-22T13:49:53Z","azione":"push","titolo":"Studio Thermo: dump RFR scritto in locale dalla specifica, uscite a valle, priorità","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1501,"sha":"adddebb3effe8b51cda9c87161c9f8cd2e9de1ae"}
