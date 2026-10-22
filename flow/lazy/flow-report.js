@@ -21,6 +21,7 @@
     host.append(say, page);
     let corsa = null;
     try { corsa = JSON.parse(await item.text()); } catch (_) { say.textContent = `${item.label} is not a run report (corsa/1).`; return; }
+    if (corsa && corsa.formato === "msngrafo/1" && F.openMsnGraph) { say.remove(); F.openMsnGraph(page, corsa, item.label); return; }
     if (!corsa || corsa.schema !== "corsa/1") { say.textContent = `${item.label} is not a run report (corsa/1).`; return; }
     try { await loadStatic("rapporto-flow.js"); } catch (e) { say.textContent = String((e && /** @type {any} */ (e).message) || e); return; }
     G.RAPPORTO_FLOW.render(page, corsa);
