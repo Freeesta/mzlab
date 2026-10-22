@@ -173,6 +173,12 @@ fn invalid_specifications_come_back_with_their_reason() {
         "err.llm.chart.color",
         "12 files, more than 8 colours"
     );
+}
+
+#[test]
+fn colour_style_and_shape_are_refused() {
+    let v = views(&sources(12, 100));
+    let ok = "\"x\":{\"field\":\"rt\"},\"y\":{\"field\":\"intensity\"}";
     assert_eq!(
         key(
             &spec(

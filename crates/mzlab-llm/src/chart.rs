@@ -4,7 +4,7 @@
 //! family of the `llm` module and by `chart_preset` (the charts offered without a model).
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{parse, Out, Value};
+use mzlab_core::json::{parse, Value};
 
 /// The most rows a chart carries.
 pub const MAX_ROWS: usize = 5000;
@@ -102,7 +102,7 @@ impl View {
     pub fn rows(&self) -> usize {
         self.cols.first().map_or(0, Col::len)
     }
-    fn at(&self, name: &str) -> Option<usize> {
+    pub(crate) fn at(&self, name: &str) -> Option<usize> {
         self.fields.iter().position(|f| f.name == name)
     }
 }
@@ -123,7 +123,7 @@ pub struct Spec {
     pub no_view: bool,
 }
 
-fn err(motive: &'static str) -> Error {
+pub(crate) fn err(motive: &'static str) -> Error {
     Error::new(match motive {
         "schema" => "err.llm.chart.schema",
         "title" => "err.llm.chart.title",
@@ -175,6 +175,8 @@ fn top_level(spec: &Value) -> Result<()> {
     Ok(())
 }
 
+type Chan<'a> = Option<(usize, &'a Field)>;
+
 fn field_of<'a>(
     v: &'a View,
     name: &Option<String>,
@@ -189,7 +191,7 @@ fn field_of<'a>(
     })
 }
 
-fn need(kinds: &[Kind], f: Option<(usize, &Field)>, role: &'static str, mark: &str) -> Result<()> {
+fn need(kinds: &[Kind], f: Chan, role: &'static str, mark: &str) -> Result<()> {
     match f {
         Some((_, f)) if kinds.contains(&f.kind) => Ok(()),
         Some((_, f)) => Err(err("type")
@@ -204,26 +206,107 @@ fn need(kinds: &[Kind], f: Option<(usize, &Field)>, role: &'static str, mark: &s
     }
 }
 
+/// The kinds of fields each mark takes; for a heat map the colour channel carries the quantity.
+fn check_types(mark: &str, fx: Chan, fy: Chan, fc: Chan) -> Result<()> {
+    use Kind::{Nominal as N, Ordinal as O, Quantitative as Q};
+    match mark {
+        "line" | "point" | "stick" => {
+            need(&[Q, O], fx, "x", mark)?;
+            need(&[Q], fy, "y", mark)
+        }
+        "bar" => {
+            need(&[N, O], fx, "x", mark)?;
+            need(&[Q], fy, "y", mark)
+        }
+        "box" => {
+            need(&[N], fx, "x", mark)?;
+            need(&[Q], fy, "y", mark)
+        }
+        "hist" if fy.is_some() => Err(err("type")
+            .with("channel", "y")
+            .with("mark", mark)
+            .with("kind", "unexpected")),
+        "hist" => need(&[Q], fx, "x", mark),
+        _ => {
+            need(&[N], fx, "x", mark)?;
+            need(&[N], fy, "y", mark)?;
+            need(&[Q], fc, "color", mark)
+        }
+    }
+}
+
+/// Nominal channels with few enough values: colour at most 8, detail at most 50, facet at most 12.
+fn check_limits(view: &View, mark: &str, fc: Chan, fd: Chan, ff: Chan) -> Result<()> {
+    let one = |c: Chan, motive: &'static str, max: usize| match c {
+        Some((i, f)) if f.kind != Kind::Nominal || view.cols[i].distinct() > max => {
+            Err(err(motive).with("field", f.name).with("max", max))
+        }
+        _ => Ok(()),
+    };
+    if mark != "heat" {
+        one(fc, "color", MAX_COLORS)?;
+    }
+    one(fd, "detail", MAX_DETAIL)?;
+    one(ff, "facet", MAX_FACETS)
+}
+
+/// A required text of at most `max` characters (`why`, `title`).
+fn text_of(spec: &Value, key: &str, max: usize, motive: &'static str) -> Result<String> {
+    let t = spec.get(key).and_then(Value::str).unwrap_or("").trim();
+    if t.is_empty() || t.chars().count() > max {
+        return Err(err(motive).with("max", max));
+    }
+    Ok(t.to_string())
+}
+
+/// The four channels of `encoding` as field names; a channel with anything but `field` (a scale, a colour) is a style.
+fn channels(spec: &Value) -> Result<[Option<String>; 4]> {
+    let enc = spec
+        .get("encoding")
+        .ok_or_else(|| err("schema").with("field", "encoding"))?;
+    let Value::Obj(o) = enc else {
+        return Err(err("schema").with("field", "encoding"));
+    };
+    if let Some((k, _)) = o
+        .iter()
+        .find(|(k, _)| !["x", "y", "color", "detail"].contains(&k.as_str()))
+    {
+        return Err(err("style").with("field", format!("encoding.{k}")));
+    }
+    Ok([
+        channel(enc, "x")?,
+        channel(enc, "y")?,
+        channel(enc, "color")?,
+        channel(enc, "detail")?,
+    ])
+}
+
+/// `log_y`: a boolean, and only for a chart with a `y`.
+fn log_flag(spec: &Value, mark: &str, fy: Chan) -> Result<bool> {
+    let on = spec
+        .get("log_y")
+        .map(|v| v.bool().ok_or_else(|| err("schema").with("field", "log_y")))
+        .transpose()?
+        .unwrap_or(false);
+    if on && fy.is_none() {
+        return Err(err("type")
+            .with("channel", "y")
+            .with("mark", mark)
+            .with("kind", "missing"));
+    }
+    Ok(on)
+}
+
 /// Checks `spec` against the views offered now. A well-formed `{error:"no_view"}` is accepted and returned with `no_view` set.
 pub fn validate(spec: &Value, views: &[View]) -> Result<Spec> {
     top_level(spec)?;
     if spec.get("schema").and_then(Value::str) != Some("grafico/1") {
         return Err(err("schema").with("field", "schema"));
     }
-    let why = spec
-        .get("why")
-        .and_then(Value::str)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    if why.is_empty() || why.chars().count() > MAX_WHY {
-        return Err(err("why").with("max", MAX_WHY));
-    }
+    let why = text_of(spec, "why", MAX_WHY, "why")?;
     if let Some(e) = spec.get("error") {
-        return if e.str() == Some("no_view")
-            && spec.get("title").is_none()
-            && spec.get("data").is_none()
-        {
+        let bare = spec.get("title").is_none() && spec.get("data").is_none();
+        return if e.str() == Some("no_view") && bare {
             Ok(Spec {
                 why,
                 no_view: true,
@@ -233,15 +316,7 @@ pub fn validate(spec: &Value, views: &[View]) -> Result<Spec> {
             Err(err("schema").with("field", "error"))
         };
     }
-    let title = spec
-        .get("title")
-        .and_then(Value::str)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    if title.is_empty() || title.chars().count() > MAX_TITLE {
-        return Err(err("title").with("max", MAX_TITLE));
-    }
+    let title = text_of(spec, "title", MAX_TITLE, "title")?;
     let data = spec
         .get("data")
         .ok_or_else(|| err("schema").with("field", "data"))?;
@@ -257,99 +332,27 @@ pub fn validate(spec: &Value, views: &[View]) -> Result<Spec> {
     if !MARKS.contains(&mark) {
         return Err(err("mark").with("mark", mark));
     }
-    let enc = spec
-        .get("encoding")
-        .ok_or_else(|| err("schema").with("field", "encoding"))?;
-    if let Value::Obj(o) = enc {
-        if let Some((k, _)) = o
-            .iter()
-            .find(|(k, _)| !["x", "y", "color", "detail"].contains(&k.as_str()))
-        {
-            return Err(err("style").with("field", format!("encoding.{k}")));
-        }
-    } else {
-        return Err(err("schema").with("field", "encoding"));
-    }
-    let (x, y, color, detail) = (
-        channel(enc, "x")?,
-        channel(enc, "y")?,
-        channel(enc, "color")?,
-        channel(enc, "detail")?,
-    );
-    let facet = match spec.get("facet") {
-        None => None,
-        Some(f) => Some(
+    let [x, y, color, detail] = channels(spec)?;
+    let facet = spec
+        .get("facet")
+        .map(|f| {
             f.str()
                 .map(str::to_string)
-                .ok_or_else(|| err("schema").with("field", "facet"))?,
-        ),
-    };
-    let (fx, fy, fc, fd, ff) = (
+                .ok_or_else(|| err("schema").with("field", "facet"))
+        })
+        .transpose()?;
+    let (fx, fy, fc) = (
         field_of(view, &x, "x")?,
         field_of(view, &y, "y")?,
         field_of(view, &color, "color")?,
+    );
+    let (fd, ff) = (
         field_of(view, &detail, "detail")?,
         field_of(view, &facet, "facet")?,
     );
-    use Kind::{Nominal as N, Ordinal as O, Quantitative as Q};
-    match mark {
-        "line" | "point" | "stick" => {
-            need(&[Q, O], fx, "x", mark)?;
-            need(&[Q], fy, "y", mark)?;
-        }
-        "bar" => {
-            need(&[N, O], fx, "x", mark)?;
-            need(&[Q], fy, "y", mark)?;
-        }
-        "box" => {
-            need(&[N], fx, "x", mark)?;
-            need(&[Q], fy, "y", mark)?;
-        }
-        "hist" => {
-            need(&[Q], fx, "x", mark)?;
-            if fy.is_some() {
-                return Err(err("type")
-                    .with("channel", "y")
-                    .with("mark", mark)
-                    .with("kind", "unexpected"));
-            }
-        }
-        _ => {
-            need(&[N], fx, "x", mark)?;
-            need(&[N], fy, "y", mark)?;
-            need(&[Q], fc, "color", mark)?;
-        }
-    }
-    // for a heat map the colour channel carries the quantity; everywhere else it names series
-    if mark != "heat" {
-        if let Some((i, f)) = fc {
-            if f.kind != N || view.cols[i].distinct() > MAX_COLORS {
-                return Err(err("color").with("field", f.name).with("max", MAX_COLORS));
-            }
-        }
-    }
-    if let Some((i, f)) = fd {
-        if f.kind != N || view.cols[i].distinct() > MAX_DETAIL {
-            return Err(err("detail").with("field", f.name).with("max", MAX_DETAIL));
-        }
-    }
-    if let Some((i, f)) = ff {
-        if f.kind != N || view.cols[i].distinct() > MAX_FACETS {
-            return Err(err("facet").with("field", f.name).with("max", MAX_FACETS));
-        }
-    }
-    let log_y = match spec.get("log_y") {
-        None => false,
-        Some(v) => v
-            .bool()
-            .ok_or_else(|| err("schema").with("field", "log_y"))?,
-    };
-    if log_y && fy.is_none() {
-        return Err(err("type")
-            .with("channel", "y")
-            .with("mark", mark)
-            .with("kind", "missing"));
-    }
+    check_types(mark, fx, fy, fc)?;
+    check_limits(view, mark, fc, fd, ff)?;
+    let log_y = log_flag(spec, mark, fy)?;
     Ok(Spec {
         title,
         view: view.id.clone(),
@@ -371,148 +374,5 @@ pub fn validate_text(spec: &str, views: &[View]) -> Result<Spec> {
     validate(&v, views)
 }
 
-/// Keeps at most `cap` of `idx` (indices into `y`): the row with the largest `y` of each interval, in the original order.
-fn peaks(idx: &[usize], y: &[f64], cap: usize) -> Vec<usize> {
-    if idx.len() <= cap {
-        return idx.to_vec();
-    }
-    let step = idx.len().div_ceil(cap).max(1);
-    idx.chunks(step)
-        .map(|c| {
-            c.iter()
-                .copied()
-                .fold(c[0], |b, j| if y[j] > y[b] { j } else { b })
-        })
-        .collect()
-}
-
-fn cell(o: &mut Out, c: &Col, i: usize) {
-    match c {
-        Col::Num(v) => {
-            o.num(v[i]);
-        }
-        Col::Text(v) => {
-            o.str(&v[i]);
-        }
-    }
-}
-
-/// The chart with its data: `data.rows` as arrays in the order of `data.fields` (only the fields the chart uses), reduced to `MAX_ROWS`.
-pub fn resolve(spec: &Spec, views: &[View]) -> Result<String> {
-    let mut o = Out::default();
-    if spec.no_view {
-        o.raw("{\"schema\":\"grafico/1\",\"error\":\"no_view\",\"why\":")
-            .str(&spec.why)
-            .raw("}");
-        return Ok(o.0);
-    }
-    let view = views
-        .iter()
-        .find(|v| v.id == spec.view)
-        .ok_or_else(|| err("ref").with("ref", &spec.view))?;
-    let mut names: Vec<&str> = vec![&spec.x];
-    for n in [&spec.y, &spec.color, &spec.detail, &spec.facet]
-        .into_iter()
-        .flatten()
-    {
-        if !names.contains(&n.as_str()) {
-            names.push(n);
-        }
-    }
-    let used: Vec<usize> = names
-        .iter()
-        .map(|n| view.at(n).ok_or_else(|| err("field").with("field", n)))
-        .collect::<Result<_>>()?;
-    let n = view.rows();
-    // series = rows that share the nominal channels; each keeps its share of the cap
-    let keys: Vec<usize> = [&spec.color, &spec.detail, &spec.facet]
-        .into_iter()
-        .flatten()
-        .filter_map(|k| view.at(k))
-        .collect();
-    let nominal = |c: usize, i: usize| match &view.cols[c] {
-        Col::Text(v) => v[i].clone(),
-        Col::Num(v) => v[i].to_string(),
-    };
-    let mut order: Vec<Vec<String>> = Vec::new();
-    let mut groups: Vec<Vec<usize>> = Vec::new();
-    for i in 0..n {
-        let key: Vec<String> = keys.iter().map(|&c| nominal(c, i)).collect();
-        match order.iter().position(|k| *k == key) {
-            Some(g) => groups[g].push(i),
-            None => {
-                order.push(key);
-                groups.push(vec![i]);
-            }
-        }
-    }
-    let by = spec
-        .y
-        .as_ref()
-        .or(Some(&spec.x))
-        .and_then(|f| view.at(f))
-        .map(|c| match &view.cols[c] {
-            Col::Num(v) => v.clone(),
-            Col::Text(_) => vec![0.0; n],
-        });
-    let by = by.unwrap_or_else(|| vec![0.0; n]);
-    let cap = (MAX_ROWS / groups.len().max(1)).max(1);
-    let kept: Vec<usize> = groups.iter().flat_map(|g| peaks(g, &by, cap)).collect();
-    o.raw("{\"schema\":\"grafico/1\",\"title\":")
-        .str(&spec.title)
-        .raw(",\"data\":{\"ref\":")
-        .str(&view.id)
-        .raw(",\"fields\":[");
-    for (k, &c) in used.iter().enumerate() {
-        let f = &view.fields[c];
-        o.raw(if k > 0 { "," } else { "" })
-            .raw("{\"name\":")
-            .str(f.name)
-            .raw(",\"type\":")
-            .str(f.kind.name())
-            .raw(",\"unit\":")
-            .str(f.unit)
-            .raw("}");
-    }
-    o.raw("],\"rows\":[");
-    for (k, &i) in kept.iter().enumerate() {
-        o.raw(if k > 0 { ",[" } else { "[" });
-        for (j, &c) in used.iter().enumerate() {
-            o.raw(if j > 0 { "," } else { "" });
-            cell(&mut o, &view.cols[c], i);
-        }
-        o.raw("]");
-    }
-    o.raw("],\"source_rows\":")
-        .int(n as i64)
-        .raw(",\"reduced\":")
-        .raw(if kept.len() < n { "true" } else { "false" })
-        .raw("},\"mark\":")
-        .str(&spec.mark);
-    o.raw(",\"encoding\":{\"x\":{\"field\":")
-        .str(&spec.x)
-        .raw("}");
-    for (k, v) in [
-        ("y", &spec.y),
-        ("color", &spec.color),
-        ("detail", &spec.detail),
-    ] {
-        if let Some(f) = v {
-            o.raw(",").str(k).raw(":{\"field\":").str(f).raw("}");
-        }
-    }
-    o.raw("}");
-    if let Some(f) = &spec.facet {
-        o.raw(",\"facet\":").str(f);
-    }
-    if spec.log_y {
-        o.raw(",\"log_y\":true");
-    }
-    o.raw(",\"why\":").str(&spec.why).raw("}");
-    Ok(o.0)
-}
-
-/// Validate and resolve in one step: the text of the chart for the page.
-pub fn make(spec: &str, views: &[View]) -> Result<String> {
-    resolve(&validate_text(spec, views)?, views)
-}
+/// `make` and `resolve` live in `chart_data`.
+pub use crate::chart_data::{make, resolve};

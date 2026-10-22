@@ -151,28 +151,34 @@ fn features(src: &Value, out: &mut Vec<View>) {
         cols: vec![Col::Text(r), Col::Text(who), Col::Num(a)],
     });
     if let (Some(mz), Some(rt)) = (mz, rt) {
-        let (mut m, mut t, mut a) = (Vec::new(), Vec::new(), Vec::new());
-        for row in &rows {
-            let best = areas
-                .iter()
-                .filter_map(|(c, _)| num(row, *c))
-                .fold(f64::NAN, f64::max);
-            if let (Some(x), Some(y)) = (num(row, mz), num(row, rt)) {
-                if best.is_finite() {
-                    (m.push(x), t.push(y), a.push(best));
-                }
+        out.push(mzrt(&rows, &areas, mz, rt));
+    }
+}
+
+/// `features:mzrt`: m/z against RT of each feature, with its largest area.
+fn mzrt(rows: &[Vec<String>], areas: &[(usize, String)], mz: usize, rt: usize) -> View {
+    let num = |r: &Vec<String>, c: usize| r.get(c).and_then(|x| x.trim().parse::<f64>().ok());
+    let (mut m, mut t, mut a) = (Vec::new(), Vec::new(), Vec::new());
+    for row in rows {
+        let best = areas
+            .iter()
+            .filter_map(|(c, _)| num(row, *c))
+            .fold(f64::NAN, f64::max);
+        if let (Some(x), Some(y)) = (num(row, mz), num(row, rt)) {
+            if best.is_finite() {
+                (m.push(x), t.push(y), a.push(best));
             }
         }
-        out.push(View {
-            id: "features:mzrt".into(),
-            description: "m/z against RT of each feature, with its largest area".into(),
-            fields: vec![
-                f("mz", Kind::Quantitative, "m/z"),
-                f("rt", Kind::Quantitative, "min"),
-                f("area", Kind::Quantitative, "counts"),
-            ],
-            cols: vec![Col::Num(m), Col::Num(t), Col::Num(a)],
-        });
+    }
+    View {
+        id: "features:mzrt".into(),
+        description: "m/z against RT of each feature, with its largest area".into(),
+        fields: vec![
+            f("mz", Kind::Quantitative, "m/z"),
+            f("rt", Kind::Quantitative, "min"),
+            f("area", Kind::Quantitative, "counts"),
+        ],
+        cols: vec![Col::Num(m), Col::Num(t), Col::Num(a)],
     }
 }
 
