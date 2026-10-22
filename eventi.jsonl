@@ -1339,3 +1339,4 @@
 {"v":1,"ts_utc":"2026-10-22T06:04:49Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/msngrafo-regole-formula","merge_main":true,"aree":{"docs":2,"altro":6,"web":4,"test":2,"tools":1},"tipo":"pr","pr":1434,"sha":"76181ab859be2d6b64780e0a54e9f7702fc5e027"}
 {"v":1,"ts_utc":"2026-10-22T06:10:27Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/centwave-veloce","merge_main":true,"aree":{"rust":2,"docs":3,"altro":2,"web":4,"test":2},"tipo":"pr","pr":1437,"sha":"c4230dec71e1c5c58e4045b25b1a686016b90ac0"}
 {"v":1,"ts_utc":"2026-10-22T06:11:07Z","azione":"aperta","tipo":"pr","pr":1439,"sha":"b81f69abcc40ca709e82dde301b65ed83bc74c70"}
+{"v":1,"ts_utc":"2026-10-22T06:16:15Z","azione":"aperta","tipo":"pr","pr":1440,"sha":"3c68a2bcdf8f4823e799e0fca91e01e99211ce5f"}
