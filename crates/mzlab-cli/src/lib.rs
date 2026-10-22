@@ -19,7 +19,6 @@ pub mod flow;
 mod flow_apply;
 mod flow_base;
 mod flow_cache;
-mod flow_hash;
 mod flow_centroid;
 #[cfg(test)]
 mod flow_centroid_tests;
@@ -38,6 +37,7 @@ mod flow_export;
 mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
+mod flow_hash;
 #[cfg(test)]
 mod flow_hr_tests;
 mod flow_import;
