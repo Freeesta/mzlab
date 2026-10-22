@@ -167,11 +167,24 @@ class ScanComparator(Comparator):
         for x, y in zip(ra, rb):
             for k in REACTION_FIELDS:
                 self.value("reactions." + k, n, x.get(k), y.get(k))
+        self.by_level(n, ra, rb, a.get("level") or b.get("level"))
         ta, tb = a.get("trailer") or {}, b.get("trailer") or {}
         na = {normalize(k): v for k, v in ta.items()}
         nb = {normalize(k): v for k, v in tb.items()}
         for k in sorted(set(na) | set(nb)):
             self.value("trailer." + k, n, na.get(k), nb.get(k), None)
+
+    def by_level(self, n, ra, rb, level):
+        """MS3+ chains, step by step and per level (`reactions.<field>@ms3` ...): the same fields as above, and our unexplained `raw_double` / `raw_long2` of the
+        earlier steps set against RFR's isolation width / offset (`reactions.iso_width~raw_double@ms3`) until a level shows them equal on the whole corpus."""
+        if not level or level < 3:
+            return
+        for i, (x, y) in enumerate(zip(ra, rb)):
+            for k in REACTION_FIELDS:
+                self.value(f"reactions.{k}@ms{level}", n, x.get(k), y.get(k), KINDS.get("reactions." + k))
+            if i < len(rb) - 1:
+                self.value(f"reactions.iso_width~raw_double@ms{level}", n, x.get("iso_width"), y.get("raw_double"), "da")
+                self.value(f"reactions.iso_offset~raw_long2@ms{level}", n, x.get("iso_offset"), y.get("raw_long2"), "da")
 
     def peaks(self, n, a, b):
         self.value("peaks.count", n, len(a["mz"]), len(b["mz"]), "exact")
