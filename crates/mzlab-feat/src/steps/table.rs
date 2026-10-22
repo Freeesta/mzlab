@@ -165,6 +165,15 @@ pub(super) fn filter() -> Step {
             .default_num(3.0)
             .unit("files")
             .doc("QC files with a peak that the row needs for the QC rule, and QC files that the series needs"),
+        Param::number("dup_ppm", "Duplicate m/z window")
+            .min(0.0)
+            .unit("ppm")
+            .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
+        Param::number("dup_rt", "Duplicate RT window")
+            .min(0.0)
+            .default_num(0.1)
+            .unit("min")
+            .doc("RT distance under which two rows may be duplicates; used with the duplicate m/z window only"),
         Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
         Param::choice("normalize", "Normalisation", &["none", "sum", "median"])
             .default_str("none")

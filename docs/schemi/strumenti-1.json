@@ -1222,6 +1222,8 @@
                   "blank_ratio",
                   "qc_cv_max",
                   "qc_min_files",
+                  "dup_ppm",
+                  "dup_rt",
                   "require_ms2",
                   "normalize"
                 ]
@@ -1258,6 +1260,17 @@
                     "minimum":2,
                     "default":3,
                     "description":"QC files with a peak that the row needs for the QC rule, and QC files that the series needs"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"RT distance under which two rows may be duplicates; used with the duplicate m/z window only"
                   },
                   {"type":"boolean","description":"An MS2 is linked to the peak; left empty, the rule is off"},
                   {

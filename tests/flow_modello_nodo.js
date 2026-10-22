@@ -7,6 +7,8 @@ const ctx = vm.createContext({});
 for (const f of ["registry", "check", "plan", "inputs", "names", "fix", "results", "views-attributio"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const reg = F.registry(["steps-1", "steps-attributio-1", "steps-tabui-1"].map(n => JSON.parse(fs.readFileSync(path.join(root, "docs/schemi", n + ".json"), "utf8"))));
+// the registry of the page also lists the command-line steps (the MSn template uses them)
+const regAll = F.registry(["steps-1", "steps-attributio-1", "steps-tabui-1", "steps-cli-1"].map(n => JSON.parse(fs.readFileSync(path.join(root, "docs/schemi", n + ".json"), "utf8"))));
 const problems = plan => F.check(F.normalize(F.exportPlan(plan)), reg, "native").map(F.problemLine);
 
 // a first step brings its own input; the chain wires itself and is valid
@@ -64,9 +66,9 @@ assert.strictEqual(F.goal(plan, reg).reached, true);
 eq(problems(F.basePlan(reg)), []);
 eq(F.basePlan(reg).steps.map(s => s.id), ["index", "detect", "align", "gapfill"]);
 for (const t of F.TEMPLATES) {
-  const p = F.templatePlan(reg, t);
-  eq(problems(p), []);
-  assert.ok(F.canvasModel({ plan: p, reg }, true).nodes.length < F.canvasModel({ plan: p, reg }, false).nodes.length || p.steps.length === 4, t.id);
+  const p = F.templatePlan(regAll, t);
+  eq(F.check(F.normalize(F.exportPlan(p)), regAll, "native").map(F.problemLine), []);
+  assert.ok(F.canvasModel({ plan: p, reg: regAll }, true).nodes.length < F.canvasModel({ plan: p, reg: regAll }, false).nodes.length || p.steps.length <= 4, t.id);
 }
 // the CSV of a result: quotes, doubled quotes, CRLF, a tab-separated file, a missing last newline
 eq(F.parseCsv('a,b\r\n"x,1","say ""hi"""\r\n3,4'), [["a", "b"], ["x,1", 'say "hi"'], ["3", "4"]]);

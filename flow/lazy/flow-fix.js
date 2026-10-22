@@ -25,7 +25,9 @@
   };
   /** a plan for a template: the base, then its add-ons @param {any} reg @param {any} tpl */
   F.templatePlan = (reg, tpl) => {
-    const S = { plan: F.basePlan(reg), reg };
+    // a template with its own steps (the MSn infusion) does not start from the feature-table base
+    const S = { plan: tpl.steps ? F.newPlan() : F.basePlan(reg), reg };
+    for (const id of tpl.steps || []) F.addStep(S.plan, reg, id);
     for (const a of tpl.addons) F.addAddon(S, F.ADDONS.find((/** @type {any} */ x) => x.id === a));
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
@@ -34,8 +36,8 @@
     }
     return S.plan;
   };
-  /** has the plan anything beyond the base? @param {any} plan */
-  F.hasAddons = plan => plan.steps.length > F.BASE.reduce((n, g) => n + g.steps.length, 0);
+  /** has the plan anything beyond the base? (a plan without the base chain has its own steps) @param {any} plan */
+  F.hasAddons = plan => !F.findStep(plan, F.BASE[0].steps[0]) || plan.steps.length > F.BASE.reduce((n, g) => n + g.steps.length, 0);
 
   /** steps that could take the output of `inst` as a required input: the proposals of «Add next step» @param {any} S @param {any} inst */
   F.nextSteps = (S, inst) => {

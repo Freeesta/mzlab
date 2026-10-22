@@ -173,17 +173,28 @@ fn shape(path: &str) -> String {
     path.split('>').map(step).collect::<Vec<_>>().join(">")
 }
 
-/// The entropy similarity and the shared peaks of `u` against the spectrum of `list` at the nearest energy.
+/// The entropy similarity and the shared peaks of `u` against the spectrum of `list` at the nearest energy; among spectra at the same distance
+/// (the same ion reached by different upstream energies) the most similar one, so a tree always finds itself.
 fn best_of<'a>(u: &Sp, list: impl Iterator<Item = &'a Sp>, tol: f64) -> Option<(f64, usize)> {
-    let e = list.min_by(|a, b| (a.ce - u.ce).abs().total_cmp(&(b.ce - u.ce).abs()))?;
-    if u.peaks.is_empty() || e.peaks.is_empty() {
+    let cand: Vec<&Sp> = list.filter(|e| !e.peaks.is_empty()).collect();
+    let near = cand
+        .iter()
+        .map(|e| (e.ce - u.ce).abs())
+        .min_by(f64::total_cmp)?;
+    if u.peaks.is_empty() {
         return None;
     }
-    let ((am, ai), (bm, bi)) = (columns(u), columns(e));
-    Some((
-        entropy_similarity(&am, &ai, &bm, &bi, tol),
-        shared_peaks(u, e, tol),
-    ))
+    let am = columns(u);
+    cand.iter()
+        .filter(|e| (e.ce - u.ce).abs() - near <= 1e-9)
+        .map(|e| {
+            let bm = columns(e);
+            (
+                entropy_similarity(&am.0, &am.1, &bm.0, &bm.1, tol),
+                shared_peaks(u, e, tol),
+            )
+        })
+        .max_by(|a, b| a.0.total_cmp(&b.0))
 }
 
 /// The precursor m/z of a spectrum of the graph.
