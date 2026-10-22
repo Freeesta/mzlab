@@ -3,7 +3,7 @@
 //! Worker variable `PRICES`. No float is stored, so counters never drift. Used by the Worker (state in Durable Objects) and by `eval` for the cost.
 use mzlab_core::error::Error;
 use mzlab_llm::event::Usage;
-use serde_json::Value;
+use mzlab_llm::spend;
 
 /// Micro-dollars in one cent.
 pub const CENT: u64 = 10_000;
@@ -85,65 +85,30 @@ pub fn admit(state: &State, limits: &Limits, now_day: u32) -> Result<(), Error> 
     Ok(())
 }
 
-/// Price of a model in thousandths of a micro-dollar per token (= USD per million tokens × 1 000), so a price like 0.10 is exact.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ModelPrice {
-    pub input: u64,
-    pub output: u64,
-    pub cache_read: u64,
+/// The prices of the models, in the micro-dollars of `mzlab_llm::spend`; this wrapper only gives its errors the tutor key `err.tutor.prices`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Prices(spend::Prices);
+
+fn tutor_error(e: Error) -> Error {
+    e.params
+        .into_iter()
+        .fold(Error::new("err.tutor.prices"), |acc, (k, v)| acc.with(k, v))
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Prices(Vec<(String, ModelPrice)>);
-
 impl Prices {
-    /// The Worker variable `PRICES`: `{"model-id": {"in": 0.1, "out": 0.5, "cache_read": 0.01}}`, USD per million tokens (`cache_read` defaults to `in`).
+    /// The Worker variable `PRICES`: `{"model-id": {"in": 0.1, "out": 0.5, "cache_read": 0.01}}`, USD per million tokens (format of `spend::Prices::parse`).
     pub fn parse(text: &str) -> Result<Prices, Error> {
-        let bad = |f: &str| Error::new("err.tutor.prices").with("field", f);
-        let v: Value = serde_json::from_str(text).map_err(|_| bad("json"))?;
-        let mut all = Vec::new();
-        for (model, p) in v.as_object().ok_or_else(|| bad("json"))? {
-            let get = |k: &str| match p.get(k) {
-                None => Ok(None),
-                Some(x) => x
-                    .as_f64()
-                    .filter(|x| x.is_finite() && *x >= 0.0)
-                    .map(|x| Some((x * 1000.0).round() as u64))
-                    .ok_or_else(|| bad(k)),
-            };
-            let input = get("in")?.ok_or_else(|| bad("in"))?;
-            all.push((
-                model.clone(),
-                ModelPrice {
-                    input,
-                    output: get("out")?.ok_or_else(|| bad("out"))?,
-                    cache_read: get("cache_read")?.unwrap_or(input),
-                },
-            ));
-        }
-        Ok(Prices(all))
+        spend::Prices::parse(text).map(Prices).map_err(tutor_error)
     }
 
-    /// The list prices the study assumes (to be checked at deploy time): Haiku 5.5 0.10/0.50, Sonnet 5.5 2/10 USD per million tokens.
+    /// The prices shipped with the program (`data/fornitori-1.json`, checked on the date it says).
     pub fn list() -> Prices {
-        Prices::parse(
-            r#"{"claude-haiku-5-5":{"in":0.1,"out":0.5,"cache_read":0.01},"claude-sonnet-5-5":{"in":2,"out":10,"cache_read":0.2}}"#,
-        )
-        .expect("the list prices are valid")
+        Prices(spend::Prices::list())
     }
 
     /// Cost of one call in micro-dollars, rounded up. A model with no price is an error: unknown must never count as free.
     pub fn cost(&self, model: &str, u: &Usage) -> Result<u64, Error> {
-        let p = self
-            .0
-            .iter()
-            .find(|(m, _)| m == model)
-            .map(|(_, p)| p)
-            .ok_or_else(|| Error::new("err.tutor.prices").with("model", model))?;
-        let thousandths = u128::from(u.input) * u128::from(p.input)
-            + u128::from(u.output) * u128::from(p.output)
-            + u128::from(u.cache_read) * u128::from(p.cache_read);
-        Ok(thousandths.div_ceil(1000) as u64)
+        self.0.cost(model, u).map_err(tutor_error)
     }
 }
 

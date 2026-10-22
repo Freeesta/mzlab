@@ -16,6 +16,8 @@
     "in": {"type": "integer"},
     "out": {"type": "integer"},
     "cache_read": {"type": "integer"},
+    "cache_write_5m": {"type": "integer"},
+    "cache_write_1h": {"type": "integer"},
     "reason": {"enum": ["end", "tool", "length", "refusal"]},
     "key": {"type": "string", "pattern": "^err\\.llm\\."},
     "params": {"type": "object", "additionalProperties": {"type": "string"}}
