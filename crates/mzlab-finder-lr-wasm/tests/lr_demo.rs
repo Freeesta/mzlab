@@ -204,3 +204,162 @@ fn table_threshold_noise() {
         );
     }
 }
+/// Strongest area of a row over its cells with a peak.
+fn amax(e: &lr::Entry) -> f64 {
+    e.cells
+        .iter()
+        .filter(|c| c.detected)
+        .map(|c| c.area)
+        .fold(0.0, f64::max)
+}
+
+fn failed(e: &lr::Entry) -> Vec<&'static str> {
+    e.criteria
+        .iter()
+        .filter(|c| c.status == "fail")
+        .map(|c| c.name)
+        .collect()
+}
+
+/// The rows in the order of the table: label, candidates before unexpected ions, score, strongest area.
+fn table_order(d: &lr::LrDig) -> Vec<&lr::Entry> {
+    let rk = |l: &str| match l {
+        "forte" => 0,
+        "possibile" => 1,
+        _ => 2,
+    };
+    let mut v: Vec<&lr::Entry> = d.entries.iter().filter(|e| e.id != 0).collect();
+    v.sort_by(|a, b| {
+        (rk(a.label), a.unexpected)
+            .cmp(&(rk(b.label), b.unexpected))
+            .then(b.score.partial_cmp(&a.score).unwrap())
+            .then(amax(b).total_cmp(&amax(a)))
+    });
+    v
+}
+
+fn report_rows(rows: &[&lr::Entry]) {
+    let expected = [(362.06, 13.02), (378.05, 13.57), (396.06, 13.41)];
+    for (mz, rt) in expected {
+        let rank = rows.iter().position(|e| {
+            (e.mz - mz).abs() < 0.5 && e.ref_rt.is_some_and(|t| (t - rt).abs() < 0.2)
+        });
+        println!("expected {mz}@{rt}: rank {rank:?} of {}", rows.len());
+    }
+    for (i, e) in rows.iter().take(12).enumerate() {
+        println!(
+            "#{} mz {:.2} area {:.2e} rt {:?} score {:?} {} {} unexpected {} by_chance {} fail {:?}",
+            i + 1, e.mz, amax(e), e.ref_rt, e.score, e.label, e.name, e.unexpected, e.by_chance, failed(e)
+        );
+    }
+}
+
+fn report_weak(rows: &[&lr::Entry]) {
+    let mut why: std::collections::BTreeMap<String, usize> = Default::default();
+    for e in rows.iter().filter(|e| !e.unexpected && e.label != "forte") {
+        if e.label == "possibile" {
+            println!(
+                "possible mz {:.2} rt {:?} area {:.2e} steps {} by_chance {} fail {:?}",
+                e.mz,
+                e.ref_rt,
+                amax(e),
+                e.steps,
+                e.by_chance,
+                failed(e)
+            );
+        }
+        *why.entry(failed(e).join("+")).or_default() += 1;
+    }
+    println!("non-strong candidates by failed criteria: {why:?}");
+}
+
+/// Strong unexpected ions that co-elute (0.1 min) with a heavier strong candidate: probable fragments of it.
+fn report_coelution(rows: &[&lr::Entry]) {
+    let strong: Vec<&&lr::Entry> = rows
+        .iter()
+        .filter(|e| !e.unexpected && e.label == "forte")
+        .collect();
+    let (mut coel, mut tot) = (0, 0);
+    for u in rows.iter().filter(|e| e.unexpected && e.label == "forte") {
+        tot += 1;
+        let ru = u.ref_rt.unwrap_or(-9.0);
+        let hit = strong
+            .iter()
+            .find(|c| c.mz > u.mz + 3.0 && (c.ref_rt.unwrap_or(0.0) - ru).abs() <= 0.1);
+        if let Some(c) = hit {
+            coel += 1;
+            println!(
+                "coeluting unexpected {:.2}@{ru:.2} under candidate {:.2} (loss {:.2})",
+                u.mz,
+                c.mz,
+                c.mz - u.mz
+            );
+        }
+    }
+    println!("unexpected strong {tot}, co-eluting and lighter than a strong candidate: {coel}");
+}
+
+fn report_decoys() {
+    let decoys = [
+        "C8H5N4",
+        "C14H9N",
+        "C9H12O4",
+        "C11H6N4O",
+        "C21H21O4",
+        "C9H7N4",
+        "C15H12N2O",
+    ];
+    let (mut shown_all, mut strong_all, mut prop_all) = (0, 0, 0);
+    for fm in decoys {
+        let x = dig(fm);
+        shown_all += shown(&x);
+        strong_all += candidates(&x, "forte").len();
+        prop_all += proposed(&x).len();
+    }
+    println!(
+        "decoys ({}): shown {shown_all}, strong {strong_all}, proposed {prop_all}",
+        decoys.len()
+    );
+}
+
+/// `cargo test --release -p mzlab-finder-lr-wasm --test lr_demo -- --ignored --nocapture report`: the results report of the demo series
+/// (features per phase, candidates with score and reasons, products found, decoy false positives, times, peak memory).
+#[test]
+#[ignore]
+fn report() {
+    let t0 = std::time::Instant::now();
+    let d = demo();
+    let (feats, _) = run::read_files(&d.feats).unwrap();
+    let per_file: Vec<usize> = feats.iter().map(|f| f.mz.len()).collect();
+    println!(
+        "features per file (detect): {per_file:?}; pipeline {:?}",
+        t0.elapsed()
+    );
+    let t1 = std::time::Instant::now();
+    let f = dig("C14H13F4N3O2S");
+    println!(
+        "dig {:?}; parent_ok {}; aligned rows {}",
+        t1.elapsed(),
+        f.parent_ok,
+        f.table.mz.len()
+    );
+    let mut counts = std::collections::BTreeMap::new();
+    for e in f.entries.iter().filter(|e| e.id != 0) {
+        *counts.entry((e.unexpected, e.label)).or_insert(0) += 1;
+    }
+    println!("entries by (unexpected, label): {counts:?}");
+    let rows = table_order(&f);
+    report_rows(&rows);
+    report_weak(&rows);
+    report_coelution(&rows);
+    println!("proposed formulas: {}", proposed(&f).len());
+    report_decoys();
+    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
+    println!(
+        "{}",
+        status
+            .lines()
+            .find(|l| l.starts_with("VmHWM"))
+            .unwrap_or("VmHWM n/a")
+    );
+}
