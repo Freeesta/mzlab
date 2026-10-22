@@ -113,6 +113,69 @@ fn the_ion_beside_the_precursor_makes_the_spectrum_chimeric() {
 }
 
 #[test]
+fn the_ms1_window_algorithm_lists_the_ions_beside_the_precursor() {
+    let dir = fixture("chimeric_ms1");
+    std::fs::write(dir.join("chi.mzML"), dda_mzml()).unwrap();
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"chi.mzML","type":"mzml"}],"steps":[
+        {"id":"idx","step":"index.mzidx@1","in":{"source":["file:chi.mzML"]}},
+        {"id":"s","step":"spectra.ms2@1","in":{"source":["file:chi.mzML"]}},
+        {"id":"c","step":"spectra.chimeric@1","algorithm":"ms1_window","in":{"spectra":"s.spectra","index":["idx.index"]},"params":{"chim_rel":0.2,"chim_cap":0.5}}]}"#;
+    let (_, prov) =
+        crate::flow::run_plan(plan.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+    assert!(!prov.contains("\"error\""), "{prov}");
+    let mgf = std::fs::read_to_string(dir.join("work/c.mgf")).unwrap();
+    let ions = header(&mgf, "chi.2", "MS1_COISOLATED=").unwrap();
+    assert!(ions.starts_with("300.4000:"), "{mgf}");
+    assert_eq!(
+        header(&mgf, "chi.2", "MS1_COISOLATED_N=").as_deref(),
+        Some("1")
+    );
+    assert_eq!(
+        header(&mgf, "chi.2", "MS1_CAPPED=").as_deref(),
+        Some("true")
+    );
+    assert_eq!(
+        header(&mgf, "chi.5", "MS1_COISOLATED=").as_deref(),
+        Some(""),
+        "{mgf}"
+    );
+    assert_eq!(
+        header(&mgf, "chi.5", "MS1_CAPPED=").as_deref(),
+        Some("false")
+    );
+    // the purity of the default algorithm is still written
+    assert!(header(&mgf, "chi.2", "PURITY=").is_some(), "{mgf}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn library_deconvolution_splits_the_spectrum_among_the_library_spectra_in_the_window() {
+    let dir = fixture("chimeric_deconv");
+    std::fs::write(dir.join("chi.mzML"), dda_mzml()).unwrap();
+    // the MS2 at 300.0 holds 100.05 and 120.08; two library spectra explain one peak each, a third lies outside the window
+    let lib = "Name: First\nPrecursorMZ: 300.0\nIonMode: Positive\nNum Peaks: 1\n100.05 100\n\n\
+               Name: Second\nPrecursorMZ: 300.4\nIonMode: Positive\nNum Peaks: 1\n120.08 100\n\n\
+               Name: Far\nPrecursorMZ: 450.0\nIonMode: Positive\nNum Peaks: 1\n100.05 100\n\n";
+    std::fs::write(dir.join("lib.msp"), lib).unwrap();
+    let plan = r#"{"format":"mzflow/2","inputs":[{"name":"chi.mzML","type":"mzml"},{"name":"lib.msp","type":"library"}],"steps":[
+        {"id":"idx","step":"index.mzidx@1","in":{"source":["file:chi.mzML"]}},
+        {"id":"s","step":"spectra.ms2@1","in":{"source":["file:chi.mzML"]}},
+        {"id":"c","step":"spectra.chimeric@1","algorithm":"library_deconvolution","in":{"spectra":"s.spectra","index":["idx.index"],"library":"file:lib.msp"},"params":{"window":1.5}}]}"#;
+    let (_, prov) =
+        crate::flow::run_plan(plan.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+    assert!(!prov.contains("\"error\""), "{prov}");
+    let mgf = std::fs::read_to_string(dir.join("work/c.mgf")).unwrap();
+    let list = header(&mgf, "chi.2", "DECONV=").unwrap();
+    assert!(list.contains("First:") && list.contains("Second:"), "{mgf}");
+    assert!(!list.contains("Far"), "{mgf}");
+    let residual = header(&mgf, "chi.2", "DECONV_RESIDUAL=").unwrap();
+    assert!(residual.parse::<f64>().unwrap() < 0.01, "{mgf}");
+    // the peaks are untouched
+    assert!(mgf.contains("100.05000 400.0\n120.08000 900.0\n"), "{mgf}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn the_features_inside_the_window_are_listed_nearest_first() {
     let point = |id, mz, rt| FeaturePoint {
         pol: "POS".into(),
@@ -128,7 +191,14 @@ fn the_features_inside_the_window_are_listed_nearest_first() {
         point(5, 302.0, 1.1),
     ];
     let mgf = "BEGIN IONS\nTITLE=a\nPEPMASS=300.0\nRTINSECONDS=66.000\nFEATURE_ID=1\n100.0 5.0\nEND IONS\n";
-    let text = crate::flow_chimeric::chimeric_text((1.5, 0.1), mgf.as_bytes(), &[None], Some(&all));
+    let text = crate::flow_chimeric::chimeric_text(
+        (1.5, 0.1),
+        mgf.as_bytes(),
+        (&[None], &[]),
+        0.5,
+        &[],
+        Some(&all),
+    );
     assert_eq!(
         header(&text, "a", "INTRUDERS=").as_deref(),
         Some("3:0.2:0;2:0.5:0.02"),

@@ -121,6 +121,12 @@ pub fn table_qc(table_read: Function, size: f64, samples_json: &str, spec: &str)
     core::qc_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
 }
 
+/// The `tabcheck/1` of a table under the view `spec` (empty = the whole table); see `core::tabcheck_json` for `polarity` and `options_json`.
+#[wasm_bindgen]
+pub fn table_check(table_read: Function, size: f64, samples_json: &str, spec: &str, polarity: i32, options_json: &str) -> std::result::Result<String, JsValue> {
+    core::tabcheck_json(&mut table_reader(table_read), size as u64, samples_json, spec, polarity, options_json).map_err(js_err)
+}
+
 /// A table file: `kind` is `full`, `full_mzmine`, `quant`, `csv_semicolon`, `xlsx_rows` or `mztab` (see `core::table_file`).
 #[wasm_bindgen]
 pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> std::result::Result<String, JsValue> {

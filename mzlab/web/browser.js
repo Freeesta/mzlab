@@ -49,8 +49,12 @@
     if (document.body) show(); else document.addEventListener("DOMContentLoaded", show);
   };
   // The Rust engine (rust-bridge.js: the supervisor of rust-worker.js). A phone does not start it (telefono.js), an old browser cannot run it.
+  // The engine starts when the page has been parsed, not while the head is still being read: the module graph and the .wasm would compete with
+  // the scripts and styles of the first paint. Opening files waits for it anyway (AVVIO.pronto), so the shell is drawn first and the engine follows.
+  window.addEventListener("mzlab:db-blocked", () => phase({ key: "load.blocked", pct: null }));
+  const parsed = () => new Promise(ok => { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => ok(null), { once: true }); else ok(null); });
   const rustReady = modern && !window.QQQ_PHONE
-    ? import(new URL("rust-bridge.js", SRC).href).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
+    ? parsed().then(() => import(new URL("rust-bridge.js", SRC).href)).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice, onBlocked: () => phase({ key: "load.blocked", pct: null }) }); b.start(); window.MZLAB_RUST = b; return b; })
         .catch(e => { window.MZLAB_RUST_ERR = String(e && e.message || e); console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
   // for a diagnosis: which version of the site this page is
@@ -85,7 +89,7 @@
   };
   const ready = lrInit();
   ready.catch(() => {});
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo|msnlib\/aggiungi)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo|msnlib\/aggiungi|msnlib\/cerca)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });

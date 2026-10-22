@@ -97,7 +97,7 @@ const CartPuntApri = (() => {
 const CartPunt = (() => {
   const { kindOf, collect, pairScan, visible, sameList, S, supported } = CartPP, render = () => CartPuntVista.render();
   const KEY = "cartella.puntata", POLL = 20000;
-  async function db() { const { lab } = await import("./qqq-db.js"); return lab()(); }
+  async function db() { const { lab } = await import("./qqq-db.js"); return lab(() => window.dispatchEvent(new Event("mzlab:db-blocked")))(); }
   const idb = (mode, f) => db().then(d => new Promise((ok, no) => { const r = f(d.transaction("kv", mode).objectStore("kv")); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
   const saved = () => idb("readonly", s => s.get(KEY)).catch(() => null);
   const keep = h => idb("readwrite", s => (h ? s.put(h, KEY) : s.delete(KEY))).catch(() => null);

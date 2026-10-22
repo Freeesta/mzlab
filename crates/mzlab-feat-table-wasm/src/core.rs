@@ -10,6 +10,7 @@ use mzlab_feat::report;
 use mzlab_feat::riga;
 use mzlab_feat::samples::{self, Sample};
 use mzlab_feat::store::read_table_from;
+use mzlab_feat::tabcheck;
 use mzlab_feat::table::Aligned;
 use mzlab_feat::view::{self, View};
 
@@ -102,6 +103,22 @@ pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) 
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
     Ok(qc::to_json(&t, &s, v.as_ref()))
+}
+
+/// The `tabcheck/1` of a table under the view `spec` (empty = the whole table): fifteen checks with value, threshold, flag, example rows and proof. `polarity` is the one the
+/// table was made with; `options_json` is empty or `{"expected_polarity": 1|-1, "mz_tol_da": number}` (what the inspection of the files found, the m/z tolerance of the alignment).
+pub fn tabcheck_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, polarity: i32, options_json: &str) -> Result<String> {
+    let (t, s) = load(r, size, samples_json)?;
+    let v = view_of(&t, &s, spec)?;
+    let mut o = tabcheck::Options { polarity: if polarity < 0 { -1 } else { 1 }, ..tabcheck::Options::default() };
+    if !options_json.trim().is_empty() {
+        let j = mzlab_core::json::parse(options_json.as_bytes())?;
+        o.expected_polarity = j.get("expected_polarity").and_then(|x| x.f64()).map(|x| if x < 0.0 { -1 } else { 1 });
+        if let Some(x) = j.get("mz_tol_da").and_then(|x| x.f64()).filter(|x| x.is_finite() && *x > 0.0) {
+            o.mz_tol_da = x;
+        }
+    }
+    tabcheck::to_json(&t, &s, v.as_ref(), &o)
 }
 
 /// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells), `quant` (FBMN),

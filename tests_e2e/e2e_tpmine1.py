@@ -49,7 +49,8 @@ try:
             q.close()
         step("without mzlab.admin the address #/tpmine opens the normal page", hash_stays)
         def five_clicks():
-            for _ in range(5): pg.click("header img.logo")
+            pg.wait_for_selector("header img.logo[role=button]", timeout=60000)      # logo-piccone.js arms the logo when its script has run, which can be after #drop
+            pg.evaluate("for (let i = 0; i < 5; i++) document.querySelector('header img.logo').click()")      # in one task: the five hits stay inside the 3 s heal window however slow the runner
             pg.wait_for_function("localStorage.getItem('mzlab.admin') === '1'", timeout=15000)
             pg.wait_for_selector(TAB, timeout=30000)                            # no reload: the tab comes up at once
             pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)
@@ -73,7 +74,8 @@ try:
             pg.wait_for_selector(TAB, timeout=30000)
         step("after a reload it is still there", reload_on)
         def five_off():
-            for _ in range(5): pg.click("header img.logo")
+            pg.wait_for_selector("header img.logo[role=button]", timeout=60000)      # logo-piccone.js arms the logo when its script has run, which can be after #drop
+            pg.evaluate("for (let i = 0; i < 5; i++) document.querySelector('header img.logo').click()")      # in one task: the five hits stay inside the 3 s heal window however slow the runner
             pg.wait_for_function("localStorage.getItem('mzlab.admin') === null", timeout=15000)
             pg.wait_for_function("!document.querySelector('#nav button[data-v=\"tpmine\"]')", timeout=30000)      # the page reloads once the logo is whole
             pg.wait_for_selector("#drop", timeout=120000)
