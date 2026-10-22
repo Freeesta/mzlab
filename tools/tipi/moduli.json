@@ -48,6 +48,7 @@
     "../../mzlab/web/idxpool.js",
     "../../mzlab/web/infusione-grafo.js",
     "../../mzlab/web/infusione-grafo-campo.js",
+    "../../mzlab/web/infusione-grafo-css.js",
     "../../mzlab/web/infusione-grafo-cerca.js",
     "../../mzlab/web/infusione-grafo-esporta.js",
     "../../mzlab/web/infusione-grafo-nodo.js",
