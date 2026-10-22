@@ -29,7 +29,7 @@
 
   /** a metadata table → one patch per file: `file`, and the role, minutes, series and replicate it gives; `unknown` lists the roles that are not in `kinds`, `missing` the columns it lacks @param {string} text @param {string[]} kinds
    * @returns {{rows: Record<string, any>[], unknown: string[], error: string}} */
-  F.parseMetadata = (text, kinds) => {
+  const parseMetadata = (text, kinds) => {
     const t = cells(text || ""), head = (t[0] || []).map(h => h.trim()), at = /** @type {Record<string, number>} */ ({});
     for (const [k, re] of Object.entries(COLS)) at[k] = head.findIndex(h => re.test(h));
     if (at.file < 0) return { rows: [], unknown: [], error: "The table needs a column named File (or Name)." };
@@ -43,10 +43,11 @@
     }).filter(o => o.file);
     return { rows, unknown, error: rows.length ? "" : "The table has no rows." };
   };
+  F.parseMetadata = parseMetadata;
 
   /** the metadata of the files open in Data with the patches of a table laid over them; files the table names but Data does not have are added from the table alone
    * @param {any} base the current document @param {Record<string, any>[]} patches @returns {any} */
-  F.applyMetadata = (base, patches) => {
+  const applyMetadata = (base, patches) => {
     const rows = /** @type {any[]} */ ([...(base.campioni || [])]);
     patches.forEach(p => {
       const at = rows.findIndex(r => r.file === p.file), { file, ...rest } = p;
@@ -55,12 +56,12 @@
     });
     return { ...base, campioni: rows };
   };
+  F.applyMetadata = applyMetadata;
 
   /** the Import card's own block: the files in Data, the buttons that add files and folders, and the metadata with its table @param {any} S */
-  F.importBox = S => {
+  const importBox = S => {
     const { el } = F, box = el("div", { class: "flx-imp" }), say = el("p", { class: "fl-note", role: "status" }), table = el("div");
     const input = (S.plan.inputs || []).find((/** @type {any} */ i) => i.type === "samples") || (S.metaInput = S.metaInput || { name: "metadata", sha256: "", type: "samples" });
-    const click = (/** @type {string} */ id) => { const n = document.getElementById(id); if (n) n.click(); else say.textContent = "The Data tab has no loader here."; };
     const drawTable = () => table.replaceChildren(F.samplesEditor ? F.samplesEditor(S, input) : "");
     const upload = el("input", { type: "file", accept: ".csv,.tsv,.txt,.xlsx,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", hidden: true, "aria-label": "Metadata table (CSV, TSV or XLSX)", onchange: async (/** @type {any} */ e) => {
       const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -75,14 +76,20 @@
       drawTable();
     } });
     box.append(
-      el("div", { class: "fl-meta" },
-        F.btn("plus", "Add data files from the computer", () => click("pick"), "Add files"),
-        F.btn("file", "Add a whole folder of data files", () => click("pickdir"), "Add a folder")),
+      F.addFilesBox(S),
       el("h4", { text: "Metadata" }),
       el("p", { class: "fl-note", text: "Generate them from the files in Data, upload a CSV, TSV or XLSX table (first sheet; columns File, Role, Time, Series, Replicate), then fix what is missing in the table." }),
       el("div", { class: "fl-meta" }, F.btn("import", "Upload a CSV, TSV or XLSX metadata table", () => upload.click(), "Upload table"), upload), say, table);
     drawTable();
-    let seen = F.dataFiles().join("\n");   // the Data loaders tell nobody: look for a change while the card is on the page
+    return box;
+  };
+  F.importBox = importBox;
+  /** the buttons that add files and folders through the loaders of the Data tab; the plan redraws when the files in Data change @param {any} S */
+  const addFilesBox = S => {
+    const box = F.el("div", { class: "fl-meta" }), say = F.el("span", { class: "fl-note", role: "status" });
+    const click = (/** @type {string} */ id) => { const n = document.getElementById(id); if (n) n.click(); else say.textContent = "The Data tab has no loader here."; };
+    box.append(F.btn("plus", "Add data files from the computer", () => click("pick"), "Add files"), F.btn("file", "Add a whole folder of data files", () => click("pickdir"), "Add a folder"), say);
+    let seen = F.dataFiles().join("\n");   // the Data loaders tell nobody: look for a change while the box is on the page
     const timer = setInterval(() => {
       if (!box.isConnected) { clearInterval(timer); return; }
       const now = F.dataFiles().join("\n");
@@ -90,4 +97,5 @@
     }, 1000);
     return box;
   };
+  F.addFilesBox = addFilesBox;
 })();
