@@ -4549,3 +4549,4 @@
 {"v":1,"ts_utc":"2026-10-22T11:00:46Z","tipo":"job","k":"119786055625","workflow":"pages","job":"deploy","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"7aa5867f5bf20d9337f081bcdcfcbebdb2773cb4","run_id":39767284692,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T11:00:47Z","tipo":"annullamento","k":"39767284692","workflow":"pages","minuti_runner":0.6,"sostituito_da":"2153ee7dc76f1d504624f73707b8a173fbb02643","pr":null,"sha":"7aa5867f5bf20d9337f081bcdcfcbebdb2773cb4","run_id":39767284692,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T11:01:28Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/strumenti-shard","merge_main":true,"aree":{"rust":37,"docs":7,"web":3,"test":5,"tools":3},"tipo":"pr","pr":1487,"sha":"da349b7186fbd0bdcc9c4847d9bc5b6fe8fb18c0"}
+{"v":1,"ts_utc":"2026-10-22T11:01:54Z","azione":"aperta","tipo":"pr","pr":1489,"sha":"b0f89ea291b337383c916ea74fd84528a4a6c163"}
