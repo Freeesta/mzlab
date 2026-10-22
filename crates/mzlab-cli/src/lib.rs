@@ -37,6 +37,7 @@ mod flow_export;
 mod flow_export_tests;
 mod flow_formula;
 mod flow_generate;
+mod flow_hash;
 #[cfg(test)]
 mod flow_hr_tests;
 mod flow_import;
@@ -52,6 +53,9 @@ mod flow_level;
 mod flow_link;
 #[cfg(test)]
 mod flow_link_tests;
+mod flow_lookup;
+#[cfg(test)]
+mod flow_lookup_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;

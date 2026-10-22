@@ -24,7 +24,8 @@ fn run_in(d: &std::path::Path, params: &str) -> Vec<String> {
         run.skipped.is_empty() && !prov.contains("\"error\""),
         "{prov}"
     );
-    (0..3)
+    ["s_t000", "s_t010", "s_t030"]
+        .iter()
         .map(|k| std::fs::read_to_string(work.join(format!("est-{k}.json"))).unwrap())
         .collect()
 }

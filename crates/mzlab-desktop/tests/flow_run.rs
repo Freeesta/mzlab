@@ -62,7 +62,7 @@ fn a_plan_runs_on_the_registered_files_and_an_unregistered_one_is_refused() {
     );
     assert!(
         Path::new(out["dir"].as_str().unwrap())
-            .join("c-0.mzML")
+            .join("c-a.mzML")
             .metadata()
             .unwrap()
             .len()

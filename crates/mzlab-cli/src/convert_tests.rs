@@ -122,13 +122,8 @@ fn the_bytes_are_those_of_flow_run_and_do_not_depend_on_the_workers() {
         let o = convert(&[p(&src), "--out", p(out), "--workers", workers]);
         assert_eq!(o.code, 0, "{}", o.stderr);
     }
-    let by_flow = ["a", "b", "c"].map(|n| {
-        std::fs::read(flow_out.join(format!(
-            "conv-{}.mzML",
-            ["a", "b", "c"].iter().position(|x| *x == n).unwrap()
-        )))
-        .unwrap()
-    });
+    let by_flow =
+        ["a", "b", "c"].map(|n| std::fs::read(flow_out.join(format!("conv-{n}.mzML"))).unwrap());
     let got = mzmls(&one);
     for (k, (_, bytes)) in got.iter().enumerate() {
         assert_eq!(*bytes, by_flow[k], "file {k}");

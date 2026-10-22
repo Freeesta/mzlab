@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
 use mzlab_core::json::Value;
@@ -17,6 +16,7 @@ use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_hash::file_sha256;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
@@ -181,8 +181,7 @@ impl FileRunner {
     }
 
     pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
-        let bytes = std::fs::read(&path).map_err(io)?;
-        let sha256 = sha256_hex(&bytes);
+        let (bytes, sha256) = file_sha256(&path)?;
         let label = path.file_name().map(|n| n.to_string_lossy().into_owned());
         self.made
             .lock()
@@ -190,7 +189,7 @@ impl FileRunner {
             .insert(sha256.clone(), path);
         Ok(Artifact {
             sha256,
-            bytes: bytes.len() as u64,
+            bytes,
             ty,
             label,
         })
@@ -420,6 +419,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(crate::flow_msnlib::EXECUTORS)
         .chain(crate::flow_tablematch::EXECUTORS)
         .chain(crate::flow_chimeric::EXECUTORS)
+        .chain(crate::flow_lookup::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?

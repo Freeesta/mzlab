@@ -229,3 +229,18 @@ def test_cursore_non_arretra(tmp_path):
     nuovo.write_text('{"ultimo": "2026-10-22T06:00:00Z"}')
     s.avanza_cursore(str(nuovo), str(vecchio))
     assert "06:00" in vecchio.read_text()
+
+
+def test_percorso_critico_per_tipo():
+    def pr(sha, doc, aree):
+        return {"tipo": "pr", "azione": "unita", "sha": sha, "solo_doc": doc, "aree": aree}
+
+    def run(sha, wf, durata, jobs):
+        return {"tipo": "run", "workflow": wf, "main": False, "sha": sha, "run_attempt": 1, "esito": "success", "ts_utc": "2026-10-22T08:00:00Z", "durata_s": durata, "jobs": jobs}
+
+    ev = [pr("a", True, {}), run("a", "test", 60, {"pytest": 30}),
+          pr("b", False, {"rust": 3}), run("b", "test", 360, {"pytest": 360}), run("b", "rust", 480, {"rust-wasm": 470})]
+    r = s.dati_ci.percorso_critico(ev)
+    assert r["docs"]["mediana"] == 1.0 and r["rust"]["mediana"] == 8.0
+    assert r["rust"]["lenti"][0] == ("rust-wasm", 7.8)
+    assert s.dati_ci.percorso_critico(ev, "2026-10-23") == {}
