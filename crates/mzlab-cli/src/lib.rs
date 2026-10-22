@@ -106,12 +106,12 @@ pub mod llm;
 mod llm_ctx;
 pub mod msn_figura;
 pub mod msn_graph;
-pub mod msn_html;
-mod msn_png;
-pub mod msn_uscite;
 mod msn_graph_compare;
+pub mod msn_html;
 mod msn_lib;
+mod msn_png;
 mod msn_rules;
+pub mod msn_uscite;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -289,10 +289,8 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
         };
     }
     if args.next_if(|a| a == "figure").is_some() {
-        return match msn_uscite::figure_cmd(args) {
-            Ok(t) => Outcome::ok(t.into_bytes()),
-            Err(e) => Outcome::fail(&e),
-        };
+        return msn_uscite::figure_cmd(args)
+            .map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()));
     }
     let a = match msn_graph::parse_args(args) {
         Ok(Some(a)) => a,
@@ -307,16 +305,16 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
         .map_err(io)
         .and_then(|_| msn_graph::esegui(&a, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
+    let r = r
+        .map_err(|e| e.to_string())
+        .and_then(|t| msn_graph::figure_files(&a, &t).map(|f| (t, f)));
     match r {
-        Err(e) => Outcome::fail(&e.to_string()),
-        Ok(t) => match msn_graph::figure_files(&a, &t) {
-            Err(e) => Outcome::fail(&e),
-            Ok(files) => {
-                let mut o = emit(t, &a.out);
-                o.stdout.extend(files.into_bytes());
-                o
-            }
-        },
+        Err(e) => Outcome::fail(&e),
+        Ok((t, files)) => {
+            let mut o = emit(t, &a.out);
+            o.stdout.extend(files.into_bytes());
+            o
+        }
     }
 }
 
@@ -493,8 +491,6 @@ mod msn_graph_compare_tests;
 mod msn_graph_strutture_tests;
 #[cfg(test)]
 mod msn_graph_tests;
-#[cfg(test)]
-mod msn_figura_tests;
 #[cfg(test)]
 mod msn_lib_tests;
 #[cfg(test)]

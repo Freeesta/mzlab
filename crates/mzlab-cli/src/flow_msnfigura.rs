@@ -49,10 +49,15 @@ fn param<'a>(job: &'a Job, name: &str) -> Option<&'a str> {
 }
 
 fn figure_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text = String::from_utf8(read_one(r, job, "graph")?.1).map_err(|_| Error::new("err.msnfigura.bad"))?;
-    let format = Formato::da_nome(param(job, "format").unwrap_or("svg")).ok_or_else(|| Error::new("err.flow.param.type").with("param", "format"))?;
-    let view = Vista::da_nome(param(job, "view").unwrap_or("tree")).ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
-    let out = r.work.join(format!("{}.{}", job.instance.id, format.estensione()));
+    let text = String::from_utf8(read_one(r, job, "graph")?.1)
+        .map_err(|_| Error::new("err.msnfigura.bad"))?;
+    let format = Formato::da_nome(param(job, "format").unwrap_or("svg"))
+        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "format"))?;
+    let view = Vista::da_nome(param(job, "view").unwrap_or("tree"))
+        .ok_or_else(|| Error::new("err.flow.param.type").with("param", "view"))?;
+    let out = r
+        .work
+        .join(format!("{}.{}", job.instance.id, format.estensione()));
     std::fs::write(&out, bytes(&text, format, view)?).map_err(crate::flow::io)?;
     r.keep(out, DataType::Report)
 }

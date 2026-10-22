@@ -82,6 +82,16 @@ fn numero(v: Option<String>, k: &str) -> std::result::Result<f64, String> {
 }
 
 /// The arguments after `msn-graph`; `Ok(None)` = `--help`.
+/// The view named after `--vista`.
+fn vista_di(n: Option<String>) -> std::result::Result<crate::msn_figura::Vista, String> {
+    crate::msn_figura::Vista::da_nome(&n.unwrap_or_default())
+        .ok_or_else(|| "--vista needs albero or radiale".into())
+}
+
+/// The refusal of `--figura` without `--out` or together with an output that is not the graph.
+const FIGURA_USO: &str =
+    "--figura needs --out and the graph itself (not --riassunto, --export or --strutture)";
+
 pub fn parse_args(
     mut a: impl Iterator<Item = String>,
 ) -> std::result::Result<Option<Args>, String> {
@@ -130,18 +140,16 @@ pub fn parse_args(
             "--toll-perdita-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
             "--ppm-struttura" => ppm_struttura = numero(a.next(), &x)?,
             "--figura" => figura = crate::msn_uscite::formati(&a.next().unwrap_or_default())?,
-            "--vista" => {
-                vista = crate::msn_figura::Vista::da_nome(&a.next().unwrap_or_default())
-                    .ok_or("--vista needs albero or radiale")?
-            }
+            "--vista" => vista = vista_di(a.next())?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
         }
     }
     let file = file.ok_or("an infusion file is needed")?;
-    if !figura.is_empty() && (out.is_none() || riassunto || export.is_some() || strutture.is_some()) {
-        return Err("--figura needs --out and the graph itself (not --riassunto, --export or --strutture)".into());
+    if !figura.is_empty() && (out.is_none() || riassunto || export.is_some() || strutture.is_some())
+    {
+        return Err(FIGURA_USO.into());
     }
     if riassunto && verita.is_none() {
         return Err("--riassunto needs --verita".into());
@@ -347,6 +355,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
     let Some(out) = a.out.as_ref().filter(|_| !a.figura.is_empty()) else {
         return Ok(String::new());
     };
-    let made = crate::msn_uscite::scrivi(graph, &a.figura, a.vista, &out.with_extension("")).map_err(|e| e.to_string())?;
+    let made = crate::msn_uscite::scrivi(graph, &a.figura, a.vista, &out.with_extension(""))
+        .map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }

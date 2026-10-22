@@ -15,9 +15,18 @@ pub fn png(svg: &str) -> Result<Vec<u8>> {
     opt.fontdb_mut().load_system_fonts();
     opt.font_family = "sans-serif".into();
     let tree = resvg::usvg::Tree::from_str(svg, &opt).map_err(|e| bad(e.to_string()))?;
-    let size = tree.size().to_int_size().scale_by(SCALE).ok_or_else(|| bad("size".into()))?;
-    let mut pix = resvg::tiny_skia::Pixmap::new(size.width(), size.height()).ok_or_else(|| bad("size".into()))?;
-    resvg::render(&tree, resvg::tiny_skia::Transform::from_scale(SCALE, SCALE), &mut pix.as_mut());
+    let size = tree
+        .size()
+        .to_int_size()
+        .scale_by(SCALE)
+        .ok_or_else(|| bad("size".into()))?;
+    let mut pix = resvg::tiny_skia::Pixmap::new(size.width(), size.height())
+        .ok_or_else(|| bad("size".into()))?;
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::from_scale(SCALE, SCALE),
+        &mut pix.as_mut(),
+    );
     pix.encode_png().map_err(|e| bad(e.to_string()))
 }
 

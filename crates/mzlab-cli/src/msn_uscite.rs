@@ -37,7 +37,10 @@ impl Formato {
 pub fn formati(lista: &str) -> std::result::Result<Vec<Formato>, String> {
     let mut out = Vec::new();
     for n in lista.split(',') {
-        let f = Formato::da_nome(n).ok_or(format!("--figura needs svg, html or png, not \"{}\"", n.trim()))?;
+        let f = Formato::da_nome(n).ok_or(format!(
+            "--figura needs svg, html or png, not \"{}\"",
+            n.trim()
+        ))?;
         if !out.contains(&f) {
             out.push(f);
         }
@@ -59,7 +62,8 @@ pub fn scrivi(graph: &str, fs: &[Formato], vista: Vista, stem: &Path) -> Result<
     let mut out = Vec::new();
     for &f in fs {
         let p = PathBuf::from(format!("{}.{}", stem.display(), f.estensione()));
-        std::fs::write(&p, bytes(graph, f, vista)?).map_err(|e| Error::new("err.file.index").with("detail", e))?;
+        std::fs::write(&p, bytes(graph, f, vista)?)
+            .map_err(|e| Error::new("err.file.index").with("detail", e))?;
         out.push(p);
     }
     Ok(out)
@@ -68,12 +72,16 @@ pub fn scrivi(graph: &str, fs: &[Formato], vista: Vista, stem: &Path) -> Result<
 /// `msn-graph figure IN.json [--figura svg,html,png] [--vista albero|radiale] [--out STEM]`: the figures of a graph already made; the stem defaults to the file
 /// without its extension. Returns the message for the standard output.
 pub fn figure_cmd(mut a: impl Iterator<Item = String>) -> std::result::Result<String, String> {
-    let (mut file, mut out, mut fs, mut vista) = (None, None, vec![Formato::Svg, Formato::Html], Vista::Albero);
+    let (mut file, mut out, mut fs, mut vista) =
+        (None, None, vec![Formato::Svg, Formato::Html], Vista::Albero);
     while let Some(x) = a.next() {
         match x.as_str() {
             "--out" => out = a.next().map(PathBuf::from),
             "--figura" => fs = formati(&a.next().unwrap_or_default())?,
-            "--vista" => vista = Vista::da_nome(&a.next().unwrap_or_default()).ok_or("--vista needs albero or radiale")?,
+            "--vista" => {
+                vista = Vista::da_nome(&a.next().unwrap_or_default())
+                    .ok_or("--vista needs albero or radiale")?
+            }
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
             f => return Err(format!("unknown argument {f}")),
         }
