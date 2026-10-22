@@ -13,7 +13,6 @@
     const set = (/** @type {string} */ name, /** @type {any} */ v) => F.setParam(inst, step, name, v === "" ? null : v);
     Promise.all([app("molecole-campo.js"), app("molecole-archivio.js")]).then(([c, a]) => {
       c.campo(host, {
-        gestisci: null,   // the molecules database is built in: no button to open it
         testi: { label: "Molecule", placeholder: "name, formula or mass", none: "No molecule found", count: (/** @type {number} */ n) => `${n} found` },
         onScegli: async (/** @type {any} */ row) => {
           const m = (await a.prendi(row.id)) || row;

@@ -8,7 +8,7 @@
 .flw.flx{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}.flx *{box-sizing:border-box}
 .flx .flx-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.flx .flx-bar h2{margin:0;font-size:16px;margin-right:4px}
 .flx .flx-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.flx .flx-seg button{border:0;background:var(--panel);color:var(--ink);min-height:28px;padding:2px 12px;cursor:pointer}
-.flx .flx-views{align-self:flex-start}.flx .flx-seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}.flx .flx-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.in-flow #mol-btn{display:none}.flx .flx-views{align-self:flex-start}.flx .flx-seg button[aria-pressed=true]{background:var(--accent);color:var(--on-accent)}.flx .flx-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .flx button[aria-busy=true]{cursor:progress;opacity:.6}@media (prefers-reduced-motion:no-preference){.flx button[aria-busy=true]{animation:flBusy 1s ease-in-out infinite alternate}}@keyframes flBusy{to{opacity:.35}}
 .flx .flx-run{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}.flx .flx-run:hover:not(:disabled){background:var(--accent);filter:brightness(1.1)}
 .flx .flx-body{--insp:340px;width:100%;align-self:stretch;display:grid;grid-template-columns:minmax(0,1fr) 24px var(--insp);gap:4px;align-items:start}.flx .flx-body.flx-adv{grid-template-columns:200px minmax(0,1fr) 24px var(--insp)}

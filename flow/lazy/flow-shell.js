@@ -148,6 +148,8 @@
       if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
     });
     sec.textContent = ""; sec.append(root);
+    // the molecules database is built in: while Flow is on screen the header button that opens it is hidden
+    if (typeof IntersectionObserver === "function") new IntersectionObserver(es => document.documentElement.classList.toggle("in-flow", es[es.length - 1].isIntersecting)).observe(root);
     // the assistant: nothing of it is downloaded unless the profile is «ricerca» and it is switched on (settings) with a consent
     if (F.llmOn()) {
       const L = /** @type {any} */ (window).TPLAZY;
