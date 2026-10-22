@@ -70,7 +70,7 @@ pub(crate) fn job_with(
     let name = r.source_name(input);
     let out = r.work.join(crate::flow_base::convert_file(
         &job.instance.id,
-        job.item.unwrap_or(0),
+        job.item_root.as_deref().unwrap_or("0"),
     ));
     let over = Over {
         fwhm: number(job, "fwhm"),

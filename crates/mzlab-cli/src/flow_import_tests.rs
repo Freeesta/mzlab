@@ -22,8 +22,8 @@ fn a_wiff_with_two_samples_gives_one_index_per_sample() {
     let o = flow_run(&[p(&plan), "--in", p(&src), "--out", p(&out)]);
     assert_eq!(o.code, 0, "{}", o.stderr);
     let (a, b) = (
-        std::fs::read(out.join("idx-0.mzidx")).unwrap(),
-        std::fs::read(out.join("idx-1.mzidx")).unwrap(),
+        std::fs::read(out.join("idx-c-1.mzidx")).unwrap(),
+        std::fs::read(out.join("idx-c-2.mzidx")).unwrap(),
     );
     assert_ne!(a, b, "two samples, two indexes");
     let _ = std::fs::remove_dir_all(&dir);

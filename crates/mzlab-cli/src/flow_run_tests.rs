@@ -89,8 +89,8 @@ fn the_base_chain_of_the_canvas_gives_the_table_of_the_page() {
         "plan.json",
         "prov.json",
         "corsa.json",
-        "idx-2.mzidx",
-        "det-0.mzfeatf",
+        "idx-s_t030.mzidx",
+        "det-s_t000.mzfeatf",
         "ali.mzfeat",
     ] {
         assert!(out.join(n).is_file(), "{n}");
@@ -347,12 +347,14 @@ fn the_alignment_reads_the_weak_candidates_the_detection_stored() {
         p(&out),
     ]);
     assert_eq!(o.code, 0, "{}", o.stderr);
-    let peaks: Vec<PathBuf> = (0..3)
+    let names = ["s_t000", "s_t010", "s_t030"];
+    let peaks: Vec<PathBuf> = names
+        .iter()
         .map(|k| out.join(format!("det-{k}.mzfeatf")))
         .collect();
     let stored = |k: usize| std::fs::read(format!("{}.weak", peaks[k].display())).unwrap();
     let mut recipe =
-        run::recipe_for_estimated("", &mut open(&out.join("idx-0.mzidx")).unwrap()).unwrap();
+        run::recipe_for_estimated("", &mut open(&out.join("idx-s_t000.mzidx")).unwrap()).unwrap();
     recipe.fill_gaps = false;
     recipe.weak_files = 1;
     let key = recipe.weak_hash();
@@ -370,7 +372,7 @@ fn the_alignment_reads_the_weak_candidates_the_detection_stored() {
             src,
             &MemBudget::mb(1024.0),
             &recipe,
-            |k| open(&out.join(format!("idx-{k}.mzidx"))),
+            |k| open(&out.join(format!("idx-{}.mzidx", names[k]))),
             &mut bytes,
         )
         .unwrap();

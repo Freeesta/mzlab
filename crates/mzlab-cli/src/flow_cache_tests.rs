@@ -89,3 +89,58 @@ fn a_second_run_in_the_same_folder_reuses_every_step() {
     assert!(seen.len() >= 4 && seen.iter().all(|x| x.1), "{seen:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_file_added_in_the_middle_does_not_run_the_others_again() {
+    let (dir, files) = fixture("cache_middle");
+    let (data, out) = (dir.join("data"), dir.join("out"));
+    std::fs::create_dir_all(&out).unwrap();
+    let base = std::fs::read_to_string(dir.join("plan.json")).unwrap();
+    let run = |text: &str, log: &std::sync::Arc<std::sync::Mutex<Vec<(String, bool)>>>| {
+        let log = log.clone();
+        let done: crate::flow::DoneFn = std::sync::Arc::new(move |id, _, _, cached, err| {
+            assert!(err.is_none(), "{err:?}");
+            log.lock().unwrap().push((id.to_string(), cached));
+        });
+        crate::flow::run_plan_notify(
+            text.as_bytes(),
+            &data,
+            &out,
+            1,
+            None,
+            Some(false),
+            Some(done),
+        )
+        .unwrap();
+    };
+    let first = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    run(&base, &first);
+    assert!(first.lock().unwrap().iter().all(|x| !x.1));
+
+    // a fourth file between the second and the third: the indexes of the other three come from the cache
+    std::fs::write(data.join("s_t020.mzML"), crate::tests::mzml(20.0)).unwrap();
+    assert_eq!(files.len(), 3);
+    let wider = base
+        .replace(
+            r#"{"name":"s_t030.mzML","type":"raw"}"#,
+            r#"{"name":"s_t020.mzML","type":"raw"},{"name":"s_t030.mzML","type":"raw"}"#,
+        )
+        .replace(
+            r#""file:s_t010.mzML","file:s_t030.mzML""#,
+            r#""file:s_t010.mzML","file:s_t020.mzML","file:s_t030.mzML""#,
+        );
+    assert_ne!(wider, base);
+    let second = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    run(&wider, &second);
+    let idx: Vec<bool> = second
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|x| x.0 == "idx")
+        .map(|x| x.1)
+        .collect();
+    assert_eq!(idx.len(), 4);
+    assert_eq!(idx.iter().filter(|c| **c).count(), 3, "{idx:?}");
+    assert!(out.join("idx-s_t020.mzidx").is_file());
+    let _ = std::fs::remove_dir_all(&dir);
+}

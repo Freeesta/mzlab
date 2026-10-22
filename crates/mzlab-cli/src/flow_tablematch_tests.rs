@@ -56,7 +56,7 @@ fn rows_mgf(dir: &Path, spec: &str) -> String {
     let table = std::fs::read(w.join("gap.mzfeat")).unwrap();
     let samples =
         crate::flow_table::samples_text(&std::fs::read(dir.join("samples.json")).unwrap()).unwrap();
-    let open = |k: usize| crate::flow_base::open(&w.join(format!("idx-{k}.mzidx")));
+    let open = |k: usize| crate::flow_base::open(&w.join(format!("idx-{}.mzidx", NAMES[k])));
     ms2_file(
         &mut Slice(&table),
         table.len() as u64,

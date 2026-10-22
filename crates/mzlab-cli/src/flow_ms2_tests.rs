@@ -159,6 +159,7 @@ fn descriptor_export_is_up_to_date() {
         crate::flow_compare::compare_step(),
         crate::flow_digl::dig_lr_step(),
         crate::flow_quant::quant_step(),
+        crate::flow_lookup::lookup_step(),
         mzlab_feat::steps::table_match(),
     ]);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi/steps-cli-1.json");
