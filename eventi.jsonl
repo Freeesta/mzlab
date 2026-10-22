@@ -3258,3 +3258,4 @@
 {"v":1,"ts_utc":"2026-10-22T09:09:05Z","azione":"aperta","tipo":"pr","pr":1477,"sha":"d9c78f22bacea049330f2aee61fccde174a95b68"}
 {"v":1,"ts_utc":"2026-10-22T09:09:31Z","azione":"aperta","tipo":"pr","pr":1478,"sha":"e7005b1f06eb9997c6b65dac0e75387905842053"}
 {"v":1,"ts_utc":"2026-10-22T09:10:28Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/msngrafo-regole-convalida-2","merge_main":true,"aree":{"workflow":2,"rust":2,"docs":4,"test":1,"tools":4},"tipo":"pr","pr":1473,"sha":"ef658899533a670dc9695d969a6228f0724cad05"}
+{"v":1,"tipo":"pr","pr":1474,"sha":"173234c2660cbe58a2b721fc4800914a800fb53c","ts_utc":"2026-10-22T09:10:32Z","azione":"unita","aperta_s":225,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":1,"righe_meno":0,"file_n":1,"file":["docs/agenti/tabui-spiega.md"],"aree":{"docs":1},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
