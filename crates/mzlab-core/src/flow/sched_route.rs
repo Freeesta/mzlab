@@ -135,19 +135,21 @@ fn finished(s: &mut Sched, body: &Value) -> String {
     }
 }
 
-/// Acts on the scheduler; None when `op` is not one of the calls that only change it.
-fn act(s: &mut Sched, op: &str, body: &Value) -> Option<String> {
+/// The answer of `update`: the jobs to cancel.
+pub fn cancels(cmds: &[Command]) -> String {
+    list(cmds, |o, Command::Cancel(id)| {
+        o.raw("{");
+        id_json(o, id);
+        o.raw("}");
+    })
+}
+
+/// Acts on the scheduler (`update`, `started`, `cached`, `block`, `progress`, `unblock`, `retry`, `pause`, `resume`); None when `op` is not one of the calls that only change it.
+pub fn act(s: &mut Sched, op: &str, body: &Value) -> Option<String> {
     let flag = |b: bool| if b { "true" } else { "false" }.to_string();
     let num = |k: &str| body.get(k).and_then(Value::f64).unwrap_or(0.0);
     Some(match op {
-        "update" => list(
-            &s.update(&read_plan(body).ok()?),
-            |o, Command::Cancel(id)| {
-                o.raw("{");
-                id_json(o, id);
-                o.raw("}");
-            },
-        ),
+        "update" => cancels(&s.update(&read_plan(body).ok()?)),
         "started" => flag(s.started(&job_of(body))),
         "cached" => flag(s.cached(&job_of(body))),
         "block" => flag(s.block(
@@ -178,8 +180,8 @@ fn act(s: &mut Sched, op: &str, body: &Value) -> Option<String> {
     })
 }
 
-/// Reads the scheduler; None when `op` is not one of the questions.
-fn ask(s: &Sched, op: &str, body: &Value) -> Option<String> {
+/// Reads the scheduler (`next`, `jobs`, `nodes`, `events`, `rev`); None when `op` is not one of the questions.
+pub fn ask(s: &Sched, op: &str, body: &Value) -> Option<String> {
     Some(match op {
         "next" => next(s, body),
         "jobs" => list(&s.jobs(), |o, (id, st)| {

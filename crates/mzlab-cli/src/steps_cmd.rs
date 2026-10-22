@@ -31,7 +31,7 @@ fn with_native(s: &Step) -> String {
 pub(crate) fn run(args: Vec<String>) -> Outcome {
     let st = Style {
         json: args.iter().any(|a| a == "--json"),
-        jsonl: false,
+        ..Style::default()
     };
     let usage = |msg: &str| {
         let err = Error::new("err.cli.usage").with("detail", msg);

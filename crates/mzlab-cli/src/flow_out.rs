@@ -48,10 +48,14 @@ pub(crate) fn write_run(
     }
     let runner = FileRunner::located(&out, found, order, meter, fresh).with_budget(budget_mb);
     let written = std::fs::write(out.join("plan.json"), &text);
-    let (run, prov) = match written
-        .map_err(crate::flow::io)
-        .and_then(|_| run_checked(ready, text.as_bytes(), &runner, workers))
-    {
+    let ran = written.map_err(crate::flow::io).and_then(|_| {
+        if st.events {
+            crate::flow::live::run_events(ready, text.as_bytes(), runner, &out, workers)
+        } else {
+            run_checked(ready, text.as_bytes(), &runner, workers)
+        }
+    });
+    let (run, prov) = match ran {
         Ok(r) => r,
         Err(e) => {
             return fail(

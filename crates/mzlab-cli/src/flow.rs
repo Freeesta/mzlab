@@ -19,11 +19,15 @@ use crate::flow_estimate::estimate_job;
 use crate::flow_hash::file_sha256;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
+use crate::flow_pace::{cancelled, Gate, Watch};
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
 pub use crate::flow_run::{fill_inputs, run_plan};
 use crate::flow_stats::stats_job;
+
+#[path = "flow_live.rs"]
+pub mod live;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -145,6 +149,8 @@ pub struct FileRunner {
     cache: Option<crate::flow_cache::Cache>,
     /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
     pub(crate) budget_mb: f64,
+    /// A live run: the cancel flag and the progress of each job it runs (`flow_live.rs`).
+    watch: Option<Arc<dyn Watch>>,
 }
 
 impl FileRunner {
@@ -160,7 +166,22 @@ impl FileRunner {
             done: None,
             cache: None,
             budget_mb: mzlab_core::budget_auto::native_auto_mb(),
+            watch: None,
         }
+    }
+
+    /// The runner whose jobs a live run watches: it can cancel them and reads their progress.
+    pub(crate) fn with_watch(mut self, watch: Arc<dyn Watch>) -> FileRunner {
+        self.watch = Some(watch);
+        self
+    }
+
+    /// The cancel flag and the progress of `job`; `Gate::none()` outside a live run.
+    pub(crate) fn gate(&self, job: &Job) -> Gate {
+        let w = self.watch.as_ref();
+        w.map_or_else(Gate::none, |w| {
+            w.gate(&job.instance.id, job.item_name.as_deref())
+        })
     }
 
     /// The runner with the working memory of the alignment set to `mb` (None: the automatic budget).
@@ -450,6 +471,14 @@ impl Runner for FileRunner {
             .and_then(|(c, k)| c.take(self, job, k));
         let cached = hit.is_some();
         let made = hit.map_or_else(|| dispatch(self, job), Ok);
+        // a step that was cancelled fails with whatever its reader or writer said: it is the cancellation
+        let made = made.map_err(|e| {
+            if self.gate(job).stopped() {
+                cancelled()
+            } else {
+                e
+            }
+        });
         if let (Ok(m), Some(c), Some(k), false) = (&made, &self.cache, key, cached) {
             c.put(k, m, self.lineage(&m.artifact));
         }

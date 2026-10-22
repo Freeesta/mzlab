@@ -12,6 +12,7 @@ use mzlab_core::pace::Pace;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{io, FileRunner, Lineage, Made};
+use crate::flow_pace::{Stop, Stopping};
 
 /// `spectra.centroid@1`: the parameters left out are estimated on at most 128 profile scans spread over the file (and reported as estimates).
 pub fn centroid_step() -> Step {
@@ -56,14 +57,18 @@ fn number(job: &Job, name: &str) -> Option<f64> {
 
 /// `spectra.centroid`: the centroid mzML of one file, named after the file for the steps that follow.
 pub(crate) fn job(r: &FileRunner, job: &Job) -> Result<Made> {
-    job_with(r, job, &mut |_, _| {})
+    let gate = r.gate(job);
+    let mut pace = gate.pace();
+    job_with(r, job, &mut pace, &gate.stop)
 }
 
-/// `job` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file made is the same with any `step`.
+/// `job` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file made is the same with any `step`. With the flag `stop`
+/// up it ends at the next piece it reads or writes with `err.flow.cancelled` and leaves no file.
 pub(crate) fn job_with(
     r: &FileRunner,
     job: &Job,
     step: &mut dyn FnMut(usize, usize),
+    stop: &Stop,
 ) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let src = r.path(input);
@@ -78,9 +83,12 @@ pub(crate) fn job_with(
     };
     let mut pace = Pace::new(step);
     let written = File::create(&out).map_err(io).and_then(|f| {
-        let mut w = BufWriter::new(f);
+        let mut w = BufWriter::new(Stopping::new(f, stop.clone()));
         let used = mzml_to_centroids_with(
-            || File::open(&src).map(BufReader::new).map_err(io),
+            || {
+                let f = File::open(&src).map_err(io)?;
+                Ok(BufReader::new(Stopping::new(f, stop.clone())))
+            },
             &mut w,
             &name,
             over,

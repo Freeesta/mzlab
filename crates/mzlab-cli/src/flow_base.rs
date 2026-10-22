@@ -23,6 +23,7 @@ use mzlab_feat::steps::recipe_map;
 use mzlab_feat_wasm::run;
 
 use crate::flow::{io, FileRunner, Lineage, Made};
+use crate::flow_pace::{Gate, Gated, Stop, Stopping};
 
 /// A value the plan leaves out: name, value, proof.
 type Estimate = (String, Value, Value);
@@ -113,7 +114,15 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
         .map_or(DEFAULT_BUDGET, |b| b as usize);
     let out = out_path(r, job, "mzidx");
     let label = job.inputs[0].1[0].label.clone().unwrap_or_default();
-    crate::build_index_of(&source, &label, &out, budget)?;
+    let gate = r.gate(job);
+    let mut pace = gate.pace();
+    let built = crate::flow_pace::build_index_with(
+        &source, &label, &out, budget, &mut pace, &gate.stop,
+    );
+    if let Err(e) = built {
+        let _ = std::fs::remove_file(&out);
+        return Err(e);
+    }
     let name = r.source_name(&job.inputs[0].1[0]);
     let a = r.keep(out, DataType::Mzidx)?;
     r.trace(
@@ -145,7 +154,8 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     // Each file takes its own base recipe, as the page does (`detect_file`): on the unit axis the mass defect and the floor come from the file.
     let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&path)?)?)?;
     let name = r.source_name(input);
-    let mut index = open(&path)?;
+    let gate = r.gate(job);
+    let mut index = open_gated(&path, &gate)?;
     let bytes = run::detect(&mut index, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
     // The weak candidates are made here, with the other files of the level at the same time, so the alignment and the gap filling do not detect again.
@@ -167,6 +177,13 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
         estimates,
         ..Made::new("peaks", a)
     })
+}
+
+/// The index at `path` as a detection reads it: it reports its progress and stops once the flag of `gate` is up.
+fn open_gated(path: &PathBuf, gate: &Gate) -> Result<Index<Gated<File>>> {
+    let f = File::open(path).map_err(io)?;
+    let size = f.metadata().map_err(io)?.len();
+    Index::open(Gated::new(f, gate, size), size)
 }
 
 /// The `.mzfeatf` of a series on disk, one file at a time (the slabs of the alignment read them again).
@@ -309,7 +326,10 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
         Some("mzlab") => Picchi::Mzlab,
         _ => Picchi::File,
     };
-    let profile = write_mzml(&r.path(input), input.label.as_deref(), &out, peaks, opz)?;
+    let gate = r.gate(job);
+    let (path, label) = (r.path(input), input.label.as_deref());
+    let mut pace = gate.pace();
+    let profile = write_mzml_with(&path, label, &out, (peaks, opz), &mut pace, &gate.stop)?;
     let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
     if profile {
         made.warnings.push("warn.flow.profile".into());
@@ -326,17 +346,18 @@ pub(crate) fn write_mzml(
     peaks: Picchi,
     opz: Opzioni,
 ) -> Result<bool> {
-    write_mzml_with(path, label, out, peaks, opz, &mut |_, _| {})
+    write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None)
 }
 
-/// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`.
+/// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`. With the flag
+/// `stop` up the write ends at the next piece with `err.flow.cancelled`.
 pub(crate) fn write_mzml_with(
     path: &Path,
     label: Option<&str>,
     out: &Path,
-    peaks: Picchi,
-    opz: Opzioni,
+    (peaks, opz): (Picchi, Opzioni),
     step: &mut dyn FnMut(usize, usize),
+    stop: &Stop,
 ) -> Result<bool> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
@@ -352,7 +373,8 @@ pub(crate) fn write_mzml_with(
         steps: Some(&[]),
     };
     let written = File::create(out).map_err(io).and_then(|f| {
-        conv.scrivi(&mut *reader, sample, BufWriter::new(f), &mut |d, t| {
+        let sink = BufWriter::new(Stopping::new(f, stop.clone()));
+        conv.scrivi(&mut *reader, sample, sink, &mut |d, t| {
             pace.at(d, t)
         })
         .and_then(|mut w| w.flush().map_err(io))

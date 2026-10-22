@@ -23,8 +23,8 @@ fn the_index_reports_monotone_progress_and_is_the_same_bytes() {
     let budget = mzlab_core::mzidx::DEFAULT_BUDGET;
     crate::build_index_of(&src, "", &a, budget).unwrap();
     let mut seen = Vec::new();
-    crate::flow_pace::build_index_with(&src, "", &b, budget, &mut |d, t| seen.push((d, t)))
-        .unwrap();
+    let step = &mut |d, t| seen.push((d, t));
+    crate::flow_pace::build_index_with(&src, "", &b, budget, step, &None).unwrap();
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
     well_formed(&seen);
     let _ = std::fs::remove_dir_all(&d);
@@ -38,8 +38,8 @@ fn the_conversion_reports_monotone_progress_and_is_the_same_bytes() {
     crate::flow_base::write_mzml(&src, None, &a, Picchi::File, Opzioni::default()).unwrap();
     let mut seen = Vec::new();
     let step = &mut |d, t| seen.push((d, t));
-    crate::flow_base::write_mzml_with(&src, None, &b, Picchi::File, Opzioni::default(), step)
-        .unwrap();
+    let how = (Picchi::File, Opzioni::default());
+    crate::flow_base::write_mzml_with(&src, None, &b, how, step, &None).unwrap();
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
     well_formed(&seen);
     let _ = std::fs::remove_dir_all(&d);
