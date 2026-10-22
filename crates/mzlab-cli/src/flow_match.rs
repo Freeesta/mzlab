@@ -433,3 +433,7 @@ pub(crate) fn query_id(k: usize, s: &Spectrum) -> String {
         s.meta.accession.clone()
     }
 }
+
+#[cfg(test)]
+#[path = "flow_match_decoy_tests.rs"]
+mod decoy_tests;
