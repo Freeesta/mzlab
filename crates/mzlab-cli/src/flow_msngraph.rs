@@ -7,7 +7,7 @@ use std::path::Path;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::molecules::{cerca, from_csv};
-use mzlab_core::msngrafo::Opzioni;
+use mzlab_core::msngrafo::{Opzioni, ParamRegole};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{one_input, write_made, FileRunner};
@@ -95,6 +95,18 @@ fn params() -> Vec<Param> {
                 .default_num(mzlab_core::msngrafo::PPM_PERDITA)
                 .unit("ppm")
                 .doc("Window of the loss match by mass, ppm of the precursor m/z"),
+            Param::boolean("regole", "Apply the fragmentation rules")
+                .default_bool(false)
+                .doc("Adds the key `regole`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"),
+            Param::number("cutoff_q", "Trap cut-off q")
+                .min(0.0)
+                .default_num(ParamRegole::default().cutoff_q)
+                .doc("Fragments below q/0.908 of the precursor m/z are not observable in a trap CID"),
+            Param::number("toll_perdita_mda", "Rule tolerance")
+                .min(0.0)
+                .default_num(ParamRegole::default().toll_mda)
+                .unit("mDa")
+                .doc("Tolerance of a loss against the mass of a rule"),
             Param::text("scelte", "Chosen formulas")
                 .default_str("")
                 .doc("MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"),
@@ -168,6 +180,18 @@ fn opzioni(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
         .params
         .iter()
         .any(|(k, v)| k == "isotopi" && v.bool() == Some(true));
+    if job
+        .resolved
+        .params
+        .iter()
+        .any(|(k, v)| k == "regole" && v.bool() == Some(true))
+    {
+        let d = ParamRegole::default();
+        o.regole = Some(ParamRegole {
+            cutoff_q: number(job, "cutoff_q", d.cutoff_q),
+            toll_mda: number(job, "toll_perdita_mda", d.toll_mda),
+        });
+    }
     for par in text(job, "scelte").iter().flat_map(|s| s.split(',')) {
         let bad = || Error::new("err.flow.param.type").with("param", "scelte");
         let (m, f) = par.split_once('=').ok_or_else(bad)?;

@@ -1081,6 +1081,9 @@
                   "ppm_struttura",
                   "interpreta",
                   "ppm_perdita",
+                  "regole",
+                  "cutoff_q",
+                  "toll_perdita_mda",
                   "scelte"
                 ]
               },
@@ -1156,6 +1159,23 @@
                     "minimum":0,
                     "default":10,
                     "description":"Window of the loss match by mass, ppm of the precursor m/z"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `regole`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.25,
+                    "description":"Fragments below q/0.908 of the precursor m/z are not observable in a trap CID"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Tolerance of a loss against the mass of a rule"
                   },
                   {
                     "type":"string",
