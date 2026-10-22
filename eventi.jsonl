@@ -7324,3 +7324,4 @@
 {"v":1,"ts_utc":"2026-10-22T18:31:14Z","azione":"aperta","tipo":"pr","pr":1520,"sha":"55b8820d0adbbc1323c8d9a63e65bacb613cc502"}
 {"v":1,"ts_utc":"2026-10-22T18:33:22Z","azione":"push","titolo":"stat-ci: best-effort backfill of the green-to-merge time","merge_main":false,"aree":{"workflow":1,"docs":1,"test":1,"tools":1},"tipo":"pr","pr":1520,"sha":"d55ac6ddc95479753234822de09d6a89bcaca23c"}
 {"v":1,"ts_utc":"2026-10-22T18:38:07Z","azione":"aperta","tipo":"pr","pr":1521,"sha":"5390ec70e708b9b94bd63ac3068a955a747e0dd7"}
+{"v":1,"ts_utc":"2026-10-22T18:41:37Z","azione":"push","titolo":"Studio Thermo: prompt T-7 velocità e zero perdite","merge_main":false,"aree":{"docs":4},"tipo":"pr","pr":1518,"sha":"38c5698bfb3c6e391b1942e57cd9df1cb9539752"}
