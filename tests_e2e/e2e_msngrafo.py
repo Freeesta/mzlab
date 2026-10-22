@@ -81,6 +81,20 @@ try:
             st, err = pg.evaluate(post, {"libreria": "", "molecola_id": "STD-1", "k": 0})
             assert st == 400 and err["error_key"] == "err.msnlib.noIon", (st, err)
         step("the library gets an entry once, the same one is a duplicate and a graph without ion is a keyed error", library)
+        def search():
+            post = "(u,b)=>fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(async r=>[r.status,await r.json()])"
+            body = {"libreria": "", "molecola_id": "STD-1", "k": 0, "formula": "C8H11N4O2+", "tol": "nom", "ce": 1, "scelte": []}
+            st, a = pg.evaluate(post, ["api/msnlib/aggiungi", body])
+            assert st == 200, (st, a)
+            q = {k: v for k, v in body.items() if k != "molecola_id"}
+            st, c = pg.evaluate(post, ["api/msnlib/cerca", {**q, "libreria": a["libreria"]}])
+            assert st == 200 and c["formato"] == "msncerca/1" and c["candidati"][0]["id"] == "STD-1", (st, str(c)[:300])
+            assert c["candidati"][0]["analogo"] is None and abs(c["candidati"][0]["delta_ppm"]) < 1, c["candidati"][0]
+            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "libreria": a["libreria"], "top": "abc"}])
+            assert st == 400 and e["error_key"] == "err.request.badNumber", (st, e)
+            st, e = pg.evaluate(post, ["api/msnlib/cerca", {**q, "libreria": "no"}])
+            assert st == 400 and e["error_key"] == "err.msnlib.bad", (st, e)
+        step("the library search finds the entry of the same infusion and bad options or a bad library are keyed errors", search)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")

@@ -144,7 +144,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
     const u = new URL(url, "http://x/"), q = u.searchParams, path = u.pathname;   // the page asks with a relative url ("api/..."): the checks use the resolved path
-    if (!api.enabled || api.disabled || (method !== "GET" && !(method === "POST" && path === "/api/msnlib/aggiungi")) || !worker) return null;
+    if (!api.enabled || api.disabled || (method !== "GET" && !(method === "POST" && (path === "/api/msnlib/aggiungi" || path === "/api/msnlib/cerca"))) || !worker) return null;
     const level = num(q, "level", 1), px = Math.max(0, num(q, "px", 0) | 0);
     const t0 = performance.now();
     const k0 = num(q, "k", -1);
@@ -178,7 +178,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
-    if (/^\/api\/(ms2tr|fileinfo|msn_grafo|msn_grafo\/export|msnlib\/aggiungi)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
+    if (/^\/api\/(ms2tr|fileinfo|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
       if (!s) return null;
