@@ -124,7 +124,7 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     const s = ST.get(p); if (!s || !live(p)) return;
-    cancelAnimationFrame(s.raf); s.raf = requestAnimationFrame(() => follow(p));
+    FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
   /** @param {any} p */
   async function follow(p) {
@@ -185,10 +185,18 @@
     if (s.pop) { closePop(p); return; }
     const d = defTol(p), unit = d.hr ? "ppm" : "Da", sel = s.sel;
     const pop = document.createElement("div"); pop.className = "sp-pop xb-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", T("xicbtn.pop.aria"));
-    pop.innerHTML = `<label>${T("xicbtn.pop.mz")} <input data-f="mz" inputmode="decimal" autocomplete="off" value="${num(sel.m)}"></label>
-      <label>${T("xicbtn.pop.tol", { unit })} <input data-f="tol" inputmode="decimal" autocomplete="off" value="${num(sel.tol != null ? sel.tol : d.v)}"></label>
-      <div class="xb-err" role="alert"></div>
-      <div class="xb-row"><button type="button" class="bt" data-f="go">${T("xicbtn.pop.go")}</button><button type="button" class="bt" data-f="no">${T("xicbtn.pop.close")}</button></div>`;
+    /** @param {string} f @param {string} v @param {string} txt */
+    const field = (f, v, txt) => {
+      const l = document.createElement("label"), i = document.createElement("input");
+      i.dataset.f = f; i.setAttribute("inputmode", "decimal"); i.autocomplete = "off"; i.value = v;
+      l.append(txt + " ", i); return l;
+    };
+    /** @param {string} f @param {string} txt */
+    const btn = (f, txt) => { const b = document.createElement("button"); b.type = "button"; b.className = "bt"; b.dataset.f = f; b.textContent = txt; return b; };
+    const msg = document.createElement("div"), row = document.createElement("div");
+    msg.className = "xb-err"; msg.setAttribute("role", "alert"); row.className = "xb-row";
+    row.append(btn("go", T("xicbtn.pop.go")), btn("no", T("xicbtn.pop.close")));
+    pop.append(field("mz", num(sel.m), T("xicbtn.pop.mz")), field("tol", num(sel.tol != null ? sel.tol : d.v), T("xicbtn.pop.tol", { unit })), msg, row);
     const lb = /** @type {HTMLElement} */ (p.el.querySelector('[data-a="xicl"]')), pr = p.el.getBoundingClientRect(), br = lb.getBoundingClientRect();
     p.el.appendChild(pop); s.pop = pop; lb.setAttribute("aria-expanded", "true");
     pop.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px";

@@ -50,7 +50,7 @@ try:
         def lr_cursor():
             ap = xic_panel(); assert pg.evaluate(f"{XP}.cur != null")
             rt0 = pg.evaluate(f"{XP}.cur")
-            pg.evaluate(f"stepScan({SPEC}.link!=null?E.panels.find(q=>q.id=={SPEC}.link):E.panels[0],3)"); ready(pg); pg.wait_for_timeout(600)
+            pg.evaluate(f"stepScan({SPEC}.link!=null?E.panels.find(q=>q.id=={SPEC}.link):E.panels[0],3)"); ready(pg); frames(pg, 8)
             rt1 = pg.evaluate(f"{XP}.cur"); assert rt1 != rt0, (rt0, rt1)
             txt = pg.inner_text(f"xpath=//*[contains(@class,'xb-info')]"); print(txt)
             assert "RT" in txt or "picco" in txt, txt
@@ -65,10 +65,10 @@ try:
             pg.keyboard.press("Escape"); assert pg.evaluate("!document.querySelector('.xb-pop')")
         step("typed ion and tolerance (comma ok); not a number: aria-invalid, Esc closes", typed)
         def keys():
-            pg.evaluate(f"{SPEC}.cv.focus()"); pg.keyboard.press("."); pg.wait_for_timeout(300)
-            m1 = pg.evaluate("XICBTN.chosen(" + SPEC + ")"); pg.keyboard.press(","); pg.wait_for_timeout(300)
+            pg.evaluate(f"{SPEC}.cv.focus()"); pg.keyboard.press("."); frames(pg, 4)
+            m1 = pg.evaluate("XICBTN.chosen(" + SPEC + ")"); pg.keyboard.press(","); frames(pg, 4)
             m2 = pg.evaluate("XICBTN.chosen(" + SPEC + ")"); assert m2 < m1, (m1, m2)
-            pg.keyboard.press("."); pg.wait_for_timeout(300); assert pg.evaluate("XICBTN.chosen(" + SPEC + ")") == m1
+            pg.keyboard.press("."); frames(pg, 4); assert pg.evaluate("XICBTN.chosen(" + SPEC + ")") == m1
             pg.focus("[data-a=xicb]"); pg.keyboard.press("Enter"); ready(pg)
             assert pg.evaluate(f"{XP}.traces.length") == 1
             pg.focus("[data-a=xicb]"); pg.keyboard.press(" "); ready(pg)
@@ -106,7 +106,7 @@ try:
             return pg2.evaluate(f"(()=>{{const p={S1},q=p.cv.getBoundingClientRect(),a=p._a,d=a.data[0].d;let b=0;d.mz.forEach((v,i)=>{{if(d.y[i]>d.y[b])b=i}});return {{mz:d.mz[b],x:q.left+a.X(d.mz[b]),y:q.top+a.Y(d.y[b])+6}}}})()")
         def hr_extract():
             pk = hr_peak(); pg2.click(f"{S1}.el".replace(S1 + ".el", "[data-a=xicb]") if False else "[data-a=xicb] >> nth=0") if False else None
-            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').click()"); pg2.mouse.click(pk["x"], pk["y"]); ready(pg2); pg2.wait_for_timeout(800)
+            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicb]').click()"); pg2.mouse.click(pk["x"], pk["y"]); ready(pg2); attendi(pg2, "!!document.querySelector('.xb-info')?.textContent")
             lab = pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicl]').textContent"); print(lab)
             assert "\u00b1 5 ppm" in lab and "m/z" in lab, lab
             t = pg2.evaluate(f"{XP}.traces[0]"); assert t["ion"] and abs(t["mz"] - pk["mz"]) < 1e-4, t
@@ -114,7 +114,7 @@ try:
             assert pg2.evaluate(f"{XP}.ints.length") >= 1, "HR: the area comes with the XIC"
         step("HR: ion with ppm window, area at once", hr_extract)
         def hr_tol():
-            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicl]').click()"); pg2.fill("[data-f=tol]", "10"); pg2.press("[data-f=tol]", "Enter"); ready(pg2); pg2.wait_for_timeout(800)
+            pg2.evaluate(f"{S1}.el.querySelector('[data-a=xicl]').click()"); pg2.fill("[data-f=tol]", "10"); pg2.press("[data-f=tol]", "Enter"); ready(pg2); attendi(pg2, "!!document.querySelector('.xb-info')?.textContent")
             t = pg2.evaluate(f"{XP}.traces[0]"); assert t["ppm"] == 10 and t["label"].endswith("\u00b1 10 ppm"), t
             assert pg2.evaluate(f"{XP}.traces.length") == 1
             a = pg2.evaluate(f"HR.xicArgs(E.files[{KH}],{XP}.traces[0],{XP})"); assert abs(a[1] - t["mz"] * 10e-6) < 1e-9, a
@@ -125,7 +125,7 @@ try:
             S2 = "E.panels.find(p=>p.type==='spec'&&p.level===2)"
             has = pg2.evaluate(f"!!({S2}&&{S2}._a&&{S2}._a.lbls&&{S2}._a.lbls.length)")
             if not has: return
-            pg2.evaluate(f"{S2}.cv.focus()"); pg2.keyboard.press("."); pg2.wait_for_timeout(300)
+            pg2.evaluate(f"{S2}.cv.focus()"); pg2.keyboard.press("."); frames(pg2, 4)
             assert pg2.evaluate(f"XICBTN.chosen({S2})") is not None
         step("HR: the keys choose a peak of the MS2 spectrum", hr_ms2)
         def esc_mode():
