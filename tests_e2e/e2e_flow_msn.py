@@ -34,6 +34,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.evaluate("localStorage.setItem('mzlab.admin','1')"); pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
+        attendi(pg, "document.getElementById('pick').onchange !== null", 120000)
         load(pg, [F], 6000, 1)
         attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
@@ -55,15 +56,15 @@ try:
             assert mask(t) == mask(cli), (len(t), len(cli))
         step("the graph is the text of mzlab-cli msn-graph --interpreta (the template starts with the interpretation on)", graph)
         def molecule_box():
-            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, inst = S.plan.steps[0];
+            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, inst = S.plan.steps[0]; inst.params = { interpreta: true };
               const box = FLOW.form(inst, FLOW.stepOf(S.reg, inst), () => {}); box.id = 'tmpform'; document.body.append(box); }""")
             pg.wait_for_selector("#tmpform .molc input", timeout=30000)
             pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000); pg.click("#tmpform .molc li >> nth=0")
             pg.wait_for_function("(() => { const p = document.querySelector('.flx-list').__flow.plan.steps[0].params || {}; return !!p.formula; })()", timeout=30000)
             p = pg.evaluate("document.querySelector('.flx-list').__flow.plan.steps[0].params")
-            assert p["formula"].split(" ")[0] and "[M" in p["formula"] and p.get("adduct") and p.get("molecule"), p
+            assert p["formula"].split(" ")[0] and "[M" in p["formula"] and p.get("molecule") and p.get("smiles"), p
             pg.evaluate("document.querySelector('#tmpform').remove()")
-        step("the molecule box of the step fills the ion, the adduct, the name and the SMILES", molecule_box)
+        step("the molecule box of the step fills the ion with its adduct, the name and the SMILES", molecule_box)
         def search():
             added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ libreria: '', molecola_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.libreria })()""" % ION)
             assert isinstance(added, str), added
@@ -91,9 +92,9 @@ try:
             assert len(t.splitlines()) > 1, t
         step("the table is the CSV of the modifications", table)
         def empty():
-            pg.evaluate("window.__f = window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i)")
-            x = pg.evaluate(RUN, {"formula": ION})
-            pg.evaluate("window.fetch = window.__f")
+            pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i); null")
+            try: x = pg.evaluate(RUN, {"formula": ION})
+            finally: pg.evaluate("window.fetch = window.__f; null")
             assert x["err"] and x["err"]["key"] == "err.flow.msn.empty", x["err"]
         step("a file with no MSn spectra gets a clear message", empty)
         def kept():
@@ -105,9 +106,9 @@ try:
             assert x["err"] and x["err"]["key"] == "err.flow.msn.molecule", x["err"]
         step("a molecule name without the ion asks for the ion", no_ion)
         def memory():
-            pg.evaluate("window.__f = window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ error: 'x', error_key: 'error.memoryBudget', params: {} }))) : window.__f(u, i)")
-            x = pg.evaluate(RUN, {"formula": ION})
-            pg.evaluate("window.fetch = window.__f")
+            pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ error: 'x', error_key: 'error.memoryBudget', params: {} }))) : window.__f(u, i); null")
+            try: x = pg.evaluate(RUN, {"formula": ION})
+            finally: pg.evaluate("window.fetch = window.__f; null")
             assert x["err"] and x["err"]["key"] == "err.flow.msn.desktop", x["err"]
             assert "desktop app" in pg.evaluate("FLOW.message({ key: 'err.flow.msn.desktop', params: {} })"), "message"
         step("a refusal of the memory says to use the desktop app", memory)
