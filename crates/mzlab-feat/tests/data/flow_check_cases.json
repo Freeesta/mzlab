@@ -322,7 +322,7 @@
       "d1||err.flow.param.unknown|param=nope",
       "d1||err.flow.param.range|param=polarity",
       "d1|index|err.flow.type|from=mzml,to=mzidx",
-      "d2||err.flow.algorithm.unavailable|step=features.detect,algorithm=centwave",
+      "d2||err.flow.algorithm.unavailable|step=features.detect,algorithm=threshold",
       "d2|index|err.flow.type|from=mzml,to=mzidx",
       "d3||err.flow.algorithm.unknown|algorithm=wavelets",
       "d3|index|err.flow.type|from=mzml,to=mzidx",
@@ -358,7 +358,7 @@
           "step": "features.detect@1"
         },
         {
-          "algorithm": "centwave",
+          "algorithm": "threshold",
           "id": "d2",
           "in": {
             "index": "file:a.mzML"
@@ -386,7 +386,6 @@
   },
   {
     "expect": [
-      "d1||err.flow.algorithm.unavailable|step=features.detect,algorithm=centwave",
       "d1||err.flow.param.range|param=peak_width_s",
       "d1|index|err.flow.type|from=mzml,to=mzidx",
       "d2||err.flow.param.type|param=min_points",

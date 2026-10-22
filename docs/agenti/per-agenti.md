@@ -22,7 +22,7 @@ Per un agente che gira sul computer dell'utente (Claude Code, Claude Cowork o al
 {"id":"ali","step":"features.align@1","in":{"peaks":["det.peaks"]}},
 {"id":"gap","step":"features.gapfill@1","in":{"table":"ali.table","index":["idx.index"]}}]}
 ```
-È il piano `BASE` di `crates/mzlab-cli/src/flow_run_tests.rs`. Un parametro si cambia senza toccare il file, per esempio `--set det.polarity=-1` o `--set det.min_height=5000`; un algoritmo `planned` del descrittore (oggi `centwave` e `threshold` di `features.detect`) dà `err.flow.algorithm.unavailable`; il nome di un'istanza unica può essere l'id del passo.
+È il piano `BASE` di `crates/mzlab-cli/src/flow_run_tests.rs`. Un parametro si cambia senza toccare il file, per esempio `--set det.polarity=-1` o `--set det.min_height=5000`; `--set det.algorithm=centwave` sceglie il modello a onde (parametri `ppm`, `peak_width_s`, `snr` solo con quell'algoritmo); un algoritmo `planned` del descrittore (oggi `threshold` di `features.detect`) dà `err.flow.algorithm.unavailable`; il nome di un'istanza unica può essere l'id del passo.
 
 ## Regole per l'agente
 - La CLI non usa la rete e legge e scrive solo in `--in` e `--out`; non cancellare file dell'utente: la cartella di corsa è l'unico posto di scrittura.

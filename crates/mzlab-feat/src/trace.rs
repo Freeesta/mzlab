@@ -10,6 +10,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::axis::MassAxis;
+use crate::centwave::{self, Peak};
 use crate::channels::{segments, stitch};
 use crate::post::{finish, median_interval, Row};
 use crate::table::FileFeatures;
@@ -27,7 +28,7 @@ pub const SLAB_GAP_PPM: f64 = 50.0;
 /// Bytes of working memory per peak of a slab (m/z, intensity, scan, log m/z, channel, ...).
 const BYTES_PER_PEAK: usize = 64;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Params {
     /// Polarity of the MS1 scans (1 or -1); `None` = all the MS1 scans.
     pub polarity: Option<i8>,
@@ -40,6 +41,27 @@ pub struct Params {
     pub axis: MassAxis,
     /// Working memory of the detection, bytes: it sets the size of the slabs (at most `SLAB_PEAKS` peaks).
     pub budget: usize,
+    /// How the traces become peaks; only the wavelet model shows in the text of the recipe.
+    pub peak: Peak,
+}
+
+// The text of the recipe is built from this: the default peak model adds nothing, so the fingerprints of the files made before it exist keep their name.
+impl std::fmt::Debug for Params {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("Params");
+        d.field("polarity", &self.polarity)
+            .field("floor", &self.floor)
+            .field("min_points", &self.min_points)
+            .field("min_height", &self.min_height)
+            .field("max_gap", &self.max_gap)
+            .field("long_trace", &self.long_trace)
+            .field("axis", &self.axis)
+            .field("budget", &self.budget);
+        if self.peak != Peak::Minima {
+            d.field("peak", &self.peak);
+        }
+        d.finish()
+    }
 }
 
 impl Default for Params {
@@ -53,6 +75,7 @@ impl Default for Params {
             long_trace: LONG_TRACE,
             axis: MassAxis::Ppm,
             budget: SLAB_PEAKS * BYTES_PER_PEAK,
+            peak: Peak::Minima,
         }
     }
 }
@@ -92,7 +115,10 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
     for (g, shift) in [0.0f64, 0.5].into_iter().enumerate() {
         let mut segs = Vec::new();
         segments(&lmz, &slab.mz, &slab.it, &slab.pos, shift, p, &mut segs)?;
-        let segs = stitch(segs, p)?;
+        let mut segs = stitch(segs, p)?;
+        if let Peak::CentWave(cw) = &p.peak {
+            segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
+        }
         for s in segs {
             if s.n >= p.min_points && s.mx >= p.min_height {
                 reserve(&mut rows[g], 1)?;

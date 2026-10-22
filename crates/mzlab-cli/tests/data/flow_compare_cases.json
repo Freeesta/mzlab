@@ -381,7 +381,7 @@
   },
   {
     "expect": [
-      "cmp||err.flow.algorithm.unavailable|algorithm=centwave",
+      "cmp||err.flow.algorithm.unavailable|algorithm=threshold",
       "cmp||err.flow.algorithm.unknown|algorithm=nope"
     ],
     "name": "an algorithm that is planned and one that does not exist",
@@ -406,7 +406,7 @@
                 "algorithm": "masstrace"
               },
               {
-                "algorithm": "centwave",
+                "algorithm": "threshold",
                 "label": "b"
               },
               {

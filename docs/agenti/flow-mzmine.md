@@ -10,7 +10,7 @@ Tabella di lavoro del Flow grafico (`docs/agenti/flow-grafica.md`). Dice cosa es
 | Mass detection: wavelet, auto, recursive threshold, factor of lowest signal | nessuna implementazione | nessuno |
 | Scan index per accesso a finestre | `index.mzidx` | step |
 | Chromatogram building (ADAP / ion chromatogram builder) | `features.detect`, algoritmo `masstrace` (HR e LR); ADAP in `untargeted/adap.rs` | step (`masstrace`), motore (ADAP) |
-| Feature detection alternativa | `features.detect`: `centwave` e `threshold` | previsto |
+| Feature detection alternativa | `features.detect`: `centwave` (onde Ricker sulle tracce, `centwave.rs`) disponibile; `threshold` | `threshold` previsto |
 | Parametri dai dati | `features.estimate` (rumore, tolleranza m/z, larghezza del picco, tempo morto) | step |
 | Smoothing | `untargeted/smooth.rs` (gaussiana, Savitzky-Golay); LOESS no | motore (SG, gauss), nessuno (LOESS) |
 | Baseline | `untargeted/arpls.rs`, opzionale | motore |

@@ -78,9 +78,8 @@ fn paper_block_b_openms() {
 
 #[test]
 fn paper_block_c_xcms() {
-    // centWave is a `planned` algorithm; `fill` has no `index` input
+    // centWave exists; `noise` and `prefilter` are not its parameters; `fill` has no `index` input
     let want = [
-        "cw||err.flow.algorithm.unavailable|step=features.detect,algorithm=centwave",
         "cw||err.flow.param.unknown|param=noise",
         "cw||err.flow.param.unknown|param=prefilter",
         "cw|index|err.flow.input.unknown|ref=ko15.mzML",

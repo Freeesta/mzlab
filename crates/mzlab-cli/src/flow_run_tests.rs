@@ -204,6 +204,29 @@ fn the_rt_correction_is_a_parameter_of_the_alignment() {
 }
 
 #[test]
+fn the_wavelet_peak_model_is_an_algorithm_of_the_detection() {
+    let (dir, _) = fixture("centwave");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = |set: &[&str]| {
+        let mut args = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
+        for s in set {
+            args.extend(["--set", s]);
+        }
+        flow_run(&args)
+    };
+    let o = run(&["det.algorithm=centwave", "det.snr=8"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let as_run = std::fs::read_to_string(out.join("plan.json")).unwrap();
+    assert!(
+        as_run.contains("\"algorithm\":\"centwave\"") && as_run.contains("\"snr\":8"),
+        "{as_run}"
+    );
+    assert_ne!(run(&["det.algorithm=threshold"]).code, 0);
+    assert_eq!(run(&["det.snr=8"]).code, 2, "snr belongs to centwave only");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn dry_run_writes_nothing_and_the_exit_codes_say_what_is_wrong() {
     let (dir, _) = fixture("dry");
     let plan = dir.join("plan.json");

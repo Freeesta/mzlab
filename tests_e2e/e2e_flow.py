@@ -107,7 +107,7 @@ try:
             assert plan["steps"][2]["params"] == {"floor": 5000}, plan["steps"][2]
             pg.click('#fl-card-detect button[aria-label^="Back to the default"]')
             attendi(pg, "!document.querySelector('#fl-card-detect button[aria-label^=\"Back to the default\"]')")
-            pg.select_option("#fl-alg-detect", "centwave"); attendi(pg, "document.querySelector('#fl-card-detect').textContent.includes('is planned, not available yet')")
+            pg.select_option("#fl-alg-detect", "threshold"); attendi(pg, "document.querySelector('#fl-card-detect').textContent.includes('is planned, not available yet')")
             pg.select_option("#fl-alg-detect", "masstrace")
         step("the form: only differences from the default are written; a planned algorithm is refused", parameters)
         def goal():
