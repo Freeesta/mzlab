@@ -51,10 +51,10 @@ def test_references_have_the_shape_of_the_study():
             assert r["note"]
 
 
-def test_what_is_not_written_yet_is_planned():
+def test_every_algorithm_of_the_chain_is_written():
     status = {a["id"]: a["status"] for s in STEPS for a in s["algorithms"]}
-    assert status["library_deconvolution"] == "planned"
-    assert [k for k, v in status.items() if v == "planned"] == ["library_deconvolution"]
+    assert status["library_deconvolution"] == "available"
+    assert [k for k, v in status.items() if v == "planned"] == []
 
 
 def test_the_shared_records_are_the_data_types_of_the_steps():
