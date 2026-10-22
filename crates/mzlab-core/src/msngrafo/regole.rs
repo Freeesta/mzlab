@@ -260,7 +260,7 @@ pub fn leggi_tabella(testo_json: &str) -> Result<Tabella> {
         .map(regola)
         .collect::<Result<Vec<_>>>()?;
     let mut ids: Vec<&str> = regole.iter().map(|r| r.id.as_str()).collect();
-    ids.sort_unstable();
+    crate::sortc::slice_ord(&mut ids);
     if ids.windows(2).any(|w| w[0] == w[1]) {
         return Err(errore("err.fragrules.badFormat", "rules.id"));
     }
