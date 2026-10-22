@@ -39,7 +39,7 @@ try:
         attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web", timeout=120000)
-        pg.click('button[aria-label="Start from a template"]'); pg.click('.flx-tc[data-tpl="msn"]')
+        (None if pg.locator('.flx-tpl.show').count() else pg.click('button[aria-label="Start from a template"]')); pg.click('.flx-tc[data-tpl="msn"]')   # the button toggles the cards: open on the first screen
         attendi(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
         got = {}
         def runs():

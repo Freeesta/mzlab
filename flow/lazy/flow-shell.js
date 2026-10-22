@@ -96,10 +96,10 @@
         el("details", { class: "flx-more" }, el("summary", { text: "More templates" }), el("div", { class: "flx-tpls" }, ...F.TEMPLATES.filter((/** @type {any} */ t) => t.more).map(tplCard))),
         el("div", { class: "fl-meta" }, btn("x", "Start from the base only", () => { dismissed = true; redraw(); }, "Start from scratch")));
     };
-    const applyTemplate = (/** @type {any} */ t) => { go(() => { S.plan = F.templatePlan(reg0, t); }); selected = tableKey(); dismissed = true; redraw(); cv.fit(); say(`Template “${t.name}” loaded. Undo goes back.`, S.undo); };
+    const applyTemplate = (/** @type {any} */ t) => { go(() => { S.plan = F.templatePlan(reg0, t); }); selected = tableKey(); dismissed = true; redraw(); cv.fit(); };
 
     const modeBtns = ["simple", "advanced"].map(m => el("button", { type: "button", "data-mode": m, "aria-pressed": String((m === "simple") === simple), onclick: () => { simple = m === "simple"; try { localStorage.setItem("mzlab.flow.mode", m); } catch (_) { /* ignore */ } selected = ""; redraw(); cv.fit(); } }, el("span", { text: m === "simple" ? "Simple" : "Advanced" })));
-    const tplBtn = btn("flow", "Start from a template", () => { dismissed = false; tplCards(); tplBox.classList.add("show"); const f = tplBox.querySelector("button"); if (f) /** @type {HTMLElement} */ (f).focus(); }, "Templates");
+    const tplBtn = btn("flow", "Start from a template", () => { if (tplBox.classList.contains("show")) { dismissed = true; redraw(); return; } dismissed = false; tplCards(); tplBox.classList.add("show"); const f = tplBox.querySelector("button"); if (f) /** @type {HTMLElement} */ (f).focus(); }, "Templates");
     const addBtn = btn("plus", "Add an analysis to the base", (/** @type {Event} */ e) => F.menu(/** @type {HTMLElement} */ (e.currentTarget), F.ADDONS.map((/** @type {any} */ a) => ({ label: a.name, line: a.line, on: a.steps.every((/** @type {string} */ s) => F.findStep(S.plan, s)),
       run: () => { let made = /** @type {any} */ (null); go(() => { made = F.addAddon(S, a); }); if (made) { const n = nodeOfStep(made.id); selected = n ? n.key : ""; redraw(); if (n) cv.reveal(n.key); } } })), root), "Add analysis");
     addBtn.id = "flx-add";
@@ -125,12 +125,19 @@
     };
     const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
     const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, check, open, run, status);
-    const tabs = ["canvas", "list", "plan"].map(t => el("button", { type: "button", role: "tab", "aria-selected": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : t === "list" ? "List view" : "Plan (JSON)" })));
+    const tabs = ["canvas", "list", "plan"].map(t => el("button", { type: "button", "aria-pressed": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : t === "list" ? "List view" : "Plan (JSON)" })));
     const issuesHost = el("div", { class: "flx-issues-host" });
-    const body = el("div", { class: "flx-body" }, palHost, cv.root, inspHost);
-    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, el("div", { class: "flx-tabs", role: "tablist", "aria-label": "Views" }, ...tabs), live, body, issuesHost, planView, listHost);
+    // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
+    const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 340 });
+    const body = el("div", { class: "flx-body" }, palHost, cv.root, split, inspHost);
+    const setWidth = (/** @type {number} */ w) => { const v = Math.max(240, Math.min(900, Math.round(w))); body.style.setProperty("--insp", v + "px"); split.setAttribute("aria-valuenow", String(v)); };
+    split.addEventListener("pointerdown", e => { split.setPointerCapture(e.pointerId); split.classList.add("drag"); });
+    split.addEventListener("pointermove", e => { if (split.classList.contains("drag")) setWidth(body.getBoundingClientRect().right - e.clientX); });
+    split.addEventListener("pointerup", () => { split.classList.remove("drag"); cv.fit(); });
+    split.addEventListener("keydown", e => { const d = e.key === "ArrowLeft" ? 40 : e.key === "ArrowRight" ? -40 : 0; if (d) { e.preventDefault(); setWidth(+(split.getAttribute("aria-valuenow") || 340) + d); } });
+    const root = el("div", { class: "flw flx", id: "flx-root" }, el("div", { class: "flx-seg flx-views", role: "group", "aria-label": "Views" }, ...tabs), bar, live, body, issuesHost, planView, listHost);
     function setTab(/** @type {string} */ t) {
-      tab = t; tabs.forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+      tab = t; tabs.forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.tab === t)); });
       body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();
     }
     // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields
