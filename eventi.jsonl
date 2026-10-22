@@ -5986,3 +5986,4 @@
 {"v":1,"ts_utc":"2026-10-22T14:10:46Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3843683,null]},"byte_totali":3843683,"margine_min_pct":null,"pr":null,"sha":"0d7b817ae0a5eed65f5e589370a1fdd3730d4b3f","run_id":39792102488,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T14:14:24Z","tipo":"carico","k":"2026-10-22T14:1","job_in_coda":54,"job_in_corso":5}
 {"v":1,"ts_utc":"2026-10-22T14:18:21Z","azione":"aperta","tipo":"pr","pr":1506,"sha":"7fa46e5a2f5ce702ebb8558f771ffea85ad51a0a"}
+{"v":1,"tipo":"pr","pr":1505,"sha":"f29b957acdb539d7566808ab0ac7f3fb507ef975","ts_utc":"2026-10-22T14:32:05Z","azione":"unita","aperta_s":1088,"commit_n":3,"cause_commit":{"merge di main":2},"merge_main":2,"righe_piu":49,"righe_meno":1,"file_n":2,"file":["docs/studi/assistente-dati/10-opzioni.md","docs/studi/assistente-dati/README.md"],"aree":{"docs":2},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
