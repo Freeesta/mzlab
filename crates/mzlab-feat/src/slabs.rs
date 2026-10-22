@@ -17,7 +17,7 @@ use crate::align::align_grouped;
 use crate::famalign::{align_families, align_ions, assemble, rt_map, Collector};
 use crate::recipe::{Mode, Recipe};
 use crate::rtmap::{RtMap, RtParams};
-use crate::series::finish;
+use crate::series::{finish, StrongFile};
 use crate::sortc;
 use crate::spill::Spill;
 use crate::store::{read_file_from, read_meta_mz, Slice, Want};
@@ -35,6 +35,10 @@ const TABLE_ROW: usize = 28;
 pub trait Stored {
     fn count(&self) -> usize;
     fn bytes(&mut self, k: usize) -> Result<Vec<u8>>;
+    /// The weak candidates stored for file `k` (`weakfile`), when the source keeps them: the alignment then does not detect the file again.
+    fn weak(&mut self, _k: usize) -> Result<Option<Vec<u8>>> {
+        Ok(None)
+    }
 }
 
 impl Stored for Vec<Vec<u8>> {
@@ -215,7 +219,12 @@ pub fn align_and_fill_spilling<R: ReadAt>(
     drop(s);
     let (mut table, filled) = finish(
         table,
-        &mut |k| lean(src, k, None),
+        &mut |k| {
+            Ok(StrongFile {
+                table: lean(src, k, None)?,
+                weak: if r.weak_files > 0 { src.weak(k)? } else { None },
+            })
+        },
         n,
         r,
         Some(budget),

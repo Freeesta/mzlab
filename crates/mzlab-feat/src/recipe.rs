@@ -128,6 +128,21 @@ impl Recipe {
         fingerprint(&self.file_text())[..16].to_string()
     }
 
+    /// Fingerprint (32 hex digits) of what the weak candidates of a file depend on (`series::weak_candidates`): versions, detection, quality and isotopes.
+    pub fn weak_hash(&self) -> String {
+        let detect = Params {
+            budget: Params::default().budget,
+            ..self.detect.clone()
+        };
+        fingerprint(&format!(
+            "{}\nweak={WEAK_RATIO}\ndetect={:?}\nquality={:?}\niso={:?}",
+            versions(),
+            detect,
+            self.steps.quality,
+            self.steps.iso
+        ))
+    }
+
     /// Fingerprint (32 hex digits) of `table_text`.
     pub fn table_hash(&self) -> String {
         fingerprint(&self.table_text())
