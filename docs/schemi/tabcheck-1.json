@@ -25,8 +25,8 @@
   "truncated": {"type": "boolean", "description": "the example rows and pairs were cut to keep the text inside the token cap; the checks are all there"},
   "summary": {
    "type": "object",
-   "required": ["ok", "note", "warn", "unavailable"],
-   "properties": {"ok": {"type": "integer"}, "note": {"type": "integer"}, "warn": {"type": "integer"}, "unavailable": {"type": "integer"}}
+   "required": ["ok", "note", "warn"],
+   "properties": {"ok": {"type": "integer"}, "note": {"type": "integer"}, "warn": {"type": "integer"}}
   },
   "checks": {
    "type": "array",
@@ -44,10 +44,10 @@
     "id": {"enum": ["size", "blank", "contaminants", "qc_cv", "qc_intensity", "rt_drift", "duplicates", "adducts", "isotopes", "insource", "long_traces", "homologous", "missing", "structure", "polarity_units"]},
     "value": {"type": ["number", "null"], "description": "what was measured (a share, a count, a CV, a change, a shift in minutes, a correlation); null when the check could not be made"},
     "threshold": {"type": ["number", "null"], "description": "the limit the value is read against; the other limits of the check are in proof"},
-    "flag": {"enum": ["ok", "note", "warn", "unavailable"]},
+    "flag": {"enum": ["ok", "note", "warn"]},
     "rows": {"type": "array", "maxItems": 20, "items": {"type": "integer", "minimum": 1}, "description": "ids of the table (1-based position), the most telling first; for a pair the heavier row comes first"},
     "files": {"type": "array", "maxItems": 20, "items": {"type": "string"}, "description": "names of the files the check points at"},
-    "proof": {"type": "object", "description": "the numbers used: counts, shares, the other limits, up to 5 pairs {lo, hi, dmz, drt, kind, r} (adducts: kind is the adduct, r the correlation of the areas; isotopes: obs_over_expected; insource: parents with their fragments; homologous: unit, members, consecutive, rho), {unavailable} with the i18n key of the reason when the build leaves the check out (the page's .wasm: homologous, structure), or {missing} naming what the check lacked (blank, qc, files, groups, common_rows, high_resolution, widths, rows, pca, or the key of the PCA error)"}
+    "proof": {"type": "object", "description": "the numbers used: counts, shares, the other limits, up to 5 pairs {lo, hi, dmz, drt, kind, r} (adducts: kind is the adduct, r the correlation of the areas; isotopes: obs_over_expected; insource: parents with their fragments; homologous: unit, members, consecutive, rho), or {missing} naming what the check lacked (blank, qc, files, groups, common_rows, high_resolution, widths, rows, pca, or the key of the PCA error)"}
    }
   }
  }

@@ -16,21 +16,7 @@ mod cells;
 mod env;
 mod num;
 mod pairs;
-#[cfg(not(target_arch = "wasm32"))]
 mod series;
-/// The page's .wasm has no room for the Kendrick analysis and the PCA: those two checks answer `unavailable` with the i18n key of the reason.
-#[cfg(target_arch = "wasm32")]
-mod series {
-    use super::*;
-
-    pub(super) fn homologous(_: &Env) -> Check {
-        Check::unavailable("homologous")
-    }
-
-    pub(super) fn structure(_: &Env) -> Check {
-        Check::unavailable("structure")
-    }
-}
 
 use env::{Caps, Env, Proof};
 pub(crate) use num::median;
@@ -76,8 +62,6 @@ pub enum Flag {
     Ok,
     Note,
     Warn,
-    /// The check is left out of this build (the page's .wasm); the proof names the reason.
-    Unavailable,
 }
 
 impl Flag {
@@ -86,7 +70,6 @@ impl Flag {
             Flag::Ok => "ok",
             Flag::Note => "note",
             Flag::Warn => "warn",
-            Flag::Unavailable => "unavailable",
         }
     }
 }
@@ -104,22 +87,6 @@ pub struct Check {
 }
 
 impl Check {
-    /// A check this build does not carry: flag `unavailable`, no value, the i18n key of the reason in the proof.
-    #[cfg(target_arch = "wasm32")]
-    fn unavailable(id: &'static str) -> Check {
-        let mut p = Proof::new();
-        p.s("unavailable", "tabcheck.unavailable.wasm");
-        Check {
-            id,
-            value: None,
-            threshold: None,
-            flag: Flag::Unavailable,
-            rows: Vec::new(),
-            files: Vec::new(),
-            proof: p.done(),
-        }
-    }
-
     /// The check could not be made for lack of `what` (a role, files, a resolution): a note with no value, never a guess.
     fn missing(id: &'static str, what: &str) -> Check {
         let mut p = Proof::new();
@@ -259,10 +226,7 @@ fn write(sum: &Summary, list: &[Check], truncated: bool) -> String {
         .raw("},\"truncated\":")
         .raw(if truncated { "true" } else { "false" });
     o.raw(",\"summary\":{");
-    for (i, f) in [Flag::Ok, Flag::Note, Flag::Warn, Flag::Unavailable]
-        .iter()
-        .enumerate()
-    {
+    for (i, f) in [Flag::Ok, Flag::Note, Flag::Warn].iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .str(f.name())
             .raw(":")
