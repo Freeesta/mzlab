@@ -82,6 +82,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
+        ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
         ("features.detect", "algorithm" | "ppm" | "peak_width_s" | "snr") => {
             set_peak(r, step, k, v)?
         }
@@ -140,6 +141,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("min_points", n(f64::from(r.detect.min_points))),
                 ("max_gap", n(f64::from(r.detect.max_gap))),
                 ("long_trace", n(f64::from(r.detect.long_trace))),
+                ("merge_overlap", n(r.detect.merge_overlap)),
             ];
             if let Peak::CentWave(c) = &r.detect.peak {
                 let (a, b) = c.width_s;

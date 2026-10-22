@@ -25,8 +25,8 @@ pub(crate) struct Row {
     pub(crate) grid: u8,
 }
 
-/// Rows of the features seen on both grids: the one with more points stays (`_merge_grids`). Returns the keep mask.
-fn merge_grids(f: &[Row], axis: MassAxis) -> Result<Vec<bool>> {
+/// Rows of the features seen on both grids: the one with more points stays (`_merge_grids`); with `overlap` > 0 also two traces whose scans overlap by that share of the shorter one. Returns the keep mask.
+fn merge_grids(f: &[Row], axis: MassAxis, overlap: f64) -> Result<Vec<bool>> {
     let (rt_tol, ppm, slack) = (0.05f64, 5e-6f64, 0.02f64);
     let n = f.len();
     let mut keep = Vec::new();
@@ -52,7 +52,13 @@ fn merge_grids(f: &[Row], axis: MassAxis) -> Result<Vec<bool>> {
             }
             let inside = (x.left >= y.left - slack && x.right <= y.right + slack)
                 || (y.left >= x.left - slack && y.right <= x.right + slack);
-            if (x.rt - y.rt).abs() <= rt_tol || inside {
+            // scans shared, over the shorter of the two traces
+            let shared = x.hi.min(y.hi) as f64 - x.lo.max(y.lo) as f64 + 1.0;
+            let short = ((x.hi - x.lo).min(y.hi - y.lo) + 1) as f64;
+            if (x.rt - y.rt).abs() <= rt_tol
+                || inside
+                || (overlap > 0.0 && shared >= overlap * short)
+            {
                 if x.n <= y.n {
                     keep[xi] = false;
                 } else {
@@ -120,12 +126,17 @@ pub(crate) fn median_interval(rt: &[f64]) -> f64 {
 }
 
 /// The merged and sorted table: grids merged, side lobes marked, rows in m/z order.
-pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64, axis: MassAxis) -> Result<FileFeatures> {
+pub(crate) fn finish(
+    rows: [Vec<Row>; 2],
+    dt: f64,
+    axis: MassAxis,
+    overlap: f64,
+) -> Result<FileFeatures> {
     let [r0, r1] = rows;
     let mut f = r0;
     reserve(&mut f, r1.len())?;
     f.extend(r1);
-    let keep = merge_grids(&f, axis)?;
+    let keep = merge_grids(&f, axis, overlap)?;
     let mut k = keep.iter();
     f.retain(|_| *k.next().unwrap());
     // no Fourier-transform side lobes at unit resolution
@@ -188,4 +199,44 @@ pub(crate) fn finish(rows: [Vec<Row>; 2], dt: f64, axis: MassAxis) -> Result<Fil
         out.alt.push(0);
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(grid: u8, lo: u32, hi: u32, apex: u32) -> Row {
+        let rt = |s: u32| s as f64 * 0.02;
+        Row {
+            mz: 400.0,
+            rt: rt(apex),
+            n: hi - lo + 1,
+            height: 1e6,
+            area: 1.0,
+            apex,
+            lo,
+            hi,
+            left: rt(lo),
+            right: rt(hi),
+            long: false,
+            grid,
+        }
+    }
+
+    // Same ion on both grids, apexes 0.4 min apart and edges that do not contain each other: the old test keeps both.
+    fn pair() -> Vec<Row> {
+        vec![row(0, 100, 160, 110), row(1, 130, 190, 150)]
+    }
+
+    #[test]
+    fn overlapping_scans_merge_only_when_asked() {
+        let kept = |overlap| {
+            let keep = merge_grids(&pair(), MassAxis::Ppm, overlap).unwrap();
+            keep.iter().filter(|k| **k).count()
+        };
+        assert_eq!(kept(0.0), 2);
+        // 31 of the 61 scans of the shorter trace are shared
+        assert_eq!(kept(0.5), 1);
+        assert_eq!(kept(0.9), 2);
+    }
 }
