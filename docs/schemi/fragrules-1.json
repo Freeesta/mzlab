@@ -1,0 +1,263 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "fragrules/1",
+ "title": "fragrules/1",
+ "description": "The table of the fragmentation rules (crates/mzlab-core/data/fragrules-1.json), read by msngrafo/regole.rs. A key outside this schema is an error.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "format",
+  "rules",
+  "globals"
+ ],
+ "properties": {
+  "format": {
+   "const": "fragrules/1"
+  },
+  "rules": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "kind",
+     "formula",
+     "radical",
+     "requires",
+     "excludes",
+     "ions",
+     "polarity",
+     "activation",
+     "energy",
+     "charge",
+     "priority",
+     "after",
+     "refs",
+     "why"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+     },
+     "kind": {
+      "enum": [
+       "loss",
+       "ion",
+       "cleavage"
+      ]
+     },
+     "formula": {
+      "type": "string",
+      "description": "Neutral formula of the loss or of the ion (no charge)"
+     },
+     "radical": {
+      "type": "boolean"
+     },
+     "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "all_groups",
+       "any_groups",
+       "site",
+       "smarts"
+      ],
+      "properties": {
+       "all_groups": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "any_groups": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "site": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "smarts": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "description": "Documentation only, not read"
+       }
+      }
+     },
+     "excludes": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "ions": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Empty = every adduct of the polarity"
+     },
+     "polarity": {
+      "enum": [
+       "+",
+       "-",
+       "both"
+      ]
+     },
+     "activation": {
+      "enum": [
+       "cid_trap",
+       "beam",
+       "both"
+      ]
+     },
+     "energy": {
+      "enum": [
+       "low",
+       "mid",
+       "high"
+      ]
+     },
+     "charge": {
+      "enum": [
+       "directed",
+       "remote",
+       "any"
+      ]
+     },
+     "priority": {
+      "enum": [
+       1,
+       2,
+       3
+      ]
+     },
+     "after": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "refs": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "key",
+        "pmid",
+        "doi",
+        "check"
+       ],
+       "properties": {
+        "key": {
+         "type": "string"
+        },
+        "pmid": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "doi": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "check": {
+         "enum": [
+          "abstract",
+          "text",
+          "todo"
+         ]
+        }
+       }
+      }
+     },
+     "why": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "globals": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "value",
+     "refs",
+     "why"
+    ],
+    "properties": {
+     "id": {
+      "enum": [
+       "even_electron",
+       "trap_cutoff",
+       "beam_composite",
+       "stepped_sum",
+       "loss_tolerance_mda"
+      ]
+     },
+     "value": {
+      "type": [
+       "boolean",
+       "number"
+      ]
+     },
+     "refs": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "key",
+        "pmid",
+        "doi",
+        "check"
+       ],
+       "properties": {
+        "key": {
+         "type": "string"
+        },
+        "pmid": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "doi": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "check": {
+         "enum": [
+          "abstract",
+          "text",
+          "todo"
+         ]
+        }
+       }
+      }
+     },
+     "why": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}
