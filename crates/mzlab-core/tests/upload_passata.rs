@@ -165,3 +165,15 @@ fn prepare_with_known_fingerprints_is_identical_and_skips_the_reread() {
     assert_eq!((a.sha256, a.probe), (b.sha256, b.probe));
     assert!(quick.1 < full.1, "{} vs {}", quick.1, full.1);
 }
+
+#[test]
+fn probe_alone_equals_the_probe_of_the_whole_pass() {
+    for n in [0, 1, 100, 65535, 65536, 65537, 131_072, 200_000] {
+        let b = bytes(n);
+        assert_eq!(
+            upload::probe(&mut b.clone(), n as u64).unwrap(),
+            reference(&b).2,
+            "size {n}"
+        );
+    }
+}

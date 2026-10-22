@@ -4,6 +4,8 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use std::time::SystemTime;
 
 use mzlab_core::budget::{sha256_hex, Hashing, WriteAt};
 use mzlab_core::lettori::{FileSet, Membro};
@@ -104,11 +106,47 @@ fn hash_file(p: &Path) -> Result<(u64, String)> {
     Ok((bytes, hex))
 }
 
+/// SHA-256 of the lone files `digest` has hashed, by path, size and modification time: the `.mzidx` build takes its source's hash from here instead of reading the file again.
+static HASHED: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
+
+struct Hashed {
+    path: PathBuf,
+    len: u64,
+    time: Option<SystemTime>,
+    sha: String,
+}
+
+fn stamp(p: &Path) -> Option<(u64, Option<SystemTime>)> {
+    let m = std::fs::metadata(p).ok()?;
+    Some((m.len(), m.modified().ok()))
+}
+
+/// The SHA-256 `digest` took of the lone file `path`, if it is still the same file (size and modification time).
+pub(crate) fn known_sha(path: &Path) -> Option<String> {
+    let (len, time) = stamp(path)?;
+    let seen = HASHED.lock().ok()?;
+    seen.iter()
+        .find(|e| e.path == path && e.len == len && e.time == time)
+        .map(|e| e.sha.clone())
+}
+
 /// Bytes and SHA-256 of the dataset at `path`: a lone file hashes as its own bytes, a dataset of several members as the list of their names and hashes.
 pub(crate) fn digest(path: &Path) -> Result<(u64, String)> {
     let list = members(path)?;
     if !path.is_dir() && list.len() == 1 {
-        return hash_file(path);
+        let before = stamp(path);
+        let (bytes, hex) = hash_file(path)?;
+        if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), HASHED.lock())
+        {
+            seen.retain(|e| e.path != path);
+            seen.push(Hashed {
+                path: path.to_path_buf(),
+                len,
+                time,
+                sha: hex.clone(),
+            });
+        }
+        return Ok((bytes, hex));
     }
     let (mut bytes, mut text) = (0, String::new());
     for (name, p) in &list {
