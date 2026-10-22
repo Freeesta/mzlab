@@ -61,7 +61,6 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
   setVisOf(all.slice(Math.min(i, j), Math.max(i, j) + 1).map(b => E.files[+(b.dataset.k || 0)]), x.checked); return true;
 }
 function bindListaFile() {
-  /** @type {HTMLButtonElement} */ (Q("#rmall")).disabled = !E.files.some(f => !f.gone);
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
   L.ondblclick = e => {
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
@@ -157,4 +156,14 @@ const noFullScan = (/** @type {string} */ label, /** @type {any} */ dda) => dda 
 // the live spectrum of a chromatogram shows the file the user picked in the list (unless the spectrum's own file menu was used)
 function followSpectra(/** @type {any} */ f) {
   E.panels.forEach(q => { if (q.type === "spec" && q.link != null && q.dda == null && !q.all && !q.kSet && q.tab === f.kind && q.k !== f.k) { q.k = f.k; if (q.el && f.vis) { ctl(q); draw(q); } } });
+}
+
+// Work area with no ticked file and no panel: a muted, centered hint (the box fills the area and ignores the pointer, so nothing moves when the text comes or goes)
+function syncWorkEmpty() {
+  const host = document.getElementById("dpanels"); if (!host) return;
+  let el = document.getElementById("work-empty");
+  if (!el) { el = document.createElement("div"); el.id = "work-empty"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); host.prepend(el); }
+  const empty = !E.files.some(f => f.vis && !f.gone) && !E.panels.some(p => p.el);
+  const t = empty ? I18N.t("work.empty") : "";
+  if (el.textContent !== t) el.textContent = t;
 }

@@ -46,9 +46,9 @@ try:
             close()
         step("T on the spectrum: the most intense row is the highest peak of the API", spec_table)
         def button():
-            pg.click(".pnl.chrom [data-a=tab]"); pg.wait_for_selector("#tdati[open]"); assert tbl()["rows"]; close()
-            assert pg.evaluate("document.activeElement.dataset.a") == "tab", "focus returns to the button"
-        step("the Dati button opens the same table and gives the focus back", button)
+            assert pg.locator(".pnl [data-a=tab]").count() == 0, "no visible table button in the panel toolbars"
+            pg.evaluate("document.querySelector('.pnl.chrom canvas').focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); assert tbl()["rows"]; close()
+        step("no table button in the toolbar; T on the focused chart still opens the table", button)
         def live():
             pg.evaluate(f"{CH}.cv.focus()"); pg.keyboard.press("d"); pg.wait_for_timeout(300)
             t = pg.evaluate("document.getElementById('tdati-live').textContent"); assert "Cromatogramma" in t and "tracce" in t, t
