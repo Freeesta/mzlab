@@ -58,7 +58,7 @@ Serie: sintetiche generate dal banco (V-0: LR 3200-like 1500 × 500; HR Orbitrap
 - **D3 Nessun indice a secchi**: si dimostra con G7; entra solo se G7 fallisce.
 - **D4 Canvas 2D**: resta salvo G5 fallito a 1 M punti.
 - **D5 Arrotondamento**: i valori trasportati restano quelli di oggi (RT 4 decimali, y 0,1 conteggi, come Python e i dati d'oro); togliere l'arrotondamento cambierebbe i dati d'oro e i confronti con Python: non proposto.
-- **D6 Motore `.wasm`**: ogni pacchetto che lo tocca misura prima/dopo; obiettivo crescita ≤ 2 KB per pacchetto entro il tetto attuale; se non basta, PR aperta e domanda al Coordinatore (il tetto sta nei workflow).
+- **D6 Motore `.wasm`**: ogni pacchetto che lo tocca misura prima/dopo; obiettivo crescita ≤ 2 KB per pacchetto entro il tetto attuale; se non basta, PR aperta e domanda al Coordinatore (il tetto sta nei workflow). Regole di velocità comuni: due target, guadagni anche piccoli contano (riga in `docs/agenti/misure-velocita.md`), dipendenze di velocità solo se ≥ 3 %.
 - **D7 Tolleranza**: mai inventata. HR: `HR.prof(f, livello).tol` (profilo dell'analizzatore del file, 5 FTMS / 10 TOF; attenzione: `hr.js` oggi la sostituisce con `UIP.hrPpm` delle Impostazioni, 5 di base, anche per un TOF: V-1 lo verifica e lo riferisce, senza cambiarlo da solo); LR: la finestra unitaria `xicWin` (3200) o `HR.prof` per la trappola (0,5 Da). Visibile e modificabile accanto al pulsante; la modifica vale per quello XIC, non cambia le Impostazioni.
 
 ## 7. Confronto con Xcalibur/FreeStyle (solo numeri di Federico)

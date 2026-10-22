@@ -10,8 +10,8 @@ Questo studio risponde al compito: convertire un `.raw` Thermo HRMS in mzML nel 
   - C: centroidatura;
   - V: velocità e memoria;
   - E: prove esterne.
-- **`DUBBI.md`**: i dubbi D1-D11 e cinque decisioni per il Coordinatore, ognuna con una raccomandazione.
-- **`RICHIESTE_LOCALE.md`**: le richieste R-a…R-e per la chat locale (RFR, msconvert, calibranti, validatori, file pubblici), da copiare in `SCAMBIO_LOC.md`.
+- **`DUBBI.md`**: i dubbi D1-D11 e cinque decisioni prese dal Coordinatore.
+- **`RICHIESTE_LOCALE.md`**: le richieste R-a…R-e per la chat locale (RFR, msconvert, calibranti, validatori, file pubblici), copiate in `SCAMBIO_LOC.md` come R-07…R-11.
 - **`VALUTAZIONE_GEMINI.md`**: verdetti, con le prove, sulle idee e sul codice del documento Gemini del repository privato, e cosa entra nei prompt.
 - **`prompt/`**: le regole comuni (`COMUNI.md`) e i prompt RM-0…RM-9 per le chat DEV.
 

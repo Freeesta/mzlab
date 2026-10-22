@@ -61,8 +61,8 @@ try:
             c = b.new_context(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce" if reduced else "no-preference"); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: CON.append(m.text[:200])); LAST[:] = [pg]; pg.on("request", lambda r: reqs.append(r.url))
             settings = json.dumps({"on": on, "provider": "anthropic", "model": "claude-sonnet-5-5", "level": level, "l2max": 5})
-            pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.profilo','%s');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
-                               % (profile, json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
+            pg.add_init_script("try{%slocalStorage.setItem('mzlab.lang','en');localStorage.setItem('mzlab.llm',%s);localStorage.setItem('mzlab.llm.consenso',%s);}catch(_){}"
+                               % ("localStorage.setItem('mzlab.admin','1');" if profile == "ricerca" else "", json.dumps(settings), json.dumps(json.dumps({"anthropic": {"classes": ["plan", "summary", "names"]}}))))
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=60000); pg.click(TAB); pg.wait_for_selector("#flx-root", timeout=30000)
             if profile == "ricerca" and on:

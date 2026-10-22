@@ -1,6 +1,6 @@
 # Criteri di accettazione (scritti prima del codice)
 
-Ogni criterio ha un numero, una prova e un esito atteso. Le soglie si cambiano solo con una decisione del Coordinatore scritta qui, mai per far passare una PR. «Corpus HR» indica: LAB-A, LAB-B, BAF, INF-A, i file Thermo del corpus della locale (R-03) e i file pubblici di `RICHIESTE_LOCALE.md` R-e. Le regole di T-7 (A1-A4 prima di ogni velocità; due bersagli; `unsafe` isolato; dipendenze ≥ 10 %) valgono anche qui.
+Ogni criterio ha un numero, una prova e un esito atteso. Le soglie si cambiano solo con una decisione del Coordinatore scritta qui, mai per far passare una PR. «Corpus HR» indica: LAB-A, LAB-B, BAF, INF-A, i file Thermo del corpus della locale (R-03) e i file pubblici di `RICHIESTE_LOCALE.md` R-e. Le regole di T-7 (A1-A4 prima di ogni velocità; due bersagli; `unsafe` isolato) valgono anche qui; ogni guadagno misurato oltre il rumore conta e una dipendenza nuova chiede ≥ 3 % (`prompt/COMUNI.md`).
 
 ## F — Fedeltà dell'mzML
 - **F1 Lista dei centroidi**: m/z (f64) e intensità uguali al bit a RFR e a msconvert `peakPicking vendor` sul 100 % delle scansioni FT del corpus HR, con lo stesso numero di picchi. Già vero su LAB-A contro msconvert; atteso: passa.
