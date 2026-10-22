@@ -84,3 +84,12 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 ## Rapporto di risultati sul demo flufenacet
 - `cargo test --release -p mzlab-finder-lr-wasm --test lr_demo -- --ignored --nocapture report` (~20 s) stampa sui cinque FullScan demo: feature per file dopo il rilevamento, righe allineate, tempi, picco di memoria, voci per etichetta, rango dei tre prodotti documentati, i dodici primi nell'ordine della tabella, motivi dei non forti, ioni inattesi forti che coeluiscono (≤ 0,1 min) con un candidato forte più pesante, e i falsi positivi di sette genitori decoy.
 - Stesso rapporto su una serie propria: ripetere `demo()` con i file e i tempi della serie (nessun percorso o nome nel repository pubblico) e leggere solo i conteggi.
+
+## Dal demo al risultato (Tabui, flufenacet)
+- Ingresso: i cinque FullScan demo come colonne in ordine di tempo, progenitore flufenacet (formula neutra `C14H13F4N3O2S`), trasformazioni predefinite; senza il progenitore giusto (`parent_ok` falso) non esce nessun candidato forte.
+- Tabella con i gettoni predefiniti (Strong, Possible, Unexpected): i candidati forti sono i primi, ordinati per punteggio e area; il progenitore è fissato in cima.
+- Risultato atteso: i tre prodotti documentati (m/z 362,06 a 13,02 min; 378,05 a 13,57; 396,06 a 13,41) sono i primi tre candidati con «Proposed formula»; sono prove da leggere, non verdetti.
+- Da verificare: un candidato con «Co-elutes with» pieno coeluisce con uno più pesante (possibile frammento in sorgente; sul demo m/z 322 e 338 a 13,44-13,46 min); un forte con lo stesso m/z a un altro RT è un isomero, non un frammento.
+- Ioni inattesi forti: sono righe senza ipotesi; «Co-elutes with» dice di quale candidato sono probabili frammenti (18 su 40 sul demo).
+- Riga aperta: criteri ✓/✗, XIC e cinetica per file, MS2 se i file `ms2` ci sono; i criteri falliti spiegano perché una riga è debole.
+- Controllo senza interfaccia: il rapporto `lr_demo` (sezione sopra) stampa gli stessi numeri; deve restare uguale dopo ogni modifica del motore.
