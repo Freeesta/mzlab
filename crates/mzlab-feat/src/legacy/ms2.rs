@@ -42,7 +42,9 @@ impl Ms2Sorted {
     pub fn of<R: ReadAt>(ix: &Index<R>) -> Ms2Sorted {
         let index = Ms2Index::of(ix);
         let mut by_center: Vec<u32> = (0..index.scan.len() as u32).collect();
-        by_center.sort_by(|&a, &b| index.center[a as usize].total_cmp(&index.center[b as usize]));
+        mzlab_core::sortc::by(&mut by_center, |&a, &b| {
+            index.center[a as usize].total_cmp(&index.center[b as usize])
+        });
         Ms2Sorted { index, by_center }
     }
 
@@ -70,7 +72,7 @@ impl Ms2Sorted {
                 (ix.center[i] - mz).abs() <= tol && ix.rt[i] >= lo && ix.rt[i] <= hi
             })
             .collect();
-        hit.sort_unstable();
+        mzlab_core::sortc::ord(&mut hit);
         hit.into_iter()
             .map(|i| (k, ix.scan[i as usize], ix.rt[i as usize]))
             .collect()
@@ -170,7 +172,9 @@ mod tests {
             m.center.push(c);
         }
         let mut by_center: Vec<u32> = (0..m.scan.len() as u32).collect();
-        by_center.sort_by(|&a, &b| m.center[a as usize].total_cmp(&m.center[b as usize]));
+        mzlab_core::sortc::by(&mut by_center, |&a, &b| {
+            m.center[a as usize].total_cmp(&m.center[b as usize])
+        });
         let sorted = Ms2Sorted {
             index: m.clone(),
             by_center,
