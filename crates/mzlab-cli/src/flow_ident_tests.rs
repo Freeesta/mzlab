@@ -407,6 +407,11 @@ fn decoys_spectrum_gives_the_q_values_of_search_fdr() {
             best.get("decoy_ge").unwrap().f64(),
             Some(w.fdr.n_decoy_ge as f64)
         );
+        assert_eq!(
+            best.get("best_decoy").unwrap().f64(),
+            Some(mzlab_core::json::round(w.best.decoy as f64, 6)),
+            "{id}"
+        );
         checked += 1;
     }
     assert!(checked >= 50, "{checked} queries checked");
