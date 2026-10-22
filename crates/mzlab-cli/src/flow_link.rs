@@ -4,6 +4,7 @@
 //! `tp/1` and `interp/1` that `tp.network` reads. The table has to be one this plan made: its lineage gives the `.mzfeatf` of the files and the recipe.
 
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use mzlab_core::budget::MemBudget;
 use mzlab_core::elements;
@@ -194,6 +195,28 @@ pub struct Series {
     pub indexes: Vec<PathBuf>,
 }
 
+fn check_series(series_of: &Series) -> Result<()> {
+    let lin = &series_of.lineage;
+    if lin.peaks.is_empty() || lin.peaks.len() != series_of.indexes.len() {
+        return Err(Error::new("err.flow.link.series")
+            .with("peaks", lin.peaks.len())
+            .with("index", series_of.indexes.len()));
+    }
+    Ok(())
+}
+
+/// Seconds of each phase of `link_bytes` on stderr when `MZLAB_PHASES` is set (for profiling real runs).
+fn report_phases(hypo: Duration, evidence: Duration, total: Duration) {
+    if std::env::var_os("MZLAB_PHASES").is_some() {
+        eprintln!(
+            "tp.link phases: hypotheses {:.1} s, evidence {:.1} s, interpretation {:.1} s",
+            hypo.as_secs_f64(),
+            (evidence - hypo).as_secs_f64(),
+            (total - evidence).as_secs_f64()
+        );
+    }
+}
+
 /// The `.mzfeat` with `tp/1` and `interp/1` of the table `table` of the series `series` (the files of `lin`), for the parent file `parent` and the
 /// `campioni/2` `samples`; `hypotheses` is the `ipotesi/1` of `tp.generate`, which has to be the one of this parent.
 pub fn link_bytes(
@@ -204,11 +227,7 @@ pub fn link_bytes(
 ) -> Result<Vec<u8>> {
     let [table, samples, parent, hypotheses] = files;
     let lin = &series_of.lineage;
-    if lin.peaks.is_empty() || lin.peaks.len() != series_of.indexes.len() {
-        return Err(Error::new("err.flow.link.series")
-            .with("peaks", lin.peaks.len())
-            .with("index", series_of.indexes.len()));
-    }
+    check_series(series_of)?;
     let mut recipe = rebuild(lin)?;
     let polarity = polarity_of(job, &recipe);
     recipe.detect.polarity = Some(polarity);
@@ -224,6 +243,7 @@ pub fn link_bytes(
         .iter()
         .map(open)
         .collect::<Result<Vec<_>>>()?;
+    let clock = Instant::now();
     let mut stored = Files(lin.peaks.clone());
     let hypo = run::hypotheses_stored(
         &mut ix,
@@ -234,6 +254,7 @@ pub fn link_bytes(
         p.rt,
         &recipe,
     )?;
+    let t_hypo = clock.elapsed();
     let budget = MemBudget::mb(r.budget_mb);
     let mut with_tp = Vec::new();
     let mut again = Files(lin.peaks.clone());
@@ -253,6 +274,7 @@ pub fn link_bytes(
         }),
         &mut with_tp,
     )?;
+    let t_evidence = clock.elapsed();
     let mut infusion = roles
         .infusion
         .first()
@@ -272,6 +294,7 @@ pub fn link_bytes(
         infusion.as_mut(),
         &mut out,
     )?;
+    report_phases(t_hypo, t_evidence, clock.elapsed());
     Ok(out)
 }
 
