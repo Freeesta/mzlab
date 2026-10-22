@@ -5,7 +5,9 @@
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
+#[cfg(feature = "attributio")]
 use crate::attributio::review::raw::{ms1_metrics, Ms1Metrics, ScanInfo};
+#[cfg(feature = "attributio")]
 use crate::attributio::review::settings::ReviewSettings;
 use crate::axis::half;
 use crate::legacy::ms2::{consensus, read_scans, select, Consensus, Ms2Index};
@@ -343,6 +345,7 @@ pub fn pool_with(scans: &[Ms2Scan], p: &LinkParams) -> Pooled {
     }
 }
 
+#[cfg(feature = "attributio")]
 /// The ions of the isolation window of each of `scans` (all of file `ix`) in the MS1 scan before it, or after it when none lies before, judged by
 /// `ms1_metrics` with a co-isolation threshold of `chim_rel`. `None` where the polarity has no MS1 or the scan has no precursor peak.
 pub fn ms1_window_metrics<R: ReadAt>(
