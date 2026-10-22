@@ -9127,3 +9127,4 @@
 {"v":1,"ts_utc":"2026-10-22T21:34:27Z","azione":"aperta","tipo":"pr","pr":1544,"sha":"78c4e5b9e13efdadc1fe8da6e5445ba63ac2b3fa"}
 {"v":1,"ts_utc":"2026-10-22T21:37:24Z","azione":"aperta","tipo":"pr","pr":1545,"sha":"595d2b6472d8f20fea589c0f750d2735efaae606"}
 {"v":1,"ts_utc":"2026-10-22T21:39:06Z","azione":"aperta","tipo":"pr","pr":1546,"sha":"149cd3c5c6611350756c4863972c31098e2fe5a0"}
+{"v":1,"tipo":"pr","pr":1544,"sha":"78c4e5b9e13efdadc1fe8da6e5445ba63ac2b3fa","ts_utc":"2026-10-22T21:39:38Z","azione":"unita","aperta_s":311,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":2,"righe_meno":1,"file_n":1,"file":["docs/agenti/rust.md"],"aree":{"docs":1},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":264}
