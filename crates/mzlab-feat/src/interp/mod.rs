@@ -4,6 +4,7 @@
 //! modification sits (`site`, `sito.rs`) and how to draw it (`drawing`, `disegno.rs`), never as an identity. Behind the feature `interp`.
 
 pub mod albero;
+mod apice;
 mod build;
 pub mod confronto;
 pub mod disegno;
