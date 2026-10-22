@@ -340,6 +340,7 @@ fn sezioni_sorgente(
             "scrivi_con",
             thread,
             &[0, 1, 6],
+            false,
             a.impronte,
         )];
         s.push(fasi::scala(
@@ -348,6 +349,7 @@ fn sezioni_sorgente(
             "indicizzato",
             &[1, *thread.last().unwrap_or(&1)],
             &[1],
+            true,
             a.impronte,
         ));
         prima.insert("scala".into(), json!(s));

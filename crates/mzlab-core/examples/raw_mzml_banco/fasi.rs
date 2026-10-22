@@ -319,6 +319,7 @@ pub fn scala(
     thread: &[usize],
     livelli: &[u32],
     indicizzato: bool,
+    con_impronta: bool,
 ) -> Value {
     let mut prove = Vec::new();
     for &lv in livelli {
@@ -334,18 +335,24 @@ pub fn scala(
                 opz,
                 steps: indicizzato.then_some(&[][..]),
             };
-            let mut impronta = None;
             let mut byte = 0;
+            // the timed runs do not hash: SHA-256 of the output is serial and would hide the scaling
             let (g, _) = ripeti(giri, || {
+                let s = conv
+                    .scrivi(&mut *l, 0, Sink::nuovo(false), &mut |_, _| {})
+                    .expect("conversion");
+                byte = s.n;
+            });
+            // one more run, outside the clock, for the determinism fingerprint
+            let impronta = con_impronta.then(|| {
                 let s = conv
                     .scrivi(&mut *l, 0, Sink::nuovo(true), &mut |_, _| {})
                     .expect("conversion");
-                byte = s.n;
-                impronta = s.sha256();
+                s.sha256()
             });
             prove.push(json!({
                 "thread": t, "livello": lv, "indicizzato": indicizzato, "peaks": format!("{:?}", src.picchi()),
-                "byte_uscita": byte, "sha256_uscita": impronta, "misura": riassunto(&g),
+                "byte_uscita": byte, "sha256_uscita": impronta.flatten(), "misura": riassunto(&g),
             }));
         }
     }
