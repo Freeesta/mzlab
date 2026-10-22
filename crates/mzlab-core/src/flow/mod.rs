@@ -23,8 +23,13 @@ pub use parse::parse;
 pub use prov::{
     prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
-pub use run::{execute, file_roots, Artifact, Job, Outcome, Run, Runner};
-pub use sched_route::route as sched_route;
+pub use run::{
+    execute, file_roots, record, work, Artifact, Core, Ctx, Hooks, Job, Outcome, Results, Run,
+    Runner,
+};
+pub use sched_route::{
+    act as sched_act, ask as sched_ask, cancels as sched_cancels, route as sched_route,
+};
 pub use write::plan_json;
 
 use crate::json::Value;

@@ -20,7 +20,7 @@ use crate::Outcome;
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
 
 usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set INSTANCE.NAME=VALUE...] [--workers N] [--budget-mb N] [--dry-run] [--fresh]
-                          [--json] [--progress text|jsonl]
+                          [--json] [--progress text|jsonl] [--jsonl]
 
   PLAN.json                the plan; its inputs are files named in it
   --in FILE|FOLDER...      where the inputs are: a file is matched by its name, a folder holds files with those names (default: the folder of the plan)
@@ -35,6 +35,7 @@ usage: mzlab-cli flow run PLAN.json [--in FILE|FOLDER...] [--out FOLDER] [--set 
                            FOLDER is reused (`... reused`, `cached` in prov.json)
   --json                   one JSON document on stdout, flowrun/1 (flowdry/1 with --dry-run; errore/1 when the command stops); stderr and files are the same
   --progress jsonl         one JSON line per job on stderr instead of `[3/9] ...`: {\"job\", \"of\", \"instance\", \"item\", \"status\", \"ms\"} (default: text)
+  --jsonl                  the flowlive/1 events of the run on stdout, one JSON line each, as they happen (not with --json); the files and prov.json are the same
   --help                   this text
 
 exit codes: 0 done, 1 a step failed (the others are written), 2 usage, 3 the plan is not valid, 4 an input is missing or does not match";
@@ -90,6 +91,7 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
                 p => return Err(format!("--progress {p}: expected text or jsonl")),
             },
             "--fresh" => a.fresh = true,
+            "--jsonl" => a.style.events = true,
             "--in" => {
                 a.ins.push(value("a file or a folder")?.into());
                 while let Some(more) = it.next_if(|n| !n.starts_with("--")) {
@@ -103,6 +105,9 @@ fn parse_args(args: Vec<String>) -> Result<Option<Args>, String> {
     }
     if a.plan.is_none() {
         return Err("no plan file".into());
+    }
+    if a.style.events && (a.style.json || a.dry) {
+        return Err("--jsonl does not go with --json or --dry-run".into());
     }
     if a.out.is_none() && !a.dry {
         return Err("--out FOLDER is needed (or --dry-run)".into());
@@ -208,8 +213,13 @@ pub(crate) fn run_checked(
 ) -> mzlab_core::Result<(Run, String)> {
     let run = execute(plan, &steps(), runner, workers)?;
     runner.save_cache()?;
-    let prov = prov_json(&agent(), Some(&sha256_hex(text)), &run);
+    let prov = prov_text(text, &run);
     Ok((run, prov))
+}
+
+/// The `prov/1` text of `run`, for the plan read from `text`.
+pub(crate) fn prov_text(text: &[u8], run: &Run) -> String {
+    prov_json(&agent(), Some(&sha256_hex(text)), run)
 }
 
 /// The progress line of one job: `[3/9] features.table (feat) ... done in 12.4 s` (`item 2` for a per-file step), `... reused` when it came from
@@ -349,7 +359,10 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
         }
         Err(e) => {
             let err = Error::new("err.cli.usage").with("detail", &e);
-            let st = Style { json, jsonl: false };
+            let st = Style {
+                json,
+                ..Style::default()
+            };
             return jfail(st, 2, &err, &e, "mzlab-cli flow run --help");
         }
     };
