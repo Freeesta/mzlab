@@ -7014,3 +7014,4 @@
 {"v":1,"ts_utc":"2026-10-22T17:43:16Z","azione":"aperta","tipo":"pr","pr":1517,"sha":"2605eeaf744ff0c415c0887861e3e11f872daefd"}
 {"v":1,"ts_utc":"2026-10-22T17:56:04Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/infusione-raw-browser","merge_main":true,"aree":{"rust":2,"docs":1,"altro":2,"test":2},"tipo":"pr","pr":1516,"sha":"93e5517622f9ff0d95f5da464a4c2262d6f54166"}
 {"v":1,"ts_utc":"2026-10-22T18:18:34Z","azione":"aperta","tipo":"pr","pr":1518,"sha":"3383d029ac7e76878eea3a0b7a41c62867399c05"}
+{"v":1,"ts_utc":"2026-10-22T18:18:59Z","azione":"aperta","tipo":"pr","pr":1519,"sha":"95e41b2b178a669e983e4d2a56d59c8607f4894f"}
