@@ -1020,6 +1020,216 @@
      }
     }
    }
+  },
+  "regole": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "versione",
+    "tabella",
+    "cutoff_q",
+    "toll_perdita_mda",
+    "addotto",
+    "archi",
+    "ioni",
+    "non_osservabili",
+    "conteggi"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "tabella": {
+     "const": "fragrules/1"
+    },
+    "cutoff_q": {
+     "type": "number"
+    },
+    "toll_perdita_mda": {
+     "type": "number"
+    },
+    "addotto": {
+     "type": [
+      "string",
+      "null"
+     ],
+     "description": "Adduct of the ion of the root, from the typed formula; null for the ion itself"
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "regole",
+       "composta",
+       "stepped",
+       "avvisi"
+      ],
+      "properties": {
+       "da": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "a": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "regole": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "id",
+          "formula",
+          "massa",
+          "errore_mda",
+          "radicale",
+          "priorita",
+          "energia",
+          "refs"
+         ],
+         "properties": {
+          "id": {
+           "type": "string"
+          },
+          "formula": {
+           "type": "string"
+          },
+          "massa": {
+           "type": "number"
+          },
+          "errore_mda": {
+           "type": "number"
+          },
+          "radicale": {
+           "type": "boolean"
+          },
+          "priorita": {
+           "enum": [
+            1,
+            2,
+            3
+           ]
+          },
+          "energia": {
+           "type": "string"
+          },
+          "refs": {
+           "type": "array",
+           "items": {
+            "type": "string"
+           }
+          }
+         }
+        }
+       },
+       "composta": {
+        "type": "array",
+        "items": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "minItems": 2,
+         "maxItems": 2
+        },
+        "description": "Pairs of rules whose losses add up to the loss of the arc (beam-type activation; the intermediate step is not observed)"
+       },
+       "stepped": {
+        "type": "boolean",
+        "description": "A spectrum of the arc is a sum of energies: no breakdown curve is read from it"
+       },
+       "avvisi": {
+        "type": "array",
+        "items": {
+         "enum": [
+          "warn.msngrafo.radicalLoss",
+          "warn.msngrafo.belowCutoff"
+         ]
+        }
+       }
+      }
+     }
+    },
+    "ioni": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "nodo",
+       "regola",
+       "errore_mda"
+      ],
+      "properties": {
+       "nodo": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "regola": {
+        "type": "string"
+       },
+       "errore_mda": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    "non_osservabili": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "nodo",
+       "regola",
+       "mz",
+       "soglia"
+      ],
+      "properties": {
+       "nodo": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "regola": {
+        "type": "string"
+       },
+       "mz": {
+        "type": "number"
+       },
+       "soglia": {
+        "type": "number"
+       }
+      }
+     },
+     "description": "Rules whose product falls below the cut-off q/0.908 of the precursor m/z of a trap CID spectrum"
+    },
+    "conteggi": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "archi_spiegati",
+      "archi_senza_regola",
+      "intensita_spiegata"
+     ],
+     "properties": {
+      "archi_spiegati": {
+       "type": "integer"
+      },
+      "archi_senza_regola": {
+       "type": "integer"
+      },
+      "intensita_spiegata": {
+       "type": "number"
+      }
+     }
+    }
+   },
+   "description": "Present only when asked (mzlab-cli msn-graph --regole): the rules of fragrules/1 that the formulas alone decide, as evidence with their references. Never a verdict. The rest of the document keeps its bytes without it."
   }
  }
 }

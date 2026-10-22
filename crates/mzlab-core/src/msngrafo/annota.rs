@@ -4,6 +4,7 @@
 
 use super::candidati::{m1_coerente, perdita_nota, sotto, Elementi};
 use super::formule::avviso;
+use super::regole_valuta::{addotto_radice, vettori_perdita};
 use super::{Avviso, Candidato, FormulaNodo, Grafo, NonSpiegati, Opzioni, STRETTA};
 use crate::elements::parse_formula;
 
@@ -128,7 +129,7 @@ fn scelte(g: &mut Grafo, st: &mut Stato, o: &Opzioni) {
 }
 
 /// The evidences of a candidate of node `j` (for one of the wide window).
-fn prove(g: &Grafo, st: &Stato, j: usize, c: &[u32]) -> Vec<&'static str> {
+fn prove(g: &Grafo, st: &Stato, o: &Opzioni, j: usize, c: &[u32]) -> Vec<&'static str> {
     let mut v = vec![];
     let perdita = st.genitori[j].iter().any(|&p| {
         st.cand[p]
@@ -137,6 +138,9 @@ fn prove(g: &Grafo, st: &Stato, j: usize, c: &[u32]) -> Vec<&'static str> {
     });
     if perdita {
         v.push("perdita");
+    }
+    if o.regole.is_some() && perdita_regola(g, st, o, j, c) {
+        v.push("regola");
     }
     // behind a window narrower than the M+1 the isotopes are not expected: no evidence for or against
     let stretta = g.nodi[j].a_monte.is_some_and(|w| w < STRETTA);
@@ -151,6 +155,20 @@ fn prove(g: &Grafo, st: &Stato, j: usize, c: &[u32]) -> Vec<&'static str> {
         v.push("msn");
     }
     v
+}
+
+/// The loss from a candidate of a precursor of node `j` to `c` is the one of a rule of `fragrules/1`.
+fn perdita_regola(g: &Grafo, st: &Stato, o: &Opzioni, j: usize, c: &[u32]) -> bool {
+    let add = addotto_radice(o, g.polarita);
+    st.genitori[j].iter().any(|&p| {
+        let vs = vettori_perdita(st.e, g.polarita, add, g.radici.contains(&p));
+        st.cand[p].iter().any(|q| {
+            sotto(c, &q.c) && {
+                let d: Vec<u32> = q.c.iter().zip(c).map(|(a, b)| a - b).collect();
+                vs.contains(&d)
+            }
+        })
+    })
 }
 
 /// One pass of the reduction; true when something changed.
@@ -180,7 +198,7 @@ fn passo(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
                 if x.stretto {
                     vec![]
                 } else {
-                    prove(g, st, j, &x.c)
+                    prove(g, st, o, j, &x.c)
                 }
             })
             .collect();

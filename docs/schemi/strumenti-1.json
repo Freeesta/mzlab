@@ -39,6 +39,7 @@
           "table.drift",
           "table.filter",
           "table.kmd",
+          "table.match",
           "table.pca",
           "table.stats",
           "tp.dig_lr",
@@ -94,6 +95,7 @@
               "table.drift@1",
               "table.filter@1",
               "table.kmd@1",
+              "table.match@1",
               "table.pca@1",
               "table.stats@1",
               "tp.dig_lr@1",
@@ -183,6 +185,7 @@
               "table.drift@1",
               "table.filter@1",
               "table.kmd@1",
+              "table.match@1",
               "table.pca@1",
               "table.stats@1",
               "tp.dig_lr@1",
@@ -1077,6 +1080,9 @@
                   "ppm_struttura",
                   "interpreta",
                   "ppm_perdita",
+                  "regole",
+                  "cutoff_q",
+                  "toll_perdita_mda",
                   "scelte"
                 ]
               },
@@ -1152,6 +1158,23 @@
                     "minimum":0,
                     "default":10,
                     "description":"Window of the loss match by mass, ppm of the precursor m/z"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `regole`: the rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss of an arc, even-electron check, trap cut-off, composite and stepped losses)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.25,
+                    "description":"Fragments below q/0.908 of the precursor m/z are not observable in a trap CID"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Tolerance of a loss against the mass of a rule"
                   },
                   {
                     "type":"string",
@@ -1309,6 +1332,124 @@
                     "minimum":2,
                     "default":3,
                     "description":"Distinct nominal Kendrick masses a series needs"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.match@1"},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "tol_da",
+                  "precursor_ppm",
+                  "precursor_da",
+                  "name_contains",
+                  "top_n",
+                  "decoys",
+                  "score_terms",
+                  "ms2_spectrum",
+                  "ms2_background",
+                  "min_score",
+                  "min_shared",
+                  "analog_window_da",
+                  "analog_prefilter",
+                  "analog_min_shift_da",
+                  "exact_ppm",
+                  "delta_formula_mda"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"enum":["spectral_entropy","cosine","modified_cosine"]},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.02,
+                    "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"Library precursor against the precursor of the feature"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
+                  {
+                    "enum":["none","spectrum"],
+                    "default":"none",
+                    "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Needs the spectral entropy (an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also carries score_terms, its score as a weighted sum of named terms (the contribution of each matched pair, the rest in one term) and the key of its formula in the Theory; the scores themselves do not change"
+                  },
+                  {
+                    "enum":["best","consensus"],
+                    "default":"best",
+                    "description":"best: the scan with the highest TIC of the file that has the best MS2 of the row; consensus: all the fitting scans of the row, merged across the files where it has a peak"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: the MS2 peaks that recur in the blank files are taken out of every row, never the precursor; without a blank file nothing is taken out"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.6,
+                    "description":"A hit below this entropy similarity is dropped"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":3,
+                    "description":"Matched ions between query and library spectrum; two peaks can score high on a sparse spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":250,
+                    "description":"Library precursors within this distance of the feature are candidate analogues"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":200,
+                    "description":"Candidates that pass the prefilter and are scored with the modified cosine"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A smaller precursor difference is the same ion, not an analogue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"A precursor difference within this is an exact match, not an analogue"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Free search of a CHNOPS formula for the precursor difference"
                   }
                 ]
               }
