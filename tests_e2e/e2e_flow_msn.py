@@ -18,7 +18,7 @@ def step(name, fn):
 D = synth("flowmsn")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 ION = "C8H11N4O2+"
-cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
+cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--interpreta"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
 mask = lambda t: re.sub(r'"sha256_idx":"[0-9a-f]*"', '"sha256_idx":""', t)
 RUN = """async (patch) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
@@ -53,7 +53,34 @@ try:
         def graph():
             t = got["r"]["files"][0]["text"]
             assert mask(t) == mask(cli), (len(t), len(cli))
-        step("the graph is the text of mzlab-cli msn-graph", graph)
+        step("the graph is the text of mzlab-cli msn-graph --interpreta (the template starts with the interpretation on)", graph)
+        def molecule_box():
+            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, inst = S.plan.steps[0];
+              const box = FLOW.form(inst, FLOW.stepOf(S.reg, inst), () => {}); box.id = 'tmpform'; document.body.append(box); }""")
+            pg.wait_for_selector("#tmpform .molc input", timeout=30000)
+            pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000); pg.click("#tmpform .molc li >> nth=0")
+            pg.wait_for_function("(() => { const p = document.querySelector('.flx-list').__flow.plan.steps[0].params || {}; return !!p.formula; })()", timeout=30000)
+            p = pg.evaluate("document.querySelector('.flx-list').__flow.plan.steps[0].params")
+            assert p["formula"].split(" ")[0] and "[M" in p["formula"] and p.get("adduct") and p.get("molecule"), p
+            pg.evaluate("document.querySelector('#tmpform').remove()")
+        step("the molecule box of the step fills the ion, the adduct, the name and the SMILES", molecule_box)
+        def search():
+            added = pg.evaluate("""(async () => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ libreria: '', molecola_id: 'STD', k: 0, formula: '%s' }) }); const j = await r.json(); return j.error ? j : j.libreria })()""" % ION)
+            assert isinstance(added, str), added
+            put = """async (t) => { const d = await navigator.storage.getDirectory(), w = await (await d.getFileHandle('msnlib.json', { create: true })).createWritable(); await w.write(t); await w.close() }"""
+            pg.evaluate(put, "")
+            x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow, ev = [];
+              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
+              try { await FLOW.runners.web.run(S); return { ok: 1 } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+            assert x.get("key") == "err.flow.msn.library", x
+            pg.evaluate(put, added)
+            x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow;
+              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
+              try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+            assert "text" in x, x
+            j = json.loads(x["text"])
+            assert j["formato"] == "msncerca/1" and j["opzioni"]["min_prove"] == 3 and j["candidati"], x["text"][:300]
+        step("the library search of spectra.match (tree) posts the library of the card and gives msncerca/1", search)
         def library():
             t = got["r"]["files"][1]["text"]
             assert "Name:" in t and "Num Peaks:" in t and "C8H11N4O2" in t, t[:300]
@@ -63,6 +90,12 @@ try:
             assert t.startswith("from,from_mz,from_formula,to,to_mz,to_formula,loss_mass,loss_formula,loss_ppm"), t[:200]
             assert len(t.splitlines()) > 1, t
         step("the table is the CSV of the modifications", table)
+        def empty():
+            pg.evaluate("window.__f = window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i)")
+            x = pg.evaluate(RUN, {"formula": ION})
+            pg.evaluate("window.fetch = window.__f")
+            assert x["err"] and x["err"]["key"] == "err.flow.msn.empty", x["err"]
+        step("a file with no MSn spectra gets a clear message", empty)
         def kept():
             names = pg.evaluate("""(async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'); const o = []; for await (const [n] of d.entries()) o.push(n); return o })()""")
             assert len([n for n in names if n.endswith((".json", ".msp", ".csv"))]) >= 3, names
