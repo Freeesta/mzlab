@@ -11,7 +11,11 @@ use mzlab_core::msngrafo::{tabella_regole, Attesa, Opzioni, Regola, Tabella, Tip
 /// A rule with no structure condition is not listed (the core decides it by the formula alone); a rule that reads a structure but has no product to
 /// compute (`remote_fixed_charge`) is not listed either.
 pub fn attese(smiles: &str, t: &Tabella) -> Result<Vec<Attesa>> {
-    let m = Mol::parse(smiles)?;
+    Ok(attese_mol(&Mol::parse(smiles)?, t))
+}
+
+/// `attese` of a structure already read (the decoys of `mzlab-cli msn-rules` are built as graphs).
+pub fn attese_mol(m: &Mol, t: &Tabella) -> Vec<Attesa> {
     let gruppi = m.groups_ext();
     let mut out = vec![];
     for r in t
@@ -19,7 +23,7 @@ pub fn attese(smiles: &str, t: &Tabella) -> Result<Vec<Attesa>> {
         .iter()
         .filter(|r| r.legge_struttura() && (r.tipo != Tipo::Cleavage || r.site.is_some()))
     {
-        if !soddisfa(&m, &gruppi, r) {
+        if !soddisfa(m, &gruppi, r) {
             continue;
         }
         let prodotti = match r.site.as_deref().and_then(|s| m.site(s)) {
@@ -37,7 +41,7 @@ pub fn attese(smiles: &str, t: &Tabella) -> Result<Vec<Attesa>> {
             }
         }
     }
-    Ok(out)
+    out
 }
 
 /// The sites whose products are computed from the structure (a site of these with no product gives nothing, not the formula of the table).

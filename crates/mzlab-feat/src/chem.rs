@@ -9,6 +9,7 @@ mod grafo_record;
 mod gruppi;
 pub mod posizioni;
 pub mod regole;
+mod rimescola;
 mod regole_site;
 mod smiles;
 pub mod strutture;
