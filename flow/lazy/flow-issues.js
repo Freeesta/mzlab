@@ -7,6 +7,7 @@
 
   /** the entry of the glossary of the Theory that explains each step (file and anchor of `mzlab/web/teoria/`); a step without an entry has no «?» */
   F.THEORY = {
+    "spectra.centroid": ["21-glossario.html", "g-fwhm"],
     "index.mzidx": ["21-glossario.html", "g-full-scan-q1-ms"],
     "features.detect": ["21-glossario.html", "g-xic-eic"],
     "features.align": ["21-glossario.html", "g-rt-tr"],
