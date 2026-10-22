@@ -71,20 +71,23 @@ impl Col {
             Col::Text(v) => v.len(),
         }
     }
-    fn distinct(&self) -> usize {
+    /// Whether more than `max` different values occur (stops as soon as it does, with no sorting).
+    fn more_than(&self, max: usize) -> bool {
+        fn count<T: PartialEq + Copy>(v: impl Iterator<Item = T>, max: usize) -> bool {
+            let mut seen: Vec<T> = Vec::new();
+            for x in v {
+                if !seen.contains(&x) {
+                    seen.push(x);
+                    if seen.len() > max {
+                        return true;
+                    }
+                }
+            }
+            false
+        }
         match self {
-            Col::Num(v) => {
-                let mut s: Vec<u64> = v.iter().map(|x| x.to_bits()).collect();
-                s.sort_unstable();
-                s.dedup();
-                s.len()
-            }
-            Col::Text(v) => {
-                let mut s: Vec<&String> = v.iter().collect();
-                s.sort_unstable();
-                s.dedup();
-                s.len()
-            }
+            Col::Num(v) => count(v.iter().map(|x| x.to_bits()), max),
+            Col::Text(v) => count(v.iter().map(String::as_str), max),
         }
     }
 }
@@ -238,7 +241,7 @@ fn check_types(mark: &str, fx: Chan, fy: Chan, fc: Chan) -> Result<()> {
 /// Nominal channels with few enough values: colour at most 8, detail at most 50, facet at most 12.
 fn check_limits(view: &View, mark: &str, fc: Chan, fd: Chan, ff: Chan) -> Result<()> {
     let one = |c: Chan, motive: &'static str, max: usize| match c {
-        Some((i, f)) if f.kind != Kind::Nominal || view.cols[i].distinct() > max => {
+        Some((i, f)) if f.kind != Kind::Nominal || view.cols[i].more_than(max) => {
             Err(err(motive).with("field", f.name).with("max", max))
         }
         _ => Ok(()),

@@ -274,3 +274,17 @@ fn the_charts_without_a_model_are_built_by_rust() {
     );
     assert!(presets(&views(&parse(b"{}").unwrap())).is_empty());
 }
+
+/// The chart of the TIC of three small files is the golden file `tests/data/grafico_tic.json` (`MZLAB_UPDATE_LLM=1` rewrites it); the Python test
+/// validates it against `docs/schemi/grafico-1.json`.
+#[test]
+fn the_golden_chart_is_stable() {
+    let v = views(&sources(3, 40));
+    let s = spec("tic:*", "line", "\"x\":{\"field\":\"rt\"},\"y\":{\"field\":\"intensity\"},\"color\":{\"field\":\"file\"}");
+    let text = make(&s, &v).unwrap();
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/grafico_tic.json");
+    if std::env::var("MZLAB_UPDATE_LLM").is_ok() {
+        std::fs::write(&path, &text).unwrap();
+    }
+    assert_eq!(text, std::fs::read_to_string(&path).unwrap());
+}
