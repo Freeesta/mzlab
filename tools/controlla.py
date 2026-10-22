@@ -11,6 +11,7 @@ lines over 600 characters (counted per file) and files over 25 KB.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,6 +28,7 @@ KINDS = ("file", "funzioni", "doc_righe", "doc_kb")
 LABEL = {"file": "file", "funzioni": "funzione", "doc_righe": "documento (righe lunghe)", "doc_kb": "documento (byte)"}
 SLACK = 0.10          # growth tolerated on an entry that is already over the limit
 SLACK_MIN = 10        # ... but at least this many lines
+HOT_MERGES, HOT_TOUCHES, HOT_FRACTION = 50, 5, 0.90      # a file touched by more than 5 of the last 50 merges is "hot": warn from 90% of its cap
 NEAR_TOL = 20         # warn when an entry over the limit is this close to its tolerance
 
 
@@ -90,6 +92,35 @@ def vicini() -> list[str]:
         size = len(d.read_bytes())
         if NEAR_DOC_BYTES <= size <= MAX_DOC_BYTES:
             out.append(f"{d.relative_to(indice.ROOT).as_posix()} is {size / 1024:.1f} KB (limit 25 KB): split it by topic before adding more")
+    return out
+
+
+def caldi(ref: str = "origin/main") -> dict[str, int]:
+    """How many of the last HOT_MERGES commits of `ref` (squash merges) touched each file; empty when git or the ref is missing."""
+    r = subprocess.run(["git", "log", f"-{HOT_MERGES}", "--first-parent", "--name-only", "--pretty=format:@", ref], cwd=indice.ROOT, capture_output=True, text=True)
+    if r.returncode:
+        return {}
+    n: dict[str, int] = {}
+    for blocco in r.stdout.split("@"):
+        for f in set(blocco.split()):
+            n[f] = n.get(f, 0) + 1
+    return n
+
+
+def vicini_caldi(tocchi: dict[str, int]) -> list[str]:
+    """Hot files (more than HOT_TOUCHES of the last merges) from 90% of their cap: lines for code, bytes for the agent documents."""
+    out = []
+    for f, t in sorted(tocchi.items(), key=lambda x: -x[1]):
+        p = indice.ROOT / f
+        if t <= HOT_TOUCHES or not p.is_file() or Path(f).name in DOC_SKIP:
+            continue
+        if f == "AGENTS.md" or f.startswith("docs/agenti/") and f.endswith(".md"):
+            if len(p.read_bytes()) >= HOT_FRACTION * MAX_DOC_BYTES:
+                out.append(f"{f} is {len(p.read_bytes()) / 1024:.1f} KB and was touched by {t} of the last {HOT_MERGES} merges (limit 25 KB)")
+        elif f.endswith((".js", ".py", ".rs")) and not any(k in f for k in indice.SKIP):
+            n = p.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+            if HOT_FRACTION * MAX_FILE <= n <= MAX_FILE:
+                out.append(f"{f} has {n} lines and was touched by {t} of the last {HOT_MERGES} merges (limit {MAX_FILE})")
     return out
 
 
@@ -252,7 +283,7 @@ def main() -> int:
     print(f"WARN {len(now['file'])} files over {MAX_FILE} lines, {len(now['funzioni'])} functions over {MAX_FUNC} lines "
           f"(base: {len(base['file'])} / {len(base['funzioni'])}); documents: {len(now['doc_righe'])} with lines over "
           f"{MAX_DOC_LINE} characters, {len(now['doc_kb'])} over 25 KB")
-    for w in vicini() + vicini_tolleranza(now, base):
+    for w in vicini() + vicini_tolleranza(now, base) + vicini_caldi(caldi()):
         print("WARN near the limit: " + w)
     if "--lista" in sys.argv:
         for kind in KINDS:

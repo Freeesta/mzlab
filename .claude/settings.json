@@ -50,6 +50,11 @@
             "type": "command",
             "command": "python3 tools/grafo.py",
             "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 tools/installa_hook.py",
+            "timeout": 30
           }
         ]
       }
