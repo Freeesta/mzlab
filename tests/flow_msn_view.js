@@ -5,6 +5,7 @@ const ctx = vm.createContext({ window: {}, document: {} });
 ctx.FLOW = {};
 ctx.globalThis = ctx;
 vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../flow/lazy/flow-views-msn.js"), "utf8"), ctx);
+vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../flow/lazy/flow-msn-graph.js"), "utf8"), ctx);
 const F = ctx.FLOW;
 const g = {
   formato: "msngrafo/1",
@@ -27,4 +28,8 @@ eq(t.modifications.rows[2].slice(10), ["", "", "", "", "", ""]);
 // a node with no chosen formula has none shown, but its candidates are counted
 eq(t.nodes.rows, [["n0", "1", "305.1", "C10H20N2O5S", "0.4", "", "1"], ["n1", "2", "261.1", "", "", "mass", "2"]]);
 eq(F.readMsnGraph({}).modifications.rows, []);
+// a chosen formula replaces the one of the same m/z; an empty formula removes it
+eq(F.msnChoices("", "305.1", "C14H15N3O5"), "305.1=C14H15N3O5");
+eq(F.msnChoices("305.1=A, 261.0=B", "305.1", "C"), "261.0=B,305.1=C");
+eq(F.msnChoices("305.1=A", "305.1", ""), "");
 console.log("ok");
