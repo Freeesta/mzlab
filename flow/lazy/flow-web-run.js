@@ -1,13 +1,11 @@
 // @ts-check
-// Flow (administrator mode): the «This browser» runner of the web. It runs the feature steps of a plan (features.detect, features.align, features.gapfill) on the .mzidx files in
-// OPFS (mzlab/idx/) with the pool of feat-worker.js (the .wasm of mzFinder, used through its public API only) and reports every step as an event
-// { passo, stato, mb, via, parte, di, modo } (document event `flow:web-step`, and the `onEvent` option): `via` = browser | computer (where the step can run), `parte`/`di` = file k of n
-// for the steps per file, `mb` = the memory the step asks for (the Rust estimate `stima_series` for the alignment, the peak measured by the worker for the detection), `modo` = memory | slabs | refused.
-// Each result is kept in OPFS (mzlab/flow/) with the key of what made it, so a run after a death of the worker starts again from the first step not finished. Docs: docs/agenti/flow-web.md.
+// Flow (administrator mode): the «This browser» runner of the web. Its helpers (the pool of feat-worker.js with the `feat` .wasm of the site, the .mzidx files of OPFS, the estimate of the alignment,
+// the recipe text) are the `kit` the live session uses (flow-live.js, flow-live-jobs.js); `run(S)` starts that session and waits until every step the browser can do is done or reused, reporting each step
+// as an event { passo, stato, mb, via, parte, di, modo } (document event `flow:web-step`, and the `onEvent` option): `via` = browser | computer, `parte`/`di` = file k of n for the steps per file,
+// `mb` = the memory the step asks for, `modo` = memory | slabs | refused. Docs: docs/agenti/flow-web.md.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const LOCK = "mzlab-mem-grande", BIG_MB = 512, DIR = "mzlab/flow/";
   /** the steps this runner knows, and the ones that need a computer */
   const KNOWN = ["index.mzidx", "features.detect", "features.align", "features.gapfill"];
   const LAYERED = ["features.detect", "features.align", "features.gapfill"];
@@ -51,6 +49,7 @@
     const w = (/** @type {any} */ m) => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
     pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs) } });
     pool.featWasm = w(man.feat);
+    pool.limit = Math.max(1, mod.poolSize(false, navigator.hardwareConcurrency));
     return pool;
   };
 
@@ -70,69 +69,6 @@
     });
   };
 
-  /** true when `path` holds the result made for `key` (the key is kept beside it) @param {any} p @param {string} path @param {string} key */
-  const fresh = async (p, path, key) => {
-    try { return (await p.fs.exists(path)) && new TextDecoder().decode(await p.fs.read(path + ".key")) === key; } catch (_) { return false; }
-  };
-  /** @param {any} p @param {string} path @param {Uint8Array} bytes @param {string} key */
-  const keep = async (p, path, bytes, key) => { await p.fs.write(path, bytes.slice()); await p.fs.write(path + ".key", new TextEncoder().encode(key)); };
-
-  /** @param {any} o @param {any} ev */
-  const emit = (o, ev) => { if (o.onEvent) o.onEvent(ev); document.dispatchEvent(new CustomEvent("flow:web-step", { detail: ev })); };
-
-  /** `features.detect`: one job per file, the finished ones kept at once; a file with its result of this very index is read back instead @param {any} o @param {any} inst @param {any[]} files @param {string} recipe */
-  const detect = async (o, inst, files, recipe) => {
-    const p = await getPool(), n = files.length, out = /** @type {Uint8Array[]} */ (new Array(n));
-    let done = 0, peak = 0;
-    const prev = p.onProgress;
-    p.onProgress = (/** @type {any} */ x) => { peak = Math.max(peak, x.memMB || 0); if (prev) prev(x); };
-    emit(o, { passo: inst.id, stato: "running", via: "browser", parte: 0, di: n, mb: null, modo: null });
-    try {
-      await Promise.all(files.map(async (f, i) => {
-        const path = DIR + f.name + ".mzfeatf", key = f.key + "|" + recipe;
-        const was = await fresh(p, path, key);
-        out[i] = was ? await p.fs.read(path) : (await p.detectAll([{ name: f.name, path: f.path }], recipe))[0];
-        if (!was) await keep(p, path, out[i], key);
-        emit(o, { passo: inst.id, stato: "running", via: "browser", parte: ++done, di: n, mb: peak || null, modo: was ? "reused" : null });
-      }));
-    } finally { p.onProgress = prev; }
-    emit(o, { passo: inst.id, stato: "done", via: "browser", parte: n, di: n, mb: peak || null, modo: null });
-    return out;
-  };
-
-  /** the refusal of the budget with the numbers, as the pipeline reports it @param {any} est */
-  const refusal = (/** @type {any} */ est, /** @type {number} */ budget) => Object.assign(new Error("error.featMemory"), { key: "error.featMemory", params: { fase: "align", stima_mb: est.mb, budget_mb: budget, libero_mb: budget } });
-
-  /** `features.align` (the table of the pool is the one with the gaps filled): the estimate first; past the budget the user is asked once, and past the high level the step is refused with its numbers
-   * @param {any} o @param {any} inst @param {any[]} files @param {Uint8Array[]} stored @param {string} recipe */
-  const align = async (o, inst, files, stored, recipe) => {
-    if (!stored.length) throw Object.assign(new Error("err.flow.lineage"), { key: "err.flow.lineage", params: { step: inst.step } });
-    const p = await getPool(), n = files.length, key = files.map(f => f.key).join(",") + "|" + recipe, path = DIR + "series.mzfeat";
-    if (await fresh(p, path, key)) { emit(o, { passo: inst.id, stato: "reused", via: "browser", parte: 1, di: 1, mb: null, modo: "reused" }); return p.fs.read(path); }
-    const est = await stima(stored, recipe), high = highMb(), budget = Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0;
-    const ev = { passo: inst.id, via: "browser", parte: 1, di: 1, mb: est.mb, modo: est.via };
-    emit(o, { ...ev, stato: "running" });
-    let raised = /** @type {number | undefined} */ (undefined);
-    if (est.via === "refused") {
-      const err = refusal(est, budget);
-      const ok = est.mb <= high && high > budget && o.askMore ? await o.askMore({ fase: "align", stima_mb: est.mb, budget_mb: budget, libero_mb: budget, high_mb: high }) : false;
-      if (!ok) { emit(o, { ...ev, stato: "refused" }); throw err; }
-      raised = p.setBudget(high);
-    }
-    const run = () => p.align(stored, files.map(f => f.path), recipe);
-    try {
-      const table = est.mb > BIG_MB && navigator.locks ? await navigator.locks.request(LOCK, run) : await run();
-      await keep(p, path, table, key);
-      emit(o, { ...ev, stato: "done" });
-      return table;
-    } catch (e) { emit(o, { ...ev, stato: /** @type {any} */ (e).key === "error.featMemory" ? "refused" : "error" }); throw e; }
-    finally {
-      if (raised !== undefined) p.setBudget(raised);
-      // a worker that grew past the big level goes at the end of the step: its memory never shrinks
-      if (est.mb > BIG_MB) { p.cancel(); p.resume(); }
-    }
-  };
-
   /** the recipe text the pool reads for the steps of `plan` up to `upto` (all when none): the layers of the feature steps, which the Rust side applies as `flow run` does, and no gap filling when the plan has no `features.gapfill` @param {any} plan @param {any} [upto] */
   const recipeOf = (plan, upto) => {
     const layers = [];
@@ -144,45 +80,20 @@
     return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });
   };
 
-  /** runs the plan of S: the steps this runner knows, in the order of the plan; the others are left out with `via: "computer"`. Resolves with { steps: [{id, stato}], table }, rejects with {key, params}
+  /** runs the plan of S: the MSn plans by their own runner, every other plan in the live session (flow-live.js), which starts the jobs the browser can do as soon as the plan allows and
+   * here is only waited for. Resolves with { steps, table, llm }, rejects with {key, params}
    * @param {any} S @param {{ onEvent?: (e: any) => void, askMore?: (i: any) => Promise<boolean> }} [opts] */
   const run = async (S, opts = {}) => {
-    const o = { askMore: G.mzlabAskMore, ...opts }, plan = S.plan;
-    if (F.webMsn && F.webMsn.handles(plan)) return F.webMsn.run(S, o);
-    const files = await listIdx();
-    if (!files.length) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
-    for (const inst of plan.steps) emit(o, { passo: inst.id, stato: "waiting", via: KNOWN.includes(base(inst)) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
-    const steps = /** @type {any[]} */ ([]);
-    /** @type {Uint8Array[]} */ let stored = [];
-    /** @type {Uint8Array | null} */ let table = null;
-    for (const inst of plan.steps) {
-      const id = base(inst), ev = { passo: inst.id, via: "browser", parte: 0, di: 0, mb: null, modo: null };
-      if (id === "index.mzidx") emit(o, { ...ev, stato: "reused", parte: files.length, di: files.length });
-      else if (id === "features.detect") stored = await detect(o, inst, files, recipeOf(plan, inst));
-      else if (id === "features.align") table = await align(o, inst, files, stored, recipeOf(plan));
-      else if (id === "features.gapfill") emit(o, { ...ev, stato: table ? "reused" : "skipped", parte: 1, di: 1 });
-      else emit(o, { ...ev, stato: "skipped", via: "computer" });
-      steps.push(inst.id);
-    }
-    // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
-    return { steps, table, llm: S.llmRef || null };
+    const o = { askMore: G.mzlabAskMore, ...opts };
+    if (F.webMsn && F.webMsn.handles(S.plan)) return F.webMsn.run(S, o);
+    if (!F.live) await F.whenLate;
+    return F.live.run(S, o);
   };
 
-  /** the estimate of the alignment when every detection is already kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
-  const preflight = async (S) => {
-    if (!available() || (F.webMsn && F.webMsn.handles(S.plan))) return null;
-    const detectInst = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.detect");
-    const detectRecipe = recipeOf(S.plan, detectInst), recipe = recipeOf(S.plan);
-    const files = await listIdx(), p = await getPool();
-    if (!files.length) return null;
-    const stored = /** @type {Uint8Array[]} */ ([]);
-    for (const f of files) {
-      const path = DIR + f.name + ".mzfeatf";
-      if (!await fresh(p, path, f.key + "|" + detectRecipe)) return null;
-      stored.push(await p.fs.read(path));
-    }
-    return stima(stored, recipe);
-  };
+  /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
+  const preflight = async S => (!available() || (F.webMsn && F.webMsn.handles(S.plan)) || !F.live ? null : F.live.preflight(S));
 
-  F.runners.web = { name: "This browser", available, run, preflight, small, highMb, recipeOf };
+  /** the pieces the live session uses: the pool of workers, the list of the indexes, the estimate, the recipe */
+  const kit = { getPool, listIdx, stima, recipeOf, highMb, KNOWN, poolIfAny: () => pool };
+  F.runners.web = { name: "This browser", available, run, preflight, small, highMb, recipeOf, kit };
 })();

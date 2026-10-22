@@ -111,3 +111,7 @@ def test_every_step_of_the_base_has_a_valid_theory_anchor():
 
 def test_the_msn_graph_view_reads_the_modifications_and_the_ions():
     assert node("flow_msn_view.js").strip() == "ok"
+
+
+def test_the_import_card_reads_a_metadata_table_and_lays_it_over_the_files():
+    assert node("flow_import_meta.js").strip() == "ok"

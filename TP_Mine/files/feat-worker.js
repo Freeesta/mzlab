@@ -84,16 +84,16 @@ function createCore(opts) {
     }
   }
   async function start(slot, job) {
-    slot.busy = true;
+    slot.busy = true; slot.job = job.id; slot.current = job;
     try {
       const value = await job.run(slot, which => ensure(slot, which));
-      slot.busy = false;
+      slot.busy = false; slot.job = slot.current = undefined;
       if (slot.recycle) kill(slot);               // a worker of one heavy phase: its memory goes back by closing it
       job.resolve(value);
     } catch (e) {
-      slot.busy = false;
+      slot.busy = false; slot.job = slot.current = undefined;
       if (slot.recycle) kill(slot);
-      if (e && e.fatal) {                         // the worker is lost: a new one, and the job once more
+      if (job.cancelled) job.reject(fail("tpmine.feat.cancelled")); else if (e && e.fatal) {   // the worker is lost: a new one, and the job once more
         kill(slot);
         if (!job.tried && !st.cancelled) { job.tried = true; notify("tpmine.feat.restarted", { reason: e.key || "" }); queue.unshift(job); }
         else job.reject(e);
@@ -102,14 +102,26 @@ function createCore(opts) {
     pump();
     rest();
   }
-  function submit(run) {
+  function submit(run, id) {
     if (st.cancelled) return Promise.reject(fail("tpmine.feat.cancelled"));
-    return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false }); pump(); });
+    return new Promise((resolve, reject) => { queue.push({ run, resolve, reject, tried: false, id }); pump(); });
   }
+  const cancelJob = makeCancel({ queue, slots, kill, fail });
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
-  return { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText };
+  return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText };
 }
 
+// the folder of a campaign as the worker reads it
+const folder = (root, files) => JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
+// cancelJob(id) of a core: a queued job is rejected, a running one loses its worker alone and is not tried again; false when no such job
+const makeCancel = ({ queue, slots, kill, fail }) => id => {
+  const at = queue.findIndex(j => j.id === id), slot = [...slots].find(s => s.busy && s.job === id);
+  if (at >= 0) queue.splice(at, 1)[0].reject(fail("tpmine.feat.cancelled"));
+  else if (slot) { slot.current.cancelled = true; slot.lost("cancelled"); kill(slot); }
+  return at >= 0 || !!slot;
+};
+// progress of a detection for `onStep` and `onJob` (`f.id` names the job for `cancelJob`)
+const detectStep = (opts, f) => (opts.onStep || opts.onJob) && ((d, t) => { opts.onStep?.({ phase: "detect", name: f.name, id: f.id, done: d, total: t }); if (f.id !== undefined) opts.onJob?.({ job: f.id, frac: t ? Math.min(1, d / t) : 1 }); });
 // Runs a .wasm export over the job's files and writes into memory: { bytes }.
 function viaFiles(m, run) {
   const out = memSink(), rd = new FileReaderSync();
@@ -153,15 +165,7 @@ function previewOps(submit, call, opts) {
 
 /** drift of the RT of the parent along a series (JSON of mzlab_feat::params_drift): `stored` = the .mzfeatf of its files, `baseRtTol` = the tolerance from the peak width (NaN = none) */
 function driftOps(submit, call, copy) {
-  return {
-    drift({ stored, parentMz, baseRtTol }) {
-      return submit(async (slot, load) => {
-        await load("feat");
-        const r = await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol });
-        return JSON.parse(r.json);
-      });
-    },
-  };
+  return { drift: ({ stored, parentMz, baseRtTol }) => submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol })).json); }) };
 }
 
 function proofOps(submit, call, copy, opts) {
@@ -196,19 +200,9 @@ function proofOps(submit, call, copy, opts) {
 function rowOps(submit, call) {
   return {
     // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
-    ms2File({ table, samples, spec, sha, pol, kind, paths }) {
-      return submit(async (slot, load) => {
-        await load("table");
-        return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text;
-      });
-    },
+    ms2File: ({ table, samples, spec, sha, pol, kind, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text; }),
     // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
-    rowTraces({ table, samples, id, ppm, paths }) {
-      return submit(async (slot, load) => {
-        await load("table");
-        return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text;
-      });
-    },
+    rowTraces: ({ table, samples, id, ppm, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text; }),
     // Candidate elemental compositions of one feature from its MS1 spectrum (`.wasm` `untargeted`, `formula_id/1`): `mz`, `y` the spectrum, `featureMz` the monoisotopic m/z,
     // `params` the JSON text of the options (ion, z, tol_ppm, elements, nitrogen, rdb_min, max_results). Resolves with the JSON text.
     formulaId({ mz, y, featureMz, params }) {
@@ -224,7 +218,7 @@ function rowOps(submit, call) {
 }
 
 export function createFeatPool(opts) {
-  const { st, slots, queue, spawn, call, submit, kill, copy, rest, classesText } = createCore(opts);
+  const { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText } = createCore(opts);
   return {
     notify: (k, p) => (opts.notify || (() => {}))(k, p),
     // L1-L3 of every file, in parallel; `files`: [{ name, path }] (path: OPFS path of the .mzidx). Resolves with the .mzfeatf bytes in the order of `files`.
@@ -233,10 +227,10 @@ export function createFeatPool(opts) {
       return Promise.all(files.map(f => submit(async (slot, load) => {
         await load("feat");
         const t0 = performance.now();
-        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe }, undefined, opts.onStep && ((d, t) => opts.onStep({ phase: "detect", name: f.name, done: d, total: t })));
+        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe }, undefined, detectStep(opts, f));
         if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
-      })));
+      }, f.id)));
     },
     // The pipeline after mzmine 3.9.0 (admin mode, `.wasm` `untargeted`): the same two steps as `detectAll` and `align`; `params` = JSON string of the recipe {"engine": "untargeted", ...}.
     async detectAllUnt(files, params) {
@@ -263,8 +257,7 @@ export function createFeatPool(opts) {
     attributioAnnotate(files, root, kind = "json") {
       return submit(async (slot, load) => {
         await load("attributio");
-        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_annotate", files: files.map(f => f.file), names, kind });
+        const r = await call(slot, { op: "attributio_annotate", files: files.map(f => f.file), names: folder(root, files), kind });
         return { summary: JSON.parse(r.summary), bytes: r.bytes };
       });
     },
@@ -272,8 +265,7 @@ export function createFeatPool(opts) {
     attributioReview(files, root, pol, id) {
       return submit(async (slot, load) => {
         await load("attributio_rev");
-        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names, pol, feature: id, classes: await classesText() });
+        const r = await call(slot, { op: "attributio_review", files: files.map(f => f.file), names: folder(root, files), pol, feature: id, classes: await classesText() });
         return JSON.parse(new TextDecoder().decode(r.bytes));
       });
     },
@@ -281,8 +273,7 @@ export function createFeatPool(opts) {
     attributioDecision(files, root, decision) {
       return submit(async (slot, load) => {
         await load("attributio_rev");
-        const names = JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
-        const r = await call(slot, { op: "attributio_decision", files: files.map(f => f.file), names, decision });
+        const r = await call(slot, { op: "attributio_decision", files: files.map(f => f.file), names: folder(root, files), decision });
         return { summary: JSON.parse(r.summary), text: new TextDecoder().decode(r.bytes) };
       });
     },
@@ -292,14 +283,15 @@ export function createFeatPool(opts) {
     ...proofOps(submit, call, copy, opts),
     ...rowOps(submit, call),
     // L4-L6: alignment and gap filling of the series in one worker. `stored`: .mzfeatf bytes in the order of `paths`. Resolves with the .mzfeat bytes.
-    align(stored, paths, recipe) {
+    align(stored, paths, recipe, id, recycle) {
       return submit(async (slot, load) => {
         await load("feat");
+        if (recycle) slot.recycle = true;
         const t0 = performance.now();
         const r = await call(slot, { op: "align", files: copy(stored), paths, recipe, budgetMb: budgetOf(opts) });
         if (opts.onProgress) opts.onProgress({ phase: "align", done: 1, total: 1, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
-      });
+      }, id);
     },
     // both phases in a row (hypotheses worker, then proofs worker). Resolves with { table, tried, found, registry, msHypotheses }.
     async proofs({ table, stored, paths, rules, parent, parentRt, minutes, parentMz, recipe }) {
@@ -325,6 +317,7 @@ export function createFeatPool(opts) {
       if (st.archive) { try { st.archive.w.terminate(); } catch (_) { /* gone */ } st.archive = null; }
     },
     resume() { st.cancelled = false; },
+    cancelJob, get onJob() { return opts.onJob; }, set onJob(f) { opts.onJob = f; },
     setBudget(mb) { const was = opts.budgetMb; opts.budgetMb = mb; return was; },
     get onProgress() { return opts.onProgress; },
     set onProgress(f) { opts.onProgress = f; },

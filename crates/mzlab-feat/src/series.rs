@@ -10,7 +10,7 @@ use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
 use crate::gapfill::fill_file;
 use crate::isotopes::group;
-use crate::pipeline::analyse;
+use crate::pipeline::analyse_with;
 use crate::quality::assess;
 use crate::recipe::{Mode, Recipe, WEAK_RATIO};
 use crate::rtmap::{build, RtMap};
@@ -21,7 +21,16 @@ use crate::weakfile;
 
 /// Detection, quality, isotopes, MS2 and families of one file.
 pub fn analyse_file<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<FileFeatures> {
-    let (mut f, links) = analyse(index, &r.detect, &r.steps)?;
+    analyse_file_with(index, r, &mut |_, _| {})
+}
+
+/// `analyse_file` telling `progress(done, total)` how far the detection is; the features are the same with any `progress`.
+pub fn analyse_file_with<R: ReadAt>(
+    index: &mut Index<R>,
+    r: &Recipe,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<FileFeatures> {
+    let (mut f, links) = analyse_with(index, &r.detect, &r.steps, progress)?;
     analyse_families(index, &mut f, &links, &r.detect, &r.fam)?;
     Ok(f)
 }
