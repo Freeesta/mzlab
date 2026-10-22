@@ -3819,3 +3819,4 @@
 {"v":1,"ts_utc":"2026-10-22T09:37:38Z","tipo":"carico","k":"2026-10-22T09:3","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-10-22T09:39:14Z","azione":"aperta","tipo":"pr","pr":1482,"sha":"f18dd18164064b4b4c36f94d6ad24c08f184c2a6"}
 {"v":1,"ts_utc":"2026-10-22T09:40:24Z","azione":"push","titolo":"Test dei passi CLI: aggiunge spectra.lookup all'elenco","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1480,"sha":"599d37aead51c75148b3091a897d74bc25a754df"}
+{"v":1,"ts_utc":"2026-10-22T09:40:54Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/flow-live-2","merge_main":true,"aree":{"rust":1},"tipo":"pr","pr":1482,"sha":"49b648366eeb4e8bce4b19b904008fba4e2e77e0"}
