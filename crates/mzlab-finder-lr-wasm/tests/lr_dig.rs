@@ -88,6 +88,7 @@ fn contract_and_rows_of_python() {
             "net_change",
             "modification",
             "pred",
+            "coelutes",
         ];
         same_shape(&without(row, &keys), &g["row"], "row");
         for k in row["kinetics"].as_array().unwrap() {
