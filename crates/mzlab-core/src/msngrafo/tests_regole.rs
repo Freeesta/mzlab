@@ -167,7 +167,8 @@ fn the_key_is_added_at_the_end_and_a_graph_without_it_keeps_its_bytes() {
     let o = con(None);
     let (g, j) = grafo_spostato(&o, &[0, 1, 2, 3], false, 0.0);
     let k = con_regole(&j, &g, &o, &ParamRegole::default());
-    assert!(k.starts_with(j.strip_suffix('}').unwrap()));
+    assert!(k.starts_with(j.split(",\"vista\":").next().unwrap()));
+    assert!(k.ends_with(&j[j.find(",\"vista\":").unwrap()..]));
     let v = crate::json::parse(k.as_bytes()).unwrap();
     let r = v.get("regole").unwrap();
     assert_eq!(r.get("tabella").and_then(|x| x.str()), Some("fragrules/1"));

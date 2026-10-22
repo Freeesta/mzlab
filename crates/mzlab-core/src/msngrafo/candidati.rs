@@ -4,6 +4,15 @@
 use super::PERDITE;
 use crate::elements::{fmt, mass_of, parse_formula, Formula, ELECTRON};
 
+/// Losses outside `PERDITE` that Hill order writes in an unusual way (Hill form, usual name); the others keep their Hill form (`C4H8`).
+const NOMI: [(&str, &str); 5] = [
+    ("CHNO", "HNCO"),
+    ("FH", "HF"),
+    ("ClH", "HCl"),
+    ("H3O4P", "H3PO4"),
+    ("HO3P", "HPO3"),
+];
+
 /// Atomic number (electrons of the neutral atom) and valence of the elements of `elements::MASS`.
 pub(super) const ATOMI: [(&str, u32, u32); 14] = [
     ("H", 1, 1),
@@ -67,7 +76,13 @@ impl Elementi {
     pub fn testo_perdita(&self, d: &[u32]) -> String {
         match self.perdite.iter().find(|(_, c)| c == d) {
             Some((n, _)) => n.to_string(),
-            None => self.testo(d),
+            None => {
+                let hill = self.testo(d);
+                match NOMI.iter().find(|(h, _)| *h == hill) {
+                    Some((_, n)) => n.to_string(),
+                    None => hill,
+                }
+            }
         }
     }
 

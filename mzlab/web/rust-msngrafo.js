@@ -52,6 +52,14 @@ export async function msnGrafo(name, blob, query, readerFor, esporta = false, id
 }
 
 /**
+ * The text of an `msngrafo/1` with the key `vista` added (a graph that has it comes back as it is); a failure is thrown as the JSON string `{error_key, params}`.
+ * @param {string} json
+ */
+export async function msnCompleta(json) {
+  return (await load("msngrafo")).completa(json);
+}
+
+/**
  * The library text with the entry of `molecola` and the graph of the query added: the JSON string `{libreria, doppione}` of the module.
  * @param {string} name @param {Blob} blob the mzML @param {string} query the parameters of the graph as a query string
  * @param {string} libreria the library file of the user ("" = none) @param {string} molecola
