@@ -327,3 +327,82 @@ fn the_recipe_of_the_layers_gives_the_bytes_of_flow_run() {
     assert!(mzlab_feat_wasm::run::layers_from_json(r#"{"step":1}"#).is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn the_alignment_reads_the_weak_candidates_the_detection_stored() {
+    use mzlab_core::budget::MemBudget;
+    use mzlab_feat::slabs::Stored;
+    use mzlab_feat::weakfile;
+    use mzlab_feat_wasm::run;
+
+    use crate::flow_base::{open, Files};
+
+    let (dir, _) = fixture("weak");
+    let (data, out) = (dir.join("data"), dir.join("out"));
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&data),
+        "--out",
+        p(&out),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let peaks: Vec<PathBuf> = (0..3)
+        .map(|k| out.join(format!("det-{k}.mzfeatf")))
+        .collect();
+    let stored = |k: usize| std::fs::read(format!("{}.weak", peaks[k].display())).unwrap();
+    let mut recipe =
+        run::recipe_for_estimated("", &mut open(&out.join("idx-0.mzidx")).unwrap()).unwrap();
+    recipe.fill_gaps = false;
+    recipe.weak_files = 1;
+    let key = recipe.weak_hash();
+    let candidates = weakfile::from_bytes(&stored(1), &key).unwrap();
+    let mut candidates =
+        candidates.expect("the recipe of the alignment is the one of the detection");
+    assert!(
+        weakfile::from_bytes(&stored(1), "0123456789abcdef0123456789abcdef")
+            .unwrap()
+            .is_none()
+    );
+    let align = |src: &mut Files| {
+        let mut bytes = Vec::new();
+        run::align_to(
+            src,
+            &MemBudget::mb(1024.0),
+            &recipe,
+            |k| open(&out.join(format!("idx-{k}.mzidx"))),
+            &mut bytes,
+        )
+        .unwrap();
+        bytes
+    };
+    let plain = align(&mut Files(peaks.clone()));
+
+    // a candidate that the strong peaks do not hold reaches the table; the same bytes under another key are not read
+    candidates.mz.push(777.7);
+    candidates.rt.push(9.0);
+    candidates.left.push(8.9);
+    candidates.right.push(9.1);
+    candidates.area.push(1e6);
+    candidates.height.push(1e5);
+    candidates.flags.push(mzlab_feat::table::FLAG_GOOD);
+    let planted = weakfile::to_bytes(&candidates, &key);
+    let foreign = weakfile::to_bytes(&candidates, "0123456789abcdef0123456789abcdef");
+    std::fs::write(format!("{}.weak", peaks[1].display()), &planted).unwrap();
+    let with = align(&mut Files(peaks.clone()));
+    assert_ne!(with, plain, "the stored candidates are read");
+    std::fs::write(format!("{}.weak", peaks[1].display()), foreign).unwrap();
+    assert_eq!(
+        align(&mut Files(peaks.clone())),
+        plain,
+        "another key is detected again"
+    );
+    std::fs::remove_file(format!("{}.weak", peaks[1].display())).unwrap();
+    assert_eq!(
+        align(&mut Files(peaks.clone())),
+        plain,
+        "no stored candidates is detected again"
+    );
+    assert!(Files(peaks).weak(1).unwrap().is_none());
+    let _ = std::fs::remove_dir_all(&dir);
+}

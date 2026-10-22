@@ -10,7 +10,7 @@ use mzlab_feat::evid::PointsTable;
 use mzlab_feat::facts::{file_facts, FileFacts};
 use mzlab_feat::hypo::{generate, HypoParams, Inputs as HypoInputs, Registry, Rules, Structure};
 use mzlab_feat::recipe::{Mode, Recipe};
-use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256};
+use mzlab_feat::series::{align_and_fill, analyse_file, source_sha256, weak_candidates};
 use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
@@ -19,6 +19,7 @@ use mzlab_feat::store::{
 };
 use mzlab_feat::table::{FileFeatures, RowIdent};
 use mzlab_feat::target::{run, TargetParams, TargetResult};
+use mzlab_feat::weakfile;
 
 /// Recipe from `{"polarity": 1 | -1 | null, "mode": "ion" | "family"}`; anything else keeps the default of the crate.
 pub fn recipe_from_json(text: &str) -> Result<Recipe> {
@@ -172,6 +173,15 @@ pub fn detect<R: ReadAt>(index: &mut Index<R>, name: &str, r: &Recipe) -> Result
     let mut v = Vec::new();
     detect_to(index, name, r, &mut v)?;
     Ok(v)
+}
+
+/// The weak candidates of one file as `weakfile` bytes, to store beside its `.mzfeatf`: the alignment of the series reads them instead of detecting the
+/// file again (the same table, whatever makes it).
+pub fn detect_weak<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Vec<u8>> {
+    Ok(weakfile::to_bytes(
+        &weak_candidates(index, r)?,
+        &r.weak_hash(),
+    ))
 }
 
 /// The per-file tables and the origin of a list of `.mzfeatf` (name and SHA-256 from their meta).
