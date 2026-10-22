@@ -89,7 +89,7 @@
   };
   const ready = lrInit();
   ready.catch(() => {});
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo|msnlib\/aggiungi)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo|msnlib\/aggiungi|msnlib\/cerca)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
