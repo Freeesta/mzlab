@@ -215,6 +215,35 @@ def compatta(ev: list[dict], oggi: datetime, giorni: int = 14) -> list[dict]:
     return ev
 
 
+def giornaliero(ev: list[dict]) -> list[dict]:
+    """One row per UTC day: runs, re-runs, mean queue, failed jobs by category, PRs opened/merged, mean open-to-merge, green-to-merge and commits per merged PR, conflicts."""
+    from stat_ci import media
+    giorni: dict[str, dict] = defaultdict(lambda: {"run": 0, "rilanci": 0, "coda": [], "job_rossi": Counter(), "pr_aperte": 0, "pr_unite": 0,
+                                                   "aperta_s": [], "verde_a_unione_s": [], "commit_n": [], "conflitti": 0})
+    for r in ev:
+        g = giorni[r["ts_utc"][:10]]
+        t = r["tipo"]
+        if t == "run":
+            g["run"] += 1
+            g["rilanci"] += r.get("run_attempt", 1) > 1
+            g["coda"].append(r.get("coda_s"))
+        elif t == "job_fallito":
+            g["job_rossi"][r["categoria"]] += 1
+        elif t == "conflitto":
+            g["conflitti"] += 1
+        elif t == "pr" and r["azione"] == "aperta":
+            g["pr_aperte"] += 1
+        elif t == "pr" and r["azione"] == "unita":
+            g["pr_unite"] += 1
+            for k in ("aperta_s", "verde_a_unione_s", "commit_n"):
+                g[k].append(r.get(k))
+    cat = sorted({c for g in giorni.values() for c in g["job_rossi"]})
+    return [{"giorno": d, "run": g["run"], "rilanci": g["rilanci"], "coda_media_s": round(media(g["coda"])), "pr_aperte": g["pr_aperte"], "pr_unite": g["pr_unite"],
+             "aperta_media_s": round(media(g["aperta_s"])), "verde_a_unione_media_s": round(media(g["verde_a_unione_s"])),
+             "commit_per_pr_media": round(media(g["commit_n"]), 1), "conflitti": g["conflitti"],
+             **{"rossi_" + c: g["job_rossi"][c] for c in cat}} for d, g in sorted(giorni.items())]
+
+
 def esporta(ev: list[dict], cartella: str) -> list[str]:
     """One CSV per row type; nested values as JSON text."""
     os.makedirs(cartella, exist_ok=True)
@@ -222,6 +251,7 @@ def esporta(ev: list[dict], cartella: str) -> list[str]:
     for r in ev:
         per_tipo[r["tipo"]].append(r)
     scritti = []
+    per_tipo["giornaliero"] = giornaliero(ev)
     for tipo, righe in per_tipo.items():
         cols = sorted({c for r in righe for c in r})
         path = os.path.join(cartella, f"{tipo}.csv")
