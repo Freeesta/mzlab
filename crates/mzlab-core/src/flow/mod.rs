@@ -10,6 +10,7 @@ mod order;
 mod parse;
 mod prov;
 mod run;
+pub mod sched;
 mod write;
 
 pub use canon::{cache_key, canonical, value_text, Resolved};

@@ -3,7 +3,7 @@
 # pull_request_target and workflow_run run the file from main and check out main only: code of a pull request is never run with the write token.
 name: stat-ci
 
-# The runs of test/rust/pages are read by a poll every 10 minutes (cursor in cursore.json on stat-ci), not one job per completed run.
+# The runs of test/rust/pages are read by a poll (schedule, plus every push to main; cursor in cursore.json on stat-ci), not one job per completed run.
 on:
   schedule:
     - cron: "*/10 * * * *"
@@ -53,6 +53,11 @@ jobs:
             *) exit 0 ;;
           esac
           python3 tools/ci_metrics.py "$cmd" --dati dati/eventi.jsonl --nuovi nuovi.jsonl --cursore cursore-nuovo.json
+          # GitHub fires the cron only a few times a day: every push to main also polls the completed runs (rows are deduplicated, the cursor only advances)
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            python3 tools/ci_metrics.py registra-recenti --dati dati/eventi.jsonl --nuovi nuovi-recenti.jsonl --cursore cursore-nuovo.json
+            cat nuovi-recenti.jsonl >> nuovi.jsonl
+          fi
       - name: Publish on stat-ci
         working-directory: dati
         run: |

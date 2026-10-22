@@ -265,6 +265,19 @@ def accoda(righe: list[dict], dati: str) -> int:
     return len(nuove)
 
 
+def avanza_cursore(nuovo: str, attuale: str) -> None:
+    """Copy cursor file `nuovo` over `attuale` unless it is older: polls on push and on schedule run concurrently."""
+    try:
+        with open(attuale, encoding="utf-8") as f:
+            vecchio = json.load(f)["ultimo"]
+        with open(nuovo, encoding="utf-8") as f:
+            if vecchio >= json.load(f)["ultimo"]:
+                return
+    except (OSError, KeyError, ValueError):
+        pass
+    shutil.copyfile(nuovo, attuale)
+
+
 def hm(s: float) -> str:
     s = int(s)
     return f"{s // 3600}h{s % 3600 // 60:02d}"
@@ -399,7 +412,7 @@ def main() -> int:
     if a.comando == "accoda":
         print(f"{accoda(leggi(a.file), dati)} new lines")
         if a.cursore and os.path.exists(a.cursore):
-            shutil.copyfile(a.cursore, os.path.join(os.path.dirname(dati) or ".", "cursore.json"))
+            avanza_cursore(a.cursore, os.path.join(os.path.dirname(dati) or ".", "cursore.json"))
         return 0
     if a.comando == "compatta":
         scrivi_righe(dati, dati_ci.compatta(leggi(dati), dati_ci.adesso_dt(), a.giorni))
