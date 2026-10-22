@@ -17,7 +17,7 @@ mod rotta;
 mod strutture;
 mod unisci;
 
-pub use cerca::{cerca, Opzioni as OpzioniCerca};
+pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
 pub use esporta::{da_richiesta_export, esporta, Formato};
 pub use json::json;
 pub use leggi::{leggi, Letto};

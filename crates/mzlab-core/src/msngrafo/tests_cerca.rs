@@ -190,3 +190,17 @@ fn an_analogue_splits_the_fragments_in_shifted_and_not_shifted_and_stays_after_t
     };
     assert!(candidates(&lib, &modified, &narrow).is_empty());
 }
+
+#[test]
+fn the_options_of_a_request_have_defaults_and_a_bad_number_is_a_keyed_error() {
+    use super::opzioni_cerca;
+    let q = |pairs: &'static [(&str, &str)]| {
+        move |k: &str| pairs.iter().find(|p| p.0 == k).map(|p| p.1.to_string())
+    };
+    assert_eq!(opzioni_cerca(&q(&[])).unwrap(), OpzioniCerca::default());
+    let o = opzioni_cerca(&q(&[("ppm_prec", "5"), ("top", "3"), ("delta_max", "16")])).unwrap();
+    assert_eq!((o.ppm_prec, o.top, o.delta_max), (5.0, 3, 16.0));
+    let e = opzioni_cerca(&q(&[("top", "abc")])).err().unwrap();
+    assert_eq!(e.key, "err.request.badNumber");
+    assert!(opzioni_cerca(&q(&[("tol_mz", "-1")])).is_err());
+}

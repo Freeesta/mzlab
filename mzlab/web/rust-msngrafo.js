@@ -49,3 +49,13 @@ export async function msnLibAggiungi(name, blob, query, libreria, molecola, read
   const [m, idx] = await Promise.all([load(), indexOf(name)]);
   return m.msnlib_aggiungi(readerFor(idx), idx.size, readerFor(blob), name, query, libreria, molecola);
 }
+
+/**
+ * The candidates of the library text for the graph of the query (`msncerca/1`, a JSON string); the query carries the parameters of the graph and the options of the search.
+ * @param {string} name @param {Blob} blob the mzML @param {string} query @param {string} libreria the library file of the user
+ * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
+ */
+export async function msnLibCerca(name, blob, query, libreria, readerFor) {
+  const [m, idx] = await Promise.all([load(), indexOf(name)]);
+  return m.msnlib_cerca(readerFor(idx), idx.size, readerFor(blob), name, query, libreria);
+}

@@ -7,7 +7,9 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
-use mzlab_core::msngrafo::{aggiungi, da_richiesta, da_richiesta_export, esporta, grafo_json};
+use mzlab_core::msngrafo::{
+    aggiungi, cerca, da_richiesta, da_richiesta_export, esporta, grafo_json, opzioni_cerca,
+};
 use mzlab_core::msngrafo::{Grafo, Opzioni};
 use mzlab_core::routes::Query;
 use mzlab_feat::chem::strutture::strutture_testo;
@@ -158,4 +160,21 @@ pub fn msnlib_aggiungi(
     o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
     o.raw(if doppione { "true}" } else { "false}" });
     Ok(o.0)
+}
+
+/// `api/msnlib/cerca`: the candidates of the library text `libreria` for the graph of the query (`msncerca/1`); the query carries the options of the graph and
+/// those of the search (`ppm_prec`, `tol_mz`, `min_prove`, `top`, `delta_max`).
+#[wasm_bindgen]
+pub fn msnlib_cerca(
+    read_idx: Function,
+    idx_size: f64,
+    read_file: Function,
+    nome: &str,
+    query: &str,
+    libreria: &str,
+) -> Result<String, JsValue> {
+    let q = Query::parse(query);
+    let o = opzioni_cerca(&|k| q.get(k).map(String::from)).map_err(js_err)?;
+    let (_, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+    cerca(libreria, &j, &o).map_err(js_err)
 }
