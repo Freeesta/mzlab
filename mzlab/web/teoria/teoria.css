@@ -425,3 +425,11 @@ body.tedit-active .sim::before{content:"[Simulazione interattiva protetta]";posi
 .exp-status.err{background:var(--bad);color:#fff}
 
 
+
+/* ---- reserved space (no layout shift): the header (#top, built by teoria.js) and the commands block of the index (#sidecmd, added by comandi.js) arrive after the first paint; until then a blank box of their final height stands in their place ---- */
+:root{--toph:61px;--sidech:285px}
+@media (pointer:fine){:root{--toph:42px;--sidech:213px}}
+@media (pointer:coarse) and (max-width:640px){:root{--toph:53px}}
+#top{min-height:var(--toph)}
+html:not(.tp-emb) body:not(.hdr)::before{content:"";display:block;height:var(--toph)}
+#side:not(:has(#sidecmd))::before{content:"";display:block;height:calc(var(--sidech) + 14px)}
