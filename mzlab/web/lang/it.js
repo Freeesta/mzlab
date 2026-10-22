@@ -3819,13 +3819,5 @@ I18N.add("it", {
   "err.llm.conversation": "La conversazione non è valida ({field}).",
   "err.llm.provider": "Qui non c'è nessun fornitore disponibile. Il sito raggiunge solo modelli sul tuo computer; l'app desktop raggiunge gli altri.",
   "err.llm.tools": "Il catalogo degli strumenti non è valido ({field}).",
-  "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova.",
-  "msngrafo.file.open": "Apri un file di grafo…",
-  "msngrafo.file.open.tip": "Apre un grafo di frammentazione salvato (un file .json della riga di comando o del Flow); puoi anche trascinarlo qui o nell'area dei dati",
-  "msngrafo.file.title": "Grafo di frammentazione · {name}",
-  "msngrafo.file.close": "Chiudi il grafo",
-  "msngrafo.file.ro": "Aperto dal file {name} senza i suoi dati grezzi: puoi leggere il grafo e ogni ione, ma lo spettro di uno ione, «Usa», i tagli di una struttura e un nuovo calcolo delle regole richiedono il file dei dati grezzi e sono spenti.",
-  "msngrafo.file.off": "Richiede il file dei dati grezzi, che non è caricato: questo grafo è stato aperto da un file salvato.",
-  "msngrafo.file.nospec": "Lo spettro di questo ione non si può aprire: il file dei dati grezzi non è caricato.",
-  "error.msngrafo.badFile": "{file} non è un grafo di frammentazione che il programma sa leggere ({raw})."
+  "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova.", "msngrafo.file.open": "Apri un file di grafo…", "msngrafo.file.open.tip": "Apre un grafo di frammentazione salvato (un file .json della riga di comando o del Flow); puoi anche trascinarlo qui o nell'area dei dati", "msngrafo.file.title": "Grafo di frammentazione · {name}", "msngrafo.file.close": "Chiudi il grafo", "msngrafo.file.ro": "Aperto dal file {name} senza i suoi dati grezzi: puoi leggere il grafo e ogni ione, ma lo spettro di uno ione, «Usa», i tagli di una struttura e un nuovo calcolo delle regole richiedono il file dei dati grezzi e sono spenti.", "msngrafo.file.off": "Richiede il file dei dati grezzi, che non è caricato: questo grafo è stato aperto da un file salvato.", "msngrafo.file.nospec": "Lo spettro di questo ione non si può aprire: il file dei dati grezzi non è caricato.", "error.msngrafo.badFile": "{file} non è un grafo di frammentazione che il programma sa leggere ({raw})."
 });
