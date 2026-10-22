@@ -5930,3 +5930,4 @@
 {"v":1,"ts_utc":"2026-10-22T14:00:57Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3843683,null]},"byte_totali":3843683,"margine_min_pct":null,"pr":1503,"sha":"793d79d5b28d5c00e44cf4b19222a8a8eab27e12","run_id":39791443493,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T14:01:52Z","tipo":"carico","k":"2026-10-22T14:0","job_in_coda":10,"job_in_corso":12}
 {"v":1,"ts_utc":"2026-10-22T14:13:23Z","azione":"aperta","tipo":"pr","pr":1504,"sha":"922d5356abd5701c18b6a9837a9feaacdeda09fa"}
+{"v":1,"ts_utc":"2026-10-22T14:13:57Z","azione":"aperta","tipo":"pr","pr":1505,"sha":"f29b957acdb539d7566808ab0ac7f3fb507ef975"}
