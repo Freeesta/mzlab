@@ -36,13 +36,13 @@ impl Default for Opzioni {
 }
 
 /// One spectrum of a graph: its path of precursors, activation, energy, precursor node and peaks `(mz, rel, node)`.
-struct Sp {
-    path: String,
-    level: i64,
-    act: String,
-    ce: f64,
-    prec: String,
-    peaks: Vec<(f64, f64, Option<String>)>,
+pub(super) struct Sp {
+    pub(super) path: String,
+    pub(super) level: i64,
+    pub(super) act: String,
+    pub(super) ce: f64,
+    pub(super) prec: String,
+    pub(super) peaks: Vec<(f64, f64, Option<String>)>,
 }
 
 /// A neutral loss between two ions: the formula when the graph proposed one.
@@ -52,11 +52,11 @@ struct Loss {
 }
 
 /// What the search needs of a graph.
-struct G {
-    pol: f64,
-    mz: f64,
+pub(super) struct G {
+    pub(super) pol: f64,
+    pub(super) mz: f64,
     nodes: HashMap<String, f64>,
-    spectra: Vec<Sp>,
+    pub(super) spectra: Vec<Sp>,
     losses: Vec<Loss>,
 }
 
@@ -80,15 +80,15 @@ pub fn opzioni_da_richiesta(get: &dyn Fn(&str) -> Option<String>) -> Result<Opzi
     })
 }
 
-fn bad() -> Error {
+pub(super) fn bad() -> Error {
     Error::new("err.msnlib.bad")
 }
 
-fn text(v: Option<&Value>) -> String {
+pub(super) fn text(v: Option<&Value>) -> String {
     v.and_then(|x| x.str()).unwrap_or("").to_string()
 }
 
-fn read_graph(g: &Value) -> Result<G> {
+pub(super) fn read_graph(g: &Value) -> Result<G> {
     let nodes: HashMap<String, f64> = g
         .get("nodi")
         .map_or(&[][..], |x| x.arr())
@@ -175,7 +175,11 @@ fn shape(path: &str) -> String {
 
 /// The entropy similarity and the shared peaks of `u` against the spectrum of `list` at the nearest energy; among spectra at the same distance
 /// (the same ion reached by different upstream energies) the most similar one, so a tree always finds itself.
-fn best_of<'a>(u: &Sp, list: impl Iterator<Item = &'a Sp>, tol: f64) -> Option<(f64, usize)> {
+pub(super) fn best_of<'a>(
+    u: &Sp,
+    list: impl Iterator<Item = &'a Sp>,
+    tol: f64,
+) -> Option<(f64, usize)> {
     let cand: Vec<&Sp> = list.filter(|e| !e.peaks.is_empty()).collect();
     let near = cand
         .iter()

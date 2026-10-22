@@ -19,6 +19,23 @@ const ADDOTTI: [(&str, &str, i8, i8); 9] = [
     ("+CH3COO", "C2H3O2", 1, -1),
 ];
 
+/// The adduct of a typed ion (`[M+H]+` for `C8H11N4O2+`, `C8H10N4O2+Na`...); `None` for `[M]+`/`[M]-`, the ion itself.
+pub(super) fn addotto(testo: &str, pol: i8) -> Option<&'static str> {
+    let t: String = testo.split_whitespace().collect();
+    if t.ends_with("[M]+") || t.ends_with("[M]-") {
+        return None;
+    }
+    let trovato = ADDOTTI[7..].iter().find(|x| t.ends_with(x.0)).or_else(|| {
+        let a = embedded_adduct(&t).1?;
+        ADDOTTI.iter().find(|x| x.0 == a)
+    });
+    Some(match (trovato, pol) {
+        (Some(x), _) => x.0,
+        (None, 1) => "[M+H]+",
+        _ => "[M-H]-",
+    })
+}
+
 /// The root is looked for within this distance when no node is within the tolerance (the isolation window of the MS2).
 const FINESTRA: f64 = 0.5;
 

@@ -5,7 +5,7 @@ use super::PERDITE;
 use crate::elements::{fmt, mass_of, parse_formula, Formula, ELECTRON};
 
 /// Atomic number (electrons of the neutral atom) and valence of the elements of `elements::MASS`.
-const ATOMI: [(&str, u32, u32); 14] = [
+pub(super) const ATOMI: [(&str, u32, u32); 14] = [
     ("H", 1, 1),
     ("C", 6, 4),
     ("N", 7, 3),
