@@ -27,6 +27,10 @@ pub trait Hooks: Sync {
     fn reuse(&self, _key: &str) -> Option<Outcome> {
         None
     }
+    /// A job that someone else runs: `work` does not start it.
+    fn leave(&self, _id: &JobId) -> bool {
+        false
+    }
     /// A job starts (called with the lock held: only record it).
     fn begin(&self, _id: &JobId) {}
     /// A job ended with `r` under `key`; `landed` says whether the scheduler used it (a discarded result is true for its key).
@@ -72,16 +76,17 @@ pub fn work(runner: &dyn Runner, core: &Mutex<Core>, cv: &Condvar, hooks: &dyn H
     }
 }
 
-/// The most urgent job that is ready, marked as started, with what it reads and the plan it belongs to. A job whose key has a result already made is
+/// The most urgent job that is ready (and not left to someone else), marked as started, with what it reads and the plan it belongs to. A job whose key has a result already made is
 /// `reused` and the next one is looked at.
 fn pick(g: &mut Core, hooks: &dyn Hooks) -> Option<(JobId, Ins, Arc<Ctx>)> {
     let ctx = g.ctx.clone()?;
     let limits = Limits {
-        slots: 1,
+        slots: usize::MAX,
         mem_mb: f64::INFINITY,
     };
     loop {
-        let spec = g.sched.next(&limits, |_| 0.0).into_iter().next()?;
+        let specs = g.sched.next(&limits, |_| 0.0);
+        let spec = specs.into_iter().find(|s| !hooks.leave(&s.id))?;
         let reused = hooks.reuse(&spec.key).filter(|_| g.sched.cached(&spec.id));
         match reused {
             Some(o) => {

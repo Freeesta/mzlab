@@ -221,3 +221,38 @@ fn flow_live_keeps_a_result_while_its_files_are_as_they_were() {
     drop(run);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn flow_live_a_claimed_job_is_run_by_the_caller_and_the_rest_follows() {
+    use mzlab_core::step::DataType;
+
+    use super::Lend;
+
+    let (dir, _) = fixture("live_lend");
+    let base = std::fs::read(dir.join("plan.json")).unwrap();
+    let first = live(&dir, &base, "w_l1", 2);
+    assert!(first.wait_idle(LIMIT));
+    drop(first);
+
+    let run = live(&dir, &base, "w_l2", 2);
+    let idx = run.jobs_of("index.mzidx");
+    assert_eq!(idx.len(), 3);
+    run.claim(&idx);
+    // nothing past the claimed jobs starts, and the workers do not take them
+    std::thread::sleep(Duration::from_millis(300));
+    let state = |id: &JobId| super::lock(&run.shared.core).sched.jobs().into_iter().find(|j| j.0 == *id).unwrap().1;
+    assert!(matches!(state(&idx[0]), State::Ready), "{:?}", state(&idx[0]));
+    assert!(run.lend(&idx[0], Lend::Running(Some(0.5))));
+    assert!(matches!(state(&idx[0]), State::Running { frac: Some(f) } if f == 0.5));
+    // the files the caller made are the ones of the first run
+    for (k, id) in idx.iter().enumerate() {
+        let name = format!("idx-s_t{:03}.mzidx", [0, 10, 30][k]);
+        let file = dir.join("w_l1").join(name);
+        assert!(run.lend(id, Lend::Done(vec![("index", file, DataType::Mzidx)])));
+    }
+    assert!(run.wait_idle(LIMIT));
+    assert!(run.jobs_of("features.align").iter().all(|id| matches!(state(id), State::Done)));
+    assert!(run.finish().is_ok());
+    drop(run);
+    let _ = std::fs::remove_dir_all(&dir);
+}

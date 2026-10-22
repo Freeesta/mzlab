@@ -103,6 +103,10 @@ impl Hooks for Shared {
         None
     }
 
+    fn leave(&self, id: &JobId) -> bool {
+        lock(&self.lent).contains(id)
+    }
+
     fn begin(&self, id: &JobId) {
         lock(&self.link.flags).insert(id.clone(), Arc::new(AtomicBool::new(false)));
     }
@@ -343,49 +347,55 @@ impl LiveRun {
             .collect()
     }
 
-    /// A job that someone else runs (the conversion queue of the desktop app): shown running while it is, and `reused` (when it was ready already) or
-    /// `done` with the files it made. False when the job is not in a state to take that: running here, or finished.
+    /// The jobs `ids` are run by the caller (the conversion queue of the desktop app): the workers leave them alone, `lend` tells how they stand.
+    pub fn claim(&self, ids: &[JobId]) {
+        lock(&self.shared.lent).extend(ids.iter().cloned());
+    }
+
+    /// A job the caller no longer runs: the workers take it again.
+    pub fn release(&self, id: &JobId) {
+        lock(&self.shared.lent).remove(id);
+        self.shared.cv.notify_all();
+    }
+
+    /// How a claimed job stands: shown running while it is, `reused` (when it was ready already) or `done` with the files it made. False when the job
+    /// is not in a state to take that: running here, or finished.
     pub fn lend(&self, id: &JobId, how: Lend) -> bool {
         let sh = &self.shared;
-        if let Lend::Done(files) = &how {
-            let outputs: Result<Vec<_>> = files
-                .iter()
-                .map(|(port, p, ty)| Ok((port.to_string(), sh.runner.keep(p.clone(), *ty)?)))
-                .collect();
-            return match outputs {
-                Ok(outputs) => self.settle(id, Ok(Outcome { outputs, cached: true, ..Outcome::default() })),
-                Err(e) => self.settle(id, Err(e)),
-            };
-        }
-        let mut g = lock(&sh.core);
-        let mine = lock(&sh.lent).contains(id);
-        let done = match how {
-            Lend::Running(f) => {
-                let ok = mine || (g.sched.started(id) && lock(&sh.lent).insert(id.clone()));
-                if let (true, Some(f)) = (ok, f) {
+        let r = match how {
+            Lend::Done(files) => {
+                let outputs: Result<Vec<_>> = files
+                    .iter()
+                    .map(|(port, p, ty)| Ok((port.to_string(), sh.runner.keep(p.clone(), *ty)?)))
+                    .collect();
+                outputs.map(|outputs| Outcome { outputs, cached: true, ..Outcome::default() })
+            }
+            Lend::Failed(e) => Err(e),
+            Lend::Running(frac) => {
+                let mut g = lock(&sh.core);
+                let up = is_running(&g.sched, id) || g.sched.started(id);
+                if let (true, Some(f)) = (up, frac) {
                     g.sched.progress(id, f);
                 }
-                ok
+                return up && lock(&sh.lent).contains(id);
             }
-            Lend::Failed(e) => return self.settle_locked(g, id, Err(e)),
-            Lend::Done(_) => false,
         };
-        drop(g);
-        done
+        self.settle(id, r)
     }
 
     fn settle(&self, id: &JobId, r: Result<Outcome>) -> bool {
-        self.settle_locked(lock(&self.shared.core), id, r)
-    }
-
-    fn settle_locked(&self, mut g: MutexGuard<'_, Core>, id: &JobId, r: Result<Outcome>) -> bool {
         let sh = &self.shared;
+        let mut g = lock(&sh.core);
+        let running = is_running(&g.sched, id);
         let mine = lock(&sh.lent).remove(id);
+        if running && !mine {
+            return false;
+        }
         let told = match &r {
             Ok(o) => Ok(Done { ms: o.ms }),
             Err(e) => Err(e.clone()),
         };
-        let landed = if mine {
+        let landed = if running {
             g.sched.finished(id, told) == Landed::Accepted
         } else if r.is_ok() {
             g.sched.cached(id)
@@ -399,6 +409,10 @@ impl LiveRun {
         sh.cv.notify_all();
         landed
     }
+}
+
+fn is_running(s: &Sched, id: &JobId) -> bool {
+    s.jobs().iter().any(|(j, st)| j == id && matches!(st, State::Running { .. }))
 }
 
 impl Drop for LiveRun {
