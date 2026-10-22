@@ -157,6 +157,7 @@ try:
             assert all("interpreta" not in r[1] for r in json.loads(pg.evaluate("JSON.stringify(window.__REQ.filter(r=>r[0]==='api/msn_grafo/export'))")))
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-int li", timeout=10000)
             t = pg.inner_text(".ig-int"); assert "Carbon dioxide" in t and "CO2" in t and "high confidence" in t, t
+            assert "Activation and energy: CID 35" in pg.inner_text(".ig-act"), pg.inner_text("#ig-node") if pg.query_selector("#ig-node") else ""
         step("The panel of a node shows the neutral loss as evidence", interp)
         def data():
             pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
