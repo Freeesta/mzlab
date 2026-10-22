@@ -12,8 +12,15 @@ use crate::samples::Sample;
 use crate::view::View;
 
 mod basic;
+mod cells;
+mod env;
+mod num;
 mod pairs;
 mod series;
+
+use env::{Caps, Env, Proof};
+pub(crate) use num::median;
+use num::{cv, mean, pearson, rank, slope};
 
 pub const SCHEMA: &str = "tabcheck/1";
 /// Estimated tokens of the whole text (`ceil(bytes / 3)`, as `contesto/1`).
@@ -96,232 +103,6 @@ impl Check {
     }
 }
 
-/// How many example rows and pairs the text carries.
-#[derive(Debug, Clone, Copy)]
-struct Caps {
-    rows: usize,
-    pairs: usize,
-}
-
-/// A JSON object under construction (the proof of a check).
-struct Proof(Out, bool);
-
-impl Proof {
-    fn new() -> Proof {
-        Proof(Out::default(), false)
-    }
-
-    fn key(&mut self, k: &str) -> &mut Out {
-        self.0.raw(if self.1 { "," } else { "{" }).str(k).raw(":");
-        self.1 = true;
-        &mut self.0
-    }
-
-    fn n(&mut self, k: &str, v: f64) -> &mut Proof {
-        self.key(k).num(round(v, 5));
-        self
-    }
-
-    fn i(&mut self, k: &str, v: usize) -> &mut Proof {
-        self.key(k).int(v as i64);
-        self
-    }
-
-    fn s(&mut self, k: &str, v: &str) -> &mut Proof {
-        self.key(k).str(v);
-        self
-    }
-
-    fn raw(&mut self, k: &str, v: &str) -> &mut Proof {
-        self.key(k).raw(v);
-        self
-    }
-
-    fn done(mut self) -> String {
-        self.0.raw(if self.1 { "}" } else { "{}" });
-        self.0 .0
-    }
-}
-
-/// The table and what the checks share: the rows considered, the files by role and the RT window of one peak.
-struct Env<'a> {
-    t: &'a Aligned,
-    s: &'a [Sample],
-    opts: &'a Options,
-    caps: Caps,
-    /// Indices of the rows considered, ascending.
-    rows: Vec<usize>,
-    /// Files that are not `dark`.
-    live: Vec<usize>,
-    blanks: Vec<usize>,
-    qcs: Vec<usize>,
-    /// Live files that are neither blank nor QC.
-    samples: Vec<usize>,
-    /// Median FWHM of the peaks, minutes: the window inside which two rows co-elute.
-    fwhm: f64,
-}
-
-impl<'a> Env<'a> {
-    fn new(
-        t: &'a Aligned,
-        s: &'a [Sample],
-        view: Option<&View>,
-        opts: &'a Options,
-        caps: Caps,
-    ) -> Env<'a> {
-        let rows: Vec<usize> = view.map_or_else(
-            || (0..t.len()).collect(),
-            |v| v.rows.iter().map(|&r| r as usize).collect(),
-        );
-        let of = |f: &dyn Fn(&Sample) -> bool| {
-            (0..s.len()).filter(|&k| f(&s[k])).collect::<Vec<usize>>()
-        };
-        let live = of(&|x| x.kind != "dark");
-        let blanks = of(&|x| x.kind == "blank");
-        let qcs = of(&|x| x.kind == "qc");
-        let samples = of(&|x| !matches!(x.kind.as_str(), "blank" | "dark" | "qc"));
-        let widths: Vec<f64> = rows
-            .iter()
-            .flat_map(|&r| (0..t.n_files).map(move |k| (r, k)))
-            .filter(|&(r, k)| t.state[r * t.n_files + k] == crate::aligned::CELL_DETECTED)
-            .map(|(r, k)| f64::from(t.width[r * t.n_files + k]))
-            .filter(|w| w.is_finite() && *w > 0.0)
-            .collect();
-        let fwhm = if widths.is_empty() {
-            FALLBACK_FWHM
-        } else {
-            median(widths) * FWHM_OF_WIDTH
-        };
-        Env {
-            t,
-            s,
-            opts,
-            caps,
-            rows,
-            live,
-            blanks,
-            qcs,
-            samples,
-            fwhm,
-        }
-    }
-
-    fn id(&self, row: usize) -> u32 {
-        self.t.id(row)
-    }
-
-    fn area(&self, row: usize, file: usize) -> Option<f64> {
-        measured(self.t, row, file)
-    }
-
-    /// Areas of `row` in `files`, 0 where the file has no peak.
-    fn areas(&self, row: usize, files: &[usize]) -> Vec<f64> {
-        files
-            .iter()
-            .map(|&k| self.area(row, k).unwrap_or(0.0))
-            .collect()
-    }
-
-    fn present_in_all(&self, row: usize, files: &[usize]) -> bool {
-        files.iter().all(|&k| self.area(row, k).is_some())
-    }
-
-    /// Ids of `rows` (indices), cut to the example cap.
-    fn ids(&self, rows: &[usize]) -> Vec<u32> {
-        rows.iter()
-            .take(self.caps.rows)
-            .map(|&r| self.id(r))
-            .collect()
-    }
-
-    fn names(&self, files: &[usize]) -> Vec<String> {
-        files
-            .iter()
-            .take(self.caps.rows)
-            .map(|&k| self.s[k].file.clone())
-            .collect()
-    }
-
-    /// Whether the table is read as unit resolution.
-    fn unit_resolution(&self) -> bool {
-        self.opts.mz_tol_da >= UNIT_TOL_DA
-    }
-
-    /// Rows considered by ascending m/z, then id.
-    fn by_mz(&self) -> Vec<usize> {
-        let mut v = self.rows.clone();
-        crate::sortc::by(&mut v, |&a, &b| {
-            self.t.mz[a].total_cmp(&self.t.mz[b]).then(a.cmp(&b))
-        });
-        v
-    }
-
-    fn rt_close(&self, a: usize, b: usize) -> bool {
-        (self.t.rt[a] - self.t.rt[b]).abs() <= self.fwhm
-    }
-}
-
-/// Sorts (id, key) pairs by key, descending if asked, ties by id; one instance for every ranking of the checks.
-fn rank(v: &mut [(usize, f64)], desc: bool) {
-    crate::sortc::by(v, |a, b| {
-        let o = a.1.total_cmp(&b.1);
-        (if desc { o.reverse() } else { o }).then(a.0.cmp(&b.0))
-    });
-}
-
-pub(crate) fn median(mut v: Vec<f64>) -> f64 {
-    crate::sortc::by(&mut v, f64::total_cmp);
-    match v.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => v[n / 2],
-        n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
-    }
-}
-
-fn mean(v: &[f64]) -> f64 {
-    v.iter().sum::<f64>() / v.len() as f64
-}
-
-/// Standard deviation over the mean (sample standard deviation, as the `qc_cv_max` rule); NaN with fewer than two values or a zero mean.
-fn cv(v: &[f64]) -> f64 {
-    if v.len() < 2 {
-        return f64::NAN;
-    }
-    let m = mean(v);
-    (v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (v.len() - 1) as f64).sqrt() / m
-}
-
-/// Pearson correlation; None for fewer than two points or no variance in either series.
-fn pearson(x: &[f64], y: &[f64]) -> Option<f64> {
-    if x.len() < 2 || x.len() != y.len() {
-        return None;
-    }
-    let (mx, my) = (mean(x), mean(y));
-    let (mut sxy, mut sxx, mut syy) = (0.0, 0.0, 0.0);
-    for (a, b) in x.iter().zip(y) {
-        sxy += (a - mx) * (b - my);
-        sxx += (a - mx).powi(2);
-        syy += (b - my) * (b - my);
-    }
-    (sxx > 0.0 && syy > 0.0).then(|| sxy / (sxx * syy).sqrt())
-}
-
-/// Slope of the least-squares line of `y` on `x`; None without variance in `x`.
-fn slope(x: &[f64], y: &[f64]) -> Option<f64> {
-    if x.len() < 2 {
-        return None;
-    }
-    let (mx, my) = (mean(x), mean(y));
-    let sxx: f64 = x.iter().map(|a| (a - mx).powi(2)).sum();
-    (sxx > 0.0).then(|| {
-        x.iter()
-            .zip(y)
-            .map(|(a, b)| (a - mx) * (b - my))
-            .sum::<f64>()
-            / sxx
-    })
-}
-
 /// The fifteen checks of `t` in the fixed order of `IDS` (one `Sample` per file; `view` limits the rows).
 pub fn checks(
     t: &Aligned,
@@ -368,11 +149,11 @@ fn analyse(
             pairs::adducts(&e),
             pairs::isotopes(&e),
             pairs::insource(&e),
-            basic::long_traces(&e),
+            cells::long_traces(&e),
             series::homologous(&e),
-            basic::missing_cells(&e),
+            cells::missing_cells(&e),
             series::structure(&e),
-            basic::polarity_units(&e),
+            cells::polarity_units(&e),
         ]
     };
     let sum = Summary {

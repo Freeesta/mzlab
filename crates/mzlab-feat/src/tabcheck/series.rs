@@ -96,6 +96,32 @@ pub(super) fn homologous(e: &Env) -> Check {
     }
 }
 
+/// Areas of the most intense rows (`MAX_PCA_ROWS`) over every file, one vector per row.
+fn top_matrix(e: &Env) -> Vec<Vec<f64>> {
+    let all: Vec<usize> = (0..e.t.n_files).collect();
+    let mut by: Vec<(usize, f64)> = e
+        .rows
+        .iter()
+        .map(|&r| (r, e.areas(r, &all).into_iter().fold(0.0, f64::max)))
+        .collect();
+    rank(&mut by, true);
+    by.truncate(MAX_PCA_ROWS);
+    by.iter().map(|x| e.areas(x.0, &all)).collect()
+}
+
+/// File indices of the injections the PCA kept, in score order.
+fn sample_ids(out: &mzlab_core::json::Value) -> Vec<usize> {
+    out.get("samples")
+        .map(|v| {
+            v.arr()
+                .iter()
+                .filter_map(|x| x.f64())
+                .map(|x| x as usize)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn column(scores: &[mzlab_core::json::Value], j: usize) -> Vec<f64> {
     scores
         .iter()
@@ -105,39 +131,13 @@ fn column(scores: &[mzlab_core::json::Value], j: usize) -> Vec<f64> {
 
 /// PCA of the injections (`table.pca`, the most intense rows): the QC should stay together and the first component should not follow the injection order.
 pub(super) fn structure(e: &Env) -> Check {
-    let mut by: Vec<(usize, f64)> = e
-        .rows
-        .iter()
-        .map(|&r| {
-            (
-                r,
-                e.areas(r, &(0..e.t.n_files).collect::<Vec<_>>())
-                    .into_iter()
-                    .fold(0.0, f64::max),
-            )
-        })
-        .collect();
-    rank(&mut by, true);
-    by.truncate(MAX_PCA_ROWS);
-    let all: Vec<usize> = (0..e.t.n_files).collect();
-    let matrix: Vec<Vec<f64>> = by.iter().map(|x| e.areas(x.0, &all)).collect();
+    let matrix = top_matrix(e);
     let roles: Vec<String> = e.s.iter().map(|s| s.kind.clone()).collect();
     let out = match pca_analysis(&matrix, &roles, None, &PcaOpts::default()) {
         Ok(v) => v,
         Err(err) => return Check::missing("structure", err.key.unwrap_or("pca")),
     };
-    let ids = |k: &str| -> Vec<usize> {
-        out.get(k)
-            .map(|v| {
-                v.arr()
-                    .iter()
-                    .filter_map(|x| x.f64())
-                    .map(|x| x as usize)
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
-    let files = ids("samples");
+    let files = sample_ids(&out);
     let scores = out
         .get("scores")
         .map(|v| v.arr().to_vec())

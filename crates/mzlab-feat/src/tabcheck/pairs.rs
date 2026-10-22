@@ -259,28 +259,8 @@ pub(super) fn isotopes(e: &Env) -> Check {
     }
 }
 
-/// Co-eluting rows whose areas keep a constant ratio over the files, the lighter one a fragment of the heavier; adduct and isotope differences are left out.
-pub(super) fn insource(e: &Env) -> Check {
-    if e.live.len() < MIN_FILES_INSOURCE {
-        return Check::missing("insource", "files");
-    }
-    let mut cand: Vec<(usize, f64)> = e
-        .rows
-        .iter()
-        .map(|&r| (r, e.areas(r, &e.live).into_iter().fold(0.0, f64::max)))
-        .filter(|x| {
-            x.1 > 0.0
-                && e.live.iter().filter(|&&k| e.area(x.0, k).is_some()).count()
-                    >= MIN_FILES_INSOURCE
-        })
-        .collect();
-    let total = cand.len();
-    rank(&mut cand, true);
-    cand.truncate(MAX_CORR_ROWS);
-    let mut rows: Vec<usize> = cand.iter().map(|x| x.0).collect();
-    crate::sortc::by(&mut rows, |&a, &b| {
-        e.t.rt[a].total_cmp(&e.t.rt[b]).then(a.cmp(&b))
-    });
+/// Pairs of rows (sorted by RT) that co-elute, differ by a fragment-sized step and keep a constant area ratio.
+fn coeluting_fragments(e: &Env, rows: &[usize]) -> Vec<Pair> {
     let known = |d: f64| {
         adducts_of(e)
             .iter()
@@ -320,10 +300,11 @@ pub(super) fn insource(e: &Env) -> Check {
             }
         }
     }
-    let found = sorted(found);
-    let mut parents: Vec<usize> = found.iter().map(|p| p.hi).collect();
-    crate::sortc::by(&mut parents, |a, b| a.cmp(b));
-    parents.dedup();
+    found
+}
+
+/// JSON list of the parents (heavier rows) with the ids of their fragments, cut to the example caps.
+fn parents_list(e: &Env, found: &[Pair], parents: &[usize]) -> String {
     let mut list = Out::default();
     list.raw("[");
     for (i, &h) in parents.iter().take(e.caps.pairs).enumerate() {
@@ -346,13 +327,43 @@ pub(super) fn insource(e: &Env) -> Check {
         list.raw("]}");
     }
     list.raw("]");
+    list.0
+}
+
+/// Co-eluting rows whose areas keep a constant ratio over the files, the lighter one a fragment of the heavier; adduct and isotope differences are left out.
+pub(super) fn insource(e: &Env) -> Check {
+    if e.live.len() < MIN_FILES_INSOURCE {
+        return Check::missing("insource", "files");
+    }
+    let mut cand: Vec<(usize, f64)> = e
+        .rows
+        .iter()
+        .map(|&r| (r, e.areas(r, &e.live).into_iter().fold(0.0, f64::max)))
+        .filter(|x| {
+            x.1 > 0.0
+                && e.live.iter().filter(|&&k| e.area(x.0, k).is_some()).count()
+                    >= MIN_FILES_INSOURCE
+        })
+        .collect();
+    let total = cand.len();
+    rank(&mut cand, true);
+    cand.truncate(MAX_CORR_ROWS);
+    let mut rows: Vec<usize> = cand.iter().map(|x| x.0).collect();
+    crate::sortc::by(&mut rows, |&a, &b| {
+        e.t.rt[a].total_cmp(&e.t.rt[b]).then(a.cmp(&b))
+    });
+    let found = sorted(coeluting_fragments(e, &rows));
+    let mut parents: Vec<usize> = found.iter().map(|p| p.hi).collect();
+    crate::sortc::by(&mut parents, |a, b| a.cmp(b));
+    parents.dedup();
+    let list = parents_list(e, &found, &parents);
     let mut p = Proof::new();
     p.i("rows_compared", cand.len())
         .i("rows_eligible", total)
         .i("pairs", found.len())
         .i("parents", parents.len())
         .n("ratio_cv_max", INSOURCE_RATIO_CV)
-        .raw("list", &list.0);
+        .raw("list", &list);
     Check {
         id: "insource",
         value: Some(found.len() as f64),
