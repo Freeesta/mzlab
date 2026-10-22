@@ -1,5 +1,5 @@
 // @ts-check
-// The window «Molecules» (header button #mol-btn; shell.js loads this module on the first click, and the «Manage» link of the search box opens it too): search the
+// The window «Molecules» (the «Manage» link of the search box loads this module on the first click and opens it): search the
 // database, add a molecule, edit one (a catalogue molecule is edited as a copy of the user, the catalogue stays), delete the ones of the user, import a CSV or JSON
 // file (one error per wrong row) and export CSV or JSON. Everything that is computed is computed by the engine (molecole-archivio.js); this file is the interface.
 // Keyboard: Tab stays inside the window, Esc goes back from the form or closes, and the focus returns to what opened it. window.MOLDB also has the search box (campo).
