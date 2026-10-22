@@ -4735,3 +4735,4 @@
 {"v":1,"ts_utc":"2026-10-22T11:21:57Z","azione":"aperta","tipo":"pr","pr":1490,"sha":"c53104df11492b7f02bd453ec0b9283a27ab58e6"}
 {"v":1,"ts_utc":"2026-10-22T11:29:01Z","azione":"aperta","tipo":"pr","pr":1491,"sha":"34dd0b7b385c58112a6c66a71b65168b2ad7a6b7"}
 {"v":1,"ts_utc":"2026-10-22T11:29:19Z","azione":"push","titolo":"Corregge e2e_flow_msn in CI","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1488,"sha":"d1827252c60ed5489f697e95b32dfe8029f7f30e"}
+{"v":1,"ts_utc":"2026-10-22T11:37:09Z","azione":"aperta","tipo":"pr","pr":1492,"sha":"30f83c3895cbd353c1243199aaf17ca61e8af372"}
