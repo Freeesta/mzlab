@@ -44,8 +44,17 @@ export const G = {
   rf: false,
   /** The answer is for the request with this key. */
   key: "",
+  /** The view: «tree» or «radial»; the filters of the toolbar (min % of the base peak, highest MS level shown, only the best path, ions whose subtree is closed, structures in the boxes). */
+  /** @type {"tree" | "radial"} */ view: "tree",
+  minRel: 0,
+  maxLevel: 0,
+  bestOnly: false,
+  /** @type {Set<string>} */ collapsed: new Set(),
+  structs: true,
   /** @type {string | null} The name of the graph file shown read-only (no raw data, no engine requests), else null. */
   ro: null,
+  /** The 2D molfile of the SMILES of the tab (OpenChemLib, infusione-grafo-mol.js), sent back to the graph for the drawings; "" = none. */
+  molfile: "",
 };
 
 /** Polarity of the file: 1 positive, -1 negative (the engine warns when the ion disagrees). */
@@ -88,14 +97,19 @@ export function query(/** @type {number} */ k) {
 export const graphUrl = (/** @type {number} */ k) => "api/msn_grafo?" + query(k);
 
 /** The URL the tab draws from: the graph plus the interpretation of the losses and the fragmentation rules (evidence for the arcs and the panel of a node; exports and the library do not carry them). */
-const viewUrl = (/** @type {number} */ k) => graphUrl(k) + "&interpreta=1&regole=1";
+const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpreta=1&regole=1" + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&strutture=tutti" : "") : "");
 
 /** Asks for the graph of the file; keeps the answer in G.j or the error in G.error. @returns {Promise<boolean>} false when a newer request took over. */
 export async function fetchGraph(/** @type {number} */ k) {
-  const url = viewUrl(k);
+  let url = viewUrl(k);
   G.key = url;
   try {
-    const j = await J(url);
+    /** @type {any} */ let j;
+    try { j = await J(url); } catch (e) {
+      // a SMILES the engine cannot read must not hide the graph: ask again without the cuts of every ion
+      if (!/** @type {any} */ (e).key || !String(/** @type {any} */ (e).key).startsWith("err.msngrafo.badSmiles")) throw e;
+      url = viewUrl(k, false); G.key = url; j = await J(url);
+    }
     if (G.key !== url) return false;
     if (G.j == null) { const o = j.opzioni || {}; for (const n of /** @type {const} */ (["ppm_formula", "mz_basso", "ppm_basso", "prove_min"])) if (typeof o[n] === "number") G.o[n] = o[n]; }
     G.j = j; G.error = null; G.errorObj = null; G.k = k;
@@ -111,11 +125,12 @@ export async function fetchGraph(/** @type {number} */ k) {
 const cuts = new Map();
 
 /**
- * The cleavages of the SMILES of the tab that explain a node (the key `strutture` of msngrafo/1): the graph request plus `strutture=<id>`.
+ * The cleavages of the SMILES of the tab that explain a node: the value of `strutture_tutti` of the graph when it has it (no request), else the key `strutture` of the graph request plus `strutture=<id>`.
  * Null when there is no SMILES, no ion, the node is a root, the engine answers without the key or the request fails.
  */
 export async function fetchStrutture(/** @type {any} */ n) {
   if (G.ro || !G.smiles || !G.j || !ionText() || n.livello < 2) return null;
+  if (G.j.strutture_tutti) return G.j.strutture_tutti.find((/** @type {any} */ s) => s.nodo === n.id) || null;
   const url = graphUrl(G.k) + "&strutture=" + n.id;
   if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.strutture || null).catch(() => null));
   return cuts.get(url);

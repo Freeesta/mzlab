@@ -35,6 +35,7 @@
      "ms": {"type": "number", "minimum": 0},
      "mem_mb": {"type": "number", "minimum": 0},
      "via": {"enum": ["memory", "slabs", "refused"]},
+     "files": {"type": "object", "description": "A per-file step that says what it did with each input (spectra.centroid: via centroided | passthrough, with the fwhm and threshold it used).", "additionalProperties": {"type": "object", "required": ["via"], "properties": {"via": {"enum": ["centroided", "passthrough"]}}}},
      "warnings": {"type": "array", "items": {"type": "string"}},
      "params_sha256": {"type": "string"},
      "params": {

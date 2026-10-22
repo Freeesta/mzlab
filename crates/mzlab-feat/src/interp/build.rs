@@ -11,11 +11,11 @@ use super::disegno::{self, Drawing};
 use super::filtri::{self, FileCal, RowFacts};
 use super::modifica::{self, Candidate, IsoCheck};
 use super::ms2link::{self, Isomers, LinkParams, Ms2Scan, Pooled};
-use super::prof::{report, time};
 use super::sito::{self, SiteReport};
 use crate::chem::posizioni::{Peak, Pol};
 use crate::legacy::ms2::{Consensus, Ms2Sorted};
 use crate::legacy::series::{Hyp, Parent};
+use crate::prof::{report, time};
 use crate::table::{Aligned, CELL_ABSENT};
 use crate::tp::{NO_PARENT, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 
@@ -269,7 +269,7 @@ pub fn build<R: ReadAt>(
     registry.decoys = time("decoys", || {
         filtri::table_decoys(inp.hyps, &t.mz, &t.tp.status, &facts)
     });
-    report();
+    report("interp");
     Ok(Output {
         rows,
         registry,

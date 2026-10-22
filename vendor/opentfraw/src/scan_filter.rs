@@ -154,6 +154,9 @@ pub fn build_filter(
             // Each intermediate reaction uses its stored energy; the final reaction uses
             // activation_energy from scan_params when available (more accurate label).
             let last = reactions.len() - 1;
+            // each clause carries the activation of its own step (MS3 CID then HCD: `@cid35.00 ... @hcd30.00`)
+            let steps = crate::reaction::chain(event, &crate::reaction::FinalReaction::default());
+            let mut step = steps.iter();
             for (i, rx) in reactions.iter().enumerate() {
                 let mz = rx.precursor_mz;
                 if mz <= 0.0 {
@@ -161,7 +164,9 @@ pub fn build_filter(
                 }
                 out.push(' ');
                 out.push_str(&format!("{mz:.4}"));
-                if let Some(a) = act {
+                let own = step.next().and_then(|s| s.activation);
+                let ethcd = act == Some(Activation::EThcD);
+                if let Some(a) = if ethcd { act } else { own.or(act) } {
                     out.push('@');
                     let is_last = i == last;
                     let is_ethcd = a == Activation::EThcD;
@@ -437,14 +442,14 @@ mod tests {
         }
     }
 
-    /// The filter carries one activation per scan (that of the first reaction on FTMS) whatever the reactions say; the per-reaction view is in `reaction`.
+    /// Every clause carries the activation of its own step; the single-step and same-activation chains read as they always did.
     #[test]
     fn filters_of_the_reaction_chains_do_not_change() {
         let idx = make_index(50.0, 500.0);
         let ms3 = ftms_event(3, 4, vec![rxn(500.0, 35.0, 1), rxn(300.0, 0.0, 11)]);
         assert_eq!(
             build_filter(&ms3, &idx, Some(300.0), Some(40.0), None),
-            "FTMS + c NSI d Full ms3 500.0000@cid35.00 300.0000@cid40.00 [50.0000-500.0000]"
+            "FTMS + c NSI d Full ms3 500.0000@cid35.00 300.0000@hcd40.00 [50.0000-500.0000]"
         );
         let hcd = ftms_event(2, 1, vec![rxn(300.5, 0.0, 11)]);
         assert_eq!(
@@ -468,6 +473,36 @@ mod tests {
         assert_eq!(
             build_filter(&tri, &idx, Some(649.1), Some(28.0), None),
             "FTMS + c NSI d Full ms2 649.1000@etd@hcd28.00 [50.0000-500.0000]"
+        );
+    }
+
+    #[test]
+    fn rare_activations_get_their_own_token() {
+        let idx = make_index(50.0, 500.0);
+        // ITMS: the final step takes the event's activation (code 4 = CID); the steps before it take their own flags
+        let mut ms3 = ftms_event(3, 4, vec![rxn(500.0, 35.0, 3 << 1 | 1), rxn(300.0, 0.0, 1)]);
+        ms3.preamble.bytes[40] = 0;
+        assert_eq!(
+            build_filter(&ms3, &idx, Some(300.0), Some(30.0), None),
+            "ITMS + c NSI d Full ms3 500.0000@pqd35.00 300.0000@cid30.00 [50.0000-500.0000]"
+        );
+        let mut uvpd = ftms_event(
+            3,
+            4,
+            vec![rxn(500.0, 5.0, 11 << 1 | 1), rxn(300.0, 0.0, 11)],
+        );
+        uvpd.preamble.bytes[40] = 0;
+        assert!(build_filter(&uvpd, &idx, Some(300.0), Some(30.0), None)
+            .contains(" 500.0000@uvpd5.00 "));
+    }
+
+    #[test]
+    fn simultaneous_precursors_stay_one_clause_each() {
+        let idx = make_index(50.0, 500.0);
+        let msx = ftms_event(2, 1, vec![rxn(400.0, 0.0, 11), rxn(410.0, 0.0, 11)]);
+        assert_eq!(
+            build_filter(&msx, &idx, Some(410.0), Some(30.0), None),
+            "FTMS + c NSI d Full ms2 400.0000@hcd30.00 410.0000@hcd30.00 [50.0000-500.0000]"
         );
     }
 }

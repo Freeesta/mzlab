@@ -13,7 +13,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::build_mzml_spill;
-use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
+use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, probe};
 
 use crate::{flow_set, io};
 
@@ -166,7 +166,12 @@ pub(crate) fn build_index_with(
     let mut out = File::create(idx).map_err(io)?;
     if !path.is_dir() && name.to_lowercase().ends_with(".mzml") {
         let size = std::fs::metadata(path).map_err(io)?.len();
-        let p = prepare(&mut File::open(path).map_err(io)?, size, &name)?;
+        let mut file = File::open(path).map_err(io)?;
+        let known = match flow_set::known_sha(path) {
+            Some(sha) => Some((sha, probe(&mut file, size)?)),
+            None => None,
+        };
+        let p = prepare_con(&mut file, size, &name, known)?;
         build_mzml_spill(
             &p.table,
             BufReader::new(

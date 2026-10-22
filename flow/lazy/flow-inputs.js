@@ -60,7 +60,7 @@
       for (const key of ["algorithm", "preset", "params"]) if (s[key] != null && !(key === "params" && !Object.keys(s.params).length)) o[key] = s[key];
       return o;
     });
-    return { format: "mzflow/2", program: plan.program, inputs: plan.inputs.map((/** @type {any} */ f) => ({ name: f.name, sha256: f.sha256 || "", ...(f.type ? { type: f.type } : {}), ...(f.facets ? { facets: f.facets } : {}) })), steps };
+    return { format: "mzflow/2", program: plan.program, ...(plan.profile ? { profile: plan.profile } : {}), inputs: plan.inputs.map((/** @type {any} */ f) => ({ name: f.name, sha256: f.sha256 || "", ...(f.type ? { type: f.type } : {}), ...(f.facets ? { facets: f.facets } : {}) })), steps };
   };
   /** a copy of the plan that the reader of flow-check.js can always read (references that are not text are dropped) @param {any} plan */
   F.cleanRefs = plan => ({ ...plan, steps: plan.steps.map((/** @type {any} */ s) => ({ ...s, in: Object.fromEntries(Object.entries(s.in || {}).filter(([, v]) => typeof v === "string" || Array.isArray(v))) })) });
@@ -71,7 +71,7 @@
     let v;
     try { v = JSON.parse(text); } catch (_) { return { error: { key: "err.flow.json", params: {} } }; }
     try { F.normalize(v); } catch (e) { const x = /** @type {any} */ (e); return { error: { key: x.key || "err.flow.json", params: x.params || {} } }; }
-    return { plan: { format: "mzflow/2", program: v.program || F.newPlan().program, inputs: (v.inputs || []).map((/** @type {any} */ f) => ({ ...f, sha256: f.sha256 || "" })), steps: v.steps || [] } };
+    return { plan: { format: "mzflow/2", program: v.program || F.newPlan().program, ...(v.profile === "as_is" ? { profile: "as_is" } : {}), inputs: (v.inputs || []).map((/** @type {any} */ f) => ({ ...f, sha256: f.sha256 || "" })), steps: v.steps || [] } };
   };
 
   /** can the chain reach the identification (F.GOAL_STEPS)? `reached`: it has the step; `canReach`: every type it needs can be made from the plan's inputs and outputs;

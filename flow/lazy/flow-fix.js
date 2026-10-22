@@ -37,7 +37,7 @@
     return S.plan;
   };
   /** has the plan anything beyond the base? (a plan without the base chain has its own steps) @param {any} plan */
-  F.hasAddons = plan => !F.findStep(plan, F.BASE[0].steps[0]) || plan.steps.length > F.BASE.reduce((n, g) => n + g.steps.length, 0);
+  F.hasAddons = plan => !F.findStep(plan, "index.mzidx") || plan.steps.some((/** @type {any} */ s) => !F.BASE.some((/** @type {any} */ g) => g.steps.includes(s.step.split("@")[0])));
 
   /** steps that could take the output of `inst` as a required input: the proposals of «Add next step» @param {any} S @param {any} inst */
   F.nextSteps = (S, inst) => {
@@ -85,6 +85,34 @@
     } };
   };
 
+  /** the Data files in profile (the first scan of the mixed ones too), by name: what the centroid step is for */
+  const profileNames = () => {
+    const have = new Set(F.dataFiles()), all = typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : [];
+    return all.filter((/** @type {any} */ f) => have.has(f.name) && (f.spectrum_mode === "profile" || f.spectrum_mode === "mixed")).map((/** @type {any} */ f) => f.name);
+  };
+  /** puts «Centroid spectra» between the files and the index: it takes what the index took, the index takes its output @param {any} S */
+  const addCentroid = (/** @type {any} */ S) => {
+    const idx = F.findStep(S.plan, "index.mzidx");
+    if (!idx || F.findStep(S.plan, "spectra.centroid")) return null;
+    const cen = F.addStep(S.plan, S.reg, "spectra.centroid"), took = idx.in.source;
+    cen.in.source = [].concat(took || []);
+    idx.in.source = Array.isArray(took) ? [cen.id + ".mzml"] : cen.id + ".mzml";
+    S.plan.steps.splice(S.plan.steps.indexOf(cen), 1);
+    S.plan.steps.splice(S.plan.steps.indexOf(idx), 0, cen);
+    return cen;
+  };
+  /** the need of a plan that reads profile files with no centroid step and no choice written in it: the two remedies are the user's to pick (the check never inserts a step) @param {any} S @returns {{instance: string, text: string, fixes: {label: string, run: () => void}[]}[]} */
+  const profileIssues = (/** @type {any} */ S) => {
+    const idx = F.findStep(S.plan, "index.mzidx"), names = profileNames();
+    if (!idx || F.findStep(S.plan, "spectra.centroid") || S.plan.profile === "as_is" || !names.length) return [];
+    return [{ instance: idx.id, text: `${names.length} profile file${names.length > 1 ? "s" : ""} (${names.slice(0, 3).join(", ")}${names.length > 3 ? "…" : ""}): peaks are found on centroids, so their detection waits for your choice.`, fixes: [
+      { label: "Centroid the profile files", run: () => { F.addCentroid(S); } },
+      { label: "Run on profile anyway", run: () => { S.plan.profile = "as_is"; } },
+    ] }];
+  };
+
+  Object.assign(F, { profileNames, addCentroid, profileIssues });
+
   /** the nodes of the canvas. Simple folds the base into two nodes and hides the raw-file inputs; Advanced shows every step and every input
    * @param {any} S state {plan, reg, problems} @param {boolean} simple @returns {{nodes: any[], edges: [string, string][]}} */
   F.canvasModel = (S, simple) => {
@@ -92,7 +120,7 @@
     const baseSteps = new Set(F.BASE.flatMap((/** @type {any} */ g) => g.steps));
     // the base group of a step the plan lacks (the MSn template has no feature table) is not drawn; without the import group the raw files stay visible
     const present = (/** @type {any} */ g) => g.steps.some((/** @type {string} */ s) => F.findStep(plan, s));
-    const lone = (/** @type {any} */ f) => !(simple && f.type === "raw" && present(F.BASE[0]));
+    const lone = (/** @type {any} */ f) => !(simple && (f.type === "raw" || f.type === "mzml") && present(F.BASE[0]));
     for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your data files.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
     const groups = simple ? F.BASE : [];
     for (const g of groups) {
@@ -107,7 +135,7 @@
       nodes.push({ key: inst.id, kind: "step", title: name, why, cat, ids: [inst.id], locked: baseSteps.has(id) });
       owner.set(inst.id, inst.id);
     }
-    if (simple) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw")) owner.set("file:" + f.name, "import");
+    if (simple) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) owner.set("file:" + f.name, "import");
     for (const inst of plan.steps) for (const [, v] of Object.entries(inst.in || {})) for (const r of [].concat(/** @type {any} */ (v))) {
       const src = r.startsWith("file:") ? owner.get(r) : owner.get(r.split(".")[0]), dst = owner.get(inst.id);
       if (src && dst && src !== dst) edges.add(src + "\u0000" + dst);

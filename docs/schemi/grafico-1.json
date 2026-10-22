@@ -1,0 +1,229 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "grafico/1",
+ "title": "grafico/1: a chart as a specification",
+ "description": "Format «grafico/1» (crates/mzlab-llm/src/chart.rs, docs/agenti/llm.md). Three shapes: the specification the model writes (a named view and its fields, never data), the same chart with `data.rows` filled by Rust (at most 5000 rows, reduced by the maximum of each interval), and the answer `{error: no_view}`. No colours or styles: the page applies them. For a heat map the `color` channel carries the quantity; elsewhere it names at most 8 series.",
+ "oneOf": [
+  {
+   "$ref": "#/$defs/spec"
+  },
+  {
+   "$ref": "#/$defs/chart"
+  },
+  {
+   "$ref": "#/$defs/noView"
+  }
+ ],
+ "$defs": {
+  "channel": {
+   "type": "object",
+   "required": [
+    "field"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "field": {
+     "type": "string",
+     "minLength": 1
+    }
+   }
+  },
+  "encoding": {
+   "type": "object",
+   "required": [
+    "x"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "x": {
+     "$ref": "#/$defs/channel"
+    },
+    "y": {
+     "$ref": "#/$defs/channel"
+    },
+    "color": {
+     "$ref": "#/$defs/channel"
+    },
+    "detail": {
+     "$ref": "#/$defs/channel"
+    }
+   }
+  },
+  "head": {
+   "type": "object",
+   "required": [
+    "schema",
+    "title",
+    "data",
+    "mark",
+    "encoding",
+    "why"
+   ],
+   "properties": {
+    "schema": {
+     "const": "grafico/1"
+    },
+    "title": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 60
+    },
+    "mark": {
+     "enum": [
+      "line",
+      "point",
+      "bar",
+      "stick",
+      "box",
+      "hist",
+      "heat"
+     ]
+    },
+    "encoding": {
+     "$ref": "#/$defs/encoding"
+    },
+    "facet": {
+     "type": "string",
+     "description": "a nominal field with at most 12 values: one panel each"
+    },
+    "log_y": {
+     "type": "boolean"
+    },
+    "why": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 300
+    }
+   }
+  },
+  "spec": {
+   "description": "what the model writes: a reference, no rows",
+   "allOf": [
+    {
+     "$ref": "#/$defs/head"
+    }
+   ],
+   "properties": {
+    "schema": {},
+    "title": {},
+    "mark": {},
+    "encoding": {},
+    "facet": {},
+    "log_y": {},
+    "why": {},
+    "data": {
+     "type": "object",
+     "required": [
+      "ref"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "ref": {
+       "type": "string",
+       "pattern": "^[a-z]+:[A-Za-z0-9*]+$"
+      }
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "chart": {
+   "description": "what the page draws: the same chart with the rows Rust built",
+   "allOf": [
+    {
+     "$ref": "#/$defs/head"
+    }
+   ],
+   "properties": {
+    "schema": {},
+    "title": {},
+    "mark": {},
+    "encoding": {},
+    "facet": {},
+    "log_y": {},
+    "why": {},
+    "data": {
+     "type": "object",
+     "required": [
+      "ref",
+      "fields",
+      "rows",
+      "source_rows",
+      "reduced"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "ref": {
+       "type": "string"
+      },
+      "fields": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "required": [
+         "name",
+         "type",
+         "unit"
+        ],
+        "additionalProperties": false,
+        "properties": {
+         "name": {
+          "type": "string"
+         },
+         "type": {
+          "enum": [
+           "quantitative",
+           "ordinal",
+           "nominal"
+          ]
+         },
+         "unit": {
+          "type": "string"
+         }
+        }
+       }
+      },
+      "rows": {
+       "type": "array",
+       "maxItems": 5000,
+       "items": {
+        "type": "array",
+        "description": "one value per entry of `fields`, in that order"
+       }
+      },
+      "source_rows": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "reduced": {
+       "type": "boolean"
+      }
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "noView": {
+   "type": "object",
+   "required": [
+    "schema",
+    "error",
+    "why"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "schema": {
+     "const": "grafico/1"
+    },
+    "error": {
+     "const": "no_view"
+    },
+    "why": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 300
+    }
+   }
+  }
+ }
+}

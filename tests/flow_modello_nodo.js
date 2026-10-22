@@ -63,8 +63,8 @@ eq([g.reached, g.canReach], [false, true]);
 for (const s of ["index.mzidx", "features.detect", "features.align", "formula.ms1", "spectra.match", "annot.level"]) F.addStep(plan, reg, s);
 assert.strictEqual(F.goal(plan, reg).reached, true);
 // the canvas: the base alone is complete and valid; every template is valid and shows as nodes, in Simple mode the base folds into two
-eq(problems(F.basePlan(reg)), []);
-eq(F.basePlan(reg).steps.map(s => s.id), ["index", "detect", "align", "gapfill"]);
+eq(F.check(F.normalize(F.exportPlan(F.basePlan(regAll))), regAll, "native").map(F.problemLine), []);
+eq(F.basePlan(regAll).steps.map(s => s.id), ["centroid", "index", "detect", "align", "gapfill"]);
 for (const t of F.TEMPLATES) {
   const p = F.templatePlan(regAll, t);
   eq(F.check(F.normalize(F.exportPlan(p)), regAll, "native").map(F.problemLine), []);
