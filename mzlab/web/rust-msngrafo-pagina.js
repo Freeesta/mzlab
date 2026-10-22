@@ -22,7 +22,7 @@ export async function grafoRoute({ slots, rpc, stats }, k, search, esporta = fal
   if (r.error) {
     /** @type {any} */ let e = null;
     try { e = JSON.parse(r.error); } catch (_) { /* not an error of the module */ }
-    if (!e || !e.error_key) return null;
+    if (!e || !e.error_key) e = { error_key: "err.load.failed", params: { fase: "decode", raw: String(r.error).slice(0, 600) } };      // never silence: an error of the worker that is no keyed error of the module still reaches the tab with its text
     return { status: 400, text: JSON.stringify({ error: e.error_key, error_key: e.error_key, params: e.params || {} }) };
   }
   stats.rust++;
