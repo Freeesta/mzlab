@@ -105,7 +105,7 @@ jobs:
             while read -r t; do skip+=(--deselect "$t"); done < tools/pytest_solo_311.txt
           fi
           python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} tests
-      # time per test file for tools/stat_ci.py (small, kept 3 days)
+      # time per test file for tools/ci_metrics.py (small, kept 3 days)
       - name: Test durations
         if: ${{ !cancelled() && hashFiles(format('junit-{0}.xml', matrix.python)) != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -187,7 +187,7 @@ jobs:
       - name: Teoria e2e (Teoria-only pull request)
         if: steps.solo.outputs.solo == 'true' && steps.solo.outputs.kind != 'doc'
         run: python tools/verifica.py --browser chromium --fumo --solo "$(python tools/ci_solo_teoria.py --e2e)"
-      # size of every built .wasm against its cap, for tools/stat_ci.py (small, kept 3 days)
+      # size of every built .wasm against its cap, for tools/ci_metrics.py (small, kept 3 days)
       - name: Size of the .wasm
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' }}
         run: python3 tools/ci_wasm_dimensioni.py site wasm-dimensioni.json

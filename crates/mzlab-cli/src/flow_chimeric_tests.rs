@@ -30,6 +30,11 @@ fn scan(
 /// MS1 (rt 1.0), MS2 at 300.0 (1.1), MS1 (1.2), MS1 (2.0), MS2 at 500.0 (2.1), MS1 (2.2). Around 300.0 there is an ion of the same height at 300.4;
 /// around 500.0 there is none. The windows are ±0.75 Da.
 fn dda_mzml() -> Vec<u8> {
+    dda_mzml_window(0.75)
+}
+
+/// The same file with isolation window offsets of `half` Da.
+fn dda_mzml_window(half: f64) -> Vec<u8> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {
@@ -51,7 +56,10 @@ fn dda_mzml() -> Vec<u8> {
     w.close_spectra().unwrap();
     let text = String::from_utf8(w.finish().unwrap()).unwrap();
     let cv = |acc: &str, name: &str| {
-        format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"0.75\"/>")
+        format!(
+            "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{}\"/>",
+            half
+        )
     };
     let mut parts = text
         .split("</isolationWindow>")
@@ -205,4 +213,27 @@ fn the_features_inside_the_window_are_listed_nearest_first() {
         "{text}"
     );
     assert!(!text.contains("PURITY="));
+}
+
+/// PURITY of the MS2 at 300.0 under isolation windows of several widths: the ion at 300.4 counts only when the real window reaches it.
+#[test]
+fn purity_follows_the_real_isolation_window() {
+    let purity_at = |half: f64| {
+        let dir = fixture(&format!("chimeric_win{}", (half * 100.0) as u32));
+        std::fs::write(dir.join("chi.mzML"), dda_mzml_window(half)).unwrap();
+        let plan = r#"{"format":"mzflow/2","inputs":[{"name":"chi.mzML","type":"mzml"}],"steps":[
+            {"id":"idx","step":"index.mzidx@1","in":{"source":["file:chi.mzML"]}},
+            {"id":"s","step":"spectra.ms2@1","in":{"source":["file:chi.mzML"]}},
+            {"id":"c","step":"spectra.chimeric@1","in":{"spectra":"s.spectra","index":["idx.index"]}}]}"#;
+        let (_, prov) =
+            crate::flow::run_plan(plan.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
+        assert!(!prov.contains("\"error\""), "{prov}");
+        let mgf = std::fs::read_to_string(dir.join("work/c.mgf")).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        header(&mgf, "chi.2", "PURITY=").map(|v| v.parse::<f64>().unwrap())
+    };
+    // ±0.2 Da stops short of 300.4; ±0.5 and ±1.5 Da reach it
+    assert!((purity_at(0.2).unwrap() - 1.0).abs() < 1e-9);
+    assert!((purity_at(0.5).unwrap() - 0.5).abs() < 1e-9);
+    assert!((purity_at(1.5).unwrap() - 0.5).abs() < 1e-9);
 }

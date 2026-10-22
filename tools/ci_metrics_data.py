@@ -1,4 +1,4 @@
-"""Raw data collectors of tools/stat_ci.py: jobs and steps, caches, test durations, cancellations, PR shape, real conflicts, runner load.
+"""Raw data collectors of tools/ci_metrics.py: jobs and steps, caches, test durations, cancellations, PR shape, real conflicts, runner load.
 
 Everything is a small JSON row (no log text, no personal data); `api` and `fetch` are injected so the tests use fake ones.
 Also the compaction of the data file, the CSV export and the extra summary tables.
@@ -56,13 +56,13 @@ def scarica(path: str) -> bytes | None:
 
 
 def passi(job: dict) -> list[list]:
-    from stat_ci import secs
+    from ci_metrics import secs
     return [[s["name"], secs(s.get("started_at"), s.get("completed_at")), s.get("conclusion")] for s in job.get("steps", [])]
 
 
 def righe_job(run: dict, jobs: list[dict], base: dict) -> list[dict]:
     """One row per completed job: queue, duration, outcome and every step with its time (attempts are rows of their own)."""
-    from stat_ci import secs
+    from ci_metrics import secs
     return [{"ts_utc": j["completed_at"], "tipo": "job", "k": str(j["id"]), "workflow": run["name"], "job": j["name"], "esito": j.get("conclusion"),
              "coda_s": secs(j.get("created_at"), j.get("started_at")), "durata_s": secs(j.get("started_at"), j.get("completed_at")),
              "passi": passi(j), **base} for j in jobs if j.get("status") == "completed" and j.get("completed_at")]
@@ -153,7 +153,7 @@ def righe_wasm(run: dict, base: dict, api, fetch) -> list[dict]:
 
 def riga_annullo(run: dict, jobs: list[dict], base: dict, api) -> list[dict]:
     """A cancelled run: runner minutes already spent and the SHA that replaced it (next run of the same workflow on the branch)."""
-    from stat_ci import secs
+    from ci_metrics import secs
     spesi = sum(secs(j.get("started_at"), j.get("completed_at")) or 0 for j in jobs if j.get("started_at"))
     dopo = [r for r in api(f"/actions/runs?branch={run.get('head_branch')}&per_page=30").get("workflow_runs", [])
             if r.get("name") == run["name"] and r["head_sha"] != run["head_sha"] and r["created_at"] > run.get("created_at", "")]
@@ -183,7 +183,7 @@ def forma_commit(sha: str, api) -> dict:
 
 def forma_pr(n: int, pr: dict, api, file_pr) -> dict:
     """Shape of a closed PR: lines, files (capped), areas, doc-only, first review."""
-    from stat_ci import secs
+    from ci_metrics import secs
     files = sorted(file_pr(n, api))
     revs = [r["submitted_at"] for r in api(f"/pulls/{n}/reviews?per_page=100") if r.get("submitted_at")]
     a = aree(files)
@@ -217,7 +217,7 @@ def compatta(ev: list[dict], oggi: datetime, giorni: int = 14) -> list[dict]:
 
 def giornaliero(ev: list[dict]) -> list[dict]:
     """One row per UTC day: runs, re-runs, mean queue, failed jobs by category, PRs opened/merged, mean open-to-merge, green-to-merge and commits per merged PR, conflicts."""
-    from stat_ci import media
+    from ci_metrics import media
     giorni: dict[str, dict] = defaultdict(lambda: {"run": 0, "rilanci": 0, "coda": [], "job_rossi": Counter(), "pr_aperte": 0, "pr_unite": 0,
                                                    "aperta_s": [], "verde_a_unione_s": [], "commit_n": [], "conflitti": 0})
     for r in ev:
@@ -266,7 +266,7 @@ def esporta(ev: list[dict], cartella: str) -> list[str]:
 
 def tabelle(ev: list[dict], out=print) -> None:
     """Extra summary tables on the raw rows (queue and steps, caches, slow test files, cancellations, hot files, time to green, runner load)."""
-    from stat_ci import hm, media
+    from ci_metrics import hm, media
     job = [r for r in ev if r["tipo"] == "job"]
     if job:
         out("\nJobs: queue, duration and slowest step (mean)")
