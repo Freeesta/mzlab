@@ -11,7 +11,7 @@ use mzlab_core::json::{parse, Out};
 use mzlab_core::lettori_mzml::Picchi;
 use mzlab_core::msnalbero::Raggruppa;
 use mzlab_core::msngrafo::{
-    con_interpretazione, esporta, grafo_json, Formato, Grafo, Opzioni, PPM_PERDITA,
+    con_interpretazione, esporta, grafo_json, Formato, Grafo, Opzioni, ParamRegole, PPM_PERDITA,
 };
 use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_core::mzmlwrite::Opzioni as MzmlOpzioni;
@@ -29,6 +29,10 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
   --interpreta         add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
                        activations that observed it
   --ppm-perdita N      window of the loss match by mass, ppm of the precursor m/z (10)
+  --regole             add to the JSON the key `regole`: the fragmentation rules of the table `fragrules/1` that the formulas alone decide (which rule explains the loss
+                       of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates
+  --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25)
+  --toll-perdita-mda N tolerance of a loss against a rule, mDa (3)
   --ppm-struttura N    window of those cleavages, ppm (10)
   --ppm-formula N      window of the sub-formulas, ppm (10)
   --mz-basso N         below this m/z the window may widen (150)
@@ -75,6 +79,7 @@ pub fn parse_args(
     let (mut export, mut pulito, mut nodo) = (None, false, None);
     let (mut strutture, mut ppm_struttura) = (None, PPM_STRUTTURA);
     let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
+    let (mut regole, mut regole_p) = (false, ParamRegole::default());
     while let Some(x) = a.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
@@ -104,6 +109,9 @@ pub fn parse_args(
             "--strutture" => strutture = a.next(),
             "--interpreta" => interpreta = true,
             "--ppm-perdita" => ppm_perdita = numero(a.next(), &x)?,
+            "--regole" => regole = true,
+            "--cutoff-q" => regole_p.cutoff_q = numero(a.next(), &x)?,
+            "--toll-perdita-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
             "--ppm-struttura" => ppm_struttura = numero(a.next(), &x)?,
             "--out" => out = a.next().map(PathBuf::from),
             f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
@@ -114,6 +122,7 @@ pub fn parse_args(
     if riassunto && verita.is_none() {
         return Err("--riassunto needs --verita".into());
     }
+    o.regole = regole.then_some(regole_p);
     let export = export.map(|f| (f, pulito, nodo));
     let strutture = strutture.map(|n| (n, ppm_struttura));
     let interpreta = interpreta.then_some(ppm_perdita);
