@@ -33,7 +33,7 @@
         p.fix ? el("button", { type: "button", class: "fl-b fl-fix", onclick: () => { p.fix.run(); c.done(); } }, icon("plus", 14), el("span", { text: p.fix.label })) : null)));
       box.append(ul);
     }
-    if (node.key === "import") box.append(dataState(el));
+    if (node.key === "import") box.append(dataState(el), ...(F.importBox ? [F.importBox(S)] : []));
     if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : el("p", { class: "fl-note", text: "The file is chosen when the plan is run." }));
       if (!c.simple) box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove")); return box; }
     for (const id of node.ids) {
