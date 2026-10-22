@@ -47,12 +47,20 @@ pub(super) fn chimeric() -> Step {
 }
 
 fn purity_flag() -> Algorithm {
-    algorithm(
+    Algorithm {
+        params: vec![Param::number("purity_min", "Purity below which a spectrum is chimeric")
+            .min(0.0)
+            .max(1.0)
+            .default_num(0.8)
+            .unit("fraction")
+            .doc("A spectrum whose purity is lower is flagged CHIMERIC=true (the same limit as tp.link); PURITY_BAND is low under 0.5, medium up to this limit and high above")],
+        ..algorithm(
         "purity_flag",
         "Purity flag",
         "Share of the MS1 signal in the isolation window that belongs to the precursor (within 5 ppm, PURITY_PPM), taken in the MS1 scans before and after the MS2 scan; the spectrum is kept and flagged (fill_purity in crates/mzlab-feat/src/interp/ms2link.rs).",
         Status::Available,
-    )
+        )
+    }
 }
 
 fn intruders() -> Algorithm {
