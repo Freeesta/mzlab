@@ -92,3 +92,5 @@ Formato `msnlib/1`, ricerca, protocollo di acquisizione, gestione dei dati e con
 | 5 · file veri | solo mzlab-dati e prova locale (chat Mac: `msn-graph --verita … --riassunto` sul timololo) | percorsi della verità tutti trovati, formula giusta fra i candidati, ppm ≤ 10 (20 con prove sotto m/z 150); soglie corrette con il loro perché |
 | 6 · `msnlib/1` | `msngrafo/libreria.rs` e `mzlab-cli msn-lib add/build/export` (fatti, MSP); da fare: `docs/schemi/msnlib-1.json`, export MassBank, `msn-graph compare` | dopo il «via» sul protocollo: libreria sintetica di 3 voci costruita dal manifest, export MassBank letto da `mzlab-lib`, convalida d1/d2 sintetica |
 | 7 · ricerca | `msngrafo::cerca`, pannello «Search lab library», prova `evid/1` | sintetico: lo standard giusto primo, un analogo spostato trovato con Δ |
+
+Interpretazione delle perdite per arco (`interpretazione`, `--interpreta`): `msn-interpreta.md`.

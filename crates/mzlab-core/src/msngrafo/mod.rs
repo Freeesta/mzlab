@@ -8,6 +8,7 @@ mod candidati;
 mod cerca;
 mod esporta;
 mod formule;
+mod interpreta;
 mod json;
 mod leggi;
 mod libreria;
@@ -19,6 +20,10 @@ mod unisci;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
 pub use esporta::{da_richiesta_export, esporta, Formato};
+pub use interpreta::{
+    con_interpretazione, interpreta, interpretazione_json, perdite_note, InterpArco, PerditaArco,
+    PerditaNota, PPM as PPM_PERDITA,
+};
 pub use json::json;
 pub use leggi::{leggi, Letto};
 pub use libreria::aggiungi;
@@ -292,3 +297,5 @@ mod tests;
 mod tests_cerca;
 #[cfg(test)]
 mod tests_formule;
+#[cfg(test)]
+mod tests_interpreta;
