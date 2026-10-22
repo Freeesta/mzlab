@@ -14,7 +14,7 @@ export function guarda(host, onStall, stallMs = STALL_MS) {
   let last = performance.now(), phase = "load", frac = 0, done = false;
   const show = () => {
     const pct = Math.round(frac * 100);
-    host.innerHTML = `<p class="sm ig-wait"><label>${I18N.t(/** @type {Record<string, string>} */ (TXT.prog)[phase], { pct })} <progress max="100" value="${pct}"></progress></label></p>`;
+    host.innerHTML = h`<p class="sm ig-wait"><label>${I18N.t(/** @type {Record<string, string>} */ (TXT.prog)[phase], { pct })} <progress max="100" value="${pct}"></progress></label></p>`;
   };
   /** @param {Event} ev */
   const on = ev => {
@@ -43,6 +43,6 @@ export function mostraErrore(host, text, e, file, phase = "graph") {
   const err = { key: e && e.key, message: text, params: { ...(e && e.params), fase: FASE[phase] || "decode", raw: (e && e.params && e.params.raw) || text } };
   const d = DIAG.da(err, { name: file.name, size: file.size, format: "raw" });
   const t = (/** @type {string} */ k) => I18N.t(k);
-  host.innerHTML = `<p class="fail sm" role="alert">${EH(text)}</p>` + DIAG.html(d, EH, t);
+  host.innerHTML = h`<p class="fail sm" role="alert">${text}</p>${raw(DIAG.html(d, EH, t))}`;
   DIAG.cabla(host, d, window.MZLAB_VERSION, t);
 }
