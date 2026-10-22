@@ -301,12 +301,20 @@ pub(super) fn parent_row(inp: &Inputs) -> Option<usize> {
 /// The graph: identities ordered by the explanation of their points (none against first, then the total, higher first, then the larger area; equal
 /// ones keep the order of the rows).
 pub fn build_graph(inp: &Inputs) -> Vec<Identity> {
-    let prep = super::prepared::Prepared::new(inp);
-    let mut ids: Vec<Identity> = (0..inp.aligned.len())
-        .map(|r| prep.identity(inp, r))
-        .collect();
-    crate::sortc::any_by(&mut ids, |a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
+    let mut ids = identities(inp);
+    sort_graph(&mut ids);
     ids
+}
+
+/// The identity of every row of the aligned table, in the order of the rows (what `row_signs` reads and `sort_graph` orders).
+pub fn identities(inp: &Inputs) -> Vec<Identity> {
+    let prep = super::prepared::Prepared::new(inp);
+    (0..inp.aligned.len()).map(|r| prep.identity(inp, r)).collect()
+}
+
+/// `ids` in the order of the graph.
+pub fn sort_graph(ids: &mut Vec<Identity>) {
+    crate::sortc::any_by(ids, |a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
 }
 
 /// Everything that grades an identity: the proofs in a fixed order, the library MS2 proof apart, the detections and the filled cells.
