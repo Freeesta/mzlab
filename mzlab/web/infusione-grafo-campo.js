@@ -18,13 +18,14 @@ export function drawField(/** @type {HTMLElement} */ host, /** @type {any} */ fi
   if (!list.includes(G.adduct)) G.adduct = startAdduct(pol, G.mol);
   host.innerHTML = h`<div class="row ig-field" id="ig-mol"></div>` +
     h`<div class="row ig-field"><label>${I18N.t("msngrafo.ion")} <input id="ig-ion" type="text" value="${ionOf()}" autocomplete="off" spellcheck="false" title="${I18N.t("msngrafo.ion.tip")}"></label>` +
-    h`<label>${I18N.t("msngrafo.adduct")} <select id="ig-add">${optionsOf(list, G.adduct)}</select></label><button type="button" class="go" id="ig-go">${I18N.t("msngrafo.go")}</button></div>` +
+    h`<label>${I18N.t("msngrafo.adduct")} <select id="ig-add">${optionsOf(list, G.adduct)}</select></label><button type="button" class="go" id="ig-go">${I18N.t("msngrafo.go")}</button><button type="button" class="go" id="ig-flow" title="${I18N.t("msngrafo.flow.tip")}">${I18N.t("msngrafo.flow")}</button></div>` +
     h`<div class="row ig-field"><label>${I18N.t("msngrafo.smiles")} <input id="ig-smi" type="text" value="${G.smiles}" autocomplete="off" spellcheck="false"></label><span id="ig-ionline" class="sm muted" aria-live="polite"></span></div>`;
   const ion = /** @type {HTMLInputElement} */ (host.querySelector("#ig-ion")), add = /** @type {HTMLSelectElement} */ (host.querySelector("#ig-add"));
   const smi = /** @type {HTMLInputElement} */ (host.querySelector("#ig-smi"));
   add.onchange = () => { G.adduct = add.value; if (G.mol) ion.value = ionOf(); go(); };
   smi.onchange = () => { G.smiles = smi.value.trim(); go(); };
   host.querySelector("#ig-go")?.addEventListener("click", () => { commit(ion); go(); });
+  host.querySelector("#ig-flow")?.addEventListener("click", () => { commit(ion); G.auto = true; go(); });
   ion.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); commit(ion); go(); } });
   campo(/** @type {HTMLElement} */ (host.querySelector("#ig-mol")), {
     testi: { label: I18N.t("msngrafo.mol"), placeholder: I18N.t("msngrafo.mol.ph"), none: I18N.t("msngrafo.mol.none"), count: n => I18N.t("msngrafo.mol.count", { n }), manage: I18N.t("msngrafo.mol.manage") },
