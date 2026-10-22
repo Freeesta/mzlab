@@ -35,6 +35,18 @@ pub(super) fn body(c: &Ctx) -> String {
                 sep(&mut o);
                 assistant(&mut o, m);
             }
+            Role::System => {
+                sep(&mut o);
+                let text: String = m
+                    .parts
+                    .iter()
+                    .filter_map(plain)
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                o.raw("{\"role\":\"system\",\"content\":")
+                    .str(&text)
+                    .raw("}");
+            }
             Role::Tool => {
                 for p in &m.parts {
                     if let Part::ToolResult { id, content, .. } = p {
@@ -232,6 +244,7 @@ impl Decoder for Dec {
                 input: n(u.get("prompt_tokens")).saturating_sub(cached),
                 output: n(u.get("completion_tokens")),
                 cache_read: cached,
+                ..Usage::default()
             }));
         }
     }
