@@ -4453,3 +4453,4 @@
 {"v":1,"ts_utc":"2026-10-22T10:51:20Z","tipo":"annullamento","k":"39765632182","workflow":"pages","minuti_runner":4.6,"sostituito_da":"03f24cfc25342a33bd6ac4e98858beaf0f92bc6d","pr":null,"sha":"20b51c88430cc9b304580dcb84d1ac50a0fb35be","run_id":39765632182,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T10:51:54Z","tipo":"carico","k":"2026-10-22T10:5","job_in_coda":0,"job_in_corso":27}
 {"v":1,"ts_utc":"2026-10-22T10:54:44Z","azione":"aperta","tipo":"pr","pr":1487,"sha":"71e04a833f287413ee1ef7165c59efcc1b5c0472"}
+{"v":1,"ts_utc":"2026-10-22T10:59:48Z","azione":"aperta","tipo":"pr","pr":1488,"sha":"89bb06f9d5bf877b5918e9abedecae5383dd52fb"}
