@@ -650,6 +650,8 @@
   "msngrafo.node.title": "Titolo del pannello di uno ione: livello MS {level} e m/z {mz}.",
   "msngrafo.unexp": "Quanti picchi degli spettri dello ione il grafo non ha spiegato ({n}); segue l'elenco dei più intensi.",
   "msngrafo.use.tip": "Suggerimento del pulsante «Usa»: {f} = formula candidata scelta per lo ione.",
+  "msngrafo.int.line": "Riga della perdita neutra verso uno ione: {name} = nome, {f} = formula, {mass} = massa esatta, {ppm} = errore, {conf} = confidenza (alta/media/bassa), {act} = attivazioni che l'hanno vista.",
+  "msngrafo.int.alt": "Altre perdite note entro la finestra di massa: {list} = elenco di formule.",
   "msngrafo.find.analog": "Tipo di voce trovata nella libreria: {d} = differenza del precursore in Da (analogo, con frammenti spostati).",
   "msngrafo.find.proofs": "Prove di una voce trovata: {p} = picchi comuni, {n} = nodi allineati, {t} = nodi dell'albero ignoto, {l} = perdite comuni.",
   "msngrafo.find.shift": "Prove di un analogo: {s} = picchi spostati, {u} = non spostati, {c} = copertura (frazione d'intensità spiegata).",

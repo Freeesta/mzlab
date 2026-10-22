@@ -144,7 +144,14 @@ fn peaks(y: &[f64], sigma: &[f64], snr: f64, floor: f64) -> Result<Vec<(usize, u
         }
         out.push((lo, apex, hi));
     }
-    Ok(keep_above_noise(y, out, snr, floor))
+    let skirt = sigma.iter().fold(0.0f64, |m, &s| m.max(s));
+    Ok(keep_above_noise(
+        y,
+        out,
+        snr,
+        floor,
+        libm::ceil(REACH * skirt) as usize,
+    ))
 }
 
 /// Index of the lowest point of `y` between two apexes (the first one if several).
@@ -158,16 +165,21 @@ fn valley(y: &[f64], a: usize, b: usize) -> usize {
     at
 }
 
-/// The peaks whose height over the baseline is `snr` times the noise of the points that no peak covers (at least `floor`).
+/// The peaks whose height over the baseline is `snr` times the noise (at least `floor`). The noise is the spread of the points farther than `skirt` scans
+/// from every apex: the flanks of a peak found by a narrow wavelet are not noise, and a short series with no such point has the noise of `floor`.
 fn keep_above_noise(
     y: &[f64],
     found: Vec<(usize, usize, usize)>,
     snr: f64,
     floor: f64,
+    skirt: usize,
 ) -> Vec<(usize, usize, usize)> {
     let (mut sum, mut sum2, mut m) = (0.0, 0.0, 0.0);
     for (i, &v) in y.iter().enumerate() {
-        if !found.iter().any(|&(lo, _, hi)| i >= lo && i <= hi) {
+        if !found
+            .iter()
+            .any(|&(lo, apex, hi)| (i >= lo && i <= hi) || i.abs_diff(apex) <= skirt)
+        {
             sum += v;
             sum2 += v * v;
             m += 1.0;

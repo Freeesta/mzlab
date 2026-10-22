@@ -31,6 +31,7 @@ STAND_IN = """(fx) => {
       if (!q.get("formula")) { j.ione = null; j.nodi.forEach(n => { n.formula = null; }); }
       (JSON.parse(q.get("scelte") || "[]")).forEach(c => { const n = j.nodi.find(x => Math.abs(x.mz - c.mz) < 1e-3); if (n && n.formula) { n.formula.scelta = c.formula; n.formula.fonte = "utente"; } });
       const sx = j._sx; delete j._sx; if (sx && q.get("strutture")) j.strutture = Object.assign({}, sx, { nodo: q.get("strutture") });
+      if (q.get("interpreta") === "1") j.interpretazione = { versione: 1, ppm: 10, archi: j.archi.map(a => ({ da: a.da, a: a.a, attivazioni: ["cid"], perdita: { nome: "Carbon dioxide", formula: "CO2", massa: 43.98983, errore_ppm: 0.4, fonte: "formula", confidenza: "high", alternative: [] } })) };
       j.avvisi = [{ chiave: "warn.msngrafo.isolation", albero: "x", nodo: "n1" }];
       return Promise.resolve(jr(j));
     }
@@ -151,6 +152,12 @@ try:
             pg.click("#ig-flow"); attendi(pg, f"window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').length > {n0}")
             pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
         step("Run MSn workflow: graph and library search with one click", workflow)
+        def interp():
+            assert "interpreta=1" in pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo')[0][1]")
+            assert all("interpreta" not in r[1] for r in json.loads(pg.evaluate("JSON.stringify(window.__REQ.filter(r=>r[0]==='api/msn_grafo/export'))")))
+            pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-int li", timeout=10000)
+            t = pg.inner_text(".ig-int"); assert "Carbon dioxide" in t and "CO2" in t and "high confidence" in t, t
+        step("The panel of a node shows the neutral loss as evidence", interp)
         def data():
             pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert "n2" in clip and "C13H10NO4" in clip, clip[:200]
