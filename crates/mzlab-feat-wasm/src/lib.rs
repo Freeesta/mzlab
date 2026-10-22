@@ -35,8 +35,6 @@ pub mod interp;
 #[cfg(feature = "finder_msn")]
 pub mod msn;
 pub mod run;
-#[cfg(feature = "detect")]
-pub mod sched;
 pub mod spill_js;
 pub mod run_evid;
 pub mod stima;
@@ -44,8 +42,10 @@ pub mod stima;
 pub mod state;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
+
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
+
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
     o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");

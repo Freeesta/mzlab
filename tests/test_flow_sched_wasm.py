@@ -1,4 +1,4 @@
-"""The live scheduler in WebAssembly (crates/mzlab-feat-wasm/src/sched.rs) gives the same states, commands, cards and events as the native one on the shared
+"""The live scheduler in WebAssembly (`flow_sched` of the engine `mzlab-wasm`, `flow::sched_route`) gives the same states, commands, cards and events as the native one on the shared
 cases of crates/mzlab-core/tests/data/sched_cases.json, played through Node (tests/flow_sched_nodo.js). Skipped without cargo, the wasm32 target,
 wasm-bindgen or node."""
 import shutil
@@ -17,8 +17,8 @@ def run(*a):
 
 
 def test_wasm_scheduler_replays_the_shared_cases(tmp_path):
-    run("cargo", "build", "--release", "--locked", "-q", "--target", "wasm32-unknown-unknown", "-p", "mzlab-feat-wasm", "--no-default-features", "--features", "detect")
+    run("cargo", "build", "--release", "--locked", "-q", "--target", "wasm32-unknown-unknown", "-p", "mzlab-wasm")
     pkg = tmp_path / "pkg"
-    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_feat_wasm.wasm")
+    run("wasm-bindgen", "--target", "nodejs", "--no-typescript", "--out-dir", str(pkg), "target/wasm32-unknown-unknown/release/mzlab_wasm.wasm")
     out = run("node", str(ROOT / "tests/flow_sched_nodo.js"), str(pkg), str(CASES))
     assert out.startswith("ok "), out

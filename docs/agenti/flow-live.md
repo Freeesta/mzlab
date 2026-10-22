@@ -39,7 +39,7 @@ I problemi di `flow::check` bloccano (`blocked`) i lavori dell'istanza interessa
 `events_since(seq)` = array JSON degli eventi con `seq` maggiore; `seq` cresce di 1 da 1, `rev` = numero di `update` finora (0 alla creazione). Un evento `job` a ogni cambio di stato, chiave o tempo di un lavoro, un evento `node` a ogni cambio della scheda, un evento `plan` per un piano non pianificabile. Il registro tiene gli ultimi 8192. Schema: `docs/schemi/flowlive-1.json`; prova `tests/test_flowlive_schema.py` sugli eventi registrati in un caso. Scritto con `json::Out`, senza serde.
 
 ## Casi condivisi
-`crates/mzlab-core/tests/data/sched_cases.json`: passi (come dati), piano, chiamate e risposta di ognuna (`expect`); `sched_cases.rs` li riproduce. Rigenerare le risposte con `MZLAB_UPDATE_SCHED_CASES=1 cargo test -p mzlab-core --lib flow::sched` e rileggere il diff (la risposta è il contratto). Serviranno alla parità del `.wasm`.
+`crates/mzlab-core/tests/data/sched_cases.json`: passi (come dati), piano, chiamate e risposta di ognuna (`expect`); `sched_cases.rs` li riproduce. Rigenerare le risposte con `MZLAB_UPDATE_SCHED_CASES=1 cargo test -p mzlab-core --lib flow::sched` e rileggere il diff (la risposta è il contratto). Servono alla parità del `.wasm`.
 
 ## Trappole
 - `finished` per un lavoro cancellato o scomparso risponde `Discarded{key}`: va messo in cache, non usato. Un risultato di un `JobId` sconosciuto dà `Unknown`.
@@ -47,8 +47,8 @@ I problemi di `flow::check` bloccano (`blocked`) i lavori dell'istanza interessa
 - Il registro è copiato in `Sched::new` (nessun prestito); i passi con versione assente o parametri non risolvibili hanno un lavoro `blocked` con `plan.problem`.
 
 ## Nel `.wasm` del sito
-- `crates/mzlab-feat-wasm/src/sched.rs` (dietro la feature `detect`, nessuna feature nuova) esporta `FlowSched` con wasm-bindgen: `new(plan, registry, versione, identità)`, `update`, `next`, `started`, `progress`, `finished`, `cached`, `block`/`unblock`, `retry`, `pause`/`resume`, `jobs`, `nodes`, `events_since`, tutto testo JSON (`mzlab_core::json`); un lavoro è `{"instance","item"}`. `registry` vuoto = i passi compilati di `mzlab_feat::steps::registry()`; altrimenti i passi dei casi condivisi come dati (girano su entrambe le piattaforme).
-- `flow/lazy/worker-flow-web.js` lo ospita con i messaggi `{op: "sched.<metodo>", args}` e non sceglie nulla.
-- Parità: `tests/test_flow_sched_wasm.py` esegue `tests/flow_sched_nodo.js` sui casi di `sched_cases.json` (SKIP senza cargo, wasm-bindgen o node).
-- Misura nel modulo `hr` (wasm-opt -Oz): 1 173 665 B senza lo scheduler, 1 289 931 B con (1 251 365 B senza il registro compilato), contro il tetto `limit_hr` 1 212 416: SOPRA il tetto (decisione D4 di Federico: nessun tetto alzato).
-
+- Lo scheduler gira nel motore `mzlab-wasm` (non nei moduli `hr`: il margine di `limit_hr` non lo regge, e nessun tetto è alzato), in un oggetto per sessione (`thread_local`) dietro la funzione `flow_sched(op, body)` (`crates/mzlab-wasm/src/campioni.rs`, `mzlab_core::flow::sched_route`). Il worker del motore (`rust-worker.js`, op `lr_flow_sched`) la serve alla rotta `api/flow/sched/<op>` (`statRoute` in `lr-map.js`); un errore è `{error_key, params}`.
+- Operazioni (testo JSON in e out; un lavoro è `{"instance","item"}`): `new` (`{plan, registry, version, identities}`), `drop`, `update`, `next` (`{slots, mem_mb, mb:{"istanza|voce":stima}, mb_default}`), `started`, `progress`, `finished` (`{job, result:{ms}|{error_key,params}}`: `"accepted"`, `"discarded:<chiave>"` o `"unknown"`), `cached`, `block`/`unblock`, `retry`, `pause`/`resume`, `jobs`, `nodes`, `events` (`{since}`), `rev`, `set_identity`, `set_resources`.
+- Il registro non è compilato nel motore: arriva come JSON dei passi `step/1` dal piano della pagina (`F.registry`) ed è riletto da `mzlab_core::step::registry_from_value` (porte, parametri, algoritmi, preset, dove gira un passo; i testi per le persone restano vuoti). Il motore è lo stesso che serve già `api/flow/command`: la pagina non lo aspetta.
+- Parità: `tests/test_flow_sched_wasm.py` costruisce il motore per Node e `tests/flow_sched_nodo.js` esegue i casi di `sched_cases.json` (SKIP senza cargo, wasm-bindgen o node); i test nativi di `sched_route` e della rilettura del registro stanno in `flow/sched_route_tests.rs`.
+- Misura del motore (wasm-opt -Oz): 1 610 624 B prima, 1 678 954 B con lo scheduler e il lettore del registro, contro il tetto 1 703 936 (residuo 24 982 B).

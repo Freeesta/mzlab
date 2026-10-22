@@ -1,9 +1,7 @@
 // @ts-check
 // Flow web runner, worker side: loads the `feat` .wasm of mzFinder and answers `stima`, the memory that aligning a stored series asks for (Rust `stima_series`, the
-// rule of `slabs::stima`) and hosts the live scheduler (Rust `FlowSched`, `{op: "sched.<method>", args}`): the choices are all made by the .wasm, this file only
-// carries the calls. The steps run in the pool of feat-worker.js. Used by flow-web-run.js.
+// rule of `slabs::stima`). Only the estimate lives here; the steps run in the pool of feat-worker.js. Used by flow-web-run.js.
 /** @type {any} */ let mod = null;
-/** @type {any} */ let sched = null;
 
 /** @param {any} m the `wasm` entry of the pool: { jsUrl, wasmUrl, sha256? } */
 async function load(m) {
@@ -29,13 +27,6 @@ self.onmessage = async (/** @type {MessageEvent} */ ev) => {
   const m = ev.data;
   try {
     await load(m.wasm);
-    if (typeof m.op === "string" && m.op.startsWith("sched.")) {
-      const method = m.op.slice(6);
-      if (method === "new") sched = new mod.FlowSched(...m.args);
-      else if (!sched || typeof sched[method] !== "function") throw Object.assign(new Error("error.flow.sched"), { key: "error.flow.sched" });
-      self.postMessage({ id: m.id, ok: true, result: method === "new" ? true : sched[method](...(m.args || [])) });
-      return;
-    }
     const files = m.files.map((/** @type {ArrayBuffer} */ b) => new Uint8Array(b));
     self.postMessage({ id: m.id, ok: true, json: mod.stima_series(files, m.recipe || "", m.budgetMb || 0) });
   } catch (e) { self.postMessage({ id: m.id, error: describe(e) }); }

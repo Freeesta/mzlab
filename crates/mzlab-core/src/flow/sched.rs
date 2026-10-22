@@ -485,4 +485,4 @@ fn identity_of(plan: &Plan, identities: &[(String, String)], name: &str) -> Stri
 
 #[cfg(test)]
 #[path = "sched_tests.rs"]
-mod tests;
+pub(in crate::flow) mod tests;
