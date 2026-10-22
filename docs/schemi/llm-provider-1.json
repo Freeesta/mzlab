@@ -31,7 +31,21 @@
             "type": "object",
             "description": "An estimate shown to the user; 0 = unknown.",
             "required": ["in", "out"],
-            "properties": {"in": {"type": "number", "minimum": 0}, "out": {"type": "number", "minimum": 0}, "as_of": {"type": "string"}, "currency": {"type": "string"}}
+            "properties": {
+              "in": {"type": "number", "minimum": 0},
+              "out": {"type": "number", "minimum": 0},
+              "cache_read": {"type": "number", "minimum": 0},
+              "write_5m": {"type": "number", "minimum": 0},
+              "write_1h": {"type": "number", "minimum": 0},
+              "as_of": {"type": "string", "description": "Date (YYYY-MM-DD) the price was checked on the vendor's page; required when in or out is above 0."},
+              "currency": {"type": "string"},
+              "over": {
+                "type": "object",
+                "description": "Rates for the whole request when its prompt has more than above_tokens tokens.",
+                "required": ["above_tokens", "in", "out"],
+                "properties": {"above_tokens": {"type": "integer", "minimum": 0}, "in": {"type": "number", "minimum": 0}, "out": {"type": "number", "minimum": 0}, "cache_read": {"type": "number", "minimum": 0}, "write_5m": {"type": "number", "minimum": 0}, "write_1h": {"type": "number", "minimum": 0}}
+              }
+            }
           }
         }
       }

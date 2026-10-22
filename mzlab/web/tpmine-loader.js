@@ -31,11 +31,18 @@
   const lazyWarm = /** @type {Set<string>} */ (new Set());
   /** @param {...string} names @returns {Promise<void>} */
   const lazyLoad = async (...names) => { warmLazy(names); for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
-  /** @type {any} */ (window).TPLAZY = { load: lazyLoad, warm: warmLazy, whenLoaded: () => loaded || Promise.resolve() };
+  /** like load, but all the tags go in now, in order (async=false): called early, they run before the page's own long list of scripts instead of one by one behind it @param {...string} names @returns {Promise<void>} */
+  const lazyLoadNow = async (...names) => {
+    warmLazy(names);
+    const ps = names.map(n => { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n, true); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } return p; });
+    for (const p of ps) await p;
+  };
+  /** @type {any} */ (window).TPLAZY = { load: lazyLoad, loadNow: lazyLoadNow, warm: warmLazy, whenLoaded: () => loaded || Promise.resolve() };
 
-  function runScript(name) {
+  function runScript(name, inOrder) {
     return new Promise((/** @type {any} */ res, rej) => {
       const s = document.createElement("script");
+      if (inOrder) s.async = false;
       s.onload = () => { s.remove(); res(); };
       s.onerror = () => { s.remove(); rej(new Error("script " + name)); };
       s.src = DIR + name; document.head.appendChild(s);

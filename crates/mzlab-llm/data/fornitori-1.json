@@ -1,8 +1,8 @@
 {"schema":"llm-providers/1","providers":[
 {"schema":"llm-provider/1","id":"anthropic","adapter":"anthropic","base_url":"https://api.anthropic.com","auth":{"header":"x-api-key","prefix":""},"extra_headers":{"anthropic-version":"2023-06-01"},"models":[
-{"id":"claude-sonnet-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}},
-{"id":"claude-opus-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}},
-{"id":"claude-haiku-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}}],"local":false,"site_allowed":true},
+{"id":"claude-sonnet-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":2,"out":10,"cache_read":0.1,"write_5m":2.5,"write_1h":4,"as_of":"2026-10-22","currency":"USD"}},
+{"id":"claude-opus-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":4,"out":20,"cache_read":0.2,"write_5m":5,"write_1h":8,"as_of":"2026-10-22","currency":"USD"}},
+{"id":"claude-haiku-5-5","context_tokens":200000,"max_output_tokens":8192,"tools":"native","vision":true,"price_per_mtok":{"in":0.1,"out":0.5,"cache_read":0.01,"write_5m":0.125,"write_1h":0.2,"over":{"above_tokens":100000,"in":0.5,"out":2.5,"cache_read":0.05,"write_5m":0.625,"write_1h":1},"as_of":"2026-10-22","currency":"USD"}}],"local":false,"site_allowed":true},
 {"schema":"llm-provider/1","id":"openai","adapter":"openai_compat","base_url":"https://api.openai.com/v1","auth":{"header":"authorization","prefix":"Bearer "},"extra_headers":{},"models":[
 {"id":"gpt-4o-mini","context_tokens":128000,"max_output_tokens":16384,"tools":"native","vision":true,"price_per_mtok":{"in":0,"out":0,"as_of":"","currency":"USD"}}],"local":false,"site_allowed":true},
 {"schema":"llm-provider/1","id":"gemini","adapter":"gemini","base_url":"https://generativelanguage.googleapis.com","auth":{"header":"x-goog-api-key","prefix":""},"extra_headers":{},"models":[

@@ -1,5 +1,5 @@
 //! The LLM side of mzLab, kept apart from the engine: `tools` builds the catalog `strumenti/1` from the step registry; `provider` turns a conversation
-//! into a request and a byte stream into events for each vendor; `fake`, `log` and `cost` serve the tests and the transport. `agent` is the loop as a
+//! into a request and a byte stream into events for each vendor; `fake`, `log`, `cost` and `spend` (micro-dollar prices, cap and meter) serve the tests and the transport. `agent` is the loop as a
 //! pure state machine, `policy` decides every call by level, `schema` checks the arguments, `plan` checks a proposed plan, `context` builds `contesto/1`
 //! and `eval` scores the evaluation cases. Used by `mzlab-cli llm`.
 //! No network, no key, no dependency beyond `mzlab-core`.
@@ -18,5 +18,6 @@ pub mod plan;
 pub mod policy;
 pub mod provider;
 pub mod schema;
+pub mod spend;
 mod text;
 pub mod tools;

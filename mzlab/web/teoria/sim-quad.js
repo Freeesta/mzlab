@@ -47,7 +47,8 @@ const QUAD = (() => {
   return { rk4, trace, stableX, stableY, stable, window, VOf, E, AMU };
 })();
 
-document.addEventListener("DOMContentLoaded", () => {
+// The simulations build after the first paint (the chapter text is already readable); heavy numerics must not hold DOMContentLoaded.
+document.addEventListener("DOMContentLoaded", () => requestAnimationFrame(() => setTimeout(() => {
   const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue("--c" + n).trim();
   const APEX_K = 2 * 0.16784; // a/q at the apex (0.237/0.706)
 
@@ -280,4 +281,4 @@ document.addEventListener("DOMContentLoaded", () => {
     c1.onresize = c2.onresize = draw;
     draw();
   }
-});
+}, 0)));

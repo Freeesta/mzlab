@@ -31,7 +31,7 @@ Colonne: id · tipo · formula (massa) · richiede · ioni/polarità · attivazi
 | loss_ch2o2_acid_pos | loss | CH2O2 (46,005479) | carboxylic_acid | [M+H]+ | both | mid | 2 | [LEV07] abstract (caratteristica, non specifica) |
 | loss_co2_carboxylate | loss | CO2 (43,989829) | carboxylic_acid | [M−H]− | both | low | 1 | [LEV07] abstract |
 | loss_co_acylium | loss | CO (27,994915) | after: loss_h2o_acid_pos, loss_ch4o_ester, loss_nh3_amide | + | both | mid | 2 | [HOL10] text |
-| loss_nh3_amine | loss | NH3 (17,026549) | amine_primary | [M+H]+ | both | low | 1 | [HOL10] text, [DEM16] text |
+| loss_nh3_amine | loss | NH3 (17,026549) | amine_primary, escluso amine_aromatic | [M+H]+ | both | low | 1 | [HOL10] text, [DEM16] text |
 | loss_nh3_amide | loss | NH3 (17,026549) | amide (primaria, site `amide_nh2`) | [M+H]+ | both | mid | 2 | [HOL10] text |
 | loss_nh3_ammonium_adduct | loss | NH3 (17,026549) | nessuno | [M+NH4]+ | both | low | 1 | [HOL10] text |
 | loss_ch5n_n_methyl | loss | CH5N (31,042199) | amine_secondary, n_methyl | [M+H]+ | both | mid | 2 | [HOL10] text |
@@ -40,7 +40,8 @@ Colonne: id · tipo · formula (massa) · richiede · ioni/polarità · attivazi
 | loss_c3h6_n_isopropyl | loss | C3H6 (42,046950) | n_isopropyl | [M+H]+ | both | low | 1 | [HOL10] text |
 | loss_c4h8_n_tbutyl | loss | C4H8 (56,062600) | n_tbutyl | [M+H]+ | both | low | 1 | [HOL10] text |
 | loss_alkene_ester | cleavage | CnH2n dall'alchile (C2H4 28,031300 per etile) | ester (site `gamma_h_carbonyl`) | + | both | mid | 2 | [MCL59] text, [DEM16] text |
-| loss_ch4o_ester | loss | CH4O (32,026215) | ester (site `methyl_ester`) o ether (site `methoxy_near_charge`) | + | both | mid | 2 | [HOL10] text |
+| loss_ch4o_ester | loss | CH4O (32,026215) | ester (site `methyl_ester`) | + | both | mid | 2 | [HOL10] text |
+| loss_ch4o_methoxy_ether | loss | CH4O (32,026215) | ether (site `methoxy_near_charge`) | + | both | mid | 2 | [HOL10] text |
 | loss_c2h4o2_acetate | loss | C2H4O2 (60,021129) | ester (site `acetate`) | + | both | low | 2 | [HOL10] text |
 | loss_c2h2o_acetyl | loss | C2H2O (42,010565) | amide o ester (site `acetyl_on_heteroatom`) | + | both | mid | 2 | [HOL10] text |
 | loss_co_ring_neg | loss | CO (27,994915) | phenol, aromatic_ring | [M−H]− | both | mid | 3 | [FAB01] abstract |
@@ -59,7 +60,7 @@ Colonne: id · tipo · formula (massa) · richiede · ioni/polarità · attivazi
 | loss_hnco_ureido | loss | HNCO (43,005814) | amide (site `ureido_nh2`) | + | both | mid | 2 | [HAO09] abstract (gruppo ureidico, CID) |
 | loss_c2h3no_n_methylcarbamate | loss | C2H3NO (57,021464) | ester, amide (site `n_methylcarbamate`) | + | beam | low | 2 | [ZHO18] abstract (CH3NCO, 15 carbammati, QTRAP) |
 | loss_h3po4_phosphate | loss | H3PO4 (97,976895) | nuovo gruppo `phosphate` | + | both | low | 1 | [HOL10] text |
-| loss_hexose | loss | C6H10O5 (162,052823) | nuovo gruppo `o_glycoside` | + e − | both | low | 1 | [MA14] abstract (glicosilazioni), [HOL10] text |
+| loss_hexose | loss | C6H10O5 (162,052823) | nuovo gruppo `o_glycoside`, escluso `glucuronide` | + e − | both | low | 1 | [MA14] abstract (glicosilazioni), [HOL10] text |
 | loss_glucuronide | loss | C6H8O6 (176,032088) | nuovo gruppo `glucuronide` | + e − | both | low | 1 | [MA14] abstract, [HOL10] text |
 | loss_hcooh_formate_adduct | loss | CH2O2 (46,005479) | nessuno | [M+HCOO]− | both | low | 1 | [HOL10] text |
 | loss_hcl_chloride_adduct | loss | HCl (35,976678) | nessuno | [M+Cl]− | both | low | 1 | [HOL10] text |
@@ -67,7 +68,7 @@ Colonne: id · tipo · formula (massa) · richiede · ioni/polarità · attivazi
 | ion_immonium_alpha | cleavage | CnH2n+2N+ dal lato dell'azoto (CH4N+ 30,033826; C2H6N+ 44,049476; C3H8N+ 58,065126) | amine (site `alpha_c_n`) | + | beam | high | 2 | [OLS07] abstract (immonio visti in HCD, peptidi), [HOL10] text |
 | ion_acylium | cleavage | R–C≡O+ dal SMILES | ketone, ester o amide (site `acyl`) | + | both | mid | 2 | [DEM16] text |
 | ion_sodium | ion | Na+ (m/z 22,989221) | nessuno | [M+Na]+ | both | high | 3 | [HOL10] text |
-| remote_fixed_charge | cleavage | tagli lontani dalla carica | ions [M+Na]+ o N quaternario | + | beam | high | 3 | [CHE00] abstract |
+| remote_fixed_charge | cleavage | tagli lontani dalla carica (letta, nessun prodotto calcolato) | ions [M+Na]+ o N quaternario | + | beam | high | 3 | [CHE00] abstract |
 - **Masse degli ioni**: m/z = massa della formula − 0,000549 (elettrone) per i positivi; C7H7+ 91,054775 − 0,000549 = 91,054226; CH4N+ 30,034374 − 0,000549 = 30,033826 (ricalcolare nel test, mai copiare).
 - **Controesempi da mettere nei test**: OH e NH2 aromatici NON danno una perdita che li riveli [LEV07] (nessuna regola `loss_h2o_phenol` in positivo); l'assenza di una perdita non esclude il gruppo [MA14]; uno ione molto stabile spegne gli altri canali [HOL10].
 - **Regole con fonti non verificate**: nessuna regola della tabella ha solo `todo` (riferimenti controllati su PubMed o Crossref); una regola aggiunta con solo `todo` ha priorità 3 e resta fuori dal conteggio «spiegato» della convalida (§3 del piano) finché una persona non conferma la fonte.

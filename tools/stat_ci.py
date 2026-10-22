@@ -40,6 +40,7 @@ VERSIONE = 1        # field `v` of every line; bump when a field changes meaning
 
 # Category of a failed job from the name of its failed step (no log is read).
 CATEGORIE = [
+    ("aggregato", r"^Every .* job passed"),      # rust-ok: red only because another job is red or cancelled, so it is not a cause of its own
     ("soglia", r"soglie|controlla\.py|size limit|limits|threshold"),
     ("lint", r"lint|clippy|fmt|format|tsc|syntax|machete|deny|globals|i18n|sources"),
     ("test", r"test|e2e|smoke|pytest|guards|parity|verifica|determinism"),
