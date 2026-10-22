@@ -4,14 +4,30 @@
 Fails when a file has more errors than its base, or has errors and is not in the base. The base only goes down:
 `--aggiorna` rewrites it with min(base, now) and refuses to raise a number or add a file. Errors in vendor/ and wasm/ are not counted.
 """
-import json, os, re, subprocess, sys
+import json, os, re, signal, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
 
 RADICE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE = os.path.join(RADICE, "tools", "tipi", "base_errori.json")
 PROGETTI = ("pagina", "moduli", "worker", "stretto")
 TSC = ["npx", "--yes", "-p", "typescript@5.9.3", "tsc", "-p"]
+INSTALLA_S, INSTALLA_PROVE = 60, 3      # the install of tsc by npx sometimes hangs on the runner: 60 s per try, the first plus 2 retries
 RIGA = re.compile(r"^(\S+?)\(\d+,\d+\): error TS\d+")
+
+
+def installa(cmd=None, timeout=INSTALLA_S, prove=INSTALLA_PROVE):
+    """Runs `npx ... tsc -v` (which installs tsc) with a timeout; a hung try is killed with its whole process group (npx leaves children behind) and retried."""
+    cmd = cmd or TSC[:-1] + ["-v"]
+    for n in range(1, prove + 1):
+        p = subprocess.Popen(cmd, cwd=RADICE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+        try:
+            p.communicate(timeout=timeout)
+            return
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, signal.SIGKILL)
+            p.communicate()
+            print("tsc install: try %d of %d hung for %d s, killed" % (n, prove, timeout), flush=True)
+    sys.exit("tsc could not be installed by npx in %d tries of %d s (the npm registry or the runner is stuck): run the job again" % (prove, timeout))
 
 
 def esegui(nome):
@@ -28,7 +44,7 @@ def esegui(nome):
 
 
 def misura():
-    subprocess.run(TSC[:-1] + ["-v"], cwd=RADICE, capture_output=True)   # installs tsc once: three npx at the same time corrupt its cache
+    installa()   # installs tsc once: three npx at the same time corrupt its cache
     ris = {}
     with ThreadPoolExecutor(len(PROGETTI)) as ex:
         for c in ex.map(esegui, PROGETTI):

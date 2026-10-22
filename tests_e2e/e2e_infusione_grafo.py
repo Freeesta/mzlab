@@ -37,6 +37,9 @@ STAND_IN = """(fx) => {
     if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", nome: "Exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
     if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", nome: "Exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
     if (path === "api/msnlib/aggiungi") { const b = JSON.parse(init.body), tag = "entry:" + b.molecola_id + "\\n"; const dup = (b.libreria || "").includes(tag); return Promise.resolve(jr({ libreria: dup ? b.libreria : (b.libreria || "") + tag, doppione: dup })); }
+    if (path === "api/msnlib/cerca") return Promise.resolve(jr({ formato: "msncerca/1", opzioni: {}, candidati: [
+      { id: "STD-1", ione: "C14H15N3O5 [M+H]+", att: [], delta_ppm: 0.4, punteggi: { ms2: 0.91, albero: 0.8, perdite: null }, prove: { picchi_comuni: 5, nodi_allineati: 3, nodi_ignoto: 4, perdite_comuni: 2, perdite_ignoto: 3 }, analogo: null },
+      { id: "STD-2", ione: "C15H17N3O5 [M+H]+", att: [], delta_ppm: 0, punteggi: { ms2: 0.5, albero: null, perdite: null }, prove: { picchi_comuni: 2, nodi_allineati: 0, nodi_ignoto: 4, perdite_comuni: 0, perdite_ignoto: 3 }, analogo: { delta_da: 14.0157, spostati: 2, non_spostati: 1, copertura: 0.6 } }] }));
     return orig(u, init);
   };
 }"""
@@ -136,6 +139,13 @@ try:
             assert body["libreria"] and body["formula"].startswith("C14H15N3O5"), body
             assert pg.evaluate("document.body.textContent").count("already in the library") > 0 or pg.evaluate("I18N.lang") != "en"
         step("Add to library: the second time says the entry is already there", library)
+        def find():
+            pg.fill("#ig-delta", "20"); pg.click("#ig-find-go"); pg.wait_for_selector(".ig-find-t tbody tr", timeout=5000)
+            assert pg.locator(".ig-find-t tbody tr").count() == 2
+            body = json.loads(pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msnlib/cerca').slice(-1)[0][2]"))
+            assert body["libreria"] and body["delta_max"] == 20 and body["formula"].startswith("C14H15N3O5"), body
+            assert pg.locator(".ig-find-t tbody tr").nth(1).inner_text().count("14.0157") == 1
+        step("Search lab library: candidates with the scores apart, the analog marked", find)
         def data():
             pg.click("#ig-copyd"); attendi(pg, "navigator.clipboard.readText().then(t => t.includes('n2'))")
             clip = pg.evaluate("navigator.clipboard.readText()"); assert "n2" in clip and "C13H10NO4" in clip, clip[:200]
