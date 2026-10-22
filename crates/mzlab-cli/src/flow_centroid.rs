@@ -8,6 +8,7 @@ use mzlab_core::centroidi::{mzml_to_centroids_with, Over};
 use mzlab_core::error::Result;
 use mzlab_core::flow::Job;
 use mzlab_core::json::Value;
+use mzlab_core::pace::Pace;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow::{io, FileRunner, Lineage, Made};
@@ -55,6 +56,15 @@ fn number(job: &Job, name: &str) -> Option<f64> {
 
 /// `spectra.centroid`: the centroid mzML of one file, named after the file for the steps that follow.
 pub(crate) fn job(r: &FileRunner, job: &Job) -> Result<Made> {
+    job_with(r, job, &mut |_, _| {})
+}
+
+/// `job` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file made is the same with any `step`.
+pub(crate) fn job_with(
+    r: &FileRunner,
+    job: &Job,
+    step: &mut dyn FnMut(usize, usize),
+) -> Result<Made> {
     let input = &job.inputs[0].1[0];
     let src = r.path(input);
     let name = r.source_name(input);
@@ -66,6 +76,7 @@ pub(crate) fn job(r: &FileRunner, job: &Job) -> Result<Made> {
         fwhm: number(job, "fwhm"),
         threshold: number(job, "threshold"),
     };
+    let mut pace = Pace::new(step);
     let written = File::create(&out).map_err(io).and_then(|f| {
         let mut w = BufWriter::new(f);
         let used = mzml_to_centroids_with(
@@ -73,7 +84,7 @@ pub(crate) fn job(r: &FileRunner, job: &Job) -> Result<Made> {
             &mut w,
             &name,
             over,
-            &mut |_, _| {},
+            &mut |d, t| pace.at(d, t),
         )?;
         w.flush().map_err(io)?;
         Ok(used)

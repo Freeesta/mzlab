@@ -3,16 +3,13 @@
 //! "Pipeline"), the steps are `run::detect` and `run::align`, and the CSV is the export "full" of the table (`core::table_file`), so the numbers are the ones of the page.
 
 use std::fs::File;
-use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
-use mzlab_core::lettori::Limiti;
-use mzlab_core::mzidx::{build_mzml_spill, DEFAULT_BUDGET};
-use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
+use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
@@ -69,6 +66,7 @@ mod flow_msnlib_tests;
 mod flow_msnraw_tests;
 mod flow_network;
 mod flow_out;
+mod flow_pace;
 mod flow_pca;
 #[cfg(test)]
 mod flow_pca_tests;
@@ -137,31 +135,7 @@ fn io(e: std::io::Error) -> Error {
 
 /// The `.mzidx` of `path` written to `idx` with `budget` bytes of working memory: an mzML through its scan table, any other file or dataset (a `.wiff` with
 /// its `.wiff.scan`, a `.D`/`.d`/`.raw` folder) through the reader of the registry. `label` is the plan input (`NAME@ID` names the sample `ID`).
-pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
-    let name = path
-        .file_name()
-        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let mut out = File::create(idx).map_err(io)?;
-    if !path.is_dir() && name.to_lowercase().ends_with(".mzml") {
-        let size = std::fs::metadata(path).map_err(io)?.len();
-        let p = prepare(&mut File::open(path).map_err(io)?, size, &name)?;
-        build_mzml_spill(
-            &p.table,
-            BufReader::new(File::open(path).map_err(io)?),
-            &mut out,
-            budget,
-            None,
-        )?;
-    } else {
-        let mut fs = flow_set::file_set(path)?;
-        let imp = impronte(&mut fs)?;
-        let mut l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
-        let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
-        let sample = flow_set::sample_index(label, &ids)?;
-        indicizza_lettore(&mut *l, sample, &imp, &name, &mut out, budget, &mut |_| {})?;
-    }
-    Ok(())
-}
+pub(crate) use flow_pace::build_index_of;
 
 pub(crate) fn build_index(path: &Path, idx: &Path, budget: usize) -> Result<()> {
     build_index_of(path, "", idx, budget)

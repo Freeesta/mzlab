@@ -41,6 +41,12 @@ I problemi di `flow::check` bloccano (`blocked`) i lavori dell'istanza interessa
 ## Casi condivisi
 `crates/mzlab-core/tests/data/sched_cases.json`: passi (come dati), piano, chiamate e risposta di ognuna (`expect`); `sched_cases.rs` li riproduce. Rigenerare le risposte con `MZLAB_UPDATE_SCHED_CASES=1 cargo test -p mzlab-core --lib flow::sched` e rileggere il diff (la risposta è il contratto). Serviranno alla parità del `.wasm`.
 
+## Avanzamento dentro i lavori (`mzlab_core::pace`)
+- `Pace::new(sink).at(done, total)` inoltra `(done, total)` al massimo una volta per percento intero, mai all'indietro; l'ultimo richiamo è `(total, total)` (un lavoro vuoto dà `(0, 0)` una volta). I byte prodotti non dipendono dalla callback.
+- Chi lo usa: `flow_centroid::job_with` (scansioni scritte da `mzml_to_centroids_with`), `flow_pace::build_index_with` (scansioni decodificate dal lettore, `Scans`, o byte letti di un mzML, `Counted`; `build_index_of` è il caso senza callback), `mzlab_feat::trace::detect_with` (picchi esaminati, per blocco). Prove: `flow_centroid_tests.rs`, `flow_pace.rs`, `lr_fullscan.rs`.
+- Nel browser il worker di `TP_Mine/files/feat-worker.js` manda `{id, progress:[done,total]}` e il pool lo gira a `opts.onStep({phase, name, done, total})`; il `.wasm` `feat` deve ancora richiamare il 6° argomento di `detect_file_to`.
+- Da collegare: `FileRunner` (l'esecutore passa a `job_with` e `build_index_with` una callback vuota), la conversione (`write_mzml` passa `|_, _| {}` a `Conversione::scrivi`), l'allineamento (per file letto).
+
 ## Trappole
 - `finished` per un lavoro cancellato o scomparso risponde `Discarded{key}`: va messo in cache, non usato. Un risultato di un `JobId` sconosciuto dà `Unknown`.
 - `set_identity` e `set_resources` valgono dal `update` o dal `next` successivo; le risorse restano legate al `JobId`.
