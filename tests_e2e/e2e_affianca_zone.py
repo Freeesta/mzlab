@@ -52,6 +52,14 @@ try:
             lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "A destra", lab
             pg.keyboard.press("Escape"); pg.mouse.up()
         step("right of the target: label «A destra»", right)
+        def over():
+            # a panel raised by many clicks must not hide the preview
+            pg.evaluate("stackOrder().forEach(q => { q.el.style.zIndex = 4000; })")
+            lab = drag(0, 1, 0.8, 0.5, release=False); assert lab == "A destra", lab
+            z = pg.evaluate("[+getComputedStyle(document.querySelector('.aff-prev')).zIndex, Math.max(...stackOrder().map(q => +q.el.style.zIndex))]")
+            assert z[0] > z[1], z
+            pg.keyboard.press("Escape"); pg.mouse.up()
+        step("the preview stays above panels raised by many clicks", over)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
