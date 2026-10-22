@@ -5,6 +5,8 @@
 //! No network, no key, no dependency beyond `mzlab-core`.
 
 pub mod agent;
+pub mod chart;
+pub mod chart_views;
 pub mod compact;
 pub mod context;
 pub mod conv;
