@@ -56,6 +56,7 @@
         ...step.algorithms.map((/** @type {any} */ a) => el("option", { value: a.id, selected: !!e.algorithm && a.id === e.algorithm.id, text: a.title + (a.status === "planned" ? " (planned)" : "") }))));
       if (e.algorithm && e.algorithm.doc) box.append(el("span"), el("span", { class: "fl-ds", text: e.algorithm.doc }));
     }
+    if (F.msnMolecule && inst.step.startsWith("spectra.msn_graph@")) box.append(F.msnMolecule(inst, step, done));
     const presets = F.presetList(step);
     if (presets.length) {
       const id = `fl-pre-${inst.id}`;
