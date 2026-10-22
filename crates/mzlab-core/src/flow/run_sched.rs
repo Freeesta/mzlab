@@ -101,6 +101,36 @@ fn pick(g: &mut Core, hooks: &dyn Hooks) -> Option<(JobId, Ins, Arc<Ctx>)> {
     }
 }
 
+/// The scheduler, what the finished jobs made and how many are running, under one lock.
+pub struct Core {
+    pub sched: Sched,
+    pub results: Results,
+    running: usize,
+    /// The plan the jobs belong to; none while the plan cannot be run (no job starts).
+    pub ctx: Option<Arc<Ctx>>,
+}
+
+impl Core {
+    pub fn new(sched: Sched, ctx: Option<Ctx>) -> Core {
+        Core {
+            sched,
+            results: HashMap::new(),
+            running: 0,
+            ctx: ctx.map(Arc::new),
+        }
+    }
+}
+
+/// A plan with its steps, parameters and jobs, the context in which the jobs run.
+pub struct Ctx {
+    plan: Plan,
+    steps: Vec<Step>,
+    resolved: Vec<Resolved>,
+    /// The jobs of each instance, in the order of its items.
+    ids: Vec<Vec<JobId>>,
+    roots: Vec<String>,
+}
+
 impl Ctx {
     fn position(&self, instance: &str) -> Option<usize> {
         self.plan.steps.iter().position(|x| x.id == instance)
@@ -128,6 +158,10 @@ impl Ctx {
             item_root: root,
         }
     }
+}
+
+fn locked(m: &Mutex<Core>) -> MutexGuard<'_, Core> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 impl Ctx {
@@ -186,34 +220,28 @@ impl Ctx {
     }
 }
 
-/// The scheduler, what the finished jobs made and how many are running, under one lock.
-pub struct Core {
-    pub sched: Sched,
-    pub results: Results,
-    running: usize,
-    /// The plan the jobs belong to; none while the plan cannot be run (no job starts).
-    pub ctx: Option<Arc<Ctx>>,
-}
-
-impl Core {
-    pub fn new(sched: Sched, ctx: Option<Ctx>) -> Core {
-        Core {
-            sched,
-            results: HashMap::new(),
-            running: 0,
-            ctx: ctx.map(Arc::new),
-        }
+/// The characters of a file name that stay in a file-name root.
+fn clean(name: &str) -> String {
+    // `NAME@ID` names a sample of a dataset: the root keeps the id
+    if let Some((base, id)) = name.rsplit_once('@') {
+        return format!("{}-{}", clean(base), clean(id));
     }
-}
-
-/// A plan with its steps, parameters and jobs, the context in which the jobs run.
-pub struct Ctx {
-    plan: Plan,
-    steps: Vec<Step>,
-    resolved: Vec<Resolved>,
-    /// The jobs of each instance, in the order of its items.
-    ids: Vec<Vec<JobId>>,
-    roots: Vec<String>,
+    let stem = name.rsplit_once('.').map_or(name, |s| s.0);
+    let root: String = stem
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    if root.is_empty() {
+        "x".into()
+    } else {
+        root
+    }
 }
 
 impl Ctx {
@@ -243,34 +271,6 @@ impl Ctx {
     /// The jobs of each instance of the plan, in the order of its items.
     pub fn ids(&self) -> &[Vec<JobId>] {
         &self.ids
-    }
-}
-
-fn locked(m: &Mutex<Core>) -> MutexGuard<'_, Core> {
-    m.lock().unwrap_or_else(|e| e.into_inner())
-}
-
-/// The characters of a file name that stay in a file-name root.
-fn clean(name: &str) -> String {
-    // `NAME@ID` names a sample of a dataset: the root keeps the id
-    if let Some((base, id)) = name.rsplit_once('@') {
-        return format!("{}-{}", clean(base), clean(id));
-    }
-    let stem = name.rsplit_once('.').map_or(name, |s| s.0);
-    let root: String = stem
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    if root.is_empty() {
-        "x".into()
-    } else {
-        root
     }
 }
 

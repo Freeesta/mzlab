@@ -37,7 +37,8 @@ fn the_routes_answer_as_the_scheduler_of_the_site() {
     );
     let files = json!({ "s_t000.mzML": "a", "s_t010.mzML": "b" });
     let st = State::new();
-    st.live_start(&json!({ "plan": PLAN, "files": files }), 0).unwrap();
+    st.live_start(&json!({ "plan": PLAN, "files": files }), 0)
+        .unwrap();
 
     let steps = mzlab_core::step::json::registry_json(&mzlab_cli::flow::steps());
     let new = format!(

@@ -13,26 +13,17 @@ use std::time::{Duration, Instant, SystemTime};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::sched::{Command, Done, JobId, Landed, Sched, State};
 use mzlab_core::flow::{
-    parse, record, sched_act, sched_ask, sched_cancels, work, Core, Ctx, FileInput, Hooks,
+    parse, record, sched_act, sched_ask, sched_cancels, work, Core, Ctx, FileInput, Hooks, Job,
     Outcome, Plan, Platform, Run,
 };
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Step};
 
 use crate::flow::{executable, FileRunner};
-use crate::flow_pace::{Gate, Report, Watch};
+use crate::flow_pace::{cancelled, Gate, Report, Watch};
 
 /// The least time between two progress events of one job.
 const BEAT: Duration = Duration::from_millis(250);
-
-fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
-    m.lock().unwrap_or_else(|e| e.into_inner())
-}
-
-/// Threads of a live run on this computer: all cores but one, at most four (as the run of the desktop app).
-pub fn default_workers() -> usize {
-    std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4))
-}
 
 /// What the runner and the jobs share with the run: the cancel flag of each running job, where they report and the scheduler.
 struct Link {
@@ -71,11 +62,6 @@ struct Kept {
     files: Vec<(PathBuf, u64, SystemTime)>,
 }
 
-fn stamp(p: &Path) -> Option<(u64, SystemTime)> {
-    let m = std::fs::metadata(p).ok()?;
-    Some((m.len(), m.modified().ok()?))
-}
-
 struct Shared {
     core: Arc<Mutex<Core>>,
     cv: Condvar,
@@ -86,6 +72,17 @@ struct Shared {
     /// Jobs a caller runs itself (`LiveRun::lend`).
     lent: Mutex<HashSet<JobId>>,
     stop: AtomicBool,
+}
+
+impl Shared {
+    fn take_in(&self, sched: &Sched, claim: &dyn Fn(&JobId) -> bool) {
+        let mine = sched.jobs().into_iter().map(|j| j.0).filter(|id| claim(id));
+        lock(&self.lent).extend(mine);
+    }
+
+    fn take(&self, claim: &dyn Fn(&JobId) -> bool) {
+        self.take_in(&lock(&self.core).sched, claim);
+    }
 }
 
 impl Hooks for Shared {
@@ -138,6 +135,32 @@ pub enum Lend {
     Failed(Error),
 }
 
+/// What a live run adds to the runner of `flow.rs`.
+impl FileRunner {
+    /// The runner whose jobs a live run watches: it can cancel them and reads their progress.
+    pub(crate) fn with_watch(mut self, watch: Arc<dyn Watch>) -> FileRunner {
+        self.watch = Some(watch);
+        self
+    }
+
+    /// The cancel flag and the progress of `job`; `Gate::none()` outside a live run.
+    pub(crate) fn gate(&self, job: &Job) -> Gate {
+        let w = self.watch.as_ref();
+        w.map_or_else(Gate::none, |w| {
+            w.gate(&job.instance.id, job.item_name.as_deref())
+        })
+    }
+
+    /// A step that was cancelled fails with whatever its reader or writer said: it is the cancellation.
+    pub(crate) fn cancelled_or(&self, job: &Job, e: Error) -> Error {
+        if self.gate(job).stopped() {
+            cancelled()
+        } else {
+            e
+        }
+    }
+}
+
 /// A plan being run; dropped, it cancels what runs and waits for the threads.
 pub struct LiveRun {
     shared: Arc<Shared>,
@@ -147,63 +170,32 @@ pub struct LiveRun {
     plan: Mutex<Plan>,
 }
 
-/// The plan of `text` as it runs: inputs hashed (those of `known` keep their hash), comparisons expanded, every step with a native executor.
-fn ready_plan(text: &[u8], dir: &Path, known: &[FileInput], reg: &[Step]) -> Result<Plan> {
-    let mut plan = parse(text)?;
-    for f in &mut plan.inputs {
-        match known.iter().find(|k| k.name == f.name) {
-            Some(k) if f.sha256.is_empty() || f.sha256 == k.sha256 => {
-                (f.sha256, f.bytes) = (k.sha256.clone(), k.bytes);
-            }
-            _ => {
-                let path = dir.join(crate::flow_set::dataset_name(&f.name));
-                let (bytes, sha) = crate::flow_set::digest(&path).map_err(|e| e.with("input", &f.name))?;
-                if !f.sha256.is_empty() && f.sha256 != sha {
-                    return Err(Error::new("err.flow.input.sha").with("input", &f.name));
-                }
-                (f.sha256, f.bytes) = (sha, Some(bytes));
-            }
-        }
-    }
-    let check = |problems: Vec<mzlab_core::flow::Problem>| {
-        let list: Vec<String> = problems.iter().map(crate::flow_run::problem_text).collect();
-        Error::new("err.flow.check").with("problems", list.join(" "))
-    };
-    let problems = crate::flow_compare::check(&plan, reg, Platform::current());
-    if !problems.is_empty() {
-        return Err(check(problems));
-    }
-    let plan = crate::flow_compare::expand(plan, reg)?;
-    if let Some(s) = plan.steps.iter().find(|s| !executable(&s.step)) {
-        let e = Error::new("err.flow.step.native").with("step", s.step.clone());
-        return Err(e);
-    }
-    Ok(plan)
-}
-
 impl LiveRun {
     /// Runs the plan of `text` (the inputs are the files of `dir` named in it; what the steps make goes to `work`, whose cache gives back the steps that
-    /// are as they were) with `workers` threads (none: the scheduler only answers, nothing runs). `registry` is `flow::steps()`.
+    /// are as they were) with `workers` threads (none: the scheduler only answers, nothing runs). `registry` is `flow::steps()`. The jobs `claim` says yes to are run by the caller (the
+    /// conversion queue of the desktop app): the workers leave them alone from the first moment, `lend` tells how they stand.
     pub fn start(
         text: &[u8],
         registry: Vec<Step>,
         dir: &Path,
         work: &Path,
         workers: usize,
+        claim: &dyn Fn(&JobId) -> bool,
     ) -> Result<LiveRun> {
         let plan = ready_plan(text, dir, &[], &registry)?;
-        std::fs::create_dir_all(work).map_err(|e| Error::new("err.file.write").with("detail", e.to_string()))?;
+        std::fs::create_dir_all(work)
+            .map_err(|e| Error::new("err.file.write").with("detail", e.to_string()))?;
         let runner = FileRunner::cached(dir, work, None, Some(false));
-        LiveRun::with_runner(plan, registry, runner, dir, workers)
+        LiveRun::with_runner(plan, registry, runner, dir, (workers, claim))
     }
 
-    /// `start` for a plan that is checked and expanded, with the runner it was prepared for.
+    /// `start` for a plan that is checked and expanded, with the runner it was prepared for; `(workers, claim)` as in `start`.
     pub(crate) fn with_runner(
         plan: Plan,
         registry: Vec<Step>,
         mut runner: FileRunner,
         dir: &Path,
-        workers: usize,
+        (workers, claim): (usize, &dyn Fn(&JobId) -> bool),
     ) -> Result<LiveRun> {
         let sched = Sched::new(&plan, &registry, env!("CARGO_PKG_VERSION"), &[]);
         let ctx = Ctx::new(&plan, &registry, &sched).ok();
@@ -224,6 +216,7 @@ impl LiveRun {
             lent: Mutex::new(HashSet::new()),
             stop: AtomicBool::new(false),
         });
+        shared.take(claim);
         let threads = (0..workers)
             .map(|_| {
                 let s = shared.clone();
@@ -237,16 +230,27 @@ impl LiveRun {
             plan: Mutex::new(plan),
         })
     }
+}
 
+fn is_running(s: &Sched, id: &JobId) -> bool {
+    s.jobs()
+        .iter()
+        .any(|(j, st)| j == id && matches!(st, State::Running { .. }))
+}
+
+impl LiveRun {
     /// The plan of `text` replaces the one that runs; answers the jobs to cancel as `api/flow/sched/update` does. A job with the same `plan_key` goes on;
     /// one with another is cancelled (its flag goes up and it ends at the next piece), kept as stale or waiting, and runs again.
-    pub fn update(&self, text: &[u8]) -> Result<String> {
+    pub fn update(&self, text: &[u8], claim: &dyn Fn(&JobId) -> bool) -> Result<String> {
         let known = lock(&self.plan).inputs.clone();
         let plan = ready_plan(text, &self.dir, &known, &self.shared.registry)?;
         let mut g = lock(&self.shared.core);
         let cmds = g.sched.update(&plan);
-        g.ctx = Ctx::new(&plan, &self.shared.registry, &g.sched).ok().map(Arc::new);
+        g.ctx = Ctx::new(&plan, &self.shared.registry, &g.sched)
+            .ok()
+            .map(Arc::new);
         self.raise(&cmds);
+        self.shared.take_in(&g.sched, claim);
         *lock(&self.plan) = plan;
         drop(g);
         self.shared.cv.notify_all();
@@ -273,7 +277,14 @@ impl LiveRun {
     pub fn ask(&self, op: &str, body: &Value) -> Option<String> {
         sched_ask(&lock(&self.shared.core).sched, op, body)
     }
+}
 
+fn stamp(p: &Path) -> Option<(u64, SystemTime)> {
+    let m = std::fs::metadata(p).ok()?;
+    Some((m.len(), m.modified().ok()?))
+}
+
+impl LiveRun {
     pub fn pause(&self) {
         lock(&self.shared.core).sched.pause();
     }
@@ -335,7 +346,13 @@ impl LiveRun {
         let ctx = g.ctx.clone().ok_or_else(|| Error::new("err.flow.sched"))?;
         record(&plan, &self.shared.registry, ctx.ids(), g.results.clone())
     }
+}
 
+fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+impl LiveRun {
     /// The jobs of the instances of the step `step`.
     pub fn jobs_of(&self, step: &str) -> Vec<JobId> {
         let plan = lock(&self.plan);
@@ -345,11 +362,6 @@ impl LiveRun {
         on.filter(|(i, _)| i.step.split('@').next() == Some(step))
             .flat_map(|(_, ids)| ids.iter().cloned())
             .collect()
-    }
-
-    /// The jobs `ids` are run by the caller (the conversion queue of the desktop app): the workers leave them alone, `lend` tells how they stand.
-    pub fn claim(&self, ids: &[JobId]) {
-        lock(&self.shared.lent).extend(ids.iter().cloned());
     }
 
     /// A job the caller no longer runs: the workers take it again.
@@ -368,7 +380,11 @@ impl LiveRun {
                     .iter()
                     .map(|(port, p, ty)| Ok((port.to_string(), sh.runner.keep(p.clone(), *ty)?)))
                     .collect();
-                outputs.map(|outputs| Outcome { outputs, cached: true, ..Outcome::default() })
+                outputs.map(|outputs| Outcome {
+                    outputs,
+                    cached: true,
+                    ..Outcome::default()
+                })
             }
             Lend::Failed(e) => Err(e),
             Lend::Running(frac) => {
@@ -382,7 +398,14 @@ impl LiveRun {
         };
         self.settle(id, r)
     }
+}
 
+/// Threads of a live run on this computer: all cores but one, at most four (as the run of the desktop app).
+pub fn default_workers() -> usize {
+    std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).clamp(1, 4))
+}
+
+impl LiveRun {
     fn settle(&self, id: &JobId, r: Result<Outcome>) -> bool {
         let sh = &self.shared;
         let mut g = lock(&sh.core);
@@ -411,10 +434,6 @@ impl LiveRun {
     }
 }
 
-fn is_running(s: &Sched, id: &JobId) -> bool {
-    s.jobs().iter().any(|(j, st)| j == id && matches!(st, State::Running { .. }))
-}
-
 impl Drop for LiveRun {
     fn drop(&mut self) {
         self.shared.stop.store(true, Ordering::SeqCst);
@@ -427,32 +446,39 @@ impl Drop for LiveRun {
     }
 }
 
-/// Runs the checked plan `ready` like `run_checked` and prints the `flowlive/1` events on stdout, one line each, as they happen (`flow run --jsonl`);
-/// returns the run and its `prov/1` text (`text` is the plan as it was read).
-pub(crate) fn run_events(
-    ready: &Plan,
-    text: &[u8],
-    runner: FileRunner,
-    dir: &Path,
-    workers: usize,
-) -> Result<(Run, String)> {
-    use std::io::Write;
-    let live = LiveRun::with_runner(ready.clone(), crate::flow::steps(), runner, dir, workers)?;
-    let mut seq = 0;
-    loop {
-        let idle = live.wait_idle(Duration::from_millis(100));
-        let mut out = std::io::stdout().lock();
-        for (n, line) in live.event_lines(seq) {
-            let _ = writeln!(out, "{line}");
-            seq = n;
-        }
-        let _ = out.flush();
-        if idle {
-            let run = live.finish()?;
-            let prov = crate::flow_run::prov_text(text, &run);
-            return Ok((run, prov));
+/// The plan of `text` as it runs: inputs hashed (those of `known` keep their hash), comparisons expanded, every step with a native executor.
+fn ready_plan(text: &[u8], dir: &Path, known: &[FileInput], reg: &[Step]) -> Result<Plan> {
+    let mut plan = parse(text)?;
+    for f in &mut plan.inputs {
+        match known.iter().find(|k| k.name == f.name) {
+            Some(k) if f.sha256.is_empty() || f.sha256 == k.sha256 => {
+                (f.sha256, f.bytes) = (k.sha256.clone(), k.bytes);
+            }
+            _ => {
+                let path = dir.join(crate::flow_set::dataset_name(&f.name));
+                let (bytes, sha) =
+                    crate::flow_set::digest(&path).map_err(|e| e.with("input", &f.name))?;
+                if !f.sha256.is_empty() && f.sha256 != sha {
+                    return Err(Error::new("err.flow.input.sha").with("input", &f.name));
+                }
+                (f.sha256, f.bytes) = (sha, Some(bytes));
+            }
         }
     }
+    let check = |problems: Vec<mzlab_core::flow::Problem>| {
+        let list: Vec<String> = problems.iter().map(crate::flow_run::problem_text).collect();
+        Error::new("err.flow.check").with("problems", list.join(" "))
+    };
+    let problems = crate::flow_compare::check(&plan, reg, Platform::current());
+    if !problems.is_empty() {
+        return Err(check(problems));
+    }
+    let plan = crate::flow_compare::expand(plan, reg)?;
+    if let Some(s) = plan.steps.iter().find(|s| !executable(&s.step)) {
+        let e = Error::new("err.flow.step.native").with("step", s.step.clone());
+        return Err(e);
+    }
+    Ok(plan)
 }
 
 #[cfg(test)]

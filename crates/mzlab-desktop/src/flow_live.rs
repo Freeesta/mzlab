@@ -6,7 +6,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use mzlab_cli::flow::live::{default_workers, Lend, LiveRun};
-use mzlab_core::flow::parse;
+use mzlab_core::flow::sched::JobId;
+use mzlab_core::flow::{parse, Plan};
 use mzlab_core::step::DataType;
 use mzlab_core::{Error, Result};
 use serde_json::Value;
@@ -25,18 +26,6 @@ static LIVE: Mutex<Option<Live>> = Mutex::new(None);
 
 fn lock() -> std::sync::MutexGuard<'static, Option<Live>> {
     LIVE.lock().unwrap_or_else(|e| e.into_inner())
-}
-
-fn no_run() -> Error {
-    Error::new("err.flow.sched")
-}
-
-fn plan_text(p: &Value) -> Result<String> {
-    match &p["plan"] {
-        Value::String(t) => Ok(t.clone()),
-        Value::Null => Err(Error::new("err.flow.plan")),
-        v => Ok(v.to_string()),
-    }
 }
 
 impl State {
@@ -87,18 +76,25 @@ impl State {
         }
         let names: Vec<&str> = parsed.inputs.iter().map(|f| f.name.as_str()).collect();
         self.stage(&names, p, &inputs)?;
+        let claim = self.claims(&parsed);
         let run = LiveRun::start(
             plan.as_bytes(),
             mzlab_cli::flow::steps(),
             &inputs,
             &work,
             workers,
+            &claim,
         )?;
-        self.claim_coda(&run);
         *lock() = Some(Live { run, inputs });
         text("{}")
     }
+}
 
+fn no_run() -> Error {
+    Error::new("err.flow.sched")
+}
+
+impl State {
     fn live_update(&self, live: &mut Live, p: &Value) -> Result<Answer> {
         let plan = plan_text(p)?;
         let parsed = parse(plan.as_bytes())?;
@@ -113,8 +109,7 @@ impl State {
             })
             .collect();
         self.stage(&new, p, &live.inputs)?;
-        let cancels = live.run.update(plan.as_bytes())?;
-        self.claim_coda(&live.run);
+        let cancels = live.run.update(plan.as_bytes(), &self.claims(&parsed))?;
         text(cancels)
     }
 
@@ -131,27 +126,45 @@ impl State {
         };
         stage_inputs(names, &p["files"], &held, dir)
     }
+}
 
-    /// The conversions of the plan whose file the queue holds are the queue's: the workers leave them.
-    fn claim_coda(&self, run: &LiveRun) {
-        let held = self.coda.list();
-        let rows = held["jobs"].as_array().map_or(&[][..], Vec::as_slice);
-        for id in run.jobs_of("convert.mzml") {
-            let row = rows.iter().find(|r| r["name"].as_str() == id.item.as_deref());
-            match row.and_then(|r| r["state"].as_str()) {
-                Some("cancelled") | None => run.release(&id),
-                Some(_) => run.claim(&[id]),
-            }
+fn plan_text(p: &Value) -> Result<String> {
+    match &p["plan"] {
+        Value::String(t) => Ok(t.clone()),
+        Value::Null => Err(Error::new("err.flow.plan")),
+        v => Ok(v.to_string()),
+    }
+}
+
+impl State {
+    /// The conversions of `plan` whose file the queue holds are the queue's: the workers leave them.
+    fn claims<'a>(&'a self, plan: &Plan) -> impl Fn(&JobId) -> bool + 'a {
+        let steps: Vec<String> = plan
+            .steps
+            .iter()
+            .filter(|i| i.step.split('@').next() == Some("convert.mzml"))
+            .map(|i| i.id.clone())
+            .collect();
+        move |id| {
+            let held = self.coda.list();
+            let rows = held["jobs"].as_array().map_or(&[][..], Vec::as_slice);
+            let queued = |r: &&Value| r["name"].as_str() == id.item.as_deref();
+            steps.contains(&id.instance)
+                && rows
+                    .iter()
+                    .find(queued)
+                    .is_some_and(|r| r["state"].as_str() != Some("cancelled"))
         }
     }
 
     /// Tells the run how the queue stands: a file being converted is a job that runs, one whose mzML is ready is a job done (its file is the output),
     /// one that failed is a job in error; one the queue has dropped goes back to the workers.
     fn sync_coda(&self, run: &LiveRun) {
-        self.claim_coda(run);
         let held = self.coda.list();
         for row in held["jobs"].as_array().into_iter().flatten() {
-            let Some(name) = row["name"].as_str() else { continue };
+            let Some(name) = row["name"].as_str() else {
+                continue;
+            };
             for id in run.jobs_of("convert.mzml") {
                 if id.item.as_deref() != Some(name) {
                     continue;
@@ -170,6 +183,7 @@ impl State {
                         let e = Error::new("err.flow.convert").with("detail", why);
                         run.lend(&id, Lend::Failed(e));
                     }
+                    Some("cancelled") => run.release(&id),
                     _ => {}
                 }
             }
