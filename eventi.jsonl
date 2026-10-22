@@ -1357,3 +1357,4 @@
 {"v":1,"ts_utc":"2026-10-22T06:42:33Z","azione":"aperta","tipo":"pr","pr":1445,"sha":"c0788ffd8b801f1a622e8bb6dc75f2bec7a9ac4a"}
 {"v":1,"ts_utc":"2026-10-22T06:46:37Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/match-chimeric","merge_main":true,"aree":{"workflow":1,"rust":7,"docs":3},"tipo":"pr","pr":1443,"sha":"ab3520a9848c7e1843b7665193c8deed0748874b"}
 {"v":1,"ts_utc":"2026-10-22T06:48:15Z","azione":"push","titolo":"Tetto del .wasm tabella a 614400 e 15 controlli nella pagina","merge_main":false,"aree":{"rust":1,"docs":4,"test":2,"tools":1},"tipo":"pr","pr":1431,"sha":"2f8b6df62b2a2b6a3f3433599dfd591e137d9bc5"}
+{"v":1,"ts_utc":"2026-10-22T06:51:35Z","azione":"aperta","tipo":"pr","pr":1446,"sha":"c6fd556bb82968b31f668292b6d3a77d2c1864e5"}
