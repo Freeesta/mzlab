@@ -61,20 +61,41 @@ fn scales(width_s: (f64, f64), dt: f64) -> Vec<f64> {
     (0..SCALES).map(|i| lo * libm::pow(k, i as f64)).collect()
 }
 
-/// Responses of the Ricker wavelet of standard deviation `s` (scans) over `y`.
-fn response(y: &[f64], s: f64) -> Result<Vec<f64>> {
+/// The Ricker wavelet of one scale: standard deviation `s` (scans), samples over `-half..=half` and the factor that normalises the response.
+struct Wavelet {
+    s: f64,
+    half: isize,
+    kernel: Vec<f64>,
+    norm: f64,
+}
+
+impl Wavelet {
+    fn new(s: f64) -> Wavelet {
+        let half = libm::ceil(4.0 * s) as isize;
+        Wavelet {
+            s,
+            half,
+            kernel: (-half..=half).map(|d| ricker(d as f64 / s)).collect(),
+            norm: 1.0 / libm::sqrt(s),
+        }
+    }
+}
+
+/// Responses of the Ricker wavelet `w` over `y`.
+fn response(y: &[f64], w: &Wavelet) -> Result<Vec<f64>> {
     let n = y.len();
-    let half = libm::ceil(4.0 * s) as isize;
-    let kernel: Vec<f64> = (-half..=half).map(|d| ricker(d as f64 / s)).collect();
-    let norm = 1.0 / libm::sqrt(s);
+    let (half, kernel, norm) = (w.half, &w.kernel, w.norm);
     let mut r = filled(n, 0.0f64)?;
     for (t, out) in r.iter_mut().enumerate() {
+        // the taps that fall inside the series, in the order of the kernel
+        let (i0, i1) = (
+            (t as isize - half).max(0) as usize,
+            (t + half as usize + 1).min(n),
+        );
+        let j0 = (i0 as isize - t as isize + half) as usize;
         let mut acc = 0.0;
-        for (j, w) in kernel.iter().enumerate() {
-            let i = t as isize + j as isize - half;
-            if i >= 0 && (i as usize) < n {
-                acc += y[i as usize] * w;
-            }
+        for (v, w) in y[i0..i1].iter().zip(&kernel[j0..]) {
+            acc += v * w;
         }
         *out = acc * norm;
     }
@@ -83,11 +104,12 @@ fn response(y: &[f64], s: f64) -> Result<Vec<f64>> {
 
 /// Apexes (index, scale) of the series: the local maxima of the response at each scale, narrowest scale first; a wider scale adds only what the narrower
 /// ones did not find nearby. The apex is the highest point of `y` within one standard deviation of the maximum.
-fn apexes(y: &[f64], sigma: &[f64]) -> Result<Vec<(usize, f64)>> {
+fn apexes(y: &[f64], wavelets: &[Wavelet]) -> Result<Vec<(usize, f64)>> {
     let n = y.len();
     let mut found: Vec<(usize, f64)> = Vec::new();
-    for &s in sigma {
-        let r = response(y, s)?;
+    for w in wavelets {
+        let s = w.s;
+        let r = response(y, w)?;
         let reach = libm::ceil(s) as usize;
         for t in 0..n {
             let left = t == 0 || r[t] >= r[t - 1];
@@ -128,9 +150,14 @@ fn resolve(y: &[f64], found: Vec<(usize, f64)>) -> Vec<(usize, f64)> {
 }
 
 /// Peaks of the series `y` as (first, apex, last) indexes, ordered by apex; adjacent peaks meet at the lowest point between their apexes.
-fn peaks(y: &[f64], sigma: &[f64], snr: f64, floor: f64) -> Result<Vec<(usize, usize, usize)>> {
+fn peaks(
+    y: &[f64],
+    wavelets: &[Wavelet],
+    snr: f64,
+    floor: f64,
+) -> Result<Vec<(usize, usize, usize)>> {
     let n = y.len();
-    let found = resolve(y, apexes(y, sigma)?);
+    let found = resolve(y, apexes(y, wavelets)?);
     let mut out: Vec<(usize, usize, usize)> = Vec::new();
     for (k, &(apex, s)) in found.iter().enumerate() {
         let reach = libm::ceil(REACH * s) as usize;
@@ -144,7 +171,7 @@ fn peaks(y: &[f64], sigma: &[f64], snr: f64, floor: f64) -> Result<Vec<(usize, u
         }
         out.push((lo, apex, hi));
     }
-    let skirt = sigma.iter().fold(0.0f64, |m, &s| m.max(s));
+    let skirt = wavelets.iter().fold(0.0f64, |m, w| m.max(w.s));
     Ok(keep_above_noise(
         y,
         out,
@@ -208,7 +235,10 @@ pub(crate) fn refine(
     p: &Params,
     cw: &CentWave,
 ) -> Result<Vec<Seg>> {
-    let sigma = scales(cw.width_s, dt);
+    let wavelets: Vec<Wavelet> = scales(cw.width_s, dt)
+        .into_iter()
+        .map(Wavelet::new)
+        .collect();
     let mut out: Vec<Seg> = Vec::new();
     for s in segs {
         let half = match p.axis {
@@ -227,7 +257,12 @@ pub(crate) fn refine(
                 weighted[k] += it[i] * mz[i];
             }
         }
-        for (lo, apex, hi) in peaks(&y, &sigma, cw.snr, p.floor)? {
+        // no peak can pass the height of the row or the signal-to-noise bar: the series is not worth the transform
+        let top = y.iter().fold(0.0f64, |m, &v| m.max(v));
+        if top < p.min_height.max(cw.snr * p.floor) {
+            continue;
+        }
+        for (lo, apex, hi) in peaks(&y, &wavelets, cw.snr, p.floor)? {
             let tot: f64 = y[lo..=hi].iter().sum();
             let w: f64 = weighted[lo..=hi].iter().sum();
             reserve(&mut out, 1)?;
