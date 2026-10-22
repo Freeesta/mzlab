@@ -4,7 +4,7 @@ the engine comes up on its own. Build first: python tools/build_site.py"""
 from pathlib import Path
 import subprocess, sys, time
 from playwright.sync_api import sync_playwright
-from lib import ROOT, free_port
+from lib import ROOT, free_port, hold
 
 PORT = free_port()
 errs, page_errs = [], []
@@ -19,7 +19,10 @@ WATCH = """(() => {
 })()"""
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import socket
+for _ in range(100):
+    try: socket.create_connection(("127.0.0.1", PORT), 0.2).close(); break
+    except OSError: pass
 URL = f"http://127.0.0.1:{PORT}/"
 held, head_held, asked_urls = [], [], []
 try:
@@ -35,7 +38,7 @@ try:
         pg.goto(URL, wait_until="commit")
 
         def engine_waits_for_the_parser():
-            pg.wait_for_timeout(1500)
+            hold(pg, 1500)                                                      # nothing to wait on: the point is that nothing happens
             assert head_held, "the head script was not asked for"
             assert not held and not any("rust-bridge.js" in u for u in asked_urls), "the engine started while the head was still being read"
             for r in head_held: r.continue_()
@@ -45,7 +48,7 @@ try:
             pg.wait_for_selector("#start", state="visible", timeout=30000)
             assert pg.is_visible("#drop") or pg.is_visible("#drop-skeleton"), "no drop area in the shell"
             deadline = time.time() + 30
-            while not held and time.time() < deadline: pg.wait_for_timeout(50)
+            while not held and time.time() < deadline: hold(pg, 50)
             assert held, "the engine never asked for the .wasm"
             assert pg.evaluate("typeof AVVIO !== 'undefined' && AVVIO.stato") == "pending", "the engine was ready with the .wasm held back"
             assert pg.is_visible("#start"), "the shell went away while the engine was pending"
@@ -59,7 +62,7 @@ try:
         def engine_follows():
             for r in held: r.continue_()
             deadline = time.time() + 90
-            while pg.evaluate("typeof AVVIO !== 'undefined' && AVVIO.stato") != "ready" and time.time() < deadline: pg.wait_for_timeout(100)
+            while pg.evaluate("typeof AVVIO !== 'undefined' && AVVIO.stato") != "ready" and time.time() < deadline: hold(pg, 100)
             assert pg.evaluate("AVVIO.stato") == "ready", "the engine did not come up after the .wasm was released"
             assert pg.is_visible("#start")
         step("released, the engine comes up on its own", engine_follows)
