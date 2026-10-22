@@ -11,11 +11,11 @@ fn field(nome: &str, valore: String) -> Campo {
     }
 }
 
-/// The chain of reactions of an MS3+ scan (or a stepped NCE) as `opentfraw.reaction.N.*` values, N counting from 1: precursor, activation (and the
+/// The chain of reactions of an MS3+ scan as `opentfraw.reaction.N.*` values, N counting from 1: precursor, activation (and the
 /// supplemental one), energy with its unit, the steps of a stepped NCE, the isolation width of the final step and the flags not yet understood.
-/// Nothing for the common MS2 scan, whose header stays as it was.
+/// Nothing for a scan with fewer than two reactions (MS2, stepped NCE included), whose header stays as it was.
 pub(crate) fn reaction_fields(p: &opentfraw::PrecursorInfo) -> Vec<Campo> {
-    if p.reactions.len() < 2 && p.reactions.iter().all(|r| r.energy_steps.is_empty()) {
+    if p.reactions.len() < 2 {
         return Vec::new();
     }
     let mut out = Vec::new();
@@ -31,10 +31,10 @@ pub(crate) fn reaction_fields(p: &opentfraw::PrecursorInfo) -> Vec<Campo> {
         }
         if let Some(e) = r.energy {
             put("energy", e.to_string());
-            put(
-                "energy unit",
-                if r.energy_is_nce { "NCE" } else { "eV" }.into(),
-            );
+            // The unit is declared only when the trailer says NCE; anything else is not known to be eV.
+            if r.energy_is_nce {
+                put("energy unit", "NCE".into());
+            }
         }
         if !r.energy_steps.is_empty() {
             let steps: Vec<String> = r.energy_steps.iter().map(f64::to_string).collect();

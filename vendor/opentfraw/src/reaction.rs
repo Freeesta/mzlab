@@ -14,7 +14,7 @@ pub struct ReactionInfo {
     /// Supplemental activation (EThcD: HCD; ETciD: CID).
     pub supplemental: Option<Activation>,
     pub energy: Option<f64>,
-    /// NCE (dimensionless %) when true, eV otherwise.
+    /// True when the trailer says the energy is an NCE (dimensionless %); false means the unit is not known (not that it is eV).
     pub energy_is_nce: bool,
     /// Stepped NCE (`20,35,60`): every step, `energy` keeps the single value the trailer gives.
     pub energy_steps: Vec<f64>,

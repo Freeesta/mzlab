@@ -48,16 +48,37 @@ fn an_ms3_chain_is_listed_step_by_step() {
 }
 
 #[test]
-fn a_stepped_nce_is_a_list_even_in_ms2() {
+fn a_stepped_nce_is_a_list_only_in_a_chain() {
     let mut r = step(300.5, Activation::HCD, 35.0);
     r.energy_steps = vec![20.0, 35.0, 60.0];
+    let one = PrecursorInfo {
+        reactions: vec![r.clone()],
+        ..Default::default()
+    };
+    assert!(values(&one).is_empty());
+    let chain = PrecursorInfo {
+        reactions: vec![step(500.0, Activation::CID, 35.0), r],
+        ..Default::default()
+    };
+    assert!(values(&chain).contains(&(
+        "opentfraw.reaction.2.energy steps".into(),
+        "20,35,60".into()
+    )));
+}
+
+#[test]
+fn the_unit_is_declared_only_when_it_is_known() {
+    let mut unknown = step(500.0, Activation::CID, 25.0);
+    unknown.energy_is_nce = false;
     let p = PrecursorInfo {
-        reactions: vec![r],
+        reactions: vec![unknown, step(300.0, Activation::CID, 25.0)],
         ..Default::default()
     };
     let v = values(&p);
-    assert!(v.contains(&(
-        "opentfraw.reaction.1.energy steps".into(),
-        "20,35,60".into()
-    )));
+    assert!(!v
+        .iter()
+        .any(|(n, _)| n == "opentfraw.reaction.1.energy unit"));
+    assert!(v
+        .iter()
+        .any(|(n, _)| n == "opentfraw.reaction.2.energy unit"));
 }
