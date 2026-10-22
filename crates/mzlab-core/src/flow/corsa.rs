@@ -43,6 +43,8 @@ pub struct Passo {
     /// Memory the step asked for in MB and the way it took (`memory`, `slabs`, `refused`), when the step estimates it.
     pub mem_mb: Option<f64>,
     pub via: Option<String>,
+    /// What a per-file step says of each file (`spectra.centroid`: `via` = `centroided` | `passthrough`, with the estimates), as the prov/1 holds it.
+    pub files: Vec<(String, Value)>,
     /// `warn.*` keys of the step.
     pub warnings: Vec<String>,
     pub params_sha256: String,
@@ -123,6 +125,10 @@ fn passo(name: &str, a: &Value) -> Passo {
         ms: a.get("ms").and_then(|m| m.f64()).unwrap_or(0.0),
         mem_mb: a.get("mem_mb").and_then(|m| m.f64()),
         via: text(a, "via"),
+        files: match a.get("files") {
+            Some(Value::Obj(o)) => o.clone(),
+            _ => Vec::new(),
+        },
         warnings: a
             .get("warnings")
             .map(Value::arr)
@@ -257,6 +263,16 @@ fn param(o: &mut Out, p: &Param) {
 fn notes(o: &mut Out, s: &Passo) {
     if let (Some(mb), Some(via)) = (s.mem_mb, &s.via) {
         o.raw(",\"mem_mb\":").num(mb).raw(",\"via\":").str(via);
+    }
+    if !s.files.is_empty() {
+        o.raw(",\"files\":{");
+        for (j, (name, v)) in s.files.iter().enumerate() {
+            o.raw(if j > 0 { "," } else { "" })
+                .str(name)
+                .raw(":")
+                .raw(&value_text(v));
+        }
+        o.raw("}");
     }
     if !s.warnings.is_empty() {
         o.raw(",\"warnings\":[");

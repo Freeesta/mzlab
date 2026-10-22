@@ -21,7 +21,7 @@
   const session = S => ({
     S, plan: S.plan, items: /** @type {any[]} */ ([]), ok: false, q: Promise.resolve(), seq: 0, sent: "", keys: new Map(), nodes: new Map(), info: new Map(), errors: new Map(), last: new Map(),
     running: new Map(), observing: new Map(), waitingInput: new Set(), memAsk: new Map(), allowed: new Set(), loading: new Map(), listeners: new Set(), log: /** @type {any[]} */ ([]), logFrom: 0,
-    pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
+    waitingProfile: new Set(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
   });
 
   /** @param {any} x @param {string} op @param {any} [body] one call to the scheduler; the calls go one after the other, and a change is followed by a read of the events */
@@ -83,8 +83,10 @@
   const build = async (S, x) => {
     const files = await kit().listIdx(), plan = JSON.parse(JSON.stringify(S.plan)), open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.map((/** @type {any} */ f) => String(f && f.file || "").split("#")[0]) : [];
     const stemOf = (/** @type {string} */ n) => n.replace(/\.[^.]+$/, "");
-    const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""); return { input: open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML", stem, idx: f }; });
-    for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null });
+    // `mode`: how Data classed the file (profile | centroid | mixed), the base of the choice of the centroid step; `cen`: the index of its centroids, when Data holds one
+    const modeOf = (/** @type {string} */ n) => { const f = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).find((/** @type {any} */ g) => g.name === n); return f && f.spectrum_mode ? String(f.spectrum_mode) : ""; };
+    const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input) }; });
+    for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML") });
     const scan = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml"), first = scan[0];
     if (items.length && first) {
       const refs = items.map((/** @type {any} */ i) => "file:" + i.input);
@@ -96,7 +98,7 @@
         s.in[port] = many ? [...list.slice(0, at), ...refs, ...list.slice(at + 1)] : refs[0];
       }
     }
-    return { plan, items, ids: Object.fromEntries(items.map((/** @type {any} */ i) => [i.input, i.idx ? i.idx.key : "loading"])) };
+    return { plan, items, ids: Object.fromEntries(items.map((/** @type {any} */ i) => [i.input, i.idx ? `${i.idx.key}:${i.mode}` : "loading"])) };
   };
 
   /** the surface the executors use (flow-live-jobs.js) @param {any} x */
@@ -105,6 +107,12 @@
     x.jk = jk;
     x.item = (/** @type {string | null} */ name) => x.items.find((/** @type {any} */ i) => i.input === name);
     x.inst = (/** @type {string} */ id) => instOf(x, id);
+    // the index a file's peaks are found on: its centroids when the plan centroids and the file is in profile, else the index of Data
+    x.profile = (/** @type {any} */ it) => !!it && (it.mode === "profile" || it.mode === "mixed");
+    x.hasCentroid = () => x.plan.steps.some((/** @type {any} */ i) => base(i) === "spectra.centroid");
+    x.source = (/** @type {any} */ it) => (it && x.profile(it) && x.hasCentroid() ? it.cen : it && it.idx);
+    // a profile file with no centroid step and no «run on profile» written in the plan is not detected: the user chooses
+    x.profileHeld = (/** @type {any} */ it) => x.profile(it) && !x.hasCentroid() && x.plan.profile !== "as_is";
     x.alignOf = (/** @type {any} */ inst) => {
       if (base(inst) !== "features.gapfill") return inst;
       const ref = [].concat(/** @type {any} */ (inst.in.table || []))[0];
@@ -113,7 +121,7 @@
     // the detections an alignment reads, in the order of the items: [{ key, path }]
     x.upstream = (/** @type {any} */ al) => {
       const ids = [...new Set(Object.values(al.in || {}).flat().map(String).filter(r => !r.startsWith("file:")).map(r => r.split(".")[0]))], out = /** @type {any[]} */ ([]);
-      for (const it of x.items) for (const id of ids) { const key = x.keys.get(`${id}|${it.input}`); if (key && it.idx) out.push({ key, path: it.idx.path }); }
+      for (const it of x.items) for (const id of ids) { const key = x.keys.get(`${id}|${it.input}`); const src = x.source(it); if (key && src) out.push({ key, path: src.path }); }
       return out;
     };
   };
@@ -164,7 +172,8 @@
   /** the index of a file Data was loading is now in OPFS: the job that watched it ends, the one that waited for the file goes on @param {any} x */
   const settleIndex = async x => {
     for (const [key, spec] of [...x.observing]) { const it = x.item(spec.item); if (it && it.idx) { x.observing.delete(key); await call(x, "finished", { job: jobOf(key), result: { ms: 0 } }); } }
-    for (const key of [...x.waitingInput]) { const it = x.item(jobOf(key).item); if (it && it.idx) { x.waitingInput.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
+    for (const key of [...x.waitingInput]) { const it = x.item(jobOf(key).item); const inst = instOf(x, jobOf(key).instance); if (it && inst && (base(inst) === "features.detect" ? x.source(it) : it.idx)) { x.waitingInput.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
+    for (const key of [...x.waitingProfile]) { const it = x.item(jobOf(key).item); if (!it || !x.profileHeld(it)) { x.waitingProfile.delete(key); await call(x, "unblock", { job: jobOf(key) }); } }
     for (const [stem] of [...x.loading]) if (x.items.some((/** @type {any} */ i) => i.stem === stem && i.idx)) x.loading.delete(stem);
   };
 
@@ -187,7 +196,7 @@
     x.sent = text;
     for (const c of await call(x, "update", { plan: JSON.parse(text) })) {
       const key = jk(c);
-      x.memAsk.delete(key); x.observing.delete(key); x.waitingInput.delete(key);
+      x.memAsk.delete(key); x.observing.delete(key); x.waitingInput.delete(key); x.waitingProfile.delete(key);
       kit().poolIfAny()?.cancelJob(key);
     }
   };
@@ -339,6 +348,14 @@
     for (const [key, spec] of x.observing) { const it = x.item(spec.item); if (it && it.stem === stem) progress(x, key, Math.min(0.99, d.frac || 0)); }
     if (!was || d.frac >= 1) change();
   });
-  F.live = { run, preflight, attach, change, state: () => x, following: () => following, held: () => held, setLive, setHeld, runNow, active: () => !!(x && x.ok) };
+  /** how Data classed a file of the live session (profile | centroid | mixed), or "" @param {string} name */
+  const modeOf = name => { const it = x && x.ok ? x.item(name) : null; return it ? it.mode : ""; };
+  /** the words of the card «Centroid spectra»: how many files it centroided and how many were centroids already; "" for another card or before the files are known @param {string[]} ids */
+  const centroidNote = ids => {
+    if (!x || !x.ok || !x.items.length || !ids.some(id => { const i = instOf(x, id); return i && base(i) === "spectra.centroid"; })) return "";
+    const n = x.items.length, mode = x.items.filter((/** @type {any} */ i) => i.mode), done = mode.filter((/** @type {any} */ i) => x.profile(i) && i.cen).length, already = mode.filter((/** @type {any} */ i) => !x.profile(i)).length;
+    return mode.length ? `${done} of ${n} files centroided, ${already} already centroided` : "";
+  };
+  F.live = { isCentroidStep: id => { const i = x && instOf(x, id); return !!i && base(i) === "spectra.centroid"; }, modeOf, centroidNote, run, preflight, attach, change, state: () => x, following: () => following, held: () => held, setLive, setHeld, runNow, active: () => !!(x && x.ok) };
   change();
 })();

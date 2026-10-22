@@ -25,6 +25,23 @@
   /** @param {any} x @param {any} spec @param {any} inst @param {() => Promise<void>} body the work after the claim */
   const detached = (x, spec, inst, body) => ({ done: body().catch((/** @type {any} */ e) => fail(x, spec, inst, e)) });
 
+  /** spectra.centroid: a file of centroids is reused as it is («already centroided»); a profile file has the index of its centroids that Data builds (`<name>.cen.mzidx`, the existing route of the engine, nothing is
+   * computed here): reused when it is there, else asked for. The browser builds it for the files it reads as a maker's file; an mzML in profile stays with the computer (blocked by platform.computer) */
+  const centroid = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const it = x.item(spec.item), j = job(spec);
+    if (!it || !it.idx) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
+    if (!x.profile(it) || it.cen) { await x.call("cached", { job: j }); return {}; }
+    const rb = await G.MZLAB_RUST_READY;
+    if (!rb || !rb.nativeCentroidIndex || !rb.isNative || !rb.isNative(it.input)) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      await rb.nativeCentroidIndex(it.input);
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+      F.live.change();
+    });
+  };
+
   /** index.mzidx: the index of the file is the one Data keeps in OPFS (reused), or the one Data is building now (progress from the event mzlab-index), else the job waits for the file */
   const index = async (/** @type {any} */ x, /** @type {any} */ spec) => {
     const it = x.item(spec.item), j = job(spec);
@@ -37,12 +54,14 @@
   /** features.detect: one job per file, kept as <plan_key>.mzfeatf; a file already there is reused */
   const detect = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
     const k = kit(), p = await k.getPool(), it = x.item(spec.item), path = DIR + spec.key + ".mzfeatf", j = job(spec);
-    if (!it || !it.idx) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
+    if (it && x.profileHeld(it)) { await x.call("block", { job: j, by: "input.profile" }); x.waitingProfile.add(x.jk(spec)); return {}; }
+    const src = x.source(it);
+    if (!src) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const out = (await p.detectAll([{ name: it.idx.name, path: it.idx.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
+      const out = (await p.detectAll([{ name: src.name, path: src.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
       await p.fs.write(path, out.slice());
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
@@ -93,5 +112,5 @@
     });
   };
 
-  F.liveJobs = { has, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();
