@@ -67,11 +67,13 @@
     { id: "position", name: "Where it changed", line: "Propose which part of the molecule was modified.", steps: ["tp.position"] },
     { id: "reactivity", name: "Where it reacts", line: "Estimate which parts of the parent are most reactive.", steps: ["structure.reactivity"] },
   ];
+  // `steps`: a plan of its own (no feature-table base), the steps in order, each wired to what fits
   // `more`: kept under «More templates» instead of on the first row
   F.TEMPLATES = [
     { id: "tp", name: "Find transformation products", good: "Good for: degradation or metabolism studies.", addons: ["tp"] },
     { id: "table", name: "Feature table", good: "Good for: a first look at your data.", addons: [] },
     { id: "identify", name: "Untargeted analysis", good: "Good for: unknown compounds in real samples, with formulas and library matches.", addons: ["formulas", "match", "level"] },
+    { id: "msn", name: "Fragmentation tree of a standard", good: "Good for: an MSn infusion of a known compound: its fragments, neutral losses and sub-formulas, as a library and a table.", help: "Fragmentation rules: CID vs HCD (see the MSn manual).", steps: ["spectra.msn_graph", "msn.library_export", "msn.table_export"], addons: [] },
     { id: "targeted", name: "Targeted check", good: "Good for: a list of compounds you already suspect.", addons: ["formulas", "match", "level", "regulatory"], more: true },
     { id: "tpseries", name: "TP time series", good: "Good for: how products rise and fall over the minutes of a treatment (needs a sample list with times).", addons: ["tp", "tpfilter", "reliable", "network"], more: true },
     { id: "standards", name: "Standards check", good: "Good for: checking that the standards and the blanks behave before you trust a table (needs a sample list).", addons: ["reliable"], params: { "table.filter": { qc_cv_max: 30 } }, more: true },

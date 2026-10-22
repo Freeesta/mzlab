@@ -150,7 +150,7 @@ try:
         def first_screen():
             attendi(pg, "document.querySelectorAll('.fln').length === 2")
             assert "Import data" in pg.inner_text(".fln") and pg.locator(".fl-lines path").count() == 1
-            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 7 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 3 and pg.locator(".flx-more .flx-tc").count() == 4 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
+            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 8 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 4 and pg.locator(".flx-more .flx-tc").count() == 4 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
@@ -163,8 +163,8 @@ try:
         step("the stylesheet of Flow leaves the rows of the file list alone (class «fl»)", file_list_untouched)
         def template():
             ids = pg.evaluate("[...document.querySelectorAll('.flx-tc')].map(b => b.dataset.tpl)")
-            assert ids == ["tp", "table", "identify", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
-            assert pg.evaluate("[...document.querySelectorAll('.flx-tc small')].every(s => s.textContent.startsWith('Good for:'))")
+            assert ids == ["tp", "table", "identify", "msn", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
+            assert pg.evaluate("[...document.querySelectorAll('.flx-tc small:not(.flx-help)')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")
             assert "Ready to run" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
