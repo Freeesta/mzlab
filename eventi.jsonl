@@ -1415,3 +1415,4 @@
 {"v":1,"ts_utc":"2026-10-22T08:37:21Z","azione":"aperta","tipo":"pr","pr":1467,"sha":"da22198264a70de04ee1d588524f8490a9fa383a"}
 {"v":1,"ts_utc":"2026-10-22T08:37:49Z","azione":"aperta","tipo":"pr","pr":1468,"sha":"44b92931bceea8355e3695b00e78bdd571f41a8e"}
 {"v":1,"tipo":"pr","pr":1465,"sha":"f9bcf20938ba1ab0509d7b788285084dadf74028","ts_utc":"2026-10-22T08:38:38Z","azione":"unita","aperta_s":909,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":7,"righe_meno":1,"file_n":3,"file":["crates/mzlab-cli/src/flow_ident_tests.rs","crates/mzlab-cli/src/flow_match.rs","docs/agenti/rust-flow.md"],"aree":{"rust":2,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
+{"v":1,"ts_utc":"2026-10-22T08:40:14Z","azione":"aperta","tipo":"pr","pr":1469,"sha":"689c6af6dd6270e929dce5d88959d0b0b779ec8a"}
