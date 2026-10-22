@@ -135,8 +135,9 @@ impl<'a> Cx<'a> {
             let mut o = rows.clone();
             o.sort_by(|&x, &y| {
                 let (a, b) = (key(t, x, k), key(t, y, k));
-                (0..3)
-                    .map(|i| b[i].total_cmp(&a[i]))
+                b.iter()
+                    .zip(&a)
+                    .map(|(bi, ai)| bi.total_cmp(ai))
                     .find(|c| c.is_ne())
                     .unwrap_or(x.cmp(&y))
             });
