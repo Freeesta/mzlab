@@ -138,6 +138,29 @@ def test_verita_from_dump():
     assert d["oracolo"]["nome"] == "rfr"
 
 
+def _dump_msn(path, rows):
+    head = {"type": "file", "schema": "scandump/1", "name": "x", "format_version": 66, "instrument": "Synthetic FT", "controller": 0, "n_scans": len(rows)}
+    path.write_text("\n".join(json.dumps(r) for r in [head, *rows]) + "\n", encoding="utf-8")
+
+
+def test_msn_chains_are_compared_per_level(tmp_path):
+    """MS3 CID then HCD and an MS8 chain: per-level fields, and raw_double of the early steps against RFR's isolation width."""
+    ms3 = lambda w, raw: {"type": "scan", "n": 3, "level": 3, "reactions": [
+        {"precursor": 500.0, "activation": "CID", "energy": 35.0, **({"iso_width": w} if w is not None else {}), **({"raw_double": raw} if raw is not None else {})},
+        {"precursor": 300.0, "activation": "HCD", "energy": 30.0, "iso_width": 1.2}]}
+    ms8 = lambda: {"type": "scan", "n": 8, "level": 8, "reactions": [{"precursor": 100.0 + i, "activation": "CID", "energy": 25.0} for i in range(7)]}
+    _dump_msn(tmp_path / "a.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(2.0, None), ms8()])
+    _dump_msn(tmp_path / "b.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(None, 2.0), ms8()])
+    f = compare.compare(tmp_path / "a.jsonl", tmp_path / "b.jsonl", "hr")["fields"]
+    assert (f["reactions.iso_width~raw_double@ms3"]["compared"], f["reactions.iso_width~raw_double@ms3"]["equal"]) == (1, 1)
+    assert f["reactions.activation@ms3"]["equal"] == 2 and f["reactions.activation@ms8"]["compared"] == 7
+    assert f["reactions.iso_width@ms3"]["absent_b"] == 1 and f["reactions.iso_width@ms3"]["equal"] == 1
+    assert "reactions.activation@ms2" not in f and "reactions.iso_width~raw_double@ms8" not in f
+    _dump_msn(tmp_path / "c.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(None, 3.0), ms8()])
+    g = compare.compare(tmp_path / "a.jsonl", tmp_path / "c.jsonl", "hr")["fields"]["reactions.iso_width~raw_double@ms3"]
+    assert (g["equal"], g["different"]) == (0, 1)
+
+
 def _dump(path: Path, rows: list) -> Path:
     head = {"type": "file", "schema": "scandump/1", "name": "x", "producer": "t", "instrument": "Q Exactive", "controller": 0, "n_scans": 0}
     path.write_text("\n".join(json.dumps(r) for r in [head, *rows]), encoding="utf-8")

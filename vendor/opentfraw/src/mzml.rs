@@ -45,6 +45,17 @@ pub struct PrecursorInfo {
     pub analyzer: Option<crate::Analyzer>,
     /// The whole chain of reactions (MS2: one, MS3: two, ... ), `collision_energy` and `activation` above being those of the final one.
     pub reactions: Vec<crate::ReactionInfo>,
+    /// SPS-MS3 synchronous precursors (`SPS Mass N` of the trailer), in channel order; empty when the scan has none.
+    pub sps_mz: Vec<f64>,
+}
+
+/// The SPS-MS3 synchronous precursors of a scan: `SPS Mass 1..N` of the trailer in channel order, up to the first channel the trailer does not have.
+pub fn sps_masses(p: &crate::ScanParams<'_>) -> Vec<f64> {
+    (0..64)
+        .map_while(|c| p.sps_mass(c))
+        .map(f64::from)
+        .filter(|&x| x > 0.0)
+        .collect()
 }
 
 /// One fully-decoded spectrum with all metadata needed to emit mzML or
@@ -206,6 +217,7 @@ pub fn scan_metadata_with(
                 activation: event.and_then(|e| e.activation()),
                 analyzer: event.and_then(|e| e.preamble.analyzer()),
                 reactions: Vec::new(),
+                sps_mz: Vec::new(),
             }
         } else {
             let reaction = event.and_then(|e| e.reactions.first());
@@ -272,6 +284,7 @@ pub fn scan_metadata_with(
                 activation: event.and_then(|e| e.activation()),
                 analyzer: event.and_then(|e| e.preamble.analyzer()),
                 reactions,
+                sps_mz: params.as_ref().map_or_else(Vec::new, sps_masses),
             }
         };
         Some(info)
@@ -1180,6 +1193,32 @@ where
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    fn trailer(values: &[(&str, crate::generic_data::GenericValue)]) -> crate::ScanParams<'static> {
+        crate::ScanParams(std::borrow::Cow::Owned(
+            crate::generic_data::GenericRecord {
+                values: values
+                    .iter()
+                    .map(|(l, v)| (l.to_string(), v.clone()))
+                    .collect(),
+            },
+        ))
+    }
+
+    #[test]
+    fn sps_precursors_and_faims_cv_come_from_the_trailer() {
+        use crate::generic_data::GenericValue::Float32;
+        let p = trailer(&[
+            ("SPS Mass 1:", Float32(400.25)),
+            ("SPS Mass 2:", Float32(512.5)),
+            ("SPS Mass 3:", Float32(0.0)),
+            ("FAIMS CV:", Float32(-45.0)),
+        ]);
+        assert_eq!(sps_masses(&p), vec![400.25, 512.5]);
+        assert_eq!(p.faims_cv(), Some(-45.0));
+        assert!(sps_masses(&trailer(&[])).is_empty());
+        assert_eq!(trailer(&[]).faims_cv(), None);
+    }
 
     #[test]
     fn tic_record_maps_pairs_and_converts_minutes_to_seconds() {
