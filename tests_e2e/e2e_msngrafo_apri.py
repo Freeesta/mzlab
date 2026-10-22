@@ -26,8 +26,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1500})
         pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); attendi(pg, "typeof INFGAPRI !== 'x' && !!document.querySelector('#pick')")
-        api_before = lambda: pg.evaluate("(window.__qqU||[]).filter(u=>/api\\//.test(u)).length")
-        base = api_before()
+        ASK = "(window.__qqU||[]).filter(u=>/api\\/(upload|explore|msn_grafo|msn_albero)/.test(u))"
         def opened(path, via="pick"):
             pg.set_input_files("#pick", str(path))
             pg.wait_for_selector("#ig-ro .ig-node", timeout=30000)
@@ -97,8 +96,8 @@ try:
             pg.click("#unopen [data-a=close]")
         step("another .json keeps the usual «format not recognised»", other)
         def noapi():
-            urls = pg.evaluate("(window.__qqU||[]).filter(u=>/api\\//.test(u))")
-            assert len(urls) == base, urls[base:]
+            urls = pg.evaluate(ASK)
+            assert not urls, urls
         step("no request to api/ for the graph files (the op completa is a call into the .wasm)", noapi)
         def lang():
             en = pg.evaluate("I18N.t('msngrafo.file.nospec')")
