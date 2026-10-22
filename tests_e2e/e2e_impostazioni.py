@@ -31,6 +31,8 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('#uip-a11y input[name=uip-font], #uip-a11y #uip-hc, #uip-g-look #uip-pal')].length") == 5
             assert pg.locator("#uip-lib").count() == 0, "spectral libraries only with HRMS files"
             assert pg.evaluate("getComputedStyle(document.getElementById('uip-pal')).appearance") == "none", "select without native arrow"
+            x = pg.evaluate("(() => { const b = document.querySelector('#uip-x'); return [b.textContent, getComputedStyle(b).fontSize, getComputedStyle(b, '::before').content]; })()")
+            assert x[0] == "" and x[1] == "0px", f"the close button must show the CSS icon only (one X), got {x}"
             pg.keyboard.press("Escape")
         step("settings: no storage section, one full reset, accessibility submenu closed", gear)
         def tour_from_draw():

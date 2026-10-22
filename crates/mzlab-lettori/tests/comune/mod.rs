@@ -190,3 +190,4 @@ pub mod andi;
 pub mod mzxml;
 pub mod ole;
 pub mod shimadzu;
+pub mod thermo;

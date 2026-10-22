@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -49,10 +49,16 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None) -> str:
     p = ""
     if prec is not None:
-        p = (f'<precursorList count="1"><precursor><selectedIonList count="1"><selectedIon>'
+        w = ""
+        if iso is not None:                            # isolation window (low, high) in m/z, as the offsets around the target
+            w = ('<isolationWindow><cvParam cvRef="MS" accession="MS:1000827" name="isolation window target m/z" value="%s"/>'
+                 '<cvParam cvRef="MS" accession="MS:1000828" name="isolation window lower offset" value="%s"/>'
+                 '<cvParam cvRef="MS" accession="MS:1000829" name="isolation window upper offset" value="%s"/></isolationWindow>'
+                 % (prec, round(prec - iso[0], 4), round(iso[1] - prec, 4)))
+        p = (f'<precursorList count="1"><precursor>{w}<selectedIonList count="1"><selectedIon>'
              f'<cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="{prec}"/></selectedIon></selectedIonList>'
              f'<activation><cvParam cvRef="MS" accession="MS:1000045" name="collision energy" value="{ce}"/></activation></precursor></precursorList>')
     return (f'<spectrum index="{i}" id="sample=1 period=1 cycle={i + 1} experiment=1" defaultArrayLength="{len(mz)}">'
@@ -476,6 +482,10 @@ def make(out: Path) -> Path:
     rng4 = np.random.default_rng(31)                  # high-resolution DDA files, written last: nothing else changes
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     subtraction_series(out)                           # written last: nothing else changes
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from dati_sintetici_serie import dia, qc_series
+    dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
+    qc_series(out)                                    # written last: nothing else changes
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 

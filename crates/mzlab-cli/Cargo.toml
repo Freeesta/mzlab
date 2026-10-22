@@ -20,7 +20,14 @@ mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp"] }
 mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder", "untargeted"] }
 mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
+mzlab-mol = { path = "../mzlab-mol" }
 
+
+# the PNG of a figure of the MSn graph (`mzlab-cli msn-graph --figura png`): rasterises the SVG, pure Rust; not in the default build, never in a .wasm
+resvg = { version = "0.48", default-features = false, features = ["text", "system-fonts"], optional = true }
+
+[features]
+png = ["dep:resvg"]
 
 [dev-dependencies]
 serde_json = { version = "1", features = ["float_roundtrip"] }

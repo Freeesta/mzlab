@@ -72,7 +72,7 @@ try:
             assert v[0] == 40 and abs(v[1] - 1.2) < 1e-9 and v[2] > 1.39, v
         step("a channel is drawn as an analog trace with its unit", drawn)
         def table():
-            pg.evaluate(f"{TIC}.el.querySelector('[data-a=tab]').click()"); pg.wait_for_selector("#tdati[open]")
+            pg.evaluate(f"TDATI.open({TIC}.cv)"); pg.wait_for_selector("#tdati[open]")
             t = pg.evaluate("(()=>{const d=document.querySelector('#tdati');return {h:[...d.querySelectorAll('thead th')].map(x=>x.textContent),n:d.querySelectorAll('tbody tr').length}})()")
             assert t["n"] == 40 and any("mbar" in h for h in t["h"]), t
             pg.evaluate("document.querySelector('#tdati').close()")

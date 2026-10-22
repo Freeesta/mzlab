@@ -171,7 +171,6 @@ const TOL0 = 1.0;                                   // strumento datato: finestr
 
 // ------------------------------------------------------------------ schermata di caricamento
 // small inline icons (no external files): download arrow and "fit to window" corners
-const IC_DATA = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px" aria-hidden="true"><rect x="1.5" y="2" width="9" height="8" rx="1"/><path d="M1.5 5h9M1.5 7.6h9M5 2v8"/></svg>';
 const IC_DL = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9"/></svg>';
 // peak with its area + sparkle = automatic
 const IC_AUTO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14C5 14 6 4.5 8 4.5S11 14 13 14z" fill="currentColor" fill-opacity=".3"/><path d="M13 1.2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" fill="currentColor" stroke="none"/></svg>';
@@ -460,7 +459,7 @@ async function bootSession0() {
     return;
   }
   if (first > 0 && isFirstLoad) STATO.file(first, "first"); renderFileList();
-  STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = "";
+  STATO.pannelli([], "clear"); Q("#dpanels").innerHTML = ""; syncWorkEmpty();
   await nbLoad();
   CAMPIONI.restore(NB.session);
   if (!restoreUi()) STATO.scheda(pickTab(E.tab), "reload");
@@ -825,6 +824,7 @@ function renderFileList() {
 
   bindFileReorder();
   renderNav();
+  syncWorkEmpty();
 }
 const vis = () => tabFiles().filter(f => f.vis);
 // "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off

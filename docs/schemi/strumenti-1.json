@@ -26,6 +26,7 @@
           "import.raw",
           "index.mzidx",
           "meta.compare",
+          "msn.figure",
           "msn.library_export",
           "msn.table_export",
           "quant.calibrate",
@@ -81,6 +82,7 @@
               "import.raw@1",
               "index.mzidx@1",
               "meta.compare@1",
+              "msn.figure@1",
               "msn.library_export@1",
               "msn.table_export@1",
               "quant.calibrate@1",
@@ -172,6 +174,7 @@
               "import.raw@1",
               "index.mzidx@1",
               "meta.compare@1",
+              "msn.figure@1",
               "msn.library_export@1",
               "msn.table_export@1",
               "quant.calibrate@1",
@@ -749,6 +752,27 @@
                   {"type":"number","minimum":0,"description":"m/z tolerance (ppm)"},
                   {"type":"number","minimum":0,"description":"m/z tolerance (unit resolution, Da)"},
                   {"type":"number","minimum":0,"description":"RT tolerance (min)"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"msn.figure@1"},
+              "name":{"enum":["format","view"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "enum":["svg","html","png"],
+                    "default":"svg",
+                    "description":"svg: the static figure, colours written in the file; html: one file with no external resource, two views, data table and downloads; png: the SVG rasterised (only in a build with the cargo feature `png`)"
+                  },
+                  {
+                    "enum":["tree","radial"],
+                    "default":"tree",
+                    "description":"tree: columns by MS level; radial: the precursor in the centre, one ring per step of the best path (the HTML has both and opens on this one)"
+                  }
                 ]
               }
             },

@@ -103,6 +103,14 @@
       run: { steps: S.plan.steps.filter((/** @type {any} */ i) => runs.states[i.id]).map((/** @type {any} */ i) => ({ instance: i.id, step: i.step, status: runs.states[i.id] })) },
     });
     const context = async () => (st.agent ? st.agent.context(JSON.stringify(sources())) : "{}");
+    /** what the charts can show: the page's collection of the open files and tables (`F.chartSources`, empty until the page has data) */
+    const chartSources = () => JSON.stringify(typeof F.chartSources === "function" ? F.chartSources() : {});
+    /** a specification of the model, checked by Rust: {ok, chart} or {ok: false, key, params} @param {any} spec */
+    const chart = async spec => {
+      try { return { ok: true, chart: await (await st.ensure()).chartMake(JSON.stringify(spec), chartSources()) }; } catch (e) { const x = /** @type {any} */ (e); return { ok: false, key: x && x.key || "err.llm.module", params: x && x.params || {} }; }
+    };
+    const chartViews = async () => (await st.ensure()).chartViews(chartSources());
+    const chartPresets = async () => (await st.ensure()).chartPresets(chartSources());
     const llmRef = async () => ({ log_sha256: await sha256(st.agent ? await st.agent.log() : ""), turn: st.agent ? st.agent.turns : 0, provider: st.settings.provider, model: st.settings.model, level: st.level });
 
         const money = () => {
@@ -110,7 +118,7 @@
       const tok = `${u[0]} in / ${u[1]} out tokens`;
       cost.textContent = st.price && st.price.in && st.price.out ? `Estimated cost: ${((u[0] * st.price.in + u[1] * st.price.out) / 1e6).toFixed(4)} ${st.price.currency || "USD"} (${tok})` : `Estimated cost: unknown (${tok})`;
     };
-    return { context, llmRef, money };
+    return { context, llmRef, money, chart, chartViews, chartPresets };
   };
 
   /** what the page does for the machine of the agent: show text, call a tool, ask for a confirmation, close the turn @param {any} kit @param {any} ui @param {any} st */
@@ -191,11 +199,21 @@
 
     const { edited, propose } = planKit(ctx, kit, regList, reg);
     /** the rest of the work is the tools */
-    st.tools = F.llmTools({ S, runs, select: ctx.select, propose, edited, context: () => context(), llmRef: () => llmRef() });
-
-    const { context, llmRef, money } = dataKit(S, runs, st, cost); st.money = money;
+    const { context, llmRef, money, chart, chartViews, chartPresets } = dataKit(S, runs, st, cost); st.money = money;
+    const showChart = (/** @type {any} */ c) => put(c.error === "no_view" ? F.llmChart.noView(c) : F.llmChart.figure(c));
+    st.tools = F.llmTools({ S, runs, select: ctx.select, propose, edited, context: () => context(), llmRef: () => llmRef(), chart, chartViews, showChart });
+    panel.insertBefore(F.llmChart.presetMenu(chartPresets, put), input);
 
     const host = makeHost(kit, { log, sent, stop, send, input }, st);
+
+    /** the conversation (one worker), opened on first use by a message or by a chart @returns {Promise<any>} */
+    st.ensure = async () => {
+      if (st.agent) return st.agent;
+      st.agent = new mod.AgentRun(host, {});
+      await st.agent.open(true);
+      try { const p = await (/** @type {any} */ (window).MZLAB_LLM && window.MZLAB_LLM.client ? window.MZLAB_LLM.client.providers() : []); const m = (p.find((/** @type {any} */ x) => x.id === settings.provider) || { models: [] }).models.find((/** @type {any} */ x) => x.id === settings.model); st.price = m && m.price || null; } catch (_) { /* no price: «unknown» */ }
+      return st.agent;
+    };
 
     async function submit() {
       const text = input.value.trim();
@@ -203,11 +221,7 @@
       input.value = ""; say(text, "me"); st.edits = 0;
       stop.hidden = false; send.disabled = true;
       try {
-        if (!st.agent) {
-          st.agent = new mod.AgentRun(host, {});
-          await st.agent.open(true);
-          try { const p = await (/** @type {any} */ (window).MZLAB_LLM && window.MZLAB_LLM.client ? window.MZLAB_LLM.client.providers() : []); const m = (p.find((/** @type {any} */ x) => x.id === settings.provider) || { models: [] }).models.find((/** @type {any} */ x) => x.id === settings.model); st.price = m && m.price || null; } catch (_) { /* no price: «unknown» */ }
-        }
+        await st.ensure();
         await st.agent.user(text, await context());
       } catch (e) { host.done("error:" + (/** @type {any} */ (e) && /** @type {any} */ (e).key || "err.llm.module")); }
     }

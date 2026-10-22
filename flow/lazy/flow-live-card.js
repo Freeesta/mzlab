@@ -32,7 +32,9 @@
   const paintLine = line => {
     const e = F.liveView.of(ids(line)), card = /** @type {HTMLElement | null} */ (line.closest(".fln"));
     if (!e) { line.dataset.state = ""; line.querySelector(".fln-lw")?.replaceChildren(); line.querySelector(".fln-lm")?.replaceChildren(); /** @type {HTMLElement} */ (line.querySelector(".fln-bar")).hidden = true; if (card) { card.removeAttribute("data-live"); if (card.dataset.lbl) card.setAttribute("aria-label", card.dataset.lbl); } return; }
-    const v = F.liveView.look(e), word = line.querySelector(".fln-lw"), bar = /** @type {HTMLElement} */ (line.querySelector(".fln-bar"));
+    const v = F.liveView.look(e), note = F.live && F.live.centroidNote ? F.live.centroidNote(ids(line)) : "";
+    if (note && v.state !== "running") v.word = `${v.word} · ${note}`;
+    const word = line.querySelector(".fln-lw"), bar = /** @type {HTMLElement} */ (line.querySelector(".fln-bar"));
     line.dataset.state = v.state; line.dataset.tone = v.tone;
     if (word && word.textContent !== v.word) { word.textContent = v.word; word.setAttribute("title", v.word); }
     const m = line.querySelector(".fln-lm");
@@ -49,7 +51,7 @@
   const files = node => {
     const { el } = F, list = node.kind === "input" ? [] : node.ids || [];
     if (!list.length) return null;
-    const tbl = el("table", { class: "flx-table" }, el("caption", { text: "Files" }), el("thead", {}, el("tr", {}, ...["File", "State", "Share", "Time", "Memory"].map(h => el("th", { scope: "col", text: h })))), el("tbody", {}));
+    const tbl = el("table", { class: "flx-table" }, el("caption", { text: "Files" }), el("thead", {}, el("tr", {}, ...["File", "Mode", "State", "Share", "Time", "Memory"].map(h => el("th", { scope: "col", text: h })))), el("tbody", {}));
     return el("div", { class: "fln-files", "data-ids": list.join(" "), hidden: true }, el("div", { class: "flx-tablewrap" }, tbl));
   };
 
@@ -62,7 +64,8 @@
     if (!body) return;
     body.replaceChildren(...rows.map(({ id, j, v }) => {
       const mb = F.liveView.memoryOf(id), share = v.state === "running" ? (v.frac === null ? "…" : Math.round(v.frac * 100) + " %") : v.state === "done" || v.state === "reused" ? "100 %" : "–";
-      return el("tr", {}, el("th", { scope: "row", text: String(j.item) }), el("td", {}, el("span", { class: "fln-lm", "aria-hidden": "true" }, mark(v.icon)), " ", v.word.replace(/^done in .*/, "done")), el("td", { text: share }),
+      const mode = F.live && F.live.modeOf ? F.live.modeOf(String(j.item)) : "", state = v.word.replace(/^done in .*/, "done");
+      return el("tr", {}, el("th", { scope: "row", text: String(j.item) }), el("td", { text: mode || "–" }), el("td", {}, el("span", { class: "fln-lm", "aria-hidden": "true" }, mark(v.icon)), " ", mode === "centroid" && F.live.isCentroidStep(id) ? "already centroided" : state), el("td", { text: share }),
         el("td", { text: j.ms ? F.liveView.seconds(j.ms) : "–" }), el("td", { text: mb ? `≈ ${Math.ceil(mb)} MB` : "–" }));
     }));
   };

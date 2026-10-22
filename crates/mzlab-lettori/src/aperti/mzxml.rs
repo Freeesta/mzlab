@@ -114,22 +114,20 @@ impl LettoreMzxml {
 }
 
 impl LettoreMzxml {
-    /// Fills in the TIC (`tic`) or the base peak intensity of the scans whose attributes do not say it, from their peaks.
+    /// Fills in the TIC (`tic`) or the base peak intensity of the scans whose attributes do not say it, from their peaks; a scan parsed for one
+    /// also gets the other, so the second pass finds nothing left to parse.
     fn completa(&mut self, tic: bool) -> Result<()> {
         for k in 0..self.indice.len() {
-            let manca = if tic {
-                !self.tic_noto[k]
-            } else {
-                self.bpi[k].is_none()
-            };
-            if !manca {
+            let (manca_tic, manca_bpi) = (!self.tic_noto[k], self.bpi[k].is_none());
+            if !(if tic { manca_tic } else { manca_bpi }) {
                 continue;
             }
             let (s, _) = self.spettro(k)?;
-            if tic {
+            if manca_tic {
                 self.indice[k].tic = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
                 self.tic_noto[k] = true;
-            } else {
+            }
+            if manca_bpi {
                 self.bpi[k] = Some(
                     (0..s.mz.len())
                         .map(|i| s.intensity_f64(i))

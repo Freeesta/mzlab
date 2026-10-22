@@ -13,7 +13,7 @@ pub const TIC_POINTS: usize = 200;
 pub const TOP_ROWS: usize = 50;
 
 /// A number as the assistant sees it: whole numbers as they are, the rest to four significant digits.
-fn sig4(x: f64) -> f64 {
+pub(crate) fn sig4(x: f64) -> f64 {
     if x == 0.0 || x.fract() == 0.0 || !x.is_finite() {
         return x;
     }
@@ -47,7 +47,7 @@ fn nums(v: Option<&Value>) -> Vec<f64> {
 }
 
 /// At most `TIC_POINTS` points: the maximum of each interval, so the peaks stay.
-fn tic(v: &Value) -> Value {
+pub(crate) fn tic(v: &Value) -> Value {
     let (rt, y) = (nums(v.get("rt")), nums(v.get("i")));
     let n = rt.len().min(y.len());
     let step = n.div_ceil(TIC_POINTS).max(1);

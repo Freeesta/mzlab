@@ -3,6 +3,11 @@
 // the graph could not explain, the warnings of the node and a drawing box (the fragment the user draws, kept next to the node: a hypothesis, not a result).
 import { G, TXT, ionText, useCandidate, fetchStrutture } from "./infusione-grafo-stato.js";
 import { rulesPanel } from "./infusione-grafo-regole.js";
+import { formulaHtml, prettyFormula, splitCharge } from "./msngrafo-vista.js";
+import { molSvg, pieceOf } from "./infusione-grafo-mol.js";
+
+/** A formula of a candidate as HTML with subscript digits and the charge of the graph as a superscript. */
+const fHtml = (/** @type {string} */ f) => raw(formulaHtml(...(/** @type {[string, string]} */ (splitCharge(f, G.j && G.j.polarita === -1 ? "-" : "+")))));
 
 const ST = "mzlab.infg.frag";
 /** @returns {Record<string, { smiles: string, svg: string }>} */
@@ -26,8 +31,8 @@ function candidates(/** @type {any} */ n) {
   if (!f) return h`<p class="muted sm">${I18N.t("msngrafo.nof")}</p>`;
   const rows = f.candidati.map((/** @type {any} */ c) => {
     const on = f.scelta === c.formula, prove = c.prove.map((/** @type {string} */ p) => I18N.t(/** @type {any} */ (TXT.prove)[p])).join(", ");
-    const btn = f.candidati.length > 1 && !on ? h`<button type="button" class="bt ig-use" data-f="${c.formula}" title="${I18N.t("msngrafo.use.tip", { f: c.formula })}">${I18N.t("msngrafo.use")}</button>` : on ? I18N.t(f.fonte === "utente" ? "msngrafo.used" : "msngrafo.chosen") : "";
-    return h`<tr${raw(on ? ' class="on"' : "")}><th scope="row">${c.formula}</th><td class="num">${c.mz_teorico.toFixed(5)}</td><td class="num">${ppmTxt(c.ppm)}</td><td class="num">${c.dbe}</td><td>${I18N.t(/** @type {any} */ (TXT.elettroni)[c.elettroni])}</td><td class="num">${c.finestra}</td><td>${prove}</td><td>${raw(btn)}</td></tr>`;
+    const btn = f.candidati.length > 1 && !on && G.ro ? h`<button type="button" class="bt ig-use" disabled aria-disabled="true" title="${I18N.t("msngrafo.file.off")}">${I18N.t("msngrafo.use")}</button>` : f.candidati.length > 1 && !on ? h`<button type="button" class="bt ig-use" data-f="${c.formula}" title="${I18N.t("msngrafo.use.tip", { f: prettyFormula(c.formula) })}">${I18N.t("msngrafo.use")}</button>` : on ? I18N.t(f.fonte === "utente" ? "msngrafo.used" : "msngrafo.chosen") : "";
+    return h`<tr${raw(on ? ' class="on"' : "")}><th scope="row">${fHtml(c.formula)}</th><td class="num">${c.mz_teorico.toFixed(5)}</td><td class="num">${ppmTxt(c.ppm)}</td><td class="num">${c.dbe}</td><td>${I18N.t(/** @type {any} */ (TXT.elettroni)[c.elettroni])}</td><td class="num">${c.finestra}</td><td>${prove}</td><td>${raw(btn)}</td></tr>`;
   });
   const head = ["msngrafo.col.cand", "msngrafo.col.mz", "msngrafo.col.err", "DBE", "msngrafo.col.e", "msngrafo.col.win", "msngrafo.col.prove", ""].map(k => raw(h`<th scope="col">${k.startsWith("msngrafo") ? I18N.t(k) : k}</th>`));
   return h`<table class="ig-cands"><caption class="sr-only">${I18N.t("msngrafo.cands.cap")}</caption><thead><tr>${head}</tr></thead><tbody>${rows.map((/** @type {string} */ r) => raw(r))}</tbody></table>`;
@@ -51,9 +56,9 @@ function lossLine(/** @type {any} */ n) {
   const arcs = it.archi.filter((/** @type {any} */ a) => a.a === n.id && a.perdita);
   if (!arcs.length) return "";
   const rows = arcs.map((/** @type {any} */ a) => {
-    const p = a.perdita, name = p.nome || p.formula || I18N.t("msngrafo.int.unnamed");
+    const p = a.perdita, name = p.nome || (p.formula ? prettyFormula(p.formula) : "") || I18N.t("msngrafo.int.unnamed");
     const alt = p.alternative.length ? " · " + I18N.t("msngrafo.int.alt", { list: p.alternative.join(", ") }) : "";
-    return h`<li>${I18N.t("msngrafo.int.line", { name, f: p.formula || "–", mass: p.massa.toFixed(4), ppm: ppmTxt(p.errore_ppm), conf: I18N.t(/** @type {any} */ (TXT.conf)[p.confidenza]), act: a.attivazioni.map((/** @type {string} */ x) => x.toUpperCase()).join("/") })}${alt}</li>`;
+    return h`<li>${I18N.t("msngrafo.int.line", { name, f: p.formula ? prettyFormula(p.formula) : "–", mass: p.massa.toFixed(4), ppm: ppmTxt(p.errore_ppm), conf: I18N.t(/** @type {any} */ (TXT.conf)[p.confidenza]), act: a.attivazioni.map((/** @type {string} */ x) => x.toUpperCase()).join("/") })}${alt}</li>`;
   });
   return h`<div class="ig-int"><b class="sm">${I18N.t("msngrafo.int.title")}</b><ul class="sm">${rows.map((/** @type {string} */ r) => raw(r))}</ul><p class="muted sm">${I18N.t("msngrafo.int.hyp")}</p></div>`;
 }
@@ -70,6 +75,9 @@ function activationLine(/** @type {any} */ n) {
 }
 
 const warnings = (/** @type {any} */ n) => G.j.avvisi.filter((/** @type {any} */ a) => a.nodo === n.id).map((/** @type {any} */ a) => h`<p class="sm ig-warn">${I18N.t(/** @type {any} */ (TXT.warn)[a.chiave], { node: n.mz.toFixed(4) })}</p>`).join("");
+
+/** In a graph file opened without raw data: why the spectrum of the ion cannot be opened. */
+const roNote = () => (G.ro ? h`<p class="muted sm ig-ro-note">${I18N.t("msngrafo.file.nospec")}</p>` : "");
 
 /** The drawing box: the saved fragment (picture from MOLUI) with Draw / Save drawing / Remove. */
 function drawBox(/** @type {any} */ n) {
@@ -92,13 +100,20 @@ function cutsTable(/** @type {any} */ s) {
   return h`<table class="ig-cuts"><caption class="sr-only">${I18N.t("msngrafo.str.cap")}</caption><thead><tr>${head}</tr></thead><tbody>${body.map((/** @type {string} */ r) => raw(r))}</tbody></table>${raw(more)}`;
 }
 
+/** The drawing of the molecule with the atoms of the piece of the best candidate highlighted (a hypothesis); empty without a molfile or OpenChemLib. */
+function hypothesis(/** @type {any} */ s) {
+  const atoms = pieceOf(s), svg = atoms && molSvg(atoms, 260, 150, "igp-" + s.nodo);
+  if (!atoms || !svg) return "";
+  return h`<div class="ig-hypo"><b class="sm">${I18N.t("msngrafo.v.hypo.title")}</b><div role="img" aria-label="${I18N.t("msngrafo.v.hypo.aria", { n: atoms.length })}">${raw(svg)}</div><p class="muted sm">${I18N.t("msngrafo.v.hypo.note")}</p></div>`;
+}
+
 /** Fills `.ig-str` of a node panel with the cleavage candidates, if the engine gives them; a click shows the broken bond in the drawing. */
 async function fillCuts(/** @type {HTMLElement} */ host, /** @type {any} */ n) {
   const box = host.querySelector(".ig-str"); if (!box) return;
   const s = await fetchStrutture(n);
   if (!s || !box.isConnected) return;
   const warn = s.avvisi.map((/** @type {string} */ a) => h`<p class="sm ig-warn">${I18N.t(/** @type {any} */ (TXT.warn)[a])}</p>`).join("");
-  box.innerHTML = h`<b class="sm">${I18N.t("msngrafo.str.title")}</b>` + warn + cutsTable(s) + h`<p class="muted sm">${I18N.t("msngrafo.str.hyp")}</p>`;
+  box.innerHTML = hypothesis(s) + h`<b class="sm">${I18N.t("msngrafo.str.title")}</b>` + warn + cutsTable(s) + h`<p class="muted sm">${I18N.t("msngrafo.str.hyp")}</p>`;
   box.querySelectorAll(".ig-cut").forEach(b => b.addEventListener("click", () => {
     const d = /** @type {HTMLElement} */ (b).dataset;
     showCut(s.candidati[+(d.i || 0)].tagli[+(d.k || 0)].legame.atomi);
@@ -132,7 +147,7 @@ async function saveDrawing(/** @type {any} */ n) {
 /** Fills the panel of a node. `redo` asks for the graph again (a candidate was chosen), `again` draws the panel again. */
 export function nodePanel(/** @type {HTMLElement} */ host, /** @type {any} */ n, /** @type {{ redo: () => void, again: () => void }} */ cb) {
   if (!n) { host.innerHTML = h`<p class="muted sm">${I18N.t("msngrafo.pick")}</p>`; return; }
-  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + activationLine(n) + lossLine(n) + rulesPanel(n) + isolation(n) + unexplained(n) + warnings(n) + drawBox(n);
+  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + activationLine(n) + lossLine(n) + rulesPanel(n) + isolation(n) + unexplained(n) + warnings(n) + roNote() + drawBox(n);
   fillCuts(host, n);
   host.querySelectorAll(".ig-use").forEach(b => b.addEventListener("click", () => {
     useCandidate(n, /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.f)); cb.redo();

@@ -1,9 +1,9 @@
 # Affiancare e spostare i pannelli (`affianca.js`, `AFFIANCA`)
 
-- Maniglia `.aff-grip` nell'intestazione del pannello; trascinarla mostra l'anteprima del rettangolo finale senza ridisegnare; Esc annulla. Senza trascinare: menu della maniglia e Alt+frecce. `rifai()` applica una mossa a una pila (vera o copiata).
+- Maniglia `.aff-grip` nell'intestazione del pannello; trascinarla mostra l'anteprima del rettangolo finale (`.aff-prev`, z-index sopra quello dei pannelli, che sale a ogni attivazione) senza ridisegnare; Esc annulla. Senza trascinare: menu della maniglia e Alt+frecce. `rifai()` applica una mossa a una pila (vera o copiata). Chiudere un pannello (`closePanel`) lascia l'ultimo compagno della riga a larghezza piena (`quota` nulla, `x` 0); un pannello ridimensionato da solo non cambia.
 - Le stesse mosse della maniglia stanno nel menu del tasto destro e nella paletta (azioni `disp.*`, `docs/agenti/azioni.md`); `disp.ripristina` rimette ogni pannello a tutta larghezza (si annulla con Ctrl+Z); `layout.js` non nomina mai un esperimento (guardia in `controlla.py`).
 - Opzione «Spettro accanto al cromatogramma» (Impostazioni, `UIP.beside`, spenta di base, ricordata in `qqq.prefs`): `newSpec` (`eventi.js`) chiama `AFFIANCA.accanto(spettro, origine)`, che mette lo spettro a destra se l'origine è sola nella sua riga e i due stanno; altrimenti resta sotto. Si annulla con Ctrl+Z; nessuna logica per tipo di esperimento.
 - Zone di rilascio a croce sul pannello bersaglio (`zona()`): 30% in alto = «Sopra» (riga propria prima del bersaglio), 30% in basso = «Sotto», fascia centrale metà sinistra / metà destra = «A sinistra» / «A destra»; «Spazio insufficiente» se non entra. Ogni zona ha la sua etichetta nell'anteprima.
 - Una cromatografia trascina con sé i suoi spettri figli; rilasciata sul proprio spettro (o con Alt+freccia verso di esso) si sposta da sola oltre di lui (`solo` nella mossa).
-- Divisori `.aff-sep` (`role=separator`, frecce ±16, Maiusc ±48, Invio = uguali) rifatti da `sync()` in `fitHost`. Annulla con `HSEQ` (Ctrl/⌘+Z) e barra di 6 s.
+- Divisori `.aff-sep` (`role=separator`, frecce ±16, Maiusc ±48, Invio = uguali) rifatti da `sync()` in `fitHost`. Si annulla con `HSEQ` (Ctrl/⌘+Z o pulsante Annulla della barra); nessun avviso visibile, solo l'annuncio in `#aff-live`.
 - Prove: `e2e_affianca`, `e2e_affianca_zone`.

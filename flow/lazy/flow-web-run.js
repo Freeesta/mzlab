@@ -7,7 +7,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the steps this runner knows, and the ones that need a computer */
-  const KNOWN = ["index.mzidx", "features.detect", "features.align", "features.gapfill"];
+  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill"];
   const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;
@@ -22,17 +22,19 @@
   /** @param {string[]} parts @param {boolean} create */
   const dirOf = async (parts, create) => { let d = await navigator.storage.getDirectory(); for (const p of parts) d = await d.getDirectoryHandle(p, { create }); return d; };
 
-  /** the .mzidx files in OPFS (not the `.cen.mzidx`) with what identifies them: [{ name, path, key }]; the ones named by a file open in the Data tab, else all */
+  /** the .mzidx files in OPFS (not the `.cen.mzidx`) with what identifies them: [{ name, path, key, cen }], `cen` = the `.cen.mzidx` of the same file (the index Data keeps for the peaks of a profile file) or null;
+   * the ones named by a file open in the Data tab, else all */
   const listIdx = async () => {
-    const out = /** @type {any[]} */ ([]);
+    const out = /** @type {any[]} */ ([]), cens = /** @type {Map<string, any>} */ (new Map());
     try {
       const d = await dirOf(["mzlab", "idx"], false);
       for await (const [name, h] of /** @type {any} */ (d).entries()) {
-        if (h.kind !== "file" || !name.endsWith(".mzidx") || name.endsWith(".cen.mzidx")) continue;
-        const f = await h.getFile();
-        out.push({ name, path: "mzlab/idx/" + name, key: `${f.size}:${f.lastModified}` });
+        if (h.kind !== "file" || !name.endsWith(".mzidx")) continue;
+        const f = await h.getFile(), one = { name, path: "mzlab/idx/" + name, key: `${f.size}:${f.lastModified}`, cen: null };
+        if (name.endsWith(".cen.mzidx")) cens.set(name.replace(/\.cen\.mzidx$/, ".mzidx"), one); else out.push(one);
       }
     } catch (_) { return []; }
+    for (const f of out) f.cen = cens.get(f.name) || null;
     out.sort((a, b) => (a.name < b.name ? -1 : 1));
     const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.map((/** @type {any} */ f) => String(f && f.file || "").split("#")[0]) : [];
     const held = out.filter(f => open.some((/** @type {string} */ n) => n && (f.name === n + ".mzidx" || f.name === n.replace(/\.[^.]+$/, "") + ".mzidx")));
