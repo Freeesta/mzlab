@@ -7915,3 +7915,4 @@
 {"v":1,"ts_utc":"2026-10-22T19:17:12Z","tipo":"job","k":"120033844204","workflow":"rust","job":"rust-lint","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ea8b19c8eb7d8bf7d2ecf43013c928ba086ed7d4","run_id":39838703567,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T19:17:12Z","tipo":"job","k":"120033844331","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ea8b19c8eb7d8bf7d2ecf43013c928ba086ed7d4","run_id":39838703567,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T19:17:12Z","tipo":"job","k":"120033930488","workflow":"rust","job":"rust-wasm","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ea8b19c8eb7d8bf7d2ecf43013c928ba086ed7d4","run_id":39838703567,"run_attempt":1}
+{"v":1,"ts_utc":"2026-10-22T19:25:28Z","azione":"aperta","tipo":"pr","pr":1526,"sha":"520658083b80519ebc8cfeeae3b1e1ae4fc79deb"}
