@@ -1367,3 +1367,4 @@
 {"v":1,"tipo":"pr","pr":1446,"sha":"c6fd556bb82968b31f668292b6d3a77d2c1864e5","ts_utc":"2026-10-22T07:03:49Z","azione":"unita","aperta_s":734,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":34,"righe_meno":2,"file_n":3,"file":["docs/agenti/teoria.md","mzlab/web/teoria/sim-quad.js","tests_e2e/e2e_teoria_avvio.py"],"aree":{"docs":1,"web":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":null}
 {"v":1,"ts_utc":"2026-10-22T07:05:42Z","azione":"push","titolo":"Fonde main","merge_main":false,"aree":{"rust":5,"docs":4,"web":1,"test":1},"tipo":"pr","pr":1448,"sha":"12970956597d9309a820ce5c3208e2e8427dd18a"}
 {"v":1,"ts_utc":"2026-10-22T07:06:35Z","azione":"aperta","tipo":"pr","pr":1449,"sha":"25b64464141ea38379dbc2d8e95d429543bbc740"}
+{"v":1,"ts_utc":"2026-10-22T07:06:58Z","azione":"aperta","tipo":"pr","pr":1450,"sha":"bc118fa0c3da0699f6cfa1dc72734b10efd29601"}
