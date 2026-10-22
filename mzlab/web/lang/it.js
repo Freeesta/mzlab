@@ -3819,18 +3819,5 @@ I18N.add("it", {
   "err.llm.conversation": "La conversazione non è valida ({field}).",
   "err.llm.provider": "Qui non c'è nessun fornitore disponibile. Il sito raggiunge solo modelli sul tuo computer; l'app desktop raggiunge gli altri.",
   "err.llm.tools": "Il catalogo degli strumenti non è valido ({field}).",
-  "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova.",
-  "err.llm.chart.schema": "Il grafico non è valido ({field}).",
-  "err.llm.chart.title": "Il titolo deve avere da 1 a {max} caratteri.",
-  "err.llm.chart.ref": "Non esiste la vista {ref}.",
-  "err.llm.chart.mark": "Il segno {mark} non esiste.",
-  "err.llm.chart.field": "La vista {ref} non ha il campo {field} per {channel}.",
-  "err.llm.chart.type": "Il segno {mark} non accetta un campo {kind} per {channel}.",
-  "err.llm.chart.color": "Il colore vuole un campo nominale con al più {max} valori ({field}).",
-  "err.llm.chart.detail": "Il dettaglio vuole un campo nominale con al più {max} valori ({field}).",
-  "err.llm.chart.facet": "I pannelli vogliono un campo nominale con al più {max} valori ({field}).",
-  "err.llm.chart.style": "Il grafico porta uno stile ({field}); colori e stili li decide il programma.",
-  "err.llm.chart.rows": "Un grafico indica una vista; non porta mai righe sue.",
-  "err.llm.chart.why": "Il motivo deve avere da 1 a {max} caratteri.",
-  "err.llm.chart.sources": "I dati dei grafici non si sono potuti leggere."
+  "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova."
 });

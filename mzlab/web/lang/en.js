@@ -3819,18 +3819,5 @@ I18N.add("en", {
   "err.llm.conversation": "The conversation is not valid ({field}).",
   "err.llm.provider": "No provider is available here. The site reaches only models on your computer; the desktop app reaches the others.",
   "err.llm.tools": "The catalog of tools is not valid ({field}).",
-  "err.llm.module": "The assistant module did not load: reload the page and try again.",
-  "err.llm.chart.schema": "The chart is not valid ({field}).",
-  "err.llm.chart.title": "The title must have 1 to {max} characters.",
-  "err.llm.chart.ref": "There is no view {ref}.",
-  "err.llm.chart.mark": "The mark {mark} does not exist.",
-  "err.llm.chart.field": "The view {ref} has no field {field} for {channel}.",
-  "err.llm.chart.type": "The mark {mark} does not take a {kind} field for {channel}.",
-  "err.llm.chart.color": "Colour needs a nominal field with at most {max} values ({field}).",
-  "err.llm.chart.detail": "Detail needs a nominal field with at most {max} values ({field}).",
-  "err.llm.chart.facet": "Facet needs a nominal field with at most {max} values ({field}).",
-  "err.llm.chart.style": "The chart carries a style ({field}); colours and styles belong to the program.",
-  "err.llm.chart.rows": "A chart points to a view; it never carries its own rows.",
-  "err.llm.chart.why": "The reason must have 1 to {max} characters.",
-  "err.llm.chart.sources": "The data of the charts could not be read."
+  "err.llm.module": "The assistant module did not load: reload the page and try again."
 });

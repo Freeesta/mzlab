@@ -691,16 +691,5 @@
   "err.llm.network": "Errore di rete verso il modello; {reason} = motivo breve in inglese (es. truncated, fetch).",
   "err.llm.replay.mismatch": "La richiesta non coincide con la registrazione; {turn} = numero del turno.",
   "err.llm.conversation": "Conversazione non valida; {field} = campo che manca o è sbagliato.",
-  "err.llm.tools": "Catalogo degli strumenti non valido; {field} = campo che manca o è sbagliato.",
-  "err.llm.chart.schema": "{field} = campo del grafico che manca o è sbagliato.",
-  "err.llm.chart.title": "{max} = lunghezza massima del titolo.",
-  "err.llm.chart.ref": "{ref} = vista chiesta e inesistente.",
-  "err.llm.chart.mark": "{mark} = segno chiesto e inesistente.",
-  "err.llm.chart.field": "{ref} = vista, {field} = campo inesistente, {channel} = canale (x, y, colore…).",
-  "err.llm.chart.type": "{mark} = segno, {kind} = tipo del campo, {channel} = canale.",
-  "err.llm.chart.color": "{field} = campo, {max} = numero massimo di valori.",
-  "err.llm.chart.detail": "{field} = campo, {max} = numero massimo di valori.",
-  "err.llm.chart.facet": "{field} = campo, {max} = numero massimo di pannelli.",
-  "err.llm.chart.style": "{field} = parte di stile presente nel grafico.",
-  "err.llm.chart.why": "{max} = lunghezza massima del motivo."
+  "err.llm.tools": "Catalogo degli strumenti non valido; {field} = campo che manca o è sbagliato."
 }
