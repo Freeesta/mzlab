@@ -173,9 +173,19 @@ pub fn quantize(score: f64) -> f32 {
 
 /// Runs the identity search and splits the candidates into targets and decoys by the accession prefix (the score is the entropy similarity).
 pub fn best_scores<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Result<Best> {
+    best_scores_by(lib, q, o, |h| h.entropy)
+}
+
+/// As `best_scores` with the score the caller chooses for each candidate (cosine, modified cosine).
+pub fn best_scores_by<S: Source>(
+    lib: &Library<S>,
+    q: &Query,
+    o: &IdentityOpts,
+    score: impl Fn(&crate::search::Hit) -> f64,
+) -> Result<Best> {
     let mut b = Best::default();
     for h in identity(lib, q, o)? {
-        let e = quantize(h.entropy);
+        let e = quantize(score(&h));
         if is_decoy(&lib.meta(h.index)?.accession) {
             b.decoy = b.decoy.max(e);
         } else if b.index.is_none() || e > b.target {

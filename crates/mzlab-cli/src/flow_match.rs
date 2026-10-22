@@ -10,7 +10,7 @@ use mzlab_lib::contrib::{
     cosine_contributions, entropy_contributions, modified_cosine_contributions,
 };
 use mzlab_lib::decoy::{
-    best_scores, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
+    best_scores_by, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
     DEFAULT_SEED,
 };
 use mzlab_lib::parse::{detect, parse_all};
@@ -255,8 +255,8 @@ struct Fdr {
     fdr: LibFdr,
 }
 
-/// The identity search of every query of the batch against the library with decoys (the entropy score, as `decoy::search_fdr`), one `Fdr` per query.
-fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job) -> Result<Vec<Fdr>> {
+/// The identity search of every query of the batch against the library with decoys (the score of the algorithm, entropy as `decoy::search_fdr`), one `Fdr` per query.
+fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job, alg: &str) -> Result<Vec<Fdr>> {
     let mut best = Vec::with_capacity(queries.len());
     for q in queries {
         best.push(match q {
@@ -267,7 +267,13 @@ fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job) -> Result<Vec<Fdr>
                     pol: q.pol,
                     top: usize::MAX,
                 };
-                best_scores(lib, q, &o).map_err(|_| Error::new("err.flow.match.library"))?
+                let frag = o.frag_da;
+                best_scores_by(lib, q, &o, |h| match alg {
+                    "cosine" => h.cosine,
+                    "modified_cosine" => modified_cosine(&q.spec, &h.spec, frag).cosine,
+                    _ => h.entropy,
+                })
+                .map_err(|_| Error::new("err.flow.match.library"))?
             }
             None => Best::default(),
         });
@@ -353,7 +359,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .params
         .iter()
         .any(|(k, v)| k == "decoys" && v.str() == Some("spectrum"));
-    if decoys && alg != "spectral_entropy" {
+    if decoys && alg == "tree" {
         return Err(Error::new("err.flow.match.decoysAlgorithm"));
     }
     let terms = job
@@ -382,7 +388,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .map(|s| Query::new(s.prec, s.pol, &s.mz, &s.it))
         .collect();
     let fdr = if decoys {
-        Some(batch_fdr(&lib, &queries, job)?)
+        Some(batch_fdr(&lib, &queries, job, &alg)?)
     } else {
         None
     };
@@ -427,3 +433,7 @@ pub(crate) fn query_id(k: usize, s: &Spectrum) -> String {
         s.meta.accession.clone()
     }
 }
+
+#[cfg(test)]
+#[path = "flow_match_decoy_tests.rs"]
+mod decoy_tests;
