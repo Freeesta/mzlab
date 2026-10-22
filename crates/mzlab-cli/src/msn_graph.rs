@@ -21,11 +21,14 @@ pub const HELP: &str = "mzlab-cli msn-graph: the fragmentation graph (msngrafo/1
 usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
        mzlab-cli msn-graph FILE.mzML --formula ION --verita TRUTH.json --riassunto
        mzlab-cli msn-graph compare A.json B.json [--out PATH]
+       mzlab-cli msn-graph complete IN.json [--out PATH]
 
   --formula ION        the ion of the root: C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; without it, masses only
   --smiles TEXT        written back in the JSON; with --strutture, the structure that is cleaved
+  --molfile FILE       the 2D structure of the molecule (a molfile), written back in the JSON for the drawings of the root and of the fragments
   --strutture NODO     add to the JSON the key `strutture`: the bonds of --smiles whose cleavage gives the m/z of the node nK of the graph (candidates, with the
-                       ppm and the peaks of its spectrum that the same piece explains)
+                       ppm and the peaks of its spectrum that the same piece explains); `tutti` = the key `strutture_tutti`, those of every node of level 2
+                       or more that has a cleavage
   --interpreta         add to the JSON the key `interpretazione`: for each arc the neutral loss (name, formula, exact mass, ppm, reason, confidence) and the
                        activations that observed it
   --ppm-perdita N      window of the loss match by mass, ppm of the precursor m/z (10)
@@ -48,6 +51,7 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
                        the tree; tutto = all
   --out PATH           write there instead of the standard output
 
+  complete             adds the key `vista` (levels, best path, tree and radial layout) to an msngrafo/1 that has not got it, with the bytes the engine writes
   compare              validates a tree measured twice: two msngrafo/1 files in, a JSON (msnconfronto/1) out with the numbers of the five criteria
                        (isolated nodes, arcs of rel >= 10 %, formulas, MS2 entropy >= 0.8 per energy, m/z shift <= 3 ppm) and `convalidata`";
 
@@ -85,6 +89,10 @@ pub fn parse_args(
             "--help" | "-h" => return Ok(None),
             "--formula" => o.formula = a.next(),
             "--smiles" => o.smiles = a.next(),
+            "--molfile" => {
+                let p = a.next().ok_or("--molfile needs a file")?;
+                o.molfile = Some(std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?);
+            }
             "--ppm-formula" => o.ppm_formula = numero(a.next(), &x)?,
             "--mz-basso" => o.mz_basso = numero(a.next(), &x)?,
             "--ppm-basso" => o.ppm_basso = numero(a.next(), &x)?,
@@ -276,6 +284,24 @@ pub fn strutture_testo(
     (nodo, ppm): (&str, f64),
 ) -> Result<String> {
     mzlab_feat::chem::strutture::strutture_testo(g, j, o.smiles.as_deref(), (nodo, ppm))
+}
+
+/// `msn-graph complete IN.json [--out PATH]`: the graph of the file with the key `vista` added; the text and the file to write it to.
+pub fn completa_cmd(
+    mut a: impl Iterator<Item = String>,
+) -> std::result::Result<(String, Option<PathBuf>), String> {
+    let (mut file, mut out) = (None, None);
+    while let Some(x) = a.next() {
+        match x.as_str() {
+            "--out" => out = a.next().map(PathBuf::from),
+            f if !f.starts_with("--") && file.is_none() => file = Some(PathBuf::from(f)),
+            f => return Err(format!("unknown argument {f}")),
+        }
+    }
+    let file = file.ok_or("complete needs an msngrafo/1 file")?;
+    let json = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
+    let done = mzlab_core::msngrafo::completa(&json).map_err(|e| e.to_string())?;
+    Ok((done + "\n", out))
 }
 
 /// The text the command prints: the graph, or the line of numbers.

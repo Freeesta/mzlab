@@ -6,7 +6,7 @@ Un file per pacchetto; piano, ordine e dipendenze in `docs/studi/ROSINA.md` E; s
 - [R-00](R-00.md): Banco comune: verità `verita/1`, strumenti `tools/rosina/`, test di parità e fuzz dei moduli
 - [LOC-2](LOC-2.md): Oracoli su tutto il corpus: TRFP sul Mac, msconvert e `timsdata` su Windows (Parallels), verità
 - [R-01](R-01.md): Convertitore mzML: validazione, profilo e centroidi dichiarati, andata e ritorno
-- [R-02](R-02.md): Thermo `.raw`: TSQ, trappole, tune, SPS/MS3, metadati contro TRFP
+- [R-02](R-02.md): Thermo `.raw`: TSQ, trappole, tune, SPS/MS3, metadati contro TRFP (punto 4 assorbito da T-4, `docs/studi/PROMPT_LETTORE_THERMO/`)
 - [R-03](R-03.md): SCIEX `.wiff`: QTRAP oltre il 3200, polarità mista, metadati; TripleTOF/ZenoTOF nel modulo `sciex-tof`
 - [R-04](R-04.md): Agilent `.D`: Q-TOF, valori effettivi, DAD, sezione GC, decisione sul 6560
 - [R-05](R-05.md): Waters `.raw`: TOF, MSe, DDA, lock mass come opzione, deriva

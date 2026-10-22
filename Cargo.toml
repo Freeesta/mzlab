@@ -19,3 +19,8 @@ codegen-units = 1
 [profile.desktop]
 inherits = "release"
 opt-level = 3
+
+# The `mzlab-cli` binary for analysis (`cargo build --profile cli -p mzlab-cli`): speed over size; the .wasm builds keep `release`.
+[profile.cli]
+inherits = "release"
+opt-level = 3

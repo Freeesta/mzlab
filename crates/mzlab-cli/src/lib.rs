@@ -277,6 +277,12 @@ fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
             Err(e) => Outcome::fail(&e.to_string()),
         };
     }
+    if args.next_if(|a| a == "complete").is_some() {
+        return match msn_graph::completa_cmd(args) {
+            Ok((t, out)) => emit(t, &out),
+            Err(e) => Outcome::fail(&e),
+        };
+    }
     let a = match msn_graph::parse_args(args) {
         Ok(Some(a)) => a,
         Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),

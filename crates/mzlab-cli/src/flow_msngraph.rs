@@ -55,6 +55,9 @@ fn params() -> Vec<Param> {
             Param::text("smiles", "Structure (SMILES)")
                 .default_str("")
                 .doc("Written back in the graph; it does not change the numbers"),
+            Param::text("molfile", "Structure (molfile)")
+                .default_str("")
+                .doc("The 2D structure as a molfile, written back in the graph for the drawings; it does not change the numbers"),
             Param::number("ppm_formula", "Sub-formula window")
                 .min(0.0)
                 .default_num(d.ppm_formula)
@@ -81,7 +84,7 @@ fn params() -> Vec<Param> {
                 .doc("The M+1 peaks of the fragments become nodes with their monoisotopic peak"),
             Param::text("strutture_nodo", "Node for the structure cleavages")
                 .default_str("")
-                .doc("Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); empty = none"),
+                .doc("Node nK of the graph: adds the key `strutture`, the bonds of the structure whose cleavage gives its m/z (needs the structure); `tutti` = the key `strutture_tutti` for every node of level 2 or more; empty = none"),
             Param::number("ppm_struttura", "Cleavage window")
                 .min(0.0)
                 .default_num(crate::msn_graph::PPM_STRUTTURA)
@@ -160,6 +163,7 @@ fn opzioni(job: &Job, molecules: Option<&str>) -> Result<Opzioni> {
     let mut o = Opzioni {
         formula: text(job, "formula"),
         smiles: text(job, "smiles"),
+        molfile: text(job, "molfile"),
         attivazione: text(job, "attivazione"),
         ..Opzioni::default()
     };

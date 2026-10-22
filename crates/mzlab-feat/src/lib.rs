@@ -49,6 +49,7 @@ pub mod params_unit;
 pub mod pipeline;
 pub mod polpair;
 mod post;
+pub mod prof;
 pub mod qc;
 pub mod quality;
 pub mod recipe;

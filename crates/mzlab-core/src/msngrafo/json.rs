@@ -49,6 +49,10 @@ fn opzioni(o: &mut Out, op: &Opzioni) {
     opt_str(o, op.formula.as_deref());
     o.raw(",\"smiles\":");
     opt_str(o, op.smiles.as_deref());
+    // only when given: a graph without a molfile keeps its bytes
+    if let Some(m) = &op.molfile {
+        o.raw(",\"molfile\":").str(m);
+    }
     o.raw(",\"ppm_formula\":")
         .num(op.ppm_formula)
         .raw(",\"mz_basso\":")
@@ -336,5 +340,5 @@ pub fn json(g: &Grafo, op: &Opzioni, sorgente: Option<(&str, &str)>) -> String {
         spettro(&mut o, s);
     }
     o.raw("]}");
-    o.0
+    super::vista::con_vista(o.0)
 }
