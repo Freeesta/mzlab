@@ -43,6 +43,7 @@ mod imp {
 
 #[cfg(target_arch = "wasm32")]
 mod imp {
+    #[inline(always)]
     pub fn time<T>(_name: &'static str, f: impl FnOnce() -> T) -> T {
         f()
     }
