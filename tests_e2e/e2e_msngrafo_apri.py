@@ -25,13 +25,14 @@ r = Run(port=8979, wd="/tmp/wd_msngrafo_apri")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1500})
+        pg.goto(f"http://127.0.0.1:{r.port}/?lang=en"); pg.wait_for_timeout(1500)
         api_before = lambda: pg.evaluate("(window.__qqU||[]).filter(u=>/api\\//.test(u)).length")
         base = api_before()
         def opened(path, via="pick"):
             pg.set_input_files("#pick", str(path))
             pg.wait_for_selector("#ig-ro .ig-node", timeout=30000)
         def close():
-            pg.keyboard.press("Escape"); pg.wait_for_selector("#ig-ro", state="detached", timeout=5000)
+            pg.focus("#ig-ro [data-x]"); pg.keyboard.press("Escape"); pg.wait_for_selector("#ig-ro", state="detached", timeout=5000)
         def old():
             opened(OLD)
             assert pg.locator("#ig-ro .ig-node").count() == N, pg.locator("#ig-ro .ig-node").count()
