@@ -53,10 +53,23 @@ def test_wasm_and_native_write_the_same_files(built, spec):
         out.mkdir()
         got = run(*cmd, str(out), *args)
         outs[name] = (got, out)
-    assert outs["nat"][0] == outs["wasm"][0]
+    # check.json differs on purpose (below); the hash of every other file is the same
+    hashes = lambda t: [l for l in t.splitlines() if "check.json" not in l]
+    assert hashes(outs["nat"][0]) == hashes(outs["wasm"][0])
     nat, wasm = outs["nat"][1], outs["wasm"][1]
     for f in sorted(p.name for p in nat.iterdir()):
-        assert (nat / f).read_bytes() == (wasm / f).read_bytes(), f
+        if f != "check.json":
+            assert (nat / f).read_bytes() == (wasm / f).read_bytes(), f
+    # The page's .wasm leaves out the Kendrick and PCA checks: they say so, the other thirteen are the native bytes.
+    left_out = ("homologous", "structure")
+    got = {c["id"]: c for c in json.loads((wasm / "check.json").read_text())["checks"]}
+    want = {c["id"]: c for c in json.loads((nat / "check.json").read_text())["checks"]}
+    assert got.keys() == want.keys()
+    for k in want:
+        if k in left_out:
+            assert got[k]["flag"] == "unavailable" and got[k]["proof"] == {"unavailable": "tabcheck.unavailable.wasm"}
+        else:
+            assert got[k] == want[k], k
     full = (nat / "full.csv").read_text().splitlines()
     assert full[0].startswith("id,mz,rt,") and len(full) > 10
     assert (nat / "quant.csv").read_text().splitlines()[0].startswith("row ID,row m/z,row retention time")

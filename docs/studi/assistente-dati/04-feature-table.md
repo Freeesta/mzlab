@@ -54,3 +54,5 @@ Ogni controllo dà: `id`, `value`, `threshold`, `flag` (`ok|note|warn`), `rows` 
 ## 5. Riferimenti per i casi d'oro
 
 I file sintetici (`tools/dati_sintetici.py`) contengono già ciò che i controlli devono trovare: un contaminante in ogni file con RT fisso, l'addotto sodico del genitore, i suoi isotopi, tre frammenti in sorgente a rapporto costante, prodotti che salgono e scendono nel tempo, uno spostamento costante di m/z dello strumento. `06-valutazione.md` li usa come risposta nota.
+
+**Peso nel `.wasm`.** Nel modulo `table` della pagina i controlli `homologous` e `structure` rispondono `unavailable` (tetto 512 000 B: con tutti e 15 il modulo pesa 563 759 B, +105 477 su 458 282; PCA ≈ 46 KB, KMD ≈ 14 KB, controlli ≈ 45 KB; con 13 controlli 502 415 B). Per portarli nella pagina: alzare il tetto (≈ 570 000) o creare un modulo a parte; decisione di Federico.
