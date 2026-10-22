@@ -25,6 +25,9 @@ mod flow_cache;
 mod flow_centroid;
 #[cfg(test)]
 mod flow_centroid_tests;
+mod flow_chimeric;
+#[cfg(test)]
+mod flow_chimeric_tests;
 mod flow_compare;
 mod flow_digl;
 mod flow_drift;
