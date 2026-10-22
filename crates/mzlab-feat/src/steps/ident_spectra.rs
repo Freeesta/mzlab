@@ -126,17 +126,9 @@ fn ms2() -> Facets {
     }
 }
 
-/// `spectra.match`: scores each query spectrum against a library (`mzlab_lib::search`, `scores.rs`, `ms2_engine::matcher`).
-pub(super) fn match_spectra() -> Step {
-    Step {
-        ins: vec![
-            Port::new("query", DataType::Spectra, "Query spectra")
-                .accepts(&[DataType::Report])
-                .requires(ms2()),
-            Port::new("library", DataType::Library, "Spectral library"),
-        ],
-        outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per feature")],
-        params: vec![
+/// The parameters `spectra.match` and `table.match` share: the windows, the cut, the decoys and the score terms.
+fn match_params() -> Vec<Param> {
+    vec![
             Param::number("tol_da", "Fragment tolerance")
                 .min(0.0)
                 .default_num(0.02)
@@ -162,7 +154,20 @@ pub(super) fn match_spectra() -> Step {
                 .default_bool(false)
                 .advanced()
                 .doc("On: every candidate also carries score_terms, its score as a weighted sum of named terms (the contribution of each matched pair, the rest in one term) and the key of its formula in the Theory; the scores themselves do not change"),
+            ]
+}
+
+/// `spectra.match`: scores each query spectrum against a library (`mzlab_lib::search`, `scores.rs`, `ms2_engine::matcher`).
+pub(super) fn match_spectra() -> Step {
+    Step {
+        ins: vec![
+            Port::new("query", DataType::Spectra, "Query spectra")
+                .accepts(&[DataType::Report])
+                .requires(ms2()),
+            Port::new("library", DataType::Library, "Spectral library"),
         ],
+        outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per feature")],
+        params: match_params(),
         runs_in: RunsIn {
             wasm: Some("lib"),
             wasm_ceiling_bytes: None,
@@ -347,6 +352,46 @@ fn fragmenter() -> Algorithm {
             "Bond-wise fragmenter",
             "Score = sum of mz^0.421 * intensity^0.1307 of the explained peaks over the sum of all the peaks (fragmenter_score in ms2_engine/insilico.rs). Not MetFrag: no bond-energy term and no 0.005 Da + 10 ppm tolerance.",
             Status::Available,
+        )
+    }
+}
+
+/// `table.match`: the MS2 spectrum of each row of the aligned feature table (the one `export.mgf` writes) scored against a library, result per row.
+pub fn table_match() -> Step {
+    let mut params = match_params();
+    params.push(
+        Param::choice("ms2_spectrum", "Spectrum of a row", &["best", "consensus"])
+            .default_str("best")
+            .doc("best: the scan with the highest TIC of the file that has the best MS2 of the row; consensus: all the fitting scans of the row, merged across the files where it has a peak"),
+    );
+    params.push(
+        Param::boolean("ms2_background", "Take out the blank background")
+            .default_bool(false)
+            .doc("On: the MS2 peaks that recur in the blank files are taken out of every row, never the precursor; without a blank file nothing is taken out"),
+    );
+    Step {
+        ins: vec![
+            Port::new("table", DataType::Table, "Aligned feature table"),
+            Port::new("samples", DataType::Samples, "Roles and times of the files"),
+            Port::new("index", DataType::Mzidx, "Scan index of each file, in the order of the table")
+                .many()
+                .requires(ms2()),
+            Port::new("library", DataType::Library, "Spectral library"),
+        ],
+        outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per row (query = id of the row)")],
+        params,
+        runs_in: RunsIn {
+            wasm: None,
+            wasm_ceiling_bytes: None,
+            native: true,
+        },
+        algorithms: vec![spectral_entropy(), cosine(), modified_cosine()],
+        default_algorithm: Some("spectral_entropy"),
+        errors: vec!["error.memoryBudget", "err.flow.tablematch.files"],
+        ..Step::core(
+            "table.match",
+            "Compare the MS2 of the table rows",
+            "Takes the MS2 spectrum of every row of the aligned table, as the MGF export does, and scores it against a spectral library like spectra.match: the candidates of each row carry the score, the shared peaks, the decoy q-value and the name. A candidate is never an identity: the level is decided by annot.level.",
         )
     }
 }
