@@ -5,19 +5,29 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
 
+  /** the command with the folder of the user in the place of the one the engine wrote: quoted once, in single quotes, so spaces are fine @param {string} text @param {string} folder */
+  F.cliFill = (text, folder) => {
+    const f = folder.trim().replace(/^(['"])(.*)\1$/, "$2");
+    return f ? text.replace(/^MZLAB_IN='[^'\n]*'$/m, () => "MZLAB_IN='" + f.replace(/'/g, "'\\''") + "'") : text;
+  };
+
   /** @param {any} S @param {{ place: (box: HTMLElement) => void, root: HTMLElement, say: (msg: string) => void }} c */
   F.runActions = (S, c) => {
     const { el, btn } = F;
     /** @type {HTMLElement | null} */ let shown = null, arrow = null;
     const shut = () => { c.root.querySelectorAll(".fl-cli").forEach(n => n.remove()); shown = null; if (arrow) arrow.setAttribute("aria-expanded", "false"); };
-    const text = async () => (await F.runners.cli.run(S)).text;
+    const text = async () => F.cliFill((await F.runners.cli.run(S)).text, S.cliFolder || "");
     const copy = async (/** @type {string} */ t) => { try { await navigator.clipboard.writeText(t); c.say("Copied"); } catch (_) { c.say("Could not copy: select the text and copy it."); } };
 
     const panel = async () => {
       shut();
       const ta = el("textarea", { class: "fl-cmd", rows: 12, spellcheck: false, "aria-label": "Command for a terminal (you can edit it)" });
-      ta.value = await text();
-      const box = el("div", { class: "fl-cli" }, el("p", { class: "fl-note", text: "Paste it in a terminal." }), ta,
+      const raw = (await F.runners.cli.run(S)).text;
+      ta.value = F.cliFill(raw, S.cliFolder || "");
+      const folder = el("input", { type: "text", id: "flx-cli-folder", placeholder: "/Users/you/Data", value: S.cliFolder || "", "aria-label": "Folder with your files",
+        oninput: (/** @type {any} */ e) => { S.cliFolder = e.target.value; ta.value = F.cliFill(raw, S.cliFolder); } });
+      const box = el("div", { class: "fl-cli" }, el("label", { class: "fl-note" }, el("span", { text: "Folder with your files " }), folder),
+        el("p", { class: "fl-note", text: "Paste the folder path; a browser can't see it. Then paste the command in a terminal." }), ta,
         el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => copy(ta.value), "Copy"), btn("x", "Close", shut, "Close")));
       c.place(box); shown = box;
       return box;
