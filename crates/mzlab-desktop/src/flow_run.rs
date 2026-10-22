@@ -93,7 +93,7 @@ impl State {
 }
 
 /// `{log_sha256, turn, provider, model, level}` of the page's assistant, or `None` when the field is absent or incomplete.
-fn llm_ref(v: &Value) -> Option<mzlab_core::flow::LlmRef> {
+pub(crate) fn llm_ref(v: &Value) -> Option<mzlab_core::flow::LlmRef> {
     let s = |k: &str| v[k].as_str().map(str::to_string);
     Some(mzlab_core::flow::LlmRef {
         log_sha256: s("log_sha256")?,

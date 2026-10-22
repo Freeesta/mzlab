@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const CW = 220, CH = 64;
+  const CW = 220, CH = 80;
 
   /** the one-line summary of a card: what differs from the default, or «Default settings» @param {any} S @param {any} node */
   F.summary = (S, node) => {
@@ -68,7 +68,8 @@
         "aria-label": `${node.title}. ${cat.word}. ${F.summary(S, node)}. ${probs.length ? probs[0].text : st.word}`, style: `left:${node.x}px;top:${node.y}px;--cc:${cat.color}`,
         onclick: () => ui.select(node.key),
         onkeydown: (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ui.select(node.key); } else if ((e.key === "Delete" || e.key === "Backspace") && !node.locked && node.kind !== "input") { e.preventDefault(); ui.remove(node); } } },
-      el("span", { class: "fln-ic" }, icon(cat.icon, 20)), el("span", { class: "fln-tx" }, el("span", { class: "fln-t", text: node.title }), el("span", { class: "fln-s", text: F.summary(S, node) })), chip);
+      el("div", { class: "fln-top" }, el("span", { class: "fln-ic" }, icon(cat.icon, 20)), el("span", { class: "fln-tx" }, el("span", { class: "fln-t", text: node.title }), el("span", { class: "fln-s", text: F.summary(S, node) }))), chip, F.liveCard ? F.liveCard.build(node) : null);
+      c.dataset.lbl = c.getAttribute("aria-label") || "";
       if (node.kind !== "input") c.append(el("button", { type: "button", class: "fln-next", "aria-label": `Add a step after ${node.title}`, title: "Add a step after this one", onclick: (/** @type {Event} */ e) => { e.stopPropagation(); ui.next(node, /** @type {HTMLElement} */ (e.currentTarget)); } }, icon("plus", 14)));
       return c;
     };
@@ -86,6 +87,7 @@
       const order = [...model.nodes].sort((m, n) => m.x - n.x || m.y - n.y);
       for (const n of order) stage.append(card(n));
       seen.clear(); for (const n of order) seen.add(n.key);
+      if (F.liveCard) F.liveCard.paint();
       if (hadFocus) { const t = stage.querySelector(`[data-key="${CSS.escape(hadFocus)}"]`); if (t instanceof HTMLElement) t.focus({ preventScroll: true }); }
     };
     /** moves the view so the card is in the middle @param {string} key */

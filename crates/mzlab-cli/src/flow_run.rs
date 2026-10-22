@@ -218,7 +218,7 @@ pub(crate) fn run_checked(
 }
 
 /// The `prov/1` text of `run`, for the plan read from `text`.
-pub(crate) fn prov_text(text: &[u8], run: &Run) -> String {
+pub fn prov_text(text: &[u8], run: &Run) -> String {
     prov_json(&agent(), Some(&sha256_hex(text)), run)
 }
 

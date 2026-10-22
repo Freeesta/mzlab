@@ -67,6 +67,7 @@ HOOK = """async () => {
 }"""
 # the instance ids and the plan the scheduler holds
 PLAN = """() => { const S = document.querySelector('.flx-list').__flow, f = n => S.plan.steps.find(s => String(s.step).split('@')[0] === n); return { detect: f('features.detect').id, align: f('features.align').id }; }"""
+CARD = '.fln:has(.fln-live[data-ids~="%s"])'
 SET = """([id, name, value]) => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps.find(s => s.id === id); i.params = i.params || {}; i.params[name] = value; S.refresh(); }"""
 NODES = """async () => (await (await fetch('api/flow/sched/nodes', { method: 'POST', body: '{}' })).json()).map(n => [n.instance, n.state])"""
 def until(pg, fn, arg=None, timeout=60):
@@ -138,6 +139,10 @@ try:
             pg.evaluate("window.__h.close()")
             pg.evaluate(SET, [ids["detect"], "min_height", 150000]); settled(pg, '"min_height":150000')
             pg.wait_for_function("window.__h.detect.length > %d" % state["detects"], timeout=120000)
+            card = CARD % ids["detect"]
+            until(pg, "(c) => { const n = document.querySelector(c + ' .fln-lw'); return n && /files|working/.test(n.textContent); }", card)
+            bar = pg.evaluate("(c) => { const b = document.querySelector(c + ' .fln-bar'); return { role: b.getAttribute('role'), now: b.getAttribute('aria-valuenow'), hidden: b.hidden }; }", card)
+            assert bar["role"] == "progressbar" and not bar["hidden"] and (bar["now"] is None or 0 <= int(bar["now"]) <= 100), bar
             pg.evaluate(SET, [ids["detect"], "min_height", 120000]); settled(pg, '"min_height":120000')
             pg.wait_for_function("window.__h.cancel.length >= 1", timeout=60000)
             h = pg.evaluate("window.__h")
@@ -145,6 +150,7 @@ try:
             assert all(c.startswith(ids["detect"]) for c in h["cancel"]), h          # no alignment is cancelled
             state["after"] = h
         step("changing a parameter of the detection cancels only the detections that run", detect_change)
+
 
         def back():
             pg.evaluate("(([id]) => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps.find(s => s.id === id); delete i.params.min_height; S.refresh(); })", [ids["detect"]])
@@ -156,6 +162,30 @@ try:
             assert pg.evaluate("window.__ev.filter(e => /detect/.test(e.passo) && e.stato === 'reused').length") >= 1, pg.evaluate("window.__ev.slice(-6)")
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("window.MZLAB_LR_MISS")
         step("going back to the earlier value reuses what was kept: the pool receives nothing", back)
+
+        def cards():
+            # the finished steps say «done in…» or «reused»; the keyboard opens a step and its table lists a row per file; axe finds nothing on the page with the cards and the table
+            pg.evaluate("window.__h.open && window.__h.open()")
+            until(pg, "async () => (await (await fetch('api/flow/sched/nodes', { method: 'POST', body: '{}' })).json()).every(n => n.state === 'done' || n.state === 'reused')", timeout=180)
+            card = CARD % ids["detect"]
+            until(pg, "(c) => /^(done in|reused)/.test((document.querySelector(c + ' .fln-lw') || {}).textContent || '')", card)
+            assert not pg.evaluate("(c) => document.querySelector(c + ' .fln-bar').hidden === false", card)
+            pg.focus(card); pg.keyboard.press("Enter")
+            until(pg, "() => { const t = document.querySelector('.fl-insp .fln-files'); return t && !t.hidden && t.querySelectorAll('tbody tr').length > 0; }")
+            # a step whose key changed is «out of date» on its card, with a dashed outline; the event is the one the engine sends, put in by hand because a card of the simple view says what its worst step does
+            st = pg.evaluate("""([c, id]) => { const was = FLOW.liveView.node(id), card = document.querySelector(c);
+              FLOW.liveView.ingest([{ ...was, state: 'stale', frac: null }]);
+              return new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(() => { const r = [card.dataset.live, getComputedStyle(card).borderStyle, card.querySelector('.fln-lw').textContent]; FLOW.liveView.ingest([was]); ok(r); }))); }""", [card, ids["detect"]])
+            assert st == ["stale", "dashed", "out of date"], st
+            heads = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files thead th')].map(h => h.textContent)")
+            rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody th')].map(h => h.textContent)")
+            assert heads == ["File", "State", "Share", "Time", "Memory"] and all(any(n.rsplit(".", 1)[0] in r for r in rows) for n in names), (heads, rows, names)
+            path = lib.axe_path()
+            if not path: print("SKIP axe: axe-core not available"); return
+            pg.add_script_tag(path=path)
+            r = pg.evaluate("axe.run('#v-flow', {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag22aa']}}).then(x => x.violations.map(v => v.id + ': ' + v.nodes.length))")
+            assert not r, r
+        step("the cards and the table of files say what the steps did, by keyboard, with no axe violation", cards)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

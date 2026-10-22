@@ -23,7 +23,7 @@ pub use crate::flow_out::{run_plan_cached, run_plan_notify};
 use crate::flow_pace::Watch;
 use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
-pub use crate::flow_run::{fill_inputs, run_plan};
+pub use crate::flow_run::{fill_inputs, prov_text, run_plan};
 use crate::flow_stats::stats_job;
 
 #[path = "flow_live.rs"]
