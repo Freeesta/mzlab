@@ -8038,3 +8038,4 @@
 {"v":1,"ts_utc":"2026-10-22T19:55:59Z","azione":"aperta","tipo":"pr","pr":1528,"sha":"080cb823da1d0733bb5a1c18f289d12235d227c7"}
 {"v":1,"ts_utc":"2026-10-22T19:56:03Z","azione":"aperta","tipo":"pr","pr":1529,"sha":"82ed36185fd7fc27b6f981ccefb3d9124a2a66d2"}
 {"v":1,"ts_utc":"2026-10-22T20:03:45Z","azione":"aperta","tipo":"pr","pr":1530,"sha":"c9eaa5a7a7f82fcbb10e85df40050dcbd1ed1b50"}
+{"v":1,"ts_utc":"2026-10-22T20:05:10Z","azione":"push","titolo":"Docs: split long rule lines in rust.md","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1530,"sha":"d5ea77afb4afc54ac26c641b36d25e342963c770"}
