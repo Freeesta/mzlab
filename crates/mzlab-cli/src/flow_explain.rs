@@ -301,5 +301,9 @@ mod tests {
             [col(1), col(2), col(3), col(4)],
             ["view", "rt_off", "F3", "no_row_mz"]
         );
+        let n = r.lines().next().unwrap().split(',').count();
+        assert!(r.lines().all(|l| l.split(',').count() == n));
+        // rank_now of the first expected product: kinship 3 outranks kinship 2
+        assert_eq!(r.lines().nth(1).unwrap().split(',').nth(18), Some("2"));
     }
 }
