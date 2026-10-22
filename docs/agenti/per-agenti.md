@@ -26,6 +26,7 @@ Per un agente che gira sul computer dell'utente (Claude Code, Claude Cowork o al
 
 Tabella per famiglie e tabella per ioni: due `features.align` sullo stesso `det.peaks`, il secondo con `"params":{"mode":"ion"}` (o `--set ion.mode=ion`); il detect è condiviso. In modo famiglie un ione assorbito nella famiglia del genitore (ISF, addotto) non ha riga e compare solo fra i membri; in modo ioni ha la sua riga con le aree per campione.
 Per la tabella a ioni di una serie con deriva di RT fra i campioni (TiO2, circa 0,2 min) conviene `ion.mode=ion`, `ion.rt_warp=piecewise` e `ion.rt_gap=0.3`: sulla serie di 12 file le righe in vista passano da 235 a 134 e il rango mediano da 31 a 20,5. Non vale per la tabella a famiglie: con gli stessi valori perde dei prodotti (assorbiti come membri), lì restano i valori di default.
+La ricetta è provata solo sulla serie TiO2 ad alta risoluzione: sul demo flufenacet (ricetta HR di default) `rt_warp=piecewise` e `rt_gap=0.3` dimezzano le righe (famiglie 11 195 → 3 537, ioni 13 910 → 4 135) ma due dei tre prodotti documentati si allontanano e la vista passa da 1 a 0 righe: non applicarla a un'altra serie senza provarla con `explain-missing`.
 
 ## Regole per l'agente
 - La CLI non usa la rete e legge e scrive solo in `--in` e `--out`; non cancellare file dell'utente: la cartella di corsa è l'unico posto di scrittura.
