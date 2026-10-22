@@ -138,7 +138,7 @@ def test_verita_from_dump():
     assert d["oracolo"]["nome"] == "rfr"
 
 
-def _dump(path, rows):
+def _dump_msn(path, rows):
     head = {"type": "file", "schema": "scandump/1", "name": "x", "format_version": 66, "instrument": "Synthetic FT", "controller": 0, "n_scans": len(rows)}
     path.write_text("\n".join(json.dumps(r) for r in [head, *rows]) + "\n", encoding="utf-8")
 
@@ -149,13 +149,48 @@ def test_msn_chains_are_compared_per_level(tmp_path):
         {"precursor": 500.0, "activation": "CID", "energy": 35.0, **({"iso_width": w} if w is not None else {}), **({"raw_double": raw} if raw is not None else {})},
         {"precursor": 300.0, "activation": "HCD", "energy": 30.0, "iso_width": 1.2}]}
     ms8 = lambda: {"type": "scan", "n": 8, "level": 8, "reactions": [{"precursor": 100.0 + i, "activation": "CID", "energy": 25.0} for i in range(7)]}
-    _dump(tmp_path / "a.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(2.0, None), ms8()])
-    _dump(tmp_path / "b.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(None, 2.0), ms8()])
+    _dump_msn(tmp_path / "a.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(2.0, None), ms8()])
+    _dump_msn(tmp_path / "b.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(None, 2.0), ms8()])
     f = compare.compare(tmp_path / "a.jsonl", tmp_path / "b.jsonl", "hr")["fields"]
     assert (f["reactions.iso_width~raw_double@ms3"]["compared"], f["reactions.iso_width~raw_double@ms3"]["equal"]) == (1, 1)
     assert f["reactions.activation@ms3"]["equal"] == 2 and f["reactions.activation@ms8"]["compared"] == 7
     assert f["reactions.iso_width@ms3"]["absent_b"] == 1 and f["reactions.iso_width@ms3"]["equal"] == 1
     assert "reactions.activation@ms2" not in f and "reactions.iso_width~raw_double@ms8" not in f
-    _dump(tmp_path / "c.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(None, 3.0), ms8()])
+    _dump_msn(tmp_path / "c.jsonl", [{"type": "scan", "n": 1, "level": 1, "reactions": []}, ms3(None, 3.0), ms8()])
     g = compare.compare(tmp_path / "a.jsonl", tmp_path / "c.jsonl", "hr")["fields"]["reactions.iso_width~raw_double@ms3"]
     assert (g["equal"], g["different"]) == (0, 1)
+
+
+def _dump(path: Path, rows: list) -> Path:
+    head = {"type": "file", "schema": "scandump/1", "name": "x", "producer": "t", "instrument": "Q Exactive", "controller": 0, "n_scans": 0}
+    path.write_text("\n".join(json.dumps(r) for r in [head, *rows]), encoding="utf-8")
+    return path
+
+
+def test_rows_that_are_not_scans_are_compared_field_by_field(tmp_path):
+    """Sequence, autosampler text, error log, status log and tune: equal / different / only theirs / only ours."""
+    oracle = _dump(tmp_path / "a.jsonl", [
+        {"type": "sequence", "row_number": 4, "sample_type": "Unknown", "id": "S1", "user_text": ["a", ""]},
+        {"type": "asinfo", "text": "Autosampler"},
+        {"type": "error", "rt": 1.5, "message": "Warning: spray"},
+        {"type": "status", "scan": 0, "rt": 0.1, "values": {"Vacuum:": "1e-5", "Temp": "30"}},
+        {"type": "tune", "values": {"Spray Voltage": "2000"}},
+    ])
+    ours = _dump(tmp_path / "b.jsonl", [
+        {"type": "sequence", "row_number": 4, "id": "S2", "user_text": ["a", ""], "unknown_numbers": {"unk1": 1}},
+        {"type": "asinfo", "text": "autosampler", "preamble": "00"},
+        {"type": "error", "rt": 1.5, "message": "Warning: spray"},
+        {"type": "status", "scan": 0, "rt": 0.1, "values": {"Vacuum": "1.0e-5", "Temp": "31"}},
+    ])
+    f = compare.compare(oracle, ours)["fields"]
+    cells = lambda k: (f[k]["compared"], f[k]["equal"], f[k]["different"], f[k]["absent_a"], f[k]["absent_b"])
+    assert cells("sequence.row_number") == (1, 1, 0, 0, 0)
+    assert cells("sequence.id") == (1, 0, 1, 0, 0)
+    assert cells("sequence.user_text") == (1, 1, 0, 0, 0)
+    assert cells("sequence.sample_type") == (0, 0, 0, 0, 1)  # only RFR has it
+    assert cells("sequence.unknown_numbers") == (0, 0, 0, 1, 0)  # only ours (extra)
+    assert cells("asinfo.text") == (1, 1, 0, 0, 0)
+    assert cells("error.message") == (1, 1, 0, 0, 0)
+    assert cells("status.vacuum") == (1, 1, 0, 0, 0)  # 1e-5 against 1.0e-5
+    assert cells("status.temp") == (1, 0, 1, 0, 0)
+    assert cells("tune.spray voltage") == (0, 0, 0, 0, 1)

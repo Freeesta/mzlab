@@ -201,10 +201,40 @@ class ScanComparator(Comparator):
             self.value("chromatogram.values", i, x, y, "rel")
 
 
+    def rows(self, a, b):
+        """The rows that are not scans: sequence, asinfo, error, status, tune, method (fields named `<type>.<key>`)."""
+        for t in ("sequence", "asinfo"):
+            self.flat(t, (a.get(t) or [{}])[0], (b.get(t) or [{}])[0])
+        ea, eb = a.get("error") or [], b.get("error") or []
+        if ea or eb:
+            self.value("error.count", 0, len(ea), len(eb), "exact")
+        for i, (x, y) in enumerate(zip(ea, eb)):
+            self.value("error.rt", i, x.get("rt"), y.get("rt"), "rt")
+            self.value("error.message", i, x.get("message"), y.get("message"))
+        sa, sb = {r.get("scan"): r for r in a.get("status") or []}, {r.get("scan"): r for r in b.get("status") or []}
+        if sa or sb:
+            self.value("status.count", 0, len(sa), len(sb), "exact")
+        for i in sorted(set(sa) & set(sb), key=str):
+            self.value("status.rt", i, sa[i].get("rt"), sb[i].get("rt"), "rt")
+            self.flat("status", sa[i].get("values") or {}, sb[i].get("values") or {}, i)
+        self.flat("tune", (a.get("tune") or [{}])[0].get("values") or {}, (b.get("tune") or [{}])[0].get("values") or {})
+
+    def flat(self, prefix, a, b, n=0):
+        """The keys of two objects, names normalized as for the trailer; lists and objects (the unknown_* of ours) are only compared when both sides have the key."""
+        na = {normalize(k): v for k, v in a.items() if k != "type"}
+        nb = {normalize(k): v for k, v in b.items() if k != "type"}
+        for k in sorted(set(na) | set(nb)):
+            x, y = na.get(k), nb.get(k)
+            if isinstance(x, (list, dict)) or isinstance(y, (list, dict)):
+                x, y = (json.dumps(x) if x is not None else None), (json.dumps(y) if y is not None else None)
+            self.value(f"{prefix}.{k}", n, x, y, None)
+
+
 def compare(path_a, path_b, tol="hr"):
-    ha, sa, pa, ca, _ = load(path_a)
-    hb, sb, pb, cb, _ = load(path_b)
+    ha, sa, pa, ca, oa = load(path_a)
+    hb, sb, pb, cb, ob = load(path_b)
     c = ScanComparator(tol)
+    c.rows(oa, ob)
     for k in FILE_FIELDS:
         c.value("file." + k, 0, ha.get(k), hb.get(k), "exact" if k in ("controller", "n_scans", "format_version") else None)
     both = sorted(set(sa) & set(sb))

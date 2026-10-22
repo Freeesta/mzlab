@@ -3,6 +3,7 @@
 // arcs that end in the selected ion (with source, weak tag and warnings) and the columns of the data table. Every number, reason, DOI and warning comes from the
 // key `regole` of msngrafo/1; the rules are evidence for the user's own judgement, never a verdict. Used by infusione-grafo*.js.
 import { G, TXT } from "./infusione-grafo-stato.js";
+import { prettyFormula } from "./msngrafo-vista.js";
 
 /** Names of the numeric thresholds of the table (spelled out so the catalogue check sees every key). */
 const THR = { trap_cutoff: "msngrafo.rule.thr.trap", loss_tolerance_mda: "msngrafo.rule.thr.tol" };
@@ -40,7 +41,7 @@ function source(/** @type {string} */ key) {
 /** The rules, the sums and the warnings of one arc that ends in the selected ion, as list items. */
 function arcItems(/** @type {any} */ r) {
   const li = r.regole.map((/** @type {any} */ x) => {
-    const line = I18N.t("msngrafo.rule.line", { id: x.id, f: x.formula, err: (x.errore_mda > 0 ? "+" : x.errore_mda < 0 ? "−" : "") + Math.abs(x.errore_mda).toFixed(2), p: x.priorita, e: x.energia });
+    const line = I18N.t("msngrafo.rule.line", { id: x.id, f: prettyFormula(x.formula), err: (x.errore_mda > 0 ? "+" : x.errore_mda < 0 ? "−" : "") + Math.abs(x.errore_mda).toFixed(2), p: x.priorita, e: x.energia });
     const weak = x.priorita === 3 ? h`<span class="ig-weak">${I18N.t("msngrafo.rule.weak")}</span> ` : "";
     const why = h`<span class="muted">${x.perche}</span>`;
     const src = x.refs.length ? " " + I18N.t("msngrafo.rule.src") + " " + x.refs.map(source).join(", ") : "";
@@ -69,7 +70,7 @@ export function rulesPanel(/** @type {any} */ n) {
   if (!arcs.length) return "";
   const blocks = arcs.map((/** @type {any} */ a) => {
     const from = j.nodi.find((/** @type {any} */ x) => x.id === a.da), r = arcRules(j, a);
-    const head = I18N.t("msngrafo.rule.from", { mz: from ? from.mz.toFixed(4) : a.da, loss: a.perdita.formula || a.perdita.da_massa.toFixed(3) + " Da" });
+    const head = I18N.t("msngrafo.rule.from", { mz: from ? from.mz.toFixed(4) : a.da, loss: a.perdita.formula ? prettyFormula(a.perdita.formula) : a.perdita.da_massa.toFixed(3) + " Da" });
     const items = r ? arcItems(r) : [];
     return h`<p class="sm"><b>${head}</b></p>` + (items.length ? h`<ul class="sm ig-rules">${raw(items.join(""))}</ul>` : h`<p class="muted sm">${I18N.t("msngrafo.rule.none")}</p>`);
   });
