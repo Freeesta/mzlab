@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::msngrafo::{aggiungi, cerca, Opzioni, OpzioniCerca};
 
-use crate::msn_lib_export::{export_text, Formato};
+use mzlab_core::msngrafo::{export_text, LibFormato as Formato};
 
 pub const HELP: &str = "mzlab-cli msn-lib: the library of MSn trees (msnlib/1).
 

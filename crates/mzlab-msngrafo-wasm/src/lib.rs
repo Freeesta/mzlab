@@ -10,7 +10,9 @@ use mzlab_core::json::Out;
 use mzlab_core::msngrafo::{
     aggiungi, cerca, da_richiesta, da_richiesta_export, esporta, grafo_json, opzioni_cerca,
 };
-use mzlab_core::msngrafo::{con_interpretazione, Grafo, Opzioni, PPM_PERDITA};
+use mzlab_core::msngrafo::{
+    con_interpretazione, library_text, table_text, Grafo, Opzioni, PPM_PERDITA,
+};
 use mzlab_core::routes::Query;
 use mzlab_feat::chem::strutture::strutture_testo;
 use wasm_bindgen::prelude::*;
@@ -141,6 +143,8 @@ pub fn msn_grafo(
 }
 
 /// The spectra of the same graph as text (`api/msn_grafo/export`: `formato=csv|mgf|msp`, `pulito=1`, `nodo=<id>` besides the query of the graph).
+/// The texts of the Flow steps come from the same route: `formato=massbank` (or `msp` with `libreria=1`) is the tree as a library (`msn.library_export`:
+/// `livelli=all|ms2`, `annota=0|1`, `id`), `vista=modifications|nodes|peaks` the CSV table of the graph (`msn.table_export`).
 #[wasm_bindgen]
 pub fn msn_grafo_export(
     read_idx: Function,
@@ -150,6 +154,36 @@ pub fn msn_grafo_export(
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
+    let pulito_flag = q.get("pulito").is_some_and(|v| v == "1");
+    if let Some(vista) = q.get("vista").filter(|v| !v.is_empty()) {
+        let (_, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+        let v = mzlab_core::json::parse(j.as_bytes()).map_err(js_err)?;
+        return Ok(table_text(&v, vista, pulito_flag));
+    }
+    let formato = q.get("formato").unwrap_or("");
+    if formato == "massbank" || q.get("libreria").is_some_and(|v| v == "1") {
+        let (_, j) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
+        let v = mzlab_core::json::parse(j.as_bytes()).map_err(js_err)?;
+        let get = |k: &str, d: &'static str| q.get(k).filter(|s| !s.is_empty()).unwrap_or(d);
+        let formato = if formato == "massbank" {
+            "massbank"
+        } else {
+            "msp"
+        };
+        let annota = get("annota", "1") != "0";
+        return library_text(
+            &v,
+            &j,
+            (
+                get("id", ""),
+                formato,
+                get("livelli", "all"),
+                pulito_flag,
+                annota,
+            ),
+        )
+        .map_err(js_err);
+    }
     let (f, pulito, nodo) = da_richiesta_export(&|k| q.get(k).map(String::from)).map_err(js_err)?;
     let (g, _) = calcola(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
     Ok(esporta(&g, f, pulito, nodo.as_deref()))

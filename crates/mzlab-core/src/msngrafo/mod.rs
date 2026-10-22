@@ -11,11 +11,13 @@ mod formule;
 mod interpreta;
 mod json;
 mod leggi;
+mod lib_export;
 mod libreria;
 mod posa;
 mod radice;
 mod rotta;
 mod strutture;
+mod tabelle;
 mod unisci;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
@@ -26,6 +28,7 @@ pub use interpreta::{
 };
 pub use json::json;
 pub use leggi::{leggi, Letto};
+pub use lib_export::{export_text, Formato as LibFormato};
 pub use libreria::aggiungi;
 pub use radice::{candidati_radice, CandidatoRadice};
 pub use rotta::{da_richiesta, grafo_json};
@@ -33,6 +36,7 @@ pub use strutture::{
     con_strutture, strutture_json, CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture,
     Taglio,
 };
+pub use tabelle::{library_text, table_text};
 
 use crate::msnalbero::Albero;
 
