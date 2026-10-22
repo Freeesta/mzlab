@@ -29,6 +29,27 @@ pub enum Error {
     #[error("operation not supported for this scan-data format: {0}")]
     UnsupportedOperation(&'static str),
 
+    /// A structure the file cannot do without could not be read: which one, the format version, the file size and the reason.
+    #[error("{stage} (format v{version}, file of {file_len} bytes): {source}")]
+    Stage {
+        stage: &'static str,
+        version: u32,
+        file_len: u64,
+        source: Box<Error>,
+    },
+
+    /// The file ends before `stage` is complete: a copy or an acquisition that stopped early, with no scan readable (`readable`, of the `declared` ones, when known).
+    #[error(
+        "file cut at {file_len} bytes: {stage} needs data up to byte {needed} ({readable} of {declared} scans readable)"
+    )]
+    Truncated {
+        stage: &'static str,
+        file_len: u64,
+        needed: u64,
+        readable: u32,
+        declared: u32,
+    },
+
     #[error(
         "refusing to allocate for {requested} bytes at offset {offset:#x}: \
          only {available} bytes remain in the input"

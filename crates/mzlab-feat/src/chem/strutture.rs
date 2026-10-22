@@ -6,7 +6,8 @@ use super::fragmenter::{fragment_molecule, FragMatch, FragmentSide};
 use super::grafo::Mol;
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
-    con_strutture, CandidatoStruttura, Grafo, IngressoStrutture, PiccoSpiegato, Strutture, Taglio,
+    con_strutture, con_strutture_tutti, CandidatoStruttura, Grafo, IngressoStrutture,
+    PiccoSpiegato, Strutture, Taglio,
 };
 
 /// Cleavable bonds taken at most (the fragmenter cuts the first ones in the order of the SMILES).
@@ -63,6 +64,18 @@ pub fn strutture_testo(
     let smiles = smiles.filter(|s| !s.trim().is_empty());
     let smiles = smiles.ok_or_else(|| Error::new("err.msngrafo.noSmiles"))?;
     let bad = || Error::new("err.msngrafo.badNode").with("node", nodo);
+    if nodo == "tutti" {
+        let mut tutti = vec![];
+        for (k, _) in g.nodi.iter().enumerate().filter(|(_, n)| n.livello >= 2) {
+            let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
+            let s = strutture(smiles, &ing, ppm)
+                .map_err(|e| Error::new("err.msngrafo.badSmiles").with("detail", e))?;
+            if !s.candidati.is_empty() {
+                tutti.push(s);
+            }
+        }
+        return Ok(con_strutture_tutti(j, &tutti));
+    }
     let k: usize = nodo.trim_start_matches('n').parse().map_err(|_| bad())?;
     let ing = g.ingresso_strutture(k).ok_or_else(bad)?;
     let s = strutture(smiles, &ing, ppm)

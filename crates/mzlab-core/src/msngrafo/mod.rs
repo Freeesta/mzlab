@@ -16,6 +16,7 @@ mod leggi;
 mod lib_export;
 mod libreria;
 mod posa;
+mod posa_radiale;
 mod radice;
 mod regole;
 mod regole_json;
@@ -24,6 +25,7 @@ mod rotta;
 mod strutture;
 mod tabelle;
 mod unisci;
+mod vista;
 
 pub use cerca::{cerca, opzioni_da_richiesta as opzioni_cerca, Opzioni as OpzioniCerca};
 pub use cerca_ms2::{cerca_ms2, Ms2Hit};
@@ -43,10 +45,11 @@ pub use regole_json::{con_regole, regole_json};
 pub use regole_valuta::{valuta as valuta_regole, Attesa, ParamRegole, Valutazione};
 pub use rotta::{da_richiesta, grafo_json};
 pub use strutture::{
-    con_strutture, strutture_json, CandidatoStruttura, IngressoStrutture, PiccoSpiegato, Strutture,
-    Taglio,
+    con_strutture, con_strutture_tutti, strutture_json, CandidatoStruttura, IngressoStrutture,
+    PiccoSpiegato, Strutture, Taglio,
 };
 pub use tabelle::{library_text, table_text};
+pub use vista::completa;
 
 use crate::msnalbero::Albero;
 
@@ -69,6 +72,8 @@ pub struct Opzioni {
     pub formula: Option<String>,
     /// The structure of the molecule, only written back in the JSON (the page draws the fragments on it).
     pub smiles: Option<String>,
+    /// The 2D structure of the molecule as a molfile, only written back in the JSON (the drawings of the root and of the fragments start from it).
+    pub molfile: Option<String>,
     /// A sub-formula is a candidate of a fragment within this many ppm of its m/z.
     pub ppm_formula: f64,
     /// Below this m/z the window may widen to `ppm_basso`, for a candidate with at least `prove_min` evidences.
@@ -94,6 +99,7 @@ impl Default for Opzioni {
             attivazione: None,
             formula: None,
             smiles: None,
+            molfile: None,
             ppm_formula: 10.0,
             mz_basso: 150.0,
             ppm_basso: 20.0,
@@ -323,3 +329,5 @@ mod tests_interpreta;
 mod tests_regole;
 #[cfg(test)]
 mod tests_regole_struttura;
+#[cfg(test)]
+mod tests_vista;

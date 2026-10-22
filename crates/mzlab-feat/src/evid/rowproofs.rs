@@ -17,23 +17,26 @@ pub fn sign_of(signs: &Signs, kind: Kind) -> u8 {
     signs[Kind::ALL.iter().position(|k| *k == kind).unwrap_or(0)]
 }
 
+/// Signs of the proofs of one identity.
+pub fn signs_of(id: &Identity) -> Signs {
+    let mut s: Signs = [NONE; 10];
+    for e in &id.breakdown.rows {
+        let i = Kind::ALL.iter().position(|k| *k == e.kind).unwrap_or(0);
+        if s[i] != AGAINST {
+            s[i] = match e.sign {
+                Sign::For => FOR,
+                Sign::Against => AGAINST,
+                Sign::Neutral => NEUTRAL,
+            };
+        }
+    }
+    s
+}
+
 /// Signs of the proofs of every row of the aligned table (the order of the rows, not the one of the graph).
 pub fn row_signs(inp: &Inputs) -> Vec<Signs> {
     let prep = Prepared::new(inp);
     (0..inp.aligned.len())
-        .map(|r| {
-            let mut s: Signs = [NONE; 10];
-            for e in &prep.identity(inp, r).breakdown.rows {
-                let i = Kind::ALL.iter().position(|k| *k == e.kind).unwrap_or(0);
-                if s[i] != AGAINST {
-                    s[i] = match e.sign {
-                        Sign::For => FOR,
-                        Sign::Against => AGAINST,
-                        Sign::Neutral => NEUTRAL,
-                    };
-                }
-            }
-            s
-        })
+        .map(|r| signs_of(&prep.identity(inp, r)))
         .collect()
 }

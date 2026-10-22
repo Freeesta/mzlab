@@ -225,9 +225,9 @@ pub fn interpretazione_json(v: &[InterpArco], ppm: f64) -> String {
 
 /// `grafo` (the text of an `msngrafo/1`) with the key `interpretazione` added at the end; the text of a graph without it does not change.
 pub fn con_interpretazione(grafo: &str, g: &Grafo, ppm: f64) -> String {
-    let testa = grafo.strip_suffix('}').unwrap_or(grafo);
-    format!(
-        "{testa},\"interpretazione\":{}}}",
-        interpretazione_json(&interpreta(g, ppm), ppm)
+    super::vista::con_chiave(
+        grafo,
+        "interpretazione",
+        &interpretazione_json(&interpreta(g, ppm), ppm),
     )
 }

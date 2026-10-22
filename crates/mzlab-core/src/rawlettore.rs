@@ -368,6 +368,9 @@ impl Lettore for LettoreRaw {
         cromatogramma_di(self, id)
     }
 
+    fn mancanti(&mut self, _c: usize) -> usize {
+        crate::raw::cut_scans(&self.raw)
+    }
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.one(c)?;
         Ok(crate::raw::metodo_of(&self.raw, &mut self.src, &self.nome))
