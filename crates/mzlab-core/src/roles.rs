@@ -7,7 +7,7 @@ use crate::json::Value;
 use crate::jsonb::{text, Obj};
 use crate::rois::Window;
 
-pub const PROTON: f64 = 1.00727646688;
+pub const PROTON: f64 = 1.00827646688;
 const ELECTRON: f64 = 0.000548579909;
 const ISO_STEP: f64 = 1.003355;
 pub(crate) const NEUTRAL_LOSSES: [&str; 20] = [
