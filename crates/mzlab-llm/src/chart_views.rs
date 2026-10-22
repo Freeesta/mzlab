@@ -55,7 +55,7 @@ fn curves(src: &Value, key: &str, name: &str, out: &mut Vec<View>) {
             ],
             cols: vec![Col::Num(r.clone()), Col::Num(i.clone())],
         });
-        who.extend(std::iter::repeat(label(file, k)).take(r.len()));
+        who.extend(std::iter::repeat_n(label(file, k), r.len()));
         rt.extend(r);
         y.extend(i);
     }
@@ -166,7 +166,9 @@ fn mzrt(rows: &[Vec<String>], areas: &[(usize, String)], mz: usize, rt: usize) -
             .fold(f64::NAN, f64::max);
         if let (Some(x), Some(y)) = (num(row, mz), num(row, rt)) {
             if best.is_finite() {
-                (m.push(x), t.push(y), a.push(best));
+                m.push(x);
+                t.push(y);
+                a.push(best);
             }
         }
     }
