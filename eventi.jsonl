@@ -8578,3 +8578,4 @@
 {"v":1,"ts_utc":"2026-10-22T20:51:04Z","azione":"aperta","tipo":"pr","pr":1538,"sha":"c606a35f4d6a49a505307481a7b5eb60ae52d4b9"}
 {"v":1,"ts_utc":"2026-10-22T20:51:01Z","azione":"aperta","tipo":"pr","pr":1537,"sha":"c289f1b95b3090b707247cf2e59f9023191c2989"}
 {"v":1,"ts_utc":"2026-10-22T20:52:42Z","azione":"push","titolo":"Merge origin/main into claude/assist-a5","merge_main":true,"aree":{"workflow":1,"rust":44,"docs":41,"web":5,"test":5,"tools":4},"tipo":"pr","pr":1527,"sha":"38ce1dc7f82562362ffecf71bac1389acdf9eaf6"}
+{"v":1,"ts_utc":"2026-10-22T20:53:16Z","azione":"push","titolo":"Merge main into thermo-t4","merge_main":true,"aree":{"rust":42,"docs":29,"web":5,"test":4,"tools":3},"tipo":"pr","pr":1538,"sha":"60d37581656a9bee35804e9cbb5c0e98053a92ad"}
