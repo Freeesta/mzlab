@@ -79,6 +79,16 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - TIC/BPC e prima scansione sono già sotto il millisecondo e i 100 µs su tutti i file: per A6 il confronto con RFR è l'unico dato mancante.
 - La lettura a 0,7-1,1 GB/s con il file in memoria misura la decodifica, non il disco: il tempo da disco o OPFS sta in `file_read_ms` del banco e nelle letture a pezzi del browser.
 
+**A-2b · Riga di base ripetuta dopo T-3 (#1537, eventi di scansione): cloud 4 vCPU, nativo, `thermo_banco`, profilo `cli`, `main` `239fa02602a7cf97c68f25440e033cd6e8b13dc4` contro `ab4fe7d00606e58218a7ea8570f333a4026b4fc4` (A-2).** Due binari a turno sullo stesso file (stessa sessione), 15 giri e due corse per binario, giro più veloce (`best`) della corsa migliore; rumore tra le due corse dello stesso binario 0,3-4,5 % (fino a 19 % sui file piccoli). 20 file > 1 MB; differenza = nuovo − vecchio.
+
+| Misura | Mediana delle differenze | Intervallo | Oltre il rumore |
+|---|---|---|---|
+| Apertura (`apri` + indice) | −3,1 % | −9,4 … +0,4 % | più veloce di 6-9 % su 6 file SRM o con pochi picchi (MTBLS14496, MTBLS7889, PXD057351, PXD059868, PXD064022, PXD019525) |
+| Tutte le scansioni | +0,8 % | −2,4 … +15,3 % | **più lento** di 13-15 % su MTBLS1752, MTBLS1807, PXD019516 (SRM, 1-2 picchi per scansione, +77-87 ns per scansione), 8,9 % su PXD006054, 3,7-4,6 % su LAB-B, MTBLS775, MTBLS9839 |
+
+- Nei file Orbitrap grandi (LAB-A, PXD077492, PXD064999, PXD067770) la lettura di tutto non cambia oltre il rumore (da −2,4 a +3,3 %). Il costo per scansione che T-3 aggiunge è fisso, quindi pesa solo dove la scansione è quasi vuota; la causa (costruzione del filtro per passo o lettura degli eventi) non è stata cercata: da profilare prima di T-7c.
+- TIC/BPC e prima scansione restano sotto 1 ms e 100 µs. Il rapporto con RFR sul Mac aspetta R-15 (RFR contro `thermo_banco`).
+
 **A-3 · Cloud 4 vCPU, bersaglio `wasm`, `tools/bench_raw.py` (modulo `thermo`, profilo `release` senza `wasm-opt`, Node 22, `wasm-bindgen` 0.2.129), `main` `ab4fe7d00606e58218a7ea8570f333a4026b4fc4`, UNA corsa** (non le 5 ripetizioni: provvisorio). Nativo = A-2 (profilo `cli`, `opt-level = 3`); il confronto mescola profilo e lavoro (la scansione del modulo costruisce anche la meta JSON e copia l'array), quindi è un limite superiore del rapporto.
 
 | File | `apri` + indice ms (wasm / nativo) | Tutte le scansioni ms (wasm / nativo) | Rapporto apertura | Rapporto lettura | µs per scansione (wasm) |
@@ -101,5 +111,5 @@ Studio: `docs/studi/LETTORE_THERMO_PERFETTO.md` §4, `docs/studi/RAW_VELOCE.md` 
 - Mappa dei costi (SHA-256 dell'impronta, SHA-1 della testata mzML, zlib) e obiettivi di RV-03/RV-04/RV-06: `RAW_VELOCE.md` §2.2 e §3 (misure precedenti con `opt-level = "z"`, senza SHA).
 
 ## Righe da ripetere
-- Riga A dopo il merge di T-3 (#1537, eventi di scansione) e dopo T-5 con il banco su entrambi i lettori sul Mac (R-07): SHA nuovo, stessa tabella A-1 con le definizioni di `thermo_banco`.
+- Riga A sul Mac con il banco su entrambi i lettori (R-15, RFR contro `thermo_banco`): SHA nuovo, stessa tabella A-1 con le definizioni di `thermo_banco`; la ripetizione sul cloud dopo T-3 è A-2b.
 - Bersaglio `wasm`: A-3 va ripetuto con 5 ripetizioni e, per il rapporto con il nativo, con lo stesso profilo (`release`) dei due bersagli; tetto del modulo `thermo` 546 304 B (`wasm-tetti.md`).
