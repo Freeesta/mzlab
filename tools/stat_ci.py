@@ -111,7 +111,7 @@ def righe_run_obj(run: dict, api=api_get, fetch=dati_ci.scarica) -> list[dict]:
     if run.get("conclusion") == "cancelled":
         out += dati_ci.riga_annullo(run, jobs, base, api)
     if run["name"] == "test":
-        out += dati_ci.righe_junit(run, base, api, fetch)
+        out += dati_ci.righe_junit(run, base, api, fetch) + dati_ci.righe_wasm(run, base, api, fetch)
     return out
 
 

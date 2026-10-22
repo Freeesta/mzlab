@@ -119,9 +119,30 @@ def test_junit_per_file():
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("junit-3.11.xml", xml)
+        z.writestr("tempi-test.json", '{"tests/test_a.py":{"setup":1.0,"call":7.5,"teardown":0.5,"n":2,"worker":["gw1"]},'
+                   '"tests/test_b.py":{"setup":0.0,"call":0.5,"teardown":0.0,"n":1,"worker":["gw0"]}}')
     api = lambda p: {"artifacts": [{"id": 5, "name": "junit-3.11"}, {"id": 6, "name": "other"}]}  # noqa: E731
     r = s.dati_ci.righe_junit(RUN["workflow_run"], {"sha": "abc"}, api, lambda p: buf.getvalue())[0]
     assert r["file"] == {"tests/test_a.py": [2, 8.5], "tests/test_b.py": [1, 0.5]} and r["lenti"] == [["tests.test_a::y", 7.0]] and r["python"] == "3.11"
+    assert r["fasi"]["tests/test_a.py"] == [1.0, 7.5, 0.5] and r["worker_occupato_s"] == {"gw0": 0.5, "gw1": 9.0}
+
+
+def test_wasm_dimensioni(tmp_path):
+    import io
+    import json
+    import zipfile
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import ci_wasm_dimensioni as w
+    (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
+    (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"0" * 1000)
+    m = w.misura(tmp_path)
+    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1212416}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("wasm-dimensioni.json", json.dumps(m))
+    api = lambda p: {"artifacts": [{"id": 7, "name": "wasm-dimensioni"}]}  # noqa: E731
+    r = s.dati_ci.righe_wasm(RUN["workflow_run"], {"sha": "abc"}, api, lambda p: buf.getvalue())[0]
+    assert r["byte_totali"] == 1000 and r["margine_min_pct"] > 99
 
 
 def test_recenti_cursore_carico_compatta_esporta(tmp_path):

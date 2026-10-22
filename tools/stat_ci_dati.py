@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 LENTO_S = 5
 AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|AGENTS\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto\.json|mappa\.md|manifest)"),
         ("rust", r"^(crates/|Cargo\.|vendor/)"), ("test", r"^tests(_e2e)?/"), ("tools", r"^tools/"), ("web", r"^mzlab/web/"), ("python", r"\.py$")]
-PESANTI = ("passi", "file", "lenti")      # fields dropped by the compaction
+PESANTI = ("passi", "file", "lenti", "fasi", "worker", "moduli")      # fields dropped by the compaction
 
 
 def area(f: str) -> str:
@@ -96,28 +96,58 @@ def righe_cache(run: dict, jobs: list[dict], base: dict, fetch) -> list[dict]:
     return out
 
 
-def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
-    """Time per test file (setup + call + teardown) and the tests over LENTO_S, from the `junit-*` artifacts of the run."""
-    out = []
+def zip_artifact(run: dict, prefisso: str, api, fetch):
+    """Yield (artifact name, ZipFile) of the not expired artifacts of the run whose name starts with `prefisso`."""
     for a in api(f"/actions/runs/{run['id']}/artifacts?per_page=50").get("artifacts", []):
-        if not a["name"].startswith("junit-") or a.get("expired"):
+        if not a["name"].startswith(prefisso) or a.get("expired"):
             continue
         raw = fetch(f"/actions/artifacts/{a['id']}/zip")
-        if not raw:
-            continue
+        if raw:
+            with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                yield a["name"], z
+
+
+def righe_junit(run: dict, base: dict, api, fetch) -> list[dict]:
+    """Time per test file (setup + call + teardown) and the tests over LENTO_S, from the `junit-*` artifacts of the run; with `tempi-test.json`
+    (tools/ci_pytest_tempi.py) also the setup/call/teardown split per file, the xdist worker of each file and the seconds each worker was busy."""
+    out = []
+    for nome_art, z in zip_artifact(run, "junit-", api, fetch):
         per_file: dict[str, list] = defaultdict(lambda: [0, 0.0])
         lenti = []
-        with zipfile.ZipFile(io.BytesIO(raw)) as z:
-            for nome in z.namelist():
-                for tc in ET.fromstring(z.read(nome)).iter("testcase"):
-                    cn, t = tc.get("classname", ""), float(tc.get("time", 0))
-                    f = (tc.get("file") or "tests/" + (cn.split(".")[1] if cn.startswith("tests.") and "." in cn else cn) + ".py")
-                    per_file[f][0] += 1
-                    per_file[f][1] += t
-                    if t > LENTO_S:
-                        lenti.append([f"{cn}::{tc.get('name')}", round(t, 1)])
-        out.append({"ts_utc": run["updated_at"], "tipo": "test_durate", "k": a["name"], "workflow": run["name"], "python": a["name"][6:],
-                    "file": {f: [n, round(s, 1)] for f, (n, s) in sorted(per_file.items())}, "lenti": sorted(lenti, key=lambda x: -x[1])[:30], **base})
+        for nome in z.namelist():
+            if not nome.endswith(".xml"):
+                continue
+            for tc in ET.fromstring(z.read(nome)).iter("testcase"):
+                cn, t = tc.get("classname", ""), float(tc.get("time", 0))
+                f = (tc.get("file") or "tests/" + (cn.split(".")[1] if cn.startswith("tests.") and "." in cn else cn) + ".py")
+                per_file[f][0] += 1
+                per_file[f][1] += t
+                if t > LENTO_S:
+                    lenti.append([f"{cn}::{tc.get('name')}", round(t, 1)])
+        riga = {"ts_utc": run["updated_at"], "tipo": "test_durate", "k": nome_art, "workflow": run["name"], "python": nome_art[6:],
+                "file": {f: [n, round(s, 1)] for f, (n, s) in sorted(per_file.items())}, "lenti": sorted(lenti, key=lambda x: -x[1])[:30], **base}
+        if "tempi-test.json" in z.namelist():
+            tempi = json.loads(z.read("tempi-test.json"))
+            occupato: Counter = Counter()
+            for f, t in tempi.items():
+                for w in t["worker"][:1]:
+                    occupato[w] += t["setup"] + t["call"] + t["teardown"]
+            riga["fasi"] = {f: [t["setup"], t["call"], t["teardown"]] for f, t in tempi.items()}
+            riga["worker"] = {f: t["worker"] for f, t in tempi.items()}
+            riga["worker_occupato_s"] = {w: round(s, 1) for w, s in sorted(occupato.items())}
+        out.append(riga)
+    return out
+
+
+def righe_wasm(run: dict, base: dict, api, fetch) -> list[dict]:
+    """Size of every built .wasm and its cap (tools/ci_wasm_dimensioni.py), from the `wasm-dimensioni` artifact of the run."""
+    out = []
+    for nome_art, z in zip_artifact(run, "wasm-dimensioni", api, fetch):
+        moduli = json.loads(z.read("wasm-dimensioni.json"))
+        margini = [100 * (1 - m["byte"] / m["tetto"]) for m in moduli.values() if m.get("tetto")]
+        out.append({"ts_utc": run["updated_at"], "tipo": "wasm", "k": nome_art, "workflow": run["name"],
+                    "moduli": {f: [m["byte"], m.get("tetto")] for f, m in moduli.items()}, "byte_totali": sum(m["byte"] for m in moduli.values()),
+                    "margine_min_pct": round(min(margini), 1) if margini else None, **base})
     return out
 
 
@@ -235,6 +265,17 @@ def tabelle(ev: list[dict], out=print) -> None:
         out("\nSlowest test files (mean seconds per run)")
         for f, s in tot.most_common(8):
             out(f"  {s:7.0f}  {f}")
+    fs = [r for r in tf if r.get("fasi")]
+    if fs:
+        tot_fasi = [sum(f[i] for r in fs for f in r["fasi"].values()) / len(fs) for i in range(3)]
+        out(f"\nTest phases (mean per run): setup {hm(tot_fasi[0])}, call {hm(tot_fasi[1])}, teardown {hm(tot_fasi[2])}")
+        for r in fs[-2:]:
+            w = r.get("worker_occupato_s") or {}
+            if w:
+                out(f"  {r['python']}: xdist busy seconds per worker " + ", ".join(f"{k} {v:.0f}" for k, v in w.items()) + f" (spread {max(w.values()) - min(w.values()):.0f}s)")
+    ws = [r for r in ev if r["tipo"] == "wasm"]
+    if ws:
+        out(f"\n.wasm: total {ws[-1]['byte_totali'] / 1e6:.1f} MB, smallest margin to a cap {ws[-1]['margine_min_pct']}% (latest of {len(ws)} runs)")
     an = [r for r in ev if r["tipo"] == "annullamento"]
     if an:
         out(f"\nCancelled runs: {len(an)}, runner minutes already spent {sum(r['minuti_runner'] for r in an):.0f}")
