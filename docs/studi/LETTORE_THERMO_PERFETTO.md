@@ -57,8 +57,9 @@ Scopo: il lettore Thermo di mzLab (`vendor/opentfraw` 2.0.0 modificato, Rust pur
 | T-3 | Precursori multipli (SPS, MSX, DIA multibanda), CV FAIMS, segmento/evento | T-1 |
 | T-4 | Trailer, status, error log, tune: tutti i campi con tipo; parità con RFR (coordinato con RV-10) | T-0 |
 | T-5 | Robustezza: troncati, versioni non dichiarate, gli 11 file che non si aprono (con RV-08), messaggi | T-0 |
-| T-6 | Velocità contro RFR: tabella in `misure.md`, interventi solo se sotto | T-0 |
-T-0 e T-1/T-2 sono in main. Prompt di T-3…T-6 in `docs/studi/PROMPT_LETTORE_THERMO/` (ordine e priorità nel `LEGGIMI.md`): T-3, T-4, T-5 in parallelo su file diversi (ognuno aggiunge una riga a `MODIFICHE-MZLAB.md`), T-6 dopo T-5.
+| T-6 | Velocità contro RFR (assorbito da T-7) | T-0 |
+| T-7 | Velocità e zero perdite: criteri prima del codice; A lettore (registro dei byte, andata e ritorno, impronte, MB/s contro RFR), B ponte verso Flow sui centroidi (colonne, matrice scansione × bin, contro mzmine) | T-3, T-5 |
+T-0 e T-1/T-2 sono in main. Prompt di T-3…T-7 in `docs/studi/PROMPT_LETTORE_THERMO/` (ordine e priorità nel `LEGGIMI.md`): T-3, T-4, T-5 in parallelo su file diversi (ognuno aggiunge una riga a `MODIFICHE-MZLAB.md`), T-7 (che assorbe T-6) dopo T-3 e T-5.
 
 **Da Federico** (con metadati scritti in un `LEGGIMI` accanto): sullo stesso composto noto, un `.raw` per caso: (a) MS2 HCD a NCE 20, 35, 50 e a gradini 20/35/50; (b) MS2 CID; (c) MS3 CID→HCD e un'infusione MSn fino a MS5-MS8; (d) se lo strumento lo consente ETD/EThcD, SPS-MS3, FAIMS, DIA; (e) un'acquisizione interrotta a metà (file troncato vero). Bastano 1-3 minuti ciascuno.
 **Dalla chat locale**: .NET SDK 8 sul Mac, pacchetto NuGet di RFR scaricato fuori dai repository, licenza salvata in `_licenze/`, il programma di dump scritto da §3 e tenuto fuori dai repository, dump di tutti i `.raw` di `dati/HRMS/` e `dati/formati/` (prima `--full` sui piccoli), esito per file in `coordinamento/dati_esterni/rosina/ORACOLI.md`.
