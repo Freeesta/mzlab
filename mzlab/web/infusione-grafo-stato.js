@@ -44,6 +44,8 @@ export const G = {
   rf: false,
   /** The answer is for the request with this key. */
   key: "",
+  /** @type {string | null} The name of the graph file shown read-only (no raw data, no engine requests), else null. */
+  ro: null,
 };
 
 /** Polarity of the file: 1 positive, -1 negative (the engine warns when the ion disagrees). */
@@ -113,7 +115,7 @@ const cuts = new Map();
  * Null when there is no SMILES, no ion, the node is a root, the engine answers without the key or the request fails.
  */
 export async function fetchStrutture(/** @type {any} */ n) {
-  if (!G.smiles || !G.j || !ionText() || n.livello < 2) return null;
+  if (G.ro || !G.smiles || !G.j || !ionText() || n.livello < 2) return null;
   const url = graphUrl(G.k) + "&strutture=" + n.id;
   if (!cuts.has(url)) cuts.set(url, J(url).then((/** @type {any} */ j) => j.strutture || null).catch(() => null));
   return cuts.get(url);

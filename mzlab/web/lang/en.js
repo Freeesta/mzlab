@@ -3819,5 +3819,13 @@ I18N.add("en", {
   "err.llm.conversation": "The conversation is not valid ({field}).",
   "err.llm.provider": "No provider is available here. The site reaches only models on your computer; the desktop app reaches the others.",
   "err.llm.tools": "The catalog of tools is not valid ({field}).",
-  "err.llm.module": "The assistant module did not load: reload the page and try again."
+  "err.llm.module": "The assistant module did not load: reload the page and try again.",
+  "msngrafo.file.open": "Open a graph file…",
+  "msngrafo.file.open.tip": "Open a saved fragmentation graph (a .json file of the command line or the Flow); you can also drop it here or on the data area",
+  "msngrafo.file.title": "Fragmentation graph · {name}",
+  "msngrafo.file.close": "Close the graph",
+  "msngrafo.file.ro": "Opened from the file {name} without its raw data: you can read the graph and each ion, but the spectrum of an ion, «Use», the cleavages of a structure and a new calculation of the rules need the raw data file and are off.",
+  "msngrafo.file.off": "Needs the raw data file, which is not loaded: this graph was opened from a saved file.",
+  "msngrafo.file.nospec": "The spectrum of this ion cannot be opened: the raw data file is not loaded.",
+  "error.msngrafo.badFile": "{file} is not a fragmentation graph the program can read ({raw})."
 });
