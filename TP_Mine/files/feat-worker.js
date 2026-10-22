@@ -42,7 +42,7 @@ function createCore(opts) {
 
   function spawn() {
     const slot = { w: new WorkerClass(workerUrl, { type: "module" }), busy: false, loaded: new Set(), dead: false, calls: new Map(), seq: 0 };
-    slot.w.onmessage = ev => { const c = slot.calls.get(ev.data.id); if (c) { slot.calls.delete(ev.data.id); c(ev.data); } };
+    slot.w.onmessage = ev => { const d = ev.data, c = slot.calls.get(d.id); if (!c) return; if (d.progress) { if (c.step) c.step(d.progress[0], d.progress[1]); return; } slot.calls.delete(d.id); c(d); };
     const lost = text => { if (slot.dead) return; slot.dead = true; const cs = [...slot.calls.values()]; slot.calls.clear(); for (const c of cs) c({ error: { key: "error.featWorker", params: {}, text }, fatal: true }); };
     slot.w.onerror = e => lost(e && e.message || "worker error");
     slot.w.onmessageerror = () => lost("message error");
@@ -50,10 +50,10 @@ function createCore(opts) {
     return slot;
   }
   // send a message and wait for the answer; a worker that dies answers with a fatal error
-  function call(slot, msg, transfer) {
+  function call(slot, msg, transfer, step) {
     return new Promise((resolve, reject) => {
       const id = ++slot.seq;
-      slot.calls.set(id, r => (r.error ? reject(Object.assign(fail(r.error.key, r.error.params, r.error.text), { fatal: !!r.fatal })) : resolve(r)));
+      slot.calls.set(id, Object.assign(r => (r.error ? reject(Object.assign(fail(r.error.key, r.error.params, r.error.text), { fatal: !!r.fatal })) : resolve(r)), { step }));
       if (slot.dead) { slot.calls.delete(id); return reject(Object.assign(fail("error.featWorker"), { fatal: true })); }
       try { slot.w.postMessage({ ...msg, id }, transfer || []); } catch (e) { slot.calls.delete(id); reject(Object.assign(fail("error.featWorker", {}, String(e)), { fatal: true })); }
     });
@@ -233,7 +233,7 @@ export function createFeatPool(opts) {
       return Promise.all(files.map(f => submit(async (slot, load) => {
         await load("feat");
         const t0 = performance.now();
-        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe });
+        const r = await call(slot, { op: "detect", path: f.path, name: f.name, recipe }, undefined, opts.onStep && ((d, t) => opts.onStep({ phase: "detect", name: f.name, done: d, total: t })));
         if (opts.onProgress) opts.onProgress({ phase: "detect", name: f.name, done: ++done, total: files.length, ms: Math.round(performance.now() - t0), memMB: r.mem / 1048576 });
         return r.bytes;
       })));
@@ -388,7 +388,7 @@ const OPS = {
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
-    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
+    try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
