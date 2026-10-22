@@ -44,7 +44,7 @@ fn the_chain_runs_from_files_to_the_network_with_the_hypotheses_of_the_plan() {
     );
     let net = std::fs::read_to_string(w.join("net.json")).unwrap();
     assert!(net.starts_with("{\"schema\":\"rete/1\""), "{net}");
-    // the synthetic parent has no pair of accepted products joined by a rule: the network is valid and may have no arcs
+    // the only accepted product with a formula (+C+3O-2H) is no rule step from the parent, and a network without arcs is the parent alone by design
     assert!(parse(net.as_bytes()).unwrap().get("n_arcs").is_some());
     let flt = std::fs::read_to_string(w.join("flt.json")).unwrap();
     assert!(flt.starts_with("{\"schema\":\"filtri/1\""), "{flt}");
