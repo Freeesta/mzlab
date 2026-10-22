@@ -65,19 +65,19 @@ try:
             assert box["width"] >= 24 and box["height"] >= 24 and b.get_attribute("aria-label").startswith("Remove "), (box, b.get_attribute("aria-label"))
             before = names(); b.focus(); pg.keyboard.press("Enter")
             assert rows() == N - 1 and names() == before[1:], "the row was not removed"
-            assert pg.locator("#tolto-box .tolto").last.inner_text().startswith("Removed"), pg.inner_text("#tolto-box")
+            assert pg.locator("#tolto-box").count() == 0, "no visible notice with an Undo button"
             assert pg.locator("#tp-fsum").inner_text().startswith(str(N - 1)), pg.inner_text("#tp-fsum")
-            pg.locator("#tolto-box .tolto button").last.click()
-            assert rows() == N and names() == before, "Undo did not put the row back in place"
-        step("«Remove» on a row (keyboard) shows «Removed · Undo» and Undo restores it in place", one)
+            pg.keyboard.press("Control+z")
+            assert rows() == N and names() == before, "Ctrl+Z did not put the row back in place"
+        step("«Remove» on a row (keyboard) shows no Undo notice and Ctrl+Z restores it in place", one)
 
         def allgone():
             before = names(); pg.click("#tp-rmall")
             assert rows() == 0 and pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
-            assert f"{N} files" in pg.locator("#tolto-box .tolto").last.inner_text(), pg.inner_text("#tolto-box")
-            pg.locator("#tolto-box .tolto button").last.click()
+            assert f"{N} files" in pg.inner_text(".sr-only[role=status]"), pg.inner_text(".sr-only[role=status]")
+            pg.locator("body").press("Control+z")
             assert names() == before and pg.is_visible("#tp-rmall")
-        step("«Remove all» empties the list and Undo brings all the files back", allgone)
+        step("«Remove all» empties the list and Ctrl+Z brings all the files back", allgone)
 
         def tip():
             assert pg.is_visible("#tp-cond"), "the conditions section is not shown"
