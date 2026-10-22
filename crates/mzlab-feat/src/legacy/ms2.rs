@@ -30,6 +30,53 @@ impl Ms2Index {
     }
 }
 
+/// `Ms2Index` with the scans also ordered by centre of the window: `select_file` finds the scans of a row without going through all of them.
+#[derive(Debug, Clone, Default)]
+pub struct Ms2Sorted {
+    index: Ms2Index,
+    /// Positions in `index`, by centre of the window.
+    by_center: Vec<u32>,
+}
+
+impl Ms2Sorted {
+    pub fn of<R: ReadAt>(ix: &Index<R>) -> Ms2Sorted {
+        let index = Ms2Index::of(ix);
+        let mut by_center: Vec<u32> = (0..index.scan.len() as u32).collect();
+        by_center.sort_by(|&a, &b| index.center[a as usize].total_cmp(&index.center[b as usize]));
+        Ms2Sorted { index, by_center }
+    }
+
+    /// What `select` gives for this one file `k` (same scans, same order, same bits): the window of centres is found by bisection and the exact test of `select` is applied to what lies in it.
+    pub fn select_file(&self, k: usize, mz: f64, limits: (f64, f64), ppm: f64) -> Vec<Pick> {
+        let (lo, hi) = limits;
+        if !(lo.is_finite() && hi.is_finite()) {
+            return vec![];
+        }
+        let ix = &self.index;
+        let tol = mz * ppm * 1e-6;
+        // a margin far above the rounding of the test, so the bisection never drops a scan the test would keep
+        let wide = tol * (1.0 + 1e-9) + mz.abs() * 1e-12;
+        let a = self
+            .by_center
+            .partition_point(|&i| ix.center[i as usize] < mz - wide);
+        let b = self
+            .by_center
+            .partition_point(|&i| ix.center[i as usize] <= mz + wide);
+        let mut hit: Vec<u32> = self.by_center[a..b]
+            .iter()
+            .copied()
+            .filter(|&i| {
+                let i = i as usize;
+                (ix.center[i] - mz).abs() <= tol && ix.rt[i] >= lo && ix.rt[i] <= hi
+            })
+            .collect();
+        hit.sort_unstable();
+        hit.into_iter()
+            .map(|i| (k, ix.scan[i as usize], ix.rt[i as usize]))
+            .collect()
+    }
+}
+
 /// `select_ms2(indexes, mz, limits, ppm)`: limits = (left, right) of the peak in every file, NaN where the row has no peak there.
 pub fn select(indexes: &[Ms2Index], mz: f64, limits: &[(f64, f64)], ppm: f64) -> Vec<Pick> {
     let mut out = vec![];
@@ -101,5 +148,40 @@ pub fn consensus(spectra: &[(Vec<f64>, Vec<f64>)]) -> Consensus {
         rel,
         n_found,
         n_scans: spectra.len(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `select_file` gives what `select` gives for the same file, on windows at the edge of the tolerance, ties and unsorted centres.
+    #[test]
+    fn select_file_is_select_on_one_file() {
+        let mut m = Ms2Index::default();
+        let mut x = 12345u64;
+        for i in 0..400 {
+            x = x
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let c = 200.0 + ((x >> 33) % 3000) as f64 * 0.01 + if i % 7 == 0 { 0.0 } else { 0.001 };
+            m.scan.push(i * 3);
+            m.rt.push(i as f64 * 0.05);
+            m.center.push(c);
+        }
+        let mut by_center: Vec<u32> = (0..m.scan.len() as u32).collect();
+        by_center.sort_by(|&a, &b| m.center[a as usize].total_cmp(&m.center[b as usize]));
+        let sorted = Ms2Sorted {
+            index: m.clone(),
+            by_center,
+        };
+        for &c in m.center.iter().take(60) {
+            for ppm in [0.0, 5.0, 10.0, 500.0] {
+                for lim in [(0.0, 30.0), (4.0, 9.0), (f64::NAN, 1.0)] {
+                    let want = select(std::slice::from_ref(&m), c, &[lim], ppm);
+                    assert_eq!(sorted.select_file(0, c, lim, ppm), want);
+                }
+            }
+        }
     }
 }

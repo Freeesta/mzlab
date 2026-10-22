@@ -13,7 +13,7 @@ use super::ms2link::{self, Isomers, LinkParams, Ms2Scan, Pooled};
 use super::sito::{self, SiteReport};
 use crate::axis::half;
 use crate::chem::posizioni::{Peak, Pol};
-use crate::legacy::ms2::Consensus;
+use crate::legacy::ms2::{Consensus, Ms2Sorted};
 use crate::legacy::series::{Hyp, Parent};
 use crate::sweep::windows;
 use crate::table::{Aligned, CELL_ABSENT};
@@ -183,6 +183,7 @@ fn read_file<R: ReadAt>(
 ) -> Res<(Vec<Ms2Scan>, Option<f64>)> {
     let t = inp.table;
     let mut all: Vec<(usize, Ms2Scan)> = vec![];
+    let m2 = Ms2Sorted::of(ix);
     let rows = work
         .iter()
         .map(|w| w.row)
@@ -194,7 +195,7 @@ fn read_file<R: ReadAt>(
         };
         if lim.0.is_finite() {
             all.extend(
-                ms2link::pick_scans_with(ix, k, t.mz[r], lim, inp.link)
+                ms2link::pick_scans_in(ix, &m2, k, t.mz[r], lim, inp.link)
                     .into_iter()
                     .map(|s| (wi, s)),
             );
