@@ -42,6 +42,7 @@ try:
         pg.focus(".flx-split"); pg.keyboard.press("ArrowLeft"); pg.keyboard.press("ArrowLeft")
         check("split", pg.evaluate("document.querySelector('.flx-insp').getBoundingClientRect().width") > w0 + 50, str(w0))
         pg.click('button[data-tab="list"]'); pg.click('button[data-tab="canvas"]')
+        check("no molecules button", pg.locator('#flx-root [aria-label*="Molecules"]').count() == 0)
         b.close()
 finally:
     srv.terminate()
