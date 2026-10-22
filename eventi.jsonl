@@ -811,3 +811,4 @@
 {"v":1,"ts_utc":"2026-10-22T01:10:56Z","azione":"aperta","tipo":"pr","pr":1405,"sha":"ea5a8c0c7e64831f226df3664bd530a1fac5e652"}
 {"v":1,"ts_utc":"2026-10-22T01:11:27Z","azione":"aperta","tipo":"pr","pr":1406,"sha":"150e3934782e5a0604fca9bbbdc21849fabebf96"}
 {"v":1,"ts_utc":"2026-10-22T01:20:07Z","azione":"push","titolo":"Match tree: la libreria resta di tipo library e il test del traguardo lo dice","merge_main":false,"aree":{"rust":2,"docs":2,"test":1},"tipo":"pr","pr":1406,"sha":"9b82c17351d3ad285613c186598756c49e81850e"}
+{"v":1,"ts_utc":"2026-10-22T01:20:14Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/msn-analoghi","merge_main":true,"aree":{"rust":6,"docs":3},"tipo":"pr","pr":1404,"sha":"59f1c8a1347652c1e66cfcc5f737970b7e53adce"}
