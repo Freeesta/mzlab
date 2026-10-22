@@ -10219,3 +10219,4 @@
 {"v":1,"ts_utc":"2026-10-22T22:26:05Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3844367,null]},"byte_totali":3844367,"margine_min_pct":null,"pr":1556,"sha":"72bf12ab6c683f9c6c2abd4a2735242d7c064dfe","run_id":39864526430,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T22:26:11Z","tipo":"carico","k":"2026-10-22T22:2","job_in_coda":0,"job_in_corso":22}
 {"v":1,"ts_utc":"2026-10-22T22:27:56Z","azione":"push","titolo":"Keep inspect out of the llm wasm: cap unchanged","merge_main":false,"aree":{"rust":1,"docs":2,"tools":1},"tipo":"pr","pr":1529,"sha":"886f0aa1847f5d9f350fc0663ed25d37422c3da7"}
+{"v":1,"ts_utc":"2026-10-22T22:28:30Z","azione":"push","titolo":"Merge origin/main into claude/msngrafo-g4a","merge_main":true,"aree":{"rust":49,"docs":60,"altro":15,"web":28,"test":25,"tools":10,"generati":2},"tipo":"pr","pr":1555,"sha":"0370d12ab3a9ff4228b103005498d865d5702ef3"}
