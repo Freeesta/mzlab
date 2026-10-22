@@ -43,9 +43,10 @@ async function indexOf(name) {
  * The `msngrafo/1` of the file `name` (a JSON string); a failure is thrown as the JSON string `{error_key, params}` of the module.
  * @param {string} name @param {Blob} blob the mzML @param {string} query the query string of the request @param {boolean} esporta the spectra as text
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
+ * @param {File} [idxFile] the index to read instead of the one of `name` (the derived mzML of a sample of a maker's file, rust-msngrafo-nativo.js)
  */
-export async function msnGrafo(name, blob, query, readerFor, esporta = false) {
-  const [m, idx] = await Promise.all([load("msngrafo"), indexOf(name)]);
+export async function msnGrafo(name, blob, query, readerFor, esporta = false, idxFile = undefined) {
+  const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
   const f = esporta ? m.msn_grafo_export : m.msn_grafo;
   return f(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query));
 }
@@ -55,9 +56,10 @@ export async function msnGrafo(name, blob, query, readerFor, esporta = false) {
  * @param {string} name @param {Blob} blob the mzML @param {string} query the parameters of the graph as a query string
  * @param {string} libreria the library file of the user ("" = none) @param {string} molecola
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
+ * @param {File} [idxFile] the index to read instead of the one of `name` (the derived mzML of a sample of a maker's file, rust-msngrafo-nativo.js)
  */
-export async function msnLibAggiungi(name, blob, query, libreria, molecola, readerFor) {
-  const [m, idx] = await Promise.all([load("msngrafo"), indexOf(name)]);
+export async function msnLibAggiungi(name, blob, query, libreria, molecola, readerFor, idxFile = undefined) {
+  const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
   return m.msnlib_aggiungi(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria, molecola);
 }
 
@@ -65,8 +67,9 @@ export async function msnLibAggiungi(name, blob, query, libreria, molecola, read
  * The candidates of the library text for the graph of the query (`msncerca/1`, a JSON string); the query carries the parameters of the graph and the options of the search.
  * @param {string} name @param {Blob} blob the mzML @param {string} query @param {string} libreria the library file of the user
  * @param {(blob: Blob) => (offset: number, length: number) => Uint8Array} readerFor
+ * @param {File} [idxFile] the index to read instead of the one of `name` (the derived mzML of a sample of a maker's file, rust-msngrafo-nativo.js)
  */
-export async function msnLibCerca(name, blob, query, libreria, readerFor) {
-  const [m, idx] = await Promise.all([load("msngrafo"), indexOf(name)]);
+export async function msnLibCerca(name, blob, query, libreria, readerFor, idxFile = undefined) {
+  const [m, idx] = await Promise.all([load("msngrafo"), idxFile || indexOf(name)]);
   return m.msnlib_cerca(readerFor(idx), idx.size, readerFor(blob), name, await conAttese(query), libreria);
 }

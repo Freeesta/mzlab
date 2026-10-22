@@ -2,8 +2,11 @@
 // Page side of api/msn_grafo and api/msnlib/aggiungi (rust-bridge.js): asks the worker of the engine for the graph or the library (op "msngrafo", rust-msngrafo.js) and words the answer.
 // Null = the route is unavailable (browser.js answers err.route.unavailable); an error of the module is a 400 with the usual JSON.
 
+/** Each `progress` message of the worker (phase load|convert|index|graph, frac of the whole bar) is told to the page: the tab shows the bar and watches for a stall. @param {{ phase: string, frac: number, done?: number, total?: number }} p */
+const avanza = p => { try { window.dispatchEvent(new CustomEvent("mzlab-msngrafo", { detail: { phase: p.phase, frac: p.frac, done: p.done, total: p.total } })); } catch (_) { /* no window */ } };
+
 /**
- * @param {{ slots: any[], rpc: (msg: any) => Promise<any>, stats: { rust: number } }} c
+ * @param {{ slots: any[], rpc: (msg: any, onp?: (p: any) => void) => Promise<any>, stats: { rust: number } }} c
  * @param {number} k @param {string} search the query string of the request @param {boolean} [esporta] the spectra as text (api/msn_grafo/export)
  * @param {{ libreria: string, molecola: string } | null} [lib] the entry to add to the library (api/msnlib/aggiungi) or the library to search (`cerca`)
  * @param {boolean} [cerca] search the library instead of adding to it (api/msnlib/cerca)
@@ -14,7 +17,7 @@ export async function grafoRoute({ slots, rpc, stats }, k, search, esporta = fal
   if (!s) return null;
   await s.opening;
   if (s.bad || !s.idx || !s.blob) return null;
-  const r = await rpc({ op: "msngrafo", slot: k, query: search, blob: s.blob, esporta, libreria: lib ? lib.libreria : undefined, cerca, molecola: lib ? lib.molecola : undefined });
+  const r = await rpc({ op: "msngrafo", slot: k, query: search, blob: s.blob, esporta, libreria: lib ? lib.libreria : undefined, cerca, molecola: lib ? lib.molecola : undefined }, avanza);
   if (r.dead) return null;
   if (r.error) {
     /** @type {any} */ let e = null;
