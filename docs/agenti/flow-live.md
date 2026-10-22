@@ -44,7 +44,7 @@ I problemi di `flow::check` bloccano (`blocked`) i lavori dell'istanza interessa
 ## `flow::execute` sopra lo scheduler
 `run.rs::execute` crea `Sched`, chiede `next` (slots 1, memoria illimitata) un lavoro alla volta, `started`, esegue con `Runner::run` su `workers` thread (pool con `Condvar`; sul wasm in sequenza), riporta `finished` e tiene i risultati per `JobId`. Gli ingressi di un lavoro si leggono dai risultati dei lavori a monte (la porta guida prende solo l'elemento di quel lavoro).
 Alla fine il record si scrive come prima, livello per livello (`levels`), con `settle`: stesso `prov/1` per qualsiasi ordine di fine. Un'uscita `many` di un lavoro per elemento ha la chiave `istanza.porta[nome-ingresso]` (`[nome#k]` se un lavoro ne dà più d'una).
-Il file per elemento si chiama `istanza-<radice>.ext`: radice = nome dell'ingresso senza estensione, caratteri non sicuri in `_`, più 8 cifre di SHA-256 del nome intero se due ingressi hanno la stessa radice. La chiave della cache del CLI non contiene la posizione dell'elemento.
+`Job::item` resta la posizione (vista, `Lineage`); `item_name` è l'ingresso del piano, `item_root` la radice del nome del file. Il file per elemento si chiama `istanza-<radice>.ext`: radice = nome dell'ingresso senza estensione, caratteri non sicuri in `_`, più 8 cifre di SHA-256 del nome intero se due ingressi hanno la stessa radice. La chiave della cache del CLI non contiene la posizione dell'elemento.
 Prove: `flow/run_tests.rs` (10 semi × 1 e 4 thread), `crates/mzlab-feat/tests/flow.rs`, `flow_cache_tests.rs`.
 
 ## Avanzamento dentro i lavori (`mzlab_core::pace`)
