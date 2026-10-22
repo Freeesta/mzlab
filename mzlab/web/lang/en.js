@@ -844,7 +844,6 @@ I18N.add("en", {
   "aff.zone.nospace": "Not enough room",
   "aff.sep": "Width of the side-by-side panels",
   "aff.done": "Side by side",
-  "aff.undo": "Undo",
   "aff.undone": "Arrangement restored",
   "aff.where": "Panel {n}: row {r} of {t}, position {i} of {m}",
   "aff.menu.reset": "Reset layout",

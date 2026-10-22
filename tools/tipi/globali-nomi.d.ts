@@ -251,7 +251,6 @@ declare var addTrace: any;
 declare var adductPair: any;
 declare var affAccanto: any;
 declare var affAnnulla: any;
-declare var affBar: any;
 declare var affBusy: any;
 declare var affCloseMenu: any;
 declare var affCommitRow: any;

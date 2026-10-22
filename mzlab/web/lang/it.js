@@ -844,7 +844,6 @@ I18N.add("it", {
   "aff.zone.nospace": "Spazio insufficiente",
   "aff.sep": "Larghezza dei pannelli affiancati",
   "aff.done": "Affiancati",
-  "aff.undo": "Annulla",
   "aff.undone": "Disposizione ripristinata",
   "aff.where": "Pannello {n}: riga {r} di {t}, posizione {i} di {m}",
   "aff.menu.reset": "Ripristina disposizione",

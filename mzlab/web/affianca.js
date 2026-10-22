@@ -63,22 +63,13 @@ function affWhere(/** @type {any} */ p) {
   return r ? AFF_T("aff.where", { n: p.num ?? "", r: rows.indexOf(r) + 1, t: rows.length, i: r.indexOf(p) + 1, m: r.length }) : "";
 }
 
-/** @type {any} */ let affBarTimer = null;
-function affBar(/** @type {string} */ msg) {
-  const old = document.getElementById("aff-bar"); if (old) old.remove();
-  clearTimeout(affBarTimer);
-  const b = document.createElement("div"); b.id = "aff-bar"; b.setAttribute("role", "status");
-  b.innerHTML = `<span>${EH(msg)}</span><button type="button">${EH(AFF_T("aff.undo"))}</button>`;
-  b.querySelector("button").onclick = () => { b.remove(); affAnnulla(); };
-  document.body.appendChild(b); affBarTimer = setTimeout(() => b.remove(), 6000);
-}
 /** Do a move on the real panels; returns false (and says so) when the move does not fit. */
 function affFai(/** @type {any} */ p, /** @type {any} */ d, /** @type {boolean} */ wide) {
   const before = affKeys(tabPanels().filter(q => q.full)), grp = wide && !d.solo ? blockOf(p).grp.map((/** @type {any} */ q) => q.id) : [p.id];
   const order = affStack(), res = affRifai(order, p.id, grp, d, hostWidth());
   if (!res) { affSay(AFF_T("aff.zone.nospace")); return false; }
   affHist.push({ n: ++HSEQ, s: before }); if (affHist.length > 20) affHist.shift();
-  placeRows(res); affRelay(p); numberPanels(); affSay(affWhere(p)); affBar(AFF_T("aff.done"));
+  placeRows(res); affRelay(p); numberPanels(); affSay(AFF_T("aff.done") + ". " + affWhere(p));
   return true;
 }
 function affAnnulla() {
@@ -253,7 +244,7 @@ const affRowOf = (/** @type {any} */ q) => `${q.num ?? ""} \u00b7 ${q.el.querySe
 function affRipristina() {
   const l = tabPanels().filter(q => q.full); affSnap();
   l.forEach(q => { q.riga = null; q.quota = null; q.x = 0; q.w = hostWidth(); });
-  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done")); affBar(AFF_T("aff.reset.done"));
+  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done"));
 }
 const affSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
 if (typeof AZIONI !== "undefined") {

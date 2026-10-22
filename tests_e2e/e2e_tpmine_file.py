@@ -60,24 +60,33 @@ try:
             assert rows() == N and len(set(names())) == N, (rows(), N)
         step("a sample read twice (again, or with a doubled .mzML) is one row, shown once without the extension", unique)
 
+        def settle():
+            # the order of the rows is final once the names have not changed for three checks (the sample times arrive after the rows)
+            pg.evaluate("""new Promise(ok => { let last = "", n = 0; const t = setInterval(() => {
+                const c = [...document.querySelectorAll("#tp-files .tp-fn")].map(x => x.textContent).join("|");
+                if (c === last) { if (++n >= 3) { clearInterval(t); ok(); } } else { last = c; n = 0; } }, 300); })""")
+
         def one():
+            settle()
             b = pg.locator("#tp-files [data-rm]").first; box = b.bounding_box()
             assert box["width"] >= 24 and box["height"] >= 24 and b.get_attribute("aria-label").startswith("Remove "), (box, b.get_attribute("aria-label"))
             before = names(); b.focus(); pg.keyboard.press("Enter")
             assert rows() == N - 1 and names() == before[1:], "the row was not removed"
-            assert pg.locator("#tolto-box .tolto").last.inner_text().startswith("Removed"), pg.inner_text("#tolto-box")
+            assert pg.locator("#tolto-box").count() == 0, "no visible notice with an Undo button"
             assert pg.locator("#tp-fsum").inner_text().startswith(str(N - 1)), pg.inner_text("#tp-fsum")
-            pg.locator("#tolto-box .tolto button").last.click()
-            assert rows() == N and names() == before, "Undo did not put the row back in place"
-        step("«Remove» on a row (keyboard) shows «Removed · Undo» and Undo restores it in place", one)
+            pg.keyboard.press("Control+z")
+            assert rows() == N and names() == before, "Ctrl+Z did not put the row back in place"
+        step("«Remove» on a row (keyboard) shows no Undo notice and Ctrl+Z restores it in place", one)
 
         def allgone():
+            settle()
             before = names(); pg.click("#tp-rmall")
-            assert rows() == 0 and pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
-            assert f"{N} files" in pg.locator("#tolto-box .tolto").last.inner_text(), pg.inner_text("#tolto-box")
-            pg.locator("#tolto-box .tolto button").last.click()
+            assert pg.is_hidden("#tp-rmall") and pg.locator("#tp-files tr").count() == 0
+            lib.attendi(pg, f"(document.querySelector('.sr-only[role=status]') || {{ textContent: '' }}).textContent.includes('{N} files')")
+            assert f"{N} files" in pg.inner_text(".sr-only[role=status]"), pg.inner_text(".sr-only[role=status]")
+            pg.keyboard.press("Control+z"); lib.attendi(pg, f"document.querySelectorAll('#tp-files tr').length === {N + 1}")
             assert names() == before and pg.is_visible("#tp-rmall")
-        step("«Remove all» empties the list and Undo brings all the files back", allgone)
+        step("«Remove all» empties the list and Ctrl+Z brings all the files back", allgone)
 
         def tip():
             assert pg.is_visible("#tp-cond"), "the conditions section is not shown"
