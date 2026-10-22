@@ -98,3 +98,23 @@ fn the_cleavages_of_a_node_are_a_parameter_of_the_step() {
     assert!(got.contains("\"strutture\":{"));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_interpretation_of_the_losses_is_a_parameter_of_the_step() {
+    let d = dir("d");
+    let got = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","interpreta":true,"ppm_perdita":5}"#,
+    )
+    .unwrap();
+    let want = cli(&[
+        "--formula",
+        "C14H15N3O5+",
+        "--interpreta",
+        "--ppm-perdita",
+        "5",
+    ]);
+    assert_eq!(got, want);
+    assert!(got.contains("\"interpretazione\":{\"versione\":1,\"ppm\":5,"));
+    let _ = std::fs::remove_dir_all(&d);
+}
