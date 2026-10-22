@@ -1222,7 +1222,7 @@ I18N.add("en", {
   "map.leg2d.mean": "color = intensity ({scale} scale)",
   "int.target.clicked": "clicked trace",
   "int.target.all": "all traces",
-  "int.guard": "<b>You cannot integrate from this chromatogram.</b><br>The TIC, the BPC and the PDA add up all the ions: the area obtained does not belong to any compound. First extract the ion you are interested in (XIC) with a narrow <i>m/z</i> window around the analyte, then integrate the peak in the XIC.<br><br>Do you want to extract an XIC now?",
+  "int.guard": "<b>Integrate an XIC, not the TIC.</b><br>The total chromatogram (TIC/BPC/PDA) adds up all the ions, so its area belongs to no compound. Extract the ion first (XIC).<br><br>Extract an XIC now?",
   "int.clash": "There is already an integrated peak here: remove it first (right-click → Delete)",
   "int.belowSn": "Below the signal/noise threshold of the detection parameters: no peak",
   "pk.title": "Peak detection",
