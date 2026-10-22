@@ -150,7 +150,7 @@ impl Mol {
     }
 
     /// Amine nitrogen: not aromatic, no double bond, no charge, not next to an acyl or sulfonyl group.
-    fn n_amine(&self, i: usize) -> bool {
+    pub(super) fn n_amine(&self, i: usize) -> bool {
         let a = &self.atoms[i];
         self.el(i) == "N"
             && !a.arom

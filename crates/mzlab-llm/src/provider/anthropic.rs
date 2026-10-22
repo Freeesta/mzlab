@@ -2,7 +2,7 @@
 
 use mzlab_core::json::{parse, Out, Value};
 
-use super::{api_error, json_text, plain, Ctx, Decoder};
+use super::{api_error, json_text, plain, CacheTtl, Ctx, Decoder};
 use crate::conv::{Part, Role};
 use crate::event::{Event, StopReason, Usage};
 
@@ -13,13 +13,39 @@ pub(super) fn body(c: &Ctx) -> String {
         .raw(",\"max_tokens\":")
         .int(c.max as i64)
         .raw(",\"stream\":true");
+    if c.opts.adaptive_thinking {
+        o.raw(",\"thinking\":{\"type\":\"adaptive\"}");
+    }
+    output_config(&mut o, c);
+    if c.opts.cache_auto {
+        o.raw(",\"cache_control\":{\"type\":\"ephemeral\"}");
+    }
     if !c.system.is_empty() {
-        o.raw(",\"system\":").str(&c.system);
+        o.raw(",\"system\":");
+        match c.opts.cache_ttl {
+            None => {
+                o.str(&c.system);
+            }
+            Some(ttl) => {
+                o.raw("[{\"type\":\"text\",\"text\":")
+                    .str(&c.system)
+                    .raw(",\"cache_control\":{\"type\":\"ephemeral\",\"ttl\":\"")
+                    .raw(if ttl == CacheTtl::Hour1 { "1h" } else { "5m" })
+                    .raw("\"}}]");
+            }
+        }
     }
     o.raw(",\"messages\":[");
     for (i, m) in c.conv.messages.iter().enumerate() {
         if i > 0 {
             o.raw(",");
+        }
+        if m.role == Role::System {
+            let text: Vec<String> = m.parts.iter().filter_map(plain).collect();
+            o.raw("{\"role\":\"system\",\"content\":")
+                .str(&text.join("\n"))
+                .raw("}");
+            continue;
         }
         o.raw(if m.role == Role::Assistant {
             "{\"role\":\"assistant\",\"content\":["
@@ -46,13 +72,36 @@ pub(super) fn body(c: &Ctx) -> String {
                 .raw(",\"description\":")
                 .str(t.description)
                 .raw(",\"input_schema\":")
-                .raw(&t.input_schema)
-                .raw("}");
+                .raw(&t.input_schema);
+            if c.opts.strict_tools {
+                o.raw(",\"strict\":true");
+            }
+            o.raw("}");
         }
         o.raw("]");
     }
     o.raw("}");
     o.0
+}
+
+/// `output_config` with the effort and the answer schema, when either is asked for.
+fn output_config(o: &mut Out, c: &Ctx) {
+    if c.opts.effort.is_none() && c.opts.format_schema.is_none() {
+        return;
+    }
+    o.raw(",\"output_config\":{");
+    if let Some(e) = c.opts.effort {
+        o.raw("\"effort\":\"").raw(e.name()).raw("\"");
+    }
+    if let Some(f) = &c.opts.format_schema {
+        if c.opts.effort.is_some() {
+            o.raw(",");
+        }
+        o.raw("\"format\":{\"type\":\"json_schema\",\"schema\":")
+            .raw(f)
+            .raw("}");
+    }
+    o.raw("}");
 }
 
 fn part(o: &mut Out, p: &Part) {
@@ -144,10 +193,22 @@ impl Dec {
     fn message_start(&mut self, v: &Value) {
         let u = v.get("message").and_then(|m| m.get("usage"));
         let n = |k: &str| u.and_then(|u| u.get(k)).and_then(Value::f64).unwrap_or(0.0) as u64;
+        let detail = u.and_then(|u| u.get("cache_creation"));
+        let w = |k: &str| detail.and_then(|d| d.get(k)).and_then(Value::f64);
+        // Without the per-lifetime detail the total counts as the 5-minute rate (the default lifetime).
+        let (w5, w1) = match (
+            w("ephemeral_5m_input_tokens"),
+            w("ephemeral_1h_input_tokens"),
+        ) {
+            (None, None) => (n("cache_creation_input_tokens"), 0),
+            (a, b) => (a.unwrap_or(0.0) as u64, b.unwrap_or(0.0) as u64),
+        };
         self.usage = Usage {
             input: n("input_tokens"),
             output: n("output_tokens"),
             cache_read: n("cache_read_input_tokens"),
+            cache_write_5m: w5,
+            cache_write_1h: w1,
         };
     }
 }

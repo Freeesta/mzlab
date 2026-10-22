@@ -126,6 +126,8 @@ fn collect(events: Vec<Event>) -> Result<(String, Usage), Error> {
                 usage.input += u.input;
                 usage.output += u.output;
                 usage.cache_read += u.cache_read;
+                usage.cache_write_5m += u.cache_write_5m;
+                usage.cache_write_1h += u.cache_write_1h;
             }
             Event::Stop(StopReason::Refusal) => {
                 return Err(Error::new("err.tutor.provider").with("reason", "refusal"))
@@ -335,7 +337,7 @@ pub fn estimate_micros(
     let usage = |(i, o): (u64, u64)| Usage {
         input: i,
         output: o,
-        cache_read: 0,
+        ..Usage::default()
     };
     Ok(n * (prices.cost(model_pick, &usage(TYPICAL_PICK))?
         + prices.cost(model_answer, &usage(TYPICAL_ANSWER))?))

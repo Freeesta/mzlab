@@ -3,69 +3,15 @@
 
 use std::path::PathBuf;
 
+mod common;
+use common::*;
+
 use mzlab_llm::conv::{Conversation, Part};
 use mzlab_llm::cost::estimate;
 use mzlab_llm::event::{Event, StopReason, Usage};
 use mzlab_llm::fake::{record_line, request_sha256, Replay};
 use mzlab_llm::log::Log;
-use mzlab_llm::provider::{builtin, http_error, request, Adapter, Provider, Stream};
-use mzlab_llm::tools::{Class, Tool};
-
-fn data(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/data")
-        .join(name)
-}
-
-fn read(name: &str) -> String {
-    std::fs::read_to_string(data(name)).unwrap_or_else(|e| panic!("{name}: {e}"))
-}
-
-/// Compares `got` with the expected file, or rewrites the file when asked.
-fn expect_file(name: &str, got: &str) {
-    if std::env::var("MZLAB_UPDATE_LLM").is_ok() {
-        std::fs::write(data(name), got).unwrap();
-    }
-    assert_eq!(
-        got,
-        read(name),
-        "{name} differs (MZLAB_UPDATE_LLM=1 rewrites it)"
-    );
-}
-
-fn tools() -> Vec<Tool> {
-    vec![
-        Tool {
-            name: "flow_check",
-            class: Class::Read,
-            description: "Check the plan.",
-            input_schema: "{\"type\":\"object\",\"properties\":{\"plan\":{\"type\":\"string\"}}}"
-                .into(),
-        },
-        Tool {
-            name: "flow_run",
-            class: Class::Run,
-            description: "Run the plan.",
-            input_schema: "{\"type\":\"object\"}".into(),
-        },
-    ]
-}
-
-fn provider(id: &str) -> Provider {
-    builtin().into_iter().find(|p| p.id == id).unwrap()
-}
-
-fn conversation(p: &Provider) -> Conversation {
-    let mut c = Conversation::parse(&read("conv.json")).unwrap();
-    c.provider = p.id.clone();
-    c.model = p.models[0].id.clone();
-    if !p.models[0].vision {
-        c.messages[0]
-            .parts
-            .retain(|x| !matches!(x, Part::Image { .. }));
-    }
-    c
-}
+use mzlab_llm::provider::{builtin, http_error, request, Adapter, Provider};
 
 #[test]
 fn request_bodies_match_the_files() {
@@ -125,31 +71,6 @@ fn urls_and_modes() {
         request(&o, &c, &[]).unwrap_err().key,
         "err.llm.conversation"
     );
-}
-
-fn run(adapter: Adapter, prompted: bool, chunks: impl Iterator<Item = Vec<u8>>) -> Vec<Event> {
-    let mut s = Stream::new(adapter);
-    if prompted {
-        s = s.prompted();
-    }
-    let mut out = Vec::new();
-    for c in chunks {
-        out.extend(s.push(&c));
-    }
-    out.extend(s.finish());
-    out
-}
-
-fn lines(e: &[Event]) -> String {
-    e.iter().map(|e| e.to_json() + "\n").collect()
-}
-
-fn adapter(name: &str) -> Adapter {
-    match name.split('_').next().unwrap() {
-        "anthropic" => Adapter::Anthropic,
-        "gemini" => Adapter::Gemini,
-        _ => Adapter::OpenAiCompat,
-    }
 }
 
 #[test]
@@ -310,6 +231,7 @@ fn log_has_sorted_keys_and_refuses_keys() {
             input: 1,
             output: 2,
             cache_read: 3,
+            ..Usage::default()
         }),
     )
     .unwrap();
@@ -340,7 +262,7 @@ fn cost_is_none_without_a_price() {
     let u = Usage {
         input: 1_000_000,
         output: 500_000,
-        cache_read: 0,
+        ..Usage::default()
     };
     let mut m = provider("openai").models[0].clone();
     assert_eq!(estimate(&u, &m), None);
@@ -350,15 +272,38 @@ fn cost_is_none_without_a_price() {
 }
 
 #[test]
-fn shipped_data_has_no_invented_price_and_schemas_are_json() {
+fn every_price_has_a_check_date_and_the_anthropic_ones_are_the_verified_list() {
+    // Prices checked on https://platform.claude.com/docs/en/about-claude/pricing on 2026-10-22 (USD per million tokens).
     for p in builtin() {
-        assert!(
-            p.models
-                .iter()
-                .all(|m| m.price.input == 0.0 && m.price.output == 0.0),
-            "{}",
-            p.id
-        );
+        for m in &p.models {
+            if m.price.input > 0.0 || m.price.output > 0.0 {
+                assert_eq!(
+                    m.price.as_of, "2026-10-22",
+                    "{} has a price without as_of",
+                    m.id
+                );
+            } else {
+                assert!(m.price.as_of.is_empty(), "{}", m.id);
+            }
+        }
+    }
+    let a = provider("anthropic");
+    let price = |id: &str| a.model(id).unwrap().price.clone();
+    let rates =
+        |p: &mzlab_llm::provider::Price| (p.input, p.output, p.cache_read, p.write_5m, p.write_1h);
+    assert_eq!(
+        rates(&price("claude-sonnet-5-5")),
+        (2.0, 10.0, 0.1, 2.5, 4.0)
+    );
+    assert_eq!(rates(&price("claude-opus-5-5")), (4.0, 20.0, 0.2, 5.0, 8.0));
+    let haiku = price("claude-haiku-5-5");
+    assert_eq!(rates(&haiku), (0.1, 0.5, 0.01, 0.125, 0.2));
+    let over = haiku.over.unwrap();
+    assert_eq!(over.above_tokens, 100_000);
+    assert_eq!(rates(&over.rates), (0.5, 2.5, 0.05, 0.625, 1.0));
+    // the other vendors have no verified price: still unknown
+    for id in ["openai", "gemini", "ollama"] {
+        assert!(provider(id).models.iter().all(|m| m.price.input == 0.0));
     }
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/schemi");
     for n in ["llm-provider-1", "llm-conv-1", "llmlog-1", "llmreg-1"] {

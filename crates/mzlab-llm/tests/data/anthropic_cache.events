@@ -1,0 +1,3 @@
+{"ev":"text_delta","text":"Ready."}
+{"cache_read":0,"cache_write_1h":24900,"cache_write_5m":100,"ev":"usage","in":12,"out":4}
+{"ev":"stop","reason":"end"}

@@ -10,6 +10,8 @@ pub enum Role {
     User,
     Assistant,
     Tool,
+    /// An operator instruction in the middle of the conversation (Anthropic `role: "system"`); the other vendors read it as a user turn.
+    System,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -69,6 +71,7 @@ impl Conversation {
                 Some("user") => Role::User,
                 Some("assistant") => Role::Assistant,
                 Some("tool") => Role::Tool,
+                Some("system") => Role::System,
                 _ => return Err(bad("role")),
             };
             let parts = m
@@ -111,6 +114,7 @@ impl Conversation {
                 Role::User => "user",
                 Role::Assistant => "assistant",
                 Role::Tool => "tool",
+                Role::System => "system",
             };
             o.raw(if i > 0 { "," } else { "" })
                 .raw("{\"role\":")

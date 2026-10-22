@@ -145,3 +145,29 @@ fn the_rules_are_a_parameter_of_the_step_and_without_them_the_bytes_do_not_chang
     assert!(!senza.contains("\"regole\""));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_structure_rules_give_the_same_bytes_in_the_step_and_in_the_command() {
+    let d = dir("s");
+    let got = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","smiles":"NCCCC(=O)O","regole":true}"#,
+    )
+    .unwrap();
+    let want = cli(&[
+        "--formula",
+        "C14H15N3O5+",
+        "--smiles",
+        "NCCCC(=O)O",
+        "--regole",
+    ]);
+    assert_eq!(got, want);
+    // a SMILES that does not parse leaves the rules of the formula alone: the structure is reported where it is used
+    let bad = graph(
+        &d,
+        r#"{"formula":"C14H15N3O5+","smiles":"C(C","regole":true}"#,
+    )
+    .unwrap();
+    assert!(bad.contains("\"regole\":{"));
+    let _ = std::fs::remove_dir_all(&d);
+}

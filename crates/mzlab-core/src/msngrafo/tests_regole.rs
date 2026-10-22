@@ -36,7 +36,8 @@ fn con(att: Option<&str>) -> Opzioni {
 #[test]
 fn the_embedded_table_is_read_with_recomputed_masses() {
     let t = tabella();
-    assert_eq!(t.regole.len(), 4);
+    assert_eq!(t.regole.len(), 43);
+    assert_eq!(t.regole.iter().filter(|r| r.solo_formula()).count(), 5);
     let nh3 = t.regole.iter().find(|r| r.id == "loss_nh3_ammonium_adduct");
     assert!((nh3.unwrap().massa - 17.02655).abs() < 1e-5);
     assert_eq!(

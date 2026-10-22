@@ -16,7 +16,7 @@
         "type": "object",
         "required": ["role", "parts"],
         "properties": {
-          "role": {"enum": ["user", "assistant", "tool"]},
+          "role": {"enum": ["user", "assistant", "tool", "system"]},
           "parts": {
             "type": "array",
             "items": {

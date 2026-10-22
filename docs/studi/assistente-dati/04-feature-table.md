@@ -54,3 +54,5 @@ Ogni controllo dà: `id`, `value`, `threshold`, `flag` (`ok|note|warn`), `rows` 
 ## 5. Riferimenti per i casi d'oro
 
 I file sintetici (`tools/dati_sintetici.py`) contengono già ciò che i controlli devono trovare: un contaminante in ogni file con RT fisso, l'addotto sodico del genitore, i suoi isotopi, tre frammenti in sorgente a rapporto costante, prodotti che salgono e scendono nel tempo, uno spostamento costante di m/z dello strumento. `06-valutazione.md` li usa come risposta nota.
+
+**Peso nel `.wasm`.** Il modulo `table` della pagina porta tutti i 15 controlli: 563 883 B contro il tetto `limit_table` 614 400 (+20 % su 512 000, decisione di Federico, 22 ott 2026); senza controlli 458 282 B (PCA ≈ 46 KB, KMD ≈ 14 KB, altri controlli ≈ 45 KB).
