@@ -596,6 +596,7 @@ I18N.add("en", {
   "err.file.unknown": "The program did not receive the file ({detail}): try loading it again.",
   "err.file.index": "The index of the file could not be built ({detail}).",
   "err.file.raw": "The .raw file (Thermo) or the .raw folder (Waters) cannot be read: the whole file is needed, with all its files ({detail}).",
+  "err.file.rawTruncated": "The Thermo .raw file is cut short: it is {size} bytes long and the “{stage}” part needs at least {needed}, so no scan can be read. Copy the whole file again.",
   "err.file.rawVersion": "Version {version} of the Thermo .raw format is not supported yet: convert the file to mzML with msconvert.",
   "err.file.notAgilentD": "The folder {name} has no AcqData/MSScan.bin and AcqData/MSPeak.bin (nor a data.ms file): the whole .D folder is needed, with its AcqData subfolder.",
   "err.file.agilentNoEngine": "Agilent .D folders open only with the Rust engine of the program ({name}).", "err.file.brukerBaf": "Bruker folders with only analysis.baf cannot be read without Bruker's SDK: export to mzML with Bruker DataAnalysis or msconvert.", "err.file.brukerNoBin": "The folder {name} does not contain {file}: the whole Bruker .d folder is needed.",

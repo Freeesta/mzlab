@@ -3,6 +3,7 @@ Skipped without cargo, wasm-bindgen or node."""
 import json
 import shutil
 import subprocess
+import urllib.parse
 from pathlib import Path
 
 import pytest
@@ -38,6 +39,34 @@ def test_wasm_and_cli_give_the_same_graph(pkg, query, args):
     assert got + "\n" == want  # the command line ends its output with a newline
     assert '"formato":"msngrafo/1"' in got
     assert ('"strutture":{' in got) == ("strutture=" in query)
+
+
+def test_the_whole_structure_and_the_molfile_are_the_same_in_cli_and_wasm(pkg, tmp_path):
+    mol = tmp_path / "x.mol"
+    mol.write_text("\n  mzlab\n\n  1  0  0  0  0  0  0  0  0  0999 V2000\n    0.0000    0.0000    0.0000 C   0  0\nM  END\n", encoding="utf-8")
+    smiles = "CCOC(=O)c1c[nH]c2ccccc12"
+    q = "formula=C14H15N3O5%2B&smiles=" + "CCOC%28%3DO%29c1c%5BnH%5Dc2ccccc12" + "&strutture=tutti&molfile=" + urllib.parse.quote(mol.read_text(encoding="utf-8"))
+    got = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), q).stdout
+    want = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--formula", "C14H15N3O5+", "--smiles", smiles, "--strutture", "tutti", "--molfile", str(mol)).stdout
+    assert got + "\n" == want
+    doc = json.loads(got)
+    assert doc["opzioni"]["molfile"].startswith("\n  mzlab")
+    assert isinstance(doc["strutture_tutti"], list) and list(doc)[-1] == "vista" and list(doc)[-2] == "strutture_tutti"
+
+
+def test_complete_adds_the_view_with_the_same_bytes_in_cli_and_wasm(pkg, tmp_path):
+    full = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(MZML), "--formula", "C14H15N3O5+").stdout
+    doc = json.loads(full)
+    assert list(doc)[-1] == "vista" and doc["vista"]["algoritmo"] == "best-path/1"
+    old = tmp_path / "old.json"
+    old.write_text(full[:full.index(',"vista":')] + "}", encoding="utf-8")
+    via_cli = run("cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", "complete", str(old)).stdout
+    via_wasm = run("node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(old), "completa").stdout
+    assert via_cli == full and via_wasm + "\n" == full
+    notgraph = tmp_path / "x.json"
+    notgraph.write_text('{"formato":"msnlib/1"}', encoding="utf-8")
+    r = subprocess.run(["node", str(ROOT / "tests" / "msngrafo_wasm_node.js"), str(pkg / "pkg"), str(pkg / "msn.mzidx"), str(MZML), str(notgraph), "completa"], capture_output=True, encoding="utf-8")
+    assert r.returncode != 0 and "err.msngrafo.badGraph" in r.stderr
 
 
 def test_a_bad_number_is_a_keyed_error(pkg):

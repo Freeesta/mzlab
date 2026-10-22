@@ -8,7 +8,10 @@ use std::io::{Read, Seek};
 pub struct FileHeader {
     pub magic: u16,
     pub signature: String,
+    /// The layout the rest of the file is read with: `declared_version` when documented, else the nearest documented one (`robust::schema_version`).
     pub version: u32,
+    /// The number written in the file.
+    pub declared_version: u32,
     pub audit_start: AuditTag,
     pub audit_end: AuditTag,
     pub tag: String,
@@ -32,11 +35,9 @@ impl FileHeader {
         // unknown_long[1..4]: 4 × u32 = 16 bytes
         r.skip(16)?;
 
-        let version = r.read_u32()?;
-        match version {
-            8 | 47 | 57 | 60 | 62 | 63 | 64 | 66 => {}
-            _ => return Err(Error::UnsupportedVersion(version)),
-        }
+        let declared_version = r.read_u32()?;
+        let version = crate::robust::schema_version(declared_version)
+            .ok_or(Error::UnsupportedVersion(declared_version))?;
 
         // AuditTag start (112 bytes)
         let audit_start = AuditTag::read(r)?;
@@ -56,6 +57,7 @@ impl FileHeader {
             magic,
             signature,
             version,
+            declared_version,
             audit_start,
             audit_end,
             tag,
@@ -116,6 +118,12 @@ mod tests {
         let bytes = file_header_bytes(999);
         let err = read(bytes).unwrap_err();
         assert!(matches!(err, Error::UnsupportedVersion(999)));
+    }
+
+    #[test]
+    fn an_undeclared_version_is_read_with_the_nearest_layout() {
+        let hdr = read(file_header_bytes(65)).unwrap();
+        assert_eq!((hdr.declared_version, hdr.version), (65, 64));
     }
 
     #[test]

@@ -58,6 +58,12 @@ pub fn version() -> String {
     format!("mzlab-msngrafo/1 {}", env!("CARGO_PKG_VERSION"))
 }
 
+/// `completa`: the text of an `msngrafo/1` with the key `vista` (the bytes `mzlab-cli msn-graph complete` writes); a keyed error for what is not one.
+#[wasm_bindgen]
+pub fn completa(json: &str) -> Result<String, JsValue> {
+    mzlab_core::msngrafo::completa(json).map_err(js_err)
+}
+
 fn calcola(
     read_idx: Function,
     idx_size: f64,

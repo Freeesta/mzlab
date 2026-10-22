@@ -22,7 +22,7 @@ Scopo: il lettore Thermo di mzLab (`vendor/opentfraw` 2.0.0 modificato, Rust pur
 6. ? **Segmenti ed eventi**: numero di segmento/evento per scansione (RFR li dà), più segmenti di tempo nel metodo.
 7. ✔ **Profilo/centroidi**: corretto dopo RV-02; ? centroidi «etichettati» (risoluzione, rumore, carica per picco) contro RFR.
 8. ? **Lock mass**: campi del trailer letti, correzione non applicata; da confrontare con le masse di RFR.
-9. ✔ **File che non si aprono**: 11 su 41 (`RAW_VELOCE.md` §2.5); ? versioni non dichiarate (v65, v67+, LTQ v8-v47) e file **troncati** (acquisizione interrotta): oggi errore, RFR legge fino all'ultima scansione intera.
+9. ✔ **File che non si aprono**: versioni non dichiarate (tra 1 e 100: schema più vicino con avviso), file **troncati** (scansioni intere più avviso) e flussi non essenziali illeggibili (saltati con avviso) si aprono; i messaggi nominano struttura, versione e byte (`lettori-modulo.md`). Resta da confrontare con i dump RFR dei 41 file (`RAW_VELOCE.md` §2.5): non verificato contro RFR.
 10. ✔ **UV/PDA 3D** (572 B per istante) non letto; ? canali analogici contro RFR.
 11. ✔ **Metodo dello strumento**: euristica UTF-16, OLE non letto (RV-09). ? Testo per dispositivo contro `GetInstrumentMethod(i)`.
 12. ? **Trailer, status log, error log, tune**: tutti i campi per etichetta e tipo contro RFR (oggi `opentfraw.trailer.<etichetta>`).
@@ -57,8 +57,9 @@ Scopo: il lettore Thermo di mzLab (`vendor/opentfraw` 2.0.0 modificato, Rust pur
 | T-3 | Precursori multipli (SPS, MSX, DIA multibanda), CV FAIMS, segmento/evento | T-1 |
 | T-4 | Trailer, status, error log, tune: tutti i campi con tipo; parità con RFR (coordinato con RV-10) | T-0 |
 | T-5 | Robustezza: troncati, versioni non dichiarate, gli 11 file che non si aprono (con RV-08), messaggi | T-0 |
-| T-6 | Velocità contro RFR: tabella in `misure.md`, interventi solo se sotto | T-0 |
-Priorità (Coordinatore): T-0, poi T-1→T-2 (etichetta CID/HCD ed energia/NCE per ogni reazione MSn) in serie (stesso `scan_event.rs`/`mzml.rs`), T-3, T-4, T-5 in parallelo su file diversi (ognuno aggiunge una riga a `MODIFICHE-MZLAB.md`).
+| T-6 | Velocità contro RFR (assorbito da T-7) | T-0 |
+| T-7 | Velocità e zero perdite: criteri prima del codice; A lettore (registro dei byte, andata e ritorno, impronte, MB/s contro RFR), B ponte verso Flow sui centroidi (colonne, matrice scansione × bin, contro mzmine) | T-3, T-5 |
+T-0 e T-1/T-2 sono in main. Prompt di T-3…T-7 in `docs/studi/PROMPT_LETTORE_THERMO/` (ordine e priorità nel `LEGGIMI.md`): T-3, T-4, T-5 in parallelo su file diversi (ognuno aggiunge una riga a `MODIFICHE-MZLAB.md`), T-7 (che assorbe T-6) dopo T-3 e T-5.
 
 **Da Federico** (con metadati scritti in un `LEGGIMI` accanto): sullo stesso composto noto, un `.raw` per caso: (a) MS2 HCD a NCE 20, 35, 50 e a gradini 20/35/50; (b) MS2 CID; (c) MS3 CID→HCD e un'infusione MSn fino a MS5-MS8; (d) se lo strumento lo consente ETD/EThcD, SPS-MS3, FAIMS, DIA; (e) un'acquisizione interrotta a metà (file troncato vero). Bastano 1-3 minuti ciascuno.
 **Dalla chat locale**: .NET SDK 8 sul Mac, pacchetto NuGet di RFR scaricato fuori dai repository, licenza salvata in `_licenze/`, il programma di dump scritto da §3 e tenuto fuori dai repository, dump di tutti i `.raw` di `dati/HRMS/` e `dati/formati/` (prima `--full` sui piccoli), esito per file in `coordinamento/dati_esterni/rosina/ORACOLI.md`.

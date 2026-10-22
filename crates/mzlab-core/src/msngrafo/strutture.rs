@@ -194,8 +194,13 @@ pub fn strutture_json(s: &Strutture) -> String {
     o.0
 }
 
+/// `grafo` with the key `strutture_tutti`: the cleavages of every node of level 2 or more (`strutture=tutti`), one `strutture` value each, by node.
+pub fn con_strutture_tutti(grafo: &str, s: &[Strutture]) -> String {
+    let v: Vec<String> = s.iter().map(strutture_json).collect();
+    super::vista::con_chiave(grafo, "strutture_tutti", &format!("[{}]", v.join(",")))
+}
+
 /// `grafo` (the text of an `msngrafo/1`) with the key `strutture` added at the end; the text of a graph without it does not change.
 pub fn con_strutture(grafo: &str, s: &Strutture) -> String {
-    let testa = grafo.strip_suffix('}').unwrap_or(grafo);
-    format!("{testa},\"strutture\":{}}}", strutture_json(s))
+    super::vista::con_chiave(grafo, "strutture", &strutture_json(s))
 }
