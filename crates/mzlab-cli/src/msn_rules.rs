@@ -163,12 +163,21 @@ fn leggi(p: &PathBuf, a: &Args) -> Result<Registro, Salto> {
     })
 }
 
+/// The neutral formula of a record (the first word of its ion): the same compound at another energy, or an isomer, is not a decoy.
+fn neutra(r: &Registro) -> &str {
+    r.ione.split(' ').next().unwrap_or("")
+}
+
 /// The spectrum of another record of the batch with the same nominal precursor and polarity (the next one, in the order of the ids, with another
-/// structure); `None` when there is none.
+/// neutral formula and structure); `None` when there is none.
 fn altro_spettro<'a>(r: &Registro, tutti: &'a [Registro]) -> Option<&'a [(f64, f64)]> {
     let gruppo: Vec<&Registro> = tutti
         .iter()
-        .filter(|x| x.pol == r.pol && x.prec.round() == r.prec.round())
+        .filter(|x| {
+            x.pol == r.pol
+                && x.prec.round() == r.prec.round()
+                && (x.id == r.id || neutra(x) != neutra(r))
+        })
         .collect();
     let i = gruppo.iter().position(|x| x.id == r.id)?;
     (1..gruppo.len())
