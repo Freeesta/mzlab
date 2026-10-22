@@ -10800,3 +10800,4 @@
 {"v":1,"ts_utc":"2026-10-22T23:03:24Z","tipo":"job","k":"120139164117","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ee04a1e10d545d0ff08a0dea8d6cdd896a8ab3e5","run_id":39869200145,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T23:03:24Z","tipo":"job","k":"120139164592","workflow":"rust","job":"rust-misc-a","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ee04a1e10d545d0ff08a0dea8d6cdd896a8ab3e5","run_id":39869200145,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T23:03:38Z","tipo":"carico","k":"2026-10-22T23:0","job_in_coda":0,"job_in_corso":7}
+{"v":1,"ts_utc":"2026-10-22T23:11:33Z","azione":"aperta","tipo":"pr","pr":1560,"sha":"8448fb52b1fa143a20b44d127c09aa9b79fe3b90"}
