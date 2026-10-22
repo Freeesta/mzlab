@@ -67,51 +67,7 @@ pub(super) struct Env<'a> {
     pub(super) fwhm: f64,
 }
 
-impl<'a> Env<'a> {
-    pub(super) fn new(
-        t: &'a Aligned,
-        s: &'a [Sample],
-        view: Option<&View>,
-        opts: &'a Options,
-        caps: Caps,
-    ) -> Env<'a> {
-        let rows: Vec<usize> = view.map_or_else(
-            || (0..t.len()).collect(),
-            |v| v.rows.iter().map(|&r| r as usize).collect(),
-        );
-        let of = |f: &dyn Fn(&Sample) -> bool| {
-            (0..s.len()).filter(|&k| f(&s[k])).collect::<Vec<usize>>()
-        };
-        let live = of(&|x| x.kind != "dark");
-        let blanks = of(&|x| x.kind == "blank");
-        let qcs = of(&|x| x.kind == "qc");
-        let samples = of(&|x| !matches!(x.kind.as_str(), "blank" | "dark" | "qc"));
-        let widths: Vec<f64> = rows
-            .iter()
-            .flat_map(|&r| (0..t.n_files).map(move |k| (r, k)))
-            .filter(|&(r, k)| t.state[r * t.n_files + k] == crate::aligned::CELL_DETECTED)
-            .map(|(r, k)| f64::from(t.width[r * t.n_files + k]))
-            .filter(|w| w.is_finite() && *w > 0.0)
-            .collect();
-        let fwhm = if widths.is_empty() {
-            FALLBACK_FWHM
-        } else {
-            median(widths) * FWHM_OF_WIDTH
-        };
-        Env {
-            t,
-            s,
-            opts,
-            caps,
-            rows,
-            live,
-            blanks,
-            qcs,
-            samples,
-            fwhm,
-        }
-    }
-
+impl Env<'_> {
     pub(super) fn id(&self, row: usize) -> u32 {
         self.t.id(row)
     }
@@ -166,5 +122,49 @@ impl Env<'_> {
 
     pub(super) fn rt_close(&self, a: usize, b: usize) -> bool {
         (self.t.rt[a] - self.t.rt[b]).abs() <= self.fwhm
+    }
+}
+
+/// The state of the checks for `t`: rows considered, files by role and the RT window of one peak.
+pub(super) fn build<'a>(
+    t: &'a Aligned,
+    s: &'a [Sample],
+    view: Option<&View>,
+    opts: &'a Options,
+    caps: Caps,
+) -> Env<'a> {
+    let rows: Vec<usize> = view.map_or_else(
+        || (0..t.len()).collect(),
+        |v| v.rows.iter().map(|&r| r as usize).collect(),
+    );
+    let of =
+        |f: &dyn Fn(&Sample) -> bool| (0..s.len()).filter(|&k| f(&s[k])).collect::<Vec<usize>>();
+    let live = of(&|x| x.kind != "dark");
+    let blanks = of(&|x| x.kind == "blank");
+    let qcs = of(&|x| x.kind == "qc");
+    let samples = of(&|x| !matches!(x.kind.as_str(), "blank" | "dark" | "qc"));
+    let widths: Vec<f64> = rows
+        .iter()
+        .flat_map(|&r| (0..t.n_files).map(move |k| (r, k)))
+        .filter(|&(r, k)| t.state[r * t.n_files + k] == crate::aligned::CELL_DETECTED)
+        .map(|(r, k)| f64::from(t.width[r * t.n_files + k]))
+        .filter(|w| w.is_finite() && *w > 0.0)
+        .collect();
+    let fwhm = if widths.is_empty() {
+        FALLBACK_FWHM
+    } else {
+        median(widths) * FWHM_OF_WIDTH
+    };
+    Env {
+        t,
+        s,
+        opts,
+        caps,
+        rows,
+        live,
+        blanks,
+        qcs,
+        samples,
+        fwhm,
     }
 }

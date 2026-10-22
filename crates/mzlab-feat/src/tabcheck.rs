@@ -134,7 +134,7 @@ fn analyse(
     if samples.len() != t.n_files {
         return Err(Error::new("error.badView"));
     }
-    let e = Env::new(t, samples, view, opts, caps);
+    let e = env::build(t, samples, view, opts, caps);
     let list = if e.rows.is_empty() {
         IDS.iter().map(|&id| Check::missing(id, "rows")).collect()
     } else {
