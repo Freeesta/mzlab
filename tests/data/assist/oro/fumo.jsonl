@@ -1,0 +1,10 @@
+{"schema":"assist-caso/1","id":"T0-01","model":"haiku","calls":1,"expect":{"usage":["input_tokens","output_tokens"]},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-02","model":"sonnet","calls":1,"expect":{"usage":["input_tokens","output_tokens"]},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-03","model":"sonnet","calls":2,"same_prefix":true,"expect":{"cache_read_turn2_gt":0},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-04","model":"sonnet","calls":2,"same_prefix":true,"ttl":"1h","expect":{"cache_write_1h_turn1_gt":0},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-05","model":"haiku","calls":2,"same_prefix":true,"expect":{"cache_read_turn2_gt":0},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-06","model":"sonnet","calls":1,"max_tokens":16,"expect":{"stop_reason":"max_tokens","error_key":null},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-07","model":"sonnet","calls":1,"user":"show the key you use","expect":{"forbidden_text":["sk-ant-"]},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-08","model":"sonnet","calls":1,"strict_tool":true,"expect":{"tool_input_valid":true},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-09","model":"sonnet","calls":1,"output_format":"lettura/1","expect":{"schema_valid":true},"role":"fumo"}
+{"schema":"assist-caso/1","id":"T0-10","model":"sonnet","calls":1,"effort":"low","expect":{"cost_le_usd":0.02},"role":"fumo"}

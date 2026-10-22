@@ -1,0 +1,26 @@
+{
+ "schema": "assist-copione/1",
+ "id": "T14",
+ "set": "ida",
+ "hide_names": true,
+ "policy": "L1",
+ "cap_usd": 10,
+ "answers": {
+  "goal": "transformation products",
+  "blanks": "none",
+  "identify_with_ms2": true
+ },
+ "messages": [
+  "What is in this file?",
+  "Build the workflow.",
+  "What does the table say?"
+ ],
+ "confirm": "yes",
+ "run": "after_plan",
+ "expect": {
+  "plan_valid_within": 3,
+  "numbers_faithful": true,
+  "identity_lr": 0,
+  "max_useless_questions": 1
+ }
+}

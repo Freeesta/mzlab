@@ -150,7 +150,7 @@ try:
         def first_screen():
             attendi(pg, "document.querySelectorAll('.fln').length === 2")
             assert "Import data" in pg.inner_text(".fln") and pg.locator(".fl-lines path").count() == 1
-            assert pg.locator(".fln .fln-chip.ok").count() == 2 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 8 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 4 and pg.locator(".flx-more .flx-tc").count() == 4 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
+            assert pg.locator(".fln .fln-chip").count() == 2 and pg.locator(".fln .fln-chip.warn").count() == 1 and pg.locator(".flx-tpl.show").count() == 1 and pg.locator(".flx-tc").count() == 8 and pg.locator(".flx-tpl > .flx-tpls > .flx-tc").count() == 4 and pg.locator(".flx-more .flx-tc").count() == 4 and pg.locator(".flx-more[open]").count() == 0 and pg.inner_text(".flx-more summary") == "More templates" and pg.inner_text(".fl-insp h3") == "Build feature table"
             assert pg.get_attribute('[data-mode="simple"]', "aria-pressed") == "true"
             assert pg.locator(".flx-pal").is_hidden()
         step("canvas: the base is already there and connected, templates are offered, Simple is the default", first_screen)
@@ -176,9 +176,9 @@ try:
         def inspector():
             pg.click('.fln:has-text("Match to library")')
             attendi(pg, "document.querySelector('.fl-insp h3') && document.querySelector('.fl-insp h3').textContent === 'Match to library'")
-            assert "What this step does" in pg.inner_text(".fl-insp") and pg.locator(".fl-insp button:has-text('Remove step')").count() == 1
+            assert "What this step does" not in pg.inner_text(".fl-insp") and "Ready." not in pg.inner_text(".fl-insp") and pg.locator(".fl-insp button:has-text('Remove step')").count() == 1
             pg.click('.fln:has-text("Import data")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Import data'")
-            assert pg.locator(".fl-insp button:has-text('Remove')").count() == 0 and "cannot remove" not in pg.inner_text(".fl-insp") and "part of the base" in pg.inner_text(".fl-insp")
+            assert pg.locator(".fl-insp button:has-text('Remove')").count() == 0 and "cannot remove" not in pg.inner_text(".fl-insp") and "part of the base" not in pg.inner_text(".fl-insp")
         step("canvas: the inspector explains the step; the base cannot be removed", inspector)
         def needs_and_fix():
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Regulatory lists")')
@@ -195,7 +195,7 @@ try:
             pg.click('button[aria-label="Start from a template"]'); pg.click('.flx-tc[data-tpl="table"]'); attendi(pg, "document.querySelectorAll('.fln').length === 2")
             pg.click("#flx-add"); pg.click('.flx-pop button:has-text("Confidence level")'); attendi(pg, "document.querySelectorAll('.fln').length === 3")
             pg.click('.fln:has-text("Confidence level")')
-            assert "Needs attention" in pg.inner_text(".fln.sel") and pg.locator(".fl-needs li").count() == 2, pg.inner_text(".fl-insp")
+            assert "Needs input" in pg.inner_text(".fln.sel") and pg.locator(".fl-needs li").count() == 2, pg.inner_text(".fl-insp")
             pg.click('.fl-fix:has-text("Molecular formulas")'); attendi(pg, "document.querySelectorAll('.fl-needs li').length === 1")
             assert "Remove" in pg.inner_text(".fl-insp")
         step("canvas: a missing input is said on the card with a one-click fix; removing can be undone", needs_and_fix)
@@ -205,7 +205,7 @@ try:
             assert "Issues (1)" in pg.inner_text(".flx-issues h3")
             pg.click('.flx-issues li button:has-text("Show")'); attendi(pg, "document.querySelector('.fln.sel')")
             pg.click('.flx-issues button:has-text("Add “Match to library”")'); attendi(pg, "document.querySelectorAll('.flx-issues li').length === 0")
-            assert "Nothing needs attention" in pg.inner_text(".flx-issues")
+            assert pg.locator(".flx-issues").is_hidden(), "no needs: the Issues box is not shown"
             pg.click('.fln:has-text("Build feature table")'); attendi(pg, "document.querySelector('.fl-insp h3').textContent === 'Build feature table'")
             q = pg.locator(".fl-insp-hd a.flx-q"); assert q.count() == 1 and q.get_attribute("href").startswith("teoria/21-glossario.html#g-"), q.count()
             for m in pg.locator('.fl-insp summary:has-text("More")').all(): m.click()

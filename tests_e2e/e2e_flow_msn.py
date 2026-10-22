@@ -39,7 +39,7 @@ try:
         attendi(pg, "E.panels.some(p=>p.type==='spec' && p._a && p._a.data && p.filt && p.filt.startsWith('msn:'))", 60000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
         pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web", timeout=120000)
-        pg.click('button[aria-label="Start from a template"]'); pg.click('.flx-tc[data-tpl="msn"]')
+        (None if pg.locator('.flx-tpl.show').count() else pg.click('button[aria-label="Start from a template"]')); pg.click('.flx-tc[data-tpl="msn"]')   # the button toggles the cards: open on the first screen
         attendi(pg, "document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow && document.querySelector('.flx-list').__flow.plan.steps.length === 3")
         got = {}
         def runs():
@@ -91,6 +91,21 @@ try:
             assert t.startswith("from,from_mz,from_formula,to,to_mz,to_formula,loss_mass,loss_formula,loss_ppm"), t[:200]
             assert len(t.splitlines()) > 1, t
         step("the table is the CSV of the modifications", table)
+        def graph_view():
+            g = json.loads(got["r"]["files"][0]["text"])
+            pg.evaluate("g => { const h = document.createElement('div'); h.id = 'tmpgraph'; document.body.append(h); FLOW.openMsnGraph(h, g, 'g.graph'); }", g)
+            pg.wait_for_selector("#tmpgraph .ig-node", timeout=30000)
+            assert pg.locator("#tmpgraph .ig-node").count() == len(g["nodi"]), "one box per ion"
+            assert pg.locator("#tmpgraph [aria-pressed=true]").first.inner_text() == "Graph"
+            pg.locator("#tmpgraph .ig-node").nth(1).click()
+            pg.wait_for_selector("#tmpgraph .fl-b:has-text('Use ')", timeout=10000)
+            pg.locator("#tmpgraph .fl-b:has-text('Use ')").first.click()
+            sc = pg.evaluate("(document.querySelector('.flx-list').__flow.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')).params || {}).scelte")
+            assert sc and "=" in sc, sc
+            pg.click("#tmpgraph [aria-pressed=false]")
+            assert pg.locator("#tmpgraph table").count() >= 1
+            pg.evaluate("document.querySelector('#tmpgraph').remove()")
+        step("the graph view draws one box per ion and «Use» writes the choice in scelte", graph_view)
         def empty():
             pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i); null")
             try: x = pg.evaluate(RUN, {"formula": ION})

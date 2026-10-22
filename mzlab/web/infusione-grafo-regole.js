@@ -13,13 +13,13 @@ export const arcRules = (/** @type {any} */ j, /** @type {any} */ a) => (j.regol
 /** A rule or a sum of two rules explains the arc. */
 export const isExplained = (/** @type {any} */ r) => !!r && (r.regole.length > 0 || r.composta.length > 0);
 
-const weakTag = (/** @type {any} */ x) => (x.priorita === 3 ? ` (${I18N.t("msngrafo.rule.weak")})` : "");
+const weakTag = (/** @type {any} */ x, /** @type {(k: string) => string} */ t) => (x.priorita === 3 ? ` (${t("msngrafo.rule.weak")})` : "");
 
 /** The short text under the loss of an arc: the ids of its rules (at most two, «+n» for the rest), the weak ones tagged; empty when no rule explains it. */
-export function arcLabel(/** @type {any} */ j, /** @type {any} */ a) {
+export function arcLabel(/** @type {any} */ j, /** @type {any} */ a, /** @type {(k: string) => string} */ t = k => I18N.t(/** @type {any} */ (k))) {
   const r = arcRules(j, a);
   if (!isExplained(r)) return "";
-  const ids = r.regole.length ? r.regole.map((/** @type {any} */ x) => x.id + weakTag(x)) : r.composta.map((/** @type {string[]} */ c) => c.join(" + "));
+  const ids = r.regole.length ? r.regole.map((/** @type {any} */ x) => x.id + weakTag(x, t)) : r.composta.map((/** @type {string[]} */ c) => c.join(" + "));
   return ids.slice(0, 2).join(", ") + (ids.length > 2 ? ` +${ids.length - 2}` : "");
 }
 

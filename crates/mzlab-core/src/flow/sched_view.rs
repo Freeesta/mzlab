@@ -121,6 +121,12 @@ impl Sched {
         format!("[{}]", texts.join(","))
     }
 
+    /// The same events, one text and its `seq` each.
+    pub fn event_texts(&self, seq: u64) -> Vec<(u64, String)> {
+        let after = self.log.iter().filter(|e| e.0 > seq);
+        after.map(|e| (e.0, e.1.clone())).collect()
+    }
+
     /// Number of `update` calls so far.
     pub fn rev(&self) -> u64 {
         self.rev

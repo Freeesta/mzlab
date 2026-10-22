@@ -38,7 +38,7 @@ Lista ORDINATA delle sessioni del test T (`07-mappa-codice.md` §5). La lancia u
 | T9 | `--ruolo orchestratore`, R01–R40 | 40 | 01, 10 | 5 $ | 1,40 $ | iniezione |
 | — | giudice sulle frasi aperte di T1–T9 | ≈ 80 | 09 | 5 $ | ≈ 2 $ | spiegazioni |
 | — | punto di controllo: risultati al Coordinatore, correzioni dei prompt, rifacimento dei gruppi cambiati (riserva ≈ 30 $) | | | | | |
-| T10–T19 | `assist run OUT/serie-N --copione copioni/N.json` (sessioni intere simulate: apertura → domande → piano → corsa → tabella → 2 grafici) | 10 sessioni | 01–08 | 10 $ ciascuna | ≈ 1 $ ciascuna | TTL della cache, catalogo intero o ridotto |
+| T10–T19 | `assist run OUT/serie-N --copione tests/data/assist/copioni/TN.json` (sessioni intere simulate: apertura → domande → piano → corsa → tabella → 2 grafici) | 10 sessioni | 01–08 | 10 $ ciascuna | ≈ 1 $ ciascuna | TTL della cache, catalogo intero o ridotto |
 | T20–T29 | Federico con i suoi file, a mano | 10 sessioni | 01–08 | 10 $ ciascuna | ≈ 2,5 $ ciascuna | confronto con il chimico (`06-valutazione.md` §4) |
 
 Le stime della tabella sono in chiamate dirette; T1–T8 si lanciano con `--batch`.
@@ -60,7 +60,7 @@ Totale stimato ≈ 50 $ in chiamate dirette, ≈ 44 $ con T1–T8 sulla Batch AP
 | T18 | file DIA | tipo di acquisizione e piano possibile |
 | T19 | file rotto + 6 buoni | errore detto, sessione che continua sugli altri |
 
-Ogni copione dà le risposte alle domande chiuse (per id della domanda o per testo) e una risposta «not sure» per controllare che l'assistente non inventi.
+I copioni stanno in `tests/data/assist/copioni/` (formato in `06-valutazione.md` §6). Ogni copione dà le risposte alle domande chiuse (per id della domanda o per testo) e una risposta «not sure» per controllare che l'assistente non inventi.
 
 ## 5. Dopo il test
 

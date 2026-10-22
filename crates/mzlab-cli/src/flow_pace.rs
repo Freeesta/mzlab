@@ -1,11 +1,16 @@
 //! The native index build and the counters it reports its progress with: a reader that counts the scans it decodes (`Scans`) and a `Read` that counts bytes
-//! (`Counted`). They forward everything and only tell a `Pace` (`mzlab_core::pace`) how far the job is, so the index made is the same bytes.
+//! (`Counted`). They forward everything and only tell a `Pace` (`mzlab_core::pace`) how far the job is, so the index made is the same bytes. The `Gate` is
+//! what a live run (`flow_live.rs`) hands a job: the flag that cancels it and where it tells its progress; the readers and writers below stop with
+//! `err.flow.cancelled` at the next piece once the flag is up, and are the very same bytes while it is down.
 
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use mzlab_core::error::Result;
+use mzlab_core::error::{Error, Result};
+use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::build_mzml_spill;
 use mzlab_core::upload::{impronte, indicizza_lettore, prepare};
@@ -17,18 +22,142 @@ use mzlab_core::mzml::{Chromatogram, Spectrum};
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 use mzlab_core::pace::Pace;
 
-/// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
-pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
-    build_index_with(path, label, idx, budget, &mut |_, _| {})
+/// The flag that cancels a live job (none: a job of `flow run`).
+pub(crate) type Stop = Option<Arc<AtomicBool>>;
+
+/// Tells the share done (0 to 1) of the job.
+pub(crate) type Report = Arc<dyn Fn(f64) + Send + Sync>;
+
+pub(crate) fn cancelled() -> Error {
+    Error::new("err.flow.cancelled")
 }
 
-/// `build_index_of` telling `step(done, total)` how far pass 1 has got (scans of the sample, bytes of an mzML), at most once per 1 %; same bytes with any `step`.
+fn up(stop: &Stop) -> bool {
+    stop.as_ref().is_some_and(|f| f.load(Ordering::Relaxed))
+}
+
+/// What a live run gives a job: its cancel flag and where it reports. `Gate::none()` is a job with neither.
+#[derive(Clone, Default)]
+pub(crate) struct Gate {
+    pub(crate) stop: Stop,
+    pub(crate) report: Option<Report>,
+}
+
+impl Gate {
+    pub(crate) fn none() -> Gate {
+        Gate::default()
+    }
+
+    pub(crate) fn stopped(&self) -> bool {
+        up(&self.stop)
+    }
+
+    /// The `(done, total)` callback of the job: the share done goes to `report`.
+    pub(crate) fn pace(&self) -> impl FnMut(usize, usize) + '_ {
+        move |d, t| {
+            if let Some(r) = &self.report {
+                r(if t == 0 { 1.0 } else { d as f64 / t as f64 });
+            }
+        }
+    }
+}
+
+/// What a live run knows about the jobs it runs: the gate of each.
+pub(crate) trait Watch: Send + Sync {
+    fn gate(&self, instance: &str, item: Option<&str>) -> Gate;
+}
+
+/// A file (or any reader or writer) that fails with `err.flow.cancelled` once the flag is up; the bytes that go through are untouched.
+pub(crate) struct Stopping<T> {
+    inner: T,
+    stop: Stop,
+}
+
+impl<T> Stopping<T> {
+    pub(crate) fn new(inner: T, stop: Stop) -> Self {
+        Stopping { inner, stop }
+    }
+
+    fn check(&self) -> std::io::Result<()> {
+        match up(&self.stop) {
+            true => Err(std::io::Error::other("cancelled")),
+            false => Ok(()),
+        }
+    }
+}
+
+impl<T: Read> Read for Stopping<T> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.check()?;
+        self.inner.read(buf)
+    }
+}
+
+impl<T: Write> Write for Stopping<T> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.check()?;
+        self.inner.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+/// An index being read by a detection: stops at the next read once the flag is up and reports the share of the file read, as far as 99 % (the job
+/// reads parts again after the first pass, so the end is the job's own).
+pub(crate) struct Gated<R> {
+    inner: R,
+    gate: Gate,
+    size: u64,
+    read: u64,
+    pct: u64,
+}
+
+impl<R> Gated<R> {
+    pub(crate) fn new(inner: R, gate: &Gate, size: u64) -> Self {
+        Gated {
+            inner,
+            gate: gate.clone(),
+            size,
+            read: 0,
+            pct: 0,
+        }
+    }
+}
+
+impl<R: ReadAt> ReadAt for Gated<R> {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        if self.gate.stopped() {
+            return Err(cancelled());
+        }
+        self.inner.read_at(off, buf)?;
+        self.read += buf.len() as u64;
+        let pct = (self.read.min(self.size) * 99 / self.size.max(1)).min(99);
+        if pct > self.pct {
+            self.pct = pct;
+            if let Some(r) = &self.gate.report {
+                r(pct as f64 / 100.0);
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
+pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
+    build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
+}
+
+/// `build_index_of` telling `step(done, total)` how far pass 1 has got (scans of the sample, bytes of an mzML), at most once per 1 %; same bytes with any
+/// `step`. With the flag `stop` up the build ends at the next piece it reads (the file at `idx` is then partial: the caller removes it).
 pub(crate) fn build_index_with(
     path: &Path,
     label: &str,
     idx: &Path,
     budget: usize,
     step: &mut dyn FnMut(usize, usize),
+    stop: &Stop,
 ) -> Result<()> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let name = path
@@ -40,7 +169,9 @@ pub(crate) fn build_index_with(
         let p = prepare(&mut File::open(path).map_err(io)?, size, &name)?;
         build_mzml_spill(
             &p.table,
-            BufReader::new(Counted::new(File::open(path).map_err(io)?, size, &mut pace)),
+            BufReader::new(
+                Counted::new(File::open(path).map_err(io)?, size, &mut pace).stopping(stop),
+            ),
             &mut out,
             budget,
             None,
@@ -51,7 +182,7 @@ pub(crate) fn build_index_with(
         let l = mzlab_lettori::apri(fs, &Limiti::desktop())?;
         let ids: Vec<u32> = l.campioni().iter().map(|s| s.id).collect();
         let sample = flow_set::sample_index(label, &ids)?;
-        let mut l = Scans::new(l, sample, &mut pace);
+        let mut l = Scans::new(l, sample, &mut pace).stopping(stop);
         indicizza_lettore(&mut l, sample, &imp, &name, &mut out, budget, &mut |_| {})?;
     }
     pace.at(1, 1);
@@ -65,6 +196,7 @@ pub(crate) struct Scans<'a, 'b> {
     n: usize,
     done: usize,
     pace: &'a mut Pace<'b>,
+    stop: Stop,
 }
 
 impl<'a, 'b> Scans<'a, 'b> {
@@ -77,6 +209,20 @@ impl<'a, 'b> Scans<'a, 'b> {
             n,
             done: 0,
             pace,
+            stop: None,
+        }
+    }
+
+    /// The reader fails with `err.flow.cancelled` at the next scan once `stop` is up.
+    pub(crate) fn stopping(mut self, stop: &Stop) -> Self {
+        self.stop = stop.clone();
+        self
+    }
+
+    fn gone(&self) -> Result<()> {
+        match up(&self.stop) {
+            true => Err(cancelled()),
+            false => Ok(()),
         }
     }
 
@@ -93,8 +239,8 @@ impl Lettore for Scans<'_, '_> {
     fn formato(&self) -> Formato { self.l.formato() }
     fn campioni(&self) -> &[Campione] { self.l.campioni() }
     fn indice(&mut self, c: usize) -> mzlab_core::Result<&[VoceScansione]> { self.l.indice(c) }
-    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { let s = self.l.scansione(c, k); self.count(c); s }
-    fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { let s = self.l.scansione_dati(c, k); self.count(c); s }
+    fn scansione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione(c, k); self.count(c); s }
+    fn scansione_dati(&mut self, c: usize, k: usize) -> mzlab_core::Result<Spectrum> { self.gone()?; let s = self.l.scansione_dati(c, k); self.count(c); s }
     fn scansione_profilo(&mut self, c: usize, k: usize) -> mzlab_core::Result<Option<Spectrum>> { self.l.scansione_profilo(c, k) }
     fn intestazione(&mut self, c: usize, k: usize) -> mzlab_core::Result<Vec<Campo>> { self.l.intestazione(c, k) }
     fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<VoceCromatogramma>> { self.l.cromatogrammi(c) }
@@ -115,6 +261,7 @@ pub(crate) struct Counted<'a, 'b, R> {
     size: usize,
     read: usize,
     pace: &'a mut Pace<'b>,
+    stop: Stop,
 }
 
 impl<'a, 'b, R> Counted<'a, 'b, R> {
@@ -124,7 +271,14 @@ impl<'a, 'b, R> Counted<'a, 'b, R> {
             size: size as usize,
             read: 0,
             pace,
+            stop: None,
         }
+    }
+
+    /// The reader fails at the next read once `stop` is up.
+    pub(crate) fn stopping(mut self, stop: &Stop) -> Self {
+        self.stop = stop.clone();
+        self
     }
 }
 
@@ -138,6 +292,9 @@ impl<R: Seek> Seek for Counted<'_, '_, R> {
 
 impl<R: Read> Read for Counted<'_, '_, R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if up(&self.stop) {
+            return Err(std::io::Error::other("cancelled"));
+        }
         let n = self.r.read(buf)?;
         self.read += n;
         self.pace.at(self.read, self.size);

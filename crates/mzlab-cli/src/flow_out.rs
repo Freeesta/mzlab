@@ -6,12 +6,13 @@ use std::path::{Path, PathBuf};
 
 use mzlab_core::flow::{parse, plan_json, plan_order, Plan, Run};
 
+use crate::flow::live::LiveRun;
 use crate::flow::{steps, DoneFn, FileRunner, Meter};
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 
 use crate::flow_json::{fail, Style, JSONL_MARK};
-use crate::flow_run::{fill_inputs, prepare, problem_text, run_checked};
+use crate::flow_run::{fill_inputs, prepare, problem_text, prov_text, run_checked};
 use crate::Outcome;
 
 /// Runs `ready` (the checked, expanded form of `plan`) with the inputs `found` and writes the run folder `out`; the steps whose result is already in
@@ -48,10 +49,14 @@ pub(crate) fn write_run(
     }
     let runner = FileRunner::located(&out, found, order, meter, fresh).with_budget(budget_mb);
     let written = std::fs::write(out.join("plan.json"), &text);
-    let (run, prov) = match written
-        .map_err(crate::flow::io)
-        .and_then(|_| run_checked(ready, text.as_bytes(), &runner, workers))
-    {
+    let ran = written.map_err(crate::flow::io).and_then(|_| {
+        if st.events {
+            run_events(ready, text.as_bytes(), runner, &out, workers)
+        } else {
+            run_checked(ready, text.as_bytes(), &runner, workers)
+        }
+    });
+    let (run, prov) = match ran {
         Ok(r) => r,
         Err(e) => {
             return fail(
@@ -149,4 +154,32 @@ pub fn run_plan_notify(
     })?;
     let runner = FileRunner::cached(dir, work, meter, fresh).with_done(done);
     run_checked(&plan, text, &runner, workers)
+}
+
+/// Runs the checked plan `ready` like `run_checked` and prints the `flowlive/1` events on stdout, one line each, as they happen (`flow run --jsonl`);
+/// returns the run and its `prov/1` text (`text` is the plan as it was read).
+pub(crate) fn run_events(
+    ready: &Plan,
+    text: &[u8],
+    runner: FileRunner,
+    dir: &Path,
+    workers: usize,
+) -> mzlab_core::Result<(Run, String)> {
+    use std::io::Write;
+    let live = LiveRun::with_runner(ready.clone(), steps(), runner, dir, (workers, &|_| false))?;
+    let mut seq = 0;
+    loop {
+        let idle = live.wait_idle(std::time::Duration::from_millis(100));
+        let mut out = std::io::stdout().lock();
+        for (n, line) in live.event_lines(seq) {
+            let _ = writeln!(out, "{line}");
+            seq = n;
+        }
+        let _ = out.flush();
+        if idle {
+            let run = live.finish()?;
+            let prov = prov_text(text, &run);
+            return Ok((run, prov));
+        }
+    }
 }

@@ -1,0 +1,24 @@
+{
+ "schema": "assist-copione/1",
+ "id": "T18",
+ "set": "dia",
+ "hide_names": true,
+ "policy": "L1",
+ "cap_usd": 10,
+ "answers": {
+  "goal": "screening"
+ },
+ "messages": [
+  "What is in this file?",
+  "What can I do with it?"
+ ],
+ "confirm": "yes",
+ "run": "after_plan",
+ "expect": {
+  "plan_valid_within": 3,
+  "numbers_faithful": true,
+  "identity_lr": 0,
+  "max_useless_questions": 1
+ },
+ "needs": "A2"
+}

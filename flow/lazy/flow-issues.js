@@ -29,7 +29,8 @@
     const { el, icon } = F, box = el("section", { class: "flx-issues", "aria-label": "Issues" });
     const list = S.problems || [];
     box.append(el("h3", { text: list.length ? `Issues (${list.length})` : "Issues" }));
-    if (!list.length) { box.append(el("p", { class: "fl-note", text: "Nothing needs attention." })); return box; }
+    // nothing to fix: the box is not shown (the cards and the status in the bar already say so)
+    if (!list.length) { box.hidden = true; return box; }
     const ul = el("ul", { class: "flx-needs", "aria-label": "Things to fix" });
     for (const p of list) {
       const f = F.friendly(S, p), n = nodeOf(p.instance);

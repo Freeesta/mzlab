@@ -1,0 +1,36 @@
+{"schema":"assist-caso/1","id":"G01","role":"metadati","set":"fs_pos","expect":{"acquisition":[{"files":"*","technique":"full_scan","polarity":"+","resolution":"unit","ms_levels":[1],"chromatography":"lc"}],"no_question_on":["polarity","resolution","technique"]}}
+{"schema":"assist-caso/1","id":"G02","role":"metadati","set":"fs_neg","expect":{"acquisition":[{"files":"*","technique":"full_scan","polarity":"-","resolution":"unit","ms_levels":[1],"chromatography":"lc"}]}}
+{"schema":"assist-caso/1","id":"G03","role":"metadati","set":"polalt","expect":{"acquisition":[{"files":"*","technique":"full_scan","polarity":"+/-","resolution":"unit"}],"action":"split_series"}}
+{"schema":"assist-caso/1","id":"G04","role":"metadati","set":"ida","expect":{"acquisition":[{"files":"*","technique":"dda","polarity":"+","resolution":"unit","ms_levels":[1,2]}]}}
+{"schema":"assist-caso/1","id":"G05","role":"metadati","set":"mrm_epi","expect":{"acquisition":[{"files":"*","technique":"mrm","also":["product_ion"],"polarity":"+","resolution":"unit"}],"forbidden_steps":["features.detect"]}}
+{"schema":"assist-caso/1","id":"G06","role":"metadati","set":"mrm_std","expect":{"acquisition":[{"files":"*","technique":"mrm","polarity":"+","resolution":"unit"}],"roles":{"standard":6,"sample":7},"question_on":["roles"],"forbidden_text":["calibration line","retta","concentration of"]}}
+{"schema":"assist-caso/1","id":"G07","role":"metadati","set":"ms2","expect":{"acquisition":[{"files":"*","technique":"product_ion","ms_levels":[2],"resolution":"unit"}],"must_mention":["empty scans"]}}
+{"schema":"assist-caso/1","id":"G08","role":"metadati","set":"hr","expect":{"acquisition":[{"files":"*","technique":"dda","polarity":"+","resolution":"high","analyzer":"orbitrap","ms_levels":[1,2]}],"must_mention":["two models"]}}
+{"schema":"assist-caso/1","id":"G09","role":"metadati","set":"trunc","expect":{"unreadable":["*"],"forbidden_fields":["technique","polarity"]}}
+{"schema":"assist-caso/1","id":"G10","role":"orchestratore","set":"fs_pos","expect":{"must_mention":["0.3"],"forbidden_tools":["flow_set_param"],"must_not":["correct the calibration"]},"user":"The parent should be at m/z 364.1: where is it?"}
+{"schema":"assist-caso/1","id":"G11","role":"cromatografia","set":"fs_pos","expect":{"flags":[{"topic":"contaminant","rt":18.3,"files":"*"}],"forbidden_flags":["rt_drift","intensity_drift"]}}
+{"schema":"assist-caso/1","id":"G12","role":"interprete","set":"fs_pos","expect":{"flags":[{"topic":"adducts","pair_mz":[364.4,386.3]}]}}
+{"schema":"assist-caso/1","id":"G13","role":"interprete","set":"fs_pos","expect":{"flags":[{"topic":"in_source","mz":[194.2,152.2,124.3],"rt":14.3}]}}
+{"schema":"assist-caso/1","id":"G14","role":"orchestratore","set":"fs_pos","expect":{"judge":["parent signal decreases over time","signals rise then fall","no identity at unit resolution"],"forbidden_text":["is the product","transformation product is","are the transformation products"]},"user":"What changes between t0 and t60?"}
+{"schema":"assist-caso/1","id":"G15","role":"parametri","set":"fs_pos","expect":{"params":{"features.detect.axis":{"eq":"lr"},"tp.dig_lr.tol_da":{"min":0.2,"max":0.6}}}}
+{"schema":"assist-caso/1","id":"G16","role":"parametri","set":"fs_pos","expect":{"params":{"features.detect.masstrace.min_points":{"min":3,"max":6},"features.detect.centwave.peak_width_s":{"min":[3,6],"max":[15,30]}}}}
+{"schema":"assist-caso/1","id":"G17","role":"parametri","set":"fs_pos","expect":{"params":{"features.align.rt_gap":{"min":0.05,"max":0.3}},"source_not":"rule:R-rt-1"}}
+{"schema":"assist-caso/1","id":"G18","role":"parametri","set":"fs_pos","expect":{"params":{"features.detect.masstrace.max_gap":{"eq":1}},"present":["features.detect.floor","features.detect.min_height"]}}
+{"schema":"assist-caso/1","id":"G19","role":"parametri","set":"hr","expect":{"files":["HR_DDA-Exploris-t30.mzML"],"params":{"features.detect.centwave.ppm":{"min":2,"max":6}}}}
+{"schema":"assist-caso/1","id":"G20","role":"parametri","set":"hr","expect":{"files":["HR_DDA-Fusion-t30.mzML"],"params":{"features.detect.centwave.ppm":{"min":4,"max":10}},"must_mention":["systematic"]}}
+{"schema":"assist-caso/1","id":"G21","role":"parametri","set":"hr","expect":{"params_per_file":{"HR_DDA-Exploris-t30.mzML":{"features.ms2_link.default_half_window":{"eq":0.75}},"HR_DDA-Fusion-t30.mzML":{"features.ms2_link.default_half_window":{"eq":1.5}}}}}
+{"schema":"assist-caso/1","id":"G22","role":"orchestratore","set":"hr","expect":{"plan":{"valid_within":3,"has_steps":["features.detect","features.align","features.ms2_link"],"axis":"ppm"},"forbidden_tools":["flow_run"]},"user":"Build me a workflow for screening.","answers":{"goal":"screening","blanks":"none"}}
+{"schema":"assist-caso/1","id":"G23","role":"orchestratore","set":"fs_pos","expect":{"question_on":["blanks"],"forbidden_params":["table.filter.blank_ratio"]},"user":"Build the workflow for the transformation products.","answers":{"goal":"transformation products"}}
+{"schema":"assist-caso/1","id":"G24","role":"grafici","set":"fs_pos","expect":{"chart":{"ref":"tic:*","mark":"line","x":"rt","y":"intensity","color":"file"}},"user":"show the TIC of all files"}
+{"schema":"assist-caso/1","id":"G25","role":"interprete","set":"fs_pos","expect":{"flags_expected":["adducts"],"flags_forbidden":[]}}
+{"schema":"assist-caso/1","id":"G26","role":"interprete","set":"fs_pos","expect":{"flags_expected":["isotopes"],"flags_forbidden":["duplicates"]}}
+{"schema":"assist-caso/1","id":"G27","role":"interprete","set":"fs_pos","expect":{"flags_expected":["in_source"],"flags_forbidden":[]}}
+{"schema":"assist-caso/1","id":"G28","role":"interprete","set":"fs_pos","expect":{"flags_expected":["contaminants"],"flags_forbidden":["blanks"]}}
+{"schema":"assist-caso/1","id":"G29","role":"interprete","set":"fs_pos","expect":{"flags_expected":[],"flags_forbidden":["long_traces","homologues"],"note":"no long traces or homologous series in the generator"}}
+{"schema":"assist-caso/1","id":"G30","role":"interprete","set":"sub","expect":{"flags_expected":["blanks"],"flags_forbidden":[],"answers":{"blanks":["SUB_blank.mzML"]}}}
+{"schema":"assist-caso/1","id":"G31","role":"interprete","set":"sub","expect":{"flags_expected":[],"flags_forbidden":["rt_drift"],"note":"0.05 min drift is below 2 x median FWHM","answers":{"blanks":["SUB_blank.mzML"]}}}
+{"schema":"assist-caso/1","id":"G32","role":"interprete","set":"sub","expect":{"flags_expected":[],"flags_forbidden":["qc_drift","qc_cv"],"note":"gain 1.3 in t20 is not a QC drift: no QC in the set","answers":{"blanks":["SUB_blank.mzML"]}}}
+{"schema":"assist-caso/1","id":"G33","role":"interprete","set":"qc","expect":{"flags_expected":["rt_drift"],"flags_forbidden":["qc_cv"]}}
+{"schema":"assist-caso/1","id":"G34","role":"interprete","set":"qc","expect":{"flags_expected":["blanks"],"flags_forbidden":[]}}
+{"schema":"assist-caso/1","id":"G35","role":"interprete","set":"hr","expect":{"flags_expected":[],"flags_forbidden":["duplicates"],"note":"isobars 305.0702 and 305.1066 at different RT are not duplicates"}}
+{"schema":"assist-caso/1","id":"G36","role":"interprete","set":"fs_neg","expect":{"flags_expected":[],"flags_forbidden":["adducts","polarity_units"],"note":"ESI-: no Na/NH4 pairs, units consistent"}}

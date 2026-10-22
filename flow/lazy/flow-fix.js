@@ -90,11 +90,14 @@
   F.canvasModel = (S, simple) => {
     const plan = S.plan, nodes = /** @type {any[]} */ ([]), owner = /** @type {Map<string, string>} */ (new Map()), edges = /** @type {Set<string>} */ (new Set());
     const baseSteps = new Set(F.BASE.flatMap((/** @type {any} */ g) => g.steps));
-    const lone = (/** @type {any} */ f) => !(simple && f.type === "raw");
+    // the base group of a step the plan lacks (the MSn template has no feature table) is not drawn; without the import group the raw files stay visible
+    const present = (/** @type {any} */ g) => g.steps.some((/** @type {string} */ s) => F.findStep(plan, s));
+    const lone = (/** @type {any} */ f) => !(simple && f.type === "raw" && present(F.BASE[0]));
     for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your files. Chosen when the plan is run.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
     const groups = simple ? F.BASE : [];
     for (const g of groups) {
       const insts = g.steps.map((/** @type {string} */ s) => F.findStep(plan, s)).filter(Boolean);
+      if (!insts.length) continue;
       nodes.push({ key: g.key, kind: "group", title: g.title, why: g.why, cat: g.key === "import" ? "input" : "process", ids: insts.map((/** @type {any} */ i) => i.id), locked: true });
       for (const i of insts) owner.set(i.id, g.key);
     }
@@ -119,6 +122,17 @@
     const rows = new Map();
     for (const n of nodes) { const d = /** @type {number} */ (depth.get(n.key)), r = rows.get(d) || 0; rows.set(d, r + 1); n.x = 40 + d * W; n.y = 40 + r * H; }
     return { width: 80 + (Math.max(0, ...nodes.map(n => /** @type {number} */ (depth.get(n.key)))) + 1) * W, height: 80 + Math.max(1, ...rows.values()) * H };
+  };
+  /** the names of the files open in the Data tab @returns {string[]} */
+  F.dataFiles = () => {
+    const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.filter((/** @type {any} */ f) => f && !f.gone && f.file) : [];
+    return [...new Set(open.map((/** @type {any} */ f) => String(f.file).split("#")[0]))];
+  };
+  /** the state of a card: «warn» with the reason when data or settings are missing, «ok» when it can run from the start @param {any} S @param {any} node @returns {{ok: boolean, word: string}} */
+  F.nodeState = (S, node) => {
+    if (F.nodeProblems(S, node).length) return { ok: false, word: "Needs input" };
+    if (node.key === "import" && !F.dataFiles().length) return { ok: false, word: "No data" };
+    return { ok: true, word: "Runs" };
   };
   /** the first problem of a node, plain @param {any} S @param {any} node */
   F.nodeProblems = (S, node) => S.problems.filter((/** @type {any} */ p) => node.ids.includes(p.instance)).map((/** @type {any} */ p) => F.friendly(S, p));
