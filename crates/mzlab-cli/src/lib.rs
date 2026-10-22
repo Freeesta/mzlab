@@ -394,6 +394,8 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
+const PLAIN: [&str; 4] = ["llm", "steps", "tutor", "explain-missing"];
+
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     match command {
         "llm" => llm::run(args),
@@ -409,7 +411,7 @@ pub fn execute(args: &[String]) -> Outcome {
     match args.next().as_deref() {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
-        Some(c @ ("llm" | "steps" | "tutor" | "explain-missing")) => return run_plain(c, args.collect()),
+        Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
