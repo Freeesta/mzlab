@@ -7720,3 +7720,4 @@
 {"v":1,"ts_utc":"2026-10-22T19:07:10Z","tipo":"job","k":"120028828442","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ac299284140bfc2c4c6b3d9df29f2c4c65330128","run_id":39837252343,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T19:07:10Z","tipo":"job","k":"120028828780","workflow":"rust","job":"deny","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"ac299284140bfc2c4c6b3d9df29f2c4c65330128","run_id":39837252343,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-22T19:07:21Z","tipo":"carico","k":"2026-10-22T19:0","job_in_coda":1,"job_in_corso":40}
+{"v":1,"ts_utc":"2026-10-22T19:08:14Z","azione":"push","titolo":"Fix clippy type_complexity and set the interp wasm cap to +10 %","merge_main":false,"aree":{"rust":1,"docs":1,"tools":1},"tipo":"pr","pr":1521,"sha":"c7851fcc95b14d3114b7cb0f7dbc718fc380bac7"}
