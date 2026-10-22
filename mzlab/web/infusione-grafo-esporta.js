@@ -26,7 +26,7 @@ export async function runExport(/** @type {any} */ file, /** @type {"csv" | "mgf
 }
 
 /** @returns {Promise<string>} the library file of the user ("" when there is none) */
-async function readLibrary() {
+export async function readLibrary() {
   try {
     const root = await navigator.storage.getDirectory(), fh = await root.getFileHandle(LIB_FILE);
     return await (await fh.getFile()).text();
