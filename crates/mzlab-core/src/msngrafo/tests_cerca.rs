@@ -153,3 +153,40 @@ fn a_text_that_is_not_a_graph_or_a_library_is_a_keyed_error() {
         assert_eq!(e.key, "err.msnlib.bad");
     }
 }
+
+#[test]
+fn an_analogue_splits_the_fragments_in_shifted_and_not_shifted_and_stays_after_the_exact_ones() {
+    let std = graph(305.1, 1, &MS2, &[]);
+    let modified = graph(
+        321.1,
+        1,
+        &[(277.1, 100.0), (244.1, 50.0), (217.1, 20.0)],
+        &[],
+    );
+    let lib = library(&[("STD", &std, 1)]);
+    let none = candidates(&lib, &modified, &OpzioniCerca::default());
+    assert!(none.is_empty(), "analogues are not searched by default");
+    let o = OpzioniCerca {
+        delta_max: 20.0,
+        ..OpzioniCerca::default()
+    };
+    let found = candidates(&lib, &modified, &o);
+    assert_eq!(found.len(), 1);
+    let a = found[0].get("analogo").unwrap();
+    assert_eq!(a.get("delta_da").unwrap().f64(), Some(16.0));
+    assert_eq!(a.get("spostati").unwrap().f64(), Some(1.0));
+    assert_eq!(a.get("non_spostati").unwrap().f64(), Some(2.0));
+    assert_eq!(a.get("copertura").unwrap().f64(), Some(1.0));
+    // an exact entry of the same unknown comes first and has no analogue field
+    let exact = library(&[("STD", &std, 1), ("MOD", &modified, 1)]);
+    let found = candidates(&exact, &modified, &o);
+    assert_eq!(found[0].get("id").unwrap().str(), Some("MOD"));
+    assert!(found[0].get("analogo").unwrap().is_null());
+    assert_eq!(found[1].get("id").unwrap().str(), Some("STD"));
+    // beyond delta_max nothing enters
+    let narrow = OpzioniCerca {
+        delta_max: 10.0,
+        ..OpzioniCerca::default()
+    };
+    assert!(candidates(&lib, &modified, &narrow).is_empty());
+}
