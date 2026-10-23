@@ -14290,3 +14290,4 @@
 {"v":1,"ts_utc":"2026-10-23T11:56:12Z","tipo":"job","k":"120400579197","workflow":"pages","job":"deploy","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"aa48836f44c21372877415344e0845e4498603c4","run_id":39949603467,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T11:56:13Z","tipo":"annullamento","k":"39949603467","workflow":"pages","minuti_runner":0.1,"sostituito_da":"f75b8384de247b3889224d6c464260ea2c0ab497","pr":null,"sha":"aa48836f44c21372877415344e0845e4498603c4","run_id":39949603467,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T11:56:39Z","tipo":"carico","k":"2026-10-23T11:5","job_in_coda":0,"job_in_corso":29}
+{"v":1,"ts_utc":"2026-10-23T11:57:06Z","azione":"aperta","tipo":"pr","pr":1604,"sha":"cc386b018d9785ee848780bf6ca2ab0bc7f47802"}
