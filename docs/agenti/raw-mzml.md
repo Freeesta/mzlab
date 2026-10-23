@@ -36,7 +36,7 @@ Suddivisione di una scrittura PRIDE senza zlib (fasi, secondi sul totale 4,08 xm
 
 ## zlib: miniz_oxide contro zlib-rs
 Stesso banco, build con `--features banco-zlib-rs`, 1 thread, secondi totali (miniz → zlib-rs; byte di uscita): PRIDE livello 1 8,76 → 7,26 s (−17 %; 722 → 837 MB, +16 %), livello 6 32,8 → 17,6 s (−46 %; 718 → 717 MB); denso 0,4 GB livello 1 6,99 → 10,8 s (+54 %; 711 → 921 MB, +30 %), livello 6 32,5 → 19,1 s (−41 %; 712 → 796 MB).
-Il livello 0 oscilla di più (PRIDE 7,5 → 4,2 s, denso 6,3 → 3,1 s: il primo giro paga la cache fredda), da non leggere come guadagno. zlib-rs cambia i byte compressi: richiede una nuova versione `conv/1` con prima/dopo; guadagna dove l'ingresso è fatto di spettri a centroidi e perde sui profili densi a livello 1. Scelta rimandata a RM-3 (V10).
+Il livello 0 oscilla di più (PRIDE 7,5 → 4,2 s, denso 6,3 → 3,1 s: il primo giro paga la cache fredda), da non leggere come guadagno. zlib-rs cambia i byte compressi: richiede una nuova versione `conv/1` con prima/dopo; guadagna dove l'ingresso è fatto di spettri a centroidi e perde sui profili densi a livello 1. Decisione (V10): resta miniz_oxide; zlib-rs è una dipendenza nuova e al livello predefinito 1 peggiora i profili densi.
 
 ## D11: le impronte di `mzlab-cli convert`
 Su PRIDE (RM-0, misura `--solo cli`, senza SHA-NI) il comando impiegava ≈ 35 s contro 20 s del solo scrittore indicizzato: non era conversione ma impronte calcolate più volte sugli stessi byte (SHA-256 dell'ingresso 8,6 s, SHA-1 dell'ingresso 5,7 s dentro la testata, SHA-256 dell'uscita 3,7 s in `keep` e di nuovo 3,7 s nel rapporto, ingresso letto 3×, uscita riletta 2×).
