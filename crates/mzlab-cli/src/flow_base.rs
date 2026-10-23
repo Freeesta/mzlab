@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use mzlab_core::budget::MemBudget;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
+use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Value;
 use mzlab_core::lettori::Limiti;
@@ -328,8 +329,10 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let gate = r.gate(job);
     let (path, label) = (r.path(input), input.label.as_deref());
     let mut pace = gate.pace();
-    let profile = write_mzml_with(&path, label, &out, (peaks, opz), &mut pace, &gate.stop)?;
-    let mut made = Made::new("mzml", r.keep(out, DataType::Mzml)?);
+    let (profile, bytes, sha256) =
+        write_mzml_with(&path, label, &out, (peaks, opz), &mut pace, &gate.stop)?;
+    crate::flow_set::remember_sha(&out, bytes, &sha256);
+    let mut made = Made::new("mzml", r.keep_known(out, DataType::Mzml, bytes, sha256));
     if profile {
         made.warnings.push("warn.flow.profile".into());
     }
@@ -345,11 +348,12 @@ pub(crate) fn write_mzml(
     peaks: Picchi,
     opz: Opzioni,
 ) -> Result<bool> {
-    write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None)
+    write_mzml_with(path, label, out, (peaks, opz), &mut |_, _| {}, &None).map(|w| w.0)
 }
 
 /// `write_mzml` telling `step(done, total)` how many scans it has written, at most once per 1 %; the file is the same with any `step`. With the flag
-/// `stop` up the write ends at the next piece with `err.flow.cancelled`.
+/// `stop` up the write ends at the next piece with `err.flow.cancelled`. Gives whether the file keeps its profile points, and the size and SHA-256 of the file
+/// written, hashed while it was written.
 pub(crate) fn write_mzml_with(
     path: &Path,
     label: Option<&str>,
@@ -357,7 +361,7 @@ pub(crate) fn write_mzml_with(
     (peaks, opz): (Picchi, Opzioni),
     step: &mut dyn FnMut(usize, usize),
     stop: &Stop,
-) -> Result<bool> {
+) -> Result<(bool, u64, String)> {
     let mut pace = mzlab_core::pace::Pace::new(step);
     let mut reader = mzlab_lettori::apri(crate::flow_set::file_set(path)?, &Limiti::desktop())?;
     let ids: Vec<u32> = reader.campioni().iter().map(|s| s.id).collect();
@@ -372,15 +376,19 @@ pub(crate) fn write_mzml_with(
         steps: Some(&[]),
     };
     let written = File::create(out).map_err(io).and_then(|f| {
-        let sink = BufWriter::new(Stopping::new(f, stop.clone()));
-        conv.scrivi(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))
-            .and_then(|mut w| w.flush().map_err(io))
+        let sink = BufWriter::new(HashWrite::new(Stopping::new(f, stop.clone())));
+        let mut w = conv.scrivi(&mut *reader, sample, sink, &mut |d, t| pace.at(d, t))?;
+        w.flush().map_err(io)?;
+        let (_, bytes, sha256) = w.into_inner().map_err(|e| io(e.into_error()))?.finish();
+        Ok((bytes, sha256))
     });
-    if let Err(e) = written {
-        let _ = std::fs::remove_file(out);
-        return Err(e);
+    match written {
+        Ok((bytes, sha256)) => Ok((profile, bytes, sha256)),
+        Err(e) => {
+            let _ = std::fs::remove_file(out);
+            Err(e)
+        }
     }
-    Ok(profile)
 }
 
 /// `features.table`: the chain of `mzlab-cli features` on the files of the series, as CSV.

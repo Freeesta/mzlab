@@ -16,7 +16,6 @@ use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
-use crate::flow_hash::file_sha256;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{run_plan_cached, run_plan_notify};
@@ -139,7 +138,7 @@ pub struct FileRunner {
     pub(crate) work: PathBuf,
     inputs: HashMap<String, PathBuf>,
     meter: Option<Meter>,
-    made: Mutex<HashMap<String, PathBuf>>,
+    pub(crate) made: Mutex<HashMap<String, PathBuf>>,
     lineage: Mutex<HashMap<String, Lineage>>,
     /// Instance ids in the order of the run: one line per job on stderr when set.
     pub(crate) progress: Option<Vec<String>>,
@@ -185,21 +184,6 @@ impl FileRunner {
             .or_else(|| self.inputs.get(&label))
             .cloned()
             .unwrap_or_else(|| self.dir.join(crate::flow_set::dataset_name(&label)))
-    }
-
-    pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
-        let (bytes, sha256) = file_sha256(&path)?;
-        let label = path.file_name().map(|n| n.to_string_lossy().into_owned());
-        self.made
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(sha256.clone(), path);
-        Ok(Artifact {
-            sha256,
-            bytes,
-            ty,
-            label,
-        })
     }
 }
 
