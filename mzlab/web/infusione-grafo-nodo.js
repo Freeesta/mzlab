@@ -3,6 +3,7 @@
 // the graph could not explain, the warnings of the node and a drawing box (the fragment the user draws, kept next to the node: a hypothesis, not a result).
 import { G, TXT, ionText, useCandidate, fetchStrutture } from "./infusione-grafo-stato.js";
 import { rulesPanel } from "./infusione-grafo-regole.js";
+import { breaksPanel } from "./infusione-grafo-rotture.js";
 import { formulaHtml, prettyFormula, splitCharge } from "./msngrafo-vista.js";
 import { molSvg, pieceOf } from "./infusione-grafo-mol.js";
 
@@ -147,7 +148,7 @@ async function saveDrawing(/** @type {any} */ n) {
 /** Fills the panel of a node. `redo` asks for the graph again (a candidate was chosen), `again` draws the panel again. */
 export function nodePanel(/** @type {HTMLElement} */ host, /** @type {any} */ n, /** @type {{ redo: () => void, again: () => void }} */ cb) {
   if (!n) { host.innerHTML = h`<p class="muted sm">${I18N.t("msngrafo.pick")}</p>`; return; }
-  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + activationLine(n) + lossLine(n) + rulesPanel(n) + isolation(n) + unexplained(n) + warnings(n) + roNote() + drawBox(n);
+  host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + activationLine(n) + lossLine(n) + rulesPanel(n) + breaksPanel(n) + isolation(n) + unexplained(n) + warnings(n) + roNote() + drawBox(n);
   fillCuts(host, n);
   host.querySelectorAll(".ig-use").forEach(b => b.addEventListener("click", () => {
     useCandidate(n, /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.f)); cb.redo();

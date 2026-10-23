@@ -34,6 +34,7 @@ STAND_IN = """(fx) => {
       if (sx && q.get("strutture") === "tutti") j.strutture_tutti = [Object.assign({}, sx, { nodo: "n2" })];
       else if (sx && q.get("strutture")) j.strutture = Object.assign({}, sx, { nodo: q.get("strutture") });
       if (q.get("interpreta") === "1") j.interpretazione = { versione: 1, ppm: 10, archi: j.archi.map(a => ({ da: a.da, a: a.a, attivazioni: ["cid"], perdita: { nome: "Carbon dioxide", formula: "CO2", massa: 43.98983, errore_ppm: 0.4, fonte: "formula", confidenza: "high", alternative: [] } })) };
+      if (q.get("rotture") === "1") j.rotture = { versione: 1, archi: j.archi.map(a => ({ da: a.da, a: a.a, spiegato: a.a === "n2" })), nodi: [{ nodo: "n2", n: 3, ipotesi: [{ legami: [[1, 2]], pezzo: [0, 1], formula: "C13H10NO4", h: 1, mz_teorico: 244.0604, ppm: 0.8 }] }] };
       j.avvisi = [{ chiave: "warn.msngrafo.isolation", albero: "x", nodo: "n1" }];
       return Promise.resolve(jr(j));
     }
@@ -102,6 +103,12 @@ try:
             drawer(pg, "gra"); pg.click(".ig-node[data-id=n0]"); pg.click("[data-a=save]")
             pg.wait_for_selector(".ig-pic svg", timeout=20000)
         step("the drawing box opens Draw from the SMILES and keeps the user's fragment", draw)
+        def breaks():
+            assert any("rotture=1" in r[1] for r in pg.evaluate("window.__REQ") if r[0] == "api/msn_grafo")
+            pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-brk li", timeout=10000)
+            t = pg.inner_text(".ig-brk"); assert "C₁₃H₁₀NO₄" in t and "244.0604" in t and "0.8 ppm" in t, t
+            assert pg.evaluate("I18N.t('msngrafo.brk.explained')") in t, t
+        step("the panel of a node lists the bond breaks of the structure as evidence", breaks)
         def cuts():
             pg.click(".ig-node[data-id=n0]"); pg.wait_for_selector(".ig-draw", timeout=10000)
             assert pg.locator(".ig-cuts").count() == 0

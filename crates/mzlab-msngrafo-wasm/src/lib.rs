@@ -98,7 +98,44 @@ fn calcola_con(
     let scans = Index::open(JsReader { read: read_idx }, size)?.scans;
     let mut m = JsReader { read: read_file };
     let (g, j) = grafo_json(&scans, &mut m, (nome, &sha), (&req.0, &req.1))?;
+    let j = con_chiavi(&g, j, &req.0, q)?;
     Ok((g, j, req.0))
+}
+
+/// The optional keys of the query on the graph text `j`: `interpreta=1` and `rotture=1`, shared by the graph and its exports.
+fn con_chiavi(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::Result<String> {
+    // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpreta` does
+    if q.get("interpreta").is_some_and(|v| v == "1") {
+        let ppm = match q.get("ppm_perdita").filter(|v| !v.is_empty()) {
+            None => PPM_PERDITA,
+            Some(v) => v
+                .parse::<f64>()
+                .ok()
+                .filter(|p| p.is_finite() && *p > 0.0)
+                .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
+        };
+        j = con_interpretazione(&j, &g, ppm);
+    }
+    // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --rotture` does
+    if q.get("rotture").is_some_and(|v| v == "1") {
+        let num = |k: &str, d: f64| -> mzlab_core::Result<f64> {
+            match q.get(k).filter(|v| !v.is_empty()) {
+                None => Ok(d),
+                Some(v) => v
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|p| p.is_finite() && *p >= 0.0)
+                    .ok_or_else(|| Error::new("err.request.badNumber").with("name", k)),
+            }
+        };
+        let p = mzlab_feat::chem::rotture::Parametri {
+            ppm: num("ppm_struttura", PPM_STRUTTURA)?,
+            h_max: num("h_max", 2.0)?.min(4.0) as u8,
+            max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
+        };
+        j = mzlab_feat::chem::rotture::rotture_testo(&g, &j, o.smiles.as_deref(), p)?;
+    }
+    Ok(j)
 }
 
 /// Default window of the cleavages (`ppm_struttura`), ppm; the same as `mzlab-cli msn-graph --strutture`.
@@ -115,41 +152,7 @@ pub fn msn_grafo(
     query: &str,
 ) -> Result<String, JsValue> {
     let q = Query::parse(query);
-    let (g, mut j, o) = calcola_con(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
-    // `interpreta=1` (and `ppm_perdita`) adds the key `interpretazione`, as `mzlab-cli msn-graph --interpreta` does
-    if q.get("interpreta").is_some_and(|v| v == "1") {
-        let ppm = match q.get("ppm_perdita").filter(|v| !v.is_empty()) {
-            None => PPM_PERDITA,
-            Some(v) => v
-                .parse::<f64>()
-                .ok()
-                .filter(|p| p.is_finite() && *p > 0.0)
-                .ok_or_else(|| {
-                    js_err(Error::new("err.request.badNumber").with("name", "ppm_perdita"))
-                })?,
-        };
-        j = con_interpretazione(&j, &g, ppm);
-    }
-    // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --rotture` does
-    if q.get("rotture").is_some_and(|v| v == "1") {
-        let num = |k: &str, d: f64| -> Result<f64, JsValue> {
-            match q.get(k).filter(|v| !v.is_empty()) {
-                None => Ok(d),
-                Some(v) => v
-                    .parse::<f64>()
-                    .ok()
-                    .filter(|p| p.is_finite() && *p >= 0.0)
-                    .ok_or_else(|| js_err(Error::new("err.request.badNumber").with("name", k))),
-            }
-        };
-        let p = mzlab_feat::chem::rotture::Parametri {
-            ppm: num("ppm_struttura", PPM_STRUTTURA)?,
-            h_max: num("h_max", 2.0)?.min(4.0) as u8,
-            max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
-        };
-        j = mzlab_feat::chem::rotture::rotture_testo(&g, &j, o.smiles.as_deref(), p)
-            .map_err(js_err)?;
-    }
+    let (g, j, o) = calcola_con(read_idx, idx_size, read_file, nome, &q).map_err(js_err)?;
     match q.get("strutture").filter(|n| !n.is_empty()) {
         None => Ok(j),
         Some(nodo) => {

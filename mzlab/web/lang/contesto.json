@@ -666,6 +666,8 @@
   "msngrafo.unexp": "Quanti picchi degli spettri dello ione il grafo non ha spiegato ({n}); segue l'elenco dei più intensi.",
   "msngrafo.use.tip": "Suggerimento del pulsante «Usa»: {f} = formula candidata scelta per lo ione.",
   "msngrafo.int.line": "Riga della perdita neutra verso uno ione: {name} = nome, {f} = formula, {mass} = massa esatta, {ppm} = errore, {conf} = confidenza (alta/media/bassa), {act} = attivazioni che l'hanno vista.",
+  "msngrafo.brk.line": "Riga di un'ipotesi di rottura: {f} = formula del pezzo, {mz} = m/z teorico, {ppm} = errore, {bonds} = numero di legami tagliati, {h} = idrogeni spostati.",
+  "msngrafo.brk.more": "Quante ipotesi in più non sono elencate: {n}.",
   "msngrafo.rule.from": "Intestazione di un gruppo di regole nel pannello di uno ione: {mz} = m/z dello ione di partenza, {loss} = formula della perdita (o massa in Da).",
   "msngrafo.rule.line": "Riga di una regola di frammentazione: {id} = identificativo della regola, {f} = formula del prodotto, {err} = errore in mDa (con segno), {p} = priorità 1-3, {e} = energia (low, mid, high).",
   "msngrafo.rule.sum": "Perdita somma di due regole: {a} e {b} = identificativi delle due regole.",
