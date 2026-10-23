@@ -129,6 +129,31 @@ fn keep_first<T: PartialEq>(v: &mut Vec<T>) {
 
 /// The replicates counted again: 1-based among the files with the same series, role, minutes and concentration.
 pub fn number_replicates(cs: &mut [Campione]) {
+    // NaN never equals itself, so those files keep the pairwise comparison
+    if cs
+        .iter()
+        .any(|c| c.time_min.is_some_and(f64::is_nan) || c.conc.is_some_and(f64::is_nan))
+    {
+        return number_replicates_pairwise(cs);
+    }
+    // 0.0 and -0.0 are equal, hence the same key
+    let bits = |x: Option<f64>| x.map(|v| if v == 0.0 { 0 } else { v.to_bits() });
+    let mut seen: std::collections::HashMap<(String, String, Option<u64>, Option<u64>), u32> =
+        std::collections::HashMap::with_capacity(cs.len());
+    for c in cs.iter_mut() {
+        let key = (
+            c.series.clone(),
+            c.role().to_string(),
+            bits(c.time_min),
+            bits(c.conc),
+        );
+        let n = seen.entry(key).or_insert(0);
+        *n += 1;
+        c.replicate = *n;
+    }
+}
+
+fn number_replicates_pairwise(cs: &mut [Campione]) {
     for i in 0..cs.len() {
         let c = &cs[i];
         let same = cs[..i]

@@ -21,6 +21,7 @@
   `rust-core` gira solo se l'output `core` di `changes` è vero (cambiano quelle crate, `Cargo.*`, `rust-toolchain.toml`, `vendor/`, `.cargo/`, `tests/golden/` o `rust.yml`); saltato altrimenti e `rust-ok` lo accetta.
 - **Test Rust e guardie** (job `rust`, `rust-core`, `rust-misc-a`, `rust-misc-b`; guardie in `rust-wasm`, determinismo in `rust-det`): `cargo test` esegue i binari uno dopo l'altro (compilazione 230 s + esecuzione 192 s su 205 binari); gli altri binari durano ≤ 11 s, quindi niente `cargo-nextest`.
   `rois_parity` dura 30 s (era 66 s): `tools/roi_riferimento.py` elabora i file in parallelo, un processo per CPU, e ogni file scrive solo i propri `<stem>.mzidx` e `.rois.json`.
+  `campioni::number_replicates` conta le repliche con una `HashMap` (chiave serie, ruolo, minuti, conc.) invece del confronto a coppie: `campioni_posizioni` (34 000 nomi) 60 s → 1,5 s; con un NaN in `time_min`/`conc` ripiega sul confronto a coppie.
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
 
 - **Misura dei job Rust** (mediana su PR verdi, cache calde, secondi): `rust` (feat) 107, `rust-core` 172, `rust-misc` 155, `rust-wasm` 186, `rust-lint` 30, `deny` 23; tempo totale del workflow 563. `rust-misc` è ora diviso in `rust-misc-a` e `rust-misc-b` e il determinismo sta in `rust-det`. Il job più lungo è `rust-wasm`: dividerlo darebbe meno di un minuto.
