@@ -59,6 +59,13 @@ try:
             assert all(e["via"] == "browser" for e in x["ev"]), x["ev"]
             assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], [f["name"] for f in x["files"]]
         step("the template runs in the browser on the open infusion: three steps, three texts", runs)
+        def fractions():
+            ev = pg.evaluate("""(async () => JSON.parse(await (await fetch('api/flow/sched/events', { method: 'POST', body: JSON.stringify({ since: 0 }) })).text()))()""")
+            for inst in ("msngraph", "librarye", "tableexp"):
+                fr = [e["frac"] for e in ev if e.get("kind") == "job" and e.get("instance") == inst and e.get("state") == "running" and e.get("frac") is not None]
+                assert any(0 < f < 1 for f in fr), (inst, fr, [(e.get("kind"), e.get("state"), e.get("frac")) for e in ev if e.get("instance") == inst])
+                assert fr == sorted(fr), (inst, fr)
+        step("each MSn job reports the stages it really went through (a fraction between 0 and 1, never backwards)", fractions)
         def same():
             ref = pg.evaluate(REF, {"formula": ION})
             assert ref["err"] is None, ref["err"]

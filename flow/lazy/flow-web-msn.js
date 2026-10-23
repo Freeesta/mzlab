@@ -49,10 +49,11 @@
     try { return await (await (await (await navigator.storage.getDirectory()).getFileHandle(LIB_FILE)).getFile()).text(); } catch (_) { return ""; }
   };
 
-  /** the candidates (msncerca/1) of the library for the graph of `q`, with the options of the step @param {URLSearchParams} q @param {any} p */
-  const search = async (q, p) => {
+  /** the candidates (msncerca/1) of the library for the graph of `q`, with the options of the step; `phase` hears the part of the job done once the library is read @param {URLSearchParams} q @param {any} p @param {((frac: number) => void) | undefined} [phase] */
+  const search = async (q, p, phase) => {
     const lib = await library();
     if (!lib) throw fail("err.flow.msn.library");
+    phase?.(0.2);
     const body = /** @type {Record<string, any>} */ ({ libreria: lib });
     for (const [n, v] of q) if (!["interpreta", "ppm_perdita", "strutture", "ppm_struttura"].includes(n)) body[n] = n === "k" ? Number(v) : v;
     const o = (/** @type {string} */ n) => (typeof p[n] === "number" ? p[n] : /** @type {Record<string, number>} */ (MATCH)[n]);
@@ -81,7 +82,7 @@
     return k;
   };
 
-  /** one MSn step: its text, kept in OPFS as `name`; `st` = { plan, k, graph } carries the query of the first graph of the plan to the steps after it @param {any} inst @param {{ plan: any, k: number, graph: URLSearchParams | null }} st */
+  /** one MSn step: its text, kept in OPFS as `name`; `st` = { plan, k, graph } carries the query of the first graph of the plan to the steps after it; `st.phase(frac)` hears the real stages of the job (library read 0.2, engine answered 0.8; the engine call itself reports nothing) @param {any} inst @param {{ plan: any, k: number, graph: URLSearchParams | null, phase?: (frac: number) => void }} st */
   const one = async (inst, st) => {
     const id = base(inst), p = inst.params || {}, k = st.k, plan = st.plan;
     let name, text;
@@ -89,11 +90,13 @@
       st.graph = graphQuery(inst, k);
       // the command writes the graph followed by a newline
       name = inst.id + ".json"; text = (await ask("api/msn_grafo?" + st.graph)) + "\n";
+      st.phase?.(0.8);
       const j = JSON.parse(text);
       if (!Array.isArray(j.nodi) || !j.nodi.length) throw fail("err.flow.msn.empty");
     } else if (id === "spectra.match") {
       const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph");
-      name = inst.id + ".json"; text = await search(st.graph || graphQuery(first || { params: {} }, k), p);
+      name = inst.id + ".json"; text = await search(st.graph || graphQuery(first || { params: {} }, k), p, st.phase);
+      st.phase?.(0.8);
     } else {
       // the graph of the first spectra.msn_graph of the plan (a plan without one asks for the graph with the defaults)
       const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph"), q = new URLSearchParams(st.graph || graphQuery(first || { params: {} }, k));
@@ -107,6 +110,7 @@
         name = inst.id + (p.format === "massbank" ? ".txt" : ".msp");
       } else { q.set("vista", p.view || "modifications"); name = inst.id + ".csv"; }
       text = await ask("api/msn_grafo/export?" + q);
+      st.phase?.(0.8);
     }
     await keep(name, text);
     return { name, text };

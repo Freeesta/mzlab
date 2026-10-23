@@ -120,7 +120,7 @@
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null });
+      const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null, phase: (/** @type {number} */ frac) => { x.call("progress", { job: j, frac }).catch(() => {}); } });
       x.files.set(inst.id, { id: inst.id, ...r });
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
