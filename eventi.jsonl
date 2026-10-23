@@ -15409,3 +15409,4 @@
 {"v":1,"ts_utc":"2026-10-23T14:10:46Z","tipo":"carico","k":"2026-10-23T14:1","job_in_coda":0,"job_in_corso":10}
 {"v":1,"ts_utc":"2026-10-23T14:13:37Z","azione":"push","titolo":"Document the discarded upstream build and the dependency fan-out proposal","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1620,"sha":"22f9d1205dbd1a091f2eb3149b89eae69735e305"}
 {"v":1,"ts_utc":"2026-10-23T14:14:26Z","azione":"push","titolo":"Keep the alignment groups only natively","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1617,"sha":"b9b1d965f0ad16c0eba04653875dbb8116041af1"}
+{"v":1,"ts_utc":"2026-10-23T14:20:47Z","azione":"aperta","tipo":"pr","pr":1621,"sha":"774d17b8961a897a39d688c7e6a7c3b6cb19d9ac"}
