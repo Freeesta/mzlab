@@ -134,5 +134,5 @@
     return { steps, table: null, files, llm: S.llmRef || null };
   };
 
-  F.webMsn = { run, one, infusion, STEPS };
+  F.webMsn = { run, one, infusion, library, keep, STEPS };
 })();
