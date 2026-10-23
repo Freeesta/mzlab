@@ -351,6 +351,11 @@ fn write_cand(
     Ok(())
 }
 
+/// Whether the parameter `name` of the job has a value that `is` accepts.
+fn flag(job: &Job, name: &str, is: fn(&mzlab_core::json::Value) -> bool) -> bool {
+    job.resolved.params.iter().any(|(k, v)| k == name && is(v))
+}
+
 /// Runs the step of `job` on the query and library files and returns the text of the `candidates` file: one object per candidate, queries in file order,
 /// each query's candidates best score first, at most `top_n` of them.
 pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
@@ -360,19 +365,11 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .as_ref()
         .map_or("spectral_entropy", |a| a.0.as_str())
         .to_string();
-    let decoys = job
-        .resolved
-        .params
-        .iter()
-        .any(|(k, v)| k == "decoys" && v.str() == Some("spectrum"));
+    let decoys = flag(job, "decoys", |v| v.str() == Some("spectrum"));
     if decoys && alg == "tree" {
         return Err(Error::new("err.flow.match.decoysAlgorithm"));
     }
-    let terms = job
-        .resolved
-        .params
-        .iter()
-        .any(|(k, v)| k == "score_terms" && v.bool() == Some(true));
+    let terms = flag(job, "score_terms", |v| v.bool() == Some(true));
     if alg == "tree" {
         return crate::flow_match_tree::tree_text(job, query, library);
     }
