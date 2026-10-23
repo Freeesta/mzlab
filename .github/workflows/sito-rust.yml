@@ -42,11 +42,15 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: sito-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
             sito-core-${{ runner.os }}-
             sito-rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: wasm-bindgen CLI (the version of Cargo.lock)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
@@ -63,6 +67,9 @@ jobs:
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       # saved right after the build, so a red e2e does not lose the cache (main only)
+      - name: Record the tree of the cache
+        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
         with:
@@ -96,11 +103,15 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: sito-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
             sito-feat-a-${{ runner.os }}-
             sito-rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: wasm-bindgen CLI (the version of Cargo.lock)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
@@ -110,6 +121,9 @@ jobs:
           mkdir -p site/static
           tools/build_feat_wasm.sh site/static a
       # saved right after the build, so a red e2e does not lose the cache (main only)
+      - name: Record the tree of the cache
+        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
         with:
@@ -141,11 +155,15 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: sito-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
             sito-feat-b-${{ runner.os }}-
             sito-rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: wasm-bindgen CLI (the version of Cargo.lock)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
@@ -155,6 +173,9 @@ jobs:
           mkdir -p site/static
           tools/build_feat_wasm.sh site/static b
       # saved right after the build, so a red e2e does not lose the cache (main only)
+      - name: Record the tree of the cache
+        if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
         with:
