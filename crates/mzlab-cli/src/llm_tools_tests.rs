@@ -56,7 +56,7 @@ fn branches(c: &Value) -> Vec<(String, BTreeSet<String>, Vec<&Value>)> {
 }
 
 #[test]
-fn the_fifteen_tools_are_there_in_order() {
+fn the_twenty_tools_are_there_in_order() {
     let c = catalog();
     let names: Vec<&str> = c
         .get("tools")
@@ -65,9 +65,20 @@ fn the_fifteen_tools_are_there_in_order() {
         .iter()
         .map(|t| t.get("name").unwrap().str().unwrap())
         .collect();
-    assert_eq!(names.len(), 15);
+    assert_eq!(names.len(), 20);
     assert_eq!(names[0], "flow_list_steps");
-    assert_eq!(names[14], "ui_show");
+    assert_eq!(names[19], "ui_show");
+    assert_eq!(
+        &names[11..17],
+        [
+            "data_summary",
+            "data_inspect",
+            "params_propose",
+            "table_check",
+            "table_rows",
+            "ask_user"
+        ]
+    );
     let classes: BTreeSet<&str> = c
         .get("tools")
         .unwrap()
@@ -212,4 +223,85 @@ fn a_set_param_call_of_the_catalog_passes_its_own_schema() {
     let wrong =
         parse(br#"{"instance":"s","step":"spectra.ms2@1","name":"nope","value":1}"#).unwrap();
     assert!(mzlab_llm::schema::validate(s, &wrong).is_err());
+}
+
+fn accepts(name: &str, args: &[u8]) -> bool {
+    let c = catalog();
+    mzlab_llm::schema::validate(schema(&c, name), &parse(args).unwrap()).is_ok()
+}
+
+#[test]
+fn the_assistant_tools_only_read_or_propose() {
+    let c = catalog();
+    for (n, class) in [
+        ("data_inspect", "read"),
+        ("params_propose", "propose"),
+        ("table_check", "read"),
+        ("table_rows", "read"),
+        ("ask_user", "propose"),
+    ] {
+        assert_eq!(
+            tool(&c, n).get("class").and_then(Value::str),
+            Some(class),
+            "{n}"
+        );
+        assert_eq!(
+            schema(&c, n)
+                .get("additionalProperties")
+                .and_then(Value::bool),
+            Some(false),
+            "{n}"
+        );
+    }
+}
+
+#[test]
+fn the_assistant_tools_take_closed_arguments() {
+    assert!(accepts("data_inspect", br#"{}"#));
+    assert!(accepts("data_inspect", br#"{"files":["a","b"]}"#));
+    assert!(!accepts("data_inspect", br#"{"files":"a"}"#));
+    assert!(!accepts("data_inspect", br#"{"path":"/x"}"#));
+    let step = steps()
+        .iter()
+        .map(|s| format!("{}@{}", s.id, s.version))
+        .next()
+        .unwrap();
+    assert!(accepts(
+        "params_propose",
+        format!(r#"{{"steps":["{step}"]}}"#).as_bytes()
+    ));
+    assert!(!accepts("params_propose", br#"{"steps":["nope@1"]}"#));
+    assert!(!accepts("params_propose", br#"{}"#));
+    assert!(accepts("table_check", br#"{"checks":["blank","qc_cv"]}"#));
+    assert!(!accepts("table_check", br#"{"checks":["nope"]}"#));
+    assert!(accepts("table_rows", br#"{"ids":["3"],"limit":50}"#));
+    assert!(accepts(
+        "table_rows",
+        br#"{"where":{"column":"area","op":"gt","value":1000}}"#
+    ));
+    assert!(!accepts("table_rows", br#"{"limit":51}"#));
+    assert!(!accepts(
+        "table_rows",
+        br#"{"where":{"column":"area","op":"like","value":1}}"#
+    ));
+}
+
+#[test]
+fn ask_user_wants_one_to_five_closed_questions() {
+    let q = |n: usize| {
+        let one = r#"{"id":"q","text":"Which?","options":["a","b"]}"#;
+        format!(r#"{{"questions":[{}]}}"#, vec![one; n].join(","))
+    };
+    assert!(accepts("ask_user", q(1).as_bytes()));
+    assert!(accepts("ask_user", q(5).as_bytes()));
+    assert!(!accepts("ask_user", q(6).as_bytes()));
+    assert!(!accepts("ask_user", br#"{"questions":[]}"#));
+    assert!(!accepts(
+        "ask_user",
+        br#"{"questions":[{"id":"q","text":"Which?","options":["a"]}]}"#
+    ));
+    assert!(!accepts(
+        "ask_user",
+        br#"{"questions":[{"id":"q","text":"Which?"}]}"#
+    ));
 }

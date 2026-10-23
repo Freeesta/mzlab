@@ -167,12 +167,12 @@ fn strs(items: impl IntoIterator<Item = String>) -> String {
     o.0
 }
 
-fn step_refs(steps: &[&Step]) -> String {
+pub(crate) fn step_refs(steps: &[&Step]) -> String {
     strs(steps.iter().map(|s| format!("{}@{}", s.id, s.version)))
 }
 
 /// An object schema with the given (name, schema) properties; the names in `required` must be among them.
-fn object(props: &[(&str, String)], required: &[&str]) -> String {
+pub(crate) fn object(props: &[(&str, String)], required: &[&str]) -> String {
     let mut o = Out::default();
     o.raw(OBJ).raw(",\"properties\":{");
     for (i, (k, v)) in props.iter().enumerate() {
@@ -278,11 +278,11 @@ fn tool(name: &'static str, class: Class, description: &'static str, input_schem
     }
 }
 
-fn s(desc: &str) -> String {
+pub(crate) fn s(desc: &str) -> String {
     format!("{{\"type\":\"string\",\"description\":{}}}", quote(desc))
 }
 
-fn quote(t: &str) -> String {
+pub(crate) fn quote(t: &str) -> String {
     let mut o = Out::default();
     o.str(t);
     o.0
@@ -337,14 +337,8 @@ pub fn catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool)
         &["step"],
     );
     let chart = object(&[("spec", ANY_OBJECT.to_string())], &["spec"]);
-    let code = object(
-        &[
-            ("language", "{\"enum\":[\"python\",\"r\",\"shell\"]}".into()),
-            ("goal", s("What the script is for.")),
-        ],
-        &["language", "goal"],
-    );
-    vec![
+    let code = crate::tools_assist::code_schema();
+    let mut all = vec![
         tool("flow_list_steps", Read, "List the steps of the Flow registry: id, title, ports, where each runs and whether it runs natively.", list_steps),
         tool("flow_describe_step", Read, "Describe one step: parameters, algorithms, presets and references.", object(&[("step", step_enum)], &["step"])),
         tool("flow_get_plan", Read, "Return the current plan in canonical form with its problems.", none.clone()),
@@ -360,7 +354,14 @@ pub fn catalog(steps: &[Step], ui: &[UiTool], executable: &dyn Fn(&str) -> bool)
         tool("chart_make", Propose, "Propose a chart from data of the session.", chart),
         tool("code_export", Propose, "Write a script for the user; it is never run.", code),
         tool("ui_show", Ui, "Show something in the interface; view-only actions.", ui_schema(ui)),
-    ]
+    ];
+    // after data_summary, so the order of the older tools holds
+    let at = all
+        .iter()
+        .position(|t| t.name == "data_summary")
+        .map_or(all.len(), |i| i + 1);
+    all.splice(at..at, crate::tools_assist::tools(steps));
+    all
 }
 
 /// Containers whose compact form is at most this long stay on one line in the exported file.

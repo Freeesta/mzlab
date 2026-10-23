@@ -25,7 +25,7 @@ def test_header_and_tools():
     assert CATALOG["schema"] == "strumenti/1"
     # the file carries no hash of the registry: it would be rewritten by every change of the registry
     assert set(CATALOG) == {"schema", "tools"}
-    assert len(CATALOG["tools"]) == 15
+    assert len(CATALOG["tools"]) == 20
     for t in CATALOG["tools"]:
         assert set(t) == {"name", "class", "description", "input_schema"}
         assert t["class"] in {"read", "propose", "edit", "run", "ui"}
