@@ -64,7 +64,7 @@ try:
             assert pg.evaluate("window.__titles") == ["mzLab \u2022 MS Analysis"], pg.evaluate("window.__titles")
             pg.evaluate("document.documentElement.classList.add('i18n-wait')")
             vis = pg.evaluate("['.logo','#np-set','#fs-btn','.hq'].map(s => getComputedStyle(document.querySelector('header ' + s)).visibility)")
-            assert vis == ["visible"] * 5, vis
+            assert vis == ["visible"] * 4, vis
             assert pg.evaluate("getComputedStyle(document.querySelector('header #nav')).visibility") == "hidden"
             c.close()
         step("the header icons are drawn at the first paint and do not move; the title is already right", header_first_paint)
