@@ -76,12 +76,7 @@ pub(super) fn helper(jobs: &Jobs, out: &Sender<Done>) {
     loop {
         let job = jobs.lock().unwrap_or_else(|e| e.into_inner()).recv();
         let Ok((seq, spec)) = job else { return };
-        let r = finish_spectrum(spec, &mut inf).map(|(sp, m)| {
-            m.map(Item::Mobility)
-                .into_iter()
-                .chain([Item::Spectrum(sp)])
-                .collect()
-        });
+        let r = ready_items(finish_spectrum(spec, &mut inf));
         if out.send((seq, r)).is_err() {
             return;
         }
@@ -128,16 +123,20 @@ impl Helped {
         }
         Ok(())
     }
+}
 
+fn disconnected(e: TryRecvError) -> bool {
+    e == TryRecvError::Disconnected
+}
+
+impl Helped {
     /// Takes the results that are in (waiting for one when `block`), and turns what no helper will ever answer into errors.
     fn collect(&mut self, block: bool) {
         loop {
             let got = if block && self.waiting > 0 {
                 self.results.recv().map_err(|_| true)
             } else {
-                self.results
-                    .try_recv()
-                    .map_err(|e| e == TryRecvError::Disconnected)
+                self.results.try_recv().map_err(disconnected)
             };
             match got {
                 Ok(d) => {
@@ -171,6 +170,16 @@ impl Helped {
     }
 }
 
+/// The items of a decoded spectrum: its mobility (when it has one) and then the spectrum.
+fn ready_items(r: Result<(Spectrum, Option<Mobility>)>) -> Result<Vec<Item>> {
+    r.map(|(sp, m)| {
+        m.map(Item::Mobility)
+            .into_iter()
+            .chain([Item::Spectrum(sp)])
+            .collect()
+    })
+}
+
 impl Decode for Helped {
     fn spectrum(&mut self, s: Spec, f: &mut dyn FnMut(Item)) -> Result<()> {
         let seq = self.first + self.queue.len() as u64;
@@ -180,12 +189,7 @@ impl Decode for Helped {
             // no helper is left to take it: decode it here
             self.queue.pop_back();
             self.waiting -= 1;
-            let r = finish_spectrum(e.0 .1, &mut self.inf).map(|(sp, m)| {
-                m.map(Item::Mobility)
-                    .into_iter()
-                    .chain([Item::Spectrum(sp)])
-                    .collect()
-            });
+            let r = ready_items(finish_spectrum(e.0 .1, &mut self.inf));
             return self.push_ready(r, f);
         }
         self.collect(false);
