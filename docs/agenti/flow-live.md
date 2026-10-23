@@ -81,7 +81,9 @@ Prove: `flow/run_tests.rs` (10 semi × 1 e 4 thread), `crates/mzlab-feat/tests/f
 
 ## MSn fuori dallo scheduler (limite noto)
 - Sul sito `F.webMsn` esegue solo piani fatti di soli passi MSn e fuori dallo scheduler; in un piano misto i passi MSn non hanno esecutore in `F.liveJobs` e restano `blocked` per `platform.computer`.
-- Per portarli nel grafo (stati, tempi e tabella «Files» come gli altri passi) servirebbe: (1) un lavoro unico `item = None` legato all'infusione aperta in Dati (`F.runPlanFromData(S).names[0]`), con la sua identità in `set_identity` perché la `plan_key` cambi con il file; (2) un esecutore per `spectra.msn_graph`, `msn.library_export`, `msn.table_export` e `spectra.match` (`tree`) in `flow-live-jobs.js` che chiami le rotte di `flow-web-msn.js`, ora dentro `run`, spezzato in una funzione per passo; (3) i testi in OPFS sotto la `plan_key` come gli altri risultati; (4) prove nuove in `e2e_flow_msn.py` e `e2e_flow_live.py` e il controllo che `prov/1` non cambi.
+- Per portarli nel grafo (stati, tempi e tabella «Files» come gli altri passi) servirebbe: (1) un lavoro unico `item = None` legato all'infusione aperta in Dati (`F.runPlanFromData(S).names[0]`), con la sua identità in `set_identity` perché la `plan_key` cambi con il file.
+- (2) Un esecutore per `spectra.msn_graph`, `msn.library_export`, `msn.table_export` e `spectra.match` (`tree`) in `flow-live-jobs.js`, che chiami le rotte di `flow-web-msn.js` (ora dentro `run`, da spezzare in una funzione per passo); (3) i testi in OPFS sotto la `plan_key`.
+- (4) Prove nuove in `e2e_flow_msn.py` e `e2e_flow_live.py` e il controllo che `prov/1` non cambi.
 - Nel `.wasm` e nei crate non cambia nulla.
 
 ## Trappole
