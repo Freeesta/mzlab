@@ -159,24 +159,56 @@ pub(crate) fn open(idx: &Path) -> Result<Index<File>> {
     Index::open(f, size)
 }
 
+/// `f(0..n)` on up to one thread per core (the order of the results is the order of the indices); in sequence on WASI, which has no threads.
+fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+    #[cfg(not(target_family = "wasm"))]
+    {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Mutex;
+        let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
+        if workers > 1 && n > 1 {
+            let next = AtomicUsize::new(0);
+            let slots: Mutex<Vec<Option<T>>> = Mutex::new((0..n).map(|_| None).collect());
+            std::thread::scope(|s| {
+                for _ in 0..workers.min(n) {
+                    s.spawn(|| loop {
+                        let k = next.fetch_add(1, Ordering::Relaxed);
+                        if k >= n {
+                            break;
+                        }
+                        let r = f(k);
+                        slots.lock().unwrap_or_else(|e| e.into_inner())[k] = Some(r);
+                    });
+                }
+            });
+            let slots = slots.into_inner().unwrap_or_else(|e| e.into_inner());
+            return slots.into_iter().flatten().collect();
+        }
+    }
+    (0..n).map(f).collect()
+}
+
 /// The CSV of the series `files`, indexes kept in `tmp` (the caller owns it: WASI has no temporary folder).
 pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
-    for (f, i) in files.iter().zip(&idxs) {
-        eprintln!("index {}", f.display());
-        build_index(f, i, DEFAULT_BUDGET)?;
-    }
+    // Index and detection of each file are independent: one pass per file on the worker pool, results in file order.
+    let built = par_map(files.len(), |k| {
+        eprintln!("index {}", files[k].display());
+        build_index(&files[k], &idxs[k], DEFAULT_BUDGET)
+    });
+    built.into_iter().collect::<Result<Vec<()>>>()?;
     let recipe = run::recipe_for(params, &mut open(&idxs[0])?)?;
-    let mut detected = Vec::new();
-    for (f, i) in files.iter().zip(&idxs) {
-        eprintln!("detect {}", f.display());
-        let name = f
+    let detected = par_map(files.len(), |k| {
+        eprintln!("detect {}", files[k].display());
+        let name = files[k]
             .file_name()
             .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        detected.push(run::detect(&mut open(i)?, &name, &recipe)?);
-    }
+        run::detect(&mut open(&idxs[k])?, &name, &recipe)
+    })
+    .into_iter()
+    .collect::<Result<Vec<_>>>()?;
     let (tables, origin) = run::read_files(&detected)?;
     eprintln!("align {} file(s)", files.len());
     let table = run::align(&tables, &origin, &recipe, |k| open(&idxs[k]))?;
