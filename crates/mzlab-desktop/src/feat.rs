@@ -280,7 +280,11 @@ impl State {
     /// `feat/table` with `kind` = `check`: the `tabcheck/1` of the held table under the view `spec`; `options` is the JSON text of `core::tabcheck_json`. `plausible`: the `plausible/1`, `mz_tol_da` defaults to 0.005.
     fn check_text(kind: &str, at: &mut Slice, size: u64, p: &Value, pol: i32) -> Result<String> {
         if kind == "plausible" {
-            return mzlab_feat_table_wasm::core::plausible_json(at, size, p["mz_tol_da"].as_f64().unwrap_or(0.005));
+            return mzlab_feat_table_wasm::core::plausible_json(
+                at,
+                size,
+                p["mz_tol_da"].as_f64().unwrap_or(0.005),
+            );
         }
         let s = |k: &str| p[k].as_str().unwrap_or("");
         mzlab_feat_table_wasm::core::tabcheck_json(
