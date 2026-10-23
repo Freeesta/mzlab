@@ -127,3 +127,7 @@ def test_the_cli_box_puts_the_folder_in_the_command_once_and_quoted():
 
 def test_the_rust_figure_of_the_msn_graph_has_the_labels_of_the_drawer():
     assert node("msn_figura_parita.js").strip() == "ok"
+
+
+def test_the_80_ion_graph_has_a_box_for_every_ion_and_no_two_overlap_in_both_views():
+    assert node("msn_layout_80.js").strip() == "ok"
