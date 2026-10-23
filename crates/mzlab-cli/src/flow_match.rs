@@ -17,6 +17,7 @@ use mzlab_lib::parse::{detect, parse_all};
 use mzlab_lib::read::{Library, CACHE_BYTES};
 use mzlab_lib::scores::modified_cosine;
 use mzlab_lib::search::{analogs, identity, AnalogOpts, IdentityOpts, Query, Tol};
+use mzlab_lib::spec::Meta;
 use mzlab_lib::spec::Spectrum;
 
 type Lib = Library<Vec<u8>>;
@@ -120,6 +121,43 @@ pub(crate) fn num(job: &Job, name: &str) -> f64 {
         .find(|(k, _)| k == name)
         .and_then(|(_, v)| v.f64())
         .unwrap_or(0.0)
+}
+
+/// The metadata filters of the step as (field, lower-case text); an empty text keeps everything.
+fn meta_filters(job: &Job) -> [(Field, String); 4] {
+    [
+        (Field::Name, text_param(job, "name_contains").to_lowercase()),
+        (
+            Field::Adduct,
+            text_param(job, "adduct_contains").to_lowercase(),
+        ),
+        (
+            Field::Instrument,
+            text_param(job, "instrument_contains").to_lowercase(),
+        ),
+        (Field::Ce, text_param(job, "ce_contains").to_lowercase()),
+    ]
+}
+
+#[derive(Clone, Copy)]
+enum Field {
+    Name,
+    Adduct,
+    Instrument,
+    Ce,
+}
+
+/// Whether the library entry has every filter text in its field (any case).
+fn passes(m: &Meta, filters: &[(Field, String); 4]) -> bool {
+    filters.iter().all(|(f, t)| {
+        let v = match f {
+            Field::Name => &m.name,
+            Field::Adduct => &m.adduct,
+            Field::Instrument => &m.instrument,
+            Field::Ce => &m.ce,
+        };
+        t.is_empty() || v.to_lowercase().contains(t.as_str())
+    })
 }
 
 /// One candidate of the `candidates` record: the hit of a library spectrum with its score.
@@ -371,7 +409,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         return crate::flow_match_tree::tree_text(job, query, library);
     }
     let lib = open_library(library, decoys)?;
-    let name = text_param(job, "name_contains").to_lowercase();
+    let filters = meta_filters(job);
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
     o.raw("{\"format\":\"candidates/1\",\"step\":")
@@ -402,11 +440,8 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         if alg == "modified_cosine" {
             c.extend(analogues(&lib, q, job, terms)?);
         }
-        if !name.is_empty() {
-            c.retain(|h| {
-                lib.meta(h.index)
-                    .is_ok_and(|m| m.name.to_lowercase().contains(&name))
-            });
+        if filters.iter().any(|(_, t)| !t.is_empty()) {
+            c.retain(|h| lib.meta(h.index).is_ok_and(|m| passes(&m, &filters)));
         }
         if decoys {
             // the decoys are scored to count the errors, never listed

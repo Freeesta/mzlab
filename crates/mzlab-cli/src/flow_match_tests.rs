@@ -101,6 +101,46 @@ fn name_contains_filters_the_candidates() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// `adduct_contains`, `instrument_contains` and `ce_contains` keep only the library entries whose field has the text, in any case; they combine with each other.
+#[test]
+fn metadata_filters_keep_the_matching_entries() {
+    let dir = fixture("meta");
+    let msp = std::fs::read_to_string(dir.join("lib.msp")).unwrap();
+    // Alpha gets an instrument and a collision energy, Beta another adduct, instrument and energy
+    let (alpha, rest) = msp.split_once("Name: Beta\n").unwrap();
+    let alpha = alpha.replace(
+        "Name: Alpha\n",
+        "Name: Alpha\nInstrument_type: Orbitrap\nCollision_energy: 30 HCD\n",
+    );
+    let rest = rest.replacen(
+        "Precursor_type: [M+H]+",
+        "Precursor_type: [M+Na]+\nInstrument_type: QTOF\nCollision_energy: 20",
+        1,
+    );
+    let msp = format!("{alpha}Name: Beta\n{rest}");
+    std::fs::write(dir.join("lib.msp"), msp).unwrap();
+    let names = |extra: &str| -> Vec<String> {
+        let p = format!(r#"{{"precursor_da":150,"tol_da":0.5,"top_n":10{extra}}}"#);
+        run(&dir, "cosine", &p);
+        let mut n: Vec<String> = hits(&dir)
+            .get("hits")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|x| x.get("name").unwrap().str().unwrap().to_string())
+            .collect();
+        n.sort();
+        n.dedup();
+        n
+    };
+    assert!(names("").len() >= 3);
+    assert_eq!(names(r#","adduct_contains":"[m+NA]""#), ["Beta"]);
+    assert_eq!(names(r#","instrument_contains":"orbi""#), ["Alpha"]);
+    assert_eq!(names(r#","ce_contains":"HCD""#), ["Alpha"]);
+    assert!(names(r#","instrument_contains":"orbi","adduct_contains":"na""#).is_empty());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// `tree`: a graph `msngrafo/1` against an `msnlib/1` library gives the `msncerca/1` text of `mzlab-cli msn-lib search`, byte for byte.
 #[test]
 fn tree_writes_the_search_of_the_msn_library() {
