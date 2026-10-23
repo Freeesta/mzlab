@@ -11,7 +11,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::axis::MassAxis;
 use crate::centwave::{self, Peak};
-use crate::channels::{segments, stitch};
+use crate::channels::{by_scan, segments, stitch};
 use crate::post::{finish, median_interval, Row};
 use crate::table::FileFeatures;
 
@@ -118,9 +118,19 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
     reserve(&mut lmz, slab.mz.len())?;
     let den = libm::log1p(CHANNEL_PPM);
     lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
+    let scan_order = by_scan(&slab.pos)?;
     for (g, shift) in [0.0f64, 0.5].into_iter().enumerate() {
         let mut segs = Vec::new();
-        segments(&lmz, &slab.mz, &slab.it, &slab.pos, shift, p, &mut segs)?;
+        segments(
+            &lmz,
+            &slab.mz,
+            &slab.it,
+            &slab.pos,
+            &scan_order,
+            shift,
+            p,
+            &mut segs,
+        )?;
         let mut segs = stitch(segs, p)?;
         if let Peak::CentWave(cw) = &p.peak {
             segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
