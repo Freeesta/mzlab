@@ -17302,3 +17302,4 @@
 {"v":1,"ts_utc":"2026-10-23T17:52:01Z","azione":"aperta","tipo":"pr","pr":1639,"sha":"90677cab692f48f8f09b723814b0e1854a512e9e"}
 {"v":1,"ts_utc":"2026-10-23T17:55:30Z","azione":"push","titolo":"Keep the helper threads of the mzML parser out of the wasm modules","merge_main":false,"aree":{"rust":4},"tipo":"pr","pr":1637,"sha":"0d0c3b4101189728c9037902d75ec7753afcd624"}
 {"v":1,"ts_utc":"2026-10-23T17:57:16Z","azione":"aperta","tipo":"pr","pr":1640,"sha":"ac11211415a4c4dfbcbfeb4d89476306f9b39487"}
+{"v":1,"tipo":"pr","pr":1639,"sha":"90677cab692f48f8f09b723814b0e1854a512e9e","ts_utc":"2026-10-23T18:07:06Z","azione":"unita","aperta_s":905,"commit_n":2,"cause_commit":{"altro":1},"merge_main":0,"righe_piu":15,"righe_meno":2,"file_n":2,"file":["docs/agenti/flow-live.md","flow/lazy/flow-live-view.js"],"aree":{"docs":1,"altro":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":430}
