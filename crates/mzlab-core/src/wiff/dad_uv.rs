@@ -7,24 +7,7 @@ pub fn dad_spectrum_json(dad: &DadData, rt0: f64, rt1: f64) -> Option<String> {
     if !rt0.is_finite() || !rt1.is_finite() {
         return None;
     }
-    let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
-    let mut rows: Vec<usize> = dad
-        .time_min
-        .iter()
-        .enumerate()
-        .filter(|(_, t)| (lo..=hi).contains(t))
-        .map(|(i, _)| i)
-        .collect();
-    if rows.is_empty() {
-        let mid = (lo + hi) / 2.0;
-        let dist = |t: &f64| (t - mid).abs();
-        let near = dad
-            .time_min
-            .iter()
-            .enumerate()
-            .min_by(|a, b| dist(a.1).total_cmp(&dist(b.1)))?;
-        rows.push(near.0);
-    }
+    let rows = window_rows(dad, rt0.min(rt1), rt0.max(rt1))?;
     let mut mean = vec![0.0f64; dad.channels()];
     for &i in &rows {
         for (m, &v) in mean.iter_mut().zip(dad.spectrum_at(i)?) {
@@ -47,6 +30,28 @@ pub fn dad_spectrum_json(dad: &DadData, rt0: f64, rt1: f64) -> Option<String> {
         time_of(rows.first())?,
         time_of(rows.last())?
     ))
+}
+
+/// The rows with a time in `lo..=hi`, or the single row nearest to the middle when none falls inside; `None` for an empty matrix.
+fn window_rows(dad: &DadData, lo: f64, hi: f64) -> Option<Vec<usize>> {
+    let rows: Vec<usize> = dad
+        .time_min
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| (lo..=hi).contains(t))
+        .map(|(i, _)| i)
+        .collect();
+    if !rows.is_empty() {
+        return Some(rows);
+    }
+    let mid = (lo + hi) / 2.0;
+    let dist = |t: &f64| (t - mid).abs();
+    let near = dad
+        .time_min
+        .iter()
+        .enumerate()
+        .min_by(|a, b| dist(a.1).total_cmp(&dist(b.1)))?;
+    Some(vec![near.0])
 }
 
 #[cfg(test)]
