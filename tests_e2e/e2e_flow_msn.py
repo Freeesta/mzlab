@@ -120,6 +120,9 @@ try:
             assert len([n for n in names if n.endswith((".json", ".msp", ".csv"))]) >= 3, names
         step("each text is kept in OPFS (mzlab/flow/)", kept)
         def mixed():
+            # the same plan run as MSn steps only (the runner of MSn plans) is the reference: earlier steps of this test wrote the molecule into the plan
+            ref = pg.evaluate(RUN, {"formula": ION})
+            assert ref["err"] is None, ref["err"]
             # an index step beside the MSn steps: the plan is no longer MSn only, so the steps go through the scheduler (executor `msn` of flow-live-jobs.js)
             pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, g = S.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')); S.plan.steps.push({ id: 'ixmix', step: 'index.mzidx@1', in: { source: g.in.source } }); }""")
             try:
@@ -130,9 +133,7 @@ try:
                 msn = [e for k, e in last.items() if k != "ixmix"]
                 assert len(msn) == 3 and all(e["stato"] in ("done", "reused") and e["via"] == "browser" for e in msn), last
                 assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], x["files"]
-                a, b = mask(x["files"][0]["text"]), mask(cli)
-                at = next((i for i in range(min(len(a), len(b))) if a[i] != b[i]), min(len(a), len(b)))
-                assert a == b, "graph differs from the CLI at %d (%d vs %d bytes): %r vs %r" % (at, len(a), len(b), a[max(0, at - 60):at + 60], b[max(0, at - 60):at + 60])
+                assert [mask(f["text"]) for f in x["files"]] == [mask(f["text"]) for f in ref["files"]], "the texts of the scheduler differ from the runner of the MSn plan"
             finally: pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow; S.plan.steps = S.plan.steps.filter(s => s.id !== 'ixmix'); }")
         step("a plan with an index step besides the MSn steps runs them in the scheduler, with the same texts", mixed)
         def no_ion():
