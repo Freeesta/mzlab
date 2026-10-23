@@ -17562,3 +17562,4 @@
 {"v":1,"ts_utc":"2026-10-23T18:25:03Z","tipo":"job","k":"120584018106","workflow":"rust","job":"deny","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"5501671419f864be51e96a51b23b08bb498abfd0","run_id":40003042250,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T18:25:03Z","tipo":"job","k":"120584018694","workflow":"rust","job":"rust","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"5501671419f864be51e96a51b23b08bb498abfd0","run_id":40003042250,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T18:25:11Z","tipo":"carico","k":"2026-10-23T18:2","job_in_coda":0,"job_in_corso":7}
+{"v":1,"ts_utc":"2026-10-23T18:27:16Z","azione":"aperta","tipo":"pr","pr":1641,"sha":"a32402755a6d77ea254e50fc83ee214f3476d921"}
