@@ -119,40 +119,50 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
     let den = libm::log1p(CHANNEL_PPM);
     lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
     let scan_order = by_scan(&slab.pos)?;
-    for (g, shift) in [0.0f64, 0.5].into_iter().enumerate() {
-        let mut segs = Vec::new();
-        segments(
-            &lmz,
-            &slab.mz,
-            &slab.it,
-            &slab.pos,
-            &scan_order,
-            shift,
-            p,
-            &mut segs,
-        )?;
-        let mut segs = stitch(segs, p)?;
-        if let Peak::CentWave(cw) = &p.peak {
-            segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
-        }
-        for s in segs {
-            if s.n >= p.min_points && s.mx >= p.min_height {
-                reserve(&mut rows[g], 1)?;
-                rows[g].push(Row {
-                    mz: s.mzc,
-                    rt: rt[s.apex as usize],
-                    n: s.n,
-                    height: s.mx,
-                    area: s.tot * dt,
-                    apex: s.apex,
-                    lo: s.a,
-                    hi: s.z,
-                    left: rt[s.a as usize],
-                    right: rt[s.z as usize],
-                    long: s.z - s.a + 1 > p.long_trace,
-                    grid: g as u8,
-                });
-            }
+    let (low, high) = rows.split_at_mut(1);
+    let (r0, r1) = mzlab_core::spare::join2(
+        || one_grid(slab, &lmz, &scan_order, (rt, dt), p, 0, &mut low[0]),
+        || one_grid(slab, &lmz, &scan_order, (rt, dt), p, 1, &mut high[0]),
+    );
+    r0.and(r1)
+}
+
+/// The rows of one grid of channels (`g` 0 = unshifted, 1 = shifted by half a channel) over a slab.
+fn one_grid(
+    slab: &Slab,
+    lmz: &[f64],
+    scan_order: &[u32],
+    (rt, dt): (&[f64], f64),
+    p: &Params,
+    g: usize,
+    rows: &mut Vec<Row>,
+) -> Result<()> {
+    let shift = if g == 0 { 0.0f64 } else { 0.5 };
+    let mut segs = Vec::new();
+    segments(
+        lmz, &slab.mz, &slab.it, &slab.pos, scan_order, shift, p, &mut segs,
+    )?;
+    let mut segs = stitch(segs, p)?;
+    if let Peak::CentWave(cw) = &p.peak {
+        segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
+    }
+    for s in segs {
+        if s.n >= p.min_points && s.mx >= p.min_height {
+            reserve(rows, 1)?;
+            rows.push(Row {
+                mz: s.mzc,
+                rt: rt[s.apex as usize],
+                n: s.n,
+                height: s.mx,
+                area: s.tot * dt,
+                apex: s.apex,
+                lo: s.a,
+                hi: s.z,
+                left: rt[s.a as usize],
+                right: rt[s.z as usize],
+                long: s.z - s.a + 1 > p.long_trace,
+                grid: g as u8,
+            });
         }
     }
     Ok(())

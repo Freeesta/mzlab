@@ -101,6 +101,7 @@ pub mod peaks;
 pub mod peakext;
 pub mod signal;
 pub mod sortc;
+pub mod spare;
 pub mod source_ramp;
 pub mod profspec;
 pub mod project;
