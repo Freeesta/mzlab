@@ -31,6 +31,9 @@
 - **Misura di `sito-rust`** (stessa base): `sito-wasm-core` 254 (motore, librerie e circa 160 s di lettori), `sito-wasm-feat-a` 166, `sito-wasm-feat-b` 190, `sito-e2e` 174; tempo totale 807. Il job più lungo della costruzione è `sito-wasm-core`.
 
 - **Tagli valutati e scartati**: dividere `rust-wasm` (meno di 60 s), un quarto gruppo di test fra `rust-core` e `rust-misc` (circa 0) e un job `sito-wasm-lettori` a parte (costruzione di `sito-rust` da 254 a circa 190 s per un runner in più, con la coda dei runner che pesa di più).
+- **Tagli scartati con misura locale (4 CPU)**: `rust-det` (build nativo + WASI, `release` con LTO): sorgenti toccati 356 s, con `ci_cargo_mtime.py restore` 3 s; con LTO spento e opt-level 3 296 s (−17 %, ma non è più il profilo del prodotto).
+  Cargo tiene il lock della cartella di build: due `cargo build` in parallelo sullo stesso `target/` (nativo e wasip1) si accodano (373 s contro 356 s). `rust-core` (159 binari di test, 505 s di CPU di compilazione): opt-level 1 costruisce da zero in circa 137 s contro 200 s ma i test durano 144 s contro 121 s, saldo circa −40 s da costruzione piena e +23 s da cache pulita; scartato.
+  Quando cambia una crate di base (`mzlab-core`) ogni binario a valle si ricompila: il guadagno degli mtime resta sui commit che non toccano `crates/` o toccano solo foglie.
 
 ## Dieci regole pratiche prima di aprire una PR
 Prima di aprire la PR: `python3 tools/pre_pr.py --veloce` (circa 30 s: solo i controlli economici, più hash CSP e l'elenco degli e2e che `--cambiati` eseguirebbe; mai clippy né e2e; ogni passo stampa «[i/N] nome» prima di partire) oppure `python3 tools/pre_pr.py` (1-2 minuti: mappa, soglie, i18n, Teoria, sintassi JS se hai toccato `mzlab/web/`, globali, tsc, import degli e2e, fmt, clippy e `cargo machete` se cambiano i percorsi Rust di `rust.yml`, poi `verifica.py --cambiati`; `--senza-e2e` salta l'ultimo passo).
