@@ -11166,3 +11166,4 @@
 {"v":1,"ts_utc":"2026-10-23T00:12:55Z","tipo":"job","k":"120164102444","workflow":"rust","job":"deny","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"50752e6c3b2448de3c4f5e5dd766455eb5887f54","run_id":39876690656,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T00:12:55Z","tipo":"job","k":"120164102829","workflow":"rust","job":"rust-lint","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"50752e6c3b2448de3c4f5e5dd766455eb5887f54","run_id":39876690656,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T00:13:10Z","tipo":"carico","k":"2026-10-23T00:1","job_in_coda":0,"job_in_corso":19}
+{"v":1,"ts_utc":"2026-10-23T00:15:46Z","azione":"push","titolo":"Bench: scaling runs are not hashed inside the clock and scrivi_con is not indexed","merge_main":false,"aree":{"rust":2},"tipo":"pr","pr":1550,"sha":"87516a982630828e46047e95f9061bae90740d29"}
