@@ -343,6 +343,7 @@
   "lib.doneN": "Esito della lettura di una libreria; {n} = spettri letti (già formattato).",
   "lib.droppedN": "Seguito di lib.doneN: spettri scartati; {n} = quanti (già formattato).",
   "lib.noPrec": "Messaggio quando nessuna voce ha un precursore entro la tolleranza; {tol} = tolleranza con unità (es. «10 ppm»).",
+  "lib.pairs.title": "Didascalia della tabella dei picchi corrispondenti sotto il grafico a specchio; {n} = numero di coppie.",
   "lib.plot.shared": "Etichetta in alto a destra nel grafico a specchio; {n} = numero di picchi in comune.",
   "lib.results": "Messaggio dopo la ricerca; {n} = risultati, {ms} = millisecondi.",
   "lib.space": "Riga in fondo alla finestra delle librerie; {mb} = megabyte usati dal sito.",

@@ -54,9 +54,13 @@ try:
             def accent_pixels():
                 return pg.evaluate("""(() => { const c = document.querySelector('#lr-cv'), g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data; const a = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); const t = document.createElement('i'); t.style.color = a; document.body.appendChild(t); const v = getComputedStyle(t).color.match(/\\d+/g).map(Number); t.remove(); let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - v[0]) < 12 && Math.abs(d[i+1] - v[1]) < 12 && Math.abs(d[i+2] - v[2]) < 12) n++; return n; })()""")
             a0 = accent_pixels(); assert a0 > 50, a0                                  # the common peaks of Match are drawn in the accent colour
+            n = pg.locator("#lr-detail table.lib-pairs tr").count() - 1                 # the table of matched peaks lists the pairs behind the score
+            assert n >= 1 and pg.evaluate("document.querySelector('#lr-detail table.lib-pairs caption').textContent").strip(), n
+            assert pg.evaluate("[...document.querySelectorAll('#lr-detail table.lib-pairs th')].every(h => h.scope === 'col')")
             pg.locator("#libres tr.row", has_text="Spostato").click(); pg.wait_for_timeout(300)
             assert pg.evaluate("document.querySelector('#libres tr.row.sel td:nth-child(2)').textContent") == "Spostato"
             a1 = accent_pixels(); assert a1 < a0, (a0, a1)                            # the shifted spectrum shares fewer peaks
+            assert pg.locator("#lr-detail table.lib-pairs").count() == 0 and "Nessun picco corrispondente" in pg.inner_text("#lr-detail")
         step("mirror plot: common peaks in the accent colour, a click on a row redraws it", mirror)
         def export():
             with pg.expect_download() as d: pg.click("#lr-xlsx")
