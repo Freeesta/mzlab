@@ -299,8 +299,8 @@ const BANCO = (() => {
   const tabOfAct = () => (act() && act().tab) || E.tab;
   function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span class="hl">${EH(label)}</span>` : ""}</button>`; }
   async function copyPng(p) {
-    let cvs; p._exp = true; EXPORTING = true;
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
+    let cvs; p._exp = true; EXPORTING = true; paintFiles();
+    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
     const blob = await new Promise(r => cvs.toBlob(r));
     try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); nearMsg(I18N.t("bn.copied.img")); }
     catch (e) { saveBlob(blob, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }

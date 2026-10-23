@@ -321,8 +321,8 @@ function addPanel(type, o, after) {
     e.stopPropagation();                            // else the click reaches the document and closes the menu at once
     menu(e, [
       { label: I18N.t("panel.dl.png"), icon: IC_DL, fn: async () => {
-        let cvs; p._exp = true; EXPORTING = true;
-        try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; draw(p); }
+        let cvs; p._exp = true; EXPORTING = true; paintFiles();                  // light palette for the image, whatever the theme
+        try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
         cvs.toBlob(async b => {
           let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { }
           saveBlob(out, plotName(p) + ".png");
