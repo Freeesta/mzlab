@@ -12587,3 +12587,4 @@
 {"v":1,"ts_utc":"2026-10-23T08:09:32Z","tipo":"carico","k":"2026-10-23T08:0","job_in_coda":0,"job_in_corso":15}
 {"v":1,"ts_utc":"2026-10-23T08:37:10Z","azione":"aperta","tipo":"pr","pr":1582,"sha":"6724dfbce6cd8e8e06a1be88b07b28f9960d0dfd"}
 {"v":1,"ts_utc":"2026-10-23T08:43:54Z","azione":"aperta","tipo":"pr","pr":1583,"sha":"a1bb95822ff70ef76352cf34d4e30ef839d10560"}
+{"v":1,"ts_utc":"2026-10-23T08:48:50Z","azione":"push","titolo":"Merge main into claude/assist-a6c","merge_main":true,"aree":{"docs":16,"rust":21,"test":1,"tools":2},"tipo":"pr","pr":1581,"sha":"7337c4071e302ee9d65e46b567cf075b97ecb969"}
