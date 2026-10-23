@@ -76,23 +76,26 @@ try:
                 return pg.evaluate("[...document.querySelectorAll('#ctx [data-azione^=\\'disp.\\']')].map(d=>[d.dataset.azione,d.getAttribute('aria-disabled')==='true',d.textContent.replace(/\\u2713/g,'')])")
             pg.evaluate("AFFIANCA.ripristina()"); attesa("1,1,1"); assert [len(x) for x in rows()] == [1, 1, 1], rows()
             it = open_menu(); ids = [i[0] for i in it]
-            assert ids[:2] == ["disp.affianca", "disp.affianca"] and ids[-4:] == ["disp.su", "disp.giu", "disp.intera", "disp.uguali", "disp.ripristina"][-4:] or {"disp.su", "disp.giu", "disp.intera", "disp.uguali", "disp.ripristina"} <= set(ids), ids
-            dis = {i[0]: i[1] for i in it}
-            assert dis["disp.uguali"] and dis["disp.intera"] and dis["disp.ripristina"], dis           # alone in its row, nothing to restore: grey, never hidden
-            assert any("Affianca a" in i[2] and not i[1] for i in it), it
-            pg.click("#ctx [data-azione='disp.affianca']:not([aria-disabled]):has-text('a 3 ')"); attesa("2,1")
-            assert [len(x) for x in rows()] == [2, 1], rows()
-            it = open_menu(); dis = {i[0]: i[1] for i in it}
-            assert not dis["disp.uguali"] and not dis["disp.intera"] and not dis["disp.ripristina"], dis
-            pg.click("#ctx [data-azione='disp.uguali']"); attendi(pg, "(()=>{const s=stackOrder().slice(-3,-1);return Math.abs(s[0].w-s[1].w)<=8})()")
+            assert ids == ["disp.su", "disp.giu"], ids           # the right-click menu keeps only Move up / Move down, side by side in one row
+            assert pg.evaluate("document.querySelectorAll('#ctx .mrow > [data-azione]').length") == 2
+            assert pg.evaluate("[...document.querySelectorAll('#ctx .mrow > [data-azione]')].every(d => d.getBoundingClientRect().width >= 24 && d.getBoundingClientRect().height >= 24)")
+            pg.keyboard.press("Escape")
+            # the rest of the arrangement is still in the registry (palette) and in the menu of the grip; grey when there is nothing to do
+            run = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; return AZIONI.pronta(AZIONI.voce('{aid}'), {{vista: p.type, p}}); }})()")
+            do = lambda aid: pg.evaluate(f"(() => {{ const p = {P}; AZIONI.esegui('{aid}', {{vista: p.type, p}}); }})()")
+            assert not run("disp.uguali") and not run("disp.intera") and not run("disp.ripristina")           # alone in its row, nothing to restore
+            pg.evaluate(f"AFFIANCA.fai({P}, {{k:'dx', t:stackOrder().at(-2).id}}, false)"); attesa("2,1")
+            assert run("disp.uguali") and run("disp.intera") and run("disp.ripristina")
+            do("disp.uguali"); attendi(pg, "(()=>{const s=stackOrder().slice(-3,-1);return Math.abs(s[0].w-s[1].w)<=8})()")
             a, b = pg.evaluate("stackOrder().slice(-3, -1).map(q => q.w)"); assert abs(a - b) <= 8, (a, b)
-            open_menu(); pg.click("#ctx [data-azione='disp.intera']"); attesa("1,1,1")
-            assert [len(x) for x in rows()] == [1, 1, 1], rows()
+            do("disp.intera"); attesa("1,1,1")
             pg.evaluate("AFFIANCA.fai(stackOrder().at(-2), {k:'dx', t:stackOrder().at(-3).id}, false)"); attesa("2,1")
-            open_menu(); pg.click("#ctx [data-azione='disp.ripristina']"); attesa("1,1,1")
+            do("disp.ripristina"); attesa("1,1,1")
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
             pg.keyboard.press("Control+z"); attesa("2,1"); assert [len(x) for x in rows()] == [2, 1], rows()           # the reset can be undone
-        step("right-click menu: the arrangement entries (group disp) do what the menu of the grip does; grey when nothing to do", disp_menu)
+            # the grip menu also resets the layout
+            g = grip_box(2); pg.mouse.click(g[0], g[1]); pg.click(".aff-menu button >> nth=-1"); attesa("1,1,1")
+        step("right-click menu: Move up / Move down in one row; the other arrangement actions stay in the registry and the grip menu", disp_menu)
         def divider():
             pg.evaluate("(() => { const s = stackOrder().slice(-3); const a = s[1], b = s[2]; AFFIANCA.fai(b, {k:'dx', t:a.id}, false); })()"); pg.wait_for_timeout(300)
             s = pg.query_selector(".aff-sep"); assert s, "no divider"

@@ -371,9 +371,9 @@ async function editAnn(p, ann) {
   const reg = o => AZIONI.registra({ viste: V, ...o });
   reg({ id: "view.resetZoom", gruppo: "reset", disponibile: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doppio: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doppioOrd: 2,
     nome: () => T("ctx.resetZoom"), esegui: /** @param {any} c */ c => { pushZh(c.p); c.p.zoom = null; c.p.zoomY = null; if (c.dbl) c.p.sel = null; draw(c.p); if (c.dbl) uiSave(); } });
-  reg({ id: "ann.edit", gruppo: "ann", ordine: 1, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
+  reg({ id: "ann.edit", gruppo: "ann", ordine: 1, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
     nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
-  reg({ id: "ann.delete", gruppo: "ann", ordine: 2, disponibile: /** @param {any} c */ c => !!c.near,
+  reg({ id: "ann.delete", gruppo: "ann", ordine: 2, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near,
     nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); draw(c.p); } });
 })();
 

@@ -162,7 +162,10 @@ function affOpenMenu(/** @type {any} */ p, /** @type {any} */ g) {
   affMenu.appendChild(item(AFF_T("aff.menu.full"), mate ? { k: "giu", t: mate.id } : null, true));
   const eq = document.createElement("button"); eq.type = "button"; eq.setAttribute("role", "menuitem"); eq.textContent = AFF_T("aff.menu.equal");
   if (!mate) eq.setAttribute("aria-disabled", "true"); else eq.onclick = () => { affCloseMenu(false); affFai(p, { k: "uguali" }, false); g.focus(); };
-  affMenu.appendChild(eq); document.body.appendChild(affMenu); g.setAttribute("aria-expanded", "true");
+  affMenu.appendChild(eq);
+  const rs = document.createElement("button"); rs.type = "button"; rs.setAttribute("role", "menuitem"); rs.textContent = AFF_T("aff.menu.reset");
+  if (!affSplit()) rs.setAttribute("aria-disabled", "true"); else rs.onclick = () => { affCloseMenu(false); affRipristina(); g.focus(); };
+  affMenu.appendChild(rs); document.body.appendChild(affMenu); g.setAttribute("aria-expanded", "true");
   const r = g.getBoundingClientRect(); affMenu.style.left = Math.max(4, Math.min(r.left, innerWidth - affMenu.offsetWidth - 4)) + "px"; affMenu.style.top = Math.min(r.bottom + 2, innerHeight - affMenu.offsetHeight - 4) + "px";
   const btns = () => /** @type {HTMLElement[]} */ ([...affMenu.querySelectorAll("button")]);
   affMenu.addEventListener("keydown", e => {
@@ -249,20 +252,21 @@ function affRipristina() {
 const affSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
 if (typeof AZIONI !== "undefined") {
   const reg = (/** @type {any} */ o) => AZIONI.registra({ gruppo: "disp", viste: ["*"], visibile: (/** @type {any} */ c) => c.vista !== "map" && !!c.p && !!c.p.el && !!c.p.full && affEligible(c.p), ...o });
-  reg({ id: "disp.affianca", ordine: 1, nome: () => AFF_T("aff.menu.beside"), disponibile: (/** @type {any} */ c) => affOthers(c.p).length > 0,
+  reg({ id: "disp.affianca", ordine: 1, menu: false, nome: () => AFF_T("aff.menu.beside"), disponibile: (/** @type {any} */ c) => affOthers(c.p).length > 0,
     esegui: (/** @type {any} */ c) => { if (c.p._grip) affOpenMenu(c.p, c.p._grip); },
     voci: (/** @type {any} */ c) => {
       const p = c.p, o = affOthers(p);
       if (!o.length) return [{ nome: AFF_T("aff.menu.beside"), dim: true, esegui: () => 0 }];
       return o.map(q => { const d = { k: p.y < q.y || p.y === q.y && p.x < q.x ? "sx" : "dx", t: q.id }; return { nome: AFF_T("aff.menu.beside") + " " + affRowOf(q), dim: !affOkFor(p, d), esegui: () => { affFai(p, d, false); } }; });
     } });
-  const via = (/** @type {string} */ id, /** @type {number} */ ordine, /** @type {string} */ key, /** @type {(p: any) => any} */ move) =>
-    reg({ id, ordine, nome: () => AFF_T(key), disponibile: (/** @type {any} */ c) => affOkFor(c.p, move(c.p)), esegui: (/** @type {any} */ c) => { const d = move(c.p); if (d) affFai(c.p, d, affWide(d)); } });
-  via("disp.su", 2, "aff.menu.up", p => affVertical(p, -1));
-  via("disp.giu", 3, "aff.menu.down", p => affVertical(p, 1));
+  // only Move up / Move down are in the context menu (one row); the rest is the grip menu, the palette and dragging
+  const via = (/** @type {string} */ id, /** @type {number} */ ordine, /** @type {string} */ key, /** @type {(p: any) => any} */ move, /** @type {any} */ extra = { menu: false }) =>
+    reg({ id, ordine, ...extra, nome: () => AFF_T(key), disponibile: (/** @type {any} */ c) => affOkFor(c.p, move(c.p)), esegui: (/** @type {any} */ c) => { const d = move(c.p); if (d) affFai(c.p, d, affWide(d)); } });
+  via("disp.su", 2, "aff.menu.up", p => affVertical(p, -1), { fila: "mv" });
+  via("disp.giu", 3, "aff.menu.down", p => affVertical(p, 1), { fila: "mv" });
   via("disp.intera", 4, "aff.menu.full", p => { const m = affMate(p); return m ? { k: "giu", t: m.id } : null; });
   via("disp.uguali", 5, "aff.menu.equal", p => affMate(p) ? { k: "uguali" } : null);
-  reg({ id: "disp.ripristina", ordine: 6, nome: () => AFF_T("aff.menu.reset"), disponibile: () => affSplit(), esegui: () => affRipristina() });
+  reg({ id: "disp.ripristina", ordine: 6, menu: false, nome: () => AFF_T("aff.menu.reset"), disponibile: () => affSplit(), esegui: () => affRipristina() });
 }
 
 /** The spectrum opened from `from` goes to its right, in the same row, when `from` is alone in its row and the two fit; otherwise it stays below. */

@@ -284,7 +284,7 @@ html .clh[hidden]{display:none!important}
 .leg{flex:none;max-height:58px;overflow:auto;display:flex;gap:10px;flex-wrap:wrap;margin-top:var(--sp-1);color:var(--muted)}.leg span{display:inline-flex;gap:4px;align-items:center}.leg i:empty{width:14px;height:3px;display:inline-block}
 .leg .lvl{display:flex;flex-wrap:wrap;gap:10px;flex-basis:100%}.leg .tr b{color:var(--ink);cursor:text}.leg .tr button{border:0;background:none;color:var(--muted);padding:0 2px}
 #ctx{position:fixed;z-index:10000;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,45,10,.18);padding:3px;min-width:220px}
-#ctx div{padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}#ctx div:hover{background:var(--sel)}#ctx hr{border:0;border-top:1px solid var(--line);margin:3px 0}#ctx .ic{display:inline-flex;align-items:center;vertical-align:middle;margin-right:8px;width:16px;height:16px}#ctx .ic svg{display:block}#ctx .ck{float:right;margin-left:14px}#ctx .dim{color:var(--muted);cursor:default}#ctx .dim:hover{background:none}
+#ctx div{padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}#ctx div:hover{background:var(--sel)}#ctx hr{border:0;border-top:1px solid var(--line);margin:3px 0}#ctx .ic{display:inline-flex;align-items:center;vertical-align:middle;margin-right:8px;width:16px;height:16px}#ctx .ic svg{display:block}#ctx .ck{float:right;margin-left:14px}#ctx .dim{color:var(--muted);cursor:default}#ctx .dim:hover{background:none}#ctx .mrow{display:flex;gap:2px;padding:0;cursor:default}#ctx .mrow:hover{background:none}#ctx .mrow>div{flex:1 1 0;display:flex;justify-content:center;align-items:center;min-height:28px}#ctx .mrow .ic{margin-right:0}
 dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:14px 16px;max-width:520px}dialog::backdrop{background:rgba(60,45,10,.35)}
 dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .hint{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:6px 10px;margin-bottom:10px;color:var(--muted)}
@@ -386,3 +386,12 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 .xb-pop{display:flex;flex-direction:column;gap:6px;padding:8px 10px}.xb-pop label{display:flex;gap:6px;align-items:center;justify-content:space-between}.xb-pop input{width:9em;min-height:24px}.xb-pop input[aria-invalid="true"]{border-color:var(--bad);outline:1px solid var(--bad)}.xb-pop .xb-err{min-height:1em;color:var(--bad)}.xb-pop .xb-row{display:flex;gap:6px;justify-content:flex-end}
 .pnl .xb-info{position:absolute;left:78px;bottom:38px;z-index:2;max-width:55%;padding:2px 8px;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px;pointer-events:none}.pnl .xb-info:empty{display:none}
 @media (pointer:coarse){.xbb,.xbl,.xb-pop .bt,.xb-pop input{min-height:40px;min-width:40px}}
+
+/* Peak detection dialog (picchi.js) */
+.pk-sec{border:1px solid var(--line);border-radius:6px;margin:0 0 8px;padding:4px 10px 6px}
+.pk-sec legend{font-weight:600;padding:0 4px}
+.pk-row{display:grid;grid-template-columns:minmax(150px,230px) 84px 1fr;gap:4px 10px;align-items:center;margin:4px 0}
+.pk-row input,.pk-row select{min-height:28px;box-sizing:border-box}
+#pk-adv>summary{cursor:pointer;min-height:28px;display:flex;align-items:center;font-weight:600}
+@media(max-width:560px){.pk-row{grid-template-columns:1fr 84px}
+.pk-row>span:last-child{grid-column:1/-1}}

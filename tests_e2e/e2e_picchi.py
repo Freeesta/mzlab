@@ -36,7 +36,7 @@ try:
         step("manual noise region", man)
         def dlg():
             pg.evaluate("Object.assign(PK, PK_DEF); peakParams()"); pg.wait_for_selector("#pk-ok", timeout=5000)
-            pg.fill("[data-pk=areaNoise]", "7"); pg.select_option("[data-pk=noise]", "rms"); pg.click("#pk-ok"); pg.wait_for_timeout(300)
+            pg.click("#pk-adv summary"); pg.fill("[data-pk=areaNoise]", "7"); pg.select_option("[data-pk=noise]", "rms"); pg.click("#pk-ok"); pg.wait_for_timeout(300)
             assert pg.evaluate("PK.areaNoise") == 7 and pg.evaluate("PK.noise") == "rms"
             assert json.loads(pg.evaluate("localStorage.getItem('mzlab.picchi')"))["areaNoise"] == 7
             pg.evaluate("peakParams()"); pg.click("#pk-def"); assert pg.evaluate("PK.areaNoise") == 3 and pg.evaluate("PK.noise") == "mad"
