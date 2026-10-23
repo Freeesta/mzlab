@@ -12589,3 +12589,4 @@
 {"v":1,"ts_utc":"2026-10-23T08:43:54Z","azione":"aperta","tipo":"pr","pr":1583,"sha":"a1bb95822ff70ef76352cf34d4e30ef839d10560"}
 {"v":1,"ts_utc":"2026-10-23T08:48:50Z","azione":"push","titolo":"Merge main into claude/assist-a6c","merge_main":true,"aree":{"docs":16,"rust":21,"test":1,"tools":2},"tipo":"pr","pr":1581,"sha":"7337c4071e302ee9d65e46b567cf075b97ecb969"}
 {"v":1,"ts_utc":"2026-10-23T08:48:49Z","azione":"aperta","tipo":"pr","pr":1584,"sha":"863f30dc77b11ff3941409e8c70c5cb0cb115d19"}
+{"v":1,"ts_utc":"2026-10-23T08:50:17Z","azione":"push","titolo":"Name the result type of the parallel detect stage (clippy type_complexity)","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1582,"sha":"716495632ef519831b7dbb658e2b39555c5465b9"}
