@@ -98,6 +98,11 @@ async function handle(m) {
           postMessage({ id, op: m.op, n, info: null, buf: len ? buf : null, len }, len ? [buf] : []);
           return;
         }
+        if (m.op === "idxxicbin") {                                                   // [rt(n), y(n)] as doubles, like the worker of the site
+          buf = await r.arrayBuffer(); len = buf.byteLength / 8; n = len / 2;
+          postMessage({ id, op: m.op, n, info: null, buf: len ? buf : null, len }, len ? [buf] : []);
+          return;
+        }
         info = await r.text();
         if (m.op === "lr_boot") files = JSON.parse(info).map(f => [f.name, stub(f.name, f.id)]);
         else if (m.op === "lr_put") files = [[m.name, stub(m.name, JSON.parse(info).id)]];

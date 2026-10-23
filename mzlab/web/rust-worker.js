@@ -437,6 +437,11 @@ async function handle(ev) {
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
       case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
+      case "idxxicbin": {                                                                 // the XIC of the index as [rt(n), y(n)] doubles (api/xicbin)
+        const len = engine.index_xic_len(m.slot, m.level);
+        if (!len) { n = 0; break; }
+        out = take(len); n = engine.index_xic_into(m.slot, m.level, m.mz, m.tol, out); break;
+      }
       case "xic": out = take(2 * engine.count(m.slot, m.level)); n = engine.xic(m.slot, m.level, m.mz, m.tol, m.px || 0, out); break;
       case "spectra": {
         const len = engine.spectra_len(m.slot, m.level, m.i0, m.i1);

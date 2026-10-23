@@ -39,6 +39,10 @@ try:
             assert got["y"] == want["y"] and got["x"] == (want.get("x") or want.get("rt")), "XIC differs from api/xic"      # E2: same numbers
             assert pg.evaluate(f"{XP}.el.getBoundingClientRect().top >= {SPEC}.el.getBoundingClientRect().bottom - 2"), "XIC is under the spectrum"
         step("LR: the button waits for a peak, the click extracts, same traces as api/xic", lr_extract)
+        def xicbin_same():
+            bad = pg.evaluate('async ([k, mz, tol, lv]) => {\n  const a = (await J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`)).traces[0], b = (await xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`)).traces[0];\n  if (a.rt.length !== b.rt.length || a.rt.length < 100) return `length ${a.rt.length} against ${b.rt.length}`;\n  for (let i = 0; i < a.rt.length; i++) if (!Object.is(a.rt[i], b.rt[i]) || !Object.is(a.y[i], b.y[i])) return `differs at ${i}: ${a.rt[i]},${a.y[i]} against ${b.rt[i]},${b.y[i]}`;\n  return Math.max(...b.y) > 0 ? "" : "empty trace";\n}', [K, 306.1, 0.5, 1]); assert bad == "" or bad == "empty trace", bad
+            bad = pg.evaluate('async ([k, mz, tol, lv]) => {\n  const a = (await J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`)).traces[0], b = (await xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`)).traces[0];\n  if (a.rt.length !== b.rt.length || a.rt.length < 100) return `length ${a.rt.length} against ${b.rt.length}`;\n  for (let i = 0; i < a.rt.length; i++) if (!Object.is(a.rt[i], b.rt[i]) || !Object.is(a.y[i], b.y[i])) return `differs at ${i}: ${a.rt[i]},${a.y[i]} against ${b.rt[i]},${b.y[i]}`;\n  return Math.max(...b.y) > 0 ? "" : "empty trace";\n}', [K, 100.0, 50, 1]); assert bad == "", bad      # a wide window: every scan has signal
+        step("LR: api/xicbin gives the numbers of api/xic, element by element (Object.is)", xicbin_same)
         def lr_replace():
             pk = peak(194.2); pg.mouse.click(pk["x"], pk["y"]); ready(pg)
             pg.click("[data-a=xicb]"); ready(pg)

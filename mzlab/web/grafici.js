@@ -19,7 +19,7 @@ async function diffTrace(p, s, o0) {
   const o = { ...o0, clip: false };                               // the numbers are never clipped: «negativi a 0» is only a way of drawing
   if (p.type === "xic") {
     const tr = p.traces.find(t => t.id === s.tid) || {}, a = tr.ion && window.HR ? HR.xicArgs(f, tr, p) : [s.mz, tr.w ?? p.tol];
-    const j = await memo(`dx${s.k}|${a[0]}|${a[1]}|${f.lv}${SUBREF.qs(o)}`, () => J(`api/xic?k=${s.k}&mz=${a[0]}&tol=${a[1]}&level=${f.lv}${SUBREF.qs(o)}`));
+    const j = await memo(`dx${s.k}|${a[0]}|${a[1]}|${f.lv}${SUBREF.qs(o)}`, () => SUBREF.qs(o) ? J(`api/xic?k=${s.k}&mz=${a[0]}&tol=${a[1]}&level=${f.lv}${SUBREF.qs(o)}`) : xicBin(`api/xicbin?k=${s.k}&mz=${a[0]}&tol=${a[1]}&level=${f.lv}`));
     return j.traces[0];
   }
   if (p.type === "chrom") {
