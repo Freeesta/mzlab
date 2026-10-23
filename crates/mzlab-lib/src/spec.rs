@@ -64,6 +64,8 @@ pub struct Spectrum {
     pub mz: Vec<f64>,
     pub it: Vec<f64>,
     pub meta: Meta,
+    /// Retention time in minutes, when the record states one.
+    pub rt: Option<f64>,
 }
 
 /// Licence classes of the `u8` in the spectra table (the exact text stays in the metadata).

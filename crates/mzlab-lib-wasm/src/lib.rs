@@ -183,6 +183,7 @@ impl Importer {
             mz: mz.to_vec(),
             it: it.to_vec(),
             meta,
+            rt: None,
         });
         self.drain().map_err(js_err)
     }

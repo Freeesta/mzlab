@@ -43,6 +43,7 @@ fn make_targets(r: &mut u64) -> Vec<Spectrum> {
             mz,
             it,
             meta,
+            rt: None,
         });
     }
     targets

@@ -1044,6 +1044,7 @@
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
+                  "rt_tol",
                   "adduct_contains",
                   "instrument_contains",
                   "ce_contains",
@@ -1085,6 +1086,12 @@
                   {
                     "type":"string",
                     "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"
                   },
                   {
                     "type":"string",
@@ -1517,6 +1524,7 @@
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
+                  "rt_tol",
                   "adduct_contains",
                   "instrument_contains",
                   "ce_contains",
@@ -1558,6 +1566,12 @@
                   {
                     "type":"string",
                     "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"
                   },
                   {
                     "type":"string",

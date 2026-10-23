@@ -179,6 +179,11 @@ fn match_params() -> Vec<Param> {
                 .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"),
             Param::text("name_contains", "Library name contains")
                 .doc("Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"),
+            Param::number("rt_tol", "RT tolerance")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("min")
+                .doc("Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"),
             Param::text("adduct_contains", "Library adduct contains")
                 .doc("Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"),
             Param::text("instrument_contains", "Library instrument contains")
