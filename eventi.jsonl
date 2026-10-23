@@ -12062,3 +12062,4 @@
 {"v":1,"ts_utc":"2026-10-23T06:40:48Z","tipo":"job","k":"120279970620","workflow":"rust","job":"rust-misc-a","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"a0ab8871b54f682001dde06f1a0ee4777e1adb1f","run_id":39912930515,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T06:41:02Z","tipo":"carico","k":"2026-10-23T06:4","job_in_coda":0,"job_in_corso":18}
 {"v":1,"ts_utc":"2026-10-23T07:00:16Z","azione":"aperta","tipo":"pr","pr":1576,"sha":"fe7936e96fd5b203dc8ae01131390711be0d92a2"}
+{"v":1,"ts_utc":"2026-10-23T07:02:47Z","azione":"aperta","tipo":"pr","pr":1577,"sha":"813a3db1a07e7857939c4308291352e090e04d8b"}
