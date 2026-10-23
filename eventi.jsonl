@@ -13039,3 +13039,4 @@
 {"v":1,"ts_utc":"2026-10-23T09:16:10Z","tipo":"carico","k":"2026-10-23T09:1","job_in_coda":0,"job_in_corso":12}
 {"v":1,"ts_utc":"2026-10-23T09:19:51Z","azione":"aperta","tipo":"pr","pr":1588,"sha":"c4456b867b1732fdea0aaed82a77291a4cdc5db3"}
 {"v":1,"ts_utc":"2026-10-23T09:27:03Z","azione":"push","titolo":"Make the full-extent limit of a chromatogram match the drawn range","merge_main":false,"aree":{"web":1},"tipo":"pr","pr":1586,"sha":"489001096753b938df8a6ce4833305f80ef6cd42"}
+{"v":1,"ts_utc":"2026-10-23T09:31:41Z","azione":"aperta","tipo":"pr","pr":1589,"sha":"1990e790a6771275f15df6c22b8c12e7d21824fc"}
