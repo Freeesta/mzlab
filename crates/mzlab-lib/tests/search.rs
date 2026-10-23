@@ -234,3 +234,37 @@ fn identity_top_n_is_the_head_of_the_full_ranking() {
     }
     assert!(full.windows(2).all(|w| w[0].entropy >= w[1].entropy));
 }
+
+/// The query-side preparation changes no number: `pair_scores_for` equals `pair_scores` bit for bit (all fields, pairs included).
+#[test]
+fn prepared_query_scores_equal_pair_scores() {
+    use mzlab_lib::prep::{pair_scores_for, QueryPrep};
+    use mzlab_lib::scores::pair_scores;
+    let mut x = 0x2545_F491_4F6C_DD1Du64;
+    let mut r = move || {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        (x >> 11) as f64 / (1u64 << 53) as f64
+    };
+    let mut spec = |n: usize| {
+        let mut mz: Vec<f64> = (0..n)
+            .map(|_| 50.0 + (r() * 60.0).floor() * 2.0 + r() * 0.2)
+            .collect();
+        mz.sort_by(|a, b| a.total_cmp(b));
+        let it: Vec<f64> = mz.iter().map(|_| 1.0 + r() * 99.0).collect();
+        Spec {
+            mz,
+            it,
+            prec: 300.0,
+        }
+    };
+    for k in 0..200 {
+        let (a, b) = (spec(1 + k % 25), spec(1 + (k * 7) % 30));
+        let prep = QueryPrep::new(&a);
+        assert_eq!(
+            pair_scores_for(&prep, &a, &b, 0.3),
+            pair_scores(&a, &b, 0.3)
+        );
+    }
+}
