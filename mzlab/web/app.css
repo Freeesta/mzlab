@@ -114,7 +114,7 @@ body.sb-dragging,body.sb-dragging *{cursor:grabbing!important;user-select:none!i
 /* the button of the session is always in the header (hidden = invisible, space kept): when it comes nothing moves */
 header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 /* header texts are translated before the first paint (index.html): its space is kept, invisible, until then */
-html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,#sb-toggle,#fs-btn,#bug-btn,.hq){visibility:visible}header .ib .ic{min-width:16px;min-height:16px}header #bug-btn[hidden]{display:none}
+html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,#sb-toggle,#fs-btn,.hq){visibility:visible}header .ib .ic{min-width:16px;min-height:16px}
 /* toolbar of the header */
 #stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
 @media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
@@ -367,7 +367,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 html:not(.phone) header{gap:4px;column-gap:4px;row-gap:2px}
 html:not(.phone) header .logo{height:28px;width:28px}
 html:not(.phone) header .hq{order:1;margin-left:auto;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
-html:not(.phone) header #fs-btn,html:not(.phone) header #bug-btn{order:5;min-width:30px;min-height:28px}
+html:not(.phone) header #fs-btn{order:5;min-width:30px;min-height:28px}
 html:not(.phone) #stbar{order:6;flex:1 1 150px;min-width:0}
 html:not(.phone) #session-btn-wrap{order:7}
 html:not(.phone) header #newrun[hidden]{display:none!important}
