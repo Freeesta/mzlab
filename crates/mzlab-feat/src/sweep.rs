@@ -28,6 +28,9 @@ struct ByScan {
     it: Vec<f64>,
 }
 
+/// Fewest peaks worth sharing between threads when a slab is grouped by scan.
+const SCATTER_MIN: usize = 200_000;
+
 impl ByScan {
     fn new(pos: &[u32], it: &[f64]) -> Result<ByScan> {
         let nscan = pos.iter().max().map_or(0, |&m| m as usize + 1);
@@ -38,17 +41,62 @@ impl ByScan {
         for k in 0..nscan {
             start[k + 1] += start[k];
         }
-        let mut next = start.clone();
         let mut orig = filled(pos.len(), 0u32)?;
         let mut y = filled(pos.len(), 0.0f64)?;
-        for (i, &s) in pos.iter().enumerate() {
-            let at = next[s as usize] as usize;
-            orig[at] = i as u32;
-            y[at] = it[i];
-            next[s as usize] += 1;
+        // the spare cores stay leased while the parts are filled
+        let held = (pos.len() >= SCATTER_MIN).then(|| mzlab_core::spare::lease(3));
+        let lease = held.as_ref().map_or(0, |l| l.count());
+        // blocks of consecutive scans with about the same number of peaks: each fills its own part of the arrays, so no thread writes to
+        // another's, and the order inside a scan is the order of `pos` whoever fills it
+        let mut cut = vec![0usize];
+        for k in 1..=lease {
+            let want = (pos.len() * k / (lease + 1)) as u32;
+            cut.push(start.partition_point(|&v| v < want).min(nscan));
         }
+        cut.push(nscan);
+        let (mut o, mut yy) = (&mut orig[..], &mut y[..]);
+        let mut parts = Vec::new();
+        for w in cut.windows(2) {
+            let n = (start[w[1]] - start[w[0]]) as usize;
+            let (oa, ob) = std::mem::take(&mut o).split_at_mut(n);
+            let (ya, yb) = std::mem::take(&mut yy).split_at_mut(n);
+            (o, yy) = (ob, yb);
+            parts.push((w[0]..w[1], oa, ya));
+        }
+        scatter(parts, pos, it, &start);
         Ok(ByScan { start, orig, it: y })
     }
+}
+
+type Part<'a> = (std::ops::Range<usize>, &'a mut [u32], &'a mut [f64]);
+
+/// Fills each part: for the scans of the range, `orig` gets the table position and `y` the intensity of their peaks, in order of `pos`.
+fn scatter(parts: Vec<Part>, pos: &[u32], it: &[f64], start: &[u32]) {
+    let fill = |(scans, orig, y): Part| {
+        let base = start[scans.start];
+        let mut next: Vec<u32> = start[scans.clone()].iter().map(|&v| v - base).collect();
+        for (i, &s) in pos.iter().enumerate() {
+            if let Some(n) = (s as usize)
+                .checked_sub(scans.start)
+                .filter(|&d| d < next.len())
+            {
+                let at = next[n] as usize;
+                orig[at] = i as u32;
+                y[at] = it[i];
+                next[n] += 1;
+            }
+        }
+    };
+    #[cfg(not(target_family = "wasm"))]
+    if parts.len() > 1 {
+        std::thread::scope(|sc| {
+            for part in parts {
+                sc.spawn(move || fill(part));
+            }
+        });
+        return;
+    }
+    parts.into_iter().for_each(fill);
 }
 
 /// The bisection path of `Slab::add_trace`: per scan, the peaks of the table positions `a..b`, found from the cursor `cur` (per scan, where
@@ -243,32 +291,4 @@ pub(crate) fn windows_by_slab<R: ReadAt>(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn own_cursor_gives_the_sums_of_the_shared_one() {
-        let mut slab = Slab::default();
-        for s in 0..40u32 {
-            for k in 0..30u32 {
-                slab.mz.push(100.0 + k as f64);
-                slab.it.push((s * 31 + k) as f64);
-                slab.pos.push(s);
-            }
-        }
-        // table order is by m/z: sort the 1200 peaks the way the index stores them
-        let mut ord: Vec<usize> = (0..slab.mz.len()).collect();
-        ord.sort_by(|&a, &b| slab.mz[a].total_cmp(&slab.mz[b]).then(a.cmp(&b)));
-        slab.it = ord.iter().map(|&i| slab.it[i]).collect();
-        slab.pos = ord.iter().map(|&i| slab.pos[i]).collect();
-        slab.mz = ord.iter().map(|&i| slab.mz[i]).collect();
-        slab.prepare().unwrap();
-        let mut cur = slab.cursor();
-        for (a, b) in [(0, 400), (390, 800), (700, 1200), (10, 80)] {
-            let (mut y1, mut y2) = (vec![0.0; 12], vec![0.0; 12]);
-            slab.add_trace(a, b, 5, &mut y1).unwrap();
-            slab.add_trace_cur(&mut cur, a, b, 5, &mut y2);
-            assert_eq!(y1, y2);
-        }
-    }
-}
+mod tests;
