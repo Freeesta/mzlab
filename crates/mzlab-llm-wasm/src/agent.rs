@@ -34,6 +34,11 @@ fn line(o: &Output, outcome: &str) -> String {
             .str(summary),
         Output::Show(t) => j.raw("{\"o\":\"show\",\"text\":").str(t),
         Output::Log(l) => j.raw("{\"o\":\"log\",\"line\":").raw(l),
+        Output::Sub { role, request } => j
+            .raw("{\"o\":\"sub\",\"role\":")
+            .str(role)
+            .raw(",\"request\":")
+            .raw(&request.to_json()),
         Output::Done => j.raw("{\"o\":\"done\",\"outcome\":").str(outcome),
     };
     j.raw("}\n");
@@ -65,7 +70,7 @@ impl Agent {
         } else {
             Profile::Course
         };
-        let mut st = State::new(
+        let st = State::without_check(
             find(provider_id)?,
             model,
             parse_catalog(tools_json).map_err(fail)?,
@@ -73,7 +78,6 @@ impl Agent {
             level,
             profile,
         );
-        st.external_check = true;
         Ok(Agent { st, replay: None })
     }
 
@@ -146,6 +150,22 @@ impl Agent {
                 content,
             },
         ))
+    }
+
+    /// What a subagent answered (`ok`: its text; otherwise the error key).
+    pub fn sub_result(&mut self, role: &str, ok: bool, body: &str) -> String {
+        let body = if ok {
+            Ok(body.to_string())
+        } else {
+            Err(body.to_string())
+        };
+        go(
+            self,
+            Input::SubResult {
+                role: role.to_string(),
+                body,
+            },
+        )
     }
 
     /// What the user answers to an `ask`.

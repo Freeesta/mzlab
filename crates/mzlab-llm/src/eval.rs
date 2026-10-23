@@ -192,7 +192,7 @@ fn feed(
                 }
                 Output::AskConfirm { id, .. } => queue.push(Input::Confirm { id, yes: true }),
                 Output::Show(t) => plan.text.push_str(&t),
-                Output::Log(_) | Output::Done => {}
+                Output::Log(_) | Output::Sub { .. } | Output::Done => {}
             }
         }
     }
