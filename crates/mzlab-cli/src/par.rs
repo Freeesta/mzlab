@@ -34,12 +34,15 @@ fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
     (0..n).map(f).collect()
 }
 
+/// The recipe, the `.mzfeatf` bytes and the weak candidates of each file.
+pub(crate) type Detected = (mzlab_feat::recipe::Recipe, Vec<Vec<u8>>, Vec<Vec<u8>>);
+
 /// Index and detection of each file are independent: one pass per file on the pool, results in file order. Returns the recipe, the `.mzfeatf` bytes and the weak candidates of each file.
 pub(crate) fn index_and_detect(
     files: &[PathBuf],
     idxs: &[PathBuf],
     params: &str,
-) -> Result<(mzlab_feat::recipe::Recipe, Vec<Vec<u8>>, Vec<Vec<u8>>)> {
+) -> Result<Detected> {
     par_map(files.len(), |k| {
         eprintln!("index {}", files[k].display());
         build_index(&files[k], &idxs[k], DEFAULT_BUDGET)
