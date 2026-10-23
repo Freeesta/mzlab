@@ -16673,3 +16673,4 @@
 {"v":1,"ts_utc":"2026-10-23T15:51:35Z","tipo":"annullamento","k":"39981857206","workflow":"pages","minuti_runner":0.1,"sostituito_da":"94ea260aca9f5cebbef108067b29225c9c5549f1","pr":null,"sha":"ff3b401a16bbc4d2cb92e2519fe29880291349ed","run_id":39981857206,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T15:53:26Z","azione":"aperta","tipo":"pr","pr":1632,"sha":"4186b534842787c996c9c67fecaf4e59ee9c2adf"}
 {"v":1,"ts_utc":"2026-10-23T16:09:25Z","azione":"aperta","tipo":"pr","pr":1633,"sha":"387e7d425b152faf659e91326b2f72f153eacce5"}
+{"v":1,"tipo":"pr","pr":1632,"sha":"4186b534842787c996c9c67fecaf4e59ee9c2adf","ts_utc":"2026-10-23T16:15:40Z","azione":"unita","aperta_s":1334,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":2,"righe_meno":0,"file_n":1,"file":["docs/agenti/lettori-modulo.md"],"aree":{"docs":1},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":1292}
