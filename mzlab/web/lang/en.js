@@ -786,6 +786,7 @@ I18N.add("en", {
   "files.rename.prompt": "Sample name",
   "files.color.of": "Color of {label}",
   "files.color.custom": "Custom",
+  "files.color.swatch": "Color {c}",
   "files.ctx.group": "Group the shown files…",
   "files.ctx.ungroup": "Ungroup",
   "files.ctx.rename": "Rename…",

@@ -1,6 +1,7 @@
 """File list: a double click on the colour square opens the colour picker at once (the colour then changes); the rename prompt no longer carries the «only a label» note."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import re
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -23,6 +24,21 @@ try:
             pg.evaluate("(() => { window.__inp.value = '#112233'; window.__inp.dispatchEvent(new Event('change')); })()")
             assert pg.evaluate(f"E.files[{k}].color") == "#112233" and pg.evaluate(f"E.files[{k}].colorSet") is True
         step("double click on the colour square opens the picker and sets the colour", colour)
+        def popup():
+            drawer(pg); k = pg.evaluate("+Q('#flst .fl .nm').dataset.k")
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text=re.compile("Cambia colore|Change color")).click(); attendi(pg, "!!Q('#colpop')")
+            sw = pg.locator("#colpop button[data-c]"); assert sw.count() == 10 and all(sw.nth(i).is_visible() for i in range(10)), "the swatches are not visible buttons"
+            assert "<button" not in pg.inner_text("#colpop") and "data-c=" not in pg.inner_text("#colpop"), "markup shown as text"
+            assert all(sw.nth(i).get_attribute("aria-label") and sw.nth(i).get_attribute("aria-pressed") in ("true", "false") for i in range(10))
+            fl = pg.locator("#flst .fl").first; dot = fl.locator(":scope > i")
+            sw.nth(3).click(); attendi(pg, "!Q('#colpop')")
+            assert pg.evaluate(f"E.files[{k}].color") == "#D55E00" and not pg.evaluate("!!Q('#colpop')")
+            assert "213, 94, 0" in dot.evaluate("e => getComputedStyle(e).backgroundColor"), "the dot did not update"
+            assert pg.evaluate(f"E.panels.some(p => p._a && JSON.stringify(p._a).includes('#D55E00')) || document.body.innerHTML.toUpperCase().includes('#D55E00') || document.body.innerHTML.includes('213, 94, 0')"), "graph/legend did not take the colour"
+            pg.locator("#flst .fl .nm").first.click(button="right"); pg.locator("#ctx div", has_text=re.compile("Cambia colore|Change color")).click(); attendi(pg, "!!Q('#colpop')")
+            assert pg.locator("#colpop button[data-c][aria-pressed=true]").get_attribute("data-c") == "#D55E00"
+            pg.keyboard.press("Escape"); assert not pg.evaluate("!!Q('#colpop')"), "Esc did not close the popup"
+        step("the colour popup shows real swatch buttons (no markup as text) and the colour changes everywhere", popup)
         def margin():
             for w, h in ((1400, 900), (700, 480)):
                 pg.set_viewport_size({"width": w, "height": h}); drawer(pg)
