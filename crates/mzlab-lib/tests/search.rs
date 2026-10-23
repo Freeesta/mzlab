@@ -235,10 +235,10 @@ fn identity_top_n_is_the_head_of_the_full_ranking() {
     assert!(full.windows(2).all(|w| w[0].entropy >= w[1].entropy));
 }
 
-/// The query-side preparation changes no number: `pair_scores_for` equals `pair_scores` bit for bit (all fields, pairs included).
+/// The reusable-buffer scorer changes no number: one `Scorer` over many spectra equals one-shot `pair_scores` bit for bit, whatever came before.
 #[test]
-fn prepared_query_scores_equal_pair_scores() {
-    use mzlab_lib::prep::{pair_scores_for, QueryPrep};
+fn scorer_over_many_spectra_equals_pair_scores() {
+    use mzlab_lib::prep::Scorer;
     use mzlab_lib::scores::pair_scores;
     let mut x = 0x2545_F491_4F6C_DD1Du64;
     let mut r = move || {
@@ -259,12 +259,35 @@ fn prepared_query_scores_equal_pair_scores() {
             prec: 300.0,
         }
     };
-    for k in 0..200 {
-        let (a, b) = (spec(1 + k % 25), spec(1 + (k * 7) % 30));
-        let prep = QueryPrep::new(&a);
-        assert_eq!(
-            pair_scores_for(&prep, &a, &b, 0.3),
-            pair_scores(&a, &b, 0.3)
-        );
+    for k in 0..40 {
+        let a = spec(1 + k % 25);
+        let mut sc = Scorer::new(&a);
+        for m in 0..40 {
+            let b = spec(1 + (k * 7 + m * 3) % 30);
+            let got = sc.score(&a, &b, 0.3);
+            let want = pair_scores(&a, &b, 0.3);
+            assert_eq!(sc.pairs(), &want.pairs[..]);
+            assert!(got.pairs.is_empty());
+            assert_eq!(
+                PairScoresNoPairs::from(&got),
+                PairScoresNoPairs::from(&want)
+            );
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct PairScoresNoPairs(u64, u64, u64, u64, usize, u64);
+
+impl From<&mzlab_lib::scores::PairScores> for PairScoresNoPairs {
+    fn from(p: &mzlab_lib::scores::PairScores) -> Self {
+        PairScoresNoPairs(
+            p.entropy.to_bits(),
+            p.cosine.to_bits(),
+            p.forward.to_bits(),
+            p.reverse.to_bits(),
+            p.shared,
+            p.explained.to_bits(),
+        )
     }
 }

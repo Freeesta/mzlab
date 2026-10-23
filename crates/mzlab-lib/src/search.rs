@@ -4,7 +4,7 @@
 use crate::clean::{clean, weighted, CleanOpts};
 use crate::error::Result;
 use crate::io::Source;
-use crate::prep::{pair_scores_for, QueryPrep};
+use crate::prep::Scorer;
 use crate::read::Library;
 use crate::scores::{common_losses, modified_cosine, pair_scores, pair_term, ModCosine, Spec};
 use crate::sortutil;
@@ -90,8 +90,9 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
     let w = o.prec_tol.window(q.prec);
     let top = o.top.max(1);
     // Scores only: spectra and pairs are loaded for the winners, so a wide window over a big library stays small.
-    let prep = QueryPrep::new(&q.spec);
+    let mut scorer = Scorer::new(&q.spec);
     let mut light: Vec<Hit> = Vec::new();
+    let mut s = Spec::default();
     let order = |a: &Hit, b: &Hit| {
         b.entropy
             .total_cmp(&a.entropy)
@@ -101,8 +102,9 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
     for r in lib.ranges(q.pol, q.prec - w, q.prec + w)? {
         for i in r {
             let rec = lib.rec(i)?;
-            let s = spec_of(lib, i, rec.prec)?;
-            let sc = pair_scores_for(&prep, &q.spec, &s, o.frag_da);
+            lib.peaks_into(i, &mut s.mz, &mut s.it)?;
+            s.prec = rec.prec;
+            let sc = scorer.score(&q.spec, &s, o.frag_da);
             let d = rec.prec - q.prec;
             light.push(Hit {
                 index: i,
