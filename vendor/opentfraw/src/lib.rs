@@ -14,6 +14,7 @@ pub mod extra;
 pub mod generic_data;
 pub mod header;
 pub mod mzml;
+pub mod pacchetto;
 pub mod raw_file_info;
 pub mod reaction;
 pub mod robust;
