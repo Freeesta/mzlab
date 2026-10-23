@@ -110,7 +110,7 @@ export class AgentRun {
     if (rep.replaying) for (const l of rep.lines.split("\n")) { if (l) events.push(JSON.parse(l)); }
     else {
       const client = await this.getClient(), p = this.settings.provider, sink = (/** @type {any} */ e) => { events.push(e); };
-      try { await client.sendRaw(p, "", json, sink); } catch (e) { const x = asError(e); events.push({ ev: "error", key: x.key, params: x.params }); }
+      try { await this.guard(client); await client.sendRaw(p, "", json, sink); } catch (e) { const x = asError(e); events.push({ ev: "error", key: x.key, params: x.params }); }
     }
     let body = "";
     for (const e of events) {
@@ -159,6 +159,14 @@ export class AgentRun {
     return client;
   }
 
+  /** the checks before any byte leaves, at every send: the assistant still switched on, the consent for the provider still stored (it may have been revoked since), a key for a provider that needs one
+   * @param {{needsKey: (id: string) => Promise<boolean>}} client */
+  async guard(client) {
+    const s = readSettings();
+    if (!s.on || !s.provider || !hasConsent(s.provider)) throw { key: "err.llm.consent", params: {} };
+    if (await client.needsKey(s.provider)) throw { key: "err.llm.key.missing", params: {} };
+  }
+
   /** the request of the last `send` goes out through the client of the page and its events come back one by one, in order */
   async transport() {
     const conv = JSON.parse((await this.rpc({ op: "agent.in", kind: "conv" })).conv);
@@ -166,7 +174,7 @@ export class AgentRun {
     // one chain per send: the events of this send are handled in order, and a send started from inside one of them (after a tool result) waits only for its own events
     let chain = Promise.resolve();
     const sink = (/** @type {any} */ e) => { chain = chain.then(async () => { await this.pump(await this.rpc({ op: "agent.in", kind: "event", line: JSON.stringify(e) })); }); };
-    try { await client.send(conv, sink, false); } catch (e) { const x = asError(e); sink({ ev: "error", key: x.key, params: x.params }); }
+    try { await this.guard(client); await client.send(conv, sink, false); } catch (e) { const x = asError(e); sink({ ev: "error", key: x.key, params: x.params }); }
     await chain;
   }
 
