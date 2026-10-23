@@ -18,6 +18,18 @@ pub enum Effort {
 }
 
 impl Effort {
+    pub fn parse(name: &str) -> Option<Effort> {
+        [
+            Effort::Low,
+            Effort::Medium,
+            Effort::High,
+            Effort::XHigh,
+            Effort::Max,
+        ]
+        .into_iter()
+        .find(|e| e.name() == name)
+    }
+
     pub fn name(self) -> &'static str {
         match self {
             Effort::Low => "low",

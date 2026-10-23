@@ -1,6 +1,6 @@
 # Rust engine (crates/): tests, WASM build and a check of the dependencies in the WASM graph.
 # The only check of the protected main branch for the Rust engine is the always-on job `rust-ok`. fmt, clippy and deny block this workflow (clippy and fmt against tools/clippy_base.json, which can only shrink).
-# Cache: every run restores the newest one; only runs on main save a new one, and only when the Rust sources changed (key on crates/, vendor/, Cargo.lock): a cache saved on a pull request is not visible to the other pull requests and would only push the ones of main out of the 10 GB of the repository.
+# Cache: every run restores the newest one; runs on main save a new one when the Rust sources changed (key on crates/, vendor/, Cargo.lock), a pull request only while the newest cache has no tree record (tools/ci_cargo_mtime.py): a cache saved on a pull request is not visible to the other pull requests and would only push the ones of main out of the 10 GB of the repository.
 name: rust
 
 on:
@@ -36,13 +36,13 @@ jobs:
           if [ -z "$BASE" ] || echo "$BASE" | grep -qE '^0+$' || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "rust=true" >> "$GITHUB_OUTPUT"; echo "core=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|vendor/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/clippy_base\.json|tools/feat_mirato\.py|tests/test_feat_wasm\.py|tests/feat_wasm_node\.js|tests/test_guardie_memoria\.py)'; then
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/|vendor/|Cargo\.|rust-toolchain\.toml|\.cargo/|\.github/workflows/rust\.yml|deny\.toml|tools/controlla_rust\.py|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|tools/clippy_base\.json|tools/feat_mirato\.py|tests/test_feat_wasm\.py|tests/feat_wasm_node\.js|tests/test_guardie_memoria\.py)'; then
             echo "rust=true" >> "$GITHUB_OUTPUT"
           else
             echo "rust=false" >> "$GITHUB_OUTPUT"
           fi
           # rust-core covers crates with no other project dependency: it runs only when one of them, the toolchain, the lockfile or the golden data changed
-          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/mzlab-(core|lettori|lib|libro|mol|target)/|Cargo\.|rust-toolchain\.toml|vendor/|\.cargo/|tests/golden/|\.github/workflows/rust\.yml)'; then
+          if git diff --name-only "$BASE" "$GITHUB_SHA" | grep -qE '^(crates/mzlab-(core|lettori|lib|libro|mol|target)/|Cargo\.|rust-toolchain\.toml|vendor/|\.cargo/|tests/golden/|tools/ci_binari_test\.py|tools/ci_cargo_mtime\.py|\.github/workflows/rust\.yml)'; then
             echo "core=true" >> "$GITHUB_OUTPUT"
           else
             echo "core=false" >> "$GITHUB_OUTPUT"
@@ -75,6 +75,10 @@ jobs:
           restore-keys: |
             rust-${{ runner.os }}-lint-
             rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: fmt and clippy against the base (tools/controlla_rust.py, tools/clippy_base.json)
         run: python3 tools/controlla_rust.py
       # a dependency that no source of the crate names is dropped from its Cargo.toml (cargo-machete)
@@ -83,8 +87,11 @@ jobs:
           command -v cargo-machete >/dev/null || cargo install cargo-machete --locked --version 0.9.2
           cargo machete
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -94,6 +101,7 @@ jobs:
             target
           key: ${{ steps.rcache.outputs.cache-primary-key }}
 
+  # builds and the dependency check; the guards (which build their own .wasm) run in rust-wasm-guardie at the same time
   rust-wasm:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -119,8 +127,10 @@ jobs:
           restore-keys: |
             rust-${{ runner.os }}-wasm-
             rust-${{ runner.os }}-
-      - name: numpy (the guards write the synthetic files with tools/golden.py)
-        run: python -m pip install numpy
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: WASM build (release)
         run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
       - name: The libraries crates and mzlab-feat build for WASM
@@ -130,11 +140,6 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features proofs
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features mrm
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
-      # installed before the cache is saved: ~/.cargo/bin/wasm-bindgen is in the cached paths, and installing it after the save recompiled it on every run (~90 s)
-      - name: wasm-bindgen CLI (the version of Cargo.lock)
-        run: |
-          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
-          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
       - name: No native dependencies in the WASM graph
         run: |
           for p in mzlab-wasm mzlab-lib mzlab-lib-wasm mzlab-feat mzlab-feat-wasm mzlab-feat-table-wasm mzlab-feat-grafo-wasm; do
@@ -143,13 +148,67 @@ jobs:
               echo "::error::forbidden dependency in the WASM graph of $p"; exit 1
             fi
           done
+      # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+
+  rust-wasm-guardie:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: rust-${{ runner.os }}-wasmguard-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
+          restore-keys: |
+            rust-${{ runner.os }}-wasmguard-
+            rust-${{ runner.os }}-wasm-
+            rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
+      - name: numpy (the guards write the synthetic files with tools/golden.py)
+        run: python -m pip install numpy
+      # installed before the cache is saved: ~/.cargo/bin/wasm-bindgen is in the cached paths, and installing it after the save recompiled it on every run (~90 s)
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
       - name: Guards of memory and same bytes under a reduced budget (docs/agenti/memoria.md)
         run: |
           python -m pip install pytest
           python -m pytest -q tests/test_guardie_memoria.py tests/test_feat_wasm.py
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -185,6 +244,10 @@ jobs:
             rust-${{ runner.os }}-det-
             rust-${{ runner.os }}-wasm-
             rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: numpy (the workflow writes the synthetic files with tools/golden.py)
         run: python -m pip install numpy pytest
       # the same synthetic workflow native and as WASI under node gives the same SHA-256 (docs/agenti/rust-flow.md)
@@ -194,8 +257,11 @@ jobs:
           python -m pip install jsonschema
           python -m pytest -q tests/test_flow_determinismo.py
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -231,6 +297,10 @@ jobs:
             rust-${{ runner.os }}-testfeat-
             rust-${{ runner.os }}-test-
             rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
       # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
@@ -248,8 +318,11 @@ jobs:
           cargo test --locked --release -p mzlab-feat --features record --test grafo_record --test posizioni_record --test frammenti_record
           cargo test --locked --release -p mzlab-feat --features record,interp --test interp_record
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -284,6 +357,10 @@ jobs:
             rust-${{ runner.os }}-testcore-
             rust-${{ runner.os }}-test-
             rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
       # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
@@ -296,10 +373,14 @@ jobs:
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: |
-          cargo test --locked --release -p mzlab-core -p mzlab-lettori -p mzlab-lib -p mzlab-libro -p mzlab-mol -p mzlab-target
+          # one build, then the test binaries four at a time (tools/ci_binari_test.py), one log group per binary
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-core -p mzlab-lettori -p mzlab-lib -p mzlab-libro -p mzlab-mol -p mzlab-target
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -334,6 +415,10 @@ jobs:
             rust-${{ runner.os }}-testmisca-
             rust-${{ runner.os }}-test-
             rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
       # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
@@ -346,13 +431,17 @@ jobs:
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: |
-          cargo test --locked --release -p mzlab-attributio-wasm -p mzlab-chem -p mzlab-chem-wasm -p mzlab-tutor -p mzlab-llm -p mzlab-llm-wasm
+          # each build once, then its test binaries four at a time (tools/ci_binari_test.py), one log group per binary
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-attributio-wasm -p mzlab-chem -p mzlab-chem-wasm -p mzlab-tutor -p mzlab-llm -p mzlab-llm-wasm
           # the fused .wasm of Attributio (feature all) is not a default feature: its own tests run here
-          cargo test --locked --release -p mzlab-attributio-wasm --features all
-          cargo test --locked --release -p mzlab-chem --features record --test mol3d_record
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-attributio-wasm --features all
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release -p mzlab-chem --features record --test mol3d_record
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -387,6 +476,10 @@ jobs:
             rust-${{ runner.os }}-testmiscb-
             rust-${{ runner.os }}-test-
             rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: numpy (the parity tests write the synthetic files with tools/golden.py)
         run: python -m pip install numpy
       # The native test binaries are optimised (opt-level 3) but without the LTO and the single codegen unit of the .wasm profile:
@@ -400,10 +493,13 @@ jobs:
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "3"
         run: |
           # every other crate of the workspace (a new crate lands here unless it is added to a list above or to rust-misc-a)
-          cargo test --locked --release --workspace --exclude mzlab-feat --exclude mzlab-core --exclude mzlab-lettori --exclude mzlab-lib --exclude mzlab-libro --exclude mzlab-mol --exclude mzlab-target --exclude mzlab-attributio-wasm --exclude mzlab-chem --exclude mzlab-chem-wasm --exclude mzlab-tutor --exclude mzlab-llm --exclude mzlab-llm-wasm
+          python3 tools/ci_binari_test.py -j 4 -- --locked --release --workspace --exclude mzlab-feat --exclude mzlab-core --exclude mzlab-lettori --exclude mzlab-lib --exclude mzlab-libro --exclude mzlab-mol --exclude mzlab-target --exclude mzlab-attributio-wasm --exclude mzlab-chem --exclude mzlab-chem-wasm --exclude mzlab-tutor --exclude mzlab-llm --exclude mzlab-llm-wasm
       # saved last and also after a red step (main only)
+      - name: Record the tree of the cache
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
+        run: python3 tools/ci_cargo_mtime.py record
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: always() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.rcache.outputs.cache-hit != 'true' && (github.ref == 'refs/heads/main' || steps.mtime.outputs.record != 'true') }}
         with:
           path: |
             ~/.cargo/registry
@@ -427,7 +523,7 @@ jobs:
   # The one name for the protection of main: green when every Rust job passed; a skipped job is accepted only when `changes` found no Rust path (rust-core also when none of its crates changed). A failed or cancelled job is red.
   rust-ok:
     if: always()
-    needs: [changes, rust, rust-core, rust-misc-a, rust-misc-b, rust-wasm, rust-det, rust-lint, deny]
+    needs: [changes, rust, rust-core, rust-misc-a, rust-misc-b, rust-wasm, rust-wasm-guardie, rust-det, rust-lint, deny]
     runs-on: ubuntu-latest
     steps:
       - name: Every Rust job passed, or all were skipped because no Rust path changed
@@ -436,9 +532,9 @@ jobs:
           RUST_DIFF: ${{ needs.changes.outputs.rust }}
           CORE_DIFF: ${{ needs.changes.outputs.core }}
           CORE: ${{ needs.rust-core.result }}
-          JOBS: ${{ needs.rust.result }} ${{ needs.rust-misc-a.result }} ${{ needs.rust-misc-b.result }} ${{ needs.rust-wasm.result }} ${{ needs.rust-det.result }} ${{ needs.rust-lint.result }} ${{ needs.deny.result }}
+          JOBS: ${{ needs.rust.result }} ${{ needs.rust-misc-a.result }} ${{ needs.rust-misc-b.result }} ${{ needs.rust-wasm.result }} ${{ needs.rust-wasm-guardie.result }} ${{ needs.rust-det.result }} ${{ needs.rust-lint.result }} ${{ needs.deny.result }}
         run: |
-          echo "changes: $CHANGES (rust=$RUST_DIFF core=$CORE_DIFF); rust-core: $CORE; rust rust-misc-a rust-misc-b rust-wasm rust-det rust-lint deny: $JOBS"
+          echo "changes: $CHANGES (rust=$RUST_DIFF core=$CORE_DIFF); rust-core: $CORE; rust rust-misc-a rust-misc-b rust-wasm rust-wasm-guardie rust-det rust-lint deny: $JOBS"
           [ "$CHANGES" = "success" ] || exit 1
           case "$JOBS $CORE" in *failure*|*cancelled*) exit 1;; esac
           # with a Rust diff nothing may be skipped, except rust-core when none of its paths changed

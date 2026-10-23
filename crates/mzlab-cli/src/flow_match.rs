@@ -1,6 +1,8 @@
 //! The native executor of `spectra.match@1`: the query spectra (MGF/MSP/MassBank/JSON) scored against a library (the same formats, or a `.mzlib`) with
 //! the engine of `mzlab-lib` (`search::identity`, `search::analogs`, `scores`), as the Library tab does. The `candidates` file it writes is JSON.
 
+use crate::flow_match_evidence::{self as evidence, Pair};
+use crate::flow_match_filter::Filters;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
@@ -19,7 +21,7 @@ use mzlab_lib::scores::modified_cosine;
 use mzlab_lib::search::{analogs, identity, AnalogOpts, IdentityOpts, Query, Tol};
 use mzlab_lib::spec::Spectrum;
 
-type Lib = Library<Vec<u8>>;
+pub(crate) type Lib = Library<Vec<u8>>;
 
 /// A file the executors read: its name (the format is told from it and the content) and its bytes.
 pub type Named<'a> = (&'a str, &'a [u8]);
@@ -87,6 +89,7 @@ fn lib_spectra(lib: &Lib) -> mzlab_lib::error::Result<Vec<Spectrum>> {
             mz,
             it,
             meta,
+            rt: rec.rt_min(),
         });
     }
     Ok(out)
@@ -108,7 +111,7 @@ fn dprec_ppm(tol: Tol, d: f64, prec: f64) -> f64 {
     }
 }
 
-fn text_param<'a>(job: &'a Job, name: &str) -> &'a str {
+pub(crate) fn text_param<'a>(job: &'a Job, name: &str) -> &'a str {
     let found = job.resolved.params.iter().find(|(k, _)| k == name);
     found.and_then(|(_, v)| v.str()).unwrap_or("")
 }
@@ -123,13 +126,15 @@ pub(crate) fn num(job: &Job, name: &str) -> f64 {
 }
 
 /// One candidate of the `candidates` record: the hit of a library spectrum with its score.
-struct Cand {
-    index: u32,
+pub(crate) struct Cand {
+    pub(crate) index: u32,
     score: f64,
     shared: usize,
     mass_ppm: f64,
     delta: f64,
     explained: Vec<f64>,
+    /// the matched peaks on both sides, when the step is asked for them (`matched_peaks`)
+    matched: Option<Vec<Pair>>,
     /// the score as a sum of terms, when the step is asked for it (`score_terms`)
     terms: Option<ScoreTerms>,
 }
@@ -203,6 +208,12 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
         {
             continue;
         }
+        let matched = want_peaks(job).then(|| match alg {
+            "modified_cosine" => {
+                evidence::from_modified(&modified_cosine(&q.spec, &h.spec, o.frag_da))
+            }
+            _ => evidence::from_pairs(&q.spec, &h.spec, &h.pairs),
+        });
         out.push(Cand {
             index: h.index,
             score,
@@ -213,10 +224,16 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
                 .iter()
                 .filter_map(|&(i, _)| q.spec.mz.get(i).copied())
                 .collect(),
+            matched,
             terms: t,
         });
     }
     Ok(out)
+}
+
+/// Whether the step lists the matched peaks of each candidate (`matched_peaks`).
+fn want_peaks(job: &Job) -> bool {
+    flag(job, "matched_peaks", |v| v.bool() == Some(true))
 }
 
 fn analogues(lib: &Lib, q: &Query, job: &Job, terms: bool) -> Result<Vec<Cand>> {
@@ -244,6 +261,7 @@ fn analogues(lib: &Lib, q: &Query, job: &Job, terms: bool) -> Result<Vec<Cand>> 
                 .iter()
                 .filter_map(|&(i, _, _)| h.mc.a_top.mz.get(i).copied())
                 .collect(),
+            matched: want_peaks(job).then(|| evidence::from_modified(&h.mc)),
             terms: terms.then(|| mod_terms(&h.mc)),
         })
         .collect())
@@ -302,6 +320,7 @@ fn write_cand(
     alg: &str,
     c: &Cand,
     fdr: Option<&Fdr>,
+    rt_delta: Option<f64>,
 ) -> Result<()> {
     let m = lib
         .meta(c.index)
@@ -326,8 +345,14 @@ fn write_cand(
     o.raw(",\"shared\":").int(c.shared as i64);
     o.raw(",\"library_peaks\":").int(peaks as i64);
     o.raw(",\"explained\":").rounded(&c.explained, 4);
+    if let Some(m) = &c.matched {
+        evidence::write(o, m);
+    }
     o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
     o.raw(",\"precursor_delta\":").num(round(c.delta, 4));
+    if let Some(d) = rt_delta {
+        o.raw(",\"rt_delta_min\":").num(round(d, 3));
+    }
     o.raw(",\"source\":\"library\",\"algorithm\":").str(alg);
     // only the best target of the query carries a q-value (the score the decoys were counted on)
     if let Some(f) = fdr {
@@ -345,6 +370,11 @@ fn write_cand(
     Ok(())
 }
 
+/// Whether the parameter `name` of the job has a value that `is` accepts.
+fn flag(job: &Job, name: &str, is: fn(&mzlab_core::json::Value) -> bool) -> bool {
+    job.resolved.params.iter().any(|(k, v)| k == name && is(v))
+}
+
 /// Runs the step of `job` on the query and library files and returns the text of the `candidates` file: one object per candidate, queries in file order,
 /// each query's candidates best score first, at most `top_n` of them.
 pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
@@ -354,24 +384,16 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         .as_ref()
         .map_or("spectral_entropy", |a| a.0.as_str())
         .to_string();
-    let decoys = job
-        .resolved
-        .params
-        .iter()
-        .any(|(k, v)| k == "decoys" && v.str() == Some("spectrum"));
+    let decoys = flag(job, "decoys", |v| v.str() == Some("spectrum"));
     if decoys && alg == "tree" {
         return Err(Error::new("err.flow.match.decoysAlgorithm"));
     }
-    let terms = job
-        .resolved
-        .params
-        .iter()
-        .any(|(k, v)| k == "score_terms" && v.bool() == Some(true));
+    let terms = flag(job, "score_terms", |v| v.bool() == Some(true));
     if alg == "tree" {
         return crate::flow_match_tree::tree_text(job, query, library);
     }
     let lib = open_library(library, decoys)?;
-    let name = text_param(job, "name_contains").to_lowercase();
+    let filters = Filters::from_job(job);
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
     o.raw("{\"format\":\"candidates/1\",\"step\":")
@@ -402,12 +424,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         if alg == "modified_cosine" {
             c.extend(analogues(&lib, q, job, terms)?);
         }
-        if !name.is_empty() {
-            c.retain(|h| {
-                lib.meta(h.index)
-                    .is_ok_and(|m| m.name.to_lowercase().contains(&name))
-            });
-        }
+        let rt_delta = filters.apply(&lib, &mut c, s.rt);
         if decoys {
             // the decoys are scored to count the errors, never listed
             c.retain(|h| lib.meta(h.index).is_ok_and(|m| !is_decoy(&m.accession)));
@@ -418,7 +435,15 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
                 o.raw(",");
             }
             first = false;
-            write_cand(&mut o, &lib, &qid, &alg, h, fdr.as_ref().map(|f| &f[k]))?;
+            write_cand(
+                &mut o,
+                &lib,
+                &qid,
+                &alg,
+                h,
+                fdr.as_ref().map(|f| &f[k]),
+                rt_delta.get(&h.index).copied(),
+            )?;
         }
     }
     o.raw("]}");

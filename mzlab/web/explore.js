@@ -910,8 +910,8 @@ function menu(ev, items) {
   ev.preventDefault();
   const m = Q("#ctx");
   m.innerHTML = "";
-  items.forEach(it => {
-    if (it === "-") { m.appendChild(document.createElement("hr")); return; }
+  // one entry; `fila` groups two or more entries in a single row (icons only, split in equal columns)
+  const mk = it => {
     const d = document.createElement("div");
     if (it.icon) {
       // decorative icon on the left (currentColor, so it follows the theme and the grey of a disabled entry); a checkable entry keeps its mark on the right
@@ -920,12 +920,12 @@ function menu(ev, items) {
       ic.setAttribute("aria-hidden", "true");
       ic.innerHTML = it.icon;
       d.appendChild(ic);
-      d.appendChild(document.createTextNode(it.label));
+      if (!it.soloIcona) d.appendChild(document.createTextNode(it.label));
       if (it.check) { const ck = document.createElement("span"); ck.className = "ck"; ck.setAttribute("aria-hidden", "true"); ck.textContent = "\u2713"; d.appendChild(ck); }
     } else {
       d.textContent = (it.check ? "\u2713 " : "") + it.label;
     }
-    if (it.tip) d.title = it.tip;
+    if (it.tip || it.soloIcona) d.title = it.tip || it.label;
     if (it.aria) d.setAttribute("aria-label", it.aria);
     d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");
     if (it.check != null) d.setAttribute("aria-checked", String(!!it.check));
@@ -934,7 +934,18 @@ function menu(ev, items) {
     // an action not available now: grey, still reachable from the keyboard
     if (it.dim) { d.className = "dim"; if (it.id) { d.tabIndex = -1; d.setAttribute("aria-disabled", "true"); } }
     else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
-    m.appendChild(d);
+    return d;
+  };
+  items.forEach(it => {
+    if (it === "-") { m.appendChild(document.createElement("hr")); return; }
+    if (it.fila) {
+      const r = document.createElement("div");
+      r.className = "mrow"; r.setAttribute("role", "group");
+      it.fila.forEach(x => r.appendChild(mk(x)));
+      m.appendChild(r);
+      return;
+    }
+    m.appendChild(mk(it));
   });
   m.hidden = false; m.setAttribute("role", "menu");
   // keyboard: arrows move, Enter/Space choose, Esc closes

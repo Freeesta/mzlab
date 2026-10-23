@@ -1,10 +1,10 @@
 // @ts-check
 "use strict";
-// Soft theme change: the new colours fade in (about 300 ms) instead of snapping, charts included. Uses the View Transitions API (a snapshot
+// Soft theme change: the new colours fade in (about 700 ms, --tema-durata in transizioni.css) instead of snapping, charts included. Uses the View Transitions API (a snapshot
 // cross-fade, so the canvases fade too) and a CSS colour transition (transizioni.css, .tema-tr) where it is missing. Nothing moves with reduced motion.
 const TEMASOFT = (() => {
   const R = document.documentElement;
-  const FADE_MS = 400;
+  const fadeMs = () => (parseFloat(getComputedStyle(R).getPropertyValue("--tema-durata")) || 700) + 100;
   const still = () => R.classList.contains("no-tr") || R.hasAttribute("data-a11y-reduce") || !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
   /** Applies `change` (sets the theme and redraws) with a short fade. @param {() => void} change */
   function run(change) {
@@ -16,7 +16,7 @@ const TEMASOFT = (() => {
     }
     R.classList.add("tema-tr");
     change();
-    setTimeout(() => R.classList.remove("tema-tr"), FADE_MS);
+    setTimeout(() => R.classList.remove("tema-tr"), fadeMs());
   }
   return { run };
 })();

@@ -5,7 +5,7 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::budget::sha256_hex;
+use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
@@ -59,6 +59,8 @@ mod flow_lookup_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
+mod flow_match_evidence;
+mod flow_match_filter;
 #[cfg(test)]
 mod flow_match_tests;
 mod flow_match_tree;
@@ -112,6 +114,7 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+mod par;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -164,22 +167,19 @@ pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
-    for (f, i) in files.iter().zip(&idxs) {
-        eprintln!("index {}", f.display());
-        build_index(f, i, DEFAULT_BUDGET)?;
-    }
-    let recipe = run::recipe_for(params, &mut open(&idxs[0])?)?;
-    let mut detected = Vec::new();
-    for (f, i) in files.iter().zip(&idxs) {
-        eprintln!("detect {}", f.display());
-        let name = f
-            .file_name()
-            .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        detected.push(run::detect(&mut open(i)?, &name, &recipe)?);
-    }
-    let (tables, origin) = run::read_files(&detected)?;
+    let (recipe, detected, weak) = crate::par::index_and_detect(files, &idxs, params)?;
+    let mut series = crate::par::Series(detected, weak);
+    let origin = run::origin_of(&mut series)?;
     eprintln!("align {} file(s)", files.len());
-    let table = run::align(&tables, &origin, &recipe, |k| open(&idxs[k]))?;
+    let mut table = Vec::new();
+    let budget = MemBudget::mb(mzlab_core::budget_auto::native_auto_mb());
+    run::align_to(
+        &mut series,
+        &budget,
+        &recipe,
+        |k| open(&idxs[k]),
+        &mut table,
+    )?;
     let mut list = Out::default();
     list.raw("{\"files\":[");
     for (k, (name, sha)) in origin.inputs.iter().enumerate() {

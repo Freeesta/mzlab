@@ -70,7 +70,7 @@ try:
         def pick():
             exp = pg.evaluate("(()=>{const r=SUBREF.autoFile('full');return r.label})()")
             pg.click(f'{X} [data-o=corr]'); pg.wait_for_timeout(150)
-            assert exp in pg.locator(f'{X} .corri', has_text="Sottrai file").inner_text(), "default = reference of the session (t0)"
+            assert exp in pg.locator(f'{X} .corri', has_text="Sottrai file").get_attribute("aria-label"), "default = reference of the session (t0)"
             assert pg.eval_on_selector(f'{X} .corrsel', "s=>s.selectedOptions[0].textContent") == exp
             other = pg.eval_on_selector(f'{X} .corrsel', "s=>[...s.options].find(o=>!o.selected).value")
             pg.select_option(f'{X} .corrsel', other); pg.wait_for_timeout(1200)

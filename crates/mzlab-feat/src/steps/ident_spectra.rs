@@ -179,10 +179,24 @@ fn match_params() -> Vec<Param> {
                 .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"),
             Param::text("name_contains", "Library name contains")
                 .doc("Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"),
+            Param::number("rt_tol", "RT tolerance")
+                .min(0.0)
+                .default_num(0.0)
+                .unit("min")
+                .doc("Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"),
+            Param::text("adduct_contains", "Library adduct contains")
+                .doc("Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"),
+            Param::text("instrument_contains", "Library instrument contains")
+                .doc("Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"),
+            Param::text("ce_contains", "Library collision energy contains")
+                .doc("Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"),
             Param::integer("top_n", "Hits kept").min(1.0).default_num(5.0),
             Param::choice("decoys", "Decoys", &["none", "spectrum"])
                 .default_str("none")
                 .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"),
+            Param::boolean("matched_peaks", "Matched peaks")
+                .default_bool(false)
+                .doc("On: every candidate also lists matched_peaks, the pairs of peaks behind its score (m/z and relative intensity of the query and of the library spectrum, and whether the precursor shift was needed), so the match can be checked peak by peak; the scores do not change. Not used by the tree algorithm"),
             Param::boolean("score_terms", "Score terms")
                 .default_bool(false)
                 .advanced()

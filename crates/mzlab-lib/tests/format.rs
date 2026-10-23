@@ -206,6 +206,7 @@ fn spectra_without_peaks_after_cleaning_are_counted_not_stored() {
         mz: vec![99.0, 99.5],
         it: vec![1.0, 1.0],
         meta: Default::default(),
+        rt: None,
     });
     let (_, info) = build_in_memory(&set, BuildOpts::default()).unwrap();
     assert_eq!((info.n_spectra, info.emptied), (10, 1));

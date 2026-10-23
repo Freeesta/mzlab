@@ -17,6 +17,11 @@ pub enum Input {
         yes: bool,
     },
     Stop,
+    /// The answer of a subagent call (`Output::Sub`): its text, or the error key.
+    SubResult {
+        role: String,
+        body: Result<String, String>,
+    },
 }
 
 pub enum Output {
@@ -34,5 +39,10 @@ pub enum Output {
     Show(String),
     /// A complete `llmlog/1` line.
     Log(String),
+    /// A call to a subagent (`assist::Role`) with its complete request; the transport answers with `Input::SubResult`.
+    Sub {
+        role: String,
+        request: Request,
+    },
     Done,
 }

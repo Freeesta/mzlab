@@ -101,6 +101,144 @@ fn name_contains_filters_the_candidates() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// `adduct_contains`, `instrument_contains` and `ce_contains` keep only the library entries whose field has the text, in any case; they combine with each other.
+#[test]
+fn metadata_filters_keep_the_matching_entries() {
+    let dir = fixture("meta");
+    let msp = std::fs::read_to_string(dir.join("lib.msp")).unwrap();
+    // Alpha gets an instrument and a collision energy, Beta another adduct, instrument and energy
+    let (alpha, rest) = msp.split_once("Name: Beta\n").unwrap();
+    let alpha = alpha.replace(
+        "Name: Alpha\n",
+        "Name: Alpha\nInstrument_type: Orbitrap\nCollision_energy: 30 HCD\n",
+    );
+    let rest = rest.replacen(
+        "Precursor_type: [M+H]+",
+        "Precursor_type: [M+Na]+\nInstrument_type: QTOF\nCollision_energy: 20",
+        1,
+    );
+    let msp = format!("{alpha}Name: Beta\n{rest}");
+    std::fs::write(dir.join("lib.msp"), msp).unwrap();
+    let names = |extra: &str| -> Vec<String> {
+        let p = format!(r#"{{"precursor_da":150,"tol_da":0.5,"top_n":10{extra}}}"#);
+        run(&dir, "cosine", &p);
+        let mut n: Vec<String> = hits(&dir)
+            .get("hits")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|x| x.get("name").unwrap().str().unwrap().to_string())
+            .collect();
+        n.sort();
+        n.dedup();
+        n
+    };
+    assert!(names("").len() >= 3);
+    assert_eq!(names(r#","adduct_contains":"[m+NA]""#), ["Beta"]);
+    assert_eq!(names(r#","instrument_contains":"orbi""#), ["Alpha"]);
+    assert_eq!(names(r#","ce_contains":"HCD""#), ["Alpha"]);
+    assert!(names(r#","instrument_contains":"orbi","adduct_contains":"na""#).is_empty());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// `rt_tol` drops the library entries whose retention time is farther than the tolerance from the query's; entries without one stay, and `rt_delta_min` is written when both are known.
+#[test]
+fn rt_tol_excludes_entries_by_retention_time() {
+    let dir = fixture("rt");
+    let msp = std::fs::read_to_string(dir.join("lib.msp")).unwrap();
+    let msp = msp
+        .replace("Name: Alpha\n", "Name: Alpha\nRT: 5.0\n")
+        .replace("Name: Beta\n", "Name: Beta\nRT: 9.0\n");
+    std::fs::write(dir.join("lib.msp"), msp).unwrap();
+    let mgf = std::fs::read_to_string(dir.join("q.mgf")).unwrap();
+    std::fs::write(
+        dir.join("q.mgf"),
+        mgf.replacen("BEGIN IONS\n", "BEGIN IONS\nRTINSECONDS=306\n", 1),
+    )
+    .unwrap();
+    let run_rt = |extra: &str| {
+        run(
+            &dir,
+            "cosine",
+            &format!(r#"{{"precursor_da":150,"tol_da":0.5,"top_n":10{extra}}}"#),
+        );
+        let h = hits(&dir);
+        let mut v: Vec<(String, Option<f64>)> = h
+            .get("hits")
+            .unwrap()
+            .arr()
+            .iter()
+            .filter(|x| x.get("query").unwrap().str() == Some("q0"))
+            .map(|x| {
+                (
+                    x.get("name").unwrap().str().unwrap().to_string(),
+                    x.get("rt_delta_min").and_then(|d| d.f64()),
+                )
+            })
+            .collect();
+        v.sort_by(|a, b| a.0.cmp(&b.0));
+        v
+    };
+    let off = run_rt("");
+    assert_eq!(off.len(), 3);
+    assert!(off
+        .iter()
+        .any(|(n, d)| n == "Beta" && d.is_some_and(|d| (d + 3.9).abs() < 1e-9)));
+    let on = run_rt(r#","rt_tol":0.5"#);
+    let names: Vec<&str> = on.iter().map(|(n, _)| n.as_str()).collect();
+    // Alpha is 0.1 min away, Beta 3.9 min away, Gamma has no retention time
+    assert_eq!(names, ["Alpha", "Gamma"], "{on:?}");
+    assert!(
+        (on[0].1.unwrap() - 0.1).abs() < 1e-9 && on[1].1.is_none(),
+        "{on:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// `matched_peaks` lists the pairs behind each score: as many as `shared`, within the fragment tolerance (or the precursor shift for the shifted ones), by query m/z.
+#[test]
+fn matched_peaks_list_the_pairs_behind_the_score() {
+    let dir = fixture("peaks");
+    for alg in ["spectral_entropy", "cosine", "modified_cosine"] {
+        run(
+            &dir,
+            alg,
+            r#"{"precursor_da":150,"tol_da":0.5,"top_n":10,"matched_peaks":true}"#,
+        );
+        let h = hits(&dir);
+        let all = h.get("hits").unwrap().arr();
+        assert!(!all.is_empty(), "{alg}");
+        for x in all {
+            let peaks = x.get("matched_peaks").unwrap().arr();
+            assert_eq!(
+                peaks.len() as i64,
+                x.get("shared").unwrap().f64().unwrap() as i64,
+                "{alg}"
+            );
+            let mut last = f64::MIN;
+            for p in peaks {
+                let (q, l) = (
+                    p.get("query_mz").unwrap().f64().unwrap(),
+                    p.get("library_mz").unwrap().f64().unwrap(),
+                );
+                let shifted = p.get("shifted").unwrap().bool().unwrap();
+                // unshifted pairs sit within the tolerance; a shifted one is the same fragment moved by the precursor difference
+                assert!(shifted || (q - l).abs() <= 0.5 + 1e-6, "{alg} {q} {l}");
+                assert!(q >= last, "{alg} not by query m/z");
+                last = q;
+            }
+        }
+    }
+    run(&dir, "cosine", r#"{"precursor_da":150,"tol_da":0.5}"#);
+    assert!(hits(&dir)
+        .get("hits")
+        .unwrap()
+        .arr()
+        .iter()
+        .all(|x| x.get("matched_peaks").is_none()));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// `tree`: a graph `msngrafo/1` against an `msnlib/1` library gives the `msncerca/1` text of `mzlab-cli msn-lib search`, byte for byte.
 #[test]
 fn tree_writes_the_search_of_the_msn_library() {

@@ -3,8 +3,8 @@
 // Button «XIC» of the mass spectrum (Full Scan, MS2, DDA, map, several files): extracts at once the XIC of the ion chosen in the spectrum and shows it in the
 // panel right under it. State per spectrum panel: the chosen peak (ring on the spectrum), its tolerance, the XIC panel it owns. The XIC follows the scan of the
 // spectrum (cursor line, band for an averaged spectrum) and says the apex of the peak that holds that scan. Every number comes from the engine through the
-// existing XIC panel and the existing peak detectors (autoEdges / engineEdges / autoInt); nothing is computed here.
-// Classic helpers used by name: xicDirect, xicTraceFor, xicWin, rh, mzd, fmz, numIt, ctl, draw, cursorLine, autoEdges, engineEdges, autoInt, PK, HR, E, ESC, AZIONI.
+// existing XIC panel and the existing peak detectors (autoEdges / autoInt); nothing is computed here.
+// Classic helpers used by name: xicDirect, xicTraceFor, xicWin, rh, mzd, fmz, numIt, ctl, draw, cursorLine, autoEdges, autoInt, PK, HR, E, ESC, AZIONI.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -145,13 +145,7 @@
     return d;
   }
   /** the limits of the peak that holds RT x on a series, with the detector of the student (Settings «Rilevamento dei picchi») @param {any} s @param {number} x */
-  async function edges(s, x) {
-    if ((PK.method === "cwt" || PK.method === "prom") && typeof engineEdges === "function") {
-      const ed = await engineEdges(s, x, PK.method === "prom" ? 1 : 0);
-      if (ed !== undefined) return ed;
-    }
-    return autoEdges(s, x, 0);
-  }
+  async function edges(s, x) { return autoEdges(s, x, 0); }
   /** «apex RT … min · intensity …» for each trace of the file of the spectrum @param {any} p @param {any} xp @param {number} rt */
   async function apexLines(p, xp, rt) {
     const f = specFile(p), a = xp._a; if (!f || !a || !a.sr) return [];
@@ -241,14 +235,17 @@
     if (s.pend) extract(p, false);
     return false;                                           // the ruler code of specClick follows and does nothing: the ruler is off here
   }
-  /** ring on the chosen peak @param {any} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {any} d0 */
+  /** small dot on the apex of the chosen peak (a ring would cover the m/z label above it); the halo keeps it readable on any background @param {any} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {any} d0 */
   function mark(p, g, X, Y, W, d0) {
     const s = ST.get(p); if (!s || !s.sel || p._exp) return;
     const px = X(s.sel.m); if (px < M.l || px > W - M.r) return;
     let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - s.sel.m) < 0.3 && (j < 0 || Math.abs(v - s.sel.m) < Math.abs(d0.mz[j] - s.sel.m))) j = i; });
     g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 2;
     if (j < 0) { g.setLineDash([4, 3]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, M.t + 2); g.stroke(); }
-    else { g.beginPath(); g.arc(px, Math.max(M.t + 6, Y(d0.y[j])), 7, 0, 7); g.stroke(); }
+    else {
+      const py = Math.max(M.t + 6, Y(d0.y[j]));
+      g.beginPath(); g.arc(px, py, 3, 0, 7); g.lineWidth = 2; g.strokeStyle = css("--panel"); g.stroke(); g.fillStyle = css("--accent"); g.fill();
+    }
     g.restore();
   }
   /** the Esc of the choice: the pop-up first, then the waiting button @returns {any} */

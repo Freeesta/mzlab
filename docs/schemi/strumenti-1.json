@@ -1044,8 +1044,13 @@
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
+                  "rt_tol",
+                  "adduct_contains",
+                  "instrument_contains",
+                  "ce_contains",
                   "top_n",
                   "decoys",
+                  "matched_peaks",
                   "score_terms",
                   "min_score",
                   "min_shared",
@@ -1083,11 +1088,34 @@
                     "type":"string",
                     "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
                   },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"
+                  },
                   {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
                   {
                     "enum":["none","spectrum"],
                     "default":"none",
                     "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also lists matched_peaks, the pairs of peaks behind its score (m/z and relative intensity of the query and of the library spectrum, and whether the precursor shift was needed), so the match can be checked peak by peak; the scores do not change. Not used by the tree algorithm"
                   },
                   {
                     "type":"boolean",
@@ -1210,7 +1238,10 @@
                   "regole",
                   "cutoff_q",
                   "toll_perdita_mda",
-                  "scelte"
+                  "scelte",
+                  "rotture",
+                  "h_max",
+                  "max_legami"
                 ]
               },
               "value":{
@@ -1312,6 +1343,25 @@
                     "type":"string",
                     "default":"",
                     "description":"MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `ppm_struttura`)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "maximum":4,
+                    "default":2,
+                    "description":"Hydrogens moved at most beyond the plain cleavage, for the bond breaks"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":2,
+                    "default":2,
+                    "description":"Bonds cut at most for one piece, 1 or 2"
                   }
                 ]
               }
@@ -1480,8 +1530,13 @@
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
+                  "rt_tol",
+                  "adduct_contains",
+                  "instrument_contains",
+                  "ce_contains",
                   "top_n",
                   "decoys",
+                  "matched_peaks",
                   "score_terms",
                   "ms2_spectrum",
                   "ms2_background",
@@ -1519,11 +1574,34 @@
                     "type":"string",
                     "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
                   },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0, a library entry whose retention time differs from the RT of the query spectrum by more than this is not a candidate; entries or queries without a retention time are kept. The candidate carries rt_delta_min (query minus library) when both are known; 0 switches the filter off. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"
+                  },
                   {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
                   {
                     "enum":["none","spectrum"],
                     "default":"none",
                     "description":"spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: every candidate also lists matched_peaks, the pairs of peaks behind its score (m/z and relative intensity of the query and of the library spectrum, and whether the precursor shift was needed), so the match can be checked peak by peak; the scores do not change. Not used by the tree algorithm"
                   },
                   {
                     "type":"boolean",
@@ -1957,6 +2035,170 @@
       "class":"read",
       "description":"Summary of the files open in the Data view.",
       "input_schema":{"type":"object","additionalProperties":false,"properties":{},"required":[]}
+    },
+    {
+      "name":"data_inspect",
+      "class":"read",
+      "description":"What each open file is (instrument, polarity, series, blanks and QC) as the inspection of the program; no raw data.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "files":{"type":"array","items":{"type":"string","description":"Alias of an open file."},"maxItems":50}
+        },
+        "required":[]
+      }
+    },
+    {
+      "name":"params_propose",
+      "class":"propose",
+      "description":"Parameter values for the given steps from the rules of the program, each with its source, confidence and reason; shown as a proposal.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "steps":{
+            "type":"array",
+            "items":{
+              "enum":[
+                "annot.hazard@1",
+                "annot.level@1",
+                "annot.regulatory@1",
+                "convert.mzml@1",
+                "export.inclusion@1",
+                "export.mztab@1",
+                "export.table_csv@1",
+                "features.align@1",
+                "features.detect@1",
+                "features.estimate@1",
+                "features.gapfill@1",
+                "features.ms2_link@1",
+                "features.table@1",
+                "formula.ms1@1",
+                "formula.ms2@1",
+                "import.raw@1",
+                "index.mzidx@1",
+                "meta.compare@1",
+                "msn.figure@1",
+                "msn.library_export@1",
+                "msn.table_export@1",
+                "quant.calibrate@1",
+                "rt.predict@1",
+                "spectra.centroid@1",
+                "spectra.chimeric@1",
+                "spectra.insilico@1",
+                "spectra.lookup@1",
+                "spectra.match@1",
+                "spectra.ms2@1",
+                "spectra.msn_graph@1",
+                "structure.draw@1",
+                "structure.reactivity@1",
+                "structure.render@1",
+                "table.drift@1",
+                "table.filter@1",
+                "table.kmd@1",
+                "table.match@1",
+                "table.pca@1",
+                "table.stats@1",
+                "tp.dig_lr@1",
+                "tp.filter@2",
+                "tp.generate@1",
+                "tp.link@2",
+                "tp.network@1",
+                "tp.position@1"
+              ]
+            },
+            "maxItems":40
+          }
+        },
+        "required":["steps"]
+      }
+    },
+    {
+      "name":"table_check",
+      "class":"read",
+      "description":"The checks of the program on the feature table of the last run: flags and the numbers behind them.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "checks":{
+            "type":"array",
+            "items":{
+              "enum":[
+                "size",
+                "blank",
+                "contaminants",
+                "qc_cv",
+                "qc_intensity",
+                "rt_drift",
+                "duplicates",
+                "adducts",
+                "isotopes",
+                "insource",
+                "long_traces",
+                "homologous",
+                "missing",
+                "structure",
+                "polarity_units"
+              ]
+            },
+            "maxItems":15
+          }
+        },
+        "required":[]
+      }
+    },
+    {
+      "name":"table_rows",
+      "class":"read",
+      "description":"Reduced rows of the feature table, by id or by one filter; at most 50.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "ids":{"type":"array","items":{"type":"string","description":"Row id."},"maxItems":50},
+          "where":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "column":{"type":"string","description":"Column of the table."},
+              "op":{"enum":["eq","lt","le","gt","ge"]},
+              "value":{"anyOf":[{"type":"number"},{"type":"string"}]}
+            },
+            "required":["column","op","value"]
+          },
+          "limit":{"type":"integer","minimum":1,"maximum":50,"default":20,"description":"At most 50 rows."}
+        },
+        "required":[]
+      }
+    },
+    {
+      "name":"ask_user",
+      "class":"propose",
+      "description":"Ask the user up to 5 closed questions, never one the program can answer; the answer comes back as the tool result.",
+      "input_schema":{
+        "type":"object",
+        "additionalProperties":false,
+        "properties":{
+          "questions":{
+            "type":"array",
+            "minItems":1,
+            "maxItems":5,
+            "items":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "id":{"type":"string","description":"Short id of the question."},
+                "text":{"type":"string","minLength":1},
+                "options":{"type":"array","minItems":2,"maxItems":8,"items":{"type":"string"}}
+              },
+              "required":["id","text","options"]
+            }
+          }
+        },
+        "required":["questions"]
+      }
     },
     {
       "name":"chart_make",

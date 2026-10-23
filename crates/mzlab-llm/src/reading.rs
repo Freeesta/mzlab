@@ -2,7 +2,7 @@
 //! proposed by the rules). Every `evidence` key must exist in the input the subagent was given, every number of a sentence must be in the input, actions
 //! must name real parameters inside the `step/1` limits. The problems go back to the subagent once; then the reading is dropped. Used by the agent.
 
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use mzlab_core::json::{Out, Value};
 use mzlab_core::step::{find, Step};
@@ -35,7 +35,7 @@ type Found = Vec<Problem>;
 struct Cx<'a> {
     input: &'a Value,
     registry: &'a [Step],
-    known: &'a HashSet<String>,
+    known: &'a BTreeSet<String>,
 }
 
 impl Cx<'_> {
@@ -292,8 +292,8 @@ pub fn validate(reading: &Value, input: &Value, registry: &[Step]) -> Result<(),
 }
 
 /// Every number of the input as a canonical string, from numeric values and from the text of the strings.
-fn known_numbers(v: &Value) -> HashSet<String> {
-    fn walk(v: &Value, out: &mut HashSet<String>) {
+fn known_numbers(v: &Value) -> BTreeSet<String> {
+    fn walk(v: &Value, out: &mut BTreeSet<String>) {
         match v {
             Value::Num(x) => {
                 out.insert(x.to_string());
@@ -304,7 +304,7 @@ fn known_numbers(v: &Value) -> HashSet<String> {
             _ => {}
         }
     }
-    let mut out = HashSet::new();
+    let mut out = BTreeSet::new();
     walk(v, &mut out);
     out
 }

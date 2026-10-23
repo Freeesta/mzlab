@@ -2,6 +2,7 @@
 //! events out (one JSON line each); a recording `llmreg/1` for the transport `replay`. No network and no key here: the iframe `llm/trasporto.html` does the fetch.
 //! An error is a JSON text `{"error", "error_key", "params"}` (the same shape as the routes of the engine). Loaded by `mzlab/web/llm/llm-worker.js`.
 mod agent;
+mod assist;
 
 use mzlab_core::error::Error;
 use mzlab_llm::conv::Conversation;

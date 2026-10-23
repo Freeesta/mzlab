@@ -29,7 +29,10 @@ async function init(){try{await bootSession();await Promise.all(E.panels.map(p=>
 let _lastV="",_itNoted=false;
 // true only the first time: remembered in localStorage (the reset of the settings of the Teoria clears it), per session when there is no storage
 function itNoteOnce(){const k="mzlab.teoria.itnote";try{if(localStorage.getItem(k))return false;localStorage.setItem(k,"1");return true}catch(e){const r=!_itNoted;_itNoted=true;return r}}
+let _addY=null,_wasAdd=false;
 function applyView(){const v=S.view,d=v==="data";
+  // the scroll of the data view, kept for the way back from the loading screen (leaveAdding)
+  if(S.adding&&!_wasAdd)_addY=window.scrollY;_wasAdd=!!S.adding;
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
@@ -431,12 +434,15 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
     b.disabled=false
   }finally{if($("#gomsg").innerHTML==="")loading(false)}
 };
-$("#cancadd").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
+// both exits of the loading screen (Cancel, «Back to the data») give the page back as it was: the side panel returns through BARRA, the scroll here
+function leaveAdding(){const y=_addY;STATO.aggiunta(false,"adding");applyView();// after the charts took their size again (the tpview handler of the data view, one timeout earlier), or the page is still too short to reach y
+  if(y!=null)setTimeout(()=>window.scrollTo(0,y),0)}
+$("#cancadd").onclick=leaveAdding;
 // while adding files the ones already in the session stay visible, with a way back to the data
 function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=="undefined"&&E.files.some(f=>!f.gone));el.hidden=!on;if(!on)return;
   const fs=E.files.filter(f=>!f.gone);
   el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="sec" id="clearall" type="button" title="${I18N.t("load.loaded.clearTip")}">${I18N.t("load.loaded.clear")}</button><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map(f=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
-  $("#backdata").onclick=()=>{STATO.aggiunta(false,"adding");applyView()};
+  $("#backdata").onclick=leaveAdding;
   // two presses (the first asks): the same clean slate as «Files and session only» of «Start a new session?» (reset.js)
   const ca=$("#clearall");let armed=0;ca.onclick=()=>{if(!armed){armed=setTimeout(()=>{armed=0;ca.textContent=I18N.t("load.loaded.clear")},6000);ca.textContent=I18N.t("load.loaded.clearSure",{n:fs.length});return}
     clearTimeout(armed);ca.disabled=true;ca.textContent=I18N.t("load.loaded.clearBusy");

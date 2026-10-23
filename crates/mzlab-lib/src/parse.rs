@@ -231,6 +231,27 @@ impl Rec {
     }
 }
 
+/// The retention time of a record in minutes: minute keys as they are (a trailing «s»/«sec» unit means seconds), «rtinseconds» (MGF) divided by 60.
+fn rt_minutes(c: &Rec) -> Option<f64> {
+    let secs = parse_float(c.get(&["rtinseconds"]).unwrap_or(""));
+    if secs.is_finite() && secs >= 0.0 {
+        return Some(secs / 60.0);
+    }
+    let raw = c.get(&["retentiontime", "rt", "rtinminutes", "retentiontimemin"])?;
+    let v = parse_float(raw);
+    if !v.is_finite() || v < 0.0 {
+        return None;
+    }
+    let unit = raw
+        .trim_start()
+        .trim_start_matches(|ch: char| {
+            ch.is_ascii_digit() || matches!(ch, '.' | ',' | '+' | '-' | 'e' | 'E')
+        })
+        .trim()
+        .to_lowercase();
+    Some(if unit.starts_with('s') { v / 60.0 } else { v })
+}
+
 /// Turns a record into a spectrum or counts why not.
 fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
     let prec = parse_float(
@@ -269,6 +290,7 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         authors: g(&["authors", "author"]),
         license: g(&["license", "licence"]),
     };
+    let rt = rt_minutes(&c);
     stats.read += 1;
     Some(Spectrum {
         prec,
@@ -276,6 +298,7 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         mz: c.mz,
         it: c.it,
         meta,
+        rt,
     })
 }
 
@@ -537,6 +560,11 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             }
             "AC$INSTRUMENT" => c.field("instrument".into(), v),
             "AC$INSTRUMENT_TYPE" => c.field("instrumenttype".into(), v),
+            "AC$CHROMATOGRAPHY" => {
+                if let Some(x) = sub(v, "RETENTION_TIME") {
+                    c.field("retentiontime".into(), &x);
+                }
+            }
             "AC$MASS_SPECTROMETRY" => {
                 if let Some(x) = sub(v, "ION_MODE") {
                     c.field("ionmode".into(), &x);

@@ -254,3 +254,6 @@ fn problems_go_back_to_the_subagent_as_json() {
         r#"[{"code":"err.llm.reading.evidence","at":"findings[1].evidence[0]"}]"#
     );
 }
+
+#[path = "llm_assist_session_tests.rs"]
+mod session;

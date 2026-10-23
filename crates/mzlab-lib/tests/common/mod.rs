@@ -63,6 +63,7 @@ pub fn synth(r: &mut Rng, i: usize, n: usize) -> Spectrum {
                 "CC0".into()
             },
         },
+        rt: None,
     }
 }
 

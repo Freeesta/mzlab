@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::agent::Agent;
+use crate::assist::Assist;
 
 const CONV: &str = r#"{"schema":"llm-conv/1","provider":"anthropic","model":"claude-sonnet-5-5","system":"s","messages":[{"role":"user","parts":[{"text":"hi"}]}]}"#;
 
@@ -179,4 +180,99 @@ fn context_is_built_from_the_sources_of_the_page() {
     assert!(context_build(r#"{"profile":"corso"}"#, 2000)
         .unwrap_err()
         .contains("err.llm.profile.course"));
+}
+
+fn doc(path: &str) -> String {
+    std::fs::read_to_string(format!("{}/../../{path}", env!("CARGO_MANIFEST_DIR"))).unwrap()
+}
+
+/// The roles and the prompts as the page hands them over.
+fn assist_files() -> (String, String) {
+    let dir = "crates/mzlab-llm/data/assist";
+    let roles = doc(&format!("{dir}/assist-ruoli-1.json"));
+    let pairs: Vec<String> =
+        std::fs::read_dir(format!("{}/../../{dir}", env!("CARGO_MANIFEST_DIR")))
+            .unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .filter(|n| n.ends_with(".md"))
+            .map(|n| {
+                let mut o = mzlab_core::json::Out::default();
+                o.raw("[")
+                    .str(&n)
+                    .raw(",")
+                    .str(&doc(&format!("{dir}/{n}")))
+                    .raw("]");
+                o.0
+            })
+            .collect();
+    (roles, format!("[{}]", pairs.join(",")))
+}
+
+fn assist() -> Assist {
+    let (roles, prompts) = assist_files();
+    Assist::new(
+        "anthropic",
+        &roles,
+        &prompts,
+        &doc("docs/schemi/steps-1.json"),
+    )
+    .unwrap()
+}
+
+const INPUT: &str = r#"{"ispezione/1":{"files":[{"alias":"f1","polarity":"positive"}]}}"#;
+const GOOD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1 is positive","evidence":["ispezione.files.f1.polarity"],"confidence":"high","action":{"type":"none"}}]}"#;
+
+#[test]
+fn assist_asks_a_role_and_gives_the_orchestrator_only_what_passed() {
+    let a = assist();
+    let r = a.request("metadati", INPUT).unwrap();
+    assert!(r.contains("claude-sonnet-5-5") && r.contains("output_config") && !r.contains("sk-"));
+    assert!(a.digest("metadati").unwrap().len() == 64);
+    assert!(a
+        .request("nobody", INPUT)
+        .unwrap_err()
+        .contains("err.llm.assist.call"));
+    let ok = a.check("metadati", INPUT, GOOD, 0).unwrap();
+    assert!(
+        ok.starts_with("{\"verdict\":\"accepted\",\"summary\":{\"schema\":\"lettura/1\""),
+        "{ok}"
+    );
+    let bad = GOOD.replace("f1 is positive", "f1 is positive at 14.3 min");
+    let retry = a.check("metadati", INPUT, &bad, 0).unwrap();
+    assert!(
+        retry.starts_with("{\"verdict\":\"retry\",\"request\":{\"url\"")
+            && retry.contains("err.llm.reading.number"),
+        "{retry}"
+    );
+    let dropped = a.check("metadati", INPUT, &bad, 1).unwrap();
+    assert!(dropped.starts_with("{\"verdict\":\"dropped\""), "{dropped}");
+}
+
+#[test]
+fn assist_refuses_roles_without_their_prompt() {
+    let (roles, _) = assist_files();
+    let e = Assist::new("anthropic", &roles, "[]", "[]").err().unwrap();
+    assert!(e.contains("err.llm.assist.roles"), "{e}");
+}
+
+#[test]
+fn the_agent_asks_the_router_then_adds_the_phase_message_and_the_readings() {
+    let (roles, prompts) = assist_files();
+    let mut a = Agent::new(&tools(), "anthropic", "claude-sonnet-5-5", "L1", true).unwrap();
+    a.enable_assist(&roles, &prompts, "06_piano.md").unwrap();
+    a.set_assist_state(r#"{"phase":"table","files_open":7,"plan":false,"pending_questions":[]}"#)
+        .unwrap();
+    a.reading("metadati", GOOD).unwrap();
+    let out = a.user("build the workflow", "").unwrap();
+    assert!(out.contains("\"o\":\"sub\",\"role\":\"router\""), "{out}");
+    let route = r#"{"route":"plan","need_data":["plan"],"language":"en","suspicious":false}"#;
+    let out = a.sub_result("router", true, route);
+    assert!(out.contains("\"o\":\"send\""), "{out}");
+    let conv = a.conversation();
+    assert!(
+        conv.contains("\"role\":\"system\"") && conv.contains("Phase: workflow"),
+        "{conv}"
+    );
+    assert!(conv.contains("\"reading\":\"metadati\""));
+    assert!(a.enable_assist(&roles, &prompts, "missing.md").is_err());
 }

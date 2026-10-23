@@ -1,7 +1,7 @@
 //! The loop of the assistant as a pure state machine: no I/O, no clock. The transport feeds `Input`s (the user's message, the events of the stream,
 //! the results of tools, confirmations, stop) and executes the `Output`s (a request to send, a tool to call, a confirmation to ask). The policy
 //! decides every call, the arguments are checked against the schema of the tool, a proposed plan goes through `flow::check`, and every step is a line
-//! of `llmlog/1`. `external_check`: the page checks the plans (the `.wasm` of the site); `usage`: tokens (in, out) reported. Used by the transport of the page and the desktop and by `mzlab-cli llm eval`.
+//! of `llmlog/1`. `State::without_check`: the page checks the plans (the `.wasm` of the site carries no plan checker); `usage`: tokens (in, out) reported. Used by the transport of the page and the desktop and by `mzlab-cli llm eval`.
 
 use std::collections::VecDeque;
 
@@ -16,6 +16,7 @@ use crate::log::Log;
 use crate::plan::problems;
 use crate::policy::{decide, Counters, Decision, Level, Profile};
 use crate::provider::{request, Provider};
+use crate::router::Route;
 use crate::text::quoted;
 use crate::tools::{value, Class, Tool};
 
@@ -25,6 +26,8 @@ pub const SYSTEM: &str = include_str!("../data/sistema-1.md");
 pub use crate::compact::{compact, estimate};
 pub const MAX_PLAN_TRIES: u32 = 3;
 
+mod sub;
+
 pub use crate::moves::{Input, Output};
 
 #[derive(Clone)]
@@ -33,6 +36,8 @@ struct Call {
     name: String,
     args: Value,
 }
+
+type PlanCheck = fn(&Value, &[Step], Platform) -> Result<(usize, String), String>;
 
 pub struct State {
     pub platform: Platform,
@@ -54,11 +59,16 @@ pub struct State {
     confirming: Option<Call>,
     tries: u32,
     stopping: bool,
-    pub external_check: bool,
+    /// The local plan checker; `None` = the page checks the plans.
+    check: Option<PlanCheck>,
     pub usage: (u64, u64),
     over: bool,
     outcome: Option<String>,
     context: Option<Value>,
+    assist: Option<sub::Assist>,
+    /// The subagent whose answer the machine waits for.
+    sub: Option<String>,
+    route: Option<Route>,
 }
 
 fn json(v: &Value) -> String {
@@ -68,7 +78,22 @@ fn json(v: &Value) -> String {
 }
 
 impl State {
+    /// A machine that checks the plans itself (`flow::check` on the registry), as the CLI and the desktop do.
     pub fn new(
+        provider: Provider,
+        model: &str,
+        tools: Vec<Tool>,
+        registry: Vec<Step>,
+        level: Level,
+        profile: Profile,
+    ) -> State {
+        let mut s = State::without_check(provider, model, tools, registry, level, profile);
+        s.check = Some(problems);
+        s
+    }
+
+    /// A machine whose plans are checked by the page: the plan checker is not linked (the `.wasm` of the site stays small).
+    pub fn without_check(
         provider: Provider,
         model: &str,
         tools: Vec<Tool>,
@@ -103,35 +128,15 @@ impl State {
             confirming: None,
             tries: 0,
             stopping: false,
-            external_check: false,
+            check: None,
             usage: (0, 0),
             over: true,
             outcome: None,
             context: None,
+            assist: None,
+            sub: None,
+            route: None,
         }
-    }
-
-    /// A `contesto/1` object that goes with the next user message.
-    pub fn add_context(&mut self, context: Value) {
-        self.context = Some(context);
-    }
-
-    /// The whole `llmlog/1` text so far.
-    pub fn log(&self) -> &str {
-        self.log.text()
-    }
-
-    pub fn conversation(&self) -> &Conversation {
-        &self.conv
-    }
-
-    pub fn counters(&self) -> Counters {
-        self.counters
-    }
-
-    /// How the last turn ended: `end`, `length`, `refusal`, `stopped` or `error:<key>`; `None` while it runs.
-    pub fn outcome(&self) -> Option<&str> {
-        self.outcome.as_deref()
     }
 }
 
@@ -140,6 +145,7 @@ fn finish(s: &mut State, out: &mut Vec<Output>) {
         return;
     }
     s.over = true;
+    s.sub = None;
     let pending: Vec<Call> = s
         .waiting
         .take()
@@ -200,14 +206,17 @@ fn user(s: &mut State, text: &str, out: &mut Vec<Output>) {
     s.queue.clear();
     s.waiting = None;
     s.confirming = None;
-    let mut parts: Vec<Part> = s.context.take().into_iter().map(Part::Context).collect();
+    let mut parts = sub::context_parts(s);
     parts.push(Part::Text(text.to_string()));
     s.conv.messages.push(Message {
         role: Role::User,
         parts,
     });
     note(s, out, "user", &[("bytes", text.len().to_string())]);
-    send(s, out);
+    s.route = None;
+    if !sub::ask_router(s, text, out) {
+        send(s, out);
+    }
 }
 
 fn close_call(s: &mut State) {
@@ -369,10 +378,11 @@ fn run_call(s: &mut State, c: Call, tool: &Tool, out: &mut Vec<Output>) {
     if tool.class == Class::Run {
         s.counters.runs += 1;
     }
-    if s.external_check || (c.name != "flow_check" && c.name != "flow_propose_plan") {
+    let planning = c.name == "flow_check" || c.name == "flow_propose_plan";
+    let Some(check) = s.check.filter(|_| planning) else {
         return call_page(s, c, out);
-    }
-    match problems(&c.args, &s.registry, s.platform) {
+    };
+    match check(&c.args, &s.registry, s.platform) {
         Err(key) => reject(s, &c, &key),
         Ok((_, text)) if c.name == "flow_check" => answer(s, &c, true, text),
         Ok((0, _)) => call_page(s, c, out),
@@ -411,7 +421,7 @@ fn result(s: &mut State, id: &str, ok: bool, content: Value, out: &mut Vec<Outpu
         "result",
         &[("id", quoted(id)), ("ok", ok.to_string())],
     );
-    if !ok && s.external_check && call.is_some_and(|c| c.name == "flow_propose_plan") {
+    if !ok && s.check.is_none() && call.is_some_and(|c| c.name == "flow_propose_plan") {
         s.tries += 1;
         if s.tries >= MAX_PLAN_TRIES {
             return fail(s, out, "err.llm.plan.tries");
@@ -456,6 +466,32 @@ pub fn step(s: &mut State, input: Input) -> Vec<Output> {
         Input::ToolResult { id, ok, content } => result(s, &id, ok, content, &mut out),
         Input::Confirm { id, yes } => confirm(s, &id, yes, &mut out),
         Input::Stop => stop(s, &mut out),
+        Input::SubResult { role, body } => sub::sub_result(s, &role, body, &mut out),
     }
     out
+}
+
+impl State {
+    /// A `contesto/1` object that goes with the next user message.
+    pub fn add_context(&mut self, context: Value) {
+        self.context = Some(context);
+    }
+
+    /// The whole `llmlog/1` text so far.
+    pub fn log(&self) -> &str {
+        self.log.text()
+    }
+
+    pub fn conversation(&self) -> &Conversation {
+        &self.conv
+    }
+
+    pub fn counters(&self) -> Counters {
+        self.counters
+    }
+
+    /// How the last turn ended: `end`, `length`, `refusal`, `stopped` or `error:<key>`; `None` while it runs.
+    pub fn outcome(&self) -> Option<&str> {
+        self.outcome.as_deref()
+    }
 }
