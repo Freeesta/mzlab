@@ -106,6 +106,19 @@ impl Engine {
         mzlab_core::itemroutes::pda_map(&mut m).map_err(|e| error_json(&e))
     }
 
+    /// `/api/uvspec`: the UV spectrum of the DAD between `rt0` and `rt1`.
+    pub fn item_pda_spectrum(
+        &mut self,
+        slot: u32,
+        size: f64,
+        read: Function,
+        rt0: f64,
+        rt1: f64,
+    ) -> Result<String, JsValue> {
+        let (mut m, _) = self.chroms(slot, size, read)?;
+        mzlab_core::itemroutes::pda_spectrum(&mut m, rt0, rt1).map_err(|e| error_json(&e))
+    }
+
     /// `api/chrom` of the MRM file at `slot`: the chromatogram of the mzML with that kind (`tic`, `bpc`, `srm`).
     pub fn mrm_chrom(
         &mut self,

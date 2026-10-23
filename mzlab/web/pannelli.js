@@ -133,7 +133,7 @@ function ptitle(s) {                                    // the title to show
   if (c === "product") return I18N.t("panel.title.product") + (a[0] != null ? " · " + a[0] : "");
   if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
-  return ["chrom", "spec", "xic", "mrm", "map", "isosim"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
+  return ["chrom", "spec", "xic", "mrm", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
 function closePanel(p) {
   if (!p) return;
@@ -523,7 +523,7 @@ function plotName(p) {
   if (p.type === "chrom") parts = [p.kind.toUpperCase(), ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, v => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, v => String(v).replace(">", "-")) : "", ft];
-  else if (p.type === "spec") parts = [I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, rtm];
+  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, rtm];
   else parts = [I18N.t("export.file.map"), ft];
   if (p.title && p.title[0] !== "@") parts = [p.title, ft];            // a title typed by the student names the file; the default titles are codes
   return fname(parts.filter(Boolean).join("_")).slice(0, 60) || I18N.t("export.file.chart");
@@ -701,7 +701,7 @@ function ctl(p) {
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
         `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
-  if (p.type === "spec") {
+  if (p.type === "spec" && !p.uv) {          // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
     // product ions: only the files that hold scans of the chosen precursor, and the precursors of the active file with their scan count

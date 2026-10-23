@@ -82,6 +82,7 @@ function drawMeas(p, g, X, Y, W) {
 }
 // a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
 function specClick(p, px, py) {
+  if (p.uv) return;
   if (window.XICBTN && XICBTN.click(p, px, py)) return;
   if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
   // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click

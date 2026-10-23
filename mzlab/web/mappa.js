@@ -709,7 +709,9 @@ window.MAPPA = (() => {
   const grpTol = () => PREF.grp ?? Math.min(0.15, Math.max(GRP0, +(5 * scanStep()).toFixed(3)));
   const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, shapeNew, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, { ...forms, grpShape });
   async function spectrumAt(p, rt, k) {
-    const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
+    const f = k != null && E.files[k] ? E.files[k] : p._a.f;
+    if (p._a.pda) { await uvOpen(p, f.k, rt, rt); return; }        // the PDA map: its spectrum is the UV one (uv-spettro.js)
+    let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
     newSpec(p, r0, r1, f.k);
   }

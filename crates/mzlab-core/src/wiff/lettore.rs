@@ -191,6 +191,10 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
         Ok(self.parte(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
     }
+    #[cfg(feature = "mappa-dad")]
+    fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
+        Ok(self.parte(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
+    }
     fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> { testata(self, c).map(Some) }
     fn metodo(&mut self, c: usize) -> Result<String> {
         let sample = self.parte(c)?.w.sample;
