@@ -29,6 +29,7 @@ pub mod plan;
 pub mod policy;
 pub mod provider;
 pub mod reading;
+pub mod router;
 pub mod schema;
 pub mod spend;
 mod text;
