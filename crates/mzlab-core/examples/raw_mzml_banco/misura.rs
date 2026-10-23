@@ -93,6 +93,7 @@ pub fn riassunto(giri: &[Giro]) -> Value {
         "secondi": s.iter().map(|x| tondo(*x)).collect::<Vec<_>>(),
         "mediana_s": tondo(mediana(&s)),
         "iqr_s": tondo(iqr(&s)),
+        "migliore_s": tondo(s.iter().copied().fold(f64::INFINITY, f64::min)),
         "primo_giro_s": tondo(s[0]),
         "mediana_senza_primo_s": tondo(mediana(&s[1.min(s.len() - 1)..])),
         "cpu_s": tondo(med(|g| g.cpu)),

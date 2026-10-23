@@ -34,6 +34,7 @@ struct Args {
     file: Option<PathBuf>,
     denso: Option<PathBuf>,
     gb: f64,
+    forma: String,
     cancella: bool,
     etichetta: String,
     giri: usize,
@@ -64,6 +65,7 @@ fn args() -> Args {
             "--file" => a.file = Some(v(&mut it, &x).into()),
             "--denso" => a.denso = Some(v(&mut it, &x).into()),
             "--gb" => a.gb = v(&mut it, &x).parse().expect("--gb"),
+            "--forma" => a.forma = v(&mut it, &x),
             "--cancella" => a.cancella = true,
             "--etichetta" => a.etichetta = v(&mut it, &x),
             "--giri" => a.giri = v(&mut it, &x).parse().expect("--giri"),
@@ -149,9 +151,14 @@ fn sorgente(a: &Args) -> Option<(Sorgente, Value)> {
     let dir = a.denso.as_ref()?;
     std::fs::create_dir_all(dir).expect("folder");
     let mut b = Vec::new();
-    denso::pacchetto(&mut b, &denso::Parametri::denso(1), 0, None);
+    let forma = |n| match a.forma.as_str() {
+        "lab-a" => denso::Parametri::forma_lab_a(n),
+        "lab-b" => denso::Parametri::forma_lab_b(n),
+        _ => denso::Parametri::denso(n),
+    };
+    denso::pacchetto(&mut b, &forma(1), 0, None);
     let scansioni = ((a.gb * 1e9) / b.len() as f64).ceil() as usize;
-    let p = denso::Parametri::denso(scansioni);
+    let p = forma(scansioni);
     let path = dir.join(format!(
         "denso_{}_{}_{:x}.bin",
         p.scansioni, p.picchi, p.seme
@@ -168,9 +175,14 @@ fn sorgente(a: &Args) -> Option<(Sorgente, Value)> {
     let mut info = info;
     info["byte"] = json!(byte);
     info["scansioni"] = json!(p.scansioni);
-    info["punti_profilo_per_scansione"] = json!(p.picchi * 10);
+    info["punti_profilo_per_scansione"] = json!(if p.con_profilo { p.picchi * 10 } else { 0 });
+    info["picchi_per_scansione"] = json!(p.picchi);
     let etichetta = if a.etichetta.is_empty() {
-        format!("denso-{:.0}gb", byte as f64 / 1e9)
+        format!(
+            "denso-{}-{:.2}gb",
+            if a.forma.is_empty() { "std" } else { &a.forma },
+            byte as f64 / 1e9
+        )
     } else {
         a.etichetta.clone()
     };
@@ -179,7 +191,7 @@ fn sorgente(a: &Args) -> Option<(Sorgente, Value)> {
             etichetta,
             origine: Origine::Denso(path),
             byte,
-            profilo: a.profilo.unwrap_or(true),
+            profilo: a.profilo.unwrap_or(p.con_profilo),
         },
         info,
     ))
