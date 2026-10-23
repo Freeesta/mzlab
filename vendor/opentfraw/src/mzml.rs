@@ -170,7 +170,9 @@ pub fn scan_metadata_with(
     let event = raw.scan_events.get(idx as usize);
     let event = event.as_ref();
 
-    let is_srm = raw.flat_peaks;
+    // A v66 flat-peak run that names no Q1 transition (GC-MS/MS with Q1 RF only, scanning in Q3) is a full scan, as RawFileReader reports it; the older TSQ layouts without a readable transition table stay SRM.
+    let q3_scan = raw.flat_peaks && raw.version >= 66 && raw.srm_q1_by_event.is_empty();
+    let is_srm = raw.flat_peaks && !q3_scan;
     let level = if is_srm {
         2
     } else {
