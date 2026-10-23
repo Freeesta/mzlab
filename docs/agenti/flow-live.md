@@ -63,7 +63,7 @@ Prove: `flow/run_tests.rs` (10 semi × 1 e 4 thread), `crates/mzlab-feat/tests/f
 - `mzlab-cli flow run --jsonl` (non con `--json`/`--dry-run`: codice 2) stampa una riga `flowlive/1` per evento mentre gira; cartella e `prov/1` sono quelli di `flow run`. Desktop: rotte `flow/live/<op>` (`crates/mzlab-desktop/src/flow_live.rs`), vedi `rust-desktop.md`. Prove: `cargo test -p mzlab-cli --lib flow_live`, `cargo test -p mzlab-desktop --lib flow_live`.
 
 ## Schede e barra di stato (`flow/lazy/flow-live-{view,card,bar,desktop}.js`)
-- **Stato in una vista sola**: `F.liveView` tiene l'ultimo evento `flowlive/1` di ogni nodo e lavoro (lo alimentano `flow-live.js` sul sito e `flow-live-desktop.js` nell'app; un evento di una `rev` più vecchia cade) e dà a ogni scheda la parola dello stato: «waiting», «k of n files · NN %», «working», «done in X s», «reused», «out of date», «error: …», «refused: …», «needs your OK for memory», «needs a computer», «fix the plan first», «skipped», «paused», «cancelled».
+- **Stato in una vista sola**: `F.liveView` tiene l'ultimo evento `flowlive/1` di ogni nodo e lavoro (lo alimentano `flow-live.js` sul sito e `flow-live-desktop.js` nell'app; un evento di una `rev` più vecchia cade) e dà a ogni scheda la parola dello stato: «waiting», «k of n files · NN %», «working», «done in X s», «reused», «out of date», «error: …», «refused: …», «needs your OK for memory», «needs a computer» (per un passo MSn di un piano misto: «runs in a plan of MSn steps only», `msnAlone`), «fix the plan first», «skipped», «paused», «cancelled».
 - **Nessun calcolo in JS**: frazioni, conteggi e tempi arrivano negli eventi; mai un tempo rimanente. Una scheda fatta di più passi mostra il nodo nel peggior stato (stesso ordine di `nodes()`).
 - **Riga di stato** (`F.liveCard`, nata in `flow-canvas.js`): segno + parola + barra `role="progressbar"` (`aria-valuenow` solo se la frazione è nota, altrimenti strisce indeterminate). Il segno ha una forma per stato (il colore si aggiunge), «out of date» ha il bordo tratteggiato, gli errori il bordo pieno; i colori sono variabili CSS, con `prefers-reduced-motion` e `data-a11y-reduce` ogni animazione si ferma. La scheda ha `data-live=<stato>` e l'`aria-label` finisce con la parola. Si ridisegna una volta per frame sull'evento `flow:live-view`, senza spostare il fuoco.
 - **Tabella «Files»** (`F.liveCard.files`, in fondo al pannello del passo): una riga per lavoro con file (file, stato, quota, tempo, memoria `≈ N MB` dalla stima del web runner, «–» altrove); nascosta finché non ci sono righe.
@@ -78,6 +78,13 @@ Prove: `flow/run_tests.rs` (10 semi × 1 e 4 thread), `crates/mzlab-feat/tests/f
 - **Rilevamento**: Il rilevamento di un file in profilo legge il `.cen.mzidx` (`x.source`), mai l'indice in profilo; il modo del file entra nell'identità dello scheduler (`indice:modo`).
 - **Scheda e tabella**: la scheda dice «k of n files centroided, m already centroided» (`F.live.centroidNote`); la tabella «Files» ha la colonna «Mode» (`F.live.modeOf`).
 - **Registro**: `Outcome.file` → `Activity.files` → `prov/1` chiave `files` (per nome di file: `via` = `centroided` | `passthrough`, con `fwhm` e `threshold` usati) e `corsa/1` `steps[].files`; `via` a livello di attività resta la modalità di memoria. La cache dei lavori (`flow_cache.rs`) conserva `file_info`. Prove: `cargo test -p mzlab-cli --lib flow_centroid` (serie mista), `e2e_flow_live.py` (sezione C).
+
+## MSn fuori dallo scheduler (limite noto)
+- Sul sito `F.webMsn` esegue solo piani fatti di soli passi MSn e fuori dallo scheduler; in un piano misto i passi MSn non hanno esecutore in `F.liveJobs` e restano `blocked` per `platform.computer`.
+- Per portarli nel grafo (stati, tempi e tabella «Files» come gli altri passi) servirebbe: (1) un lavoro unico `item = None` legato all'infusione aperta in Dati (`F.runPlanFromData(S).names[0]`), con la sua identità in `set_identity` perché la `plan_key` cambi con il file.
+- (2) Un esecutore per `spectra.msn_graph`, `msn.library_export`, `msn.table_export` e `spectra.match` (`tree`) in `flow-live-jobs.js`, che chiami le rotte di `flow-web-msn.js` (ora dentro `run`, da spezzare in una funzione per passo); (3) i testi in OPFS sotto la `plan_key`.
+- (4) Prove nuove in `e2e_flow_msn.py` e `e2e_flow_live.py` e il controllo che `prov/1` non cambi.
+- Nel `.wasm` e nei crate non cambia nulla.
 
 ## Trappole
 - `finished` per un lavoro cancellato o scomparso risponde `Discarded{key}`: va messo in cache, non usato. Un risultato di un `JobId` sconosciuto dà `Unknown`.
