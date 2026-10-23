@@ -12,7 +12,7 @@ pan of the TIC, the spectrum and XIC traces of 3k, 50k and 1M points (served by 
 before and after MREPS XICs (default 1000). Phases per gesture: request (wall time of the `api/` fetches), engine (`X-Py-Ms`), JSON (`Response.json`), rest = drawing.
 `--native` also runs `visore_tempi` on the `.mzidx` of the first file of each case; `--g7 DIR` builds the >= 2 GB file in DIR and times the native engine on it.
 Nothing of the product is changed: the hooks wrap global functions of the page (draw, fetch, Response.json, Worker)."""
-import argparse, glob, json, os, platform, shutil, subprocess, sys, tempfile, time
+import argparse, glob, json, os, platform, shutil, signal, subprocess, sys, tempfile, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -373,6 +373,8 @@ def main():
                 ctx.set_default_timeout(OPEN_MS)
                 ctx.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}" + INIT)
                 pg = ctx.pages[0] if ctx.pages else ctx.new_page(); errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
+                signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError("the case did not finish within its time cap")))
+                signal.alarm(int(2 * OPEN_MS / 1000) + 900)                                  # a hung browser must not stall the whole run
                 try:
                     t = time.time(); o = run_case(pg, a.port, nm, files, a.reps, a.mreps, one_synthetic=len(files) == 1)
                     o["page_errors"] = errs[:3]; o["case_s"] = round(time.time() - t); o["lr_miss"] = pg.evaluate("window.MZLAB_LR_MISS || []")
@@ -383,7 +385,7 @@ def main():
                     print(json.dumps(o) if a.json else table(o), flush=True)
                 except Exception as e:                                                       # a case that does not open in time (hrp in the browser) is a result, not a crash
                     o = {"case": nm, "error": str(e).splitlines()[0][:300], "case_s": round(time.time() - t)}; print(json.dumps(o) if a.json else f"\n### {nm}\nnot measured: {o['error']}", flush=True)
-                finally: ctx.close(); shutil.rmtree(prof, ignore_errors=True)
+                finally: signal.alarm(0); ctx.close(); shutil.rmtree(prof, ignore_errors=True)
     finally:
         srv.terminate()
     print(f"total {time.time() - t_all:.0f} s", file=sys.stderr)
