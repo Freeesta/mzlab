@@ -14,7 +14,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{fail, find};
 
-mod sub;
+pub(crate) mod sub;
 
 fn line(o: &Output, outcome: &str) -> String {
     let mut j = Out::default();

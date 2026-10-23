@@ -58,3 +58,21 @@ impl Agent {
         Ok(())
     }
 }
+
+/// The readers a router answer (`body`) asks for, as a JSON array of roles; an answer outside the schema asks for none (the router is advisory).
+#[wasm_bindgen]
+pub fn assist_readers(body: &str) -> String {
+    let roles = mzlab_llm::router::parse(body)
+        .map(|r| r.readers())
+        .unwrap_or_default();
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("[");
+    for (i, r) in roles.iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.str(r);
+    }
+    o.raw("]");
+    o.0
+}
