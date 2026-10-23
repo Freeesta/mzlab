@@ -118,6 +118,7 @@ declare var TPPOS: any;
 declare var TPTR: any;
 declare var TRANS: any;
 declare var UNTUI: any;
+declare var UVSPEC: any;
 declare var WORKFLOW: any;
 declare var WatersRaw: any;
 declare var XICBTN: any;

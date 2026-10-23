@@ -133,7 +133,7 @@ function ptitle(s) {                                    // the title to show
   if (c === "product") return I18N.t("panel.title.product") + (a[0] != null ? " · " + a[0] : "");
   if (c === "ms2prec") return I18N.t("panel.title.ms2prec", { prec: a[0] });
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
-  return ["chrom", "spec", "xic", "mrm", "map", "isosim"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
+  return ["chrom", "spec", "xic", "mrm", "map", "isosim", "uv"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
 function closePanel(p) {
   if (!p) return;
@@ -346,7 +346,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
-  if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
+  if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });      // the new XIC (or wavelength trace on a PDA) sits right under this chromatogram
   el.querySelector(".x").onclick = () => chiudiPannello(p);
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { p.title = v === ptitle(p.title) ? p.title : v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
@@ -523,7 +523,7 @@ function plotName(p) {
   if (p.type === "chrom") parts = [p.kind.toUpperCase(), ft];
   else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, v => +v.toFixed(mzd(p))) : "", ft];
   else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, v => String(v).replace(">", "-")) : "", ft];
-  else if (p.type === "spec") parts = [I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, rtm];
+  else if (p.type === "spec") parts = [p.uv ? "UV" : I18N.t(p.level === 2 ? "export.file.spectrumMs2" : "export.file.spectrum"), fs.length > 1 ? I18N.t("export.file.overlaid") + "_" + ft : ft, rtm];
   else parts = [I18N.t("export.file.map"), ft];
   if (p.title && p.title[0] !== "@") parts = [p.title, ft];            // a title typed by the student names the file; the default titles are codes
   return fname(parts.filter(Boolean).join("_")).slice(0, 60) || I18N.t("export.file.chart");
@@ -634,7 +634,7 @@ function corrInfoWire(p, b) {
 const ms2Scans = (x, v) => (x.ms2_exps || []).filter(e => e.prec != null && Math.abs(e.prec - v) < 0.6).reduce((t, e) => t + e.n, 0);
 function ctl(p) {
   hdRestore(p);
-  const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
+  const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
   t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);      // a single trace is named in the title
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";          // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
@@ -673,7 +673,7 @@ function ctl(p) {
   const parBox = inner => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}. ${I18N.t("ctl.range.note")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option>${anKinds.map(([v, a]) => `<option value="${EH(v)}" ${p.kind === v ? "selected" : ""}>${EH(v === "press" ? I18N.t("ctl.kind.press") : a.id)}</option>`).join("")}${window.REGISTRO && REGISTRO.has(TF) ? `<option value="reg" ${p.kind === "reg" ? "selected" : ""} title="${I18N.t("ctl.kind.reg.title")}">${I18N.t("ctl.kind.reg")}</option>` : ""}</select>${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}${parBox(`${p.kind === "pda" || isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option>${anKinds.map(([v, a]) => `<option value="${EH(v)}" ${p.kind === v ? "selected" : ""}>${EH(v === "press" ? I18N.t("ctl.kind.press") : a.id)}</option>`).join("")}${window.REGISTRO && REGISTRO.has(TF) ? `<option value="reg" ${p.kind === "reg" ? "selected" : ""} title="${I18N.t("ctl.kind.reg.title")}">${I18N.t("ctl.kind.reg")}</option>` : ""}</select>${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;      // xed: lower / upper m/z of an ion read in high resolution (ppm window)
@@ -701,7 +701,7 @@ function ctl(p) {
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
         `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
-  if (p.type === "spec") {
+  if (p.type === "spec" && !p.uv) {          // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
     // product ions: only the files that hold scans of the chosen precursor, and the precursors of the active file with their scan count

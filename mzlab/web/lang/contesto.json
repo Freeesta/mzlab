@@ -713,5 +713,10 @@
   "xicbtn.apex": "Riga sotto lo XIC nato dal pulsante dello spettro; {rt} = RT dell'apice (min), {y} = intensità dell'apice.",
   "xicbtn.ion.aria": "Nome accessibile dell'etichetta dello ione accanto al pulsante XIC; {ion} = ione e finestra (es. m/z 301.1410 ± 5 ppm).",
   "xicbtn.picked": "Annuncio dopo la scelta di un picco nello spettro; {ion} = ione e finestra.",
-  "xicbtn.pop.tol": "Etichetta del campo tolleranza; {unit} = ppm (alta risoluzione) o Da (risoluzione unitaria)."
+  "xicbtn.pop.tol": "Etichetta del campo tolleranza; {unit} = ppm (alta risoluzione) o Da (risoluzione unitaria).",
+  "a11y.uv": "Descrizione letta dai lettori di schermo dello spettro UV; {title} titolo, {a}-{b} nm, {y} assorbanza massima (mAU).",
+  "ctx.uv.where": "Riga d'intestazione del menu dello spettro UV; {nm} = lunghezza d'onda sotto il puntatore.",
+  "tdati.note.uv": "Nota sopra la tabella dello spettro UV; {a}-{b} nm, {n} = massimo di righe.",
+  "uv.leg.mean": "Legenda dello spettro UV medio; {rt} = intervallo RT (min), {n} = numero di spettri mediati.",
+  "uv.leg.one": "Legenda dello spettro UV di un solo istante; {rt} = RT (min)."
 }

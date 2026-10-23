@@ -7,6 +7,8 @@
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
+#[cfg(feature = "mappa-dad")]
+pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
 mod run;

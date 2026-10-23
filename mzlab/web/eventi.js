@@ -234,6 +234,26 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
     drawSoon(s);
   });
 }
+/** A UV spectrum of the DAD under panel `from` (module loaded on first use). @param {any} from @param {number} k @param {number} r0 @param {number} r1 */
+async function uvOpen(from, k, r0, r1) {
+  if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
+  return window.UVSPEC.open(from, k, r0, r1);
+}
+/** The controls of a PDA chromatogram: the extract button is "λ" (wavelength) instead of "XIC", and a trace by wavelength has its range in nm. @param {any} p @returns {string} */
+function wlCtl(p) {
+  const b = p.el.querySelector('[data-a="xic"]');
+  const pda = p.kind === "pda";
+  if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = null;      // m/z and nm are different ranges: the choice of the kind clears it
+  p._kw = p.kind;
+  if (pda) { p.mz0 ??= p.mz1; p.mz1 ??= p.mz0; }      // a wavelength range has both ends, or none
+  if (b) { b.dataset.t0 ??= b.title; b.textContent = pda ? "λ" : "XIC"; b.title = pda ? I18N.t("panel.wl.title") : b.dataset.t0; }
+  return !pda || p.mz0 == null ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
+}
+/** A trace of the DAD at the wavelengths nm0..nm1 (a PDA chromatogram) under panel `from`. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k] */
+async function wlOpen(from, nm0 = 250, nm1 = 260, k) {
+  if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
+  return window.UVSPEC.openWl(from, nm0, nm1, k);
+}
 // A new spectrum from a chromatogram (double click, right click) is the "live" one: it sits right under the chromatogram (the older ones slide down),
 // and only it follows clicks, cursor, arrows and selections. The older ones are frozen: they keep their time in the title and stay children of the
 // chromatogram (src) so they travel with it. Closing the live one promotes nobody; "Ricollega al cromatogramma" in a spectrum's menu makes it live again.
@@ -255,9 +275,9 @@ function liveSpec(s, from) {
   if (from.cur != null && s.r0 == null) { const dt = scanStep(); s.r0 = from.cur - dt / 2; s.r1 = from.cur + dt / 2; }
   draw(s); uiSave();
 }
-function newSpec(from, r0, r1, k, link = from.id) {
+function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
-  const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec });
+  const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec, ...extra });
   
   // Disable transition temporarily so it doesn't fly from the bottom
   s.el.classList.add("drag");
@@ -314,6 +334,8 @@ function ctxFor(p, e, x, px, py) {
     items.push("-");
     if (p.sel) items.push({ label: I18N.t("ctx.spec.avgSel"), fn: () => newSpec(p, p.sel[0], p.sel[1], f.k) });
     items.push({ label: I18N.t("ctx.spec.atRt"), fn: () => newSpec(p, x - dt / 2, x + dt / 2, f.k) });
+  } else if (p.type === "spec" && p.uv) {
+    items.push({ label: I18N.t("ctx.uv.where", { nm: Math.round(x) }), dim: true }, "-", ...AZIONI.per({ vista: "uv", p, x, px, py, e, near }));
   } else if (p.type === "spec") {                              // the actions of the registry azioni/1 (spettro.js and the modules that add theirs)
     const a = p._a, m = specPick(p, px, py);                  // the SAME peak that the label and the mouse box show; on empty space the m/z entries are grey
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…";
@@ -350,7 +372,16 @@ function ctxFor(p, e, x, px, py) {
       p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
       if (c.dbl) draw(p);
     } });
-  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  // PDA trace: the double click gives the UV spectrum at that time of the detector (the trace may be shown later by «Allinea PDA e massa»); with a selection, the mean (uv-spettro.js)
+  /** @param {any} p */
+  const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
+  reg({ id: "chrom.uvAtRt", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doppioOrd: 3,
+    doppio: /** @param {any} c */ c => c.p.kind === "pda" && !!c.p._a && !c.p.el.classList.contains("max"),
+    esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.x - pdaT(c.p), c.x - pdaT(c.p)) });
+  reg({ id: "chrom.uvAvgSel", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
+    esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
+  reg({ id: "chrom.wl", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
+  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
