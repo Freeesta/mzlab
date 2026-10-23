@@ -14941,3 +14941,4 @@
 {"v":1,"ts_utc":"2026-10-23T13:00:36Z","tipo":"job","k":"120427536539","workflow":"rust","job":"deny","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"54ae285e2185be58b436b748dfbc382a39d33011","run_id":39957629706,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T13:00:36Z","tipo":"job","k":"120427536801","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"54ae285e2185be58b436b748dfbc382a39d33011","run_id":39957629706,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T13:00:45Z","tipo":"carico","k":"2026-10-23T13:0","job_in_coda":0,"job_in_corso":21}
+{"v":1,"ts_utc":"2026-10-23T13:09:09Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/assist-a8","merge_main":true,"aree":{"rust":16,"altro":1,"docs":2,"web":6,"test":2,"generati":1},"tipo":"pr","pr":1612,"sha":"3c25f88dff233babbd43c6153f4096a4f6040863"}
