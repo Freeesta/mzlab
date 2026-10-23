@@ -13,7 +13,7 @@
  * @typedef {{ tasto?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, dove: "chart" | "view", et?: string }} Scorciatoia
  *   tasto = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; dove = "chart": only with the focus on a chart, "view": anywhere in the view; et = i18n key of the short label
  * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, icon?: string, esegui: () => any }} Riga
- * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any }} VoceAzione
+ * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any, fila?: string, soloIcona?: boolean }} VoceAzione
  */
 const AZIONI = (() => {
   // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
@@ -63,9 +63,16 @@ const AZIONI = (() => {
       last = a.gruppo;
       const nome = a.nome ? a.nome(c) : a.id;
       items.push({ id: a.id, label: a.voce ? a.voce(c) : nome, aria: a.aria ? a.aria(c) : nome, tip: a.tip && a.tip(c), icon: icona(a, c),
-        check: a.attiva ? a.attiva(c) : null, dim: !pronta(a, c), fn: () => esegui(a.id, c) });
+        check: a.attiva ? a.attiva(c) : null, dim: !pronta(a, c), fn: () => esegui(a.id, c), fila: a.fila, soloIcona: !!a.fila });
     }
-    return items;
+    // consecutive entries of the same `fila` share one row of the menu
+    return items.reduce((/** @type {any[]} */ out, it) => {
+      const prev = out[out.length - 1];
+      if (it !== "-" && it.fila) {
+        if (prev && prev.fila && prev.fila[0].fila === it.fila) prev.fila.push(it); else out.push({ fila: [it] });
+      } else out.push(it);
+      return out;
+    }, []);
   }
   /** @param {string} id @param {Contesto} c */
   function esegui(id, c) {

@@ -1,5 +1,5 @@
 """Peak quality (Rust engine, qualita.js) on the built site: the optional columns of the integration table (Gaussian similarity, asymmetry at 10 %,
-noise score), the two methods for the limits of the automatic integration (CWT, prominence + local minimum) and the «compare» view.
+noise score) and the Peak detection panel (one method for the limits, sections, reset button).
 Needs the site and the .wasm (python tools/build_site.py; the CI builds the .wasm in site/static/wasm)."""
 import subprocess, sys, time, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -33,7 +33,7 @@ try:
             return pg.evaluate(f"(()=>{{const s={XP}._a.sr[0];let k=0;s.y.forEach((v,i)=>{{if(v>s.y[k])k=i}});return s.x[k]}})()")
         def columns():
             x = apex()
-            pg.evaluate(f"(()=>{{const p={XP};PK.method='classic';autoInt(p,p._a.sr[0],{x})}})()"); pg.wait_for_timeout(300)
+            pg.evaluate(f"(()=>{{const p={XP};autoInt(p,p._a.sr[0],{x})}})()"); pg.wait_for_timeout(300)
             assert pg.evaluate(f"{XP}.ints.length") == 1
             pg.evaluate("INTOPT.q = true; showInts()"); pg.wait_for_selector("#ig-q", timeout=10000); pg.wait_for_timeout(500)
             heads = pg.locator("#bigbody th[title]").all_inner_texts()
@@ -46,19 +46,17 @@ try:
         def excel():
             rows = pg.evaluate("allInts().length"); assert rows == 1
         step("one integration listed", excel)
-        def methods():
+        def one_method():
             pg.evaluate("document.querySelector('#bigdlg').close()")
-            x = apex()
-            for m in ("cwt", "prom"):
-                pg.evaluate(f"(()=>{{const p={XP};p.ints.length=0;PK.method='{m}';autoInt(p,p._a.sr[0],{x})}})()"); pg.wait_for_timeout(1500)
-                ed = pg.evaluate(f"{XP}.ints.map(i=>[i.a,i.b])"); assert len(ed) == 1 and ed[0][1] > ed[0][0] and ed[0][0] < x < ed[0][1], (m, ed)
-        step("automatic integration with CWT and with prominence + local minimum", methods)
-        def compare():
-            x = apex()
-            pg.evaluate(f"(()=>{{const p={XP};compareMethods(p,{x},0)}})()"); pg.wait_for_selector("#bigbody svg[role=img]", timeout=10000)
-            assert pg.locator("#bigbody table tr").count() >= 4
-            assert pg.evaluate("document.querySelector('#bigbody svg').getAttribute('aria-label')").startswith("Traccia con i bordi")
-        step("compare view: trace, three methods, accessible", compare)
+            assert pg.evaluate("typeof compareMethods") == "undefined" and pg.evaluate("PK.method") is None           # one method only, no comparison window
+            labels = pg.evaluate("(() => { const p = " + XP + "; return intMenuItems(p, " + str(apex()) + ", null, 0).map(i => i === '-' ? '-' : i.label); })()")
+            assert not any("Confronta" in l for l in labels if l != "-"), labels
+            pg.evaluate("peakParams()"); pg.wait_for_selector("#bigbody [data-pk=win]")
+            assert pg.locator("#bigbody [data-pk=method]").count() == 0
+            assert pg.locator("#bigbody fieldset.pk-sec").count() >= 3 and pg.locator("#bigbody details#pk-adv [data-pk]").count() == 5
+            assert pg.inner_text("#pk-def") == "Ripristina predefiniti"
+            pg.evaluate("document.querySelector('#bigdlg').close()")
+        step("one method for the limits: no method selector, no comparison, parameters in sections", one_method)
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         b.close()
 finally:
