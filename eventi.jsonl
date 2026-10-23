@@ -15407,3 +15407,4 @@
 {"v":1,"ts_utc":"2026-10-23T14:10:33Z","tipo":"job","k":"120460703730","workflow":"rust","job":"rust","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"987dc0367b5828396eedf6b764154265d1f47da4","run_id":39967319435,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T14:10:33Z","tipo":"job","k":"120460704026","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"987dc0367b5828396eedf6b764154265d1f47da4","run_id":39967319435,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T14:10:46Z","tipo":"carico","k":"2026-10-23T14:1","job_in_coda":0,"job_in_corso":10}
+{"v":1,"ts_utc":"2026-10-23T14:13:37Z","azione":"push","titolo":"Document the discarded upstream build and the dependency fan-out proposal","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1620,"sha":"22f9d1205dbd1a091f2eb3149b89eae69735e305"}
