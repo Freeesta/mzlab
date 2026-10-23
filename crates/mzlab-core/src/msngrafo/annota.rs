@@ -332,6 +332,25 @@ fn non_spiegati(g: &mut Grafo, tieni: &[bool]) {
     }
 }
 
+/// Share of the fragment intensity (sum of % of the base peak, spectra of kept precursors) left without a node above which the graph warns.
+const QUOTA_NON_SPIEGATA: f64 = 0.5;
+
+/// A graph-level note when the formula leaves most of the fragment intensity unexplained (a wrong ion formula or adduct looks like this).
+fn muchi_non_spiegati(g: &mut Grafo) {
+    let (mut tot, mut fuori) = (0.0, 0.0);
+    for sp in g.spettri.iter().filter(|s| s.precursore.is_some()) {
+        for &(_, rel, k) in &sp.picchi {
+            tot += rel;
+            if k.is_none() {
+                fuori += rel;
+            }
+        }
+    }
+    if tot > 0.0 && fuori / tot >= QUOTA_NON_SPIEGATA {
+        avviso(g, "warn.msngrafo.mostUnexplained", None);
+    }
+}
+
 /// The nodes with a formula stay (with their isotopes), the others leave the graph; ids, arcs, spectra and notes follow.
 fn togli(g: &mut Grafo, tieni: &[bool]) {
     non_spiegati(g, tieni);
@@ -369,6 +388,7 @@ fn togli(g: &mut Grafo, tieni: &[bool]) {
     for a in g.avvisi.iter_mut() {
         a.nodo = a.nodo.and_then(|x| nuovo[x]);
     }
+    muchi_non_spiegati(g);
     crate::sortc::slice_ord(&mut tolti);
     g.avvisi.extend(tolti.into_iter().map(|albero| Avviso {
         chiave: "warn.msngrafo.isolatedUnexplained",
