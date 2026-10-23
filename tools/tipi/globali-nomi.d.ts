@@ -28,6 +28,8 @@ declare var CIVIDIS: any;
 declare var CIVIDIS_DARK: any;
 declare var COLOR_BOX: any;
 declare var COLOR_MARGIN: any;
+declare var COMANDI: any;
+declare var COMANDI_TAB: any;
 declare var COMP: any;
 declare var CONC_MGL: any;
 declare var CONV: any;

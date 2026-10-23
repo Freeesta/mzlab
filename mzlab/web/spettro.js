@@ -17,16 +17,23 @@ const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
 // ---------------------------------------------------------------- ruler: p.meas = { ref: m/z | null, list: [{a, b}] }
 // a measure belongs to one view of one spectrum: a new zoom of the m/z axis, another scan or another file/level cancels it
 const measKey = p => JSON.stringify([p.zoom, p.r0, p.r1, p.k, p.level, p.si, p.prec, p.all]);
+// the ruler is one undoable action (comandi.js): the snapshot is p.meas and the state of the ruler button
+COMANDI.gestore("spec.ruler", {
+  leggi: p => JSON.stringify([p.meas || null, !!p.rul]),
+  applica: (p, snap) => { const [m, r] = JSON.parse(snap); p.meas = m; p.rul = r; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", r); },
+});
 function measClick(p, m) {
-  p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
-  if (p.meas.ref == null) p.meas.ref = m;
-  // one more measure from the same reference
-  else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });
+  COMANDI.fai("spec.ruler", p, () => {
+    p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
+    if (p.meas.ref == null) p.meas.ref = m;
+    // one more measure from the same reference
+    else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });
+  });
   draw(p); uiSave();
 }
-function measSet(p, m) { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; draw(p); uiSave(); }
+function measSet(p, m) { COMANDI.fai("spec.ruler", p, () => { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; }); draw(p); uiSave(); }
 const measAperta = p => !!p && p.type === "spec" && !!(p.meas || p.rul);
-function measClear(p) { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); draw(p); uiSave(); }
+function measClear(p) { COMANDI.fai("spec.ruler", p, () => { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); }); draw(p); uiSave(); }
 // Adduct exchanges between two peaks: the short symbol on the chart, the full form in the tooltip. One list for the spectrum ruler and the map (mappa.js).
 const AD_PAIRS = /** @type {Record<string, [number, string, string][]>} */ ({
   positive: [[21.9819, "Na⁺/H⁺", "[M+Na]⁺ / [M+H]⁺"], [17.0265, "NH₄⁺/H⁺", "[M+NH₄]⁺ / [M+H]⁺"], [37.9559, "K⁺/H⁺", "[M+K]⁺ / [M+H]⁺"]],
@@ -191,7 +198,7 @@ function scanLine(p, data, d0) {
   const srcOf = p => p.src && E.panels.find(q => q.id === p.src && q.el);
   // the double click on a spectrum that is not zoomed: the whole spectrum, free axes, no measures (not a menu entry)
   reg({ id: "spec.full", gruppo: "zoom", menu: false, doppio: () => true, doppioOrd: 9, esegui: /** @param {any} c */ c => {
-    const p = c.p; pushZh(p); p.lock = null;
+    const p = c.p; pushZh(p); p.lock = null;       // the zoom step keeps the ruler of the view (meas, rul): the undo brings it back
     if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); }
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
   } });

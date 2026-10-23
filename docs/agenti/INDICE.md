@@ -8,7 +8,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | affiancare e spostare i pannelli (maniglia, zone di rilascio, divisori, annulla) | `docs/agenti/pannelli-affianca.md` |
 | esportazioni a pezzi in OPFS (`dl()`, `export-pezzi.js`, `export-worker.js`, provenienza, pulizia di `export/`) | `docs/agenti/dati-esporta.md` |
 | azioni dei pannelli (registro `azioni/1`, menu del tasto destro, Maiusc+F10) | `docs/agenti/azioni.md` |
-| voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
+| registro delle azioni che cambiano stato (`comandi.js`, `docs/azioni.md` generato), annulla/ripeti, voci «tolto» (togliere un file, chiudere un pannello, svuotare le marcature: nessun avviso, voci di `STORIA`) | `docs/agenti/storia-tolto.md` |
 | animazione di caricamento (`base`) e analizzatori animati spenti (`an-*.js`: quadrupolo, TOF, Orbitrap, ESI, trappola, FT-ICR, QqQ, Paul, settore, IMS, MALDI) | `docs/agenti/analizzatori.md` |
 | header (schermo intero, logo, (i)), area e tabella di caricamento, avvio progressivo (`AVVIO`), regola «interfaccia subito» | `docs/agenti/intestazione.md`, `avvio.md`, `avvio-rapido.md` |
 | barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |

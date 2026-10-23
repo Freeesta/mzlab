@@ -51,18 +51,19 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   /** @param {any} p @param {string} tipo @param {any} [snap] */
   const cattura = (p, tipo, snap) => tipo === "int" ? (snap ?? intSnap(p))
     : tipo === "campi" ? JSON.stringify(Object.fromEntries(KEYS.filter(k => p[k] !== undefined).map(k => [k, p[k]])))
-    : JSON.stringify({ zoom: p.zoom || null, zoomY: p.zoomY || null });
+    : JSON.stringify({ zoom: p.zoom || null, zoomY: p.zoomY || null, meas: p.meas || null, rul: !!p.rul });
   /** Puts a snapshot back and returns the one it replaced. @param {any} e @param {string} st */
   const ripristina = (e, st) => {
     // before = "U" + data (its weight), after = "R"
     if (e.tipo === "tolto") { if (st.charAt(0) === "U") { e.undo(); return "R"; } e.redo(); return "U" + e.dati; }
-    const p = e.p, cur = cattura(p, e.tipo), o = JSON.parse(st);
+    const p = e.p, cur = e.tipo === "cmd" ? "" : cattura(p, e.tipo), o = e.tipo === "cmd" ? null : JSON.parse(st);
     if (e.tipo === "int") { p.ints = o; p.isel = null; }
     else if (e.tipo === "campi") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
-    else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") p.lock = null; }
+    else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); g.applica(p, st); draw(p); uiSave(); return prev; }
+    else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
     draw(p); uiSave(); return cur;
   };
-  const etichetta = (/** @type {any} */ e) => e.tipo === "tolto" ? e.what : T(e.w || (e.tipo === "int" ? "storia.int" : e.tipo === "campi" ? "storia.campi" : "storia.zoom"));
+  const etichetta = (/** @type {any} */ e) => e.tipo === "tolto" ? e.what : e.tipo === "cmd" ? T(e.w) : T(e.w || (e.tipo === "int" ? "storia.int" : e.tipo === "campi" ? "storia.campi" : "storia.zoom"));
   function sync() {
     const u = document.getElementById("np-undo"), r = document.getElementById("np-redo");
     if (u) /** @type {HTMLButtonElement} */ (u).disabled = StoriaPila.ultimo(pila.v, visibile) < 0 && !(window.AFFIANCA && AFFIANCA.ultimo() > 0);
@@ -73,6 +74,12 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const prima = cattura(p, tipo, snap);
     if (tipo === "zoom") { const l = pila.v[StoriaPila.ultimo(pila.v, e => e.p === p && e.tipo === "zoom")]; if (l && l.prima === prima) return; }
     pila.push({ p, tipo, w, prima, dopo: null }); sync();
+  }
+  /** Records the step of a registered command (comandi.js) whose state BEFORE the change is `prima`; steps with the same `unisci` on the same panel less than 0.8 s apart are one (a drag). @param {string} id @param {any} p @param {string} prima @param {string} [unisci] */
+  function comando(id, p, prima, unisci) {
+    const l = pila.v[pila.v.length - 1], t = Date.now();
+    if (unisci && l && l.tipo === "cmd" && l.cmd === id && l.p === p && l.unisci === unisci && t - l.t < 800) { l.t = t; pila.r.length = 0; sync(); return; }
+    pila.push({ p, tipo: "cmd", cmd: id, w: COMANDI.riga(id)?.nome, unisci: unisci || "", t, prima, dopo: null }); sync();
   }
   /** @param {(e: any) => boolean} [solo] */
   function annulla(solo) {
@@ -109,7 +116,9 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     if (!e) { say(T("storia.nienteRipeti")); return false; }
     say(T("storia.redone", { what: etichetta(e) })); sync(); return true;
   }
-  const idle = (/** @type {Element | null} */ t) => !!(t && t.closest && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']")) || !!document.querySelector("dialog[open]");
+  // text entry keeps the undo of the browser; a button, checkbox, range or select does not (the key must reach the stack)
+  const TESTO = "input:not([type=checkbox],[type=radio],[type=range],[type=button],[type=submit],[type=reset],[type=color],[type=file],[type=image]),textarea,[contenteditable='true'],[contenteditable='']";
+  const idle = (/** @type {Element | null} */ t) => !!(t && t.closest && t.closest(TESTO)) || !!document.querySelector("dialog[open]");
   const inDati = () => { const d = document.getElementById("dpanels"); return !!(d && d.offsetParent); };
   document.addEventListener("keydown", e => {
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
@@ -127,7 +136,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   const bu = document.getElementById("np-undo"), br = document.getElementById("np-redo");
   if (bu) bu.addEventListener("click", () => { annulla(); });
   if (br) br.addEventListener("click", () => { ripeti(); });
-  return { registra, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
+  return { registra, comando, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();
 
 // thin wrappers: the callers (eventi.js, pannelli.js, dda.js, mappa.js, banco.js) keep their names
