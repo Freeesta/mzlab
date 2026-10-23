@@ -17960,3 +17960,4 @@
 {"v":1,"ts_utc":"2026-10-23T19:57:59Z","tipo":"carico","k":"2026-10-23T19:5","job_in_coda":0,"job_in_corso":15}
 {"v":1,"ts_utc":"2026-10-23T19:59:57Z","azione":"aperta","tipo":"pr","pr":1647,"sha":"00aee506a96f571c4e5b54d6fe50f24d875cfa31"}
 {"v":1,"ts_utc":"2026-10-23T20:03:33Z","azione":"aperta","tipo":"pr","pr":1648,"sha":"de9458138c37035df9382e3a7ffff9329ad736c7"}
+{"v":1,"tipo":"pr","pr":1644,"sha":"0f77acba15e8bb6e1bf743ad652e13da43d607dc","ts_utc":"2026-10-23T20:04:11Z","azione":"unita","aperta_s":1234,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":7,"righe_meno":0,"file_n":1,"file":["tests_e2e/e2e_infusione_grafo.py"],"aree":{"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":291}
