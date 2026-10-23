@@ -270,24 +270,26 @@ pub fn align_grouped(
     adj: Option<&RtMap>,
     record: bool,
 ) -> Result<Grouped> {
-    // the groups are found once and kept as the lists of features, so the table is reserved to its exact size and filled from the lists
-    let (mut kept, mut lens) = (Vec::<Item>::new(), Vec::<u32>::new());
+    // Natively the groups of the first pass are kept as lists of features and replayed, so they are found once; the module in the browser keeps its
+    // peak memory and finds them again.
+    let keep = !cfg!(target_family = "wasm");
+    let (mut kept, mut lens, mut n) = (Vec::<Item>::new(), Vec::<u32>::new(), 0usize);
     merge_groups(files, p, adj, &mut |items| {
-        kept.extend_from_slice(items);
-        lens.push(items.len() as u32);
+        n += 1;
+        if keep {
+            kept.extend_from_slice(items);
+            lens.push(items.len() as u32);
+        }
     })?;
     let mut out = Grouped {
-        table: Aligned::with_capacity(files.len(), lens.len()),
+        table: Aligned::with_capacity(files.len(), n),
         group_of: if record {
             files.iter().map(|f| vec![u32::MAX; f.len()]).collect()
         } else {
             Vec::new()
         },
     };
-    let mut at = 0;
-    for len in lens {
-        let items = &kept[at..at + len as usize];
-        at += len as usize;
+    let mut emit = |items: &[Item]| {
         if record {
             let g = out.table.len() as u32;
             for &(k, i) in items {
@@ -295,6 +297,15 @@ pub fn align_grouped(
             }
         }
         push_group(files, items, &mut out.table, adj);
+    };
+    if keep {
+        let mut at = 0;
+        for len in lens {
+            emit(&kept[at..at + len as usize]);
+            at += len as usize;
+        }
+    } else {
+        merge_groups(files, p, adj, &mut emit)?;
     }
     Ok(out)
 }
