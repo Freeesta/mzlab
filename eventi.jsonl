@@ -12852,3 +12852,4 @@
 {"v":1,"ts_utc":"2026-10-23T08:59:10Z","tipo":"job","k":"120330834394","workflow":"pages","job":"build","esito":"cancelled","coda_s":0,"durata_s":3,"passi":[],"pr":null,"sha":"260313e8756e303bbfbb88866cd9ef083cf0aa16","run_id":39928546198,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T08:59:10Z","tipo":"job","k":"120330860636","workflow":"pages","job":"deploy","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"260313e8756e303bbfbb88866cd9ef083cf0aa16","run_id":39928546198,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T08:59:11Z","tipo":"annullamento","k":"39928546198","workflow":"pages","minuti_runner":0.1,"sostituito_da":"ffde06ec8c213967cc8f4e7b613bc691db61c0b2","pr":null,"sha":"260313e8756e303bbfbb88866cd9ef083cf0aa16","run_id":39928546198,"run_attempt":1}
+{"v":1,"ts_utc":"2026-10-23T09:01:08Z","azione":"aperta","tipo":"pr","pr":1586,"sha":"bb52f97a980a0a5c5f0a1d350a55470e2918429c"}
