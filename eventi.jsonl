@@ -13302,3 +13302,4 @@
 {"v":1,"ts_utc":"2026-10-23T09:49:55Z","tipo":"run","workflow":"rust","esito":"cancelled","main":true,"durata_s":6,"attivo_s":0,"coda_s":0,"jobs":{},"pr":null,"sha":"325a741b3a9b53c002fdcd2f6f081e76f051c4e4","run_id":39934696472,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T09:49:55Z","tipo":"annullamento","k":"39934696472","workflow":"rust","minuti_runner":0.0,"sostituito_da":"1acac3a5d9ca6ad673242aff8a346377a1e19bcb","pr":null,"sha":"325a741b3a9b53c002fdcd2f6f081e76f051c4e4","run_id":39934696472,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T09:50:22Z","tipo":"carico","k":"2026-10-23T09:5","job_in_coda":0,"job_in_corso":34}
+{"v":1,"ts_utc":"2026-10-23T09:57:47Z","azione":"aperta","tipo":"pr","pr":1592,"sha":"6541db487516c33891ad7304642a52a1c6faef6e"}
