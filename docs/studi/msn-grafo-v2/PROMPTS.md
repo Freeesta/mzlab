@@ -4,7 +4,7 @@ Passo 2 dell'ARCH MSn-grafo v2. Criteri, soglie e decisioni: `docs/studi/msn-gra
 ## Ordine e dipendenze
 | Prompt | Dipende da | Parallelo con | Note |
 |---|---|---|---|
-| G1 · dati, best path, livelli, %, perdite, energie (+ G0: 55 vs 26 nodi, eV vs NCE) | CRITERI in main | G4b | parte SUBITO; G0 è il suo primo commit |
+| G1 · dati, best path, livelli, %, perdite, energie (+ G0: 55 nodi senza formula vs 26 con formula, eV vs NCE) | CRITERI in main | G4b | parte SUBITO; G0 è il suo primo commit |
 | G4b · .raw dell'infusione nel browser | nessuna | G1 | parte SUBITO; tocca lettura/indice, non `msngrafo/` |
 | G2 · scheda: modulo `msngrafo-vista.js`, albero/radiale, pedici, filtri, disegni | G1 unita | G4a | |
 | G3 · Flow/CLI: SVG Rust, HTML autonomo, PNG | G1 unita, G2 unita (usa `msngrafo-vista.js`) | G5 (parte cloud) | |
@@ -19,7 +19,7 @@ Regole comuni a ogni prompt (già scritte dentro ciascuno): leggi AGENTS.md e il
 ```text
 Sei DEV G1 «grafo MSn v2: dati» di mzLab (repo Freeesta/mzlab, rispondi in italiano breve). Coordinatore: COO 11, session_01SqVGjScVGPMmoMETWKcX2F: conferma SUBITO la ricezione con send_message. NON unire PR: a CI verde manda PR + SHA al COO (≤ 5 righe).
 Leggi: AGENTS.md (già in contesto), docs/studi/msn-grafo-v2/CRITERI.md (tutto, è il contratto), docs/agenti/msn-grafo.md §2-§4, docs/agenti/rust.md (parti su msngrafo), docs/agenti/wasm-tetti.md.
-G0 (primo commit, prima del codice nuovo): spiega con numeri due discrepanze. (1) Sul timololo la CLI dal .raw dà 55 nodi/101 archi, la pagina dal mzML convertito 26 nodi: riproduci sul sintetico (crates/mzlab-core/src/msngrafo/tests.rs, tests_e2e/fixtures/msngrafo_esempio.json, TP_Mine/tests/msn_synth.py) le opzioni che la pagina manda (infusione-grafo-stato.js `params`) e quelle della CLI (crates/mzlab-cli/src/msn_graph.rs): formula sì/no, interpreta, attivazione, k/tol/ce dell'albero; trova cosa cambia il conteggio.
+G0 (primo commit, prima del codice nuovo): spiega con numeri due discrepanze. (1) Sul timololo 55 nodi/101 archi sono il grafo senza formula (solo masse), 26 nodi/36 archi quello con la formula dello ione (pagina e CLI uguali, misura del Mac): riproduci sul sintetico (crates/mzlab-core/src/msngrafo/tests.rs, tests_e2e/fixtures/msngrafo_esempio.json, TP_Mine/tests/msn_synth.py) le opzioni che la pagina manda (infusione-grafo-stato.js `params`) e quelle della CLI (crates/mzlab-cli/src/msn_graph.rs): formula sì/no, interpreta, attivazione, k/tol/ce dell'albero; conferma sul sintetico che solo la formula cambia il conteggio.
 Se serve il file vero scrivi nel CODA di mzlab-dati la richiesta al loc COO (comandi esatti, solo aggregati). (2) Energie Thermo: il lettore marca cid25.00 come eV (energy_is_nce=false): verifica nel lettore Thermo e nei filtri, e o correggi l'unità (NCE %) o lasciala com'è con un perché; se il fix sta nel lettore Thermo e cambia hash di altri test, fermati e chiedi al COO. Scrivi l'esito in CRITERI.md §2 (riscrivi la riga, niente cronaca).
 Poi realizza D1-D3 di CRITERI.md:
 - crates/mzlab-core/src/msngrafo/vista.rs (nuovo): `vista` calcolata SOLO dai campi già nel grafo: per nodo id, livelli (livelli MS degli spettri in cui lo ione compare, da archi[].misure), rel (% nello spettro del genitore sul best path, misura più intensa; radice null se non c'è MS1), rel_max, best {da, passi, costo}, entranti, comune, albero {col, riga}, radiale {anello, angolo}; per arco {da, a, best}; algoritmo "best-path/1" con la regola in chiaro; ordine.
