@@ -18273,3 +18273,4 @@
 {"v":1,"ts_utc":"2026-10-23T21:13:37Z","tipo":"carico","k":"2026-10-23T21:1","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-10-23T21:17:24Z","azione":"aperta","tipo":"pr","pr":1650,"sha":"7966eb384c0eb24e708cb4a2f6f4131a90d0a1f3"}
 {"v":1,"ts_utc":"2026-10-23T21:19:46Z","azione":"aperta","tipo":"pr","pr":1651,"sha":"87809235b4db46a293f121642623d4ff7d23cfe1"}
+{"v":1,"tipo":"pr","pr":1651,"sha":"87809235b4db46a293f121642623d4ff7d23cfe1","ts_utc":"2026-10-23T21:28:25Z","azione":"unita","aperta_s":519,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":22,"righe_meno":4,"file_n":3,"file":["docs/agenti/visore-veloce.md","mzlab/web/dda.js","mzlab/web/transizioni.js"],"aree":{"docs":1,"web":2},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":82}
