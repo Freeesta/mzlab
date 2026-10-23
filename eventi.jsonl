@@ -18757,3 +18757,4 @@
 {"v":1,"ts_utc":"2026-10-23T22:45:18Z","azione":"push","titolo":"Allow the x key on chrom.wl, exclusive with chrom.xic by visibility","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1655,"sha":"46d8909499e152d820e388dd4fdd47611a39f39d"}
 {"v":1,"ts_utc":"2026-10-23T22:49:47Z","azione":"aperta","tipo":"pr","pr":1657,"sha":"d4e6702178df04178925ba8db0d535df651a6e1f"}
 {"v":1,"ts_utc":"2026-10-23T23:20:17Z","azione":"aperta","tipo":"pr","pr":1658,"sha":"f003367f7894e976f8c6ee06cc776246fe48009d"}
+{"v":1,"ts_utc":"2026-10-23T23:21:16Z","azione":"aperta","tipo":"pr","pr":1659,"sha":"8ccd93c58e916074dd33b4c1675acc938f7b09ee"}
