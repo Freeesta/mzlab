@@ -1044,6 +1044,9 @@
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
+                  "adduct_contains",
+                  "instrument_contains",
+                  "ce_contains",
                   "top_n",
                   "decoys",
                   "score_terms",
@@ -1082,6 +1085,18 @@
                   {
                     "type":"string",
                     "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"
                   },
                   {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
                   {
@@ -1480,6 +1495,9 @@
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
+                  "adduct_contains",
+                  "instrument_contains",
+                  "ce_contains",
                   "top_n",
                   "decoys",
                   "score_terms",
@@ -1518,6 +1536,18 @@
                   {
                     "type":"string",
                     "description":"Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose adduct (for example [M+H]+) contains this text (any case) are candidates; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose instrument or instrument type contains this text (any case) are candidates, for example Orbitrap or QTOF; empty keeps all. Not used by the tree algorithm"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Only library entries whose collision energy text contains this text (any case) are candidates, for example 30 or HCD; empty keeps all. Not used by the tree algorithm"
                   },
                   {"type":"integer","minimum":1,"default":5,"description":"Hits kept"},
                   {
