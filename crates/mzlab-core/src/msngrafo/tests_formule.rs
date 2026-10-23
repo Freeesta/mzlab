@@ -188,7 +188,11 @@ fn an_isolated_precursor_left_unexplained_is_noted() {
 
 #[test]
 fn most_intensity_unexplained_is_noted_on_the_graph_only_then() {
-    let nota = |g: &Grafo| g.avvisi.iter().any(|a| a.chiave == "warn.msngrafo.mostUnexplained");
+    let nota = |g: &Grafo| {
+        g.avvisi
+            .iter()
+            .any(|a| a.chiave == "warn.msngrafo.mostUnexplained")
+    };
     let (bene, _) = grafo_spostato(&con("C8H11N4O2"), &[0, 1, 2, 3], false, 0.0);
     assert!(!nota(&bene), "{:?}", bene.avvisi);
     // fragments 15 ppm off with a 3 ppm window: none has a candidate
