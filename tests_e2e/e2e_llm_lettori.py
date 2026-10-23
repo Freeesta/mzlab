@@ -168,6 +168,29 @@ try:
             pg.context.close()
         step("before every send: consent still stored, assistant on, a key where one is needed", guard)
 
+        def cap():
+            pg = fresh()
+            r = pg.evaluate("""async () => {
+              // the token limit, counted before each send over the machine and the subagents; no limit: one question at 50 000, asked once
+              window.MZLAB_LLM = { client: { needsKey: async () => false } };
+              let asked = 0, yes = true;
+              const host = __host(''); host.ask = async () => { asked++; return yes; };
+              const run = new __T.AgentRun(host); await __T.start(run);
+              const set = cap => localStorage.setItem('mzlab.llm', JSON.stringify({ on: true, provider: 'anthropic', model: 'm', level: 'L1', cap }));
+              const g = async () => { try { await run.guard(window.MZLAB_LLM.client); return 'ok'; } catch (e) { return e.key; } };
+              const out = {};
+              set(100); run.usage = [60, 20]; run.subUsage = [10, 5]; out.under = await g();
+              run.subUsage = [30, 5]; out.over = await g();
+              set(0); run.usage = [40000, 5000]; run.subUsage = [0, 0]; out.small = await g(); out.askedSmall = asked;
+              run.usage = [40000, 20000]; out.first = await g(); out.again = await g(); out.asked = asked;
+              const run2 = new __T.AgentRun(host); await __T.start(run2); yes = false; run2.usage = [60000, 0];
+              out.refused = await (async () => { try { await run2.guard(window.MZLAB_LLM.client); return 'ok'; } catch (e) { return e.key; } })();
+              return out;
+            }""")
+            assert r == {"under": "ok", "over": "err.llm.limit.spend", "small": "ok", "askedSmall": 0, "first": "ok", "again": "ok", "asked": 1, "refused": "err.llm.limit.spend"}, r
+            pg.context.close()
+        step("token limit: a set limit stops the assistant; without one it asks once at 50 000", cap)
+
         def outside():
             ext = [u for u in reqs if not u.startswith(f"http://127.0.0.1:{PORT}/") and not u.startswith(("data:", "blob:"))]
             assert not ext, ext[:5]
