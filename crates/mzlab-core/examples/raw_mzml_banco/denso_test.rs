@@ -128,4 +128,21 @@ fn il_caso_denso_ha_almeno_200000_punti_per_scansione() {
     assert!(v.profilo.len() >= 200_000, "{}", v.profilo.len());
 }
 
+/// The 8 GB variant of the memory proof: generated, checked for size and deleted (`cargo test --profile cli -- --ignored`; about a minute and 8 GB of disk).
+#[test]
+#[ignore]
+fn la_variante_da_8_gb_si_genera_e_si_cancella() {
+    let dir = std::env::temp_dir().join(format!("raw_mzml_denso_8g_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let f = dir.join("d8.bin");
+    let mut b = Vec::new();
+    pacchetto(&mut b, &Parametri::denso(1), 0, None);
+    let scansioni = (8.0e9 / b.len() as f64).ceil() as usize;
+    let (tabella, byte, _) = genera(&f, &Parametri::denso(scansioni), false).unwrap();
+    assert_eq!(tabella.len(), scansioni);
+    assert!(byte >= 8_000_000_000);
+    assert_eq!(std::fs::metadata(&f).unwrap().len(), byte);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 const SHA_ATTESO: &str = "5ae7271d7a6da6693ae677ce9593b7cdcd75a5469314b719989e6b45e009e182";
