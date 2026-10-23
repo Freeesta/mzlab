@@ -104,6 +104,7 @@ try:
               const sub = [], answers = [[{ ev: 'text_delta', text: route }, { ev: 'usage', in: 100, out: 20, cache_read: 0 }], [{ ev: 'text_delta', text: ok }, { ev: 'usage', in: 300, out: 50, cache_read: 0 }]];
               const conv = [[{ ev: 'tool_call_start', id: 'c0', name: 'flow_run' }, { ev: 'tool_call_delta', json: '{}' }, { ev: 'tool_call_end', id: 'c0' }, { ev: 'stop', reason: 'tool' }], [{ ev: 'text_delta', text: 'I will not run anything.' }, { ev: 'stop', reason: 'end' }]];
               window.MZLAB_LLM = { client: {
+                needsKey: async () => false,
                 sendRaw: async (p, m, req, sink) => { sub.push(req); for (const e of answers.shift()) sink(e); },
                 send: async (c, sink) => { for (const e of conv.shift()) sink(e); } } };
               __T.confirm = false;
@@ -133,6 +134,7 @@ try:
               const route = JSON.stringify({ route: 'inspect', need_data: ['inspection'], language: 'en', suspicious: false });
               let n = 0;
               window.MZLAB_LLM = { client: {
+                needsKey: async () => false,
                 sendRaw: async (p, m, req, sink) => { n++; if (n === 1) sink({ ev: 'text_delta', text: route }); else sink({ ev: 'error', key: 'err.llm.network', params: { reason: 'test' } }); },
                 send: async (c, sink) => { sink({ ev: 'text_delta', text: 'Done without the reading.' }); sink({ ev: 'stop', reason: 'end' }); } } };
               const run = new __T.AgentRun(__host('')); await __T.start(run);
@@ -144,6 +146,27 @@ try:
             assert '"reading"' not in r["conv"], "a reader that failed gives the orchestrator nothing"
             pg.context.close()
         step("a reader that cannot be reached is skipped and the turn goes on", failure)
+
+        def guard():
+            pg = fresh()
+            r = pg.evaluate("""async () => {
+              // a client that counts what it is asked to send: the consent revoked after the start, then a provider that needs a key it does not have
+              let sent = 0, key = false;
+              window.MZLAB_LLM = { client: { needsKey: async () => key,
+                sendRaw: async (p, m, req, sink) => { sent++; sink({ ev: 'text_delta', text: 'x' }); },
+                send: async (c, sink) => { sent++; sink({ ev: 'text_delta', text: 'Hi.' }); sink({ ev: 'stop', reason: 'end' }); } } };
+              const run = new __T.AgentRun(__host('')); await __T.start(run);
+              const g = async () => { try { await run.guard(window.MZLAB_LLM.client); return 'ok'; } catch (e) { return e.key; } };
+              const out = { fine: await g() };
+              key = true; out.nokey = await g(); key = false;
+              localStorage.setItem('mzlab.llm.consenso', '{}'); out.revoked = await g();
+              localStorage.setItem('mzlab.llm.consenso', JSON.stringify({ anthropic: { classes: ['plan', 'summary', 'names'] } }));
+              localStorage.setItem('mzlab.llm', JSON.stringify({ on: false, provider: 'anthropic', model: 'm', level: 'L1' })); out.off = await g();
+              return out;
+            }""")
+            assert r == {"fine": "ok", "nokey": "err.llm.key.missing", "revoked": "err.llm.consent", "off": "err.llm.consent"}, r
+            pg.context.close()
+        step("before every send: consent still stored, assistant on, a key where one is needed", guard)
 
         def outside():
             ext = [u for u in reqs if not u.startswith(f"http://127.0.0.1:{PORT}/") and not u.startswith(("data:", "blob:"))]

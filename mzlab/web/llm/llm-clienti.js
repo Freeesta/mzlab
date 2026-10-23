@@ -45,6 +45,8 @@ export class SiteClient {
     return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, provider, model, request, transport: "net" }); });
   }
   stop() { if (this.lastId) this.worker.postMessage({ op: "abort", id: this.lastId }); }
+  /** whether the provider needs a key that this page does not hold (a model on this computer needs none) @param {string} id */
+  async needsKey(id) { const p = (await this.providers()).find(x => x.id === id); return !!p && !p.local && !this.hasKey; }
   /** @param {string} text @param {boolean} strict */
   async replay(text, strict) { return (await this.call("replay.load", { text, strict })).turns; }
   /** the iframe with the key field; created only here, after the consent @param {HTMLElement} box @param {Provider} p @param {Record<string, string>} labels @param {string} title */
@@ -93,6 +95,8 @@ export class DesktopClient {
       await new Promise(ok => setTimeout(ok, 120));
     }
   }
+  /** whether the provider needs a key that the app does not hold, asked to the app each time (the key may have been forgotten since) @param {string} id */
+  async needsKey(id) { const r = await this.post("llm/providers"), p = JSON.parse(r.providers).providers.find((/** @type {Provider} */ x) => x.id === id); return !!p && !p.local && !(r.has_key || {})[id]; }
   stop() { this.stopped = true; if (this.cur) this.post("llm/abort", { id: this.cur }).catch(() => {}); }
   /** @param {string} provider @param {string} key */
   async setKey(provider, key) { await this.post("llm/key/set", { provider, key }); this.hasKey = true; }

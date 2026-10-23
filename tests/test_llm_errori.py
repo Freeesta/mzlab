@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 # keys that can end a turn or a send; Rust emits them, the page must say them in words
 TERMINAL = ["auth", "rate", "context", "network", "bad_response", "aborted", "provider", "module", "limit.workspace", "limit.spend",
-            "limit.calls", "plan.tries", "profile.course", "level.denied", "context.budget"]
+            "limit.calls", "plan.tries", "profile.course", "level.denied", "context.budget", "consent", "key.missing"]
 
 
 def test_catalogs_and_flow_panel_have_every_terminal_error():

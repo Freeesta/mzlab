@@ -13,6 +13,8 @@
     "err.llm.bad_response": () => "The provider answered with something the program cannot read.",
     "err.llm.aborted": () => "Stopped.",
     "err.llm.provider": () => "No provider is available here. Choose one in Settings, Assistant.",
+    "err.llm.consent": () => "The consent for this provider is gone or the assistant is switched off: nothing was sent.",
+    "err.llm.key.missing": () => "The provider's key is missing: set it in Settings, Assistant. Nothing was sent.",
     "err.llm.module": () => "The assistant module did not load: reload the page and try again.",
     "err.llm.limit.workspace": () => "The provider's workspace usage limit is reached: nothing more can be sent until it resets.",
     "err.llm.limit.spend": () => "The spending cap of this conversation is reached: the assistant stops.",
