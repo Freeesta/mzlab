@@ -18681,3 +18681,4 @@
 {"v":1,"ts_utc":"2026-10-23T22:35:53Z","tipo":"job","k":"120691003449","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"a23bbf1f4a62ab91da78be680341ee24aadd6c82","run_id":40034587977,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T22:35:53Z","tipo":"job","k":"120691003932","workflow":"rust","job":"rust-wasm","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"a23bbf1f4a62ab91da78be680341ee24aadd6c82","run_id":40034587977,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T22:36:04Z","tipo":"carico","k":"2026-10-23T22:3","job_in_coda":0,"job_in_corso":28}
+{"v":1,"ts_utc":"2026-10-23T22:38:48Z","azione":"push","titolo":"Gate dad_spectrum with mappa-dad again","merge_main":false,"aree":{"rust":1},"tipo":"pr","pr":1655,"sha":"0895c115002081f7fe042f78f8a4e9e123845f2f"}
