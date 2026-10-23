@@ -872,7 +872,7 @@ const xicTraceFor = (mz, ref) => {
 function xicDirect(mz, after, panel, over) {
   XIC_LAST = { mz };
   const tr = over || xicTraceFor(mz, panel);
-  if (!(panel && E.panels.includes(panel))) xicPrefetch(tr);
+  if (!(panel && E.panels.includes(panel))) window.XICBTN?.prefetch(tr);
   if (panel && E.panels.includes(panel)) { panel.traces.push(tr); ctl(panel); draw(panel); reveal(panel); return panel; }
   const np = addPanel("xic", { traces: [tr] });
   if (after && E.panels.includes(after)) {

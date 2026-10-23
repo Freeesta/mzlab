@@ -847,7 +847,6 @@ declare var xicBin: any;
 declare var xicDirect: any;
 declare var xicName: any;
 declare var xicNominal: any;
-declare var xicPrefetch: any;
 declare var xicTraceFor: any;
 declare var xicWin: any;
 declare var xlsxBuild: any;

@@ -175,15 +175,6 @@ const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 // title of the y axis: what the corrected trace is (blank file, background or both)
 const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
 const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
-/** Starts the requests of the XIC panel about to be created (getXic memoises them): they run while the panel is being built, and draw() finds them done or under way.
- * @param {any} tr the trace of the new panel (it opens in the current tab) */
-function xicPrefetch(tr) {
-  try {
-    if (E.tab === "mrm") return;                                                           // addPanel picks another tab there
-    const p = { tab: E.tab, tol: TOL0 };
-    scanFiles(shownFor(p)).forEach(f => { getXic(f.k, ...(tr.ion && window.HR ? HR.xicArgs(f, tr, p) : [tr.mz, tr.w ?? p.tol]), f.lv).catch(() => {}); });
-  } catch (e) { /* draw() asks again */ }
-}
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
   if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins

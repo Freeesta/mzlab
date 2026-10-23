@@ -58,6 +58,6 @@ Dove va il tempo: il tempo misurato comprende la richiesta `api/xic` (JSON dal m
 - **Banco**: le tracce sintetiche di G5 sono servite anche per `api/xicbin`.
 
 ## Disegno del pannello XIC (V-3)
-- **Cosa**: `xicPrefetch(tr)` (`grafici.js`, chiamata da `xicDirect` prima di `addPanel`) fa partire le richieste `api/xicbin` del nuovo pannello (memoizzate da `getXic`) mentre `addPanel` costruisce il DOM (~6 ms sul thread principale); `draw()` trova le tracce già pronte o in arrivo. Il risultato visibile non cambia: stesse richieste, stessa finestra.
+- **Cosa**: `XICBTN.prefetch(tr)` (`xic-spettro.js`, chiamata da `xicDirect` prima di `addPanel`) fa partire le richieste `api/xicbin` del nuovo pannello (memoizzate da `getXic`) mentre `addPanel` costruisce il DOM (~6 ms sul thread principale); `draw()` trova le tracce già pronte o in arrivo. Il risultato visibile non cambia: stesse richieste, stessa finestra.
 - **Dove andavano i ~18 ms di G2 `lr`** (strumentando le funzioni globali): `addPanel` 6,2 ms p50, poi `seriesOf` (richiesta) ~9 ms, poi `drawLines` oltre l'attesa ~3 ms, `afterDraw` 0,7; `setup` 1,0, `axes` 0,5, `legend` 0,1, `smooth` 0,1: il disegno vero e proprio è sotto 5 ms, il resto era attesa in serie.
 - **Misure** (stessa macchina e giro, sito costruito prima/dopo, G2 `lr`, p50 / p95 ms, n = 30): 18,5 / 32,5 -> 15,2 / 22,9 (richiesta 8,5 -> 11,4 perché ora comprende la costruzione del pannello, resto 9,0 -> 3,8). G2 p50 <= 16: ok.
