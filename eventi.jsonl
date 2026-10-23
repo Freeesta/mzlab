@@ -15284,3 +15284,4 @@
 {"v":1,"ts_utc":"2026-10-23T13:59:18Z","tipo":"carico","k":"2026-10-23T13:5","job_in_coda":0,"job_in_corso":23}
 {"v":1,"ts_utc":"2026-10-23T14:00:57Z","azione":"aperta","tipo":"pr","pr":1617,"sha":"70d6297f1206cc68be83d1a32ea37a47812adc6a"}
 {"v":1,"ts_utc":"2026-10-23T14:03:48Z","azione":"aperta","tipo":"pr","pr":1618,"sha":"ba77335b43ea7e63288e8b3f9ab2f88bcd3beac1"}
+{"v":1,"ts_utc":"2026-10-23T14:06:03Z","azione":"aperta","tipo":"pr","pr":1619,"sha":"331b6fe2195096a9061a23f2fc35567871507ca2"}
