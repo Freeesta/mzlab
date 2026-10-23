@@ -36,7 +36,7 @@ impl RawFileReader {
         }
         let first = self.run_header.sample_info.first_scan_number;
         for (i, entry) in self.scan_index.iter().enumerate() {
-            let Some(event) = self.scan_events.get(i) else {
+            let Some(event) = self.scan_event(i) else {
                 continue;
             };
             let Some(rx) = event.reactions.first() else {

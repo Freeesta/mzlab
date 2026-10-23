@@ -6,7 +6,8 @@
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
-use crate::trace::reserve;
+use crate::trace::{filled, reserve};
+use std::cell::{OnceCell, RefCell};
 
 /// Peaks of a slab: m/z, intensity and position of the scan (in the section), in table order.
 #[derive(Default)]
@@ -14,13 +15,98 @@ pub(crate) struct Slab {
     pub(crate) mz: Vec<f64>,
     pub(crate) it: Vec<f64>,
     pub(crate) pos: Vec<u32>,
+    by_scan: OnceCell<ByScan>,
 }
+
+/// The peaks of a slab grouped by scan, each scan in table order: `orig` is the table position, so the peaks of a window `a..b` of a scan are
+/// found by bisection instead of by walking the whole window of the table.
+struct ByScan {
+    start: Vec<u32>,
+    orig: Vec<u32>,
+    it: Vec<f64>,
+    /// Per scan, where the last window began: windows come in ascending order of m/z, so the next one starts at or after it.
+    cur: RefCell<Vec<u32>>,
+}
+
+impl ByScan {
+    fn new(pos: &[u32], it: &[f64]) -> Result<ByScan> {
+        let nscan = pos.iter().max().map_or(0, |&m| m as usize + 1);
+        let mut start = filled(nscan + 1, 0u32)?;
+        for &s in pos {
+            start[s as usize + 1] += 1;
+        }
+        for k in 0..nscan {
+            start[k + 1] += start[k];
+        }
+        let mut next = start.clone();
+        let mut orig = filled(pos.len(), 0u32)?;
+        let mut y = filled(pos.len(), 0.0f64)?;
+        for (i, &s) in pos.iter().enumerate() {
+            let at = next[s as usize] as usize;
+            orig[at] = i as u32;
+            y[at] = it[i];
+            next[s as usize] += 1;
+        }
+        let cur = RefCell::new(start[..nscan].to_vec());
+        Ok(ByScan {
+            start,
+            orig,
+            it: y,
+            cur,
+        })
+    }
+}
+
+/// The bisection path of `Slab::add_trace`: per scan, the peaks of the table positions `a..b`, found from the cursor of the last window.
+fn bisect_into(g: &ByScan, a: usize, b: usize, w0: usize, y: &mut [f64]) {
+    let w1 = w0 + y.len();
+    let mut cur = g.cur.borrow_mut();
+    for s in w0..w1.min(cur.len()) {
+        let (from, to) = (g.start[s] as usize, g.start[s + 1] as usize);
+        let below = |o: &u32| (*o as usize) < a;
+        let mut k = cur[s] as usize;
+        if k > from && g.orig[k - 1] as usize >= a {
+            // a window that starts before the last one: look again from the start of the scan
+            k = from + g.orig[from..to].partition_point(below);
+        } else {
+            let mut steps = 0;
+            while k < to && below(&g.orig[k]) {
+                k += 1;
+                steps += 1;
+                if steps == 16 {
+                    k += g.orig[k..to].partition_point(below);
+                    break;
+                }
+            }
+        }
+        cur[s] = k as u32;
+        while k < to && (g.orig[k] as usize) < b {
+            y[s - w0] += g.it[k];
+            k += 1;
+        }
+    }
+}
+
+/// The walking path of `Slab::add_trace`.
+fn walk_into(pos: &[u32], it: &[f64], w0: usize, y: &mut [f64]) {
+    let len = y.len();
+    for (&s, &v) in pos.iter().zip(it) {
+        let d = (s as usize).wrapping_sub(w0);
+        if d < len {
+            y[d] += v;
+        }
+    }
+}
+
+/// Looking up the window in one scan costs about this many peaks of the plain walk.
+const BISECT_COST: usize = 4;
 
 impl Slab {
     fn load<R: ReadAt>(&mut self, index: &mut Index<R>, si: usize, a: u64, b: u64) -> Result<()> {
         self.mz.clear();
         self.it.clear();
         self.pos.clear();
+        self.by_scan = OnceCell::new();
         let n = (b - a) as usize;
         reserve(&mut self.mz, n)?;
         reserve(&mut self.it, n)?;
@@ -31,6 +117,26 @@ impl Slab {
             it.push(y);
             pos.push(p as u32);
         })
+    }
+}
+
+impl Slab {
+    /// Adds to `y[s - w0]` the intensity of the peaks of the table positions `a..b` that lie in scan `s`, for the scans `w0..w0 + y.len()`, in table
+    /// order: the sums are the ones of walking `a..b`, found by the shorter of the two ways.
+    pub(crate) fn add_trace(&self, a: usize, b: usize, w0: usize, y: &mut [f64]) -> Result<()> {
+        if y.len().saturating_mul(BISECT_COST) >= b - a {
+            walk_into(&self.pos[a..b], &self.it[a..b], w0, y);
+            return Ok(());
+        }
+        if self.by_scan.get().is_none() {
+            let built = ByScan::new(&self.pos, &self.it)?;
+            let _ = self.by_scan.set(built);
+        }
+        let Some(g) = self.by_scan.get() else {
+            return Ok(());
+        };
+        bisect_into(g, a, b, w0, y);
+        Ok(())
     }
 }
 

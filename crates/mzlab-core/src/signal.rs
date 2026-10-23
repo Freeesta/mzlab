@@ -5,6 +5,9 @@ pub(crate) fn median(v: &[f64]) -> f64 {
         return 0.0;
     }
     let mut s = v.to_vec();
+    if let Some(m) = crate::sortc::select_median(&mut s) {
+        return m;
+    }
     crate::sortc::by(&mut s, |a, b| {
         a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
     });

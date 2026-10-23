@@ -250,6 +250,15 @@ impl<R: Read + Seek> BinaryReader<R> {
     }
 }
 
+/// Position in the event table of scan `idx`: its own when there is one event per scan, else the one its index row names (`row_event`).
+pub(crate) fn event_slot(n_events: usize, n_scans: usize, idx: usize, row_event: u16) -> usize {
+    if n_events == n_scans {
+        idx
+    } else {
+        row_event as usize
+    }
+}
+
 /// Model strings from the InstID block that follows the MS controller's
 /// RunHeader (`docs/docs/format/03-raw-file-info.md` section 11), most
 /// specific first: `model[2]` always names the model, while `model[1]` is
@@ -705,7 +714,15 @@ impl RawFileReader {
         // the table with each known layout until one ends exactly where the next stream begins.
         let sizes: [usize; 3] = if version >= 66 && n_events > 0 {
             let n = n_events as u64;
-            if stream_bytes % n == 0 {
+            // Events of equal size may still be counted ones (a single event, or the same number of reactions in each):
+            // they are when the walk fits and one event holds several reactions, which no uniform layout does.
+            let start = r.position();
+            let counted_uniform = walk_counted(&mut r, n, preamble_size, start, stream_bytes)
+                .is_some_and(|most| most >= 2);
+            r.seek_to(start)?;
+            if counted_uniform {
+                [crate::scan_event::COUNTED_BODY; 3]
+            } else if stream_bytes % n == 0 {
                 let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
                 [body, body, body]
             } else {
@@ -721,8 +738,8 @@ impl RawFileReader {
                     let ok = walk_events(&mut r, n, preamble_size, &body, start, stream_bytes);
                     ok
                 });
-                let counted =
-                    found.is_none() && walk_counted(&mut r, n, preamble_size, start, stream_bytes);
+                let counted = found.is_none()
+                    && walk_counted(&mut r, n, preamble_size, start, stream_bytes).is_some();
                 r.seek_to(start)?;
                 match found {
                     Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
@@ -955,7 +972,7 @@ impl RawFileReader {
                     // --- v66 Q1 extraction: anchor on scan_index.high_mz ---
                     let mut event_q3_hi: HashMap<u16, f64> = HashMap::new();
                     for entry in &scan_index {
-                        if entry.high_mz > 50.0 && entry.high_mz < 2000.0 {
+                        if entry.high_mz > 10.0 && entry.high_mz < 2000.0 {
                             event_q3_hi.entry(entry.scan_event).or_insert(entry.high_mz);
                         }
                     }
@@ -1417,9 +1434,20 @@ impl RawFileReader {
         )
     }
 
+    /// The event of scan `idx`: its own entry when the file holds one event per scan, otherwise the entry of the shared event table that the scan's index row names (ion-trap runs list each distinct event once).
+    pub fn scan_event(&self, idx: usize) -> Option<ScanEvent> {
+        let slot = event_slot(
+            self.scan_events.len(),
+            self.scan_index.len(),
+            idx,
+            self.scan_index.get(idx)?.scan_event,
+        );
+        self.scan_events.get(slot)
+    }
+
     /// The filter of an SRM scan from its own event: `+ c NSI SRM ms2 528.296 [343.207-343.209, ...]`; `None` without a reaction and ranges.
     fn srm_event_filter(&self, idx: usize) -> Option<String> {
-        let event = self.scan_events.get(idx)?;
+        let event = self.scan_event(idx)?;
         if event.preamble.scan_type() != Some(crate::ScanType::Srm) {
             return None;
         }
@@ -1598,7 +1626,7 @@ impl RawFileReader {
             return Some(s);
         }
 
-        let event = self.scan_events.get(idx)?;
+        let event = self.scan_event(idx)?;
         // Precursor m/z and activation energy come from the per-scan params
         // table (not the event body) for v66+. Fall back silently if missing.
         let precursor = params.and_then(|p| p.monoisotopic_mz());
@@ -2290,6 +2318,14 @@ fn trailer_records_fit(tail: u64, num_scans: u32, record_size: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_shared_event_table_is_read_through_the_index_rows() {
+        // an ion-trap run: 99 scans, 7 distinct events
+        assert_eq!(event_slot(7, 99, 40, 3), 3);
+        // one event per scan: the scan's own position, whatever the row says
+        assert_eq!(event_slot(99, 99, 40, 3), 40);
+    }
     use std::io::Cursor;
 
     // The trailer region of a TSQ GC file holds 4 + N bytes for N scans; the schema found
@@ -2476,9 +2512,9 @@ mod tests {
         .concat();
         let n = bytes.len() as u64;
         let mut r = BinaryReader::new(Cursor::new(bytes));
-        assert!(walk_counted(&mut r, 3, 136, 0, n));
-        assert!(!walk_counted(&mut r, 3, 136, 0, n + 1));
-        assert!(!walk_counted(&mut r, 4, 136, 0, n));
+        assert_eq!(walk_counted(&mut r, 3, 136, 0, n), Some(7));
+        assert!(walk_counted(&mut r, 3, 136, 0, n + 1).is_none());
+        assert!(walk_counted(&mut r, 4, 136, 0, n).is_none());
     }
 
     #[test]
@@ -2490,35 +2526,37 @@ mod tests {
 }
 
 /// Whether `n` events of a v66 table are counted events (body = 96 + 56 bytes per reaction, the count opening the
-/// body) and the walk ends exactly `stream_bytes` after `start`.
+/// body) and the walk ends exactly `stream_bytes` after `start`; then the largest reaction count of an event.
 fn walk_counted<R: Read + Seek>(
     r: &mut BinaryReader<R>,
     n: u64,
     preamble_size: usize,
     start: u64,
     stream_bytes: u64,
-) -> bool {
+) -> Option<u32> {
     use crate::scan_event::{COUNTED_BASE, COUNTED_MAX, COUNTED_STEP};
     let mut at = start;
+    let mut most = 0;
     for _ in 0..n {
         if r.seek_to(at).is_err() {
-            return false;
+            return None;
         }
         let Ok(pre) = r.read_bytes(preamble_size) else {
-            return false;
+            return None;
         };
         if pre.get(4).is_some_and(|&p| p > 2) || pre.get(6).is_none_or(|&p| p == 0 || p > 8) {
-            return false;
+            return None;
         }
         let Ok(count) = r.read_u32() else {
-            return false;
+            return None;
         };
         if count as usize > COUNTED_MAX {
-            return false;
+            return None;
         }
+        most = most.max(count);
         at += (preamble_size + COUNTED_BASE + COUNTED_STEP * count as usize) as u64;
     }
-    at == start + stream_bytes
+    (at == start + stream_bytes).then_some(most)
 }
 
 /// Walks `n` events of a v66 scan-event table with the body sizes `body` (primary, dependent, independent MS2+) and says

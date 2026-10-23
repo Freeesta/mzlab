@@ -167,10 +167,12 @@ pub fn scan_metadata_with(
     let first_scan = raw.run_header.sample_info.first_scan_number;
     let scan_number = first_scan + idx;
     let entry = &raw.scan_index[idx as usize];
-    let event = raw.scan_events.get(idx as usize);
+    let event = raw.scan_event(idx as usize);
     let event = event.as_ref();
 
-    let is_srm = raw.flat_peaks;
+    // A v66 flat-peak run that names no Q1 transition (GC-MS/MS with Q1 RF only, scanning in Q3) is a full scan, as RawFileReader reports it; the older TSQ layouts without a readable transition table stay SRM.
+    let q3_scan = raw.flat_peaks && raw.version >= 66 && raw.srm_q1_by_event.is_empty();
+    let is_srm = raw.flat_peaks && !q3_scan;
     let level = if is_srm {
         2
     } else {
@@ -384,7 +386,7 @@ fn extract_parts_with_params<R: Read + Seek>(
     }
     let params = raw.scan_params(source, raw.run_header.sample_info.first_scan_number + idx);
     let meta = scan_metadata_with(raw, idx, params.as_ref().map(|p| p.borrowed()))?;
-    let event = raw.scan_events.get(idx as usize);
+    let event = raw.scan_event(idx as usize);
     let (mz, intensity, effective_scan_mode) = resolve_scan_arrays(
         raw,
         source,
@@ -406,7 +408,7 @@ pub fn extract_arrays<R: Read + Seek>(
     if idx >= raw.num_scans {
         return None;
     }
-    let event = raw.scan_events.get(idx as usize);
+    let event = raw.scan_event(idx as usize);
     let nominal = if raw.flat_peaks {
         Some(crate::ScanMode::Centroid)
     } else {

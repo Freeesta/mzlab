@@ -55,9 +55,11 @@ pub fn weak_candidates<R: ReadAt>(index: &mut Index<R>, r: &Recipe) -> Result<Fi
         min_height: r.detect.min_height * WEAK_RATIO,
         ..r.detect.clone()
     };
-    let mut w = detect(index, &p)?;
-    assess(index, &mut w, &p, &r.steps.quality)?;
-    group(&mut w, &r.steps.iso)?;
+    let mut w = crate::prof::time("weak: traces", || detect(index, &p))?;
+    crate::prof::time("weak: quality", || {
+        assess(index, &mut w, &p, &r.steps.quality)
+    })?;
+    crate::prof::time("weak: isotopes", || group(&mut w, &r.steps.iso))?;
     let mut out = FileFeatures {
         dt: w.dt,
         ..FileFeatures::default()

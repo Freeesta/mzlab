@@ -83,6 +83,9 @@ try:
             pg.locator("#libres tr.row[data-k=an]").first.click(); pg.wait_for_timeout(400)
             ln = json.loads(pg.get_attribute("#libres #lr-cv", "data-lines")); assert any(l[2] == 1 for l in ln), ln
             assert "Perdite neutre" in pg.inner_text("#libres #lr-detail")
+            n = pg.locator("#libres #lr-detail table.lib-pairs tr").count() - 1   # the table lists the pairs behind the score, shifted ones flagged
+            assert n >= len(ln) and pg.locator("#libres #lr-detail table.lib-pairs th[scope=col]").count() == 6, n
+            assert pg.locator("#libres #lr-detail table.lib-pairs caption").inner_text().strip()
         step("the mirror joins the paired peaks (shifted ones too) and lists the shared neutral losses", mirror_lines)
         def attribution():
             pg.locator("#libres tr.row[data-k=id]").first.click(); pg.wait_for_timeout(300)
