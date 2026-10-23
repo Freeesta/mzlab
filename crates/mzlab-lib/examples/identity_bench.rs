@@ -103,4 +103,23 @@ fn main() {
             lib.block_reads.get() - reads0
         );
     }
+    // the same windows, loading the spectra only (what is left of the warm pass when the scoring costs nothing)
+    let t = Instant::now();
+    let (mut n_spec, mut n_peaks) = (0usize, 0usize);
+    for q in &queries {
+        let w = o.prec_tol.window(q.prec);
+        for r in lib.ranges(q.pol, q.prec - w, q.prec + w).unwrap() {
+            for i in r {
+                let rec = lib.rec(i).unwrap();
+                n_peaks += lib.peaks(i).unwrap().0.len();
+                n_spec += usize::from(rec.prec > 0.0);
+            }
+        }
+    }
+    let s = t.elapsed().as_secs_f64();
+    println!(
+        "load only: {:.3} s, {:.2} ms/query, {n_spec} spectra, {n_peaks} peaks",
+        s,
+        s * 1e3 / queries.len() as f64
+    );
 }

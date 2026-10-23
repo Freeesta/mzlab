@@ -108,12 +108,21 @@ pub fn entropy_of(p: &[f64]) -> f64 {
 
 /// Intensities normalised to sum 1; if the spectral entropy is below 3 they are raised to 0.25 + 0.25 S and normalised again (Li 2021).
 pub fn weighted(it: &[f64]) -> Vec<f64> {
+    let mut p = Vec::new();
+    weighted_into(it, &mut p);
+    p
+}
+
+/// `weighted` into a buffer the caller reuses (cleared first).
+pub fn weighted_into(it: &[f64], p: &mut Vec<f64>) {
+    p.clear();
     let s: f64 = it.iter().sum();
     if s.is_nan() || s <= 0.0 {
-        return vec![0.0; it.len()];
+        p.resize(it.len(), 0.0);
+        return;
     }
-    let mut p: Vec<f64> = it.iter().map(|v| v / s).collect();
-    let big_s = entropy_of(&p);
+    p.extend(it.iter().map(|v| v / s));
+    let big_s = entropy_of(p);
     if big_s < 3.0 {
         let w = 0.25 + 0.25 * big_s;
         for v in p.iter_mut() {
@@ -124,7 +133,6 @@ pub fn weighted(it: &[f64]) -> Vec<f64> {
             *v /= t;
         }
     }
-    p
 }
 
 /// m/z in 1e-5 Da units (saturating at the format's limit).

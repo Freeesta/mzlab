@@ -31,25 +31,51 @@ pub fn match_peaks(
     b_it: &[f64],
     tol: f64,
 ) -> Vec<(usize, usize)> {
-    let mut c: Vec<(usize, usize, f64)> = Vec::new();
+    let mut s = MatchScratch::default();
+    match_peaks_into(a_mz, a_it, b_mz, b_it, tol, &mut s);
+    s.out
+}
+
+/// The buffers of `match_peaks_into`, reused from one library spectrum to the next.
+#[derive(Default)]
+pub struct MatchScratch {
+    cand: Vec<(usize, usize, f64)>,
+    ua: Vec<bool>,
+    ub: Vec<bool>,
+    /// The pairs of the last call.
+    pub out: Vec<(usize, usize)>,
+}
+
+/// `match_peaks` with the result in `s.out` and no allocation once the buffers have grown.
+pub fn match_peaks_into(
+    a_mz: &[f64],
+    a_it: &[f64],
+    b_mz: &[f64],
+    b_it: &[f64],
+    tol: f64,
+    s: &mut MatchScratch,
+) {
+    s.cand.clear();
     for i in 0..a_mz.len() {
         let mut j = lower_bound(b_mz, a_mz[i] - tol);
         while j < b_mz.len() && b_mz[j] <= a_mz[i] + tol {
-            c.push((i, j, a_it[i] * b_it[j]));
+            s.cand.push((i, j, a_it[i] * b_it[j]));
             j += 1;
         }
     }
-    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
-    let (mut ua, mut ub) = (vec![false; a_mz.len()], vec![false; b_mz.len()]);
-    let mut out = Vec::new();
-    for (i, j, _) in c {
-        if !ua[i] && !ub[j] {
-            ua[i] = true;
-            ub[j] = true;
-            out.push((i, j));
+    sortutil::sort_by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
+    s.ua.clear();
+    s.ua.resize(a_mz.len(), false);
+    s.ub.clear();
+    s.ub.resize(b_mz.len(), false);
+    s.out.clear();
+    for &(i, j, _) in &s.cand {
+        if !s.ua[i] && !s.ub[j] {
+            s.ua[i] = true;
+            s.ub[j] = true;
+            s.out.push((i, j));
         }
     }
-    out
 }
 
 /// Entropy similarity for given pairs: `1 - (2 S_AB - S_A - S_B) / ln 4`, clipped to [0, 1].
@@ -91,7 +117,10 @@ pub struct PairScores {
 }
 
 pub fn pair_scores(a: &Spec, b: &Spec, tol: f64) -> PairScores {
-    crate::prep::pair_scores_for(&crate::prep::QueryPrep::new(a), a, b, tol)
+    let mut sc = crate::prep::Scorer::new(a);
+    let mut r = sc.score(a, b, tol);
+    r.pairs = sc.pairs().to_vec();
+    r
 }
 
 /// Hybrid pairs (brute force, the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by
