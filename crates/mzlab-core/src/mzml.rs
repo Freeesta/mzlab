@@ -4,7 +4,7 @@
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
 pub(crate) mod help;
-use help::{Decode, Plain};
+use help::Decode;
 use crate::numarray::Num;
 use std::borrow::Cow;
 use std::io::{BufReader, Read};
@@ -312,11 +312,16 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
 /// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order. Spare cores decode the arrays (`help`); the items and their
 /// order are the same without them.
 pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
-    let lease = crate::spare::lease(help::HELPERS);
-    help::parse_helped(reader, &mut f, lease.count())
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let lease = crate::spare::lease(help::pool::HELPERS);
+        help::pool::parse_helped(reader, &mut f, lease.count())
+    }
+    #[cfg(target_family = "wasm")]
+    help::parse_with(reader, &mut f, &mut help::Plain(Inflate::new()))
 }
 
-pub(super) fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
+fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let mut scope = Scope::None;

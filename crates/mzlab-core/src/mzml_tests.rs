@@ -104,7 +104,7 @@ fn series(n: usize, bad: Option<usize>) -> String {
 
 fn items(xml: &str, helpers: usize) -> (Vec<crate::mzml::Item>, Option<String>) {
     let mut out = Vec::new();
-    let r = crate::mzml::help::parse_helped(xml.as_bytes(), &mut |it| out.push(it), helpers);
+    let r = crate::mzml::help::pool::parse_helped(xml.as_bytes(), &mut |it| out.push(it), helpers);
     (out, r.err().map(|e| e.key.to_string()))
 }
 
