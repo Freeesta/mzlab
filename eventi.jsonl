@@ -15138,3 +15138,4 @@
 {"v":1,"ts_utc":"2026-10-23T13:42:50Z","tipo":"carico","k":"2026-10-23T13:4","job_in_coda":0,"job_in_corso":26}
 {"v":1,"ts_utc":"2026-10-23T13:43:24Z","azione":"aperta","tipo":"pr","pr":1615,"sha":"628f0d21303bc9c5404770b59daa606195f8ed56"}
 {"v":1,"ts_utc":"2026-10-23T13:49:21Z","azione":"aperta","tipo":"pr","pr":1616,"sha":"365f0607098b884722e48c16c173b0859f73706d"}
+{"v":1,"tipo":"pr","pr":1615,"sha":"628f0d21303bc9c5404770b59daa606195f8ed56","ts_utc":"2026-10-23T13:58:41Z","azione":"unita","aperta_s":917,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":20,"righe_meno":1,"file_n":1,"file":["vendor/opentfraw/src/scan_data.rs"],"aree":{"rust":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":257}
