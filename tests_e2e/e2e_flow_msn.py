@@ -130,7 +130,9 @@ try:
                 msn = [e for k, e in last.items() if k != "ixmix"]
                 assert len(msn) == 3 and all(e["stato"] in ("done", "reused") and e["via"] == "browser" for e in msn), last
                 assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], x["files"]
-                assert mask(x["files"][0]["text"]) == mask(cli)
+                a, b = mask(x["files"][0]["text"]), mask(cli)
+                at = next((i for i in range(min(len(a), len(b))) if a[i] != b[i]), min(len(a), len(b)))
+                assert a == b, "graph differs from the CLI at %d (%d vs %d bytes): %r vs %r" % (at, len(a), len(b), a[max(0, at - 60):at + 60], b[max(0, at - 60):at + 60])
             finally: pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow; S.plan.steps = S.plan.steps.filter(s => s.id !== 'ixmix'); }")
         step("a plan with an index step besides the MSn steps runs them in the scheduler, with the same texts", mixed)
         def no_ion():
