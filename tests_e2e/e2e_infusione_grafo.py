@@ -36,6 +36,7 @@ STAND_IN = """(fx) => {
       if (q.get("interpreta") === "1") j.interpretazione = { versione: 1, ppm: 10, archi: j.archi.map(a => ({ da: a.da, a: a.a, attivazioni: ["cid"], perdita: { nome: "Carbon dioxide", formula: "CO2", massa: 43.98983, errore_ppm: 0.4, fonte: "formula", confidenza: "high", alternative: [] } })) };
       if (q.get("rotture") === "1") j.rotture = { versione: 1, archi: j.archi.map(a => ({ da: a.da, a: a.a, spiegato: a.a === "n2" })), nodi: [{ nodo: "n2", n: 3, ipotesi: [{ legami: [[1, 2]], pezzo: [0, 1], formula: "C13H10NO4", h: 1, mz_teorico: 244.0604, ppm: 0.8 }] }] };
       j.avvisi = [{ chiave: "warn.msngrafo.isolation", albero: "x", nodo: "n1" }];
+      if (q.get("formula") === "C99H99+") j.avvisi.push({ chiave: "warn.msngrafo.mostUnexplained", albero: "", nodo: null });
       return Promise.resolve(jr(j));
     }
     if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", nome: "Exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
@@ -78,6 +79,12 @@ try:
             assert "ppm" in pg.inner_text("#ig-sum") or "ppm" in pg.inner_text("#ig-msg")
             assert pg.locator("#ig-msg .ig-warn").count() == 1
         step("a formula gives the graph with the candidates and their ppm; one line per warning", formula)
+        def most_unexplained():
+            pg.fill("#ig-ion", "C99H99+"); pg.click("#ig-go"); pg.wait_for_function("document.querySelectorAll('#ig-msg .ig-warn').length === 2", timeout=15000)
+            txt = pg.inner_text("#ig-msg")
+            assert ("Most of the fragment intensity" in txt) or ("Gran parte dell" in txt), txt
+            pg.fill("#ig-ion", "C14H15N3O5+"); pg.click("#ig-go"); pg.wait_for_function("document.querySelectorAll('#ig-msg .ig-warn').length === 1", timeout=15000)
+        step("a graph-level note appears when most of the fragment intensity has no candidate formula", most_unexplained)
         def use():
             pg.click(".ig-node[data-id=n2]"); pg.wait_for_selector(".ig-use", timeout=10000)
             assert pg.locator(".ig-cands tbody tr").count() == 2
