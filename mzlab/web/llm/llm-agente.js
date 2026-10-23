@@ -11,8 +11,8 @@ import { hasConsent } from "./llm-consenso.js";
 
 /** @typedef {{show: (text: string) => void, log: (line: any) => void, sending: (request: any) => void, call: (id: string, name: string, args: any) => Promise<{ok: boolean, content: any}>,
  *   ask: (id: string, summary: string, name: string, args: any) => Promise<boolean>, done: (outcome: string) => void,
- *   readerInput?: (role: string) => Promise<object | null> | object | null, reader?: (info: {role: string, status: "accepted" | "dropped" | "failed" | "skipped", problems?: any[], summary?: any}) => void}} Host
- * `readerInput(role)` gives the sources a reader may see, keyed by source (`{"ispezione/1": ...}`), or null when the page has none (the reader is skipped); `reader` hears how each one ended. */
+ *   readerInput?: (role: string) => Promise<object | null> | object | null, reader?: (info: {role: string, status: "accepted" | "dropped" | "failed" | "skipped", problems?: any[], summary?: any}) => void, readerStage?: (role: string, stage: "queued" | "running" | "cancelled") => void}} Host
+ * `readerInput(role)` gives the sources a reader may see, keyed by source (`{"ispezione/1": ...}`), or null when the page has none (the reader is skipped); `reader` hears how each one ended and `readerStage` where it is (queued, running, cancelled by a Stop). */
 
 /** a recording for tests: `MZLAB_LLM_AGENT.replay(text, strict)` answers the requests of the next conversation */
 /** @type {{text: string, strict: boolean} | null} */ let recording = null;
@@ -126,7 +126,9 @@ export class AgentRun {
     const r = await this.subCall(o.request);
     if (r.ok && this.assist && !this.stopped) {
       const readers = JSON.parse((await this.rpc({ op: "assist.readers", body: r.body })).readers);
-      for (const role of readers) { if (this.stopped) break; await this.runReader(role); }
+      const stage = (/** @type {string} */ role, /** @type {"queued" | "running" | "cancelled"} */ st) => { if (this.host.readerStage) this.host.readerStage(role, st); };
+      for (const role of readers) stage(role, "queued");
+      for (const role of readers) { if (this.stopped) stage(role, "cancelled"); else await this.runReader(role); }
     }
     await this.pump(await this.rpc({ op: "agent.in", kind: "sub", role: o.role, ok: r.ok, body: r.ok ? r.body : r.key }));
   }
@@ -137,6 +139,7 @@ export class AgentRun {
     const src = h.readerInput ? await h.readerInput(role) : null;
     if (!src) return say({ status: "skipped" });
     const input = JSON.stringify(src);
+    if (h.readerStage) h.readerStage(role, "running");
     try {
       let req = (await this.rpc({ op: "assist.request", role, input })).request;
       for (let attempt = 0; attempt < 2; attempt++) {
