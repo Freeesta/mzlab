@@ -121,7 +121,9 @@ pub mod rois;
 pub mod roi_cluster;
 pub mod roles;
 pub mod ricerca;
+pub mod jsonround;
 pub mod routes;
+pub mod routes_xicbin;
 pub mod scaninfo;
 pub(crate) mod scanrow;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]

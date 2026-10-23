@@ -293,13 +293,7 @@ impl Out {
     }
 }
 
-/// Python's `round(v, nd)`: the double nearest to the correctly rounded decimal of the exact binary value.
-pub fn round(v: f64, nd: usize) -> f64 {
-    if !v.is_finite() {
-        return v;
-    }
-    format!("{v:.nd$}").parse().unwrap_or(v)
-}
+pub use crate::jsonround::round;
 
 /// Python's `format(x, "g")` (six significant digits, no trailing zeros).
 pub fn fmt_g(x: f64) -> String {

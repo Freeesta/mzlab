@@ -48,6 +48,10 @@ try:
             assert tr["ion"] and tr["label"] == "m/z 412.1364 ± 5 ppm", tr
             assert pg.evaluate(f"xicName(E.panels.find(q=>q.id=={pid}))") == "m/z 412.1364 ± 5 ppm"
         step("click on a centroid: XIC centred on it, named «m/z 412.1364 ± 5 ppm»", direct)
+        def xicbin_same():
+            for args in ([K, 305.0702, 305.0702 * 5e-6, 1], [K, 412.1364, 0.01, 1]):
+                bad = pg.evaluate('async ([k, mz, tol, lv]) => {\n  const a = (await J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`)).traces[0], b = (await xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`)).traces[0];\n  if (a.rt.length !== b.rt.length || a.rt.length < 100) return `length ${a.rt.length} against ${b.rt.length}`;\n  for (let i = 0; i < a.rt.length; i++) if (!Object.is(a.rt[i], b.rt[i]) || !Object.is(a.y[i], b.y[i])) return `differs at ${i}: ${a.rt[i]},${a.y[i]} against ${b.rt[i]},${b.y[i]}`;\n  return Math.max(...b.y) > 0 ? "" : "empty trace";\n}', args); assert bad == "" or args[1] == 412.1364 and bad == "empty trace", bad
+        step("api/xicbin gives the numbers of api/xic, element by element (Object.is), HR", xicbin_same)
         def edit_edges():
             pid = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().id")
             pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});ctl(p)}})()")

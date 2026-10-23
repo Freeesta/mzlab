@@ -250,6 +250,15 @@ impl State {
                 Some(r) => text(r.xic(f("mz"), f("tol"), u("level") as u8)?),
                 _ => text(""),
             },
+            "idxxicbin" => match eng.idx.get_mut(&u("slot")) {
+                Some(r) => {
+                    let mut out = vec![0.0; 2 * r.xic_len(u("level") as u8)];
+                    let n = r.xic_into(f("mz"), f("tol"), u("level") as u8, &mut out)?;
+                    out.truncate(2 * n);
+                    Ok(Answer::Bytes(out.iter().flat_map(|v| v.to_le_bytes()).collect()))
+                }
+                _ => Ok(Answer::Bytes(Vec::new())),
+            },
             "close" => {
                 eng.idx.remove(&u("slot"));
                 eng.nat.forget(u("slot"));

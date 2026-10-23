@@ -841,6 +841,7 @@ declare var whiteCanvas: any;
 declare var wiffName: any;
 declare var wiffToMzml: any;
 declare var xOf: any;
+declare var xicBin: any;
 declare var xicDirect: any;
 declare var xicName: any;
 declare var xicNominal: any;

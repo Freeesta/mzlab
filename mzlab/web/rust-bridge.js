@@ -14,6 +14,7 @@ import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
+import { indexXicBin } from "./rust-xicbin.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
@@ -189,6 +190,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };
     }
+    if (path === "/api/xicbin") return indexXicBin({ slots, rpc, recycle, stats, handle: api.handle }, u, level, t0);   // api/xic as doubles (rust-xicbin.js)
     if (path === "/api/xic" && !hasRef(q)) {
       const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), mz = num(q, "mz", NaN), tol = num(q, "tol", 0.35);
       if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {

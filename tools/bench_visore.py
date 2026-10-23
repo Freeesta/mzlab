@@ -32,16 +32,19 @@ INIT = r"""(() => {
   window.Worker = class extends W { constructor(u, o) { super(u, o); this.addEventListener('message', e => { const m = e.data; if (m && m.mem) { V.wcur = m.mem; V.wmem = Math.max(V.wmem, m.mem); } }); } };
   const j0 = Response.prototype.json; Response.prototype.json = function () { const t0 = performance.now(); return j0.call(this).then(x => { V.js.push({ t0, t1: performance.now() }); return x; }); };
   const rnd = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-  const synth = (n, k) => { const r = rnd(7 + n), rt = new Array(n), y = new Array(n), pk = [4, 9, 13, 18, 22];
+  const synth = (n, k, bin) => { const r = rnd(7 + n), rt = new Array(n), y = new Array(n), pk = [4, 9, 13, 18, 22];
     for (let i = 0; i < n; i++) { const x = 0.3 + 24.7 * i / (n - 1); let v = 200 + 80 * r(); for (const c of pk) v += 2e5 * Math.exp(-0.5 * ((x - c) / 0.05) ** 2); rt[i] = +x.toFixed(4); y[i] = +v.toFixed(1); }
-    return JSON.stringify({ mz: 0, tol: 0, traces: [{ k, rt, y }] }); };
+    return bin ? binary(k, rt, y) : JSON.stringify({ mz: 0, tol: 0, traces: [{ k, rt, y }] }); };
+  // the api/xicbin layout: u32 header length, the header, zeros up to a multiple of 8, rt and y as float64
+  const binary = (k, rt, y) => { const h = new TextEncoder().encode(JSON.stringify({ mz: 0, tol: 0, traces: [{ k, n: rt.length }] })), at = (4 + h.length + 7) & ~7, b = new ArrayBuffer(at + 16 * rt.length);
+    new DataView(b).setUint32(0, h.length, true); new Uint8Array(b, 4, h.length).set(h); const f = new Float64Array(b, at); f.set(rt, 0); f.set(y, rt.length); return b; };
   let wrapped = false;
   V.wrap = () => { if (wrapped || !window.draw) return; wrapped = true;
     const f0 = window.fetch;
-    window.fetch = function (u, ...a) { const s = String(u), t0 = performance.now(), r = { u: s, t0 }, m = /api\/xic\?k=(\d+)&mz=([\d.]+)/.exec(s);
+    window.fetch = function (u, ...a) { const s = String(u), t0 = performance.now(), r = { u: s, t0 }, m = /api\/xic(bin)?\?k=(\d+)&mz=([\d.]+)/.exec(s);
       if (/api\//.test(s)) V.fe.push(r); V.last = t0;
-      const syn = m && [1001, 1002, 1003].find(z => Math.abs(+m[2] - z) < 0.5);
-      const p = syn ? Promise.resolve().then(() => { const n = syn === 1001 ? 3000 : syn === 1002 ? 50000 : 1000000; const key = m[1] + '|' + n; return new Response(V.syn[key] || (V.syn[key] = synth(n, +m[1])), { status: 200, headers: { 'Content-Type': 'application/json', 'X-Py-Ms': '0' } }); }) : f0.call(this, u, ...a);
+      const syn = m && [1001, 1002, 1003].find(z => Math.abs(+m[3] - z) < 0.5);
+      const p = syn ? Promise.resolve().then(() => { const n = syn === 1001 ? 3000 : syn === 1002 ? 50000 : 1000000; const key = m[2] + '|' + n + '|' + (m[1] || ''); return new Response(V.syn[key] || (V.syn[key] = synth(n, +m[2], !!m[1])), { status: 200, headers: { 'Content-Type': m[1] ? 'application/octet-stream' : 'application/json', 'X-Py-Ms': '0' } }); }) : f0.call(this, u, ...a);
       return p.then(x => { r.t1 = performance.now(); r.ms = +(x.headers.get('X-Py-Ms') || 0); V.last = r.t1; return x; }, e => { r.t1 = performance.now(); throw e; }); };
     const d0 = window.draw; window.draw = async function (p) { const t0 = performance.now(); try { return await d0(p); } finally { const t1 = performance.now(); V.dr.push({ id: p.id, type: p.type, t0, t1 }); V.last = t1; } };
   };

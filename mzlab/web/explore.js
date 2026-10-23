@@ -369,7 +369,16 @@ const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
   }
   return CHROM1.sent(memo(key, () => J(url)));
 };
-const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
+// api/xicbin: 4 bytes = length of the JSON header {mz, tol, traces:[{k, n}]}, the header, zeros up to a multiple of 8, then per trace rt and y as float64; the same {k, rt, y} as api/xic
+async function xicBin(url) {
+  const r = await fetch(url);
+  if (!r.ok) { let m = new Error(I18N.t("err.http", { status: r.status })); try { const j = await r.json(); if (j && j.error) m = I18N.err(j); } catch (e) { /* not JSON */ } throw m; }
+  const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
+  let off = (4 + hl + 7) & ~7;
+  const traces = head.traces.map(t => { const rt = Array.from(new Float64Array(buf, off, t.n)), y = Array.from(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
+  return { mz: head.mz, tol: head.tol, traces };
+}
+const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
 // + "&hr=0" when high resolution is switched off (hr.js)
 const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");
 const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));
