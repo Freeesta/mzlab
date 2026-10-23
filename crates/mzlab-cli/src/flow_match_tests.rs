@@ -195,6 +195,50 @@ fn rt_tol_excludes_entries_by_retention_time() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// `matched_peaks` lists the pairs behind each score: as many as `shared`, within the fragment tolerance (or the precursor shift for the shifted ones), by query m/z.
+#[test]
+fn matched_peaks_list_the_pairs_behind_the_score() {
+    let dir = fixture("peaks");
+    for alg in ["spectral_entropy", "cosine", "modified_cosine"] {
+        run(
+            &dir,
+            alg,
+            r#"{"precursor_da":150,"tol_da":0.5,"top_n":10,"matched_peaks":true}"#,
+        );
+        let h = hits(&dir);
+        let all = h.get("hits").unwrap().arr();
+        assert!(!all.is_empty(), "{alg}");
+        for x in all {
+            let peaks = x.get("matched_peaks").unwrap().arr();
+            assert_eq!(
+                peaks.len() as i64,
+                x.get("shared").unwrap().f64().unwrap() as i64,
+                "{alg}"
+            );
+            let mut last = f64::MIN;
+            for p in peaks {
+                let (q, l) = (
+                    p.get("query_mz").unwrap().f64().unwrap(),
+                    p.get("library_mz").unwrap().f64().unwrap(),
+                );
+                let shifted = p.get("shifted").unwrap().bool().unwrap();
+                // unshifted pairs sit within the tolerance; a shifted one is the same fragment moved by the precursor difference
+                assert!(shifted || (q - l).abs() <= 0.5 + 1e-6, "{alg} {q} {l}");
+                assert!(q >= last, "{alg} not by query m/z");
+                last = q;
+            }
+        }
+    }
+    run(&dir, "cosine", r#"{"precursor_da":150,"tol_da":0.5}"#);
+    assert!(hits(&dir)
+        .get("hits")
+        .unwrap()
+        .arr()
+        .iter()
+        .all(|x| x.get("matched_peaks").is_none()));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// `tree`: a graph `msngrafo/1` against an `msnlib/1` library gives the `msncerca/1` text of `mzlab-cli msn-lib search`, byte for byte.
 #[test]
 fn tree_writes_the_search_of_the_msn_library() {
