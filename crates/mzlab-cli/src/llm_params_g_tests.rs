@@ -3,7 +3,7 @@
 
 use mzlab_core::json::Value;
 
-use crate::llm_params_tests::{conf, find, n, near, run, val, G01, G08};
+use super::params::{conf, find, n, near, run, val, G01, G08};
 
 #[test]
 fn g15_unit_series_gets_the_unit_axis_and_a_tolerance_in_da() {

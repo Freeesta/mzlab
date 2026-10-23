@@ -104,10 +104,6 @@ mod flow_tablematch;
 mod flow_tablematch_tests;
 pub mod llm;
 mod llm_ctx;
-#[cfg(test)]
-mod llm_params_g_tests;
-#[cfg(test)]
-mod llm_params_tests;
 pub mod msn_figura;
 pub mod msn_graph;
 mod msn_graph_compare;
