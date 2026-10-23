@@ -14,6 +14,8 @@ use wasm_bindgen::prelude::*;
 
 use crate::{fail, find};
 
+mod sub;
+
 fn line(o: &Output, outcome: &str) -> String {
     let mut j = Out::default();
     match o {
@@ -48,7 +50,7 @@ fn line(o: &Output, outcome: &str) -> String {
 /// One conversation of the assistant: the state machine, the level and (in tests) a recording.
 #[wasm_bindgen]
 pub struct Agent {
-    st: State,
+    pub(super) st: State,
     replay: Option<Replay>,
 }
 
