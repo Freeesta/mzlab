@@ -13,7 +13,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::mzidx::build_mzml_late;
-use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, prepare_late, probe};
+use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, probe};
 
 use crate::{flow_set, io};
 
@@ -156,7 +156,8 @@ fn prepare_unknown(
 ) -> Result<(mzlab_core::mzidx::ScanTable, Option<Late>)> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let (table, late) = prepare_late(file, File::open(path).map_err(io)?, size, name)?;
+        let (table, late) =
+            mzlab_core::upload::prepare_late(file, File::open(path).map_err(io)?, size, name)?;
         Ok((table, Some(Box::new(late))))
     }
     #[cfg(target_arch = "wasm32")]
