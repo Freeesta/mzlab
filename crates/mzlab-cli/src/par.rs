@@ -75,25 +75,44 @@ fn detect_one(
     k: usize,
     recipe: &mzlab_feat::recipe::Recipe,
 ) -> Result<Pair> {
+    Ok((
+        detect_strong(files, idxs, k, recipe)?,
+        detect_weak_one(idxs, k, recipe)?,
+    ))
+}
+
+/// The `.mzfeatf` bytes of file `k`.
+fn detect_strong(
+    files: &[PathBuf],
+    idxs: &[PathBuf],
+    k: usize,
+    recipe: &mzlab_feat::recipe::Recipe,
+) -> Result<Vec<u8>> {
     eprintln!("detect {}", files[k].display());
     let name = files[k]
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let mut index = open(&idxs[k])?;
-    let peaks = run::detect(&mut index, &name, recipe)?;
-    // The weak candidates are made here, beside the file, so the alignment does not detect it again (the Flow does the same).
-    let weak = if recipe.weak_files > 0 {
-        run::detect_weak(&mut index, recipe)?
-    } else {
-        Vec::new()
-    };
-    Ok((peaks, weak))
+    run::detect(&mut open(&idxs[k])?, &name, recipe)
+}
+
+/// The weak candidates of file `k`, made beside the file so the alignment does not detect it again (the Flow does the same).
+fn detect_weak_one(
+    idxs: &[PathBuf],
+    k: usize,
+    recipe: &mzlab_feat::recipe::Recipe,
+) -> Result<Vec<u8>> {
+    if recipe.weak_files == 0 {
+        return Ok(Vec::new());
+    }
+    run::detect_weak(&mut open(&idxs[k])?, recipe)
 }
 
 #[cfg(not(target_family = "wasm"))]
 enum Job {
     Index(usize),
-    Detect(usize),
+    /// The strong peaks and the weak candidates of a file are two jobs: they read the index and nothing else, so two threads can make them.
+    Strong(usize),
+    Weak(usize),
 }
 
 /// What the threads of `pooled` share: the next job, the finished indexes, the recipe and the detections.
@@ -105,7 +124,8 @@ struct Pool {
     recipe_state: u8,
     recipe: Option<std::sync::Arc<mzlab_feat::recipe::Recipe>>,
     recipe_err: Option<mzlab_core::error::Error>,
-    detected: Vec<Option<Result<Pair>>>,
+    detected: Vec<Option<Result<Vec<u8>>>>,
+    weak: Vec<Option<Result<Vec<u8>>>>,
 }
 
 /// Stores the recipe made from the first index (or why there is none) and lets the detections start.
@@ -134,7 +154,8 @@ fn plan_jobs(files: &[PathBuf]) -> Vec<Job> {
     jobs.extend(rest.iter().map(|&k| Job::Index(k)));
     let mut all: Vec<usize> = (0..files.len()).collect();
     all.sort_by_key(|&k| std::cmp::Reverse(size(k)));
-    jobs.extend(all.iter().map(|&k| Job::Detect(k)));
+    // the weak candidates cost the more of the two
+    jobs.extend(all.iter().flat_map(|&k| [Job::Weak(k), Job::Strong(k)]));
     jobs
 }
 
@@ -153,12 +174,13 @@ fn collect(mut st: Pool) -> Result<Detected> {
         return Err(mzlab_core::error::Error::memory_budget());
     };
     let (mut peaks, mut weak) = (Vec::new(), Vec::new());
-    for r in st.detected.iter_mut() {
-        let (p, w) = r
-            .take()
-            .unwrap_or_else(|| Err(mzlab_core::error::Error::memory_budget()))?;
-        peaks.push(p);
-        weak.push(w);
+    for (p, w) in st.detected.iter_mut().zip(st.weak.iter_mut()) {
+        for (r, into) in [(p, &mut peaks), (w, &mut weak)] {
+            into.push(
+                r.take()
+                    .unwrap_or_else(|| Err(mzlab_core::error::Error::memory_budget()))?,
+            );
+        }
     }
     let recipe = std::sync::Arc::try_unwrap(recipe).unwrap_or_else(|a| (*a).clone());
     Ok((recipe, peaks, weak))
@@ -181,6 +203,7 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
         recipe: None,
         recipe_err: None,
         detected: (0..n).map(|_| None).collect(),
+        weak: (0..n).map(|_| None).collect(),
     });
     let ready = Condvar::new();
     let lock = || pool.lock().unwrap_or_else(|e| e.into_inner());
@@ -207,7 +230,7 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
                         }
                         ready.notify_all();
                     }
-                    Job::Detect(k) => {
+                    Job::Strong(k) | Job::Weak(k) => {
                         let mut st = lock();
                         while st.recipe_state == 0 || st.indexed[k].is_none() {
                             st = ready.wait(st).unwrap_or_else(|e| e.into_inner());
@@ -216,8 +239,13 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
                         let indexed = matches!(st.indexed[k], Some(Ok(())));
                         drop(st);
                         if let (Some(recipe), true) = (recipe, indexed) {
-                            let r = detect_one(files, idxs, k, &recipe);
-                            lock().detected[k] = Some(r);
+                            if matches!(job, Job::Strong(_)) {
+                                let r = detect_strong(files, idxs, k, &recipe);
+                                lock().detected[k] = Some(r);
+                            } else {
+                                let r = detect_weak_one(idxs, k, &recipe);
+                                lock().weak[k] = Some(r);
+                            }
                         }
                     }
                 }
