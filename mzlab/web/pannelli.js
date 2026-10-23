@@ -568,14 +568,18 @@ function corrWidget(p, o) {
   const subK = cfile ? +o.cur.slice(1) : fileOpts.some(x => x.k === refK) ? refK : fileOpts.length ? fileOpts[0].k : null, subF = subK != null ? E.files[subK] : null;
   // [value, icon, label, subtitle (only where it explains something non-obvious), short label, tooltip]: «None» and the file entry keep their sentence as a tooltip, not as a second line
   const items = [["", "none", I18N.t("corr.none"), "", "", I18N.t("corr.none.desc")],
-    [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? o.fileDesc || "" : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : "", subF && !o.fileDesc ? I18N.t("corr.file.desc") : ""],
+    [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? "" : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : "", subF ? o.fileDesc || I18N.t("corr.file.desc") : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
     ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));       // parts: only these entries (the trace panels have two menus, «Sottrai» and «Fondo»)
   const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
   const ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
-  const sel = fileOpts.length > 1 ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map(x => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
+  const sel = subF ? `<select class="corrsel" data-o="corrf" aria-label="${EH(I18N.t("corr.file.pick"))}" title="${EH(I18N.t("corr.file.pick"))}">${fileOpts.map(x => `<option value="${x.k}"${x.k === subK ? " selected" : ""}>${EH(x.label)}</option>`).join("")}</select>` : "";
+  const CK = '<span class="corrck" aria-hidden="true">&#10003;</span>';      // the tick closes the row of the active entry (hidden, not removed, so the rows stay aligned)
+  const btn = (i, inner) => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : i[5] ? ` title="${EH(i[5])}"` : ""}${i[1] === "blank" && subF ? ` aria-label="${EH(I18N.t("corr.file", { label: subF.label }))}"` : ""}>${CIC[i[1]]}${inner}</button>`;
+  const row = i => i[1] === "blank" && subF ? `<span class="corrrow${i === now ? " on" : ""}">${btn(i, `<span><b>${EH(I18N.t("corr.file.lab"))}</b></span>`)}${sel}${CK}</span>`      // fixed label · chooser · tick
+    : btn(i, `<span><b>${EH(i[2])}</b>${i[3] ? `<span class="sm muted">${EH(i[3])}</span>` : ""}</span>${i === now ? CK : '<span class="corrck" aria-hidden="true"></span>'}`);
   return `<span class="corrw"><button type="button" data-o="${o.wire || "corr"}" class="corrb${now === items[0] ? "" : " on"}" aria-haspopup="true" aria-expanded="false"${o.dis ? ` disabled title="${o.dis}"` : ` title="${EH(tip)}"`} aria-label="${EH(tip)}">${now === items[0] && o.idle ? CIC[o.idle] : CIC[now[1]]}<span aria-hidden="true">&#9662;</span></button>
-    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${items.map(i => `<button type="button" class="corri${i === now ? " on" : ""}" aria-pressed="${i === now}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? ` disabled title="${EH(I18N.t("corr.fileNone.desc"))}"` : i[5] ? ` title="${EH(i[5])}"` : ""}>${CIC[i[1]]}<span><b>${EH(i[2])}</b>${i[3] ? `<span class="sm muted">${EH(i[3])}</span>` : ""}</span></button>${i[1] === "blank" ? sel : ""}`).join("")}</span></span>`;
+    <span class="corrm" role="group" aria-label="${EH(ttl)}" hidden>${items.map(row).join("")}</span></span>`;
 }
 function corrWire(x, pick) {          // pick("" | "f<k>" | "tract" | "snip")
   const m = x.parentNode.querySelector(".corrm"), items = () => [...m.querySelectorAll("button:not(:disabled),select")];
