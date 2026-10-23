@@ -11985,3 +11985,4 @@
 {"v":1,"ts_utc":"2026-10-23T06:03:42Z","tipo":"carico","k":"2026-10-23T06:0","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-10-23T06:36:13Z","azione":"aperta","tipo":"pr","pr":1574,"sha":"c5b1d1c6fabe8520e25da1634aaa564d2dcf2c7c"}
 {"v":1,"tipo":"pr","pr":1574,"sha":"c5b1d1c6fabe8520e25da1634aaa564d2dcf2c7c","ts_utc":"2026-10-23T06:40:21Z","azione":"unita","aperta_s":248,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":1,"righe_meno":0,"file_n":1,"file":["AGENTS.md"],"aree":{"docs":1},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":202}
+{"v":1,"ts_utc":"2026-10-23T06:41:11Z","azione":"aperta","tipo":"pr","pr":1575,"sha":"1f5076896ef5b90f5f3b0e88522a4b5921eb061a"}
