@@ -15,12 +15,12 @@ def dark_frac(im):
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); ready(pg)
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');p.mode='cas';draw(p)})()"); pg.wait_for_timeout(500)
+        pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');p.mode='cas';draw(p)})()"); ready(pg); frames(pg)
         shots = {}
         for theme in ("light", "dark"):
-            pg.evaluate(f"(()=>{{UIP.theme='{theme}';document.documentElement.dataset.theme='{theme}';paintFiles();redrawAll()}})()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"(()=>{{UIP.theme='{theme}';document.documentElement.dataset.theme='{theme}';paintFiles();redrawAll()}})()"); ready(pg); frames(pg)
             shots[theme] = (png(pg, ".pnl.chrom"), png(pg, ".pnl.spec"))
         for i, kind in enumerate(("TIC cascade", "spectrum")):
             def same(i=i):
