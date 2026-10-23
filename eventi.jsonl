@@ -11538,3 +11538,4 @@
 {"v":1,"ts_utc":"2026-10-23T01:53:42Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3844367,null]},"byte_totali":3844367,"margine_min_pct":null,"pr":null,"sha":"2651548068d69ebf26e51180533ab23303479209","run_id":39885966868,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T02:12:00Z","tipo":"carico","k":"2026-10-23T02:1","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-10-23T02:30:10Z","azione":"aperta","tipo":"pr","pr":1569,"sha":"d030a4e35ef2394a5b0fa9cb7d09d3d622d9567b"}
+{"v":1,"ts_utc":"2026-10-23T02:37:45Z","azione":"push","titolo":"Update e2e checks for the XIC dialog without its intro paragraph","merge_main":false,"aree":{"test":4},"tipo":"pr","pr":1569,"sha":"c03d214626d809d27e590e8bc1b8c34ffea7cc31"}
