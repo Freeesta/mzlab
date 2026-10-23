@@ -390,7 +390,6 @@ declare var drawMap: any;
 declare var drawMeas: any;
 declare var drawSoon: any;
 declare var drawSpec: any;
-declare var drawUv: any;
 declare var dropDups: any;
 declare var dropHasFiles: any;
 declare var dropReady: any;
