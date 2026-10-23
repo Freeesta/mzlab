@@ -3,7 +3,7 @@
 Per un agente che gira sul computer dell'utente (Claude Code, Claude Cowork o altri) e usa mzLab senza la pagina: prepara un piano `mzflow/2`, lo controlla, lo esegue e legge i risultati con `mzlab-cli`. Regole complete dei comandi: `cli.md`; piani e `prov/1`: `rust-flow.md`; passi `step/1`: `rust-step.md`. Studio: `docs/studi/llm/agenti-esterni.md`.
 
 ## Installazione
-- Oggi solo da sorgente: `cargo install --path crates/mzlab-cli` (serve Rust), poi `mzlab-cli` è nel PATH. La stessa CLI compila per `wasm32-wasip1` ed esegue un piano sotto node con `tools/wasi_run.mjs`.
+- Oggi solo da sorgente: `cargo install --path crates/mzlab-cli --profile cli` (serve Rust; il profilo `cli` è `opt-level = 3`, in `target/cli/`: `cargo build --profile cli -p mzlab-cli`, circa un quarto più veloce del profilo `release`, che è a dimensione e resta dei `.wasm`; stessi byte d'uscita), poi `mzlab-cli` è nel PATH. La stessa CLI compila per `wasm32-wasip1` ed esegue un piano sotto node con `tools/wasi_run.mjs`.
 
 ## Sequenza consigliata
 1. **Passi e parametri**: `mzlab-cli steps --json [--id ID]` stampa i descrittori `step/1` del binario che userai, con `executable_native`; gli stessi stanno in `step/1` stanno in `docs/schemi/steps-1.json`, `steps-attributio-1.json`, `steps-tabui-1.json`, `steps-cli-1.json` (una riga JSON per passo; `params` è un JSON Schema con `default`, `minimum`, `maximum`, `enum`). Un passo senza esecutore nativo (elenco `BUCHI` in `cli.md`, «Copertura») fa rifiutare il piano con `err.flow.step.native`.

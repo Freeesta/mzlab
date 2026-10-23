@@ -53,7 +53,7 @@ const AZIONI_ICONE = (() => {
   // the icon of the actions that do not name one (`icona` of the action wins)
   /** @type {Record<string, string>} */
   const POR_ID = {
-    "spec.copy": "copy", "spec.extractMs2": "ms2", "spec.xic": "xic", "spec.peak": "target", "spec.overlay": "overlay", "spec.measure": "measure", "spec.annotate": "note",
+    "spec.copy": "copy", "spec.extractMs2": "ms2", "spec.xic": "xic", "spec.xicPrev": "xic", "spec.xicNext": "xic", "spec.peak": "target", "spec.overlay": "overlay", "spec.measure": "measure", "spec.annotate": "note",
     "spec.iso": "iso", "spec.isoRes": "isoRes", "spec.isoOff": "isoOff", "spec.full": "fit", "spec.freeze": "lock", "spec.relink": "link", "spec.generate": "formula", "spec.fmClear": "clear",
     "spec.marker": "flag", "spec.noCont": "filter", "spec.disp": "sliders", "spec.ms2": "ms2", "spec.dda": "dda", "spec.ddaShow": "eye", "spec.lib": "book", "spec.exportMgf": "save",
     "spec.exportMsp": "save", "spec.exportMassbank": "save", "spec.exportSirius": "save", "spec.contLists": "list", "spec.known": "listCheck", "spec.addLab": "tag",

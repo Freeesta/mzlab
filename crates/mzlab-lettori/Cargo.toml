@@ -38,3 +38,11 @@ sha2 = { version = "0.11", default-features = false }
 [[example]]
 name = "thermo_scandump"
 required-features = ["thermo"]
+
+[[example]]
+name = "thermo_banco"
+required-features = ["thermo"]
+
+[[example]]
+name = "thermo_diagnosi"
+required-features = ["thermo"]

@@ -256,7 +256,7 @@ async function showInts() {
   const th = (t, n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
   const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th(I18N.t("int.tbl.plates"), 1) + th(I18N.t("int.tbl.tail"), 1) : "") +
     (INTOPT.q ? ["gauss", "asym", "nscore"].map(k => `<th class="num" title="${I18N.t(`int.tbl.${k}.h`)}">${I18N.t(`int.tbl.${k}`)}</th>`).join("") : "");
-  big(I18N.t("int.tbl.title"), rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button>
+  big(I18N.t("int.tbl.title"), rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button><button id="ig-csv">${IC_DL}CSV</button>
     <label title="${I18N.t("int.tbl.sn.title")}"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
     <label title="${I18N.t("int.tbl.par.title")}"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> ${I18N.t("int.tbl.par")}</label>
     <label title="${I18N.t("int.tbl.q.title")}"><input type="checkbox" id="ig-q" ${INTOPT.q ? "checked" : ""}> ${I18N.t("int.tbl.q")}</label></div>
@@ -276,8 +276,10 @@ async function showInts() {
       const r = rows[+b.dataset.nz]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, I18N.t("int.pickNoise.msg"), true);
     });
-    Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : [])],
-      rows: rows.map(r => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18] }], { table: "integration" });
+    const sheetsOf = () => [{ name: I18N.t("int.xlsx.sheet"), head: [...INT_HEADS, ...(INTOPT.sn ? [I18N.t("int.xlsx.sn")] : []), ...(INTOPT.par ? ["w1/2 (min)", I18N.t("int.xlsx.plates"), I18N.t("int.xlsx.tail")] : []), ...(INTOPT.q ? [I18N.t("int.xlsx.gauss"), I18N.t("int.xlsx.asym"), I18N.t("int.xlsx.nscore")] : [])],
+      rows: rows.map(r => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : []), ...(INTOPT.q ? [r.qg, r.qa, r.qn] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14, 18, 18, 18] }];
+    Q("#ig-xlsx").onclick = () => dlx(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
+    Q("#ig-csv").onclick = () => dlc(I18N.t("int.xlsx.file"), sheetsOf(), { table: "integration" });
   });
 }
 
@@ -466,6 +468,7 @@ async function drawSpec(p, snapped) {
     lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
+  if (window.XICBTN) XICBTN.mark(p, g, X, Y, W, d0);   // the peak chosen for the XIC button
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences (before the annotations: a label hides the dashed line under it)
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
@@ -510,6 +513,7 @@ async function drawSpec(p, snapped) {
     return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
   }).join("") : "") + isoNote;
   contLegend(p);
+  if (window.XICBTN) XICBTN.sync(p);                         // the XIC under this spectrum follows its scan
 }
 
 // Known contaminants on a high-resolution spectrum: a small diamond over the peaks whose m/z is COMPATIBLE with an entry of the lists (a sign, not a verdict).

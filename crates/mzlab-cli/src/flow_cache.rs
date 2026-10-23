@@ -22,6 +22,7 @@ struct Entry {
     ty: DataType,
     estimates: Vec<(String, Value, Value)>,
     warnings: Vec<String>,
+    said: Option<Value>,
     lineage: Option<Lineage>,
 }
 
@@ -102,6 +103,7 @@ impl Cache {
             artifact: a,
             estimates: e.estimates.clone(),
             warnings: e.warnings.clone(),
+            file: e.said.clone(),
         })
     }
 }
@@ -122,6 +124,7 @@ impl Cache {
             ty: made.artifact.ty,
             estimates: made.estimates.clone(),
             warnings: made.warnings.clone(),
+            said: made.file.clone(),
             lineage,
         };
         self.now
@@ -233,6 +236,7 @@ fn write_entry(work: &Path, key: &str, e: &Entry) -> Value {
             "warnings".into(),
             Value::Arr(e.warnings.iter().map(|w| s(w)).collect()),
         ),
+        ("file_info".into(), e.said.clone().unwrap_or(Value::Null)),
         (
             "lineage".into(),
             e.lineage
@@ -269,6 +273,7 @@ fn read_entry(work: &Path, v: &Value) -> Option<(String, Entry)> {
             .iter()
             .filter_map(|w| w.str().map(str::to_string))
             .collect(),
+        said: v.get("file_info").filter(|f| !f.is_null()).cloned(),
         lineage,
     };
     Some((text("key")?, e))

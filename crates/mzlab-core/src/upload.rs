@@ -78,16 +78,29 @@ impl Passata {
         if self.seen != self.size {
             return None;
         }
-        let mut p = Sha1::new();
-        p.update(self.size.to_string().as_bytes());
-        p.update(&self.head);
-        p.update(&self.tail);
         Some((
             hex(&self.sha256.finalize()),
             self.sha1.map(|h| hex(&h.finalize())).unwrap_or_default(),
-            hex(&p.finalize()),
+            probe_hex(self.size, &self.head, &self.tail),
         ))
     }
+}
+
+fn probe_hex(size: u64, head: &[u8], tail: &[u8]) -> String {
+    let mut p = Sha1::new();
+    p.update(size.to_string().as_bytes());
+    p.update(head);
+    p.update(tail);
+    hex(&p.finalize())
+}
+
+/// The `probe` of a file of `size` bytes, reading only its first and last 64 KB (what `Passata` gives, for a caller that already has the SHA-256).
+pub fn probe<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
+    let n = size.min(PROBE) as usize;
+    let (mut head, mut tail) = (vec![0u8; n], vec![0u8; n]);
+    r.read_at(0, &mut head)?;
+    r.read_at(size - n as u64, &mut tail)?;
+    Ok(probe_hex(size, &head, &tail))
 }
 
 /// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.

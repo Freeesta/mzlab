@@ -4,9 +4,9 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 
-use mzlab_core::centroidi::{mzml_to_centroids_with, Over};
+use mzlab_core::centroidi::{mzml_to_centroids_with, Over, Params};
 use mzlab_core::error::Result;
-use mzlab_core::flow::Job;
+use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::Value;
 use mzlab_core::pace::Pace;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
@@ -117,15 +117,30 @@ pub(crate) fn job_with(
             ..Lineage::default()
         },
     );
+    Ok(made_of(job, a, used))
+}
+
+/// The file made, with the values the centroider measured (as estimates) and what the record says of the file: `centroided`, or `passthrough` when the file had no profile scan.
+fn made_of(job: &Job, a: Artifact, used: Option<Params>) -> Made {
     let mut made = Made::new("mzml", a);
     let proof = Value::Str("estimated on the profile scans of the file".into());
-    if let Some(p) = used {
-        for (k, v) in [("fwhm", p.w), ("threshold", p.k)] {
-            if number(job, k).is_none() {
-                made.estimates
-                    .push((k.into(), Value::Num(v), proof.clone()));
-            }
+    let via = if used.is_some() {
+        "centroided"
+    } else {
+        "passthrough"
+    };
+    let mut said = vec![("via".to_string(), Value::Str(via.into()))];
+    for (k, v) in used
+        .iter()
+        .flat_map(|p| [("fwhm", p.w), ("threshold", p.k)])
+    {
+        let given = number(job, k);
+        said.push((k.into(), Value::Num(given.unwrap_or(v))));
+        if given.is_none() {
+            made.estimates
+                .push((k.into(), Value::Num(v), proof.clone()));
         }
     }
-    Ok(made)
+    made.file = Some(Value::Obj(said));
+    made
 }

@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): the fragmentation graph msngrafo/1 of spectra.msn_graph drawn as in the Fragmentation graph tab (same SVG, loaded from the app's modules), in English.
-// Clicking an ion shows its candidate formulas; «Use» writes the choice in the parameter `scelte` of the step, and the next Run applies it. Used by flow-views-msn.js.
+// Tree view, no filters, no drawings (the tab has them). Clicking an ion shows its candidate formulas; «Use» writes the choice in the parameter `scelte` of the step, and the next Run applies it. Used by flow-views-msn.js.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
@@ -8,7 +8,11 @@
   const app = name => import(/* webpackIgnore: true */ new URL(name, G.QTOOLS && G.QTOOLS.ctx ? G.QTOOLS.ctx.base : document.baseURI).href);
   const EN = /** @type {Record<string, string>} */ ({
     "msngrafo.more": "+{n} more", "msngrafo.amb": "Several candidates: pick one with «Use»", "msngrafo.graph.aria": "Fragmentation graph: columns by MS level, arrows for the losses",
-    "msngrafo.node.aria": "Ion m/z {mz}, level MS{level}, {n} candidates shown", "msngrafo.prove.perdita": "known loss", "msngrafo.prove.isotopi": "isotopes", "msngrafo.prove.msn": "MSn", "msngrafo.rule.weak": "weak",
+    "msngrafo.v.graph.radial": "Fragmentation graph, radial view: the precursor in the centre, one ring per step of the best path, arrows for the losses",
+    "msngrafo.v.aria.levels": "levels {levels}", "msngrafo.v.aria.rel": "{rel} % of the base peak", "msngrafo.v.aria.formula": "formula {f}", "msngrafo.v.aria.cands": "{n} candidate formulas",
+    "msngrafo.v.aria.common": "reached from {n} precursors", "msngrafo.v.aria.collapsed": "{n} ions closed below", "msngrafo.v.common": "Reached from {n} different precursors",
+    "msngrafo.v.compat": "compatible with {f}", "msngrafo.v.hidden": "{n} closed", "msngrafo.v.hyp": "hypothesis",
+    "msngrafo.prove.perdita": "known loss", "msngrafo.prove.isotopi": "isotopes", "msngrafo.prove.msn": "MSn", "msngrafo.rule.weak": "weak",
   });
   /** @param {string} key @param {Record<string, any>} [p] */
   const t = (key, p) => (EN[key] || key).replace(/\{(\w+)\}/g, (_, k) => String(p && p[k] !== undefined ? p[k] : ""));
@@ -60,7 +64,8 @@
       const save = (/** @type {string} */ name, /** @type {string} */ type, /** @type {string} */ body) => { const a = el("a", { href: URL.createObjectURL(new Blob([body], { type })), download: name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
       host.append(el("div", { class: "fl-meta" },
         F.btn("export", `Download ${label}`, () => save(label, "application/json", JSON.stringify(g, null, 1)), "JSON"),
-        F.btn("export", "Download the graph as an image", () => { const s = wrap.querySelector("svg"); if (s) save(label.replace(/\.json$/i, "") + ".svg", "image/svg+xml", new XMLSerializer().serializeToString(s)); }, "SVG")));
+        F.btn("export", "Download the graph as an SVG image", () => { const s = wrap.querySelector("svg"); if (s) app("msngrafo-immagine.js").then(m => save(label.replace(/\.json$/i, "") + ".svg", "image/svg+xml", m.svgAutonomo(s))); }, "SVG"),
+        F.btn("export", "Download the graph as a PNG image", () => { const s = wrap.querySelector("svg"); if (s) app("msngrafo-immagine.js").then(async m => { const b = await m.pngDa(m.svgAutonomo(s), 2); const a = el("a", { href: URL.createObjectURL(b), download: label.replace(/\.json$/i, "") + ".png" }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }); }, "PNG")));
     } catch (_) { wrap.replaceWith(el("p", { class: "fl-note", text: "The graph could not be drawn here: the tables show the same data." })); }
   };
 })();

@@ -487,7 +487,6 @@ Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" 
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
-Q("#rmall").onclick = () => removeAllFiles();
 addEventListener("resize", () => { fitWidth(); redrawSoon(); });
 document.addEventListener("tpview", e => { if (/** @type {CustomEvent} */ (e).detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
@@ -533,6 +532,7 @@ function pendHint(p, e) {
 // the next click of a two-step action on this panel, as the i18n key of the cursor label (null: nothing pending)
 function pendKey(p) {
   if (p.type === "spec" && p.meas && p.meas.ref != null) return "pend.peak";
+  if (p.type === "spec" && window.XICBTN && XICBTN.pending(p)) return "xicbtn.pend";
   if (p._ibkA) return "pend.span";
   return null;
 }

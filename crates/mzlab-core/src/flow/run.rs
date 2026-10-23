@@ -57,6 +57,8 @@ pub struct Outcome {
     pub warnings: Vec<String>,
     /// The output came from the cache key (`cache_key`), the step did not run.
     pub cached: bool,
+    /// What a per-file step says of its file for the record of the run (`{"via": "centroided"|"passthrough", ...}`).
+    pub file: Option<Value>,
 }
 
 /// The owner of the files and the clock: runs the step of a job. It must not read the clock or unseeded randomness to decide a result.
@@ -174,6 +176,15 @@ fn gather(
     (made, generated)
 }
 
+/// Why an instance stopped, as the record writes it.
+fn error_record(e: &Error) -> ErrorRecord {
+    let params = e.params.iter().map(|(k, v)| (k.to_string(), v.clone()));
+    ErrorRecord {
+        error_key: e.key.to_string(),
+        params: params.collect(),
+    }
+}
+
 /// The activity of an instance and, when it did not fail, what it made.
 fn settle(
     inst: &Instance,
@@ -195,6 +206,7 @@ fn settle(
         params: resolved.params.clone(),
         params_sha256: resolved.params_sha256(),
         estimates: Vec::new(),
+        files: Vec::new(),
         used,
         generated: Vec::new(),
         ms: 0.0,
@@ -214,20 +226,14 @@ fn settle(
             }
             Err(e) => {
                 act.cached = false;
-                act.error = Some(ErrorRecord {
-                    error_key: e.key.to_string(),
-                    params: e
-                        .params
-                        .iter()
-                        .map(|(k, v)| (k.to_string(), v.clone()))
-                        .collect(),
-                });
+                act.error = Some(error_record(&e));
                 return (act, None);
             }
         }
     }
     let (made, generated) = gather(inst, step, &outcomes, &names);
     act.generated = generated;
+    act.files = file_notes(&outcomes, &names);
     for o in &outcomes {
         act.ms += o.ms;
         act.cached &= o.cached;
@@ -265,6 +271,17 @@ fn merged(a: Option<Mem>, b: Option<Mem>) -> Option<Mem> {
         }),
         (a, b) => a.or(b),
     }
+}
+
+/// What each per-file job said of its file, by the name of the input (a job with no name says nothing under one).
+fn file_notes(outcomes: &[Outcome], names: &[Option<String>]) -> Vec<(String, Value)> {
+    let said = outcomes.iter().zip(names);
+    said.filter_map(|(o, n)| {
+        o.file
+            .as_ref()
+            .map(|v| (n.clone().unwrap_or_default(), v.clone()))
+    })
+    .collect()
 }
 
 /// Runs `plan` with `workers` threads (1 = in order; the record is the same for any number). The plan is checked first; an instance that fails stops its

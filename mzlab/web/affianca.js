@@ -5,7 +5,7 @@ const AFF_T = (/** @type {string} */ k, /** @type {any} */ v) => I18N.t(k, v);
 const affCss = document.createElement("style");
 affCss.textContent = ".aff-grip{flex:none;min-width:24px;min-height:24px;padding:0 2px;margin-right:2px;border:0;background:transparent;color:var(--muted);cursor:grab;touch-action:none;opacity:0;line-height:1;font-size:14px}" +
   ".pnl:hover .aff-grip,.aff-grip:focus-visible,.aff-grip[aria-expanded=true]{opacity:1}.aff-grip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.aff-grip{opacity:1;min-width:40px;min-height:40px}}" +
-  ".pnl.aff-drag{opacity:.45}.aff-prev{position:absolute;z-index:30;box-sizing:border-box;pointer-events:none;border:2px dashed var(--accent);background:var(--sel);opacity:.8;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:13px;font-weight:600}" +
+  ".pnl.aff-drag{opacity:.45}.aff-prev{position:absolute;z-index:5001;box-sizing:border-box;pointer-events:none;border:2px dashed var(--accent);background:var(--sel);opacity:.8;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:13px;font-weight:600}" +
   ".aff-prev.no{border-color:var(--muted);background:var(--soft);color:var(--muted)}" +
   ".aff-menu{position:fixed;z-index:10005;min-width:200px;max-width:min(320px,94vw);max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);padding:4px}" +
   ".aff-menu button{display:block;width:100%;min-height:28px;text-align:left;border:0;background:transparent;color:var(--ink);padding:3px 8px;border-radius:4px}.aff-menu button:hover,.aff-menu button:focus-visible{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}.aff-menu button[aria-disabled=true]{color:var(--muted);cursor:default}" +
@@ -63,22 +63,13 @@ function affWhere(/** @type {any} */ p) {
   return r ? AFF_T("aff.where", { n: p.num ?? "", r: rows.indexOf(r) + 1, t: rows.length, i: r.indexOf(p) + 1, m: r.length }) : "";
 }
 
-/** @type {any} */ let affBarTimer = null;
-function affBar(/** @type {string} */ msg) {
-  const old = document.getElementById("aff-bar"); if (old) old.remove();
-  clearTimeout(affBarTimer);
-  const b = document.createElement("div"); b.id = "aff-bar"; b.setAttribute("role", "status");
-  b.innerHTML = `<span>${EH(msg)}</span><button type="button">${EH(AFF_T("aff.undo"))}</button>`;
-  b.querySelector("button").onclick = () => { b.remove(); affAnnulla(); };
-  document.body.appendChild(b); affBarTimer = setTimeout(() => b.remove(), 6000);
-}
 /** Do a move on the real panels; returns false (and says so) when the move does not fit. */
 function affFai(/** @type {any} */ p, /** @type {any} */ d, /** @type {boolean} */ wide) {
   const before = affKeys(tabPanels().filter(q => q.full)), grp = wide && !d.solo ? blockOf(p).grp.map((/** @type {any} */ q) => q.id) : [p.id];
   const order = affStack(), res = affRifai(order, p.id, grp, d, hostWidth());
   if (!res) { affSay(AFF_T("aff.zone.nospace")); return false; }
   affHist.push({ n: ++HSEQ, s: before }); if (affHist.length > 20) affHist.shift();
-  placeRows(res); affRelay(p); numberPanels(); affSay(affWhere(p)); affBar(AFF_T("aff.done"));
+  placeRows(res); affRelay(p); numberPanels(); affSay(AFF_T("aff.done") + ". " + affWhere(p));
   return true;
 }
 function affAnnulla() {
@@ -253,7 +244,7 @@ const affRowOf = (/** @type {any} */ q) => `${q.num ?? ""} \u00b7 ${q.el.querySe
 function affRipristina() {
   const l = tabPanels().filter(q => q.full); affSnap();
   l.forEach(q => { q.riga = null; q.quota = null; q.x = 0; q.w = hostWidth(); });
-  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done")); affBar(AFF_T("aff.reset.done"));
+  affRelay(null); numberPanels(); affSay(AFF_T("aff.reset.done"));
 }
 const affSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
 if (typeof AZIONI !== "undefined") {

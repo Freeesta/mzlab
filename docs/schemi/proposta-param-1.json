@@ -1,0 +1,42 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "proposta-param/1",
+ "title": "proposta-param/1: the parameters of mzFlow proposed by rules from an ispezione/1",
+ "description": "Format «proposta-param/1» (crates/mzlab-llm/src/params_rules.rs, docs/agenti/llm.md): one proposal per parameter with the rule `R-*` of docs/studi/assistente-dati/03-parametri.md §5, the signals it used, the confidence, whether the value is inside the limits of the step/1 (`range_ok`) and where the proof is; a signal that is absent is a question in `missing`, never an invented value. The same input gives the same bytes.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "series", "proposals", "missing", "warnings"],
+ "properties": {
+  "schema": {"const": "proposta-param/1"},
+  "series": {"type": "string"},
+  "proposals": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["step", "name", "value", "rule", "signals", "confidence", "range_ok", "proof"],
+    "properties": {
+     "step": {"type": "string", "pattern": "^[a-z0-9_.]+@[0-9]+$"},
+     "algorithm": {"type": "string"},
+     "name": {"type": "string"},
+     "value": {"type": ["number", "string", "boolean", "array"], "items": {"type": "number"}},
+     "rule": {"type": "string", "pattern": "^R-[a-z0-9]+-[0-9]+$"},
+     "signals": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+     "confidence": {"enum": ["high", "medium", "low"]},
+     "range_ok": {"type": "boolean"},
+     "proof": {"type": "string", "pattern": "^ispezione:f[0-9]+:[a-z_]+$"}
+    }
+   }
+  },
+  "missing": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["signal", "asks"],
+    "properties": {"signal": {"type": "string"}, "asks": {"type": "string", "pattern": "^Q-[a-z0-9-]+$"}}
+   }
+  },
+  "warnings": {"type": "array", "items": {"type": "string", "pattern": "^warn\\.params\\."}}
+ }
+}

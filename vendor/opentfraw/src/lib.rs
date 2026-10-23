@@ -16,6 +16,7 @@ pub mod header;
 pub mod mzml;
 pub mod raw_file_info;
 pub mod reaction;
+pub mod robust;
 pub mod run_header;
 pub mod sample_info;
 pub mod scan_data;
@@ -38,6 +39,7 @@ pub use reaction::ReactionInfo;
 pub use reader::{
     AnalogTrace, ControllerInfo, ControllerType, RawFileReader, ScanParams, StatusLogEntry,
 };
+pub use robust::Warning;
 pub use scan_format::ScanDataFormat;
 pub use srm_traces::SrmTrace;
 pub use types::*;

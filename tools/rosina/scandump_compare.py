@@ -167,11 +167,24 @@ class ScanComparator(Comparator):
         for x, y in zip(ra, rb):
             for k in REACTION_FIELDS:
                 self.value("reactions." + k, n, x.get(k), y.get(k))
+        self.by_level(n, ra, rb, a.get("level") or b.get("level"))
         ta, tb = a.get("trailer") or {}, b.get("trailer") or {}
         na = {normalize(k): v for k, v in ta.items()}
         nb = {normalize(k): v for k, v in tb.items()}
         for k in sorted(set(na) | set(nb)):
             self.value("trailer." + k, n, na.get(k), nb.get(k), None)
+
+    def by_level(self, n, ra, rb, level):
+        """MS3+ chains, step by step and per level (`reactions.<field>@ms3` ...): the same fields as above, and our unexplained `raw_double` / `raw_long2` of the
+        earlier steps set against RFR's isolation width / offset (`reactions.iso_width~raw_double@ms3`) until a level shows them equal on the whole corpus."""
+        if not level or level < 3:
+            return
+        for i, (x, y) in enumerate(zip(ra, rb)):
+            for k in REACTION_FIELDS:
+                self.value(f"reactions.{k}@ms{level}", n, x.get(k), y.get(k), KINDS.get("reactions." + k))
+            if i < len(rb) - 1:
+                self.value(f"reactions.iso_width~raw_double@ms{level}", n, x.get("iso_width"), y.get("raw_double"), "da")
+                self.value(f"reactions.iso_offset~raw_long2@ms{level}", n, x.get("iso_offset"), y.get("raw_long2"), "da")
 
     def peaks(self, n, a, b):
         self.value("peaks.count", n, len(a["mz"]), len(b["mz"]), "exact")
@@ -188,10 +201,40 @@ class ScanComparator(Comparator):
             self.value("chromatogram.values", i, x, y, "rel")
 
 
+    def rows(self, a, b):
+        """The rows that are not scans: sequence, asinfo, error, status, tune, method (fields named `<type>.<key>`)."""
+        for t in ("sequence", "asinfo"):
+            self.flat(t, (a.get(t) or [{}])[0], (b.get(t) or [{}])[0])
+        ea, eb = a.get("error") or [], b.get("error") or []
+        if ea or eb:
+            self.value("error.count", 0, len(ea), len(eb), "exact")
+        for i, (x, y) in enumerate(zip(ea, eb)):
+            self.value("error.rt", i, x.get("rt"), y.get("rt"), "rt")
+            self.value("error.message", i, x.get("message"), y.get("message"))
+        sa, sb = {r.get("scan"): r for r in a.get("status") or []}, {r.get("scan"): r for r in b.get("status") or []}
+        if sa or sb:
+            self.value("status.count", 0, len(sa), len(sb), "exact")
+        for i in sorted(set(sa) & set(sb), key=str):
+            self.value("status.rt", i, sa[i].get("rt"), sb[i].get("rt"), "rt")
+            self.flat("status", sa[i].get("values") or {}, sb[i].get("values") or {}, i)
+        self.flat("tune", (a.get("tune") or [{}])[0].get("values") or {}, (b.get("tune") or [{}])[0].get("values") or {})
+
+    def flat(self, prefix, a, b, n=0):
+        """The keys of two objects, names normalized as for the trailer; lists and objects (the unknown_* of ours) are only compared when both sides have the key."""
+        na = {normalize(k): v for k, v in a.items() if k != "type"}
+        nb = {normalize(k): v for k, v in b.items() if k != "type"}
+        for k in sorted(set(na) | set(nb)):
+            x, y = na.get(k), nb.get(k)
+            if isinstance(x, (list, dict)) or isinstance(y, (list, dict)):
+                x, y = (json.dumps(x) if x is not None else None), (json.dumps(y) if y is not None else None)
+            self.value(f"{prefix}.{k}", n, x, y, None)
+
+
 def compare(path_a, path_b, tol="hr"):
-    ha, sa, pa, ca, _ = load(path_a)
-    hb, sb, pb, cb, _ = load(path_b)
+    ha, sa, pa, ca, oa = load(path_a)
+    hb, sb, pb, cb, ob = load(path_b)
     c = ScanComparator(tol)
+    c.rows(oa, ob)
     for k in FILE_FIELDS:
         c.value("file." + k, 0, ha.get(k), hb.get(k), "exact" if k in ("controller", "n_scans", "format_version") else None)
     both = sorted(set(sa) & set(sb))

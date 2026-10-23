@@ -67,9 +67,11 @@ Quello che resta è `Vec<VoceScansione>` più il testo JSON.
 - In un'acquisizione Orbitrap a profilo (LAB-B, filtro «FTMS + p») la scansione 0 dà 492 centroidi con `profile = true`; `lettori_centroidi::centroidato` li ricentroida e ne restano 66. Su tutto il file 1 051 091 → 186 194 picchi (−82 %). Stesso difetto su PXD077492 (SIM «FTMS + p»: 71 → 15).
 - Tocca il `.cen.mzidx` di mzFinder (`lr_index_cen`), l'mzML scaricato (dichiarato «profile spectrum» con dati centroidi) e lo spettro mostrato. LAB-A («FTMS + c») è corretto.
 
-### 2.5 `.raw` che opentfraw non apre (11 su 41)
+### 2.5 `.raw` che non si aprono (11 su 41 nel corpus RV-08)
 
-Exploris 480/240 (MTBLS14155, MTBLS13497: DDA), Fusion Lumos (MTBLS825: «I/O Invalid argument»), LTQ Orbitrap XL + PDA (MTBLS804), LTQ Velos (unittest), TSQ Vantage/Quantum (MTBLS1752, MTBLS1807, MTBLS5229, PXD019516), TSQ Quantum Ultra (PXD006054), TSQ 9000 GC (MTBLS5358). Errori «refusing to allocate» (un conteggio letto male supera `Limiti`) o EOF. MTBLS2956 si apre ma ha 0 scansioni leggibili (`error.badIndex k=0`).
+Exploris 480/240 (MTBLS14155, MTBLS13497: DDA), Fusion Lumos (MTBLS825: «I/O Invalid argument»), LTQ Orbitrap XL + PDA (MTBLS804), LTQ Velos (unittest), TSQ Vantage/Quantum (MTBLS1752, MTBLS1807, MTBLS5229, PXD019516), TSQ Quantum Ultra (PXD006054: `AllocationTooLarge`), TSQ 9000 GC (MTBLS5358). MTBLS2956 si apre ma ha 0 scansioni leggibili.
+
+Causa non confermata: il conteggio letto male si trova con `thermo_diagnosi` (`lettori-modulo.md`) sul file vero. Per ora l'apertura tollera i flussi non essenziali illeggibili, le versioni non dichiarate e i file troncati (`vendor/opentfraw/src/robust.rs`; prove sintetiche in `crates/mzlab-lettori/tests/robustezza_thermo_aperture.rs`). Tabella «aperti / F0-F2 uguali a RFR» per i 41 file: non compilata, servono i file e i dump RFR (non verificato contro RFR).
 
 ### 2.6 Metadati: cosa c'è nel `.raw` e cosa esce in `metodo/1`
 
