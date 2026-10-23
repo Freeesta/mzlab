@@ -32,6 +32,19 @@ const load = async () => {
   llm = new mod.Llm(toolsText);
 };
 
+/** the roles and prompt files of the subagents, fetched on first request (they are data beside the page, not part of the module) @type {Promise<{roles: string, files: [string, string][]}> | null} */
+let assistFiles = null;
+const loadAssist = () => assistFiles || (assistFiles = (async () => {
+  const get = async (/** @type {string} */ name) => {
+    const r = await fetch(new URL("assist/" + name, import.meta.url));
+    if (!r.ok) throw { key: "err.llm.module", params: { reason: "assist" } };
+    return r.text();
+  };
+  const roles = await get("assist-ruoli-1.json");
+  const names = [...new Set(JSON.parse(roles).roles.map((/** @type {{prompt: string}} */ r) => r.prompt))];
+  return { roles, files: await Promise.all(names.map(async n => /** @type {[string, string]} */ ([n, await get(String(n))]))) };
+})().catch(e => { assistFiles = null; throw e; }));
+
 /** a Rust error is a JSON text {error_key, params}; anything else is a failure of the module @param {any} e */
 const wrap = e => {
   if (e && e.key) return e;
@@ -85,6 +98,7 @@ onmessage = async ev => {
   const m = ev.data || {};
   try {
     if (m.op === "port") { port = ev.ports[0]; port.onmessage = onPort; return; }
+    if (m.op === "assist.files") { postMessage({ id: m.id, ok: true, ...(await loadAssist()) }); return; }
     await load();
     if (!llm) return;
     if (m.op === "init") postMessage({ id: m.id, ok: true, providers: mod.providers(), version: mod.version() });
