@@ -185,3 +185,86 @@ fn analogues_need_a_distance_in_precursor_and_enough_peaks() {
     );
     assert!(hits[0].hybrid > 0.9);
 }
+
+/// A window with many candidates: the bounded top-N equals the head of the full ranking, ties included (index order).
+#[test]
+fn identity_top_n_is_the_head_of_the_full_ranking() {
+    let q_mz = [50.0, 70.2, 90.4, 110.6, 130.8];
+    let q_it = [10.0, 40.0, 100.0, 25.0, 60.0];
+    let set: Vec<Spectrum> = (0..300)
+        .map(|k| {
+            // a few distinct shapes so that scores repeat across entries (ties)
+            let shift = (k % 7) as f64 * 0.3;
+            let it: Vec<f64> = q_it.iter().map(|v| v + (k % 5) as f64 * 3.0).collect();
+            let mz: Vec<f64> = q_mz.iter().map(|m| m + shift).collect();
+            sp(200.0 + (k % 3) as f64 * 0.1, 1, &mz, &it, &format!("e{k}"))
+        })
+        .collect();
+    let (b, _) = build_in_memory(&set, BuildOpts::default()).unwrap();
+    let lib = Library::open(&b[..], CACHE_BYTES).unwrap();
+    let q = Query::new(200.1, 1, &q_mz, &q_it).unwrap();
+    let run = |top: usize| {
+        identity(
+            &lib,
+            &q,
+            &IdentityOpts {
+                prec_tol: Tol::Da(0.5),
+                frag_da: 0.25,
+                pol: 1,
+                top,
+            },
+        )
+        .unwrap()
+    };
+    let full = run(1000);
+    assert_eq!(full.len(), 300);
+    // an unbounded `top` must not overflow the pruning threshold
+    assert_eq!(run(usize::MAX).len(), 300);
+    for top in [1, 5, 17, 100] {
+        let got = run(top);
+        assert_eq!(got.len(), top);
+        for (g, f) in got.iter().zip(&full) {
+            assert_eq!(
+                (g.index, g.entropy, g.shared),
+                (f.index, f.entropy, f.shared)
+            );
+            assert_eq!(g.pairs, f.pairs);
+            assert_eq!(g.spec.mz, f.spec.mz);
+        }
+    }
+    assert!(full.windows(2).all(|w| w[0].entropy >= w[1].entropy));
+}
+
+/// The query-side preparation changes no number: `pair_scores_for` equals `pair_scores` bit for bit (all fields, pairs included).
+#[test]
+fn prepared_query_scores_equal_pair_scores() {
+    use mzlab_lib::prep::{pair_scores_for, QueryPrep};
+    use mzlab_lib::scores::pair_scores;
+    let mut x = 0x2545_F491_4F6C_DD1Du64;
+    let mut r = move || {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        (x >> 11) as f64 / (1u64 << 53) as f64
+    };
+    let mut spec = |n: usize| {
+        let mut mz: Vec<f64> = (0..n)
+            .map(|_| 50.0 + (r() * 60.0).floor() * 2.0 + r() * 0.2)
+            .collect();
+        mz.sort_by(|a, b| a.total_cmp(b));
+        let it: Vec<f64> = mz.iter().map(|_| 1.0 + r() * 99.0).collect();
+        Spec {
+            mz,
+            it,
+            prec: 300.0,
+        }
+    };
+    for k in 0..200 {
+        let (a, b) = (spec(1 + k % 25), spec(1 + (k * 7) % 30));
+        let prep = QueryPrep::new(&a);
+        assert_eq!(
+            pair_scores_for(&prep, &a, &b, 0.3),
+            pair_scores(&a, &b, 0.3)
+        );
+    }
+}

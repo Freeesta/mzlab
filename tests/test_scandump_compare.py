@@ -194,3 +194,12 @@ def test_rows_that_are_not_scans_are_compared_field_by_field(tmp_path):
     assert cells("status.vacuum") == (1, 1, 0, 0, 0)  # 1e-5 against 1.0e-5
     assert cells("status.temp") == (1, 0, 1, 0, 0)
     assert cells("tune.spray voltage") == (0, 0, 0, 0, 1)
+
+
+def test_ms1_range_reaction_of_rfr_is_not_a_reaction():
+    ms1 = {"level": 1, "mz_low": 350.0, "mz_high": 1050.0, "reactions": [{"precursor": 700, "iso_width": 700, "activation": "HCD"}]}
+    assert compare.reactions_of(ms1) == []
+    ms2 = dict(ms1, level=2)
+    assert len(compare.reactions_of(ms2)) == 1
+    other = dict(ms1, reactions=[{"precursor": 500, "iso_width": 2}])
+    assert len(compare.reactions_of(other)) == 1

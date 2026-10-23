@@ -4,6 +4,7 @@
 use crate::clean::{clean, weighted, CleanOpts};
 use crate::error::Result;
 use crate::io::Source;
+use crate::prep::{pair_scores_for, QueryPrep};
 use crate::read::Library;
 use crate::scores::{common_losses, modified_cosine, pair_scores, pair_term, ModCosine, Spec};
 use crate::sortutil;
@@ -87,14 +88,23 @@ pub struct Hit {
 /// Every library spectrum with the query's polarity (or none known) and a precursor within the tolerance, best entropy first.
 pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Result<Vec<Hit>> {
     let w = o.prec_tol.window(q.prec);
-    let mut hits: Vec<Hit> = Vec::new();
+    let top = o.top.max(1);
+    // Scores only: spectra and pairs are loaded for the winners, so a wide window over a big library stays small.
+    let prep = QueryPrep::new(&q.spec);
+    let mut light: Vec<Hit> = Vec::new();
+    let order = |a: &Hit, b: &Hit| {
+        b.entropy
+            .total_cmp(&a.entropy)
+            .then(b.cosine.total_cmp(&a.cosine))
+            .then(a.index.cmp(&b.index))
+    };
     for r in lib.ranges(q.pol, q.prec - w, q.prec + w)? {
         for i in r {
             let rec = lib.rec(i)?;
             let s = spec_of(lib, i, rec.prec)?;
-            let sc = pair_scores(&q.spec, &s, o.frag_da);
+            let sc = pair_scores_for(&prep, &q.spec, &s, o.frag_da);
             let d = rec.prec - q.prec;
-            hits.push(Hit {
+            light.push(Hit {
                 index: i,
                 prec: rec.prec,
                 pol: rec.pol,
@@ -111,22 +121,24 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
                 } else {
                     d
                 },
-                pairs: sc.pairs,
-                spec: s,
+                pairs: Vec::new(),
+                spec: Spec::default(),
             });
+            // amortised pruning keeps at most 2 * top candidates alive
+            if light.len() >= top.saturating_mul(2).saturating_add(64) {
+                sortutil::sort_any_by(&mut light, order);
+                light.truncate(top);
+            }
         }
     }
-    sortutil::sort_any_by(&mut hits, |a, b| {
-        b.entropy
-            .total_cmp(&a.entropy)
-            .then(b.cosine.total_cmp(&a.cosine))
-            .then(a.index.cmp(&b.index))
-    });
-    hits.truncate(o.top.max(1));
-    for h in hits.iter_mut() {
+    sortutil::sort_any_by(&mut light, order);
+    light.truncate(top);
+    for h in light.iter_mut() {
+        h.spec = spec_of(lib, h.index, h.prec)?;
+        h.pairs = pair_scores(&q.spec, &h.spec, o.frag_da).pairs;
         h.nl_shared = common_losses(&q.spec, &h.spec, o.frag_da);
     }
-    Ok(hits)
+    Ok(light)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -395,7 +395,9 @@ impl Profile {
         for chunk in &self.chunks {
             for (i, &intensity) in chunk.signal.iter().enumerate() {
                 let bin_global = chunk.first_bin as f64 + i as f64;
-                let freq = self.first_value + bin_global * self.step;
+                // A profile already in the m/z domain (ion trap) starts one step after its first value, as the vendor library gives it.
+                let origin = if coefficients.is_empty() { 1.0 } else { 0.0 };
+                let freq = self.first_value + (bin_global + origin) * self.step;
                 // The per-chunk fudge is an additive m/z correction applied
                 // after frequency-to-m/z conversion, not a frequency offset.
                 // Applying it in the frequency domain shifts Orbitrap profile
@@ -955,6 +957,23 @@ mod tests {
         };
         let result = profile.to_mz_intensity(&[]);
         assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn to_mz_intensity_without_coefficients_starts_one_step_after_the_first_value() {
+        let profile = Profile {
+            first_value: 300.0,
+            step: 0.5,
+            peak_count: 1,
+            nbins: 2,
+            chunks: vec![ProfileChunk {
+                first_bin: 0,
+                signal: vec![1.0, 2.0],
+                fudge: None,
+            }],
+        };
+        let mz: Vec<f64> = profile.to_mz_intensity(&[]).iter().map(|p| p.0).collect();
+        assert_eq!(mz, vec![300.5, 301.0]);
     }
 
     #[test]

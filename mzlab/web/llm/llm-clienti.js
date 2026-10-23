@@ -40,6 +40,10 @@ export class SiteClient {
   send(conv, sink, replay) {
     return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, conv: JSON.stringify(conv), transport: replay ? "replay" : "net" }); });
   }
+  /** a request already built by Rust (a call of a subagent): the events come to `sink` like those of `send` @param {string} provider @param {string} model @param {string} request JSON of the request @param {(e: LlmEvent) => void} sink */
+  sendRaw(provider, model, request, sink) {
+    return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, provider, model, request, transport: "net" }); });
+  }
   stop() { if (this.lastId) this.worker.postMessage({ op: "abort", id: this.lastId }); }
   /** @param {string} text @param {boolean} strict */
   async replay(text, strict) { return (await this.call("replay.load", { text, strict })).turns; }
@@ -74,8 +78,13 @@ export class DesktopClient {
   /** @param {object} conv @param {(e: LlmEvent) => void} sink @param {boolean} replay */
   async send(conv, sink, replay) {
     if (replay) throw { key: "err.llm.replay.format", params: {} };
+    await this.poll(await this.post("llm/send", { conv: JSON.stringify(conv) }), sink);
+  }
+  /** a request already built by Rust (a call of a subagent), sent by the app with the key it holds @param {string} provider @param {string} _model @param {string} request JSON @param {(e: LlmEvent) => void} sink */
+  async sendRaw(provider, _model, request, sink) { await this.poll(await this.post("llm/send", { provider, request }), sink); }
+  /** @param {{id: string}} job @param {(e: LlmEvent) => void} sink */
+  async poll({ id }, sink) {
     this.stopped = false;
-    const { id } = await this.post("llm/send", { conv: JSON.stringify(conv) });
     this.cur = id;
     for (;;) {
       const r = await this.post("llm/poll", { id });

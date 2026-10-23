@@ -186,6 +186,18 @@ pub fn align_and_fill_spilling<R: ReadAt>(
     open: impl FnMut(usize) -> Result<Index<R>>,
     spill: Option<&mut dyn Spill>,
 ) -> Result<(Aligned, usize)> {
+    align_and_fill_with(src, budget, r, open, spill, None)
+}
+
+/// `align_and_fill_spilling` filling the gaps of the files at the same time when `par_open` is given (same table, same bytes).
+pub fn align_and_fill_with<R: ReadAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
+    open: impl FnMut(usize) -> Result<Index<R>>,
+    spill: Option<&mut dyn Spill>,
+    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+) -> Result<(Aligned, usize)> {
     let n = src.count();
     let mut s = survey(src, budget)?;
     let widest = s.rows.iter().copied().max().unwrap_or(0);
@@ -230,6 +242,7 @@ pub fn align_and_fill_spilling<R: ReadAt>(
         Some(budget),
         spill,
         open,
+        par_open,
     )?;
     crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, range| {
         let b = src.bytes(k)?;
