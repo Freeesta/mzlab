@@ -213,10 +213,10 @@
     await pump(x);
   };
 
-  /** the live session of the plan of S: made on the first call; null when this browser cannot (a phone, a plan of MSn steps only, no OPFS) @param {any} S @param {boolean} force */
+  /** the live session of the plan of S: made on the first call; null when this browser cannot (a phone, no OPFS) @param {any} S @param {boolean} force */
   const attach = async (S, force) => {
     const R = F.runners.web;
-    if (!R.available() || (!force && R.small()) || (F.webMsn && F.webMsn.handles(S.plan))) return null;
+    if (!R.available() || (!force && R.small())) return null;
     if (!x || x.S !== S) { x = session(S); surface(x); }
     const live = x;
     if (!live.started) await replan(live);
@@ -272,6 +272,8 @@
     await replan(live);
     if (!live.items.length) throw Object.assign(new Error("err.flow.input.missing"), { key: "err.flow.input.missing", params: {} });
     if (!await outputsKept(live)) await restart(live);
+    // Run is a new request: an MSn step that failed (the engine refused, the file was not open) is tried again, the other failures wait for a change of the plan
+    for (const j of await call(live, "jobs")) { const inst = instOf(live, j.instance); if (inst && F.webMsn?.STEPS.includes(base(inst)) && ["error", "refused", "cancelled"].includes(j.state)) await call(live, "retry", { job: { instance: j.instance, item: j.item ?? null } }); }
     // what happened since the last run is reported again to this run; with nothing new, every finished step is reused
     const hist = live.log.slice(live.logFrom);
     if (o.onEvent) live.listeners.add(o.onEvent);

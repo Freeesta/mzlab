@@ -32,6 +32,11 @@ RUN = """async (patch) => {
   document.removeEventListener('flow:web-step', on);
   return { ev, err, files: res && res.files };
 }"""
+REF = """async (patch) => {
+  const S = document.querySelector('.flx-list').__flow;
+  for (const inst of S.plan.steps) if (inst.step.startsWith('spectra.msn_graph')) inst.params = Object.assign({}, inst.params, patch);
+  try { return { err: null, files: (await FLOW.webMsn.run(S)).files }; } catch (e) { return { err: { key: e.key, params: e.params }, files: null }; }
+}"""
 r = Run(port=8979, wd="/tmp/wd_flowmsn")
 try:
     with sync_playwright() as p:
@@ -54,6 +59,13 @@ try:
             assert all(e["via"] == "browser" for e in x["ev"]), x["ev"]
             assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], [f["name"] for f in x["files"]]
         step("the template runs in the browser on the open infusion: three steps, three texts", runs)
+        def same():
+            ref = pg.evaluate(REF, {"formula": ION})
+            assert ref["err"] is None, ref["err"]
+            a, b = got["r"]["files"], ref["files"]
+            assert [f["name"] for f in a] == [f["name"] for f in b], (a and [f["name"] for f in a], [f["name"] for f in b])
+            for fa, fb in zip(a, b): assert mask(fa["text"]) == mask(fb["text"]), "the scheduler differs from the functions of the MSn steps on " + fa["name"]
+        step("a plan of MSn steps only goes through the scheduler and gives the same texts as the functions of the steps", same)
         def graph():
             t = got["r"]["files"][0]["text"]
             assert mask(t) == mask(cli), (len(t), len(cli))
@@ -74,13 +86,13 @@ try:
             put = """async (t) => { const d = await navigator.storage.getDirectory(), w = await (await d.getFileHandle('msnlib.json', { create: true })).createWritable(); await w.write(t); await w.close() }"""
             pg.evaluate(put, "")
             x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow, ev = [];
-              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
-              try { await FLOW.runners.web.run(S); return { ok: 1 } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+              const l = S.plan.steps.find(s => s.step.startsWith('msn.library_export')); S.plan.inputs.push({ name: 'q.mgf', type: 'spectra', sha256: '' }); S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'file:q.mgf', library: l.id + '.library' }, params: {} });
+              try { await FLOW.runners.web.run(S); return { ok: 1 } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop(); S.plan.inputs.pop() } }""")
             assert x.get("key") == "err.flow.msn.library", x
             pg.evaluate(put, added)
             x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow;
-              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
-              try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+              const l = S.plan.steps.find(s => s.step.startsWith('msn.library_export')); S.plan.inputs.push({ name: 'q.mgf', type: 'spectra', sha256: '' }); S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'file:q.mgf', library: l.id + '.library' }, params: {} });
+              try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop(); S.plan.inputs.pop() } }""")
             assert "text" in x, x
             j = json.loads(x["text"])
             assert j["formato"] == "msncerca/1" and j["opzioni"]["min_prove"] == 3 and j["candidati"], x["text"][:300]
@@ -120,8 +132,8 @@ try:
             assert len([n for n in names if n.endswith((".json", ".msp", ".csv"))]) >= 3, names
         step("each text is kept in OPFS (mzlab/flow/)", kept)
         def mixed():
-            # the same plan run as MSn steps only (the runner of MSn plans) is the reference: earlier steps of this test wrote the molecule into the plan
-            ref = pg.evaluate(RUN, {"formula": ION})
+            # the same plan run in order by the functions of the MSn steps, outside the scheduler, is the reference: earlier steps of this test wrote the molecule into the plan
+            ref = pg.evaluate(REF, {"formula": ION})
             assert ref["err"] is None, ref["err"]
             # an index step beside the MSn steps: the plan is no longer MSn only, so the steps go through the scheduler (executor `msn` of flow-live-jobs.js)
             pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, g = S.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')); S.plan.steps.push({ id: 'ixmix', step: 'index.mzidx@1', in: { source: g.in.source } }); }""")

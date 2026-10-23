@@ -82,18 +82,17 @@
     return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });
   };
 
-  /** runs the plan of S: the MSn plans by their own runner, every other plan in the live session (flow-live.js), which starts the jobs the browser can do as soon as the plan allows and
+  /** runs the plan of S: every plan in the live session (flow-live.js), which starts the jobs the browser can do as soon as the plan allows and
    * here is only waited for. Resolves with { steps, table, llm }, rejects with {key, params}
    * @param {any} S @param {{ onEvent?: (e: any) => void, askMore?: (i: any) => Promise<boolean> }} [opts] */
   const run = async (S, opts = {}) => {
     const o = { askMore: G.mzlabAskMore, ...opts };
-    if (F.webMsn && F.webMsn.handles(S.plan)) return F.webMsn.run(S, o);
     if (!F.live) await F.whenLate;
     return F.live.run(S, o);
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
-  const preflight = async S => (!available() || (F.webMsn && F.webMsn.handles(S.plan)) || !F.live ? null : F.live.preflight(S));
+  const preflight = async S => (!available() || !F.live ? null : F.live.preflight(S));
 
   /** the pieces the live session uses: the pool of workers, the list of the indexes, the estimate, the recipe */
   const kit = { getPool, listIdx, stima, recipeOf, highMb, KNOWN, poolIfAny: () => pool };

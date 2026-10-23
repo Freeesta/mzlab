@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): the «This browser» runner of the MSn steps (spectra.msn_graph, msn.library_export, msn.table_export, and spectra.match with the `tree` algorithm). The infusion is the file the plan names that is open in the Data tab;
+// Flow (administrator mode): the functions of the MSn steps (spectra.msn_graph, msn.library_export, msn.table_export, and spectra.match with the `tree` algorithm). The infusion is the file the plan names that is open in the Data tab;
 // the graph, the library and the tables come from the routes of the engine of the page (`api/msn_grafo`, `api/msn_grafo/export`: the .wasm msngrafo, the same functions as `mzlab-cli msn-graph`
 // and `msn-lib export`; the library search posts the library of the user, the one the Fragmentation graph card keeps, to `api/msnlib/cerca`), so the bytes are the ones of the command. Reports the same events as flow-web-run.js, keeps each result in OPFS (mzlab/flow/) and resolves with the texts. Docs: docs/agenti/flow-web.md.
 (() => {
@@ -12,9 +12,6 @@
   const fail = (/** @type {string} */ key, params = {}) => Object.assign(new Error(key), { key, params });
   /** @param {any} o @param {any} ev */
   const emit = (o, ev) => { if (o.onEvent) o.onEvent(ev); document.dispatchEvent(new CustomEvent("flow:web-step", { detail: ev })); };
-
-  /** a plan made of the MSn steps only: no .mzidx, so the runner of the series is not the one to ask @param {any} plan */
-  const handles = plan => plan.steps.length > 0 && plan.steps.every((/** @type {any} */ i) => STEPS.includes(base(i)) && (base(i) !== "spectra.match" || i.algorithm === "tree"));
 
   /** the query of the graph of `inst` for the file number `k`: the parameters of the step under the names of the route @param {any} inst @param {number} k */
   const graphQuery = (inst, k) => {
@@ -115,7 +112,7 @@
     return { name, text };
   };
 
-  /** runs the MSn steps of S in order; resolves with { steps, files: [{ id, name, text }] } @param {any} S @param {{ onEvent?: (e: any) => void }} [opts] */
+  /** runs the MSn steps of S in order, outside the scheduler: the reference the tests compare the live session with; resolves with { steps, files: [{ id, name, text }] } @param {any} S @param {{ onEvent?: (e: any) => void }} [opts] */
   const run = async (S, opts = {}) => {
     const o = opts, plan = S.plan, st = { plan, k: infusion(S), graph: /** @type {URLSearchParams | null} */ (null) };
     const steps = /** @type {string[]} */ ([]), files = /** @type {{ id: string, name: string, text: string }[]} */ ([]);
@@ -133,5 +130,5 @@
     return { steps, table: null, files, llm: S.llmRef || null };
   };
 
-  F.webMsn = { handles, run, one, infusion, STEPS };
+  F.webMsn = { run, one, infusion, STEPS };
 })();
