@@ -311,10 +311,10 @@ function addPanel(type, o, after) {
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { COMANDI.fai("spec.ruler", p, () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); };
   if (p.type === "spec" && window.XICBTN) XICBTN.wire(p);
-  const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { p.rel = !p.rel; relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
+  const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { COMANDI.fai("spec.display", p, () => { p.rel = !p.rel; }); relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
   const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); };
-  const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; p.log = !p.log; syncTb(p); draw(p); uiSave(); };
+  const lgB = el.querySelector('[data-a="log"]'); if (lgB) lgB.onclick = () => { if (lgB.disabled) return; COMANDI.fai("panel.source", p, () => { p.log = !p.log; }); syncTb(p); draw(p); uiSave(); };
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const dlB = el.querySelector('[data-a="dl"]');
   if (dlB) dlB.onclick = e => {
@@ -734,15 +734,15 @@ function ctl(p) {
   const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const op = cpP.offsetParent || p.el, pr = op.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, op.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
   const parToggle = on => { p._parOpen = on; if (cpB) cpB.setAttribute("aria-expanded", String(!!on)); if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
   if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); parPlace();
-    const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; pushZh(p); p.zoom = null; p.zoomY = null; p._parOpen = false; ctl(p); draw(p); uiSave(); };
+    const rx = c.querySelector('[data-a="rngx"]'); if (rx) rx.onclick = () => { COMANDI.fai("panel.source", p, () => { p.mz0 = p.mz1 = null; if (p.type === "chrom" && !ms2c) p.prec = null; p.zoom = null; p.zoomY = null; }); p._parOpen = false; ctl(p); draw(p); uiSave(); };
     if (!p._parAway) { p._parAway = e => { if (p._parOpen && p.el.isConnected && !e.target.closest(".cpop") && !e.target.closest('[data-a="cpar"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("mousedown", p._parAway, { capture: true, signal: p._ac.signal }); } }
   c.querySelectorAll("[data-o]").forEach(x => {
     const k = x.dataset.o;
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
-    else if (k === "gdelay") x.onchange = () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); draw(p); uiSave(); };
-    else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; draw(p); uiSave(); };
-    else if (k === "pdaAlign") x.onchange = () => { p.pdaAlign = x.checked; draw(p); uiSave(); };
+    else if (k === "gdelay") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.gdelay = Math.max(0, Math.min(10, Math.round((numIt(x.value) || 0) * 10) / 10)); }); draw(p); uiSave(); };
+    else if (k === "pdadelay") x.onchange = () => { const n = numIt(x.value); COMANDI.fai("spec.display", p, () => { p.pdaDelay = isFinite(n) ? Math.max(-2, Math.min(2, n)) : null; }); draw(p); uiSave(); };
+    else if (k === "pdaAlign") x.onchange = () => { COMANDI.fai("spec.display", p, () => { p.pdaAlign = x.checked; }); draw(p); uiSave(); };
     else if (k === "xlo" || k === "xhi") x.onchange = () => {
       const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(numIt(v), 5) : null) : numMz1(v);
       const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);
@@ -765,18 +765,7 @@ function ctl(p) {
     else if (k === "bkg") corrWire(x, v => setFondo(p, v));
     else if (k === "cinfo") corrInfoWire(p, x);
     else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
-        else x.onchange = () => {
-      if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {      // the map follows the file chosen in the bar: the menu chooses that file, like the bar does
-        p.k = +x.value; activeFile(+x.value); return;
-      }
-      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
-      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
-      if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
-      if (p.type === "spec" && k === "k") p.kSet = true;      // the file chosen in the menu stays until another choice or a click on a trace of the TIC
-      if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
-      if (["level", "all", "snip", "bg", "kind", "mapKind", "mz0", "mz1", "scale", "mode"].includes(k) || (k === "k" && p.type === "map")) { if (k === "mapKind") { p.zoom = null; p.zoomY = null; } ctl(p); }
-      draw(p);
-    };
+        else x.onchange = () => choosePanelOption(p, k, x);
   });
   if (window.REGISTRO && p.kind === "reg") REGISTRO.wire(p, c);       // registro-serie.js: the search box of the channels
   syncTb(p);
@@ -997,3 +986,25 @@ function mapNavWire(/** @type {Pannello} */ p, /** @type {HTMLElement} */ c) {  
     if (k == null) return; p.k = k; if (fol) { activeFile(k); return; } ctl(p); draw(p);
   }; });
 }
+// the choice made in a control of the panel menu, with what it resets
+function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /** @type {any} */ x) {
+      if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {      // the map follows the file chosen in the bar: the menu chooses that file, like the bar does
+        p.k = +x.value; activeFile(+x.value); return;
+      }
+      COMANDI.fai("panel.source", p, () => {      // one undo step: the choice with what it resets (measures, zoom, background)
+      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
+      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
+      if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
+      if (p.type === "spec" && k === "k") p.kSet = true;      // the file chosen in the menu stays until another choice or a click on a trace of the TIC
+      if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
+      if (["level", "all", "snip", "bg", "kind", "mapKind", "mz0", "mz1", "scale", "mode"].includes(k) || (k === "k" && p.type === "map")) { if (k === "mapKind") { p.zoom = null; p.zoomY = null; } ctl(p); }
+      });
+      draw(p);
+}
+
+// the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (comandi.js)
+const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY"];
+COMANDI.gestore("panel.source", {
+  leggi: p => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
+  applica: (p, snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },
+});

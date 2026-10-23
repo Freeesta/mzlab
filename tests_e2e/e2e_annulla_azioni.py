@@ -104,6 +104,35 @@ try:
             undo(); assert meas() is None and not rul(), "one Ctrl+Z takes the whole gesture back"
             assert pg.evaluate("(()=>{try{COMANDI.fai('nope.x',null,()=>1);return 'no'}catch(e){return 'throws'}})()") == "throws", "an action outside the registry is refused"
         step("registry: handlers present, a gesture is one step, unknown id refused", registro_e_raffica)
+        def pan_drag():
+            reset()
+            pg.evaluate(f"(()=>{{const p={SPEC};pushZh(p);p.zoom=[100,400];draw(p)}})()"); tick()
+            n0 = pg.evaluate("STORIA.pila.v.length"); box = pg.evaluate(f"(()=>{{const q={SPEC}.cv.getBoundingClientRect();return {{x:q.left+q.width/2,y:q.top+q.height/2}}}})()")
+            pg.keyboard.down("Shift"); pg.mouse.move(box["x"], box["y"]); pg.mouse.down(); pg.mouse.move(box["x"] + 60, box["y"], steps=5); pg.mouse.move(box["x"] + 120, box["y"], steps=5); pg.mouse.up(); pg.keyboard.up("Shift"); tick()
+            assert pg.evaluate(f"{SPEC}.zoom") != [100, 400], "the drag moved the view"
+            assert pg.evaluate("STORIA.pila.v.length") == n0 + 1, "a whole pan drag is ONE step"
+            undo(); assert pg.evaluate(f"{SPEC}.zoom") == [100, 400], "Ctrl+Z puts the view before the pan back"
+        step("view: a pan drag is one undoable step", pan_drag)
+        def annotazioni():
+            reset()
+            pg.evaluate(f"(()=>{{const p={SPEC};p.anns=p.anns||[];COMANDI.fai('spec.annotation',p,()=>p.anns.push({{x:364.4,text:'a'}}));draw(p)}})()")
+            assert pg.evaluate(f"{SPEC}.anns.length") == 1
+            undo(); assert pg.evaluate(f"{SPEC}.anns.length") == 0, "Ctrl+Z takes the note back"
+            redo(); assert pg.evaluate(f"{SPEC}.anns.length") == 1, "redo puts it back"
+        step("annotation: add, undo, redo", annotazioni)
+        def opzioni():
+            reset()
+            old = pg.evaluate(f"{SPEC}.thr")
+            pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('spec.display',p,()=>{{p.thr=({{}}.x??{old}) + 7}});draw(p)}})()")
+            undo(); assert pg.evaluate(f"{SPEC}.thr") == old, "Ctrl+Z restores the display option"
+            redo(); assert pg.evaluate(f"{SPEC}.thr") == old + 7
+        step("display options: change, undo, redo", opzioni)
+        def sorgente():
+            reset()
+            pg.evaluate(f"(()=>{{const p={SPEC};COMANDI.fai('panel.source',p,()=>{{p.log=!p.log}});draw(p)}})()")
+            was = pg.evaluate(f"!!{SPEC}.log")
+            undo(); assert pg.evaluate(f"!!{SPEC}.log") != was, "Ctrl+Z restores the panel choice"
+        step("panel source: choice, undo", sorgente)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]

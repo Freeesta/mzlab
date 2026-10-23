@@ -12,7 +12,7 @@
 // TAB-BEGIN
 const COMANDI_TAB = [
   { id: "view.zoom", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js", "mappa.js", "pannelli.js", "banco.js", "dda.js", "spettro.js", "azioni-tasti.js", "scroll.js", "tabs.js", "grafici.js"], campi: ["zoom", "zoomY", "lock"],
-    parametri: "m/z or RT interval, intensity interval", tasto: "wheel, Backspace, double click", unisci: "a burst of wheel steps and a drag are one step", annulla: "istantanea" },
+    parametri: "m/z or RT interval, intensity interval", tasto: "wheel, Backspace, double click, Shift+drag", unisci: "a burst of wheel steps, a drag and a pan are one step", annulla: "istantanea" },
   { id: "peaks.integration", nome: "storia.int", modulo: "picchi.js", dove: ["picchi.js", "eventi.js", "xic-spettro.js"], campi: ["ints", "isel"],
     parametri: "limits of the integrated peak", tasto: "I, Del", unisci: "an edge drag is one step", annulla: "istantanea" },
   { id: "panel.fields", nome: "storia.campi", modulo: "grafici.js", dove: ["grafici.js", "pannelli.js", "fondo-spettro.js", "sottrazione.js", "mappa.js", "barra.js"], campi: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
@@ -29,12 +29,11 @@ const COMANDI_TAB = [
     parametri: "position and size of the panels", tasto: "Alt+arrows", unisci: "", annulla: "layout" },
 
   // ---- not undoable yet (annulla "da-portare": the count can only go down, tests/test_comandi.py) or not an action to undo ("nessuna" + motivo)
-  { id: "view.pan", nome: "storia.zoom", modulo: "eventi.js", dove: ["eventi.js"], campi: ["zoom", "zoomY"], parametri: "drag with Shift, trackpad", tasto: "Shift+drag", unisci: "a drag is one step", annulla: "da-portare" },
-  { id: "panel.source", nome: "storia.campi", modulo: "pannelli.js", dove: ["pannelli.js", "banco.js"], campi: ["k", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "rel", "tl", "filt"],
-    parametri: "file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale", tasto: "", unisci: "", annulla: "da-portare" },
-  { id: "spec.annotation", nome: "storia.campi", modulo: "spettro.js", dove: ["spettro.js", "eventi.js"], campi: ["anns"], parametri: "add, edit, delete a note", tasto: "", unisci: "", annulla: "da-portare" },
-  { id: "spec.display", nome: "storia.campi", modulo: "visualizza.js", dove: ["visualizza.js", "spettro.js"], campi: ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "gdelay", "pdaDelay", "pdaAlign", "overlay"],
-    parametri: "threshold, labels, decimals, sticks, dots, markers, contaminants, gradient overlay", tasto: "", unisci: "", annulla: "da-portare" },
+  { id: "panel.source", nome: "cmd.source", modulo: "pannelli.js", dove: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js"], campi: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log"],
+    parametri: "file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale", tasto: "", unisci: "", annulla: "comando" },
+  { id: "spec.annotation", nome: "cmd.annotation", modulo: "eventi.js", dove: ["spettro.js", "eventi.js"], campi: ["anns"], parametri: "add, edit, delete a note", tasto: "", unisci: "", annulla: "comando" },
+  { id: "spec.display", nome: "cmd.display", modulo: "visualizza.js", dove: ["visualizza.js", "spettro.js", "pannelli.js", "barra.js", "gradiente.js"], campi: ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay"],
+    parametri: "threshold, labels, decimals, sticks, dots, markers, contaminants, gradient overlay", tasto: "", unisci: "", annulla: "comando" },
   { id: "spec.isotopes", nome: "storia.campi", modulo: "spettro.js", dove: ["spettro.js"], campi: ["iso"], parametri: "isotope simulation and resolution", tasto: "", unisci: "", annulla: "da-portare" },
   { id: "spec.background", nome: "storia.fondo", modulo: "fondo-spettro.js", dove: ["fondo-spettro.js", "pannelli.js", "grafici.js"], campi: ["bw0", "bw1", "bwi"], parametri: "background window of the spectrum", tasto: "", unisci: "", annulla: "da-portare" },
   { id: "peaks.noise", nome: "storia.int", modulo: "eventi.js", dove: ["eventi.js"], campi: ["noise"], parametri: "noise stretch of an integration", tasto: "", unisci: "", annulla: "da-portare" },
