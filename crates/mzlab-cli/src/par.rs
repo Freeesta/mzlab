@@ -35,6 +35,9 @@ fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
 }
 
 /// The recipe, the `.mzfeatf` bytes and the weak candidates of each file.
+/// The `.mzfeatf` bytes and the weak candidates of one file.
+type Pair = (Vec<u8>, Vec<u8>);
+
 pub(crate) type Detected = (mzlab_feat::recipe::Recipe, Vec<Vec<u8>>, Vec<Vec<u8>>);
 
 /// Index and detection of each file are independent: the pool takes the indexes largest first and starts a detection as soon as its index and the
@@ -71,7 +74,7 @@ fn detect_one(
     idxs: &[PathBuf],
     k: usize,
     recipe: &mzlab_feat::recipe::Recipe,
-) -> Result<(Vec<u8>, Vec<u8>)> {
+) -> Result<Pair> {
     eprintln!("detect {}", files[k].display());
     let name = files[k]
         .file_name()
@@ -102,7 +105,7 @@ struct Pool {
     recipe_state: u8,
     recipe: Option<std::sync::Arc<mzlab_feat::recipe::Recipe>>,
     recipe_err: Option<mzlab_core::error::Error>,
-    detected: Vec<Option<Result<(Vec<u8>, Vec<u8>)>>>,
+    detected: Vec<Option<Result<Pair>>>,
 }
 
 /// Stores the recipe made from the first index (or why there is none) and lets the detections start.
