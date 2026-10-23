@@ -59,6 +59,22 @@ try:
             attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
             rt = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return E.panels.find(q=>q.uv&&q.src===c.id)._a.uvd.rt})()"); assert abs(rt - 0.5) < 0.06, rt
         step("double click on the PDA trace: the UV spectrum of that time", chrom_dbl)
+        def wl_panel():
+            c = "E.panels.find(q=>q.type==='chrom')"
+            assert pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').textContent") == "λ"
+            pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').click()")
+            attendi(pg, "E.panels.filter(q=>q.type==='chrom').length === 2 && E.panels.filter(q=>q.type==='chrom')[1]._a")
+            w = "E.panels.filter(q=>q.type==='chrom')[1]"
+            assert pg.evaluate(f"[{w}.kind, {w}.mz0, {w}.mz1]") == ["pda", 250, 260]
+            assert pg.evaluate(f"{w}.el.querySelectorAll('input[data-o=mz0], input[data-o=mz1]').length") == 2
+            pg.evaluate(f"(()=>{{const i={w}.el.querySelector('input[data-o=mz0]'); i.value='258'; i.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
+            attendi(pg, f"{w}.mz0 === 258 && {w}._a")
+            y = pg.evaluate("fetch('api/chrom?k=0&kind=pda&level=1&mz0=255&mz1=265').then(r=>r.json()).then(j=>Math.max(...j.y))"); assert y > 0, y
+        step("PDA trace: the button is λ; it opens a trace by wavelength with an nm range that can be edited", wl_panel)
+        def wl_menu():
+            ids = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return AZIONI.per({vista:'chrom', p:c, k:0, x:0.5}).map(a=>a.id)})()")
+            assert "chrom.wl" in ids and "chrom.xic" not in ids, ids
+        step("the right-click menu of a PDA trace offers λ and not XIC", wl_menu)
         def axe():
             if not AXE: steps.append(("axe-core not available (SKIP)", "ok")); return
             pg.add_script_tag(path=AXE)
@@ -74,6 +90,9 @@ try:
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 10)
             attendi(pg, "/DAD/.test(document.body.innerText)")
             assert pg.evaluate("E.panels.filter(q=>q.uv).length") == 0
+            pg.evaluate("E.panels.find(q=>q.type==='chrom').el.querySelector('[data-a=xic]').click()")
+            attendi(pg, "/DAD/.test(document.body.innerText)")
+            assert pg.evaluate("E.panels.filter(q=>q.type==='chrom').length") == 1
         step("a file with only the PDA trace: a clear message and no panel", no_matrix)
     r.close()
 except Exception as e:

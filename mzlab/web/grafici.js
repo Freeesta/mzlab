@@ -24,8 +24,8 @@ async function diffTrace(p, s, o0) {
   }
   if (p.type === "chrom") {
     const pda = p.kind === "pda", lv = p.flv ?? f.lv, prec = !pda && f.kind === "ms2" ? p.prec : null;
-    return memo(`dc${s.k}|${p.kind}|${lv}|${pda ? "" : p.mz0 ?? ""}|${pda ? "" : p.mz1 ?? ""}|${prec ?? ""}|${p.filt ?? ""}${SUBREF.qs(o)}`,
-      () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (!pda && p.mz0 != null ? `&mz0=${p.mz0}` : "") + (!pda && p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
+    return memo(`dc${s.k}|${p.kind}|${lv}|${p.mz0 ?? ""}|${p.mz1 ?? ""}|${prec ?? ""}|${p.filt ?? ""}${SUBREF.qs(o)}`,
+      () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (p.mz0 != null ? `&mz0=${p.mz0}` : "") + (p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
   }
   const j = await memo(`dm${s.k}${SUBREF.qs(o)}`, () => J(`api/mrm?k=${s.k}${SUBREF.qs(o)}`));
   const t = j.files[0].transitions.find(q => `${q.q1}>${q.q3}` === s.ion);
@@ -83,7 +83,7 @@ async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
-    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.kind === "pda" ? null : p.mz0, p.kind === "pda" ? null : p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
+    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
     const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea PDA e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
     if (sh) r.forEach(s => { s.x = Array.from(s.x, v => v + sh); });
     return r.filter(s => s.x.length);

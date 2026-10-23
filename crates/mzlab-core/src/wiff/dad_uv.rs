@@ -32,6 +32,58 @@ pub fn dad_spectrum_json(dad: &DadData, rt0: f64, rt1: f64) -> Option<String> {
     ))
 }
 
+/// `/api/uvxic`: the trace of the DAD at the wavelengths `nm0`..`nm1` (mean of the channels inside, or the nearest channel when none falls inside), as `{rt, y, nm0, nm1, n}`. `None` for a non-finite wavelength or an empty matrix.
+pub fn dad_wavelength_json(dad: &DadData, nm0: f64, nm1: f64) -> Option<String> {
+    if !nm0.is_finite() || !nm1.is_finite() {
+        return None;
+    }
+    let cols = window_cols(dad, nm0.min(nm1), nm0.max(nm1))?;
+    let y: Vec<String> = (0..dad.points())
+        .map(|i| {
+            let row = dad.spectrum_at(i).unwrap_or_default();
+            let sum: f64 = cols
+                .iter()
+                .filter_map(|&j| row.get(j))
+                .map(|&v| f64::from(v))
+                .sum();
+            format!("{:.4}", sum / cols.len() as f64)
+        })
+        .collect();
+    let rt: Vec<String> = dad.time_min.iter().map(|t| format!("{t:.4}")).collect();
+    let nm_of = |j: Option<&usize>| j.and_then(|&j| dad.wavelengths_nm.get(j)).copied();
+    Some(format!(
+        "{{\"rt\":[{}],\"y\":[{}],\"nm0\":{},\"nm1\":{},\"n\":{}}}",
+        rt.join(","),
+        y.join(","),
+        nm_of(cols.first())?,
+        nm_of(cols.last())?,
+        cols.len()
+    ))
+}
+
+/// The channels with a wavelength in `lo..=hi`, or the single one nearest to the middle when none falls inside; `None` for an empty matrix.
+fn window_cols(dad: &DadData, lo: f64, hi: f64) -> Option<Vec<usize>> {
+    let cols: Vec<usize> = dad
+        .wavelengths_nm
+        .iter()
+        .enumerate()
+        .filter(|(_, w)| (lo..=hi).contains(w))
+        .map(|(j, _)| j)
+        .collect();
+    if !cols.is_empty() {
+        return Some(cols);
+    }
+    let mid = (lo + hi) / 2.0;
+    let dist = |w: &f64| (w - mid).abs();
+    Some(vec![
+        dad.wavelengths_nm
+            .iter()
+            .enumerate()
+            .min_by(|a, b| dist(a.1).total_cmp(&dist(b.1)))?
+            .0,
+    ])
+}
+
 /// The rows with a time in `lo..=hi`, or the single row nearest to the middle when none falls inside; `None` for an empty matrix.
 fn window_rows(dad: &DadData, lo: f64, hi: f64) -> Option<Vec<usize>> {
     let rows: Vec<usize> = dad
@@ -88,5 +140,23 @@ mod tests {
             "{j}"
         );
         assert!(dad_spectrum_json(&d, f64::NAN, 0.0).is_none());
+    }
+
+    #[test]
+    fn wavelength_trace_is_the_mean_of_the_channels_in_range() {
+        let d = dad(3, 3);
+        // channels 0 and 1 (200, 201): rows [0,1,2] -> 0.5, [3,4,5] -> 3.5, [6,7,8] -> 6.5
+        let j = dad_wavelength_json(&d, 201.0, 200.0).unwrap_or_default();
+        assert!(
+            j.contains("\"y\":[0.5000,3.5000,6.5000]") && j.contains("\"n\":2"),
+            "{j}"
+        );
+        // no channel inside: the nearest one (202)
+        let j = dad_wavelength_json(&d, 250.0, 260.0).unwrap_or_default();
+        assert!(
+            j.contains("\"y\":[2.0000,5.0000,8.0000]") && j.contains("\"nm0\":202"),
+            "{j}"
+        );
+        assert!(dad_wavelength_json(&d, f64::NAN, 0.0).is_none());
     }
 }

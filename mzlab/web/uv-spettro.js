@@ -28,6 +28,21 @@ export async function open(from, k, r0, r1) {
   return newSpec(from, r0, r1, k, null, { uv: true, title: "@uv" });
 }
 
+/**
+ * A new PDA trace at the wavelengths nm0..nm1 (the mean of the DAD channels inside) under panel `from`; a message and no panel when the file has no matrix.
+ * @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k]
+ */
+export async function openWl(from, nm0, nm1, k) {
+  const fk = k ?? E.files.findIndex(f => f.pda), q = `api/chrom?k=${Math.max(0, fk)}&kind=pda&level=1&mz0=${nm0}&mz1=${nm1}`;
+  try { const j = await (await fetch(q)).json(); if (j.error) throw j; } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
+  const np = addPanel("chrom", { kind: "pda", mz0: nm0, mz1: nm1 });
+  if (from && E.panels.includes(from) && from.type === "chrom") {
+    np.el.classList.add("drag"); np.y = from.y + from.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
+    stackAfter(np, from); relayout(); fitHost();
+  } else reveal(np);
+  return np;
+}
+
 /** @param {any} p */
 export async function draw(p) {
   const tok = p._tok = (p._tok || 0) + 1;

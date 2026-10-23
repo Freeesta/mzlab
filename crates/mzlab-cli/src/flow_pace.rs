@@ -252,6 +252,7 @@ impl Lettore for Scans<'_, '_> {
     fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.cromatogramma(c, id) }
     fn dad_map(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.dad_map(c) }
     fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_spectrum(c, rt0, rt1) }
+    fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_wavelength(c, nm0, nm1) }
     fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
     fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.testata_mzml(c) }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra { self.l.extra_mzml(s) }

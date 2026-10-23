@@ -210,6 +210,10 @@ pub trait Lettore {
     fn dad_spectrum(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> {
         Ok(None)
     }
+    /// Trace of the DAD / PDA of sample `c` at the wavelengths `nm0`..`nm1` (JSON `{rt, y, nm0, nm1, n}`), if it has the optical matrix.
+    fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> {
+        Ok(None)
+    }
     /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
     fn metodo(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.

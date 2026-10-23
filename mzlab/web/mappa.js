@@ -750,7 +750,7 @@ window.MAPPA = (() => {
   const ptText = q => q ? `RT ${q.rt.toFixed(2)} min · m/z ${q.mz.toFixed(3)}${q.v != null ? " · " + T("mappa.read.int") + " " + fmt(q.v) : ""}` : "";
   function extract(ad, what) {
     const q = ad.pt(); if (!q) { nearMsg(T("mapnav.nopt")); return; }
-    if (what !== "spec") xicDirect(q.mz, ad.p);
+    if (what !== "spec") { if (ad.p._a.pda) wlOpen(ad.p, +q.mz.toFixed(1), +q.mz.toFixed(1), ad.p._a.f.k); else xicDirect(q.mz, ad.p); }      // on the PDA map the vertical axis is the wavelength (nm)
     if (what !== "xic") { const p = ad.p; if (ad.kind === "2d" && p.sel && p.sel[1] > p.sel[0]) newSpec(p, p.sel[0], p.sel[1], p._a.f.k); else spectrumAt(p, q.rt, ad.k); }
     if (ad.after) ad.after();
   }
@@ -759,7 +759,7 @@ window.MAPPA = (() => {
   const nameOf = (id, ad) => T(id === "maplock" && ad.locked() || id === "mapmark" && ad.marked() ? `cmd.${id}.off.name` : `cmd.${id}.name`);
   const cmd = (id, gruppo, ic, viste, o) => AZIONI.registra({ id, gruppo, ic, viste, nome: ad => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: ad => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
   // with an RT stretch selected (Alt + drag) the spectrum is the average over it
-  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : T(`cmd.${id}.menu`) });
+  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : id === "mapxic" && ad.p._a?.pda ? T("cmd.mapxic.menuWl") : T(`cmd.${id}.menu`) });
   const hasPt = ad => !!ad.pt();
   const CMDS = [
     cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), disponibile: hasPt, esegui: ad => extract(ad, "xic") }),

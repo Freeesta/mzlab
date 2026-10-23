@@ -12,6 +12,7 @@
 2. **Pannello**: un pannello `spec` con `uv: true` (`uv-spettro.js`, modulo caricato al primo uso): asse nm, assorbanza mAU, tabella dei dati, export, zoom da tastiera. Doppio clic sulla mappa PDA e sulla traccia PDA (azione `chrom.uvAtRt`, registro `azioni/1`); con una selezione sulla traccia, anche la media (`chrom.uvAvgSel`). Il ritardo «Allinea PDA e massa» è tolto dal tempo.
 3. **Senza matrice**: messaggio `uv.none` («solo i file `.wiff` SCIEX con il rivelatore DAD») e nessun pannello.
 4. **Test**: `.wiff` sintetico con DAD già disponibile (`tools/wiff_riferimento.py`, `dad=`), usato da `tests_e2e/e2e_uv_spettro.py`. Una demo con DAD sintetico dichiarata come tale è possibile con lo stesso scrittore, ma serve una decisione di Federico (i demo sono dati anonimi di `mzlab/web/esempi/`).
+5. **Estrazione per λ** (richiesta di Federico): con il PDA selezionato il pulsante XIC diventa «λ» e il menu destro offre «Estrai lunghezza d'onda (λ)» al posto di XIC; apre un pannello traccia PDA con un intervallo di nm modificabile (media dei canali). Stessa rotta `chrom?kind=pda` con `mz0/mz1` in nm; senza matrice stesso messaggio `uv.none`.
 
 ## Non fatto / aperto
 - Nessun λmax o assegnazione automatica (principio 1): il valore si legge da cursore e tabella.
