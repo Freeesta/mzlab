@@ -8,6 +8,7 @@ mod gemini;
 mod openai;
 mod options;
 pub mod sse;
+mod wire;
 
 pub(crate) use errors::api_error;
 pub use errors::{http_error, retry_delay, MAX_RATE_RETRIES};

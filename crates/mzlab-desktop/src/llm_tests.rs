@@ -52,3 +52,17 @@ fn unknown_provider_is_a_conversation_error() {
         .unwrap();
     assert_eq!(e.key, "err.llm.conversation");
 }
+
+#[test]
+fn send_of_a_ready_request_needs_its_provider_and_a_well_formed_request() {
+    let st = State::default();
+    let d = tempfile::tempdir().unwrap();
+    st.store.lock().unwrap().set_dir(d.path().to_path_buf());
+    let bad = |p: Value| st.op_llm("llm/send", &p).err().map(|e| e.key.to_string());
+    assert_eq!(
+        bad(json!({"provider": "nope", "request": "{}"})).as_deref(),
+        Some("err.llm.conversation")
+    );
+    assert!(bad(json!({"provider": "anthropic", "request": "{\"url\":1}"})).is_some());
+    assert!(bad(json!({"provider": "anthropic", "request": "not json"})).is_some());
+}

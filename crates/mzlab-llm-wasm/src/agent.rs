@@ -14,7 +14,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::{fail, find};
 
-mod sub;
+pub(crate) mod sub;
 
 fn line(o: &Output, outcome: &str) -> String {
     let mut j = Out::default();
@@ -51,7 +51,7 @@ fn line(o: &Output, outcome: &str) -> String {
 #[wasm_bindgen]
 pub struct Agent {
     pub(super) st: State,
-    replay: Option<Replay>,
+    pub(super) replay: Option<Replay>,
 }
 
 #[wasm_bindgen]
