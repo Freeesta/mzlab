@@ -2,7 +2,7 @@
 
 Perché: `rust-core` è il job più lungo delle PR Rust (mediana 433 s, passo dei test 401 s, dati `stat-ci` dal 2026-10-22 14:00 UTC) e `cargo test` esegue i ~153 binari uno dopo l'altro; molti sono test di parità che lanciano un processo Python a thread singolo. In locale (4 CPU, profilo del workflow): compilazione 240 s a freddo, esecuzione in serie 377 s (60 s dopo la correzione di `number_replicates`), esecuzione dei 153 binari con `xargs -P4` **145 s e 152 s** (due giri, il secondo con `MZLAB_GOLDEN_STRICT=1 MZLAB_IDX_STRICT=1`), nessun fallimento né collisione sui file sintetici.
 
-Guadagno atteso: circa −170 s sul passo (da ~340 s dopo la PR dei campioni a ~170 s), quindi `rust-core` scende sotto `rust-wasm` (325 s) e il percorso critico delle PR Rust passa a circa 5,5-6 min dai 8 attuali. Stessa idea applicabile a `rust` e `rust-misc-*` solo dove l'esecuzione pesa: in `rust-misc-b` l'esecuzione misurata è 60 s su 268, non conviene.
+Misura in CI (job `rust-core` della PR dei campioni, 427 s): esecuzione dei 159 binari 201 s in serie (il runner è circa 1,9 volte più veloce del contenitore locale), il resto è compilazione e cache. Con quattro binari alla volta l'esecuzione scenderebbe a circa 80-100 s: guadagno atteso circa −100 s su `rust-core` (da ~430 a ~330 s, al livello di `rust-wasm` 325 s); il percorso critico delle PR Rust passa da ~8 a ~6,5 min. In `rust-misc-b` l'esecuzione misurata è 60 s su 268 (il resto è compilazione): non conviene.
 
 ## Modifica a `.github/workflows/rust.yml` (richiede il «via» di Federico)
 
