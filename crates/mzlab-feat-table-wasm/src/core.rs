@@ -121,6 +121,12 @@ pub fn tabcheck_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: 
     tabcheck::to_json(&t, &s, v.as_ref(), &o)
 }
 
+/// The `plausible/1` of a table (the values it shows: finite, in range, ppm of the identity columns); `mz_tol_da` is the alignment tolerance (0 = high resolution).
+pub fn plausible_json<R: ReadAt>(r: &mut R, size: u64, mz_tol_da: f64) -> Result<String> {
+    let (t, _) = read_table_from(r, size)?;
+    Ok(mzlab_feat::plausible::to_json(&t, mz_tol_da))
+}
+
 /// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells), `quant` (FBMN),
 /// `csv_semicolon` (the sheet of features as text with `;`), `xlsx_rows` (the same sheet as JSON rows for the page to zip) or `mztab` (mzTab-M 2.0).
 pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> Result<String> {
