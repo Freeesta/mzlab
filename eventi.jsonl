@@ -13948,3 +13948,4 @@
 {"v":1,"ts_utc":"2026-10-23T11:20:59Z","azione":"aperta","tipo":"pr","pr":1599,"sha":"55d731f2319b3be5a88eb6102585827c8f7f5bd8"}
 {"v":1,"ts_utc":"2026-10-23T11:22:11Z","azione":"aperta","tipo":"pr","pr":1600,"sha":"3fb1c8b55fc2a0d33ed82e8557f20bda2f7eedd9"}
 {"v":1,"ts_utc":"2026-10-23T11:27:12Z","azione":"aperta","tipo":"pr","pr":1601,"sha":"1750f9583ebcd0e66194b4209f413b4c0a1b3bdb"}
+{"v":1,"tipo":"pr","pr":1600,"sha":"3fb1c8b55fc2a0d33ed82e8557f20bda2f7eedd9","ts_utc":"2026-10-23T11:28:14Z","azione":"unita","aperta_s":363,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":2,"righe_meno":2,"file_n":1,"file":["deny.toml"],"aree":{"altro":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":188}
