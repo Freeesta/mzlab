@@ -67,8 +67,29 @@ fn formula_of(n: Option<&Value>) -> (String, String) {
     (cell(name.unwrap_or("")), num(ppm, 2))
 }
 
+/// The bond-break hypotheses of the node `id` in the key `rotture`: how many, and the formula of the best one.
+fn breaks_of(g: &Value, id: Option<&str>) -> (String, String) {
+    let hit = g
+        .get("rotture")
+        .and_then(|r| r.get("nodi"))
+        .map_or(&[][..], |x| x.arr())
+        .iter()
+        .find(|n| n.get("nodo").and_then(Value::str) == id);
+    let best = hit
+        .and_then(|n| n.get("ipotesi"))
+        .and_then(|i| i.arr().first())
+        .and_then(|h| h.get("formula"));
+    (num(hit.and_then(|n| n.get("n")), 0), text(best))
+}
+
 fn nodes_csv(g: &Value) -> String {
-    let mut t = String::from("node,level,mz,dev_ppm,observations,rel_max,formula,formula_ppm,formula_source,candidates,isolated,tree\n");
+    let has_breaks = g.get("rotture").is_some();
+    let mut t = String::from("node,level,mz,dev_ppm,observations,rel_max,formula,formula_ppm,formula_source,candidates,isolated,tree");
+    t += if has_breaks {
+        ",bond_break_hypotheses,bond_break_best_formula\n"
+    } else {
+        "\n"
+    };
     for n in g.get("nodi").map_or(&[][..], |x| x.arr()) {
         let (formula, ppm) = formula_of(Some(n));
         let f = n.get("formula");
@@ -81,8 +102,14 @@ fn nodes_csv(g: &Value) -> String {
             .iter()
             .filter_map(Value::str)
             .collect();
+        let extra = if has_breaks {
+            let (k, best) = breaks_of(g, n.get("id").and_then(Value::str));
+            format!(",{},{best}", if k.is_empty() { "0" } else { &k })
+        } else {
+            String::new()
+        };
         t += &format!(
-            "{},{},{},{},{},{},{formula},{ppm},{},{candidates},{},{}\n",
+            "{},{},{},{},{},{},{formula},{ppm},{},{candidates},{},{}{extra}\n",
             text(n.get("id")),
             num(n.get("livello"), 0),
             num(n.get("mz"), 5),
@@ -97,8 +124,44 @@ fn nodes_csv(g: &Value) -> String {
     t
 }
 
+/// Extra cells of an edge: the named loss and its confidence (`interpretazione`), the bond-break flag (`rotture`).
+fn edge_extras(g: &Value, a: &Value) -> String {
+    let same = |x: &&Value| {
+        x.get("da").and_then(Value::str) == a.get("da").and_then(Value::str)
+            && x.get("a").and_then(Value::str) == a.get("a").and_then(Value::str)
+    };
+    let arc_of = |key: &str| {
+        g.get(key)
+            .and_then(|k| k.get("archi"))
+            .and_then(|l| l.arr().iter().find(same))
+    };
+    let mut s = String::new();
+    if g.get("interpretazione").is_some() {
+        let l = arc_of("interpretazione").and_then(|x| x.get("perdita"));
+        s += &format!(
+            ",{},{}",
+            text(l.and_then(|p| p.get("nome"))),
+            text(l.and_then(|p| p.get("confidenza")))
+        );
+    }
+    if g.get("rotture").is_some() {
+        let e = arc_of("rotture")
+            .and_then(|x| x.get("spiegato"))
+            .and_then(Value::bool);
+        s += &format!(",{}", e.unwrap_or(false));
+    }
+    s
+}
+
 fn modifications_csv(g: &Value) -> String {
-    let mut t = String::from("from,from_mz,from_formula,to,to_mz,to_formula,loss_mass,loss_formula,loss_ppm,isolation_step,tree,level,activation,ce,scans,rel\n");
+    let mut t = String::from("from,from_mz,from_formula,to,to_mz,to_formula,loss_mass,loss_formula,loss_ppm,isolation_step,tree,level,activation,ce,scans,rel");
+    if g.get("interpretazione").is_some() {
+        t += ",loss_name,loss_confidence";
+    }
+    if g.get("rotture").is_some() {
+        t += ",bond_break_explained";
+    }
+    t.push('\n');
     for a in g.get("archi").map_or(&[][..], |x| x.arr()) {
         let (from, to) = (
             find(g, "nodi", a.get("da").and_then(Value::str)),
@@ -118,13 +181,14 @@ fn modifications_csv(g: &Value) -> String {
             num(loss.and_then(|l| l.get("ppm")), 2),
             a.get("isolamento").and_then(Value::bool).unwrap_or(false),
         );
+        let extra = edge_extras(g, a);
         let measures = a.get("misure").map_or(&[][..], |m| m.arr());
         if measures.is_empty() {
-            t += &format!("{head},,,,,,\n");
+            t += &format!("{head},,,,,,{extra}\n");
         }
         for m in measures {
             t += &format!(
-                "{head},{},{},{},{},{},{}\n",
+                "{head},{},{},{},{},{},{}{extra}\n",
                 text(m.get("albero")),
                 num(m.get("livello"), 0),
                 text(m.get("att")),
@@ -201,5 +265,29 @@ mod tests {
                 .contains("STD")
         );
         assert!(library_text(&g, GRAPH, ("", "pdf", "all", false, true)).is_err());
+    }
+
+    #[test]
+    fn the_optional_keys_add_columns_only_when_present() {
+        let with = GRAPH.replacen(
+            r#"],"archi""#,
+            r#"],"rotture":{"nodi":[{"nodo":"n1","n":2,"ipotesi":[{"formula":"C7H8N3+"}]}],"archi":[{"da":"n0","a":"n1","spiegato":true}]},"interpretazione":{"archi":[{"da":"n0","a":"n1","perdita":{"nome":"methyl isocyanate","confidenza":"high"}}]},"archi""#,
+            1,
+        );
+        let g = parse(with.as_bytes()).unwrap();
+        let nodes = table_text(&g, "nodes", false);
+        assert!(nodes
+            .lines()
+            .next()
+            .unwrap()
+            .ends_with("bond_break_best_formula"));
+        assert!(nodes.contains(",2,C7H8N3+"));
+        let mods = table_text(&g, "modifications", false);
+        assert!(mods
+            .lines()
+            .next()
+            .unwrap()
+            .ends_with("loss_name,loss_confidence,bond_break_explained"));
+        assert!(mods.contains(",,,,,,methyl isocyanate,high,true"));
     }
 }

@@ -96,8 +96,8 @@ export function query(/** @type {number} */ k) {
 /** The URL of the graph for the state and the options of the precursor tree. */
 export const graphUrl = (/** @type {number} */ k) => "api/msn_grafo?" + query(k);
 
-/** The URL the tab draws from: the graph plus the interpretation of the losses and the fragmentation rules (evidence for the arcs and the panel of a node; exports and the library do not carry them). */
-const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpreta=1&regole=1" + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&strutture=tutti" : "") : "");
+/** The URL the tab draws from: the graph plus the interpretation of the losses and the fragmentation rules and, with a SMILES, the bond breaks of the structure (evidence for the arcs and the panel of a node; exports and the library do not carry them). */
+const viewUrl = (/** @type {number} */ k, /** @type {boolean} */ withCuts = true) => graphUrl(k) + "&interpreta=1&regole=1" + (withCuts && G.smiles && ionText() ? "&rotture=1" : "") + (G.smiles && G.molfile ? "&molfile=" + encodeURIComponent(G.molfile) + (withCuts ? "&strutture=tutti" : "") : "");
 
 /** Asks for the graph of the file; keeps the answer in G.j or the error in G.error. @returns {Promise<boolean>} false when a newer request took over. */
 export async function fetchGraph(/** @type {number} */ k) {
