@@ -11859,3 +11859,4 @@
 {"v":1,"ts_utc":"2026-10-23T05:18:09Z","tipo":"carico","k":"2026-10-23T05:1","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-10-23T05:40:17Z","azione":"aperta","tipo":"pr","pr":1573,"sha":"bcbe9be56b03b38383e5381ee6c81cae34274b4e"}
 {"v":1,"ts_utc":"2026-10-23T05:42:52Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/raw-mzml-rm1b","merge_main":true,"aree":{"rust":4,"docs":3},"tipo":"pr","pr":1573,"sha":"7f2fe0b351e22a2714e347e5eeabb3eadc2a5520"}
+{"v":1,"ts_utc":"2026-10-23T05:45:01Z","azione":"push","titolo":"Record the zlib-rs decision in the raw-mzml notes","merge_main":false,"aree":{"docs":1},"tipo":"pr","pr":1573,"sha":"a03e98534760f56e2d7c03fc86f3f2a0608f55dc"}
