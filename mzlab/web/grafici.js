@@ -196,6 +196,10 @@ function setCorr(p, v) {
 }
 // chromatogram / XIC / MRM: two independent choices, always applied in the same order (the file first, then the background on the difference)
 function setSub(p, v) { pushCampi(p, "storia.bianco"); p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
+// thin grey baseline of a trace (stacked and waterfall views)
+function baseLine(g, y, xa, xb) { g.save(); g.strokeStyle = css("--line"); g.lineWidth = 1; g.beginPath(); g.moveTo(xa, y); g.lineTo(xb, y); g.stroke(); g.restore(); }
+// choosing stacked or waterfall switches the automatic background on, unless the student already picked one
+function fondoOnStack(p, mode) { if (mode !== "ovl" && p.fondo && p.fondo.mode === "none") p.fondo = { ...p.fondo, mode: "auto", w: p.fondo.w || 1, ib: null }; }
 function setFondo(p, v) {
   pushCampi(p, "storia.fondo"); const f = p.fondo; p._pickIbk = false;
   if (v === "snip") { p.fondo = { ...f, mode: "auto", w: f.w || 1, ib: null }; }
@@ -358,7 +362,7 @@ async function drawLines(p) {
   if (stk) {
     g.font = fpx(12); g.textAlign = "left";
     const hrw = !!window.BANCO && BANCO.on();
-    sr.forEach(s => { if (s.grp != null && sr.find(q => q.row === s.row) !== s) return; const y = Y(s.off); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); const lab = s.grp != null && s.rlabel ? s.rlabel : s.name, t = lab.length > 34 ? lab.slice(0, 33) + "…" : lab;
+    sr.forEach(s => { if (s.grp != null && sr.find(q => q.row === s.row) !== s) return; const y = Y(s.off); baseLine(g, y, M.l, W - M.r); const lab = s.grp != null && s.rlabel ? s.rlabel : s.name, t = lab.length > 34 ? lab.slice(0, 33) + "…" : lab;
       if (hrw) { const nl = "NL: " + rowMax[s.row].toExponential(2).replace("e+", "E"); g.save(); g.textAlign = "right"; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(nl, W - M.r - 4, y - 4); g.fillStyle = css("--muted"); g.fillText(nl, W - M.r - 4, y - 4); g.restore(); }
       g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
@@ -368,9 +372,12 @@ async function drawLines(p) {
     for (let k = cs.length - 1; k >= 0; k--) {
       const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
       g.beginPath();
-      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); last = px; });
+      const pts = [];
+      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; });
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = css("--panel"); g.fill();
+      baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
+      g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
       g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
       tags.push({ s, f, px: first, py: Y(0) + sy });
     }

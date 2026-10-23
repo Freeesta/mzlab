@@ -54,6 +54,7 @@ try:
             try: pg.wait_for_function(f"(()=>{{const a=E.panels[{ch}]._a;return !!(a && a.cas && a.sr && a.sr.length===4)}})()", timeout=60000)
             except Exception: raise AssertionError("state: " + str(pg.evaluate(f"(()=>{{const p=E.panels[{ch}],a=p._a;return {{mode:p.mode,cas:a&&a.cas,n:a&&a.sr&&a.sr.length,files:E.files.map(f=>[f.label,f.vis,f.kind]),tab:E.tab}}}})()")))
             a = pg.evaluate(f"(()=>{{const a=E.panels[{ch}]._a;return {{cas:a.cas,n:a.sr.length}}}})()"); assert a["cas"] and a["n"] == 4, a
+            assert pg.evaluate(f"E.panels[{ch}].fondo.mode") == "auto", "waterfall switches the automatic background on"
             pg.evaluate(f"E.panels[{ch}].el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.move(box["x"] + 300, box["y"] + 150); pg.wait_for_timeout(2000)
             assert pg.locator(".pnl.chrom .tip").first.is_hidden(), "no reading of values in the waterfall view"
