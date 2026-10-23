@@ -32,19 +32,37 @@ fn view_of(t: &Aligned, s: &[Sample], spec: &str) -> Result<Option<View>> {
     view::from_spec(t, s, spec.as_bytes()).map(Some)
 }
 
-fn ctx<'a>(t: &'a Aligned, s: &'a [Sample], v: Option<&'a View>, sha: &'a str, polarity: i32) -> Ctx<'a> {
-    Ctx { table: t, samples: s, view: v, table_sha256: sha, polarity: if polarity < 0 { -1 } else { 1 } }
+fn ctx<'a>(
+    t: &'a Aligned,
+    s: &'a [Sample],
+    v: Option<&'a View>,
+    sha: &'a str,
+    polarity: i32,
+) -> Ctx<'a> {
+    Ctx {
+        table: t,
+        samples: s,
+        view: v,
+        table_sha256: sha,
+        polarity: if polarity < 0 { -1 } else { 1 },
+    }
 }
 
 /// The view of a table (an empty `spec` keeps every row, areas as measured): `{"digest", "righe":[id of every row kept], "fattori":[per file], "conteggi":{...}}`.
-pub fn view_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) -> Result<String> {
+pub fn view_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let spec = if spec.trim().is_empty() { "{}" } else { spec };
     let v = view::from_spec(&t, &s, spec.as_bytes())?;
     let mut o = Out::default();
     o.raw("{\"digest\":").str(&v.digest(&t)).raw(",\"righe\":[");
     for (i, &row) in v.rows.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).int(i64::from(t.id(row as usize)));
+        o.raw(if i > 0 { "," } else { "" })
+            .int(i64::from(t.id(row as usize)));
     }
     o.raw("],\"fattori\":").floats(&v.factors);
     o.raw(",\"conteggi\":").raw(&v.counts_json()).raw("}");
@@ -52,33 +70,63 @@ pub fn view_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str
 }
 
 /// The `report/1` of a table under the view `spec` (empty = the whole table).
-pub fn report_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, table_sha256: &str) -> Result<String> {
+pub fn report_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
     Ok(report::to_json(&t, &s, v.as_ref(), table_sha256))
 }
 
 /// The `tptab/1` of a table: the rows of the JSON list `rows_json` (indices of the table), or, empty, the rows of the view `tp/1`, with their numbers and the controls.
-pub fn tp_table_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, rows_json: &str) -> Result<String> {
+pub fn tp_table_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    rows_json: &str,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let rows: Option<Vec<usize>> = if rows_json.trim().is_empty() {
         None
     } else {
         let v = mzlab_core::json::parse(rows_json.as_bytes())?;
-        Some(v.arr().iter().filter_map(|x| x.f64()).map(|x| x as usize).collect())
+        Some(
+            v.arr()
+                .iter()
+                .filter_map(|x| x.f64())
+                .map(|x| x as usize)
+                .collect(),
+        )
     };
     mzlab_feat::tp::table_json(&t, &s, rows.as_deref())
 }
 
 /// `tp_table_json` with the conditions: `campioni_json` is the `campioni/2` of the files and `infos_json` the list `[{"row","neutral_formula","ion_formula","ppm"}]` of
 /// what the caller knows of the best hypothesis of each row. With fewer than two conditions the text is the one of `tp_table_json`; with more it carries `gruppi`.
-pub fn tp_table_cond_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, rows_json: &str, campioni_json: &str, infos_json: &str) -> Result<String> {
+pub fn tp_table_cond_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    rows_json: &str,
+    campioni_json: &str,
+    infos_json: &str,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let rows: Option<Vec<usize>> = if rows_json.trim().is_empty() {
         None
     } else {
         let v = mzlab_core::json::parse(rows_json.as_bytes())?;
-        Some(v.arr().iter().filter_map(|x| x.f64()).map(|x| x as usize).collect())
+        Some(
+            v.arr()
+                .iter()
+                .filter_map(|x| x.f64())
+                .map(|x| x as usize)
+                .collect(),
+        )
     };
     let cs = mzlab_core::campioni::from_json(campioni_json.as_bytes())?;
     let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
@@ -93,7 +141,18 @@ pub fn samples_json(files_json: &str) -> Result<String> {
         .map(|a| a.arr())
         .unwrap_or_default()
         .iter()
-        .map(|f| (f.get("name").and_then(|x| x.str()).unwrap_or("").to_string(), f.get("sha256").and_then(|x| x.str()).unwrap_or("").to_string()))
+        .map(|f| {
+            (
+                f.get("name")
+                    .and_then(|x| x.str())
+                    .unwrap_or("")
+                    .to_string(),
+                f.get("sha256")
+                    .and_then(|x| x.str())
+                    .unwrap_or("")
+                    .to_string(),
+            )
+        })
         .collect();
     Ok(samples::to_json(&samples::propose(&files)))
 }
@@ -107,14 +166,31 @@ pub fn qc_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str) 
 
 /// The `tabcheck/1` of a table under the view `spec` (empty = the whole table): fifteen checks with value, threshold, flag, example rows and proof. `polarity` is the one the
 /// table was made with; `options_json` is empty or `{"expected_polarity": 1|-1, "mz_tol_da": number}` (what the inspection of the files found, the m/z tolerance of the alignment).
-pub fn tabcheck_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, polarity: i32, options_json: &str) -> Result<String> {
+pub fn tabcheck_json<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    polarity: i32,
+    options_json: &str,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
-    let mut o = tabcheck::Options { polarity: if polarity < 0 { -1 } else { 1 }, ..tabcheck::Options::default() };
+    let mut o = tabcheck::Options {
+        polarity: if polarity < 0 { -1 } else { 1 },
+        ..tabcheck::Options::default()
+    };
     if !options_json.trim().is_empty() {
         let j = mzlab_core::json::parse(options_json.as_bytes())?;
-        o.expected_polarity = j.get("expected_polarity").and_then(|x| x.f64()).map(|x| if x < 0.0 { -1 } else { 1 });
-        if let Some(x) = j.get("mz_tol_da").and_then(|x| x.f64()).filter(|x| x.is_finite() && *x > 0.0) {
+        o.expected_polarity =
+            j.get("expected_polarity")
+                .and_then(|x| x.f64())
+                .map(|x| if x < 0.0 { -1 } else { 1 });
+        if let Some(x) = j
+            .get("mz_tol_da")
+            .and_then(|x| x.f64())
+            .filter(|x| x.is_finite() && *x > 0.0)
+        {
             o.mz_tol_da = x;
         }
     }
@@ -123,7 +199,15 @@ pub fn tabcheck_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: 
 
 /// A table file: `kind` is `full` (CSV full for mzmine), `full_mzmine` (the same with mzmine's words for the filled and targeted cells), `quant` (FBMN),
 /// `csv_semicolon` (the sheet of features as text with `;`), `xlsx_rows` (the same sheet as JSON rows for the page to zip) or `mztab` (mzTab-M 2.0).
-pub fn table_file<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> Result<String> {
+pub fn table_file<R: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    spec: &str,
+    table_sha256: &str,
+    polarity: i32,
+    kind: &str,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     let v = view_of(&t, &s, spec)?;
     let c = ctx(&t, &s, v.as_ref(), table_sha256, polarity);
@@ -173,7 +257,9 @@ fn ms2_options(spec: &str, kind: &str, samples: &[Sample]) -> (ms2spec::SpecOpts
         background: get("ms2_background").and_then(|x| x.bool()) == Some(true),
         unit: kind == "mgf_unit",
     };
-    let blanks = (0..samples.len()).filter(|&k| samples[k].kind == "blank").collect();
+    let blanks = (0..samples.len())
+        .filter(|&k| samples[k].kind == "blank")
+        .collect();
     (opts, blanks)
 }
 
@@ -184,7 +270,11 @@ fn ms2_note(text: String, info: &ms2spec::SpecInfo) -> String {
     }
     let lost: u32 = info.lost.iter().sum();
     let note = format!("# MS2 background: {}, {} peaks removed\n", info.bg, lost);
-    let at = text.split_inclusive('\n').take_while(|l| l.starts_with('#')).map(str::len).sum();
+    let at = text
+        .split_inclusive('\n')
+        .take_while(|l| l.starts_with('#'))
+        .map(str::len)
+        .sum();
     let mut out = text;
     out.insert_str(at, &note);
     out
@@ -197,7 +287,14 @@ pub fn row_json<R: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32) ->
 }
 
 /// The `riga_tracce/1` of the row with `id`, read from the index of every file (`open(k)`), within `ppm` of its m/z.
-pub fn row_traces_json<R: ReadAt, I: ReadAt>(r: &mut R, size: u64, samples_json: &str, id: u32, ppm: f64, open: impl FnMut(usize) -> Result<Index<I>>) -> Result<String> {
+pub fn row_traces_json<R: ReadAt, I: ReadAt>(
+    r: &mut R,
+    size: u64,
+    samples_json: &str,
+    id: u32,
+    ppm: f64,
+    open: impl FnMut(usize) -> Result<Index<I>>,
+) -> Result<String> {
     let (t, s) = load(r, size, samples_json)?;
     riga::traces(&t, &s, id, open, ppm)
 }

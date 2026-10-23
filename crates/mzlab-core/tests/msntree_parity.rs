@@ -52,14 +52,19 @@ fn nums(v: &Value) -> Vec<f64> {
 #[test]
 fn tree_like_python() {
     let golden = root().join("tests/golden/ref/msntree.json");
-    let committed = golden.exists();           // the answers of Python for the synthetic data are committed: no python3 needed
-    let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab_msntree_{}.json", std::process::id())) };
-    let ok = committed || Command::new("python3")
-        .arg(root().join("tools/msntree_riferimento.py"))
-        .arg(&out)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let committed = golden.exists(); // the answers of Python for the synthetic data are committed: no python3 needed
+    let out = if committed {
+        golden
+    } else {
+        std::env::temp_dir().join(format!("mzlab_msntree_{}.json", std::process::id()))
+    };
+    let ok = committed
+        || Command::new("python3")
+            .arg(root().join("tools/msntree_riferimento.py"))
+            .arg(&out)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
     if !ok {
         assert!(
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
@@ -69,7 +74,9 @@ fn tree_like_python() {
         return;
     }
     let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
-    if !committed { let _ = std::fs::remove_file(&out); }
+    if !committed {
+        let _ = std::fs::remove_file(&out);
+    }
     let (mut trees, mut errors, mut formulas) = (0, 0, 0);
     for (i, c) in cases.iter().enumerate() {
         let scans: Vec<TreeScan> = c["scans"]

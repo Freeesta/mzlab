@@ -22,7 +22,9 @@ impl Engine {
                 Some(r) => p.fetch(k, r).map_err(|e| error_json(&e)),
             }
         };
-        let Some(reference) = get(p.o.reference)? else { return Ok(String::new()) };
+        let Some(reference) = get(p.o.reference)? else {
+            return Ok(String::new());
+        };
         let mut files = Vec::new();
         for &k in &p.ks {
             match get(k)? {
@@ -42,7 +44,9 @@ impl Engine {
         };
         let mut rows = Vec::new();
         for &k in &p.ks {
-            let Some(r) = self.idx.get_mut(&k) else { return Ok(String::new()) };
+            let Some(r) = self.idx.get_mut(&k) else {
+                return Ok(String::new());
+            };
             match p.measure(k, r).map_err(|e| error_json(&e))? {
                 Some(row) => rows.push(row),
                 None => return Ok(String::new()),

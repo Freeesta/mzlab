@@ -25,7 +25,9 @@ pub struct View {
 /// The view of `t` under a method and a list of rules.
 pub fn build(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rule]) -> Result<View> {
     let why = filters::apply(t, samples, rules)?;
-    let rows = (0..why.len() as u32).filter(|&r| why[r as usize] == 0).collect();
+    let rows = (0..why.len() as u32)
+        .filter(|&r| why[r as usize] == 0)
+        .collect();
     Ok(View {
         method: method.clone(),
         rules: rules.to_vec(),
@@ -56,7 +58,11 @@ impl View {
 
     /// The parameters of both operations: `{"normalizza": ..., "filtra": [...]}` (what the `.mzflow` records).
     pub fn spec_json(&self) -> String {
-        format!("{{\"normalizza\":{},\"filtra\":{}}}", self.method.to_json(), filters::to_json(&self.rules))
+        format!(
+            "{{\"normalizza\":{},\"filtra\":{}}}",
+            self.method.to_json(),
+            filters::to_json(&self.rules)
+        )
     }
 
     /// SHA-256 of the parameters and of the ids of the rows kept: two equal views have the same digest.
@@ -71,7 +77,11 @@ impl View {
     /// Counts for the report: rows in, rows kept and, for every rule, the rows it rejected first.
     pub fn counts_json(&self) -> String {
         let mut j = Out::default();
-        j.raw("{\"righe\":").int(self.why.len() as i64).raw(",\"tenute\":").int(self.rows.len() as i64).raw(",\"scartate\":[");
+        j.raw("{\"righe\":")
+            .int(self.why.len() as i64)
+            .raw(",\"tenute\":")
+            .int(self.rows.len() as i64)
+            .raw(",\"scartate\":[");
         for i in 0..self.rules.len() {
             let n = self.why.iter().filter(|&&w| w as usize == i + 1).count();
             j.raw(if i > 0 { "," } else { "" }).int(n as i64);
@@ -88,6 +98,8 @@ pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
         Some(m) => Method::from_json(m)?,
         None => Method::None,
     };
-    let rules = v.get("filtra").map_or(Ok(Vec::new()), |f: &Value| filters::from_json(f))?;
+    let rules = v
+        .get("filtra")
+        .map_or(Ok(Vec::new()), |f: &Value| filters::from_json(f))?;
     build(t, samples, &method, &rules)
 }

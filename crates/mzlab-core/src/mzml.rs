@@ -234,19 +234,22 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
         unit: mob_unit,
         scan: s.mobility_scan,
     });
-    Ok((Spectrum {
-        index: s.index,
-        id: s.id,
-        level: s.level,
-        rt: if s.rt_seconds { s.rt / 60.0 } else { s.rt },
-        polarity: s.polarity,
-        profile: s.profile,
-        filter: s.filter,
-        precursor: s.selected.or(s.target),
-        mz,
-        intensity: it,
-        wide,
-    }, mobility))
+    Ok((
+        Spectrum {
+            index: s.index,
+            id: s.id,
+            level: s.level,
+            rt: if s.rt_seconds { s.rt / 60.0 } else { s.rt },
+            polarity: s.polarity,
+            profile: s.profile,
+            filter: s.filter,
+            precursor: s.selected.or(s.target),
+            mz,
+            intensity: it,
+            wide,
+        },
+        mobility,
+    ))
 }
 
 fn number_after(id: &str, key: &str) -> Option<f64> {
@@ -443,7 +446,13 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                                 }
                                 "MS:1000744" => s.selected = value.parse().ok(),
                                 "MS:1000827" => s.target = value.parse().ok(),
-                                _ => s.mobility_scan = s.mobility_scan.or_else(|| mobility_of(acc).zip(value.parse().ok()).map(|(u, v)| (v, u))),
+                                _ => {
+                                    s.mobility_scan = s.mobility_scan.or_else(|| {
+                                        mobility_of(acc)
+                                            .zip(value.parse().ok())
+                                            .map(|(u, v)| (v, u))
+                                    })
+                                }
                             }
                         }
                     }
@@ -479,7 +488,10 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "spectrum" => {
                         if let Some(s) = spec.take() {
                             let (sp, mob) = finish_spectrum(s, &mut inf)?;
-                            mob.map(Item::Mobility).into_iter().chain([Item::Spectrum(sp)]).for_each(&mut f);
+                            mob.map(Item::Mobility)
+                                .into_iter()
+                                .chain([Item::Spectrum(sp)])
+                                .for_each(&mut f);
                             n_spec += 1;
                         }
                         scope = Scope::None;

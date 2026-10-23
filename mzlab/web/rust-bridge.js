@@ -14,6 +14,7 @@ import { makeConvertCentroids } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
+import { indexXicBin } from "./rust-xicbin.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
@@ -132,18 +133,6 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     return out;
   };
 
-  // api/xicbin: 4 bytes = length of the JSON header {mz, tol, traces:[{k, n}]}, the header, zeros up to a multiple of 8, then for each trace rt (n doubles) and y (n doubles)
-  const packXic = (mz, tol, list) => {
-    const head = new TextEncoder().encode(JSON.stringify({ mz, tol, traces: list.map(t => ({ k: t.k, n: t.rt.length })) }));
-    const at = (4 + head.length + 7) & ~7, buf = new ArrayBuffer(at + 16 * list.reduce((a, t) => a + t.rt.length, 0));
-    new DataView(buf).setUint32(0, head.length, true);
-    new Uint8Array(buf, 4, head.length).set(head);
-    const all = new Float64Array(buf, at);
-    let w = 0;
-    for (const t of list) { all.set(t.rt, w); all.set(t.y, w + t.rt.length); w += 2 * t.rt.length; }
-    return buf;
-  };
-
   async function indexRoute(s, k, path, u, t0) {
     let r = await rpc({ op: "route", slot: k, path, query: u.search });
     if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
@@ -201,25 +190,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: r.info, ms: performance.now() - t0 };
     }
-    if (path === "/api/xicbin") {
-      const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), mz = num(q, "mz", NaN), tol = num(q, "tol", 0.35);
-      if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {
-        await Promise.all(ks.map(k => slots[k].opening));
-        if (ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) {
-          const list = [];
-          for (const k of ks) {
-            const r = await rpc({ op: "idxxicbin", slot: k, level, mz, tol });
-            if (r.dead || r.error) return null;
-            const a = r.n ? new Float64Array(r.buf, 0, r.len) : new Float64Array(0);
-            list.push({ k, rt: a.subarray(0, r.n), y: a.subarray(r.n, 2 * r.n), back: r.buf });
-          }
-          const buf = packXic(mz, tol, list);
-          for (const t of list) if (t.back) recycle(t.back);                  // the worker's buffers go back once copied into the answer
-          stats.rust++;
-          return { status: 200, buf, ms: performance.now() - t0 };
-        }
-      }
-    }
+    if (path === "/api/xicbin") return indexXicBin({ slots, rpc, recycle, stats, handle: api.handle }, u, level, t0);   // api/xic as doubles (rust-xicbin.js)
     if (path === "/api/xic" && !hasRef(q)) {
       const ks = (q.get("k") || "").split(",").filter(Boolean).map(Number), mz = num(q, "mz", NaN), tol = num(q, "tol", 0.35);
       if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {
@@ -241,7 +212,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     if (path === "/api/chrom") {
       if ((q.get("kind") || "tic") !== "tic" || !empty(q, "mz0", "mz1", "prec", "filt")) return null;
       ks = [k0];
-    } else if (path === "/api/xic" || path === "/api/xicbin") ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
+    } else if (path === "/api/xic") ks = (q.get("k") || "").split(",").filter(Boolean).map(Number);
     else if (path === "/api/spectra") {
       if (!empty(q, "prec", "precursor", "filt") || q.get("merge") === "1") return null;
       ks = [k0];
@@ -254,12 +225,11 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     let body;
     if (path === "/api/chrom") {
       const t = await trace(ks[0], "tic", level, {}, px); if (!t) return null; body = t;
-    } else if (path === "/api/xic" || path === "/api/xicbin") {
+    } else if (path === "/api/xic") {
       const mz = num(q, "mz", NaN), tol = num(q, "tol", 0.35);
       if (!isFinite(mz)) return null;
       const traces = [];
       for (const k of ks) { const t = await trace(k, "xic", level, { mz, tol }, px); if (!t) return null; traces.push({ k, ...t }); }
-      if (path === "/api/xicbin") { stats.rust++; return { status: 200, buf: packXic(mz, tol, traces), ms: performance.now() - t0 }; }
       body = { mz, tol, traces };
     } else {
       const info = slots[ks[0]].info, lv = info.levels[String(level)];

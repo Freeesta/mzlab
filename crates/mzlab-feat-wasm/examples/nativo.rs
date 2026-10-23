@@ -140,7 +140,9 @@ fn main() {
         }
     }
     if budget_mb.is_finite() {
-        return budgeted(&files, &recipe, &out, budget_mb, &parent, &structure, &rules, pmz, prt);
+        return budgeted(
+            &files, &recipe, &out, budget_mb, &parent, &structure, &rules, pmz, prt,
+        );
     }
     let r = run::recipe_for(&recipe, &mut open(&files[0])).expect("recipe");
     let t0 = Instant::now();

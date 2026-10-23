@@ -29,14 +29,20 @@ fn close(a: f64, b: f64) -> bool {
 
 #[test]
 fn statistics_like_python() {
-    let golden = root().join("tests/golden/ref/stats.json"); let committed = golden.exists();           // committed answers of Python: no python3 needed
-    let out = if committed { golden } else { std::env::temp_dir().join(format!("mzlab_stats_{}.json", std::process::id())) };
-    let ok = committed || Command::new("python3")
-        .arg(root().join("tools/stats_riferimento.py"))
-        .arg(&out)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let golden = root().join("tests/golden/ref/stats.json");
+    let committed = golden.exists(); // committed answers of Python: no python3 needed
+    let out = if committed {
+        golden
+    } else {
+        std::env::temp_dir().join(format!("mzlab_stats_{}.json", std::process::id()))
+    };
+    let ok = committed
+        || Command::new("python3")
+            .arg(root().join("tools/stats_riferimento.py"))
+            .arg(&out)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
     if !ok {
         assert!(
             std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
@@ -46,7 +52,9 @@ fn statistics_like_python() {
         return;
     }
     let d: Value = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
-    if !committed { let _ = std::fs::remove_file(&out); }
+    if !committed {
+        let _ = std::fs::remove_file(&out);
+    }
     let mut perms = 0;
     for (i, c) in d["cases"].as_array().unwrap().iter().enumerate() {
         let (x, y, w) = (nums(&c["x"]), nums(&c["y"]), nums(&c["w"]));

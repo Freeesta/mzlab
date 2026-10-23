@@ -11,20 +11,53 @@ use mzlab_feat_table_wasm::core;
 
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
-    let (out, table, samples) = (Path::new(&a[0]), std::fs::read(&a[1]).expect("table"), std::fs::read_to_string(&a[2]).expect("samples"));
-    let spec = if a[3] == "-" { String::new() } else { std::fs::read_to_string(&a[3]).expect("spec") };
-    let (pol, size, sha) = (a[4].parse::<i32>().expect("polarity"), table.len() as u64, sha256_hex(&table));
+    let (out, table, samples) = (
+        Path::new(&a[0]),
+        std::fs::read(&a[1]).expect("table"),
+        std::fs::read_to_string(&a[2]).expect("samples"),
+    );
+    let spec = if a[3] == "-" {
+        String::new()
+    } else {
+        std::fs::read_to_string(&a[3]).expect("spec")
+    };
+    let (pol, size, sha) = (
+        a[4].parse::<i32>().expect("polarity"),
+        table.len() as u64,
+        sha256_hex(&table),
+    );
     let put = |name: &str, text: String| {
         std::fs::write(out.join(name), &text).expect("write");
         println!("{name} {}", sha256_hex(text.as_bytes()));
     };
     let r = || Slice(&table);
-    put("view.json", core::view_json(&mut r(), size, &samples, &spec).expect("view"));
-    put("report.json", core::report_json(&mut r(), size, &samples, &spec, &sha).expect("report"));
-    put("qc.json", core::qc_json(&mut r(), size, &samples, &spec).expect("qc"));
-    put("check.json", core::tabcheck_json(&mut r(), size, &samples, &spec, pol, "").expect("check"));
-    for (name, kind) in [("full.csv", "full"), ("full_mzmine.csv", "full_mzmine"), ("quant.csv", "quant"), ("features.csv", "csv_semicolon"), ("features.rows.json", "xlsx_rows")] {
-        put(name, core::table_file(&mut r(), size, &samples, &spec, &sha, pol, kind).expect("file"));
+    put(
+        "view.json",
+        core::view_json(&mut r(), size, &samples, &spec).expect("view"),
+    );
+    put(
+        "report.json",
+        core::report_json(&mut r(), size, &samples, &spec, &sha).expect("report"),
+    );
+    put(
+        "qc.json",
+        core::qc_json(&mut r(), size, &samples, &spec).expect("qc"),
+    );
+    put(
+        "check.json",
+        core::tabcheck_json(&mut r(), size, &samples, &spec, pol, "").expect("check"),
+    );
+    for (name, kind) in [
+        ("full.csv", "full"),
+        ("full_mzmine.csv", "full_mzmine"),
+        ("quant.csv", "quant"),
+        ("features.csv", "csv_semicolon"),
+        ("features.rows.json", "xlsx_rows"),
+    ] {
+        put(
+            name,
+            core::table_file(&mut r(), size, &samples, &spec, &sha, pol, kind).expect("file"),
+        );
     }
     let open = |k: usize| {
         let f = File::open(&a[5 + k]).expect("index");
@@ -32,8 +65,17 @@ fn main() {
         Index::open(f, n)
     };
     for (name, kind) in [("ms2.mgf", "mgf"), ("sirius.ms", "sirius")] {
-        put(name, core::ms2_file(&mut r(), size, &samples, &spec, &sha, pol, kind, open).expect("ms2"));
+        put(
+            name,
+            core::ms2_file(&mut r(), size, &samples, &spec, &sha, pol, kind, open).expect("ms2"),
+        );
     }
-    put("riga.json", core::row_json(&mut r(), size, &samples, 3).expect("row"));
-    put("riga_tracce.json", core::row_traces_json(&mut r(), size, &samples, 3, 5.0, open).expect("traces"));
+    put(
+        "riga.json",
+        core::row_json(&mut r(), size, &samples, 3).expect("row"),
+    );
+    put(
+        "riga_tracce.json",
+        core::row_traces_json(&mut r(), size, &samples, 3, 5.0, open).expect("traces"),
+    );
 }

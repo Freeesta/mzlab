@@ -10,9 +10,17 @@ pub mod decoy;
 pub mod error;
 pub mod format;
 pub mod io;
-#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+#[warn(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::cast_possible_truncation
+)]
 pub mod parse;
-#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+#[warn(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::cast_possible_truncation
+)]
 pub mod read;
 pub mod scores;
 pub mod search;

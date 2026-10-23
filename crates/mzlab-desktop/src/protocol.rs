@@ -255,15 +255,27 @@ fn lib_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -
 fn rpc_route(state: &State, body: &[u8]) -> Option<Response> {
     let v: serde_json::Value = serde_json::from_slice(body).ok()?;
     Some(match state.rpc(v["op"].as_str()?, &v, body) {
-        Ok(crate::rpc::Answer::Text(t)) => Response { status: 200, content_type: "text/plain; charset=utf-8", body: t.into_bytes() },
-        Ok(crate::rpc::Answer::Bytes(b)) => Response { status: 200, content_type: "application/octet-stream", body: b },
+        Ok(crate::rpc::Answer::Text(t)) => Response {
+            status: 200,
+            content_type: "text/plain; charset=utf-8",
+            body: t.into_bytes(),
+        },
+        Ok(crate::rpc::Answer::Bytes(b)) => Response {
+            status: 200,
+            content_type: "application/octet-stream",
+            body: b,
+        },
         Err(e) => error(&e),
     })
 }
 
 /// `lr/upload?name&off&total`: a piece of a file that reaches the app as bytes; the answer holds the number of the file once the last piece is in.
 fn upload_route(state: &State, q: &HashMap<&str, &str>, body: &[u8]) -> Option<Response> {
-    let (name, off, total) = (q.get("name")?, q.get("off")?.parse().ok()?, q.get("total")?.parse().ok()?);
+    let (name, off, total) = (
+        q.get("name")?,
+        q.get("off")?.parse().ok()?,
+        q.get("total")?.parse().ok()?,
+    );
     Some(match state.upload_chunk(&decode(name), off, total, body) {
         Ok(Some(id)) => json(200, format!("{{\"id\":{id}}}")),
         Ok(None) => json(200, "{}".into()),

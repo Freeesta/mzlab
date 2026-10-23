@@ -82,7 +82,14 @@ pub struct Routes<R: ReadAt> {
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), pol: None, msn: Default::default() }
+        Routes {
+            idx,
+            maps: Vec::new(),
+            steps: Vec::new(),
+            tiles: Vec::new(),
+            pol: None,
+            msn: Default::default(),
+        }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -119,39 +126,6 @@ impl<R: ReadAt> Routes<R> {
     pub fn xic(&mut self, mz: f64, tol: f64, level: u8) -> Result<String> {
         let (rt, y) = self.xic_raw(mz, tol, level)?;
         Ok(trace(&rt, &y))
-    }
-
-    /// Scans of one level (the length of each half of the buffer `xic_into` fills).
-    pub fn xic_len(&self, level: u8) -> usize {
-        self.idx
-            .section_of(level, self.pol)
-            .map_or(0, |si| self.idx.sections[si].n_scans)
-    }
-
-    /// The XIC of one level into `out` as `[rt(n), y(n)]`, rounded like `xic` (RT to 4 decimals, y to 1) so the numbers
-    /// are those `JSON.parse(xic)` gives. Returns n (0 if the section is missing or `out` is shorter than `2 * n`).
-    pub fn xic_into(&mut self, mz: f64, tol: f64, level: u8, out: &mut [f64]) -> Result<usize> {
-        let Some(si) = self.idx.section_of(level, self.pol) else {
-            return Ok(0);
-        };
-        let n = self.idx.sections[si].n_scans;
-        if out.len() < 2 * n {
-            return Ok(0);
-        }
-        let (lo, hi) = (mz - tol, mz + tol);
-        let a = self.idx.search(si, lo, false)?;
-        let b = self.idx.search(si, hi, true)?;
-        let y = if b <= a {
-            vec![0.0; n]
-        } else {
-            self.idx.sum_window(si, a, b)?
-        };
-        let rt = &self.idx.arrays(si)?.rt;
-        for i in 0..n {
-            out[i] = crate::json::round(rt[i], 4);
-            out[n + i] = crate::json::round(y[i], 1);
-        }
-        Ok(n)
     }
 
     /// The XIC of one level as the arrays Python works on (not rounded): the reference difference subtracts these.
@@ -314,7 +288,14 @@ impl<R: ReadAt> Routes<R> {
         let ar = self.idx.arrays(si)?.clone();
         let fl = self.filtro(filt)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &self.idx.scans[ar.scan_ids[j] as usize])))
+            .filter(|&j| {
+                fl.as_ref().is_none_or(|f| {
+                    f.passa(
+                        ar.scan_ids[j] as usize,
+                        &self.idx.scans[ar.scan_ids[j] as usize],
+                    )
+                })
+            })
             .collect();
         let sc = |j: usize| &self.idx.scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
@@ -412,24 +393,41 @@ pub(crate) fn next_tick() -> u64 {
 
 /// Total bytes of the cached maps of the files.
 pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    files.values().flat_map(|r| r.maps.iter()).map(|m| m.1.len() * 4).sum()
+    files
+        .values()
+        .flat_map(|r| r.maps.iter())
+        .map(|m| m.1.len() * 4)
+        .sum()
 }
 
 /// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
 pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    map_cache_bytes(files) + tiles_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+    map_cache_bytes(files)
+        + tiles_cache_bytes(files)
+        + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
 }
 
 /// Bytes of the pyramids of map tiles (`maptiles`) of all the files; they go in the same LRU as the maps.
 pub fn tiles_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    files.values().flat_map(|r| r.tiles.iter()).filter_map(|t| t.1.as_ref()).map(|p| p.bytes()).sum()
+    files
+        .values()
+        .flat_map(|r| r.tiles.iter())
+        .filter_map(|t| t.1.as_ref())
+        .map(|p| p.bytes())
+        .sum()
 }
 
 /// Drops maps, oldest use first, until the maps hold at most `cap` bytes. Returns how many were dropped.
-pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+pub fn trim_map_cache<R: ReadAt>(
+    files: &mut std::collections::HashMap<u32, Routes<R>>,
+    cap: usize,
+) -> usize {
     let mut dropped = 0;
     while map_cache_bytes(files) > cap {
-        let oldest = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
+        let oldest = files
+            .iter()
+            .flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i)))
+            .min();
         let Some((_, k, i)) = oldest else { break };
         if let Some(r) = files.get_mut(&k) {
             r.maps.remove(i);
@@ -441,12 +439,30 @@ pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Rout
 
 /// The one LRU of the engine: maps, per-scan arrays and cached blocks of ALL the files go, least recently used first, until the cache holds at most
 /// `cap` bytes (every entry is read again from the index when asked: the answers do not change). Returns how many entries were dropped.
-pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+pub fn trim_cache<R: ReadAt>(
+    files: &mut std::collections::HashMap<u32, Routes<R>>,
+    cap: usize,
+) -> usize {
     let mut dropped = 0;
     while cache_bytes(files) > cap {
-        let map = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
-        let tile = files.iter().flat_map(|(k, r)| r.tiles.iter().enumerate().filter(|(_, t)| t.1.is_some()).map(move |(i, t)| (t.2, *k, i))).min();
-        let idx = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, *k))).min();
+        let map = files
+            .iter()
+            .flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i)))
+            .min();
+        let tile = files
+            .iter()
+            .flat_map(|(k, r)| {
+                r.tiles
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, t)| t.1.is_some())
+                    .map(move |(i, t)| (t.2, *k, i))
+            })
+            .min();
+        let idx = files
+            .iter()
+            .filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, *k)))
+            .min();
         let older = |t: u64, other: Option<u64>| other.is_none_or(|o| t <= o);
         let (tm, tt, ti) = (map.map(|m| m.0), tile.map(|t| t.0), idx.map(|i| i.0));
         match (map, tile, idx) {

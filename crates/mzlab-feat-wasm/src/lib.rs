@@ -36,11 +36,11 @@ pub mod interp;
 pub mod msn;
 pub mod progress_js;
 pub mod run;
-pub mod spill_js;
 pub mod run_evid;
-pub mod stima;
+pub mod spill_js;
 #[cfg(feature = "proofs")]
 pub mod state;
+pub mod stima;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 
@@ -194,11 +194,18 @@ pub fn detect_file(
 /// L1-L3 of one file written to `write(offset, bytes)`: `{"bytes", "sha256"}` of the `.mzfeatf`. `progress(done, total)` (optional) is called at most once per 1 % of the peaks.
 #[wasm_bindgen]
 pub fn detect_file_to(
-    read: Function, size: f64, name: &str, recipe: &str, write: Function, progress: Option<Function>,
+    read: Function,
+    size: f64,
+    name: &str,
+    recipe: &str,
+    write: Function,
+    progress: Option<Function>,
 ) -> std::result::Result<String, JsValue> {
     let mut ix = open_one(&read, 0, size).map_err(js_err)?;
     let r = run::recipe_for(recipe, &mut ix).map_err(js_err)?;
-    to_sink(write, |sink| progress_js::detect_to(&mut ix, name, &r, sink, progress))
+    to_sink(write, |sink| {
+        progress_js::detect_to(&mut ix, name, &r, sink, progress)
+    })
 }
 
 #[cfg(feature = "detect")]
@@ -253,8 +260,20 @@ pub fn align_series_to(
         .map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
-    let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
-    to_sink(write, |sink| run::align_to_spilling(&mut src, &budget, &r, open, sink, spill_js::borrow(&mut spill)))
+    let (open, mut spill) = (
+        |k| open_one(&read, k, sizes[k]),
+        spill_js::of(spill.as_ref())?,
+    );
+    to_sink(write, |sink| {
+        run::align_to_spilling(
+            &mut src,
+            &budget,
+            &r,
+            open,
+            sink,
+            spill_js::borrow(&mut spill),
+        )
+    })
 }
 
 #[cfg(feature = "detect")]

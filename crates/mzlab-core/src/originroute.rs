@@ -44,9 +44,15 @@ fn has_scans<R: ReadAt>(r: &Routes<R>, level: u8) -> bool {
 }
 
 /// The product-ion spectra of X and of P from the first file that has MS2 scans (whole run), `None` if there is no spectrum of P.
-fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>, a: &Ask) -> Result<Option<Ms2>> {
+fn find_ms2<R: ReadAt>(
+    items: &[ItemMeta],
+    routes: &mut HashMap<u32, Routes<R>>,
+    a: &Ask,
+) -> Result<Option<Ms2>> {
     for it in items {
-        let Some(r) = routes.get_mut(&it.slot) else { continue };
+        let Some(r) = routes.get_mut(&it.slot) else {
+            continue;
+        };
         if !has_scans(r, 2) {
             continue;
         }
@@ -54,7 +60,9 @@ fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>,
         let lo = rts.clone().fold(f64::INFINITY, f64::min);
         let hi = rts.fold(f64::NEG_INFINITY, f64::max);
         let mut spec = |mz: f64| -> Result<Option<(Vec<f64>, Vec<f64>)>> {
-            Ok(r.binned(2, lo, hi, Some(mz), 0.1, None)?.filter(|b| b.n > 0).map(|b| (b.mz, b.y)))
+            Ok(r.binned(2, lo, hi, Some(mz), 0.1, None)?
+                .filter(|b| b.n > 0)
+                .map(|b| (b.mz, b.y)))
         };
         let (sx, sp) = (spec(a.mz)?, spec(a.parent)?);
         if let Some(p) = sp {
@@ -65,11 +73,17 @@ fn find_ms2<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>,
 }
 
 /// The report of `App.origin` for the session `items` (whose indexes are in `routes`, by slot), or `None` when Python must answer.
-pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Routes<R>>, a: &Ask) -> Result<Option<Value>> {
+pub fn origin_route<R: ReadAt>(
+    items: &[ItemMeta],
+    routes: &mut HashMap<u32, Routes<R>>,
+    a: &Ask,
+) -> Result<Option<Value>> {
     let mut full: Vec<(usize, &ItemMeta)> = Vec::new();
     let mut hr = false;
     for (i, it) in items.iter().enumerate() {
-        let Some(r) = routes.get(&it.slot) else { return Ok(None) };
+        let Some(r) = routes.get(&it.slot) else {
+            return Ok(None);
+        };
         if it.full && has_scans(r, 1) {
             hr |= group_is_hr(&r.idx.scans, true);
             full.push((i, it));
@@ -84,18 +98,47 @@ pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Rou
         return Ok(None);
     }
     let ms2 = find_ms2(items, routes, a)?;
-    let pol = full.iter().find_map(|(_, it)| routes.get(&it.slot)?.idx.scans.iter().find(|s| s.polarity != 0).map(|s| s.polarity as i64)).unwrap_or(1);
+    let pol = full
+        .iter()
+        .find_map(|(_, it)| {
+            routes
+                .get(&it.slot)?
+                .idx
+                .scans
+                .iter()
+                .find(|s| s.polarity != 0)
+                .map(|s| s.polarity as i64)
+        })
+        .unwrap_or(1);
     let reference = full.iter().position(|(i, _)| *i as i64 == a.k);
-    let mut by_slot: HashMap<u32, &mut Index<R>> = routes.iter_mut().map(|(k, r)| (*k, &mut r.idx)).collect();
+    let mut by_slot: HashMap<u32, &mut Index<R>> =
+        routes.iter_mut().map(|(k, r)| (*k, &mut r.idx)).collect();
     let mut samples: Vec<Sample<R>> = Vec::new();
     for (_, it) in &full {
         let idx = by_slot.remove(&it.slot).expect("slot checked above");
-        let Some(si) = idx.section_of(1, None) else { return Ok(None) };
-        samples.push(Sample { label: it.label.clone(), time: it.time, idx, si });
+        let Some(si) = idx.section_of(1, None) else {
+            return Ok(None);
+        };
+        samples.push(Sample {
+            label: it.label.clone(),
+            time: it.time,
+            idx,
+            si,
+        });
     }
-    let req = Request { mz: a.mz, parent_mz: a.parent, rt0: a.rt0, rt1: a.rt1, reference, formula_p: a.formula, top: 25 };
+    let req = Request {
+        mz: a.mz,
+        parent_mz: a.parent,
+        rt0: a.rt0,
+        rt1: a.rt1,
+        reference,
+        formula_p: a.formula,
+        top: 25,
+    };
     let rep = origin_report(&mut samples, ms2.as_ref(), &req)?;
-    let Value::Obj(fields) = rep else { return Ok(None) };
+    let Value::Obj(fields) = rep else {
+        return Ok(None);
+    };
     let mut out = Obj::new();
     for (k, v) in fields {
         out.set(&k, v);
@@ -104,7 +147,10 @@ pub fn origin_route<R: ReadAt>(items: &[ItemMeta], routes: &mut HashMap<u32, Rou
     out.set("pol", Value::Num(pol as f64));
     if let Some(m) = &ms2 {
         let x = m.x.as_ref().map_or(Value::Null, strongest);
-        out.set("ms2_peaks", Obj::new().put("x", x).put("p", strongest(&m.p)).done());
+        out.set(
+            "ms2_peaks",
+            Obj::new().put("x", x).put("p", strongest(&m.p)).done(),
+        );
     }
     Ok(Some(out.done()))
 }
