@@ -47,9 +47,11 @@ try:
             sp = "E.panels.find(p=>p.type==='spec'&&p.tab==='ms2')"
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic'&&p.tab==='ms2').length")
             pg.evaluate(f"{sp}.el.scrollIntoView({{block:'center'}})"); frames(pg, 20)
-            pg.evaluate(f"{sp}.cv.focus()"); pg.keyboard.press("."); frames(pg, 4)      # the keys choose a labelled peak, Enter extracts
-            pk = {"mz": pg.evaluate(f"XICBTN.chosen({sp})")}; assert pk["mz"] is not None
-            pg.keyboard.press("Enter"); ready(pg)
+            pg.evaluate(f"{sp}.el.querySelector('[data-a=xicb]').click()")
+            pk = top_peak(sp)
+            # the start screen fades out over 0.4 s and swallows the clicks meanwhile: wait until the canvas is what lies under the pointer
+            attendi(pg, f"document.elementFromPoint({pk['x']},{pk['y']})==={sp}.cv")
+            pg.mouse.click(pk["x"], pk["y"]); ready(pg)
             attendi(pg, "E.panels.some(p=>p.type==='xic'&&p.tab==='ms2'&&p._a&&p._a.sr&&p._a.sr.length)")
             t = pg.evaluate("E.panels.find(p=>p.type==='xic'&&p.tab==='ms2').traces[0].mz")
             assert abs(t - pk["mz"]) < 1.0, (t, pk["mz"])
