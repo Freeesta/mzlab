@@ -186,13 +186,13 @@ fn collect(mut st: Pool) -> Result<Detected> {
     Ok((recipe, peaks, weak))
 }
 
-/// `index_and_detect` on a pool of threads; `None` when there is only one thread or one file (then the plain passes run).
+/// `index_and_detect` on a pool of threads; `None` when there is only one thread (then the plain passes run).
 #[cfg(not(target_family = "wasm"))]
 fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<Detected>> {
     use std::sync::{Condvar, Mutex};
     let n = files.len();
     let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
-    if workers < 2 || n < 2 {
+    if workers < 2 {
         return None;
     }
     let jobs = plan_jobs(files);
@@ -219,6 +219,8 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
                 let Some(job) = jobs.get(j) else { break };
                 match *job {
                     Job::Index(k) => {
+                        // a core in use: the passes that split in two use the others
+                        let _core = mzlab_core::spare::busy(1);
                         let r = index_one(files, idxs, k);
                         let ok = r.is_ok();
                         lock().indexed[k] = Some(r);
@@ -239,6 +241,7 @@ fn pooled(files: &[PathBuf], idxs: &[PathBuf], params: &str) -> Option<Result<De
                         let indexed = matches!(st.indexed[k], Some(Ok(())));
                         drop(st);
                         if let (Some(recipe), true) = (recipe, indexed) {
+                            let _core = mzlab_core::spare::busy(1);
                             if matches!(job, Job::Strong(_)) {
                                 let r = detect_strong(files, idxs, k, &recipe);
                                 lock().detected[k] = Some(r);
