@@ -1,6 +1,7 @@
 //! Descriptors of the statistics steps over the feature table (`stat/`): `table.stats`, `table.pca`, `table.kmd`. They run native only: the `.wasm` `table`
 //! does not carry them. Their defaults are those of `StatsOpts`, `PcaOpts` and `KmdOpts` (checked by `tests/stat.rs`).
 
+use crate::plausible::Limits;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 fn native() -> RunsIn {
@@ -121,6 +122,39 @@ pub(super) fn kmd() -> Step {
             "table.kmd",
             "Kendrick mass defect",
             "KM and KMD of every ion and the series of ions that share the KMD, with their members, steps and retention trend. A series is a candidate with its evidence, never an identification.",
+        )
+    }
+}
+
+/// `table.plausible`: the plausibility of the values the table shows (`plausible::to_json`); the defaults are those of `plausible::Limits`.
+pub(super) fn plausible() -> Step {
+    let d = Limits::default();
+    let params = vec![
+        Param::number("mz_min", "Lowest m/z").min(0.0).default_num(d.mz_min).unit("m/z").doc("A row below it is flagged: no LC-MS run reads there"),
+        Param::number("mz_max", "Highest m/z").min(0.0).default_num(d.mz_max).unit("m/z").doc("A row above it is flagged"),
+        Param::number("rt_max", "Longest run").min(0.0).default_num(d.rt_max).unit("min").doc("A row with an RT outside 0 and this value is flagged: check the unit of the times"),
+        Param::number("width_max", "Widest peak").min(0.0).default_num(d.width_max).unit("min").advanced().doc("A detected peak wider than this, or with no width or apex, is flagged"),
+        Param::number("ppm_max", "Largest ppm error").min(0.0).default_num(d.ppm_max).unit("ppm").doc("A row whose m/z is further than this from its neutral mass plus adduct is flagged; read only in a high-resolution table"),
+        Param::number("mz_tol_da", "Alignment tolerance")
+            .min(0.0)
+            .unit("Da")
+            .advanced()
+            .doc("0.1 Da or more is unit resolution and the ppm error is not read; without a value the recipe stored in the table decides"),
+    ];
+    Step {
+        ins: vec![Port::new("table", DataType::Table, "Feature table")],
+        outs: vec![Port::new("report", DataType::Report, "Plausibility of the values (plausible/1)")],
+        params,
+        runs_in: RunsIn {
+            wasm: Some("table"),
+            wasm_ceiling_bytes: Some(super::FEAT_CEILING),
+            native: true,
+        },
+        errors: vec!["error.badView"],
+        ..Step::core(
+            "table.plausible",
+            "Plausibility of the values",
+            "Seven checks of the numbers the table shows: finite values, m/z and RT inside a real run, no negative area or height, a width and an apex for every detected peak, rows with no peak in any file and the ppm error of the identity columns. Numbers only: a flagged row is a value to look at, never a verdict.",
         )
     }
 }

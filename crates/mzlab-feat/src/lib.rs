@@ -74,6 +74,7 @@ mod store_read;
 pub mod suspects;
 mod sweep;
 pub mod table;
+pub mod plausible;
 pub mod tabcheck;
 pub mod target;
 pub mod tp;

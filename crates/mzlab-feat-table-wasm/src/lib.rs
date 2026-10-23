@@ -121,6 +121,12 @@ pub fn table_qc(table_read: Function, size: f64, samples_json: &str, spec: &str)
     core::qc_json(&mut table_reader(table_read), size as u64, samples_json, spec).map_err(js_err)
 }
 
+/// The `plausible/1` of a table; `options_json` is empty or `{"mz_tol_da","mz_min","mz_max","rt_max","width_max","ppm_max"}` (see `core::plausible_json`).
+#[wasm_bindgen]
+pub fn table_plausible(table_read: Function, size: f64, options_json: &str) -> std::result::Result<String, JsValue> {
+    core::plausible_json(&mut table_reader(table_read), size as u64, options_json).map_err(js_err)
+}
+
 /// The `tabcheck/1` of a table under the view `spec` (empty = the whole table); see `core::tabcheck_json` for `polarity` and `options_json`.
 #[wasm_bindgen]
 pub fn table_check(table_read: Function, size: f64, samples_json: &str, spec: &str, polarity: i32, options_json: &str) -> std::result::Result<String, JsValue> {

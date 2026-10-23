@@ -1,0 +1,29 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "plausible/1",
+ "title": "plausible/1: plausibility of the values of an aligned feature table",
+ "description": "Seven checks of the numbers a .mzfeat table shows: finite values, m/z and RT inside any real run, no negative area or height, a width for every detected peak, rows with no peak in any file, and the ppm error between the m/z of a row and its neutral mass plus adduct. Computed by crates/mzlab-feat/src/plausible.rs (same table and tolerance, same bytes). Numbers only: a flagged row is a value to look at, never a verdict on the compound.",
+ "type": "object",
+ "required": ["schema", "rows", "summary", "checks"],
+ "properties": {
+  "schema": {"const": "plausible/1"},
+  "rows": {"type": "integer", "minimum": 0},
+  "summary": {"type": "object", "required": ["ok", "note", "warn"], "description": "checks that could be made, by flag", "properties": {"ok": {"type": "integer"}, "note": {"type": "integer"}, "warn": {"type": "integer"}}},
+  "checks": {
+   "type": "array", "minItems": 7, "maxItems": 7,
+   "description": "always in this order: non_finite, mz_range, rt_range, negative, peak_shape, empty_rows, ppm_error",
+   "items": {
+    "type": "object",
+    "required": ["id", "flag", "count", "limit", "rows", "missing"],
+    "properties": {
+     "id": {"type": "string"},
+     "flag": {"enum": ["ok", "note", "warn", "na"], "description": "na = the check could not be made (see missing); empty_rows is a note, the others a warn"},
+     "count": {"type": "integer", "minimum": 0, "description": "rows flagged"},
+     "limit": {"type": "array", "items": {"type": "number"}, "description": "the bounds the check reads against ([min, max] or the single limit), empty when it has none"},
+     "rows": {"type": "array", "maxItems": 20, "items": {"type": "integer"}, "description": "table ids of the first rows flagged, ascending"},
+     "missing": {"enum": [null, "accurate_mass", "identity"], "description": "why the check was not made: unit resolution, or no identity columns"}
+    }
+   }
+  }
+ }
+}

@@ -294,6 +294,9 @@ try:
             assert pg.locator("#tdati table tr").count() >= n, "the chart has its table of data"
             pg.keyboard.press("Escape")
             assert "validated" not in pg.inner_text("#pipe-qc")      # no gate text in the quality control
+            pg.wait_for_selector("#pipe-qc .qc-pl [role=status]", timeout=60000)      # the plausibility box of the engine (`plausible/1`) over the real table
+            pl = pg.inner_text("#pipe-qc .qc-pl")
+            assert pl.startswith("Plausibility of the values") and ("checks of the values flag rows" in pl or "The values look plausible" in pl), pl
         step("quality control: matrix D/T/F/A per file with its table, numbers of the engine", qc_step)
 
         def table_step():

@@ -12,6 +12,7 @@
     view: ["digest", "righe", "fattori", "conteggi"],
     row: ["schema", "id", "mz", "rt", "rt_lo", "rt_hi", "charge", "quality", "iso_m1", "ms2", "ident", "cells"], rowQuality: ["shape", "snr", "fwhm", "flags"], rowMs2: ["file", "purity"], rowIdent: ["neutral", "adduct", "sources"], rowCell: ["file", "type", "time", "area", "height", "apex_rt", "width", "state"],
     traces: ["schema", "id", "mz", "ppm", "xic", "ms1", "ms2"], traceXic: ["file", "rt", "y"], traceMs1: ["file", "rt", "mz", "y"], traceMs2: ["file", "prec", "mz", "y"], counts: ["righe", "tenute", "scartate"],
+    plausible: ["schema", "rows", "summary", "checks"], plausibleCheck: ["id", "flag", "count", "limit", "rows", "missing"],
     report: ["crate", "tabella_sha256", "campioni_sha256", "righe", "file", "celle", "vista", "qc"], cells: ["rilevate", "mirate", "riempite", "assenti"], reportView: ["parametri", "conteggi"], rows: ["hojas"], sheet: ["nombre", "filas"],
   };
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -91,6 +92,7 @@
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       row: (/** @type {number} */ id) => JSON.parse(run(() => m.table_row(read, size, samples, id))),
+      plausible: () => JSON.parse(run(() => m.table_plausible(read, size, plausibleOptions(a)))),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
@@ -116,6 +118,7 @@
       rows: async (/** @type {string} */ spec) => JSON.parse(await V("export", spec, { export_kind: "xlsx_rows" })).hojas[0].filas,
       report: async (/** @type {string} */ spec) => JSON.parse(await V("report", spec)),
       row: async (/** @type {number} */ id) => JSON.parse(await V("row", "", { id })),
+      plausible: async () => JSON.parse(await V("plausible", "", { options: plausibleOptions(a) })),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => V("export", spec, { export_kind: kind }),
@@ -128,6 +131,26 @@
   const fmt = (/** @type {any} */ v) => (v == null ? "" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : String(+Number(v).toPrecision(4)));
   /** the reason of each rule of the filters, in words (the number of rows is the engine's) */
   const WHY = /** @type {Record<string, string>} */ ({ min_rilevati: "detected in too few files", min_area: "area below the minimum", min_altezza: "height below the minimum", bianco: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2", qc_cv_max: "QC CV above the maximum" });
+  /** the options text of the plausibility check: empty keeps the limits of the engine, which reads the resolution from the recipe stored in the table (unit resolution: no ppm error); `a.plausibleLimits` and `a.mzTolDa` (0.1 Da or more is unit resolution) override it */
+  const plausibleOptions = (/** @type {any} */ a) => JSON.stringify({ ...(a.plausibleLimits || {}), ...(a.mzTolDa > 0 ? { mz_tol_da: a.mzTolDa } : {}) });
+  /** the sentence of each check of `plausible/1` for the rows it flags (the count and the rows are the engine's; `lim` = its limits) */
+  const PLAUSIBLE = /** @type {Record<string, (lim: number[]) => string>} */ ({
+    non_finite: () => "a value that is not a number (NaN or infinite) in m/z, RT, area or height",
+    mz_range: l => `m/z outside ${l[0]}–${l[1]}, where no LC-MS run reads`,
+    rt_range: l => `RT outside ${l[0]}–${l[1]} min: check the unit of the times`,
+    negative: () => "a negative area or height",
+    peak_shape: l => `a detected peak with a width of 0 or above ${l[1]} min, or without an apex`,
+    empty_rows: () => "no peak in any file",
+    ppm_error: l => `m/z more than ${l[0]} ppm away from its neutral mass plus adduct`,
+  });
+  /** the box of the plausibility of the values: one status line (what the page announces) and, only for the checks that flag rows, a list with the rows to look at */
+  function plausibleHtml(/** @type {any} */ p) {
+    const bad = p.checks.filter((/** @type {any} */ c) => c.count > 0), skipped = p.checks.filter((/** @type {any} */ c) => c.missing);
+    const head = bad.length ? `${bad.length} of ${p.checks.length - skipped.length} checks of the values flag rows.` : `The values look plausible: ${p.checks.length - skipped.length} checks, no row flagged.`;
+    const items = bad.map((/** @type {any} */ c) => `<li><strong>${c.flag === "warn" ? "Warning" : "Note"}:</strong> ${c.count.toLocaleString("en")} row${c.count > 1 ? "s" : ""} with ${esc(PLAUSIBLE[c.id](c.limit))}. First row ids: ${c.rows.join(", ")}${c.count > c.rows.length ? ", …" : ""}.</li>`).join("");
+    const na = skipped.length ? `<p class="mut">Not checked: ${skipped.map((/** @type {any} */ c) => c.id === "ppm_error" ? "ppm error (needs the identity columns and accurate mass)" : c.id).join(", ")}.</p>` : "";
+    return `<section class="qc-pl" aria-labelledby="qc-pl-h"><h4 id="qc-pl-h">Plausibility of the values</h4><p role="status" class="${bad.length ? "qc-pl-bad" : "mut"}">${head}</p>${items ? `<ul>${items}</ul>` : ""}${na}</section>`;
+  }
   const W = 360, ROW = 22, M = { l: 120, r: 8, t: 6, b: 6 };
 
   /** stacked bars of the cells of each file (D, T, F, A) */
@@ -141,7 +164,7 @@
     });
     return s + "</svg>";
   }
-  const qcCss = `#pipe svg.qcl{display:inline;width:12px;vertical-align:-1px}#pipe .qcb{stroke:var(--panel)}#pipe .qcb0{fill:var(--pv-d)}#pipe .qcb1{fill:var(--pv-t)}#pipe .qcb2{fill:var(--pv-f)}#pipe .qcb3{fill:var(--pv-a)}#pipe .qc table{border-collapse:collapse;font-size:12px;margin:6px 0}#pipe .qc td,#pipe .qc th{padding:2px 8px;text-align:left}#pipe .qc .n{text-align:right}`;
+  const qcCss = `#pipe svg.qcl{display:inline;width:12px;vertical-align:-1px}#pipe .qcb{stroke:var(--panel)}#pipe .qcb0{fill:var(--pv-d)}#pipe .qcb1{fill:var(--pv-t)}#pipe .qcb2{fill:var(--pv-f)}#pipe .qcb3{fill:var(--pv-a)}#pipe .qc table{border-collapse:collapse;font-size:12px;margin:6px 0}#pipe .qc td,#pipe .qc th{padding:2px 8px;text-align:left}#pipe .qc .n{text-align:right}#pipe .qc-pl h4{margin:10px 0 4px;font-size:13px}#pipe .qc-pl ul{margin:4px 0;padding-left:18px}#pipe .qc-pl-bad{border-left:4px solid var(--warn);padding-left:8px;color:var(--ink)}`;
 
   /** renders the step into `box`; `o` = { session, chart (PIPE.chart: box, svg, title, desc, table) } */
   async function render(/** @type {HTMLElement} */ box, /** @type {any} */ o) {
@@ -155,11 +178,13 @@
       ${q.gruppi.map((/** @type {any} */ g) => `<tr><td>${esc(g.tipo)}</td><td>${esc(g.gruppo)}</td><td class="n">${fmt(g.tempo_min)}</td><td class="n">${g.file}</td><td class="n">${g.righe}</td><td class="n">${fmt(g.cv_mediano)}</td></tr>`).join("")}</table>` : `<p class="mut">No condition has two or more replicates: no agreement to report.</p>`}
       ${q.bianchi.file ? `<p class="mut">Rows with a peak in a blank: ${q.bianchi.righe_con_picco.toLocaleString("en")} of ${q.bianchi.righe.toLocaleString("en")} (${q.bianchi.file} blank file${q.bianchi.file > 1 ? "s" : ""}).</p>` : `<p class="mut">No blank file in the series.</p>`}
       ${q.m1_su_m ? `<p class="mut">M+1/M of ${q.m1_su_m.righe.toLocaleString("en")} rows: median ${fmt(q.m1_su_m.mediana)} (from ${fmt(q.m1_su_m.min)} to ${fmt(q.m1_su_m.max)}).</p>` : ""}
-      <p class="mut">Stability of the internal standard (CV of its area): ${q.standard_cv == null ? "no standard chosen" : fmt(q.standard_cv)}</p></details>`;
+      <p class="mut">Stability of the internal standard (CV of its area): ${q.standard_cv == null ? "no standard chosen" : fmt(q.standard_cv)}</p>
+      <div id="qc-plausible"></div></details>`;
+    try { box.querySelector("#qc-plausible").innerHTML = plausibleHtml(await o.session.plausible()); } catch (_) { /* the other numbers stay */ }
     o.chart(box.querySelector("#qc-m"), matrixSvg(files), "Cells per file", `Stacked bars of the cells of each of the ${files.length} files: detected, targeted, filled and absent.`,
       { head: ["File", ...KINDS.map(k => k[2])], rows: files.map((/** @type {any} */ f) => [f.file, ...KINDS.map(k => String(f[k[0]]))]) });
     return q;
   }
 
-  G.PIPEQC = { open, render, engine, CONTRACT, fmt, WHY, css: qcCss };
+  G.PIPEQC = { open, render, engine, CONTRACT, fmt, WHY, css: qcCss, plausibleHtml };
 })();
