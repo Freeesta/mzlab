@@ -40,6 +40,8 @@ enum Kind {
 }
 
 type Block = (Rc<Vec<u8>>, u64);
+/// One decoded chunk and its index.
+type Held = Option<(u32, Rc<Vec<u8>>)>;
 
 struct Cache {
     map: HashMap<(Kind, u32), Block>,
@@ -111,7 +113,7 @@ pub struct Library<S: Source> {
     nl: IndexDir,
     cache: RefCell<Cache>,
     /// The last chunk used of each kind (table, peaks, meta): consecutive spectra of a scan sit in the same chunk, and this skips the hashed cache lookup.
-    recent: RefCell<[Option<(u32, Rc<Vec<u8>>)>; 3]>,
+    recent: RefCell<[Held; 3]>,
     light: std::cell::OnceCell<Light>,
     /// Decoded-chunk reads served from the file (not the cache): lets tests and the bench see the cache work.
     pub block_reads: std::cell::Cell<u64>,
@@ -314,13 +316,15 @@ impl<S: Source> Library<S> {
             Kind::Peaks => 1,
             _ => 2,
         };
-        if let Some((i, v)) = &self.recent.borrow()[slot] {
+        if let Some(Some((i, v))) = self.recent.borrow().get(slot) {
             if *i == idx {
                 return Ok(v.clone());
             }
         }
         let v = self.chunk_cached(kind, idx)?;
-        self.recent.borrow_mut()[slot] = Some((idx, v.clone()));
+        if let Some(h) = self.recent.borrow_mut().get_mut(slot) {
+            *h = Some((idx, v.clone()));
+        }
         Ok(v)
     }
 
