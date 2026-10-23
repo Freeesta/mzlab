@@ -17201,3 +17201,4 @@
 {"v":1,"ts_utc":"2026-10-23T17:33:44Z","tipo":"job","k":"120559837427","workflow":"rust","job":"rust-det","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"bbbcf4c7effe4b8300c4f0409a14cab76707bad2","run_id":39996031942,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T17:33:44Z","tipo":"job","k":"120559838227","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"bbbcf4c7effe4b8300c4f0409a14cab76707bad2","run_id":39996031942,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T17:34:06Z","tipo":"carico","k":"2026-10-23T17:3","job_in_coda":0,"job_in_corso":23}
+{"v":1,"ts_utc":"2026-10-23T17:34:33Z","azione":"aperta","tipo":"pr","pr":1638,"sha":"9997e9781be298e6ffb340ac5ef96275de34d9d9"}
