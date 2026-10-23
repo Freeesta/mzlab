@@ -1152,8 +1152,7 @@ mod tests {
             .iter()
             .flat_map(|f| f.iter().map(|(m, a)| (*m as f64, *a)))
             .collect();
-        let solo = ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(v)))
-            .unwrap();
+        let solo = ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(v))).unwrap();
         assert_eq!(
             solo.iter().map(|p| (p.mz, p.abundance)).collect::<Vec<_>>(),
             attesi
@@ -1165,8 +1164,8 @@ mod tests {
         let mut v = Vec::new();
         u32s(&mut v, &[u32::MAX, 0, 0, 1, 0, 0, 0, 0]);
         f32s(&mut v, &[1.0, 2.0]);
-        let err = ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(v)))
-            .unwrap_err();
+        let err =
+            ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(v))).unwrap_err();
         assert!(matches!(err, Error::AllocationTooLarge { .. }));
     }
 }

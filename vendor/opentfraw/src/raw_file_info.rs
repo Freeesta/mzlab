@@ -433,12 +433,14 @@ mod tests {
     #[test]
     fn a_v63_preamble_lists_every_controller() {
         let mut b = vec![0u8; 20];
-        for w in [0u32, 47_600, 3, 3, 3, 0, 1_000, 4, 1, 2_000, 0, 2, 3_000, 0, 0] {
+        for w in [
+            0u32, 47_600, 3, 3, 3, 0, 1_000, 4, 1, 2_000, 0, 2, 3_000, 0, 0,
+        ] {
             b.extend_from_slice(&w.to_le_bytes());
         }
         b.resize(b.len() + 744 - 8 - 12, 0);
-        let p = RawFileInfoPreamble::read(&mut BinaryReader::new(std::io::Cursor::new(b)), 63)
-            .unwrap();
+        let p =
+            RawFileInfoPreamble::read(&mut BinaryReader::new(std::io::Cursor::new(b)), 63).unwrap();
         assert_eq!(p.run_header_addrs, vec![1_000, 2_000, 3_000]);
         assert_eq!(p.data_addr, 47_600);
     }
