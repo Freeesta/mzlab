@@ -83,3 +83,4 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | lanciare la verifica nel container cloud (Chromium, `--setup`, test col sito costruito) | `docs/agenti/ambiente-cloud.md` |
 | scheduler a stati del Flow «live» (`mzlab_core::flow::sched`, `run_sched.rs`) | `docs/agenti/flow-live.md` |
 | dove Tabui perde un prodotto atteso (`mzlab-cli explain-missing`) | `docs/agenti/tabui-spiega.md` |
+| pulsante «XIC» nella barra dello spettro, tempi del visualizzatore veloce (`xic-spettro.js`) | `docs/agenti/visore-veloce.md` |

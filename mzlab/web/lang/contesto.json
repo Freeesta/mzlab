@@ -705,5 +705,9 @@
   "err.llm.tools": "Catalogo degli strumenti non valido; {field} = campo che manca o è sbagliato.",
   "error.msngrafo.badFile": "Errore di un file di grafo salvato che non si legge; {file} = nome del file, {raw} = motivo tecnico.",
   "msngrafo.file.ro": "Nota in cima alla finestra di un grafo aperto da file; {name} = nome del file.",
-  "msngrafo.file.title": "Titolo della finestra di un grafo aperto da file; {name} = nome del file."
+  "msngrafo.file.title": "Titolo della finestra di un grafo aperto da file; {name} = nome del file.",
+  "xicbtn.apex": "Riga sotto lo XIC nato dal pulsante dello spettro; {rt} = RT dell'apice (min), {y} = intensità dell'apice.",
+  "xicbtn.ion.aria": "Nome accessibile dell'etichetta dello ione accanto al pulsante XIC; {ion} = ione e finestra (es. m/z 301.1410 ± 5 ppm).",
+  "xicbtn.picked": "Annuncio dopo la scelta di un picco nello spettro; {ion} = ione e finestra.",
+  "xicbtn.pop.tol": "Etichetta del campo tolleranza; {unit} = ppm (alta risoluzione) o Da (risoluzione unitaria)."
 }

@@ -116,6 +116,8 @@ const TASTI = (() => {
       const d = a.data[0].d; let b = -1;
       for (let i = 0; i < d.mz.length; i++) if (d.mz[i] >= a.x0 && d.mz[i] <= a.x1 && (b < 0 || d.y[i] > d.y[b])) b = i;
       if (b >= 0) { x = d.mz[b]; c.has = true; c.m = x; c.lab = x.toFixed(typeof mzd === "function" ? mzd(p, p.level) : 2); }
+      const ch = window.XICBTN ? XICBTN.chosen(p) : null;                       // the peak chosen for the XIC button wins over the highest one
+      if (ch != null) { x = ch; c.has = true; c.m = x; c.lab = x.toFixed(typeof mzd === "function" ? mzd(p, p.level) : 2); }
     }
     c.x = x; c.px = a.X(x); c.py = p.cv.getBoundingClientRect().height / 2; c.k = p.type === "spec" ? 0 : typeof nearestFile === "function" ? nearestFile(p, x) : 0;
     return c;
