@@ -14415,3 +14415,4 @@
 {"v":1,"ts_utc":"2026-10-23T12:15:27Z","tipo":"job","k":"120408327228","workflow":"pages","job":"deploy","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"fb86a3322fdfd7ef4aaf9bb5b93195c24143a39f","run_id":39951959347,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T12:15:28Z","tipo":"annullamento","k":"39951959347","workflow":"pages","minuti_runner":0.0,"sostituito_da":"6c1278d45e2fcbc8b3ad85737a3e59d14c535dc7","pr":null,"sha":"fb86a3322fdfd7ef4aaf9bb5b93195c24143a39f","run_id":39951959347,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T12:16:06Z","tipo":"carico","k":"2026-10-23T12:1","job_in_coda":0,"job_in_corso":39}
+{"v":1,"ts_utc":"2026-10-23T12:18:11Z","azione":"aperta","tipo":"pr","pr":1606,"sha":"2b4d5151eb7b147b2dda82d27878c320f337dfc4"}
