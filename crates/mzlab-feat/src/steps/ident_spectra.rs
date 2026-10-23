@@ -194,6 +194,9 @@ fn match_params() -> Vec<Param> {
             Param::choice("decoys", "Decoys", &["none", "spectrum"])
                 .default_str("none")
                 .doc("spectrum: a decoy spectrum (random fragments, same intensities) is searched beside every library entry and each best hit carries decoy_q, the q-value of the batch; it is a lower bound of the true error rate (isomers and analogues are not random errors). Works with the entropy, cosine and modified cosine scores (not tree; the q-value counts the candidates inside the precursor window; an .mzlib is read back to spectra and rebuilt with the decoys); none leaves the hits as they are"),
+            Param::boolean("matched_peaks", "Matched peaks")
+                .default_bool(false)
+                .doc("On: every candidate also lists matched_peaks, the pairs of peaks behind its score (m/z and relative intensity of the query and of the library spectrum, and whether the precursor shift was needed), so the match can be checked peak by peak; the scores do not change. Not used by the tree algorithm"),
             Param::boolean("score_terms", "Score terms")
                 .default_bool(false)
                 .advanced()

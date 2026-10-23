@@ -59,6 +59,7 @@ mod flow_lookup_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
+mod flow_match_evidence;
 mod flow_match_filter;
 #[cfg(test)]
 mod flow_match_tests;
