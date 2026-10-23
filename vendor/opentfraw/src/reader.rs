@@ -972,7 +972,7 @@ impl RawFileReader {
                     // --- v66 Q1 extraction: anchor on scan_index.high_mz ---
                     let mut event_q3_hi: HashMap<u16, f64> = HashMap::new();
                     for entry in &scan_index {
-                        if entry.high_mz > 50.0 && entry.high_mz < 2000.0 {
+                        if entry.high_mz > 10.0 && entry.high_mz < 2000.0 {
                             event_q3_hi.entry(entry.scan_event).or_insert(entry.high_mz);
                         }
                     }
