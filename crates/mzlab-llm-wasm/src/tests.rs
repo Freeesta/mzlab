@@ -276,3 +276,22 @@ fn the_agent_asks_the_router_then_adds_the_phase_message_and_the_readings() {
     assert!(conv.contains("\"reading\":\"metadati\""));
     assert!(a.enable_assist(&roles, &prompts, "missing.md").is_err());
 }
+
+#[test]
+fn the_readers_follow_the_route_once_each_and_a_bad_answer_asks_for_none() {
+    let r = r#"{"route":"table","need_data":["tabcheck","rows","inspection","tabcheck","plan"],"language":"en","suspicious":false}"#;
+    assert_eq!(Assist::readers(r), r#"["interprete","metadati"]"#);
+    assert_eq!(Assist::readers(r#"{"route":"nope"}"#), "[]");
+    assert_eq!(Assist::readers("not json"), "[]");
+}
+
+#[test]
+fn a_request_of_a_subagent_survives_the_trip_through_json() {
+    let (roles, prompts) = assist_files();
+    let a = Assist::new("anthropic", &roles, &prompts, "[]").unwrap();
+    let req = a.request("metadati", INPUT).unwrap();
+    let back =
+        mzlab_llm::provider::Request::from_value(&mzlab_core::json::parse(req.as_bytes()).unwrap())
+            .unwrap();
+    assert_eq!(back.to_json(), req);
+}

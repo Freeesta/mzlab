@@ -51,7 +51,7 @@ fn line(o: &Output, outcome: &str) -> String {
 #[wasm_bindgen]
 pub struct Agent {
     pub(super) st: State,
-    replay: Option<Replay>,
+    pub(super) replay: Option<Replay>,
 }
 
 #[wasm_bindgen]

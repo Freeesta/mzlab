@@ -44,11 +44,22 @@ impl State {
             }
             "llm/request" => text(build(s("conv"))?.2.to_json()),
             "llm/send" => {
-                let (prov, conv, req) = build(s("conv"))?;
+                // a call of a subagent comes as a request already built by Rust (`request`) and has no tool call to read from the text
+                let (prov, prompted, req) = match p["request"].as_str() {
+                    Some(r) => {
+                        let prov = find(s("provider"))?;
+                        let v = mzlab_core::json::parse(r.as_bytes())?;
+                        (prov, false, provider::Request::from_value(&v)?)
+                    }
+                    None => {
+                        let (prov, conv, req) = build(s("conv"))?;
+                        let prompted = prov
+                            .model(&conv.model)
+                            .is_some_and(|m| m.tools == ToolMode::Prompted);
+                        (prov, prompted, req)
+                    }
+                };
                 let key = read_keys(&self.keys_path()?).remove(&prov.id);
-                let prompted = prov
-                    .model(&conv.model)
-                    .is_some_and(|m| m.tools == ToolMode::Prompted);
                 let abort = Arc::new(AtomicBool::new(false));
                 let id = with_jobs(|n, m| {
                     *n += 1;
