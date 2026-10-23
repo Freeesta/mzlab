@@ -1,11 +1,13 @@
 //! The catalog `strumenti/1` against the registry: every step and every `--set` name is reachable through it, defaults sit inside their limits, the
 //! file `docs/schemi/strumenti-1.json` is the export (`MZLAB_UPDATE_STEPS=1 cargo test -p mzlab-cli --lib llm_tools` rewrites it) and the bytes are stable.
 
-// The tests of `proposta-param/1` ride on this module (the crate root is at its line limit).
+// The tests of `proposta-param/1` and of `reading` ride on this module (the crate root is at its line limit).
 #[path = "llm_params_tests.rs"]
 mod params;
 #[path = "llm_params_g_tests.rs"]
 mod params_g;
+#[path = "llm_reading_tests.rs"]
+mod reading;
 
 use std::collections::BTreeSet;
 

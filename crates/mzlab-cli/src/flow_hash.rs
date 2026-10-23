@@ -1,12 +1,14 @@
 //! SHA-256 and size of a file read in pieces, for the files a flow run makes (`FileRunner::keep`); used by `flow.rs`.
 
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use mzlab_core::budget::{Hashing, WriteAt};
 use mzlab_core::error::Result;
+use mzlab_core::flow::Artifact;
+use mzlab_core::step::DataType;
 
-use crate::flow::io;
+use crate::flow::{io, FileRunner};
 
 /// A sink that keeps nothing: `Hashing` over it gives the size and SHA-256 of a stream.
 struct Discard;
@@ -34,4 +36,33 @@ pub(crate) fn file_sha256(path: &Path) -> Result<(u64, String)> {
     }
     let (_, bytes, sha) = sink.finish();
     Ok((bytes, sha))
+}
+
+impl FileRunner {
+    /// Keeps a file the run made: its size and SHA-256 are read from it.
+    pub(crate) fn keep(&self, path: PathBuf, ty: DataType) -> Result<Artifact> {
+        let (bytes, sha256) = file_sha256(&path)?;
+        Ok(self.keep_known(path, ty, bytes, sha256))
+    }
+
+    /// `keep` of a file whose size and SHA-256 the writer took while it wrote it: the file is not read again.
+    pub(crate) fn keep_known(
+        &self,
+        path: PathBuf,
+        ty: DataType,
+        bytes: u64,
+        sha256: String,
+    ) -> Artifact {
+        let label = path.file_name().map(|n| n.to_string_lossy().into_owned());
+        self.made
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(sha256.clone(), path);
+        Artifact {
+            sha256,
+            bytes,
+            ty,
+            label,
+        }
+    }
 }

@@ -1,0 +1,57 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "lettura/1",
+ "title": "lettura/1: what a subagent of the data assistant read in the data",
+ "description": "Format «lettura/1» (crates/mzlab-llm/src/reading.rs, docs/studi/assistente-dati/01-architettura.md §8): at most 8 findings, each with the keys of the program's data it rests on (`evidence`, all present in the input), a confidence and an action, at most 5 closed questions and the numbers used. `reading::validate` also checks that every number of every sentence is in the input and that `set_param` names a real parameter inside its limits. A finding is a candidate, never an identification.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "kind", "findings"],
+ "properties": {
+  "schema": {"const": "lettura/1"},
+  "kind": {"enum": ["acquisition", "chromatography", "table"]},
+  "findings": {
+   "type": "array",
+   "maxItems": 8,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "topic", "statement", "evidence", "confidence", "action"],
+    "properties": {
+     "id": {"type": "string"},
+     "topic": {"type": "string"},
+     "statement": {"type": "string", "minLength": 1},
+     "evidence": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+     "confidence": {"enum": ["high", "medium", "low"]},
+     "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+       "type": {"enum": ["none", "ask", "set_param", "add_step", "split_series", "chart"]},
+       "ref": {"type": "string"},
+       "step": {"type": "string", "pattern": "^[a-z0-9_.]+@[0-9]+$"},
+       "algorithm": {"type": "string"},
+       "name": {"type": "string"},
+       "value": {"type": ["number", "string", "boolean", "array"], "items": {"type": "number"}}
+      }
+     }
+    }
+   }
+  },
+  "questions": {
+   "type": "array",
+   "maxItems": 5,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "text", "options"],
+    "properties": {
+     "id": {"type": "string"},
+     "text": {"type": "string", "minLength": 1},
+     "options": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"type": "string"}}
+    }
+   }
+  },
+  "charts": {"type": "array", "maxItems": 2, "items": {"type": "object", "required": ["ref"], "properties": {"ref": {"type": "string"}, "why": {"type": "string"}}}},
+  "numbers": {"type": "array", "items": {"type": ["string", "number"]}}
+ }
+}

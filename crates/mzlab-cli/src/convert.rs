@@ -15,7 +15,7 @@ use crate::convert_report::{head_of, report, Item};
 use crate::flow::{steps, DoneFn, FileRunner};
 use crate::flow_base::convert_file;
 use crate::flow_run::{apply_set, fail, fill_inputs, prepare, problem_text, run_checked};
-use crate::flow_set::{digest, file_set, is_set_folder};
+use crate::flow_set::{digest_known, file_set, is_set_folder, known_sha};
 use crate::Outcome;
 
 pub(crate) const HELP: &str = "mzlab-cli convert: vendor files to indexed mzML, the step convert.mzml of the Flow page.
@@ -288,9 +288,12 @@ fn item(root: &str, e: &Entry, ended: Option<&Ended>, (work, out): (&Path, &Path
         }
     };
     let to = out.join(&e.out);
-    let made = place(&work.join(convert_file("conv", root)), &to)
+    let made_file = work.join(convert_file("conv", root));
+    // the SHA-256 the writer took while it wrote the file; a file taken from the cache is hashed
+    let known = known_sha(&made_file);
+    let made = place(&made_file, &to)
         .map_err(|err| err.to_string())
-        .and_then(|_| digest(&to).map_err(|err| err.to_string()));
+        .and_then(|_| digest_known(&to, known).map_err(|err| err.to_string()));
     match made {
         Ok((_, sha256)) => {
             let (spectra, conv) = head_of(&to);

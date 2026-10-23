@@ -1,0 +1,47 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "param-scelte/1",
+ "title": "param-scelte/1: the choices of the parameter subagent on the proposals of the rules",
+ "description": "Format «param-scelte/1» (crates/mzlab-llm/src/reading.rs, docs/studi/assistente-dati/prompt/05_proposta-parametri.md): one choice for each proposal of `proposta-param/1`. `source` is `rule:<id>` when the value of the rule is kept and `model` when it is changed (with the reason); `reading::validate` checks that every proposal has its choice, that every value is inside the limits of the step/1 descriptor and that every number of a reason is in the input.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "choices"],
+ "properties": {
+  "schema": {"const": "param-scelte/1"},
+  "choices": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["step", "name", "value", "source", "reason"],
+    "properties": {
+     "step": {"type": "string", "pattern": "^[a-z0-9_.]+@[0-9]+$"},
+     "algorithm": {"type": "string"},
+     "name": {"type": "string"},
+     "value": {"type": ["number", "string", "boolean", "array"], "items": {"type": "number"}},
+     "source": {"type": "string", "pattern": "^(model|rule:R-[a-z0-9]+-[0-9]+)$"},
+     "reason": {"type": "string", "minLength": 1}
+    }
+   }
+  },
+  "questions": {
+   "type": "array",
+   "maxItems": 5,
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "text", "options"],
+    "properties": {
+     "id": {"type": "string"},
+     "text": {"type": "string", "minLength": 1},
+     "options": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"type": "string"}}
+    }
+   }
+  },
+  "skipped": {
+   "type": "array",
+   "items": {"type": "object", "additionalProperties": false, "required": ["step", "name", "why"], "properties": {"step": {"type": "string"}, "name": {"type": "string"}, "why": {"type": "string", "minLength": 1}}}
+  },
+  "numbers": {"type": "array", "items": {"type": ["string", "number"]}}
+ }
+}

@@ -1,0 +1,8 @@
+{"schema":"assist-ruoli/1","roles":[
+{"role":"router","prompt":"02_router.md","model":"claude-haiku-5-5","effort":"low","max_tokens":200,"output_schema":"router/1","input_sources":["state","message"]},
+{"role":"metadati","prompt":"03_metadati.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":4000,"output_schema":"lettura/1","input_sources":["ispezione/1"]},
+{"role":"cromatografia","prompt":"04_cromatografia.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":4000,"output_schema":"lettura/1","input_sources":["ispezione/1","qc/1"]},
+{"role":"parametri","prompt":"05_parametri.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":4000,"output_schema":"param-scelte/1","input_sources":["proposta-param/1","answers","plan"]},
+{"role":"interprete","prompt":"07_interprete.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":4000,"output_schema":"lettura/1","input_sources":["tabcheck/1","rows","answers","resolution"]},
+{"role":"grafici","prompt":"08_grafici.md","model":"claude-haiku-5-5","effort":"low","max_tokens":1000,"output_schema":"grafico/1","input_sources":["request","views"]}
+],"orchestrator":{"prompt":"01_sistema.md","phase_prompt":"06_piano.md","model":"claude-sonnet-5-5","effort":"medium","max_tokens":3000,"max_tokens_plan":6000}}

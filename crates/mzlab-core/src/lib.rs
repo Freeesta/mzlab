@@ -30,6 +30,7 @@ pub mod hrroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod chromeleon;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
+pub mod hashio;
 pub mod hrscanbin;
 pub mod hrscans;
 pub mod error;

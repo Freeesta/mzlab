@@ -219,3 +219,36 @@ fn the_default_is_the_cores_minus_one_and_at_least_one() {
     assert_eq!(thread_predefinito(), n.saturating_sub(1).max(1));
     assert_eq!(Opzioni::default().thread, thread_predefinito());
 }
+
+/// Blocks close by points as well as by count: a few spectra of 150 000 points among small ones, and an error inside a block of mixed sizes.
+#[test]
+fn blocks_closed_by_points_write_the_same_bytes_and_stop_at_the_same_error() {
+    let mut s = spettri(90);
+    for i in [3, 4, 40, 41, 77] {
+        let punti = 150_000;
+        s[i].0.mz = (0..punti).map(|k| 100.0 + k as f64 * 0.01).collect();
+        s[i].0.intensity = (0..punti).map(|k| (k % 977) as f32).collect();
+        s[i].0.wide = None;
+    }
+    let opz = Opzioni::default();
+    let atteso = senza_gruppo(&s, opz, true);
+    for thread in [1, 3] {
+        assert!(
+            con_gruppo(&s, opz, true, thread) == atteso,
+            "threads={thread}"
+        );
+    }
+    let mut w = apri(Opzioni { thread: 3, ..opz }, false, s.len());
+    let guasto =
+        |enc: &mut Codifica, k: usize, sp: &Spectrum, ex: &SpectrumExtra, t: &mut String| {
+            if k == 41 {
+                return Err(Error::new("err.test.injected"));
+            }
+            enc.spettro(k, sp, ex, t)
+        };
+    let e = w
+        .spettri_con(s.iter().cloned().map(Ok), &guasto)
+        .unwrap_err();
+    assert_eq!(e.key, "err.test.injected");
+    assert!(w.out == fino_a(&s, 41, false));
+}

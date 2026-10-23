@@ -178,6 +178,8 @@ def main() -> None:
     pack_mzfinder(static)
     # the catalog of assistant tools beside its page (the module `llm/` reads it on first use)
     shutil.copy2(ROOT / "docs" / "schemi" / "strumenti-1.json", static / "llm" / "strumenti-1.json")
+    # the prompts and roles of the assistant's subagents: data fetched on request, the same bytes as in the crate
+    shutil.copytree(ROOT / "crates" / "mzlab-llm" / "data" / "assist", static / "llm" / "assist")
     bad = python_files(out)
     if bad:
         raise SystemExit(f"the site must not carry Python: {bad[:5]}")

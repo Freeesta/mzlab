@@ -5,6 +5,7 @@
 //! No network, no key, no dependency beyond `mzlab-core`.
 
 pub mod agent;
+pub mod assist;
 pub mod chart;
 mod chart_data;
 pub mod chart_views;
@@ -27,6 +28,7 @@ mod params_rules_tab;
 pub mod plan;
 pub mod policy;
 pub mod provider;
+pub mod reading;
 pub mod schema;
 pub mod spend;
 mod text;
