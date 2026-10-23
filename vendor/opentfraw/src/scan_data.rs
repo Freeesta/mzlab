@@ -73,6 +73,8 @@ pub struct Profile {
 /// The header of a scan data packet (40 bytes).
 #[derive(Debug)]
 pub struct PacketHeader {
+    /// Number of m/z windows of the scan (several in a multi-range SIM scan); each window after the first adds a low/high pair to the header and a count to the peak list.
+    pub windows: u32,
     pub profile_size: u32,
     pub peak_list_size: u32,
     pub layout: u32,
@@ -169,10 +171,24 @@ impl ScanDataPacket {
         if header.peak_list_size == 0 {
             return Ok(Vec::new());
         }
-        let count = r.read_u32()?;
         let item_size: usize = if wide_mz { 12 } else { 8 };
-        let n = r.block_len(count as u64, item_size as u64)?;
-        // the whole list in one read, decoded from the slice
+        // one count and one run of peaks per window
+        let mut peaks = Vec::new();
+        for _ in 0..header.windows.max(1) {
+            let count = r.read_u32()?;
+            let n = r.block_len(count as u64, item_size as u64)?;
+            peaks.extend(Self::read_window_peaks(r, n, item_size, wide_mz)?);
+        }
+        Ok(peaks)
+    }
+
+    /// The `n` bytes of one window's peaks in one read, decoded from the slice.
+    fn read_window_peaks<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        n: usize,
+        item_size: usize,
+        wide_mz: bool,
+    ) -> Result<Vec<Peak>> {
         con_blocco(r, n, |b| {
             b.chunks_exact(item_size)
                 .map(|c| {
@@ -292,9 +308,10 @@ impl ScanDataPacket {
 
 impl PacketHeader {
     fn read<R: Read + Seek>(r: &mut BinaryReader<R>) -> Result<Self> {
-        // 40 bytes: _unk1, profile_size, peak_list_size, layout, descriptor_list_size, unknown_stream_size, triplet_stream_size, _unk2 (u32), low_mz, high_mz (f32)
-        con_blocco(r, 40, |b| {
-            Ok(Self {
+        // 40 bytes: windows, profile_size, peak_list_size, layout, descriptor_list_size, unknown_stream_size, triplet_stream_size, _unk2 (u32), low_mz, high_mz (f32)
+        let header = con_blocco(r, 40, |b| {
+            Ok::<_, Error>(Self {
+                windows: read_u32_le(b, 0)?,
                 profile_size: read_u32_le(b, 4)?,
                 peak_list_size: read_u32_le(b, 8)?,
                 layout: read_u32_le(b, 12)?,
@@ -304,7 +321,13 @@ impl PacketHeader {
                 low_mz: read_f32_le(b, 32)?,
                 high_mz: read_f32_le(b, 36)?,
             })
-        })?
+        })??;
+        // the low/high pairs of the other windows
+        if header.windows > 1 {
+            let extra = r.block_len(header.windows as u64 - 1, 8)?;
+            r.skip(extra)?;
+        }
+        Ok(header)
     }
 }
 
@@ -718,6 +741,7 @@ mod tests {
         triplet_stream_size: u32,
     ) -> PacketHeader {
         PacketHeader {
+            windows: 1,
             profile_size: 0,
             peak_list_size: 0,
             layout: 0,
@@ -1103,5 +1127,45 @@ mod tests {
             let r = ScanDataPacket::read(&mut BinaryReader::new(Cursor::new(bytes[..n].to_vec())));
             assert!(r.is_err(), "{n}");
         }
+    }
+
+    /// A multi-window SIM scan: the header carries one low/high pair per window and the peak list one count per window.
+    #[test]
+    fn un_pacchetto_a_piu_finestre_da_tutti_i_picchi() {
+        let finestre: [&[(f32, f32)]; 3] = [
+            &[(428.5, 10.0), (429.5, 20.0)],
+            &[(646.75, 30.0)],
+            &[(670.0, 40.0), (671.0, 50.0), (672.0, 60.0)],
+        ];
+        let mut lista = Vec::new();
+        for f in finestre {
+            u32s(&mut lista, &[f.len() as u32]);
+            for (mz, a) in f {
+                f32s(&mut lista, &[*mz, *a]);
+            }
+        }
+        let mut v = Vec::new();
+        u32s(&mut v, &[3, 0, (lista.len() / 4) as u32, 1, 0, 0, 0, 0]);
+        f32s(&mut v, &[428.0, 438.0, 646.5, 651.5, 669.5, 684.5]);
+        v.extend(&lista);
+        let attesi: Vec<(f64, f32)> = finestre
+            .iter()
+            .flat_map(|f| f.iter().map(|(m, a)| (*m as f64, *a)))
+            .collect();
+        let solo = ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(v))).unwrap();
+        assert_eq!(
+            solo.iter().map(|p| (p.mz, p.abundance)).collect::<Vec<_>>(),
+            attesi
+        );
+    }
+
+    #[test]
+    fn un_numero_di_finestre_assurdo_non_alloca() {
+        let mut v = Vec::new();
+        u32s(&mut v, &[u32::MAX, 0, 0, 1, 0, 0, 0, 0]);
+        f32s(&mut v, &[1.0, 2.0]);
+        let err =
+            ScanDataPacket::read_peaks_only(&mut BinaryReader::new(Cursor::new(v))).unwrap_err();
+        assert!(matches!(err, Error::AllocationTooLarge { .. }));
     }
 }
