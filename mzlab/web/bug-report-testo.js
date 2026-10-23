@@ -1,7 +1,7 @@
 // @ts-check
-// The text of a bug report, no DOM and no network: what the dialog of bug-report.js shows, copies and puts in the link to a new GitHub issue.
+// The text of a bug report, no DOM and no network: what the «Report a bug» group of the settings (bug-report.js) shows, copies and puts in the link to a new GitHub issue.
 // Privacy rule: the diagnostics hold only counts, formats and sizes of the loaded files, never a file name, a sample label or a path; the recent errors are cut to
-// one line, with every name of the loaded files and every file-like word replaced by «<file>». The user's own two answers are the only free text.
+// one line, with every name of the loaded files and every file-like word replaced by «<file>». The user's own description is the only free text.
 // Run by node in tests/test_bug_report.py.
 
 export const REPO = "https://github.com/Freeesta/mzlab";
@@ -56,11 +56,10 @@ export function righeDiagnostica(d) {
   return L;
 }
 
-/** The Markdown report. @param {{what: string, expected: string, diag: ReturnType<typeof righeDiagnostica> | null}} r
+/** The Markdown report: the description and the diagnostics. @param {{what: string, diag: ReturnType<typeof righeDiagnostica> | null}} r
  * @param {(k: string) => string} t */
 export function rapporto(r, t) {
-  const none = t("bug.r.none");
-  const L = [`## ${t("bug.r.what")}`, "", (r.what || "").trim() || none, "", `## ${t("bug.r.expected")}`, "", (r.expected || "").trim() || none];
+  const L = [`## ${t("bug.r.what")}`, "", (r.what || "").trim() || t("bug.r.none")];
   if (r.diag) L.push("", `## ${t("bug.r.diag")}`, "", ...r.diag);
   return L.join("\n");
 }

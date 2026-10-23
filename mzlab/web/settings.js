@@ -143,10 +143,17 @@ function uipOpen(btn) {
     + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
     + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
     + grp("uip-g-app", "app", "settings.g.app", app, false)
+    + grp("uip-g-bug", "bug", "settings.g.bug", '<div id="uip-bug"></div>', false)
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
+  const bugGroup = /** @type {HTMLDetailsElement | null} */ (d.querySelector("#uip-g-bug")), bugBox = /** @type {HTMLElement | null} */ (d.querySelector("#uip-bug"));
+  if (bugGroup && bugBox) {            // the report form is fetched when the group is first opened
+    let bugDone = false;
+    const bugMount = () => { if (bugDone || !bugGroup.open) return; bugDone = true; import("./bug-report.js").then(m => m.mount(bugBox)).catch(() => { bugDone = false; }); };
+    bugGroup.addEventListener("toggle", bugMount); bugMount();
+  }
   if (window.DESKUPD) DESKUPD.bind(d);
   if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);

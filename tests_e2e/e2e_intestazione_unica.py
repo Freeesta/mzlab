@@ -54,8 +54,8 @@ try:
         def bug():
             for adm in (0, 1):
                 c, q = new(1440, "it", adm); q.goto(U); q.wait_for_function("window.qqReady===true", timeout=60000)
-                assert q.is_visible("#bug-btn"), ("bug button", adm); c.close()
-        step("the bug button shows for everybody, admin off and on", bug)
+                assert q.locator("#bug-btn").count() == 0, ("no bug button in the header", adm); c.close()
+        step("the header has no bug button (the report lives in the settings), admin off and on", bug)
         def once():
             c, q = new(1440, "en", 0); q.goto(U); q.wait_for_function("window.qqReady===true", timeout=60000)
             sorry = "[...document.querySelectorAll('#toast-container *')].filter(e => e.textContent.trim() === 'Sorry! For now the theory is only in Italian.').length"
