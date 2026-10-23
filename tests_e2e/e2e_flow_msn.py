@@ -173,6 +173,38 @@ try:
             assert x["err"] and x["err"]["key"] == "err.flow.msn.open", x["err"]
             assert "Data tab" in pg.evaluate("FLOW.message({ key: 'err.flow.msn.open', params: { input: 'x.mzML' } })")
         step("without the infusion open the run asks to open it in Data", closed)
+        def cache():
+            count = "window.__n = 0; window.__g = window.__g || window.fetch; window.fetch = (u, i) => { if (String(u).includes('api/msn_grafo')) window.__n++; return window.__g(u, i); }; null"
+            states = "(async () => JSON.parse(await (await fetch('api/flow/sched/nodes', { method: 'POST', body: '{}' })).text()).map(n => n.instance + ':' + n.state))()"
+            a = pg.evaluate(RUN, {"formula": ION, "ppm_formula": 7})
+            assert a["err"] is None, a["err"]
+            pg.evaluate(count)
+            try:
+                other = pg.evaluate(RUN, {"formula": ION, "ppm_formula": 9})
+                assert other["err"] is None, other["err"]
+                made = pg.evaluate("window.__n")
+                assert made >= 3, made
+                pg.evaluate("window.__n = 0")
+                back = pg.evaluate(RUN, {"formula": ION, "ppm_formula": 7})
+                assert back["err"] is None, back["err"]
+                assert pg.evaluate("window.__n") == 0, "the engine was asked again for a result kept in OPFS"
+                st = pg.evaluate(states)
+                assert all(s.endswith(":reused") for s in st if not s.startswith("ixmix")), st
+                assert [mask(f["text"]) for f in back["files"]] == [mask(f["text"]) for f in a["files"]], "the cached texts differ from the first run"
+            finally: pg.evaluate("window.fetch = window.__g; null")
+            keep = pg.evaluate("""(async () => { const d = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow')).getDirectoryHandle('msn'); const o = []; for await (const [n] of d.entries()) o.push(n); return o })()""")
+            assert "index.json" in keep and len([n for n in keep if n.endswith(".json") and n != "index.json"]) >= 6, keep
+        step("a result kept in OPFS is taken from there when the plan returns to the same parameters (no request to the engine, job reused)", cache)
+        def library_key():
+            k = pg.evaluate("""async () => {
+              const put = async t => { const w = await (await (await (await navigator.storage.getDirectory()).getFileHandle('msnlib.json', { create: true })).createWritable()); await w.write(t); await w.close() };
+              const spec = { key: 'k1' }, inst = { step: 'spectra.match@1' }, other = { step: 'msn.table_export@1' };
+              await put('{"a":1}'); const a = await FLOW.liveJobs.msnKey(spec, inst), t1 = await FLOW.liveJobs.msnKey(spec, other);
+              await put('{"a":2}'); const b = await FLOW.liveJobs.msnKey(spec, inst), t2 = await FLOW.liveJobs.msnKey(spec, other);
+              await put(''); return { same: a === b, table: t1 === t2 } }""")
+            assert not k["same"], "a change of the library of the user keeps the key of the search"
+            assert k["table"], "the library of the user enters the key of a step that does not read it"
+        step("the key of the library search follows the library of the user, the key of the other steps does not", library_key)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")

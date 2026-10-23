@@ -112,20 +112,55 @@
     });
   };
 
+  // results of the MSn steps kept in OPFS (mzlab/flow/msn/<key>.json = {name, text}), the newest MSN_KEEP of them; index.json lists the keys, oldest first
+  const MSN_DIR = "mzlab/flow/msn/", MSN_KEEP = 32;
+  /** SHA-256 hex of a text @param {string} s */
+  const sha = async s => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
+  /** the key of an MSn job: its plan_key (step, parameters, program version, the open infusion, the jobs upstream) and, for the search, the library of the user, which the plan does not hold @param {any} spec @param {any} inst */
+  const msnKey = async (spec, inst) => sha(spec.key + (base(inst) === "spectra.match" ? "\n" + await F.webMsn.library() : ""));
+  /** the {name, text} kept under `key`, or null @param {any} p @param {string} key */
+  const recall = async (p, key) => {
+    try { return await has(p, MSN_DIR + key + ".json") ? JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + key + ".json"))) : null; } catch (_) { return null; }
+  };
+  /** keeps a result and forgets the oldest ones past MSN_KEEP @param {any} p @param {string} key @param {{ name: string, text: string }} r */
+  const remember = async (p, key, r) => {
+    try {
+      await p.fs.write(MSN_DIR + key + ".json", new TextEncoder().encode(JSON.stringify({ name: r.name, text: r.text })));
+      let list = [];
+      try { list = JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + "index.json"))); } catch (_) { /* no index yet */ }
+      list = [...list.filter((/** @type {string} */ k) => k !== key), key];
+      for (const old of list.splice(0, Math.max(0, list.length - MSN_KEEP))) await p.fs.remove(MSN_DIR + old + ".json").catch(() => {});
+      await p.fs.write(MSN_DIR + "index.json", new TextEncoder().encode(JSON.stringify(list)));
+    } catch (_) { /* the cache is a convenience: the result is still given */ }
+  };
+
   /** the MSn steps (flow-web-msn.js): one job for the step, on the infusion open in Data; the text is kept in OPFS by the runner of the MSn steps and given back with the other results (`x.files`).
+   * A result already kept under the key of the job (same plan_key, same library for the search) is taken from OPFS without asking the engine: the job is `cached`.
    * The routes of the engine are the ones of the runner of an MSn plan, so the bytes are the same; spectra.match with another algorithm stays with the computer */
   const msn = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
     const j = job(spec), M = F.webMsn;
     if (!M || (base(inst) === "spectra.match" && inst.algorithm !== "tree")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const p = await kit().getPool(), key = await msnKey(spec, inst);
+    // a closed infusion is an error to show, never a result to take from the cache
+    let open = true;
+    try { M.infusion(x.S); } catch (_) { open = false; }
+    const hit = open ? await recall(p, key) : null;
+    if (hit) {
+      x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text });
+      await M.keep(hit.name, hit.text);
+      await x.call("cached", { job: j });
+      return {};
+    }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
       const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null, phase: (/** @type {number} */ frac) => { x.call("progress", { job: j, frac }).catch(() => {}); } });
+      await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
   };
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
 
-  F.liveJobs = { "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { msnKey, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();
