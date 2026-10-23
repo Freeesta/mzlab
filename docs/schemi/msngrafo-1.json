@@ -1324,6 +1324,188 @@
     "type": "object"
    }
   },
+  "rotture": {
+   "type": "object",
+   "additionalProperties": false,
+   "description": "Present only when asked (mzlab-cli msn-graph --rotture): the sets of atoms of the structure (opzioni.smiles) with one or two bonds cut and a few hydrogens moved whose m/z is a node's, the arcs whose child piece lies inside the parent's, and the share of each spectrum's intensity on explained arcs. Hypotheses with their evidence, never an assignment.",
+   "required": [
+    "versione",
+    "smiles",
+    "ppm",
+    "h_max",
+    "max_legami",
+    "atomi",
+    "legami",
+    "avvisi",
+    "conteggi",
+    "nodi",
+    "archi",
+    "spettri"
+   ],
+   "properties": {
+    "versione": {
+     "const": 1
+    },
+    "smiles": {
+     "type": "string"
+    },
+    "ppm": {
+     "type": "number"
+    },
+    "h_max": {
+     "type": "integer"
+    },
+    "max_legami": {
+     "type": "integer",
+     "minimum": 1,
+     "maximum": 2
+    },
+    "atomi": {
+     "type": "integer"
+    },
+    "legami": {
+     "type": "integer"
+    },
+    "avvisi": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "conteggi": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "archi_spiegati",
+      "archi",
+      "intensita_spiegata"
+     ],
+     "properties": {
+      "archi_spiegati": {
+       "type": "integer"
+      },
+      "archi": {
+       "type": "integer"
+      },
+      "intensita_spiegata": {
+       "type": "number"
+      }
+     }
+    },
+    "nodi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "nodo",
+       "n",
+       "ipotesi"
+      ],
+      "properties": {
+       "nodo": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "n": {
+        "type": "integer"
+       },
+       "ipotesi": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "legami",
+          "pezzo",
+          "formula",
+          "h",
+          "mz_teorico",
+          "ppm"
+         ],
+         "properties": {
+          "legami": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           }
+          },
+          "pezzo": {
+           "type": "array",
+           "items": {
+            "type": "integer",
+            "minimum": 0
+           }
+          },
+          "formula": {
+           "type": "string"
+          },
+          "h": {
+           "type": "integer"
+          },
+          "mz_teorico": {
+           "type": "number"
+          },
+          "ppm": {
+           "type": "number"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    "archi": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "da",
+       "a",
+       "spiegato"
+      ],
+      "properties": {
+       "da": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "a": {
+        "type": "string",
+        "pattern": "^n[0-9]+$"
+       },
+       "spiegato": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    "spettri": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "albero",
+       "spiegata",
+       "totale"
+      ],
+      "properties": {
+       "albero": {
+        "type": "string"
+       },
+       "spiegata": {
+        "type": "number"
+       },
+       "totale": {
+        "type": "number"
+       }
+      }
+     }
+    }
+   }
+  },
   "vista": {
    "type": "object",
    "additionalProperties": false,

@@ -40,7 +40,7 @@ Reopening, seconds spent between worker messages:
 | 9 HR DDA | 0.1 | 3.88 | 0.93 | 0.01 | 2.95 |
 
 ## Librerie spettrali (`python3 tools/bench.py --librerie --gb --scrivi`, Chromium Linux con profilo persistente)
-«js» = percorso JavaScript (`?libjs=1`, solo fino a 10^5 spettri: oltre non è pratico), «wasm» = motore Rust/WASM. Tempi misurati dalla pagina (comprendono il passaggio dei messaggi al worker); identità e analoghi = mediana di 30 e 10 richieste a caldo, «cold» = la prima; «identify_all» = 5000 MS2 (400 per MassBank, che ne ha meno). Memoria = picco RSS di tutto il browser meno la base prima dell'importazione. Spettri sintetici (8-40 picchi uniformi: comprimono poco, il peso su disco è quindi un caso sfavorevole).
+«js» = percorso JavaScript (`?libjs=1`, fino a 10^5 spettri), «wasm» = motore Rust/WASM. Tempi misurati dalla pagina (comprendono il passaggio dei messaggi al worker); identità e analoghi = mediana di 30 e 10 richieste a caldo, «cold» = la prima; «identify_all» = 5000 MS2 (400 per MassBank, che ne ha meno). Memoria = picco RSS di tutto il browser meno la base prima dell'importazione. Spettri sintetici (8-40 picchi uniformi: comprimono poco: caso sfavorevole per il peso).
 Bersagli: identità < 5 ms a caldo, analoghi < 100 ms su 10^6, MGF da 1 GB < 90 s con ≤ 200 MB. Browser: identità 8-12 ms (giro messaggi e JSON; <1 ms nativo), analoghi 136 ms su 10^6, MGF da 1 GB 130 s e 331 MB (74 s nativo con 110 MB). MassBank su disco: 8,0 MB contro 15,7 MB MSP. Gestione librerie `.mzlib` v1: indici Flash (frammenti e perdite neutre), ricerca a caldo 8-12 ms, analoghi ~136 ms su 10^6 spettri, supporto decoy e stima FDR.
 
 | library | engine | spectra | file_mb | disk_mb | import_s | ident_cold_ms | ident_ms | analogs_cold_ms | analogs_ms | identify_all_s | identify_all_named | rss_peak_import_delta_mb | rss_peak_mb |
@@ -82,7 +82,7 @@ Sito con `.mzidx` in OPFS, una macchina, un giro. File sintetici: 20 Full Scan L
 | RSS massima del browser, MB | 831.3 | 1355.3 |
 
 ## Costruttore del `.mzidx` (Chromium Linux 4 CPU)
-«python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo (le differenze di riapertura tra le due righe sono rumore: l'indice è lo stesso). File: gli esempi anonimi del sito (LR: Full Scan; HR: il ritaglio Orbitrap ripetuto fino a 140 MB). Un solo giro per scenario.
+«python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo (le differenze tra le due righe sono rumore). File: esempi anonimi del sito (LR: Full Scan; HR: ritaglio Orbitrap ripetuto fino a 140 MB). Un giro per scenario.
 
 | scenario | constructor | files | file_mb | build_total_s | rss_peak_build_mb | first_draw_s | reopen_first_draw_s | rust_passes_max | digest |
 |---|---|---|---|---|---|---|---|---|---|
@@ -239,3 +239,4 @@ Metriche (numeri solo nel repository privato): TP di letteratura in vista, regio
 ## `.wasm` interp (`tools/build_feat_wasm.sh`, `cargo build --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features interp`)
 Dopo `wasm-bindgen --target web` e `wasm-opt -Oz` (binaryen da npm): 496 569 B dopo `wasm-opt` (388 039 B senza i siti e il disegno): sopra il cancello di 470 000 B e sotto il tetto di 512 000 B, che non si alza; l'albero MSn lo costruisce ancora `interp` stesso e è un'eccezione accettata per ora: `interp` non deve crescere oltre; ogni peso nuovo si paga prima spostando l'albero in `finder_msn` (piccola PR a parte). Gli altri `.wasm` non cambiano peso.
 Clic Tabui: `misure-clic.md`; mzTab-M: `misure-esporta.md`.
+Gesti del visualizzatore, sito e nativo: `tools/bench_visore.py`; tabella in `visore-veloce.md`.

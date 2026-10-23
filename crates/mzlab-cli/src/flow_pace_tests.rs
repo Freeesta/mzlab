@@ -44,3 +44,37 @@ fn the_conversion_reports_monotone_progress_and_is_the_same_bytes() {
     well_formed(&seen);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_input_changes_no_byte()
+{
+    let d = folder("pace_hash");
+    let src = makers(&d, false).join("a.mzXML");
+    let how = (Picchi::File, Opzioni::default());
+    // no memo of the input yet: the reader takes the SHA-1 of the header itself
+    let a = d.join("a.mzML");
+    let (_, bytes, sha) =
+        crate::flow_base::write_mzml_with(&src, None, &a, how, &mut |_, _| {}, &None).unwrap();
+    assert_eq!(
+        crate::flow_hash::file_sha256(&a).unwrap(),
+        (bytes, sha.clone())
+    );
+    assert_eq!(std::fs::metadata(&a).unwrap().len(), bytes);
+    // `digest` hashes the input once for both, the reader then takes the SHA-1 from it
+    let (len, sha256) = crate::flow_set::digest(&src).unwrap();
+    assert_eq!(len, std::fs::metadata(&src).unwrap().len());
+    assert_eq!(sha256, crate::flow_hash::file_sha256(&src).unwrap().1);
+    let given = crate::flow_set::file_set(&src).unwrap().membri[0]
+        .sha1
+        .clone();
+    let mut f = std::fs::File::open(&src).unwrap();
+    let size = f.metadata().unwrap().len();
+    assert_eq!(
+        given,
+        Some(mzlab_core::metodo::sha1_hex(&mut f, size).unwrap())
+    );
+    let b = d.join("b.mzML");
+    crate::flow_base::write_mzml_with(&src, None, &b, how, &mut |_, _| {}, &None).unwrap();
+    assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
+    let _ = std::fs::remove_dir_all(&d);
+}

@@ -3,7 +3,7 @@
 Codice: `crates/mzlab-core/src/msngrafo/vista.rs`, `posa.rs`, `posa_radiale.rs`. Schema: `docs/schemi/msngrafo-1.json` (`vista` facoltativa, versione 1). Il formato resta `msngrafo/1`: `vista` è una chiave in coda che i lettori vecchi ignorano.
 
 - **Che cos'è**: ciò che chi disegna il grafo serve e il grafo non dice apertamente, calcolato SOLO dai campi già presenti (`nodi`, `archi`, `misure`), quindi `completa(json)` aggiunge a un grafo vecchio gli stessi byte del grafo costruito oggi (prova: costruito = completato). Coordinate astratte (colonne, righe, anelli, gradi): pixel e stili sono del disegno. Una proposta di regola scritta nel JSON (`regola`), mai un meccanismo.
-- **Posizione**: sempre ultima; `strutture`, `strutture_tutti`, `regole` e `interpretazione` si inseriscono prima di essa (`vista::con_chiave`).
+- **Posizione**: sempre ultima; `strutture`, `strutture_tutti`, `regole`, `interpretazione` e `rotture` si inseriscono prima di essa (`vista::con_chiave`).
 - **Testa**: `{versione: 1, algoritmo: "best-path/1", regola (a parole), ordine (id per colonna e riga dell'albero), nodi, archi}`.
 - **`nodi[]`** (stesso ordine del grafo): `id`; `livelli` (MS delle misure in cui il frammento c'è davvero, `rel` > 0; la radice [1]); `rel` (intensità nello spettro del padre sul cammino migliore, % del picco base; radice: `rel_max`) | null; `rel_max`; `best {da (id) | null, passi, costo [passi, rel minima lungo il cammino | null, archi isolati]}`; `entranti` (precursori diversi); `comune` (entranti ≥ 2); `albero {col, riga}`; `radiale {anello, angolo}`.
 - **`archi[]`**: `{da, a, best}`; `best` true se è l'arco entrante scelto per `a`.

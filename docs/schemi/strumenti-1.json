@@ -1210,7 +1210,10 @@
                   "regole",
                   "cutoff_q",
                   "toll_perdita_mda",
-                  "scelte"
+                  "scelte",
+                  "rotture",
+                  "h_max",
+                  "max_legami"
                 ]
               },
               "value":{
@@ -1312,6 +1315,25 @@
                     "type":"string",
                     "default":"",
                     "description":"MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `ppm_struttura`)"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "maximum":4,
+                    "default":2,
+                    "description":"Hydrogens moved at most beyond the plain cleavage, for the bond breaks"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":2,
+                    "default":2,
+                    "description":"Bonds cut at most for one piece, 1 or 2"
                   }
                 ]
               }

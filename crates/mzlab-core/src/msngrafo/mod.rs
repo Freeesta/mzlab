@@ -22,6 +22,7 @@ mod regole;
 mod regole_json;
 mod regole_valuta;
 mod rotta;
+mod rotture;
 mod strutture;
 mod tabelle;
 mod unisci;
@@ -44,6 +45,9 @@ pub use regole::{leggi_tabella, tabella as tabella_regole, Regola, Tabella, Tipo
 pub use regole_json::{con_regole, regole_json};
 pub use regole_valuta::{valuta as valuta_regole, Attesa, ParamRegole, Valutazione};
 pub use rotta::{da_richiesta, grafo_json};
+pub use rotture::{
+    con_rotture, rotture_json, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
+};
 pub use strutture::{
     con_strutture, con_strutture_tutti, strutture_json, CandidatoStruttura, IngressoStrutture,
     PiccoSpiegato, Strutture, Taglio,

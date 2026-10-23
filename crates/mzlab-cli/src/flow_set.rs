@@ -2,12 +2,12 @@
 //! `.D`/`.d`/`.raw` folder (the `FileSet` of a reader of the registry), their SHA-256, and the sample a plan input names (`NAME@ID`).
 
 use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::SystemTime;
 
-use mzlab_core::budget::{sha256_hex, Hashing, WriteAt};
+use mzlab_core::budget::sha256_hex;
+use mzlab_core::hashio::hash_read;
 use mzlab_core::lettori::{FileSet, Membro};
 use mzlab_core::{Error, Result};
 
@@ -76,38 +76,34 @@ pub(crate) fn file_set(path: &Path) -> Result<FileSet> {
             nome,
             dim: f.metadata().map_err(io)?.len(),
             dati: Box::new(f),
-            sha1: None,
+            sha1: known_sha1(&p),
         });
     }
     Ok(FileSet { membri })
 }
 
-struct Sink;
-
-impl WriteAt for Sink {
-    fn write_at(&mut self, _: u64, _: &[u8]) -> Result<()> {
-        Ok(())
-    }
-}
-
+/// Size and SHA-256 of the file `p`; its SHA-1 comes with them in the same read and is kept for `file_set`, so the reader that writes the header of an mzML
+/// does not read the file again for it.
 fn hash_file(p: &Path) -> Result<(u64, String)> {
-    let mut f = File::open(p).map_err(io)?;
-    let mut h = Hashing::new(Sink);
-    let (mut buf, mut at) = (vec![0u8; 1 << 16], 0u64);
-    loop {
-        let n = f.read(&mut buf).map_err(io)?;
-        if n == 0 {
-            break;
-        }
-        h.write_at(at, &buf[..n])?;
-        at += n as u64;
+    let before = stamp(p);
+    let (bytes, sha256, sha1) = hash_read(&mut File::open(p).map_err(io)?).map_err(io)?;
+    if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), SHA1.lock()) {
+        seen.retain(|e| e.path != p);
+        seen.push(Hashed {
+            path: p.to_path_buf(),
+            len,
+            time,
+            sha: sha1,
+        });
     }
-    let (_, bytes, hex) = h.finish();
-    Ok((bytes, hex))
+    Ok((bytes, sha256))
 }
 
 /// SHA-256 of the lone files `digest` has hashed, by path, size and modification time: the `.mzidx` build takes its source's hash from here instead of reading the file again.
 static HASHED: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
+
+/// SHA-1 of the files `hash_file` has read, in the same way.
+static SHA1: Mutex<Vec<Hashed>> = Mutex::new(Vec::new());
 
 struct Hashed {
     path: PathBuf,
@@ -119,6 +115,41 @@ struct Hashed {
 fn stamp(p: &Path) -> Option<(u64, Option<SystemTime>)> {
     let m = std::fs::metadata(p).ok()?;
     Some((m.len(), m.modified().ok()))
+}
+
+/// Notes the SHA-256 of the lone file `path` of `bytes` bytes, which a caller has just hashed (or hashed while it wrote the file), for `known_sha`.
+pub(crate) fn remember_sha(path: &Path, bytes: u64, sha: &str) {
+    remember(path, stamp(path), bytes, sha);
+}
+
+/// `remember_sha` with the stamp of the file taken before it was hashed: a file that changed meanwhile is not noted.
+fn remember(path: &Path, before: Option<(u64, Option<SystemTime>)>, bytes: u64, sha: &str) {
+    if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), HASHED.lock()) {
+        seen.retain(|e| e.path != path);
+        seen.push(Hashed {
+            path: path.to_path_buf(),
+            len,
+            time,
+            sha: sha.to_string(),
+        });
+    }
+}
+
+/// The SHA-1 `hash_file` took of `path`, if it is still the same file.
+fn known_sha1(path: &Path) -> Option<String> {
+    let (len, time) = stamp(path)?;
+    let seen = SHA1.lock().ok()?;
+    seen.iter()
+        .find(|e| e.path == path && e.len == len && e.time == time)
+        .map(|e| e.sha.clone())
+}
+
+/// Size and SHA-256 of `path`; the hash is not recomputed when the writer already took `known`.
+pub(crate) fn digest_known(path: &Path, known: Option<String>) -> Result<(u64, String)> {
+    match known {
+        Some(sha) => Ok((std::fs::metadata(path).map_err(io)?.len(), sha)),
+        None => digest(path),
+    }
 }
 
 /// The SHA-256 `digest` took of the lone file `path`, if it is still the same file (size and modification time).
@@ -136,16 +167,7 @@ pub(crate) fn digest(path: &Path) -> Result<(u64, String)> {
     if !path.is_dir() && list.len() == 1 {
         let before = stamp(path);
         let (bytes, hex) = hash_file(path)?;
-        if let (Some((len, time)), Ok(mut seen)) = (before.filter(|s| s.0 == bytes), HASHED.lock())
-        {
-            seen.retain(|e| e.path != path);
-            seen.push(Hashed {
-                path: path.to_path_buf(),
-                len,
-                time,
-                sha: hex.clone(),
-            });
-        }
+        remember(path, before, bytes, &hex);
         return Ok((bytes, hex));
     }
     let (mut bytes, mut text) = (0, String::new());

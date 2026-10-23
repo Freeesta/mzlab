@@ -18,7 +18,10 @@ def step(name, fn):
 D = synth("flowmsn")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 ION = "C8H11N4O2+"
-cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--interpreta"], cwd=ROOT, check=True, capture_output=True, encoding="utf-8").stdout
+_cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--interpreta"], cwd=ROOT, capture_output=True, encoding="utf-8")
+# a failure of the reference command must show its stderr in the log (a bare CalledProcessError hid the cause)
+if _cli.returncode: sys.exit("msn-graph reference failed (exit %d):\n%s" % (_cli.returncode, _cli.stderr[-3000:]))
+cli = _cli.stdout
 mask = lambda t: re.sub(r'"sha256_idx":"[0-9a-f]*"', '"sha256_idx":""', t)
 RUN = """async (patch) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
