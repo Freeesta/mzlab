@@ -178,13 +178,27 @@ pub fn fill_file<R: ReadAt>(
     params: &Params,
     p: &FillParams,
 ) -> Result<usize> {
+    let found = fill_find(index, al, file, map, params, p)?;
+    Ok(fill_apply(al, file, &found))
+}
+
+/// The cells of `file` that `fill_file` fills, as (row, area): it reads the table (the cells of other files too, for the expected RT) and changes
+/// nothing, so the files can be searched at the same time and applied in file order.
+pub fn fill_find<R: ReadAt>(
+    index: &mut Index<R>,
+    al: &Aligned,
+    file: usize,
+    map: Option<&RtMap>,
+    params: &Params,
+    p: &FillParams,
+) -> Result<Vec<(usize, f64)>> {
     let Some(si) = index.section_of(1, params.polarity) else {
-        return Ok(0);
+        return Ok(Vec::new());
     };
     let rt: Vec<f64> = index.arrays(si)?.rt.clone();
     let nscan = rt.len();
     if nscan < 3 {
-        return Ok(0);
+        return Ok(Vec::new());
     }
     let dt = median(rt.windows(2).map(|w| w[1] - w[0]).collect()) * 60.0;
     let list = todo(al, file, &rt, map, p);
@@ -202,10 +216,15 @@ pub fn fill_file<R: ReadAt>(
         }
         Ok(())
     })?;
+    Ok(found)
+}
+
+/// Writes the cells `fill_find` found; returns how many.
+pub fn fill_apply(al: &mut Aligned, file: usize, found: &[(usize, f64)]) -> usize {
     let nf = al.n_files;
-    for &(row, area) in &found {
+    for &(row, area) in found {
         al.area[row * nf + file] = area;
         al.state[row * nf + file] = CELL_FILLED;
     }
-    Ok(found.len())
+    found.len()
 }
