@@ -114,7 +114,7 @@ fn con_chiavi(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::R
                 .filter(|p| p.is_finite() && *p > 0.0)
                 .ok_or_else(|| Error::new("err.request.badNumber").with("name", "ppm_perdita"))?,
         };
-        j = con_interpretazione(&j, &g, ppm);
+        j = con_interpretazione(&j, g, ppm);
     }
     // `rotture=1` (with `h_max`, `max_legami` and the window `ppm_struttura`) adds the key `rotture`, as `mzlab-cli msn-graph --rotture` does
     if q.get("rotture").is_some_and(|v| v == "1") {
@@ -133,7 +133,7 @@ fn con_chiavi(g: &Grafo, mut j: String, o: &Opzioni, q: &Query) -> mzlab_core::R
             h_max: num("h_max", 2.0)?.min(4.0) as u8,
             max_legami: num("max_legami", 2.0)?.clamp(1.0, 2.0) as u8,
         };
-        j = mzlab_feat::chem::rotture::rotture_testo(&g, &j, o.smiles.as_deref(), p)?;
+        j = mzlab_feat::chem::rotture::rotture_testo(g, &j, o.smiles.as_deref(), p)?;
     }
     Ok(j)
 }
