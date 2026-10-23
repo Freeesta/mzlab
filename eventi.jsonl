@@ -12064,3 +12064,4 @@
 {"v":1,"ts_utc":"2026-10-23T07:00:16Z","azione":"aperta","tipo":"pr","pr":1576,"sha":"fe7936e96fd5b203dc8ae01131390711be0d92a2"}
 {"v":1,"ts_utc":"2026-10-23T07:02:47Z","azione":"aperta","tipo":"pr","pr":1577,"sha":"813a3db1a07e7857939c4308291352e090e04d8b"}
 {"v":1,"ts_utc":"2026-10-23T07:06:56Z","azione":"aperta","tipo":"pr","pr":1578,"sha":"b7703b355706322ce83079b1d8940de638ad2b45"}
+{"v":1,"tipo":"pr","pr":1575,"sha":"1f5076896ef5b90f5f3b0e88522a4b5921eb061a","ts_utc":"2026-10-23T07:07:04Z","azione":"unita","aperta_s":1553,"commit_n":5,"cause_commit":{"altro":2,"merge di main":2},"merge_main":2,"righe_piu":665,"righe_meno":3,"file_n":5,"file":["crates/mzlab-core/examples/visore_tempi.rs","docs/agenti/INDICE.md","docs/agenti/misure.md","docs/agenti/visore-veloce.md","tools/bench_visore.py"],"aree":{"rust":1,"docs":3,"tools":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":345}
