@@ -6,9 +6,9 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse as parse_json, Out, Value};
 
 use crate::assist::Role;
-use crate::conv::{Conversation, Message, Part, Role as Speaker};
-use crate::provider::{request_with, CacheTtl, Effort, Options, Provider, Request};
+use crate::provider::{Provider, Request};
 use crate::schema::validate;
+use crate::subcall;
 use crate::tools::value;
 
 /// The schema of the answer (`output_config.format`), the one of `prompt/02`.
@@ -54,23 +54,7 @@ pub fn request(
     input.raw("{\"message\":").str(message).raw(",\"state\":");
     value(&mut input, state);
     input.raw("}");
-    let conv = Conversation {
-        provider: provider.id.clone(),
-        model: role.model.clone(),
-        system: prompt.to_string(),
-        max_output_tokens: Some(role.max_tokens),
-        messages: vec![Message {
-            role: Speaker::User,
-            parts: vec![Part::Text(input.0)],
-        }],
-    };
-    let opts = Options {
-        cache_ttl: Some(CacheTtl::Min5),
-        effort: Some(Effort::parse(&role.effort).ok_or_else(|| bad("effort"))?),
-        format_schema: Some(SCHEMA.to_string()),
-        ..Options::default()
-    };
-    request_with(provider, &conv, &[], &opts)
+    subcall::build(provider, role, prompt, input.0, Some(SCHEMA))
 }
 
 /// The route of an answer; anything outside the schema is `err.llm.router` (the caller then goes on without a route).

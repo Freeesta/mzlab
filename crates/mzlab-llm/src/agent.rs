@@ -206,7 +206,7 @@ fn user(s: &mut State, text: &str, out: &mut Vec<Output>) {
     s.queue.clear();
     s.waiting = None;
     s.confirming = None;
-    let mut parts: Vec<Part> = s.context.take().into_iter().map(Part::Context).collect();
+    let mut parts = sub::context_parts(s);
     parts.push(Part::Text(text.to_string()));
     s.conv.messages.push(Message {
         role: Role::User,
