@@ -17633,3 +17633,4 @@
 {"v":1,"ts_utc":"2026-10-23T18:40:46Z","tipo":"job","k":"120591468746","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":1642,"sha":"4bbaf47fb7e4b7cd49821cbc41aaca48808d48c6","run_id":40005200392,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T18:43:01Z","tipo":"carico","k":"2026-10-23T18:4","job_in_coda":0,"job_in_corso":9}
 {"v":1,"ts_utc":"2026-10-23T18:57:47Z","azione":"push","titolo":"Show where the graph of the mixed plan differs from the CLI in e2e_flow_msn","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1642,"sha":"407d545ca0d8a4c4781f8161aa921cb86c3a478a"}
+{"v":1,"ts_utc":"2026-10-23T19:14:07Z","azione":"push","titolo":"Compare the mixed plan with the runner of the MSn plan in the same state","merge_main":false,"aree":{"test":1},"tipo":"pr","pr":1642,"sha":"cedff1cf195e69bdd2f2e6b4b58f5a1ff3936ab6"}
