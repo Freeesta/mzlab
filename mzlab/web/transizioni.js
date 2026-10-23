@@ -4,9 +4,21 @@
 // Tokens (--t-med, --ease-out) come from transizioni.css; duration 0 (reduced motion) or the first paint = no animation.
 const R = document.documentElement;
 const Q1 = s => document.querySelector(s);
-const cs = () => getComputedStyle(R);
-const ms = () => parseFloat(cs().getPropertyValue("--t-med")) || 0;
-const ease = () => cs().getPropertyValue("--ease-out").trim() || "ease-out";
+// The tokens change only with reduced motion (system setting or the in-app switch), so they are read once: a computed-style read in the panel observer below forces a style recalculation on every panel move
+let tok = null;
+const flip = new MutationObserver(() => { tok = null; });
+flip.observe(R, { attributes: true, attributeFilter: ["data-a11y-reduce"] });
+matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => { tok = null; });
+const tokens = () => {
+  if (flip.takeRecords().length) tok = null;
+  if (tok) return tok;
+  const c = getComputedStyle(R), m = c.getPropertyValue("--t-med").trim();
+  const t = { ms: parseFloat(m) || 0, ease: c.getPropertyValue("--ease-out").trim() || "ease-out" };
+  if (m) tok = t;                                   // the stylesheet is not loaded yet when the value is empty: ask again next time
+  return t;
+};
+const ms = () => tokens().ms;
+const ease = () => tokens().ease;
 const still = () => R.classList.contains("no-tr") || !ms() || !Element.prototype.animate;
 
 // the user is dragging or resizing: the layout follows the pointer at once

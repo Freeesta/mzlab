@@ -41,12 +41,13 @@ const DDA = (() => {
   const set = (q, o) => { let ch = false; for (const k in o) if (Math.abs((q[k] || 0) - o[k]) > 0.5) { q[k] = o[k]; ch = true; } if (ch) apply(q); return ch; };
   function sync() {
     try {
-      const W = hostWidth();
+      let W = 0;                                     // read only when a trio exists: the width forces a layout, and sync runs on every panel change
       E.panels.forEach(q => { if (q.el) { q.el.classList.toggle("jb", false); q.el.classList.toggle("jt", false); q.el.classList.toggle("dk", false); } });
       E.panels.forEach(s2 => {
         if (s2.dock == null || !s2.el) return;
         const s1 = byId(s2.dock); if (!s1) return;
         if (s2.extra) return;
+        W ||= hostWidth();
         const row = [s2, ...extras(s1)], g = LAYOUT.geometria([{ voci: row.map(q => ({ id: q.id, h: s2.h })) }], W, 0, 0);       // equal shares side by side (no minimum: the trio keeps its shape)
         set(s1, { x: 0, w: W }); row.forEach(q => { const r = g.rett.find(t => t.id === q.id); set(q, { x: r.x, w: r.w, y: s2.y, h: s2.h }); q.el.classList.add("dk"); });
         s2.el.classList.add("dk"); s1.el.classList.add("jb");
