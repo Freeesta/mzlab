@@ -26,16 +26,7 @@ pub fn opt(v: Option<f64>) -> Value {
 
 /// `message(key, **params)`: `{"key": ..., "params": {...}}`.
 pub fn msg(key: &str, params: &[(&str, Value)]) -> Value {
-    Obj::new()
-        .put("key", text(key))
-        .put(
-            "params",
-            params
-                .iter()
-                .fold(Obj::new(), |o, (k, v)| o.put(k, v.clone()))
-                .done(),
-        )
-        .done()
+    Obj::new().put("key", text(key)).put("params", params.iter().fold(Obj::new(), |o, (k, v)| o.put(k, v.clone())).done()).done()
 }
 
 /// An object under construction (keys in insertion order, like a Python dict).

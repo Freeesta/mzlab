@@ -7,13 +7,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 impl Engine {
     /// `/api/fileinfo` of the file at `slot`: the head of its mzML (`size` bytes, read through `read`) and the index (`name` = the file name).
-    pub fn fileinfo(
-        &mut self,
-        slot: u32,
-        name: &str,
-        size: f64,
-        read: Function,
-    ) -> Result<String, JsValue> {
+    pub fn fileinfo(&mut self, slot: u32, name: &str, size: f64, read: Function) -> Result<String, JsValue> {
         let Some(r) = self.idx.get_mut(&slot) else {
             return Err(error_json(&mzlab_core::Error::new("error.badIndex")));
         };

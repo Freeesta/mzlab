@@ -60,11 +60,7 @@ fn floyd(g: &mut Pcg64, pop: usize, size: usize) -> Vec<usize> {
     let mut idx = vec![0usize; size];
     let mask = {
         let set = (1.2 * size as f64) as u64;
-        if set == 0 {
-            0
-        } else {
-            u64::MAX >> set.leading_zeros()
-        }
+        if set == 0 { 0 } else { u64::MAX >> set.leading_zeros() }
     };
     let mut table = vec![u64::MAX; mask as usize + 1];
     for j in pop - size..pop {
@@ -123,9 +119,7 @@ impl Pcg64 {
     }
     /// `rng.integers(0, high, size)` (`high >= 1`).
     pub fn integers(&mut self, high: usize, size: usize) -> Vec<usize> {
-        (0..size)
-            .map(|_| self.bounded((high - 1) as u32) as usize)
-            .collect()
+        (0..size).map(|_| self.bounded((high - 1) as u32) as usize).collect()
     }
     /// `rng.choice(population, size, replace=True)` as indices into the population.
     pub fn choice_replace(&mut self, pop: usize, size: usize) -> Vec<usize> {
@@ -186,19 +180,13 @@ mod tests {
     fn draws_match_numpy() {
         let mut g = Pcg64::new(3);
         assert_eq!(g.integers(17, 6), vec![13, 1, 3, 4, 3, 13]);
-        assert_eq!(
-            g.choice_no_replace(40, 12),
-            vec![21, 29, 26, 6, 14, 1, 9, 35, 3, 10, 17, 25]
-        );
+        assert_eq!(g.choice_no_replace(40, 12), vec![21, 29, 26, 6, 14, 1, 9, 35, 3, 10, 17, 25]);
         assert_eq!(g.choice_replace(9, 9), vec![6, 6, 8, 7, 2, 2, 5, 5, 6]);
         assert_eq!(g.permutation(8), vec![2, 4, 0, 7, 6, 1, 3, 5]);
         let mut g = Pcg64::new(0);
         assert_eq!(
             g.choice_no_replace(100, 30),
-            vec![
-                62, 65, 55, 53, 98, 23, 82, 41, 74, 94, 92, 19, 84, 1, 75, 47, 97, 49, 72, 25, 13,
-                52, 5, 45, 50, 60, 0, 37, 3, 95
-            ]
+            vec![62, 65, 55, 53, 98, 23, 82, 41, 74, 94, 92, 19, 84, 1, 75, 47, 97, 49, 72, 25, 13, 52, 5, 45, 50, 60, 0, 37, 3, 95]
         );
     }
 }

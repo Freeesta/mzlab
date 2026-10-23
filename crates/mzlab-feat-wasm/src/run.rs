@@ -66,7 +66,10 @@ pub type Layer = (String, Vec<(String, Value)>);
 
 /// The recipe of a Flow run: the one of the panel on the first index, then the parameters of each feature step in order (`steps::recipe_map`). The native
 /// `flow run` and the browser runner both build it here, so the same plan gives the same bytes.
-pub fn recipe_of_layers<R: ReadAt>(first: &mut Index<R>, layers: &[Layer]) -> Result<Recipe> {
+pub fn recipe_of_layers<R: ReadAt>(
+    first: &mut Index<R>,
+    layers: &[Layer],
+) -> Result<Recipe> {
     let mut r = recipe_for_estimated("", first)?;
     apply_layers(&mut r, layers)?;
     Ok(r)

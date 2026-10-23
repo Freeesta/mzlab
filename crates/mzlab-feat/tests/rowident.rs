@@ -2,11 +2,11 @@
 //! written and read back identical; a table without them reads as before.
 
 use mzlab_feat::facts::FileFacts;
-use mzlab_feat::hypo::Dir;
 use mzlab_feat::hypo::{Hypothesis, SRC_FAMILY, SRC_RULE};
-use mzlab_feat::recipe::Recipe;
+use mzlab_feat::hypo::Dir;
 use mzlab_feat::rowident::{adduct_names, RowIdent, SRC_DETECTED};
 use mzlab_feat::store::{origin_from_meta, read_table, write_table, Origin};
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_TARGETED};
 
 fn table() -> Aligned {
@@ -73,15 +73,9 @@ fn a_unit_resolution_row_is_matched_within_the_window_in_da() {
     t.mz[0] = na.mz + 0.3;
     let hyps = [na.clone()];
     let ppm = RowIdent::compute(&t, &hyps, 1);
-    assert_eq!(
-        ppm.src[0], SRC_DETECTED,
-        "5 ppm does not reach a calibration error of 0.3 Da"
-    );
+    assert_eq!(ppm.src[0], SRC_DETECTED, "5 ppm does not reach a calibration error of 0.3 Da");
     let unit = RowIdent::compute_in(&t, &hyps, 1, mzlab_feat::axis::da(mzlab_feat::axis::LR_TOL));
-    assert_eq!(
-        (unit.neutral[0], unit.src[0]),
-        (177.0, SRC_RULE << 1 | SRC_DETECTED)
-    );
+    assert_eq!((unit.neutral[0], unit.src[0]), (177.0, SRC_RULE << 1 | SRC_DETECTED));
 }
 
 #[test]
@@ -95,10 +89,7 @@ fn identity_and_facts_survive_the_file() {
         instrument: "orbitrap".into(),
     };
     let o = Origin {
-        inputs: vec![
-            ("a.mzML".into(), "ab".repeat(32)),
-            ("b.mzML".into(), "cd".repeat(32)),
-        ],
+        inputs: vec![("a.mzML".into(), "ab".repeat(32)), ("b.mzML".into(), "cd".repeat(32))],
         facts: vec![facts.clone(), FileFacts::default()],
         samples: Some("ef".repeat(32)),
         ..Origin::default()
@@ -112,10 +103,7 @@ fn identity_and_facts_survive_the_file() {
     assert_eq!(o2.inputs, o.inputs);
     assert_eq!(o2.facts, o.facts);
     assert_eq!(o2.samples, o.samples);
-    assert_eq!(
-        meta.get("adducts").unwrap().arr().len(),
-        adduct_names().len()
-    );
+    assert_eq!(meta.get("adducts").unwrap().arr().len(), adduct_names().len());
     assert!(read_table(&bytes[..bytes.len() - 100]).is_err());
 }
 

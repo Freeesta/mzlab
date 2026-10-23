@@ -57,22 +57,14 @@ impl<R: ReadAt> Routes<R> {
             k
         };
         for k1 in keys {
-            let mut g: Vec<(i64, f64)> = tot
-                .range((k1, i64::MIN)..=(k1, i64::MAX))
-                .map(|(k, &v)| (k.1, v))
-                .collect();
+            let mut g: Vec<(i64, f64)> = tot.range((k1, i64::MIN)..=(k1, i64::MAX)).map(|(k, &v)| (k.1, v)).collect();
             crate::sortc::slice_by(&mut g, |a, b| b.1.total_cmp(&a.1)); // stable: ties keep the ascending q3
             g.truncate(TOP);
             crate::sortc::slice_by_key(&mut g, |x| x.0);
             for (q3, y) in g {
                 o.raw(if first { "{\"q1\":" } else { ",{\"q1\":" });
                 first = false;
-                o.num(k1 as f64 / 10.0)
-                    .raw(",\"q3\":")
-                    .num(q3 as f64)
-                    .raw(",\"y\":")
-                    .num(crate::json::round(y, 1))
-                    .raw("}");
+                o.num(k1 as f64 / 10.0).raw(",\"q3\":").num(q3 as f64).raw(",\"y\":").num(crate::json::round(y, 1)).raw("}");
             }
         }
         o.raw("]");

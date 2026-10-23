@@ -38,10 +38,7 @@ mod tests {
     /// The fast path gives the very double of the text path, halves and their neighbours included (`MZLAB_ROUND_N` = number of values, default 2 million).
     #[test]
     fn fast_rounding_is_the_text_rounding() {
-        let n: u64 = std::env::var("MZLAB_ROUND_N")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(2_000_000);
+        let n: u64 = std::env::var("MZLAB_ROUND_N").ok().and_then(|v| v.parse().ok()).unwrap_or(2_000_000);
         let slow = |v: f64, nd: usize| format!("{v:.nd$}").parse::<f64>().unwrap_or(v);
         let mut x = 0x9E37_79B9_7F4A_7C15u64;
         let mut next = || {
@@ -66,11 +63,7 @@ mod tests {
             if i % 5 == 0 {
                 v = -v;
             }
-            assert_eq!(
-                round(v, nd).to_bits(),
-                slow(v, nd).to_bits(),
-                "{v:e} at {nd}"
-            );
+            assert_eq!(round(v, nd).to_bits(), slow(v, nd).to_bits(), "{v:e} at {nd}");
         }
         assert_eq!(round(-0.00001, 4).to_bits(), (-0.0f64).to_bits());
         assert_eq!(round(0.0, 1).to_bits(), 0.0f64.to_bits());

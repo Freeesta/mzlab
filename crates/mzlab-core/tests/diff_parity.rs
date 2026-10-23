@@ -18,10 +18,7 @@ fn close(a: f64, b: f64) -> bool {
 
 fn same(path: &str, got: &Value, want: &Value, what: &str) {
     match (got, want) {
-        (Value::Number(a), Value::Number(b)) => assert!(
-            close(a.as_f64().unwrap(), b.as_f64().unwrap()),
-            "{what} {path}: {a} against {b}"
-        ),
+        (Value::Number(a), Value::Number(b)) => assert!(close(a.as_f64().unwrap(), b.as_f64().unwrap()), "{what} {path}: {a} against {b}"),
         (Value::Array(a), Value::Array(b)) => {
             assert_eq!(a.len(), b.len(), "{what} {path}: length");
             for (i, (x, y)) in a.iter().zip(b).enumerate() {
@@ -29,11 +26,7 @@ fn same(path: &str, got: &Value, want: &Value, what: &str) {
             }
         }
         (Value::Object(a), Value::Object(b)) => {
-            assert_eq!(
-                a.keys().collect::<Vec<_>>(),
-                b.keys().collect::<Vec<_>>(),
-                "{what} {path}: keys"
-            );
+            assert_eq!(a.keys().collect::<Vec<_>>(), b.keys().collect::<Vec<_>>(), "{what} {path}: keys");
             for (k, y) in b {
                 same(&format!("{path}.{k}"), &a[k], y, what);
             }
@@ -43,15 +36,7 @@ fn same(path: &str, got: &Value, want: &Value, what: &str) {
 }
 
 fn enc(s: &str) -> String {
-    s.bytes()
-        .map(|b| {
-            if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
-                (b as char).to_string()
-            } else {
-                format!("%{b:02X}")
-            }
-        })
-        .collect()
+    s.bytes().map(|b| if b.is_ascii_alphanumeric() || b"-._~".contains(&b) { (b as char).to_string() } else { format!("%{b:02X}") }).collect()
 }
 
 fn transitions(mzml: &str, routes: &Routes<std::fs::File>) -> String {
@@ -66,12 +51,7 @@ fn transitions(mzml: &str, routes: &Routes<std::fs::File>) -> String {
 fn reference_difference_matches_python() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let out = std::env::temp_dir().join(format!("mzlab-diff-{}", std::process::id()));
-    let listing = match Command::new("python3")
-        .current_dir(&root)
-        .arg("tools/differenza_riferimento.py")
-        .arg(&out)
-        .output()
-    {
+    let listing = match Command::new("python3").current_dir(&root).arg("tools/differenza_riferimento.py").arg(&out).output() {
         Ok(o) if o.status.success() => String::from_utf8(o.stdout).unwrap(),
         other => {
             if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {
@@ -81,75 +61,34 @@ fn reference_difference_matches_python() {
             return;
         }
     };
-    let files: Vec<String> = listing
-        .lines()
-        .filter(|l| !l.is_empty())
-        .map(String::from)
-        .collect();
+    let files: Vec<String> = listing.lines().filter(|l| !l.is_empty()).map(String::from).collect();
     let mut routes: Vec<Routes<std::fs::File>> = files
         .iter()
         .map(|f| {
-            let p = out.join(format!(
-                "{}.mzidx",
-                PathBuf::from(f).file_stem().unwrap().to_string_lossy()
-            ));
-            Routes::new(
-                Index::open(
-                    std::fs::File::open(&p).unwrap(),
-                    std::fs::metadata(&p).unwrap().len(),
-                )
-                .unwrap(),
-            )
+            let p = out.join(format!("{}.mzidx", PathBuf::from(f).file_stem().unwrap().to_string_lossy()));
+            Routes::new(Index::open(std::fs::File::open(&p).unwrap(), std::fs::metadata(&p).unwrap().len()).unwrap())
         })
         .collect();
-    let rows: Vec<Value> =
-        serde_json::from_slice(&std::fs::read(out.join("diff.json")).unwrap()).unwrap();
+    let rows: Vec<Value> = serde_json::from_slice(&std::fs::read(out.join("diff.json")).unwrap()).unwrap();
     let (mut compared, mut declined, mut failed) = (0, 0, 0);
     for r in &rows {
         let path = r["path"].as_str().unwrap();
         let q = r["query"].as_object().unwrap();
-        let qs = q
-            .iter()
-            .map(|(k, v)| format!("{k}={}", enc(v.as_str().unwrap())))
-            .collect::<Vec<_>>()
-            .join("&");
+        let qs = q.iter().map(|(k, v)| format!("{k}={}", enc(v.as_str().unwrap()))).collect::<Vec<_>>().join("&");
         let what = format!("{path} {qs}");
         let query = Query::parse(&qs);
         let answer: Option<Result<String, String>> = if path == "/api/mrm" {
-            let ks: Vec<usize> = q["k"]
-                .as_str()
-                .unwrap()
-                .split(',')
-                .filter_map(|x| x.parse().ok())
-                .collect();
-            let parts: Vec<String> = ks
-                .iter()
-                .map(|&k| {
-                    format!(
-                        "{{\"k\":{k},\"transitions\":{}}}",
-                        transitions(&files[k], &routes[k])
-                    )
-                })
-                .collect();
-            let rf: usize = q["ref"].as_str().unwrap().parse().unwrap_or(0); // a ref that is not a number: the options decline it
-            mrm_diff(
-                &format!("[{}]", parts.join(",")),
-                &transitions(&files[rf], &routes[rf]),
-                &query,
-            )
+            let ks: Vec<usize> = q["k"].as_str().unwrap().split(',').filter_map(|x| x.parse().ok()).collect();
+            let parts: Vec<String> = ks.iter().map(|&k| format!("{{\"k\":{k},\"transitions\":{}}}", transitions(&files[k], &routes[k]))).collect();
+            let rf: usize = q["ref"].as_str().unwrap().parse().unwrap_or(0);   // a ref that is not a number: the options decline it
+            mrm_diff(&format!("[{}]", parts.join(",")), &transitions(&files[rf], &routes[rf]), &query)
         } else {
             match plan(path, &query) {
                 None => None,
                 Some(Err(e)) => Some(Err(e)),
                 Some(Ok(p)) => {
-                    let reference = p
-                        .fetch(p.o.reference, &mut routes[p.o.reference as usize])
-                        .unwrap()
-                        .unwrap();
-                    let fetched: Vec<_> =
-                        p.ks.iter()
-                            .map(|&k| p.fetch(k, &mut routes[k as usize]).unwrap().unwrap())
-                            .collect();
+                    let reference = p.fetch(p.o.reference, &mut routes[p.o.reference as usize]).unwrap().unwrap();
+                    let fetched: Vec<_> = p.ks.iter().map(|&k| p.fetch(k, &mut routes[k as usize]).unwrap().unwrap()).collect();
                     Some(Ok(p.finish(&reference, &fetched)))
                 }
             }
@@ -172,9 +111,6 @@ fn reference_difference_matches_python() {
             }
         }
     }
-    assert!(
-        compared >= 140 && declined >= 10 && failed >= 15,
-        "{compared} answers, {declined} declined, {failed} errors"
-    );
+    assert!(compared >= 140 && declined >= 10 && failed >= 15, "{compared} answers, {declined} declined, {failed} errors");
     let _ = std::fs::remove_dir_all(&out);
 }

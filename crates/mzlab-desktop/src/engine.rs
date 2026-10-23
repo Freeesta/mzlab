@@ -101,10 +101,7 @@ impl State {
 
     /// The folder of the app for what survives a run: the list of the files, the notebook, the files made by the app.
     pub fn set_data_folder(&self, dir: PathBuf) {
-        self.store
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .set_dir(dir);
+        self.store.lock().unwrap_or_else(|e| e.into_inner()).set_dir(dir);
     }
 
     pub fn indexer(&self) -> Result<Arc<crate::idxbuild::IdxBuilder>> {

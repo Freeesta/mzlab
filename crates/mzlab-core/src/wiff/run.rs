@@ -1,6 +1,7 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
 //! and the MRM blocks become a TIC and one SRM chromatogram per transition.
 
+
 use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;

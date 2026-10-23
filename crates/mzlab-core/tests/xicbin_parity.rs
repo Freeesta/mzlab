@@ -40,10 +40,7 @@ fn xicbin_numbers_are_the_json_numbers() {
                 let got = r.xic_into(mz, tol, level, &mut out).unwrap();
                 assert_eq!(got, n);
                 let want = json::parse(r.xic(mz, tol, level).unwrap().as_bytes()).unwrap();
-                let (rt, y) = (
-                    doubles(want.get("rt").unwrap()),
-                    doubles(want.get("y").unwrap()),
-                );
+                let (rt, y) = (doubles(want.get("rt").unwrap()), doubles(want.get("y").unwrap()));
                 assert_eq!(rt.len(), n);
                 for i in 0..n {
                     assert_eq!(out[i].to_bits(), rt[i].to_bits(), "rt {i} at {mz}");
@@ -62,11 +59,7 @@ fn xicbin_edges() {
     let n = r.xic_len(1);
     assert_eq!(r.xic_len(9), 0);
     assert_eq!(r.xic_into(100.0, 1.0, 9, &mut vec![0.0; 2 * n]).unwrap(), 0);
-    assert_eq!(
-        r.xic_into(100.0, 1.0, 1, &mut vec![0.0; 2 * n - 1])
-            .unwrap(),
-        0
-    );
+    assert_eq!(r.xic_into(100.0, 1.0, 1, &mut vec![0.0; 2 * n - 1]).unwrap(), 0);
     let mut out = vec![1.0; 2 * n];
     assert_eq!(r.xic_into(1.0e6, 0.1, 1, &mut out).unwrap(), n);
     assert!(out[n..].iter().all(|&v| v == 0.0));

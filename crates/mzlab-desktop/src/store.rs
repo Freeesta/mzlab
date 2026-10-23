@@ -26,9 +26,7 @@ impl Store {
     }
 
     fn dir(&mut self) -> PathBuf {
-        self.dir
-            .get_or_insert_with(|| std::env::temp_dir().join("mzlab-data"))
-            .clone()
+        self.dir.get_or_insert_with(|| std::env::temp_dir().join("mzlab-data")).clone()
     }
 
     /// The data folder of the app (created when needed): where the files of the app and the key file of the assistant live.
@@ -51,10 +49,7 @@ impl Store {
         }
         self.loaded = true;
         let dir = self.dir();
-        if let Some(Value::Object(m)) = std::fs::read(dir.join("files.json"))
-            .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok())
-        {
+        if let Some(Value::Object(m)) = std::fs::read(dir.join("files.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()) {
             for (name, e) in m {
                 let path = PathBuf::from(e["path"].as_str().unwrap_or(""));
                 if path.as_os_str().is_empty() {
@@ -64,20 +59,11 @@ impl Store {
                 let nat = Nat::from_json(&e["nat"]);
                 self.files.insert(
                     name,
-                    Entry {
-                        path,
-                        size: e["size"].as_u64().unwrap_or(0),
-                        mtime: e["mtime"].as_u64().unwrap_or(0),
-                        seq: self.seq,
-                        nat,
-                    },
+                    Entry { path, size: e["size"].as_u64().unwrap_or(0), mtime: e["mtime"].as_u64().unwrap_or(0), seq: self.seq, nat },
                 );
             }
         }
-        if let Some(Value::Object(m)) = std::fs::read(dir.join("kv.json"))
-            .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok())
-        {
+        if let Some(Value::Object(m)) = std::fs::read(dir.join("kv.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()) {
             for (k, v) in m {
                 if let Some(s) = v.as_str() {
                     self.kv.insert(k, s.to_string());
@@ -92,8 +78,7 @@ impl Store {
             .files
             .iter()
             .map(|(n, e)| {
-                let mut v =
-                    json!({ "path": e.path.to_string_lossy(), "size": e.size, "mtime": e.mtime });
+                let mut v = json!({ "path": e.path.to_string_lossy(), "size": e.size, "mtime": e.mtime });
                 if let Some(nat) = &e.nat {
                     v["nat"] = nat.to_json();
                 }
@@ -105,11 +90,7 @@ impl Store {
 
     fn save_kv(&mut self) {
         let dir = self.dir();
-        let m: serde_json::Map<String, Value> = self
-            .kv
-            .iter()
-            .map(|(k, v)| (k.clone(), Value::String(v.clone())))
-            .collect();
+        let m: serde_json::Map<String, Value> = self.kv.iter().map(|(k, v)| (k.clone(), Value::String(v.clone()))).collect();
         write_atomic(&dir, "kv.json", &Value::Object(m).to_string());
     }
 
@@ -150,16 +131,9 @@ impl Store {
     pub fn put(&mut self, name: &str, path: PathBuf) -> Result<Entry> {
         self.load();
         let name = clean(name)?;
-        let (size, mtime) = stamp(&path)
-            .ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))?;
+        let (size, mtime) = stamp(&path).ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))?;
         self.seq += 1;
-        let e = Entry {
-            path,
-            size,
-            mtime,
-            seq: self.seq,
-            nat: None,
-        };
+        let e = Entry { path, size, mtime, seq: self.seq, nat: None };
         self.files.insert(name.to_string(), e.clone());
         self.save_files();
         Ok(e)
@@ -169,22 +143,10 @@ impl Store {
     pub fn put_nat(&mut self, name: &str, nat: Nat) -> Result<Entry> {
         self.load();
         let name = clean(name)?;
-        let path = nat
-            .members
-            .first()
-            .map(|m| m.1.clone())
-            .ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
+        let path = nat.members.first().map(|m| m.1.clone()).ok_or_else(|| Error::new("err.file.notAccepted").with("name", name))?;
         self.seq += 1;
-        let mut e = Entry {
-            path,
-            size: 0,
-            mtime: 0,
-            seq: self.seq,
-            nat: Some(nat),
-        };
-        (e.size, e.mtime) = e
-            .stamp()
-            .ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))?;
+        let mut e = Entry { path, size: 0, mtime: 0, seq: self.seq, nat: Some(nat) };
+        (e.size, e.mtime) = e.stamp().ok_or_else(|| Error::new("err.file.unknown").with("detail", "unknown file"))?;
         self.files.insert(name.to_string(), e.clone());
         self.save_files();
         Ok(e)
@@ -194,11 +156,7 @@ impl Store {
         self.load();
         if let Some(e) = self.files.remove(name) {
             if let Ok(own) = self.own_dir() {
-                let paths = e
-                    .nat
-                    .iter()
-                    .flat_map(|n| n.members.iter().map(|m| m.1.clone()))
-                    .chain([e.path.clone()]);
+                let paths = e.nat.iter().flat_map(|n| n.members.iter().map(|m| m.1.clone())).chain([e.path.clone()]);
                 for p in paths.filter(|p| p.starts_with(&own)) {
                     let _ = std::fs::remove_file(p);
                 }
@@ -235,8 +193,7 @@ impl Store {
     pub fn molecules(&mut self, op: &str, body: &str) -> Result<String> {
         let dir = self.dir();
         match op {
-            "leggi" => Ok(std::fs::read_to_string(dir.join(MOLECULES_FILE))
-                .unwrap_or_else(|_| EMPTY_MOLECULES.to_string())),
+            "leggi" => Ok(std::fs::read_to_string(dir.join(MOLECULES_FILE)).unwrap_or_else(|_| EMPTY_MOLECULES.to_string())),
             "scrivi" => {
                 let canonical = mzlab_core::molecules::route("a_json", body)?;
                 if canonical.starts_with("{\"errori\"") {
@@ -252,12 +209,7 @@ impl Store {
 
 /// A name that is only a file name (the page never chooses a path).
 pub fn clean(name: &str) -> Result<&str> {
-    if name.is_empty()
-        || name.contains(['/', '\\', '\0'])
-        || name == "."
-        || name == ".."
-        || name.starts_with('.')
-    {
+    if name.is_empty() || name.contains(['/', '\\', '\0']) || name == "." || name == ".." || name.starts_with('.') {
         return Err(Error::new("err.file.notAccepted").with("name", name));
     }
     Ok(name)
@@ -265,12 +217,7 @@ pub fn clean(name: &str) -> Result<&str> {
 
 fn stamp(path: &Path) -> Option<(u64, u64)> {
     let m = std::fs::metadata(path).ok()?;
-    let t = m
-        .modified()
-        .ok()?
-        .duration_since(UNIX_EPOCH)
-        .ok()?
-        .as_millis() as u64;
+    let t = m.modified().ok()?.duration_since(UNIX_EPOCH).ok()?.as_millis() as u64;
     Some((m.len(), t))
 }
 
@@ -287,20 +234,12 @@ pub struct Nat {
 
 impl Nat {
     fn to_json(&self) -> Value {
-        let members: Vec<Value> = self
-            .members
-            .iter()
-            .map(|(n, p)| json!([n, p.to_string_lossy()]))
-            .collect();
+        let members: Vec<Value> = self.members.iter().map(|(n, p)| json!([n, p.to_string_lossy()])).collect();
         json!({ "ds": self.ds, "c": self.c, "id": self.id, "centroid": self.centroid, "members": members })
     }
 
     fn from_json(v: &Value) -> Option<Nat> {
-        let members: Vec<(String, PathBuf)> = v["members"]
-            .as_array()?
-            .iter()
-            .filter_map(|m| Some((m[0].as_str()?.to_string(), PathBuf::from(m[1].as_str()?))))
-            .collect();
+        let members: Vec<(String, PathBuf)> = v["members"].as_array()?.iter().filter_map(|m| Some((m[0].as_str()?.to_string(), PathBuf::from(m[1].as_str()?)))).collect();
         (!members.is_empty()).then(|| Nat {
             ds: v["ds"].as_str().unwrap_or("").to_string(),
             c: v["c"].as_u64().unwrap_or(0) as usize,
@@ -326,12 +265,8 @@ pub struct Entry {
 impl Entry {
     /// Size and date now: of the file, or of all the members of a native sample (the sum of the sizes and the latest date). None when one is gone.
     fn stamp(&self) -> Option<(u64, u64)> {
-        let Some(nat) = &self.nat else {
-            return stamp(&self.path);
-        };
-        nat.members.iter().try_fold((0u64, 0u64), |(s, t), (_, p)| {
-            stamp(p).map(|(a, b)| (s + a, t.max(b)))
-        })
+        let Some(nat) = &self.nat else { return stamp(&self.path) };
+        nat.members.iter().try_fold((0u64, 0u64), |(s, t), (_, p)| stamp(p).map(|(a, b)| (s + a, t.max(b))))
     }
 }
 
@@ -388,39 +323,18 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let mut s = Store::default();
         s.set_dir(d.path().join("data"));
-        assert!(s
-            .molecules("leggi", "")
-            .unwrap()
-            .contains("\"molecole\":[]"));
+        assert!(s.molecules("leggi", "").unwrap().contains("\"molecole\":[]"));
         let doc = "{\"schema\":\"molecules/1\",\"molecole\":[{\"nome\":\"Esempina\",\"formula\":\"NC10H15O\"}]}";
         s.molecules("scrivi", doc).unwrap();
         s.clear();
         let mut t = Store::default();
         t.set_dir(d.path().join("data"));
         let back = t.molecules("leggi", "").unwrap();
-        assert!(
-            back.contains("\"nome\":\"Esempina\"")
-                && back.contains("\"formula\":\"C10H15NO\"")
-                && back.contains("\"id\":\"u:"),
-            "{back}"
-        );
+        assert!(back.contains("\"nome\":\"Esempina\"") && back.contains("\"formula\":\"C10H15NO\"") && back.contains("\"id\":\"u:"), "{back}");
         assert_eq!(t.molecules("scrivi", &back).unwrap(), "{}");
-        assert_eq!(
-            t.molecules("leggi", "").unwrap(),
-            back,
-            "canonical bytes stay the same"
-        );
-        assert!(t
-            .molecules(
-                "scrivi",
-                "{\"schema\":\"molecules/1\",\"molecole\":[{\"nome\":\"X\",\"formula\":\"Xx9\"}]}"
-            )
-            .is_err());
-        assert_eq!(
-            t.molecules("leggi", "").unwrap(),
-            back,
-            "a wrong document changes nothing"
-        );
+        assert_eq!(t.molecules("leggi", "").unwrap(), back, "canonical bytes stay the same");
+        assert!(t.molecules("scrivi", "{\"schema\":\"molecules/1\",\"molecole\":[{\"nome\":\"X\",\"formula\":\"Xx9\"}]}").is_err());
+        assert_eq!(t.molecules("leggi", "").unwrap(), back, "a wrong document changes nothing");
     }
 
     #[test]

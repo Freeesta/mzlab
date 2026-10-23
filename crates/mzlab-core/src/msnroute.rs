@@ -13,42 +13,21 @@ use crate::sorgente::Scansioni;
 
 impl<R: ReadAt> Routes<R> {
     /// The tree of the fragmentation paths of the file (`App.msn_tree`: the whole run, whatever part of a mixed file `k` is).
-    pub(crate) fn msntree_route<M: Scansioni + ?Sized>(
-        &mut self,
-        q: &Query,
-        mzml: &mut M,
-    ) -> Result<Option<String>> {
-        let Ok(ppm) = q.num("ppm") else {
-            return Ok(None);
-        };
+    pub(crate) fn msntree_route<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M) -> Result<Option<String>> {
+        let Ok(ppm) = q.num("ppm") else { return Ok(None) };
         let scans: Vec<TreeScan> = self
             .idx
             .scans
             .iter()
             .enumerate()
-            .map(|(index, s)| TreeScan {
-                index,
-                level: s.level,
-                polarity: s.polarity,
-                path: s.path.clone().unwrap_or_default(),
-            })
+            .map(|(index, s)| TreeScan { index, level: s.level, polarity: s.polarity, path: s.path.clone().unwrap_or_default() })
             .collect();
         let table = &self.idx.scans;
-        msn_tree(
-            &scans,
-            |i| mzml.spettro(&table[i]),
-            q.some("formula"),
-            ppm.unwrap_or(5.0),
-        )
-        .map(Some)
+        msn_tree(&scans, |i| mzml.spettro(&table[i]), q.some("formula"), ppm.unwrap_or(5.0)).map(Some)
     }
 
     /// Runs `f` with the options of `q` (`Opz`), then puts back the ones before: what a request asks never leaks into the next.
-    pub(crate) fn con_opz<T>(
-        &mut self,
-        q: &Query,
-        f: impl FnOnce(&mut Self) -> Result<T>,
-    ) -> Result<T> {
+    pub(crate) fn con_opz<T>(&mut self, q: &Query, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
         let opz = Opz {
             raggruppa: raggruppa_of(q, "mtol", "mce")?,
             somma: q.get("modo") == Some("somma"),
@@ -97,69 +76,30 @@ impl<R: ReadAt> Routes<R> {
         }
         let scans = &self.idx.scans;
         let span = |ix: &mut dyn Iterator<Item = usize>| {
-            ix.map(|i| scans[i].rt)
-                .fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), t| {
-                    (a.min(t), b.max(t))
-                })
+            ix.map(|i| scans[i].rt).fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), t| (a.min(t), b.max(t)))
         };
         let mut o = Out::default();
-        o.raw("{\"formato\":\"msn_albero/1\",\"ms1\":{\"n\":")
-            .int(a.ms1.len() as i64);
+        o.raw("{\"formato\":\"msn_albero/1\",\"ms1\":{\"n\":").int(a.ms1.len() as i64);
         let (t0, t1) = span(&mut a.ms1.iter().copied());
-        o.raw(",\"rt0\":")
-            .opt(t0.is_finite().then(|| round(t0, 4)))
-            .raw(",\"rt1\":")
-            .opt(t1.is_finite().then(|| round(t1, 4)));
+        o.raw(",\"rt0\":").opt(t0.is_finite().then(|| round(t0, 4))).raw(",\"rt1\":").opt(t1.is_finite().then(|| round(t1, 4)));
         let mut livelli: Vec<u8> = a.nodi.iter().map(|n| n.livello).collect();
         crate::sortc::slice_ord(&mut livelli);
         livelli.dedup();
-        o.raw("},\"livelli\":[")
-            .raw(
-                &livelli
-                    .iter()
-                    .map(|l| l.to_string())
-                    .collect::<Vec<_>>()
-                    .join(","),
-            )
-            .raw("],\"nodi\":[");
+        o.raw("},\"livelli\":[").raw(&livelli.iter().map(|l| l.to_string()).collect::<Vec<_>>().join(",")).raw("],\"nodi\":[");
         for (k, (n, bl)) in a.nodi.iter().zip(blocchi(&a, scans.len())).enumerate() {
-            let (m, act, ce) = n
-                .chiave
-                .last()
-                .cloned()
-                .unwrap_or((0.0, String::new(), f64::NAN));
-            o.raw(if k > 0 { "," } else { "" })
-                .raw("{\"id\":")
-                .str(&n.id)
-                .raw(",\"genitore\":");
+            let (m, act, ce) = n.chiave.last().cloned().unwrap_or((0.0, String::new(), f64::NAN));
+            o.raw(if k > 0 { "," } else { "" }).raw("{\"id\":").str(&n.id).raw(",\"genitore\":");
             match n.genitore {
                 Some(g) => o.str(&a.nodi[g].id),
                 None => o.raw("null"),
             };
-            o.raw(",\"salto\":")
-                .int(n.salto as i64)
-                .raw(",\"livello\":")
-                .int(n.livello as i64);
-            o.raw(",\"prec\":")
-                .num(m)
-                .raw(",\"att\":")
-                .str(&act)
-                .raw(",\"ce\":")
-                .opt((!ce.is_nan()).then_some(ce));
+            o.raw(",\"salto\":").int(n.salto as i64).raw(",\"livello\":").int(n.livello as i64);
+            o.raw(",\"prec\":").num(m).raw(",\"att\":").str(&act).raw(",\"ce\":").opt((!ce.is_nan()).then_some(ce));
             let (t0, t1) = span(&mut n.scansioni.iter().copied());
-            o.raw(",\"n\":")
-                .int(n.scansioni.len() as i64)
-                .raw(",\"rt0\":")
-                .num(round(t0, 4))
-                .raw(",\"rt1\":")
-                .num(round(t1, 4));
+            o.raw(",\"n\":").int(n.scansioni.len() as i64).raw(",\"rt0\":").num(round(t0, 4)).raw(",\"rt1\":").num(round(t1, 4));
             o.raw(",\"blocchi\":[");
             for (j, (b0, b1)) in bl.iter().enumerate() {
-                o.raw(if j > 0 { ",[" } else { "[" })
-                    .num(round(scans[*b0].rt, 4))
-                    .raw(",")
-                    .num(round(scans[*b1].rt, 4))
-                    .raw("]");
+                o.raw(if j > 0 { ",[" } else { "[" }).num(round(scans[*b0].rt, 4)).raw(",").num(round(scans[*b1].rt, 4)).raw("]");
             }
             o.raw("]}");
         }
@@ -214,6 +154,7 @@ fn raggruppa_of(q: &Query, tol: &str, ce: &str) -> Result<Raggruppa> {
 
 /// The trees already built, at most this many groupings per file.
 const ALBERI: usize = 4;
+
 
 /// More nodes than this: `err.tree.tooMany` (energies merged or a wider tolerance make fewer).
 const MAX_NODI: usize = 400;

@@ -19,15 +19,9 @@ fn main() {
         state.libs.set_root(d.into());
     }
     // the folder of the app for the files, the notebook and the indexes (`MZLAB_DATA`; a folder of the system temp dir otherwise)
-    let data = std::env::var_os("MZLAB_DATA")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| {
-            std::env::temp_dir().join(format!("mzlab-serve-{}", std::process::id()))
-        });
+    let data = std::env::var_os("MZLAB_DATA").map(std::path::PathBuf::from).unwrap_or_else(|| std::env::temp_dir().join(format!("mzlab-serve-{}", std::process::id())));
     state.set_data_folder(data.clone());
-    state
-        .set_index_folder(data.join("mzidx"))
-        .expect("index folder");
+    state.set_index_folder(data.join("mzidx")).expect("index folder");
     for f in args {
         let (id, p) = state.pick(f.into()).expect("file");
         println!("FILE {id} {} {}", p.name, p.size);
