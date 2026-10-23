@@ -50,6 +50,25 @@ pub fn build_filter(
     activation_energy: Option<f64>,
     supplemental_energy: Option<f64>,
 ) -> String {
+    build_filter_with(
+        event,
+        index_entry,
+        precursor_mz,
+        activation_energy,
+        supplemental_energy,
+        4,
+    )
+}
+
+/// [`build_filter`] with the decimals of the m/z values (precursors and scan range): the LTQ family writes 2, the others 4.
+pub fn build_filter_with(
+    event: &ScanEvent,
+    index_entry: &ScanIndexEntry,
+    precursor_mz: Option<f64>,
+    activation_energy: Option<f64>,
+    supplemental_energy: Option<f64>,
+    mz_decimals: usize,
+) -> String {
     let mut out = String::with_capacity(96);
     let p = &event.preamble;
     let analyzer = p.analyzer();
@@ -139,7 +158,7 @@ pub fn build_filter(
             // activation_energy from scan_params "HCD Energy:" = supplemental HCD NCE%.
             if let Some(rx) = reactions.iter().find(|r| r.precursor_mz > 0.0) {
                 out.push(' ');
-                out.push_str(&format!("{:.4}", rx.precursor_mz));
+                out.push_str(&format!("{:.*}", mz_decimals, rx.precursor_mz));
                 out.push('@');
                 out.push_str("etd");
                 out.push('@');
@@ -163,7 +182,7 @@ pub fn build_filter(
                     continue;
                 }
                 out.push(' ');
-                out.push_str(&format!("{mz:.4}"));
+                out.push_str(&format!("{mz:.mz_decimals$}"));
                 let own = step.next().and_then(|s| s.activation);
                 let ethcd = act == Some(Activation::EThcD);
                 if let Some(a) = if ethcd { act } else { own.or(act) } {
@@ -209,7 +228,7 @@ pub fn build_filter(
         } else if let Some(mz) = precursor_mz {
             // Fallback: single precursor from scan_params.
             out.push(' ');
-            out.push_str(&format!("{mz:.4}"));
+            out.push_str(&format!("{mz:.mz_decimals$}"));
             if let Some(a) = act {
                 out.push('@');
                 if a == Activation::EThcD {
@@ -232,6 +251,22 @@ pub fn build_filter(
         }
     }
 
+    // A SIM event names each of its windows
+    if event.fraction_collectors.len() > 1 && matches!(p.scan_type(), Some(ScanType::Sim)) {
+        out.push_str(" [");
+        for (i, fc) in event.fraction_collectors.iter().enumerate() {
+            if i > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(&format!(
+                "{:.*}-{:.*}",
+                mz_decimals, fc.low_mz, mz_decimals, fc.high_mz
+            ));
+        }
+        out.push(']');
+        return out;
+    }
+
     // Scan range [low-high]
     if index_entry.low_mz.is_finite()
         && index_entry.high_mz.is_finite()
@@ -240,13 +275,16 @@ pub fn build_filter(
     {
         out.push(' ');
         out.push_str(&format!(
-            "[{:.4}-{:.4}]",
-            index_entry.low_mz, index_entry.high_mz
+            "[{:.*}-{:.*}]",
+            mz_decimals, index_entry.low_mz, mz_decimals, index_entry.high_mz
         ));
     } else if let Some(fc) = event.fraction_collectors.first() {
         if fc.low_mz > 0.0 && fc.high_mz > fc.low_mz {
             out.push(' ');
-            out.push_str(&format!("[{:.4}-{:.4}]", fc.low_mz, fc.high_mz));
+            out.push_str(&format!(
+                "[{:.*}-{:.*}]",
+                mz_decimals, fc.low_mz, mz_decimals, fc.high_mz
+            ));
         }
     }
 
@@ -289,6 +327,40 @@ mod tests {
             high_mz: high,
             offset: 0,
         }
+    }
+
+    #[test]
+    fn ltq_filters_use_two_decimals_and_a_sim_names_each_window() {
+        let sim = ScanEvent {
+            preamble: make_preamble(1, 0, 1, 2),
+            reactions: vec![],
+            fraction_collectors: vec![
+                FractionCollector {
+                    low_mz: 428.0,
+                    high_mz: 438.0,
+                },
+                FractionCollector {
+                    low_mz: 646.5,
+                    high_mz: 651.5,
+                },
+            ],
+            coefficients: vec![],
+        };
+        let idx = make_index(428.0, 651.5);
+        assert_eq!(
+            build_filter_with(&sim, &idx, None, None, None, 2),
+            "FTMS + c NSI SIM ms [428.00-438.00, 646.50-651.50]"
+        );
+        let full = ScanEvent {
+            preamble: make_preamble(1, 1, 1, 0),
+            reactions: vec![],
+            fraction_collectors: vec![],
+            coefficients: vec![],
+        };
+        assert_eq!(
+            build_filter_with(&full, &make_index(400.0, 1400.0), None, None, None, 2),
+            "FTMS + p NSI Full ms [400.00-1400.00]"
+        );
     }
 
     #[test]

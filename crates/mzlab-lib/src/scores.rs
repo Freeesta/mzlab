@@ -8,7 +8,7 @@
 //! * `gnps_cosine`: the GNPS-style cosine with the rules of the precursor-aware pipeline of Attributio (rewritten from the rules): precursor region
 //!   and peaks below 1% of the base peak removed, square-root intensities, greedy pairing by decreasing product within an absolute tolerance.
 
-use crate::clean::{entropy_of, weighted};
+use crate::clean::weighted;
 use crate::sortutil;
 
 /// A spectrum for scoring.
@@ -54,27 +54,7 @@ pub fn match_peaks(
 
 /// Entropy similarity for given pairs: `1 - (2 S_AB - S_A - S_B) / ln 4`, clipped to [0, 1].
 pub fn entropy_from_pairs(a_it: &[f64], b_it: &[f64], pairs: &[(usize, usize)]) -> f64 {
-    let (pa, pb) = (weighted(a_it), weighted(b_it));
-    let (mut ia, mut ib) = (vec![false; pa.len()], vec![false; pb.len()]);
-    let mut m: Vec<f64> = Vec::with_capacity(pa.len() + pb.len());
-    for &(i, j) in pairs {
-        m.push((pa[i] + pb[j]) / 2.0);
-        ia[i] = true;
-        ib[j] = true;
-    }
-    m.extend(
-        pa.iter()
-            .enumerate()
-            .filter(|(i, _)| !ia[*i])
-            .map(|(_, v)| v / 2.0),
-    );
-    m.extend(
-        pb.iter()
-            .enumerate()
-            .filter(|(j, _)| !ib[*j])
-            .map(|(_, v)| v / 2.0),
-    );
-    (1.0 - (2.0 * entropy_of(&m) - entropy_of(&pa) - entropy_of(&pb)) / 4f64.ln()).clamp(0.0, 1.0)
+    crate::prep::entropy_from_pairs(a_it, b_it, pairs)
 }
 
 /// Contribution of one matched pair of entropy-weighted intensities `(a, b)` to the entropy similarity (the similarity is the sum over the pairs).
@@ -111,31 +91,7 @@ pub struct PairScores {
 }
 
 pub fn pair_scores(a: &Spec, b: &Spec, tol: f64) -> PairScores {
-    let pairs = match_peaks(&a.mz, &a.it, &b.mz, &b.it, tol);
-    let entropy = entropy_from_pairs(&a.it, &b.it, &pairs);
-    let cosine = cosine_from_pairs(&a.it, &b.it, &pairs);
-    let dot: f64 = pairs.iter().map(|&(i, j)| (a.it[i] * b.it[j]).sqrt()).sum();
-    let na: f64 = a.it.iter().sum();
-    let nb: f64 = b.it.iter().sum();
-    let na_m: f64 = pairs.iter().map(|&(i, _)| a.it[i]).sum();
-    let nb_m: f64 = pairs.iter().map(|&(_, j)| b.it[j]).sum();
-    let ratio = |d: f64, x: f64, y: f64| {
-        if x > 0.0 && y > 0.0 {
-            d / (x * y).sqrt()
-        } else {
-            0.0
-        }
-    };
-    PairScores {
-        entropy,
-        cosine,
-        // forward: all peaks of the query, only the matched ones of the library; reverse: the opposite (NIST naming)
-        forward: ratio(dot, na, nb_m),
-        reverse: ratio(dot, na_m, nb),
-        shared: pairs.len(),
-        explained: if na > 0.0 { na_m / na } else { 0.0 },
-        pairs,
-    }
+    crate::prep::pair_scores_for(&crate::prep::QueryPrep::new(a), a, b, tol)
 }
 
 /// Hybrid pairs (brute force, the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by

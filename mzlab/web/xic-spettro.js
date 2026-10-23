@@ -4,7 +4,7 @@
 // panel right under it. State per spectrum panel: the chosen peak (ring on the spectrum), its tolerance, the XIC panel it owns. The XIC follows the scan of the
 // spectrum (cursor line, band for an averaged spectrum) and says the apex of the peak that holds that scan. Every number comes from the engine through the
 // existing XIC panel and the existing peak detectors (autoEdges / autoInt); nothing is computed here.
-// Classic helpers used by name: xicDirect, xicTraceFor, xicWin, rh, mzd, fmz, numIt, ctl, draw, cursorLine, autoEdges, autoInt, PK, HR, E, ESC, AZIONI.
+// Classic helpers used by name: getXic, scanFiles, shownFor, TOL0, xicDirect, xicTraceFor, xicWin, rh, mzd, fmz, numIt, ctl, draw, cursorLine, autoEdges, autoInt, PK, HR, E, ESC, AZIONI.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -261,6 +261,14 @@
     nome, disponibile: (/** @type {any} */ c) => !!c.p._a && labelled(c.p).length > 0, esegui: (/** @type {any} */ c) => step(c.p, d) });
   key("spec.xicPrev", ",", "scorc.xicPrev", () => T("scorc.xicPrev"), -1); key("spec.xicNext", ".", "scorc.xicNext", () => T("scorc.xicNext"), 1);
 
-  /** @type {any} */ (window).XICBTN = { wire, click, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** Starts the requests of the XIC panel about to be created in the current tab (getXic memoises them): they run while addPanel builds the DOM, and draw() finds them done or under way. @param {any} tr */
+  function prefetch(tr) {
+    try {
+      const p = { tab: E.tab, tol: TOL0 };
+      scanFiles(shownFor(p)).forEach((/** @type {any} */ f) => { getXic(f.k, ...(tr.ion && window.HR ? HR.xicArgs(f, tr, p) : [tr.mz, tr.w ?? p.tol]), f.lv).catch(() => {}); });
+    } catch (e) { /* draw() asks again */ }
+  }
+
+  /** @type {any} */ (window).XICBTN = { wire, prefetch, click, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();

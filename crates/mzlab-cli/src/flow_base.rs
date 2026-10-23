@@ -214,11 +214,11 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<
     let budget = MemBudget::mb(r.budget_mb);
     let mut bytes = Vec::new();
     let mut src = Files(lin.peaks.clone());
-    run::align_to(
+    run::align_to_par(
         &mut src,
         &budget,
         &recipe,
-        |k| open(&lin.index[k]),
+        &|k| open(&lin.index[k]),
         &mut bytes,
     )?;
     let out = out_path(r, job, "mzfeat");
