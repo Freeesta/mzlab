@@ -31,7 +31,7 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 
 ## Trasporto nel sito
 - Dopo il consenso la pagina crea l'iframe `llm/trasporto.html` con una CSP propria (`default-src 'none'`, `connect-src 'self' http://localhost:* http://127.0.0.1:*`): la chiave vive solo lì (memoria; «Remember on this device» la cifra con AES-GCM in IndexedDB `mzlab_llm`, chiave non estraibile; «Forget key» la cancella).
-- I byte della risposta passano al worker `llm-worker.js` su un `MessageChannel` (controllo dell'origine alla consegna della porta); il worker carica `wasm-feat/llm/` (`crates/mzlab-llm-wasm`, `limit_llm` 344 064 B, misurato 309 781 B) alla prima richiesta e decodifica con `LlmStream`; `strumenti-1.json` sta accanto (`tools/build_site.py`).
+- I byte della risposta passano al worker `llm-worker.js` su un `MessageChannel` (controllo dell'origine alla consegna della porta); il worker carica `wasm-feat/llm/` (`crates/mzlab-llm-wasm`, `limit_llm` 344 064 B, misurato 309 824 B) alla prima richiesta e decodifica con `LlmStream`; `strumenti-1.json` sta accanto (`tools/build_site.py`).
 - Nessun host esterno nella CSP del trasporto: dal sito si raggiunge solo `localhost`/`127.0.0.1` (modello locale) e il trasporto `replay` (registrazione servita da 'self'); i fornitori nel cloud sono raggiungibili solo dall'app. Aggiungere un host è una decisione esplicita (`tests/test_llm_csp.py` elenca le sorgenti ammesse). CORS di un fornitore e di `localhost`: non misurati (nessuna richiesta a fornitori veri, nessun server locale in CI); `site_allowed` resta com'è.
 - `index.html` e `tauri.conf.json` non cambiano: l'iframe ha la sua CSP.
 

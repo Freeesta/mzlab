@@ -23,8 +23,30 @@ pub(crate) fn prompts_of(json: &str) -> Result<Prompts, String> {
     Ok(with_prompts(&pairs))
 }
 
+fn registry_of(json: &str) -> Result<Vec<Step>, String> {
+    registry_from_value(&parse(json.as_bytes()).map_err(fail)?).map_err(fail)
+}
+
 fn call_error(field: &str) -> String {
     fail(Error::new("err.llm.assist.call").with("field", field))
+}
+
+/// A verdict as the JSON the page reads.
+fn verdict_json(v: Verdict) -> String {
+    let mut o = Out::default();
+    match v {
+        Verdict::Accepted(s) => o.raw("{\"verdict\":\"accepted\",\"summary\":").raw(&s),
+        Verdict::Retry { request, problems } => o
+            .raw("{\"verdict\":\"retry\",\"request\":")
+            .raw(&request.to_json())
+            .raw(",\"problems\":")
+            .raw(&problems),
+        Verdict::Dropped { problems } => o
+            .raw("{\"verdict\":\"dropped\",\"problems\":")
+            .raw(&problems),
+    };
+    o.raw("}");
+    o.0
 }
 
 /// The roles, their prompts and the registry of steps, for one conversation.
@@ -49,12 +71,11 @@ impl Assist {
         let roles = roles(roles_json).map_err(fail)?;
         let prompts = prompts_of(prompts_json)?;
         prompts.check(&roles).map_err(fail)?;
-        let steps = parse(steps_json.as_bytes()).map_err(fail)?;
         Ok(Assist {
             provider: find(provider_id)?,
             roles,
             prompts,
-            registry: registry_from_value(&steps).map_err(fail)?,
+            registry: registry_of(steps_json)?,
         })
     }
 
@@ -107,19 +128,6 @@ impl Assist {
             &self.registry,
         )
         .map_err(fail)?;
-        let mut o = Out::default();
-        match v {
-            Verdict::Accepted(s) => o.raw("{\"verdict\":\"accepted\",\"summary\":").raw(&s),
-            Verdict::Retry { request, problems } => o
-                .raw("{\"verdict\":\"retry\",\"request\":")
-                .raw(&request.to_json())
-                .raw(",\"problems\":")
-                .raw(&problems),
-            Verdict::Dropped { problems } => o
-                .raw("{\"verdict\":\"dropped\",\"problems\":")
-                .raw(&problems),
-        };
-        o.raw("}");
-        Ok(o.0)
+        Ok(verdict_json(v))
     }
 }

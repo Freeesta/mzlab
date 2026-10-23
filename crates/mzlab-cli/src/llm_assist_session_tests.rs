@@ -188,114 +188,112 @@ fn page(level: Level, replay: Option<Replay>, turns: Vec<Vec<Event>>) -> Page {
     }
 }
 
-impl Page {
-    /// The next model call: the recording answers, or (when it is being written) the script.
-    fn model(&mut self, req: &Request) -> Vec<Event> {
-        let events = match self.replay.as_mut() {
-            Some(r) => r.respond(req).expect("the recording has this call"),
-            None => self.turns[self.n].clone(),
-        };
-        self.lines.push(record_line(self.n, req, &events));
-        self.n += 1;
-        events
-    }
+/// The next model call: the recording answers, or (when it is being written) the script.
+fn model(pg: &mut Page, req: &Request) -> Vec<Event> {
+    let events = match pg.replay.as_mut() {
+        Some(r) => r.respond(req).expect("the recording has this call"),
+        None => pg.turns[pg.n].clone(),
+    };
+    pg.lines.push(record_line(pg.n, req, &events));
+    pg.n += 1;
+    events
+}
 
-    fn body(events: &[Event]) -> String {
-        events
-            .iter()
-            .filter_map(|e| {
-                if let Event::TextDelta(t) = e {
-                    Some(t.as_str())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    /// A reader: its request, the check of its answer, one retry with the problems; what passed goes to the orchestrator.
-    fn read(&mut self, role: &str) {
-        let r = self.roles.iter().find(|r| r.role == role).unwrap().clone();
-        let prompt = self.prompts.prompt(&r.prompt_file).unwrap().to_string();
-        let (p, reg, inp) = (
-            builtin().into_iter().find(|p| p.id == "anthropic").unwrap(),
-            steps(),
-            input(role),
-        );
-        let mut req = request(&p, &r, &prompt, &inp).unwrap();
-        for attempt in 0..2u8 {
-            let body = Self::body(&self.model(&req));
-            match check(&p, &r, &prompt, &inp, &body, attempt, &reg).unwrap() {
-                Verdict::Accepted(summary) => {
-                    return self.s.add_reading(role, parse(summary.as_bytes()).unwrap())
-                }
-                Verdict::Retry { request, .. } => {
-                    self.wrong += 1;
-                    req = request;
-                }
-                Verdict::Dropped { .. } => return self.wrong += 1,
+fn body(events: &[Event]) -> String {
+    events
+        .iter()
+        .filter_map(|e| {
+            if let Event::TextDelta(t) = e {
+                Some(t.as_str())
+            } else {
+                None
             }
+        })
+        .collect()
+}
+
+/// A reader: its request, the check of its answer, one retry with the problems; what passed goes to the orchestrator.
+fn read(pg: &mut Page, role: &str) {
+    let r = pg.roles.iter().find(|r| r.role == role).unwrap().clone();
+    let prompt = pg.prompts.prompt(&r.prompt_file).unwrap().to_string();
+    let (p, reg, inp) = (
+        builtin().into_iter().find(|p| p.id == "anthropic").unwrap(),
+        steps(),
+        input(role),
+    );
+    let mut req = request(&p, &r, &prompt, &inp).unwrap();
+    for attempt in 0..2u8 {
+        let body = body(&model(pg, &req));
+        match check(&p, &r, &prompt, &inp, &body, attempt, &reg).unwrap() {
+            Verdict::Accepted(summary) => {
+                return pg.s.add_reading(role, parse(summary.as_bytes()).unwrap())
+            }
+            Verdict::Retry { request, .. } => {
+                pg.wrong += 1;
+                req = request;
+            }
+            Verdict::Dropped { .. } => return pg.wrong += 1,
         }
     }
+}
 
-    fn answer(&mut self, name: &str) -> Value {
-        let j = match name {
-            "ask_user" => "{\"answers\":{\"goal\":\"transformation products\"}}",
-            "table_check" => "{\"checks\":[{\"id\":\"adducts\",\"flag\":\"note\"}]}",
-            _ => "{\"ok\":true}",
-        };
-        parse(j.as_bytes()).unwrap()
-    }
+fn answer(name: &str) -> Value {
+    let j = match name {
+        "ask_user" => "{\"answers\":{\"goal\":\"transformation products\"}}",
+        "table_check" => "{\"checks\":[{\"id\":\"adducts\",\"flag\":\"note\"}]}",
+        _ => "{\"ok\":true}",
+    };
+    parse(j.as_bytes()).unwrap()
+}
 
-    /// One user message, the way the page plays it: router, the readers it names, then the orchestrator until the turn is done.
-    fn say(&mut self, msg: &str) {
-        let mut queue = vec![Input::User(msg.to_string())];
-        for _ in 0..200 {
-            let Some(input) = queue.pop() else { break };
-            for o in step(&mut self.s, input) {
-                match o {
-                    Output::Sub { request, .. } => {
-                        let body = Self::body(&self.model(&request));
-                        for need in router::parse(&body)
-                            .map(|r| {
-                                r.need_data()
-                                    .into_iter()
-                                    .map(String::from)
-                                    .collect::<Vec<_>>()
-                            })
-                            .unwrap_or_default()
-                        {
-                            if let Some(role) = reader_of(&need) {
-                                self.read(role);
-                            }
+/// One user message, the way the page plays it: router, the readers it names, then the orchestrator until the turn is done.
+fn say(pg: &mut Page, msg: &str) {
+    let mut queue = vec![Input::User(msg.to_string())];
+    for _ in 0..200 {
+        let Some(input) = queue.pop() else { break };
+        for o in step(&mut pg.s, input) {
+            match o {
+                Output::Sub { request, .. } => {
+                    let body = body(&model(pg, &request));
+                    for need in router::parse(&body)
+                        .map(|r| {
+                            r.need_data()
+                                .into_iter()
+                                .map(String::from)
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default()
+                    {
+                        if let Some(role) = reader_of(&need) {
+                            read(pg, role);
                         }
-                        queue.push(Input::SubResult {
-                            role: "router".into(),
-                            body: Ok(body),
-                        });
                     }
-                    Output::Send(req) => {
-                        let ev = self.model(&req);
-                        queue.extend(ev.into_iter().rev().map(Input::Event));
-                    }
-                    Output::CallTool { id, name, .. } => {
-                        let content = self.answer(&name);
-                        self.called.push(name);
-                        queue.push(Input::ToolResult {
-                            id,
-                            ok: true,
-                            content,
-                        });
-                    }
-                    Output::AskConfirm { id, .. } => {
-                        self.asked.push(id.clone());
-                        queue.push(Input::Confirm {
-                            id,
-                            yes: self.confirm,
-                        });
-                    }
-                    _ => {}
+                    queue.push(Input::SubResult {
+                        role: "router".into(),
+                        body: Ok(body),
+                    });
                 }
+                Output::Send(req) => {
+                    let ev = model(pg, &req);
+                    queue.extend(ev.into_iter().rev().map(Input::Event));
+                }
+                Output::CallTool { id, name, .. } => {
+                    let content = answer(&name);
+                    pg.called.push(name);
+                    queue.push(Input::ToolResult {
+                        id,
+                        ok: true,
+                        content,
+                    });
+                }
+                Output::AskConfirm { id, .. } => {
+                    pg.asked.push(id.clone());
+                    queue.push(Input::Confirm {
+                        id,
+                        yes: pg.confirm,
+                    });
+                }
+                _ => {}
             }
         }
     }
@@ -307,10 +305,16 @@ fn a_whole_session_on_fs_pos_plays_from_its_recording() {
     let replay = (!update)
         .then(|| Replay::parse(&std::fs::read_to_string(recording()).unwrap(), false).unwrap());
     let mut pg = page(Level::L1, replay, script());
-    pg.say("I opened the seven files of the series: what are they?");
-    pg.say("Build the workflow for the transformation products.");
-    pg.say("The run is done: check the table.");
-    pg.say("show the TIC of all files");
+    say(
+        &mut pg,
+        "I opened the seven files of the series: what are they?",
+    );
+    say(
+        &mut pg,
+        "Build the workflow for the transformation products.",
+    );
+    say(&mut pg, "The run is done: check the table.");
+    say(&mut pg, "show the TIC of all files");
     if update {
         std::fs::write(recording(), pg.lines.join("\n") + "\n").unwrap();
     }
@@ -360,7 +364,7 @@ fn an_instruction_in_a_method_comment_or_a_cell_changes_no_decision() {
         ];
         let mut pg = page(Level::L1, None, turns);
         pg.confirm = false;
-        pg.say(&format!("Which files are full scan? {inject}"));
+        say(&mut pg, &format!("Which files are full scan? {inject}"));
         assert!(
             !pg.called.iter().any(|c| c == "flow_run"),
             "a run needs the user"
@@ -371,7 +375,10 @@ fn an_instruction_in_a_method_comment_or_a_cell_changes_no_decision() {
             "the run is asked to the user, who says no"
         );
         let log = pg.s.log();
-        assert!(log.contains("\"ev\":\"confirm\""), "the run was asked and declined");
+        assert!(
+            log.contains("\"ev\":\"confirm\""),
+            "the run was asked and declined"
+        );
         assert!(
             pg.s.route().is_some_and(|r| r.suspicious()),
             "the router flags it"
