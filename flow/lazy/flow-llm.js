@@ -124,6 +124,7 @@
   /** what the page does for the machine of the agent: show text, call a tool, ask for a confirmation, close the turn @param {any} kit @param {any} ui @param {any} st */
   const makeHost = (kit, ui, st) => {
     const { el } = F;
+    const rd = F.llmReaders.make(kit.put);
     /** @type {any} */
     const host = {
       show: (/** @type {string} */ t) => { if (!host.cur) host.cur = kit.say("", ""); host.cur.textContent += t; ui.log.scrollTop = ui.log.scrollHeight; },
@@ -137,6 +138,8 @@
         ui.sent.textContent = `${r && r.url || ""}\n` + (typeof body === "string" ? body : JSON.stringify(body, null, 1)).slice(0, 8000);
         st.money();
       },
+      readerStage: (/** @type {string} */ role, /** @type {string} */ stage) => { host.cur = null; if (stage === "queued") rd.queued(role); else rd.stage(role, stage); },
+      reader: (/** @type {any} */ info) => { host.cur = null; rd.verdict(info); },
       call: async (/** @type {string} */ _id, /** @type {string} */ name, /** @type {any} */ args) => {
         host.cur = null;
         if (EDITS.has(name) && name !== "flow_propose_plan" && st.level === "L2" && ++st.edits > st.l2max) return { ok: false, content: { error_key: "err.llm.limit.edits", params: { max: st.l2max } } };
