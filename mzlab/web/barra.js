@@ -1053,8 +1053,6 @@ const BARRA = (() => {
     if (hd) { hd.setAttribute("role", "separator"); hd.setAttribute("aria-orientation", "vertical"); hd.tabIndex = 0; hd.setAttribute("aria-label", t("side.resize.aria")); }
     watchWorkspace();
     saveState();                 // writes back only the valid fields: an old state (pinned, odd side or width) is cleaned
-    const add = Q1("#addf");
-    if (add) add.addEventListener("click", () => { _open = false; });
     bindResizer();
     bindSideDrag();
     bindGlobalEvents();
