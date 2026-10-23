@@ -374,15 +374,21 @@ pub fn completa_cmd(
     Ok((done + "\n", out))
 }
 
-/// The text the command prints: the graph, or the line of numbers.
-pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
-    let (g, mut j) = grafo(&a.file, &a.o, tmp)?;
+/// The graph text `j` of `g` with the keys `interpretazione` and `rotture` the options ask for (also used by `msn-lib add`).
+pub fn con_chiavi(a: &Args, g: &Grafo, mut j: String) -> Result<String> {
     if let Some(ppm) = a.interpreta {
-        j = con_interpretazione(&j, &g, ppm);
+        j = con_interpretazione(&j, g, ppm);
     }
     if let Some(p) = a.rotture {
-        j = mzlab_feat::chem::rotture::rotture_testo(&g, &j, a.o.smiles.as_deref(), p)?;
+        j = mzlab_feat::chem::rotture::rotture_testo(g, &j, a.o.smiles.as_deref(), p)?;
     }
+    Ok(j)
+}
+
+/// The text the command prints: the graph, or the line of numbers.
+pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
+    let (g, j) = grafo(&a.file, &a.o, tmp)?;
+    let j = con_chiavi(a, &g, j)?;
     if let Some((f, pulito, nodo)) = &a.export {
         return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
     }

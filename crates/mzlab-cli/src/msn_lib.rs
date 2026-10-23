@@ -60,6 +60,7 @@ fn add(args: Vec<String>, tmp: &Path) -> Result<String> {
         .map_err(|m| bad(&m))?
         .ok_or_else(|| bad("--help is not an option here"))?;
     let (g, json) = crate::msn_graph::grafo(&a.file, &a.o, tmp)?;
+    let json = crate::msn_graph::con_chiavi(&a, &g, json)?;
     let (text, doppione) = aggiungi(&read_lib(&lib)?, &id, &g, &json)?;
     let out = a.out.clone().unwrap_or(lib);
     std::fs::write(&out, text).map_err(io)?;
