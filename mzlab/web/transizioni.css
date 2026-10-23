@@ -1,8 +1,8 @@
 /* Motion tokens and the shared transitions of the interface. Loaded last: a component that animates uses these tokens
    (var(--t-fast), var(--t-med), var(--ease-out)) and animates only transform and opacity. Reduced motion = duration 0. */
-:root{--t-fast:120ms;--t-med:180ms;--ease-out:cubic-bezier(.2,.8,.2,1)}
-@media (prefers-reduced-motion:reduce){:root{--t-fast:0ms;--t-med:0ms}}
-:root[data-a11y-reduce]{--t-fast:0ms;--t-med:0ms}
+:root{--t-fast:120ms;--t-med:180ms;--ease-out:cubic-bezier(.2,.8,.2,1);--tema-durata:700ms}
+@media (prefers-reduced-motion:reduce){:root{--t-fast:0ms;--t-med:0ms;--tema-durata:0ms}}
+:root[data-a11y-reduce]{--t-fast:0ms;--t-med:0ms;--tema-durata:0ms}
 @keyframes tr-pop{from{opacity:0;transform:scale(.98)}}
 @keyframes tr-drop{from{opacity:0;transform:translateY(6px)}}
 @keyframes tr-fade{from{opacity:0}}
@@ -24,6 +24,6 @@ details[open]>:not(summary){animation:tr-fade var(--t-med) var(--ease-out)}
 /* reduced motion or no animation on the first paint: nothing moves */
 @media (prefers-reduced-motion:reduce){#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],dialog[open]::backdrop,#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*{animation:none!important}}
 :root[data-a11y-reduce] :is(#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*),:root[data-a11y-reduce] dialog[open]::backdrop,:root[data-a11y-reduce] #paletta{animation:none!important}
-/* soft theme change (tema-morbido.js): colours fade; the browser cross-fade of the page lasts the same */
-html.tema-tr,html.tema-tr *{transition:background-color .3s,color .3s,border-color .3s,fill .3s,stroke .3s!important}
-::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}
+/* soft theme change (tema-morbido.js): colours fade over --tema-durata, the only place that sets it; the browser cross-fade of the page lasts the same */
+html.tema-tr,html.tema-tr *{transition:background-color var(--tema-durata) ease-in-out,color var(--tema-durata) ease-in-out,border-color var(--tema-durata) ease-in-out,fill var(--tema-durata) ease-in-out,stroke var(--tema-durata) ease-in-out!important}
+::view-transition-old(root),::view-transition-new(root){animation-duration:var(--tema-durata);animation-timing-function:ease-in-out}
