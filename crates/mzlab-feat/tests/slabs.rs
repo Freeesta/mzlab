@@ -5,7 +5,7 @@ use mzlab_core::budget::{MemBudget, WriteAt};
 use mzlab_core::error::Result;
 use mzlab_core::idxread::Index;
 use mzlab_feat::recipe::{Mode, Recipe};
-use mzlab_feat::slabs::{align_and_fill_stored, Stored};
+use mzlab_feat::slabs::{align_and_fill_progress, align_and_fill_stored, Stored};
 use mzlab_feat::store::{
     read_file, read_file_from, write_file, write_table_to, Origin, Slice, Want,
 };
@@ -315,4 +315,45 @@ fn a_lean_read_of_a_range_is_the_rows_and_columns_asked_for() {
     let mut sink: Vec<u8> = Vec::new();
     sink.write_at(3, b"x").unwrap();
     assert_eq!(sink, [0, 0, 0, b'x']);
+}
+
+/// The progress callback of the alignment: the same bytes, `done` never goes back, it ends at the total, and the total is announced first.
+#[test]
+fn the_progress_of_the_alignment_ends_at_the_total_and_changes_nothing() {
+    for mb in [1024.0, 0.4] {
+        for mode in [Mode::Ion, Mode::Family] {
+            let r = recipe(mode);
+            let reference = aligned_bytes(&mut series(), mb, &r).unwrap();
+            let open = |_: usize| -> Result<Index<Vec<u8>>> { unreachable!("no weak tier") };
+            let mut seen: Vec<(usize, usize)> = Vec::new();
+            let (t, _) = align_and_fill_progress(
+                &mut series(),
+                &MemBudget::mb(mb),
+                &r,
+                open,
+                None,
+                None,
+                &mut |d, n| seen.push((d, n)),
+            )
+            .unwrap();
+            let mut out = Vec::new();
+            write_table_to(&mut out, &t, &r, &Origin::default(), &mut (&[][..])).unwrap();
+            assert!(out == reference, "{mb} MB {mode:?}: different bytes");
+            let (d0, total) = seen[0];
+            assert!(
+                d0 == 0 && total >= 1,
+                "{mb} MB {mode:?}: first call {:?}",
+                seen[0]
+            );
+            assert!(
+                seen.windows(2).all(|w| w[0].0 <= w[1].0),
+                "{mb} MB {mode:?}: {seen:?}"
+            );
+            assert_eq!(
+                seen.last(),
+                Some(&(total, total)),
+                "{mb} MB {mode:?}: {seen:?}"
+            );
+        }
+    }
 }

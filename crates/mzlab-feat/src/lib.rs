@@ -63,6 +63,7 @@ pub mod rowmeta;
 pub mod rtmap;
 pub mod rtwarp;
 pub mod samples;
+mod prog;
 pub mod series;
 pub mod slabs;
 pub mod spill;
