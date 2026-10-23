@@ -1,6 +1,7 @@
 //! The native executor of `spectra.match@1`: the query spectra (MGF/MSP/MassBank/JSON) scored against a library (the same formats, or a `.mzlib`) with
 //! the engine of `mzlab-lib` (`search::identity`, `search::analogs`, `scores`), as the Library tab does. The `candidates` file it writes is JSON.
 
+use crate::flow_match_evidence::{self as evidence, Pair};
 use crate::flow_match_filter::Filters;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
@@ -132,6 +133,8 @@ pub(crate) struct Cand {
     mass_ppm: f64,
     delta: f64,
     explained: Vec<f64>,
+    /// the matched peaks on both sides, when the step is asked for them (`matched_peaks`)
+    matched: Option<Vec<Pair>>,
     /// the score as a sum of terms, when the step is asked for it (`score_terms`)
     terms: Option<ScoreTerms>,
 }
@@ -205,6 +208,12 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
         {
             continue;
         }
+        let matched = want_peaks(job).then(|| match alg {
+            "modified_cosine" => {
+                evidence::from_modified(&modified_cosine(&q.spec, &h.spec, o.frag_da))
+            }
+            _ => evidence::from_pairs(&q.spec, &h.spec, &h.pairs),
+        });
         out.push(Cand {
             index: h.index,
             score,
@@ -215,10 +224,16 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
                 .iter()
                 .filter_map(|&(i, _)| q.spec.mz.get(i).copied())
                 .collect(),
+            matched,
             terms: t,
         });
     }
     Ok(out)
+}
+
+/// Whether the step lists the matched peaks of each candidate (`matched_peaks`).
+fn want_peaks(job: &Job) -> bool {
+    flag(job, "matched_peaks", |v| v.bool() == Some(true))
 }
 
 fn analogues(lib: &Lib, q: &Query, job: &Job, terms: bool) -> Result<Vec<Cand>> {
@@ -246,6 +261,7 @@ fn analogues(lib: &Lib, q: &Query, job: &Job, terms: bool) -> Result<Vec<Cand>> 
                 .iter()
                 .filter_map(|&(i, _, _)| h.mc.a_top.mz.get(i).copied())
                 .collect(),
+            matched: want_peaks(job).then(|| evidence::from_modified(&h.mc)),
             terms: terms.then(|| mod_terms(&h.mc)),
         })
         .collect())
@@ -329,6 +345,9 @@ fn write_cand(
     o.raw(",\"shared\":").int(c.shared as i64);
     o.raw(",\"library_peaks\":").int(peaks as i64);
     o.raw(",\"explained\":").rounded(&c.explained, 4);
+    if let Some(m) = &c.matched {
+        evidence::write(o, m);
+    }
     o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
     o.raw(",\"precursor_delta\":").num(round(c.delta, 4));
     if let Some(d) = rt_delta {
