@@ -201,13 +201,12 @@ function baseLine(g, y, xa, xb) { g.save(); g.strokeStyle = ecss("--line"); g.li
 // choosing stacked or waterfall switches the automatic background on, unless the student already picked one
 function fondoOnStack(p, mode) { if (mode !== "ovl" && p.fondo && p.fondo.mode === "none") p.fondo = { ...p.fondo, mode: "auto", w: p.fondo.w || 1, ib: null }; }
 function setFondo(p, v) {
-  pushCampi(p, "storia.fondo"); const f = p.fondo; p._pickIbk = false;
-  if (v === "snip") { p.fondo = { ...f, mode: "auto", w: f.w || 1, ib: null }; }
-  else if (v === "tract") {
-    if (f.ib) f.mode = "tract";
-    else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }
+  const f = p.fondo; p._pickIbk = false;
+  if (v === "tract") {
+    if (f.ib) { pushCampi(p, "storia.fondo"); f.mode = "tract"; }
+    else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }      // ibkSet records its own step
     else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
-  } else p.fondo = { ...f, mode: "none", w: f.w || 1, ib: null };
+  } else { pushCampi(p, "storia.fondo"); p.fondo = { ...f, mode: v === "snip" ? "auto" : "none", w: f.w || 1, ib: null }; }
   ctl(p); draw(p); uiSave();
 }
 const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
@@ -227,12 +226,17 @@ function ibkChip(p) {
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
   (p.corrbar || p.leg).appendChild(chip);
 }
+// hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (comandi.js)
+COMANDI.gestore("series.visibility", {
+  leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]),
+  applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; },
+});
 // the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
 function ibkSpectra(p) {
   const ib = ibOf(p); if (!ib) return;
   const sp = E.panels.filter(q => q.type === "spec" && (q.link === p.id || q.src === p.id));
   if (!sp.length) return info(I18N.t("ibk.noSpectra"));
-  sp.forEach(q => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; ctl(q); draw(q); }); uiSave();
+  sp.forEach(q => { COMANDI.fai("spec.background", q, () => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; }); ctl(q); draw(q); }); uiSave();
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
@@ -262,14 +266,14 @@ function legend(p, all, note = "") {
     const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}" data-h="x|${f.k}|${p.traces[0].mz}" title="${I18N.t("leg.toggle.title")}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
-    p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; }); draw(p); });
+    p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
   } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
-  p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { t.label = v; draw(p); } });
-  p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); ctl(p); draw(p); });
-  p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; draw(p); });
+  p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMANDI.fai("xic.traces", p, () => { t.label = v; }); draw(p); } });
+  p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { COMANDI.fai("xic.traces", p, () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); }); ctl(p); draw(p); });
+  p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; COMANDI.fai("series.visibility", p, () => { if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; }); draw(p); });
   legCollapse(p);
   ibkChip(p);
   if (window.SUBREF) SUBREF.chip(p);

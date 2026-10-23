@@ -66,17 +66,17 @@ const DISP = (() => {
     ctl(p); redraw(p); if (window.BANCO) BANCO.renderInfo();
   };
   register("chrom", { id: "xmz", label: "disp.xmz", title: "disp.xmz.title", kind: "number", min: 0, step: 0.0001, when: p => xhr(p) && !!xt(p), get: p => (+xt(p).mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1) + 1),
-    set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; tr.mz = rh(n, 5); xrefresh(p, tr); } });
+    set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; COMANDI.fai("xic.traces", p, () => { tr.mz = rh(n, 5); }); xrefresh(p, tr); } });
   register("chrom", { id: "xunit", label: "disp.xunit", kind: "select", when: p => xhr(p) && !!xt(p), opts: () => [["ppm", "ppm"], ["da", "Da"]], get: p => xunit(p, xt(p)),
     set: (p, v) => {                                          // same interval, written in the other unit
       const tr = xt(p), cur = xunit(p, tr); if (cur === v) return;
       const f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)), tol = tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6;
-      if (tr.ion) { if (v === "da") tr.wda = rh(tr.mz * tol * 1e-6, 5); else { delete tr.wda; tr.ppm = tol; } } else p._xu = v;
+      COMANDI.fai("xic.traces", p, () => { if (tr.ion) { if (v === "da") tr.wda = rh(tr.mz * tol * 1e-6, 5); else { delete tr.wda; tr.ppm = tol; } } else p._xu = v; });
       xrefresh(p, tr); } });
   register("chrom", { id: "xtol", label: "disp.xtol", title: "disp.xtol.title", kind: "number", min: 0, step: 0.1, when: p => xhr(p) && !!xt(p),
     get: p => { const tr = xt(p), u = xunit(p, tr), f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)); return u === "da" ? +(tr.ion ? tr.wda : (tr.w ?? p.tol)).toFixed(5) : +(tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6).toFixed(2); },
     set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; const u = xunit(p, tr);
-      if (tr.ion) { if (u === "da") tr.wda = rh(n, 5); else tr.ppm = n; } else tr.w = u === "da" ? rh(n, 5) : rh(tr.mz * n * 1e-6, 5);
+      COMANDI.fai("xic.traces", p, () => { if (tr.ion) { if (u === "da") tr.wda = rh(n, 5); else tr.ppm = n; } else tr.w = u === "da" ? rh(n, 5) : rh(tr.mz * n * 1e-6, 5); });
       xrefresh(p, tr); } });
 
   function control(it, p, k) {

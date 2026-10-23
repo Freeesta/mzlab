@@ -71,7 +71,7 @@ const BANCO = (() => {
   }
   function setPin(p, v) {
     p.pin = !!v;
-    if (p.type === "spec") { if (v && p.link) freezeSpec(p); else if (!v && !p.link && p.src) { const s = E.panels.find(q => q.id === p.src); if (s) liveSpec(p, s); } }
+    if (p.type === "spec") { if (v && p.link) spLinkFreeze(p); else if (!v && !p.link && p.src) { const s = E.panels.find(q => q.id === p.src); if (s) spLinkFollow(p, s); } }
     ctl(p); uiSave();
   }
   // ---------------------------------------------------------------- «+ scan»: every scan of the file in time order; the chosen one opens as a TIC with its spectrum under it, at the place the student picks
@@ -464,7 +464,7 @@ const BANCO = (() => {
       if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
       return o;
     };
-    const apply = (s2, o, only) => { s2.iso = { ...o, only: !!only }; let pat; try { pat = HR.isoPat(o, 0); } catch (e) { return nearMsg(e.message); } s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); draw(s2); };
+    const apply = (s2, o, only) => { let pat; try { pat = HR.isoPat(o, 0); } catch (e) { return nearMsg(e.message); } COMANDI.fai("spec.isotopes", s2, () => { s2.iso = { ...o, only: !!only }; s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); }); draw(s2); };
     b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, false); };
     b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
@@ -472,7 +472,7 @@ const BANCO = (() => {
       const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0), w: hostWidth(), h: 300, full: true });
       relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
     };
-    b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
+    b.querySelector("#hri-off").onclick = () => { if (sp) { COMANDI.fai("spec.isotopes", sp, () => { sp.iso = null; }); draw(sp); } };
   }
   function tIdn(b, p) {
     const sp = specOf(p), f = cFile(p);

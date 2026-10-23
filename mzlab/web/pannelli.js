@@ -348,7 +348,7 @@ function addPanel(type, o, after) {
   }
   if (bX) bX.onclick = () => p.kind === "pda" ? wlOpen(p) : openXic(null, { after: p });      // the new XIC (or wavelength trace on a PDA) sits right under this chromatogram
   el.querySelector(".x").onclick = () => chiudiPannello(p);
-  el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { p.title = v === ptitle(p.title) ? p.title : v; ctl(p); uiSave(); } };
+  el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { COMANDI.fai("panel.rename", p, () => { p.title = v === ptitle(p.title) ? p.title : v; }); ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
 }
@@ -724,8 +724,8 @@ function ctl(p) {
     fb.onclick = e => {
       e.stopPropagation();
       const cands = E.panels.filter(q => ["chrom", "xic", "mrm"].includes(q.type) && (q.tab || E.tab) === (p.tab || E.tab) && q.el);
-      menu(e, [...cands.map(q => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => liveSpec(p, q) })),
-        ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { freezeSpec(p); uiSave(); } }]);
+      menu(e, [...cands.map(q => ({ label: (p.link === q.id ? "\u2713 " : "") + I18N.t("spec.follow.item", { n: q.num || "?", title: ptitle(q.title) }), fn: () => spLinkFollow(p, q) })),
+        ...(cands.length ? ["-"] : []), { label: (p.link ? "" : "\u2713 ") + I18N.t("spec.follow.menu.none"), fn: () => { spLinkFreeze(p); uiSave(); } }]);
     };
   }
   if (window.BANCO) BANCO.decorate(p, c); mapNavWire(p, c);
@@ -748,7 +748,7 @@ function ctl(p) {
       const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);
       if (t && lo != null && hi != null && hi > lo) {                       // the student writes the edges: from now on it is an explicit window in Da, the same for every file
         const d = hrE ? HR.dec(HR.xicFiles(p.tab), 1) : 1;
-        t.mz = rh((lo + hi) / 2, hrE ? 5 : 2); t.w = rh((hi - lo) / 2, hrE ? 5 : 2); t.label = `m/z ${hrE ? t.mz.toFixed(4) : t.mz.toFixed(mzd(p))}`; delete t.ion; delete t.obs;
+        COMANDI.fai("xic.traces", p, () => { t.mz = rh((lo + hi) / 2, hrE ? 5 : 2); t.w = rh((hi - lo) / 2, hrE ? 5 : 2); t.label = `m/z ${hrE ? t.mz.toFixed(4) : t.mz.toFixed(mzd(p))}`; delete t.ion; delete t.obs; });
       }
       ctl(p); draw(p);
     };
@@ -830,7 +830,7 @@ function hdMoreInit(p) {
 }
 function addTrace(p, mz, label, w) {
   mz = rh(mz, w != null ? 2 : 1);       // (a window centre is half of two 0.1 values: two decimals, the edges stay at one) unit-resolution instrument: one decimal is all that means anything
-  p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) });
+  COMANDI.fai("xic.traces", p, () => p.traces.push({ id: E.seq++, mz, w: w ?? null, label: label || "m/z " + mz.toFixed(mzd(p)) }));
   ctl(p); draw(p);
 }
 const numMz = t => { const v = numIt(t); return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
@@ -862,7 +862,7 @@ function xicDirect(mz, after, panel, over) {
   XIC_LAST = { mz };
   const tr = over || xicTraceFor(mz, panel);
   if (!(panel && E.panels.includes(panel))) window.XICBTN?.prefetch(tr);
-  if (panel && E.panels.includes(panel)) { panel.traces.push(tr); ctl(panel); draw(panel); reveal(panel); return panel; }
+  if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => panel.traces.push(tr)); ctl(panel); draw(panel); reveal(panel); return panel; }
   const np = addPanel("xic", { traces: [tr] });
   if (after && E.panels.includes(after)) {
     np.el.classList.add("drag"); np.y = after.y + after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
@@ -950,7 +950,7 @@ function openXic(panel, pre = {}) {
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
     let np;
-    if (panel && E.panels.includes(panel)) { traces.forEach(t => panel.traces.push(t)); np = panel; ctl(np); }
+    if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => traces.forEach(t => panel.traces.push(t))); np = panel; ctl(np); }
     else {
       np = addPanel("xic", { traces });
       if (pre.after && E.panels.includes(pre.after)) { 
@@ -1002,8 +1002,15 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
       draw(p);
 }
 
+// the title of a panel is one undoable action (comandi.js)
+COMANDI.gestore("panel.rename", { leggi: p => JSON.stringify(p.title ?? null), applica: (p, snap) => { p.title = JSON.parse(snap); ctl(p); } });
+// the traces of an XIC panel (add, remove, label, window, unit) are one undoable action (comandi.js); the split into panels is not (it creates panels)
+COMANDI.gestore("xic.traces", {
+  leggi: p => JSON.stringify([p.traces, p._xu ?? null, p.ints]),
+  applica: (p, snap) => { const [t, u, i] = JSON.parse(snap); p.traces = t; p._xu = u; p.ints = i; p.isel = null; ctl(p); },
+});
 // the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (comandi.js)
-const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY"];
+const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi"];
 COMANDI.gestore("panel.source", {
   leggi: p => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
   applica: (p, snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },

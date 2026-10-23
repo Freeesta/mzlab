@@ -105,8 +105,8 @@
     let xp = old;
     if (!xp) { xp = s.xp = xicDirect(sel.m, p, null, tr); await xp.ready; }
     else {
-      if (!add) { if (xp.ints && xp.ints.length) pushIh(xp); xp.ints = []; xp.traces = []; }
-      xp.traces.push(tr); ctl(xp); reveal(xp); await draw(xp);
+      COMANDI.fai("xic.traces", xp, () => { if (!add) { xp.ints = []; xp.traces = []; } xp.traces.push(tr); });
+      ctl(xp); reveal(xp); await draw(xp);
     }
     if (tok !== s.xtok) return;
     if (!add && hrFile(p)) await integrate(p, xp);

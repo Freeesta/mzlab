@@ -47,6 +47,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   /** Visible now: the panel is open, in the visible tab, and in full screen only that panel. @param {any} e */
   // a removed file or closed panel belongs to a tab (remove-all to none), not to a live panel
   const visibile = e => { if (e.tipo === "tolto" && e.p === undefined) return !fullscreen() && (e.tab === undefined || e.tab === E.tab);
+    if (e.p && e.p.globale) return !fullscreen();
     if (!E.panels.includes(e.p)) return false; const m = fullscreen(); return m ? e.p === m : (e.p.tab || E.tab) === E.tab; };
   /** @param {any} p @param {string} tipo @param {any} [snap] */
   const cattura = (p, tipo, snap) => tipo === "int" ? (snap ?? intSnap(p))
@@ -59,7 +60,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const p = e.p, cur = e.tipo === "cmd" ? "" : cattura(p, e.tipo), o = e.tipo === "cmd" ? null : JSON.parse(st);
     if (e.tipo === "int") { p.ints = o; p.isel = null; }
     else if (e.tipo === "campi") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
-    else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); g.applica(p, st); draw(p); uiSave(); return prev; }
+    else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); COMANDI.ripristina(e.cmd, p, st); if (!p.globale) draw(p); uiSave(); return prev; }
     else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
     draw(p); uiSave(); return cur;
   };
