@@ -112,6 +112,7 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+mod par;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -164,19 +165,7 @@ pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
-    for (f, i) in files.iter().zip(&idxs) {
-        eprintln!("index {}", f.display());
-        build_index(f, i, DEFAULT_BUDGET)?;
-    }
-    let recipe = run::recipe_for(params, &mut open(&idxs[0])?)?;
-    let mut detected = Vec::new();
-    for (f, i) in files.iter().zip(&idxs) {
-        eprintln!("detect {}", f.display());
-        let name = f
-            .file_name()
-            .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        detected.push(run::detect(&mut open(i)?, &name, &recipe)?);
-    }
+    let (recipe, detected) = crate::par::index_and_detect(files, &idxs, params)?;
     let (tables, origin) = run::read_files(&detected)?;
     eprintln!("align {} file(s)", files.len());
     let table = run::align(&tables, &origin, &recipe, |k| open(&idxs[k]))?;
