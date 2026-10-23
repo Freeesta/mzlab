@@ -681,6 +681,7 @@
   "msngrafo.str.show.tip": "Suggerimento del pulsante «Mostra» di un taglio candidato: {bond} = etichetta del legame, per esempio C2-O3.",
   "warn.msngrafo.fixedNotFound": "Avviso: la formula scelta dall'utente non è tra i candidati del nodo; {node} = m/z del nodo.",
   "warn.msngrafo.isolatedUnexplained": "Avviso: un precursore isolato non ha formule candidate ed è stato tolto; {node} = m/z.",
+  "warn.msngrafo.mostUnexplained": "Avviso: oltre metà dell'intensità dei frammenti non ha formule candidate (formula o addotto sbagliati?).",
   "warn.msngrafo.isolation": "Avviso: più picchi nella finestra d'isolamento; {node} = m/z del nodo.",
   "warn.msngrafo.precNotFound": "Avviso: il precursore non c'è nello spettro del genitore; {node} = m/z del nodo.",
   "warn.msngrafo.userConflict": "Avviso: la formula scelta dall'utente contrasta con il precursore; {node} = m/z del nodo.",

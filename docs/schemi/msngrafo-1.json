@@ -273,7 +273,8 @@
        "warn.msngrafo.rootMissing",
        "warn.msngrafo.fixedNotFound",
        "warn.msngrafo.userConflict",
-       "warn.msngrafo.isolatedUnexplained"
+       "warn.msngrafo.isolatedUnexplained",
+       "warn.msngrafo.mostUnexplained"
       ]
      },
      "albero": {
