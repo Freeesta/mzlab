@@ -76,8 +76,7 @@
   <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="-" class="op">&minus;</button>
   <button data-k="0">0</button><button data-k=",">,</button><button data-k="=" class="eq" data-i18n-title="calc.eq" title="Risultato (Invio)">=</button><button data-k="+" class="op">+</button></div>
  <div id="calctape" hidden></div><div id="calcout"></div></div>
-<dialog id="xicdlg" style="max-width:520px"><h3 style="margin:0 0 6px" data-i18n="xicdlg.title">Estrai ioni (XIC)</h3>
- <div class="muted sm" data-i18n-html="xicdlg.intro">XIC (<i>Extracted Ion Chromatogram</i>): il cromatogramma dei <b>soli segnali con <i>m/z</i> dentro un intervallo</b> largo 1 Da attorno alla massa nominale dello ione. Si integra da qui. In ogni riga scrivi un <i>m/z</i> oppure una formula neutra (con l'addotto).</div>
+<dialog id="xicdlg" style="max-width:520px"><h3 style="margin:0 0 6px" data-i18n="xicdlg.title" data-i18n-title="xicdlg.desc" title="XIC (Extracted Ion Chromatogram): il cromatogramma dei soli segnali con m/z dentro un intervallo largo 1 Da attorno alla massa nominale dello ione. Si integra da qui. In ogni riga scrivi un m/z oppure una formula neutra (con l'addotto).">Estrai ioni (XIC)</h3>
  <div id="xic-rows"></div>
  <div class="xrow" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="xic-add" type="button" data-i18n-title="xicdlg.add.title" title="Aggiunge un altro ione (fino a 10): tutti finiscono nello stesso grafico" data-i18n="xicdlg.add">+ ione</button>
   <label class="muted"><span data-i18n="side.file">File</span> <select id="xic-file" data-i18n-title="xicdlg.file.title" title="Da quale file estrarre. Vale solo all'inizio: dopo si cambia dal selettore File del grafico"></select></label></div>
