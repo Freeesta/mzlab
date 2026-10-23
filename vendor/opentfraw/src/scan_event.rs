@@ -554,8 +554,13 @@ impl ScanEvent {
         for _ in 0..np {
             reactions.push(Reaction::read(r)?);
         }
-        let _unk1 = r.read_u32()?;
-        let fc = FractionCollector::read(r)?;
+        // The scan windows: one, or several for a SIM event (the LTQ lists each range).
+        let n_windows = r.read_u32()?;
+        r.check_count(n_windows as u64, 16)?;
+        let mut fraction_collectors = Vec::with_capacity(n_windows as usize);
+        for _ in 0..n_windows {
+            fraction_collectors.push(FractionCollector::read(r)?);
+        }
         let nparam = r.read_u32()?;
         r.check_count(nparam as u64, 8)?;
         let mut coefficients = Vec::with_capacity(nparam as usize);
@@ -568,7 +573,7 @@ impl ScanEvent {
         Ok(Self {
             preamble,
             reactions,
-            fraction_collectors: vec![fc],
+            fraction_collectors,
             coefficients,
         })
     }
@@ -596,6 +601,36 @@ impl FractionCollector {
         let low_mz = r.read_f64()?;
         let high_mz = r.read_f64()?;
         Ok(Self { low_mz, high_mz })
+    }
+}
+
+#[cfg(test)]
+mod pre_v66_tests {
+    use super::*;
+    use crate::reader::BinaryReader;
+    use std::io::Cursor;
+
+    #[test]
+    fn a_sim_event_keeps_every_window_and_the_next_event_stays_aligned() {
+        let mut bytes = vec![0u8; ScanEventPreamble::size_for_version(64)];
+        bytes.extend(0u32.to_le_bytes()); // reactions
+        bytes.extend(3u32.to_le_bytes()); // windows
+        for (lo, hi) in [(428.0f64, 438.0f64), (646.5, 651.5), (669.5, 684.5)] {
+            bytes.extend(lo.to_le_bytes());
+            bytes.extend(hi.to_le_bytes());
+        }
+        bytes.extend(0u32.to_le_bytes()); // coefficients
+        bytes.extend([0u8; 8]); // two trailing words
+        let end = bytes.len() as u64;
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        let e = ScanEvent::read(&mut r, 64, [0, 0, 0]).unwrap();
+        let w: Vec<(f64, f64)> = e
+            .fraction_collectors
+            .iter()
+            .map(|f| (f.low_mz, f.high_mz))
+            .collect();
+        assert_eq!(w, vec![(428.0, 438.0), (646.5, 651.5), (669.5, 684.5)]);
+        assert_eq!(r.position(), end);
     }
 }
 
