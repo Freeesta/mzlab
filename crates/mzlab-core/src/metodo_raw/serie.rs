@@ -301,8 +301,7 @@ fn scansioni(raw: &RawFileReader) -> Vec<Scansione> {
             livello: if raw.flat_peaks {
                 2
             } else {
-                raw.scan_events
-                    .get(k)
+                raw.scan_event(k)
                     .and_then(|ev| ev.preamble.ms_power())
                     .map_or(1, |p| if p == MsPower::Undefined { 1 } else { p as u8 })
             },

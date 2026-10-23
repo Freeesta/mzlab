@@ -250,6 +250,15 @@ impl<R: Read + Seek> BinaryReader<R> {
     }
 }
 
+/// Position in the event table of scan `idx`: its own when there is one event per scan, else the one its index row names (`row_event`).
+pub(crate) fn event_slot(n_events: usize, n_scans: usize, idx: usize, row_event: u16) -> usize {
+    if n_events == n_scans {
+        idx
+    } else {
+        row_event as usize
+    }
+}
+
 /// Model strings from the InstID block that follows the MS controller's
 /// RunHeader (`docs/docs/format/03-raw-file-info.md` section 11), most
 /// specific first: `model[2]` always names the model, while `model[1]` is
@@ -1417,9 +1426,20 @@ impl RawFileReader {
         )
     }
 
+    /// The event of scan `idx`: its own entry when the file holds one event per scan, otherwise the entry of the shared event table that the scan's index row names (ion-trap runs list each distinct event once).
+    pub fn scan_event(&self, idx: usize) -> Option<ScanEvent> {
+        let slot = event_slot(
+            self.scan_events.len(),
+            self.scan_index.len(),
+            idx,
+            self.scan_index.get(idx)?.scan_event,
+        );
+        self.scan_events.get(slot)
+    }
+
     /// The filter of an SRM scan from its own event: `+ c NSI SRM ms2 528.296 [343.207-343.209, ...]`; `None` without a reaction and ranges.
     fn srm_event_filter(&self, idx: usize) -> Option<String> {
-        let event = self.scan_events.get(idx)?;
+        let event = self.scan_event(idx)?;
         if event.preamble.scan_type() != Some(crate::ScanType::Srm) {
             return None;
         }
@@ -1598,7 +1618,7 @@ impl RawFileReader {
             return Some(s);
         }
 
-        let event = self.scan_events.get(idx)?;
+        let event = self.scan_event(idx)?;
         // Precursor m/z and activation energy come from the per-scan params
         // table (not the event body) for v66+. Fall back silently if missing.
         let precursor = params.and_then(|p| p.monoisotopic_mz());
@@ -2290,6 +2310,14 @@ fn trailer_records_fit(tail: u64, num_scans: u32, record_size: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_shared_event_table_is_read_through_the_index_rows() {
+        // an ion-trap run: 99 scans, 7 distinct events
+        assert_eq!(event_slot(7, 99, 40, 3), 3);
+        // one event per scan: the scan's own position, whatever the row says
+        assert_eq!(event_slot(99, 99, 40, 3), 40);
+    }
     use std::io::Cursor;
 
     // The trailer region of a TSQ GC file holds 4 + N bytes for N scans; the schema found

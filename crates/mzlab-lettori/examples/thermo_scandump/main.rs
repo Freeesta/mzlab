@@ -154,7 +154,7 @@ fn scan_row(
         meta.scan_mode.map(|s| format!("{s:?}").to_lowercase()),
     );
     put(&mut m, "filter", meta.filter.clone());
-    let ev = raw.scan_events.get(idx as usize);
+    let ev = raw.scan_event(idx as usize);
     put(
         &mut m,
         "scan_type",
