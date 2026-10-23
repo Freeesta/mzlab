@@ -5,7 +5,7 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use mzlab_core::budget::sha256_hex;
+use mzlab_core::budget::{sha256_hex, MemBudget};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::Index;
 use mzlab_core::json::Out;
@@ -165,10 +165,19 @@ pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
     let idxs: Vec<PathBuf> = (0..files.len())
         .map(|k| tmp.join(format!("{k}.mzidx")))
         .collect();
-    let (recipe, detected) = crate::par::index_and_detect(files, &idxs, params)?;
-    let (tables, origin) = run::read_files(&detected)?;
+    let (recipe, detected, weak) = crate::par::index_and_detect(files, &idxs, params)?;
+    let mut series = crate::par::Series(detected, weak);
+    let origin = run::origin_of(&mut series)?;
     eprintln!("align {} file(s)", files.len());
-    let table = run::align(&tables, &origin, &recipe, |k| open(&idxs[k]))?;
+    let mut table = Vec::new();
+    let budget = MemBudget::mb(mzlab_core::budget_auto::native_auto_mb());
+    run::align_to(
+        &mut series,
+        &budget,
+        &recipe,
+        |k| open(&idxs[k]),
+        &mut table,
+    )?;
     let mut list = Out::default();
     list.raw("{\"files\":[");
     for (k, (name, sha)) in origin.inputs.iter().enumerate() {

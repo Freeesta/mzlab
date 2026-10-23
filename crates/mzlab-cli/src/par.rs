@@ -34,12 +34,12 @@ fn par_map<T: Send>(n: usize, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
     (0..n).map(f).collect()
 }
 
-/// Index and detection of each file are independent: one pass per file on the pool, results in file order. Returns the recipe and the detections.
+/// Index and detection of each file are independent: one pass per file on the pool, results in file order. Returns the recipe, the `.mzfeatf` bytes and the weak candidates of each file.
 pub(crate) fn index_and_detect(
     files: &[PathBuf],
     idxs: &[PathBuf],
     params: &str,
-) -> Result<(mzlab_feat::recipe::Recipe, Vec<Vec<u8>>)> {
+) -> Result<(mzlab_feat::recipe::Recipe, Vec<Vec<u8>>, Vec<Vec<u8>>)> {
     par_map(files.len(), |k| {
         eprintln!("index {}", files[k].display());
         build_index(&files[k], &idxs[k], DEFAULT_BUDGET)
@@ -52,9 +52,33 @@ pub(crate) fn index_and_detect(
         let name = files[k]
             .file_name()
             .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-        run::detect(&mut open(&idxs[k])?, &name, &recipe)
+        let mut index = open(&idxs[k])?;
+        let peaks = run::detect(&mut index, &name, &recipe)?;
+        // The weak candidates are made here, beside the file, so the alignment does not detect it again (the Flow does the same).
+        let weak = if recipe.weak_files > 0 {
+            run::detect_weak(&mut index, &recipe)?
+        } else {
+            Vec::new()
+        };
+        Ok((peaks, weak))
     })
     .into_iter()
     .collect::<Result<Vec<_>>>()?;
-    Ok((recipe, detected))
+    let (peaks, weak) = detected.into_iter().unzip();
+    Ok((recipe, peaks, weak))
+}
+
+/// The detections of a series in memory, with their weak candidates, as the source of the alignment.
+pub(crate) struct Series(pub(crate) Vec<Vec<u8>>, pub(crate) Vec<Vec<u8>>);
+
+impl mzlab_feat::slabs::Stored for Series {
+    fn count(&self) -> usize {
+        self.0.len()
+    }
+    fn bytes(&mut self, k: usize) -> Result<Vec<u8>> {
+        Ok(self.0[k].clone())
+    }
+    fn weak(&mut self, k: usize) -> Result<Option<Vec<u8>>> {
+        Ok(Some(self.1[k].clone()).filter(|w| !w.is_empty()))
+    }
 }
