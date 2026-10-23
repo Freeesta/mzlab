@@ -1,0 +1,592 @@
+{
+ "formato": "msngrafo/1",
+ "motore": "1.0.1",
+ "sorgente": {
+  "nome": "msn.mzML",
+  "sha256_idx": "72908de343010abfa77e8155d1e013dae3bb7d4ca97e98d35905ff7ed2e0428b"
+ },
+ "opzioni": {
+  "ppm": 5,
+  "da_min": 0.002,
+  "min_rel": 2,
+  "max_picchi": 120,
+  "isotopi": false,
+  "attivazione": null,
+  "formula": "C14H15N3O5+",
+  "smiles": null,
+  "ppm_formula": 10,
+  "mz_basso": 150,
+  "ppm_basso": 20,
+  "prove_min": 1,
+  "scelte": []
+ },
+ "polarita": 1,
+ "radici": [
+  "n0"
+ ],
+ "ione": {
+  "formula": "C14H15N3O5",
+  "mz_teorico": 305.10062,
+  "mz_osservato": 305.1,
+  "ppm": -2.05
+ },
+ "conteggi": {
+  "nodi": 7,
+  "archi": 8,
+  "scartati_pesanti": 0,
+  "scartati_isotopi": 0,
+  "scartati_deboli": 0,
+  "scartati_formula": 0
+ },
+ "avvisi": [],
+ "nodi": [
+  {
+   "id": "n0",
+   "mz": 305.1,
+   "dev_ppm": 0,
+   "livello": 1,
+   "isolato": true,
+   "albero": [
+    "305@cid35"
+   ],
+   "osservazioni": 0,
+   "rel_max": 100,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": 1,
+    "a_monte": null,
+    "stretto": false
+   },
+   "non_spiegati": {
+    "n": 2,
+    "picchi": [
+     {
+      "mz": 261.2,
+      "rel": 12.5
+     },
+     {
+      "mz": 190.3,
+      "rel": 3.1
+     }
+    ]
+   },
+   "pos": {
+    "col": 0,
+    "riga": 0
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C14H15N3O5",
+      "mz_teorico": 305.10062,
+      "ppm": -2.05,
+      "dbe": 9,
+      "elettroni": "dispari",
+      "finestra": 10,
+      "prove": []
+     }
+    ],
+    "scelta": "C14H15N3O5",
+    "fonte": "radice"
+   }
+  },
+  {
+   "id": "n1",
+   "mz": 217.11998,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 23.4,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 2
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C12H15N3O",
+      "mz_teorico": 217.12096,
+      "ppm": -4.55,
+      "dbe": 7,
+      "elettroni": "dispari",
+      "finestra": 10,
+      "prove": []
+     },
+     {
+      "formula": "C13H15NO2",
+      "mz_teorico": 217.10973,
+      "ppm": 47.19,
+      "dbe": 7,
+      "elettroni": "dispari",
+      "finestra": 10,
+      "prove": []
+     }
+    ],
+    "scelta": null,
+    "fonte": null
+   }
+  },
+  {
+   "id": "n2",
+   "mz": 244.06035,
+   "dev_ppm": 1.4,
+   "livello": 2,
+   "isolato": true,
+   "albero": [
+    "305@cid35>244@cid35"
+   ],
+   "osservazioni": 2,
+   "rel_max": 100,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": 1,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 1
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C13H10NO4",
+      "mz_teorico": 244.06043,
+      "ppm": -0.35,
+      "dbe": 9.5,
+      "elettroni": "pari",
+      "finestra": 10,
+      "prove": []
+     },
+     {
+      "formula": "C12H10N3O3",
+      "mz_teorico": 244.07167,
+      "ppm": -46.38,
+      "dbe": 9.5,
+      "elettroni": "pari",
+      "finestra": 10,
+      "prove": [
+       "perdita"
+      ]
+     }
+    ],
+    "scelta": null,
+    "fonte": null
+   }
+  },
+  {
+   "id": "n3",
+   "mz": 261.08001,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": true,
+   "albero": [
+    "305@cid35>261@cid35"
+   ],
+   "osservazioni": 1,
+   "rel_max": 100,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": 1,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 0
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C14H13O5",
+      "mz_teorico": 261.07575,
+      "ppm": 16.3,
+      "dbe": 8.5,
+      "elettroni": "pari",
+      "finestra": 10,
+      "prove": []
+     }
+    ],
+    "scelta": "C14H13O5",
+    "fonte": "unica"
+   }
+  },
+  {
+   "id": "n4",
+   "mz": 145.03999,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 15.6,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 0
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C8H5N2O",
+      "mz_teorico": 145.03964,
+      "ppm": 2.42,
+      "dbe": 7.5,
+      "elettroni": "pari",
+      "finestra": 10,
+      "prove": []
+     },
+     {
+      "formula": "C5H7NO4",
+      "mz_teorico": 145.03696,
+      "ppm": 20.9,
+      "dbe": 3,
+      "elettroni": "dispari",
+      "finestra": 10,
+      "prove": []
+     }
+    ],
+    "scelta": null,
+    "fonte": null
+   }
+  },
+  {
+   "id": "n5",
+   "mz": 162.05501,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 47.5,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 2
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C9H8NO2",
+      "mz_teorico": 162.05495,
+      "ppm": 0.33,
+      "dbe": 6.5,
+      "elettroni": "pari",
+      "finestra": 10,
+      "prove": []
+     }
+    ],
+    "scelta": "C9H8NO2",
+    "fonte": "unica"
+   }
+  },
+  {
+   "id": "n6",
+   "mz": 190.04985,
+   "dev_ppm": 0.78,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 2,
+   "rel_max": 100,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 1
+   },
+   "formula": {
+    "candidati": [
+     {
+      "formula": "C10H8NO3",
+      "mz_teorico": 190.04987,
+      "ppm": -0.11,
+      "dbe": 7.5,
+      "elettroni": "pari",
+      "finestra": 10,
+      "prove": []
+     }
+    ],
+    "scelta": "C10H8NO3",
+    "fonte": "unica"
+   }
+  }
+ ],
+ "archi": [
+  {
+   "da": "n0",
+   "a": "n1",
+   "perdita": {
+    "da_massa": 87.98002,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "305@cid35",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 23.4
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n2",
+   "perdita": {
+    "da_massa": 61.03965,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": true,
+   "misure": [
+    {
+     "albero": "305@cid35",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 51.4
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n3",
+   "perdita": {
+    "da_massa": 44.01999,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": true,
+   "misure": [
+    {
+     "albero": "305@cid35",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 100
+    }
+   ]
+  },
+  {
+   "da": "n2",
+   "a": "n5",
+   "perdita": {
+    "da_massa": 82.00534,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "305@cid35>244@cid35",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 47.5
+    }
+   ]
+  },
+  {
+   "da": "n2",
+   "a": "n6",
+   "perdita": {
+    "da_massa": 54.0105,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "305@cid35>244@cid35",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 100
+    }
+   ]
+  },
+  {
+   "da": "n3",
+   "a": "n2",
+   "perdita": {
+    "da_massa": 17.01966,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "305@cid35>261@cid35",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 100
+    }
+   ]
+  },
+  {
+   "da": "n3",
+   "a": "n4",
+   "perdita": {
+    "da_massa": 116.04002,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "305@cid35>261@cid35",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 15.6
+    }
+   ]
+  },
+  {
+   "da": "n3",
+   "a": "n6",
+   "perdita": {
+    "da_massa": 71.03016,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "305@cid35>261@cid35",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 14,
+     "rel": 39.6
+    }
+   ]
+  }
+ ],
+ "spettri": [
+  {
+   "albero": "305@cid35",
+   "livello": 2,
+   "att": "cid",
+   "ce": 35,
+   "precursore": "n0",
+   "larghezza": 1,
+   "picchi": [
+    {
+     "mz": 217.11998,
+     "rel": 23.4,
+     "nodo": "n1"
+    },
+    {
+     "mz": 244.06001,
+     "rel": 51.4,
+     "nodo": "n2"
+    },
+    {
+     "mz": 261.08001,
+     "rel": 100,
+     "nodo": "n3"
+    }
+   ]
+  },
+  {
+   "albero": "305@cid35>244@cid35",
+   "livello": 3,
+   "att": "cid",
+   "ce": 35,
+   "precursore": "n2",
+   "larghezza": 1,
+   "picchi": [
+    {
+     "mz": 162.05501,
+     "rel": 47.5,
+     "nodo": "n5"
+    },
+    {
+     "mz": 190.04979,
+     "rel": 100,
+     "nodo": "n6"
+    }
+   ]
+  },
+  {
+   "albero": "305@cid35>261@cid35",
+   "livello": 3,
+   "att": "cid",
+   "ce": 35,
+   "precursore": "n3",
+   "larghezza": 1,
+   "picchi": [
+    {
+     "mz": 145.03999,
+     "rel": 15.6,
+     "nodo": "n4"
+    },
+    {
+     "mz": 190.05,
+     "rel": 39.6,
+     "nodo": "n6"
+    },
+    {
+     "mz": 244.06052,
+     "rel": 100,
+     "nodo": "n2"
+    }
+   ]
+  }
+ ]
+,"vista":{"versione":1,"algoritmo":"best-path/1","regola":"Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id","ordine":["n0","n3","n2","n1","n4","n6","n5"],"nodi":[{"id":"n0","livelli":[1],"rel":100,"rel_max":100,"best":{"da":null,"passi":0,"costo":[0,null,0]},"entranti":0,"comune":false,"albero":{"col":0,"riga":0},"radiale":{"anello":0,"angolo":0}},{"id":"n1","livelli":[2],"rel":23.4,"rel_max":23.4,"best":{"da":"n0","passi":1,"costo":[1,23.4,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":2},"radiale":{"anello":1,"angolo":315}},{"id":"n2","livelli":[2,3],"rel":51.4,"rel_max":100,"best":{"da":"n0","passi":1,"costo":[1,51.4,1]},"entranti":2,"comune":true,"albero":{"col":1,"riga":1},"radiale":{"anello":1,"angolo":180}},{"id":"n3","livelli":[2],"rel":100,"rel_max":100,"best":{"da":"n0","passi":1,"costo":[1,100,1]},"entranti":1,"comune":false,"albero":{"col":1,"riga":0},"radiale":{"anello":1,"angolo":45}},{"id":"n4","livelli":[3],"rel":15.6,"rel_max":15.6,"best":{"da":"n3","passi":2,"costo":[2,15.6,1]},"entranti":1,"comune":false,"albero":{"col":2,"riga":0},"radiale":{"anello":2,"angolo":45}},{"id":"n5","livelli":[3],"rel":47.5,"rel_max":47.5,"best":{"da":"n2","passi":2,"costo":[2,47.5,1]},"entranti":1,"comune":false,"albero":{"col":2,"riga":2},"radiale":{"anello":2,"angolo":225}},{"id":"n6","livelli":[3],"rel":100,"rel_max":100,"best":{"da":"n2","passi":2,"costo":[2,51.4,1]},"entranti":2,"comune":true,"albero":{"col":2,"riga":1},"radiale":{"anello":2,"angolo":135}}],"archi":[{"da":"n0","a":"n1","best":true},{"da":"n0","a":"n2","best":true},{"da":"n0","a":"n3","best":true},{"da":"n2","a":"n5","best":true},{"da":"n2","a":"n6","best":true},{"da":"n3","a":"n2","best":false},{"da":"n3","a":"n4","best":true},{"da":"n3","a":"n6","best":false}]}}

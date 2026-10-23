@@ -352,6 +352,7 @@ async function drawLines(p) {
     g.font = fpx(12); g.textAlign = "left"; g.fillStyle = css("--muted");
     g.fillText(I18N.t("ibk.band", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", extra: sr.length > 1 ? I18N.t("ibk.firstTrace") : "" }), Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }
+  if (p.band && !p._exp) { g.save(); g.globalAlpha = .14; g.fillStyle = css("--accent"); g.fillRect(X(p.band[0]), M.t, Math.max(2, X(p.band[1]) - X(p.band[0])), H - M.t - M.b); g.restore(); }      // scans averaged by the spectrum under this XIC (xic-spettro.js)
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
   if (stk) {
     g.font = fpx(12); g.textAlign = "left";

@@ -844,7 +844,6 @@ I18N.add("it", {
   "aff.zone.nospace": "Spazio insufficiente",
   "aff.sep": "Larghezza dei pannelli affiancati",
   "aff.done": "Affiancati",
-  "aff.undo": "Annulla",
   "aff.undone": "Disposizione ripristinata",
   "aff.where": "Pannello {n}: riga {r} di {t}, posizione {i} di {m}",
   "aff.menu.reset": "Ripristina disposizione",
@@ -1222,7 +1221,7 @@ I18N.add("it", {
   "map.leg2d.mean": "colore = intensità (scala {scale})",
   "int.target.clicked": "traccia cliccata",
   "int.target.all": "tutte le tracce",
-  "int.guard": "<b>Da questo cromatogramma non si integra.</b><br>Il TIC, il BPC e il PDA sommano tutti gli ioni: l'area che ne esce non appartiene a nessun composto. Estrai prima lo ione che ti interessa (XIC) con una finestra di <i>m/z</i> stretta attorno all'analita, poi integra il picco nell'XIC.<br><br>Vuoi estrarre un XIC adesso?",
+  "int.guard": "<b>Si integra su uno XIC, non sul TIC.</b><br>Il cromatogramma totale (TIC/BPC/PDA) somma tutti gli ioni: la sua area non appartiene a nessun composto. Estrai prima lo ione (XIC).<br><br>Estrarre uno XIC ora?",
   "int.clash": "Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)",
   "int.belowSn": "Sotto la soglia segnale/rumore dei parametri di rilevamento: nessun picco",
   "pk.title": "Rilevamento dei picchi",
@@ -1526,6 +1525,10 @@ I18N.add("it", {
   "spec.dm.tip.ad": "Clic destro: apre gli addotti",
   "spec.dm.tip.ls": "Clic destro: cerca nelle perdite neutre",
   "pend.peak": "Clic sul secondo picco · Esc annulla",
+  "xicbtn.title": "Estrae subito lo XIC dell'ione scelto nello spettro e lo mostra nel pannello sotto. Senza un ione scelto: clic su un picco (o tasti , e .). Maiusc: aggiunge lo ione come traccia in più", "xicbtn.aria": "Estrai lo XIC dell'ione scelto", "xicbtn.pend": "Clic su un picco: ne estrae lo XIC · Esc annulla", "xicbtn.ion.title": "Ione e tolleranza dello XIC: clic o Invio per scriverli", "xicbtn.ion.aria": "Ione e tolleranza dello XIC: {ion}. Modifica",
+  "xicbtn.picked": "Ione scelto: {ion}", "xicbtn.pop.aria": "Ione e tolleranza dello XIC", "xicbtn.pop.mz": "m/z", "xicbtn.pop.tol": "Tolleranza ± ({unit})", "xicbtn.pop.go": "Estrai",
+  "xicbtn.pop.close": "Chiudi", "xicbtn.pop.bad": "Scrivi numeri positivi (la virgola va bene).", "xicbtn.apex": "apice RT {rt} min · intensità {y}", "xicbtn.nopeak": "nessun picco qui", "scorc.xicPrev": "Picco precedente (XIC)",
+  "scorc.xicNext": "Picco successivo (XIC)",
   "pend.span": "Secondo tratto: seleziona e clic destro · Esc annulla",
   "spec.measure.clear": "Togli le misure",
   "spec.par.thr.title": "Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati",
@@ -3818,5 +3821,5 @@ I18N.add("it", {
   "err.llm.conversation": "La conversazione non è valida ({field}).",
   "err.llm.provider": "Qui non c'è nessun fornitore disponibile. Il sito raggiunge solo modelli sul tuo computer; l'app desktop raggiunge gli altri.",
   "err.llm.tools": "Il catalogo degli strumenti non è valido ({field}).",
-  "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova."
+  "err.llm.module": "Il modulo dell'assistente non si è caricato: ricarica la pagina e riprova.", "msngrafo.file.open": "Apri un file di grafo…", "msngrafo.file.open.tip": "Apre un grafo di frammentazione salvato (un file .json della riga di comando o del Flow); puoi anche trascinarlo qui o nell'area dei dati", "msngrafo.file.title": "Grafo di frammentazione · {name}", "msngrafo.file.close": "Chiudi il grafo", "msngrafo.file.ro": "Aperto dal file {name} senza i suoi dati grezzi: puoi leggere il grafo e ogni ione, ma lo spettro di uno ione, «Usa», i tagli di una struttura e un nuovo calcolo delle regole richiedono il file dei dati grezzi e sono spenti.", "msngrafo.file.off": "Richiede il file dei dati grezzi, che non è caricato: questo grafo è stato aperto da un file salvato.", "msngrafo.file.nospec": "Lo spettro di questo ione non si può aprire: il file dei dati grezzi non è caricato.", "error.msngrafo.badFile": "{file} non è un grafo di frammentazione che il programma sa leggere ({raw})."
 });

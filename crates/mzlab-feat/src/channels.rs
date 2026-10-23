@@ -44,7 +44,8 @@ pub(crate) fn segments(
         let cmax = it[s..e]
             .iter()
             .fold(f64::MIN, |m, &y| if y > m { y } else { m });
-        if cmax >= keep_floor {
+        // A lone peak cannot make a run of 2 points.
+        if e - s >= 2 && cmax >= keep_floor {
             order.clear();
             reserve(&mut order, e - s)?;
             order.extend((s..e).map(|i| (pos[i], i as u32)));
