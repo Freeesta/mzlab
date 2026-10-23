@@ -9,7 +9,7 @@ steps = []
 def report(): return pg.evaluate("BUGREP.corpo()")
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
+    except Exception as e: steps.append((name, "FAIL " + " | ".join(str(e).split("\n"))[:300])); import traceback; traceback.print_exc()
 r = Run(port=8871, wd="/tmp/wd_bug")
 SECRET = "ZZSegretoRossi_campione"
 tmp = Path("/tmp/wd_bug_in"); shutil.rmtree(tmp, ignore_errors=True); tmp.mkdir()
@@ -40,7 +40,8 @@ try:
             assert pg.locator("#bug-prev").count() == 0 and pg.locator("#bug-exp").count() == 0 and pg.locator("#bug-diag").count() == 0
             assert pg.evaluate("document.querySelector('#uipset').getAttribute('role')") == "dialog"
             assert pg.get_attribute("#bug-what", "id") == "bug-what" and pg.locator("label[for=bug-what]").count() == 1, "the field has a label"
-            pg.click("#bug-diagtxt >> xpath=ancestor::details/summary")
+            pg.click("#uip-bug details > summary"); attendi(pg, "document.querySelector('#bug-diagtxt').textContent !== ''")
+            assert pg.evaluate("document.querySelector('#uip-g-bug').open"), "group still open"
             t = pg.inner_text("#bug-diagtxt")
             assert "- mzLab:" in t and "- Mode: web" in t and "- Loaded files: 1 (mzML" in t and "- Service worker:" in t and "Recent errors:" in t, t
             assert SECRET not in t and "ZZ" not in t, "no name of the loaded file in the report"
