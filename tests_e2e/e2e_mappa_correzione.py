@@ -24,7 +24,7 @@ try:
         pg.click("#opbtn"); ready(pg)
         pg.click("#np-map"); ready(pg); pg.wait_for_timeout(800)
         pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
-        items = lambda t: pg.evaluate("(t)=>{const p=E.panels.find(q=>q.type===t); return [...p.el.querySelectorAll('.corrm .corri')].map(b=>[b.dataset.c, b.querySelector('b').textContent, b.querySelector('.sm').textContent])}", t)
+        items = lambda t: pg.evaluate("(t)=>{const p=E.panels.find(q=>q.type===t); return [...p.el.querySelectorAll('.corrm .corri')].map(b=>[b.dataset.c, b.getAttribute('aria-label')||b.querySelector('b').textContent, (b.querySelector('.sm')||b).title||b.querySelector('.sm').textContent])}", t)
         def legacy():
             assert pg.evaluate(M + ".corr") == "auto", "the old switch PREF.bg becomes «Automatic background» of the panel"
             assert pg.evaluate("JSON.stringify(" + M + "._mz && 0)") is not None
