@@ -28,6 +28,19 @@ mod imp {
         Busy(n as isize)
     }
 
+    /// Up to `max` spare cores, taken together; they come back when the lease drops.
+    pub struct Lease(Vec<Busy>);
+
+    impl Lease {
+        pub fn count(&self) -> usize {
+            self.0.len()
+        }
+    }
+
+    pub fn lease(max: usize) -> Lease {
+        Lease((0..max).map_while(|_| take()).collect())
+    }
+
     /// Takes one spare core if there is one.
     fn take() -> Option<Busy> {
         let f = free();
@@ -70,9 +83,21 @@ mod imp {
         Busy
     }
 
+    pub struct Lease;
+
+    impl Lease {
+        pub fn count(&self) -> usize {
+            0
+        }
+    }
+
+    pub fn lease(_: usize) -> Lease {
+        Lease
+    }
+
     pub fn join2<A, B>(a: impl FnOnce() -> A, b: impl FnOnce() -> B) -> (A, B) {
         (a(), b())
     }
 }
 
-pub use imp::{busy, join2, Busy};
+pub use imp::{busy, join2, lease, Busy, Lease};

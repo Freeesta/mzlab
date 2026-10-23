@@ -3,6 +3,8 @@
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
+pub(crate) mod help;
+use help::{Decode, Plain};
 use crate::numarray::Num;
 use std::borrow::Cow;
 use std::io::{BufReader, Read};
@@ -307,8 +309,14 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     })
 }
 
-/// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order.
+/// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order. Spare cores decode the arrays (`help`); the items and their
+/// order are the same without them.
 pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
+    let lease = crate::spare::lease(help::HELPERS);
+    help::parse_helped(reader, &mut f, lease.count())
+}
+
+pub(super) fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let mut scope = Scope::None;
@@ -319,7 +327,6 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     let mut in_binary = false;
     let mut in_precursor_list = false;
     let mut in_analyzer = false;
-    let mut inf = Inflate::new();
 
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
@@ -387,7 +394,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "cvParam" => {
                         let a = attrs(e);
                         if in_analyzer {
-                            f(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()));
+                            out.item(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()), f)?;
                         }
                         let acc = get(&a, "accession").unwrap_or("");
                         let value = get(&a, "value").unwrap_or("");
@@ -478,15 +485,14 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "analyzer" => in_analyzer = false,
                     "spectrum" => {
                         if let Some(s) = spec.take() {
-                            let (sp, mob) = finish_spectrum(s, &mut inf)?;
-                            mob.map(Item::Mobility).into_iter().chain([Item::Spectrum(sp)]).for_each(&mut f);
+                            out.spectrum(s, f)?;
                             n_spec += 1;
                         }
                         scope = Scope::None;
                     }
                     "chromatogram" => {
                         if let Some(c) = chrom.take() {
-                            f(Item::Chromatogram(finish_chromatogram(c, &mut inf)?));
+                            out.chromatogram(c, f)?;
                             n_chrom += 1;
                         }
                         scope = Scope::None;

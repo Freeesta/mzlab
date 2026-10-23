@@ -65,7 +65,7 @@
   "crates/mzlab-core/src/msntree.rs::msn_tree": 253,
   "crates/mzlab-core/src/mzidx.rs::Sec": 189,
   "crates/mzlab-core/src/mzidx.rs::build_dopo": 266,
-  "crates/mzlab-core/src/mzml.rs::parse": 183,
+  "crates/mzlab-core/src/mzml.rs::parse_loop": 183,
   "crates/mzlab-core/src/mzmlhead.rs::metadata": 117,
   "crates/mzlab-core/src/mzmlhead.rs::mobility_kind": 356,
   "crates/mzlab-core/src/mzmlwrite.rs::Opzioni": 141,
