@@ -129,12 +129,7 @@ pub fn gather<R: ReadAt>(
     windows(index, si, &ranges, max_peaks, |k, a, b, slab| {
         let (w0, w1) = wins[k];
         let base = t.start[k] as usize;
-        for j in a..b {
-            let s = slab.pos[j] as usize;
-            if s >= w0 && s <= w1 {
-                t.y[base + s - w0] += slab.it[j];
-            }
-        }
+        slab.add_trace(a, b, w0, &mut t.y[base..base + (w1 - w0 + 1)])?;
         Ok(())
     })?;
     Ok(t)

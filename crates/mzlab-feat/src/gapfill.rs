@@ -196,12 +196,7 @@ pub fn fill_file<R: ReadAt>(
         let t = &list[q];
         let (s0, s1) = (t.i0.saturating_sub(pad), (t.i1 + pad).min(nscan));
         let mut y = filled(s1 - s0, 0.0f64)?;
-        for j in a..b {
-            let s = slab.pos[j] as usize;
-            if s >= s0 && s < s1 {
-                y[s - s0] += slab.it[j];
-            }
-        }
+        slab.add_trace(a, b, s0, &mut y)?;
         if let Some(area) = trace_area(&y, s0, t.i0, t.i1, dt, p).filter(|&v| v > 0.0) {
             found.push((t.row, area));
         }

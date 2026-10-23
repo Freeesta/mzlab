@@ -80,6 +80,84 @@ pub fn any_by_key<T, K: Ord, F: FnMut(&T) -> K>(v: &mut Vec<T>, mut key: F) {
     any_by(v, |a, b| key(a).cmp(&key(b)));
 }
 
+/// Median of `v` (even length: the mean of the middle pair) found by selection instead of a sort, the same value a sort gives; reorders `v`.
+/// `None` when `v` holds a NaN (the order of a sort then depends on its algorithm: the caller keeps its sort for that case).
+pub fn select_median(v: &mut [f64]) -> Option<f64> {
+    let n = v.len();
+    if n == 0 || v.iter().any(|x| x.is_nan()) {
+        return None;
+    }
+    let k = n / 2;
+    let (mut l, mut r) = (0isize, n as isize - 1);
+    // Hoare partition: equal elements stop both scans, so runs of equal values (zeros) stay linear
+    while l < r {
+        let pivot = v[((l + r) / 2) as usize];
+        let (mut i, mut j) = (l, r);
+        while i <= j {
+            while v[i as usize] < pivot {
+                i += 1;
+            }
+            while v[j as usize] > pivot {
+                j -= 1;
+            }
+            if i <= j {
+                v.swap(i as usize, j as usize);
+                i += 1;
+                j -= 1;
+            }
+        }
+        if (k as isize) <= j {
+            r = j;
+        } else if (k as isize) >= i {
+            l = i;
+        } else {
+            break;
+        }
+    }
+    if n % 2 == 1 {
+        Some(v[k])
+    } else {
+        let low = v[..k]
+            .iter()
+            .fold(f64::NEG_INFINITY, |m, &x| if x > m { x } else { m });
+        Some((low + v[k]) / 2.0)
+    }
+}
+
+#[cfg(test)]
+mod select_tests {
+    use super::*;
+
+    #[test]
+    fn select_median_is_the_median_of_the_sorted_values() {
+        let mut seed = 11u64;
+        let mut r = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (seed >> 33) as u32
+        };
+        for n in [1usize, 2, 3, 4, 7, 8, 15, 16, 17, 100, 1001, 2000] {
+            for spread in [1u32, 3, 50, 100_000] {
+                let v: Vec<f64> = (0..n).map(|_| f64::from(r() % spread) * 0.5).collect();
+                let mut sorted = v.clone();
+                by(&mut sorted, |a, b| a.total_cmp(b));
+                let want = if n % 2 == 1 {
+                    sorted[n / 2]
+                } else {
+                    (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+                };
+                let mut w = v.clone();
+                assert_eq!(select_median(&mut w).unwrap().to_bits(), want.to_bits());
+            }
+        }
+        assert!(select_median(&mut []).is_none());
+        assert!(select_median(&mut [1.0, f64::NAN]).is_none());
+        assert_eq!(
+            select_median(&mut [f64::NEG_INFINITY, f64::NEG_INFINITY]),
+            Some(f64::NEG_INFINITY)
+        );
+    }
+}
+
 /// The stable order of `n` items as a permutation: `result[i]` is the index of the item that goes to position `i`.
 /// Not generic on purpose: there is ONE copy of the sort in the `.wasm`; each call site only adds its comparison closure.
 pub fn order(n: usize, cmp: &mut dyn FnMut(usize, usize) -> Ordering) -> Vec<u32> {

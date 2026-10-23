@@ -51,6 +51,9 @@ fn median(v: &mut [f64]) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
+    if let Some(m) = sortc::select_median(v) {
+        return m;
+    }
     sortc::by(v, |a, b| a.total_cmp(b));
     let n = v.len();
     if n % 2 == 1 {
@@ -238,12 +241,7 @@ pub(crate) fn assess_with<R: ReadAt>(
         let w0 = slo.min(wa).saturating_sub(q.pad);
         let w1 = (shi.max(wb) + q.pad).min(nscan - 1);
         let mut y = filled(w1 - w0 + 1, 0.0f64)?;
-        for j in a..b {
-            let s = slab.pos[j] as usize;
-            if s >= w0 && s <= w1 {
-                y[s - w0] += slab.it[j];
-            }
-        }
+        slab.add_trace(a, b, w0, &mut y)?;
         fill_row(f, i, &rt, &y, (w0, wa, wb), p.floor, q);
         hook(f, i, &rt, &y, w0)?;
         Ok(())
