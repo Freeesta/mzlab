@@ -127,11 +127,13 @@ function specParams(p, btn) {
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { p.sticks = false; p.dots = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { COMANDI.fai("spec.display", p, () => { p.sticks = false; p.dots = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; }); pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
-      if (k === "sticks") p.sticks = x.value === "1";
-      else if (k === "dots") p.dots = x.checked;
-      else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
+      COMANDI.fai("spec.display", p, () => {
+        if (k === "sticks") p.sticks = x.value === "1";
+        else if (k === "dots") p.dots = x.checked;
+        else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
+      });
       apply();
     };
   });
@@ -189,7 +191,7 @@ function scanLine(p, data, d0) {
   } });
   reg({ id: "spec.measure", gruppo: "tools", voci: /** @param {any} c */ c => measMenu(c.p, c.m).map((o, i) => ({ nome: o.label, tip: o.tip, dim: i === 0 && !c.has, esegui: o.fn })) });
   reg({ id: "spec.annotate", gruppo: "tools", disponibile: /** @param {any} c */ c => c.has, nome: () => T("ctx.spec.annotate"),
-    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { c.p.anns.push({ x: c.m, text: v }); draw(c.p); } } });
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });
   reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
   reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { c.p.iso = null; draw(c.p); } });

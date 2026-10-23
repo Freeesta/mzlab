@@ -106,7 +106,7 @@ function attach(p) {
   cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
-    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
+    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null, zo: p.zoom ? [...p.zoom] : null, zyo: p.zoomY ? [...p.zoomY] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
@@ -116,7 +116,11 @@ function attach(p) {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true; if (d.ax !== undefined && window.MAPPA) MAPPA.guide(p, null);
     if (p.type === "map" && window.MAPPA && MAPPA.touched(p)) { zl.hidden = true; return; }       // mappa.js: the mouse events after a finger gesture
     zl.hidden = true; p._hz = null;
-    if (d.pan) { uiSave(); return; }
+    if (d.pan) {                                                  // the whole drag is ONE zoom step: the view before it is the snapshot
+      const fin = [p.zoom, p.zoomY];
+      if (JSON.stringify(fin) !== JSON.stringify([d.zo, d.zyo])) { p.zoom = d.zo; p.zoomY = d.zyo; pushZh(p); [p.zoom, p.zoomY] = fin; }
+      uiSave(); return;
+    }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
     if (d.cursor) { uiSave(); return; }
     const a = p._a;
@@ -168,6 +172,7 @@ function attach(p) {
     if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
     if (!(e.ctrlKey || e.metaKey) && p._a && p.zoom && p.type !== "map" && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {      // trackpad: two fingers sideways pan the zoomed x axis (vertical scroll still moves the page)
       e.preventDefault(); const a = p._a, span = a.x1 - a.x0, dx = e.deltaX / (a.W - M.l - M.r) * span;
+      if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of sideways steps is one step
       p.zoom = clampView(a.x0 + dx, a.x1 + dx, a.full[0], a.full[1]); drawSoon(p); return;
     }
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
@@ -353,7 +358,7 @@ function ctxFor(p, e, x, px, py) {
   reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
-    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
 })();
 
 // the actions common to every graph but the map (registry azioni/1): zoom reset (first in the menu, grey without a zoom) and the annotations (last, grey away from one);
@@ -362,7 +367,7 @@ function ctxFor(p, e, x, px, py) {
 async function editAnn(p, ann) {
   const v = await ask(I18N.t("ctx.ann.prompt"), ann.text);
   if (v == null) return;
-  if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v;
+  COMANDI.fai("spec.annotation", p, () => { if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v; });
   draw(p);
 }
 (() => {
@@ -374,7 +379,7 @@ async function editAnn(p, ann) {
   reg({ id: "ann.edit", gruppo: "ann", ordine: 1, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
     nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
   reg({ id: "ann.delete", gruppo: "ann", ordine: 2, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near,
-    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); draw(c.p); } });
+    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
 })();
 
 // LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
@@ -676,3 +681,5 @@ Q("#calcin").oninput = calcRun;
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
   addEventListener("scroll", hide, true);
 })();
+// the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (comandi.js)
+COMANDI.gestore("spec.annotation", { leggi: p => JSON.stringify(p.anns || []), applica: (p, snap) => { p.anns = JSON.parse(snap); } });

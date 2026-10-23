@@ -16,6 +16,12 @@ const DISP = (() => {
   const typeOf = p => (!p ? null : p.type === "spec" ? "spec" : p.type === "chrom" || p.type === "xic" ? "chrom" : null);
   const redraw = p => { draw(p); if (typeof uiSave === "function") uiSave(); };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  // the display options of a graph are one undoable action (comandi.js)
+  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay"];
+  COMANDI.gestore("spec.display", {
+    leggi: p => JSON.stringify(DISPLAY.filter(k => p[k] !== undefined).map(k => [k, p[k]])),
+    applica: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); if (typeof syncTb === "function") syncTb(p); },
+  });
 
   // ---- spectrum: what the ▾ button of the spectrum and the decimals field of the bar had (the low-resolution popover is in spettro.js)
   register("spec", { id: "dec", label: "spec.par.dec", kind: "select", opts: () => [3, 4, 5].map(n => [n, String(n)]), get: () => Math.round(UIP.hrDec || 4),
@@ -94,8 +100,8 @@ const DISP = (() => {
       }).join("")}</div>`;
     b.querySelectorAll("[data-k]").forEach(el => {
       const it = list[+el.dataset.k];
-      if (it.kind === "button") el.onclick = () => it.set(p);
-      else el.onchange = () => it.set(p, it.kind === "check" ? el.checked : el.value);
+      if (it.kind === "button") el.onclick = () => COMANDI.fai("spec.display", p, () => it.set(p));
+      else el.onchange = () => COMANDI.fai("spec.display", p, () => it.set(p, it.kind === "check" ? el.checked : el.value));
     });
   }
   // right click entry / palette command: the panel for the chart p (default: the active cell)
@@ -108,9 +114,9 @@ const DISP = (() => {
   if (typeof AZIONI !== "undefined") {
     const bench = () => !!window.BANCO && BANCO.on(), T = I18N.t.bind(I18N);
     AZIONI.registra({ id: "spec.marker", gruppo: "gen", ordine: 3, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => markOn(c.p), nome: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
-      esegui: c => { c.p.mk = !markOn(c.p); draw(c.p); uiSave(); } });
+      esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.mk = !markOn(c.p); }); draw(c.p); uiSave(); } });
     AZIONI.registra({ id: "spec.noCont", gruppo: "gen", ordine: 4, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
-      esegui: c => { c.p.noCont = !c.p.noCont; draw(c.p); uiSave(); } });
+      esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.noCont = !c.p.noCont; }); draw(c.p); uiSave(); } });
     AZIONI.registra({ id: "spec.disp", gruppo: "gen", ordine: 5, viste: ["spec"], visibile: bench, nome: () => T("disp.menu"), aria: () => T("disp.menu.aria"), esegui: c => open(c.p) });
     AZIONI.registra({ id: "chrom.disp", gruppo: "gen", ordine: 5, viste: ["chrom", "xic"], visibile: bench, nome: () => T("disp.menu"), esegui: c => open(c.p) });
   }

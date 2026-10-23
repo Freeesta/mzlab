@@ -4,7 +4,7 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 
 | Id | Nome | Modulo | Cosa sceglie l'utente | Stato che cambia | Tasto | Passi | Annullamento |
 |---|---|---|---|---|---|---|---|
-| `view.zoom` | zoom (`storia.zoom`) | `eventi.js` | m/z or RT interval, intensity interval | zoom, zoomY, lock | wheel, Backspace, double click | a burst of wheel steps and a drag are one step | undo with a snapshot (storia.js) |
+| `view.zoom` | zoom (`storia.zoom`) | `eventi.js` | m/z or RT interval, intensity interval | zoom, zoomY, lock | wheel, Backspace, double click, Shift+drag | a burst of wheel steps, a drag and a pan are one step | undo with a snapshot (storia.js) |
 | `peaks.integration` | integrazione (`storia.int`) | `picchi.js` | limits of the integrated peak | ints, isel | I, Del | an edge drag is one step | undo with a snapshot (storia.js) |
 | `panel.fields` | correzione (`storia.campi`) | `grafici.js` | blank, background, smoothing, correction, reference | bk, bg, fondo, smooth, corr, ref, bgr | - | - | undo with a snapshot (storia.js) |
 | `spec.ruler` | righello (`cmd.spec.ruler`) | `spettro.js` | the reference peak and the second peak of each measure | meas, rul | R, Esc | - | command: do / undo handler (comandi.js) |
@@ -12,10 +12,9 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 | `panel.close` | pannello (`storia.pannello`) | `pannelli.js` | the panel with its zoom, integrations and settings | - | - | - | removal with its own undo / redo (STORIA.tolto) |
 | `map.marks.clear` | marcature (`storia.marcature`) | `mappa-tabella.js` | the marks of the map | - | - | - | removal with its own undo / redo (STORIA.tolto) |
 | `layout.arrange` | Disposizione ripristinata (`aff.undone`) | `affianca.js` | position and size of the panels | - | Alt+arrows | - | arrangement of the panels (affianca.js) |
-| `view.pan` | zoom (`storia.zoom`) | `eventi.js` | drag with Shift, trackpad | zoom, zoomY | Shift+drag | a drag is one step | NOT undoable yet |
-| `panel.source` | correzione (`storia.campi`) | `pannelli.js` | file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale | k, level, prec, all, kind, mode, mz0, mz1, tr, mapKind, norm, scale, gamma, log, rel, tl, filt | - | - | NOT undoable yet |
-| `spec.annotation` | correzione (`storia.campi`) | `spettro.js` | add, edit, delete a note | anns | - | - | NOT undoable yet |
-| `spec.display` | correzione (`storia.campi`) | `visualizza.js` | threshold, labels, decimals, sticks, dots, markers, contaminants, gradient overlay | thr, nlab, dec, sticks, dots, mk, noCont, gdelay, pdaDelay, pdaAlign, overlay | - | - | NOT undoable yet |
+| `panel.source` | scelta del pannello (`cmd.source`) | `pannelli.js` | file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale | k, kSet, level, prec, all, kind, mode, mz0, mz1, tr, mapKind, norm, scale, gamma, log | - | - | command: do / undo handler (comandi.js) |
+| `spec.annotation` | nota (`cmd.annotation`) | `eventi.js` | add, edit, delete a note | anns | - | - | command: do / undo handler (comandi.js) |
+| `spec.display` | opzioni di visualizzazione (`cmd.display`) | `visualizza.js` | threshold, labels, decimals, sticks, dots, markers, contaminants, gradient overlay | thr, nlab, dec, sticks, dots, mk, noCont, rel, gdelay, pdaDelay, pdaAlign, overlay | - | - | command: do / undo handler (comandi.js) |
 | `spec.isotopes` | correzione (`storia.campi`) | `spettro.js` | isotope simulation and resolution | iso | - | - | NOT undoable yet |
 | `spec.background` | fondo (`storia.fondo`) | `fondo-spettro.js` | background window of the spectrum | bw0, bw1, bwi | - | - | NOT undoable yet |
 | `peaks.noise` | integrazione (`storia.int`) | `eventi.js` | noise stretch of an integration | noise | - | - | NOT undoable yet |
@@ -35,4 +34,4 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 | `view.navigate` | correzione (`storia.campi`) | `pannelli.js` | walk through the scans | si, r0, r1 | arrows | - | not undone: navigation: it chooses what to look at, the data are the same |
 | `view.fullscreen` | correzione (`storia.campi`) | `pannelli.js` | full screen of a panel | - | F | - | not undone: transient view of the page; Esc leaves it |
 
-Da portare nello stack: 17 azioni su 30.
+Da portare nello stack: 13 azioni su 29.
