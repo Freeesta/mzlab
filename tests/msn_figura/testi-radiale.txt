@@ -1,0 +1,9 @@
+node n0 | m/z 305.1000 | MS1 | C14H15N3O5+  −2.05 ppm
+node n1 | m/z 217.1200  ·  23.4 % | MS2 | C12H15N3O+  −4.55 ppm
+node n2 | m/z 244.0603  ·  51.4 % | MS2 | C13H10NO4+  −0.35 ppm
+node n3 | m/z 162.0550  ·  47.5 % | MS3 | C9H8NO2+  +0.33 ppm
+node n4 | m/z 190.0498  ·  100.0 % | MS3 | C10H8NO3+  −0.11 ppm
+arc n0>n1 | −C2O4 |  | 
+arc n0>n2 | −CH5N2O |  | 
+arc n2>n3 | −C4H2O2 |  | 
+arc n2>n4 | −C3H2O |  | 

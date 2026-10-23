@@ -255,6 +255,7 @@ function addPanel(type, o, after) {
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
     const gv = `<span class="tbg">${lens ? `<button class="bt" data-a="izoom" title="${I18N.t("panel.izoom.title")}">${IC_ZOOM}</button>` : ""}${fit}</span>`;
+    const gxb = type === "spec" ? `<span class="tbg"><button class="bt xbb" data-a="xicb" aria-pressed="false" title="${I18N.t("xicbtn.title")}" aria-label="${I18N.t("xicbtn.aria")}">XIC</button><button class="bt xbl" data-a="xicl" hidden aria-haspopup="dialog" aria-expanded="false" title="${I18N.t("xicbtn.ion.title")}"></button></span>` : "";
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="${I18N.t("panel.rul.title")}">${IC_RULER}</button><button class="bt" data-a="par" title="${I18N.t("panel.par.title")}" aria-label="${I18N.t("panel.par.aria")}">&#9662;</button><button class="bt${p.rel ? " on" : ""}" data-a="rel" title="${I18N.t("panel.rel.title")}">%</button><button class="bt" data-a="lock" aria-pressed="false" title="${I18N.t("lock.off.title")}" aria-label="${I18N.t("lock.off.title")}">${IC_UNLOCK}</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${p.tl ? " on" : ""}" data-a="tlink" aria-pressed="${!!p.tl}" aria-label="${I18N.t("panel.tlink.aria")}" title="${I18N.t("panel.tlink.title")}">${IC_SYNC}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="${I18N.t("panel.iauto.title")}">${IC_AUTO}</button><button class="bt" data-a="iman" title="${I18N.t("panel.iman.title")}">${IC_MAN}</button><button class="bt" data-a="idel" title="${I18N.t("panel.idel.title")}">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="${I18N.t("panel.intf.title")}"></select><button class="bt" data-a="iclr" hidden title="${I18N.t("panel.iclr.title")}">${I18N.t("panel.iclr")}</button><button class="bt" data-a="itab" hidden title="${I18N.t("panel.itab.title")}">${IC_TAB}</button></span>` : "";
@@ -262,7 +263,7 @@ function addPanel(type, o, after) {
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? I18N.t("panel.xic.off") : I18N.t("panel.xic.title")}">XIC</button></span>` : "";
     const go = `<span class="tbg"><button class="bt" data-a="dl" title="${I18N.t("panel.dl.title")}" aria-label="${I18N.t("panel.dl.title")}">${IC_DL.replace(";margin-right:4px", "")}</button></span>`;
     const more = type === "map" ? "" : `<button class="bt hmb" type="button" data-a="more" hidden aria-haspopup="true" aria-expanded="false" title="${I18N.t("panel.more.title")}" aria-label="${I18N.t("panel.more.title")}">\u22EF</button><span class="hmore" hidden role="group" aria-label="${I18N.t("panel.more.title")}"></span>`;
-    return `<span class="tbs">${gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
+    return `<span class="tbs">${gxb + gv + gl + gs + gi + gt + gx + go}${more}<button class="bt fsb" data-a="max" title="${I18N.t("panel.max.title")}">${IC_FS}</button><button class="x" title="${I18N.t("panel.close")}">&times;</button></span>`;
   })()}</div><canvas></canvas><div class="vl" hidden></div><div class="cl" hidden></div>${type === "spec" || type === "map" ? "" : '<button type="button" class="clh" role="slider" hidden></button>'}<div class="tip" hidden></div><div class="leg"></div>${["chrom", "xic", "mrm", "spec", "map"].includes(type) ? `<div class="corrbar" role="dialog" hidden aria-label="${EH(I18N.t("corr.info.dlg"))}"></div>` : ""}${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p._ac = new AbortController();
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.ch = el.querySelector(".clh"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2"); p.corrbar = el.querySelector(".corrbar");
@@ -309,6 +310,7 @@ function addPanel(type, o, after) {
   el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } };
+  if (p.type === "spec" && window.XICBTN) XICBTN.wire(p);
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { p.rel = !p.rel; relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
   const smB = el.querySelector('[data-a="smooth"]'); if (smB) smB.onclick = () => { pushCampi(p, "storia.liscia"); p.smooth = !p.smooth; syncTb(p); draw(p); uiSave(); };
@@ -811,7 +813,7 @@ function fitHd(p) {
     const over = () => hd.scrollWidth > hd.clientWidth + 1 || (c && c.scrollWidth > c.clientWidth + 1);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.querySelector(".xbb")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     for (const n of [...cands, ...groups, ...kids]) {
       if (!over()) break;
       if (n.hidden || !n.offsetWidth) continue;
@@ -857,12 +859,17 @@ const xicNominal = (v, obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (v, obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
 let XIC_LAST = null;       // the last ion the student asked for ({mz} or {formula, adduct}): the window opens with it, still editable
 // Right click on a peak of the spectrum: the XIC appears at once, with the default unit window and no dialog; the window is changed afterwards from the header of the XIC panel.
-function xicDirect(mz, after, panel) {
-  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), lab = `m/z ${c.toFixed(mzd(panel))}`;
+// the default trace of a clicked centroid: the ion with its ppm window when a high-resolution file is among the files, else the unit window (ref: any panel, for its tab)
+const xicTraceFor = (mz, ref) => {
+  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2);
+  return (window.HR && HR.ionTrace(mz, { obs: true, tab: ref && ref.tab })) || { id: E.seq++, mz: c, w, label: `m/z ${c.toFixed(mzd(ref))}` };
+};
+// over: a trace already made by the caller (button «XIC» of the spectrum, xic-spettro.js), else the default one
+function xicDirect(mz, after, panel, over) {
   XIC_LAST = { mz };
-  const ht = window.HR && HR.ionTrace(mz, { obs: true, tab: panel && panel.tab });          // a high-resolution file among the files: the ion with its ppm window
-  if (panel && E.panels.includes(panel)) { if (ht) { panel.traces.push(ht); ctl(panel); draw(panel); } else addTrace(panel, c, lab, w); reveal(panel); return panel; }
-  const np = addPanel("xic", { traces: [ht || { id: E.seq++, mz: c, w, label: lab }] });
+  const tr = over || xicTraceFor(mz, panel);
+  if (panel && E.panels.includes(panel)) { panel.traces.push(tr); ctl(panel); draw(panel); reveal(panel); return panel; }
+  const np = addPanel("xic", { traces: [tr] });
   if (after && E.panels.includes(after)) {
     np.el.classList.add("drag"); np.y = after.y + after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
     stackAfter(np, after); relayout(); fitHost(); 
