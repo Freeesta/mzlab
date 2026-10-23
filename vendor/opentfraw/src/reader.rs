@@ -714,7 +714,15 @@ impl RawFileReader {
         // the table with each known layout until one ends exactly where the next stream begins.
         let sizes: [usize; 3] = if version >= 66 && n_events > 0 {
             let n = n_events as u64;
-            if stream_bytes % n == 0 {
+            // Events of equal size may still be counted ones (a single event, or the same number of reactions in each):
+            // they are when the walk fits and one event holds several reactions, which no uniform layout does.
+            let start = r.position();
+            let counted_uniform = walk_counted(&mut r, n, preamble_size, start, stream_bytes)
+                .is_some_and(|most| most >= 2);
+            r.seek_to(start)?;
+            if counted_uniform {
+                [crate::scan_event::COUNTED_BODY; 3]
+            } else if stream_bytes % n == 0 {
                 let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
                 [body, body, body]
             } else {
@@ -730,8 +738,8 @@ impl RawFileReader {
                     let ok = walk_events(&mut r, n, preamble_size, &body, start, stream_bytes);
                     ok
                 });
-                let counted =
-                    found.is_none() && walk_counted(&mut r, n, preamble_size, start, stream_bytes);
+                let counted = found.is_none()
+                    && walk_counted(&mut r, n, preamble_size, start, stream_bytes).is_some();
                 r.seek_to(start)?;
                 match found {
                     Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
@@ -2504,9 +2512,9 @@ mod tests {
         .concat();
         let n = bytes.len() as u64;
         let mut r = BinaryReader::new(Cursor::new(bytes));
-        assert!(walk_counted(&mut r, 3, 136, 0, n));
-        assert!(!walk_counted(&mut r, 3, 136, 0, n + 1));
-        assert!(!walk_counted(&mut r, 4, 136, 0, n));
+        assert_eq!(walk_counted(&mut r, 3, 136, 0, n), Some(7));
+        assert!(walk_counted(&mut r, 3, 136, 0, n + 1).is_none());
+        assert!(walk_counted(&mut r, 4, 136, 0, n).is_none());
     }
 
     #[test]
@@ -2518,35 +2526,37 @@ mod tests {
 }
 
 /// Whether `n` events of a v66 table are counted events (body = 96 + 56 bytes per reaction, the count opening the
-/// body) and the walk ends exactly `stream_bytes` after `start`.
+/// body) and the walk ends exactly `stream_bytes` after `start`; then the largest reaction count of an event.
 fn walk_counted<R: Read + Seek>(
     r: &mut BinaryReader<R>,
     n: u64,
     preamble_size: usize,
     start: u64,
     stream_bytes: u64,
-) -> bool {
+) -> Option<u32> {
     use crate::scan_event::{COUNTED_BASE, COUNTED_MAX, COUNTED_STEP};
     let mut at = start;
+    let mut most = 0;
     for _ in 0..n {
         if r.seek_to(at).is_err() {
-            return false;
+            return None;
         }
         let Ok(pre) = r.read_bytes(preamble_size) else {
-            return false;
+            return None;
         };
         if pre.get(4).is_some_and(|&p| p > 2) || pre.get(6).is_none_or(|&p| p == 0 || p > 8) {
-            return false;
+            return None;
         }
         let Ok(count) = r.read_u32() else {
-            return false;
+            return None;
         };
         if count as usize > COUNTED_MAX {
-            return false;
+            return None;
         }
+        most = most.max(count);
         at += (preamble_size + COUNTED_BASE + COUNTED_STEP * count as usize) as u64;
     }
-    at == start + stream_bytes
+    (at == start + stream_bytes).then_some(most)
 }
 
 /// Walks `n` events of a v66 scan-event table with the body sizes `body` (primary, dependent, independent MS2+) and says
