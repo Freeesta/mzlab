@@ -786,6 +786,7 @@ I18N.add("it", {
   "files.rename.prompt": "Nome del campione",
   "files.color.of": "Colore di {label}",
   "files.color.custom": "Personalizzato",
+  "files.color.swatch": "Colore {c}",
   "files.ctx.group": "Raggruppa i file visibili…",
   "files.ctx.ungroup": "Sciogli il gruppo",
   "files.ctx.rename": "Rinomina…",

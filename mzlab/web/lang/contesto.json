@@ -103,6 +103,7 @@
   "methwarn.item": "Avviso sopra i pannelli; {method} = nome del .dam, {expects} = tipo di esperimento del metodo (Full Scan, MS2, MRM), {files} = tipi dei file aperti già uniti (es. «Full Scan e MRM»).",
   "methwarn.and": "Unisce due nomi di esperimento: «Full Scan e MRM».",
   "files.color.of": "Titolo del selettore di colore; {label} = nome del campione (già protetto).",
+  "files.color.swatch": "Nome accessibile di un campione di colore; {c} = codice esadecimale del colore.",
   "files.remove.confirm": "{label} = nome del campione (già protetto).",
   "panel.title.ms2prec": "Titolo del cromatogramma dei precursori di un file MS2; {prec} = m/z del precursore.",
   "panel.title.composite": "Titolo dello spettro composito (banco HR); {t0} e {t1} = estremi dell'intervallo di RT.",
