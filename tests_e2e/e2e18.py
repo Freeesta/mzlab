@@ -20,7 +20,7 @@ try:
         def window_():
             pg.locator("#dpanels .pnl.chrom [data-a=xic]").first.click(); assert dlg()
             assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
-            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
+            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
             assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
