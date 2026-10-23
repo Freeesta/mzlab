@@ -1221,7 +1221,7 @@ I18N.add("it", {
   "map.leg2d.mean": "colore = intensità (scala {scale})",
   "int.target.clicked": "traccia cliccata",
   "int.target.all": "tutte le tracce",
-  "int.guard": "<b>Da questo cromatogramma non si integra.</b><br>Il TIC, il BPC e il PDA sommano tutti gli ioni: l'area che ne esce non appartiene a nessun composto. Estrai prima lo ione che ti interessa (XIC) con una finestra di <i>m/z</i> stretta attorno all'analita, poi integra il picco nell'XIC.<br><br>Vuoi estrarre un XIC adesso?",
+  "int.guard": "<b>Si integra su uno XIC, non sul TIC.</b><br>Il cromatogramma totale (TIC/BPC/PDA) somma tutti gli ioni: la sua area non appartiene a nessun composto. Estrai prima lo ione (XIC).<br><br>Estrarre uno XIC ora?",
   "int.clash": "Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)",
   "int.belowSn": "Sotto la soglia segnale/rumore dei parametri di rilevamento: nessun picco",
   "pk.title": "Rilevamento dei picchi",
