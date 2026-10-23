@@ -218,6 +218,8 @@ fn identity_top_n_is_the_head_of_the_full_ranking() {
     };
     let full = run(1000);
     assert_eq!(full.len(), 300);
+    // an unbounded `top` must not overflow the pruning threshold
+    assert_eq!(run(usize::MAX).len(), 300);
     for top in [1, 5, 17, 100] {
         let got = run(top);
         assert_eq!(got.len(), top);

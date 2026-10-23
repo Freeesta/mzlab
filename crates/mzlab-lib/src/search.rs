@@ -123,7 +123,7 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
                 spec: Spec::default(),
             });
             // amortised pruning keeps at most 2 * top candidates alive
-            if light.len() >= 2 * top + 64 {
+            if light.len() >= top.saturating_mul(2).saturating_add(64) {
                 sortutil::sort_any_by(&mut light, order);
                 light.truncate(top);
             }
