@@ -256,6 +256,16 @@ const LIB = (() => {
     return { peaks, prec, pol, f, rt, title: `${(f && f.label) || ""}${rt != null ? " · RT " + rt.toFixed(2) + " min" : ""}` };
   }
 
+  // the peak pairs behind the score of the selected candidate (query peak, library peak, difference); `an` adds the column of the precursor shift
+  function pairsTable(ps, q, l, an) {
+    if (!ps.length) return `<p class="muted">${I18N.t("lib.pairs.none")}</p>`;
+    const rows = ps.slice().sort((a, b) => q.mz[a[0]] - q.mz[b[0]]).map(pr => {
+      const dm = l.mz[pr[1]] - q.mz[pr[0]];
+      return `<tr><td class="num">${q.mz[pr[0]].toFixed(4)}</td><td class="num">${l.mz[pr[1]].toFixed(4)}</td><td class="num">${(dm >= 0 ? "+" : "\u2212") + Math.abs(dm).toFixed(4)}</td><td class="num">${q.it[pr[0]].toFixed(3)}</td><td class="num">${l.it[pr[1]].toFixed(3)}</td>${an ? `<td>${pr[2] ? I18N.t("lib.pairs.yes") : ""}</td>` : ""}</tr>`;
+    }).join("");
+    return `<div class="tbl"><table class="lib-pairs"><caption>${I18N.t("lib.pairs.title", { n: ps.length })}</caption><tr><th scope="col" class="num">${I18N.t("lib.pairs.q")}</th><th scope="col" class="num">${I18N.t("lib.pairs.l")}</th><th scope="col" class="num">&Delta;m/z</th><th scope="col" class="num">${I18N.t("lib.pairs.qi")}</th><th scope="col" class="num">${I18N.t("lib.pairs.li")}</th>${an ? `<th scope="col">${I18N.t("lib.pairs.shift")}</th>` : ""}</tr>${rows}</table></div>`;
+  }
+
   // ------------------------------------------------------------ the results window
   function mirror(cv, q, r) {
     // description and table: the experimental peaks above, the library ones below
@@ -468,7 +478,7 @@ const LIB = (() => {
       JSON.parse(cv.dataset.nl || "[]").forEach(([i]) => nls.push(+(st.prec - q2.mz[i]).toFixed(4)));
       ps.forEach(pr => { const v = +(st.prec - q2.mz[pr[0]]).toFixed(4); if (v > 0.5 && !nls.includes(v)) nls.push(v); });
       const attr = [r.authors, r.accession, r.license].some(x => x) ? `<div>${I18N.t("lib.what.attr", { authors: EHt(r.authors || "–"), accession: EHt(r.accession || "–"), license: EHt(r.license || "–") })}</div>` : "";
-      det.innerHTML = `<div class="muted">${I18N.t("lib.what.legend")}</div><div>${nls.length ? I18N.t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : I18N.t("lib.what.nlNone")}</div>${attr}`;
+      det.innerHTML = `<div class="muted">${I18N.t("lib.what.legend")}</div><div>${nls.length ? I18N.t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : I18N.t("lib.what.nlNone")}</div>${attr}${pairsTable(ps, q2, st.sel.k === "an" ? r.la : r, st.sel.k === "an")}`;
     };
     const run = async () => {
       const num = id => numIt(String(d.querySelector(id).value));
