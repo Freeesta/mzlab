@@ -233,7 +233,16 @@ pub fn scan_metadata_with(
                         .and_then(|p| p.monoisotopic_mz())
                         .filter(|&mz| mz > 0.0)
                 })
-                .or_else(|| reaction.map(|r| r.precursor_mz).filter(|&mz| mz > 0.0));
+                // the last stage of the chain is the one isolated for this scan (an MS3 names its MS2 precursor first)
+                .or_else(|| {
+                    event.and_then(|e| {
+                        e.reactions
+                            .iter()
+                            .rev()
+                            .map(|r| r.precursor_mz)
+                            .find(|&mz| mz > 0.0)
+                    })
+                });
             let sm = params
                 .as_ref()
                 .and_then(|p| p.monoisotopic_mz())

@@ -1632,12 +1632,20 @@ impl RawFileReader {
         let precursor = params.and_then(|p| p.monoisotopic_mz());
         let energy = params.and_then(|p| p.activation_energy());
         let supplemental = params.and_then(|p| p.supplemental_activation_energy());
-        Some(crate::scan_filter::build_filter(
+        // RawFileReader writes the m/z of a filter with 2 decimals on the LTQ family (checked on LTQ FT, LTQ Velos, LTQ Orbitrap XL, Orbitrap Velos Pro and Elite), 4 on the others.
+        use crate::device::DeviceFamily::{LtqFt, LtqIonTrap, LtqOrbitrap};
+        let mz_decimals = if matches!(self.device_family, LtqIonTrap | LtqFt | LtqOrbitrap) {
+            2
+        } else {
+            4
+        };
+        Some(crate::scan_filter::build_filter_with(
             &event,
             entry,
             precursor,
             energy,
             supplemental,
+            mz_decimals,
         ))
     }
 
