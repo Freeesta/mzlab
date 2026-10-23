@@ -16,3 +16,35 @@ Macchina: container cloud 4 CPU, Chromium headless, dati sintetici (`.verifica/d
 | HR, 1 file | 30 | 21,5 | 27,3 | p95 ≤33 ok; p50 ≤16 NO |
 
 Dove va il tempo: il tempo misurato comprende la richiesta `api/xic` (JSON dal motore) e il disegno del pannello XIC (non scomposti); l'integrazione HR viene dopo l'ultimo disegno. Scendere sotto 16 ms p50 richiede di cambiare il percorso dei dati (fuori da V-1).
+
+## Banco di misura (V-0)
+- **Comando**: `python3 tools/bench_visore.py lr,hrc,hrc_big,lr20,hrp,hr15 --wd DIR --native --json > run.json` (sito costruito in `DIR/site`, Chromium headless, motore Rust/WASM; `--md run.json` ristampa la tabella). Nativo: `cargo run --release -p mzlab-core --example visore_tempi -- FILE.mzidx [N] [--json]`; `genera DIR` e `indicizza FILE.mzML OUT.mzidx` creano e indicizzano un file sintetico. G7: `--g7 DIR` (nativo) e `--g7-site FILE` (sito) su un mzML da 2,6 GB.
+- **Casi** (sintetici, mai dati del laboratorio): `lr` 1500 scansioni x 500 picchi; `hrc` 3000 x 3000; `hrc_big` 6000 x 5000; `hrp` 400 x 50000 in profilo; `lr20` = 20 file `lr`; `hr15` = 15 file `hrc`. Ogni caso apre i file con il profilo su disco (la quota di un browser vero), `--enable-precise-memory-info` e `gc` esposto.
+- **Cosa si misura**: l'orologio parte dall'evento (clic, tasto, rotella) e si ferma all'ultimo `draw()` del pannello; le fasi sono richiesta (`fetch`), motore (`X-Py-Ms`), JSON (`Response.json`) e resto (disegno). Numeri `p50 / p95 ms (n)`. G1 clic sul TIC e spettro collegato; G2 XIC dal pannello spettro (ioni non in cache); G3 XIC su tutti i file della scheda;
+- **Cosa si misura (seguito)**: G4 scorrimento del puntatore sullo spettro (fotogrammi e long task, riferimento); G5 zoom (Ctrl+rotella) e spostamento (Maiusc+trascinamento) di TIC, spettro e XIC da 3k, 50k e 1M punti; G6 freccia destra = scansione successiva; G7 XIC su un indice da miliardi di picchi; M memoria dopo 1000 XIC.
+- **Macchina**: container cloud, Intel Xeon 2,1 GHz, 4 CPU; i numeri cambiano con la macchina, si confrontano solo quelli dello stesso giro.
+
+### Tabella di partenza (sito, p50 / p95 ms, n tra parentesi)
+| gesture | lr | hrc | hrc_big | lr20 | hrp | hr15 |
+|---|---|---|---|---|---|---|
+| G1 click on the TIC -> spectrum | 36.3 / 44.3 (29) | 803.6 / 883.8 (29) | 2427.3 / 2783.0 (30) | 56.3 / 67.0 (30) | not measured | not measured |
+| G2 XIC from the spectrum, one file | 18.7 / 25.9 (30) | 23.3 / 31.8 (30) | 28.0 / 40.5 (30) | 30.4 / 46.0 (30) | not measured | not measured |
+| G3 XIC, all files of the tab | – | – | – | 288.4 / 366.0 (30) | not measured | not measured |
+| G5 TIC zoom (wheel step) | 29.2 / 38.3 (30) | 33.4 / 43.5 (30) | 31.6 / 40.8 (30) | 121.6 / 138.5 (30) | not measured | not measured |
+| G5 TIC pan | 3.8 / 5.8 (30) | 4.4 / 5.8 (30) | 5.5 / 8.2 (30) | 61.9 / 78.8 (30) | not measured | not measured |
+| G5 spectrum zoom | 33.1 / 43.4 (30) | 96.3 / 136.4 (30) | 244.8 / 312.7 (30) | 36.0 / 45.3 (30) | not measured | not measured |
+| G5 spectrum pan | 4.9 / 7.4 (30) | 64.8 / 90.9 (30) | 173.5 / 231.8 (30) | 7.5 / 10.2 (30) | not measured | not measured |
+| G5 XIC 3k points zoom | 30.6 / 38.7 (30) | 29.4 / 37.4 (30) | 27.2 / 38.7 (30) | – | not measured | not measured |
+| G5 XIC 3k points pan | 3.9 / 6.1 (30) | 4.0 / 5.6 (30) | 4.3 / 5.9 (30) | – | not measured | not measured |
+| G5 XIC 50k points zoom | 36.7 / 45.9 (30) | 32.7 / 41.6 (30) | 33.3 / 40.9 (30) | – | not measured | not measured |
+| G5 XIC 50k points pan | 6.8 / 11.3 (30) | 7.6 / 11.2 (30) | 8.8 / 12.3 (30) | – | not measured | not measured |
+| G5 XIC 1M points zoom | 92.9 / 125.8 (30) | 91.9 / 122.8 (30) | 96.3 / 156.4 (30) | – | not measured | not measured |
+| G5 XIC 1M points pan | 63.8 / 96.9 (30) | 61.4 / 106.1 (30) | 62.4 / 98.0 (30) | – | not measured | not measured |
+| G6 ArrowRight -> next spectrum | 6.0 / 8.5 (30) | 104.0 / 154.3 (30) | 286.9 / 315.8 (30) | 11.8 / 14.9 (30) | not measured | not measured |
+
+- **Non misurati**: `hrp` apre i file ma i pannelli TIC e spettro non compaiono entro 25 minuti; `hr15` (15 file da 150 MB) non si apre nel browser entro 27 minuti (tetto per caso); G7 nel sito: un mzML da 2,6 GB non entra nell'elenco file entro 15 minuti. Sono numeri cattivi anch'essi: un caso che non si apre è una lacuna del visualizzatore.
+- **Dove va il tempo, G1 HR**: `hrc` 804 ms = richiesta 696 (motore 574, JSON 2, resto 107); `hrc_big` 2427 ms = richiesta 2446 (motore 1775, JSON 4). In LR lo stesso gesto costa 36 ms (motore 19). G3 su `lr20`: 288 ms, motore 755 ms sommati su richieste in parallelo, richiesta 64, JSON 6, disegno 222.
+- **Altri valori**: G2 19-30 ms in ogni caso (motore 8-17). G4: fotogrammi da 16,7 ms, nessun long task. G6 `hrc` 104 ms, `hrc_big` 287 ms (lo spettro HR pesa). G5 spettro HR `hrc_big`: zoom 245 ms, spostamento 174 ms. G5 XIC da 1M punti: zoom 92-96 ms, spostamento 61-64 ms in ogni caso.
+- **M** (1000 XIC): heap JS 57 -> 72 MB (`lr`), 64 -> 123 MB (`hrc`), 73 -> 190 MB (`hrc_big`), 35 -> 49 MB (`lr20`); motore WASM fisso a 32 MB (50 MB con 20 file); Chromium 1,2-1,4 GB di RSS.
+- **Nativo** (stesso indice `.mzidx`, N = 200 m/z): apertura 4,3 ms (`lr`), 9,4 (`hrc`), 12,9 (`hrc_big`). `xic_raw` (array) 0,01-0,02 ms (`lr`), 0,12-0,19 (`hrc`), 0,16-0,45 (`hrc_big`); `xic` con la stringa JSON 0,9-1,0 ms (`lr`), 1,9-2,3 (`hrc`), 3,8-4,8 (`hrc_big`). Lo spettro nativo risponde `None` su questi file sintetici (non è la rotta Rust): 0 byte, riga marcata nella stampa.
+- **G7 nativo** (mzML 2,64 GB, 80000 scansioni x 6000 picchi, `.mzidx` 6,76 GB, 82 milioni di picchi MS1; indice costruito in 118 s dopo 21 s di tabella): apertura p50 468 ms (p95 2001); `xic_raw` p50 0,18-0,62 ms (p95 fino a 22 ms a freddo); `xic` JSON p50 20-25 ms, 350-470 KB per risposta.

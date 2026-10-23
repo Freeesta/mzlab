@@ -100,7 +100,7 @@ def med(v):
     return bm.pct(v, .5) if v else None
 
 
-class Viewer:
+class Base:
     """One case: the files opened in a fresh page, then the gestures one after the other; every result goes in `out`."""
     def __init__(s, pg, reps, mreps):
         s.pg, s.reps, s.mreps, s.out = pg, reps, mreps, {}
@@ -154,6 +154,10 @@ class Viewer:
         s.out[label] = o
 
     # ---- G1: click on the TIC at `reps` places -> the linked spectrum drawn
+
+class Gestures(Base):
+    """The click and XIC gestures G1-G4."""
+
     def g1(s):
         c = s.centre(s.panel("chrom")); rows = []
         pos = s.ev(f"(() => {{ const a = {s.panel('chrom')}._a; return Array.from({{length: {s.reps}}}, (_, i) => a.X(a.x0 + (a.x1 - a.x0) * (0.06 + 0.88 * ((i * 0.381966) % 1)))); }})()")
@@ -196,6 +200,10 @@ class Viewer:
         s.out["G4_sweep_spectrum"] = {"frame_p50": bm.pct(fr["g"], .5), "frame_p95": bm.pct(fr["g"], .95), "frames": len(fr["g"]), "long_tasks": len(fr["lt"])}
 
     # ---- G5: Ctrl+wheel zoom and Shift+drag pan, one event at a time
+
+class Viewer(Gestures):
+    """Plus the zoom/pan, scan-stepping and memory gestures."""
+
     def g5_panel(s, label, p_expr, pid):
         c = s.centre(p_expr); pg = s.pg; zin, zout, pan = [], [], []
         pg.mouse.move(c[0] + c[2] * 0.45, c[1] + c[3] * 0.5); s.quiet(); s.take()
