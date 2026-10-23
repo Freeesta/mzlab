@@ -13,7 +13,9 @@ use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{
     align_and_fill, analyse_file, analyse_file_with, source_sha256, weak_candidates,
 };
-use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
+use mzlab_feat::slabs::{
+    align_and_fill_spilling, align_and_fill_stored, align_and_fill_with, Stored,
+};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
     origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,
@@ -66,10 +68,7 @@ pub type Layer = (String, Vec<(String, Value)>);
 
 /// The recipe of a Flow run: the one of the panel on the first index, then the parameters of each feature step in order (`steps::recipe_map`). The native
 /// `flow run` and the browser runner both build it here, so the same plan gives the same bytes.
-pub fn recipe_of_layers<R: ReadAt>(
-    first: &mut Index<R>,
-    layers: &[Layer],
-) -> Result<Recipe> {
+pub fn recipe_of_layers<R: ReadAt>(first: &mut Index<R>, layers: &[Layer]) -> Result<Recipe> {
     let mut r = recipe_for_estimated("", first)?;
     apply_layers(&mut r, layers)?;
     Ok(r)
@@ -265,6 +264,20 @@ pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     let mut origin = origin_of(src)?;
     origin.facts = facts_of(src.count(), &mut open)?;
     let (table, _) = align_and_fill_spilling(src, budget, r, open, spill)?;
+    write_table_to(sink, &table, r, &origin, &mut (&[][..]))
+}
+
+/// `align_to` filling the gaps of the files at the same time (native runs): `open` can be called from any thread. The same bytes.
+pub fn align_to_par<R: ReadAt, W: WriteAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
+    open: &(dyn Fn(usize) -> Result<Index<R>> + Sync),
+    sink: &mut W,
+) -> Result<()> {
+    let mut origin = origin_of(src)?;
+    origin.facts = facts_of(src.count(), &mut |k| open(k))?;
+    let (table, _) = align_and_fill_with(src, budget, r, open, None, Some(open))?;
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
 
