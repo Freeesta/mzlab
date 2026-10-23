@@ -13557,3 +13557,4 @@
 {"v":1,"ts_utc":"2026-10-23T10:15:48Z","tipo":"job","k":"120361683092","workflow":"rust","job":"deny","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"8e1b2d5cca54ccfe82f6998544b1bc90ad8b54cf","run_id":39937598430,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T10:15:48Z","tipo":"job","k":"120361683163","workflow":"rust","job":"rust-misc-a","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"8e1b2d5cca54ccfe82f6998544b1bc90ad8b54cf","run_id":39937598430,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T10:15:48Z","tipo":"job","k":"120361683220","workflow":"rust","job":"rust-lint","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"8e1b2d5cca54ccfe82f6998544b1bc90ad8b54cf","run_id":39937598430,"run_attempt":1}
+{"v":1,"ts_utc":"2026-10-23T10:21:32Z","azione":"aperta","tipo":"pr","pr":1596,"sha":"81d355e06f9819d30704f5b294973f29451aa4e9"}
