@@ -11,7 +11,9 @@ use std::io::{Cursor, Seek, SeekFrom, Write};
 use crate::error::{Error, Result};
 use crate::mzidx_ordine::ordina_secchi;
 use crate::mzidx_spill::{leggi_parti, Parti, Spill};
-use crate::mzml::{self, Item, Spectrum};
+use crate::mzml::Spectrum;
+mod late;
+pub use late::build_mzml_late;
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
@@ -621,7 +623,7 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con_spill(table, pass, out, budget, nativo, None)
+    build_con_spill(table, pass, out, budget, nativo, None, None)
 }
 
 /// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
@@ -633,6 +635,7 @@ pub fn build_con_spill(
     budget: usize,
     nativo: bool,
     spill: Option<&mut dyn Spill>,
+    late_source: Option<&mut dyn FnMut() -> Result<String>>,
 ) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
@@ -662,7 +665,7 @@ pub fn build_con_spill(
     if let Some(e) = failure {
         return Err(e);
     }
-    build_dopo(table, prima, pass, out, budget, nativo)
+    build_dopo(table, prima, pass, out, budget, nativo, late_source)
 }
 
 /// The rest of the build once pass 1 has run (`prima`, which counted `table.level.len()` scans): the layout, the arrays of the scans and the peaks,
@@ -675,6 +678,7 @@ pub(crate) fn build_dopo(
     out: &mut dyn Output,
     budget: usize,
     nativo: bool,
+    late_source: Option<&mut dyn FnMut() -> Result<String>>,
 ) -> Result<Stats> {
     let (version, flags) = if nativo {
         (2u32, crate::idxread::FLAG_LETTORE)
@@ -897,7 +901,11 @@ pub(crate) fn build_dopo(
     out.write_at(scans_off, &table.scans_json)?;
     let mut meta =
         format!("{{\"format\":\"mzidx\",\"version\":{version},\"block\":16384,\"source\":");
-    meta.push_str(&table.source_json);
+    match late_source {
+        // the SHA-256 of the file may still be running: it is needed only here
+        Some(late) => meta.push_str(&late()?),
+        None => meta.push_str(&table.source_json),
+    }
     meta.push_str(",\"run\":");
     meta.push_str(&table.run_json);
     meta.push_str(",\"keys\":{");
@@ -964,26 +972,12 @@ pub fn build_mzml<R: std::io::Read + Seek>(
 /// `build_mzml` with a scratch file for the peaks that do not fit in `budget` (the mzML is then decoded once).
 pub fn build_mzml_spill<R: std::io::Read + Seek>(
     table: &ScanTable,
-    mut src: R,
+    src: R,
     out: &mut dyn Output,
     budget: usize,
     spill: Option<&mut dyn Spill>,
 ) -> Result<Stats> {
-    build_con_spill(
-        table,
-        &mut |on| {
-            src.seek(SeekFrom::Start(0)).map_err(io_error)?;
-            mzml::parse(&mut src, |item| {
-                if let Item::Spectrum(s) = item {
-                    on(s)
-                }
-            })
-        },
-        out,
-        budget,
-        false,
-        spill,
-    )
+    build_mzml_late(table, src, out, budget, spill, None)
 }
 
 /// The same for a Thermo `.raw` file.

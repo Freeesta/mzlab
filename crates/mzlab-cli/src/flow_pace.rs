@@ -12,8 +12,8 @@ use std::sync::Arc;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
-use mzlab_core::mzidx::build_mzml_spill;
-use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, probe};
+use mzlab_core::mzidx::build_mzml_late;
+use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, prepare_late, probe};
 
 use crate::{flow_set, io};
 
@@ -144,6 +144,28 @@ impl<R: ReadAt> ReadAt for Gated<R> {
     }
 }
 
+type Late = Box<dyn FnMut() -> Result<String>>;
+
+/// The scan table of an mzML and, when its fingerprints are not known, the function that gives the `source` object once a second thread has taken
+/// them (the index is built meanwhile); without threads the fingerprints are taken at once.
+fn prepare_unknown(
+    path: &Path,
+    file: &mut File,
+    size: u64,
+    name: &str,
+) -> Result<(mzlab_core::mzidx::ScanTable, Option<Late>)> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let (table, late) = prepare_late(file, File::open(path).map_err(io)?, size, name)?;
+        Ok((table, Some(Box::new(late))))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = path;
+        Ok((prepare_con(file, size, name, None)?.table, None))
+    }
+}
+
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
 pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
     build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
@@ -167,19 +189,23 @@ pub(crate) fn build_index_with(
     if !path.is_dir() && name.to_lowercase().ends_with(".mzml") {
         let size = std::fs::metadata(path).map_err(io)?.len();
         let mut file = File::open(path).map_err(io)?;
-        let known = match flow_set::known_sha(path) {
-            Some(sha) => Some((sha, probe(&mut file, size)?)),
-            None => None,
+        let (table, mut late) = match flow_set::known_sha(path) {
+            Some(sha) => {
+                let known = Some((sha, probe(&mut file, size)?));
+                (prepare_con(&mut file, size, &name, known)?.table, None)
+            }
+            None => prepare_unknown(path, &mut file, size, &name)?,
         };
-        let p = prepare_con(&mut file, size, &name, known)?;
-        build_mzml_spill(
-            &p.table,
+        build_mzml_late(
+            &table,
             BufReader::new(
                 Counted::new(File::open(path).map_err(io)?, size, &mut pace).stopping(stop),
             ),
             &mut out,
             budget,
             None,
+            late.as_mut()
+                .map(|l| l as &mut dyn FnMut() -> Result<String>),
         )?;
     } else {
         let mut fs = flow_set::file_set(path)?;
