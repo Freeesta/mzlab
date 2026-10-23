@@ -112,5 +112,20 @@
     });
   };
 
-  F.liveJobs = { has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  /** the MSn steps (flow-web-msn.js): one job for the step, on the infusion open in Data; the text is kept in OPFS by the runner of the MSn steps and given back with the other results (`x.files`).
+   * The routes of the engine are the ones of the runner of an MSn plan, so the bytes are the same; spectra.match with another algorithm stays with the computer */
+  const msn = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const j = job(spec), M = F.webMsn;
+    if (!M || (base(inst) === "spectra.match" && inst.algorithm !== "tree")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null });
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+  const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
+
+  F.liveJobs = { "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();
