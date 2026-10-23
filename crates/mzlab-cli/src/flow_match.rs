@@ -1,6 +1,7 @@
 //! The native executor of `spectra.match@1`: the query spectra (MGF/MSP/MassBank/JSON) scored against a library (the same formats, or a `.mzlib`) with
 //! the engine of `mzlab-lib` (`search::identity`, `search::analogs`, `scores`), as the Library tab does. The `candidates` file it writes is JSON.
 
+use crate::flow_match_filter::Filters;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{round, Out};
@@ -17,10 +18,9 @@ use mzlab_lib::parse::{detect, parse_all};
 use mzlab_lib::read::{Library, CACHE_BYTES};
 use mzlab_lib::scores::modified_cosine;
 use mzlab_lib::search::{analogs, identity, AnalogOpts, IdentityOpts, Query, Tol};
-use mzlab_lib::spec::Meta;
 use mzlab_lib::spec::Spectrum;
 
-type Lib = Library<Vec<u8>>;
+pub(crate) type Lib = Library<Vec<u8>>;
 
 /// A file the executors read: its name (the format is told from it and the content) and its bytes.
 pub type Named<'a> = (&'a str, &'a [u8]);
@@ -110,7 +110,7 @@ fn dprec_ppm(tol: Tol, d: f64, prec: f64) -> f64 {
     }
 }
 
-fn text_param<'a>(job: &'a Job, name: &str) -> &'a str {
+pub(crate) fn text_param<'a>(job: &'a Job, name: &str) -> &'a str {
     let found = job.resolved.params.iter().find(|(k, _)| k == name);
     found.and_then(|(_, v)| v.str()).unwrap_or("")
 }
@@ -124,46 +124,9 @@ pub(crate) fn num(job: &Job, name: &str) -> f64 {
         .unwrap_or(0.0)
 }
 
-/// The metadata filters of the step as (field, lower-case text); an empty text keeps everything.
-fn meta_filters(job: &Job) -> [(Field, String); 4] {
-    [
-        (Field::Name, text_param(job, "name_contains").to_lowercase()),
-        (
-            Field::Adduct,
-            text_param(job, "adduct_contains").to_lowercase(),
-        ),
-        (
-            Field::Instrument,
-            text_param(job, "instrument_contains").to_lowercase(),
-        ),
-        (Field::Ce, text_param(job, "ce_contains").to_lowercase()),
-    ]
-}
-
-#[derive(Clone, Copy)]
-enum Field {
-    Name,
-    Adduct,
-    Instrument,
-    Ce,
-}
-
-/// Whether the library entry has every filter text in its field (any case).
-fn passes(m: &Meta, filters: &[(Field, String); 4]) -> bool {
-    filters.iter().all(|(f, t)| {
-        let v = match f {
-            Field::Name => &m.name,
-            Field::Adduct => &m.adduct,
-            Field::Instrument => &m.instrument,
-            Field::Ce => &m.ce,
-        };
-        t.is_empty() || v.to_lowercase().contains(t.as_str())
-    })
-}
-
 /// One candidate of the `candidates` record: the hit of a library spectrum with its score.
-struct Cand {
-    index: u32,
+pub(crate) struct Cand {
+    pub(crate) index: u32,
     score: f64,
     shared: usize,
     mass_ppm: f64,
@@ -414,7 +377,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         return crate::flow_match_tree::tree_text(job, query, library);
     }
     let lib = open_library(library, decoys)?;
-    let filters = meta_filters(job);
+    let filters = Filters::from_job(job);
     let top = num(job, "top_n").max(1.0) as usize;
     let mut o = Out::default();
     o.raw("{\"format\":\"candidates/1\",\"step\":")
@@ -445,26 +408,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         if alg == "modified_cosine" {
             c.extend(analogues(&lib, q, job, terms)?);
         }
-        if filters.iter().any(|(_, t)| !t.is_empty()) {
-            c.retain(|h| lib.meta(h.index).is_ok_and(|m| passes(&m, &filters)));
-        }
-        let q_rt = s.rt;
-        let rt_tol = num(job, "rt_tol");
-        let mut with_rt: Vec<(Cand, Option<f64>)> = Vec::new();
-        for h in c.drain(..) {
-            let lib_rt = lib.rec(h.index).ok().and_then(|r| r.rt_min());
-            let delta = q_rt.zip(lib_rt).map(|(a, b)| a - b);
-            // an entry or a query without a retention time cannot be excluded by it
-            if rt_tol > 0.0 && delta.is_some_and(|d| d.abs() > rt_tol) {
-                continue;
-            }
-            with_rt.push((h, delta));
-        }
-        let rt_delta: std::collections::HashMap<u32, f64> = with_rt
-            .iter()
-            .filter_map(|(h, d)| d.map(|d| (h.index, d)))
-            .collect();
-        c = with_rt.into_iter().map(|(h, _)| h).collect();
+        let rt_delta = filters.apply(&lib, &mut c, s.rt);
         if decoys {
             // the decoys are scored to count the errors, never listed
             c.retain(|h| lib.meta(h.index).is_ok_and(|m| !is_decoy(&m.accession)));
