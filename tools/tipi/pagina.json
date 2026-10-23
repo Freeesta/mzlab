@@ -236,6 +236,7 @@
     "../../flow/lazy/flow-llm-chart-ui.js",
     "../../flow/lazy/flow-llm-tools.js",
     "../../flow/lazy/flow-llm-readers.js",
+    "../../flow/lazy/flow-llm-errors.js",
     "../../flow/lazy/flow-web-ui.js"
   ]
 }
