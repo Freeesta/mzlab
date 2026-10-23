@@ -37,7 +37,11 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
                        of an arc, even-electron check, trap cut-off, composite and stepped losses) and the evidence `regola` of the candidates
   --cutoff-q N         q of the trap cut-off, fragments below q/0.908 of the precursor m/z are not observable in a trap CID (0.25)
   --toll-perdita-mda N tolerance of a loss against a rule, mDa (3)
-  --ppm-struttura N    window of those cleavages, ppm (10)
+  --rotture            add to the JSON the key `rotture`: the sets of atoms of --smiles (one or two bonds cut, a few hydrogens moved) that give the m/z of each
+                       node, the arcs they explain and the share of each spectrum's intensity explained (hypotheses, never an assignment)
+  --h-max N            hydrogens moved at most beyond the plain cleavage, for --rotture (2)
+  --max-legami N       bonds cut at most, 1 or 2, for --rotture (2)
+  --ppm-struttura N    window of those cleavages and of --rotture, ppm (10)
   --ppm-formula N      window of the sub-formulas, ppm (10)
   --mz-basso N         below this m/z the window may widen (150)
   --ppm-basso N        the wider window, ppm (20), for a candidate with --prove-min evidences (1)
@@ -63,6 +67,44 @@ usage: mzlab-cli msn-graph FILE.mzML [--formula ION] [options] [--out PATH]
 /// Default window of the cleavages of `--strutture`, ppm.
 pub const PPM_STRUTTURA: f64 = 10.0;
 
+use mzlab_feat::chem::rotture::Parametri;
+
+/// The flags of the bond breaks and the window shared with `--strutture`.
+struct Rot {
+    on: bool,
+    p: Parametri,
+}
+
+impl Default for Rot {
+    fn default() -> Self {
+        Rot {
+            on: false,
+            p: Parametri {
+                ppm: PPM_STRUTTURA,
+                ..Parametri::default()
+            },
+        }
+    }
+}
+
+impl Rot {
+    /// Takes the flag `x` if it is one of `--rotture`, `--h-max`, `--max-legami`, `--ppm-struttura`.
+    fn flag(
+        &mut self,
+        x: &str,
+        a: &mut impl Iterator<Item = String>,
+    ) -> std::result::Result<bool, String> {
+        match x {
+            "--rotture" => self.on = true,
+            "--h-max" => self.p.h_max = numero(a.next(), x)?.clamp(0.0, 4.0) as u8,
+            "--max-legami" => self.p.max_legami = numero(a.next(), x)?.clamp(1.0, 2.0) as u8,
+            "--ppm-struttura" => self.p.ppm = numero(a.next(), x)?,
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
+}
+
 pub struct Args {
     pub(crate) file: PathBuf,
     pub(crate) o: Opzioni,
@@ -71,6 +113,7 @@ pub struct Args {
     export: Option<(Formato, bool, Option<String>)>,
     strutture: Option<(String, f64)>,
     interpreta: Option<f64>,
+    rotture: Option<Parametri>,
     figura: Vec<crate::msn_uscite::Formato>,
     vista: crate::msn_figura::Vista,
     pub out: Option<PathBuf>,
@@ -98,7 +141,7 @@ pub fn parse_args(
     let (mut file, mut o) = (None, Opzioni::default());
     let (mut verita, mut riassunto, mut out) = (None, false, None);
     let (mut export, mut pulito, mut nodo) = (None, false, None);
-    let (mut strutture, mut ppm_struttura) = (None, PPM_STRUTTURA);
+    let (mut strutture, mut rot) = (None, Rot::default());
     let (mut interpreta, mut ppm_perdita) = (false, PPM_PERDITA);
     let (mut regole, mut regole_p) = (false, ParamRegole::default());
     let (mut figura, mut vista) = (Vec::new(), crate::msn_figura::Vista::Albero);
@@ -138,7 +181,7 @@ pub fn parse_args(
             "--regole" => regole = true,
             "--cutoff-q" => regole_p.cutoff_q = numero(a.next(), &x)?,
             "--toll-perdita-mda" => regole_p.toll_mda = numero(a.next(), &x)?,
-            "--ppm-struttura" => ppm_struttura = numero(a.next(), &x)?,
+            x if rot.flag(x, &mut a)? => {}
             "--figura" => figura = crate::msn_uscite::formati(&a.next().unwrap_or_default())?,
             "--vista" => vista = vista_di(a.next())?,
             "--out" => out = a.next().map(PathBuf::from),
@@ -156,7 +199,7 @@ pub fn parse_args(
     }
     o.regole = regole.then_some(regole_p);
     let export = export.map(|f| (f, pulito, nodo));
-    let strutture = strutture.map(|n| (n, ppm_struttura));
+    let strutture = strutture.map(|n| (n, rot.p.ppm));
     let interpreta = interpreta.then_some(ppm_perdita);
     Ok(Some(Args {
         file,
@@ -166,6 +209,7 @@ pub fn parse_args(
         export,
         strutture,
         interpreta,
+        rotture: rot.on.then_some(rot.p),
         figura,
         vista,
         out,
@@ -336,6 +380,9 @@ pub fn esegui(a: &Args, tmp: &Path) -> Result<String> {
     if let Some(ppm) = a.interpreta {
         j = con_interpretazione(&j, &g, ppm);
     }
+    if let Some(p) = a.rotture {
+        j = mzlab_feat::chem::rotture::rotture_testo(&g, &j, a.o.smiles.as_deref(), p)?;
+    }
     if let Some((f, pulito, nodo)) = &a.export {
         return Ok(esporta(&g, *f, *pulito, nodo.as_deref()));
     }
@@ -359,3 +406,7 @@ pub fn figure_files(a: &Args, graph: &str) -> std::result::Result<String, String
         .map_err(|e| e.to_string())?;
     Ok(made.iter().map(|p| format!("{}\n", p.display())).collect())
 }
+
+#[cfg(test)]
+#[path = "msn_graph_rotture_tests.rs"]
+mod rotture_tests;

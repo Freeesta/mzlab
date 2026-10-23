@@ -40,9 +40,28 @@ pub fn msn_graph_step() -> Step {
 }
 
 /// The parameters of the step: one per option of the command.
+/// The parameters of the bond breaks (`rotture`).
+fn rotture_params() -> Vec<Param> {
+    vec![
+            Param::boolean("rotture", "Break the bonds of the structure")
+                .default_bool(false)
+                .doc("Adds the key `rotture`: the sets of atoms of the structure (one or two bonds cut, a few hydrogens moved) that give the m/z of each node, the arcs they explain and the share of each spectrum's intensity explained (needs the structure; window `ppm_struttura`)"),
+            Param::integer("h_max", "Hydrogens moved")
+                .min(0.0)
+                .max(4.0)
+                .default_num(2.0)
+                .doc("Hydrogens moved at most beyond the plain cleavage, for the bond breaks"),
+            Param::integer("max_legami", "Bonds cut")
+                .min(1.0)
+                .max(2.0)
+                .default_num(2.0)
+                .doc("Bonds cut at most for one piece, 1 or 2"),
+    ]
+}
+
 fn params() -> Vec<Param> {
     let d = Opzioni::default();
-    vec![
+    let mut v = vec![
             Param::text("formula", "Ion of the root")
                 .default_str("")
                 .doc("C13H25N4O3S+, C13H24N4O3S+H or \"C13H24N4O3S [M+H]+\"; empty = masses only, no sub-formulas"),
@@ -113,7 +132,9 @@ fn params() -> Vec<Param> {
             Param::text("scelte", "Chosen formulas")
                 .default_str("")
                 .doc("MZ=ION pairs separated by commas: the formula chosen for the node at that m/z"),
-        ]
+        ];
+    v.extend(rotture_params());
+    v
 }
 
 fn text(job: &Job, name: &str) -> Option<String> {
@@ -222,6 +243,19 @@ pub fn msn_graph_text(
     {
         let ppm = number(job, "ppm_perdita", mzlab_core::msngrafo::PPM_PERDITA);
         json = mzlab_core::msngrafo::con_interpretazione(&json, &g, ppm);
+    }
+    if job
+        .resolved
+        .params
+        .iter()
+        .any(|(k, v)| k == "rotture" && v.bool() == Some(true))
+    {
+        let p = mzlab_feat::chem::rotture::Parametri {
+            ppm: number(job, "ppm_struttura", crate::msn_graph::PPM_STRUTTURA),
+            h_max: number(job, "h_max", 2.0) as u8,
+            max_legami: number(job, "max_legami", 2.0) as u8,
+        };
+        json = mzlab_feat::chem::rotture::rotture_testo(&g, &json, o.smiles.as_deref(), p)?;
     }
     match text(job, "strutture_nodo") {
         Some(nodo) => {

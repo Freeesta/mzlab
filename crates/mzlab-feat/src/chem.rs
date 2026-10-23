@@ -11,5 +11,6 @@ pub mod posizioni;
 pub mod regole;
 mod regole_site;
 mod rimescola;
+pub mod rotture;
 mod smiles;
 pub mod strutture;
