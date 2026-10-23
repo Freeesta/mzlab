@@ -240,11 +240,11 @@
     const s = ST.get(p); if (!s || !s.sel || p._exp) return;
     const px = X(s.sel.m); if (px < M.l || px > W - M.r) return;
     let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - s.sel.m) < 0.3 && (j < 0 || Math.abs(v - s.sel.m) < Math.abs(d0.mz[j] - s.sel.m))) j = i; });
-    g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 2;
+    g.save(); g.strokeStyle = ecss("--accent"); g.lineWidth = 2;
     if (j < 0) { g.setLineDash([4, 3]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, M.t + 2); g.stroke(); }
     else {
       const py = Math.max(M.t + 6, Y(d0.y[j]));
-      g.beginPath(); g.arc(px, py, 3, 0, 7); g.lineWidth = 2; g.strokeStyle = css("--panel"); g.stroke(); g.fillStyle = css("--accent"); g.fill();
+      g.beginPath(); g.arc(px, py, 3, 0, 7); g.lineWidth = 2; g.strokeStyle = ecss("--panel"); g.stroke(); g.fillStyle = ecss("--accent"); g.fill();
     }
     g.restore();
   }

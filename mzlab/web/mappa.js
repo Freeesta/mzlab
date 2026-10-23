@@ -205,7 +205,7 @@ window.MAPPA = (() => {
     drawPoints(p, g);
     // axis lock (asse.js): the line along which the gesture may move
     if (s.guide) {
-      const q = s.guide; g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 1.5; g.setLineDash([6, 4]); g.beginPath();
+      const q = s.guide; g.save(); g.strokeStyle = ecss("--accent"); g.lineWidth = 1.5; g.setLineDash([6, 4]); g.beginPath();
       if (q.ax === "x") { g.moveTo(M.l, q.y + .5); g.lineTo(a.W - M.r, q.y + .5); } else { g.moveTo(q.x + .5, M.t); g.lineTo(q.x + .5, a.H - M.b); }
       g.stroke(); g.restore();
     }
@@ -214,7 +214,7 @@ window.MAPPA = (() => {
     const pt = point(p), on = mirOn(p) && !s.ex; s.dot = null;
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
-      g.save(); g.strokeStyle = css("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
+      g.save(); g.strokeStyle = ecss("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
       g.beginPath(); g.moveTo(M.l, y); g.lineTo(a.W - M.r, y); g.moveTo(x, M.t); g.lineTo(x, a.H - M.b); g.stroke(); g.setLineDash([]);
       if (s.lock) lockDot(g, a.X(pt.rt), a.Y(pt.mz), s);                  // the locked point: a small dot exactly on it
       g.restore();
@@ -223,7 +223,7 @@ window.MAPPA = (() => {
   }
   // the mark of a locked point: a dot with a dark outline and an accent fill, centred on (x, y); s.dot keeps the centre for the tests
   function lockDot(g, x, y, s) {
-    g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = css("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = css("--ink"); g.stroke(); s.dot = { x, y };
+    g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = ecss("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = ecss("--ink"); g.stroke(); s.dot = { x, y };
   }
   function readout(p) {
     // Map 2D has no header readout text to prevent 2-row wrapping
@@ -382,7 +382,7 @@ window.MAPPA = (() => {
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
   // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
   function sideLabels(g, W, order, get, x0, s, limit = 8) {
-    const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.fillStyle = css("--ink");
+    const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
     for (const i of order) {
       if (out.length >= limit) break; const q = get(i);
       const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + 4 : q.y - 3, bx = { x, y: by - 9, w, h: 11 };
@@ -412,7 +412,7 @@ window.MAPPA = (() => {
   // spectrum turned on its side: m/z upwards like the map, intensity to the right
   function drawSide(p, pt, sp, prev) {
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
-    const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
+    const { g, W, H } = canvasOf(s.sp), ink = ecss("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const cr = p.cv.getBoundingClientRect(), sr = s.sp.getBoundingClientRect();
     const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
     const Y = v => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH, x0 = 6, x1 = W - 8;
@@ -427,13 +427,13 @@ window.MAPPA = (() => {
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
     if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
-    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1;
+    g.strokeStyle = a.f.color || ecss("--accent"); g.globalAlpha = prev ? .5 : 1;
     if (sg) {
       g.beginPath(); g.moveTo(xz + .5, mapTop); g.lineTo(xz + .5, mapBot); g.strokeStyle = ink; g.stroke();
       for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) { g.strokeStyle = css(col); g.beginPath(); for (const i of vis) if (sp.y[i] * sgn > 0) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(xz, y); g.lineTo(xz + len(sp.y[i]), y); } g.stroke(); }
     } else {
     g.beginPath();
-    if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || css("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
+    if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || ecss("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
     if (!pr)
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke();
@@ -446,12 +446,12 @@ window.MAPPA = (() => {
     const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });
     s.snr = new Map(kept.all.map(c => [c.i, c.snr]));
     sideLabels(g, W, kept.map(c => c.i), i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit);
-    if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
+    if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
-    const { g, W, H } = canvasOf(s.xc), ink = css("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
+    const { g, W, H } = canvasOf(s.xc), ink = ecss("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const cr = p.cv.getBoundingClientRect(), xr = s.xc.getBoundingClientRect();
     const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
     const X = v => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
@@ -493,10 +493,10 @@ window.MAPPA = (() => {
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
       g.stroke(); g.setLineDash([]); g.lineWidth = 1; g.globalAlpha = 1;
     });
-    g.fillStyle = css("--ink"); g.textAlign = "left";
+    g.fillStyle = ecss("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
     g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
-    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
+    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 
   // ---------------------------------------------------------------- mouse

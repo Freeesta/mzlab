@@ -57,9 +57,11 @@ const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, 
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
+let EXPORTING = false;          // true while a plot is drawn for a saved image
 // ---- chart colours (settings: "Colori dei grafici"). PAL = categorical colours of the current palette (filled in place by setPal, so every user of PAL follows it);
 // files of the Full Scan tab that have a time get a SEQUENTIAL scale ordered by time (seqColor), see paintFiles.
 function isDark() {
+  if (EXPORTING) return false;
   if (typeof UIP !== "undefined") {
     if (UIP.theme === "dark") return true;
     if (UIP.theme === "light") return false;
@@ -320,7 +322,11 @@ function uiSave(now = false) {
 addEventListener("pagehide", () => uiSave(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
 
-let EXPORTING = false;
+// colours of the saved images: always the light theme, whatever the page theme is (so a PNG is the same in light and dark); css() everywhere else
+const EXPORT_LIGHT = { "--panel": "#ffffff", "--line": "#e2e5ea", "--ink": "#25282c", "--muted": "#5e6676", "--accent": "#2b5c8a", "--warn": "#92400e", "--sel": "#edf2f8", "--soft": "#f0f3f6", "--bg": "#ffffff", "--diff-pos": "#D55E00", "--diff-neg": "#0072B2" };
+// opaque pale version of a trace colour (85% towards white): the area under a saved cascade trace
+const lightTint = c => { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return "#ffffff"; const v = parseInt(m[1], 16); return "#" + [v >> 16, v >> 8 & 255, v & 255].map(x => Math.round(x + (255 - x) * .85).toString(16).padStart(2, "0")).join(""); };
+const ecss = n => EXPORTING && n in EXPORT_LIGHT ? EXPORT_LIGHT[n] : css(n);
 const fz = () => 1;        // (the text size of the graphs follows the browser zoom: Ctrl/Cmd + and −)
 const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ data (cached)

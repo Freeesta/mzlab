@@ -273,7 +273,7 @@ async function snapNearest(p, f) {
 async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
-  const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
+  const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
   if (!isDda && !p.all && p.level === 1 && E.files[p.k] && !E.files[p.k].vis) { const v = shownFor(p).find(x => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
   const targetK = p.link ? p.k : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : p.k);
@@ -350,8 +350,8 @@ async function drawSpec(p, snapped) {
   p._a.hrp = hrp; p._a.dec = DECP;
   if (isDiff) {                                            // the words of the sign on the plot (never only the colour)
     g.save(); g.font = fpx(12, "bold "); g.textAlign = "left";
-    g.fillStyle = css("--diff-pos"); g.fillText("▲ " + I18N.t("spec.diff.upAxis"), M.l + 8, M.t + 14);
-    if (ymin < 0) { g.fillStyle = css("--diff-neg"); g.fillText("▼ " + I18N.t("spec.diff.downAxis"), M.l + 8, H - M.b - 8); }
+    g.fillStyle = ecss("--diff-pos"); g.fillText("▲ " + I18N.t("spec.diff.upAxis"), M.l + 8, M.t + 14);
+    if (ymin < 0) { g.fillStyle = ecss("--diff-neg"); g.fillText("▼ " + I18N.t("spec.diff.downAxis"), M.l + 8, H - M.b - 8); }
     g.restore();
   }
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
@@ -403,10 +403,10 @@ async function drawSpec(p, snapped) {
       g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = color; g.fill(); g.restore(); }
       g.beginPath();
     } else if (x.d.diff) {                                             // difference: orange up (higher in the sample), blue down (higher in the reference)
-      [[1, css("--diff-pos")], [-1, css("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke(); });
-      g.strokeStyle = css("--muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke();      // the zero line
+      [[1, ecss("--diff-pos")], [-1, ecss("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke(); });
+      g.strokeStyle = ecss("--muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke();      // the zero line
     } else { const hid = cont ? hidOf(x) : null, dim = []; x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; if (hid && hid(j)) { dim.push(j); return; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
-      if (dim.length) { g.save(); g.strokeStyle = css("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
+      if (dim.length) { g.save(); g.strokeStyle = ecss("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
     g.fillStyle = color;                                          // a small triangle on every cut bar
     x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); });
   });
@@ -416,11 +416,11 @@ async function drawSpec(p, snapped) {
   const hid0 = cont ? hidOf(data[0]) : null;
   d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])); const used = [];
-  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
+  g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find(z => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
     g.fillText(t, px, y < 0 ? Y(y) + 15 : Y(y) - 4 - up);
-    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = css("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
+    if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = ecss("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
     lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
@@ -484,7 +484,7 @@ function contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax) {
   for (const r of list.slice(0, 80)) {
     const cx = X(r.m), cy = Math.max(M.t + 6, Y(r.y) - 24), off = r.s.hid, sz = 5;
     g.beginPath(); g.moveTo(cx, cy - sz); g.lineTo(cx + sz, cy); g.lineTo(cx, cy + sz); g.lineTo(cx - sz, cy); g.closePath();
-    g.strokeStyle = css("--ink"); g.fillStyle = off ? css("--panel") : css("--warn"); g.fill(); g.stroke();
+    g.strokeStyle = ecss("--ink"); g.fillStyle = off ? ecss("--panel") : ecss("--warn"); g.fill(); g.stroke();
     a.cmarks.push({ x: cx, y: cy, m: r.m, s: r.s });
   }
   g.restore();

@@ -54,7 +54,7 @@ function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   // zoom or scan changed: the measure is cancelled
   if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }
-  const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
+  const ac = ecss("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
   g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
   if (m.ref != null && X(m.ref) >= x0 && X(m.ref) <= x1) {
@@ -72,7 +72,7 @@ function drawMeas(p, g, X, Y, W) {
     const ws = parts.map(([t, st]) => { g.font = fpx(12, st); return g.measureText(t).width; }), wt = ws.reduce((u, v) => u + v, 0);
     const bx = Math.max(x0 + 2, Math.min(x1 - wt - 2, mid - wt / 2)); let cx = bx;
     g.textAlign = "left"; g.lineJoin = "round";
-    parts.forEach(([t, st], j) => { g.font = fpx(12, st); g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); cx += ws[j]; });
+    parts.forEach(([t, st], j) => { g.font = fpx(12, st); g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); cx += ws[j]; });
     g.font = fpx(12); g.strokeStyle = ac; g.lineWidth = 1;
     // the label is a target of the hover box and of the right click (eventi.js)
     const fv = `<i>m/z</i> ${num}`;
