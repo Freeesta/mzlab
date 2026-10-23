@@ -27,6 +27,7 @@ Studio e piano a PR: `docs/studi/llm/README.md`. Il crate `mzlab-llm` (membro de
 ## Profilo, impostazioni, consenso (`mzlab/web/llm/`)
 - Profilo (`settings.js`, `uipProfile()`): non è una scelta dell'utente: `ricerca` con la modalità amministratore (5 clic sul logo) o nell'app desktop, altrimenti `corso`. Con `corso` nessun elemento LLM nel DOM e nessun file di `llm/`; con `ricerca` e interruttore spento c'è solo l'interruttore: `llm-impostazioni.js` si importa quando `mzlab.llm.on` è vero o l'interruttore viene acceso. Il vecchio testo `mzlab.profilo` («corso»/«ricerca») è cancellato.
 - `llm-impostazioni.js` (`mount`): fornitore e modello da `fornitori-1.json`, livello (L0 predefinito, L1, L2), limite L2, tetto di spesa, «Hide file names», revoca, area della chiave, messaggio di prova con anteprima «What will be sent» (la richiesta senza chiave). Impostazioni in `mzlab.llm`; il gancio di prova `window.MZLAB_LLM.replay(testo, strict)` carica una registrazione `llmreg/1`.
+- Errori che fermano un turno: testo nei cataloghi (`err.llm.*`, mostrato da `llm-impostazioni.js`) e, per il pannello del Flow (solo inglese), in `flow/lazy/flow-llm-errors.js` (estende `F.message`); `tests/test_llm_errori.py` impone entrambi per ogni chiave terminale.
 - `llm-consenso.js`: `<dialog>` modale (fuoco su «Cancel», Esc chiude solo il dialogo, testi `llm.consenso.*`); il consenso è per fornitore e classe (`plan`, `summary`, `names`) in `localStorage mzlab.llm.consenso` ed è revocabile.
 
 ## Trasporto nel sito
