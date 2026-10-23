@@ -14292,3 +14292,4 @@
 {"v":1,"ts_utc":"2026-10-23T11:56:39Z","tipo":"carico","k":"2026-10-23T11:5","job_in_coda":0,"job_in_corso":29}
 {"v":1,"ts_utc":"2026-10-23T11:57:06Z","azione":"aperta","tipo":"pr","pr":1604,"sha":"cc386b018d9785ee848780bf6ca2ab0bc7f47802"}
 {"v":1,"ts_utc":"2026-10-23T12:14:20Z","azione":"aperta","tipo":"pr","pr":1605,"sha":"86fe900d657ce676610e6db9279badbcd1153680"}
+{"v":1,"tipo":"pr","pr":1602,"sha":"f8ddbf049fa117ada0143ef5a54fbc916737b5bb","ts_utc":"2026-10-23T12:15:20Z","azione":"unita","aperta_s":2589,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":11,"righe_meno":10,"file_n":2,"file":["Cargo.lock","deny.toml"],"aree":{"rust":1,"altro":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":424}
