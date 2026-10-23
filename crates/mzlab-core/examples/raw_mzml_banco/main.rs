@@ -86,6 +86,7 @@ fn args() -> Args {
             }
             "--json" => a.json = Some(v(&mut it, &x).into()),
             "--senza-impronte" => a.impronte = false,
+            "--senza-conta" => conta::imposta(false),
             "--tmp" => a.tmp = v(&mut it, &x).into(),
             _ => panic!("unknown option {x}"),
         }
