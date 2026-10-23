@@ -115,7 +115,22 @@ fn steps(unit: bool) -> Vec<(u8, f64)> {
     v
 }
 
+/// Where the window of m/z of a (charge, step) began for the last feature: the next feature looks near it instead of from the start of the table.
+type Cursors = Vec<(usize, usize)>;
+
+/// `partition_point(|m| keep(m))` of the sorted `mz`, found by moving `at` (the result for a neighbouring feature) instead of by bisection.
+fn near(mz: &[f64], mut at: usize, keep: impl Fn(f64) -> bool) -> usize {
+    while at > 0 && !keep(mz[at - 1]) {
+        at -= 1;
+    }
+    while at < mz.len() && keep(mz[at]) {
+        at += 1;
+    }
+    at
+}
+
 /// Best lighter parent of feature `j`: `(parent, charge)` with the smallest error in ppm (ties: lower charge, lower index).
+/// `cur`: the cursors of the walk over a table sorted by m/z (`group`), empty to bisect.
 fn parent_of(
     f: &FileFeatures,
     j: usize,
@@ -123,14 +138,26 @@ fn parent_of(
     ex: &mut Expect,
     p: &IsoParams,
     st: &[(u8, f64)],
+    cur: &mut Cursors,
 ) -> Option<(usize, i32)> {
     let mut best: Option<(f64, i32, usize)> = None;
+    let mut slot = 0;
     for z in 1..=p.max_charge {
         for &(k, d) in st {
             let want = f.mz[j] - d / z as f64;
             let tol = half(f.mz[j], p.tol_ppm) + 3e-4;
-            let a = f.mz.partition_point(|&m| m < want - tol);
-            let b = f.mz.partition_point(|&m| m <= want + tol);
+            let (lo, hi) = (want - tol, want + tol);
+            let (a, b) = if cur.is_empty() {
+                (
+                    f.mz.partition_point(|&m| m < lo),
+                    f.mz.partition_point(|&m| m <= hi),
+                )
+            } else {
+                let c = &mut cur[slot];
+                *c = (near(&f.mz, c.0, |m| m < lo), near(&f.mz, c.1, |m| m <= hi));
+                *c
+            };
+            slot += 1;
             #[allow(clippy::needless_range_loop)]
             for i in a..b.min(j) {
                 if (f.rt[i] - f.rt[j]).abs() as f64 > p.rt_tol
@@ -160,8 +187,15 @@ pub fn group(f: &mut FileFeatures, p: &IsoParams) -> Result<()> {
     let st = steps(p.tol_ppm < 0.0);
     let mut charge = filled(n, 0i8)?;
     let mut gid = filled(n, 0u32)?;
+    // a table sorted by m/z is walked with cursors (the windows of neighbouring features are neighbours); any other order bisects
+    let sorted = f.mz.windows(2).all(|w| w[0] <= w[1]);
+    let mut cur: Cursors = if sorted {
+        vec![(0, 0); p.max_charge.max(0) as usize * st.len()]
+    } else {
+        Vec::new()
+    };
     for j in 0..n {
-        let Some((i, z)) = parent_of(f, j, &charge, &mut ex, p, &st) else {
+        let Some((i, z)) = parent_of(f, j, &charge, &mut ex, p, &st, &mut cur) else {
             continue;
         };
         let g = if gid[i] != 0 { gid[i] } else { i as u32 + 1 };
@@ -174,4 +208,35 @@ pub fn group(f: &mut FileFeatures, p: &IsoParams) -> Result<()> {
     f.iso_group = gid;
     f.charge = charge;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_cursor_finds_the_partition_point_wherever_it_starts() {
+        let mut seed = 9u64;
+        let mut r = |n: u64| {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (seed >> 33) % n
+        };
+        for _ in 0..300 {
+            let mut mz: Vec<f64> = (0..r(60)).map(|_| 100.0 + r(40) as f64 * 0.25).collect();
+            mz.sort_by(f64::total_cmp);
+            let lo = 99.0 + r(45) as f64 * 0.25;
+            for start in 0..=mz.len() {
+                assert_eq!(
+                    near(&mz, start, |m| m < lo),
+                    mz.partition_point(|&m| m < lo)
+                );
+                assert_eq!(
+                    near(&mz, start, |m| m <= lo),
+                    mz.partition_point(|&m| m <= lo)
+                );
+            }
+        }
+    }
 }

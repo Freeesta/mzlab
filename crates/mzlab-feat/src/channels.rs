@@ -189,13 +189,24 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
     } else {
         TOUCH_HEIGHT
     };
+    // the neighbour channel of the segments of one channel: (channel, first, end)
+    let mut next = (i64::MIN, 0, 0);
     for i in 0..m {
         let c = segs[i].chan;
-        let lo = segs.partition_point(|s| s.chan < c + 1);
-        let hi = segs.partition_point(|s| s.chan <= c + 1);
+        if next.0 != c {
+            let lo = segs.partition_point(|s| s.chan < c + 1);
+            next = (c, lo, lo + segs[lo..].partition_point(|s| s.chan <= c + 1));
+        }
+        let (lo, hi) = (next.1, next.2);
         let si = &segs[i];
-        for j in lo..hi {
+        // The segments of a channel come in scan order and apart (both `a` and `z` ascend), so those within reach of `si` are a run of them.
+        let reach = si.a as i64 - max_gap;
+        let from = lo + segs[lo..hi].partition_point(|s| (s.z as i64) < reach);
+        for j in from..hi {
             let sj = &segs[j];
+            if sj.a as i64 > si.z as i64 + max_gap {
+                break;
+            }
             let ov = sj.z.min(si.z) as i64 - sj.a.max(si.a) as i64 + 1;
             // neither the half overlap nor the touching test can hold below this
             if ov < 1 - max_gap {
@@ -283,3 +294,6 @@ fn join(segs: &[Seg], parent: &mut [u32]) -> Result<Vec<Seg>> {
     }
     Ok(out)
 }
+
+#[cfg(test)]
+mod tests;
