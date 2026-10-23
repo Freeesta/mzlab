@@ -99,25 +99,6 @@ impl Assist {
         Ok(req.to_json())
     }
 
-    /// The readers a router answer (`body`) asks for, as a JSON array of roles; an answer outside the schema asks for none (the router is advisory).
-    pub fn readers(body: &str) -> String {
-        let mut o = Out::default();
-        o.raw("[");
-        for (i, r) in mzlab_llm::router::parse(body)
-            .map(|r| r.readers())
-            .unwrap_or_default()
-            .iter()
-            .enumerate()
-        {
-            if i > 0 {
-                o.raw(",");
-            }
-            o.str(r);
-        }
-        o.raw("]");
-        o.0
-    }
-
     /// SHA-256 of the prompt of `role`, for the log.
     pub fn digest(&self, role: &str) -> Result<String, String> {
         let (r, _) = self.role(role)?;
@@ -149,4 +130,24 @@ impl Assist {
         .map_err(fail)?;
         Ok(verdict_json(v))
     }
+}
+
+/// The readers a router answer (`body`) asks for, as a JSON array of roles; an answer outside the schema asks for none (the router is advisory).
+#[wasm_bindgen]
+pub fn assist_readers(body: &str) -> String {
+    let mut o = Out::default();
+    o.raw("[");
+    for (i, r) in mzlab_llm::router::parse(body)
+        .map(|r| r.readers())
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+    {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.str(r);
+    }
+    o.raw("]");
+    o.0
 }

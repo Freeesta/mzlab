@@ -280,9 +280,12 @@ fn the_agent_asks_the_router_then_adds_the_phase_message_and_the_readings() {
 #[test]
 fn the_readers_follow_the_route_once_each_and_a_bad_answer_asks_for_none() {
     let r = r#"{"route":"table","need_data":["tabcheck","rows","inspection","tabcheck","plan"],"language":"en","suspicious":false}"#;
-    assert_eq!(Assist::readers(r), r#"["interprete","metadati"]"#);
-    assert_eq!(Assist::readers(r#"{"route":"nope"}"#), "[]");
-    assert_eq!(Assist::readers("not json"), "[]");
+    assert_eq!(
+        crate::assist::assist_readers(r),
+        r#"["interprete","metadati"]"#
+    );
+    assert_eq!(crate::assist::assist_readers(r#"{"route":"nope"}"#), "[]");
+    assert_eq!(crate::assist::assist_readers("not json"), "[]");
 }
 
 #[test]

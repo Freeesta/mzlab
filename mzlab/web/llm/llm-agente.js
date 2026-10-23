@@ -2,7 +2,7 @@
 // The loop of the assistant on the page: one conversation = one worker (llm-worker.js) that holds the state machine of Rust (`Agent`), and this class, which carries out what the machine asks:
 // show the text, call a tool of the Flow, ask the user, send a request. Every decision (levels, confirmations, limits) is Rust's; the page only executes and reports back.
 // Used by flow/lazy/flow-llm.js, only when the assistant is on. A recording (tests) answers the requests inside the worker and no transport is used.
-// The subagents (docs/agenti/llm.md): when the machine asks for the router (`sub`), the page sends its request, asks Rust which readers the answer names (`Assist.readers`), runs each
+// The subagents (docs/agenti/llm.md): when the machine asks for the router (`sub`), the page sends its request, asks Rust which readers the answer names (`assist_readers`), runs each
 // one (request, send, verdict of `Assist.check`, one retry with the problems, then a discard) and hands the accepted summaries to the machine as data. Every decision is Rust's;
 // what a file says never becomes an instruction: a reading is checked against the data it saw and enters the conversation only as data.
 import { DesktopClient, asError, desktop } from "./llm-clienti.js";

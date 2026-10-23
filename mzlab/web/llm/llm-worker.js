@@ -132,7 +132,7 @@ onmessage = async ev => {
     else if (m.op === "assist.on") { await assistOn(m); postMessage({ id: m.id, ok: true }); }
     else if (m.op === "assist.request") postMessage({ id: m.id, ok: true, request: needAssist().request(m.role, m.input) });
     else if (m.op === "assist.check") postMessage({ id: m.id, ok: true, verdict: needAssist().check(m.role, m.input, m.body, m.attempt) });
-    else if (m.op === "assist.readers") postMessage({ id: m.id, ok: true, readers: mod.Assist.readers(m.body) });
+    else if (m.op === "assist.readers") postMessage({ id: m.id, ok: true, readers: mod.assist_readers(m.body) });
     else if (m.op === "assist.digest") postMessage({ id: m.id, ok: true, digest: needAssist().digest(m.role) });
     else if (m.op === "assist.state") { if (!agent) throw { key: "err.llm.module", params: { reason: "agent" } }; agent.set_assist_state(m.state); postMessage({ id: m.id, ok: true }); }
     else if (m.op === "assist.reading") { if (!agent) throw { key: "err.llm.module", params: { reason: "agent" } }; agent.reading(m.role, m.summary); postMessage({ id: m.id, ok: true }); }

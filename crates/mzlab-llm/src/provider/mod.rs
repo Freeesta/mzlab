@@ -8,6 +8,7 @@ mod gemini;
 mod openai;
 mod options;
 pub mod sse;
+mod wire;
 
 pub(crate) use errors::api_error;
 pub use errors::{http_error, retry_delay, MAX_RATE_RETRIES};
@@ -112,43 +113,6 @@ impl Request {
         o.raw(",\"auth\":{\"header\":").str(&self.auth.header);
         o.raw(",\"prefix\":").str(&self.auth.prefix).raw("}}");
         o.0
-    }
-
-    /// The inverse of `to_json`: a request the page got back from Rust and hands to a transport that only has the request (the calls of the subagents).
-    pub fn from_value(v: &Value) -> Result<Request> {
-        let text = |k: &str| {
-            v.get(k)
-                .and_then(Value::str)
-                .map(str::to_string)
-                .ok_or_else(|| bad(k))
-        };
-        let mut headers = Vec::new();
-        for h in v.get("headers").map_or(&[][..], Value::arr) {
-            let (k, x) = (
-                h.arr().first().and_then(Value::str),
-                h.arr().get(1).and_then(Value::str),
-            );
-            headers.push((
-                k.ok_or_else(|| bad("headers"))?.to_string(),
-                x.ok_or_else(|| bad("headers"))?.to_string(),
-            ));
-        }
-        let auth = v.get("auth").ok_or_else(|| bad("auth"))?;
-        let slot = |k: &str| {
-            auth.get(k)
-                .and_then(Value::str)
-                .map(str::to_string)
-                .ok_or_else(|| bad(k))
-        };
-        Ok(Request {
-            url: text("url")?,
-            headers,
-            body: text("body")?,
-            auth: AuthSlot {
-                header: slot("header")?,
-                prefix: slot("prefix")?,
-            },
-        })
     }
 }
 
