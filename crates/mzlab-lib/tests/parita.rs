@@ -108,6 +108,7 @@ fn as_spectrum(s: &Spec) -> Spectrum {
         mz: s.mz.clone(),
         it: s.it.clone(),
         meta: Meta::default(),
+        rt: None,
     }
 }
 

@@ -19,6 +19,7 @@ fn sp(prec: f64, pol: i8, mz: &[f64], it: &[f64], name: &str) -> Spectrum {
             name: name.into(),
             ..Default::default()
         },
+        rt: None,
     }
 }
 

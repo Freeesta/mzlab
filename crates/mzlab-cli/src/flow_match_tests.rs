@@ -141,6 +141,60 @@ fn metadata_filters_keep_the_matching_entries() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// `rt_tol` drops the library entries whose retention time is farther than the tolerance from the query's; entries without one stay, and `rt_delta_min` is written when both are known.
+#[test]
+fn rt_tol_excludes_entries_by_retention_time() {
+    let dir = fixture("rt");
+    let msp = std::fs::read_to_string(dir.join("lib.msp")).unwrap();
+    let msp = msp
+        .replace("Name: Alpha\n", "Name: Alpha\nRT: 5.0\n")
+        .replace("Name: Beta\n", "Name: Beta\nRT: 9.0\n");
+    std::fs::write(dir.join("lib.msp"), msp).unwrap();
+    let mgf = std::fs::read_to_string(dir.join("q.mgf")).unwrap();
+    std::fs::write(
+        dir.join("q.mgf"),
+        mgf.replacen("BEGIN IONS\n", "BEGIN IONS\nRTINSECONDS=306\n", 1),
+    )
+    .unwrap();
+    let run_rt = |extra: &str| {
+        run(
+            &dir,
+            "cosine",
+            &format!(r#"{{"precursor_da":150,"tol_da":0.5,"top_n":10{extra}}}"#),
+        );
+        let h = hits(&dir);
+        let mut v: Vec<(String, Option<f64>)> = h
+            .get("hits")
+            .unwrap()
+            .arr()
+            .iter()
+            .filter(|x| x.get("query").unwrap().str() == Some("q0"))
+            .map(|x| {
+                (
+                    x.get("name").unwrap().str().unwrap().to_string(),
+                    x.get("rt_delta_min").and_then(|d| d.f64()),
+                )
+            })
+            .collect();
+        v.sort_by(|a, b| a.0.cmp(&b.0));
+        v
+    };
+    let off = run_rt("");
+    assert_eq!(off.len(), 3);
+    assert!(off
+        .iter()
+        .any(|(n, d)| n == "Beta" && d.is_some_and(|d| (d + 3.9).abs() < 1e-9)));
+    let on = run_rt(r#","rt_tol":0.5"#);
+    let names: Vec<&str> = on.iter().map(|(n, _)| n.as_str()).collect();
+    // Alpha is 0.1 min away, Beta 3.9 min away, Gamma has no retention time
+    assert_eq!(names, ["Alpha", "Gamma"], "{on:?}");
+    assert!(
+        (on[0].1.unwrap() - 0.1).abs() < 1e-9 && on[1].1.is_none(),
+        "{on:?}"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// `tree`: a graph `msngrafo/1` against an `msnlib/1` library gives the `msncerca/1` text of `mzlab-cli msn-lib search`, byte for byte.
 #[test]
 fn tree_writes_the_search_of_the_msn_library() {

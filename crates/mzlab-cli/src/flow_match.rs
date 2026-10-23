@@ -88,6 +88,7 @@ fn lib_spectra(lib: &Lib) -> mzlab_lib::error::Result<Vec<Spectrum>> {
             mz,
             it,
             meta,
+            rt: rec.rt_min(),
         });
     }
     Ok(out)
@@ -340,6 +341,7 @@ fn write_cand(
     alg: &str,
     c: &Cand,
     fdr: Option<&Fdr>,
+    rt_delta: Option<f64>,
 ) -> Result<()> {
     let m = lib
         .meta(c.index)
@@ -366,6 +368,9 @@ fn write_cand(
     o.raw(",\"explained\":").rounded(&c.explained, 4);
     o.raw(",\"mass_ppm\":").num(round(c.mass_ppm, 3));
     o.raw(",\"precursor_delta\":").num(round(c.delta, 4));
+    if let Some(d) = rt_delta {
+        o.raw(",\"rt_delta_min\":").num(round(d, 3));
+    }
     o.raw(",\"source\":\"library\",\"algorithm\":").str(alg);
     // only the best target of the query carries a q-value (the score the decoys were counted on)
     if let Some(f) = fdr {
@@ -443,6 +448,23 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         if filters.iter().any(|(_, t)| !t.is_empty()) {
             c.retain(|h| lib.meta(h.index).is_ok_and(|m| passes(&m, &filters)));
         }
+        let q_rt = s.rt;
+        let rt_tol = num(job, "rt_tol");
+        let mut with_rt: Vec<(Cand, Option<f64>)> = Vec::new();
+        for h in c.drain(..) {
+            let lib_rt = lib.rec(h.index).ok().and_then(|r| r.rt_min());
+            let delta = q_rt.zip(lib_rt).map(|(a, b)| a - b);
+            // an entry or a query without a retention time cannot be excluded by it
+            if rt_tol > 0.0 && delta.is_some_and(|d| d.abs() > rt_tol) {
+                continue;
+            }
+            with_rt.push((h, delta));
+        }
+        let rt_delta: std::collections::HashMap<u32, f64> = with_rt
+            .iter()
+            .filter_map(|(h, d)| d.map(|d| (h.index, d)))
+            .collect();
+        c = with_rt.into_iter().map(|(h, _)| h).collect();
         if decoys {
             // the decoys are scored to count the errors, never listed
             c.retain(|h| lib.meta(h.index).is_ok_and(|m| !is_decoy(&m.accession)));
@@ -453,7 +475,15 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
                 o.raw(",");
             }
             first = false;
-            write_cand(&mut o, &lib, &qid, &alg, h, fdr.as_ref().map(|f| &f[k]))?;
+            write_cand(
+                &mut o,
+                &lib,
+                &qid,
+                &alg,
+                h,
+                fdr.as_ref().map(|f| &f[k]),
+                rt_delta.get(&h.index).copied(),
+            )?;
         }
     }
     o.raw("]}");

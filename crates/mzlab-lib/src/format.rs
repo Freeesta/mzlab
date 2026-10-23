@@ -37,6 +37,8 @@ pub const MAX_SPECTRA: u32 = 1 << 31;
 pub const INT_MAX: f64 = 65535.0;
 
 pub const FLAG_FEW_PEAKS: u16 = 1;
+/// The retention time (minutes, `f32` in bytes 28..32 of the spectra record) is known.
+pub const FLAG_HAS_RT: u16 = 2;
 
 /// Order of spectra in the table: polarity first (negative, unknown, positive), then precursor m/z.
 pub fn pol_key(pol: i8) -> u8 {
@@ -58,6 +60,8 @@ pub struct SpecRec {
     pub orig: u32,
     /// The highest entropy-weighted intensity: the index intensities are `u16` fractions of it.
     pub scale: f32,
+    /// Retention time in minutes; meaningful only with `FLAG_HAS_RT` (bytes 28..32, zero in files that predate it).
+    pub rt: f32,
 }
 
 impl SpecRec {
@@ -71,6 +75,7 @@ impl SpecRec {
         b[16..18].copy_from_slice(&self.flags.to_le_bytes());
         b[20..24].copy_from_slice(&self.orig.to_le_bytes());
         b[24..28].copy_from_slice(&self.scale.to_bits().to_le_bytes());
+        b[28..32].copy_from_slice(&self.rt.to_bits().to_le_bytes());
         b
     }
 
@@ -84,7 +89,13 @@ impl SpecRec {
             flags: le_u16(b, 16),
             orig: le_u32(b, 20),
             scale: le_f32(b, 24),
+            rt: le_f32(b, 28),
         }
+    }
+
+    /// The retention time in minutes, when the library entry has one.
+    pub fn rt_min(&self) -> Option<f64> {
+        (self.flags & FLAG_HAS_RT != 0 && self.rt.is_finite()).then_some(self.rt as f64)
     }
 }
 

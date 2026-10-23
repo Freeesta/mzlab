@@ -9,7 +9,7 @@ use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
 use crate::sortutil;
 use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
-use crate::util::{crc32c, get_varint, le_f64, le_u16, le_u32, put_varint};
+use crate::util::{crc32c, get_varint, le_f32, le_f64, le_u16, le_u32, put_varint};
 
 const S_REC: usize = 0;
 const S_META: usize = 1;
@@ -99,12 +99,17 @@ impl<T: Scratch> Builder<T> {
         }
         let mx = q.iter().fold(0.0f64, |a, x| a.max(x.1));
         let mut rec: Vec<u8> = Vec::with_capacity(32 + q.len() * 6 + 64);
-        let flags = if q.len() < 3 { FLAG_FEW_PEAKS } else { 0 };
+        let rt = s.rt.filter(|r| r.is_finite() && *r >= 0.0 && *r < 1e5);
+        let mut flags = if q.len() < 3 { FLAG_FEW_PEAKS } else { 0 };
+        if rt.is_some() {
+            flags |= FLAG_HAS_RT;
+        }
         rec.extend_from_slice(&s.prec.to_le_bytes());
         rec.push(s.pol as u8);
         rec.push(licence::class_of(&s.meta.license));
         rec.extend_from_slice(&flags.to_le_bytes());
         rec.extend_from_slice(&orig.to_le_bytes());
+        rec.extend_from_slice(&(rt.unwrap_or(0.0) as f32).to_le_bytes());
         rec.extend_from_slice(&(q.len() as u16).to_le_bytes());
         for (mq, i) in &q {
             rec.extend_from_slice(&mq.to_le_bytes());
@@ -174,9 +179,9 @@ impl<T: Scratch> Builder<T> {
             let i = i as u32;
             let mut buf = crate::util::zeroed(k.len as usize)?;
             self.store.read_at(S_REC, k.off as u64, &mut buf)?;
-            // record: prec f64 | pol | licence | flags u16 | orig u32 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
-            let n_pk = le_u16(&buf, 16) as usize;
-            let peaks_at = 18;
+            // record: prec f64 | pol | licence | flags u16 | orig u32 | rt f32 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
+            let n_pk = le_u16(&buf, 20) as usize;
+            let peaks_at = 22;
             let meta_at = peaks_at + n_pk * 6;
             let prec = le_f64(&buf, 0);
             let pol = buf[8] as i8;
@@ -232,6 +237,7 @@ impl<T: Scratch> Builder<T> {
                 flags: le_u16(&buf, 10),
                 orig: le_u32(&buf, 12),
                 scale,
+                rt: le_f32(&buf, 16),
             };
             self.store.append(S_TABLE, &rec.to_bytes())?;
             for j in 0..n_pk {
