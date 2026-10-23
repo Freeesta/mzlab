@@ -11858,3 +11858,4 @@
 {"v":1,"ts_utc":"2026-10-23T05:03:09Z","tipo":"cache","k":"120249369919","workflow":"rust","job":"rust-wasm","esito_cache":"primary","ripristinate":["rust-Linux-wasm-5b3041990b73734e97aab0db9ec7b85a06cea94fe85b3abcfa39b2e9b944953d-d3379777667bb4eddcc76476dcc42ba9f2dd77debc1729278ba720ae59be79bf"],"mancate":[],"salvata":null,"mb":179,"pr":null,"sha":"bc28150c08a760a9a6fa6e581576414531ea01b3","run_id":39903235824,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T05:18:09Z","tipo":"carico","k":"2026-10-23T05:1","job_in_coda":0,"job_in_corso":17}
 {"v":1,"ts_utc":"2026-10-23T05:40:17Z","azione":"aperta","tipo":"pr","pr":1573,"sha":"bcbe9be56b03b38383e5381ee6c81cae34274b4e"}
+{"v":1,"ts_utc":"2026-10-23T05:42:52Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/raw-mzml-rm1b","merge_main":true,"aree":{"rust":4,"docs":3},"tipo":"pr","pr":1573,"sha":"7f2fe0b351e22a2714e347e5eeabb3eadc2a5520"}
