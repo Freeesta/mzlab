@@ -4,21 +4,26 @@ use super::dad::DadData;
 
 /// `/api/uvspec`: the UV spectrum (absorbance against wavelength) at the times `rt0`..`rt1`: the mean of the rows inside, or the nearest row when none falls inside. `None` for a non-finite time or an empty matrix.
 pub fn dad_spectrum_json(dad: &DadData, rt0: f64, rt1: f64) -> Option<String> {
-    if !rt0.is_finite() || !rt1.is_finite() || dad.points() == 0 {
+    if !rt0.is_finite() || !rt1.is_finite() {
         return None;
     }
     let (lo, hi) = (rt0.min(rt1), rt0.max(rt1));
-    let mut rows: Vec<usize> = (0..dad.points())
-        .filter(|&i| (lo..=hi).contains(&dad.time_min[i]))
+    let mut rows: Vec<usize> = dad
+        .time_min
+        .iter()
+        .enumerate()
+        .filter(|(_, t)| (lo..=hi).contains(t))
+        .map(|(i, _)| i)
         .collect();
     if rows.is_empty() {
         let mid = (lo + hi) / 2.0;
-        let near = (0..dad.points()).min_by(|&a, &b| {
-            (dad.time_min[a] - mid)
-                .abs()
-                .total_cmp(&(dad.time_min[b] - mid).abs())
-        })?;
-        rows.push(near);
+        let dist = |t: &f64| (t - mid).abs();
+        let near = dad
+            .time_min
+            .iter()
+            .enumerate()
+            .min_by(|a, b| dist(a.1).total_cmp(&dist(b.1)))?;
+        rows.push(near.0);
     }
     let mut mean = vec![0.0f64; dad.channels()];
     for &i in &rows {
@@ -34,12 +39,13 @@ pub fn dad_spectrum_json(dad: &DadData, rt0: f64, rt1: f64) -> Option<String> {
     };
     let n = rows.len();
     let mau: Vec<f64> = mean.iter().map(|m| m / n as f64).collect();
+    let time_of = |i: Option<&usize>| i.and_then(|&i| dad.time_min.get(i)).copied();
     Some(format!(
         "{{\"nm\":[{}],\"mau\":[{}],\"rt0\":{},\"rt1\":{},\"n\":{n},\"unit\":\"mAU\"}}",
         join(&dad.wavelengths_nm, 2),
         join(&mau, 4),
-        dad.time_min[rows[0]],
-        dad.time_min[rows[n - 1]]
+        time_of(rows.first())?,
+        time_of(rows.last())?
     ))
 }
 
@@ -64,15 +70,18 @@ mod tests {
     fn uv_spectrum_is_the_mean_of_the_window_or_the_nearest_row() {
         let d = dad(5, 3);
         // rows 1 and 2 (0.01, 0.02): means of [3,4,5] and [6,7,8]
-        let j = dad_spectrum_json(&d, 0.01, 0.02).unwrap();
+        let j = dad_spectrum_json(&d, 0.01, 0.02).unwrap_or_default();
+        assert!(j.contains("\"nm\":[200.00,201.00,202.00]"), "{j}");
         assert!(
-            j.contains("\"nm\":[200.00,201.00,202.00]")
-                && j.contains("\"mau\":[4.5000,5.5000,6.5000]")
-                && j.contains("\"n\":2")
+            j.contains("\"mau\":[4.5000,5.5000,6.5000]") && j.contains("\"n\":2"),
+            "{j}"
         );
         // between two rows, reversed bounds: the nearest row (0.03 -> row 3)
-        let j = dad_spectrum_json(&d, 0.0305, 0.0295).unwrap();
-        assert!(j.contains("\"mau\":[9.0000,10.0000,11.0000]") && j.contains("\"n\":1"));
+        let j = dad_spectrum_json(&d, 0.0305, 0.0295).unwrap_or_default();
+        assert!(
+            j.contains("\"mau\":[9.0000,10.0000,11.0000]") && j.contains("\"n\":1"),
+            "{j}"
+        );
         assert!(dad_spectrum_json(&d, f64::NAN, 0.0).is_none());
     }
 }
