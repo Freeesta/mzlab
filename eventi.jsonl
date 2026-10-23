@@ -15617,3 +15617,4 @@
 {"v":1,"ts_utc":"2026-10-23T14:26:06Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3855651,null]},"byte_totali":3855651,"margine_min_pct":null,"pr":null,"sha":"b9b1d965f0ad16c0eba04653875dbb8116041af1","run_id":39967894028,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T14:45:57Z","azione":"aperta","tipo":"pr","pr":1622,"sha":"3e471316cd58ec85cabf9ee1dff4ff34b9de0e73"}
 {"v":1,"ts_utc":"2026-10-23T14:49:16Z","azione":"aperta","tipo":"pr","pr":1623,"sha":"a9601e3409eb715b81bb146feaaba7632a17b303"}
+{"v":1,"tipo":"pr","pr":1621,"sha":"774d17b8961a897a39d688c7e6a7c3b6cb19d9ac","ts_utc":"2026-10-23T14:50:29Z","azione":"unita","aperta_s":1782,"commit_n":2,"cause_commit":{"altro":1},"merge_main":0,"righe_piu":72,"righe_meno":13,"file_n":2,"file":["crates/mzlab-lib/src/search.rs","crates/mzlab-lib/tests/search.rs"],"aree":{"rust":2},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":340}
