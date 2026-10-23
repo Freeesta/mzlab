@@ -10,6 +10,8 @@
   const WEB = /** @type {Record<string, string>} */ ({ waiting: "waiting", ready: "waiting", paused: "waiting", stale: "waiting", running: "running", done: "done", reused: "reused", error: "error", refused: "refused", blocked: "skipped", skipped: "skipped", cancelled: "skipped" });
   const kit = () => F.runners.web.kit;
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
+  /** true when this browser does the step (the MSn search in a library is for the `tree` algorithm only) */
+  const here = (/** @type {any} */ inst) => kit().KNOWN.includes(base(inst)) && (base(inst) !== "spectra.match" || inst.algorithm === "tree");
   const budgetMb = () => Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0;
   /** @type {any} */ let x = null;
   // the two switches of the bar: Live (the plan is followed and its jobs start by themselves, on by default) and the user's Pause
@@ -21,7 +23,7 @@
   const session = S => ({
     S, plan: S.plan, items: /** @type {any[]} */ ([]), ok: false, q: Promise.resolve(), seq: 0, sent: "", keys: new Map(), nodes: new Map(), info: new Map(), errors: new Map(), last: new Map(),
     running: new Map(), observing: new Map(), waitingInput: new Set(), memAsk: new Map(), allowed: new Set(), loading: new Map(), listeners: new Set(), log: /** @type {any[]} */ ([]), logFrom: 0,
-    waitingProfile: new Set(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
+    waitingProfile: new Set(), files: new Map(), pooled: 0, peak: 0, pumping: /** @type {any} */ (null), again: false, waiters: /** @type {(() => void)[]} */ ([]), started: 0, tick: new Map(), registry: null, drainSoon: 0,
   });
 
   /** @param {any} x @param {string} op @param {any} [body] one call to the scheduler; the calls go one after the other, and a change is followed by a read of the events */
@@ -51,7 +53,7 @@
   const fromNode = (x, n) => {
     const inst = instOf(x, n.instance);
     if (!inst) return;
-    const known = kit().KNOWN.includes(base(inst)), memory = n.state === "blocked" && [...x.memAsk.values()].some((/** @type {any} */ a) => a.spec.instance === n.instance);
+    const known = here(inst), memory = n.state === "blocked" && [...x.memAsk.values()].some((/** @type {any} */ a) => a.spec.instance === n.instance);
     const stato = memory ? "blocked" : WEB[n.state] || "waiting", info = x.info.get(n.instance) || {};
     const ev = { passo: n.instance, stato, via: known ? "browser" : "computer", parte: n.parte || 0, di: n.di || 0, mb: base(inst) === "features.detect" ? x.peak || null : info.mb ?? null, modo: info.modo ?? null };
     const was = x.last.get(n.instance);
@@ -87,6 +89,8 @@
     const modeOf = (/** @type {string} */ n) => { const f = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).find((/** @type {any} */ g) => g.name === n); return f && f.spectrum_mode ? String(f.spectrum_mode) : ""; };
     const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input) }; });
     for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML") });
+    // an MSn step reads the infusion open in Data, not the first file of the series: its key follows that file
+    const infusion = (() => { try { return F.runPlanFromData(S).names[0]; } catch (_) { return ""; } })(), msnSteps = F.webMsn ? F.webMsn.STEPS : [];
     const scan = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml"), first = scan[0];
     if (items.length && first) {
       const refs = items.map((/** @type {any} */ i) => "file:" + i.input);
@@ -95,7 +99,7 @@
         const list = [].concat(/** @type {any} */ (v)), at = list.indexOf("file:" + first.name);
         if (at < 0) continue;
         const many = (F.stepOf(S.reg, s) || { in: {} }).in[port]?.many;
-        s.in[port] = many ? [...list.slice(0, at), ...refs, ...list.slice(at + 1)] : refs[0];
+        s.in[port] = many ? [...list.slice(0, at), ...refs, ...list.slice(at + 1)] : msnSteps.includes(base(s)) && refs.includes("file:" + infusion) ? "file:" + infusion : refs[0];
       }
     }
     return { plan, items, ids: Object.fromEntries(items.map((/** @type {any} */ i) => [i.input, i.idx ? `${i.idx.key}:${i.mode}` : "loading"])) };
@@ -187,7 +191,7 @@
       await call(x, "new", { plan: JSON.parse(text), registry: x.registry, version: String(G.MZLAB_VERSION || ""), identities: b.ids });
       x.started = 1; x.sent = text; x.ok = true; x.ids = b.ids;
       if (!following || held) await call(x, "pause");
-      for (const inst of b.plan.steps) emitWeb(x, { passo: inst.id, stato: "waiting", via: kit().KNOWN.includes(base(inst)) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
+      for (const inst of b.plan.steps) emitWeb(x, { passo: inst.id, stato: "waiting", via: here(inst) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
       return;
     }
     for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) await call(x, "set_identity", { name, text: id });
@@ -273,7 +277,7 @@
     if (o.onEvent) live.listeners.add(o.onEvent);
     try {
       if (hist.length) for (const ev of hist) { if (o.onEvent) o.onEvent(ev); document.dispatchEvent(new CustomEvent("flow:web-step", { detail: ev })); }
-      else for (const n of await call(live, "nodes")) { const inst = instOf(live, n.instance); if (inst) emitWeb(live, { passo: n.instance, stato: n.state === "done" || n.state === "reused" ? "reused" : WEB[n.state] || "waiting", via: kit().KNOWN.includes(base(inst)) ? "browser" : "computer", parte: n.di, di: n.di, mb: null, modo: "reused" }); }
+      else for (const n of await call(live, "nodes")) { const inst = instOf(live, n.instance); if (inst) emitWeb(live, { passo: n.instance, stato: n.state === "done" || n.state === "reused" ? "reused" : WEB[n.state] || "waiting", via: here(inst) ? "browser" : "computer", parte: n.di, di: n.di, mb: null, modo: "reused" }); }
       let before = "";
       for (;;) {
         await pump(live); await drain(live);
@@ -292,7 +296,7 @@
     const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.keys.get(`${al.id}|`);
     const table = key ? await (await kit().getPool()).fs.read(F.liveJobs.DIR + key + ".mzfeat") : null;
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
-    return { steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, llm: S.llmRef || null };
+    return { steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null @param {any} S */

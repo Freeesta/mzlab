@@ -76,44 +76,56 @@
     } catch (_) { /* the result is still given to the page */ }
   };
 
-  /** runs the MSn steps of S in order; resolves with { steps, files: [{ id, name, text }] } @param {any} S @param {{ onEvent?: (e: any) => void }} [opts] */
-  const run = async (S, opts = {}) => {
-    const o = opts, plan = S.plan, names = F.runPlanFromData(S).names;
-    const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files : [];
+  /** the infusion of S: the position in Data of the file the plan names first @param {any} S */
+  const infusion = S => {
+    const names = F.runPlanFromData(S).names, open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files : [];
     const k = names.length ? open.findIndex((/** @type {any} */ f) => f && !f.gone && String(f.file).split("#")[0] === names[0]) : -1;
     if (k < 0) throw fail("err.flow.msn.open", { input: names[0] || "" });
+    return k;
+  };
+
+  /** one MSn step: its text, kept in OPFS as `name`; `st` = { plan, k, graph } carries the query of the first graph of the plan to the steps after it @param {any} inst @param {{ plan: any, k: number, graph: URLSearchParams | null }} st */
+  const one = async (inst, st) => {
+    const id = base(inst), p = inst.params || {}, k = st.k, plan = st.plan;
+    let name, text;
+    if (id === "spectra.msn_graph") {
+      st.graph = graphQuery(inst, k);
+      // the command writes the graph followed by a newline
+      name = inst.id + ".json"; text = (await ask("api/msn_grafo?" + st.graph)) + "\n";
+      const j = JSON.parse(text);
+      if (!Array.isArray(j.nodi) || !j.nodi.length) throw fail("err.flow.msn.empty");
+    } else if (id === "spectra.match") {
+      const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph");
+      name = inst.id + ".json"; text = await search(st.graph || graphQuery(first || { params: {} }, k), p);
+    } else {
+      // the graph of the first spectra.msn_graph of the plan (a plan without one asks for the graph with the defaults)
+      const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph"), q = new URLSearchParams(st.graph || graphQuery(first || { params: {} }, k));
+      q.delete("interpreta"); q.delete("ppm_perdita"); q.delete("strutture"); q.delete("ppm_struttura");
+      if (p.clean === true) q.set("pulito", "1");
+      if (id === "msn.library_export") {
+        q.set("libreria", "1"); q.set("formato", p.format === "massbank" ? "massbank" : "msp");
+        if (p.levels === "ms2") q.set("livelli", "ms2");
+        if (p.annotate === false) q.set("annota", "0");
+        if (typeof p.id === "string" && p.id) q.set("id", p.id);
+        name = inst.id + (p.format === "massbank" ? ".txt" : ".msp");
+      } else { q.set("vista", p.view || "modifications"); name = inst.id + ".csv"; }
+      text = await ask("api/msn_grafo/export?" + q);
+    }
+    await keep(name, text);
+    return { name, text };
+  };
+
+  /** runs the MSn steps of S in order; resolves with { steps, files: [{ id, name, text }] } @param {any} S @param {{ onEvent?: (e: any) => void }} [opts] */
+  const run = async (S, opts = {}) => {
+    const o = opts, plan = S.plan, st = { plan, k: infusion(S), graph: /** @type {URLSearchParams | null} */ (null) };
     const steps = /** @type {string[]} */ ([]), files = /** @type {{ id: string, name: string, text: string }[]} */ ([]);
     for (const inst of plan.steps) emit(o, { passo: inst.id, stato: "waiting", via: "browser", parte: 0, di: 0, mb: null, modo: null });
-    /** @type {URLSearchParams | null} */ let graph = null;
     for (const inst of plan.steps) {
-      const id = base(inst), p = inst.params || {}, ev = { passo: inst.id, via: "browser", parte: 1, di: 1, mb: null, modo: null };
+      const ev = { passo: inst.id, via: "browser", parte: 1, di: 1, mb: null, modo: null };
       emit(o, { ...ev, stato: "running" });
       try {
-        let name, text;
-        if (id === "spectra.msn_graph") {
-          graph = graphQuery(inst, k);
-          // the command writes the graph followed by a newline
-          name = inst.id + ".json"; text = (await ask("api/msn_grafo?" + graph)) + "\n";
-          const j = JSON.parse(text);
-          if (!Array.isArray(j.nodi) || !j.nodi.length) throw fail("err.flow.msn.empty");
-        } else if (id === "spectra.match") {
-          const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph");
-          name = inst.id + ".json"; text = await search(graph || graphQuery(first || { params: {} }, k), p);
-        } else {
-          // the graph of the first spectra.msn_graph of the plan (a plan without one asks for the graph with the defaults)
-          const first = plan.steps.find((/** @type {any} */ i) => base(i) === "spectra.msn_graph"), q = new URLSearchParams(graph || graphQuery(first || { params: {} }, k));
-          q.delete("interpreta"); q.delete("ppm_perdita"); q.delete("strutture"); q.delete("ppm_struttura");
-          if (p.clean === true) q.set("pulito", "1");
-          if (id === "msn.library_export") {
-            q.set("libreria", "1"); q.set("formato", p.format === "massbank" ? "massbank" : "msp");
-            if (p.levels === "ms2") q.set("livelli", "ms2");
-            if (p.annotate === false) q.set("annota", "0");
-            if (typeof p.id === "string" && p.id) q.set("id", p.id);
-            name = inst.id + (p.format === "massbank" ? ".txt" : ".msp");
-          } else { q.set("vista", p.view || "modifications"); name = inst.id + ".csv"; }
-          text = await ask("api/msn_grafo/export?" + q);
-        }
-        await keep(name, text); files.push({ id: inst.id, name, text });
+        const r = await one(inst, st);
+        files.push({ id: inst.id, ...r });
         emit(o, { ...ev, stato: "done" });
       } catch (e) { emit(o, { ...ev, stato: "error" }); throw e; }
       steps.push(inst.id);
@@ -121,5 +133,5 @@
     return { steps, table: null, files, llm: S.llmRef || null };
   };
 
-  F.webMsn = { handles, run };
+  F.webMsn = { handles, run, one, infusion, STEPS };
 })();

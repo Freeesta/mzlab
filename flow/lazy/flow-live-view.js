@@ -26,12 +26,6 @@
   /** the reason of an error or a refusal, in the words of the page @param {any} e */
   const why = e => (e && e.error && e.error.error_key ? F.message({ key: e.error.error_key, params: e.error.params || {} }) : "");
 
-  /** true when the browser does this step, but only in a plan made of MSn steps alone (flow-web-msn.js), so in a mixed plan its card must not send the user to a computer @param {string} id */
-  const msnAlone = id => {
-    const live = F.live && F.live.state && F.live.state(), inst = live && live.plan && live.plan.steps.find((/** @type {any} */ i) => i.id === id);
-    return !!inst && !!F.webMsn && F.webMsn.handles({ steps: [inst] });
-  };
-
   /** the mark, the words and the look (ok, run, warn, bad, idle) of one node or job event @param {any} e @returns {{state: string, icon: string, word: string, tone: string, frac: number | null}} */
   const look = e => {
     const st = e.state, frac = typeof e.frac === "number" ? e.frac : null, many = (e.di || 0) > 1, files = many ? `${e.parte || 0} of ${e.di} files` : "";
@@ -43,7 +37,7 @@
       case "stale": return mk("stale", "out of date", "warn");
       case "error": return mk("bad", why(e) ? "error: " + why(e) : "error", "bad");
       case "refused": return mk("bad", why(e) ? "refused: " + why(e) : "refused", "bad");
-      case "blocked": return mk("lock", e.blocked_by === "permission.memory" ? "needs your OK for memory" : e.blocked_by === "platform.computer" ? (msnAlone(e.instance) ? "runs in a plan of MSn steps only" : "needs a computer") : "fix the plan first", "warn");
+      case "blocked": return mk("lock", e.blocked_by === "permission.memory" ? "needs your OK for memory" : e.blocked_by === "platform.computer" ? "needs a computer" : "fix the plan first", "warn");
       case "skipped": return mk("skip", "skipped", "idle");
       case "paused": return mk("pause", "paused", "idle");
       case "cancelled": return mk("skip", "cancelled", "idle");
