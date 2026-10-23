@@ -3025,6 +3025,7 @@ I18N.add("it", {
   "storia.zoom": "zoom",
   "storia.int": "integrazione",
   "storia.campi": "correzione",
+  "cmd.spec.ruler": "righello",
   "storia.liscia": "lisciatura",
   "storia.fondo": "fondo",
   "storia.bianco": "sottrazione del bianco",

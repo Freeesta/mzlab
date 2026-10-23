@@ -3025,6 +3025,7 @@ I18N.add("en", {
   "storia.zoom": "zoom",
   "storia.int": "integration",
   "storia.campi": "correction",
+  "cmd.spec.ruler": "ruler",
   "storia.liscia": "smoothing",
   "storia.fondo": "background",
   "storia.bianco": "blank subtraction",

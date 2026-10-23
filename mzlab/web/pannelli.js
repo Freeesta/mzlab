@@ -309,7 +309,7 @@ function addPanel(type, o, after) {
   AFFIANCA.grip(p);
   el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
-  const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } };
+  const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { COMANDI.fai("spec.ruler", p, () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } }); };
   if (p.type === "spec" && window.XICBTN) XICBTN.wire(p);
   const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { p.rel = !p.rel; relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);

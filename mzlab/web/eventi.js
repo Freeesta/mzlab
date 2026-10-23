@@ -542,10 +542,13 @@ ESC.registra({
   aperto: () => E.panels.some(q => pendKey(q)) || measAperta(E.active),
   chiudi: () => {
     const p = E.panels.find(q => pendKey(q)); if (!p) return measClear(E.active);
-    if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
-    const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
-    draw(p); uiSave();
-    if (measAperta(E.active)) measClear(E.active);                          // the ruler goes away with the same press
+    const passo = () => {
+      if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
+      const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
+      draw(p); uiSave();
+      if (measAperta(E.active)) measClear(E.active);                          // the ruler goes away with the same press
+    };
+    if (p.type === "spec") COMANDI.fai("spec.ruler", p, passo); else passo();   // one press = one undo step
   },
 });
 document.addEventListener("keydown", e => {
