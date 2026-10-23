@@ -17,7 +17,7 @@
     "err.llm.key.missing": () => "The provider's key is missing: set it in Settings, Assistant. Nothing was sent.",
     "err.llm.module": () => "The assistant module did not load: reload the page and try again.",
     "err.llm.limit.workspace": () => "The provider's workspace usage limit is reached: nothing more can be sent until it resets.",
-    "err.llm.limit.spend": () => "The spending cap of this conversation is reached: the assistant stops.",
+    "err.llm.limit.spend": () => "The token limit of this conversation is reached (or you chose not to go on): the assistant stops.",
     "err.llm.limit.calls": () => "The assistant reached the maximum number of actions for one request.",
     "err.llm.plan.tries": () => "The assistant could not produce a valid plan after several tries.",
     "err.llm.profile.course": () => "The assistant is not available in this profile.",

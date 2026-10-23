@@ -18,6 +18,9 @@ import { hasConsent } from "./llm-consenso.js";
 /** @type {{text: string, strict: boolean} | null} */ let recording = null;
 /** @type {any} */ (window).MZLAB_LLM_AGENT = { replay: (/** @type {string} */ text, strict = false) => { recording = { text, strict }; } };
 
+/** without a limit set, the conversation asks before it goes past this many tokens */
+const ASK_TOKENS = 50000;
+
 export class AgentRun {
   /** @param {Host} host @param {{hideNames?: boolean}} [opts] */
   constructor(host, opts = {}) {
@@ -34,6 +37,7 @@ export class AgentRun {
     this.outcome = "";
     this.running = false;
     this.replaying = false;
+    /** whether the user was already asked to go past ASK_TOKENS */ this.capAsked = false;
     this.assist = false;
     /** @type {any} */ this.client = null;
     /** @type {Promise<string>} */ this.done = Promise.resolve("");
@@ -165,6 +169,18 @@ export class AgentRun {
     const s = readSettings();
     if (!s.on || !s.provider || !hasConsent(s.provider)) throw { key: "err.llm.consent", params: {} };
     if (await client.needsKey(s.provider)) throw { key: "err.llm.key.missing", params: {} };
+    await this.capCheck(s.cap);
+  }
+
+  /** the token limit of the conversation (machine + subagents, counted before each send): a limit stops the assistant; without one, the first crossing of ASK_TOKENS asks the user once @param {number} cap */
+  async capCheck(cap) {
+    const used = this.totalUsage(), tokens = used[0] + used[1];
+    if (cap > 0 ? tokens < cap : tokens < ASK_TOKENS || this.capAsked) return;
+    if (cap === 0) {
+      this.capAsked = true;
+      if (await this.host.ask("cap", `${tokens} tokens used in this conversation so far. Go on?`, "continue", null)) return;
+    }
+    throw { key: "err.llm.limit.spend", params: {} };
   }
 
   /** the request of the last `send` goes out through the client of the page and its events come back one by one, in order */
