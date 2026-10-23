@@ -17564,3 +17564,4 @@
 {"v":1,"ts_utc":"2026-10-23T18:25:11Z","tipo":"carico","k":"2026-10-23T18:2","job_in_coda":0,"job_in_corso":7}
 {"v":1,"ts_utc":"2026-10-23T18:27:16Z","azione":"aperta","tipo":"pr","pr":1641,"sha":"a32402755a6d77ea254e50fc83ee214f3476d921"}
 {"v":1,"ts_utc":"2026-10-23T18:40:12Z","azione":"aperta","tipo":"pr","pr":1642,"sha":"4bbaf47fb7e4b7cd49821cbc41aaca48808d48c6"}
+{"v":1,"tipo":"pr","pr":1641,"sha":"a32402755a6d77ea254e50fc83ee214f3476d921","ts_utc":"2026-10-23T18:42:22Z","azione":"unita","aperta_s":906,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":45,"righe_meno":5,"file_n":6,"file":["docs/agenti/llm-lettori.md","flow/lazy/flow-llm-errors.js","mzlab/web/lang/en.js","mzlab/web/lang/it.js","mzlab/web/llm/llm-agente.js","tests_e2e/e2e_llm_lettori.py"],"aree":{"docs":1,"altro":1,"web":3,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":366}
