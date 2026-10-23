@@ -339,7 +339,7 @@ pub fn target_param<'a>(
 }
 
 /// `value` brought inside the limits of `p`; false when it had to be cut (or is not one of the choices).
-fn fit(p: &Param, v: Value) -> (Value, bool) {
+pub(crate) fn fit(p: &Param, v: Value) -> (Value, bool) {
     let cut = |x: f64, lo: Option<f64>| {
         let y = x
             .max(lo.or(p.min).unwrap_or(f64::NEG_INFINITY))
