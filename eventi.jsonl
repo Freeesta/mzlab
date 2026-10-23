@@ -16875,3 +16875,4 @@
 {"v":1,"ts_utc":"2026-10-23T16:16:05Z","tipo":"job","k":"120522972668","workflow":"rust","job":"rust-wasm-guardie","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"0db5d76db658e64e3e404058f246802254b837a2","run_id":39985303031,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T16:16:05Z","tipo":"job","k":"120522972846","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"0db5d76db658e64e3e404058f246802254b837a2","run_id":39985303031,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T16:16:23Z","tipo":"carico","k":"2026-10-23T16:1","job_in_coda":0,"job_in_corso":23}
+{"v":1,"ts_utc":"2026-10-23T16:21:20Z","azione":"push","titolo":"Make the plausibility limits configurable and add the table.plausible step","merge_main":false,"aree":{"altro":1,"rust":12,"docs":8,"test":4},"tipo":"pr","pr":1616,"sha":"3d7c424a429fd774576e149f0f89e376e7e242bf"}
