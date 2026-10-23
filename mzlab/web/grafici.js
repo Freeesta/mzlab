@@ -308,7 +308,8 @@ async function drawLines(p) {
   p._own = [lo, hi];
   if (p.tl && !p._exp) [lo, hi] = unionTime(p, lo, hi);                    // linked chromatograms of a view share the time range: the union of their own
   p._u = [lo, hi];
-  const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
+  // the automatic range snaps outwards to 0.1 min: a file added or removed with a slightly different last scan must not move the axis or the traces already shown
+  const x0 = p.zoom ? p.zoom[0] : Math.floor(lo * 10 + 1e-6) / 10, x1 = p.zoom ? p.zoom[1] : Math.ceil(hi * 10 - 1e-6) / 10;
   const so = window.SUBREF ? SUBREF.eff(p) : null, clipDraw = !!p.clipDraw || !!(so && so.clip);
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
