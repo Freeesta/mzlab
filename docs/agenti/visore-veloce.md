@@ -4,7 +4,7 @@
 - **Tasti**: pulsante «XIC» = modo «scegli un picco» (Esc esce, catena `xic-scelta`); `,` e `.` picco precedente/successivo; Invio estrae; Maiusc+Invio o Maiusc+clic aggiunge una traccia; Spazio sul pulsante non scorre le scansioni.
 - **Finestra**: LR = finestra nominale di `xicTraceFor` ([n−0,2; n+0,8]); HR = ppm del profilo del file (`HR.ionTrace`). Una tolleranza digitata sostituisce quella predefinita e compare nell'etichetta; mai inventata.
 - **Linea di scansione**: `xp.cur` (banda se lo spettro è una media di più scansioni); apice e area in `.xb-info`; area subito in HR, in LR solo dopo l'integrazione dello studente.
-- **Tipi di spettro coperti**: vedi la descrizione della PR del pacchetto V-1; Infusion MSn e Tabui restano fuori.
+- **Tipi di spettro coperti**: LR full scan e HR MS1 (`e2e_xic_spettro`), MS2 HR e LR con i tasti, spettro del secondo file come lo apre un clic sulla mappa e file sovrapposti (`e2e_xic_spettro_tipi`). Il clic del mouse su un'etichetta dello spettro MS2 LR con il pulsante in attesa non sceglie il picco (non spiegato; con i tasti `.` e Invio funziona). Infusion MSn e Tabui restano fuori.
 
 ## Misure (G2: dal Invio nel pannello all'ultimo disegno dell'XIC, ioni non in cache, n = 30)
 Macchina: container cloud 4 CPU, Chromium headless, dati sintetici (`.verifica/dati_sintetici`), sito costruito con `tools/prepara_sito.py`, ramo `claude/viewer-1-xic-button`.
