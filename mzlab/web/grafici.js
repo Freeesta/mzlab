@@ -308,7 +308,8 @@ async function drawLines(p) {
   p._own = [lo, hi];
   if (p.tl && !p._exp) [lo, hi] = unionTime(p, lo, hi);                    // linked chromatograms of a view share the time range: the union of their own
   p._u = [lo, hi];
-  const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
+  // the automatic range snaps outwards to 0.1 min: a file added or removed with a slightly different last scan must not move the axis or the traces already shown
+  const flo = Math.floor(lo * 10 + 1e-6) / 10, fhi = Math.ceil(hi * 10 - 1e-6) / 10, x0 = p.zoom ? p.zoom[0] : flo, x1 = p.zoom ? p.zoom[1] : fhi;
   const so = window.SUBREF ? SUBREF.eff(p) : null, clipDraw = !!p.clipDraw || !!(so && so.clip);
   sr.forEach(s => {
     s.ys = smooth(s.y, p.smooth ? 3 : 0);
@@ -343,7 +344,7 @@ async function drawLines(p) {
   p.cv._needR = window.GRADIENTE ? GRADIENTE.needR(p) : 0;               // room for the right axis of the gradient: the panels of a view share it (syncView)
   const { X, Y } = axes(g, W, H, x0, x1v, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
   const ph = H - M.t - M.b;
-  p._a = { x0, x1: x1v, cas, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, nl: rowMax, nrow, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
+  p._a = { x0, x1: x1v, cas, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, nl: rowMax, nrow, full: [flo, fhi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
   const withFondo = sr.some(s => s.cf);
   if ((ymin < 0 || withFondo) && !stk && !logy) zeroMarks(g, sr, X, Y, W, H, withFondo && !p._exp);
   if (ibOf(p) && !p._exp) {                                    // grey band(s) of the internal blank, always visible
