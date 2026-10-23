@@ -17,7 +17,7 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         sm = lambda: pg.inner_text("#xic-sum")
         def dialog():
-            pg.click("#np-xic"); t = pg.inner_text("#xicdlg")
+            pg.click("#np-xic"); t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description")
             assert "Extracted Ion Chromatogram" in t and "1 Da" in t and "oppure" in t, t
             assert not pg.query_selector("#xic-lo") and "compromesso" not in t, t
             pg.fill("#xic-mz", "364.37"); assert "363.8 - 364.8" in sm(), sm()

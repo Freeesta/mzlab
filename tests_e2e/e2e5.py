@@ -41,7 +41,7 @@ try:
         step("XIC window: formula (neutral) and one m/z value (unit window around the nominal mass)", formula_in_xic)
         def xicdlg_layout():
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
-            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "1 Da" in t, t
+            t = pg.inner_text("#xicdlg") + " " + pg.get_attribute("#xicdlg", "aria-description"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "1 Da" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
             pg.fill("#xic-mz", ""); hold(pg, 700)      # (the window opens with the last ion: clear it, then nothing is written)
             pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
