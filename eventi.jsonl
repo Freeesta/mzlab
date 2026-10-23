@@ -14943,3 +14943,4 @@
 {"v":1,"ts_utc":"2026-10-23T13:00:45Z","tipo":"carico","k":"2026-10-23T13:0","job_in_coda":0,"job_in_corso":21}
 {"v":1,"ts_utc":"2026-10-23T13:09:09Z","azione":"push","titolo":"Merge remote-tracking branch 'origin/main' into claude/assist-a8","merge_main":true,"aree":{"rust":16,"altro":1,"docs":2,"web":6,"test":2,"generati":1},"tipo":"pr","pr":1612,"sha":"3c25f88dff233babbd43c6153f4096a4f6040863"}
 {"v":1,"ts_utc":"2026-10-23T13:23:55Z","azione":"aperta","tipo":"pr","pr":1613,"sha":"4bd9be02148ad6b212125d31ec6edd054c94b8e2"}
+{"v":1,"tipo":"pr","pr":1613,"sha":"4bd9be02148ad6b212125d31ec6edd054c94b8e2","ts_utc":"2026-10-23T13:25:37Z","azione":"unita","aperta_s":102,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":2,"righe_meno":1,"file_n":1,"file":["docs/agenti/visore-veloce.md"],"aree":{"docs":1},"solo_doc":true,"prima_review_s":null,"review_n":0,"verde_a_unione_s":32}
