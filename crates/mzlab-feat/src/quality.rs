@@ -12,7 +12,8 @@ use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::peakq;
 
-use crate::sweep::{ppm_ranges, windows};
+use crate::chunked::chunked;
+use crate::sweep::{ppm_ranges, windows_by_slab, Slab};
 use crate::table::{FileFeatures, FLAG_EDGE, FLAG_GOOD};
 use crate::trace::{filled, Params};
 
@@ -161,32 +162,57 @@ pub(crate) fn around_apex(rt: &[f64], apex: usize, half: f64) -> (usize, usize) 
     (a, b)
 }
 
-/// Quality columns of row `i` from its trace `y`, which starts at scan `w0`; `(w0, wa, wb)` with `wa..=wb` the scans of the area window.
+/// The quality columns of one row, computed from its trace without touching the table (so that rows can be measured on several threads).
+pub(crate) struct RowQ {
+    area_win: f64,
+    snr: f32,
+    pub(crate) shape: f32,
+    fwhm: f32,
+    asym: f32,
+    gaps: u16,
+    why: u8,
+    edge: bool,
+}
+
+impl RowQ {
+    fn apply(&self, f: &mut FileFeatures, i: usize) {
+        f.flags[i] &= !(FLAG_GOOD | FLAG_EDGE);
+        f.area_win[i] = self.area_win;
+        f.snr[i] = self.snr;
+        f.shape[i] = self.shape;
+        f.fwhm[i] = self.fwhm;
+        f.asym[i] = self.asym;
+        f.gaps[i] = self.gaps;
+        f.qreason[i] = self.why;
+        if self.why == 0 {
+            f.flags[i] |= FLAG_GOOD;
+        }
+        if self.edge {
+            f.flags[i] |= FLAG_EDGE;
+        }
+    }
+}
+
+/// Quality of row `i` from its trace `y`, which starts at scan `w0`; `(w0, wa, wb)` with `wa..=wb` the scans of the area window.
 /// `scan_lo`, `scan_hi`, `apex` and `npts` of the row are already set.
-pub(crate) fn fill_row(
-    f: &mut FileFeatures,
+pub(crate) fn row_quality(
+    f: &FileFeatures,
     i: usize,
     rt: &[f64],
     y: &[f64],
     win: (usize, usize, usize),
     floor: f64,
     q: &QParams,
-) {
+) -> RowQ {
     let (w0, wa, wb) = win;
     let nscan = rt.len();
     let (slo, shi) = (
         f.scan_lo[i] as usize,
         (f.scan_hi[i] as usize).min(nscan - 1),
     );
-    f.flags[i] &= !(FLAG_GOOD | FLAG_EDGE);
-    f.area_win[i] = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
+    let area_win = y[wa - w0..=wb - w0].iter().sum::<f64>() * f.dt;
     let (snr, shape, fwhm, asym, gaps) =
         measure(&rt[w0..w0 + y.len()], y, slo - w0, shi - w0, floor);
-    f.snr[i] = snr as f32;
-    f.shape[i] = shape as f32;
-    f.fwhm[i] = fwhm as f32;
-    f.asym[i] = asym as f32;
-    f.gaps[i] = gaps;
     let mut why = 0u8;
     if shape < q.min_shape {
         why |= Q_SHAPE;
@@ -197,13 +223,29 @@ pub(crate) fn fill_row(
     if f.npts[i] < q.min_points {
         why |= Q_POINTS;
     }
-    f.qreason[i] = why;
-    if why == 0 {
-        f.flags[i] |= FLAG_GOOD;
+    RowQ {
+        area_win,
+        snr: snr as f32,
+        shape: shape as f32,
+        fwhm: fwhm as f32,
+        asym: asym as f32,
+        gaps,
+        why,
+        edge: slo == 0 || shi == nscan - 1,
     }
-    if slo == 0 || shi == nscan - 1 {
-        f.flags[i] |= FLAG_EDGE;
-    }
+}
+
+/// `row_quality` written into row `i`.
+pub(crate) fn fill_row(
+    f: &mut FileFeatures,
+    i: usize,
+    rt: &[f64],
+    y: &[f64],
+    win: (usize, usize, usize),
+    floor: f64,
+    q: &QParams,
+) {
+    row_quality(f, i, rt, y, win, floor, q).apply(f, i);
 }
 
 /// Fill the quality columns of `f` (computed by `trace::detect` on the same section) from the peak table of `index`.
@@ -213,39 +255,102 @@ pub fn assess<R: ReadAt>(
     p: &Params,
     q: &QParams,
 ) -> Result<()> {
-    assess_with(index, f, p, q, |_, _, _, _, _| Ok(()))
+    assess_with(
+        index,
+        f,
+        p,
+        q,
+        |_, _, _, _, _, _, _: &mut ()| Ok(()),
+        |_, _| {},
+    )
 }
 
-/// `assess`, and after every row `hook(f, i, rt, y, w0)` sees the finished row and its trace `y` (scans `w0..`) while the peaks are in memory.
-pub(crate) fn assess_with<R: ReadAt>(
+/// Rows per unit of parallel work, and the fewest rows of a slab worth sharing between threads.
+const CHUNK_ROWS: usize = 64;
+
+/// One row to measure: the table positions `a..b` of its peaks in the slab and the scans `w0..=w1` of its trace, `wa..=wb` of the area window.
+struct Item {
+    i: usize,
+    a: usize,
+    b: usize,
+    win: (usize, usize, usize),
+    w1: usize,
+}
+
+/// `assess`, and for every row `hook(f, i, quality, rt, y, w0, out)` sees the row (its quality columns not yet written, the rest final)
+/// and its trace `y` (scans `w0..`) while the peaks are in memory. Rows are measured on spare cores in blocks; the qualities are written and
+/// the `out` of the blocks handed to `merge` in the order of the rows, so nothing depends on the number of threads.
+pub(crate) fn assess_with<R: ReadAt, T: Default + Send>(
     index: &mut Index<R>,
     f: &mut FileFeatures,
     p: &Params,
     q: &QParams,
-    mut hook: impl FnMut(&FileFeatures, usize, &[f64], &[f64], usize) -> Result<()>,
-) -> Result<()> {
+    hook: impl Fn(&FileFeatures, usize, &RowQ, &[f64], &[f64], usize, &mut T) -> Result<()> + Sync,
+    mut merge: impl FnMut(&mut T, T),
+) -> Result<T> {
+    let mut total = T::default();
     let Some(si) = index.section_of(1, p.polarity) else {
-        return Ok(());
+        return Ok(total);
     };
     let rt: Vec<f64> = index.arrays(si)?.rt.clone();
     let nscan = rt.len();
     let max_peaks = (p.budget / 24).clamp(1024, crate::trace::SLAB_PEAKS);
-    let mz = f.mz.clone();
-    let ranges = ppm_ranges(&mz, q.window_ppm);
-    windows(index, si, &ranges, max_peaks, |i, a, b, slab| {
-        let (slo, shi) = (
-            f.scan_lo[i] as usize,
-            (f.scan_hi[i] as usize).min(nscan - 1),
+    let ranges = ppm_ranges(&f.mz, q.window_ppm);
+    windows_by_slab(index, si, &ranges, max_peaks, |slab, hits| {
+        let items: Vec<Item> = hits
+            .iter()
+            .map(|&(i, a, b)| {
+                let (slo, shi) = (
+                    f.scan_lo[i] as usize,
+                    (f.scan_hi[i] as usize).min(nscan - 1),
+                );
+                let (wa, wb) =
+                    around_apex(&rt, (f.apex[i] as usize).min(nscan - 1), AREA_HALF_WINDOW);
+                let w0 = slo.min(wa).saturating_sub(q.pad);
+                let w1 = (shi.max(wb) + q.pad).min(nscan - 1);
+                Item {
+                    i,
+                    a,
+                    b,
+                    win: (w0, wa, wb),
+                    w1,
+                }
+            })
+            .collect();
+        if items
+            .iter()
+            .any(|t| Slab::bisects(t.w1 - t.win.0 + 1, t.a, t.b))
+        {
+            slab.prepare()?;
+        }
+        let table: &FileFeatures = f;
+        let blocks: Vec<&[Item]> = items.chunks(CHUNK_ROWS).collect();
+        let done = chunked(
+            blocks.len(),
+            || slab.cursor(),
+            |cur, k| -> Result<(Vec<RowQ>, T)> {
+                let mut out = T::default();
+                let mut rows = Vec::with_capacity(blocks[k].len());
+                for t in blocks[k] {
+                    let mut y = filled(t.w1 - t.win.0 + 1, 0.0f64)?;
+                    slab.add_trace_cur(cur, t.a, t.b, t.win.0, &mut y);
+                    let rq = row_quality(table, t.i, &rt, &y, t.win, p.floor, q);
+                    hook(table, t.i, &rq, &rt, &y, t.win.0, &mut out)?;
+                    rows.push(rq);
+                }
+                Ok((rows, out))
+            },
         );
-        let (wa, wb) = around_apex(&rt, (f.apex[i] as usize).min(nscan - 1), AREA_HALF_WINDOW);
-        let w0 = slo.min(wa).saturating_sub(q.pad);
-        let w1 = (shi.max(wb) + q.pad).min(nscan - 1);
-        let mut y = filled(w1 - w0 + 1, 0.0f64)?;
-        slab.add_trace(a, b, w0, &mut y)?;
-        fill_row(f, i, &rt, &y, (w0, wa, wb), p.floor, q);
-        hook(f, i, &rt, &y, w0)?;
+        for (block, res) in blocks.iter().zip(done) {
+            let (rows, out) = res?;
+            for (t, rq) in block.iter().zip(&rows) {
+                rq.apply(f, t.i);
+            }
+            merge(&mut total, out);
+        }
         Ok(())
-    })
+    })?;
+    Ok(total)
 }
 
 /// The row of an aligned table stays when at least one file has a good peak (`None` = the file has no peak in the row).
