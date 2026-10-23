@@ -765,8 +765,7 @@ function ctl(p) {
       if (p.type === "map" && k === "k" && follow(p.tab || E.tab)) {      // the map follows the file chosen in the bar: the menu chooses that file, like the bar does
         p.k = +x.value; activeFile(+x.value); return;
       }
-      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco");
-      if (k === "mode" && x.value !== "ovl" && p.fondo && p.fondo.mode === "none") p.fondo = { ...p.fondo, mode: "auto", w: p.fondo.w || 1, ib: null };      // stacked / waterfall read better without the background: switch the automatic one on (a mode chosen by hand is kept)
+      if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
       p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
       if (p.type === "spec" && k === "k") p.kSet = true;      // the file chosen in the menu stays until another choice or a click on a trace of the TIC
