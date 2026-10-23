@@ -51,6 +51,38 @@ fn add_writes_the_entry_once_and_the_library_is_the_one_of_the_route() {
 }
 
 #[test]
+fn an_entry_keeps_the_bond_breaks_of_its_graph_and_the_table_of_the_entry_shows_them() {
+    let d = dir("rotture");
+    let lib = d.join("lib.json");
+    let (l, f) = (lib.to_str().unwrap(), msn());
+    let o = run(&[
+        "msn-lib",
+        "add",
+        l,
+        f.to_str().unwrap(),
+        "--id",
+        "STD-1",
+        "--formula",
+        "C14H15N3O5+",
+        "--smiles",
+        "CCOC(=O)c1c[nH]c2ccccc12",
+        "--rotture",
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let v = mzlab_core::json::parse(&std::fs::read(&lib).unwrap()).unwrap();
+    let g = v.get("voci").unwrap().arr()[0].get("grafo").unwrap();
+    assert!(
+        g.get("rotture").is_some(),
+        "the entry holds the key rotture"
+    );
+    let csv = mzlab_core::msngrafo::table_text(g, "nodes", false);
+    assert!(csv.lines().next().unwrap().contains("bond_break"), "{csv}");
+    let e = run(&["msn-lib", "export", l, "--tutti"]);
+    assert_eq!(e.code, 0, "{}", e.stderr);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
 fn build_reads_a_manifest_and_export_gives_msp() {
     let d = dir("build");
     std::fs::copy(msn(), d.join("msn.mzML")).unwrap();
