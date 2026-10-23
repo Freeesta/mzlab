@@ -56,7 +56,7 @@ export async function draw(p) {
   p._a = { x0, x1, y0, y1, ymin: y0, ymax: y1, yfull, full, W, H, X, Y, f, uvd: { nm, y, rt: d.rt0, rt1: d.rt1, n: d.n },
     yinv: (/** @type {number} */ py) => y1 - (py - M.t) / ph * (y1 - y0),
     hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(w); return { px: X(nm[i]), html: `<b>${nm[i].toFixed(0)} nm</b><div>${y[i].toFixed(2)} mAU</div>` }; } };
-  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}</span><span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
+  p.leg.innerHTML = h`<span><i style="background:${f.color}"></i>${f.label}</span><span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = "";
   p.r0 = d.rt0; p.r1 = d.rt1;
 }
