@@ -15880,3 +15880,4 @@
 {"v":1,"ts_utc":"2026-10-23T15:05:09Z","tipo":"annullamento","k":"39975086316","workflow":"pages","minuti_runner":0.8,"sostituito_da":"dc8f24d3dc7bebe49b39522350488e1243b182d4","pr":null,"sha":"ecc39c5667ddfdebcf44b669933a84d1547579a3","run_id":39975086316,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T15:09:22Z","azione":"aperta","tipo":"pr","pr":1625,"sha":"e789e2328db08e8794799245229ecb88d7ff9831"}
 {"v":1,"ts_utc":"2026-10-23T15:09:48Z","azione":"aperta","tipo":"pr","pr":1626,"sha":"6d9cd6c7bcb3cba4215aa957f02ef278206fadfd"}
+{"v":1,"ts_utc":"2026-10-23T15:10:44Z","azione":"aperta","tipo":"pr","pr":1627,"sha":"309329a1f3d421669abfa776345cf1536399c2c8"}
