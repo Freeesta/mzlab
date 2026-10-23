@@ -54,6 +54,17 @@ fn the_svg_of_both_views_is_the_golden_one() {
             &(testi(&g2, v).unwrap().join("\n") + "\n"),
         );
     }
+    // the 80-ion graph (many ions with two precursors): the texts of both views
+    let g80 = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests_e2e/fixtures/msngrafo_80.json"),
+    )
+    .unwrap();
+    for (v, n) in [(Vista::Albero, "albero"), (Vista::Radiale, "radiale")] {
+        golden(
+            &format!("g80-testi-{n}.txt"),
+            &(testi(&g80, v).unwrap().join("\n") + "\n"),
+        );
+    }
     let s = svg(&g2, Vista::Albero).unwrap();
     assert!(
         s.contains("+2 more")

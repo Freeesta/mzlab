@@ -39,8 +39,9 @@ const ruleLabel = (j, a) => {
   return ids.slice(0, 2).join(", ") + (ids.length > 2 ? ` +${ids.length - 2}` : "");
 };
 
-for (const [name, mode, file] of [["g", "tree", "testi-albero.txt"], ["g", "radial", "testi-radiale.txt"], ["g2", "tree", "g2-testi-albero.txt"], ["g2", "radial", "g2-testi-radiale.txt"]]) {
-  const j = JSON.parse(fs.readFileSync(path.join(dir, name + ".json"), "utf8"));
+for (const [name, mode, file] of [["g", "tree", "testi-albero.txt"], ["g", "radial", "testi-radiale.txt"], ["g2", "tree", "g2-testi-albero.txt"], ["g2", "radial", "g2-testi-radiale.txt"],
+  ["g80", "tree", "g80-testi-albero.txt"], ["g80", "radial", "g80-testi-radiale.txt"]]) {
+  const j = JSON.parse(fs.readFileSync(name === "g80" ? path.resolve(__dirname, "../tests_e2e/fixtures/msngrafo_80.json") : path.join(dir, name + ".json"), "utf8"));
   const host = new El("div");
   const { svg } = mk.drawVista(host, j, { onSelect() {}, onOpen() {} }, { t, mode, proveText: p => PROVE[p], ruleLabel: a => ruleLabel(j, a) });
   const lines = [];
