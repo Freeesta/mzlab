@@ -51,6 +51,7 @@ fn run(y: &[f64]) -> Found {
     look(
         &f,
         0,
+        f.shape[0],
         &rt,
         y,
         0,

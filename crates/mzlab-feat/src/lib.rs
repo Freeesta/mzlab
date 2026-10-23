@@ -73,6 +73,7 @@ pub mod store;
 mod store_read;
 pub mod suspects;
 mod sweep;
+mod chunked;
 pub mod table;
 pub mod plausible;
 pub mod tabcheck;

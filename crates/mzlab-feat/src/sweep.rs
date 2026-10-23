@@ -7,7 +7,7 @@ use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::trace::{filled, reserve};
-use std::cell::{OnceCell, RefCell};
+use std::sync::{Mutex, OnceLock};
 
 /// Peaks of a slab: m/z, intensity and position of the scan (in the section), in table order.
 #[derive(Default)]
@@ -15,7 +15,9 @@ pub(crate) struct Slab {
     pub(crate) mz: Vec<f64>,
     pub(crate) it: Vec<f64>,
     pub(crate) pos: Vec<u32>,
-    by_scan: OnceCell<ByScan>,
+    by_scan: OnceLock<ByScan>,
+    /// Cursors of `add_trace` (the single-thread path); parallel callers keep their own (`add_trace_cur`).
+    cur: Mutex<Vec<u32>>,
 }
 
 /// The peaks of a slab grouped by scan, each scan in table order: `orig` is the table position, so the peaks of a window `a..b` of a scan are
@@ -24,8 +26,6 @@ struct ByScan {
     start: Vec<u32>,
     orig: Vec<u32>,
     it: Vec<f64>,
-    /// Per scan, where the last window began: windows come in ascending order of m/z, so the next one starts at or after it.
-    cur: RefCell<Vec<u32>>,
 }
 
 impl ByScan {
@@ -47,20 +47,14 @@ impl ByScan {
             y[at] = it[i];
             next[s as usize] += 1;
         }
-        let cur = RefCell::new(start[..nscan].to_vec());
-        Ok(ByScan {
-            start,
-            orig,
-            it: y,
-            cur,
-        })
+        Ok(ByScan { start, orig, it: y })
     }
 }
 
-/// The bisection path of `Slab::add_trace`: per scan, the peaks of the table positions `a..b`, found from the cursor of the last window.
-fn bisect_into(g: &ByScan, a: usize, b: usize, w0: usize, y: &mut [f64]) {
+/// The bisection path of `Slab::add_trace`: per scan, the peaks of the table positions `a..b`, found from the cursor `cur` (per scan, where
+/// the last window began: windows come in ascending order of m/z, so the next one starts at or after it).
+fn bisect_into(g: &ByScan, cur: &mut [u32], a: usize, b: usize, w0: usize, y: &mut [f64]) {
     let w1 = w0 + y.len();
-    let mut cur = g.cur.borrow_mut();
     for s in w0..w1.min(cur.len()) {
         let (from, to) = (g.start[s] as usize, g.start[s + 1] as usize);
         let below = |o: &u32| (*o as usize) < a;
@@ -87,6 +81,9 @@ fn bisect_into(g: &ByScan, a: usize, b: usize, w0: usize, y: &mut [f64]) {
     }
 }
 
+/// Looking up the window in one scan costs about this many peaks of the plain walk.
+const BISECT_COST: usize = 4;
+
 /// The walking path of `Slab::add_trace`.
 fn walk_into(pos: &[u32], it: &[f64], w0: usize, y: &mut [f64]) {
     let len = y.len();
@@ -98,15 +95,12 @@ fn walk_into(pos: &[u32], it: &[f64], w0: usize, y: &mut [f64]) {
     }
 }
 
-/// Looking up the window in one scan costs about this many peaks of the plain walk.
-const BISECT_COST: usize = 4;
-
 impl Slab {
     fn load<R: ReadAt>(&mut self, index: &mut Index<R>, si: usize, a: u64, b: u64) -> Result<()> {
         self.mz.clear();
         self.it.clear();
         self.pos.clear();
-        self.by_scan = OnceCell::new();
+        self.by_scan = OnceLock::new();
         let n = (b - a) as usize;
         reserve(&mut self.mz, n)?;
         reserve(&mut self.it, n)?;
@@ -117,26 +111,6 @@ impl Slab {
             it.push(y);
             pos.push(p as u32);
         })
-    }
-}
-
-impl Slab {
-    /// Adds to `y[s - w0]` the intensity of the peaks of the table positions `a..b` that lie in scan `s`, for the scans `w0..w0 + y.len()`, in table
-    /// order: the sums are the ones of walking `a..b`, found by the shorter of the two ways.
-    pub(crate) fn add_trace(&self, a: usize, b: usize, w0: usize, y: &mut [f64]) -> Result<()> {
-        if y.len().saturating_mul(BISECT_COST) >= b - a {
-            walk_into(&self.pos[a..b], &self.it[a..b], w0, y);
-            return Ok(());
-        }
-        if self.by_scan.get().is_none() {
-            let built = ByScan::new(&self.pos, &self.it)?;
-            let _ = self.by_scan.set(built);
-        }
-        let Some(g) = self.by_scan.get() else {
-            return Ok(());
-        };
-        bisect_into(g, a, b, w0, y);
-        Ok(())
     }
 }
 
@@ -155,6 +129,67 @@ pub(crate) fn ppm_ranges(centres: &[f64], tol: f64) -> Vec<(f64, f64)> {
         .collect()
 }
 
+impl Slab {
+    /// The peaks of the slab by scan, built on first use (callers that share the slab between threads call `prepare` first).
+    fn scans(&self) -> Result<&ByScan> {
+        if let Some(g) = self.by_scan.get() {
+            return Ok(g);
+        }
+        let built = ByScan::new(&self.pos, &self.it)?;
+        let mut cur = self.cur.lock().unwrap_or_else(|e| e.into_inner());
+        cur.clear();
+        cur.extend_from_slice(&built.start[..built.start.len() - 1]);
+        Ok(self.by_scan.get_or_init(|| built))
+    }
+
+    /// Adds to `y[s - w0]` the intensity of the peaks of the table positions `a..b` that lie in scan `s`, for the scans `w0..w0 + y.len()`, in table
+    /// order: the sums are the ones of walking `a..b`, found by the shorter of the two ways.
+    pub(crate) fn add_trace(&self, a: usize, b: usize, w0: usize, y: &mut [f64]) -> Result<()> {
+        if y.len().saturating_mul(BISECT_COST) >= b - a {
+            walk_into(&self.pos[a..b], &self.it[a..b], w0, y);
+            return Ok(());
+        }
+        let g = self.scans()?;
+        let mut cur = self.cur.lock().unwrap_or_else(|e| e.into_inner());
+        bisect_into(g, &mut cur, a, b, w0, y);
+        Ok(())
+    }
+
+    /// Builds the by-scan view now, so that `add_trace_cur` can run on several threads.
+    pub(crate) fn prepare(&self) -> Result<()> {
+        self.scans().map(|_| ())
+    }
+
+    /// A fresh cursor for `add_trace_cur` (empty until the slab is prepared).
+    pub(crate) fn cursor(&self) -> Vec<u32> {
+        self.by_scan
+            .get()
+            .map_or_else(Vec::new, |g| g.start[..g.start.len() - 1].to_vec())
+    }
+
+    /// `add_trace` for a thread with its own `cur` from `cursor`: the same sums; the bisection path needs a prepared slab.
+    pub(crate) fn add_trace_cur(
+        &self,
+        cur: &mut [u32],
+        a: usize,
+        b: usize,
+        w0: usize,
+        y: &mut [f64],
+    ) {
+        match self.by_scan.get() {
+            Some(g) if y.len().saturating_mul(BISECT_COST) < b - a => {
+                bisect_into(g, cur, a, b, w0, y)
+            }
+            _ => walk_into(&self.pos[a..b], &self.it[a..b], w0, y),
+        }
+    }
+
+    /// Whether the trace of the scans `w0..w1` over the table positions `a..b` is served by bisection.
+    pub(crate) fn bisects(len: usize, a: usize, b: usize) -> bool {
+        len.saturating_mul(BISECT_COST) < b - a
+    }
+}
+
 /// `f(i, lo..hi, slab)` for every range `i` (ascending by lower bound): the peaks `lo..hi` of the slab lie inside `ranges[i]`.
 pub(crate) fn windows<R: ReadAt>(
     index: &mut Index<R>,
@@ -163,11 +198,26 @@ pub(crate) fn windows<R: ReadAt>(
     max_peaks: usize,
     mut f: impl FnMut(usize, usize, usize, &Slab) -> Result<()>,
 ) -> Result<()> {
+    windows_by_slab(index, si, ranges, max_peaks, |slab, hits| {
+        hits.iter().try_for_each(|&(j, x, y)| f(j, x, y, slab))
+    })
+}
+
+/// `f(slab, hits)` for every slab, with `hits` = `(i, lo, hi)` of the ranges the slab serves, in order: the same windows as `windows`,
+/// handed over together so that the caller can work on them in parallel.
+pub(crate) fn windows_by_slab<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    ranges: &[(f64, f64)],
+    max_peaks: usize,
+    mut f: impl FnMut(&Slab, &[(usize, usize, usize)]) -> Result<()>,
+) -> Result<()> {
     let n_peaks = index.sections[si].n_peaks;
     // a high-resolution survey stores f32: the bounds are compared in f32, as the index search does
     let f4 = index.sections[si].f4;
     let cast = |v: f64| if f4 { v as f32 as f64 } else { v };
     let mut slab = Slab::default();
+    let mut hits: Vec<(usize, usize, usize)> = Vec::new();
     let mut i = 0;
     while i < ranges.len() {
         let a = index.search(si, ranges[i].0, false)?;
@@ -178,14 +228,47 @@ pub(crate) fn windows<R: ReadAt>(
         let last = slab.mz.last().copied().unwrap_or(f64::MAX);
         let more = b < n_peaks;
         let mut j = i;
+        hits.clear();
         while j < ranges.len() && (j == i || !more || ranges[j].1 < last) {
             let (lo, hi) = (cast(ranges[j].0), cast(ranges[j].1));
             let x = slab.mz.partition_point(|&m| m < lo);
             let y = slab.mz.partition_point(|&m| m <= hi);
-            f(j, x, y, &slab)?;
+            hits.push((j, x, y));
             j += 1;
         }
+        f(&slab, &hits)?;
         i = j;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn own_cursor_gives_the_sums_of_the_shared_one() {
+        let mut slab = Slab::default();
+        for s in 0..40u32 {
+            for k in 0..30u32 {
+                slab.mz.push(100.0 + k as f64);
+                slab.it.push((s * 31 + k) as f64);
+                slab.pos.push(s);
+            }
+        }
+        // table order is by m/z: sort the 1200 peaks the way the index stores them
+        let mut ord: Vec<usize> = (0..slab.mz.len()).collect();
+        ord.sort_by(|&a, &b| slab.mz[a].total_cmp(&slab.mz[b]).then(a.cmp(&b)));
+        slab.it = ord.iter().map(|&i| slab.it[i]).collect();
+        slab.pos = ord.iter().map(|&i| slab.pos[i]).collect();
+        slab.mz = ord.iter().map(|&i| slab.mz[i]).collect();
+        slab.prepare().unwrap();
+        let mut cur = slab.cursor();
+        for (a, b) in [(0, 400), (390, 800), (700, 1200), (10, 80)] {
+            let (mut y1, mut y2) = (vec![0.0; 12], vec![0.0; 12]);
+            slab.add_trace(a, b, 5, &mut y1).unwrap();
+            slab.add_trace_cur(&mut cur, a, b, 5, &mut y2);
+            assert_eq!(y1, y2);
+        }
+    }
 }

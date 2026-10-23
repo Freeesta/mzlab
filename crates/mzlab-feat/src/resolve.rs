@@ -14,7 +14,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::peakq::{detect_prominence, ProminenceParams};
 
 use crate::ms2::Ms2Links;
-use crate::quality::{around_apex, assess_with, fill_row, QParams, AREA_HALF_WINDOW};
+use crate::quality::{around_apex, assess_with, fill_row, QParams, RowQ, AREA_HALF_WINDOW};
 use crate::table::{FileFeatures, FLAG_MIXTURE, FLAG_RESOLVED};
 use crate::trace::{filled, Params};
 
@@ -102,6 +102,7 @@ struct Found {
 fn look(
     f: &FileFeatures,
     i: usize,
+    shape: f32,
     rt: &[f64],
     y: &[f64],
     w0: usize,
@@ -115,7 +116,7 @@ fn look(
         (f.scan_hi[i] as usize).min(rt.len() - 1),
     );
     if f.npts[i] < 2 * p.min_points as u16
-        || !(f.scan_hi[i] - f.scan_lo[i] + 1 > p.long_trace || (f.shape[i] as f64) < rp.max_shape)
+        || !(f.scan_hi[i] - f.scan_lo[i] + 1 > p.long_trace || (shape as f64) < rp.max_shape)
     {
         return Ok(());
     }
@@ -219,10 +220,19 @@ pub fn assess_and_resolve<R: ReadAt>(
     q: &QParams,
     rp: &ResolveParams,
 ) -> Result<Resolved> {
-    let mut found = Found::default();
-    assess_with(index, f, p, q, |f, i, rt, y, w0| {
-        look(f, i, rt, y, w0, p, q, rp, &mut found)
-    })?;
+    let found = assess_with(
+        index,
+        f,
+        p,
+        q,
+        |f, i, rq: &RowQ, rt, y, w0, out: &mut Found| {
+            look(f, i, rq.shape, rt, y, w0, p, q, rp, out)
+        },
+        |all, part| {
+            all.pieces.extend(part.pieces);
+            all.multi.extend(part.multi);
+        },
+    )?;
     let mut out = Resolved::default();
     let Some(si) = index.section_of(1, p.polarity) else {
         return Ok(out);
