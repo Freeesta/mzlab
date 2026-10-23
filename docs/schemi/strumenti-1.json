@@ -44,6 +44,7 @@
           "table.kmd",
           "table.match",
           "table.pca",
+          "table.plausible",
           "table.stats",
           "tp.dig_lr",
           "tp.filter",
@@ -102,6 +103,7 @@
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
+              "table.plausible@1",
               "table.stats@1",
               "tp.dig_lr@1",
               "tp.filter@2",
@@ -194,6 +196,7 @@
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
+              "table.plausible@1",
               "table.stats@1",
               "tp.dig_lr@1",
               "tp.filter@2",
@@ -1725,6 +1728,47 @@
           },
           {
             "properties":{
+              "step":{"const":"table.plausible@1"},
+              "name":{"enum":["mz_min","mz_max","rt_max","width_max","ppm_max","mz_tol_da"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":20,
+                    "description":"A row below it is flagged: no LC-MS run reads there"
+                  },
+                  {"type":"number","minimum":0,"default":5000,"description":"A row above it is flagged"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":600,
+                    "description":"A row with an RT outside 0 and this value is flagged: check the unit of the times"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"A detected peak wider than this, or with no width or apex, is flagged"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":50,
+                    "description":"A row whose m/z is further than this from its neutral mass plus adduct is flagged; read only in a high-resolution table"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"0.1 Da or more is unit resolution and the ppm error is not read; without a value the recipe stored in the table decides"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"table.stats@1"},
               "name":{"enum":["pseudocount","floor"]},
               "value":{
@@ -2099,6 +2143,7 @@
                 "table.kmd@1",
                 "table.match@1",
                 "table.pca@1",
+                "table.plausible@1",
                 "table.stats@1",
                 "tp.dig_lr@1",
                 "tp.filter@2",

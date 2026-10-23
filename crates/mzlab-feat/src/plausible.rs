@@ -3,6 +3,7 @@
 //! lists up to 20 of them; numbers only, nothing says what a row is. Used by the quality-control step of Tabui (page and app).
 
 use mzlab_core::elements;
+use mzlab_core::error::Result;
 use mzlab_core::json::Out;
 
 use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
@@ -10,17 +11,70 @@ use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
 pub const SCHEMA: &str = "plausible/1";
 /// Example rows listed by a check.
 pub const ROWS_CAP: usize = 20;
-/// Lowest and highest m/z of any LC-MS run; outside this band a value is a unit or parsing mistake.
-pub const MZ_MIN: f64 = 20.0;
-pub const MZ_MAX: f64 = 5000.0;
-/// Longest run, minutes (10 h).
-pub const RT_MAX: f64 = 600.0;
-/// A detected peak wider than this (minutes) is a baseline, not a peak.
-pub const WIDTH_MAX: f64 = 30.0;
-/// Largest |ppm| between the m/z of a row and the neutral mass plus adduct it carries, in a high-resolution table.
-pub const PPM_MAX: f64 = 50.0;
 /// Alignment tolerance, Da, from which the table is unit resolution and a ppm error means nothing.
-const UNIT_TOL_DA: f64 = 0.1;
+pub const UNIT_TOL_DA: f64 = 0.1;
+
+/// What the checks read against. The defaults are the bounds of any real LC-MS run; `mz_tol_da` is the tolerance of the alignment (0.005 in HR, 0.3 at
+/// unit resolution), which decides whether the ppm error can be read at all; without it the recipe of the table decides.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Limits {
+    /// Lowest and highest m/z; outside this band a value is a unit or parsing mistake.
+    pub mz_min: f64,
+    pub mz_max: f64,
+    /// Longest run, minutes (10 h).
+    pub rt_max: f64,
+    /// A detected peak wider than this (minutes) is a baseline, not a peak.
+    pub width_max: f64,
+    /// Largest |ppm| between the m/z of a row and the neutral mass plus the adduct it carries, in a high-resolution table.
+    pub ppm_max: f64,
+    /// Tolerance of the alignment when the caller knows it; `None` reads the resolution from the recipe stored in the table (`recipe::is_unit_text`).
+    pub mz_tol_da: Option<f64>,
+}
+
+impl Default for Limits {
+    fn default() -> Limits {
+        Limits {
+            mz_min: 20.0,
+            mz_max: 5000.0,
+            rt_max: 600.0,
+            width_max: 30.0,
+            ppm_max: 50.0,
+            mz_tol_da: None,
+        }
+    }
+}
+
+impl Limits {
+    /// The limits of an options object `{"mz_tol_da","mz_min","mz_max","rt_max","width_max","ppm_max"}`; a missing, non-finite or non-positive key keeps the default,
+    /// and an empty text is all the defaults.
+    pub fn from_json(text: &str) -> Result<Limits> {
+        let mut l = Limits::default();
+        if text.trim().is_empty() {
+            return Ok(l);
+        }
+        let j = mzlab_core::json::parse(text.as_bytes())?;
+        for (key, slot) in [
+            ("mz_min", &mut l.mz_min),
+            ("mz_max", &mut l.mz_max),
+            ("rt_max", &mut l.rt_max),
+            ("width_max", &mut l.width_max),
+            ("ppm_max", &mut l.ppm_max),
+        ] {
+            if let Some(v) = j
+                .get(key)
+                .and_then(|x| x.f64())
+                .filter(|v| v.is_finite() && *v > 0.0)
+            {
+                *slot = v;
+            }
+        }
+        l.mz_tol_da = j
+            .get("mz_tol_da")
+            .and_then(|x| x.f64())
+            .filter(|v| v.is_finite() && *v > 0.0);
+        Ok(l)
+    }
+}
 
 /// IDs of the checks in the order of the text.
 pub const IDS: [&str; 7] = [
@@ -69,16 +123,16 @@ fn bad_value(v: f64) -> bool {
     !v.is_finite()
 }
 
-/// The checks of `t`; `mz_tol_da` is the tolerance of the alignment (0.005 in HR, 0.3 at unit resolution).
-fn checks(t: &Aligned, mz_tol_da: f64) -> Vec<Check> {
+/// The checks of `t` read against `l`.
+fn checks(t: &Aligned, unit: bool, l: &Limits) -> Vec<Check> {
     let mut non_finite = Check::new("non_finite", true, &[]);
-    let mut mz_range = Check::new("mz_range", true, &[MZ_MIN, MZ_MAX]);
-    let mut rt_range = Check::new("rt_range", true, &[0.0, RT_MAX]);
+    let mut mz_range = Check::new("mz_range", true, &[l.mz_min, l.mz_max]);
+    let mut rt_range = Check::new("rt_range", true, &[0.0, l.rt_max]);
     let mut negative = Check::new("negative", true, &[0.0]);
-    let mut peak_shape = Check::new("peak_shape", true, &[0.0, WIDTH_MAX]);
+    let mut peak_shape = Check::new("peak_shape", true, &[0.0, l.width_max]);
     let mut empty_rows = Check::new("empty_rows", false, &[]);
-    let mut ppm_error = Check::new("ppm_error", true, &[PPM_MAX]);
-    let hr = mz_tol_da < UNIT_TOL_DA;
+    let mut ppm_error = Check::new("ppm_error", true, &[l.ppm_max]);
+    let hr = l.mz_tol_da.map_or(!unit, |tol| tol < UNIT_TOL_DA);
     if !hr {
         ppm_error.missing = "accurate_mass";
     } else if t.ident.is_empty() {
@@ -104,7 +158,8 @@ fn checks(t: &Aligned, mz_tol_da: f64) -> Vec<Check> {
             if t.state[c] == CELL_DETECTED {
                 let w = f64::from(t.width[c]);
                 // a detected peak always has an apex and a width
-                if bad_value(w) || bad_value(f64::from(t.apex_rt[c])) || w <= 0.0 || w > WIDTH_MAX {
+                if bad_value(w) || bad_value(f64::from(t.apex_rt[c])) || w <= 0.0 || w > l.width_max
+                {
                     shape = true;
                 }
             }
@@ -112,10 +167,10 @@ fn checks(t: &Aligned, mz_tol_da: f64) -> Vec<Check> {
         if !finite {
             non_finite.hit(t, row);
         }
-        if finite && !(MZ_MIN..=MZ_MAX).contains(&mz) {
+        if finite && !(l.mz_min..=l.mz_max).contains(&mz) {
             mz_range.hit(t, row);
         }
-        if finite && !(0.0..=RT_MAX).contains(&rt) {
+        if finite && !(0.0..=l.rt_max).contains(&rt) {
             rt_range.hit(t, row);
         }
         if neg {
@@ -129,7 +184,7 @@ fn checks(t: &Aligned, mz_tol_da: f64) -> Vec<Check> {
         }
         if ppm_error.missing.is_empty() && finite && t.ident.ion[row] > 0 {
             let theory = t.ident.neutral[row] + shifts[usize::from(t.ident.ion[row]) - 1].1;
-            if theory > 0.0 && ((mz - theory) / theory * 1e6).abs() > PPM_MAX {
+            if theory > 0.0 && ((mz - theory) / theory * 1e6).abs() > l.ppm_max {
                 ppm_error.hit(t, row);
             }
         }
@@ -139,9 +194,9 @@ fn checks(t: &Aligned, mz_tol_da: f64) -> Vec<Check> {
     ]
 }
 
-/// The `plausible/1` text of `t`. Same table and tolerance, same bytes.
-pub fn to_json(t: &Aligned, mz_tol_da: f64) -> String {
-    let list = checks(t, mz_tol_da);
+/// The `plausible/1` text of `t` read against `l`; `unit` = the recipe of the table is the unit-resolution one. Same table and limits, same bytes.
+pub fn to_json(t: &Aligned, unit: bool, l: &Limits) -> String {
+    let list = checks(t, unit, l);
     let flag = |c: &Check| {
         if c.rows == 0 {
             "ok"

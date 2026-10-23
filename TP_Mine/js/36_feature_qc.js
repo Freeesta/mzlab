@@ -92,7 +92,7 @@
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       row: (/** @type {number} */ id) => JSON.parse(run(() => m.table_row(read, size, samples, id))),
-      plausible: () => JSON.parse(run(() => m.table_plausible(read, size, a.mzTolDa ?? 0.005))),
+      plausible: () => JSON.parse(run(() => m.table_plausible(read, size, plausibleOptions(a)))),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => run(() => m.export_table(read, size, samples, spec, sha, a.pol, kind)),
@@ -118,7 +118,7 @@
       rows: async (/** @type {string} */ spec) => JSON.parse(await V("export", spec, { export_kind: "xlsx_rows" })).hojas[0].filas,
       report: async (/** @type {string} */ spec) => JSON.parse(await V("report", spec)),
       row: async (/** @type {number} */ id) => JSON.parse(await V("row", "", { id })),
-      plausible: async () => JSON.parse(await V("plausible", "", { mz_tol_da: a.mzTolDa ?? 0.005 })),
+      plausible: async () => JSON.parse(await V("plausible", "", { options: plausibleOptions(a) })),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
       file: (/** @type {string} */ spec, /** @type {string} */ kind) => V("export", spec, { export_kind: kind }),
@@ -131,6 +131,8 @@
   const fmt = (/** @type {any} */ v) => (v == null ? "" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : String(+Number(v).toPrecision(4)));
   /** the reason of each rule of the filters, in words (the number of rows is the engine's) */
   const WHY = /** @type {Record<string, string>} */ ({ min_rilevati: "detected in too few files", min_area: "area below the minimum", min_altezza: "height below the minimum", bianco: "not above the blank", mz: "m/z out of range", rt: "RT out of range", ms2: "no MS2", qc_cv_max: "QC CV above the maximum" });
+  /** the options text of the plausibility check: empty keeps the limits of the engine, which reads the resolution from the recipe stored in the table (unit resolution: no ppm error); `a.plausibleLimits` and `a.mzTolDa` (0.1 Da or more is unit resolution) override it */
+  const plausibleOptions = (/** @type {any} */ a) => JSON.stringify({ ...(a.plausibleLimits || {}), ...(a.mzTolDa > 0 ? { mz_tol_da: a.mzTolDa } : {}) });
   /** the sentence of each check of `plausible/1` for the rows it flags (the count and the rows are the engine's; `lim` = its limits) */
   const PLAUSIBLE = /** @type {Record<string, (lim: number[]) => string>} */ ({
     non_finite: () => "a value that is not a number (NaN or infinite) in m/z, RT, area or height",

@@ -1,7 +1,7 @@
 //! `plausible/1`: a clean table flags nothing; each broken value is flagged by its own check and by that one only.
 
 use mzlab_core::json::{parse, Value};
-use mzlab_feat::plausible::{self, IDS};
+use mzlab_feat::plausible::{self, Limits, IDS};
 use mzlab_feat::table::{Aligned, CELL_ABSENT, CELL_DETECTED};
 
 /// Rows `(mz, rt)` with two files; every cell is a detected peak of area 1000 and width 0.1 min.
@@ -23,7 +23,14 @@ fn table(rows: &[(f64, f64)]) -> Aligned {
 
 /// Count and flag of a check in the text.
 fn read(t: &Aligned, tol: f64) -> Vec<(String, i64, String)> {
-    let text = plausible::to_json(t, tol);
+    let text = plausible::to_json(
+        t,
+        false,
+        &Limits {
+            mz_tol_da: Some(tol),
+            ..Limits::default()
+        },
+    );
     let j = parse(text.as_bytes()).expect("json");
     assert_eq!(j.get("schema").and_then(Value::str), Some("plausible/1"));
     let list = j.get("checks").map(|c| c.arr()).expect("checks");
@@ -120,5 +127,67 @@ fn ppm_error_is_read_only_with_identity_and_accurate_mass() {
 #[test]
 fn same_table_same_bytes() {
     let t = table(&[(200.1, 5.0)]);
-    assert_eq!(plausible::to_json(&t, 0.005), plausible::to_json(&t, 0.005));
+    let l = Limits::default();
+    assert_eq!(
+        plausible::to_json(&t, false, &l),
+        plausible::to_json(&t, false, &l)
+    );
+}
+
+#[test]
+fn limits_come_from_the_options_text() {
+    let l = Limits::from_json(r#"{"mz_min":100,"mz_max":400,"rt_max":10,"width_max":1,"ppm_max":5,"mz_tol_da":0.3,"bad":1}"#).unwrap();
+    assert_eq!(
+        (
+            l.mz_min,
+            l.mz_max,
+            l.rt_max,
+            l.width_max,
+            l.ppm_max,
+            l.mz_tol_da.unwrap()
+        ),
+        (100.0, 400.0, 10.0, 1.0, 5.0, 0.3)
+    );
+    assert_eq!(Limits::from_json("").unwrap(), Limits::default());
+    // a key that is zero, negative or not a number keeps the default
+    assert_eq!(
+        Limits::from_json(r#"{"mz_max":0,"rt_max":-1,"ppm_max":"x"}"#).unwrap(),
+        Limits::default()
+    );
+    // a narrower band flags what the default accepts
+    let t = table(&[(200.1, 5.0), (900.0, 6.0)]);
+    let json = plausible::to_json(
+        &t,
+        false,
+        &Limits {
+            mz_max: 400.0,
+            ..Limits::default()
+        },
+    );
+    assert!(
+        json.contains("\"id\":\"mz_range\",\"flag\":\"warn\",\"count\":1,\"limit\":[20,400]"),
+        "{json}"
+    );
+}
+
+#[test]
+fn the_recipe_of_the_table_decides_the_resolution_when_no_tolerance_is_given() {
+    let mut t = table(&[(200.1, 5.0)]);
+    t.ident.neutral = vec![200.1];
+    t.ident.ion = vec![1];
+    t.ident.src = vec![1];
+    let skipped = |unit: bool, tol: Option<f64>| {
+        let j = plausible::to_json(
+            &t,
+            unit,
+            &Limits {
+                mz_tol_da: tol,
+                ..Limits::default()
+            },
+        );
+        j.contains("\"id\":\"ppm_error\",\"flag\":\"na\"")
+    };
+    assert!(!skipped(false, None) && skipped(true, None));
+    // an explicit tolerance wins over the recipe
+    assert!(skipped(false, Some(0.3)) && !skipped(true, Some(0.005)));
 }
