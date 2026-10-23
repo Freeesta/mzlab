@@ -12,7 +12,7 @@ Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro
 
 ## Riga `scan` (una per scansione)
 - `n` (numero di scansione del file), `rt`, `level`, `polarity` (`+` o `-`), `analyzer` (ITMS, TQMS, SQMS, TOFMS, FTMS, Sector), `mode` (`profile` o `centroid`), `filter` (stringa del filtro Thermo), `scan_type` (full, zoom, sim, srm, crm, q1, q3), `segment`, `event` (come nell'indice delle scansioni), `master` (numero della scansione da cui è scelto il precursore), `tic`, `bp_mz`, `bp_int`, `mz_low`, `mz_high`, `n_peaks`.
-- `reactions[]`, una voce per reazione, in ordine: `precursor` (centro d'isolamento), `iso_width`, `iso_offset`, `activation` (CID, HCD, ETD, EThcD, UVPD, ...), `energy`, `energy_unit` (`NCE` o `eV`, omessa se il file non la dice), `multiple` (booleano), `supplemental` (energia supplementare). Vuota nelle MS1.
+- `reactions[]`, una voce per reazione, in ordine: `precursor` (centro d'isolamento), `iso_width`, `iso_offset`, `activation` (CID, HCD, ETD, EThcD, UVPD, ...), `energy`, `energy_unit` (`NCE` o `eV`, omessa se il file non la dice), `multiple` (booleano), `supplemental` (energia supplementare). Vuota nelle MS1. Nelle scansioni SRM l'attivazione è `Any`, come la dà RFR.
 - `sps_precursors[]` (m/z dei precursori SPS-MS3), `faims_cv`.
 - `trailer`: oggetto etichetta → valore come testo; etichette senza i due punti finali, nell'ordine del file.
 - Con `--downstream` (solo nostro) l'oggetto `down`: `filter` (filtro come esce dall'indice del lettore), `mzml` (`precursors[]` letti dall'mzML scritto: `spectrum_ref`, `selected_mz`, `iso_target`, `iso_lower`, `iso_upper`, `charge`, `activation[]`, `energy{name,value}`), `rawfilter` (`spectrum_ref` del primo precursore dopo `MzmlFilter`), `mzidx` (`level`, `precursor`, `rt`: la riga della tabella del `.mzidx`), `msngraph` (`node`, `level`, `chain[]` di `mz`, `activation`, `energy`: il nodo d'ingresso di `msngrafo/1`).
@@ -29,6 +29,7 @@ Oracolo RFR (RawFileReader di Thermo, solo sul Mac, mai nel repository) e nostro
 
 ## Soglie del confronto (F.2)
 RT 1e-4 min; m/z 0,5 ppm (`--tol hr`) o 1e-3 Da (`--tol lr`); intensità 1e-5 relativo; testo uguale dopo normalizzazione (spazi, maiuscole, due punti finali delle etichette). Un campo presente solo in B (nostro) è `extra`, non un errore. Le righe che non sono scansioni (`sequence`, `asinfo`, `error`, `status`, `tune`) si confrontano chiave per chiave come il trailer (`<tipo>.<chiave>`; `status` per istante campionato).
+La reazione che RFR dà alle MS1 Q Exactive (precursore = centro del range, isolamento = ampiezza del range, HCD, energia 0) non è un precursore: il comparatore la omette da entrambi i lati (`reactions_of`).
 
 ## Comandi
 ```

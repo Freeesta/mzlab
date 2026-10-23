@@ -1,4 +1,4 @@
-"""The text of the «Report a bug» dialog (mzlab/web/bug-report-testo.js, run by node): no file name or label in the diagnostics, errors cut to one line, the link of the new issue
+"""The text of the «Report a bug» group of the settings (mzlab/web/bug-report-testo.js, run by node): no file name or label in the diagnostics, errors cut to one line, the link of the new issue
 (form bug.yml, label bug, at most 6000 characters), the translation keys."""
 import json
 import shutil
@@ -29,9 +29,10 @@ def test_riassunto_file_senza_nomi():
 
 
 def test_rapporto_e_diagnostica():
-    out = nodo("(()=>{const d=B.righeDiagnostica({version:'1.0.0',commit:'abc',date:'D',ua:'UA',mode:'web',view:'data (#/data)',files:'0',sw:'none',errors:[]});return B.rapporto({what:'boom',expected:'',diag:d},k=>k)})()")
-    assert "## bug.r.what\n\nboom" in out and "bug.r.none" in out and "- Mode: web" in out and "- Recent errors: none" in out
-    assert "## bug.r.diag" not in nodo("B.rapporto({what:'a',expected:'b',diag:null},k=>k)")
+    out = nodo("(()=>{const d=B.righeDiagnostica({version:'1.0.0',commit:'abc',date:'D',ua:'UA',mode:'web',view:'data (#/data)',files:'0',sw:'none',errors:[]});return B.rapporto({what:'boom',diag:d},k=>k)})()")
+    assert "## bug.r.what\n\nboom" in out and "- Mode: web" in out and "- Recent errors: none" in out and "expected" not in out
+    assert "## bug.r.diag" not in nodo("B.rapporto({what:'a',diag:null},k=>k)")
+    assert "bug.r.none" in nodo("B.rapporto({what:' ',diag:null},k=>k)")
 
 
 def test_url_issue_attesa_e_limite():

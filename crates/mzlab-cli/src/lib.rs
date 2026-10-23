@@ -173,11 +173,11 @@ pub fn features(files: &[PathBuf], params: &str, tmp: &Path) -> Result<String> {
     eprintln!("align {} file(s)", files.len());
     let mut table = Vec::new();
     let budget = MemBudget::mb(mzlab_core::budget_auto::native_auto_mb());
-    run::align_to(
+    run::align_to_par(
         &mut series,
         &budget,
         &recipe,
-        |k| open(&idxs[k]),
+        &|k| open(&idxs[k]),
         &mut table,
     )?;
     let mut list = Out::default();

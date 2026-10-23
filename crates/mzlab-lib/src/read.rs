@@ -40,6 +40,8 @@ enum Kind {
 }
 
 type Block = (Rc<Vec<u8>>, u64);
+/// One decoded chunk and its index.
+type Held = Option<(u32, Rc<Vec<u8>>)>;
 
 struct Cache {
     map: HashMap<(Kind, u32), Block>,
@@ -110,6 +112,8 @@ pub struct Library<S: Source> {
     frag: IndexDir,
     nl: IndexDir,
     cache: RefCell<Cache>,
+    /// The last chunk used of each kind (table, peaks, meta): consecutive spectra of a scan sit in the same chunk, and this skips the hashed cache lookup.
+    recent: RefCell<[Held; 3]>,
     light: std::cell::OnceCell<Light>,
     /// Decoded-chunk reads served from the file (not the cache): lets tests and the bench see the cache work.
     pub block_reads: std::cell::Cell<u64>,
@@ -239,6 +243,7 @@ impl<S: Source> Library<S> {
                 budget: cache_bytes,
                 tick: 0,
             }),
+            recent: RefCell::new([None, None, None]),
             light: std::cell::OnceCell::new(),
             block_reads: std::cell::Cell::new(0),
         })
@@ -306,6 +311,24 @@ impl<S: Source> Library<S> {
     }
 
     fn chunk(&self, kind: Kind, idx: u32) -> Result<Rc<Vec<u8>>> {
+        let slot = match kind {
+            Kind::Table => 0,
+            Kind::Peaks => 1,
+            _ => 2,
+        };
+        if let Some(Some((i, v))) = self.recent.borrow().get(slot) {
+            if *i == idx {
+                return Ok(v.clone());
+            }
+        }
+        let v = self.chunk_cached(kind, idx)?;
+        if let Some(h) = self.recent.borrow_mut().get_mut(slot) {
+            *h = Some((idx, v.clone()));
+        }
+        Ok(v)
+    }
+
+    fn chunk_cached(&self, kind: Kind, idx: u32) -> Result<Rc<Vec<u8>>> {
         if let Some(v) = self.cache.borrow_mut().get((kind, idx)) {
             return Ok(v);
         }
@@ -341,8 +364,8 @@ impl<S: Source> Library<S> {
             .ok_or_else(|| Error::corrupt("chunk"))
     }
 
-    /// Quantised peaks of spectrum `i`: m/z in 1e-5 Da units and intensities as fractions of 65535.
-    pub fn peaks_q(&self, i: u32) -> Result<(Vec<u32>, Vec<u16>)> {
+    /// Calls `f(m/z in 1e-5 Da units, intensity as a fraction of 65535)` for each peak of spectrum `i`, in m/z order.
+    fn each_peak_q(&self, i: u32, mut f: impl FnMut(u32, u16)) -> Result<()> {
         let r = self.rec(i)?;
         let ci = i / SPECTRA_PER_PEAK_CHUNK;
         let chunk_first = self.rec(ci * SPECTRA_PER_PEAK_CHUNK)?.first_peak as u64;
@@ -361,25 +384,41 @@ impl<S: Source> Library<S> {
         if start + n > t {
             return Err(Error::corrupt("peaks"));
         }
-        let mut mz = Vec::with_capacity(n);
-        let mut it = Vec::with_capacity(n);
         let mut acc = 0u32;
         for j in start..start + n {
             let d = u32::from_le_bytes([raw[j], raw[t + j], raw[2 * t + j], raw[3 * t + j]]);
             acc = acc.checked_add(d).ok_or_else(|| Error::corrupt("peaks"))?;
-            mz.push(acc);
-            it.push(u16::from_le_bytes([raw[4 * t + j], raw[5 * t + j]]));
+            f(acc, u16::from_le_bytes([raw[4 * t + j], raw[5 * t + j]]));
         }
+        Ok(())
+    }
+
+    /// Quantised peaks of spectrum `i`: m/z in 1e-5 Da units and intensities as fractions of 65535.
+    pub fn peaks_q(&self, i: u32) -> Result<(Vec<u32>, Vec<u16>)> {
+        let n = self.rec(i)?.n_peaks as usize;
+        let (mut mz, mut it) = (Vec::with_capacity(n), Vec::with_capacity(n));
+        self.each_peak_q(i, |m, v| {
+            mz.push(m);
+            it.push(v);
+        })?;
         Ok((mz, it))
     }
 
-    /// Peaks of spectrum `i` as `f64`: m/z in Da, intensity as a fraction of the highest (≤ 1).
+    /// Peaks of spectrum `i` (m/z, intensity as a fraction of 1).
     pub fn peaks(&self, i: u32) -> Result<(Vec<f64>, Vec<f64>)> {
-        let (mq, iq) = self.peaks_q(i)?;
-        Ok((
-            mq.into_iter().map(dequant_mz).collect(),
-            iq.into_iter().map(|v| v as f64 / INT_MAX).collect(),
-        ))
+        let (mut mz, mut it) = (Vec::new(), Vec::new());
+        self.peaks_into(i, &mut mz, &mut it)?;
+        Ok((mz, it))
+    }
+
+    /// `peaks` into buffers the caller reuses (cleared first): no allocation per spectrum when scanning a window.
+    pub fn peaks_into(&self, i: u32, mz: &mut Vec<f64>, it: &mut Vec<f64>) -> Result<()> {
+        mz.clear();
+        it.clear();
+        self.each_peak_q(i, |m, v| {
+            mz.push(dequant_mz(m));
+            it.push(v as f64 / INT_MAX);
+        })
     }
 
     pub fn meta(&self, i: u32) -> Result<Meta> {

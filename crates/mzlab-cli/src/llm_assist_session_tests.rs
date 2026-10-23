@@ -87,18 +87,6 @@ fn input(role: &str) -> Value {
     parse(j.as_bytes()).unwrap()
 }
 
-/// The need_data the router names, as the reader that serves each.
-fn reader_of(need: &str) -> Option<&'static str> {
-    Some(match need {
-        "inspection" => "metadati",
-        "chromatograms" => "cromatografia",
-        "proposals" => "parametri",
-        "tabcheck" => "interprete",
-        "views" => "grafici",
-        _ => return None,
-    })
-}
-
 const META_BAD: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1–f7 are ESI+ full scan at unit resolution, peak sigma 0.06 min","evidence":["ispezione.files.f1.polarity","ispezione.files.f1.class"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":["0.06"]}"#;
 const META_OK: &str = r#"{"schema":"lettura/1","kind":"acquisition","findings":[{"id":"F1","topic":"polarity","statement":"f1–f7 are ESI+ full scan at unit resolution","evidence":["ispezione.files.f1.polarity","ispezione.files.f1.class"],"confidence":"high","action":{"type":"none"}}],"questions":[],"numbers":[]}"#;
 const CROM: &str = r#"{"schema":"lettura/1","kind":"chromatography","findings":[{"id":"F1","topic":"contaminant","statement":"A signal recurs at 18.3 min in every file: a candidate contaminant","evidence":["qc.contaminant.rt"],"confidence":"medium","action":{"type":"none"}}],"questions":[],"numbers":["18.3"]}"#;
@@ -255,18 +243,11 @@ fn say(pg: &mut Page, msg: &str) {
             match o {
                 Output::Sub { request, .. } => {
                     let body = body(&model(pg, &request));
-                    for need in router::parse(&body)
-                        .map(|r| {
-                            r.need_data()
-                                .into_iter()
-                                .map(String::from)
-                                .collect::<Vec<_>>()
-                        })
+                    for role in router::parse(&body)
+                        .map(|r| r.readers())
                         .unwrap_or_default()
                     {
-                        if let Some(role) = reader_of(&need) {
-                            read(pg, role);
-                        }
+                        read(pg, role);
                     }
                     queue.push(Input::SubResult {
                         role: "router".into(),

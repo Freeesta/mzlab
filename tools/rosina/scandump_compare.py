@@ -152,6 +152,18 @@ class Comparator:
             self.value(name, n, x, y, kind)
 
 
+def reactions_of(row):
+    """The reactions of a scan row. RFR gives the MS1 of a Q Exactive one reaction that is only its scan range (centre as precursor, width as isolation, HCD, energy 0):
+    it names no precursor, so it is left out on either side."""
+    rs = row.get("reactions") or []
+    lo, hi = row.get("mz_low"), row.get("mz_high")
+    if row.get("level") == 1 and len(rs) == 1 and lo is not None and hi is not None:
+        r = rs[0]
+        if abs((r.get("precursor") or 0) - (lo + hi) / 2) < 0.5 and abs((r.get("iso_width") or 0) - (hi - lo)) < 0.5:
+            return []
+    return rs
+
+
 class ScanComparator(Comparator):
     """The comparator applied to the rows of a dump: scans (with reactions and trailer), peaks and chromatograms."""
 
@@ -161,7 +173,7 @@ class ScanComparator(Comparator):
                 self.array(k, n, a.get(k), b.get(k), "mz")
             else:
                 self.value(k, n, a.get(k), b.get(k))
-        ra, rb = a.get("reactions") or [], b.get("reactions") or []
+        ra, rb = reactions_of(a), reactions_of(b)
         if ra or rb:
             self.value("reactions.count", n, len(ra), len(rb), "exact")
         for x, y in zip(ra, rb):

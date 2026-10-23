@@ -14,6 +14,7 @@
     look: ico('<circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 0 0 14z" fill="currentColor"/>'),
     read: ico('<path d="M3 4.5h5a2 2 0 0 1 2 2V16a2 2 0 0 0-2-2H3zM17 4.5h-5a2 2 0 0 0-2 2V16a2 2 0 0 1 2-2h5z"/>'),
     data: ico('<ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V5M4 10c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5"/>'),
+    bug: ico('<path d="M7.5 5.5a2.5 2.5 0 0 1 5 0"/><rect x="6" y="5.5" width="8" height="10" rx="4"/><path d="M10 8v7.5M6 10H3M6.2 13H3.5M14 10h3M13.8 13h2.7M7 4L5.5 2.8M13 4l1.5-1.2"/>'),
     app: ico('<rect x="3" y="3.5" width="14" height="13" rx="2"/><path d="M3 7.5h14"/>'),
     lang: ico('<circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2.3 2 2.3 12 0 14M10 3c-2.3 2-2.3 12 0 14"/>'),
     play: ico('<path d="M6 4l10 6-10 6z" fill="currentColor"/>'),
