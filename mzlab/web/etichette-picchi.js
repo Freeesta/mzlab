@@ -44,7 +44,7 @@ function labelsOf(p, s) {
   (async () => {
     let list = [];
     try {
-      const found = (window.QUALITA ? await QUALITA.labels(s.x, s.y, MAXC, REL, SNR) : null) || [];
+      const found = (window.QUALITA ? await QUALITA.labels(s.x, s.y, MAXC, REL, SNR, true) : null) || [];
       list = await Promise.all(found.map(async l => ({ ...l, rt: s.x[l.apex], q: await quantity(p, s, s.x[l.apex]).catch(() => null) })));
     } catch (e) { list = []; }
     cache.set(key, { list });
@@ -70,7 +70,7 @@ function texts(l) {
 function draw(p, g, sr, c) {
   if (!on(p, sr.length) || !sr.length || p.mode === "cas") return;
   const a = p._a, lbls = a.lbls = a.lbls || [], pw = c.W - M.l - M.r, room = Math.max(1, Math.min(8, Math.floor(pw / 120)));
-  g.save(); g.font = fpx(11, "bold "); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
+  g.save(); g.font = fpx(11, ""); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
   const h = 11 * fz() + 4;
   for (const s of sr.length > 1 ? [sr[0]] : sr) {
     const list = labelsOf(p, s); if (!list) continue;
@@ -85,7 +85,7 @@ function draw(p, g, sr, c) {
         if (top >= M.t && !lbls.some((/** @type {any} */ o) => b.x < o.x + o.w + GAP && o.x < b.x + b.w + GAP && b.y < o.y + o.h && o.y < b.y + b.h)) box = b;
       }
       if (!box) continue;
-      g.strokeStyle = ecss("--panel"); g.strokeText(label, x, box.y + h - 4); g.fillStyle = ecss("--ink"); g.fillText(label, x, box.y + h - 4);
+      g.strokeStyle = ecss("--panel"); g.strokeText(label, x, box.y + h - 4); g.fillStyle = ecss("--muted"); g.fillText(label, x, box.y + h - 4);
       lbls.push({ ...box, tip, text: label, etpk: true });
     }
   }

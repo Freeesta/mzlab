@@ -24,7 +24,7 @@ onmessage = async ev => {
       postMessage({ id: m.id, v: peaks });
     } else if (m.op === "labels") {
       const out = new Float64Array(4 * 64);
-      const n = label_peaks(m.rt, m.y, m.maxN, m.rel, m.snr, out);
+      const n = label_peaks(m.rt, m.y, m.maxN, m.rel, m.snr, !!m.ends, out);
       postMessage({ id: m.id, v: Array.from({ length: n }, (_, i) => ({ apex: out[i * 4], rt: out[i * 4 + 1], height: out[i * 4 + 2], snr: out[i * 4 + 3] })) });
     } else if (m.op === "mainpeak") {
       const out = new Float64Array(2);

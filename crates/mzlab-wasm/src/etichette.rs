@@ -6,6 +6,7 @@ use wasm_bindgen::prelude::*;
 pub const LABEL_FIELDS: usize = 4;
 
 /// The peaks of a trace that deserve a label (`etichette_picchi::select`): records of `LABEL_FIELDS` numbers by increasing RT; returns how many fit in `out`.
+/// `skip_ends`: chromatograms (RT in minutes) leave out the solvent front and the end of the run; false for a spectrum.
 #[wasm_bindgen]
 pub fn label_peaks(
     rt: &[f64],
@@ -13,9 +14,11 @@ pub fn label_peaks(
     max_n: u32,
     rel_min: f64,
     snr_min: f64,
+    skip_ends: bool,
     out: &mut [f64],
 ) -> u32 {
-    let found = mzlab_core::etichette_picchi::select(rt, y, max_n as usize, rel_min, snr_min);
+    let found =
+        mzlab_core::etichette_picchi::select(rt, y, max_n as usize, rel_min, snr_min, skip_ends);
     let room = out.len() / LABEL_FIELDS;
     for (i, l) in found.iter().take(room).enumerate() {
         out[i * LABEL_FIELDS..(i + 1) * LABEL_FIELDS].copy_from_slice(&[
