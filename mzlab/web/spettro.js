@@ -210,8 +210,8 @@ function scanLine(p, data, d0) {
     if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); }
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
   } });
-  reg({ id: "spec.freeze", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !!c.p.link, nome: () => T("ctx.spec.freeze"), esegui: /** @param {any} c */ c => { spLinkFreeze(c.p); uiSave(); } });
-  reg({ id: "spec.relink", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !c.p.link && !!srcOf(c.p), nome: () => T("ctx.spec.relink"), esegui: /** @param {any} c */ c => { const s = srcOf(c.p); if (s) spLinkFollow(c.p, s); } });
+  reg({ id: "spec.freeze", viste: ["spec", "uv"], gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !!c.p.link, nome: () => T("ctx.spec.freeze"), esegui: /** @param {any} c */ c => { spLinkFreeze(c.p); uiSave(); } });
+  reg({ id: "spec.relink", viste: ["spec", "uv"], gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !c.p.link && !!srcOf(c.p), nome: () => T("ctx.spec.relink"), esegui: /** @param {any} c */ c => { const s = srcOf(c.p); if (s) spLinkFollow(c.p, s); } });
 })();
 // «Isotopic pattern…»: the formula (with its charge, or with the adduct) whose pattern is drawn over the spectrum, zoomed on it
 /** @param {any} p */

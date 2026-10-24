@@ -16,6 +16,30 @@ function load(k, r0, r1) {
   }
   return memo.get(key);
 }
+/** PDA matrices already resolved per file: once present, any (r0, r1) is sliced in memory in the same frame (no request while a line is dragged). @type {Record<number, any>} */
+const MAT = {};
+/**
+ * Mean UV spectrum of the rows with r0 <= t <= r1 of a PDA matrix (the nearest row when none falls inside); null for an empty matrix.
+ * @param {any} A the object of getMap(k, "pda", "") @param {number} r0 @param {number} r1
+ */
+export function sliceUv(A, r0, r1) {
+  if (!(A && A.nrt > 0 && A.nmz > 0 && A.m && A.m.length >= A.nrt * A.nmz)) return null;
+  if (!A._nm) A._nm = Array.from({ length: A.nmz }, (_, j) => +(A.mz0 + j * A.dmz).toFixed(2));
+  const lo = Math.min(r0, r1), hi = Math.max(r0, r1), t = (/** @type {number} */ i) => (A.nrt > 1 ? A.rt0 + i * (A.rt1 - A.rt0) / (A.nrt - 1) : A.rt0);
+  let i0 = -1, i1 = -1;
+  for (let i = 0; i < A.nrt; i++) if (t(i) >= lo && t(i) <= hi) { if (i0 < 0) i0 = i; i1 = i; }
+  if (i0 < 0) { let b = 0; for (let i = 1; i < A.nrt; i++) if (Math.abs(t(i) - (lo + hi) / 2) < Math.abs(t(b) - (lo + hi) / 2)) b = i; i0 = i1 = b; }
+  const n = i1 - i0 + 1, mau = new Array(A.nmz).fill(0);
+  for (let i = i0; i <= i1; i++) for (let j = 0; j < A.nmz; j++) mau[j] += A.m[i * A.nmz + j];
+  for (let j = 0; j < A.nmz; j++) mau[j] /= n;
+  return { nm: A._nm, mau, rt0: t(i0), rt1: t(i1), n };
+}
+/** Loads the matrix of file k into MAT once; false when the file has none (a lone 1D trace, a non-wiff file). @param {number} k */
+async function ensureMat(k) {
+  if (MAT[k]) return true;
+  try { const A = await getMap(k, "pda", ""); if (A && A.nrt > 0 && A.nmz > 0) { MAT[k] = A; return true; } } catch (e) { /* the uvspec request below gives the structured error */ }
+  return false;
+}
 /** @param {any} j */
 const reason = j => (j && j.error_key ? I18N.t(j.error_key, j.params || {}) : T("uv.error"));
 
@@ -25,7 +49,8 @@ const reason = j => (j && j.error_key ? I18N.t(j.error_key, j.params || {}) : T(
  */
 export async function open(from, k, r0, r1) {
   try { await load(k, r0, r1); } catch (e) { if (window.toast) toast(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); return null; }
-  return newSpec(from, r0, r1, k, null, { uv: true, title: "@uv" });
+  const link = from && ["chrom", "xic", "mrm"].includes(from.type) ? from.id : null;
+  return newSpec(from, r0, r1, k, link, { uv: true, title: "@uv" });
 }
 
 /**
@@ -51,14 +76,17 @@ export async function draw(p) {
   const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const f = E.files[p.k];
   if (!f || p.r0 == null) return say(T("spec.pickRange"));
-  /** @type {any} */ let d;
-  try { d = await load(p.k, p.r0, p.r1); } catch (e) { return say(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); }
+  /** @type {any} */ let d = MAT[p.k] ? sliceUv(MAT[p.k], p.r0, p.r1) : null;
+  if (!d && await ensureMat(p.k)) { if (tok !== p._tok) return false; d = sliceUv(MAT[p.k], p.r0, p.r1); }
+  if (!d) try { d = await load(p.k, p.r0, p.r1); } catch (e) { return say(/** @type {any} */ (e)?.error_key === "err.pda.none" ? T("uv.none") : reason(e)); }
   if (tok !== p._tok) return false;
   /** @type {number[]} */ const nm = d.nm, y = d.mau;
   if (!nm.length) return say(T("uv.none"));
   const full = [nm[0], nm[nm.length - 1]], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let lo = 0, hi = 0; for (const v of y) { if (v < lo) lo = v; if (v > hi) hi = v; }
-  const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, hi + pad], y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : yfull[1];
+  const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, hi + pad];
+  if (p.lock && p.lock.pending) { p.lock.y = yfull[1]; p.lock.pending = false; }
+  const y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : p.lock && p.lock.y != null ? p.lock.y : yfull[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b, X = (/** @type {number} */ v) => M.l + (v - x0) / (x1 - x0) * pw, Y = (/** @type {number} */ v) => H - M.b - (v - y0) / (y1 - y0) * ph;
   g.clearRect(0, 0, W, H);
   frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), String(+t.toFixed(2))]), nice(y0, y1, 6).map(t => [Y(t), String(+t.toFixed(2))]), T("uv.axis.x"), T("uv.axis.y"));
@@ -72,7 +100,7 @@ export async function draw(p) {
     yinv: (/** @type {number} */ py) => y1 - (py - M.t) / ph * (y1 - y0),
     hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(w); return { px: X(nm[i]), html: `<b>${nm[i].toFixed(0)} nm</b><div>${y[i].toFixed(2)} mAU</div>` }; } };
   if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima (etichette-picchi.js)
-  p.leg.innerHTML = h`<span><i style="background:${f.color}"></i>${f.label}</span><span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
+  p.leg.innerHTML = h`<span><i style="background:${f.color}"></i>${f.label}</span> · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = "";
   p.r0 = d.rt0; p.r1 = d.rt1;
 }

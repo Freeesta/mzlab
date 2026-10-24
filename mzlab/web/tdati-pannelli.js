@@ -57,7 +57,7 @@ const data = p => (p.uv ? uvData(p) : p.type === "spec" ? specData(p) : p.type =
 
 function text(p) {
   const a = p._a; if (!a) return T("a11y.empty");
-  if (p.uv && a.uvd) return T("a11y.uv", { title: ptitle(p), a: nm(a.x0, 0), b: nm(a.x1, 0), y: nm(Math.max(...a.uvd.y), 1) });
+  if (p.uv && a.uvd) return T("a11y.uv", { title: ptitle(p), rt: a.uvd.n > 1 ? a.uvd.rt.toFixed(2) + "–" + a.uvd.rt1.toFixed(2) : a.uvd.rt.toFixed(2), a: nm(a.x0, 0), b: nm(a.x1, 0), y: nm(Math.max(...a.uvd.y), 1) });
   if (p.type === "spec") {
     const n = a.data ? a.data[0].d.mz.filter((m, i) => m >= a.x0 && m <= a.x1 && a.data[0].d.y[i] >= (p.thr ?? 5) / 100 * Math.max(...a.data[0].d.y, 1e-9)).length : 0;
     return T("a11y.spec", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), n });
