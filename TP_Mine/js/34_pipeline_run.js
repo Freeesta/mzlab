@@ -178,8 +178,15 @@
       st.session = session; const g = { ...gate, table: gate.table === true };
       await /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, say, cs: st.cs, ppm: () => st.ctx.values().ppm, pol: () => st.ctx.values().polarity, formula: ($("#pipe-pf").value || "").trim(), levels: levelMap(), identsOf: id => (st.cand ? st.all.filter(x => x.row === id - 1) : []), interpText: id => { const T = /** @type {any} */ (window).TPSTRUCT; return T && session.interpCached ? T.identText(session.interpCached(id)) : ""; } });
-      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
+      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8), provenance, tpInfo: id => ({ level: levelMap().get(id) }) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
+  }
+  /** what the report says of the run: the recipe (profile and SHA-256), the rules and the inputs of the table */
+  async function provenance() {
+    const text = st.ctx.recipe(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
+    let rec = {}; try { rec = JSON.parse(text); } catch (_) { /* a recipe that is not JSON has no profile */ }
+    const rv = typeof rules === "string" ? rules : rules ? new TextDecoder().decode(rules) : "", ver = /"version"\s*:\s*(\d+)/.exec(rv);
+    return { profile: rec.profile, recipe_sha256: await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(text)), rules: rv ? "regole_tp/1" + (ver ? " v" + ver[1] : "") + " SHA-256 " + (await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(rv))) : "", inputs: st.data.meta.inputs || [] };
   }
   /** what the interpretation of the rows needs (parent, hypotheses, infusion); none without a gate table or without a parent */
   function interpInput(out) {

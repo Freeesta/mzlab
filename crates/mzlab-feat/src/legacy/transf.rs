@@ -92,7 +92,7 @@ fn literature(comment: &str) -> Option<String> {
 }
 
 /// '+O', '-C-O', ... (`chem.fmt_delta`).
-fn delta_text(d: &Delta) -> String {
+pub(crate) fn delta_text(d: &Delta) -> String {
     let mut o = String::new();
     for (e, n) in d {
         o.push(if *n > 0 { '+' } else { '-' });

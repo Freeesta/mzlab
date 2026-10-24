@@ -160,6 +160,10 @@ fn param(o: &mut Out, p: &Param) {
         key(o, "x-unit");
         o.str(u);
     }
+    if let Some(kind) = p.list {
+        key(o, "x-liste");
+        o.str(kind);
+    }
     for (on, k) in [
         (p.estimate, "x-estimate"),
         (p.noresult, "x-noresult"),
