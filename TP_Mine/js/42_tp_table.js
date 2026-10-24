@@ -78,6 +78,22 @@
     return v.map(x => x.r);
   }
 
+  /** redraws only the rows `ids` (a row that opens or closes) in a list without a window; false when the whole table has to be drawn (virtual list, a row is missing) */
+  function redrawOnly(/** @type {any} */ c, /** @type {(number | null)[]} */ ids) {
+    const want = [...new Set(ids.filter(x => x != null))], tr = (/** @type {any} */ id) => /** @type {HTMLElement | null} */ (c.body.querySelector(`tr.clk[data-id="${id}"]`));
+    if (c.isVirt() || want.some(id => !tr(id))) return false;
+    const had = document.activeElement instanceof HTMLElement && c.host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
+    c.panel.remove();
+    for (const id of want) {
+      const row = /** @type {HTMLElement} */ (tr(id)), next = row.nextElementSibling;
+      if (next && next.classList.contains("tpt-exp")) next.remove();
+      row.outerHTML = c.rowHtml(c.rowOf(id), Number(row.getAttribute("aria-rowindex")) - 2);
+    }
+    const slot = c.body.querySelector(".tpt-slot"); if (slot) slot.appendChild(c.panel);
+    if (had != null) { const bt = c.body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
+    return true;
+  }
+
   /**
    * The table in `host`.
    * @param {HTMLElement} host
@@ -131,14 +147,19 @@
       });
     }
     const stk = (/** @type {Col} */ c, /** @type {number} */ i) => c.sticky || c.width ? ` style="${c.sticky ? `left:var(--tpt-l${i},0);` : ""}${c.width ? `max-width:${c.width}px` : ""}"` : "";
+    /** what does not depend on the row, per column, made again by every `draw`: the start of the cell (class), the end of its tag (fixed/width style) and whether it holds the id of the row @type {{ a: string, z: string, id: boolean }[]} */
+    let tpl = [];
+    const makeTpl = () => {
+      const idCol = cols.findIndex(c => c.key === "identity");
+      tpl = cols.map((c, i) => { const k = [c.num ? "n" : "", i === 0 ? "tpt-c0" : "", c.sticky ? "tpt-stk" : ""].filter(Boolean).join(" "); return { a: `<td${k ? ` class="${k}"` : ""}`, z: `${stk(c, i)}>`, id: i === (idCol < 0 ? 0 : idCol) }; });
+    };
     /** @param {any} r @param {number} idx the index in the list of rows */
     function rowHtml(r, idx) {
-      const id = idOf(r), on = st.open === id, pinned = o.pin ? o.pin(r) : false;
-      const idCol = cols.findIndex(c => c.key === "identity");
-      return `<tr class="clk${on ? " sel" : ""}${o.rowClass && o.rowClass(r) ? " " + o.rowClass(r) : ""}" data-id="${id}" aria-rowindex="${idx + 2}">${cols.map((c, i) => {
-        const k = [c.num ? "n" : "", i === 0 ? "tpt-c0" : "", c.sticky ? "tpt-stk" : ""].filter(Boolean).join(" ");
+      const id = idOf(r), on = st.open === id, pinned = o.pin ? o.pin(r) : false, rc = o.rowClass ? o.rowClass(r) : "";
+      return `<tr class="clk${on ? " sel" : ""}${rc ? " " + rc : ""}" data-id="${id}" aria-rowindex="${idx + 2}">${cols.map((c, i) => {
         const tg = i === 0 ? `<button type="button" class="tpt-tg" data-tg="${id}" aria-expanded="${on}" aria-controls="${panel.id}" aria-label="Details of ${esc(o.name(r))}"><span aria-hidden="true">${on ? "▾" : "▸"}</span></button>${pinned ? `<span class="tpt-pin" tabindex="0" role="img" aria-label="Pinned: the parent"${tt("ft.pin.parent")}>★</span>` : ""}` : "";
-        return `<td${k ? ` class="${k}"` : ""}${i === (idCol < 0 ? 0 : idCol) ? ` id="${o.id}-i-${id}"` : ""}${stk(c, i)}>${tg}${c.cell(r)}</td>`;
+        const t = tpl[i];
+        return `${t.a}${t.id ? ` id="${o.id}-i-${id}"` : ""}${t.z}${tg}${c.cell(r)}</td>`;
       }).join("")}</tr>${on ? `<tr class="tpt-exp"><td colspan="${cols.length}"><div class="tpt-slot"></div></td></tr>` : ""}`;
     }
     const spacer = (/** @type {number} */ n) => n > 0 ? `<tr class="tpt-sp" aria-hidden="true" style="height:${n * rowH}px"><td colspan="${cols.length}"></td></tr>` : "";
@@ -156,7 +177,7 @@
     }
     function draw() {
       const had = document.activeElement instanceof HTMLElement && host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
-      panel.remove(); drawHead();
+      panel.remove(); drawHead(); makeTpl();
       const p = st.pinned.length, n = st.rest.length, [a, b] = windowOf(); st.a = a; st.b = b;
       const oi = st.open == null ? -1 : st.rest.findIndex(r => idOf(r) === st.open);
       const idx = [];
@@ -171,6 +192,7 @@
       const slot = body.querySelector(".tpt-slot"); if (slot) slot.appendChild(panel);
       if (had != null) { const bt = body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
     }
+    const redrawRows = (/** @type {(number | null)[]} */ ids) => redrawOnly({ host, body, panel, rowHtml, rowOf, isVirt }, ids);
     let raf = 0;
     wrap.addEventListener("scroll", () => {
       if (!isVirt() || raf) return;
@@ -254,16 +276,16 @@
     /** @param {number} id */
     function open(id) {
       const r = rowOf(id); if (!r) return false;
-      const fresh = st.open !== id;
+      const fresh = st.open !== id, prev = st.open;
       if (fresh && isVirt() && !trOf(id)) reveal(st.list.indexOf(r));
-      anchored(id, () => { st.open = id; if (fresh) { buildPanel(r); draw(); fill(r); } else draw(); });
+      anchored(id, () => { st.open = id; if (fresh) { buildPanel(r); if (!redrawRows([prev, id])) draw(); fill(r); } else draw(); });
       if (fresh) { live.textContent = `Details of ${o.name(r)} opened`; }
       showPanel(id);
       return true;
     }
     function close() {
       const id = st.open; if (id == null) return;
-      anchored(id, () => { st.open = null; panel.innerHTML = ""; draw(); });
+      anchored(id, () => { st.open = null; panel.innerHTML = ""; if (!redrawRows([id])) draw(); });
       live.textContent = "Details closed";
     }
     /** @param {number} id */

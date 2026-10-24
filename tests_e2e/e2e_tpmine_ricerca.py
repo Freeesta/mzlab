@@ -105,6 +105,29 @@ with sync_playwright() as p:
         }""")
         assert all(res), res
     step("a chip or the search on a sorted table equals sorting the filtered rows again", filter_keeps_order)
+    def open_close_patch():
+        res = pg.evaluate("""() => {
+          document.getElementById('h').innerHTML = '';
+          const rows = Array.from({ length: 60 }, (_, i) => ({ id: i, name: 'n' + i, a: i / 3, pin: i === 2 }));
+          const cols = [{ key: 'identity', label: 'Id', sticky: true, sort: r => r.name, cell: r => r.name }, { key: 'a', label: 'A', num: true, width: 90, cell: r => r.a.toFixed(2) }];
+          const t = window.TPTAB.mount(document.getElementById('h'), { id: 'p', esc: s => String(s), rowId: r => r.id, name: r => r.name, pin: r => r.pin, rowClass: r => r.id % 4 ? '' : 'zz',
+            onOpen(id, panel) { panel.textContent = 'row ' + id; }, cols });
+          t.setRows(rows);
+          const html = () => document.querySelector('#h tbody').innerHTML, out = {};
+          const same = (label) => { const a = html(); t.setRows(rows); out[label] = a === html(); };     // setRows draws the whole table again
+          t.open(5); same('open');
+          t.open(9); same('open another row');
+          t.open(2); same('open the pinned row');
+          t.close(); same('close');
+          t.open(7); document.querySelector('[data-tg="7"]').focus(); t.close();
+          out.focus = document.activeElement.getAttribute('data-tg') === '7';
+          t.open(30); out.panel = !!document.querySelector('#h .tpt-slot #p-panel, #h .tpt-slot > *') && document.querySelectorAll('#h tr.tpt-exp').length === 1;
+          out.expanded = document.querySelector('[data-tg="30"]').getAttribute('aria-expanded') === 'true' && document.querySelectorAll('[aria-expanded="true"]').length === 1;
+          out.rowindex = [...document.querySelectorAll('#h tr.clk')].every((tr, i) => Number(tr.getAttribute('aria-rowindex')) === i + 2);
+          return out;
+        }""")
+        assert all(res.values()), res
+    step("opening or closing a row redraws only its rows and gives the same table as a full draw", open_close_patch)
     b.close()
 for s in steps: print(s)
 print("page errors:", errs)
