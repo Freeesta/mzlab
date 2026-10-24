@@ -380,6 +380,11 @@ function ctxFor(p, e, x, px, py) {
     esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.x - pdaT(c.p), c.x - pdaT(c.p)) });
   reg({ id: "chrom.uvAvgSel", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
     esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
+  // from a UV spectrum: the DAD trace at the wavelength under the cursor, or over the nm range in view (zoom with the keys or the axis: no dragging needed)
+  reg({ id: "uv.wlAt", gruppo: "xic", viste: ["uv", "spec"], visibile: /** @param {any} c */ c => !!c.p.uv, nome: /** @param {any} c */ c => T("ctx.uv.wlAt", { nm: Math.round(c.x) }),
+    esegui: /** @param {any} c */ c => wlOpen(c.p, +c.x.toFixed(1), +c.x.toFixed(1), c.p.k) });
+  reg({ id: "uv.wlView", gruppo: "xic", viste: ["uv", "spec"], visibile: /** @param {any} c */ c => !!c.p.uv, disponibile: /** @param {any} c */ c => !!c.p.zoom, scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.uv.wlView"),
+    esegui: /** @param {any} c */ c => wlOpen(c.p, +c.p._a.x0.toFixed(1), +c.p._a.x1.toFixed(1), c.p.k) });
   reg({ id: "chrom.wl", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
   reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
