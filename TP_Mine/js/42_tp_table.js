@@ -78,6 +78,22 @@
     return v.map(x => x.r);
   }
 
+  /** redraws only the rows `ids` (a row that opens or closes) in a list without a window; false when the whole table has to be drawn (virtual list, a row is missing) */
+  function redrawOnly(/** @type {any} */ c, /** @type {(number | null)[]} */ ids) {
+    const want = [...new Set(ids.filter(x => x != null))], tr = (/** @type {any} */ id) => /** @type {HTMLElement | null} */ (c.body.querySelector(`tr.clk[data-id="${id}"]`));
+    if (c.isVirt() || want.some(id => !tr(id))) return false;
+    const had = document.activeElement instanceof HTMLElement && c.host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
+    c.panel.remove();
+    for (const id of want) {
+      const row = /** @type {HTMLElement} */ (tr(id)), next = row.nextElementSibling;
+      if (next && next.classList.contains("tpt-exp")) next.remove();
+      row.outerHTML = c.rowHtml(c.rowOf(id), Number(row.getAttribute("aria-rowindex")) - 2);
+    }
+    const slot = c.body.querySelector(".tpt-slot"); if (slot) slot.appendChild(c.panel);
+    if (had != null) { const bt = c.body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
+    return true;
+  }
+
   /**
    * The table in `host`.
    * @param {HTMLElement} host
@@ -176,21 +192,7 @@
       const slot = body.querySelector(".tpt-slot"); if (slot) slot.appendChild(panel);
       if (had != null) { const bt = body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
     }
-    /** redraws only the rows `ids` (a row that opens or closes) in a list without a window; false when the whole table has to be drawn (virtual list, a row is missing) */
-    function redrawRows(/** @type {(number | null)[]} */ ids) {
-      const want = [...new Set(ids.filter(x => x != null))];
-      if (isVirt() || want.some(id => !body.querySelector(`tr.clk[data-id="${id}"]`))) return false;
-      const had = document.activeElement instanceof HTMLElement && host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
-      panel.remove();
-      for (const id of want) {
-        const tr = /** @type {HTMLElement} */ (body.querySelector(`tr.clk[data-id="${id}"]`)), next = tr.nextElementSibling, r = rowOf(/** @type {number} */ (id));
-        if (next && next.classList.contains("tpt-exp")) next.remove();
-        tr.outerHTML = rowHtml(r, Number(tr.getAttribute("aria-rowindex")) - 2);
-      }
-      const slot = body.querySelector(".tpt-slot"); if (slot) slot.appendChild(panel);
-      if (had != null) { const bt = body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
-      return true;
-    }
+    const redrawRows = (/** @type {(number | null)[]} */ ids) => redrawOnly({ host, body, panel, rowHtml, rowOf, isVirt }, ids);
     let raf = 0;
     wrap.addEventListener("scroll", () => {
       if (!isVirt() || raf) return;
