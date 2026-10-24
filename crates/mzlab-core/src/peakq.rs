@@ -125,6 +125,28 @@ impl Default for ProminenceParams {
     }
 }
 
+/// For every point, the lowest value from it to the nearest strictly higher point on its left (`rev` = false) or right, ends included; one pass
+/// with a stack, the same minima as walking out from each point.
+fn reach_min(ys: &[f64], rev: bool) -> Vec<f64> {
+    let n = ys.len();
+    let mut out = vec![0.0; n];
+    let mut stack: Vec<(f64, f64)> = Vec::new();
+    for t in 0..n {
+        let i = if rev { n - 1 - t } else { t };
+        let mut m = ys[i];
+        while let Some(&(v, vm)) = stack.last() {
+            if v > ys[i] {
+                break;
+            }
+            m = m.min(vm);
+            stack.pop();
+        }
+        out[i] = m;
+        stack.push((ys[i], m));
+    }
+    out
+}
+
 /// Peaks of the trace by prominence and local minima, sorted by decreasing height. `Peak.snr` = prominence over the noise; `Peak.area` is
 /// summed on the RAW signal above the straight line between the two limits (trapezoid, RT in minutes); a limit shared with the next peak is
 /// a valley and counts as a drop line down to the level of the other limit.
@@ -205,28 +227,6 @@ fn valley(ys: &[f64], a: usize, b: usize) -> usize {
         }
     }
     v
-}
-
-/// For every point, the lowest value from it to the nearest strictly higher point on its left (`rev` = false) or right, ends included; one pass
-/// with a stack, the same minima as walking out from each point.
-fn reach_min(ys: &[f64], rev: bool) -> Vec<f64> {
-    let n = ys.len();
-    let mut out = vec![0.0; n];
-    let mut stack: Vec<(f64, f64)> = Vec::new();
-    for t in 0..n {
-        let i = if rev { n - 1 - t } else { t };
-        let mut m = ys[i];
-        while let Some(&(v, vm)) = stack.last() {
-            if v > ys[i] {
-                break;
-            }
-            m = m.min(vm);
-            stack.pop();
-        }
-        out[i] = m;
-        stack.push((ys[i], m));
-    }
-    out
 }
 
 #[cfg(test)]
