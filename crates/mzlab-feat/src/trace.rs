@@ -90,6 +90,20 @@ impl Params {
     fn slab_peaks(&self) -> usize {
         (self.budget / BYTES_PER_PEAK).clamp(1024, SLAB_PEAKS)
     }
+
+    /// Sets the peak model to CentWave with the given FWHM range in seconds.
+    pub fn with_centwave_width(mut self, width_s: (f64, f64)) -> Self {
+        match &mut self.peak {
+            Peak::CentWave(cw) => cw.width_s = width_s,
+            _ => {
+                self.peak = Peak::CentWave(centwave::CentWave {
+                    width_s,
+                    ..centwave::CentWave::default()
+                })
+            }
+        }
+        self
+    }
 }
 pub(crate) fn reserve<T>(v: &mut Vec<T>, extra: usize) -> Result<()> {
     v.try_reserve(extra).map_err(|_| Error::memory_budget())

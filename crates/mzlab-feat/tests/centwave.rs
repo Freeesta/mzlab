@@ -113,6 +113,29 @@ fn apexes(f: &FileFeatures) -> Vec<f64> {
 }
 
 #[test]
+fn default_centwave_width_is_five_to_thirty_seconds_and_configurable() {
+    let cw_default = CentWave::default();
+    assert_eq!(cw_default.width_s, (5.0, 30.0));
+    let cw_custom = CentWave::default().with_width_s((5.0, 60.0));
+    assert_eq!(cw_custom.width_s, (5.0, 60.0));
+
+    // with default parameters, explicit and default give identical output
+    let two = [(150.0, 1.0e6), (157.0, 8.0e5)];
+    let def = run(&two, wavelet());
+    let explicit = run(
+        &two,
+        Peak::CentWave(CentWave {
+            width_s: (5.0, 30.0),
+            ..CentWave::default()
+        }),
+    );
+    assert_eq!(def.mz, explicit.mz);
+    assert_eq!(def.rt, explicit.rt);
+    assert_eq!(def.area, explicit.area);
+    assert_eq!(def.height, explicit.height);
+}
+
+#[test]
 fn two_overlapping_peaks_are_two_for_centwave_and_one_run_for_the_default_model() {
     let two = [(150.0, 1.0e6), (157.0, 8.0e5)];
     let plain = apexes(&run(&two, Peak::Minima));

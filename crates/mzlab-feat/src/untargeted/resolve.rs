@@ -49,6 +49,20 @@ impl Default for MinParams {
     }
 }
 
+impl MinParams {
+    /// Sets the peak duration range (minutes).
+    pub fn with_duration(mut self, duration: (f64, f64)) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    /// Sets the upper limit of the peak duration in minutes (keeping the lower limit as it is).
+    pub fn with_max_duration(mut self, max_duration: f64) -> Self {
+        self.duration.1 = max_duration;
+        self
+    }
+}
+
 /// The trace on ALL the MS1 scans of the file, in scan order: `y[i]` is the intensity of its point in scan `i` (0 where the trace has none, so a
 /// missing scan closes a region) and `mz[i]` its m/z (0 where `y[i]` is 0).
 #[derive(Clone, Debug, Default, PartialEq)]
