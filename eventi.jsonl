@@ -19484,3 +19484,4 @@
 {"v":1,"ts_utc":"2026-10-24T01:07:40Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3856450,null]},"byte_totali":3856450,"margine_min_pct":null,"pr":1664,"sha":"34b225b2c13c299edd09f5c6a3e309d302785c8c","run_id":40048116843,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-24T01:10:23Z","tipo":"carico","k":"2026-10-24T01:1","job_in_coda":0,"job_in_corso":2}
 {"v":1,"ts_utc":"2026-10-24T01:16:03Z","azione":"aperta","tipo":"pr","pr":1665,"sha":"c009c4b696b9117830cbdb1dfbf9990a7d193b4c"}
+{"v":1,"tipo":"pr","pr":1664,"sha":"34b225b2c13c299edd09f5c6a3e309d302785c8c","ts_utc":"2026-10-24T01:16:48Z","azione":"unita","aperta_s":735,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":46,"righe_meno":1,"file_n":2,"file":["mzlab/web/comandi.js","tests_e2e/e2e_flow_annulla.py"],"aree":{"web":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":329}
