@@ -34,6 +34,8 @@ I18N.add("it", {
   "settings.merge": "Unisci i centroidi della stessa massa nominale",
   "settings.beside": "Spettro accanto al cromatogramma",
   "settings.beside.title": "Lo spettro aperto con il doppio clic va nella stessa riga del cromatogramma, se c'è spazio",
+  "settings.xiclens": "Lente XIC al passaggio sul picco",
+  "settings.xiclens.title": "Passando sul picco di uno spettro compare una piccola anteprima dello XIC di quello ione; un clic la apre come pannello XIC",
   "settings.libs.label": "Librerie di spettri",
   "settings.libs.button": "Librerie…",
   "settings.libs.title": "Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»",

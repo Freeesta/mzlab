@@ -34,6 +34,8 @@ I18N.add("en", {
   "settings.merge": "Merge the centroids of the same nominal mass",
   "settings.beside": "Spectrum beside the chromatogram",
   "settings.beside.title": "The spectrum opened with a double click goes in the same row as the chromatogram, when there is room",
+  "settings.xiclens": "XIC lens on peak hover",
+  "settings.xiclens.title": "Passing over a peak of a spectrum shows a small preview of the XIC of that ion; a click opens it as an XIC panel",
   "settings.libs.label": "Spectral libraries",
   "settings.libs.button": "Libraries…",
   "settings.libs.title": "Load the libraries (MSP, MGF) to compare the MS2 spectra with: right-click an MS2 spectrum, «Search in the libraries»",

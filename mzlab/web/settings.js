@@ -30,21 +30,22 @@ function stdColor(u) {                                       // u in 0..1
 }
 function uipLoad() {
   QA11Y.apply(QA11Y.read());
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false; if (o.beside === true) UIP.beside = true;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false; if (o.beside === true) UIP.beside = true; if (o.xicLens === false) UIP.xicLens = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
   const o = { v: 2, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
   if (UIP.beside) o.beside = true;
+  if (!UIP.xicLens) o.xicLens = false;
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
 // the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js); the language reloads the page and is not undone
 COMANDI.gestore("app.settings", {
-  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.merge, !!UIP.beside, UIP.hrPpm, UIP.hrDec, QA11Y.read()]),
+  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.merge, !!UIP.beside, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
   applica: (_p, snap) => {
-    const [theme, pal, merge, beside, hrPpm, hrDec, a11y] = JSON.parse(snap);
-    Object.assign(UIP, { theme, pal, merge, beside, hrPpm, hrDec }); QA11Y.write(a11y); uipSave(); uipApply();
+    const [theme, pal, merge, beside, hrPpm, hrDec, a11y, xicLens] = JSON.parse(snap);
+    Object.assign(UIP, { theme, pal, merge, beside, hrPpm, hrDec, xicLens: xicLens !== false }); QA11Y.write(a11y); uipSave(); uipApply();
     CACHE.clear(); SC.m.clear(); SC.n.clear();
     const open = Q("#uipset"), btn = Q("#np-set"); if (open && btn) { open.remove(); uipOpen(btn); }
   },
@@ -124,7 +125,7 @@ function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
-  uipDo(() => { Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 }); QA11Y.write({}); });
+  uipDo(() => { Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
   uipSave(); uipApply();
 }
 function uipOpen(btn) {
@@ -137,7 +138,8 @@ function uipOpen(btn) {
   const fld = (label, tip, inner) => `<div class="imp-fld" title="${esc(tip)}"><span>${label}</span>${inner}</div>`;
   const look = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg")))
     + C.section(T("settings.pal.label"), `<select id="uip-pal" title="${esc(T("settings.pal.title"))}" aria-label="${esc(T("settings.pal.label"))}">${pals}</select>`)
-    + C.sw(T("settings.beside"), T("settings.beside.title"), 'id="uip-beside"', UIP.beside, "side");
+    + C.sw(T("settings.beside"), T("settings.beside.title"), 'id="uip-beside"', UIP.beside, "side")
+    + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
   const read = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default")], ["atkinson", T("settings.font.atkinson")], ["dyslexic", T("settings.font.dyslexic")]], a11y.font || "", "font")))
     + C.sw(T("settings.hc.label"), "", 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
@@ -192,6 +194,7 @@ function uipOpen(btn) {
     if (typeof redrawAll === "function") redrawAll();
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
+  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (!UIP.xicLens && window.XICLENS) XICLENS.closeAll(); });
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
     if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }

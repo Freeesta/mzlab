@@ -62,9 +62,10 @@
   function section(d) {
     if (!d) return "";
     const prod = d.rows.filter((/** @type {any} */ r) => r.status === 0 || r.status === 4), unexp = d.rows.filter((/** @type {any} */ r) => r.status === 3);
-    const head = ["ID", "m/z", "RT (min)", "Neutral formula", "Ion formula", "Status", "Kinship", "Route", "Prev. N", "Level proposed", "Level decided", "Notes"];
+    const hasIon = prod.some((/** @type {any} */ r) => r.ion), hasPred = prod.some((/** @type {any} */ r) => r.pred);
+    const head = ["ID", "m/z", "RT (min)", "Neutral formula", ...(hasIon ? ["Ion formula"] : []), "Status", "Kinship", "Route", ...(hasPred ? ["Prev. N"] : []), "Level proposed", "Level decided", "Notes"];
     let h = `<h2>Transformation products</h2><p>${prod.length} rows of the view with status product or parent, ${unexp.length} formed and not explained. The levels proposed come from the engine; the level decided is the one the chemist typed, if any.</p>`
-      + `<h3>Products</h3><table>${th(head)}${prod.map((/** @type {any} */ r) => tr([r.id, num(r.mz), num(r.rt, 2), r.neutral, r.ion, STATUS[r.status] || "", KINSHIP[r.kinship] || "", bits(VIA, r.via), r.pred ? `Prev. ${r.pred}` : "", r.level, r.decided, bits(NOTES, r.notes)])).join("")}</table>`
+      + `<h3>Products</h3><table>${th(head)}${prod.map((/** @type {any} */ r) => tr([r.id, num(r.mz), num(r.rt, 2), r.neutral, ...(hasIon ? [r.ion] : []), STATUS[r.status] || "", KINSHIP[r.kinship] || "", bits(VIA, r.via), ...(hasPred ? [r.pred ? `Prev. ${r.pred}` : ""] : []), r.level, r.decided, bits(NOTES, r.notes)])).join("")}</table>`
       + `<h3>Formed, not explained</h3>` + (unexp.length ? `<table>${th(["ID", "m/z", "RT (min)", "Detected in files", "Max area", "Notes"])}${unexp.map((/** @type {any} */ r) => tr([r.id, num(r.mz), num(r.rt, 2), r.n_det, sci(r.max_area), bits(NOTES, r.notes)])).join("")}</table>` : "<p>None.</p>");
     const drawn = prod.filter((/** @type {any} */ r) => r.status === 0 && r.series && r.series.some((/** @type {any} */ y) => y != null)).sort((/** @type {any} */ a, /** @type {any} */ b) => (b.kinship || 0) - (a.kinship || 0)).slice(0, MAX_DRAWN);
     if (drawn.length) h += `<h3>Time courses</h3><p>Area of the treated samples against time, one chart per product with its data. ${prod.filter((/** @type {any} */ r) => r.status === 0).length > drawn.length ? `The first ${MAX_DRAWN} by kinship are drawn; the others are in the CSV.` : ""}</p>`
