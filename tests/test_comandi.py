@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 pytestmark = pytest.mark.skipif(not shutil.which("node"), reason="node not available")
 import doc_comandi  # noqa: E402
 
-DA_PORTARE_MAX = 2      # only goes down: porting an action lowers it
+DA_PORTARE_MAX = 0      # only goes down: porting an action lowers it
 ANNULLA = {"istantanea", "comando", "tolto", "layout", "flow", "draw", "da-portare", "nessuna"}
 CAMPI_SOLI = {"istantanea", "comando"}
 FONTI = [f for f in WEB.glob("*.js") if f.name not in ("comandi.js", "storia.js")]

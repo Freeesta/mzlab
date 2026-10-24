@@ -314,7 +314,7 @@ const BANCO = (() => {
     const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;
     const q = E.panels.reduce((m, x) => Math.max(m, x.y + x.h + pnlGap()), 0), w = hostWidth();
     const o = { tab, x: 0, y: q, w, h: type === "map" ? 420 : 300, full: true };
-    const n = type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o);
+    const n = apriAnnullabile(type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o));
     relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
   }
   function subXicCell() { let a = act(); if (!a || a.type !== "chrom") { addCell("chrom"); a = act(); } if (a && a.type === "chrom") subXic(a); }

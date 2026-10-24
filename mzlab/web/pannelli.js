@@ -168,6 +168,27 @@ function chiudiPannello(p) {
   } });
 }
 
+/** A panel the student opened (a button, a double click, the XIC window): one undo step that closes it again and a redo that opens it as it was then. @param {any} p */
+function apriAnnullabile(p) {
+  if (!STORIA || !p) return p;
+  let cur = p, dati = "", rel = /** @type {any} */ ({});
+  const after = () => { relayout(); fitHost(); uiSave(); if (tabFiles("ms2").length) renderFileList(); };
+  STORIA.aperto({ what: ptitle(p.title) || I18N.t("storia.pannello"), tab: p.tab, dati: JSON.stringify(panelRec(p)),
+    segue: (/** @type {any} */ v, /** @type {any} */ n) => { if (cur === v) cur = n; },
+    undo: () => {
+      if (!E.panels.includes(cur)) return;
+      dati = JSON.stringify(panelRec(cur)); rel = { link: cur.link, src: cur.src, dda: cur.dda, dock: cur.dock, duo: cur.duo };
+      closePanel(cur); after();
+    },
+    redo: () => {
+      if (!dati) return;
+      const q = riapriPannello(JSON.parse(dati));
+      for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = rel[k] != null && E.panels.some(x => x.id === rel[k]) ? rel[k] : null;
+      STORIA.segui(cur, q); cur = q; after(); ctl(q); redrawAll();
+    } });
+  return p;
+}
+
 function closeAllPanels() {
   const all = E.panels.slice();
   all.forEach(p => closePanel(p));
@@ -863,7 +884,7 @@ function xicDirect(mz, after, panel, over) {
   const tr = over || xicTraceFor(mz, panel);
   if (!(panel && E.panels.includes(panel))) window.XICBTN?.prefetch(tr);
   if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => panel.traces.push(tr)); ctl(panel); draw(panel); reveal(panel); return panel; }
-  const np = addPanel("xic", { traces: [tr] });
+  const np = apriAnnullabile(addPanel("xic", { traces: [tr] }));
   if (after && E.panels.includes(after)) {
     np.el.classList.add("drag"); np.y = after.y + after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
     stackAfter(np, after); relayout(); fitHost(); 
@@ -952,7 +973,7 @@ function openXic(panel, pre = {}) {
     let np;
     if (panel && E.panels.includes(panel)) { COMANDI.fai("xic.traces", panel, () => traces.forEach(t => panel.traces.push(t))); np = panel; ctl(np); }
     else {
-      np = addPanel("xic", { traces });
+      np = apriAnnullabile(addPanel("xic", { traces }));
       if (pre.after && E.panels.includes(pre.after)) { 
         np.el.classList.add("drag"); np.y = pre.after.y + pre.after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
         stackAfter(np, pre.after); relayout(); fitHost(); 

@@ -110,8 +110,13 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, p: o.p, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, scade: o.scade || null, chiudi: null });
     sync(); avviso(e); return e;
   }
+  /** A panel the student opened: the undo closes it, the redo opens it again (the same entry as a removal with the two closures the other way round, and no notice). o = { what, tab, dati, undo, redo, segue? }: `segue(vecchio, nuovo)` follows a panel that was closed and opened again. @param {any} o */
+  function aperto(o) {
+    const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, segue: o.segue, scade: null, chiudi: null });
+    sync(); return e;
+  }
   /** A closed panel is open again as another object: the entries of the old one follow it. @param {any} vecchio @param {any} nuovo */
-  function segui(vecchio, nuovo) { pila.v.concat(pila.r).forEach(e => { if (e.p === vecchio && e.tipo !== "tolto") e.p = nuovo; }); sync(); }
+  function segui(vecchio, nuovo) { pila.v.concat(pila.r).forEach(e => { if (e.p === vecchio && e.tipo !== "tolto") e.p = nuovo; if (e.segue) e.segue(vecchio, nuovo); }); sync(); }
   function ripeti() {
     const e = pila.ripeti(visibile, ripristina);
     if (!e) { say(T("storia.nienteRipeti")); return false; }
@@ -137,7 +142,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   const bu = document.getElementById("np-undo"), br = document.getElementById("np-redo");
   if (bu) bu.addEventListener("click", () => { annulla(); });
   if (br) br.addEventListener("click", () => { ripeti(); });
-  return { registra, comando, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
+  return { registra, comando, tolto, aperto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();
 
 // thin wrappers: the callers (eventi.js, pannelli.js, dda.js, mappa.js, banco.js) keep their names

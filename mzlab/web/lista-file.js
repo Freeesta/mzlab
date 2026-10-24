@@ -3,14 +3,25 @@
 // Ctrl / Cmd + click = adds or removes the file, a double click on the name = only this file, Shift + click on a box = a range of boxes. (renderFileList in explore.js calls bindListaFile)
 // name, colour, group, visibility and order of the files are one undoable action (comandi.js): the snapshot is the list of all the files
 COMANDI.gestore("files.view", {
-  leggi: () => JSON.stringify(E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null])),
+  // the panels are part of the snapshot: hiding a file closes the panels that only showed it, and the undo opens them again
+  leggi: () => JSON.stringify({ f: E.files.map((/** @type {any} */ f) => [f.file, !!f.vis, f.label, f.color, !!f.colorSet, f.ugrp ?? null]),
+    p: E.panels.map((/** @type {any} */ q) => [q.id, panelRec(q), { link: q.link, src: q.src, dda: q.dda, dock: q.dock, duo: q.duo }]) }),
   applica: (_p, snap) => {
-    /** @type {any[][]} */ const rows = JSON.parse(snap);
-    rows.forEach(([file, vis, label, color, colorSet, ugrp]) => { const f = E.files.find((/** @type {any} */ x) => x.file === file); if (f) Object.assign(f, { vis, label, color, colorSet, ugrp: ugrp || undefined }); });
-    rows.map(r => r[0]).filter(n => E.files.some((/** @type {any} */ f) => f.file === n)).forEach((n, i) => {      // the order back, one move at a time (reorderFiles renumbers the panels)
+    const { f: rows, p: panels } = JSON.parse(snap);
+    rows.forEach((/** @type {any[]} */ [file, vis, label, color, colorSet, ugrp]) => { const f = E.files.find((/** @type {any} */ x) => x.file === file); if (f) Object.assign(f, { vis, label, color, colorSet, ugrp: ugrp || undefined }); });
+    rows.map((/** @type {any[]} */ r) => r[0]).filter((/** @type {string} */ n) => E.files.some((/** @type {any} */ f) => f.file === n)).forEach((/** @type {string} */ n, /** @type {number} */ i) => {      // the order back, one move at a time (reorderFiles renumbers the panels)
       if (E.files[i].file !== n) { const j = E.files.findIndex((/** @type {any} */ f) => f.file === n); reorderFiles(E.files[j].k, E.files[i].k, true); }
     });
-    cleanupOrphanPanels(); renderFileList(); renderNav(); redrawAll();
+    cleanupOrphanPanels();
+    const made = /** @type {Map<number, any>} */ (new Map());
+    panels.forEach((/** @type {any[]} */ [id, rec]) => {
+      const live = E.panels.find((/** @type {any} */ q) => q.id === id);
+      if (!live) { made.set(id, riapriPannello(rec)); return; }
+      const k = E.files.findIndex((/** @type {any} */ f) => f.file === rec.k); if (rec.k && k >= 0 && live.k !== k) live.k = k;      // a spectrum that moved to another file comes back
+    });
+    const now = (/** @type {number | null} */ id) => id == null ? null : made.has(id) ? made.get(id).id : E.panels.some((/** @type {any} */ q) => q.id === id) ? id : null;
+    made.forEach((q, id) => { const rel = panels.find((/** @type {any[]} */ x) => x[0] === id)[2]; for (const k of /** @type {const} */ (["link", "src", "dda", "dock", "duo"])) q[k] = now(rel[k]); });
+    relayout(); fitHost(); renderFileList(); renderNav(); redrawAll();
   },
 });
 /** @param {() => void} fn */

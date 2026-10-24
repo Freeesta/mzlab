@@ -303,7 +303,7 @@ function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   stackAfter(s, from); relayout(); fitHost();
   if (UIP.beside && window.AFFIANCA) AFFIANCA.accanto(s, from);        // the option «Spectrum beside the chromatogram»: same row when there is room (affianca.js)
   // Do NOT reveal(s) so the viewport does not shift randomly
-  return s;
+  return apriAnnullabile(s);
 }
 
 // The peak a click on the spectrum means: a click inside the box of a peak label gives exactly that peak; otherwise the peak the mouse box highlights (p._a.snap).
@@ -524,11 +524,11 @@ function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noop
 window.openBT = openBT;
 
 // ------------------------------------------------------------------ barra strumenti
-Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
-Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
+Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
+Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
-Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
+Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all" })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };

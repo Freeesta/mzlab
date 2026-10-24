@@ -22,8 +22,8 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 | `series.visibility` | correzione (`storia.campi`) | `grafici.js` | hide or show a series from the legend | hid, showHid | - | - | command: do / undo handler (comandi.js) |
 | `panel.link` | correzione (`storia.campi`) | `eventi.js` | freeze or relink the live spectrum | link, src | - | - | command: do / undo handler (comandi.js) |
 | `panel.rename` | pannello (`storia.pannello`) | `pannelli.js` | title of the panel | title | - | - | command: do / undo handler (comandi.js) |
-| `panel.open` | pannello (`storia.pannello`) | `pannelli.js` | create a panel (spectrum, XIC, extracted window) | - | - | - | NOT undoable yet |
-| `map.marks` | marcature (`storia.marcature`) | `mappa.js` | add, move, delete, note, reference of a mark | - | - | a drag is one step | NOT undoable yet |
+| `panel.open` | pannello (`storia.pannello`) | `pannelli.js` | create a panel (spectrum, XIC, extracted window) | - | - | - | removal with its own undo / redo (STORIA.tolto) |
+| `map.marks` | marcature (`storia.marcature`) | `mappa.js` | add, move, delete, note, reference of a mark | - | - | a drag is one step | command: do / undo handler (comandi.js) |
 | `files.view` | correzione (`storia.campi`) | `lista-file.js` | visibility, name, colour, group, order of a file | - | - | - | command: do / undo handler (comandi.js) |
 | `samples.meta` | correzione (`storia.campi`) | `campioni-tabella.js` | type, replicate, concentration, unit, time; TSV import | - | - | - | command: do / undo handler (comandi.js) |
 | `peaks.settings` | correzione (`storia.campi`) | `picchi.js` | peak-finding parameters, options of the integration table | - | - | - | command: do / undo handler (comandi.js) |
@@ -34,4 +34,4 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 | `view.navigate` | correzione (`storia.campi`) | `pannelli.js` | walk through the scans | si, r0, r1 | arrows | - | not undone: navigation: it chooses what to look at, the data are the same |
 | `view.fullscreen` | correzione (`storia.campi`) | `pannelli.js` | full screen of a panel | - | F | - | not undone: transient view of the page; Esc leaves it |
 
-Da portare nello stack: 2 azioni su 29.
+Da portare nello stack: 0 azioni su 29.
