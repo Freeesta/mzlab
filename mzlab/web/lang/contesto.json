@@ -714,7 +714,7 @@
   "xicbtn.ion.aria": "Nome accessibile dell'etichetta dello ione accanto al pulsante XIC; {ion} = ione e finestra (es. m/z 301.1410 ± 5 ppm).",
   "xicbtn.picked": "Annuncio dopo la scelta di un picco nello spettro; {ion} = ione e finestra.",
   "xicbtn.pop.tol": "Etichetta del campo tolleranza; {unit} = ppm (alta risoluzione) o Da (risoluzione unitaria).",
-  "a11y.uv": "Descrizione letta dai lettori di schermo dello spettro UV; {title} titolo, {a}-{b} nm, {y} assorbanza massima (mAU).",
+  "a11y.uv": "Descrizione letta dai lettori di schermo dello spettro UV; {title} titolo, {rt} RT in minuti, {a}-{b} nm, {y} assorbanza massima (mAU).",
   "ctx.uv.where": "Riga d'intestazione del menu dello spettro UV; {nm} = lunghezza d'onda sotto il puntatore.",
   "ctx.uv.wlAt": "Voce del menu dello spettro UV che apre la traccia del DAD a una lunghezza d'onda; {nm} = lunghezza d'onda sotto il puntatore, arrotondata.",
   "tdati.note.uv": "Nota sopra la tabella dello spettro UV; {a}-{b} nm, {n} = massimo di righe.",
