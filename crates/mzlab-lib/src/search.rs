@@ -5,7 +5,8 @@ use crate::clean::{clean, weighted, CleanOpts};
 use crate::error::Result;
 use crate::io::Source;
 use crate::read::Library;
-use crate::scores::{common_losses, modified_cosine, pair_scores, pair_term, ModCosine, Spec};
+use crate::pair_score::{pair_scores_prepared, Prepared};
+use crate::scores::{common_losses, modified_cosine, pair_term, ModCosine, Spec};
 use crate::sortutil;
 use std::ops::Range;
 
@@ -84,15 +85,31 @@ pub struct Hit {
     pub spec: Spec,
 }
 
+fn sort_hits(hits: &mut Vec<Hit>) {
+    sortutil::sort_any_by(hits, |a, b| {
+        b.entropy
+            .total_cmp(&a.entropy)
+            .then(b.cosine.total_cmp(&a.cosine))
+            .then(a.index.cmp(&b.index))
+    });
+}
+
 /// Every library spectrum with the query's polarity (or none known) and a precursor within the tolerance, best entropy first.
 pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Result<Vec<Hit>> {
     let w = o.prec_tol.window(q.prec);
+    let keep = o.top.max(1);
+    let prep = Prepared::new(&q.spec.it);
     let mut hits: Vec<Hit> = Vec::new();
     for r in lib.ranges(q.pol, q.prec - w, q.prec + w)? {
         for i in r {
             let rec = lib.rec(i)?;
             let s = spec_of(lib, i, rec.prec)?;
-            let sc = pair_scores(&q.spec, &s, o.frag_da);
+            let sc = pair_scores_prepared(&prep, &q.spec, &s, o.frag_da);
+            // A wide window lists thousands of candidates: prune to the best `keep` now and then instead of holding them all.
+            if hits.len() >= 4 * keep + 64 {
+                sort_hits(&mut hits);
+                hits.truncate(keep);
+            }
             let d = rec.prec - q.prec;
             hits.push(Hit {
                 index: i,
@@ -116,13 +133,8 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
             });
         }
     }
-    sortutil::sort_any_by(&mut hits, |a, b| {
-        b.entropy
-            .total_cmp(&a.entropy)
-            .then(b.cosine.total_cmp(&a.cosine))
-            .then(a.index.cmp(&b.index))
-    });
-    hits.truncate(o.top.max(1));
+    sort_hits(&mut hits);
+    hits.truncate(keep);
     for h in hits.iter_mut() {
         h.nl_shared = common_losses(&q.spec, &h.spec, o.frag_da);
     }
