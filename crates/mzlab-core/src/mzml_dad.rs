@@ -10,6 +10,74 @@ use crate::wiff::dad::DadData;
 /// Bytes read per step when walking the file for UV spectra.
 const STEP: u64 = 4 << 20;
 
+impl<R: ReadAt> Mzml<R> {
+    /// The optical matrix of the file, or `None` when it has no more than the 1D PDA trace.
+    pub fn dad(&mut self) -> Result<Option<DadData>> {
+        if let Some(d) = self.dad_array()? {
+            return Ok(Some(d));
+        }
+        self.dad_spectra()
+    }
+
+    /// The `dad_matrix` array of a `<chromatogram>`; the chromatograms close the file, so only its tail is read.
+    fn dad_array(&mut self) -> Result<Option<DadData>> {
+        let mut n: u64 = 1 << 20;
+        loop {
+            let from = self.size.saturating_sub(n);
+            let tail = self.read(from, self.size)?;
+            if let Some(p) = find(&tail, b"<chromatogramList", 0) {
+                for (head, data) in arrays(&tail[p..]) {
+                    if head.contains("value=\"dad_matrix\"") {
+                        return Ok(from_array(&head, &data));
+                    }
+                }
+                return Ok(None);
+            }
+            if from == 0 {
+                return Ok(None);
+            }
+            n *= 4;
+        }
+    }
+
+    /// The `MS:1000804` spectra, walking the file in steps (a spectrum that does not fit grows the step).
+    fn dad_spectra(&mut self) -> Result<Option<DadData>> {
+        let (mut pos, mut step) = (0u64, STEP);
+        let (mut times, mut wl, mut mat): (Vec<f64>, Vec<f64>, Vec<f32>) = (vec![], vec![], vec![]);
+        while pos < self.size {
+            let chunk = self.read(pos, (pos + step).min(self.size))?;
+            let last = pos + step >= self.size;
+            let Some(a) = find(&chunk, b"<spectrum ", 0) else {
+                pos += (chunk.len() as u64).saturating_sub(10).max(1);
+                continue;
+            };
+            let Some(b) = find(&chunk, b"</spectrum>", a) else {
+                if last {
+                    break;
+                }
+                pos += a as u64;
+                step = if a == 0 { step * 2 } else { step };
+                continue;
+            };
+            let block = &chunk[a..b + 11];
+            if find(block, b"MS:1000804", 0).is_some() {
+                if let Some((t, w, y)) = uv_row(block) {
+                    if wl.is_empty() {
+                        wl = w;
+                    }
+                    // a row on another wavelength grid cannot join the matrix
+                    if y.len() == wl.len() {
+                        times.push(t);
+                        mat.extend(y.iter().map(|&v| v as f32));
+                    }
+                }
+            }
+            pos += (b + 11) as u64;
+        }
+        Ok(build(times, wl, mat))
+    }
+}
+
 /// `<userParam name="key" value="..."/>` of an array head, as a number.
 fn user(head: &str, key: &str) -> Option<f64> {
     let k = format!("<userParam name=\"{key}\" value=\"");
@@ -79,74 +147,6 @@ fn uv_row(block: &[u8]) -> Option<(f64, Vec<f64>, Vec<f64>)> {
     }
     let (wl, ab) = (wl?, ab?);
     (wl.len() == ab.len() && !wl.is_empty()).then_some((rt, wl, ab))
-}
-
-impl<R: ReadAt> Mzml<R> {
-    /// The optical matrix of the file, or `None` when it has no more than the 1D PDA trace.
-    pub fn dad(&mut self) -> Result<Option<DadData>> {
-        if let Some(d) = self.dad_array()? {
-            return Ok(Some(d));
-        }
-        self.dad_spectra()
-    }
-
-    /// The `dad_matrix` array of a `<chromatogram>`; the chromatograms close the file, so only its tail is read.
-    fn dad_array(&mut self) -> Result<Option<DadData>> {
-        let mut n: u64 = 1 << 20;
-        loop {
-            let from = self.size.saturating_sub(n);
-            let tail = self.read(from, self.size)?;
-            if let Some(p) = find(&tail, b"<chromatogramList", 0) {
-                for (head, data) in arrays(&tail[p..]) {
-                    if head.contains("value=\"dad_matrix\"") {
-                        return Ok(from_array(&head, &data));
-                    }
-                }
-                return Ok(None);
-            }
-            if from == 0 {
-                return Ok(None);
-            }
-            n *= 4;
-        }
-    }
-
-    /// The `MS:1000804` spectra, walking the file in steps (a spectrum that does not fit grows the step).
-    fn dad_spectra(&mut self) -> Result<Option<DadData>> {
-        let (mut pos, mut step) = (0u64, STEP);
-        let (mut times, mut wl, mut mat): (Vec<f64>, Vec<f64>, Vec<f32>) = (vec![], vec![], vec![]);
-        while pos < self.size {
-            let chunk = self.read(pos, (pos + step).min(self.size))?;
-            let last = pos + step >= self.size;
-            let Some(a) = find(&chunk, b"<spectrum ", 0) else {
-                pos += (chunk.len() as u64).saturating_sub(10).max(1);
-                continue;
-            };
-            let Some(b) = find(&chunk, b"</spectrum>", a) else {
-                if last {
-                    break;
-                }
-                pos += a as u64;
-                step = if a == 0 { step * 2 } else { step };
-                continue;
-            };
-            let block = &chunk[a..b + 11];
-            if find(block, b"MS:1000804", 0).is_some() {
-                if let Some((t, w, y)) = uv_row(block) {
-                    if wl.is_empty() {
-                        wl = w;
-                    }
-                    // a row on another wavelength grid cannot join the matrix
-                    if y.len() == wl.len() {
-                        times.push(t);
-                        mat.extend(y.iter().map(|&v| v as f32));
-                    }
-                }
-            }
-            pos += (b + 11) as u64;
-        }
-        Ok(build(times, wl, mat))
-    }
 }
 
 #[cfg(test)]
