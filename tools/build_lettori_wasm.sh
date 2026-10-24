@@ -8,7 +8,7 @@ tetti="aperti 416768
 andi 263936
 thermo 561152
 agilent 438272
-sciex 331776
+sciex 364544
 waters 303104
 shimadzu 290816
 bruker 434176"
