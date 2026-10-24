@@ -199,8 +199,8 @@ fn the_options_come_from_json() {
     }
 }
 
-/// `score_terms` opens the score of every candidate as the weighted mean of its mass and isotope terms: the terms give the value back to 1e-12, the value is
-/// the score up to its rounding, and with the option off the text is the one of before.
+/// `score_terms` opens the score of every candidate as the weighted mean of its mass and isotope terms: the terms give the value back to 1e-12, the value
+/// rounded to 4 decimals is the score shown, and with the option off the text is the one of before.
 #[test]
 fn score_terms_open_the_combined_score_and_leave_it_unchanged() {
     for name in [
@@ -228,8 +228,9 @@ fn score_terms_open_the_combined_score_and_leave_it_unchanged() {
             assert!(t.residual().abs() < 1e-12, "{name}");
             assert!((t.terms.iter().map(|x| x.weight).sum::<f64>() - 1.0).abs() < 1e-12);
             if w.iso_term.is_some() {
-                assert!(
-                    (t.value - w.score).abs() < 1e-4,
+                assert_eq!(
+                    mzlab_core::jsonround::round(t.value, 4),
+                    w.score,
                     "{name}: {} vs {}",
                     t.value,
                     w.score
