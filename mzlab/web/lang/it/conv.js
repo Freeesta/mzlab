@@ -17,6 +17,7 @@ I18N.add("it", {
   "conv.cancelling": "Annullamento…",
   "conv.row.group": "In caricamento",
   "conv.row.open": "Lettura del file…",
+  "conv.row.get": "Scarico…",
   "conv.row.wait": "In coda",
   "conv.row.run": "In conversione {pc}%",
   "conv.row.conv": "Convertito: in attesa dell'indicizzazione",
