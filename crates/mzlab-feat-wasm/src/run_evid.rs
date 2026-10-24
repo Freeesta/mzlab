@@ -129,7 +129,7 @@ fn add_candidates(
             .get(r)
             .and_then(Option::as_ref)
             .map(|s| (&s.0.mz[..], &s.0.it[..]));
-        (aligned.mz[r], peaks)
+        (aligned.mz[r], peaks, None)
     });
 }
 

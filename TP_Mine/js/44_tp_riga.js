@@ -19,7 +19,7 @@
    * @typedef {{ title?: string, level?: string | number, pred?: number, decided?: string | number | null, summary?: TpSum[], words?: string, actions?: TpAction[], xic?: TpXic[], xicTip?: string, apexRt?: number | null, lo?: number | null, hi?: number | null,
    *   composition?: { run: () => Promise<any> }, spectrum?: TpSpec | null, spectrum2?: TpSpec | null, open?: { xic?: () => void, ms2?: () => void }, samples?: TpSample[], identity?: { neutral?: number | string | null, adduct?: string, candidates?: TpCand[] } | null,
    *   quality?: { shape?: number | string | null, snr?: number | null, fwhm?: number | null, flags?: string[], isoM1?: number | string | null, blank?: any, t0?: any, rejected?: string[] } | null,
-   *   fitCandidates?: { neutral_formula: string, ion_formula: string, ppm: number, element_fit: number, ms2_explained: number | null, total: number }[],
+   *   fitCandidates?: { neutral_formula: string, ion_formula: string, ppm: number, element_fit: number, ms2_explained: number | null, isotope_fit?: number | null, total: number }[],
    *   polpair?: { id: number, ionHere: string, ionThere: string, ppm: number, dRt: number, r: number | null, n: number }[], decide?: { series: any, key: string, level?: string | number | null, name?: string }, interp?: any, missing?: Record<string, string> }} TpRiga
    */
 
@@ -284,11 +284,12 @@
     if (!d) { d = document.createElement("details"); d.className = "tpr-det"; d.innerHTML = `<summary${tt("ft.riga.details")}>Details</summary><div class="tpr-detb"></div>`; panel.appendChild(d); }
     return /** @type {HTMLElement} */ (d.querySelector(".tpr-detb"));
   }
-  /** the leads of a row formed and not explained: formulas that fit its mass, scored by element fit and MS2 explained; numbers only, no verdict @param {NonNullable<TpRiga["fitCandidates"]>} cs */
+  /** the leads of a row formed and not explained: formulas that fit its mass, scored by element fit, isotope fit and MS2 explained; numbers only, no verdict @param {NonNullable<TpRiga["fitCandidates"]>} cs */
   function fitTable(cs) {
     const box = document.createElement("div"); box.className = "tpr-tw"; box.tabIndex = 0; box.setAttribute("role", "region"); box.setAttribute("aria-label", "Element fit candidates");
-    const f = (/** @type {number | null} */ v) => v == null ? "–" : v.toFixed(2);
-    box.innerHTML = `<table class="tpr"><caption>Element fit candidates</caption><thead><tr><th scope="col">Neutral formula</th><th scope="col" class="n">ppm</th><th scope="col" class="n">Element fit</th><th scope="col" class="n">MS2 explained</th></tr></thead><tbody>${cs.map(c => `<tr><td>${esc(c.neutral_formula)}</td><td class="n">${c.ppm.toFixed(1)}</td><td class="n">${f(c.element_fit)}</td><td class="n">${f(c.ms2_explained)}</td></tr>`).join("")}</tbody></table>`;
+    const f = (/** @type {number | null | undefined} */ v) => v == null ? "–" : v.toFixed(2);
+    const hasIso = cs.some(c => c.isotope_fit != null);
+    box.innerHTML = `<table class="tpr"><caption>Element fit candidates</caption><thead><tr><th scope="col">Neutral formula</th><th scope="col" class="n">ppm</th><th scope="col" class="n">Element fit</th>${hasIso ? `<th scope="col" class="n">Isotope fit</th>` : ""}<th scope="col" class="n">MS2 explained</th></tr></thead><tbody>${cs.map(c => `<tr><td>${esc(c.neutral_formula)}</td><td class="n">${c.ppm.toFixed(1)}</td><td class="n">${f(c.element_fit)}</td>${hasIso ? `<td class="n">${f(c.isotope_fit)}</td>` : ""}<td class="n">${f(c.ms2_explained)}</td></tr>`).join("")}</tbody></table>`;
     return box;
   }
   /** @param {HTMLElement} panel @param {TpRiga} m */
