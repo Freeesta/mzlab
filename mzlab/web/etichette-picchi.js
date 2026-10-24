@@ -92,6 +92,47 @@ function draw(p, g, sr, c) {
   g.restore();
 }
 
+/** @type {Map<string, { apex: number }[] | "wait">} */
+const uvCache = new Map();
+
+/** The maxima of a UV spectrum (indices into nm), or null while the engine works (the panel is drawn again when ready). @param {any} p @param {number[]} nm @param {number[]} y */
+function uvMaxima(p, nm, y) {
+  let sum = 0; for (let i = 0; i < y.length; i++) sum += y[i];
+  const key = [nm.length, nm[0], nm[nm.length - 1], +sum.toFixed(3)].join("|"), c = uvCache.get(key);
+  if (c && c !== "wait") return c;
+  if (c === "wait") return null;
+  if (uvCache.size > 50) uvCache.clear();
+  uvCache.set(key, "wait");
+  (async () => {
+    let list = [];
+    try { list = (window.QUALITA ? await QUALITA.labels(nm, y, MAXC, REL, SNR) : null) || []; } catch (e) { list = []; }
+    uvCache.set(key, list);
+    if (window.drawSoon) drawSoon(p);
+  })();
+  return null;
+}
+
+/**
+ * Labels the absorbance maxima of the UV spectrum panel `p` with their wavelength ("260 nm"), tallest first, never over each other; they follow the zoom and
+ * are drawn into the exports too. `p._a.lbls` keeps the boxes (text, etpk) like the chromatogram labels.
+ * @param {any} p @param {CanvasRenderingContext2D} g @param {{ nm: number[], y: number[], X: (v: number) => number, Y: (v: number) => number, x0: number, x1: number, W: number }} c
+ */
+function drawUv(p, g, c) {
+  if (!on(p, 1) || !p._a) return;
+  const list = uvMaxima(p, c.nm, c.y); if (!list) return;
+  const lbls = p._a.lbls = p._a.lbls || [], room = Math.max(1, Math.min(8, Math.floor((c.W - M.l - M.r) / 70))), h = 11 * fz() + 4;
+  g.save(); g.font = fpx(11, "bold "); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
+  for (const l of list.filter(o => c.nm[o.apex] >= c.x0 && c.nm[o.apex] <= c.x1).sort((u, v) => v.height - u.height).slice(0, room)) {
+    const label = T("etpk.nm", { v: String(Math.round(c.nm[l.apex])) }), w = g.measureText(label).width + 6;
+    const x = Math.max(M.l + w / 2 + 2, Math.min(c.W - M.r - w / 2 - 2, c.X(c.nm[l.apex])));
+    const b = { x: x - w / 2, y: Math.max(M.t + 2, c.Y(c.y[l.apex]) - 5 - h), w, h };
+    if (lbls.some((/** @type {any} */ o) => b.x < o.x + o.w + GAP && o.x < b.x + b.w + GAP && b.y < o.y + o.h && o.y < b.y + b.h)) continue;
+    g.strokeStyle = ecss("--panel"); g.strokeText(label, x, b.y + h - 4); g.fillStyle = ecss("--ink"); g.fillText(label, x, b.y + h - 4);
+    lbls.push({ ...b, text: label, etpk: true });
+  }
+  g.restore();
+}
+
 /** @param {any} p */
 const toggle = p => { COMANDI.fai("spec.display", p, () => { p.etpk = !on(p, p._a && p._a.sr ? p._a.sr.length : 1); }); drawSoon(p); uiSave(); };
 
@@ -102,7 +143,7 @@ function rows(p, s) {
 }
 
 if (typeof AZIONI !== "undefined") {
-  AZIONI.registra({ id: "chrom.etpk", gruppo: "view", viste: ["chrom", "xic", "mrm"], visibile: (/** @type {any} */ c) => !isAnalog(c.p.kind), attiva: (/** @type {any} */ c) => on(c.p, c.p._a && c.p._a.sr ? c.p._a.sr.length : 1),
+  AZIONI.registra({ id: "chrom.etpk", gruppo: "view", viste: ["chrom", "xic", "mrm", "spec"], visibile: (/** @type {any} */ c) => c.vista !== "spec" ? !isAnalog(c.p.kind) : !!c.p.uv, attiva: (/** @type {any} */ c) => on(c.p, c.p._a && c.p._a.sr ? c.p._a.sr.length : 1),
     nome: () => T("ctx.chrom.etpk"), aria: () => T("ctx.chrom.etpk.aria"), esegui: (/** @type {any} */ c) => toggle(c.p) });
 }
-window.ETPK = { on, draw, labelsOf, rows, toggle };
+window.ETPK = { on, draw, drawUv, labelsOf, rows, toggle };

@@ -164,6 +164,8 @@ function toggleTl(p) {
 function scanLine(p, data, d0) {
   // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
   const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;
+  const rt0 = p.r0, rt1 = p.r1;           // time of provenance: the scan, or the window the spectrum averages
+  if (rt0 != null && rt1 != null) parts.push(d0.scans === 1 ? I18N.t("spec.scanLine.rt", { rt: ((rt0 + rt1) / 2).toFixed(2) }) : I18N.t("spec.scanLine.rtr", { a: rt0.toFixed(2), b: rt1.toFixed(2) }));
   parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
   if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(I18N.t("spec.scanLine.prec", { prec: p.prec != null ? p.prec : "?" }) + (ce != null ? I18N.t("spec.scanLine.ce", { ce }) : "")); }
   return parts.join(" · ");

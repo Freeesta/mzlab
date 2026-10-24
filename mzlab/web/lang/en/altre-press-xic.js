@@ -111,6 +111,8 @@ I18N.add("en", {
   "spec.par.reset.title": "Back to the default values",
   "spec.par.reset": "Reset to defaults",
   "spec.scanLine.one": "scan {i}{of}",
+  "spec.scanLine.rt": "RT {rt} min",
+  "spec.scanLine.rtr": "RT {a}–{b} min",
   "spec.scanLine.avg": "average of {n} scans",
   "spec.scanLine.prec": "precursor {prec}",
   "spec.scanLine.ce": " · CE {ce} eV",

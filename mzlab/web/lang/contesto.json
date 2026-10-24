@@ -266,6 +266,8 @@
   "spec.par.dec": "{select} = menu a tendina (HTML).",
   "spec.par.sticks": "{select} = menu a tendina Profilo/Bastoncini (HTML).",
   "spec.scanLine.one": "{of} = «/N» (numero totale) oppure vuoto.",
+  "spec.scanLine.rt": "Tempo di ritenzione di provenienza dello spettro di una sola scansione, sulla riga sotto lo spettro; {rt} = minuti.",
+  "spec.scanLine.rtr": "Intervallo di tempo di ritenzione di cui lo spettro è la media, sulla riga sotto lo spettro; {a}, {b} = minuti.",
   "perf.env": "Riga del pannello ?perf (strumento per sviluppatori).",
   "perf.version": "Riga del pannello ?perf.",
   "perf.engine": "Riga del pannello ?perf.",

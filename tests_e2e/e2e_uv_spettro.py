@@ -43,6 +43,27 @@ try:
             assert d["head"] == ["nm", "Assorbanza (mAU)"] and len(d["rows"]) > 50, d["head"]
             assert "UV" in t and "m/z" not in t, t
         step("the table of the data has nm and mAU; the description speaks of the UV spectrum", table)
+        LBU = f"({UV}._a.lbls || []).filter(l => l.etpk)"
+        def uv_labels():
+            attendi(pg, f"{LBU}.length >= 1")
+            t = pg.evaluate(f"{LBU}.map(l => l.text)"); assert t == ["260 nm"], t
+            b = pg.evaluate(f"{LBU}.map(l => [l.x, l.y, l.w, l.h])")[0]; cv = pg.evaluate(f"{UV}.cv.getBoundingClientRect().width")
+            assert b[0] >= 0 and b[0] + b[2] <= cv and b[1] >= 0, b
+        step("UV spectrum: the absorbance maximum is labelled with its wavelength (260 nm), inside the plot", uv_labels)
+        def uv_labels_zoom():
+            pg.evaluate(f"{UV}.zoom=[300,400]"); pg.evaluate(f"drawSoon({UV})"); frames(pg, 3)
+            assert pg.evaluate(f"{LBU}.length") == 0, "the label of a maximum out of view stays"
+            pg.evaluate(f"{UV}.zoom=null"); pg.evaluate(f"drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
+        step("the wavelength labels follow the zoom", uv_labels_zoom)
+        def uv_labels_off():
+            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = false }}); drawSoon({UV})"); frames(pg, 3)
+            assert pg.evaluate(f"{LBU}.length") == 0
+            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
+        step("the wavelength labels can be hidden and shown again", uv_labels_off)
+        def ms_rt():
+            t = pg.evaluate("(()=>{const q=E.panels.find(q=>q.type==='spec'&&!q.uv&&q._a); return q ? q.leg.textContent : null})()")
+            assert t and __import__('re').search(r"RT \d+\.\d\d", t), t
+        step("the MS spectrum says the RT (or the RT range) it comes from", ms_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
             assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Assorbanza (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]

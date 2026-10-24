@@ -111,6 +111,8 @@ I18N.add("it", {
   "spec.par.reset.title": "Riporta ai valori predefiniti",
   "spec.par.reset": "Ripristina predefiniti",
   "spec.scanLine.one": "scansione {i}{of}",
+  "spec.scanLine.rt": "RT {rt} min",
+  "spec.scanLine.rtr": "RT {a}–{b} min",
   "spec.scanLine.avg": "media di {n} scansioni",
   "spec.scanLine.prec": "precursore {prec}",
   "spec.scanLine.ce": " · CE {ce} eV",
