@@ -20516,3 +20516,4 @@
 {"v":1,"ts_utc":"2026-10-24T08:25:48Z","tipo":"carico","k":"2026-10-24T08:2","job_in_coda":0,"job_in_corso":10}
 {"v":1,"ts_utc":"2026-10-24T09:03:13Z","azione":"aperta","tipo":"pr","pr":1678,"sha":"035cee11ea96dde35f300d8e8c6e12e88cc3634c"}
 {"v":1,"ts_utc":"2026-10-24T09:17:26Z","azione":"aperta","tipo":"pr","pr":1679,"sha":"42dd1d0421585bc390d870356f600e2eedbae8c5"}
+{"v":1,"tipo":"pr","pr":1678,"sha":"035cee11ea96dde35f300d8e8c6e12e88cc3634c","ts_utc":"2026-10-24T09:17:51Z","azione":"unita","aperta_s":878,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":15,"righe_meno":7,"file_n":3,"file":["crates/mzlab-feat/src/untargeted/formula_id.rs","crates/mzlab-feat/tests/untargeted_formula_id.rs","docs/agenti/attributio-formula.md"],"aree":{"rust":2,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":407}
