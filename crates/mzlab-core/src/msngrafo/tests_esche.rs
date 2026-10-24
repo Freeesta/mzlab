@@ -144,3 +144,92 @@ fn decoys_mixed_with_the_fragments_leave_most_of_them_without_a_formula() {
     }
     assert!((10..=20).contains(&esche), "{esche} of 80 decoys");
 }
+
+/// Sub-formulas of a sulfur-bearing root (C22H31N6O7S, m/z of the ion) that are even-electron ions: a denser lattice than `FRAMMENTI`.
+fn bersagli_s(n: usize) -> Vec<String> {
+    let mut v = vec![];
+    for c in 4..=22 {
+        for h in 4..=31 {
+            for nn in 0..=6 {
+                for o in 0..=7 {
+                    for s in 0..=1 {
+                        let dbe2 = 2 * c + 2 + nn - h - 1;
+                        if 2 + 2 * (22 - c) + (6 - nn) - (31 - h) < 0
+                            || dbe2 < 1
+                            || dbe2 % 2 != 0
+                            || ion_s(c, h, nn, o, s) < 150.0
+                        {
+                            continue;
+                        }
+                        v.push(format!("C{c}H{h}N{nn}O{o}S{s}"));
+                    }
+                }
+            }
+        }
+    }
+    let mut x: u64 = 12345;
+    let mut out = vec![];
+    for _ in 0..n {
+        x = x
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        out.push(v[(x >> 33) as usize % v.len()].clone());
+    }
+    out
+}
+fn ion_s(c: i32, h: i32, n: i32, o: i32, s: i32) -> f64 {
+    12.0 * c as f64
+        + 1.00782503207 * h as f64
+        + 14.0030740048 * n as f64
+        + 15.99491461956 * o as f64
+        + 31.97207100 * s as f64
+        - 0.00054858
+}
+
+/// (targets, decoys) among `n` targets of the sulfur root and their decoys moved by `d` Da, in one spectrum, that keep a formula candidate.
+fn misto_s(n: usize, d: f64) -> (usize, usize) {
+    let ts = bersagli_s(n);
+    let sc = |i: usize| (((i * 37) % 7) as f64 * 0.5 - 1.5) * 0.3e-6;
+    let mut peaks = vec![];
+    for (i, f) in ts.iter().enumerate() {
+        let f = f.replace("S0", "").replace("O0", "").replace("N0", "");
+        let m = ion(&f) * (1.0 - 2.8e-6 + sc(i));
+        peaks.push((m, 100.0 - i as f64));
+        peaks.push((m + d, 99.5 - i as f64));
+    }
+    let o = Opzioni {
+        formula: Some("C22H30N6O7S+H".into()),
+        ..Opzioni::default()
+    };
+    let g = grafo_da_picchi((ion("C22H31N6O7S"), 1), ("CID", 30.0), &peaks, &o);
+    let trovati = |(m, _): &(f64, f64)| {
+        g.nodi.iter().any(|n| {
+            (n.mz - m).abs() < 1e-4 && n.formula.as_ref().is_some_and(|f| !f.candidati.is_empty())
+        })
+    };
+    (
+        peaks.iter().step_by(2).filter(|p| trovati(p)).count(),
+        peaks
+            .iter()
+            .skip(1)
+            .step_by(2)
+            .filter(|p| trovati(p))
+            .count(),
+    )
+}
+
+#[test]
+fn decoys_among_the_targets_of_a_dense_lattice_are_fewer_with_the_recalibration_window_read_from_the_cluster(
+) {
+    // a root of m/z ~490 with sulfur: at 10 ppm more than half of the decoys fit a sub-formula (the decoys of 0.03-0.04 Da are near the
+    // CH4/O swap, 0.0364 Da, and fit exactly); the window read from the densest 40 % of the values and floored at 2 ppm leaves 92 of 176
+    // (108 with the floor at 3 ppm and the quartile), and every target keeps its formula
+    let (mut bersagli, mut esche) = (0, 0);
+    for d in [0.02, 0.03, 0.04, 0.05] {
+        let (b, e) = misto_s(44, d);
+        bersagli += b;
+        esche += e;
+    }
+    assert!(bersagli >= 175, "{bersagli} of 176 targets");
+    assert!(esche <= 95, "{esche} of 176 decoys");
+}
