@@ -191,6 +191,19 @@ fn passo(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
                     })
             })
             .collect();
+        // a precursor that does not hold any candidate (a co-isolated ion, a wrong formula) must not take a fragment away from the others
+        let tieni = if tieni.iter().any(|x| *x) {
+            tieni
+        } else {
+            st.cand[j]
+                .iter()
+                .map(|x| {
+                    st.genitori[j]
+                        .iter()
+                        .any(|&p| st.cand[p].iter().any(|q| sotto(&x.c, &q.c)))
+                })
+                .collect()
+        };
         filtra(&mut st.cand[j], &tieni);
         let pr: Vec<Vec<&'static str>> = st.cand[j]
             .iter()
