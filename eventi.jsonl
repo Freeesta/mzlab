@@ -19175,3 +19175,4 @@
 {"v":1,"ts_utc":"2026-10-24T00:20:03Z","tipo":"carico","k":"2026-10-24T00:2","job_in_coda":0,"job_in_corso":9}
 {"v":1,"ts_utc":"2026-10-24T00:26:15Z","azione":"aperta","tipo":"pr","pr":1661,"sha":"ddd51b167c9e870087ce4ceed61e778c80fe6ae9"}
 {"v":1,"ts_utc":"2026-10-24T00:29:47Z","azione":"aperta","tipo":"pr","pr":1662,"sha":"1e60385c2a00fa8ffc1051bd157fa20e6efeae90"}
+{"v":1,"tipo":"pr","pr":1662,"sha":"1e60385c2a00fa8ffc1051bd157fa20e6efeae90","ts_utc":"2026-10-24T00:40:33Z","azione":"unita","aperta_s":646,"commit_n":2,"cause_commit":{"merge di main":1},"merge_main":1,"righe_piu":98,"righe_meno":19,"file_n":4,"file":["crates/mzlab-cli/src/flow_run_tests.rs","crates/mzlab-feat-wasm/src/run.rs","crates/mzlab-feat-wasm/src/run/par.rs","docs/agenti/mzfeat.md"],"aree":{"rust":3,"docs":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":177}
