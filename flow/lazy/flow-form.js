@@ -22,6 +22,7 @@
       for (const i of n) i.addEventListener("change", () => { const v = n.map((/** @type {any} */ x) => x.value === "" ? NaN : +x.value); set(v.some(Number.isNaN) ? null : v); });
       box.append(...n); return box;
     }
+    if (p["x-liste"] && F.listeEditor) { const ed = F.listeEditor(p, cur, set, id); if (ed) return ed; }
     const num = p.type === "number" || p.type === "integer";
     return el("input", {
       type: num ? "number" : "text", id, "data-fk": id, value: cur ?? "", step: p.type === "integer" ? 1 : "any", min: p.minimum, max: p.maximum,
