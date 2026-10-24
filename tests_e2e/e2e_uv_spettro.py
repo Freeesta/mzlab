@@ -75,6 +75,44 @@ try:
             ids = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return AZIONI.per({vista:'chrom', p:c, k:0, x:0.5}).map(a=>a.id)})()")
             assert "chrom.wl" in ids and "chrom.xic" not in ids, ids
         step("the right-click menu of a PDA trace offers λ and not XIC", wl_menu)
+        def n_wl(): return pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
+        def menu_click(azione):
+            pg.evaluate(f"(()=>{{const d=document.querySelector('#ctx [data-azione=\"{azione}\"]'); if(!d) throw new Error('no menu entry {azione}'); d.click()}})()")
+        def wl_from_map():
+            n0 = n_wl()
+            m = "E.panels.find(q=>q.type==='map')"
+            pg.evaluate(f"(()=>{{const p={m};p.zoom=null;p.cv.scrollIntoView({{block:'center'}})}})()"); frames(pg, 3)
+            at = lambda: pg.evaluate(f"(()=>{{const p={m},b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X(0.5),y:b.y+a.Y(260),t:b.y}}}})()")
+            box = at(); pg.mouse.move(box["x"], box["y"]); frames(pg, 3); box = at()       # the hover can move the layout: measure again
+            pg.mouse.click(box["x"], box["y"], button="right")
+            attendi(pg, "!!document.querySelector('#ctx [data-azione=mapxic]')")
+            want = pg.evaluate(f"{m}._a.mzAt({box['y'] - box['t']})")
+            menu_click("mapxic")
+            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
+            assert abs(w[0] - want) < 10 and w[0] == w[1] and 200 <= w[0] <= 400, (w, want)
+        step("right click on the PDA map, λ: a trace at the wavelength under the pointer", wl_from_map)
+        def wl_from_uv():
+            n0 = n_wl()
+            pg.evaluate(f"({UV}).zoom=null"); frames(pg, 2)
+            box = pg.evaluate(f"(()=>{{const p={UV},b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X(255),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
+            pg.mouse.click(box["x"], box["y"], button="right")
+            attendi(pg, "!!document.querySelector('#ctx [data-azione=\"uv.wlAt\"]')")
+            ids = pg.evaluate("[...document.querySelectorAll('#ctx [data-azione]')].map(d=>d.dataset.azione)")
+            assert "uv.wlView" in ids and "spec.xic" not in ids, ids
+            menu_click("uv.wlAt")
+            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()"); assert w[0] == w[1] and abs(w[0] - 255) < 3, w
+        step("UV spectrum, right-click menu: λ at the pointer and no XIC", wl_from_uv)
+        def wl_range():
+            n0 = n_wl()
+            pg.evaluate(f"({UV}).cv.focus()"); pg.keyboard.press("+"); frames(pg, 3)
+            lo, hi = pg.evaluate(f"[{UV}._a.x0, {UV}._a.x1]"); assert hi - lo < 200, (lo, hi)
+            pg.keyboard.press("x")
+            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
+            assert abs(w[0] - lo) < 0.06 and abs(w[1] - hi) < 0.06, (w, lo, hi)
+        step("UV spectrum: zoom with the keys, then X traces the visible nm range (no dragging)", wl_range)
         def axe():
             if not AXE: steps.append(("axe-core not available (SKIP)", "ok")); return
             pg.add_script_tag(path=AXE)

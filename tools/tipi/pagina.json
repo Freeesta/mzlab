@@ -74,6 +74,7 @@
     "../../mzlab/web/storia.js",
     "../../mzlab/web/asse.js",
     "../../mzlab/web/eventi.js",
+    "../../mzlab/web/uv-azioni.js",
     "../../mzlab/web/hr.js",
     "../../mzlab/web/composizione.js",
     "../../mzlab/web/elementare.js",
