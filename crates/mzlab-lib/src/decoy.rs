@@ -2,9 +2,10 @@
 //! so the search engine is the same with or without them. The number is a LOWER BOUND of the true error rate (see `fdr_note`).
 
 use crate::error::Result;
+use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::read::Library;
-use crate::search::{identity, IdentityOpts, Query};
+use crate::search::{identity_with, IdentityOpts, Query};
 use crate::sortutil;
 use crate::spec::Spectrum;
 
@@ -183,8 +184,19 @@ pub fn best_scores_by<S: Source>(
     o: &IdentityOpts,
     score: impl Fn(&crate::search::Hit) -> f64,
 ) -> Result<Best> {
+    best_scores_with(lib, q, o, o.frag_da, score)
+}
+
+/// As `best_scores_by` with the fragment tolerance given as `FragTol` (`o.frag_da` is not read).
+pub fn best_scores_with<S: Source>(
+    lib: &Library<S>,
+    q: &Query,
+    o: &IdentityOpts,
+    frag: impl Into<FragTol>,
+    score: impl Fn(&crate::search::Hit) -> f64,
+) -> Result<Best> {
     let mut b = Best::default();
-    for h in identity(lib, q, o)? {
+    for h in identity_with(lib, q, o, frag)? {
         let e = quantize(score(&h));
         if is_decoy(&lib.meta(h.index)?.accession) {
             b.decoy = b.decoy.max(e);
