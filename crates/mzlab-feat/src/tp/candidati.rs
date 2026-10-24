@@ -6,7 +6,8 @@
 //! - `element_fit` = max(Σ_e min(p_e, c_e) / Σ_e c_e, Σ_e min(p_e, c_e) / Σ_e p_e), p = parent and c = candidate counts of each element (H included);
 //! - `ms2_explained` = share of the MS2 intensity of the row (precursor left out) matched within `FRAG_TOL` Da by a sub-formula of the ion of the
 //!   candidate; `None` without an MS2 (or when the candidate has too many sub-formulas to list);
-//! - `total` = `element_fit` + `ms2_explained` (0 when absent). The two parts are kept apart in the output.
+//! - `isotope_fit` = score of the observed isotope pattern against the ion formula (isoscore); `None` without observed pattern;
+//! - `total` = `element_fit` + `ms2_explained` (0 when absent) + `isotope_fit` (0 when absent). The parts are kept apart in the output.
 
 use mzlab_core::elements::{mass_of, parse_formula};
 use mzlab_core::json::{round, Out, Value};
@@ -35,6 +36,7 @@ pub struct FitCandidate {
     pub ppm: f64,
     pub element_fit: f64,
     pub ms2_explained: Option<f64>,
+    pub isotope_fit: Option<f64>,
     pub total: f64,
 }
 
@@ -172,6 +174,7 @@ fn scored(
     ppm: f64,
     pf: &[(String, u64)],
     spec: Option<&(Vec<f64>, Vec<f64>)>,
+    iso: Option<&[(f64, f64)]>,
     mz: f64,
     z: i32,
 ) -> FitCandidate {
@@ -183,13 +186,30 @@ fn scored(
     let ion_formula = formula_text(&ion);
     let fit = element_fit(pf, &parse_formula(&neutral_formula).unwrap_or_default());
     let ms2 = spec.and_then(|s| ms2_share(&ion_formula, z, s, mz));
+    let iso_fit = iso.and_then(|obs| {
+        if obs.is_empty() {
+            return None;
+        }
+        let io = mzlab_core::isoscore::IsoOpts {
+            r200: 0.0,
+            sigma_ppm: PPM,
+            sigma_int: 0.1,
+            min_rel: 1.0,
+            noise_rel: 0.0,
+            norm: "base",
+        };
+        mzlab_core::isoscore::isotope_score(&ion, z, obs, &io)
+            .ok()
+            .map(|s| round(s.score, 4))
+    });
     FitCandidate {
         neutral_formula,
         ion_formula,
         ppm,
         element_fit: fit,
         ms2_explained: ms2,
-        total: fit + ms2.unwrap_or(0.0),
+        isotope_fit: iso_fit,
+        total: fit + ms2.unwrap_or(0.0) + iso_fit.unwrap_or(0.0),
     }
 }
 
@@ -200,6 +220,7 @@ pub fn candidates(
     mz: f64,
     polarity: i8,
     spec: Option<(&[f64], &[f64])>,
+    iso: Option<&[(f64, f64)]>,
 ) -> Vec<FitCandidate> {
     let Ok(pf) = parse_formula(parent) else {
         return Vec::new();
@@ -220,7 +241,7 @@ pub fn candidates(
     let z = if polarity < 0 { -1 } else { 1 };
     let mut out: Vec<FitCandidate> = formulas_near(neutral_of(mz, polarity), &limits, mz)
         .into_iter()
-        .map(|(counts, ppm)| scored(&counts, ppm, &pf, spec.as_ref(), mz, z))
+        .map(|(counts, ppm)| scored(&counts, ppm, &pf, spec.as_ref(), iso, mz, z))
         .collect();
     mzlab_core::sortc::slice_by(&mut out, |a, b| {
         b.total
@@ -232,14 +253,20 @@ pub fn candidates(
 }
 
 impl TpBlock {
-    /// Fill `fit_candidates` for every row formed and not explained. `rows` gives (m/z, MS2 peaks if any) of a row; nothing is done at unit resolution,
-    /// without a parent formula or without the block.
+    /// Fill `fit_candidates` for every row formed and not explained. `rows` gives (m/z, MS2 peaks if any, isotope pattern if any) of a row;
+    /// nothing is done at unit resolution, without a parent formula or without the block.
     pub fn add_fit_candidates<'a>(
         &mut self,
         parent: &str,
         polarity: i8,
         unit: bool,
-        rows: impl Fn(usize) -> (f64, Option<(&'a [f64], &'a [f64])>),
+        rows: impl Fn(
+            usize,
+        ) -> (
+            f64,
+            Option<(&'a [f64], &'a [f64])>,
+            Option<&'a [(f64, f64)]>,
+        ),
     ) {
         self.fit_candidates.clear();
         if unit || parent.is_empty() {
@@ -249,8 +276,8 @@ impl TpBlock {
             if self.status[r] != ST_UNEXPLAINED {
                 continue;
             }
-            let (mz, spec) = rows(r);
-            let c = candidates(parent, mz, polarity, spec);
+            let (mz, spec, iso) = rows(r);
+            let c = candidates(parent, mz, polarity, spec, iso);
             if !c.is_empty() {
                 self.fit_candidates.push((r as u32, c));
             }
@@ -265,7 +292,7 @@ impl TpBlock {
     }
 }
 
-/// The array of candidates as JSON (`[{neutral_formula, ion_formula, ppm, element_fit, ms2_explained, total}]`).
+/// The array of candidates as JSON (`[{neutral_formula, ion_formula, ppm, element_fit, ms2_explained, isotope_fit, total}]`).
 pub fn candidates_json(o: &mut Out, c: &[FitCandidate]) {
     o.raw("[");
     for (i, x) in c.iter().enumerate() {
@@ -280,6 +307,8 @@ pub fn candidates_json(o: &mut Out, c: &[FitCandidate]) {
             .num(round(x.element_fit, 4))
             .raw(",\"ms2_explained\":")
             .opt(x.ms2_explained.map(|v| round(v, 4)))
+            .raw(",\"isotope_fit\":")
+            .opt(x.isotope_fit.map(|v| round(v, 4)))
             .raw(",\"total\":")
             .num(round(x.total, 4))
             .raw("}");
@@ -298,6 +327,7 @@ pub fn candidates_from(a: &[Value]) -> Vec<FitCandidate> {
             ppm: f(x, "ppm").unwrap_or(0.0),
             element_fit: f(x, "element_fit").unwrap_or(0.0),
             ms2_explained: f(x, "ms2_explained"),
+            isotope_fit: f(x, "isotope_fit"),
             total: f(x, "total").unwrap_or(0.0),
         })
         .collect()

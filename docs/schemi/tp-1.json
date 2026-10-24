@@ -95,6 +95,7 @@
         "ppm",
         "element_fit",
         "ms2_explained",
+        "isotope_fit",
         "total"
        ],
        "properties": {
@@ -120,10 +121,18 @@
          "minimum": 0,
          "maximum": 1
         },
+        "isotope_fit": {
+         "type": [
+          "number",
+          "null"
+         ],
+         "minimum": 0,
+         "maximum": 1
+        },
         "total": {
          "type": "number",
          "minimum": 0,
-         "maximum": 2
+         "maximum": 3
         }
        }
       }

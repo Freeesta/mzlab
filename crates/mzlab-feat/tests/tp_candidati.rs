@@ -26,7 +26,7 @@ fn true_formula_is_among_the_first_three() {
     let mz = mz_of(PRODUCT);
     let (pm, pi) = ms2_of(PRODUCT);
     for spec in [None, Some((&pm[..], &pi[..]))] {
-        let c = candidates(PARENT, mz, 1, spec);
+        let c = candidates(PARENT, mz, 1, spec, None);
         assert!(!c.is_empty() && c.len() <= 3);
         assert!(c.iter().any(|x| x.neutral_formula == PRODUCT), "{c:?}");
         if spec.is_some() {
@@ -34,6 +34,7 @@ fn true_formula_is_among_the_first_three() {
             assert!(t.ms2_explained.unwrap() > 0.99, "{t:?}");
         }
         for x in &c {
+            assert!(x.isotope_fit.is_none());
             assert!((x.total - (x.element_fit + x.ms2_explained.unwrap_or(0.0))).abs() < 1e-3);
         }
     }
@@ -43,7 +44,7 @@ fn true_formula_is_among_the_first_three() {
 fn an_element_the_parent_lacks_gives_no_candidate() {
     // A chlorinated mass: no formula with the parent's elements sits within 5 ppm.
     let mz = mz_of("C14H17ClN2O3S");
-    assert!(candidates(PARENT, mz, 1, None).is_empty());
+    assert!(candidates(PARENT, mz, 1, None, None).is_empty());
 }
 
 #[test]
@@ -56,9 +57,9 @@ fn unit_resolution_and_the_status_columns() {
         ..TpBlock::default()
     };
     let before = b.clone();
-    b.add_fit_candidates(PARENT, 1, true, |_| (mz_of(PRODUCT), None));
+    b.add_fit_candidates(PARENT, 1, true, |_| (mz_of(PRODUCT), None, None));
     assert!(b.fit_candidates.is_empty());
-    b.add_fit_candidates(PARENT, 1, false, |_| (mz_of(PRODUCT), None));
+    b.add_fit_candidates(PARENT, 1, false, |_| (mz_of(PRODUCT), None, None));
     assert_eq!(b.fit_candidates.len(), 1);
     assert_eq!(b.fit_candidates[0].0, 1);
     assert_eq!(
@@ -92,7 +93,7 @@ fn decoy_masses_fit_worse_than_true_products() {
         "C12H16N2O4S",
     ];
     let best = |mz: f64| {
-        candidates(PARENT, mz, 1, None)
+        candidates(PARENT, mz, 1, None, None)
             .iter()
             .map(|c| c.element_fit)
             .fold(0.0, f64::max)
@@ -109,4 +110,63 @@ fn decoy_masses_fit_worse_than_true_products() {
     let d: f64 = decoys.iter().map(|&m| best(m)).sum::<f64>() / decoys.len() as f64;
     eprintln!("mean best element_fit: true {t:.3}, decoy {d:.3}");
     assert!(d < t, "decoy {d} true {t}");
+}
+
+fn pattern_of(f: &str) -> Vec<(f64, f64)> {
+    let p = parse_formula(f).unwrap();
+    let counts: Vec<(String, i64)> = p.into_iter().map(|(s, n)| (s, n as i64)).collect();
+    mzlab_core::isoscore::fine_pattern(&counts, 1, 1.0)
+        .unwrap()
+        .into_iter()
+        .map(|p| (p.mz, p.rel))
+        .collect()
+}
+
+#[test]
+fn without_isotope_data_isotope_fit_is_none_and_total_is_unaltered() {
+    let mz = mz_of(PRODUCT);
+    let (pm, pi) = ms2_of(PRODUCT);
+    let c = candidates(PARENT, mz, 1, Some((&pm, &pi)), None);
+    assert!(!c.is_empty());
+    for x in &c {
+        assert_eq!(x.isotope_fit, None);
+        assert!((x.total - (x.element_fit + x.ms2_explained.unwrap_or(0.0))).abs() < 1e-6);
+    }
+}
+
+#[test]
+fn isotope_data_changes_candidate_order() {
+    let mz = mz_of("C14H12O5");
+    let c_no_iso = candidates(PARENT, mz, 1, None, None);
+    assert_eq!(c_no_iso.len(), 2);
+    assert_eq!(c_no_iso[0].neutral_formula, "C14H12O5");
+    assert_eq!(c_no_iso[1].neutral_formula, "C6H16N2O7S");
+    assert!(c_no_iso[0].element_fit > c_no_iso[1].element_fit);
+
+    // Observed pattern matches the second candidate (C6H16N2O7S, ion C6H17N2O7S):
+    let iso = pattern_of("C6H17N2O7S");
+    let c_with_iso = candidates(PARENT, mz, 1, None, Some(&iso));
+    assert_eq!(c_with_iso.len(), 2);
+    assert_eq!(c_with_iso[0].neutral_formula, "C6H16N2O7S");
+    assert_eq!(c_with_iso[1].neutral_formula, "C14H12O5");
+    assert!(c_with_iso[0].isotope_fit.unwrap() > 0.95);
+    assert!(c_with_iso[0].total > c_with_iso[1].total);
+}
+
+#[test]
+fn isotope_data_keeps_candidate_order() {
+    let mz = mz_of("C14H12O5");
+    let c_no_iso = candidates(PARENT, mz, 1, None, None);
+    assert_eq!(c_no_iso.len(), 2);
+    assert_eq!(c_no_iso[0].neutral_formula, "C14H12O5");
+    assert_eq!(c_no_iso[1].neutral_formula, "C6H16N2O7S");
+
+    // Observed pattern matches the first candidate (C14H12O5, ion C14H13O5):
+    let iso = pattern_of("C14H13O5");
+    let c_with_iso = candidates(PARENT, mz, 1, None, Some(&iso));
+    assert_eq!(c_with_iso.len(), 2);
+    assert_eq!(c_with_iso[0].neutral_formula, "C14H12O5");
+    assert_eq!(c_with_iso[1].neutral_formula, "C6H16N2O7S");
+    assert!(c_with_iso[0].isotope_fit.unwrap() > c_with_iso[1].isotope_fit.unwrap());
+    assert!(c_with_iso[0].total > c_with_iso[1].total);
 }
