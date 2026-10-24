@@ -177,7 +177,7 @@
    "additionalProperties": false
   },
   "paramSchema": {
-   "description": "JSON Schema 2020-12 of the parameters (type object). The form is generated from it: title, description, default, minimum, maximum, enum. Extra keywords: x-unit (ppm, Da, min, s, counts, fraction), x-advanced (hidden behind 'More'), x-group (a box of the form), x-estimate (absent value = estimated by the step, which then writes the value and its proof in prov/1), x-noresult (does not change the result: memory budget, threads; left out of the fingerprint).",
+   "description": "JSON Schema 2020-12 of the parameters (type object). The form is generated from it: title, description, default, minimum, maximum, enum. Extra keywords: x-unit (ppm, Da, min, s, counts, fraction), x-advanced (hidden behind 'More'), x-group (a box of the form), x-estimate (absent value = estimated by the step, which then writes the value and its proof in prov/1), x-noresult (does not change the result: memory budget, threads; left out of the fingerprint), x-liste (a string that holds a list of the user, liste/1: transformations or adducts).",
    "type": "object",
    "required": [
     "type",

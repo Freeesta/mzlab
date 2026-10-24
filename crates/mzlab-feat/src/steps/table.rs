@@ -293,9 +293,12 @@ pub(super) fn export_csv() -> Step {
 /// `export.inclusion`: the inclusion list of the products expected in the plan, to inject the samples again in targeted MS2 (`export_inclusione`).
 pub(super) fn export_inclusion() -> Step {
     let params = vec![
-        Param::text("adducts", "Adducts")
-            .default_str("[M+H]+")
-            .doc("Adducts of the ion table separated by commas; one row per product and adduct"),
+        Param {
+            list: Some("adducts"),
+            ..Param::text("adducts", "Adducts")
+        }
+        .default_str("[M+H]+")
+            .doc("Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"),
         Param::number("rt_window", "RT half window")
             .min(0.0)
             .default_num(0.5)
