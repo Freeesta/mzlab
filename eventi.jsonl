@@ -20028,3 +20028,4 @@
 {"v":1,"ts_utc":"2026-10-24T04:10:56Z","tipo":"cache","k":"120774832848","workflow":"rust","job":"rust-wasm-guardie","esito_cache":"primary","ripristinate":["rust-Linux-wasmguard-dbe0560855069a4a8a10c949a9b1b7119d1af96ebdf4edb4679c2e71ff95ac59-5d137840bdf62f24c6291c0adf14a331db07b3652df558cf130dcec6b9d7a9da"],"mancate":[],"salvata":null,"mb":141,"pr":null,"sha":"87146835326f93212c5675d66a22e5d3f915e967","run_id":40061148575,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-24T04:18:45Z","tipo":"carico","k":"2026-10-24T04:1","job_in_coda":0,"job_in_corso":19}
 {"v":1,"ts_utc":"2026-10-24T04:22:05Z","azione":"aperta","tipo":"pr","pr":1672,"sha":"287b73c4e58d0d272da5d52f7eb36734d4b9bdaa"}
+{"v":1,"ts_utc":"2026-10-24T04:26:48Z","azione":"push","titolo":"Test the in-place sort value change; split the long doc line","merge_main":false,"aree":{"docs":1,"test":1},"tipo":"pr","pr":1672,"sha":"0c7551f12fac573619ae72d9d761226e1019827c"}
