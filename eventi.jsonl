@@ -20029,3 +20029,4 @@
 {"v":1,"ts_utc":"2026-10-24T04:18:45Z","tipo":"carico","k":"2026-10-24T04:1","job_in_coda":0,"job_in_corso":19}
 {"v":1,"ts_utc":"2026-10-24T04:22:05Z","azione":"aperta","tipo":"pr","pr":1672,"sha":"287b73c4e58d0d272da5d52f7eb36734d4b9bdaa"}
 {"v":1,"ts_utc":"2026-10-24T04:26:48Z","azione":"push","titolo":"Test the in-place sort value change; split the long doc line","merge_main":false,"aree":{"docs":1,"test":1},"tipo":"pr","pr":1672,"sha":"0c7551f12fac573619ae72d9d761226e1019827c"}
+{"v":1,"tipo":"pr","pr":1672,"sha":"0c7551f12fac573619ae72d9d761226e1019827c","ts_utc":"2026-10-24T04:41:39Z","azione":"unita","aperta_s":1174,"commit_n":3,"cause_commit":{"altro":2},"merge_main":0,"righe_piu":40,"righe_meno":7,"file_n":3,"file":["TP_Mine/js/42_tp_table.js","docs/agenti/mzfinder-tabella.md","tests_e2e/e2e_tpmine_ricerca.py"],"aree":{"altro":1,"docs":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":442}
