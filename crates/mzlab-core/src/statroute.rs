@@ -124,7 +124,11 @@ fn error_json(e: &StatErr) -> String {
 
 /// The answer to a POST of `path`: None = not a statistics route; Ok = the JSON (status 200); Err = the JSON of the error (status 400).
 pub fn stat_route(path: &str, body: &str) -> Option<Result<String, String>> {
-    let run: fn(&Value) -> R<Value> = match path.trim_start_matches("./").trim_start_matches('/') {
+    let p = path.trim_start_matches("./").trim_start_matches('/');
+    if p == "api/kmd" || p == "api/stat/kmd" {
+        return Some(crate::kendrick::kendrick_route(body));
+    }
+    let run: fn(&Value) -> R<Value> = match p {
         "api/stat/profile" => profile,
         "api/stat/blank" => blank,
         "api/stat/reference" => reference,
