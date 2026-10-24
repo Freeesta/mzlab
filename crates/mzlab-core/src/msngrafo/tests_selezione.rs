@@ -23,6 +23,11 @@ const FRAMMENTI: [&str; 16] = [
     "C10H13N2O",
 ];
 
+/// Scatter of the measurement around the systematic error, ppm (deterministic, within ±1.5).
+fn rumore(i: usize) -> f64 {
+    ((i * 37) % 7) as f64 * 0.5 - 1.5
+}
+
 /// (nodes with a candidate, nodes with one chosen formula) of the graph of one MS2 whose fragments are moved by `spostamento` Da.
 fn conteggi(spostamento: f64) -> (usize, usize) {
     let peaks: Vec<(f64, f64)> = FRAMMENTI
@@ -30,7 +35,7 @@ fn conteggi(spostamento: f64) -> (usize, usize) {
         .enumerate()
         .map(|(i, f)| {
             (
-                ion(f) * (1.0 - 2.5e-6) + spostamento,
+                ion(f) * (1.0 + (-2.5 + rumore(i)) * 1e-6) + spostamento,
                 100.0 - i as f64 * 5.0,
             )
         })
@@ -59,6 +64,47 @@ fn decoys_do_not_gain_a_choice_from_the_preference() {
     // a decoy that matches a sub-formula is kept (the window is 10 ppm) but a radical candidate never adds a second one
     let (con, unici) = conteggi(0.02);
     assert!(con < 17 && con == unici, "{con} {unici}");
+}
+
+/// Decoys among the targets (the same spectrum): how many of the 16 decoys, the fragments moved by `spostamento` Da, get a candidate, and how
+/// many of the 16 targets keep theirs.
+fn misto(spostamento: f64) -> (usize, usize) {
+    let mz = |i: usize, f: &str| ion(f) * (1.0 + (-2.5 + rumore(i)) * 1e-6);
+    let mut peaks: Vec<(f64, f64)> = vec![];
+    for (i, f) in FRAMMENTI.iter().enumerate() {
+        peaks.push((mz(i, f), 100.0 - i as f64 * 5.0));
+        peaks.push((mz(i, f) + spostamento, 97.0 - i as f64 * 5.0));
+    }
+    let o = Opzioni {
+        formula: Some("C17H21N3O5+H".into()),
+        ..Opzioni::default()
+    };
+    let g = grafo_da_picchi((ion("C17H22N3O5"), 1), ("CID", 30.0), &peaks, &o);
+    let trovati = |(m, _): &(f64, f64)| {
+        g.nodi
+            .iter()
+            .any(|n| (n.mz - m).abs() < 1e-4 && n.formula.is_some())
+    };
+    let bersagli = peaks.iter().step_by(2).filter(|p| trovati(p)).count();
+    let esche = peaks
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .filter(|p| trovati(p))
+        .count();
+    (bersagli, esche)
+}
+
+#[test]
+fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
+    let mut esche = 0;
+    for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
+        let (bersagli, e) = misto(d);
+        assert_eq!(bersagli, 16, "targets at {d}");
+        esche += e;
+    }
+    // 10 ppm alone lets 28 of the 80 decoys keep a candidate; around the systematic error, with the residue read from the scatter, 18
+    assert!(esche <= 20, "{esche} of 80 decoys");
 }
 
 /// The infusion of a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears

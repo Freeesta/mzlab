@@ -2,6 +2,9 @@
 //! within the window of each node, reduced to a fixed point on the DAG (a fragment is under a formula of each precursor, a candidate of the
 //! wide low-mass window needs its evidences), the choices of the user, then the nodes with no candidate leave the graph. No score, no proposal.
 
+mod ricalibra;
+use ricalibra::{preferisci_pari, ricalibra};
+
 use super::candidati::{m1_coerente, perdita_nota, sotto, Elementi};
 use super::formule::avviso;
 use super::regole_valuta::{addotto_radice, vettori_perdita};
@@ -410,33 +413,15 @@ fn togli(g: &mut Grafo, tieni: &[bool]) {
     }));
 }
 
-/// A node with an even-electron candidate within the window loses its radical-ion candidates that have no evidence (the even-electron rule:
-/// most fragments are even-electron ions); a node with only radical candidates keeps them. True when a candidate left.
-fn preferisci_pari(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
-    let mut cambiato = false;
-    for k in 1..st.ordine.len() {
-        let j = st.ordine[k];
-        let pari = |x: &Cand| st.e.pari(&x.c, st.e.pol);
-        if st.utente[j] || !st.cand[j].iter().any(|x| x.stretto && pari(x)) {
-            continue;
-        }
-        let tieni: Vec<bool> = st.cand[j]
-            .iter()
-            .map(|x| pari(x) || !prove(g, st, o, j, &x.c).is_empty())
-            .collect();
-        let n = st.cand[j].len();
-        filtra(&mut st.cand[j], &tieni);
-        cambiato |= st.cand[j].len() < n;
-    }
-    cambiato
-}
-
 /// The formulas of the nodes below root `r` (counts `rc`) and of their losses; the nodes they do not explain leave the graph.
 pub(super) fn annota(g: &mut Grafo, e: &Elementi, r: usize, rc: Vec<u32>, o: &Opzioni) {
     let mut st = stato(g, e, r, &rc, o);
     scelte(g, &mut st, o);
     while passo(g, &mut st, o) {}
     if preferisci_pari(g, &mut st, o) {
+        while passo(g, &mut st, o) {}
+    }
+    if ricalibra(&mut st, o) {
         while passo(g, &mut st, o) {}
     }
     for k in 1..st.ordine.len() {
