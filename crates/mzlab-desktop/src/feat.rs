@@ -222,8 +222,7 @@ impl State {
                     .to_vec(),
             ));
         }
-        let (mut at, size) = (Slice(table), table.len() as u64);
-        let sha = sha_hex(table);
+        let (mut at, size, sha) = (Slice(table), table.len() as u64, sha_hex(table));
         // the page names the table it means by its SHA-256: another step of mzFinder may have replaced the one the app holds
         if !s("sha256").is_empty() && s("sha256") != sha {
             return Err(Error::new("error.featState"));
@@ -233,6 +232,7 @@ impl State {
             "view" => t::view_json(&mut at, size, s("samples"), s("spec"))?,
             "report" => t::report_json(&mut at, size, s("samples"), s("spec"), &sha)?,
             "qc" => t::qc_json(&mut at, size, s("samples"), s("spec"))?,
+            "tp_table" => t::tp_table_json(&mut at, size, s("samples"), s("spec"))?,
             "check" | "plausible" => Self::check_text(kind, &mut at, size, p, pol)?,
             "export" => t::table_file(
                 &mut at,

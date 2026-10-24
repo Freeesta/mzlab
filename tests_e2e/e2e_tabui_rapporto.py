@@ -12,7 +12,7 @@ from lib import axe_path  # noqa: E402
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:900]))
+    except Exception as e: steps.append((name, "FAIL " + (str(e) or repr(e)).split("\n")[0][:900]))
 
 tmp = Path(tempfile.mkdtemp(prefix="tabui_rapporto_"))
 reuse = os.environ.get("MZLAB_PIPE_SITE")
@@ -44,6 +44,16 @@ BUILD = """([tp, times]) => {
     return window.PIPEX.reportHtml(r, ["a", "b", "c", "d", "e"], { tp: d, provenance: { profile: "small", recipe_sha256: "c".repeat(64), rules: "regole_tp/1 v1", inputs: [{ name: "a.mzML", sha256: "d".repeat(64) }] } });
   });
 }"""
+BUILD_NO_PRED_ION = """([tp, times]) => {
+  const rows = [["id", "mz", "rt"], [1], [2], [3], [4]];
+  const session = { rows: async () => rows, tpTable: async () => tp, report: async () => ({}),
+    interp: async id => ({ change: { neutral_formula: "C10H12N2O" + id } }) };
+  return window.TPREPORT.collect({ session, spec: () => "", names: ["a", "b", "c", "d", "e"], tpInfo: id => ({ level: id === 2 ? "3" : null, pred: null }) }).then(d => {
+    const r = { crate: "9.9.9", tabella_sha256: "a".repeat(64), campioni_sha256: "b".repeat(64), righe: 5, file: 5, celle: { rilevate: 1, mirate: 0, riempite: 0, assenti: 0 }, vista: null,
+      qc: { file: [], gruppi: [], standard_cv: null } };
+    return window.PIPEX.reportHtml(r, ["a", "b", "c", "d", "e"], { tp: d, provenance: { profile: "small", recipe_sha256: "c".repeat(64), rules: "regole_tp/1 v1", inputs: [{ name: "a.mzML", sha256: "d".repeat(64) }] } });
+  });
+}"""
 html = ""
 try:
     with sync_playwright() as p:
@@ -58,7 +68,15 @@ try:
         def section():
             assert "<h2>Transformation products</h2>" in html and "<h3>Formed, not explained</h3>" in html and "<h3>Products</h3>" in html
             assert re.search(r"<td>289\.1183</td>", html) and "<td>Prev. 2</td>" in html and "<td>L3</td>" in html, html[html.find("Products"):][:600]
+            assert ">Ion formula</th>" in html and ">Prev. N</th>" in html
         step("the section Transformation products has the products and the formed-not-explained list", section)
+
+        def conditional_columns():
+            html_bare = pg.evaluate(BUILD_NO_PRED_ION, [TPTAB, TIMES])
+            assert "Ion formula" not in html_bare and "Prev. N" not in html_bare
+            assert ">Neutral formula</th>" in html_bare and "<td>C10H12N2O2</td>" in html_bare
+            assert not re.search(r"(?<![A-Za-z] )(?<!Neutral )(?<!Ion )(?<!\[M\+H\]\+ )\bformula\b", re.sub(r"<[^>]*>", " ", html_bare).replace("Neutral formula", "")), "bare formula in html_bare"
+        step("columns Ion formula and Prev. N appear only when provided", conditional_columns)
 
         def numbers():
             for r in TPTAB["rows"][1:4]:
