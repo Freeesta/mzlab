@@ -84,6 +84,27 @@ with sync_playwright() as p:
         for k in ("n1", "n-1", "m1", "m-1"):
             assert got[k] == got[k + "ref"], f"{k}: {got[k]} != {got[k + 'ref']}"
     step("sort order equals localeCompare: accents, case, empty last, stable ties, both directions", order_like_localecompare)
+    def filter_keeps_order():
+        res = pg.evaluate("""() => {
+          document.getElementById('h').innerHTML = '';
+          const rows = Array.from({ length: 500 }, (_, i) => ({ id: i, name: 'n' + ((i * 37) % 101), mz: (i * 53) % 17 }));
+          const t = window.TPTAB.mount(document.getElementById('h'), { id: 'f', esc: s => String(s), rowId: r => r.id, name: r => r.name, onOpen() {},
+            cols: [{ key: 'n', label: 'Name', sort: r => r.name, cell: r => r.name }, { key: 'm', label: 'mz', num: true, sort: r => r.mz, cell: r => String(r.mz) }],
+            chips: [{ key: 'hi', label: 'Hi', test: r => r.mz > 8 }], search: r => r.name });
+          t.setRows(rows); t.sortBy('m', -1);
+          const q = document.querySelector('.tpt-q'), ids = () => t.view.map(r => r.id);
+          const want = () => rows.filter(r => (!t.chips.includes('hi') || r.mz > 8) && r.name.includes(q.value)).map((r, i) => ({ r, i })).sort((a, b) => b.r.mz - a.r.mz || a.i - b.i).map(x => x.r.id);
+          const out = [];
+          t.setChip('hi', true); out.push([ids(), want()]);
+          q.value = 'n1'; q.dispatchEvent(new Event('input')); out.push([ids(), want()]);
+          t.setChip('hi', false); out.push([ids(), want()]);
+          rows[3].mz = 99; t.setRows(rows); out.push([ids(), want()]);       // an edited sort value is read again after setRows
+          t.setChip('hi', true); rows.find(r => r.name.includes(q.value) && r.mz <= 8).mz = 98; t.setChip('hi', false); t.setChip('hi', true); out.push([ids(), want()]);   // edited in place, no setRows: the order is read again
+          t.setChip('hi', false); t.sortBy('n', 1); q.value = ''; q.dispatchEvent(new Event('input'));
+          return out.map(([a, b]) => JSON.stringify(a) === JSON.stringify(b)).concat([ids()[0] !== undefined]);
+        }""")
+        assert all(res), res
+    step("a chip or the search on a sorted table equals sorting the filtered rows again", filter_keeps_order)
     b.close()
 for s in steps: print(s)
 print("page errors:", errs)
