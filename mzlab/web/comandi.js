@@ -29,7 +29,7 @@ const COMANDI_TAB = [
     parametri: "position and size of the panels", tasto: "Alt+arrows", unisci: "", annulla: "layout" },
 
   // ---- not undoable yet (annulla "da-portare": the count can only go down, tests/test_comandi.py) or not an action to undo ("nessuna" + motivo)
-  { id: "panel.source", nome: "cmd.source", modulo: "pannelli.js", dove: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js"], campi: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log"],
+  { id: "panel.source", nome: "cmd.source", modulo: "pannelli.js", dove: ["pannelli.js", "banco.js", "lista-file.js", "grafici.js", "picchi.js", "infusione.js", "eventi.js"], campi: ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log"],
     parametri: "file, MS level, precursor, chromatogram kind, display mode, m/z limits, scale", tasto: "", unisci: "", annulla: "comando" },
   { id: "spec.annotation", nome: "cmd.annotation", modulo: "eventi.js", dove: ["spettro.js", "eventi.js"], campi: ["anns"], parametri: "add, edit, delete a note", tasto: "", unisci: "", annulla: "comando" },
   { id: "spec.display", nome: "cmd.display", modulo: "visualizza.js", dove: ["visualizza.js", "spettro.js", "pannelli.js", "barra.js", "gradiente.js"], campi: ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay"],
