@@ -90,6 +90,7 @@ fn run(ro: Option<&TpRoles>) -> TpBlock {
         signs: &signs,
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &params,
         rules: None,
     };
@@ -173,6 +174,7 @@ fn no_treated_or_no_reference_is_an_error() {
         signs: &signs,
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &params,
         rules: None,
     };

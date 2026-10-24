@@ -109,6 +109,7 @@ fn status(
         signs: &signs,
         parent: (300.0, 5.0),
         fragments: frag,
+        infusion: None,
         params: &TpParams::default(),
         rules: None,
     })
@@ -154,6 +155,7 @@ fn build_kinship(reg: &Registry, signs: &[Signs]) -> TpBlock {
         signs,
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &TpParams::default(),
         rules: None,
     })
@@ -234,6 +236,7 @@ fn the_in_source_fragment_of_the_parent_is_taken_out_by_gate_2() {
             signs: &signs,
             parent: (300.0, 5.0),
             fragments: f,
+            infusion: None,
             params: &TpParams::default(),
             rules: None,
         })
