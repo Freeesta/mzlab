@@ -3,7 +3,10 @@ names of composti.csv), in the `lang/` catalogs (Tabui has no key there) and no 
 import csv, json, re
 from pathlib import Path
 
+import sys
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import lang_catalogo  # noqa: E402
 TP = ROOT / "TP_Mine"
 ITALIAN = re.compile(
     r"\b(nessun[a-z]*|della|delle|degli|dello|nella|nelle|sono|questo|questa|perch[eé]|anche|pi[uù]|pu[oò]|oppure|tabella|banco|scegli|apri|chiudi|salva|scarica|errore|avviso|"
@@ -56,5 +59,5 @@ def test_composti_has_no_bare_formula_column():
 
 def test_tabui_has_no_lang_keys():
     for lang in ("it", "en"):
-        src = (ROOT / "mzlab" / "web" / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        src = lang_catalogo.testo(lang)
         assert not re.search(r'"tpmine\.', src), f"lang/{lang}.js has keys of Tabui"

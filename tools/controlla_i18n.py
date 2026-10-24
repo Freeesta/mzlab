@@ -24,6 +24,8 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 
+import lang_catalogo
+
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
 LANG = WEB / "lang"
@@ -65,11 +67,7 @@ PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
 
 # ---------------------------------------------------------------- catalogs
 def load_catalog(lang: str) -> dict[str, str]:
-    p = LANG / f"{lang}.js"
-    lines = p.read_text(encoding="utf-8").strip().splitlines()
-    if not lines[0].startswith(f'I18N.add("{lang}", {{') or lines[-1].strip() != "});":
-        raise ValueError(f"{p.name}: the first line must be `I18N.add(\"{lang}\", {{` and the last `}});`")
-    return json.loads("{" + "\n".join(lines[1:-1]) + "}")
+    return lang_catalogo.catalogo(lang)
 
 
 def icu_signature(msg: str) -> tuple[list, list]:

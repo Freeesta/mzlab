@@ -11,7 +11,7 @@ import glob, json, os, re, sys
 
 RADICE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TIPI = os.path.join(RADICE, "tools", "tipi")
-NON_CONTROLLATI = ("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/teoria/", "mzlab/web/wasm/")
+NON_CONTROLLATI = ("mzlab/web/vendor/", "mzlab/web/esempi/", "mzlab/web/teoria/", "mzlab/web/wasm/", "mzlab/web/lang/it/", "mzlab/web/lang/en/")
 
 
 def elenco(nome):
