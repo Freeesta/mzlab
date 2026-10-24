@@ -105,6 +105,7 @@ fn the_systematic_error_is_taken_out_and_decoys_among_targets_mostly_leave() {
     }
     // 10 ppm alone lets 28 of the 80 decoys keep a candidate; around the systematic error, with the residue read from the scatter, 18
     assert!(esche <= 20, "{esche} of 80 decoys");
+}
 
 /// The infusion of a root whose MS2 holds a strong fragment A (C4H7N2) and an ion P (C5H6N3O) that is isolated for an MS3, where A appears
 /// too although it is no sub-formula of P (a co-isolated ion): A must keep its formula, it is under the root.
