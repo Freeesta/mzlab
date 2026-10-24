@@ -646,6 +646,11 @@ window.MAPPA = (() => {
   // dragged. Saved in the notebook (NB.mappaPunti) for each pair of files. Table under the map: numbers only, never a name or a verdict.
   const pairKey = p => { const a = p._a; if (!a || !a.f) return null; return `${a.f.file}|${a.ref ? a.ref.file : ""}|${a.f.lv || 1}`; };
   const pts = p => { const k = pairKey(p); if (!k) return []; NB.mappaPunti = NB.mappaPunti || {}; return NB.mappaPunti[k] || (NB.mappaPunti[k] = []); };
+  // the marks of the map (add, move, delete, note, reference) are one undoable action (comandi.js): the snapshot is the list of marks of the pair of files
+  COMANDI.gestore("map.marks", {
+    leggi: p => JSON.stringify(pts(p)),
+    applica: (p, snap) => { const l = pts(p); l.splice(0, l.length, ...JSON.parse(snap)); st(p).psel = null; ptsSave(p); overlay(p); table(p); },
+  });
   const ptsSave = p => { const k = pairKey(p); if (k && NB.mappaPunti && !NB.mappaPunti[k].length) delete NB.mappaPunti[k]; nbSave(); };
   const ppmOf = f => isHrF(f) ? ((HR.prof(f, f.lv || 1) || {}).tol || 5) : 0;
   // the apex near (rt, m/z) (Rust, `api/mapsnap`); null when the option «snap» is off or no peak is near
@@ -658,14 +663,14 @@ window.MAPPA = (() => {
   async function addPoint(p, px, py) {
     const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
     const q = (await snapAt(p, rt, mz)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
+    const list = pts(p); COMANDI.fai("map.marks", p, () => list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) })); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
   async function addPointAt(p, rt, mz, dmz) {
     const a = p._a; if (!a || !a.f) return;
     const q = (await snapAt(p, rt, mz, dmz || 1, 0.2)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
+    const list = pts(p); COMANDI.fai("map.marks", p, () => list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) })); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // index of the marked point under (rt, m/z), -1 if none
@@ -680,7 +685,7 @@ window.MAPPA = (() => {
     if (!is2d(p) || e.button !== 0 || e.shiftKey || e.altKey) return false;
     if (st(p).ex && window.MAPEX && MAPEX.down(p, e, px, py)) return true;       // the box of «How it is extracted»
     const i = nearPoint(p, px, py); if (i < 0) return false;
-    e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false;
+    e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false; const step = COMANDI.inizia("map.marks", p);
     // Ctrl/⌘ held or X / Y: the point moves along one axis only (asse.js)
     const a0 = p._a, q0 = { rt: list[i].rt, mz: list[i].mz }, g = ASSE.gest(); let ax = null, wait = false;
     const mv = ev => {
@@ -689,7 +694,7 @@ window.MAPPA = (() => {
     };
     const up = async ev => {
       removeEventListener("mousemove", mv); removeEventListener("mouseup", up); guide(p, null);
-      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { if (ax !== "y") list[i].rt = at.rt; if (ax !== "x") list[i].mz = at.mz; } ptsSave(p); }
+      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { if (ax !== "y") list[i].rt = at.rt; if (ax !== "x") list[i].mz = at.mz; } ptsSave(p); step.fine(); }
       overlay(p); table(p);
     };
     addEventListener("mousemove", mv); addEventListener("mouseup", up);
@@ -704,7 +709,7 @@ window.MAPPA = (() => {
     if (!s.mark) return false;
     addPoint(p, px, py); return true;
   }
-  function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
+  function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; COMANDI.fai("map.marks", p, () => list.splice(i, 1)); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
   // tolerance of the RT groups: the student's value, else about one peak width (5 scans, between 0.02 and 0.15 min)
   const grpTol = () => PREF.grp ?? Math.min(0.15, Math.max(GRP0, +(5 * scanStep()).toFixed(3)));
   const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, shapeNew, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, { ...forms, grpShape });

@@ -1,6 +1,11 @@
 // @ts-check
 // Automatic background of the SPECTRUM: when «background of a stretch» is chosen and no stretch is typed, the program picks one from the TIC of each file.
 // Pure choice (regioni, waste, tested in Node: tests/fondo_node.js) + the glue used by drawSpec (picchi.js) and ctl (pannelli.js). Classic script, loaded after fondo.js.
+// the stretch of the spectrum background (and the choice «background of a stretch») is one undoable action (comandi.js)
+COMANDI.gestore("spec.background", {
+  leggi: p => JSON.stringify([p.bg ?? null, p.bw0 ?? null, p.bw1 ?? null, p.bwi ?? null]),
+  applica: (p, snap) => { [p.bg, p.bw0, p.bw1, p.bwi] = JSON.parse(snap); ctl(p); },
+});
 const FONDOSP = (() => {
   /** @param {number[]} a */
   const sorted = a => a.slice().sort((p, q) => p - q);
@@ -65,7 +70,7 @@ const FONDOSP = (() => {
   // the button back to automatic (one listener for every panel: the header is rebuilt by ctl)
   if (typeof document !== "undefined") document.addEventListener("click", e => {
     const b = e.target instanceof Element ? e.target.closest('[data-o="bwauto"]') : null, p = b && E.panels.find(q => q.el && q.el.contains(b));
-    if (p) { pushCampi(p, "storia.bianco"); p.bw0 = p.bw1 = null; p.bwi = 0; ctl(p); draw(p); uiSave(); }
+    if (p) { COMANDI.fai("spec.background", p, () => { p.bw0 = p.bw1 = null; p.bwi = 0; }); ctl(p); draw(p); uiSave(); }
   });
   return { waste, regioni, bgOf, note, box };
 })();

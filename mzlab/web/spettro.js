@@ -22,6 +22,11 @@ COMANDI.gestore("spec.ruler", {
   leggi: p => JSON.stringify([p.meas || null, !!p.rul]),
   applica: (p, snap) => { const [m, r] = JSON.parse(snap); p.meas = m; p.rul = r; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", r); },
 });
+// the isotope simulation with the zoom it sets is one undoable action
+COMANDI.gestore("spec.isotopes", {
+  leggi: p => JSON.stringify([p.iso || null, p.zoom || null, p._isoKey || null]),
+  applica: (p, snap) => { const [i, z, k] = JSON.parse(snap); p.iso = i; p.zoom = z; p._isoKey = k; },
+});
 function measClick(p, m) {
   COMANDI.fai("spec.ruler", p, () => {
     p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
@@ -195,7 +200,7 @@ function scanLine(p, data, d0) {
     esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.spec.annotate.prompt", { mz: c.lab }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.m, text: v })); draw(c.p); } } });
   reg({ id: "spec.iso", gruppo: "tools", nome: () => T("ctx.spec.iso"), esegui: /** @param {any} c */ c => isoAsk(c.p) });
   reg({ id: "spec.isoRes", gruppo: "tools", visibile: /** @param {any} c */ c => !!window.HR && !!c.a.hrp, disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoRes"), esegui: /** @param {any} c */ c => isoRes(c.p) });
-  reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { c.p.iso = null; draw(c.p); } });
+  reg({ id: "spec.isoOff", gruppo: "tools", disponibile: /** @param {any} c */ c => !!c.p.iso, nome: () => T("ctx.spec.isoOff"), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.isotopes", c.p, () => { c.p.iso = null; }); draw(c.p); } });
   // a spectrum that follows its chromatogram can be frozen; a frozen one can follow it again
   /** @param {any} p */
   const srcOf = p => p.src && E.panels.find(q => q.id === p.src && q.el);
@@ -205,8 +210,8 @@ function scanLine(p, data, d0) {
     if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); }
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
   } });
-  reg({ id: "spec.freeze", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !!c.p.link, nome: () => T("ctx.spec.freeze"), esegui: /** @param {any} c */ c => { freezeSpec(c.p); uiSave(); } });
-  reg({ id: "spec.relink", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !c.p.link && !!srcOf(c.p), nome: () => T("ctx.spec.relink"), esegui: /** @param {any} c */ c => { const s = srcOf(c.p); if (s) liveSpec(c.p, s); } });
+  reg({ id: "spec.freeze", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !!c.p.link, nome: () => T("ctx.spec.freeze"), esegui: /** @param {any} c */ c => { spLinkFreeze(c.p); uiSave(); } });
+  reg({ id: "spec.relink", gruppo: "link", ordine: 2, visibile: /** @param {any} c */ c => !c.p.link && !!srcOf(c.p), nome: () => T("ctx.spec.relink"), esegui: /** @param {any} c */ c => { const s = srcOf(c.p); if (s) spLinkFollow(c.p, s); } });
 })();
 // «Isotopic pattern…»: the formula (with its charge, or with the adduct) whose pattern is drawn over the spectrum, zoomed on it
 /** @param {any} p */
@@ -218,10 +223,14 @@ async function isoAsk(p) {
   // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
   const chg = ftxt.match(/^(.+?)([+\-−])$/);
   if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
-  try { const r = await getFormula(ftxt, ""); p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim() };
-    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
-    // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
-    p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }
+  try { const r = await getFormula(ftxt, "");
+    COMANDI.fai("spec.isotopes", p, () => {
+      p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim() };
+      const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
+      // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
+      p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom);
+    });
+    draw(p); }
   catch (e) { info(I18N.t("ctx.spec.iso.fail", { message: EH(/** @type {any} */ (e).message) })); }
 }
 // «Resolution of the pattern…» (high resolution): a number or «auto»
@@ -229,6 +238,7 @@ async function isoAsk(p) {
 async function isoRes(p) {
   const v = await ask(I18N.t("ctx.spec.isoRes.prompt"), p.iso.R != null ? String(p.iso.R) : "auto");
   if (v == null) return; const t = String(v).trim().replace(",", ".");
-  if (t === "auto") delete p.iso.R; else { const r = parseFloat(t); if (!(r >= 0)) { info(I18N.t("ctx.spec.isoRes.number")); return; } p.iso.R = r; }
+  if (t === "auto") COMANDI.fai("spec.isotopes", p, () => { delete p.iso.R; });
+  else { const r = parseFloat(t); if (!(r >= 0)) { info(I18N.t("ctx.spec.isoRes.number")); return; } COMANDI.fai("spec.isotopes", p, () => { p.iso.R = r; }); }
   draw(p);
 }

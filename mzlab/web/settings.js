@@ -39,8 +39,20 @@ function uipSave() {
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
+// the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js); the language reloads the page and is not undone
+COMANDI.gestore("app.settings", {
+  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.merge, !!UIP.beside, UIP.hrPpm, UIP.hrDec, QA11Y.read()]),
+  applica: (_p, snap) => {
+    const [theme, pal, merge, beside, hrPpm, hrDec, a11y] = JSON.parse(snap);
+    Object.assign(UIP, { theme, pal, merge, beside, hrPpm, hrDec }); QA11Y.write(a11y); uipSave(); uipApply();
+    CACHE.clear(); SC.m.clear(); SC.n.clear();
+    const open = Q("#uipset"), btn = Q("#np-set"); if (open && btn) { open.remove(); uipOpen(btn); }
+  },
+});
+/** @param {() => void} f */
+const uipDo = f => COMANDI.fai("app.settings", COMANDI.GLOBALE, f);
 // the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
-window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.theme = t; uipSave(); TEMASOFT.run(uipApply); } };
+window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { uipDo(() => { UIP.theme = t; }); uipSave(); TEMASOFT.run(uipApply); } };
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
@@ -112,8 +124,8 @@ function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
-  Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 });
-  QA11Y.write({}); uipSave(); uipApply();
+  uipDo(() => { Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 }); QA11Y.write({}); });
+  uipSave(); uipApply();
 }
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
@@ -169,17 +181,17 @@ function uipOpen(btn) {
     else on("#llm-on", "change", e => { if (e.target.checked) go(true); });
   }
   radio("uip-lang", v => I18N.set(v));                                  // remembered in qqq.lang, then the page reloads (open files come back with the session)
-  radio("uip-th", v => { UIP.theme = v; uipSave(); TEMASOFT.run(uipApply); });
-  radio("uip-font", v => { const c = QA11Y.read(); c.font = v; QA11Y.write(c); });
-  on("#uip-hc", "change", e => { const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; QA11Y.write(c); if (typeof redrawAll === "function") redrawAll(); });
-  on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; QA11Y.write(c); });
+  radio("uip-th", v => { uipDo(() => { UIP.theme = v; }); uipSave(); TEMASOFT.run(uipApply); });
+  radio("uip-font", v => { const c = QA11Y.read(); c.font = v; uipDo(() => QA11Y.write(c)); });
+  on("#uip-hc", "change", e => { const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; uipDo(() => QA11Y.write(c)); if (typeof redrawAll === "function") redrawAll(); });
+  on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; uipDo(() => QA11Y.write(c)); });
   const pal = /** @type {HTMLSelectElement} */ (d.querySelector("#uip-pal")); pal.value = UIP.pal;
-  pal.onchange = () => { setPal(pal.value); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
+  pal.onchange = () => { uipDo(() => setPal(pal.value)); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
   on("#uip-merge", "change", e => {                                     // spectra are asked again to the server with / without the merge
-    UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
+    uipDo(() => { UIP.merge = e.target.checked; }); uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   });
-  on("#uip-beside", "change", e => { UIP.beside = e.target.checked; uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
+  on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
     if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }
@@ -198,8 +210,8 @@ function uipOpen(btn) {
     if (typeof renderFileList === "function" && E.files.length) renderFileList();
     if (typeof redrawAll === "function") redrawAll();
   };
-  on("#uip-ppm", "change", e => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); e.target.value = UIP.hrPpm; hrChanged(); });
-  on("#uip-hdec", "change", e => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); e.target.value = UIP.hrDec; hrChanged(); });
+  on("#uip-ppm", "change", e => { uipDo(() => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); }); e.target.value = UIP.hrPpm; hrChanged(); });
+  on("#uip-hdec", "change", e => { uipDo(() => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); }); e.target.value = UIP.hrDec; hrChanged(); });
   on("#uip-reset", "click", () => { uipRestore(); d.remove(); uipOpen(btn); });
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);

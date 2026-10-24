@@ -132,7 +132,7 @@ function attach(p) {
     if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
-      const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
+      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
@@ -280,6 +280,11 @@ function liveSpec(s, from) {
   if (from.cur != null && s.r0 == null) { const dt = scanStep(); s.r0 = from.cur - dt / 2; s.r1 = from.cur + dt / 2; }
   draw(s); uiSave();
 }
+COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
+/** @param {any} s */
+const spLinkFreeze = s => COMANDI.fai("panel.link", s, () => freezeSpec(s));
+/** @param {any} s @param {any} from */
+const spLinkFollow = (s, from) => COMANDI.fai("panel.link", s, () => liveSpec(s, from));
 function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec, ...extra });
@@ -294,7 +299,7 @@ function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   stackAfter(s, from); relayout(); fitHost();
   if (UIP.beside && window.AFFIANCA) AFFIANCA.accanto(s, from);        // the option «Spectrum beside the chromatogram»: same row when there is room (affianca.js)
   // Do NOT reveal(s) so the viewport does not shift randomly
-  return s;
+  return apriAnnullabile(s);
 }
 
 // The peak a click on the spectrum means: a click inside the box of a peak label gives exactly that peak; otherwise the peak the mouse box highlights (p._a.snap).
@@ -515,11 +520,11 @@ function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noop
 window.openBT = openBT;
 
 // ------------------------------------------------------------------ barra strumenti
-Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
-Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
+Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
+Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
-Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
+Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all" })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
