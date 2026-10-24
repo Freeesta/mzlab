@@ -334,4 +334,6 @@ mod tests_regole;
 #[cfg(test)]
 mod tests_regole_struttura;
 #[cfg(test)]
+mod tests_selezione;
+#[cfg(test)]
 mod tests_vista;
