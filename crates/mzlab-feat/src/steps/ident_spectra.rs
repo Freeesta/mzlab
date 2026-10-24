@@ -171,7 +171,7 @@ fn match_params() -> Vec<Param> {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("ppm")
-                .doc("Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search keeps tol_da"),
+                .doc("Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"),
             Param::number("precursor_ppm", "Precursor tolerance")
                 .min(0.0)
                 .default_num(10.0)

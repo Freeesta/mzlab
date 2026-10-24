@@ -5,7 +5,10 @@ use mzlab_lib::build::{build_in_memory, BuildOpts};
 use mzlab_lib::frag_tol::FragTol;
 use mzlab_lib::read::{Library, CACHE_BYTES};
 use mzlab_lib::scores::{match_peaks, modified_cosine, pair_scores, Spec};
-use mzlab_lib::search::{identity, identity_with, IdentityOpts, Query, Tol};
+use mzlab_lib::search::{
+    analogs, flash_scores, flash_scores_with, identity, identity_with, AnalogHit, AnalogOpts,
+    FlashMode, IdentityOpts, Query, Tol,
+};
 use mzlab_lib::spec::{Meta, Spectrum};
 
 const MZ: [f64; 4] = [85.0284, 127.0390, 301.1410, 455.2500];
@@ -111,4 +114,67 @@ fn a_da_tolerance_keeps_its_bits() {
     let n = modified_cosine(&a, &b, FragTol::from_params(0.01, 0.0));
     assert_eq!(m.cosine.to_bits(), n.cosine.to_bits());
     assert_eq!(m.pairs, n.pairs);
+}
+
+fn analog_lib() -> Vec<u8> {
+    let mut wrong = sp(&shifted(0.008), "wrong");
+    let mut right = sp(&MZ, "right");
+    wrong.prec = 600.3;
+    right.prec = 600.3;
+    build_in_memory(&[wrong, right], BuildOpts::default())
+        .unwrap()
+        .0
+}
+
+#[test]
+fn the_analogue_search_honours_ppm_and_keeps_the_da_bits() {
+    let b = analog_lib();
+    let lib = Library::open(&b[..], CACHE_BYTES).unwrap();
+    let q = Query::new(500.3, 1, &with_error(3.0), &IT).unwrap();
+    let name = |h: &AnalogHit| lib.meta(h.index).unwrap().name;
+    let da = analogs(
+        &lib,
+        &q,
+        &AnalogOpts {
+            frag_da: 0.01,
+            pol: 1,
+            ..AnalogOpts::default()
+        },
+    )
+    .unwrap();
+    let ppm = analogs(
+        &lib,
+        &q,
+        &AnalogOpts {
+            frag_da: 0.01,
+            frag_ppm: 5.0,
+            pol: 1,
+            ..AnalogOpts::default()
+        },
+    )
+    .unwrap();
+    // the Da window sees both compounds, the ppm window only the right one
+    assert_eq!(da.len(), 2);
+    assert_eq!(ppm.len(), 1);
+    assert_eq!(name(&ppm[0]), "right");
+    assert_eq!(ppm[0].mc.matched, 4);
+
+    // tol_ppm = 0 is the Da path to the bit
+    let all = lib.ranges(1, 0.0, 2000.0).unwrap();
+    let a = flash_scores(&lib, &q, FlashMode::Hybrid, 0.01, &all).unwrap();
+    let w = flash_scores_with(
+        &lib,
+        &q,
+        FlashMode::Hybrid,
+        FragTol::from_params(0.01, 0.0),
+        &all,
+    )
+    .unwrap();
+    assert_eq!(a.len(), w.len());
+    for (x, y) in a.iter().zip(&w) {
+        assert_eq!(
+            (x.index, x.pairs, x.score.to_bits()),
+            (y.index, y.pairs, y.score.to_bits())
+        );
+    }
 }

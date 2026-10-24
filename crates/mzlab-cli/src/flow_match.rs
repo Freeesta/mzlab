@@ -246,6 +246,7 @@ fn want_peaks(job: &Job) -> bool {
 fn analogues(lib: &Lib, q: &Query, job: &Job, terms: bool) -> Result<Vec<Cand>> {
     let o = AnalogOpts {
         frag_da: num(job, "tol_da"),
+        frag_ppm: num(job, "tol_ppm"),
         pol: q.pol,
         max_delta: num(job, "analog_window_da"),
         min_delta: num(job, "analog_min_shift_da"),
