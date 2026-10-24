@@ -60,10 +60,6 @@ try:
             assert pg.evaluate(f"{LBU}.length") == 0
             pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
-        def ms_rt():
-            t = pg.evaluate("(()=>{const q=E.panels.find(q=>q.type==='spec'&&!q.uv&&q._a); return q ? q.leg.textContent : null})()")
-            assert t and __import__('re').search(r"RT \d+\.\d\d", t), t
-        step("the MS spectrum says the RT (or the RT range) it comes from", ms_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
             assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Assorbanza (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]

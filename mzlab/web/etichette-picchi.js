@@ -92,7 +92,7 @@ function draw(p, g, sr, c) {
   g.restore();
 }
 
-/** @type {Map<string, { apex: number }[] | "wait">} */
+/** @type {Map<string, { apex: number, height: number }[] | "wait">} */
 const uvCache = new Map();
 
 /** The maxima of a UV spectrum (indices into nm), or null while the engine works (the panel is drawn again when ready). @param {any} p @param {number[]} nm @param {number[]} y */
