@@ -115,11 +115,20 @@ mod tests {
     fn unit_resolution_is_everything_but_orbitrap_and_tof() {
         let q = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         let none: [&Spectrum; 0] = [];
-        assert!(is_unit_resolution(&q(&["quadrupole", "quadrupole", "ion trap"]), none));
+        assert!(is_unit_resolution(
+            &q(&["quadrupole", "quadrupole", "ion trap"]),
+            none
+        ));
         assert!(is_unit_resolution(&[], none));
         assert!(!is_unit_resolution(&q(&["orbitrap"]), none));
-        assert!(!is_unit_resolution(&q(&["quadrupole", "time-of-flight"]), none));
-        let s = Spectrum { filter: "FTMS + p ESI Full ms".into(), ..Default::default() };
+        assert!(!is_unit_resolution(
+            &q(&["quadrupole", "time-of-flight"]),
+            none
+        ));
+        let s = Spectrum {
+            filter: "FTMS + p ESI Full ms".into(),
+            ..Default::default()
+        };
         assert!(!is_unit_resolution(&[], [&s]));
     }
 

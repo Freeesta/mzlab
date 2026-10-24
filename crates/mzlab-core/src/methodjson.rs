@@ -10,7 +10,15 @@ fn opt(o: &mut Out, v: Option<f64>) {
 fn params(o: &mut Out, v: &[Param]) {
     o.raw("[");
     for (i, p) in v.iter().enumerate() {
-        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" }).str(&p.id).raw(",\"label\":").str(p.label).raw(",\"value\":").num(p.value).raw(",\"unit\":").str(p.unit).raw("}");
+        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
+            .str(&p.id)
+            .raw(",\"label\":")
+            .str(p.label)
+            .raw(",\"value\":")
+            .num(p.value)
+            .raw(",\"unit\":")
+            .str(p.unit)
+            .raw("}");
     }
     o.raw("]");
 }
@@ -28,12 +36,21 @@ impl Method {
         }
         o.raw("},\"experiments\":[");
         for (i, e) in self.experiments.iter().enumerate() {
-            o.raw(if i > 0 { ",{\"index\":" } else { "{\"index\":" }).int(e.index as i64);
+            o.raw(if i > 0 { ",{\"index\":" } else { "{\"index\":" })
+                .int(e.index as i64);
             match &e.kind {
                 Kind::Mrm(tr) => {
                     o.raw(",\"kind\":\"mrm\",\"transitions\":[");
                     for (j, t) in tr.iter().enumerate() {
-                        o.raw(if j > 0 { ",{\"q1\":" } else { "{\"q1\":" }).num(t.q1).raw(",\"q3\":").num(t.q3).raw(",\"dwell\":").num(t.dwell).raw(",\"name\":").str(&t.name).raw(",\"ce\":");
+                        o.raw(if j > 0 { ",{\"q1\":" } else { "{\"q1\":" })
+                            .num(t.q1)
+                            .raw(",\"q3\":")
+                            .num(t.q3)
+                            .raw(",\"dwell\":")
+                            .num(t.dwell)
+                            .raw(",\"name\":")
+                            .str(&t.name)
+                            .raw(",\"ce\":");
                         opt(o, t.ce);
                         o.raw("}");
                     }
@@ -68,13 +85,41 @@ impl Lc {
     fn write_json(&self, o: &mut Out) {
         o.raw("{\"gradient\":[");
         for (i, g) in self.gradient.iter().enumerate() {
-            o.raw(if i > 0 { ",{\"t\":" } else { "{\"t\":" }).num(g.t).raw(",\"b\":").opt(g.b).raw(",\"flow\":").opt(g.flow).raw("}");
+            o.raw(if i > 0 { ",{\"t\":" } else { "{\"t\":" })
+                .num(g.t)
+                .raw(",\"b\":")
+                .opt(g.b)
+                .raw(",\"flow\":")
+                .opt(g.flow)
+                .raw("}");
         }
-        o.raw("],\"flow\":").opt(self.flow).raw(",\"b0\":").opt(self.b0).raw(",\"run_time\":").opt(self.run_time).raw(",\"pda\":{\"start\":").opt(self.pda.start);
-        o.raw(",\"stop\":").opt(self.pda.stop).raw(",\"step\":").opt(self.pda.step).raw(",\"freq\":").opt(self.pda.freq).raw(",\"lamp\":").str(&self.pda.lamp);
-        o.raw(",\"cell\":").opt(self.pda.cell).raw(",\"slit\":").opt(self.pda.slit).raw("},\"pda_channels\":[");
+        o.raw("],\"flow\":")
+            .opt(self.flow)
+            .raw(",\"b0\":")
+            .opt(self.b0)
+            .raw(",\"run_time\":")
+            .opt(self.run_time)
+            .raw(",\"pda\":{\"start\":")
+            .opt(self.pda.start);
+        o.raw(",\"stop\":")
+            .opt(self.pda.stop)
+            .raw(",\"step\":")
+            .opt(self.pda.step)
+            .raw(",\"freq\":")
+            .opt(self.pda.freq)
+            .raw(",\"lamp\":")
+            .str(&self.pda.lamp);
+        o.raw(",\"cell\":")
+            .opt(self.pda.cell)
+            .raw(",\"slit\":")
+            .opt(self.pda.slit)
+            .raw("},\"pda_channels\":[");
         for (i, (w, bw)) in self.channels.iter().enumerate() {
-            o.raw(if i > 0 { ",{\"wl\":" } else { "{\"wl\":" }).num(*w).raw(",\"bw\":").opt(*bw).raw("}");
+            o.raw(if i > 0 { ",{\"wl\":" } else { "{\"wl\":" })
+                .num(*w)
+                .raw(",\"bw\":")
+                .opt(*bw)
+                .raw("}");
         }
         o.raw("],\"oven\":").opt(self.oven).raw("}");
     }

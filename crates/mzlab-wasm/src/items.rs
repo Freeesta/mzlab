@@ -107,7 +107,14 @@ impl Engine {
     }
 
     /// `/api/uvxic`: the trace of the DAD at the wavelengths `nm0`..`nm1`.
-    pub fn item_pda_wavelength(&mut self, slot: u32, size: f64, read: Function, nm0: f64, nm1: f64) -> Result<String, JsValue> {
+    pub fn item_pda_wavelength(
+        &mut self,
+        slot: u32,
+        size: f64,
+        read: Function,
+        nm0: f64,
+        nm1: f64,
+    ) -> Result<String, JsValue> {
         let (mut m, _) = self.chroms(slot, size, read)?;
         mzlab_core::itemroutes::pda_wavelength(&mut m, nm0, nm1).map_err(|e| error_json(&e))
     }

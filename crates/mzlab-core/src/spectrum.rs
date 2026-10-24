@@ -65,11 +65,19 @@ impl crate::msnroute::Filtro<'_> {
     }
 }
 
-pub(crate) const EMPTY: &str = "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
+pub(crate) const EMPTY: &str =
+    "{\"mode\":\"centroid\",\"mz\":[],\"y\":[],\"scans\":0,\"i0\":null,\"i1\":null,\"n\":0}";
 
 impl<R: ReadAt> Routes<R> {
     /// Positions (in the section) of the scans that pass the filter and the precursor of a request (`_scan_ids`).
-    pub(crate) fn selected(&mut self, level: u8, si: usize, precursor: Option<f64>, prec_tol: f64, filt: Option<&str>) -> Result<Vec<usize>> {
+    pub(crate) fn selected(
+        &mut self,
+        level: u8,
+        si: usize,
+        precursor: Option<f64>,
+        prec_tol: f64,
+        filt: Option<&str>,
+    ) -> Result<Vec<usize>> {
         let ar = self.idx.arrays(si)?.clone();
         let want_prec = if level > 1 { precursor } else { None };
         let fl = self.filtro(filt)?;
@@ -77,18 +85,37 @@ impl<R: ReadAt> Routes<R> {
             .filter(|&j| {
                 let id = ar.scan_ids[j] as usize;
                 let s = &self.idx.scans[id];
-                fl.as_ref().is_none_or(|f| f.passa(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
+                fl.as_ref().is_none_or(|f| f.passa(id, s))
+                    && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
             })
             .collect())
     }
 
     /// `None` when the file has no section of `level`.
-    pub(crate) fn binned(&mut self, level: u8, lo: f64, hi: f64, precursor: Option<f64>, bin: f64, filt: Option<&str>) -> Result<Option<Binned>> {
-        self.binned_cells(level, lo, hi, (precursor, 0.6), filt, |m| (m / bin).floor() as i64)
+    pub(crate) fn binned(
+        &mut self,
+        level: u8,
+        lo: f64,
+        hi: f64,
+        precursor: Option<f64>,
+        bin: f64,
+        filt: Option<&str>,
+    ) -> Result<Option<Binned>> {
+        self.binned_cells(level, lo, hi, (precursor, 0.6), filt, |m| {
+            (m / bin).floor() as i64
+        })
     }
 
     /// The mean spectrum of a window with the peaks summed per cell `cell(m/z)` (cells come in order because the peaks do).
-    pub(crate) fn binned_cells(&mut self, level: u8, lo: f64, hi: f64, (precursor, prec_tol): (Option<f64>, f64), filt: Option<&str>, cell_of: impl Fn(f64) -> i64) -> Result<Option<Binned>> {
+    pub(crate) fn binned_cells(
+        &mut self,
+        level: u8,
+        lo: f64,
+        hi: f64,
+        (precursor, prec_tol): (Option<f64>, f64),
+        filt: Option<&str>,
+        cell_of: impl Fn(f64) -> i64,
+    ) -> Result<Option<Binned>> {
         let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
@@ -98,7 +125,8 @@ impl<R: ReadAt> Routes<R> {
         let keep = |j: usize, idx: &crate::idxread::Index<R>| {
             let id = ar.scan_ids[j] as usize;
             let s = &idx.scans[id];
-            fl.as_ref().is_none_or(|f| f.passa(id, s)) && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
+            fl.as_ref().is_none_or(|f| f.passa(id, s))
+                && want_prec.is_none_or(|p| (s.prec(-1.0) - p).abs() <= prec_tol)
         };
         let ok: Vec<bool> = (0..ar.rt.len())
             .map(|j| ar.rt[j] >= lo && ar.rt[j] <= hi && keep(j, &self.idx))
@@ -113,7 +141,11 @@ impl<R: ReadAt> Routes<R> {
             .collect();
         let (mut mz, mut y) = (vec![], vec![]);
         // `modo=somma`: the sum per cell, not the mean (a spectrum of more than `MAX_CELLS` cells is refused rather than built)
-        let (div, cap) = if self.msn.opz.somma { (1.0, MAX_CELLS) } else { (n as f64, usize::MAX) };
+        let (div, cap) = if self.msn.opz.somma {
+            (1.0, MAX_CELLS)
+        } else {
+            (n as f64, usize::MAX)
+        };
         if n > 0 {
             // the peaks come in order of m/z, so the cells of `floor(mz / bin)` come in order too
             let (mut cell, mut sy, mut smy) = (i64::MIN, 0.0f64, 0.0f64);
@@ -146,7 +178,14 @@ impl<R: ReadAt> Routes<R> {
             mz = cm;
             y = cy;
         }
-        Ok(Some(Binned { mz, y, n, sel, in_win, scan_ids: ar.scan_ids.iter().map(|&v| v as i64).collect() }))
+        Ok(Some(Binned {
+            mz,
+            y,
+            n,
+            sel,
+            in_win,
+            scan_ids: ar.scan_ids.iter().map(|&v| v as i64).collect(),
+        }))
     }
 }
 
@@ -165,7 +204,14 @@ pub(crate) struct Binned {
 /// The answer for a window: the peaks rounded to `nd` decimals (m/z) and 1 (intensity), the scans of the window and, for one scan, its number.
 pub(crate) fn binned_json(m: Binned, nd: usize, merge: bool) -> String {
     let mut o = Out::default();
-    let Binned { mut mz, mut y, n, sel, in_win, scan_ids } = m;
+    let Binned {
+        mut mz,
+        mut y,
+        n,
+        sel,
+        in_win,
+        scan_ids,
+    } = m;
     if merge {
         let (a, b) = merge_unit(&mz, &y);
         mz = a;
