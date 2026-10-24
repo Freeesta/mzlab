@@ -753,6 +753,7 @@ declare var ricTheoryP: any;
 declare var ricWords: any;
 declare var rngIsOn: any;
 declare var roundc: any;
+declare var rowPc: any;
 declare var saveBlob: any;
 declare var scAhead: any;
 declare var scBase: any;

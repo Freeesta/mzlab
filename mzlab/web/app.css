@@ -397,3 +397,4 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 #pk-adv>summary{cursor:pointer;min-height:28px;display:flex;align-items:center;font-weight:600}
 @media(max-width:560px){.pk-row{grid-template-columns:1fr 84px}
 .pk-row>span:last-child{grid-column:1/-1}}
+td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cvrow] .prog{height:4px}

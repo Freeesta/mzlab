@@ -291,14 +291,14 @@ async function cancelLoads(){for(const c of LOADS)c.abort();if(CONVQ.on())CONVQ.
 // downloads the example files in order: the bytes are the first 40 % of the bar of each row (Content-Length); a cancel stops the rows, an error drops them and says why
 async function fetchDemo(names,signal){const out=[];
   try{for(const n of names){CONVROWS.set(n,"get",0);const r=await fetch("static/esempi/"+n,{signal});if(!r.ok)throw new Error(n);const len=+(r.headers.get("content-length")||0),parts=[];let got=0;
-      if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;CONVROWS.set(n,"get",len?Math.floor(40*Math.min(1,got/len)):0)}}else parts.push(await r.blob());
+      if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;CONVROWS.set(n,"get",len?Math.floor(40*Math.min(1,got/len)):0,undefined,{done:got,total:len})}}else parts.push(await r.blob());
       CONVROWS.set(n,"wait",40);CONVROWS.base(n,40);out.push(new File(parts,n))}}
   catch(e){if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
   return out}
 // `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
 async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
   if(demo){demo=demo.filter(n=>!ST.files.some(g=>g.name===n)&&!INFLIGHT.has(n));if(!demo.length)return;files=[];demo.forEach(n=>INFLIGHT.add(n))}else{files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)))}
-  if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>CONVROWS.add(n,"wait"));
+  if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
   try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok())}}}
@@ -309,11 +309,16 @@ async function upload0(files,into,box,signal){
     if(into&&isDam!==(into==="dam"))rep.moved[isDam?"dam":"data"].push(f.name);
     // a converted file: its index is the last phase of the bar of the conversion
     const pn=panel&&CONV.has(f.name)?panel:null,QQQ_NET=!window.QQQ_BROWSER,mono=()=>Math.floor(100*PROGRESSO.file(f.name));
-    CONVROWS.set(f.name,"index",0);if(pn)pn.index(f.name,0);
-    const put=(frac,phase,sub)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=Math.min(99,mono());CONVROWS.set(f.name,NATIVO.rowState(phase),pc,sub);if(pn)pn.index(f.name,pc)};
+    // the bar of the row: load 0-40, read 40-85, index 85-100 (rowPc, progresso.js) whatever the reader; the same fraction of the model always gives the same percent
+    const rp=()=>Math.min(99,Math.floor(rowPc(!!f.mzlabNat,PROGRESSO.file(f.name)))),rowSt=(phase,pc)=>phase==="load"?"load":f.mzlabNat?NATIVO.rowState(phase):pc>=85?"idx":"nscan";let tot=0;
+    CONVROWS.set(f.name,f.mzlabNat?"index":"load",0);if(pn)pn.index(f.name,0);
+    const put=(frac,phase,sub,det)=>{PROGRESSO.set(f.name,QQQ_NET?PROG_NET.send+(1-PROG_NET.send)*frac:frac,phase);const pc=rp();CONVROWS.set(f.name,rowSt(phase,pc),pc,sub,det);if(pn)pn.index(f.name,Math.min(99,mono()))};
     // the worker tells the phase, the fraction, the scans of the sample done (done/total) or that the file waits for a free builder (wait); the last message goes to the diagnosis
     const onIdx=e=>{const d=e.detail;if(d.name!==f.name)return;CONVROWS.note(f.name,`${d.phase||"?"} ${(+d.frac||0).toFixed(3)}${d.total?` scans ${d.done}/${d.total}`:""}${d.wait?" queued":""}`);
-      if(d.wait)CONVROWS.set(f.name,"wait",Math.min(99,mono()));else put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:null)};
+      if(d.wait){CONVROWS.set(f.name,"wait",rp());return}
+      if(d.phase==="load"){put(d.frac,"load",null,{done:d.done,total:d.total});return}
+      if(d.total)tot=d.total;      // the scans of an mzML are known from its first event; the builder then tells the position in the file, so the scans read are that share of them
+      put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:!f.mzlabNat&&tot?{done:Math.round(tot*Math.max(0,Math.min(1,(d.frac-0.4)/0.585))),total:tot}:null)};
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find(y=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
@@ -331,7 +336,7 @@ async function upload0(files,into,box,signal){
   // the same group dropped again: no second notice
   if(rep.unopen.length){const h=groupHash(rep.unopen.map(x=>rejected.find(f=>f.name===x.name)));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}
   // all the files of this loading are in the batch before the first one is read: the total only grows in precision, never goes back
-  for(const f of files){PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"")}
+  for(const f of files){PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0)}
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
