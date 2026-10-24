@@ -54,6 +54,7 @@
   /** @param {any} p */
   function refresh(p) {
     const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]');
+    if (p.uv) { for (const x of [b, l]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
     if (b) { b.classList.toggle("on", s.pend); b.setAttribute("aria-pressed", String(s.pend)); }
     if (l) {
       l.hidden = !s.sel;
@@ -216,6 +217,7 @@
   function wire(p) {
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicb"]')), l = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicl"]'));
     if (!b || !l || /** @type {any} */ (b)._xb) return;
+    if (p.uv) { b.hidden = true; return; }
     /** @type {any} */ (b)._xb = true;
     b.onclick = e => press(p, e.shiftKey);
     // Space on the button presses it: the walk over the scans (scroll.js) must not take it

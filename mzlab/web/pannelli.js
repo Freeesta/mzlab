@@ -636,11 +636,11 @@ const ms2Scans = (x, v) => (x.ms2_exps || []).filter(e => e.prec != null && Math
 function ctl(p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
-  t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);      // a single trace is named in the title
-  t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";          // the menu of the kind (TIC / BPC / PDA) is the title
+  t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);  // a single trace is named in the title
+  t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";  // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
   const T0 = p.tab || E.tab, prodTab = T0 === "ms2", ms2c = p.type === "chrom" && prodTab, mrmP = p.type === "mrm";
-  if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.fondo = { mode: "none", w: p.fondo.w, ib: null }; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
+  if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.fondo = { mode: "none", w: p.fondo.w, ib: null }; p.log = false; }  // precursor chromatogram: only the MS2 scans of the precursor
   if (mrmP) p.bk = "";
   if (p.type === "spec" && prodTab && !p.filt) p.level = 2;
   const NOMS2 = I18N.t("ctl.noMs2"), NOMRM = I18N.t("ctl.noMrm");
@@ -657,12 +657,12 @@ function ctl(p) {
   const mzbar = `<label class="muted" title="${I18N.t("ctl.mz.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(mzd(p)) : ""}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(mzd(p)) : ""}"></label>`;
   const rtbar = p.type === "map" ? "" : `<label class="muted" title="${I18N.t("ctl.rt.title")}"><i>RT</i> ${I18N.t("ctl.range.from")} <input data-o="rt0" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[0]) : ""}" placeholder="${I18N.t("ctl.rt.min")}"> ${I18N.t("ctl.range.to")} <input data-o="rt1" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[1]) : ""}" placeholder="${I18N.t("ctl.rt.max")}"> min</label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter(x => x.kind === "ms2"), hasPda = TF.some(x => x.pda);
-  const anKinds = [...new Map(TF.flatMap(x => x.analog || []).map(a => [a.kind === "pressure" ? "press" : "an:" + a.id, a])).entries()];       // [value, trace] of the analog traces of the files of the tab
-  if (p.type === "chrom" && ((!hasScan && p.kind === "bpc") || (!hasPda && p.kind === "pda") || (isAnalog(p.kind) && p.kind !== "reg" && !anKinds.some(([v]) => v === p.kind)) || (p.kind === "reg" && !(window.REGISTRO && REGISTRO.has(TF) !== false)))) p.kind = "tic";      // options that make no sense for these files are switched off
+  const anKinds = [...new Map(TF.flatMap(x => x.analog || []).map(a => [a.kind === "pressure" ? "press" : "an:" + a.id, a])).entries()];  // [value, trace] of the analog traces of the files of the tab
+  if (p.type === "chrom" && ((!hasScan && p.kind === "bpc") || (!hasPda && p.kind === "pda") || (isAnalog(p.kind) && p.kind !== "reg" && !anKinds.some(([v]) => v === p.kind)) || (p.kind === "reg" && !(window.REGISTRO && REGISTRO.has(TF) !== false)))) p.kind = "tic";  // options that make no sense for these files are switched off
   const precs = [...new Set(ms2s.flatMap(x => x.precursors))].sort((a, b) => a - b);
   const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none;min-width:11em" title="${I18N.t("ctl.prec.title")}"><option value="">${I18N.t("ctl.prec.all")}</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "";
     const blanks = TF.filter(x => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
-  const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);          // an old notebook may point to a file that is not marked as blank: keep it
+  const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);  // an old notebook may point to a file that is not marked as blank: keep it
   const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
   const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
     + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
@@ -677,9 +677,9 @@ function ctl(p) {
   if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option>${anKinds.map(([v, a]) => `<option value="${EH(v)}" ${p.kind === v ? "selected" : ""}>${EH(v === "press" ? I18N.t("ctl.kind.press") : a.id)}</option>`).join("")}${window.REGISTRO && REGISTRO.has(TF) ? `<option value="reg" ${p.kind === "reg" ? "selected" : ""} title="${I18N.t("ctl.kind.reg.title")}">${I18N.t("ctl.kind.reg")}</option>` : ""}</select>${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
-    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;      // xed: lower / upper m/z of an ion read in high resolution (ppm window)
+    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;  // xed: lower / upper m/z of an ion read in high resolution (ppm window)
     const xsel = p.traces.length > 1 ? `<select data-o="xt" title="${I18N.t("ctl.xt.title")}">${p.traces.map((t, i) => `<option value="${i}" ${i === p._xt ? "selected" : ""}>XIC ${i + 1}</option>`).join("")}</select>` : "";
-    const hrX = !!(window.HR && HR.xicFiles(p.tab).some(x => HR.isHr(x, x.lv)));      // high resolution: only the label, m/z and interval are in «Display options» of this chromatogram
+    const hrX = !!(window.HR && HR.xicFiles(p.tab).some(x => HR.isHr(x, x.lv)));  // high resolution: only the label, m/z and interval are in «Display options» of this chromatogram
     const xr = xt && hrX ? `${xsel}<b class="xlab" title="${EH(I18N.t("ctl.xlab.title"))}">XIC \u2022 m/z ${(+xt.mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1))}</b>` : xt ? `${xsel}<label class="muted" title="${I18N.t("ctl.xr.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> ${I18N.t("ctl.range.to")} <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
     c.innerHTML = `${xr}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}${p.traces.length > 1 ? '<button data-o="split" title="${I18N.t("ctl.split.title")}">${I18N.t("ctl.split")}</button>' : ""}`;
   }
@@ -690,9 +690,9 @@ function ctl(p) {
   if (p.type === "map") {
     const sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     const G = (lab, inner) => `<span class="mzg" role="group" aria-label="${lab}">${inner}</span>`, fol = follow(p.tab || E.tab), lvf = (E.files[fol ? E.cur : p.k] || {}).lv || 1;
-    const cur = E.files[fol ? E.cur : p.k] || {}, mc = MAPPA.corrState(p), others = sf.filter(x => x.k !== cur.k), isF = mc.now[0] === "f";      // a file minus itself is not offered
+    const cur = E.files[fol ? E.cur : p.k] || {}, mc = MAPPA.corrState(p), others = sf.filter(x => x.k !== cur.k), isF = mc.now[0] === "f";  // a file minus itself is not offered
     const mCorr = corrWidget(p, { files: others, min: 0, cur: mc.now === "auto" ? "snip" : mc.now, snip: true, dis: "", tractDesc: I18N.t("corr.tract.mapdesc"), snipDesc: I18N.t("corr.auto.mapdesc"), fileDesc: I18N.t("corr.file.mapdesc") });
-    const mChips = [];                                                   // next to «Options»: the correction and what is not at its default value
+    const mChips = [];  // next to «Options»: the correction and what is not at its default value
     if (isF) mChips.push(I18N.t("corr.file.short", { label: (E.files[+mc.now.slice(1)] || {}).label || "" })); else if (mc.now === "tract") mChips.push(I18N.t("corr.tract")); else if (mc.now === "auto") mChips.push(I18N.t("corr.snip"));
     mChips.push(...MAPPA.optChips(p));
     const mPar = inner => `<span class="cpar"><button class="bt cparl" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.cpar.titleMap")}" aria-label="${I18N.t("ctl.cpar.map")}">${I18N.t("ctl.cpar.map.lab")} &#9662;</button>${mChips.map(t => `<button class="chip" type="button" data-a="cparchip" title="${I18N.t("ctl.cpar.titleMap")}">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
@@ -702,13 +702,13 @@ function ctl(p) {
         `<details class="mzcol"${p._colOpen ? " open" : ""}><summary>${I18N.t("ctl.map.colors")}</summary><label class="muted" title="${I18N.t("ctl.map.scale.title")}">${I18N.t("ctl.map.scale.lab")} <select data-o="scale">${opt("lin", p.scale, I18N.t("ctl.map.scale.lin"))}${opt("sqrt", p.scale, I18N.t("ctl.map.scale.sqrt"))}${opt("log", p.scale, I18N.t("ctl.map.scale.log"))}${opt("gamma", p.scale, I18N.t("ctl.map.scale.gamma"))}</select></label>` +
         `${p.scale === "gamma" ? `<label class="muted">${I18N.t("ctl.map.gamma")} <input data-o="gamma" type="number" class="mzf" min="0.1" max="3" step="0.05" value="${p.gamma || 0.6}" style="width:5em"></label>` : ""}<span data-mzslot="col"></span></details>`);
   }
-  if (p.type === "spec" && !p.uv) {          // a UV spectrum (uv-spettro.js) has no file, level or background menus
+  if (p.type === "spec" && !p.uv) {  // a UV spectrum (uv-spettro.js) has no file, level or background menus
     const f = TF, hasMs2 = f.some(x => x.ms2), sref0 = window.SUBREF ? SUBREF.eff(p) : null;      // the «fondo» menu starts from the reference of the session
     const fol = follow(T0), FW = I18N.t("ctl.spec.follow");
     // product ions: only the files that hold scans of the chosen precursor, and the precursors of the active file with their scan count
     const hasPrec = p.level === 2 && p.prec != null && p.prec !== "", fl = prodTab ? f.filter(x => hasPrec ? ms2Scans(x, +p.prec) : (x.ms2_exps || []).length) : f;
     if (prodTab) { p.all = false; if (fl.length && !fl.some(x => x.k === (fol ? E.cur : p.k))) p.k = fl[0].k; }
-    const vf = f.filter(x => x.vis);          // the menu lists the files ticked in the list (the same as the TIC)
+    const vf = f.filter(x => x.vis);  // the menu lists the files ticked in the list (the same as the TIC)
     if (!prodTab && !fol && vf.length && !vf.some(x => x.k === p.k)) { p.k = vf[0].k; p.kSet = false; }
     const act = E.files[fol ? E.cur : p.k] || {}, precN = prodTab ? (act.ms2_exps || []).filter(e => e.prec != null).sort((a, b) => a.prec - b.prec) : [];
     c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : chk("all", I18N.t("ctl.spec.all"), fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
@@ -717,9 +717,10 @@ function ctl(p) {
       (p.bg === "w" ? FONDOSP.box(p) : "") +
       (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map(e => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.n != null ? I18N.t("ctl.prec.n", { v: e.prec, n: e.n }) : I18N.t("ctl.prec.one", { v: e.prec })}</option>`).join("")}</select>` : "");
   }
-  if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {          // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
+  if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {  // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find(q => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
     const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? I18N.t("spec.follow", { n }) : I18N.t("spec.follow.none")} &#9662;</button>`;
+    c.querySelectorAll(".fol").forEach(x => x.remove());          // UV controls are not rewritten by innerHTML
     if (c.firstElementChild) c.firstElementChild.insertAdjacentHTML("afterend", fh); else c.innerHTML = fh;
     const fb = c.querySelector(".fol");
     if (!p.link) fb.classList.remove("lk");
