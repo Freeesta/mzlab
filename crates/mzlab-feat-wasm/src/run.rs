@@ -275,6 +275,8 @@ pub struct HypoRun {
     /// The rules as read (bytes of the file) and the profile chosen: the proofs look for their differences of mass among the rows (`tp::rete`).
     pub rules_src: Vec<u8>,
     pub profile: Option<String>,
+    /// Neutral formula of the parent: the formula candidates of the rows formed and not explained start from it (empty = none).
+    pub parent: String,
 }
 
 impl HypoRun {
@@ -366,6 +368,7 @@ pub fn hypotheses<R: ReadAt>(
         result,
         rules_src: rules.to_vec(),
         profile,
+        parent: parent.to_string(),
     })
 }
 
@@ -401,6 +404,7 @@ pub fn hypotheses_stored<R: ReadAt>(
         result,
         rules_src: rules.to_vec(),
         profile,
+        parent: parent.to_string(),
     })
 }
 

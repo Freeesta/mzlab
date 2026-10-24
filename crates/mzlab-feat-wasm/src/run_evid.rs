@@ -58,6 +58,9 @@ pub struct RowSources<'a, O: ReadAt> {
     pub open: &'a mut dyn FnMut(usize) -> Result<Index<O>>,
 }
 
+/// What `measured_facts` gives: the facts of every row, the fragments of the MS2 of the parent and the MS2 chosen for each row.
+type RowMeasures = (Vec<Facts>, Option<Vec<f64>>, Vec<Option<(Peaks, f32)>>);
+
 /// The facts of every row measured in the files, and the fragments of the MS2 of the parent. The `.mzfeatf` read take their bytes from `budget` while the
 /// facts are made (`error.memoryBudget` past it).
 fn measured_facts<O: ReadAt>(
@@ -68,7 +71,7 @@ fn measured_facts<O: ReadAt>(
     spec: (&Recipe, Option<&TpRoles>),
     src: RowSources<O>,
     budget: &MemBudget,
-) -> Result<(Vec<Facts>, Option<Vec<f64>>)> {
+) -> Result<RowMeasures> {
     let RowSources { stored, mut open } = src;
     let mut feats = Vec::new();
     let mut held = 0;
@@ -110,7 +113,24 @@ fn measured_facts<O: ReadAt>(
     let (facts, parent_spec) = time("proofs: row facts", || {
         row_facts(aligned, &hypo.registry, parent, &spectra, &idx, unit)
     });
-    Ok((facts, parent_spec.map(|p| p.mz)))
+    Ok((facts, parent_spec.map(|p| p.mz), spectra))
+}
+
+/// The formula candidates of the rows formed and not explained, scored on the MS2 chosen for each row (none at unit resolution).
+fn add_candidates(
+    tp: &mut TpBlock,
+    hypo: &HypoRun,
+    unit: bool,
+    aligned: &mzlab_feat::table::Aligned,
+    spectra: &[Option<(Peaks, f32)>],
+) {
+    tp.add_fit_candidates(&hypo.parent, hypo.registry.polarity, unit, |r| {
+        let peaks = spectra
+            .get(r)
+            .and_then(Option::as_ref)
+            .map(|s| (&s.0.mz[..], &s.0.it[..]));
+        (aligned.mz[r], peaks)
+    });
 }
 
 /// The areas of the parent along the treated files (ones when the parent is not in the table).
@@ -159,7 +179,7 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
         parent: parent_kinetics(&forms, &times, &y, None),
         pseudo: mzlab_feat::trace::FLOOR * 3.0,
     };
-    let (facts, fragments) = match src {
+    let (facts, fragments, spectra) = match src {
         Some(src) => measured_facts(
             &aligned,
             hypo,
@@ -169,7 +189,7 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
             src,
             budget,
         )?,
-        None => (Vec::new(), None),
+        None => (Vec::new(), None, Vec::new()),
     };
     let inp = Inputs {
         table: &points,
@@ -188,7 +208,7 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
     };
     let rules = hypo.rules()?;
     let (mut ids, signs) = identities_and_signs(&inp, budget, parent.is_some());
-    let tp = time("proofs: tp view", || {
+    let mut tp = time("proofs: tp view", || {
         tp_block(
             &inp,
             minutes,
@@ -201,6 +221,7 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
             &signs,
         )
     });
+    add_candidates(&mut tp, hypo, is_unit(&meta), &aligned, &spectra);
     let held = aligned.heap_bytes() + tp.heap_bytes();
     if !budget.in_memory(held + aligned.len() * IDENTITY_BYTES) {
         ids = None;

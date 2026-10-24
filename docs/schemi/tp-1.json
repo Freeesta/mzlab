@@ -68,6 +68,68 @@
      "type": "integer"
     }
    }
+  },
+  "candidati_formula": {
+   "description": "formula candidates of the rows formed and not explained (high resolution only): at most 3 per row, sorted by total, a lead and never a verdict",
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "riga",
+     "c"
+    ],
+    "properties": {
+     "riga": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "row of the table, from 1"
+     },
+     "c": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+       "type": "object",
+       "required": [
+        "neutral_formula",
+        "ion_formula",
+        "ppm",
+        "element_fit",
+        "ms2_explained",
+        "total"
+       ],
+       "properties": {
+        "neutral_formula": {
+         "type": "string"
+        },
+        "ion_formula": {
+         "type": "string"
+        },
+        "ppm": {
+         "type": "number"
+        },
+        "element_fit": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 1
+        },
+        "ms2_explained": {
+         "type": [
+          "number",
+          "null"
+         ],
+         "minimum": 0,
+         "maximum": 1
+        },
+        "total": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 2
+        }
+       }
+      }
+     }
+    }
+   }
   }
  },
  "$defs": {
