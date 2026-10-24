@@ -239,6 +239,42 @@ pub(crate) const COUNTED_STEP: usize = 56;
 /// Largest reaction count believed (MS8 has seven).
 pub(crate) const COUNTED_MAX: usize = 16;
 
+/// Reactions of a fixed-size v66 body that opens with a count followed by `COUNTED_STEP`-byte slots;
+/// empty unless the count fits the body and every precursor m/z is plausible.
+fn counted_reactions(body: &[u8]) -> Vec<Reaction> {
+    let Ok(n) = crate::bytes::read_u32_le(body, 0) else {
+        return Vec::new();
+    };
+    let n = n as usize;
+    if n == 0 || n > COUNTED_MAX || 4 + (n - 1) * COUNTED_STEP + 32 > body.len() {
+        return Vec::new();
+    }
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        let off = 4 + i * COUNTED_STEP;
+        let (Ok(mz), Ok(unk), Ok(energy), Ok(ul1), Ok(ul2)) = (
+            crate::bytes::read_f64_le(body, off),
+            crate::bytes::read_f64_le(body, off + 8),
+            crate::bytes::read_f64_le(body, off + 16),
+            crate::bytes::read_u32_le(body, off + 24),
+            crate::bytes::read_u32_le(body, off + 28),
+        ) else {
+            return Vec::new();
+        };
+        if !(mz.is_finite() && mz > 0.0 && mz < 50_000.0) {
+            return Vec::new();
+        }
+        out.push(Reaction {
+            precursor_mz: mz,
+            unknown_double: unk,
+            energy,
+            unknown_long1: ul1,
+            unknown_long2: ul2,
+        });
+    }
+    out
+}
+
 impl ScanEvent {
     /// Activation of the scan. Code 4 on an FTMS scan is CID (collisions in the ion trap) when the first reaction's
     /// `unknown_long1` is 1 and beam-type HCD otherwise (11 in the Fusion and Exploris files that mix both).
@@ -510,11 +546,17 @@ impl ScanEvent {
             }
         };
 
+        // Fixed-size v66 events with several reactions (MSx, mixed HCD+CID) hold
+        // the count at body[0] and 56-byte slots from body[4], like the counted
+        // tables; the offset-8 parse above reads body[4] (an m/z word) as count.
+        if reactions.is_empty() && (is_ms2_plus || preamble.is_dependent()) && !is_tribrid_dep {
+            reactions = counted_reactions(&body);
+        }
+
         // Exploris v66 dependent scans store the reaction record starting at
         // body offset 4 (precursor m/z as an f64 at body[4..12]), with no
         // leading count word, so the offset-8 parse above finds nothing. Fall
-        // back to that layout when an MS2+/dependent, non-tribrid scan yielded
-        // no reaction.
+        // back to that layout when the counted read also yielded no reaction.
         if reactions.is_empty()
             && (is_ms2_plus || preamble.is_dependent())
             && !is_tribrid_dep
@@ -696,6 +738,44 @@ pub(crate) mod counted_tests {
         body[fc + 16..fc + 20].copy_from_slice(&1u32.to_le_bytes());
         body[fc + 20..fc + 28].copy_from_slice(&1.5f64.to_le_bytes());
         [pre, body].concat()
+    }
+
+    /// A fixed-size MS`power` event: count at body[0], 56-byte slots from body[4].
+    fn fixed_event(body_size: usize, power: u8, slots: &[(f64, u32)]) -> Vec<u8> {
+        let mut pre = vec![0u8; 136];
+        pre[6] = power;
+        let mut body = vec![0u8; body_size];
+        body[0..4].copy_from_slice(&(slots.len() as u32).to_le_bytes());
+        for (i, (mz, flag)) in slots.iter().enumerate() {
+            let at = 4 + i * COUNTED_STEP;
+            body[at..at + 8].copy_from_slice(&mz.to_le_bytes());
+            body[at + 16..at + 24].copy_from_slice(&30.0f64.to_le_bytes());
+            body[at + 24..at + 28].copy_from_slice(&flag.to_le_bytes());
+        }
+        [pre, body].concat()
+    }
+
+    fn read_fixed(bytes: Vec<u8>, body_size: usize) -> ScanEvent {
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        ScanEvent::read(&mut r, 66, [body_size; 3]).unwrap()
+    }
+
+    #[test]
+    fn a_fixed_msx_event_keeps_its_four_reactions() {
+        let slots = [(500.25, 11), (400.5, 11), (300.75, 11), (200.125, 11)];
+        let ev = read_fixed(fixed_event(312, 2, &slots), 312);
+        let got: Vec<f64> = ev.reactions.iter().map(|x| x.precursor_mz).collect();
+        assert_eq!(got, [500.25, 400.5, 300.75, 200.125]);
+        assert_eq!(ev.reactions[3].energy, 30.0);
+    }
+
+    #[test]
+    fn a_fixed_event_keeps_hcd_and_cid_reactions() {
+        let ev = read_fixed(fixed_event(152, 3, &[(450.5, 11), (350.25, 1)]), 152);
+        assert_eq!(ev.reactions.len(), 2);
+        assert_eq!(ev.reactions[0].unknown_long1, 11);
+        assert_eq!(ev.reactions[1].unknown_long1, CID_REACTION_FLAG);
+        assert_eq!(ev.reactions[1].precursor_mz, 350.25);
     }
 
     #[test]
