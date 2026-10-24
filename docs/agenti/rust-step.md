@@ -16,6 +16,7 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - `Step::core(id, title, doc)`: a `core` step at version 1 with empty ports and parameters; descriptors fill the rest with struct update syntax.
 - `Port::new(name, type, title)` with `.many()`, `.accepts(types)`, `.requires(facets)`: an input or output port.
 - `Param::number|integer|boolean|text|choice|choice_num|pair(name, title, ..)` with `.default_num|default_bool|default_str|default_pair`, `.min`, `.max`, `.unit`, `.doc`, `.advanced`, `.estimate`, `.noresult`: a property of a `paramSchema`; no default means the step estimates the value or the rule is off.
+- `Param::list(name, title, kind)`: a text that is a list of the user (`liste/1`, `kind` `adducts` or `transformations`), written `x-liste` in `step/1`; its value is the CSV of the list with the header (`name;delta;charge;comment`) or, for `export.inclusion`, names of the adduct table separated by commas (`export_inclusione::adduct_shifts`, the default `[M+H]+` gives the same bytes as before).
 - `Step::param(name)` and `Step::algorithm_param(algorithm, name)`: look a parameter up; `Param::default_f64()` reads its default as a number; `step::find(registry, id)` finds a descriptor.
 - `step::json::step_json(&Step)` and `registry_json(&[Step])`: the `step/1` JSON, keys in the order of `step.features.detect.json`; the registry has one step per line.
 - `step::core_steps()` (`step/core_steps.rs`): the descriptors of `import.raw`, `convert.mzml`, `index.mzidx`.

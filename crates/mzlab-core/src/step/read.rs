@@ -106,6 +106,9 @@ fn params(v: Option<&Value>) -> Vec<Param> {
             out.max = p.get("maximum").and_then(Value::f64);
             out.estimate = flag(p, "x-estimate");
             out.noresult = flag(p, "x-noresult");
+            out.list = ["transformations", "adducts"]
+                .into_iter()
+                .find(|k| p.get("x-liste").and_then(Value::str) == Some(*k));
             out
         })
         .collect()

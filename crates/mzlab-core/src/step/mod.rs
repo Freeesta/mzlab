@@ -169,6 +169,8 @@ pub struct Param {
     pub estimate: bool,
     /// Does not change the result (memory budget): left out of the fingerprint.
     pub noresult: bool,
+    /// A text that is a list of the user, `liste/1` (`transformations` or `adducts`): the page edits it as a table, the CSV of the list is the value.
+    pub list: Option<&'static str>,
 }
 
 impl Param {
@@ -185,6 +187,7 @@ impl Param {
             advanced: false,
             estimate: false,
             noresult: false,
+            list: None,
         }
     }
     pub fn number(name: &'static str, title: &'static str) -> Param {
@@ -205,6 +208,13 @@ impl Param {
     }
     pub fn text(name: &'static str, title: &'static str) -> Param {
         Param::new(name, title, Kind::Text)
+    }
+    /// A text that holds a list of the user (`liste/1` of `kind`), written as its CSV with a header.
+    pub fn list(name: &'static str, title: &'static str, kind: &'static str) -> Param {
+        Param {
+            list: Some(kind),
+            ..Param::new(name, title, Kind::Text)
+        }
     }
     pub fn pair(name: &'static str, title: &'static str, min: f64) -> Param {
         Param::new(name, title, Kind::Pair(min))

@@ -22,13 +22,71 @@ pub fn inclusion_expected(
     adducts: &[&str],
     half_window: f64,
 ) -> Result<String> {
+    let mut ions = Vec::new();
+    for a in adducts {
+        let shift = elements::ion_mz(0.0, a).ok_or_else(|| {
+            mzlab_core::error::Error::new("error.export.adduct").with("adduct", a)
+        })?;
+        ions.push(shift);
+    }
+    inclusion_expected_by(products, &ions, half_window)
+}
+
+/// The shifts of the adducts written in `text`: names of `elements::adducts` separated by commas, or a list of the user (`liste/1`, a CSV with the header
+/// `name;delta;charge;comment`), whose shift is the mass of the change of formula minus the electrons of the charge. Only single charges go in this list.
+pub fn adduct_shifts(text: &str) -> Result<Vec<f64>> {
+    use mzlab_core::error::Error;
+    let first = text
+        .lines()
+        .map(str::trim)
+        .find(|l| !l.is_empty() && !l.starts_with('#'));
+    if first.is_some_and(|l| l.to_lowercase().starts_with("name")) {
+        let list = crate::liste::from_csv(crate::liste::Kind::Adducts, text).map_err(|e| {
+            let e = &e[0];
+            Error::new(e.key)
+                .with("line", e.line)
+                .with("detail", &e.detail)
+        })?;
+        let crate::liste::Liste::Adducts(rows) = list else {
+            return Err(Error::new("error.badListe"));
+        };
+        return rows
+            .iter()
+            .map(|a| {
+                if a.charge.abs() != 1 {
+                    return Err(Error::new("error.export.adduct").with("adduct", &a.name));
+                }
+                let mut mass = 0.0;
+                for (e, n) in &a.delta {
+                    let m = elements::mass_of(e)
+                        .ok_or_else(|| Error::new("error.export.adduct").with("adduct", &a.name))?;
+                    mass += m * *n as f64;
+                }
+                Ok(mass - f64::from(a.charge) * elements::ELECTRON)
+            })
+            .collect();
+    }
+    text.split(',')
+        .map(str::trim)
+        .filter(|a| !a.is_empty())
+        .map(|a| {
+            elements::ion_mz(0.0, a)
+                .ok_or_else(|| Error::new("error.export.adduct").with("adduct", a))
+        })
+        .collect()
+}
+
+/// `inclusion_expected` for ions given by their shift (ion m/z = neutral mass + shift), the adducts of a list of the user among them.
+pub fn inclusion_expected_by(
+    products: &[Expected],
+    shifts: &[f64],
+    half_window: f64,
+) -> Result<String> {
     let mut rows: Vec<(f64, f64, String, String)> = Vec::new();
     for p in products {
         let neutral = elements::mass(&elements::parse_formula(&p.formula)?);
-        for a in adducts {
-            let mz = elements::ion_mz(neutral, a).ok_or_else(|| {
-                mzlab_core::error::Error::new("error.export.adduct").with("adduct", a)
-            })?;
+        for shift in shifts {
+            let mz = neutral + shift;
             let (start, end) = ((p.rt - half_window).max(0.0), p.rt + half_window);
             rows.push((
                 start,
