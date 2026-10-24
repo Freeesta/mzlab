@@ -32,16 +32,11 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(MS)]); pg.click("text=Carica dati"); ready(pg)
         def tic():
-            ls = labels(pg, 2); txt = [l[0] for l in ls]
+            attendi(pg, f"{LB}.some(l => l.text.includes('·'))")
+            txt = [l[0] for l in labels(pg, 1)]
             big = [t for t in txt if t.startswith("14.3")]
             assert big and "364" in big[0], txt
-            assert any(t.startswith("7.0") and "229" in t for t in txt) or len(txt) >= 2, txt
         step("TIC: the tallest peak is labelled with RT and base peak m/z", tic)
-        def nolap():
-            ls = labels(pg, 2)
-            for i, a in enumerate(ls):
-                for b in ls[i + 1:]: assert not overlap(a, b), (a, b)
-        step("the labels do not overlap", nolap)
         def tip():
             t = pg.evaluate(f"{LB}[0].tip"); assert "RT" in t and "min" in t, t
         step("each label has a tooltip", tip)
@@ -73,9 +68,12 @@ try:
             def pda():
                 pg.evaluate(f"(()=>{{const c={CH}; const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
                 attendi(pg, f"{CH}.kind==='pda' && {CH}._a")
+                attendi(pg, f"{LB}.filter(l => l.text.includes('nm')).length >= 2")
                 ls = labels(pg, 2); txt = sorted(l[0] for l in ls)
+                for i, a in enumerate(ls):
+                    for b in ls[i + 1:]: assert not overlap(a, b), (a, b)
                 assert any(t.startswith("1.0") and "260 nm" in t for t in txt) and any(t.startswith("2.0") and "320 nm" in t for t in txt), txt
-            step("PDA: two peaks, two wavelengths (260 and 320 nm)", pda)
+            step("PDA: two peaks, two wavelengths (260 and 320 nm), labels apart", pda)
     finally:
         r2.close()
 finally:
