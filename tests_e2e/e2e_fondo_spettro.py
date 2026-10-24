@@ -17,10 +17,6 @@ try:
         stage(pg, files); pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1,r0:5.0,r1:5.4}); "); ready(pg)
         P = "E.panels.find(q=>q.type==='spec')"
-        def rt_line():
-            attendi(pg, f"!!({P}._a && {P}.leg.textContent.includes('RT'))")
-            t = pg.evaluate(f"{P}.leg.textContent"); assert "RT 5.00–5.40 min" in t, t
-        step("the line under the spectrum says the RT range it averages", rt_line)
         def auto():
             pg.evaluate(f"{P}.bg='w'; ctl({P}); draw({P})"); ready(pg); attendi(pg, f"!!{P}._bgauto && {P}.leg.textContent.includes('utomatic')")
             a = pg.evaluate(f"{P}._bgauto"); assert a and a["cands"] and a["lead"] >= 0.5, a
