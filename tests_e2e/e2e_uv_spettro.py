@@ -113,6 +113,28 @@ try:
             w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
             assert abs(w[0] - lo) < 0.06 and abs(w[1] - hi) < 0.06, (w, lo, hi)
         step("UV spectrum: zoom with the keys, then X traces the visible nm range (no dragging)", wl_range)
+        def undo_wl():
+            WL = "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda')"
+            n0 = pg.evaluate(f"{WL}.length")
+            pg.evaluate(f"({UV}).cv.focus()"); pg.keyboard.press("Escape")
+            pg.evaluate(f"({UV}).zoom=[230,300]"); pg.evaluate(f"draw({UV})"); frames(pg, 3)
+            pg.keyboard.press("x"); attendi(pg, f"{WL}.length === {n0 + 1}")
+            pg.keyboard.press("Control+z"); attendi(pg, f"{WL}.length === {n0}")      # the opened trace is one undo step
+            pg.keyboard.press("Control+y"); attendi(pg, f"{WL}.length === {n0 + 1}")
+            assert pg.evaluate(f"{WL}.pop().mz0") == 230
+            w = f"{WL}[{n0}]"
+            pg.evaluate(f"(()=>{{const i={w}.el.querySelector('input[data-o=mz0]'); i.value='240'; i.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
+            attendi(pg, f"{w}.mz0 === 240")
+            pg.evaluate(f"{w}.cv.focus()"); pg.keyboard.press("Control+z"); attendi(pg, f"{w}.mz0 === 230")      # the nm range is undone
+        step("lambda trace: opening it and changing its nm range can be undone and redone", undo_wl)
+        def undo_uv():
+            n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
+            pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'&&q.kind==='pda');c.cv.focus()})()")
+            dbl(pg, "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')", 0.7)
+            attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
+            pg.keyboard.press("Control+z"); attendi(pg, f"E.panels.filter(q=>q.uv).length === {n0}")
+            pg.keyboard.press("Control+y"); attendi(pg, f"E.panels.filter(q=>q.uv).length === {n0 + 1}")
+        step("UV spectrum: opening it can be undone and redone", undo_uv)
         def axe():
             if not AXE: steps.append(("axe-core not available (SKIP)", "ok")); return
             pg.add_script_tag(path=AXE)
