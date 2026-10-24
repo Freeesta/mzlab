@@ -92,6 +92,7 @@
       rows: (/** @type {string} */ spec) => JSON.parse(run(() => m.export_table(read, size, samples, spec, sha, a.pol, "xlsx_rows"))).hojas[0].filas,
       report: (/** @type {string} */ spec) => JSON.parse(run(() => m.table_report(read, size, samples, spec, sha))),
       row: (/** @type {number} */ id) => JSON.parse(run(() => m.table_row(read, size, samples, id))),
+      tpTable: () => JSON.parse(run(() => m.tp_table(read, size, samples, ""))),
       plausible: () => JSON.parse(run(() => m.table_plausible(read, size, plausibleOptions(a)))),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
