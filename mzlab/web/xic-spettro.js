@@ -73,6 +73,7 @@
     s.sel = { m, obs, tol: null };
     refresh(p); draw(p);
     say(p, T("xicbtn.picked", { ion: ionText(p, s.sel) }));
+    if (window.XICLENS) XICLENS.show(p, m);
   }
   /** the labelled peaks of the spectrum in order of m/z @param {any} p */
   const labelled = p => [...new Set((p._a && p._a.lbls || []).filter((/** @type {any} */ l) => l.m != null).map((/** @type {any} */ l) => l.m))].sort((u, v) => u - v);
@@ -102,6 +103,7 @@
   async function extract(p, add) {
     const s = st(p), sel = s.sel; if (!sel) return;
     s.pend = false; refresh(p);
+    if (window.XICLENS) XICLENS.close(p);
     const tok = ++s.xtok, tr = traceFor(p, sel), old = live(p);
     let xp = old;
     if (!xp) { xp = s.xp = xicDirect(sel.m, p, null, tr); await xp.ready; }
@@ -124,6 +126,7 @@
   // ---------------------------------------------------------------- the XIC follows the scan of the spectrum
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
+    if (window.XICLENS) XICLENS.sync(p);
     const s = ST.get(p); if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
@@ -225,12 +228,26 @@
     l.onclick = () => openPop(p);
     refresh(p);
   }
-  /** a click on the spectrum, no drag: with the ruler on (or a measure open) it stays the ruler's; otherwise the nearest peak is chosen, and extracted when the button is waiting @param {any} p @param {number} px @param {number} py */
-  function click(p, px, py) {
-    if (p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
+  /** the m/z of the peak a pixel means: the nearest peak label within 34 px, otherwise the peak the mouse box highlights (null: none) @param {any} p @param {number} px @returns {number | null} */
+  function target(p, px) {
+    if (!p._a || !p._a.snap) return null;
     /** @type {any} */ let lb = null, bd = 34;
     (p._a.lbls || []).forEach((/** @type {any} */ l) => { if (l.m == null) return; const dd = Math.abs(l.x + l.w / 2 - px); if (dd < bd) { bd = dd; lb = l; } });
     const m = lb ? lb.m : (p._a.snap(px) || {}).m;
+    return m == null ? null : m;
+  }
+  /** what the lens asks the engine for the ion m of this spectrum: the file of the spectrum, the (m/z, tolerance) of the XIC button, the label @param {any} p @param {number} m */
+  function lensArgs(p, m) {
+    const f = specFile(p); if (!f) return null;
+    const sel = { m, obs: true, tol: null }, tr = traceFor(p, sel);
+    return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel) };
+  }
+  /** the lens was committed: the same path as a click on the peak with the button waiting @param {any} p @param {number} m */
+  function commit(p, m) { choose(p, m, true); extract(p, false); }
+  /** a click on the spectrum, no drag: with the ruler on (or a measure open) it stays the ruler's; otherwise the nearest peak is chosen, and extracted when the button is waiting @param {any} p @param {number} px @param {number} py */
+  function click(p, px, py) {
+    if (p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
+    const m = target(p, px);
     if (m == null) return false;
     const s = st(p);
     choose(p, m, true);
@@ -271,6 +288,6 @@
     } catch (e) { /* draw() asks again */ }
   }
 
-  /** @type {any} */ (window).XICBTN = { wire, prefetch, click, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** @type {any} */ (window).XICBTN = { wire, prefetch, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();

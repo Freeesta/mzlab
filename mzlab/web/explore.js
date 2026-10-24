@@ -53,7 +53,7 @@ window.avvisoAuto = function(el, o = {}) {
 "use strict";
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
 // merge = join the centroids of the same nominal mass (centroid files only)
-const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 };
+const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true };
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
