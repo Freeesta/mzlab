@@ -19637,3 +19637,4 @@
 {"v":1,"ts_utc":"2026-10-24T01:45:18Z","tipo":"carico","k":"2026-10-24T01:4","job_in_coda":0,"job_in_corso":9}
 {"v":1,"ts_utc":"2026-10-24T01:48:09Z","azione":"aperta","tipo":"pr","pr":1666,"sha":"7486655d3b48f6c0ac1b613f5848fe27f91a8848"}
 {"v":1,"ts_utc":"2026-10-24T01:56:31Z","azione":"aperta","tipo":"pr","pr":1667,"sha":"d554966cee4f17bebd3aabc255dfb13c3748679e"}
+{"v":1,"tipo":"pr","pr":1666,"sha":"7486655d3b48f6c0ac1b613f5848fe27f91a8848","ts_utc":"2026-10-24T02:00:10Z","azione":"unita","aperta_s":721,"commit_n":1,"cause_commit":{},"merge_main":0,"righe_piu":25,"righe_meno":3,"file_n":4,"file":["docs/agenti/wiff-varianti.md","docs/azioni.md","mzlab/web/comandi.js","tests_e2e/e2e_uv_spettro.py"],"aree":{"docs":2,"web":1,"test":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":360}
