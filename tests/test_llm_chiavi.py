@@ -21,7 +21,7 @@ def names(node):
 
 
 def test_nessuna_forma_di_chiave_nei_cataloghi_e_nei_dati():
-    paths = list((ROOT / "mzlab/web/lang").glob("*.js")) + list((ROOT / "mzlab/web/llm").glob("*")) + [f for f in (ROOT / "tests/data/llm").rglob("*") if f.is_file()]
+    paths = list((ROOT / "mzlab/web/lang").rglob("*.js")) + list((ROOT / "mzlab/web/llm").glob("*")) + [f for f in (ROOT / "tests/data/llm").rglob("*") if f.is_file()]
     paths += [ROOT / "crates/mzlab-llm/data/fornitori-1.json"]
     for p in paths:
         assert not FORMS.search(p.read_text(encoding="utf-8")), p

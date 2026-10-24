@@ -1,8 +1,10 @@
 """A «formula» is never alone in an export or in a Tabui label: it is the neutral formula or the one of an ion ([M+H]+ ...)."""
-import json, re
+import json, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+import lang_catalogo  # noqa: E402
 BARE = re.compile(r'"(?:formula|Formula)"')
 
 
@@ -34,7 +36,7 @@ def test_tabui_headers_and_labels_have_no_bare_formula():
 
 def test_catalog_labels_have_no_bare_formula():
     for lang in ("it", "en"):
-        t = (ROOT / f"mzlab/web/lang/{lang}.js").read_text(encoding="utf-8")
+        t = lang_catalogo.testo(lang)
         for k in ("lst.col.formula", "cx.formula", "draw.labels.formula", "fair.formulaOpt"):
             m = re.search(r'"%s": *"([^"]*)"' % re.escape(k), t)
             assert m and m.group(1).strip().lower() not in ("formula", "formula (optional)", "formula (facoltativa)"), (lang, k)

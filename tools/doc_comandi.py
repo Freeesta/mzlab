@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+import lang_catalogo  # noqa: E402
 JS = ROOT / "mzlab" / "web" / "comandi.js"
 OUT = ROOT / "docs" / "azioni.md"
 UNDO = {
@@ -29,7 +31,7 @@ def tabella() -> list[dict]:
 
 
 def etichette(lang: str) -> dict[str, str]:
-    return dict(re.findall(r'^\s*"([^"]+)":\s*"((?:[^"\\]|\\.)*)"', (ROOT / "mzlab" / "web" / "lang" / f"{lang}.js").read_text(encoding="utf-8"), re.M))
+    return lang_catalogo.catalogo(lang)
 
 
 def pagina() -> str:

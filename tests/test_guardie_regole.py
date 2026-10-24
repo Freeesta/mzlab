@@ -12,7 +12,10 @@ import re
 import subprocess
 from pathlib import Path
 
+import sys
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import lang_catalogo  # noqa: E402
 MZLAB = ROOT / "mzlab"
 TP_MINE = ROOT / "TP_Mine"
 
@@ -122,7 +125,7 @@ def test_guardia_tabui_nessuna_chiave_lang():
 def test_guardia_tabui_nessuna_chiave_interna_in_lang_catalog():
     """Main application lang catalogs (lang/it.js, lang/en.js) must not contain internal Tabui keys."""
     for lang in ("it", "en"):
-        src = (ROOT / "mzlab" / "web" / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        src = lang_catalogo.testo(lang)
         assert not re.search(r'"tpmine\.', src), f"mzlab/web/lang/{lang}.js has tpmine.* keys"
 
 
