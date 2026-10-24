@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // One progress panel for the heavy jobs of the page that are not the loading of data files (those have CONVROWS and PROGRESSO): the example files, the library packages.
 // It says the job, the item («2 of 5: name»), a bar with the true percentage when it is known (no aria-valuenow when it is not), the time elapsed and, once it is reliable,
 // the time left; it is never still for more than a second (the clock), it adds «Still working…» after 2 s without news and advice after 30 s. At the end a short summary

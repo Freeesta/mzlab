@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Tagged template for HTML built from strings: every `${}` is escaped (quotes included) unless wrapped in raw(). Guard: tools/html_sicuro.py.
 /** Trusted HTML marker for `h`: the only way to let markup through an interpolation. */
 class RawHtml { /** @param {string} s */ constructor(s) { this.s = s; } }

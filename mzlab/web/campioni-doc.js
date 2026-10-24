@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // The `campioni/2` document of the open files (roles, subtypes, times and their confirmation): this file packs E.files into the entries of the notebook
 // (NB.session) and of the .mzflow, and reads them back; the Rust of mzlab-core (`api/campioni/<op>`) canonicalises, hashes and migrates the old shapes.

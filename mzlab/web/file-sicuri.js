@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Safe reading of JSON files that students exchange (.mzflow, notebook, lists): size and depth caps before parsing, no key that can
 // reach the prototype, and a copy that keeps only known keys of the same type. Content is data and is never evaluated.
 const FILESICURI = (() => {
