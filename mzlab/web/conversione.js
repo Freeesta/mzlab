@@ -329,7 +329,8 @@ function convName(rawName, taken) {
 }
 // name of the mzML of a sample of a SCIEX .wiff: DATA name if present, else "x.mzML" or "x_s3.mzML" (sample number); "x.wiff.mzML" when taken
 function wiffName(stem, sample, several, taken, sampleName) {
-  const clean = sampleName != null ? String(sampleName).trim().replace(/[/\\:*?"<>|]/g, "_").slice(0, 120) : "";
+  const given = sampleName != null && String(sampleName) !== stem + ".wiff #" + sample;      // the reader names a sample without a DATA name "x.wiff #3"
+  const clean = given ? String(sampleName).trim().replace(/[/\\:*?"<>|]/g, "_").slice(0, 120) : "";
   const used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   let base;
   if (clean) {
