@@ -196,6 +196,17 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     out
 }
 
+/// Index of the lowest point of `ys` strictly between the apexes `a` and `b` (the first one on a tie).
+fn valley(ys: &[f64], a: usize, b: usize) -> usize {
+    let mut v = a + 1;
+    for i in a + 1..b {
+        if ys[i] < ys[v] {
+            v = i;
+        }
+    }
+    v
+}
+
 /// For every point, the lowest value from it to the nearest strictly higher point on its left (`rev` = false) or right, ends included; one pass
 /// with a stack, the same minima as walking out from each point.
 fn reach_min(ys: &[f64], rev: bool) -> Vec<f64> {
@@ -216,17 +227,6 @@ fn reach_min(ys: &[f64], rev: bool) -> Vec<f64> {
         stack.push((ys[i], m));
     }
     out
-}
-
-/// Index of the lowest point of `ys` strictly between the apexes `a` and `b` (the first one on a tie).
-fn valley(ys: &[f64], a: usize, b: usize) -> usize {
-    let mut v = a + 1;
-    for i in a + 1..b {
-        if ys[i] < ys[v] {
-            v = i;
-        }
-    }
-    v
 }
 
 #[cfg(test)]
