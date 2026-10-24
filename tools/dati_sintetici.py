@@ -140,9 +140,7 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = Fal
     tp, yp = _pda(rng, _exp(-k * t))
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3)] if pressure else []))
     if dad:                                           # opt-in: the extra array changes the bytes, so the golden answers keyed by SHA-256 keep the default
-        sys.path.insert(0, str(Path(__file__).resolve().parent))
-        from dati_sintetici_dad import inject_dad
-        inject_dad(path, t)
+        sys.path.insert(0, str(Path(__file__).resolve().parent)); from dati_sintetici_dad import inject_dad; inject_dad(path, t)
 
 
 def ms2(path: Path, rng, t: float = 15) -> None:
