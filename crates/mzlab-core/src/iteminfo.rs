@@ -79,11 +79,7 @@ fn polarities(sel: &[&Scan], split: bool) -> Vec<Option<i8>> {
     if !split {
         return vec![None];
     }
-    let mut v: Vec<i8> = sel
-        .iter()
-        .map(|s| s.polarity)
-        .filter(|p| *p == 1 || *p == -1)
-        .collect();
+    let mut v: Vec<i8> = sel.iter().map(|s| s.polarity).filter(|p| *p == 1 || *p == -1).collect();
     crate::sortc::slice_ord(&mut v);
     v.dedup();
     v.reverse();
@@ -690,12 +686,7 @@ pub fn item_info<R: ReadAt>(
         if !mobs.is_empty() {
             let lo = mobs.iter().map(|m| m.0).fold(f64::INFINITY, f64::min);
             let hi = mobs.iter().map(|m| m.0).fold(f64::NEG_INFINITY, f64::max);
-            o.raw(",\"min\":")
-                .num(round(lo, 6))
-                .raw(",\"max\":")
-                .num(round(hi, 6))
-                .raw(",\"n\":")
-                .int(mobs.len() as i64);
+            o.raw(",\"min\":").num(round(lo, 6)).raw(",\"max\":").num(round(hi, 6)).raw(",\"n\":").int(mobs.len() as i64);
         }
         o.raw("}");
     }

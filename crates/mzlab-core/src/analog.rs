@@ -20,17 +20,9 @@ const BAR_MAX: f64 = 2000.0;
 /// (values in bar, true when the unit had to be corrected by a factor of ten).
 pub fn pressure_to_bar(y: &[f64], unit: &str) -> (Vec<f64>, bool) {
     let u = unit.trim().to_lowercase();
-    let f = TO_BAR
-        .iter()
-        .find(|(n, _)| *n == u)
-        .or_else(|| TO_BAR.iter().find(|(n, _)| u.contains(n)))
-        .map_or(1.0, |x| x.1);
+    let f = TO_BAR.iter().find(|(n, _)| *n == u).or_else(|| TO_BAR.iter().find(|(n, _)| u.contains(n))).map_or(1.0, |x| x.1);
     let out: Vec<f64> = y.iter().map(|v| v * f).collect();
-    let top = out
-        .iter()
-        .filter(|v| !v.is_nan())
-        .map(|v| v.abs())
-        .fold(0.0, f64::max);
+    let top = out.iter().filter(|v| !v.is_nan()).map(|v| v.abs()).fold(0.0, f64::max);
     if top > BAR_MAX {
         return (out.iter().map(|v| v / 10.0).collect(), true);
     }
@@ -43,13 +35,7 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
         return (t.to_vec(), y.to_vec());
     }
     let step = t.len() as f64 / n as f64;
-    let edge = |i: usize| {
-        if i == n {
-            t.len()
-        } else {
-            (i as f64 * step) as usize
-        }
-    };
+    let edge = |i: usize| if i == n { t.len() } else { (i as f64 * step) as usize };
     let (mut tt, mut yy) = (Vec::new(), Vec::new());
     for i in 0..n {
         let (a, b) = (edge(i), edge(i + 1));
@@ -82,15 +68,7 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
 }
 
 /// `{"i", "kind", "id", "unit", "t", "y", "unit_note"?}` of one analog trace, reduced for drawing.
-pub fn analog_json(
-    i: i64,
-    kind: &str,
-    id: &str,
-    unit: &str,
-    t: &[f64],
-    y: &[f64],
-    n: usize,
-) -> String {
+pub fn analog_json(i: i64, kind: &str, id: &str, unit: &str, t: &[f64], y: &[f64], n: usize) -> String {
     let (mut y, mut unit, mut note) = (y.to_vec(), unit.to_string(), None);
     if kind == "pressure" {
         let (v, fixed) = pressure_to_bar(&y, &unit);
@@ -99,22 +77,9 @@ pub fn analog_json(
     }
     let (t, y) = reduce_minmax(t, &y, n);
     let mut o = Out::default();
-    o.raw("{\"i\":")
-        .int(i)
-        .raw(",\"kind\":")
-        .str(kind)
-        .raw(",\"id\":")
-        .str(id)
-        .raw(",\"unit\":")
-        .str(&unit)
-        .raw(",\"t\":")
-        .rounded(&t, 4)
-        .raw(",\"y\":")
-        .rounded(&y, 3);
+    o.raw("{\"i\":").int(i).raw(",\"kind\":").str(kind).raw(",\"id\":").str(id).raw(",\"unit\":").str(&unit).raw(",\"t\":").rounded(&t, 4).raw(",\"y\":").rounded(&y, 3);
     if let Some(u) = note {
-        o.raw(",\"unit_note\":{\"key\":\"analog.unit.tenfold\",\"params\":{\"unit\":")
-            .str(&u)
-            .raw("}}");
+        o.raw(",\"unit_note\":{\"key\":\"analog.unit.tenfold\",\"params\":{\"unit\":").str(&u).raw("}}");
     }
     o.raw("}");
     o.0
@@ -161,19 +126,10 @@ fn grid(t: &[f64], y: &[f64], t0: f64, t1: f64, dt: f64) -> Vec<f64> {
 fn flatten(y: &[f64], width: usize) -> Vec<f64> {
     let k = (width | 1).max(3);
     let h = k / 2;
-    let pad: Vec<f64> = (0..y.len() + 2 * h)
-        .map(|i| y[i.saturating_sub(h).min(y.len() - 1)])
-        .collect();
+    let pad: Vec<f64> = (0..y.len() + 2 * h).map(|i| y[i.saturating_sub(h).min(y.len() - 1)]).collect();
     let idx: Vec<f64> = (0..y.len()).step_by(8).map(|i| i as f64).collect();
-    let med: Vec<f64> = idx
-        .iter()
-        .map(|&i| median(&pad[i as usize..i as usize + k]))
-        .collect();
-    let z: Vec<f64> = y
-        .iter()
-        .enumerate()
-        .map(|(i, v)| v - interp(i as f64, &idx, &med))
-        .collect();
+    let med: Vec<f64> = idx.iter().map(|&i| median(&pad[i as usize..i as usize + k])).collect();
+    let z: Vec<f64> = y.iter().enumerate().map(|(i, v)| v - interp(i as f64, &idx, &med)).collect();
     let mean = z.iter().sum::<f64>() / z.len() as f64;
     let s = (z.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / z.len() as f64).sqrt();
     if s > 0.0 {
@@ -184,9 +140,7 @@ fn flatten(y: &[f64], width: usize) -> Vec<f64> {
 }
 
 fn tops(v: &[f64], k: usize) -> Vec<usize> {
-    let mut idx: Vec<usize> = (1..v.len().saturating_sub(1))
-        .filter(|&j| v[j] > v[j - 1] && v[j] >= v[j + 1] && v[j] > 2.0)
-        .collect();
+    let mut idx: Vec<usize> = (1..v.len().saturating_sub(1)).filter(|&j| v[j] > v[j - 1] && v[j] >= v[j + 1] && v[j] > 2.0).collect();
     crate::sortc::by(&mut idx, |a, b| v[*b].total_cmp(&v[*a]));
     idx.truncate(k);
     idx
@@ -220,15 +174,7 @@ pub fn detector_delay(ta: &[f64], ya: &[f64], tb: &[f64], yb: &[f64]) -> Option<
     let aa = &a[lo..hi];
     let norm = |v: &[f64]| v.iter().map(|x| x * x).sum::<f64>().sqrt();
     let den = norm(aa) * norm(&b[lo..hi]) + 1e-12;
-    let cc: Vec<f64> = (0..=2 * n)
-        .map(|l| {
-            aa.iter()
-                .zip(&b[lo + l - n..hi + l - n])
-                .map(|(x, y)| x * y)
-                .sum::<f64>()
-                / den
-        })
-        .collect();
+    let cc: Vec<f64> = (0..=2 * n).map(|l| aa.iter().zip(&b[lo + l - n..hi + l - n]).map(|(x, y)| x * y).sum::<f64>() / den).collect();
     let mut i = 0;
     for (j, v) in cc.iter().enumerate() {
         if *v > cc[i] {
@@ -248,13 +194,6 @@ pub fn detector_delay(ta: &[f64], ya: &[f64], tb: &[f64], yb: &[f64]) -> Option<
     let delay = (i as f64 - n as f64 + off) * dt;
     let (pa, pb) = (tops(aa, 8), tops(&b[lo..hi], 40));
     let shift = (delay / dt).round_ties_even() as i64;
-    let peaks = pa
-        .iter()
-        .filter(|&&j| pb.iter().any(|&q| (j as i64 + shift - q as i64).abs() <= 2))
-        .count();
-    Some(Delay {
-        delay: round(delay, 4),
-        peaks,
-        corr: round(cc[i], 3),
-    })
+    let peaks = pa.iter().filter(|&&j| pb.iter().any(|&q| (j as i64 + shift - q as i64).abs() <= 2)).count();
+    Some(Delay { delay: round(delay, 4), peaks, corr: round(cc[i], 3) })
 }

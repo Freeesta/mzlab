@@ -4,14 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod budget_js;
-mod diff;
-mod etichette;
-mod info;
-mod items;
-mod metodo;
-mod stat;
-mod xicbin;
+mod xicbin; mod etichette; mod info; mod diff; mod items; mod metodo; mod stat; mod budget_js;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -19,17 +12,13 @@ use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
+mod scans;
 mod cache;
-mod campioni;
-mod centroidi;
-mod contato;
+mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca;
 pub mod esterno;
-mod molecules;
+mod contato;
 mod nativi;
 mod nativi_motore;
-mod panic;
-mod ricerca;
-mod scans;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -179,8 +168,7 @@ pub struct Engine {
     pub(crate) idx: HashMap<u32, Routes<JsReader>>,
     labs: Vec<(mzlab_core::labmethods::Lab, u64)>,
     /// Bytes the cache (maps, arrays and blocks of the indexes) may hold (`set_budget_mb`; 0 = the default).
-    pub(crate) cache_cap: usize,
-    pub(crate) work_cap: usize, // work_cap: what the files opened whole may hold together
+    pub(crate) cache_cap: usize, pub(crate) work_cap: usize,    // work_cap: what the files opened whole may hold together
     /// The slots read straight from the files of a maker (`nativi.rs`).
     pub(crate) nat: nativi::Nativi,
 }
@@ -271,11 +259,7 @@ impl Engine {
     }
 
     /// Makes the item at `slot` the polarity part of a mixed file (`1` or `-1`; anything else = the whole file).
-    pub fn set_polarity(&mut self, slot: u32, pol: i32) {
-        if let Some(r) = self.idx.get_mut(&slot) {
-            r.pol = [1, -1].contains(&pol).then_some(pol as i8);
-        }
-    }
+    pub fn set_polarity(&mut self, slot: u32, pol: i32) { if let Some(r) = self.idx.get_mut(&slot) { r.pol = [1, -1].contains(&pol).then_some(pol as i8); } }
 
     /// The answer of an `api/...` route that only needs the index, as JSON text; an empty string = not answered here (Python's).
     pub fn route(&mut self, slot: u32, path: &str, query: &str) -> Result<String, JsValue> {
@@ -304,18 +288,9 @@ impl Engine {
     }
 
     /// `/api/spectrum` of a window holding ONE scan of a centroid HR file: the exact peaks come from the mzML (`read`). Empty = Python's.
-    pub fn spectrum_exact(
-        &mut self,
-        slot: u32,
-        query: &str,
-        read: Function,
-    ) -> Result<String, JsValue> {
-        let Some(r) = self.idx.get_mut(&slot) else {
-            return Ok(String::new());
-        };
-        r.spectrum_exact(&Query::parse(query), &mut self.nat.src(slot, read, 0.0)?.0)
-            .map(|a| a.unwrap_or_default())
-            .map_err(|e| error_json(&e))
+    pub fn spectrum_exact(&mut self, slot: u32, query: &str, read: Function) -> Result<String, JsValue> {
+        let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
+        r.spectrum_exact(&Query::parse(query), &mut self.nat.src(slot, read, 0.0)?.0).map(|a| a.unwrap_or_default()).map_err(|e| error_json(&e))
     }
 
     /// The SRM transitions of the file at `slot` (`[{id, q1, q3, ce, name, dwell, rt, y}]`), from the chromatograms of its mzML (`api/mrm`).
@@ -529,20 +504,14 @@ fn f64s(b: &[u8]) -> Vec<f64> {
 }
 
 /// The files of the session as the page describes them: `[{slot, label, time, full}]`, in session order.
-pub(crate) fn session_items(
-    items: &str,
-) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
+pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
     use mzlab_core::json::{self, Value};
     let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
     Ok(v.arr()
         .iter()
         .map(|i| mzlab_core::originroute::ItemMeta {
             slot: i.get("slot").and_then(Value::f64).unwrap_or(-1.0) as u32,
-            label: i
-                .get("label")
-                .and_then(Value::str)
-                .unwrap_or("")
-                .to_string(),
+            label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
             time: i.get("time").and_then(Value::f64),
             full: matches!(i.get("full"), Some(Value::Bool(true))),
         })
@@ -562,14 +531,7 @@ impl Engine {
         let (Some(mz), Some(parent)) = (num("mz")?, num("parent")?) else {
             return Ok(String::new());
         };
-        let ask = Ask {
-            k: k as i64,
-            mz,
-            parent,
-            rt0: num("rt0")?,
-            rt1: num("rt1")?,
-            formula: q.some("formula"),
-        };
+        let ask = Ask { k: k as i64, mz, parent, rt0: num("rt0")?, rt1: num("rt1")?, formula: q.some("formula") };
         match origin_route(&metas, &mut self.idx, &ask).map_err(|e| error_json(&e))? {
             Some(rep) => Ok(mzlab_core::jsonb::write(&rep)),
             None => Ok(String::new()),
@@ -578,11 +540,8 @@ impl Engine {
 
     /// `api/subxic` of the high-resolution survey in `slot` (the item `k` of the session): empty = Python's (not high resolution, a request Python refuses).
     pub fn subxic(&mut self, slot: u32, k: i32, query: &str) -> Result<String, JsValue> {
-        let Some(r) = self.idx.get_mut(&slot) else {
-            return Ok(String::new());
-        };
-        let out = mzlab_core::subxic::subxic(r, k as i64, &Query::parse(query))
-            .map_err(|e| error_json(&e))?;
+        let Some(r) = self.idx.get_mut(&slot) else { return Ok(String::new()) };
+        let out = mzlab_core::subxic::subxic(r, k as i64, &Query::parse(query)).map_err(|e| error_json(&e))?;
         Ok(out.unwrap_or_default())
     }
 }
@@ -610,13 +569,7 @@ pub fn build_mzidx(
     spill_get: Option<Function>,
     cap_mb: f64,
 ) -> Result<String, JsValue> {
-    mzlab_core::stima::check_index(
-        &MemBudget::from_request(cap_mb),
-        levels.len(),
-        scans_json.len(),
-        (budget_mb as usize) << 20,
-    )
-    .map_err(|e| error_json(&e))?;
+    mzlab_core::stima::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
     let table = mzidx::ScanTable {
         level: levels.to_vec(),
         polarity: polarities.iter().map(|&b| b as i8).collect(),
@@ -637,9 +590,7 @@ pub fn build_mzidx(
         BlockReader::new(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
-        spill
-            .as_mut()
-            .map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
+        spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
     )
     .map_err(|e| error_json(&e))?;
     Ok(format!(
@@ -657,15 +608,7 @@ pub fn provenance(ctx: &str) -> String {
 /// `/api/formula`: neutral mass and ion m/z of a formula (`mzlab-core::elements`); an error is JSON with a key.
 #[wasm_bindgen]
 pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
-    mzlab_core::elements::formula_mz(
-        formula,
-        if adduct.is_empty() {
-            None
-        } else {
-            Some(adduct)
-        },
-    )
-    .map_err(|e| error_json(&e))
+    mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
 }
 
 /// `api/composition` from its query string (`?mz=...&elements=...`): the JSON of the formulas that fit, or empty when Python must answer.
@@ -677,34 +620,16 @@ pub fn composition(query: &str) -> String {
 /// What the index builder and the loading table need of an uploaded mzML, without Python (`mzlab-core::upload`): the scan table as the eight inputs of
 /// `build_mzidx` (levels, polarities, rt, tic, rows, source, run, hr1) and, at the end, the SHA-256 of the file. `read(offset, length)` gives the bytes. `budget_mb` is the budget of the instance (0 or NaN = 192). `sha256` and `probe`, when both given, are the fingerprints taken during the copy: the file is not read again for them.
 #[wasm_bindgen]
-pub fn prepare_upload(
-    size: f64,
-    read: Function,
-    name: &str,
-    sha256: Option<String>,
-    probe: Option<String>,
-    budget_mb: f64,
-) -> Result<js_sys::Array, JsValue> {
+pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<String>, probe: Option<String>, budget_mb: f64) -> Result<js_sys::Array, JsValue> {
     let mut r = JsReader { read };
     let known = sha256.zip(probe);
     // the scan table is estimated before it is kept: a file that does not fit is refused in order (`error.memoryBudget`, phase `table`)
-    let p = mzlab_core::upload::prepare_in(
-        &mut r,
-        size as u64,
-        name,
-        known,
-        Some(&MemBudget::from_request(budget_mb)),
-    )
-    .map_err(|e| error_json(&e))?;
+    let p = mzlab_core::upload::prepare_in(&mut r, size as u64, name, known, Some(&MemBudget::from_request(budget_mb))).map_err(|e| error_json(&e))?;
     let t = &p.table;
-    let f8 = |v: &[f64]| {
-        Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..])
-    };
+    let f8 = |v: &[f64]| Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..]);
     let out = js_sys::Array::new();
     out.push(&Uint8Array::from(&t.level[..]));
-    out.push(&Uint8Array::from(
-        &t.polarity.iter().map(|&v| v as u8).collect::<Vec<u8>>()[..],
-    ));
+    out.push(&Uint8Array::from(&t.polarity.iter().map(|&v| v as u8).collect::<Vec<u8>>()[..]));
     out.push(&f8(&t.rt));
     out.push(&f8(&t.tic));
     out.push(&Uint8Array::from(&t.scans_json[..]));

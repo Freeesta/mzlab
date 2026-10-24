@@ -4,8 +4,8 @@
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
 pub(crate) mod help;
-use crate::numarray::Num;
 use help::Decode;
+use crate::numarray::Num;
 use std::borrow::Cow;
 use std::io::{BufReader, Read};
 
@@ -238,22 +238,19 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
         unit: mob_unit,
         scan: s.mobility_scan,
     });
-    Ok((
-        Spectrum {
-            index: s.index,
-            id: s.id,
-            level: s.level,
-            rt: if s.rt_seconds { s.rt / 60.0 } else { s.rt },
-            polarity: s.polarity,
-            profile: s.profile,
-            filter: s.filter,
-            precursor: s.selected.or(s.target),
-            mz,
-            intensity: it,
-            wide,
-        },
-        mobility,
-    ))
+    Ok((Spectrum {
+        index: s.index,
+        id: s.id,
+        level: s.level,
+        rt: if s.rt_seconds { s.rt / 60.0 } else { s.rt },
+        polarity: s.polarity,
+        profile: s.profile,
+        filter: s.filter,
+        precursor: s.selected.or(s.target),
+        mz,
+        intensity: it,
+        wide,
+    }, mobility))
 }
 
 fn number_after(id: &str, key: &str) -> Option<f64> {
@@ -462,13 +459,7 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                                 }
                                 "MS:1000744" => s.selected = value.parse().ok(),
                                 "MS:1000827" => s.target = value.parse().ok(),
-                                _ => {
-                                    s.mobility_scan = s.mobility_scan.or_else(|| {
-                                        mobility_of(acc)
-                                            .zip(value.parse().ok())
-                                            .map(|(u, v)| (v, u))
-                                    })
-                                }
+                                _ => s.mobility_scan = s.mobility_scan.or_else(|| mobility_of(acc).zip(value.parse().ok()).map(|(u, v)| (v, u))),
                             }
                         }
                     }
