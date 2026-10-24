@@ -17,6 +17,7 @@ I18N.add("en", {
   "conv.cancelling": "Cancelling…",
   "conv.row.group": "Loading the files",
   "conv.row.open": "Reading the file…",
+  "conv.row.get": "Downloading…",
   "conv.row.wait": "Queued",
   "conv.row.run": "Converting {pc}%",
   "conv.row.conv": "Converted: waiting to be indexed",

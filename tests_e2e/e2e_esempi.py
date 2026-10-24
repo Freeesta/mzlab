@@ -9,7 +9,15 @@ try:
         reqs = []; pg.on("request", lambda q: reqs.append(q.url) if "/esempi/" in q.url else None)
         pg.wait_for_timeout(1500); assert not reqs, ("nothing is downloaded before the click", reqs)
         pg.click("#demobtn"); pg.wait_for_timeout(300); assert pg.is_visible("#demochoice") and pg.locator("#demochoice [data-demo]").count() == 4 and not reqs, "the button only opens the choice"
-        pg.click("#demochoice [data-demo=full]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000); pg.wait_for_timeout(500)
+        # LOAD-UX: the rows of the whole set are in the list at once, in the order of the set, and keep it until the end; one system of progress (no panel under the button, no card bar)
+        pg.evaluate("""() => { window.__ord = []; window.__bars = 0; new MutationObserver(() => { const l = [...document.querySelectorAll('#flist td[data-cvrow]')].map(x => x.dataset.cvrow); if (l.length) window.__ord.push(l.join('|'));
+            window.__bars += document.querySelectorAll('.avanza, .loadbar').length; }).observe(document.querySelector('#flist'), { childList: true, subtree: true }); }""")
+        pg.click("#demochoice [data-demo=full]")
+        pg.wait_for_function("document.querySelectorAll('#flist td[data-cvrow]').length===5", timeout=5000)
+        assert pg.evaluate("[...document.querySelectorAll('#flist td[data-cvrow]')].map(x => x.dataset.cvrow)") == [f"FullScan_t{t}.mzML" for t in (0, 5, 10, 15, 30)]
+        pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000); pg.wait_for_timeout(500)
+        assert pg.evaluate("[...new Set(window.__ord)]") == ["FullScan_t0.mzML|FullScan_t5.mzML|FullScan_t10.mzML|FullScan_t15.mzML|FullScan_t30.mzML"], pg.evaluate("[...new Set(window.__ord)]")
+        assert pg.evaluate("window.__bars") == 0, "never a second bar (panel of the download, bar of the card)"
         t = pg.inner_text("#flist"); assert t.count("Full Scan") >= 1 and "FullScan_t30" in t, t
         tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [0, 5, 10, 15, 30], tm
         assert pg.locator("#demo a").count() == 0, "no download links any more"
@@ -21,22 +29,29 @@ try:
         assert "flufenacet" not in pg.inner_text("body").lower(), "the compound is never named after the files are open"
         assert all("FullScan" in u for u in reqs), ("only the Full Scan set was downloaded", reqs)
         steps.append(("choice Full Scan: 5 files with times 0/5/10/15/30, only that set downloaded, no links, button in box 1, no compound name, data open", "ok"))
-        # the shared progress panel (avanzamento.js): item «k di n», true percentage, sign of life when nothing arrives, «Annulla», summary; nothing is opened after a cancel
+        # the rows of the example files: the download is their first part; «Annulla» (one for everything) stops them and nothing is opened
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_selector("#demobtn")
         # the examples come from the service worker, out of reach of page.route: the second MRM file is held by a wrapper of fetch until «Annulla» aborts it
         pg.evaluate("""() => { const f0 = window.fetch; let n = 0; window.fetch = (u, o) => String(u).includes("esempi/MRM") && ++n === 2
             ? new Promise((_, no) => o.signal.addEventListener("abort", () => no(new DOMException("aborted", "AbortError")))) : f0(u, o); }""")
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=mrm]")
-        pg.wait_for_function("(document.querySelector('#demo .avanza [data-r=item]')||{}).textContent?.startsWith('2 di 4: ')", timeout=20000)
-        assert pg.get_attribute("#demo .avanza [role=progressbar]", "aria-valuenow") == "25", pg.get_attribute("#demo .avanza [role=progressbar]", "aria-valuenow")
-        pg.wait_for_function("document.querySelector('#demo .avanza [data-r=beat]').textContent.includes('Ancora al lavoro')", timeout=6000)
-        assert "trascorsi" in pg.inner_text("#demo .avanza [data-r=time]")
-        pg.click("#demo .avanza [data-r=cancel]")
-        pg.wait_for_selector("#demo .avanza [data-r=sum]", timeout=10000)
-        t = pg.inner_text("#demo .avanza [data-r=sum]"); assert "1 di 4 completati" in t and "1 annullati" in t, t
+        pg.wait_for_function("document.querySelectorAll('#flist td[data-cvrow]').length===4", timeout=5000)
+        assert pg.evaluate("[...document.querySelectorAll('#flist td[data-cvrow]')].map(x => x.dataset.cvrow)") == [f"MRM_std_{c}ppm.mzML" for c in ("0.6", "2.4", "7.2", "18")]
+        pg.wait_for_function("document.querySelector('#flist td[data-cvrow] [role=progressbar][aria-valuenow=\"40\"]')", timeout=20000)      # the first file is downloaded (40 % of its bar)
+        assert pg.locator("#demo .avanza").count() == 0 and pg.locator(".loadbar").count() == 0
+        pg.click("#flist [data-cvact=cancel]")
+        pg.wait_for_function("document.querySelectorAll('#flist li[data-cvend=cancel]').length>=3", timeout=10000)
         assert pg.locator("#flist [data-k=conc]").count() == 0, "nothing is loaded after «Annulla»"
-        pg.click("#demo .avanza [data-r=close]"); assert pg.locator("#demo .avanza").count() == 0
-        steps.append(("the shared progress panel: item, percentage, sign of life, «Annulla» stops and the summary says it", "ok"))
+        steps.append(("the rows of the example files exist at once and in order, the download is part of the row, «Annulla» stops them and nothing is opened", "ok"))
+        # a drop of three files: three rows at once
+        pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_selector("#demobtn")
+        three = [str(ROOT / "site" / "static" / "esempi" / f"FullScan_t{t}.mzML") for t in (0, 5, 10)]
+        pg.evaluate("""() => { window.__ord = []; new MutationObserver(() => { const l = [...document.querySelectorAll('#flist td[data-cvrow]')].map(x => x.dataset.cvrow); if (l.length) window.__ord.push(l.join('|')); })
+            .observe(document.querySelector('#flist'), { childList: true, subtree: true }); }""")
+        pg.set_input_files("#pick", three)
+        pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===3", timeout=30000)
+        o = pg.evaluate("[...new Set(window.__ord)]"); assert o == ["FullScan_t0.mzML|FullScan_t5.mzML|FullScan_t10.mzML"], o      # always the three rows, in the order of the drop, from the first paint
+        steps.append(("drop of three files: three rows at once, in the order of the drop", "ok"))
         # MS2: two files, times 15 and 60, the product-ion type
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=ms2]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===2", timeout=30000); pg.wait_for_timeout(500)

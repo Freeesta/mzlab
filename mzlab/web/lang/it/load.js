@@ -50,8 +50,6 @@ I18N.add("it", {
   "load.demo.mrm.size": "4 file · 2 MB",
   "load.demo.hrms.title": "4 file ad alta risoluzione (Orbitrap, DDA): serie temporale di un inquinante degradato su TiO2 (0, 5, 10 e 30 min)",
   "load.demo.hrms.size": "4 file · 28 MB",
-  "load.demo.job": "File di esempio",
-  "load.demo.mb": "{mb} MB scaricati",
   "load.demo.opening": "Apro i file di esempio…",
   "load.demo.error": "Non riesco a scaricare i file di esempio: {message}",
   "load.step2.title": "2. Metodo di acquisizione",

@@ -89,7 +89,7 @@ const CONV_FINAL = ["done", "fail", "cancel"];
 // what the summary counts apart, in this order: the kinds of file (`kind` of the file entry, "mixed" for a file of more parts), then the rows that did not load
 const CONV_SUM = { full: "conv.sum.full", ms2: "conv.sum.ms2", mrm: "conv.sum.mrm", infusion: "conv.sum.infusion", mixed: "conv.sum.mixed", other: "conv.sum.other", fail: "conv.sum.fail", cancel: "conv.sum.cancel" };
 const CONVROWS = {
-  /** @type {{ name: string, state: string, pc: number | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, cached?: boolean, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
+  /** @type {{ name: string, state: string, pc: number | null, floor?: number, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, cached?: boolean, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
   rows: [],
   /** @type {null | (() => void)} */
   onCancel: null,
@@ -105,11 +105,16 @@ const CONVROWS = {
   },
   set(name, state, pc, sub) {
     const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
+    if (pc != null && r.floor && pc < r.floor) pc = r.floor;          // a row that began with a download never goes back
     const was = r.state, was_pc = r.pc, was_sub = r.sub ? r.sub.done : -1, now = Date.now();
     r.state = state; r.pc = pc == null ? null : pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null;
     if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub) r.seen = now;
     if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.paint(); } else if (r.seen === now) this.fill(r);
   },
+  // the part of the bar already done (the download of an example file): the next phase starts from here
+  base(name, pc) { const r = this.find(name); if (r) r.floor = pc; },
+  // a row of the loading under way keeps its place in the list (and its file stays out of the table) until nothing runs any more: the order never changes while the files get ready
+  holds(name) { const r = this.find(name); return !!r && r.state !== "fail" && r.state !== "cancel" && this.running().length > 0; },
   // the last message of the worker, for the diagnosis
   note(name, text) { const r = this.find(name); if (r) r.last = String(text).slice(0, 200); },
   // the end of a row: "done" ({ scans }), "fail" ({ msg, diag }) or "cancel"; it stays until «Close» or the next loading
@@ -173,10 +178,10 @@ const CONVROWS = {
     const act = this.onCancel ? ` <button type="button" class="sec sm" data-cvact="cancel" title="${T("load.cancel.title")}">${T("conv.cancel")}</button>` : "";
     const det = `<div class="diag" data-cvdiag><button type="button" class="sec sm" data-a="diagdet" aria-expanded="false">${T("diag.details")}</button><div class="diagbox" hidden><pre data-cvtrace></pre><button type="button" class="sec" data-a="diagcopy">${T("diag.copy")}</button></div></div>`;
     const head = `<tr class="grp"><td colspan="${ncol}">${T("conv.row.group")} <span class="muted">${T("load.prog.count", { done: n - run.length, n })}</span>${act}${det}</td></tr>`;
-    return head + run.map(r => {
-      const lab = this.label(r), now = r.pc == null ? "" : ` aria-valuenow="${r.pc}"`;
-      return `<tr aria-busy="true"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm"><span data-cvtxt>${esc(lab)}</span> <span class="cp-num" data-cvwhen>${esc(this.when(r))}</span></div>` +
-        `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="width:${r.pc || 0}%"></i></div></td></tr>`;
+    return head + this.rows.filter(r => r.state !== "fail" && r.state !== "cancel").map(r => {
+      const end = r.state === "done", lab = this.label(r), pc = end ? 100 : r.pc, now = pc == null ? "" : ` aria-valuenow="${pc}"`;
+      return `<tr aria-busy="${!end}"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm"><span data-cvtxt>${esc(lab)}</span> <span class="cp-num" data-cvwhen>${esc(this.when(r))}</span></div>` +
+        `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="width:${pc || 0}%"></i></div></td></tr>`;
     }).join("");
   },
   // the count of the ended rows by kind of file (full scan, MS2, MRM, infusion, mixed, other), the failed, cancelled and truncated ones, and the time from the first start to the last end
@@ -333,7 +338,7 @@ function wiffName(stem, sample, several, taken) {
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(state) { return { open: "conv.row.open", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" }[state] || "conv.row.wait"; }
+function convRowKey(state) { return { open: "conv.row.open", get: "conv.row.get", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" }[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;
