@@ -47,6 +47,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   /** Visible now: the panel is open, in the visible tab, and in full screen only that panel. @param {any} e */
   // a removed file or closed panel belongs to a tab (remove-all to none), not to a live panel
   const visibile = e => { if (e.tipo === "tolto" && e.p === undefined) return !fullscreen() && (e.tab === undefined || e.tab === E.tab);
+    if (e.p && e.p.globale) return !fullscreen();
     if (!E.panels.includes(e.p)) return false; const m = fullscreen(); return m ? e.p === m : (e.p.tab || E.tab) === E.tab; };
   /** @param {any} p @param {string} tipo @param {any} [snap] */
   const cattura = (p, tipo, snap) => tipo === "int" ? (snap ?? intSnap(p))
@@ -59,7 +60,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const p = e.p, cur = e.tipo === "cmd" ? "" : cattura(p, e.tipo), o = e.tipo === "cmd" ? null : JSON.parse(st);
     if (e.tipo === "int") { p.ints = o; p.isel = null; }
     else if (e.tipo === "campi") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
-    else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); g.applica(p, st); draw(p); uiSave(); return prev; }
+    else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); COMANDI.ripristina(e.cmd, p, st); if (!p.globale) draw(p); uiSave(); return prev; }
     else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
     draw(p); uiSave(); return cur;
   };
@@ -109,8 +110,13 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, p: o.p, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, scade: o.scade || null, chiudi: null });
     sync(); avviso(e); return e;
   }
+  /** A panel the student opened: the undo closes it, the redo opens it again (the same entry as a removal with the two closures the other way round, and no notice). o = { what, tab, dati, undo, redo, segue? }: `segue(vecchio, nuovo)` follows a panel that was closed and opened again. @param {any} o */
+  function aperto(o) {
+    const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, segue: o.segue, scade: null, chiudi: null });
+    sync(); return e;
+  }
   /** A closed panel is open again as another object: the entries of the old one follow it. @param {any} vecchio @param {any} nuovo */
-  function segui(vecchio, nuovo) { pila.v.concat(pila.r).forEach(e => { if (e.p === vecchio && e.tipo !== "tolto") e.p = nuovo; }); sync(); }
+  function segui(vecchio, nuovo) { pila.v.concat(pila.r).forEach(e => { if (e.p === vecchio && e.tipo !== "tolto") e.p = nuovo; if (e.segue) e.segue(vecchio, nuovo); }); sync(); }
   function ripeti() {
     const e = pila.ripeti(visibile, ripristina);
     if (!e) { say(T("storia.nienteRipeti")); return false; }
@@ -136,7 +142,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   const bu = document.getElementById("np-undo"), br = document.getElementById("np-redo");
   if (bu) bu.addEventListener("click", () => { annulla(); });
   if (br) br.addEventListener("click", () => { ripeti(); });
-  return { registra, comando, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
+  return { registra, comando, tolto, aperto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();
 
 // thin wrappers: the callers (eventi.js, pannelli.js, dda.js, mappa.js, banco.js) keep their names

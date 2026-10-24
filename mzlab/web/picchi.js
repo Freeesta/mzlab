@@ -113,7 +113,7 @@ const intSnap = p => JSON.stringify(p.ints);
 function delInts(p, list) { pushIh(p); p.ints = p.ints.filter(i => !list.includes(i)); if (list.some(i => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(p, s, a, b, mirror = true) {
   const lo = Math.min(a, b), hi = Math.max(a, b);
-  if (p.type === "mrm") { if (p.ints.some(i => i.key === s.key)) pushIh(p); p.ints = p.ints.filter(i => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
+  if (p.type === "mrm") { pushIh(p); p.ints = p.ints.filter(i => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
   else {
     if (p.ints.some(i => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
     if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }
@@ -165,10 +165,13 @@ function peakParams() {
       ${f("nr0")}${f("nr1", false)}${f("constrain")}${f("minHalf")}</fieldset></details>
     <div style="margin-top:8px"><button id="pk-def" type="button">${I18N.t("pk.default")}</button> <button id="pk-ok" type="button" class="go">${I18N.t("pk.apply")}</button></div>`, () => {
     const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = PK[i.dataset.pk]; });
-    Q("#pk-def").onclick = () => { Object.assign(PK, PK_DEF); pkSave(); rdv(); };
+    Q("#pk-def").onclick = () => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => Object.assign(PK, PK_DEF)); pkSave(); rdv(); };
     Q("#pk-ok").onclick = () => {
-      document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = numIt(i.value); if (v >= 0) PK[k] = v; } });
-      PK.minHalf = Math.max(1, Math.round(PK.minHalf)); pkSave(); Q("#bigdlg").close();
+      COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
+        document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = numIt(i.value); if (v >= 0) PK[k] = v; } });
+        PK.minHalf = Math.max(1, Math.round(PK.minHalf));
+      });
+      pkSave(); Q("#bigdlg").close();
     };
   });
 }
@@ -191,6 +194,11 @@ function allInts() {
 }
 // optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
 const INTOPT = { sn: false, par: false, q: false };
+// the peak-finding parameters and the columns of the integration table are one undoable action (comandi.js)
+COMANDI.gestore("peaks.settings", {
+  leggi: () => JSON.stringify([PK, INTOPT]),
+  applica: (_p, snap) => { const [pk, io] = JSON.parse(snap); Object.assign(PK, pk); Object.assign(INTOPT, io); pkSave(); const dlg = Q("#bigdlg"); if (dlg && dlg.open) showInts(); },
+});
 const INT_COLS = ["panel", "ion", "file", "time", "conc", "cunit", "a", "b", "rt", "area", "height", "corr"];
 const INT_HEADS = ["panel", "trace", "sample", "time", "conc", "unit", "rt0", "rt1", "apex", "area", "height", "corr"].map(k => I18N.t(`export.int.${k}`));
 function intExtra(r) {
@@ -224,9 +232,9 @@ async function showInts() {
     `</table><div class="muted sm">${I18N.t("int.tbl.note")}</div>`
     : `<div class="muted">${I18N.t("int.tbl.none")}</div>`, () => {
     if (!rows.length) return;
-    Q("#ig-sn").onchange = e => { INTOPT.sn = e.target.checked; showInts(); };
-    Q("#ig-par").onchange = e => { INTOPT.par = e.target.checked; showInts(); };
-    Q("#ig-q").onchange = e => { INTOPT.q = e.target.checked; showInts(); };
+    Q("#ig-sn").onchange = e => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.sn = e.target.checked; }); showInts(); };
+    Q("#ig-par").onchange = e => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.par = e.target.checked; }); showInts(); };
+    Q("#ig-q").onchange = e => { COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => { INTOPT.q = e.target.checked; }); showInts(); };
     Q("#bigbody").querySelectorAll("button[data-del]").forEach(b => b.onclick = () => { const r = rows[+b.dataset.del]; delInts(r._p, [r._it]); showInts(); });
     Q("#bigbody").querySelectorAll("button[data-nz]").forEach(b => b.onclick = () => {
       const r = rows[+b.dataset.nz]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
@@ -515,7 +523,7 @@ function contLegend(p) {
   if (n) h += `<span class="cont-cnt" role="status">${I18N.t(p.showHid ? "cont.cnt.shown" : "cont.cnt", { n })} · <button type="button" class="cont-show">${I18N.t(p.showHid ? "cont.hide" : "cont.show")}</button></span>`;
   if (!h) return;
   p.leg2.insertAdjacentHTML("beforeend", h);
-  const b = p.leg2.querySelector(".cont-show"); if (b) b.onclick = () => { p.showHid = !p.showHid; draw(p); };
+  const b = p.leg2.querySelector(".cont-show"); if (b) b.onclick = () => { COMANDI.fai("series.visibility", p, () => { p.showHid = !p.showHid; }); draw(p); };
   const l = p.leg2.querySelector(".cont-lb");
   if (l) l.onclick = e => {
     e.stopPropagation();

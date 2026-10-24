@@ -579,7 +579,8 @@ function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFil
 function goToFileTab(f) {
   setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f.kind);
 }
-function reorderFiles(fromK, toK, isBefore) {
+const reorderFiles = (fromK, toK, isBefore) => fileViewDo(() => reorderFilesRaw(fromK, toK, isBefore));
+function reorderFilesRaw(fromK, toK, isBefore) {
   if (fromK == null || toK == null || fromK === toK) return;
   const srcIdx = E.files.findIndex(f => f.k === fromK);
   const dstIdx = E.files.findIndex(f => f.k === toK);
@@ -822,14 +823,14 @@ function renderFileList() {
     const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
-    side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
+    fileViewDo(() => side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderFileList(); renderNav();
     redrawAll();
     uiSave();
   });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
-    sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; });
+    fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; }));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderNav(); redrawAll();
     uiSave();

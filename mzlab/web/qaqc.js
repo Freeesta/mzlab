@@ -209,7 +209,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     if (st.ions.length) refresh(box);
     box.onchange = e => {
       const r = e.target.closest("select[data-role]");
-      if (r) { CAMPIONI.apply([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
+      if (r) { campioniEdit([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
       if (e.target.id === "qq-thr") { st.thr = +e.target.value; save(); if (res.ratio) runRatio().then(() => paint(box)).catch(() => {}); }
       if (e.target.id === "qq-win") { const v = numIt(e.target.value); if (v > 0) { st.win = v; save(); refresh(box); } }
     };

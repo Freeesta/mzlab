@@ -65,6 +65,7 @@
     "../../mzlab/web/fondo-spettro.js",
     "../../mzlab/web/mappa-vicino.js",
     "../../mzlab/web/pannelli.js",
+    "../../mzlab/web/pannelli-annulla.js",
     "../../mzlab/web/affianca.js",
     "../../mzlab/web/legende.js",
     "../../mzlab/web/grafici.js",

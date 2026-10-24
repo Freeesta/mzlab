@@ -143,7 +143,9 @@
     // Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z) outside text fields
     root.addEventListener("keydown", e => {
       const t = /** @type {HTMLElement} */ (e.target);
-      if (!(e.ctrlKey || e.metaKey) || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable) return;
+      // text entry keeps the undo of the browser; a select, checkbox, radio or range does not (the key must reach the plan)
+      const typing = t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && !/^(checkbox|radio|range|button|submit|reset|color|file|image)$/.test(/** @type {HTMLInputElement} */ (t).type));
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || typing || t.isContentEditable) return;
       const k = e.key.toLowerCase();
       if (k === "z" && !e.shiftKey) { e.preventDefault(); S.undo(); } else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); S.redo(); }
     });

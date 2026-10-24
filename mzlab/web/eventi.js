@@ -106,7 +106,7 @@ function attach(p) {
   cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
-    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
+    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null, zo: p.zoom ? [...p.zoom] : null, zyo: p.zoomY ? [...p.zoomY] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
@@ -116,7 +116,11 @@ function attach(p) {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true; if (d.ax !== undefined && window.MAPPA) MAPPA.guide(p, null);
     if (p.type === "map" && window.MAPPA && MAPPA.touched(p)) { zl.hidden = true; return; }       // mappa.js: the mouse events after a finger gesture
     zl.hidden = true; p._hz = null;
-    if (d.pan) { uiSave(); return; }
+    if (d.pan) {                                                  // the whole drag is ONE zoom step: the view before it is the snapshot
+      const fin = [p.zoom, p.zoomY];
+      if (JSON.stringify(fin) !== JSON.stringify([d.zo, d.zyo])) { p.zoom = d.zo; p.zoomY = d.zyo; pushZh(p); [p.zoom, p.zoomY] = fin; }
+      uiSave(); return;
+    }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
     if (d.cursor) { uiSave(); return; }
     const a = p._a;
@@ -128,7 +132,7 @@ function attach(p) {
     if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
-      const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
+      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
@@ -168,6 +172,7 @@ function attach(p) {
     if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
     if (!(e.ctrlKey || e.metaKey) && p._a && p.zoom && p.type !== "map" && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {      // trackpad: two fingers sideways pan the zoomed x axis (vertical scroll still moves the page)
       e.preventDefault(); const a = p._a, span = a.x1 - a.x0, dx = e.deltaX / (a.W - M.l - M.r) * span;
+      if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of sideways steps is one step
       p.zoom = clampView(a.x0 + dx, a.x1 + dx, a.full[0], a.full[1]); drawSoon(p); return;
     }
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
@@ -275,6 +280,11 @@ function liveSpec(s, from) {
   if (from.cur != null && s.r0 == null) { const dt = scanStep(); s.r0 = from.cur - dt / 2; s.r1 = from.cur + dt / 2; }
   draw(s); uiSave();
 }
+COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
+/** @param {any} s */
+const spLinkFreeze = s => COMANDI.fai("panel.link", s, () => freezeSpec(s));
+/** @param {any} s @param {any} from */
+const spLinkFollow = (s, from) => COMANDI.fai("panel.link", s, () => liveSpec(s, from));
 function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec, ...extra });
@@ -289,7 +299,7 @@ function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   stackAfter(s, from); relayout(); fitHost();
   if (UIP.beside && window.AFFIANCA) AFFIANCA.accanto(s, from);        // the option «Spectrum beside the chromatogram»: same row when there is room (affianca.js)
   // Do NOT reveal(s) so the viewport does not shift randomly
-  return s;
+  return apriAnnullabile(s);
 }
 
 // The peak a click on the spectrum means: a click inside the box of a peak label gives exactly that peak; otherwise the peak the mouse box highlights (p._a.snap).
@@ -389,7 +399,7 @@ function ctxFor(p, e, x, px, py) {
   reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
-    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
 })();
 
 // the actions common to every graph but the map (registry azioni/1): zoom reset (first in the menu, grey without a zoom) and the annotations (last, grey away from one);
@@ -398,7 +408,7 @@ function ctxFor(p, e, x, px, py) {
 async function editAnn(p, ann) {
   const v = await ask(I18N.t("ctx.ann.prompt"), ann.text);
   if (v == null) return;
-  if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v;
+  COMANDI.fai("spec.annotation", p, () => { if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v; });
   draw(p);
 }
 (() => {
@@ -410,7 +420,7 @@ async function editAnn(p, ann) {
   reg({ id: "ann.edit", gruppo: "ann", ordine: 1, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
     nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
   reg({ id: "ann.delete", gruppo: "ann", ordine: 2, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near,
-    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); draw(c.p); } });
+    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
 })();
 
 // LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
@@ -515,11 +525,11 @@ function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noop
 window.openBT = openBT;
 
 // ------------------------------------------------------------------ barra strumenti
-Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
-Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
+Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
+Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
-Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
+Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all" })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
@@ -712,3 +722,5 @@ Q("#calcin").oninput = calcRun;
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
   addEventListener("scroll", hide, true);
 })();
+// the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (comandi.js)
+COMANDI.gestore("spec.annotation", { leggi: p => JSON.stringify(p.anns || []), applica: (p, snap) => { p.anns = JSON.parse(snap); } });
