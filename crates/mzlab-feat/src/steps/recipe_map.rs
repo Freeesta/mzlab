@@ -44,10 +44,25 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     match k {
         "ppm" => c.ppm = num?,
         "snr" => c.snr = num?,
-        _ => match (v.at(0).and_then(Value::f64), v.at(1).and_then(Value::f64)) {
-            (Some(a), Some(b)) => c.width_s = (a, b),
-            _ => return Err(bad(step, k)),
-        },
+        "peak_width_s" | "width_s" => {
+            match (v.at(0).and_then(Value::f64), v.at(1).and_then(Value::f64)) {
+                (Some(a), Some(b)) if a.is_finite() && b.is_finite() && b >= a => {
+                    c.width_s = (a, b)
+                }
+                _ => {
+                    if let Some(hi) = v.f64() {
+                        if hi.is_finite() && hi >= c.width_s.0 {
+                            c.width_s.1 = hi;
+                        } else {
+                            return Err(bad(step, k));
+                        }
+                    } else {
+                        return Err(bad(step, k));
+                    }
+                }
+            }
+        }
+        _ => return Err(bad(step, k)),
     }
     Ok(())
 }
@@ -83,7 +98,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
-        ("features.detect", "algorithm" | "ppm" | "peak_width_s" | "snr") => {
+        ("features.detect", "algorithm" | "ppm" | "peak_width_s" | "width_s" | "snr") => {
             set_peak(r, step, k, v)?
         }
         ("features.align", "mode") => {

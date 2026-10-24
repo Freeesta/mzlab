@@ -488,6 +488,8 @@ class Run:
     def _index(self):
         refs, level_of = {}, {}
         for a, b, h in self._spans():
+            if "MS:1000804" in h:                                  # optical (UV/PDA) spectrum: not a scan
+                continue
             m = re.search(r'\sid="([^"]*)"', h)
             lvl = _cv(h, "MS:1000511")
             pol = 1 if 'accession="MS:1000130"' in h else -1 if 'accession="MS:1000129"' in h else 0

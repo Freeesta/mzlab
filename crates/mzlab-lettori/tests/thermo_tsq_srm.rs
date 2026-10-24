@@ -1,7 +1,7 @@
 #![cfg(feature = "thermo")]
 //! The Thermo TSQ MRM run PXD043691 `201208_15.raw` (v66 file, one event per scan with Q1, collision energy and seven product ranges) read
 //! against two external oracles: the spectra of ThermoRawFileParser (`trfp/201208_15.mzML`) and the 14 SRM chromatograms of msconvert.
-//! Needs the real file and the oracles under `rosina-dati` (`MZLAB_ROSINA_DATI`, or a folder of that name above the repository);
+//! Needs the real file and the oracles under `/Volumes/Fred/rosina` (`MZLAB_ROSINA_DATI` overrides it);
 //! a part whose file is missing is skipped. Nothing here is a synthetic file.
 #![allow(clippy::indexing_slicing)]
 
@@ -21,13 +21,7 @@ fn dati(rel: &str) -> Option<PathBuf> {
         .map(PathBuf::from)
         .into_iter()
         .collect();
-    let qui = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    radici.extend(
-        qui.ancestors()
-            .skip(1)
-            .take(8)
-            .map(|a| a.join("rosina-dati")),
-    );
+    radici.push(PathBuf::from("/Volumes/Fred/rosina"));
     radici
         .into_iter()
         .map(|r| r.join(rel))

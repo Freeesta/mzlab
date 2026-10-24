@@ -184,6 +184,8 @@ struct Spec {
     selected: Option<f64>,
     target: Option<f64>,
     mobility_scan: Option<(f64, &'static str)>,
+    /// An optical (`MS:1000804`) spectrum: read by `mzml_dad`, not a scan.
+    uv: bool,
     arrays: Vec<Array>,
 }
 
@@ -360,6 +362,7 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                             selected: None,
                             target: None,
                             mobility_scan: None,
+                            uv: false,
                             arrays: Vec::new(),
                         });
                         scope = Scope::Spectrum;
@@ -442,6 +445,7 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                             }
                         } else if let (Scope::Spectrum, Some(s)) = (scope, spec.as_mut()) {
                             match acc {
+                                "MS:1000804" => s.uv = true,
                                 "MS:1000511" if !in_precursor_list => {
                                     s.level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1)
                                 }
@@ -489,7 +493,7 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                     "precursorList" => in_precursor_list = false,
                     "analyzer" => in_analyzer = false,
                     "spectrum" => {
-                        if let Some(s) = spec.take() {
+                        if let Some(s) = spec.take().filter(|s| !s.uv) {
                             out.spectrum(s, f)?;
                             n_spec += 1;
                         }

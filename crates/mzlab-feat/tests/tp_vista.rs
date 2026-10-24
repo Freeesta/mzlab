@@ -68,7 +68,15 @@ fn run(signs: &[Signs], fragments: Option<&[f64]>) -> TpBlock {
 }
 
 fn run_with(minutes: &[f64], signs: &[Signs], fragments: Option<&[f64]>) -> TpBlock {
-    let t = table();
+    run_table(&table(), minutes, signs, (fragments, None))
+}
+
+fn run_table(
+    t: &Aligned,
+    minutes: &[f64],
+    signs: &[Signs],
+    (fragments, infusion): (Option<&[f64]>, Option<&[f64]>),
+) -> TpBlock {
     let hyps = [
         hyp(316.0, SRC_RULE),
         hyp(332.0, SRC_RULE),
@@ -76,12 +84,13 @@ fn run_with(minutes: &[f64], signs: &[Signs], fragments: Option<&[f64]>) -> TpBl
         hyp(250.0, SRC_RULE),
     ];
     let inp = TpInputs {
-        aligned: &t,
+        aligned: t,
         minutes,
         hyps: &hyps,
         signs,
         parent: (300.0, 5.0),
         fragments,
+        infusion,
         params: &TpParams::default(),
         rules: None,
     };
@@ -158,6 +167,24 @@ fn the_fragments_of_the_parent_decide_the_in_source_fragments() {
 }
 
 #[test]
+fn gate_isf_uses_infusion_ms1_ions() {
+    // a series with no t0 and a coeluting lighter ion whose ratio to the parent is not constant: it stays a product, noted when the parent's own
+    // spectrum (here the MS1 of its infusion) holds it
+    let m = [f64::NAN, 2.0, 5.0, 10.0, 20.0, 40.0, 80.0];
+    let mut t = table();
+    for (k, v) in [0.0, 4e5, 1e5, 5e5, 1e5, 4e5, 2e4].into_iter().enumerate() {
+        t.area[7 + k] = v;
+    }
+    let b = run_table(&t, &m, &signs(), (None, None));
+    assert_eq!(b.notes[1] & NOTE_ISF_COELUTES, 0);
+    let b = run_table(&t, &m, &signs(), (None, Some(&[250.0001])));
+    assert_ne!(b.status[1], ST_ISF);
+    assert_eq!(b.notes[1] & NOTE_ISF_COELUTES, NOTE_ISF_COELUTES);
+    let b = run_table(&t, &m, &signs(), (None, Some(&[120.0])));
+    assert_eq!(b.notes[1] & NOTE_ISF_COELUTES, 0);
+}
+
+#[test]
 fn no_controls_is_an_error_and_no_parent_is_no_view() {
     let t = table();
     let s = signs();
@@ -169,6 +196,7 @@ fn no_controls_is_an_error_and_no_parent_is_no_view() {
         signs: &s,
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &TpParams::default(),
         rules: None,
     };

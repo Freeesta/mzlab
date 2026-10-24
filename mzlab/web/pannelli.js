@@ -237,6 +237,7 @@ function addPanel(type, o, after) {
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", fondo: FONDO.migra(o), clipDraw: FONDO.clipOld(o) });
   if (type !== "spec" && type !== "map") {
     p.pdaAlign = !!o.pdaAlign; p.pdaDelay = typeof o.pdaDelay === "number" ? o.pdaDelay : null; p.overlay = o.overlay === "grad" || o.overlay === "press" ? o.overlay : null; p.gdelay = +o.gdelay || 0;           // gradient over the traces (gradiente.js) and its delay at the column, in min
+    p.etpk = typeof o.etpk === "boolean" ? o.etpk : undefined;           // peak labels (etichette-picchi.js): undefined = the default for the number of traces
     p.tl = o.tl ?? true;                                                  // the chromatograms of a view are linked by default (one panel can be unlinked)
     const mate = p.tl && o.zoom === undefined ? E.panels.find(q => q.tl && q.tab === p.tab && q.type !== "spec" && q.type !== "map" && q.zoom) : null;
     if (mate) p.zoom = [...mate.zoom];
@@ -250,7 +251,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="${EH(shortHelp("pnl-" + type))} ${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="${EH(shortHelp("pnl-" + type))} ${I18N.t("panel.rename.hint")}"></b>${type === "spec" ? '<span class="rtl" aria-live="polite" aria-atomic="true"></span>' : ""}<span class="ctl"></span>${type === "map" ? "" : '<span class="rd"></span>'}${(() => {
     // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] | [PNG / Excel] □ ×
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="${I18N.t("panel.fit.title")}">${IC_FIT}</button>`;
@@ -716,9 +717,10 @@ function ctl(p) {
       (p.bg === "w" ? FONDOSP.box(p) : "") +
       (p.level === 2 ? `<select data-o="prec" aria-label="${I18N.t("ctl.prec.title")}" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${(prodTab ? precN : [...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => ({ prec: v }))).map(e => `<option value="${e.prec}" ${String(p.prec) === String(e.prec) ? "selected" : ""}>${e.n != null ? I18N.t("ctl.prec.n", { v: e.prec, n: e.n }) : I18N.t("ctl.prec.one", { v: e.prec })}</option>`).join("")}</select>` : "");
   }
-  if (p.type === "spec" && c.firstElementChild && !prodTab) {          // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
+  if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {          // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find(q => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
-    c.firstElementChild.insertAdjacentHTML("afterend", `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? I18N.t("spec.follow", { n }) : I18N.t("spec.follow.none")} &#9662;</button>`);
+    const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? I18N.t("spec.follow", { n }) : I18N.t("spec.follow.none")} &#9662;</button>`;
+    if (c.firstElementChild) c.firstElementChild.insertAdjacentHTML("afterend", fh); else c.innerHTML = fh;
     const fb = c.querySelector(".fol");
     if (!p.link) fb.classList.remove("lk");
     fb.onclick = e => {

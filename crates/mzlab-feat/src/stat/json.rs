@@ -1,6 +1,6 @@
 //! `stat/1` as text (keys in English, fixed order) and the JSON input of the three steps (matrices as lists of rows). Numbers only.
 
-use super::{analyse, compare, Ion, KmdOpts, KmdOut, Layout, StatsOpts, StatsOut, SCHEMA};
+use super::{compare, Layout, StatsOpts, StatsOut, SCHEMA};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, Out, Value};
 
@@ -17,10 +17,6 @@ fn matrix_of(v: &Value) -> Result<Vec<Vec<f64>>> {
                 .collect()
         })
         .ok_or_else(bad)
-}
-
-fn num_or(v: &Value, key: &str, d: f64) -> f64 {
-    v.get(key).and_then(Value::f64).unwrap_or(d)
 }
 
 /// The conditions of `{"groups": [name | null per file], "blank": [bool per file], "reference": name | null}`.
@@ -215,78 +211,6 @@ pub fn pca_json(input: &[u8]) -> std::result::Result<String, String> {
 
 /// `{"features": [{"mz", "rt"}], "unit", "tolMDa", "minMembers"}` -> the rows and series of the Kendrick analysis.
 pub fn kmd_json(input: &[u8]) -> Result<String> {
-    let v = parse(input)?;
-    let ions: Vec<Ion> = v
-        .get("features")
-        .ok_or_else(bad)?
-        .arr()
-        .iter()
-        .map(|f| Ion {
-            mz: num_or(f, "mz", f64::NAN),
-            rt: f.get("rt").and_then(Value::f64),
-        })
-        .collect();
-    let d = KmdOpts::default();
-    let id = v.get("unit").and_then(Value::str).unwrap_or("CF2");
-    let o = KmdOpts {
-        unit: super::units()
-            .iter()
-            .find(|u| u.id == id)
-            .map_or(d.unit, |u| u.id),
-        tol_mda: num_or(&v, "tolMDa", d.tol_mda),
-        min_members: num_or(&v, "minMembers", d.min_members as f64) as usize,
-    };
-    Ok(write_kmd(&analyse(&ions, &o)))
-}
-
-pub fn write_kmd(r: &KmdOut) -> String {
-    let mut o = Out::default();
-    o.raw("{\"schema\":")
-        .str(SCHEMA)
-        .raw(",\"unit\":{\"id\":")
-        .str(r.unit.id)
-        .raw(",\"mass\":")
-        .num(r.unit.mass)
-        .raw(",\"nominal\":")
-        .num(r.unit.nominal)
-        .raw("},\"rows\":[");
-    for (i, x) in r.rows.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"i\":")
-            .int(x.i as i64)
-            .raw(",\"mz\":")
-            .num(x.mz)
-            .raw(",\"rt\":")
-            .opt(x.rt);
-        for (k, n) in [("km", x.km), ("nkm", x.nkm), ("kmd", x.kmd)] {
-            o.raw(",\"").raw(k).raw("\":").num(n);
-        }
-        o.raw(",\"series\":")
-            .opt(x.series.map(|s| s as f64))
-            .raw("}");
-    }
-    o.raw("],\"series\":[");
-    for (i, s) in r.series.iter().enumerate() {
-        let members: Vec<String> = s.members.iter().map(|m| m.to_string()).collect();
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"n\":")
-            .int(s.n as i64)
-            .raw(",\"members\":[")
-            .raw(&members.join(","))
-            .raw("],\"kmd\":")
-            .num(s.kmd);
-        o.raw(",\"spanMDa\":")
-            .num(s.span_mda)
-            .raw(",\"steps\":")
-            .floats(&s.steps)
-            .raw(",\"consecutive\":")
-            .num(s.consecutive);
-        o.raw(",\"distinct\":")
-            .int(s.distinct as i64)
-            .raw(",\"rho\":")
-            .opt(s.rho)
-            .raw("}");
-    }
-    o.raw("]}");
-    o.0
+    let body = std::str::from_utf8(input).map_err(|_| bad())?;
+    mzlab_core::kendrick::kendrick_json(body)
 }

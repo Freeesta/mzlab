@@ -7,7 +7,7 @@ use mzlab_core::elements::{fmt, ion_mz, mass, parse_formula, Formula};
 use mzlab_core::json::{self, Value};
 
 use super::formula::{neutral_formula, smiles_formula};
-use super::sample::guess;
+use super::sample::stem;
 use super::Res;
 
 /// One LC file of the series (a column of the table), in the order of the table.
@@ -56,7 +56,7 @@ pub fn lc_files(files_json: &str) -> Res<Vec<FileIn>> {
         }
         let time = f.get("time").and_then(Value::f64);
         let mut x = FileIn {
-            label: guess(&name).label,
+            label: stem(&name),
             name,
             kind,
             time,

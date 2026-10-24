@@ -208,7 +208,24 @@ fn read_resolve(r: &Value, m: &mut MinParams) -> Result<()> {
     if let Some(d) = r.get("duration") {
         match (d.at(0).and_then(Value::f64), d.at(1).and_then(Value::f64)) {
             (Some(lo), Some(hi)) if lo.is_finite() && hi >= lo => m.duration = (lo, hi),
-            _ => return Err(bad()),
+            _ => {
+                if let Some(hi) = d.f64() {
+                    if hi.is_finite() && hi >= m.duration.0 {
+                        m.duration.1 = hi;
+                    } else {
+                        return Err(bad());
+                    }
+                } else {
+                    return Err(bad());
+                }
+            }
+        }
+    }
+    if let Some(hi) = r.get("max_duration").and_then(Value::f64) {
+        if hi.is_finite() && hi >= m.duration.0 {
+            m.duration.1 = hi;
+        } else {
+            return Err(bad());
         }
     }
     Ok(())

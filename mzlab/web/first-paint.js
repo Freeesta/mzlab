@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 "use strict";
 // The toolbar of the header is part of the first paint: its scripts are read here, in order and before the page is drawn, and barra.js
 // draws it as soon as it is loaded (BARRA.primo); carica.js then skips them. Not on a smartphone, which has no toolbar.

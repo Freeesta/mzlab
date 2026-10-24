@@ -1,5 +1,5 @@
 """UV spectrum of the DAD: a double click on the PDA map or on the PDA trace of a SCIEX .wiff opens the UV spectrum (nm, mAU) of that time under the graph, with its
-table of the data; a file with only the PDA trace (no optical matrix) answers with a clear message and opens nothing. Synthetic pair (tools/wiff_riferimento.py)."""
+table of the data; a file with only the PDA trace (no optical matrix) answers with a clear message and opens nothing. Synthetic pair (tools/wiff_riferimento.py); the demo FullScan_t10.mzML carries its matrix in the TWC chromatogram."""
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path
@@ -43,6 +43,26 @@ try:
             assert d["head"] == ["nm", "Assorbanza (mAU)"] and len(d["rows"]) > 50, d["head"]
             assert "UV" in t and "m/z" not in t, t
         step("the table of the data has nm and mAU; the description speaks of the UV spectrum", table)
+        LBU = f"({UV}._a.lbls || []).filter(l => l.etpk)"
+        def uv_labels():
+            attendi(pg, f"{LBU}.length >= 1")
+            t = pg.evaluate(f"{LBU}.map(l => l.text)"); assert t == ["260 nm"], t
+            b = pg.evaluate(f"{LBU}.map(l => [l.x, l.y, l.w, l.h])")[0]; cv = pg.evaluate(f"{UV}.cv.getBoundingClientRect().width")
+            assert b[0] >= 0 and b[0] + b[2] <= cv and b[1] >= 0, b
+        step("UV spectrum: the absorbance maximum is labelled with its wavelength (260 nm), inside the plot", uv_labels)
+        def uv_labels_zoom():
+            pg.evaluate(f"{UV}.zoom=[300,400]"); pg.evaluate(f"drawSoon({UV})"); frames(pg, 3)
+            assert pg.evaluate(f"{LBU}.length") == 0, "the label of a maximum out of view stays"
+            pg.evaluate(f"{UV}.zoom=null"); pg.evaluate(f"drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
+        step("the wavelength labels follow the zoom", uv_labels_zoom)
+        def uv_labels_off():
+            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = false }}); drawSoon({UV})"); frames(pg, 3)
+            assert pg.evaluate(f"{LBU}.length") == 0
+            pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
+        step("the wavelength labels can be hidden and shown again", uv_labels_off)
+        def header_rt():
+            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?RT \d+\.\d\d min", t.strip()), t
+        step("the header of the UV spectrum says the RT it comes from", header_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
             assert s and s[0]["head"][0] == "nm" and s[0]["head"][1] == "Assorbanza (mAU)" and len(s[0]["rows"]) == 201, s and s[0]["head"]
@@ -59,6 +79,28 @@ try:
             attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
             rt = pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); return E.panels.find(q=>q.uv&&q.src===c.id)._a.uvd.rt})()"); assert abs(rt - 0.5) < 0.06, rt
         step("double click on the PDA trace: the UV spectrum of that time", chrom_dbl)
+        def live_uv():
+            c = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"; u = f"E.panels.filter(q=>q.uv&&q.src==={c}.id).pop()"
+            attendi(pg, f"!!({u}._a && {u}.link === {c}.id)")
+            assert pg.evaluate(f"{u}.link === {c}.id") and pg.evaluate(f"{c}.cur != null"), "linked and the vertical line is drawn"
+            fol = pg.evaluate(f"(()=>{{const b={u}.el.querySelector('.fol'); return b && b.offsetParent ? b.textContent : null}})()"); assert fol and fol.startswith("Segue"), fol
+            lg = pg.evaluate(f"{u}.leg.textContent"); assert " \u00b7 RT " in lg, lg
+            assert pg.evaluate(f"{u}.el.querySelector('.rtl').getAttribute('aria-live')") == "polite"
+            assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "RT %.2f min" % pg.evaluate(f"{u}._a.uvd.rt"), "rtl"
+            pg.evaluate("(()=>{window.__n=0; if(!window.__f){window.__f=window.fetch; window.fetch=function(u,...a){ if(/api\\/(uvspec|map)/.test(String(u))) window.__n++; return window.__f.call(this,u,...a)}}})()")
+            for rt in (1.0, 1.5):
+                pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()")
+                attendi(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
+                assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "RT %.2f min" % pg.evaluate(f"{u}._a.uvd.rt")
+                assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in pg.evaluate(f"{u}.leg.textContent")
+                tx = pg.evaluate(f"TDATI_P.text({u})"); assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in tx, tx
+            assert pg.evaluate("window.__n") == 0, "no uvspec/map request while the line moves"
+            pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2)
+            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a RT")
+            pg.evaluate(f"(()=>{{const c={c}; c.cur=0.5; pushLinked(c,0.5,0.5,0,true)}})()"); frames(pg, 3)
+            assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
+            pg.evaluate(f"spLinkFollow({u}, {c})"); attendi(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")
+        step("UV spectrum from the PDA trace: linked, follows the line without requests, freezes and follows again", live_uv)
         def wl_panel():
             c = "E.panels.find(q=>q.type==='chrom')"
             assert pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').textContent") == "λ"
@@ -154,6 +196,32 @@ try:
             attendi(pg, "/DAD/.test(document.body.innerText)")
             assert pg.evaluate("E.panels.filter(q=>q.type==='chrom').length") == 1
         step("a file with only the PDA trace: a clear message and no panel", no_matrix)
+        pg.close()
+        pg = r.page(p)
+        stage(pg, [ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"]); pg.click("text=Carica dati"); ready(pg)
+        CH = "E.panels.find(q=>q.type==='chrom')"
+        UVS = "E.panels.filter(q=>q.uv&&q._a)"
+        def demo_uv_at(rt, nm):
+            dbl(pg, CH, rt)
+            attendi(pg, f"(()=>{{const u={UVS}.pop(); return !!u && Math.abs(u._a.uvd.rt - {rt}) < 0.15}})()")
+            a = pg.evaluate(f"(()=>{{const u={UVS}.pop()._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
+            assert a["n"] == 201 and a["nm0"] == 200 and a["nm1"] == 400 and abs(a["rt"] - rt) < 0.1 and abs(a["mx"] - nm) <= 4, a
+        def demo_open():
+            pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
+            attendi(pg, f"{CH}._a && {CH}.kind==='pda'")
+            demo_uv_at(14.30, 224)
+        step("FullScan_t10 demo: double click on the PDA trace at 14.30 min opens the UV spectrum, maximum near 224 nm", demo_open)
+        step("FullScan_t10 demo: at 7.07 min the UV spectrum has its maximum near 248 nm", lambda: demo_uv_at(7.07, 248))
+        def demo_wl():
+            n0 = pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
+            UV1 = f"{UVS}.pop()"
+            pg.evaluate(f"(()=>{{const u={UV1};u.zoom=[244,252];draw(u);u.cv.focus()}})()"); frames(pg, 3)
+            pg.keyboard.press("x")
+            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
+            assert abs(w[0] - 244) < 0.06 and abs(w[1] - 252) < 0.06, w
+            attendi(pg, "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
+        step("FullScan_t10 demo: the trace at 248 +/- 4 nm is created without errors", demo_wl)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
