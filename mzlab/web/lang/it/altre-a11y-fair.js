@@ -81,7 +81,7 @@ I18N.add("it", {
   "export.sheet.data": "Dati",
   "export.sheet.meta": "Metadati",
   "export.sheet.notes": "Note",
-  "export.col.pdaSignal": "Segnale PDA (unità del file)",
+  "export.col.pdaSignal": "Segnale PDA (unità arbitrarie, AU)",
   "export.stream.fail": "Esportazione non riuscita: spazio insufficiente o archivio del browser non disponibile.",
   "export.col.intensity": "Intensità (cps)",
   "export.meta.property": "Proprietà",

@@ -720,6 +720,7 @@ function ctl(p) {
   if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {          // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find(q => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
     const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? I18N.t("spec.follow", { n }) : I18N.t("spec.follow.none")} &#9662;</button>`;
+    c.querySelectorAll(".fol").forEach(x => x.remove());          // a UV panel redraws its controls without rewriting c.innerHTML
     if (c.firstElementChild) c.firstElementChild.insertAdjacentHTML("afterend", fh); else c.innerHTML = fh;
     const fb = c.querySelector(".fol");
     if (!p.link) fb.classList.remove("lk");

@@ -101,6 +101,16 @@ try:
             assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
             pg.evaluate(f"spLinkFollow({u}, {c})"); attendi(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")
         step("UV spectrum from the PDA trace: linked, follows the line without requests, freezes and follows again", live_uv)
+        def fol_once():
+            c = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"; u = f"E.panels.filter(q=>q.uv&&q.src==={c}.id).pop()"
+            for i in range(5):
+                rt = 0.4 + 0.2 * i
+                pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()"); attendi(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
+            pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2); pg.evaluate(f"spLinkFollow({u}, {c})"); frames(pg, 3)
+            pg.evaluate(f"(()=>{{ctl({u}); ctl({u}); ctl({u})}})()"); frames(pg, 3)          # every redraw of the controls (new file, tab, level)
+            assert pg.evaluate(f"{u}.el.querySelectorAll('.fol').length") == 1, "one «Follows» button, in the bar or in the «…» menu"
+            xb = pg.evaluate(f"[...{u}.el.querySelectorAll('[data-a=xicb],[data-a=xicl]')].every(b => b.hidden || !b.offsetParent)"); assert xb, "no XIC button on a UV spectrum"
+        step("UV spectrum: exactly one «Follows» button after the line moves and the source changes, and no XIC button", fol_once)
         def wl_panel():
             c = "E.panels.find(q=>q.type==='chrom')"
             assert pg.evaluate(f"{c}.el.querySelector('[data-a=xic]').textContent") == "λ"
