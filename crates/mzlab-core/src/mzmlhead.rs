@@ -14,7 +14,7 @@ const MAX_REGION: u64 = 256 << 20;
 /// The most `mobility_kind` reads to find the end of the first spectrum.
 const MOBILITY_PROBE: u64 = 32 << 20;
 
-fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
+pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     if from > h.len() || n.is_empty() {
         return None;
     }
@@ -23,7 +23,7 @@ fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
         .position(|w| w == n)
         .map(|p| p + from)
 }
-fn text(b: &[u8]) -> String {
+pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
 }
 fn is_word(c: char) -> bool {
@@ -73,7 +73,7 @@ fn blocks<'a>(s: &'a str, kind: &str) -> Vec<&'a str> {
 }
 
 /// `attr="value"` of the first occurrence in `s` (value up to the next quote).
-fn attr<'a>(s: &'a str, a: &str) -> Option<&'a str> {
+pub(crate) fn attr<'a>(s: &'a str, a: &str) -> Option<&'a str> {
     let k = format!("{a}=\"");
     let mut from = 0;
     while let Some(p) = s[from..].find(&k) {
@@ -582,7 +582,7 @@ fn dwell(h: &str) -> Option<f64> {
 }
 
 /// Every `<binaryDataArray ...>...</binaryDataArray>`: (the head up to `<binary>`, the base64 text).
-fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
+pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
     let mut out = vec![];
     let mut pos = 0;
     while let Some(a) = find(chunk, b"<binaryDataArray ", pos) {
@@ -602,7 +602,7 @@ fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
     out
 }
 
-fn decode(head: &str, data: &[u8]) -> Result<Vec<f64>> {
+pub(crate) fn decode(head: &str, data: &[u8]) -> Result<Vec<f64>> {
     let clean: Vec<u8> = data
         .iter()
         .copied()

@@ -17,7 +17,7 @@ const DISP = (() => {
   const redraw = p => { draw(p); if (typeof uiSave === "function") uiSave(); };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   // the display options of a graph are one undoable action (comandi.js)
-  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay"];
+  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk"];
   COMANDI.gestore("spec.display", {
     leggi: p => JSON.stringify(DISPLAY.filter(k => p[k] !== undefined).map(k => [k, p[k]])),
     applica: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); if (typeof syncTb === "function") syncTb(p); },
@@ -37,6 +37,7 @@ const DISP = (() => {
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });
 
+  register("chrom", { id: "etpk", label: "ctx.chrom.etpk", title: "ctx.chrom.etpk.aria", kind: "check", when: p => !isAnalog(p.kind) && !!window.ETPK, get: p => ETPK.on(p, p._a && p._a.sr ? p._a.sr.length : 1), set: (p, v) => { p.etpk = !!v; redraw(p); } });
   // ---- PDA in series before the mass spectrometer: the delay is measured by the server (cross-correlation of PDA and TIC of the file) and can be corrected by hand;
   // «Allinea PDA e massa» only moves the time axis of the PDA trace on the screen (data and results stay as they are)
   const pdel = new Map();

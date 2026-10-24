@@ -18,7 +18,7 @@ use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::Stored;
 use mzlab_feat::store::origin_from_meta;
 use mzlab_feat::store::{read_file, read_table_from, write_table_tp, Origin, Slice};
-use mzlab_feat::table::Aligned;
+use mzlab_feat::table::{Aligned, FileFeatures, FLAG_GOOD};
 use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpParams, TpRoles};
 
@@ -58,8 +58,14 @@ pub struct RowSources<'a, O: ReadAt> {
     pub open: &'a mut dyn FnMut(usize) -> Result<Index<O>>,
 }
 
-/// What `measured_facts` gives: the facts of every row, the fragments of the MS2 of the parent and the MS2 chosen for each row.
-type RowMeasures = (Vec<Facts>, Option<Vec<f64>>, Vec<Option<(Peaks, f32)>>);
+/// What `measured_facts` gives: the facts of every row, the fragments of the MS2 of the parent, the MS2 chosen for each row and the MS1 ions of the
+/// infusion of the parent (sorted, empty without one).
+type RowMeasures = (
+    Vec<Facts>,
+    Option<Vec<f64>>,
+    Vec<Option<(Peaks, f32)>>,
+    Vec<f64>,
+);
 
 /// The facts of every row measured in the files, and the fragments of the MS2 of the parent. The `.mzfeatf` read take their bytes from `budget` while the
 /// facts are made (`error.memoryBudget` past it).
@@ -113,7 +119,48 @@ fn measured_facts<O: ReadAt>(
     let (facts, parent_spec) = time("proofs: row facts", || {
         row_facts(aligned, &hypo.registry, parent, &spectra, &idx, unit)
     });
-    Ok((facts, parent_spec.map(|p| p.mz), spectra))
+    let ions = spec.1.map_or_else(Vec::new, |ro| {
+        infusion_ions(&feats, &ro.infusion, spec.0.detect.min_height, unit)
+    });
+    Ok((facts, parent_spec.map(|p| p.mz), spectra, ions))
+}
+
+/// `measured_facts` when the files are given, else nothing measured.
+fn measured_or_none<O: ReadAt>(
+    aligned: &Aligned,
+    hypo: &HypoRun,
+    parent: Option<(f64, f64)>,
+    spec: (&Recipe, Option<&TpRoles>),
+    src: Option<RowSources<O>>,
+    budget: &MemBudget,
+    unit: bool,
+) -> Result<RowMeasures> {
+    match src {
+        Some(src) => measured_facts(aligned, hypo, parent, unit, spec, src, budget),
+        None => Ok(Default::default()),
+    }
+}
+
+/// The m/z of the MS1 ions detected in the files of the infusion (good peaks or above `floor`), sorted, those within the tolerance of the one before
+/// dropped.
+fn infusion_ions(feats: &[FileFeatures], files: &[usize], floor: f64, unit: bool) -> Vec<f64> {
+    let ppm = if unit {
+        -mzlab_feat::axis::LR_TOL
+    } else {
+        TpParams::default().ppm
+    };
+    let mut mz: Vec<f64> = files
+        .iter()
+        .filter_map(|&k| feats.get(k))
+        .flat_map(|f| {
+            (0..f.mz.len())
+                .filter(|&i| f.flags[i] & FLAG_GOOD != 0 || f64::from(f.height[i]) >= floor)
+                .map(|i| f.mz[i])
+        })
+        .collect();
+    mz.sort_by(f64::total_cmp);
+    mz.dedup_by(|b, a| (*b - *a).abs() <= mzlab_feat::axis::half(*a, ppm));
+    mz
 }
 
 /// The formula candidates of the rows formed and not explained, scored on the MS2 chosen for each row (none at unit resolution).
@@ -179,18 +226,15 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
         parent: parent_kinetics(&forms, &times, &y, None),
         pseudo: mzlab_feat::trace::FLOOR * 3.0,
     };
-    let (facts, fragments, spectra) = match src {
-        Some(src) => measured_facts(
-            &aligned,
-            hypo,
-            parent,
-            is_unit(&meta),
-            (r, roles),
-            src,
-            budget,
-        )?,
-        None => (Vec::new(), None, Vec::new()),
-    };
+    let (facts, fragments, spectra, infusion) = measured_or_none(
+        &aligned,
+        hypo,
+        parent,
+        (r, roles),
+        src,
+        budget,
+        is_unit(&meta),
+    )?;
     let inp = Inputs {
         table: &points,
         aligned: &aligned,
@@ -215,7 +259,10 @@ pub fn evidence_sources_to<R: ReadAt, W: WriteAt, O: ReadAt>(
             roles,
             &hypo.registry.hyps,
             parent,
-            fragments.as_deref(),
+            (
+                fragments.as_deref(),
+                Some(&infusion[..]).filter(|i| !i.is_empty()),
+            ),
             rules.as_ref(),
             is_unit(&meta),
             &signs,
@@ -307,7 +354,7 @@ fn tp_block(
     roles: Option<&TpRoles>,
     hyps: &[Hypothesis],
     parent: Option<(f64, f64)>,
-    fragments: Option<&[f64]>,
+    (fragments, infusion): (Option<&[f64]>, Option<&[f64]>),
     rules: Option<&Rules>,
     unit: bool,
     signs: &[Signs],
@@ -330,6 +377,7 @@ fn tp_block(
         signs,
         parent,
         fragments,
+        infusion,
         params: &params,
         rules,
     };

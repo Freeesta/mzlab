@@ -135,12 +135,16 @@ fn constant(inp: &TpInputs, r: &[f64]) -> bool {
         <= inp.params.isf_cv
 }
 
-/// The m/z is among the fragments of the MS2 of the parent (true when the parent has none: it is not contradicted).
+/// The m/z is among the fragments of the MS2 of the parent or the MS1 ions of its infusion (true when it has neither: it is not contradicted).
 fn in_ms2(inp: &TpInputs, mz: f64) -> bool {
-    inp.fragments.is_none_or(|f| {
-        f.iter()
-            .any(|&x| (x - mz).abs() <= crate::axis::half(mz, inp.params.ppm))
-    })
+    if inp.fragments.is_none() && inp.infusion.is_none() {
+        return true;
+    }
+    let tol = crate::axis::half(mz, inp.params.ppm);
+    [inp.fragments, inp.infusion]
+        .into_iter()
+        .flatten()
+        .any(|f| f.iter().any(|&x| (x - mz).abs() <= tol))
 }
 
 /// Gate 2, against the parent: a lighter ion that coelutes with it, whose ratio to it is constant along the series and that is in its MS2, is an
@@ -156,7 +160,7 @@ pub(super) fn not_in_source(inp: &TpInputs, parent: usize, b: &mut TpBlock) {
         let rat = ratios(inp, r, parent);
         if constant(inp, &rat) && in_ms2(inp, t.mz[r]) {
             b.status[r] = ST_ISF;
-        } else if inp.fragments.is_some()
+        } else if (inp.fragments.is_some() || inp.infusion.is_some())
             && rat.len() >= inp.params.isf_points
             && in_ms2(inp, t.mz[r])
         {

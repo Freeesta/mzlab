@@ -331,7 +331,7 @@ async function drawLines(p) {
   const U = (s, v) => s.off + v / s.sc;
   const yzf = !!p.zoomY && !stk && !logy;                       // y zoom (box, or drag on the numbers at the left of the axis): tall peaks are cut at the top
   const nrm = !stk && !!p.norm100 && !p.log;
-  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels
+  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
   if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
@@ -440,7 +440,7 @@ async function drawLines(p) {
     let top = 0; sr.forEach(s => { const i = nearIdx(s.x, a.x); top = Math.max(top, U(s, s.ys[i])); });
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(top))), W, 26);
   }
-  if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); }      // the gradient over the traces (PNG included)
+  if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); } if (window.ETPK && !cas) ETPK.draw(p, g, sr, { X, Y, U, x0, x1, W });      // the gradient over the traces (PNG included); then RT + m/z or nm of the main peaks (etichette-picchi.js)
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);

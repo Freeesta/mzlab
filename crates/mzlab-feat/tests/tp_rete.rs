@@ -60,6 +60,7 @@ fn build_with(t: &Aligned, hyps: &[Hypothesis], signs: &[Signs], rules: Option<&
         signs,
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &TpParams::default(),
         rules,
     };
@@ -103,6 +104,7 @@ fn the_arcs_run_from_the_row_the_rule_starts_at_and_carry_the_generation() {
         signs: &signs,
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &TpParams::default(),
         rules: Some(&r),
     };

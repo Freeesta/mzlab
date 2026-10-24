@@ -371,7 +371,7 @@ I18N.add("it", {
   "a11y.line": "{title}. Cromatogramma: {n} tracce; asse x tempo di ritenzione (min) da {a} a {b}; asse y intensità fino a {y}; {p} picchi integrati. T apre la tabella dei dati, D rilegge questa descrizione, + e − ingrandiscono, [ e ] spostano il tratto visibile, 0 mostra tutto.",
   "a11y.spec": "{title}. Spettro di massa: asse x m/z da {a} a {b}; asse y intensità; {n} picchi oltre la soglia. T apre la tabella dei dati, D rilegge questa descrizione, + e − ingrandiscono, [ e ] spostano il tratto visibile, 0 mostra tutto.",
   "a11y.mapPda": "{title}. Mappa tempo di ritenzione per lunghezza d'onda del PDA: RT da {a} a {b} min, da {c} a {d} nm. T apre la tabella delle celle più intense, D rilegge questa descrizione.",
-  "a11y.uv": "{title}. Spettro UV, assorbanza contro lunghezza d'onda da {a} a {b} nm; massimo {y} mAU. T apre la tabella dei valori, D rilegge questa descrizione.",
+  "a11y.uv": "{title}. Spettro UV a RT {rt} min, assorbanza contro lunghezza d'onda da {a} a {b} nm; massimo {y} mAU. T apre la tabella dei valori, D rilegge questa descrizione.",
   "a11y.map": "{title}. Mappa tempo di ritenzione per m/z: RT da {a} a {b} min, m/z da {c} a {d}. T apre la tabella delle celle più intense, D rilegge questa descrizione.",
   "a11y.small": "{title}. Grafico a linee: {n} serie; asse x {xl} da {a} a {b}; asse y {yl} da {c} a {d}. T apre la tabella dei dati, D rilegge questa descrizione.",
   "disp.rel": "Asse y in % del picco più alto",

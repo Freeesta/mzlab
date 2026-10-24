@@ -506,7 +506,11 @@ pub use json::Columns;
 use rows::Head;
 pub(crate) use rows::Rows;
 
+/// A spectrum of the optical detector (`MS:1000804`) is not a scan: the DAD reader of `mzml_dad` takes it.
 fn push(rows: &mut Rows, a: u64, b: u64, h: &[u8]) {
+    if h.windows(10).any(|w| w == b"MS:1000804") {
+        return;
+    }
     rows.spectrum(a, b, &String::from_utf8_lossy(h));
 }
 

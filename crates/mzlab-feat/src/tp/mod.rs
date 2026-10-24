@@ -112,6 +112,8 @@ pub struct TpInputs<'a> {
     pub parent: (f64, f64),
     /// Fragments of the MS2 of the parent, when it has one (the m/z of an in-source fragment must be among them).
     pub fragments: Option<&'a [f64]>,
+    /// m/z of the MS1 ions of the file of the infusion of the parent (sorted), when there is one: an in-source fragment of the parent shows in it too.
+    pub infusion: Option<&'a [f64]>,
     pub params: &'a TpParams,
     /// The rules, to look for their differences of mass among the rows (`rete`); None = no network.
     pub rules: Option<&'a crate::hypo::Rules>,
