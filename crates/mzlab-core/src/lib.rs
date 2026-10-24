@@ -157,6 +157,7 @@ pub mod statistica;
 pub mod statmat;
 pub mod statref;
 pub mod statroute;
+pub mod kendrick;
 pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
