@@ -55,11 +55,11 @@
     xicBin(`api/xicbin?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}`).then(j => j.traces[0]).then(tr => {
       busy = false; if (!tr) return;
       keep(w.key, tr);
-      if (my === seq && want === w && cur === p) show(p, s, w, tr); else pump(p);
+      if (my === seq && want === w && cur === p) show(p, s, w, tr, true); else pump(p);
     }, () => { busy = false; if (want === w) close(p); });
   }
-  /** @param {any} p @param {any} s @param {Want} w @param {Trace} t */
-  function show(p, s, w, t) {
+  /** a fresh response is drawn at once (it is not in the pointer handler, and waiting for the next frame would add one to the preview); a cached trace waits for the frame @param {any} p @param {any} s @param {Want} w @param {Trace} t @param {boolean} [now] */
+  function show(p, s, w, t, now) {
     s.tr = t; s.m = w.m; s.text = w.req.text;
     const a = p._a, px = a && a.X ? a.X(w.m) : M.l;
     const right = px + GAP + W <= a.W - M.r, left = right ? px + GAP : Math.max(M.l, px - GAP - W);
@@ -69,7 +69,8 @@
     const lo = M.t + 4, hi = Math.max(lo, a.H - M.b - H), top = Math.min(hi, Math.max(lo, (j < 0 ? lo : a.Y(d0.y[j])) - 24));
     s.el.style.left = p.cv.offsetLeft + left + "px"; s.el.style.top = p.cv.offsetTop + top + "px";
     s.el.hidden = false;
-    FRAME.cancel(s.raf); s.raf = FRAME.next(() => paint(p, s));
+    FRAME.cancel(s.raf);
+    if (now) paint(p, s); else s.raf = FRAME.next(() => paint(p, s));
   }
 
   // ---------------------------------------------------------------- drawing
