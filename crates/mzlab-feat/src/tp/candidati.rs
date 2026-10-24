@@ -67,6 +67,43 @@ fn ms2_share(ion: &str, z: i32, spec: &(Vec<f64>, Vec<f64>), mz0: f64) -> Option
     (all > 0.0).then(|| hit / all)
 }
 
+/// Counts the formulas of a row may have: 0 to the parent's, oxygens and hydrogens a few more, no element the parent lacks.
+fn element_ranges(pf: &[(String, u64)]) -> Ranges {
+    pf.iter()
+        .map(|(e, n)| {
+            let n = *n as i64;
+            let hi = match e.as_str() {
+                "O" => n + EXTRA_O,
+                "H" => n + EXTRA_H,
+                _ => n,
+            };
+            (e.clone(), (0, hi))
+        })
+        .collect()
+}
+
+/// A formula of the result of `compose` with its scores.
+fn scored(
+    r: &Value,
+    pf: &[(String, u64)],
+    spec: Option<&(Vec<f64>, Vec<f64>)>,
+    z: i32,
+    mz: f64,
+) -> Option<FitCandidate> {
+    let neutral = r.get("neutral").and_then(Value::str)?.to_string();
+    let ion_formula = r.get("formula").and_then(Value::str)?.to_string();
+    let fit = element_fit(pf, &parse_formula(&neutral).ok()?);
+    let ms2 = spec.and_then(|s| ms2_share(&ion_formula, z, s, mz));
+    Some(FitCandidate {
+        neutral_formula: neutral,
+        ion_formula,
+        ppm: r.get("delta_ppm").and_then(Value::f64).unwrap_or(0.0),
+        element_fit: fit,
+        ms2_explained: ms2,
+        total: fit + ms2.unwrap_or(0.0),
+    })
+}
+
 /// The best `KEPT` candidates of a row at `mz` for the parent `parent` (neutral formula): ordered by total, then by |ppm|. Empty when the parent
 /// cannot be read or no formula within the elements of the parent fits the mass.
 pub fn candidates(
@@ -78,22 +115,9 @@ pub fn candidates(
     let Ok(pf) = parse_formula(parent) else {
         return Vec::new();
     };
-    let ion = if polarity < 0 { "[M-H]-" } else { "[M+H]+" };
-    let elements: Ranges = pf
-        .iter()
-        .map(|(e, n)| {
-            let n = *n as i64;
-            let hi = match e.as_str() {
-                "O" => n + EXTRA_O,
-                "H" => n + EXTRA_H,
-                _ => n,
-            };
-            (e.clone(), (0, hi))
-        })
-        .collect();
     let o = Opts {
-        elements: Some(elements),
-        ion,
+        elements: Some(element_ranges(&pf)),
+        ion: if polarity < 0 { "[M-H]-" } else { "[M+H]+" },
         tol: PPM,
         unit: "ppm",
         rdb: (0.0, 100.0),
@@ -113,22 +137,7 @@ pub fn candidates(
         .map(Value::arr)
         .unwrap_or_default()
         .iter()
-        .filter_map(|r| {
-            let neutral = r.get("neutral").and_then(Value::str)?.to_string();
-            let ion_formula = r.get("formula").and_then(Value::str)?.to_string();
-            let fit = element_fit(&pf, &parse_formula(&neutral).ok()?);
-            let ms2 = spec
-                .as_ref()
-                .and_then(|s| ms2_share(&ion_formula, z, s, mz));
-            Some(FitCandidate {
-                neutral_formula: neutral,
-                ion_formula,
-                ppm: r.get("delta_ppm").and_then(Value::f64).unwrap_or(0.0),
-                element_fit: fit,
-                ms2_explained: ms2,
-                total: fit + ms2.unwrap_or(0.0),
-            })
-        })
+        .filter_map(|r| scored(r, &pf, spec.as_ref(), z, mz))
         .collect();
     out.sort_by(|a, b| {
         b.total
