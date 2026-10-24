@@ -3,6 +3,7 @@
 
 use crate::clean::{clean, weighted, CleanOpts};
 use crate::error::Result;
+use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::prep::Scorer;
 use crate::read::Library;
@@ -87,6 +88,18 @@ pub struct Hit {
 
 /// Every library spectrum with the query's polarity (or none known) and a precursor within the tolerance, best entropy first.
 pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Result<Vec<Hit>> {
+    identity_with(lib, q, o, o.frag_da)
+}
+
+/// `identity` with the fragment tolerance given as `FragTol` (ppm of the query peak or Da); `o.frag_da` is not read.
+/// `dprec` and the neutral-loss count use the same tolerance (losses: the window of the precursor m/z).
+pub fn identity_with<S: Source>(
+    lib: &Library<S>,
+    q: &Query,
+    o: &IdentityOpts,
+    frag: impl Into<FragTol>,
+) -> Result<Vec<Hit>> {
+    let frag = frag.into();
     let w = o.prec_tol.window(q.prec);
     let top = o.top.max(1);
     // Scores only: spectra and pairs are loaded for the winners, so a wide window over a big library stays small.
@@ -104,7 +117,7 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
             let rec = lib.rec(i)?;
             lib.peaks_into(i, &mut s.mz, &mut s.it)?;
             s.prec = rec.prec;
-            let sc = scorer.score(&q.spec, &s, o.frag_da);
+            let sc = scorer.score(&q.spec, &s, frag);
             let d = rec.prec - q.prec;
             light.push(Hit {
                 index: i,
@@ -137,8 +150,8 @@ pub fn identity<S: Source>(lib: &Library<S>, q: &Query, o: &IdentityOpts) -> Res
     light.truncate(top);
     for h in light.iter_mut() {
         h.spec = spec_of(lib, h.index, h.prec)?;
-        h.pairs = pair_scores(&q.spec, &h.spec, o.frag_da).pairs;
-        h.nl_shared = common_losses(&q.spec, &h.spec, o.frag_da);
+        h.pairs = pair_scores(&q.spec, &h.spec, frag).pairs;
+        h.nl_shared = common_losses(&q.spec, &h.spec, frag.at(q.prec));
     }
     Ok(light)
 }
