@@ -28,10 +28,10 @@ pub(super) fn preferisci_pari(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
 /// Fewest nodes with one formula needed to estimate the systematic error of the instrument.
 const MIN_PER_OFFSET: usize = 5;
 /// Scatter (ppm) left around the systematic error once it is removed.
-const RESIDUO_PPM: f64 = 3.0;
+const RESIDUO_PPM: f64 = 2.0;
 
 /// The error of the instrument is mostly systematic: the median ppm of the nodes with one narrow-window candidate is taken out, and a narrow-window
-/// candidate more than the residue (`RESIDUO_PPM`, wider for a noisy instrument) from it leaves (a chance match of the dense sub-formula lattice is not). Nothing happens under
+/// candidate more than the residue (`RESIDUO_PPM`, wider for a noisy instrument: 4.8 half-widths of the densest 40 % of the values) from it leaves (a chance match of the dense sub-formula lattice is not). Nothing happens under
 /// `MIN_PER_OFFSET` such nodes or when the window is not wider than the residue. True when a candidate left.
 pub(super) fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
     if o.ppm_formula <= RESIDUO_PPM {
@@ -46,11 +46,15 @@ pub(super) fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
         return false;
     }
     crate::sortc::slice_by(&mut v, |a, b| a.total_cmp(b));
+    // the densest 40 % of the values (the shorth) is the cluster of the true matches: chance matches of the dense lattice are spread over the window
+    // and do not widen it as they do a quantile; for a normal scatter that window is 1.05 sigma wide, so 2.5 sigmas are 4.8 half-widths
+    let k = (v.len() * 2).div_ceil(5);
+    let i = (0..=v.len() - k)
+        .min_by(|&a, &b| (v[a + k - 1] - v[a]).total_cmp(&(v[b + k - 1] - v[b])))
+        .unwrap_or(0);
+    let meta = (v[i + k - 1] - v[i]) / 2.0;
     let offset = v[v.len() / 2];
-    // a noisy instrument keeps a wider residue: 2.5 sigmas read from the lower quartile of the deviations (0.3186 sigma for a normal scatter, and chance matches do not inflate it), never below RESIDUO_PPM
-    let mut dev: Vec<f64> = v.iter().map(|x| (x - offset).abs()).collect();
-    crate::sortc::slice_by(&mut dev, |a, b| a.total_cmp(b));
-    let residuo = RESIDUO_PPM.max(2.5 * dev[dev.len() / 4] / 0.3186);
+    let residuo = RESIDUO_PPM.max(4.8 * meta);
     if residuo >= o.ppm_formula {
         return false;
     }
