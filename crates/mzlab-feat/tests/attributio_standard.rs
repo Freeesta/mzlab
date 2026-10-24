@@ -354,6 +354,36 @@ fn a_file_without_the_checklist_is_read_and_written_back_with_the_empty_column_l
 }
 
 #[test]
+fn a_file_with_the_run_columns_is_read_and_written_back_unchanged_and_an_old_one_stays_without_them(
+) {
+    let old = "pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification\nPOS;2;250.1234;6.00;3;;A;2026-09-24;t;why\n";
+    let t = load_feature_decisions(Some(old), "f.csv").expect("load");
+    assert!(!t.columns.iter().any(|c| c == "plan_sha256"));
+    let out = write_feature_decisions(&t);
+    assert!(!out.contains("plan_sha256") && !out.contains("engine_version"));
+    assert_eq!(
+        write_feature_decisions(&load_feature_decisions(Some(&out), "f.csv").expect("reload")),
+        out
+    );
+    let new = out
+        .replacen(
+            "evidence_checklist\n",
+            "evidence_checklist;plan_sha256;engine_version\n",
+            1,
+        )
+        .replacen(";\n", ";;abc;0.9\n", 1);
+    let t = load_feature_decisions(Some(&new), "f.csv").expect("load");
+    assert_eq!(
+        (t.get(0, "plan_sha256"), t.get(0, "engine_version")),
+        ("abc", "0.9")
+    );
+    assert_eq!(write_feature_decisions(&t), new);
+    // a new row without a run keeps the columns of the file and leaves them empty
+    let (merged, _) = merge_decisions(&t, &t);
+    assert_eq!(write_feature_decisions(&merged), new);
+}
+
+#[test]
 fn a_file_with_the_italian_column_names_is_read_and_written_with_the_english_ones() {
     let text = "pol;feature_id;mz;rt;livello;nome;identita;decided_on;decided_by;motivazione\nPOS;2;250.1234;6.00;2b;Caffeine;A;2026-09-24;t;why\n";
     let t = load_feature_decisions(Some(text), "f.csv").expect("load");
