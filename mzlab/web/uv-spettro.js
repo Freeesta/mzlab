@@ -85,8 +85,8 @@ export async function draw(p) {
   const full = [nm[0], nm[nm.length - 1]], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let lo = 0, hi = 0; for (const v of y) { if (v < lo) lo = v; if (v > hi) hi = v; }
   const pad = (hi - lo || 1) * 0.06, yfull = [lo < 0 ? lo - pad : 0, hi + pad];
-  if (p.lock && p.lock.pending) p.lock = { y: yfull[1] };
-  const y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : p.lock && !p.lock.pending && p.lock.y != null ? p.lock.y : yfull[1];
+  if (p.lock && p.lock.pending) { p.lock.y = yfull[1]; p.lock.pending = false; }
+  const y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : p.lock && p.lock.y != null ? p.lock.y : yfull[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b, X = (/** @type {number} */ v) => M.l + (v - x0) / (x1 - x0) * pw, Y = (/** @type {number} */ v) => H - M.b - (v - y0) / (y1 - y0) * ph;
   g.clearRect(0, 0, W, H);
   frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), String(+t.toFixed(2))]), nice(y0, y1, 6).map(t => [Y(t), String(+t.toFixed(2))]), T("uv.axis.x"), T("uv.axis.y"));
