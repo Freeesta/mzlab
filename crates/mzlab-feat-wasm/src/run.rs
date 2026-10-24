@@ -13,9 +13,7 @@ use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::{
     align_and_fill, analyse_file, analyse_file_with, source_sha256, weak_candidates,
 };
-use mzlab_feat::slabs::{
-    align_and_fill_spilling, align_and_fill_stored, align_and_fill_with, Stored,
-};
+use mzlab_feat::slabs::{align_and_fill_spilling, align_and_fill_stored, Stored};
 use mzlab_feat::spill::Spill;
 use mzlab_feat::store::{
     origin_from_meta, read_file, read_meta_mz, write_file_to, write_table_to,
@@ -267,19 +265,8 @@ pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
 
-/// `align_to` filling the gaps of the files at the same time (native runs): `open` can be called from any thread. The same bytes.
-pub fn align_to_par<R: ReadAt, W: WriteAt>(
-    src: &mut dyn Stored,
-    budget: &MemBudget,
-    r: &Recipe,
-    open: &(dyn Fn(usize) -> Result<Index<R>> + Sync),
-    sink: &mut W,
-) -> Result<()> {
-    let mut origin = origin_of(src)?;
-    origin.facts = facts_of(src.count(), &mut |k| open(k))?;
-    let (table, _) = align_and_fill_with(src, budget, r, open, None, Some(open))?;
-    write_table_to(sink, &table, r, &origin, &mut (&[][..]))
-}
+mod par;
+pub use par::{align_to_par, align_to_par_progress};
 
 /// What the targeted pass leaves for the proofs: the registry of the hypotheses with their outcomes and the rows found.
 pub struct HypoRun {
