@@ -186,19 +186,32 @@ pub fn flash_scores<S: Source>(
     frag_da: f64,
     ranges: &[Range<u32>],
 ) -> Result<Vec<FlashScore>> {
+    flash_scores_with(lib, q, mode, frag_da, ranges)
+}
+
+/// `flash_scores` with the fragment tolerance as `FragTol`: in ppm the window of a query peak is that many ppm of its own m/z
+/// (the shifted window too, as in `modified_cosine`); a plain Da value gives the same bits as `flash_scores`.
+pub fn flash_scores_with<S: Source>(
+    lib: &Library<S>,
+    q: &Query,
+    mode: FlashMode,
+    frag: impl Into<FragTol>,
+    ranges: &[Range<u32>],
+) -> Result<Vec<FlashScore>> {
+    let frag = frag.into();
     let light = lib.light()?;
     let pa = weighted(&q.spec.it);
-    let tol_q = frag_da * crate::clean::MZ_SCALE;
     // (spectrum, query peak, library peak in 1e-5 Da units, contribution)
     let mut pairs: Vec<(u32, u16, u32, f64)> = Vec::new();
-    let window = |x: f64| -> Option<(u32, u32)> {
+    let window = |x: f64, tol_q: f64| -> Option<(u32, u32)> {
         let lo = (x - tol_q).ceil().max(0.0);
         let hi = (x + tol_q).floor();
         (hi >= 0.0 && lo <= hi && hi < u32::MAX as f64).then_some((lo as u32, hi as u32))
     };
     for (i, &mz) in q.spec.mz.iter().enumerate() {
+        let tol_q = frag.at(mz) * crate::clean::MZ_SCALE;
         if mode != FlashMode::NeutralLoss {
-            if let Some((lo, hi)) = window(mz * crate::clean::MZ_SCALE) {
+            if let Some((lo, hi)) = window(mz * crate::clean::MZ_SCALE, tol_q) {
                 lib.for_each_entry(false, lo, hi, |mq, sp, qi| {
                     if in_ranges(ranges, sp) {
                         let p = qi as f64 / 65535.0 * light.scale[sp as usize] as f64;
@@ -208,7 +221,7 @@ pub fn flash_scores<S: Source>(
             }
         }
         if mode != FlashMode::Open {
-            if let Some((lo, hi)) = window((q.prec - mz) * crate::clean::MZ_SCALE) {
+            if let Some((lo, hi)) = window((q.prec - mz) * crate::clean::MZ_SCALE, tol_q) {
                 lib.for_each_entry(true, lo, hi, |nq, sp, qi| {
                     if in_ranges(ranges, sp) {
                         let p = qi as f64 / 65535.0 * light.scale[sp as usize] as f64;
@@ -219,6 +232,11 @@ pub fn flash_scores<S: Source>(
             }
         }
     }
+    Ok(score_pairs(pairs))
+}
+
+/// Best one-to-one score per spectrum from the `(spectrum, query peak, library peak, contribution)` candidates, best first.
+fn score_pairs(mut pairs: Vec<(u32, u16, u32, f64)>) -> Vec<FlashScore> {
     sortutil::sort_by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
     pairs.dedup_by(|b, a| (a.0, a.1, a.2) == (b.0, b.1, b.2));
     let mut out: Vec<FlashScore> = Vec::new();
@@ -264,12 +282,14 @@ pub fn flash_scores<S: Source>(
     sortutil::sort_by(&mut out, |a, b| {
         b.score.total_cmp(&a.score).then(a.index.cmp(&b.index))
     });
-    Ok(out)
+    out
 }
 
 #[derive(Debug, Clone)]
 pub struct AnalogOpts {
     pub frag_da: f64,
+    /// When > 0 the fragment window is this many ppm of each query peak and `frag_da` is ignored.
+    pub frag_ppm: f64,
     pub pol: i8,
     pub max_delta: f64,
     pub min_delta: f64,
@@ -284,6 +304,7 @@ impl Default for AnalogOpts {
     fn default() -> Self {
         AnalogOpts {
             frag_da: 0.01,
+            frag_ppm: 0.0,
             pol: 0,
             max_delta: 200.0,
             min_delta: 0.5,
@@ -312,7 +333,8 @@ pub fn analogs<S: Source>(lib: &Library<S>, q: &Query, o: &AnalogOpts) -> Result
     let pol = if o.pol != 0 { o.pol } else { q.pol };
     let ranges = lib.ranges(pol, q.prec - o.max_delta, q.prec + o.max_delta)?;
     let light = lib.light()?;
-    let mut sc = flash_scores(lib, q, FlashMode::Hybrid, o.frag_da, &ranges)?;
+    let frag = FragTol::from_params(o.frag_da, o.frag_ppm);
+    let mut sc = flash_scores_with(lib, q, FlashMode::Hybrid, frag, &ranges)?;
     let pq = q.prec;
     sc.retain(|s| {
         s.pairs >= o.min_hybrid_pairs
@@ -324,7 +346,7 @@ pub fn analogs<S: Source>(lib: &Library<S>, q: &Query, o: &AnalogOpts) -> Result
     for s in sc {
         let rec = lib.rec(s.index)?;
         let spec = spec_of(lib, s.index, rec.prec)?;
-        let mc = modified_cosine(&q.spec, &spec, o.frag_da);
+        let mc = modified_cosine(&q.spec, &spec, frag);
         if mc.matched < o.min_matched {
             continue;
         }

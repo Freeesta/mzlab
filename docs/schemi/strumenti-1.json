@@ -1080,7 +1080,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search keeps tol_da"
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"
                   },
                   {
                     "type":"number",
@@ -1573,7 +1573,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search keeps tol_da"
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"
                   },
                   {
                     "type":"number",
