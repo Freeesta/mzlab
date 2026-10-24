@@ -2,8 +2,8 @@
 //! scratch vectors, so a library scan scores every spectrum without allocating; `scores::pair_scores` and `scores::entropy_from_pairs` are the
 //! one-shot forms of the same code (same arithmetic, same order: the numbers are identical bit for bit).
 
-use crate::frag_tol::FragTol;
 use crate::clean::{entropy_of, weighted, weighted_into};
+use crate::frag_tol::FragTol;
 use crate::scores::{cosine_from_pairs, match_peaks_into, MatchScratch, PairScores, Spec};
 
 /// The buffers of the entropy of the pairs.
