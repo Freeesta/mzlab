@@ -719,5 +719,12 @@
   "ctx.uv.wlAt": "Voce del menu dello spettro UV che apre la traccia del DAD a una lunghezza d'onda; {nm} = lunghezza d'onda sotto il puntatore, arrotondata.",
   "tdati.note.uv": "Nota sopra la tabella dello spettro UV; {a}-{b} nm, {n} = massimo di righe.",
   "uv.leg.mean": "Legenda dello spettro UV medio; {rt} = intervallo RT (min), {n} = numero di spettri mediati.",
-  "uv.leg.one": "Legenda dello spettro UV di un solo istante; {rt} = RT (min)."
+  "uv.leg.one": "Legenda dello spettro UV di un solo istante; {rt} = RT (min).",
+  "etpk.nm": "Lunghezza d'onda in nanometri nell'etichetta di un picco del PDA/UV (es. «14.26 · 254 nm»); {v} = lunghezza d'onda.",
+  "etpk.tip.rt": "Tooltip dell'etichetta di un picco senza grandezza definente; {rt} = RT (min).",
+  "etpk.tip.mz": "Tooltip dell'etichetta di un picco di TIC/BPC; {rt} = RT (min), {v} = m/z del picco base alla scansione di apice.",
+  "etpk.tip.nm": "Tooltip dell'etichetta di un picco del PDA/UV; {rt} = RT (min), {v} = lunghezza d'onda del massimo (nm).",
+  "etpk.tip.xic": "Tooltip dell'etichetta di un picco di XIC; {rt} = RT (min), {v} = m/z estratto.",
+  "etpk.tip.mrm": "Tooltip dell'etichetta di un picco di MRM; {rt} = RT (min), {v} = transizione Q1>Q3.",
+  "tdati.etpk": "Riga della tabella per un picco con etichetta (RT e grandezza che lo definisce); {v} = testo dell'etichetta, es. «14.26 · 254 nm»."
 }

@@ -209,6 +209,7 @@ I18N.add("en", {
   "tdati.col.file": "File",
   "tdati.col.rel": "Relative (%)",
   "tdati.apex": "integrated peak {a}-{b} min (apex)",
+  "tdati.etpk": "peak label: {v}",
   "tdati.note.line": "Points drawn between RT {a} and {b} min (at most {n} per trace, plus the apexes of the integrated peaks).",
   "tdati.note.spec": "Peaks above {thr} % of the highest between m/z {a} and {b} (at most 300, the most intense).",
   "tdati.note.map": "The {n} most intense cells of the visible region.",

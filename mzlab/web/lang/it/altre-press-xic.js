@@ -209,6 +209,7 @@ I18N.add("it", {
   "tdati.col.file": "File",
   "tdati.col.rel": "Relativa (%)",
   "tdati.apex": "picco integrato {a}-{b} min (apice)",
+  "tdati.etpk": "etichetta del picco: {v}",
   "tdati.note.line": "Punti disegnati fra RT {a} e {b} min (al massimo {n} per traccia, più gli apici dei picchi integrati).",
   "tdati.note.spec": "Picchi oltre il {thr} % del più alto fra m/z {a} e {b} (al massimo 300, i più intensi).",
   "tdati.note.map": "Le {n} celle più intense della regione visibile.",

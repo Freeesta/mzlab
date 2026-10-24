@@ -81,6 +81,7 @@
     "../../mzlab/web/pulizia.js",
     "../../mzlab/web/qqq-db.js",
     "../../mzlab/web/qualita.js",
+    "../../mzlab/web/etichette-picchi.js",
     "../../mzlab/web/rust-bridge-info.js",
     "../../mzlab/web/rust-bridge.js",
     "../../mzlab/web/nativo-fasi.js",
