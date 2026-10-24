@@ -19769,3 +19769,4 @@
 {"v":1,"ts_utc":"2026-10-24T02:54:38Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3856450,null]},"byte_totali":3856450,"margine_min_pct":null,"pr":null,"sha":"731e1c03ed40147d6ab437698a603d5bb4927998","run_id":40055938112,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-24T02:59:15Z","tipo":"carico","k":"2026-10-24T02:5","job_in_coda":0,"job_in_corso":10}
 {"v":1,"ts_utc":"2026-10-24T03:03:28Z","azione":"aperta","tipo":"pr","pr":1669,"sha":"a98d34722fc1400b3050a7156e79affdd397130f"}
+{"v":1,"ts_utc":"2026-10-24T03:12:45Z","azione":"push","titolo":"Regenerate steps-cli-1.json and strumenti-1.json for tol_ppm","merge_main":false,"aree":{"docs":2},"tipo":"pr","pr":1669,"sha":"609ef44491a3c7a8890706f446a1d284e253a24d"}
