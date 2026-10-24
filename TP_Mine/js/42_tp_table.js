@@ -177,11 +177,14 @@
 
     // ---- the filter, the order and the pinned row
     const chipTests = () => (o.chips || []).filter(c => st.chips.has(c.key));
+    /** lower-case search text of each row, kept only while the user types in the search box (any other refresh drops it, so edited rows are never stale) @type {Map<any, string> | null} */
+    let hay = null;
     function derive() {
       const ts = chipTests(), q = st.q.trim().toLowerCase();
       const groups = new Map(), alone = /** @type {Chip[]} */ ([]);       // chips with the same `group` add rows (any of them); the others narrow the list (all of them)
       for (const c of ts) if (c.group) groups.set(c.group, [...(groups.get(c.group) || []), c]); else alone.push(c);
-      const ok = (/** @type {any} */ r) => alone.every(c => c.test(r)) && [...groups.values()].every(g => g.some((/** @type {Chip} */ c) => c.test(r))) && (!q || !o.search || o.search(r).toLowerCase().includes(q));
+      const ok = (/** @type {any} */ r) => alone.every(c => c.test(r)) && [...groups.values()].every(g => g.some((/** @type {Chip} */ c) => c.test(r))) && (!q || !o.search || hayOf(r).includes(q));
+      const hayOf = (/** @type {any} */ r) => { if (!hay) return /** @type {Function} */ (o.search)(r).toLowerCase(); let h = hay.get(r); if (h === undefined) { h = /** @type {Function} */ (o.search)(r).toLowerCase(); hay.set(r, h); } return h; };
       const pinned = o.pin ? st.rows.filter(r => /** @type {Function} */ (o.pin)(r)) : [];
       const rest = (o.chips || o.search) ? st.rows.filter(r => !(o.pin && o.pin(r)) && ok(r)) : st.rows.filter(r => !(o.pin && o.pin(r)));
       st.pinned = pinned; st.rest = sortRows(rest, o.cols.find(x => x.key === st.sort), st.dir); st.list = [...pinned, ...st.rest];
@@ -189,7 +192,8 @@
       if (o.onCount) o.onCount(st.list.length, st.rows.length);
       if (isVirt() && !o.height) { wrap.classList.add("tpt-h"); wrap.style.maxHeight = "520px"; }
     }
-    function refresh() {
+    function refresh(typing = false) {
+      hay = typing && o.search ? hay || new Map() : null;
       derive();
       if (st.open != null && !st.list.some(r => idOf(r) === st.open)) { st.open = null; panel.innerHTML = ""; }
       draw();
@@ -297,7 +301,7 @@
     }
     host.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => { const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.chip); setChip(k, !st.chips.has(k)); }));
     const q = /** @type {HTMLInputElement | null} */ (host.querySelector(".tpt-q"));
-    if (q) q.addEventListener("input", () => { st.q = q.value; refresh(); });
+    if (q) q.addEventListener("input", () => { st.q = q.value; refresh(true); });
     host.querySelectorAll("[data-vc]").forEach(b => b.addEventListener("change", () => {
       const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.vc);
       if (/** @type {HTMLInputElement} */ (b).checked) st.vis.add(k); else st.vis.delete(k);
