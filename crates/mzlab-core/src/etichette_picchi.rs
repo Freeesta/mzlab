@@ -26,7 +26,12 @@ pub fn select(rt: &[f64], y: &[f64], max_n: usize, rel_min: f64, snr_min: f64) -
         .iter()
         .filter(|p| p.snr >= snr_min && p.height >= rel_min * top)
         .take(max_n)
-        .map(|p| Label { apex_i: p.apex_i, rt: rt[p.apex_i], height: p.height, snr: p.snr })
+        .map(|p| Label {
+            apex_i: p.apex_i,
+            rt: rt[p.apex_i],
+            height: p.height,
+            snr: p.snr,
+        })
         .collect();
     crate::sortc::slice_by_key(&mut out, |l| l.apex_i);
     out
@@ -48,7 +53,11 @@ pub fn main_peak(x: &[f64], y: &[f64], refine: bool) -> Option<(f64, f64)> {
         let d = y0 - 2.0 * y1 + y2;
         if d < 0.0 {
             let t = (0.5 * (y0 - y2) / d).clamp(-1.0, 1.0);
-            let step = if t < 0.0 { x[i] - x[i - 1] } else { x[i + 1] - x[i] };
+            let step = if t < 0.0 {
+                x[i] - x[i - 1]
+            } else {
+                x[i + 1] - x[i]
+            };
             return Some((x[i] + t * step, y1 - 0.25 * (y0 - y2) * t));
         }
     }

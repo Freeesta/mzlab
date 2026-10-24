@@ -11,7 +11,13 @@ fn trace(centers: &[(f64, f64)]) -> (Vec<f64>, Vec<f64>) {
     let y = rt
         .iter()
         .enumerate()
-        .map(|(i, &t)| 20.0 + (i % 7) as f64 + centers.iter().map(|&(c, h)| gauss(t, c, 0.12, h)).sum::<f64>())
+        .map(|(i, &t)| {
+            20.0 + (i % 7) as f64
+                + centers
+                    .iter()
+                    .map(|&(c, h)| gauss(t, c, 0.12, h))
+                    .sum::<f64>()
+        })
         .collect();
     (rt, y)
 }
@@ -30,7 +36,11 @@ fn tic_with_three_peaks_labels_each_apex() {
 #[test]
 fn the_count_and_the_relative_threshold_limit_the_labels() {
     let (rt, y) = trace(&[(3.0, 500.0), (6.0, 20000.0), (9.0, 8000.0)]);
-    assert_eq!(select(&rt, &y, 8, 0.05, 5.0).len(), 2, "the 2.5 % peak is under the relative threshold");
+    assert_eq!(
+        select(&rt, &y, 8, 0.05, 5.0).len(),
+        2,
+        "the 2.5 % peak is under the relative threshold"
+    );
     let one = select(&rt, &y, 1, 0.05, 5.0);
     assert_eq!(one.len(), 1);
     assert!((one[0].rt - 6.0).abs() < 0.05, "the tallest is kept");
@@ -43,7 +53,9 @@ fn a_flat_noise_trace_has_no_label() {
     let mut seed = 12345u64;
     let y: Vec<f64> = (0..300)
         .map(|_| {
-            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             100.0 + (seed >> 33) as f64 / (1u64 << 31) as f64 * 4.0
         })
         .collect();
@@ -53,12 +65,21 @@ fn a_flat_noise_trace_has_no_label() {
 #[test]
 fn uv_spectrum_maximum_is_the_tallest_wavelength() {
     let nm: Vec<f64> = (0..200).map(|i| 200.0 + i as f64 * 2.0).collect();
-    let a: Vec<f64> = nm.iter().map(|&w| gauss(w, 254.0, 12.0, 80.0) + gauss(w, 330.0, 15.0, 30.0)).collect();
+    let a: Vec<f64> = nm
+        .iter()
+        .map(|&w| gauss(w, 254.0, 12.0, 80.0) + gauss(w, 330.0, 15.0, 30.0))
+        .collect();
     let (w, v) = main_peak(&nm, &a, true).unwrap();
     assert!((w - 254.0).abs() < 1.0 && (v - 80.0).abs() < 1.0);
-    let b: Vec<f64> = nm.iter().map(|&w| gauss(w, 254.0, 12.0, 30.0) + gauss(w, 330.0, 15.0, 80.0)).collect();
+    let b: Vec<f64> = nm
+        .iter()
+        .map(|&w| gauss(w, 254.0, 12.0, 30.0) + gauss(w, 330.0, 15.0, 80.0))
+        .collect();
     let (w2, _) = main_peak(&nm, &b, true).unwrap();
-    assert!((w2 - 330.0).abs() < 1.0, "a second trace has its maximum elsewhere: {w2}");
+    assert!(
+        (w2 - 330.0).abs() < 1.0,
+        "a second trace has its maximum elsewhere: {w2}"
+    );
 }
 
 #[test]

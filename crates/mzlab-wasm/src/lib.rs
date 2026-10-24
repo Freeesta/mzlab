@@ -4,7 +4,7 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 #![forbid(unsafe_code)]
-mod xicbin; mod info; mod diff; mod items; mod metodo; mod stat; mod budget_js;
+mod xicbin; mod etichette; mod info; mod diff; mod items; mod metodo; mod stat; mod budget_js;
 use js_sys::{Function, Uint8Array};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
@@ -695,32 +695,6 @@ pub fn peak_quality(rt: &[f64], y: &[f64], lo: u32, hi: u32, out: &mut [f64]) ->
     );
     out[..3].copy_from_slice(&[q.gaussian, q.asymmetry.unwrap_or(f64::NAN), q.noise_score]);
     3
-}
-
-/// Fields per label written by `label_peaks`: apex index, RT, height, S/N.
-pub const LABEL_FIELDS: usize = 4;
-
-/// The peaks of a trace that deserve a label (`etichette_picchi::select`): records of `LABEL_FIELDS` numbers by increasing RT; returns how many fit in `out`.
-#[wasm_bindgen]
-pub fn label_peaks(rt: &[f64], y: &[f64], max_n: u32, rel_min: f64, snr_min: f64, out: &mut [f64]) -> u32 {
-    let found = mzlab_core::etichette_picchi::select(rt, y, max_n as usize, rel_min, snr_min);
-    let room = out.len() / LABEL_FIELDS;
-    for (i, l) in found.iter().take(room).enumerate() {
-        out[i * LABEL_FIELDS..(i + 1) * LABEL_FIELDS].copy_from_slice(&[l.apex_i as f64, l.rt, l.height, l.snr]);
-    }
-    found.len().min(room) as u32
-}
-
-/// Tallest point of a spectrum (`etichette_picchi::main_peak`): `[x, y]` into `out`; returns 2, or 0 when there is none. `refine` = parabola (UV curves).
-#[wasm_bindgen]
-pub fn main_peak(x: &[f64], y: &[f64], refine: bool, out: &mut [f64]) -> u32 {
-    match mzlab_core::etichette_picchi::main_peak(x, y, refine) {
-        Some((a, b)) if out.len() >= 2 => {
-            out[..2].copy_from_slice(&[a, b]);
-            2
-        }
-        _ => 0,
-    }
 }
 
 fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {
