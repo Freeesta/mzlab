@@ -63,6 +63,27 @@ with sync_playwright() as p:
         n = pg.evaluate("() => window.__t.view.length")
         assert n == 2000, n
     step("sorting keeps the filter, an empty search shows all rows", sort_and_clear)
+
+    def order_like_localecompare():
+        names = ["éclair", "Zeta", "alpha", "Alpha", "beta", None, "ångström", "alpha", "10", "9", None, "zeta"]
+        got = pg.evaluate("""(names) => {
+          const rows = names.map((n, i) => ({ id: i, name: n, mz: n === null ? null : n.length }));
+          document.getElementById('h').innerHTML = '';
+          const t = window.TPTAB.mount(document.getElementById('h'), { id: 'o', esc: s => String(s), rowId: r => r.id, name: r => String(r.name), onOpen() {},
+            cols: [{ key: 'n', label: 'Name', sort: r => r.name, cell: r => String(r.name) }, { key: 'm', label: 'Len', num: true, sort: r => r.mz, cell: r => String(r.mz) }] });
+          t.setRows(rows); const out = {};
+          for (const [k, d] of [['n', 1], ['n', -1], ['m', 1], ['m', -1]]) {
+            t.sortBy(k, d); out[k + d] = t.view.map(r => r.id);
+            const f = k === 'n' ? r => r.name : r => r.mz, ref = rows.map((r, i) => ({ r, v: f(r), i })).sort((x, y) => {
+              if (x.v == null || y.v == null) return x.v == null && y.v == null ? x.i - y.i : x.v == null ? 1 : -1;
+              const c = typeof x.v === 'string' ? x.v.localeCompare(y.v) : x.v - y.v; return c ? c * d : x.i - y.i; }).map(x => x.r.id);
+            out[k + d + 'ref'] = ref;
+          }
+          return out;
+        }""", names)
+        for k in ("n1", "n-1", "m1", "m-1"):
+            assert got[k] == got[k + "ref"], f"{k}: {got[k]} != {got[k + 'ref']}"
+    step("sort order equals localeCompare: accents, case, empty last, stable ties, both directions", order_like_localecompare)
     b.close()
 for s in steps: print(s)
 print("page errors:", errs)
