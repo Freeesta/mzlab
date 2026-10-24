@@ -113,7 +113,7 @@ def _pda(rng, total, rt_end=22.0):
     return t, y
 
 
-def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = False) -> None:
+def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = False, dad: bool = False) -> None:
     k = 0.035
     P = 2.0e7 * _exp(-k * t)
     comps = [  # (m/z observed, RT, sigma, amplitude)
@@ -139,6 +139,10 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = Fal
         specs.append(_spec(i, rt, mz, it, neg=neg)); tic.append(it.sum()); bpc.append(it.max())
     tp, yp = _pda(rng, _exp(-k * t))
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3)] if pressure else []))
+    if dad:                                           # opt-in: the extra array changes the bytes, so the golden answers keyed by SHA-256 keep the default
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from dati_sintetici_dad import inject_dad
+        inject_dad(path, t)
 
 
 def ms2(path: Path, rng, t: float = 15) -> None:
