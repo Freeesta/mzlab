@@ -3,6 +3,7 @@
 //! one-shot forms of the same code (same arithmetic, same order: the numbers are identical bit for bit).
 
 use crate::clean::{entropy_of, weighted, weighted_into};
+use crate::frag_tol::FragTol;
 use crate::scores::{cosine_from_pairs, match_peaks_into, MatchScratch, PairScores, Spec};
 
 /// The buffers of the entropy of the pairs.
@@ -83,7 +84,7 @@ impl Scorer {
     }
 
     /// All the scores of `a` (the spectrum this scorer was made from) against `b`; `pairs` of the result is empty, read them with `pairs()`.
-    pub fn score(&mut self, a: &Spec, b: &Spec, tol: f64) -> PairScores {
+    pub fn score(&mut self, a: &Spec, b: &Spec, tol: impl Into<FragTol>) -> PairScores {
         match_peaks_into(&a.mz, &a.it, &b.mz, &b.it, tol, &mut self.m);
         let pairs = &self.m.out;
         let entropy = entropy_with_query(&self.pa, self.ha, &b.it, pairs, &mut self.e);

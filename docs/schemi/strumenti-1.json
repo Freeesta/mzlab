@@ -1044,6 +1044,7 @@
                 "enum":[
                   "algorithm",
                   "tol_da",
+                  "tol_ppm",
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
@@ -1074,6 +1075,12 @@
                     "minimum":0,
                     "default":0.02,
                     "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search keeps tol_da"
                   },
                   {
                     "type":"number",
@@ -1530,6 +1537,7 @@
                 "enum":[
                   "algorithm",
                   "tol_da",
+                  "tol_ppm",
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
@@ -1560,6 +1568,12 @@
                     "minimum":0,
                     "default":0.02,
                     "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search keeps tol_da"
                   },
                   {
                     "type":"number",

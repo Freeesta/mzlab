@@ -9,6 +9,7 @@
 //!   and peaks below 1% of the base peak removed, square-root intensities, greedy pairing by decreasing product within an absolute tolerance.
 
 use crate::clean::weighted;
+use crate::frag_tol::FragTol;
 use crate::sortutil;
 
 /// A spectrum for scoring.
@@ -29,7 +30,7 @@ pub fn match_peaks(
     a_it: &[f64],
     b_mz: &[f64],
     b_it: &[f64],
-    tol: f64,
+    tol: impl Into<FragTol>,
 ) -> Vec<(usize, usize)> {
     let mut s = MatchScratch::default();
     match_peaks_into(a_mz, a_it, b_mz, b_it, tol, &mut s);
@@ -52,13 +53,15 @@ pub fn match_peaks_into(
     a_it: &[f64],
     b_mz: &[f64],
     b_it: &[f64],
-    tol: f64,
+    tol: impl Into<FragTol>,
     s: &mut MatchScratch,
 ) {
+    let tol = tol.into();
     s.cand.clear();
     for i in 0..a_mz.len() {
-        let mut j = lower_bound(b_mz, a_mz[i] - tol);
-        while j < b_mz.len() && b_mz[j] <= a_mz[i] + tol {
+        let w = tol.at(a_mz[i]);
+        let mut j = lower_bound(b_mz, a_mz[i] - w);
+        while j < b_mz.len() && b_mz[j] <= a_mz[i] + w {
             s.cand.push((i, j, a_it[i] * b_it[j]));
             j += 1;
         }
@@ -116,7 +119,7 @@ pub struct PairScores {
     pub pairs: Vec<(usize, usize)>,
 }
 
-pub fn pair_scores(a: &Spec, b: &Spec, tol: f64) -> PairScores {
+pub fn pair_scores(a: &Spec, b: &Spec, tol: impl Into<FragTol>) -> PairScores {
     let mut sc = crate::prep::Scorer::new(a);
     let mut r = sc.score(a, b, tol);
     r.pairs = sc.pairs().to_vec();
@@ -198,7 +201,8 @@ pub struct ModCosine {
 }
 
 /// Modified cosine: candidate pairs at shift 0 and at `delta = prec(q) - prec(lib)`, one-to-one greedy by decreasing `sqrt(Iq Il)`.
-pub fn modified_cosine(q: &Spec, lib: &Spec, tol: f64) -> ModCosine {
+pub fn modified_cosine(q: &Spec, lib: &Spec, tol: impl Into<FragTol>) -> ModCosine {
+    let tol = tol.into();
     let a = top32(q);
     let b = top32(lib);
     let delta = q.prec - lib.prec;
@@ -211,8 +215,9 @@ pub fn modified_cosine(q: &Spec, lib: &Spec, tol: f64) -> ModCosine {
     for i in 0..a.mz.len() {
         for &sh in shifts {
             let t = a.mz[i] - sh;
-            let mut j = lower_bound(&b.mz, t - tol);
-            while j < b.mz.len() && b.mz[j] <= t + tol {
+            let w = tol.at(a.mz[i]);
+            let mut j = lower_bound(&b.mz, t - w);
+            while j < b.mz.len() && b.mz[j] <= t + w {
                 c.push((i, j, (a.it[i] * b.it[j]).sqrt(), sh != 0.0));
                 j += 1;
             }

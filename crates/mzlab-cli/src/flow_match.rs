@@ -12,13 +12,14 @@ use mzlab_lib::contrib::{
     cosine_contributions, entropy_contributions, modified_cosine_contributions,
 };
 use mzlab_lib::decoy::{
-    best_scores_by, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
+    best_scores_with, fdr_note, is_decoy, lib_fdr, quantize, with_decoys, Best, DecoyKind, LibFdr,
     DEFAULT_SEED,
 };
+use mzlab_lib::frag_tol::FragTol;
 use mzlab_lib::parse::{detect, parse_all};
 use mzlab_lib::read::{Library, CACHE_BYTES};
 use mzlab_lib::scores::modified_cosine;
-use mzlab_lib::search::{analogs, identity, AnalogOpts, IdentityOpts, Query, Tol};
+use mzlab_lib::search::{analogs, identity_with, AnalogOpts, IdentityOpts, Query, Tol};
 use mzlab_lib::spec::Spectrum;
 
 pub(crate) type Lib = Library<Vec<u8>>;
@@ -173,7 +174,8 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
         pol: q.pol,
         top: usize::MAX,
     };
-    let hits = identity(lib, q, &o).map_err(|_| Error::new("err.flow.match.library"))?;
+    let frag = frag_tol(job);
+    let hits = identity_with(lib, q, &o, frag).map_err(|_| Error::new("err.flow.match.library"))?;
     let mut out = Vec::new();
     for h in hits {
         let (score, shared, pairs, t) = match alg {
@@ -187,7 +189,7 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
                 }),
             ),
             "modified_cosine" => {
-                let m = modified_cosine(&q.spec, &h.spec, o.frag_da);
+                let m = modified_cosine(&q.spec, &h.spec, frag);
                 let p = m.pairs.iter().map(|&(i, j, _)| (i, j)).collect();
                 (m.cosine, m.matched, p, terms.then(|| mod_terms(&m)))
             }
@@ -229,6 +231,11 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
         });
     }
     Ok(out)
+}
+
+/// The fragment tolerance of the step: `tol_ppm` when above 0, else `tol_da`.
+fn frag_tol(job: &Job) -> FragTol {
+    FragTol::from_params(num(job, "tol_da"), num(job, "tol_ppm"))
 }
 
 /// Whether the step lists the matched peaks of each candidate (`matched_peaks`).
@@ -285,8 +292,8 @@ fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job, alg: &str) -> Resu
                     pol: q.pol,
                     top: usize::MAX,
                 };
-                let frag = o.frag_da;
-                best_scores_by(lib, q, &o, |h| match alg {
+                let frag = frag_tol(job);
+                best_scores_with(lib, q, &o, frag, |h| match alg {
                     "cosine" => h.cosine,
                     "modified_cosine" => modified_cosine(&q.spec, &h.spec, frag).cosine,
                     _ => h.entropy,
