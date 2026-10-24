@@ -2,6 +2,9 @@
 //! within the window of each node, reduced to a fixed point on the DAG (a fragment is under a formula of each precursor, a candidate of the
 //! wide low-mass window needs its evidences), the choices of the user, then the nodes with no candidate leave the graph. No score, no proposal.
 
+mod ricalibra;
+use ricalibra::{preferisci_pari, ricalibra};
+
 use super::candidati::{m1_coerente, perdita_nota, sotto, Elementi};
 use super::formule::avviso;
 use super::regole_valuta::{addotto_radice, vettori_perdita};
@@ -395,69 +398,6 @@ fn togli(g: &mut Grafo, tieni: &[bool]) {
         albero,
         nodo: None,
     }));
-}
-
-/// A node with an even-electron candidate within the window loses its radical-ion candidates that have no evidence (the even-electron rule:
-/// most fragments are even-electron ions); a node with only radical candidates keeps them. True when a candidate left.
-fn preferisci_pari(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
-    let mut cambiato = false;
-    for k in 1..st.ordine.len() {
-        let j = st.ordine[k];
-        let pari = |x: &Cand| st.e.pari(&x.c, st.e.pol);
-        if st.utente[j] || !st.cand[j].iter().any(|x| x.stretto && pari(x)) {
-            continue;
-        }
-        let tieni: Vec<bool> = st.cand[j]
-            .iter()
-            .map(|x| pari(x) || !prove(g, st, o, j, &x.c).is_empty())
-            .collect();
-        let n = st.cand[j].len();
-        filtra(&mut st.cand[j], &tieni);
-        cambiato |= st.cand[j].len() < n;
-    }
-    cambiato
-}
-
-/// Fewest nodes with one formula needed to estimate the systematic error of the instrument.
-const MIN_PER_OFFSET: usize = 5;
-/// Scatter (ppm) left around the systematic error once it is removed.
-const RESIDUO_PPM: f64 = 3.0;
-
-/// The error of the instrument is mostly systematic: the median ppm of the nodes with one narrow-window candidate is taken out, and a narrow-window
-/// candidate more than the residue (`RESIDUO_PPM`, wider for a noisy instrument) from it leaves (a chance match of the dense sub-formula lattice is not). Nothing happens under
-/// `MIN_PER_OFFSET` such nodes or when the window is not wider than the residue. True when a candidate left.
-fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
-    if o.ppm_formula <= RESIDUO_PPM {
-        return false;
-    }
-    let mut v: Vec<f64> = st.ordine[1..]
-        .iter()
-        .filter(|&&j| !st.utente[j] && st.cand[j].len() == 1 && st.cand[j][0].stretto)
-        .map(|&j| st.cand[j][0].ppm)
-        .collect();
-    if v.len() < MIN_PER_OFFSET {
-        return false;
-    }
-    crate::sortc::slice_by(&mut v, |a, b| a.total_cmp(b));
-    let offset = v[v.len() / 2];
-    // a noisy instrument keeps a wider residue: 2.5 sigmas read from the lower quartile of the deviations (0.3186 sigma for a normal scatter, and chance matches do not inflate it), never below RESIDUO_PPM
-    let mut dev: Vec<f64> = v.iter().map(|x| (x - offset).abs()).collect();
-    crate::sortc::slice_by(&mut dev, |a, b| a.total_cmp(b));
-    let residuo = RESIDUO_PPM.max(2.5 * dev[dev.len() / 4] / 0.3186);
-    if residuo >= o.ppm_formula {
-        return false;
-    }
-    let mut cambiato = false;
-    for k in 1..st.ordine.len() {
-        let j = st.ordine[k];
-        if st.utente[j] {
-            continue;
-        }
-        let n = st.cand[j].len();
-        st.cand[j].retain(|x| !x.stretto || (x.ppm - offset).abs() <= residuo);
-        cambiato |= st.cand[j].len() < n;
-    }
-    cambiato
 }
 
 /// The formulas of the nodes below root `r` (counts `rc`) and of their losses; the nodes they do not explain leave the graph.
