@@ -19063,3 +19063,4 @@
 {"v":1,"ts_utc":"2026-10-23T23:36:33Z","tipo":"annullamento","k":"40040620587","workflow":"pages","minuti_runner":0.1,"sostituito_da":"70fd81961077cb0a8bc103fd57bdd45877b6f1c3","pr":null,"sha":"2709492205edfd02f170f352b39fc011ecbf00ef","run_id":40040620587,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-23T23:37:01Z","tipo":"carico","k":"2026-10-23T23:3","job_in_coda":0,"job_in_corso":23}
 {"v":1,"ts_utc":"2026-10-24T00:07:10Z","azione":"aperta","tipo":"pr","pr":1660,"sha":"1bc815f14d2aa154958efa606e86c66fa1ced332"}
+{"v":1,"tipo":"pr","pr":1660,"sha":"1bc815f14d2aa154958efa606e86c66fa1ced332","ts_utc":"2026-10-24T00:19:26Z","azione":"unita","aperta_s":736,"commit_n":4,"cause_commit":{"limite":2,"altro":1},"merge_main":0,"righe_piu":9,"righe_meno":9,"file_n":3,"file":["docs/agenti/mzfeat.md","mzlab/web/comandi.js","tools/soglie_base.json"],"aree":{"docs":1,"web":1,"tools":1},"solo_doc":false,"prima_review_s":null,"review_n":0,"verde_a_unione_s":39}
