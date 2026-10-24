@@ -181,7 +181,7 @@
     const chipTests = () => (o.chips || []).filter(c => st.chips.has(c.key));
     /** lower-case search text of each row, kept only while the user types in the search box (any other refresh drops it, so edited rows are never stale) @type {Map<any, string> | null} */
     let hay = null;
-    /** all the rows that are not pinned, ordered by the current column: a chip or the search then only filters it instead of sorting again; dropped by every refresh that is not a filter change @type {{ key: string | null, dir: number, list: any[] } | null} */
+    /** all the rows that are not pinned, ordered by the current column: a chip or the search then only filters it instead of sorting again; dropped by every refresh that is not a filter change @type {{ key: string | null, dir: number, list: any[], vals: any[] } | null} */
     let ordered = null;
     function derive() {
       const ts = chipTests(), q = st.q.trim().toLowerCase();
@@ -191,7 +191,12 @@
       const hayOf = (/** @type {any} */ r) => { if (!hay) return /** @type {Function} */ (o.search)(r).toLowerCase(); let h = hay.get(r); if (h === undefined) { h = /** @type {Function} */ (o.search)(r).toLowerCase(); hay.set(r, h); } return h; };
       const pinned = o.pin ? st.rows.filter(r => /** @type {Function} */ (o.pin)(r)) : [];
       const sc = o.cols.find(x => x.key === st.sort);
-      if (!ordered || ordered.key !== st.sort || ordered.dir !== st.dir) ordered = { key: st.sort, dir: st.dir, list: sortRows(o.pin ? st.rows.filter(r => !(/** @type {Function} */ (o.pin))(r)) : st.rows, sc, st.dir) };
+      // a sort value edited in place (no refresh in between) is noticed here: the cached order is then built again
+      if (ordered && sc && sc.sort && ordered.vals.some((v, i) => /** @type {Function} */ (sc.sort)(/** @type {any} */ (ordered).list[i]) !== v)) ordered = null;
+      if (!ordered || ordered.key !== st.sort || ordered.dir !== st.dir) {
+        const list = sortRows(o.pin ? st.rows.filter(r => !(/** @type {Function} */ (o.pin))(r)) : st.rows, sc, st.dir);
+        ordered = { key: st.sort, dir: st.dir, list, vals: sc && sc.sort ? list.map(sc.sort) : [] };
+      }
       const rest = (o.chips || o.search) ? ordered.list.filter(ok) : ordered.list;
       st.pinned = pinned; st.rest = rest; st.list = [...pinned, ...st.rest];
       if (count) count.textContent = `${st.list.length} of ${st.rows.length} rows`;

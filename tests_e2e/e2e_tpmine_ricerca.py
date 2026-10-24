@@ -99,7 +99,8 @@ with sync_playwright() as p:
           q.value = 'n1'; q.dispatchEvent(new Event('input')); out.push([ids(), want()]);
           t.setChip('hi', false); out.push([ids(), want()]);
           rows[3].mz = 99; t.setRows(rows); out.push([ids(), want()]);       // an edited sort value is read again after setRows
-          t.sortBy('n', 1); q.value = ''; q.dispatchEvent(new Event('input'));
+          t.setChip('hi', true); rows[10].mz = 98; t.setChip('hi', false); t.setChip('hi', true); out.push([ids(), want()]);   // edited in place, no setRows: the order is read again
+          t.setChip('hi', false); t.sortBy('n', 1); q.value = ''; q.dispatchEvent(new Event('input'));
           return out.map(([a, b]) => JSON.stringify(a) === JSON.stringify(b)).concat([ids()[0] !== undefined]);
         }""")
         assert all(res), res
