@@ -22,7 +22,7 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 | `series.visibility` | correzione (`storia.campi`) | `grafici.js` | hide or show a series from the legend | hid, showHid | - | - | command: do / undo handler (comandi.js) |
 | `panel.link` | correzione (`storia.campi`) | `eventi.js` | freeze or relink the live spectrum | link, src | - | - | command: do / undo handler (comandi.js) |
 | `panel.rename` | pannello (`storia.pannello`) | `pannelli-annulla.js` | title of the panel | title | - | - | command: do / undo handler (comandi.js) |
-| `panel.open` | pannello (`storia.pannello`) | `pannelli.js` | create a panel (spectrum, XIC, extracted window) | - | - | - | removal with its own undo / redo (STORIA.tolto) |
+| `panel.open` | pannello (`storia.pannello`) | `pannelli.js` | create a panel (spectrum, XIC, extracted window, UV spectrum, wavelength trace) | - | - | - | removal with its own undo / redo (STORIA.tolto) |
 | `map.marks` | marcature (`storia.marcature`) | `mappa.js` | add, move, delete, note, reference of a mark | - | - | a drag is one step | command: do / undo handler (comandi.js) |
 | `files.view` | correzione (`storia.campi`) | `lista-file.js` | visibility, name, colour, group, order of a file | - | - | - | command: do / undo handler (comandi.js) |
 | `samples.meta` | correzione (`storia.campi`) | `campioni-tabella.js` | type, replicate, concentration, unit, time; TSV import | - | - | - | command: do / undo handler (comandi.js) |
