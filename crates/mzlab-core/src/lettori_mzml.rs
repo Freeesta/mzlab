@@ -33,6 +33,14 @@ pub(crate) fn testata(l: &mut dyn Lettore, c: usize) -> Result<Header> {
     })
 }
 
+/// The header the scan table reads (`Lettore::testata_tabella`).
+pub(crate) fn testata_tabella(l: &mut dyn Lettore, c: usize) -> Result<Header> {
+    Ok(match l.testata_tabella(c)? {
+        Some(h) => h,
+        None => semplice(l, c),
+    })
+}
+
 /// Which points of a scan the file gets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Picchi {

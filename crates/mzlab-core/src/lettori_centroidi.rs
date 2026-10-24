@@ -134,6 +134,13 @@ impl Lettore for Centroidato {
             ..h
         }))
     }
+    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
+        let h = self.l.testata_tabella(c)?;
+        Ok(h.map(|h| Header {
+            centroided: true,
+            ..h
+        }))
+    }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra {
         self.l.extra_mzml(s)
     }
