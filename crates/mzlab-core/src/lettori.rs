@@ -221,6 +221,10 @@ pub trait Lettore {
     fn testata_mzml(&mut self, _c: usize) -> Result<Option<Header>> {
         Ok(None)
     }
+    /// What the scan table needs of `testata_mzml` (instrument, sources, analyzers); a reader whose header is costly gives a lighter one. Default: `testata_mzml`.
+    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
+        self.testata_mzml(c)
+    }
     /// What the mzML says of a spectrum besides its points (SIM mark, scan window).
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {
         SpectrumExtra::default()

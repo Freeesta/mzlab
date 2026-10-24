@@ -37,6 +37,11 @@ try:
             big = [t for t in txt if t.startswith("14.3")]
             assert big and "364" in big[0], txt
         step("TIC: the tallest peak is labelled with RT and base peak m/z", tic)
+        def zones():
+            # the run is 0.5-20 min: no label in the solvent front (first 3 min) or in the last 5 min
+            rts = [float(l[0].split(" ")[0]) for l in labels(pg, 1)]
+            assert rts and all(3.0 <= t <= 15.2 for t in rts), rts
+        step("TIC: no label in the first 3 min or in the last 5 min", zones)
         def tip():
             t = pg.evaluate(f"{LB}[0].tip"); assert "RT" in t and "min" in t, t
         step("each label has a tooltip", tip)

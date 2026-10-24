@@ -37,7 +37,7 @@ window.QUALITA = {
   /** Peaks of the trace: mode 0 = CWT, 1 = prominence + local minimum. Each: { apex, lo, hi, area, height, snr, n, gaussian, asymmetry, noise } (indices into the trace), or null. */
   detect(x, y, mode) { return call({ op: "detect", rt: f64(x), y: f64(y), mode }); },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
-  labels(x, y, maxN, rel, snr) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr }); },
+  labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */
   mainPeak(x, y, refine) { return call({ op: "mainpeak", x: f64(x), y: f64(y), refine: !!refine }); },
   /** True when the engine can answer. */

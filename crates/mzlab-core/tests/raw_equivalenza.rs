@@ -230,3 +230,50 @@ fn scansione_dati_e_il_trasporto_danno_la_stessa_scansione() {
         }
     }
 }
+
+/// The light header of the scan table (`testata_tabella`) has the fields `Head::da_testata` reads exactly as the full header of the mzML (`testata_mzml`), so the
+/// table is the same, for every `.raw` of the data repository.
+#[test]
+fn la_testata_della_tabella_ha_i_campi_della_testata_completa() {
+    let Some(dir) = dati_percorsi::percorso("dati/formati/thermo/raw") else {
+        eprintln!("SKIP raw_equivalenza: no data repository (MZLAB_DATI)");
+        return;
+    };
+    let mut visti = 0;
+    for e in std::fs::read_dir(dir).unwrap().flatten() {
+        let p = e.path();
+        if p.extension().is_none_or(|x| x != "raw") {
+            continue;
+        }
+        let nome = p.file_name().unwrap().to_string_lossy().into_owned();
+        let fs = FileSet {
+            membri: vec![Membro {
+                nome: nome.clone(),
+                dim: std::fs::metadata(&p).unwrap().len(),
+                dati: Box::new(std::fs::File::open(&p).unwrap()),
+                sha1: None,
+            }],
+        };
+        let Ok(mut l) = lettori::apri(fs, &Limiti::sito()) else {
+            continue;
+        };
+        let piena = l.testata_mzml(0).unwrap().expect("full header");
+        let leggera = l.testata_tabella(0).unwrap().expect("light header");
+        let campi = |h: &mzlab_core::mzmlwrite::Header| {
+            format!(
+                "{:?}",
+                (
+                    &h.components,
+                    &h.source_cv,
+                    &h.sources,
+                    &h.instrument,
+                    &h.content,
+                    &h.extra_software
+                )
+            )
+        };
+        assert_eq!(campi(&leggera), campi(&piena), "{nome}");
+        visti += 1;
+    }
+    assert!(visti > 0, "no .raw opened");
+}

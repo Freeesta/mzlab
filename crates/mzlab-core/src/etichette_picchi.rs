@@ -13,16 +13,48 @@ pub struct Label {
     pub snr: f64,
 }
 
-/// At most `max_n` peaks with S/N ≥ `snr_min` and height ≥ `rel_min` times the tallest peak, by increasing RT.
-pub fn select(rt: &[f64], y: &[f64], max_n: usize, rel_min: f64, snr_min: f64) -> Vec<Label> {
+/// Minutes at the start of a run (solvent front) where no peak is labelled, at most `SKIP_INI_FRAC` of the run.
+pub const SKIP_INI_MIN: f64 = 3.0;
+/// Minutes at the end of a run (wash, re-equilibration) where no peak is labelled, at most `SKIP_FIN_FRAC` of the run.
+pub const SKIP_FIN_MIN: f64 = 5.0;
+/// The fractions keep a useful zone in short runs (MRM, demos of a few minutes).
+pub const SKIP_INI_FRAC: f64 = 0.15;
+pub const SKIP_FIN_FRAC: f64 = 0.25;
+
+/// At most `max_n` peaks with S/N ≥ `snr_min` and height ≥ `rel_min` times the tallest candidate, by increasing RT.
+/// With `skip_ends` (`rt` in minutes) the peaks in the first and last minutes of the run are not candidates; labels only: the detector and everything else still see them.
+/// A spectrum (nm axis) is labelled with `skip_ends` false.
+pub fn select(
+    rt: &[f64],
+    y: &[f64],
+    max_n: usize,
+    rel_min: f64,
+    snr_min: f64,
+    skip_ends: bool,
+) -> Vec<Label> {
     let n = rt.len().min(y.len());
     if n < 3 || max_n == 0 {
         return Vec::new();
     }
     // detect_peaks returns the peaks by decreasing height
     let found = detect_peaks(&rt[..n], &y[..n], Params::default());
-    let top = found.iter().map(|p| p.height).fold(0.0, f64::max);
-    let mut out: Vec<Label> = found
+    let (t0, t1) = (rt[0], rt[n - 1]);
+    let span = t1 - t0;
+    let (lo, hi) = if skip_ends {
+        (
+            t0 + SKIP_INI_MIN.min(SKIP_INI_FRAC * span),
+            t1 - SKIP_FIN_MIN.min(SKIP_FIN_FRAC * span),
+        )
+    } else {
+        (t0, t1)
+    };
+    let cands: Vec<_> = found
+        .iter()
+        .filter(|p| (lo..=hi).contains(&rt[p.apex_i]))
+        .collect();
+    // the threshold is relative to the tallest candidate: a huge solvent peak must not hide the real ones
+    let top = cands.iter().map(|p| p.height).fold(0.0, f64::max);
+    let mut out: Vec<Label> = cands
         .iter()
         .filter(|p| p.snr >= snr_min && p.height >= rel_min * top)
         .take(max_n)
