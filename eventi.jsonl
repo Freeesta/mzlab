@@ -21489,3 +21489,4 @@
 {"v":1,"ts_utc":"2026-10-24T12:50:15Z","tipo":"carico","k":"2026-10-24T12:5","job_in_coda":0,"job_in_corso":23}
 {"v":1,"ts_utc":"2026-10-24T13:04:44Z","azione":"push","titolo":"Fix merge: close test, trim docs","merge_main":false,"aree":{"rust":1,"docs":1},"tipo":"pr","pr":1685,"sha":"8d3478da7f117152f529f265f5f3cb1315d73754"}
 {"v":1,"ts_utc":"2026-10-24T13:05:28Z","azione":"aperta","tipo":"pr","pr":1690,"sha":"275ee739c527dcc33b058757bebe32d512b88c51"}
+{"v":1,"ts_utc":"2026-10-24T13:06:53Z","azione":"aperta","tipo":"pr","pr":1691,"sha":"1db766f3acd94249f286dfdc2578c032c2f8743a"}
