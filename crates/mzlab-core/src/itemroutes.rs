@@ -9,6 +9,8 @@ use crate::iteminfo::{file_parts, matches, Part};
 use crate::json::{round, Out};
 use crate::mzmlhead::{Chrom, Mzml};
 use crate::routes::Routes;
+use crate::wiff::dad_map::dad_to_map_json;
+use crate::wiff::dad_uv::{dad_spectrum_json, dad_wavelength_json};
 
 /// The scans of the item `file` (`name` or `name#tag`): the experiment of a mixed file, else all.
 fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str) -> (Option<Part>, Vec<&'a Scan>) {
@@ -166,6 +168,9 @@ pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
             return Ok(json);
         }
     }
+    if let Some(d) = m.dad()? {
+        return Ok(dad_to_map_json(&d));
+    }
     Err(Error::new("err.pda.none"))
 }
 
@@ -176,15 +181,21 @@ pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<
             return Ok(json);
         }
     }
+    if let Some(json) = m.dad()?.and_then(|d| dad_wavelength_json(&d, nm0, nm1)) {
+        return Ok(json);
+    }
     Err(Error::new("err.pda.none"))
 }
 
-/// `/api/uvspec`: the UV spectrum of the DAD between `rt0` and `rt1` (minutes); `err.pda.none` when the file has no optical matrix (only the `.wiff` of the 3200 with the detector has it).
+/// `/api/uvspec`: the UV spectrum of the DAD between `rt0` and `rt1` (minutes); `err.pda.none` when the file has no optical matrix (the `.wiff` of the 3200 with the detector and an mzML with a `dad_matrix` or `MS:1000804` spectra have it).
 pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<String> {
     if let Some((l, c)) = m.r.lettore() {
         if let Some(json) = l.dad_spectrum(c, rt0, rt1)? {
             return Ok(json);
         }
+    }
+    if let Some(json) = m.dad()?.and_then(|d| dad_spectrum_json(&d, rt0, rt1)) {
+        return Ok(json);
     }
     Err(Error::new("err.pda.none"))
 }

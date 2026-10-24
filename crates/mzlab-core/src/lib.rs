@@ -90,6 +90,7 @@ pub mod mzml;
 mod mzmlarray;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
+mod mzml_dad;
 pub mod numarray;
 pub mod numpress;
 pub mod mzmlwrite;
