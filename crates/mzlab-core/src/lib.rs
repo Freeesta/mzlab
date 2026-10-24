@@ -97,6 +97,8 @@ pub mod mzmlwrite;
 pub mod mzmlvalida;
 pub mod pace;
 pub mod peakq;
+#[cfg(test)]
+mod peakq_reach_test;
 pub mod peaks;
 pub mod peakext;
 pub mod signal;
