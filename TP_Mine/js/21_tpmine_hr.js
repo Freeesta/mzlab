@@ -149,7 +149,7 @@
     call("tp_table", rows.map(r => r.id)).then(d => {
       if (!d || !d.rows) return;
       const by = new Map(d.rows.map(x => [x.row, x]));
-      rows.forEach(r => { const x = by.get(r.id); if (x) r.ctl = { in_t0: x.in_t0, in_blank: x.in_blank, in_t0_ratio: x.t0_ratio ?? 0, in_blank_ratio: x.blank_ratio ?? 0 }; });
+      rows.forEach(r => { const x = by.get(r.id); if (x && x.fit_candidates && x.fit_candidates.length) r.fit = x.fit_candidates; if (x) r.ctl = { in_t0: x.in_t0, in_blank: x.in_blank, in_t0_ratio: x.t0_ratio ?? 0, in_blank_ratio: x.blank_ratio ?? 0 }; });
       T.enableChip("not0"); T.enableChip("noblank"); T.setRows(rows);
     }).catch(() => { /* no numbers: the chips stay off */ });
 
@@ -218,6 +218,7 @@
       /** @type {Record<string, string>} */ const missing = {};
       const m = /** @type {any} */ ({ ...baseModel(r), apexRt: row ? row.rt : r.rt, lo: row ? row.rt_lo : null, hi: row ? row.rt_hi : null, missing });
       if (tr && tr.xic) m.xic = tr.xic.map((/** @type {any} */ t) => ({ file: t.file, group: group[t.file] || "Treated", time: time[t.file] ?? null, rt: t.rt, y: t.y })); else missing.xic = "the XIC needs the index files of the series, which this version cannot read here";
+      if (r.fit) m.fitCandidates = r.fit;
       if (ms2) m.spectrum = { kind: "mirror", mz: ms2.candidate.mz, y: ms2.candidate.rel, ref: { mz: ms2.parent.mz, y: ms2.parent.rel } };
       else if (tr && tr.ms1 && tr.ms1.mz && tr.ms1.mz.length) m.spectrum = { kind: "ms1", mz: tr.ms1.mz, y: tr.ms1.y };
       else missing.spectrum = "no MS2 for this ion";

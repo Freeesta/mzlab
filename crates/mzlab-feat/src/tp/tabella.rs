@@ -300,5 +300,10 @@ fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
         .opt((max_a > 0.0).then(|| round(m_t0 / max_a, 4)));
     o.raw(",\"blank_ratio\":")
         .opt((max_a > 0.0).then(|| round(m_bl / max_a, 4)));
-    o.raw(",\"series\":").floats(&series).raw("}");
+    o.raw(",\"series\":").floats(&series);
+    if has_block {
+        o.raw(",\"fit_candidates\":");
+        super::candidati::candidates_json(o, t.tp.fit_of(r));
+    }
+    o.raw("}");
 }

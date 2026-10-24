@@ -9,12 +9,14 @@
 //! second axis, read from the signs of the proofs of `evid/1`.
 
 mod cancelli;
+mod candidati;
 mod gruppi;
 mod meta;
 mod parentela;
 mod rete;
 mod tabella;
 
+pub use candidati::{candidates, candidates_json, element_fit, FitCandidate};
 pub use gruppi::{conditions as group_conditions, groups_json, infos_from_json, treated_by_condition, RowInfo};
 pub use rete::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_generation, Arc, NetParams};
 pub(crate) use tabella::measured;
@@ -188,6 +190,8 @@ pub struct TpBlock {
     pub params: TpParams,
     /// Present when gate 1 read the roles (`build_by_role`).
     pub roles: Option<RoleCounts>,
+    /// Formula candidates of the rows formed and not explained, sorted by row (`candidati`); a lead, never a verdict.
+    pub fit_candidates: Vec<(u32, Vec<FitCandidate>)>,
 }
 
 impl TpBlock {

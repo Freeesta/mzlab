@@ -38,7 +38,19 @@ impl TpBlock {
         if let Some(c) = &self.roles {
             roles_json(&mut j, c);
         }
-        j.raw("}}");
+        j.raw("}");
+        if !self.fit_candidates.is_empty() {
+            j.raw(",\"candidati_formula\":[");
+            for (i, (row, c)) in self.fit_candidates.iter().enumerate() {
+                j.raw(if i > 0 { ",{\"riga\":" } else { "{\"riga\":" })
+                    .int(i64::from(*row) + 1)
+                    .raw(",\"c\":");
+                candidati::candidates_json(&mut j, c);
+                j.raw("}");
+            }
+            j.raw("]");
+        }
+        j.raw("}");
         j.0
     }
 
@@ -63,6 +75,19 @@ impl TpBlock {
                     .unwrap_or(false),
             },
             roles: v.get("ruoli").map(|o| roles_from(v, o)),
+            fit_candidates: v
+                .get("candidati_formula")
+                .map(|a| a.arr())
+                .unwrap_or_default()
+                .iter()
+                .map(|x| {
+                    let row = num(x, "riga", 1.0) as u32 - 1;
+                    (
+                        row,
+                        candidati::candidates_from(x.get("c").map(|c| c.arr()).unwrap_or_default()),
+                    )
+                })
+                .collect(),
             ..TpBlock::default()
         }
     }
