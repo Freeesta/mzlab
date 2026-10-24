@@ -9,7 +9,9 @@ use crate::iteminfo::{file_parts, matches, Part};
 use crate::json::{round, Out};
 use crate::mzmlhead::{Chrom, Mzml};
 use crate::routes::Routes;
+#[cfg(feature = "mappa-dad")]
 use crate::wiff::dad_map::dad_to_map_json;
+#[cfg(feature = "mappa-dad")]
 use crate::wiff::dad_uv::{dad_spectrum_json, dad_wavelength_json};
 
 /// The scans of the item `file` (`name` or `name#tag`): the experiment of a mixed file, else all.
@@ -168,6 +170,7 @@ pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
             return Ok(json);
         }
     }
+    #[cfg(feature = "mappa-dad")]
     if let Some(d) = m.dad()? {
         return Ok(dad_to_map_json(&d));
     }
@@ -181,6 +184,7 @@ pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<
             return Ok(json);
         }
     }
+    #[cfg(feature = "mappa-dad")]
     if let Some(json) = m.dad()?.and_then(|d| dad_wavelength_json(&d, nm0, nm1)) {
         return Ok(json);
     }
@@ -194,6 +198,7 @@ pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<St
             return Ok(json);
         }
     }
+    #[cfg(feature = "mappa-dad")]
     if let Some(json) = m.dad()?.and_then(|d| dad_spectrum_json(&d, rt0, rt1)) {
         return Ok(json);
     }
