@@ -21487,3 +21487,4 @@
 {"v":1,"ts_utc":"2026-10-24T12:49:52Z","tipo":"job","k":"120876939733","workflow":"rust","job":"rust-core","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"aee9d016e42eb25af4f747692a8036a2238bf7ac","run_id":40095512284,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-24T12:49:52Z","tipo":"job","k":"120876940098","workflow":"rust","job":"rust-misc-b","esito":"skipped","coda_s":0,"durata_s":0,"passi":[],"pr":null,"sha":"aee9d016e42eb25af4f747692a8036a2238bf7ac","run_id":40095512284,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-24T12:50:15Z","tipo":"carico","k":"2026-10-24T12:5","job_in_coda":0,"job_in_corso":23}
+{"v":1,"ts_utc":"2026-10-24T13:04:44Z","azione":"push","titolo":"Fix merge: close test, trim docs","merge_main":false,"aree":{"rust":1,"docs":1},"tipo":"pr","pr":1685,"sha":"8d3478da7f117152f529f265f5f3cb1315d73754"}
