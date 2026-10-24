@@ -4,6 +4,7 @@
           window.fetch = async (u, o) => { if (!String(u).includes('/rpc')) return real(u, o);
             const b = JSON.parse(o.body), op = b.op, ok = (v) => new Response(typeof v === 'string' ? v : JSON.stringify(v), { status: 200 });
             window.__ops.push(op);
+            if (op === 'flow/reuse') { const n = JSON.parse(b.plan).steps.length, r = window.__reused || 0; return ok({ reused: r, compute: n - r }); }
             if (op === 'flow/read') return ok('a,b\n1,2\n');
             if (op === 'flow/live/start') { const plan = JSON.parse(b.plan); window.__runs++; window.__sent.push(plan.inputs.map(i => i.name).join(','));
               if (window.__missing && (window.__missing === '*' || plan.inputs.some(i => i.name === window.__missing))) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: window.__missing === '*' ? 'a.mzML' : window.__missing } }), { status: 400 });

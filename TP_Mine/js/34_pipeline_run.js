@@ -20,12 +20,13 @@
       <div class="row"><strong>Roles and times</strong><label>Time unit <select id="pr-unit" aria-label="Unit of the times of the files">${["min", "s", "h", "d"].map(u => `<option>${u}</option>`).join("")}</select></label>
         <button type="button" id="pr-all" title="Accept the times proposed from the names (yellow)">Confirm times</button></div>
       <table id="pr-tab"><caption class="mut">Role and treatment time of each file; a time proposed from the name is yellow until you confirm it (Enter or «Confirm times»)</caption></table><div id="pr-warn" role="status"></div></div>
-    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
+    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><button type="button" id="pipe-cc" aria-label="Clear cache: delete the stored detections of the files" title="Deletes the detections kept for the next run; the next run detects every file again">Clear cache</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
     <div id="pipe-res"></div></details>`;
 
   function mount(box, ctx) {
     st.ctx = ctx; box.innerHTML = html(); st.box = box;
     $("#pipe-run-go").onclick = () => run();
+    $("#pipe-cc").onclick = clearCache;
     $("#pipe-again").onclick = again; ctx.onRefresh(armAgain); armAgain();
     const sync = async () => { st.files = await ctx.listIdx(); await loadRoles(); };
     ctx.onRefresh(sync); sync();
@@ -70,6 +71,12 @@
     const by = new Map(), mine = r.polarity > 0 ? "pos" : "neg", other = r.polarity > 0 ? "neg" : "pos";
     for (const q of JSON.parse(text).pairs) { const k = q["id_" + mine]; if (!by.has(k)) by.set(k, []); by.get(k).push({ id: q["id_" + other], ionHere: q["ion_" + mine], ionThere: q["ion_" + other], ppm: q.ppm * (r.polarity > 0 ? 1 : -1), dRt: q.d_rt * (r.polarity > 0 ? 1 : -1), r: q.r, n: q.n_common }); }
     st.pair = by; window.PIPEPOL = { pol: r.polarity, rows: id => by.get(id) || [] };
+  }
+  async function clearCache() {
+    try {
+      const pool = await st.ctx.pool(), mod = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-run.js"]], { type: "text/javascript" })));
+      msg(`Cache cleared (${((pool.fs ? await mod.clearDetectCache(pool) : 0) / 1048576).toFixed(1)} MB)`);
+    } catch (e) { msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }
   }
   async function run(op) {
     if (st.busy) return;

@@ -24,6 +24,8 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
+#[cfg(any(feature = "detect", feature = "untargeted"))]
+pub mod cache;
 #[cfg(feature = "detect")]
 pub mod family;
 #[cfg(feature = "finder")]

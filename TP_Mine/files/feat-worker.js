@@ -299,6 +299,7 @@ export function createFeatPool(opts) {
       const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe });
       return { table: e.table, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: h.ms };
     },
+    op: (which, msg) => submit(async (slot, load) => { await load(which); return call(slot, { ...msg, which }); }),   // one call of the .wasm `which` in a worker of the pool (the cache of the detections)
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
     fs: {
       async _call(msg, transfer) {
@@ -309,6 +310,7 @@ export function createFeatPool(opts) {
       async read(path) { return (await this._call({ op: "fs.read", path })).bytes; },
       async exists(path) { return (await this._call({ op: "fs.stat", path })).size >= 0; },
       remove(path) { return this._call({ op: "fs.remove", path }); },
+      trim(dir, cap) { return this._call({ op: "fs.trim", dir, cap }); },   // keeps the newest files of the folder within `cap` bytes (0 empties it): { freed }
     },
     cancel() {                                  // everything stops: running jobs are lost with their workers, the queued ones are rejected
       st.cancelled = true;
@@ -467,6 +469,11 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
+  async file_key(m) { const f = await openAll([m.path]), w = mods[m.which]; try { return { text: (m.which === "untargeted" ? w.file_key_untargeted : w.file_key)(f.read, f.sizes[0], m.name, m.recipe) }; } finally { f.close(); } },
+  async check_stored(m) { return { text: mods[m.which].check_stored(new Uint8Array(m.bytes), m.key) }; },
+  async "fs.trim"(m) { const dir = await dirOf(m.dir.split("/").filter(Boolean), true), all = []; let freed = 0;
+    for await (const [n, h] of /** @type {any} */ (dir).entries()) if (h.kind === "file") all.push({ n, f: await h.getFile() });
+    let size = all.reduce((a, x) => a + x.f.size, 0); for (const x of all.sort((a, b) => a.f.lastModified - b.f.lastModified)) if (size > m.cap) { await dir.removeEntry(x.n); size -= x.f.size; freed += x.f.size; } return { freed }; },
   attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", write)),
   attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
   attributio_ms2: m => viaFiles(m, (read, write) => mods.attributio_ms2.ms2_to(read, m.names, m.request, write)),
