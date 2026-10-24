@@ -70,6 +70,7 @@
     "../../mzlab/web/legende.js",
     "../../mzlab/web/grafici.js",
     "../../mzlab/web/picchi.js",
+    "../../mzlab/web/etichette-picchi.js",
     "../../mzlab/web/comandi.js",
     "../../mzlab/web/storia.js",
     "../../mzlab/web/asse.js",

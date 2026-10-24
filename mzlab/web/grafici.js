@@ -331,7 +331,7 @@ async function drawLines(p) {
   const U = (s, v) => s.off + v / s.sc;
   const yzf = !!p.zoomY && !stk && !logy;                       // y zoom (box, or drag on the numbers at the left of the axis): tall peaks are cut at the top
   const nrm = !stk && !!p.norm100 && !p.log;
-  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels
+  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
   if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
@@ -435,6 +435,7 @@ async function drawLines(p) {
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
     const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area) }) }); g.font = fpx(12);
   }
+  if (window.ETPK && !cas) ETPK.draw(p, g, sr, { X, Y, U, x0, x1, W });                // RT + m/z or nm of the main peaks (etichette-picchi.js)
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
     let top = 0; sr.forEach(s => { const i = nearIdx(s.x, a.x); top = Math.max(top, U(s, s.ys[i])); });

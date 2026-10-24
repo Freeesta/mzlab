@@ -214,6 +214,7 @@ interface Window {
   DDA: typeof DDA;
   DISP: typeof DISP;
   ELEM: typeof ELEM;
+  ETPK: typeof ETPK;
   FEATURES: typeof FEATURES;
   HR: typeof HR;
   INF: typeof INF;

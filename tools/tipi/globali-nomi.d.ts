@@ -64,6 +64,7 @@ declare var ELEM: any;
 declare var ELEMENTS: any;
 declare var ESC: any;
 declare var ESP: any;
+declare var ETPK: any;
 declare var EXPN: any;
 declare var EXPORTING: any;
 declare var EXPORT_LIGHT: any;

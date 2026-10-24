@@ -101,6 +101,7 @@ pub mod peakq;
 mod peakq_reach_test;
 pub mod peaks;
 pub mod peakext;
+pub mod etichette_picchi;
 pub mod signal;
 pub mod sortc;
 pub mod spare;
