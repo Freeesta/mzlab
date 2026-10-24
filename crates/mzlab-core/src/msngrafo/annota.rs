@@ -418,12 +418,50 @@ fn preferisci_pari(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
     cambiato
 }
 
+/// Fewest nodes with one formula needed to estimate the systematic error of the instrument.
+const MIN_PER_OFFSET: usize = 5;
+/// Scatter (ppm) left around the systematic error once it is removed.
+const RESIDUO_PPM: f64 = 3.0;
+
+/// The error of the instrument is mostly systematic: the median ppm of the nodes with one narrow-window candidate is taken out, and a narrow-window
+/// candidate more than `RESIDUO_PPM` from it leaves (a chance match of the dense sub-formula lattice is not). Nothing happens under
+/// `MIN_PER_OFFSET` such nodes or when the window is not wider than the residue. True when a candidate left.
+fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
+    if o.ppm_formula <= RESIDUO_PPM {
+        return false;
+    }
+    let mut v: Vec<f64> = st.ordine[1..]
+        .iter()
+        .filter(|&&j| !st.utente[j] && st.cand[j].len() == 1 && st.cand[j][0].stretto)
+        .map(|&j| st.cand[j][0].ppm)
+        .collect();
+    if v.len() < MIN_PER_OFFSET {
+        return false;
+    }
+    crate::sortc::slice_by(&mut v, |a, b| a.total_cmp(b));
+    let offset = v[v.len() / 2];
+    let mut cambiato = false;
+    for k in 1..st.ordine.len() {
+        let j = st.ordine[k];
+        if st.utente[j] {
+            continue;
+        }
+        let n = st.cand[j].len();
+        st.cand[j].retain(|x| !x.stretto || (x.ppm - offset).abs() <= RESIDUO_PPM);
+        cambiato |= st.cand[j].len() < n;
+    }
+    cambiato
+}
+
 /// The formulas of the nodes below root `r` (counts `rc`) and of their losses; the nodes they do not explain leave the graph.
 pub(super) fn annota(g: &mut Grafo, e: &Elementi, r: usize, rc: Vec<u32>, o: &Opzioni) {
     let mut st = stato(g, e, r, &rc, o);
     scelte(g, &mut st, o);
     while passo(g, &mut st, o) {}
     if preferisci_pari(g, &mut st, o) {
+        while passo(g, &mut st, o) {}
+    }
+    if ricalibra(&mut st, o) {
         while passo(g, &mut st, o) {}
     }
     for k in 1..st.ordine.len() {
