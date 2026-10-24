@@ -326,6 +326,8 @@ mod tests;
 #[cfg(test)]
 mod tests_cerca;
 #[cfg(test)]
+mod tests_esche;
+#[cfg(test)]
 mod tests_formule;
 #[cfg(test)]
 mod tests_interpreta;
