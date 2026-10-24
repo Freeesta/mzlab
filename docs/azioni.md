@@ -18,10 +18,10 @@ Generato da `python3 tools/doc_comandi.py` dalla tabella `COMANDI_TAB` di `mzlab
 | `spec.isotopes` | correzione (`storia.campi`) | `spettro.js` | isotope simulation and resolution | iso | - | - | command: do / undo handler (comandi.js) |
 | `spec.background` | fondo (`storia.fondo`) | `fondo-spettro.js` | background window of the spectrum | bg, bw0, bw1, bwi | - | - | command: do / undo handler (comandi.js) |
 | `peaks.noise` | integrazione (`storia.int`) | `eventi.js` | noise stretch of an integration | noise | - | - | undo with a snapshot (storia.js) |
-| `xic.traces` | correzione (`storia.campi`) | `pannelli.js` | add, remove, label, window and unit of the XIC traces (the split into panels is not undone) | traces | X | - | command: do / undo handler (comandi.js) |
+| `xic.traces` | correzione (`storia.campi`) | `pannelli-annulla.js` | add, remove, label, window and unit of the XIC traces (the split into panels is not undone) | traces | X | - | command: do / undo handler (comandi.js) |
 | `series.visibility` | correzione (`storia.campi`) | `grafici.js` | hide or show a series from the legend | hid, showHid | - | - | command: do / undo handler (comandi.js) |
 | `panel.link` | correzione (`storia.campi`) | `eventi.js` | freeze or relink the live spectrum | link, src | - | - | command: do / undo handler (comandi.js) |
-| `panel.rename` | pannello (`storia.pannello`) | `pannelli.js` | title of the panel | title | - | - | command: do / undo handler (comandi.js) |
+| `panel.rename` | pannello (`storia.pannello`) | `pannelli-annulla.js` | title of the panel | title | - | - | command: do / undo handler (comandi.js) |
 | `panel.open` | pannello (`storia.pannello`) | `pannelli.js` | create a panel (spectrum, XIC, extracted window) | - | - | - | removal with its own undo / redo (STORIA.tolto) |
 | `map.marks` | marcature (`storia.marcature`) | `mappa.js` | add, move, delete, note, reference of a mark | - | - | a drag is one step | command: do / undo handler (comandi.js) |
 | `files.view` | correzione (`storia.campi`) | `lista-file.js` | visibility, name, colour, group, order of a file | - | - | - | command: do / undo handler (comandi.js) |
