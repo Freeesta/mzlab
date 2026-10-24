@@ -197,17 +197,29 @@ pub(crate) fn build_index_with(
             }
             None => prepare_unknown(path, &mut file, size, &name)?,
         };
-        build_mzml_late(
+        // the peaks that do not fit in `budget` go to a scratch file, so the mzML is decoded once and not once per round
+        let scratch_path = idx.with_extension("mzidx.scratch");
+        let mut scratch = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&scratch_path)
+            .map_err(io)?;
+        let built = build_mzml_late(
             &table,
             BufReader::new(
                 Counted::new(File::open(path).map_err(io)?, size, &mut pace).stopping(stop),
             ),
             &mut out,
             budget,
-            None,
+            Some(&mut scratch),
             late.as_mut()
                 .map(|l| l as &mut dyn FnMut() -> Result<String>),
-        )?;
+        );
+        drop(scratch);
+        let _ = std::fs::remove_file(&scratch_path);
+        built?;
     } else {
         let mut fs = flow_set::file_set(path)?;
         let imp = impronte(&mut fs)?;
