@@ -122,12 +122,13 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .collect();
     let stem = nome
         .rsplit_once('.')
-        .map_or(nome.as_str(), |(s, _)| s)
+        .map_or(&nome[..], |(s, _)| s)
         .to_string();
     let campioni = vec![Campione {
         id: 1,
         nome: stem,
         scansioni: indice.len(),
+        dimensione: None,
     }];
     Ok(Box::new(LettoreRaw {
         raw,
@@ -467,11 +468,7 @@ fn testata(l: &mut LettoreRaw) -> Header {
     }
     let sha1 = l.sha1.clone().flatten();
     let t = opentfraw::mzml::run_terms(&l.raw);
-    let run = l
-        .campioni
-        .first()
-        .map(|c| c.nome.clone())
-        .unwrap_or_default();
+    let run = l.campioni.first().map_or("", |c| &c.nome).to_string();
     let document = crate::raw::metodo_sha1(&l.raw, &mut l.src, &l.nome, sha1.clone());
     let acquired = t
         .start_timestamp

@@ -58,6 +58,7 @@ impl Denso {
                 id: 1,
                 nome: "denso".into(),
                 scansioni: n,
+                dimensione: None,
             }],
             nome,
             buf: Vec::new(),

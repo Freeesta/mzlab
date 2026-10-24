@@ -22,9 +22,12 @@ def test_the_key_is_safe_and_unique():
 
 
 def test_a_sample_is_a_file_with_its_members():
-    r = run("""(()=>{const m=[{name:'a.wiff',blob:new Blob(['xx'])},{name:'a.wiff.scan',blob:new Blob(['yyyy'])}],f=n.sample('a_s1.mzML','k',m,1,7,false);
-      return [f.name,f.mzlabNat.key,f.mzlabNat.c,f.mzlabNat.id,f.mzlabNat.size,n.size(f),n.size(new File(['abc'],'x.mzML'))]})()""")
-    assert r == ["a_s1.mzML", "k", 1, 7, 6, 6, 3]
+    r = run("""(()=>{const m=[{name:'a.wiff',blob:new Blob(['xx'])},{name:'a.wiff.scan',blob:new Blob(['yyyy'])}],
+      f=n.sample('a_s1.mzML','k',m,1,7,false),
+      f_with_sz=n.sample('a_s2.mzML','k',m,2,8,false,500),
+      f_single=n.sample('r.mzML','k',[{name:'r.raw',blob:new Blob(['abc'])}],0,1,false);
+      return [f.name,f.mzlabNat.key,f.mzlabNat.c,f.mzlabNat.id,f.mzlabNat.size,n.size(f),n.size(f_with_sz),n.size(f_single),n.size(new File(['abc'],'x.mzML'))]})()""")
+    assert r == ["a_s1.mzML", "k", 1, 7, None, None, 500, 3, 3]
 
 
 def test_raw_files_become_samples_and_the_rest_goes_on():

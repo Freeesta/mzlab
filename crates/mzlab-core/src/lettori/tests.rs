@@ -39,6 +39,7 @@ fn apri_vuoto(_: FileSet, _: &Limiti) -> Result<Box<dyn Lettore>> {
             id: 1,
             nome: "a".into(),
             scansioni: 0,
+            dimensione: None,
         }],
         indice: vec![],
     }))

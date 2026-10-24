@@ -17,7 +17,7 @@ const PHASES = { 1: "sha", 4: "open", 2: "scans", 3: "chrom" };        // the ph
 const SHOWN = { sha: "read", open: "open", scans: "scans", chrom: "chrom" };  // the name of the phase the page shows
 
 /** @typedef {{ name: string, store: string, size: number, mtime?: number, sha256?: string, sha1?: string, probe?: string }} StubMember (`mtime`: lastModified of the file given; the fingerprints taken during the copy; a stub without them gets them from the engine as before) */
-/** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number }} Stub */
+/** @typedef {{ mzlab: string, ds: string, c: number, id: number, centroid: boolean, members: StubMember[], size: number | null }} Stub */
 
 /** the stub in a File of the archive, or null when it is an ordinary file (an mzML, a member) */
 export async function readStub(/** @type {Blob} */ f) {
@@ -170,7 +170,7 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
       if (o) [member.sha256, member.sha1, member.probe] = o;
     }
     /** @type {Stub} */
-    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: total };
+    const st = { mzlab: MAGIC, ds: nat.key, c: nat.c, id: nat.id, centroid: !!nat.centroid, members, size: nat.size != null ? nat.size : null };
     stubs.delete(m.name);
     return ARCH.put("files", m.name, new TextEncoder().encode(JSON.stringify(st)));
   }

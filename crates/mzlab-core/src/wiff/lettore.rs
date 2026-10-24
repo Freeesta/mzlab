@@ -2,7 +2,7 @@
 //! the `.wiff.scan` never, a scan reads only its own block. One `Campione` per injection; the index lists the scans (the MRM blocks are chromatograms).
 
 use super::window::Window;
-use super::{container, samples, scan, Record, Wiff};
+use super::{container, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::{
@@ -284,10 +284,21 @@ pub fn apri_solo(
         if solo.is_none_or(|c| c == i) {
             build(&mut parte, &mut scan, scan_len, membro)?;
         }
+        let nome_campione = ole
+            .read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
+            .and_then(|b| {
+                crate::metodo_wiff::counted_strings(&b)
+                    .into_iter()
+                    .next()
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+            })
+            .unwrap_or_else(|| format!("{nome} #{s}"));
         campioni.push(Campione {
             id: s,
-            nome: format!("{nome} #{s}"),
+            nome: nome_campione,
             scansioni: parte.scans.len(),
+            dimensione: None,
         });
         parti.push(parte);
     }

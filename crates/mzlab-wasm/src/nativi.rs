@@ -73,10 +73,7 @@ impl Membri {
         sizes: &[f64],
         read: Function,
     ) -> Result<Membri, JsValue> {
-        let names: Vec<String> = names
-            .iter()
-            .map(|v| v.as_string().unwrap_or_default())
-            .collect();
+        let names: Vec<String> = names.iter().flat_map(|v| v.as_string()).collect();
         if names.len() != sizes.len() || names.is_empty() {
             return Err(error_json(
                 &mzlab_core::Error::new("err.file.notAccepted")
@@ -245,13 +242,17 @@ pub fn native_samples(
         .str(&format!("{:?}", l.formato()))
         .raw(",\"samples\":[");
     for (i, s) in l.campioni().iter().enumerate() {
-        o.raw(if i > 0 { ",{\"id\":" } else { "{\"id\":" })
+        let p = if i > 0 { ",{\"id\":" } else { "{\"id\":" };
+        o.raw(p)
             .int(i64::from(s.id))
             .raw(",\"name\":")
             .str(&s.nome)
             .raw(",\"scans\":")
-            .int(s.scansioni as i64)
-            .raw("}");
+            .int(s.scansioni as i64);
+        if let Some(dim) = s.dimensione {
+            o.raw(",\"size\":").int(dim as i64);
+        }
+        o.raw("}");
     }
     o.raw("]}");
     Ok(o.0)

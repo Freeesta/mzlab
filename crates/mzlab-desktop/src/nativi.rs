@@ -60,8 +60,11 @@ pub(crate) fn samples(members: &[(String, PathBuf)]) -> Result<String> {
             .raw(",\"name\":")
             .str(&s.nome)
             .raw(",\"scans\":")
-            .int(s.scansioni as i64)
-            .raw("}");
+            .int(s.scansioni as i64);
+        if let Some(dim) = s.dimensione {
+            o.raw(",\"size\":").int(dim as i64);
+        }
+        o.raw("}");
     }
     o.raw("]}");
     Ok(o.0)

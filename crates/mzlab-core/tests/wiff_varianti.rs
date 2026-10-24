@@ -227,3 +227,19 @@ fn damaged_files_are_refused_or_read_never_a_panic() {
         try_open(wiff.clone(), scan[..cut].to_vec());
     }
 }
+
+#[test]
+fn wiff_campioni_nomi_data() {
+    let Some((dir, _)) = reference() else { return };
+    let l = lettori::apri(set(&dir, "nomi"), &Limiti::sito()).unwrap();
+    let campioni = l.campioni();
+    assert_eq!(campioni.len(), 5);
+    assert_eq!(campioni[0].nome, "Sample_A");
+    assert_eq!(campioni[1].nome, "Sample_B");
+    assert_eq!(campioni[2].nome, "nomi.wiff #3");
+    assert_eq!(campioni[3].nome, "nomi.wiff #4");
+    assert_eq!(campioni[4].nome, "Sample_A");
+    for c in campioni {
+        assert_eq!(c.dimensione, None);
+    }
+}
