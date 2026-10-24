@@ -138,22 +138,14 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     let top = ys.iter().cloned().fold(0.0, f64::max);
     let need = (p.snr * noise).max(p.rel_prominence * top);
     // local maxima and their prominence
+    let (left_min, right_min) = (reach_min(&ys, false), reach_min(&ys, true));
     let mut cand: Vec<(usize, f64)> = Vec::new();
     for j in 1..n - 1 {
         if !(ys[j] > ys[j - 1] && ys[j] >= ys[j + 1] && ys[j] > 0.0) {
             continue;
         }
-        let (mut lm, mut k) = (ys[j], j);
-        while k > 0 && ys[k - 1] <= ys[j] {
-            k -= 1;
-            lm = lm.min(ys[k]);
-        }
-        let left = lm; // lowest point between the apex and the next higher point on the left (or the start)
-        let (mut rm, mut k) = (ys[j], j);
-        while k + 1 < n && ys[k + 1] <= ys[j] {
-            k += 1;
-            rm = rm.min(ys[k]);
-        }
+        // lowest point between the apex and the next higher point on each side (or the trace end)
+        let (left, rm) = (left_min[j], right_min[j]);
         let prom = ys[j] - left.max(rm);
         if prom >= need {
             cand.push((j, prom));
@@ -204,6 +196,28 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     out
 }
 
+/// For every point, the lowest value from it to the nearest strictly higher point on its left (`rev` = false) or right, ends included; one pass
+/// with a stack, the same minima as walking out from each point.
+fn reach_min(ys: &[f64], rev: bool) -> Vec<f64> {
+    let n = ys.len();
+    let mut out = vec![0.0; n];
+    let mut stack: Vec<(f64, f64)> = Vec::new();
+    for t in 0..n {
+        let i = if rev { n - 1 - t } else { t };
+        let mut m = ys[i];
+        while let Some(&(v, vm)) = stack.last() {
+            if v > ys[i] {
+                break;
+            }
+            m = m.min(vm);
+            stack.pop();
+        }
+        out[i] = m;
+        stack.push((ys[i], m));
+    }
+    out
+}
+
 /// Index of the lowest point of `ys` strictly between the apexes `a` and `b` (the first one on a tie).
 fn valley(ys: &[f64], a: usize, b: usize) -> usize {
     let mut v = a + 1;
@@ -219,6 +233,29 @@ fn valley(ys: &[f64], a: usize, b: usize) -> usize {
 mod tests {
     use super::*;
     use crate::peaks::{detect_peaks, Params};
+
+    /// `reach_min` against walking out from each point.
+    #[test]
+    fn reach_min_matches_the_walk() {
+        let mut seed = 11u64;
+        for n in [1usize, 2, 3, 50, 700] {
+            let ys: Vec<f64> = (0..n).map(|i| ((lcg(&mut seed) * 4.0).round() + (i % 40) as f64 * 0.1).max(0.0)).collect();
+            let (l, r) = (reach_min(&ys, false), reach_min(&ys, true));
+            for j in 0..n {
+                let (mut lm, mut k) = (ys[j], j);
+                while k > 0 && ys[k - 1] <= ys[j] {
+                    k -= 1;
+                    lm = lm.min(ys[k]);
+                }
+                let (mut rm, mut k) = (ys[j], j);
+                while k + 1 < n && ys[k + 1] <= ys[j] {
+                    k += 1;
+                    rm = rm.min(ys[k]);
+                }
+                assert_eq!((l[j].to_bits(), r[j].to_bits()), (lm.to_bits(), rm.to_bits()), "n={n} j={j}");
+            }
+        }
+    }
 
     /// Deterministic noise in [-1, 1).
     fn lcg(seed: &mut u64) -> f64 {
