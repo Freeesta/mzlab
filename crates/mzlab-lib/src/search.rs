@@ -4,8 +4,8 @@
 use crate::clean::{clean, weighted, CleanOpts};
 use crate::error::Result;
 use crate::io::Source;
-use crate::read::Library;
 use crate::pair_score::{pair_scores_prepared, Prepared};
+use crate::read::Library;
 use crate::scores::{common_losses, modified_cosine, pair_term, ModCosine, Spec};
 use crate::sortutil;
 use std::ops::Range;
