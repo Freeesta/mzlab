@@ -21247,3 +21247,4 @@
 {"v":1,"ts_utc":"2026-10-24T11:35:01Z","tipo":"carico","k":"2026-10-24T11:3","job_in_coda":0,"job_in_corso":19}
 {"v":1,"ts_utc":"2026-10-24T11:45:47Z","azione":"aperta","tipo":"pr","pr":1687,"sha":"69fb0cd9671e8fb15d14c0972d68a1c6dd17c4db"}
 {"v":1,"ts_utc":"2026-10-24T11:50:50Z","azione":"push","titolo":"MSn graph: move the narrowing rules to annota/ricalibra.rs (file size limit)","merge_main":false,"aree":{"rust":2},"tipo":"pr","pr":1685,"sha":"05f89b40d70fb1617691e33f42fec00470272723"}
+{"v":1,"ts_utc":"2026-10-24T11:56:59Z","azione":"aperta","tipo":"pr","pr":1688,"sha":"92ce77167ca24dedc912685b11f0b614bdf55fb1"}
