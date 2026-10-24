@@ -424,7 +424,7 @@ const MIN_PER_OFFSET: usize = 5;
 const RESIDUO_PPM: f64 = 3.0;
 
 /// The error of the instrument is mostly systematic: the median ppm of the nodes with one narrow-window candidate is taken out, and a narrow-window
-/// candidate more than `RESIDUO_PPM` from it leaves (a chance match of the dense sub-formula lattice is not). Nothing happens under
+/// candidate more than the residue (`RESIDUO_PPM`, wider for a noisy instrument) from it leaves (a chance match of the dense sub-formula lattice is not). Nothing happens under
 /// `MIN_PER_OFFSET` such nodes or when the window is not wider than the residue. True when a candidate left.
 fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
     if o.ppm_formula <= RESIDUO_PPM {
@@ -440,6 +440,13 @@ fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
     }
     crate::sortc::slice_by(&mut v, |a, b| a.total_cmp(b));
     let offset = v[v.len() / 2];
+    // a noisy instrument keeps a wider residue: 2.5 sigmas read from the lower quartile of the deviations (0.3186 sigma for a normal scatter, and chance matches do not inflate it), never below RESIDUO_PPM
+    let mut dev: Vec<f64> = v.iter().map(|x| (x - offset).abs()).collect();
+    crate::sortc::slice_by(&mut dev, |a, b| a.total_cmp(b));
+    let residuo = RESIDUO_PPM.max(2.5 * dev[dev.len() / 4] / 0.3186);
+    if residuo >= o.ppm_formula {
+        return false;
+    }
     let mut cambiato = false;
     for k in 1..st.ordine.len() {
         let j = st.ordine[k];
@@ -447,7 +454,7 @@ fn ricalibra(st: &mut Stato, o: &Opzioni) -> bool {
             continue;
         }
         let n = st.cand[j].len();
-        st.cand[j].retain(|x| !x.stretto || (x.ppm - offset).abs() <= RESIDUO_PPM);
+        st.cand[j].retain(|x| !x.stretto || (x.ppm - offset).abs() <= residuo);
         cambiato |= st.cand[j].len() < n;
     }
     cambiato
