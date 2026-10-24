@@ -227,10 +227,7 @@ function ibkChip(p) {
   (p.corrbar || p.leg).appendChild(chip);
 }
 // hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (comandi.js)
-COMANDI.gestore("series.visibility", {
-  leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]),
-  applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; },
-});
+COMANDI.gestore("series.visibility", { leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]), applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; } });
 // the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
 function ibkSpectra(p) {
   const ib = ibOf(p); if (!ib) return;

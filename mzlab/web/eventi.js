@@ -281,10 +281,7 @@ function liveSpec(s, from) {
   draw(s); uiSave();
 }
 // freezing or following another panel from the menu / the bar is one undoable action (comandi.js); newSpec freezes the old live ones without a step of their own
-COMANDI.gestore("panel.link", {
-  leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]),
-  applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); },
-});
+COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); } });
 /** @param {any} s */
 const spLinkFreeze = s => COMANDI.fai("panel.link", s, () => freezeSpec(s));
 /** @param {any} s @param {any} from */
