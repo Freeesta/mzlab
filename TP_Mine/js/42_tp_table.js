@@ -64,16 +64,18 @@
   const tt = (/** @type {string | undefined} */ k) => k && G.TPHELP ? ` data-tt="${k}"` : "";
   const plain = (/** @type {string} */ html) => { const t = document.createElement("template"); t.innerHTML = html; return (t.content.textContent || "").replace(/\s+/g, " ").trim(); };
 
+  /** same order as `localeCompare` without arguments, but the collator is built once */
+  const collator = new Intl.Collator();
   /** rows ordered by the sort value of a column (empty values last, ties in the original order) */
   function sortRows(/** @type {any[]} */ rows, /** @type {any} */ c, /** @type {number} */ dir) {
     if (!c || !c.sort) return rows;
-    const f = c.sort, v = new Map(rows.map((r, i) => [r, { v: f(r), i }]));
-    return [...rows].sort((a, b) => {
-      const x = /** @type {any} */ (v.get(a)), y = /** @type {any} */ (v.get(b));
+    const f = c.sort, v = rows.map((r, i) => ({ r, v: f(r), i }));
+    v.sort((x, y) => {
       if (x.v == null || y.v == null) return x.v == null && y.v == null ? x.i - y.i : x.v == null ? 1 : -1;
-      const d = typeof x.v === "string" ? x.v.localeCompare(y.v) : x.v - y.v;
+      const d = typeof x.v === "string" ? collator.compare(x.v, y.v) : x.v - y.v;
       return d ? d * dir : x.i - y.i;
     });
+    return v.map(x => x.r);
   }
 
   /**
