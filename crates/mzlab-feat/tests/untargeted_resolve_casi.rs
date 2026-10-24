@@ -97,6 +97,47 @@ fn peak_longer_than_one_minute_is_dropped() {
 }
 
 #[test]
+fn peak_longer_than_one_minute_is_kept_when_duration_roof_is_raised() {
+    let rt = axis(N);
+    let long = polyline(&[(100, 3e4), (170, 3e5), (240, 3e4)]); // 1.40 min
+    let p = MinParams::default();
+    assert!(
+        resolve(&chrom(long.clone()), &rt, &p).is_empty(),
+        "dropped with default (0, 1.0)"
+    );
+
+    let raised = MinParams::default().with_max_duration(2.0);
+    let kept = resolve(&chrom(long.clone()), &rt, &raised);
+    assert_eq!(
+        kept.len(),
+        1,
+        "kept when duration roof is raised to 2.0 min"
+    );
+    assert_eq!(kept[0].scans, (100, 240));
+    assert!((kept[0].rt_end - kept[0].rt_start - 1.40).abs() < 1e-12);
+
+    let explicit_pair = MinParams::default().with_duration((0.0, 2.0));
+    let kept_pair = resolve(&chrom(long), &rt, &explicit_pair);
+    assert_eq!(kept_pair, kept);
+}
+
+#[test]
+fn default_params_give_identical_output_to_explicit_defaults() {
+    let rt = axis(N);
+    let ok = polyline(&[(100, 3e4), (145, 3e5), (190, 3e4)]);
+    let def = resolve(&chrom(ok.clone()), &rt, &MinParams::default());
+    let explicit = resolve(
+        &chrom(ok),
+        &rt,
+        &MinParams {
+            duration: (0.0, 1.0),
+            ..MinParams::default()
+        },
+    );
+    assert_eq!(def, explicit);
+}
+
+#[test]
 fn shape_filters() {
     let rt = axis(N);
     let p = MinParams::default();

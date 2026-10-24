@@ -36,6 +36,14 @@ impl Default for CentWave {
     }
 }
 
+impl CentWave {
+    /// Sets the range of the full width at half maximum of the peaks, seconds.
+    pub fn with_width_s(mut self, width_s: (f64, f64)) -> Self {
+        self.width_s = width_s;
+        self
+    }
+}
+
 /// Number of scales between the narrowest and the widest peak.
 const SCALES: usize = 6;
 /// FWHM of a Gaussian over its standard deviation.
