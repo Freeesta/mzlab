@@ -135,12 +135,12 @@ fn invented_peaks_get_no_formula_where_a_co_isolated_fragment_keeps_it() {
 
 #[test]
 fn decoys_mixed_with_the_fragments_leave_most_of_them_without_a_formula() {
-    // measured on a drug-sized root: 28 of the 80 decoys (shifts of 0.02-0.11 Da) hold a candidate at 10 ppm, the 16 targets all keep theirs
+    // measured on a drug-sized root: 10 ppm alone lets 28 of the 80 decoys (shifts of 0.02-0.11 Da) hold a candidate; with the recalibration 18 do, and the 16 targets all keep theirs
     let mut esche = 0;
     for d in [0.02, 0.03, 0.05, 0.07, 0.11] {
         let (bersagli, e) = misto(d);
         assert_eq!(bersagli, 16, "targets at {d}");
         esche += e;
     }
-    assert!((20..=35).contains(&esche), "{esche} of 80 decoys");
+    assert!((10..=20).contains(&esche), "{esche} of 80 decoys");
 }
