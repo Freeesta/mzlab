@@ -145,7 +145,7 @@ Stato (19/10): il privato è riordinato: dati in `dati/` (formati in `dati/forma
   Le verità stanno in `scratchpad/rosina/verita/` con lo stesso percorso relativo a `dati/formati/` (`<file>.verita.json`). Produttori: `thermo`, `sciex`, `agilent`, `waters`, `bruker`, `shimadzu`, `leco`, `aperti` (mzML, mzXML, mzData, imzML, netCDF senza produttore noto). Nell'indice lo strumento è quello letto nel file, non quello dichiarato dal deposito (spesso sbagliato, vedi `INDICE.md`).
 - **Indice unico** `dati/formati/INDICE.tsv` (da cui si genera `INDICE.md`): `percorso`, `produttore`, `modello_nel_file`, `versione_formato`, `esperimenti` (vocabolario chiuso: `fullscan`, `sim`, `mrm`, `smrm`, `ms2`, `dda`, `dia`, `mse`, `prm`, `pis`, `nl`, `epi`, `ms3`, `ims`, `uv`, `analogico`, `polarita-mista`, `lockmass`, `profilo`, `centroidi`, `gc`, `imaging`).
   Altre colonne: `fonte`, `accession`, `doi`, `licenza`, `ridistribuibile` (`si`, `no`, `da-verificare`), `byte`, `sha256` (file o manifest), `url`, `riferimento` (`nessuno`, `autori`, `msconvert-<v>`, `trfp-<v>`, …), `verita` (`si`/`no`), `note`.
-- **File grandi fuori da git**: `dati/formati/GRANDI.tsv` (stesse colonne + `destinazione`; assorbe i quattro `_grandi_*.tsv`) e lo script `tools/rosina/scarica.py GRANDI.tsv DEST` del repository pubblico (nessun dato dentro: legge l'elenco, scarica con ripresa, controlla byte e checksum, rifiuta oltre il tetto di `controlla_tetto.sh`). Sul Mac i grandi stanno in `~/mzLab/rosina-dati/` (tetto 20 GB); nel privato vanno solo file ≤ 90 MB (regola di `tools/controlla_dati.py`) e le verità.
+- **File grandi fuori da git**: `dati/formati/GRANDI.tsv` (stesse colonne + `destinazione`; assorbe i quattro `_grandi_*.tsv`) e lo script `tools/rosina/scarica.py GRANDI.tsv DEST` del repository pubblico (nessun dato dentro: legge l'elenco, scarica con ripresa, controlla byte e checksum, rifiuta oltre il tetto di `controlla_tetto.sh`). Sul Mac i grandi stanno in `/Volumes/Fred/rosina/` (tetto 20 GB); nel privato vanno solo file ≤ 90 MB (regola di `tools/controlla_dati.py`) e le verità.
 - **Repository pubblico**: solo file sintetici (`tools/*_sintetico.py`, già per ogni famiglia) e, dopo il controllo della licenza da parte di Federico, piccoli file CC0/CC-BY/MIT/Apache (≤ 2 MB ciascuno, ≤ 10 MB in tutto, proposti dalla chat DEV del lettore) in `tests/formati/` con `ATTRIBUZIONI.md`, senza nomi di persone o di campioni clinici. Le fixture di ProteoWizard e i file «EBI terms of use» restano privati; una licenza non dichiarata vuol dire nessuna ridistribuzione.
 - **Elenchi da scaricare** (ELENCO-1, …): `coordinamento/dati_esterni/rosina/`.
 - **Licenze**: `dati/formati/_licenze/` con il testo della licenza di ogni fonte e degli SDK usati come oracoli.
@@ -156,7 +156,7 @@ Prompt in `docs/studi/PROMPT_ROSINA/` (regole comuni come quelle dei pacchetti D
 
 | # | Pacchetto | Tocca | Dipende da | Chi scarica / produce verità |
 |---|---|---|---|---|
-| LOC-1 | **Fatto il 19/10**: ELENCO-1 sul Mac, MassIVE contato (A.4), oracoli provati (`ORACOLI.md` del privato) | `~/mzLab/rosina-dati/`, privato | — | chat locale |
+| LOC-1 | **Fatto il 19/10**: ELENCO-1 sul Mac, MassIVE contato (A.4), oracoli provati (`ORACOLI.md` del privato) | `/Volumes/Fred/rosina/`, privato | — | chat locale |
 | R-00 | Banco comune: formato `verita/1`, `tools/rosina/` (verità da mzML e da TRFP, scaricamento, indice), test Rust `verita.rs` per famiglia, confronto dei metadati, bersagli fuzz di `mzlab-lettori`, workflow notturno del privato | `tools/rosina/`, `crates/mzlab-lettori/tests/`, `fuzz/`, privato | — | — |
 | LOC-2 | Oracoli su tutto il corpus: JSON e mzML di TRFP sul Mac; msconvert (senza peak picking e con `peakPicking vendor`) e 1/K0 di `timsdata` su Windows (Parallels); verità con gli script di R-00; scala (dimensioni, tempi, RAM) | privato | R-00, LOC-1 | chat locale e Federico, guidati dal Coordinatore |
 | R-01 | Convertitore mzML: validazione XSD e semantica, profilo/centroidi dichiarati, andata e ritorno con lettori terzi | `lettori_mzml`, `lettori_centroidi`, scrittori | R-00 | — |
@@ -194,7 +194,7 @@ Esito per file: `L` (F0-F5 contro V1 o V2), `P` (manca un livello, scritto), `NV
 ### F.3 Dove gira
 - **CI pubblica** (`test.yml`): F0-F4 e F6 sui sintetici e sui piccoli pubblici; F5 sui documenti `metodo/1` dei sintetici.
 - **CI privata** (workflow notturno in `mzlab-dati`, testo in `rosina/WORKFLOW_NOTTE.md`): checkout di `Freeesta/mzlab` `main`, `cargo test -p mzlab-lettori --features tutte --test 'verita_*'` (un test per famiglia, `tests/verita_<famiglia>.rs`) su ogni `scratchpad/rosina/verita/**/*.verita.json` (file ≤ 90 MB); il riassunto (formato × livello) in un artefatto, mai nel pubblico.
-- **Locale** (Mac): F8 e i file in `~/mzLab/rosina-dati/`, con lo stesso test e `MZLAB_DATI_GRANDI=<percorso>`.
+- **Locale** (Mac): F8 e i file in `/Volumes/Fred/rosina/`, con lo stesso test e `MZLAB_DATI_GRANDI=<percorso>`.
 
 ### F.4 Casi limite: ogni cella vuota è «nessun file», da cercare
 | Caso | Thermo | SCIEX | Agilent | Waters | Bruker | Shimadzu |
