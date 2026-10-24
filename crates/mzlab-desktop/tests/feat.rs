@@ -235,6 +235,11 @@ fn dig_and_views(e: &Env, proofs: &[u8], registry: &str, files_json: &str, paren
             json!({"kind": "view", "samples": samples, "spec": ""})
         )
         .contains("\"righe\""));
+    let tp = e.r(
+        "feat/table",
+        json!({"kind": "tp_table", "samples": samples, "spec": ""}),
+    );
+    assert!(tp.contains("tptab/1"), "{tp}");
     assert!(e.st.rpc("feat/nope", &json!({}), &[]).is_err());
     assert!(e
         .r(

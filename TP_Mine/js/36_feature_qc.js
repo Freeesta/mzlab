@@ -119,6 +119,7 @@
       rows: async (/** @type {string} */ spec) => JSON.parse(await V("export", spec, { export_kind: "xlsx_rows" })).hojas[0].filas,
       report: async (/** @type {string} */ spec) => JSON.parse(await V("report", spec)),
       row: async (/** @type {number} */ id) => JSON.parse(await V("row", "", { id })),
+      tpTable: async () => JSON.parse(await V("tp_table", "")),
       plausible: async () => JSON.parse(await V("plausible", "", { options: plausibleOptions(a) })),
       traces: async (/** @type {number} */ id, /** @type {number} */ ppm) => JSON.parse(await tracesVia(a, bytes, samples, id, ppm)),
       composition: (/** @type {number[]} */ mz, /** @type {number[]} */ y, /** @type {number} */ featureMz, /** @type {string} */ params) => compositionVia(a, mz, y, featureMz, params),
