@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Brackets of a partial structure (a piece with a change whose position is unknown, «+O -H2»): square brackets around a set of points, the delta at the upper
 // right (the lower right is where the editors write formula and mass), and optional dashed bonds (an attachment to «any atom of the ring»). Pure SVG drawing,
 // no editor behind it: the Disegno tab draws it over Ketcher (disegno-parziali.js) and mzFinder can draw the same on its own structures. Coordinates are in the
