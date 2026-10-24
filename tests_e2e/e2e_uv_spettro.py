@@ -1,5 +1,5 @@
 """UV spectrum of the DAD: a double click on the PDA map or on the PDA trace of a SCIEX .wiff opens the UV spectrum (nm, mAU) of that time under the graph, with its
-table of the data; a file with only the PDA trace (no optical matrix) answers with a clear message and opens nothing. Synthetic pair (tools/wiff_riferimento.py)."""
+table of the data; a file with only the PDA trace (no optical matrix) answers with a clear message and opens nothing. Synthetic pair (tools/wiff_riferimento.py); the demo FullScan_t10.mzML carries its matrix in the TWC chromatogram."""
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from pathlib import Path
@@ -196,6 +196,32 @@ try:
             attendi(pg, "/DAD/.test(document.body.innerText)")
             assert pg.evaluate("E.panels.filter(q=>q.type==='chrom').length") == 1
         step("a file with only the PDA trace: a clear message and no panel", no_matrix)
+        pg.close()
+        pg = r.page(p)
+        stage(pg, [ROOT / "mzlab" / "web" / "esempi" / "FullScan_t10.mzML"]); pg.click("text=Carica dati"); ready(pg)
+        CH = "E.panels.find(q=>q.type==='chrom')"
+        UVS = "E.panels.filter(q=>q.uv&&q._a)"
+        def demo_uv_at(rt, nm):
+            dbl(pg, CH, rt)
+            attendi(pg, f"(()=>{{const u={UVS}.pop(); return !!u && Math.abs(u._a.uvd.rt - {rt}) < 0.15}})()")
+            a = pg.evaluate(f"(()=>{{const u={UVS}.pop()._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
+            assert a["n"] == 201 and a["nm0"] == 200 and a["nm1"] == 400 and abs(a["rt"] - rt) < 0.1 and abs(a["mx"] - nm) <= 4, a
+        def demo_open():
+            pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
+            attendi(pg, f"{CH}._a && {CH}.kind==='pda'")
+            demo_uv_at(14.30, 224)
+        step("FullScan_t10 demo: double click on the PDA trace at 14.30 min opens the UV spectrum, maximum near 224 nm", demo_open)
+        step("FullScan_t10 demo: at 7.07 min the UV spectrum has its maximum near 248 nm", lambda: demo_uv_at(7.07, 248))
+        def demo_wl():
+            n0 = pg.evaluate("E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length")
+            UV1 = f"{UVS}.pop()"
+            pg.evaluate(f"(()=>{{const u={UV1};u.zoom=[244,252];draw(u);u.cv.focus()}})()"); frames(pg, 3)
+            pg.keyboard.press("x")
+            attendi(pg, f"E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').length === {n0 + 1}")
+            w = pg.evaluate("(()=>{const c=E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop(); return [c.mz0, c.mz1]})()")
+            assert abs(w[0] - 244) < 0.06 and abs(w[1] - 252) < 0.06, w
+            attendi(pg, "E.panels.filter(q=>q.type==='chrom'&&q.kind==='pda').pop()._a")
+        step("FullScan_t10 demo: the trace at 248 +/- 4 nm is created without errors", demo_wl)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
