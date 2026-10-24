@@ -8,12 +8,11 @@
 //!   candidate; `None` without an MS2 (or when the candidate has too many sub-formulas to list);
 //! - `total` = `element_fit` + `ms2_explained` (0 when absent). The two parts are kept apart in the output.
 
-use mzlab_core::composition::{compose, Opts, Ranges};
-use mzlab_core::elements::parse_formula;
-use mzlab_core::json::{parse, round, Out, Value};
-use mzlab_core::subformulas::submasses;
+use mzlab_core::elements::{mass_of, parse_formula};
+use mzlab_core::json::{round, Out, Value};
 
 use super::{TpBlock, ST_UNEXPLAINED};
+use crate::evid::producers::neutral_of;
 
 /// Mass window (ppm) of the formulas of a row, most formulas searched per row, most kept per row.
 pub const PPM: f64 = 5.0;
@@ -24,6 +23,9 @@ const EXTRA_O: i64 = 6;
 const EXTRA_H: i64 = 8;
 /// Tolerance (Da) between a peak of the MS2 and a sub-formula.
 const FRAG_TOL: f64 = 0.01;
+/// Most sub-formulas listed for one candidate, and the mass of the electron.
+const MAX_SUBS: usize = 300_000;
+const ELECTRON: f64 = 0.00054858;
 
 /// A formula candidate of a row.
 #[derive(Debug, Clone, PartialEq)]
@@ -50,9 +52,34 @@ pub fn element_fit(parent: &[(String, u64)], cand: &[(String, u64)]) -> f64 {
     (shared as f64 / c as f64).max(shared as f64 / p as f64)
 }
 
+/// Sorted m/z of the ion of every sub-formula of `ion` (a formula without charge, ion charge `z`); None past `MAX_SUBS` combinations.
+fn sub_masses(ion: &str, z: i32) -> Option<Vec<f64>> {
+    let f = parse_formula(ion).ok()?;
+    let total = f
+        .iter()
+        .try_fold(1usize, |t, x| t.checked_mul(x.1 as usize + 1))?;
+    if total > MAX_SUBS {
+        return None;
+    }
+    let mut mass = vec![0.0f64];
+    for (e, n) in &f {
+        let m = mass_of(e)?;
+        mass = mass
+            .iter()
+            .flat_map(|&b| (0..=*n).map(move |j| b + m * j as f64))
+            .collect();
+    }
+    let mut mz: Vec<f64> = mass[1..]
+        .iter()
+        .map(|&m| (m - f64::from(z) * ELECTRON) / f64::from(z.abs()))
+        .collect();
+    mzlab_core::sortc::by(&mut mz, f64::total_cmp);
+    Some(mz)
+}
+
 /// Share of the intensity of the peaks of an MS2 (`mz`, `it`), the precursor `mz0` excluded, that a sub-formula of the ion explains.
 fn ms2_share(ion: &str, z: i32, spec: &(Vec<f64>, Vec<f64>), mz0: f64) -> Option<f64> {
-    let subs = submasses(ion, z, 0.0).ok()?;
+    let subs = sub_masses(ion, z)?;
     let (mut hit, mut all) = (0.0, 0.0);
     for (&m, &i) in spec.0.iter().zip(&spec.1) {
         if m >= mz0 - FRAG_TOL || i.partial_cmp(&0.0) != Some(std::cmp::Ordering::Greater) {
@@ -67,41 +94,103 @@ fn ms2_share(ion: &str, z: i32, spec: &(Vec<f64>, Vec<f64>), mz0: f64) -> Option
     (all > 0.0).then(|| hit / all)
 }
 
-/// Counts the formulas of a row may have: 0 to the parent's, oxygens and hydrogens a few more, no element the parent lacks.
-fn element_ranges(pf: &[(String, u64)]) -> Ranges {
-    pf.iter()
+/// Hill order: C, H, then the other elements alphabetically; a count of 1 is not written.
+fn formula_text(counts: &[(String, i64)]) -> String {
+    let mut v: Vec<&(String, i64)> = counts.iter().filter(|x| x.1 > 0).collect();
+    mzlab_core::sortc::slice_by_key(&mut v, |x| {
+        (x.0 != "C", x.0 != "H" || x.0 == "C", x.0.clone())
+    });
+    v.iter()
         .map(|(e, n)| {
-            let n = *n as i64;
-            let hi = match e.as_str() {
-                "O" => n + EXTRA_O,
-                "H" => n + EXTRA_H,
-                _ => n,
-            };
-            (e.clone(), (0, hi))
+            if *n == 1 {
+                e.clone()
+            } else {
+                format!("{e}{n}")
+            }
         })
         .collect()
 }
 
-/// A formula of the result of `compose` with its scores.
+/// Ring and double bond count of a neutral formula (C, H, N, P and the halogens count; any other element is left out).
+fn rdbe2(counts: &[(String, i64)]) -> i64 {
+    let at = |e: &str| counts.iter().find(|x| x.0 == e).map_or(0, |x| x.1);
+    let hal: i64 = ["F", "Cl", "Br", "I"].iter().map(|e| at(e)).sum();
+    2 * at("C") + 2 + at("N") + at("P") - at("H") - hal
+}
+
+/// The neutral formulas within `PPM` of the neutral mass `neutral` whose counts stay in `limits` (0 to the parent's, oxygens and hydrogens a few
+/// more; no element the parent lacks), with a whole ring-and-double-bond count of 0 or more. Sorted by |error|, at most `SEARCHED`.
+fn formulas_near(
+    neutral: f64,
+    limits: &[(String, i64)],
+    ion_mz: f64,
+) -> Vec<(Vec<(String, i64)>, f64)> {
+    let tol = ion_mz * PPM * 1e-6;
+    let m = |e: &str| mass_of(e).unwrap_or(0.0);
+    let others: Vec<&(String, i64)> = limits.iter().filter(|x| x.0 != "C" && x.0 != "H").collect();
+    let (cmax, hmax) = limits.iter().fold((0, 0), |a, x| match x.0.as_str() {
+        "C" => (x.1, a.1),
+        "H" => (a.0, x.1),
+        _ => a,
+    });
+    let mut out = Vec::new();
+    let mut cur = vec![0i64; others.len()];
+    loop {
+        let rest = neutral
+            - others
+                .iter()
+                .zip(&cur)
+                .map(|(o, n)| m(&o.0) * *n as f64)
+                .sum::<f64>();
+        for c in 0..=cmax {
+            let h = ((rest - 12.0 * c as f64) / m("H")).round() as i64;
+            let err = rest - 12.0 * c as f64 - h as f64 * m("H");
+            if h < 0 || h > hmax || err.abs() > tol {
+                continue;
+            }
+            let mut counts = vec![("C".to_string(), c), ("H".to_string(), h)];
+            counts.extend(others.iter().zip(&cur).map(|(o, n)| (o.0.clone(), *n)));
+            let r2 = rdbe2(&counts);
+            if r2 >= 0 && r2 % 2 == 0 && counts.iter().any(|x| x.1 > 0) {
+                out.push((counts, err / ion_mz * 1e6));
+            }
+        }
+        let Some(k) = (0..cur.len()).rev().find(|&k| cur[k] < others[k].1) else {
+            break;
+        };
+        cur[k] += 1;
+        cur[k + 1..].iter_mut().for_each(|x| *x = 0);
+    }
+    mzlab_core::sortc::slice_by(&mut out, |a, b| a.1.abs().total_cmp(&b.1.abs()));
+    out.truncate(SEARCHED);
+    out
+}
+
+/// A formula found for a row with its scores.
 fn scored(
-    r: &Value,
+    counts: &[(String, i64)],
+    ppm: f64,
     pf: &[(String, u64)],
     spec: Option<&(Vec<f64>, Vec<f64>)>,
-    z: i32,
     mz: f64,
-) -> Option<FitCandidate> {
-    let neutral = r.get("neutral").and_then(Value::str)?.to_string();
-    let ion_formula = r.get("formula").and_then(Value::str)?.to_string();
-    let fit = element_fit(pf, &parse_formula(&neutral).ok()?);
+    z: i32,
+) -> FitCandidate {
+    let neutral_formula = formula_text(counts);
+    let ion: Vec<(String, i64)> = counts
+        .iter()
+        .map(|(e, n)| (e.clone(), if e == "H" { n + i64::from(z) } else { *n }))
+        .collect();
+    let ion_formula = formula_text(&ion);
+    let fit = element_fit(pf, &parse_formula(&neutral_formula).unwrap_or_default());
     let ms2 = spec.and_then(|s| ms2_share(&ion_formula, z, s, mz));
-    Some(FitCandidate {
-        neutral_formula: neutral,
+    FitCandidate {
+        neutral_formula,
         ion_formula,
-        ppm: r.get("delta_ppm").and_then(Value::f64).unwrap_or(0.0),
+        ppm,
         element_fit: fit,
         ms2_explained: ms2,
         total: fit + ms2.unwrap_or(0.0),
-    })
+    }
 }
 
 /// The best `KEPT` candidates of a row at `mz` for the parent `parent` (neutral formula): ordered by total, then by |ppm|. Empty when the parent
@@ -115,31 +204,25 @@ pub fn candidates(
     let Ok(pf) = parse_formula(parent) else {
         return Vec::new();
     };
-    let o = Opts {
-        elements: Some(element_ranges(&pf)),
-        ion: if polarity < 0 { "[M-H]-" } else { "[M+H]+" },
-        tol: PPM,
-        unit: "ppm",
-        rdb: (0.0, 100.0),
-        max_results: SEARCHED,
-        ..Opts::default()
-    };
-    let Ok(json) = compose(mz, &o) else {
-        return Vec::new();
-    };
-    let Ok(v) = parse(json.as_bytes()) else {
-        return Vec::new();
-    };
+    let limits: Vec<(String, i64)> = pf
+        .iter()
+        .map(|(e, n)| {
+            let n = *n as i64;
+            let hi = match e.as_str() {
+                "O" => n + EXTRA_O,
+                "H" => n + EXTRA_H,
+                _ => n,
+            };
+            (e.clone(), hi)
+        })
+        .collect();
     let spec = spec.map(|(m, i)| (m.to_vec(), i.to_vec()));
     let z = if polarity < 0 { -1 } else { 1 };
-    let mut out: Vec<FitCandidate> = v
-        .get("results")
-        .map(Value::arr)
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|r| scored(r, &pf, spec.as_ref(), z, mz))
+    let mut out: Vec<FitCandidate> = formulas_near(neutral_of(mz, polarity), &limits, mz)
+        .into_iter()
+        .map(|(counts, ppm)| scored(&counts, ppm, &pf, spec.as_ref(), mz, z))
         .collect();
-    out.sort_by(|a, b| {
+    mzlab_core::sortc::slice_by(&mut out, |a, b| {
         b.total
             .total_cmp(&a.total)
             .then(a.ppm.abs().total_cmp(&b.ppm.abs()))
