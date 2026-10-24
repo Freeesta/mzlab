@@ -83,6 +83,7 @@ mod flow_pca_tests;
 mod flow_position;
 #[cfg(test)]
 mod flow_position_tests;
+mod flow_probe;
 mod flow_quant;
 mod flow_reactivity;
 #[cfg(test)]

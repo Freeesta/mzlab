@@ -46,6 +46,18 @@
       list.textContent = "";
       for (const inst of S.plan.steps) { const n = F.liveView.node(inst.id); list.append(slot(inst, n ? F.liveView.look(n).word : "waiting")); }
     };
+    // before Run: how many steps the cache of the last run would give back (the native route flow/reuse looks at the keys, nothing runs); a later answer replaces an earlier one
+    const reuse = el("p", { class: "fl-note", role: "status", "data-reuse": "1" });
+    let asked = 0, due = 0;
+    const preview = async () => {
+      const n = ++asked;
+      if (go.dataset.busy === "1" || S.problems.length) { reuse.textContent = ""; return; }
+      try {
+        const { plan } = F.runPlanFromData(S), a = JSON.parse(await post("flow/reuse", { plan: F.exportText(plan), files: S.samplesJson || {} }));
+        if (n === asked && go.dataset.busy !== "1") reuse.textContent = `${a.reused} step${a.reused === 1 ? "" : "s"} reused, ${a.compute} to compute`;
+      } catch (_) { if (n === asked) reuse.textContent = ""; }
+    };
+    const soon = () => { clearTimeout(due); due = window.setTimeout(preview, 600); };
     const rep = btn("file", "Open the report of the last run", async () => {
       try { F.openResult(await F.lastRunReport()); } catch (e) { note.textContent = F.message(/** @type {any} */ (e)); }
     }, "Report");
@@ -66,13 +78,15 @@
         await F.afterRun(S);
       } catch (e) { list.textContent = ""; note.textContent = F.message(/** @type {any} */ (e)); }
       go.dataset.busy = ""; go.disabled = S.problems.length > 0;
+      soon();
     }, "Run on this computer");
     waiting();
-    const box = el("div", { class: "fl-meta" }, go, rep, note, list);
+    const box = el("div", { class: "fl-meta" }, go, rep, note, reuse, list);
     // a plan with problems does not run: the reason stays next to the button and follows the plan
     const gate = () => {
-      if (!box.isConnected && box.dataset.shown) { document.removeEventListener("flow:changed", gate); return; }
+      if (!box.isConnected && box.dataset.shown) { document.removeEventListener("flow:changed", gate); clearTimeout(due); return; }
       box.dataset.shown = "1";
+      soon();
       const bad = S.problems.length;
       go.disabled = go.dataset.busy === "1" || bad > 0;
       if (bad) note.textContent = `Cannot run yet: the plan has ${bad} problem${bad === 1 ? "" : "s"}. Open the checklist to see what to fix.`;

@@ -462,10 +462,15 @@ try:
             go = 'button[aria-label="Run the plan on this computer"]'
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")      # Run started the first run by itself
             pg.evaluate("window.__missing = ''")
+            # before Run the line says what the cache would give back (nothing the first time); after the run the same plan would reuse what the engine kept
+            attendi(pg, "/^0 steps reused, \\d+ to compute$/.test(document.querySelector('.fl-cli [data-reuse]').textContent)")
+            assert pg.evaluate("window.__ops.includes('flow/reuse')") and pg.get_attribute(".fl-cli [data-reuse]", "role") == "status"
+            n = pg.evaluate("document.querySelector('.flx-list').__flow.plan.steps.length"); pg.evaluate("window.__reused = %d" % n)
             pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
             assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "reused" in pg.inner_text(slots + ":last-child") and "1 steps reused" in pg.inner_text(".fl-cli .fl-note") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
+            attendi(pg, "document.querySelector('.fl-cli [data-reuse]').textContent === '%d steps reused, 0 to compute'" % n)
             pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
             attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
