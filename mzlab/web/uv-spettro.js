@@ -84,7 +84,7 @@ export async function draw(p) {
   if (!nm.length) return say(T("uv.none"));
   const full = [nm[0], nm[nm.length - 1]], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let lo = 0, hi = 0; for (const v of y) { if (v < lo) lo = v; if (v > hi) hi = v; }
-  const pad = (hi - lo || 1) * 0.06, yfull = [lo < 0 ? lo - pad : 0, hi + pad];
+  const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, hi + pad];
   if (p.lock && p.lock.pending) { p.lock.y = yfull[1]; p.lock.pending = false; }
   const y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : p.lock && p.lock.y != null ? p.lock.y : yfull[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b, X = (/** @type {number} */ v) => M.l + (v - x0) / (x1 - x0) * pw, Y = (/** @type {number} */ v) => H - M.b - (v - y0) / (y1 - y0) * ph;
@@ -99,6 +99,7 @@ export async function draw(p) {
   p._a = { x0, x1, y0, y1, ymin: y0, ymax: y1, yfull, full, W, H, X, Y, f, uvd: { nm, y, rt: d.rt0, rt1: d.rt1, n: d.n },
     yinv: (/** @type {number} */ py) => y1 - (py - M.t) / ph * (y1 - y0),
     hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(w); return { px: X(nm[i]), html: `<b>${nm[i].toFixed(0)} nm</b><div>${y[i].toFixed(2)} mAU</div>` }; } };
+  if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima (etichette-picchi.js)
   p.leg.innerHTML = h`<span><i style="background:${f.color}"></i>${f.label}</span> · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = "";
   p.r0 = d.rt0; p.r1 = d.rt1;
