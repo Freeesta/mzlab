@@ -1,6 +1,6 @@
 #![cfg(feature = "waters")]
 //! External truth for the Waters MSe + lock mass + ion mobility run `Blk_ext_2_C18MSe_1.raw` (MTBLS7394): the values below were read from the full msconvert (profile) mzML of the same run
-//! (the oracle is not in the repository). Skips without the real folder (`MZLAB_ROSINA_DATI`, default `~/mzLab/rosina-dati`). msconvert writes one spectrum per drift bin (200 per cycle);
+//! (the oracle is not in the repository). Skips without the real folder (`MZLAB_ROSINA_DATI`, default `/Volumes/Fred/rosina`). msconvert writes one spectrum per drift bin (200 per cycle);
 //! the reader writes one per cycle, so the oracle is compared on cycle sums: TIC, RT and the intensity-weighted mean m/z.
 use std::path::PathBuf;
 
@@ -9,7 +9,7 @@ use mzlab_core::lettori::{FileSet, Limiti, Membro};
 fn cartella() -> Option<FileSet> {
     let base = std::env::var_os("MZLAB_ROSINA_DATI")
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join("mzLab/rosina-dati")))?;
+        .unwrap_or_else(|| PathBuf::from("/Volumes/Fred/rosina"));
     let d = base.join("waters/raw/MTBLS7394_mse+lockmass+ims/Blk_ext_2_C18MSe_1.raw");
     if !d.is_dir() {
         eprintln!("SKIP waters_mse_oracolo: {} not found", d.display());
