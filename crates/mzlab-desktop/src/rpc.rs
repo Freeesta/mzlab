@@ -336,6 +336,7 @@ impl State {
             "flow/read" => return self.flow_read(p),
             "flow/progress" => return self.flow_progress(p),
             "flow/report" => return self.flow_report(p),
+            "flow/reuse" => return self.flow_reuse(p),                                   // steps the cache would give back, before Run (`flow_reuse.rs`)
             "flow/run" => return self.flow_run(p),                                      // a whole plan: it does not hold the engine
             _ if op.starts_with("flow/live/") => return self.flow_live(&op[10..], p),   // a plan that takes changes while it runs (`flow_live.rs`)
             _ => {}

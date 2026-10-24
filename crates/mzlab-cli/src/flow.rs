@@ -18,7 +18,7 @@ use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
-pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
 use crate::flow_pace::Watch;
 use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
@@ -148,6 +148,8 @@ pub struct FileRunner {
     done: Option<DoneFn>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
     cache: Option<crate::flow_cache::Cache>,
+    /// Only look in the cache: a job whose key is not there fails with `err.flow.probe.miss` instead of running (`flow_probe.rs`).
+    pub(crate) probe: bool,
     /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
     pub(crate) budget_mb: f64,
     /// A live run: the cancel flag and the progress of each job it runs (`flow_live.rs`).
@@ -166,6 +168,7 @@ impl FileRunner {
             progress: None,
             done: None,
             cache: None,
+            probe: false,
             budget_mb: mzlab_core::budget_auto::native_auto_mb(),
             watch: None,
         }
@@ -447,7 +450,16 @@ impl Runner for FileRunner {
             .zip(key.as_deref())
             .and_then(|(c, k)| c.take(self, job, k));
         let cached = hit.is_some();
-        let made = hit.map_or_else(|| dispatch(self, job), Ok);
+        let made = hit.map_or_else(
+            || {
+                if self.probe {
+                    Err(Error::new("err.flow.probe.miss"))
+                } else {
+                    dispatch(self, job)
+                }
+            },
+            Ok,
+        );
         let made = made.map_err(|e| self.cancelled_or(job, e));
         if let (Ok(m), Some(c), Some(k), false) = (&made, &self.cache, key, cached) {
             c.put(k, m, self.lineage(&m.artifact));
