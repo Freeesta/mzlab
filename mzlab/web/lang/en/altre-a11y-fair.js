@@ -371,7 +371,7 @@ I18N.add("en", {
   "a11y.line": "{title}. Chromatogram: {n} traces; x axis retention time (min) from {a} to {b}; y axis intensity up to {y}; {p} integrated peaks. T opens the data table, D reads this description again, + and - zoom, [ and ] move the visible range, 0 shows everything.",
   "a11y.spec": "{title}. Mass spectrum: x axis m/z from {a} to {b}; y axis intensity; {n} peaks above the threshold. T opens the data table, D reads this description again, + and - zoom, [ and ] move the visible range, 0 shows everything.",
   "a11y.mapPda": "{title}. Retention time by PDA wavelength map: RT from {a} to {b} min, from {c} to {d} nm. T opens the table of the most intense cells, D reads this description again.",
-  "a11y.uv": "{title}. UV spectrum, absorbance against wavelength from {a} to {b} nm; maximum {y} mAU. T opens the table of values, D reads this description again.",
+  "a11y.uv": "{title}. UV spectrum at RT {rt} min, absorbance against wavelength from {a} to {b} nm; maximum {y} mAU. T opens the table of values, D reads this description again.",
   "a11y.map": "{title}. Retention time by m/z map: RT from {a} to {b} min, m/z from {c} to {d}. T opens the table of the most intense cells, D reads this description again.",
   "a11y.small": "{title}. Line chart: {n} series; x axis {xl} from {a} to {b}; y axis {yl} from {c} to {d}. T opens the data table, D reads this description again.",
   "disp.rel": "y axis as % of the highest peak",
