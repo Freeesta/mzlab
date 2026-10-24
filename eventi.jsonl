@@ -20199,3 +20199,4 @@
 {"v":1,"ts_utc":"2026-10-24T05:26:41Z","tipo":"wasm","k":"wasm-dimensioni","workflow":"test","moduli":{"static/wasm/mzlab_wasm_bg.wasm":[3856450,null]},"byte_totali":3856450,"margine_min_pct":null,"pr":null,"sha":"13b9fa81431bc988b76089455208d2d3bb38f321","run_id":40066083078,"run_attempt":1}
 {"v":1,"ts_utc":"2026-10-24T05:34:07Z","tipo":"carico","k":"2026-10-24T05:3","job_in_coda":0,"job_in_corso":9}
 {"v":1,"ts_utc":"2026-10-24T05:36:00Z","azione":"aperta","tipo":"pr","pr":1674,"sha":"e04e4c8c507714b73f69bab1bcdc35e3a4882c9b"}
+{"v":1,"ts_utc":"2026-10-24T05:41:55Z","azione":"push","titolo":"Read the split catalog in the two tests that still opened lang/<lang>.js","merge_main":false,"aree":{"test":2},"tipo":"pr","pr":1674,"sha":"f0abccd6506632a9dc1a5fbfc677f129cf9144fa"}
