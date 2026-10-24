@@ -63,9 +63,13 @@
     s.tr = t; s.m = w.m; s.text = w.req.text;
     const a = p._a, px = a && a.X ? a.X(w.m) : M.l;
     const right = px + GAP + W <= a.W - M.r, left = right ? px + GAP : Math.max(M.l, px - GAP - W);
-    s.el.style.left = p.cv.offsetLeft + left + "px"; s.el.style.top = p.cv.offsetTop + M.t + 4 + "px";
+    // level with the top of the peak, so that the pointer reaches the lens by a horizontal move that crosses no other peak
+    const d0 = a.data[0].d; let j = -1;
+    d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - w.m) < 0.6 && (j < 0 || Math.abs(v - w.m) < Math.abs(d0.mz[j] - w.m))) j = i; });
+    const lo = M.t + 4, hi = Math.max(lo, a.H - M.b - H), top = Math.min(hi, Math.max(lo, (j < 0 ? lo : a.Y(d0.y[j])) - 24));
+    s.el.style.left = p.cv.offsetLeft + left + "px"; s.el.style.top = p.cv.offsetTop + top + "px";
     s.el.hidden = false;
-    cancelAnimationFrame(s.raf); s.raf = requestAnimationFrame(() => paint(p, s));
+    FRAME.cancel(s.raf); s.raf = FRAME.next(() => paint(p, s));
   }
 
   // ---------------------------------------------------------------- drawing
@@ -175,7 +179,7 @@
   /** @param {any} p @param {boolean} [esc] Esc: the same peak does not reopen it until the pointer goes to another one */
   function close(p, esc) {
     const s = ST.get(p); if (!s) return;
-    s.dis = esc ? (s.m ?? (want && want.m)) : null; cancelAnimationFrame(s.raf);
+    s.dis = esc ? (s.m ?? (want && want.m)) : null; FRAME.cancel(s.raf);
     if (!s.el.hidden) { const had = s.el.contains(document.activeElement); s.el.hidden = true; if (had) p.cv.focus({ preventScroll: true }); }
     s.sticky = false; s.m = null; s.tr = null;
     if (cur === p) { cur = null; want = null; seq++; }
@@ -183,5 +187,5 @@
   const closeAll = () => { if (cur) close(cur); };
 
   ESC.registra({ id: "xic-lente", prio: 28, aperto: () => !!cur && !!ST.get(cur) && !ST.get(cur).el.hidden, chiudi: () => { if (cur) close(cur, true); } });
-  /** @type {any} */ (window).XICLENS = { move, leave, show: showChosen, sync, close, closeAll, columns, apex, cacheSize: () => LRU.size, trace: (/** @type {any} */ p) => { const s = ST.get(p); return s && !s.el.hidden ? s.tr : null; }, shown: (/** @type {any} */ p) => { const s = ST.get(p); return s && !s.el.hidden ? s.m : null; } };
+  /** @type {any} */ (window).XICLENS = { move, leave, show: showChosen, sync, close, closeAll, columns, apex, cacheSize: () => LRU.size, clear: () => LRU.clear(), trace: (/** @type {any} */ p) => { const s = ST.get(p); return s && !s.el.hidden ? s.tr : null; }, shown: (/** @type {any} */ p) => { const s = ST.get(p); return s && !s.el.hidden ? s.m : null; } };
 })();

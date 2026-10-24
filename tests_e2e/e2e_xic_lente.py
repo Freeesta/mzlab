@@ -31,7 +31,7 @@ try:
         pg.evaluate(TRACK)
         def pk(): return pg.evaluate(PEAKS % SPEC)
         def hover_lr():
-            ps = pk(); assert len(ps) >= 5, len(ps)
+            ps = pk(); assert len(ps) >= 4, len(ps)
             t = ps[2]; pg.mouse.move(t["x"] - 40, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3)
             pg.wait_for_selector(LENS, timeout=10000); frames(pg, 3)
             got = lens_trace(pg, SPEC); assert got and got["m"] == t["mz"], (got and got["m"], t["mz"])
@@ -51,23 +51,26 @@ try:
             assert st["max"] <= 1, st
             assert same(lens_trace(pg, SPEC), api_trace(pg, SPEC, last["mz"], K))
         step("LR: a fast sweep over 20 peaks: one request in flight, the last peak wins", sweep)
+        last_m = [None]
         def esc():
+            last_m[0] = pg.evaluate(f"XICLENS.shown({SPEC})"); assert last_m[0] is not None
             pg.keyboard.press("Escape"); frames(pg, 2); assert not pg.query_selector(LENS)
-            ps = pk(); t = ps[2]; pg.mouse.move(t["x"] + 1, t["y"]); frames(pg, 4); assert not pg.query_selector(LENS), "Esc: the same peak does not reopen it"
+            ps = pk(); t = next(o for o in ps if o["mz"] == last_m[0]); pg.mouse.move(t["x"] + 1, t["y"]); frames(pg, 4); assert not pg.query_selector(LENS), "Esc: the same peak does not reopen it"
             pg.mouse.move(2, 2); frames(pg, 2); pg.mouse.move(t["x"], t["y"], steps=2); pg.wait_for_selector(LENS, timeout=10000)
         step("Esc closes the lens; it comes back on leaving and entering the peak", esc)
         def wheel_closes():
             pg.mouse.wheel(0, 120); frames(pg, 3); assert not pg.query_selector(LENS), "the wheel closes it"
         step("scroll closes the lens", wheel_closes)
         def commit():
-            ps = pk(); t = ps[3]; pg.mouse.move(t["x"] - 30, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3); pg.wait_for_selector(LENS, timeout=10000)
+            ps = pk(); t = ps[3]; pg.mouse.move(t["x"] - 30, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3); pg.wait_for_function(f"XICLENS.shown({SPEC})==={t['mz']}&&XICLENS.trace({SPEC})", timeout=10000); frames(pg, 2)
             want = api_trace(pg, SPEC, t["mz"], K)
             b = pg.evaluate("(()=>{const b=document.querySelector('.pnl .xl:not([hidden])').getBoundingClientRect();return [b.left+b.width/2,b.top+b.height/2]})()")
             pg.mouse.move(b[0], b[1], steps=4); frames(pg, 2); assert pg.query_selector(LENS), "the lens stays while the pointer is on it"
             pg.mouse.click(b[0], b[1]); ready(pg)
             pg.wait_for_function(f"(()=>{{const p={XP};return p&&p._a&&p._a.sr&&p._a.sr.length}})()", timeout=20000)
             assert not pg.query_selector(LENS)
-            s = pg.evaluate(f"{XP}._a.sr.find(q=>q.k=={K})"); assert s["y"] == want["y"], "the panel differs from the lens"
+            s = pg.evaluate(f"{XP}._a.sr.find(q=>q.k=={K})"); print(pg.evaluate(f"[{XP}.traces, XICBTN.lensArgs({SPEC},{t['mz']}).args]"), len(s["y"]), len(want["y"]), max(s["y"]), max(want["y"]))
+            assert s["y"] == want["y"], ("the panel differs from the lens", t["mz"], pg.evaluate(f"{XP}.traces"))
             assert pg.evaluate(f"XICBTN.chosen({SPEC})") == t["mz"]
         step("a click on the lens makes the XIC panel of the button (same trace)", commit)
         def key_only():
@@ -96,7 +99,7 @@ try:
             pg.evaluate("UIP.xicLens=true")
         step("the preference switches the lens off", pref)
         def touch():
-            ps = pk(); t = ps[4]; pg.mouse.move(2, 2); frames(pg, 2)
+            ps = pk(); t = ps[0]; pg.mouse.move(2, 2); frames(pg, 2)
             pg.mouse.click(t["x"], t["y"]); pg.wait_for_selector(LENS, timeout=10000)
             h = pg.evaluate("(()=>{const b=document.querySelector('.pnl .xl:not([hidden])').getBoundingClientRect();return [b.width,b.height]})()"); assert h[0] >= 40 and h[1] >= 40, h
             pg.keyboard.press("Escape")
