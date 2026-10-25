@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // High resolution: how precisely m/z values are written and compared (classic script, loaded after explore.js).
 // The server sends, for every file, the mass profile of its survey scans (`prof1`) and of its product-ion scans (`prof2`):
@@ -143,7 +144,7 @@ const HR = (() => {
     // no width: whole fine structure
     const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = isoPat(p.iso, fw);
     const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
-    const find = mz => { let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return best; };
+    const find = mz => { /** @type {{ m: number, y: number, e: number } | null} */ let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return /** @type {{ m: number, y: number, e: number } | null} */ (best); };
     const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9;
     g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
     if (st === "profilo" && fw) {                                      // Gaussian profile at the resolution of the scan
