@@ -560,6 +560,7 @@ async function pngWithMeta(blob, fields) {
 // o = { files: files that can be subtracted, cur: "" | "f<k>" | "tract" | "snip", snip: offer the automatic baseline, dis: reason why it is off ("" = on) }
 const ICN = d => `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.8"/>'), blank: ICN('<path d="M4 2.5h5.5L12.5 5.5v10H4z"/><path d="M9.5 2.5v3h3"/><path d="M6.2 10.5h3.6" stroke-width="2"/>'),
+  flat: ICN('<path d="M2 14c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-dasharray="2 2"/><path d="M5 12v5M13 12v5"/>'),
   tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>'),
   file: ICN('<path d="M4 2.5h5.5L12.5 5.5v10H4z"/><path d="M9.5 2.5v3h3"/><path d="M6.2 10.5h3.6" stroke-width="2"/>'), bg: ICN('<path d="M2 11.5c3 0 4-7 7-7s4 7 7 7"/><path d="M2 14.5h14" stroke-width="2.4"/><path d="M6 16.8h6" stroke-width="1.5"/>') };      // file / bg: the idle icons of «Subtract a file» and «Subtract the background» (not the same as «none»)
   // one «Subtract file» entry with a file chooser (default: the session reference, else the t0); tract and SNIP keep their one-line hint
@@ -571,6 +572,7 @@ function corrWidget(p, o) {
   const items = [["", "none", I18N.t("corr.none"), "", "", I18N.t("corr.none.desc")],
     [subF ? "f" + subF.k : "", "blank", subF ? I18N.t("corr.file", { label: subF.label }) : I18N.t("corr.fileNone"), subF ? "" : I18N.t("corr.fileNone.desc"), subF ? I18N.t("corr.file.short", { label: subF.label }) : "", subF ? o.fileDesc || I18N.t("corr.file.desc") : ""],
     ["tract", "tract", I18N.t("corr.tract"), o.tractDesc || I18N.t("corr.tract.desc")],
+    ...(o.parts && o.parts.includes("flat") ? [["flat", "flat", I18N.t("corr.flat"), I18N.t("corr.flat.desc")]] : []),
     ...(o.snip ? [["snip", "snip", I18N.t("corr.snip"), o.snipDesc || I18N.t("corr.snip.desc")]] : [])].filter(i => !o.parts || i[1] === "none" || o.parts.includes(i[1]));       // parts: only these entries (the trace panels have two menus, «Sottrai» and «Fondo»)
   const now = items.find(i => i[1] === "blank" ? cfile : i[0] === o.cur && i[1] !== "none") || items[0];
   const ttl = o.title || I18N.t("corr.button.title"), tip = ttl + (now === items[0] ? "" : ": " + (now[4] ?? now[2]));
@@ -663,9 +665,9 @@ function ctl(p) {
   const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none;min-width:11em" title="${I18N.t("ctl.prec.title")}"><option value="">${I18N.t("ctl.prec.all")}</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "";
     const blanks = TF.filter(x => x.kind !== "mrm" || p.type === "mrm"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);  // an old notebook may point to a file that is not marked as blank: keep it
-  const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
+  const fo0 = p.fondo || { mode: "none", w: 1 }, fm = fo0.mode, fval = fm === "tract" && fo0.ib && fo0.ib.flat ? "flat" : fm === "tract" || p._pickIbk ? "tract" : fm === "auto" ? "snip" : "";
   const corr = corrWidget(p, { files: bkList, cur: bkOn ? "f" + p.bk : "", snip: false, parts: ["blank"], title: I18N.t("corr.sub.title"), idle: "file", dis: ms2c ? NOMS2 : mrmP ? NOMRM : "" })
-    + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
+    + corrWidget(p, { files: [], cur: fval, snip: true, parts: ["tract", "flat", "snip"], title: I18N.t("corr.fondo.title"), idle: "bg", dis: ms2c ? NOMS2 : "", wire: "bkg" })
     + corrInfo(p)
     + `${fm === "auto" ? `<label class="muted" title="${I18N.t("corr.snipw.title")}">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${fo0.w}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, I18N.t("ctl.files.one"))} title="${I18N.t("ctl.files.title")}" aria-label="${I18N.t("ctl.files.aria", { n: TF.filter(f => f.vis).length, tot: TF.length })}">${I18N.t("ctl.files", { n: TF.filter(f => f.vis).length, tot: TF.length })}</button>`;

@@ -59,7 +59,7 @@ function attach(p) {
       if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = c.dy / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
       draw(p);
     } else if (drag && drag.cursor) moveCur(x);                // dragging the vertical line: the linked spectrum follows
-    else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
+    else if (drag && (drag.edge || drag.fw)) { if (drag.fw) { if (x != null) FONDOP.put(p, drag.fw.t0 + x - drag.fw.x0); } else edgeMove(drag.edge, x); draw(p); }
     else if (drag && drag.ya) {                               // line along the y axis: only the intensity axis is zoomed
       drag.y = Math.max(M.t, Math.min(a.H - M.b, py)); zl.hidden = false; zl.className = "zl v";
       zl.style.left = cv.offsetLeft + M.l - 20 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";
@@ -110,7 +110,7 @@ function attach(p) {
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
-    const ed = edgeAt(px); drag = ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
+    const fw = p.type !== "spec" && p.type !== "map" && FONDOP.gripAt(p, px, py), ed = edgeAt(px); if (fw) e.preventDefault(); drag = fw ? { fw: FONDOP.begin(p, xd(px)) } : ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
   };
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true; if (d.ax !== undefined && window.MAPPA) MAPPA.guide(p, null);
@@ -122,7 +122,7 @@ function attach(p) {
       uiSave(); return;
     }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
-    if (d.cursor) { uiSave(); return; }
+    if (d.cursor || d.fw) { uiSave(); return; }
     const a = p._a;
     if (a && (d.ya || d.xa) && Math.abs((d.ya ? d.y - d.y0 : d.x - d.x0)) > 4) pushZh(p);
     if (d.ya) { if (a && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0))); return; }
