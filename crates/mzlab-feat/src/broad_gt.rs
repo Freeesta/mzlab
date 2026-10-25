@@ -71,33 +71,11 @@ impl TraceBank {
         if !(self.seen - 1).is_multiple_of(self.stride) {
             return Ok(());
         }
-        let m = self.n_scans.div_ceil(self.k);
-        let mut row = filled(m, f32::NAN)?;
-        let mut cover = filled(m, 0usize)?;
-        let mut acc = filled(m, 0.0f64)?;
-        for (i, &v) in y.iter().enumerate() {
-            let b = (scan0 + i) / self.k;
-            acc[b] += v;
-            cover[b] += 1;
-        }
-        let mut vals = Vec::new();
-        reserve(&mut vals, m)?;
-        for ((r, &c), &a) in row.iter_mut().zip(&cover).zip(&acc) {
-            if c > 0 {
-                let v = a / c as f64;
-                *r = v as f32;
-                vals.push(v);
-            }
-        }
-        let scale = median(&mut vals);
-        if scale.is_nan() || scale <= 0.0 {
+        let Some(row) = normalised_row(scan0, y, self.n_scans, self.k)? else {
             return Ok(());
-        }
-        for v in row.iter_mut().filter(|v| !v.is_nan()) {
-            *v = (*v as f64 / scale) as f32;
-        }
+        };
         if self.rows.len() == MAX_TRACES {
-            let mut keep = 0;
+            let mut keep = 0usize;
             self.rows.retain(|_| {
                 keep += 1;
                 !keep.is_multiple_of(2)
@@ -133,26 +111,61 @@ impl TraceBank {
         }
         // a narrow peak that the traces happen to share must not enter G: running median over `SMOOTH` blocks
         let gb = smooth(&gb)?;
-        let known: Vec<usize> = (0..m).filter(|&b| !gb[b].is_nan()).collect();
-        if known.len() < 2 {
-            return Ok(None);
-        }
-        let mut g = filled(self.n_scans, 0.0f64)?;
-        let centre = |b: usize| (b * self.k) as f64 + (self.k as f64 - 1.0) / 2.0;
-        for (i, out) in g.iter_mut().enumerate() {
-            let at = known.partition_point(|&b| centre(b) <= i as f64);
-            *out = match (at.checked_sub(1), known.get(at)) {
-                (Some(l), Some(&r)) => {
-                    let (a, z) = (known[l], r);
-                    gb[a] + (gb[z] - gb[a]) * (i as f64 - centre(a)) / (centre(z) - centre(a))
-                }
-                (Some(l), None) => gb[known[l]],
-                (None, Some(&r)) => gb[r],
-                (None, None) => 0.0,
-            };
-        }
-        Ok(Some(CommonMode { g }))
+        interpolate(&gb, self.k, self.n_scans)
     }
+}
+
+/// The trace `y` (from scan `scan0`) as block means over the run (`NaN` where it has no scan) divided by their median; `None` when that is not positive.
+fn normalised_row(scan0: usize, y: &[f64], n_scans: usize, k: usize) -> Result<Option<Vec<f32>>> {
+    let m = n_scans.div_ceil(k);
+    let mut row = filled(m, f32::NAN)?;
+    let mut cover = filled(m, 0usize)?;
+    let mut acc = filled(m, 0.0f64)?;
+    for (i, &v) in y.iter().enumerate() {
+        let b = (scan0 + i) / k;
+        acc[b] += v;
+        cover[b] += 1;
+    }
+    let mut vals = Vec::new();
+    reserve(&mut vals, m)?;
+    for ((r, &c), &a) in row.iter_mut().zip(&cover).zip(&acc) {
+        if c > 0 {
+            let v = a / c as f64;
+            *r = v as f32;
+            vals.push(v);
+        }
+    }
+    let scale = median(&mut vals);
+    if scale.is_nan() || scale <= 0.0 {
+        return Ok(None);
+    }
+    for v in row.iter_mut().filter(|v| !v.is_nan()) {
+        *v = (*v as f64 / scale) as f32;
+    }
+    Ok(Some(row))
+}
+
+/// Linear interpolation of the block values `gb` (`NaN` = unknown) between the block centres to every scan; `None` with fewer than two known blocks.
+fn interpolate(gb: &[f64], k: usize, n_scans: usize) -> Result<Option<CommonMode>> {
+    let known: Vec<usize> = (0..gb.len()).filter(|&b| !gb[b].is_nan()).collect();
+    if known.len() < 2 {
+        return Ok(None);
+    }
+    let mut g = filled(n_scans, 0.0f64)?;
+    let centre = |b: usize| (b * k) as f64 + (k as f64 - 1.0) / 2.0;
+    for (i, out) in g.iter_mut().enumerate() {
+        let at = known.partition_point(|&b| centre(b) <= i as f64);
+        *out = match (at.checked_sub(1), known.get(at)) {
+            (Some(l), Some(&r)) => {
+                let (a, z) = (known[l], r);
+                gb[a] + (gb[z] - gb[a]) * (i as f64 - centre(a)) / (centre(z) - centre(a))
+            }
+            (Some(l), None) => gb[known[l]],
+            (None, Some(&r)) => gb[r],
+            (None, None) => 0.0,
+        };
+    }
+    Ok(Some(CommonMode { g }))
 }
 
 /// Running median of `SMOOTH` blocks (shorter at the ends, `NaN` blocks skipped and left `NaN`).
@@ -209,19 +222,21 @@ fn solve4(mut a: [[f64; 4]; 4], mut b: [f64; 4]) -> Option<[f64; 4]> {
         b.swap(c, p);
         for r in c + 1..4 {
             let f = a[r][c] / a[c][c];
-            for k in c..4 {
-                a[r][k] -= f * a[c][k];
+            let pivot = a[c];
+            for (v, pv) in a[r][c..].iter_mut().zip(&pivot[c..]) {
+                *v -= f * pv;
             }
             b[r] -= f * b[c];
         }
     }
     let mut x = [0.0; 4];
     for c in (0..4).rev() {
-        let mut s = b[c];
-        for k in c + 1..4 {
-            s -= a[c][k] * x[k];
-        }
-        x[c] = s / a[c][c];
+        let tail: f64 = a[c][c + 1..]
+            .iter()
+            .zip(&x[c + 1..])
+            .map(|(u, v)| u * v)
+            .sum();
+        x[c] = (b[c] - tail) / a[c][c];
     }
     Some(x)
 }
@@ -244,10 +259,10 @@ pub fn fit_coefficients(td: &[f64], yd: &[f64], gd: &[f64]) -> Option<[f64; 4]> 
         let mut a = [[0.0f64; 4]; 4];
         let mut b = [0.0f64; 4];
         for (i, r) in rows.iter().enumerate() {
-            for p in 0..4 {
-                b[p] += w[i] * r[p] * yd[i];
-                for q in 0..4 {
-                    a[p][q] += w[i] * r[p] * r[q];
+            for (p, (bp, ap)) in b.iter_mut().zip(a.iter_mut()).enumerate() {
+                *bp += w[i] * r[p] * yd[i];
+                for (apq, rq) in ap.iter_mut().zip(r) {
+                    *apq += w[i] * r[p] * rq;
                 }
             }
         }
