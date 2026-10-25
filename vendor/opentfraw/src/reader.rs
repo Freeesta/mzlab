@@ -409,6 +409,8 @@ pub struct RawFileReader {
     /// collision energy is read from per-scan parameters instead, so this map is
     /// empty for v66/TSQ Altis files.
     pub srm_ce_by_event: HashMap<u16, f64>,
+    /// The filter text of each SRM event with a Q1 and Q3 windows, formatted once at open (it only depends on the event, not on the scan).
+    srm_filters: HashMap<u16, String>,
 }
 
 // -- Multi-controller metadata --
@@ -1005,6 +1007,13 @@ impl RawFileReader {
             }
         };
 
+        let srm_filters = srm_event_filters(
+            scan_format,
+            &srm_q1_by_event,
+            &srm_q3_windows,
+            &srm_ce_by_event,
+        );
+
         Ok(Self {
             header,
             seq_row,
@@ -1032,6 +1041,7 @@ impl RawFileReader {
             srm_q1_by_event,
             srm_q3_windows,
             srm_ce_by_event,
+            srm_filters,
         })
     }
 
@@ -1535,42 +1545,11 @@ impl RawFileReader {
         // SRM files have no scan events; build the filter string from
         // the pre-loaded Q1 and Q3 window maps.
         if self.flat_peaks {
-            let (Some(&q1), Some(windows)) = (
-                self.srm_q1_by_event.get(&entry.scan_event),
-                self.srm_q3_windows.get(&entry.scan_event),
-            ) else {
+            let Some(text) = self.srm_filters.get(&entry.scan_event) else {
                 // A TSQ run whose events are one per scan (no event class): the event itself holds Q1 and the product ranges.
                 return self.srm_event_filter(idx);
             };
-            // v63 (TSQ Quantum/Vantage): NSI ionization, @cid{CE:.2} after Q1.
-            // v66 (TSQ Quantiva/Altis): ESI ionization, no CE in filter.
-            use crate::scan_format::ScanDataFormat;
-            let ionization = match self.scan_format {
-                ScanDataFormat::FlatV63 => "NSI",
-                _ => "ESI",
-            };
-            let ce_part = if self.scan_format == ScanDataFormat::FlatV63 {
-                self.srm_ce_by_event
-                    .get(&entry.scan_event)
-                    .map(|&ce| format!("@cid{:.2}", ce))
-                    .unwrap_or_default()
-            } else {
-                String::new()
-            };
-            // Format: "+ c {ION} SRM ms2 {Q1:.3}{@cidCE} [{lo1:.3}-{hi1:.3}, ...]"
-            let mut s = format!("+ c {} SRM ms2 {:.3}{}", ionization, q1, ce_part);
-            if !windows.is_empty() {
-                s.push(' ');
-                s.push('[');
-                for (i, (lo, hi)) in windows.iter().enumerate() {
-                    if i > 0 {
-                        s.push_str(", ");
-                    }
-                    s.push_str(&format!("{:.3}-{:.3}", lo, hi));
-                }
-                s.push(']');
-            }
-            return Some(s);
+            return Some(text.clone());
         }
 
         let event = self.scan_event(idx)?;
@@ -2618,4 +2597,48 @@ fn walk_events<R: Read + Seek>(
         }
     }
     at == start + stream_bytes
+}
+
+/// `+ c {NSI|ESI} SRM ms2 {Q1:.3}{@cidCE} [{lo:.3}-{hi:.3}, ...]` for each event with a Q1 and Q3 windows. v63 (TSQ Quantum/Vantage) is NSI and carries the
+/// collision energy after Q1; v66 (TSQ Quantiva/Altis) is ESI without it.
+fn srm_event_filters(
+    scan_format: crate::scan_format::ScanDataFormat,
+    q1_by_event: &HashMap<u16, f64>,
+    q3_windows: &HashMap<u16, Vec<(f32, f32)>>,
+    ce_by_event: &HashMap<u16, f64>,
+) -> HashMap<u16, String> {
+    use crate::scan_format::ScanDataFormat;
+    let v63 = scan_format == ScanDataFormat::FlatV63;
+    let mut out = HashMap::with_capacity(q1_by_event.len());
+    for (&event, &q1) in q1_by_event {
+        let Some(windows) = q3_windows.get(&event) else {
+            continue;
+        };
+        let ce_part = if v63 {
+            ce_by_event
+                .get(&event)
+                .map(|&ce| format!("@cid{:.2}", ce))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+        let mut s = format!(
+            "+ c {} SRM ms2 {:.3}{}",
+            if v63 { "NSI" } else { "ESI" },
+            q1,
+            ce_part
+        );
+        if !windows.is_empty() {
+            s.push_str(" [");
+            for (i, (lo, hi)) in windows.iter().enumerate() {
+                if i > 0 {
+                    s.push_str(", ");
+                }
+                s.push_str(&format!("{:.3}-{:.3}", lo, hi));
+            }
+            s.push(']');
+        }
+        out.insert(event, s);
+    }
+    out
 }
