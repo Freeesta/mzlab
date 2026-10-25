@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 use mzlab_core::error::Result;
 
-use crate::broad_gt::{detrend, CommonMode};
+use crate::broad_front::{area_over_line, base_of, hwhm_left, noise_of};
+use crate::broad_gt::{detrend, median, CommonMode};
 use crate::centwave::ricker;
 use crate::trace::{filled, reserve};
 
@@ -36,6 +37,8 @@ pub struct BroadParams {
     pub min_scans: usize,
     /// Minimum height over the local bridge, in intensity units.
     pub noise: f64,
+    /// A band whose left front reaches half height in at most this many seconds before the apex is the tail of a narrow peak and is dropped.
+    pub front_s: f64,
     /// Removes [1, t, t^2, G(t)] (asymmetric fit) from every trace before the search; needs `common`, otherwise it does nothing.
     pub gt: bool,
     /// Common gradient mode of the file, set by the collector of the detector (`trace::detect_with`, `untargeted::pipeline::run_file`).
@@ -52,6 +55,9 @@ impl std::fmt::Debug for BroadParams {
             .field("snr", &self.snr)
             .field("min_scans", &self.min_scans)
             .field("noise", &self.noise);
+        if self.enabled {
+            d.field("front_s", &self.front_s);
+        }
         if self.gt {
             d.field("gt", &self.gt);
         }
@@ -68,6 +74,7 @@ impl Default for BroadParams {
             snr: 8.0,
             min_scans: 40,
             noise: 500.0,
+            front_s: 20.0,
             gt: false,
             common: None,
         }
@@ -192,25 +199,6 @@ pub fn decimate(
     Ok((r, v, z))
 }
 
-use crate::broad_gt::median;
-
-/// Noise of a short series: 1.4826 x median of |first difference| / sqrt 2 (robust to the bands themselves; no reach of a peak is involved).
-fn noise_of(y: &[f64]) -> Result<f64> {
-    let mut d = Vec::new();
-    reserve(&mut d, y.len())?;
-    d.extend(y.windows(2).map(|w| (w[1] - w[0]).abs()));
-    Ok(1.4826 * median(&mut d) / core::f64::consts::SQRT_2)
-}
-
-/// Lower quartile of a series: the base of the bands.
-fn base_of(y: &[f64]) -> Result<f64> {
-    let mut v = Vec::new();
-    reserve(&mut v, y.len())?;
-    v.extend_from_slice(y);
-    v.sort_by(|a, b| a.total_cmp(b));
-    Ok(v.get(v.len() / 4).copied().unwrap_or(0.0))
-}
-
 /// One candidate: the sample, the scale (index) and the response that found it.
 struct Cand {
     t: usize,
@@ -326,10 +314,14 @@ pub fn detect_broad_at(
     let mut y_res = filled(len, 0.0f64)?;
     y_res.copy_from_slice(y);
     inpaint_linear(&mut y_res, &cut);
+    // the inpainted trace before G(t) is subtracted: front width and area are measured on it
+    let mut y_pre = Vec::new();
     if let (true, Some(cm)) = (p.gt, &p.common) {
+        reserve(&mut y_pre, len)?;
+        y_pre.extend_from_slice(&y_res);
         detrend(rt_s, mz, &mut y_res, p.decimate, scan0, cm)?;
     }
-    let r = Residue::new(rt_s, mz, y, y_res, dt_s, p)?;
+    let r = Residue::new(rt_s, mz, y, y_res, y_pre, dt_s, p)?;
     let widths = scale_widths(p);
     let sig: Vec<f64> = widths.iter().map(|&w| sigma(w, r.dt_d)).collect();
     // only candidates that clear the height bars limit the borders of their neighbours
@@ -370,6 +362,10 @@ struct Residue<'a> {
     mz: &'a [f64],
     y: &'a [f64],
     y_res: Vec<f64>,
+    /// Inpainted trace before G(t) was subtracted (empty when no common mode was applied).
+    y_pre: Vec<f64>,
+    /// `y_pre` decimated (empty with `y_pre`).
+    y_pre_d: Vec<f64>,
     rt_d: Vec<f64>,
     y_d: Vec<f64>,
     /// `y_d` smoothed over three blocks.
@@ -387,11 +383,17 @@ impl<'a> Residue<'a> {
         mz: &'a [f64],
         y: &'a [f64],
         y_res: Vec<f64>,
+        y_pre: Vec<f64>,
         dt_s: f64,
         p: &'a BroadParams,
     ) -> Result<Self> {
         let k = p.decimate.max(1);
         let (rt_d, y_d, _) = decimate(rt_s, mz, &y_res, k)?;
+        let y_pre_d = if y_pre.is_empty() {
+            Vec::new()
+        } else {
+            decimate(rt_s, mz, &y_pre, k)?.1
+        };
         let n = y_d.len();
         let mut sm = filled(n, 0.0f64)?;
         for (i, out) in sm.iter_mut().enumerate() {
@@ -404,6 +406,8 @@ impl<'a> Residue<'a> {
             mz,
             y,
             y_res,
+            y_pre,
+            y_pre_d,
             rt_d,
             y_d,
             sm,
@@ -440,16 +444,32 @@ fn band(r: &Residue, t: usize, lo_d: usize, hi_d: usize, scale_s: f64) -> Option
     if !(wide && snr >= r.p.snr && height >= r.p.noise) {
         return None;
     }
+    // front width on the inpainted trace, before G(t) is subtracted
+    let pre = if r.y_pre.is_empty() {
+        &r.y_d
+    } else {
+        &r.y_pre_d
+    };
+    if hwhm_left(&r.rt_d, pre, t, lo_d) <= r.p.front_s {
+        return None;
+    }
     let (mut area, mut area_s, mut sw, mut swm) = (0.0, 0.0, 0.0, 0.0);
-    for i in lo..=hi {
-        let v = r.y_res[i] - bridge(i);
-        sw += r.y[i];
-        swm += r.y[i] * r.mz[i];
-        if i > lo {
-            let u = r.y_res[i - 1] - bridge(i - 1);
-            area += (u + v) / 2.0;
-            area_s += (r.rt_s[i] - r.rt_s[i - 1]) * (u + v) / 2.0;
+    if r.y_pre.is_empty() {
+        for i in lo..=hi {
+            let v = r.y_res[i] - bridge(i);
+            if i > lo {
+                let u = r.y_res[i - 1] - bridge(i - 1);
+                area += (u + v) / 2.0;
+                area_s += (r.rt_s[i] - r.rt_s[i - 1]) * (u + v) / 2.0;
+            }
         }
+    } else {
+        // area before G(t): the fitted background would eat the area of a band wider than the fit
+        (area, area_s) = area_over_line(r.rt_s, &r.y_pre, lo, hi);
+    }
+    for (&v, &z) in r.y[lo..=hi].iter().zip(&r.mz[lo..=hi]) {
+        sw += v;
+        swm += v * z;
     }
     Some(BroadPeak {
         scan_lo: lo,
