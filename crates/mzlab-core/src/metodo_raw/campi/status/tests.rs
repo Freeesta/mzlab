@@ -16,8 +16,8 @@ fn log() -> StatusLog {
             ("Fore Vacuum (mbar):".into(), GenericValue::Float64(c)),
         ],
     };
-    StatusLog {
-        header: GenericDataHeader {
+    StatusLog::new(
+        GenericDataHeader {
             fields: vec![
                 d(GenericType::Gap, "=== Ion Source ===:"),
                 d(GenericType::Float64, "Spray Voltage (V):"),
@@ -25,9 +25,9 @@ fn log() -> StatusLog {
                 d(GenericType::Float64, "Fore Vacuum (mbar):"),
             ],
         },
-        times_min: vec![0.0, 1.5],
-        records: vec![rec(3400.5, "Ok", 1.25), rec(3500.0, "Ok", 1.25)],
-    }
+        vec![0.0, 1.5],
+        vec![rec(3400.5, "Ok", 1.25), rec(3500.0, "Ok", 1.25)].into(),
+    )
 }
 
 #[test]
@@ -97,8 +97,8 @@ fn a_schema_that_ends_at_the_records_is_found_and_the_records_read() {
     let region = bytes.len() as u64 - addr;
     let log = opentfraw::status_log::decode(std::io::Cursor::new(&bytes), addr, 3, region)
         .expect("decoded");
-    assert_eq!((log.records.len(), log.header.fields.len()), (3, 2));
-    assert_eq!(log.times_min, [0.0, 0.5, 1.0]);
+    assert_eq!((log.records().len(), log.header.fields.len()), (3, 2));
+    assert_eq!(log.times_min(), [0.0, 0.5, 1.0]);
     let s = log.series();
     assert_eq!(
         (
@@ -120,4 +120,41 @@ fn without_a_schema_or_with_records_that_do_not_fit_nothing_is_decoded() {
     assert!(decode(addr - 6, 3).is_none(), "no schema ends there");
     assert!(decode(addr, 1_000_000).is_none(), "more records than bytes");
     assert!(decode(addr, 0).is_none());
+}
+
+/// Like `stream`, but the second field is a wide string of 4 units and the last record carries `tail` in it.
+fn wide_stream(tail: [u16; 4]) -> (Vec<u8>, u64) {
+    let pascal = |t: &str| {
+        let u: Vec<u16> = t.encode_utf16().collect();
+        let mut b = (u.len() as u32).to_le_bytes().to_vec();
+        u.iter().for_each(|x| b.extend(x.to_le_bytes()));
+        b
+    };
+    let mut out = vec![0xAB; 40];
+    let fields = [(0xBu32, 1u32, "Spray Voltage (V):"), (0xD, 4, "Status:")];
+    out.extend((fields.len() as u32).to_le_bytes());
+    for (t, l, name) in fields {
+        out.extend(t.to_le_bytes());
+        out.extend(l.to_le_bytes());
+        out.extend(pascal(name));
+    }
+    let addr = out.len() as u64;
+    for (i, units) in [[0x4F, 0x6B, 0, 0], tail].into_iter().enumerate() {
+        out.extend((i as f32).to_le_bytes());
+        out.extend((3000.0 + i as f64).to_le_bytes());
+        units.iter().for_each(|u| out.extend(u.to_le_bytes()));
+    }
+    (out, addr)
+}
+
+#[test]
+fn a_wide_string_that_is_not_utf16_leaves_the_log_undecoded_at_open() {
+    let (ok, addr) = wide_stream([0x4B, 0x6F, 0, 0]);
+    let region = ok.len() as u64 - addr;
+    let log =
+        opentfraw::status_log::decode(std::io::Cursor::new(&ok), addr, 2, region).expect("decoded");
+    assert_eq!(log.records().len(), 2);
+    let (bad, addr) = wide_stream([0xD800, 0x0041, 0, 0]);
+    let region = bad.len() as u64 - addr;
+    assert!(opentfraw::status_log::decode(std::io::Cursor::new(&bad), addr, 2, region).is_none());
 }

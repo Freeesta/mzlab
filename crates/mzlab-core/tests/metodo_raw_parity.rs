@@ -209,12 +209,12 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
         decoded += 1;
         assert!(!warned, "{raw_path:?}: decoded log still warned");
         assert_eq!(
-            log.records.len(),
+            log.records().len(),
             reader.run_header.sample_info.inst_log_length as usize
         );
         for f in &log.header.fields {
             let (name, _) = opentfraw::status_log::split_label(&f.label);
-            let has_value = log.records.iter().any(|r| {
+            let has_value = log.records().iter().any(|r| {
                 r.values.iter().any(|(l, x)| {
                     *l == f.label && !matches!(x, opentfraw::generic_data::GenericValue::Gap)
                 })

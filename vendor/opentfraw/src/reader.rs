@@ -367,7 +367,7 @@ pub struct RawFileReader {
     pub error_log: Vec<ErrorEntry>,
     // Instrument log uses same structure
     pub inst_log_header: GenericDataHeader,
-    pub inst_log: Vec<GenericRecord>,
+    pub inst_log: std::sync::Arc<[GenericRecord]>,
     /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
     pub status_log: Option<crate::status_log::StatusLog>,
     /// Layout the file is read with: the version in the header when documented, else the nearest documented one (`declared_version` has the number written).
@@ -866,6 +866,7 @@ impl RawFileReader {
             skipped(&mut warnings, "InstrumentLog", run_header.inst_log_addr, &e);
             (GenericDataHeader { fields: Vec::new() }, Vec::new())
         });
+        let inst_log: std::sync::Arc<[GenericRecord]> = inst_log.into();
 
         let status_log = Self::read_status_log(&mut r, &run_header, &inst_log_header, &inst_log)
             .unwrap_or_else(|e| {
@@ -1050,14 +1051,14 @@ impl RawFileReader {
         r: &mut BinaryReader<R>,
         run_header: &RunHeader,
         header: &GenericDataHeader,
-        records: &[GenericRecord],
+        records: &std::sync::Arc<[GenericRecord]>,
     ) -> Result<Option<crate::status_log::StatusLog>> {
         if !records.is_empty() {
-            return Ok(Some(crate::status_log::StatusLog {
-                header: header.clone(),
-                times_min: Vec::new(),
-                records: records.to_vec(),
-            }));
+            return Ok(Some(crate::status_log::StatusLog::new(
+                header.clone(),
+                Vec::new(),
+                std::sync::Arc::clone(records),
+            )));
         }
         let (addr, next) = (run_header.inst_log_addr, run_header.error_log_addr);
         let region = next.checked_sub(addr).unwrap_or(0);

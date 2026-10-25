@@ -8,15 +8,15 @@ use opentfraw::status_log::{split_label, StatusLog};
 const FROM: &str = "thermo-raw:StatusLog";
 
 pub fn fields(log: &StatusLog) -> Vec<Campo> {
-    let mut out = vec![Campo::new(FROM, "Records", log.records.len())];
-    let times: Vec<f64> = log.times_min.iter().map(|t| f64::from(*t)).collect();
+    let mut out = vec![Campo::new(FROM, "Records", log.records().len())];
+    let times: Vec<f64> = log.times_min().iter().map(|t| f64::from(*t)).collect();
     if !times.is_empty() && times.iter().all(|t| t.is_finite()) {
         let (lo, hi) = range(&times);
         out.push(Campo::new(FROM, "Time (min..max)", format!("{lo}..{hi}")).unit("min"));
     }
     for (i, d) in log.header.fields.iter().enumerate() {
         let vals: Vec<&GenericValue> = log
-            .records
+            .records()
             .iter()
             .filter_map(|r| r.values.get(i).map(|v| &v.1))
             .filter(|v| !matches!(v, GenericValue::Gap))
