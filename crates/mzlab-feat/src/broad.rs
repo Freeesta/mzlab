@@ -311,17 +311,17 @@ pub fn detect_broad_at(
             cut.push((lo, hi));
         }
     }
-    let mut y_res = filled(len, 0.0f64)?;
-    y_res.copy_from_slice(y);
-    inpaint_linear(&mut y_res, &cut);
-    // the inpainted trace before G(t) is subtracted: front width and area are measured on it
-    let mut y_pre = Vec::new();
+    let mut y_pre = filled(len, 0.0f64)?;
+    y_pre.copy_from_slice(y);
+    inpaint_linear(&mut y_pre, &cut);
+    // the search runs on the trace without G(t); front width and area are measured on `y_pre`, before it is subtracted
+    let mut y_res = Vec::new();
     if let (true, Some(cm)) = (p.gt, &p.common) {
-        reserve(&mut y_pre, len)?;
-        y_pre.extend_from_slice(&y_res);
+        reserve(&mut y_res, len)?;
+        y_res.extend_from_slice(&y_pre);
         detrend(rt_s, mz, &mut y_res, p.decimate, scan0, cm)?;
     }
-    let r = Residue::new(rt_s, mz, y, y_res, y_pre, dt_s, p)?;
+    let r = Residue::new(rt_s, mz, y, y_pre, &y_res, dt_s, p)?;
     let widths = scale_widths(p);
     let sig: Vec<f64> = widths.iter().map(|&w| sigma(w, r.dt_d)).collect();
     // only candidates that clear the height bars limit the borders of their neighbours
@@ -361,11 +361,8 @@ struct Residue<'a> {
     rt_s: &'a [f64],
     mz: &'a [f64],
     y: &'a [f64],
-    y_res: Vec<f64>,
-    /// Inpainted trace before G(t) was subtracted (empty when no common mode was applied).
+    /// Inpainted trace before G(t) is subtracted.
     y_pre: Vec<f64>,
-    /// `y_pre` decimated (empty with `y_pre`).
-    y_pre_d: Vec<f64>,
     rt_d: Vec<f64>,
     y_d: Vec<f64>,
     /// `y_d` smoothed over three blocks.
@@ -382,18 +379,13 @@ impl<'a> Residue<'a> {
         rt_s: &'a [f64],
         mz: &'a [f64],
         y: &'a [f64],
-        y_res: Vec<f64>,
         y_pre: Vec<f64>,
+        y_res: &[f64],
         dt_s: f64,
         p: &'a BroadParams,
     ) -> Result<Self> {
         let k = p.decimate.max(1);
-        let (rt_d, y_d, _) = decimate(rt_s, mz, &y_res, k)?;
-        let y_pre_d = if y_pre.is_empty() {
-            Vec::new()
-        } else {
-            decimate(rt_s, mz, &y_pre, k)?.1
-        };
+        let (rt_d, y_d, _) = decimate(rt_s, mz, if y_res.is_empty() { &y_pre } else { y_res }, k)?;
         let n = y_d.len();
         let mut sm = filled(n, 0.0f64)?;
         for (i, out) in sm.iter_mut().enumerate() {
@@ -405,9 +397,7 @@ impl<'a> Residue<'a> {
             rt_s,
             mz,
             y,
-            y_res,
             y_pre,
-            y_pre_d,
             rt_d,
             y_d,
             sm,
@@ -445,28 +435,11 @@ fn band(r: &Residue, t: usize, lo_d: usize, hi_d: usize, scale_s: f64) -> Option
         return None;
     }
     // front width on the inpainted trace, before G(t) is subtracted
-    let pre = if r.y_pre.is_empty() {
-        &r.y_d
-    } else {
-        &r.y_pre_d
-    };
-    if hwhm_left(&r.rt_d, pre, t, lo_d) <= r.p.front_s {
+    if hwhm_left(&r.rt_d, &r.y_pre, k, t, lo_d) <= r.p.front_s {
         return None;
     }
-    let (mut area, mut area_s, mut sw, mut swm) = (0.0, 0.0, 0.0, 0.0);
-    if r.y_pre.is_empty() {
-        for i in lo..=hi {
-            let v = r.y_res[i] - bridge(i);
-            if i > lo {
-                let u = r.y_res[i - 1] - bridge(i - 1);
-                area += (u + v) / 2.0;
-                area_s += (r.rt_s[i] - r.rt_s[i - 1]) * (u + v) / 2.0;
-            }
-        }
-    } else {
-        // area before G(t): the fitted background would eat the area of a band wider than the fit
-        (area, area_s) = area_over_line(r.rt_s, &r.y_pre, lo, hi);
-    }
+    let (area, area_s) = area_over_line(r.rt_s, &r.y_pre, (lo, hi), (r.y_pre[lo], r.y_pre[hi]));
+    let (mut sw, mut swm) = (0.0, 0.0);
     for (&v, &z) in r.y[lo..=hi].iter().zip(&r.mz[lo..=hi]) {
         sw += v;
         swm += v * z;

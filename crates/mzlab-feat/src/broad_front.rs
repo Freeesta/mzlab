@@ -6,36 +6,35 @@ use mzlab_core::error::Result;
 
 use crate::trace::reserve;
 
-/// Seconds from the left half-height point of the front to the apex (block `t` of the decimated trace `y_d`, baseline at block `lo_d`).
-/// Zero when the walk to the left border found no flank at all; infinite when the apex is not above the baseline, so a candidate whose front cannot be measured is kept.
-pub(crate) fn hwhm_left(rt_d: &[f64], y_d: &[f64], t: usize, lo_d: usize) -> f64 {
-    let (base, top) = (y_d[lo_d], y_d[t]);
-    // no flank to the left of the apex: the candidate sits at the foot of something higher, a step and not a rise
-    if lo_d >= t {
-        return 0.0;
-    }
-    if top <= base {
-        return f64::INFINITY;
-    }
-    let half = base + 0.5 * (top - base);
-    for j in (lo_d..t).rev() {
-        if y_d[j] < half {
-            let frac = (y_d[j + 1] - half) / (y_d[j + 1] - y_d[j]);
-            return rt_d[t] - (rt_d[j + 1] - frac * (rt_d[j + 1] - rt_d[j]));
-        }
-    }
-    rt_d[t] - rt_d[lo_d]
+/// Seconds from the left half-height point of the front to the apex: block `t` of the series `y` cut in blocks of `k` scans, baseline at block `lo_d`.
+/// Zero when `lo_d` is the apex block (no flank: a step, as at the foot of something higher); when no block is below half height the width runs to `lo_d`.
+pub(crate) fn hwhm_left(rt_d: &[f64], y: &[f64], k: usize, t: usize, lo_d: usize) -> f64 {
+    let block = |b: usize| {
+        let s = &y[b * k..((b + 1) * k).min(y.len())];
+        s.iter().sum::<f64>() / s.len() as f64
+    };
+    let half = (block(lo_d) + block(t)) / 2.0;
+    let at = (lo_d..t)
+        .rev()
+        .find(|&j| block(j) < half)
+        .map_or(lo_d, |j| j + 1);
+    rt_d[t] - rt_d[at]
 }
 
-/// Trapezoid area (scan units, seconds x intensity) of `y` over scans `lo..=hi` after removing the line between `y[lo]` and `y[hi]`.
-pub(crate) fn area_over_line(rt_s: &[f64], y: &[f64], lo: usize, hi: usize) -> (f64, f64) {
-    let span = (hi - lo).max(1) as f64;
-    let line = |i: usize| y[lo] + (y[hi] - y[lo]) * (i - lo) as f64 / span;
-    let (mut area, mut area_s) = (0.0, 0.0);
+/// Trapezoid area (scan units, seconds x intensity) of `y` over scans `lo..=hi` after removing the line that runs from `b_lo` at `lo` to `b_hi` at `hi`.
+pub(crate) fn area_over_line(
+    rt_s: &[f64],
+    y: &[f64],
+    (lo, hi): (usize, usize),
+    (b_lo, b_hi): (f64, f64),
+) -> (f64, f64) {
+    let line = |i: usize| b_lo + (b_hi - b_lo) * (i - lo) as f64 / (hi - lo) as f64;
+    let (mut area, mut area_s, mut u) = (0.0, 0.0, y[lo] - b_lo);
     for i in lo + 1..=hi {
-        let (u, v) = (y[i - 1] - line(i - 1), y[i] - line(i));
+        let v = y[i] - line(i);
         area += (u + v) / 2.0;
         area_s += (rt_s[i] - rt_s[i - 1]) * (u + v) / 2.0;
+        u = v;
     }
     (area, area_s)
 }
