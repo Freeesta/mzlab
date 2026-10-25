@@ -16,7 +16,6 @@ pub struct BlockCache<F> {
     dim: u64,
     size: usize,
     slots: Vec<Slot>,
-    max_slots: usize,
     tick: u64,
 }
 
@@ -26,8 +25,13 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> BlockCache<F> {
             fetch,
             dim,
             size,
-            slots: Vec::new(),
-            max_slots: slots.max(1),
+            slots: (0..slots.max(1))
+                .map(|_| Slot {
+                    start: 0,
+                    data: Vec::new(),
+                    used: 0,
+                })
+                .collect(),
             tick: 0,
         }
     }
@@ -37,46 +41,35 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         self.tick += 1;
         let end = off + buf.len() as u64;
-        if let Some(s) = self
-            .slots
-            .iter_mut()
-            .find(|s| off >= s.start && end <= s.start + s.data.len() as u64)
-        {
-            s.used = self.tick;
-            let a = (off - s.start) as usize;
-            buf.copy_from_slice(&s.data[a..a + buf.len()]);
-            return Ok(());
+        let (mut victim, mut oldest) = (0, u64::MAX);
+        for (i, s) in self.slots.iter_mut().enumerate() {
+            if off >= s.start && end <= s.start + s.data.len() as u64 {
+                s.used = self.tick;
+                let a = (off - s.start) as usize;
+                buf.copy_from_slice(&s.data[a..a + buf.len()]);
+                return Ok(());
+            }
+            if s.used < oldest {
+                (victim, oldest) = (i, s.used);
+            }
         }
         let n = self.size.min(self.dim.saturating_sub(off) as usize);
         if buf.len() >= self.size || n < buf.len() {
             // big (or past the end, for the fetch to refuse): as asked
             return (self.fetch)(off, buf);
         }
-        let idx = if self.slots.len() < self.max_slots {
-            self.slots.push(Slot {
-                start: 0,
-                data: Vec::new(),
-                used: 0,
-            });
-            self.slots.len() - 1
-        } else {
-            (0..self.slots.len())
-                .min_by_key(|&i| self.slots[i].used)
-                .unwrap_or(0)
-        };
-        let s = &mut self.slots[idx];
+        let s = &mut self.slots[victim];
+        s.data.clear();
         s.data.resize(n, 0);
-        // a failed fetch must not leave a block that claims bytes it does not hold
-        s.start = u64::MAX;
-        s.used = 0;
-        s.data.fill(0);
         let r = (self.fetch)(off, &mut s.data);
-        if r.is_ok() {
-            s.start = off;
-            s.used = self.tick;
-            buf.copy_from_slice(&s.data[..buf.len()]);
+        if r.is_err() {
+            // a failed fetch must not leave a block that claims bytes it does not hold
+            s.data.clear();
+            return r;
         }
-        r
+        (s.start, s.used) = (off, self.tick);
+        buf.copy_from_slice(&s.data[..buf.len()]);
+        Ok(())
     }
 }
 

@@ -3,7 +3,6 @@
 use std::io::Write;
 
 use js_sys::Function;
-use mzlab_core::blocchi::BlockCache;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
@@ -31,10 +30,6 @@ fn error_json(e: &mzlab_core::Error) -> JsValue {
 /// synchronously (about a millisecond), so the member is read ahead in blocks.
 const LETTURA: usize = 256 << 10;
 
-/// Blocks kept: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read again at the next
-/// (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145).
-const BLOCCHI: usize = 3;
-
 /// `read(i, offset, length) -> Uint8Array`: `n` bytes of member `i` at `off`.
 fn da_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_sys::Uint8Array> {
     let bad = || mzlab_core::Error::new("error.badIndex");
@@ -53,17 +48,67 @@ fn da_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_s
     Ok(a)
 }
 
+/// Blocks kept by the `thermo` module: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read
+/// again at the next (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145). The other families keep
+/// the one block they had: their gain is not measured and their `.wasm` limits leave no room for the cache.
+#[cfg(feature = "thermo")]
+const BLOCCHI: usize = 3;
+
 /// Member `i` of a dataset, read through `read` and a cache of `BLOCCHI` blocks of `LETTURA` bytes (the small reads are served from them).
+#[cfg(feature = "thermo")]
 fn membro_js(
     read: Function,
     i: u32,
     dim: u64,
-) -> BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
+) -> mzlab_core::blocchi::BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
     let fetch = move |off: u64, buf: &mut [u8]| -> mzlab_core::Result<()> {
         da_js(&read, i, off, buf.len())?.copy_to(buf);
         Ok(())
     };
-    BlockCache::new(fetch, dim, LETTURA, BLOCCHI)
+    mzlab_core::blocchi::BlockCache::new(fetch, dim, LETTURA, BLOCCHI)
+}
+
+/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`; the small reads are served from the last block read.
+#[cfg(not(feature = "thermo"))]
+struct JsMember {
+    read: Function,
+    i: u32,
+    dim: u64,
+    inizio: u64,
+    blocco: Vec<u8>,
+}
+
+#[cfg(not(feature = "thermo"))]
+fn membro_js(read: Function, i: u32, dim: u64) -> JsMember {
+    JsMember {
+        read,
+        i,
+        dim,
+        inizio: 0,
+        blocco: Vec::new(),
+    }
+}
+
+#[cfg(not(feature = "thermo"))]
+impl mzlab_core::idxread::ReadAt for JsMember {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
+        let fine = off + buf.len() as u64;
+        let dentro = off >= self.inizio && fine <= self.inizio + self.blocco.len() as u64;
+        if !dentro {
+            let n = LETTURA.min(self.dim.saturating_sub(off) as usize);
+            if buf.len() >= LETTURA || n < buf.len() {
+                da_js(&self.read, self.i, off, buf.len())?.copy_to(buf); // big (or past the end, for JS to refuse): as asked
+                return Ok(());
+            }
+            let a = da_js(&self.read, self.i, off, n)?;
+            self.blocco.resize(n, 0);
+            a.copy_to(&mut self.blocco);
+            self.inizio = off;
+        }
+        let da = (off - self.inizio) as usize;
+        buf.copy_from_slice(&self.blocco[da..da + buf.len()]);
+        Ok(())
+    }
 }
 
 /// The members of a dataset as the page describes them.
