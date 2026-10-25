@@ -1476,6 +1476,30 @@ impl RawFileReader {
         }
     }
 
+    /// [`Self::read_peaks_only`] with the peaks appended to `mz` and `int` instead of returned as `Peak`s: the arrays of a spectrum without a `Vec<Peak>` in between.
+    pub fn read_peaks_only_into<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<()> {
+        use crate::scan_format::ScanDataFormat;
+        if self.scan_format != ScanDataFormat::PacketHeader {
+            let peaks = self.read_peaks_only(source, scan_number)?;
+            crate::scan_data::make_room(mz, peaks.len());
+            crate::scan_data::make_room(int, peaks.len());
+            mz.extend(peaks.iter().map(|p| p.mz));
+            int.extend(peaks.iter().map(|p| p.abundance));
+            return Ok(());
+        }
+        let entry = self.scan_index_entry(scan_number)?;
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read_peaks_only_into(&mut r, mz, int)
+    }
+
     /// Return the scan-parameter record for a given 1-based scan number, read from `source` (the one the file was opened with).
     ///
     /// Returns `None` if the file has no scan-parameter stream, if
