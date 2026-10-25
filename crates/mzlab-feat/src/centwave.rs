@@ -4,7 +4,7 @@
 
 use mzlab_core::error::Result;
 
-use crate::broad::{detect_broad, BroadParams};
+use crate::broad::{detect_broad_at, BroadParams};
 use crate::channels::Seg;
 use crate::trace::{filled, reserve, Params};
 
@@ -250,6 +250,34 @@ fn keep_above_noise(
         .collect()
 }
 
+/// The series of `s`: the intensities of the slab inside the window of m/z of the segment summed per scan, and the same weighted by m/z.
+pub(crate) fn series_of(
+    s: &Seg,
+    mz: &[f64],
+    it: &[f64],
+    pos: &[u32],
+    p: &Params,
+    cw: &CentWave,
+) -> Result<(Vec<f64>, Vec<f64>)> {
+    let half = match p.axis {
+        crate::axis::MassAxis::Ppm => s.mzc * cw.ppm * 1e-6,
+        crate::axis::MassAxis::Da { .. } => 0.5,
+    };
+    let from = mz.partition_point(|&m| m < s.mzc - half);
+    let to = mz.partition_point(|&m| m <= s.mzc + half);
+    let len = (s.z - s.a + 1) as usize;
+    let mut y = filled(len, 0.0f64)?;
+    let mut weighted = filled(len, 0.0f64)?;
+    for i in from..to {
+        if pos[i] >= s.a && pos[i] <= s.z {
+            let k = (pos[i] - s.a) as usize;
+            y[k] += it[i];
+            weighted[k] += it[i] * mz[i];
+        }
+    }
+    Ok((y, weighted))
+}
+
 /// Cuts every segment into the peaks of its series: the intensities of the slab inside the window of m/z of the segment, summed per scan.
 /// `mz` ascending; `dt` is the median interval between scans, seconds.
 pub(crate) fn refine(
@@ -267,22 +295,8 @@ pub(crate) fn refine(
         .collect();
     let mut out: Vec<Seg> = Vec::new();
     for s in segs {
-        let half = match p.axis {
-            crate::axis::MassAxis::Ppm => s.mzc * cw.ppm * 1e-6,
-            crate::axis::MassAxis::Da { .. } => 0.5,
-        };
-        let from = mz.partition_point(|&m| m < s.mzc - half);
-        let to = mz.partition_point(|&m| m <= s.mzc + half);
-        let len = (s.z - s.a + 1) as usize;
-        let mut y = filled(len, 0.0f64)?;
-        let mut weighted = filled(len, 0.0f64)?;
-        for i in from..to {
-            if pos[i] >= s.a && pos[i] <= s.z {
-                let k = (pos[i] - s.a) as usize;
-                y[k] += it[i];
-                weighted[k] += it[i] * mz[i];
-            }
-        }
+        let (y, weighted) = series_of(&s, mz, it, pos, p, cw)?;
+        let len = y.len();
         // no peak can pass the height of the row or the signal-to-noise bar: the series is not worth the transform
         let top = y.iter().fold(0.0f64, |m, &v| m.max(v));
         if top < p.min_height.max(cw.snr * p.floor) {
@@ -331,7 +345,7 @@ fn broad_segs(
         }
     }
     let narrow: Vec<(usize, usize)> = found.iter().map(|&(lo, _, hi)| (lo, hi)).collect();
-    for b in detect_broad(&rt, &mz, y, &narrow, bp)? {
+    for b in detect_broad_at(&rt, &mz, y, &narrow, bp, s.a as usize)? {
         reserve(out, 1)?;
         out.push(Seg {
             chan: s.chan,

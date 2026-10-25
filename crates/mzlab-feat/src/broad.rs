@@ -3,8 +3,11 @@
 //! multiscale Ricker pass on the residue decimated by `decimate`. Used by `centwave::refine` and `untargeted::resolve`; off by default.
 //! Sums run in a fixed order and `exp` comes from `libm`: native and WASM give the same bits.
 
+use std::sync::Arc;
+
 use mzlab_core::error::Result;
 
+use crate::broad_gt::{detrend, CommonMode};
 use crate::centwave::ricker;
 use crate::trace::{filled, reserve};
 
@@ -20,7 +23,7 @@ const MIN_HALF_WIDTH: f64 = 0.75;
 const EDGE: f64 = 0.03;
 
 /// Parameters of the broad-band pass (`enabled: false` leaves every table as it was).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct BroadParams {
     pub enabled: bool,
     /// Scans per block of the decimated residue.
@@ -33,6 +36,27 @@ pub struct BroadParams {
     pub min_scans: usize,
     /// Minimum height over the local bridge, in intensity units.
     pub noise: f64,
+    /// Removes [1, t, t^2, G(t)] (asymmetric fit) from every trace before the search; needs `common`, otherwise it does nothing.
+    pub gt: bool,
+    /// Common gradient mode of the file, set by the collector of the detector (`trace::detect_with`, `untargeted::pipeline::run_file`).
+    pub common: Option<Arc<CommonMode>>,
+}
+
+// `gt` and `common` stay out of the text of the recipe while `gt` is off, so the fingerprints made before they existed keep their name.
+impl std::fmt::Debug for BroadParams {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("BroadParams");
+        d.field("enabled", &self.enabled)
+            .field("decimate", &self.decimate)
+            .field("width_s", &self.width_s)
+            .field("snr", &self.snr)
+            .field("min_scans", &self.min_scans)
+            .field("noise", &self.noise);
+        if self.gt {
+            d.field("gt", &self.gt);
+        }
+        d.finish()
+    }
 }
 
 impl Default for BroadParams {
@@ -44,6 +68,8 @@ impl Default for BroadParams {
             snr: 8.0,
             min_scans: 40,
             noise: 500.0,
+            gt: false,
+            common: None,
         }
     }
 }
@@ -166,18 +192,7 @@ pub fn decimate(
     Ok((r, v, z))
 }
 
-fn median(v: &mut [f64]) -> f64 {
-    if v.is_empty() {
-        return 0.0;
-    }
-    v.sort_by(|a, b| a.total_cmp(b));
-    let m = v.len() / 2;
-    if v.len() % 2 == 1 {
-        v[m]
-    } else {
-        (v[m - 1] + v[m]) / 2.0
-    }
-}
+use crate::broad_gt::median;
 
 /// Noise of a short series: 1.4826 x median of |first difference| / sqrt 2 (robust to the bands themselves; no reach of a peak is involved).
 fn noise_of(y: &[f64]) -> Result<f64> {
@@ -278,6 +293,18 @@ pub fn detect_broad(
     narrow: &[(usize, usize)],
     p: &BroadParams,
 ) -> Result<Vec<BroadPeak>> {
+    detect_broad_at(rt_s, mz, y, narrow, p, 0)
+}
+
+/// [`detect_broad`] for a trace that starts at scan `scan0` of the run (the scan of `p.common` that its first sample belongs to).
+pub fn detect_broad_at(
+    rt_s: &[f64],
+    mz: &[f64],
+    y: &[f64],
+    narrow: &[(usize, usize)],
+    p: &BroadParams,
+    scan0: usize,
+) -> Result<Vec<BroadPeak>> {
     let len = y.len();
     if !p.enabled || len < p.min_scans || rt_s.len() != len || mz.len() != len || len < 2 {
         return Ok(Vec::new());
@@ -299,6 +326,9 @@ pub fn detect_broad(
     let mut y_res = filled(len, 0.0f64)?;
     y_res.copy_from_slice(y);
     inpaint_linear(&mut y_res, &cut);
+    if let (true, Some(cm)) = (p.gt, &p.common) {
+        detrend(rt_s, mz, &mut y_res, p.decimate, scan0, cm)?;
+    }
     let r = Residue::new(rt_s, mz, y, y_res, dt_s, p)?;
     let widths = scale_widths(p);
     let sig: Vec<f64> = widths.iter().map(|&w| sigma(w, r.dt_d)).collect();
