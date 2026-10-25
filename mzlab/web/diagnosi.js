@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Why a file could not be read: ONE shape {codice, fase, causa, dettagli} for every loading error of every format. `fase` = where it failed (open / copy / index / decode / write),
 // `causa` = a short key of the catalog (diag.cause.*), `dettagli` = what helps to find the reason without showing data: format, size, the original technical error, the first lines of the header

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Actions of the UV spectrum (DAD) that open a wavelength trace; used by the menu and the keys of a `spec` panel with `uv: true`. Classic script, loaded after eventi.js (wlOpen).
 (() => {
   const T = I18N.t.bind(I18N);

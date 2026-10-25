@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Roles and times in the loading table (`campioni/2`, the Rust of mzlab-core). The proposals from the file names (`proponi`) come from the engine through `api/campioni/<op>`;
 // nothing is decided here. The time is optional and written in the table: nothing holds back «Load data», which is the confirmation.

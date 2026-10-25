@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Automatic background of the SPECTRUM: when «background of a stretch» is chosen and no stretch is typed, the program picks one from the TIC of each file.
 // Pure choice (regioni, waste, tested in Node: tests/fondo_node.js) + the glue used by drawSpec (picchi.js) and ctl (pannelli.js). Classic script, loaded after fondo.js.
 // the stretch of the spectrum background (and the choice «background of a stretch») is one undoable action (comandi.js)

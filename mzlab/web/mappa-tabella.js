@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The marked points of the RT x m/z map: the shapes drawn on the map, the Excel / copy export and the table under it (sort, groups, reference).
 // Classic script, loaded before mappa.js, which calls MAPFORME(ctx) and MAPTAB(ctx, forms) once inside its closure: ctx carries the helpers that live there.
 const MAPFORME = c => {
