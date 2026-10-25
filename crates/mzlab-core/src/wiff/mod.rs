@@ -20,7 +20,7 @@ use crate::error::{Error, Result};
 use crate::methodinfo::{self, Method};
 use crate::ole::Ole;
 
-const SAMPLES: &str = "SampleSubtree/";
+pub(super) const SAMPLES: &str = "SampleSubtree/";
 /// Offsets inside `ExperimentHeader`: the precursor m/z (f64) and the scan-type code (u32).
 const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;

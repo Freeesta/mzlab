@@ -303,7 +303,7 @@ async function lrOp(m) {
         lrFile.set(e.name, f);
         const ok = /\.mzml$/i.test(e.name) ? await safe(() => lrOpen(e.name)) : false;
         const st = /\.mzml$/i.test(e.name) ? await nativo.stubOf(e.name) : null;
-        out.push({ name: e.name, size: st ? st.size : f.size, indexed: !!ok, nat: !!st, file: f });
+        out.push({ name: e.name, size: st ? (st.dim != null ? st.dim : null) : f.size, indexed: !!ok, nat: !!st, file: f });
       }
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
@@ -321,7 +321,7 @@ async function lrOp(m) {
     case "lr_entry": {
       const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
       const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
-      return { info: st ? JSON.stringify({ ...JSON.parse(info), size: st.size, nat: true }) : info };      // the size of a sample of a maker's file is the one of its members
+      return { info: st ? JSON.stringify({ ...JSON.parse(info), size: st.dim != null ? st.dim : null, nat: true }) : info };
     }
     case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)

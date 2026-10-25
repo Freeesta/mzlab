@@ -136,6 +136,7 @@ pub struct Campione {
     pub id: u32,
     pub nome: String,
     pub scansioni: usize,
+    pub dimensione: Option<u64>,
 }
 
 /// Where the bytes of a scan lie in the original: member of the `FileSet`, offset, length (what the `.mzidx` of a vendor file will store).

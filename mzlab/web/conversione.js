@@ -358,9 +358,17 @@ function convName(rawName, taken) {
   const base = String(rawName).replace(/\.raw$/i, ""), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
   return used.has((base + ".mzML").toLowerCase()) ? base + ".raw.mzML" : base + ".mzML";
 }
-// name of the mzML of a sample of a SCIEX .wiff: "x.mzML" when the .wiff holds one sample, "x_s3.mzML" (sample number) when it holds several; "x.wiff.mzML" when taken
-function wiffName(stem, sample, several, taken) {
-  const base = several ? stem + "_s" + sample : String(stem), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
+// name of the mzML of a sample of a SCIEX .wiff: DATA name if present, else "x.mzML" or "x_s3.mzML" (sample number); "x.wiff.mzML" when taken
+function wiffName(stem, sample, several, taken, sampleName) {
+  const given = sampleName != null && String(sampleName) !== stem + ".wiff #" + sample;      // the reader names a sample without a DATA name "x.wiff #3"
+  const clean = given ? String(sampleName).trim().replace(/[/\\:*?"<>|]/g, "_").slice(0, 120) : "";
+  const used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
+  let base;
+  if (clean) {
+    base = used.has((clean + ".mzML").toLowerCase()) ? clean + "_s" + sample : clean;
+  } else {
+    base = several ? stem + "_s" + sample : String(stem);
+  }
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // the text key of the state of a row of the files being converted (CONVROWS)

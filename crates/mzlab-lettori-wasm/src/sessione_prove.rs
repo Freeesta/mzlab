@@ -73,6 +73,7 @@ fn la_sessione_risponde_e_chiude() {
             id: 1,
             nome: "a".into(),
             scansioni: 1,
+            dimensione: None,
         }],
         indice: vec![VoceScansione {
             id: "scan=0".into(),

@@ -87,7 +87,7 @@ class Writer:
     def __init__(self):
         self.scan, self.streams, self.table, self.expect = bytearray(), {}, [], {}
 
-    def sample(self, n, blocks, method=None, log=None, dad=None):
+    def sample(self, n, blocks, method=None, log=None, dad=None, data_name=None):
         """blocks: [("scan", points, time_ms, tic[, version]) | ("mrm", values, time_ms, tic)] in file order; `log`: the model of the Log; `dad`: (times in min, first nm, step nm, rows of absorbance in mAU) for the optical detector; a method path that starts with `Period` is taken whole."""
         start = len(self.scan)
         self.scan += bytes(44)
@@ -99,6 +99,9 @@ class Writer:
             off += len(block)
         self.table.append((n, start + 20))
         self.streams[f"SampleSubtree/Sample{n}/Idx"] = bytes(idx)
+        if data_name is not None:
+            enc = data_name.encode("utf-16le")
+            self.streams[f"SampleSubtree/Sample{n}/SampleDABE/DATA"] = struct.pack("<H", len(enc)) + enc
         for path, data in (method or {}).items():
             self.streams[f"MethodSubtree/Method{n}/DeviceMethod0/{path if path.startswith('Period') else 'Period0/' + path}"] = data
         if dad:
@@ -155,6 +158,13 @@ def main():
            "2": {"polarity": 0, "spectra": [], "chromatograms": [{"id": "TIC", "time": [t / 60000.0 for t in times], "intensity": [sum(v) for v in MRM]}]
                  + [{"id": f"SRM SIC sample=2 period=1 experiment=1 transition={j}", "time": [t / 60000.0 for t in times], "intensity": [v[j] for v in MRM]} for j in range(3)]}}
     w.save(out, "two")
+    w = Writer()
+    w.sample(1, [("scan", FULL, 600.0, 1.0)], data_name="Sample_A")
+    w.sample(2, [("scan", FULL, 600.0, 1.0)], data_name="  Sample_B  ")
+    w.sample(3, [("scan", FULL, 600.0, 1.0)], data_name="")
+    w.sample(4, [("scan", FULL, 600.0, 1.0)])
+    w.sample(5, [("scan", FULL, 600.0, 1.0)], data_name="Sample_A")
+    w.save(out, "nomi")
     cfb_scrivi.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
     w, series = Writer(), []
     for k in range(80):  # a peak at m/z ~229.1 (9 bins wide) eluting at 4 min, on sparse noise: enough points per scan for the profile step

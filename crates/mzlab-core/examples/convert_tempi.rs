@@ -110,6 +110,7 @@ impl DaMzml {
             id: 1,
             nome: "sintetico".into(),
             scansioni: run.spectra.len(),
+            dimensione: None,
         }];
         DaMzml {
             run,

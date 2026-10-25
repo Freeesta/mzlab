@@ -58,7 +58,7 @@ addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setVie
 if(S.view!=="data"){$("#v-draw").hidden=S.view!=="draw";$("#v-theory").hidden=S.view!=="theory";document.documentElement.classList.toggle("in-draw",S.view==="draw");document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view))}
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
-const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
+const sz=b=>b==null?"—":b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
 async function post(u,body,raw){const r=await fetch(u,{method:"POST",body:raw??JSON.stringify(body||{})});const j=await r.json();if(j.error)throw I18N.err(j);return j}
 // concentration units: key -> [label, factor to mg/L]; the names carry the unit (std_0.5ppm), the table shows the one chosen in its header
 const CU={mgl:["mg/L",1],ugl:["µg/L",1e-3],ngl:["ng/L",1e-6],gl:["g/L",1e3]},CUN={ppm:"mgl",ppb:"ugl",ppt:"ngl",mgl:"mgl",ugl:"ugl",ngml:"ugl",ngl:"ngl",gl:"gl"};
@@ -191,11 +191,11 @@ async function wiffToMzml(files,box,signal){const rb=window.MZLAB_RUST_READY?awa
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
     // the module looks at every pair first: the engine reads the 3200 QTRAP only, and a file of another instrument or scan type is for the module («variante»)
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD,pr=M0&&window.LETTORI_FAM.sciex.sonda?await M0.probe("sciex",mem).catch(()=>null):null;
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,cs.length>1,taken);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex"))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size))});CONVROWS.drop(e.row);continue}
       const hit=await NATIVO.cached(rb,e.stem,mem,ST.files||[]);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       // the module's answer for the pair holds for its samples (moduloWants)
-      s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken),f=NATIVO.sample(nm,key,mem,i,x.id,false);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
+      s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
     catch(x){const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}

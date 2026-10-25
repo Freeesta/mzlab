@@ -122,12 +122,13 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .collect();
     let stem = nome
         .rsplit_once('.')
-        .map_or(nome.as_str(), |(s, _)| s)
+        .map_or(&nome[..], |(s, _)| s)
         .to_string();
     let campioni = vec![Campione {
         id: 1,
         nome: stem,
         scansioni: indice.len(),
+        dimensione: None,
     }];
     Ok(Box::new(LettoreRaw {
         raw,
