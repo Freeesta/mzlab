@@ -97,3 +97,64 @@ fn inpaint_and_decimate_follow_the_spec() {
     let (r, v, z) = decimate(&[0.0, 1.0, 2.0], &[1.0, 3.0, 5.0], &[1.0, 3.0, 0.0], 2).unwrap();
     assert_eq!((r, v, z), (vec![0.5, 2.0], vec![2.0, 0.0], vec![2.5, 5.0]));
 }
+
+/// Gaussian convolved with an exponential tail (EMG), unit area scaled to height `h` at its own maximum approximately.
+fn emg(t: f64, t0: f64, sd: f64, tau: f64, h: f64) -> f64 {
+    let z = (sd / tau - (t - t0) / sd) / core::f64::consts::SQRT_2;
+    let e = libm::exp(sd * sd / (2.0 * tau * tau) - (t - t0) / tau);
+    h * e * 0.5 * libm::erfc(z)
+}
+
+#[test]
+fn tail_of_a_narrow_peak_is_not_a_band() {
+    let mut rng = Lcg(5);
+    let rt: Vec<f64> = (0..1200).map(|i| i as f64).collect();
+    let y: Vec<f64> = rt
+        .iter()
+        .map(|&t| emg(t, 600.0, 4.0, 40.0, 40000.0) + rng.next(40.0))
+        .collect();
+    // the detector of narrow peaks stops where the tail is still high; its shoulder reads as a band unless the steep front is checked
+    let narrow = [(590, 610)];
+    let b = detect_broad(&rt, &vec![300.0; 1200], &y, &narrow, &on()).unwrap();
+    assert!(b.is_empty(), "{b:?}");
+    let mut off = on();
+    off.front_s = -1.0;
+    assert!(!detect_broad(&rt, &vec![300.0; 1200], &y, &narrow, &off)
+        .unwrap()
+        .is_empty());
+}
+
+#[test]
+fn wide_bands_keep_recall_and_area() {
+    let (mut hit, mut total) = (0, 0);
+    for fwhm in [60.0, 90.0, 120.0, 180.0, 240.0] {
+        let sd = fwhm / 2.354_820_045;
+        for emg_tau in [0.0, 25.0] {
+            let mut rng = Lcg(fwhm as u64 + emg_tau as u64);
+            let rt: Vec<f64> = (0..1500).map(|i| i as f64).collect();
+            let f = |t: f64| {
+                if emg_tau > 0.0 {
+                    emg(t, 600.0, sd, emg_tau, 3000.0)
+                } else {
+                    gauss(t, 600.0, sd, 3000.0)
+                }
+            };
+            let truth: f64 = rt.iter().map(|&t| f(t)).sum();
+            let y: Vec<f64> = rt.iter().map(|&t| f(t) + rng.next(40.0)).collect();
+            let b = detect_broad(&rt, &vec![300.0; 1500], &y, &[], &on()).unwrap();
+            total += 1;
+            if let Some(p) = b
+                .iter()
+                .find(|p| (p.rt_apex - 600.0).abs() <= 60.0 + emg_tau)
+            {
+                hit += 1;
+                assert!(
+                    (p.area_s - truth).abs() <= 0.2 * truth,
+                    "{fwhm} {emg_tau}: {} vs {truth}",
+                    p.area_s
+                );
+            }
+        }
+    }
+    assert!(hit as f64 / total as f64 >= 0.8, "{hit}/{total}");
+}

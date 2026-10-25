@@ -12,6 +12,7 @@ mod aligned_ops;
 pub mod attributio;
 pub mod axis;
 pub mod broad;
+mod broad_front;
 pub mod broad_gt;
 pub mod centwave;
 mod channels;
