@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // «Fragmentation graph» tab of an MSn infusion (banco.js, BODY.gra): the Ion formula field (formula or name), the settings, the graph the engine builds from the
 // file already loaded (/api/msn_grafo), the panel of the selected ion, the export of the cleaned spectra and «Add to library». JS only draws: the formulas,
 // the ppm, the filters and the texts of the exports come from the engine. Parts: infusione-grafo-{stato,campo,svg,nodo,esporta}.js. Loaded by banco.js on first use.

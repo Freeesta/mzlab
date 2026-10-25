@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // UV spectrum of the DAD / PDA (absorbance against wavelength), opened by a double click on the PDA map (mappa.js) or on the PDA trace (eventi.js).
 // A "spec" panel with `uv: true`: the data come from /api/uvspec (mean of the optical rows between r0 and r1, or the nearest row), drawn here as a line
 // with the same axes machinery (zoom, hover, export, table of the data) as the other graphs. Only a .wiff with the detector has the matrix.

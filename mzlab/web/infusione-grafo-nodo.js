@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The panel of the selected ion of the «Fragmentation graph»: its candidate formulas (error, evidences, «Use»), the isolation window, the peaks of its spectra
 // the graph could not explain, the warnings of the node and a drawing box (the fragment the user draws, kept next to the node: a hypothesis, not a result).
 import { G, TXT, ionText, useCandidate, fetchStrutture } from "./infusione-grafo-stato.js";

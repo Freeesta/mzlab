@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Drawer of the fragmentation graph (msngrafo/1 with its `vista`): pure SVG, no page globals (texts and choices come in `opts`), so the tab, the Flow and the
 // stand-alone HTML draw the same figure. Two views of the same data: the tree (columns by MS level) and the radial (precursor in the centre, one ring per step of
 // the best path). Imports nothing from the page.
@@ -287,9 +287,11 @@ function lossText(/** @type {any} */ a, /** @type {Tr} */ t) {
   let second = null;
   if (comp.length) {
     const [pre, post] = t("msngrafo.v.compat", { f: "\u0001" }).split("\u0001");
-    second = [{ t: "(" + pre, k: "n" }];
-    comp.forEach((/** @type {string} */ c, /** @type {number} */ i) => { if (i) second.push({ t: " / ", k: "n" }); second.push(...formulaParts(c)); });
-    second.push({ t: (post || "") + ")", k: "n" });
+    /** @type {{ t: string, k: string }[]} */
+    const parts = [{ t: "(" + pre, k: "n" }];
+    comp.forEach((/** @type {string} */ c, /** @type {number} */ i) => { if (i) parts.push({ t: " / ", k: "n" }); parts.push(...formulaParts(c)); });
+    parts.push({ t: (post || "") + ")", k: "n" });
+    second = parts;
   }
   return { first: [{ t: `Δ ${p.da_massa.toFixed(3)} Da`, k: "n" }], second };
 }

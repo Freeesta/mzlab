@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Labels of the main peaks of a chromatogram, as in Xcalibur: the RT of the apex and the quantity that defines the peak ("14.26 · 301.14" = base peak m/z of
 // the apex scan, "14.26 · 254 nm" = absorbance maximum of the DAD at the apex; XIC and MRM: the extracted ion). Which peaks and which maximum is worked out by
 // the Rust engine (QUALITA.labels / QUALITA.mainPeak, qualita.js); this file only asks at rest, caches, places the labels and draws them (grafici.js drawLines).

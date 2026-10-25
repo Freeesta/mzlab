@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // «Search lab library» of the «Fragmentation graph»: the graph in view is compared with the local library of MSn trees (OPFS, see «Add to library»)
 // through POST api/msnlib/cerca. Shows the candidates with their three separate scores and proofs, analogs marked; never a verdict. The engine ranks and scores.
 import { params } from "./infusione-grafo-stato.js";

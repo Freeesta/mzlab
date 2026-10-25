@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Opening a saved fragmentation graph (a g.json, msngrafo/1) without its raw data: a dropped or picked .json is recognised by its head, a graph without `vista`
 // is completed by the .wasm msngrafo (op `completa`; no calculation here) and shown read-only in a window with the same body as the «Fragmentation graph» tab.
 // Used by shell.js (upload0, the data area) and infusione-grafo.js (the tab). docs/agenti/infusione-grafo.md.

@@ -1,3 +1,4 @@
+// @ts-strict
 // High-resolution mass spectrometry (HRMS) target and suspect screening UI and coordination.
 "use strict";
 

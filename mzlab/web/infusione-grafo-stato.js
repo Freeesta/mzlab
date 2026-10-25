@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // State and requests of the «Fragmentation graph» tab of an MSn infusion: the ion typed or chosen by name, the settings, the user's formula choices
 // and the graph (msngrafo/1) that /api/msn_grafo answers. No chemistry here: the engine reads the ion text and does every calculation.
 // Used by infusione-grafo*.js.
