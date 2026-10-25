@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Lens of the mass spectrum: passing over a peak (or choosing it with the keys or a tap) shows a small XIC of that ion, one file, with the tolerance of the
 // button «XIC» (xic-spettro.js) and the line of the scan the spectrum shows. Transient: no state, no area, no integration. A click or Enter on the lens

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Loads the .wasm of ONE readers module (wasm-lettori/<family>/, crates/mzlab-lettori-wasm) in the worker that asks, once per worker: fetched on the first request that names the family (never the others)
 // and checked against its SHA-256 in wasm-lettori/manifest.json. Used by lettori-worker.js (probe, toMzml) and lettore-esterno.js (the engine's workers read a `.raw` through the `thermo` module).
 

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The error log of a Thermo .raw in the Method window (`metodo/1.registro`): what the instrument reported while it acquired, each entry with its time. A click on the time moves the cursor of the
 // first chromatogram of the tab to that RT (the spectrum of the scan nearest in time follows, as for a click on the chromatogram). Only what the file says is shown, as it says it; every text goes through EH().
 // Loaded as a module after the classic scripts; metodo-doc.js uses window.METODO_REGISTRO.
