@@ -25,9 +25,12 @@ for _ in range(50):
     except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 MZ = sorted(str(p) for p in D.glob("*.mzML"))[:3]
 WIFF = [str(D / n) for n in ["serie.wiff", "serie.wiff.scan"]]
-RECORD = """() => { window.__pc = []; window.__over = false;
-  const read = () => { const b = document.querySelector('#up .loadbar [role=progressbar]'); if (b) window.__pc.push(Number(b.getAttribute('aria-valuenow'))); };
-  new MutationObserver(read).observe(document.querySelector('#up'), { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'], childList: true });
+RECORD = """() => { window.__pc = {}; window.__over = false;
+  const read = () => { for (const c of document.querySelectorAll('#flist td[data-cvrow]')) { const b = c.querySelector('[role=progressbar]'); if (b) (window.__pc[c.dataset.cvrow] = window.__pc[c.dataset.cvrow] || []).push(Number(b.getAttribute('aria-valuenow'))); } };
+  new MutationObserver(read).observe(document.querySelector('#flist'), { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'], childList: true });
+  window.__tx = new Set(); window.__head = new Set(); window.__live = 0;
+  new MutationObserver(() => { for (const x of document.querySelectorAll('#flist [data-cvtxt]')) window.__tx.add(x.textContent.trim()); for (const h of document.querySelectorAll('#flist [data-cvhead]')) window.__head.add(h.textContent);
+    window.__live += document.querySelectorAll('#flist [aria-live]').length; }).observe(document.querySelector('#flist'), { subtree: true, characterData: true, childList: true });
   window.__ph = []; addEventListener('mzlab-index', e => window.__ph.push([e.detail.name, e.detail.phase || '', e.detail.frac, performance.now()])); }"""
 
 try:
@@ -45,14 +48,30 @@ try:
         pcs = pg.evaluate("window.__pc")
         print("   bar:", pcs)
         def forward():
-            assert len(pcs) >= 3, pcs
-            assert pcs == sorted(pcs), pcs                                          # forward only
-            assert pcs[-1] == 100 and all(x <= 99 for x in pcs[:-1]), pcs
-        step("the bar of the loading card only goes forward and is not 100 before the end", forward)
+            assert pcs, pcs
+            for name, v in pcs.items():
+                if not name.endswith('.mzML'): continue                                  # the row of a maker's pair is replaced by the rows of its samples
+                assert v == sorted(v), (name, v)                                       # forward only
+                first = v.index(100) if 100 in v else len(v)
+                assert all(x <= 99 for x in v[:first]), (name, v)                         # never 100 before the end of the file (the last row to end is not painted again)
+            assert any(len(v) >= 3 for v in pcs.values()), pcs
+        step("the bar of each row only goes forward and is not 100 before the end of its file", forward)
         def one_bar():
-            assert pg.evaluate("document.querySelectorAll('#up .loadbar').length") == 0      # removed when the last loading is over
+            assert pg.evaluate("document.querySelectorAll('#up .loadbar').length") == 0, "the card has no bar of its own: the rows carry the progress"
             assert pg.evaluate("document.querySelectorAll('#up .prog').length") == 0, "a second bar is left"
-        step("one bar, removed at the end", one_bar)
+        step("one system: no bar in the card", one_bar)
+        def texts():
+            tx = pg.evaluate("[...window.__tx]"); head = pg.evaluate("[...window.__head]"); print("   texts:", tx, "heads:", head[:3])
+            import re
+            assert any(t.startswith(("Loading", "Carico")) for t in tx), tx
+            assert any(re.fullmatch(r"(Reading [\d.,\u00a0\u202f ]+ of [\d.,\u00a0\u202f ]+ scans|Leggo [\d.,\u00a0\u202f ]+ / [\d.,\u00a0\u202f ]+ scansioni)", t) for t in tx), tx      # the scans read of the sample, from the engine
+            assert any(re.fullmatch(r"(\d+ of \d+ ready|\d+ di \d+ pronti) · \d+:\d\d", h) for h in head), head
+        step("each row says what it does (Loading, Reading n of m scans) and the head says «k of n ready · m:ss»", texts)
+        def live():
+            assert pg.evaluate("window.__live") == 0, "no aria-live inside the list: only the summary region speaks"
+            assert pg.evaluate("document.querySelectorAll('#cvlive[role=status][aria-live=polite]').length") == 1
+            assert pg.evaluate("document.getElementById('cvlive').textContent") != ""
+        step("one polite region for the summary, none in the rows", live)
         ph = pg.evaluate("window.__ph")
         def weights():
             by = {}

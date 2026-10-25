@@ -26,6 +26,7 @@ pub mod scan_filter;
 pub mod scan_format;
 pub mod scan_index;
 pub mod seq_row;
+mod srm_table;
 pub mod srm_traces;
 pub mod status_log;
 

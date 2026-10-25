@@ -91,11 +91,11 @@ export function createLr({ rb }) {
     if ((nat ? nat.size : blob.size) > 4 * 1024 * 1024 * 1024) return fail("err.memory.over4gb", {}, "file over 4 GB: too big", 500);
     let fase = "copy";                                                 // where it fails, for the diagnosis (diagnosi.js): copy → index → open
     try {                                                              // lr_put and lr_index report how far they have got: the page shows it (event mzlab-index, shell.js upload)
-      const put = await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : undefined);
+      const put = await rpc({ op: "lr_put", name: n, blob, nat }, nat ? p => tellIndex(n, W.copy * p.frac, "read") : p => tellIndex(n, 0.4 * p.frac, "load", p));
       if (nat && rb.markNative) rb.markNative(n);
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
-      else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
+      else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
     } catch (e) {
       let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
