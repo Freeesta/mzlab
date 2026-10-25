@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Pull-request client of the Teoria editor (public repository Freeesta/mzlab): reads a chapter from main and sends an edit as ONE pull request
 // (new branch, the .md and its generated .html, auto-merge once the checks are green). One editor pull request may be open at a time; main is never written directly.
 // fetch is injectable so the whole flow is tested in Node (tests/test_teoria_editor.py).

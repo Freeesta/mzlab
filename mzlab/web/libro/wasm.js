@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Loads the Rust Libro converter (crates/mzlab-libro-wasm) built by tools/build_feat_wasm.sh: the manifest of wasm-feat/ gives its file and SHA-256, the bytes are checked before they run.
 
 /** @typedef {{version: string, convert: (text: string, name: string, rawOk: boolean) => string, preview: (text: string, name: string, rawOk: boolean) => string, edit: (text: string, name: string, rawOk: boolean, src: string, html: string) => string, retitled: (oldText: string, newText: string, name: string) => boolean, reindex: (indexJs: string, file: string, html: string) => string}} Converter */

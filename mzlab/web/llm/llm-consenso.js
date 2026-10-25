@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Consent of the assistant: what the user agreed to, per provider and class of data (localStorage `mzlab.llm.consenso`, revocable in the settings), and the dialog that asks for it.
 // Nothing leaves the computer before a consent exists for the provider and every class the request carries. Loaded by llm-impostazioni.js, only in the profile «ricerca».
 

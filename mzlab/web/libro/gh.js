@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // GitHub Contents API client for the private Libro repository. Admin tool of the editor page: the token and the text live in memory only.
 // Every call goes to api.github.com (the only host the page CSP allows); fetch is injectable so the logic is tested in Node.
 

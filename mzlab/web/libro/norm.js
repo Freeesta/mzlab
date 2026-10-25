@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Brings the Markdown written by the visual editor back to the dialect the converter and Claude read (tools/libro/LEGGIMI.md):
 // the editor escapes [ and ~, writes "*" bullets and pads tables; none of that is needed, so the file stays clean and small diffs stay small.
 

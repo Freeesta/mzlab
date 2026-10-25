@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The loop of the assistant on the page: one conversation = one worker (llm-worker.js) that holds the state machine of Rust (`Agent`), and this class, which carries out what the machine asks:
 // show the text, call a tool of the Flow, ask the user, send a request. Every decision (levels, confirmations, limits) is Rust's; the page only executes and reports back.
 // Used by flow/lazy/flow-llm.js, only when the assistant is on. A recording (tests) answers the requests inside the worker and no transport is used.

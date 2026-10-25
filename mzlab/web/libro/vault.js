@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Keeps the GitHub token of the admin editor: either sealed with a passphrase (AES-GCM, PBKDF2) in localStorage, or only for the tab (sessionStorage).
 // Every storage access can throw (private window, blocked site data): the page must work without it.
 

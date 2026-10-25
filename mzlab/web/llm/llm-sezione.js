@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Pieces of the «Assistant» section that keep no state of their own: the markup of the switched-on section, the text of «What will be sent», the test conversation and
 // the area of the key. Used by llm-impostazioni.js.
 import { readConsent } from "./llm-consenso.js";
