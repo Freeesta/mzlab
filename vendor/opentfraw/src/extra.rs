@@ -304,7 +304,7 @@ pub fn trailer_extras<R: Read + Seek>(
 pub fn trailer_extras_of(rec: &GenericRecord, fields: &ExtraFields) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
     for (label, value) in &rec.values {
-        if READ_LABELS.contains(&label.as_str()) || label.contains("===") {
+        if READ_LABELS.contains(&&**label) || label.contains("===") {
             continue;
         }
         let name = label

@@ -216,7 +216,7 @@ fn every_channel_of_the_status_log_is_a_field_and_the_log_is_no_longer_a_warning
             let (name, _) = opentfraw::status_log::split_label(&f.label);
             let has_value = log.records().iter().any(|r| {
                 r.values.iter().any(|(l, x)| {
-                    *l == f.label && !matches!(x, opentfraw::generic_data::GenericValue::Gap)
+                    **l == f.label && !matches!(x, opentfraw::generic_data::GenericValue::Gap)
                 })
             });
             if !has_value || name.is_empty() {

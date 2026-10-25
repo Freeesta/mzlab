@@ -2,6 +2,7 @@ use crate::error::{Error, Result};
 use crate::reader::BinaryReader;
 use crate::types::GenericType;
 use std::io::{Cursor, Read, Seek};
+use std::sync::Arc;
 
 /// A field descriptor within a GenericDataHeader.
 #[derive(Debug, Clone)]
@@ -36,7 +37,7 @@ pub enum GenericValue {
 /// A single record decoded using a GenericDataHeader.
 #[derive(Debug, Clone)]
 pub struct GenericRecord {
-    pub values: Vec<(String, GenericValue)>,
+    pub values: Vec<(Arc<str>, GenericValue)>,
 }
 
 impl GenericDataHeader {
@@ -200,21 +201,23 @@ impl GenericRecord {
     ) -> Result<Self> {
         // the bytes of the record first and then the values from them: `read_value` exists for one kind of reader only (it is not repeated for each source)
         let bytes = r.read_bytes(header.fixed_record_size())?;
-        Self::from_bytes(&bytes, header)
+        let labels: Vec<Arc<str>> = header.fields.iter().map(|d| d.label.as_str().into()).collect();
+        Self::from_bytes(&bytes, header, &labels)
     }
 
-    fn from_bytes(bytes: &[u8], header: &GenericDataHeader) -> Result<Self> {
+    /// The record in `bytes`; `labels` are the labels of `header`, shared by every record of a stream instead of copied into each.
+    fn from_bytes(bytes: &[u8], header: &GenericDataHeader, labels: &[Arc<str>]) -> Result<Self> {
         let mut r = BinaryReader::new(Cursor::new(bytes));
         let mut values = Vec::with_capacity(header.fields.len());
-        for desc in &header.fields {
-            values.push((desc.label.clone(), read_value(&mut r, desc)?));
+        for (desc, label) in header.fields.iter().zip(labels) {
+            values.push((Arc::clone(label), read_value(&mut r, desc)?));
         }
         Ok(Self { values })
     }
 
     /// Look up a field by label and return a reference to its value.
     pub fn get(&self, label: &str) -> Option<&GenericValue> {
-        self.values.iter().find(|(l, _)| l == label).map(|(_, v)| v)
+        self.values.iter().find(|(l, _)| &**l == label).map(|(_, v)| v)
     }
 
     /// Get a float64 field by label.
@@ -298,6 +301,8 @@ fn read_value<R: Read + Seek>(
 #[derive(Debug)]
 pub struct GenericRecordStream {
     header: GenericDataHeader,
+    /// The labels of the fields of `header`, shared by the records `get` gives.
+    labels: Vec<Arc<str>>,
     /// Byte offset of each field inside a record.
     offsets: Vec<usize>,
     record_size: usize,
@@ -312,6 +317,7 @@ impl Clone for GenericRecordStream {
     fn clone(&self) -> Self {
         Self {
             header: self.header.clone(),
+            labels: self.labels.clone(),
             offsets: self.offsets.clone(),
             record_size: self.record_size,
             n: self.n,
@@ -345,6 +351,7 @@ impl GenericRecordStream {
     pub fn empty() -> Self {
         Self {
             header: GenericDataHeader { fields: Vec::new() },
+            labels: Vec::new(),
             offsets: Vec::new(),
             record_size: 0,
             n: 0,
@@ -371,6 +378,7 @@ impl GenericRecordStream {
         }
         Ok(Self {
             header: header.clone(),
+            labels: header.fields.iter().map(|d| d.label.as_str().into()).collect(),
             offsets,
             record_size,
             n,
@@ -416,7 +424,7 @@ impl GenericRecordStream {
             *g = (first, buf);
         }
         let at = (i - first) * self.record_size;
-        GenericRecord::from_bytes(&g.1[at..at + self.record_size], &self.header).ok()
+        GenericRecord::from_bytes(&g.1[at..at + self.record_size], &self.header, &self.labels).ok()
     }
 
     /// Calls `f(i, record)` for every record in order, reading the file `CHUNK` records at a time. Stops (and says `false`) when the file cannot be read.
