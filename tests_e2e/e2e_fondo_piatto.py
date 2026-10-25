@@ -14,7 +14,8 @@ site = ROOT / "site"
 if not (site / "index.html").exists() or not (site / "static" / "wasm" / "mzlab_wasm.js").exists():
     print("  ", ("site", "SKIP site/ or site/static/wasm not built")); sys.exit(0)
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import socket
+while socket.socket().connect_ex(("127.0.0.1", PORT)) != 0: pass          # the server is up when the port answers
 PANEL = ".pnl.chrom"
 CP = "E.panels.find(p=>p.type==='chrom')"
 try:
