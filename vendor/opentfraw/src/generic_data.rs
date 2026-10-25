@@ -201,7 +201,11 @@ impl GenericRecord {
     ) -> Result<Self> {
         // the bytes of the record first and then the values from them: `read_value` exists for one kind of reader only (it is not repeated for each source)
         let bytes = r.read_bytes(header.fixed_record_size())?;
-        let labels: Vec<Arc<str>> = header.fields.iter().map(|d| d.label.as_str().into()).collect();
+        let labels: Vec<Arc<str>> = header
+            .fields
+            .iter()
+            .map(|d| d.label.as_str().into())
+            .collect();
         Self::from_bytes(&bytes, header, &labels)
     }
 
@@ -217,7 +221,10 @@ impl GenericRecord {
 
     /// Look up a field by label and return a reference to its value.
     pub fn get(&self, label: &str) -> Option<&GenericValue> {
-        self.values.iter().find(|(l, _)| &**l == label).map(|(_, v)| v)
+        self.values
+            .iter()
+            .find(|(l, _)| &**l == label)
+            .map(|(_, v)| v)
     }
 
     /// Get a float64 field by label.
@@ -378,7 +385,11 @@ impl GenericRecordStream {
         }
         Ok(Self {
             header: header.clone(),
-            labels: header.fields.iter().map(|d| d.label.as_str().into()).collect(),
+            labels: header
+                .fields
+                .iter()
+                .map(|d| d.label.as_str().into())
+                .collect(),
             offsets,
             record_size,
             n,
