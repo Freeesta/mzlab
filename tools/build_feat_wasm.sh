@@ -7,6 +7,7 @@ part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 # Limit of every other .wasm after wasm-opt -Oz, bytes (the rule of the project: it does not go up; measured: detect 418400, proofs 450711, finder 436274, attributio 432347, finder_msn 296579, mrm 226834, grafo 199697).
 limit=512000
+limit_untargeted=524288   # untargeted: +2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator
 limit_table=614400   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
 limit_hr=1339392   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1099407 (+10 %); the six separate ones measured 2037856 under 6 x 512000); the only cap of the group (docs/agenti/wasm-tetti.md)
 limit_attributio=1388544   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1258944 (+10 %); the four separate ones measured 2494394 under 512000 + 942080 + 659456 + 479232); the only cap of the group (docs/agenti/misure.md)
@@ -37,7 +38,7 @@ fi
 for which in $group; do
   case $which in detect|proofs|mrm|finder) want a || continue ;; *) want b || continue ;; esac
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $([ $which = interp ] && echo $limit_interp || echo $limit) "mzFinder $which"
+  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $(case $which in interp) echo $limit_interp;; untargeted) echo $limit_untargeted;; *) echo $limit;; esac) "mzFinder $which"
 done
 if want a; then
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
