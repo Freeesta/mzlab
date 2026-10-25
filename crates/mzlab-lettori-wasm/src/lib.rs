@@ -3,7 +3,7 @@
 use std::io::Write;
 
 use js_sys::Function;
-use mzlab_core::idxread::ReadAt;
+use mzlab_core::blocchi::BlockCache;
 use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
@@ -31,64 +31,39 @@ fn error_json(e: &mzlab_core::Error) -> JsValue {
 /// synchronously (about a millisecond), so the member is read ahead in blocks.
 const LETTURA: usize = 256 << 10;
 
-/// Member `i` of a dataset, read through `read(i, offset, length) -> Uint8Array`; the small reads are served from the last block read.
-struct JsMember {
+/// Blocks kept: the reader alternates between the packets of the scans, the trailer records and the index, and a block thrown away by a far read is read again at the next
+/// (`raw_tempi`: with 3 the table of a 32 MB Orbitrap file fetches 26 MB instead of 59, the 82 MB profile file 71 instead of 145).
+const BLOCCHI: usize = 3;
+
+/// `read(i, offset, length) -> Uint8Array`: `n` bytes of member `i` at `off`.
+fn da_js(read: &Function, i: u32, off: u64, n: usize) -> mzlab_core::Result<js_sys::Uint8Array> {
+    let bad = || mzlab_core::Error::new("error.badIndex");
+    let v = read
+        .call3(
+            &JsValue::NULL,
+            &i.into(),
+            &(off as f64).into(),
+            &(n as f64).into(),
+        )
+        .map_err(|_| bad())?;
+    let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
+    if a.length() as usize != n {
+        return Err(bad());
+    }
+    Ok(a)
+}
+
+/// Member `i` of a dataset, read through `read` and a cache of `BLOCCHI` blocks of `LETTURA` bytes (the small reads are served from them).
+fn membro_js(
     read: Function,
     i: u32,
     dim: u64,
-    inizio: u64,
-    blocco: Vec<u8>,
-}
-
-impl JsMember {
-    fn new(read: Function, i: u32, dim: u64) -> Self {
-        JsMember {
-            read,
-            i,
-            dim,
-            inizio: 0,
-            blocco: Vec::new(),
-        }
-    }
-
-    fn da_js(&self, off: u64, n: usize) -> mzlab_core::Result<js_sys::Uint8Array> {
-        let bad = || mzlab_core::Error::new("error.badIndex");
-        let v = self
-            .read
-            .call3(
-                &JsValue::NULL,
-                &self.i.into(),
-                &(off as f64).into(),
-                &(n as f64).into(),
-            )
-            .map_err(|_| bad())?;
-        let a: js_sys::Uint8Array = v.dyn_into().map_err(|_| bad())?;
-        if a.length() as usize != n {
-            return Err(bad());
-        }
-        Ok(a)
-    }
-}
-
-impl ReadAt for JsMember {
-    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
-        let fine = off + buf.len() as u64;
-        let dentro = off >= self.inizio && fine <= self.inizio + self.blocco.len() as u64;
-        if !dentro {
-            let n = LETTURA.min(self.dim.saturating_sub(off) as usize);
-            if buf.len() >= LETTURA || n < buf.len() {
-                self.da_js(off, buf.len())?.copy_to(buf); // big (or past the end, for JS to refuse): as asked
-                return Ok(());
-            }
-            let a = self.da_js(off, n)?;
-            self.blocco.resize(n, 0);
-            a.copy_to(&mut self.blocco);
-            self.inizio = off;
-        }
-        let da = (off - self.inizio) as usize;
-        buf.copy_from_slice(&self.blocco[da..da + buf.len()]);
+) -> BlockCache<impl FnMut(u64, &mut [u8]) -> mzlab_core::Result<()>> {
+    let fetch = move |off: u64, buf: &mut [u8]| -> mzlab_core::Result<()> {
+        da_js(&read, i, off, buf.len())?.copy_to(buf);
         Ok(())
-    }
+    };
+    BlockCache::new(fetch, dim, LETTURA, BLOCCHI)
 }
 
 /// The members of a dataset as the page describes them.
@@ -126,7 +101,7 @@ impl Membri {
             .map(|(i, (n, &s))| Membro {
                 nome: n.clone(),
                 dim: s as u64,
-                dati: Box::new(JsMember::new(self.read.clone(), i as u32, s as u64)),
+                dati: Box::new(membro_js(self.read.clone(), i as u32, s as u64)),
                 sha1: None,
             })
             .collect();
