@@ -19,9 +19,10 @@ use super::gapfill::{fill, GapParams};
 use super::ident::{ident, IdentParams};
 use super::isotopes::{group, IsoParams, Representative};
 use super::join::{align, JoinParams};
-use super::resolve::{resolve, Chrom as Trace, MinParams};
+use super::resolve::{resolve_with_broad, Chrom as Trace, MinParams};
 use super::table::to_aligned;
 use super::Feature;
+use crate::broad::BroadParams;
 use crate::table::{Aligned, FileFeatures};
 
 /// Bytes of points that the ADAP builder may hold at once (`adap::each_slab`).
@@ -69,6 +70,8 @@ pub struct UntParams {
     /// `None` (the default, as in the mzmine 4.10 gold batches) leaves the traces as the ADAP builder gives them.
     pub baseline: Option<BaselineParams>,
     pub resolve: MinParams,
+    /// Broad bands on the residue of the narrow peaks (off by default).
+    pub broad: BroadParams,
     pub join: JoinParams,
     pub gap: GapParams,
     /// Isotope groups and identities of the rows of the table (`"iso": null` or `false` leaves them out).
@@ -88,6 +91,7 @@ impl Default for UntParams {
                 adjust_edges: true,
                 ..MinParams::default()
             },
+            broad: BroadParams::default(),
             join: JoinParams::default(),
             // the mass list the filler reads is the one of the mass detector
             gap: GapParams {
@@ -341,19 +345,22 @@ pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Featu
     // the RT of mzmine is a float: the resolver compares distances on that axis
     let axis: Vec<f64> = scans.iter().map(|s| s.rt as f32 as f64).collect();
     let mut out = Vec::new();
+    let mut failed = None;
     each_slab(&scans, &p.adap, p.slab_bytes, |chroms| {
         for c in &chroms {
             let mut t = full_trace(c, scans.len());
             if let Some(b) = &p.baseline {
                 t.y = b.apply(&axis, &t.y);
             }
-            out.extend(
-                resolve(&t, &axis, &p.resolve)
-                    .iter()
-                    .map(|f| stored(f.into())),
-            );
+            match resolve_with_broad(&t, &axis, &p.resolve, &p.broad) {
+                Ok(fs) => out.extend(fs.iter().map(|f| stored(f.into()))),
+                Err(e) => failed = failed.take().or(Some(e)),
+            }
         }
     });
+    if let Some(e) = failed {
+        return Err(e);
+    }
     out.sort_by(|a, b| a.mz.total_cmp(&b.mz).then(a.rt.total_cmp(&b.rt)));
     Ok(out)
 }

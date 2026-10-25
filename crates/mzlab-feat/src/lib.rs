@@ -11,6 +11,7 @@ mod aligned_ops;
 #[cfg(feature = "attributio")]
 pub mod attributio;
 pub mod axis;
+pub mod broad;
 pub mod centwave;
 mod channels;
 #[cfg(feature = "chem")]

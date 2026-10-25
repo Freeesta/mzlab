@@ -4,6 +4,7 @@
 
 use mzlab_core::error::Result;
 
+use crate::broad::{detect_broad, BroadParams};
 use crate::channels::Seg;
 use crate::trace::{filled, reserve, Params};
 
@@ -16,7 +17,7 @@ pub enum Peak {
 }
 
 /// Parameters of the wavelet model (descriptor `features.detect`, algorithm `centwave`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct CentWave {
     /// Half window of m/z (ppm; on the Da axis 0.5 Da) around a trace where its intensities are summed per scan.
     pub ppm: f64,
@@ -24,6 +25,8 @@ pub struct CentWave {
     pub width_s: (f64, f64),
     /// Minimum height over the baseline, in units of the noise of the trace (never less than `Params::floor`).
     pub snr: f64,
+    /// Broad bands (30-300 s) on the residue of the narrow peaks; off by default.
+    pub broad: BroadParams,
 }
 
 impl Default for CentWave {
@@ -32,7 +35,22 @@ impl Default for CentWave {
             ppm: 25.0,
             width_s: (5.0, 30.0),
             snr: 10.0,
+            broad: BroadParams::default(),
         }
+    }
+}
+
+// The text of the recipe is built from this: the broad pass adds nothing while it is off, so the fingerprints made before it exist keep their name.
+impl std::fmt::Debug for CentWave {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("CentWave");
+        d.field("ppm", &self.ppm)
+            .field("width_s", &self.width_s)
+            .field("snr", &self.snr);
+        if self.broad.enabled {
+            d.field("broad", &self.broad);
+        }
+        d.finish()
     }
 }
 
@@ -53,7 +71,7 @@ const REACH: f64 = 2.5;
 /// Two neighbouring apexes are two peaks only if the valley between them is lower than this fraction of the lower apex.
 const RESOLVED: f64 = 0.9;
 
-fn ricker(x: f64) -> f64 {
+pub(crate) fn ricker(x: f64) -> f64 {
     let x2 = x * x;
     (1.0 - x2) * libm::exp(-0.5 * x2)
 }
@@ -270,7 +288,11 @@ pub(crate) fn refine(
         if top < p.min_height.max(cw.snr * p.floor) {
             continue;
         }
-        for (lo, apex, hi) in peaks(&y, &wavelets, cw.snr, p.floor)? {
+        let found = peaks(&y, &wavelets, cw.snr, p.floor)?;
+        if cw.broad.enabled && len >= cw.broad.min_scans {
+            broad_segs(&s, &y, &weighted, &found, dt, &cw.broad, &mut out)?;
+        }
+        for (lo, apex, hi) in found {
             let tot: f64 = y[lo..=hi].iter().sum();
             let w: f64 = weighted[lo..=hi].iter().sum();
             reserve(&mut out, 1)?;
@@ -287,4 +309,43 @@ pub(crate) fn refine(
         }
     }
     Ok(out)
+}
+
+/// Appends the broad bands of the series of `s` (the narrow peaks `found` are inpainted away first) as segments.
+fn broad_segs(
+    s: &Seg,
+    y: &[f64],
+    weighted: &[f64],
+    found: &[(usize, usize, usize)],
+    dt: f64,
+    bp: &BroadParams,
+    out: &mut Vec<Seg>,
+) -> Result<()> {
+    let len = y.len();
+    let mut rt = filled(len, 0.0f64)?;
+    let mut mz = filled(len, s.mzc)?;
+    for i in 0..len {
+        rt[i] = i as f64 * dt;
+        if y[i] > 0.0 {
+            mz[i] = weighted[i] / y[i];
+        }
+    }
+    let narrow: Vec<(usize, usize)> = found.iter().map(|&(lo, _, hi)| (lo, hi)).collect();
+    for b in detect_broad(&rt, &mz, y, &narrow, bp)? {
+        reserve(out, 1)?;
+        out.push(Seg {
+            chan: s.chan,
+            mzc: b.mz,
+            apex: s.a + b.scan_apex as u32,
+            n: y[b.scan_lo..=b.scan_hi]
+                .iter()
+                .filter(|&&v| v > 0.0)
+                .count() as u32,
+            mx: b.height,
+            tot: b.area,
+            a: s.a + b.scan_lo as u32,
+            z: s.a + b.scan_hi as u32,
+        });
+    }
+    Ok(())
 }
