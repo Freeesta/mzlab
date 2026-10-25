@@ -11,7 +11,7 @@ fn d(t: GenericType, label: &str) -> GenericDataDescriptor {
 
 fn rec(v: Vec<(&str, GenericValue)>) -> GenericRecord {
     GenericRecord {
-        values: v.into_iter().map(|(k, x)| (k.to_string(), x)).collect(),
+        values: v.into_iter().map(|(k, x)| (k.into(), x)).collect(),
     }
 }
 
