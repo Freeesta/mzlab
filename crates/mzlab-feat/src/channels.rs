@@ -9,7 +9,7 @@ use crate::trace::{filled, reserve, Params, TOUCH_HEIGHT};
 /// A run of scans in one channel.
 #[derive(Clone, Copy)]
 pub(crate) struct Seg {
-    pub(crate) chan: i64,
+    pub(crate) chan: i32,
     pub(crate) mzc: f64,
     pub(crate) apex: u32,
     pub(crate) n: u32,
@@ -48,9 +48,9 @@ fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result
     let mut chan_of = filled(n, u32::MAX)?;
     let mut s = 0;
     while s < n {
-        let b = libm::floor(lmz[s] + shift) as i64;
+        let b = libm::floor(lmz[s] + shift) as i32;
         let mut e = s + 1;
-        while e < n && libm::floor(lmz[e] + shift) as i64 == b {
+        while e < n && libm::floor(lmz[e] + shift) as i32 == b {
             e += 1;
         }
         let cmax = it[s..e]
@@ -95,7 +95,7 @@ pub(crate) fn segments(
     }
     for &(s, e, _) in &chans {
         let (s, e) = (s as usize, e as usize);
-        let b = libm::floor(lmz[s] + shift) as i64;
+        let b = libm::floor(lmz[s] + shift) as i32;
         let order = &order[s..e];
         let mut k = 0;
         // current segment
@@ -137,7 +137,7 @@ pub(crate) fn segments(
 
 fn push_seg(
     out: &mut Vec<Seg>,
-    chan: i64,
+    chan: i32,
     c: (u32, u32, f64, f64, u32, f64, f64, u32),
     p: &Params,
 ) -> Result<()> {
@@ -193,7 +193,7 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
         TOUCH_HEIGHT
     };
     // the neighbour channel of the segments of one channel: (channel, first, end)
-    let mut next = (i64::MIN, 0, 0);
+    let mut next = (i32::MIN, 0, 0);
     for i in 0..m {
         let c = segs[i].chan;
         if next.0 != c {
