@@ -80,7 +80,7 @@ class Bench:
 
     def drag(s):
         """the vertical line of the chromatogram (its dot) dragged across the run: the MS1 spectrum follows"""
-        pg = s.pg; pg.evaluate("(p => p.el.scrollIntoView({block: 'center'}))(E.panels.find(p => p.type === 'chrom'))"); pg.wait_for_timeout(300)
+        pg = s.pg; pg.evaluate("(p => p.el.scrollIntoView({block: 'center'}))(E.panels.find(p => p.type === 'chrom'))"); frames(pg, 20)
         pg.mouse.click(*pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'chrom'), r = p.cv.getBoundingClientRect(); return [r.left + r.width * 0.5, r.top + r.height * 0.4]; })()")); frames(pg, 4)      # the click places the line; the mouse then grabs it
         c = pg.evaluate("(() => { const p = E.panels.find(q => q.type === 'chrom'), r = p.cv.getBoundingClientRect(); return [r.left + p._a.X(p.cur), r.top + r.height * 0.4, r.left, r.width]; })()")
         def sweep():
@@ -92,6 +92,9 @@ class Bench:
         du = pg.evaluate("i => __M.dr.slice(i).map(r => r.t1 - r.t0)", i0)
         s.out["drag_update"] = {"n": len(du), "p50": pct(du, .5), "p95": pct(du, .95)}
 
+
+class Gestures(Bench):
+    """the other actions: panels, files, maps, XIC, memory"""
     def switches(s):
         rows = []
         for _ in range(s.reps):                                                    # a new chromatogram panel and its closing
@@ -116,7 +119,7 @@ class Bench:
             pg.evaluate("(() => { const q = E.panels.filter(p => p.type === 'map'); q.forEach(closePanel); })()"); frames(pg, 3)
         s.put("map_2d", rows)
         pg.click("#np-map"); attendi(pg, "E.panels.some(p => p.type === 'map' && p._a)", timeout=600000); frames(pg, 5)
-        pg.evaluate("E.panels.find(p => p.type === 'map').el.scrollIntoView({block: 'center'})"); pg.wait_for_timeout(300)
+        pg.evaluate("E.panels.find(p => p.type === 'map').el.scrollIntoView({block: 'center'})"); frames(pg, 20)
         if pg.locator(".pnl.map [data-o=view][data-v='3d']").count():
             rows = []
             for _ in range(max(3, s.reps // 3)):
@@ -159,7 +162,7 @@ def one_config(p, port, rate, cores, reps):
     pg.add_init_script(INIT)
     ctx.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": rate})
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    B = Bench(pg, reps); t = time.time()
+    B = Gestures(pg, reps); t = time.time()
     for name, fn in (("open", lambda: B.open_demo(port)), ("drag", B.drag), ("switch", B.switches), ("map", B.maps), ("xic", B.xic), ("memory", B.memory)):
         print("  step", name, flush=True)
         try: fn()
