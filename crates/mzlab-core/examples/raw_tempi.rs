@@ -98,6 +98,16 @@ fn slots() -> usize {
         .unwrap_or(3)
 }
 
+/// Encoding threads of the mzML writer (`--threads N`; the default of the writer, the cores minus one, without it).
+fn threads() -> usize {
+    let a: Vec<String> = std::env::args().collect();
+    a.iter()
+        .position(|x| x == "--threads")
+        .and_then(|i| a.get(i + 1))
+        .and_then(|n| n.parse().ok())
+        .unwrap_or_else(mzlab_core::mzmlwrite::thread_predefinito)
+}
+
 fn set(path: &str) -> (FileSet, Counters) {
     let dim = std::fs::metadata(path).unwrap().len();
     let c = Counters {
@@ -321,6 +331,23 @@ fn main() {
     println!("peak memory {:.0} MB", peak_rss_mb());
 }
 
+/// The producer of the mzML writer alone: every scan and its extras, nothing written (the part of the writer that stays on one thread).
+fn producer(l: &mut dyn Lettore, n: usize, c: &Counters) {
+    let t = Instant::now();
+    let mut pts = 0usize;
+    for k in 0..n {
+        let s = l.scansione(0, k).unwrap();
+        let extra = l.extra_scansione(0, k, &s);
+        pts += s.mz.len() + extra.params.len();
+    }
+    line(
+        "producer (scan + extras)",
+        t.elapsed().as_secs_f64(),
+        c,
+        &format!("{pts} values"),
+    );
+}
+
 /// Every phase of the site for one reading of the file (`cen`: through `lettori_centroidi`).
 fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     println!(
@@ -404,9 +431,14 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     scratch_phases(path, name, cen, &mut *l, &imp, &c);
 
     if with_mzml {
+        producer(&mut *l, n, &c);
         let t = Instant::now();
         let mut sink = Sink::default();
-        lettori_mzml::scrivi(&mut *l, 0, &mut sink, &mut |_, _| {}).expect("mzML");
+        let opz = mzlab_core::mzmlwrite::Opzioni {
+            thread: threads(),
+            ..Default::default()
+        };
+        lettori_mzml::scrivi_con(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
         line(
             "write mzML (scrivi)",
             t.elapsed().as_secs_f64(),
