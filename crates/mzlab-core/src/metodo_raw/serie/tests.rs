@@ -27,8 +27,8 @@ fn log() -> StatusLog {
             ("Fore Vacuum (mbar):", GenericValue::Float64(b)),
         ])
     };
-    StatusLog {
-        header: GenericDataHeader {
+    StatusLog::new(
+        GenericDataHeader {
             fields: vec![
                 d(GenericType::Gap, "=== Ion Source ===:"),
                 d(GenericType::Float64, "Spray Voltage (V):"),
@@ -38,9 +38,9 @@ fn log() -> StatusLog {
                 d(GenericType::Float64, "Fore Vacuum (mbar):"),
             ],
         },
-        times_min: vec![0.0, 1.0, 2.5],
-        records: vec![r(3400.0, 1.0), r(3500.0, 1.5), r(3500.0, 2.0)],
-    }
+        vec![0.0, 1.0, 2.5],
+        vec![r(3400.0, 1.0), r(3500.0, 1.5), r(3500.0, 2.0)].into(),
+    )
 }
 
 #[test]
@@ -72,8 +72,8 @@ fn the_points_of_a_status_series_carry_the_time_of_each_record() {
 
 #[test]
 fn a_log_without_time_has_no_series() {
-    let mut l = log();
-    l.times_min.clear();
+    let l = log();
+    let l = StatusLog::new(l.header.clone(), Vec::new(), l.records().to_vec().into());
     assert!(indice_stato(&l).is_empty());
 }
 

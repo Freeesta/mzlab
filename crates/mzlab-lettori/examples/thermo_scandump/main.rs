@@ -325,13 +325,13 @@ fn write_extras(
         }
     }
     if let Some(sl) = raw.status_log.as_ref() {
-        let n = sl.records.len();
+        let n = sl.records().len();
         for i in (0..n).step_by(n.div_ceil(16).max(1)) {
             let mut o = Map::new();
             o.insert("type".into(), "status".into());
             o.insert("scan".into(), i.into());
-            put(&mut o, "rt", sl.times_min.get(i).map(|t| f64::from(*t)));
-            o.insert("values".into(), Value::Object(values_of(&sl.records[i])));
+            put(&mut o, "rt", sl.times_min().get(i).map(|t| f64::from(*t)));
+            o.insert("values".into(), Value::Object(values_of(&sl.records()[i])));
             out.row(&Value::Object(o));
         }
     }
