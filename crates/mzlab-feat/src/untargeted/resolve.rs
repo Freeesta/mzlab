@@ -12,6 +12,9 @@
 //! the start of the region, no point within ± `search_rt` is lower, and the apex is at least `min_ratio` times that minimum; the closed region must then
 //! pass the shape filter on both edges, otherwise it is dropped and the walk goes on from the minimum.
 
+use crate::broad::{detect_broad, BroadParams};
+use mzlab_core::error::Result;
+
 /// Parameters of the resolver (mzmine names in the comments; values of `tools/bench/parametri/mzmine/predefinita.json`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct MinParams {
@@ -258,4 +261,37 @@ pub fn resolve(c: &Chrom, rt: &[f64], p: &MinParams) -> Vec<Feature> {
         .into_iter()
         .map(|(s, e)| make_feature(rt, c, s, e))
         .collect()
+}
+
+/// [`resolve`] plus the broad bands: the narrow regions (found on the thresholded copy as ever) are inpainted away from the ORIGINAL trace, which is
+/// searched by `broad::detect_broad` before the quantile threshold could shave the band. With `bp.enabled == false` it is exactly [`resolve`].
+pub fn resolve_with_broad(
+    c: &Chrom,
+    rt: &[f64],
+    p: &MinParams,
+    bp: &BroadParams,
+) -> Result<Vec<Feature>> {
+    if !bp.enabled || c.y.len() != rt.len() || c.mz.len() != rt.len() {
+        return Ok(resolve(c, rt, p));
+    }
+    let mut y = c.y.clone();
+    let narrow = regions(rt, &mut y, p);
+    let mut out: Vec<Feature> = narrow
+        .iter()
+        .map(|&(s, e)| make_feature(rt, c, s, e))
+        .collect();
+    let rt_s: Vec<f64> = rt.iter().map(|m| m * 60.0).collect();
+    for b in detect_broad(&rt_s, &c.mz, &c.y, &narrow, bp)? {
+        out.push(Feature {
+            mz: b.mz,
+            rt_apex: b.rt_apex / 60.0,
+            rt_start: b.rt_lo / 60.0,
+            rt_end: b.rt_hi / 60.0,
+            height: b.height,
+            area: b.area_s / 60.0,
+            area_s: b.area_s,
+            scans: (b.scan_lo, b.scan_hi),
+        });
+    }
+    Ok(out)
 }

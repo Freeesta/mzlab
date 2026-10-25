@@ -105,6 +105,11 @@ impl Params {
         self
     }
 }
+/// True when the broad-band pass is on: a band longer than `long_trace` scans is then a peak, not background.
+fn broad_on(p: &Params) -> bool {
+    matches!(&p.peak, Peak::CentWave(cw) if cw.broad.enabled)
+}
+
 pub(crate) fn reserve<T>(v: &mut Vec<T>, extra: usize) -> Result<()> {
     v.try_reserve(extra).map_err(|_| Error::memory_budget())
 }
@@ -174,7 +179,7 @@ fn one_grid(
                 hi: s.z,
                 left: rt[s.a as usize],
                 right: rt[s.z as usize],
-                long: s.z - s.a + 1 > p.long_trace,
+                long: s.z - s.a + 1 > p.long_trace && !broad_on(p),
                 grid: g as u8,
             });
         }
