@@ -23,6 +23,7 @@ use super::resolve::{resolve_with_broad, Chrom as Trace, MinParams};
 use super::table::to_aligned;
 use super::Feature;
 use crate::broad::BroadParams;
+use crate::broad_gt::{share, TraceBank};
 use crate::table::{Aligned, FileFeatures};
 
 /// Bytes of points that the ADAP builder may hold at once (`adap::each_slab`).
@@ -336,6 +337,36 @@ fn stored(mut f: Feature) -> Feature {
     f
 }
 
+/// With the common-mode option of the broad pass on: the parameters with the gradient mode G(t) of the file in `broad.common`, found by a first pass
+/// over the persistent chromatograms (the span between their first and last scan covers 400 scans or 30 % of the run). `None` when the option is off
+/// or the file has too few of them.
+fn common_mode_params(scans: &[Ms1Scan], axis: &[f64], p: &UntParams) -> Option<UntParams> {
+    let b = &p.broad;
+    if !(b.enabled && b.gt) || b.common.is_some() {
+        return None;
+    }
+    let mut bank = TraceBank::new(scans.len(), b.decimate);
+    let mut failed = false;
+    each_slab(scans, &p.adap, p.slab_bytes, |chroms| {
+        for c in &chroms {
+            let (Some(&lo), Some(&hi)) = (c.scan.iter().min(), c.scan.iter().max()) else {
+                continue;
+            };
+            let mut t = full_trace(c, scans.len());
+            if let Some(bl) = &p.baseline {
+                t.y = bl.apply(axis, &t.y);
+            }
+            failed |= bank
+                .add(lo as usize, &t.y[lo as usize..=hi as usize])
+                .is_err();
+        }
+    });
+    let cm = bank.finish().ok().flatten().filter(|_| !failed)?;
+    let mut q = p.clone();
+    q.broad.common = share(Some(cm));
+    Some(q)
+}
+
 /// ADAP + resolver on the MS1 scans of one file: its list of features, sorted by m/z (then RT). Memory: the points of one slab of m/z at a time.
 pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Feature>> {
     let Some(si) = ix.section_of(1, p.polarity) else {
@@ -344,6 +375,8 @@ pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Featu
     let scans = ms1_scans(ix, si, p.adap.noise)?;
     // the RT of mzmine is a float: the resolver compares distances on that axis
     let axis: Vec<f64> = scans.iter().map(|s| s.rt as f32 as f64).collect();
+    let with_gt = common_mode_params(&scans, &axis, p);
+    let p = with_gt.as_ref().unwrap_or(p);
     let mut out = Vec::new();
     let mut failed = None;
     each_slab(&scans, &p.adap, p.slab_bytes, |chroms| {
