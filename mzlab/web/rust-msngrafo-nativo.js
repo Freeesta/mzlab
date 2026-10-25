@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // What api/msn_grafo reads when the infusion is a sample of a maker's file (.raw ...): the .wasm msngrafo only decodes an mzML by offset, so the sample is
 // written once as mzML on OPFS (conv/) with its own index (idx/), kept for the next request of the same sample; the page shows one bar over the phases.
 // Used by rust-worker.js (op "msngrafo"). docs/agenti/lettura-nativa.md.

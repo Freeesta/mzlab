@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Memory budget of the Rust engine as the page shows and keeps it: the device facts the engine's rule (budget_choice in Rust) needs, the choice made by
 // hand (kept in the code, no control in the settings: the budget is always automatic), the audit log of every choice (what, why, with which numbers, who)
 // and its read-only record in the administrator's diagnostics. The rule itself runs in Rust: this file only collects facts, no threshold in MB.

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Growth probe of the memory the browser grants a WebAssembly instance: a throwaway worker (this same file) makes a `WebAssembly.Memory` with the limit of
 // the build and grows it in steps of 256 MB up to 3072 MB or to the first refusal, then closes: a probe inside the engine would leave it gigabytes that
 // WASM memory never gives back. The pages are not written: it measures what the browser allows, not the free RAM. Used by rust-budget.js.
