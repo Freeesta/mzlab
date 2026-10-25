@@ -319,6 +319,7 @@ pub(crate) fn refine(
                 tot,
                 a: s.a + lo as u32,
                 z: s.a + hi as u32,
+                broad: false,
             });
         }
     }
@@ -359,6 +360,7 @@ fn broad_segs(
             tot: b.area,
             a: s.a + b.scan_lo as u32,
             z: s.a + b.scan_hi as u32,
+            broad: true,
         });
     }
     Ok(())

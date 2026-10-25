@@ -40,7 +40,7 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
     };
     for _ in 0..200 {
         let mut segs = Vec::new();
-        for chan in 0..6i64 {
+        for chan in 0..6i32 {
             // the runs of a channel come in scan order and apart, as `segments` makes them
             let mut at = r(30) as u32;
             for _ in 0..r(12) {
@@ -55,6 +55,7 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
                     tot: 3.0 * mx,
                     a,
                     z,
+                    broad: false,
                 });
                 at = z + p.max_gap + 1 + r(20) as u32;
             }
@@ -67,4 +68,10 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
             assert_eq!(find(&mut got, i), find(&mut want, i));
         }
     }
+}
+
+/// A segment stays at 48 bytes: the peak memory of detection on the wasm is guarded in `tests/test_guardie_memoria.py`.
+#[test]
+fn a_segment_is_48_bytes() {
+    assert_eq!(std::mem::size_of::<Seg>(), 48);
 }

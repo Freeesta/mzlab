@@ -14,6 +14,7 @@ fn row(grid: u8, lo: u32, hi: u32, apex: u32) -> Row {
         left: rt(lo),
         right: rt(hi),
         long: false,
+        broad: false,
         grid,
     }
 }

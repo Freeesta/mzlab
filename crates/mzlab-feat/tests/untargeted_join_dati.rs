@@ -60,6 +60,7 @@ fn load_lists(d: &std::path::Path, stems: &[String]) -> Vec<Vec<Feature>> {
                     height: x[c("height")].parse().unwrap(),
                     area: x[c("area")].parse().unwrap(),
                     filled: false,
+                    broad: false,
                 })
                 .collect(),
         );

@@ -44,7 +44,8 @@ pub fn row_facts(t: &crate::table::Aligned) -> Vec<RowFacts> {
     }
     (0..t.len())
         .map(|r| RowFacts {
-            bad_quality: !t.meta.is_empty() && t.meta.get(r).qreason != 0,
+            bad_quality: !t.meta.is_empty()
+                && t.meta.get(r).qreason & !crate::quality::REASON_BROAD != 0,
             isotope: !t.iso.is_empty() && t.iso.group[r] != 0 && first[&t.iso.group[r]] != r,
             tp_status: t.tp.status[r],
             mass_error: false,

@@ -24,6 +24,7 @@ use super::table::to_aligned;
 use super::Feature;
 use crate::broad::BroadParams;
 use crate::broad_gt::{share, TraceBank};
+use crate::quality::REASON_BROAD;
 use crate::table::{Aligned, FileFeatures};
 
 /// Bytes of points that the ADAP builder may hold at once (`adap::each_slab`).
@@ -247,6 +248,7 @@ impl From<&super::resolve::Feature> for Feature {
             height: f.height,
             area: f.area,
             filled: false,
+            broad: f.broad,
         }
     }
 }
@@ -448,7 +450,10 @@ pub fn to_file_features(list: &[Feature]) -> FileFeatures {
         fwhm: vec![0.0; n],
         asym: vec![0.0; n],
         gaps: vec![0; n],
-        qreason: vec![0; n],
+        qreason: list
+            .iter()
+            .map(|f| if f.broad { REASON_BROAD } else { 0 })
+            .collect(),
         ms2_n: vec![0; n],
         purity: vec![-1.0; n],
         area_win: vec![0.0; n],
@@ -470,6 +475,7 @@ pub fn from_file_features(f: &FileFeatures) -> Vec<Feature> {
             height: f.height[i] as f64,
             area: f.area[i] / MIN_TO_S,
             filled: false,
+            broad: f.qreason[i] & REASON_BROAD != 0,
         })
         .collect()
 }

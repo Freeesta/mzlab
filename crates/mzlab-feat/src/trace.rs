@@ -183,6 +183,7 @@ fn one_grid(
                 left: rt[s.a as usize],
                 right: rt[s.z as usize],
                 long: s.z - s.a + 1 > p.long_trace && !broad_on(p),
+                broad: s.broad,
                 grid: g as u8,
             });
         }
