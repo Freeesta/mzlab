@@ -1454,6 +1454,11 @@
                   "min_area",
                   "min_height",
                   "blank_ratio",
+                  "blank_quantity",
+                  "blank_stat",
+                  "blank_scope",
+                  "blank_subtract",
+                  "qc_zero",
                   "qc_cv_max",
                   "qc_min_files",
                   "dup_ppm",
@@ -1483,6 +1488,29 @@
                     "type":"number",
                     "minimum":0,
                     "description":"The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"
+                  },
+                  {
+                    "enum":["area","height","norm_area"],
+                    "default":"area",
+                    "description":"What is compared with the blank: area, height or normalised area; used with the sample to blank ratio only"
+                  },
+                  {
+                    "enum":["mean","max"],
+                    "default":"mean",
+                    "description":"The blank level of a row: mean or maximum over the blank files (a blank without a peak counts as 0)"
+                  },
+                  {
+                    "enum":["max_feature","each_feature"],
+                    "default":"max_feature",
+                    "description":"max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"
                   },
                   {
                     "type":"number",

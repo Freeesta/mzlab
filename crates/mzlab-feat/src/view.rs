@@ -7,6 +7,7 @@ use mzlab_core::json::{parse, Out, Value};
 
 use crate::aligned::Aligned;
 use crate::filters::{self, Rule};
+use crate::filters_blank::{self, Subtraction};
 use crate::norm::{self, Method};
 use crate::samples::Sample;
 
@@ -20,19 +21,18 @@ pub struct View {
     pub why: Vec<u8>,
     /// Rows kept, ascending.
     pub rows: Vec<u32>,
+    /// The blank subtraction of a `Rule::BlankWith` that asks for it.
+    pub sub: Option<Subtraction>,
 }
 
 /// The view of `t` under a method and a list of rules.
 pub fn build(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rule]) -> Result<View> {
-    let why = filters::apply(t, samples, rules)?;
+    let factors = norm::factors(t, samples, method)?;
+    let why = filters::apply_with(t, samples, rules, Some(&factors))?;
     let rows = (0..why.len() as u32).filter(|&r| why[r as usize] == 0).collect();
-    Ok(View {
-        method: method.clone(),
-        rules: rules.to_vec(),
-        factors: norm::factors(t, samples, method)?,
-        why,
-        rows,
-    })
+    let is_blank: Vec<bool> = samples.iter().map(|s| s.kind == "blank").collect();
+    let sub = filters_blank::subtraction(t, &factors, rules, &is_blank)?;
+    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub })
 }
 
 impl View {
@@ -46,12 +46,15 @@ impl View {
 
     /// Normalised area of the cell `i` of the view (row `rows[i]`) in `file`.
     pub fn area(&self, t: &Aligned, i: usize, file: usize) -> Option<f64> {
-        norm::normalised(t, &self.factors, self.rows[i] as usize, file)
+        self.area_at(t, self.rows[i] as usize, file)
     }
 
     /// Normalised area of row `row` of the table (not of the view) in `file`.
     pub fn area_at(&self, t: &Aligned, row: usize, file: usize) -> Option<f64> {
-        norm::normalised(t, &self.factors, row, file)
+        match &self.sub {
+            Some(s) => s.cell(t, &self.factors, row, file),
+            None => norm::normalised(t, &self.factors, row, file),
+        }
     }
 
     /// The parameters of both operations: `{"normalizza": ..., "filtra": [...]}` (what the `.mzflow` records).

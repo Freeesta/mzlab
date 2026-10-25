@@ -9,6 +9,7 @@ use mzlab_core::json::{Out, Value};
 
 use crate::aligned::{Aligned, CELL_DETECTED, NO_FILE};
 use crate::quality::REASON_BROAD;
+use crate::filters_blank::{self as fb, BlankOpts};
 use crate::norm::{bad, decides, measured};
 use crate::samples::Sample;
 
@@ -22,6 +23,9 @@ pub enum Rule {
     MinHeight(f64),
     /// The largest area of a sample is at least `ratio` times the mean area of the blanks (a row with no peak in the blanks passes).
     Blank(f64),
+    /// The blank rule with options (`filters_blank`): at least `.0` times (never under 1) the blank level, by the quantity, statistic and scope of
+    /// `.1`; with `subtract` the view also shows the areas minus the blank.
+    BlankWith(f64, BlankOpts),
     /// m/z of the reference ion in `[lo, hi]`.
     Mz(f64, f64),
     /// RT of the reference ion in `[lo, hi]`, minutes.
@@ -31,6 +35,8 @@ pub enum Rule {
     /// CV (%) of the areas over the `qc` files is at most `.0`; the row needs a peak in at least `.1` of them, and the series needs that many `qc` files
     /// (`error.qc.tooFew` otherwise). The CV is the sample standard deviation over the mean of the cells `norm::measured` reads.
     QcCv(f64, usize),
+    /// Like `QcCv`, but the files without a peak count as 0 and the row needs no minimum of them (`filters_blank::qc_cv_percent`).
+    QcCvZero(f64, usize),
     /// Among rows within `.0` ppm in m/z and `.1` minutes in RT of each other only the one with the largest area is kept (ties: the first row);
     /// a row is judged against the rows kept before it, strongest first, so a chain of near rows does not drop the ones in the middle.
     Duplicates(f64, f64),
@@ -62,11 +68,11 @@ impl Rule {
             Rule::MinDetected(_) => 0,
             Rule::MinArea(_) => 1,
             Rule::MinHeight(_) => 2,
-            Rule::Blank(_) => 3,
+            Rule::Blank(_) | Rule::BlankWith(..) => 3,
             Rule::Mz(..) => 4,
             Rule::Rt(..) => 5,
             Rule::Ms2 => 6,
-            Rule::QcCv(..) => 7,
+            Rule::QcCv(..) | Rule::QcCvZero(..) => 7,
             Rule::Duplicates(..) => 8,
             Rule::BroadBlank(_) => 9,
         }]
@@ -80,6 +86,7 @@ fn passes(
     row: usize,
     rule: &Rule,
     (blank, qc, dup): (&[usize], &[usize], &[bool]),
+    factors: Option<&[f64]>,
 ) -> bool {
     let files = || (0..t.n_files).filter(|&k| decides(&samples[k]));
     match *rule {
@@ -113,6 +120,11 @@ fn passes(
                 .fold(0.0, f64::max)
                 >= ratio * b
         }
+        Rule::BlankWith(fold, ref o) => {
+            let sample: Vec<usize> = files().collect();
+            fb::passes(t, factors, o, fold, row, (&sample, blank)).unwrap_or(false)
+        }
+        Rule::QcCvZero(max, _) => fb::qc_cv_percent(t, row, qc).is_some_and(|cv| cv <= max),
         Rule::Mz(lo, hi) => (lo..=hi).contains(&t.mz[row]),
         Rule::Rt(lo, hi) => (lo..=hi).contains(&t.rt[row]),
         Rule::Ms2 => t.meta.ms2_file[row] != NO_FILE,
@@ -183,13 +195,18 @@ fn duplicates(t: &Aligned, samples: &[Sample], ppm: f64, rt_min: f64) -> Vec<boo
 
 /// For every row 0 when it is kept, else the 1-based position in `rules` of the first rule it fails.
 pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>> {
+    apply_with(t, samples, rules, None)
+}
+
+/// `apply` with the factors of the file normalisation, which the blank rule needs when it compares normalised areas.
+pub fn apply_with(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: Option<&[f64]>) -> Result<Vec<u8>> {
     if samples.len() != t.n_files || rules.len() > 250 {
         return Err(bad());
     }
     let blank: Vec<usize> = (0..t.n_files)
         .filter(|&k| samples[k].kind == "blank")
         .collect();
-    if rules.iter().any(|r| matches!(r, Rule::Blank(_))) && blank.is_empty() {
+    if rules.iter().any(|r| matches!(r, Rule::Blank(_) | Rule::BlankWith(..))) && blank.is_empty() {
         return Err(Error::new("error.filterNoBlank"));
     }
     let qc: Vec<usize> = (0..t.n_files)
@@ -197,12 +214,19 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
         .collect();
     if rules
         .iter()
-        .any(|r| matches!(r, Rule::QcCv(_, n) if qc.len() < (*n).max(2)))
+        .any(|r| matches!(r, Rule::QcCv(_, n) | Rule::QcCvZero(_, n) if qc.len() < (*n).max(2)))
     {
         return Err(Error::new("error.qc.tooFew").with("have", qc.len()));
     }
     if rules.contains(&Rule::Ms2) && t.meta.len() != t.len() {
         return Err(Error::new("error.filterNoSummaries"));
+    }
+    if factors.is_none()
+        && rules
+            .iter()
+            .any(|r| matches!(r, Rule::BlankWith(_, o) if o.quantity == fb::Quantity::NormArea))
+    {
+        return Err(bad());
     }
     let dup = rules.iter().find_map(|r| match *r {
         Rule::Duplicates(ppm, rt) => Some(duplicates(t, samples, ppm, rt)),
@@ -213,7 +237,7 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
         .map(|row| {
             rules
                 .iter()
-                .position(|r| !passes(t, samples, row, r, (&blank, &qc, &dup)))
+                .position(|r| !passes(t, samples, row, r, (&blank, &qc, &dup), factors))
                 .map_or(0, |i| i as u8 + 1)
         })
         .collect())
@@ -234,12 +258,23 @@ pub fn to_json(rules: &[Rule]) -> String {
             Rule::MinDetected(n) => j.raw(",\"valore\":").int(n as i64),
             Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) | Rule::BroadBlank(x) => j.raw(",\"valore\":").num(x),
             Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"da\":").num(a).raw(",\"a\":").num(b),
+            Rule::BlankWith(x, ref o) => {
+                j.raw(",\"valore\":").num(x);
+                fb::write_json(&mut j, o);
+                &mut j
+            }
             Rule::Ms2 => &mut j,
             Rule::QcCv(x, n) => j
                 .raw(",\"valore\":")
                 .num(x)
                 .raw(",\"qc_min_files\":")
                 .int(n as i64),
+            Rule::QcCvZero(x, n) => j
+                .raw(",\"valore\":")
+                .num(x)
+                .raw(",\"qc_min_files\":")
+                .int(n as i64)
+                .raw(",\"qc_zero\":true"),
             Rule::Duplicates(ppm, rt) => j.raw(",\"ppm\":").num(ppm).raw(",\"rt_min\":").num(rt),
         };
         j.raw("}");
@@ -262,7 +297,15 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                 Some("min_rilevati") => Rule::MinDetected(num(o, "valore")?.max(0.0) as usize),
                 Some("min_area") => Rule::MinArea(num(o, "valore")?),
                 Some("min_altezza") => Rule::MinHeight(num(o, "valore")?),
-                Some("bianco") => Rule::Blank(num(o, "valore")?),
+                Some("bianco") => {
+                    let opts = fb::read_json(o)?;
+                    let fold = num(o, "valore")?;
+                    if opts == BlankOpts::default() {
+                        Rule::Blank(fold)
+                    } else {
+                        Rule::BlankWith(fold.max(1.0), opts)
+                    }
+                }
                 Some("bianco_larga") => Rule::BroadBlank(num(o, "valore")?),
                 Some("mz") => Rule::Mz(num(o, "da")?, num(o, "a")?),
                 Some("rt") => Rule::Rt(num(o, "da")?, num(o, "a")?),
@@ -271,7 +314,13 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                     let n = o
                         .get("qc_min_files")
                         .map_or(Ok(QC_MIN_FILES as f64), |_| num(o, "qc_min_files"))?;
-                    Rule::QcCv(num(o, "valore")?.max(0.0), n.max(0.0) as usize)
+                    let (max, n) = (num(o, "valore")?.max(0.0), n.max(0.0) as usize);
+                    match o.get("qc_zero") {
+                        None => Rule::QcCv(max, n),
+                        Some(z) if z.bool() == Some(false) => Rule::QcCv(max, n),
+                        Some(z) if z.bool() == Some(true) => Rule::QcCvZero(max, n),
+                        Some(_) => return Err(bad()),
+                    }
                 }
                 Some("duplicati") => {
                     Rule::Duplicates(num(o, "ppm")?.max(0.0), num(o, "rt_min")?.max(0.0))
