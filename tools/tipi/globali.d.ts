@@ -194,6 +194,7 @@ declare var qqHardReset: any;
 declare var qqPhaseCur: any;
 declare var qqReady: any;
 declare var qqStep: any;
+declare var rowPc: any;
 declare var saveBlob: any;
 declare var timeShown: any;
 declare var timeStored: any;

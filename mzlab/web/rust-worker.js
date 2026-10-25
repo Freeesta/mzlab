@@ -209,7 +209,12 @@ const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params
 // the uploaded blob copied to OPFS in pieces, its SHA-256 and probe taken in the same pass (a .dam has none: the method is not indexed)
 async function copyPrints(m) {
   const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size) : null;
-  const put = ARCH.putChunks("files", m.name, blob.size, async (o, n) => new Uint8Array(await blob.slice(o, o + n).arrayBuffer()), pass ? b => pass.add(b) : undefined);
+  let tp = 0;      // the page shows the copy (bytes done / total, at most 10 times a second)
+  const put = ARCH.putChunks("files", m.name, blob.size, async (o, n) => {
+    const now = performance.now();
+    if (now - tp > 100) { tp = now; postMessage({ op: "progress", id: m.id, frac: blob.size ? Math.min(1, o / blob.size) : 0, phase: "load", done: o, total: blob.size }); }
+    return new Uint8Array(await blob.slice(o, o + n).arrayBuffer());
+  }, pass ? b => pass.add(b) : undefined);
   let f;
   try { f = await put; } catch (e) { if (pass) pass.end().catch(() => null); throw e; }
   const o = pass && await pass.end().catch(() => null);

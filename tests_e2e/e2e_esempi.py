@@ -12,11 +12,14 @@ try:
         # LOAD-UX: the rows of the whole set are in the list at once, in the order of the set, and keep it until the end; one system of progress (no panel under the button, no card bar)
         pg.evaluate("""() => { window.__ord = []; window.__bars = 0; new MutationObserver(() => { const l = [...document.querySelectorAll('#flist td[data-cvrow]')].map(x => x.dataset.cvrow); if (l.length) window.__ord.push(l.join('|'));
             window.__bars += document.querySelectorAll('.avanza, .loadbar').length; }).observe(document.querySelector('#flist'), { childList: true, subtree: true }); }""")
+        pg.evaluate("""() => { window.__t = {}; document.addEventListener('click', e => { if (e.target.closest('[data-demo=full]')) window.__t.c = performance.now(); }, true);
+            new MutationObserver(() => { if (!window.__t.r && document.querySelector('#flist td[data-cvrow]')) window.__t.r = performance.now(); }).observe(document.querySelector('#flist'), { childList: true, subtree: true }); }""")
         pg.click("#demochoice [data-demo=full]")
         pg.wait_for_function("document.querySelectorAll('#flist td[data-cvrow]').length===5", timeout=5000)
         assert pg.evaluate("[...document.querySelectorAll('#flist td[data-cvrow]')].map(x => x.dataset.cvrow)") == [f"FullScan_t{t}.mzML" for t in (0, 5, 10, 15, 30)]
         pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000); pg.wait_for_timeout(500)
         assert pg.evaluate("[...new Set(window.__ord)]") == ["FullScan_t0.mzML|FullScan_t5.mzML|FullScan_t10.mzML|FullScan_t15.mzML|FullScan_t30.mzML"], pg.evaluate("[...new Set(window.__ord)]")
+        dt = pg.evaluate("window.__t.r - window.__t.c"); print("   click to the list of rows: %.0f ms" % dt); assert 0 <= dt < 1000, dt
         assert pg.evaluate("window.__bars") == 0, "never a second bar (panel of the download, bar of the card)"
         t = pg.inner_text("#flist"); assert t.count("Full Scan") >= 1 and "FullScan_t30" in t, t
         tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [0, 5, 10, 15, 30], tm

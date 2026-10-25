@@ -28,6 +28,9 @@ WIFF = [str(D / n) for n in ["serie.wiff", "serie.wiff.scan"]]
 RECORD = """() => { window.__pc = {}; window.__over = false;
   const read = () => { for (const c of document.querySelectorAll('#flist td[data-cvrow]')) { const b = c.querySelector('[role=progressbar]'); if (b) (window.__pc[c.dataset.cvrow] = window.__pc[c.dataset.cvrow] || []).push(Number(b.getAttribute('aria-valuenow'))); } };
   new MutationObserver(read).observe(document.querySelector('#flist'), { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'], childList: true });
+  window.__tx = new Set(); window.__head = new Set(); window.__live = 0;
+  new MutationObserver(() => { for (const x of document.querySelectorAll('#flist [data-cvtxt]')) window.__tx.add(x.textContent.trim()); for (const h of document.querySelectorAll('#flist [data-cvhead]')) window.__head.add(h.textContent);
+    window.__live += document.querySelectorAll('#flist [aria-live]').length; }).observe(document.querySelector('#flist'), { subtree: true, characterData: true, childList: true });
   window.__ph = []; addEventListener('mzlab-index', e => window.__ph.push([e.detail.name, e.detail.phase || '', e.detail.frac, performance.now()])); }"""
 
 try:
@@ -57,6 +60,18 @@ try:
             assert pg.evaluate("document.querySelectorAll('#up .loadbar').length") == 0, "the card has no bar of its own: the rows carry the progress"
             assert pg.evaluate("document.querySelectorAll('#up .prog').length") == 0, "a second bar is left"
         step("one system: no bar in the card", one_bar)
+        def texts():
+            tx = pg.evaluate("[...window.__tx]"); head = pg.evaluate("[...window.__head]"); print("   texts:", tx, "heads:", head[:3])
+            import re
+            assert any(t.startswith(("Loading", "Carico")) for t in tx), tx
+            assert any(re.fullmatch(r"(Reading [\d.,\u00a0\u202f ]+ of [\d.,\u00a0\u202f ]+ scans|Leggo [\d.,\u00a0\u202f ]+ / [\d.,\u00a0\u202f ]+ scansioni)", t) for t in tx), tx      # the scans read of the sample, from the engine
+            assert any(re.fullmatch(r"(\d+ of \d+ ready|\d+ di \d+ pronti) · \d+:\d\d", h) for h in head), head
+        step("each row says what it does (Loading, Reading n of m scans) and the head says «k of n ready · m:ss»", texts)
+        def live():
+            assert pg.evaluate("window.__live") == 0, "no aria-live inside the list: only the summary region speaks"
+            assert pg.evaluate("document.querySelectorAll('#cvlive[role=status][aria-live=polite]').length") == 1
+            assert pg.evaluate("document.getElementById('cvlive').textContent") != ""
+        step("one polite region for the summary, none in the rows", live)
         ph = pg.evaluate("window.__ph")
         def weights():
             by = {}

@@ -89,11 +89,14 @@ const CONV_FINAL = ["done", "fail", "cancel"];
 // what the summary counts apart, in this order: the kinds of file (`kind` of the file entry, "mixed" for a file of more parts), then the rows that did not load
 const CONV_SUM = { full: "conv.sum.full", ms2: "conv.sum.ms2", mrm: "conv.sum.mrm", infusion: "conv.sum.infusion", mixed: "conv.sum.mixed", other: "conv.sum.other", fail: "conv.sum.fail", cancel: "conv.sum.cancel" };
 const CONVROWS = {
-  /** @type {{ name: string, state: string, pc: number | null, floor?: number, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, cached?: boolean, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
+  /** @type {{ name: string, state: string, pc: number | null, floor?: number, mono?: boolean, det?: { done: number, total: number } | null, sub?: { done: number, total: number } | null, t0?: number, seen?: number, tr?: string[], last?: string, scans?: number, kind?: string, missing?: number, cached?: boolean, secs?: number, msg?: string, diag?: any, mem?: string }[]} */
   rows: [],
   /** @type {null | (() => void)} */
   onCancel: null,
   timer: /** @type {any} */ (0),
+  liveN: "",
+  dirty: /** @type {Set<any>} */ (new Set()),
+  tq: /** @type {any} */ (0),
   find(name) { return this.rows.find(r => r.name === name); },
   running() { return this.rows.filter(r => !CONV_FINAL.includes(r.state)); },
   // a row; `mem` describes the members without their names (".wiff 1.2 MB + .wiff.scan 57.0 MB", for the diagnosis)
@@ -103,16 +106,24 @@ const CONVROWS = {
     if (r) this.rows.splice(this.rows.indexOf(r), 1);
     this.rows.push({ name, state, pc: null, sub: null, t0: now, seen: now, tr: [`0.0 s ${state}`], last: "", mem: mem || "" }); this.paint(); this.clock();
   },
-  set(name, state, pc, sub) {
+  // `det` = bytes { done, total } of a download or a copy; `sub` = scans { done, total }. A row of a loading (`base`) never goes back
+  set(name, state, pc, sub, det) {
     const r = this.find(name); if (!r || CONV_FINAL.includes(r.state)) return;
-    if (pc != null && r.floor && pc < r.floor) pc = r.floor;          // a row that began with a download never goes back
+    if (r.mono && pc != null) pc = Math.max(pc, r.pc || 0, r.floor || 0);
     const was = r.state, was_pc = r.pc, was_sub = r.sub ? r.sub.done : -1, now = Date.now();
-    r.state = state; r.pc = pc == null ? null : pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null;
-    if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub) r.seen = now;
-    if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.paint(); } else if (r.seen === now) this.fill(r);
+    r.state = state; r.pc = pc == null ? null : pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null; if (det !== undefined) r.det = det && det.total ? det : null;
+    if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub || det) r.seen = now;
+    if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.paint(); } else if (r.seen === now) this.queue(r);
+  },
+  // at most one repaint of the bars every 100 ms: the first change goes at once, the others of the window together at its end
+  queue(r) {
+    this.dirty.add(r);
+    if (this.tq) return;
+    const go = () => { const d = [...this.dirty]; this.dirty.clear(); for (const x of d) this.fill(x); };
+    go(); this.tq = setTimeout(() => { this.tq = 0; if (this.dirty.size) { go(); this.tq = setTimeout(() => { this.tq = 0; }, 100); } }, 100);
   },
   // the part of the bar already done (the download of an example file): the next phase starts from here
-  base(name, pc) { const r = this.find(name); if (r) r.floor = pc; },
+  base(name, pc) { const r = this.find(name); if (r) { r.floor = pc; r.mono = true; } },
   // a row of the loading under way keeps its place in the list (and its file stays out of the table) until nothing runs any more: the order never changes while the files get ready
   holds(name) { const r = this.find(name); return !!r && r.state !== "fail" && r.state !== "cancel" && this.running().length > 0; },
   // the last message of the worker, for the diagnosis
@@ -135,14 +146,18 @@ const CONVROWS = {
     this.timer = setInterval(() => {
       const run = this.running();
       for (const r of run) this.fill(r);
+      const h = typeof document !== "undefined" && document.querySelector("#flist [data-cvhead]"); if (h && run.length) { const t = this.ready(); if (h.textContent !== t) h.textContent = t; }
       if (!run.length) { clearInterval(this.timer); this.timer = 0; }
     }, 1000);
   },
   label(r) {
     if (r.state === "done") return (r.cached ? I18N.t("conv.row.cached", { scans: I18N.fix(r.scans || 0, 0) }) : I18N.t("conv.row.done", { scans: I18N.fix(r.scans || 0, 0), secs: I18N.fix(r.secs || 0, 1) })) + (r.missing ? " · " + I18N.t("conv.row.missing", { n: I18N.fix(r.missing, 0) }) : "");
     if (r.state === "fail") return r.msg || "";
-    const lab = I18N.t(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc });
-    return r.sub ? `${lab} · ${I18N.t("conv.row.scans", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) })}` : lab;
+    const T = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p), mb = (/** @type {number} */ v) => I18N.fix(v / 1e6, 1);
+    if ((r.state === "get" || r.state === "load") && r.det) return T(r.state === "get" ? "conv.row.getmb" : "conv.row.loadmb", { done: mb(r.det.done), total: mb(r.det.total) });
+    if (r.sub && (r.state === "nscan" || r.state === "index")) return T("conv.row.readn", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) });
+    const lab = T(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc });
+    return r.sub ? `${lab} · ${T("conv.row.scans", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) })}` : lab;
   },
   // the time of a running row and, when it has been quiet for CONV_QUIET ms, for how long (not for a queued row: it waits for a free builder); "" for an ended row
   when(r, now = Date.now()) {
@@ -171,13 +186,24 @@ const CONVROWS = {
     });
     return L.join("\n");
   },
+  // the one summary of the loading: «3 of 5 ready · 0:12»; the screen readers hear it (a polite region of its own) only when the count of the ready files changes, never the clock
+  ready() {
+    const n = this.rows.length, done = n - this.running().length, t0 = Math.min(...this.rows.map(r => r.t0 || Date.now()));
+    if (typeof document !== "undefined" && this.liveN !== done + "/" + n) {
+      this.liveN = done + "/" + n;
+      let el = document.getElementById("cvlive");
+      if (!el) { el = document.createElement("div"); el.id = "cvlive"; el.className = "sr-only"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el); }
+      el.textContent = I18N.t("load.prog.count", { done, n });
+    }
+    return I18N.t("conv.row.ready", { done, n, time: convElapsed(Date.now() - t0) });
+  },
   // the rows running, for the table of the list (a heading row with the files ended of all, «Cancel» and «Details», then one row per file), `ncol` = the columns of the table
   html(ncol) {
     const run = this.running(); if (!run.length) return "";
     const T = (k, p) => I18N.t(k, p), n = this.rows.length;
     const act = this.onCancel ? ` <button type="button" class="sec sm" data-cvact="cancel" title="${T("load.cancel.title")}">${T("conv.cancel")}</button>` : "";
     const det = `<div class="diag" data-cvdiag><button type="button" class="sec sm" data-a="diagdet" aria-expanded="false">${T("diag.details")}</button><div class="diagbox" hidden><pre data-cvtrace></pre><button type="button" class="sec" data-a="diagcopy">${T("diag.copy")}</button></div></div>`;
-    const head = `<tr class="grp"><td colspan="${ncol}">${T("conv.row.group")} <span class="muted">${T("load.prog.count", { done: n - run.length, n })}</span>${act}${det}</td></tr>`;
+    const head = `<tr class="grp"><td colspan="${ncol}">${T("conv.row.group")} <span class="muted cp-num" data-cvhead>${this.ready()}</span>${act}${det}</td></tr>`;
     return head + this.rows.filter(r => r.state !== "fail" && r.state !== "cancel").map(r => {
       const end = r.state === "done", lab = this.label(r), pc = end ? 100 : r.pc, now = pc == null ? "" : ` aria-valuenow="${pc}"`;
       return `<tr aria-busy="${!end}"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm"><span data-cvtxt>${esc(lab)}</span> <span class="cp-num" data-cvwhen>${esc(this.when(r))}</span></div>` +
@@ -338,7 +364,7 @@ function wiffName(stem, sample, several, taken) {
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
 // the text key of the state of a row of the files being converted (CONVROWS)
-function convRowKey(state) { return { open: "conv.row.open", get: "conv.row.get", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" }[state] || "conv.row.wait"; }
+function convRowKey(state) { return { open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" }[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
 function convElapsed(ms) {
   const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60;

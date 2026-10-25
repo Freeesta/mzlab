@@ -20,7 +20,7 @@ READERS = {
 
 
 def run(code):
-    out = subprocess.run(["node", "-e", f"const m=require({str(JS)!r});const {{PROGRESSO:P,progCompose:C,PROG_NET:N}}=m;{code}"], check=True, capture_output=True, encoding="utf-8").stdout
+    out = subprocess.run(["node", "-e", f"const m=require({str(JS)!r});const {{PROGRESSO:P,progCompose:C,PROG_NET:N,rowPc:R}}=m;{code}"], check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
 
@@ -88,3 +88,12 @@ for(let step=0;step<400;step++){
 }
 console.log(JSON.stringify(bad));""")
     assert out == []
+
+
+def test_the_bar_of_a_row_has_fixed_shares_for_every_reader():
+    # load / download 0-40 %, read 40-85 %, index 85-100 %: a maker's file by the model's 0.3 and 0.75, an mzML by 0.4 and 0.985; forward only in both
+    got = run("console.log(JSON.stringify([[0,.3,.525,.75,1].map(f=>R(true,f)),[0,.4,.6925,.985,1].map(f=>R(false,f)),R(true,-1),R(false,5),R(true,null)]))")
+    assert got[0] == [0, 40, 62.5, 85, 100] and got[1] == [0, 40, 62.5, 85, 100] and got[2:] == [0, 100, 0]
+    for native in ("true", "false"):
+        v = run(f"console.log(JSON.stringify(Array.from({{length:101}},(_,i)=>R({native},i/100))))")
+        assert v == sorted(v) and v[0] == 0 and v[-1] == 100
