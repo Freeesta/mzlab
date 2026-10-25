@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Small helpers of the tour invitation (tour.js): centre it under the side panel and, after «Not now», a bubble on the gear that says where the tour can be taken again.
 // The bubble goes away by itself after 10 s, on a click or on Esc. Classic script.

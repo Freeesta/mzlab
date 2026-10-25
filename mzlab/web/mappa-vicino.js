@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Previous / next file of the 2D map (the ◀ ▶ arrows next to the file menu): pure function, tested in Node (tests/mappa_vicino_node.js). Classic script, loaded before pannelli.
 const MAPVICINO = (() => {
   /** The file `dir` steps (-1 before, +1 after) from `cur` in the menu order, jumping over the reference of the difference (a file minus itself is empty); null when there is none.

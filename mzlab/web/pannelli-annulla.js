@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Opening a panel as one undoable step (comandi.js / storia.js); used by the buttons and dialogs that add panels. Classic script, loaded after pannelli.js.
 /** A panel the student opened (a button, a double click, the XIC window): one undo step that closes it again and a redo that opens it as it was then. @param {any} p */
 function apriAnnullabile(p) {

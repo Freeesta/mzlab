@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The file list is the only control of what is shown: the box = the file is drawn, a click on the row = the active file (spectrum, scans, arrows),
 // Ctrl / Cmd + click = adds or removes the file, a double click on the name = only this file, Shift + click on a box = a range of boxes. (renderFileList in explore.js calls bindListaFile)
 // name, colour, group, visibility and order of the files are one undoable action (comandi.js): the snapshot is the list of all the files

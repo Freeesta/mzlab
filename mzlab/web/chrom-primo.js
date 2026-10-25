@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Order of the first requests to the engine after «Carica dati»: it answers one at a time, so the first chromatogram is asked for before what only completes the graphs
 // (the series list of an instrument log waits for `ready`), and a provisional TIC is replaced by ONE real request however many redraws ask meanwhile. Used by getChrom (explore.js) and registro-serie.js.
 const CHROM1 = (() => {

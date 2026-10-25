@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // The one place that talks to the browser's frame clock: FRAME.next(fn) = requestAnimationFrame, FRAME.cancel(id), FRAME.ro(el, fn) = one shared ResizeObserver
 // (returns the function that stops watching). tools/controlla.py refuses new direct calls to requestAnimationFrame / ResizeObserver outside this file. Classic script, loaded in the head of index.html (before tour.js and avvio.js, which also use it).

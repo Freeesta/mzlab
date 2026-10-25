@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) are loaded as they are (rust-nativo.js): no mzML is made. A sample is listed as `x.mzML` (a File with the members attached:
 // `mzlabNat`, read by lr.js) and goes through upload() like any mzML; «Download .mzML» writes its mzML on request. Classic script, loaded after conversione.js; the pure helpers are run by node in tests/test_nativo.py.

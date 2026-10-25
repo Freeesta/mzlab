@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Background correction of a chromatogram trace (TIC / XIC / MRM): pure functions, tested in Node (tests/fondo_node.js). Classic script, loaded before grafici.js.
 // The state of a panel is p.fondo = { mode: "none" | "auto" | "tract", w, ib }: "auto" = SNIP baseline of half-width w min, centred on the mean of the noise;
 // "tract" = the level of a stretch chosen by the student, ib = { mode: "mean" | "median" | "line", a: [t0, t1], b: [t0, t1] | null }.

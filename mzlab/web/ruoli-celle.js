@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Cells of the loading table: role and time.
 Object.assign(RUOLI, (() => {

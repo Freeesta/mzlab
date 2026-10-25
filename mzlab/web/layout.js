@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Page layout of the panels: a stack of rows, each row with 1-3 panels side by side (shared height, widths from `quota`).
 // `geometria` is pure (tested in Node); `colloca` reads the panels of one stack and gives back the rectangles. No view is named here:
 // the callers pass the minimum width of each panel and the gap that follows each row.

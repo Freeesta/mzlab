@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // ONE model of progress for every loading (.mzML, .raw, .wiff, .D, .mzidx): the readers tell it how far each file has got (event mzlab-index {name, frac, phase}, frac = 0..1 of the whole file),
 // and every bar of the page (the loading card, the overlay of «Open», Tabui) shows what the model says. Rules: a file never goes back; the total never goes back (a file added in the middle
