@@ -205,6 +205,9 @@ fn centwave() -> Algorithm {
                 .default_pair(5.0, 30.0)
                 .unit("s"),
             Param::number("snr", "Signal to noise").min(0.0).default_num(10.0),
+            Param::boolean("broad_peaks", "Broad peaks")
+                .default_bool(false)
+                .doc("Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"),
         ],
         status: Status::Available,
     }
