@@ -263,8 +263,22 @@ pub(crate) fn io(_: std::io::Error) -> Error {
     Error::new("err.file.mzmlWrite")
 }
 
+/// `s` with `&`, `<`, `>` and `"` escaped, in one pass (a text with none of them is copied once).
 fn esc(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    if !s.bytes().any(|b| matches!(b, b'&' | b'<' | b'>' | b'"')) {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len() + 16);
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 /// The kind element of a chromatogram: the PSI-MS term of its kind, `chromatogram type` for a trace without a more precise one.
@@ -281,12 +295,23 @@ pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {
 }
 
 fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
-    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>")
+    use std::fmt::Write;
+    // room for the fixed text and a number: a `format!` starts from the length of its literal and grows while the value is written
+    let mut s = String::with_capacity(acc.len() + name.len() + 256);
+    let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>");
+    s
 }
 
 fn window_xml(w: Option<(f64, f64)>) -> String {
     match w {
-        Some((lo, hi)) => format!("<scanWindowList count=\"1\"><scanWindow>{}{}</scanWindow></scanWindowList>", mz_cv("MS:1000501", "scan window lower limit", lo), mz_cv("MS:1000500", "scan window upper limit", hi)),
+        Some((lo, hi)) => {
+            let mut s = String::with_capacity(768);
+            s.push_str("<scanWindowList count=\"1\"><scanWindow>");
+            s += &mz_cv("MS:1000501", "scan window lower limit", lo);
+            s += &mz_cv("MS:1000500", "scan window upper limit", hi);
+            s.push_str("</scanWindow></scanWindowList>");
+            s
+        }
         None => String::new(),
     }
 }
@@ -297,12 +322,18 @@ fn mz_cv(acc: &str, name: &str, value: f64) -> String {
 
 #[cfg(feature = "precursori")]
 fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
-    unit_cv_str(acc, name, &value.to_string(), "MS", unit_acc, unit_name)
+    use std::fmt::Write;
+    let mut v = String::with_capacity(32);
+    let _ = write!(v, "{value}");
+    unit_cv_str(acc, name, &v, "MS", unit_acc, unit_name)
 }
 
 #[cfg(not(feature = "precursori"))]
 fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
-    format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>")
+    use std::fmt::Write;
+    let mut s = String::with_capacity(acc.len() + name.len() + unit_acc.len() + unit_name.len() + 128);
+    let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>");
+    s
 }
 
 #[cfg(feature = "precursori")]

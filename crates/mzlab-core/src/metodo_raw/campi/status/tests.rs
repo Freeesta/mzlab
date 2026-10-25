@@ -158,3 +158,65 @@ fn a_wide_string_that_is_not_utf16_leaves_the_log_undecoded_at_open() {
     let region = bad.len() as u64 - addr;
     assert!(opentfraw::status_log::decode(std::io::Cursor::new(&bad), addr, 2, region).is_none());
 }
+
+/// The channel as it was before the finite numbers skipped the text of every value.
+fn canale_di_prima(label: &str, vals: &[&GenericValue]) -> Option<Campo> {
+    let (name, unit) = split_label(label);
+    let texts: Vec<String> = vals.iter().map(|v| shown(v)).collect();
+    if name.is_empty() || texts.iter().all(String::is_empty) {
+        return None;
+    }
+    let same = texts.iter().all(|t| Some(t) == texts.first());
+    let nums: Vec<f64> = vals
+        .iter()
+        .filter_map(|v| v.as_f64())
+        .filter(|x| x.is_finite())
+        .collect();
+    let (value, key) = if same {
+        (texts[0].clone(), name)
+    } else if nums.len() == vals.len() {
+        let (lo, hi) = range(&nums);
+        (format!("{lo}..{hi}"), format!("{name} (min..max)"))
+    } else {
+        let mut u = texts.clone();
+        crate::sortc::slice_ord(&mut u);
+        u.dedup();
+        (u.len().to_string(), format!("{name} (distinct values)"))
+    };
+    Some(Campo::new(FROM, &key, value).unit(&unit))
+}
+
+#[test]
+fn a_channel_of_finite_numbers_gives_what_the_text_of_every_value_gave() {
+    use GenericValue::{Float32, Float64, Int16, String as Text, UInt32};
+    let f = |xs: &[f64]| xs.iter().map(|&x| Float64(x)).collect::<Vec<_>>();
+    let cases: Vec<Vec<GenericValue>> = vec![
+        f(&[3400.5]),
+        f(&[3400.5, 3400.5]),
+        f(&[3400.5, 3500.0, 3400.5]),
+        f(&[0.0, -0.0]),
+        f(&[1.0, f64::NAN]),
+        f(&[f64::NAN, f64::NAN]),
+        f(&[f64::INFINITY, 1.0]),
+        f(&[0.1 + 0.2, 0.3]),
+        vec![Float32(0.1), Float32(0.1)],
+        vec![Float32(0.1), Float32(0.3)],
+        vec![Int16(-3), Int16(-3), Int16(4)],
+        vec![UInt32(7), UInt32(7)],
+        vec![Text("Ok".into()), Text("Ok".into())],
+        vec![Text("Ok".into()), Text("Fail".into()), Text("Ok".into())],
+        vec![Text(String::new()), Text(String::new())],
+    ];
+    for values in &cases {
+        let vals: Vec<&GenericValue> = values.iter().collect();
+        for label in ["Spray Voltage (V):", "Fore Vacuum:", ":"] {
+            let a = channel(label, &vals);
+            let b = canale_di_prima(label, &vals);
+            let key = |c: &Option<Campo>| {
+                c.as_ref()
+                    .map(|c| (c.chiave.clone(), c.valore.clone(), c.unita.clone()))
+            };
+            assert_eq!(key(&a), key(&b), "{label} {values:?}");
+        }
+    }
+}

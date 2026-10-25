@@ -17,10 +17,26 @@ fn totals(sp: &Spectrum, extra: &SpectrumExtra) -> (f64, Option<(f64, f64)>) {
     }
 }
 
+/// Room for the header of `sp`: the fixed elements, the filter and about 130 bytes for each parameter the reader gave.
+fn capacita_testa(sp: &Spectrum, extra: &SpectrumExtra) -> usize {
+    #[cfg(feature = "precursori")]
+    let n = extra.params.len()
+        + extra.scan_params.len()
+        + extra.cv_params.len()
+        + 2 * extra.precursors.len();
+    #[cfg(not(feature = "precursori"))]
+    let n = extra.params.len();
+    2048 + sp.filter.len() + 130 * n
+}
+
 /// The text of a spectrum up to its arrays (`<spectrum ...>` and every header element before `<binaryDataArrayList`): what `scantable` reads.
 pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) -> String {
     let (tic, base) = totals(sp, extra);
-    let mut s = format!(
+    use std::fmt::Write;
+    // a header is a few KB: one allocation instead of the doublings of a string that starts empty
+    let mut s = String::with_capacity(capacita_testa(sp, extra));
+    let _ = write!(
+        s,
         "<spectrum index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">",
         index,
         esc(&sp.id),
@@ -70,7 +86,7 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
             s += &cv(acc, v, "");
             continue;
         }
-        s += &format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
+        let _ = write!(s, "<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v));
     }
     // The filter string is a scan-level term: the CV only allows it under <scan>.
     let filter = if sp.filter.is_empty() {
@@ -78,13 +94,13 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
     } else {
         cv("MS:1000512", "filter string", esc(&sp.filter))
     };
-    s += &format!("<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, scan_xml(extra), window_xml(extra.window));
+    let _ = write!(s, "<scanList count=\"1\">{}<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>{}{}{}</scan></scanList>", cv("MS:1000795", "no combination", ""), sp.rt, filter, scan_xml(extra), window_xml(extra.window));
     #[cfg(feature = "precursori")]
     if !extra.precursors.is_empty() {
         return s + &precursor_list(&extra.precursors);
     }
     if let Some(p) = sp.precursor {
-        s += &format!("<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
+        let _ = write!(s, "<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
     }
     s
 }
