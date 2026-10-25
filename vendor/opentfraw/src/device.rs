@@ -168,6 +168,11 @@ fn contains_word(haystack: &[u8], needle: &[u8]) -> bool {
     if needle.is_empty() || needle.len() > haystack.len() {
         return false;
     }
+    (0..=haystack.len() - needle.len()).any(|start| word_match_at(haystack, needle, start))
+}
+
+/// True if `needle` sits at `start` in `haystack` with word boundaries (the per-position test of [`contains_word`]).
+fn word_match_at(haystack: &[u8], needle: &[u8], start: usize) -> bool {
     let is_word_byte = |b: u8| b.is_ascii_alphanumeric();
     let is_word_char_at = |pos: usize| -> bool {
         // UTF-16LE code unit at `pos` (must be aligned). An ASCII-alphanumeric
@@ -178,39 +183,58 @@ fn contains_word(haystack: &[u8], needle: &[u8]) -> bool {
         haystack[pos + 1] == 0 && is_word_byte(haystack[pos])
     };
 
-    for start in 0..=haystack.len() - needle.len() {
-        if &haystack[start..start + needle.len()] != needle {
+    if &haystack[start..start + needle.len()] != needle {
+        return false;
+    }
+    // Left boundary: either at start of buffer, or previous UTF-16
+    // code unit is not an ASCII-alphanumeric character.
+    let left_ok = start < 2 || !is_word_char_at(start - 2);
+    // Right boundary: either at end, or next UTF-16 code unit is not
+    // ASCII-alphanumeric. Note: the match may be followed by a space
+    // (e.g. "LCQ Header") - that's still a word boundary on the
+    // needle's right edge, which is what we want.
+    //
+    // However for "LCQ" we want to REJECT "LCQ Header" because
+    // "Header" is a generic section marker, not an instrument qualifier.
+    // The word-boundary test alone accepts "LCQ " - to disambiguate
+    // we also require: if the needle is a known ambiguous prefix
+    // (LCQ/LTQ/TSQ with no model suffix), reject matches where the
+    // next token is "Header".
+    let after = start + needle.len();
+    let right_ok = after >= haystack.len() || !is_word_char_at(after);
+    if !(left_ok && right_ok) {
+        return false;
+    }
+    // Guard against "<PREFIX> Header" - a universal section marker.
+    const HEADER_SUFFIX: &[u8] = b" \0H\0e\0a\0d\0e\0r\0";
+    !(haystack.len() >= after + HEADER_SUFFIX.len()
+        && &haystack[after..after + HEADER_SUFFIX.len()] == HEADER_SUFFIX)
+}
+
+/// Index of the first `MODEL_REGISTRY` entry (registry order) present as a word in `haystack`, in a single pass over the bytes: only positions whose first
+/// UTF-16 code unit starts some registry name are tested, and only against the entries ahead of the best found so far.
+fn first_registry_hit(haystack: &[u8]) -> Option<usize> {
+    let needles: Vec<Vec<u8>> = MODEL_REGISTRY.iter().map(|(n, _)| utf16le(n)).collect();
+    let mut starts = [false; 256];
+    for n in &needles {
+        starts[n[0] as usize] = true;
+    }
+    let mut best = MODEL_REGISTRY.len();
+    for start in 0..haystack.len().saturating_sub(1) {
+        if !starts[haystack[start] as usize] || haystack[start + 1] != 0 {
             continue;
         }
-        // Left boundary: either at start of buffer, or previous UTF-16
-        // code unit is not an ASCII-alphanumeric character.
-        let left_ok = start < 2 || !is_word_char_at(start - 2);
-        // Right boundary: either at end, or next UTF-16 code unit is not
-        // ASCII-alphanumeric. Note: the match may be followed by a space
-        // (e.g. "LCQ Header") - that's still a word boundary on the
-        // needle's right edge, which is what we want.
-        //
-        // However for "LCQ" we want to REJECT "LCQ Header" because
-        // "Header" is a generic section marker, not an instrument qualifier.
-        // The word-boundary test alone accepts "LCQ " - to disambiguate
-        // we also require: if the needle is a known ambiguous prefix
-        // (LCQ/LTQ/TSQ with no model suffix), reject matches where the
-        // next token is "Header".
-        let after = start + needle.len();
-        let right_ok = after >= haystack.len() || !is_word_char_at(after);
-
-        if left_ok && right_ok {
-            // Guard against "<PREFIX> Header" - a universal section marker.
-            const HEADER_SUFFIX: &[u8] = b" \0H\0e\0a\0d\0e\0r\0";
-            if haystack.len() >= after + HEADER_SUFFIX.len()
-                && &haystack[after..after + HEADER_SUFFIX.len()] == HEADER_SUFFIX
-            {
-                continue;
+        for (i, n) in needles.iter().enumerate().take(best) {
+            if start + n.len() <= haystack.len() && word_match_at(haystack, n, start) {
+                best = i;
+                break;
             }
-            return true;
+        }
+        if best == 0 {
+            break;
         }
     }
-    false
+    (best < MODEL_REGISTRY.len()).then_some(best)
 }
 
 /// Detection result carrying the exact model (when found) and the coarse
@@ -243,14 +267,12 @@ impl DeviceFamily {
         inst_method: &str,
         first_analyzer: Option<Analyzer>,
     ) -> DetectedInstrument {
-        for (name, family) in MODEL_REGISTRY {
-            let needle = utf16le(name);
-            if contains_word(metadata_bytes, &needle) {
-                return DetectedInstrument {
-                    model: Some(name),
-                    family: *family,
-                };
-            }
+        if let Some(i) = first_registry_hit(metadata_bytes) {
+            let (name, family) = &MODEL_REGISTRY[i];
+            return DetectedInstrument {
+                model: Some(name),
+                family: *family,
+            };
         }
 
         let family = Self::detect_heuristic(tag2, inst_method, first_analyzer);
@@ -365,6 +387,54 @@ mod tests {
         assert_eq!(det.model, Some("Q Exactive Plus"));
         assert_eq!(det.family, DeviceFamily::QOrbitrap);
         assert!(DeviceFamily::detect_from_model_strings(&["".to_string()]).is_none());
+    }
+
+    /// The linear scan this pass replaced, kept as the reference.
+    fn first_registry_hit_slow(hay: &[u8]) -> Option<usize> {
+        MODEL_REGISTRY
+            .iter()
+            .position(|(n, _)| contains_word(hay, &utf16le(n)))
+    }
+
+    #[test]
+    fn single_pass_matches_registry_scan() {
+        // Deterministic noise with registry names, near-misses and "<name> Header" planted in it.
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let pieces = [
+            "TSQ",
+            "TSQ Quantiva",
+            "TSQ Quantum",
+            "TSQ Quantum Ultra",
+            "LTQ",
+            "LTQ Orbitrap",
+            "LCQ Header",
+            "TSQ Header",
+            "Orbitrap Fusion",
+            "Orbitrap Fusion Lumos",
+            "Q Exactive",
+            "Q Exactive HF",
+            "xTSQ",
+            "Q Exact",
+        ];
+        for _ in 0..300 {
+            let mut hay: Vec<u8> = (0..(next() % 300)).map(|_| next() as u8).collect();
+            for _ in 0..(next() % 4) {
+                let at = (next() as usize) % (hay.len() + 1);
+                let p = pieces[(next() as usize) % pieces.len()];
+                let mut enc = utf16le(p);
+                if next() % 3 == 0 {
+                    enc.extend_from_slice(&[b'A', 0]);
+                }
+                hay.splice(at..at, enc);
+            }
+            assert_eq!(first_registry_hit(&hay), first_registry_hit_slow(&hay));
+        }
     }
 
     #[test]

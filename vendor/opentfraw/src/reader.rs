@@ -940,24 +940,7 @@ impl RawFileReader {
                             event_q3_hi.entry(entry.scan_event).or_insert(entry.high_mz);
                         }
                     }
-                    let data = &metadata_window;
-                    let mut q1_map: HashMap<u16, f64> = HashMap::new();
-                    'outer_v66: for (&event, &q3_hi_target) in &event_q3_hi {
-                        let end = data.len().saturating_sub(8);
-                        for i in 16..end {
-                            let hi = crate::bytes::read_f64_le(data, i)?;
-                            if (hi - q3_hi_target).abs() < 0.002 {
-                                let lo = crate::bytes::read_f64_le(data, i - 8)?;
-                                if hi > lo && (hi - lo) < 0.1 {
-                                    let q1 = crate::bytes::read_f64_le(data, i - 16)?;
-                                    if q1 > 50.0 && q1 < 3000.0 {
-                                        q1_map.insert(event, q1);
-                                        continue 'outer_v66;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    let q1_map = crate::srm_table::v66_q1_by_event(&metadata_window, &event_q3_hi)?;
                     // --- v66 Q3 window extraction: read per-scan record header ---
                     let mut seen: HashMap<u16, bool> = HashMap::new();
                     let mut q3_map: HashMap<u16, Vec<(f32, f32)>> = HashMap::new();
