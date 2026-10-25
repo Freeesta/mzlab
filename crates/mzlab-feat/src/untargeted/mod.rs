@@ -29,4 +29,6 @@ pub struct Feature {
     pub height: f64,
     pub area: f64,
     pub filled: bool,
+    /// Found by the broad-band pass; written as `REASON_BROAD` in the table of the file.
+    pub broad: bool,
 }

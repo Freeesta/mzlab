@@ -163,6 +163,7 @@ fn feature_of(p: &[Pt]) -> Feature {
         height: p[best].inten,
         area: area as f64,
         filled: true,
+        broad: false,
     }
 }
 

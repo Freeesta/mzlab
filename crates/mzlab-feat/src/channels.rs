@@ -17,6 +17,8 @@ pub(crate) struct Seg {
     pub(crate) tot: f64,
     pub(crate) a: u32,
     pub(crate) z: u32,
+    /// Found by the broad-band pass (`broad.rs`).
+    pub(crate) broad: bool,
 }
 
 /// The peaks of a slab in the order (scan, table position): a stable counting sort of `pos`, which `segments` uses instead of sorting each channel.
@@ -151,6 +153,7 @@ fn push_seg(
             tot,
             a,
             z,
+            broad: false,
         });
     }
     Ok(())
@@ -290,6 +293,7 @@ fn join(segs: &[Seg], parent: &mut [u32]) -> Result<Vec<Seg>> {
             tot: tots[g],
             a: a2[g],
             z: z2[g],
+            broad: false,
         });
     }
     Ok(out)

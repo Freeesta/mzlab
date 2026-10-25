@@ -8,6 +8,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 
 use crate::aligned::{Aligned, CELL_DETECTED, NO_FILE};
+use crate::quality::REASON_BROAD;
 use crate::norm::{bad, decides, measured};
 use crate::samples::Sample;
 
@@ -33,13 +34,16 @@ pub enum Rule {
     /// Among rows within `.0` ppm in m/z and `.1` minutes in RT of each other only the one with the largest area is kept (ties: the first row);
     /// a row is judged against the rows kept before it, strongest first, so a chain of near rows does not drop the ones in the middle.
     Duplicates(f64, f64),
+    /// A row with a broad-band peak (`REASON_BROAD`) needs the largest area of a sample to be at least `ratio` times the largest area of the blanks;
+    /// every other row, and any series with no blank or no summaries, passes (the rule never errors).
+    BroadBlank(f64),
 }
 
 /// QC files needed when the rule does not say.
 pub const QC_MIN_FILES: usize = 3;
 
 /// Names of the rules in the `filtra` operation, in the order of `Rule`.
-const NAMES: [&str; 9] = [
+const NAMES: [&str; 10] = [
     "min_rilevati",
     "min_area",
     "min_altezza",
@@ -49,6 +53,7 @@ const NAMES: [&str; 9] = [
     "ms2",
     "qc_cv_max",
     "duplicati",
+    "bianco_larga",
 ];
 
 impl Rule {
@@ -63,6 +68,7 @@ impl Rule {
             Rule::Ms2 => 6,
             Rule::QcCv(..) => 7,
             Rule::Duplicates(..) => 8,
+            Rule::BroadBlank(_) => 9,
         }]
     }
 }
@@ -112,6 +118,14 @@ fn passes(
         Rule::Ms2 => t.meta.ms2_file[row] != NO_FILE,
         Rule::QcCv(max, min_files) => qc_cv(t, row, qc, min_files).is_some_and(|cv| cv <= max),
         Rule::Duplicates(..) => !dup[row],
+        Rule::BroadBlank(ratio) => {
+            let broad = t.meta.len() == t.len() && t.meta.get(row).qreason & REASON_BROAD != 0;
+            if !broad || blank.is_empty() {
+                return true;
+            }
+            let top = |ks: &mut dyn Iterator<Item = usize>| ks.filter_map(|k| measured(t, row, k)).fold(0.0, f64::max);
+            top(&mut files()) >= ratio * top(&mut blank.iter().copied())
+        }
     }
 }
 
@@ -218,7 +232,7 @@ pub fn to_json(rules: &[Rule]) -> String {
         .str(r.name());
         match *r {
             Rule::MinDetected(n) => j.raw(",\"valore\":").int(n as i64),
-            Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) => j.raw(",\"valore\":").num(x),
+            Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) | Rule::BroadBlank(x) => j.raw(",\"valore\":").num(x),
             Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"da\":").num(a).raw(",\"a\":").num(b),
             Rule::Ms2 => &mut j,
             Rule::QcCv(x, n) => j
@@ -249,6 +263,7 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                 Some("min_area") => Rule::MinArea(num(o, "valore")?),
                 Some("min_altezza") => Rule::MinHeight(num(o, "valore")?),
                 Some("bianco") => Rule::Blank(num(o, "valore")?),
+                Some("bianco_larga") => Rule::BroadBlank(num(o, "valore")?),
                 Some("mz") => Rule::Mz(num(o, "da")?, num(o, "a")?),
                 Some("rt") => Rule::Rt(num(o, "da")?, num(o, "a")?),
                 Some("ms2") => Rule::Ms2,

@@ -21,6 +21,8 @@ use crate::trace::{filled, Params};
 pub const Q_SHAPE: u8 = 1;
 pub const Q_SNR: u8 = 2;
 pub const Q_POINTS: u8 = 4;
+/// The peak comes from the broad-band pass; not a quality failure, so `RowQ::apply` keeps it and the quality tests ignore it.
+pub const REASON_BROAD: u8 = 1 << 3;
 /// Half width, minutes, of the window around the apex that gives `FileFeatures::area_win`.
 pub const AREA_HALF_WINDOW: f64 = 0.05;
 
@@ -183,7 +185,7 @@ impl RowQ {
         f.fwhm[i] = self.fwhm;
         f.asym[i] = self.asym;
         f.gaps[i] = self.gaps;
-        f.qreason[i] = self.why;
+        f.qreason[i] = self.why | (f.qreason[i] & REASON_BROAD);
         if self.why == 0 {
             f.flags[i] |= FLAG_GOOD;
         }

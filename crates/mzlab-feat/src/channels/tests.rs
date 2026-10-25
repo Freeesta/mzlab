@@ -55,6 +55,7 @@ fn the_bounded_reach_links_the_segments_the_full_one_links() {
                     tot: 3.0 * mx,
                     a,
                     z,
+                    broad: false,
                 });
                 at = z + p.max_gap + 1 + r(20) as u32;
             }

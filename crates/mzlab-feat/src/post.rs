@@ -1,6 +1,7 @@
 //! The last steps of the detection: the two grids are merged, the Fourier-transform side lobes are marked (`_merge_grids`,
 //! `fourier_artefacts`).
 
+use crate::quality::REASON_BROAD;
 use crate::sortc;
 use mzlab_core::error::Result;
 
@@ -22,6 +23,7 @@ pub(crate) struct Row {
     pub(crate) left: f64,
     pub(crate) right: f64,
     pub(crate) long: bool,
+    pub(crate) broad: bool,
     pub(crate) grid: u8,
 }
 
@@ -190,7 +192,7 @@ pub(crate) fn finish(
         out.fwhm.push(0.0);
         out.asym.push(0.0);
         out.gaps.push(0);
-        out.qreason.push(0);
+        out.qreason.push(if r.broad { REASON_BROAD } else { 0 });
         out.ms2_n.push(0);
         out.purity.push(-1.0);
         out.area_win.push(0.0);

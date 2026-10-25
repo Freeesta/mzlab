@@ -88,6 +88,8 @@ pub struct Feature {
     pub area_s: f64,
     /// First and last scan of the peak, both included.
     pub scans: (usize, usize),
+    /// From the broad-band pass.
+    pub broad: bool,
 }
 
 /// Quantile as `MathUtils.calcQuantile`: sort, then the mean of the values at `floor((n-1)·q)` and `ceil((n-1)·q)` (no other interpolation);
@@ -247,6 +249,7 @@ fn make_feature(rt: &[f64], c: &Chrom, s: usize, e: usize) -> Feature {
         area,
         area_s: area * 60.0,
         scans: (s, e),
+        broad: false,
     }
 }
 
@@ -291,6 +294,7 @@ pub fn resolve_with_broad(
             area: b.area_s / 60.0,
             area_s: b.area_s,
             scans: (b.scan_lo, b.scan_hi),
+            broad: true,
         });
     }
     Ok(out)
