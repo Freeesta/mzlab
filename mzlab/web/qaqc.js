@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender et al. 2023; BP4NTA).
 //   - type of each file (sample, blank, QC, standard, dark): guessed from the name (project.py + QC / dark words), corrected by hand
@@ -16,8 +17,10 @@ const QAQC = (() => {
   const Q1 = s => document.querySelector(s);
   const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
+  /** @returns {{ roles: Record<string, any>, ions: any[], thr: number, win: number, ratio: Record<string, any>, seq: number }} */
   const blankState = () => ({ roles: {}, ions: [], thr: 3, win: 0.5, ratio: { text: "", rt: "" }, seq: 1 });
   let st = blankState();
+  /** @type {{ ions: any[], ratio: any, feat: any, at: string | null }} */
   let res = { ions: [], ratio: null, feat: null, at: null };      // last results, read by the study report
   Object.assign(st, lsObj(KEY));
   // the roles are not stored here any more: they belong to the sample table (campioni.js, notebook NB.session)
