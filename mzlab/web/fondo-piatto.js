@@ -14,6 +14,14 @@ const FONDOP = (() => {
   }
   /** Does the window still have to be found by the program? @param {any} fo */
   const wants = fo => !!fo && fo.mode === "tract" && !!fo.ib && !!fo.ib.flat && !fo.ib.mod;
+  /** Is the background the flat window? @param {any} fo */
+  const is = fo => !!fo && fo.mode === "tract" && !!fo.ib && !!fo.ib.flat;
+  /** Entry of the «Fondo» corrections menu (and its icon, added once to CIC). @param {any} o @returns {any[]} */
+  function item(o) {
+    if (!o.parts || !o.parts.includes("flat")) return [];
+    /** @type {any} */ (CIC).flat ??= ICN('<path d="M2 14c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-dasharray="2 2"/><path d="M5 12v5M13 12v5"/>');
+    return [["flat", "flat", I18N.t("corr.flat"), I18N.t("corr.flat.desc")]];
+  }
   /** Entry of the trace menu: back to the automatic window (only after a move). @param {any} p @returns {{ label: string, fn: () => void }[]} */
   const menu = p => { const ib = ibf(p); return ib && ib.mod ? [{ label: I18N.t("fondo.flat.restore"), fn: () => restore(p) }] : []; };
   /** Switches the background to the automatic flat window (the window itself is found when the traces are corrected). @param {any} p */
@@ -70,5 +78,5 @@ const FONDOP = (() => {
     const r = el.querySelector('[data-ib="fl0"]'); if (r instanceof HTMLElement) r.onclick = () => { keep(p, "fl-"); restore(p); };
     if (p._flatFocus) { const f = el.querySelector(`[data-ib="${p._flatFocus}"]`); if (f instanceof HTMLElement) f.focus(); }
   }
-  return { wants, menu, auto, on, put, step, restore, gripAt, begin, drawGrip, chip, wire };
+  return { is, item, wants, menu, auto, on, put, step, restore, gripAt, begin, drawGrip, chip, wire };
 })();
