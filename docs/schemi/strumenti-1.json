@@ -509,6 +509,7 @@
                   "ppm",
                   "peak_width_s",
                   "snr",
+                  "broad_peaks",
                   "smooth"
                 ]
               },
@@ -555,6 +556,11 @@
                     "description":"Peak width"
                   },
                   {"type":"number","minimum":0,"default":10,"description":"Signal to noise"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"
+                  },
                   {"type":"integer","minimum":1,"default":5,"description":"Smoothing window"}
                 ]
               }

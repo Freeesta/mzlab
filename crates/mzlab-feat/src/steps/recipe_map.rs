@@ -28,6 +28,16 @@ pub fn apply(r: &mut Recipe, step: &str, params: &[(String, Value)]) -> Result<(
 }
 
 /// The peak model of `features.detect`: the algorithm, and the parameters that only the wavelet model has.
+/// Detect parameters that belong to the peak model.
+const PEAK_KEYS: [&str; 6] = [
+    "algorithm",
+    "ppm",
+    "peak_width_s",
+    "width_s",
+    "snr",
+    "broad_peaks",
+];
+
 fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     if k == "algorithm" {
         r.detect.peak = match v.str() {
@@ -40,6 +50,10 @@ fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     let Peak::CentWave(c) = &mut r.detect.peak else {
         return Err(Error::new("err.flow.param.unknown").with("param", k));
     };
+    if k == "broad_peaks" {
+        c.broad.enabled = v.bool().ok_or_else(|| bad(step, k))?;
+        return Ok(());
+    }
     let num = v.f64().ok_or_else(|| bad(step, k));
     match k {
         "ppm" => c.ppm = num?,
@@ -98,9 +112,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
-        ("features.detect", "algorithm" | "ppm" | "peak_width_s" | "width_s" | "snr") => {
-            set_peak(r, step, k, v)?
-        }
+        ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
         ("features.align", "mode") => {
             r.mode = match v.str() {
                 Some("family") => Mode::Family,
@@ -166,6 +178,7 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 v.push(("ppm", n(c.ppm)));
                 v.push(("peak_width_s", Value::Arr(vec![n(a), n(b)])));
                 v.push(("snr", n(c.snr)));
+                v.push(("broad_peaks", Value::Bool(c.broad.enabled)));
             }
             match r.detect.axis {
                 MassAxis::Ppm => v.push(("axis", Value::Str("ppm".into()))),

@@ -227,6 +227,34 @@ fn the_wavelet_peak_model_is_an_algorithm_of_the_detection() {
 }
 
 #[test]
+fn the_broad_band_pass_is_one_switch_of_the_wavelet_model() {
+    let (dir, _) = fixture("broad");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = |set: &[&str]| {
+        let mut args = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
+        for s in set {
+            args.extend(["--set", s]);
+        }
+        flow_run(&args)
+    };
+    let o = run(&["det.algorithm=centwave", "det.broad_peaks=true"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let as_run = std::fs::read_to_string(out.join("plan.json")).unwrap();
+    assert!(as_run.contains("\"broad_peaks\":true"), "{as_run}");
+    assert_eq!(
+        run(&["det.broad_peaks=true"]).code,
+        2,
+        "the pass belongs to centwave only"
+    );
+    assert_eq!(
+        run(&["det.algorithm=centwave", "det.broad_peaks=3"]).code,
+        2,
+        "a boolean"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn dry_run_writes_nothing_and_the_exit_codes_say_what_is_wrong() {
     let (dir, _) = fixture("dry");
     let plan = dir.join("plan.json");

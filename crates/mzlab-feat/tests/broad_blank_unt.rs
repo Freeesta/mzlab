@@ -26,3 +26,22 @@ fn the_mark_round_trips_through_the_table_of_the_file() {
     assert!(back[0].broad && !back[1].broad);
     assert_eq!(REASON_BROAD & (Q_SHAPE | Q_SNR | Q_POINTS), 0);
 }
+
+#[test]
+fn the_untargeted_recipe_switches_the_broad_pass_in_the_resolve_block() {
+    use mzlab_feat::untargeted::pipeline::UntParams;
+    assert!(!UntParams::from_json("").unwrap().broad.enabled);
+    assert!(
+        !UntParams::from_json(r#"{"resolve":{"min_ratio":1.5}}"#)
+            .unwrap()
+            .broad
+            .enabled
+    );
+    assert!(
+        UntParams::from_json(r#"{"resolve":{"broad":true}}"#)
+            .unwrap()
+            .broad
+            .enabled
+    );
+    assert!(UntParams::from_json(r#"{"resolve":{"broad":3}}"#).is_err());
+}

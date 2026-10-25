@@ -162,6 +162,9 @@ impl UntParams {
         p.gap.noise = p.adap.noise;
         read_baseline(&v, &mut p)?;
         read_resolve(r, &mut p.resolve)?;
+        if let Some(b) = r.get("broad") {
+            p.broad.enabled = b.bool().ok_or_else(bad)?;
+        }
         num(j, "tol_da", &mut p.join.tol_da)?;
         num(j, "tol_ppm", &mut p.join.tol_ppm)?;
         num(j, "w_mz", &mut p.join.w_mz)?;
@@ -199,7 +202,7 @@ fn read_baseline(v: &Value, p: &mut UntParams) -> Result<()> {
     Ok(())
 }
 
-/// The `"resolve"` object: the numbers of [`MinParams`] by their names, `duration` as `[min, max]` and `adjust_edges` as a boolean.
+/// The `"resolve"` object: the numbers of [`MinParams`] by their names, `duration` as `[min, max]` and `adjust_edges` as a boolean; `broad` (boolean, default false) switches the broad-band pass of [`UntParams::broad`].
 fn read_resolve(r: &Value, m: &mut MinParams) -> Result<()> {
     num(r, "chrom_threshold", &mut m.chrom_threshold)?;
     num(r, "search_rt", &mut m.search_rt)?;
