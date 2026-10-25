@@ -76,3 +76,26 @@ fn numpress_is_lossy_but_close_and_off_by_default() {
     let p = &mzml::read(&plain[..]).unwrap().spectra[0];
     assert!(p.mz == mz && p.intensity == intensity);
 }
+
+#[test]
+fn esc_gives_what_the_four_replacements_gave() {
+    let before = |s: &str| {
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+    };
+    for s in [
+        "",
+        "plain text",
+        "FTMS + p NSI Full ms [350.0000-1500.0000]",
+        "a & b",
+        "<a href=\"x\">&lt;&amp;&gt;</a>",
+        "\"&\"<>",
+        "&&&&",
+        "ÅÅ & é > 日本語 \" <",
+        "scan=1 & scan=2",
+    ] {
+        assert_eq!(esc(s), before(s), "{s:?}");
+    }
+}
