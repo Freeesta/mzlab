@@ -29,6 +29,9 @@ pub mod fileroutes;
 pub mod hrroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod chromeleon;
+pub mod chrom_fondo;
+#[cfg(test)]
+mod chrom_fondo_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;
