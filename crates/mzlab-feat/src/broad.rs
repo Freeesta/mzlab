@@ -313,7 +313,7 @@ pub fn detect_broad(
         let next = cands.get(ci + 1).map_or(r.y_d.len() - 1, |x| x.t);
         let lo_d = walk(&r.sm, c.t, thr, 4.0 * r.noise, prev, false);
         let hi_d = walk(&r.sm, c.t, thr, 4.0 * r.noise, next, true);
-        if let Some(b) = r.band(c.t, lo_d, hi_d, widths[c.s]) {
+        if let Some(b) = band(&r, c.t, lo_d, hi_d, widths[c.s]) {
             reserve(&mut out, 1)?;
             out.push(b);
         }
@@ -384,58 +384,57 @@ impl<'a> Residue<'a> {
             p,
         })
     }
+}
 
-    /// The band around block `t` between the blocks `lo_d` and `hi_d`: height and area over the line between the two edge blocks; `None` when it is
-    /// not wide enough or does not clear the height bars.
-    fn band(&self, t: usize, lo_d: usize, hi_d: usize, scale_s: f64) -> Option<BroadPeak> {
-        let (k, len) = (self.k, self.y.len());
-        let (lo, hi) = (lo_d * k, ((hi_d + 1) * k - 1).min(len - 1));
-        let (b_lo, b_hi) = (self.y_d[lo_d], self.y_d[hi_d]);
-        let bridge = |i: usize| {
-            if hi == lo {
-                b_lo
-            } else {
-                b_lo + (b_hi - b_lo) * (i - lo) as f64 / (hi - lo) as f64
-            }
-        };
-        let at = (t * k + k / 2).min(len - 1);
-        let height = self.y_d[t] - bridge(at.clamp(lo, hi));
-        let snr = if self.noise > 0.0 {
-            height / self.noise
+/// The band around block `t` between the blocks `lo_d` and `hi_d`: height and area over the line between the two edge blocks; `None` when it is
+/// not wide enough or does not clear the height bars.
+fn band(r: &Residue, t: usize, lo_d: usize, hi_d: usize, scale_s: f64) -> Option<BroadPeak> {
+    let (k, len) = (r.k, r.y.len());
+    let (lo, hi) = (lo_d * k, ((hi_d + 1) * k - 1).min(len - 1));
+    let (b_lo, b_hi) = (r.y_d[lo_d], r.y_d[hi_d]);
+    let bridge = |i: usize| {
+        if hi == lo {
+            b_lo
         } else {
-            f64::INFINITY
-        };
-        let wide = half_width(&self.y_d, t, self.base) as f64 * self.dt_d
-            >= MIN_HALF_WIDTH * self.p.width_s.0;
-        if !(wide && snr >= self.p.snr && height >= self.p.noise) {
-            return None;
+            b_lo + (b_hi - b_lo) * (i - lo) as f64 / (hi - lo) as f64
         }
-        let (mut area, mut area_s, mut sw, mut swm) = (0.0, 0.0, 0.0, 0.0);
-        for i in lo..=hi {
-            let v = self.y_res[i] - bridge(i);
-            sw += self.y[i];
-            swm += self.y[i] * self.mz[i];
-            if i > lo {
-                let u = self.y_res[i - 1] - bridge(i - 1);
-                area += (u + v) / 2.0;
-                area_s += (self.rt_s[i] - self.rt_s[i - 1]) * (u + v) / 2.0;
-            }
-        }
-        Some(BroadPeak {
-            scan_lo: lo,
-            scan_hi: hi,
-            scan_apex: at,
-            rt_apex: self.rt_d[t],
-            rt_lo: self.rt_s[lo],
-            rt_hi: self.rt_s[hi],
-            mz: if sw > 0.0 { swm / sw } else { self.mz[at] },
-            height,
-            area,
-            area_s,
-            snr,
-            scale_s,
-        })
+    };
+    let at = (t * k + k / 2).min(len - 1);
+    let height = r.y_d[t] - bridge(at.clamp(lo, hi));
+    let snr = if r.noise > 0.0 {
+        height / r.noise
+    } else {
+        f64::INFINITY
+    };
+    let wide = half_width(&r.y_d, t, r.base) as f64 * r.dt_d >= MIN_HALF_WIDTH * r.p.width_s.0;
+    if !(wide && snr >= r.p.snr && height >= r.p.noise) {
+        return None;
     }
+    let (mut area, mut area_s, mut sw, mut swm) = (0.0, 0.0, 0.0, 0.0);
+    for i in lo..=hi {
+        let v = r.y_res[i] - bridge(i);
+        sw += r.y[i];
+        swm += r.y[i] * r.mz[i];
+        if i > lo {
+            let u = r.y_res[i - 1] - bridge(i - 1);
+            area += (u + v) / 2.0;
+            area_s += (r.rt_s[i] - r.rt_s[i - 1]) * (u + v) / 2.0;
+        }
+    }
+    Some(BroadPeak {
+        scan_lo: lo,
+        scan_hi: hi,
+        scan_apex: at,
+        rt_apex: r.rt_d[t],
+        rt_lo: r.rt_s[lo],
+        rt_hi: r.rt_s[hi],
+        mz: if sw > 0.0 { swm / sw } else { r.mz[at] },
+        height,
+        area,
+        area_s,
+        snr,
+        scale_s,
+    })
 }
 
 #[cfg(test)]
