@@ -1,7 +1,7 @@
-// @ts-check
+// @ts-strict
 // Side-by-side panels of the Dati view: the affGrip in the header (drag with zones, affMenu, Alt+arrows), the dividers between neighbours, undo (Ctrl/Cmd+Z).
 // Classic script, loaded after pannelli.js (shared globals). The rows themselves (riga, quota, geometry) are in layout.js; here only the gestures.
-const AFF_T = (/** @type {string} */ k, /** @type {any} */ v) => I18N.t(k, v);
+const AFF_T = (/** @type {string} */ k, /** @type {any} */ v = undefined) => I18N.t(k, v);
 const affCss = document.createElement("style");
 affCss.textContent = ".aff-grip{flex:none;min-width:24px;min-height:24px;padding:0 2px;margin-right:2px;border:0;background:transparent;color:var(--muted);cursor:grab;touch-action:none;opacity:0;line-height:1;font-size:14px}" +
   ".pnl:hover .aff-grip,.aff-grip:focus-visible,.aff-grip[aria-expanded=true]{opacity:1}.aff-grip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.aff-grip{opacity:1;min-width:40px;min-height:40px}}" +
