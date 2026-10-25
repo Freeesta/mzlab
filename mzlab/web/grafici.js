@@ -42,7 +42,7 @@ async function corrected(p, all) {
       const d = await diffTrace(p, s, so);
       if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); cb = true; }
     }
-    const r = FONDO.apply(x, y, fo), yraw = y;
+    if (!out.length && FONDOP.wants(fo)) await FONDOP.auto(fo, x, y); const r = FONDO.apply(x, y, fo), yraw = y;
     if (r) { y = r.y; note.push(I18N.t(fo.mode === "tract" ? "corr.note.ibk" : "corr.note.baseline")); }
     out.push({ ...s, x, y, corr: note.join(" "), ibl: r ? r.ibl : null, bl: r && r.bl || null, yraw: r ? yraw : null, ze: r ? FONDO.zoneEnd(x, fo) : -Infinity, cb, cf: !!r });
   }
@@ -206,7 +206,7 @@ function setFondo(p, v) {
     if (f.ib) { pushCampi(p, "storia.fondo"); f.mode = "tract"; }
     else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }      // ibkSet records its own step
     else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
-  } else { pushCampi(p, "storia.fondo"); p.fondo = { ...f, mode: v === "snip" ? "auto" : "none", w: f.w || 1, ib: null }; }
+  } else if (v === "flat") FONDOP.on(p); else { pushCampi(p, "storia.fondo"); p.fondo = { ...f, mode: v === "snip" ? "auto" : "none", w: f.w || 1, ib: null }; }
   ctl(p); draw(p); uiSave();
 }
 const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
@@ -214,9 +214,9 @@ const ibkLevels = l => fmtA(l.lvl) + (l.lvl2 != null ? " " + I18N.t("ibk.andShor
 function ibkChip(p) {
   const fo = p.fondo, ib = ibOf(p), auto = !!fo && fo.mode === "auto"; if (!ib && !auto) return;
   const s0 = p._a && p._a.sr && p._a.sr[0], l0 = s0 && s0.ibl, bl = s0 && s0.bl, zd = fo.zd != null ? fo.zd : FONDO.ZD;
-  const chip = document.createElement("span"); chip.className = "ibk";
+  const chip = document.createElement("span"); chip.className = "ibk"; const flat = ib && ib.flat ? FONDOP.chip(p, ib, l0 ? ibkLevels(l0) : "", chip) : null;
   chip.title = I18N.t(ib ? "ibk.chip.title" : "fondo.chip.auto.title");
-  const main = ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "";
+  const main = flat || (ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "");
   chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input type="number" data-ib="zd" min="0" step="0.1" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
     (ib ? ` <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button>` : "") + ` <button data-ib="off">${I18N.t("ibk.off")}</button>`;
   chip.querySelector("[data-ib=clip]").onchange = e => { p.clipDraw = e.target.checked; draw(p); uiSave(); };
@@ -224,7 +224,7 @@ function ibkChip(p) {
   chip.querySelector("[data-ib=det]").onclick = () => { const z = s0 ? FONDO.front(s0.x, s0.yraw || s0.y) : null; if (z == null) return info(I18N.t("fondo.zone.none")); fo.zd = z; draw(p); uiSave(); };
   const sp = chip.querySelector("[data-ib=spec]"); if (sp) sp.onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
-  (p.corrbar || p.leg).appendChild(chip);
+  (p.corrbar || p.leg).appendChild(chip); if (flat) FONDOP.wire(p, chip);
 }
 // hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (comandi.js)
 COMANDI.gestore("series.visibility", { leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]), applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; } });
@@ -247,7 +247,7 @@ function ibkPick(p, mode, iv) {
 function ibkMenuItems(p) {
   const it = [], iv = p.sel && p.sel[1] > p.sel[0] ? p.sel : null;
   if (iv && !ibOf(p)) it.push({ label: I18N.t("ibk.menu.sub"), fn: () => { ibkSet(p, "mean", [...iv]); p.sel = null; ctl(p); draw(p); } });
-  if (ibOf(p)) it.push({ label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
+  if (ibOf(p)) it.push(...FONDOP.menu(p), { label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
   return it;
 }
 // the background-of-a-stretch entries of the menu of a trace (registry azioni/1): the rows of ibkMenuItems
@@ -354,7 +354,7 @@ async function drawLines(p) {
   if ((ymin < 0 || withFondo) && !stk && !logy) zeroMarks(g, sr, X, Y, W, H, withFondo && !p._exp);
   if (ibOf(p) && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = ibOf(p), bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
-    g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
+    g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }); if (ib.flat) FONDOP.drawGrip(g, ib, X, W);
     g.font = fpx(12); g.textAlign = "left"; g.fillStyle = ecss("--muted");
     g.fillText(I18N.t("ibk.band", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", extra: sr.length > 1 ? I18N.t("ibk.firstTrace") : "" }), Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }

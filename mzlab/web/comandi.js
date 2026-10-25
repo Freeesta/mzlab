@@ -16,7 +16,7 @@ const COMANDI_TAB = [
     parametri: "m/z or RT interval, intensity interval", tasto: "wheel, Backspace, double click, Shift+drag", unisci: "a burst of wheel steps, a drag and a pan are one step", annulla: "istantanea" },
   { id: "peaks.integration", nome: "storia.int", modulo: "picchi.js", dove: ["picchi.js", "eventi.js", "xic-spettro.js", "pannelli.js", "pannelli-annulla.js"], campi: ["ints", "isel"],
     parametri: "limits of the integrated peak", tasto: "I, Del", unisci: "an edge drag is one step", annulla: "istantanea" },
-  { id: "panel.fields", nome: "storia.campi", modulo: "grafici.js", dove: ["grafici.js", "pannelli.js", "fondo-spettro.js", "sottrazione.js", "mappa.js", "barra.js"], campi: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
+  { id: "panel.fields", nome: "storia.campi", modulo: "grafici.js", dove: ["grafici.js", "pannelli.js", "fondo-spettro.js", "fondo-piatto.js", "sottrazione.js", "mappa.js", "barra.js"], campi: ["bk", "bg", "fondo", "smooth", "corr", "ref", "bgr"],
     parametri: "blank, background, smoothing, correction, reference", tasto: "", unisci: "", annulla: "istantanea" },
   { id: "spec.ruler", nome: "cmd.spec.ruler", modulo: "spettro.js", dove: ["spettro.js", "pannelli.js", "eventi.js", "banco.js"], campi: ["meas", "rul"],
     parametri: "the reference peak and the second peak of each measure", tasto: "R, Esc", unisci: "", annulla: "comando" },

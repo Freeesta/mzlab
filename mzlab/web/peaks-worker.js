@@ -1,6 +1,6 @@
 // Worker of the peak measures (qualita.js): the Rust functions of mzlab-wasm that need no file, only a trace of the page. Separate from the
 // worker of the Rust engine (rust-worker.js), so the quality columns and the methods of the limits work with or without ?motore=rust.
-import init, { detect_peaks, peak_quality, label_peaks, main_peak } from "./wasm/mzlab_wasm.js";
+import init, { detect_peaks, peak_quality, label_peaks, main_peak, flat_window } from "./wasm/mzlab_wasm.js";
 
 const FIELDS = 10;                                      // PEAK_FIELDS of mzlab-wasm
 const ready = init();
@@ -26,6 +26,9 @@ onmessage = async ev => {
       const out = new Float64Array(4 * 64);
       const n = label_peaks(m.rt, m.y, m.maxN, m.rel, m.snr, !!m.ends, out);
       postMessage({ id: m.id, v: Array.from({ length: n }, (_, i) => ({ apex: out[i * 4], rt: out[i * 4 + 1], height: out[i * 4 + 2], snr: out[i * 4 + 3] })) });
+    } else if (m.op === "flat") {
+      const out = new Float64Array(3);
+      postMessage({ id: m.id, v: flat_window(m.y, m.frac || 0, m.minPts || 0, out) ? Array.from(out) : null });
     } else if (m.op === "mainpeak") {
       const out = new Float64Array(2);
       postMessage({ id: m.id, v: main_peak(m.x, m.y, m.refine, out) ? { x: out[0], y: out[1] } : null });

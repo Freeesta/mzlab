@@ -40,6 +40,11 @@ window.QUALITA = {
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */
   mainPeak(x, y, refine) { return call({ op: "mainpeak", x: f64(x), y: f64(y), refine: !!refine }); },
+  /** The steadiest flat window of a trace: { i0, i1 (exclusive), level (median) } as indices into y, or null (too short, or without the engine). */
+  async flatWindow(y) {
+    const v = await call({ op: "flat", y: f64(y) });
+    return v ? { i0: v[0], i1: v[1], level: v[2] } : null;
+  },
   /** True when the engine can answer. */
   async available() { return (await call({ op: "quality", rt: f64([0, 1, 2]), y: f64([0, 1, 0]), lo: 0, hi: 2 })) !== null; },
 };
