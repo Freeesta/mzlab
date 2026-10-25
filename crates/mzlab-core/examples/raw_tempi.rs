@@ -1,7 +1,8 @@
 //! Times every phase the site goes through for a Thermo `.raw` (`crates/mzlab-wasm/src/nativi.rs`): fingerprint, scan table, `.mzidx`,
 //! «Scarica .mzML», each with the reader as it is and with the centroids of `lettori_centroidi`. The member is read through a 256 KB block
-//! cache like the `thermo` module's `JsMember`, and the number of reads asked of it is counted (in the browser each one is a JS call).
-//! `cargo run --release --example raw_tempi -- FILE.raw [--no-cen] [--no-mzml]`; numbers in `docs/studi/RAW_VELOCE.md`.
+//! cache like the `thermo` module's `JsMember` (`--blocks N` blocks, 3 by default), and the number of reads asked of it, the blocks fetched and the bytes asked, fetched and
+//! fetched again are counted (in the browser each fetch is a JS call).
+//! `cargo run --release --example raw_tempi -- FILE.raw [--no-cen] [--no-mzml] [--blocks N]`; numbers in `docs/studi/RAW_VELOCE.md`.
 use std::cell::Cell;
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
@@ -10,56 +11,91 @@ use std::time::Instant;
 
 use sha2::{Digest, Sha256};
 
+use mzlab_core::blocchi::BlockCache;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{self, FileSet, Lettore, Limiti, Membro};
 use mzlab_core::{lettori_centroidi, lettori_mzml, mzidx, upload};
 
 const BLOCK: usize = 256 << 10;
 
-/// A file read in blocks of 256 KB (the cache of `mzlab-lettori-wasm`); `calls` counts the reads asked of it, `fills` the blocks read.
-struct Blocks {
-    f: File,
-    dim: u64,
-    start: u64,
-    block: Vec<u8>,
-    calls: Rc<Cell<u64>>,
-    fills: Rc<Cell<u64>>,
+/// Page size of the re-read count.
+const PAGE: u64 = 4096;
+
+/// What the reader asked of a `Blocks` and what was read from the file for it, in a phase: `asked` the bytes of the reads, `fetched` the bytes read from the file,
+/// `reread` the bytes of the pages (4 KB) fetched that an earlier fetch of the phase had already brought.
+#[derive(Default)]
+struct Bytes {
+    asked: Cell<u64>,
+    fetched: Cell<u64>,
+    reread: Cell<u64>,
+    seen: std::cell::RefCell<Vec<u64>>,
 }
 
-impl ReadAt for Blocks {
+impl Bytes {
+    fn fetch(&self, off: u64, len: u64) {
+        self.fetched.set(self.fetched.get() + len);
+        let mut seen = self.seen.borrow_mut();
+        for page in off / PAGE..(off + len).div_ceil(PAGE) {
+            let (w, bit) = ((page / 64) as usize, 1u64 << (page % 64));
+            if seen.len() <= w {
+                seen.resize(w + 1, 0);
+            }
+            if seen[w] & bit != 0 {
+                self.reread.set(self.reread.get() + PAGE);
+            }
+            seen[w] |= bit;
+        }
+    }
+}
+
+/// A file read through the block cache of `mzlab-lettori-wasm` (`mzlab_core::blocchi::BlockCache`, `slots` blocks of 256 KB); `calls` counts the reads asked of it, `fills` the
+/// blocks (and big reads) fetched from the file.
+struct Blocks<R> {
+    inner: R,
+    calls: Rc<Cell<u64>>,
+    bytes: Rc<Bytes>,
+}
+
+impl<R: ReadAt> ReadAt for Blocks<R> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> mzlab_core::Result<()> {
         self.calls.set(self.calls.get() + 1);
-        let end = off + buf.len() as u64;
-        if !(off >= self.start && end <= self.start + self.block.len() as u64) {
-            let n = BLOCK.min(self.dim.saturating_sub(off) as usize);
-            self.fills.set(self.fills.get() + 1);
-            if buf.len() >= BLOCK || n < buf.len() {
-                self.f.seek(SeekFrom::Start(off)).unwrap();
-                self.f
-                    .read_exact(buf)
-                    .map_err(|_| mzlab_core::Error::new("error.badIndex"))?;
-                return Ok(());
-            }
-            self.block.resize(n, 0);
-            self.f.seek(SeekFrom::Start(off)).unwrap();
-            self.f.read_exact(&mut self.block).unwrap();
-            self.start = off;
-        }
-        let a = (off - self.start) as usize;
-        buf.copy_from_slice(&self.block[a..a + buf.len()]);
-        Ok(())
+        self.bytes
+            .asked
+            .set(self.bytes.asked.get() + buf.len() as u64);
+        self.inner.read_at(off, buf)
     }
 }
 
 struct Counters {
     calls: Rc<Cell<u64>>,
     fills: Rc<Cell<u64>>,
+    bytes: Rc<Bytes>,
 }
 
 impl Counters {
-    fn take(&self) -> (u64, u64) {
-        (self.calls.replace(0), self.fills.replace(0))
+    /// Reads, blocks, and the bytes (asked, fetched, re-read) of the phase that ends; the next phase starts from zero.
+    fn take(&self) -> (u64, u64, [u64; 3]) {
+        self.bytes.seen.borrow_mut().clear();
+        (
+            self.calls.replace(0),
+            self.fills.replace(0),
+            [
+                self.bytes.asked.replace(0),
+                self.bytes.fetched.replace(0),
+                self.bytes.reread.replace(0),
+            ],
+        )
     }
+}
+
+/// Number of blocks of the cache (`--blocks N`, 3 like the `thermo` module; 1 is the single block it had before).
+fn slots() -> usize {
+    let a: Vec<String> = std::env::args().collect();
+    a.iter()
+        .position(|x| x == "--blocks")
+        .and_then(|i| a.get(i + 1))
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(3)
 }
 
 fn set(path: &str) -> (FileSet, Counters) {
@@ -67,14 +103,21 @@ fn set(path: &str) -> (FileSet, Counters) {
     let c = Counters {
         calls: Rc::default(),
         fills: Rc::default(),
+        bytes: Rc::default(),
+    };
+    let mut f = File::open(path).unwrap();
+    let (fills, bytes) = (c.fills.clone(), c.bytes.clone());
+    let fetch = move |off: u64, buf: &mut [u8]| -> mzlab_core::Result<()> {
+        fills.set(fills.get() + 1);
+        bytes.fetch(off, buf.len() as u64);
+        f.seek(SeekFrom::Start(off)).unwrap();
+        f.read_exact(buf)
+            .map_err(|_| mzlab_core::Error::new("error.badIndex"))
     };
     let b = Blocks {
-        f: File::open(path).unwrap(),
-        dim,
-        start: 0,
-        block: Vec::new(),
+        inner: BlockCache::new(fetch, dim, BLOCK, slots()),
         calls: c.calls.clone(),
-        fills: c.fills.clone(),
+        bytes: c.bytes.clone(),
     };
     let nome = std::path::Path::new(path)
         .file_name()
@@ -140,8 +183,14 @@ fn hash12(b: &[u8]) -> String {
 }
 
 fn line(what: &str, secs: f64, c: &Counters, extra: &str) {
-    let (calls, fills) = c.take();
-    println!("{what:<28} {secs:>8.3} s  reads {calls:>10}  blocks {fills:>7}  {extra}");
+    let (calls, fills, [asked, fetched, reread]) = c.take();
+    let mb = |b: u64| b as f64 / 1e6;
+    println!(
+        "{what:<28} {secs:>8.3} s  reads {calls:>10}  blocks {fills:>7}  MB asked {:>8.1} fetched {:>8.1} re-read {:>8.1}  {extra}",
+        mb(asked),
+        mb(fetched),
+        mb(reread)
+    );
 }
 
 /// The index with a scratch file (the browser's second OPFS file, a temporary file on the desktop) and the desktop way with the fingerprints in a second thread.
