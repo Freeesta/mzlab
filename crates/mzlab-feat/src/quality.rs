@@ -23,6 +23,8 @@ pub const Q_SNR: u8 = 2;
 pub const Q_POINTS: u8 = 4;
 /// The peak comes from the broad-band pass; not a quality failure, so `RowQ::apply` keeps it and the quality tests ignore it.
 pub const REASON_BROAD: u8 = 1 << 3;
+/// A targeted peak accepted with fewer points than `TargetParams::min_points` (an estimate, not a detection).
+pub const REASON_ESTIMATED: u8 = 1 << 4;
 /// Half width, minutes, of the window around the apex that gives `FileFeatures::area_win`.
 pub const AREA_HALF_WINDOW: f64 = 0.05;
 

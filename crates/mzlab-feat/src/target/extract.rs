@@ -28,6 +28,8 @@ pub(crate) struct Cand {
     pub asym: f32,
     pub gaps: u16,
     pub npts: u16,
+    /// Fewer points than `TargetParams::min_points` (accepted only with `estimate_points`).
+    pub estimated: bool,
 }
 
 /// The MS1 section of a file: its index and the RT of every scan.
@@ -48,6 +50,12 @@ impl Section {
     pub fn run(&self) -> (f64, f64) {
         (self.rt[0], self.rt[self.rt.len() - 1])
     }
+}
+
+/// Fewest points a peak may have to be accepted at all.
+fn floor_points(p: &TargetParams) -> u16 {
+    p.estimate_points
+        .map_or(p.min_points, |e| e.min(p.min_points))
 }
 
 /// The peaks of the ion `mz` whose apex lies in the RT window `win`, highest first.
@@ -79,7 +87,7 @@ fn trace_peaks(rt: &[f64], y: &[f64], win: (f64, f64), p: &TargetParams) -> Vec<
     let (t, v) = (&rt[w0..w1], &y[w0..w1]);
     let pp = ProminenceParams {
         snr: p.min_snr,
-        min_scans: p.min_points as usize,
+        min_scans: floor_points(p) as usize,
         ..Default::default()
     };
     let mut out = Vec::new();
@@ -94,7 +102,12 @@ fn trace_peaks(rt: &[f64], y: &[f64], win: (f64, f64), p: &TargetParams) -> Vec<
             .count()
             .min(u16::MAX as usize) as u16;
         let (snr, shape, fwhm, asym, gaps) = measure(t, v, pk.lo, pk.hi, p.floor);
-        if snr < p.min_snr || shape < p.min_shape || npts < p.min_points {
+        if snr < p.min_snr || shape < p.min_shape || npts < floor_points(p) {
+            continue;
+        }
+        if p.shape_tol_pct
+            .is_some_and(|tol| !rises_then_falls(&v[pk.lo..=pk.hi], pk.apex_i - pk.lo, tol))
+        {
             continue;
         }
         out.push(Cand {
@@ -112,9 +125,25 @@ fn trace_peaks(rt: &[f64], y: &[f64], win: (f64, f64), p: &TargetParams) -> Vec<
             asym: asym as f32,
             gaps,
             npts,
+            estimated: npts < p.min_points,
         });
     }
     out
+}
+
+/// Whether the trace goes up to the apex and down after it, a step back of at most `tol_pct` % of the apex height being allowed (a tooth within the
+/// tolerance is noise). The test is against the running maximum before the apex and the running minimum after it, so small steps cannot add up.
+fn rises_then_falls(v: &[f64], apex: usize, tol_pct: f64) -> bool {
+    let slack = v[apex] * tol_pct / 100.0;
+    let (mut top, mut bottom) = (v[0], v[apex]);
+    let up = v[..=apex].iter().all(|&x| {
+        top = top.max(x);
+        x >= top - slack
+    });
+    up && v[apex..].iter().all(|&x| {
+        bottom = bottom.min(x);
+        x <= bottom + slack
+    })
 }
 
 /// A row of the detection table (sorted by m/z) that is the same ion as `mz` at `rt`: within `ppm`, and the apex of one inside the edges of the
@@ -154,11 +183,78 @@ pub(crate) fn push_peak(t: &mut FileFeatures, mz: f64, c: &Cand) {
     t.fwhm.push(c.fwhm);
     t.asym.push(c.asym);
     t.gaps.push(c.gaps);
-    t.qreason.push(0);
+    t.qreason.push(if c.estimated {
+        crate::quality::REASON_ESTIMATED
+    } else {
+        0
+    });
     t.ms2_n.push(0);
     t.purity.push(-1.0);
     t.area_win.push(c.area);
     t.family_id.push(0);
     t.role.push(0);
     t.alt.push(0);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A smooth peak of `n` points around scan 30 on a flat zero trace, one scan every 0.02 min.
+    fn trace(heights: &[f64]) -> (Vec<f64>, Vec<f64>) {
+        let rt: Vec<f64> = (0..60).map(|i| 1.0 + 0.02 * i as f64).collect();
+        let mut y = vec![0.0; 60];
+        for (k, &h) in heights.iter().enumerate() {
+            y[30 - heights.len() / 2 + k] = h;
+        }
+        (rt, y)
+    }
+
+    fn run(heights: &[f64], p: &TargetParams) -> Vec<Cand> {
+        let (rt, y) = trace(heights);
+        trace_peaks(&rt, &y, (rt[0], rt[59]), p)
+    }
+
+    const FIVE: [f64; 5] = [3e4, 8e4, 1e5, 8e4, 3e4];
+    const FOUR: [f64; 4] = [4e4, 1e5, 9e4, 3e4];
+
+    #[test]
+    fn four_points_are_not_detected_unless_estimates_are_on() {
+        let off = TargetParams::default();
+        assert!(run(&FOUR, &off).is_empty(), "min_points 5 refuses it");
+        assert_eq!(run(&FIVE, &off).len(), 1);
+        assert!(!run(&FIVE, &off)[0].estimated);
+        let on = TargetParams {
+            estimate_points: Some(3),
+            ..TargetParams::default()
+        };
+        let found = run(&FOUR, &on);
+        assert_eq!(found.len(), 1);
+        assert!(found[0].estimated);
+        assert!(
+            !run(&FIVE, &on)[0].estimated,
+            "five points stay a detection"
+        );
+    }
+
+    #[test]
+    fn a_tooth_is_refused_beyond_the_tolerance() {
+        let tooth = [3e4, 9e4, 6e4, 1e5, 8e4, 3e4];
+        let off = TargetParams::default();
+        assert_eq!(run(&tooth, &off).len(), 1, "no check, no refusal");
+        let strict = TargetParams {
+            shape_tol_pct: Some(10.0),
+            ..TargetParams::default()
+        };
+        assert!(
+            run(&tooth, &strict).is_empty(),
+            "a 30 % dip before the apex"
+        );
+        let loose = TargetParams {
+            shape_tol_pct: Some(40.0),
+            ..TargetParams::default()
+        };
+        assert_eq!(run(&tooth, &loose).len(), 1);
+        assert_eq!(run(&FIVE, &strict).len(), 1, "a clean peak passes");
+    }
 }
