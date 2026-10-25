@@ -154,16 +154,30 @@ class Gestures(Bench):
         s.out["memory_peak"] = {"heap_mb": h, "engine_mb": w, "uas_mb": ua}
 
 
-def one_config(p, port, rate, cores, reps):
+PATCH = None
+
+
+def open_only(p, port, rate, cores, n):
+    """n openings of the demo in fresh browsers (one opening is noisy): p50 / p95 of the first chart and of the ready page"""
+    first, done = [], []
+    for _ in range(n):
+        o = one_config(p, port, rate, cores, 0, only=("open",), patch=PATCH)
+        if "open_ready" in o: first.append(o["open_first_chart"]["p50"]); done.append(o["open_ready"]["p50"])
+    return {"open_first_chart": {"n": len(first), "p50": pct(first, .5), "p95": pct(first, .95)}, "open_ready": {"n": len(done), "p50": pct(done, .5), "p95": pct(done, .95)}}
+
+
+def one_config(p, port, rate, cores, reps, only=None, patch=None):
     b = p.chromium.launch(args=["--enable-precise-memory-info", "--js-flags=--expose-gc"])
     ctx = b.new_context(viewport={"width": 1500, "height": 1000}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
     pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
     pg.add_init_script(f"Object.defineProperty(navigator, 'hardwareConcurrency', {{get: () => {cores}}});")
     pg.add_init_script(INIT)
+    if patch: pg.add_init_script(Path(patch).read_text())            # an experiment under test (A/B): run before and after with the same bench
     ctx.new_cdp_session(pg).send("Emulation.setCPUThrottlingRate", {"rate": rate})
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     B = Gestures(pg, reps); t = time.time()
     for name, fn in (("open", lambda: B.open_demo(port)), ("drag", B.drag), ("switch", B.switches), ("map", B.maps), ("xic", B.xic), ("memory", B.memory)):
+        if only and name not in only: continue
         print("  step", name, flush=True)
         try: fn()
         except Exception as e: B.out.setdefault("errors", []).append(f"{name}: {str(e).splitlines()[0][:160]}")
@@ -197,14 +211,15 @@ def worst(res, rate, cores):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--reps", type=int, default=12); ap.add_argument("--rates", default="1,4,6"); ap.add_argument("--cores", default="2,4")
-    ap.add_argument("--json"); ap.add_argument("--md"); ap.add_argument("--port", type=int, default=8979); a = ap.parse_args()
+    ap.add_argument("--json"); ap.add_argument("--md"); ap.add_argument("--patch", help="JS file added as an init script (A/B test of an idea without touching the product)"); ap.add_argument("--open-reps", type=int, help="only the opening of the demo, this many times per configuration"); ap.add_argument("--port", type=int, default=8979); a = ap.parse_args()
+    global PATCH; PATCH = a.patch
     rates = [int(x) for x in a.rates.split(",")]; cores = [int(x) for x in a.cores.split(",")]
     r = Run(port=a.port, wd="/tmp/wd_macchine"); res = {}
     try:
         with sync_playwright() as p:
             for rate in rates:
                 for c in cores:
-                    print(f"== {rate}x / {c} cores", flush=True); res[f"{rate}_{c}"] = one_config(p, r.port, rate, c, a.reps)
+                    print(f"== {rate}x / {c} cores", flush=True); res[f"{rate}_{c}"] = open_only(p, r.port, rate, c, a.open_reps) if a.open_reps else one_config(p, r.port, rate, c, a.reps, patch=a.patch)
                     print(json.dumps(res[f"{rate}_{c}"])[:600], flush=True)
     finally:
         r.close()
