@@ -46,7 +46,8 @@ impl CvPar {
 /// The cvParams of `list` in order (nothing without the `precursori` feature).
 #[cfg(feature = "precursori")]
 pub(super) fn params_xml(list: &[CvPar]) -> String {
-    let mut s = String::new();
+    // about 150 bytes a parameter: one allocation instead of the doublings of a string that starts empty
+    let mut s = String::with_capacity(160 * list.len());
     for p in list {
         s += &p.xml();
     }
@@ -104,7 +105,8 @@ pub(super) fn precursor_list(list: &[Precursore]) -> String {
     if list.is_empty() {
         return String::new();
     }
-    let mut s = String::from("<precursorList count=\"");
+    let mut s = String::with_capacity(768 * list.len() + 64);
+    s.push_str("<precursorList count=\"");
     s += &list.len().to_string();
     s += "\">";
     for p in list {

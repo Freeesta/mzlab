@@ -2,7 +2,7 @@
 //! «Scarica .mzML», each with the reader as it is and with the centroids of `lettori_centroidi`. The member is read through a 256 KB block
 //! cache like the `thermo` module's `JsMember` (`--blocks N` blocks, 3 by default), and the number of reads asked of it, the blocks fetched and the bytes asked, fetched and
 //! fetched again are counted (in the browser each fetch is a JS call).
-//! `cargo run --release --example raw_tempi -- FILE.raw [--no-cen] [--no-mzml] [--blocks N]`; numbers in `docs/studi/RAW_VELOCE.md`.
+//! `cargo run --release --example raw_tempi -- FILE.raw [--no-cen] [--no-mzml] [--blocks N] [--threads N] [--sha]`; numbers in `docs/studi/RAW_VELOCE.md`.
 use std::cell::Cell;
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
@@ -147,12 +147,16 @@ fn set(path: &str) -> (FileSet, Counters) {
     )
 }
 
-/// Counts the bytes written.
+/// Counts the bytes written and, with `--sha`, keeps their SHA-256 (the mzML must be byte for byte the same from one build to the next; hashing 40 MB on the
+/// writing thread is a cost of its own, so the times are taken without it).
 #[derive(Default)]
-struct Sink(u64);
+struct Sink(u64, Option<Sha256>);
 impl Write for Sink {
     fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
         self.0 += b.len() as u64;
+        if let Some(h) = self.1.as_mut() {
+            h.update(b);
+        }
         Ok(b.len())
     }
     fn flush(&mut self) -> std::io::Result<()> {
@@ -348,6 +352,38 @@ fn producer(l: &mut dyn Lettore, n: usize, c: &Counters) {
     );
 }
 
+/// The mzML writer: its producer alone, the header, then the whole write (with `--threads N` encoding threads and, with `--sha`, the SHA-256 of the file).
+fn mzml(l: &mut dyn Lettore, n: usize, c: &Counters) {
+    producer(&mut *l, n, c);
+    let t = Instant::now();
+    let _ = l.testata_mzml(0).expect("header");
+    line("header (testata_mzml)", t.elapsed().as_secs_f64(), c, "");
+    let t = Instant::now();
+    let mut sink = Sink(0, std::env::args().any(|a| a == "--sha").then(Sha256::new));
+    let opz = mzlab_core::mzmlwrite::Opzioni {
+        thread: threads(),
+        ..Default::default()
+    };
+    lettori_mzml::scrivi_con(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
+    line(
+        "write mzML (scrivi)",
+        t.elapsed().as_secs_f64(),
+        c,
+        &format!(
+            "{:.1} MB{}",
+            sink.0 as f64 / 1e6,
+            sink.1.map_or(String::new(), |h| format!(
+                ", sha256 {}",
+                h.finalize()
+                    .iter()
+                    .take(6)
+                    .map(|x| format!("{x:02x}"))
+                    .collect::<String>()
+            ))
+        ),
+    );
+}
+
 /// Every phase of the site for one reading of the file (`cen`: through `lettori_centroidi`).
 fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     println!(
@@ -431,19 +467,6 @@ fn phases(path: &str, name: &str, cen: bool, with_mzml: bool) {
     scratch_phases(path, name, cen, &mut *l, &imp, &c);
 
     if with_mzml {
-        producer(&mut *l, n, &c);
-        let t = Instant::now();
-        let mut sink = Sink::default();
-        let opz = mzlab_core::mzmlwrite::Opzioni {
-            thread: threads(),
-            ..Default::default()
-        };
-        lettori_mzml::scrivi_con(&mut *l, 0, &mut sink, &mut |_, _| {}, opz).expect("mzML");
-        line(
-            "write mzML (scrivi)",
-            t.elapsed().as_secs_f64(),
-            &c,
-            &format!("{:.1} MB", sink.0 as f64 / 1e6),
-        );
+        mzml(&mut *l, n, &c);
     }
 }

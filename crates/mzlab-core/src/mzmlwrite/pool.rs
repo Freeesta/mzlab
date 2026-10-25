@@ -44,14 +44,16 @@ impl<W: Write> MzmlWriter<W> {
                 let (tx, rx) = (tx_pronti.clone(), &rx_lavoro);
                 sc.spawn(move || {
                     let mut enc = Codifica::new(opz);
+                    // the text of the last block, to start the next one with room for it (a string that starts empty doubles a dozen times)
+                    let mut capacita = 0usize;
                     loop {
                         // the lock is held only while waiting for the next block
                         let voce = rx.lock().unwrap_or_else(|e| e.into_inner()).recv();
                         let Ok((primo, blocco)) = voce else { break };
-                        if tx
-                            .send(codifica_blocco(&mut enc, base, primo, blocco, codifica))
-                            .is_err()
-                        {
+                        let pronto =
+                            codifica_blocco(&mut enc, base, primo, blocco, codifica, capacita);
+                        capacita = pronto.testo.len() + pronto.testo.len() / 8;
+                        if tx.send(pronto).is_err() {
                             break;
                         }
                     }
@@ -130,13 +132,14 @@ fn codifica_blocco<F>(
     primo: usize,
     mut blocco: Vec<Voce>,
     codifica: &F,
+    capacita: usize,
 ) -> Pronto
 where
     F: Fn(&mut Codifica, usize, &Spectrum, &SpectrumExtra, &mut String) -> Result<()>,
 {
     let mut pronto = Pronto {
         primo,
-        testo: String::new(),
+        testo: String::with_capacity(capacita),
         fine: Vec::with_capacity(blocco.len()),
         errore: None,
         usati: Vec::new(),
