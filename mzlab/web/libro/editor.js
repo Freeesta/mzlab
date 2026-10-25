@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Admin page of the Libro: visual editor (Milkdown) for the sections of the private repository, saved as Markdown with the GitHub API.
 // Nothing of the Libro is part of the site: the text is fetched at run time with the user's token and kept in memory only.
 import { GhError, makeClient, trio } from "./gh.js";

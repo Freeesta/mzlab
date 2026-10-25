@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Teoria editor (administrator page): edit the Markdown source of a Teoria chapter, check it with the Rust converter, preview the page and send the change
 // as one pull request with auto-merge (pr.js). Text and token live in memory; the token may be sealed with a passphrase (vault.js, own slot).
 import { GhError } from "./gh.js";

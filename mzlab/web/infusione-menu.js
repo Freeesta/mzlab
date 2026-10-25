@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Right click on a peak of an MSn infusion spectrum: «Fragment this ion» (the child node with that precursor), «Back to the precursor», Mean | Sum. Needs infusione.js.
 (() => {

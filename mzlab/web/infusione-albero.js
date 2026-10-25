@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // The precursor tree of an MSn infusion, as the body of a tab of the information bar of the bench (banco.js, BODY.alb): indented rows MS1 > MS2 > MSn with the
 // precursor, the level, the collision energy, the number of scans and the minutes; above them the level, the tolerance and the energies of the grouping, and the

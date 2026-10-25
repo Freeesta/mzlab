@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // «Report a bug» group of the settings panel (settings.js loads this module when the group is opened). One free field; the diagnostics (bug-report-testo.js, no names) are always added.
 // Three actions: open a new issue of the public repository in a new tab with the text already in the form, copy it, or write an email with it (the address is joined here, at click time).
 // Nothing is sent by the site: no request, no cookie; the user still reads and edits everything on GitHub or in the mail program before sending. Keyboard and focus are those of the settings panel.

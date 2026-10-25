@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The clients of the assistant: the worker + iframe `trasporto.html` in the site, the native routes `llm/*` in the desktop app (the key stays in Rust), and the helpers that
 // say which providers a page can reach. Loaded by llm-impostazioni.js only after the user turned the assistant on.
 

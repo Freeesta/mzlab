@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // MSn infusion (kind "infusion"): the precursor tree of the file (/api/msn_albero, built in Rust from the index), the nodes as scan filters of the cells
 // of the bench (filt = "msn:<id>", with mtol/mce of the tree options added to every request by qs()), the Mean | Sum switch (modo=somma) and the

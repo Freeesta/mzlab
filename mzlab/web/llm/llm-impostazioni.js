@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // «Assistant» section of the settings (profile «ricerca» only; settings.js imports this file when the section is shown, so a profile «corso» downloads nothing of llm/).
 // Off by default: turning it on loads the provider list, asks for the consent (llm-consenso.js) and only then can anything leave the computer. The client talks to the
 // worker + iframe `trasporto.html` in the site, to the native routes `llm/*` in the desktop app, or to a recording (`replay`, tests); the preview shows the exact request.

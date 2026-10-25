@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The text of a bug report, no DOM and no network: what the «Report a bug» group of the settings (bug-report.js) shows, copies and puts in the link to a new GitHub issue.
 // Privacy rule: the diagnostics hold only counts, formats and sizes of the loaded files, never a file name, a sample label or a path; the recent errors are cut to
 // one line, with every name of the loaded files and every file-like word replaced by «<file>». The user's own description is the only free text.
