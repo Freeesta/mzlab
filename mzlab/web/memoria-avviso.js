@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Warning before a phase uses more memory than the browser safely gives (docs/studi/memoria/README.md §4): the phase was refused at the safe budget and its estimate fits in the high
 // one. Two buttons, the safe one («Cancel») is the default (Enter, Esc, a click outside); «Use more memory» is the user's choice. feat-run.js asks it through `window.mzlabAskMore`
 // (set by rust-budget.js, loaded on the first need). Colours from the variables of the page; keyboard: Tab stays inside, the focus comes back where it was.

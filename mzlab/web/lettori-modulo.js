@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The readers modules in the page (docs/agenti/lettori-modulo.md): `LETTORI_MOD` opens, in a worker of its own (lettori-worker.js, started on the first request; each family's .wasm loaded when a file of it arrives), the files of a family that
 // the engine does not read, and gives their mzML as a File of OPFS. `shell.js moduloToMzml` (rule R of upload0) decides which files go here. Module loaded by carica.js.
 

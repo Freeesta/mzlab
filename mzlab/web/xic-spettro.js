@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Button «XIC» of the mass spectrum (Full Scan, MS2, DDA, map, several files): extracts at once the XIC of the ion chosen in the spectrum and shows it in the
 // panel right under it. State per spectrum panel: the chosen peak (ring on the spectrum), its tolerance, the XIC panel it owns. The XIC follows the scan of the
@@ -257,8 +257,9 @@
   /** small dot on the apex of the chosen peak (a ring would cover the m/z label above it); the halo keeps it readable on any background @param {any} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {any} d0 */
   function mark(p, g, X, Y, W, d0) {
     const s = ST.get(p); if (!s || !s.sel || p._exp) return;
-    const px = X(s.sel.m); if (px < M.l || px > W - M.r) return;
-    let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - s.sel.m) < 0.3 && (j < 0 || Math.abs(v - s.sel.m) < Math.abs(d0.mz[j] - s.sel.m))) j = i; });
+    const sel = s.sel;
+    const px = X(sel.m); if (px < M.l || px > W - M.r) return;
+    let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - sel.m) < 0.3 && (j < 0 || Math.abs(v - sel.m) < Math.abs(d0.mz[j] - sel.m))) j = i; });
     g.save(); g.strokeStyle = ecss("--accent"); g.lineWidth = 2;
     if (j < 0) { g.setLineDash([4, 3]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, M.t + 2); g.stroke(); }
     else {
