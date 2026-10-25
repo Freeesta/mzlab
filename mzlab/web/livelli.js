@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // The confidence levels of the identifications (Schymanski et al. 2014; MSI 2007): ONE module used by «Cos'è?», «Identifica tutte le MS2» and mzFinder (same words, same colours).
 // The rules and the thresholds are in the data file livelli-1.js (format «livelli/1»); here only the cascade that reads them. Always «candidate, level N, evidence», never «it is X».
@@ -65,7 +65,7 @@ const LIVELLI = (() => {
   function assess(input, name, T) {
     const P = profile(name), TT = T || thresholds(name), inp = input || {};
     const sf = (P.cancelli.find(g => g.id === "score") || { campo: "ent" }).campo, list = ranked(inp.cands, sf), best = list[0] || null;
-    const res = { proposed: P.senza_prove, decided: null, why: "none", best, gates: [], lines: [], decisive: "", std: null, profile: name || profileName() };
+    const res = /** @type {Record<string, any>} */ ({ proposed: P.senza_prove, decided: null, why: "none", best, gates: [], lines: [], decisive: "", std: null, profile: name || profileName() });
     const fin = (lv, why, decisive) => { res.proposed = lv; res.why = why; res.decisive = decisive; return res; };
     const nm = c => c.name || "?", lb = c => (c.lib ? " " + c.lib : "");
     if (inp.std && P.standard.length) {                // level 1 only with the standard marked by the user
