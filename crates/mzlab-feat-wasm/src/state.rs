@@ -168,6 +168,7 @@ fn row(g: &mut Get) -> Result<TargetRow> {
         n_targeted: (counts >> 16) as u16,
         ms2_total,
         coincidence,
+        merged: Vec::new(),
     })
 }
 
