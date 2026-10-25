@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Images of a drawn fragmentation graph: a stand-alone SVG (computed styles written on the elements, so no stylesheet is needed) and a PNG drawn
 // from it with a canvas. Used by the Flow graph view; the stand-alone HTML of mzlab-cli carries the same logic in its page script.
 

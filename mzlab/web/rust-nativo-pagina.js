@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Page side of the files of a maker read as they are (rust-nativo.js is the worker side): the samples of a dataset, which files of the session are samples of a maker's file,
 // and «Download .mzML» (the mzML of one sample written on request to a file of OPFS). `h` = { rpc, base, current, abort } of the bridge (rust-bridge.js).
 import { ensureRoom } from "./archivio.js";

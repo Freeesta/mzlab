@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Size of the atom symbols in the editor (Disegno): three sizes, kept in this browser. Ketcher takes it as its "fontsz" option;
 // only editor.setOptions applies it at once (ketcher.setSettings does not), and Ketcher keeps it in its own localStorage as well.
 const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.font") : "qqq.disegno.font";

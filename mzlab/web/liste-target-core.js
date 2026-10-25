@@ -1,3 +1,4 @@
+// @ts-strict
 // High-resolution mass spectrometry (HRMS) target screening calculation core.
 "use strict";
 

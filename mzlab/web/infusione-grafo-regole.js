@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The fragmentation rules in the «Fragmentation graph» tab: the label of a rule under the loss of an arc, the filter «explained by a rule», the rules of the
 // arcs that end in the selected ion (with source, weak tag and warnings) and the columns of the data table. Every number, reason, DOI and warning comes from the
 // key `regole` of msngrafo/1; the rules are evidence for the user's own judgement, never a verdict. Used by infusione-grafo*.js.

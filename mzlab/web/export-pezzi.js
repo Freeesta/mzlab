@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Exports written piece by piece (docs/agenti/dati-esporta.md). ES module; only EXPORT_PEZZI goes on window.
 // A source is a string, a Uint8Array, a Blob or an (async) iterable of those: the pieces go to export-worker.js, which writes them into OPFS (mzlab/export/),
 // and the download is the File read from there, so the page never holds the whole text. Same bytes as `new Blob(pieces)` (strings are UTF-8).
