@@ -25,7 +25,7 @@
    "type": "array",
    "items": {
     "type": "object",
-    "required": ["acquisito", "campione", "campione_id", "composto", "concentrazione", "extra", "file", "gruppo", "istd", "lotto", "matrice", "note", "ordine_iniezione", "polarita", "replica", "serie", "sha256", "tempo", "tempo_confermato", "tempo_min", "tipo", "tipo_bianco", "unita", "unita_tempo"],
+    "required": ["acquisito", "campione", "campione_id", "composto", "concentrazione", "extra", "file", "gruppo", "istd", "lotto", "matrice", "note", "ordine_iniezione", "polarita", "reiniezione", "replica", "serie", "sha256", "tempo", "tempo_confermato", "tempo_min", "tipo", "tipo_bianco", "unita", "unita_tempo"],
     "properties": {
      "file": {"type": "string"},
      "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
@@ -57,6 +57,7 @@
      "tempo_min": {"type": ["number", "null"]},
      "tempo_confermato": {"type": "boolean"},
      "serie": {"type": "string"},
+     "reiniezione": {"type": "boolean", "description": "a re-injection (ID suffix -R): a distinct injection, left out of the kinetics by the pages"},
      "replica": {"type": "integer", "minimum": 1},
      "concentrazione": {"type": ["number", "null"]},
      "unita": {"type": ["string", "null"]},

@@ -126,3 +126,20 @@ fn pool_is_a_role_and_pos_neg_replicates_stay_apart() {
         (1.into(), 1.into())
     );
 }
+
+#[test]
+fn a_reinjection_keeps_its_id_and_is_flagged() {
+    let out = run_model(
+        MODEL,
+        &[
+            "20300101_neg_001_TW-PMS-T5.mzML",
+            "20300101_neg_002_TW-PMS-T5-R.mzML",
+        ],
+    );
+    let cs = out["campioni"]["campioni"].as_array().unwrap();
+    assert_eq!(
+        (field(&cs[0], "reiniezione"), field(&cs[1], "reiniezione")),
+        (false.into(), true.into())
+    );
+    assert_eq!(field(&cs[1], "campione_id"), "TW-PMS-T5-R");
+}

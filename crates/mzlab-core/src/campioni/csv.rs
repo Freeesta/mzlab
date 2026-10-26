@@ -12,7 +12,7 @@ use crate::error::{Error, Result};
 use crate::json::{parse, Out};
 
 /// The fixed columns, in the order written.
-const FIXED: [&str; 22] = [
+const FIXED: [&str; 23] = [
     "file",
     "campione",
     "sha256",
@@ -28,6 +28,7 @@ const FIXED: [&str; 22] = [
     "unita_tempo",
     "tempo_confermato",
     "serie",
+    "reiniezione",
     "replica",
     "concentrazione",
     "unita",
@@ -217,6 +218,7 @@ fn put(c: &mut Campione, f: &str, v: &str) -> bool {
                     .is_some()
         }
         "istd" => return v.is_empty() || flag(v).map(|b| c.istd = b).is_some(),
+        "reiniezione" => return v.is_empty() || flag(v).map(|b| c.reinjection = b).is_some(),
         "replica" => return v.is_empty() || whole(v).map(|n| c.replicate = n).is_some(),
         "ordine_iniezione" => return v.is_empty() || whole(v).map(|n| c.order = n).is_some(),
         "concentrazione" => return v.is_empty() || num(v).map(|x| c.conc = Some(x)).is_some(),
@@ -397,6 +399,7 @@ fn fixed(c: &Campione, f: &str) -> String {
         "unita_tempo" => c.time_unit.clone(),
         "tempo_confermato" => c.time_confirmed.to_string(),
         "serie" => c.series.clone(),
+        "reiniezione" => c.reinjection.to_string(),
         "replica" => c.replicate.to_string(),
         "concentrazione" => n(c.conc),
         "unita" => c.unit.clone().unwrap_or_default(),

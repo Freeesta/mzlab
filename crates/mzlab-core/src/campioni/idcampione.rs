@@ -20,6 +20,8 @@ pub struct IdInfo {
     pub bad_time: bool,
     /// The ID has the shape `MAT-COND-Ttt` but COND is not one of the known conditions.
     pub unknown_cond: bool,
+    /// The ID ends with `-R`.
+    pub reinjection: bool,
 }
 
 /// `2P5` (the ID is upper-cased) → 2.5, `30` → 30; None when it is not a number written that way.
@@ -46,8 +48,12 @@ pub fn leggi(id: &str) -> IdInfo {
         .or_else(|| id.strip_suffix("-r"))
         .unwrap_or(id);
     let up = base.to_uppercase();
+    let reinjection = base.len() != id.len();
     let parts: Vec<&str> = up.split('-').collect();
-    let mut r = IdInfo::default();
+    let mut r = IdInfo {
+        reinjection,
+        ..IdInfo::default()
+    };
     match parts.as_slice() {
         [m, cond, t] if matrix_of(m).is_some() && t.starts_with('T') => {
             r.matrix = matrix_of(m);
@@ -88,6 +94,7 @@ pub fn leggi(id: &str) -> IdInfo {
 pub fn applica(c: &mut Campione, skip: &[&str]) {
     let i = leggi(&c.sample_id);
     let free = |f: &str| !skip.contains(&f);
+    c.reinjection = i.reinjection;
     if let (true, Some(m)) = (free("matrice"), i.matrix) {
         c.matrix = m.into();
     }

@@ -56,6 +56,8 @@ pub struct Campione {
     pub file: String,
     /// The sample inside a file that holds several (index or inner name); empty for one sample per file.
     pub sub: String,
+    /// A re-injection of a sample (ID suffix `-R`): a distinct injection that the kinetics leave out.
+    pub reinjection: bool,
     /// SHA-256 of the raw file: the key (the name can change).
     pub sha256: String,
     /// One of `TIPI`.

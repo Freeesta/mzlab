@@ -68,6 +68,8 @@ fn one(c: &Campione) -> String {
     j.raw(",\"note\":").str(&c.note);
     j.raw(",\"ordine_iniezione\":").int(c.order as i64);
     j.raw(",\"polarita\":").opt(c.polarity.map(f64::from));
+    j.raw(",\"reiniezione\":")
+        .raw(if c.reinjection { "true" } else { "false" });
     j.raw(",\"replica\":").int(c.replicate as i64);
     j.raw(",\"serie\":").str(&c.series);
     j.raw(",\"sha256\":").str(&c.sha256);
@@ -151,6 +153,7 @@ fn range_of(d: &Value, hi: &str, lo: &str) -> Result<Option<(f64, f64)>> {
 pub(super) fn leggi_nuovi(v: &Value, c: &mut Campione) -> Result<()> {
     let s = |k: &str| -> Result<String> { Ok(opt_text(v, k, &[])?.unwrap_or_default()) };
     c.sub = s("campione")?;
+    c.reinjection = v.get("reiniezione").and_then(|x| x.bool()).unwrap_or(false);
     c.sample_id = s("campione_id")?;
     c.matrix = s("matrice")?;
     c.batch = s("lotto")?;
