@@ -156,7 +156,7 @@ const COMP = (() => {
             rows: j.results.map((r, i) => [i + 1, r.formula, r.neutral || "", r.rdb, r.delta_mda, r.delta_ppm, +(r.iso.m1 * 100).toFixed(2), +(r.iso.m2 * 100).toFixed(2), r.iso.ok == null ? "" : r.iso.ok ? I18N.t("comp.compatible") : I18N.t("comp.incompatible"),
               r.score ? r.score.total : "", r.score ? r.score.mass : "", r.score && r.score.iso != null ? r.score.iso : "", r.score && r.score.frag != null ? r.score.frag : "", r.frag && r.frag.explained != null ? `${(r.frag.explained * 100).toFixed(0)} % (${r.frag.n_explained}/${r.frag.n_peaks})` : "", r.rules_failed.join(", ")]), widths: [5, 24, 22, 8, 10, 10, 12, 12, 16, 10, 8, 8, 8, 14, 30] },
             { name: I18N.t("lib.all.sheetPar"), head: [I18N.t("lib.all.parameter"), I18N.t("lib.all.value")], rows: [["m/z", q.mz], [I18N.t("comp.ion"), q.ion], [I18N.t("comp.tol"), `${q.tol} ${q.unit}`], [I18N.t("comp.xlsx.elements"), q.elements], [I18N.t("comp.col.rdb"), q.rdb], [I18N.t("comp.nitrogen"), q.n], [I18N.t("comp.filters"), q.rules || ""], [I18N.t("comp.parent"), q.parent || ""], [I18N.t("lib.all.level"), I18N.t("comp.xlsx.level")]], widths: [28, 60] }], { table: "composition" });
-        } catch (e) { $("#cmp-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_); $("#cmp-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
       };
       $("#cmp-go").onclick = go;
       if (o.mz != null) go();
@@ -196,7 +196,7 @@ const COMP = (() => {
               Q("#mt-pk").querySelectorAll("tr[data-mz]").forEach(r => { r.onclick = () => open({ mz: +r.dataset.mz, parent: n.formula || "", polarity: f && f.polarity, ion: j.ion }); });
             };
           });
-        } catch (e) { Q("#mt-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_); Q("#mt-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
       };
       Q("#mt-go").onclick = go;
       go();

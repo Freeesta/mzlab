@@ -31,7 +31,7 @@ export async function locked(kind, name, fn) {
   const key = "mzlab-file:" + kind + "/" + name, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), WAIT_MS);
   try {
     return await L.request(key, { mode: "exclusive", signal: ctl.signal }, async () => { clearTimeout(timer); return fn(); });
-  } catch (e) {
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_);
     if (e && e.name === "AbortError") throw fail("error.fileInUse", { file: name });
     throw e;
   } finally { clearTimeout(timer); }
@@ -72,7 +72,7 @@ const dir = async kind => (await root()).getDirectoryHandle(kind, { create: true
 export function writeFull(ah, data, at) {
   let done = 0;
   try { while (done < data.length) { const n = ah.write(data.subarray(done), { at: at + done }); if (!(n > 0)) break; done += n; } }
-  catch (e) { if (!(e && e.name === "QuotaExceededError")) throw e; }
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); if (!(e && e.name === "QuotaExceededError")) throw e; }
   return done;
 }
 // the error.quota of the page (as a string, like the other errors of the engine): `needed` bytes in all, the room left asked to the browser
@@ -147,7 +147,7 @@ async function openLease(l) {
       // the handle of the file (and of its directory) is kept between two openings: a request that wakes the lease does not walk the tree again; any failure looks the file up afresh
       let ah;
       try { ah = await (l.fh || (l.fh = await (await (l.dh || (l.dh = await dir(l.kind)))).getFileHandle(l.name))).createSyncAccessHandle(); }
-      catch (e) {
+      catch (e_) { const e = /** @type {Lanciato} */ (e_);
         if (!l.fh || (e && e.name === "NoModificationAllowedError")) { l.fh = l.dh = null; throw e; }
         l.fh = l.dh = null; l.dh = await dir(l.kind); ah = await (l.fh = await l.dh.getFileHandle(l.name)).createSyncAccessHandle();
       }

@@ -443,7 +443,7 @@ async function showMethod(sel) {
   const again = () => showMethod(sel);
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
   if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
-  let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
+  let m; try { m = await J("api/method?k=" + f.k); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
   const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${EH(a)}</td><td>${EH(String(b))}</td></tr>`;   // values come from the file: always escaped here
   const pol = ["positive", "negative", "mixed", "unknown"].includes(m.polarity) ? I18N.t(`method.pol.${m.polarity}`) : m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
@@ -509,7 +509,7 @@ function loadDam() {
       if (j.error) throw I18N.err(j);
       if (typeof ST !== "undefined") { ST.methods = j.methods || ST.methods; renderMethods(); }
       methodWarn(); showMethod();
-    } catch (e) { info(I18N.t("method.error", { message: EH(e.message) })); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); info(I18N.t("method.error", { message: EH(e.message) })); }
   };
   inp.click();
 }
@@ -685,7 +685,7 @@ async function calcRun() {
       Q("#calcdlg").close();
       openXic([...tabPanels()].reverse().find(q => q.type === "xic") || null, { formula: r.formula, adduct: b.dataset.a });
     });
-  } catch (e) { sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
 }
 Q("#calcin").oninput = calcRun;
 

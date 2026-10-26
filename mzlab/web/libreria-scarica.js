@@ -38,9 +38,9 @@ const SCARICA = (() => {
     for (let t = 1; ; t++) {
       let res;
       try { res = await fetchFn(url, { cache: "no-store", signal }); }
-      catch (e) { if (signal && signal.aborted) throw err("lib.dl.err.cancelled"); throw err("lib.dl.err.offline", { detail: String(e && e.message || e) }); }
+      catch (e_) { const e = /** @type {Lanciato} */ (e_); if (signal && signal.aborted) throw err("lib.dl.err.cancelled"); throw err("lib.dl.err.offline", { detail: String(e && e.message || e) }); }
       if (!res.ok) throw err("lib.dl.err.http", { status: res.status });
-      let b; try { b = new Uint8Array(await res.arrayBuffer()); } catch (e) { if (signal && signal.aborted) throw err("lib.dl.err.cancelled"); throw err("lib.dl.err.offline", { detail: String(e && e.message || e) }); }
+      let b; try { b = new Uint8Array(await res.arrayBuffer()); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (signal && signal.aborted) throw err("lib.dl.err.cancelled"); throw err("lib.dl.err.offline", { detail: String(e && e.message || e) }); }
       if (b.length === pc.dimensione && (await sha256(b)) === pc.sha256) return b;
       if (t >= TRIES) throw err("lib.dl.err.hash", { what: pc.file });
     }

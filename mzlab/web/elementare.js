@@ -133,7 +133,7 @@ const ELEM = (() => {
         const j = await J("api/composition?" + C.qs(q));
         if (my !== seq) return;
         res = C.afterFit(j, s); sel = 0; show();
-      } catch (e) { if (my === seq) o.innerHTML = `<span class="fail" style="padding:6px">${EH(e.message)}</span>`; }
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (my === seq) o.innerHTML = `<span class="fail" style="padding:6px">${EH(e.message)}</span>`; }
     };
     const later = () => { clearTimeout(tm); tm = setTimeout(run, 250); };
     ["#cx-mz", "#cx-max", "#cx-ion", "#cx-n", "#cx-tol", "#cx-unit", "#cx-r0", "#cx-r1"].forEach(s => { $(s).oninput = later; $(s).onchange = later; });

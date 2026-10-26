@@ -253,6 +253,15 @@ impl Lettore for SrmDaScansioni {
         }
         self.inner.cromatogramma(c, id)
     }
+    fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
+        self.inner.dad_map(c)
+    }
+    fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
+        self.inner.dad_spectrum(c, rt0, rt1)
+    }
+    fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
+        self.inner.dad_wavelength(c, nm0, nm1)
+    }
     fn metodo(&mut self, c: usize) -> Result<String> {
         self.inner.metodo(c)
     }

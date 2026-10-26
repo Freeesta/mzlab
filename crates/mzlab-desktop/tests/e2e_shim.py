@@ -18,6 +18,13 @@ EX = ROOT / "mzlab" / "web" / "esempi"
 LR_FILES = [EX / "FullScan_t10.mzML", EX / "FullScan_t30.mzML", EX / "MS2_t15.mzML", EX / "MRM_std_2.4ppm.mzML"]
 from lib_hr import synth  # noqa: E402  (synthetic high-resolution DDA files)
 HR_FILES = [synth("shimhr") / "HR_DDA-Exploris-t30.mzML", synth("shimhr") / "HR_DDA-Fusion-t30.mzML"]
+import math  # noqa: E402
+sys.path.insert(0, str(ROOT / "tools")); import wiff_riferimento as wr  # noqa: E402  (synthetic .wiff pair with a DAD: peak at 260 nm, 1.0 min)
+WIFF_DIR = Path(tempfile.mkdtemp(prefix="mzlab-dad-"))
+_ts = [0.05 * k for k in range(40)]
+_w = wr.Writer(); _w.sample(1, [("scan", [(100 + k, 50 + k)], 1000.0 * k, 50.0 + k) for k in range(40)], {"Experiment0/ExperimentHeader": wr.header(15, 30.0)},
+                            dad=(_ts, 200.0, 1.0, [[10 + 400 * math.exp(-((j - 60) / 12) ** 2) * math.exp(-((t - 1.0) / 0.2) ** 2) for j in range(201)] for t in _ts])); _w.save(WIFF_DIR, "uv")
+WIFF_FILES = [WIFF_DIR / "uv.wiff", WIFF_DIR / "uv.wiff.scan"]
 PAGE_PORT, ENGINE_PORT = 8841, 8842
 fails = []
 def step(name, fn):
@@ -32,13 +39,13 @@ if not (DIST / "index.html").exists() or not all(f.exists() for f in LR_FILES + 
 subprocess.run(["cargo", "build", "-q", "-p", "mzlab-desktop", "--example", "serve"], cwd=ROOT, check=True)
 LIBDIR = Path(tempfile.mkdtemp(prefix="mzlab-libs-")) / "Librerie"      # the native folder of the libraries (does not exist yet: the app creates it)
 DATA = Path(tempfile.mkdtemp(prefix="mzlab-data-"))                    # the folder of the app: files.json, kv.json, the indexes
-eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_DATA": str(DATA)})
+eng = subprocess.Popen([str(ROOT / "target" / "debug" / "examples" / "serve"), str(ENGINE_PORT), *map(str, LR_FILES + HR_FILES + WIFF_FILES)], stdout=subprocess.PIPE, text=True, env={**os.environ, "MZLAB_LIBDIR": str(LIBDIR), "MZLAB_DATA": str(DATA)})
 picked = {}
 for line in eng.stdout:
     if line.startswith("FILE "):
         _, i, name, size = line.split(); picked[name] = {"id": int(i), "name": name, "size": int(size)}
     if line.startswith("READY"): break
-LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]
+LR_PICK = [picked[f.name] for f in LR_FILES]; HR_PICK = [picked[f.name] for f in HR_FILES]; WIFF_PICK = [picked[f.name] for f in WIFF_FILES]
 
 class Quiet(SimpleHTTPRequestHandler):
     def log_message(self, *a): pass
@@ -309,6 +316,32 @@ try:
             pg.evaluate("LIB.call('index', { name: 'a.msp' })"); pg.evaluate("LIB.call('remove', { id: 'f:a.msp' })")
             assert (LIBDIR / "a.msp").is_file() and states()["v"] == [["a.msp", "sorgente", "da_indicizzare"]]
         step("a truncated index is «damaged», indexing again mends it, removing it leaves the source", native_damaged)
+        def desktop_dad():
+            c4 = b.new_context(user_agent=ctx_ua, viewport={"width": 1400, "height": 900})
+            c4.add_init_script("window.__NEWRUN = true; window.__PICK = %s;\n" % json.dumps(WIFF_PICK) + FAKE_TAURI); c4.route(re.compile(r"http://mzlab\.localhost/.*"), native)
+            q = c4.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))
+            q.goto(f"http://127.0.0.1:{PAGE_PORT}/index.html"); q.wait_for_selector("#drop", timeout=120000)
+            q.wait_for_function("window.MZLAB_RUST !== undefined && window.MZLAB_DESKTOP === true", timeout=30000)
+            q.click("#drop"); q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
+            q.click("#opbtn"); q.wait_for_function("E.files.length >= 1 && E.pending.length === 0 && E.files[0].pda === true", timeout=120000)
+            q.click("#np-map"); q.wait_for_function("E.files[0]._pdaMap === true", timeout=60000)
+            q.select_option("body select[data-o=mapKind]", "pda")
+            M = "E.panels.find(q=>q.type==='map')"
+            q.wait_for_function(f"{M}._a && {M}._a.pda && {M}._a.mat && {M}._a.mat.nmz === 201", timeout=60000)
+            UV = "E.panels.find(q=>q.type==='spec'&&q.uv)"
+            box = q.evaluate(f"(()=>{{const p={M},b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X(1.0),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
+            q.mouse.dblclick(box["x"], box["y"])
+            q.wait_for_function(f"!!({UV} && {UV}._a && {UV}._a.uvd)", timeout=60000)
+            a = q.evaluate(f"({{n: {UV}._a.uvd.nm.length, mx: {UV}._a.uvd.nm[{UV}._a.uvd.y.indexOf(Math.max(...{UV}._a.uvd.y))]}})")
+            assert a["n"] == 201 and abs(a["mx"] - 260) <= 1, a
+            q.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{bubbles:true}))})()")
+            q.wait_for_function("E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'", timeout=60000)
+            q.evaluate("wlOpen(E.panels.find(q=>q.type==='chrom'), 258, 262, E.files[0].k)")                  # the λ trace: 258-262 nm
+            q.wait_for_function("E.panels.some(q=>q.type==='chrom'&&q.kind==='pda'&&q.mz0===258&&q._a)", timeout=60000)
+            miss = [m for m in q.evaluate("window.MZLAB_LR_MISS || []") if re.search(r"pda|uvspec|uvxic|kind=pda", m)]        # the routes of the detector are all answered
+            assert not miss, miss
+            c4.close()
+        step("desktop: PDA map, UV spectrum and λ trace of a .wiff with DAD", desktop_dad)
         def cold_start():
             c3 = b.new_context(user_agent=ctx_ua); c3.add_init_script("window.__NEWRUN = true;\n" + FAKE_TAURI); c3.route(re.compile(r"http://mzlab\.localhost/.*"), native)
             q = c3.new_page(); q.on("pageerror", lambda e: fails.append("pageerror " + str(e)[:200]))

@@ -130,7 +130,7 @@ const WEBGL_TRIES = [{ antialias: true, alpha: false }, { antialias: false, alph
 export function makeContext(canvas, tries = WEBGL_TRIES) {
   const errs = [];
   for (const o of tries) {
-    try { const g = canvas.getContext("webgl2", o); if (g) return { gl: g, opts: o, errs }; } catch (e) { errs.push(String(e && e.message || e)); }
+    try { const g = canvas.getContext("webgl2", o); if (g) return { gl: g, opts: o, errs }; } catch (e_) { const e = /** @type {Lanciato} */ (e_); errs.push(String(e && e.message || e)); }
   }
   return { gl: null, errs };
 }
@@ -236,7 +236,7 @@ export function open(p, opener) {
   let PR;
   try {
     PR = { surf: prog(gl, SURF_VS, SURF_FS), floor: prog(gl, FLOOR_VS, FLOOR_FS), stick: prog(gl, STICK_VS, STICK_FS), row: prog(gl, ROW_VS, ROW_FS), line: prog(gl, LINE_VS, LINE_FS) };
-  } catch (e) { const d = diagnose(gl, { opts: cx.opts }); dlg.remove(); throw new Fail("shader", String(e && e.message || e), d); }
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); const d = diagnose(gl, { opts: cx.opts }); dlg.remove(); throw new Fail("shader", String(e && e.message || e), d); }
   glc.addEventListener("webglcontextlost", e => { e.preventDefault(); if (!alive) return; V.lost = true; msg(T("m3d.err.lost")); console.warn("mzLab 3D: context lost", diagnose(gl, { opts: cx.opts })); });
   const tex = {}; const vao = gl.createVertexArray();
   const mkTex = (id, w, h, fmt, type, data, filter) => {
@@ -276,7 +276,7 @@ export function open(p, opener) {
     const nrt = Math.min(N, Math.max(2, Math.ceil((rt1 - rt0) / Math.max(scanStep(), 1e-4))));
     const q = `api/map?k=${V.k}&level=${V.lv}&rt0=${rt0}&rt1=${rt1}&mz0=${mz0}&mz1=${mz1}&nrt=${nrt}&nmz=${hr ? N : Math.min(N, Math.max(2, Math.ceil(mz1 - mz0)))}&mzscale=${hr ? "log" : "lin"}${prefs.bg ? "&bg=1" : ""}` +
       (V.ref != null ? `&ref=${V.ref}&norm=${V.norm}&rttol=${MAPPA.diffOpt().rttol}` : "&agg=max");
-    let j; try { j = decode(await J(q)); } catch (e) { msg(e && e.message ? e.message : T("m3d.err.load")); return; }
+    let j; try { j = decode(await J(q)); } catch (e_) { const e = /** @type {Lanciato} */ (e_); msg(e && e.message ? e.message : T("m3d.err.load")); return; }
     if (gen !== V.gen) return;
     if (j.nrt < 2 || j.nmz < 2) { msg(T("m3d.err.small")); return; }
     V.g = j; V.raw = j.m; V.signed = V.ref != null; V.pts = null;
@@ -295,7 +295,7 @@ export function open(p, opener) {
       if (gen !== V.gen) return;
       V.pts = { n: j.n, total: j.total, rt: b64f(j.rt, Float32Array), mz: b64f(j.mz, Float64Array), y: b64f(j.inten, Float32Array) };
       uploadSticks();
-    } catch (e) { msg(e && e.message ? e.message : T("m3d.err.load")); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); msg(e && e.message ? e.message : T("m3d.err.load")); }
   }
   function msg(t) { let m = main.querySelector(".m3d-msg"); if (!t) { if (m) m.remove(); return; } if (!m) { m = document.createElement("div"); m.className = "m3d-msg"; m.setAttribute("role", "status"); main.appendChild(m); } m.textContent = t; }
 
