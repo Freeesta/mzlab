@@ -415,15 +415,19 @@ impl Rows {
         if level > 1 {
             m.path = filter_path(filt);
             if let Some(p) = sp.precursor {
+                // what the writer says of a plain precursor: its window (offsets when the reader knows them), CID and the energy
                 m.precs.push(Prec {
                     target: Some(p),
                     selected: Some(p),
+                    lo: extra.iso_half.map(|h| p - h),
+                    hi: extra.iso_half.map(|h| p + h),
+                    act: Some("CID"),
+                    ce: extra.ce,
                     ..Prec::default()
                 });
                 m.prec = Some(p);
                 let half = extra.iso_half.unwrap_or(0.5);
                 m.iso = Some((p - half, p + half));
-                // the `<activation>` the writer gives a plain precursor
                 m.act = Some("CID".into());
                 m.ce = extra.ce;
             }
