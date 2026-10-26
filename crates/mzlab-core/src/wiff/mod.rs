@@ -11,6 +11,7 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+pub mod modi;
 #[cfg(feature = "estesi")]
 mod bpc;
 mod run;
@@ -28,13 +29,12 @@ const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
 /// Offset of the polarity in `ExperimentHeader`.
 const HEADER_POLARITY: usize = 86;
-/// Scan-type codes seen in the headers (full scan, product-ion scan); anything else is read as a full scan.
-const CODE_PRODUCT: u32 = 11;
-const CODE_FULL: u32 = 15;
+use modi::{Uscita, CODE_PRODUCT};
 impl Wiff {
     /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
     pub(crate) fn scan_experiment(&self, e: usize) -> bool {
-        matches!(self.experiments.get(e).and_then(|x| x.code), Some(CODE_FULL | CODE_PRODUCT))
+        let code = self.experiments.get(e).and_then(|x| x.code);
+        modi::nativo(code) && code.and_then(modi::modo).is_some_and(|m| m.uscita == Uscita::Spettro)
     }
 }
 

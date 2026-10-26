@@ -7,7 +7,8 @@ Il metodo `variante` del trait `Lettore` e i parametri `cv:` di `mzmlwrite.rs` s
 - `Wiff::variante()` (`estesi.rs`): modello del Log diverso da «3200 QTRAP» oppure un codice di esperimento fuori da {15 full scan, 11 prodotto, 4 MRM}. `Lettore::variante(c)` lo espone; `mzlab_lettori::motivi` aggiunge `"variante"`; `probe` del modulo (`mzlab-lettori-wasm`) risponde `{"formato":"sciex-wiff","campioni":[],"motivi":["variante"]}` anche quando l'apertura fallisce con `err.file.wiff`.
 - Regola della pagina: la riga `sciex` di `lettori-famiglie.js` ha `sonda: true`; `shell.js::wiffToMzml` chiama `LETTORI_MOD.probe("sciex", mem)` per ogni coppia e, se i motivi contengono «variante», crea un file per campione con `LETTORI_MOD.stand` (il motore non vede la coppia). Se la sonda fallisce, la coppia va al motore come prima. Costo: ogni coppia `.wiff` scarica e avvia il modulo `sciex` (≈310 KB).
 - Mai una scansione piena per un codice sconosciuto: `err.file.wiff` con `detail` = `scan type code C (experiment E)`, `no scan type code (experiment E)`, `periods=N` (più periodi: nessun file vero, disposizione dei cicli non verificata), `TOF block` (blocco che inizia `ffffffff`), `scan block version V` (V fuori da 1..3), `sparse MRM block`, `MRM block`.
-- TOF (TripleTOF, ZenoTOF, X500): codice 8 (TOF MS) o 9; il codec dei blocchi `.wiff.scan` è un altro e non c'è un mzML di riferimento per nessun TOF: sempre rifiutati. Il `.wiff2` di SCIEX OS (codice 0) è rifiutato allo stesso modo.
+- TOF (TripleTOF, ZenoTOF, X500): codice 8 (TOF MS) o 9; il codec dei blocchi `.wiff.scan` è un altro e non c'è un mzML di riferimento per nessun TOF: sempre rifiutati. Il `.wiff2` di SCIEX OS è riconosciuto da `Wiff2SampleInfo` (`WiffNSampleInfo`) accanto a un codice non confermato e rifiutato con `detail` = `wiff2`; il codice 0 senza quello stream resta `scan type code 0`.
+- Tabella dei modi (`wiff/modi.rs`, `MODI`, indice = codice 0..16): sigla Analyst (Q1, Q1MI, Q3, Q3MI, MRM, Prec, PI, NL, EPI, ER, MS3, TDF, EMS, EMC; 8 e 9 «TOF MS», «TOF MS/MS», 10 «?»), livello, termine CV, uscita (Spettro, Srm, Sim) e `confermato`. Confermati (visti in file veri): 4, 5, 7, 11, 15; gli altri seguono l'enum `ScanType` di Analyst. `modi::nativo` = {4, 11, 15} (il motore), il modulo `sciex` accetta solo i `confermato`; `modi::sigla(code)` dà alla pagina il tipo esatto dell'esperimento.
 
 ## Formato misurato (QTRAP 4500/5500/6500/6500+)
 - Codici in `ExperimentHeader` +122: 4 MRM, 5 precursor ion (PIS), 7 perdita neutra (NL), 8 TOF MS, 9 TOF MS/MS, 11 product ion/EPI, 15 survey/full scan. Polarità: u32 a +86 (0 positiva, 1 negativa; misurata su 40 file; il segno di IS non la dà). Massa fissa/precursore: f64 a +42 (PIS e NL: livello 2 con quel precursore; per EPI resta quella del metodo, non verificata).
@@ -31,7 +32,7 @@ Il metodo `variante` del trait `Lettore` e i parametri `cv:` di `mzmlwrite.rs` s
 ## Cosa NON si legge
 - Più periodi (`Period1…`): `err.file.wiff`, `periods=N`; nessun file vero li ha, la disposizione dei cicli non è verificata.
 - Il precursore vero di un EPI: la massa a +42 è quella del metodo, non quella scelta dall'IDA a ogni ciclo (`DDERealTimeData` non si legge).
-- `.wiff2` (SCIEX OS) e TOF (codici 8, 9, 0): rifiutati, altro codec e nessun mzML di riferimento.
+- `.wiff2` (SCIEX OS) e TOF (codici 8, 9): rifiutati, altro codec e nessun mzML di riferimento.
 
 ## DAD
 - `Devices/Device_N/DAD/{DADSampleHeader, DADIdx, DADRealTimeData}` (solo nei file del laboratorio con il rivelatore): decodificato in `crates/mzlab-core/src/wiff/dad.rs` (`struct DadData`, `read_dad`).
