@@ -15,14 +15,14 @@ try:
         pg = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}).new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
-        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); pg.wait_for_timeout(600)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "typeof E !== 'undefined'")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
+        pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, M + "._a")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
-        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); pg.wait_for_timeout(900); ready(pg)
+        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, M + ".el.classList.contains('max')"); ready(pg)
         c = pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
         def hover(fx, fy):
-            pg.mouse.move(c[0] + c[2] * fx, c[1] + c[3] * fy); pg.wait_for_timeout(250); ready(pg); pg.wait_for_timeout(250)
+            pg.mouse.move(c[0] + c[2] * fx, c[1] + c[3] * fy); frames(pg, 3); ready(pg); frames(pg, 3)
         def one_per_group():
             seen = 0
             for fx in (.2, .4, .6, .8):
@@ -45,16 +45,16 @@ try:
         def no_lock_btn():
             assert pg.locator(".pnl.map [data-nav=maplock]").count() == 0
         step("no «Lock the sight» button on the 2D map", no_lock_btn)
-        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); pg.wait_for_timeout(900); ready(pg)          # back to the page: the panel grows only outside full screen
+        pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, "!" + M + ".el.classList.contains('max')"); ready(pg)          # back to the page: the panel grows only outside full screen
         def selector():
             def sel(): return pg.locator(".pnl.map select[data-o=k]")
             assert sel().count() == 1 and sel().is_enabled()
             assert [o for o in sel().locator("option").all_inner_texts()] == ["FullScan_t0", "FullScan_t30"], sel().locator("option").all_inner_texts()
-            sel().select_option(index=1); pg.wait_for_timeout(600); ready(pg)
+            sel().select_option(index=1); attendi(pg, "E.files[" + M + ".k].label === 'FullScan_t30'"); ready(pg)
             assert pg.evaluate(f"E.files[{M}.k].label") == "FullScan_t30"
             pg.evaluate(f"soloFile(E.files[{M}.k])"); attendi(pg, 'E.browse'); ready(pg)           # one file shown: the map follows the bar, the selector still works
             assert sel().is_enabled()
-            sel().select_option(index=0); pg.wait_for_timeout(700); ready(pg)
+            sel().select_option(index=0); attendi(pg, "E.files[" + M + ".k].label === 'FullScan_t0'"); ready(pg)
             assert pg.evaluate("E.cur") == pg.evaluate(f"{M}.k") or pg.evaluate("E.files[E.cur].label") == "FullScan_t0", pg.evaluate("E.cur")
             assert pg.evaluate(f"E.files[E.cur].label") == "FullScan_t0"
             pg.evaluate("tabFiles().forEach(f=>{f.vis=true});renderFileList();renderNav();redrawAll()"); ready(pg)
@@ -63,19 +63,19 @@ try:
             h = lambda: pg.evaluate(f"{M}.cv.getBoundingClientRect().height")
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
             a = pg.evaluate(f"({M}._a.x0+{M}._a.x1)/2"); y0, y1 = pg.evaluate(f"[{M}._a.y0,{M}._a.y1]")
-            def add(n): pg.evaluate(f"(async()=>{{const p={M};for(let i=0;i<{n};i++)await MAPPA.addPointAt(p,p._a.x0+(p._a.x1-p._a.x0)*(0.1+0.8*Math.random()),p._a.y0+(p._a.y1-p._a.y0)*(0.1+0.8*Math.random()),1)}})()"); pg.wait_for_timeout(1500); ready(pg)
-            add(1); pg.wait_for_selector(".pnl.map .mztab tbody tr"); pg.wait_for_timeout(500); h1 = h()
-            add(14); pg.wait_for_timeout(1500); h2 = h()
+            def add(n): pg.evaluate(f"(async()=>{{const p={M};for(let i=0;i<{n};i++)await MAPPA.addPointAt(p,p._a.x0+(p._a.x1-p._a.x0)*(0.1+0.8*Math.random()),p._a.y0+(p._a.y1-p._a.y0)*(0.1+0.8*Math.random()),1)}})()"); ready(pg)
+            add(1); pg.wait_for_selector(".pnl.map .mztab tbody tr"); ready(pg); h1 = h()
+            add(14); attendi(pg, "document.querySelectorAll('.pnl.map .mztab tbody tr').length >= 10"); ready(pg); h2 = h()
             assert pg.locator(".pnl.map .mztab tbody tr").count() >= 10
             assert abs(h1 - h2) <= 2, (h1, h2)                                                  # same map size with 1 or 15 points
             sc = pg.evaluate("(()=>{const e=document.querySelector('.pnl.map .mzt-sc');return [e.scrollHeight,e.clientHeight,getComputedStyle(e).overflowY]})()")
             assert sc[0] > sc[1] and sc[2] in ("auto", "scroll"), sc                             # the table scrolls
-            pg.click(".pnl.map [data-t=clear]"); pg.wait_for_timeout(300)
+            pg.click(".pnl.map [data-t=clear]"); frames(pg, 3)
             if pg.locator("dialog[open] button").count(): pg.keyboard.press("Enter")
-            pg.wait_for_timeout(800)
+            attendi(pg, "!document.querySelector('.pnl.map .mztab tbody tr')"); ready(pg)
         step("marking many points: the map keeps its size, the table below scrolls", mark_keeps_size)
         def legend():
-            pg.evaluate(f"(()=>{{const p={M};p.corr='f'+E.files[0].k;p.ref=E.files[0].k;p.k=E.files[1].k;draw(p)}})()"); pg.wait_for_timeout(1500); ready(pg)
+            pg.evaluate(f"(()=>{{const p={M};p.corr='f'+E.files[0].k;p.ref=E.files[0].k;p.k=E.files[1].k;draw(p)}})()"); attendi(pg, M + ".leg.innerText.includes('more in the sample')"); ready(pg)
             t = pg.evaluate(f"{M}.leg.innerText"); assert "▲ more in the sample" in t and "▼ more in the reference" in t and "e+" not in t and "orange" not in t, t
             assert len(t) < 140, t
         step("difference map: short legend without a numeric range", legend)
