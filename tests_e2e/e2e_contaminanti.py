@@ -26,8 +26,8 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         pg.evaluate("localStorage.removeItem('mzlab.contaminanti');localStorage.removeItem('mzlab.contaminanti.on');localStorage.removeItem('mzlab.liste.attive')")
-        pg.evaluate("LISTE.ensure()"); pg.wait_for_function("LISTE.find&&true", timeout=5000); pg.wait_for_timeout(1500)
-        sp = pg.evaluate(f"(()=>{{const p={SP};p.zoom=[270,400];draw(p);return p.id}})()"); pg.wait_for_timeout(1500)
+        pg.evaluate("LISTE.ensure()"); pg.wait_for_function("LISTE.find&&true", timeout=5000); attendi(pg, f"{SP}&&{SP}._a")
+        sp = pg.evaluate(f"(()=>{{const p={SP};p.zoom=[270,400];draw(p);return p.id}})()"); frames(pg, 3)
 
         def default_off():
             # Initially contaminants are off: no signs on spectrum
@@ -75,12 +75,12 @@ try:
         step("a peak that does not match has no line", other)
 
         def pixels():
-            pg.evaluate("LISTE.setOn(true)"); pg.wait_for_timeout(1200)
+            pg.evaluate("LISTE.setOn(true)"); attendi(pg, f"{SP}._a.cmarks.length>=1")
             n_on = pg.evaluate(f"{SP}._a.cmarks.length"); assert n_on >= 1, n_on
-            pg.evaluate("LISTE.setOn(false)"); pg.wait_for_timeout(1200)
+            pg.evaluate("LISTE.setOn(false)"); attendi(pg, f"{SP}._a.cmarks.length==0&&!{SP}._a.cont")
             assert pg.evaluate(f"{SP}._a.cmarks.length") == 0 and pg.evaluate(f"{SP}._a.cont") is None, "switch off = no signs"
             h = hov(pg, 279.1591); assert h and "contaminante" not in h, h
-            pg.evaluate("LISTE.setOn(true)"); pg.wait_for_timeout(1000)
+            pg.evaluate("LISTE.setOn(true)"); attendi(pg, f"{SP}._a.cmarks.length>=1")
             assert "contaminante" in hov(pg, 279.1591)
         step("signs only with the switch on; off = the box of before", pixels)
 
@@ -91,42 +91,42 @@ try:
             t0 = sig()
             kks = pg.evaluate(f"{SP}._a.cont.match({SP}._a.cmarks[0].m).map(x=>LISTE.keyFor('entry', x))"); kk = kks[0]
             for k in kks: pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)")
-            pg.wait_for_timeout(1200)
+            attendi(pg, f"{SP}._a.chid>=1")
             s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"mzlab.contaminanti.esclusi\"))"))
             assert "Mostra" in pg.inner_text(".cont-cnt")
             assert t0 == sig(), "TIC drawn the same"
-            pg.focus(".cont-show"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1000)
+            pg.focus(".cont-show"); pg.keyboard.press("Enter"); attendi(pg, "document.querySelector('.cont-cnt').innerText.includes('Nascondi')")
             assert st()["marks"] == m0 and "Nascondi" in pg.inner_text(".cont-cnt")
-            pg.click(".cont-show"); pg.wait_for_timeout(800)
+            pg.click(".cont-show"); attendi(pg, "document.querySelector('.cont-cnt').innerText.includes('Mostra')")
             ls = json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')")); assert kk in ls["voci"], ls
         step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in mzlab.contaminanti.esclusi", excl)
 
         def excl_cls():
-            pg.evaluate("LISTE.exclReset()"); pg.wait_for_timeout(600)
+            pg.evaluate("LISTE.exclReset()"); attendi(pg, f"{SP}._a.chid==0")
             ck = pg.evaluate(f"LISTE.keyFor('cls', {SP}._a.cont.match(391.2843)[0])")
-            pg.evaluate(f"LISTE.exclSet('cls', {json.dumps(ck)}, true)"); pg.wait_for_timeout(1000)
+            pg.evaluate(f"LISTE.exclSet('cls', {json.dumps(ck)}, true)"); attendi(pg, f"{SP}._a.cont.state(391.2843).hid===true")
             assert pg.evaluate(f"{SP}._a.cont.state(391.2843).hid") is True
             assert json.loads(pg.evaluate("localStorage.getItem('mzlab.contaminanti.esclusi')"))["classi"] == [ck]
-            pg.click("#np-liste"); pg.wait_for_selector("#lst-excl", timeout=5000); pg.wait_for_timeout(500)
-            assert pg.is_visible("#lst-excl-reset"); pg.click("#lst-excl-reset"); pg.wait_for_timeout(500)
+            pg.click("#np-liste"); pg.wait_for_selector("#lst-excl", timeout=5000)
+            assert pg.is_visible("#lst-excl-reset"); pg.click("#lst-excl-reset"); attendi(pg, "LISTE.exclItems().length==0")
             assert pg.evaluate("LISTE.exclItems().length") == 0
         step("exclude a class; list in the panel; Restore all", excl_cls)
 
         def kbd_menu():
-            pg.evaluate("LISTE.exclReset()"); pg.wait_for_timeout(800)
+            pg.evaluate("LISTE.exclReset()"); attendi(pg, f"{SP}._a.chid==0")
             assert pg.evaluate(f"{SP}._a.chid") == 0
-            pg.focus(".cont-lb"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
+            pg.focus(".cont-lb"); pg.keyboard.press("Enter"); attendi(pg, "document.activeElement.getAttribute('role')==='menuitem'")
             assert pg.evaluate("document.activeElement.getAttribute('role')") == "menuitem", pg.evaluate("[document.activeElement.outerHTML.slice(0,80), document.querySelector('#ctx').hidden, document.querySelector('#ctx').innerHTML.slice(0,200), !!document.querySelector('.cont-lb')]")
-            pg.keyboard.press("Enter"); pg.wait_for_timeout(300)          # the first marked peak -> its exclude menu
-            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1000)     # (name is a dim line) the first action: exclude this entry
+            pg.keyboard.press("Enter"); frames(pg, 3)          # the first marked peak -> its exclude menu
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); attendi(pg, "LISTE.exclItems().length==1")     # (name is a dim line) the first action: exclude this entry
             assert pg.evaluate("LISTE.exclItems().length") == 1, pg.evaluate("LISTE.exclItems().length")
             pg.evaluate("LISTE.exclReset()")
         step("keyboard: legend button -> menu -> exclude, arrows and Enter", kbd_menu)
 
         def sess():
             k = pg.evaluate(f"LISTE.keyFor('entry', {SP}._a.cont.match({SP}._a.cmarks[0].m)[0])")
-            pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); pg.wait_for_timeout(300)
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(500)
+            pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); attendi(pg, "LISTE.exclItems().length==1")
+            pg.evaluate("uiSave(true)"); attendi(pg, "NB.ui.contEx&&NB.ui.contEx.voci&&NB.ui.contEx.voci.length>=1")
             assert k in pg.evaluate("NB.ui.contEx.voci"), "exclusions saved with the session"
             pg.evaluate("localStorage.removeItem('mzlab.contaminanti.esclusi')"); pg.evaluate("LISTE.exclReset()")
             pg.evaluate("LISTE.exclImport(NB.ui.contEx)"); assert pg.evaluate("LISTE.exclItems().length") == 1
@@ -169,9 +169,9 @@ try:
         step("PEG: three consecutive members = «serie PEG (n = 7-11)»; two are not", series)
 
         def lab():
-            pg.evaluate(f"(()=>{{const p={SP};p.zoom=[200,300];draw(p)}})()"); pg.wait_for_timeout(1500)
+            pg.evaluate(f"(()=>{{const p={SP};p.zoom=[200,300];draw(p)}})()"); frames(pg, 3)
             mz0 = pg.evaluate(f"(()=>{{const p={SP};const d=p._a.data[0].d;let k=-1;d.mz.forEach((m,i)=>{{if(m>200&&m<300&&(k<0||d.y[i]>d.y[k]))k=i}});return d.mz[k]}})()")
-            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); pg.wait_for_timeout(1200)
+            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); attendi(pg, "JSON.parse(localStorage.getItem('mzlab.contaminanti')||'[]').length==1")
             h = hov(pg, mz0); assert h and "mio fondo" in h and "Contaminanti del laboratorio" in h, h
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.contaminanti')).length") == 1
             csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "mio fondo" in csv
@@ -189,14 +189,14 @@ try:
             assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists"
             assert not pg.is_visible("#sb-help"), "no question mark on the Lists panel"
             # Close dialog
-            pg.evaluate("BARRA.close(false)"); shut(pg, "#listex"); pg.wait_for_timeout(400)
+            pg.evaluate("BARRA.close(false)"); shut(pg, "#listex"); frames(pg, 2)
         step("header button: #np-liste opens the Liste tab of the sidebar", header_btn)
 
         def user_csv():
             # CSV with 5 compounds, semicolon and decimal comma, matching one observed peak
             csv_data = "mz;name;formula;polarity;note\n279,1591;Sospetto Acque;C16H22O4;+;fiume Po\n150,5000;Sospetto B;C6H6O4;+;test\n200,1000;Sospetto C;C8H12N2;+;test\n300,1500;Sospetto D;C12H20O4;+;test\n350,2000;Sospetto E;C18H26O3;+;test\n"
             pg.evaluate(f"LISTE.addUserListFromCsv('sospetti_acque.csv', {json.dumps(csv_data)})")
-            pg.wait_for_timeout(1500)
+            attendi(pg, f"(()=>{{const a={SP}._a;const h=a.hov(a.X(279.1591));return !!h&&h.html.includes('Sospetto Acque')}})()")
             # The compound appears in the hover tip on peak 279.1591
             h = hov(pg, 279.1591)
             assert h and "Sospetto Acque" in h, h
@@ -204,7 +204,7 @@ try:
             pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
             txt = pg.inner_text("#sb-panel-lists")
             assert "sospetti_acque" in txt or "Sospetto Acque" in txt
-            shut(pg, "#listex"); pg.wait_for_timeout(300)
+            shut(pg, "#listex"); frames(pg, 2)
         step("user CSV suspect list: uploaded, visible in dialog, matched in HR hover tip", user_csv)
 
         pg.evaluate("localStorage.removeItem('mzlab.contaminanti')")
