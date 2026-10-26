@@ -1,7 +1,5 @@
 {
  "clippy": {
-  "crates/mzlab-core/src/analog.rs::clippy::cast_possible_truncation": 7,
-  "crates/mzlab-core/src/analog.rs::clippy::indexing_slicing": 46,
   "crates/mzlab-core/src/chromeleon.rs::clippy::cast_possible_truncation": 1,
   "crates/mzlab-core/src/chromeleon.rs::clippy::indexing_slicing": 9,
   "crates/mzlab-core/src/hrscans.rs::clippy::needless_range_loop": 1,
