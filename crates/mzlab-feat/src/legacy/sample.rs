@@ -24,15 +24,14 @@ pub fn stem(name: &str) -> String {
 /// `guess_sample`: label, time (min) and type from a file name ('blank', 't30', 'STD_12ppm', '120min', 'dark'), read by the one parser of the names.
 pub fn guess(name: &str) -> Guess {
     let label = stem(name);
-    let c = mzlab_core::campioni::proponi(&[(name.to_string(), String::new(), "full".to_string())])
-        .remove(0);
-    let kind = match c.kind.as_str() {
+    let (role, minutes) = mzlab_core::campioni::ruolo_e_minuti(name);
+    let kind = match role {
         "blank" => "blank",
         "dark" => "control",
         "std" | "calibration" => "standard",
         _ => "sample",
     };
-    let time = if kind == "sample" { c.time_min } else { None };
+    let time = if kind == "sample" { minutes } else { None };
     Guess { label, time, kind }
 }
 

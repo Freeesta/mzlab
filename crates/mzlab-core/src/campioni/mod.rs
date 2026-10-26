@@ -9,7 +9,7 @@ mod ricollega;
 mod valida;
 
 pub use json::{da_legacy, digest, from_json, from_value, to_json};
-pub use nomi::{proponi, proponi_spiegato, tipo_v1};
+pub use nomi::{proponi, proponi_spiegato, ruolo_e_minuti, tipo_v1};
 pub use posizioni::{proposte_json, Posizione, Proposta};
 pub use ricollega::{ricollega, ricollega_json, Abbinamento};
 pub use valida::{per_tp, per_tp_json, valida, valida_json, Avviso, PerTp};

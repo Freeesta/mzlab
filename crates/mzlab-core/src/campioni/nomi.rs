@@ -230,6 +230,19 @@ fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
     }
 }
 
+/// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
+pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
+    let (stem, _, guess) = guess_sample(name);
+    let lowc: Vec<char> = stem.to_lowercase().chars().collect();
+    let mut c = Campione::new(name, "", 1);
+    if let Some(t) = (guess == "sample").then(|| time_of(&lowc)).flatten() {
+        c.set_time(Some(t.value), t.unit);
+    }
+    let kind = kind_of(&name.to_lowercase(), guess, c.time_min, false);
+    let time = (kind != "infusion" && kind != "qc").then_some(c.time_min).flatten();
+    (kind, time)
+}
+
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.
 pub fn proponi(files: &[(String, String, String)]) -> Vec<Campione> {
     proponi_spiegato(files)
