@@ -61,7 +61,7 @@ pub enum ChromKind {
     /// Pump pressure (MS:1003019, or an id that starts with "Pump Pressure").
     Pressure,
     Srm,
-    /// Selected ion current of one SIM ion (MS:1000627); the id is "SIC <m/z>".
+    /// Selected ion current of one SIM ion (MS:1000627); the id is "SIC <m/z>" (or "SIM SIC Q1=<m/z> ..." from msconvert, whose m/z is `q1`).
     Sic,
     /// Any other detector or device trace: it carries no mass-spectrometer term.
     Analog,
@@ -290,12 +290,15 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
         _ if c.pda => ChromKind::Pda,
         s if c.pressure || s.starts_with("Pump Pressure") => ChromKind::Pressure,
         s if s.starts_with("SRM") => ChromKind::Srm,
-        s if s.starts_with("SIC ") => ChromKind::Sic,
+        s if s.starts_with("SIC ") || s.starts_with("SIM SIC ") => ChromKind::Sic,
         _ if !c.ms_term => ChromKind::Analog,
         _ => ChromKind::Other,
     };
     let (q1, q3) = if kind == ChromKind::Srm {
         (number_after(&c.id, "Q1="), number_after(&c.id, "Q3="))
+    } else if kind == ChromKind::Sic {
+        // msconvert names a SIM trace "SIM SIC Q1=<m/z> ..."; the plain "SIC <m/z>" of our own writer has no Q1
+        (number_after(&c.id, "Q1="), None)
     } else {
         (None, None)
     };
