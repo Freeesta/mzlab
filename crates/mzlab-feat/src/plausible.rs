@@ -6,7 +6,7 @@ use mzlab_core::elements;
 use mzlab_core::error::Result;
 use mzlab_core::json::Out;
 
-use crate::aligned::{Aligned, no_peak, CELL_DETECTED};
+use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
 
 pub const SCHEMA: &str = "plausible/1";
 /// Example rows listed by a check.

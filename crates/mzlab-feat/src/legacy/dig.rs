@@ -16,7 +16,7 @@ use super::Res;
 use crate::evid::points::PointsTable;
 use crate::evid::Kind;
 use crate::rtmap::{build, RtMap, RtParams};
-use crate::table::{Aligned, no_peak, CELL_FILLED};
+use crate::table::{no_peak, Aligned, CELL_FILLED};
 use crate::tp::{NOTE_CHIMERIC_MS2, NOTE_ISF_COELUTES, NO_PARENT, ST_ISF};
 
 /// Isolation centre within this many ppm of the m/z of the row (`select_ms2`).

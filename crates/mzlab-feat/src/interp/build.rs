@@ -16,7 +16,7 @@ use crate::chem::posizioni::{Peak, Pol};
 use crate::legacy::ms2::{Consensus, Ms2Sorted};
 use crate::legacy::series::{Hyp, Parent};
 use crate::prof::{report, time};
-use crate::table::{Aligned, no_peak};
+use crate::table::{no_peak, Aligned};
 use crate::tp::{NO_PARENT, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 
 pub type Res<T> = Result<T, String>;

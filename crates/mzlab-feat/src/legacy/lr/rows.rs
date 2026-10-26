@@ -12,7 +12,7 @@ use super::super::Res;
 use super::labels::{crit, score, status, Cell, GROWS, PERSISTS};
 use super::plan::{ParentLr, Settings};
 use super::{Entry, Offset};
-use crate::aligned::{Aligned, no_peak, CELL_DETECTED};
+use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
 
 /// The calibration offset is measured on a parent row within this many Da of its [M+H]+ and applied up to the same limit.
 pub const OFFSET_MAX: f64 = 0.6;

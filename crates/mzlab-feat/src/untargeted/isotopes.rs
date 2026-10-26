@@ -11,7 +11,7 @@
 //! `group_items` works on a plain list (the rows of one file, which is what mzmine groups); `group` takes the rows of an aligned table, whose height is
 //! the mean over the files where the ion was detected.
 
-use crate::table::{Aligned, no_peak};
+use crate::table::{no_peak, Aligned};
 
 /// Distance between isotopologues of mzmine (`isotopeDistance`), Da.
 pub const ISOTOPE_STEP: f64 = 1.0033;

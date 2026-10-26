@@ -16,9 +16,15 @@ fn b64(data: &[u8]) -> String {
     const T: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut s = String::new();
     for c in data.chunks(3) {
-        let n = (u32::from(c[0]) << 16) | (u32::from(*c.get(1).unwrap_or(&0)) << 8) | u32::from(*c.get(2).unwrap_or(&0));
+        let n = (u32::from(c[0]) << 16)
+            | (u32::from(*c.get(1).unwrap_or(&0)) << 8)
+            | u32::from(*c.get(2).unwrap_or(&0));
         for i in 0..4 {
-            s.push(if i <= c.len() { T[(n >> (18 - 6 * i) & 63) as usize] as char } else { '=' });
+            s.push(if i <= c.len() {
+                T[(n >> (18 - 6 * i) & 63) as usize] as char
+            } else {
+                '='
+            });
         }
     }
     s
@@ -35,7 +41,9 @@ fn array(acc: &str, v: &[f64]) -> String {
 /// A file acquired from `lo` to `hi` minutes: each ion is a Gaussian of 0.1 min sigma at its RT.
 fn index_bytes(lo: f64, hi: f64) -> Vec<u8> {
     let n = ((hi - lo) / STEP).round() as usize + 1;
-    let mut x = String::from(r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count=""#);
+    let mut x = String::from(
+        r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count=""#,
+    );
     x += &format!("{n}\">");
     for i in 0..n {
         let rt = lo + i as f64 * STEP;
@@ -65,7 +73,10 @@ fn open(bytes: &[u8]) -> Index<Vec<u8>> {
 /// 6 whole files (0-20 min), then 6 cut at 1.8-16 min. The ions are detected in the whole files and absent in the cut ones, except the middle one.
 fn table() -> Aligned {
     let nf = 12;
-    let mut t = Aligned { n_files: nf, ..Aligned::default() };
+    let mut t = Aligned {
+        n_files: nf,
+        ..Aligned::default()
+    };
     for (mz, rt) in IONS {
         t.mz.push(mz);
         t.rt.push(rt);

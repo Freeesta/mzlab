@@ -7,7 +7,9 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
-use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED, CELL_NA, CELL_TARGETED, NO_FILE, no_peak};
+use crate::aligned::{
+    no_peak, Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED, CELL_NA, CELL_TARGETED, NO_FILE,
+};
 use crate::hypo::{SRC_CLEAVAGE, SRC_FAMILY, SRC_IMPORTED, SRC_NETWORK, SRC_RULE, SRC_SUSPECT};
 use crate::ms2spec::{pick, read_peaks};
 use crate::norm::measured;

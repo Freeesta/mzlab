@@ -38,6 +38,15 @@ const PEAK_KEYS: [&str; 6] = [
     "broad_peaks",
 ];
 
+/// `[min, max]` minutes (`Some(None)` for null = all rows); `None` when the value is not a range.
+fn rt_range(v: &Value) -> Option<Option<(f64, f64)>> {
+    if matches!(v, Value::Null) {
+        return Some(None);
+    }
+    let (a, b) = (v.at(0)?.f64()?, v.at(1)?.f64()?);
+    (a.is_finite() && b.is_finite() && b >= a).then_some(Some((a, b)))
+}
+
 fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     if k == "algorithm" {
         r.detect.peak = match v.str() {
@@ -107,13 +116,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                 *defect = num()?;
             }
         }
-        ("features.detect", "rt_range") => {
-            r.rt_range = match (v.at(0).and_then(Value::f64), v.at(1).and_then(Value::f64)) {
-                (Some(a), Some(b)) if a.is_finite() && b.is_finite() && b >= a => Some((a, b)),
-                _ if matches!(v, Value::Null) => None,
-                _ => return Err(bad(step, k)),
-            }
-        }
+        ("features.detect", "rt_range") => r.rt_range = rt_range(v).ok_or_else(|| bad(step, k))?,
         ("features.detect", "budget") => r.detect.budget = int()?,
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
