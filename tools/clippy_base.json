@@ -1,7 +1,5 @@
 {
  "clippy": {
-  "crates/mzlab-core/src/chromeleon.rs::clippy::cast_possible_truncation": 1,
-  "crates/mzlab-core/src/chromeleon.rs::clippy::indexing_slicing": 9,
   "crates/mzlab-core/src/hrscans.rs::clippy::needless_range_loop": 1,
   "crates/mzlab-core/src/isoscore.rs::clippy::neg_cmp_op_on_partial_ord": 1,
   "crates/mzlab-core/src/iteminfo.rs::clippy::type_complexity": 1,
@@ -126,7 +124,6 @@
   "crates/mzlab-core/src/subxic.rs",
   "crates/mzlab-core/src/tracestat.rs",
   "crates/mzlab-core/src/wiff/mod.rs",
-  "crates/mzlab-core/src/wiff/run.rs",
   "crates/mzlab-core/tests/chrom_kinds.rs",
   "crates/mzlab-core/tests/components_parity.rs",
   "crates/mzlab-core/tests/composition_route_parity.rs",
