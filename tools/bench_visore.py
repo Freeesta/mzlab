@@ -1,6 +1,6 @@
 """Speed of the viewer gestures on the built site (Rust/WASM engine, Chromium headless, synthetic files) and, optionally, of the native engine.
 
-    python3 tools/bench_visore.py [CASES] [--site DIR] [--wd DIR] [--reps N] [--mreps N] [--json] [--native] [--g7 DIR]
+    python3 tools/bench_visore.py [CASES] [--site DIR] [--wd DIR] [--reps N] [--mreps N] [--json] [--native] [--g7 DIR] [--only-g2]
 
 CASES (default `lr,hrc`): `lr` 3200-like Full Scan (1500 scans x 500 centroids), `hrc` Orbitrap centroids (3000 x 3000), `hrc_big` (6000 x 5000), `hrp` Orbitrap
 profile (400 x 50 000), `lr20` (20 `lr` files), `hr15` (15 `hrc` files); `NAME:SCANSxPEAKS` changes the size, `NAME:SCANSxPEAKSxFILES` also the number of files.
@@ -22,6 +22,7 @@ import bench_mappa as bm  # noqa: E402
 CASES = {"lr": ("lr", 1500, 500, 1), "hrc": ("hrc", 3000, 3000, 1), "hrc_big": ("hrc", 6000, 5000, 1), "hrp": ("hrp", 400, 50_000, 1),
          "lr20": ("lr", 1500, 500, 20), "hr15": ("hrc", 3000, 3000, 15)}
 ONLY_M = False
+ONLY_G2 = False
 OPEN_MS = 1500000                                              # the opening of the files gives up after this many ms (the case is reported as not measured)
 SYN = {"3k": 3_000, "50k": 50_000, "1M": 1_000_000}          # traces served by the bench for the m/z 1001 / 1002 / 1003 (G5)
 
@@ -279,6 +280,7 @@ def run_case(pg, port, name, files, reps, mreps, one_synthetic):
     multi = len(files) > 1
     if multi: v.ev("setVisOf(E.files.slice(1), false)"); v.quiet(600); v.take()
     v.g2()
+    if ONLY_G2: return v.out
     if multi: v.g3()
     v.g4(); v.g6(); v.g5(synthetic=one_synthetic)
     if multi: v.ev("setVisOf(E.files.slice(1), false)"); v.quiet(600); v.take()      # M counts the XICs of one file: G3 has its own
@@ -359,12 +361,12 @@ def md(path):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cases", nargs="?", default="lr,hrc"); ap.add_argument("--site", type=Path); ap.add_argument("--wd", type=Path)
     ap.add_argument("--reps", type=int, default=30); ap.add_argument("--mreps", type=int, default=1000); ap.add_argument("--json", action="store_true")
-    ap.add_argument("--port", type=int, default=8873); ap.add_argument("--only-m", action="store_true", help="only the M of the lens (V-5)"); ap.add_argument("--native", action="store_true"); ap.add_argument("--g7", type=Path)
+    ap.add_argument("--port", type=int, default=8873); ap.add_argument("--only-g2", action="store_true", help="only G1 and G2 (the XIC panel)"); ap.add_argument("--only-m", action="store_true", help="only the M of the lens (V-5)"); ap.add_argument("--native", action="store_true"); ap.add_argument("--g7", type=Path)
     ap.add_argument("--g7-site", type=Path, help="open this big mzML in the browser and time XICs on its index (G7 on the site)")
     ap.add_argument("--open-min", type=int, default=25, help="minutes the opening of the files of a case may take")
     ap.add_argument("--g7-size", default="80000x6000", help="SCANSxPEAKS of the file of --g7 (80000x6000 = 2.6 GB of mzML)")
     ap.add_argument("--md", type=Path, help="print the starting table from the JSON lines of a previous run and stop")
-    a = ap.parse_args(); global OPEN_MS, ONLY_M; OPEN_MS = a.open_min * 60000; ONLY_M = a.only_m
+    a = ap.parse_args(); global OPEN_MS, ONLY_M, ONLY_G2; OPEN_MS = a.open_min * 60000; ONLY_M = a.only_m; ONLY_G2 = a.only_g2
     if a.md: return print(md(a.md))
     wd = a.wd or Path(tempfile.gettempdir()) / "bench_visore"; wd.mkdir(parents=True, exist_ok=True)
     t_all = time.time(); mach = machine(); print(json.dumps({"machine": mach}) if a.json else f"machine: {mach['cpu']} x{mach['cores']}, commit {mach['commit']}", flush=True)
