@@ -153,7 +153,8 @@ def main():
     w.sample(1, [("scan", FULL, 1180.0, 1.5e6), ("scan", [], 1630.0, 0.0), ("scan", LATE, 2500.0, 3.0), ("scan", PRODUCT, 3000.0, 4.5e3)], method)
     one = {"1": {"polarity": 1, "spectra": [spectrum("sample=1 period=1 cycle=1 experiment=1", 1, None, 1180.0, FULL),
                                              spectrum("sample=1 period=1 cycle=2 experiment=1", 1, None, 2500.0, LATE),
-                                             spectrum("sample=1 period=1 cycle=2 experiment=2", 2, 123.4, 3000.0, PRODUCT)], "chromatograms": []}}
+                                             spectrum("sample=1 period=1 cycle=2 experiment=2", 2, 123.4, 3000.0, PRODUCT)],
+                  "chromatograms": [{"id": "TIC", "time": [1180.0 / 60000.0, 2500.0 / 60000.0], "intensity": [1.5e6, 3.0]}]}}  # the TIC of the full scan experiment: the header of each non-empty block
     w.save(out, "one")
     w = Writer()
     w.sample(1, [("scan", FULL, 600.0, 1.0)])
@@ -179,7 +180,8 @@ def main():
         series.append(("scan", pts, 6000.0 * k, float(sum(c for _, c in pts))))
     w.sample(1, series, {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "serie")
-    big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)], "chromatograms": []}}
+    big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)],
+                  "chromatograms": [{"id": "TIC", "time": [6000.0 * k / 60000.0 for k in range(80)], "intensity": [series[k][3] for k in range(80)]}]}}
     w = Writer()  # product-ion scans: sample 1 one precursor (305.0); sample 2 two (229.1 every cycle, 305.0 in about one cycle of four, the other scans empty), irregular times, dense scans
     rnd = random.Random(7)
     for n, precs in ((1, (305.0,)), (2, (229.1, 305.0))):
@@ -198,7 +200,8 @@ def main():
     transizioni = transitions(out)
     programmati = scheduled(out)
     variante, rifiuti = variants(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti}))
+    totale = full_tic(out)
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale}))
 
 
 def energy(out: Path):
@@ -213,6 +216,16 @@ def energy(out: Path):
     w.sample(1, blocks, method)
     w.save(out, "energia")
     return {"ce": ces, "precursors": [None, 55.5, 120.0, 77.7]}
+
+
+def full_tic(out: Path):
+    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
+    ys = [expected_scan(p)[1] for p in (FULL, LATE, LATE)]
+    method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    w = Writer()
+    w.sample(1, [("scan", FULL, 1000.0, 1.5e6), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
+    w.save(out, "totale")
+    return {"tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
 
 
 def mrm_method(trs) -> bytes:

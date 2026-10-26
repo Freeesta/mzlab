@@ -357,6 +357,19 @@ fn id_field(id: &str, key: &str) -> Option<usize> {
         .and_then(|v| v.parse::<usize>().ok())
 }
 
+/// The TIC the index of the file holds for the block of `s`, when the block is where the spectrum number says and the value is usable.
+#[cfg(feature = "estesi")]
+fn header_tic(l: &LettoreWiff, s: &Spectrum) -> Option<f64> {
+    let p = l
+        .parti
+        .iter()
+        .find(|p| Some(p.w.sample as usize) == id_field(&s.id, "sample="))?;
+    let r = p.w.records.get(*p.scans.get(s.index)?)?;
+    let same = id_field(&s.id, "cycle=") == Some(r.cycle + 1)
+        && id_field(&s.id, "experiment=") == Some(r.experiment + 1);
+    (same && r.tic.is_finite() && r.tic > 0.0).then_some(r.tic)
+}
+
 /// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
 /// type (CV term) of precursor-ion and neutral-loss scans.
 fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
@@ -365,6 +378,10 @@ fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
         .zip(id_field(&s.id, "experiment="))
         .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
     let mut extra = crate::mzmlwrite::SpectrumExtra::default();
+    #[cfg(feature = "estesi")]
+    {
+        extra.tic = header_tic(l, s);
+    }
     let Some(e) = e else { return extra };
     (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
     #[cfg(feature = "estesi")]
