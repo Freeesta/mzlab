@@ -18,7 +18,6 @@
   "crates/mzlab-core/src/peaks.rs::clippy::manual_clamp": 1,
   "crates/mzlab-core/src/profspec.rs::clippy::neg_cmp_op_on_partial_ord": 1,
   "crates/mzlab-core/src/scantable.rs::clippy::question_mark": 1,
-  "crates/mzlab-core/src/sniff.rs::clippy::cast_possible_truncation": 2,
   "crates/mzlab-core/src/sortc.rs::clippy::unnecessary_sort_by": 2,
   "crates/mzlab-core/src/specdiff.rs::clippy::neg_cmp_op_on_partial_ord": 1,
   "crates/mzlab-core/src/specdiff.rs::clippy::unnecessary_unwrap": 1,
