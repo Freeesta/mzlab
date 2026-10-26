@@ -67,7 +67,7 @@ def test_tabui_does_not_use_the_language_catalogs():
 
 
 def test_net_change_cell_has_subscripts_and_the_export_stays_plain():
-    src = (JS / "20_tpmine.js").read_text(encoding="utf-8")
+    src = (JS / "20_tpmine_results.js").read_text(encoding="utf-8")
     assert '.replace(/([A-Za-z)])(\\d+)/g, "$1<sub>$2</sub>")' in src          # the cell of «Net change (formula)»
     assert 'r.net_change ?? ""' in src                                      # the export keeps the plain text
     if shutil.which("node"):
