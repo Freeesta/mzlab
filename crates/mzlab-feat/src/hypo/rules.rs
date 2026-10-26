@@ -23,6 +23,27 @@ pub enum Dir {
     Free,
 }
 
+impl Dir {
+    /// The direction a change of logP points to: positive (more lipophilic) = less polar; within `margin` of 0 = free.
+    pub fn from_delta_logp(delta: f64, margin: f64) -> Dir {
+        if delta > margin {
+            Dir::LessPolar
+        } else if delta < -margin {
+            Dir::MorePolar
+        } else {
+            Dir::Free
+        }
+    }
+
+    /// Does a measured change of logP agree with this direction? `None` when either is undecided (a free direction, or a change within `margin`).
+    pub fn agrees(self, delta_logp: f64, margin: f64) -> Option<bool> {
+        match (self, Dir::from_delta_logp(delta_logp, margin)) {
+            (Dir::Free, _) | (_, Dir::Free) => None,
+            (a, b) => Some(a == b),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Rule {
     pub id: String,

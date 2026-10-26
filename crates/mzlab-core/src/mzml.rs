@@ -284,7 +284,7 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
         t.iter_mut().for_each(|v| *v /= 60.0);
     }
     let kind = match c.id.as_str() {
-        "TIC" => ChromKind::Tic,
+        s if s == "TIC" || s.starts_with("TIC ") => ChromKind::Tic,
         "BPC" => ChromKind::Bpc,
         "TWC" => ChromKind::Pda,
         _ if c.pda => ChromKind::Pda,
