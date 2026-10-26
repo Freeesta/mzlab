@@ -154,7 +154,8 @@ def main():
     one = {"1": {"polarity": 1, "spectra": [spectrum("sample=1 period=1 cycle=1 experiment=1", 1, None, 1180.0, FULL),
                                              spectrum("sample=1 period=1 cycle=2 experiment=1", 1, None, 2500.0, LATE),
                                              spectrum("sample=1 period=1 cycle=2 experiment=2", 2, 123.4, 3000.0, PRODUCT)],
-                  "chromatograms": [{"id": "TIC", "time": [1180.0 / 60000.0, 2500.0 / 60000.0], "intensity": [1.5e6, 3.0]}]}}  # the TIC of the full scan experiment: the header of each non-empty block
+                  "chromatograms": [{"id": "TIC", "time": [1180.0 / 60000.0, 2500.0 / 60000.0], "intensity": [1.5e6, 3.0]},
+                                    {"id": "BPC", "time": [1180.0 / 60000.0, 2500.0 / 60000.0], "intensity": [max(expected_scan(FULL)[1]), max(expected_scan(LATE)[1])]}]}}  # the TIC of the full scan experiment: the header of each non-empty block
     w.save(out, "one")
     w = Writer()
     w.sample(1, [("scan", FULL, 600.0, 1.0)])
@@ -181,7 +182,8 @@ def main():
     w.sample(1, series, {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "serie")
     big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)],
-                  "chromatograms": [{"id": "TIC", "time": [6000.0 * k / 60000.0 for k in range(80)], "intensity": [series[k][3] for k in range(80)]}]}}
+                  "chromatograms": [{"id": "TIC", "time": [6000.0 * k / 60000.0 for k in range(80)], "intensity": [series[k][3] for k in range(80)]},
+                                    {"id": "BPC", "time": [6000.0 * k / 60000.0 for k in range(80)], "intensity": [max(expected_scan(series[k][1])[1]) for k in range(80)]}]}}
     w = Writer()  # product-ion scans: sample 1 one precursor (305.0); sample 2 two (229.1 every cycle, 305.0 in about one cycle of four, the other scans empty), irregular times, dense scans
     rnd = random.Random(7)
     for n, precs in ((1, (305.0,)), (2, (229.1, 305.0))):
@@ -225,7 +227,7 @@ def full_tic(out: Path):
     w = Writer()
     w.sample(1, [("scan", FULL, 1000.0, 1.5e6), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
     w.save(out, "totale")
-    return {"tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
+    return {"bpc": [max(y) for y in ys], "tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
 
 
 def mrm_method(trs) -> bytes:

@@ -9,7 +9,7 @@ use std::process::Command;
 
 mod conv_aiuto;
 
-use mzlab_core::mzml::{self, Run};
+use mzlab_core::mzml::{self, ChromKind, Run};
 use mzlab_core::wiff::{container, samples, Wiff};
 use serde_json::Value;
 
@@ -197,7 +197,10 @@ fn the_centroid_mzml_keeps_the_scans_and_reduces_the_points() {
         assert!(g.mz.windows(2).all(|p| p[0] < p[1]));
     }
     assert!(after > 0 && after < before, "{after} against {before}");
-    assert_eq!(got.chromatograms, want.chromatograms);
+    // the BPC of the centroids is the one of the centroided spectra, not of the profile
+    let not_bpc = |r: &Run| r.chromatograms.iter().filter(|c| c.kind != ChromKind::Bpc).cloned().collect::<Vec<_>>();
+    assert_eq!(not_bpc(&got), not_bpc(&want));
+    assert_eq!(got.chromatograms.len(), want.chromatograms.len());
 }
 
 /// The header of the mzML of a real file names the model the Log gives, the creation time and the SHA-1 of both files.
