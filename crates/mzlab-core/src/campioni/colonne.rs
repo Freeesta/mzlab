@@ -104,3 +104,22 @@ impl Campione {
         }
     }
 }
+
+/// A free column read without a declared type: a number when every value is one written the way a number is written here.
+pub(super) fn infer(values: &[Option<&str>]) -> TipoColonna {
+    let filled: Vec<&str> = values
+        .iter()
+        .flatten()
+        .copied()
+        .filter(|v| !v.is_empty())
+        .collect();
+    let canon = |v: &&str| {
+        v.parse::<f64>()
+            .is_ok_and(|x| x.is_finite() && format!("{x}") == **v)
+    };
+    if !filled.is_empty() && filled.iter().all(canon) {
+        TipoColonna::Numero
+    } else {
+        TipoColonna::Testo
+    }
+}

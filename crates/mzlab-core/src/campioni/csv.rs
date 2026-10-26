@@ -3,6 +3,7 @@
 //! `time` (minutes), `dose` (`25 ppm`) and the like are read too, and an unknown column becomes a free column (a number when every value is one).
 //! What `csv_scrivi` writes `csv_leggi` reads back unchanged (`tempo_min` is derived, `dati_file` is not in the table).
 
+use super::colonne::infer;
 use super::json::legacy_kind;
 use super::{
     number_replicates, tabella_da_value, to_json3, Campione, Cell, Colonna, Tabella, TipoColonna,
@@ -259,23 +260,6 @@ fn time_of(c: &mut Campione, row: usize, get: &dyn Fn(&str) -> Option<String>) -
     Ok(())
 }
 
-/// A free column read without a declared type: a number when every value is one written the way a number is written here.
-fn infer(values: &[Option<&str>]) -> TipoColonna {
-    let mut any = false;
-    for v in values.iter().flatten().filter(|v| !v.is_empty()) {
-        any = true;
-        match v.parse::<f64>() {
-            Ok(x) if x.is_finite() && format!("{x}") == *v => {}
-            _ => return TipoColonna::Testo,
-        }
-    }
-    if any {
-        TipoColonna::Numero
-    } else {
-        TipoColonna::Testo
-    }
-}
-
 /// Reads `text`; `sep` None = detected; `declared` gives the type of the free columns it names (the others are inferred).
 pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabella> {
     let recs = records(text, sep.unwrap_or_else(|| detect(text)))?;
@@ -294,10 +278,10 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
         }
         heads.push(f);
     }
-    let mut free: Vec<(String, Vec<Option<&str>>)> = Vec::new();
-    for h in heads.iter().filter_map(|h| h.as_ref().err()) {
-        free.push((h.clone(), Vec::new()));
-    }
+    let mut free: Vec<(String, Vec<Option<&str>>)> = (heads.iter())
+        .filter_map(|h| h.as_ref().err())
+        .map(|h| (h.clone(), Vec::new()))
+        .collect();
     let mut cs = Vec::with_capacity(rows.len());
     let mut written: Vec<Option<u32>> = Vec::with_capacity(rows.len());
     let has = |f: &str| heads.iter().any(|h| h.as_ref().ok() == Some(&f));
@@ -348,8 +332,21 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             c.replicate = n;
         }
     }
+    let colonne = place_free(&mut cs, &free, declared);
+    Ok(Tabella {
+        campioni: cs,
+        colonne,
+    })
+}
+
+/// Gives each free column its type (declared, else inferred) and stores its values as extras; returns the columns of the table.
+fn place_free(
+    cs: &mut [Campione],
+    free: &[(String, Vec<Option<&str>>)],
+    declared: &[Colonna],
+) -> Vec<Colonna> {
     let mut colonne = declared.to_vec();
-    for (name, values) in &free {
+    for (name, values) in free {
         let col = match declared.iter().find(|d| &d.name == name) {
             Some(d) => d.clone(),
             None => {
@@ -368,10 +365,7 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             }
         }
     }
-    Ok(Tabella {
-        campioni: cs,
-        colonne,
-    })
+    colonne
 }
 
 fn quote(s: &str, sep: char, force: bool) -> String {
