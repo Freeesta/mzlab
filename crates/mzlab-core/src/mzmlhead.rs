@@ -14,14 +14,13 @@ const MAX_REGION: u64 = 256 << 20;
 /// The most `mobility_kind` reads to find the end of the first spectrum.
 const MOBILITY_PROBE: u64 = 32 << 20;
 
+fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
+    h.get(a..b).unwrap_or_default()
+}
+
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
-    if from > h.len() || n.is_empty() {
-        return None;
-    }
-    h[from..]
-        .windows(n.len())
-        .position(|w| w == n)
-        .map(|p| p + from)
+    let tail = h.get(from..).filter(|_| !n.is_empty())?;
+    tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
 }
 pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
@@ -177,10 +176,11 @@ impl<R: ReadAt> Mzml<R> {
         if b - a > MAX_REGION {
             return Err(Error::memory_budget());
         }
+        let len = usize::try_from(b - a).map_err(|_| Error::memory_budget())?;
         let mut v = Vec::new();
-        v.try_reserve_exact((b - a) as usize)
+        v.try_reserve_exact(len)
             .map_err(|_| Error::memory_budget())?;
-        v.resize((b - a) as usize, 0);
+        v.resize(len, 0);
         self.r.read_at(a, &mut v)?;
         Ok(v)
     }
@@ -194,8 +194,8 @@ impl<R: ReadAt> Mzml<R> {
             let Some(b) = find(&region, b"</chromatogram>", a) else {
                 break;
             };
-            let c = find(&region[..b], b"<binaryDataArrayList", a);
-            let h = text(&region[a..c.unwrap_or(b)]);
+            let c = find(part(&region, 0, b), b"<binaryDataArrayList", a);
+            let h = text(part(&region, a, c.unwrap_or(b)));
             let cid = attr_id(&h).unwrap_or_default();
             let mut d = Chrom {
                 index: out.len(),
@@ -206,7 +206,7 @@ impl<R: ReadAt> Mzml<R> {
                 ..Default::default()
             };
             let acc = |x: &str| h.contains(&format!("accession=\"{x}\""));
-            if cid == "TIC" {
+            if cid == "TIC" || cid.starts_with("TIC ") {
                 d.kind = "tic".into();
             } else if cid == "BPC" {
                 d.kind = "bpc".into();
@@ -217,7 +217,8 @@ impl<R: ReadAt> Mzml<R> {
             } else if cid.starts_with("SRM") {
                 d.kind = "srm".into();
                 (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
-                d.dwell = dwell(&h);
+                d.dwell = named_value(&h, "MS_dwell_time");
+                d.ce = d.ce.or_else(|| named_value(&h, "collision energy"));
             } else if ![
                 "MS:1000235",
                 "MS:1000627",
@@ -252,7 +253,7 @@ impl<R: ReadAt> Mzml<R> {
         let (mut t, y) = (t.unwrap_or_default(), y.unwrap_or_default());
         let n = t.len().min(y.len());
         let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-        let seconds = text(&chunk[..list]).contains("unitName=\"second\"")
+        let seconds = text(part(&chunk, 0, list)).contains("unitName=\"second\"")
             || find(
                 &chunk,
                 b"name=\"time array\" value=\"\" unitCvRef=\"UO\" unitAccession=\"UO:0000010\"",
@@ -263,7 +264,7 @@ impl<R: ReadAt> Mzml<R> {
             t.iter_mut().for_each(|v| *v /= 60.0);
         }
         t.truncate(n);
-        Ok((t, y[..n].to_vec()))
+        Ok((t, y.get(..n).unwrap_or_default().to_vec()))
     }
 
     /// The unit written on the intensity array of a chromatogram, or "".
@@ -300,7 +301,7 @@ impl<R: ReadAt> Mzml<R> {
     fn head(&mut self) -> Result<String> {
         let probe = self.until_run(0)?;
         let end = find(&probe, b"<run ", 0).unwrap_or_else(|| probe.len().saturating_sub(1));
-        Ok(text(&probe[..end]))
+        Ok(text(part(&probe, 0, end)))
     }
 
     /// The start of the file up to `<run ` plus 3000 bytes, as text (where `fileinfo` finds the time stamp and the processing steps).
@@ -315,14 +316,14 @@ impl<R: ReadAt> Mzml<R> {
         let end = run
             .map_or(0, |p| p)
             .saturating_add(usize::try_from(extra).unwrap_or(usize::MAX));
-        Ok(text(&probe[..end.min(probe.len())]))
+        Ok(text(part(&probe, 0, end.min(probe.len()))))
     }
 
     /// Polarity written in the header (used when a file has no scans, e.g. MRM): positive, negative, mixed or unknown.
     pub fn header_polarity(&mut self) -> Result<String> {
         let all = self.read(0, self.size.min(MAX_REGION))?;
         let end = find(&all, b"</run>", 0).unwrap_or_else(|| all.len().saturating_sub(1));
-        let h = &all[..end];
+        let h = part(&all, 0, end);
         let (pos, neg) = (
             find(h, b"accession=\"MS:1000130\"", 0).is_some(),
             find(h, b"accession=\"MS:1000129\"", 0).is_some(),
@@ -343,7 +344,7 @@ impl<R: ReadAt> Mzml<R> {
             Some(p) if p > 0 => p,
             _ => probe.len(),
         };
-        Ok(find(&probe[..end], b"accession=\"MS:1000768\"", 0).is_some())
+        Ok(find(part(&probe, 0, end), b"accession=\"MS:1000768\"", 0).is_some())
     }
 
     /// Instrument, serial, components, analyzers, source files and software from the header (`Run.metadata`).
@@ -386,7 +387,7 @@ impl<R: ReadAt> Mzml<R> {
                             })
                     {
                         let body = &head[g.0..];
-                        let from = body.find(&open).unwrap() + open.len();
+                        let from = body.find(&open).map_or(0, |i| i + open.len());
                         let to = body
                             .find("</referenceableParamGroup>")
                             .unwrap_or(body.len());
@@ -470,7 +471,7 @@ impl<R: ReadAt> Mzml<R> {
             Some(p) if p > 0 => p,
             _ => probe.len().min(200_000),
         };
-        let head = text(&probe[..end]);
+        let head = text(part(&probe, 0, end));
         let mut out = vec![];
         let mut rest = head.as_str();
         while let Some(p) = rest.find("<instrumentConfiguration") {
@@ -560,14 +561,14 @@ fn attr_id(h: &str) -> Option<String> {
     None
 }
 
-/// `name="?MS_dwell_time"?\s+value="([^"]*)"`
-fn dwell(h: &str) -> Option<f64> {
+/// `name="?KEY"?\s+value="([^"]*)"` (`MS_dwell_time`, `collision energy`)
+fn named_value(h: &str, key: &str) -> Option<f64> {
     let mut from = 0;
-    while let Some(p) = h[from..].find("MS_dwell_time") {
+    while let Some(p) = h[from..].find(key) {
         let at = from + p;
         let before_ok = h[..at].ends_with("name=\"") || h[..at].ends_with("name=");
         if before_ok {
-            let mut t = &h[at + 13..];
+            let mut t = &h[at + key.len()..];
             t = t.strip_prefix('"').unwrap_or(t);
             let t2 = t.trim_start();
             if t2.len() < t.len() {
@@ -589,11 +590,11 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
         let Some(b) = find(chunk, b"</binaryDataArray>", a) else {
             break;
         };
-        let t = &chunk[a..b + 18];
+        let t = part(chunk, a, b + 18);
         let k = find(t, b"<binary>", 0);
-        let head = text(&t[..k.unwrap_or(t.len())]);
+        let head = text(part(t, 0, k.unwrap_or(t.len())));
         let data = match (k, find(t, b"</binary>", 0)) {
-            (Some(k), Some(e)) if e >= k + 8 => t[k + 8..e].to_vec(),
+            (Some(k), Some(e)) if e >= k + 8 => part(t, k + 8, e).to_vec(),
             _ => vec![],
         };
         out.push((head, data));

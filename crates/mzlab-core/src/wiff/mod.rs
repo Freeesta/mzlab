@@ -26,6 +26,14 @@ const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
 /// Scan-type codes seen in the headers (full scan, product-ion scan); anything else is read as a full scan.
 const CODE_PRODUCT: u32 = 11;
+const CODE_FULL: u32 = 15;
+impl Wiff {
+    /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
+    pub(crate) fn scan_experiment(&self, e: usize) -> bool {
+        matches!(self.experiments.get(e).and_then(|x| x.code), Some(CODE_FULL | CODE_PRODUCT))
+    }
+}
+
 /// Half of the 0.7 m/z (FWHM) that Q1 transmits at unit resolution, the only setting the method is assumed to hold (the resolution is not read per experiment).
 const UNIT_HALF_WIDTH: f64 = 0.35;
 
@@ -40,6 +48,8 @@ pub struct Experiment {
     pub ce: Option<f64>,
     /// Half-width (m/z) of the isolation window of a product-ion experiment.
     pub iso_half: Option<f64>,
+    /// Detection window (s) of a scheduled MRM experiment (sMRM), when the method says it is scheduled.
+    pub window_s: Option<u32>,
     #[cfg(feature = "estesi")]
     pub polarity: Option<i8>,
 }
@@ -74,6 +84,8 @@ pub struct Wiff {
     pub created: Option<String>,
     /// SHA-1 (hex) of the `.wiff`, for the `sourceFile` of the mzML; the caller that has the bytes sets it (`Ole::sha1_hex`).
     pub wiff_sha1: Option<String>,
+    /// Off by default. When set, a scheduled transition keeps only the points within its window around the target RT (as msconvert writes it).
+    pub trim_scheduled: bool,
     scan_len: u64,
 }
 
@@ -118,6 +130,7 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             precursor: if product { prec } else { None },
             ce: None,
             iso_half: None,
+            window_s: None,
             #[cfg(feature = "estesi")]
             polarity: None,
         });
@@ -172,6 +185,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     #[cfg(feature = "estesi")]
     {
         experiments = estesi::refine(ole, sample, experiments)?;
+        estesi::mark_windows(ole, sample, &mut experiments);
     }
     let n_exp = experiments.len().max(1);
     let records = entries
@@ -207,6 +221,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         source_type,
         created,
         wiff_sha1: None,
+        trim_scheduled: false,
         scan_len,
     })
 }

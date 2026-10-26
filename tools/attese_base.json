@@ -170,6 +170,7 @@
  "tests_e2e/e2e_schermointero.py": 14,
  "tests_e2e/e2e_scroll.py": 34,
  "tests_e2e/e2e_select_freccia.py": 5,
+ "tests_e2e/e2e_sito_pubblico.py": 6,
  "tests_e2e/e2e_sottrazione.py": 18,
  "tests_e2e/e2e_spettro.py": 31,
  "tests_e2e/e2e_spettro_hr.py": 10,

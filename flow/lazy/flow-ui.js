@@ -81,6 +81,7 @@
       "err.flow.input": `An input file has no ${q.field}.`,
       "err.flow.compare.sameVariant": "Two variants of the comparison are identical.",
       "err.flow.msn.open": `Open the infusion ${q.input || "of the plan"} in the Data tab first, then run again.`,
+      "err.flow.tp.parent": `The parent compound ${q.input || ""} is empty: write its formula or SMILES in the input, then run again.`,
       "err.flow.msn.desktop": "This file is too big for this browser. Run the plan in the desktop app or with the command line.",
       "err.flow.msn.empty": "This file has no MSn spectra (MS2 or deeper). The plan needs an MSn infusion: open one in the Data tab.",
       "err.flow.msn.library": "The MSn library is empty. In the Data tab, open the Fragmentation graph card of a standard and add it to the library, then run again.",

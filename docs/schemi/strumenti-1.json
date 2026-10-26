@@ -30,6 +30,7 @@
           "msn.library_export",
           "msn.table_export",
           "quant.calibrate",
+          "rt.predict",
           "spectra.centroid",
           "spectra.chimeric",
           "spectra.insilico",
@@ -858,10 +859,56 @@
           {
             "properties":{
               "step":{"const":"rt.predict@1"},
-              "name":{"enum":["algorithm","rt_logp_k","rt_logp_floor","lc_dwell_min","rt_logp_terms","seed"]},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "parent",
+                  "parent_rt",
+                  "polarity_margin",
+                  "rt_margin",
+                  "order",
+                  "drop_outside",
+                  "rt_logp_k",
+                  "rt_logp_floor",
+                  "lc_dwell_min",
+                  "rt_logp_terms",
+                  "seed"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {"enum":["logp_window","forest"]},
+                  {
+                    "type":"string",
+                    "description":"SMILES of the parent compound: each candidate then gets delta_logp (Crippen) against it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"With a parent: the direction of the RT change (rt_dir) and whether it agrees with delta_logp (rt_dir_agrees)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.3,
+                    "description":"A change of logP within this margin gives no direction"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"A change of RT within this margin gives no direction"
+                  },
+                  {
+                    "enum":["none","residual"],
+                    "default":"none",
+                    "description":"residual: within each query the candidates with the smallest |residual| first; a candidate without a prediction last"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: the candidates whose RT falls outside the window are removed (logp_window only)"
+                  },
                   {
                     "type":"number",
                     "minimum":0,
@@ -873,7 +920,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Dwell volume over flow; the gradient itself ([[t, %B], ...]) is read from the campaign"
+                    "description":"Dwell volume over flow; the gradient itself ([[t, %B], ...]) is read from the campaign. Not used by the native step, which fits the RT itself"
                   },
                   {
                     "type":"boolean",

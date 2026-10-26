@@ -97,12 +97,21 @@ def hold(pg, ms):
     _real_wft(pg, ms)
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
+# The public site hides the desktop-app download and the Teoria (sito.js); the tests run with both on, as the code still offers them.
+# MZLAB_SITO_PRODUZIONE=1 (e2e_sito_pubblico) leaves the production values.
+_SITO = "window.SITO_PUBBLICO=Object.freeze({scaricaApp:true,teoria:true})"
+def _sito():
+    return None if os.environ.get("MZLAB_SITO_PRODUZIONE") else _SITO
 def _new_page(self, *a, **k):
     k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
-    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); return pg
+    pg = _np(self, *a, **k); pg.add_init_script(_TRACK)
+    if _sito(): pg.add_init_script(_sito())
+    return pg
 def _new_context(self, *a, **k):
     k.setdefault("locale", "it-IT")
-    c = _nc(self, *a, **k); c.add_init_script(_TRACK); return c
+    c = _nc(self, *a, **k); c.add_init_script(_TRACK)
+    if _sito(): c.add_init_script(_sito())
+    return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
 def stage(pg, files, timeout=90000):
     """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""

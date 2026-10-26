@@ -195,8 +195,10 @@ def main():
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
     energia = energy(out)
+    transizioni = transitions(out)
+    programmati = scheduled(out)
     variante, rifiuti = variants(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "variante": variante, "rifiuti": rifiuti}))
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti}))
 
 
 def energy(out: Path):
@@ -211,6 +213,45 @@ def energy(out: Path):
     w.sample(1, blocks, method)
     w.save(out, "energia")
     return {"ce": ces, "precursors": [None, 55.5, 120.0, 77.7]}
+
+
+def mrm_method(trs) -> bytes:
+    """A `MassRangeEx` stream of an MRM experiment: per transition Q1, Q3, dwell (ms), the name and the compound parameters DP, EP, CE, CXP (float32 after their UTF-16 tag)."""
+    out = bytearray()
+    for q1, q3, dwell, name, dp, ep, ce, cxp in trs:
+        nm = name.encode("utf-16le")
+        out += struct.pack("<f", q1) + bytes(4) + struct.pack("<ff", q3, dwell) + bytes(4) + bytes([len(nm), 0]) + nm
+        out += b"\x04\x00D\x00P\x00" + struct.pack("<f", dp) + b"\x04\x00E\x00P\x00" + struct.pack("<f", ep)
+        out += b"\x04\x00C\x00E\x00" + struct.pack("<f", ce) + b"\x06\x00C\x00X\x00P\x00" + struct.pack("<f", cxp) + bytes(4)
+    return bytes(out)
+
+
+def transitions(out: Path):
+    """One MRM experiment with three transitions (Q1, Q3, dwell ms, name, DP, EP, CE, CXP) over four cycles: what the method says about each."""
+    trs = [(364.5, 176.0, 50.0, "tpA", 40.0, 10.0, 25.0, 5.0), (364.5, 159.0, 25.5, "tpB", 41.0, 10.5, 35.0, 6.0), (250.25, 100.5, 100.0, "ref", 30.0, 9.0, 15.0, 4.0)]
+    method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(trs), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    w = Writer()
+    w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
+    w.save(out, "transizioni")
+    return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
+
+
+def scheduled(out: Path):
+    """Two MRM experiments over four cycles (one minute apart): 0 dense with two transitions, 1 scheduled (sMRM, window 60 s) with three transitions whose dwell field is the target RT (0.5, 1.5, 2.5 min) and sparse blocks."""
+    dense = [(300.0, 100.0, 50.0, "d0", 30.0, 9.0, 15.0, 4.0), (301.0, 101.0, 50.0, "d1", 30.0, 9.0, 16.0, 4.0)]
+    sched = [(364.5, 176.0, 0.5, "s0", 40.0, 10.0, 25.0, 5.0), (364.5, 159.0, 1.5, "s1", 41.0, 10.0, 35.0, 6.0), (250.25, 100.5, 2.5, "s2", 30.0, 9.0, 15.0, 4.0)]
+    sparse = [[-3.01, 10.0, -2.01], [-3.01, 20.0, 30.0, -1.01], [-3.01, -1.01, 40.0, 50.0], [-3.01, 5.0, -1.01, 60.0]]
+    method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(dense), "Experiment1/ExperimentHeader": header(4, 0.0),
+              "Experiment1/MassRangeEx/MassRangeEx": mrm_method(sched), "Experiment1/sMRM": bytes(36) + struct.pack("<II", 1, 60) + bytes(8),
+              "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    blocks = []
+    for c in range(4):
+        blocks.append(("mrm", [100.0 + c, 200.0 + c], 60000.0 * c, 300.0 + 2 * c))
+        blocks.append(("mrm", sparse[c], 60000.0 * c, 10.0 * (c + 1)))
+    w = Writer()
+    w.sample(1, blocks, method)
+    w.save(out, "programmati")
+    return {"targets": [t[2] for t in sched], "window_s": 60}
 
 
 def variants(out: Path):

@@ -152,7 +152,7 @@ const BARRA = (() => {
   const visible = c => (!c.feature || !!FEATURES[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
   const lab = c => (c.teo ? c.etichetta : t(`cmd.${c.id}.lab`));
   const name = c => (c.teo ? c.etichetta : t(`cmd.${c.id}.name`));
-  const tip = c => t(`cmd.${c.id}.tip`);
+  const tip = c => t(`cmd.${c.id}.tip` + (c.id === "search" && !SITO_PUBBLICO.teoria ? ".nt" : ""));
 
   // ---------------------------------------------------------------- state
   function loadState() {

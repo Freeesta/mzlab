@@ -4,7 +4,7 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 
 ## Prove fatte sul codice
 - Il registro del CLI (`flow::steps()`) contiene la catena di base, `features.table`, `spectra.centroid`, Attributio, `spectra.ms2`, `meta.compare` e tutta la famiglia di Tabui (`mzlab_chem::step::tabui()`); un passo senza esecutore dà `err.flow.step.native` (`tp.generate` ora si esegue).
-- I passi nel registro ma senza esecutore (`features.ms2_link`, `spectra.chimeric`, `spectra.insilico`, `rt.predict`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native`.
+- I passi nel registro ma senza esecutore (`features.ms2_link`, `spectra.chimeric`, `spectra.insilico`, `annot.regulatory`, `annot.hazard`) danno `err.flow.step.native`.
 - Esecutori oggi (29, più `quant.calibrate`, `msn.library_export` e `msn.table_export`, fuori dal flusso di Tabui, e con `tp.dig_lr`, lo Scavo LR di Tabui: JSON uguale byte per byte sui 5 demo FullScan): `convert.mzml`, `spectra.centroid`, `index.mzidx`, `features.detect`, `features.align`, `features.gapfill`,
   `features.estimate`, `features.table`, `table.drift`, `table.stats`, `table.pca`, `table.kmd`, `table.plausible`, `export.table_csv`, `export.mztab`, `spectra.match`, `formula.ms1`, `formula.ms2`, `spectra.ms2`, `spectra.msn_graph`, `annot.level`, `tp.generate`, `table.filter`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network` (con un `tp/1` dato come file), `tp.dig_lr`, `meta.compare`, `export.inclusion` (vuole un `tp/1`).
 - Non provato a mano nel sito costruito: la sola prova nel browser è `e2e_flow.py` (piano, modelli, viste dei file); nessun piano è stato eseguito dal sito perché non può.

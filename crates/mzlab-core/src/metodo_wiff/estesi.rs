@@ -125,7 +125,7 @@ fn dad(ole: &Ole, sample: &str) -> Vec<Campo> {
 
 /// Scheduled MRM of the experiment `index` of the method `no`: `(window in seconds)` when the `sMRM` stream says the experiment is scheduled (u32 flag at
 /// byte 36, u32 window at byte 40: 360 in a file named «6minWindow», 120 in the file whose mzML keeps each transition 120 s around its target).
-fn scheduled(ole: &Ole, no: u32, index: usize) -> Option<u32> {
+pub(crate) fn scheduled(ole: &Ole, no: u32, index: usize) -> Option<u32> {
     let b = ole.read(&format!(
         "MethodSubtree/Method{no}/DeviceMethod0/Period0/Experiment{index}/sMRM"
     ))?;
