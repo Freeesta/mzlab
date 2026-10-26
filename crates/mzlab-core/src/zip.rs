@@ -138,61 +138,98 @@ pub fn zip_packed(packed: &[u8]) -> Result<Vec<u8>, String> {
     zip_stored(&unpack(packed)?)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn crc_known_values() {
-        assert_eq!(crc32(b""), 0);
-        assert_eq!(crc32(b"123456789"), 0xCBF4_3926);
+/// Packs entries into the buffer format of `unpack` (the inverse; the page reads the result of `unzip_packed`).
+pub fn pack(files: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for (n, d) in files {
+        out.extend_from_slice(&(n.len() as u16).to_le_bytes());
+        out.extend_from_slice(&(d.len() as u32).to_le_bytes());
+        out.extend_from_slice(n.as_bytes());
+        out.extend_from_slice(d);
     }
-
-    #[test]
-    fn empty_archive_is_the_end_record_only() {
-        let z = zip_stored(&[]).unwrap();
-        assert_eq!(z.len(), 22);
-        assert_eq!(&z[..4], &[0x50, 0x4B, 5, 6]);
-    }
-
-    #[test]
-    fn packed_round_trip_layout() {
-        let z = zip_stored(&[("a.txt", b"hello"), ("d/vuoto", b"")]).unwrap();
-        // 2 local headers (30 + name + data), 2 central entries (46 + name), end record 22
-        assert_eq!(z.len(), (30 + 5 + 5) + (30 + 7) + (46 + 5) + (46 + 7) + 22);
-        let mut packed = Vec::new();
-        for (n, d) in [("a.txt", &b"hello"[..]), ("d/vuoto", &b""[..])] {
-            packed.extend_from_slice(&(n.len() as u16).to_le_bytes());
-            packed.extend_from_slice(&(d.len() as u32).to_le_bytes());
-            packed.extend_from_slice(n.as_bytes());
-            packed.extend_from_slice(d);
-        }
-        assert_eq!(zip_packed(&packed).unwrap(), z);
-        assert!(unpack(&packed[..8]).is_err());
-    }
-
-    /// With `MZLAB_ZIP_OUT=<dir>`: writes the archives that `tests/test_zip_stored.py` reads back with Python's `zipfile`.
-    #[test]
-    fn write_for_the_independent_reader() {
-        let Ok(dir) = std::env::var("MZLAB_ZIP_OUT") else {
-            return;
-        };
-        let big: Vec<u8> = (0..70_000u32)
-            .map(|i| (i.wrapping_mul(2_654_435_761) >> 24) as u8)
-            .collect();
-        let files: Vec<(&str, &[u8])> = vec![
-            ("manifesto.json", b"{\"v\":1}"),
-            ("vuoto.txt", b""),
-            ("sotto/\u{e8}.bin", &big),
-            ("z", &[0, 255, 0]),
-        ];
-        std::fs::write(format!("{dir}/n.zip"), zip_stored(&files).unwrap()).unwrap();
-        std::fs::write(format!("{dir}/zero.zip"), zip_stored(&[]).unwrap()).unwrap();
-        std::fs::write(
-            format!("{dir}/uno_vuoto.zip"),
-            zip_stored(&[("v", b"")]).unwrap(),
-        )
-        .unwrap();
-        std::fs::write(format!("{dir}/big.bin"), &big).unwrap();
-    }
+    out
 }
+
+fn le16(b: &[u8], p: usize) -> Result<usize, String> {
+    b.get(p..p + 2)
+        .map(|x| u16::from_le_bytes([x[0], x[1]]) as usize)
+        .ok_or_else(|| "zip: truncated".to_string())
+}
+fn le32(b: &[u8], p: usize) -> Result<usize, String> {
+    b.get(p..p + 4)
+        .map(|x| u32::from_le_bytes([x[0], x[1], x[2], x[3]]) as usize)
+        .ok_or_else(|| "zip: truncated".to_string())
+}
+
+/// A name that stays inside the archive: relative, no `..`, no backslash, no NUL, not empty.
+fn safe_name(n: &str) -> bool {
+    !n.is_empty()
+        && !n.starts_with('/')
+        && !n.contains('\\')
+        && !n.contains('\0')
+        && n.split('/').all(|c| c != "..")
+}
+
+/// The entries of an archive made of "stored" entries (what `zip_stored` writes, and any other tool's uncompressed ZIP without ZIP64): name and bytes, the CRC-32 of
+/// every entry checked. Errors (a message): not a ZIP, compressed or encrypted entry, ZIP64, bad CRC, a name that leaves the archive.
+pub fn unzip_stored(z: &[u8]) -> Result<Vec<(String, Vec<u8>)>, String> {
+    let lo = z.len().saturating_sub(22 + u16::MAX as usize);
+    let end = (lo..=z.len().saturating_sub(22))
+        .rev()
+        .find(|&i| z.get(i..i + 4) == Some(&[0x50, 0x4B, 5, 6][..]))
+        .ok_or("zip: no end record")?;
+    let n = le16(z, end + 10)?;
+    let mut p = le32(z, end + 16)?;
+    let mut out = Vec::with_capacity(n);
+    for _ in 0..n {
+        if le32(z, p)? != 0x0201_4B50 {
+            return Err("zip: bad central directory".into());
+        }
+        let (flags, method, crc, size, nl, el, cl, off) = (
+            le16(z, p + 8)?,
+            le16(z, p + 10)?,
+            le32(z, p + 16)?,
+            le32(z, p + 24)?,
+            le16(z, p + 28)?,
+            le16(z, p + 30)?,
+            le16(z, p + 32)?,
+            le32(z, p + 42)?,
+        );
+        if method != 0 || flags & 1 != 0 {
+            return Err("zip: entry is compressed or encrypted".into());
+        }
+        if size == 0xFFFF_FFFF || off == 0xFFFF_FFFF {
+            return Err("zip: ZIP64 is not supported".into());
+        }
+        let name = std::str::from_utf8(z.get(p + 46..p + 46 + nl).ok_or("zip: truncated")?)
+            .map_err(|_| "zip: name is not UTF-8")?;
+        if !safe_name(name) {
+            return Err("zip: unsafe name".into());
+        }
+        if le32(z, off)? != 0x0403_4B50 {
+            return Err("zip: bad local header".into());
+        }
+        let start = off + 30 + le16(z, off + 26)? + le16(z, off + 28)?;
+        let data = z.get(start..start + size).ok_or("zip: truncated data")?;
+        if crc32(data) as usize != crc {
+            return Err("zip: CRC mismatch".into());
+        }
+        out.push((name.to_string(), data.to_vec()));
+        p += 46 + nl + el + cl;
+    }
+    Ok(out)
+}
+
+/// `unzip_stored` into the packed buffer of `unpack`.
+pub fn unzip_packed(z: &[u8]) -> Result<Vec<u8>, String> {
+    let files = unzip_stored(z)?;
+    Ok(pack(
+        &files
+            .iter()
+            .map(|(n, d)| (n.as_str(), d.as_slice()))
+            .collect::<Vec<_>>(),
+    ))
+}
+
+#[cfg(test)]
+mod tests;
