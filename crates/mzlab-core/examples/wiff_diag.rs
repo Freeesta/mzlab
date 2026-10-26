@@ -64,6 +64,9 @@ fn main() {
             row.3 = row.3.min(r.size);
             row.4 = row.4.max(r.size);
         }
+        if w.experiments.is_empty() {
+            no_method_profile(&w, &mut scan);
+        }
         for (e, (all, yes, no, lo, hi)) in rows.iter().enumerate().filter(|(_, r)| r.0 > 0) {
             let chosen = if w
                 .experiments
@@ -78,5 +81,40 @@ fn main() {
             let v = vers[e];
             println!("  experiment {e}: records {all} marker_yes {yes} marker_no {no} size_min {lo} size_max {hi} chosen {chosen} head_not_marker {} version1 {} version2 {} version3 {} version4_or_more {}", v[0], v[1], v[2], v[3], v[4] + v[5]);
         }
+    }
+}
+
+/// A sample without an experiment in its method: what its first scans look like (numbers only), to tell a full scan from a product-ion or a survey scan by its content.
+fn no_method_profile(w: &Wiff, scan: &mut std::fs::File) {
+    let Ok(run) = w.run(scan) else {
+        println!("  no method: read error");
+        return;
+    };
+    let mut spans = std::collections::BTreeSet::new();
+    for s in &run.spectra {
+        if let (Some(a), Some(b)) = (s.mz.first(), s.mz.last()) {
+            spans.insert(((a * 10.0).round() as i64, (b * 10.0).round() as i64));
+        }
+    }
+    println!(
+        "  no method: spectra {} distinct (first m/z, last m/z) pairs {}",
+        run.spectra.len(),
+        spans.len()
+    );
+    for s in run.spectra.iter().take(8) {
+        let top = (0..s.mz.len())
+            .max_by(|&i, &j| s.intensity_f64(i).total_cmp(&s.intensity_f64(j)))
+            .map_or(0.0, |i| s.mz[i]);
+        println!(
+            "    {} level {} rt {:.4} points {} mz {:.2}..{:.2} base peak m/z {:.2} precursor {:?}",
+            s.id,
+            s.level,
+            s.rt,
+            s.mz.len(),
+            s.mz.first().copied().unwrap_or(0.0),
+            s.mz.last().copied().unwrap_or(0.0),
+            top,
+            s.precursor
+        );
     }
 }

@@ -1304,7 +1304,18 @@
           {
             "properties":{
               "step":{"const":"spectra.ms2@1"},
-              "name":{"enum":["min_intensity","max_isolation","tol_da","rt_tol"]},
+              "name":{
+                "enum":[
+                  "min_intensity",
+                  "max_isolation",
+                  "tol_da",
+                  "rt_tol",
+                  "dia_pseudo",
+                  "dia_min_corr",
+                  "dia_min_points",
+                  "dia_frag_ppm"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {
@@ -1329,6 +1340,30 @@
                     "minimum":0,
                     "default":0.2,
                     "description":"With a feature table: largest distance between the scan and the RT of the feature"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"For data-independent runs (SWATH, MSE): one pseudo MS2 spectrum per feature of the table, made of the fragments whose trace follows that of the precursor; needs the feature table, and the DDA scans are not written"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.9,
+                    "description":"With `dia_pseudo`: least Pearson correlation between the trace of a fragment and that of the precursor"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":3,
+                    "default":5,
+                    "description":"With `dia_pseudo`: fewest cycles of the RT range of a feature; a feature with fewer has no spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"With `dia_pseudo`: window around an m/z to follow its trace"
                   }
                 ]
               }
