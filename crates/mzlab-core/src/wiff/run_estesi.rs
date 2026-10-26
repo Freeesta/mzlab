@@ -17,8 +17,39 @@ impl Wiff {
                 .is_some_and(|c| c != super::super::estesi::CODE_MRM)
     }
 
+    /// Appends the BPC of each `(experiment, times, intensities)` after the transitions, so that the list a reader that decodes later (`LettoreWiff`) completes is in
+    /// the same order.
+    fn push_bpc(
+        &self,
+        chroms: &mut Vec<Chromatogram>,
+        bpcs: Vec<(usize, Vec<f64>, Vec<f64>)>,
+        many: bool,
+    ) {
+        for (e, time, intensity) in bpcs {
+            let unit = "number of detector counts".into();
+            chroms.push(Chromatogram {
+                index: chroms.len(),
+                id: self.bpc_id(e, many),
+                kind: ChromKind::Bpc,
+                q1: None,
+                q3: None,
+                unit,
+                time,
+                intensity,
+            });
+        }
+    }
+
+    /// The id of the BPC of experiment `e` (0-based): `BPC`, or with the sample and experiment when several experiments have a TIC.
+    pub(crate) fn bpc_id(&self, e: usize, many: bool) -> String {
+        match many {
+            true => format!("BPC sample={} period=1 experiment={}", self.sample, e + 1),
+            false => "BPC".into(),
+        }
+    }
+
     /// True when experiment `e` is a full scan: its spectra give a TIC chromatogram (the other scan experiments give none).
-    fn is_full_scan(&self, e: usize) -> bool {
+    pub(crate) fn is_full_scan(&self, e: usize) -> bool {
         self.experiments.get(e).and_then(|x| x.code) == Some(super::super::estesi::CODE_FULL)
     }
 
@@ -36,7 +67,7 @@ impl Wiff {
                     continue;
                 }
                 if self.is_full_scan(r.experiment) {
-                    blocks.add_tic(r);
+                    blocks.add_tic(r, p.intensity.iter().copied().reduce(f64::max));
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
@@ -59,7 +90,7 @@ impl Wiff {
         for r in &self.records {
             if let Some(count) = scan::point_count(scan, self.scan_len, r.at, r.end)? {
                 if count > 0 && self.is_full_scan(r.experiment) {
-                    blocks.add_tic(r);
+                    blocks.add_tic(r, None);
                 }
                 continue;
             }
@@ -82,6 +113,7 @@ impl Wiff {
     fn chromatograms_of(&self, blocks: Blocks) -> Vec<Chromatogram> {
         let unit = "number of detector counts";
         let mut chroms = Vec::new();
+        let mut bpcs = Vec::new();
         let many = blocks
             .experiments
             .iter()
@@ -96,6 +128,9 @@ impl Wiff {
                 true => format!("TIC sample={} period=1 experiment={}", self.sample, e + 1),
                 false => "TIC".into(),
             };
+            if !ex.bpc.is_empty() && ex.bpc.len() == ex.time.len() {
+                bpcs.push((e, ex.time.clone(), ex.bpc));
+            }
             chroms.push(Chromatogram {
                 index: chroms.len(),
                 id,
@@ -141,6 +176,7 @@ impl Wiff {
                 });
             }
         }
+        self.push_bpc(&mut chroms, bpcs, many);
         chroms
     }
 }
@@ -150,6 +186,8 @@ impl Wiff {
 struct Experiment {
     time: Vec<f64>,
     tic: Vec<f64>,
+    /// Base peak intensity of each block of `time`, empty when the blocks were not decoded.
+    bpc: Vec<f64>,
     cols: Vec<(Vec<f64>, Vec<f64>)>,
 }
 
@@ -166,10 +204,12 @@ impl Blocks {
     }
 
     /// A point of the TIC of a full scan experiment: the TIC the index holds for the block.
-    fn add_tic(&mut self, r: &Record) {
+    /// `base` is the base peak intensity of the block when its points were decoded.
+    fn add_tic(&mut self, r: &Record, base: Option<f64>) {
         if let Some(e) = self.experiments.get_mut(r.experiment) {
             e.time.push(r.time_min);
             e.tic.push(r.tic);
+            e.bpc.extend(base);
         }
     }
 

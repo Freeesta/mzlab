@@ -11,6 +11,8 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+#[cfg(feature = "estesi")]
+mod bpc;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
