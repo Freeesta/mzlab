@@ -3,6 +3,8 @@
 // and molecules in IndexedDB, saved libraries in OPFS), adds manifesto.json (what is in, what is left out and why) and downloads one mzlab-dati-<date>.zip.
 // The ZIP is written by Rust (esporta-dati-worker.js); nothing leaves the computer. Format and inventory: docs/agenti/esporta-dati.md.
 
+import { lab } from "./qqq-db.js";
+
 /** @type {any} */
 const W = window;
 const FORMAT = "mzlab-dati/1";
@@ -16,7 +18,6 @@ const RUNTIME = /^(mzlab|qqq)\.(run|avvii|migrato|memProbe|memBudget(\.log)?|mem
 const DEV = /^(mzlab|qqq)\.(admin|dev\..*)$/;
 const OURS = /^(mzlab|qqq)[.-]/;
 // IndexedDB stores worth keeping; the others are rebuilt (manifest of OPFS) or are file copies
-const IDB_NAME = "mzlab_lab";
 const IDB_STORES = ["notebook", "kv", "liste_utente", "molecole"];
 
 /** @typedef {{ name: string, bytes: Uint8Array, what: string }} Entry */
@@ -66,17 +67,14 @@ const allOf = (db, store) => new Promise(res => {
 async function indexed(files, left) {
   if (!W.indexedDB) return;
   try {
-    const names = W.indexedDB.databases ? (await W.indexedDB.databases()).map((/** @type {{ name?: string }} */ d) => d.name) : [IDB_NAME];
-    if (!names.includes(IDB_NAME)) return;
-    const db = await new Promise((res, rej) => { const q = W.indexedDB.open(IDB_NAME); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+    const db = await lab()();                          // the one connection of the app (qqq-db.js): the only file that opens the database
     for (const s of IDB_STORES) {
       if (!db.objectStoreNames.contains(s)) continue;
       const rows = await allOf(db, s);
       if (rows === null) { left.push({ item: `indexeddb/${s}`, reason: "unreadable" }); continue; }
-      if (rows.length) files.push({ name: `indexeddb/${s}.json`, bytes: text(jsonSafe(rows)), what: `IndexedDB ${IDB_NAME}/${s}` });
+      if (rows.length) files.push({ name: `indexeddb/${s}.json`, bytes: text(jsonSafe(rows)), what: `IndexedDB mzlab_lab/${s}` });
     }
     for (const s of ["files", "manifest"]) if (db.objectStoreNames.contains(s)) left.push({ item: `indexeddb/${s}`, reason: s === "files" ? "copies of the loaded files" : "rebuilt from the files" });
-    db.close();
   } catch (_) { left.push({ item: "indexeddb", reason: "unreadable" }); }
 }
 

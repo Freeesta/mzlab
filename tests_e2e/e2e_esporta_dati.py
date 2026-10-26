@@ -19,8 +19,8 @@ try:
         pg = r.page(p)
         pg.evaluate("""([a, b]) => { localStorage.setItem('mzlab.libro.token', a); localStorage.setItem('mzlab.llm.apikey', b); localStorage.setItem('mzlab.tunit', 's'); }""", [SECRET_A, SECRET_B])
         pg.click("#np-set"); pg.wait_for_selector("#uipset", state="visible")
-        pg.check("input[name='uip-th'][value='dark']", force=True); pg.wait_for_timeout(300)
-        pg.select_option("#uip-pal", index=1); pg.wait_for_timeout(300)
+        pg.check("input[name='uip-th'][value='dark']", force=True); pg.wait_for_function("JSON.parse(localStorage.getItem('mzlab.prefs') || '{}').theme === 'dark'")
+        pg.select_option("#uip-pal", index=1); pg.wait_for_function("JSON.parse(localStorage.getItem('mzlab.prefs') || '{}').pal !== 'file'")
         z = {}
         def press():
             pg.focus("#uip-g-priv > summary"); pg.keyboard.press("Enter")
