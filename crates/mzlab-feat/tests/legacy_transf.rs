@@ -62,7 +62,11 @@ fn transformations_match_python() {
         let lit: Vec<_> = merged
             .iter()
             .filter(|r| r.level == 2)
-            .filter(|r| !base_rules.iter().any(|b| b.id == r.id && b.source == r.source))
+            .filter(|r| {
+                !base_rules
+                    .iter()
+                    .any(|b| b.id == r.id && b.source == r.source)
+            })
             .collect();
         let want = case["literature"].as_array().unwrap();
         assert_eq!(lit.len(), want.len(), "{name}: literature");

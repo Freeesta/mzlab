@@ -3,7 +3,10 @@
 use super::*;
 
 fn rules() -> Rules {
-    Rules::parse(include_bytes!("../../../../../TP_Mine/data/regole_tp_2.json")).unwrap()
+    Rules::parse(include_bytes!(
+        "../../../../../TP_Mine/data/regole_tp_2.json"
+    ))
+    .unwrap()
 }
 
 /// The choices of `predecessors` on the cases of `tests/golden/finder_funzioni.json` (names differ: the table of the reference is its own).

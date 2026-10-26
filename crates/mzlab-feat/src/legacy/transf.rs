@@ -167,7 +167,10 @@ pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
     let rows = crate::liste::from_legacy_text(text)?.transformation_rows();
     let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
-    let default = file.get("predefinito").and_then(Value::str).map(String::from);
+    let default = file
+        .get("predefinito")
+        .and_then(Value::str)
+        .map(String::from);
     let flat = file.get("regole").is_some();
     let holder = if flat {
         Some(&mut file)
