@@ -1,4 +1,4 @@
-//! Cells outside the RT a file acquired: files cut at 1.8 and 16 min give `CELL_NA` (not measured, NaN area) where the expected apex lies outside, never a false
+//! Cells outside the RT a file acquired: files cut at 1.8 and 15.5 min (valve to the MS) give `CELL_NA` (not measured, NaN area) where the expected apex lies outside, never a false
 //! zero; `rt_range` keeps only the rows inside. The mzML are synthetic (one Gaussian trace per ion), built here.
 
 use mzlab_core::idxread::Index;
@@ -70,7 +70,7 @@ fn open(bytes: &[u8]) -> Index<Vec<u8>> {
     Index::open(bytes.to_vec(), bytes.len() as u64).unwrap()
 }
 
-/// 6 whole files (0-20 min), then 6 cut at 1.8-16 min. The ions are detected in the whole files and absent in the cut ones, except the middle one.
+/// 6 whole files (0-20 min), then 6 cut at 1.8-15.5 min. The ions are detected in the whole files and absent in the cut ones, except the middle one.
 fn table() -> Aligned {
     let nf = 12;
     let mut t = Aligned {
@@ -81,7 +81,7 @@ fn table() -> Aligned {
         t.mz.push(mz);
         t.rt.push(rt);
         for k in 0..nf {
-            let seen = k < 6 || (rt > 1.8 && rt < 16.0);
+            let seen = k < 6 || (rt > 1.8 && rt < 15.5);
             t.area.push(if seen { 1e6 } else { 0.0 });
             t.height.push(0.0);
             t.apex_rt.push(if seen { rt as f32 } else { f32::NAN });
@@ -94,8 +94,9 @@ fn table() -> Aligned {
 
 #[test]
 fn cut_files_give_na_not_zero() {
-    let (whole, cut) = (index_bytes(0.0, 20.0), index_bytes(1.8, 16.0));
-    assert_eq!(file_facts(&open(&cut)).rt_range, Some((1.8, 16.0)));
+    let (whole, cut) = (index_bytes(0.0, 20.0), index_bytes(1.8, 15.5));
+    let (a, b) = file_facts(&open(&cut)).rt_range.unwrap();
+    assert!((a - 1.8).abs() < 1e-9 && (b - 15.5).abs() < 1e-9);
     let mut t = table();
     let (p, f) = (Params::default(), FillParams::default());
     for k in 0..12 {
@@ -121,7 +122,7 @@ fn cut_files_give_na_not_zero() {
 #[test]
 fn rt_range_drops_rows_outside() {
     let mut t = table();
-    t.retain_rt(1.8, 16.0);
+    t.retain_rt(1.8, 15.5);
     assert_eq!(t.mz, vec![300.2]);
     assert_eq!(t.state.len(), 12);
 }
