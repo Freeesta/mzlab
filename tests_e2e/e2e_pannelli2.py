@@ -61,40 +61,40 @@ try:
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
         step("RT from ... to ... sets the visible interval; empty = whole run", rt)
         def popover_out():
-            pg.evaluate(f"(()=>{{const p={CH};p._parOpen=true;ctl(p)}})()"); pg.wait_for_timeout(300)
-            pg.evaluate("document.querySelector('.pnl.chrom .cpop').style.minHeight='700px'"); pg.wait_for_timeout(200)
+            pg.evaluate(f"(()=>{{const p={CH};p._parOpen=true;ctl(p)}})()"); frames(pg, 3)
+            pg.evaluate("document.querySelector('.pnl.chrom .cpop').style.minHeight='700px'"); frames(pg, 3)
             r = pg.evaluate("(()=>{const pn=document.querySelector('.pnl.chrom'),c=document.querySelector('.pnl.chrom .cpop');return [getComputedStyle(pn).overflow,c.getBoundingClientRect().bottom,pn.getBoundingClientRect().bottom]})()"); print(r)
             assert r[0] == "visible" and r[1] > r[2], r
             pg.evaluate("document.querySelector('.pnl.chrom .cpop').style.minHeight=''"); pg.evaluate(f"(()=>{{const p={CH};p._parOpen=false;ctl(p)}})()")
         step("a tall popover goes beyond the panel (not cut)", popover_out)
         def ruler():
-            pg.evaluate(f"(()=>{{const p={SPEC};p.rul=true;measClick(p,152.2);measClick(p,364.4)}})()"); pg.wait_for_timeout(300)
+            pg.evaluate(f"(()=>{{const p={SPEC};p.rul=true;measClick(p,152.2);measClick(p,364.4)}})()"); attendi(pg, SPEC + ".meas && " + SPEC + ".meas.list.length === 1")
             assert pg.evaluate(f"{SPEC}.meas.list.length") == 1
-            pg.evaluate(f"(()=>{{const p={SPEC};p.zoom=[100,300];draw(p)}})()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"(()=>{{const p={SPEC};p.zoom=[100,300];draw(p)}})()"); frames(pg, 3)
             assert pg.evaluate(f"{SPEC}.meas") is None, "the zoom cancels the measure"
             pg.evaluate(f"(()=>{{const p={SPEC};p.zoom=null;p.rul=false;draw(p)}})()")
         step("ruler: a new zoom cancels the measure", ruler)
         def iso():
-            pg.evaluate(f"(()=>{{const p={SPEC};p.iso={{formula:'C8H10NO2',ad:'[M]+'}};p.zoom=[145,165];p._isoKey=JSON.stringify(p.zoom);draw(p)}})()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"(()=>{{const p={SPEC};p.iso={{formula:'C8H10NO2',ad:'[M]+'}};p.zoom=[145,165];p._isoKey=JSON.stringify(p.zoom);draw(p)}})()"); frames(pg, 3)
             assert pg.evaluate(f"!!{SPEC}.iso")
-            pg.evaluate(f"(()=>{{const p={SPEC};p.zoom=[140,170];draw(p)}})()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"(()=>{{const p={SPEC};p.zoom=[140,170];draw(p)}})()"); frames(pg, 3)
             assert pg.evaluate(f"{SPEC}.iso") is None, "zoom changed: the simulation is off"
             assert pg.evaluate("QADD.some(a=>a.n==='[M]-')")
         step("isotope simulation switches off when the zoom changes; [M]- exists", iso)
         def map_views():
-            pg.click("#np-map"); pg.wait_for_timeout(1500)
+            pg.click("#np-map"); attendi(pg, "document.querySelectorAll('[data-o=view]').length > 0"); ready(pg)
             v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["3d"], v
         step("map: only 2D and 3D (no Mirino, no Ridge)", map_views)
         def grips():
             pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()")
-            pg.click("#np-spec"); pg.wait_for_timeout(1200)
+            pg.click("#np-spec"); attendi(pg, "E.panels.filter(q=>q.full).length >= 2"); ready(pg)
             ps = pg.evaluate("E.panels.filter(q=>q.full).map(q=>q.id)"); assert len(ps) >= 2, ps
             for w in (1100, 1440, 1920):
                 for fold in (False, True):
-                    pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()" if not fold else "BARRA.close(false)"); pg.wait_for_timeout(500)
+                    pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()" if not fold else "BARRA.close(false)"); frames(pg, 5)
                     ov = pg.evaluate("[document.documentElement.scrollWidth - document.documentElement.clientWidth, E.panels.filter(q=>!q.el.classList.contains('max')).map(q=>q.x+q.w-document.getElementById('dpanels').clientWidth).reduce((m,v)=>Math.max(m,v),-9)]")
                     assert ov[0] <= 1 and ov[1] <= 2, (w, fold, ov)               # no horizontal scroll, no panel wider than the column
-            pg.set_viewport_size({"width": 1280, "height": 1000}); pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()"); pg.wait_for_timeout(400)
+            pg.set_viewport_size({"width": 1280, "height": 1000}); pg.evaluate("(()=>{BARRA.setTab('file',{noFocus:true})})()"); frames(pg, 5)
             assert pg.evaluate("getComputedStyle(E.panels[0].el).resize") == "none"
             assert pg.locator(".pnl .pgrip.t").count() >= 2 and pg.locator(".pnl .pgrip.b").count() >= 2
         step("panels: grips on the top and bottom edge, never wider than the column at 1100, 1440 and 1920 px (sidebar open and closed)", grips)
@@ -103,13 +103,13 @@ try:
             ids = pg.evaluate("E.panels.filter(q=>q.full&&q.el.offsetParent).sort((a,b)=>a.y-b.y).map(q=>q.id)")
             i = ids[1]; h = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", i); hp = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", ids[0])
             h0, p0 = h(), hp()
-            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.scrollIntoView({block:'center'})", i); pg.wait_for_timeout(300)
+            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.scrollIntoView({block:'center'})", i); frames(pg, 3)
             bb = pg.evaluate("id=>{const r=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}", i)
-            pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
+            pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === {h0 + 60}")
             assert h() == h0 + 60 and hp() == p0 - 60, (h0, h(), p0, hp())     # splitter: the panel above gives what this one gains
-            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); pg.wait_for_timeout(400)
+            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 300")
             assert h() == 300, h()                                              # double click = default height
-            pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); pg.wait_for_timeout(300)
+            pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 320")
             assert h() == 320, h()
         step("panels: the top grip moves the boundary with the panel above, double click = default height, arrows on the focused grip", drag_top)
     r.close()

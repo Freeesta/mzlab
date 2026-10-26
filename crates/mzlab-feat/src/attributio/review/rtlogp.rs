@@ -206,7 +206,7 @@ pub struct LogPValues {
 impl LogPValues {
     /// Crippen logP and descriptors from our own tables (`mzlab-mol`) for the heaviest component of a SMILES; `None` when it does not read or an element has no
     /// weight. No `xlogp3`: that value only comes from the sources of the campaign.
-    #[cfg(feature = "record")]
+    #[cfg(any(feature = "record", feature = "crippen"))]
     pub fn from_smiles(smiles: &str) -> Option<LogPValues> {
         let d = smiles
             .split('.')

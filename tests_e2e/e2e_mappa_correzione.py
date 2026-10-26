@@ -19,18 +19,18 @@ try:
         ctx.add_init_script("try{localStorage.setItem('mzlab.mappa', JSON.stringify({bg:true}));localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1')}catch(_){}")
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "typeof E !== 'undefined'")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 2")
         pg.click("#opbtn"); ready(pg)
-        pg.click("#np-map"); ready(pg); pg.wait_for_timeout(800)
-        pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
+        pg.click("#np-map"); ready(pg); attendi(pg, M + "._a")
+        pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); frames(pg, 3)
         items = lambda t: pg.evaluate("(t)=>{const p=E.panels.find(q=>q.type===t); return [...p.el.querySelectorAll('.corrm .corri')].map(b=>[b.dataset.c, b.getAttribute('aria-label')||b.querySelector('b').textContent, (b.querySelector('.sm')||b).title||b.querySelector('.sm').textContent])}", t)
         def legacy():
             assert pg.evaluate(M + ".corr") == "auto", "the old switch PREF.bg becomes «Automatic background» of the panel"
             assert pg.evaluate("JSON.stringify(" + M + "._mz && 0)") is not None
-            pg.evaluate("(()=>{const f=E.files; addPanel('map',{k:f[1].k, ref:f[0].k})})()"); ready(pg); pg.wait_for_timeout(600)
+            pg.evaluate("(()=>{const f=E.files; addPanel('map',{k:f[1].k, ref:f[0].k})})()"); ready(pg); attendi(pg, "!!E.panels.filter(q=>q.type==='map').pop()._a")
             assert pg.evaluate("E.panels.filter(q=>q.type==='map').pop().corr") == "file", "an old panel with p.ref becomes «Subtract file»"
-            pg.evaluate("E.panels.filter(q=>q.type==='map').pop().el.querySelector('.x').click()"); pg.wait_for_timeout(300)
+            pg.evaluate("E.panels.filter(q=>q.type==='map').pop().el.querySelector('.x').click()"); frames(pg, 3)
         step("old preferences are converted: PREF.bg → automatic background, p.ref → subtract file", legacy)
         def same_items():
             nm = {t: items(t) for t in ("chrom", "spec", "map")}
@@ -42,7 +42,7 @@ try:
             assert [x[1] for x in nm["map"] if x[1].startswith("Subtract file")] == ["Subtract file: FullScan_t30"], nm["map"]           # not the file itself
         step("same items in the three panels; the spectrum has no automatic background", same_items)
         def header():
-            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
+            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); frames(pg, 3)
             h = pg.evaluate("(()=>{const q=" + M + ".el, hd=q.querySelector('.hd'); return [hd.getBoundingClientRect().height, hd.scrollWidth - hd.clientWidth, q.querySelector('.leg .mzhelp') ? 1 : 0, q.querySelector('.leg').textContent]})()")
             assert h[0] < 60 and h[1] <= 1 and h[2] == 0, h
             assert "double click" not in h[3] and "Shift+right click" not in h[3], h[3]
@@ -52,21 +52,21 @@ try:
         def numbers():
             f = pg.evaluate("[" + M + "._a.f.k, " + M + "._a.f.lv]")
             q = f"k={f[0]}&level={f[1]}"
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); pg.wait_for_timeout(1500)
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=snip]"); attendi(pg, M + ".corr === 'auto' && !!" + M + "._img && " + M + "._img.key.includes('bg=1')"); ready(pg)
             a = pg.evaluate("(()=>{const a=" + M + "._a; let s=0; for (const v of a.mat ? a.mat.v : []) s+=v; return s})()")
             ref = pg.evaluate(API, q + "&bg=1"); raw = pg.evaluate(API, q)
             assert pg.evaluate(M + ".corr") == "auto" and abs(ref[0] - raw[0]) > 1 and ref[0] < raw[0], (ref, raw)
             assert pg.evaluate("JSON.stringify(Object.keys(" + M + ")) && " + M + "._img.key.includes('bg=1')")
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c^=f]"); pg.wait_for_timeout(1800)
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c^=f]"); attendi(pg, M + ".corr === 'file' && !!" + M + "._a.ref"); ready(pg)
             assert pg.evaluate(M + ".corr") == "file" and pg.evaluate("!!" + M + "._a.ref")
             leg = pg.evaluate(M + ".leg.textContent"); assert "▲" in leg and "SUB" not in leg
             d = pg.evaluate("(async()=>{const p=" + M + "; const j=await MAPPA.diffMap(p._a.f.k, p._a.ref.k, p._a.f.lv, 'abs'); let s=0; for (const v of j) s+=v; return [s, j.length]})()")
             api = pg.evaluate(API, q + f"&ref={pg.evaluate(M + '.ref')}&norm=abs&rttol=0.1"); assert abs(d[0] - api[0]) < 1e-3 * max(1, abs(api[0])) and d[1] == api[1], (d, api)
         step("automatic background and subtract file: the same numbers as the API requests of before", numbers)
         def tract():
-            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=tract]"); pg.wait_for_timeout(400)
+            pg.click(".pnl.map [data-o=corr]"); pg.click(".pnl.map .corrm [data-c=tract]"); attendi(pg, M + "._pickBg === true")
             assert pg.evaluate(M + "._pickBg") is True and pg.evaluate(M + ".corr") == "tract", "no stretch yet: asks for one"
-            pg.evaluate("(()=>{const q=" + M + ", a=q._a; q.sel=[a.x0+(a.x1-a.x0)*.05, a.x0+(a.x1-a.x0)*.15]; draw(q)})()"); pg.wait_for_timeout(1500)
+            pg.evaluate("(()=>{const q=" + M + ", a=q._a; q.sel=[a.x0+(a.x1-a.x0)*.05, a.x0+(a.x1-a.x0)*.15]; draw(q)})()"); attendi(pg, M + "._img && " + M + "._img.key.includes('bgrt0=')"); ready(pg)
             bgr = pg.evaluate(M + ".bgr"); assert bgr and bgr[1] > bgr[0] and pg.evaluate(M + "._pickBg") is False and pg.evaluate(M + ".sel") is None
             assert pg.evaluate(M + "._img.key.includes('bgrt0=')"), "the request carries the stretch"
             f = pg.evaluate("[" + M + "._a.f.k, " + M + "._a.f.lv]")
@@ -75,15 +75,15 @@ try:
             chip = pg.inner_text(".pnl.map .cpar"); assert "stretch" in chip.lower() or "tract" in chip.lower() or True
         step("background of a stretch: Alt + drag a stretch (here simulated), mean over it is taken off", tract)
         def persist():
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(500)
+            pg.evaluate("uiSave(true)"); attendi(pg, "JSON.stringify(NB.ui.panels.filter(q=>q.type==='map').map(q=>[q.corr,q.bgr])).includes('\"tract\"')")
             sv = pg.evaluate("JSON.stringify(NB.ui.panels.filter(q=>q.type==='map').map(q=>[q.corr,q.bgr]))"); assert '"tract"' in sv, sv
         step("the choice is saved with the session", persist)
         def spectrum_menu():
-            pg.evaluate("E.panels.find(q=>q.type==='spec').el.scrollIntoView({block:'center'})"); pg.wait_for_timeout(300)
+            pg.evaluate("E.panels.find(q=>q.type==='spec').el.scrollIntoView({block:'center'})"); frames(pg, 3)
             pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'); p.el.querySelector('[data-o=corr]').click()})()")
-            pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'); p.el.querySelector('.corrm [data-c=tract]').click()})()"); pg.wait_for_timeout(400)
+            pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'); p.el.querySelector('.corrm [data-c=tract]').click()})()"); attendi(pg, "E.panels.find(q=>q.type==='spec').bg === 'w'")
             assert pg.evaluate("E.panels.find(q=>q.type==='spec').bg") == "w" and pg.evaluate("!!E.panels.find(q=>q.type==='spec').el.querySelector('[data-o=bw0]')"), "the window of time appears"
-            pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'); p.el.querySelector('[data-o=corr]').click(); p.el.querySelector('.corrm [data-c=\"\"]').click()})()"); pg.wait_for_timeout(300)
+            pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='spec'); p.el.querySelector('[data-o=corr]').click(); p.el.querySelector('.corrm [data-c=\"\"]').click()})()"); attendi(pg, "['', 'x'].includes(E.panels.find(q=>q.type==='spec').bg)")
             assert pg.evaluate("E.panels.find(q=>q.type==='spec').bg") in ("", "x")
         step("spectrum: window of time and none work from the same menu", spectrum_menu)
         b.close()
