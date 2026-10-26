@@ -1006,9 +1006,9 @@ window.MAPPA = (() => {
 (() => {
   const H0 = 300, HMIN = 190, h0 = p => p.type === "map" ? 360 : H0;
   const css = document.createElement("style");
-  css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:10px;z-index:5;cursor:ns-resize;touch-action:none}" +
-    ".pnl .pgrip.t{top:-3px}.pnl .pgrip.b{bottom:-3px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:3px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
-    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip{height:24px}.pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{opacity:.8;top:10px}}" +
+  css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:24px;z-index:5;cursor:ns-resize;touch-action:none}" +
+    ".pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:10px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
+    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip::after{opacity:.8}}" +
     "@media (prefers-reduced-motion:reduce){.pnl .pgrip::after{transition:none}}";
   document.head.appendChild(css);
   const host = () => document.getElementById("dpanels");
