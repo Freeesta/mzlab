@@ -89,6 +89,34 @@ fn a_product_ion_spectrum_with_a_plain_precursor_validates() {
     valida(&w.finish().unwrap());
 }
 
+#[test]
+fn an_srm_chromatogram_validates() {
+    use crate::mzml::{ChromKind, Chromatogram};
+    let h = Header {
+        run: "x".into(),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default()).unwrap();
+    w.open_spectra(0).unwrap();
+    w.close_spectra().unwrap();
+    w.open_chromatograms(2).unwrap();
+    for (i, id) in ["SRM SIC Q1=364.5 Q3=176 sample=1 period=1 experiment=1 transition=0", "SRM SIC Q1=364.5 Q3=159 sample=1 period=1 experiment=1 transition=1 ce=25 dwell=50 name=tpB"].iter().enumerate() {
+        let c = Chromatogram {
+            index: i,
+            id: (*id).into(),
+            kind: ChromKind::Srm,
+            q1: Some(364.5),
+            q3: Some(176.0 - 17.0 * i as f64),
+            unit: "number of detector counts".into(),
+            time: vec![0.5, 1.5],
+            intensity: vec![30.0, 31.0],
+        };
+        w.chromatogram(&c).unwrap();
+    }
+    w.close_chromatograms().unwrap();
+    valida(&w.finish().unwrap());
+}
+
 /// `idx` against the indexed schema; a machine without `xmllint`, `curl` or network says so and passes.
 pub(super) fn valida(idx: &[u8]) {
     let dir = match schemas() {
