@@ -4,8 +4,7 @@
 //! silently. Evidence classes: A = MS2 + matching SIRIUS formula + coherent RT, B = MS2 + one of the two, C = MS2 only, D = no MS2 (not reportable), X = the
 //! feature is already annotated at Levels 1-3 as another compound. An [M+NH4]+ or [M+Na]+ hit with no [M+H]+ hit of the same suspect within 0.15 min is an
 //! isolated adduct and goes one class down. The inputs are plain rows (suspects, features, evidence): where they come from is the caller's business.
-//! The Crippen logP of a suspect with a SMILES but no XLogP is `LogPValues::from_smiles` (features `record` or `crippen`); a build without them leaves such a
-//! suspect with no logP and its RT «n.a.».
+//! A suspect with a SMILES but no XLogP gets `LogPValues::from_smiles` (features `record`/`crippen`); without them its logP and RT stay «n.a.».
 
 use super::b1::{in_window, StructRow};
 use super::catalog;
@@ -122,13 +121,13 @@ fn own_crippen(smiles: &str) -> (Option<f64>, String) {
     use crate::attributio::review::rtlogp::LogPValues;
     match LogPValues::from_smiles(smiles).and_then(|v| v.crippen) {
         Some(v) => (Some(v), "Crippen (own)".into()),
-        None => (None, String::new()),
+        None => Default::default(),
     }
 }
 
 #[cfg(not(any(feature = "record", feature = "crippen")))]
 fn own_crippen(_: &str) -> (Option<f64>, String) {
-    (None, String::new())
+    Default::default()
 }
 
 fn median(v: &[f64]) -> f64 {
