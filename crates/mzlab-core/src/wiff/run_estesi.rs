@@ -17,6 +17,15 @@ impl Wiff {
                 .is_some_and(|c| c != super::super::estesi::CODE_MRM)
     }
 
+    /// Appends the BPC of each `(experiment, times, intensities)` after the transitions, so that the list a reader that decodes later (`LettoreWiff`) completes is in
+    /// the same order.
+    fn push_bpc(&self, chroms: &mut Vec<Chromatogram>, bpcs: Vec<(usize, Vec<f64>, Vec<f64>)>, many: bool) {
+        for (e, time, intensity) in bpcs {
+            let unit = "number of detector counts".into();
+            chroms.push(Chromatogram { index: chroms.len(), id: self.bpc_id(e, many), kind: ChromKind::Bpc, q1: None, q3: None, unit, time, intensity });
+        }
+    }
+
     /// The id of the BPC of experiment `e` (0-based): `BPC`, or with the sample and experiment when several experiments have a TIC.
     pub(crate) fn bpc_id(&self, e: usize, many: bool) -> String {
         match many {
@@ -153,19 +162,7 @@ impl Wiff {
                 });
             }
         }
-        // after the transitions, so that the list a reader that decodes later (`LettoreWiff`) completes is in the same order
-        for (e, time, intensity) in bpcs {
-            chroms.push(Chromatogram {
-                index: chroms.len(),
-                id: self.bpc_id(e, many),
-                kind: ChromKind::Bpc,
-                q1: None,
-                q3: None,
-                unit: unit.into(),
-                time,
-                intensity,
-            });
-        }
+        self.push_bpc(&mut chroms, bpcs, many);
         chroms
     }
 }
