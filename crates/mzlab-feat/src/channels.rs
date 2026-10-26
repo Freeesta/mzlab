@@ -40,6 +40,8 @@ pub(crate) fn by_scan(pos: &[u32]) -> Result<Vec<u32>> {
 }
 
 /// The channels that can make a run: (first peak, end, next free slot of its block of the order) and the channel of every peak.
+// (a, last, tot, mzw, n, mx, apexI, apex): the segment being grown.
+type OpenSeg = (u32, u32, f64, f64, u32, f64, f64, u32);
 type Chans = (Vec<(u32, u32, u32)>, Vec<u32>);
 
 fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result<Chans> {
@@ -99,7 +101,7 @@ pub(crate) fn segments(
         let order = &order[s..e];
         let mut k = 0;
         // current segment
-        let mut cur: Option<(u32, u32, f64, f64, u32, f64, f64, u32)> = None; // (a, last, tot, mzw, n, mx, apexI, apex)
+        let mut cur: Option<OpenSeg> = None; // (a, last, tot, mzw, n, mx, apexI, apex)
         while k < order.len() {
             let ps = pos[order[k] as usize];
             let (mut ii, mut mw) = (0.0f64, 0.0f64);
@@ -205,8 +207,7 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
         // The segments of a channel come in scan order and apart (both `a` and `z` ascend), so those within reach of `si` are a run of them.
         let reach = si.a as i64 - max_gap;
         let from = lo + segs[lo..hi].partition_point(|s| (s.z as i64) < reach);
-        for j in from..hi {
-            let sj = &segs[j];
+        for (j, sj) in segs.iter().enumerate().take(hi).skip(from) {
             if sj.a as i64 > si.z as i64 + max_gap {
                 break;
             }

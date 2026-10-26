@@ -241,6 +241,7 @@ fn meta_json(
 }
 
 /// Writes a whole container to `sink`, in order: header, meta, the columns and the `evid` section (never held as one buffer).
+#[allow(clippy::too_many_arguments)] // one call per container kind, all parts distinct
 fn write_container<W: WriteAt>(
     sink: &mut W,
     kind: &str,

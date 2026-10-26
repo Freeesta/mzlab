@@ -111,6 +111,7 @@ pub struct Evidence {
 
 impl Evidence {
     /// A proof graded by the table: the sign is "for" when it earns points, "against" when `opposed`, else neutral. An opposing proof earns nothing.
+    #[allow(clippy::too_many_arguments)] // one constructor shared by every proof
     pub fn graded(
         table: &PointsTable,
         kind: Kind,

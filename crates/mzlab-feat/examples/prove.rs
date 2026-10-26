@@ -430,7 +430,7 @@ fn main() {
     let truth = truth_path.as_deref().map(load_truth);
     let lib = lib_path.as_deref().map(load_library);
     let (aligned, ids, bytes) = build(&files, &r, &formula, truth.as_ref(), lib.as_ref());
-    assert_eq!(read_evid(&bytes).expect("evid").is_empty(), false);
+    assert!(!read_evid(&bytes).expect("evid").is_empty());
     println!("{} bytes of .mzfeat", bytes.len());
     if let Some(t) = &truth {
         report(&aligned, &ids, t);
