@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::mzml::ChromKind;
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
@@ -242,4 +243,39 @@ fn wiff_campioni_nomi_data() {
     for c in campioni {
         assert_eq!(c.dimensione, None);
     }
+}
+
+/// A full scan experiment gives a TIC chromatogram, and the TIC of each spectrum in the mzML is the one of the header of its block when the file has one
+/// (here 1.5e6, not the sum of the profile), the sum of the profile where it has none.
+#[test]
+fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let want = &want["totale"];
+    let (tic, time) = (nums(&want["tic"]), nums(&want["time"]));
+    let (w, mut scan) = open(&dir, "totale").unwrap();
+    let run = w.run(&mut scan).unwrap();
+    assert_eq!(run.chromatograms.len(), 1);
+    let c = &run.chromatograms[0];
+    assert!((c.id.as_str(), c.kind) == ("TIC", ChromKind::Tic));
+    assert!(c.time.iter().zip(&time).all(|(a, b)| close(*a, *b)));
+    // the chromatogram is the TIC of the index as the file wrote it, a missing one (0.0) included
+    assert_eq!(c.intensity, vec![tic[0], 0.0, tic[2]]);
+    let mut l = lettori::apri(set(&dir, "totale"), &Limiti::sito()).unwrap();
+    let xml = String::from_utf8(
+        mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+    )
+    .unwrap();
+    let got: Vec<f64> = xml
+        .split("name=\"total ion current\" value=\"")
+        .skip(1)
+        .map(|t| t.split('"').next().unwrap().parse().unwrap())
+        .collect();
+    assert_eq!(got.len(), 3);
+    assert!(
+        got.iter().zip(&tic).all(|(a, b)| close(*a, *b)),
+        "{got:?} {tic:?}"
+    );
+    assert!(xml.contains("<chromatogram index=\"0\" id=\"TIC\""));
 }

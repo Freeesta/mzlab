@@ -1,4 +1,4 @@
-//! The spectra and chromatograms of a sample for the readers module (feature `estesi`): as `run.rs`, and the MRM blocks may be scheduled (sMRM: a transition
+//! The spectra and chromatograms of a sample (a TIC for each full scan or MRM experiment) for the readers module (feature `estesi`): as `run.rs`, and the MRM blocks may be scheduled (sMRM: a transition
 //! is a point of its chromatogram only in the scans where it was acquired) and the experiments of a sample may be several (one TIC each).
 
 use super::super::{scan, Record, Wiff};
@@ -17,6 +17,11 @@ impl Wiff {
                 .is_some_and(|c| c != super::super::estesi::CODE_MRM)
     }
 
+    /// True when experiment `e` is a full scan: its spectra give a TIC chromatogram (the other scan experiments give none).
+    fn is_full_scan(&self, e: usize) -> bool {
+        self.experiments.get(e).and_then(|x| x.code) == Some(super::super::estesi::CODE_FULL)
+    }
+
     /// Gives the spectra one at a time to `on` (profile; the empty scans are left out) and returns the chromatograms of the MRM blocks.
     pub fn visit<R: ReadAt>(
         &self,
@@ -29,6 +34,9 @@ impl Wiff {
             if let Some(p) = scan::read_scan(scan, self.scan_len, r.at, r.end)? {
                 if p.mz.is_empty() {
                     continue;
+                }
+                if self.is_full_scan(r.experiment) {
+                    blocks.add_tic(r);
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
@@ -49,10 +57,13 @@ impl Wiff {
     pub fn chromatograms<R: ReadAt>(&self, scan: &mut R) -> Result<Vec<Chromatogram>> {
         let mut blocks = Blocks::new(self.experiments.len().max(1));
         for r in &self.records {
-            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some()
-                || self.is_empty_row(r)
-                || self.scan_experiment(r.experiment)
-            {
+            if let Some(count) = scan::point_count(scan, self.scan_len, r.at, r.end)? {
+                if count > 0 && self.is_full_scan(r.experiment) {
+                    blocks.add_tic(r);
+                }
+                continue;
+            }
+            if self.is_empty_row(r) || self.scan_experiment(r.experiment) {
                 continue;
             }
             if let Some(c) = scan::read_mrm_cols(scan, self.scan_len, r.at, r.size as usize)? {
@@ -151,6 +162,14 @@ impl Blocks {
     fn new(experiments: usize) -> Self {
         Blocks {
             experiments: (0..experiments).map(|_| Experiment::default()).collect(),
+        }
+    }
+
+    /// A point of the TIC of a full scan experiment: the TIC the index holds for the block.
+    fn add_tic(&mut self, r: &Record) {
+        if let Some(e) = self.experiments.get_mut(r.experiment) {
+            e.time.push(r.time_min);
+            e.tic.push(r.tic);
         }
     }
 
