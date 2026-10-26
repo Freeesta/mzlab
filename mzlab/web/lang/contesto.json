@@ -636,6 +636,7 @@
   "map.sc.gamma": "Scala dei colori «gamma» nella legenda della mappa; {g} = esponente scelto (numero).",
   "settings.cen.ask": "Conferma prima di creare le copie a un punto per picco; {n} = numero di file, {size} = spazio massimo, già formattato (es. 120 MB).",
   "settings.cen.run": "Avanzamento della riduzione: {n} = file in corso, {m} = file in tutto, {name} = nome del file.",
+  "export.done": "Esito dell'esportazione dei dati: {name} = nome del file scaricato, {n} = numero di file nell'archivio (manifesto compreso).",
   "settings.cen.done": "Fine della riduzione; {n} = copie create.",
   "settings.cen.stopped": "Riduzione annullata dall'utente; {n} = copie già create.",
   "settings.cen.fail": "Errore su un file della riduzione; {name} = nome del file.",
