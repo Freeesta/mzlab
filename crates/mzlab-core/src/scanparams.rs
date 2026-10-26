@@ -14,7 +14,12 @@ fn med(mut v: Vec<f64>) -> Option<f64> {
     }
     crate::sortc::by(&mut v, f64::total_cmp);
     let n = v.len();
-    Some(if n % 2 == 1 { v[n / 2] } else { (v[n / 2 - 1] + v[n / 2]) / 2.0 })
+    let at = |i: usize| v.get(i).copied();
+    if n % 2 == 1 {
+        at(n / 2)
+    } else {
+        Some((at(n / 2 - 1)? + at(n / 2)?) / 2.0)
+    }
 }
 
 /// The numbers `acc` takes in the headers of the scans sampled at about 300 (`sample` and `vals` of Python).
@@ -67,7 +72,7 @@ pub(crate) fn write<R: ReadAt, M: ReadAt>(idx: &Index<R>, mzml: &mut M, instrume
         let nce = idx.run.get("nce").and_then(|v| v.bool()).unwrap_or(false);
         let ces = sorted_set(sc2.iter().filter_map(|s| s.collision_energy));
         let iso: Vec<f64> = sorted_set(sc2.iter().filter_map(|s| s.iso).map(|(a, b)| round((b - a) / 2.0, 3))).into_iter().take(4).collect();
-        let lo2 = vals(&sc2[..sc2.len().min(50)], "MS:1000501", mzml)?;
+        let lo2 = vals(sc2.get(..sc2.len().min(50)).unwrap_or_default(), "MS:1000501", mzml)?;
         o.raw("{\"n\":").int(sc2.len() as i64).raw(",\"per_cycle\":").num(round(sc2.len() as f64 / sc1.len() as f64, 2)).raw(",\"act\":[");
         for (i, a) in acts.iter().enumerate() {
             o.raw(if i > 0 { "," } else { "" }).str(a);

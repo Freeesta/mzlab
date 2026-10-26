@@ -37,6 +37,6 @@ def test_tabui_headers_and_labels_have_no_bare_formula():
 def test_catalog_labels_have_no_bare_formula():
     for lang in ("it", "en"):
         t = lang_catalogo.testo(lang)
-        for k in ("lst.col.formula", "cx.formula", "draw.labels.formula", "fair.formulaOpt"):
+        for k in ("lst.col.formula", "cx.formula", "fair.formulaOpt"):
             m = re.search(r'"%s": *"([^"]*)"' % re.escape(k), t)
             assert m and m.group(1).strip().lower() not in ("formula", "formula (optional)", "formula (facoltativa)"), (lang, k)

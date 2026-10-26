@@ -35,51 +35,51 @@ try:
         step("first view of Data: no Italian", first_view)
         def sidebar():
             for t in ("calc", "losses", "adducts", "lists"):
-                pg.click(f"#stbar [data-cmd={t}]"); pg.wait_for_timeout(500)
+                pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
-            pg.click("#stbar [data-cmd=file]"); pg.wait_for_timeout(300); it = italian(pg); assert not it, ("file", it)
-            pg.click("#sb-x"); pg.wait_for_timeout(300)
+            pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
+            pg.click("#sb-x"); frames(pg, 3)
         step("sidebar tabs: calculator, losses, adducts, lists", sidebar)
         def periodic():
-            pg.click("#np-pt"); pg.wait_for_timeout(600)
+            pg.click("#np-pt"); attendi(pg, "/Hydrogen|Carbon/.test(document.querySelector('#refdlg').innerText)")
             assert "Hydrogen" in pg.inner_text("#refdlg") or "Carbon" in pg.inner_text("#refdlg"), pg.inner_text("#refdlg")[:200]
             it = italian(pg); assert not it, it
             pg.click("#refx")
         step("periodic table dialog", periodic)
         def xic():
-            pg.click("#np-xic"); pg.wait_for_timeout(500); assert pg.is_visible("#xicdlg")
+            pg.click("#np-xic"); pg.wait_for_selector("#xicdlg", state="visible"); assert pg.is_visible("#xicdlg")
             it = italian(pg); assert not it, it
             assert "Extract ions (XIC)" in pg.inner_text("#xicdlg")
             pg.click("#xic-no")
         step("XIC window", xic)
         def menus():
-            pg.click("#np-spec"); pg.wait_for_timeout(500)
-            pg.click("#np-map"); pg.wait_for_timeout(800)
+            pg.click("#np-spec"); frames(pg, 3)
+            pg.click("#np-map"); attendi(pg, "E.panels.some(p => p.type === 'map')"); frames(pg, 3)
             it = italian(pg); assert not it, it
             for i in range(pg.locator(".pnl canvas").count()):
                 box = pg.locator(".pnl canvas").nth(i).bounding_box()
                 if not box: continue
                 for fx in (0.5, 0.3):
-                    pg.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] / 2, button="right"); pg.wait_for_timeout(300)
+                    pg.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] / 2, button="right"); frames(pg, 3)
                     it = italian(pg); assert not it, (i, fx, it)
                     pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
         step("panels and right-click menu", menus)
         def gear_method():
-            pg.click("#np-set"); pg.wait_for_timeout(200); it = italian(pg); assert not it, it; pg.click("#np-set")
-            pg.click("#np-method"); pg.wait_for_timeout(800); it = italian(pg); assert not it, it
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); it = italian(pg); assert not it, it; pg.click("#np-set")
+            pg.click("#np-method"); attendi(pg, "!!document.querySelector('dialog[open]')"); frames(pg, 2); it = italian(pg); assert not it, it
         step("gear and method window", gear_method)
         def xic_integrate():
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5)
-            pg.click("#np-xic"); pg.wait_for_timeout(300)
-            pg.fill("#xic-rows input >> nth=0", "250"); pg.click("#xic-go"); ready(pg); pg.wait_for_timeout(800)
+            pg.click("#np-xic"); pg.wait_for_selector("#xic-rows input", state="visible")
+            pg.fill("#xic-rows input >> nth=0", "250"); pg.click("#xic-go"); ready(pg); frames(pg, 3)
             it = italian(pg); assert not it, it
             n = pg.locator(".pnl").count(); last = pg.locator(".pnl").nth(n - 1)
             box = last.locator("canvas").first.bounding_box()
-            pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5, button="right"); pg.wait_for_timeout(300)
+            pg.mouse.click(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5, button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes('Integrate')")
             it = italian(pg); assert not it, it
             items = pg.evaluate("[...document.querySelectorAll('#ctx button, #ctx div, #ctx a')].map(e => e.textContent.trim()).filter(Boolean)")
             assert any("Integrate" in x for x in items), items
-            pg.locator("#ctx").get_by_text("Integrate the peak").first.click(); pg.wait_for_timeout(800)
+            pg.locator("#ctx").get_by_text("Integrate the peak").first.click(); frames(pg, 3)
             it = italian(pg); assert not it, it
         step("XIC extraction and integration menu", xic_integrate)
         b.close()

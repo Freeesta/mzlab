@@ -6,6 +6,8 @@ const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 const MAXC = 12, REL = 0.05, SNR = 5, GAP = 4;           // candidates asked of the engine, relative height, S/N, pixels between two labels
 /** @type {Map<string, { list: { apex: number, rt: number, height: number, snr: number, q: { kind: string, v: string } | null }[] } | "wait">} */
 const cache = new Map();
+/** @type {Map<string, Promise<void>>} the labels being worked out, and those a drawing is waiting for (it draws them itself) */
+const pending = new Map(), claimed = new Set();
 
 /** Labels are on by default for one visible trace; a student's choice (p.etpk) wins. @param {any} p @param {number} n visible traces */
 const on = (p, n) => !isAnalog(p.kind) && (typeof p.etpk === "boolean" ? p.etpk : n <= 1);
@@ -41,16 +43,31 @@ function labelsOf(p, s) {
   if (c === "wait") return null;
   if (cache.size > 200) cache.clear();
   cache.set(key, "wait");
-  (async () => {
+  pending.set(key, (async () => {
     let list = [];
     try {
       const found = (window.QUALITA ? await QUALITA.labels(s.x, s.y, MAXC, REL, SNR, true) : null) || [];
       list = await Promise.all(found.map(async l => ({ ...l, rt: s.x[l.apex], q: await quantity(p, s, s.x[l.apex]).catch(() => null) })));
     } catch (e) { list = []; }
-    cache.set(key, { list });
-    if (window.drawSoon) drawSoon(p);
-  })();
+    cache.set(key, { list }); pending.delete(key);
+    if (window.drawSoon && !claimed.has(key)) drawSoon(p);
+  })());
   return null;
+}
+
+/**
+ * Waits up to `ms` for the labels of the visible traces before the first drawing of a panel, so it is drawn once with them instead of again a frame after the
+ * engine answers; a slower engine does not hold the drawing (the panel is drawn again when they are ready, as before). @param {any} p @param {any[]} sr @param {number} [ms]
+ */
+async function ready(p, sr, ms = 12) {
+  if (!on(p, sr.length) || p.mode === "cas") return;
+  const keys = [];
+  for (const s of sr.length > 1 ? [sr[0]] : sr) { if (labelsOf(p, s) === null) { const k = keyOf(p, s); if (pending.has(k)) keys.push(k); } }
+  if (!keys.length) return;
+  keys.forEach(k => claimed.add(k));
+  let timer = 0;
+  try { await Promise.race([Promise.all(keys.map(k => pending.get(k))), new Promise(r => { timer = window.setTimeout(r, ms); })]); }
+  finally { clearTimeout(timer); keys.forEach(k => claimed.delete(k)); }
 }
 
 /** Text of the label and of its tooltip. @param {any} l */
@@ -146,4 +163,4 @@ if (typeof AZIONI !== "undefined") {
   AZIONI.registra({ id: "chrom.etpk", gruppo: "view", viste: ["chrom", "xic", "mrm", "spec"], visibile: (/** @type {any} */ c) => c.vista !== "spec" ? !isAnalog(c.p.kind) : !!c.p.uv, attiva: (/** @type {any} */ c) => on(c.p, c.p._a && c.p._a.sr ? c.p._a.sr.length : 1),
     nome: () => T("ctx.chrom.etpk"), aria: () => T("ctx.chrom.etpk.aria"), esegui: (/** @type {any} */ c) => toggle(c.p) });
 }
-window.ETPK = { on, draw, drawUv, labelsOf, rows, toggle };
+window.ETPK = { on, draw, drawUv, labelsOf, ready, rows, toggle };

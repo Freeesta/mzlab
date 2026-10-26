@@ -38,8 +38,28 @@ try:
             assert same(got, api_trace(pg, SPEC, t["mz"], K)), "the lens differs from api/xic"
             box = pg.evaluate("(()=>{const b=document.querySelector('.pnl .xl:not([hidden])').getBoundingClientRect();return [b.width,b.height]})()")
             assert box[0] >= 160 and box[1] >= 90, box
-            assert pg.evaluate(f"(()=>{{const l=document.querySelector('.pnl .xl').getBoundingClientRect();return l.left>{t['x']}+2||l.right<{t['x']}-2}})()"), "the lens covers the peak under the pointer"
+            assert pg.evaluate(f"(()=>{{const l=document.querySelector('.pnl .xl').getBoundingClientRect();return l.left>{t['x']}+2||l.right<{t['x']}-2||l.bottom<{t['y']}-8}})()"), "the lens covers the peak under the pointer"
         step("LR: hovering a peak shows the lens, same traces as api/xic (Object.is), size, not over the peak", hover_lr)
+        def fixed_place():
+            ps = pk(); rects = []
+            for t in (ps[1], ps[len(ps) - 2], ps[2]):
+                pg.keyboard.press("Escape"); pg.mouse.move(2, 2); frames(pg, 2)
+                pg.mouse.move(t["x"] - 30, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3); pg.wait_for_selector(LENS, timeout=10000); frames(pg, 3)
+                r = pg.evaluate("(()=>{const l=document.querySelector('.pnl .xl:not([hidden])').getBoundingClientRect(),c=XICLENS&&E.panels.find(p=>p.type==='spec'&&p.tab==='full').cv.getBoundingClientRect();return {l:l.left,r:l.right,t:l.top,b:l.bottom,ct:c.top,cl:c.left,cr:c.right}})()")
+                assert abs(r["t"] - r["ct"]) < 6, ("the lens is not at the top edge of the plot", r)
+                assert not (r["l"] - 1 <= t["x"] <= r["r"] + 1 and r["t"] - 1 <= t["y"] <= r["b"] + 1), ("the lens is over the pointer", r, t)
+                assert not (r["l"] - 1 <= t["x"] <= r["r"] + 1 and t["y"] - 8 <= r["b"]), ("the lens is over the peak", r, t)
+                rects.append(round(r["l"] - r["cl"]))
+            lab = pg.evaluate("(()=>{const l=document.querySelector('.pnl .xl .xl-f');return [l.textContent,l.title,document.querySelector('.pnl .xl').getAttribute('aria-label')]})()")
+            assert lab[0] and lab[1] == lab[0] and lab[0] in lab[2], lab
+        step("the lens is in a fixed corner of the plot (the other one when the peak or the pointer is in it), with the file name", fixed_place)
+        def right_click():
+            t = pk()[2]; pg.keyboard.press("Escape"); pg.mouse.move(2, 2); frames(pg, 2)
+            pg.mouse.move(t["x"] - 30, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3); pg.wait_for_selector(LENS, timeout=10000)
+            pg.mouse.click(t["x"], t["y"], button="right"); pg.wait_for_selector("#ctx div", timeout=5000); frames(pg, 2)
+            assert pg.evaluate("document.querySelectorAll('.pnl .xl:not([hidden])').length") == 0, "the lens stays under the context menu"
+            pg.keyboard.press("Escape"); pg.mouse.move(2, 2); frames(pg, 2)
+        step("a right click closes the lens: it never overlaps the context menu", right_click)
         def sweep():
             ps = pk(); pg.keyboard.press("Escape"); pg.mouse.move(2, 2); frames(pg, 3)
             pg.evaluate("window.__xl.max=0;window.__xl.n=0")
@@ -63,9 +83,12 @@ try:
         step("scroll closes the lens", wheel_closes)
         def commit():
             ps = pk(); t = ps[3]; pg.mouse.move(t["x"] - 30, t["y"]); pg.mouse.move(t["x"], t["y"], steps=3); pg.wait_for_function(f"XICLENS.shown({SPEC})==={t['mz']}&&XICLENS.trace({SPEC})", timeout=10000); frames(pg, 2)
-            want = api_trace(pg, SPEC, t["mz"], K)
             b = pg.evaluate("(()=>{const b=document.querySelector('.pnl .xl:not([hidden])').getBoundingClientRect();return [b.left+b.width/2,b.top+b.height/2]})()")
             pg.mouse.move(b[0], b[1], steps=4); frames(pg, 2); assert pg.query_selector(LENS), "the lens stays while the pointer is on it"
+            # the lens is in a corner: the way to it may cross other peaks, the click opens what the lens shows
+            pg.wait_for_function(f"XICLENS.trace({SPEC})", timeout=10000)
+            t = {"mz": pg.evaluate(f"XICLENS.shown({SPEC})")}
+            want = api_trace(pg, SPEC, t["mz"], K)
             pg.mouse.click(b[0], b[1]); ready(pg)
             pg.wait_for_function(f"(()=>{{const p={XP};return p&&p._a&&p._a.sr&&p._a.sr.length}})()", timeout=20000)
             assert not pg.query_selector(LENS)

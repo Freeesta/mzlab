@@ -17,6 +17,17 @@ pub(super) fn num_or_null(v: Option<f64>) -> J {
     J::on(v)
 }
 
+/// Crippen logP and descriptors of the identity's SMILES from our own tables; empty where the build does not carry them or the SMILES does not read.
+#[cfg(any(feature = "record", feature = "crippen"))]
+fn own_descriptors(smiles: Option<&str>) -> LogPValues {
+    smiles.and_then(LogPValues::from_smiles).unwrap_or_default()
+}
+
+#[cfg(not(any(feature = "record", feature = "crippen")))]
+fn own_descriptors(_: Option<&str>) -> LogPValues {
+    LogPValues::default()
+}
+
 /// The retention-time versus logP check of the feature, calibrated on the Level 1 and robust 2a features of its polarity that the sources give a logP for.
 pub(super) fn rt_logp(b: &Bench, f: &Feature) -> Option<(J, Option<bool>)> {
     let s = &b.settings;
@@ -37,7 +48,7 @@ pub(super) fn rt_logp(b: &Bench, f: &Feature) -> Option<(J, Option<bool>)> {
     };
     let values = |g: &Feature| LogPValues {
         xlogp3: g.csi.xlogp.filter(|v| v.is_finite()),
-        ..Default::default()
+        ..own_descriptors(g.smiles.as_deref())
     };
     let pts: Vec<CalPoint> = b
         .features

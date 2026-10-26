@@ -117,6 +117,32 @@ fn an_srm_chromatogram_validates() {
     valida(&w.finish().unwrap());
 }
 
+#[test]
+fn the_tic_of_a_full_scan_validates() {
+    use crate::mzml::{ChromKind, Chromatogram};
+    let h = Header {
+        run: "x".into(),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::indicizzato(Vec::new(), &h, Opzioni::default()).unwrap();
+    w.open_spectra(0).unwrap();
+    w.close_spectra().unwrap();
+    w.open_chromatograms(1).unwrap();
+    let tic = Chromatogram {
+        index: 0,
+        id: "TIC".into(),
+        kind: ChromKind::Tic,
+        q1: None,
+        q3: None,
+        unit: "number of detector counts".into(),
+        time: vec![0.5, 1.5],
+        intensity: vec![1.5e6, 3.0],
+    };
+    w.chromatogram(&tic).unwrap();
+    w.close_chromatograms().unwrap();
+    valida(&w.finish().unwrap());
+}
+
 /// `idx` against the indexed schema; a machine without `xmllint`, `curl` or network says so and passes.
 pub(super) fn valida(idx: &[u8]) {
     let dir = match schemas() {

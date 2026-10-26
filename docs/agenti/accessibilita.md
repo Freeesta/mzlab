@@ -66,6 +66,7 @@ Verifica l'assenza di violazioni su Banco HR, visualizzatore molecolare Disegno,
 ```bash
 python3 tests_e2e/e2e_axe_release.py
 python3 tests_e2e/e2e_a11y_disegno.py
+python3 tests_e2e/e2e_a11y_hr.py
 ```
 
 ### 4. Verifica completa di «Lettura facilitata» e Teoria
