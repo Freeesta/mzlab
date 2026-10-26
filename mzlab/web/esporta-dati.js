@@ -13,12 +13,12 @@ const T = (k, p) => W.I18N.t(k, p);
 const enc = new TextEncoder();
 
 // localStorage keys the export never takes, with the reason written in the manifest
-const SECRET = /token|key|secret|passw/i;
-const RUNTIME = /^(mzlab|qqq)\.(run|avvii|migrato|memProbe|memBudget(\.log)?|memLevel|kprefetch|sessione)$/;
-const DEV = /^(mzlab|qqq)\.(admin|dev\..*)$/;
-const OURS = /^(mzlab|qqq)[.-]/;
+export const SECRET = /token|key|secret|passw/i;
+export const RUNTIME = /^(mzlab|qqq)\.(run|avvii|migrato|memProbe|memBudget(\.log)?|memLevel|kprefetch|sessione)$/;
+export const DEV = /^(mzlab|qqq)\.(admin|dev\..*)$/;
+export const OURS = /^(mzlab|qqq)[.-]/;
 // IndexedDB stores worth keeping; the others are rebuilt (manifest of OPFS) or are file copies
-const IDB_STORES = ["notebook", "kv", "liste_utente", "molecole"];
+export const IDB_STORES = ["notebook", "kv", "liste_utente", "molecole"];
 
 /** @typedef {{ name: string, bytes: Uint8Array, what: string }} Entry */
 /** @typedef {{ item: string, reason: string }} Left */
@@ -125,14 +125,19 @@ export function pack(entries) {
   return out;
 }
 
-/** @param {Uint8Array} packed @returns {Promise<Uint8Array>} */
-const zipIt = packed => new Promise((res, rej) => {
+/** One request to the worker of the ZIP (esporta-dati-worker.js); the buffers in `transfer` are handed over. @param {Record<string, any>} msg @param {ArrayBuffer[]} [transfer] @returns {Promise<any>} */
+export const work = (msg, transfer = []) => new Promise((res, rej) => {
   const w = new Worker(new URL("esporta-dati-worker.js", import.meta.url), { type: "module" });
-  w.onmessage = ev => { w.terminate(); ev.data.error ? rej(new Error(ev.data.error)) : res(new Uint8Array(ev.data.zip)); };
+  w.onmessage = ev => { w.terminate(); ev.data.error ? rej(new Error(ev.data.error)) : res(ev.data); };
   w.onerror = ev => { w.terminate(); rej(new Error(ev.message || "worker")); };
-  const buf = packed.buffer.slice(packed.byteOffset, packed.byteOffset + packed.byteLength);
-  w.postMessage({ id: 1, packed: buf }, [buf]);
+  w.postMessage({ id: 1, ...msg }, transfer);
 });
+
+/** @param {Uint8Array} packed @returns {Promise<Uint8Array>} */
+const zipIt = async packed => {
+  const buf = /** @type {ArrayBuffer} */ (packed.buffer.slice(packed.byteOffset, packed.byteOffset + packed.byteLength));
+  return new Uint8Array((await work({ op: "zip", packed: buf }, [buf])).zip);
+};
 
 /** The export, end to end: collect, pack, download. Returns the archive name and the number of entries. */
 export async function run() {
