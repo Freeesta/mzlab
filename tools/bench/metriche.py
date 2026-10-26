@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from valida.abbina import abbina
+from valida.abbina import abbina, abbina_larghi, finestra_larghi
 
 from . import PPM, RT_TOL
 from .adatta import matrici
 from .verita import RUOLI_FEATURE, RUOLI_SPIEGANO, con_ruolo, esche, feature_vere, prodotti
+from .verita import larghi as composti_larghi
 
 LIVELLI_ALTI = ("1", "2a", "2b", "3")             # better than level 4
 SOGLIA_RANGO = 0.9                               # share of the products to reach for "candidates to scan"
@@ -158,3 +159,58 @@ def secondarie(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT
 def tutte(verita: list[dict], t: dict, gruppi: dict | None = None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     return {"P1": p1(verita, t, ppm, rt_tol), "P2": p2(verita, t, gruppi, ppm, rt_tol), "P3": p3(verita, t, ppm, rt_tol), "P4": p4(verita, t, ppm, rt_tol),
             "P5": p5(verita, t, ppm, rt_tol), "secondarie": secondarie(verita, t, ppm, rt_tol)}
+
+
+# ---------------------------------------------------------------------------------------------------------------- smeared peaks (broad bands)
+def _intervalli(t: dict) -> tuple[np.ndarray, np.ndarray]:
+    """[rt_min, rt_max] of the rows (NaN where the tool gives none)."""
+    f = lambda k: np.array([np.nan if r.get(k) is None else r[k] for r in t["righe"]], float)
+    return f("rt_min"), f("rt_max")
+
+
+def _vero(comp: list[dict]) -> tuple:
+    """Arrays of the true compounds read by `abbina_larghi` / `finestra_larghi`: m/z, RT, FWHM (min), broad?, rt_min, rt_max."""
+    g = lambda c, k: np.nan if c.get(k) is None else c[k]
+    return (np.array([c["mz"] for c in comp], float), np.array([c["rt"] for c in comp], float), np.array([g(c, "fwhm_s") for c in comp], float) / 60.0,
+            np.array([c["ruolo"] == "broad" for c in comp], bool), np.array([g(c, "rt_min") for c in comp], float), np.array([g(c, "rt_max") for c in comp], float))
+
+
+def larghi(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+    """Endpoints of the smeared-peak lot, on the broad bands and the narrow peaks of the truth (`ruolo` broad / narrow) matched TOGETHER one-to-one to the rows
+    (a row cannot serve a band and a peak on it; `abbina_larghi`: a band accepts |dRT| <= max(tol, 0.35 FWHM) or an interval overlap >= 0.40):
+    - P1_narrow, P1_broad: recall (also by morphology);
+    - P2_broad: relative error of the mean area of the matched row against `area_attesa` (NaN if no row or no area; summary = median);
+    - P3_split: rows emitted per true band = rows that accept the band and are not matched to a narrow peak (0 = lost; summary mean, median and share > 1);
+    - P5_fp: rows that no true compound accepts (share of all the rows), e.g. the gradient background."""
+    comp = composti_larghi(verita)
+    mz, rt, rmin, rmax = (*matrici(t)[:2], *_intervalli(t)) if t["righe"] else (np.zeros(0),) * 4
+    cm, cr, fw, larga, c0, c1 = _vero(comp)
+    ia, ib = abbina_larghi(cm, cr, fw, larga, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol)
+    riga = np.full(len(comp), -1, int)
+    riga[ia] = ib
+    ok, _ = finestra_larghi(cm, cr, fw, larga, c0, c1, mz, rt, rmin, rmax, ppm, rt_tol) if len(comp) and len(mz) else (np.zeros((len(comp), len(mz)), bool), None)
+    del_stretto = {int(r) for r, b in zip(riga.tolist(), larga.tolist()) if r >= 0 and not b}
+
+    def richiamo(maschera):
+        hit = [int(riga[i] >= 0) for i in np.flatnonzero(maschera)]
+        morf: dict = {}
+        for i in np.flatnonzero(maschera):
+            morf.setdefault(str(comp[i].get("morfologia")), []).append(int(riga[i] >= 0))
+        return {"per_composto": hit, "richiamo": sum(hit) / len(hit) if hit else None, "n": len(hit),
+                "per_morfologia": {k: {"n": len(v), "richiamo": sum(v) / len(v)} for k, v in sorted(morf.items())}}
+
+    _, _, area = matrici(t) if t["righe"] else (None, None, np.zeros((0, len(t["file"]))))
+    err = []
+    for i in np.flatnonzero(larga):
+        att = np.array([np.nan if v is None else v for v in (comp[i].get("area_attesa") or [])], float)
+        sel = att > 0
+        err.append(abs(area[riga[i], sel].mean() - att[sel].mean()) / att[sel].mean() if riga[i] >= 0 and sel.any() else np.nan)
+    v = [x for x in err if not np.isnan(x)]
+    righe_banda = [int(sum(1 for r in np.flatnonzero(ok[i]).tolist() if r not in del_stretto)) for i in np.flatnonzero(larga)]
+    spurie = int((~ok.any(0)).sum()) if len(comp) else len(mz)
+    return {"P1_narrow": richiamo(~larga), "P1_broad": richiamo(larga),
+            "P2_broad": {"per_composto": [None if np.isnan(x) else float(x) for x in err], "mediana": float(np.median(v)) if v else None, "n_misurati": len(v), "n": len(err)},
+            "P3_split": {"per_composto": righe_banda, "media": float(np.mean(righe_banda)) if righe_banda else None,
+                         "mediana": float(np.median(righe_banda)) if righe_banda else None, "divise": sum(1 for x in righe_banda if x > 1) / len(righe_banda) if righe_banda else None,
+                         "n": len(righe_banda)},
+            "P5_fp": {"righe": len(mz), "spurie": spurie, "frazione": spurie / len(mz) if len(mz) else None}}
