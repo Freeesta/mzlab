@@ -2,6 +2,8 @@
 
 `crates/mzlab-core/src/agilent/`: Rust puro, nessun crate nuovo. Una cartella `.D` si legge dai suoi file: `AcqData/MSScan.bin` (indice, un record per scansione) e `AcqData/MSPeak.bin` (i punti), più i file piccoli (`MSTS.xml`, `Devices.xml`, `Contents.xml`, `MSTree2.bin`, `acqmeth.txt` nella cartella `.D`).
 
+Supportato anche il GC/TQ Agilent 7000D in scansione completa a centroidi (MS1, EI positivo, punti `f32`): letto come il 5977. NON letti: SIM, MRM e product-ion del TQ. Provato su `.D` sintetici; la verifica sul `.D` vero (13.002 scansioni, TIC dei record = somma dei punti) spetta al locale.
+
 Le corse LC/MS (QqQ, Q-TOF) le legge la variante `crates/mzlab-core/src/agilent_ext/` (feature `estesi`, modulo `agilent`): `agilent-lcms.md`.
 
 Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 5977 (EI, positivo; una in scansione 50-500 m/z, due in SIM) e dallo schema `AcqData/MSScan.xsd` che Agilent mette nella cartella; Riferimento: gli mzML che ProteoWizard msconvert ha fatto dalle stesse tre corse (64 bit, zlib, senza peak picking, SIM come spettri; repository dati, `GC-MS/mzML/`), più controlli interni (sotto). Tutto ciò che non è nelle tre corse è elencato in «Non verificato».
