@@ -171,6 +171,7 @@
     "../../mzlab/web/bug-report.js",
     "../../mzlab/web/bug-report-testo.js",
     "../../mzlab/web/esporta-dati.js",
+    "../../mzlab/web/importa-dati.js",
     "../../mzlab/web/molecole-archivio.js",
     "../../mzlab/web/molecole-campo.js",
     "../../mzlab/web/molecole-modulo.js",
