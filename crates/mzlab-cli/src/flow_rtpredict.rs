@@ -1,6 +1,7 @@
 //! The native executor of `rt.predict@1`: the candidates (`candidates/1`) checked against the retention times of the campaign's own standards, with our own
 //! Crippen descriptors (`logp_window`) or a regression forest (`forest`). Written beside each hit: the predicted RT, the residual and, with a window, `rt_ok`;
-//! optionally the direction of the RT change against a parent. Evidence only: a hit is never added, a level never set.
+//! optionally the direction of the RT change against a parent. With `lc_gradient` the window is fitted on the organic fraction (%B) the compound has met, so
+//! `rt_pred` and `rt_resid` are then in %B (`rt_unit`). Evidence only: a hit is never added, a level never set.
 
 use crate::flow::{all_inputs, read_one, write_made, Exec, FileRunner};
 use crate::flow_match::num;
@@ -11,13 +12,14 @@ use mzlab_core::json::{self, round, Out, Value};
 use mzlab_core::step::DataType;
 use mzlab_feat::attributio::ms2_engine::rtpredict::RtModel;
 use mzlab_feat::attributio::review::rtlogp::{
-    calibrate, check, check_terms, CalPoint, LogPValues, MIN_N,
+    calibrate, check, check_terms, organic_fraction, CalPoint, LogPValues, MIN_N,
 };
 use mzlab_feat::hypo::Dir;
 use std::collections::HashMap;
 
 /// Keys this step writes; a hit that already has one gets it replaced.
-const OWN: [&str; 7] = [
+const OWN: [&str; 8] = [
+    "rt_unit",
     "rt_pred",
     "rt_resid",
     "rt_ok",
@@ -90,6 +92,38 @@ fn text_of(job: &Job, name: &str) -> String {
         .to_string()
 }
 
+/// The %B profile of `lc_gradient` (`t:%B;t:%B;...`, minutes and percent, ascending t) and the dwell time; none when the parameter is empty.
+struct Gradient {
+    points: Vec<Vec<f64>>,
+    dwell: f64,
+}
+
+impl Gradient {
+    /// The organic fraction a compound eluting at `rt` has met.
+    fn at(&self, rt: f64) -> f64 {
+        organic_fraction(rt, &self.points, self.dwell)
+    }
+}
+
+fn gradient_of(job: &Job) -> Result<Option<Gradient>> {
+    let text = text_of(job, "lc_gradient");
+    if text.is_empty() {
+        return Ok(None);
+    }
+    let pair = |s: &str| -> Option<Vec<f64>> {
+        let (a, b) = s.split_once(':')?;
+        Some(vec![a.trim().parse().ok()?, b.trim().parse().ok()?])
+    };
+    let points: Option<Vec<Vec<f64>>> = text.split(';').map(pair).collect();
+    match points {
+        Some(p) if p.len() >= 2 && p.windows(2).all(|w| w[0][0] < w[1][0]) => Ok(Some(Gradient {
+            points: p,
+            dwell: num(job, "lc_dwell_min"),
+        })),
+        _ => Err(bad("err.flow.rtpredict.gradient")),
+    }
+}
+
 /// What a hit gets: the check against the standards.
 struct Verdict {
     pred: Option<f64>,
@@ -138,19 +172,22 @@ fn judge_of(job: &Job, algorithm: &str, standards: &[u8]) -> Result<Judge> {
             }
         }));
     }
+    let grad = gradient_of(job)?;
+    // with a gradient the fit runs on %B, whose floor is 3 %B instead of 1 min
     let (k, floor) = (
         num(job, "rt_logp_k"),
         Some(num(job, "rt_logp_floor"))
             .filter(|f| *f > 0.0)
-            .unwrap_or(1.0),
+            .unwrap_or(if grad.is_some() { 3.0 } else { 1.0 }),
     );
+    let y_of = move |rt: f64| grad.as_ref().map_or(rt, |g| g.at(rt));
     let terms = param(job, "rt_logp_terms").and_then(Value::bool) == Some(true);
     let points: Vec<CalPoint> = std_rows
         .iter()
         .filter_map(|(s, rt)| {
             Some(CalPoint {
                 logp: LogPValues::from_smiles(s)?,
-                y: Some(*rt),
+                y: Some(y_of(*rt)),
             })
         })
         .collect();
@@ -169,9 +206,9 @@ fn judge_of(job: &Job, algorithm: &str, standards: &[u8]) -> Result<Judge> {
                 terms: None,
             };
         };
-        let c = check(&model, &lv, obs, k, floor);
+        let c = check(&model, &lv, obs.map(&y_of), k, floor);
         let t = if terms {
-            check_terms(&model, &lv, obs)
+            check_terms(&model, &lv, obs.map(&y_of))
         } else {
             None
         };
@@ -207,7 +244,7 @@ fn direction(o: &mut Out, job: &Job, p: &Parent, delta: f64, rt: Option<f64>) {
     o.raw(flag(seen.agrees(delta, num(job, "polarity_margin"))));
 }
 
-fn write_hit(o: &mut Out, h: &Value, v: &Verdict, windowed: bool) {
+fn write_hit(o: &mut Out, h: &Value, v: &Verdict, windowed: bool, in_b: bool) {
     o.raw("{\"query\":")
         .str(h.get("query").and_then(Value::str).unwrap_or(""));
     for (key, val) in h
@@ -219,6 +256,9 @@ fn write_hit(o: &mut Out, h: &Value, v: &Verdict, windowed: bool) {
         json::write_value(o, val);
     }
     let r4 = |x: Option<f64>| x.map(|x| round(x, 4));
+    if in_b {
+        o.raw(",\"rt_unit\":\"%B\"");
+    }
     o.raw(",\"rt_pred\":")
         .opt(r4(v.pred))
         .raw(",\"rt_resid\":")
@@ -276,6 +316,7 @@ pub fn rtpredict_text(
         return Err(bad("err.flow.rtpredict.window"));
     }
     let (judge, parent) = (judge_of(job, &algorithm, standards)?, parent_of(job)?);
+    let in_b = algorithm == "logp_window" && gradient_of(job)?.is_some();
     let mut rows: Vec<Row> = Vec::new();
     for (idx, h) in hits.iter().enumerate() {
         let query = h
@@ -293,7 +334,8 @@ pub fn rtpredict_text(
             continue;
         }
         let mut o = Out::default();
-        write_hit(&mut o, h, &v, algorithm == "logp_window");
+        let windowed = algorithm == "logp_window";
+        write_hit(&mut o, h, &v, windowed, windowed && in_b);
         if let (Some(p), Some(lv)) = (&parent, LogPValues::from_smiles(smiles)) {
             let delta = lv.crippen.unwrap_or(0.0) - p.logp;
             o.raw(",\"delta_logp\":").num(round(delta, 2));
