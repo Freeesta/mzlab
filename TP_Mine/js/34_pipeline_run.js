@@ -52,7 +52,7 @@
   }
   /** the parent of the proofs (null without the formula or the rules) */
   async function parentOf(files) {
-    const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
+    const f = $("#pipe-pf").value.trim(), rules = window.QTOOLS.ctx.files["regole_tp_2.json"];
     if (!st.gated || !f || !rules) return null;
     const num = id => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : NaN; };
     const smiles = $("#pipe-psmi").value.trim();
@@ -143,7 +143,7 @@
   // ------------------------------------------------------------ recipe: the record goes to the log of operations (.mzflow), «Re-apply» runs the last one again
   const levelsText = async () => { const s = document.querySelector('script[src*="livelli-1.js"]'); try { return s ? await (await fetch(s.src)).text() : null; } catch (_) { return null; } };
   async function recordRun(recipe, parent, op) {
-    const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp.json"] || null, levels: await levelsText(),
+    const rec = await /** @type {any} */ (window).PIPEREC.record({ recipe, proofs: st.ctx.proofs(), crate: st.ctx.crate(), out: st.out, data: st.data, rules: window.QTOOLS.ctx.files["regole_tp_2.json"] || null, levels: await levelsText(),
       parent: parent ? { formula: parent.parent, mz: parent.parentMz, rt: parent.parentRt, minuti: parent.minutes, smiles: parent.smiles } : null });
     if (op) { const c = /** @type {any} */ (window).PIPEREC.compare(op, rec); msg(c.same ? `Re-applied: the .mzfeat is identical to the recorded one (SHA-256 ${rec.tabella_sha256.slice(0, 12)}...).` : "Re-applied, but " + c.lines.join("; ") + ".", !c.same); return; }
     if (window.WORKFLOW) { const { op: _o, t: _t, ...rest } = rec; window.WORKFLOW.logOp("feature_pipeline", rest); if (st.cs) window.WORKFLOW.logOp("campioni", /** @type {any} */ (window).PIPEREC.campioniOp(await st.R.canonical(st.call, st.cs))); }
@@ -183,7 +183,7 @@
   }
   /** what the report says of the run: the recipe (profile and SHA-256), the rules and the inputs of the table */
   async function provenance() {
-    const text = st.ctx.recipe(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
+    const text = st.ctx.recipe(), rules = window.QTOOLS.ctx.files["regole_tp_2.json"];
     let rec = {}; try { rec = JSON.parse(text); } catch (_) { /* a recipe that is not JSON has no profile */ }
     const rv = typeof rules === "string" ? rules : rules ? new TextDecoder().decode(rules) : "", ver = /"version"\s*:\s*(\d+)/.exec(rv);
     return { profile: rec.profile, recipe_sha256: await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(text)), rules: rv ? "regole_tp/1" + (ver ? " v" + ver[1] : "") + " SHA-256 " + (await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(rv))) : "", inputs: st.data.meta.inputs || [] };

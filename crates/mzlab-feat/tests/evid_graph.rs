@@ -25,7 +25,7 @@ fn root() -> PathBuf {
 
 fn registry() -> Registry {
     let rules =
-        Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap();
+        Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap()).unwrap();
     let inp = HypoInputs {
         parent: "C9H13NO3",
         suspects: None,

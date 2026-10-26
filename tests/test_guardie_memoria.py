@@ -43,7 +43,7 @@ def measure(tmp_path, idx, budget, tag):
     """Peaks of the linear memory after each phase (twice: the growth is deterministic) and the SHA-256 of the two outputs."""
     out = tmp_path / f"out_{tag}"
     out.mkdir()
-    env = dict(os.environ, RULES=str(ROOT / "TP_Mine/data/regole_tp.json"), BUDGET_MB=str(budget))
+    env = dict(os.environ, RULES=str(ROOT / "TP_Mine/data/regole_tp_2.json"), BUDGET_MB=str(budget))
     cmd = ("node", "tests/guardie_memoria_node.js", str(tmp_path / "feat"), str(tmp_path / "eng"), str(out), *idx)
     got = json.loads(run(*cmd, env=env))
     assert got == json.loads(run(*cmd, env=env)), "the growth of the memory is not deterministic"

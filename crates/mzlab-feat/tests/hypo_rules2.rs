@@ -81,7 +81,7 @@ fn the_file_has_three_profiles_and_the_default_is_photocatalysis() {
 #[test]
 fn a_v1_file_is_still_read_and_says_so() {
     let r =
-        Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap();
+        Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap()).unwrap();
     assert_eq!((r.version, r.profile.as_str()), (1, ""));
     assert!(r
         .rules
@@ -90,7 +90,7 @@ fn a_v1_file_is_still_read_and_says_so() {
     assert_eq!(run(&r, None).rules_version, 1);
     assert_eq!(
         Rules::parse_profile(
-            &std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap(),
+            &std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap(),
             Some("fotocatalisi")
         )
         .err()

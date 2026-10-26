@@ -5,7 +5,7 @@
 //! With `--budget-mb` the steps run as the browser runs them under that memory budget: outputs written at offsets to files (hashed on the way), the series
 //! read file by file, slabs and streams when the budget asks for them. The lines printed are the same as without it.
 //!
-//! Writes `<name>.mzfeatf` for every file and `series.mzfeat`, and prints the SHA-256 of each; `--parent FORMULA [--smiles SMILES] --rules regole_tp.json` adds the
+//! Writes `<name>.mzfeatf` for every file and `series.mzfeat`, and prints the SHA-256 of each; `--parent FORMULA [--smiles SMILES] --rules regole_tp_2.json` adds the
 //! hypotheses and the graph of the proofs (`series_evid.mzfeat`; times from `tNNNmin` in the name, `--parent-mz M --parent-rt R` for the parent row).
 
 use std::fs::File;

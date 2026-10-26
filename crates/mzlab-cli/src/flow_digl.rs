@@ -1,5 +1,5 @@
 //! The native executor of `tp.dig_lr@1`: the low-resolution Dig of mzFinder (`legacy::lr::dig`: calibration on the parent, candidates of the rules of
-//! `regole_tp.json`, criteria, score and labels) on a unit-resolution series made by this plan. Its output is the JSON `api.run` of the page.
+//! `regole_tp_2.json`, criteria, score and labels) on a unit-resolution series made by this plan. Its output is the JSON `api.run` of the page.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
@@ -17,7 +17,7 @@ use mzlab_core::flow::Artifact;
 #[path = "flow_uv.rs"]
 pub(crate) mod uv;
 
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp.json");
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
 /// The steps of this crate besides `features.table`, in the order of the registry.
 pub fn cli_steps() -> Vec<Step> {

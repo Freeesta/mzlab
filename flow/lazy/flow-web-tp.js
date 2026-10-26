@@ -91,7 +91,7 @@
         if (!m.table) return null;
         const pr = JSON.parse(params); m.ppm = pr.ppm ?? 10; m.minFragments = pr.min_fragments ?? 0;
         m.samples = (sref && S.samplesJson && S.samplesJson[sref]) || "";
-        const rules = G.QTOOLS.ctx.files["regole_tp.json"];
+        const rules = G.QTOOLS.ctx.files["regole_tp_2.json"];
         m.rules = typeof rules === "string" ? new TextEncoder().encode(rules) : rules;
       }
       return { name: inst.id + NAMES[kind], text: await c.p.tpPost(m) };

@@ -10,7 +10,7 @@ use mzlab_feat::tp::{TpBlock, KIN_POSSIBLE, KIN_PROBABLE, ST_PARENT, ST_TP, ST_U
 const PROTON: f64 = 1.007276;
 
 fn rules() -> Rules {
-    Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp.json")).unwrap()
+    Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp_2.json")).unwrap()
 }
 
 fn neutral_mass(f: &str) -> f64 {
