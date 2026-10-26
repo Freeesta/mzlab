@@ -14,6 +14,8 @@ from pathlib import Path
 RUOLI_FEATURE = ("progenitore", "tp1", "tp2", "isomero", "addotto", "isf")
 RUOLI_TP = ("tp1", "tp2", "isomero")
 RUOLI_ESCA = ("esca", "isf_finto")
+RUOLI_LARGHI = ("broad", "narrow")             # the smeared-peak lot (`valida.sintetici_mzml.genera_larghi`): measured by `metriche.larghi`, not by P1-P5
+EXTRA_LARGHI = ("morfologia", "fwhm_s", "rt_min", "rt_max", "su")
 RUOLI_SPIEGANO = RUOLI_FEATURE + ("isotopo", "isf_finto", "chimerica", "coincidenza", "fondo")
 
 
@@ -34,7 +36,8 @@ def da_righe(righe: list[dict], ruolo_predefinito: str = "tp1") -> list[dict]:
         rts = _rts(r) if r.get("presente", 1) else []
         for k, rt in enumerate(rts or [None]):
             out.append({"id": str(r.get("id", r.get("name"))) + ("" if k == 0 else f"#{k + 1}"), "mz": float(r["mz"]), "rt": rt, "ruolo": ruolo,
-                        "fascia": r.get("fascia", note.get("fascia")), "atteso": r.get("atteso"), "area_attesa": r.get("area_attesa")})
+                        "fascia": r.get("fascia", note.get("fascia")), "atteso": r.get("atteso"), "area_attesa": r.get("area_attesa"),
+                        **{k: r[k] for k in EXTRA_LARGHI if k in r}})
     return sorted(out, key=lambda c: (c["mz"], c["rt"] if c["rt"] is not None else -1.0, c["id"]))
 
 
@@ -71,6 +74,11 @@ def da_maf(path, mz: str = "mass_to_charge", rt: str = "retention_time", atteso:
 
 def con_ruolo(verita: list[dict], ruoli) -> list[dict]:
     return [c for c in verita if c["ruolo"] in ruoli]
+
+
+def larghi(verita: list[dict]) -> list[dict]:
+    """The compounds of the smeared-peak lot with a known RT: broad bands and narrow peaks (free or on a band)."""
+    return [c for c in con_ruolo(verita, RUOLI_LARGHI) if c["rt"] is not None]
 
 
 def feature_vere(verita: list[dict]) -> list[dict]:
