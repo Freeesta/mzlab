@@ -8,6 +8,12 @@ use crate::json::{self, Out};
 use crate::mzmlhead::Mzml;
 use crate::sorgente::Scansioni;
 
+// `as` saturates and maps NaN to 0, which is what both callers want.
+#[allow(clippy::cast_possible_truncation)]
+fn to_i64(x: f64) -> i64 {
+    x as i64
+}
+
 /// The hint the file name gives: "infusion", "mrm", "ms2" or "full" (the first rule that matches the lower-case stem).
 pub fn hint(file_name: &str) -> Option<&'static str> {
     let base = file_name.rsplit('/').next().unwrap_or(file_name);
@@ -100,7 +106,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
         .iter()
         .filter(|s| s.level >= 2)
         .filter_map(|s| s.precursor.filter(|p| *p != 0.0))
-        .map(|p| p.round_ties_even() as i64)
+        .map(|p| to_i64(p.round_ties_even()))
         .collect();
     crate::sortc::slice_ord(&mut prec);
     prec.dedup();
@@ -110,7 +116,7 @@ pub fn sniff<R: ReadAt, M: ReadAt>(
     o.raw("{\"kind\":")
         .str(kind)
         .raw(",\"scans\":")
-        .int(v.get("scans").and_then(|x| x.f64()).unwrap_or(0.0) as i64);
+        .int(to_i64(v.get("scans").and_then(|x| x.f64()).unwrap_or(0.0)));
     o.raw(",\"srm\":")
         .int(facts.srm as i64)
         .raw(",\"polarity\":")
