@@ -159,7 +159,11 @@ impl Totals {
         if let Some(a) = self.acc.get_mut(pos) {
             *a += it;
         }
-        if let (Some(have), Some(bpy), Some(bpm)) = (self.have.get_mut(pos), self.bpy.get_mut(pos), self.bpm.get_mut(pos)) {
+        if let (Some(have), Some(bpy), Some(bpm)) = (
+            self.have.get_mut(pos),
+            self.bpy.get_mut(pos),
+            self.bpm.get_mut(pos),
+        ) {
             if !*have || it >= *bpy {
                 *bpm = mz;
                 *bpy = it;
@@ -378,9 +382,17 @@ impl<T: Num> Sect for Sec<T> {
         let mut round = std::mem::take(&mut self.round);
         // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
         let ends: Vec<usize> = (self.lo..self.hi)
-            .map(|b| self.base.get(b).copied().unwrap_or(0) + self.counts.get(b).map_or(0, |&c| c as usize))
+            .map(|b| {
+                self.base.get(b).copied().unwrap_or(0)
+                    + self.counts.get(b).map_or(0, |&c| c as usize)
+            })
             .collect();
-        ordina_secchi(&mut round, self.base.get(self.lo).copied().unwrap_or(0), &ends, self.per_scansione)?;
+        ordina_secchi(
+            &mut round,
+            self.base.get(self.lo).copied().unwrap_or(0),
+            &ends,
+            self.per_scansione,
+        )?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
