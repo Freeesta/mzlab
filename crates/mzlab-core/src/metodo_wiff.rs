@@ -456,6 +456,8 @@ mod tests;
 
 #[cfg(feature = "estesi")]
 mod estesi;
+#[cfg(feature = "estesi")]
+pub(crate) use estesi::scheduled;
 
 /// The method of the sample, or (readers module) the nearest method below it when the file shares its methods between samples.
 #[cfg(feature = "estesi")]

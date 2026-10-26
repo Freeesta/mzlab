@@ -206,7 +206,7 @@ impl<R: ReadAt> Mzml<R> {
                 ..Default::default()
             };
             let acc = |x: &str| h.contains(&format!("accession=\"{x}\""));
-            if cid == "TIC" {
+            if cid == "TIC" || cid.starts_with("TIC ") {
                 d.kind = "tic".into();
             } else if cid == "BPC" {
                 d.kind = "bpc".into();
