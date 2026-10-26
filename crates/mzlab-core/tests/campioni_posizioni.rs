@@ -95,7 +95,7 @@ fn spans_say_which_part_of_the_name_decided() {
     );
     assert_eq!(
         got[1],
-        pairs(&[("tempo", "90"), ("serie", "Y_TiO2"), ("replica", "(2)")])
+        pairs(&[("tempo", "90 s"), ("serie", "Y_TiO2"), ("replica", "(2)")])
     );
     assert_eq!(got[2], pairs(&[("tempo", "t010min"), ("serie", "X_TiO2")]));
     assert_eq!(
