@@ -43,6 +43,10 @@ struct Parte {
     scans: Vec<usize>,
     indice: Vec<VoceScansione>,
     chroms: Option<Vec<Chromatogram>>,
+    /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
+    /// once all of them were seen, so that listing the chromatograms never decodes a scan.
+    bpc: Vec<f64>,
+    bpc_seen: usize,
     /// `scans` and `indice` are built (`apri_solo` builds only the injection it is asked for; the others on their first use).
     pronta: bool,
 }
@@ -104,6 +108,42 @@ impl LettoreWiff {
         Ok(self.parte(c)?.w.dad.as_ref())
     }
 
+    /// Notes the base peak of scan `k` of injection `c` (the mzML writer reads every scan once, in order; the BPC comes from these).
+    #[cfg(feature = "estesi")]
+    fn watch(&mut self, c: usize, k: usize, s: &Spectrum) {
+        let Some(p) = self.parti.get_mut(c) else { return };
+        if p.bpc.len() != p.scans.len() {
+            (p.bpc, p.bpc_seen) = (vec![f64::NAN; p.scans.len()], 0);
+        }
+        let Some(slot) = p.bpc.get_mut(k) else { return };
+        p.bpc_seen += slot.is_nan() as usize;
+        *slot = (0..s.mz.len()).map(|i| s.intensity_f64(i)).fold(0.0, f64::max);
+    }
+
+    /// The BPC of each full scan experiment of injection `c`, in the order and with the times of its TIC; none until every scan went through `watch`.
+    #[cfg(feature = "estesi")]
+    fn bpc_chroms(&mut self, c: usize) -> Result<Vec<Chromatogram>> {
+        self.pronta(c)?;
+        let many = self.chromatograms(c)?.iter().filter(|h| h.kind == ChromKind::Tic).count() > 1;
+        let p = self.parte(c)?;
+        if p.bpc.is_empty() || p.bpc_seen != p.scans.len() {
+            return Ok(Vec::new());
+        }
+        let mut by_experiment: std::collections::BTreeMap<usize, (Vec<f64>, Vec<f64>)> = Default::default();
+        for (&i, &base) in p.scans.iter().zip(&p.bpc) {
+            let r = &p.w.records[i];
+            if p.w.is_full_scan(r.experiment) {
+                let (t, v) = by_experiment.entry(r.experiment).or_default();
+                (t.push(r.time_min), v.push(base));
+            }
+        }
+        let unit = "number of detector counts";
+        Ok(by_experiment
+            .into_iter()
+            .map(|(e, (time, intensity))| Chromatogram { index: 0, id: p.w.bpc_id(e, many), kind: ChromKind::Bpc, q1: None, q3: None, unit: unit.into(), time, intensity })
+            .collect())
+    }
+
     /// The member of the `FileSet` that holds the `.wiff.scan` (what `Posizione::membro` says).
     pub fn membro_scan(&self) -> u16 {
         self.scan_member
@@ -150,7 +190,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -176,6 +216,12 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     }
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         let mut v: Vec<VoceCromatogramma> = self.chromatograms(c)?.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect();
+        #[cfg(feature = "estesi")]
+        {
+            let bpc = self.bpc_chroms(c)?;
+            let at = v.iter().position(|x| x.tipo == ChromKind::Pda).unwrap_or(v.len());
+            v.splice(at..at, bpc.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }));
+        }
         if self.parte(c)?.w.dad.is_some() && !v.iter().any(|x| x.tipo == ChromKind::Pda) {
             v.push(VoceCromatogramma { id: "DAD TWC".into(), tipo: ChromKind::Pda, unita: "mAU".into() });
         }
@@ -183,6 +229,10 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     }
     fn cromatogramma(&mut self, c: usize, id: &str) -> Result<Chromatogram> {
         if let Some(ch) = self.chromatograms(c)?.iter().find(|h| h.id == id).cloned() {
+            return Ok(ch);
+        }
+        #[cfg(feature = "estesi")]
+        if let Some(ch) = self.bpc_chroms(c)?.into_iter().find(|h| h.id == id) {
             return Ok(ch);
         }
         dad_chrom(self.parte(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
@@ -279,6 +329,8 @@ pub fn apri_solo(
             scans: Vec::new(),
             indice: Vec::new(),
             chroms: None,
+            bpc: Vec::new(),
+            bpc_seen: 0,
             pronta: false,
         };
         if solo.is_none_or(|c| c == i) {
