@@ -19,10 +19,24 @@ impl Wiff {
 
     /// Appends the BPC of each `(experiment, times, intensities)` after the transitions, so that the list a reader that decodes later (`LettoreWiff`) completes is in
     /// the same order.
-    fn push_bpc(&self, chroms: &mut Vec<Chromatogram>, bpcs: Vec<(usize, Vec<f64>, Vec<f64>)>, many: bool) {
+    fn push_bpc(
+        &self,
+        chroms: &mut Vec<Chromatogram>,
+        bpcs: Vec<(usize, Vec<f64>, Vec<f64>)>,
+        many: bool,
+    ) {
         for (e, time, intensity) in bpcs {
             let unit = "number of detector counts".into();
-            chroms.push(Chromatogram { index: chroms.len(), id: self.bpc_id(e, many), kind: ChromKind::Bpc, q1: None, q3: None, unit, time, intensity });
+            chroms.push(Chromatogram {
+                index: chroms.len(),
+                id: self.bpc_id(e, many),
+                kind: ChromKind::Bpc,
+                q1: None,
+                q3: None,
+                unit,
+                time,
+                intensity,
+            });
         }
     }
 
