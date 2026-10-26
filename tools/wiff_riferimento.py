@@ -79,6 +79,11 @@ def header(code, precursor) -> bytes:
     return bytes(d)
 
 
+def mass_range(*ces) -> bytes:
+    """A `MassRangeEx` stream of a scan experiment: each collision energy as the UTF-16 tag `CE` (length 4) and a float32."""
+    return bytes(8) + b"".join(b"\x04\x00C\x00E\x00" + struct.pack("<f", ce) + bytes(4) for ce in ces)
+
+
 def ion_spray(volts) -> bytes:
     return bytes(24) + "IS".encode("utf-16le") + struct.pack("<ff", volts, volts) + bytes(4)
 
@@ -189,8 +194,23 @@ def main():
                 blocks.append(("scan", pts, t + 200 * e, float(sum(c for _, c in pts))))
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
+    energia = energy(out)
     variante, rifiuti = variants(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "variante": variante, "rifiuti": rifiuti}))
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "variante": variante, "rifiuti": rifiuti}))
+
+
+def energy(out: Path):
+    """Four experiments (full scan; product ions with CE 25, with CE 35, with two energies) over two cycles: the collision energy of each product-ion experiment, None where the method has no single value."""
+    ces = [None, 25.0, 35.0, None]
+    method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5), "Experiment2/ExperimentHeader": header(11, 120.0),
+              "Experiment3/ExperimentHeader": header(11, 77.7), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0),
+              "Experiment0/MassRangeEx/MassRangeEx": bytes(8), "Experiment1/MassRangeEx/MassRangeEx": mass_range(25.0), "Experiment2/MassRangeEx/MassRangeEx": mass_range(35.0),
+              "Experiment3/MassRangeEx/MassRangeEx": mass_range(20.0, 40.0)}
+    blocks = [("scan", FULL if e == 0 else PRODUCT, 1000.0 * cycle + 100.0 * e, 1.0) for cycle in range(2) for e in range(4)]
+    w = Writer()
+    w.sample(1, blocks, method)
+    w.save(out, "energia")
+    return {"ce": ces, "precursors": [None, 55.5, 120.0, 77.7]}
 
 
 def variants(out: Path):

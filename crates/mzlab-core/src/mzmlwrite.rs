@@ -229,6 +229,9 @@ pub struct SpectrumExtra {
     pub observed: bool,
     /// Scan window (lower, upper) m/z.
     pub window: Option<(f64, f64)>,
+    /// `MS:1000045` collision energy (eV) and half-width of the isolation window (m/z) of a spectrum with a plain `Spectrum::precursor`: written in its `<precursor>`.
+    pub ce: Option<f64>,
+    pub iso_half: Option<f64>,
     /// userParams of the spectrum: (name, value).
     pub params: Vec<(String, String)>,
     /// The precursors, in order (the chain of an MSn scan is one per level, outermost first). Empty: `Spectrum::precursor` is written as target and selected ion.

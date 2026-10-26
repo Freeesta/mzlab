@@ -150,7 +150,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -351,23 +351,24 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
 }
 
 /// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).
-#[cfg(feature = "estesi")]
 fn id_field(id: &str, key: &str) -> Option<usize> {
     id.split_whitespace()
         .find_map(|w| w.strip_prefix(key))
         .and_then(|v| v.parse::<usize>().ok())
 }
 
-/// The spectrum type (CV term) a spectrum of the readers module carries besides its level: precursor-ion and neutral-loss scans.
-#[cfg(feature = "estesi")]
+/// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
+/// type (CV term) of precursor-ion and neutral-loss scans.
 fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
-    let code = id_field(&s.id, "sample=")
+    let e = id_field(&s.id, "sample=")
         .and_then(|n| l.parti.iter().find(|p| p.w.sample as usize == n))
         .zip(id_field(&s.id, "experiment="))
-        .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)))
-        .and_then(|e| e.code);
+        .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
     let mut extra = crate::mzmlwrite::SpectrumExtra::default();
-    if let Some((acc, name)) = super::estesi::spectrum_term(code) {
+    let Some(e) = e else { return extra };
+    (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
+    #[cfg(feature = "estesi")]
+    if let Some((acc, name)) = super::estesi::spectrum_term(e.code) {
         extra.params.push((format!("cv:{acc}"), name.to_string()));
     }
     extra
