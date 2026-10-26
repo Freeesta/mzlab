@@ -67,7 +67,7 @@ RUN = """async ([plan, samples, parent]) => {
 # the SHA-256 of the .tp.mzfeat the run kept in OPFS
 KEPT = """async () => {
   const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), live = await d.getDirectoryHandle('live'), out = [];
-  for await (const [n, h] of live.entries()) if (n.endsWith('.tp.mzfeat')) { const b = await (await h.getFile()).arrayBuffer(); out.push([...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join('')); }
+  for await (const [n, h] of live.entries()) if (n.endsWith('.tp.mzfeat') || (window.__all && n.endsWith('.mzfeat'))) { const b = await (await h.getFile()).arrayBuffer(); out.push([...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join('')); }
   return out;
 }"""
 PORT = lib.free_port()
@@ -92,6 +92,10 @@ try:
         def first():
             r = pg.evaluate(RUN, [PLAN, SAMPLES, PARENT]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             assert any(e["passo"] == "lnk" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), r["ev"]
+            pg.evaluate("window.__all = true"); allk = pg.evaluate(KEPT); pg.evaluate("window.__all = false")
+            print("DEBUG all kept", allk, "native gap", hashlib.sha256((run / "out" / "gap.mzfeat").read_bytes()).hexdigest(), "native lnk", native)
+            if os.environ.get("MZLAB_KEEP"):
+                import base64; (tmp / "web.mzfeat").write_bytes(base64.b64decode(pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), live = await d.getDirectoryHandle('live'); for await (const [n, h] of live.entries()) if (n.endsWith('.tp.mzfeat')) { const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode(...b.subarray(i, i + 8192)); return btoa(s); } }"""))); shutil.copy2(run / "out" / "lnk.mzfeat", tmp / "native.mzfeat"); shutil.copy2(run / "out" / "gap.mzfeat", tmp / "gap.mzfeat"); print("KEPT", tmp)
             assert pg.evaluate(KEPT) == [native], (pg.evaluate(KEPT), native)
         step("tp.link in the browser gives the .mzfeat of the native flow run, byte for byte", first)
 
@@ -101,7 +105,8 @@ try:
         step("a second run takes the .mzfeat from OPFS", again)
         b.close()
 finally:
-    srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
+    srv.terminate()
+    if not os.environ.get("MZLAB_KEEP"): shutil.rmtree(tmp, ignore_errors=True)
 for s in steps: print(s)
 print("page errors:", errs)
 sys.exit(1 if any(s[1] != "ok" for s in steps) or errs else 0)
