@@ -52,6 +52,8 @@ I18N.add("it", {
   "tour.metodo.titolo": "Il metodo dello strumento",
   "tour.metodo.testo": "Che cosa ha misurato lo strumento: tipo di scansione, polarità, intervallo di massa e parametri del metodo.",
   "tour.ingranaggio.titolo": "Impostazioni, Teoria e questo tour",
+  "tour.ingranaggio.titolo.nt": "Impostazioni e questo tour",
+  "tour.ingranaggio.testo.nt": "Nell'ingranaggio trovi tema, lingua e le preferenze; da qui puoi rifare il tour quando vuoi.",
   "tour.ingranaggio.testo": "Nell'ingranaggio trovi tema, lingua e le preferenze; da qui puoi rifare il tour quando vuoi. Se un concetto non è chiaro, apri la scheda Teoria.",
   "tour.cap3": "Disegno",
   "tour.d_tela.titolo": "La tela",

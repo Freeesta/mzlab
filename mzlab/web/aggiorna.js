@@ -34,6 +34,7 @@ window.DESKUPD = (() => {
     else if (r.status === "available") {
       show(EH(I18N.t("update.available", { files: r.files, size: mb(r.bytes) })), [["go", I18N.t("update.download")], closeBtn()], silent ? I18N.t("update.notice") : "");
     } else if (r.status === "newapp") {
+      if (!SITO_PUBBLICO.scaricaApp) return;
       show(`${EH(I18N.t("update.newapp", { min: r.min }))}<br><a href="${REL}" target="_blank" rel="noopener noreferrer">${REL}</a>`, [closeBtn()]);
     } else if (!silent) show(EH(errText(r)), [closeBtn()]);
   }
@@ -81,7 +82,7 @@ window.DESKUPD = (() => {
   // The request is made by the native side (command release_check, GitHub's public releases API, nothing of the user in it).
   // At most once a day (qqq.rel.last); a notice closed for a version is not shown again for that version (qqq.rel.seen).
   async function release(force) {
-    if (!live()) return;
+    if (!live() || !SITO_PUBBLICO.scaricaApp) return;
     let last = 0, seen = ""; try { last = +(localStorage.getItem(NOMI.KEY("rel.last")) || 0); seen = localStorage.getItem(NOMI.KEY("rel.seen")) || ""; } catch (_) { /* optional */ }
     if (!force && Date.now() - last <= DAY) return;
     try { localStorage.setItem(NOMI.KEY("rel.last"), String(Date.now())); } catch (_) { /* optional */ }
