@@ -367,7 +367,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),
     ),
-    ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
+    ("tp.link", Exec::Made(crate::flow_link::link_job)),
     (
         "table.filter",
         Exec::File("table", crate::flow_table::filter_job),

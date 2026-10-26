@@ -74,6 +74,9 @@
       const fd = /** @type {HTMLButtonElement | null} */ (box.querySelector("button[aria-label^='Take']"));
       if (!data && fd) { fd.disabled = true; fd.title = "No file is open in the Data tab"; }
       if (!rows.length) { box.append(el("p", { class: "fl-note", text: "The list is empty. Take it from Data or add the files one by one." })); return; }
+      const n = (/** @type {string} */ k) => rows.filter(r => r.tipo === k).length, t0 = rows.filter(r => r.tipo === "sample" && r.tempo_min === 0).length;
+      const treated = rows.filter(r => r.tipo === "sample" && r.tempo_min > 0).length;
+      box.append(el("p", { class: "fl-note flx-smp-roles", role: "status", text: `Roles: ${treated} treated, ${t0} t0, ${n("blank")} blank, ${n("dark")} dark, ${n("infusion")} infusion.` + (treated && !t0 ? " No t0: tp.link will run the formation gate on blank and dark only, and every row will say so." : "") }));
       const upd = (/** @type {number} */ i, /** @type {any} */ patch) => { const next = rows.map((r, k) => (k === i ? { ...r, ...patch } : r)); void save({ ...d, campioni: next }); };
       const head = ["File", "Role", "Time (min)", "Series", "Replicate", ""];
       box.append(el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": "Sample list" }, el("table", { class: "flx-table" }, el("caption", { text: `${rows.length} files` }),
