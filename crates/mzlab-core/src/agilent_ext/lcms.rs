@@ -45,7 +45,7 @@ impl AgilentD {
 
     fn is_gc_block(r: &ScanRec) -> bool {
         r.format == 1
-            && r.bytes as u64 == r.points as u64 * 16
+            && super::peak::gc_width(r).is_some()
             && r.uncompressed.is_none_or(|u| u == r.bytes)
     }
 
