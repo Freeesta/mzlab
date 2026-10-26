@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["tp.generate"];
+  const STEPS = ["tp.generate", "tp.link"];
   /** @type {Promise<any> | null} */ let loaded = null;
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
 
@@ -32,17 +32,31 @@
   /** an error of a .wasm ({error_key, params} as text) as the page's {key, params} @param {any} e */
   const asError = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return j && j.error_key ? fail(j.error_key, j.params || {}) : e; };
 
+  /** the parent the plan holds, as the .wasm reads it: its text and the structure text of its SMILES @param {any} S @param {any} inst */
+  const parentOf = async (S, inst) => {
+    const ref = (F.refs(inst, "parent")[0] || "").replace(/^file:/, ""), text = F.parentText(S, ref);
+    if (!text) throw fail("err.flow.tp.parent", { input: ref });
+    const e = await engine(), smiles = JSON.parse(e.hr.tp_parent(text)).smiles;
+    return { ...e, text, structure: smiles ? (e.grafo ? e.grafo.analyse(smiles) : (() => { throw fail("error.featFailed"); })()) : "" };
+  };
+
   /** tp.generate: the registry of the hypotheses of the parent the plan holds, under the parameters of the step @param {any} S @param {any} inst @returns {Promise<{ name: string, text: string }>} */
   const generate = async (S, inst) => {
-    const ref = F.refs(inst, "parent")[0] || "", text = F.parentText(S, ref.replace(/^file:/, ""));
-    if (!text) throw fail("err.flow.tp.parent", { input: ref.replace(/^file:/, "") });
-    const { hr, grafo, rules } = await engine();
     try {
-      const smiles = JSON.parse(hr.tp_parent(text)).smiles;
-      const structure = smiles ? (grafo ? grafo.analyse(smiles) : (() => { throw fail("error.featFailed"); })()) : "";
+      const { hr, rules, text, structure } = await parentOf(S, inst);
       return { name: inst.id + ".ipotesi.json", text: hr.tp_generate(rules, text, structure, JSON.stringify({ ...F.defaults(inst, F.stepOf(S.reg, inst)), ...(inst.params || {}) })) };
     } catch (e) { throw asError(e); }
   };
 
-  F.webTp = { STEPS, generate };
+  /** the inputs of tp.link@2 that are text: the parent with its structure, the samples and the hypotheses (made again by the tp.generate step they come from; a file of hypotheses stays with the computer, null)
+   * @param {any} S @param {any} inst @param {(id: string) => any} instOf */
+  const linkInputs = async (S, inst, instOf) => {
+    const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = S.samplesJson && S.samplesJson[sref];
+    if (!samples) throw fail("err.flow.input.missing", { input: sref });
+    const href = F.refs(inst, "hypotheses")[0] || "", gen = href.startsWith("file:") ? null : instOf(href.split(".")[0]);
+    if (!gen || String(gen.step).split("@")[0] !== "tp.generate") return null;
+    try { return { ...await parentOf(S, inst), samples, hypotheses: (await generate(S, gen)).text }; } catch (e) { throw asError(e); }
+  };
+
+  F.webTp = { STEPS, generate, linkInputs };
 })();

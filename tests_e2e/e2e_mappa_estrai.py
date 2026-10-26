@@ -26,12 +26,12 @@ try:
         ctx = b.new_context(locale="en-US", viewport={"width": 1440, "height": 950}, has_touch=True)
         pg = ctx.new_page()
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg)
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=2")
         pg.click("#opbtn"); ready(pg)
-        pg.click("#np-map"); ready(pg); pg.wait_for_timeout(600)
+        pg.click("#np-map"); ready(pg)
         pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")      # the invitation to the tour would cover the page
-        pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.wait_for_timeout(300)
+        pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); frames(pg, 3)
         box = lambda: pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
         at = lambda fx, fy: (lambda c: (c[0] + c[2] * fx, c[1] + c[3] * fy))(box())
         win = lambda: pg.evaluate("MAPEX.numbers(" + M + ")")
@@ -40,8 +40,8 @@ try:
             assert not pg.evaluate(M + "._mz.ex")
         step("off at the start; the bar has the button", nothing_before)
         def on():
-            x, y = at(.4, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
-            pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); pg.wait_for_timeout(500)
+            x, y = at(.4, .5); pg.mouse.move(x, y); ready(pg)
+            pg.evaluate("MAPPA.explain(" + M + ", true)"); pg.wait_for_function("window.MAPEX && MAPEX.numbers(" + M + ")", timeout=15000); ready(pg)
             assert pg.evaluate("!!" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}.el.querySelector('.mzside').hidden && !{M}.el.querySelector('.mzbot').hidden"), "the two plots at the margins are on"
             n = win(); assert n["win"]["mz1"] - n["win"]["mz0"] > 0.5 and n["win"]["rt1"] > n["win"]["rt0"], n
@@ -55,29 +55,29 @@ try:
                     assert n[k] is not None and abs(n[k] - a[k]) <= 1e-6 * max(1, abs(a[k])), (k, n[k], a[k])
                 assert o["shown"]["height"] and o["shown"]["rtmax"], o["shown"]
                 pg.evaluate(M + ".cv.focus()")      # arrows with the focus elsewhere change file
-                pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(700)
+                pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); attendi(pg, f"MAPEX.numbers({M}).win.rt0 !== {n['win']['rt0']}"); frames(pg, 2)
         step("the numbers are the ones of /api/xic and /api/spectrum for the window of the box", numbers_match)
         def move_keys():
             pg.evaluate(M + ".cv.focus()"); w0 = win()["win"]
-            pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(700); w1 = win()["win"]; assert w1["rt0"] > w0["rt0"] and w1["mz0"] == w0["mz0"], (w0, w1)
-            pg.keyboard.press("ArrowUp"); pg.wait_for_timeout(700); w2 = win()["win"]; assert w2["mz0"] > w1["mz0"], (w1, w2)
-            pg.keyboard.press("Alt+ArrowRight"); pg.wait_for_timeout(700); w3 = win()["win"]; assert (w3["rt1"] - w3["rt0"]) > (w2["rt1"] - w2["rt0"]), (w2, w3)
+            pg.keyboard.press("ArrowRight"); attendi(pg, f"MAPEX.numbers({M}).win.rt0 > {w0['rt0']}"); w1 = win()["win"]; assert w1["rt0"] > w0["rt0"] and w1["mz0"] == w0["mz0"], (w0, w1)
+            pg.keyboard.press("ArrowUp"); attendi(pg, f"MAPEX.numbers({M}).win.mz0 > {w1['mz0']}"); w2 = win()["win"]; assert w2["mz0"] > w1["mz0"], (w1, w2)
+            pg.keyboard.press("Alt+ArrowRight"); attendi(pg, f"(w=>w.rt1-w.rt0)(MAPEX.numbers({M}).win) > {w2['rt1'] - w2['rt0']}"); w3 = win()["win"]; assert (w3["rt1"] - w3["rt0"]) > (w2["rt1"] - w2["rt0"]), (w2, w3)
         step("arrows move the box, Alt + arrows widen it; numbers follow", move_keys)
         def drag_mouse():
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2), r.left+a.X(b.rt1), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
             w0 = win()["win"]
             pg.mouse.move(c[0], c[1]); ready(pg)      # the pointer entering the map shifts the layout: the box is read again where it is now
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
-            pg.mouse.move(c[0], c[1]); pg.mouse.down(); pg.mouse.move(c[0] + 60, c[1] - 20, steps=5); pg.mouse.up(); pg.wait_for_timeout(800)
+            pg.mouse.move(c[0], c[1]); pg.mouse.down(); pg.mouse.move(c[0] + 60, c[1] - 20, steps=5); pg.mouse.up(); attendi(pg, f"(w=>w.rt0 > {w0['rt0']} && w.mz0 > {w0['mz0']})(MAPEX.numbers({M}).win)")
             w1 = win()["win"]; assert w1["rt0"] > w0["rt0"] and w1["mz0"] > w0["mz0"] and abs((w1["rt1"] - w1["rt0"]) - (w0["rt1"] - w0["rt0"])) < 1e-9, (w0, w1)
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X(b.rt1), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
-            pg.mouse.move(c[0], c[1]); pg.mouse.down(); pg.mouse.move(c[0] + 40, c[1], steps=5); pg.mouse.up(); pg.wait_for_timeout(800)
+            pg.mouse.move(c[0], c[1]); pg.mouse.down(); pg.mouse.move(c[0] + 40, c[1], steps=5); pg.mouse.up(); attendi(pg, f"MAPEX.numbers({M}).win.rt1 > {w1['rt1']}")
             w2 = win()["win"]; assert w2["rt1"] > w1["rt1"] and w2["rt0"] == w1["rt0"], (w1, w2)
             o = pg.evaluate(CHECK); assert abs(o["n"]["area"] - o["api"]["area"]) <= 1e-6 * max(1, o["api"]["area"]), o
         step("drag the box and its right edge with the mouse; the numbers still match the API", drag_mouse)
         def menu_item():
-            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(200)
-            x, y = at(.2, .3); pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(250)
+            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); frames(pg, 3)
+            x, y = at(.2, .3); pg.mouse.click(x, y, button="right"); attendi(pg, "!document.getElementById('ctx').hidden")
             its = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(d=>d.textContent.trim())")
             assert not any("extracted" in i.lower() or "both" in i.lower() for i in its), its                 # the teaching view is not in the menu: it has its own button
             pg.keyboard.press("Escape")
@@ -89,19 +89,19 @@ try:
             c = pg.evaluate(f"(()=>{{const a={M}._a, b={M}._mz.ex.box, r={M}.cv.getBoundingClientRect(); return [r.left+a.X((b.rt0+b.rt1)/2), r.top+a.Y((b.mz0+b.mz1)/2)]}})()")
             w0 = win()["win"]; z0 = pg.evaluate(f"[{M}.zoom,{M}.zoomY]")
             cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": c[0], "y": c[1], "id": 0}]})
-            for k in range(1, 7): cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": c[0] + k * 8, "y": c[1], "id": 0}]}); pg.wait_for_timeout(30)
-            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); pg.wait_for_function("1", timeout=1000); pg.wait_for_timeout(700)
+            for k in range(1, 7): cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": c[0] + k * 8, "y": c[1], "id": 0}]}); frames(pg, 2)
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []}); attendi(pg, f"MAPEX.numbers({M}).win.rt0 > {w0['rt0']}")
             w1 = win()["win"]; assert w1["rt0"] > w0["rt0"], (w0, w1); assert pg.evaluate(f"[{M}.zoom,{M}.zoomY]") == z0, "the map did not move"
         step("a finger on the box moves the box, not the map", touch_drag)
         def no_labels():
-            pg.evaluate("window.MAPFEAT = { features: () => [{ id: 1, mz: 259, rt: 8, ppm: 5 }] }"); pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(500)
+            pg.evaluate("window.MAPFEAT = { features: () => [{ id: 1, mz: 259, rt: 8, ppm: 5 }] }"); pg.evaluate(M + ".cv.focus()"); r0 = win()["win"]["rt0"]; pg.keyboard.press("ArrowRight"); attendi(pg, f"MAPEX.numbers({M}).win.rt0 !== {r0}"); frames(pg, 3)
             assert pg.evaluate(f"!{M}._mz.feat && document.querySelector('.pnl.map [data-nav=mapfeat]').hidden"), "LR: no automatic marker, no switch for the features of a search, even if a provider exists"
             pg.evaluate("delete window.MAPFEAT")
             txt = pg.inner_text(".pnl.map .mzex"); import re
             assert not re.search(r"(?i)product|\bTP\b|candidate|identified", txt), txt
         step("low resolution: no marker and no label from the program", no_labels)
         def off():
-            pg.click(".pnl.map .mzex [data-ex=off]"); pg.wait_for_timeout(500)
+            pg.click(".pnl.map .mzex [data-ex=off]"); attendi(pg, M + "._mz.ex == null || !" + M + "._mz.ex")
             assert pg.evaluate(f"!{M}._mz.ex && !document.querySelector('.pnl.map .mzex')")
             assert not pg.evaluate(M + "._mz.ex")
             assert pg.evaluate(f"{M}.el.querySelector('.mzside').hidden")

@@ -16,23 +16,23 @@ try:
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg)
         def open_below():
-            pg.click("#np-calc2"); pg.wait_for_timeout(300)
+            pg.click("#np-calc2"); attendi(pg, "window.BARRA.curTab === 'calc' && !document.querySelector('#sb-panel-calc').hidden")
             assert pg.evaluate("window.BARRA.curTab === 'calc' && !document.querySelector('#sb-panel-calc').hidden")
             # In Disegno view, np-calc2 opens floating dropdown right under its button, not modal, >= 520px wide
-            pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(400)
-            pg.click("#np-calc2"); pg.wait_for_timeout(300)
+            pg.click("#nav [data-v=draw]"); frames(pg, 3)
+            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden"); frames(pg, 3)
             b = pg.evaluate("(()=>{const a=document.querySelector('#np-calc2').getBoundingClientRect(),c=document.querySelector('#calcdlg');const r=c.getBoundingClientRect();return {ab:a.bottom,ct:r.top,w:r.width,vis:!c.hidden,modal:c.matches(':modal')}})()")
             assert b["vis"] and not b["modal"] and 0 < b["ct"] - b["ab"] < 20 and b["w"] >= 520, b
-            pg.click("#calcx"); pg.wait_for_timeout(200)
-            pg.click("#nav [data-v=data]"); pg.wait_for_timeout(400)
+            pg.click("#calcx"); attendi(pg, "document.querySelector('#calcdlg').hidden")
+            pg.click("#nav [data-v=data]"); frames(pg, 3)
             if not pg.evaluate("!!document.querySelector('#calcin').offsetParent"):    # the sidebar tab stays open across views: the button is a toggle
-                pg.click("#np-calc2"); pg.wait_for_timeout(300)
+                pg.click("#np-calc2"); attendi(pg, "!!document.querySelector('#calcin').offsetParent")
         step("in Dati opens sidebar tab, in Disegno opens right under its button >= 520 px wide", open_below)
         def usable():
-            pg.wait_for_timeout(300)               # docked next to the charts the calculator stays open while the student works on them
+            frames(pg, 3)               # docked next to the charts the calculator stays open while the student works on them
             c = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom'&&q.tab==='full'),r=p.cv.getBoundingClientRect();return {x:r.left+p._a.X(14.3),y:r.bottom-60}})()")
             pg.evaluate("window.scrollTo(0,0)")
-            pg.mouse.click(c["x"], c["y"] if c["y"] < 700 else 400); pg.wait_for_timeout(500)
+            pg.mouse.click(c["x"], c["y"] if c["y"] < 700 else 400); attendi(pg, "E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur != null"); frames(pg, 3)
             assert pg.evaluate("document.querySelector('#calcdlg').hidden") is False, "stays open while the student works on the graphs"
             assert pg.evaluate("E.panels.find(q=>q.type==='chrom'&&q.tab==='full').cur") is not None
         step("the graphs stay usable with the calculator open", usable)
@@ -48,15 +48,15 @@ try:
             pg.fill("#calcin", "364.4-194.2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'")
             assert pg.inner_text("#calcres").strip() == "170.2" and not pg.evaluate("document.querySelector('#calcpad').hidden")
             assert pg.is_visible("#calc-nl") and "170.2" in pg.get_attribute("#calc-nl", "title")
-            pg.fill("#calcin", "364,4 \u2212 194,2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
+            pg.fill("#calcin", "364,4 \u2212 194,2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '170.2'"); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
             pg.fill("#calcin", "(229.1-171.2)*2"); until(pg, "document.querySelector('#calcres').innerText.trim() === '115.8'"); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); until(pg, "window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.evaluate("window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.input_value("#nl-q") == "115.8"
-            pg.click("#np-calc2"); pg.wait_for_timeout(200)
+            pg.click("#np-calc2"); attendi(pg, "window.BARRA.curTab === 'calc'")
         step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), calc-nl button opens losses tab", arithmetic)
         def keypad():
-            pg.fill("#calcin", ""); pg.wait_for_timeout(100)
+            pg.fill("#calcin", ""); frames(pg, 2)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
             assert pg.inner_text("#calcres").strip() == "3"
             pg.click("#calcpad [data-k='=']"); until(pg, "document.querySelector('#calcin').value === '3'")
@@ -77,16 +77,16 @@ try:
             pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
         step("a formula: adduct table as before, no keypad", formula_hides_pad)
         def closes():
-            pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(300)
-            pg.click("#np-calc2"); pg.wait_for_timeout(300)
+            pg.click("#nav [data-v=draw]"); frames(pg, 3)
+            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")
             assert not pg.evaluate("document.querySelector('#calcdlg').hidden")
-            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); attendi(pg, "document.querySelector('#calcdlg').hidden")
             assert pg.evaluate("document.querySelector('#calcdlg').hidden")
-            pg.click("#nav [data-v=data]"); pg.wait_for_timeout(300)
+            pg.click("#nav [data-v=data]"); frames(pg, 3)
             assert pg.locator("#np-iso").count() == 0, "the Isotopi button is gone from the header"
         step("Esc closes the calculator; no Isotopi button in the header", closes)
         def xic_dlg():
-            pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300); pg.fill("#xic-mz", "c14h13f4n3o2s"); hold(pg, 1200)
+            pg.evaluate("openXic(null,{})"); pg.wait_for_selector("#xic-mz", state="visible"); pg.fill("#xic-mz", "c14h13f4n3o2s"); attendi(pg, "document.querySelector('#xic-sum').innerText.includes('interpretata come')")
             assert "interpretata come" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")
         step("XIC window too", xic_dlg)
     r.close()

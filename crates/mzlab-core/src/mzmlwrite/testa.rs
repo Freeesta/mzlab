@@ -2,7 +2,7 @@
 
 use super::*;
 
-/// Total ion current and base peak (m/z, intensity) summed from the points; the `precursori` build takes the maker's values where the reader gives them.
+/// Total ion current and base peak (m/z, intensity): the maker's values where the reader gives them (`precursori` both, `estesi` the TIC), else summed from the points.
 fn totals(sp: &Spectrum, extra: &SpectrumExtra) -> (f64, Option<(f64, f64)>) {
     let tic: f64 = (0..sp.mz.len()).map(|i| sp.intensity_f64(i)).sum();
     let base = (0..sp.mz.len())
@@ -10,7 +10,9 @@ fn totals(sp: &Spectrum, extra: &SpectrumExtra) -> (f64, Option<(f64, f64)>) {
         .map(|b| (sp.mz[b], sp.intensity_f64(b)));
     #[cfg(feature = "precursori")]
     return (extra.tic.unwrap_or(tic), extra.base_peak.or(base));
-    #[cfg(not(feature = "precursori"))]
+    #[cfg(all(feature = "estesi", not(feature = "precursori")))]
+    return (extra.tic.unwrap_or(tic), base);
+    #[cfg(not(any(feature = "precursori", feature = "estesi")))]
     {
         let _ = extra;
         (tic, base)

@@ -3,8 +3,6 @@
   "crates/mzlab-core/src/hrscans.rs::clippy::needless_range_loop": 1,
   "crates/mzlab-core/src/isoscore.rs::clippy::neg_cmp_op_on_partial_ord": 1,
   "crates/mzlab-core/src/iteminfo.rs::clippy::type_complexity": 1,
-  "crates/mzlab-core/src/json.rs::clippy::indexing_slicing": 4,
-  "crates/mzlab-core/src/json.rs::clippy::unwrap_used": 4,
   "crates/mzlab-core/src/labmethods.rs::clippy::double_ended_iterator_last": 1,
   "crates/mzlab-core/src/mapcells.rs::clippy::neg_cmp_op_on_partial_ord": 1,
   "crates/mzlab-core/src/mapcells.rs::clippy::type_complexity": 1,

@@ -11,7 +11,7 @@ pub(super) use super::ident_spectra::{chimeric, insilico, match_spectra, table_m
 /// The fused `.wasm` of Attributio (manifest entries `attributio`, `attributio_rev`, `attributio_export`, `attributio_ms2`) and its fixed ceiling in
 /// bytes (`limit_attributio` of `tools/build_feat_wasm.sh`).
 pub(super) const ATTRIBUTIO_WASM: &str = "attributio";
-pub(super) const ATTRIBUTIO_CEILING: u64 = 1_388_544;
+pub(super) const ATTRIBUTIO_CEILING: u64 = 1_536_000;
 
 /// Every step of the identification chain, in the order of the chain.
 pub fn registry() -> Vec<Step> {

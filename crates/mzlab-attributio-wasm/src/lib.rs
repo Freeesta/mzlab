@@ -444,3 +444,29 @@ pub fn ms2_to(
     }
     Ok(format!("{{\"bytes\":{}}}", text.len()))
 }
+
+/// The Crippen logP and descriptors of a SMILES as JSON (`{crippen, mw, tpsa, hbd, hba, nrot}`, `null` where unknown; `{}` when it does not read): the values the RT-logP check of the
+/// Banco computes with, exposed so a test can compare the native and the `.wasm` results.
+#[cfg(feature = "rev")]
+pub fn rt_descriptors_json(smiles: &str) -> String {
+    use mzlab_feat::attributio::review::rtlogp::LogPValues;
+    let Some(v) = LogPValues::from_smiles(smiles) else {
+        return "{}".into();
+    };
+    let n = |x: Option<f64>| x.map_or("null".to_string(), |y| format!("{y:?}"));
+    format!(
+        "{{\"crippen\":{},\"mw\":{},\"tpsa\":{},\"hbd\":{},\"hba\":{},\"nrot\":{}}}",
+        n(v.crippen),
+        n(v.mw),
+        n(v.tpsa),
+        n(v.hbd),
+        n(v.hba),
+        n(v.nrot)
+    )
+}
+
+#[cfg(feature = "rev")]
+#[wasm_bindgen]
+pub fn rt_descriptors(smiles: &str) -> String {
+    rt_descriptors_json(smiles)
+}
