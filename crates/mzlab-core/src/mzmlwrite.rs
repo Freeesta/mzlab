@@ -290,7 +290,7 @@ fn esc(s: &str) -> String {
 fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
     let mut s = String::new();
     #[cfg(any(feature = "sciex", feature = "precursori"))]
-    let (ce, dwell) = (crate::mzmlhead::srm_id(&c.id).2, crate::mzmlhead::id_dwell(&c.id));
+    let (ce, dwell) = (crate::mzmlhead::srm_id(&c.id).2, crate::mzmlsrm::id_dwell(&c.id));
     #[cfg(not(any(feature = "sciex", feature = "precursori")))]
     let _ = c;
     #[cfg(any(feature = "sciex", feature = "precursori"))]

@@ -134,11 +134,6 @@ pub fn srm_id(id: &str) -> (Option<f64>, Option<f64>, Option<f64>, String) {
     (after(id, "Q1="), after(id, "Q3="), after(id, "ce="), name)
 }
 
-/// The dwell time (ms) an SRM chromatogram id spells (`dwell=...`).
-pub fn id_dwell(id: &str) -> Option<f64> {
-    after(id, "dwell=")
-}
-
 pub struct Mzml<R: ReadAt> {
     pub r: R,
     pub size: u64,
@@ -223,7 +218,7 @@ impl<R: ReadAt> Mzml<R> {
                 d.kind = "srm".into();
                 (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
                 d.dwell = dwell(&h);
-                d.ce = d.ce.or_else(|| cv_number(&h, "MS:1000045"));
+                d.ce = d.ce.or_else(|| crate::mzmlsrm::cv_number(&h, "MS:1000045"));
             } else if ![
                 "MS:1000235",
                 "MS:1000627",
@@ -564,14 +559,6 @@ fn attr_id(h: &str) -> Option<String> {
         from = at + 1;
     }
     None
-}
-
-/// The `value` of the first cvParam with accession `acc` as a number (the collision energy of an `<activation>`).
-fn cv_number(h: &str, acc: &str) -> Option<f64> {
-    let t = &h[h.find(&format!("accession=\"{acc}\""))?..];
-    let t = &t[..t.find("/>")?];
-    let v = &t[t.find("value=\"")? + 7..];
-    pyfloat(&v[..v.find('"')?])
 }
 
 /// `name="?MS_dwell_time"?\s+value="([^"]*)"`

@@ -11,27 +11,48 @@ use serde_json::Value;
 fn reference() -> Option<(PathBuf, Value)> {
     let out = std::env::temp_dir().join(format!("mzlab_wiff_mrm_{}", std::process::id()));
     let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools/wiff_riferimento.py");
-    let ok = Command::new("python3").arg(script).arg(&out).output().ok().filter(|o| o.status.success());
+    let ok = Command::new("python3")
+        .arg(script)
+        .arg(&out)
+        .output()
+        .ok()
+        .filter(|o| o.status.success());
     if ok.is_none() {
-        assert!(std::env::var("MZLAB_GOLDEN_STRICT").is_err(), "python3 not available");
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 not available"
+        );
         eprintln!("SKIP wiff_mrm: python3 not available");
         return None;
     }
-    let json = serde_json::from_slice(&std::fs::read(out.join("riferimento.json")).unwrap()).unwrap();
+    let json =
+        serde_json::from_slice(&std::fs::read(out.join("riferimento.json")).unwrap()).unwrap();
     Some((out, json))
 }
 
 fn pair(dir: &Path, name: &str) -> FileSet {
     let member = |file: String| {
         let bytes = std::fs::read(dir.join(&file)).unwrap();
-        Membro { nome: file, dim: bytes.len() as u64, dati: Box::new(bytes), sha1: None }
+        Membro {
+            nome: file,
+            dim: bytes.len() as u64,
+            dati: Box::new(bytes),
+            sha1: None,
+        }
     };
-    FileSet { membri: vec![member(format!("{name}.wiff")), member(format!("{name}.wiff.scan"))] }
+    FileSet {
+        membri: vec![
+            member(format!("{name}.wiff")),
+            member(format!("{name}.wiff.scan")),
+        ],
+    }
 }
 
 #[test]
 fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
-    let Some((dir, want)) = reference() else { return };
+    let Some((dir, want)) = reference() else {
+        return;
+    };
     let want = want["transizioni"]["transitions"].as_array().unwrap();
     let mut l = lettori::apri(pair(&dir, "transizioni"), &Limiti::sito()).unwrap();
     let bytes = mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap();
@@ -47,7 +68,12 @@ fn the_transitions_of_the_method_survive_wiff_to_mzml_to_read() {
     assert_eq!(srm.len(), want.len());
     for (c, w) in srm.iter().zip(want) {
         assert_eq!((c.q1, c.q3), (w["q1"].as_f64(), w["q3"].as_f64()));
-        assert_eq!((c.ce, c.dwell), (w["ce"].as_f64(), w["dwell"].as_f64()), "{}", c.id);
+        assert_eq!(
+            (c.ce, c.dwell),
+            (w["ce"].as_f64(), w["dwell"].as_f64()),
+            "{}",
+            c.id
+        );
         assert_eq!(c.name, w["name"].as_str().unwrap());
     }
 }
