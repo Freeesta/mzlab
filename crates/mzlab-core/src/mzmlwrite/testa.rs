@@ -100,7 +100,32 @@ pub(crate) fn spectrum_head(index: usize, sp: &Spectrum, extra: &SpectrumExtra) 
         return s + &precursor_list(&extra.precursors);
     }
     if let Some(p) = sp.precursor {
-        let _ = write!(s, "<precursorList count=\"1\"><precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList></precursor></precursorList>", mz_cv("MS:1000827", "isolation window target m/z", p), mz_cv("MS:1000744", "selected ion m/z", p));
+        s += &plain_precursor(p, extra);
     }
     s
+}
+
+/// The `<precursorList>` of a spectrum whose reader gave only the selected m/z: the schema wants an `<activation>`, which is collision-induced dissociation
+/// when the file does not say otherwise. The readers that know a collision energy and an isolation half-width (`SpectrumExtra::ce`, `iso_half`) add them;
+/// the builds that carry no such reader (the ones under a size limit) leave them out.
+fn plain_precursor(p: f64, extra: &SpectrumExtra) -> String {
+    let mut s = format!(
+        "<precursorList count=\"1\"><precursor><isolationWindow>{}",
+        mz_cv("MS:1000827", "isolation window target m/z", p)
+    );
+    #[cfg(any(feature = "sciex", feature = "precursori"))]
+    if let Some(h) = extra.iso_half {
+        s += &mz_cv("MS:1000828", "isolation window lower offset", h);
+        s += &mz_cv("MS:1000829", "isolation window upper offset", h);
+    }
+    s += "</isolationWindow><selectedIonList count=\"1\"><selectedIon>";
+    s += &mz_cv("MS:1000744", "selected ion m/z", p);
+    s += "</selectedIon></selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>";
+    #[cfg(any(feature = "sciex", feature = "precursori"))]
+    if let Some(ce) = extra.ce {
+        s += &format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{ce}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>");
+    }
+    #[cfg(not(any(feature = "sciex", feature = "precursori")))]
+    let _ = extra;
+    s + "</activation></precursor></precursorList>"
 }

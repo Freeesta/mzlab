@@ -94,7 +94,20 @@ fn a_spectrum_without_precursors_keeps_the_plain_precursor_and_the_totals_from_i
     assert!(head.contains("name=\"selected ion m/z\" value=\"229.1\""));
     assert!(head.contains("name=\"total ion current\" value=\"8\"/>"));
     assert!(head.contains("name=\"base peak m/z\" value=\"101\""));
-    assert!(!head.contains("activation"));
+    // the schema wants an activation: collision-induced dissociation when nothing says more
+    assert!(head.contains("</selectedIonList><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/></activation></precursor>"));
+
+    let extra = SpectrumExtra {
+        ce: Some(25.0),
+        iso_half: Some(0.35),
+        ..Default::default()
+    };
+    let head = spectrum_head(0, &sp, &extra);
+    assert!(head.contains("name=\"isolation window lower offset\" value=\"0.35\""));
+    assert!(head.contains("name=\"isolation window upper offset\" value=\"0.35\""));
+    assert!(head.contains(
+        "name=\"collision energy\" value=\"25\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\""
+    ));
 }
 
 #[test]

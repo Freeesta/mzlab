@@ -421,7 +421,11 @@ impl Rows {
                     ..Prec::default()
                 });
                 m.prec = Some(p);
-                m.iso = Some((p - 0.5, p + 0.5));
+                let half = extra.iso_half.unwrap_or(0.5);
+                m.iso = Some((p - half, p + half));
+                // the `<activation>` the writer gives a plain precursor
+                m.act = Some("CID".into());
+                m.ce = extra.ce;
             }
             if m.act.is_none() {
                 m.act = match &m.path {

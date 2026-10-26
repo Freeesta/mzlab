@@ -26,6 +26,8 @@ const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
 /// Scan-type codes seen in the headers (full scan, product-ion scan); anything else is read as a full scan.
 const CODE_PRODUCT: u32 = 11;
+/// Half of the 0.7 m/z (FWHM) that Q1 transmits at unit resolution, the only setting the method is assumed to hold (the resolution is not read per experiment).
+const UNIT_HALF_WIDTH: f64 = 0.35;
 
 /// One acquisition experiment of the period (the scans of a cycle alternate between them).
 #[derive(Debug, Clone, Default)]
@@ -34,6 +36,10 @@ pub struct Experiment {
     /// 1 for a full scan (and unknown types), 2 for a product-ion scan.
     pub level: u8,
     pub precursor: Option<f64>,
+    /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
+    pub ce: Option<f64>,
+    /// Half-width (m/z) of the isolation window of a product-ion experiment.
+    pub iso_half: Option<f64>,
     #[cfg(feature = "estesi")]
     pub polarity: Option<i8>,
 }
@@ -110,11 +116,27 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             code,
             level: if product { 2 } else { 1 },
             precursor: if product { prec } else { None },
+            ce: None,
+            iso_half: None,
             #[cfg(feature = "estesi")]
             polarity: None,
         });
     }
     out
+}
+
+/// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
+fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
+    let Some(m) = method else { return };
+    for (i, e) in experiments.iter_mut().enumerate().filter(|(_, e)| e.level == 2) {
+        e.iso_half = Some(UNIT_HALF_WIDTH);
+        if let Some(methodinfo::Kind::Scan { ce, .. }) = m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind) {
+            e.ce = match ce[..] {
+                [v] => Some(v),
+                _ => None,
+            };
+        }
+    }
 }
 
 fn polarity(method: &Option<Method>) -> i8 {
@@ -146,9 +168,11 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         &ole.read(&format!("{SAMPLES}Sample{sample}/Idx"))
             .ok_or_else(|| bad("no Idx"))?,
     );
-    let experiments = experiments(ole, sample);
+    let mut experiments = experiments(ole, sample);
     #[cfg(feature = "estesi")]
-    let experiments = estesi::refine(ole, sample, experiments)?;
+    {
+        experiments = estesi::refine(ole, sample, experiments)?;
+    }
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
@@ -168,6 +192,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     let method = methodinfo::method_of_sample(ole, sample);
     #[cfg(feature = "estesi")]
     let method = method.or_else(|| estesi::fallback_method(ole, sample));
+    activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
