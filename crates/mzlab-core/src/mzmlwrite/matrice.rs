@@ -98,7 +98,11 @@ impl Codifica {
         }
         let len = self.packed.len().div_ceil(3) * 4;
         let ((unit_acc, unit_name), (cv, label)) = (unit_term(unit), kind_term(kind));
-        let unit_cv = if unit == "time" { "UO" } else { "MS" };
+        let unit_cv = if matches!(unit, "time" | "nm" | "au") {
+            "UO"
+        } else {
+            "MS"
+        };
         let _ = write!(s, "<binaryDataArray encodedLength=\"{len}\">");
         if is_np {
             // the values are 64-bit floats once decoded; the codec (and zlib with it) replaces the compression term
@@ -119,6 +123,8 @@ fn unit_term(unit: &str) -> (&'static str, &'static str) {
     match unit {
         "time" => ("UO:0000031", "minute"),
         "mz" => ("MS:1000040", "m/z"),
+        "nm" => ("UO:0000018", "nanometer"),
+        "au" => ("UO:0000269", "absorbance unit"),
         _ => ("MS:1000131", "number of detector counts"),
     }
 }
@@ -128,6 +134,7 @@ fn kind_term(kind: &str) -> (&'static str, &'static str) {
     match kind {
         "time" => ("MS:1000595", "time array"),
         "mz" => ("MS:1000514", "m/z array"),
+        "wavelength" => ("MS:1000617", "wavelength array"),
         _ => ("MS:1000515", "intensity array"),
     }
 }

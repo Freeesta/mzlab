@@ -215,6 +215,10 @@ pub trait Lettore {
     fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> {
         Ok(None)
     }
+    /// The optical (DAD / PDA) matrix of sample `c` as the reader holds it, for `convert.mzml` with `dad`; `None` when the sample has none.
+    fn dad_dati(&mut self, _c: usize) -> Result<Option<crate::wiff::dad::DadData>> {
+        Ok(None)
+    }
     /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
     fn metodo(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.

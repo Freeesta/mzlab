@@ -168,13 +168,21 @@ impl Conversione<'_> {
             None => MzmlWriter::con_opzioni(out, &h, self.opz)?,
         };
         let n = l.indice(c)?.len();
-        if n > 0 {
-            w.open_spectra(n)?;
+        let dad = if self.opz.dad { l.dad_dati(c)? } else { None };
+        let uv = dad.as_ref().map_or(0, |d| d.points());
+        if n + uv > 0 {
+            w.open_spectra(n + uv)?;
         }
         progress(0, n);
         spettri(&mut w, l, (c, n), (self.peaks, &mut pick), progress)?;
         progress(n, n);
-        if n > 0 {
+        if let Some(d) = &dad {
+            for (i, &t) in d.time_min.iter().enumerate() {
+                let row = d.spectrum_at(i).unwrap_or(&[]);
+                w.uv_spectrum(i, t, &d.wavelengths_nm, row)?;
+            }
+        }
+        if n + uv > 0 {
             w.close_spectra()?;
         }
         cromatogrammi(l, c, &mut w)?;

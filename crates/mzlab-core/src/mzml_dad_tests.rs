@@ -132,3 +132,98 @@ fn trace_only_file_has_no_matrix() {
         assert_eq!(r.unwrap_err().key, "err.pda.none");
     }
 }
+
+/// A reader of one sample with no scans and the optical matrix of a `.wiff` (200..210 nm every 2 nm, 5 instants of 0.01 min).
+struct Ottico(Option<DadData>);
+
+impl Ottico {
+    fn matrice() -> DadData {
+        let wl: Vec<f64> = (0..6).map(|j| 200.0 + 2.0 * f64::from(j)).collect();
+        let time: Vec<f64> = (0..5).map(|i| f64::from(i as f32 * 0.01)).collect();
+        let mat: Vec<f32> = (0..30).map(|k| k as f32 * 0.37 - 3.0).collect();
+        DadData {
+            twc_mau: time.iter().map(|t| t * 100.0).collect(),
+            duration_min: 0.04,
+            time_min: time,
+            wl_start_nm: 200.0,
+            wl_stop_nm: 210.0,
+            wl_step_nm: 2.0,
+            wavelengths_nm: wl,
+            matrix_mau: mat,
+        }
+    }
+}
+
+impl crate::lettori::Lettore for Ottico {
+    fn formato(&self) -> crate::lettori::Formato {
+        crate::lettori::Formato::Altro("prova")
+    }
+    fn campioni(&self) -> &[crate::lettori::Campione] {
+        static C: std::sync::OnceLock<Vec<crate::lettori::Campione>> = std::sync::OnceLock::new();
+        C.get_or_init(|| {
+            vec![crate::lettori::Campione {
+                id: 1,
+                nome: "uv".into(),
+                scansioni: 0,
+                dimensione: None,
+            }]
+        })
+    }
+    fn indice(&mut self, _: usize) -> Result<&[crate::lettori::VoceScansione]> {
+        Ok(&[])
+    }
+    fn scansione(&mut self, _: usize, _: usize) -> Result<crate::mzml::Spectrum> {
+        Err(crate::error::Error::new("error.badIndex"))
+    }
+    fn intestazione(&mut self, _: usize, _: usize) -> Result<Vec<crate::lettori::Campo>> {
+        Ok(vec![])
+    }
+    fn cromatogrammi(&mut self, _: usize) -> Result<Vec<crate::lettori::VoceCromatogramma>> {
+        Ok(vec![])
+    }
+    fn cromatogramma(&mut self, _: usize, _: &str) -> Result<crate::mzml::Chromatogram> {
+        Err(crate::error::Error::new("error.badIndex"))
+    }
+    fn metodo(&mut self, _: usize) -> Result<String> {
+        Ok(String::new())
+    }
+    fn dad_dati(&mut self, _: usize) -> Result<Option<DadData>> {
+        Ok(self.0.clone())
+    }
+}
+
+fn convert(dad: bool, matrix: Option<DadData>) -> Vec<u8> {
+    let opz = crate::mzmlwrite::Opzioni {
+        dad,
+        ..Default::default()
+    };
+    crate::lettori_mzml::scrivi_con(&mut Ottico(matrix), 0, Vec::new(), &mut |_, _| {}, opz)
+        .unwrap()
+}
+
+#[test]
+fn conversion_round_trip_gives_the_json_of_the_wiff() {
+    let d = Ottico::matrice();
+    let mut m = mz(convert(true, Some(d.clone())));
+    assert_eq!(
+        pda_map(&mut m).unwrap(),
+        crate::wiff::dad_map::dad_to_map_json(&d)
+    );
+    let spec = crate::wiff::dad_uv::dad_spectrum_json(&d, 0.0, 0.025).unwrap();
+    assert_eq!(pda_spectrum(&mut m, 0.0, 0.025).unwrap(), spec);
+    let xic = crate::wiff::dad_uv::dad_wavelength_json(&d, 202.0, 206.0).unwrap();
+    assert_eq!(pda_wavelength(&mut m, 202.0, 206.0).unwrap(), xic);
+    let run = crate::mzml::read(&convert(true, Some(d))[..]).unwrap();
+    assert!(run.spectra.is_empty(), "the optical spectra are not scans");
+}
+
+#[test]
+fn option_off_leaves_the_bytes_as_they_are() {
+    let without = convert(false, None);
+    assert_eq!(convert(false, Some(Ottico::matrice())), without);
+    assert!(!String::from_utf8_lossy(&without).contains("MS:1000804"));
+    assert_eq!(convert(true, None), without, "no matrix, nothing to add");
+    assert!(
+        String::from_utf8_lossy(&convert(true, Some(Ottico::matrice()))).contains("count=\"5\"")
+    );
+}

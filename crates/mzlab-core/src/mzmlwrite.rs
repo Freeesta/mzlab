@@ -24,11 +24,13 @@ pub struct Opzioni {
     pub numpress: bool,
     /// Threads that encode the arrays when the spectra come through `MzmlWriter::spettri` (`thread_predefinito`); 0 and 1 encode on the calling thread. The bytes written do not depend on it.
     pub thread: usize,
+    /// Also write the optical (DAD / PDA) matrix of the sample, one `MS:1000804` spectrum per instant, after the scans (`MzmlWriter::uv_spectrum`). Off: the file is the same as without it.
+    pub dad: bool,
 }
 
 impl Default for Opzioni {
     fn default() -> Self {
-        Opzioni { livello: LIVELLO_ZLIB, numpress: false, thread: thread_predefinito() }
+        Opzioni { livello: LIVELLO_ZLIB, numpress: false, thread: thread_predefinito(), dad: false }
     }
 }
 
@@ -394,6 +396,7 @@ fn component_list(h: &Header) -> String {
 
 mod codifica;
 mod matrice;
+mod uv;
 mod thread;
 pub use thread::thread_predefinito;
 use codifica::{Codifica, Data};
