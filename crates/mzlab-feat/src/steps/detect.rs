@@ -130,8 +130,8 @@ fn preset_lr() -> Preset {
         },
         params: vec![
             ("axis", text("Da")),
-            ("floor", num(2_000.0)),
-            ("min_height", num(20_000.0)),
+            ("floor", num(3_000.0)),
+            ("min_height", num(7_000.0)),
         ],
         evidence: "LR_FLOOR and LR_MIN_HEIGHT of recipe_lr.rs; the preview proposes the values of each file",
         algorithm: Some("masstrace"),
