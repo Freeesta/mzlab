@@ -64,15 +64,15 @@ pub fn digest(cs: &[Campione]) -> String {
     sha256_hex(to_json(cs).as_bytes())
 }
 
-fn bad() -> Error {
+pub(super) fn bad() -> Error {
     Error::new("error.badCampioni")
 }
 
-fn text(v: &Value, k: &str) -> Result<String> {
+pub(super) fn text(v: &Value, k: &str) -> Result<String> {
     Ok(v.get(k).and_then(|x| x.str()).ok_or_else(bad)?.to_string())
 }
 
-fn number(v: &Value, k: &str) -> Result<Option<f64>> {
+pub(super) fn number(v: &Value, k: &str) -> Result<Option<f64>> {
     match v.get(k) {
         None => Ok(None),
         Some(x) if x.is_null() => Ok(None),
@@ -80,14 +80,14 @@ fn number(v: &Value, k: &str) -> Result<Option<f64>> {
     }
 }
 
-fn whole(v: &Value, k: &str) -> Result<u32> {
+pub(super) fn whole(v: &Value, k: &str) -> Result<u32> {
     let x = number(v, k)?.ok_or_else(bad)?;
     (x >= 1.0 && x.fract() == 0.0 && x < 4e9)
         .then_some(x as u32)
         .ok_or_else(bad)
 }
 
-fn opt_text(v: &Value, k: &str, allowed: &[&str]) -> Result<Option<String>> {
+pub(super) fn opt_text(v: &Value, k: &str, allowed: &[&str]) -> Result<Option<String>> {
     match v.get(k) {
         None => Ok(None),
         Some(x) if x.is_null() => Ok(None),
@@ -127,10 +127,11 @@ fn read_one(v: &Value) -> Result<Campione> {
     c.istd = v.get("istd").and_then(|x| x.bool()).ok_or_else(bad)?;
     c.note = text(v, "note")?;
     c.compound = text(v, "composto")?;
+    super::json3::leggi_nuovi(v, &mut c)?;
     Ok(c)
 }
 
-/// Reads a `campioni/2` document: the roles, kinds of blank and units must be the ones of the schema; `tempo_min` is derived again from
+/// Reads a `campioni/2` (or `/3`, the new fields apart) document: the roles, kinds of blank and units must be the ones of the schema; `tempo_min` is derived again from
 /// `tempo` and `unita_tempo` (a time zero without a time has 0 minutes).
 pub fn from_json(bytes: &[u8]) -> Result<Vec<Campione>> {
     from_value(&parse(bytes)?)
@@ -138,7 +139,10 @@ pub fn from_json(bytes: &[u8]) -> Result<Vec<Campione>> {
 
 /// The same as `from_json` on a document already parsed (a part of a larger document).
 pub fn from_value(doc: &Value) -> Result<Vec<Campione>> {
-    if doc.get("schema").and_then(|v| v.str()) != Some(SCHEMA) {
+    if !matches!(
+        doc.get("schema").and_then(|v| v.str()),
+        Some(SCHEMA) | Some(super::SCHEMA3)
+    ) {
         return Err(bad());
     }
     doc.get("campioni")
@@ -150,7 +154,7 @@ pub fn from_value(doc: &Value) -> Result<Vec<Campione>> {
 }
 
 /// A role of the old vocabularies (Data view, QA/QC, `campioni/1`, Dig) in `campioni/2`; None when unknown.
-fn legacy_kind(t: &str) -> Option<&'static str> {
+pub(super) fn legacy_kind(t: &str) -> Option<&'static str> {
     Some(match t {
         "sample" => "sample",
         "blank" => "blank",
