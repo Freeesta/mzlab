@@ -15,15 +15,19 @@ M = "E.panels.find(q=>q.type==='map')"
 BTN = ".pnl.map [data-o=view][data-v='3d']"
 D = synth("m3d")
 r = Run(port=8838, wd="/tmp/wd_mappa3d")
+def still(pg, expr, n=8):
+    """Wait until `expr` (a JavaScript expression) has given the same JSON for `n` consecutive frames (an animation is over)."""
+    pg.evaluate("window.__still = null")
+    pg.wait_for_function("function (n) { const k = JSON.stringify(" + expr + "); const s = window.__still; if (!s || s.k !== k) { window.__still = {k: k, n: 0}; return false; } return ++s.n >= n; }", arg=n)
 INK = "(()=>{const c=document.querySelector('.m3d-gl');window.__m3d.frame();const o=document.createElement('canvas');o.width=c.width;o.height=c.height;const g=o.getContext('2d');g.drawImage(c,0,0);const d=g.getImageData(0,0,o.width,o.height).data;const s=new Set();for(let i=0;i<d.length;i+=4*97)s.add((d[i]>>4)+','+(d[i+1]>>4)+','+(d[i+2]>>4));return s.size})()"
 
 
 def viewer(pg, tag, hr):
     def opens():
-        pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.wait_for_timeout(300)
+        pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); frames(pg, 3)
         assert pg.locator(BTN).count() == 1
         pg.locator(BTN).click()
-        pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000); pg.wait_for_timeout(500)
+        pg.wait_for_function("document.querySelector('dialog.m3d[open]') && window.__m3d && window.__m3d.V.g && window.__m3d.V.Z", timeout=60000); attendi(pg, INK + " > 6")
         assert pg.evaluate("document.querySelector('dialog.m3d').matches(':modal')")
         assert pg.evaluate(INK) > 6, "the canvas draws something"
         pg.screenshot(path=SH + f"m3d_{tag}_surf.png")
@@ -36,18 +40,20 @@ def viewer(pg, tag, hr):
     step(f"{tag}: region of the 2D map, grid up to 1024 and cells in ppm only in high resolution", region)
     def rotate():
         box = pg.locator(".m3d-gl").bounding_box(); cx, cy = box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5
-        az0 = pg.evaluate("window.__m3d.V.cam.az"); pg.mouse.move(cx, cy); pg.mouse.down(); pg.mouse.move(cx + 120, cy + 20, steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
+        az0 = pg.evaluate("window.__m3d.V.cam.az"); pg.mouse.move(cx, cy); pg.mouse.down(); pg.mouse.move(cx + 120, cy + 20, steps=6); pg.mouse.up(); attendi(pg, f"window.__m3d.V.cam.az !== {az0}")
         assert pg.evaluate("window.__m3d.V.cam.az") != az0
-        d0 = pg.evaluate("window.__m3d.V.cam.d"); pg.mouse.move(cx, cy); pg.mouse.wheel(0, -300); pg.wait_for_timeout(200)
+        d0 = pg.evaluate("window.__m3d.V.cam.d"); pg.mouse.move(cx, cy); pg.mouse.wheel(0, -300); attendi(pg, f"window.__m3d.V.cam.d < {d0}")
         assert pg.evaluate("window.__m3d.V.cam.d") < d0
-        pg.keyboard.press("1"); pg.wait_for_timeout(200); assert pg.evaluate("window.__m3d.V.cam.el") > 80
-        pg.keyboard.press("2"); pg.wait_for_timeout(200); assert pg.evaluate("window.__m3d.V.cam.el") == 0
-        pg.keyboard.press("r"); pg.wait_for_timeout(1500)
+        pg.keyboard.press("1"); attendi(pg, "window.__m3d.V.cam.el > 80"); assert pg.evaluate("window.__m3d.V.cam.el") > 80
+        pg.keyboard.press("2"); attendi(pg, "window.__m3d.V.cam.el === 0"); assert pg.evaluate("window.__m3d.V.cam.el") == 0
+        pg.keyboard.press("r"); still(pg, "window.__m3d.V.cam")
     step(f"{tag}: drag rotates, wheel zooms, keys 1-2 and R", rotate)
     def modes():
         modes = ["fall", "cont", "surf"] + (["sticks"] if hr else [])
         for m in modes:
-            pg.select_option("dialog.m3d [data-m=mode]", m); pg.wait_for_timeout(1500 if m == "sticks" else 600)
+            pg.select_option("dialog.m3d [data-m=mode]", m)
+            if m == "sticks": attendi(pg, "window.__m3d.V.pts && window.__m3d.V.pts.n > 0")
+            attendi(pg, INK + " > 4")
             assert pg.evaluate(INK) > 4, m
             pg.screenshot(path=SH + f"m3d_{tag}_{m}.png")
         dis = pg.evaluate("document.querySelector('dialog.m3d [data-m=mode] [value=sticks]').disabled")
@@ -60,7 +66,8 @@ def viewer(pg, tag, hr):
         c = pg.evaluate("""(()=>{const m=window.__m3d,V=m.V,g=V.g;let b=-1,bi=0;for(let i=0;i<V.raw.length;i++)if(V.raw[i]>b){b=V.raw[i];bi=i}
           const i=Math.floor(bi/g.nmz),j=bi%g.nmz,q=m.project(m.px(i),m.heightAt(i,j)*m.box().y,m.pz(j)),r=document.querySelector('.m3d-gl').getBoundingClientRect();
           return {x:r.left+q[0],y:r.top+q[1],i,j,v:b,rt:m.rtAt(i),mz:m.mzAt(j)}})()""")
-        pg.mouse.move(c["x"], c["y"]); pg.wait_for_timeout(400)
+        pg.mouse.move(c["x"], c["y"])
+        attendi(pg, f"(()=>{{const c=window.__m3d.V.cur;return !!c&&Math.abs(c.i-{c['i']})<=2&&Math.abs(c.j-{c['j']})<=2}})()")
         cur = pg.evaluate("window.__m3d.V.cur")
         assert abs(cur["i"] - c["i"]) <= 2 and abs(cur["j"] - c["j"]) <= 2, (cur, c)
         txt = pg.inner_text(".m3d-read"); assert "RT" in txt and "m/z" in txt, txt
@@ -79,13 +86,13 @@ def viewer(pg, tag, hr):
         pg.mouse.click(c[0], c[1]); pg.wait_for_function(f"MAPPA.pts({M}).length==={n0 + 1}", timeout=10000)
     step(f"{tag}: a click fixes a point (same list as the 2D map)", fix)
     def keys():
-        i0 = pg.evaluate("window.__m3d.V.cur.i"); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(150)
+        i0 = pg.evaluate("window.__m3d.V.cur.i"); pg.keyboard.press("ArrowRight"); attendi(pg, f"window.__m3d.V.cur.i === {i0 + 1}")
         assert pg.evaluate("window.__m3d.V.cur.i") == i0 + 1 and pg.evaluate("window.__m3d.V.plane") is True
-        pg.fill("dialog.m3d [data-m=ti]", "5"); pg.dispatch_event("dialog.m3d [data-m=ti]", "input"); pg.wait_for_timeout(200)
+        pg.fill("dialog.m3d [data-m=ti]", "5"); pg.dispatch_event("dialog.m3d [data-m=ti]", "input"); attendi(pg, "window.__m3d.V.cur.i === 5")
         assert pg.evaluate("window.__m3d.V.cur.i") == 5
     step(f"{tag}: arrows and the time slider move the cursor and the plane", keys)
     def closes():
-        pg.keyboard.press("Escape"); pg.wait_for_timeout(500)
+        pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.m3d')")
         assert pg.evaluate("!document.querySelector('dialog.m3d')")
         assert pg.evaluate("document.activeElement && document.activeElement.dataset && document.activeElement.dataset.o==='view'"), "the focus goes back to the button"
         assert pg.locator(".pnl.map .mztab tbody tr").count() >= 1, "the point is in the table of the 2D map"
@@ -97,25 +104,26 @@ try:
         b = p.chromium.launch(); r.b = b
         pg = b.new_context(locale="it-IT", viewport={"width": 1440, "height": 950}).new_page()
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
-        pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); pg.wait_for_timeout(800)
+        pg.goto(f"http://127.0.0.1:{r.port}/"); ready(pg)
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]); attendi(pg, "document.querySelectorAll('#flist input[data-k=use]').length>=2")
         pg.click("#opbtn"); ready(pg)
-        pg.click("#np-map"); ready(pg); pg.wait_for_timeout(1200)
+        pg.click("#np-map"); ready(pg)
         viewer(pg, "lr", False)
         def diff():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.locator(BTN).click()
             pg.wait_for_function("window.__m3d && window.__m3d.V.g", timeout=60000)
             k = pg.evaluate("E.files.filter(f=>f.kind==='full')[1].k")
-            pg.select_option("dialog.m3d [data-m=ref]", str(k)); pg.wait_for_function("window.__m3d.V.signed===true && window.__m3d.V.g.ref!==undefined", timeout=60000); pg.wait_for_timeout(800)
+            pg.select_option("dialog.m3d [data-m=ref]", str(k)); pg.wait_for_function("window.__m3d.V.signed===true && window.__m3d.V.g.ref!==undefined", timeout=60000)
+            attendi(pg, INK + " > 4")
             assert pg.evaluate(INK) > 4
             pg.screenshot(path=SH + "m3d_lr_diff.png")
             pg.check("dialog.m3d [data-m=bg]"); pg.wait_for_function("window.__m3d.V.g.bg===true", timeout=60000)
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog.m3d')")
             pg.evaluate("localStorage.removeItem('mzlab.mappa')")
         step("lr: comparison A - B (signed heights) and constant background removed", diff)
         # old keys of the previous 3D view are ignored without errors
         def oldkeys():
-            pg.evaluate("localStorage.setItem('mzlab.mappa', JSON.stringify({t3pal:'cividis',t3sig:2,t3thr:.1}))"); pg.reload(); pg.wait_for_timeout(1500)
+            pg.evaluate("localStorage.setItem('mzlab.mappa', JSON.stringify({t3pal:'cividis',t3sig:2,t3thr:.1}))"); pg.reload(); ready(pg)
             assert not r.errs, r.errs
         step("old t3* keys of mzlab.mappa are ignored", oldkeys)
         b.close()
@@ -123,8 +131,8 @@ try:
     with sync_playwright() as p:
         pg = r2.page(p); pg.set_viewport_size({"width": 1440, "height": 950})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
-        pg.evaluate("reveal(addPanel('map', { k: E.files.find(f => f.kind === 'full').k }))"); ready(pg); pg.wait_for_timeout(1500)
+        pg.evaluate("setTab('full',true)"); ready(pg)
+        pg.evaluate("reveal(addPanel('map', { k: E.files.find(f => f.kind === 'full').k }))"); ready(pg); attendi(pg, M + " && " + M + "._a")
         viewer(pg, "hr", True)
     r2.close()
 except Exception as e:
