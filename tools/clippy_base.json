@@ -50,16 +50,7 @@
   "crates/mzlab-feat/src/ms2spec.rs::clippy::type_complexity": 1,
   "crates/mzlab-feat/src/params_tests.rs::clippy::approx_constant": 1,
   "crates/mzlab-feat/src/store.rs::clippy::too_many_arguments": 1,
-  "crates/mzlab-feat/tests/evid_graph.rs::clippy::no_effect_replace": 1,
-  "crates/mzlab-lib-wasm/src/lib.rs::clippy::too_many_arguments": 2,
-  "crates/mzlab-lib-wasm/src/lib.rs::clippy::type_complexity": 1,
-  "crates/mzlab-lib/src/parse.rs::clippy::indexing_slicing": 18,
-  "crates/mzlab-lib/src/read.rs::clippy::cast_possible_truncation": 13,
-  "crates/mzlab-lib/src/read.rs::clippy::indexing_slicing": 16,
-  "crates/mzlab-lib/src/scores.rs::clippy::needless_range_loop": 2,
-  "crates/mzlab-lib/src/sortutil.rs::clippy::unnecessary_sort_by": 1,
-  "crates/mzlab-lib/tests/common/mod.rs::clippy::manual_is_multiple_of": 1,
-  "crates/mzlab-lib/tests/format.rs::clippy::type_complexity": 1
+  "crates/mzlab-feat/tests/evid_graph.rs::clippy::no_effect_replace": 1
  },
  "fmt": [
   "crates/mzlab-core/src/analog.rs",
