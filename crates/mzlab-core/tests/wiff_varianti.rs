@@ -256,13 +256,30 @@ fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
     let (tic, time) = (nums(&want["tic"]), nums(&want["time"]));
     let (w, mut scan) = open(&dir, "totale").unwrap();
     let run = w.run(&mut scan).unwrap();
-    assert_eq!(run.chromatograms.len(), 1);
+    assert_eq!(run.chromatograms.len(), 2);
     let c = &run.chromatograms[0];
     assert!((c.id.as_str(), c.kind) == ("TIC", ChromKind::Tic));
     assert!(c.time.iter().zip(&time).all(|(a, b)| close(*a, *b)));
     // the chromatogram is the TIC of the index as the file wrote it, a missing one (0.0) included
     assert_eq!(c.intensity, vec![tic[0], 0.0, tic[2]]);
+    let bpc = &run.chromatograms[1];
+    assert!((bpc.id.as_str(), bpc.kind) == ("BPC", ChromKind::Bpc));
+    assert_eq!(bpc.time, c.time);
+    assert!(bpc
+        .intensity
+        .iter()
+        .zip(nums(&want["bpc"]))
+        .all(|(a, b)| close(*a, b)));
     let mut l = lettori::apri(set(&dir, "totale"), &Limiti::sito()).unwrap();
+    // listing the chromatograms decodes no scan: the BPC is there once the writer has gone through the scans
+    let ids = |l: &mut dyn lettori::Lettore| {
+        l.cromatogrammi(0)
+            .unwrap()
+            .into_iter()
+            .map(|v| v.id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(&mut *l), ["TIC"]);
     let xml = String::from_utf8(
         mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
     )
@@ -278,4 +295,12 @@ fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
         "{got:?} {tic:?}"
     );
     assert!(xml.contains("<chromatogram index=\"0\" id=\"TIC\""));
+    assert!(xml.contains("<chromatogram index=\"1\" id=\"BPC\""));
+    assert_eq!(ids(&mut *l), ["TIC", "BPC"]);
+    let back = mzlab_core::mzml::read(xml.as_bytes()).unwrap();
+    assert!(back.chromatograms[1]
+        .intensity
+        .iter()
+        .zip(&run.chromatograms[1].intensity)
+        .all(|(a, b)| close(*a, *b)));
 }

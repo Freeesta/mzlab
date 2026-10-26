@@ -17,7 +17,7 @@ TRIO = "(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null),s2=E.panel
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1500})
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2); pg.wait_for_timeout(2000)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2); attendi(pg, "E.files.some(f=>f.kind==='ms2')")
         info = pg.evaluate("""(async()=>{const k=E.files.find(f=>f.kind==='ms2').k, d=await J('api/dda?k='+k), cnt={};d.tgt.forEach(t=>{if(t)cnt[t]=(cnt[t]||0)+1});
           const t=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0], i=d.tgt.indexOf(t), s=await J('api/scan?k='+k+'&sid='+d.sid[i]);
           return {k, t, n:cnt[t], sid:d.sid[i], mz:s.mz, y:s.y}})()""")
@@ -26,15 +26,15 @@ try:
             return f"Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nInChIKey: {ik}\nLicense: CC BY 4.0\nAuthors: Autore di prova\nAccession: ACC001\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f} {y:.1f}" for m, y in peaks) + "\n\n"
         text = (msp("Voce di prova", info["t"], pk, "AAAAAAAAAAAAAA-AAAAAAAAAA-N") + msp("Gemella di prova", info["t"], pk, "AAAAAAAAAAAAAA-BBBBBBBBBB-N")
                 + msp("Analogo di prova", info["t"] - 15.9949, [(m if i < len(pk) // 2 else m - 15.9949, y) for i, (m, y) in enumerate(pk)], "CCCCCCCCCCCCCC-AAAAAAAAAA-N"))
-        pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'prova.msp')})})(%s)" % json.dumps(text)); pg.wait_for_timeout(600)
+        pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'prova.msp')})})(%s)" % json.dumps(text))
         def open_menu():
-            pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); pg.wait_for_timeout(2500)
+            pg.evaluate("(async()=>{const t=" + TRIO + ";await DDA.selectMs2(t.s2," + str(info["sid"]) + ")})()"); attendi(pg, "(()=>{const t=" + TRIO + ";return !!(t.s2&&t.s2._a)})()"); frames(pg, 3)
             pos = pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.scrollIntoView({block:'center'});const r=t.s2.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.3}})()")
-            pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
+            pg.mouse.click(pos["x"], pos["y"], button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.includes(\"Cos'è?\")")
             assert "Cos'è?" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
         step("the MS2 panel of the DDA trio has the voice «Cos'è? (cerca nelle librerie)»", open_menu)
         def result():
-            pg.click("#ctx >> text=Cos'è?"); pg.wait_for_selector("#libres #lr-body table", timeout=60000); pg.wait_for_timeout(1500)
+            pg.click("#ctx >> text=Cos'è?"); pg.wait_for_selector("#libres #lr-body table", timeout=60000); attendi(pg, "document.querySelector('#libres').open && document.querySelector('#libres').innerText.includes('Analoghi')")
             t = pg.inner_text("#libres")
             assert pg.evaluate("document.querySelector('#libres').open") and "Candidati" in t and "Analoghi" in t, t[:300]
             names = pg.locator("#libres tr.row[data-k=id]:not([hidden]) td:nth-child(2)").all_inner_texts()
@@ -49,7 +49,7 @@ try:
             b = pg.locator("#libres [data-grp]"); assert b.count() == 1, b.count()          # the twin shares the first InChIKey block
             assert "stesso primo blocco" in b.first.inner_text()
             assert pg.locator("#libres tr.mem[hidden]").count() == 1
-            b.first.click(); pg.wait_for_timeout(300)
+            b.first.click(); attendi(pg, "document.querySelectorAll('#libres tr.mem:not([hidden])').length === 1")
             assert pg.locator("#libres tr.mem:not([hidden])").count() == 1
         step("entries with the same first InChIKey block are grouped (stereoisomers), expandable", groups)
         def level():
@@ -63,24 +63,24 @@ try:
             prop = pg.evaluate("document.querySelector('#libres #lv-dec').closest('div').innerText")
             lv = pg.evaluate("(()=>{const m=document.querySelector('#libres .vd .lvb').textContent.match(/Candidato · L(\\w+)/);return m&&m[1]})()")
             assert lv in ("2a", "3a"), lv
-            pg.select_option("#libres #lv-dec", "2b"); pg.wait_for_timeout(300)
+            pg.select_option("#libres #lv-dec", "2b"); attendi(pg, "document.querySelector('#libres .vd .lvb').textContent.includes('L2b')")
             assert "L2b" in pg.inner_text("#libres .vd .lvb"), pg.inner_text("#libres .vd")
             assert "Livello proposto: L" + lv in pg.inner_text("#libres .vd").replace("\n", " "), "the proposal stays"
-            pg.select_option("#libres #lv-dec", "1"); pg.wait_for_timeout(300)
+            pg.select_option("#libres #lv-dec", "1"); attendi(pg, "document.querySelector('#libres #lv-msg').innerText.includes('standard')")
             assert "standard" in pg.inner_text("#libres #lv-msg") and pg.input_value("#libres #lv-dec") == "2b"
-            pg.select_option("#libres #lv-dec", ""); pg.wait_for_timeout(200)
+            pg.select_option("#libres #lv-dec", ""); frames(pg, 3)
         step("2b only by the decision of the chemist; 1 refused without a standard", decision)
         def thresholds():
-            pg.click("#libres #lr-sog summary"); pg.fill("#libres [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libres [data-thr=entropia_min]", "change"); pg.wait_for_timeout(500)
+            pg.click("#libres #lr-sog summary"); pg.fill("#libres [data-thr=entropia_min]", "0,999"); pg.dispatch_event("#libres [data-thr=entropia_min]", "change"); attendi(pg, "(() => { try { return JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min === 0.999; } catch (e) { return false; } })()")
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.lib.soglie')).mzlab.entropia_min") == 0.999
             assert "L3" in pg.inner_text("#libres .vd .lvb") or "L2a" not in pg.inner_text("#libres .vd .lvb")
             wf = pg.evaluate("LIVELLI.exportState()"); assert wf["soglie"]["entropia_min"] == 0.999 and wf["formato"] == "livelli/1"
-            pg.click("#libres #lr-sog-reset"); pg.wait_for_timeout(300)
+            pg.click("#libres #lr-sog-reset"); attendi(pg, "LIVELLI.thresholds().entropia_min === 0.75")
             assert pg.evaluate("LIVELLI.thresholds().entropia_min") == 0.75
         step("editable thresholds saved in mzlab.lib.soglie and exported for the workflow file", thresholds)
         def mirror_lines():
             lines = json.loads(pg.get_attribute("#libres #lr-cv", "data-lines")); assert len(lines) >= 4 and all(l[2] == 0 for l in lines), lines
-            pg.locator("#libres tr.row[data-k=an]").first.click(); pg.wait_for_timeout(400)
+            pg.locator("#libres tr.row[data-k=an]").first.click(); attendi(pg, "(() => { const c = document.querySelector('#libres #lr-cv'); if (!c) return false; try { return JSON.parse(c.getAttribute('data-lines')).some(l => l[2] === 1); } catch (e) { return false; } })()")
             ln = json.loads(pg.get_attribute("#libres #lr-cv", "data-lines")); assert any(l[2] == 1 for l in ln), ln
             assert "Perdite neutre" in pg.inner_text("#libres #lr-detail")
             n = pg.locator("#libres #lr-detail table.lib-pairs tr").count() - 1   # the table lists the pairs behind the score, shifted ones flagged
@@ -88,7 +88,7 @@ try:
             assert pg.locator("#libres #lr-detail table.lib-pairs caption").inner_text().strip()
         step("the mirror joins the paired peaks (shifted ones too) and lists the shared neutral losses", mirror_lines)
         def attribution():
-            pg.locator("#libres tr.row[data-k=id]").first.click(); pg.wait_for_timeout(300)
+            pg.locator("#libres tr.row[data-k=id]").first.click(); attendi(pg, "document.querySelector('#libres #lr-detail').innerText.includes('ACC001')")
             assert "Autore di prova" in pg.inner_text("#libres #lr-detail") and "ACC001" in pg.inner_text("#libres #lr-detail"), pg.inner_text("#libres #lr-detail")
         step("authors, accession and license under the mirror", attribution)
         def golden_pairs():
@@ -114,14 +114,14 @@ try:
     r.close()
     with sync_playwright() as p:
         r = Run(port=8982, wd="/tmp/wd_ricms2lr"); pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
-        pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
+        pg.evaluate("setTab('ms2',true)"); attendi(pg, "(() => { const p = E.panels.find(p => p.type === 'spec' && p.level === 2); return !!(p && p._a && p._a.data && p._a.data[0]); })()")
         def lr_none():
             SPEC = "E.panels.find(p => p.type === 'spec' && p.level === 2)"
             assert pg.evaluate(f"LIB.isHr({SPEC})") is False
             c = pg.evaluate(f"(() => {{ const p = {SPEC}; p.el.scrollIntoView({{block:'center'}}); const q = p.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_timeout(400)
+            pg.mouse.click(c["x"], c["y"], button="right"); attendi(pg, "!document.querySelector('#ctx').hidden && document.querySelector('#ctx').innerText.trim() !== ''")
             t = pg.inner_text("#ctx"); assert "Cos'è?" not in t, t
         step("low resolution: the voice «Cos'è?» does not exist (the program gives no answers)", lr_none)
     r.close()
