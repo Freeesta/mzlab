@@ -232,6 +232,7 @@
     "../../flow/lazy/flow-review.js",
     "../../flow/lazy/flow-decisions.js",
     "../../flow/lazy/flow-views-tabui.js",
+    "../../flow/lazy/flow-views-tptab.js",
     "../../flow/lazy/flow-desktop.js",
     "../../flow/lazy/flow-web-run.js",
     "../../flow/lazy/flow-live-view.js",

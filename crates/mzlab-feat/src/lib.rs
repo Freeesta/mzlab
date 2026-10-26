@@ -88,6 +88,7 @@ pub mod tp;
 pub mod trace;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
+pub mod uv_bands;
 pub mod view;
 pub mod weakfile;
 

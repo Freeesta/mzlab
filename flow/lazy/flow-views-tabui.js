@@ -104,6 +104,7 @@
     if (kind === "tptab/1") {
       if (!j.rows || !j.rows.length) { host.append(el("p", { class: "fl-note", text: `${label} has no products to show.` })); return; }
       table(host, label, F.readTptab(j), `Table ${label}`);
+      if (F.tptabDetail) F.tptabDetail(host, j, label);
       if (j.gruppi) conditions(host, j.gruppi, label);
     } else if (kind === "gruppi/1") conditions(host, j, label);
     else if (kind === "interp/1") { const d = F.readInterp(j); table(host, label, d.summary, `Reading of ${label}`); table(host, `${label}, site classes`, d.classes, `Site classes of ${label}`); }
