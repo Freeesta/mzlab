@@ -72,8 +72,10 @@ def idx_row(offset, size, time_ms, tic, n) -> bytes:
     return struct.pack("<IId", offset, size, time_ms) + b"\x01\x00" + struct.pack("<dd", tic, float(n)) + bytes(20)
 
 
-def header(code, precursor) -> bytes:
+def header(code, precursor, polarity=None) -> bytes:
     d = bytearray(180)
+    if polarity is not None:
+        d[86:90] = struct.pack("<I", polarity)  # 0 positive, 1 negative
     d[42:50] = struct.pack("<d", precursor)
     d[122:126] = struct.pack("<I", code)
     return bytes(d)
@@ -203,7 +205,8 @@ def main():
     programmati = scheduled(out)
     variante, rifiuti = variants(out)
     totale = full_tic(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale}))
+    blocchi = blocks_v13(out)
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale, "blocchi": blocchi}))
 
 
 def energy(out: Path):
@@ -313,6 +316,25 @@ def variants(out: Path):
     w.save(out, "versione4")
     rifiuti["versione4"] = "scan block version 4"
     return variante, rifiuti
+
+
+def blocks_v13(out: Path):
+    """A 3200-like sample (codes 15 and 11, no model name) whose scan blocks are V1, V3 and V2, with one negative experiment (polarity in the header, the ion spray voltage positive):
+    what the site engine reads without the readers module. Per experiment: the polarity and the expected spectra."""
+    ex = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5, 1),
+          "Experiment2/ExperimentHeader": header(15, 30.0, 0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    versions = [1, 3, 2]
+    pts = [FULL, PRODUCT, FULL]
+    blocks, want = [], []
+    for cycle in range(2):
+        for e in range(3):
+            t = 1000.0 * cycle + 100.0 * e
+            blocks.append(("scan", pts[e], t, float(sum(c for _, c in pts[e])), versions[e]))
+            want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", 2 if e == 1 else 1, 55.5 if e == 1 else None, t, pts[e], versions[e]))
+    w = Writer()
+    w.sample(1, blocks, ex)
+    w.save(out, "blocchi")
+    return {"polarity": [1, -1, 1], "spectra": want}
 
 
 if __name__ == "__main__":

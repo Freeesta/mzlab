@@ -4,8 +4,6 @@
 
 use super::{bad, Experiment, Wiff, HEADER_PRECURSOR};
 
-/// Offset of the polarity in `ExperimentHeader` (u32: 0 positive, 1 negative).
-const HEADER_POLARITY: usize = 86;
 use crate::error::Result;
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
@@ -73,20 +71,6 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
         return Err(bad(&format!("periods={p}")));
     }
     for (i, e) in ex.iter_mut().enumerate() {
-        e.polarity = ole
-            .read(&format!(
-                "MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
-            ))
-            .and_then(|h| {
-                h.get(HEADER_POLARITY..HEADER_POLARITY + 4)
-                    .and_then(|b| <[u8; 4]>::try_from(b).ok())
-                    .map(u32::from_le_bytes)
-            })
-            .and_then(|v| match v {
-                0 => Some(1),
-                1 => Some(-1),
-                _ => None,
-            });
         match e.code {
             Some(CODE_MRM | CODE_FULL | CODE_PRODUCT) => {}
             Some(CODE_PRECURSOR_ION | CODE_NEUTRAL_LOSS) => {
@@ -105,11 +89,6 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
 }
 
 impl Wiff {
-    /// The polarity of the scans of experiment `e`: the one of its header, else the sign of the ion spray voltage of the method.
-    pub(super) fn polarity_of(&self, e: &Experiment) -> i8 {
-        e.polarity.unwrap_or(self.polarity)
-    }
-
     /// True when the engine's reader (written for the 3200 QTRAP: full scans, product-ion scans and MRM) would not read this sample as the file is:
     /// another instrument model, or a scan type besides those three.
     pub fn variante(&self) -> bool {
