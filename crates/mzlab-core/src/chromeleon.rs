@@ -10,16 +10,20 @@ struct Cur<'a> {
     i: usize,
 }
 
+fn span(c: &[char], a: usize, b: usize) -> String {
+    c.get(a..b).unwrap_or_default().iter().collect()
+}
+
 impl Cur<'_> {
     fn ws(&mut self) {
-        while self.i < self.c.len() && self.c[self.i].is_whitespace() {
+        while self.c.get(self.i).is_some_and(|ch| ch.is_whitespace()) {
             self.i += 1;
         }
     }
     /// A word, ignoring case (`re.I`).
     fn word(&mut self, w: &str) -> bool {
         let n = w.chars().count();
-        if self.i + n > self.c.len() || !self.c[self.i..self.i + n].iter().zip(w.chars()).all(|(a, b)| a.to_lowercase().eq(b.to_lowercase())) {
+        if !self.c.get(self.i..self.i + n).is_some_and(|s| s.iter().zip(w.chars()).all(|(a, b)| a.to_lowercase().eq(b.to_lowercase()))) {
             return false;
         }
         self.i += n;
@@ -32,7 +36,7 @@ impl Cur<'_> {
     }
     fn digits(&mut self) -> Option<usize> {
         let a = self.i;
-        while self.i < self.c.len() && self.c[self.i].is_ascii_digit() {
+        while self.c.get(self.i).is_some_and(|ch| ch.is_ascii_digit()) {
             self.i += 1;
         }
         (self.i > a).then_some(a)
@@ -51,7 +55,7 @@ impl Cur<'_> {
                 self.i = at;
             }
         }
-        Some(self.c[a..self.i].iter().collect())
+        Some(span(self.c, a, self.i))
     }
     fn assign(&mut self) -> bool {
         self.ws();
@@ -103,7 +107,7 @@ fn curve(c: &mut Cur) -> Option<String> {
     c.word("curve").then_some(())?;
     c.assign().then_some(())?;
     let a = c.digits()?;
-    Some(c.c[a..c.i].iter().collect())
+    Some(span(c.c, a, c.i))
 }
 
 /// `Run\s*Time\s*[:=]\s*(\d+(?:[.,]\d+)?)`
@@ -131,10 +135,10 @@ fn equate(line: &[char], from: usize) -> Option<(char, String, usize)> {
         c.assign().then_some(())?;
         c.eat('"');
         let a = c.i;
-        while c.i < line.len() && !matches!(line[c.i], '"' | '\n' | ';') {
+        while line.get(c.i).is_some_and(|ch| !matches!(ch, '"' | '\n' | ';')) {
             c.i += 1;
         }
-        (c.i > a).then(|| (l.to_ascii_lowercase(), line[a..c.i].iter().collect(), c.i))
+        (c.i > a).then(|| (l.to_ascii_lowercase(), span(line, a, c.i), c.i))
     })
 }
 
@@ -170,7 +174,7 @@ fn row_time(line: &[char]) -> Option<f64> {
         (unit && look(d)) || look(Cur { c: line, i: e })
     };
     let end = ends.into_iter().find(|&e| tail_ok(e))?;
-    num_text(&line[a..end].iter().collect::<String>())
+    num_text(&span(line, a, end))
 }
 
 #[derive(Default, Clone, Copy)]
@@ -219,7 +223,7 @@ pub fn parse(text: &str) -> Result<Gradient> {
                     rows.push((t, Slot::default()));
                     rows.len() - 1
                 });
-                &mut rows[at].1
+                rows.get_mut(at).map_or(&mut initial, |row| &mut row.1)
             }
             None => &mut initial,
         };
@@ -229,6 +233,7 @@ pub fn parse(text: &str) -> Result<Gradient> {
         if let Some(v) = fl.as_deref().and_then(num_text) {
             slot.flow = Some(v);
         }
+        #[allow(clippy::cast_possible_truncation)] // a curve number is a small integer
         if let Some(v) = cv.as_deref().and_then(num_text) {
             slot.curve = Some(v as i64);
         }
