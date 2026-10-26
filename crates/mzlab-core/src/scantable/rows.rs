@@ -411,33 +411,7 @@ impl Rows {
             -1 => -1,
             _ => 0,
         };
-        let mut m = Msn::default();
-        if level > 1 {
-            m.path = filter_path(filt);
-            if let Some(p) = sp.precursor {
-                // what the writer says of a plain precursor: its window (offsets when the reader knows them), CID and the energy
-                m.precs.push(Prec {
-                    target: Some(p),
-                    selected: Some(p),
-                    lo: extra.iso_half.map(|h| p - h),
-                    hi: extra.iso_half.map(|h| p + h),
-                    act: Some("CID"),
-                    ce: extra.ce,
-                    ..Prec::default()
-                });
-                m.prec = Some(p);
-                let half = extra.iso_half.unwrap_or(0.5);
-                m.iso = Some((p - half, p + half));
-                m.act = Some("CID".into());
-                m.ce = extra.ce;
-            }
-            if m.act.is_none() {
-                m.act = match &m.path {
-                    Some(p) => Some(p[p.len() - 1].1.clone()),
-                    None => activation_in_filter(filt),
-                };
-            }
-        }
+        let m = plain_msn(sp, extra, filt);
         let res = extra
             .params
             .iter()
@@ -553,4 +527,37 @@ impl Rows {
         }
         m
     }
+}
+
+/// The precursor part of a row of a scan whose reader gave a plain precursor: what the writer says of it (its window, with offsets when the reader knows
+/// them, CID and the energy), else the activation of the filter.
+fn plain_msn(sp: &Spectrum, extra: &SpectrumExtra, filt: &str) -> Msn {
+    let mut m = Msn::default();
+    if sp.level <= 1 {
+        return m;
+    }
+    m.path = filter_path(filt);
+    if let Some(p) = sp.precursor {
+        let half = extra.iso_half;
+        m.precs.push(Prec {
+            target: Some(p),
+            selected: Some(p),
+            lo: half.map(|h| p - h),
+            hi: half.map(|h| p + h),
+            act: Some("CID"),
+            ce: extra.ce,
+            ..Prec::default()
+        });
+        m.prec = Some(p);
+        m.iso = Some((p - half.unwrap_or(0.5), p + half.unwrap_or(0.5)));
+        m.act = Some("CID".into());
+        m.ce = extra.ce;
+    }
+    if m.act.is_none() {
+        m.act = match &m.path {
+            Some(p) => Some(p[p.len() - 1].1.clone()),
+            None => activation_in_filter(filt),
+        };
+    }
+    m
 }
