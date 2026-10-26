@@ -17,7 +17,7 @@ use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;
 use mzlab_feat::store::Slice;
 use mzlab_feat::tp::TpRoles;
-use mzlab_feat_wasm::run_link::{link_evidence, LinkParent, Series as LinkSeries};
+use mzlab_feat_wasm::run_tp::{link_evidence, LinkParent, Series as LinkSeries};
 
 use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage, Made};
 use crate::flow_base::{open, rebuild, Files};

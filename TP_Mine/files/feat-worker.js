@@ -38,7 +38,6 @@ function createCore(opts) {
   const st = /** @type {{ archive: any, cancelled: boolean }} */ ({ archive: null, cancelled: false });
   const queue = [];                             // jobs waiting for a worker: { run(slot), resolve, reject, tried }
   const rest = idleRest(opts.idleMs ?? IDLE_MS, st, slots, queue, s => kill(s));
-
   function spawn() {
     const slot = { w: new WorkerClass(workerUrl, { type: "module" }), busy: false, loaded: new Set(), dead: false, calls: new Map(), seq: 0 };
     slot.w.onmessage = ev => { const d = ev.data, c = slot.calls.get(d.id); if (!c) return; if (d.progress) { if (c.step) c.step(d.progress[0], d.progress[1]); return; } slot.calls.delete(d.id); c(d); };
