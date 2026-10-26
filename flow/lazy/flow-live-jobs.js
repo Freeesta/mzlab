@@ -176,6 +176,22 @@
     });
   };
 
+  /** tp.filter@2, tp.position, tp.network (flow-web-tp.js `post`): a text made by the pool from the `.tp.mzfeat` of the tp.link they follow, kept like the MSn results under the key of the job */
+  const tpPost = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const t0 = performance.now();
+    /** @type {any} */ let r = null;
+    try { r = F.webTp ? await F.webTp.post({ x, p, dir: DIR }, inst) : null; } catch (e) { await x.call("started", { job: j }); await fail(x, spec, inst, e); return {}; }
+    if (!r) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    return detached(x, spec, inst, async () => {
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
   /** tp.link@2 (flow-web-tp.js): the hypotheses searched in the series, the proofs on the table of the alignment and the interpretation of the rows, in two calls to the pool (the same Rust as `flow run`); the `.mzfeat`
    * is kept in OPFS under the plan_key of the job. A file of hypotheses or a table that is not this plan's stays with the computer @param {any} x @param {any} spec @param {any} inst */
   const tpLink = async (x, spec, inst) => {
@@ -198,5 +214,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();
