@@ -182,3 +182,30 @@ fn m2_ratio_matches_the_golden_data() {
         );
     }
 }
+
+#[cfg(any(feature = "record", feature = "crippen"))]
+#[test]
+fn fill_logp_prefers_xlogp3_and_falls_back_to_own_crippen() {
+    let row = |smiles: &str, xlogp: &str| Suspect {
+        smiles: smiles.into(),
+        xlogp: xlogp.into(),
+        ..Default::default()
+    };
+    let mut sus = vec![
+        row("CCO", "-0.3"),
+        row("CCCCO", ""),
+        row("", ""),
+        row("not a smiles (", ""),
+    ];
+    fill_logp(&mut sus, &HashMap::new());
+    assert_eq!(
+        (sus[0].logp, sus[0].logp_source.as_str()),
+        (Some(-0.3), "XLogP3")
+    );
+    let own = sus[1].logp.expect("Crippen value");
+    assert!(own.is_finite() && own > 0.0, "{own}");
+    assert_eq!(sus[1].logp_source, "Crippen (own)");
+    for i in [2, 3] {
+        assert_eq!((sus[i].logp, sus[i].logp_source.as_str()), (None, ""));
+    }
+}
