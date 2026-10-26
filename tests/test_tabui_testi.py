@@ -101,6 +101,6 @@ def test_green_scale_keeps_3_to_1_for_the_symbol_at_every_step():
 
 
 def test_cells_uses_the_shared_area_scale_and_white_for_none():
-    t = (JS / "42_tp_table.js").read_text(encoding="utf-8")
+    t = (JS / "42_tp_table.js").read_text(encoding="utf-8") + (JS / "41_tp_table_marks.js").read_text(encoding="utf-8")
     assert not re.search(r"--tpr-c[0-4]", t) and "areaScale" in t and "AREA_NOTE" in t
     assert not re.search(r"--tpr-c[0-4]", (JS / "44_tp_riga.js").read_text(encoding="utf-8"))
