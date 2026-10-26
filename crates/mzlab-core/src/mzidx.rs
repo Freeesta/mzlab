@@ -75,6 +75,10 @@ pub(crate) trait Num: Copy + Default + Send {
     fn to64(self) -> f64;
     fn put(self, out: &mut Vec<u8>);
 }
+fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
+    v.get(i).copied().unwrap_or_default()
+}
+
 impl Num for f32 {
     const SIZE: usize = 4;
     const F32: bool = true;
@@ -316,20 +320,15 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn cost(&self, b: usize) -> usize {
-        self.counts.get(b).map_or(0, |&c| c as usize) * std::mem::size_of::<Peak<T>>()
+        get0(&self.counts, b) as usize * std::mem::size_of::<Peak<T>>()
     }
 
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()> {
         if self.before.is_empty() {
-            let mut acc = 0u64;
             self.before = self
                 .counts
                 .iter()
-                .map(|&c| {
-                    let v = acc;
-                    acc += c as u64;
-                    v
-                })
+                .scan(0u64, |a, &c| Some(std::mem::replace(a, *a + c as u64)))
                 .collect();
         }
         self.lo = lo;
@@ -339,12 +338,12 @@ impl<T: Num> Sect for Sec<T> {
             if let (Some(base), Some(cursor)) = (self.base.get_mut(b), self.cursor.get_mut(b)) {
                 (*base, *cursor) = (at, at);
             }
-            at += self.counts.get(b).map_or(0, |&c| c as usize);
+            at += get0(&self.counts, b) as usize;
         }
         self.round = Vec::new();
         reserve(&mut self.round, at)?;
         self.round.resize(at, Peak::default());
-        self.done = self.before.get(lo).copied().unwrap_or(0);
+        self.done = get0(&self.before, lo);
         Ok(())
     }
 
@@ -382,17 +381,10 @@ impl<T: Num> Sect for Sec<T> {
         let mut round = std::mem::take(&mut self.round);
         // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
         let ends: Vec<usize> = (self.lo..self.hi)
-            .map(|b| {
-                self.base.get(b).copied().unwrap_or(0)
-                    + self.counts.get(b).map_or(0, |&c| c as usize)
-            })
+            .map(|b| get0(&self.base, b) + get0(&self.counts, b) as usize)
             .collect();
-        ordina_secchi(
-            &mut round,
-            self.base.get(self.lo).copied().unwrap_or(0),
-            &ends,
-            self.per_scansione,
-        )?;
+        let first = get0(&self.base, self.lo);
+        ordina_secchi(&mut round, first, &ends, self.per_scansione)?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
