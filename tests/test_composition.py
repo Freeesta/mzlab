@@ -79,10 +79,25 @@ def test_errors():
         compose(300, ion="[M+Zz]+")
 
 
+def _ratio_to_reference(work, ref, n=7):
+    """work/ref in seconds: the two are timed alternately and each keeps its minimum (load only adds time), so a loaded runner slows both alike."""
+    w = r = float("inf")
+    for _ in range(n):
+        t = time.perf_counter(); work(); w = min(w, time.perf_counter() - t)
+        t = time.perf_counter(); ref(); r = min(r, time.perf_counter() - t)
+    return w / r
+
+
 def test_speed_with_chnosp_and_three_halogens():
     els = parse_elements("C:0-60,H:0-120,N:0-10,O:0-12,S:0-3,P:0-3,F:0-6,Cl:0-3,Br:0-2")
-    t = time.time(); compose(799.5, elements=els, tol=5)
-    assert time.time() - t < 1.5                                   # < 300 ms on a normal CPU; the margin is for a loaded CI machine
+
+    def ref():                                                      # fixed pure-Python work that measures the speed of this machine
+        s, d = 0.0, {}
+        for i in range(300000):
+            s += (i * 0.5) % 7; d[i % 97] = s
+
+    # compose/ref is ~4.5 (0.11 s / 0.023 s); the limit is 10, so a 3x slowdown of compose (ratio ~13) fails and a loaded runner does not
+    assert _ratio_to_reference(lambda: compose(799.5, elements=els, tol=5), ref) < 10
 
 
 class _App:                                                         # the API does not touch the app for this route
