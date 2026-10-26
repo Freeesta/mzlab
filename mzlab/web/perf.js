@@ -54,7 +54,7 @@
   function wrapFn(name, label) {
     const f = /** @type {any} */ (window)[name];
     if (typeof f !== "function" || f.__perf) return;
-    const w = function (...a) {
+    const w = /** @this {any} */ function (...a) {
       const t = performance.now(), p = a[0];
       const done = () => { const ms = performance.now() - t, what = label + (p && p.type ? " " + p.type : ""); note("disegno", what, ms); add("disegno " + what, ms); };
       let r;

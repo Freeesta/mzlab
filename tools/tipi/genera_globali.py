@@ -3,7 +3,7 @@
 
 globali.d.ts  = `declare var X: any` for every `window.X = ...` and for the names of the classic scripts that tsc reads as CommonJS (module.exports).
 globali-nomi.d.ts = `declare var X: any` for every top-level name of the classic scripts, for the projects that do not include them (moduli, worker).
-stretto.json (pagina/moduli) and stretto-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with strictNullChecks: they must have 0 errors.
+stretto.json (pagina/moduli) and stretto-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with `strict` (no noImplicitAny, catch variables `any`): they must have 0 errors.
 `--controlla` writes nothing and exits 1 when: a file of mzlab/web or TP_Mine is in no project, a top-level name is defined in two classic scripts,
 or the generated files are out of date.
 """
@@ -71,14 +71,14 @@ STRETTO_TESTA = "// @ts-strict"
 
 
 def stretto(progetti=("pagina", "moduli"), lib=("ES2022", "DOM", "DOM.Iterable"), tipi=("globali.d.ts", "globali-nomi.d.ts", "modello.d.ts", "manuale.d.ts", "manuale-dom.d.ts")):
-    """tools/tipi/stretto*.json: the files of the given projects with `// @ts-strict` in their first lines, checked with strictNullChecks."""
+    """tools/tipi/stretto*.json: the files of the given projects with `// @ts-strict` in their first lines, checked with `strict` (noImplicitAny stays off from base.json, catch variables stay `any`)."""
     files = []
     for nome in progetti:
         for p in elenco(nome):
             if STRETTO_TESTA in "\n".join(leggi(p).split("\n")[:3]):
                 files.append("../../" + p)
     d = {"extends": "./base.json",
-         "compilerOptions": {"lib": list(lib), "moduleDetection": "force", "strictNullChecks": True},
+         "compilerOptions": {"lib": list(lib), "moduleDetection": "force", "strict": True, "useUnknownInCatchVariables": False, "strictNullChecks": True},
          "include": list(tipi) + files}
     return json.dumps(d, indent=2) + "\n"
 
