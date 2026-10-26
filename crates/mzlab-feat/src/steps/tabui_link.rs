@@ -1,4 +1,4 @@
-//! `tp.link`, `tp.position` and `tp.network`: the MS2 of a product row, the place of its modification and the network of the products. The parameters
+//! `tp.link`, `tp.position`, `tp.network` and `tp.review`: the MS2 of a product row, the place of its modification and the network of the products. The parameters
 //! are the constants of `interp::ms2link`, `interp::sito` and `rete::ReteParams`, compared with the code in `tests/steps_tabui_parity.rs` (feature `interp`).
 
 use mzlab_core::step::{
@@ -242,6 +242,35 @@ fn rule_arcs() -> Algorithm {
         "rule_arcs",
         "Arcs by the rules of the table",
         "One arc per pair of ions, from the one that peaks first, for the rule whose change of formula joins them (crates/mzlab-feat/src/rete/arcs.rs, shared with the network of mzFinder).",
+        Status::Available,
+    )
+}
+
+/// `tp.review`: the level and the note the chemist decides for each row of the table of the products, checked with the rules of the levels (`interp::review`, `review/1`).
+pub(super) fn review() -> Step {
+    Step {
+        ins: vec![
+            Port::new("tp", DataType::Tp, "Rows with the level the interpretation proposes (interp/1)").requires(hr()),
+            Port::new("decisions", DataType::Transform, "The decisions of the chemist by row (tpdec/1): level and note, kept with the plan"),
+        ],
+        outs: vec![Port::new("review", DataType::Transform, "Each decision with its row, the proposed level and whether the rules of the levels allow it")],
+        algorithms: vec![level_rules()],
+        default_algorithm: Some("level_rules"),
+        ..tabui_step(
+            "tp.review",
+            "Decide the levels",
+            "Keeps what the chemist decides for each row: a level, a note of up to 200 characters, or not a TP. The programme proposes and shows the evidence; a decision is allowed by the rules of the levels (2b only on a row proposed at 2a, 3a, 3b or 4; 1 only with a standard marked) and a refused one is listed with its reason and not counted. It decides nothing by itself.",
+            INTERP_WASM,
+            INTERP_CEILING,
+        )
+    }
+}
+
+fn level_rules() -> Algorithm {
+    algorithm(
+        "level_rules",
+        "Rules of the levels",
+        "The rules of LIVELLI.decide in mzlab/web/livelli.js, checked against the proposed level of each row (refusal in crates/mzlab-feat/src/interp/review.rs); rows are matched by m/z at 0.0001 and RT at 0.05 min.",
         Status::Available,
     )
 }

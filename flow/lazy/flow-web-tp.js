@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network"];
+  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network", "tp.review"];
   /** @type {Promise<any> | null} */ let loaded = null;
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
 
@@ -58,7 +58,7 @@
     try { return { ...await parentOf(S, inst), samples, hypotheses: (await generate(S, gen)).text }; } catch (e) { throw asError(e); }
   };
 
-  const NAMES = /** @type {Record<string, string>} */ ({ "tp.filter": ".filtri.json", "tp.position": ".sites.json", "tp.network": ".rete.json" });
+  const NAMES = /** @type {Record<string, string>} */ ({ "tp.filter": ".filtri.json", "tp.position": ".sites.json", "tp.network": ".rete.json", "tp.review": ".review.json" });
   const step = (/** @type {any} */ i) => String(i && i.step).split("@")[0];
 
   /** the `.tp.mzfeat` of the tp.link job an input points to (null when it is not a tp.link of this plan or not made yet) @param {any} c the context of the executor @param {any} inst @param {string} port */
@@ -67,7 +67,7 @@
     return key && await c.p.fs.exists(c.dir + key + ".tp.mzfeat") ? c.p.fs.read(c.dir + key + ".tp.mzfeat") : null;
   };
 
-  /** the text a tp.filter, tp.position or tp.network job asks of the pool (the same Rust as `flow run`): its name and text, or null when an input stays with the computer
+  /** the text a tp.filter, tp.position, tp.network or tp.review job asks of the pool (the same Rust as `flow run`): its name and text, or null when an input stays with the computer
    * @param {{ x: any, p: any, dir: string }} c @param {any} inst */
   const post = async (c, inst) => {
     const S = c.x.S, kind = step(inst), tp = await tpFile(c, inst, "tp");
@@ -78,6 +78,10 @@
         const href = F.refs(inst, "hypotheses")[0] || "", gen = href.startsWith("file:") ? null : c.x.inst(href.split(".")[0]);
         if (!gen || step(gen) !== "tp.generate") return null;
         m.hypotheses = (await generate(S, gen)).text;
+      } else if (kind === "tp.review") {
+        const dref = (F.refs(inst, "decisions")[0] || "").replace(/^file:/, "");
+        m.decisions = S.samplesJson && S.samplesJson[dref];
+        if (!m.decisions) throw fail("err.flow.input.missing", { input: dref });
       } else if (kind === "tp.position") {
         const { hr, text, structure } = await parentOf(S, inst), pf = JSON.parse(hr.tp_parent(text));
         m.smiles = pf.smiles; m.formula = pf.formula || (structure && JSON.parse(structure).formula) || "";
