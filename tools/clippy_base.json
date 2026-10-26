@@ -28,8 +28,6 @@
   "crates/mzlab-core/src/statistica.rs::clippy::eq_op": 1,
   "crates/mzlab-core/src/statistica.rs::clippy::neg_cmp_op_on_partial_ord": 1,
   "crates/mzlab-core/src/statistica.rs::clippy::unnecessary_map_or": 1,
-  "crates/mzlab-core/src/statref.rs::clippy::neg_cmp_op_on_partial_ord": 3,
-  "crates/mzlab-core/src/statref.rs::clippy::unnecessary_map_or": 3,
   "crates/mzlab-core/src/wiff/idx.rs::clippy::indexing_slicing": 5,
   "crates/mzlab-core/src/wiff/mod.rs::clippy::indexing_slicing": 4,
   "crates/mzlab-core/src/wiff/run.rs::clippy::cast_possible_truncation": 1,
