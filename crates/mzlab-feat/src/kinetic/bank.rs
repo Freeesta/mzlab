@@ -103,7 +103,7 @@ impl Bank {
                 }
             };
             let slot = &mut best[r.group as usize];
-            if slot.map_or(true, |b| hit.sse < b.sse) {
+            if slot.is_none_or(|b| hit.sse < b.sse) {
                 *slot = Some(hit);
             }
         }

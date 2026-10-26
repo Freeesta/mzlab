@@ -9,7 +9,7 @@ use mzlab_core::step::{
 use crate::hypo::HypoParams;
 
 pub(super) use super::tabui_draw::{draw, render};
-pub(super) use super::tabui_link::{link, network, position};
+pub(super) use super::tabui_link::{link, network, position, review};
 
 /// The `.wasm` that runs the hypotheses (the `hr` group of mzFinder) and its fixed ceiling in bytes (`limit_hr` of `tools/build_feat_wasm.sh`).
 const HR_WASM: &str = "hr";
@@ -29,6 +29,7 @@ pub fn registry() -> Vec<Step> {
         link(),
         position(),
         network(),
+        review(),
         render(),
         draw(),
     ]

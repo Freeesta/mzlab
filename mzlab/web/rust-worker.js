@@ -243,7 +243,7 @@ async function lrPut(m) {                                              // an upl
   }
   lrPrints.delete(m.name);
   try { f = await copyPrints(m); }
-  catch (e) { if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await copyPrints(m); } else { ARCH.release(m.name); throw e; } }
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await copyPrints(m); } else { ARCH.release(m.name); throw e; } }
   lrFile.set(m.name, f);
   if (/\.dam$/i.test(m.name)) ARCH.release(m.name);                    // a method has no index
   await ARCH.persistOnce();
@@ -461,7 +461,7 @@ async function handle(ev) {
       default: throw new Error("unknown operation " + m.op);
     }
     postMessage({ id, op: m.op, n, info, buf: out ? out.buffer : null, len: out ? out.length : 0, mem: memNow(), rd: rdStat }, out ? [out.buffer] : []);
-  } catch (e) {
+  } catch (e_) { const e = /** @type {Lanciato|string} */ (e_);
     const text = typeof e === "string" ? e : String(e && e.message || e);
     // a JSON string {"error_key", "params"} is an error of the engine itself (the file is not readable, memory budget); anything else
     const fatal = !(typeof e === "string" && e.startsWith("{"));

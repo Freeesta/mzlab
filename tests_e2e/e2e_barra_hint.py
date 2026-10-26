@@ -7,21 +7,21 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL: " + str(e).split("\n")[0][:240]))
 def load(pg):
-    pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_timeout(800)
+    pg.set_input_files("#pick", [{"name": "a.mzML", "mimeType": "application/octet-stream", "buffer": open(mz("B_FullMass-t15"), "rb").read()}]); pg.wait_for_selector("text=Carica dati")
     pg.click("text=Carica dati"); ready(pg)
 def fresh(p, tour_state=True, hint=None):
     r = Run(port=8872, wd="/tmp/wd_hint"); r.b = p.chromium.launch()
     ctx = r.b.new_context(viewport={"width": 1440, "height": 900}, locale="it-IT", reduced_motion="reduce"); pg = ctx.new_page()
     init = "try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');" + ("localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));" if tour_state else "") + (f"localStorage.setItem('mzlab.barra.hint','{hint}');" if hint else "") + "}catch(_){}"
-    pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+    pg.add_init_script(init); pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#pick", state="attached")
     return r, ctx, pg
 vis = lambda pg: pg.evaluate("(() => { const e = document.getElementById('bar-hint'); if (!e) return null; const b = e.getBoundingClientRect(), s = document.getElementById('stbar').getBoundingClientRect(); return {w: b.width, below: b.top >= s.bottom, live: e.getAttribute('aria-live'), role: e.getAttribute('role'), inside: b.right <= innerWidth && b.left >= 0}; })()")
-shut = lambda pg: (pg.click("#sb-toggle"), pg.wait_for_timeout(400))
+shut = lambda pg: (pg.click("#sb-toggle"), frames(pg, 3))
 with sync_playwright() as p:
     def first():
         r, ctx, pg = fresh(p)
         try:
-            load(pg); pg.wait_for_timeout(2000)
+            load(pg); frames(pg, 5)
             assert vis(pg) is None and pg.evaluate("localStorage.getItem('mzlab.barra.hint')") is None, "the hint must not appear at load"
             shut(pg)
             v = vis(pg); assert v and v["w"] > 100 and v["below"] and v["inside"] and v["live"] == "polite" and v["role"] == "status", v
@@ -36,25 +36,25 @@ with sync_playwright() as p:
     def second():
         r, ctx, pg = fresh(p)
         try:
-            load(pg); pg.wait_for_timeout(1500)
-            shut(pg); assert vis(pg); pg.click("#bar-hint button"); pg.wait_for_timeout(300); assert vis(pg) is None      # × closes it
+            load(pg); frames(pg, 3)
+            shut(pg); assert vis(pg); pg.click("#bar-hint button"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # × closes it
             shut(pg); shut(pg); assert vis(pg) is None, "the second hide does not show it"
-            pg.reload(); pg.wait_for_timeout(2000); shut(pg); assert vis(pg) is None, "not after a reload either"
+            pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length >= 1", 60000); frames(pg, 5); shut(pg); assert vis(pg) is None, "not after a reload either"
         finally: ctx.close(); r.close()
     step("× closes it; the second hide and a reload never show it again", second)
     def esc_tool():
         r, ctx, pg = fresh(p)
         try:
-            load(pg); pg.wait_for_timeout(1500); shut(pg); assert vis(pg)
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert vis(pg) is None
+            load(pg); frames(pg, 3); shut(pg); assert vis(pg)
+            pg.keyboard.press("Escape"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None
             assert pg.evaluate("BARRA.commands.every(c=>c.id!=='hint')"), "no palette command for the hint"
-            pg.evaluate("BARRA.hintShow()"); pg.wait_for_timeout(500); assert vis(pg), "hintShow did not reopen it"
-            pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_timeout(500); assert vis(pg) is None      # first tool closes it
+            pg.evaluate("BARRA.hintShow()"); attendi(pg, "!!document.getElementById('bar-hint')"); assert vis(pg), "hintShow did not reopen it"
+            pg.click("#stbar [data-cmd=adducts]"); attendi(pg, "!document.getElementById('bar-hint')"); assert vis(pg) is None      # first tool closes it
         finally: ctx.close(); r.close()
     step("Esc closes, hintShow reopens (no palette command), first tool closes", esc_tool)
     def seen():
         r, ctx, pg = fresh(p, hint="1")
-        try: load(pg); pg.wait_for_timeout(1500); shut(pg); assert vis(pg) is None
+        try: load(pg); frames(pg, 3); shut(pg); assert vis(pg) is None
         finally: ctx.close(); r.close()
     step("not shown when already seen", seen)
 for n, s in steps: print(("PASS " if s == "ok" else "FAIL ") + n, "" if s == "ok" else s)

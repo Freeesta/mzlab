@@ -42,8 +42,7 @@ def step_ids(root: Path) -> list[str]:
 
 
 def check_steps(root: Path) -> Result:
-    cli = root / "docs/agenti/cli.md"
-    text = cli.read_text(encoding="utf-8") if cli.is_file() else ""
+    text = "".join(f.read_text(encoding="utf-8") for f in (root / "docs/agenti/cli.md", root / "docs/agenti/cli-passi.md") if f.is_file())
     ids = step_ids(root)
     if not ids:
         return "steps in cli.md", ["docs/schemi/steps-*-1.json:1: no step descriptor found -> export them (docs/agenti/rust-step.md)"]
@@ -62,7 +61,12 @@ def check_area_files(root: Path) -> Result:
 
 
 def known_commands(root: Path) -> set[str]:
-    return set(re.findall(r'Some\("([a-z][a-z-]*)"\)', (root / "crates/mzlab-cli/src/lib.rs").read_text(encoding="utf-8"))) if (root / "crates/mzlab-cli/src/lib.rs").is_file() else set()
+    lib = root / "crates/mzlab-cli/src/lib.rs"
+    if not lib.is_file():
+        return set()
+    src = lib.read_text(encoding="utf-8")
+    plain = re.search(r"const PLAIN: \[&str; \d+\] = \[([^\]]*)\]", src)
+    return set(re.findall(r'Some\("([a-z][a-z-]*)"\)', src)) | set(re.findall(r'"([a-z][a-z-]*)"', plain.group(1) if plain else ""))
 
 
 def check_guides(root: Path) -> Result:

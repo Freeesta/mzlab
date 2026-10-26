@@ -128,8 +128,7 @@ Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `ben
 - Dipendenze e conflitti: nessuna sul motore; stessi file di P3 (`mappa.js`, `grafici.js`).
 
 ### P7 Colore su GPU (ipotetico studio futuro, non implementato)
-- Studio architetturale (nessun file `mzlab/web/mappa-gl.js` presente nel codice): qualora servisse uno zoom continuo a 60 fps anche su griglie 2048 × 1024. Celle in una texture float, scala come texture 1D, shader che applica log/lineare e percentile; ripiego su P3 se WebGL manca.
-- File ipotetico: eventuale `mzlab/web/mappa-gl.js` (modulo ES), aggancio in `grafici.js`.
+- Studio architetturale (`mappa-gl.js` non esiste): qualora servisse uno zoom continuo a 60 fps anche su griglie 2048 × 1024. Celle in una texture float, scala come texture 1D, shader che applica log/lineare e percentile; ripiego su P3 se WebGL manca.
 - Guadagno stimato: colore < 5 ms, cambio di scala istantaneo.
 - Rischio: medio-alto (CSP e contesti persi su iPad, stessa resa dei colori, accessibilità invariata).
 - Accettazione ipotetica: `bench_mappa.py lr,hrc` con colore ≤ 5 ms e frame p95 ≤ 17 ms su griglia 2048 × 1024; confronto dei pixel con P3; ripiego senza WebGL provato; `e2e_axe_grafici` verde.

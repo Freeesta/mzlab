@@ -29,3 +29,7 @@ pub(crate) fn refilter_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text = refilter_text(job, &tp.1, &hypotheses.1)?;
     write_made(r, job, text, DataType::Table)
 }
+
+/// `tp.review` reads the same table as `tp.filter`, so its executor sits beside it.
+#[path = "flow_review.rs"]
+pub(crate) mod review;

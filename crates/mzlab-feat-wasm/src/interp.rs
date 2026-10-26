@@ -12,6 +12,7 @@ use mzlab_feat::interp::json::filtri_json;
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::refilter::{refilter, FilterParams};
 use mzlab_feat::interp::reposition::reposition;
+use mzlab_feat::interp::review;
 use mzlab_feat::interp::run::{run_to, run_to_with};
 use mzlab_feat::interp::sito::SiteParams;
 use mzlab_feat::legacy::series;
@@ -247,6 +248,16 @@ pub fn tp_refilter(
 ) -> std::result::Result<String, JsValue> {
     let set = getter(params)?;
     refilter_text(&|n| set.get(n).and_then(Value::f64), tp, hypotheses).map_err(js_err)
+}
+
+/// `tp.review` in the browser and natively: the `review/1` of the decisions `tpdec/1` over the table `tp`.
+pub fn review_text(tp: &[u8], decisions: &str) -> Result<String> {
+    review::review_text(tp, decisions)
+}
+
+#[wasm_bindgen]
+pub fn tp_review(tp: &[u8], decisions: &str) -> std::result::Result<String, JsValue> {
+    review_text(tp, decisions).map_err(js_err)
 }
 
 /// `tp.position` in the browser: the `sites/1` of the table `tp` for the parent `smiles` / `formula` (neutral) under the thresholds in `params`.

@@ -12,6 +12,8 @@ def out(tmp_path_factory):
     if not shutil.which("cargo"):
         pytest.skip("cargo not available")
     d = tmp_path_factory.mktemp("zip")
+    with zipfile.ZipFile(d / "py.zip", "w", zipfile.ZIP_STORED) as z:       # an archive of another writer, read back by the Rust reader
+        z.writestr("a.txt", b"hello"); z.writestr("d/vuoto", b""); z.writestr("d/\u00e8.bin", bytes([0, 1, 2, 255]))
     env = dict(os.environ, MZLAB_ZIP_OUT=str(d))
     r = subprocess.run(["cargo", "test", "--locked", "-p", "mzlab-core", "--lib", "zip::"], cwd=ROOT, env=env, capture_output=True, text=True)
     assert r.returncode == 0, r.stdout[-2000:] + r.stderr[-2000:]

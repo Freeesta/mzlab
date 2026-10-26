@@ -11,7 +11,7 @@ r = Run(port=8823, wd="/tmp/wd23")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15"]]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15"]]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
         cid = pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').id")
         P = f"E.panels.find(q=>q.id=={cid})"
@@ -19,7 +19,7 @@ try:
             return pg.evaluate("""async()=>{const p=%s;const all=await seriesOf(p);return all.map(s=>({n:s.name,mn:Math.min(...s.y),mx:Math.max(...s.y),lv:s.ibl&&s.ibl.lvl}))}""" % P)
         def mean():
             before = raw_min()
-            pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); pg.wait_for_timeout(1500)
+            pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); ready(pg)
             after = raw_min(); print(before, after)
             assert all(a["lv"] is not None and a["lv"] > 0 for a in after)
             assert all(abs((b["mx"] - a["mx"]) - a["lv"]) < 1e-6 * max(1, b["mx"]) for a, b in zip(after, before)), "max drops by the level"
@@ -28,28 +28,28 @@ try:
             assert "fondo del tratto" in chip and "0.3-2 min" in chip
         step("mean of 0.3-2 min subtracted, not clipped, chip visible", mean)
         def noclip():
-            pg.evaluate("%s.clipDraw=true;draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
+            pg.evaluate("%s.clipDraw=true;draw(%s)" % (P, P)); ready(pg)
             assert pg.evaluate("Math.min(...%s._a.sr[0].ys)" % P) >= 0, "drawing clipped on request"
             assert min(a["mn"] for a in raw_min()) < 0, "the numbers keep their negatives"
-            pg.evaluate("%s.clipDraw=false;draw(%s)" % (P, P)); pg.wait_for_timeout(800)
+            pg.evaluate("%s.clipDraw=false;draw(%s)" % (P, P)); ready(pg)
         step("unclip shows negatives", noclip)
         def median_line():
-            pg.evaluate("ibkSet(%s,'median',[0.3,2])" % P); pg.wait_for_timeout(800)
+            pg.evaluate("ibkSet(%s,'median',[0.3,2])" % P); ready(pg)
             m = raw_min(); assert all(a["lv"] is not None for a in m)
             pg.evaluate("ibkPick(%s,'line',[0.3,1.5])" % P); assert pg.evaluate("!!%s._ibkA" % P); pg.keyboard.press("Escape")
             pg.evaluate("document.querySelector('#askdlg[open] #askok')&&document.querySelector('#askok').click()")
-            pg.evaluate("ibkPick(%s,'line',[18,19.5])" % P); pg.wait_for_timeout(1200)
+            pg.evaluate("ibkPick(%s,'line',[18,19.5])" % P); ready(pg)
             assert pg.evaluate("%s.fondo.ib.mode" % P) == "line" and pg.evaluate("%s.fondo.ib.b[0]" % P) == 18
             assert all(a["lv"] is not None for a in raw_min())
         step("median, then line between two stretches", median_line)
         def integ_note():
             pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P)
-            pg.evaluate("""async()=>{const p=%s;await draw(p);const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3,ion:s.name,file:'f',time:0});await draw(p)}""" % P); pg.wait_for_timeout(1500)
+            pg.evaluate("""async()=>{const p=%s;await draw(p);const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});p.ints.push({key:s.key,a:s.x[m]-0.3,b:s.x[m]+0.3,ion:s.name,file:'f',time:0});await draw(p)}""" % P)
             it = pg.evaluate("%s.ints[0].corr" % P); print(it); assert it.startswith("sì, 0.3-2 min, media")
             a1 = pg.evaluate("%s.ints[0].area" % P)
-            pg.evaluate("%s.fondo={mode:'none',w:1,ib:null};draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
+            pg.evaluate("%s.fondo={mode:'none',w:1,ib:null};draw(%s)" % (P, P)); ready(pg)
             a0 = pg.evaluate("%s.ints[0].area" % P); print(a0, a1); assert a0 != a1 and pg.evaluate("%s.ints[0].corr" % P) == "no"
-            pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); pg.wait_for_timeout(1200)
+            pg.evaluate("ibkSet(%s,'mean',[0.3,2])" % P); ready(pg)
         step("integration on the subtracted trace and declared (table)", integ_note)
         def meta():
             sh = pg.evaluate("plotSheets(%s).map(s=>s.name)" % P); print(sh); assert "Note" in sh
@@ -57,20 +57,20 @@ try:
         step("xlsx Note sheet and PNG metadata", meta)
         def menu():
             box = pg.locator("#dpanels .pnl >> nth=0 >> canvas").bounding_box()
-            pg.mouse.click(box["x"] + 400, box["y"] + 100, button="right"); pg.wait_for_timeout(300)
+            pg.mouse.click(box["x"] + 400, box["y"] + 100, button="right"); pg.wait_for_selector("#ctx:not([hidden])")
             t = pg.inner_text("#ctx"); assert "Sottrai il fondo di questo tratto" in t or "Togli il fondo del tratto" in t, t
             pg.keyboard.press("Escape")
         step("right-click menu offers the internal blank", menu)
         def spec():
             pg.evaluate("document.querySelector('#ctx').hidden=true")
             n = pg.evaluate("E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).length" % (cid, cid)); assert n >= 1, n
-            pg.evaluate("ibkSpectra(%s)" % P); pg.wait_for_timeout(1500)
+            pg.evaluate("ibkSpectra(%s)" % P); attendi(pg, "E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).every(q=>q.bg==='w'&&q.bw0===0.3&&q.bw1===2)" % (cid, cid))
             assert pg.evaluate("E.panels.filter(q=>q.type==='spec'&&(q.link===%d||q.src===%d)).every(q=>q.bg==='w'&&q.bw0===0.3&&q.bw1===2)" % (cid, cid))
         step("spectrum of the blank stretch subtracted from the linked spectra", spec)
         def reload():
             saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.panels.some(q => q.tab === 'full' && q.type === 'chrom' && q.fondo)", 90000); ready(pg)
             assert pg.evaluate("(E.panels.find(q=>q.tab==='full'&&q.type==='chrom')||{}).fondo.ib.mode") == "mean"
-            pg.locator("#dpanels .pnl >> nth=0 >> [data-o=cinfo]").click(); pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); pg.wait_for_timeout(500)
+            pg.locator("#dpanels .pnl >> nth=0 >> [data-o=cinfo]").click(); pg.locator("#dpanels .pnl >> nth=0 >> [data-ib=off]").click(); attendi(pg, "E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode==='none'")
             assert pg.evaluate("E.panels.find(q=>q.tab==='full'&&q.type==='chrom').fondo.mode") == "none"
         step("saved in the notebook, removable with one click", reload)
         pg.screenshot(path=SH + "230_ibk.png", full_page=True)
