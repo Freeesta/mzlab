@@ -165,6 +165,7 @@
  "tests_e2e/e2e_schermo_intero.py": 3,
  "tests_e2e/e2e_schermointero.py": 14,
  "tests_e2e/e2e_select_freccia.py": 5,
+ "tests_e2e/e2e_sito_pubblico.py": 6,
  "tests_e2e/e2e_sottrazione.py": 18,
  "tests_e2e/e2e_spettro_hr.py": 10,
  "tests_e2e/e2e_spezza.py": 4,

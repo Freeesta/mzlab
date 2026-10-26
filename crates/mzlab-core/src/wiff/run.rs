@@ -1,7 +1,6 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
 //! and the MRM blocks become a TIC and one SRM chromatogram per transition.
 
-
 use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;
@@ -24,18 +23,25 @@ impl Wiff {
     }
 
     /// The id of the SRM chromatogram of transition `j` of experiment `e` (0-based), as msconvert spells it (Q1, Q3, sample, period, experiment, transition),
-    /// then the collision energy, dwell (ms) and name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
+    /// then the collision energy, dwell (ms) (target RT in min and window in s when scheduled) and name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
     pub(super) fn srm_id(&self, e: usize, j: usize, t: Option<&Transition>) -> String {
         let mut id = String::from("SRM SIC");
         if let Some(t) = t {
             id += &format!(" Q1={} Q3={}", t.q1, t.q3);
         }
-        id += &format!(" sample={} period=1 experiment={} transition={j}", self.sample, e + 1);
+        id += &format!(
+            " sample={} period=1 experiment={} transition={j}",
+            self.sample,
+            e + 1
+        );
         if let Some(t) = t {
             if let Some(ce) = t.ce {
                 id += &format!(" ce={ce}");
             }
-            id += &format!(" dwell={}", t.dwell);
+            match self.experiments.get(e).and_then(|x| x.window_s) {
+                Some(w) => id += &format!(" rt={} window={w}", t.dwell),
+                None => id += &format!(" dwell={}", t.dwell),
+            }
             if !t.name.is_empty() {
                 id += &format!(" name={}", t.name);
             }
@@ -71,6 +77,8 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
+            } else if self.scan_experiment(r.experiment) {
+                continue;
             } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?
             {
                 let m = &mut mrm[r.experiment];
@@ -122,7 +130,9 @@ impl Wiff {
             .map(|_| Mrm::default())
             .collect();
         for r in &self.records {
-            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some() {
+            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some()
+                || self.scan_experiment(r.experiment)
+            {
                 continue;
             }
             if let (Some(v), Some(m)) = (

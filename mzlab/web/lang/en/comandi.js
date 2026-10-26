@@ -53,6 +53,7 @@ I18N.add("en", {
   "cmd.search.lab": "Search",
   "cmd.search.name": "Search",
   "cmd.search.tip": "Search a number, a formula, a command or a Theory topic (Ctrl+K, ⌘K on the Mac)",
+  "cmd.search.tip.nt": "Search a number, a formula or a command (Ctrl+K, ⌘K on the Mac)",
   "cmd.search.kw": "cerca ricerca comando paletta search command palette find",
   "cmd.method.lab": "Method",
   "cmd.method.name": "Acquisition method",
