@@ -217,8 +217,8 @@ impl<R: ReadAt> Mzml<R> {
             } else if cid.starts_with("SRM") {
                 d.kind = "srm".into();
                 (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
-                d.dwell = dwell(&h);
-                d.ce = d.ce.or_else(|| crate::mzmlsrm::cv_number(&h, "MS:1000045"));
+                d.dwell = named_value(&h, "MS_dwell_time");
+                d.ce = d.ce.or_else(|| named_value(&h, "collision energy"));
             } else if ![
                 "MS:1000235",
                 "MS:1000627",
@@ -561,14 +561,14 @@ fn attr_id(h: &str) -> Option<String> {
     None
 }
 
-/// `name="?MS_dwell_time"?\s+value="([^"]*)"`
-fn dwell(h: &str) -> Option<f64> {
+/// `name="?KEY"?\s+value="([^"]*)"` (`MS_dwell_time`, `collision energy`)
+fn named_value(h: &str, key: &str) -> Option<f64> {
     let mut from = 0;
-    while let Some(p) = h[from..].find("MS_dwell_time") {
+    while let Some(p) = h[from..].find(key) {
         let at = from + p;
         let before_ok = h[..at].ends_with("name=\"") || h[..at].ends_with("name=");
         if before_ok {
-            let mut t = &h[at + 13..];
+            let mut t = &h[at + key.len()..];
             t = t.strip_prefix('"').unwrap_or(t);
             let t2 = t.trim_start();
             if t2.len() < t.len() {

@@ -284,28 +284,25 @@ fn esc(s: &str) -> String {
     out
 }
 
-/// The kind element of a chromatogram: the PSI-MS term of its kind, `chromatogram type` for a trace without a more precise one.
 /// The dwell time (userParam, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
 /// (ms) are the ones the id spells (`ce=`, `dwell=`) and only the readers that know them (`sciex`, `precursori`) write them.
 fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
-    let mut s = String::new();
+    let (mut dwell, mut ce) = (String::new(), String::new());
     #[cfg(any(feature = "sciex", feature = "precursori"))]
-    let (ce, dwell) = (crate::mzmlhead::srm_id(&c.id).2, crate::mzmlsrm::id_dwell(&c.id));
+    {
+        if let Some(d) = crate::mzmlsrm::id_dwell(&c.id) {
+            dwell = format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>");
+        }
+        if let Some(e) = crate::mzmlhead::srm_id(&c.id).2 {
+            ce = format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{e}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>");
+        }
+    }
     #[cfg(not(any(feature = "sciex", feature = "precursori")))]
-    let _ = c;
-    #[cfg(any(feature = "sciex", feature = "precursori"))]
-    if let Some(d) = dwell {
-        s += &format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>");
-    }
-    s += &format!("<precursor><isolationWindow>{}</isolationWindow><selectedIonList count=\"1\"><selectedIon>{}</selectedIon></selectedIonList>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000744", "selected ion m/z", q1));
-    s += "<activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>";
-    #[cfg(any(feature = "sciex", feature = "precursori"))]
-    if let Some(ce) = ce {
-        s += &format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{ce}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>");
-    }
-    s + &format!("</activation></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q3))
+    let _ = (c, &mut dwell, &mut ce);
+    format!("{dwell}<precursor><isolationWindow>{}</isolationWindow><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>{ce}</activation></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3))
 }
 
+/// The kind element of a chromatogram: the PSI-MS term of its kind, `chromatogram type` for a trace without a more precise one.
 pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {
     match c.kind {
         ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
