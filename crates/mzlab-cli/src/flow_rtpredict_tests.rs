@@ -139,3 +139,31 @@ fn forest_and_the_standards_it_needs() {
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&few);
 }
+
+/// With a gradient the window is fitted on %B: the same standards and RTs give a different prediction under two gradients, the dwell time shifts it, and
+/// no gradient leaves the RT in minutes without a unit.
+#[test]
+fn gradient_moves_the_fit_to_organic_fraction() {
+    let dir = fixture("gradient", 20);
+    let near = |params: &str| {
+        let v = run_plan(&dir, params, "logp_window").unwrap();
+        v.get("hits").unwrap().arr()[1].clone()
+    };
+    let pred = |h: &mzlab_core::json::Value| h.get("rt_pred").unwrap().f64().unwrap();
+    let plain = near("{}");
+    assert!(plain.get("rt_unit").is_none());
+    assert!((pred(&plain) - 6.0).abs() < 0.3);
+    // linear ramp: 5 + 7.5 %B per min, so 6 min is 50 %B
+    let ramp = near(r#"{"lc_gradient":"0:5;12:95"}"#);
+    assert_eq!(ramp.get("rt_unit").unwrap().str(), Some("%B"));
+    assert!((pred(&ramp) - 50.0).abs() < 3.0, "{}", pred(&ramp));
+    // an initial hold: 6 min is 35 %B
+    let hold = near(r#"{"lc_gradient":"0:5;3:5;12:95"}"#);
+    assert!((pred(&hold) - 35.0).abs() < 3.0, "{}", pred(&hold));
+    // a 1 min dwell: the compound met the %B of 5 min
+    let dwell = near(r#"{"lc_gradient":"0:5;12:95","lc_dwell_min":1.0}"#);
+    assert!((pred(&dwell) - 42.5).abs() < 3.0, "{}", pred(&dwell));
+    assert!(run_plan(&dir, r#"{"lc_gradient":"0:5"}"#, "logp_window").is_err());
+    assert!(run_plan(&dir, r#"{"lc_gradient":"3:5;1:95"}"#, "logp_window").is_err());
+    let _ = std::fs::remove_dir_all(&dir);
+}
