@@ -6,6 +6,8 @@
       "WebWorker"
     ],
     "moduleDetection": "force",
+    "strict": true,
+    "useUnknownInCatchVariables": false,
     "strictNullChecks": true
   },
   "include": [
