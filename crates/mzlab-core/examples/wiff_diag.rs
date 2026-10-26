@@ -1,0 +1,70 @@
+//! Numbers only for a `.wiff` + `.wiff.scan` pair: per sample the ExperimentHeader code of each experiment and, per record of the Idx, its size and
+//! whether the 8 bytes at its start are the scan MARKER. Shows why a sample is read as scans or as MRM. Run: cargo run --release -p mzlab-core --example wiff_diag -- FILE.wiff
+use std::io::{Read, Seek, SeekFrom};
+
+use mzlab_core::wiff::{container, samples, Wiff};
+
+const MARKER: [u8; 8] = [0xfe, 0xff, 0xff, 0xff, 2, 0, 0, 0];
+
+fn main() {
+    let path = std::env::args()
+        .nth(1)
+        .expect("usage: wiff_diag FILE.wiff (FILE.wiff.scan next to it)");
+    let ole = container(std::fs::read(&path).expect("read .wiff"), &path).expect("not a .wiff");
+    let mut scan = std::fs::File::open(format!("{path}.scan")).expect("open .wiff.scan");
+    let scan_len = scan.metadata().expect("scan size").len();
+    for n in samples(&ole) {
+        let w = match Wiff::open(&ole, &path, Some(scan_len), n) {
+            Ok(w) => w,
+            Err(e) => {
+                println!("sample {n}: open error {}", e.key);
+                continue;
+            }
+        };
+        let codes: Vec<String> = w
+            .experiments
+            .iter()
+            .map(|e| e.code.map_or("none".into(), |c| c.to_string()))
+            .collect();
+        println!(
+            "sample {n}: experiments {} codes [{}] records {}",
+            w.experiments.len(),
+            codes.join(","),
+            w.records.len()
+        );
+        // per (experiment): records, records with the marker, records without it, smallest and largest size
+        let mut rows: Vec<(usize, usize, usize, u32, u32)> = Vec::new();
+        for r in &w.records {
+            let mut head = [0u8; 8];
+            let ok = r.at + 8 <= scan_len
+                && scan.seek(SeekFrom::Start(r.at)).is_ok()
+                && scan.read_exact(&mut head).is_ok();
+            let marked = ok && head == MARKER;
+            if rows.len() <= r.experiment {
+                rows.resize(r.experiment + 1, (0, 0, 0, u32::MAX, 0));
+            }
+            let row = &mut rows[r.experiment];
+            row.0 += 1;
+            if marked {
+                row.1 += 1
+            } else {
+                row.2 += 1
+            }
+            row.3 = row.3.min(r.size);
+            row.4 = row.4.max(r.size);
+        }
+        for (e, (all, yes, no, lo, hi)) in rows.iter().enumerate().filter(|(_, r)| r.0 > 0) {
+            let chosen = if w
+                .experiments
+                .get(e)
+                .and_then(|x| x.code)
+                .is_some_and(|c| c == 15 || c == 11)
+            {
+                "scan"
+            } else {
+                "mrm-or-unknown"
+            };
+            println!("  experiment {e}: records {all} marker_yes {yes} marker_no {no} size_min {lo} size_max {hi} chosen {chosen}");
+        }
+    }
+}

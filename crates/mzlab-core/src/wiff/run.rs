@@ -77,6 +77,8 @@ impl Wiff {
                 }
                 on(self.spectrum_of(n, r, p))?;
                 n += 1;
+            } else if self.scan_experiment(r.experiment) {
+                continue;
             } else if let Some(v) = scan::read_mrm(scan, self.scan_len, r.at, r.size as usize / 4)?
             {
                 let m = &mut mrm[r.experiment];
@@ -128,7 +130,9 @@ impl Wiff {
             .map(|_| Mrm::default())
             .collect();
         for r in &self.records {
-            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some() {
+            if scan::point_count(scan, self.scan_len, r.at, r.end)?.is_some()
+                || self.scan_experiment(r.experiment)
+            {
                 continue;
             }
             if let (Some(v), Some(m)) = (
