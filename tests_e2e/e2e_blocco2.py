@@ -14,28 +14,28 @@ r = Run(port=8878, wd="/tmp/wd78")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
         def header():
             h = pg.evaluate(f"(()=>{{const p={CH},hd=p.el.querySelector('.hd').getBoundingClientRect();return [hd.height,p.el.querySelector('.cpop').hidden,!!p.el.querySelector('[data-o=kind]'),p.el.querySelector('.ttl').offsetParent===null]}})()"); print(h)
             assert h[0] < 46 and h[1] and h[2] and h[3], h          # one row, popover closed, the kind menu is the title
-            pg.click(".pnl.chrom [data-a=cpar]"); pg.wait_for_timeout(200)
+            pg.click(".pnl.chrom [data-a=cpar]"); attendi(pg, f"!{CH}.el.querySelector('.cpop').hidden")
             assert pg.evaluate(f"!{CH}.el.querySelector('.cpop').hidden")
-            pg.fill(".pnl.chrom [data-o=mz0]", "150"); pg.press(".pnl.chrom [data-o=mz0]", "Tab"); pg.fill(".pnl.chrom [data-o=mz1]", "300"); pg.press(".pnl.chrom [data-o=mz1]", "Tab"); pg.wait_for_timeout(1500)
+            pg.fill(".pnl.chrom [data-o=mz0]", "150"); pg.press(".pnl.chrom [data-o=mz0]", "Tab"); pg.fill(".pnl.chrom [data-o=mz1]", "300"); pg.press(".pnl.chrom [data-o=mz1]", "Tab"); attendi(pg, f"{CH}.el.querySelector('[data-a=cpar]').classList.contains('on') && !!{CH}.el.querySelector('[data-a=rngx]')")
             on = pg.evaluate(f"[{CH}.el.querySelector('[data-a=cpar]').classList.contains('on'), !!{CH}.el.querySelector('[data-a=rngx]')]"); print(on); assert on == [True, True], "the Range button is accented and has its ×"
-            pg.mouse.click(5, 300); pg.wait_for_timeout(200); assert pg.evaluate(f"{CH}.el.querySelector('.cpop').hidden"), "closes on a click outside"
+            pg.mouse.click(5, 300); attendi(pg, f"{CH}.el.querySelector('.cpop').hidden"); assert pg.evaluate(f"{CH}.el.querySelector('.cpop').hidden"), "closes on a click outside"
             pg.evaluate(f"(()=>{{const p={CH};p.mz0=p.mz1=null;ctl(p);draw(p)}})()")
         step("2.1: one-row header, Range popover, accented button", header)
         def legend():
-            pg.evaluate("E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()"); pg.wait_for_timeout(1200)
+            pg.evaluate("E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()"); attendi(pg, f"[...{CH}.leg.children].filter(x=>!x.classList.contains('cmp-grad')).length===3")
             g = pg.evaluate(f"(()=>{{const p={CH},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.top>=c.top,l.bottom<=c.bottom,l.right<=c.right,[...p.leg.children].filter(x=>!x.classList.contains('cmp-grad')).length]}})()"); print(g)
             assert g[0] and g[1] and g[2] and g[3] == 3, g
-            pg.evaluate("E.files.forEach((f,i)=>{f.vis=i===0});redrawAll()"); pg.wait_for_timeout(1200)
+            pg.evaluate("E.files.forEach((f,i)=>{f.vis=i===0});redrawAll()"); attendi(pg, f"{CH}.leg.children.length===0")
             assert pg.evaluate(f"{CH}.leg.children.length") == 0 and not pg.evaluate(f"{CH}.leg.offsetParent"), "one file: no legend"
-            pg.evaluate("E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()"); pg.wait_for_timeout(1200)
+            pg.evaluate("E.files.forEach(f=>{f.vis=true});syncBrowse();redrawAll()"); attendi(pg, f"[...{CH}.leg.children].filter(x=>!x.classList.contains('cmp-grad')).length===3")
         step("2.1/2.4: legend inside the graph, none with one file", legend)
         def below():
-            pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
             g = pg.evaluate(f"(()=>{{const p={SPEC},l=p.leg.getBoundingClientRect(),c=p.cv.getBoundingClientRect();return [l.bottom<=c.bottom+1,l.top>c.bottom-30,l.width>100,getComputedStyle(p.leg).position]}})()"); print(g)
             assert g[0] and g[1] and g[2] and g[3] == "absolute", g          # the scan line is on the row of the x axis title
         step("2.4: scan line on the row of the x axis title", below)
@@ -50,20 +50,20 @@ try:
         step("2.3/2.5: no icons, tab label = Q1 -> q2 -> Q3 after TIP_DELAY (1250 ms)", tabs)
         def rows():
             drawer(pg); pg.evaluate("E.cur=E.files.find(f=>f.kind==='full').k;renderFileList()")
-            pg.locator("#flst .fl small").nth(2).click(); pg.wait_for_timeout(300)
+            pg.locator("#flst .fl small").nth(2).click(); attendi(pg, "E.cur===tabFiles('full')[2].k")
             c = pg.evaluate("E.cur"); assert c == pg.evaluate("tabFiles('full')[2].k"), c
-            box = pg.locator("#flst .fl").nth(1).bounding_box(); pg.mouse.click(box["x"] + box["width"] - 3, box["y"] + 3); pg.wait_for_timeout(300)
+            box = pg.locator("#flst .fl").nth(1).bounding_box(); pg.mouse.click(box["x"] + box["width"] - 3, box["y"] + 3); attendi(pg, "E.cur===tabFiles('full')[1].k")
             assert pg.evaluate("E.cur") == pg.evaluate("tabFiles('full')[1].k")
         step("2.6: the whole row of a file selects it", rows)
         def axis():
-            pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})"); frames(pg, 2)
             q = pg.evaluate(f"(()=>{{const p={CH},c=p.cv.getBoundingClientRect(),a=p._a;return {{l:c.left,t:c.top,x:c.left+a.X(10),yb:c.top+a.H-20,x2:c.left+a.X(13),H:a.H}}}})()")
-            pg.mouse.move(q["x"], q["yb"]); pg.wait_for_timeout(200)
+            pg.mouse.move(q["x"], q["yb"]); attendi(pg, f"!{CH}.el.querySelector('.zl').hidden && {CH}.el.querySelector('.zl').classList.contains('hint')")
             assert pg.evaluate(f"!{CH}.el.querySelector('.zl').hidden && {CH}.el.querySelector('.zl').classList.contains('hint')"), "hint strip over the numbers"
             pg.mouse.down(); pg.mouse.move(q["x2"], q["yb"], steps=6)
             t = pg.evaluate(f"({CH}.el.querySelector('.zl').dataset.v)"); print(t); assert t.startswith("RT ") and "min" in t, t
             bw = pg.evaluate(f"getComputedStyle({CH}.el.querySelector('.zl')).height"); assert bw == "16px", bw
-            pg.screenshot(path=SH + "b2_axis.png"); pg.mouse.up(); pg.wait_for_timeout(500)
+            pg.screenshot(path=SH + "b2_axis.png"); pg.mouse.up(); attendi(pg, f"!!{CH}.zoom")
             assert pg.evaluate(f"!!{CH}.zoom")
         step("2.2: thin line with band and values on the axis", axis)
         pg.screenshot(path=SH + "b2_full.png")
