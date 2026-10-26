@@ -75,9 +75,14 @@ pub(crate) trait Num: Copy + Default + Send {
     fn to64(self) -> f64;
     fn put(self, out: &mut Vec<u8>);
 }
+fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
+    v.get(i).copied().unwrap_or_default()
+}
+
 impl Num for f32 {
     const SIZE: usize = 4;
     const F32: bool = true;
+    #[allow(clippy::cast_possible_truncation)] // f32 is the stored width of the profile arrays
     fn from64(x: f64) -> Self {
         x as f32
     }
@@ -155,11 +160,19 @@ impl Totals {
         }
     }
     fn add(&mut self, pos: usize, mz: f64, it: f64) {
-        self.acc[pos] += it;
-        if !self.have[pos] || it >= self.bpy[pos] {
-            self.bpm[pos] = mz;
-            self.bpy[pos] = it;
-            self.have[pos] = true;
+        if let Some(a) = self.acc.get_mut(pos) {
+            *a += it;
+        }
+        if let (Some(have), Some(bpy), Some(bpm)) = (
+            self.have.get_mut(pos),
+            self.bpy.get_mut(pos),
+            self.bpm.get_mut(pos),
+        ) {
+            if !*have || it >= *bpy {
+                *bpm = mz;
+                *bpy = it;
+                *have = true;
+            }
         }
     }
 }
@@ -240,8 +253,8 @@ impl<T: Num> Sec<T> {
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
-        while (g as usize) < peaks.len() {
-            self.fence.push(peaks[g as usize].mz);
+        while let Some(p) = usize::try_from(g).ok().and_then(|i| peaks.get(i)) {
+            self.fence.push(p.mz);
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
@@ -307,32 +320,30 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn cost(&self, b: usize) -> usize {
-        self.counts[b] as usize * std::mem::size_of::<Peak<T>>()
+        get0(&self.counts, b) as usize * std::mem::size_of::<Peak<T>>()
     }
 
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()> {
         if self.before.is_empty() {
-            let mut acc = 0u64;
-            self.before = (0..NB)
-                .map(|b| {
-                    let v = acc;
-                    acc += self.counts[b] as u64;
-                    v
-                })
+            self.before = self
+                .counts
+                .iter()
+                .scan(0u64, |a, &c| Some(std::mem::replace(a, *a + c as u64)))
                 .collect();
         }
         self.lo = lo;
         self.hi = hi;
         let mut at = 0usize;
         for b in lo..hi {
-            self.base[b] = at;
-            self.cursor[b] = at;
-            at += self.counts[b] as usize;
+            if let (Some(base), Some(cursor)) = (self.base.get_mut(b), self.cursor.get_mut(b)) {
+                (*base, *cursor) = (at, at);
+            }
+            at += get0(&self.counts, b) as usize;
         }
         self.round = Vec::new();
         reserve(&mut self.round, at)?;
         self.round.resize(at, Peak::default());
-        self.done = self.before[lo];
+        self.done = get0(&self.before, lo);
         Ok(())
     }
 
@@ -341,8 +352,8 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()> {
-        for j in 0..sp.mz.len() {
-            self.fill_pk(sp.mz[j], sp.intensity_f64(j), pos)?;
+        for (j, &mz) in sp.mz.iter().enumerate() {
+            self.fill_pk(mz, sp.intensity_f64(j), pos)?;
         }
         Ok(())
     }
@@ -356,8 +367,12 @@ impl<T: Num> Sect for Sec<T> {
         };
         let b = bucket(p.mz.to64());
         if b >= self.lo && b < self.hi {
-            self.round[self.cursor[b]] = p;
-            self.cursor[b] += 1;
+            if let Some(c) = self.cursor.get_mut(b) {
+                if let Some(slot) = self.round.get_mut(*c) {
+                    *slot = p;
+                }
+                *c += 1;
+            }
         }
         Ok(())
     }
@@ -366,9 +381,10 @@ impl<T: Num> Sect for Sec<T> {
         let mut round = std::mem::take(&mut self.round);
         // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
         let ends: Vec<usize> = (self.lo..self.hi)
-            .map(|b| self.base[b] + self.counts[b] as usize)
+            .map(|b| get0(&self.base, b) + get0(&self.counts, b) as usize)
             .collect();
-        ordina_secchi(&mut round, self.base[self.lo], &ends, self.per_scansione)?;
+        let first = get0(&self.base, self.lo);
+        ordina_secchi(&mut round, first, &ends, self.per_scansione)?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
