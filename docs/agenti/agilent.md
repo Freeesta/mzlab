@@ -2,6 +2,8 @@
 
 `crates/mzlab-core/src/agilent/`: Rust puro, nessun crate nuovo. Una cartella `.D` si legge dai suoi file: `AcqData/MSScan.bin` (indice, un record per scansione) e `AcqData/MSPeak.bin` (i punti), più i file piccoli (`MSTS.xml`, `Devices.xml`, `Contents.xml`, `MSTree2.bin`, `acqmeth.txt` nella cartella `.D`).
 
+Supportato anche il GC/TQ Agilent 7000D in scansione completa a centroidi (MS1, EI positivo, punti `f32`): letto come il 5977. NON letti: SIM, MRM e product-ion del TQ. Provato su `.D` sintetici; la verifica sul `.D` vero (13.002 scansioni, TIC dei record = somma dei punti) spetta al locale.
+
 Le corse LC/MS (QqQ, Q-TOF) le legge la variante `crates/mzlab-core/src/agilent_ext/` (feature `estesi`, modulo `agilent`): `agilent-lcms.md`.
 
 Il formato è stato ricavato da tre corse vere di un GC/MS a singolo quadrupolo 5977 (EI, positivo; una in scansione 50-500 m/z, due in SIM) e dallo schema `AcqData/MSScan.xsd` che Agilent mette nella cartella; Riferimento: gli mzML che ProteoWizard msconvert ha fatto dalle stesse tre corse (64 bit, zlib, senza peak picking, SIM come spettri; repository dati, `GC-MS/mzML/`), più controlli interni (sotto). Tutto ciò che non è nelle tre corse è elencato in «Non verificato».
@@ -22,7 +24,7 @@ Regola: nessuna informazione dei file grezzi si butta; ciò che non so mappare s
 | File | Contenuto | Estratto? |
 |---|---|---|
 | `AcqData/MSScan.bin` | indice, un record per scansione | tutti i campi: i mappati in `ScanRec`, gli altri (stato, periodo di campionamento, intervallo di massa misurato, soglia, `MinX`/`MaxX`…) in `ScanRec::extra` con i nomi in `AgilentD::extra_names`; l'intestazione di 160 byte (a parte l'offset a +88) non è decodificata |
-| `AcqData/MSPeak.bin` | punti (m/z, intensità) | sì; i 68 byte di intestazione non sono decodificati |
+| `AcqData/MSPeak.bin` | punti (m/z, intensità): blocco per scansione, `n` m/z poi `n` intensità, tutti `f64` (16 byte/punto, 5977) oppure tutti `f32` (8 byte/punto, centroidi del GC/TQ 7000D a scansione completa, `dataStorage PeakDetected`: senza `MSProfile.bin`, `MSMassCal.bin`, `MSTree2.bin`); la dimensione del blocco sceglie il layout, altre dimensioni sono errore. SIM/MRM/product-ion del TQ non sono letti | sì; i 68 byte di intestazione non sono decodificati |
 | `AcqData/MSScan.xsd` | schema dei record | sì, determina il layout; conservato come testo |
 | `AcqData/MSTS.xml` | segmenti di tempo | sì (`segments`, e tutti i campi in `metadata`) |
 | `AcqData/MSIndex.bin` | tempi di scansione per segmento | no (sono uguali ai tempi dei record; verificato sul primo segmento) |
