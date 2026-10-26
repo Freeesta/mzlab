@@ -70,7 +70,7 @@ fn row(id: u32, p: &[Peak]) -> (u32, String) {
     (id, o.0)
 }
 
-fn tp_file(recipe: &Recipe) -> Vec<u8> {
+pub(crate) fn tp_file(recipe: &Recipe) -> Vec<u8> {
     let mut t = Aligned::with_capacity(1, 2);
     for r in 0..2 {
         t.mz.push(100.0 + r as f64);

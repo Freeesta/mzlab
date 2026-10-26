@@ -230,6 +230,7 @@
     "../../flow/lazy/flow-family-proofs.js",
     "../../flow/lazy/flow-views-features.js",
     "../../flow/lazy/flow-review.js",
+    "../../flow/lazy/flow-decisions.js",
     "../../flow/lazy/flow-views-tabui.js",
     "../../flow/lazy/flow-desktop.js",
     "../../flow/lazy/flow-web-run.js",
