@@ -204,6 +204,26 @@ pub struct LogPValues {
 }
 
 impl LogPValues {
+    /// Crippen logP and descriptors from our own tables (`mzlab-mol`) for the heaviest component of a SMILES; `None` when it does not read or an element has no
+    /// weight. No `xlogp3`: that value only comes from the sources of the campaign.
+    #[cfg(feature = "record")]
+    pub fn from_smiles(smiles: &str) -> Option<LogPValues> {
+        let d = smiles
+            .split('.')
+            .filter_map(|p| Some(mzlab_mol::Mol::from_smiles(p).ok()?.descriptors()))
+            .filter(|d| d.mw.is_some())
+            .max_by(|a, b| a.mw.partial_cmp(&b.mw).unwrap())?;
+        Some(LogPValues {
+            crippen: Some(round_to(d.logp, 2)),
+            mw: Some(round_to(d.mw?, 2)),
+            tpsa: Some(round_to(d.tpsa, 2)),
+            hbd: Some(d.hbd as f64),
+            hba: Some(d.hba as f64),
+            nrot: Some(d.rotors as f64),
+            ..Default::default()
+        })
+    }
+
     fn get(&self, source: &str) -> Option<f64> {
         if source == "xlogp3" {
             self.xlogp3

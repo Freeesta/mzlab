@@ -29,6 +29,8 @@ use crate::flow_stats::stats_job;
 pub mod live;
 #[path = "flow_plausible.rs"]
 mod plausible;
+#[path = "flow_rtpredict.rs"]
+mod rtpredict;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -420,6 +422,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(crate::flow_tablematch::EXECUTORS)
         .chain(crate::flow_chimeric::EXECUTORS)
         .chain(crate::flow_lookup::EXECUTORS)
+        .chain(rtpredict::EXECUTORS)
         .chain(plausible::EXECUTORS)
 }
 

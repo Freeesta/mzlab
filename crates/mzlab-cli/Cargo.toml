@@ -17,7 +17,7 @@ mzlab-llm = { path = "../mzlab-llm" }
 mzlab-tutor = { path = "../mzlab-tutor" }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # the same features as mzlab-desktop: one build of each crate in the workspace
-mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp"] }
+mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp", "record"] }
 mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder", "untargeted"] }
 mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
 mzlab-mol = { path = "../mzlab-mol" }
