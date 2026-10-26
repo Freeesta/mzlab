@@ -176,5 +176,27 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  /** tp.link@2 (flow-web-tp.js): the hypotheses searched in the series, the proofs on the table of the alignment and the interpretation of the rows, in two calls to the pool (the same Rust as `flow run`); the `.mzfeat`
+   * is kept in OPFS under the plan_key of the job. A file of hypotheses or a table that is not this plan's stays with the computer @param {any} x @param {any} spec @param {any} inst */
+  const tpLink = async (x, spec, inst) => {
+    const j = job(spec), k = kit(), p = await k.getPool(), path = DIR + spec.key + ".tp.mzfeat";
+    if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
+    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    const inp = F.webTp ? await F.webTp.linkInputs(x.S, inst, x.inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
+    if (inp instanceof Error) { await x.call("started", { job: j }); await fail(x, spec, inst, inp); return {}; }
+    if (!inp || !alKey || !up.length) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const read = async (/** @type {string} */ f) => p.fs.read(f), paths = up.map(u => u.path);
+      const table = await read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(u => read(DIR + u.key + ".mzfeatf")));
+      const given = (inst.params || {}).polarity, step = F.stepOf(x.S.reg, inst);
+      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: k.recipeOf(x.plan), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
+      const out = await p.linkInterp({ table: ev.table, parent: ev.parent, registry: ev.registry, polarity: ev.polarity, params: JSON.stringify({ ...F.defaults(inst, step), ...(inst.params || {}) }), infusion: ev.infusion, paths });
+      await p.fs.write(path, out.slice());
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();
