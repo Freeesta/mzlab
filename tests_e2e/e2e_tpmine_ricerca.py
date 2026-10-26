@@ -27,6 +27,7 @@ with sync_playwright() as p:
     b = p.chromium.launch(); pg = b.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.set_content('<div class="tp"><div id="h"></div></div>')
+    pg.add_script_tag(path=str(ROOT / "TP_Mine" / "js" / "41_tp_table_marks.js"))
     pg.add_script_tag(path=str(ROOT / "TP_Mine" / "js" / "42_tp_table.js"))
     pg.evaluate(SETUP)
 

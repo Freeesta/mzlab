@@ -137,7 +137,7 @@ def peggiori(now: dict[str, dict[str, int]], base: dict[str, dict[str, int]]) ->
 
 
 BYTE_API = indice.ROOT / "tools" / "api_byte_ammesse.txt"
-IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria.js", "mzlab/web/libreria-worker.js", "mzlab/web/liste.js", "mzlab/web/llm/trasporto.js", "TP_Mine/js/20_tpmine.js"}     # the schema point and the historical databases
+IDB_OK = {"mzlab/web/qqq-db.js", "mzlab/web/libreria.js", "mzlab/web/libreria-worker.js", "mzlab/web/liste.js", "mzlab/web/llm/trasporto.js", "TP_Mine/js/19_tpmine_base.js"}     # the schema point and the historical databases
 
 
 def regole_statiche() -> list[str]:
