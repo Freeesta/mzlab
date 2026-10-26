@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use mzlab_core::error::Result;
 
+use crate::broad_blank::{subtract, BlankBank};
 use crate::broad_front::{area_over_line, base_of, hwhm_left, noise_of};
 use crate::broad_gt::{detrend, median, CommonMode};
 use crate::centwave::ricker;
@@ -43,6 +44,14 @@ pub struct BroadParams {
     pub gt: bool,
     /// Common gradient mode of the file, set by the collector of the detector (`trace::detect_with`, `untargeted::pipeline::run_file`).
     pub common: Option<Arc<CommonMode>>,
+    /// Subtracts the blank trace of the same ion (from `blank`) before the search; does nothing without `blank`.
+    pub blank_pointwise: bool,
+    /// Scales the blank trace by the median sample/blank ratio (at most 1) before subtracting it.
+    pub blank_scale: bool,
+    /// Tolerance on the m/z of the blank trace, ppm.
+    pub blank_ppm: f64,
+    /// Ion traces of the blank run, set by `trace::detect_with_blank`.
+    pub blank: Option<Arc<BlankBank>>,
 }
 
 // `gt` and `common` stay out of the text of the recipe while `gt` is off, so the fingerprints made before they existed keep their name.
@@ -61,6 +70,9 @@ impl std::fmt::Debug for BroadParams {
         if self.gt {
             d.field("gt", &self.gt);
         }
+        if self.blank_pointwise {
+            d.field("blank_pointwise", &(self.blank_scale, self.blank_ppm));
+        }
         d.finish()
     }
 }
@@ -77,6 +89,10 @@ impl Default for BroadParams {
             front_s: 20.0,
             gt: false,
             common: None,
+            blank_pointwise: false,
+            blank_scale: false,
+            blank_ppm: 10.0,
+            blank: None,
         }
     }
 }
@@ -314,6 +330,23 @@ pub fn detect_broad_at(
     let mut y_pre = filled(len, 0.0f64)?;
     y_pre.copy_from_slice(y);
     inpaint_linear(&mut y_pre, &cut);
+    if let (true, Some(bank)) = (p.blank_pointwise, &p.blank) {
+        let w: f64 = y.iter().sum();
+        let mz_c = if w > 0.0 {
+            y.iter().zip(mz).map(|(a, b)| a * b).sum::<f64>() / w
+        } else {
+            mz[len / 2]
+        };
+        let args = (&**bank, p.blank_scale, p.blank_ppm);
+        subtract(
+            &mut y_pre,
+            rt_s,
+            scan0 as f64 * dt_s,
+            mz_c,
+            p.decimate.max(1),
+            args,
+        )?;
+    }
     // the search runs on the trace without G(t); front width and area are measured on `y_pre`, before it is subtracted
     let mut y_res = Vec::new();
     if let (true, Some(cm)) = (p.gt, &p.common) {

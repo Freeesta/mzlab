@@ -1,4 +1,6 @@
 use super::*;
+use crate::broad_blank::BlankBank;
+use std::sync::Arc;
 
 /// Deterministic noise: sum of twelve uniforms of an LCG, mean 0, sd `sd`.
 struct Lcg(u64);
@@ -157,4 +159,59 @@ fn wide_bands_keep_recall_and_area() {
         }
     }
     assert!(hit as f64 / total as f64 >= 0.8, "{hit}/{total}");
+}
+
+fn bank_of(peaks: &[(f64, f64, f64)]) -> Arc<BlankBank> {
+    let (rt, _, mut y) = trace(peaks);
+    let mut rng = Lcg(99);
+    for v in y.iter_mut() {
+        *v += rng.next(10.0);
+    }
+    let mut b = BlankBank::default();
+    b.add(300.0, &rt, &y, 8).unwrap();
+    Arc::new(b.finish().unwrap())
+}
+
+fn with_blank(b: &Arc<BlankBank>, scale: bool) -> BroadParams {
+    BroadParams {
+        blank_pointwise: true,
+        blank_scale: scale,
+        blank: Some(b.clone()),
+        ..on()
+    }
+}
+
+#[test]
+fn pointwise_blank_removes_the_hump_of_the_blank_and_keeps_the_sample_band() {
+    let (rt, mz, y) = trace(&[(300.0, 75.0, 1000.0), (800.0, 75.0, 1000.0)]);
+    let plain = detect_broad(&rt, &mz, &y, &[], &on()).unwrap();
+    assert_eq!(plain.len(), 2, "{plain:?}");
+    let bank = bank_of(&[(800.0, 75.0, 1000.0)]);
+    for scale in [false, true] {
+        let b = detect_broad(&rt, &mz, &y, &[], &with_blank(&bank, scale)).unwrap();
+        assert_eq!(b.len(), 1, "{b:?}");
+        assert!((b[0].rt_apex - 300.0).abs() <= 16.0, "{b:?}");
+    }
+}
+
+#[test]
+fn pointwise_blank_is_inert_without_the_option_or_the_bank_or_another_ion() {
+    let (rt, mz, y) = trace(&[(300.0, 75.0, 1000.0), (800.0, 75.0, 1000.0)]);
+    let plain = detect_broad(&rt, &mz, &y, &[], &on()).unwrap();
+    let bank = bank_of(&[(800.0, 75.0, 1000.0)]);
+    let off = BroadParams {
+        blank: Some(bank.clone()),
+        ..on()
+    };
+    assert_eq!(detect_broad(&rt, &mz, &y, &[], &off).unwrap(), plain);
+    let no_bank = BroadParams {
+        blank_pointwise: true,
+        ..on()
+    };
+    assert_eq!(detect_broad(&rt, &mz, &y, &[], &no_bank).unwrap(), plain);
+    let other = vec![450.0; y.len()];
+    assert_eq!(
+        detect_broad(&rt, &other, &y, &[], &with_blank(&bank, false)).unwrap(),
+        detect_broad(&rt, &other, &y, &[], &on()).unwrap()
+    );
 }

@@ -6,10 +6,13 @@
 //! between two peaks above the floor, where no trace can pass), so the memory is bounded and the result does not depend on the slabs.
 //! Sums run in a fixed order and `ln` comes from `libm`: native and WASM give the same bits.
 
+use std::sync::Arc;
+
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::axis::MassAxis;
+use crate::broad_blank::BlankBank;
 use crate::broad_gt::{share, TraceBank};
 use crate::centwave::{self, Peak};
 use crate::channels::{by_scan, segments, stitch};
@@ -214,6 +217,69 @@ pub fn detect_with<R: ReadAt>(
         run_slab(slab, &rt, dt, p, &mut rows)
     })?;
     finish(rows, dt, p.axis, p.merge_overlap)
+}
+
+/// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of
+/// the blank are collected first and subtracted from each sample trace before the broad search. Otherwise the same as `detect_with`.
+pub fn detect_with_blank<R: ReadAt, B: ReadAt>(
+    index: &mut Index<R>,
+    blank: &mut Index<B>,
+    p: &Params,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<FileFeatures> {
+    let Peak::CentWave(cw) = &p.peak else {
+        return detect_with(index, p, progress);
+    };
+    if !(cw.broad.enabled && cw.broad.blank_pointwise) || cw.broad.blank.is_some() {
+        return detect_with(index, p, progress);
+    }
+    let bank = blank_bank(blank, p)?;
+    let mut q = p.clone();
+    if let Peak::CentWave(c) = &mut q.peak {
+        c.broad.blank = bank;
+    }
+    detect_with(index, &q, progress)
+}
+
+/// The ion traces of the blank run (unshifted grid, at least `broad.min_scans` scans long) decimated like the sample; `None` when it has none.
+fn blank_bank<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<Option<Arc<BlankBank>>> {
+    let Peak::CentWave(cw) = &p.peak else {
+        return Ok(None);
+    };
+    let Some(si) = index.section_of(1, p.polarity) else {
+        return Ok(None);
+    };
+    let rt: Vec<f64> = index.arrays(si)?.rt.clone();
+    let mut bank = BlankBank::default();
+    let den = libm::log1p(CHANNEL_PPM);
+    each_slab(index, si, p, rt.len(), &mut |_, _| {}, &mut |slab| {
+        if slab.mz.is_empty() {
+            return Ok(());
+        }
+        let mut lmz: Vec<f64> = Vec::new();
+        reserve(&mut lmz, slab.mz.len())?;
+        lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
+        let order = by_scan(&slab.pos)?;
+        let mut segs = Vec::new();
+        segments(
+            &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
+        )?;
+        for s in stitch(segs, p)? {
+            if ((s.z - s.a + 1) as usize) < cw.broad.min_scans {
+                continue;
+            }
+            let (y, w) = centwave::series_of(&s, &slab.mz, &slab.it, &slab.pos, p, cw)?;
+            let tot: f64 = y.iter().sum();
+            let mz = if tot > 0.0 {
+                w.iter().sum::<f64>() / tot
+            } else {
+                s.mzc
+            };
+            bank.add(mz, &rt[s.a as usize..=s.z as usize], &y, cw.broad.decimate)?;
+        }
+        Ok(())
+    })?;
+    Ok(bank.finish().map(Arc::new))
 }
 
 /// Feeds `f` the slabs of the section: peaks above the floor in m/z order, a slab ending only at a gap of `SLAB_GAP_PPM` once it is full.
