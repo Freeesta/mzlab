@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Reads a source file of the index builder (a plain mzML, a member of a maker's set) straight from its copy in OPFS with a read-only SyncAccessHandle, in blocks of any size:
 // no File object, no copy through the browser process. Without a handle (not supported, the file is taken, the size is not the Blob's) every read goes through
 // the FileReaderSync of the Blob, as before. Used by idx-worker.js (a worker: handles exist only there).

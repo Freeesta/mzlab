@@ -19,7 +19,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 LENTO_S = 5
-AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|AGENTS\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto\.json|mappa\.md|manifest)"),
+AREE = [("workflow", r"^\.github/"), ("docs", r"^(docs/|AGENTS\.md|.*\.md$)"), ("generati", r"(schemi/.*\.json|globali.*\.d\.ts|stretto(-worker)?\.json|mappa\.md|manifest)"),
         ("rust", r"^(crates/|Cargo\.|vendor/)"), ("test", r"^tests(_e2e)?/"), ("tools", r"^tools/"), ("web", r"^mzlab/web/"), ("python", r"\.py$")]
 PESANTI = ("passi", "file", "lenti", "fasi", "worker", "moduli")      # fields dropped by the compaction
 

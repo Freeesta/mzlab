@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Worker of the assistant (module worker): loads the Rust module `wasm-feat/llm/` (manifest, SHA-256 checked) on the first message and only then. Builds each request and decodes
 // each answer with it; the bytes travel over a MessagePort to/from the iframe `llm/trasporto.html`, which owns the key. The transport `replay` answers from a recording and never uses the iframe.
 // Page -> worker: init, port, request, send (a conversation, or a ready `request` of a subagent), abort, assist.files, assist.on, assist.request, assist.check, assist.readers, assist.state, assist.reading, sub.replay, replay.load, replay.reset, chart.views, chart.make, chart.presets (charts: grafico/1, docs/agenti/llm.md), agent.new, agent.in (the loop of the assistant: llm-agente.js). Worker -> page: {id, ok, ...} per call and {id, event} per normalized event.

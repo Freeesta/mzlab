@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // Writes an export file piece by piece into OPFS (mzlab/export/<id>), so the page never holds the whole text (export-pezzi.js is the client).
 // Messages: { op: "open", id } (answered with { op: "ack", id }), { op: "put", id, data: string | Uint8Array | Blob } (answered with { op: "ack", id }), { op: "end", id } (answered with { op: "done", id, bytes }),
 // { op: "abort", id }, { op: "drop", id }, { op: "clean", olderMs } (removes what an interrupted export left); a failure is answered { op: "fail", id, name, message }.

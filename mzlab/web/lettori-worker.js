@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // The worker of the readers modules (crates/mzlab-lettori-wasm, wasm-lettori/<family>/): opens the files of a family that the engine does not read and writes their mzML into OPFS (rust-opfs.js rawSink).
 // The .wasm of a family is fetched on the first message that names it (never the others) and checked against its SHA-256 in wasm-lettori/manifest.json (carica-modulo.js). Messages: probe, toMzml, cancel (the page also ends the worker, a running conversion cannot listen).
 import { rawSink } from "./rust-opfs.js";

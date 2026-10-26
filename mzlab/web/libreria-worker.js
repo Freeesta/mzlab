@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Spectral libraries (MSP, MGF, JSON, MassBank records) read in a Web Worker, kept in the browser's private file system (OPFS) and searched with a MS2 spectrum.
 // No Pyodide. Where WebAssembly works the work is done by static/wasm-lib/ (crates/mzlab-lib-wasm: the .mzlib format of docs/agenti/librerie.md, Flash indexes, scores);
@@ -33,12 +34,13 @@ function topPeaks(mz, it) {                     // the TOP_PEAKS most intense, b
   return { mz: Float32Array.from(idx, i => mz[i]), it: Float32Array.from(idx, i => it[i] / mx) };
 }
 class LibParser {
+  /** @type {any} */ cur = null;
   // format "msp" | "mgf"; onSpectrum(spectrum) is called for every good one; push(text) as the file is read, end() at the end.
   constructor(format, onSpectrum) {
     this.fmt = format; this.cb = onSpectrum; this.rest = ""; this.cur = null; this.inPeaks = false;
     this.stats = { read: 0, dropped: 0, noPrec: 0, noPeaks: 0, broken: 0 };
   }
-  push(text) { const lines = (this.rest + text).split(/\r?\n/); this.rest = lines.pop(); for (const l of lines) this.line(l); }
+  push(text) { const lines = (this.rest + text).split(/\r?\n/); this.rest = lines.pop() ?? ""; for (const l of lines) this.line(l); }
   end() { if (this.rest) { this.line(this.rest); this.rest = ""; } if (this.cur) { if (this.fmt === "mgf") this.drop("broken"); else this.emit(); } }
   fresh() { this.cur = { f: {}, mz: [], it: [] }; this.inPeaks = false; }
   drop(why) { this.stats.dropped++; if (why) this.stats[why]++; this.cur = null; this.inPeaks = false; }
@@ -175,7 +177,7 @@ function lossesOf(mz, prec) { const l = Float64Array.from(mz, m => prec - m); l.
 function coincidences(q, lib, tol) { return sharedCount(q.mz, lib.mz, tol) + sharedCount(lossesOf(q.mz, q.prec), lossesOf(lib.mz, lib.prec), tol); }
 // modified cosine: candidate pairs at shift 0 and shift delta, one-to-one greedy by decreasing weight sqrt(Iq*Il), normalised as the cosine of the square roots
 function modCosine(q, lib, tol) {
-  const a = top32(q, q.prec), b = top32(lib, lib.prec), delta = q.prec - lib.prec, c = [];
+  const a = top32(q, q.prec), b = top32(lib, lib.prec), delta = q.prec - lib.prec, c = /** @type {[number, number, number, boolean][]} */ ([]);
   for (let i = 0; i < a.mz.length; i++) for (const sh of (Math.abs(delta) < 1e-6 ? [0] : [0, delta])) {
     const t = a.mz[i] - sh;
     for (let j = lowerBound(b.mz, t - tol); j < b.mz.length && b.mz[j] <= t + tol; j++) c.push([i, j, Math.sqrt(a.it[i] * b.it[j]), sh !== 0]);
@@ -279,7 +281,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   async function listLibraries() {
     const out = [];
     if (await probeOpfs()) { const d = await root(); for await (const [name] of d.entries()) if (name.endsWith(".info.json")) { try { out.push(JSON.parse(await (await (await d.getFileHandle(name)).getFile()).text())); } catch (e) { /* damaged: ignored */ } } }
-    else { const db = await idb(); await new Promise(ok => { const r = db.transaction("lib").objectStore("lib").openCursor(); r.onsuccess = () => { const c = r.result; if (c) { out.push(c.value.info); c.continue(); } else ok(); }; r.onerror = ok; }); db.close(); }
+    else { const db = await idb(); await new Promise(ok => { const r = db.transaction("lib").objectStore("lib").openCursor(); r.onsuccess = () => { const c = r.result; if (c) { out.push(c.value.info); c.continue(); } else ok(undefined); }; r.onerror = ok; }); db.close(); }
     return out.sort((a, b) => a.date - b.date);
   }
   async function removeLibrary(id) {
@@ -345,7 +347,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       const tol = m.tol.unit === "ppm" ? q.prec * m.tol.v * 1e-6 : m.tol.v, lo = lowerBound(lib.idx.prec, q.prec - tol);
       for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + tol; k++) { const pos = lib.idx.ord[k]; cache.set(pos, await peaksOf(lib, pos)); }
       const rs = searchIndex(lib.idx, q, { ppm: m.tol.unit === "ppm" ? m.tol.v : null, da: m.tol.unit === "ppm" ? null : m.tol.v, frag: m.frag, pol: m.pol }, pos => cache.get(pos), lib.meta);
-      rs.forEach(r => { r.lib = lib.info.name; out.push(r); });
+      rs.forEach(r => { /** @type {any} */ (r).lib = lib.info.name; out.push(r); });
     }
     out.sort((a, b) => b.ent - a.ent || b.cos - a.cos);
     return { results: out.slice(0, 50), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
@@ -358,7 +360,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     for (const id of ids) {
       const lib = await loadLibrary(id), cache = new Map(), lo = lowerBound(lib.idx.prec, q.prec - maxD);
       for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + maxD; k++) { const pos = lib.idx.ord[k]; const lp = lib.idx.pol[pos]; if (m.pol && lp && lp !== m.pol) continue; cache.set(pos, await peaksOf(lib, pos)); }
-      analogIndex(lib.idx, q, { maxDelta: maxD, frag: m.frag, pol: m.pol }, pos => cache.get(pos), lib.meta).forEach(r => { r.lib = lib.info.name; out.push(r); });
+      analogIndex(lib.idx, q, { maxDelta: maxD, frag: m.frag, pol: m.pol }, pos => cache.get(pos), lib.meta).forEach(r => { /** @type {any} */ (r).lib = lib.info.name; out.push(r); });
     }
     out.sort((a, b) => b.mcos - a.mcos);
     return { results: out.slice(0, m.max || 10), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
@@ -401,6 +403,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     if (forceJs || !allowWasm) return null;
     if (wasmTried) return W;
     wasmTried = true;
+    // @ts-ignore the engine is generated by wasm-bindgen: it is not in the tree
     try { if (typeof WebAssembly !== "object") throw new Error("no WebAssembly"); const mod = await import("./wasm-lib/mzlab_lib_wasm.js"); await mod.default(); W = mod; } catch (e) { W = null; }
     return W;
   }
@@ -469,6 +472,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   }
 
   // ---------------------------------------------------------------- the folder of the libraries (libreria-cartella.js)
+  /** @type {{ dir: any, mode: string | null, map: Map<string, any>, infos: any[], cat: any, tried: boolean, catTried: boolean, pending?: Promise<void> }} */
   const FOLD = { dir: null, mode: null, map: new Map(), infos: [], cat: null, tried: false, catTried: false };
   // {mode: "opfs" | "fs" (handle) | "native" (base of the mzlab:// protocol)}
   async function setFolder(m) {
@@ -530,6 +534,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     const s = await foldRefresh();
     return { cat: FOLD.cat, avail: FOLD.cat.librerie.map(p => ({ id: p.id, stato: SCARICA.stateOf(p, s.voci) })) };
   }
+  /** @type {{ abort: AbortController | null }} */
   const DL = { abort: null };
   // the packages the user ticked, one after the other; a failure of one does not stop the others (a cancel does)
   async function downloadCmd(m, reqId) {
@@ -540,7 +545,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
         const pkg = FOLD.cat.librerie.find(p => p.id === id);
         if (!pkg) { failed.push({ id, key: "lib.dl.err.catalog", params: { detail: id } }); continue; }
         try {
-          await SCARICA.downloadPackage({ dir: FOLD.dir, pkg, base, signal: DL.abort.signal, onProgress: p => postMessage({ type: "progress", reqId, ...p }),
+          await SCARICA.downloadPackage({ dir: FOLD.dir, pkg, base, signal: /** @type {AbortController} */ (DL.abort).signal, onProgress: p => postMessage({ type: "progress", reqId, ...p }),
             beforeReplace: async () => { const w = WLIBS.get(CARTELLA.idOf(id + ".mzlib")); if (w) { try { w.lib.free(); } catch (e) { /* gone */ } WLIBS.delete(CARTELLA.idOf(id + ".mzlib")); rebalance(); } } });
           done.push(id);
         } catch (e) {
@@ -576,7 +581,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     try {
       imp = w.Importer.forSpectra(scratch.read, scratch.write);
       for (let i = 0; i < n; i++) {
-        const a = idx.off[i], b = idx.off[i + 1], f = new Float32Array(peaks ? peaks.slice(a * 8, b * 8) : rd(a * 8, (b - a) * 8).buffer), mz = new Float64Array(b - a), it = new Float64Array(b - a);
+        const a = idx.off[i], b = idx.off[i + 1], f = new Float32Array(peaks ? peaks.slice(a * 8, b * 8) : /** @type {any} */ (rd)(a * 8, (b - a) * 8).buffer), mz = new Float64Array(b - a), it = new Float64Array(b - a);
         for (let j = 0; j < b - a; j++) { mz[j] = f[2 * j]; it[j] = f[2 * j + 1]; }
         imp.addSpectrum(precAt[i], idx.pol[i], mz, it, JSON.stringify(meta[i] || []));
       }
