@@ -23,6 +23,16 @@ pub struct Scan {
 
 /// (MSScan.bin, MSPeak.bin) for the scans.
 pub fn encode(scans: &[Scan]) -> (Vec<u8>, Vec<u8>) {
+    encode_width(scans, false)
+}
+
+/// Same, with the points as `f32` pairs of arrays (8 bytes per point, the centroids of the GC/TQ 7000D).
+pub fn encode_f32(scans: &[Scan]) -> (Vec<u8>, Vec<u8>) {
+    encode_width(scans, true)
+}
+
+fn encode_width(scans: &[Scan], single: bool) -> (Vec<u8>, Vec<u8>) {
+    let w = if single { 8 } else { 16 };
     let mut peak = vec![0u8; 68];
     let mut idx = vec![0u8; 160];
     idx[0] = 1;
@@ -30,8 +40,16 @@ pub fn encode(scans: &[Scan]) -> (Vec<u8>, Vec<u8>) {
     idx[88..92].copy_from_slice(&160i32.to_le_bytes());
     for (k, s) in scans.iter().enumerate() {
         let off = peak.len() as i64;
-        s.pts.iter().for_each(|p| put_f64(&mut peak, p.0));
-        s.pts.iter().for_each(|p| put_f64(&mut peak, p.1));
+        for col in 0..2 {
+            for p in &s.pts {
+                let v = if col == 0 { p.0 } else { p.1 };
+                if single {
+                    peak.extend((v as f32).to_le_bytes());
+                } else {
+                    put_f64(&mut peak, v);
+                }
+            }
+        }
         let tic: f64 = s.pts.iter().map(|p| p.1).sum();
         let (bmz, bv) = s
             .pts
@@ -58,7 +76,7 @@ pub fn encode(scans: &[Scan]) -> (Vec<u8>, Vec<u8>) {
         put_i32(r, 0);
         put_i32(r, 1);
         r.extend(off.to_le_bytes());
-        put_i32(r, s.pts.len() as i32 * 16);
+        put_i32(r, s.pts.len() as i32 * w);
         put_i32(r, s.pts.len() as i32);
         for v in [f64::MAX, bv, 0.0, 0.0] {
             put_f64(r, v);

@@ -22,7 +22,7 @@ Regola: nessuna informazione dei file grezzi si butta; ciò che non so mappare s
 | File | Contenuto | Estratto? |
 |---|---|---|
 | `AcqData/MSScan.bin` | indice, un record per scansione | tutti i campi: i mappati in `ScanRec`, gli altri (stato, periodo di campionamento, intervallo di massa misurato, soglia, `MinX`/`MaxX`…) in `ScanRec::extra` con i nomi in `AgilentD::extra_names`; l'intestazione di 160 byte (a parte l'offset a +88) non è decodificata |
-| `AcqData/MSPeak.bin` | punti (m/z, intensità) | sì; i 68 byte di intestazione non sono decodificati |
+| `AcqData/MSPeak.bin` | punti (m/z, intensità): blocco per scansione, `n` m/z poi `n` intensità, tutti `f64` (16 byte/punto, 5977) oppure tutti `f32` (8 byte/punto, centroidi del GC/TQ 7000D a scansione completa, `dataStorage PeakDetected`: senza `MSProfile.bin`, `MSMassCal.bin`, `MSTree2.bin`); la dimensione del blocco sceglie il layout, altre dimensioni sono errore. SIM/MRM/product-ion del TQ non sono letti | sì; i 68 byte di intestazione non sono decodificati |
 | `AcqData/MSScan.xsd` | schema dei record | sì, determina il layout; conservato come testo |
 | `AcqData/MSTS.xml` | segmenti di tempo | sì (`segments`, e tutti i campi in `metadata`) |
 | `AcqData/MSIndex.bin` | tempi di scansione per segmento | no (sono uguali ai tempi dei record; verificato sul primo segmento) |
