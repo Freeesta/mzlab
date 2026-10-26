@@ -18,7 +18,10 @@ D = Path(tempfile.mkdtemp(prefix="wiff_tipi_"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_misto.py"), str(D)], check=True, capture_output=True)
 TRUE = json.loads((D / "tipi.json").read_text())
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import urllib.request
+for _ in range(50):
+    try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
+    except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 SHOWN = """() => ST.files.map(f => [f.name, f.kind, (f.mixed || []).map(p => p.name).join('+'), (document.querySelector(`#flist tr[data-n="${CSS.escape(f.name)}"]`) || {}).innerText || ''])"""
 try:
     with sync_playwright() as p:
@@ -28,8 +31,8 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1")
         pg.wait_for_selector("#drop"); attendi(pg, "window.MZLAB_LR !== undefined && !!document.getElementById('pick').onchange")
-        pg.set_input_files("#pick", [*__import__("os").environ.get("WIFFPAIR", f"{D}/misto.wiff,{D}/misto.wiff.scan").split(",")])
-        attendi(pg, f"ST.files.length === {int(__import__("os").environ.get("NS", len(TRUE)))} && ST.files.every(f => f.kind)", timeout=120000)
+        pg.set_input_files("#pick", [str(D / "misto.wiff"), str(D / "misto.wiff.scan")])
+        attendi(pg, f"ST.files.length === {len(TRUE)} && ST.files.every(f => f.kind)", timeout=120000)
         got = pg.evaluate(SHOWN)
         print("   shown:", json.dumps([g[:3] for g in got]))
         def kinds():
