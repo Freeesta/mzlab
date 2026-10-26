@@ -67,8 +67,7 @@ try:
             assert n >= 3, f"only {n} live regions on the page"
         step("dynamic updates: live regions exist", live)
         def esc():
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
-            assert pg.evaluate("!document.querySelector('dialog[open]')"), "a dialog stayed open after Esc"
+            pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('dialog[open]')")
         step("keyboard: Esc leaves no open dialog", esc)
     r.close()
 except Exception as e:
