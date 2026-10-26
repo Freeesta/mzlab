@@ -13,33 +13,33 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         shutil.rmtree("/tmp/s26", ignore_errors=True)
-        pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
         def header():
             assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Dati")[0]
             assert pg.get_attribute("header .logo", "alt") == "mzLab"
             for w in (360, 768, 1500):
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(200)
+                pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 3)
                 if w < 600:      # very narrow: everything but File is in «Altro»
                     assert not pg.is_visible("#np-nl"); pg.click("#tb-more"); pg.locator("#stmenu button", has_text="Perdite neutre").click()
                 else:
                     assert pg.is_visible("#np-nl"), w
                     pg.click("#np-nl")
-                pg.wait_for_timeout(400)
+                attendi(pg, "!!document.querySelector('#sb-panel-losses') && document.querySelector('#sb-panel-losses').offsetParent !== null")
                 assert pg.is_visible("#sb-panel-losses") and pg.inner_text("#sb-title") == "Perdite neutre", w
-                pg.click("#sb-x"); pg.wait_for_timeout(300); assert not pg.is_visible("#dfiles"), w
+                pg.click("#sb-x"); frames(pg, 3); assert not pg.is_visible("#dfiles"), w
             pg.set_viewport_size({"width": 1400, "height": 900})
         step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
-        pg.click("#np-chrom"); pg.wait_for_timeout(800); pg.click("#np-spec"); pg.wait_for_timeout(800)
+        pg.click("#np-chrom"); attendi(pg, "E.panels.some(p=>p.type==='chrom')"); pg.click("#np-spec"); attendi(pg, "E.panels.some(p=>p.type==='spec')")
         def fs():
             n = pg.evaluate("document.querySelectorAll('.pnl').length"); assert n >= 2, n
-            pg.click("#np-xic"); pg.wait_for_timeout(600); pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+            pg.click("#np-xic"); frames(pg, 3); pg.keyboard.press("Escape"); attendi(pg, "document.querySelectorAll('.pnl').length>=3")
             n = pg.evaluate("document.querySelectorAll('.pnl').length"); assert n >= 3, n
             for i in range(n):
-                pg.evaluate("document.querySelectorAll('.pnl .fsb')[%d].click()" % i); pg.wait_for_timeout(400)
+                pg.evaluate("document.querySelectorAll('.pnl .fsb')[%d].click()" % i); attendi(pg, "document.querySelectorAll('.pnl')[%d].classList.contains('max')" % i)
                 box = pg.evaluate("(()=>{const e=document.querySelectorAll('.pnl')[%d];const r=e.getBoundingClientRect();return [r.width,r.height,e.classList.contains('max')]})()" % i)
                 assert box[2] and box[0] > 1000 * 0.9 and box[1] > 600, (i, box)
-                pg.keyboard.press("Escape"); pg.wait_for_timeout(300)
+                pg.keyboard.press("Escape"); attendi(pg, "!document.querySelector('.pnl.max')")
                 assert pg.evaluate("!document.querySelector('.pnl.max')"), (i, pg.evaluate("[!!document.querySelector('dialog[open]'), !!document.querySelector('#helppop:not([hidden])'), !!document.querySelector('#ctx:not([hidden])')]"))
         step("full screen on every panel (incl. XIC added later), Esc leaves it", fs)
         def tip():
@@ -47,17 +47,17 @@ try:
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "too early"
             hold(pg, 1100)
             assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Schermo intero" in pg.inner_text("#qtip")
-            pg.mouse.move(5, 5); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#qtip').hidden")
+            pg.mouse.move(5, 5); attendi(pg, "document.querySelector('#qtip').hidden"); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
         def rt():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab===E.tab)"); assert ci >= 0
-            pg.evaluate(f"E.panels[{ci}].el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            pg.evaluate(f"E.panels[{ci}].el.scrollIntoView({{block:'center'}})"); frames(pg, 3)
             b = pg.evaluate(f"(()=>{{const r=E.panels[{ci}].cv.getBoundingClientRect(),a=E.panels[{ci}]._a;return {{x:r.left,w:r.width,y:r.top+r.height/2,l:a.X(a.x0+(a.x1-a.x0)*0.5)-0,mid:r.left+a.X(a.x0+(a.x1-a.x0)*0.8)}}}})()")
             state = lambda: pg.evaluate(f"(()=>{{const q=E.panels[{ci}];return [q.sel,q._a.full]}})()")
-            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] - 200, b["y"], steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] - 200, b["y"], steps=8); pg.mouse.up(); attendi(pg, f"E.panels[{ci}].sel!=null")
             s, full = state(); assert s is not None, "the drag must create a selection (otherwise the test proves nothing)"
             assert s[0] >= full[0] - 1e-9 and s[1] <= full[1] + 1e-9 and s[0] - full[0] < 0.1 * (full[1] - full[0]), (s, full)           # never before the start of the run, and it did reach the left end
-            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] + b["w"] + 300, b["y"], steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] + b["w"] + 300, b["y"], steps=8); pg.mouse.up(); frames(pg, 3)
             s, full = state(); assert s is not None and s[1] <= full[1] + 1e-9 and full[1] - s[1] < 0.1 * (full[1] - full[0]) and s[0] >= full[0] - 1e-9, (s, full)    # and never after the end
         step("RT selection dragged outside the chromatogram stays inside its range", rt)
     r.close()
