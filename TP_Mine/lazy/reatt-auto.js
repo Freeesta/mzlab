@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  TPREATTAUTO: the automatic calculation of the reactivity of the parent in Tabui (administrator mode only; docs/agenti/reattivita.md). When the TPs are done and the parent has a SMILES,
 // the calculation starts by itself in chem-worker.js (the .wasm `chem` is fetched at that moment, never before) or, in the desktop app, on the native route feat/grafo; the TPs always come first:
 // a new run of the TPs stops the calculation (the worker is terminated) and it starts again after them. One calculation at a time. The result of a SMILES + engine + options is kept for the session.

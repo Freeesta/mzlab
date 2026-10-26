@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  TPRETE_VIEW: the network of the products of Tabui. It receives a `rete/1` (the output of the Rust module `crates/mzlab-feat/src/rete/`) and draws it: the parent and the products in columns
 // by step, an arc for every rule that takes one ion formula to another, the reason of the chosen arc under the chart and the table of the arcs. It computes nothing: columns, places, rules, errors and the
 // reasons in words are read from the JSON. Texts in English (Tabui has no `lang/` keys); colours only from CSS variables; shape and text as well as colour; every chart has its table (TDATI); no animation.
