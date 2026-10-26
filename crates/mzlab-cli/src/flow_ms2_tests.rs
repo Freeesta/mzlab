@@ -8,6 +8,9 @@ use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 
 use crate::flow_ident_tests::fixture;
 
+#[path = "flow_ms2_dia_tests.rs"]
+mod dia_tests;
+
 fn scan(
     index: usize,
     level: u8,
