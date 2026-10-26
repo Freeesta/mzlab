@@ -162,5 +162,19 @@
   };
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
 
-  F.liveJobs = { msnKey, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  /** tp.generate (flow-web-tp.js): the registry of the hypotheses of the parent the plan holds; kept like the MSn results, under the key of the job (the plan_key has the SHA-256 of the parent) */
+  const tpGenerate = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const r = await F.webTp.generate(x.S, inst);
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();
