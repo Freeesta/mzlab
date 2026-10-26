@@ -3,6 +3,17 @@
 
 use crate::json::{round, Out};
 
+// `as` saturates and maps NaN to 0, which is what every caller below wants.
+#[allow(clippy::cast_possible_truncation)]
+fn to_idx(x: f64) -> usize {
+    x as usize
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn to_i64(x: f64) -> i64 {
+    x as i64
+}
+
 const TO_BAR: [(&str, f64); 9] = [
     ("megapascal", 10.0),
     ("mpa", 10.0),
@@ -35,22 +46,22 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
         return (t.to_vec(), y.to_vec());
     }
     let step = t.len() as f64 / n as f64;
-    let edge = |i: usize| if i == n { t.len() } else { (i as f64 * step) as usize };
+    let edge = |i: usize| if i == n { t.len() } else { to_idx(i as f64 * step) };
     let (mut tt, mut yy) = (Vec::new(), Vec::new());
     for i in 0..n {
         let (a, b) = (edge(i), edge(i + 1));
         if b <= a {
             continue;
         }
-        let seg = &y[a..b];
+        let Some(seg) = y.get(a..b) else { continue };
         let pick = |better: &dyn Fn(f64, f64) -> bool| {
-            let mut k = 0;
+            let (mut k, mut m) = (0, seg.first().copied().unwrap_or(f64::NAN));
             for (j, v) in seg.iter().enumerate() {
-                if seg[k].is_nan() {
+                if m.is_nan() {
                     break;
                 }
-                if v.is_nan() || better(*v, seg[k]) {
-                    k = j;
+                if v.is_nan() || better(*v, m) {
+                    (k, m) = (j, *v);
                 }
             }
             a + k
@@ -60,8 +71,10 @@ pub fn reduce_minmax(t: &[f64], y: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
         crate::sortc::slice_ord(&mut ks);
         ks.dedup();
         for k in ks {
-            tt.push(t[k]);
-            yy.push(y[k]);
+            if let (Some(&tk), Some(&yk)) = (t.get(k), y.get(k)) {
+                tt.push(tk);
+                yy.push(yk);
+            }
         }
     }
     (tt, yy)
@@ -90,34 +103,37 @@ pub fn analog_json(i: i64, kind: &str, id: &str, unit: &str, t: &[f64], y: &[f64
 /// `np.interp(x, xp, fp)` for increasing `xp`.
 fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
     let n = xp.len();
-    if x < xp[0] {
-        return fp[0];
+    let (Some(&x0), Some(&f0), Some(&xl), Some(&fl)) = (xp.first(), fp.first(), xp.last(), fp.last()) else { return f64::NAN };
+    if x < x0 {
+        return f0;
     }
-    if x > xp[n - 1] {
-        return fp[n - 1];
+    if x > xl {
+        return fl;
     }
-    let j = xp.partition_point(|v| *v <= x) - 1;
-    if j == n - 1 || xp[j] == x {
-        return fp[j];
+    let j = xp.partition_point(|v| *v <= x).saturating_sub(1);
+    let (Some(&xj), Some(&fj)) = (xp.get(j), fp.get(j)) else { return fl };
+    if j + 1 >= n || xj == x {
+        return fj;
     }
-    let slope = (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j]);
-    slope * (x - xp[j]) + fp[j]
+    let (Some(&xn), Some(&fnx)) = (xp.get(j + 1), fp.get(j + 1)) else { return fj };
+    (fnx - fj) / (xn - xj) * (x - xj) + fj
 }
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
     crate::sortc::by(&mut s, f64::total_cmp);
     let n = s.len();
+    let at = |i: usize| s.get(i).copied().unwrap_or(f64::NAN);
     if n % 2 == 1 {
-        s[n / 2]
+        at(n / 2)
     } else {
-        (s[n / 2 - 1] + s[n / 2]) / 2.0
+        (at((n / 2).saturating_sub(1)) + at(n / 2)) / 2.0
     }
 }
 
 /// `np.interp(np.arange(t0, t1, dt), t, y)`.
 fn grid(t: &[f64], y: &[f64], t0: f64, t1: f64, dt: f64) -> Vec<f64> {
-    let n = ((t1 - t0) / dt).ceil().max(0.0) as usize;
+    let n = to_idx(((t1 - t0) / dt).ceil().max(0.0));
     let step = (t0 + dt) - t0;
     (0..n).map(|i| interp(t0 + i as f64 * step, t, y)).collect()
 }
@@ -126,9 +142,10 @@ fn grid(t: &[f64], y: &[f64], t0: f64, t1: f64, dt: f64) -> Vec<f64> {
 fn flatten(y: &[f64], width: usize) -> Vec<f64> {
     let k = (width | 1).max(3);
     let h = k / 2;
-    let pad: Vec<f64> = (0..y.len() + 2 * h).map(|i| y[i.saturating_sub(h).min(y.len() - 1)]).collect();
-    let idx: Vec<f64> = (0..y.len()).step_by(8).map(|i| i as f64).collect();
-    let med: Vec<f64> = idx.iter().map(|&i| median(&pad[i as usize..i as usize + k])).collect();
+    let pad: Vec<f64> = (0..y.len() + 2 * h).map(|i| y.get(i.saturating_sub(h).min(y.len().saturating_sub(1))).copied().unwrap_or(f64::NAN)).collect();
+    let starts: Vec<usize> = (0..y.len()).step_by(8).collect();
+    let idx: Vec<f64> = starts.iter().map(|&i| i as f64).collect();
+    let med: Vec<f64> = starts.iter().map(|&i| pad.get(i..i + k).map_or(f64::NAN, median)).collect();
     let z: Vec<f64> = y.iter().enumerate().map(|(i, v)| v - interp(i as f64, &idx, &med)).collect();
     let mean = z.iter().sum::<f64>() / z.len() as f64;
     let s = (z.iter().map(|v| (v - mean) * (v - mean)).sum::<f64>() / z.len() as f64).sqrt();
@@ -140,8 +157,16 @@ fn flatten(y: &[f64], width: usize) -> Vec<f64> {
 }
 
 fn tops(v: &[f64], k: usize) -> Vec<usize> {
-    let mut idx: Vec<usize> = (1..v.len().saturating_sub(1)).filter(|&j| v[j] > v[j - 1] && v[j] >= v[j + 1] && v[j] > 2.0).collect();
-    crate::sortc::by(&mut idx, |a, b| v[*b].total_cmp(&v[*a]));
+    let mut idx: Vec<usize> = v
+        .windows(3)
+        .enumerate()
+        .filter_map(|(j, w)| match w {
+            [a, b, c] if b > a && b >= c && *b > 2.0 => Some(j + 1),
+            _ => None,
+        })
+        .collect();
+    let at = |i: &usize| v.get(*i).copied().unwrap_or(f64::NAN);
+    crate::sortc::by(&mut idx, |a, b| at(b).total_cmp(&at(a)));
     idx.truncate(k);
     idx
 }
@@ -158,42 +183,55 @@ pub fn detector_delay(ta: &[f64], ya: &[f64], tb: &[f64], yb: &[f64]) -> Option<
     if ta.len() < 20 || tb.len() < 20 {
         return None;
     }
-    let t0 = ta[0].max(tb[0]) + max_lag;
-    let t1 = ta[ta.len() - 1].min(tb[tb.len() - 1]) - max_lag;
+    let (Some(&a0), Some(&b0), Some(&a1), Some(&b1)) = (ta.first(), tb.first(), ta.last(), tb.last()) else { return None };
+    let t0 = a0.max(b0) + max_lag;
+    let t1 = a1.min(b1) - max_lag;
     if t1 - t0 < 1.0 {
         return None;
     }
-    let step = |t: &[f64]| median(&t.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>());
+    let step = |t: &[f64]| {
+        median(
+            &t.windows(2)
+                .filter_map(|w| match w {
+                    [p, q] => Some(q - p),
+                    _ => None,
+                })
+                .collect::<Vec<_>>(),
+        )
+    };
     let dt = step(tb).max(step(ta)).max(0.002) / 2.0;
     let a = grid(ta, ya, t0 - max_lag, t1 + max_lag, dt);
     let b = grid(tb, yb, t0 - max_lag, t1 + max_lag, dt);
-    let w = (0.5 / dt) as usize;
+    let w = to_idx(0.5 / dt);
     let (a, b) = (flatten(&a, w), flatten(&b, w));
-    let n = (max_lag / dt) as usize;
-    let (lo, hi) = (n, a.len() - n);
-    let aa = &a[lo..hi];
+    let n = to_idx(max_lag / dt);
+    let (lo, hi) = (n, a.len().saturating_sub(n));
+    let (aa, bb) = (a.get(lo..hi)?, b.get(lo..hi)?);
     let norm = |v: &[f64]| v.iter().map(|x| x * x).sum::<f64>().sqrt();
-    let den = norm(aa) * norm(&b[lo..hi]) + 1e-12;
-    let cc: Vec<f64> = (0..=2 * n).map(|l| aa.iter().zip(&b[lo + l - n..hi + l - n]).map(|(x, y)| x * y).sum::<f64>() / den).collect();
-    let mut i = 0;
+    let den = norm(aa) * norm(bb) + 1e-12;
+    let cc: Vec<f64> = (0..=2 * n)
+        .map(|l| b.get(lo + l - n..hi + l - n).map(|bs| aa.iter().zip(bs).map(|(x, y)| x * y).sum::<f64>() / den))
+        .collect::<Option<_>>()?;
+    let (mut i, mut best) = (0, *cc.first()?);
     for (j, v) in cc.iter().enumerate() {
-        if *v > cc[i] {
-            i = j;
+        if *v > best {
+            (i, best) = (j, *v);
         }
     }
-    let off = if i > 0 && i < cc.len() - 1 {
-        let d = cc[i - 1] - 2.0 * cc[i] + cc[i + 1];
-        if d != 0.0 {
-            0.5 * (cc[i - 1] - cc[i + 1]) / d
-        } else {
-            0.0
+    let off = i.checked_sub(1).and_then(|j| cc.get(j..j + 3)).map_or(0.0, |w| match *w {
+        [p, c, nx] => {
+            let d = p - 2.0 * c + nx;
+            if d != 0.0 {
+                0.5 * (p - nx) / d
+            } else {
+                0.0
+            }
         }
-    } else {
-        0.0
-    };
+        _ => 0.0,
+    });
     let delay = (i as f64 - n as f64 + off) * dt;
-    let (pa, pb) = (tops(aa, 8), tops(&b[lo..hi], 40));
-    let shift = (delay / dt).round_ties_even() as i64;
+    let (pa, pb) = (tops(aa, 8), tops(bb, 40));
+    let shift = to_i64((delay / dt).round_ties_even());
     let peaks = pa.iter().filter(|&&j| pb.iter().any(|&q| (j as i64 + shift - q as i64).abs() <= 2)).count();
-    Some(Delay { delay: round(delay, 4), peaks, corr: round(cc[i], 3) })
+    Some(Delay { delay: round(delay, 4), peaks, corr: round(best, 3) })
 }
