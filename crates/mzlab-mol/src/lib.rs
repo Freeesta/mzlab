@@ -5,8 +5,11 @@
 mod aromatic;
 mod canon;
 mod codec;
+mod crippen;
+mod crippen_tab;
 mod cxsmiles;
 pub mod delta;
+mod descr;
 mod elements;
 mod kekule;
 mod model;
@@ -27,6 +30,7 @@ mod validate;
 
 pub use canon::CAN_VERSION;
 pub use codec::{hex, MolError};
+pub use descr::Descriptors;
 pub use model::{
     Atom, Bond, Cfg, Coords, GroupKind, Ids, Mol, Parity, Prop, Region, RegionKind, Status, Stereo,
     StereoGroup, FORMAT,
