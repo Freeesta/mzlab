@@ -24,7 +24,7 @@ const HELP = {
   "adducts": [I18N.t("help.adducts.title"), I18N.t("help.adducts.body")],
   "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
   // the download link is pointless inside the desktop app
-  "header": ["", I18N.t("help.header.body") + (window.__TAURI__ ? "" : I18N.t("help.header.app"))],
+  "header": ["", I18N.t("help.header.body") + (window.__TAURI__ || !SITO_PUBBLICO.scaricaApp ? "" : I18N.t("help.header.app"))],
 };
 
 (() => {
