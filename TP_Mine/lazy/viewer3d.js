@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  TPV3D: the 3D viewer of Tabui (administrator mode only, used by the panel of reactivity, reattivita.js). Canvas 2D, no WebGL, no library: balls and sticks sorted by depth with simple
 // shading, a halo under each atom (radius and opacity proportional to the value of the card), a thick outline and the written index on the atoms above the threshold (never colour alone), hydrogen
 // bonds dashed, an on/off switch for the H. Controls: buttons (rotate ← → ↑ ↓, zoom + −, Reset view) and the same keys with the canvas in focus; dragging is an extra, never the only way.
