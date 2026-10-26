@@ -222,7 +222,9 @@ fn small_file() -> Vec<u8> {
         .0
 }
 
-fn read_all(bytes: &[u8]) -> Result<Vec<(Vec<u32>, Vec<u16>, String)>, String> {
+type Rows = Vec<(Vec<u32>, Vec<u16>, String)>;
+
+fn read_all(bytes: &[u8]) -> Result<Rows, String> {
     let lib = Library::open(bytes, CACHE_BYTES).map_err(|e| e.key.to_string())?;
     lib.verify().map_err(|e| e.key.to_string())?;
     let mut v = Vec::new();

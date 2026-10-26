@@ -8,7 +8,7 @@ export function makeConvertCentroids(h) {
     const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
     if (signal && signal.aborted) throw cancelled();
     try { await ensureRoom(size * 1.1); }
-    catch (q) { const j = JSON.parse(q); throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } }); }
+    catch (q) { const j = JSON.parse(/** @type {string} */ (q)); throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } }); }
     const onAbort = () => { if (w && w === h.current()) h.abort(w); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;

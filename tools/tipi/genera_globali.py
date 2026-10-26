@@ -3,7 +3,7 @@
 
 globali.d.ts  = `declare var X: any` for every `window.X = ...` and for the names of the classic scripts that tsc reads as CommonJS (module.exports).
 globali-nomi.d.ts = `declare var X: any` for every top-level name of the classic scripts, for the projects that do not include them (moduli, worker).
-stretto.json (pagina/moduli) and stretto-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with `strict` (no noImplicitAny, catch variables `any`): they must have 0 errors.
+stretto.json/stretto2.json (pagina/moduli) and stretto-worker.json/stretto2-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with `strict` (no noImplicitAny; catch variables `unknown` in stretto2*, `any` in TP_Mine/flow): they must have 0 errors.
 `--controlla` writes nothing and exits 1 when: a file of mzlab/web or TP_Mine is in no project, a top-level name is defined in two classic scripts,
 or the generated files are out of date.
 """
@@ -70,26 +70,32 @@ def genera():
 STRETTO_TESTA = "// @ts-strict"
 
 
-def stretto(progetti=("pagina", "moduli"), lib=("ES2022", "DOM", "DOM.Iterable"), tipi=("globali.d.ts", "globali-nomi.d.ts", "modello.d.ts", "manuale.d.ts", "manuale-dom.d.ts")):
-    """tools/tipi/stretto*.json: the files of the given projects with `// @ts-strict` in their first lines, checked with `strict` (noImplicitAny stays off from base.json, catch variables stay `any`)."""
+LIBERI = ("TP_Mine/", "flow/")   # kept at level 1 (catch variables `any`) until their owners close
+
+
+def stretto(progetti=("pagina", "moduli"), lib=("ES2022", "DOM", "DOM.Iterable"), tipi=("globali.d.ts", "globali-nomi.d.ts", "modello.d.ts", "manuale.d.ts", "manuale-dom.d.ts"), livello=1):
+    """tools/tipi/stretto*.json: the files of the given projects with `// @ts-strict` in their first lines, checked with `strict` (noImplicitAny stays off from base.json).
+    Level 1 = TP_Mine/ and flow/ files, catch variables stay `any`; level 2 = all the others, catch variables are `unknown`. No file is in both."""
     files = []
     for nome in progetti:
         for p in elenco(nome):
-            if STRETTO_TESTA in "\n".join(leggi(p).split("\n")[:3]):
+            if STRETTO_TESTA in "\n".join(leggi(p).split("\n")[:3]) and p.startswith(LIBERI) == (livello == 1):
                 files.append("../../" + p)
-    d = {"extends": "./base.json",
-         "compilerOptions": {"lib": list(lib), "moduleDetection": "force", "strict": True, "useUnknownInCatchVariables": False, "strictNullChecks": True},
-         "include": list(tipi) + files}
-    return json.dumps(d, indent=2) + "\n"
+    opzioni = {"lib": list(lib), "moduleDetection": "force", "strict": True, "useUnknownInCatchVariables": livello == 2, "strictNullChecks": True}
+    return json.dumps({"extends": "./base.json", "compilerOptions": opzioni, "include": list(tipi) + files}, indent=2) + "\n"
 
 
-def stretto_worker():
-    return stretto(("worker",), ("ES2022", "WebWorker"), ("manuale.d.ts", "manuale-worker.d.ts"))
+def stretto_worker(livello=1):
+    return stretto(("worker",), ("ES2022", "WebWorker"), ("manuale.d.ts", "manuale-worker.d.ts"), livello)
+
+
+def stretti():
+    """{file name: content} of the four stretto*.json."""
+    return {"stretto.json": stretto(), "stretto-worker.json": stretto_worker(), "stretto2.json": stretto(livello=2), "stretto2-worker.json": stretto_worker(2)}
 
 
 def main():
     g, n, dove = genera()
-    st, stw = stretto(), stretto_worker()
     errori = []
     for nome, ps in sorted(dove.items()):
         if len(ps) > 1:
@@ -101,7 +107,7 @@ def main():
             continue
         errori.append("file in no tsc project (add it to tools/tipi/pagina|moduli|worker.json): " + r)
     if "--controlla" in sys.argv:
-        for nome, atteso in (("globali.d.ts", g), ("globali-nomi.d.ts", n), ("stretto.json", st), ("stretto-worker.json", stw)):
+        for nome, atteso in (("globali.d.ts", g), ("globali-nomi.d.ts", n)) + tuple(stretti().items()):
             try:
                 if leggi("tools/tipi/" + nome) != atteso:
                     errori.append(nome + " out of date: run python3 tools/tipi/genera_globali.py")
@@ -109,7 +115,7 @@ def main():
                 errori.append(nome + " missing")
         print("\n".join(errori) or "genera_globali: ok")
         return 1 if errori else 0
-    for nome, t in (("globali.d.ts", g), ("globali-nomi.d.ts", n), ("stretto.json", st), ("stretto-worker.json", stw)):
+    for nome, t in (("globali.d.ts", g), ("globali-nomi.d.ts", n)) + tuple(stretti().items()):
         with open(os.path.join(TIPI, nome), "w", encoding="utf8") as f:
             f.write(t)
     print("\n".join(errori))

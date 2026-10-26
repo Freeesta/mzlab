@@ -4,12 +4,13 @@ use crate::mzml::Spectrum;
 use crate::mzmlwrite::SpectrumExtra;
 
 /// The accessions `spectrum` looks for in the text of a header (as substrings: `h.contains` too): an extra that carries one of them would change the row.
-const LETTI: [&str; 25] = [
+const LETTI: [&str; 26] = [
     "MS:1000341",
     "MS:1000326",
     "MS:1000325",
     "MS:1000789",
     "MS:1000790",
+    "MS:1000791",
     "MS:1002815",
     "MS:1002476",
     "MS:1000511",

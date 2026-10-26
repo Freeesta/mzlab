@@ -7,7 +7,7 @@ use mzlab_core::idxread::Index;
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 use mzlab_feat::legacy::lr::{self, summary::summary};
-use mzlab_feat_wasm::run;
+use mzlab_feat_wasm::{run, run_tp};
 
 const NAMES: [&str; 5] = [
     "FullScan_t0.mzML",
@@ -40,6 +40,12 @@ fn fixture(tag: &str) -> PathBuf {
     d
 }
 
+fn rules_path(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../TP_Mine/data")
+        .join(name)
+}
+
 fn plan(tail: &str) -> String {
     let raw: Vec<String> = NAMES
         .iter()
@@ -66,6 +72,11 @@ fn run_flow(d: &Path, tail: &str) -> String {
 
 /// The chain of the page (`feat-worker.js`): indexes in memory, each file detected with its own recipe, aligned with the first one.
 fn page(d: &Path) -> (Vec<u8>, String) {
+    page_with(d, "regole_tp.json")
+}
+
+/// The page chain with the rules file `rules` of `TP_Mine/data`.
+fn page_with(d: &Path, rules_file: &str) -> (Vec<u8>, String) {
     let idxs: Vec<Vec<u8>> = NAMES
         .iter()
         .map(|n| {
@@ -97,11 +108,7 @@ fn page(d: &Path) -> (Vec<u8>, String) {
         samples.trim()
     );
     let parent = format!(r#"{{"name":"parent","neutral":"{FORMULA}","adduct":"[M+H]+"}}"#);
-    let rules = std::fs::read(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../TP_Mine/data/regole_tp.json"
-    ))
-    .unwrap();
+    let rules = std::fs::read(rules_path(rules_file)).unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = (0..NAMES.len()).map(open).collect();
     let refs: Vec<_> = f.iter().collect();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", FORMULA, None, &r).unwrap();
@@ -166,5 +173,77 @@ fn tp_link_reads_a_unit_resolution_table() {
     assert!(t.tp.status.contains(&mzlab_feat::tp::ST_TP));
     let parent = t.tp.parent_row as usize;
     assert!((t.mz[parent] - 364.074).abs() < 0.6, "{}", t.mz[parent]);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// (formula, m/z, steps) -> predicted level of the hypotheses of `ipotesi/1`.
+fn levels(text: &str) -> std::collections::BTreeMap<(String, i64, i64), i64> {
+    let j = mzlab_core::json::parse(text.as_bytes()).unwrap();
+    let n = |h: &mzlab_core::json::Value, k: &str| h.get(k).and_then(|v| v.f64()).unwrap();
+    j.get("hypotheses")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(|h| {
+            let f = h.get("formula").and_then(|v| v.str()).unwrap().to_string();
+            (
+                (f, (n(h, "mz") * 1e6).round() as i64, n(h, "steps") as i64),
+                n(h, "level") as i64,
+            )
+        })
+        .collect()
+}
+
+/// The two rule files (`regole_tp.json` of the Dig, `regole_tp_2.json` of `tp.generate`) propose the same candidates for the parent of the demos; only the
+/// predicted level of some differs (hydroxylations 4 -> 3, dehalogenations 3 -> 2), so the rows of the Dig over the five demo files agree in everything they propose.
+#[test]
+fn the_two_rule_files_give_the_same_candidates_on_the_demo_parent() {
+    let hp = mzlab_feat::hypo::HypoParams::default();
+    let text = |f: &str| {
+        run_tp::generate_text(&std::fs::read(rules_path(f)).unwrap(), FORMULA, "", &hp).unwrap()
+    };
+    let (v1, v2) = (
+        levels(&text("regole_tp.json")),
+        levels(&text("regole_tp_2.json")),
+    );
+    assert_eq!(v1.len(), 161);
+    assert_eq!(v1.keys().collect::<Vec<_>>(), v2.keys().collect::<Vec<_>>());
+    let diff: Vec<_> = v1
+        .iter()
+        .filter(|(k, l)| v2[*k] != **l)
+        .map(|(k, l)| (*l, v2[k]))
+        .collect();
+    assert_eq!(diff.len(), 20, "{diff:?}");
+    assert!(diff.iter().all(|&(a, b)| a == b + 1), "{diff:?}");
+    let d = fixture("rules");
+    // the rows of the Dig agree in what they propose (formula, m/z, steps, change, score, label); `pred`, the order of the alternatives and the wording differ
+    let rows = |text: String| {
+        let j = mzlab_core::json::parse(text.as_bytes()).unwrap();
+        let s = |h: &mzlab_core::json::Value, k: &str| {
+            h.get(k).map(|v| {
+                v.f64()
+                    .map_or_else(|| v.str().unwrap_or("").to_string(), |x| x.to_string())
+            })
+        };
+        let mut v: Vec<_> = j
+            .get("rows")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|h| ["formula", "mz", "steps", "delta", "score", "label"].map(|k| s(h, k)))
+            .collect();
+        v.sort();
+        v
+    };
+    let (a, b) = (
+        rows(page_with(&d, "regole_tp.json").1),
+        rows(page_with(&d, "regole_tp_2.json").1),
+    );
+    assert!(
+        a.len() > 100 && a == b,
+        "the Dig rows differ: {} vs {}",
+        a.len(),
+        b.len()
+    );
     let _ = std::fs::remove_dir_all(&d);
 }

@@ -523,7 +523,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       let text;
       if (m.cat) text = JSON.stringify(m.cat);
       else {
-        let res; try { res = await fetch("librerie/catalogo.json", { cache: "no-store" }); } catch (e) { throw Object.assign(new Error("offline"), { key: "lib.dl.err.offline", params: { detail: String(e && e.message || e) } }); }
+        let res; try { res = await fetch("librerie/catalogo.json", { cache: "no-store" }); } catch (e_) { const e = /** @type {Lanciato} */ (e_); throw Object.assign(new Error("offline"), { key: "lib.dl.err.offline", params: { detail: String(e && e.message || e) } }); }
         if (res.status === 404) throw Object.assign(new Error("no catalog"), { key: "lib.dl.err.nocatalog" });
         if (!res.ok) throw Object.assign(new Error("http"), { key: "lib.dl.err.http", params: { status: res.status } });
         text = await res.text();
@@ -548,7 +548,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
           await SCARICA.downloadPackage({ dir: FOLD.dir, pkg, base, signal: /** @type {AbortController} */ (DL.abort).signal, onProgress: p => postMessage({ type: "progress", reqId, ...p }),
             beforeReplace: async () => { const w = WLIBS.get(CARTELLA.idOf(id + ".mzlib")); if (w) { try { w.lib.free(); } catch (e) { /* gone */ } WLIBS.delete(CARTELLA.idOf(id + ".mzlib")); rebalance(); } } });
           done.push(id);
-        } catch (e) {
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_);
           failed.push({ id, key: e.key || "lib.dl.err.io", params: e.params || { detail: String(e && e.message || e) } });
           if (e.key === "lib.dl.err.cancelled") break;
         }
@@ -660,7 +660,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   async function listCmd() {
     await migrateAll();
     let voci = [], r = {};
-    if (await wasm()) { try { voci = (await foldRefresh()).voci; } catch (e) { r = { folderError: String(e && e.name || e) }; } }
+    if (await wasm()) { try { voci = (await foldRefresh()).voci; } catch (e_) { const e = /** @type {Lanciato} */ (e_); r = { folderError: String(e && e.name || e) }; } }
     return { ...r, libs: [...(await listLibraries()), ...FOLD.infos], voci, folder: { mode: FOLD.mode, name: foldName() }, opfs: await probeOpfs() };
   }
   async function indexCmd(m, reqId) {
@@ -695,7 +695,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       if (!run) throw new Error("unknown command: " + m.cmd);
       const r = await run(m, reqId);
       postMessage({ type: "done", reqId, ...r });
-    } catch (err) {
+    } catch (err_) { const err = /** @type {any} */ (err_);
       // an error of the engine itself: {"error_key", "params"}
       let j = null; if (typeof err === "string" && err.startsWith("{")) { try { j = JSON.parse(err); } catch (e2) { j = null; } }
       // a trap or a lost memory: the instance is gone, the page starts a new worker

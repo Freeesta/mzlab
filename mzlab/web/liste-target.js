@@ -209,7 +209,7 @@ const LISTE_TARGET = (function() {
         if (opt) opt.textContent = `${file.name} (${doc.molecole.length} substances)`;
         sel.value = "upload";
         onCustomLoaded(doc);
-      } catch (e) {
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_);
         const st = container.querySelector("#ts-status");
         if (st) { st.style.display = "block"; st.textContent = `Cannot read ${file.name}: ${e.message}`; }
       }
@@ -313,7 +313,7 @@ const LISTE_TARGET = (function() {
         if (mode === "upload" && !customDoc) throw new Error("no file loaded");
         entries = mode === "keller" ? getKellerEntries()
           : await listMolecules(opts.adducts, mode === "upload" ? customDoc : null);
-      } catch (e) {
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_);
         elStatus.textContent = `Cannot load the substance list: ${e.message}`;
         btnStart.style.display = "inline-block"; btnStop.style.display = "none";
         return;

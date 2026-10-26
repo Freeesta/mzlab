@@ -96,8 +96,8 @@ export function createLr({ rb }) {
       for (const [nm, file] of put.files || []) rb.noteUpload(nm, file);
       if (/\.dam$/i.test(n)) await mr.refresh();                          // a method: no index, the engine reads it when asked
       else { fase = "index"; const ix = JSON.parse((await rpc({ op: "lr_index", name: n, cen: !!window.MZLAB_CEN_IDX }, p => tellIndex(n, nat ? p.frac : 0.4 + 0.585 * p.frac, p.phase, p))).info || "{}"); fase = "open"; files.set(n, JSON.parse((await rpc({ op: "lr_entry", name: n })).info)); missing.set(n, ix.missing || 0); }
-    } catch (e) {
-      let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (_) { /* not an engine error */ }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
+      let key = "err.engine.index", params = {}; try { const j = JSON.parse(e.raw); key = j.error_key || key; params = j.params || {}; } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
       if (key === "err.load.cancelled") { try { await rpc({ op: "lr_remove", name: n }); } catch (_) { /* nothing was kept */ } files.delete(n); }      // «Cancel»: no half file stays to be indexed at the next start
       return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
@@ -180,7 +180,7 @@ export function createLr({ rb }) {
         { const r = await mr.get(path, u.searchParams); if (r !== undefined) return r; }          // method, analog traces, delay, PDA, gradient
         if (path === "/api/formula") {
           try { return { status: 200, text: (await rpc({ op: "lr_formula", f: u.searchParams.get("f") || "", adduct: u.searchParams.get("adduct") || "" })).info }; }
-          catch (e) { let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
+          catch (e_) { const e = /** @type {Lanciato} */ (e_); let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ } if (j && j.error_key) return json({ error: formulaText(j), error_key: j.error_key, params: j.params || {} }, 400); throw e; }
         }
         if (path === "/api/origin") return await originRoute(u.searchParams, { rb, rpc, json, items });
         { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = unavailable)
@@ -202,8 +202,8 @@ export function createLr({ rb }) {
       if (path === "/api/remove") return await remove(body);
       if (path === "/api/new") return await fresh(body);
       return null;
-    } catch (e) {
-      let j = null; try { j = JSON.parse(e.raw); } catch (_) { /* not an engine error */ }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
+      let j = null; try { j = JSON.parse(e.raw); } catch (__) { const _ = /** @type {Lanciato} */ (__); /* not an engine error */ }
       if (j && j.error_key) return json({ error: j.error || j.error_key, error_key: j.error_key, params: j.params || {} }, 400);
       // not an engine error: a JS exception while serving a route that exists. It is a failure of the data (cause and original text in the diagnosis), never "route unavailable"
       const raw = String(e && e.message || e).slice(0, 600);

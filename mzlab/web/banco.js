@@ -218,7 +218,7 @@ const BANCO = (() => {
           $("#bs-out").innerHTML = `<div class="muted sm">${I18N.t("bn.sub.count", { hit: d.n_hit, n: d.n_sub })}</div>` + (d.rows.length ? `<table><thead><tr><th>${I18N.t("bn.sub.th.formula")}</th>${["mz", "ppm", "int", "rt", "r"].map(th).join("")}</tr></thead><tbody>`
             + d.rows.map(x => `<tr><td>${EH(x.formula)}</td><td class="num">${x.mz.toFixed(dec)}</td><td class="num">${n(x.ppm, 1)}</td><td class="num">${x.int.toExponential(2).replace("e+", "E")}</td><td class="num">${x.rt.toFixed(2)}</td><td class="num">${n(x.r, 2)}</td></tr>`).join("") + "</tbody></table>" : `<div class="muted">${I18N.t("bn.sub.none")}</div>`);
           $("#bs-add").hidden = false;
-        } catch (e) { $("#bs-err").textContent = e && e.message || String(e); }
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_); $("#bs-err").textContent = e && e.message || String(e); }
       };
       $("#bs-f").onkeydown = e => { if (e.key === "Enter") $("#bs-go").click(); };
       $("#bs-add").onclick = () => {
@@ -453,7 +453,7 @@ const BANCO = (() => {
     };
     const read = async () => {
       const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg(I18N.t("bn.iso.typeFormula")); return null; }
-      let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
+      let r; try { r = await getFormula(f, ""); } catch (e_) { const e = /** @type {Lanciato} */ (e_); nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
       const ads = [...b.querySelectorAll(".hri-ad")].map(w => ({ ad: w.querySelector("[data-ad]").value, c: Math.max(0, numIt(w.querySelector("[data-conc]").value) || 0) })).filter(a => a.c > 0);
       if (!ads.length) { nearMsg(I18N.t("bn.iso.noSeries")); return null; }
       const o = { formula: r.formula, ad: ads[0].ad, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
@@ -464,7 +464,7 @@ const BANCO = (() => {
       if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
       return o;
     };
-    const apply = (s2, o, only) => { let pat; try { pat = HR.isoPat(o, 0); } catch (e) { return nearMsg(e.message); } COMANDI.fai("spec.isotopes", s2, () => { s2.iso = { ...o, only: !!only }; s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); }); draw(s2); };
+    const apply = (s2, o, only) => { let pat; try { pat = HR.isoPat(o, 0); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return nearMsg(e.message); } COMANDI.fai("spec.isotopes", s2, () => { s2.iso = { ...o, only: !!only }; s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); }); draw(s2); };
     b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, false); };
     b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
