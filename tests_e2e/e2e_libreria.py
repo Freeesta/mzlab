@@ -8,14 +8,18 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_libreria.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+DLG_LISTA = "document.querySelector('#libdlg') && document.querySelector('#libdlg').open && document.querySelector('#lib-list').innerText.trim() !== ''"
+DLG_APERTO = "document.querySelector('#libdlg') && document.querySelector('#libdlg').open"
+DLG_CHIUSO = "!document.querySelector('#libdlg').open"
+LISTA_VUOTA = "document.querySelector('#lib-list').innerText.includes('Nessuna libreria')"
 r = Run(port=8847, wd="/tmp/wd_lib")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 1000})
-        pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
+        pg.evaluate("setTab('ms2',true)"); attendi(pg, "(() => { const p = E.panels.find(p => p.type === 'spec' && p.level === 2); return !!(p && p._a && p._a.data && p._a.data[0]); })()")
         SPEC = "E.panels.find(p => p.type === 'spec' && p.level === 2)"
         q = pg.evaluate(f"(() => {{ const p = {SPEC}, d = p._a.data[0].d; return {{mz: d.mz, y: d.y0 || d.y, prec: p.prec, pol: p._a.data[0].f.polarity}}; }})()")
         assert len(q["mz"]) >= 2 and q["prec"], q
@@ -31,17 +35,17 @@ try:
             pg.wait_for_function("document.querySelector('#libdlg') && document.querySelector('#libdlg').open")
             attendi(pg, "document.querySelector('#lib-list') && document.querySelector('#lib-list').innerText.trim() !== ''")
             assert "Nessuna libreria" in pg.inner_text("#lib-list"), pg.inner_text("#lib-list")
-            pg.set_input_files("#lib-file", {"name": "prova.msp", "mimeType": "text/plain", "buffer": msp.encode()}); pg.wait_for_timeout(2500)
+            pg.set_input_files("#lib-file", {"name": "prova.msp", "mimeType": "text/plain", "buffer": msp.encode()}); attendi(pg, "document.querySelectorAll('#lib-list tr').length === 2")
             t = pg.inner_text("#lib-list"); assert "prova" in t and "5" in t, t
             assert pg.locator("#lib-list tr").count() == 2 and pg.inner_text("#lib-list td.num:nth-child(5)").strip() == "1", pg.inner_text("#lib-list")     # one discarded (no precursor)
-            pg.click("#lib-x"); pg.wait_for_timeout(200)
+            pg.click("#lib-x"); attendi(pg, DLG_CHIUSO)
         step("gear → Librerie: a synthetic MSP is read, one spectrum discarded", load)
         def search():
             c = pg.evaluate(f"(() => {{ const p = {SPEC}, q = p.cv.getBoundingClientRect(); p.el.scrollIntoView({{block:'center'}}); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_timeout(400)
+            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Cerca nelle librerie")
             assert "Cerca nelle librerie" in pg.inner_text("#ctx"), pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Cerca nelle librerie"); pg.wait_for_timeout(2500)
+            pg.click("#ctx >> text=Cerca nelle librerie"); attendi(pg, "document.querySelector('#libres') && document.querySelector('#libres').open && document.querySelectorAll('#libres tr.row').length >= 3")
             assert pg.evaluate("document.querySelector('#libres').open")
             names = pg.locator("#libres tr.row td:nth-child(2)").all_inner_texts(); print("   ", names)
             assert names[0] == "Match" and "Negativo" not in names and "Lontano" not in names and {"Spostato", "Parziale"} <= set(names), names
@@ -54,42 +58,42 @@ try:
             def accent_pixels():
                 return pg.evaluate("""(() => { const c = document.querySelector('#lr-cv'), g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data; const a = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); const t = document.createElement('i'); t.style.color = a; document.body.appendChild(t); const v = getComputedStyle(t).color.match(/\\d+/g).map(Number); t.remove(); let n = 0; for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - v[0]) < 12 && Math.abs(d[i+1] - v[1]) < 12 && Math.abs(d[i+2] - v[2]) < 12) n++; return n; })()""")
             a0 = accent_pixels(); assert a0 > 50, a0                                  # the common peaks of Match are drawn in the accent colour
-            pg.locator("#libres tr.row", has_text="Spostato").click(); pg.wait_for_timeout(300)
+            pg.locator("#libres tr.row", has_text="Spostato").click(); attendi(pg, "(() => { const t = document.querySelector('#libres tr.row.sel td:nth-child(2)'); return !!t && t.textContent === 'Spostato'; })()"); frames(pg, 2)
             assert pg.evaluate("document.querySelector('#libres tr.row.sel td:nth-child(2)').textContent") == "Spostato"
             a1 = accent_pixels(); assert a1 < a0, (a0, a1)                            # the shifted spectrum shares fewer peaks
         step("mirror plot: common peaks in the accent colour, a click on a row redraws it", mirror)
         def export():
             with pg.expect_download() as d: pg.click("#lr-xlsx")
             rows = xlsx_rows(d.value.path()); assert any("Entropia" in str(c) for c in rows[0]), rows[0]
-            pg.click("#lr-copy"); pg.wait_for_timeout(400); assert "copiate" in pg.inner_text("#lr-msg") or "non permette" in pg.inner_text("#lr-msg")
+            pg.click("#lr-copy"); attendi(pg, "(() => { const t = document.querySelector('#lr-msg').innerText; return t.includes('copiate') || t.includes('non permette'); })()"); assert "copiate" in pg.inner_text("#lr-msg") or "non permette" in pg.inner_text("#lr-msg")
         step("copy the table / Excel", export)
         def none():
-            pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_timeout(500)
-            pg.click("#lib-list [data-rm]"); pg.wait_for_timeout(800); assert "Nessuna libreria" in pg.inner_text("#lib-list"); pg.click("#lib-x")
+            pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_selector("#lib-list [data-rm]")
+            pg.click("#lib-list [data-rm]"); attendi(pg, LISTA_VUOTA); assert "Nessuna libreria" in pg.inner_text("#lib-list"); pg.click("#lib-x")
             c = pg.evaluate(f"(() => {{ const q = {SPEC}.cv.getBoundingClientRect(); return {{x: q.left + q.width * 0.5, y: q.top + q.height * 0.3}}; }})()")
-            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_timeout(300); pg.click("#ctx >> text=Cerca nelle librerie"); pg.wait_for_timeout(1500)
+            pg.mouse.click(c["x"], c["y"], button="right"); pg.wait_for_selector("#ctx >> text=Cerca nelle librerie"); pg.click("#ctx >> text=Cerca nelle librerie"); attendi(pg, "document.querySelector('#lr-body') && document.querySelector('#lr-body').innerText.includes('Carica una libreria')")
             assert "Carica una libreria" in pg.inner_text("#lr-body"), pg.inner_text("#libres")
         step("no library: «Carica una libreria (ingranaggio → Librerie)»", none)
         def unsupported():
-            pg.click("#lr-x"); pg.evaluate("LIB.open()"); pg.wait_for_timeout(400)
-            pg.set_input_files("#lib-file", {"name": "x.lib", "mimeType": "application/octet-stream", "buffer": b"\x00\x01"}); pg.wait_for_timeout(800)
+            pg.click("#lr-x"); pg.evaluate("LIB.open()"); attendi(pg, DLG_APERTO)
+            pg.set_input_files("#lib-file", {"name": "x.lib", "mimeType": "application/octet-stream", "buffer": b"\x00\x01"}); attendi(pg, "document.querySelector('#lib-st').innerText.includes('MSP')")
             assert "MSP" in pg.inner_text("#lib-st"), pg.inner_text("#lib-st")
-            pg.click("#lib-x"); pg.wait_for_timeout(200)
+            pg.click("#lib-x"); attendi(pg, DLG_CHIUSO)
         step("a NIST .lib is refused with the hint to export MSP", unsupported)
         def persists():
             big = "\n".join(rec(f"Fill{i}", 150 + i * 0.01, [(50 + j * 3.7, 100 + j) for j in range(60)]) for i in range(5000)) + "\n" + rec("Target", 777.1234, pk)
             assert len(big) > 3_000_000, len(big)
-            pg.evaluate("LIB.open()"); pg.wait_for_timeout(400)
-            pg.set_input_files("#lib-file", {"name": "grande.msp", "mimeType": "text/plain", "buffer": big.encode()}); pg.wait_for_timeout(6000)
+            pg.evaluate("LIB.open()"); attendi(pg, DLG_APERTO)
+            pg.set_input_files("#lib-file", {"name": "grande.msp", "mimeType": "text/plain", "buffer": big.encode()}); attendi(pg, "(() => { const t = document.querySelector('#lib-list').innerText; return t.includes('grande') && t.includes('MB'); })()")
             t = pg.inner_text("#lib-list"); assert "grande" in t and "5001" in t.replace(".", "").replace("\u202f", ""), t
             assert "MB" in t, t
-            pg.reload(); pg.wait_for_timeout(2500)
-            pg.evaluate("LIB.open()"); pg.wait_for_timeout(1000)
+            pg.reload(); attendi(pg, "typeof LIB !== 'undefined' && typeof LIB.open === 'function'")
+            pg.evaluate("LIB.open()"); attendi(pg, "document.querySelector('#lib-list').innerText.includes('grande')")
             assert "grande" in pg.inner_text("#lib-list"), pg.inner_text("#lib-list")                  # still there after the reload: no new import
             res = pg.evaluate("LIB.call('search', {peaks: %s, prec: 777.1234, pol: 1, tol: {v: 10, unit: 'ppm'}, frag: 0.02})" % json.dumps([[m, i] for m, i in pk]))
             assert res["results"] and res["results"][0]["name"] == "Target", res
-            pg.click("#lib-list [data-rm]"); pg.wait_for_timeout(1000); assert "Nessuna libreria" in pg.inner_text("#lib-list")
-            pg.reload(); pg.wait_for_timeout(2000); pg.evaluate("LIB.open()"); pg.wait_for_timeout(800)
+            pg.click("#lib-list [data-rm]"); attendi(pg, LISTA_VUOTA); assert "Nessuna libreria" in pg.inner_text("#lib-list")
+            pg.reload(); attendi(pg, "typeof LIB !== 'undefined' && typeof LIB.open === 'function'"); pg.evaluate("LIB.open()"); attendi(pg, DLG_LISTA)
             assert "Nessuna libreria" in pg.inner_text("#lib-list")                                    # removed for good
         step("a library of some MB survives a reload, is searched without re-importing and «Togli» removes it", persists)
     r.close()
