@@ -311,7 +311,7 @@ pub fn row_traces_json<R: ReadAt, I: ReadAt>(
     riga::traces(&t, &s, id, open, ppm)
 }
 
-/// `campioni/2`: `op` is `proponi`, `valida`, `da_legacy` or `per_tp` (`mzlab_core::campioni::route`).
+/// `campioni/2` and `/3`: `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest` or `migra` (`mzlab_core::campioni::route`: no name models or CSV, they are over the cap of this .wasm).
 pub fn campioni_json(op: &str, input: &str) -> Result<String> {
     mzlab_core::campioni::route(op, input)
 }
