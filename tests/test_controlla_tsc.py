@@ -31,3 +31,21 @@ def test_hung_install_is_killed_with_its_children_and_gives_a_clear_error(tmp_pa
 
 def test_install_returns_at_the_first_good_try():
     ct.installa([sys.executable, "-c", "pass"], timeout=5, prove=3)
+
+
+def test_a_stretto2_error_fails_even_when_the_base_is_silent(monkeypatch, tmp_path, capsys):
+    base = tmp_path / "base.json"
+    base.write_text("{}")
+    monkeypatch.setattr(ct, "BASE", str(base))
+    monkeypatch.setattr(ct, "misura", lambda: {"stretto2:mzlab/web/x.js": 1})
+    monkeypatch.setattr(sys, "argv", ["controlla_tsc.py"])
+    assert ct.main() == 1 and "stretto2:mzlab/web/x.js: 1 errors" in capsys.readouterr().out
+
+
+def test_stretto_keys_are_ignored_in_the_base(monkeypatch, tmp_path):
+    base = tmp_path / "base.json"
+    base.write_text('{"stretto2:mzlab/web/x.js": 5}')
+    monkeypatch.setattr(ct, "BASE", str(base))
+    monkeypatch.setattr(ct, "misura", lambda: {"stretto2:mzlab/web/x.js": 2})
+    monkeypatch.setattr(sys, "argv", ["controlla_tsc.py"])
+    assert ct.main() == 1

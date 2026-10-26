@@ -82,7 +82,7 @@ async function ogRun() {
     const res = await J(u); if (my !== OG.busy) return;
     OG.res = res; OG.k = +q("#og-k").value; OG.sel = new Set(); OG.traces = new Map();
     ogRender();
-  } catch (e) { q("#og-out").innerHTML = ""; err.textContent = I18N.t("og.failed", { message: e.message }); err.hidden = false; }
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); q("#og-out").innerHTML = ""; err.textContent = I18N.t("og.failed", { message: e.message }); err.hidden = false; }
   finally { clearInterval(tick); q("#og-go").disabled = false; }
 }
 

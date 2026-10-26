@@ -196,7 +196,7 @@ async function wiffToMzml(files,box,signal){const rb=window.MZLAB_RUST_READY?awa
       const s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       // the module's answer for the pair holds for its samples (moduloWants)
       s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
-    catch(x){const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
+    catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
@@ -228,7 +228,7 @@ async function moduloToMzml(files,box,rep){
     CONVROWS.add(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
     try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,p=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
       ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
-    catch(e){ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
+    catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm)}}
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
@@ -293,7 +293,7 @@ async function fetchDemo(names,signal){const out=[];
   try{for(const n of names){CONVROWS.set(n,"get",0);const r=await fetch("static/esempi/"+n,{signal});if(!r.ok)throw new Error(n);const len=+(r.headers.get("content-length")||0),parts=[];let got=0;
       if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;CONVROWS.set(n,"get",len?Math.floor(40*Math.min(1,got/len)):0,undefined,{done:got,total:len})}}else parts.push(await r.blob());
       CONVROWS.set(n,"wait",40);CONVROWS.base(n,40);out.push(new File(parts,n))}}
-  catch(e){if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
+  catch(e_){const e=/** @type {Lanciato} */(e_);if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
   return out}
 // `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
 async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
@@ -323,7 +323,7 @@ async function upload0(files,into,box,signal){
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find(y=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
       LOADFAIL.delete(f.name)}
-    catch(e){LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
+    catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
       // a sample of a maker's file: the error stays on its row, with «Details» and the trace of the loading
       if(CONVROWS.find(f.name)&&f.mzlabNat){CONVROWS.finish(f.name,"fail",{msg:e.message,diag:d});return}
@@ -369,7 +369,7 @@ async function openRest(rest,tok){
     // taken off the list: not read
     const p=E.pending.find(x=>x.file===s.file&&x.state==="wait");if(!p)continue;
     try{await post("api/explore",{samples:[s],append:true})}
-    catch(e){p.state="err";p.msg=e.message;renderFileList();continue}
+    catch(e_){const e=/** @type {Lanciato} */(e_);p.state="err";p.msg=e.message;renderFileList();continue}
     // LR: the overlay is redrawn at most every ~200 ms, whatever the number of files that arrived
     added.push(p);if(Date.now()-last>=200)await boot();
   }
@@ -397,7 +397,7 @@ async function directDone(){
   fresh.forEach(f=>{f.use=!!f.hr===world});
   const skipped=fresh.filter(f=>!f.use).length,n=fresh.length-skipped;
   try{if(n)await openStaged(false);directNote(skipped?"files.drop.mixed":"files.drop.done",{n,m:skipped})}
-  catch(e){directNote("files.drop.fail",{msg:e.message})}
+  catch(e_){const e=/** @type {Lanciato} */(e_);directNote("files.drop.fail",{msg:e.message})}
   renderFiles()}
 (()=>{const dz=$("#dfiles");
   ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,e=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true)}));
@@ -413,7 +413,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
     // the time of a dark is negative whatever way it got here (name, table, old project)
     ST.files.forEach(f=>{if(RUOLI.roleOf(f)==="dark")f.time=darkTime(f.time)});
     await openStaged(true)}
-  catch(e){
+  catch(e_){const e=/** @type {Lanciato} */(e_);
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 
       <button id="hrmix-replace" class="btn">${I18N.t("load.hrmix.replace")}</button> 
@@ -428,7 +428,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
           await post("api/new",{});
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
           STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
-        }catch(e2){$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
+        }catch(e2_){const e2=/** @type {Lanciato} */(e2_);$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
       };
     } else {
       $("#gomsg").innerHTML=h`<span class="fail">${e.message}</span>`;

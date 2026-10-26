@@ -62,7 +62,7 @@ function start() {
             await k.addFragment(txt);
             if (await k.getKet() === before) dnote(I18N.t("draw.import.unsupported"));
             else { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); }
-          } catch (err) { dnote(I18N.t("draw.import.failed", { message: err.message })); }
+          } catch (err_) { const err = /** @type {Lanciato} */ (err_); dnote(I18N.t("draw.import.failed", { message: err.message })); }
         }
       });
     }
@@ -396,7 +396,7 @@ async function showInfo() {
   if (infoBusy) { infoAgain = true; return; }
   infoBusy = true;
   try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
-  catch (e) {                                                                  // never leave an empty or stale box: say what went wrong
+  catch (e_) { const e = /** @type {Lanciato} */ (e_);                                                                  // never leave an empty or stale box: say what went wrong
     console.error("QqQ Draw: properties not computed", e);
     const pc = Q("#prop-card"); if (pc) { pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.failed", { message: e && e.message ? e.message : e })) + '</div>'; }
   } finally { infoBusy = false; }
@@ -739,7 +739,7 @@ async function doExport(kind) {
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
     saveBlob(blob, exportName(kind, clear));
     if (window.toast) toast(I18N.t("draw.export.saved"));
-  } catch (e) { exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
 Q("#ex-png").onclick = () => doExport("png");
 Q("#ex-jpg").onclick = () => doExport("jpg");
@@ -753,7 +753,7 @@ Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; Q("#ex-cont").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
-  catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
 window.TPDraw = { when: async () => { await start(); return true; }, load: async smi => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async pairs => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K, undefined, ids => pieceMolfile(ids)); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };

@@ -165,7 +165,7 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
         }
       }
       say("ref.opened");
-    } catch (err) { if (note) note.textContent = String(err && err.message || err); }
+    } catch (err_) { const err = /** @type {Lanciato} */ (err_); if (note) note.textContent = String(err && err.message || err); }
   }
 
   // ---------------------------------------------------------------- export (parameters and reference included: reproducibility)

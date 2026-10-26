@@ -118,12 +118,12 @@
     document.addEventListener("tpview", x.fn);
     tabs.set(t.id, x);
   }
-  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
+  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
   function openTool(t) {
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Close">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
-    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
+    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
   }
 
   // ---- loading (once per page): index, then extra files + the scripts' downloads in parallel, then the scripts run in order
