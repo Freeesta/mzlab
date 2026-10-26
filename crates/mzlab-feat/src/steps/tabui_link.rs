@@ -5,7 +5,9 @@ use mzlab_core::step::{
     Algorithm, Applicability, DataType, Facets, Param, Port, Reference, Status, Step,
 };
 
-use super::tabui::{algorithm, hr, tabui_step, INTERP_CEILING, INTERP_WASM, TABLE_CEILING, TABLE_WASM};
+use super::tabui::{
+    algorithm, hr, tabui_step, INTERP_CEILING, INTERP_WASM, TABLE_CEILING, TABLE_WASM,
+};
 
 /// `tp.link` (version 2): the series searched for the hypotheses, the view of the products (`tp/1`) and the interpretation of each row (`interp/1`):
 /// every DDA MS2 of the series linked to a row, with the purity of the isolation, and the comparison with the parent. Version 1 took the MS2 as an MGF

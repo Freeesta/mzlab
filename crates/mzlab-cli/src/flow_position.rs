@@ -10,7 +10,11 @@ use crate::flow::{read_one, write_made, FileRunner};
 use crate::flow_link::parent_of;
 
 fn param(job: &Job, name: &str) -> Option<f64> {
-    job.resolved.params.iter().find(|(k, _)| k == name).and_then(|(_, v)| v.f64())
+    job.resolved
+        .params
+        .iter()
+        .find(|(k, _)| k == name)
+        .and_then(|(_, v)| v.f64())
 }
 
 /// `sites/1` text of the `.mzfeat` `tp` (with the block `interp`) for the parent file `parent`: the code the `.wasm` `interp` runs.
