@@ -94,7 +94,7 @@ def build_site(out):
     w = out / "static" / "wasm" / "mzlab_wasm_bg.wasm"
     if shutil.which("npm"):
         env = {**os.environ, "RUNNER_TEMP": str(out.parent / "runner_tmp")}
-        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), "1708032", "engine"], cwd=ROOT, env=env, check=False)
+        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), "1884160", "engine"], cwd=ROOT, env=env, check=False)
 
 
 def stats(v):

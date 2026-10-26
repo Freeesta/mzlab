@@ -155,6 +155,7 @@ pub mod subxic;
 pub mod subpeaks;
 pub mod upload;
 pub mod window;
+pub mod zip;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod xmltree;
 pub mod similarity;
