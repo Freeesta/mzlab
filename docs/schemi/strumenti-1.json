@@ -333,7 +333,7 @@
           {
             "properties":{
               "step":{"const":"convert.mzml@1"},
-              "name":{"enum":["peaks","zlib_level","numpress"]},
+              "name":{"enum":["peaks","zlib_level","numpress","dad"]},
               "value":{
                 "anyOf":[
                   {
@@ -352,6 +352,11 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also write the UV / PDA matrix of the sample as MS:1000804 spectra (one per instant, wavelengths in nm) after the scans; off: the file is the one written without the option"
                   }
                 ]
               }

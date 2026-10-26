@@ -396,6 +396,7 @@ fn component_list(h: &Header) -> String {
 
 mod codifica;
 mod matrice;
+#[cfg(not(target_family = "wasm"))]
 mod uv;
 mod thread;
 pub use thread::thread_predefinito;

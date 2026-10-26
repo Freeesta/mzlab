@@ -135,6 +135,47 @@ fn scansione_di(
     }
 }
 
+/// The optical matrix of sample `c` when `opz.dad` asks for it (the browser build never writes it: `convert.mzml` is native only).
+#[cfg(not(target_family = "wasm"))]
+fn dad_di(
+    opz: Opzioni,
+    l: &mut dyn Lettore,
+    c: usize,
+) -> Result<Option<crate::wiff::dad::DadData>> {
+    if opz.dad {
+        l.dad_dati(c)
+    } else {
+        Ok(None)
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn dad_di(_: Opzioni, _: &mut dyn Lettore, _: usize) -> Result<Option<crate::wiff::dad::DadData>> {
+    Ok(None)
+}
+
+/// The rows of the optical matrix as `MS:1000804` spectra, after the scans.
+#[cfg(not(target_family = "wasm"))]
+fn uv_spettri<W: Write>(
+    w: &mut MzmlWriter<W>,
+    dad: Option<&crate::wiff::dad::DadData>,
+) -> Result<()> {
+    for d in dad {
+        for (i, &t) in d.time_min.iter().enumerate() {
+            w.uv_spectrum(i, t, &d.wavelengths_nm, d.spectrum_at(i).unwrap_or(&[]))?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(target_family = "wasm")]
+fn uv_spettri<W: Write>(
+    _: &mut MzmlWriter<W>,
+    _: Option<&crate::wiff::dad::DadData>,
+) -> Result<()> {
+    Ok(())
+}
+
 /// A conversion of one sample to mzML: the one entry of every route (`scrivi*` are its short forms).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Conversione<'a> {
@@ -168,7 +209,7 @@ impl Conversione<'_> {
             None => MzmlWriter::con_opzioni(out, &h, self.opz)?,
         };
         let n = l.indice(c)?.len();
-        let dad = if self.opz.dad { l.dad_dati(c)? } else { None };
+        let dad = dad_di(self.opz, l, c)?;
         let uv = dad.as_ref().map_or(0, |d| d.points());
         if n + uv > 0 {
             w.open_spectra(n + uv)?;
@@ -176,12 +217,7 @@ impl Conversione<'_> {
         progress(0, n);
         spettri(&mut w, l, (c, n), (self.peaks, &mut pick), progress)?;
         progress(n, n);
-        if let Some(d) = &dad {
-            for (i, &t) in d.time_min.iter().enumerate() {
-                let row = d.spectrum_at(i).unwrap_or(&[]);
-                w.uv_spectrum(i, t, &d.wavelengths_nm, row)?;
-            }
-        }
+        uv_spettri(&mut w, dad.as_ref())?;
         if n + uv > 0 {
             w.close_spectra()?;
         }
