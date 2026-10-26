@@ -43,6 +43,13 @@ impl Value {
             _ => None,
         }
     }
+    /// The members of an object, in their order; empty for any other value.
+    pub fn entries(&self) -> &[(String, Value)] {
+        match self {
+            Value::Obj(m) => m,
+            _ => &[],
+        }
+    }
     pub fn arr(&self) -> &[Value] {
         match self {
             Value::Arr(a) => a,
@@ -294,6 +301,32 @@ impl Out {
 }
 
 pub use crate::jsonround::round;
+
+/// A parsed value written back as it came (object keys in their order).
+pub fn write_value(o: &mut Out, v: &Value) {
+    match v {
+        Value::Null => o.raw("null"),
+        Value::Bool(b) => o.raw(if *b { "true" } else { "false" }),
+        Value::Num(x) => o.num(*x),
+        Value::Str(t) => o.str(t),
+        Value::Arr(a) => {
+            o.raw("[");
+            for (i, x) in a.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" });
+                write_value(o, x);
+            }
+            o.raw("]")
+        }
+        Value::Obj(m) => {
+            o.raw("{");
+            for (i, (k, x)) in m.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" }).str(k).raw(":");
+                write_value(o, x);
+            }
+            o.raw("}")
+        }
+    };
+}
 
 /// Python's `format(x, "g")` (six significant digits, no trailing zeros).
 pub fn fmt_g(x: f64) -> String {

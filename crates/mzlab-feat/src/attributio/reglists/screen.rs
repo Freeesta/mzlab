@@ -4,8 +4,8 @@
 //! silently. Evidence classes: A = MS2 + matching SIRIUS formula + coherent RT, B = MS2 + one of the two, C = MS2 only, D = no MS2 (not reportable), X = the
 //! feature is already annotated at Levels 1-3 as another compound. An [M+NH4]+ or [M+Na]+ hit with no [M+H]+ hit of the same suspect within 0.15 min is an
 //! isolated adduct and goes one class down. The inputs are plain rows (suspects, features, evidence): where they come from is the caller's business.
-//! Not ported: the Crippen logP that the reference computes with RDKit for a suspect that has a SMILES but no XLogP in its list or in the registry; such a
-//! suspect gets no logP, so its RT is «n.a.».
+//! The Crippen logP of a suspect with a SMILES but no XLogP is `LogPValues::from_smiles` (feature `record`, in no `.wasm`); this module does not call it, so
+//! such a suspect gets no logP here and its RT is «n.a.».
 
 use super::b1::{in_window, StructRow};
 use super::catalog;
