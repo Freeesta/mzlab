@@ -196,6 +196,7 @@
     "../../mzlab/web/molecole-modulo.js",
     "../../mzlab/web/molecole-ui.js",
     "../../mzlab/web/disegno-font.js",
+    "../../mzlab/web/disegno-contaminanti.js",
     "../../mzlab/web/disegno-barra.js",
     "../../mzlab/web/disegno-frammenti.js",
     "../../mzlab/web/disegno-parziali.js",
