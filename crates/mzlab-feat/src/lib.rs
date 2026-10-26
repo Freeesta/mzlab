@@ -17,6 +17,7 @@ mod channels;
 pub mod chem;
 pub mod classi;
 pub mod deconvolve;
+pub mod dia;
 pub mod evid;
 pub mod export;
 pub mod export_inclusione;
