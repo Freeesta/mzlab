@@ -21,7 +21,7 @@ use mzlab_feat::store::{read_table_from, Slice};
 use mzlab_feat::tp::TpRoles;
 use mzlab_feat_wasm::run::{self, RowSources};
 
-use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage};
+use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage, Made};
 use crate::flow_base::{open, rebuild, Files};
 use mzlab_core::flow::Artifact;
 use mzlab_core::step::DataType;
@@ -298,8 +298,8 @@ pub fn link_bytes(
     Ok(out)
 }
 
-/// `tp.link`: the `.mzfeat` of the series with `tp/1` and `interp/1`, written next to the other outputs of the run.
-pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
+/// `tp.link`: the `.mzfeat` with `tp/1` and `interp/1` of the series; no t0 among the samples adds `warn.flow.link.noT0` to the run.
+pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let table_in = job
         .inputs
         .iter()
@@ -319,8 +319,21 @@ pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         &parent.1[..],
         &hypotheses.1[..],
     ];
+    let roles = TpRoles::from_json(&String::from_utf8_lossy(files[1]))?;
     let bytes = link_bytes(r, job, &series, files)?;
     let out = r.work.join(format!("{}.mzfeat", job.instance.id));
     std::fs::write(&out, bytes).map_err(io)?;
-    r.keep(out, DataType::Tp)
+    let mut made = Made::new("tp", r.keep(out, DataType::Tp)?);
+    if no_t0(&roles) {
+        made.warnings.push(WARN_NO_T0.into());
+    }
+    Ok(made)
+}
+
+/// The key the run records when the treated files have no t0 to compare with.
+pub(crate) const WARN_NO_T0: &str = "warn.flow.link.noT0";
+
+/// Treated files and no t0: the gate of the formation then runs on blank and dark only.
+pub(crate) fn no_t0(roles: &TpRoles) -> bool {
+    !roles.treated.is_empty() && roles.t0.is_empty()
 }

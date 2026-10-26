@@ -345,7 +345,7 @@ try:
             pg.fill('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "10"); pg.press('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "Tab")
             attendi(pg, "FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256 !== '%s'" % sha)
             assert pg.evaluate("Object.values(FLOW.current.samples)[0].campioni[1].tempo_min") == 10
-            pg.evaluate("() => { E.files = window.__e; }")
+            assert "No t0" in pg.inner_text('.flx-smp-roles') and "1 blank" in pg.inner_text('.flx-smp-roles'); pg.evaluate("() => { E.files = window.__e; }")
         step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
 
         def samples_fix():
