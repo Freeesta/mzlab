@@ -35,7 +35,7 @@ try:
             assert "Cromatografia liquida" in q.inner_text("#menu")
             assert q.evaluate("document.documentElement.scrollWidth") <= 390
             assert q.evaluate("getComputedStyle(document.querySelector('#cbar')).position") == "fixed"
-            q.evaluate("scrollTo(0, 1500)"); q.wait_for_timeout(300)
+            q.evaluate("scrollTo(0, 1500)"); frames(q, 3)
             assert q.is_visible("#menu") and q.locator("#menu").bounding_box()["y"] < 60, "button not fixed"
             assert q.evaluate("document.querySelector('#prog').style.transform") not in ("", "scaleX(0)")
         step("one fixed button with the current chapter, progress bar moves", button)
@@ -50,32 +50,32 @@ try:
             assert q.evaluate("document.activeElement.closest('#side')!==null"), "focus not in the sheet"
             q.keyboard.press("Escape"); assert q.is_hidden("#side") and q.is_hidden("#sheetbg")
             assert q.evaluate("document.activeElement.id") == "menu", "focus not back on the button"
-            q.click("#menu"); q.mouse.click(195, 30) if False else q.touchscreen.tap(195, 30); q.wait_for_timeout(300)
+            q.click("#menu"); q.mouse.click(195, 30) if False else q.touchscreen.tap(195, 30); q.wait_for_selector("#side", state="hidden")
             assert q.is_hidden("#side"), "tap outside did not close"
         step("sheet: opens, current chapter, targets >= 44 px, Esc and tap outside close, focus returns", sheet)
 
         def swipe():
-            q.click("#menu"); q.wait_for_timeout(300)
+            q.click("#menu"); q.wait_for_selector("#side", state="visible")
             touch(cdp, "touchStart", [(195, 100)])
             for y in range(140, 520, 40): touch(cdp, "touchMove", [(195, y)])
-            touch(cdp, "touchEnd", []); q.wait_for_timeout(400)
+            touch(cdp, "touchEnd", []); q.wait_for_selector("#side", state="hidden")
             assert q.is_hidden("#side"), "swipe down did not close"
         step("sheet: swipe down closes", swipe)
 
         def jump():
             q.click("#menu"); q.click("#side a[href='09-quadrupolo.html']"); q.wait_for_url("**/09-quadrupolo.html")
             q.wait_for_selector("#menu"); assert "Il quadrupolo" in q.inner_text("#menu") and "Il quadrupolo" in q.title()
-            q.click("#menu"); q.click("#side a[href='10-qqq.html']"); q.wait_for_timeout(300)
+            q.click("#menu"); q.click("#side a[href='10-qqq.html']"); q.wait_for_selector("#side", state="hidden")
             assert q.is_hidden("#side") and q.is_hidden("#sheetbg"), "sheet/backdrop stays after a chapter link"
         step("jump to a chapter and to a section; title and button follow", jump)
 
         def memory():
             q.goto(T + "13-formula.html"); q.wait_for_selector("#menu")
-            h = q.evaluate("document.documentElement.scrollHeight - innerHeight"); q.evaluate(f"scrollTo(0, {int(h * 0.5)})"); q.wait_for_timeout(1000)
+            h = q.evaluate("document.documentElement.scrollHeight - innerHeight"); q.evaluate(f"scrollTo(0, {int(h * 0.5)})"); frames(q, 2)
             q.evaluate("dispatchEvent(new Event('pagehide'))")
             st = q.evaluate("JSON.parse(localStorage.getItem('mzlab.teoria.pos'))")
             assert st["last"] == "13-formula.html" and 0.4 < st["pos"]["13-formula.html"] < 0.6, st
-            q.goto("about:blank"); q.goto(T + "13-formula.html"); q.wait_for_load_state("load"); q.wait_for_timeout(500)
+            q.goto("about:blank"); q.goto(T + "13-formula.html"); q.wait_for_load_state("load"); q.wait_for_function("scrollY > 300")
             assert q.evaluate("scrollY") > 300, "position not restored"
             q.goto(T + "04-lc.html"); q.wait_for_selector("#menu"); q.click("#menu")
             assert "Riprendi" in q.inner_text("#side .resume") and "formula" in q.get_attribute("#side .resume", "href")
@@ -103,21 +103,21 @@ try:
             q.keyboard.press("+"); t1 = tr(); q.keyboard.press("-"); assert tr() != t1
             q.keyboard.press("0")
             # double tap zooms in, again resets
-            q.touchscreen.tap(200, 400); q.wait_for_timeout(80); q.touchscreen.tap(200, 400); q.wait_for_timeout(150)
+            q.touchscreen.tap(200, 400); frames(q, 3); q.touchscreen.tap(200, 400); q.wait_for_function("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a > 2")
             s = q.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a")
             assert s > 2, ("double tap", s)
-            q.touchscreen.tap(200, 400); q.wait_for_timeout(80); q.touchscreen.tap(200, 400); q.wait_for_timeout(150)
+            q.touchscreen.tap(200, 400); frames(q, 3); q.touchscreen.tap(200, 400); q.wait_for_function("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a < 1.1")
             s = q.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a"); assert s < 1.1, ("reset", s)
             # pinch with two fingers
             touch(cdp, "touchStart", [(150, 400), (240, 400)])
             for d in range(0, 120, 20): touch(cdp, "touchMove", [(150 - d, 400), (240 + d, 400)])
-            touch(cdp, "touchEnd", []); q.wait_for_timeout(150)
+            touch(cdp, "touchEnd", []); q.wait_for_function("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a > 1.5")
             s = q.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a"); assert s > 1.5, ("pinch", s)
             # drag moves the picture
             m0 = q.evaluate("getComputedStyle(document.querySelector('.lbnode')).transform")
             touch(cdp, "touchStart", [(200, 400)])
             for x in range(190, 120, -10): touch(cdp, "touchMove", [(x, 390)])
-            touch(cdp, "touchEnd", []); q.wait_for_timeout(100)
+            touch(cdp, "touchEnd", []); q.wait_for_function("m0 => getComputedStyle(document.querySelector('.lbnode')).transform !== m0", arg=m0)
             assert q.evaluate("getComputedStyle(document.querySelector('.lbnode')).transform") != m0, "drag"
             q.keyboard.press("Escape"); q.wait_for_selector("#lb", state="hidden")
             assert abs(q.evaluate("scrollY") - y0) < 3, "reading position lost"
@@ -130,7 +130,7 @@ try:
             c2 = r.b.new_context(viewport={"width": 1280, "height": 800}); d = c2.new_page()
             d.goto(T + (FIG or "02-fotocatalisi") + ".html"); d.wait_for_selector(".fzoom"); d.locator(".fzoom").first.click(); d.wait_for_selector("#lb:not([hidden])")
             a = lambda: d.evaluate("new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a")
-            s0 = a(); d.mouse.move(640, 400); d.mouse.wheel(0, -400); d.wait_for_timeout(150); assert a() > s0, "wheel zoom"
+            s0 = a(); d.mouse.move(640, 400); d.mouse.wheel(0, -400); d.wait_for_function("s0 => new DOMMatrix(getComputedStyle(document.querySelector('.lbnode')).transform).a > s0", arg=s0); assert a() > s0, "wheel zoom"
             d.mouse.move(640, 400); d.mouse.down(); d.mouse.move(540, 360); d.mouse.up()
             d.keyboard.press("Escape"); d.wait_for_selector("#lb", state="hidden")
             assert d.is_hidden("#cbar") and d.is_visible("#side"), "desktop layout changed"
@@ -168,7 +168,7 @@ try:
             d.on("response", lambda resp: tot.__setitem__(0, tot[0] + len(resp.body() or b"")) if resp.url.startswith(T[:-14]) and resp.ok else None)
             d.add_init_script("window.__lcp=0;new PerformanceObserver(l=>{for(const e of l.getEntries())window.__lcp=e.startTime}).observe({type:'largest-contentful-paint',buffered:true})")
             for n in ("04-lc", "20-disegno"):
-                tot[0] = 0; d.goto(T + n + ".html", wait_until="networkidle"); d.wait_for_timeout(500)
+                tot[0] = 0; d.goto(T + n + ".html", wait_until="networkidle"); d.wait_for_function("window.__lcp > 0")
                 print(f"MEASURE {n} 390px: {tot[0]/1024:.0f} kB, LCP {d.evaluate('window.__lcp'):.0f} ms")
             c.close()
         step("measure bytes and LCP (printed)", measure)
