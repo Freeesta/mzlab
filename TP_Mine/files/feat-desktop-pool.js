@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  The pool of the Pipeline panel (32_pipeline.js) in the desktop app: the same calls as createFeatPool of feat-worker.js (crateVersion, preview, detectAll, align,
 // hypotheses, evidence), but every step is a native route `feat/*` of the app (crates/mzlab-desktop/src/feat.rs): the .mzidx are the ones of the app's index folder, the
 // .mzfeatf stay in the app (the page names the files, never sends them) and the table comes back as bytes. No wasm-feat/ and no OPFS here.

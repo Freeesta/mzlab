@@ -4,7 +4,7 @@
 // evidence with their source and score and never become a level in the profile «mzlab». Pure but for LIB/LIVELLI/UNT, which are globals of the page (node tests inject them).
 (() => {
   "use strict";
-  const G = typeof window !== "undefined" ? window : globalThis;
+  const G = /** @type {any} */ (typeof window !== "undefined" ? window : globalThis);
   const BATCH = 1000, MIN_TOL_PPM = 1;
 
   /** a formula given by an external source that explains the m/z of the feature (5 ppm) and is the only one → level 4 («unique formula»); never invented here */

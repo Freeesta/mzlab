@@ -1,4 +1,4 @@
-// TPMINE-PRIVATE  Pipeline of mzFinder in the browser: the Web Workers that run the feature engine (crates/mzlab-feat-wasm, two .wasm of their own: `feat` = detection and
+// @ts-strict TPMINE-PRIVATE  Pipeline of mzFinder in the browser: the Web Workers that run the feature engine (crates/mzlab-feat-wasm, two .wasm of their own: `feat` = detection and
 // alignment, `proofs` = hypotheses and graph of the proofs) and the supervisor that drives them. One file, two roles:
 //   - imported by the page as a module (from a Blob URL, like the other files of mzFinder): `createFeatPool(...)` is the supervisor;
 //   - started as a module Worker (the same URL): the worker below. It reads the .mzidx files with OPFS synchronous handles (`createSyncAccessHandle`: the only reads the
@@ -36,7 +36,7 @@ function createCore(opts) {
   const { workerUrl, wasm, notify = () => {}, WorkerClass = Worker } = opts;
   const limit = Math.max(1, opts.size || 1);
   const slots = new Set();                      // every worker alive: { w, busy, loaded:Set, dead }
-  const st = { archive: null, cancelled: false };
+  const st = /** @type {{ archive: any, cancelled: boolean }} */ ({ archive: null, cancelled: false });
   const queue = [];                             // jobs waiting for a worker: { run(slot), resolve, reject, tried }
   const rest = idleRest(opts.idleMs ?? IDLE_MS, st, slots, queue, s => kill(s));
 

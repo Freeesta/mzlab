@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  The low-resolution Dig of mzFinder in Rust (crates/mzlab-finder-lr-wasm, wasm-feat/finder-lr/): imported by tpmine-worker.js for a series of
 // unit-resolution full-scan files, each with its .mzidx in OPFS, a parent (with a formula or only its m/z) and the default or the user's list of transformations. The pool of feat-worker.js runs
 // detection, alignment and the hypotheses of the parent (recipe "" = profile `lr`), then finder_lr_dig gives the JSON of api.run; detail(id) reads the XICs

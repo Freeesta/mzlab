@@ -1,3 +1,4 @@
+// @ts-strict
 // A phase the memory refuses (`error.featMemory`) whose estimate fits in the high budget of the engine of the page (`MZLAB_RUST.choice.high_mb`, or the level it was lowered to) asks
 // the user once (`askMore({ fase, stima_mb, budget_mb, libero_mb, high_mb })` resolves true = use more memory) and runs again with that budget, for the rest of the run. Without an
 // answer, or beyond the high budget, the refusal goes on with its numbers.
@@ -43,7 +44,7 @@ export async function clearDetectCache(pool) { return (await pool.fs.trim(CACHE_
 // The .mzfeatf and the .mzfeat are written to OPFS (`mzlab/feat/`) by the archive worker when `save` is true, each as soon as its phase ends, so a phase that the
 // memory refuses (`error.featMemory`) leaves the earlier ones saved: the hypotheses or the proofs refused give the table without proofs and the warning
 // `tpmine.feat.degraded` (`degraded` = the phase), the detection or the alignment refused stop the run with the error (and `params.files`).
-export async function runFeatPipeline(pool, { files, recipe, parent, save = false, onPhase = () => {}, askMore = globalThis.mzlabAskMore }) {
+export async function runFeatPipeline(pool, { files, recipe, parent, save = false, onPhase = _ => {}, askMore = globalThis.mzlabAskMore }) {
   const raised = [], more = run => withMore(pool, askMore, raised, run);      // the budget the pool had is given back at the end of the run
   const timings = [], t00 = performance.now();
   const phase = async (name, fn) => {

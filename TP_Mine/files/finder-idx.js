@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  Ingress of mzFinder: every mzML the page sends to the worker gets its .mzidx in OPFS (mzlab/idx/<name>.mzidx) before the Rust engine reads it.
 // The index is built by the SAME code as the main program (prepare_upload of mzlab_wasm.js for the scan table, the pool of idx-worker.js for the index, ARCH.promote for the
 // final name), so the bytes are the ones the Data tab would have written. A file that already has a fresh index (same size recorded in its meta) is left alone.

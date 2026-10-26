@@ -39,7 +39,7 @@ const CartPP = (() => {
 // the list in the page: rows, groups, messages (the buttons call CartPunt when they are pressed)
 const CartPuntVista = (() => {
   const { visible, S, supported } = CartPP;
-  const loadedNames = () => new Set((window.ST && ST.files || []).map(f => f.name.toLowerCase()));
+  const loadedNames = () => new Set((/** @type {any} */ (window).ST && ST.files || []).map(f => f.name.toLowerCase()));
   const isLoaded = x => S.opened.has(x.path) || loadedNames().has(x.name.toLowerCase());
   // ---- page
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);

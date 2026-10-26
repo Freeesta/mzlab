@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  Roles and times of the files of mzFinder (campioni/2), module imported by 34_pipeline_run.js. Packs and shows: the proposals (from the names), the warnings and the indices
 // per role are the Rust of mzlab-core (`campioni`: ops proponi, valida, per_tp, da_legacy, canonico, digest), reached through `call`: the binding of the table .wasm (synchronous) or, in the desktop app, the native route finder/campioni (asynchronous); every function that calls it is async and awaits the answer. The record lives in the notebook (`NB.campioni`,
 // canonical campioni/2); where it has no entry for a file, the Data view's NB.session (v1) and the roles of the QA/QC panel (localStorage qqq.qaqc) are migrated, and the rest is proposed.

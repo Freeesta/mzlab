@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  mzFinder in the desktop app: tpmine-worker.js sends every call here when the page says it runs in the app (init.desktop). Nothing is computed in this file: the
 // steps (detection, alignment, hypotheses, proofs, the Dig) are the native routes `feat/*` and `finder/*` of the app (crates/mzlab-desktop/src/feat.rs, feat_finder.rs), the
 // same functions the .wasm runs on the site, over the .mzidx of the app's index folder. No Pyodide and no wasm-feat/ here. The files are registered in the app by name,
