@@ -1,7 +1,7 @@
 //! The blocks of a `.wiff.scan` for the readers module (feature `estesi`): everything of `scan.rs` plus the scan blocks of versions 1 to 3.
 //! After the marker `fe ff ff ff` comes the version `V` (u32), `V` ranges of four f64 `[start, end, step, scale]`, the point count (u32) and the
 //! nibble stream of `scan.rs`. The m/z is `start1 + bin * step1`; the intensity is `count * scale` of the last range whose start is below the m/z
-//! (the 3200 writes V=2, the other QTRAPs V=1..3). A block that starts like a scan but is not one of these (another version, the `ffffffff` of the
+//! (the 3200 writes V=2 for survey scans and V=3 for enhanced product ion scans, the other QTRAPs V=1..3; a sample with a block besides V=2 is a `variante`). A block that starts like a scan but is not one of these (another version, the `ffffffff` of the
 //! TOF instruments) is an error, never a scan or an MRM block read by mistake.
 
 #[allow(dead_code)]
@@ -133,6 +133,16 @@ pub fn point_count<R: ReadAt>(
     end: u64,
 ) -> Result<Option<u32>> {
     Ok(head(scan, scan_len, at, end)?.map(|h| u32::try_from(h.n).unwrap_or(u32::MAX)))
+}
+
+/// True when the block at `at` is a scan block of a version besides 2, the only one the engine's reader (`scan.rs`) decodes (a 3200 writes 3 for enhanced product ion scans).
+pub fn other_version<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<bool> {
+    if end.min(scan_len).saturating_sub(at) < 8 {
+        return Ok(false);
+    }
+    let mut b = [0u8; 8];
+    scan.read_at(at, &mut b)?;
+    Ok(b[..4] == MARKER[..4] && u32_at(&b, 4) != 2)
 }
 
 /// The transitions of an MRM block: `width` transitions in the experiment, and the `(transition, cps)` the block holds.
