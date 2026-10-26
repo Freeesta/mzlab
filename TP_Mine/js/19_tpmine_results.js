@@ -1,5 +1,5 @@
 // @ts-strict
-// TPMINE-PRIVATE  Tabui results: the summary card, the table, the map, the kinetics, the row panel and the exports of the low-resolution Dig (factory used by 20_tpmine.js).
+// TPMINE-PRIVATE  Tabui results: the summary card, the table, the map, the kinetics, the row panel and the exports of the low-resolution Dig (factory used by 20_tpmine.js, loaded before it: files load in name order).
 (() => {
   "use strict";
   const B = /** @type {any} */ (window).TPBASE;
