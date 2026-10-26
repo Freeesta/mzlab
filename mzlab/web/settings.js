@@ -157,6 +157,7 @@ function uipOpen(btn) {
     + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
     + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
     + grp("uip-g-app", "app", "settings.g.app", app, false)
+    + grp("uip-g-priv", "data", "settings.g.priv", `<div id="uip-priv" class="imp-fld"><button id="uip-export" type="button" title="${esc(T("export.title"))}">${T("export.btn")}</button></div><div class="hint">${T("export.hint")}</div><div id="uip-export-st" class="hint" role="status" aria-live="polite"></div>`, false)
     + grp("uip-g-bug", "bug", "settings.g.bug", '<div id="uip-bug"></div>', false)
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
@@ -195,6 +196,7 @@ function uipOpen(btn) {
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
   on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (!UIP.xicLens && window.XICLENS) XICLENS.closeAll(); });
+  on("#uip-export", "click", () => { import("./esporta-dati.js").then(m => m.start(d)).catch(() => { const st = d.querySelector("#uip-export-st"); if (st) st.textContent = T("export.err"); }); });
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
     if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }
