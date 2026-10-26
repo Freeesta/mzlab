@@ -17,6 +17,7 @@ mod cache;
 mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca;
 pub mod esterno;
 mod contato;
+mod zip;
 mod nativi;
 mod nativi_motore;
 
