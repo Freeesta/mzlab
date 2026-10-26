@@ -24,85 +24,40 @@ pub struct Modo {
     pub sigla: &'static str,
     pub level: u8,
     /// CV `(accession, name)` of the spectrum type, when it needs one.
-    pub term: Option<(&'static str, &'static str)>,
+    pub term: Term,
     pub uscita: Uscita,
     /// Seen in a real file: only these are read by the readers module.
     pub confermato: bool,
 }
 
-const fn m(
-    code: u32,
-    sigla: &'static str,
-    level: u8,
-    term: Option<(&'static str, &'static str)>,
-    uscita: Uscita,
-    confermato: bool,
-) -> Modo {
-    Modo {
-        code,
-        sigla,
-        level,
-        term,
-        uscita,
-        confermato,
-    }
+type Term = Option<(&'static str, &'static str)>;
+
+#[rustfmt::skip]
+const fn m(code: u32, sigla: &'static str, level: u8, term: Term, uscita: Uscita, confermato: bool) -> Modo {
+    Modo { code, sigla, level, term, uscita, confermato }
 }
 
 use Uscita::{Sim, Spettro, Srm};
 
+#[rustfmt::skip]
 pub const MODI: [Modo; 17] = [
     m(0, "Q1", 1, None, Spettro, false),
     m(1, "Q1MI", 1, None, Sim, false),
     m(2, "Q3", 1, None, Spettro, false),
     m(3, "Q3MI", 1, None, Sim, false),
     m(CODE_MRM, "MRM", 2, None, Srm, true),
-    m(
-        CODE_PRECURSOR_ION,
-        "Prec",
-        2,
-        Some(("MS:1000341", "precursor ion spectrum")),
-        Spettro,
-        true,
-    ),
+    m(CODE_PRECURSOR_ION, "Prec", 2, Some(("MS:1000341", "precursor ion spectrum")), Spettro, true),
     m(6, "PI", 2, None, Spettro, false),
-    m(
-        CODE_NEUTRAL_LOSS,
-        "NL",
-        2,
-        Some(("MS:1000326", "constant neutral loss spectrum")),
-        Spettro,
-        true,
-    ),
+    m(CODE_NEUTRAL_LOSS, "NL", 2, Some(("MS:1000326", "constant neutral loss spectrum")), Spettro, true),
     m(8, "TOF MS", 1, None, Spettro, false),
     m(9, "TOF MS/MS", 2, None, Spettro, false),
     m(10, "?", 1, None, Spettro, false),
     m(CODE_PRODUCT, "EPI", 2, None, Spettro, true),
-    m(
-        12,
-        "ER",
-        1,
-        Some(("MS:1000791", "enhanced resolution spectrum")),
-        Spettro,
-        false,
-    ),
+    m(12, "ER", 1, Some(("MS:1000791", "enhanced resolution spectrum")), Spettro, false),
     m(13, "MS3", 3, None, Spettro, false),
-    m(
-        14,
-        "TDF",
-        2,
-        Some(("MS:1000790", "time-delayed fragmentation spectrum")),
-        Spettro,
-        false,
-    ),
+    m(14, "TDF", 2, Some(("MS:1000790", "time-delayed fragmentation spectrum")), Spettro, false),
     m(CODE_FULL, "EMS", 1, None, Spettro, true),
-    m(
-        16,
-        "EMC",
-        1,
-        Some(("MS:1000789", "enhanced multiply charged spectrum")),
-        Spettro,
-        false,
-    ),
+    m(16, "EMC", 1, Some(("MS:1000789", "enhanced multiply charged spectrum")), Spettro, false),
 ];
 
 /// The row of `code`, `None` outside the table.
