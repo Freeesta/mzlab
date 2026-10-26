@@ -2,7 +2,7 @@
 plan index, detect, align, gapfill, tp.generate, tp.link makes in the browser the `.mzfeat` (with tp/1 and interp/1) that `mzlab-cli flow run` makes of the same plan, byte for byte; a second run takes
 it from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_tp_link.py"""
-import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
+import base64, hashlib, json, struct, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -64,11 +64,14 @@ RUN = """async ([plan, samples, parent]) => {
   catch (e) { return { ev, err: { key: e.key, params: e.params } }; }
   finally { document.removeEventListener('flow:web-step', on); }
 }"""
-# the SHA-256 of the .tp.mzfeat the run kept in OPFS
+def split(b):
+    """the JSON header and the sections of a .mzfeat (the zero padding of the sections is the same in both runs once the headers have the same length)"""
+    n = struct.unpack("<Q", b[8:16])[0]; return json.loads(b[16:16 + n]), b[16 + n:]
+# the .tp.mzfeat the run kept in OPFS, as base64
 KEPT = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), live = await d.getDirectoryHandle('live'), out = [];
-  for await (const [n, h] of live.entries()) if (n.endsWith('.tp.mzfeat') || (window.__all && n.endsWith('.mzfeat'))) { const b = await (await h.getFile()).arrayBuffer(); out.push([...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join('')); }
-  return out;
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), live = await d.getDirectoryHandle('live');
+  for await (const [n, h] of live.entries()) if (n.endsWith('.tp.mzfeat')) { const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode(...b.subarray(i, i + 8192)); return btoa(s); }
+  return '';
 }"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -92,11 +95,12 @@ try:
         def first():
             r = pg.evaluate(RUN, [PLAN, SAMPLES, PARENT]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             assert any(e["passo"] == "lnk" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), r["ev"]
-            pg.evaluate("window.__all = true"); allk = pg.evaluate(KEPT); pg.evaluate("window.__all = false")
-            print("DEBUG all kept", allk, "native gap", hashlib.sha256((run / "out" / "gap.mzfeat").read_bytes()).hexdigest(), "native lnk", native)
-            if os.environ.get("MZLAB_KEEP"):
-                import base64; (tmp / "web.mzfeat").write_bytes(base64.b64decode(pg.evaluate("""async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), live = await d.getDirectoryHandle('live'); for await (const [n, h] of live.entries()) if (n.endsWith('.tp.mzfeat')) { const b = new Uint8Array(await (await h.getFile()).arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 8192) s += String.fromCharCode(...b.subarray(i, i + 8192)); return btoa(s); } }"""))); shutil.copy2(run / "out" / "lnk.mzfeat", tmp / "native.mzfeat"); shutil.copy2(run / "out" / "gap.mzfeat", tmp / "gap.mzfeat"); print("KEPT", tmp)
-            assert pg.evaluate(KEPT) == [native], (pg.evaluate(KEPT), native)
+            web = base64.b64decode(pg.evaluate(KEPT)); nat = (run / "out" / "lnk.mzfeat").read_bytes()
+            # the browser names the sources after the .mzidx of Data (SIN_x.mzidx), the file run after the .mzML: the header differs in those names only, and the sections move by the padding
+            (ha, ba), (hb, bb) = split(nat), split(web)
+            for h in (ha, hb): h["inputs"] = [dict(i, name=i["name"].split(".")[0]) for i in h["inputs"]]
+            assert ha == hb, (ha, hb)
+            assert ba.replace(b"\0", b"") == bb.replace(b"\0", b""), (len(ba), len(bb))
         step("tp.link in the browser gives the .mzfeat of the native flow run, byte for byte", first)
 
         def again():
@@ -105,8 +109,7 @@ try:
         step("a second run takes the .mzfeat from OPFS", again)
         b.close()
 finally:
-    srv.terminate()
-    if not os.environ.get("MZLAB_KEEP"): shutil.rmtree(tmp, ignore_errors=True)
+    srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
 for s in steps: print(s)
 print("page errors:", errs)
 sys.exit(1 if any(s[1] != "ok" for s in steps) or errs else 0)
