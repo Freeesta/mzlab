@@ -178,7 +178,7 @@ pub fn per_tp(cs: &[Campione]) -> PerTp {
             "blank" => &mut p.blank,
             "dark" => &mut p.dark,
             "infusion" => &mut p.infusion,
-            "qc" => &mut p.qc,
+            "qc" | "pool" => &mut p.qc,
             _ => &mut p.std,
         };
         list.push(i);

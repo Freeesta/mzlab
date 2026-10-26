@@ -162,6 +162,7 @@ pub(super) fn legacy_kind(t: &str) -> Option<&'static str> {
         "calibration" => "calibration",
         "dark" | "control" => "dark",
         "qc" => "qc",
+        "pool" => "pool",
         "t0" => "t0",
         "infusion" => "infusion",
         _ => return None,
@@ -316,7 +317,7 @@ fn finish(cs: &mut [Campione], qaqc: Option<&Value>) {
         }
         if matches!(
             c.kind.as_str(),
-            "blank" | "std" | "calibration" | "qc" | "infusion"
+            "blank" | "std" | "calibration" | "qc" | "infusion" | "pool"
         ) {
             c.set_time(None, "min");
         }

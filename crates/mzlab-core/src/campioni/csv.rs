@@ -12,8 +12,9 @@ use crate::error::{Error, Result};
 use crate::json::{parse, Out};
 
 /// The fixed columns, in the order written.
-const FIXED: [&str; 21] = [
+const FIXED: [&str; 22] = [
     "file",
+    "campione",
     "sha256",
     "campione_id",
     "polarita",
@@ -191,6 +192,7 @@ fn put(c: &mut Campione, f: &str, v: &str) -> bool {
     match f {
         "file" => c.file = v.into(),
         "sha256" => c.sha256 = v.into(),
+        "campione" => c.sub = v.into(),
         "campione_id" => c.sample_id = v.into(),
         "matrice" => c.matrix = v.into(),
         "lotto" => c.batch = v.into(),
@@ -382,6 +384,7 @@ fn fixed(c: &Campione, f: &str) -> String {
     match f {
         "file" => c.file.clone(),
         "sha256" => c.sha256.clone(),
+        "campione" => c.sub.clone(),
         "campione_id" => c.sample_id.clone(),
         "polarita" => c.polarity.map(|p| p.to_string()).unwrap_or_default(),
         "matrice" => c.matrix.clone(),

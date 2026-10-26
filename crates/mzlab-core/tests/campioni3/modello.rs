@@ -4,7 +4,7 @@ use super::many;
 use mzlab_core::campioni::{self, tabella_da_json, Cell};
 use serde_json::{json, Value};
 
-fn run(model: &str, names: &[&str]) -> Value {
+pub(super) fn run(model: &str, names: &[&str]) -> Value {
     let files: Vec<Value> = names
         .iter()
         .map(|n| json!({"name": n, "sha256": ""}))

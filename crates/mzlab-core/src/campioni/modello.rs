@@ -32,7 +32,8 @@ pub struct Applicato {
 fn pattern_of(field: &str) -> &'static str {
     match field {
         "polarita" => r"positive|negative|pos|neg|\+1|-1|\+|-|p|n",
-        "tempo" | "concentrazione" => r"-?\d+(?:[.,]\d+)?",
+        "tempo" => r"-?\d+(?:[.,pP]\d+)?",
+        "concentrazione" => r"-?\d+(?:[.,]\d+)?",
         "replica" | "ordine_iniezione" => r"\d+",
         "unita_tempo" => "min|sec|s|h|d",
         _ => ".+?",
@@ -148,7 +149,7 @@ fn set_time(c: &mut Campione, time: Option<&str>, unit: Option<&str>) {
         .and_then(time_unit)
         .unwrap_or(&c.time_unit.clone())
         .to_string();
-    match time.map(num) {
+    match time.map(|t| num(&t.replace(['p', 'P'], "."))) {
         Some(Some(t)) => c.set_time(Some(t), &unit),
         Some(None) => return,
         None => {
@@ -192,6 +193,7 @@ fn one(re: &Regex, c: &mut Campione, cols: &[Colonna]) -> Option<Vec<Pos>> {
     if used.contains(&"tempo") || used.contains(&"unita_tempo") {
         set_time(c, time.as_deref(), unit.as_deref());
     }
+    super::idcampione::applica(c, &used);
     Some(spans)
 }
 

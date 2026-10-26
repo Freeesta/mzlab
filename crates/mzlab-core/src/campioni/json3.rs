@@ -44,6 +44,7 @@ fn one(c: &Campione) -> String {
     let mut j = Out::default();
     j.raw("{\"acquisito\":");
     opt_str(&mut j, c.acquired.as_deref());
+    j.raw(",\"campione\":").str(&c.sub);
     j.raw(",\"campione_id\":").str(&c.sample_id);
     j.raw(",\"composto\":").str(&c.compound);
     j.raw(",\"concentrazione\":").opt(c.conc);
@@ -149,6 +150,7 @@ fn range_of(d: &Value, hi: &str, lo: &str) -> Result<Option<(f64, f64)>> {
 /// The fields `campioni/3` adds, all optional (a `campioni/2` has none): read into `c`.
 pub(super) fn leggi_nuovi(v: &Value, c: &mut Campione) -> Result<()> {
     let s = |k: &str| -> Result<String> { Ok(opt_text(v, k, &[])?.unwrap_or_default()) };
+    c.sub = s("campione")?;
     c.sample_id = s("campione_id")?;
     c.matrix = s("matrice")?;
     c.batch = s("lotto")?;

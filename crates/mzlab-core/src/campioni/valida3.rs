@@ -1,7 +1,7 @@
 //! The checks `campioni/3` adds to `valida`: free columns (`missingValue`, `typeMismatch`), the key of a file (`duplicateKey`) and the two
 //! polarities of a physical sample (`pairMissing`, `pairMismatch`). Stable codes; the pages put the words.
 
-use super::{valida, Avviso, Campione, Tabella};
+use super::{idcampione, valida, Avviso, Campione, Tabella};
 
 fn push(
     out: &mut Vec<Avviso>,
@@ -20,15 +20,30 @@ fn push(
     });
 }
 
-/// `duplicateKey` (error) on every file after the first with the same SHA-256 (when known) or the same name.
+/// `typeMismatch` on `tempo` (error) when the ID has a time part that is not a number, `unknownCondition` (warning, column `serie`) when
+/// the ID has the shape `MAT-COND-Ttt` with a condition the series does not use.
+fn ids(out: &mut Vec<Avviso>, cs: &[Campione]) {
+    for (i, c) in cs.iter().enumerate() {
+        let info = idcampione::leggi(&c.sample_id);
+        if info.bad_time {
+            push(out, "typeMismatch", "error", i, c, "tempo");
+        }
+        if info.unknown_cond {
+            push(out, "unknownCondition", "warning", i, c, "serie");
+        }
+    }
+}
+
+/// `duplicateKey` (error) on every file after the first with the same SHA-256 (when known) or the same name, and the same sample inside it.
 fn duplicates(out: &mut Vec<Avviso>, cs: &[Campione]) {
     for (i, c) in cs.iter().enumerate() {
         let same = |o: &Campione| {
-            if c.sha256.is_empty() || o.sha256.is_empty() {
-                o.file == c.file && !c.file.is_empty()
-            } else {
-                o.sha256 == c.sha256
-            }
+            o.sub == c.sub
+                && if c.sha256.is_empty() || o.sha256.is_empty() {
+                    o.file == c.file && !c.file.is_empty()
+                } else {
+                    o.sha256 == c.sha256
+                }
         };
         if cs[..i].iter().any(same) {
             push(out, "duplicateKey", "error", i, c, "");
@@ -84,6 +99,7 @@ pub fn valida3(t: &Tabella) -> Vec<Avviso> {
     let mut out = valida(&t.campioni);
     duplicates(&mut out, &t.campioni);
     columns(&mut out, t);
+    ids(&mut out, &t.campioni);
     pairs(&mut out, &t.campioni);
     out
 }

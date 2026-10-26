@@ -25,10 +25,11 @@
    "type": "array",
    "items": {
     "type": "object",
-    "required": ["acquisito", "campione_id", "composto", "concentrazione", "extra", "file", "gruppo", "istd", "lotto", "matrice", "note", "ordine_iniezione", "polarita", "replica", "serie", "sha256", "tempo", "tempo_confermato", "tempo_min", "tipo", "tipo_bianco", "unita", "unita_tempo"],
+    "required": ["acquisito", "campione", "campione_id", "composto", "concentrazione", "extra", "file", "gruppo", "istd", "lotto", "matrice", "note", "ordine_iniezione", "polarita", "replica", "serie", "sha256", "tempo", "tempo_confermato", "tempo_min", "tipo", "tipo_bianco", "unita", "unita_tempo"],
     "properties": {
      "file": {"type": "string"},
      "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
+     "campione": {"type": "string", "description": "the sample inside a file that holds several (index or inner name); empty when the file is one sample"},
      "campione_id": {"type": "string", "description": "the physical sample; the two polarities of one sample share it"},
      "polarita": {"enum": [1, -1, null], "description": "from the file (dal_file) or proposed by a name model"},
      "matrice": {"type": "string"},
@@ -49,7 +50,7 @@
        "scansioni": {"type": ["number", "null"]}
       }
      },
-     "tipo": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"]},
+     "tipo": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc", "pool"]},
      "tipo_bianco": {"enum": ["solvent", "procedure", null]},
      "tempo": {"type": ["number", "null"]},
      "unita_tempo": {"enum": ["s", "min", "h", "d"]},

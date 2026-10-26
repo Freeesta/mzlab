@@ -3,6 +3,7 @@
 
 mod csv;
 mod modello;
+mod serie;
 
 use mzlab_core::campioni::{
     self, from_json, per_tp, tabella_da_json, to_json, to_json3, valida, Cell, Colonna, Tabella,

@@ -7,6 +7,7 @@
 mod colonne;
 mod csv;
 mod dal_file;
+mod idcampione;
 mod json;
 mod json3;
 mod modello;
@@ -33,7 +34,7 @@ use crate::error::{Error, Result};
 
 pub const SCHEMA: &str = "campioni/2";
 /// Roles of a file, in the order of the schema.
-pub const TIPI: [&str; 8] = [
+pub const TIPI: [&str; 9] = [
     "sample",
     "t0",
     "blank",
@@ -42,6 +43,7 @@ pub const TIPI: [&str; 8] = [
     "std",
     "calibration",
     "qc",
+    "pool",
 ];
 /// Kinds of blank (optional: every blank is subtracted the same way).
 pub const TIPI_BIANCO: [&str; 2] = ["solvent", "procedure"];
@@ -52,6 +54,8 @@ pub const UNITA_TEMPO: [&str; 4] = ["s", "min", "h", "d"];
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Campione {
     pub file: String,
+    /// The sample inside a file that holds several (index or inner name); empty for one sample per file.
+    pub sub: String,
     /// SHA-256 of the raw file: the key (the name can change).
     pub sha256: String,
     /// One of `TIPI`.
@@ -142,7 +146,9 @@ fn keep_first<T: PartialEq>(v: &mut Vec<T>) {
     }
 }
 
-/// The replicates counted again: 1-based among the files with the same series, role, minutes and concentration.
+type NumberKey = (String, String, Option<u64>, Option<u64>, Option<i8>, String);
+
+/// The replicates counted again: 1-based among the files with the same series, role, minutes, concentration, polarity and matrix.
 pub fn number_replicates(cs: &mut [Campione]) {
     // NaN never equals itself, so those files keep the pairwise comparison
     if cs
@@ -153,7 +159,7 @@ pub fn number_replicates(cs: &mut [Campione]) {
     }
     // 0.0 and -0.0 are equal, hence the same key
     let bits = |x: Option<f64>| x.map(|v| if v == 0.0 { 0 } else { v.to_bits() });
-    let mut seen: std::collections::HashMap<(String, String, Option<u64>, Option<u64>), u32> =
+    let mut seen: std::collections::HashMap<NumberKey, u32> =
         std::collections::HashMap::with_capacity(cs.len());
     for c in cs.iter_mut() {
         let key = (
@@ -161,6 +167,8 @@ pub fn number_replicates(cs: &mut [Campione]) {
             c.role().to_string(),
             bits(c.time_min),
             bits(c.conc),
+            c.polarity,
+            c.matrix.clone(),
         );
         let n = seen.entry(key).or_insert(0);
         *n += 1;
@@ -178,6 +186,8 @@ fn number_replicates_pairwise(cs: &mut [Campione]) {
                     && o.role() == c.role()
                     && o.time_min == c.time_min
                     && o.conc == c.conc
+                    && o.polarity == c.polarity
+                    && o.matrix == c.matrix
             })
             .count();
         cs[i].replicate = same as u32 + 1;
