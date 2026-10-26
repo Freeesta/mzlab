@@ -105,11 +105,13 @@ fn check_inputs(inp: &RefIn, o: &RefOpts) -> R<()> {
     if o.ref_stat != "max" && o.ref_stat != "mean" {
         return user("err.stat.blank.stat", "stat must be 'max' or 'mean'");
     }
-    if !(o.factor >= 0.0) || o.min_detect < 1 || !(o.floor >= 0.0) || o.pseudo.map_or(false, |p| !(p >= 0.0)) {
+    // NaN counts as invalid, like the negated comparisons it replaces.
+    let bad = |x: f64| x.is_nan() || x < 0.0;
+    if bad(o.factor) || o.min_detect < 1 || bad(o.floor) || o.pseudo.is_some_and(bad) {
         return user("err.stat.blank.param", "factor must be >= 0 and the minimum of detections >= 1");
     }
     let n = inp.roles.len();
-    let wrong = inp.times.len() != n || (!inp.matrix.is_empty() && ncols(inp.matrix) != n) || inp.groups.map_or(false, |g| g.len() != n);
+    let wrong = inp.times.len() != n || (!inp.matrix.is_empty() && ncols(inp.matrix) != n) || inp.groups.is_some_and(|g| g.len() != n);
     if wrong {
         return user("err.stat.ref.shape", "the table, the roles and the times must have one entry per file");
     }
@@ -126,7 +128,7 @@ fn reference_columns(inp: &RefIn) -> R<Vec<usize>> {
             }
             r.iter().map(|&i| i as usize).collect()
         }
-        None => (0..n as usize).filter(|&i| inp.roles[i] == "blank" || inp.roles[i] == "dark" || inp.times[i].map_or(false, |t| t <= 0.0)).collect(),
+        None => (0..n as usize).filter(|&i| inp.roles[i] == "blank" || inp.roles[i] == "dark" || inp.times[i].is_some_and(|t| t <= 0.0)).collect(),
     };
     crate::sortc::slice_ord(&mut ref_cols);
     ref_cols.dedup();
