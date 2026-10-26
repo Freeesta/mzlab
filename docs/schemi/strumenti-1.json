@@ -52,7 +52,8 @@
           "tp.generate",
           "tp.link",
           "tp.network",
-          "tp.position"
+          "tp.position",
+          "tp.review"
         ]
       }
     },
@@ -111,7 +112,8 @@
               "tp.generate@1",
               "tp.link@2",
               "tp.network@1",
-              "tp.position@1"
+              "tp.position@1",
+              "tp.review@1"
             ]
           }
         },
@@ -204,7 +206,8 @@
               "tp.generate@1",
               "tp.link@2",
               "tp.network@1",
-              "tp.position@1"
+              "tp.position@1",
+              "tp.review@1"
             ]
           },
           "label":{"type":"string","description":"Optional label."}
@@ -2125,6 +2128,10 @@
               }
             },
             "required":["step","name","value"]
+          },
+          {
+            "properties":{"step":{"const":"tp.review@1"},"name":{"enum":["algorithm"]},"value":{"enum":["level_rules"]}},
+            "required":["step","name","value"]
           }
         ]
       }
@@ -2250,7 +2257,8 @@
                 "tp.generate@1",
                 "tp.link@2",
                 "tp.network@1",
-                "tp.position@1"
+                "tp.position@1",
+                "tp.review@1"
               ]
             },
             "maxItems":40

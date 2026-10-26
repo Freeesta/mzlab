@@ -176,7 +176,7 @@
     });
   };
 
-  /** tp.filter@2, tp.position, tp.network (flow-web-tp.js `post`): a text made by the pool from the `.tp.mzfeat` of the tp.link they follow, kept like the MSn results under the key of the job */
+  /** tp.filter@2, tp.position, tp.network, tp.review (flow-web-tp.js `post`): a text made by the pool from the `.tp.mzfeat` of the tp.link they follow, kept like the MSn results under the key of the job */
   const tpPost = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
     const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
@@ -214,5 +214,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();

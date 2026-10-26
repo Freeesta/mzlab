@@ -49,7 +49,7 @@
         inputs.append(el("span", { class: "fl-chip" }, F.mark(f.type), el("span", { text: f.name }), res, btn("x", `Remove input ${f.name}`, () => { F.removeInput(S.plan, f.name); refresh(); })));
       }
       inputs.append(el("select", { id: "fl-add-input", "aria-label": "Add an input file", onchange: (/** @type {any} */ e) => { if (e.target.value) { F.addInput(S.plan, e.target.value); refresh(); } } },
-        el("option", { value: "", text: "+ input file…" }), ...F.INPUT_TYPES.map((/** @type {string} */ t) => el("option", { value: t, text: t }))));
+        el("option", { value: "", text: "+ input file…" }), ...[...F.INPUT_TYPES, "transform"].map((/** @type {string} */ t) => el("option", { value: t, text: t }))));
     };
     const drawGoal = () => {
       const g = F.goal(S.plan, reg);

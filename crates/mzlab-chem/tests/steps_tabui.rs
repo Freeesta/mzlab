@@ -6,19 +6,20 @@ use mzlab_chem::step::tabui;
 use mzlab_core::step::json::registry_json;
 use mzlab_core::step::Kind;
 
-const IDS: [&str; 8] = [
+const IDS: [&str; 9] = [
     "tp.generate",
     "tp.filter",
     "tp.link",
     "tp.position",
     "tp.network",
+    "tp.review",
     "structure.render",
     "structure.draw",
     "structure.reactivity",
 ];
 
 #[test]
-fn registry_lists_the_eight_steps_in_the_order_of_the_chain() {
+fn registry_lists_the_nine_steps_in_the_order_of_the_chain() {
     let steps = tabui();
     assert_eq!(steps.iter().map(|s| s.id).collect::<Vec<_>>(), IDS);
     for s in &steps {
