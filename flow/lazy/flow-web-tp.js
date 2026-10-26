@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["tp.generate", "tp.link"];
+  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network"];
   /** @type {Promise<any> | null} */ let loaded = null;
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
 
@@ -58,5 +58,41 @@
     try { return { ...await parentOf(S, inst), samples, hypotheses: (await generate(S, gen)).text }; } catch (e) { throw asError(e); }
   };
 
-  F.webTp = { STEPS, generate, linkInputs };
+  const NAMES = /** @type {Record<string, string>} */ ({ "tp.filter": ".filtri.json", "tp.position": ".sites.json", "tp.network": ".rete.json" });
+  const step = (/** @type {any} */ i) => String(i && i.step).split("@")[0];
+
+  /** the `.tp.mzfeat` of the tp.link job an input points to (null when it is not a tp.link of this plan or not made yet) @param {any} c the context of the executor @param {any} inst @param {string} port */
+  const tpFile = async (c, inst, port) => {
+    const up = c.x.inst(String(F.refs(inst, port)[0] || "").split(".")[0]), key = up && step(up) === "tp.link" && c.x.keys.get(c.x.jk({ instance: up.id, item: null }));
+    return key && await c.p.fs.exists(c.dir + key + ".tp.mzfeat") ? c.p.fs.read(c.dir + key + ".tp.mzfeat") : null;
+  };
+
+  /** the text a tp.filter, tp.position or tp.network job asks of the pool (the same Rust as `flow run`): its name and text, or null when an input stays with the computer
+   * @param {{ x: any, p: any, dir: string }} c @param {any} inst */
+  const post = async (c, inst) => {
+    const S = c.x.S, kind = step(inst), tp = await tpFile(c, inst, "tp");
+    if (!tp) return null;
+    const params = JSON.stringify({ ...F.defaults(inst, F.stepOf(S.reg, inst)), ...(inst.params || {}) }), m = /** @type {any} */ ({ kind: kind.slice(3), tp, params });
+    try {
+      if (kind === "tp.filter") {
+        const href = F.refs(inst, "hypotheses")[0] || "", gen = href.startsWith("file:") ? null : c.x.inst(href.split(".")[0]);
+        if (!gen || step(gen) !== "tp.generate") return null;
+        m.hypotheses = (await generate(S, gen)).text;
+      } else if (kind === "tp.position") {
+        const { hr, text, structure } = await parentOf(S, inst), pf = JSON.parse(hr.tp_parent(text));
+        m.smiles = pf.smiles; m.formula = pf.formula || (structure && JSON.parse(structure).formula) || "";
+      } else {
+        const same = F.refs(inst, "table")[0] === F.refs(inst, "tp")[0], sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, "");
+        m.table = same ? tp : await tpFile(c, inst, "table");
+        if (!m.table) return null;
+        const pr = JSON.parse(params); m.ppm = pr.ppm ?? 10; m.minFragments = pr.min_fragments ?? 0;
+        m.samples = (sref && S.samplesJson && S.samplesJson[sref]) || "";
+        const rules = G.QTOOLS.ctx.files["regole_tp.json"];
+        m.rules = typeof rules === "string" ? new TextEncoder().encode(rules) : rules;
+      }
+      return { name: inst.id + NAMES[kind], text: await c.p.tpPost(m) };
+    } catch (e) { throw asError(e); }
+  };
+
+  F.webTp = { STEPS, generate, linkInputs, post };
 })();

@@ -5,7 +5,7 @@ use mzlab_core::step::{
     Algorithm, Applicability, DataType, Facets, Param, Port, Reference, Status, Step,
 };
 
-use super::tabui::{algorithm, hr, tabui_step, INTERP_CEILING, INTERP_WASM};
+use super::tabui::{algorithm, hr, tabui_step, INTERP_CEILING, INTERP_WASM, TABLE_CEILING, TABLE_WASM};
 
 /// `tp.link` (version 2): the series searched for the hypotheses, the view of the products (`tp/1`) and the interpretation of each row (`interp/1`):
 /// every DDA MS2 of the series linked to a row, with the purity of the isolation, and the comparison with the parent. Version 1 took the MS2 as an MGF
@@ -229,8 +229,8 @@ pub(super) fn network() -> Step {
             "tp.network",
             "Network of the products",
             "Draws the parent and the accepted products in columns by the number of steps from the parent, with an arc wherever a rule of the transformation table takes the ion formula of one to that of another. The source of an arc is the product that peaks first; an arc from the parent carries the fragments of the MS2 that are equal or shifted by the change. A network is evidence of kinship and never an identification: it raises no level.",
-            INTERP_WASM,
-            INTERP_CEILING,
+            TABLE_WASM,
+            TABLE_CEILING,
         )
     }
 }

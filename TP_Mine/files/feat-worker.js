@@ -72,7 +72,6 @@ function createCore(opts) {
     slot.loaded.add(which);
   }
   function kill(slot) { slot.dead = true; slots.delete(slot); try { slot.w.terminate(); } catch (_) { /* gone */ } }
-
   function pump() {
     while (queue.length) {
       let slot = [...slots].find(s => !s.busy && !s.dead);
@@ -108,7 +107,6 @@ function createCore(opts) {
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
   return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText };
 }
-
 // the folder of a campaign as the worker reads it
 const folder = (root, files) => JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
 // cancelJob(id) of a core: a queued job is rejected, a running one loses its worker alone and is not tried again; false when no such job
@@ -213,6 +211,7 @@ function rowOps(submit, call) {
     interpBuild: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "interp_build", ...m, table: m.table.slice() })).bytes; }),
     interpRow: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "table_interp", ...m, table: m.table.slice() })).text; }),
     linkEvidence: m => submit(async (slot, load) => { await load("proofs"); const r = await call(slot, { op: "tp_link_evidence", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) }); slot.recycle = true; return r; }),
+    tpPost: m => submit(async (slot, load) => { await load(m.kind === "network" ? "table" : "interp"); return (await call(slot, { op: "tp_post", ...m, tp: m.tp.slice(), table: m.table && m.table.slice(), rules: m.rules && m.rules.slice() })).text; }),
     linkInterp: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "tp_link_interp", ...m, table: m.table.slice() })).bytes; }),
   };
 }
@@ -387,6 +386,7 @@ const OPS = {
   async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },
   async tp_link_interp(m) { const f = await openAll(m.paths), out = memSink(); try { mods.interp.tp_link_interp(new Uint8Array(m.table), m.parent, m.registry, m.polarity, m.params, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
+  async tp_post(m) { const t = new Uint8Array(m.tp), i = mods.interp; return { text: m.kind === "filter" ? i.tp_refilter(t, m.hypotheses, m.params) : m.kind === "position" ? i.tp_position(t, m.smiles, m.formula, m.params) : mods.table.rete_build((_, off, len) => new Uint8Array(m.table).subarray(off, off + len), m.table.byteLength, (_, off, len) => t.subarray(off, off + len), t.length, m.samples, new Uint8Array(m.rules), m.ppm, m.minFragments) }; },
   async detect_unt(m) {
     const f = await openAll([m.path]), out = memSink();
     try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
