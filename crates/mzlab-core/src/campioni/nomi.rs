@@ -239,7 +239,9 @@ pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
         c.set_time(Some(t.value), t.unit);
     }
     let kind = kind_of(&name.to_lowercase(), guess, c.time_min, false);
-    let time = (kind != "infusion" && kind != "qc").then_some(c.time_min).flatten();
+    let time = (kind != "infusion" && kind != "qc")
+        .then_some(c.time_min)
+        .flatten();
     (kind, time)
 }
 
