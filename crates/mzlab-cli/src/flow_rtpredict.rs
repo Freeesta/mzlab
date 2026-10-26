@@ -206,9 +206,9 @@ fn judge_of(job: &Job, algorithm: &str, standards: &[u8]) -> Result<Judge> {
                 terms: None,
             };
         };
-        let c = check(&model, &lv, obs.map(|o| y_of(o)), k, floor);
+        let c = check(&model, &lv, obs.map(&y_of), k, floor);
         let t = if terms {
-            check_terms(&model, &lv, obs.map(|o| y_of(o)))
+            check_terms(&model, &lv, obs.map(&y_of))
         } else {
             None
         };
