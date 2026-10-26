@@ -40,6 +40,7 @@ pub mod progress_js;
 pub mod run;
 pub mod spill_js;
 pub mod run_evid;
+pub mod run_link;
 pub mod run_tp;
 pub mod stima;
 #[cfg(feature = "proofs")]

@@ -12,18 +12,15 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::{parse, Value};
 use mzlab_feat::chem::grafo::analyse_json;
-use mzlab_feat::hypo::{generate, HypoParams, Inputs, Rules, Structure};
+use mzlab_feat::hypo::Structure;
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;
-use mzlab_feat::legacy::lr::rows::OFFSET_MAX;
-use mzlab_feat::legacy::series;
-use mzlab_feat::store::{read_table_from, Slice};
+use mzlab_feat::store::Slice;
 use mzlab_feat::tp::TpRoles;
-use mzlab_feat_wasm::run::{self, RowSources};
+use mzlab_feat_wasm::run_link::{link_evidence, LinkParent, Series as LinkSeries};
 
 use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage, Made};
 use crate::flow_base::{open, rebuild, Files};
-use mzlab_core::flow::Artifact;
 use mzlab_core::step::DataType;
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
@@ -46,16 +43,7 @@ fn param(job: &Job, name: &str) -> Option<f64> {
 
 /// The thresholds of the step over `LinkParams::default()`.
 pub fn link_params(job: &Job) -> LinkParams {
-    let d = LinkParams::default();
-    LinkParams {
-        select_ppm: param(job, "select_ppm").unwrap_or(d.select_ppm),
-        purity_ppm: param(job, "purity_ppm").unwrap_or(d.purity_ppm),
-        purity_min: param(job, "purity_min").unwrap_or(d.purity_min),
-        match_ppm: param(job, "match_ppm").unwrap_or(d.match_ppm),
-        iso_corr: param(job, "iso_corr").unwrap_or(d.iso_corr),
-        iso_min_scans: param(job, "iso_min_scans").map_or(d.iso_min_scans, |v| v as usize),
-        iso_fragments: param(job, "iso_fragments").map_or(d.iso_fragments, |v| v as usize),
-    }
+    mzlab_feat_wasm::interp::link_params(&|n| param(job, n))
 }
 
 /// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
@@ -116,77 +104,10 @@ pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
     })
 }
 
-/// The parent as the interpretation reads it (`series::parent`): the SMILES or the neutral formula, the adduct of the polarity and the time.
-fn parent_json(p: &Parent, polarity: i8, rt: f64) -> String {
-    let mut o = mzlab_core::json::Out::default();
-    o.raw("{");
-    if p.smiles.is_empty() {
-        o.raw("\"neutral\":").str(&p.formula);
-    } else {
-        o.raw("\"smiles\":").str(&p.smiles);
-    }
-    o.raw(",\"adduct\":")
-        .str(if polarity < 0 { "[M-H]-" } else { "[M+H]+" });
-    o.raw(",\"rt\":").num(rt).raw("}");
-    o.0
-}
-
-/// The retention time of the parent when the file does not say it: the strongest row of the table within 5 ppm of its ion (on a unit-resolution
-/// table, within the offset the low-resolution Dig accepts for the parent, `OFFSET_MAX` Da).
-fn parent_rt(table: &[u8], mz: f64) -> Result<f64> {
-    let (t, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
-    let unit = meta
-        .get("recipe")
-        .and_then(Value::str)
-        .is_some_and(mzlab_feat::recipe::is_unit_text);
-    let tol = if unit { OFFSET_MAX } else { mz * 5e-6 };
-    let near = (0..t.len()).filter(|&r| (t.mz[r] - mz).abs() <= tol);
-    let total = |r: usize| {
-        t.area[r * t.n_files..(r + 1) * t.n_files]
-            .iter()
-            .sum::<f64>()
-    };
-    let best = near.max_by(|&a, &b| total(a).total_cmp(&total(b)));
-    best.map(|r| t.rt[r])
-        .ok_or_else(|| Error::new("err.flow.link.parent").with("mz", mz))
-}
-
-/// The hypotheses of `tp.generate` for the parent, before the search: what the input `hypotheses` has to be.
-fn expected_hypotheses(p: &Parent, polarity: i8) -> Result<String> {
-    let st = Structure::parse(&p.structure)?;
-    let inp = Inputs {
-        parent: &p.formula,
-        suspects: None,
-        families: &[],
-        imported: &[],
-        fragments: &st.fragments,
-        groups: st.groups.as_deref(),
-    };
-    let rules = Rules::parse_profile(RULES, st.profile.as_deref())?;
-    let hp = HypoParams {
-        polarity,
-        ..HypoParams::default()
-    };
-    Ok(generate(&rules, &inp, &hp)?.to_json())
-}
-
-/// The polarity of the link: the one the plan sets, else the one of the detection (a detection that took both polarities, 0, or none is read as
-/// positive, like a form left at its default).
-fn polarity_of(job: &Job, recipe: &mzlab_feat::recipe::Recipe) -> i8 {
+/// The plan sets the polarity of the link only when the instance writes it; else the detection's polarity decides.
+fn given_polarity(job: &Job) -> Option<f64> {
     let given = job.instance.params.iter().any(|(k, _)| k == "polarity");
-    match param(job, "polarity") {
-        Some(v) if given => v.signum() as i8,
-        _ => recipe.detect.polarity.filter(|&p| p != 0).unwrap_or(1),
-    }
-}
-
-/// The m/z of the ion of the parent in the polarity.
-fn parent_mz(p: &Parent, polarity: i8) -> Result<f64> {
-    let json = parent_json(p, polarity, 0.0);
-    let parent = series::parent(&json);
-    Ok(parent
-        .map_err(|e| Error::new("error.interp.failed").with("detail", e))?
-        .mz)
+    param(job, "polarity").filter(|_| given)
 }
 
 /// What `link` needs of the job, read from the files.
@@ -229,72 +150,56 @@ pub fn link_bytes(
     let lin = &series_of.lineage;
     check_series(series_of)?;
     let mut recipe = rebuild(lin)?;
-    let polarity = polarity_of(job, &recipe);
-    recipe.detect.polarity = Some(polarity);
     let p = parent_of(parent)?;
-    if String::from_utf8_lossy(hypotheses).trim() != expected_hypotheses(&p, polarity)? {
-        return Err(Error::new("err.flow.link.hypotheses").with("parent", &p.formula));
-    }
     let roles = TpRoles::from_json(&String::from_utf8_lossy(samples))?;
-    let mz = parent_mz(&p, polarity)?;
-    let rt = p.rt.map_or_else(|| parent_rt(table, mz), Ok)?;
     let mut ix = series_of
         .indexes
         .iter()
         .map(open)
         .collect::<Result<Vec<_>>>()?;
     let clock = Instant::now();
-    let mut stored = Files(lin.peaks.clone());
-    let hypo = run::hypotheses_stored(
-        &mut ix,
-        &mut stored,
-        RULES,
-        &p.structure,
-        &p.formula,
-        p.rt,
-        &recipe,
-    )?;
-    let t_hypo = clock.elapsed();
-    let budget = MemBudget::mb(r.budget_mb);
-    let mut with_tp = Vec::new();
-    let mut again = Files(lin.peaks.clone());
+    let (mut stored, mut again) = (Files(lin.peaks.clone()), Files(lin.peaks.clone()));
     let mut reopen = |k: usize| open(&series_of.indexes[k]);
-    run::evidence_sources_to(
-        &mut Slice(table),
-        table.len() as u64,
-        &hypo,
-        &roles.minutes,
-        Some(&roles),
-        Some((mz, rt)),
-        &recipe,
-        &budget,
-        Some(RowSources {
-            stored: &mut again,
+    let mut laps = Vec::new();
+    let made = link_evidence(
+        RULES,
+        &LinkParent {
+            formula: &p.formula,
+            smiles: &p.smiles,
+            structure: &p.structure,
+            rt: p.rt,
+        },
+        &String::from_utf8_lossy(hypotheses),
+        table,
+        &roles,
+        &mut recipe,
+        given_polarity(job),
+        LinkSeries {
+            indexes: &mut ix,
+            peaks: &mut stored,
+            peaks_again: &mut again,
             open: &mut reopen,
-        }),
-        &mut with_tp,
+        },
+        &MemBudget::mb(r.budget_mb),
+        &mut |_| laps.push(clock.elapsed()),
     )?;
-    let t_evidence = clock.elapsed();
-    let mut infusion = roles
+    let mut infusion = made
         .infusion
-        .first()
-        .map(|&k| open(&series_of.indexes[k]))
+        .map(|k| open(&series_of.indexes[k]))
         .transpose()?;
     let mut out = Vec::new();
     run_to_with(
-        &mut Slice(&with_tp),
-        with_tp.len() as u64,
-        (
-            &parent_json(&p, polarity, rt),
-            &hypo.registry.to_json(),
-            polarity,
-        ),
+        &mut Slice(&made.with_tp),
+        made.with_tp.len() as u64,
+        (&made.parent, &made.registry, made.polarity),
         &link_params(job),
         &mut reopen,
         infusion.as_mut(),
         &mut out,
     )?;
-    report_phases(t_hypo, t_evidence, clock.elapsed());
+    if let [hypo, evidence] = laps[..] {
+        report_phases(hypo, evidence, clock.elapsed());
+    }
     Ok(out)
 }
 
