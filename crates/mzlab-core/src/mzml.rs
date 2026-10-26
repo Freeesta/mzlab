@@ -47,8 +47,8 @@ impl Spectrum {
     /// Intensity of peak `i` as the file wrote it.
     pub fn intensity_f64(&self, i: usize) -> f64 {
         match &self.wide {
-            Some(w) => w[i],
-            None => self.intensity[i] as f64,
+            Some(w) => w.get(i).copied().unwrap_or(0.0),
+            None => self.intensity.get(i).map_or(0.0, |&x| x as f64),
         }
     }
 }
@@ -447,7 +447,10 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                             match acc {
                                 "MS:1000804" => s.uv = true,
                                 "MS:1000511" if !in_precursor_list => {
-                                    s.level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1)
+                                    // A level is a small integer; `as` saturates and maps NaN to 0.
+                                    #[allow(clippy::cast_possible_truncation)]
+                                    let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
+                                    s.level = level
                                 }
                                 "MS:1000130" => s.polarity = 1,
                                 "MS:1000129" => s.polarity = -1,

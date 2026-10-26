@@ -222,7 +222,10 @@ fn logp_window() -> Algorithm {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("min")
-                .doc("Dwell volume over flow; the gradient itself ([[t, %B], ...]) is read from the campaign. Not used by the native step, which fits the RT itself")
+                .doc("Dwell volume over flow, used with the gradient: the compound is taken to meet the %B of the gradient this long before its RT")
+                .advanced(),
+            Param::text("lc_gradient", "Gradient")
+                .doc("The %B profile as t:%B pairs separated by semicolons (minutes, ascending), e.g. 0:5;10:95;12:95. Given: the window is fitted on the largest %B met, so rt_pred, rt_resid and the window are in %B (rt_unit) and the floor 0 means 3 %B; empty: the fit is on the RT in minutes")
                 .advanced(),
             Param::boolean("rt_logp_terms", "Score terms")
                 .default_bool(false)
