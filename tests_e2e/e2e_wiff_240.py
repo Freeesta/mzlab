@@ -51,19 +51,21 @@ def follow(pg, cdp, bcdp, until, limit=1500):
 
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(executable_path=os.environ.get("MZLAB_CHROMIUM") or None)
-        c = b.new_context(locale="en-US", viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000)
-        pg = c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e)))); pg.on("crash", lambda: errs.append(("crash", "page crashed")))
+        # a normal window (a profile on disk): the ephemeral context of Playwright behaves like a private window, whose OPFS holds only about 200 MB (error.quota with room left, misure-formati.md)
+        prof = tempfile.mkdtemp(prefix="wiff240_prof_")
+        c = p.chromium.launch_persistent_context(prof, executable_path=os.environ.get("MZLAB_CHROMIUM") or None, locale="en-US", viewport={"width": 1500, "height": 1800}); c.set_default_timeout(120000)
+        pg = c.pages[0] if c.pages else c.new_page(); pg.on("pageerror", lambda e: errs.append(("pageerror", str(e)))); pg.on("crash", lambda: errs.append(("crash", "page crashed")))
         loads = []; pg.on("load", lambda: loads.append(time.time()))
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/?motore=rust&lr=1"); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
-        cdp = c.new_cdp_session(pg); cdp.send("Performance.enable"); bcdp = b.new_browser_cdp_session()
+        cdp = c.new_cdp_session(pg); cdp.send("Performance.enable"); bcdp = cdp
         base = len(loads)
         opfs = lambda: pg.evaluate("navigator.storage.estimate().then(e => e.usage)") / 1e9
 
         pg.set_input_files("#pick", FILES)
         s, peak = follow(pg, cdp, bcdp, lambda s: s["busy"] == 0 and len(s["files"]) >= len(SAMPLES))
         print(f"   measure: {len(NAMES)} pairs, {peak['s']:.0f} s total, {peak['s'] / len(NAMES):.2f} s/pair, peak {peak['mb']:.0f} MB (all chromium processes), page heap {peak['heap']:.0f} MB, builders {peak['builders']}, OPFS {opfs():.2f} GB")
+        if os.environ.get("MZLAB_CARICO_SOLO"): c.close(); shutil.rmtree(prof, ignore_errors=True); sys.exit(0)      # only the measure of the first drop
         def all_in():
             assert len(s["files"]) == len(SAMPLES), (len(s["files"]), s["files"][:5])
             assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == len(SAMPLES), pg.evaluate("CONVROWS.rows.filter(r => r.state !== 'done').map(r => [r.name, r.state]).slice(0, 5)")
@@ -100,7 +102,7 @@ try:
             assert time.time() - t0 < 30, f"Cancel took {time.time() - t0:.1f} s"
         step("«Cancel» in the middle stops the pairs not done", cancel)
         assert not errs, errs
-        b.close()
+        c.close(); shutil.rmtree(prof, ignore_errors=True)
 finally:
     srv.terminate()
     if not REAL: shutil.rmtree(D, ignore_errors=True)
