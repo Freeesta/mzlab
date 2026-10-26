@@ -21,119 +21,17 @@ pub fn stem(name: &str) -> String {
     }
 }
 
-fn sep(c: char) -> bool {
-    c == '_' || c == '-' || c.is_whitespace()
-}
-
-/// Positions where a match may start: the start of the text and after every separator (`(^|[_\-\s])`).
-fn starts(s: &[char]) -> Vec<usize> {
-    let mut v = vec![0];
-    v.extend((0..s.len()).filter(|&i| sep(s[i])).map(|i| i + 1));
-    v
-}
-
-fn word_at(s: &[char], p: usize, w: &str) -> bool {
-    let w: Vec<char> = w.chars().collect();
-    p + w.len() <= s.len() && s[p..p + w.len()] == w[..]
-}
-
-/// `(^|[_\-\s])(w1|w2|...)([_\-\s\d]|$)`
-fn has_word(s: &[char], words: &[&str]) -> bool {
-    starts(s).into_iter().any(|p| {
-        words.iter().any(|w| {
-            let e = p + w.chars().count();
-            word_at(s, p, w) && (e >= s.len() || sep(s[e]) || s[e].is_ascii_digit())
-        })
-    })
-}
-
-/// The end of `\d+(?:[.,]\d+)?` at `i` (greedy; a shorter number is followed by a digit or a decimal mark, which no tail accepts).
-fn number_end(s: &[char], i: usize) -> Option<usize> {
-    let d = |mut j: usize| {
-        while j < s.len() && s[j].is_ascii_digit() {
-            j += 1;
-        }
-        j
-    };
-    let e = d(i);
-    if e == i {
-        return None;
-    }
-    if e < s.len() && (s[e] == '.' || s[e] == ',') && d(e + 1) > e + 1 {
-        return Some(d(e + 1));
-    }
-    Some(e)
-}
-
-/// `\s*(units)?(?:[_\-\s(]|$)` after the number, with the backtracking of the regex: the most spaces first, then each unit in order, then no unit.
-/// The unit matched, `""` for none, or None when the tail does not fit.
-fn tail(s: &[char], e: usize, units: &[&'static str], unit_needed: bool) -> Option<&'static str> {
-    let term = |j: usize| j >= s.len() || sep(s[j]) || s[j] == '(';
-    let mut ws = e;
-    while ws < s.len() && s[ws].is_whitespace() {
-        ws += 1;
-    }
-    for k in (e..=ws).rev() {
-        for u in units {
-            if word_at(s, k, u) && term(k + u.chars().count()) {
-                return Some(u);
-            }
-        }
-        if !unit_needed && term(k) {
-            return Some("");
-        }
-    }
-    None
-}
-
-fn time_value(s: &[char], a: usize, e: usize, unit: &str) -> f64 {
-    let t: String = s[a..e]
-        .iter()
-        .map(|&c| if c == ',' { '.' } else { c })
-        .collect();
-    let v: f64 = t.parse().unwrap_or(0.0);
-    if unit == "h" || unit == "ore" {
-        v * 60.0
-    } else {
-        v
-    }
-}
-
-/// `t(\d+(?:[.,]\d+)?)\s*(min|m|h|ore)?` first, then `(\d+(?:[.,]\d+)?)\s*(min|h|ore)`, each from the leftmost start.
-fn time_of(s: &[char]) -> Option<f64> {
-    for p in starts(s) {
-        if p < s.len() && s[p] == 't' {
-            if let Some(e) = number_end(s, p + 1) {
-                if let Some(u) = tail(s, e, &["min", "m", "h", "ore"], false) {
-                    return Some(time_value(s, p + 1, e, u));
-                }
-            }
-        }
-    }
-    for p in starts(s) {
-        if let Some(e) = number_end(s, p) {
-            if let Some(u) = tail(s, e, &["min", "h", "ore"], true) {
-                return Some(time_value(s, p, e, u));
-            }
-        }
-    }
-    None
-}
-
-/// `guess_sample`: label, time (min) and type from a file name ('blank', 't30', 'STD_12ppm', '120min', 'dark').
+/// `guess_sample`: label, time (min) and type from a file name ('blank', 't30', 'STD_12ppm', '120min', 'dark'), read by the one parser of the names.
 pub fn guess(name: &str) -> Guess {
     let label = stem(name);
-    let s: Vec<char> = label.to_lowercase().chars().collect();
-    let kind = if has_word(&s, &["blank", "blk", "bianco"]) {
-        "blank"
-    } else if has_word(&s, &["std", "standard", "taratura", "cal"]) {
-        "standard"
-    } else if has_word(&s, &["control", "ctrl", "dark", "buio"]) {
-        "control"
-    } else {
-        "sample"
+    let (role, minutes) = mzlab_core::campioni::ruolo_e_minuti(name);
+    let kind = match role {
+        "blank" => "blank",
+        "dark" => "control",
+        "std" | "calibration" => "standard",
+        _ => "sample",
     };
-    let time = if kind == "sample" { time_of(&s) } else { None };
+    let time = if kind == "sample" { minutes } else { None };
     Guess { label, time, kind }
 }
 

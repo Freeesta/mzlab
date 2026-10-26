@@ -14,7 +14,7 @@ const CAL_WORDS: [&str; 6] = [
     "taratura",
     "curva",
 ];
-const DARK_WORDS: [&str; 3] = ["dark", "buio", "adsorption"];
+const DARK_WORDS: [&str; 5] = ["dark", "buio", "adsorption", "control", "ctrl"];
 const INFUSION_WORDS: [&str; 3] = ["infusion", "infusione", "fia"];
 /// Units after the number of a time: the text in the name and the unit it stands for (`s`, `min`, `h`, `d`).
 const TIME_WORDS: [(&str, &str); 11] = [
@@ -73,10 +73,14 @@ fn after_prefix(s: &[char]) -> Vec<usize> {
 }
 
 /// The unit of the time that ends at `e` (`min` when none is written) and where the time ends, or None when what follows is not a time.
-fn time_tail(s: &[char], e: usize) -> Option<(&'static str, usize)> {
-    let term = |j: usize| j >= s.len() || is_sep(s[j]);
+fn time_tail(s: &[char], e: usize, after_t: bool) -> Option<(&'static str, usize)> {
+    // `(` ends a time too: `t30min(2)` is the second replicate of 30 min
+    let term = |j: usize| j >= s.len() || is_sep(s[j]) || s[j] == '(';
     let k = skip_ws(s, e);
     for (w, unit) in TIME_WORDS {
+        if w == "m" && !after_t {
+            continue;
+        }
         if starts(s, k, w) {
             let j = k + w.len();
             if term(j) {
@@ -101,9 +105,10 @@ struct Time {
 /// `t?\d+([.,]\d+)?\s*unit?` after a separator, in the order of `guess_sample`.
 fn time_of(s: &[char]) -> Option<Time> {
     for p in after_prefix(s) {
-        let i = if p < s.len() && s[p] == 't' { p + 1 } else { p };
+        let after_t = p < s.len() && s[p] == 't';
+        let i = if after_t { p + 1 } else { p };
         for e in number_ends(s, i) {
-            if let Some((unit, end)) = time_tail(s, e) {
+            if let Some((unit, end)) = time_tail(s, e, after_t) {
                 let text: String = s[i..e]
                     .iter()
                     .map(|c| if *c == ',' { '.' } else { *c })
@@ -223,6 +228,21 @@ fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
             }
         };
     }
+}
+
+/// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
+pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
+    let (stem, _, guess) = guess_sample(name);
+    let lowc: Vec<char> = stem.to_lowercase().chars().collect();
+    let mut c = Campione::new(name, "", 1);
+    if let Some(t) = (guess == "sample").then(|| time_of(&lowc)).flatten() {
+        c.set_time(Some(t.value), t.unit);
+    }
+    let kind = kind_of(&name.to_lowercase(), guess, c.time_min, false);
+    let time = (kind != "infusion" && kind != "qc")
+        .then_some(c.time_min)
+        .flatten();
+    (kind, time)
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.
