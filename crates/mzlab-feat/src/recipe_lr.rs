@@ -10,8 +10,8 @@ use crate::recipe::Recipe;
 use crate::trace::Params;
 
 /// Noise floor and minimum height of the unit profile (counts per second of a triple quadrupole); the preview proposes the ones of each file.
-pub const LR_FLOOR: f64 = 2e3;
-pub const LR_MIN_HEIGHT: f64 = 2e4;
+pub const LR_FLOOR: f64 = 3e3;
+pub const LR_MIN_HEIGHT: f64 = 7e3;
 /// Width of the bins of the comparison of two MS2 spectra at unit resolution, m/z.
 const LR_MS2_BIN: f64 = 0.5;
 

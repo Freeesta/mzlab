@@ -82,6 +82,9 @@ fn no_true_product_goes_from_shown_to_hidden() {
             "amplitude {a}: without filters {before:?}, defaults {now:?}"
         );
     }
+    // four times the noise is shown with the thresholds of the profile
+    let weak = run(1.2e4, DEFAULTS);
+    assert_eq!(weak.shown, TPS.len(), "{weak:?}");
     let strong = run(1e5, DEFAULTS);
     assert_eq!(strong.shown, TPS.len(), "{strong:?}");
 }
@@ -116,16 +119,19 @@ fn table_threshold_recall() {
 /// and no product). `cargo test --release -p mzlab-finder-lr-wasm --test lr_recall -- --ignored --nocapture bench` prints the curve recall / false
 /// positives per threshold pair `(floor, min_height)`.
 const BENCH_LEVELS: [f64; 6] = [6e3, 9e3, 1.2e4, 1.5e4, 2.1e4, 3e4];
-const BENCH_PAIRS: [(f64, f64); 9] = [
+const BENCH_PAIRS: [(f64, f64); 12] = [
     (2e3, 2e4),
-    (2e3, 1.5e4),
     (2e3, 1e4),
-    (2e3, 7e3),
-    (1.5e3, 1e4),
     (3e3, 1e4),
     (4e3, 1e4),
     (3e3, 7e3),
+    (3e3, 5e3),
+    (3.5e3, 7e3),
+    (3.5e3, 5e3),
     (4e3, 7e3),
+    (4e3, 5e3),
+    (4e3, 4e3),
+    (5e3, 5e3),
 ];
 const DECOY_SEEDS: [u64; 3] = [200, 400, 600];
 
