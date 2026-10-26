@@ -462,7 +462,7 @@ async function drawSpec(p, snapped) {
       g.restore(); g.font = fpx(12);
       isoNote = `<span><i style="background:#d62728"></i>${I18N.t("iso.note", { formula: fmtFormula(p.iso.formula), adduct: fmtAdduct(p.iso.ad), align: obs ? I18N.t("iso.align", { mz: (obs.c ?? obs.m).toFixed(mzd(p, p.level)), shift: Math.abs(shift) >= 0.05 ? I18N.t("iso.shift", { v: (shift > 0 ? "+" : "") + shift.toFixed(1) }) : "" }) : I18N.t("iso.noPeak", { mz: top.mz.toFixed(mzd(p)) }) })}</span>`;
       }
-    } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
   p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${FONDOSP.note(p, bgOf(files[0]))}${p._nCont ? I18N.t("spec.contRemoved", { n: p._nCont }) : ""}</span>`;       // on the row of the x axis title, to the right
   if (isDda) DDA.caption(p);                                // scan, parent, activation, NCE, isolation

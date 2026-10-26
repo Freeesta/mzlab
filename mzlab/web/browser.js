@@ -79,7 +79,7 @@
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
       window.qqStep = ""; phase(null); perfMark("motore pronto");
     }
-    catch (e) {
+    catch (e_) { const e = /** @type {Lanciato} */ (e_);
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page

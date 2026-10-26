@@ -25,7 +25,7 @@ const RESET = (function () {
     for await (const [n] of /** @type {any} */ (root).entries()) names.push(n);
     for (const n of names) {
       if (mode !== "all" && KEEP_OPFS.includes(n)) continue;
-      try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); } catch (e) { rep.errors.push("opfs " + n + ": " + (e && e.name)); }
+      try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); } catch (e_) { const e = /** @type {Lanciato} */ (e_); rep.errors.push("opfs " + n + ": " + (e && e.name)); }
     }
   }
   const delDb = name => new Promise(r => { const q = indexedDB.deleteDatabase(name); q.onsuccess = q.onerror = () => r(true); q.onblocked = () => r(false); });

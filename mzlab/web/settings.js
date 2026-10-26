@@ -94,7 +94,7 @@ async function centroidAll(btn, stop, st, refresh) {
     try {
       const blob = await rb.convertCentroids(f.name, sizeOf(f), p => { if (p.scansTotal) line(p.scans / p.scansTotal); }, ctl.signal);
       if (blob) { await upload([new File([blob], name, { type: "application/xml" })], "data"); made++; }
-    } catch (e) {
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       if (e && e.cancelled) break;
       failed++; st.textContent = I18N.t("settings.cen.fail", { name: f.name });
     }
