@@ -24,7 +24,7 @@ try:
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
             assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
-            pg.select_option("#xic-ad", "[M+Na]+"); pg.wait_for_timeout(600)
+            pg.select_option("#xic-ad", "[M+Na]+"); attendi(pg, "document.querySelector('#xic-sum').innerText.includes('385.8 - 386.8')")
             assert "385.8 - 386.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
             assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.5 && p._a && p._a.sr.length>0)")
@@ -58,28 +58,28 @@ try:
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
             assert any(i[0] == "Estrai uno ione (XIC)…" for i in items), items
             assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") == "true", "no zoom yet: the entry is there, grey"
-            pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); pg.wait_for_timeout(300)
+            pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); attendi(pg, "!!document.querySelector('#xicdlg').open")
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
-            pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
+            pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); attendi(pg, f"!!E.panels[{ci}].zoom")
             assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_enabled()
-            c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
+            c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); attendi(pg, "document.querySelectorAll('#ctx div').length>0")
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0][0].startswith("RT") and pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]').getAttribute('aria-disabled')") != "true", items          # with a zoom it works
-            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); pg.wait_for_timeout(500)
+            pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); attendi(pg, f"E.panels[{ci}].zoom==null")
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()
         step("right click on the chromatogram: Estrai uno ione (same window), Ripristina zoom", chrom_menu)
         def guard():
             c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]").first; c.click()
-            ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); pg.wait_for_timeout(400)
-            pg.screenshot(path=SH + "181_guard.png"); pg.click("#askok"); pg.wait_for_timeout(400)
+            ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); attendi(pg, "!!document.querySelector('#askdlg').open")
+            pg.screenshot(path=SH + "181_guard.png"); pg.click("#askok"); attendi(pg, "!!document.querySelector('#xicdlg').open")
             assert dlg(); pg.click("#xic-no"); c.click()
         step("integrating from the TIC offers the same XIC window", guard)
         def spec_menu():
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
-            pg.mouse.click(a["px"], a["py"], button="right"); pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(600)
+            pg.mouse.click(a["px"], a["py"], button="right"); attendi(pg, "document.querySelectorAll('#ctx div').length>0")
+            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); attendi(pg, f"E.panels.filter(p=>p.type==='xic').length==={n0+1}")
             assert not dlg(), "no dialog: the XIC appears at once"
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
             t = pg.evaluate("(()=>{const x=E.panels.filter(p=>p.type==='xic').pop().traces[0];return [x.mz,x.w,x.label]})()"); print(t)
@@ -92,12 +92,12 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")
             # one row for the buttons, and the groups are told apart by a vertical bar
             for w in (1500, 1100, 700):
-                pg.set_viewport_size({"width": w, "height": 2200}); pg.wait_for_timeout(700)
+                pg.set_viewport_size({"width": w, "height": 2200}); attendi(pg, "[...document.querySelectorAll('.pnl')].filter(p=>p.offsetParent).every(p=>p.querySelector('.tbs').getBoundingClientRect().height<=30)")
                 tops = pg.evaluate("[...document.querySelectorAll('.pnl')].filter(p=>p.offsetParent).map(p=>[p.className, Math.round(p.querySelector('.tbs').getBoundingClientRect().height)])")
                 assert all(h <= 30 for _, h in tops), (w, tops)
-            pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(800)      # (narrow: some groups are in the «⋯» menu)
+            pg.set_viewport_size({"width": 1500, "height": 2200}); frames(pg, 4)      # (narrow: some groups are in the «⋯» menu)
             bars = pg.evaluate("[...document.querySelectorAll('.pnl.chrom .tbg')].map(g=>getComputedStyle(g).borderLeftWidth)"); print("bars:", bars); assert bars[1] != "0px" and bars[-1] != "0px"
-            pg.wait_for_timeout(100); pg.screenshot(path=SH + "182_header.png", clip={"x": 250, "y": 150, "width": 1250, "height": 330})
+            frames(pg, 2); pg.screenshot(path=SH + "182_header.png", clip={"x": 250, "y": 150, "width": 1250, "height": 330})
         step("button groups in order, zoom next to reset, one row at 1500/1100/700 px", groups)
         def xlsx():
             xp = pg.locator(".pnl.xic").first
@@ -106,8 +106,8 @@ try:
             nums = [c[1] for r_ in rows[1:] for c in r_ if c and c[0] == "n"]; assert len(nums) > 400 and max(nums) > 1000, len(nums)
             xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp.locator("[data-a=iauto]").click()
             xbox = xp.locator("canvas").bounding_box(); xx = pg.evaluate(f"E.panels[{xi}]._a.X(14.33)")
-            pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
-            xp.locator("[data-a=itab]").click(); pg.wait_for_timeout(500)
+            pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); attendi(pg, "(()=>{const b=document.querySelector('.pnl.xic [data-a=itab]');return !!b&&!b.hidden})()")
+            xp.locator("[data-a=itab]").click(); pg.wait_for_selector("#ig-xlsx")
             with pg.expect_download() as d2: pg.click("#ig-xlsx")
             g = d2.value.path(); assert d2.value.suggested_filename == "integrazioni.xlsx"; rr = xlsx_rows(g)
             heads = [c[1] for c in rr[0]]; assert "Area (conteggi*s)" in heads and "RT inizio (min)" in heads, heads
