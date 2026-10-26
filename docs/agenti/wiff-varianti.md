@@ -25,6 +25,11 @@ Il metodo `variante` del trait `Lettore` e i parametri `cv:` di `mzmlwrite.rs` s
 - `campi`: stringhe di `SampleSubtree/DabsInfo` e `SampleTable` (`s1`, `s2`, …: nome del campione, tipo di piastra, posizione), tabelle di `MethodN/GLPTables` (testo UTF-16: tarature e risoluzione di Q1/Q3, detector; una voce per tabella, titolata dalla prima riga) con la versione di Analyst («File was created with the software version», `mappato: strumento.software`), intestazione del DAD (vedi sotto).
 - `campione.nome` CONFERMATO: prima stringa di `SampleSubtree/SampleN/SampleDABE/DATA`, ora usata per `Campione.nome` in `wiff/lettore.rs` e in `wiffName` (`conversione.js`). La versione di Analyst CONFERMATA dalle GLPTables (1.6.3 e 1.6.2). `campione.vial` (ultima stringa di `DATA`, numerica, 0 senza piastra) resta DA CONFERMARE.
 
+## Cosa NON si legge
+- Più periodi (`Period1…`): `err.file.wiff`, `periods=N`; nessun file vero li ha, la disposizione dei cicli non è verificata.
+- Il precursore vero di un EPI: la massa a +42 è quella del metodo, non quella scelta dall'IDA a ogni ciclo (`DDERealTimeData` non si legge).
+- `.wiff2` (SCIEX OS) e TOF (codici 8, 9, 0): rifiutati, altro codec e nessun mzML di riferimento.
+
 ## DAD
 - `Devices/Device_N/DAD/{DADSampleHeader, DADIdx, DADRealTimeData}` (solo nei file del laboratorio con il rivelatore): decodificato in `crates/mzlab-core/src/wiff/dad.rs` (`struct DadData`, `read_dad`).
   - Layout byte: offset intestazione standard OLE di 32 byte (`+0..+32`); in `DADSampleHeader` (86 byte totali) ci sono `n_points` a `+34` (`u32`, N_t), `n_channels` a `+38` (`u32`, N_λ), durata a `+46` (`f32`, min), lunghezza d'onda iniziale `wl_start_nm` a `+50` (`f32`, nm), finale `wl_stop_nm` a `+54` (`f32`, nm) e passo `wl_step_nm` a `+58` (`f32`, nm, es. 200–400 nm, passo 1.0, 201 canali).
@@ -43,5 +48,6 @@ Il metodo `variante` del trait `Lettore` e i parametri `cv:` di `mzmlwrite.rs` s
 ## Prove
 - `tools/wiff_riferimento.py`: `variants(out)` scrive `variante.wiff` (QTRAP 5500, blocchi V1 e V3, EPI, PIS, NL, un blocco vuoto) e i file da rifiutare (`periodi`, `tof`, `codice`, `bloccotof`, `versione4`), con i valori attesi in `riferimento.json`.
 - `tests/wiff_varianti.rs` (feature `estesi`): sintetici, rifiuti, danni (ogni byte sovrascritto: nessun panico); `tests/wiff_varianti_reali.rs`: con `MZLAB_DATI` i file veri (`dati/formati/sciex/wiff`, `scansioni_speciali`): 32 file, 388 campioni letti, 6 rifiutati (TOF e `.wiff2`), TIC dell'indice sempre uguale; confronto con gli mzML ProteoWizard di PIS/NL (3594 spettri) e MRM (108 cromatogrammi, 94 programmati); `metodo/1` (nome, finestra, `rt_min`, versione, DAD).
+- `tests/wiff_programmati.rs` (`programmati`: due esperimenti MRM, uno sMRM con finestra 60 s): un TIC per esperimento, `rt=`/`window=` negli id, taglio opzionale; `tests/wiff_mrm.rs` (`transizioni`): CE, dwell e nome fino all'mzML.
 - `tests_e2e/e2e_wiff.py`: la coppia sintetica «variante» passa dal modulo `sciex`.
 - Mancano file veri di: periodi multipli, MS3, EMC/ER, scansioni Q1/Q3, EPI con precursore (la massa a +42 è del metodo), TripleTOF/ZenoTOF (codec dei blocchi TOF).

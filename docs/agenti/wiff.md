@@ -51,3 +51,4 @@ Si tiene ciò che il file contiene, senza peak picking implicito: il `.wiff` del
 - Le tracce DAD/analogiche del `.wiff` non si leggono (il DAD è descritto in `wiff-varianti.md`); i nomi dei campioni sono in `metodo/1` (`campione.nome`).
 - Il TIC è quello dell'indice (come l'mzML), non la somma dei punti. Chiavi i18n: `err.file.notWiff`, `err.file.wiffNoScan`, `err.file.wiff` (nei cataloghi quando la pagina le usa).
 - Centroidi: `lettori_centroidi::centroidato(lettore)` con `Conversione` scrive un punto per picco con `centroidi` (parametri stimati da ≤64 scansioni, larghezza di riserva 0,7); l'mzML dichiara `MS:1000035` e il software «mzLab centroidi». Gli MRM non cambiano. La pagina non offre la scelta.
+- Non letto (dettagli in `wiff-varianti.md`): più periodi, il precursore vero di un EPI, `.wiff2` e TOF.
