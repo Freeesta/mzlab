@@ -90,16 +90,9 @@ impl Wiff {
                 .enumerate()
                 .filter(|(_, c)| !c.0.is_empty())
             {
-                let (q1, q3) = known.get(j).copied().unwrap_or((None, None));
-                let mass = match (q1, q3) {
-                    (Some(a), Some(b)) => format!(" Q1={a} Q3={b}"),
-                    _ => String::new(),
-                };
-                let id = format!(
-                    "SRM SIC{mass} sample={} period=1 experiment={} transition={j}",
-                    self.sample,
-                    e + 1
-                );
+                let t = known.get(j);
+                let (q1, q3) = (t.map(|t| t.q1), t.map(|t| t.q3));
+                let id = self.srm_id(e, j, t);
                 chroms.push(Chromatogram {
                     index: chroms.len(),
                     id,

@@ -195,8 +195,9 @@ def main():
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
     energia = energy(out)
+    transizioni = transitions(out)
     variante, rifiuti = variants(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "variante": variante, "rifiuti": rifiuti}))
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "variante": variante, "rifiuti": rifiuti}))
 
 
 def energy(out: Path):
@@ -211,6 +212,27 @@ def energy(out: Path):
     w.sample(1, blocks, method)
     w.save(out, "energia")
     return {"ce": ces, "precursors": [None, 55.5, 120.0, 77.7]}
+
+
+def mrm_method(trs) -> bytes:
+    """A `MassRangeEx` stream of an MRM experiment: per transition Q1, Q3, dwell (ms), the name and the compound parameters DP, EP, CE, CXP (float32 after their UTF-16 tag)."""
+    out = bytearray()
+    for q1, q3, dwell, name, dp, ep, ce, cxp in trs:
+        nm = name.encode("utf-16le")
+        out += struct.pack("<f", q1) + bytes(4) + struct.pack("<ff", q3, dwell) + bytes(4) + bytes([len(nm), 0]) + nm
+        out += b"\x04\x00D\x00P\x00" + struct.pack("<f", dp) + b"\x04\x00E\x00P\x00" + struct.pack("<f", ep)
+        out += b"\x04\x00C\x00E\x00" + struct.pack("<f", ce) + b"\x06\x00C\x00X\x00P\x00" + struct.pack("<f", cxp) + bytes(4)
+    return bytes(out)
+
+
+def transitions(out: Path):
+    """One MRM experiment with three transitions (Q1, Q3, dwell ms, name, DP, EP, CE, CXP) over four cycles: what the method says about each."""
+    trs = [(364.5, 176.0, 50.0, "tpA", 40.0, 10.0, 25.0, 5.0), (364.5, 159.0, 25.5, "tpB", 41.0, 10.5, 35.0, 6.0), (250.25, 100.5, 100.0, "ref", 30.0, 9.0, 15.0, 4.0)]
+    method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(trs), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    w = Writer()
+    w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
+    w.save(out, "transizioni")
+    return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
 
 
 def variants(out: Path):
