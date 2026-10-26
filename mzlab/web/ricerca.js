@@ -140,6 +140,7 @@ let ricTheoryP = null;
 function ricTheoryIndex() {
   if (!ricTheoryP) {
     ricTheoryP = new Promise(res => {
+      if (!window.SITO_PUBBLICO.teoria) return res([]);
       const s = document.createElement("script");
       s.src = "static/teoria/indice-ricerca.js";
       s.onload = () => res(typeof INDICE_RICERCA !== "undefined" ? INDICE_RICERCA : []);

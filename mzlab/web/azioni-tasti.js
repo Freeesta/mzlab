@@ -41,8 +41,8 @@
     nome: () => T("scorc.esporta"), tip: () => T("scorc.esporta.tip"), disponibile: () => inData() && !!window.RAPPORTO, esegui: () => window.RAPPORTO && RAPPORTO.export("html") });
   /** @param {string} k @param {string} v @param {string} code @param {() => string} nome */
   const vista = (k, v, code, nome) => reg({ id: "app." + k, gruppo: "tools", viste: ["*"], icona: "side", scorciatoia: { code, alt: true, dove: "view", et: "scorc." + k },
-    nome, tip: () => T("scorc.vista.tip"), disponibile: () => typeof setView === "function", esegui: () => setView(v) });
-  vista("dati", "data", "Digit1", () => T("scorc.dati")); vista("disegno", "draw", "Digit2", () => T("scorc.disegno")); vista("teoria", "theory", "Digit3", () => T("scorc.teoria"));
+    nome, tip: () => T(window.SITO_PUBBLICO.teoria ? "scorc.vista.tip" : "scorc.vista.tip.nt"), disponibile: () => typeof setView === "function", esegui: () => setView(v) });
+  vista("dati", "data", "Digit1", () => T("scorc.dati")); vista("disegno", "draw", "Digit2", () => T("scorc.disegno")); if (window.SITO_PUBBLICO.teoria) vista("teoria", "theory", "Digit3", () => T("scorc.teoria"));
   // Shift+H shows/hides the side panels like Ctrl/Cmd+B; Alt+Left/Right step through the files like the arrows next to the file menu (not while typing: the field keeps its keys)
   const inField = () => !!(document.activeElement && document.activeElement.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
   reg({ id: "app.pannelli", gruppo: "view", viste: ["*"], icona: "side", scorciatoia: { tasto: "h", shift: true, dove: "view", et: "scorc.pannelli" },

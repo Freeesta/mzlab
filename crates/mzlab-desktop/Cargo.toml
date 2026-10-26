@@ -23,7 +23,7 @@ mzlab-core = { path = "../mzlab-core" }
 mzlab-lettori = { path = "../mzlab-lettori", features = ["tutte"] }
 # mzFinder natively: the same steps and adapter that the .wasm of mzFinder runs (`run`, `legacy`) and the table views of the Pipeline panel
 mzlab-chem = { path = "../mzlab-chem" }
-mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp"] }
+mzlab-feat = { path = "../mzlab-feat", features = ["chem", "untargeted", "attributio", "interp", "record"] }
 mzlab-feat-wasm = { path = "../mzlab-feat-wasm", default-features = false, features = ["detect", "proofs", "finder", "untargeted"] }
 mzlab-feat-table-wasm = { path = "../mzlab-feat-table-wasm" }
 # the engine of the plans of the graphical Flow (`flow/run`): the same one as `cargo run -p mzlab-cli --example flow`

@@ -52,6 +52,8 @@ I18N.add("en", {
   "tour.metodo.titolo": "The instrument method",
   "tour.metodo.testo": "What the instrument measured: scan type, polarity, mass range and method settings.",
   "tour.ingranaggio.titolo": "Settings, Theory and this tour",
+  "tour.ingranaggio.titolo.nt": "Settings and this tour",
+  "tour.ingranaggio.testo.nt": "The gear holds theme, language and preferences; you can replay this tour from here at any time.",
   "tour.ingranaggio.testo": "The gear holds theme, language and preferences; you can replay this tour from here at any time. If a concept is unclear, open the Theory tab.",
   "tour.cap3": "Drawing",
   "tour.d_tela.titolo": "The canvas",

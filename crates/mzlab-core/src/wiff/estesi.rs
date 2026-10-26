@@ -16,6 +16,14 @@ pub const CODE_NEUTRAL_LOSS: u32 = 7;
 pub const CODE_PRODUCT: u32 = 11;
 pub const CODE_FULL: u32 = 15;
 
+/// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
+pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Experiment]) {
+    let no = method_no(ole, sample);
+    for (i, e) in experiments.iter_mut().enumerate() {
+        e.window_s = crate::metodo_wiff::scheduled(ole, no, i);
+    }
+}
+
 /// The method that holds the experiments of `sample`: its own `MethodN`, or, when the file stores fewer methods than it has samples (a batch run with one
 /// method), the nearest one before it.
 pub(crate) fn method_no(ole: &Ole, sample: u32) -> u32 {

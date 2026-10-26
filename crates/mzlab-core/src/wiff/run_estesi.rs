@@ -1,5 +1,5 @@
 //! The spectra and chromatograms of a sample for the readers module (feature `estesi`): as `run.rs`, and the MRM blocks may be scheduled (sMRM: a transition
-//! is a point of its chromatogram only in the scans where it was acquired) and the experiments of a sample may be several (the TIC takes the blocks of all).
+//! is a point of its chromatogram only in the scans where it was acquired) and the experiments of a sample may be several (one TIC each).
 
 use super::super::{scan, Record, Wiff};
 use crate::error::Result;
@@ -66,41 +66,58 @@ impl Wiff {
         Ok(chroms)
     }
 
-    /// The TIC of all the MRM blocks and one SRM chromatogram per transition that was acquired at least once.
+    /// One TIC per MRM experiment that has blocks (just `TIC` when there is one) and one SRM chromatogram per transition that was acquired at least once.
+    /// With `trim_scheduled`, a scheduled transition keeps only the points within its window around the target RT, as msconvert does.
     fn chromatograms_of(&self, blocks: Blocks) -> Vec<Chromatogram> {
         let unit = "number of detector counts";
         let mut chroms = Vec::new();
-        if blocks.time.is_empty() {
-            return chroms;
-        }
-        chroms.push(Chromatogram {
-            index: 0,
-            id: "TIC".into(),
-            kind: ChromKind::Tic,
-            q1: None,
-            q3: None,
-            unit: unit.into(),
-            time: blocks.time,
-            intensity: blocks.tic,
-        });
+        let many = blocks
+            .experiments
+            .iter()
+            .filter(|x| !x.time.is_empty())
+            .count()
+            > 1;
         for (e, ex) in blocks.experiments.into_iter().enumerate() {
+            if ex.time.is_empty() {
+                continue;
+            }
+            let id = match many {
+                true => format!("TIC sample={} period=1 experiment={}", self.sample, e + 1),
+                false => "TIC".into(),
+            };
+            chroms.push(Chromatogram {
+                index: chroms.len(),
+                id,
+                kind: ChromKind::Tic,
+                q1: None,
+                q3: None,
+                unit: unit.into(),
+                time: ex.time,
+                intensity: ex.tic,
+            });
             let known = self.mrm_transitions(e);
-            for (j, (time, intensity)) in ex
+            let window = self.experiments.get(e).and_then(|x| x.window_s);
+            for (j, (mut time, mut intensity)) in ex
                 .cols
                 .into_iter()
                 .enumerate()
                 .filter(|(_, c)| !c.0.is_empty())
             {
-                let (q1, q3) = known.get(j).copied().unwrap_or((None, None));
-                let mass = match (q1, q3) {
-                    (Some(a), Some(b)) => format!(" Q1={a} Q3={b}"),
-                    _ => String::new(),
-                };
-                let id = format!(
-                    "SRM SIC{mass} sample={} period=1 experiment={} transition={j}",
-                    self.sample,
-                    e + 1
-                );
+                let t = known.get(j);
+                if let (true, Some(t), Some(w)) = (self.trim_scheduled, t, window) {
+                    let half = f64::from(w) / 120.0;
+                    let keep: Vec<bool> =
+                        time.iter().map(|x| (x - t.dwell).abs() <= half).collect();
+                    let mut k = keep.iter();
+                    time.retain(|_| *k.next().unwrap_or(&true));
+                    let mut k = keep.iter();
+                    intensity.retain(|_| *k.next().unwrap_or(&true));
+                    if time.is_empty() {
+                        continue;
+                    }
+                }
+                let (q1, q3) = (t.map(|t| t.q1), t.map(|t| t.q3));
+                let id = self.srm_id(e, j, t);
                 chroms.push(Chromatogram {
                     index: chroms.len(),
                     id,
@@ -117,34 +134,32 @@ impl Wiff {
     }
 }
 
-/// The MRM blocks of one experiment: per transition, the times (min) and cps of the scans that acquired it.
+/// The MRM blocks of one experiment: the times (min) and TIC of every block, and per transition the times and cps of the scans that acquired it.
 #[derive(Default)]
 struct Experiment {
+    time: Vec<f64>,
+    tic: Vec<f64>,
     cols: Vec<(Vec<f64>, Vec<f64>)>,
 }
 
-/// The blocks of all the MRM experiments: the times and TIC of every block, and the experiments.
+/// The blocks of all the MRM experiments.
 struct Blocks {
-    time: Vec<f64>,
-    tic: Vec<f64>,
     experiments: Vec<Experiment>,
 }
 
 impl Blocks {
     fn new(experiments: usize) -> Self {
         Blocks {
-            time: Vec::new(),
-            tic: Vec::new(),
             experiments: (0..experiments).map(|_| Experiment::default()).collect(),
         }
     }
 
     fn add(&mut self, r: &Record, c: scan::Cols) {
-        self.time.push(r.time_min);
-        self.tic.push(r.tic);
         let Some(e) = self.experiments.get_mut(r.experiment) else {
             return;
         };
+        e.time.push(r.time_min);
+        e.tic.push(r.tic);
         if e.cols.len() < c.width {
             e.cols.resize_with(c.width, Default::default);
         }

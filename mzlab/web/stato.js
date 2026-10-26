@@ -7,9 +7,9 @@ const E = { files: /** @type {any[]} */ ([]), panels: /** @type {any[]} */ ([]),
 const NB = { ui: null, session: null };   // notebook: state of the interface (+ drawing, see draw.js)
 // addresses of the views: #/data, #/draw (and #/theory, which the head script of index.html sends to the standalone Teoria on a cold start)
 const VIEW_HASH = { data: "data", draw: "draw", theory: "theory" }, HASH_VIEW = { data: "data", draw: "draw", theory: "theory" };
-// views that moved into another one: the old name still works (Attributio is now a step of Flow)
-const VIEW_ALIAS = { attributio: "flow" };
-const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); return m && HASH_VIEW[m[1]] || null; };
+// views that moved into another one: the old name still works (Attributio is now a step of Flow); the Teoria view is the main page while sito.js keeps it off
+const VIEW_ALIAS = { attributio: "flow", ...(window.SITO_PUBBLICO.teoria ? {} : { theory: "data" }) };
+const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); const v = m && HASH_VIEW[m[1]] || null; return v && VIEW_ALIAS[v] || v; };
 const S = { view: hashView() || "data", sess: null, adding: false, ref: { on: {}, k: "auto", factor: 1, norm: "none", istd: "", rttol: 0.1, clip: false } };
 const ST = { files: [], methods: [] };
 

@@ -1,26 +1,52 @@
 //! A sample as the `Run` that the rest of the program reads: scans become spectra (profile, empty ones left out as msconvert does)
 //! and the MRM blocks become a TIC and one SRM chromatogram per transition.
 
-
 use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::methodinfo::Kind;
+use crate::methodinfo::{Kind, Transition};
 #[cfg_attr(feature = "estesi", allow(unused_imports))]
 use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
 use crate::mzmlwrite::Header;
 
 impl Wiff {
-    fn mrm_transitions(&self, experiment: usize) -> Vec<(Option<f64>, Option<f64>)> {
+    pub(super) fn mrm_transitions(&self, experiment: usize) -> Vec<Transition> {
         let kind = self
             .method
             .as_ref()
-            .and_then(|m| m.experiments.get(experiment))
+            .and_then(|m| m.experiments.iter().find(|x| x.index == experiment))
             .map(|e| &e.kind);
         match kind {
-            Some(Kind::Mrm(t)) => t.iter().map(|t| (Some(t.q1), Some(t.q3))).collect(),
+            Some(Kind::Mrm(t)) => t.clone(),
             _ => Vec::new(),
         }
+    }
+
+    /// The id of the SRM chromatogram of transition `j` of experiment `e` (0-based), as msconvert spells it (Q1, Q3, sample, period, experiment, transition),
+    /// then the collision energy, dwell (ms) (target RT in min and window in s when scheduled) and name of the method when it has them; the mzML writer and `mzmlhead` read them back from it.
+    pub(super) fn srm_id(&self, e: usize, j: usize, t: Option<&Transition>) -> String {
+        let mut id = String::from("SRM SIC");
+        if let Some(t) = t {
+            id += &format!(" Q1={} Q3={}", t.q1, t.q3);
+        }
+        id += &format!(
+            " sample={} period=1 experiment={} transition={j}",
+            self.sample,
+            e + 1
+        );
+        if let Some(t) = t {
+            if let Some(ce) = t.ce {
+                id += &format!(" ce={ce}");
+            }
+            match self.experiments.get(e).and_then(|x| x.window_s) {
+                Some(w) => id += &format!(" rt={} window={w}", t.dwell),
+                None => id += &format!(" dwell={}", t.dwell),
+            }
+            if !t.name.is_empty() {
+                id += &format!(" name={}", t.name);
+            }
+        }
+        id
     }
 
     /// Spectra and chromatograms of the sample. Reads every block of the `.wiff.scan` once.
@@ -201,16 +227,9 @@ impl Wiff {
             }
             let known = self.mrm_transitions(e);
             for (j, col) in cols.into_iter().enumerate() {
-                let (q1, q3) = known.get(j).copied().unwrap_or((None, None));
-                let mass = match (q1, q3) {
-                    (Some(a), Some(b)) => format!(" Q1={a} Q3={b}"),
-                    _ => String::new(),
-                };
-                let id = format!(
-                    "SRM SIC{mass} sample={} period=1 experiment={} transition={j}",
-                    self.sample,
-                    e + 1
-                );
+                let t = known.get(j);
+                let (q1, q3) = (t.map(|t| t.q1), t.map(|t| t.q3));
+                let id = self.srm_id(e, j, t);
                 chroms.push(Chromatogram {
                     index: chroms.len(),
                     id,

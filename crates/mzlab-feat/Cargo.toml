@@ -151,3 +151,7 @@ required-features = ["interp"]
 [[test]]
 name = "rete_run"
 required-features = ["interp"]
+
+[[test]]
+name = "rt_descriptors"
+required-features = ["record", "attributio"]
