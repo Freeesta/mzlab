@@ -343,6 +343,7 @@
     };
     startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); if (typeof TPTR !== "undefined") TPTR.mount($("#tp-tr"), callRaw); }).catch(e => msg(String(e.message || e), true));
 
+    // 19_tpmine_results.js must load before this file: the tab can open the moment it registers
     const { render, toast, dl } = /** @type {any} */ (window).TPRESULTS({ st, $, msg });
 
     // ---- run
