@@ -98,7 +98,7 @@ mod tests {
             let mut x = a.clone();
             let mut y = a.clone();
             sort_by(&mut x, |p, q| p.0.cmp(&q.0));
-            y.sort_by(|p, q| p.0.cmp(&q.0));
+            y.sort_by_key(|p| p.0);
             assert_eq!(x, y, "n = {n}");
             let mut z: Vec<String> = a.iter().map(|p| format!("{}-{}", p.0, p.1)).collect();
             let mut w = z.clone();

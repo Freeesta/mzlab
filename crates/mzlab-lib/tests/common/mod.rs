@@ -57,7 +57,7 @@ pub fn synth(r: &mut Rng, i: usize, n: usize) -> Spectrum {
             smiles: "C".into(),
             accession: format!("SYN{i:06}"),
             authors: "A. Author".into(),
-            license: if i % 3 == 0 {
+            license: if i.is_multiple_of(3) {
                 "CC BY".into()
             } else {
                 "CC0".into()

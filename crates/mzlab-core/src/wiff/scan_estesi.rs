@@ -65,3 +65,13 @@ pub fn read_mrm_cols<R: ReadAt>(
         points: v.into_iter().enumerate().collect(),
     }))
 }
+
+/// True when the block at `at` is a scan block of a version besides 2, the one a 3200 writes for survey scans (a 3200 writes 3 for enhanced product ion scans).
+pub fn other_version<R: ReadAt>(scan: &mut R, scan_len: u64, at: u64, end: u64) -> Result<bool> {
+    if end.min(scan_len).saturating_sub(at) < 8 {
+        return Ok(false);
+    }
+    let mut b = [0u8; 8];
+    scan.read_at(at, &mut b)?;
+    Ok(b[..4] == MARKER && u32::from_le_bytes([b[4], b[5], b[6], b[7]]) != 2)
+}

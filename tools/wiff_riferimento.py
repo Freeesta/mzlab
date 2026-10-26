@@ -290,6 +290,9 @@ def variants(out: Path):
     w = Writer()
     w.sample(1, blocks, ex, log="QTRAP 5500")
     w.save(out, "variante")
+    w = Writer()  # a 3200 QTRAP whose enhanced product ion scan blocks are version 3: the engine's reader (version 2 only) would list no scans, so the file is a variant
+    w.sample(1, [("scan", FULL, 100.0, 1.0, 2), ("scan", PRODUCT, 200.0, 1.0, 3)], {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 239.0)}, log="3200 QTRAP")
+    w.save(out, "epi3200")
     variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": []}}
     rifiuti = {}
     one = [("scan", FULL, 1000.0, 1.0)]

@@ -13,6 +13,10 @@ use crate::flow_base::{open, rebuild, Files};
 use crate::flow_link::parent_of;
 use mzlab_core::flow::Artifact;
 
+// `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
+#[path = "flow_uv.rs"]
+pub(crate) mod uv;
+
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp.json");
 
 /// The steps of this crate besides `features.table`, in the order of the registry.
@@ -27,6 +31,7 @@ pub fn cli_steps() -> Vec<Step> {
         mzlab_feat::steps::table_match(),
         crate::flow_lookup::lookup_step(),
         dig_lr_step(),
+        uv::uv_step(),
     ]
 }
 

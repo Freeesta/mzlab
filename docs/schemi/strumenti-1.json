@@ -12,6 +12,7 @@
         "required":[],
         "x-executable-native":[
           "annot.level",
+          "chrom.uv_peaks",
           "convert.mzml",
           "export.inclusion",
           "export.mztab",
@@ -70,6 +71,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.inclusion@1",
               "export.mztab@1",
@@ -164,6 +166,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.inclusion@1",
               "export.mztab@1",
@@ -324,6 +327,52 @@
                     "minItems":2,
                     "maxItems":2,
                     "description":"Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"chrom.uv_peaks@1"},
+              "name":{"enum":["wavelength_nm","band_nm","broad","broad_min_s","broad_max_s","broad_snr"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":254,
+                    "description":"The trace is the matrix at this wavelength; the nearest column when none is inside the band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":4,
+                    "description":"The columns within half of this around the wavelength are averaged"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also look for bands too wide for the narrow peak finder"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"Smallest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":300,
+                    "description":"Largest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":8,
+                    "description":"Smallest height of a band over its bridge, in noise units"
                   }
                 ]
               }
@@ -2215,6 +2264,7 @@
                 "annot.hazard@1",
                 "annot.level@1",
                 "annot.regulatory@1",
+                "chrom.uv_peaks@1",
                 "convert.mzml@1",
                 "export.inclusion@1",
                 "export.mztab@1",

@@ -132,11 +132,11 @@ pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
     let (pa, pb) = (weighted(&a.it), weighted(&b.it));
     let delta = a.prec - b.prec;
     let mut c: Vec<(usize, usize, f64)> = Vec::new();
-    for i in 0..a.mz.len() {
-        for j in 0..b.mz.len() {
-            let d = a.mz[i] - b.mz[j];
+    for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
+        for (j, (&mb, &wb)) in b.mz.iter().zip(&pb).enumerate() {
+            let d = ma - mb;
             if d.abs() <= tol || (d - delta).abs() <= tol {
-                c.push((i, j, pair_term(pa[i], pb[j])));
+                c.push((i, j, pair_term(wa, wb)));
             }
         }
     }
