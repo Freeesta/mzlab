@@ -12,6 +12,13 @@ pub const CELL_TARGETED: u8 = 1;
 pub const CELL_FILLED: u8 = 2;
 /// Below the threshold: the file has no peak for the row.
 pub const CELL_ABSENT: u8 = 3;
+/// Not measured: the file does not cover the RT where the row elutes (acquisition cut). Area is NaN; it is missing, never "absent".
+pub const CELL_NA: u8 = 4;
+
+/// Whether a cell holds no peak (absent or not measured).
+pub fn no_peak(state: u8) -> bool {
+    state == CELL_ABSENT || state == CELL_NA
+}
 
 /// Features of a series aligned across files: one row per group, cells are `row * n_files + file`.
 /// `apex_rt`/`width` are NaN where the file has no detected peak; `width` = right - left (minutes).

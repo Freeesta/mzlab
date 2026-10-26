@@ -504,6 +504,7 @@
                   "floor",
                   "min_height",
                   "axis",
+                  "rt_range",
                   "mass_defect",
                   "budget",
                   "min_points",
@@ -530,6 +531,13 @@
                   },
                   {"type":"number","minimum":0,"default":200000,"description":"Minimum height"},
                   {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "description":"Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows"
+                  },
                   {
                     "type":"number",
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"

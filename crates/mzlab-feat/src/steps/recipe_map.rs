@@ -107,6 +107,13 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                 *defect = num()?;
             }
         }
+        ("features.detect", "rt_range") => {
+            r.rt_range = match (v.at(0).and_then(Value::f64), v.at(1).and_then(Value::f64)) {
+                (Some(a), Some(b)) if a.is_finite() && b.is_finite() && b >= a => Some((a, b)),
+                _ if matches!(v, Value::Null) => None,
+                _ => return Err(bad(step, k)),
+            }
+        }
         ("features.detect", "budget") => r.detect.budget = int()?,
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
@@ -179,6 +186,9 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 v.push(("peak_width_s", Value::Arr(vec![n(a), n(b)])));
                 v.push(("snr", n(c.snr)));
                 v.push(("broad_peaks", Value::Bool(c.broad.enabled)));
+            }
+            if let Some((a, b)) = r.rt_range {
+                v.push(("rt_range", Value::Arr(vec![n(a), n(b)])));
             }
             match r.detect.axis {
                 MassAxis::Ppm => v.push(("axis", Value::Str("ppm".into()))),

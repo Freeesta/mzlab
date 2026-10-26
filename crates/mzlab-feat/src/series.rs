@@ -281,6 +281,9 @@ pub(crate) fn finish<R: ReadAt>(
     }
     let map: RtMap = build(&table, &r.rt);
     let map = map.ok().then_some(&map);
+    if let Some((lo, hi)) = r.rt_range {
+        table.retain_rt(lo, hi);
+    }
     let mut filled = 0;
     if r.fill_gaps {
         match par_open {

@@ -7,7 +7,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::Out;
 
-use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED, CELL_TARGETED, NO_FILE};
+use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED, CELL_NA, CELL_TARGETED, NO_FILE, no_peak};
 use crate::hypo::{SRC_CLEAVAGE, SRC_FAMILY, SRC_IMPORTED, SRC_NETWORK, SRC_RULE, SRC_SUSPECT};
 use crate::ms2spec::{pick, read_peaks};
 use crate::norm::measured;
@@ -35,6 +35,7 @@ fn state_word(state: u8) -> &'static str {
         CELL_DETECTED => "detected",
         CELL_FILLED => "filled",
         CELL_TARGETED => "targeted",
+        CELL_NA => "na",
         _ => "absent",
     }
 }
@@ -199,11 +200,11 @@ fn write_cells(o: &mut Out, t: &Aligned, s: &[Sample], r: usize) {
             .raw(",\"height\":")
             .opt(a.map(|_| f64::from(t.height[c])));
         o.raw(",\"apex_rt\":")
-            .opt(fin(t.apex_rt[c]).filter(|_| t.state[c] != CELL_ABSENT))
+            .opt(fin(t.apex_rt[c]).filter(|_| !no_peak(t.state[c])))
             .raw(",\"width\":")
-            .opt(fin(t.width[c]).filter(|_| t.state[c] != CELL_ABSENT));
+            .opt(fin(t.width[c]).filter(|_| !no_peak(t.state[c])));
         o.raw(",\"state\":")
-            .str(state_word(if a.is_some() {
+            .str(state_word(if a.is_some() || t.state[c] == CELL_NA {
                 t.state[c]
             } else {
                 CELL_ABSENT
@@ -248,7 +249,7 @@ fn list(o: &mut Out, v: &[f64]) {
 fn window(t: &Aligned, r: usize, k: usize, q: Option<&RowQ>) -> (f64, f64, f64) {
     let c = t.cell(r, k);
     let apex = fin(t.apex_rt[c])
-        .filter(|_| t.state[c] != CELL_ABSENT)
+        .filter(|_| !no_peak(t.state[c]))
         .unwrap_or(t.rt[r]);
     let edges = q.map(|q| (f64::from(q.rt_lo), f64::from(q.rt_hi)));
     let (lo, hi) = match edges {
