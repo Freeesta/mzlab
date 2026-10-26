@@ -285,10 +285,10 @@ fn esc(s: &str) -> String {
 }
 
 /// The dwell time (userParam, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
-/// (ms) are the ones the id spells (`ce=`, `dwell=`) and only the readers that know them (`sciex`, `precursori`) write them.
+/// (ms) are the ones the id spells (`ce=`, `dwell=`) and only the SCIEX readers module (`sciex`) writes them.
 fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
     let (mut dwell, mut ce) = (String::new(), String::new());
-    #[cfg(any(feature = "sciex", feature = "precursori"))]
+    #[cfg(feature = "sciex")]
     {
         if let Some(d) = crate::mzmlsrm::id_dwell(&c.id) {
             dwell = format!("<userParam name=\"MS_dwell_time\" value=\"{d}\"/>");
@@ -297,7 +297,7 @@ fn srm_windows(c: &Chromatogram, q1: f64, q3: f64) -> String {
             ce = format!("<cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{e}\" unitCvRef=\"UO\" unitAccession=\"UO:0000266\" unitName=\"electronvolt\"/>");
         }
     }
-    #[cfg(not(any(feature = "sciex", feature = "precursori")))]
+    #[cfg(not(feature = "sciex"))]
     let _ = (c, &mut dwell, &mut ce);
     format!("{dwell}<precursor><isolationWindow>{}</isolationWindow><activation><cvParam cvRef=\"MS\" accession=\"MS:1000133\" name=\"collision-induced dissociation\" value=\"\"/>{ce}</activation></precursor><product><isolationWindow>{}</isolationWindow></product>", mz_cv("MS:1000827", "isolation window target m/z", q1), mz_cv("MS:1000827", "isolation window target m/z", q3))
 }
