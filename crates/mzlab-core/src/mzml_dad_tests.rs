@@ -227,3 +227,34 @@ fn option_off_leaves_the_bytes_as_they_are() {
         String::from_utf8_lossy(&convert(true, Some(Ottico::matrice()))).contains("count=\"5\"")
     );
 }
+
+/// The matrix of the 3200 PDA (210..400 nm every 1 nm, 0.24 s for 20 min) with a slow baseline and noise: the size the option adds to a file.
+#[test]
+fn size_of_a_real_sized_matrix() {
+    let (nl, nt) = (191usize, 5000usize);
+    let mut x = 12345u32;
+    let mut noise = move || {
+        x = x.wrapping_mul(1664525).wrapping_add(1013904223);
+        (x >> 8) as f32 / 16_777_216.0 - 0.5
+    };
+    let time: Vec<f64> = (0..nt).map(|i| i as f64 * 0.004).collect();
+    let mat: Vec<f32> = (0..nt * nl)
+        .map(|k| {
+            20.0 + 10.0 * ((k / nl) as f32 * 0.01).sin() + (k % nl) as f32 * 0.05 + noise() * 0.2
+        })
+        .collect();
+    let d = DadData {
+        twc_mau: vec![0.0; nt],
+        duration_min: 20.0,
+        time_min: time,
+        wl_start_nm: 210.0,
+        wl_stop_nm: 400.0,
+        wl_step_nm: 1.0,
+        wavelengths_nm: (0..nl).map(|j| 210.0 + j as f64).collect(),
+        matrix_mau: mat,
+    };
+    let raw = d.matrix_mau.len() * 4;
+    let bytes = convert(true, Some(d)).len();
+    eprintln!("raw {raw} mzML {bytes}");
+    assert!(bytes < 4 * raw, "{bytes} bytes for {raw} raw");
+}
