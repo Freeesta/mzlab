@@ -72,11 +72,18 @@ def idx_row(offset, size, time_ms, tic, n) -> bytes:
     return struct.pack("<IId", offset, size, time_ms) + b"\x01\x00" + struct.pack("<dd", tic, float(n)) + bytes(20)
 
 
-def header(code, precursor) -> bytes:
+def header(code, precursor, polarity=None) -> bytes:
     d = bytearray(180)
+    if polarity is not None:
+        d[86:90] = struct.pack("<I", polarity)  # 0 positive, 1 negative
     d[42:50] = struct.pack("<d", precursor)
     d[122:126] = struct.pack("<I", code)
     return bytes(d)
+
+
+def mass_range(*ces) -> bytes:
+    """A `MassRangeEx` stream of a scan experiment: each collision energy as the UTF-16 tag `CE` (length 4) and a float32."""
+    return bytes(8) + b"".join(b"\x04\x00C\x00E\x00" + struct.pack("<f", ce) + bytes(4) for ce in ces)
 
 
 def ion_spray(volts) -> bytes:
@@ -87,7 +94,7 @@ class Writer:
     def __init__(self):
         self.scan, self.streams, self.table, self.expect = bytearray(), {}, [], {}
 
-    def sample(self, n, blocks, method=None, log=None, dad=None):
+    def sample(self, n, blocks, method=None, log=None, dad=None, data_name=None):
         """blocks: [("scan", points, time_ms, tic[, version]) | ("mrm", values, time_ms, tic)] in file order; `log`: the model of the Log; `dad`: (times in min, first nm, step nm, rows of absorbance in mAU) for the optical detector; a method path that starts with `Period` is taken whole."""
         start = len(self.scan)
         self.scan += bytes(44)
@@ -99,6 +106,9 @@ class Writer:
             off += len(block)
         self.table.append((n, start + 20))
         self.streams[f"SampleSubtree/Sample{n}/Idx"] = bytes(idx)
+        if data_name is not None:
+            enc = data_name.encode("utf-16le")
+            self.streams[f"SampleSubtree/Sample{n}/SampleDABE/DATA"] = struct.pack("<H", len(enc)) + enc
         for path, data in (method or {}).items():
             self.streams[f"MethodSubtree/Method{n}/DeviceMethod0/{path if path.startswith('Period') else 'Period0/' + path}"] = data
         if dad:
@@ -145,7 +155,9 @@ def main():
     w.sample(1, [("scan", FULL, 1180.0, 1.5e6), ("scan", [], 1630.0, 0.0), ("scan", LATE, 2500.0, 3.0), ("scan", PRODUCT, 3000.0, 4.5e3)], method)
     one = {"1": {"polarity": 1, "spectra": [spectrum("sample=1 period=1 cycle=1 experiment=1", 1, None, 1180.0, FULL),
                                              spectrum("sample=1 period=1 cycle=2 experiment=1", 1, None, 2500.0, LATE),
-                                             spectrum("sample=1 period=1 cycle=2 experiment=2", 2, 123.4, 3000.0, PRODUCT)], "chromatograms": []}}
+                                             spectrum("sample=1 period=1 cycle=2 experiment=2", 2, 123.4, 3000.0, PRODUCT)],
+                  "chromatograms": [{"id": "TIC", "time": [1180.0 / 60000.0, 2500.0 / 60000.0], "intensity": [1.5e6, 3.0]},
+                                    {"id": "BPC", "time": [1180.0 / 60000.0, 2500.0 / 60000.0], "intensity": [max(expected_scan(FULL)[1]), max(expected_scan(LATE)[1])]}]}}  # the TIC of the full scan experiment: the header of each non-empty block
     w.save(out, "one")
     w = Writer()
     w.sample(1, [("scan", FULL, 600.0, 1.0)])
@@ -155,6 +167,13 @@ def main():
            "2": {"polarity": 0, "spectra": [], "chromatograms": [{"id": "TIC", "time": [t / 60000.0 for t in times], "intensity": [sum(v) for v in MRM]}]
                  + [{"id": f"SRM SIC sample=2 period=1 experiment=1 transition={j}", "time": [t / 60000.0 for t in times], "intensity": [v[j] for v in MRM]} for j in range(3)]}}
     w.save(out, "two")
+    w = Writer()
+    w.sample(1, [("scan", FULL, 600.0, 1.0)], data_name="Sample_A")
+    w.sample(2, [("scan", FULL, 600.0, 1.0)], data_name="  Sample_B  ")
+    w.sample(3, [("scan", FULL, 600.0, 1.0)], data_name="")
+    w.sample(4, [("scan", FULL, 600.0, 1.0)])
+    w.sample(5, [("scan", FULL, 600.0, 1.0)], data_name="Sample_A")
+    w.save(out, "nomi")
     cfb_scrivi.write({"SampleSubtree/Sample1/Idx": bytes(32)}, out / "lonely.wiff")
     w, series = Writer(), []
     for k in range(80):  # a peak at m/z ~229.1 (9 bins wide) eluting at 4 min, on sparse noise: enough points per scan for the profile step
@@ -164,7 +183,9 @@ def main():
         series.append(("scan", pts, 6000.0 * k, float(sum(c for _, c in pts))))
     w.sample(1, series, {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "serie")
-    big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)], "chromatograms": []}}
+    big = {"1": {"polarity": 1, "spectra": [spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1, None, 6000.0 * k, series[k][1]) for k in range(80)],
+                  "chromatograms": [{"id": "TIC", "time": [6000.0 * k / 60000.0 for k in range(80)], "intensity": [series[k][3] for k in range(80)]},
+                                    {"id": "BPC", "time": [6000.0 * k / 60000.0 for k in range(80)], "intensity": [max(expected_scan(series[k][1])[1]) for k in range(80)]}]}}
     w = Writer()  # product-ion scans: sample 1 one precursor (305.0); sample 2 two (229.1 every cycle, 305.0 in about one cycle of four, the other scans empty), irregular times, dense scans
     rnd = random.Random(7)
     for n, precs in ((1, (305.0,)), (2, (229.1, 305.0))):
@@ -179,8 +200,76 @@ def main():
                 blocks.append(("scan", pts, t + 200 * e, float(sum(c for _, c in pts))))
         w.sample(n, blocks, {f"Experiment{e}/ExperimentHeader": header(11, pr) for e, pr in enumerate(precs)} | {"Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)})
     w.save(out, "prodotto")
+    energia = energy(out)
+    transizioni = transitions(out)
+    programmati = scheduled(out)
     variante, rifiuti = variants(out)
-    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "variante": variante, "rifiuti": rifiuti}))
+    totale = full_tic(out)
+    blocchi = blocks_v13(out)
+    (out / "riferimento.json").write_text(json.dumps({"one": one, "two": two, "serie": big, "energia": energia, "transizioni": transizioni, "programmati": programmati, "variante": variante, "rifiuti": rifiuti, "totale": totale, "blocchi": blocchi}))
+
+
+def energy(out: Path):
+    """Four experiments (full scan; product ions with CE 25, with CE 35, with two energies) over two cycles: the collision energy of each product-ion experiment, None where the method has no single value."""
+    ces = [None, 25.0, 35.0, None]
+    method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5), "Experiment2/ExperimentHeader": header(11, 120.0),
+              "Experiment3/ExperimentHeader": header(11, 77.7), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0),
+              "Experiment0/MassRangeEx/MassRangeEx": bytes(8), "Experiment1/MassRangeEx/MassRangeEx": mass_range(25.0), "Experiment2/MassRangeEx/MassRangeEx": mass_range(35.0),
+              "Experiment3/MassRangeEx/MassRangeEx": mass_range(20.0, 40.0)}
+    blocks = [("scan", FULL if e == 0 else PRODUCT, 1000.0 * cycle + 100.0 * e, 1.0) for cycle in range(2) for e in range(4)]
+    w = Writer()
+    w.sample(1, blocks, method)
+    w.save(out, "energia")
+    return {"ce": ces, "precursors": [None, 55.5, 120.0, 77.7]}
+
+
+def full_tic(out: Path):
+    """A full scan experiment over three cycles: the header TIC of a block is not the sum of its profile (cycle 1), is missing (cycle 2, 0.0: the sum is written) or is the sum (cycle 3)."""
+    ys = [expected_scan(p)[1] for p in (FULL, LATE, LATE)]
+    method = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    w = Writer()
+    w.sample(1, [("scan", FULL, 1000.0, 1.5e6), ("scan", LATE, 2000.0, 0.0), ("scan", LATE, 3000.0, sum(ys[2]))], method)
+    w.save(out, "totale")
+    return {"bpc": [max(y) for y in ys], "tic": [1.5e6, sum(ys[1]), sum(ys[2])], "time": [1000.0 / 60000.0, 2000.0 / 60000.0, 3000.0 / 60000.0]}
+
+
+def mrm_method(trs) -> bytes:
+    """A `MassRangeEx` stream of an MRM experiment: per transition Q1, Q3, dwell (ms), the name and the compound parameters DP, EP, CE, CXP (float32 after their UTF-16 tag)."""
+    out = bytearray()
+    for q1, q3, dwell, name, dp, ep, ce, cxp in trs:
+        nm = name.encode("utf-16le")
+        out += struct.pack("<f", q1) + bytes(4) + struct.pack("<ff", q3, dwell) + bytes(4) + bytes([len(nm), 0]) + nm
+        out += b"\x04\x00D\x00P\x00" + struct.pack("<f", dp) + b"\x04\x00E\x00P\x00" + struct.pack("<f", ep)
+        out += b"\x04\x00C\x00E\x00" + struct.pack("<f", ce) + b"\x06\x00C\x00X\x00P\x00" + struct.pack("<f", cxp) + bytes(4)
+    return bytes(out)
+
+
+def transitions(out: Path):
+    """One MRM experiment with three transitions (Q1, Q3, dwell ms, name, DP, EP, CE, CXP) over four cycles: what the method says about each."""
+    trs = [(364.5, 176.0, 50.0, "tpA", 40.0, 10.0, 25.0, 5.0), (364.5, 159.0, 25.5, "tpB", 41.0, 10.5, 35.0, 6.0), (250.25, 100.5, 100.0, "ref", 30.0, 9.0, 15.0, 4.0)]
+    method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(trs), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    w = Writer()
+    w.sample(1, [("mrm", v, 1000.0 * k, sum(v)) for k, v in enumerate(MRM)], method)
+    w.save(out, "transizioni")
+    return {"transitions": [{"q1": t[0], "q3": t[1], "dwell": t[2], "name": t[3], "ce": t[6]} for t in trs]}
+
+
+def scheduled(out: Path):
+    """Two MRM experiments over four cycles (one minute apart): 0 dense with two transitions, 1 scheduled (sMRM, window 60 s) with three transitions whose dwell field is the target RT (0.5, 1.5, 2.5 min) and sparse blocks."""
+    dense = [(300.0, 100.0, 50.0, "d0", 30.0, 9.0, 15.0, 4.0), (301.0, 101.0, 50.0, "d1", 30.0, 9.0, 16.0, 4.0)]
+    sched = [(364.5, 176.0, 0.5, "s0", 40.0, 10.0, 25.0, 5.0), (364.5, 159.0, 1.5, "s1", 41.0, 10.0, 35.0, 6.0), (250.25, 100.5, 2.5, "s2", 30.0, 9.0, 15.0, 4.0)]
+    sparse = [[-3.01, 10.0, -2.01], [-3.01, 20.0, 30.0, -1.01], [-3.01, -1.01, 40.0, 50.0], [-3.01, 5.0, -1.01, 60.0]]
+    method = {"Experiment0/ExperimentHeader": header(4, 0.0), "Experiment0/MassRangeEx/MassRangeEx": mrm_method(dense), "Experiment1/ExperimentHeader": header(4, 0.0),
+              "Experiment1/MassRangeEx/MassRangeEx": mrm_method(sched), "Experiment1/sMRM": bytes(36) + struct.pack("<II", 1, 60) + bytes(8),
+              "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    blocks = []
+    for c in range(4):
+        blocks.append(("mrm", [100.0 + c, 200.0 + c], 60000.0 * c, 300.0 + 2 * c))
+        blocks.append(("mrm", sparse[c], 60000.0 * c, 10.0 * (c + 1)))
+    w = Writer()
+    w.sample(1, blocks, method)
+    w.save(out, "programmati")
+    return {"targets": [t[2] for t in sched], "window_s": 60}
 
 
 def variants(out: Path):
@@ -201,6 +290,9 @@ def variants(out: Path):
     w = Writer()
     w.sample(1, blocks, ex, log="QTRAP 5500")
     w.save(out, "variante")
+    w = Writer()  # a 3200 QTRAP whose enhanced product ion scan blocks are version 3: the engine's reader (version 2 only) would list no scans, so the file is a variant
+    w.sample(1, [("scan", FULL, 100.0, 1.0, 2), ("scan", PRODUCT, 200.0, 1.0, 3)], {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 239.0)}, log="3200 QTRAP")
+    w.save(out, "epi3200")
     variante = {"1": {"polarity": 1, "model": "QTRAP 5500", "spectra": want, "chromatograms": []}}
     rifiuti = {}
     one = [("scan", FULL, 1000.0, 1.0)]
@@ -227,6 +319,25 @@ def variants(out: Path):
     w.save(out, "versione4")
     rifiuti["versione4"] = "scan block version 4"
     return variante, rifiuti
+
+
+def blocks_v13(out: Path):
+    """A 3200-like sample (codes 15 and 11, no model name) whose scan blocks are V1, V3 and V2, with one negative experiment (polarity in the header, the ion spray voltage positive):
+    what the site engine reads without the readers module. Per experiment: the polarity and the expected spectra."""
+    ex = {"Experiment0/ExperimentHeader": header(15, 30.0), "Experiment1/ExperimentHeader": header(11, 55.5, 1),
+          "Experiment2/ExperimentHeader": header(15, 30.0, 0), "Experiment0/IonSourceParamsTable/Parameter0/ParameterData": ion_spray(5500.0)}
+    versions = [1, 3, 2]
+    pts = [FULL, PRODUCT, FULL]
+    blocks, want = [], []
+    for cycle in range(2):
+        for e in range(3):
+            t = 1000.0 * cycle + 100.0 * e
+            blocks.append(("scan", pts[e], t, float(sum(c for _, c in pts[e])), versions[e]))
+            want.append(spectrum(f"sample=1 period=1 cycle={cycle + 1} experiment={e + 1}", 2 if e == 1 else 1, 55.5 if e == 1 else None, t, pts[e], versions[e]))
+    w = Writer()
+    w.sample(1, blocks, ex)
+    w.save(out, "blocchi")
+    return {"polarity": [1, -1, 1], "spectra": want}
 
 
 if __name__ == "__main__":

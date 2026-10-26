@@ -20,6 +20,7 @@ const fake = need => class {{
   postMessage(m) {{
     setTimeout(() => {{
       if (m.op === "init" || m.op === "alias") return this.onmessage({{ data: {{ id: m.id, ok: true, crate: "x" }} }});
+      if (m.op === "file_key" || m.op === "check_stored" || m.op.startsWith("fs.")) return this.onmessage({{ data: {{ id: m.id, ok: true, text: "" }} }});   // the cache of the detections is not under test here
       if (m.op === "detect") return this.onmessage({{ data: {{ id: m.id, ok: true, bytes: new Uint8Array(1), mem: 1048576 }} }});
       seen.push(m.budgetMb);
       if ((m.budgetMb || 192) < need) return this.onmessage({{ data: {{ id: m.id, error: {{ key: "error.featMemory", params: {{ fase: "align", stima_mb: String(need), budget_mb: String(m.budgetMb || 192), libero_mb: "100" }} }} }} }});

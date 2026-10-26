@@ -83,6 +83,7 @@ fn reactions_of(meta: &ScanMetadata, params: Option<&ScanParams<'_>>) -> Vec<Val
         .and_then(|q| q.activation_energy())
         .is_some_and(|e| e > 0.0);
     let last = steps.len() - 1;
+    let srm = meta.filter.as_deref().is_some_and(|f| f.contains(" SRM "));
     let mut out = Vec::new();
     for (i, st) in steps.iter().enumerate() {
         let mut r = Map::new();
@@ -93,11 +94,13 @@ fn reactions_of(meta: &ScanMetadata, params: Option<&ScanParams<'_>>) -> Vec<Val
         };
         put(&mut r, "precursor", (mz > 0.0).then_some(mz));
         put(&mut r, "iso_width", st.isolation_width);
-        put(
-            &mut r,
-            "activation",
-            st.activation.map(|a| format!("{a:?}")),
-        );
+        // RFR names the activation of an SRM reaction "Any": a TSQ gives none beyond collision in q2
+        let activation = if srm {
+            Some("Any".to_string())
+        } else {
+            st.activation.map(|a| format!("{a:?}"))
+        };
+        put(&mut r, "activation", activation);
         put(&mut r, "energy", st.energy);
         // the unit is known only when the energy comes from the trailer (the final step) or the trailer says NCE
         if st.energy.is_some() {
@@ -322,13 +325,13 @@ fn write_extras(
         }
     }
     if let Some(sl) = raw.status_log.as_ref() {
-        let n = sl.records.len();
+        let n = sl.records().len();
         for i in (0..n).step_by(n.div_ceil(16).max(1)) {
             let mut o = Map::new();
             o.insert("type".into(), "status".into());
             o.insert("scan".into(), i.into());
-            put(&mut o, "rt", sl.times_min.get(i).map(|t| f64::from(*t)));
-            o.insert("values".into(), Value::Object(values_of(&sl.records[i])));
+            put(&mut o, "rt", sl.times_min().get(i).map(|t| f64::from(*t)));
+            o.insert("values".into(), Value::Object(values_of(&sl.records()[i])));
             out.row(&Value::Object(o));
         }
     }

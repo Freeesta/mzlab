@@ -62,6 +62,7 @@ impl LettoreBruker {
             id: 0,
             nome: db_m.nome.rsplit_once('/').map_or("", |x| x.0).to_string(),
             scansioni: desc.len(),
+            dimensione: None,
         }];
         let mut l = LettoreBruker {
             tsf,

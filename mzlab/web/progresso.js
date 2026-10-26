@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // ONE model of progress for every loading (.mzML, .raw, .wiff, .D, .mzidx): the readers tell it how far each file has got (event mzlab-index {name, frac, phase}, frac = 0..1 of the whole file),
 // and every bar of the page (the loading card, the overlay of «Open», Tabui) shows what the model says. Rules: a file never goes back; the total never goes back (a file added in the middle
@@ -17,6 +17,15 @@ function progCompose(profile, phase, local) {
   const w = PROG_W[profile]; if (!w || !(phase in w)) return Math.max(0, Math.min(1, local || 0));
   let before = 0; for (const k of Object.keys(w)) { if (k === phase) break; before += w[k]; }
   return Math.min(1, before + w[phase] * Math.max(0, Math.min(1, local || 0)));
+}
+
+/** the bar of a ROW of the loading, 0..100 whatever the reader: load / download 0-40, read 40-85, index 85-100. `frac` = the fraction of the whole file the model holds (a maker's file: copy+SHA 0.3,
+ * open+scans up to 0.75, chromatograms after; an mzML: copy 0.4, then the builder up to 0.985); the same fraction always gives the same percent, so the bar never goes back with the model */
+function rowPc(native, frac) {
+  const f = Math.max(0, Math.min(1, Number(frac) || 0)), a = native ? 0.3 : 0.4, b = native ? 0.75 : 0.985;
+  if (f < a) return 40 * f / a;
+  if (f < b) return 40 + 45 * (f - a) / (b - a);
+  return 85 + 15 * (f - b) / (1 - b);
 }
 
 const PROGRESSO = (() => {
@@ -77,4 +86,4 @@ const PROGRESSO = (() => {
   };
 })();
 
-if (typeof module !== "undefined") module.exports = { PROGRESSO, progCompose, PROG_W, PROG_NET };
+if (typeof module !== "undefined") module.exports = { PROGRESSO, progCompose, PROG_W, PROG_NET, rowPc };

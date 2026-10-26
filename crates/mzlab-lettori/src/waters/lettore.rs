@@ -446,6 +446,7 @@ fn apri(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         id: 0,
         nome,
         scansioni: l.indice.len(),
+        dimensione: None,
     }];
     Ok(Box::new(l))
 }

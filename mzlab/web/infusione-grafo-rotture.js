@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The bond breaks of the SMILES of the tab that explain an ion, in the panel of a node of the «Fragmentation graph». Every hypothesis comes from the key
 // `rotture` of msngrafo/1 (formula, error, hydrogens moved); they are evidence for the user's own judgement, never an identification. Used by infusione-grafo-nodo.js.
 import { G } from "./infusione-grafo-stato.js";

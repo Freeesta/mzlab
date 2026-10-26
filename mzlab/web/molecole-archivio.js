@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The molecules database in the page (molecules/1): loads the catalogue and the molecules of the user into the Rust engine once, keeps the records of the user in
 // the archive behind the routes api/molecules/* (IndexedDB in the browser, a canonical JSON file in the app), and does the add / edit / delete / import / export.
 // Every check, id, mass and conversion is done by the engine; this file only moves documents. Used by molecole-ui.js (the window) and molecole-campo.js (the search box).

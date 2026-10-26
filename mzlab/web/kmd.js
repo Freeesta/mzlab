@@ -1,20 +1,23 @@
 // @ts-strict
 "use strict";
 // Kendrick mass defect (KMD) of the feature table (high resolution only; «Statistica» panel), for the PFAS and any other series of ions that differ by a whole
-// number of repeating units (CF2, CF2O, C2F4, CH2). The arithmetic is in kmd-calc.js (KMDCALC). A VIEW and a list of CANDIDATE series with their evidence
+// number of repeating units (CF2, CF2O, C2F4, CH2). Calculated by the Rust engine (api/kmd). A VIEW and a list of CANDIDATE series with their evidence
 // (members, steps, retention trend): the program never says what an ion is. Click on a point or a row: XIC of the ion and its profile in time.
 const KMD = (() => {
-  const KEY = NOMI.KEY("kmd");
-  const t = (k, p) => I18N.t(k, p);
-  const eh = s => EH(s == null ? "" : s);
+  const KEY = NOMI.KEY("kmd"), t = (k, p) => I18N.t(k, p), eh = s => EH(s == null ? "" : s);
   const st = Object.assign({ unit: "CF2", tol: 3, min: 3 }, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   let res = null, selSer = null, selRow = null, curBox = null;
-  function compute() {
+  async function compute() {
     const tb = TABELLA.table;
-    res = tb ? KMDCALC.analyse(tb.features, { unit: st.unit, tolMDa: st.tol, minMembers: st.min }) : null;
-    selSer = null; selRow = null;
+    if (!tb) { res = null; selSer = null; selRow = null; return null; }
+    const features = tb.features.map((f, i) => ({ id: f.id ?? i, mz: +f.mz, rt: f.rt == null ? null : +f.rt }));
+    const resp = await fetch("api/kmd", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ features, unit: st.unit, tolMDa: st.tol, minMembers: st.min }) });
+    const j = await resp.json();
+    if (j.error) throw (window.I18N && I18N.err ? I18N.err(j) : new Error(j.error));
+    res = j; selSer = null; selRow = null;
     if (res && window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("stat_kmd", { unit: st.unit, tol: st.tol, min: st.min, n: res.rows.length, series: res.series.length });
+    return res;
   }
   function paintRes(box) {
     const el = box.querySelector("#kmd-res");
@@ -32,36 +35,31 @@ const KMD = (() => {
       + `<form id="kmd-form" class="qq-form"><label>${t("kmd.unit")} <select id="kmd-unit">${KMDCALC.UNITS.map(u => `<option value="${u.id}"${u.id === st.unit ? " selected" : ""}>${u.id} (${u.mass.toFixed(4)})</option>`).join("")}</select></label>`
       + `<label>${t("kmd.tol")} <input id="kmd-tol" value="${st.tol}" inputmode="decimal" size="4"></label><label>${t("kmd.min")} <input id="kmd-min" value="${st.min}" inputmode="numeric" size="3"></label>`
       + `<button type="submit" id="kmd-go">${t("kmd.go")}</button></form>${tb ? "" : `<p class="sm">${t("kmd.needtable")}</p>`}<div id="kmd-msg" class="sm bad" role="alert"></div><div id="kmd-res"></div>`;
-    if (tb && !res) compute();
-    paintRes(box);
+    if (tb && !res) compute().then(() => { if (curBox === box && box.isConnected) paintRes(box); }).catch(err => { const msg = box.querySelector("#kmd-msg"); if (msg) msg.textContent = String(err && err.message || err); res = null; if (curBox === box && box.isConnected) paintRes(box); });
+    else paintRes(box);
   }
-
   function openIonXic(mz) {
     if (!window.HR || typeof addPanel !== "function") return;
-    const ht = HR.ionTrace(mz, { obs: false });
-    if (!ht) return;
+    const ht = HR.ionTrace(mz, { obs: false }); if (!ht) return;
     const ex = E.panels.find(p => p.kmdIon);
     if (ex) { ex.traces = [ht]; if (typeof ctl === "function") ctl(ex); draw(ex); reveal(ex); }
     else { const np = addPanel("xic", { traces: [ht] }); np.kmdIon = true; reveal(np); }
   }
   function selectRow(i, box) {
-    selRow = i;
-    const r = res.rows.find(x => x.i === i); if (!r) return;
-    paintRes(box);
-    openIonXic(r.mz);
+    selRow = i; const r = res && res.rows.find(x => x.i === i); if (!r) return;
+    paintRes(box); openIonXic(r.mz);
     if (window.PROFILO && r.rt != null) PROFILO.show(r.mz, r.rt);
   }
-
   document.addEventListener("tabella", () => { res = null; selSer = null; selRow = null; if (curBox && curBox.isConnected) paint(curBox); });
   function mount(box) {
-    curBox = box;
-    paint(box);
-    box.onsubmit = e => {
+    curBox = box; paint(box);
+    box.onsubmit = async e => {
       e.preventDefault();
       const tol = numIt(box.querySelector("#kmd-tol").value), mn = parseInt(box.querySelector("#kmd-min").value, 10);
       st.unit = box.querySelector("#kmd-unit").value; st.tol = tol > 0 ? tol : 3; st.min = mn >= 2 ? mn : 3; save();
-      try { compute(); box.querySelector("#kmd-msg").textContent = ""; } catch (err) { box.querySelector("#kmd-msg").textContent = String(err && err.message || err); res = null; }
-      paint(box);
+      const msg = box.querySelector("#kmd-msg"); if (msg) msg.textContent = "";
+      try { await compute(); } catch (err_) { const err = /** @type {Lanciato} */ (err_); if (msg) msg.textContent = String(err && err.message || err); res = null; }
+      paintRes(box);
     };
     box.onclick = e => {
       if (e.target.id === "kmd-xlsx" && res) { xlsx(); return; }

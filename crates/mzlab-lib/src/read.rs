@@ -25,10 +25,30 @@ pub fn cache_budget(small_device: bool) -> usize {
     }
 }
 
+/// Widens a small format constant at compile time (the assert fails the build if it ever grows past 16 bits).
+#[allow(clippy::cast_possible_truncation)]
+const fn small(x: usize) -> u32 {
+    assert!(x < 1 << 16);
+    x as u32
+}
+
+fn to_u32(x: usize) -> Result<u32> {
+    u32::try_from(x).map_err(|_| Error::corrupt("size"))
+}
+
+/// `b[from..]`, or a corruption error when the offset read from the file is out of range.
+fn tail<'a>(b: &'a [u8], from: usize, what: &'static str) -> Result<&'a [u8]> {
+    b.get(from..).ok_or_else(|| Error::corrupt(what))
+}
+
+fn to_usize(x: u64) -> Result<usize> {
+    usize::try_from(x).map_err(|_| Error::corrupt("size"))
+}
+
 /// Largest decoded size accepted for a block of each kind.
-const MAX_TABLE_RAW: u32 = SPEC_REC_LEN as u32 * RECORDS_PER_TABLE_CHUNK;
+const MAX_TABLE_RAW: u32 = small(SPEC_REC_LEN) * RECORDS_PER_TABLE_CHUNK;
 const MAX_PEAKS_RAW: u32 = 6 * SPECTRA_PER_PEAK_CHUNK * 500;
-const MAX_META_RAW: u32 = RECORDS_PER_META_CHUNK * 10 * (crate::spec::MAX_FIELD_BYTES as u32 + 4);
+const MAX_META_RAW: u32 = RECORDS_PER_META_CHUNK * 10 * (small(crate::spec::MAX_FIELD_BYTES) + 4);
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum Kind {
@@ -40,6 +60,8 @@ enum Kind {
 }
 
 type Block = (Rc<Vec<u8>>, u64);
+/// One decoded chunk and its index.
+type Held = Option<(u32, Rc<Vec<u8>>)>;
 
 struct Cache {
     map: HashMap<(Kind, u32), Block>,
@@ -110,6 +132,8 @@ pub struct Library<S: Source> {
     frag: IndexDir,
     nl: IndexDir,
     cache: RefCell<Cache>,
+    /// The last chunk used of each kind (table, peaks, meta): consecutive spectra of a scan sit in the same chunk, and this skips the hashed cache lookup.
+    recent: RefCell<[Held; 3]>,
     light: std::cell::OnceCell<Light>,
     /// Decoded-chunk reads served from the file (not the cache): lets tests and the bench see the cache work.
     pub block_reads: std::cell::Cell<u64>,
@@ -172,12 +196,17 @@ impl<S: Source> Library<S> {
             return Err(Error::corrupt("header"));
         }
         let head = read_vec(&src, 0, table_len + 4)?;
-        if crc32c(&head[..table_len as usize]) != le_u32(&head, table_len as usize) {
+        let tl = to_usize(table_len)?;
+        if !head
+            .get(..tl)
+            .is_some_and(|h| crc32c(h) == le_u32(&head, tl))
+        {
             return Err(Error::corrupt("sections"));
         }
         let mut secs = Vec::new();
         for i in 0..header.n_sections as usize {
-            let e = SectionEntry::from_bytes(&head[HEADER_LEN + i * SECTION_ENTRY_LEN..]);
+            let at = HEADER_LEN + i * SECTION_ENTRY_LEN;
+            let e = SectionEntry::from_bytes(tail(&head, at, "sections")?);
             if e.offset.checked_add(e.length).is_none_or(|end| end > flen)
                 || e.offset < HEAD_RESERVED
                 || e.dir_len as u64 > e.length
@@ -213,7 +242,7 @@ impl<S: Source> Library<S> {
             (&meta, RECORDS_PER_META_CHUNK),
         ] {
             for (i, e) in c.entries.iter().enumerate() {
-                if e.first != i as u32 * per {
+                if Some(e.first) != to_u32(i)?.checked_mul(per) {
                     return Err(Error::corrupt("directory"));
                 }
             }
@@ -239,6 +268,7 @@ impl<S: Source> Library<S> {
                 budget: cache_bytes,
                 tick: 0,
             }),
+            recent: RefCell::new([None, None, None]),
             light: std::cell::OnceCell::new(),
             block_reads: std::cell::Cell::new(0),
         })
@@ -253,7 +283,7 @@ impl<S: Source> Library<S> {
         let mut scale = vec_with_capacity::<f32>(n)?;
         let mut precq = vec_with_capacity::<u32>(n)?;
         for (ci, e) in self.table.entries.iter().enumerate() {
-            let raw = match self.cache.borrow_mut().get((Kind::Table, ci as u32)) {
+            let raw = match self.cache.borrow_mut().get((Kind::Table, to_u32(ci)?)) {
                 Some(r) => r,
                 None => {
                     let stored = read_vec(&self.src, self.table.off + e.offset, e.stored as u64)?;
@@ -306,6 +336,24 @@ impl<S: Source> Library<S> {
     }
 
     fn chunk(&self, kind: Kind, idx: u32) -> Result<Rc<Vec<u8>>> {
+        let slot = match kind {
+            Kind::Table => 0,
+            Kind::Peaks => 1,
+            _ => 2,
+        };
+        if let Some(Some((i, v))) = self.recent.borrow().get(slot) {
+            if *i == idx {
+                return Ok(v.clone());
+            }
+        }
+        let v = self.chunk_cached(kind, idx)?;
+        if let Some(h) = self.recent.borrow_mut().get_mut(slot) {
+            *h = Some((idx, v.clone()));
+        }
+        Ok(v)
+    }
+
+    fn chunk_cached(&self, kind: Kind, idx: u32) -> Result<Rc<Vec<u8>>> {
         if let Some(v) = self.cache.borrow_mut().get((kind, idx)) {
             return Ok(v);
         }
@@ -341,8 +389,8 @@ impl<S: Source> Library<S> {
             .ok_or_else(|| Error::corrupt("chunk"))
     }
 
-    /// Quantised peaks of spectrum `i`: m/z in 1e-5 Da units and intensities as fractions of 65535.
-    pub fn peaks_q(&self, i: u32) -> Result<(Vec<u32>, Vec<u16>)> {
+    /// Calls `f(m/z in 1e-5 Da units, intensity as a fraction of 65535)` for each peak of spectrum `i`, in m/z order.
+    fn each_peak_q(&self, i: u32, mut f: impl FnMut(u32, u16)) -> Result<()> {
         let r = self.rec(i)?;
         let ci = i / SPECTRA_PER_PEAK_CHUNK;
         let chunk_first = self.rec(ci * SPECTRA_PER_PEAK_CHUNK)?.first_peak as u64;
@@ -353,33 +401,54 @@ impl<S: Source> Library<S> {
         if raw.len() as u64 != 6 * total {
             return Err(Error::corrupt("peaks"));
         }
-        let start = (r.first_peak as u64)
-            .checked_sub(chunk_first)
-            .ok_or_else(|| Error::corrupt("peaks"))? as usize;
+        let start = to_usize(
+            (r.first_peak as u64)
+                .checked_sub(chunk_first)
+                .ok_or_else(|| Error::corrupt("peaks"))?,
+        )?;
         let n = r.n_peaks as usize;
-        let t = total as usize;
+        let t = to_usize(total)?;
         if start + n > t {
             return Err(Error::corrupt("peaks"));
         }
-        let mut mz = Vec::with_capacity(n);
-        let mut it = Vec::with_capacity(n);
         let mut acc = 0u32;
+        // Column `c` of the byte-plane layout (six planes of `t` bytes).
+        let bad = || Error::corrupt("peaks");
+        let col = |c: usize, j: usize| raw.get(c * t + j).copied().ok_or_else(bad);
         for j in start..start + n {
-            let d = u32::from_le_bytes([raw[j], raw[t + j], raw[2 * t + j], raw[3 * t + j]]);
-            acc = acc.checked_add(d).ok_or_else(|| Error::corrupt("peaks"))?;
-            mz.push(acc);
-            it.push(u16::from_le_bytes([raw[4 * t + j], raw[5 * t + j]]));
+            let d = u32::from_le_bytes([col(0, j)?, col(1, j)?, col(2, j)?, col(3, j)?]);
+            acc = acc.checked_add(d).ok_or_else(bad)?;
+            f(acc, u16::from_le_bytes([col(4, j)?, col(5, j)?]));
         }
+        Ok(())
+    }
+
+    /// Quantised peaks of spectrum `i`: m/z in 1e-5 Da units and intensities as fractions of 65535.
+    pub fn peaks_q(&self, i: u32) -> Result<(Vec<u32>, Vec<u16>)> {
+        let n = self.rec(i)?.n_peaks as usize;
+        let (mut mz, mut it) = (Vec::with_capacity(n), Vec::with_capacity(n));
+        self.each_peak_q(i, |m, v| {
+            mz.push(m);
+            it.push(v);
+        })?;
         Ok((mz, it))
     }
 
-    /// Peaks of spectrum `i` as `f64`: m/z in Da, intensity as a fraction of the highest (≤ 1).
+    /// Peaks of spectrum `i` (m/z, intensity as a fraction of 1).
     pub fn peaks(&self, i: u32) -> Result<(Vec<f64>, Vec<f64>)> {
-        let (mq, iq) = self.peaks_q(i)?;
-        Ok((
-            mq.into_iter().map(dequant_mz).collect(),
-            iq.into_iter().map(|v| v as f64 / INT_MAX).collect(),
-        ))
+        let (mut mz, mut it) = (Vec::new(), Vec::new());
+        self.peaks_into(i, &mut mz, &mut it)?;
+        Ok((mz, it))
+    }
+
+    /// `peaks` into buffers the caller reuses (cleared first): no allocation per spectrum when scanning a window.
+    pub fn peaks_into(&self, i: u32, mz: &mut Vec<f64>, it: &mut Vec<f64>) -> Result<()> {
+        mz.clear();
+        it.clear();
+        self.each_peak_q(i, |m, v| {
+            mz.push(dequant_mz(m));
+            it.push(v as f64 / INT_MAX);
+        })
     }
 
     pub fn meta(&self, i: u32) -> Result<Meta> {
@@ -391,7 +460,7 @@ impl<S: Source> Library<S> {
         let skip = (i % RECORDS_PER_META_CHUNK) as usize;
         for _ in 0..skip {
             for _ in 0..crate::spec::META_FIELDS {
-                let l = crate::util::get_varint(&raw, &mut pos)? as usize;
+                let l = to_usize(crate::util::get_varint(&raw, &mut pos)?)?;
                 pos = pos
                     .checked_add(l)
                     .filter(|p| *p <= raw.len())
@@ -410,20 +479,20 @@ impl<S: Source> Library<S> {
         if c == 0 {
             return Ok(0);
         }
-        let ci = (c - 1) as u32;
+        let ci = to_u32(c - 1)?;
         let chunk = self.chunk(Kind::Table, ci)?;
         let n_in = chunk.len() / SPEC_REC_LEN;
         let (mut lo, mut hi) = (0usize, n_in);
         while lo < hi {
             let m = (lo + hi) / 2;
-            let r = SpecRec::from_bytes(&chunk[m * SPEC_REC_LEN..]);
+            let r = SpecRec::from_bytes(tail(&chunk, m * SPEC_REC_LEN, "chunk")?);
             if less(pol_key(r.pol), r.prec) {
                 lo = m + 1;
             } else {
                 hi = m;
             }
         }
-        Ok(ci * RECORDS_PER_TABLE_CHUNK + lo as u32)
+        Ok(ci * RECORDS_PER_TABLE_CHUNK + to_u32(lo)?)
     }
 
     /// Spectra of polarity key `pk` (0 negative, 1 unknown, 2 positive) with a precursor in `[lo, hi]`: a contiguous index range.
@@ -517,12 +586,12 @@ impl<S: Source> Library<S> {
             return Ok(());
         }
         let first = d.pages.partition_point(|p| p.0 < lo).saturating_sub(1);
-        for p in first..d.pages.len() {
-            if d.pages[p].0 > hi {
+        for (p, pg) in d.pages.iter().enumerate().skip(first) {
+            if pg.0 > hi {
                 break;
             }
-            let b = self.page(nl, p as u32)?;
-            let c = d.pages[p].1 as usize;
+            let b = self.page(nl, to_u32(p)?)?;
+            let c = pg.1 as usize;
             for j in 0..c {
                 let mz = le_u32(&b, j * 4);
                 if mz < lo {
@@ -553,7 +622,7 @@ impl<S: Source> Library<S> {
             prev = Some(k);
             peaks += r.n_peaks as u64;
             let (mz, _) = self.peaks_q(i)?;
-            if mz.windows(2).any(|w| w[0] >= w[1]) {
+            if !mz.is_sorted_by(|a, b| a < b) {
                 return Err(Error::corrupt("peaks"));
             }
             self.meta(i)?;
@@ -565,9 +634,9 @@ impl<S: Source> Library<S> {
             let d = self.index_dir(nl);
             let mut total = 0u64;
             let mut last = 0u32;
-            for p in 0..d.pages.len() as u32 {
-                let b = self.page(nl, p)?;
-                let c = d.pages[p as usize].1 as usize;
+            for (p, pg) in d.pages.iter().enumerate() {
+                let b = self.page(nl, to_u32(p)?)?;
+                let c = pg.1 as usize;
                 for j in 0..c {
                     let (mz, sp) = (le_u32(&b, j * 4), le_u32(&b, c * 4 + j * 4));
                     if mz < last || sp >= n {
@@ -601,7 +670,7 @@ fn read_chunked<S: Source>(
     }
     let mut entries = vec_with_capacity(n as usize)?;
     for i in 0..n as usize {
-        let e = ChunkEntry::from_bytes(&d[8 + i * CHUNK_ENTRY_LEN..]);
+        let e = ChunkEntry::from_bytes(tail(&d, 8 + i * CHUNK_ENTRY_LEN, "directory")?);
         let end = e.offset.checked_add(e.stored as u64);
         if e.raw > max_raw
             || end.is_none_or(|x| x > s.length)
@@ -648,12 +717,9 @@ fn read_index_dir<S: Source>(src: &S, s: &SectionEntry) -> Result<IndexDir> {
         return Err(Error::corrupt("directory"));
     }
     let data_off = s.offset + s.dir_len as u64;
-    let need = if n_pages == 0 {
-        0
-    } else {
-        (n_pages as u64 - 1) * PAGE_BYTES as u64
-            + pages[n_pages as usize - 1].1 as u64 * ENTRY_BYTES as u64
-    };
+    let need = pages.last().map_or(0, |p| {
+        (n_pages as u64 - 1) * PAGE_BYTES as u64 + p.1 as u64 * ENTRY_BYTES as u64
+    });
     if data_off + need > s.offset + s.length {
         return Err(Error::corrupt("section"));
     }

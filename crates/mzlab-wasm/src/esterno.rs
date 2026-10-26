@@ -138,6 +138,7 @@ impl Risposte {
                 id: numero(c.get("id")) as u32,
                 nome: testo(c.get("name")),
                 scansioni: numero(c.get("scans")) as usize,
+                dimensione: c.get("size").and_then(Value::f64).map(|d| d as u64),
             })
             .collect::<Vec<_>>();
         if c.is_empty() {

@@ -1,16 +1,3 @@
 {
- "pagina:TP_Mine/js/20_tpmine.js": 1,
- "pagina:TP_Mine/js/26_untarget_match.js": 1,
- "pagina:mzlab/web/cartella-puntata.js": 1,
- "pagina:mzlab/web/picchi.js": 1,
- "pagina:mzlab/web/riferimento.js": 2,
- "worker:TP_Mine/files/feat-run.js": 2,
- "worker:TP_Mine/files/feat-worker.js": 2,
- "worker:mzlab/web/archivio.js": 2,
- "worker:mzlab/web/idx-worker.js": 1,
- "worker:mzlab/web/libreria-worker.js": 16,
- "worker:mzlab/web/peaks-worker.js": 1,
- "worker:mzlab/web/rust-worker-lab.js": 1,
- "worker:mzlab/web/rust-worker.js": 3,
- "worker:mzlab/web/sw.js": 5
+ "pagina:TP_Mine/js/20_tpmine.js": 1
 }

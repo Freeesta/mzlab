@@ -130,8 +130,8 @@ fn preset_lr() -> Preset {
         },
         params: vec![
             ("axis", text("Da")),
-            ("floor", num(2_000.0)),
-            ("min_height", num(20_000.0)),
+            ("floor", num(3_000.0)),
+            ("min_height", num(7_000.0)),
         ],
         evidence: "LR_FLOOR and LR_MIN_HEIGHT of recipe_lr.rs; the preview proposes the values of each file",
         algorithm: Some("masstrace"),
@@ -205,6 +205,9 @@ fn centwave() -> Algorithm {
                 .default_pair(5.0, 30.0)
                 .unit("s"),
             Param::number("snr", "Signal to noise").min(0.0).default_num(10.0),
+            Param::boolean("broad_peaks", "Broad peaks")
+                .default_bool(false)
+                .doc("Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"),
         ],
         status: Status::Available,
     }

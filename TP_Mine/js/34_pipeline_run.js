@@ -20,12 +20,13 @@
       <div class="row"><strong>Roles and times</strong><label>Time unit <select id="pr-unit" aria-label="Unit of the times of the files">${["min", "s", "h", "d"].map(u => `<option>${u}</option>`).join("")}</select></label>
         <button type="button" id="pr-all" title="Accept the times proposed from the names (yellow)">Confirm times</button></div>
       <table id="pr-tab"><caption class="mut">Role and treatment time of each file; a time proposed from the name is yellow until you confirm it (Enter or «Confirm times»)</caption></table><div id="pr-warn" role="status"></div></div>
-    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
+    <div class="row"><button type="button" id="pipe-run-go" class="imp">Run</button><label class="pipe-both"><input type="checkbox" id="pipe-both" aria-label="Both polarities: run the other polarity too and look for the same neutral mass in it"> Both polarities</label><button type="button" id="pipe-again" disabled title="Runs the last recipe of the session or of the opened .mzflow again and compares the table">Re-apply the recipe</button><button type="button" id="pipe-cc" aria-label="Clear cache: delete the stored detections of the files" title="Deletes the detections kept for the next run; the next run detects every file again">Clear cache</button><span id="pipe-run-msg" class="mut" role="status"></span></div>
     <div id="pipe-res"></div></details>`;
 
   function mount(box, ctx) {
     st.ctx = ctx; box.innerHTML = html(); st.box = box;
     $("#pipe-run-go").onclick = () => run();
+    $("#pipe-cc").onclick = clearCache;
     $("#pipe-again").onclick = again; ctx.onRefresh(armAgain); armAgain();
     const sync = async () => { st.files = await ctx.listIdx(); await loadRoles(); };
     ctx.onRefresh(sync); sync();
@@ -70,6 +71,12 @@
     const by = new Map(), mine = r.polarity > 0 ? "pos" : "neg", other = r.polarity > 0 ? "neg" : "pos";
     for (const q of JSON.parse(text).pairs) { const k = q["id_" + mine]; if (!by.has(k)) by.set(k, []); by.get(k).push({ id: q["id_" + other], ionHere: q["ion_" + mine], ionThere: q["ion_" + other], ppm: q.ppm * (r.polarity > 0 ? 1 : -1), dRt: q.d_rt * (r.polarity > 0 ? 1 : -1), r: q.r, n: q.n_common }); }
     st.pair = by; window.PIPEPOL = { pol: r.polarity, rows: id => by.get(id) || [] };
+  }
+  async function clearCache() {
+    try {
+      const pool = await st.ctx.pool(), mod = await import(URL.createObjectURL(new Blob([window.QTOOLS.ctx.files["feat-run.js"]], { type: "text/javascript" })));
+      msg(`Cache cleared (${((pool.fs ? await mod.clearDetectCache(pool) : 0) / 1048576).toFixed(1)} MB)`);
+    } catch (e) { msg(st.ctx.msg(e.key || "error.featFailed", e.params), true); }
   }
   async function run(op) {
     if (st.busy) return;
@@ -171,8 +178,15 @@
       st.session = session; const g = { ...gate, table: gate.table === true };
       await /** @type {any} */ (window).PIPEQC.render($("#pipe-qc"), { session, gate: g, chart });
       const tab = /** @type {any} */ (window).PIPET.mount($("#pipe-tab"), { session, names: st.names, gate: g, say, cs: st.cs, ppm: () => st.ctx.values().ppm, pol: () => st.ctx.values().polarity, formula: ($("#pipe-pf").value || "").trim(), levels: levelMap(), identsOf: id => (st.cand ? st.all.filter(x => x.row === id - 1) : []), interpText: id => { const T = /** @type {any} */ (window).TPSTRUCT; return T && session.interpCached ? T.identText(session.interpCached(id)) : ""; } });
-      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8) });
+      /** @type {any} */ (window).PIPEX.mount($("#pipe-exp"), { session, spec: () => (tab ? tab.spec() : ""), names: st.names, pool: st.ctx.pool, pol: st.ctx.values().polarity, say, stem: "tabui_" + session.sha.slice(0, 8), provenance, tpInfo: id => ({ level: levelMap().get(id) }) });
     } catch (e) { $("#pipe-qc").innerHTML = `<p class="err">${esc(say(e))}</p>`; }
+  }
+  /** what the report says of the run: the recipe (profile and SHA-256), the rules and the inputs of the table */
+  async function provenance() {
+    const text = st.ctx.recipe(), rules = window.QTOOLS.ctx.files["regole_tp.json"];
+    let rec = {}; try { rec = JSON.parse(text); } catch (_) { /* a recipe that is not JSON has no profile */ }
+    const rv = typeof rules === "string" ? rules : rules ? new TextDecoder().decode(rules) : "", ver = /"version"\s*:\s*(\d+)/.exec(rv);
+    return { profile: rec.profile, recipe_sha256: await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(text)), rules: rv ? "regole_tp/1" + (ver ? " v" + ver[1] : "") + " SHA-256 " + (await /** @type {any} */ (window).UNT.sha256Hex(new TextEncoder().encode(rv))) : "", inputs: st.data.meta.inputs || [] };
   }
   /** what the interpretation of the rows needs (parent, hypotheses, infusion); none without a gate table or without a parent */
   function interpInput(out) {

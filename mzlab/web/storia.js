@@ -47,22 +47,24 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   /** Visible now: the panel is open, in the visible tab, and in full screen only that panel. @param {any} e */
   // a removed file or closed panel belongs to a tab (remove-all to none), not to a live panel
   const visibile = e => { if (e.tipo === "tolto" && e.p === undefined) return !fullscreen() && (e.tab === undefined || e.tab === E.tab);
+    if (e.p && e.p.globale) return !fullscreen();
     if (!E.panels.includes(e.p)) return false; const m = fullscreen(); return m ? e.p === m : (e.p.tab || E.tab) === E.tab; };
   /** @param {any} p @param {string} tipo @param {any} [snap] */
   const cattura = (p, tipo, snap) => tipo === "int" ? (snap ?? intSnap(p))
     : tipo === "campi" ? JSON.stringify(Object.fromEntries(KEYS.filter(k => p[k] !== undefined).map(k => [k, p[k]])))
-    : JSON.stringify({ zoom: p.zoom || null, zoomY: p.zoomY || null });
+    : JSON.stringify({ zoom: p.zoom || null, zoomY: p.zoomY || null, meas: p.meas || null, rul: !!p.rul });
   /** Puts a snapshot back and returns the one it replaced. @param {any} e @param {string} st */
   const ripristina = (e, st) => {
     // before = "U" + data (its weight), after = "R"
     if (e.tipo === "tolto") { if (st.charAt(0) === "U") { e.undo(); return "R"; } e.redo(); return "U" + e.dati; }
-    const p = e.p, cur = cattura(p, e.tipo), o = JSON.parse(st);
+    const p = e.p, cur = e.tipo === "cmd" ? "" : cattura(p, e.tipo), o = e.tipo === "cmd" ? null : JSON.parse(st);
     if (e.tipo === "int") { p.ints = o; p.isel = null; }
     else if (e.tipo === "campi") { KEYS.forEach(k => { if (k in o) p[k] = o[k]; else delete p[k]; }); if (typeof ctl === "function") ctl(p); if (typeof syncTb === "function") syncTb(p); }
-    else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") p.lock = null; }
+    else if (e.tipo === "cmd") { const g = COMANDI.gest(e.cmd); const prev = g.leggi(p); COMANDI.ripristina(e.cmd, p, st); if (!p.globale) draw(p); uiSave(); return prev; }
+    else { p.zoom = o.zoom; p.zoomY = o.zoomY; if (p.type === "spec") { p.lock = null; if ("meas" in o) { p.meas = o.meas; p.rul = o.rul; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.toggle("on", !!o.rul); } } }
     draw(p); uiSave(); return cur;
   };
-  const etichetta = (/** @type {any} */ e) => e.tipo === "tolto" ? e.what : T(e.w || (e.tipo === "int" ? "storia.int" : e.tipo === "campi" ? "storia.campi" : "storia.zoom"));
+  const etichetta = (/** @type {any} */ e) => e.tipo === "tolto" ? e.what : e.tipo === "cmd" ? T(e.w) : T(e.w || (e.tipo === "int" ? "storia.int" : e.tipo === "campi" ? "storia.campi" : "storia.zoom"));
   function sync() {
     const u = document.getElementById("np-undo"), r = document.getElementById("np-redo");
     if (u) /** @type {HTMLButtonElement} */ (u).disabled = StoriaPila.ultimo(pila.v, visibile) < 0 && !(window.AFFIANCA && AFFIANCA.ultimo() > 0);
@@ -73,6 +75,12 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const prima = cattura(p, tipo, snap);
     if (tipo === "zoom") { const l = pila.v[StoriaPila.ultimo(pila.v, e => e.p === p && e.tipo === "zoom")]; if (l && l.prima === prima) return; }
     pila.push({ p, tipo, w, prima, dopo: null }); sync();
+  }
+  /** Records the step of a registered command (comandi.js) whose state BEFORE the change is `prima`; steps with the same `unisci` on the same panel less than 0.8 s apart are one (a drag). @param {string} id @param {any} p @param {string} prima @param {string} [unisci] */
+  function comando(id, p, prima, unisci) {
+    const l = pila.v[pila.v.length - 1], t = Date.now();
+    if (unisci && l && l.tipo === "cmd" && l.cmd === id && l.p === p && l.unisci === unisci && t - l.t < 800) { l.t = t; pila.r.length = 0; sync(); return; }
+    pila.push({ p, tipo: "cmd", cmd: id, w: COMANDI.riga(id)?.nome, unisci: unisci || "", t, prima, dopo: null }); sync();
   }
   /** @param {(e: any) => boolean} [solo] */
   function annulla(solo) {
@@ -102,14 +110,21 @@ const STORIA = typeof document === "undefined" ? null : (() => {
     const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, p: o.p, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, scade: o.scade || null, chiudi: null });
     sync(); avviso(e); return e;
   }
+  /** A panel the student opened: the undo closes it, the redo opens it again (the same entry as a removal with the two closures the other way round, and no notice). o = { what, tab, dati, undo, redo, segue? }: `segue(vecchio, nuovo)` follows a panel that was closed and opened again. @param {any} o */
+  function aperto(o) {
+    const e = pila.push({ tipo: "tolto", what: o.what, tab: o.tab, dati: o.dati || "", prima: "U" + (o.dati || ""), dopo: null, undo: o.undo, redo: o.redo, segue: o.segue, scade: null, chiudi: null });
+    sync(); return e;
+  }
   /** A closed panel is open again as another object: the entries of the old one follow it. @param {any} vecchio @param {any} nuovo */
-  function segui(vecchio, nuovo) { pila.v.concat(pila.r).forEach(e => { if (e.p === vecchio && e.tipo !== "tolto") e.p = nuovo; }); sync(); }
+  function segui(vecchio, nuovo) { pila.v.concat(pila.r).forEach(e => { if (e.p === vecchio && e.tipo !== "tolto") e.p = nuovo; if (e.segue) e.segue(vecchio, nuovo); }); sync(); }
   function ripeti() {
     const e = pila.ripeti(visibile, ripristina);
     if (!e) { say(T("storia.nienteRipeti")); return false; }
     say(T("storia.redone", { what: etichetta(e) })); sync(); return true;
   }
-  const idle = (/** @type {Element | null} */ t) => !!(t && t.closest && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']")) || !!document.querySelector("dialog[open]");
+  // text entry keeps the undo of the browser; a button, checkbox, range or select does not (the key must reach the stack)
+  const TESTO = "input:not([type=checkbox],[type=radio],[type=range],[type=button],[type=submit],[type=reset],[type=color],[type=file],[type=image]),textarea,[contenteditable='true'],[contenteditable='']";
+  const idle = (/** @type {Element | null} */ t) => !!(t && t.closest && t.closest(TESTO)) || !!document.querySelector("dialog[open]");
   const inDati = () => { const d = document.getElementById("dpanels"); return !!(d && d.offsetParent); };
   document.addEventListener("keydown", e => {
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
@@ -127,7 +142,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   const bu = document.getElementById("np-undo"), br = document.getElementById("np-redo");
   if (bu) bu.addEventListener("click", () => { annulla(); });
   if (br) br.addEventListener("click", () => { ripeti(); });
-  return { registra, tolto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
+  return { registra, comando, tolto, aperto, segui, annulla, ripeti, sync, svuota: () => { pila.svuota(); sync(); }, pila };
 })();
 
 // thin wrappers: the callers (eventi.js, pannelli.js, dda.js, mappa.js, banco.js) keep their names

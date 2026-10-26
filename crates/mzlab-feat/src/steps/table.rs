@@ -181,6 +181,19 @@ pub(super) fn filter() -> Step {
             .min(0.0)
             .unit("fraction")
             .doc("The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"),
+        Param::choice("blank_quantity", "Blank quantity", &["area", "height", "norm_area"])
+            .default_str("area")
+            .doc("What is compared with the blank: area, height or normalised area; used with the sample to blank ratio only"),
+        Param::choice("blank_stat", "Blank level", &["mean", "max"])
+            .default_str("mean")
+            .doc("The blank level of a row: mean or maximum over the blank files (a blank without a peak counts as 0)"),
+        Param::choice("blank_scope", "Blank comparison", &["max_feature", "each_feature"])
+            .default_str("max_feature")
+            .doc("max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"),
+        Param::boolean("blank_subtract", "Subtract the blank")
+            .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
+        Param::boolean("qc_zero", "Count missing QC as 0")
+            .doc("The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"),
         Param::number("qc_cv_max", "Maximum QC CV")
             .min(0.0)
             .unit("percent")
@@ -293,9 +306,12 @@ pub(super) fn export_csv() -> Step {
 /// `export.inclusion`: the inclusion list of the products expected in the plan, to inject the samples again in targeted MS2 (`export_inclusione`).
 pub(super) fn export_inclusion() -> Step {
     let params = vec![
-        Param::text("adducts", "Adducts")
-            .default_str("[M+H]+")
-            .doc("Adducts of the ion table separated by commas; one row per product and adduct"),
+        Param {
+            list: Some("adducts"),
+            ..Param::text("adducts", "Adducts")
+        }
+        .default_str("[M+H]+")
+            .doc("Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"),
         Param::number("rt_window", "RT half window")
             .min(0.0)
             .default_num(0.5)

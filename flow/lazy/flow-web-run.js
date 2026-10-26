@@ -7,7 +7,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the steps this runner knows, and the ones that need a computer */
-  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill"];
+  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : [])];
   const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;
@@ -49,7 +49,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(/* webpackIgnore: true */ url);
     const w = (/** @type {any} */ m) => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs) } });
+    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}) } });
     pool.featWasm = w(man.feat);
     pool.limit = Math.max(1, mod.poolSize(false, navigator.hardwareConcurrency));
     return pool;
@@ -82,18 +82,17 @@
     return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });
   };
 
-  /** runs the plan of S: the MSn plans by their own runner, every other plan in the live session (flow-live.js), which starts the jobs the browser can do as soon as the plan allows and
+  /** runs the plan of S: every plan in the live session (flow-live.js), which starts the jobs the browser can do as soon as the plan allows and
    * here is only waited for. Resolves with { steps, table, llm }, rejects with {key, params}
    * @param {any} S @param {{ onEvent?: (e: any) => void, askMore?: (i: any) => Promise<boolean> }} [opts] */
   const run = async (S, opts = {}) => {
     const o = { askMore: G.mzlabAskMore, ...opts };
-    if (F.webMsn && F.webMsn.handles(S.plan)) return F.webMsn.run(S, o);
     if (!F.live) await F.whenLate;
     return F.live.run(S, o);
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null: lets the page refuse a series that no level of memory holds before it starts @param {any} S */
-  const preflight = async S => (!available() || (F.webMsn && F.webMsn.handles(S.plan)) || !F.live ? null : F.live.preflight(S));
+  const preflight = async S => (!available() || !F.live ? null : F.live.preflight(S));
 
   /** the pieces the live session uses: the pool of workers, the list of the indexes, the estimate, the recipe */
   const kit = { getPool, listIdx, stima, recipeOf, highMb, KNOWN, poolIfAny: () => pool };

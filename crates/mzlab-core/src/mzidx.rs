@@ -11,7 +11,9 @@ use std::io::{Cursor, Seek, SeekFrom, Write};
 use crate::error::{Error, Result};
 use crate::mzidx_ordine::ordina_secchi;
 use crate::mzidx_spill::{leggi_parti, Parti, Spill};
-use crate::mzml::{self, Item, Spectrum};
+use crate::mzml::Spectrum;
+mod late;
+pub use late::build_mzml_late;
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
@@ -73,9 +75,14 @@ pub(crate) trait Num: Copy + Default + Send {
     fn to64(self) -> f64;
     fn put(self, out: &mut Vec<u8>);
 }
+fn get0<T: Copy + Default>(v: &[T], i: usize) -> T {
+    v.get(i).copied().unwrap_or_default()
+}
+
 impl Num for f32 {
     const SIZE: usize = 4;
     const F32: bool = true;
+    #[allow(clippy::cast_possible_truncation)] // f32 is the stored width of the profile arrays
     fn from64(x: f64) -> Self {
         x as f32
     }
@@ -153,11 +160,19 @@ impl Totals {
         }
     }
     fn add(&mut self, pos: usize, mz: f64, it: f64) {
-        self.acc[pos] += it;
-        if !self.have[pos] || it >= self.bpy[pos] {
-            self.bpm[pos] = mz;
-            self.bpy[pos] = it;
-            self.have[pos] = true;
+        if let Some(a) = self.acc.get_mut(pos) {
+            *a += it;
+        }
+        if let (Some(have), Some(bpy), Some(bpm)) = (
+            self.have.get_mut(pos),
+            self.bpy.get_mut(pos),
+            self.bpm.get_mut(pos),
+        ) {
+            if !*have || it >= *bpy {
+                *bpm = mz;
+                *bpy = it;
+                *have = true;
+            }
         }
     }
 }
@@ -238,8 +253,8 @@ impl<T: Num> Sec<T> {
     fn emit(&mut self, out: &mut dyn Output, off: &Offsets, peaks: &[Peak<T>]) -> Result<()> {
         const CHUNK: usize = 1 << 16;
         let mut g = (BLOCK - self.done % BLOCK) % BLOCK;
-        while (g as usize) < peaks.len() {
-            self.fence.push(peaks[g as usize].mz);
+        while let Some(p) = usize::try_from(g).ok().and_then(|i| peaks.get(i)) {
+            self.fence.push(p.mz);
             g += BLOCK;
         }
         for chunk in peaks.chunks(CHUNK) {
@@ -305,32 +320,30 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn cost(&self, b: usize) -> usize {
-        self.counts[b] as usize * std::mem::size_of::<Peak<T>>()
+        get0(&self.counts, b) as usize * std::mem::size_of::<Peak<T>>()
     }
 
     fn begin_round(&mut self, lo: usize, hi: usize) -> Result<()> {
         if self.before.is_empty() {
-            let mut acc = 0u64;
-            self.before = (0..NB)
-                .map(|b| {
-                    let v = acc;
-                    acc += self.counts[b] as u64;
-                    v
-                })
+            self.before = self
+                .counts
+                .iter()
+                .scan(0u64, |a, &c| Some(std::mem::replace(a, *a + c as u64)))
                 .collect();
         }
         self.lo = lo;
         self.hi = hi;
         let mut at = 0usize;
         for b in lo..hi {
-            self.base[b] = at;
-            self.cursor[b] = at;
-            at += self.counts[b] as usize;
+            if let (Some(base), Some(cursor)) = (self.base.get_mut(b), self.cursor.get_mut(b)) {
+                (*base, *cursor) = (at, at);
+            }
+            at += get0(&self.counts, b) as usize;
         }
         self.round = Vec::new();
         reserve(&mut self.round, at)?;
         self.round.resize(at, Peak::default());
-        self.done = self.before[lo];
+        self.done = get0(&self.before, lo);
         Ok(())
     }
 
@@ -339,8 +352,8 @@ impl<T: Num> Sect for Sec<T> {
     }
 
     fn fill(&mut self, sp: &Spectrum, pos: u32) -> Result<()> {
-        for j in 0..sp.mz.len() {
-            self.fill_pk(sp.mz[j], sp.intensity_f64(j), pos)?;
+        for (j, &mz) in sp.mz.iter().enumerate() {
+            self.fill_pk(mz, sp.intensity_f64(j), pos)?;
         }
         Ok(())
     }
@@ -354,8 +367,12 @@ impl<T: Num> Sect for Sec<T> {
         };
         let b = bucket(p.mz.to64());
         if b >= self.lo && b < self.hi {
-            self.round[self.cursor[b]] = p;
-            self.cursor[b] += 1;
+            if let Some(c) = self.cursor.get_mut(b) {
+                if let Some(slot) = self.round.get_mut(*c) {
+                    *slot = p;
+                }
+                *c += 1;
+            }
         }
         Ok(())
     }
@@ -364,9 +381,10 @@ impl<T: Num> Sect for Sec<T> {
         let mut round = std::mem::take(&mut self.round);
         // a round filled by passes is in scan order, so a stable sort keeps equal m/z so; `carica` joins groups, `pos` orders them
         let ends: Vec<usize> = (self.lo..self.hi)
-            .map(|b| self.base[b] + self.counts[b] as usize)
+            .map(|b| get0(&self.base, b) + get0(&self.counts, b) as usize)
             .collect();
-        ordina_secchi(&mut round, self.base[self.lo], &ends, self.per_scansione)?;
+        let first = get0(&self.base, self.lo);
+        ordina_secchi(&mut round, first, &ends, self.per_scansione)?;
         let r = self.emit(out, off, &round);
         self.round = Vec::new();
         r
@@ -621,7 +639,7 @@ pub fn build(
     budget: usize,
     nativo: bool,
 ) -> Result<Stats> {
-    build_con_spill(table, pass, out, budget, nativo, None)
+    build_con_spill(table, pass, out, budget, nativo, None, None)
 }
 
 /// `build` with a scratch file (`mzidx_spill`) for the peaks that do not fit in `budget`: the stream is decoded once whatever its size.
@@ -633,6 +651,7 @@ pub fn build_con_spill(
     budget: usize,
     nativo: bool,
     spill: Option<&mut dyn Spill>,
+    late_source: Option<&mut dyn FnMut() -> Result<String>>,
 ) -> Result<Stats> {
     let n_scans = table.level.len();
     if table.polarity.len() != n_scans || table.rt.len() != n_scans || table.tic.len() != n_scans {
@@ -662,7 +681,7 @@ pub fn build_con_spill(
     if let Some(e) = failure {
         return Err(e);
     }
-    build_dopo(table, prima, pass, out, budget, nativo)
+    build_dopo(table, prima, pass, out, budget, nativo, late_source)
 }
 
 /// The rest of the build once pass 1 has run (`prima`, which counted `table.level.len()` scans): the layout, the arrays of the scans and the peaks,
@@ -675,6 +694,7 @@ pub(crate) fn build_dopo(
     out: &mut dyn Output,
     budget: usize,
     nativo: bool,
+    late_source: Option<&mut dyn FnMut() -> Result<String>>,
 ) -> Result<Stats> {
     let (version, flags) = if nativo {
         (2u32, crate::idxread::FLAG_LETTORE)
@@ -897,7 +917,11 @@ pub(crate) fn build_dopo(
     out.write_at(scans_off, &table.scans_json)?;
     let mut meta =
         format!("{{\"format\":\"mzidx\",\"version\":{version},\"block\":16384,\"source\":");
-    meta.push_str(&table.source_json);
+    match late_source {
+        // the SHA-256 of the file may still be running: it is needed only here
+        Some(late) => meta.push_str(&late()?),
+        None => meta.push_str(&table.source_json),
+    }
     meta.push_str(",\"run\":");
     meta.push_str(&table.run_json);
     meta.push_str(",\"keys\":{");
@@ -964,26 +988,12 @@ pub fn build_mzml<R: std::io::Read + Seek>(
 /// `build_mzml` with a scratch file for the peaks that do not fit in `budget` (the mzML is then decoded once).
 pub fn build_mzml_spill<R: std::io::Read + Seek>(
     table: &ScanTable,
-    mut src: R,
+    src: R,
     out: &mut dyn Output,
     budget: usize,
     spill: Option<&mut dyn Spill>,
 ) -> Result<Stats> {
-    build_con_spill(
-        table,
-        &mut |on| {
-            src.seek(SeekFrom::Start(0)).map_err(io_error)?;
-            mzml::parse(&mut src, |item| {
-                if let Item::Spectrum(s) = item {
-                    on(s)
-                }
-            })
-        },
-        out,
-        budget,
-        false,
-        spill,
-    )
+    build_mzml_late(table, src, out, budget, spill, None)
 }
 
 /// The same for a Thermo `.raw` file.

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Transport of the assistant (the document inside the iframe `llm/trasporto.html`, which has a CSP of its own): the only place that holds the API key and the only code that
 // fetches a model. No logic: the worker (`llm-worker.js`) builds each request and decodes the bytes; here the key goes into the header named by `auth`, the bytes come back unread.
 // Messages: the page sends `init` (labels, provider, port to the worker) with window.postMessage; the worker talks over that port (`send`, `abort` / `head`, `chunk`, `end`, `fail`).

@@ -138,6 +138,7 @@
     "error.memoryBudget": "This file is too big for the memory the browser gives the calculation engine.",
     "error.badRecipe": "The parameters of the pipeline are not valid.",
     "error.badMzfeat": "This is not a valid .mzfeat file.",
+    "error.newerFormat": "This file was written by a newer version of the program, so it is not used.",
     "error.io": "A file could not be read.",
     "tpmine.feat.degraded": "Table without proofs: not enough memory for the proofs on {files} files (phase {phase}, about {stima_mb} MB needed of {budget_mb} MB). The phases already finished are saved; split the series into smaller groups.",
     "tpmine.feat.restarted": "A worker of the pipeline stopped and was restarted: the step runs again.",

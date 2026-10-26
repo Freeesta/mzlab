@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The window «Molecules» (the «Manage» link of the search box loads this module on the first click and opens it): search the
 // database, add a molecule, edit one (a catalogue molecule is edited as a copy of the user, the catalogue stays), delete the ones of the user, import a CSV or JSON
 // file (one error per wrong row) and export CSV or JSON. Everything that is computed is computed by the engine (molecole-archivio.js); this file is the interface.
@@ -11,7 +11,7 @@ import { campiHtml, testiModulo, riempi, leggi } from "./molecole-modulo.js";
 
 /** @type {any} */
 const W = window;
-const t = (/** @type {string} */ k, /** @type {any} */ p) => (W.I18N ? W.I18N.t(k, p) : k);
+const t = (/** @type {string} */ k, /** @type {any} */ p = undefined) => (W.I18N ? W.I18N.t(k, p) : k);
 const STYLE_ID = "mol-style";
 const MAX_ERRORI = 200;
 const CSS = `#moldlg{position:fixed;inset:0;z-index:6200;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--ink) 45%,transparent)}
@@ -208,7 +208,7 @@ function chiediElimina(/** @type {string} */ id, /** @type {string} */ nome) {
   q("#mol-conf-ok").onclick = () => protetto(async () => {
     const r = await A.elimina(id);
     chiudiConferma();
-    if ("errori" in r) mostraErrori(r.errori, t("mol.err.save"));
+    if ("errori" in r) mostraErrori(/** @type {ErroreRiga[]} */ (r.errori), t("mol.err.save"));
     else { await elenco(); stato(t("mol.deleted", { name: nome })); }
   });
   q("#mol-conf-no").focus();

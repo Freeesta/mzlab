@@ -1,0 +1,27 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "WebWorker"
+    ],
+    "moduleDetection": "force",
+    "strict": true,
+    "useUnknownInCatchVariables": false,
+    "strictNullChecks": true
+  },
+  "include": [
+    "manuale.d.ts",
+    "manuale-worker.d.ts",
+    "../../TP_Mine/files/feat-run.js",
+    "../../TP_Mine/files/chem-worker.js",
+    "../../TP_Mine/files/feat-worker.js",
+    "../../TP_Mine/files/finder-idx.js",
+    "../../TP_Mine/files/finder-ruoli.js",
+    "../../TP_Mine/files/finder-tabella.js",
+    "../../TP_Mine/files/finder-desktop.js",
+    "../../TP_Mine/files/feat-desktop-pool.js",
+    "../../TP_Mine/files/tpmine-worker.js",
+    "../../TP_Mine/files/finder-lr.js"
+  ]
+}

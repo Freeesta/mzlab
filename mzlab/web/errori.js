@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // One way to show errors: an uncaught `error` or `unhandledrejection` becomes a short translated message in a role=alert box with a
 // «Copy details» button (version, route, stack). Nothing is hidden: the browser console still gets the original error.
 const BOX = "errbox";

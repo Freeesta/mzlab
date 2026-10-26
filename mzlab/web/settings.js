@@ -30,17 +30,30 @@ function stdColor(u) {                                       // u in 0..1
 }
 function uipLoad() {
   QA11Y.apply(QA11Y.read());
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false; if (o.beside === true) UIP.beside = true;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.v >= 2 || o.pal !== "time" ? o.pal : "file";   /* before v2 "time" was the default, not a choice */ if (o.merge === false) UIP.merge = false; if (o.beside === true) UIP.beside = true; if (o.xicLens === false) UIP.xicLens = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
   const o = { v: 2, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
   if (UIP.beside) o.beside = true;
+  if (!UIP.xicLens) o.xicLens = false;
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
+// the preferences (theme, colours, reading, high-resolution options) are one undoable action (comandi.js); the language reloads the page and is not undone
+COMANDI.gestore("app.settings", {
+  leggi: () => JSON.stringify([UIP.theme, UIP.pal, UIP.merge, !!UIP.beside, UIP.hrPpm, UIP.hrDec, QA11Y.read(), UIP.xicLens]),
+  applica: (_p, snap) => {
+    const [theme, pal, merge, beside, hrPpm, hrDec, a11y, xicLens] = JSON.parse(snap);
+    Object.assign(UIP, { theme, pal, merge, beside, hrPpm, hrDec, xicLens: xicLens !== false }); QA11Y.write(a11y); uipSave(); uipApply();
+    CACHE.clear(); SC.m.clear(); SC.n.clear();
+    const open = Q("#uipset"), btn = Q("#np-set"); if (open && btn) { open.remove(); uipOpen(btn); }
+  },
+});
+/** @param {() => void} f */
+const uipDo = f => COMANDI.fai("app.settings", COMANDI.GLOBALE, f);
 // the settings panel of the Teoria (inside the iframe) changes the theme of the whole program through here
-window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { UIP.theme = t; uipSave(); TEMASOFT.run(uipApply); } };
+window.uipSetTheme = t => { if (["auto", "light", "dark"].includes(t)) { uipDo(() => { UIP.theme = t; }); uipSave(); TEMASOFT.run(uipApply); } };
 function uipApply() {
   const r = document.documentElement;
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
@@ -81,7 +94,7 @@ async function centroidAll(btn, stop, st, refresh) {
     try {
       const blob = await rb.convertCentroids(f.name, sizeOf(f), p => { if (p.scansTotal) line(p.scans / p.scansTotal); }, ctl.signal);
       if (blob) { await upload([new File([blob], name, { type: "application/xml" })], "data"); made++; }
-    } catch (e) {
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       if (e && e.cancelled) break;
       failed++; st.textContent = I18N.t("settings.cen.fail", { name: f.name });
     }
@@ -112,8 +125,17 @@ function uipContOn() { try { return localStorage.getItem(NOMI.KEY("contaminanti.
 const UIP_GROUP_KEY = id => NOMI.KEY(id === "uip-a11y" ? "set.a11y" : "set." + id);      // the group «Accessibility» keeps the key it always had
 function uipGroupOpen(id, dflt) { try { const v = localStorage.getItem(UIP_GROUP_KEY(id)); return v === null ? dflt : v === "1"; } catch (_) { return dflt; } }
 function uipRestore() {            // theme, colours, reading and high-resolution options go back to the factory values; files and sessions are never touched
-  Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 });
-  QA11Y.write({}); uipSave(); uipApply();
+  uipDo(() => { Object.assign(UIP, { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true }); QA11Y.write({}); });
+  uipSave(); uipApply();
+}
+/** Privacy group body: export and import buttons, hidden file input, preview box and statuses (logic in esporta-dati.js and importa-dati.js). */
+/** @param {(k: string, p?: any) => string} T @param {(s: string) => string} esc */
+function uipPrivHtml(T, esc) { return `<div id="uip-priv" class="imp-fld"><button id="uip-export" type="button" title="${esc(T("export.title"))}">${T("export.btn")}</button></div><div class="hint">${T("export.hint")}</div><div id="uip-export-st" class="hint" role="status" aria-live="polite"></div>` + `<div class="imp-fld"><button id="uip-import" type="button" title="${esc(T("import.title"))}">${T("import.btn")}</button><input type="file" id="uip-import-file" accept=".zip,application/zip" hidden></div><div id="uip-import-box" role="group" aria-label="${esc(T("import.preview"))}" hidden></div><div id="uip-import-st" class="hint" role="status" aria-live="polite"></div>`; }
+/** @param {HTMLElement} d @param {(sel: string, ev: string, fn: (e: any) => void) => void} on */
+function uipPriv(d, on) {
+  on("#uip-export", "click", () => { import("./esporta-dati.js").then(m => m.start(d)).catch(() => { const st = d.querySelector("#uip-export-st"); if (st) st.textContent = I18N.t("export.err"); }); });
+  on("#uip-import", "click", () => { const f = /** @type {HTMLInputElement | null} */ (d.querySelector("#uip-import-file")); if (f) { f.value = ""; f.click(); } });
+  on("#uip-import-file", "change", e => { const f = e.target.files && e.target.files[0]; if (f) import("./importa-dati.js").then(m => m.begin(d, f)).catch(() => { const st = d.querySelector("#uip-import-st"); if (st) st.textContent = I18N.t("import.bad"); }); });
 }
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
@@ -125,7 +147,8 @@ function uipOpen(btn) {
   const fld = (label, tip, inner) => `<div class="imp-fld" title="${esc(tip)}"><span>${label}</span>${inner}</div>`;
   const look = C.section(T("settings.theme"), C.opts("seg3", C.radios("uip-th", [["auto", T("settings.theme.auto")], ["light", T("settings.theme.light")], ["dark", T("settings.theme.dark")]], UIP.theme, "seg")))
     + C.section(T("settings.pal.label"), `<select id="uip-pal" title="${esc(T("settings.pal.title"))}" aria-label="${esc(T("settings.pal.label"))}">${pals}</select>`)
-    + C.sw(T("settings.beside"), T("settings.beside.title"), 'id="uip-beside"', UIP.beside, "side");
+    + C.sw(T("settings.beside"), T("settings.beside.title"), 'id="uip-beside"', UIP.beside, "side")
+    + C.sw(T("settings.xiclens"), T("settings.xiclens.title"), 'id="uip-xiclens"', UIP.xicLens, "side");
   const read = C.section(T("settings.font.label"), C.opts("f3", C.radios("uip-font", [["", T("settings.font.default")], ["atkinson", T("settings.font.atkinson")], ["dyslexic", T("settings.font.dyslexic")]], a11y.font || "", "font")))
     + C.sw(T("settings.hc.label"), "", 'id="uip-hc"', a11y.bg === "hc", "hc") + C.sw(T("settings.motion"), T("settings.motion.title"), 'id="uip-motion"', a11y.motion === "always", "motion");
   const cen = window.MZLAB_BROWSER && typeof centroidTargets === "function" && centroidTargets().length
@@ -143,10 +166,18 @@ function uipOpen(btn) {
     + C.section(T("settings.language.label"), C.opts("seg2", C.radios("uip-lang", [["it", "Italiano", T("settings.language.title"), C.GICON.lang], ["en", "English", T("settings.language.title"), C.GICON.lang]], I18N.lang, "seg")))
     + grp("uip-g-look", "look", "settings.g.look", look, true) + grp("uip-a11y", "read", "settings.g.read", read, false) + grp("uip-g-data", "data", "settings.g.data", data, false)
     + grp("uip-g-app", "app", "settings.g.app", app, false)
+    + grp("uip-g-priv", "data", "settings.g.priv", uipPrivHtml(T, esc), false)
+    + grp("uip-g-bug", "bug", "settings.g.bug", '<div id="uip-bug"></div>', false)
     + (prof === "ricerca" ? grp("uip-g-llm", "app", "llm.g", '<div id="uip-llm"></div>', false) : "") + grp("uip-g-diag", "cont", "settings.g.diag", mem ? mem.html : "", false)
     + `<div class="row"><button type="button" id="uip-reset" title="${esc(T("settings.reset.title"))}">${T("settings.reset")}</button></div>`;
   document.body.appendChild(d);
   d.querySelectorAll("details.imp-g").forEach(g => g.addEventListener("toggle", () => { try { localStorage.setItem(UIP_GROUP_KEY(g.id), /** @type {HTMLDetailsElement} */ (g).open ? "1" : "0"); } catch (_) { /* not remembered */ } }));
+  const bugGroup = /** @type {HTMLDetailsElement | null} */ (d.querySelector("#uip-g-bug")), bugBox = /** @type {HTMLElement | null} */ (d.querySelector("#uip-bug"));
+  if (bugGroup && bugBox) {            // the report form is fetched when the group is first opened
+    let bugDone = false;
+    const bugMount = () => { if (bugDone || !bugGroup.open) return; bugDone = true; import("./bug-report.js").then(m => m.mount(bugBox)).catch(() => { bugDone = false; }); };
+    bugGroup.addEventListener("toggle", bugMount); bugMount();
+  }
   if (window.DESKUPD) DESKUPD.bind(d);
   if (window.DESKDEF) DESKDEF.bind(d);
   if (mem) mem.bind(d);
@@ -162,17 +193,19 @@ function uipOpen(btn) {
     else on("#llm-on", "change", e => { if (e.target.checked) go(true); });
   }
   radio("uip-lang", v => I18N.set(v));                                  // remembered in qqq.lang, then the page reloads (open files come back with the session)
-  radio("uip-th", v => { UIP.theme = v; uipSave(); TEMASOFT.run(uipApply); });
-  radio("uip-font", v => { const c = QA11Y.read(); c.font = v; QA11Y.write(c); });
-  on("#uip-hc", "change", e => { const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; QA11Y.write(c); if (typeof redrawAll === "function") redrawAll(); });
-  on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; QA11Y.write(c); });
+  radio("uip-th", v => { uipDo(() => { UIP.theme = v; }); uipSave(); TEMASOFT.run(uipApply); });
+  radio("uip-font", v => { const c = QA11Y.read(); c.font = v; uipDo(() => QA11Y.write(c)); });
+  on("#uip-hc", "change", e => { const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; uipDo(() => QA11Y.write(c)); if (typeof redrawAll === "function") redrawAll(); });
+  on("#uip-motion", "change", e => { const c = QA11Y.read(); c.motion = e.target.checked ? "always" : "auto"; uipDo(() => QA11Y.write(c)); });
   const pal = /** @type {HTMLSelectElement} */ (d.querySelector("#uip-pal")); pal.value = UIP.pal;
-  pal.onchange = () => { setPal(pal.value); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
+  pal.onchange = () => { uipDo(() => setPal(pal.value)); uipSave(); uipApply(); };              // applied at once: file colours, lists, legends, every graph
   on("#uip-merge", "change", e => {                                     // spectra are asked again to the server with / without the merge
-    UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
+    uipDo(() => { UIP.merge = e.target.checked; }); uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   });
-  on("#uip-beside", "change", e => { UIP.beside = e.target.checked; uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
+  on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
+  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (!UIP.xicLens && window.XICLENS) XICLENS.closeAll(); });
+  uipPriv(d, on);
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();
     if (window.TOUR && typeof S !== "undefined" && S.view === "draw") { TOUR.disegno(); return; }
@@ -191,8 +224,8 @@ function uipOpen(btn) {
     if (typeof renderFileList === "function" && E.files.length) renderFileList();
     if (typeof redrawAll === "function") redrawAll();
   };
-  on("#uip-ppm", "change", e => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); e.target.value = UIP.hrPpm; hrChanged(); });
-  on("#uip-hdec", "change", e => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); e.target.value = UIP.hrDec; hrChanged(); });
+  on("#uip-ppm", "change", e => { uipDo(() => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); }); e.target.value = UIP.hrPpm; hrChanged(); });
+  on("#uip-hdec", "change", e => { uipDo(() => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); }); e.target.value = UIP.hrDec; hrChanged(); });
   on("#uip-reset", "click", () => { uipRestore(); d.remove(); uipOpen(btn); });
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);

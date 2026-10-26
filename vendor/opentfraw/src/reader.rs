@@ -367,7 +367,7 @@ pub struct RawFileReader {
     pub error_log: Vec<ErrorEntry>,
     // Instrument log uses same structure
     pub inst_log_header: GenericDataHeader,
-    pub inst_log: Vec<GenericRecord>,
+    pub inst_log: std::sync::Arc<[GenericRecord]>,
     /// The status log as the file stores it (temperatures, voltages, vacuum...); `None` when no schema is found or the records do not fit.
     pub status_log: Option<crate::status_log::StatusLog>,
     /// Layout the file is read with: the version in the header when documented, else the nearest documented one (`declared_version` has the number written).
@@ -409,6 +409,8 @@ pub struct RawFileReader {
     /// collision energy is read from per-scan parameters instead, so this map is
     /// empty for v66/TSQ Altis files.
     pub srm_ce_by_event: HashMap<u16, f64>,
+    /// The filter text of each SRM event with a Q1 and Q3 windows, formatted once at open (it only depends on the event, not on the scan).
+    srm_filters: HashMap<u16, String>,
 }
 
 // -- Multi-controller metadata --
@@ -713,43 +715,7 @@ impl RawFileReader {
         // have one size; the tribrid ones (Eclipse, Fusion Lumos) mix several, and the sizes are found by walking
         // the table with each known layout until one ends exactly where the next stream begins.
         let sizes: [usize; 3] = if version >= 66 && n_events > 0 {
-            let n = n_events as u64;
-            // Events of equal size may still be counted ones (a single event, or the same number of reactions in each):
-            // they are when the walk fits and one event holds several reactions, which no uniform layout does.
-            let start = r.position();
-            let counted_uniform = walk_counted(&mut r, n, preamble_size, start, stream_bytes)
-                .is_some_and(|most| most >= 2);
-            r.seek_to(start)?;
-            if counted_uniform {
-                [crate::scan_event::COUNTED_BODY; 3]
-            } else if stream_bytes % n == 0 {
-                let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
-                [body, body, body]
-            } else {
-                let layouts: [[u64; 3]; 4] = [
-                    [232, 344, 344],
-                    [232, 344, 288],
-                    [232, 288, 288],
-                    [232, 232, 288],
-                ];
-                let start = r.position();
-                let found = layouts.iter().find(|l| {
-                    let body = l.map(|x| (x as usize).saturating_sub(preamble_size));
-                    let ok = walk_events(&mut r, n, preamble_size, &body, start, stream_bytes);
-                    ok
-                });
-                let counted = found.is_none()
-                    && walk_counted(&mut r, n, preamble_size, start, stream_bytes).is_some();
-                r.seek_to(start)?;
-                match found {
-                    Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
-                    None if counted => [crate::scan_event::COUNTED_BODY; 3],
-                    None => {
-                        let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
-                        [body, body, body]
-                    }
-                }
-            }
+            v66_body_sizes(&mut r, n_events as u64, preamble_size, stream_bytes)?
         } else {
             [0, 0, 0]
         };
@@ -900,6 +866,7 @@ impl RawFileReader {
             skipped(&mut warnings, "InstrumentLog", run_header.inst_log_addr, &e);
             (GenericDataHeader { fields: Vec::new() }, Vec::new())
         });
+        let inst_log: std::sync::Arc<[GenericRecord]> = inst_log.into();
 
         let status_log = Self::read_status_log(&mut r, &run_header, &inst_log_header, &inst_log)
             .unwrap_or_else(|e| {
@@ -976,24 +943,7 @@ impl RawFileReader {
                             event_q3_hi.entry(entry.scan_event).or_insert(entry.high_mz);
                         }
                     }
-                    let data = &metadata_window;
-                    let mut q1_map: HashMap<u16, f64> = HashMap::new();
-                    'outer_v66: for (&event, &q3_hi_target) in &event_q3_hi {
-                        let end = data.len().saturating_sub(8);
-                        for i in 16..end {
-                            let hi = crate::bytes::read_f64_le(data, i)?;
-                            if (hi - q3_hi_target).abs() < 0.002 {
-                                let lo = crate::bytes::read_f64_le(data, i - 8)?;
-                                if hi > lo && (hi - lo) < 0.1 {
-                                    let q1 = crate::bytes::read_f64_le(data, i - 16)?;
-                                    if q1 > 50.0 && q1 < 3000.0 {
-                                        q1_map.insert(event, q1);
-                                        continue 'outer_v66;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    let q1_map = crate::srm_table::v66_q1_by_event(&metadata_window, &event_q3_hi)?;
                     // --- v66 Q3 window extraction: read per-scan record header ---
                     let mut seen: HashMap<u16, bool> = HashMap::new();
                     let mut q3_map: HashMap<u16, Vec<(f32, f32)>> = HashMap::new();
@@ -1058,6 +1008,13 @@ impl RawFileReader {
             }
         };
 
+        let srm_filters = srm_event_filters(
+            scan_format,
+            &srm_q1_by_event,
+            &srm_q3_windows,
+            &srm_ce_by_event,
+        );
+
         Ok(Self {
             header,
             seq_row,
@@ -1085,6 +1042,7 @@ impl RawFileReader {
             srm_q1_by_event,
             srm_q3_windows,
             srm_ce_by_event,
+            srm_filters,
         })
     }
 
@@ -1093,14 +1051,14 @@ impl RawFileReader {
         r: &mut BinaryReader<R>,
         run_header: &RunHeader,
         header: &GenericDataHeader,
-        records: &[GenericRecord],
+        records: &std::sync::Arc<[GenericRecord]>,
     ) -> Result<Option<crate::status_log::StatusLog>> {
         if !records.is_empty() {
-            return Ok(Some(crate::status_log::StatusLog {
-                header: header.clone(),
-                times_min: Vec::new(),
-                records: records.to_vec(),
-            }));
+            return Ok(Some(crate::status_log::StatusLog::new(
+                header.clone(),
+                Vec::new(),
+                std::sync::Arc::clone(records),
+            )));
         }
         let (addr, next) = (run_header.inst_log_addr, run_header.error_log_addr);
         let region = next.checked_sub(addr).unwrap_or(0);
@@ -1518,6 +1476,30 @@ impl RawFileReader {
         }
     }
 
+    /// [`Self::read_peaks_only`] with the peaks appended to `mz` and `int` instead of returned as `Peak`s: the arrays of a spectrum without a `Vec<Peak>` in between.
+    pub fn read_peaks_only_into<R: Read + Seek>(
+        &self,
+        source: &mut R,
+        scan_number: u32,
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<()> {
+        use crate::scan_format::ScanDataFormat;
+        if self.scan_format != ScanDataFormat::PacketHeader {
+            let peaks = self.read_peaks_only(source, scan_number)?;
+            crate::scan_data::make_room(mz, peaks.len());
+            crate::scan_data::make_room(int, peaks.len());
+            mz.extend(peaks.iter().map(|p| p.mz));
+            int.extend(peaks.iter().map(|p| p.abundance));
+            return Ok(());
+        }
+        let entry = self.scan_index_entry(scan_number)?;
+        let abs_offset = self.data_addr.saturating_add(entry.offset);
+        source.seek(SeekFrom::Start(abs_offset))?;
+        let mut r = BinaryReader::new(source);
+        ScanDataPacket::read_peaks_only_into(&mut r, mz, int)
+    }
+
     /// Return the scan-parameter record for a given 1-based scan number, read from `source` (the one the file was opened with).
     ///
     /// Returns `None` if the file has no scan-parameter stream, if
@@ -1588,42 +1570,11 @@ impl RawFileReader {
         // SRM files have no scan events; build the filter string from
         // the pre-loaded Q1 and Q3 window maps.
         if self.flat_peaks {
-            let (Some(&q1), Some(windows)) = (
-                self.srm_q1_by_event.get(&entry.scan_event),
-                self.srm_q3_windows.get(&entry.scan_event),
-            ) else {
+            let Some(text) = self.srm_filters.get(&entry.scan_event) else {
                 // A TSQ run whose events are one per scan (no event class): the event itself holds Q1 and the product ranges.
                 return self.srm_event_filter(idx);
             };
-            // v63 (TSQ Quantum/Vantage): NSI ionization, @cid{CE:.2} after Q1.
-            // v66 (TSQ Quantiva/Altis): ESI ionization, no CE in filter.
-            use crate::scan_format::ScanDataFormat;
-            let ionization = match self.scan_format {
-                ScanDataFormat::FlatV63 => "NSI",
-                _ => "ESI",
-            };
-            let ce_part = if self.scan_format == ScanDataFormat::FlatV63 {
-                self.srm_ce_by_event
-                    .get(&entry.scan_event)
-                    .map(|&ce| format!("@cid{:.2}", ce))
-                    .unwrap_or_default()
-            } else {
-                String::new()
-            };
-            // Format: "+ c {ION} SRM ms2 {Q1:.3}{@cidCE} [{lo1:.3}-{hi1:.3}, ...]"
-            let mut s = format!("+ c {} SRM ms2 {:.3}{}", ionization, q1, ce_part);
-            if !windows.is_empty() {
-                s.push(' ');
-                s.push('[');
-                for (i, (lo, hi)) in windows.iter().enumerate() {
-                    if i > 0 {
-                        s.push_str(", ");
-                    }
-                    s.push_str(&format!("{:.3}-{:.3}", lo, hi));
-                }
-                s.push(']');
-            }
-            return Some(s);
+            return Some(text.clone());
         }
 
         let event = self.scan_event(idx)?;
@@ -1632,12 +1583,20 @@ impl RawFileReader {
         let precursor = params.and_then(|p| p.monoisotopic_mz());
         let energy = params.and_then(|p| p.activation_energy());
         let supplemental = params.and_then(|p| p.supplemental_activation_energy());
-        Some(crate::scan_filter::build_filter(
+        // RawFileReader writes the m/z of a filter with 2 decimals on the LTQ family (checked on LTQ FT, LTQ Velos, LTQ Orbitrap XL, Orbitrap Velos Pro and Elite), 4 on the others.
+        use crate::device::DeviceFamily::{LtqFt, LtqIonTrap, LtqOrbitrap};
+        let mz_decimals = if matches!(self.device_family, LtqIonTrap | LtqFt | LtqOrbitrap) {
+            2
+        } else {
+            4
+        };
+        Some(crate::scan_filter::build_filter_with(
             &event,
             entry,
             precursor,
             energy,
             supplemental,
+            mz_decimals,
         ))
     }
 
@@ -2502,6 +2461,28 @@ mod tests {
     }
 
     #[test]
+    fn a_counted_table_whose_length_divides_evenly_is_still_read_as_counted() {
+        use crate::scan_event::{counted_tests::counted_event, COUNTED_BODY};
+        // 7 events without reaction and 1 with one: 7 * 232 + 288 = 1912 bytes, 239 on average over 8 events
+        let mut events = vec![counted_event(&[]); 7];
+        events.push(counted_event(&[300.0]));
+        let bytes = events.concat();
+        let n = bytes.len() as u64;
+        assert_eq!(n % 8, 0);
+        let mut r = BinaryReader::new(Cursor::new(bytes));
+        assert_eq!(
+            v66_body_sizes(&mut r, 8, 136, n).unwrap(),
+            [COUNTED_BODY; 3]
+        );
+        assert_eq!(r.position(), 0);
+        // events that are all the same (a fixed body of 144 bytes) keep the uniform sizes
+        let plain = vec![0u8; 8 * (136 + 144)];
+        let n = plain.len() as u64;
+        let mut r = BinaryReader::new(Cursor::new(plain));
+        assert_eq!(v66_body_sizes(&mut r, 8, 136, n).unwrap(), [144; 3]);
+    }
+
+    #[test]
     fn walk_counted_follows_events_that_grow_with_their_reactions() {
         use crate::scan_event::counted_tests::counted_event;
         let bytes = [
@@ -2512,7 +2493,7 @@ mod tests {
         .concat();
         let n = bytes.len() as u64;
         let mut r = BinaryReader::new(Cursor::new(bytes));
-        assert_eq!(walk_counted(&mut r, 3, 136, 0, n), Some(7));
+        assert_eq!(walk_counted(&mut r, 3, 136, 0, n), Some((0, 7)));
         assert!(walk_counted(&mut r, 3, 136, 0, n + 1).is_none());
         assert!(walk_counted(&mut r, 4, 136, 0, n).is_none());
     }
@@ -2525,18 +2506,63 @@ mod tests {
     }
 }
 
+/// The body sizes of the events of a v66 table of `n` events that starts at the reader's position and spans `stream_bytes`
+/// (see the layouts above). Leaves the reader where it started.
+fn v66_body_sizes<R: Read + Seek>(
+    r: &mut BinaryReader<R>,
+    n: u64,
+    preamble_size: usize,
+    stream_bytes: u64,
+) -> Result<[usize; 3]> {
+    let start = r.position();
+    // Events of equal size may still be counted ones: a table of events that grow with their reactions can total a whole
+    // multiple of its length (R135: 590 MS1 of 232 and 15930 MS2 of 288 bytes make 286 on average). They are when the walk
+    // fits exactly and the counts differ or one event holds several reactions, which no uniform layout does.
+    let counted_uniform = walk_counted(r, n, preamble_size, start, stream_bytes)
+        .is_some_and(|(fewest, most)| most >= 2 || fewest != most);
+    r.seek_to(start)?;
+    let uniform = |stream_bytes: u64| {
+        let body = ((stream_bytes / n) as usize).saturating_sub(preamble_size);
+        [body, body, body]
+    };
+    if counted_uniform {
+        return Ok([crate::scan_event::COUNTED_BODY; 3]);
+    }
+    if stream_bytes % n == 0 {
+        return Ok(uniform(stream_bytes));
+    }
+    let layouts: [[u64; 3]; 4] = [
+        [232, 344, 344],
+        [232, 344, 288],
+        [232, 288, 288],
+        [232, 232, 288],
+    ];
+    let found = layouts.iter().find(|l| {
+        let body = l.map(|x| (x as usize).saturating_sub(preamble_size));
+        walk_events(r, n, preamble_size, &body, start, stream_bytes)
+    });
+    let counted =
+        found.is_none() && walk_counted(r, n, preamble_size, start, stream_bytes).is_some();
+    r.seek_to(start)?;
+    Ok(match found {
+        Some(l) => l.map(|x| (x as usize).saturating_sub(preamble_size)),
+        None if counted => [crate::scan_event::COUNTED_BODY; 3],
+        None => uniform(stream_bytes),
+    })
+}
+
 /// Whether `n` events of a v66 table are counted events (body = 96 + 56 bytes per reaction, the count opening the
-/// body) and the walk ends exactly `stream_bytes` after `start`; then the largest reaction count of an event.
+/// body) and the walk ends exactly `stream_bytes` after `start`; then the smallest and the largest reaction count of an event.
 fn walk_counted<R: Read + Seek>(
     r: &mut BinaryReader<R>,
     n: u64,
     preamble_size: usize,
     start: u64,
     stream_bytes: u64,
-) -> Option<u32> {
+) -> Option<(u32, u32)> {
     use crate::scan_event::{COUNTED_BASE, COUNTED_MAX, COUNTED_STEP};
     let mut at = start;
-    let mut most = 0;
+    let (mut fewest, mut most) = (u32::MAX, 0);
     for _ in 0..n {
         if r.seek_to(at).is_err() {
             return None;
@@ -2553,10 +2579,11 @@ fn walk_counted<R: Read + Seek>(
         if count as usize > COUNTED_MAX {
             return None;
         }
+        fewest = fewest.min(count);
         most = most.max(count);
         at += (preamble_size + COUNTED_BASE + COUNTED_STEP * count as usize) as u64;
     }
-    (at == start + stream_bytes).then_some(most)
+    (at == start + stream_bytes).then_some((fewest, most))
 }
 
 /// Walks `n` events of a v66 scan-event table with the body sizes `body` (primary, dependent, independent MS2+) and says
@@ -2595,4 +2622,48 @@ fn walk_events<R: Read + Seek>(
         }
     }
     at == start + stream_bytes
+}
+
+/// `+ c {NSI|ESI} SRM ms2 {Q1:.3}{@cidCE} [{lo:.3}-{hi:.3}, ...]` for each event with a Q1 and Q3 windows. v63 (TSQ Quantum/Vantage) is NSI and carries the
+/// collision energy after Q1; v66 (TSQ Quantiva/Altis) is ESI without it.
+fn srm_event_filters(
+    scan_format: crate::scan_format::ScanDataFormat,
+    q1_by_event: &HashMap<u16, f64>,
+    q3_windows: &HashMap<u16, Vec<(f32, f32)>>,
+    ce_by_event: &HashMap<u16, f64>,
+) -> HashMap<u16, String> {
+    use crate::scan_format::ScanDataFormat;
+    let v63 = scan_format == ScanDataFormat::FlatV63;
+    let mut out = HashMap::with_capacity(q1_by_event.len());
+    for (&event, &q1) in q1_by_event {
+        let Some(windows) = q3_windows.get(&event) else {
+            continue;
+        };
+        let ce_part = if v63 {
+            ce_by_event
+                .get(&event)
+                .map(|&ce| format!("@cid{:.2}", ce))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+        let mut s = format!(
+            "+ c {} SRM ms2 {:.3}{}",
+            if v63 { "NSI" } else { "ESI" },
+            q1,
+            ce_part
+        );
+        if !windows.is_empty() {
+            s.push_str(" [");
+            for (i, (lo, hi)) in windows.iter().enumerate() {
+                if i > 0 {
+                    s.push_str(", ");
+                }
+                s.push_str(&format!("{:.3}-{:.3}", lo, hi));
+            }
+            s.push(']');
+        }
+        out.insert(event, s);
+    }
+    out
 }

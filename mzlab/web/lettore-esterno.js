@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The readers modules in the workers of the ENGINE (rust-worker.js, idx-worker.js): the engine (mzlab-wasm) has no reader for a Thermo `.raw`; the dataset is opened on the `thermo` module, loaded in the same
 // worker on the first `.raw` (carica-modulo.js, never for other files), and the engine reads it through `LettoreEsterno` (crates/mzlab-wasm/src/esterno.rs): synchronous calls, no mzML in between.
 // The index and the scans cross as one Uint8Array each, read by the engine (`trasporto.rs`); the engine refuses a module whose `protocollo()` is not its own (err.file.wiffLoad).

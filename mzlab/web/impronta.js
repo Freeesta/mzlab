@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The fingerprints of a member (SHA-256, SHA-1, probe: `Passata` of the engine, crates/mzlab-wasm/src/nativi.rs) taken WHILE it is copied to OPFS, so that the file is read once. The default is a dedicated
 // worker (impronta-worker.js) that receives each piece as a Transferable after it was written and hashes it on another core while the copy goes on; without a Worker (or `mode: "qui"`) it hashes in the
 // worker of the copy at each piece. At most WINDOW pieces wait for the hash worker (the copy waits for it beyond that: the memory never holds the file).

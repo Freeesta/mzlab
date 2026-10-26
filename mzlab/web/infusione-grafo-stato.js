@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // State and requests of the «Fragmentation graph» tab of an MSn infusion: the ion typed or chosen by name, the settings, the user's formula choices
 // and the graph (msngrafo/1) that /api/msn_grafo answers. No chemistry here: the engine reads the ion text and does every calculation.
 // Used by infusione-grafo*.js.
@@ -15,7 +15,7 @@ export const TXT = {
   warn: {
     "warn.msngrafo.isolation": "warn.msngrafo.isolation", "warn.msngrafo.precNotFound": "warn.msngrafo.precNotFound", "warn.msngrafo.polarity": "warn.msngrafo.polarity",
     "warn.msngrafo.badFormula": "warn.msngrafo.badFormula", "warn.msngrafo.rootMissing": "warn.msngrafo.rootMissing", "warn.msngrafo.fixedNotFound": "warn.msngrafo.fixedNotFound",
-    "warn.msngrafo.userConflict": "warn.msngrafo.userConflict", "warn.msngrafo.isolatedUnexplained": "warn.msngrafo.isolatedUnexplained",
+    "warn.msngrafo.userConflict": "warn.msngrafo.userConflict", "warn.msngrafo.isolatedUnexplained": "warn.msngrafo.isolatedUnexplained", "warn.msngrafo.mostUnexplained": "warn.msngrafo.mostUnexplained",
     "warn.msngrafo.structMixture": "warn.msngrafo.structMixture", "warn.msngrafo.radicalLoss": "warn.msngrafo.radicalLoss", "warn.msngrafo.belowCutoff": "warn.msngrafo.belowCutoff",
   },
 };

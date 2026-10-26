@@ -84,13 +84,15 @@ fn same(dir: &Path, name: &str) -> usize {
             );
             checked += 1;
         }
+        // the BPC is listed only after the mzML writer has gone through the scans (`extra_scansione`): this test reads them one by one
         let listed = l.cromatogrammi(c).unwrap();
-        assert_eq!(
-            listed.len(),
-            run.chromatograms.len(),
-            "{name}/{s}: chromatograms"
-        );
-        for want in &run.chromatograms {
+        let chroms: Vec<_> = run
+            .chromatograms
+            .iter()
+            .filter(|c| c.kind != mzlab_core::mzml::ChromKind::Bpc)
+            .collect();
+        assert_eq!(listed.len(), chroms.len(), "{name}/{s}: chromatograms");
+        for want in chroms {
             assert_eq!(&l.cromatogramma(c, &want.id).unwrap(), want);
         }
         let via = mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap();

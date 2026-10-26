@@ -2,6 +2,9 @@
 //! within the window of each node, reduced to a fixed point on the DAG (a fragment is under a formula of each precursor, a candidate of the
 //! wide low-mass window needs its evidences), the choices of the user, then the nodes with no candidate leave the graph. No score, no proposal.
 
+mod ricalibra;
+use ricalibra::{preferisci_pari, ricalibra};
+
 use super::candidati::{m1_coerente, perdita_nota, sotto, Elementi};
 use super::formule::avviso;
 use super::regole_valuta::{addotto_radice, vettori_perdita};
@@ -191,6 +194,19 @@ fn passo(g: &Grafo, st: &mut Stato, o: &Opzioni) -> bool {
                     })
             })
             .collect();
+        // a precursor that does not hold any candidate (a co-isolated ion, a wrong formula) must not take a fragment away from the others
+        let tieni = if tieni.iter().any(|x| *x) {
+            tieni
+        } else {
+            st.cand[j]
+                .iter()
+                .map(|x| {
+                    st.genitori[j]
+                        .iter()
+                        .any(|&p| st.cand[p].iter().any(|q| sotto(&x.c, &q.c)))
+                })
+                .collect()
+        };
         filtra(&mut st.cand[j], &tieni);
         let pr: Vec<Vec<&'static str>> = st.cand[j]
             .iter()
@@ -332,6 +348,25 @@ fn non_spiegati(g: &mut Grafo, tieni: &[bool]) {
     }
 }
 
+/// Share of the fragment intensity (sum of % of the base peak, spectra of kept precursors) left without a node above which the graph warns.
+const QUOTA_NON_SPIEGATA: f64 = 0.5;
+
+/// A graph-level note when the formula leaves most of the fragment intensity unexplained (a wrong ion formula or adduct looks like this).
+fn muchi_non_spiegati(g: &mut Grafo) {
+    let (mut tot, mut fuori) = (0.0, 0.0);
+    for sp in g.spettri.iter().filter(|s| s.precursore.is_some()) {
+        for &(_, rel, k) in &sp.picchi {
+            tot += rel;
+            if k.is_none() {
+                fuori += rel;
+            }
+        }
+    }
+    if tot > 0.0 && fuori / tot >= QUOTA_NON_SPIEGATA {
+        avviso(g, "warn.msngrafo.mostUnexplained", None);
+    }
+}
+
 /// The nodes with a formula stay (with their isotopes), the others leave the graph; ids, arcs, spectra and notes follow.
 fn togli(g: &mut Grafo, tieni: &[bool]) {
     non_spiegati(g, tieni);
@@ -369,6 +404,7 @@ fn togli(g: &mut Grafo, tieni: &[bool]) {
     for a in g.avvisi.iter_mut() {
         a.nodo = a.nodo.and_then(|x| nuovo[x]);
     }
+    muchi_non_spiegati(g);
     crate::sortc::slice_ord(&mut tolti);
     g.avvisi.extend(tolti.into_iter().map(|albero| Avviso {
         chiave: "warn.msngrafo.isolatedUnexplained",
@@ -382,6 +418,12 @@ pub(super) fn annota(g: &mut Grafo, e: &Elementi, r: usize, rc: Vec<u32>, o: &Op
     let mut st = stato(g, e, r, &rc, o);
     scelte(g, &mut st, o);
     while passo(g, &mut st, o) {}
+    if preferisci_pari(g, &mut st, o) {
+        while passo(g, &mut st, o) {}
+    }
+    if ricalibra(&mut st, o) {
+        while passo(g, &mut st, o) {}
+    }
     for k in 1..st.ordine.len() {
         let j = st.ordine[k];
         let fuori = st.genitori[j].iter().any(|&p| {

@@ -488,6 +488,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         id: 1,
         nome: stem,
         scansioni: l.indice.len(),
+        dimensione: None,
     }];
     Ok(Box::new(l))
 }

@@ -337,7 +337,7 @@ def test_render_drop_stato_transizioni_e_fallback_dom():
 def test_duplicate_file_while_waiting_real_upload_drop_dups():
     """Test duplicate files while pending and after ready via real code extracted from shell.js."""
     shell_src = (WEB / "shell.js").read_text(encoding="utf-8")
-    m = re.search(r"const INFLIGHT=new Set\(\)[\s\S]*?async function upload\(files,into\)\{[\s\S]*?finally\{[\s\S]*?\}\}\}", shell_src)
+    m = re.search(r"const INFLIGHT=new Set\(\)[\s\S]*?async function upload\(files,into(?:,demo)?\)\{[\s\S]*?finally\{[\s\S]*?\}\}\}", shell_src)
     assert m is not None, "Could not extract upload and dropDups from shell.js"
 
     code = f"""

@@ -12,6 +12,7 @@
         "required":[],
         "x-executable-native":[
           "annot.level",
+          "chrom.uv_peaks",
           "convert.mzml",
           "export.inclusion",
           "export.mztab",
@@ -30,6 +31,7 @@
           "msn.library_export",
           "msn.table_export",
           "quant.calibrate",
+          "rt.predict",
           "spectra.centroid",
           "spectra.chimeric",
           "spectra.insilico",
@@ -44,13 +46,15 @@
           "table.kmd",
           "table.match",
           "table.pca",
+          "table.plausible",
           "table.stats",
           "tp.dig_lr",
           "tp.filter",
           "tp.generate",
           "tp.link",
           "tp.network",
-          "tp.position"
+          "tp.position",
+          "tp.review"
         ]
       }
     },
@@ -67,6 +71,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.inclusion@1",
               "export.mztab@1",
@@ -102,13 +107,15 @@
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
+              "table.plausible@1",
               "table.stats@1",
               "tp.dig_lr@1",
               "tp.filter@2",
               "tp.generate@1",
               "tp.link@2",
               "tp.network@1",
-              "tp.position@1"
+              "tp.position@1",
+              "tp.review@1"
             ]
           }
         },
@@ -159,6 +166,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.inclusion@1",
               "export.mztab@1",
@@ -194,13 +202,15 @@
               "table.kmd@1",
               "table.match@1",
               "table.pca@1",
+              "table.plausible@1",
               "table.stats@1",
               "tp.dig_lr@1",
               "tp.filter@2",
               "tp.generate@1",
               "tp.link@2",
               "tp.network@1",
-              "tp.position@1"
+              "tp.position@1",
+              "tp.review@1"
             ]
           },
           "label":{"type":"string","description":"Optional label."}
@@ -325,6 +335,52 @@
           },
           {
             "properties":{
+              "step":{"const":"chrom.uv_peaks@1"},
+              "name":{"enum":["wavelength_nm","band_nm","broad","broad_min_s","broad_max_s","broad_snr"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":254,
+                    "description":"The trace is the matrix at this wavelength; the nearest column when none is inside the band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":4,
+                    "description":"The columns within half of this around the wavelength are averaged"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also look for bands too wide for the narrow peak finder"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"Smallest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":300,
+                    "description":"Largest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":8,
+                    "description":"Smallest height of a band over its bridge, in noise units"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"convert.mzml@1"},
               "name":{"enum":["peaks","zlib_level","numpress"]},
               "value":{
@@ -360,7 +416,7 @@
                   {
                     "type":"string",
                     "default":"[M+H]+",
-                    "description":"Adducts of the ion table separated by commas; one row per product and adduct"
+                    "description":"Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"
                   },
                   {
                     "type":"number",
@@ -506,6 +562,7 @@
                   "ppm",
                   "peak_width_s",
                   "snr",
+                  "broad_peaks",
                   "smooth"
                 ]
               },
@@ -552,6 +609,11 @@
                     "description":"Peak width"
                   },
                   {"type":"number","minimum":0,"default":10,"description":"Signal to noise"},
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also looks for bands 30-300 s wide (overloaded or interconverting compounds) that the narrow peaks leave out; a band is marked, and the filter against the blank can judge it"
+                  },
                   {"type":"integer","minimum":1,"default":5,"description":"Smoothing window"}
                 ]
               }
@@ -849,10 +911,57 @@
           {
             "properties":{
               "step":{"const":"rt.predict@1"},
-              "name":{"enum":["algorithm","rt_logp_k","rt_logp_floor","lc_dwell_min","rt_logp_terms","seed"]},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "parent",
+                  "parent_rt",
+                  "polarity_margin",
+                  "rt_margin",
+                  "order",
+                  "drop_outside",
+                  "rt_logp_k",
+                  "rt_logp_floor",
+                  "lc_dwell_min",
+                  "lc_gradient",
+                  "rt_logp_terms",
+                  "seed"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {"enum":["logp_window","forest"]},
+                  {
+                    "type":"string",
+                    "description":"SMILES of the parent compound: each candidate then gets delta_logp (Crippen) against it"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"With a parent: the direction of the RT change (rt_dir) and whether it agrees with delta_logp (rt_dir_agrees)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.3,
+                    "description":"A change of logP within this margin gives no direction"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"A change of RT within this margin gives no direction"
+                  },
+                  {
+                    "enum":["none","residual"],
+                    "default":"none",
+                    "description":"residual: within each query the candidates with the smallest |residual| first; a candidate without a prediction last"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"On: the candidates whose RT falls outside the window are removed (logp_window only)"
+                  },
                   {
                     "type":"number",
                     "minimum":0,
@@ -864,7 +973,11 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Dwell volume over flow; the gradient itself ([[t, %B], ...]) is read from the campaign"
+                    "description":"Dwell volume over flow, used with the gradient: the compound is taken to meet the %B of the gradient this long before its RT"
+                  },
+                  {
+                    "type":"string",
+                    "description":"The %B profile as t:%B pairs separated by semicolons (minutes, ascending), e.g. 0:5;10:95;12:95. Given: the window is fitted on the largest %B met, so rt_pred, rt_resid and the window are in %B (rt_unit) and the floor 0 means 3 %B; empty: the fit is on the RT in minutes"
                   },
                   {
                     "type":"boolean",
@@ -1041,6 +1154,7 @@
                 "enum":[
                   "algorithm",
                   "tol_da",
+                  "tol_ppm",
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
@@ -1071,6 +1185,12 @@
                     "minimum":0,
                     "default":0.02,
                     "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"
                   },
                   {
                     "type":"number",
@@ -1438,6 +1558,11 @@
                   "min_area",
                   "min_height",
                   "blank_ratio",
+                  "blank_quantity",
+                  "blank_stat",
+                  "blank_scope",
+                  "blank_subtract",
+                  "qc_zero",
                   "qc_cv_max",
                   "qc_min_files",
                   "dup_ppm",
@@ -1467,6 +1592,29 @@
                     "type":"number",
                     "minimum":0,
                     "description":"The largest area of a sample is at least this many times the mean area of the blanks; needs a blank in the samples; left empty, the rule is off"
+                  },
+                  {
+                    "enum":["area","height","norm_area"],
+                    "default":"area",
+                    "description":"What is compared with the blank: area, height or normalised area; used with the sample to blank ratio only"
+                  },
+                  {
+                    "enum":["mean","max"],
+                    "default":"mean",
+                    "description":"The blank level of a row: mean or maximum over the blank files (a blank without a peak counts as 0)"
+                  },
+                  {
+                    "enum":["max_feature","each_feature"],
+                    "default":"max_feature",
+                    "description":"max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"
                   },
                   {
                     "type":"number",
@@ -1527,6 +1675,7 @@
                 "enum":[
                   "algorithm",
                   "tol_da",
+                  "tol_ppm",
                   "precursor_ppm",
                   "precursor_da",
                   "name_contains",
@@ -1557,6 +1706,12 @@
                     "minimum":0,
                     "default":0.02,
                     "description":"Fragment matching between spectra, the GNPS convention"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Above 0 it replaces tol_da: a peak pairs within this many ppm of its own m/z (high-resolution spectra); the analogue search uses it too"
                   },
                   {
                     "type":"number",
@@ -1717,6 +1872,47 @@
                     "maximum":20,
                     "default":5,
                     "description":"Components kept in scores and loadings"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"table.plausible@1"},
+              "name":{"enum":["mz_min","mz_max","rt_max","width_max","ppm_max","mz_tol_da"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":20,
+                    "description":"A row below it is flagged: no LC-MS run reads there"
+                  },
+                  {"type":"number","minimum":0,"default":5000,"description":"A row above it is flagged"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":600,
+                    "description":"A row with an RT outside 0 and this value is flagged: check the unit of the times"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"A detected peak wider than this, or with no width or apex, is flagged"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":50,
+                    "description":"A row whose m/z is further than this from its neutral mass plus adduct is flagged; read only in a high-resolution table"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"0.1 Da or more is unit resolution and the ppm error is not read; without a value the recipe stored in the table decides"
                   }
                 ]
               }
@@ -1981,6 +2177,10 @@
               }
             },
             "required":["step","name","value"]
+          },
+          {
+            "properties":{"step":{"const":"tp.review@1"},"name":{"enum":["algorithm"]},"value":{"enum":["level_rules"]}},
+            "required":["step","name","value"]
           }
         ]
       }
@@ -2064,6 +2264,7 @@
                 "annot.hazard@1",
                 "annot.level@1",
                 "annot.regulatory@1",
+                "chrom.uv_peaks@1",
                 "convert.mzml@1",
                 "export.inclusion@1",
                 "export.mztab@1",
@@ -2099,13 +2300,15 @@
                 "table.kmd@1",
                 "table.match@1",
                 "table.pca@1",
+                "table.plausible@1",
                 "table.stats@1",
                 "tp.dig_lr@1",
                 "tp.filter@2",
                 "tp.generate@1",
                 "tp.link@2",
                 "tp.network@1",
-                "tp.position@1"
+                "tp.position@1",
+                "tp.review@1"
               ]
             },
             "maxItems":40

@@ -189,12 +189,12 @@ fn the_canonical_form_ignores_how_the_file_is_written() {
 fn the_preset_then_the_file_then_the_algorithm_give_the_values() {
     let reg = registry();
     let step = reg.iter().find(|s| s.id == "features.detect").unwrap();
-    let plan = parse(br#"{"steps":[{"id":"d","step":"features.detect@1","preset":"lr","params":{"floor":3000}}]}"#).unwrap();
+    let plan = parse(br#"{"steps":[{"id":"d","step":"features.detect@1","preset":"lr","params":{"floor":2500}}]}"#).unwrap();
     let r = canonical(&plan.steps[0], step).unwrap();
     let get = |k: &str| r.params.iter().find(|p| p.0 == k).unwrap().1.clone();
     assert_eq!(get("axis").str(), Some("Da"));
-    assert_eq!(get("floor").f64(), Some(3000.0));
-    assert_eq!(get("min_height").f64(), Some(20_000.0));
+    assert_eq!(get("floor").f64(), Some(2500.0));
+    assert_eq!(get("min_height").f64(), Some(7_000.0));
     assert_eq!(r.algorithm, Some(("masstrace".to_string(), 1)));
     assert_eq!(r.preset.as_deref(), Some("lr"));
     // sorted keys, shortest numbers

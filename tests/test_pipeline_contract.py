@@ -35,6 +35,8 @@ def test_the_keys_the_page_reads_are_in_the_json_of_the_engine(outs):
     assert qc["gruppi"] == [] or set(c["qcGroup"]) <= set(qc["gruppi"][0])
     assert set(c["view"]) <= set(view) and set(c["counts"]) <= set(view["conteggi"])
     assert set(c["rows"]) <= set(rows) and set(c["sheet"]) <= set(rows["hojas"][0])
+    pl = outs["plausible.json"]
+    assert pl["schema"] == "plausible/1" and set(c["plausible"]) <= set(pl) and all(set(c["plausibleCheck"]) <= set(x) for x in pl["checks"])
     rep = outs["report.json"]
     assert rep["schema"] == "report/1" and set(c["report"]) <= set(rep) and set(c["cells"]) <= set(rep["celle"]) and set(c["reportView"]) <= set(rep["vista"] or {"parametri": 0, "conteggi": 0})
     # the grid reads the sheet by position: six columns, then area and state of each file

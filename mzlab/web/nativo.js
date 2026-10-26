@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Files of a maker (Thermo .raw, SCIEX .wiff + .wiff.scan, Agilent .D folder) are loaded as they are (rust-nativo.js): no mzML is made. A sample is listed as `x.mzML` (a File with the members attached:
 // `mzlabNat`, read by lr.js) and goes through upload() like any mzML; «Download .mzML» writes its mzML on request. Classic script, loaded after conversione.js; the pure helpers are run by node in tests/test_nativo.py.
@@ -6,12 +7,13 @@ const NATIVO = {
   // one key for the dataset (its samples share the members in the browser storage): the name without odd characters + a random part
   key(ds) { return String(ds).replace(/[^\w.-]+/g, "_").slice(0, 60) + "-" + Math.random().toString(36).slice(2, 8); },
   // the File that stands for sample `c` (number `id`) of a dataset in the list of the files; `members` = [{ name, blob }], names relative to the dataset
-  sample(name, key, members, c, id, centroid) {
-    const f = new File([JSON.stringify({ mzlab: "nat1", ds: key })], name), size = members.reduce((a, m) => a + m.blob.size, 0);
+  sample(name, key, members, c, id, centroid, sampleSize) {
+    const f = new File([JSON.stringify({ mzlab: "nat1", ds: key })], name),
+      size = sampleSize != null ? sampleSize : (members.length === 1 ? members[0].blob.size : null);
     Object.defineProperty(f, "mzlabNat", { value: { key, members, c, id, centroid: !!centroid, size } });
     return f;
   },
-  // the size to show: the one of the members
+  // the size to show: the one of the sample or members
   size(f) { return f && f.mzlabNat ? f.mzlabNat.size : f && f.mzlabModulo ? f.mzlabModulo.size : f.size; },
   // the engine of the page when it reads the files of a maker as they are, else null
   async engine() { const rb = window.MZLAB_RUST_READY ? await window.MZLAB_RUST_READY : null; return rb && !rb.disabled && rb.nativo ? rb : null; },

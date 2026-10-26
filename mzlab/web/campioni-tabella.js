@@ -2,6 +2,13 @@
 "use strict";
 // The «Sample metadata» section of the «Statistica» panel (first section): the table of CAMPIONI (campioni.js), one row per file, with the TSV export and import.
 // Every edit goes through CAMPIONI.apply, the only writer of roles, subtypes, times and their confirmation.
+// the metadata of the files (type, time, concentration, replicate) are one undoable action (comandi.js): the snapshot is the table of all the open files
+COMANDI.gestore("samples.meta", {
+  leggi: () => JSON.stringify(CAMPIONI.files().map(f => [f.file, CAMPIONI.kindOf(f), f.time ?? null, f.tconf !== false, f.conc ?? null, f.cunit ?? null, f.rep ?? null])),
+  applica: (_p, snap) => { CAMPIONI.apply(JSON.parse(snap).map(([file, role, time, tconf, conc, cunit, rep]) => ({ file, role, time, tconf, conc, cunit, rep }))); },
+});
+/** Edits the metadata of the files (CAMPIONI.apply) as one undo step. @param {any[]} entries */
+function campioniEdit(entries) { return COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => CAMPIONI.apply(entries)); }
 (() => {
   const { files, apply, selVal, kindOf, shownRep, importTsv, gradientLegend, toTsv, rows } = CAMPIONI;
   const t = (k, p) => I18N.t(k, p);
@@ -42,7 +49,7 @@
       if (el.id === "cmp-imp") {
         const file = el.files && el.files[0]; if (!file) return;
         FILESICURI.readText(file).then(tx => {
-          const r = importTsv(tx);
+          const r = COMANDI.fai("samples.meta", COMANDI.GLOBALE, () => importTsv(tx));
           paint(box);
           msg(box, r.changed ? t("meta.imported", { n: r.changed }) + (r.unknown.length ? " " + t("meta.unknown", { list: r.unknown.join(", ") }) : "") : t("meta.imported.none"), !r.changed);
         }, x => msg(box, I18N.t(x.key || "workflow.err.invalidFormat"), true));
@@ -58,13 +65,13 @@
         if (Number.isNaN(v)) { paint(box); msg(box, t("meta.err.num"), true); return; }
         if (m === "time") ent.time = timeStored(v, tunitGet()); else { ent.conc = v; if (v != null) ent.cunit = (box.querySelector(`select[data-f="${CSS.escape(f)}"][data-m=cunit]`) || {}).value || "mg/L"; }
       }
-      apply([ent]); paint(box);
+      campioniEdit([ent]); paint(box);
     };
     box.onkeydown = e => {
       const el = e.target;
       if (e.key !== "Enter" || !el.dataset || el.dataset.m !== "time" || el.disabled) return;
       const v = parseDecimal(el.value, isDark(el.dataset.f));
-      if (v != null && !Number.isNaN(v)) { apply([{ file: el.dataset.f, time: timeStored(v, tunitGet()), tconf: true }]); paint(box); }
+      if (v != null && !Number.isNaN(v)) { campioniEdit([{ file: el.dataset.f, time: timeStored(v, tunitGet()), tconf: true }]); paint(box); }
     };
     box.onclick = e => {
       if (e.target.id === "cmp-exp") {

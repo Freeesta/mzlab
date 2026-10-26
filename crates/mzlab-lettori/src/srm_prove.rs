@@ -91,6 +91,7 @@ fn finto_con(filtro: &str, pol: i8, metodo: &str) -> SrmDaScansioni {
             id: 1,
             nome: "a".into(),
             scansioni: 4,
+            dimensione: None,
         }],
         indice,
         metodo: metodo.into(),

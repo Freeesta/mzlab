@@ -71,13 +71,29 @@ pub(super) fn formed(inp: &TpInputs, parent: usize, b: &mut TpBlock) -> Result<(
 /// Gate 1 with the roles: the treated files must beat each reference by `ratio`, in order the blank, the t0 and the dark, and the first that wins takes
 /// the row out with its note. A row in the t0 that passes stays with `NOTE_T0_PRESENT`. Without a t0 the gate runs on the blank and the dark and every
 /// row carries `NOTE_NO_T0`. The infusion is neither a reference nor a treated file.
-pub(super) fn formed_by_role(inp: &TpInputs, roles: &TpRoles, parent: usize, b: &mut TpBlock) -> Result<RoleCounts> {
+pub(super) fn formed_by_role(
+    inp: &TpInputs,
+    roles: &TpRoles,
+    parent: usize,
+    b: &mut TpBlock,
+) -> Result<RoleCounts> {
     let t = inp.aligned;
-    let refs = [(&roles.blank, NOTE_BLANK), (&roles.t0, NOTE_T0), (&roles.dark, NOTE_DARK)];
-    if roles.treated.is_empty() || refs.iter().all(|(f, _)| f.is_empty()) || roles.minutes.len() != t.n_files {
+    let refs = [
+        (&roles.blank, NOTE_BLANK),
+        (&roles.t0, NOTE_T0),
+        (&roles.dark, NOTE_DARK),
+    ];
+    if roles.treated.is_empty()
+        || refs.iter().all(|(f, _)| f.is_empty())
+        || roles.minutes.len() != t.n_files
+    {
         return Err(Error::new("error.tpNoControls"));
     }
-    let mut c = RoleCounts { no_t0: roles.t0.is_empty(), blank_kinds: roles.blank_kinds.clone(), ..RoleCounts::default() };
+    let mut c = RoleCounts {
+        no_t0: roles.t0.is_empty(),
+        blank_kinds: roles.blank_kinds.clone(),
+        ..RoleCounts::default()
+    };
     for r in 0..t.len() {
         if c.no_t0 {
             b.notes[r] |= NOTE_NO_T0;
@@ -135,12 +151,16 @@ fn constant(inp: &TpInputs, r: &[f64]) -> bool {
         <= inp.params.isf_cv
 }
 
-/// The m/z is among the fragments of the MS2 of the parent (true when the parent has none: it is not contradicted).
+/// The m/z is among the fragments of the MS2 of the parent or the MS1 ions of its infusion (true when it has neither: it is not contradicted).
 fn in_ms2(inp: &TpInputs, mz: f64) -> bool {
-    inp.fragments.is_none_or(|f| {
-        f.iter()
-            .any(|&x| (x - mz).abs() <= crate::axis::half(mz, inp.params.ppm))
-    })
+    if inp.fragments.is_none() && inp.infusion.is_none() {
+        return true;
+    }
+    let tol = crate::axis::half(mz, inp.params.ppm);
+    [inp.fragments, inp.infusion]
+        .into_iter()
+        .flatten()
+        .any(|f| f.iter().any(|&x| (x - mz).abs() <= tol))
 }
 
 /// Gate 2, against the parent: a lighter ion that coelutes with it, whose ratio to it is constant along the series and that is in its MS2, is an
@@ -156,7 +176,7 @@ pub(super) fn not_in_source(inp: &TpInputs, parent: usize, b: &mut TpBlock) {
         let rat = ratios(inp, r, parent);
         if constant(inp, &rat) && in_ms2(inp, t.mz[r]) {
             b.status[r] = ST_ISF;
-        } else if inp.fragments.is_some()
+        } else if (inp.fragments.is_some() || inp.infusion.is_some())
             && rat.len() >= inp.params.isf_points
             && in_ms2(inp, t.mz[r])
         {
@@ -189,8 +209,8 @@ pub(super) fn not_in_source(inp: &TpInputs, parent: usize, b: &mut TpBlock) {
 /// Gate 3: a rule, a cleavage or an imported hypothesis covers the ion, or its MS2 is related to the parent's. Notes the MS2 of low purity.
 pub(super) fn explained(inp: &TpInputs, b: &mut TpBlock) {
     let matched = match_hypotheses(inp.hyps, inp.aligned);
-    for r in 0..inp.aligned.len() {
-        if let Some(h) = matched[r] {
+    for (r, &opt_h) in matched.iter().enumerate() {
+        if let Some(h) = opt_h {
             let s = inp.hyps[h].sources;
             b.via[r] |= [
                 (SRC_RULE, VIA_RULE),

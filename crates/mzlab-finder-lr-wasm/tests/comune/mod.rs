@@ -10,7 +10,9 @@ use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 use mzlab_core::upload::prepare;
+use mzlab_feat::axis::MassAxis;
 use mzlab_feat::legacy::lr;
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat_wasm::run;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -157,15 +159,23 @@ pub fn series() -> (String, Vec<Vec<u8>>) {
 pub fn series_with(
     extra: &dyn Fn(Option<f64>) -> Vec<(f64, f64, f64, f64)>,
 ) -> (String, Vec<Vec<u8>>) {
+    series_seeded(0, extra)
+}
+
+/// `series_with` with another realization of the noise (`offset` added to every seed).
+pub fn series_seeded(
+    offset: u64,
+    extra: &dyn Fn(Option<f64>) -> Vec<(f64, f64, f64, f64)>,
+) -> (String, Vec<Vec<u8>>) {
     let mut files = Vec::new();
     let mut idxs = Vec::new();
     for (i, t) in TIMES.iter().enumerate() {
         files.push(format!(r#"{{"name": "lr_FullMass-t{t}.mzML", "time": {t:.1}, "type": "sample", "kind": "full"}}"#));
-        idxs.push(index_with(Some(*t), 11 + i as u64, extra));
+        idxs.push(index_with(Some(*t), 11 + offset + i as u64, extra));
     }
     files
         .push(r#"{"name": "lr_blank.mzML", "time": null, "type": "blank", "kind": "full"}"#.into());
-    idxs.push(index_with(None, 99, extra));
+    idxs.push(index_with(None, 99 + offset, extra));
     (format!("[{}]", files.join(",")), idxs)
 }
 
@@ -180,9 +190,31 @@ pub fn dig_for(files: &str, parent: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
 
 /// `dig_for` with the settings of the page (`plan::settings`).
 pub fn dig_with(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> lr::LrDig {
+    dig_at(files, parent, settings, idxs, None)
+}
+
+/// The recipe of a file with the unit-profile `(floor, min_height)` replaced (the mass defect stays the one measured from the index).
+pub fn recipe_at(idx: &[u8], tune: Option<(f64, f64)>) -> Recipe {
+    let r = run::recipe_for("", &mut open(idx)).unwrap();
+    match (tune, r.detect.axis) {
+        (Some((floor, min_height)), MassAxis::Da { defect }) => {
+            Recipe::lr(defect, floor, min_height)
+        }
+        _ => r,
+    }
+}
+
+/// `dig_with` with the detection thresholds `tune = (floor, min_height)` instead of the ones of the profile.
+pub fn dig_at(
+    files: &str,
+    parent: &str,
+    settings: &str,
+    idxs: &[Vec<u8>],
+    tune: Option<(f64, f64)>,
+) -> lr::LrDig {
     let plan: Value = serde_json::from_str(&lr::plan::plan_json(files, parent).unwrap()).unwrap();
     assert_eq!(plan["rust"], true);
-    let r = run::recipe_for("", &mut open(&idxs[0])).unwrap();
+    let r = recipe_at(&idxs[0], tune);
     // as detect_file_to of the pool: the recipe of every file from its own index, the file name as the name
     let list: Value = serde_json::from_str(files).unwrap();
     let list = list.get("files").unwrap_or(&list); // a list, or {files, campioni}
@@ -195,9 +227,7 @@ pub fn dig_with(files: &str, parent: &str, settings: &str, idxs: &[Vec<u8>]) -> 
     let stored: Vec<Vec<u8>> = idxs
         .iter()
         .zip(&names)
-        .map(|(b, n)| {
-            run::detect(&mut open(b), n, &run::recipe_for("", &mut open(b)).unwrap()).unwrap()
-        })
+        .map(|(b, n)| run::detect(&mut open(b), n, &recipe_at(b, tune)).unwrap())
         .collect();
     let (feats, origin) = run::read_files(&stored).unwrap();
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();

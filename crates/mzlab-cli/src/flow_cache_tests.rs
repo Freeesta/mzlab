@@ -144,3 +144,34 @@ fn a_file_added_in_the_middle_does_not_run_the_others_again() {
     assert!(out.join("idx-s_t020.mzidx").is_file());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_probe_counts_the_steps_the_cache_would_give_back() {
+    let (dir, _) = fixture("cache_probe");
+    let (data, out) = (dir.join("data"), dir.join("out"));
+    std::fs::create_dir_all(&out).unwrap();
+    let text = std::fs::read(dir.join("plan.json")).unwrap();
+    // nothing is cached yet: every step is to compute, and the probe leaves no index behind
+    assert_eq!(crate::flow::probe_plan(&text, &data, &out).unwrap(), (0, 4));
+    assert!(!out.join("cache").join("index.json").exists());
+
+    crate::flow::run_plan_cached(&text, &data, &out, 1, None, Some(false)).unwrap();
+    let index = std::fs::read(out.join("cache").join("index.json")).unwrap();
+    assert_eq!(crate::flow::probe_plan(&text, &data, &out).unwrap(), (4, 0));
+
+    // a parameter of align: index and detect are reused, align and gapfill are to compute
+    let changed = String::from_utf8(text).unwrap().replace(
+        r#""step":"features.align@1","#,
+        r#""step":"features.align@1","params":{"drop_artefacts":false},"#,
+    );
+    assert!(changed.contains("drop_artefacts"));
+    assert_eq!(
+        crate::flow::probe_plan(changed.as_bytes(), &data, &out).unwrap(),
+        (2, 2)
+    );
+    assert_eq!(
+        std::fs::read(out.join("cache").join("index.json")).unwrap(),
+        index
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}

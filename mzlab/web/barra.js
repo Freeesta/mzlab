@@ -116,10 +116,10 @@ const BARRA = (() => {
     // commands that live elsewhere on the page: found by the palette, never in the bar (group: where they are)
     { id: "method", bar: false, group: "graphs", ic: () => IC('<rect x="3" y="2.5" width="10" height="11.5" rx="1.6"/><path d="M6 6h4M6 9h4M6 12h2"/>'), visible: () => inData(), run: () => clickEl("#np-method") },
     { id: "subref", bar: false, group: "graphs", ic: () => IC('<path d="M2 11c2 0 2-6 4-6s2 6 4 6 2-3 4-3"/><path d="M2 13.5h12" stroke-dasharray="2 2"/>'), visible: () => inData() && window.SUBREF && tabFiles().length > 1, run: () => window.SUBREF && SUBREF.toggle() },
-    { id: "gradient", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && !!lineHere(p => window.GRADIENTE && GRADIENTE.have(p)), run: () => { const p = lineHere(q => window.GRADIENTE && GRADIENTE.have(q)); if (p) { p.overlay = p.overlay === "grad" ? null : "grad"; draw(p); uiSave(); } } },
-    { id: "pressure", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && !!lineHere(p => window.GRADIENTE && GRADIENTE.pressHave(p) && !isAnalog(p.kind)), run: () => { const p = lineHere(q => window.GRADIENTE && GRADIENTE.pressHave(q) && !isAnalog(q.kind)); if (p) { p.overlay = p.overlay === "press" ? null : "press"; draw(p); uiSave(); } } },
-    { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { p.mk = !markOn(p); draw(p); uiSave(); } } },
-    { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { p.noCont = !p.noCont; draw(p); uiSave(); } } },
+    { id: "gradient", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && !!lineHere(p => window.GRADIENTE && GRADIENTE.have(p)), run: () => { const p = lineHere(q => window.GRADIENTE && GRADIENTE.have(q)); if (p) { COMANDI.fai("spec.display", p, () => { p.overlay = p.overlay === "grad" ? null : "grad"; }); draw(p); uiSave(); } } },
+    { id: "pressure", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && !!lineHere(p => window.GRADIENTE && GRADIENTE.pressHave(p) && !isAnalog(p.kind)), run: () => { const p = lineHere(q => window.GRADIENTE && GRADIENTE.pressHave(q) && !isAnalog(q.kind)); if (p) { COMANDI.fai("spec.display", p, () => { p.overlay = p.overlay === "press" ? null : "press"; }); draw(p); uiSave(); } } },
+    { id: "marker", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.markN != null), run: () => { const p = specHere(a => a.markN != null); if (p) { COMANDI.fai("spec.display", p, () => { p.mk = !markOn(p); }); draw(p); uiSave(); } } },
+    { id: "nocont", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!specHere(a => a.hrp), run: () => { const p = specHere(a => a.hrp); if (p) { COMANDI.fai("spec.display", p, () => { p.noCont = !p.noCont; }); draw(p); uiSave(); } } },
     { id: "openms2", bar: false, group: "graphs", ic: () => ICONS.qaqc, visible: () => inData() && isHrMode() && !!lastMs2(), run: () => { const q = lastMs2(); if (q) DDA.openMs2(q.p, q.j); } },
     { id: "report", azione: "app.esporta", bar: false, group: "app", ic: () => ICONS.qaqc, visible: () => inData(), run: () => window.RAPPORTO && RAPPORTO.export("html") },
     { id: "settings", bar: false, group: "app", ic: () => IC('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M1.8 8h1.7M12.5 8h1.7M3.6 3.6l1.2 1.2M11.2 11.2l1.2 1.2M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2"/>'), run: () => clickEl("#np-set") },
@@ -152,7 +152,7 @@ const BARRA = (() => {
   const visible = c => (!c.feature || !!FEATURES[c.feature]) && (c.visible ? !!c.visible() : true) && (!c.hr || (isHrMode() && inData())) && (!c.item || visible(byId(c.item)));
   const lab = c => (c.teo ? c.etichetta : t(`cmd.${c.id}.lab`));
   const name = c => (c.teo ? c.etichetta : t(`cmd.${c.id}.name`));
-  const tip = c => t(`cmd.${c.id}.tip`);
+  const tip = c => t(`cmd.${c.id}.tip` + (c.id === "search" && !SITO_PUBBLICO.teoria ? ".nt" : ""));
 
   // ---------------------------------------------------------------- state
   function loadState() {

@@ -23,6 +23,7 @@ fn main() {
     put("report.json", core::report_json(&mut r(), size, &samples, &spec, &sha).expect("report"));
     put("qc.json", core::qc_json(&mut r(), size, &samples, &spec).expect("qc"));
     put("check.json", core::tabcheck_json(&mut r(), size, &samples, &spec, pol, "").expect("check"));
+    put("plausible.json", core::plausible_json(&mut r(), size, "").expect("plausible"));
     for (name, kind) in [("full.csv", "full"), ("full_mzmine.csv", "full_mzmine"), ("quant.csv", "quant"), ("features.csv", "csv_semicolon"), ("features.rows.json", "xlsx_rows")] {
         put(name, core::table_file(&mut r(), size, &samples, &spec, &sha, pol, kind).expect("file"));
     }

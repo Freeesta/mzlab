@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Page side of api/msn_grafo and api/msnlib/aggiungi (rust-bridge.js): asks the worker of the engine for the graph or the library (op "msngrafo", rust-msngrafo.js) and words the answer.
 // Null = the route is unavailable (browser.js answers err.route.unavailable); an error of the module is a 400 with the usual JSON.
 

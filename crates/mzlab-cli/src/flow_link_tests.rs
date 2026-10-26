@@ -234,3 +234,40 @@ fn the_thresholds_reach_the_interpretation_and_a_wrong_input_is_refused() {
     assert!(run(&dir, "{}").is_err());
     let _ = std::fs::remove_dir_all(&out);
 }
+
+/// The roles of the samples reach the run: with a t0 the report has no warning, without one `tp.link` records `warn.flow.link.noT0`.
+#[test]
+fn a_series_without_t0_is_flagged_in_the_report() {
+    let Some(out) = series("not0") else { return };
+    let dir = fixture(
+        &out,
+        &format!(r#"{{"formula":"{FORMULA}","rt":1.0}}"#),
+        &hypotheses(),
+    );
+    let flagged = |dir: &Path| {
+        let (_, prov) =
+            crate::flow::run_plan(plan("{}").as_bytes(), dir, &dir.join("work"), 2, None).unwrap();
+        prov.contains(crate::flow_link::WARN_NO_T0)
+    };
+    assert!(!flagged(&dir), "t0 is there");
+    let roles =
+        TpRoles::from_json(&std::fs::read_to_string(dir.join("samples.json")).unwrap()).unwrap();
+    assert!(!crate::flow_link::no_t0(&roles));
+    let files: Vec<_> = NAMES
+        .iter()
+        .map(|n| {
+            (
+                format!("{}.mzML", n.replace("_t0", "_untimed")),
+                String::new(),
+                String::new(),
+            )
+        })
+        .collect();
+    let untimed = to_json(&proponi(&files));
+    assert!(crate::flow_link::no_t0(
+        &TpRoles::from_json(&untimed).unwrap()
+    ));
+    std::fs::write(dir.join("samples.json"), untimed).unwrap();
+    assert!(flagged(&dir), "the report says the series has no t0");
+    let _ = std::fs::remove_dir_all(&out);
+}

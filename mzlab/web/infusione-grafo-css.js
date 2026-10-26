@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The styles of the «Fragmentation graph» (class ig-*): added once to the page by the tab and by the Flow view of the same graph.
 
 const CSS = `.ig-field{align-items:flex-end;gap:8px}.ig-field input[type=text]{min-width:14ch}.ig-set summary{cursor:pointer;min-height:24px}.ig-set input[type=number]{width:7ch}.ig-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:6px 0}.ig-bar .bt{min-width:28px;min-height:28px}.ig-cut{min-height:28px}.ig-cuts{border-collapse:collapse}.ig-cuts th,.ig-cuts td{padding:2px 6px;text-align:left}

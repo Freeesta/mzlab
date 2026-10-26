@@ -7,8 +7,12 @@
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
+#[cfg(feature = "mappa-dad")]
+pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+#[cfg(feature = "estesi")]
+mod bpc;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
@@ -18,12 +22,24 @@ use crate::error::{Error, Result};
 use crate::methodinfo::{self, Method};
 use crate::ole::Ole;
 
-const SAMPLES: &str = "SampleSubtree/";
+pub(super) const SAMPLES: &str = "SampleSubtree/";
 /// Offsets inside `ExperimentHeader`: the precursor m/z (f64) and the scan-type code (u32).
 const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
+/// Offset of the polarity in `ExperimentHeader`.
+const HEADER_POLARITY: usize = 86;
 /// Scan-type codes seen in the headers (full scan, product-ion scan); anything else is read as a full scan.
 const CODE_PRODUCT: u32 = 11;
+const CODE_FULL: u32 = 15;
+impl Wiff {
+    /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
+    pub(crate) fn scan_experiment(&self, e: usize) -> bool {
+        matches!(self.experiments.get(e).and_then(|x| x.code), Some(CODE_FULL | CODE_PRODUCT))
+    }
+}
+
+/// Half of the 0.7 m/z (FWHM) that Q1 transmits at unit resolution, the only setting the method is assumed to hold (the resolution is not read per experiment).
+const UNIT_HALF_WIDTH: f64 = 0.35;
 
 /// One acquisition experiment of the period (the scans of a cycle alternate between them).
 #[derive(Debug, Clone, Default)]
@@ -32,7 +48,13 @@ pub struct Experiment {
     /// 1 for a full scan (and unknown types), 2 for a product-ion scan.
     pub level: u8,
     pub precursor: Option<f64>,
-    #[cfg(feature = "estesi")]
+    /// Collision energy (eV) of a product-ion experiment, when the method gives one value for it.
+    pub ce: Option<f64>,
+    /// Half-width (m/z) of the isolation window of a product-ion experiment.
+    pub iso_half: Option<f64>,
+    /// Detection window (s) of a scheduled MRM experiment (sMRM), when the method says it is scheduled.
+    pub window_s: Option<u32>,
+    /// Polarity of the scans from the header (1 positive, -1 negative); `None` when the header does not say.
     pub polarity: Option<i8>,
 }
 
@@ -66,6 +88,8 @@ pub struct Wiff {
     pub created: Option<String>,
     /// SHA-1 (hex) of the `.wiff`, for the `sourceFile` of the mzML; the caller that has the bytes sets it (`Ole::sha1_hex`).
     pub wiff_sha1: Option<String>,
+    /// Off by default. When set, a scheduled transition keeps only the points within its window around the target RT (as msconvert writes it).
+    pub trim_scheduled: bool,
     scan_len: u64,
 }
 
@@ -108,11 +132,34 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             code,
             level: if product { 2 } else { 1 },
             precursor: if product { prec } else { None },
-            #[cfg(feature = "estesi")]
-            polarity: None,
+            ce: None,
+            iso_half: None,
+            window_s: None,
+            polarity: d
+                .get(HEADER_POLARITY..HEADER_POLARITY + 4)
+                .and_then(|b| <[u8; 4]>::try_from(b).ok())
+                .and_then(|b| match u32::from_le_bytes(b) {
+                    0 => Some(1),
+                    1 => Some(-1),
+                    _ => None,
+                }),
         });
     }
     out
+}
+
+/// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
+fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
+    let Some(m) = method else { return };
+    for (i, e) in experiments.iter_mut().enumerate().filter(|(_, e)| e.level == 2) {
+        e.iso_half = Some(UNIT_HALF_WIDTH);
+        if let Some(methodinfo::Kind::Scan { ce, .. }) = m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind) {
+            e.ce = match ce[..] {
+                [v] => Some(v),
+                _ => None,
+            };
+        }
+    }
 }
 
 fn polarity(method: &Option<Method>) -> i8 {
@@ -144,9 +191,12 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         &ole.read(&format!("{SAMPLES}Sample{sample}/Idx"))
             .ok_or_else(|| bad("no Idx"))?,
     );
-    let experiments = experiments(ole, sample);
+    let mut experiments = experiments(ole, sample);
     #[cfg(feature = "estesi")]
-    let experiments = estesi::refine(ole, sample, experiments)?;
+    {
+        experiments = estesi::refine(ole, sample, experiments)?;
+        estesi::mark_windows(ole, sample, &mut experiments);
+    }
     let n_exp = experiments.len().max(1);
     let records = entries
         .iter()
@@ -166,6 +216,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
     let method = methodinfo::method_of_sample(ole, sample);
     #[cfg(feature = "estesi")]
     let method = method.or_else(|| estesi::fallback_method(ole, sample));
+    activation(&mut experiments, &method);
     let dad = dad::DadData::read(ole, sample);
     let (model, created, serial, source_type) = crate::metodo_wiff::run_facts_full(ole, sample);
     Ok(Wiff {
@@ -180,6 +231,7 @@ fn open_wiff(ole: &Ole, name: &str, scan_len: Option<u64>, sample: u32) -> Resul
         source_type,
         created,
         wiff_sha1: None,
+        trim_scheduled: false,
         scan_len,
     })
 }
@@ -197,9 +249,9 @@ pub(crate) mod estesi;
 #[path = "scan_estesi.rs"]
 pub mod scan;
 
-#[cfg(not(feature = "estesi"))]
 impl Wiff {
-    fn polarity_of(&self, _e: &Experiment) -> i8 {
-        self.polarity
+    /// The polarity of the scans of experiment `e`: the one of its header (offset 86, u32: 0 positive, 1 negative), else the sign of the ion spray voltage of the method.
+    pub(crate) fn polarity_of(&self, e: &Experiment) -> i8 {
+        e.polarity.unwrap_or(self.polarity)
     }
 }

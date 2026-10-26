@@ -24,6 +24,8 @@ use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
+#[cfg(any(feature = "detect", feature = "untargeted"))]
+pub mod cache;
 #[cfg(feature = "detect")]
 pub mod family;
 #[cfg(feature = "finder")]
@@ -38,6 +40,7 @@ pub mod progress_js;
 pub mod run;
 pub mod spill_js;
 pub mod run_evid;
+pub mod run_tp;
 pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
@@ -46,7 +49,6 @@ pub mod untargeted;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-wasm/1";
-
 fn js_err(e: Error) -> JsValue {
     let mut o = Out::default();
     o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
@@ -426,6 +428,7 @@ fn roles_of(
 /// the indexes) with `mzidx_read`/`mzidx_sizes` (the `.mzidx` of the same files, read by offsets) let the proofs measure the rows: isotope patterns, MS2 purity, the share of the MS2
 /// the parent explains and its fragments; without them the bytes are the ones of before. The same bytes whatever `budget_mb` (0/NaN = 192): the graph whole, or made identity by identity (`error.memoryBudget` if not even so).
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)] // signature of the page
 pub fn build_evidence_to(
     table_read: Function,
     table_size: f64,

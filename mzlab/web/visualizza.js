@@ -16,6 +16,12 @@ const DISP = (() => {
   const typeOf = p => (!p ? null : p.type === "spec" ? "spec" : p.type === "chrom" || p.type === "xic" ? "chrom" : null);
   const redraw = p => { draw(p); if (typeof uiSave === "function") uiSave(); };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  // the display options of a graph are one undoable action (comandi.js)
+  const DISPLAY = ["thr", "nlab", "dec", "sticks", "dots", "mk", "noCont", "rel", "gdelay", "pdaDelay", "pdaAlign", "overlay", "etpk"];
+  COMANDI.gestore("spec.display", {
+    leggi: p => JSON.stringify(DISPLAY.filter(k => p[k] !== undefined).map(k => [k, p[k]])),
+    applica: (p, snap) => { const o = new Map(JSON.parse(snap)); DISPLAY.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); if (typeof syncTb === "function") syncTb(p); },
+  });
 
   // ---- spectrum: what the ▾ button of the spectrum and the decimals field of the bar had (the low-resolution popover is in spettro.js)
   register("spec", { id: "dec", label: "spec.par.dec", kind: "select", opts: () => [3, 4, 5].map(n => [n, String(n)]), get: () => Math.round(UIP.hrDec || 4),
@@ -31,6 +37,7 @@ const DISP = (() => {
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });
 
+  register("chrom", { id: "etpk", label: "ctx.chrom.etpk", title: "ctx.chrom.etpk.aria", kind: "check", when: p => !isAnalog(p.kind) && !!window.ETPK, get: p => ETPK.on(p, p._a && p._a.sr ? p._a.sr.length : 1), set: (p, v) => { p.etpk = !!v; redraw(p); } });
   // ---- PDA in series before the mass spectrometer: the delay is measured by the server (cross-correlation of PDA and TIC of the file) and can be corrected by hand;
   // «Allinea PDA e massa» only moves the time axis of the PDA trace on the screen (data and results stay as they are)
   const pdel = new Map();
@@ -60,17 +67,17 @@ const DISP = (() => {
     ctl(p); redraw(p); if (window.BANCO) BANCO.renderInfo();
   };
   register("chrom", { id: "xmz", label: "disp.xmz", title: "disp.xmz.title", kind: "number", min: 0, step: 0.0001, when: p => xhr(p) && !!xt(p), get: p => (+xt(p).mz).toFixed(HR.dec(HR.xicFiles(p.tab), 1) + 1),
-    set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; tr.mz = rh(n, 5); xrefresh(p, tr); } });
+    set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; COMANDI.fai("xic.traces", p, () => { tr.mz = rh(n, 5); }); xrefresh(p, tr); } });
   register("chrom", { id: "xunit", label: "disp.xunit", kind: "select", when: p => xhr(p) && !!xt(p), opts: () => [["ppm", "ppm"], ["da", "Da"]], get: p => xunit(p, xt(p)),
     set: (p, v) => {                                          // same interval, written in the other unit
       const tr = xt(p), cur = xunit(p, tr); if (cur === v) return;
       const f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)), tol = tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6;
-      if (tr.ion) { if (v === "da") tr.wda = rh(tr.mz * tol * 1e-6, 5); else { delete tr.wda; tr.ppm = tol; } } else p._xu = v;
+      COMANDI.fai("xic.traces", p, () => { if (tr.ion) { if (v === "da") tr.wda = rh(tr.mz * tol * 1e-6, 5); else { delete tr.wda; tr.ppm = tol; } } else p._xu = v; });
       xrefresh(p, tr); } });
   register("chrom", { id: "xtol", label: "disp.xtol", title: "disp.xtol.title", kind: "number", min: 0, step: 0.1, when: p => xhr(p) && !!xt(p),
     get: p => { const tr = xt(p), u = xunit(p, tr), f = HR.xicFiles(p.tab).find(x => HR.isHr(x, x.lv)); return u === "da" ? +(tr.ion ? tr.wda : (tr.w ?? p.tol)).toFixed(5) : +(tr.ion ? (tr.ppm ?? HR.prof(f, f.lv).tol) : (tr.w ?? p.tol) / tr.mz * 1e6).toFixed(2); },
     set: (p, v) => { const tr = xt(p), n = numIt(v); if (!(n > 0)) return; const u = xunit(p, tr);
-      if (tr.ion) { if (u === "da") tr.wda = rh(n, 5); else tr.ppm = n; } else tr.w = u === "da" ? rh(n, 5) : rh(tr.mz * n * 1e-6, 5);
+      COMANDI.fai("xic.traces", p, () => { if (tr.ion) { if (u === "da") tr.wda = rh(n, 5); else tr.ppm = n; } else tr.w = u === "da" ? rh(n, 5) : rh(tr.mz * n * 1e-6, 5); });
       xrefresh(p, tr); } });
 
   function control(it, p, k) {
@@ -94,8 +101,8 @@ const DISP = (() => {
       }).join("")}</div>`;
     b.querySelectorAll("[data-k]").forEach(el => {
       const it = list[+el.dataset.k];
-      if (it.kind === "button") el.onclick = () => it.set(p);
-      else el.onchange = () => it.set(p, it.kind === "check" ? el.checked : el.value);
+      if (it.kind === "button") el.onclick = () => COMANDI.fai("spec.display", p, () => it.set(p));
+      else el.onchange = () => COMANDI.fai("spec.display", p, () => it.set(p, it.kind === "check" ? el.checked : el.value));
     });
   }
   // right click entry / palette command: the panel for the chart p (default: the active cell)
@@ -108,9 +115,9 @@ const DISP = (() => {
   if (typeof AZIONI !== "undefined") {
     const bench = () => !!window.BANCO && BANCO.on(), T = I18N.t.bind(I18N);
     AZIONI.registra({ id: "spec.marker", gruppo: "gen", ordine: 3, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => markOn(c.p), nome: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
-      esegui: c => { c.p.mk = !markOn(c.p); draw(c.p); uiSave(); } });
+      esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.mk = !markOn(c.p); }); draw(c.p); uiSave(); } });
     AZIONI.registra({ id: "spec.noCont", gruppo: "gen", ordine: 4, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
-      esegui: c => { c.p.noCont = !c.p.noCont; draw(c.p); uiSave(); } });
+      esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.noCont = !c.p.noCont; }); draw(c.p); uiSave(); } });
     AZIONI.registra({ id: "spec.disp", gruppo: "gen", ordine: 5, viste: ["spec"], visibile: bench, nome: () => T("disp.menu"), aria: () => T("disp.menu.aria"), esegui: c => open(c.p) });
     AZIONI.registra({ id: "chrom.disp", gruppo: "gen", ordine: 5, viste: ["chrom", "xic"], visibile: bench, nome: () => T("disp.menu"), esegui: c => open(c.p) });
   }

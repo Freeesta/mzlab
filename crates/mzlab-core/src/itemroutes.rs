@@ -9,6 +9,10 @@ use crate::iteminfo::{file_parts, matches, Part};
 use crate::json::{round, Out};
 use crate::mzmlhead::{Chrom, Mzml};
 use crate::routes::Routes;
+#[cfg(feature = "mappa-dad")]
+use crate::wiff::dad_map::dad_to_map_json;
+#[cfg(feature = "mappa-dad")]
+use crate::wiff::dad_uv::{dad_spectrum_json, dad_wavelength_json};
 
 /// The scans of the item `file` (`name` or `name#tag`): the experiment of a mixed file, else all.
 fn item_scans<'a, R: ReadAt>(idx: &'a Index<R>, chroms: &[Chrom], file: &str) -> (Option<Part>, Vec<&'a Scan>) {
@@ -165,6 +169,38 @@ pub fn pda_map<M: ReadAt>(m: &mut Mzml<M>) -> Result<String> {
         if let Some(json) = l.dad_map(c)? {
             return Ok(json);
         }
+    }
+    #[cfg(feature = "mappa-dad")]
+    if let Some(d) = m.dad()? {
+        return Ok(dad_to_map_json(&d));
+    }
+    Err(Error::new("err.pda.none"))
+}
+
+/// `/api/uvxic`: the trace of the DAD at the wavelengths `nm0`..`nm1`; `err.pda.none` when the file has no optical matrix.
+pub fn pda_wavelength<M: ReadAt>(m: &mut Mzml<M>, nm0: f64, nm1: f64) -> Result<String> {
+    if let Some((l, c)) = m.r.lettore() {
+        if let Some(json) = l.dad_wavelength(c, nm0, nm1)? {
+            return Ok(json);
+        }
+    }
+    #[cfg(feature = "mappa-dad")]
+    if let Some(json) = m.dad()?.and_then(|d| dad_wavelength_json(&d, nm0, nm1)) {
+        return Ok(json);
+    }
+    Err(Error::new("err.pda.none"))
+}
+
+/// `/api/uvspec`: the UV spectrum of the DAD between `rt0` and `rt1` (minutes); `err.pda.none` when the file has no optical matrix (the `.wiff` of the 3200 with the detector and an mzML with a `dad_matrix` or `MS:1000804` spectra have it).
+pub fn pda_spectrum<M: ReadAt>(m: &mut Mzml<M>, rt0: f64, rt1: f64) -> Result<String> {
+    if let Some((l, c)) = m.r.lettore() {
+        if let Some(json) = l.dad_spectrum(c, rt0, rt1)? {
+            return Ok(json);
+        }
+    }
+    #[cfg(feature = "mappa-dad")]
+    if let Some(json) = m.dad()?.and_then(|d| dad_spectrum_json(&d, rt0, rt1)) {
+        return Ok(json);
     }
     Err(Error::new("err.pda.none"))
 }

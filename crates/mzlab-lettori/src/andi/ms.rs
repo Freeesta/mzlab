@@ -460,6 +460,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         id: 1,
         nome: l.testata.titolo.clone().unwrap_or(stem),
         scansioni,
+        dimensione: None,
     }];
     Ok(Box::new(l))
 }

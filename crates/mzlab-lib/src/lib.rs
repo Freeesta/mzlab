@@ -14,6 +14,8 @@ pub mod io;
 pub mod parse;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod read;
+pub mod prep;
+pub mod frag_tol;
 pub mod scores;
 pub mod search;
 pub mod sortutil;

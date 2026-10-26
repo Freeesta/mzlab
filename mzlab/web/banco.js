@@ -71,7 +71,7 @@ const BANCO = (() => {
   }
   function setPin(p, v) {
     p.pin = !!v;
-    if (p.type === "spec") { if (v && p.link) freezeSpec(p); else if (!v && !p.link && p.src) { const s = E.panels.find(q => q.id === p.src); if (s) liveSpec(p, s); } }
+    if (p.type === "spec") { if (v && p.link) spLinkFreeze(p); else if (!v && !p.link && p.src) { const s = E.panels.find(q => q.id === p.src); if (s) spLinkFollow(p, s); } }
     ctl(p); uiSave();
   }
   // ---------------------------------------------------------------- «+ scan»: every scan of the file in time order; the chosen one opens as a TIC with its spectrum under it, at the place the student picks
@@ -218,7 +218,7 @@ const BANCO = (() => {
           $("#bs-out").innerHTML = `<div class="muted sm">${I18N.t("bn.sub.count", { hit: d.n_hit, n: d.n_sub })}</div>` + (d.rows.length ? `<table><thead><tr><th>${I18N.t("bn.sub.th.formula")}</th>${["mz", "ppm", "int", "rt", "r"].map(th).join("")}</tr></thead><tbody>`
             + d.rows.map(x => `<tr><td>${EH(x.formula)}</td><td class="num">${x.mz.toFixed(dec)}</td><td class="num">${n(x.ppm, 1)}</td><td class="num">${x.int.toExponential(2).replace("e+", "E")}</td><td class="num">${x.rt.toFixed(2)}</td><td class="num">${n(x.r, 2)}</td></tr>`).join("") + "</tbody></table>" : `<div class="muted">${I18N.t("bn.sub.none")}</div>`);
           $("#bs-add").hidden = false;
-        } catch (e) { $("#bs-err").textContent = e && e.message || String(e); }
+        } catch (e_) { const e = /** @type {Lanciato} */ (e_); $("#bs-err").textContent = e && e.message || String(e); }
       };
       $("#bs-f").onkeydown = e => { if (e.key === "Enter") $("#bs-go").click(); };
       $("#bs-add").onclick = () => {
@@ -299,8 +299,8 @@ const BANCO = (() => {
   const tabOfAct = () => (act() && act().tab) || E.tab;
   function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span class="hl">${EH(label)}</span>` : ""}</button>`; }
   async function copyPng(p) {
-    let cvs; p._exp = true; EXPORTING = true;
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
+    let cvs; p._exp = true; EXPORTING = true; paintFiles();
+    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; paintFiles(); draw(p); }
     const blob = await new Promise(r => cvs.toBlob(r));
     try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); nearMsg(I18N.t("bn.copied.img")); }
     catch (e) { saveBlob(blob, plotName(p) + ".png"); info(I18N.t("bn.copied.dl")); }
@@ -314,7 +314,7 @@ const BANCO = (() => {
     const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;
     const q = E.panels.reduce((m, x) => Math.max(m, x.y + x.h + pnlGap()), 0), w = hostWidth();
     const o = { tab, x: 0, y: q, w, h: type === "map" ? 420 : 300, full: true };
-    const n = type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o);
+    const n = apriAnnullabile(type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o));
     relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
   }
   function subXicCell() { let a = act(); if (!a || a.type !== "chrom") { addCell("chrom"); a = act(); } if (a && a.type === "chrom") subXic(a); }
@@ -453,7 +453,7 @@ const BANCO = (() => {
     };
     const read = async () => {
       const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg(I18N.t("bn.iso.typeFormula")); return null; }
-      let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
+      let r; try { r = await getFormula(f, ""); } catch (e_) { const e = /** @type {Lanciato} */ (e_); nearMsg(I18N.t("bn.iso.failed", { message: e.message })); return null; }
       const ads = [...b.querySelectorAll(".hri-ad")].map(w => ({ ad: w.querySelector("[data-ad]").value, c: Math.max(0, numIt(w.querySelector("[data-conc]").value) || 0) })).filter(a => a.c > 0);
       if (!ads.length) { nearMsg(I18N.t("bn.iso.noSeries")); return null; }
       const o = { formula: r.formula, ad: ads[0].ad, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
@@ -464,7 +464,7 @@ const BANCO = (() => {
       if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
       return o;
     };
-    const apply = (s2, o, only) => { s2.iso = { ...o, only: !!only }; let pat; try { pat = HR.isoPat(o, 0); } catch (e) { return nearMsg(e.message); } s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); draw(s2); };
+    const apply = (s2, o, only) => { let pat; try { pat = HR.isoPat(o, 0); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return nearMsg(e.message); } COMANDI.fai("spec.isotopes", s2, () => { s2.iso = { ...o, only: !!only }; s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); }); draw(s2); };
     b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, false); };
     b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg(I18N.t("bn.needSpec")); const o = await read(); if (o) apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
@@ -472,7 +472,7 @@ const BANCO = (() => {
       const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + pnlGap()), 0), w: hostWidth(), h: 300, full: true });
       relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
     };
-    b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
+    b.querySelector("#hri-off").onclick = () => { if (sp) { COMANDI.fai("spec.isotopes", sp, () => { sp.iso = null; }); draw(sp); } };
   }
   function tIdn(b, p) {
     const sp = specOf(p), f = cFile(p);

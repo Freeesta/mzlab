@@ -75,6 +75,7 @@ fn centroids_of_the_reader_are_not_touched() {
             id: 0,
             nome: "a".into(),
             scansioni: n,
+            dimensione: None,
         }],
         indice: (0..n).map(voce).collect(),
     };
@@ -97,6 +98,7 @@ fn alternato(n: usize) -> Alternato {
             id: 0,
             nome: "a".into(),
             scansioni: n,
+            dimensione: None,
         }],
         indice: (0..n).map(voce).collect(),
     }

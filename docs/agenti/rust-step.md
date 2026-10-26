@@ -9,13 +9,14 @@ Eight more, `package: tabui`: `tp.generate` (`hypo::generate`, `ipotesi/1`; its 
 `structure.render` (`interp::disegno`, the one form of the drawing) and `structure.draw` (Ketcher, page only: no `.wasm`, `deterministic: false`) and `structure.reactivity` (`mzlab-chem`, defaults read from `Opts::parse("")`; algorithms `gfn2_xtb`, `extended_huckel` as the engine fallback).
 They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as data.
 
-`table.stats`, `table.pca` and `table.kmd` (`steps/stats.rs`, native only, engine `stat/`) are in the same registry: `stat.md`.
+`table.stats`, `table.pca`, `table.kmd` and `table.plausible` (`steps/stats.rs`, native only, engine `stat/`) are in the same registry: `stat.md`.
 
 ## Functions
 - `step::Step`, `Port`, `Param`, `Algorithm`, `Preset`, `Reference`, `Applicability`, `Facets`, `RunsIn`, `DataType`: plain structs of `step/1` (`mzlab-core/src/step/mod.rs`); no serde, the JSON is written with `json::Out`.
 - `Step::core(id, title, doc)`: a `core` step at version 1 with empty ports and parameters; descriptors fill the rest with struct update syntax.
 - `Port::new(name, type, title)` with `.many()`, `.accepts(types)`, `.requires(facets)`: an input or output port.
 - `Param::number|integer|boolean|text|choice|choice_num|pair(name, title, ..)` with `.default_num|default_bool|default_str|default_pair`, `.min`, `.max`, `.unit`, `.doc`, `.advanced`, `.estimate`, `.noresult`: a property of a `paramSchema`; no default means the step estimates the value or the rule is off.
+- `Param { list: Some(kind), ..Param::text(..) }`: a text that is a list of the user (`liste/1`, `kind` `adducts` or `transformations`), written `x-liste` in `step/1`; its value is the CSV of the list with the header (`name;delta;charge;comment`) or, for `export.inclusion`, names of the adduct table separated by commas (`export_inclusione::adduct_shifts`, the default `[M+H]+` gives the same bytes as before).
 - `Step::param(name)` and `Step::algorithm_param(algorithm, name)`: look a parameter up; `Param::default_f64()` reads its default as a number; `step::find(registry, id)` finds a descriptor.
 - `step::json::step_json(&Step)` and `registry_json(&[Step])`: the `step/1` JSON, keys in the order of `step.features.detect.json`; the registry has one step per line.
 - `step::core_steps()` (`step/core_steps.rs`): the descriptors of `import.raw`, `convert.mzml`, `index.mzidx`.
@@ -48,8 +49,8 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - `cargo test -p mzlab-feat --test steps_attributio`: order and package of the nine steps, defaults inside their limits, export equal to `docs/schemi/steps-attributio-1.json` and `records-1.json` (same `MZLAB_UPDATE_STEPS=1`). `--features attributio,untargeted --test steps_attributio_parity` compares every default with the engine structs.
 - `tests/test_step_identificazione.py`: the nine descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study, no algorithm is `planned`, every error key is a string of the code.
 
-- `cargo test -p mzlab-chem --test steps_tabui`: order and package of the eight steps, defaults inside their limits, export equal to `docs/schemi/steps-tabui-1.json` (same `MZLAB_UPDATE_STEPS=1`). `cargo test -p mzlab-feat --features interp --test steps_tabui_parity` compares the defaults of `tp.generate`, `tp.filter`, `tp.link`, `tp.position` and `tp.network` with the engine.
-- `tests/test_step_tabui.py`: the eight descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study and agree with the identification chain, every error key is a string of the code.
+- `cargo test -p mzlab-chem --test steps_tabui`: order and package of the nine steps, defaults inside their limits, export equal to `docs/schemi/steps-tabui-1.json` (same `MZLAB_UPDATE_STEPS=1`). `cargo test -p mzlab-feat --features interp --test steps_tabui_parity` compares the defaults of `tp.generate`, `tp.filter`, `tp.link`, `tp.position` and `tp.network` with the engine.
+- `tests/test_step_tabui.py`: the nine descriptors validate against `$defs/step`, DOI and `citation_key` have the shape of the study and agree with the identification chain, every error key is a string of the code.
 
 ## Traps
 - The parameter names are those of the engine structs (`rt_gap`, `rt_tol`, `tol_ppm`), not the keys of the Pipeline panel (`apply_params` in `mzlab-feat-wasm/src/run.rs`, where `rt_tol` sets two fields); the mapping belongs to the plan reader.
@@ -61,3 +62,5 @@ They run in the `.wasm` `hr`, `interp` and `chem` with their ceilings written as
 - `msn.library_export` and `msn.table_export` (`flow_msnlib.rs`; graph `report` → `library` MSP/MassBank, or CSV `report`) are in `mzlab-cli` too.
 - `annot.level` runs natively in `mzlab-cli` (`flow_level.rs`) with the rule of `livelli.js` on the data of `livelli-1.json`, not with the Attributio cascade its parameters describe; see `rust-flow.md`.
 - `meta.compare` has its descriptor in `mzlab-cli` (`flow_compare.rs`), not in the registry of `mzlab-feat`: the plan is expanded before the check, so the descriptor describes the expanded compare instance (`step`, `labels`); see `rust-flow.md`.
+- `rt.predict` runs natively (`mzlab_cli::flow_rtpredict`): `candidates/1` + CSV `standards` (`smiles,rt`) + optional CSV `queries` (`query,rt`). `logp_window` fits RT on our own Crippen descriptors (`LogPValues::from_smiles`, feature `record`, in no `.wasm`) and writes `rt_pred`, `rt_resid`, `rt_ok`; `forest` writes the first two. `parent` + `parent_rt` add `delta_logp`, `rt_dir`, `rt_dir_agrees` (`hypo::Dir`); `order: residual` sorts per query, `drop_outside` removes `rt_ok: false`.
+  `lc_gradient` (`t:%B;t:%B`, with `lc_dwell_min`) fits the window on the %B met instead of the RT: `rt_pred`/`rt_resid` are then in %B (`rt_unit`), the floor 0 means 3 %B; empty = unchanged.

@@ -6,9 +6,11 @@
 
 mod csv;
 mod json;
+mod route;
 
 pub use csv::from_csv;
 pub use json::{errors_json, from_json, to_json};
+pub use route::route;
 
 use mzlab_core::budget::sha256_hex;
 

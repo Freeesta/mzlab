@@ -11,6 +11,10 @@ mod aligned_ops;
 #[cfg(feature = "attributio")]
 pub mod attributio;
 pub mod axis;
+pub mod broad;
+pub mod broad_blank;
+mod broad_front;
+pub mod broad_gt;
 pub mod centwave;
 mod channels;
 #[cfg(feature = "chem")]
@@ -29,6 +33,7 @@ pub mod family;
 pub mod famrecord;
 pub mod drift;
 pub mod filters;
+pub mod filters_blank;
 pub mod gapfill;
 pub mod gruppi;
 pub mod hypo;
@@ -64,6 +69,7 @@ pub mod rowmeta;
 pub mod rtmap;
 pub mod rtwarp;
 pub mod samples;
+mod prog;
 pub mod series;
 pub mod slabs;
 pub mod spill;
@@ -74,13 +80,16 @@ pub mod store;
 mod store_read;
 pub mod suspects;
 mod sweep;
+mod chunked;
 pub mod table;
+pub mod plausible;
 pub mod tabcheck;
 pub mod target;
 pub mod tp;
 pub mod trace;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
+pub mod uv_bands;
 pub mod view;
 pub mod weakfile;
 

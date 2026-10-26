@@ -27,6 +27,8 @@ fn mul(a: &M, b: &M) -> M {
 }
 
 /// Solves `d * x = n` by Gaussian elimination with partial pivoting.
+// Index loops keep the order of the floating-point sums = parity with the reference.
+#[allow(clippy::needless_range_loop)]
 fn solve(mut d: M, mut n: M) -> M {
     for c in 0..4 {
         let p = (c..4).fold(c, |p, r| if d[r][c].abs() > d[p][c].abs() { r } else { p });
@@ -54,6 +56,8 @@ fn solve(mut d: M, mut n: M) -> M {
     n
 }
 
+// Index loops keep the order of the floating-point sums = parity with the reference.
+#[allow(clippy::needless_range_loop)]
 pub fn expm(a: &M) -> M {
     let nrm = (0..4)
         .map(|j| (0..4).map(|i| a[i][j].abs()).sum::<f64>())

@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  Table of the files of Tabui with role, condition, time and replicate (campioni/2). Loaded on request (window.TPLAZY.load("gruppi-campioni.js")), never at start.
 // window.TPGRUPPI_FILES.mount(el, files, opts) draws it: the proposals (role, time, condition = `serie`, replicate) and the warnings are the Rust of mzlab-core (`campioni`) reached through
 // opts.R (the module TP_Mine/files/finder-ruoli.js) and opts.call; this file holds no rule about names. The record lives in the notebook: NB.campioni (canonical campioni/2, one entry per file)

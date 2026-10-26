@@ -8,17 +8,77 @@ use crate::error::Result;
 use crate::generic_data::{GenericDataHeader, GenericRecord};
 use crate::reader::BinaryReader;
 use std::io::{Cursor, Read, Seek};
+use std::sync::{Arc, OnceLock};
 
 /// How far before the first record the schema is looked for.
 const WINDOW: u64 = 64 * 1024;
 
-/// The decoded status log of a file.
+/// The status log of a file. A log read from the file keeps the bytes of its fixed-size records and decodes them on the first call of [`Self::records`] or
+/// [`Self::times_min`], so opening a file does not allocate a string for every field of every record.
 #[derive(Debug)]
 pub struct StatusLog {
     pub header: GenericDataHeader,
+    /// Bytes of the records not decoded yet (`count` of `size` bytes: the time as `f32`, then the fields of the schema); empty once decoded.
+    bytes: Vec<u8>,
+    count: usize,
+    decoded: OnceLock<Decoded>,
+}
+
+#[derive(Debug)]
+struct Decoded {
+    times_min: Vec<f32>,
+    records: Arc<[GenericRecord]>,
+}
+
+impl StatusLog {
+    /// A log whose records are already decoded. `times_min` is empty when the layout of the file has no time before the record.
+    pub fn new(
+        header: GenericDataHeader,
+        times_min: Vec<f32>,
+        records: Arc<[GenericRecord]>,
+    ) -> Self {
+        let decoded = OnceLock::new();
+        let _ = decoded.set(Decoded { times_min, records });
+        Self {
+            header,
+            bytes: Vec::new(),
+            count: 0,
+            decoded,
+        }
+    }
+
+    fn decoded(&self) -> &Decoded {
+        self.decoded.get_or_init(|| {
+            let size = self.header.fixed_record_size() + 4;
+            let (mut times_min, mut records) = (Vec::new(), Vec::new());
+            for chunk in self.bytes.chunks_exact(size).take(self.count) {
+                let mut r = BinaryReader::new(Cursor::new(&chunk[4..]));
+                match GenericRecord::read(&mut r, &self.header) {
+                    Ok(rec) => {
+                        times_min
+                            .push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+                        records.push(rec);
+                    }
+                    // the strings were checked when the log was read, so this is not reached
+                    Err(_) => break,
+                }
+            }
+            Decoded {
+                times_min,
+                records: records.into(),
+            }
+        })
+    }
+
     /// Time of each record in minutes; empty when the layout of the file has no time before the record.
-    pub times_min: Vec<f32>,
-    pub records: Vec<GenericRecord>,
+    pub fn times_min(&self) -> &[f32] {
+        &self.decoded().times_min
+    }
+
+    /// The records, shared with [`crate::RawFileReader::inst_log`] when the per-scan records are the log.
+    pub fn records(&self) -> &[GenericRecord] {
+        &self.decoded().records
+    }
 }
 
 /// One numeric channel of the status log over time (`Spray Voltage` in `V`).
@@ -48,15 +108,15 @@ pub fn split_label(label: &str) -> (String, String) {
 impl StatusLog {
     /// Every numeric channel as a series; nothing when the records carry no time.
     pub fn series(&self) -> Vec<StatusSeries> {
-        if self.times_min.len() != self.records.len() {
+        if self.times_min().len() != self.records().len() {
             return Vec::new();
         }
         let mut out = Vec::new();
         for (i, d) in self.header.fields.iter().enumerate() {
             let pairs: Vec<(f64, f64)> = self
-                .records
+                .records()
                 .iter()
-                .zip(&self.times_min)
+                .zip(self.times_min())
                 .filter_map(|(r, t)| Some((f64::from(*t), r.values.get(i)?.1.as_f64()?)))
                 .filter(|(t, v)| t.is_finite() && v.is_finite())
                 .collect();
@@ -119,16 +179,45 @@ pub(crate) fn read_before<R: Read + Seek>(
     let size = header.fixed_record_size() as u64 + 4;
     r.seek_to(addr)?;
     r.check_count(u64::from(count), size)?;
-    let (mut times_min, mut records) = (Vec::new(), Vec::new());
-    for _ in 0..count {
-        times_min.push(r.read_f32()?);
-        records.push(GenericRecord::read(r, &header)?);
+    let bytes = r.read_bytes((u64::from(count) * size) as usize)?;
+    // The only way decoding fails beyond the end of the bytes is a wide string that is not valid UTF-16: look for it here so a log that does not decode is
+    // still "not decoded" at open, as when the records were read one by one.
+    let wide: Vec<(usize, usize)> = header_wide_fields(&header);
+    for rec in bytes.chunks_exact(size as usize) {
+        for &(at, units) in &wide {
+            if !wide_string_is_valid(&rec[4 + at..4 + at + units * 2]) {
+                return Err(crate::error::Error::InvalidUtf16(addr));
+            }
+        }
     }
     Ok(Some(StatusLog {
         header,
-        times_min,
-        records,
+        bytes,
+        count: count as usize,
+        decoded: OnceLock::new(),
     }))
+}
+
+/// `(byte offset in the fields area, UTF-16 units)` of each wide string field of a record.
+fn header_wide_fields(header: &GenericDataHeader) -> Vec<(usize, usize)> {
+    let mut at = 0;
+    let mut out = Vec::new();
+    for f in &header.fields {
+        if f.field_type == crate::types::GenericType::WideString && f.length > 0 {
+            out.push((at, f.length as usize));
+        }
+        at += GenericDataHeader::field_size(f);
+    }
+    out
+}
+
+/// True if the string stored in `bytes` (UTF-16LE, up to the first null unit) decodes.
+fn wide_string_is_valid(bytes: &[u8]) -> bool {
+    let units = bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .take_while(|&u| u != 0);
+    char::decode_utf16(units).all(|c| c.is_ok())
 }
 
 /// [`read_before`] on any seekable source (the file, or bytes built by a test).

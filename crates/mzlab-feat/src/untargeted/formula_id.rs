@@ -343,8 +343,15 @@ pub fn identify(mz: &[f64], y: &[f64], feature_mz: f64, o: &Opts) -> Result<Iden
 
 /// The combined score of `compose` as its weighted mean: the mass term and, with a pattern, the isotope term (the weights of `compose`).
 fn composition_terms(c: &Candidate) -> ScoreTerms {
-    let w = ComposeOpts::default().weights;
-    let mut parts = vec![("mass", c.mass_term, w.0)];
+    let d = ComposeOpts::default();
+    let w = d.weights;
+    // with a pattern `compose` averages the unrounded mass term and rounds only the total: the terms of the record are the ones it averaged, so the value
+    // rounded to 4 decimals is the score shown
+    let mass = match c.iso_term {
+        Some(_) => (-0.5 * (c.error_ppm / d.sigma_ppm).powi(2)).exp(),
+        None => c.mass_term,
+    };
+    let mut parts = vec![("mass", mass, w.0)];
     if let Some(i) = c.iso_term {
         parts.push(("isotopes", i, w.1));
     }

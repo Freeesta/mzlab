@@ -6,10 +6,14 @@
 //! between two peaks above the floor, where no trace can pass), so the memory is bounded and the result does not depend on the slabs.
 //! Sums run in a fixed order and `ln` comes from `libm`: native and WASM give the same bits.
 
+use std::sync::Arc;
+
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::axis::MassAxis;
+use crate::broad_blank::BlankBank;
+use crate::broad_gt::{share, TraceBank};
 use crate::centwave::{self, Peak};
 use crate::channels::{by_scan, segments, stitch};
 use crate::post::{finish, median_interval, Row};
@@ -20,6 +24,8 @@ pub const FLOOR: f64 = 2e4;
 pub const MIN_HEIGHT: f64 = 2e5;
 pub const MIN_POINTS: u32 = 5;
 pub const LONG_TRACE: u32 = 400;
+/// Scans of a series for the common mode: the shortest trace that `TraceBank` counts as persistent.
+const PERSISTENT_SCANS: usize = 400;
 pub const MAX_GAP: u32 = 2;
 pub const SLAB_PEAKS: usize = 1_500_000;
 pub const TOUCH_HEIGHT: f64 = 2e6;
@@ -90,7 +96,26 @@ impl Params {
     fn slab_peaks(&self) -> usize {
         (self.budget / BYTES_PER_PEAK).clamp(1024, SLAB_PEAKS)
     }
+
+    /// Sets the peak model to CentWave with the given FWHM range in seconds.
+    pub fn with_centwave_width(mut self, width_s: (f64, f64)) -> Self {
+        match &mut self.peak {
+            Peak::CentWave(cw) => cw.width_s = width_s,
+            _ => {
+                self.peak = Peak::CentWave(centwave::CentWave {
+                    width_s,
+                    ..centwave::CentWave::default()
+                })
+            }
+        }
+        self
+    }
 }
+/// True when the broad-band pass is on: a band longer than `long_trace` scans is then a peak, not background.
+fn broad_on(p: &Params) -> bool {
+    matches!(&p.peak, Peak::CentWave(cw) if cw.broad.enabled)
+}
+
 pub(crate) fn reserve<T>(v: &mut Vec<T>, extra: usize) -> Result<()> {
     v.try_reserve(extra).map_err(|_| Error::memory_budget())
 }
@@ -119,40 +144,51 @@ fn run_slab(slab: &Slab, rt: &[f64], dt: f64, p: &Params, rows: &mut [Vec<Row>; 
     let den = libm::log1p(CHANNEL_PPM);
     lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
     let scan_order = by_scan(&slab.pos)?;
-    for (g, shift) in [0.0f64, 0.5].into_iter().enumerate() {
-        let mut segs = Vec::new();
-        segments(
-            &lmz,
-            &slab.mz,
-            &slab.it,
-            &slab.pos,
-            &scan_order,
-            shift,
-            p,
-            &mut segs,
-        )?;
-        let mut segs = stitch(segs, p)?;
-        if let Peak::CentWave(cw) = &p.peak {
-            segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
-        }
-        for s in segs {
-            if s.n >= p.min_points && s.mx >= p.min_height {
-                reserve(&mut rows[g], 1)?;
-                rows[g].push(Row {
-                    mz: s.mzc,
-                    rt: rt[s.apex as usize],
-                    n: s.n,
-                    height: s.mx,
-                    area: s.tot * dt,
-                    apex: s.apex,
-                    lo: s.a,
-                    hi: s.z,
-                    left: rt[s.a as usize],
-                    right: rt[s.z as usize],
-                    long: s.z - s.a + 1 > p.long_trace,
-                    grid: g as u8,
-                });
-            }
+    let (low, high) = rows.split_at_mut(1);
+    let (r0, r1) = mzlab_core::spare::join2(
+        || one_grid(slab, &lmz, &scan_order, (rt, dt), p, 0, &mut low[0]),
+        || one_grid(slab, &lmz, &scan_order, (rt, dt), p, 1, &mut high[0]),
+    );
+    r0.and(r1)
+}
+
+/// The rows of one grid of channels (`g` 0 = unshifted, 1 = shifted by half a channel) over a slab.
+fn one_grid(
+    slab: &Slab,
+    lmz: &[f64],
+    scan_order: &[u32],
+    (rt, dt): (&[f64], f64),
+    p: &Params,
+    g: usize,
+    rows: &mut Vec<Row>,
+) -> Result<()> {
+    let shift = if g == 0 { 0.0f64 } else { 0.5 };
+    let mut segs = Vec::new();
+    segments(
+        lmz, &slab.mz, &slab.it, &slab.pos, scan_order, shift, p, &mut segs,
+    )?;
+    let mut segs = stitch(segs, p)?;
+    if let Peak::CentWave(cw) = &p.peak {
+        segs = centwave::refine(segs, &slab.mz, &slab.it, &slab.pos, dt, p, cw)?;
+    }
+    for s in segs {
+        if s.n >= p.min_points && s.mx >= p.min_height {
+            reserve(rows, 1)?;
+            rows.push(Row {
+                mz: s.mzc,
+                rt: rt[s.apex as usize],
+                n: s.n,
+                height: s.mx,
+                area: s.tot * dt,
+                apex: s.apex,
+                lo: s.a,
+                hi: s.z,
+                left: rt[s.a as usize],
+                right: rt[s.z as usize],
+                long: s.z - s.a + 1 > p.long_trace && !broad_on(p),
+                broad: s.broad,
+                grid: g as u8,
+            });
         }
     }
     Ok(())
@@ -174,10 +210,89 @@ pub fn detect_with<R: ReadAt>(
     };
     let rt: Vec<f64> = index.arrays(si)?.rt.clone();
     let dt = median_interval(&rt);
-    let nscan = rt.len();
+    let with_gt = common_mode_params(index, si, rt.len(), p)?;
+    let p = with_gt.as_ref().unwrap_or(p);
+    let mut rows: [Vec<Row>; 2] = [Vec::new(), Vec::new()];
+    each_slab(index, si, p, rt.len(), progress, &mut |slab| {
+        run_slab(slab, &rt, dt, p, &mut rows)
+    })?;
+    finish(rows, dt, p.axis, p.merge_overlap)
+}
+
+/// `detect_with` for a sample whose blank run `blank` is open in the same batch: with the pointwise blank option of the broad pass on, the traces of
+/// the blank are collected first and subtracted from each sample trace before the broad search. Otherwise the same as `detect_with`.
+pub fn detect_with_blank<R: ReadAt, B: ReadAt>(
+    index: &mut Index<R>,
+    blank: &mut Index<B>,
+    p: &Params,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<FileFeatures> {
+    let Peak::CentWave(cw) = &p.peak else {
+        return detect_with(index, p, progress);
+    };
+    if !(cw.broad.enabled && cw.broad.blank_pointwise) || cw.broad.blank.is_some() {
+        return detect_with(index, p, progress);
+    }
+    let bank = blank_bank(blank, p)?;
+    let mut q = p.clone();
+    if let Peak::CentWave(c) = &mut q.peak {
+        c.broad.blank = bank;
+    }
+    detect_with(index, &q, progress)
+}
+
+/// The ion traces of the blank run (unshifted grid, at least `broad.min_scans` scans long) decimated like the sample; `None` when it has none.
+fn blank_bank<R: ReadAt>(index: &mut Index<R>, p: &Params) -> Result<Option<Arc<BlankBank>>> {
+    let Peak::CentWave(cw) = &p.peak else {
+        return Ok(None);
+    };
+    let Some(si) = index.section_of(1, p.polarity) else {
+        return Ok(None);
+    };
+    let rt: Vec<f64> = index.arrays(si)?.rt.clone();
+    let mut bank = BlankBank::default();
+    let den = libm::log1p(CHANNEL_PPM);
+    each_slab(index, si, p, rt.len(), &mut |_, _| {}, &mut |slab| {
+        if slab.mz.is_empty() {
+            return Ok(());
+        }
+        let mut lmz: Vec<f64> = Vec::new();
+        reserve(&mut lmz, slab.mz.len())?;
+        lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
+        let order = by_scan(&slab.pos)?;
+        let mut segs = Vec::new();
+        segments(
+            &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
+        )?;
+        for s in stitch(segs, p)? {
+            if ((s.z - s.a + 1) as usize) < cw.broad.min_scans {
+                continue;
+            }
+            let (y, w) = centwave::series_of(&s, &slab.mz, &slab.it, &slab.pos, p, cw)?;
+            let tot: f64 = y.iter().sum();
+            let mz = if tot > 0.0 {
+                w.iter().sum::<f64>() / tot
+            } else {
+                s.mzc
+            };
+            bank.add(mz, &rt[s.a as usize..=s.z as usize], &y, cw.broad.decimate)?;
+        }
+        Ok(())
+    })?;
+    Ok(bank.finish().map(Arc::new))
+}
+
+/// Feeds `f` the slabs of the section: peaks above the floor in m/z order, a slab ending only at a gap of `SLAB_GAP_PPM` once it is full.
+fn each_slab<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    p: &Params,
+    nscan: usize,
+    progress: &mut dyn FnMut(usize, usize),
+    f: &mut dyn FnMut(&Slab) -> Result<()>,
+) -> Result<()> {
     let n_peaks = index.sections[si].n_peaks;
     let max_slab = p.slab_peaks();
-    let mut rows: [Vec<Row>; 2] = [Vec::new(), Vec::new()];
     let mut slab = Slab {
         mz: Vec::new(),
         it: Vec::new(),
@@ -201,7 +316,7 @@ pub fn detect_with<R: ReadAt>(
             if slab.mz.len() >= max_slab {
                 let last = slab.mz[slab.mz.len() - 1];
                 if (mz - last) / mz * 1e6 >= SLAB_GAP_PPM {
-                    run_slab(&slab, &rt, dt, p, &mut rows)?;
+                    f(&slab)?;
                     slab.mz.clear();
                     slab.it.clear();
                     slab.pos.clear();
@@ -217,10 +332,54 @@ pub fn detect_with<R: ReadAt>(
         a = b;
         progress(a as usize, n_peaks as usize);
     }
-    run_slab(&slab, &rt, dt, p, &mut rows)?;
-    drop(slab);
+    f(&slab)
+}
 
-    finish(rows, dt, p.axis, p.merge_overlap)
+/// With the common-mode option of the broad pass on: the parameters with the gradient mode G(t) of the file in `broad.common`, found by a first pass
+/// over the persistent traces of the unshifted grid. `None` when the option is off or the file has too few of them.
+fn common_mode_params<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    nscan: usize,
+    p: &Params,
+) -> Result<Option<Params>> {
+    let Peak::CentWave(cw) = &p.peak else {
+        return Ok(None);
+    };
+    if !(cw.broad.enabled && cw.broad.gt) || cw.broad.common.is_some() {
+        return Ok(None);
+    }
+    let mut bank = TraceBank::new(nscan, cw.broad.decimate);
+    let min_len = PERSISTENT_SCANS.min(libm::ceil(0.3 * nscan as f64) as usize);
+    let den = libm::log1p(CHANNEL_PPM);
+    each_slab(index, si, p, nscan, &mut |_, _| {}, &mut |slab| {
+        if slab.mz.is_empty() {
+            return Ok(());
+        }
+        let mut lmz: Vec<f64> = Vec::new();
+        reserve(&mut lmz, slab.mz.len())?;
+        lmz.extend(slab.mz.iter().map(|&m| p.axis.coord(m, den)));
+        let order = by_scan(&slab.pos)?;
+        let mut segs = Vec::new();
+        segments(
+            &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
+        )?;
+        for s in stitch(segs, p)? {
+            if (s.z - s.a + 1) as usize >= min_len {
+                let (y, _) = centwave::series_of(&s, &slab.mz, &slab.it, &slab.pos, p, cw)?;
+                bank.add(s.a as usize, &y)?;
+            }
+        }
+        Ok(())
+    })?;
+    let Some(cm) = bank.finish()? else {
+        return Ok(None);
+    };
+    let mut q = p.clone();
+    if let Peak::CentWave(c) = &mut q.peak {
+        c.broad.common = share(Some(cm));
+    }
+    Ok(Some(q))
 }
 
 #[cfg(test)]

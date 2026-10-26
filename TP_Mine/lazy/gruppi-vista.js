@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  TPGRUPPI_VIEW: the «Compare conditions» view of Tabui. It receives a `gruppi/1` (the output of the Rust module `crates/mzlab-feat/src/gruppi/`) and draws it: the matrix TP × condition,
 // the UpSet of the sets, the chart of the chosen TP (grouped bars with one time per condition, overlaid curves with more times, small multiples beyond 8 conditions), the table of the parent per
 // condition and the exports. It computes nothing: every number (areas, ratios, sets, shapes, Prev.) is read from the JSON. Texts in English (Tabui has no `lang/` keys); colours only from CSS variables

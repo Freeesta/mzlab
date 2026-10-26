@@ -15,6 +15,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::align::align_grouped;
 use crate::famalign::{align_families, align_ions, assemble, rt_map, Collector};
+use crate::prog::Prog;
 use crate::recipe::{Mode, Recipe};
 use crate::rtmap::{RtMap, RtParams};
 use crate::series::{finish, StrongFile};
@@ -186,6 +187,33 @@ pub fn align_and_fill_spilling<R: ReadAt>(
     open: impl FnMut(usize) -> Result<Index<R>>,
     spill: Option<&mut dyn Spill>,
 ) -> Result<(Aligned, usize)> {
+    align_and_fill_with(src, budget, r, open, spill, None)
+}
+
+/// `align_and_fill_spilling` filling the gaps of the files at the same time when `par_open` is given (same table, same bytes).
+pub fn align_and_fill_with<R: ReadAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
+    open: impl FnMut(usize) -> Result<Index<R>>,
+    spill: Option<&mut dyn Spill>,
+    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+) -> Result<(Aligned, usize)> {
+    align_and_fill_progress(src, budget, r, open, spill, par_open, &mut |_, _| {})
+}
+
+/// `align_and_fill_with` telling `progress(done, total)` after every slab (one unit for an alignment in memory), every file of the weak tier and every
+/// file whose gaps are filled; the total is announced (done = 0) before the first slab. The table is the same with any `progress`.
+pub fn align_and_fill_progress<R: ReadAt>(
+    src: &mut dyn Stored,
+    budget: &MemBudget,
+    r: &Recipe,
+    open: impl FnMut(usize) -> Result<Index<R>>,
+    spill: Option<&mut dyn Spill>,
+    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+    progress: &mut dyn FnMut(usize, usize),
+) -> Result<(Aligned, usize)> {
+    let mut prog = Prog::new(progress);
     let n = src.count();
     let mut s = survey(src, budget)?;
     let widest = s.rows.iter().copied().max().unwrap_or(0);
@@ -196,11 +224,17 @@ pub fn align_and_fill_spilling<R: ReadAt>(
             return Err(budget.refuse("align", way.bytes));
         }
         let _g = budget.reserve("align", way.bytes)?;
-        in_memory(src, n, r)?
+        prog.add_total(1 + stages_after(r, n));
+        prog.announce();
+        let t = in_memory(src, n, r)?;
+        prog.tick(1);
+        t
     } else if r.mode == Mode::Family {
-        family_slabs(src, &mut s, budget, r, widest * 3 / 2)?
+        family_slabs(src, &mut s, budget, r, widest * 3 / 2, &mut prog)?
     } else {
         let cuts = cuts(&mut s.all, slab_rows(budget.left() / 4), r.align.ion.ppm);
+        prog.add_total(cuts.len().saturating_sub(1) + stages_after(r, n));
+        prog.announce();
         let map = if r.align.warp.on() {
             first_map(src, &cuts, budget, r, &r.rt, Plan::default())?
         } else {
@@ -214,6 +248,7 @@ pub fn align_and_fill_spilling<R: ReadAt>(
             map.ok().then_some(&map),
             None,
             Plan::default(),
+            &mut prog,
         )?
     };
     drop(s);
@@ -230,6 +265,8 @@ pub fn align_and_fill_spilling<R: ReadAt>(
         Some(budget),
         spill,
         open,
+        par_open,
+        &mut prog,
     )?;
     crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, range| {
         let b = src.bytes(k)?;
@@ -240,6 +277,11 @@ pub fn align_and_fill_spilling<R: ReadAt>(
         Ok(read_file_from(&mut Slice(&b), b.len() as u64, want)?.0)
     })?;
     Ok((table, filled))
+}
+
+/// Units of progress `finish` reports after the alignment: a file of the weak tier and a file whose gaps are filled.
+fn stages_after(r: &Recipe, n: usize) -> usize {
+    n * (usize::from(r.weak_files > 0) + usize::from(r.fill_gaps))
 }
 
 fn in_memory(src: &mut dyn Stored, n: usize, r: &Recipe) -> Result<Aligned> {
@@ -269,6 +311,7 @@ fn slab_rows(bytes: usize) -> usize {
 /// Aligns the series slab by slab (`cuts`), with the RT corrected by a map (`adj`) or not. With `group_of`, records the group of every row
 /// (`group_of[file][row]`, the rows of a file counted in the whole file, not in the slab). The `plan` says what a slab is cut to take and how many rows
 /// the table is given room for.
+#[allow(clippy::too_many_arguments)]
 fn slabs(
     src: &mut dyn Stored,
     cuts: &[f64],
@@ -277,6 +320,7 @@ fn slabs(
     adj: Option<&RtMap>,
     mut group_of: Option<&mut Vec<Vec<u32>>>,
     plan: Plan,
+    prog: &mut Prog,
 ) -> Result<Aligned> {
     let n = src.count();
     let mut table = match plan.table_rows {
@@ -316,6 +360,7 @@ fn slabs(
             *b += f.len();
         }
         table.append(&g.table);
+        prog.tick(1);
     }
     Ok(table)
 }
@@ -335,7 +380,16 @@ fn first_map(
     if w.on() {
         first_recipe.align.ion = crate::rtwarp::coarse(&r.align.ion, w);
     }
-    let first = slabs(src, cuts, budget, &first_recipe, None, None, plan)?;
+    let first = slabs(
+        src,
+        cuts,
+        budget,
+        &first_recipe,
+        None,
+        None,
+        plan,
+        &mut Prog::off(),
+    )?;
     Ok(if w.on() {
         crate::rtwarp::map_from_table(&first, rt, w)
     } else {
@@ -350,6 +404,7 @@ fn family_slabs(
     budget: &MemBudget,
     r: &Recipe,
     table_rows: usize,
+    prog: &mut Prog,
 ) -> Result<Aligned> {
     let p = &r.align;
     // the group of every row stays for the whole alignment
@@ -363,6 +418,8 @@ fn family_slabs(
         slab_bytes: Some(slab_bytes),
         table_rows: Some(table_rows),
     };
+    prog.add_total(cuts.len().saturating_sub(1) + stages_after(r, s.rows.len()));
+    prog.announce();
     let map = first_map(src, &cuts, budget, r, &r.align.rt, plan)?;
     let mut group_of = s
         .rows
@@ -377,6 +434,7 @@ fn family_slabs(
         map.ok().then_some(&map),
         Some(&mut group_of),
         plan,
+        prog,
     )?;
     // votes and links of the groups and one lean file in memory
     let widest = s.rows.iter().copied().max().unwrap_or(0);

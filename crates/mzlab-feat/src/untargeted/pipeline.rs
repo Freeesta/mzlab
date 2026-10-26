@@ -19,9 +19,12 @@ use super::gapfill::{fill, GapParams};
 use super::ident::{ident, IdentParams};
 use super::isotopes::{group, IsoParams, Representative};
 use super::join::{align, JoinParams};
-use super::resolve::{resolve, Chrom as Trace, MinParams};
+use super::resolve::{resolve_with_broad, Chrom as Trace, MinParams};
 use super::table::to_aligned;
 use super::Feature;
+use crate::broad::BroadParams;
+use crate::broad_gt::{share, TraceBank};
+use crate::quality::REASON_BROAD;
 use crate::table::{Aligned, FileFeatures};
 
 /// Bytes of points that the ADAP builder may hold at once (`adap::each_slab`).
@@ -69,6 +72,8 @@ pub struct UntParams {
     /// `None` (the default, as in the mzmine 4.10 gold batches) leaves the traces as the ADAP builder gives them.
     pub baseline: Option<BaselineParams>,
     pub resolve: MinParams,
+    /// Broad bands on the residue of the narrow peaks (off by default).
+    pub broad: BroadParams,
     pub join: JoinParams,
     pub gap: GapParams,
     /// Isotope groups and identities of the rows of the table (`"iso": null` or `false` leaves them out).
@@ -88,6 +93,7 @@ impl Default for UntParams {
                 adjust_edges: true,
                 ..MinParams::default()
             },
+            broad: BroadParams::default(),
             join: JoinParams::default(),
             // the mass list the filler reads is the one of the mass detector
             gap: GapParams {
@@ -156,6 +162,9 @@ impl UntParams {
         p.gap.noise = p.adap.noise;
         read_baseline(&v, &mut p)?;
         read_resolve(r, &mut p.resolve)?;
+        if let Some(b) = r.get("broad") {
+            p.broad.enabled = b.bool().ok_or_else(bad)?;
+        }
         num(j, "tol_da", &mut p.join.tol_da)?;
         num(j, "tol_ppm", &mut p.join.tol_ppm)?;
         num(j, "w_mz", &mut p.join.w_mz)?;
@@ -193,7 +202,7 @@ fn read_baseline(v: &Value, p: &mut UntParams) -> Result<()> {
     Ok(())
 }
 
-/// The `"resolve"` object: the numbers of [`MinParams`] by their names, `duration` as `[min, max]` and `adjust_edges` as a boolean.
+/// The `"resolve"` object: the numbers of [`MinParams`] by their names, `duration` as `[min, max]` and `adjust_edges` as a boolean; `broad` (boolean, default false) switches the broad-band pass of [`UntParams::broad`].
 fn read_resolve(r: &Value, m: &mut MinParams) -> Result<()> {
     num(r, "chrom_threshold", &mut m.chrom_threshold)?;
     num(r, "search_rt", &mut m.search_rt)?;
@@ -208,7 +217,24 @@ fn read_resolve(r: &Value, m: &mut MinParams) -> Result<()> {
     if let Some(d) = r.get("duration") {
         match (d.at(0).and_then(Value::f64), d.at(1).and_then(Value::f64)) {
             (Some(lo), Some(hi)) if lo.is_finite() && hi >= lo => m.duration = (lo, hi),
-            _ => return Err(bad()),
+            _ => {
+                if let Some(hi) = d.f64() {
+                    if hi.is_finite() && hi >= m.duration.0 {
+                        m.duration.1 = hi;
+                    } else {
+                        return Err(bad());
+                    }
+                } else {
+                    return Err(bad());
+                }
+            }
+        }
+    }
+    if let Some(hi) = r.get("max_duration").and_then(Value::f64) {
+        if hi.is_finite() && hi >= m.duration.0 {
+            m.duration.1 = hi;
+        } else {
+            return Err(bad());
         }
     }
     Ok(())
@@ -225,6 +251,7 @@ impl From<&super::resolve::Feature> for Feature {
             height: f.height,
             area: f.area,
             filled: false,
+            broad: f.broad,
         }
     }
 }
@@ -315,6 +342,36 @@ fn stored(mut f: Feature) -> Feature {
     f
 }
 
+/// With the common-mode option of the broad pass on: the parameters with the gradient mode G(t) of the file in `broad.common`, found by a first pass
+/// over the persistent chromatograms (the span between their first and last scan covers 400 scans or 30 % of the run). `None` when the option is off
+/// or the file has too few of them.
+fn common_mode_params(scans: &[Ms1Scan], axis: &[f64], p: &UntParams) -> Option<UntParams> {
+    let b = &p.broad;
+    if !(b.enabled && b.gt) || b.common.is_some() {
+        return None;
+    }
+    let mut bank = TraceBank::new(scans.len(), b.decimate);
+    let mut failed = false;
+    each_slab(scans, &p.adap, p.slab_bytes, |chroms| {
+        for c in &chroms {
+            let (Some(&lo), Some(&hi)) = (c.scan.iter().min(), c.scan.iter().max()) else {
+                continue;
+            };
+            let mut t = full_trace(c, scans.len());
+            if let Some(bl) = &p.baseline {
+                t.y = bl.apply(axis, &t.y);
+            }
+            failed |= bank
+                .add(lo as usize, &t.y[lo as usize..=hi as usize])
+                .is_err();
+        }
+    });
+    let cm = bank.finish().ok().flatten().filter(|_| !failed)?;
+    let mut q = p.clone();
+    q.broad.common = share(Some(cm));
+    Some(q)
+}
+
 /// ADAP + resolver on the MS1 scans of one file: its list of features, sorted by m/z (then RT). Memory: the points of one slab of m/z at a time.
 pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Feature>> {
     let Some(si) = ix.section_of(1, p.polarity) else {
@@ -323,20 +380,25 @@ pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Featu
     let scans = ms1_scans(ix, si, p.adap.noise)?;
     // the RT of mzmine is a float: the resolver compares distances on that axis
     let axis: Vec<f64> = scans.iter().map(|s| s.rt as f32 as f64).collect();
+    let with_gt = common_mode_params(&scans, &axis, p);
+    let p = with_gt.as_ref().unwrap_or(p);
     let mut out = Vec::new();
+    let mut failed = None;
     each_slab(&scans, &p.adap, p.slab_bytes, |chroms| {
         for c in &chroms {
             let mut t = full_trace(c, scans.len());
             if let Some(b) = &p.baseline {
                 t.y = b.apply(&axis, &t.y);
             }
-            out.extend(
-                resolve(&t, &axis, &p.resolve)
-                    .iter()
-                    .map(|f| stored(f.into())),
-            );
+            match resolve_with_broad(&t, &axis, &p.resolve, &p.broad) {
+                Ok(fs) => out.extend(fs.iter().map(|f| stored(f.into()))),
+                Err(e) => failed = failed.take().or(Some(e)),
+            }
         }
     });
+    if let Some(e) = failed {
+        return Err(e);
+    }
     out.sort_by(|a, b| a.mz.total_cmp(&b.mz).then(a.rt.total_cmp(&b.rt)));
     Ok(out)
 }
@@ -391,7 +453,10 @@ pub fn to_file_features(list: &[Feature]) -> FileFeatures {
         fwhm: vec![0.0; n],
         asym: vec![0.0; n],
         gaps: vec![0; n],
-        qreason: vec![0; n],
+        qreason: list
+            .iter()
+            .map(|f| if f.broad { REASON_BROAD } else { 0 })
+            .collect(),
         ms2_n: vec![0; n],
         purity: vec![-1.0; n],
         area_win: vec![0.0; n],
@@ -413,6 +478,7 @@ pub fn from_file_features(f: &FileFeatures) -> Vec<Feature> {
             height: f.height[i] as f64,
             area: f.area[i] / MIN_TO_S,
             filled: false,
+            broad: f.qreason[i] & REASON_BROAD != 0,
         })
         .collect()
 }

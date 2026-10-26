@@ -227,6 +227,28 @@ fn flow_live_update_in_the_middle_of_the_run_keeps_the_detections_when_only_the_
 }
 
 #[test]
+fn flow_live_alignment_reports_a_fraction_that_ends_below_one_before_it_is_done() {
+    let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+    let (dir, _) = fixture("live_ali_frac");
+    let base = std::fs::read(dir.join("plan.json")).unwrap();
+    let run = held(&dir, &base, "w_f", usize::MAX);
+    HOLD.store(false, Ordering::SeqCst);
+    assert!(run.wait_idle(LIMIT));
+    let lines: Vec<String> = run.event_lines(0).into_iter().map(|x| x.1).collect();
+    let fracs: Vec<&String> = lines
+        .iter()
+        .filter(|l| {
+            l.contains(r#""instance":"ali""#)
+                && l.contains(r#""state":"running""#)
+                && !l.contains(r#""frac":null"#)
+        })
+        .collect();
+    assert!(!fracs.is_empty(), "{lines:?}");
+    drop(run);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn flow_live_new_detection_parameter_cancels_only_the_detection_that_runs() {
     let _g = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
     let (dir, _) = fixture("live_det");

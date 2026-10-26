@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mzlab_core::lettori::{self, FileSet, Limiti, Membro};
+use mzlab_core::mzml::ChromKind;
 use mzlab_core::wiff::{container, Wiff};
 use serde_json::Value;
 
@@ -163,6 +164,20 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
     );
 }
 
+/// A 3200 QTRAP whose product-ion scan blocks are version 3 is a variant (the engine's reader decodes version 2 only and would list it with no scans); a 3200 file
+/// with version 2 blocks only is not.
+#[test]
+fn a_3200_with_version_3_blocks_is_a_variant() {
+    let Some((dir, _)) = reference() else {
+        return;
+    };
+    let mut l = lettori::apri(set(&dir, "epi3200"), &Limiti::sito()).unwrap();
+    assert!(l.variante(0));
+    assert_eq!(l.campioni()[0].scansioni, 2);
+    let mut l = lettori::apri(set(&dir, "prodotto"), &Limiti::sito()).unwrap();
+    assert!(!l.variante(0));
+}
+
 #[test]
 fn what_the_reader_does_not_know_is_refused_never_read_as_a_full_scan() {
     let Some((dir, want)) = reference() else {
@@ -226,4 +241,80 @@ fn damaged_files_are_refused_or_read_never_a_panic() {
     for cut in (0..scan.len()).step_by(11) {
         try_open(wiff.clone(), scan[..cut].to_vec());
     }
+}
+
+#[test]
+fn wiff_campioni_nomi_data() {
+    let Some((dir, _)) = reference() else { return };
+    let l = lettori::apri(set(&dir, "nomi"), &Limiti::sito()).unwrap();
+    let campioni = l.campioni();
+    assert_eq!(campioni.len(), 5);
+    assert_eq!(campioni[0].nome, "Sample_A");
+    assert_eq!(campioni[1].nome, "Sample_B");
+    assert_eq!(campioni[2].nome, "nomi.wiff #3");
+    assert_eq!(campioni[3].nome, "nomi.wiff #4");
+    assert_eq!(campioni[4].nome, "Sample_A");
+    for c in campioni {
+        assert_eq!(c.dimensione, None);
+    }
+}
+
+/// A full scan experiment gives a TIC chromatogram, and the TIC of each spectrum in the mzML is the one of the header of its block when the file has one
+/// (here 1.5e6, not the sum of the profile), the sum of the profile where it has none.
+#[test]
+fn a_full_scan_has_its_tic_and_each_spectrum_the_tic_of_its_header() {
+    let Some((dir, want)) = reference() else {
+        return;
+    };
+    let want = &want["totale"];
+    let (tic, time) = (nums(&want["tic"]), nums(&want["time"]));
+    let (w, mut scan) = open(&dir, "totale").unwrap();
+    let run = w.run(&mut scan).unwrap();
+    assert_eq!(run.chromatograms.len(), 2);
+    let c = &run.chromatograms[0];
+    assert!((c.id.as_str(), c.kind) == ("TIC", ChromKind::Tic));
+    assert!(c.time.iter().zip(&time).all(|(a, b)| close(*a, *b)));
+    // the chromatogram is the TIC of the index as the file wrote it, a missing one (0.0) included
+    assert_eq!(c.intensity, vec![tic[0], 0.0, tic[2]]);
+    let bpc = &run.chromatograms[1];
+    assert!((bpc.id.as_str(), bpc.kind) == ("BPC", ChromKind::Bpc));
+    assert_eq!(bpc.time, c.time);
+    assert!(bpc
+        .intensity
+        .iter()
+        .zip(nums(&want["bpc"]))
+        .all(|(a, b)| close(*a, b)));
+    let mut l = lettori::apri(set(&dir, "totale"), &Limiti::sito()).unwrap();
+    // listing the chromatograms decodes no scan: the BPC is there once the writer has gone through the scans
+    let ids = |l: &mut dyn lettori::Lettore| {
+        l.cromatogrammi(0)
+            .unwrap()
+            .into_iter()
+            .map(|v| v.id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(&mut *l), ["TIC"]);
+    let xml = String::from_utf8(
+        mzlab_core::lettori_mzml::scrivi(&mut *l, 0, Vec::new(), &mut |_, _| {}).unwrap(),
+    )
+    .unwrap();
+    let got: Vec<f64> = xml
+        .split("name=\"total ion current\" value=\"")
+        .skip(1)
+        .map(|t| t.split('"').next().unwrap().parse().unwrap())
+        .collect();
+    assert_eq!(got.len(), 3);
+    assert!(
+        got.iter().zip(&tic).all(|(a, b)| close(*a, *b)),
+        "{got:?} {tic:?}"
+    );
+    assert!(xml.contains("<chromatogram index=\"0\" id=\"TIC\""));
+    assert!(xml.contains("<chromatogram index=\"1\" id=\"BPC\""));
+    assert_eq!(ids(&mut *l), ["TIC", "BPC"]);
+    let back = mzlab_core::mzml::read(xml.as_bytes()).unwrap();
+    assert!(back.chromatograms[1]
+        .intensity
+        .iter()
+        .zip(&run.chromatograms[1].intensity)
+        .all(|(a, b)| close(*a, *b)));
 }

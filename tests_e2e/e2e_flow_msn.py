@@ -32,6 +32,11 @@ RUN = """async (patch) => {
   document.removeEventListener('flow:web-step', on);
   return { ev, err, files: res && res.files };
 }"""
+REF = """async (patch) => {
+  const S = document.querySelector('.flx-list').__flow;
+  for (const inst of S.plan.steps) if (inst.step.startsWith('spectra.msn_graph')) inst.params = Object.assign({}, inst.params, patch);
+  try { return { err: null, files: (await FLOW.webMsn.run(S)).files }; } catch (e) { return { err: { key: e.key, params: e.params }, files: null }; }
+}"""
 r = Run(port=8979, wd="/tmp/wd_flowmsn")
 try:
     with sync_playwright() as p:
@@ -54,6 +59,20 @@ try:
             assert all(e["via"] == "browser" for e in x["ev"]), x["ev"]
             assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], [f["name"] for f in x["files"]]
         step("the template runs in the browser on the open infusion: three steps, three texts", runs)
+        def fractions():
+            ev = pg.evaluate("""(async () => JSON.parse(await (await fetch('api/flow/sched/events', { method: 'POST', body: JSON.stringify({ since: 0 }) })).text()))()""")
+            for inst in ("msngraph", "librarye", "tableexp"):
+                fr = [e["frac"] for e in ev if e.get("kind") == "job" and e.get("instance") == inst and e.get("state") == "running" and e.get("frac") is not None]
+                assert any(0 < f < 1 for f in fr), (inst, fr, [(e.get("kind"), e.get("state"), e.get("frac")) for e in ev if e.get("instance") == inst])
+                assert fr == sorted(fr), (inst, fr)
+        step("each MSn job reports the stages it really went through (a fraction between 0 and 1, never backwards)", fractions)
+        def same():
+            ref = pg.evaluate(REF, {"formula": ION})
+            assert ref["err"] is None, ref["err"]
+            a, b = got["r"]["files"], ref["files"]
+            assert [f["name"] for f in a] == [f["name"] for f in b], (a and [f["name"] for f in a], [f["name"] for f in b])
+            for fa, fb in zip(a, b): assert mask(fa["text"]) == mask(fb["text"]), "the scheduler differs from the functions of the MSn steps on " + fa["name"]
+        step("a plan of MSn steps only goes through the scheduler and gives the same texts as the functions of the steps", same)
         def graph():
             t = got["r"]["files"][0]["text"]
             assert mask(t) == mask(cli), (len(t), len(cli))
@@ -74,13 +93,13 @@ try:
             put = """async (t) => { const d = await navigator.storage.getDirectory(), w = await (await d.getFileHandle('msnlib.json', { create: true })).createWritable(); await w.write(t); await w.close() }"""
             pg.evaluate(put, "")
             x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow, ev = [];
-              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
-              try { await FLOW.runners.web.run(S); return { ok: 1 } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+              const l = S.plan.steps.find(s => s.step.startsWith('msn.library_export')); S.plan.inputs.push({ name: 'q.mgf', type: 'spectra', sha256: '' }); S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'file:q.mgf', library: l.id + '.library' }, params: {} });
+              try { await FLOW.runners.web.run(S); return { ok: 1 } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop(); S.plan.inputs.pop() } }""")
             assert x.get("key") == "err.flow.msn.library", x
             pg.evaluate(put, added)
             x = pg.evaluate("""async () => { const S = document.querySelector('.flx-list').__flow;
-              S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'g.graph', library: 'file:lib.json' }, params: {} });
-              try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop() } }""")
+              const l = S.plan.steps.find(s => s.step.startsWith('msn.library_export')); S.plan.inputs.push({ name: 'q.mgf', type: 'spectra', sha256: '' }); S.plan.steps.push({ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: { query: 'file:q.mgf', library: l.id + '.library' }, params: {} });
+              try { const r = await FLOW.runners.web.run(S); return { text: r.files.find(f => f.id === 'srch').text } } catch (e) { return { key: e.key } } finally { S.plan.steps.pop(); S.plan.inputs.pop() } }""")
             assert "text" in x, x
             j = json.loads(x["text"])
             assert j["formato"] == "msncerca/1" and j["opzioni"]["min_prove"] == 3 and j["candidati"], x["text"][:300]
@@ -119,6 +138,23 @@ try:
             names = pg.evaluate("""(async () => { const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'); const o = []; for await (const [n] of d.entries()) o.push(n); return o })()""")
             assert len([n for n in names if n.endswith((".json", ".msp", ".csv"))]) >= 3, names
         step("each text is kept in OPFS (mzlab/flow/)", kept)
+        def mixed():
+            # the same plan run in order by the functions of the MSn steps, outside the scheduler, is the reference: earlier steps of this test wrote the molecule into the plan
+            ref = pg.evaluate(REF, {"formula": ION})
+            assert ref["err"] is None, ref["err"]
+            # an index step beside the MSn steps: the plan is no longer MSn only, so the steps go through the scheduler (executor `msn` of flow-live-jobs.js)
+            pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, g = S.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')); S.plan.steps.push({ id: 'ixmix', step: 'index.mzidx@1', in: { source: g.in.source } }); }""")
+            try:
+                x = pg.evaluate(RUN, {"formula": ION})
+                assert x["err"] is None, x["err"]
+                last = {}
+                for e in x["ev"]: last[e["passo"]] = e
+                msn = [e for k, e in last.items() if k != "ixmix"]
+                assert len(msn) == 3 and all(e["stato"] in ("done", "reused") and e["via"] == "browser" for e in msn), last
+                assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], x["files"]
+                assert [mask(f["text"]) for f in x["files"]] == [mask(f["text"]) for f in ref["files"]], "the texts of the scheduler differ from the runner of the MSn plan"
+            finally: pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow; S.plan.steps = S.plan.steps.filter(s => s.id !== 'ixmix'); }")
+        step("a plan with an index step besides the MSn steps runs them in the scheduler, with the same texts", mixed)
         def no_ion():
             x = pg.evaluate(RUN, {"formula": "", "molecule": "Caffeine"})
             assert x["err"] and x["err"]["key"] == "err.flow.msn.molecule", x["err"]
@@ -137,6 +173,38 @@ try:
             assert x["err"] and x["err"]["key"] == "err.flow.msn.open", x["err"]
             assert "Data tab" in pg.evaluate("FLOW.message({ key: 'err.flow.msn.open', params: { input: 'x.mzML' } })")
         step("without the infusion open the run asks to open it in Data", closed)
+        def cache():
+            count = "window.__n = 0; window.__g = window.__g || window.fetch; window.fetch = (u, i) => { if (String(u).includes('api/msn_grafo')) window.__n++; return window.__g(u, i); }; null"
+            states = "(async () => JSON.parse(await (await fetch('api/flow/sched/nodes', { method: 'POST', body: '{}' })).text()).map(n => n.instance + ':' + n.state))()"
+            a = pg.evaluate(RUN, {"formula": ION, "ppm_formula": 7})
+            assert a["err"] is None, a["err"]
+            pg.evaluate(count)
+            try:
+                other = pg.evaluate(RUN, {"formula": ION, "ppm_formula": 9})
+                assert other["err"] is None, other["err"]
+                made = pg.evaluate("window.__n")
+                assert made >= 3, made
+                pg.evaluate("window.__n = 0")
+                back = pg.evaluate(RUN, {"formula": ION, "ppm_formula": 7})
+                assert back["err"] is None, back["err"]
+                assert pg.evaluate("window.__n") == 0, "the engine was asked again for a result kept in OPFS"
+                st = pg.evaluate(states)
+                assert all(s.endswith(":reused") for s in st if not s.startswith("ixmix")), st
+                assert [mask(f["text"]) for f in back["files"]] == [mask(f["text"]) for f in a["files"]], "the cached texts differ from the first run"
+            finally: pg.evaluate("window.fetch = window.__g; null")
+            keep = pg.evaluate("""(async () => { const d = await (await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow')).getDirectoryHandle('msn'); const o = []; for await (const [n] of d.entries()) o.push(n); return o })()""")
+            assert "index.json" in keep and len([n for n in keep if n.endswith(".json") and n != "index.json"]) >= 6, keep
+        step("a result kept in OPFS is taken from there when the plan returns to the same parameters (no request to the engine, job reused)", cache)
+        def library_key():
+            k = pg.evaluate("""async () => {
+              const put = async t => { const w = await (await (await (await navigator.storage.getDirectory()).getFileHandle('msnlib.json', { create: true })).createWritable()); await w.write(t); await w.close() };
+              const spec = { key: 'k1' }, inst = { step: 'spectra.match@1' }, other = { step: 'msn.table_export@1' };
+              await put('{"a":1}'); const a = await FLOW.liveJobs.msnKey(spec, inst), t1 = await FLOW.liveJobs.msnKey(spec, other);
+              await put('{"a":2}'); const b = await FLOW.liveJobs.msnKey(spec, inst), t2 = await FLOW.liveJobs.msnKey(spec, other);
+              await put(''); return { same: a === b, table: t1 === t2 } }""")
+            assert not k["same"], "a change of the library of the user keeps the key of the search"
+            assert k["table"], "the library of the user enters the key of a step that does not read it"
+        step("the key of the library search follows the library of the user, the key of the other steps does not", library_key)
         errs = [e for e in r.errs if e[0] in ("pageerror",)]
         step("no page errors", lambda: (_ for _ in ()).throw(AssertionError(errs[:3])) if errs else None)
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")

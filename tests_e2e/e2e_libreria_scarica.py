@@ -29,8 +29,9 @@ if not wasm.exists():
         print("  ", ("wasm", "FAIL site/static/wasm-lib missing and no cargo + wasm-bindgen to build it")); sys.exit(0)
 for f in ("libreria-worker.js", "libreria.js", "libreria-cartella.js", "libreria-scarica.js"):
     lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
-for f in (ROOT / "mzlab" / "web" / "lang").glob("*.js"):
-    lib_copia(f, ROOT / "site" / "static" / "lang" / f.name)
+for f in (ROOT / "mzlab" / "web" / "lang").rglob("*.js"):
+    (ROOT / "site" / "static" / "lang" / f.relative_to(ROOT / "mzlab" / "web" / "lang")).parent.mkdir(parents=True, exist_ok=True)
+    lib_copia(f, ROOT / "site" / "static" / "lang" / f.relative_to(ROOT / "mzlab" / "web" / "lang"))
 
 def rec(name, prec, peaks):
     return f"Name: {name}\nPrecursorMZ: {prec}\nIon_mode: Positive\nPrecursor_type: [M+H]+\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.4f}\t{i:.1f}" for m, i in peaks) + "\n"

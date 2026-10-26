@@ -4,6 +4,11 @@
           window.fetch = async (u, o) => { if (!String(u).includes('/rpc')) return real(u, o);
             const b = JSON.parse(o.body), op = b.op, ok = (v) => new Response(typeof v === 'string' ? v : JSON.stringify(v), { status: 200 });
             window.__ops.push(op);
+            if (op === 'flow/reuse') { const n = JSON.parse(b.plan).steps.length, r = window.__reused || 0; return ok({ reused: r, compute: n - r }); }
+            if (op === 'flow/liste') { const rows = b.rows || b.csv.split('\n').filter(l => l.trim()).slice(1).map(l => { const c = l.split(';'); return { name: c[0], delta: c[1], charge: c[2], comment: c[3] || '' }; }), bad = rows.findIndex(r => !r.name);
+              if (bad >= 0) return ok({ errors: [{ line: bad + 2, key: 'error.liste.noName', detail: '' }] });
+              const csv = 'name;delta;charge;comment\n' + rows.map(r => [r.name, r.delta, r.charge, r.comment].join(';')).join('\n') + (rows.length ? '\n' : ''), h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(csv)))].map(x => x.toString(16).padStart(2, '0')).join('');
+              return ok({ rows, csv, sha256: h, json: JSON.stringify({ elementi: rows, schema: 'liste/1', tipo: 'adducts' }) }); }
             if (op === 'flow/read') return ok('a,b\n1,2\n');
             if (op === 'flow/live/start') { const plan = JSON.parse(b.plan); window.__runs++; window.__sent.push(plan.inputs.map(i => i.name).join(','));
               if (window.__missing && (window.__missing === '*' || plan.inputs.some(i => i.name === window.__missing))) return new Response(JSON.stringify({ error_key: 'err.flow.input.missing', params: { input: window.__missing === '*' ? 'a.mzML' : window.__missing } }), { status: 400 });

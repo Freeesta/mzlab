@@ -6,7 +6,7 @@ use std::sync::OnceLock;
 
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::mzml::Spectrum;
-use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+use mzlab_core::mzmlwrite::{Header, MzmlWriter, SpectrumExtra};
 use mzlab_core::upload::prepare;
 use mzlab_feat::legacy::lr::ms2link::{self, Links, Override, State};
 use mzlab_feat::legacy::lr::plan::FileLr;
@@ -73,7 +73,7 @@ fn ms2_file(name: &str, xs: &[X]) -> Vec<u8> {
             .map(|(c, s, a)| a * (-0.5 * ((rt - c) / s).powi(2)).exp())
             .sum();
         let tic = (LEVEL + top) * (1.0 + 0.03 * rng.normal());
-        w.spectrum(&Spectrum {
+        let sp = Spectrum {
             index: i,
             id: format!("sample=1 period=1 cycle={} experiment={}", i + 1, j + 2),
             level: 2,
@@ -85,23 +85,15 @@ fn ms2_file(name: &str, xs: &[X]) -> Vec<u8> {
             mz: LOSSES.iter().map(|l| e.precursor - l.0).collect(),
             intensity: LOSSES.iter().map(|l| (tic * l.1) as f32).collect(),
             wide: None,
-        })
-        .unwrap();
+        };
+        let extra = SpectrumExtra {
+            ce: e.ce,
+            ..Default::default()
+        };
+        w.spectrum_with(&sp, &extra).unwrap();
     }
     w.close_spectra().unwrap();
-    let mzml = String::from_utf8(w.finish().unwrap()).unwrap();
-    // the writer has no collision energy: the nth precursor gets the energy of the nth scan
-    let mut out = String::new();
-    for (k, part) in mzml.split("</selectedIonList></precursor>").enumerate() {
-        out += part;
-        if let Some((_, j)) = cycles.get(k) {
-            out += "</selectedIonList>";
-            if let Some(ce) = xs[*j].ce {
-                out += &format!("<activation><cvParam cvRef=\"MS\" accession=\"MS:1000045\" name=\"collision energy\" value=\"{ce}\"/></activation>");
-            }
-            out += "</precursor>";
-        }
-    }
+    let out = String::from_utf8(w.finish().unwrap()).unwrap();
     let bytes = out.into_bytes();
     let mut src = bytes.clone();
     let p = prepare(&mut src, bytes.len() as u64, name).unwrap();

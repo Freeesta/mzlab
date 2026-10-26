@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Undo/redo of the Teoria editor and the draft kept in the browser. The history lives in memory per chapter; the draft (chapter text and summary, never the token)
 // goes to localStorage so a closed tab does not lose the work. Every storage access can throw (private window, blocked site data): the editor must work without it.
 

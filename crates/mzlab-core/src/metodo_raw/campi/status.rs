@@ -8,15 +8,15 @@ use opentfraw::status_log::{split_label, StatusLog};
 const FROM: &str = "thermo-raw:StatusLog";
 
 pub fn fields(log: &StatusLog) -> Vec<Campo> {
-    let mut out = vec![Campo::new(FROM, "Records", log.records.len())];
-    let times: Vec<f64> = log.times_min.iter().map(|t| f64::from(*t)).collect();
+    let mut out = vec![Campo::new(FROM, "Records", log.records().len())];
+    let times: Vec<f64> = log.times_min().iter().map(|t| f64::from(*t)).collect();
     if !times.is_empty() && times.iter().all(|t| t.is_finite()) {
         let (lo, hi) = range(&times);
         out.push(Campo::new(FROM, "Time (min..max)", format!("{lo}..{hi}")).unit("min"));
     }
     for (i, d) in log.header.fields.iter().enumerate() {
         let vals: Vec<&GenericValue> = log
-            .records
+            .records()
             .iter()
             .filter_map(|r| r.values.get(i).map(|v| &v.1))
             .filter(|v| !matches!(v, GenericValue::Gap))
@@ -38,16 +38,28 @@ fn range(nums: &[f64]) -> (f64, f64) {
 /// One channel: all its values, in record order.
 fn channel(label: &str, vals: &[&GenericValue]) -> Option<Campo> {
     let (name, unit) = split_label(label);
-    let texts: Vec<String> = vals.iter().map(|v| shown(v)).collect();
-    if name.is_empty() || texts.iter().all(String::is_empty) {
-        return None;
-    }
-    let same = texts.iter().all(|t| Some(t) == texts.first());
     let nums: Vec<f64> = vals
         .iter()
         .filter_map(|v| v.as_f64())
         .filter(|x| x.is_finite())
         .collect();
+    if nums.len() == vals.len() && !name.is_empty() {
+        // Only finite numbers, which are never an empty text: two of them print the same exactly when their bits are the same (the type of a channel is one), so the
+        // text is built for the first value only.
+        let first = nums[0].to_bits();
+        let (value, key) = if nums.iter().all(|x| x.to_bits() == first) {
+            (shown(vals[0]), name)
+        } else {
+            let (lo, hi) = range(&nums);
+            (format!("{lo}..{hi}"), format!("{name} (min..max)"))
+        };
+        return Some(Campo::new(FROM, &key, value).unit(&unit));
+    }
+    let texts: Vec<String> = vals.iter().map(|v| shown(v)).collect();
+    if name.is_empty() || texts.iter().all(String::is_empty) {
+        return None;
+    }
+    let same = texts.iter().all(|t| Some(t) == texts.first());
     let (value, key) = if same {
         (texts[0].clone(), name)
     } else if nums.len() == vals.len() {

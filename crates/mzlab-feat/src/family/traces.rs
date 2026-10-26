@@ -146,6 +146,6 @@ mod tests {
             .collect();
         let scaled: Vec<f64> = g.iter().map(|v| v * 0.1).collect();
         assert!((pearson(&g, &scaled).unwrap() - 1.0).abs() < 1e-12);
-        assert!(pearson(&g, &vec![1.0; 21]).is_none());
+        assert!(pearson(&g, &[1.0; 21]).is_none());
     }
 }

@@ -233,7 +233,16 @@ pub fn scan_metadata_with(
                         .and_then(|p| p.monoisotopic_mz())
                         .filter(|&mz| mz > 0.0)
                 })
-                .or_else(|| reaction.map(|r| r.precursor_mz).filter(|&mz| mz > 0.0));
+                // the last stage of the chain is the one isolated for this scan (an MS3 names its MS2 precursor first)
+                .or_else(|| {
+                    event.and_then(|e| {
+                        e.reactions
+                            .iter()
+                            .rev()
+                            .map(|r| r.precursor_mz)
+                            .find(|&mz| mz > 0.0)
+                    })
+                });
             let sm = params
                 .as_ref()
                 .and_then(|p| p.monoisotopic_mz())
@@ -488,15 +497,15 @@ fn resolve_scan_arrays<R: Read + Seek>(
         let int: Vec<f32> = packet.peaks.iter().map(|p| p.abundance).collect();
         return Some((mz, int, Some(crate::ScanMode::Centroid)));
     }
-    let peaks = raw.read_peaks_only(source, scan_number).ok()?;
-    if peaks.is_empty() && !raw.flat_peaks && nominal_scan_mode == Some(crate::ScanMode::Profile) {
+    let (mut mz, mut int) = (Vec::new(), Vec::new());
+    raw.read_peaks_only_into(source, scan_number, &mut mz, &mut int)
+        .ok()?;
+    if mz.is_empty() && !raw.flat_peaks && nominal_scan_mode == Some(crate::ScanMode::Profile) {
         // A profile scan without a centroid list: the profile is all the file holds (msconvert's default).
         if let Some(profile) = raw.read_scan(source, scan_number).ok()?.profile {
             return Some(profile_arrays(&profile, event));
         }
     }
-    let mz: Vec<f64> = peaks.iter().map(|p| p.mz).collect();
-    let int: Vec<f32> = peaks.iter().map(|p| p.abundance).collect();
     Some((mz, int, Some(crate::ScanMode::Centroid)))
 }
 
@@ -506,17 +515,8 @@ fn profile_arrays(
     event: Option<&ScanEvent>,
 ) -> (Vec<f64>, Vec<f32>, Option<crate::ScanMode>) {
     let coeffs = event.map(|e| e.coefficients.as_slice()).unwrap_or(&[]);
-    let pairs = profile.to_mz_intensity(coeffs);
-    let mz: Vec<f64> = pairs
-        .iter()
-        .filter(|(m, _)| *m > 0.0)
-        .map(|(m, _)| *m)
-        .collect();
-    let int: Vec<f32> = pairs
-        .iter()
-        .filter(|(m, _)| *m > 0.0)
-        .map(|(_, i)| *i as f32)
-        .collect();
+    let (mut mz, mut int) = (Vec::new(), Vec::new());
+    profile.to_mz_intensity_into(coeffs, &mut mz, &mut int);
     (mz, int, Some(crate::ScanMode::Profile))
 }
 

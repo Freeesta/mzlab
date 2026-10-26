@@ -5,8 +5,9 @@ import subprocess
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
-# a key may be on several actions only when their views are disjoint (the key belongs to the view of the chart in focus)
-DISJOINT = {"x": {"spec.xic", "chrom.xic", "xic.addIon"}, "enter": {"spec.peak", "chrom.specAtRt"}}
+# a key may be on several actions only when their views are disjoint (the key belongs to the view of the chart in focus), or when their `visibile` excludes each other
+# (chrom.xic on every trace but the PDA one, chrom.wl on the PDA one)
+DISJOINT = {"x": {"spec.xic", "chrom.xic", "chrom.wl", "uv.wlView", "xic.addIon"}, "enter": {"spec.peak", "chrom.specAtRt"}}
 RESERVED = {("t", True, False), ("n", True, False), ("w", True, False), ("q", True, False), ("l", True, False), ("r", True, False), ("p", True, False), ("s", True, False), ("f", True, False)}
 
 

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // PFAS evidence for the feature table (high resolution only; «Statistica» panel, after the Kendrick mass defect): the candidate formula of every ion
 // (/api/composition, the Rust engine), MD/C against m/C, and the diagnostic fragments and neutral losses of the MS2 scans that selected it. A VIEW of
 // CANDIDATES with their evidence (counts and ppm errors): the program never says what an ion is. A click on a point or a row opens the XIC and the MS2 scan.
@@ -8,7 +8,7 @@ import { carbons, mdc, pickFormula, search } from "./pfas-calc.js";
 const w = /** @type {any} */ (window);
 const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("pfas") : "qqq.pfas";
 const MAX_FEATURES = 300, MAX_ROWS = 200, POOL = 4;
-const t = (/** @type {string} */ k, /** @type {any} */ p) => I18N.t(k, p);
+const t = (/** @type {string} */ k, /** @type {any} */ p = undefined) => I18N.t(k, p);
 const eh = (/** @type {any} */ s) => EH(s == null ? "" : s);
 const fmt = (/** @type {any} */ v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
 const ELEMENTS = "C:1-30,H:0-10,F:3-40,O:0-6,N:0-1,S:0-1";

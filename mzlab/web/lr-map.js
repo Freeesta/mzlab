@@ -56,7 +56,7 @@ export async function statRoute(path, body, { rpc }) {
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
   if (path === "/api/flow/command") {
     let r;
-    try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e) { r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }
+    try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e_) { const e = /** @type {Lanciato} */ (e_); r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }
     return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
   }
   if (path.startsWith("/api/flow/sched/")) return { status: 200, text: (await rpc({ op: "lr_flow_sched", sop: path.slice(16), body })).info };
@@ -65,7 +65,7 @@ export async function statRoute(path, body, { rpc }) {
   // the molecules of the user kept between sessions: archivio/leggi gives a molecules/1 document, archivio/scrivi (the document as body) replaces them
   if (path === "/api/molecules/archivio/leggi" || path === "/api/molecules/archivio/scrivi") return { status: 200, text: (await rpc({ op: "lr_molecole_archivio", mop: path.slice(24), body })).info };
   if (path.startsWith("/api/molecules/")) return { status: 200, text: (await rpc({ op: "lr_molecules", mop: path.slice(15), body })).info };
-  if (!/^\/api\/stat\/(profile|blank|reference|pca)$/.test(path)) return undefined;
+  if (!/^\/api\/(stat\/(profile|blank|reference|pca|kmd)|kmd)$/.test(path)) return undefined;
   const r = (await rpc({ op: "lr_stat", path: path.slice(1), body })).info;
   if (!r) return null;
   return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };

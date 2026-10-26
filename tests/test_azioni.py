@@ -1,7 +1,10 @@
 """The registry of the actions of the panels (azioni.js, format azioni/1): order of the groups, grey entries, unique ids, and the texts it/en of the map actions."""
 import json, re, shutil, subprocess
 from pathlib import Path
+import sys
 import pytest
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+import lang_catalogo  # noqa: E402
 
 WEB = Path(__file__).resolve().parents[1] / "mzlab" / "web"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
@@ -36,7 +39,7 @@ def test_map_actions_have_texts_in_both_languages():
     ids = re.findall(r'cmd\("(\w+)"', (WEB / "mappa.js").read_text(encoding="utf-8"))
     assert len(ids) == len(set(ids)) >= 13
     for lang in ("it", "en"):
-        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        cat = lang_catalogo.testo(lang)
         for i in ids:
             for k in ("name", "tip"):
                 assert f'"cmd.{i}.{k}"' in cat, (lang, i, k)
@@ -58,7 +61,7 @@ def test_spectrum_actions_have_texts_in_both_languages():
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|cx|disp)\.[\w.]+)"', b))
     assert len(blocks) >= 24 and len(keys) >= 20, (len(blocks), len(keys))
     for lang in ("it", "en"):
-        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        cat = lang_catalogo.testo(lang)
         for k in keys:
             assert f'"{k}"' in cat, (lang, k)
 
@@ -70,7 +73,7 @@ def test_trace_actions_have_texts_in_both_languages():
     keys = set(k for b in blocks for k in re.findall(r'"((?:ctx|disp)\.[\w.]+)"', b))
     assert len(blocks) >= 11 and len(keys) >= 9, (len(blocks), len(keys))
     for lang in ("it", "en"):
-        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        cat = lang_catalogo.testo(lang)
         for k in keys:
             assert f'"{k}"' in cat, (lang, k)
 
@@ -121,7 +124,7 @@ def test_arrangement_actions_show_in_every_view_and_have_texts_in_both_languages
     keys = set(re.findall(r'"(aff\.menu\.[\w.]+)"', src))
     assert len(keys) >= 6, keys
     for lang in ("it", "en"):
-        cat = (WEB / "lang" / f"{lang}.js").read_text(encoding="utf-8")
+        cat = lang_catalogo.testo(lang)
         for k in keys | {f"cmd.disp.{i}.{f}" for i in ("affianca", "su", "giu", "intera", "uguali", "ripristina") for f in ("lab", "name", "tip", "kw")}:
             assert f'"{k}"' in cat, (lang, k)
     assert not re.search(r"""["'](?:full|ms2|mrm|spec|chrom)["']""", (WEB / "layout.js").read_text(encoding="utf-8"))

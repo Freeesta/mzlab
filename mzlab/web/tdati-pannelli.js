@@ -18,6 +18,7 @@ function lineData(p) {
   const rows = [], dec = p.kind === "press" ? 1 : 0, reg = p.kind === "reg";
   a.sr.forEach(s => {
     pick(s.x, a.x0, a.x1).forEach(i => rows.push([s.name, nm(s.x[i], 4), reg ? nm(s.y[i], 6) : nm(s.y[i], dec || 1)]));
+    if (window.ETPK) ETPK.rows(p, s).forEach(r => rows.push([`${s.name} · ${T("tdati.etpk", { v: r.text })}`, nm(r.rt, 4), nm(s.y[r.apex], 1)]));
     (p.ints || []).filter(it => it.key === s.key).forEach(it => {
       let b = -1; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= it.a && s.x[i] <= it.b && (b < 0 || s.y[i] > s.y[b])) b = i;
       if (b >= 0) rows.push([`${s.name} · ${T("tdati.apex", { a: nm(it.a, 2), b: nm(it.b, 2) })}`, nm(s.x[b], 4), nm(s.y[b], 1)]);
@@ -47,10 +48,16 @@ function mapData(p) {
   cells.sort((u, v) => v[2] - u[2]).splice(100);
   return { title: ptitle(p), head: [T("tdati.col.rt"), a.pda ? "nm" : "m/z", a.pda ? T("tdati.col.mau") : T("tdati.col.int")], rows: cells.map(c => [nm(c[0], 3), nm(c[1], a.pda ? 0 : 2), nm(c[2], 1)]), note: T("tdati.note.map", { n: cells.length }) };
 }
-const data = p => (p.type === "spec" ? specData(p) : p.type === "map" ? mapData(p) : lineData(p));
+function uvData(p) {
+  const a = p._a; if (!a || !a.uvd) return null;
+  const ix = pick(a.uvd.nm, a.x0, a.x1);
+  return { title: ptitle(p), head: ["nm", T("tdati.col.mau")], rows: ix.map(i => [nm(a.uvd.nm[i], 1), nm(a.uvd.y[i], 2)]), note: T("tdati.note.uv", { a: nm(a.x0, 0), b: nm(a.x1, 0), n: MAXROWS }) };
+}
+const data = p => (p.uv ? uvData(p) : p.type === "spec" ? specData(p) : p.type === "map" ? mapData(p) : lineData(p));
 
 function text(p) {
   const a = p._a; if (!a) return T("a11y.empty");
+  if (p.uv && a.uvd) return T("a11y.uv", { title: ptitle(p), rt: a.uvd.n > 1 ? a.uvd.rt.toFixed(2) + "–" + a.uvd.rt1.toFixed(2) : a.uvd.rt.toFixed(2), a: nm(a.x0, 0), b: nm(a.x1, 0), y: nm(Math.max(...a.uvd.y), 1) });
   if (p.type === "spec") {
     const n = a.data ? a.data[0].d.mz.filter((m, i) => m >= a.x0 && m <= a.x1 && a.data[0].d.y[i] >= (p.thr ?? 5) / 100 * Math.max(...a.data[0].d.y, 1e-9)).length : 0;
     return T("a11y.spec", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), n });

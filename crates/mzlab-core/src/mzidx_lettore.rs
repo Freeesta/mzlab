@@ -62,7 +62,7 @@ fn tabella(l: &mut dyn Lettore, c: usize, mut prima: Option<&mut Prima<'_>>) -> 
 
 /// The rows of a table with no scan yet, from the header of the reader.
 fn righe_vuote(l: &mut dyn Lettore, c: usize) -> Result<Rows> {
-    let h = lettori_mzml::testata(l, c)?;
+    let h = lettori_mzml::testata_tabella(l, c)?;
     Ok(match Rows::da_testata(&h) {
         Some(r) => r,
         None => Rows::from_head(&MzmlWriter::new(Vec::new(), &h)?.finish()?),

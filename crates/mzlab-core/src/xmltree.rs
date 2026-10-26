@@ -28,31 +28,36 @@ impl El {
 
 impl P<'_> {
     fn starts(&self, t: &str) -> bool {
-        self.s[self.i..].starts_with(t.as_bytes())
+        self.s
+            .get(self.i..)
+            .is_some_and(|r| r.starts_with(t.as_bytes()))
     }
     fn skip_until(&mut self, t: &str) -> Option<()> {
-        let p = self.s[self.i..]
+        let p = self
+            .s
+            .get(self.i..)?
             .windows(t.len())
             .position(|w| w == t.as_bytes())?;
         self.i += p + t.len();
         Some(())
     }
     fn ws(&mut self) {
-        while self.i < self.s.len() && self.s[self.i].is_ascii_whitespace() {
+        while self.s.get(self.i).is_some_and(u8::is_ascii_whitespace) {
             self.i += 1;
         }
     }
     fn name(&mut self) -> Option<String> {
         let a = self.i;
-        while self.i < self.s.len()
-            && !matches!(
-                self.s[self.i],
-                b' ' | b'\t' | b'\r' | b'\n' | b'>' | b'/' | b'='
-            )
+        while self
+            .s
+            .get(self.i)
+            .is_some_and(|c| !matches!(c, b' ' | b'\t' | b'\r' | b'\n' | b'>' | b'/' | b'='))
         {
             self.i += 1;
         }
-        (self.i > a).then(|| String::from_utf8_lossy(&self.s[a..self.i]).into_owned())
+        (self.i > a).then(|| {
+            String::from_utf8_lossy(self.s.get(a..self.i).unwrap_or_default()).into_owned()
+        })
     }
     /// Skips comments, declarations and processing instructions.
     fn misc(&mut self) -> Option<()> {
@@ -144,7 +149,7 @@ impl P<'_> {
                     let a = self.i + 9;
                     self.skip_until("]]>")?;
                     if el.children.is_empty() {
-                        text.extend(escape(&self.s[a..self.i - 3]));
+                        text.extend(escape(self.s.get(a..self.i - 3).unwrap_or_default()));
                     }
                 }
                 b'<' if self.starts("<?") => self.skip_until("?>")?,

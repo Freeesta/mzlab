@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // QA/QC panel of the drawer («QA/QC»): measures of the series, never verdicts (NORMAN guide, Hollender et al. 2023; BP4NTA).
 //   - type of each file (sample, blank, QC, standard, dark): guessed from the name (project.py + QC / dark words), corrected by hand
@@ -16,8 +17,10 @@ const QAQC = (() => {
   const Q1 = s => document.querySelector(s);
   const eh = s => EH(s == null ? "" : s);
   const isHr = () => !!(window.HR && typeof BANCO !== "undefined" && BANCO.on());
+  /** @returns {{ roles: Record<string, any>, ions: any[], thr: number, win: number, ratio: Record<string, any>, seq: number }} */
   const blankState = () => ({ roles: {}, ions: [], thr: 3, win: 0.5, ratio: { text: "", rt: "" }, seq: 1 });
   let st = blankState();
+  /** @type {{ ions: any[], ratio: any, feat: any, at: string | null }} */
   let res = { ions: [], ratio: null, feat: null, at: null };      // last results, read by the study report
   Object.assign(st, lsObj(KEY));
   // the roles are not stored here any more: they belong to the sample table (campioni.js, notebook NB.session)
@@ -70,7 +73,7 @@ const QAQC = (() => {
     const out = [];
     for (const ion of st.ions) {
       try { const q = await query(ion.mz, ion.rt, false); out.push({ ion, files: q.files.map(f => f.file), roles: q.roles, r: q.r }); }
-      catch (e) { out.push({ ion, error: String(e && e.message || e) }); }
+      catch (e_) { const e = /** @type {Lanciato} */ (e_); out.push({ ion, error: String(e && e.message || e) }); }
     }
     res.ions = out;
     res.at = new Date().toISOString();
@@ -200,7 +203,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   }
   async function refresh(box) {
     const msg = box.querySelector("#qq-msg");
-    try { await run(); if (msg) msg.textContent = ""; } catch (e) { if (msg) msg.textContent = String(e && e.message || e); }
+    try { await run(); if (msg) msg.textContent = ""; } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (msg) msg.textContent = String(e && e.message || e); }
     paintIons(box);
     if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("qaqc_measure", { n: st.ions.length });
   }
@@ -209,7 +212,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
     if (st.ions.length) refresh(box);
     box.onchange = e => {
       const r = e.target.closest("select[data-role]");
-      if (r) { CAMPIONI.apply([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
+      if (r) { campioniEdit([{ file: r.dataset.role, role: { standard: "std" }[r.value] || r.value }]); refresh(box); }
       if (e.target.id === "qq-thr") { st.thr = +e.target.value; save(); if (res.ratio) runRatio().then(() => paint(box)).catch(() => {}); }
       if (e.target.id === "qq-win") { const v = numIt(e.target.value); if (v > 0) { st.win = v; save(); refresh(box); } }
     };
@@ -230,7 +233,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
           await runRatio(); paint(box); if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("qaqc_ratio", { thr: st.thr });
         }
         msg.textContent = "";
-      } catch (err) { msg.textContent = String(err && err.message || err); }
+      } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); }
     };
   }
 

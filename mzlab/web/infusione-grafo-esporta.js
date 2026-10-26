@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Export of the cleaned spectra of the «Fragmentation graph» (CSV, MGF, MSP; one node or the whole tree; clean or all) and «Add to library»: one msnlib/1 entry
 // appended to the library file of the user, kept in the browser (OPFS) and downloadable. The text of every export and the library are made by the engine.
 import { G, params, query } from "./infusione-grafo-stato.js";

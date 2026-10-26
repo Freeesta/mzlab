@@ -53,13 +53,15 @@ window.avvisoAuto = function(el, o = {}) {
 "use strict";
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
 // merge = join the centroids of the same nominal mass (centroid files only)
-const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4 };
+const UIP = { theme: "auto", pal: "file", merge: true, beside: false, hrPpm: 5, hrDec: 4, xicLens: true };
 // areas: at least 3 decimals in the label (2.243e+6), whole number in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString() : "";
+let EXPORTING = false;          // true while a plot is drawn for a saved image
 // ---- chart colours (settings: "Colori dei grafici"). PAL = categorical colours of the current palette (filled in place by setPal, so every user of PAL follows it);
 // files of the Full Scan tab that have a time get a SEQUENTIAL scale ordered by time (seqColor), see paintFiles.
 function isDark() {
+  if (EXPORTING) return false;
   if (typeof UIP !== "undefined") {
     if (UIP.theme === "dark") return true;
     if (UIP.theme === "light") return false;
@@ -296,7 +298,7 @@ function panelRec(p) {
     k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
     link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1,
     dda: p.dda != null ? E.panels.findIndex(q => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex(q => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex(q => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
-    lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, bwi: p.bwi || undefined, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+    uv: p.uv || undefined, lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, etpk: typeof p.etpk === "boolean" ? p.etpk : undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, bwi: p.bwi || undefined, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
   };
 }
 let uiTimer = null;
@@ -320,7 +322,11 @@ function uiSave(now = false) {
 addEventListener("pagehide", () => uiSave(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
 
-let EXPORTING = false;
+// colours of the saved images: always the light theme, whatever the page theme is (so a PNG is the same in light and dark); css() everywhere else
+const EXPORT_LIGHT = { "--panel": "#ffffff", "--line": "#e2e5ea", "--ink": "#25282c", "--muted": "#5e6676", "--accent": "#2b5c8a", "--warn": "#92400e", "--sel": "#edf2f8", "--soft": "#f0f3f6", "--bg": "#ffffff", "--diff-pos": "#D55E00", "--diff-neg": "#0072B2" };
+// opaque pale version of a trace colour (85% towards white): the area under a saved cascade trace
+const lightTint = c => { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return "#ffffff"; const v = parseInt(m[1], 16); return "#" + [v >> 16, v >> 8 & 255, v & 255].map(x => Math.round(x + (255 - x) * .85).toString(16).padStart(2, "0")).join(""); };
+const ecss = n => EXPORTING && n in EXPORT_LIGHT ? EXPORT_LIGHT[n] : css(n);
 const fz = () => 1;        // (the text size of the graphs follows the browser zoom: Ctrl/Cmd + and −)
 const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ data (cached)
@@ -573,7 +579,8 @@ function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFil
 function goToFileTab(f) {
   setTab(f.kind); STATO.file(f.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f.kind);
 }
-function reorderFiles(fromK, toK, isBefore) {
+const reorderFiles = (fromK, toK, isBefore) => fileViewDo(() => reorderFilesRaw(fromK, toK, isBefore));
+function reorderFilesRaw(fromK, toK, isBefore) {
   if (fromK == null || toK == null || fromK === toK) return;
   const srcIdx = E.files.findIndex(f => f.k === fromK);
   const dstIdx = E.files.findIndex(f => f.k === toK);
@@ -816,14 +823,14 @@ function renderFileList() {
     const cv = el.querySelector(".chv"); if (cv) cv.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); flip(); } };
   });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
-    side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
+    fileViewDo(() => side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderFileList(); renderNav();
     redrawAll();
     uiSave();
   });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
-    sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; });
+    fileViewDo(() => sibsOf(E.files[+x.dataset.k]).forEach(f => { f.vis = x.checked; }));
     if (!x.checked) cleanupOrphanPanels(); else if (lrTog()) ensureLayout();
     renderNav(); redrawAll();
     uiSave();
@@ -989,7 +996,8 @@ const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the
 function plotSheets(p) {
   const a = p._a; if (!a) return null;
   const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") : I18N.t("export.col.intensity");
-  if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
+  if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);
+  else if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z - ${x.f.label}`, x.d.mz], [`${I18N.t("export.col.intensity")} - ${x.f.label}`, x.d.y0 || x.d.y]); });
   else if (a.sr) {
     // total chromatograms of one run type share the time axis: one RT column
     const same = p.type === "chrom" && a.sr.length > 1 && a.sr.every(q => q.x.length === a.sr[0].x.length && q.x.every((v, i) => v === a.sr[0].x[i]));

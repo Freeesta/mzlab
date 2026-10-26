@@ -14,6 +14,9 @@ use crate::mzidx::ScanTable;
 use crate::mzidx_lettore;
 use crate::scantable::{self, Table};
 use crate::window::Windowed;
+mod late;
+#[cfg(not(target_arch = "wasm32"))]
+pub use late::prepare_late;
 
 const PROBE: u64 = 65536;
 const STEP: u64 = 1 << 20;
@@ -173,26 +176,10 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
     })
 }
 
-fn da_tabella_mzml(mut t: Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
-    let mut source = Out::default();
-    source_head(&mut source, name, size, &probe, &sha256);
-    source.raw("}");
-    let (json, c) = t.drain_json();
-    let run = format!(
-        "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}}}",
-        t.nce, t.hr1, t.n_chromatograms
-    );
+fn da_tabella_mzml(t: Table, name: &str, size: u64, sha256: String, probe: String) -> Prepared {
+    let table = late::tabella_con(t, late::source_text(name, size, &probe, &sha256));
     Prepared {
-        table: ScanTable {
-            level: c.level,
-            polarity: c.polarity,
-            rt: c.rt,
-            tic: c.tic,
-            scans_json: json.into_bytes(),
-            source_json: source.0,
-            run_json: run,
-            hr1: t.hr1,
-        },
+        table,
         sha256,
         probe,
     }
@@ -372,6 +359,7 @@ pub fn indicizza_lettore_con(
         out,
         budget,
         true,
+        None,
     )?;
     Ok((st, p.sha256))
 }
@@ -411,6 +399,7 @@ pub fn indicizza_lettore_doppio(
         out,
         meta,
         true,
+        None,
     )?;
     let st_cen = crate::mzidx::build_dopo(
         &p_cen.table,
@@ -419,6 +408,7 @@ pub fn indicizza_lettore_doppio(
         out_cen,
         meta,
         true,
+        None,
     )?;
     Ok(((st, p.sha256), (st_cen, p_cen.sha256)))
 }

@@ -297,6 +297,7 @@ impl LettoreAgilent {
             id: 1,
             nome,
             scansioni: scans.len(),
+            dimensione: None,
         }];
         LettoreAgilent {
             d,

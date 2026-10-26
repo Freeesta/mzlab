@@ -205,7 +205,7 @@ window.MAPPA = (() => {
     drawPoints(p, g);
     // axis lock (asse.js): the line along which the gesture may move
     if (s.guide) {
-      const q = s.guide; g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 1.5; g.setLineDash([6, 4]); g.beginPath();
+      const q = s.guide; g.save(); g.strokeStyle = ecss("--accent"); g.lineWidth = 1.5; g.setLineDash([6, 4]); g.beginPath();
       if (q.ax === "x") { g.moveTo(M.l, q.y + .5); g.lineTo(a.W - M.r, q.y + .5); } else { g.moveTo(q.x + .5, M.t); g.lineTo(q.x + .5, a.H - M.b); }
       g.stroke(); g.restore();
     }
@@ -214,7 +214,7 @@ window.MAPPA = (() => {
     const pt = point(p), on = mirOn(p) && !s.ex; s.dot = null;
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
-      g.save(); g.strokeStyle = css("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
+      g.save(); g.strokeStyle = ecss("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
       g.beginPath(); g.moveTo(M.l, y); g.lineTo(a.W - M.r, y); g.moveTo(x, M.t); g.lineTo(x, a.H - M.b); g.stroke(); g.setLineDash([]);
       if (s.lock) lockDot(g, a.X(pt.rt), a.Y(pt.mz), s);                  // the locked point: a small dot exactly on it
       g.restore();
@@ -223,7 +223,7 @@ window.MAPPA = (() => {
   }
   // the mark of a locked point: a dot with a dark outline and an accent fill, centred on (x, y); s.dot keeps the centre for the tests
   function lockDot(g, x, y, s) {
-    g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = css("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = css("--ink"); g.stroke(); s.dot = { x, y };
+    g.globalAlpha = 1; g.beginPath(); g.arc(x, y, 4, 0, 2 * Math.PI); g.fillStyle = ecss("--accent"); g.fill(); g.lineWidth = 1.6; g.strokeStyle = ecss("--ink"); g.stroke(); s.dot = { x, y };
   }
   function readout(p) {
     // Map 2D has no header readout text to prevent 2-row wrapping
@@ -382,7 +382,7 @@ window.MAPPA = (() => {
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
   // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
   function sideLabels(g, W, order, get, x0, s, limit = 8) {
-    const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.fillStyle = css("--ink");
+    const out = []; s.lbls = out; g.textAlign = "left"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = ecss("--panel"); g.fillStyle = ecss("--ink");
     for (const i of order) {
       if (out.length >= limit) break; const q = get(i);
       const w = g.measureText(q.t).width, right = q.tip + 5 + w <= W - 2, x = right ? q.tip + 5 : Math.max(x0 + 2, q.tip - 3 - w), by = right ? q.y + 4 : q.y - 3, bx = { x, y: by - 9, w, h: 11 };
@@ -412,7 +412,7 @@ window.MAPPA = (() => {
   // spectrum turned on its side: m/z upwards like the map, intensity to the right
   function drawSide(p, pt, sp, prev) {
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
-    const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
+    const { g, W, H } = canvasOf(s.sp), ink = ecss("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const cr = p.cv.getBoundingClientRect(), sr = s.sp.getBoundingClientRect();
     const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
     const Y = v => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH, x0 = 6, x1 = W - 8;
@@ -427,13 +427,13 @@ window.MAPPA = (() => {
     if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, Math.max(10, mapTop + 10)); return; }
     const xz = sg ? (x0 + x1) / 2 : x0, len = v => (sg ? (x1 - x0) / 2 : x1 - x0) * v / ymax;
     if (window.TDATI) { s.sp.setAttribute("aria-label", T("mappa.side.title")); TDATI.addButton(s.sp, () => ({ title: T(sg ? "mappa.side.diff" : "mappa.side.title"), head: ["m/z", T("tdati.col.int")], rows: vis.slice(0, 300).map(i => [TDATI.num(sp.mz[i], 4), TDATI.num(sp.y[i], 1)]) }), true); }
-    g.strokeStyle = a.f.color || css("--accent"); g.globalAlpha = prev ? .5 : 1;
+    g.strokeStyle = a.f.color || ecss("--accent"); g.globalAlpha = prev ? .5 : 1;
     if (sg) {
       g.beginPath(); g.moveTo(xz + .5, mapTop); g.lineTo(xz + .5, mapBot); g.strokeStyle = ink; g.stroke();
       for (const [sgn, col] of /** @type {[number, string][]} */ ([[1, "--diff-pos"], [-1, "--diff-neg"]])) { g.strokeStyle = css(col); g.beginPath(); for (const i of vis) if (sp.y[i] * sgn > 0) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(xz, y); g.lineTo(xz + len(sp.y[i]), y); } g.stroke(); }
     } else {
     g.beginPath();
-    if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || css("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
+    if (pr) { const r = profSide(g, sp, pr, Y, x0, x1, ymax, a.f.color || ecss("--accent")); s.sp.dataset.pts = r.pts; s.sp.dataset.full = r.full; } else { delete s.sp.dataset.pts; }
     if (!pr)
     for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
     g.stroke();
@@ -446,12 +446,12 @@ window.MAPPA = (() => {
     const kept = MAPREND.pick(sp.mz, sp.y, { lo: a.y0, hi: a.y1, bands: dn.bands, quota: dn.quota, act: [cen - tol, cen + tol] });
     s.snr = new Map(kept.all.map(c => [c.i, c.snr]));
     sideLabels(g, W, kept.map(c => c.i), i => ({ y: Y(sp.mz[i]), tip: sg ? xz + Math.max(0, len(sp.y[i])) : x0 + (x1 - x0) * sp.y[i] / ymax, t: sp.mz[i].toFixed(mzd(p)), i }), x0, s, dn.limit);
-    if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
+    if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
     g.fillStyle = ink; g.fillText(sg ? `A − B · RT ${sp.rt.toFixed(2)}` : `${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, Math.min(H - 4, mapBot + 14));
   }
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
-    const { g, W, H } = canvasOf(s.xc), ink = css("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
+    const { g, W, H } = canvasOf(s.xc), ink = ecss("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
     const cr = p.cv.getBoundingClientRect(), xr = s.xc.getBoundingClientRect();
     const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
     const X = v => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
@@ -493,10 +493,10 @@ window.MAPPA = (() => {
       for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
       g.stroke(); g.setLineDash([]); g.lineWidth = 1; g.globalAlpha = 1;
     });
-    g.fillStyle = css("--ink"); g.textAlign = "left";
+    g.fillStyle = ecss("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
     g.fillText(prev ? `XIC · ${T("mappa.preview")}` : `XIC${sg ? " A − B" : ""} ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}${tic ? " · " + T("mappa.bot.tic") : ""}`, ml + 4, mt + 8);
-    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
+    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = ecss("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
   }
 
   // ---------------------------------------------------------------- mouse
@@ -646,6 +646,11 @@ window.MAPPA = (() => {
   // dragged. Saved in the notebook (NB.mappaPunti) for each pair of files. Table under the map: numbers only, never a name or a verdict.
   const pairKey = p => { const a = p._a; if (!a || !a.f) return null; return `${a.f.file}|${a.ref ? a.ref.file : ""}|${a.f.lv || 1}`; };
   const pts = p => { const k = pairKey(p); if (!k) return []; NB.mappaPunti = NB.mappaPunti || {}; return NB.mappaPunti[k] || (NB.mappaPunti[k] = []); };
+  // the marks of the map (add, move, delete, note, reference) are one undoable action (comandi.js): the snapshot is the list of marks of the pair of files
+  COMANDI.gestore("map.marks", {
+    leggi: p => JSON.stringify(pts(p)),
+    applica: (p, snap) => { const l = pts(p); l.splice(0, l.length, ...JSON.parse(snap)); st(p).psel = null; ptsSave(p); overlay(p); table(p); },
+  });
   const ptsSave = p => { const k = pairKey(p); if (k && NB.mappaPunti && !NB.mappaPunti[k].length) delete NB.mappaPunti[k]; nbSave(); };
   const ppmOf = f => isHrF(f) ? ((HR.prof(f, f.lv || 1) || {}).tol || 5) : 0;
   // the apex near (rt, m/z) (Rust, `api/mapsnap`); null when the option «snap» is off or no peak is near
@@ -658,14 +663,14 @@ window.MAPPA = (() => {
   async function addPoint(p, px, py) {
     const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
     const q = (await snapAt(p, rt, mz)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
+    const list = pts(p); COMANDI.fai("map.marks", p, () => list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) })); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // from the 3D viewer: a point at (rt, mz), snapped to the local maximum like a click on the map (dmz = width of the cell, in Da)
   async function addPointAt(p, rt, mz, dmz) {
     const a = p._a; if (!a || !a.f) return;
     const q = (await snapAt(p, rt, mz, dmz || 1, 0.2)) || { rt, mz };
-    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) }); st(p).psel = list.length - 1;
+    const list = pts(p); COMANDI.fai("map.marks", p, () => list.push({ rt: q.rt, mz: q.mz, note: "", shape: shapeNew(list, q.rt) })); st(p).psel = list.length - 1;
     ptsSave(p); overlay(p); table(p);
   }
   // index of the marked point under (rt, m/z), -1 if none
@@ -680,7 +685,7 @@ window.MAPPA = (() => {
     if (!is2d(p) || e.button !== 0 || e.shiftKey || e.altKey) return false;
     if (st(p).ex && window.MAPEX && MAPEX.down(p, e, px, py)) return true;       // the box of «How it is extracted»
     const i = nearPoint(p, px, py); if (i < 0) return false;
-    e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false;
+    e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false; const step = COMANDI.inizia("map.marks", p);
     // Ctrl/⌘ held or X / Y: the point moves along one axis only (asse.js)
     const a0 = p._a, q0 = { rt: list[i].rt, mz: list[i].mz }, g = ASSE.gest(); let ax = null, wait = false;
     const mv = ev => {
@@ -689,7 +694,7 @@ window.MAPPA = (() => {
     };
     const up = async ev => {
       removeEventListener("mousemove", mv); removeEventListener("mouseup", up); guide(p, null);
-      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { if (ax !== "y") list[i].rt = at.rt; if (ax !== "x") list[i].mz = at.mz; } ptsSave(p); }
+      if (moved) { const at = await snapAt(p, list[i].rt, list[i].mz); if (at) { if (ax !== "y") list[i].rt = at.rt; if (ax !== "x") list[i].mz = at.mz; } ptsSave(p); step.fine(); }
       overlay(p); table(p);
     };
     addEventListener("mousemove", mv); addEventListener("mouseup", up);
@@ -704,12 +709,14 @@ window.MAPPA = (() => {
     if (!s.mark) return false;
     addPoint(p, px, py); return true;
   }
-  function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
+  function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; COMANDI.fai("map.marks", p, () => list.splice(i, 1)); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
   // tolerance of the RT groups: the student's value, else about one peak width (5 scans, between 0.02 and 0.15 min)
   const grpTol = () => PREF.grp ?? Math.min(0.15, Math.max(GRP0, +(5 * scanStep()).toFixed(3)));
   const MX = { st, is2d, pts, ptsSave, overlay, margins, follow, grow, ppmOf, diffOpt, isHrF, PREF, grpTol, prefSave, SHAPES, GLYPH, SHAPE_KEY, spectrumAt }, { grpShape, shapeNew, drawPoints, shapePath, ...forms } = MAPFORME(MX), { table, tableNow } = MAPTAB(MX, { ...forms, grpShape });
   async function spectrumAt(p, rt, k) {
-    const f = k != null && E.files[k] ? E.files[k] : p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
+    const f = k != null && E.files[k] ? E.files[k] : p._a.f;
+    if (p._a.pda) { await uvOpen(p, f.k, rt, rt); return; }        // the PDA map: its spectrum is the UV one (uv-spettro.js)
+    let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
     const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
     newSpec(p, r0, r1, f.k);
   }
@@ -748,7 +755,7 @@ window.MAPPA = (() => {
   const ptText = q => q ? `RT ${q.rt.toFixed(2)} min · m/z ${q.mz.toFixed(3)}${q.v != null ? " · " + T("mappa.read.int") + " " + fmt(q.v) : ""}` : "";
   function extract(ad, what) {
     const q = ad.pt(); if (!q) { nearMsg(T("mapnav.nopt")); return; }
-    if (what !== "spec") xicDirect(q.mz, ad.p);
+    if (what !== "spec") { if (ad.p._a.pda) wlOpen(ad.p, +q.mz.toFixed(1), +q.mz.toFixed(1), ad.p._a.f.k); else xicDirect(q.mz, ad.p); }      // on the PDA map the vertical axis is the wavelength (nm)
     if (what !== "xic") { const p = ad.p; if (ad.kind === "2d" && p.sel && p.sel[1] > p.sel[0]) newSpec(p, p.sel[0], p.sel[1], p._a.f.k); else spectrumAt(p, q.rt, ad.k); }
     if (ad.after) ad.after();
   }
@@ -757,7 +764,7 @@ window.MAPPA = (() => {
   const nameOf = (id, ad) => T(id === "maplock" && ad.locked() || id === "mapmark" && ad.marked() ? `cmd.${id}.off.name` : `cmd.${id}.name`);
   const cmd = (id, gruppo, ic, viste, o) => AZIONI.registra({ id, gruppo, ic, viste, nome: ad => nameOf(id, ad), tip: () => T(`cmd.${id}.tip`), svg: ad => SV(id === "maplock" && ad.locked() ? ICO.unlock : ICO[ic]), ...o });
   // with an RT stretch selected (Alt + drag) the spectrum is the average over it
-  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : T(`cmd.${id}.menu`) });
+  const short = id => ({ voce: ad => id === "mapspec" && ad.kind === "2d" && ad.p.sel ? T("cmd.mapspec.menuAvg") : id === "mapxic" && ad.p._a?.pda ? T("cmd.mapxic.menuWl") : T(`cmd.${id}.menu`) });
   const hasPt = ad => !!ad.pt();
   const CMDS = [
     cmd("mapxic", "extract", "xic", V2, { ...short("mapxic"), disponibile: hasPt, esegui: ad => extract(ad, "xic") }),
@@ -985,8 +992,8 @@ window.MAPPA = (() => {
     big(T("m3d.err.title"), `<p>${I18N.t(`m3d.err.${k}`)}</p>${k === "nowebgl2" ? `<p>${T("m3d.err.how")}</p>` : ""}<p>${T("m3d.err.2d")}</p><pre class="m3d-tech" tabindex="0" aria-label="${T("m3d.err.tech")}">${esc(tech)}</pre>`);
   }
   async function open3d(p, opener) {
-    let mod; try { mod = await import("./mappa3d.js"); } catch (e) { console.error(e); return failure3d("import", String(e && e.message || e), {}); }
-    try { mod.open(p, opener); } catch (e) {
+    let mod; try { mod = await import("./mappa3d.js"); } catch (e_) { const e = /** @type {Lanciato} */ (e_); console.error(e); return failure3d("import", String(e && e.message || e), {}); }
+    try { mod.open(p, opener); } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       const k = e && e.kind ? e.kind : "error"; console.error("mzLab 3D:", k, e && e.detail || e, e && e.diag || "");
       failure3d(k, e && e.detail != null ? e.detail : String(e && e.message || e), e && e.diag || {});
     }
@@ -999,9 +1006,9 @@ window.MAPPA = (() => {
 (() => {
   const H0 = 300, HMIN = 190, h0 = p => p.type === "map" ? 360 : H0;
   const css = document.createElement("style");
-  css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:10px;z-index:5;cursor:ns-resize;touch-action:none}" +
-    ".pnl .pgrip.t{top:-3px}.pnl .pgrip.b{bottom:-3px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:3px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
-    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip{height:24px}.pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{opacity:.8;top:10px}}" +
+  css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:24px;z-index:5;cursor:ns-resize;touch-action:none}" +
+    ".pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:10px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
+    ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip::after{opacity:.8}}" +
     "@media (prefers-reduced-motion:reduce){.pnl .pgrip::after{transition:none}}";
   document.head.appendChild(css);
   const host = () => document.getElementById("dpanels");

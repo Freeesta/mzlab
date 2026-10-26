@@ -3,6 +3,8 @@
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
+pub(crate) mod help;
+use help::Decode;
 use crate::numarray::Num;
 use std::borrow::Cow;
 use std::io::{BufReader, Read};
@@ -45,8 +47,8 @@ impl Spectrum {
     /// Intensity of peak `i` as the file wrote it.
     pub fn intensity_f64(&self, i: usize) -> f64 {
         match &self.wide {
-            Some(w) => w[i],
-            None => self.intensity[i] as f64,
+            Some(w) => w.get(i).copied().unwrap_or(0.0),
+            None => self.intensity.get(i).map_or(0.0, |&x| x as f64),
         }
     }
 }
@@ -182,6 +184,8 @@ struct Spec {
     selected: Option<f64>,
     target: Option<f64>,
     mobility_scan: Option<(f64, &'static str)>,
+    /// An optical (`MS:1000804`) spectrum: read by `mzml_dad`, not a scan.
+    uv: bool,
     arrays: Vec<Array>,
 }
 
@@ -280,7 +284,7 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
         t.iter_mut().for_each(|v| *v /= 60.0);
     }
     let kind = match c.id.as_str() {
-        "TIC" => ChromKind::Tic,
+        s if s == "TIC" || s.starts_with("TIC ") => ChromKind::Tic,
         "BPC" => ChromKind::Bpc,
         "TWC" => ChromKind::Pda,
         _ if c.pda => ChromKind::Pda,
@@ -307,8 +311,19 @@ fn finish_chromatogram(c: Chrom, inf: &mut Inflate) -> Result<Chromatogram> {
     })
 }
 
-/// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order.
+/// Parses an mzML stream, calling `f` for every spectrum and chromatogram in file order. Spare cores decode the arrays (`help`); the items and their
+/// order are the same without them.
 pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let lease = crate::spare::lease(help::pool::HELPERS);
+        help::pool::parse_helped(reader, &mut f, lease.count())
+    }
+    #[cfg(target_family = "wasm")]
+    help::parse_with(reader, &mut f, &mut help::Plain(Inflate::new()))
+}
+
+fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let mut scope = Scope::None;
@@ -319,7 +334,6 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     let mut in_binary = false;
     let mut in_precursor_list = false;
     let mut in_analyzer = false;
-    let mut inf = Inflate::new();
 
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
@@ -348,6 +362,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                             selected: None,
                             target: None,
                             mobility_scan: None,
+                            uv: false,
                             arrays: Vec::new(),
                         });
                         scope = Scope::Spectrum;
@@ -387,7 +402,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "cvParam" => {
                         let a = attrs(e);
                         if in_analyzer {
-                            f(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()));
+                            out.item(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()), f)?;
                         }
                         let acc = get(&a, "accession").unwrap_or("");
                         let value = get(&a, "value").unwrap_or("");
@@ -430,8 +445,12 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                             }
                         } else if let (Scope::Spectrum, Some(s)) = (scope, spec.as_mut()) {
                             match acc {
+                                "MS:1000804" => s.uv = true,
                                 "MS:1000511" if !in_precursor_list => {
-                                    s.level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1)
+                                    // A level is a small integer; `as` saturates and maps NaN to 0.
+                                    #[allow(clippy::cast_possible_truncation)]
+                                    let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
+                                    s.level = level
                                 }
                                 "MS:1000130" => s.polarity = 1,
                                 "MS:1000129" => s.polarity = -1,
@@ -477,16 +496,15 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "precursorList" => in_precursor_list = false,
                     "analyzer" => in_analyzer = false,
                     "spectrum" => {
-                        if let Some(s) = spec.take() {
-                            let (sp, mob) = finish_spectrum(s, &mut inf)?;
-                            mob.map(Item::Mobility).into_iter().chain([Item::Spectrum(sp)]).for_each(&mut f);
+                        if let Some(s) = spec.take().filter(|s| !s.uv) {
+                            out.spectrum(s, f)?;
                             n_spec += 1;
                         }
                         scope = Scope::None;
                     }
                     "chromatogram" => {
                         if let Some(c) = chrom.take() {
-                            f(Item::Chromatogram(finish_chromatogram(c, &mut inf)?));
+                            out.chromatogram(c, f)?;
                             n_chrom += 1;
                         }
                         scope = Scope::None;

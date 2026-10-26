@@ -112,5 +112,107 @@
     });
   };
 
-  F.liveJobs = { has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  // results of the MSn steps kept in OPFS (mzlab/flow/msn/<key>.json = {name, text}), the newest MSN_KEEP of them; index.json lists the keys, oldest first
+  const MSN_DIR = "mzlab/flow/msn/", MSN_KEEP = 32;
+  /** SHA-256 hex of a text @param {string} s */
+  const sha = async s => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
+  /** the key of an MSn job: its plan_key (step, parameters, program version, the open infusion, the jobs upstream) and, for the search, the library of the user, which the plan does not hold @param {any} spec @param {any} inst */
+  const msnKey = async (spec, inst) => sha(spec.key + (base(inst) === "spectra.match" ? "\n" + await F.webMsn.library() : ""));
+  /** the {name, text} kept under `key`, or null @param {any} p @param {string} key */
+  const recall = async (p, key) => {
+    try { return await has(p, MSN_DIR + key + ".json") ? JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + key + ".json"))) : null; } catch (_) { return null; }
+  };
+  /** keeps a result and forgets the oldest ones past MSN_KEEP @param {any} p @param {string} key @param {{ name: string, text: string }} r */
+  const remember = async (p, key, r) => {
+    try {
+      await p.fs.write(MSN_DIR + key + ".json", new TextEncoder().encode(JSON.stringify({ name: r.name, text: r.text })));
+      let list = [];
+      try { list = JSON.parse(new TextDecoder().decode(await p.fs.read(MSN_DIR + "index.json"))); } catch (_) { /* no index yet */ }
+      list = [...list.filter((/** @type {string} */ k) => k !== key), key];
+      for (const old of list.splice(0, Math.max(0, list.length - MSN_KEEP))) await p.fs.remove(MSN_DIR + old + ".json").catch(() => {});
+      await p.fs.write(MSN_DIR + "index.json", new TextEncoder().encode(JSON.stringify(list)));
+    } catch (_) { /* the cache is a convenience: the result is still given */ }
+  };
+
+  /** the MSn steps (flow-web-msn.js): one job for the step, on the infusion open in Data; the text is kept in OPFS by the runner of the MSn steps and given back with the other results (`x.files`).
+   * A result already kept under the key of the job (same plan_key, same library for the search) is taken from OPFS without asking the engine: the job is `cached`.
+   * The routes of the engine are the ones of the runner of an MSn plan, so the bytes are the same; spectra.match with another algorithm stays with the computer */
+  const msn = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const j = job(spec), M = F.webMsn;
+    if (!M || (base(inst) === "spectra.match" && inst.algorithm !== "tree")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const p = await kit().getPool(), key = await msnKey(spec, inst);
+    // a closed infusion is an error to show, never a result to take from the cache
+    let open = true;
+    try { M.infusion(x.S); } catch (_) { open = false; }
+    const hit = open ? await recall(p, key) : null;
+    if (hit) {
+      x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text });
+      await M.keep(hit.name, hit.text);
+      await x.call("cached", { job: j });
+      return {};
+    }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null, phase: (/** @type {number} */ frac) => { x.call("progress", { job: j, frac }).catch(() => {}); } });
+      await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+  const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
+
+  /** tp.generate (flow-web-tp.js): the registry of the hypotheses of the parent the plan holds; kept like the MSn results, under the key of the job (the plan_key has the SHA-256 of the parent) */
+  const tpGenerate = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const r = await F.webTp.generate(x.S, inst);
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  /** tp.filter@2, tp.position, tp.network, tp.review (flow-web-tp.js `post`): a text made by the pool from the `.tp.mzfeat` of the tp.link they follow, kept like the MSn results under the key of the job */
+  const tpPost = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const t0 = performance.now();
+    /** @type {any} */ let r = null;
+    try { r = F.webTp ? await F.webTp.post({ x, p, dir: DIR }, inst) : null; } catch (e) { await x.call("started", { job: j }); await fail(x, spec, inst, e); return {}; }
+    if (!r) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    return detached(x, spec, inst, async () => {
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  /** tp.link@2 (flow-web-tp.js): the hypotheses searched in the series, the proofs on the table of the alignment and the interpretation of the rows, in two calls to the pool (the same Rust as `flow run`); the `.mzfeat`
+   * is kept in OPFS under the plan_key of the job. A file of hypotheses or a table that is not this plan's stays with the computer @param {any} x @param {any} spec @param {any} inst */
+  const tpLink = async (x, spec, inst) => {
+    const j = job(spec), k = kit(), p = await k.getPool(), path = DIR + spec.key + ".tp.mzfeat";
+    if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
+    const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
+    const inp = F.webTp ? await F.webTp.linkInputs(x.S, inst, x.inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
+    if (inp instanceof Error) { await x.call("started", { job: j }); await fail(x, spec, inst, inp); return {}; }
+    if (!inp || !alKey || !up.length) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return detached(x, spec, inst, async () => {
+      const read = async (/** @type {string} */ f) => p.fs.read(f), paths = up.map(u => u.path);
+      const table = await read(DIR + alKey + ".mzfeat"), peaks = await Promise.all(up.map(u => read(DIR + u.key + ".mzfeatf")));
+      const given = (inst.params || {}).polarity, step = F.stepOf(x.S.reg, inst);
+      const ev = await p.linkEvidence({ table, rules: inp.rules, parent: inp.text, structure: inp.structure, hypotheses: inp.hypotheses, samples: inp.samples, recipe: k.recipeOf(x.plan), polarity: given == null ? NaN : Number(given), budgetMb: budgetMb(), peaks, paths });
+      const out = await p.linkInterp({ table: ev.table, parent: ev.parent, registry: ev.registry, polarity: ev.polarity, params: JSON.stringify({ ...F.defaults(inst, step), ...(inst.params || {}) }), infusion: ev.infusion, paths });
+      await p.fs.write(path, out.slice());
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();

@@ -35,6 +35,31 @@ struct Col {
     lo: f64,
     hi: f64,
     distinct: std::collections::HashSet<String>,
+    /// The bits of the first value of a numeric field: while the values repeat them, their text is the one in `first` and nothing is formatted.
+    first_bits: u64,
+}
+
+/// One value of a numeric field: the range, and whether it is the same as the first. The text of a number is only built for the first value and for the first one
+/// that differs in its bits (it can still print the same, as two NaN do); after the field has changed nothing else is needed but the range.
+fn numeric_step(c: &mut Col, v: &GenericValue) {
+    let x = v.as_f64();
+    if let Some(x) = x {
+        c.lo = c.lo.min(x);
+        c.hi = c.hi.max(x);
+    }
+    // a number is never an empty text
+    c.all_empty = false;
+    let bits = x.map_or(0, f64::to_bits);
+    match &c.first {
+        None => {
+            c.first = Some(shown(v));
+            c.first_bits = bits;
+        }
+        Some(f) if c.same && bits != c.first_bits || c.same && x.is_none() => {
+            c.same &= *f == shown(v)
+        }
+        Some(_) => {}
+    }
 }
 
 /// The 62 fields of the scan trailer: the value when it is the same in every scan, else `min..max` (numbers) or the number of distinct values. One pass over the
@@ -63,25 +88,23 @@ fn trailer<R: Read + Seek>(raw: &RawFileReader, source: &mut R) -> Vec<Campo> {
             lo: f64::INFINITY,
             hi: f64::NEG_INFINITY,
             distinct: Default::default(),
+            first_bits: 0,
         })
         .collect();
     raw.scan_parameters.for_each(source, &mut |_, rec| {
         for (i, c) in cols.iter_mut().enumerate() {
             let Some(v) = rec.value(i) else { continue };
+            if c.numeric {
+                numeric_step(c, &v);
+                continue;
+            }
             let t = shown(&v);
             c.all_empty &= t.is_empty();
             match &c.first {
                 None => c.first = Some(t.clone()),
                 Some(f) => c.same &= *f == t,
             }
-            if c.numeric {
-                if let Some(x) = v.as_f64() {
-                    c.lo = c.lo.min(x);
-                    c.hi = c.hi.max(x);
-                }
-            } else {
-                c.distinct.insert(t);
-            }
+            c.distinct.insert(t);
         }
     });
     let mut out = Vec::new();

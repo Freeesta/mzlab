@@ -78,3 +78,25 @@ fn the_hash_taken_while_writing_is_the_hash_of_the_file_and_the_memo_of_the_inpu
     assert_eq!(std::fs::read(&a).unwrap(), std::fs::read(&b).unwrap());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn a_tiny_budget_spills_to_a_scratch_file_that_is_removed_and_changes_no_byte() {
+    let d = folder("pace_spill");
+    let src = d.join("a.mzML");
+    std::fs::write(&src, crate::tests::mzml(1.0)).unwrap();
+    let (big, small) = (d.join("big.mzidx"), d.join("small.mzidx"));
+    crate::build_index_of(&src, "", &big, 1 << 30).unwrap();
+    crate::build_index_of(&src, "", &small, 1 << 10).unwrap();
+    assert_eq!(std::fs::read(&big).unwrap(), std::fs::read(&small).unwrap());
+    let mut names: Vec<_> = std::fs::read_dir(&d)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    assert_eq!(
+        names,
+        ["a.mzML", "big.mzidx", "small.mzidx"],
+        "no scratch is left"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}

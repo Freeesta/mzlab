@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // RT x m/z map, the parts that do not touch the page (classic script, loaded before mappa.js; node loads it with require).
 //   splat(v, nrt, nmz, sx, sy)   the «Liscia» look of a zoomed region: every cell spreads its value as a gaussian tent (max, not sum: heights stay those of the

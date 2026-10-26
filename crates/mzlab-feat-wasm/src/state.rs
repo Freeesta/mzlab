@@ -78,6 +78,8 @@ pub fn dump(h: &HypoRun) -> Vec<u8> {
     o.u32(h.rules_src.len() as u32);
     o.0.extend_from_slice(&h.rules_src);
     o.str(h.profile.as_deref().unwrap_or(""));
+    // Appended after the first release of the format: states without it read as an empty parent formula.
+    o.str(&h.parent);
     o.0
 }
 
@@ -166,6 +168,7 @@ fn row(g: &mut Get) -> Result<TargetRow> {
         n_targeted: (counts >> 16) as u16,
         ms2_total,
         coincidence,
+        merged: Vec::new(),
     })
 }
 
@@ -186,8 +189,10 @@ pub fn load(bytes: &[u8]) -> Result<HypoRun> {
     let n = g.u32()? as usize;
     let rules_src = g.take(n)?.to_vec();
     let profile = g.str()?;
+    let parent = if g.0.is_empty() { String::new() } else { g.str()? };
     Ok(HypoRun {
         rules_src,
+        parent,
         profile: (!profile.is_empty()).then_some(profile),
         registry: Registry {
             hyps,

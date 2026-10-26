@@ -326,6 +326,8 @@ mod tests;
 #[cfg(test)]
 mod tests_cerca;
 #[cfg(test)]
+mod tests_esche;
+#[cfg(test)]
 mod tests_formule;
 #[cfg(test)]
 mod tests_interpreta;
@@ -333,5 +335,7 @@ mod tests_interpreta;
 mod tests_regole;
 #[cfg(test)]
 mod tests_regole_struttura;
+#[cfg(test)]
+mod tests_selezione;
 #[cfg(test)]
 mod tests_vista;

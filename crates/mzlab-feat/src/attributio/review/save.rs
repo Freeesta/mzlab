@@ -8,7 +8,7 @@ use crate::attributio::annotate::Feature;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::io::Io;
 use crate::attributio::readers::feature_decisions::{
-    merge_decisions, write_feature_decisions, DecisionTable, EVIDENCE_COLUMNS,
+    merge_decisions, write_feature_decisions, DecisionTable, EVIDENCE_COLUMNS, PROVENANCE_COLUMNS,
 };
 use mzlab_core::json::{self, Value};
 
@@ -115,7 +115,7 @@ fn check_rules(
     Ok(())
 }
 
-/// `decision` is `{pol, id, level, name, group, justification, decided_by, decided_on, rt_check, checklist: [keys], evidence: {type, library, entry, cosine, matched, delta_mz, delta_formula, note}}`.
+/// `decision` is `{pol, id, level, name, group, justification, decided_by, decided_on, rt_check, checklist: [keys], plan_sha256, engine_version (both optional), evidence: {type, library, entry, cosine, matched, delta_mz, delta_formula, note}}`.
 pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
     let d = json::parse(decision.as_bytes()).map_err(|_| bad("the decision is not valid JSON"))?;
     let g = |k: &str| text(d.get(k));
@@ -143,6 +143,11 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
     check_rules(f, level, &group, &name, &nota, &etype)?;
     let ticked = ticked_items(&d)?;
     let mut row = DecisionTable::empty();
+    // the run the decision comes from (`plan_sha256` and `agent.version` of its `prov/1`), when the page sends it
+    let prov: Vec<(&str, String)> = PROVENANCE_COLUMNS.iter().map(|c| (*c, g(c))).collect();
+    for (c, _) in prov.iter().filter(|p| !p.1.is_empty()) {
+        row.columns.push(c.to_string());
+    }
     row.rows.push(vec![String::new(); row.columns.len()]);
     let num = |v: Option<f64>| {
         v.filter(|x| x.is_finite())
@@ -174,7 +179,7 @@ pub fn decision_text(io: &Io, root: &str, decision: &str) -> Result<Saved> {
     debug_assert!(EVIDENCE_COLUMNS
         .iter()
         .all(|c| cells.iter().any(|x| x.0 == *c)));
-    for (col, v) in cells {
+    for (col, v) in cells.into_iter().chain(prov) {
         row.put(0, col, &v);
     }
     let (path, _) = b.decisions_path();

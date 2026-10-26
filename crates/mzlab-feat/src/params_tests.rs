@@ -9,7 +9,7 @@ fn u(r: &mut Pcg64) -> f64 {
 
 /// Standard normal by Box-Muller.
 fn gauss(r: &mut Pcg64) -> f64 {
-    libm::sqrt(-2.0 * libm::log(u(r))) * libm::cos(6.283185307179586 * u(r))
+    libm::sqrt(-2.0 * libm::log(u(r))) * libm::cos(std::f64::consts::TAU * u(r))
 }
 
 /// Noise: log-normal around `noise` (0.25 decade); signal: log-normal around 1e6 (0.6 decade), 2 % of the peaks.

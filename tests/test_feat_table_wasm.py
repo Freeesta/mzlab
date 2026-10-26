@@ -66,6 +66,8 @@ def test_wasm_and_native_write_the_same_files(built, spec):
     assert json.loads((nat / "qc.json").read_text())["schema"] == "qc/1"
     check = json.loads((nat / "check.json").read_text())
     assert check["schema"] == "tabcheck/1" and [c["id"] for c in check["checks"]][:3] == ["size", "blank", "contaminants"]
+    plaus = json.loads((nat / "plausible.json").read_text())
+    assert plaus["schema"] == "plausible/1" and [c["id"] for c in plaus["checks"]][0] == "non_finite"
     assert (nat / "features.csv").read_text().splitlines()[0].startswith("id;mz;rt;")
     assert len(json.loads((nat / "features.rows.json").read_text())["hojas"][0]["filas"]) == len(full)
     assert json.loads((nat / "report.json").read_text())["schema"] == "report/1"

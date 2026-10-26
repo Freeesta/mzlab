@@ -196,7 +196,7 @@ impl State {
         a
     }
 
-    /// `feat/table`: the table held by the last `feat/align` or `feat/evidence`. `kind` = `view`, `report`, `qc`, `check` (`tabcheck/1`; `polarity`, `options`), `samples`, `export` (`export_kind`), `ms2`
+    /// `feat/table`: the table held by the last `feat/align` or `feat/evidence`. `kind` = `view`, `report`, `qc`, `check` (`tabcheck/1`; `polarity`, `options`), `plausible` (`plausible/1`; `options`), `samples`, `export` (`export_kind`), `ms2`
     /// (`export_kind`, the indexes of `names`) as the Pipeline panel asks of `mzlab-feat-table-wasm`; `bytes` = a piece (`off`, `len`) of the `.mzfeat`.
     fn feat_table(&self, p: &Value) -> Result<Answer> {
         use mzlab_feat_table_wasm::core as t;
@@ -222,8 +222,7 @@ impl State {
                     .to_vec(),
             ));
         }
-        let (mut at, size) = (Slice(table), table.len() as u64);
-        let sha = sha_hex(table);
+        let (mut at, size, sha) = (Slice(table), table.len() as u64, sha_hex(table));
         // the page names the table it means by its SHA-256: another step of mzFinder may have replaced the one the app holds
         if !s("sha256").is_empty() && s("sha256") != sha {
             return Err(Error::new("error.featState"));
@@ -233,7 +232,8 @@ impl State {
             "view" => t::view_json(&mut at, size, s("samples"), s("spec"))?,
             "report" => t::report_json(&mut at, size, s("samples"), s("spec"), &sha)?,
             "qc" => t::qc_json(&mut at, size, s("samples"), s("spec"))?,
-            "check" => Self::check_text(&mut at, size, p, pol)?,
+            "tp_table" => t::tp_table_json(&mut at, size, s("samples"), s("spec"))?,
+            "check" | "plausible" => Self::check_text(kind, &mut at, size, p, pol)?,
             "export" => t::table_file(
                 &mut at,
                 size,
@@ -277,8 +277,15 @@ impl State {
         })
     }
 
-    /// `feat/table` with `kind` = `check`: the `tabcheck/1` of the held table under the view `spec`; `options` is the JSON text of `core::tabcheck_json`.
-    fn check_text(at: &mut Slice, size: u64, p: &Value, pol: i32) -> Result<String> {
+    /// `feat/table` with `kind` = `check`: the `tabcheck/1` of the held table under the view `spec`; `options` is the JSON text of `core::tabcheck_json`. `plausible`: the `plausible/1` read with the `options` text of `plausible::Limits::from_json`.
+    fn check_text(kind: &str, at: &mut Slice, size: u64, p: &Value, pol: i32) -> Result<String> {
+        if kind == "plausible" {
+            return mzlab_feat_table_wasm::core::plausible_json(
+                at,
+                size,
+                p["options"].as_str().unwrap_or(""),
+            );
+        }
         let s = |k: &str| p[k].as_str().unwrap_or("");
         mzlab_feat_table_wasm::core::tabcheck_json(
             at,

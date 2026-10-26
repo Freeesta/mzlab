@@ -12,7 +12,7 @@ use std::sync::Arc;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
-use mzlab_core::mzidx::build_mzml_spill;
+use mzlab_core::mzidx::build_mzml_late;
 use mzlab_core::upload::{impronte, indicizza_lettore, prepare_con, probe};
 
 use crate::{flow_set, io};
@@ -144,6 +144,29 @@ impl<R: ReadAt> ReadAt for Gated<R> {
     }
 }
 
+type Late = Box<dyn FnMut() -> Result<String>>;
+
+/// The scan table of an mzML and, when its fingerprints are not known, the function that gives the `source` object once a second thread has taken
+/// them (the index is built meanwhile); without threads the fingerprints are taken at once.
+fn prepare_unknown(
+    path: &Path,
+    file: &mut File,
+    size: u64,
+    name: &str,
+) -> Result<(mzlab_core::mzidx::ScanTable, Option<Late>)> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let (table, late) =
+            mzlab_core::upload::prepare_late(file, File::open(path).map_err(io)?, size, name)?;
+        Ok((table, Some(Box::new(late))))
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = path;
+        Ok((prepare_con(file, size, name, None)?.table, None))
+    }
+}
+
 /// The `.mzidx` of one file (an mzML, or the sample `label` of any dataset a reader takes) at `idx`.
 pub(crate) fn build_index_of(path: &Path, label: &str, idx: &Path, budget: usize) -> Result<()> {
     build_index_with(path, label, idx, budget, &mut |_, _| {}, &None)
@@ -167,20 +190,36 @@ pub(crate) fn build_index_with(
     if !path.is_dir() && name.to_lowercase().ends_with(".mzml") {
         let size = std::fs::metadata(path).map_err(io)?.len();
         let mut file = File::open(path).map_err(io)?;
-        let known = match flow_set::known_sha(path) {
-            Some(sha) => Some((sha, probe(&mut file, size)?)),
-            None => None,
+        let (table, mut late) = match flow_set::known_sha(path) {
+            Some(sha) => {
+                let known = Some((sha, probe(&mut file, size)?));
+                (prepare_con(&mut file, size, &name, known)?.table, None)
+            }
+            None => prepare_unknown(path, &mut file, size, &name)?,
         };
-        let p = prepare_con(&mut file, size, &name, known)?;
-        build_mzml_spill(
-            &p.table,
+        // the peaks that do not fit in `budget` go to a scratch file, so the mzML is decoded once and not once per round
+        let scratch_path = idx.with_extension("mzidx.scratch");
+        let mut scratch = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&scratch_path)
+            .map_err(io)?;
+        let built = build_mzml_late(
+            &table,
             BufReader::new(
                 Counted::new(File::open(path).map_err(io)?, size, &mut pace).stopping(stop),
             ),
             &mut out,
             budget,
-            None,
-        )?;
+            Some(&mut scratch),
+            late.as_mut()
+                .map(|l| l as &mut dyn FnMut() -> Result<String>),
+        );
+        drop(scratch);
+        let _ = std::fs::remove_file(&scratch_path);
+        built?;
     } else {
         let mut fs = flow_set::file_set(path)?;
         let imp = impronte(&mut fs)?;
@@ -251,6 +290,8 @@ impl Lettore for Scans<'_, '_> {
     fn cromatogrammi(&mut self, c: usize) -> mzlab_core::Result<Vec<VoceCromatogramma>> { self.l.cromatogrammi(c) }
     fn cromatogramma(&mut self, c: usize, id: &str) -> mzlab_core::Result<Chromatogram> { self.l.cromatogramma(c, id) }
     fn dad_map(&mut self, c: usize) -> mzlab_core::Result<Option<String>> { self.l.dad_map(c) }
+    fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_spectrum(c, rt0, rt1) }
+    fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> mzlab_core::Result<Option<String>> { self.l.dad_wavelength(c, nm0, nm1) }
     fn metodo(&mut self, c: usize) -> mzlab_core::Result<String> { self.l.metodo(c) }
     fn testata_mzml(&mut self, c: usize) -> mzlab_core::Result<Option<Header>> { self.l.testata_mzml(c) }
     fn extra_mzml(&self, s: &Spectrum) -> SpectrumExtra { self.l.extra_mzml(s) }

@@ -7,6 +7,7 @@ declare var MZLAB_COMMIT: string;
 declare var MZLAB_PHONE: boolean;
 declare var QQQ_PHONE: boolean;
 declare var MZLAB_DESKTOP: boolean;
+declare var SITO_PUBBLICO: { readonly scaricaApp: boolean; readonly teoria: boolean };
 declare var MZLAB_TOFILE: ((f: { id: number; name: string; size: number }) => File) | undefined;
 declare var __TAURI__: any;
 declare class FileReaderSync { readAsArrayBuffer(blob: Blob): ArrayBuffer; }
@@ -20,3 +21,6 @@ declare var TPMINE: any;
 
 /** An entry of the loading table (ST.files) as ruoli-*.js reads it: `role`/`sub` are campioni/2 `tipo` and `tipo_bianco`, `time` is in minutes, `gT` = proposed from the name. */
 type Voce = { name: string; kind?: string; use: boolean; type: string; role?: string; sub?: string | null; time: number | null; gT?: boolean; conc?: number | null; prop?: number; ed?: number };
+
+/** What a `catch` of the page receives: an Error, an `api/` answer `{error, error_key, params}` or `{json}` of a failed fetch; `message` is typed as present (as on an Error), the other fields are optional and the code checks what it reads. */
+type Lanciato = { message: string; name?: string; key?: string; fatal?: boolean; stack?: string; error?: string; error_key?: string; params?: any; json?: any; [k: string]: any };

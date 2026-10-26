@@ -1,0 +1,159 @@
+node n0 | m/z 500.0000 | MS1
+node n1 | m/z 460.0000  ·  25.2 % | MS2
+node n2 | m/z 457.0000  ·  10.4 % | MS2
+node n3 | m/z 454.0000  ·  86.8 % | MS2
+node n4 | m/z 451.0000  ·  6.8 % | MS2
+node n5 | m/z 448.0000  ·  38.7 % | MS2
+node n6 | m/z 445.0000  ·  19.8 % | MS2
+node n7 | m/z 442.0000  ·  79.0 % | MS2
+node n8 | m/z 439.0000  ·  43.3 % | MS2
+node n9 | m/z 436.0000  ·  56.2 % | MS2
+node n10 | m/z 433.0000  ·  37.1 % | MS2
+node n11 | m/z 420.0000  ·  12.5 % | MS3
+node n12 | m/z 417.0000  ·  54.8 % | MS3
+node n13 | m/z 414.0000  ·  77.7 % | MS3
+node n14 | m/z 411.0000  ·  33.9 % | MS3
+node n15 | m/z 408.0000  ·  89.0 % | MS3
+node n16 | m/z 405.0000  ·  59.5 % | MS3
+node n17 | m/z 402.0000  ·  84.8 % | MS3
+node n18 | m/z 399.0000  ·  37.3 % | MS3
+node n19 | m/z 396.0000  ·  91.4 % | MS3
+node n20 | m/z 393.0000  ·  9.3 % | MS3
+node n21 | m/z 380.0000  ·  66.3 % | MS4
+node n22 | m/z 377.0000  ·  67.7 % | MS4
+node n23 | m/z 374.0000  ·  12.4 % | MS4
+node n24 | m/z 371.0000  ·  35.4 % | MS4
+node n25 | m/z 368.0000  ·  21.6 % | MS4
+node n26 | m/z 365.0000  ·  22.9 % | MS4
+node n27 | m/z 362.0000  ·  60.6 % | MS4
+node n28 | m/z 359.0000  ·  74.8 % | MS4
+node n29 | m/z 356.0000  ·  22.7 % | MS4
+node n30 | m/z 353.0000  ·  13.4 % | MS4
+node n31 | m/z 340.0000  ·  54.9 % | MS5
+node n32 | m/z 337.0000  ·  5.9 % | MS5
+node n33 | m/z 334.0000  ·  22.4 % | MS5
+node n34 | m/z 331.0000  ·  40.7 % | MS5
+node n35 | m/z 328.0000  ·  15.6 % | MS5
+node n36 | m/z 325.0000  ·  88.6 % | MS5
+node n37 | m/z 322.0000  ·  7.0 % | MS5
+node n38 | m/z 319.0000  ·  64.5 % | MS5
+node n39 | m/z 316.0000  ·  35.6 % | MS5
+node n40 | m/z 313.0000  ·  82.1 % | MS5
+node n41 | m/z 300.0000  ·  27.1 % | MS6
+node n42 | m/z 297.0000  ·  26.6 % | MS6
+node n43 | m/z 294.0000  ·  85.6 % | MS6
+node n44 | m/z 291.0000  ·  19.1 % | MS6
+node n45 | m/z 288.0000  ·  45.0 % | MS6
+node n46 | m/z 285.0000  ·  24.2 % | MS6
+node n47 | m/z 282.0000  ·  5.0 % | MS6
+node n48 | m/z 279.0000  ·  70.5 % | MS6
+node n49 | m/z 276.0000  ·  28.5 % | MS6
+node n50 | m/z 273.0000  ·  58.6 % | MS6
+node n51 | m/z 260.0000  ·  15.1 % | MS7
+node n52 | m/z 257.0000  ·  26.7 % | MS7
+node n53 | m/z 254.0000  ·  87.3 % | MS7
+node n54 | m/z 251.0000  ·  76.3 % | MS7
+node n55 | m/z 248.0000  ·  25.6 % | MS7
+node n56 | m/z 245.0000  ·  10.4 % | MS7
+node n57 | m/z 242.0000  ·  73.3 % | MS7
+node n58 | m/z 239.0000  ·  89.1 % | MS7
+node n59 | m/z 236.0000  ·  73.2 % | MS7
+node n60 | m/z 233.0000  ·  43.5 % | MS7
+node n61 | m/z 220.0000  ·  90.9 % | MS8
+node n62 | m/z 217.0000  ·  58.3 % | MS8
+node n63 | m/z 214.0000  ·  32.2 % | MS8
+node n64 | m/z 211.0000  ·  45.2 % | MS8
+node n65 | m/z 208.0000  ·  38.8 % | MS8
+node n66 | m/z 205.0000  ·  32.8 % | MS8
+node n67 | m/z 202.0000  ·  12.3 % | MS8
+node n68 | m/z 199.0000  ·  47.4 % | MS8
+node n69 | m/z 196.0000  ·  10.6 % | MS8
+node n70 | m/z 193.0000  ·  64.2 % | MS8
+node n71 | m/z 180.0000  ·  10.9 % | MS9
+node n72 | m/z 177.0000  ·  63.6 % | MS9
+node n73 | m/z 174.0000  ·  79.7 % | MS9
+node n74 | m/z 171.0000  ·  71.4 % | MS9
+node n75 | m/z 168.0000  ·  82.7 % | MS9
+node n76 | m/z 165.0000  ·  89.4 % | MS9
+node n77 | m/z 162.0000  ·  6.9 % | MS9
+node n78 | m/z 159.0000  ·  30.8 % | MS9
+node n79 | m/z 156.0000  ·  48.0 % | MS9
+arc n0>n1 | Δ 40.000 Da |  | 
+arc n0>n2 | Δ 43.000 Da |  | 
+arc n0>n3 | Δ 46.000 Da |  | 
+arc n0>n4 | Δ 49.000 Da |  | 
+arc n0>n5 | Δ 52.000 Da |  | 
+arc n0>n6 | Δ 55.000 Da |  | 
+arc n0>n7 | Δ 58.000 Da |  | 
+arc n0>n8 | Δ 61.000 Da |  | 
+arc n0>n9 | Δ 64.000 Da |  | 
+arc n0>n10 | Δ 67.000 Da |  | 
+arc n7>n11 | Δ 22.000 Da |  | 
+arc n3>n12 | Δ 37.000 Da |  | 
+arc n4>n13 | Δ 37.000 Da |  | 
+arc n9>n14 | Δ 25.000 Da |  | 
+arc n4>n15 | Δ 43.000 Da |  | 
+arc n4>n16 | Δ 46.000 Da |  | 
+arc n6>n17 | Δ 43.000 Da |  | 
+arc n2>n18 | Δ 58.000 Da |  | 
+arc n8>n19 | Δ 43.000 Da |  | 
+arc n9>n20 | Δ 43.000 Da |  | 
+arc n16>n21 | Δ 25.000 Da |  | 
+arc n14>n22 | Δ 34.000 Da |  | 
+arc n17>n23 | Δ 28.000 Da |  | 
+arc n12>n24 | Δ 46.000 Da |  | 
+arc n15>n25 | Δ 40.000 Da |  | 
+arc n19>n26 | Δ 31.000 Da |  | 
+arc n16>n27 | Δ 43.000 Da |  | 
+arc n14>n28 | Δ 52.000 Da |  | 
+arc n19>n29 | Δ 40.000 Da |  | 
+arc n17>n30 | Δ 49.000 Da |  | 
+arc n26>n31 | Δ 25.000 Da |  | 
+arc n26>n32 | Δ 28.000 Da |  | 
+arc n25>n33 | Δ 34.000 Da |  | 
+arc n26>n34 | Δ 34.000 Da |  | 
+arc n24>n35 | Δ 43.000 Da |  | 
+arc n21>n36 | Δ 55.000 Da |  | 
+arc n27>n37 | Δ 40.000 Da |  | 
+arc n24>n38 | Δ 52.000 Da |  | 
+arc n26>n39 | Δ 49.000 Da |  | 
+arc n26>n40 | Δ 52.000 Da |  | 
+arc n37>n41 | Δ 22.000 Da |  | 
+arc n40>n42 | Δ 16.000 Da |  | 
+arc n34>n43 | Δ 37.000 Da |  | 
+arc n35>n44 | Δ 37.000 Da |  | 
+arc n36>n45 | Δ 37.000 Da |  | 
+arc n35>n46 | Δ 43.000 Da |  | 
+arc n34>n47 | Δ 49.000 Da |  | 
+arc n38>n48 | Δ 40.000 Da |  | 
+arc n32>n49 | Δ 61.000 Da |  | 
+arc n40>n50 | Δ 40.000 Da |  | 
+arc n41>n51 | Δ 40.000 Da |  | 
+arc n43>n52 | Δ 37.000 Da |  | 
+arc n43>n53 | Δ 40.000 Da |  | 
+arc n50>n54 | Δ 22.000 Da |  | 
+arc n49>n55 | Δ 28.000 Da |  | 
+arc n46>n56 | Δ 40.000 Da |  | 
+arc n47>n57 | Δ 40.000 Da |  | 
+arc n46>n58 | Δ 46.000 Da |  | 
+arc n49>n59 | Δ 40.000 Da |  | 
+arc n41>n60 | Δ 67.000 Da |  | 
+arc n57>n61 | Δ 22.000 Da |  | 
+arc n57>n62 | Δ 25.000 Da |  | 
+arc n52>n63 | Δ 43.000 Da |  | 
+arc n59>n64 | Δ 25.000 Da |  | 
+arc n53>n65 | Δ 46.000 Da |  | 
+arc n54>n66 | Δ 46.000 Da |  | 
+arc n55>n67 | Δ 46.000 Da |  | 
+arc n56>n68 | Δ 46.000 Da |  | 
+arc n52>n69 | Δ 61.000 Da |  | 
+arc n54>n70 | Δ 58.000 Da |  | 
+arc n69>n71 | Δ 16.000 Da |  | 
+arc n69>n72 | Δ 19.000 Da |  | 
+arc n69>n73 | Δ 22.000 Da |  | 
+arc n62>n74 | Δ 46.000 Da |  | 
+arc n63>n75 | Δ 46.000 Da |  | 
+arc n68>n76 | Δ 34.000 Da |  | 
+arc n64>n77 | Δ 49.000 Da |  | 
+arc n69>n78 | Δ 37.000 Da |  | 
+arc n61>n79 | Δ 64.000 Da |  | 

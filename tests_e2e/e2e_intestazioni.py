@@ -1,6 +1,6 @@
 """Intestazioni dei pannelli (HR): una riga bassa, mai a capo né tagliata a 1280/1440/1680 px, a 700/900/1200 px, con il cassetto aperto o fissato e su iPad
 (1024×1366 e 1366×1024, anche ruotando); sotto la larghezza utile i gruppi vanno nel menu «⋯» (e tornano a posto con lo spazio); il grafico resta alto almeno 100 px."""
-import sys, os
+import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -32,12 +32,21 @@ def check(q, tag):
         assert x["ch"] >= 100, (tag, "the chart is too low", x)
     return res
 
+def settle(q):
+    """Wait until the layout of the panel headers is the same on two reads three frames apart (the resize has been handled)."""
+    prev = None
+    for _ in range(40):
+        frames(q, 3); cur = json.dumps(q.evaluate(CHECK))
+        if cur == prev: return
+        prev = cur
+    raise AssertionError("the headers keep changing")
+
 def setup(q):
-    ready(q); q.wait_for_timeout(300)
-    if q.is_visible("#dfiles"): q.click("#sb-x"); q.wait_for_timeout(400)      # the File panel is open at first start: the test measures the panel headers at the width of the window
-    q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000); q.wait_for_timeout(800)
-    q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); q.wait_for_timeout(1500)
-    q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); q.wait_for_timeout(1500)
+    ready(q)
+    if q.is_visible("#dfiles"): q.click("#sb-x"); attendi(q, "(()=>{const d=document.querySelector('#dfiles');return !d||!d.offsetParent})()")      # the File panel is open at first start: the test measures the panel headers at the width of the window
+    q.wait_for_function("typeof E !== 'undefined' && E.files.length>=1", timeout=60000)
+    q.evaluate("(()=>{addPanel('xic',{tab:E.tab,traces:[HR.ionTrace(305.0702,{tab:E.tab})],x:0,y:700,w:hostWidth(),h:300,full:true});relayout();fitHost()})()"); attendi(q, "E.panels.some(p=>p.type==='xic')")
+    q.evaluate("(()=>{const f=E.files.find(x=>x.kind==='full'); if(f){addPanel('map',{tab:'full',k:f.k,x:0,y:1020,w:hostWidth(),h:380,full:true});relayout();fitHost()}})()"); attendi(q, "E.panels.some(p=>p.type==='map')||!E.files.find(x=>x.kind==='full')"); settle(q)
 
 try:
     with sync_playwright() as p:
@@ -48,25 +57,25 @@ try:
 
         def larghe():
             for w in (1280, 1440, 1680):
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(700)
+                pg.set_viewport_size({"width": w, "height": 900}); settle(pg)
                 res = check(pg, w); print(w, [(x["type"], x["rows"], x["more"]) for x in res])
         step("header on one row at 1280, 1440, 1680 px", larghe)
 
         def strette():
             seen = False
             for w in (1200, 900, 700):
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(700)
+                pg.set_viewport_size({"width": w, "height": 900}); settle(pg)
                 res = check(pg, w); print(w, [(x["type"], x["rows"], x["more"]) for x in res]); seen = seen or any(x["more"] for x in res)
             assert seen, "at 700 px something goes into the «⋯» menu"
             # the «⋯» menu opens, holds the moved controls and closes with Esc; a moved control still works
             cid = pg.evaluate("E.panels.find(p=>p.type==='chrom').id")
             sel = f"E.panels.find(p=>p.id=={cid}).el"
             assert pg.evaluate(f"!{sel}.querySelector('[data-a=more]').hidden"), "chromatogram header has the «⋯» button at 700 px"
-            pg.evaluate(f"{sel}.querySelector('[data-a=more]').click()"); pg.wait_for_timeout(200)
+            pg.evaluate(f"{sel}.querySelector('[data-a=more]').click()"); attendi(pg, f"!{sel}.querySelector('.hmore').hidden")
             assert pg.evaluate(f"!{sel}.querySelector('.hmore').hidden && {sel}.querySelector('.hmore').children.length>0 && {sel}.querySelector('[data-a=more]').getAttribute('aria-expanded')==='true'")
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            pg.keyboard.press("Escape"); attendi(pg, f"{sel}.querySelector('.hmore').hidden")
             assert pg.evaluate(f"{sel}.querySelector('.hmore').hidden")
-            pg.set_viewport_size({"width": 1680, "height": 900}); pg.wait_for_timeout(700)
+            pg.set_viewport_size({"width": 1680, "height": 900}); settle(pg)
             assert pg.evaluate(f"{sel}.querySelector('[data-a=more]').hidden && {sel}.querySelector('.hmore').children.length===0"), "with room again everything is back in the header"
         step("narrow: groups go into «⋯» (opens, closes with Esc, comes back with room); 1200, 900, 700 px", strette)
 
@@ -74,32 +83,32 @@ try:
             cid = pg.evaluate("E.panels.find(p=>p.type==='chrom').id")
             b = f"E.panels.find(p=>p.id=={cid}).el.querySelector('[data-a=smooth]')"
             assert pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "true" and pg.evaluate(f"{b}.tagName") == "BUTTON"
-            pg.evaluate(f"E.active=E.panels.find(p=>p.id=={cid}); BARRA.commands.find(c=>c.id==='smooth').run()"); pg.wait_for_timeout(500)
+            pg.evaluate(f"E.active=E.panels.find(p=>p.id=={cid}); BARRA.commands.find(c=>c.id==='smooth').run()"); attendi(pg, f"E.panels.find(p=>p.id=={cid}).smooth===false")
             assert pg.evaluate(f"E.panels.find(p=>p.id=={cid}).smooth") is False and pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "false"
-            pg.evaluate(f"{b}.click()"); pg.wait_for_timeout(300)
+            pg.evaluate(f"{b}.click()"); attendi(pg, f"E.panels.find(p=>p.id=={cid}).smooth===true")
             assert pg.evaluate(f"E.panels.find(p=>p.id=={cid}).smooth") is True and pg.evaluate(f"{b}.getAttribute('aria-pressed')") == "true"
         step("Smoothing: a button, also reachable from the palette command", smoothing)
 
         def cassetto():
             for w in (1280, 1440, 1680):
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500)
-                pg.evaluate("BARRA.setTab('file',{noFocus:true})"); pg.wait_for_timeout(500)
+                pg.set_viewport_size({"width": w, "height": 900}); settle(pg)
+                pg.evaluate("BARRA.setTab('file',{noFocus:true})"); settle(pg)
                 check(pg, ("drawer", w))
-                pg.evaluate("BARRA.show('file',{noFocus:true})"); pg.wait_for_timeout(900)
+                pg.evaluate("BARRA.show('file',{noFocus:true})"); settle(pg)
                 check(pg, ("pinned", w))
-                pg.evaluate("BARRA.close && BARRA.close()"); pg.wait_for_timeout(500)
+                pg.evaluate("BARRA.close && BARRA.close()"); settle(pg)
         step("drawer open or pinned: headers stay on one row, nothing cut (1280, 1440, 1680)", cassetto)
 
         def ipad():
             for w, h in ((1024, 1366), (1366, 1024)):
                 ctx = r.b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True, locale="it-IT", reduced_motion="reduce")
                 q = ctx.new_page(); q.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_timeout(1500)
+                q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#pick", state="attached")
                 try:
                     load(q, [D / "HR_DDA-Exploris-t30.mzML", D / "HR_DDA-Fusion-t30.mzML"], 4000, 4); setup(q)        # the session lives in the browser: a new context opens the files itself
                     check(q, ("ipad", w))
-                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); q.wait_for_timeout(500); check(q, ("ipad drawer", w))
-                    q.set_viewport_size({"width": h, "height": w}); q.wait_for_timeout(800); check(q, ("ipad rotated", h))
+                    q.evaluate("BARRA.setTab('file',{noFocus:true})"); settle(q); check(q, ("ipad drawer", w))
+                    q.set_viewport_size({"width": h, "height": w}); settle(q); check(q, ("ipad rotated", h))
                 finally:
                     ctx.close()
         step("iPad 1024×1366 and 1366×1024 (touch), drawer open, rotated: one row, nothing cut", ipad)

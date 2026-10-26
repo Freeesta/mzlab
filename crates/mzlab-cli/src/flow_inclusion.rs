@@ -5,11 +5,11 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json;
 use mzlab_core::step::DataType;
-use mzlab_feat::export_inclusione::{inclusion_expected, Expected};
+use mzlab_feat::export_inclusione::{adduct_shifts, inclusion_expected_by, Expected};
 
 use crate::flow::{io, read_one, FileRunner};
 
-/// The CSV of the list from the products, the adducts (comma separated) and the half window of RT in minutes.
+/// The CSV of the list from the products, the adducts (comma separated names, or a list of the user as CSV) and the half window of RT in minutes.
 pub(crate) fn inclusion_text(products: &[u8], adducts: &str, half_window: f64) -> Result<String> {
     let v = json::parse(products)?;
     let mut list = Vec::new();
@@ -26,12 +26,8 @@ pub(crate) fn inclusion_text(products: &[u8], adducts: &str, half_window: f64) -
             priority,
         });
     }
-    let adducts: Vec<&str> = adducts
-        .split(',')
-        .map(str::trim)
-        .filter(|a| !a.is_empty())
-        .collect();
-    inclusion_expected(&list, &adducts, half_window)
+    let shifts = adduct_shifts(adducts)?;
+    inclusion_expected_by(&list, &shifts, half_window)
 }
 
 /// The executor: the adducts and the half window come from the parameters, the products from the port `tp`.
@@ -65,5 +61,18 @@ mod tests {
         let t = inclusion_text(j, "[M+H]+", 0.5).unwrap();
         assert_eq!(t, "m/z,charge,RT_start_min,RT_end_min,note\n317.1642,1,5.5,6.5,\"C13H24N4O3S priority 1.0\"");
         assert!(inclusion_text(br#"[{"rt":1}]"#, "[M+H]+", 0.5).is_err());
+    }
+
+    #[test]
+    fn a_list_of_the_user_gives_the_rows_of_the_table_adduct_it_equals() {
+        let j = br#"[{"formula":"C13H24N4O3S","rt":6.0,"priority":1}]"#;
+        let list = "name;delta;charge;comment\nmine;H1;1;the proton";
+        assert_eq!(
+            inclusion_text(j, list, 0.5).unwrap(),
+            inclusion_text(j, "[M+H]+", 0.5).unwrap()
+        );
+        let e = inclusion_text(j, "name;delta;charge\nbad;H1;2", 0.5).unwrap_err();
+        assert_eq!(e.key, "error.export.adduct");
+        assert!(inclusion_text(j, "name;delta\nx;", 0.5).is_err());
     }
 }

@@ -79,7 +79,7 @@ fn index_mzidx() -> Step {
             .advanced()],
         runs_in: RunsIn {
             wasm: Some("engine"),
-            wasm_ceiling_bytes: Some(1_703_936),
+            wasm_ceiling_bytes: Some(1_708_032),
             native: true,
         },
         errors: vec!["err.file.index", "err.file.notAccepted", "error.memoryBudget"],

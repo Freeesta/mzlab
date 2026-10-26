@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The marked points of the RT x m/z map: the shapes drawn on the map, the Excel / copy export and the table under it (sort, groups, reference).
 // Classic script, loaded before mappa.js, which calls MAPFORME(ctx) and MAPTAB(ctx, forms) once inside its closure: ctx carries the helpers that live there.
 const MAPFORME = c => {
@@ -110,8 +110,8 @@ const MAPTAB = (c, f) => {
       tr.onclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (!q) return; s.psel = i; s.lock = { rt: q.rt, mz: q.mz }; follow(p, s.lock); overlay(p); margins(p); tableNow(p); };
       tr.ondblclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (q) spectrumAt(p, q.rt); };
     });
-    box.querySelectorAll("[data-note]").forEach(inp => inp.onchange = () => { const q = pts(p)[+inp.dataset.note]; if (q) { q.note = inp.value; ptsSave(p); } });
-    box.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => { const i = +b.dataset.ref, was = !!(pts(p)[i] || {}).ref; pts(p).forEach(q => { delete q.ref; }); if (!was && pts(p)[i]) pts(p)[i].ref = true; ptsSave(p); tableNow(p); });
+    box.querySelectorAll("[data-note]").forEach(inp => inp.onchange = () => { const q = pts(p)[+inp.dataset.note]; if (q) { COMANDI.fai("map.marks", p, () => { q.note = inp.value; }); ptsSave(p); } });
+    box.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => { const i = +b.dataset.ref, was = !!(pts(p)[i] || {}).ref; COMANDI.fai("map.marks", p, () => { pts(p).forEach(q => { delete q.ref; }); if (!was && pts(p)[i]) pts(p)[i].ref = true; }); ptsSave(p); tableNow(p); });
     box.querySelectorAll("[data-xic]").forEach(b => b.onclick = () => { const q = pts(p)[+b.dataset.xic]; if (q) xicAB(p, q.mz); });
     box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f), f.polarity); });
     grow(p, "tab", Math.ceil(box.offsetHeight) + 5);                    // the panel grows by the height of the table (it scrolls inside beyond its maximum): the map keeps its size

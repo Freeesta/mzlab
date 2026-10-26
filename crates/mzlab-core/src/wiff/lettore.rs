@@ -2,7 +2,7 @@
 //! the `.wiff.scan` never, a scan reads only its own block. One `Campione` per injection; the index lists the scans (the MRM blocks are chromatograms).
 
 use super::window::Window;
-use super::{container, samples, scan, Record, Wiff};
+use super::{container, samples, scan, Record, Wiff, SAMPLES};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::{
@@ -37,12 +37,19 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
 }
 
 /// One injection: the reader of its blocks, which blocks are scans, and the index built from the heads of the blocks.
-struct Parte {
-    w: Wiff,
+pub(super) struct Parte {
+    pub(super) w: Wiff,
     /// Indexes into `w.records` of the scans with points.
-    scans: Vec<usize>,
+    pub(super) scans: Vec<usize>,
     indice: Vec<VoceScansione>,
     chroms: Option<Vec<Chromatogram>>,
+    /// Base peak intensity of each scan as the mzML writer saw it (NaN: not yet) and how many it has seen: the BPC of the full scan experiments is listed
+    /// once all of them were seen, so that listing the chromatograms never decodes a scan.
+    pub(super) bpc: Vec<f64>,
+    pub(super) bpc_seen: usize,
+    /// A scan with points has a block version the engine's reader does not decode (it would list the sample with no scans): the module reads it.
+    #[cfg(feature = "sciex")]
+    other_version: bool,
     /// `scans` and `indice` are built (`apri_solo` builds only the injection it is asked for; the others on their first use).
     pronta: bool,
 }
@@ -54,7 +61,7 @@ pub struct LettoreWiff {
     scan_len: u64,
     scan_member: u16,
     campioni: Vec<Campione>,
-    parti: Vec<Parte>,
+    pub(super) parti: Vec<Parte>,
     /// SHA-1 of the `.wiff.scan` for the header, read once (the whole member).
     scan_sha1: Option<Option<String>>,
 }
@@ -68,14 +75,14 @@ pub const VOCE: VoceLettore = VoceLettore {
 };
 
 impl LettoreWiff {
-    fn parte(&self, c: usize) -> Result<&Parte> {
+    pub(super) fn parte(&self, c: usize) -> Result<&Parte> {
         self.parti
             .get(c)
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
 
     /// Injection `c` with its index built (the heads of its blocks read now when `apri_solo` left it out).
-    fn pronta(&mut self, c: usize) -> Result<&Parte> {
+    pub(super) fn pronta(&mut self, c: usize) -> Result<&Parte> {
         let p = self
             .parti
             .get_mut(c)
@@ -87,7 +94,7 @@ impl LettoreWiff {
     }
 
     /// The chromatograms of injection `c`, read once (the MRM blocks only).
-    fn chromatograms(&mut self, c: usize) -> Result<&[Chromatogram]> {
+    pub(super) fn chromatograms(&mut self, c: usize) -> Result<&[Chromatogram]> {
         let p = self
             .parti
             .get_mut(c)
@@ -150,7 +157,7 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     dad.wavelength_chromatogram(nm, None, 0)
 }
 
-#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.parti.get(c).is_some_and(|p| p.w.variante()) } #[cfg(feature = "estesi")] fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) }
+#[rustfmt::skip] impl Lettore for LettoreWiff { #[cfg(feature = "sciex")] fn variante(&mut self, c: usize) -> bool { self.pronta(c).is_ok_and(|p| p.w.variante() || p.other_version) } fn extra_mzml(&self, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { extra_of(self, s) } fn extra_scansione(&mut self, c: usize, k: usize, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra { #[cfg(feature = "estesi")] self.watch(c, k, s); extra_of(self, s) }
     fn formato(&self) -> Formato { Formato::SciexWiff }
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use crate::conv::{IDENTITA, NON_DECODIFICATO};
@@ -176,6 +183,8 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
     }
     fn cromatogrammi(&mut self, c: usize) -> Result<Vec<VoceCromatogramma>> {
         let mut v: Vec<VoceCromatogramma> = self.chromatograms(c)?.iter().map(|h| VoceCromatogramma { id: h.id.clone(), tipo: h.kind, unita: h.unit.clone() }).collect();
+        #[cfg(feature = "estesi")]
+        self.list_bpc(c, &mut v)?;
         if self.parte(c)?.w.dad.is_some() && !v.iter().any(|x| x.tipo == ChromKind::Pda) {
             v.push(VoceCromatogramma { id: "DAD TWC".into(), tipo: ChromKind::Pda, unita: "mAU".into() });
         }
@@ -185,11 +194,23 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         if let Some(ch) = self.chromatograms(c)?.iter().find(|h| h.id == id).cloned() {
             return Ok(ch);
         }
+        #[cfg(feature = "estesi")]
+        if let Some(ch) = self.bpc_chroms(c)?.into_iter().find(|h| h.id == id) {
+            return Ok(ch);
+        }
         dad_chrom(self.parte(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
     #[cfg(feature = "mappa-dad")]
     fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
         Ok(self.parte(c)?.w.dad.as_ref().map(|d| d.to_map_json()))
+    }
+    #[cfg(feature = "mappa-dad")]
+    fn dad_wavelength(&mut self, c: usize, nm0: f64, nm1: f64) -> Result<Option<String>> {
+        Ok(self.parte(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_wavelength_json(d, nm0, nm1)))
+    }
+    #[cfg(feature = "mappa-dad")]
+    fn dad_spectrum(&mut self, c: usize, rt0: f64, rt1: f64) -> Result<Option<String>> {
+        Ok(self.parte(c)?.w.dad.as_ref().and_then(|d| super::dad_uv::dad_spectrum_json(d, rt0, rt1)))
     }
     fn testata_mzml(&mut self, c: usize) -> Result<Option<Header>> { testata(self, c).map(Some) }
     fn metodo(&mut self, c: usize) -> Result<String> {
@@ -271,15 +292,30 @@ pub fn apri_solo(
             scans: Vec::new(),
             indice: Vec::new(),
             chroms: None,
+            bpc: Vec::new(),
+            bpc_seen: 0,
+            #[cfg(feature = "sciex")]
+            other_version: false,
             pronta: false,
         };
         if solo.is_none_or(|c| c == i) {
             build(&mut parte, &mut scan, scan_len, membro)?;
         }
+        let nome_campione = ole
+            .read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
+            .and_then(|b| {
+                crate::metodo_wiff::counted_strings(&b)
+                    .into_iter()
+                    .next()
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+            })
+            .unwrap_or_else(|| format!("{nome} #{s}"));
         campioni.push(Campione {
             id: s,
-            nome: format!("{nome} #{s}"),
+            nome: nome_campione,
             scansioni: parte.scans.len(),
+            dimensione: None,
         });
         parti.push(parte);
     }
@@ -300,9 +336,15 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
     let w = &p.w;
     let mut win = Window::new(scan, scan_len);
     let (mut scans, mut indice) = (Vec::new(), Vec::new());
+    #[cfg_attr(not(feature = "sciex"), allow(unused_mut, unused_variables))]
+    let mut other = false;
     for (i, r) in w.records.iter().enumerate() {
         if !scan::point_count(&mut win, scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {
             continue;
+        }
+        #[cfg(feature = "sciex")]
+        {
+            other |= scan::other_version(&mut win, scan_len, r.at, r.end)?;
         }
         let e = w.experiments.get(r.experiment).cloned().unwrap_or_default();
         indice.push(VoceScansione {
@@ -328,27 +370,49 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
         scans.push(i);
     }
     (p.scans, p.indice, p.pronta) = (scans, indice, true);
+    #[cfg(feature = "sciex")]
+    {
+        p.other_version = other;
+    }
     Ok(())
 }
 
 /// The number after `key` in a spectrum id (`sample=2 ... experiment=1`).
-#[cfg(feature = "estesi")]
 fn id_field(id: &str, key: &str) -> Option<usize> {
     id.split_whitespace()
         .find_map(|w| w.strip_prefix(key))
         .and_then(|v| v.parse::<usize>().ok())
 }
 
-/// The spectrum type (CV term) a spectrum of the readers module carries besides its level: precursor-ion and neutral-loss scans.
+/// The TIC the index of the file holds for the block of `s`, when the block is where the spectrum number says and the value is usable.
 #[cfg(feature = "estesi")]
+fn header_tic(l: &LettoreWiff, s: &Spectrum) -> Option<f64> {
+    let p = l
+        .parti
+        .iter()
+        .find(|p| Some(p.w.sample as usize) == id_field(&s.id, "sample="))?;
+    let r = p.w.records.get(*p.scans.get(s.index)?)?;
+    let same = id_field(&s.id, "cycle=") == Some(r.cycle + 1)
+        && id_field(&s.id, "experiment=") == Some(r.experiment + 1);
+    (same && r.tic.is_finite() && r.tic > 0.0).then_some(r.tic)
+}
+
+/// What the mzML says of a spectrum besides its points: the collision energy and isolation window of its experiment, and (readers module) the spectrum
+/// type (CV term) of precursor-ion and neutral-loss scans.
 fn extra_of(l: &LettoreWiff, s: &Spectrum) -> crate::mzmlwrite::SpectrumExtra {
-    let code = id_field(&s.id, "sample=")
+    let e = id_field(&s.id, "sample=")
         .and_then(|n| l.parti.iter().find(|p| p.w.sample as usize == n))
         .zip(id_field(&s.id, "experiment="))
-        .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)))
-        .and_then(|e| e.code);
+        .and_then(|(p, e)| p.w.experiments.get(e.wrapping_sub(1)));
     let mut extra = crate::mzmlwrite::SpectrumExtra::default();
-    if let Some((acc, name)) = super::estesi::spectrum_term(code) {
+    #[cfg(feature = "estesi")]
+    {
+        extra.tic = header_tic(l, s);
+    }
+    let Some(e) = e else { return extra };
+    (extra.ce, extra.iso_half) = (e.ce, e.iso_half);
+    #[cfg(feature = "estesi")]
+    if let Some((acc, name)) = super::estesi::spectrum_term(e.code) {
         extra.params.push((format!("cv:{acc}"), name.to_string()));
     }
     extra

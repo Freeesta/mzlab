@@ -9,12 +9,14 @@
 //! second axis, read from the signs of the proofs of `evid/1`.
 
 mod cancelli;
+mod candidati;
 mod gruppi;
 mod meta;
 mod parentela;
 mod rete;
 mod tabella;
 
+pub use candidati::{candidates, candidates_json, element_fit, FitCandidate};
 pub use gruppi::{conditions as group_conditions, groups_json, infos_from_json, treated_by_condition, RowInfo};
 pub use rete::{arcs, arcs_in, explain_by_arcs, explain_by_arcs_in, next_generation, Arc, NetParams};
 pub(crate) use tabella::measured;
@@ -110,6 +112,8 @@ pub struct TpInputs<'a> {
     pub parent: (f64, f64),
     /// Fragments of the MS2 of the parent, when it has one (the m/z of an in-source fragment must be among them).
     pub fragments: Option<&'a [f64]>,
+    /// m/z of the MS1 ions of the file of the infusion of the parent (sorted), when there is one: an in-source fragment of the parent shows in it too.
+    pub infusion: Option<&'a [f64]>,
     pub params: &'a TpParams,
     /// The rules, to look for their differences of mass among the rows (`rete`); None = no network.
     pub rules: Option<&'a crate::hypo::Rules>,
@@ -188,6 +192,8 @@ pub struct TpBlock {
     pub params: TpParams,
     /// Present when gate 1 read the roles (`build_by_role`).
     pub roles: Option<RoleCounts>,
+    /// Formula candidates of the rows formed and not explained, sorted by row (`candidati`); a lead, never a verdict.
+    pub fit_candidates: Vec<(u32, Vec<FitCandidate>)>,
 }
 
 impl TpBlock {

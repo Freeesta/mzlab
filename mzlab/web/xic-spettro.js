@@ -1,10 +1,10 @@
-// @ts-check
+// @ts-strict
 "use strict";
 // Button «XIC» of the mass spectrum (Full Scan, MS2, DDA, map, several files): extracts at once the XIC of the ion chosen in the spectrum and shows it in the
 // panel right under it. State per spectrum panel: the chosen peak (ring on the spectrum), its tolerance, the XIC panel it owns. The XIC follows the scan of the
 // spectrum (cursor line, band for an averaged spectrum) and says the apex of the peak that holds that scan. Every number comes from the engine through the
 // existing XIC panel and the existing peak detectors (autoEdges / autoInt); nothing is computed here.
-// Classic helpers used by name: xicDirect, xicTraceFor, xicWin, rh, mzd, fmz, numIt, ctl, draw, cursorLine, autoEdges, autoInt, PK, HR, E, ESC, AZIONI.
+// Classic helpers used by name: getXic, scanFiles, shownFor, TOL0, xicDirect, xicTraceFor, xicWin, rh, mzd, fmz, numIt, ctl, draw, cursorLine, autoEdges, autoInt, PK, HR, E, ESC, AZIONI.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
@@ -54,6 +54,7 @@
   /** @param {any} p */
   function refresh(p) {
     const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]');
+    if (p.uv) { for (const x of [b, l]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
     if (b) { b.classList.toggle("on", s.pend); b.setAttribute("aria-pressed", String(s.pend)); }
     if (l) {
       l.hidden = !s.sel;
@@ -72,6 +73,7 @@
     s.sel = { m, obs, tol: null };
     refresh(p); draw(p);
     say(p, T("xicbtn.picked", { ion: ionText(p, s.sel) }));
+    if (window.XICLENS) XICLENS.show(p, m);
   }
   /** the labelled peaks of the spectrum in order of m/z @param {any} p */
   const labelled = p => [...new Set((p._a && p._a.lbls || []).filter((/** @type {any} */ l) => l.m != null).map((/** @type {any} */ l) => l.m))].sort((u, v) => u - v);
@@ -101,12 +103,13 @@
   async function extract(p, add) {
     const s = st(p), sel = s.sel; if (!sel) return;
     s.pend = false; refresh(p);
+    if (window.XICLENS) XICLENS.close(p);
     const tok = ++s.xtok, tr = traceFor(p, sel), old = live(p);
     let xp = old;
     if (!xp) { xp = s.xp = xicDirect(sel.m, p, null, tr); await xp.ready; }
     else {
-      if (!add) { if (xp.ints && xp.ints.length) pushIh(xp); xp.ints = []; xp.traces = []; }
-      xp.traces.push(tr); ctl(xp); reveal(xp); await draw(xp);
+      COMANDI.fai("xic.traces", xp, () => { if (!add) { xp.ints = []; xp.traces = []; } xp.traces.push(tr); });
+      ctl(xp); reveal(xp); await draw(xp);
     }
     if (tok !== s.xtok) return;
     if (!add && hrFile(p)) await integrate(p, xp);
@@ -123,6 +126,7 @@
   // ---------------------------------------------------------------- the XIC follows the scan of the spectrum
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
+    if (window.XICLENS) XICLENS.sync(p);
     const s = ST.get(p); if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
@@ -216,6 +220,7 @@
   function wire(p) {
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicb"]')), l = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicl"]'));
     if (!b || !l || /** @type {any} */ (b)._xb) return;
+    if (p.uv) { b.hidden = true; return; }
     /** @type {any} */ (b)._xb = true;
     b.onclick = e => press(p, e.shiftKey);
     // Space on the button presses it: the walk over the scans (scroll.js) must not take it
@@ -223,12 +228,26 @@
     l.onclick = () => openPop(p);
     refresh(p);
   }
-  /** a click on the spectrum, no drag: with the ruler on (or a measure open) it stays the ruler's; otherwise the nearest peak is chosen, and extracted when the button is waiting @param {any} p @param {number} px @param {number} py */
-  function click(p, px, py) {
-    if (p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
+  /** the m/z of the peak a pixel means: the nearest peak label within 34 px, otherwise the peak the mouse box highlights (null: none) @param {any} p @param {number} px @returns {number | null} */
+  function target(p, px) {
+    if (!p._a || !p._a.snap) return null;
     /** @type {any} */ let lb = null, bd = 34;
     (p._a.lbls || []).forEach((/** @type {any} */ l) => { if (l.m == null) return; const dd = Math.abs(l.x + l.w / 2 - px); if (dd < bd) { bd = dd; lb = l; } });
     const m = lb ? lb.m : (p._a.snap(px) || {}).m;
+    return m == null ? null : m;
+  }
+  /** what the lens asks the engine for the ion m of this spectrum: the file of the spectrum, the (m/z, tolerance) of the XIC button, the label @param {any} p @param {number} m */
+  function lensArgs(p, m) {
+    const f = specFile(p); if (!f) return null;
+    const sel = { m, obs: true, tol: null }, tr = traceFor(p, sel);
+    return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel) };
+  }
+  /** the lens was committed: the same path as a click on the peak with the button waiting @param {any} p @param {number} m */
+  function commit(p, m) { choose(p, m, true); extract(p, false); }
+  /** a click on the spectrum, no drag: with the ruler on (or a measure open) it stays the ruler's; otherwise the nearest peak is chosen, and extracted when the button is waiting @param {any} p @param {number} px @param {number} py */
+  function click(p, px, py) {
+    if (p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
+    const m = target(p, px);
     if (m == null) return false;
     const s = st(p);
     choose(p, m, true);
@@ -238,13 +257,14 @@
   /** small dot on the apex of the chosen peak (a ring would cover the m/z label above it); the halo keeps it readable on any background @param {any} p @param {CanvasRenderingContext2D} g @param {(v: number) => number} X @param {(v: number) => number} Y @param {number} W @param {any} d0 */
   function mark(p, g, X, Y, W, d0) {
     const s = ST.get(p); if (!s || !s.sel || p._exp) return;
-    const px = X(s.sel.m); if (px < M.l || px > W - M.r) return;
-    let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - s.sel.m) < 0.3 && (j < 0 || Math.abs(v - s.sel.m) < Math.abs(d0.mz[j] - s.sel.m))) j = i; });
-    g.save(); g.strokeStyle = css("--accent"); g.lineWidth = 2;
+    const sel = s.sel;
+    const px = X(sel.m); if (px < M.l || px > W - M.r) return;
+    let j = -1; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - sel.m) < 0.3 && (j < 0 || Math.abs(v - sel.m) < Math.abs(d0.mz[j] - sel.m))) j = i; });
+    g.save(); g.strokeStyle = ecss("--accent"); g.lineWidth = 2;
     if (j < 0) { g.setLineDash([4, 3]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, M.t + 2); g.stroke(); }
     else {
       const py = Math.max(M.t + 6, Y(d0.y[j]));
-      g.beginPath(); g.arc(px, py, 3, 0, 7); g.lineWidth = 2; g.strokeStyle = css("--panel"); g.stroke(); g.fillStyle = css("--accent"); g.fill();
+      g.beginPath(); g.arc(px, py, 3, 0, 7); g.lineWidth = 2; g.strokeStyle = ecss("--panel"); g.stroke(); g.fillStyle = ecss("--accent"); g.fill();
     }
     g.restore();
   }
@@ -261,6 +281,14 @@
     nome, disponibile: (/** @type {any} */ c) => !!c.p._a && labelled(c.p).length > 0, esegui: (/** @type {any} */ c) => step(c.p, d) });
   key("spec.xicPrev", ",", "scorc.xicPrev", () => T("scorc.xicPrev"), -1); key("spec.xicNext", ".", "scorc.xicNext", () => T("scorc.xicNext"), 1);
 
-  /** @type {any} */ (window).XICBTN = { wire, click, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** Starts the requests of the XIC panel about to be created in the current tab (getXic memoises them): they run while addPanel builds the DOM, and draw() finds them done or under way. @param {any} tr */
+  function prefetch(tr) {
+    try {
+      const p = { tab: E.tab, tol: TOL0 };
+      scanFiles(shownFor(p)).forEach((/** @type {any} */ f) => { getXic(f.k, ...(tr.ion && window.HR ? HR.xicArgs(f, tr, p) : [tr.mz, tr.w ?? p.tol]), f.lv).catch(() => {}); });
+    } catch (e) { /* draw() asks again */ }
+  }
+
+  /** @type {any} */ (window).XICBTN = { wire, prefetch, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();

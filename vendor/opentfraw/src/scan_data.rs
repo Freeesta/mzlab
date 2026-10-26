@@ -32,6 +32,60 @@ fn con_blocco<R: Read + Seek, T>(
     })
 }
 
+/// The centroid peaks of one window (`f32` or `f64` m/z, then the `f32` abundance, little endian) appended to `mz` and `int`; a trailing partial item is ignored.
+fn decode_peaks_into(b: &[u8], wide_mz: bool, mz: &mut Vec<f64>, int: &mut Vec<f32>) {
+    if wide_mz {
+        let (items, _) = b.as_chunks::<12>();
+        make_room(mz, items.len());
+        make_room(int, items.len());
+        for &[m0, m1, m2, m3, m4, m5, m6, m7, a0, a1, a2, a3] in items {
+            mz.push(f64::from_le_bytes([m0, m1, m2, m3, m4, m5, m6, m7]));
+            int.push(f32::from_le_bytes([a0, a1, a2, a3]));
+        }
+    } else {
+        let (items, _) = b.as_chunks::<8>();
+        make_room(mz, items.len());
+        make_room(int, items.len());
+        for &[m0, m1, m2, m3, a0, a1, a2, a3] in items {
+            mz.push(f64::from(f32::from_le_bytes([m0, m1, m2, m3])));
+            int.push(f32::from_le_bytes([a0, a1, a2, a3]));
+        }
+    }
+}
+
+/// Room for `n` more items in `v`; an empty vector gets exactly `n` (the common case of one array per scan), which is cheaper than the amortized growth of `reserve`.
+pub(crate) fn make_room<T>(v: &mut Vec<T>, n: usize) {
+    if v.capacity() == 0 {
+        *v = Vec::with_capacity(n);
+    } else {
+        v.reserve(n);
+    }
+}
+
+/// The `(f32 m/z, f32 abundance)` pairs of `b` as peaks; a trailing partial pair is ignored.
+fn peaks_f32_pairs(b: &[u8]) -> Vec<Peak> {
+    let (items, _) = b.as_chunks::<8>();
+    items
+        .iter()
+        .map(|&[m0, m1, m2, m3, a0, a1, a2, a3]| Peak {
+            mz: f64::from(f32::from_le_bytes([m0, m1, m2, m3])),
+            abundance: f32::from_le_bytes([a0, a1, a2, a3]),
+        })
+        .collect()
+}
+
+/// The `(u32 channel, f32 m/z, f32 abundance)` triplets of `b` as peaks; a trailing partial triplet is ignored.
+fn peaks_f32_triplets(b: &[u8]) -> Vec<Peak> {
+    let (items, _) = b.as_chunks::<12>();
+    items
+        .iter()
+        .map(|&[_, _, _, _, m0, m1, m2, m3, a0, a1, a2, a3]| Peak {
+            mz: f64::from(f32::from_le_bytes([m0, m1, m2, m3])),
+            abundance: f32::from_le_bytes([a0, a1, a2, a3]),
+        })
+        .collect()
+}
+
 /// A single centroid peak (m/z + abundance).
 #[derive(Debug, Clone)]
 pub struct Peak {
@@ -206,6 +260,29 @@ impl ScanDataPacket {
                 })
                 .collect::<Result<Vec<Peak>>>()
         })?
+    }
+
+    /// [`Self::read_peaks_only`] with the peaks appended to `mz` and `int` (one vector each) instead of returned as `Peak`s.
+    pub(crate) fn read_peaks_only_into<R: Read + Seek>(
+        r: &mut BinaryReader<R>,
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) -> Result<()> {
+        let header = PacketHeader::read(r)?;
+        if header.profile_size > 0 {
+            r.skip((header.profile_size as usize) * 4)?;
+        }
+        let wide_mz = header.layout & 0x10000 != 0;
+        if header.peak_list_size == 0 {
+            return Ok(());
+        }
+        let item_size: usize = if wide_mz { 12 } else { 8 };
+        for _ in 0..header.windows.max(1) {
+            let count = r.read_u32()?;
+            let n = r.block_len(count as u64, item_size as u64)?;
+            con_blocco(r, n, |b| decode_peaks_into(b, wide_mz, mz, int))?;
+        }
+        Ok(())
     }
 
     /// Decode the per-peak label streams that follow the centroid peak list:
@@ -395,7 +472,9 @@ impl Profile {
         for chunk in &self.chunks {
             for (i, &intensity) in chunk.signal.iter().enumerate() {
                 let bin_global = chunk.first_bin as f64 + i as f64;
-                let freq = self.first_value + bin_global * self.step;
+                // A profile already in the m/z domain (ion trap) starts one step after its first value, as the vendor library gives it.
+                let origin = if coefficients.is_empty() { 1.0 } else { 0.0 };
+                let freq = self.first_value + (bin_global + origin) * self.step;
                 // The per-chunk fudge is an additive m/z correction applied
                 // after frequency-to-m/z conversion, not a frequency offset.
                 // Applying it in the frequency domain shifts Orbitrap profile
@@ -406,6 +485,34 @@ impl Profile {
             }
         }
         result
+    }
+}
+
+impl Profile {
+    /// [`Self::to_mz_intensity`] keeping only the points with m/z > 0, appended to `mz` and `int` as the arrays of a spectrum; the same arithmetic in the same order.
+    pub fn to_mz_intensity_into(
+        &self,
+        coefficients: &[f64],
+        mz: &mut Vec<f64>,
+        int: &mut Vec<f32>,
+    ) {
+        let cap: usize = self.chunks.iter().map(|c| c.signal.len()).sum();
+        make_room(mz, cap);
+        make_room(int, cap);
+        // A profile already in the m/z domain (ion trap) starts one step after its first value, as the vendor library gives it.
+        let origin = if coefficients.is_empty() { 1.0 } else { 0.0 };
+        for chunk in &self.chunks {
+            let fudge = chunk.fudge.unwrap_or(0.0) as f64;
+            for (i, &intensity) in chunk.signal.iter().enumerate() {
+                let bin_global = chunk.first_bin as f64 + i as f64;
+                let freq = self.first_value + (bin_global + origin) * self.step;
+                let m = freq_to_mz(freq, coefficients) + fudge;
+                if m > 0.0 {
+                    mz.push(m);
+                    int.push(f64::from(intensity) as f32);
+                }
+            }
+        }
     }
 }
 
@@ -483,16 +590,7 @@ pub fn read_flat_peaks<R: Read + Seek>(
         let mut r = BinaryReader::new(&mut *source);
 
         let n = r.block_len(peak_count as u64, 8)?;
-        let peaks = con_blocco(&mut r, n, |b| {
-            b.chunks_exact(8)
-                .map(|c| {
-                    Ok(Peak {
-                        mz: read_f32_le(c, 0)? as f64,
-                        abundance: read_f32_le(c, 4)?,
-                    })
-                })
-                .collect::<Result<Vec<Peak>>>()
-        })??;
+        let peaks = con_blocco(&mut r, n, peaks_f32_pairs)?;
 
         // Validate: first peak mz should be a plausible mass value (or zero for empty transitions)
         let looks_valid = if let Some(first) = peaks.first() {
@@ -550,17 +648,7 @@ pub fn read_scan_srm_v66<R: Read + Seek>(
 
     // Read peak records: (u32 channel_idx, f32 mz, f32 intensity) × n_peaks
     let n = r.block_len(n_peaks as u64, 12)?;
-    con_blocco(&mut r, n, |b| {
-        b.chunks_exact(12)
-            .map(|c| {
-                // c[0..4] is the channel index
-                Ok(Peak {
-                    mz: read_f32_le(c, 4)? as f64,
-                    abundance: read_f32_le(c, 8)?,
-                })
-            })
-            .collect::<Result<Vec<Peak>>>()
-    })?
+    con_blocco(&mut r, n, peaks_f32_triplets)
 }
 
 /// Read the peaks of a v66 full-scan record that ends in a 56-byte footer (TSQ GC full scan).
@@ -594,16 +682,7 @@ pub fn read_scan_footer_v66<R: Read + Seek>(
     }
     r.seek_to(data_addr.saturating_add(start))?;
     let n = r.block_len(n_bytes / 8, 8)?;
-    con_blocco(&mut r, n, |b| {
-        b.chunks_exact(8)
-            .map(|c| {
-                Ok(Peak {
-                    mz: read_f32_le(c, 0)? as f64,
-                    abundance: read_f32_le(c, 4)?,
-                })
-            })
-            .collect::<Result<Vec<Peak>>>()
-    })?
+    con_blocco(&mut r, n, peaks_f32_pairs)
 }
 
 /// Read the Q3 isolation window table from an SRM v66 scan record.
@@ -696,6 +775,159 @@ pub fn search_v63_transition(data: &[u8], q3_center_target: f64) -> Option<(f64,
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    /// The bytes of `n` peaks of `item` bytes each from a deterministic generator, with NaN payloads, signed zeros, infinities and subnormals among the floats.
+    fn peak_bytes(n: usize, item: usize, seed: u64) -> Vec<u8> {
+        let mut state = seed;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let odd = [
+            0x7fc0_0001u32,
+            0x7f80_0001,
+            0xffc0_0000,
+            0x8000_0000,
+            0x0000_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x0000_0001,
+            0x7f7f_ffff,
+        ];
+        let mut b = Vec::new();
+        for _ in 0..n * item / 4 {
+            let v = next();
+            b.extend(
+                if v % 3 == 0 {
+                    odd[(v >> 8) as usize % odd.len()]
+                } else {
+                    v as u32
+                }
+                .to_le_bytes(),
+            );
+        }
+        b
+    }
+
+    #[test]
+    fn decode_peaks_into_matches_the_peak_by_peak_decoding() {
+        for wide in [false, true] {
+            let item = if wide { 12 } else { 8 };
+            for n in [0usize, 1, 2, 3, 7, 64, 1025] {
+                let mut b = peak_bytes(n, item, 0x9e37_79b9 + n as u64);
+                // a trailing partial item is ignored by both
+                b.extend([1u8, 2, 3]);
+                let old: Vec<Peak> = b
+                    .chunks_exact(item)
+                    .map(|c| {
+                        if wide {
+                            Peak {
+                                mz: read_f64_le(c, 0).unwrap(),
+                                abundance: read_f32_le(c, 8).unwrap(),
+                            }
+                        } else {
+                            Peak {
+                                mz: read_f32_le(c, 0).unwrap() as f64,
+                                abundance: read_f32_le(c, 4).unwrap(),
+                            }
+                        }
+                    })
+                    .collect();
+                // two windows appended to vectors that already hold a window
+                let (mut mz, mut int) = (vec![1.5f64], vec![2.5f32]);
+                decode_peaks_into(&b, wide, &mut mz, &mut int);
+                decode_peaks_into(&b, wide, &mut mz, &mut int);
+                assert_eq!(mz.len(), 1 + 2 * old.len());
+                for (i, p) in old.iter().chain(old.iter()).enumerate() {
+                    assert_eq!(mz[1 + i].to_bits(), p.mz.to_bits());
+                    assert_eq!(int[1 + i].to_bits(), p.abundance.to_bits());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_flat_decoders_match_the_peak_by_peak_decoding() {
+        let b = peak_bytes(129, 12, 7);
+        let pairs = peaks_f32_pairs(&b);
+        assert_eq!(pairs.len(), b.len() / 8);
+        for (c, p) in b.chunks_exact(8).zip(&pairs) {
+            assert_eq!(
+                p.mz.to_bits(),
+                (read_f32_le(c, 0).unwrap() as f64).to_bits()
+            );
+            assert_eq!(p.abundance.to_bits(), read_f32_le(c, 4).unwrap().to_bits());
+        }
+        let triplets = peaks_f32_triplets(&b);
+        assert_eq!(triplets.len(), b.len() / 12);
+        for (c, p) in b.chunks_exact(12).zip(&triplets) {
+            assert_eq!(
+                p.mz.to_bits(),
+                (read_f32_le(c, 4).unwrap() as f64).to_bits()
+            );
+            assert_eq!(p.abundance.to_bits(), read_f32_le(c, 8).unwrap().to_bits());
+        }
+    }
+
+    #[test]
+    fn profile_points_into_arrays_match_the_pairs() {
+        let signal = |n: usize, seed: u64| -> Vec<f32> {
+            peak_bytes(n, 4, seed)
+                .chunks_exact(4)
+                .map(|c| read_f32_le(c, 0).unwrap())
+                .collect()
+        };
+        let profile = Profile {
+            first_value: 100.0,
+            step: 0.25,
+            peak_count: 0,
+            nbins: 0,
+            chunks: vec![
+                ProfileChunk {
+                    first_bin: 0,
+                    signal: signal(33, 1),
+                    fudge: Some(0.001),
+                },
+                ProfileChunk {
+                    first_bin: 4000,
+                    signal: signal(17, 2),
+                    fudge: None,
+                },
+                ProfileChunk {
+                    first_bin: 9,
+                    signal: Vec::new(),
+                    fudge: Some(-0.5),
+                },
+            ],
+        };
+        let sets: [&[f64]; 5] = [
+            &[],
+            &[0.0, 1.0, 2.0, 3.0],
+            &[0.0, 0.0, 1.0e6, -2.0e12, 3.0e18],
+            &[0.0, 0.0, 1.0e6, -2.0e12, 3.0e18, 0.0, 0.0],
+            &[1.0, 2.0],
+        ];
+        for coefficients in sets {
+            let pairs = profile.to_mz_intensity(coefficients);
+            let om: Vec<f64> = pairs
+                .iter()
+                .filter(|(m, _)| *m > 0.0)
+                .map(|(m, _)| *m)
+                .collect();
+            let oi: Vec<f32> = pairs
+                .iter()
+                .filter(|(m, _)| *m > 0.0)
+                .map(|(_, i)| *i as f32)
+                .collect();
+            let (mut mz, mut int) = (Vec::new(), Vec::new());
+            profile.to_mz_intensity_into(coefficients, &mut mz, &mut int);
+            assert_eq!(mz.len(), om.len());
+            assert!(mz.iter().zip(&om).all(|(a, b)| a.to_bits() == b.to_bits()));
+            assert!(int.iter().zip(&oi).all(|(a, b)| a.to_bits() == b.to_bits()));
+        }
+    }
 
     /// Peaks, then a footer (56 bytes) that describes them, as a TSQ GC full-scan record.
     fn footer_record(peaks: &[(f32, f32)], start: u32) -> Vec<u8> {
@@ -955,6 +1187,23 @@ mod tests {
         };
         let result = profile.to_mz_intensity(&[]);
         assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn to_mz_intensity_without_coefficients_starts_one_step_after_the_first_value() {
+        let profile = Profile {
+            first_value: 300.0,
+            step: 0.5,
+            peak_count: 1,
+            nbins: 2,
+            chunks: vec![ProfileChunk {
+                first_bin: 0,
+                signal: vec![1.0, 2.0],
+                fudge: None,
+            }],
+        };
+        let mz: Vec<f64> = profile.to_mz_intensity(&[]).iter().map(|p| p.0).collect();
+        assert_eq!(mz, vec![300.5, 301.0]);
     }
 
     #[test]

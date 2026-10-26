@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Drop-down toolbar of the editor (Disegno). Ketcher has no API to rearrange its toolbars, so a group of its buttons is replaced by ONE proxy button
 // that opens a small menu; choosing an item clicks the real (hidden) Ketcher button, and the proxy mirrors which one is selected.
 // To add a group: one entry of GROUPS (the data-testid of the real buttons + a key of lang/ for each tooltip).

@@ -59,7 +59,7 @@ function attach(p) {
       if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = c.dy / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
       draw(p);
     } else if (drag && drag.cursor) moveCur(x);                // dragging the vertical line: the linked spectrum follows
-    else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
+    else if (drag && (drag.edge || drag.fw)) { if (drag.fw) { if (x != null) FONDOP.put(p, drag.fw.t0 + x - drag.fw.x0); } else edgeMove(drag.edge, x); draw(p); }
     else if (drag && drag.ya) {                               // line along the y axis: only the intensity axis is zoomed
       drag.y = Math.max(M.t, Math.min(a.H - M.b, py)); zl.hidden = false; zl.className = "zl v";
       zl.style.left = cv.offsetLeft + M.l - 20 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";
@@ -80,7 +80,7 @@ function attach(p) {
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
     if (p.rd) p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
-    showHover(p, px, py); if (drag) p.tip.hidden = true;
+    showHover(p, px, py); if (drag) p.tip.hidden = true; if (p.type === "spec" && window.XICLENS) XICLENS.move(p, px, py, !!drag);
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py, e);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };
@@ -103,22 +103,26 @@ function attach(p) {
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
   cv.addEventListener("mousemove", e => pendHint(p, e));
-  cv.onmouseleave = () => { if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  cv.onmouseleave = e => { if (p.type === "spec" && window.XICLENS) XICLENS.leave(p, e); if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
-    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
+    if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null, zo: p.zoom ? [...p.zoom] : null, zyo: p.zoomY ? [...p.zoomY] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
-    const ed = edgeAt(px); drag = ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
+    const fw = p.type !== "spec" && p.type !== "map" && FONDOP.gripAt(p, px, py), ed = edgeAt(px); if (fw) e.preventDefault(); drag = fw ? { fw: FONDOP.begin(p, xd(px)) } : ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
   };
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true; if (d.ax !== undefined && window.MAPPA) MAPPA.guide(p, null);
     if (p.type === "map" && window.MAPPA && MAPPA.touched(p)) { zl.hidden = true; return; }       // mappa.js: the mouse events after a finger gesture
     zl.hidden = true; p._hz = null;
-    if (d.pan) { uiSave(); return; }
+    if (d.pan) {                                                  // the whole drag is ONE zoom step: the view before it is the snapshot
+      const fin = [p.zoom, p.zoomY];
+      if (JSON.stringify(fin) !== JSON.stringify([d.zo, d.zyo])) { p.zoom = d.zo; p.zoomY = d.zyo; pushZh(p); [p.zoom, p.zoomY] = fin; }
+      uiSave(); return;
+    }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
-    if (d.cursor) { uiSave(); return; }
+    if (d.cursor || d.fw) { uiSave(); return; }
     const a = p._a;
     if (a && (d.ya || d.xa) && Math.abs((d.ya ? d.y - d.y0 : d.x - d.x0)) > 4) pushZh(p);
     if (d.ya) { if (a && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0))); return; }
@@ -128,7 +132,7 @@ function attach(p) {
     if (p.type === "map" && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p.type === "map" && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
-      const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
+      const it = p._pickNoise; p._pickNoise = null; p.sel = null; pushIh(p, intSnap(p)); it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
@@ -168,6 +172,7 @@ function attach(p) {
     if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
     if (!(e.ctrlKey || e.metaKey) && p._a && p.zoom && p.type !== "map" && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {      // trackpad: two fingers sideways pan the zoomed x axis (vertical scroll still moves the page)
       e.preventDefault(); const a = p._a, span = a.x1 - a.x0, dx = e.deltaX / (a.W - M.l - M.r) * span;
+      if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();                // a burst of sideways steps is one step
       p.zoom = clampView(a.x0 + dx, a.x1 + dx, a.full[0], a.full[1]); drawSoon(p); return;
     }
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
@@ -227,12 +232,32 @@ function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
   if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
   if (!o.step) { p._msg = null; p._sk = null; }              // a click or a drag starts a new walk: the axes of the spectrum are free again
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => {
-    s.r0 = r0; s.r1 = r1; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
+    const sh = s.uv && p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0; s.r0 = r0 - sh; s.r1 = r1 - sh; if (!(s.kSet && E.files[s.k]?.vis && !E.files[s.k].gone) && (!s.uv || E.files[k]?.pda)) { s.k = k; s.kSet = false; } s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
     if (!keepZoom) s.zoom = null;
     if (!o.step) { s.lock = null; ctl(s); }                  // no rebuilding of the controls while scrolling
     if (o.step) scAhead(s);
     drawSoon(s);
   });
+}
+/** A UV spectrum of the DAD under panel `from` (module loaded on first use). @param {any} from @param {number} k @param {number} r0 @param {number} r1 */
+async function uvOpen(from, k, r0, r1) {
+  if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
+  return window.UVSPEC.open(from, k, r0, r1);
+}
+/** The controls of a PDA chromatogram: the extract button is "λ" (wavelength) instead of "XIC", and a trace by wavelength has its range in nm. @param {any} p @returns {string} */
+function wlCtl(p) {
+  const b = p.el.querySelector('[data-a="xic"]');
+  const pda = p.kind === "pda";
+  if (p._kw !== undefined && p._kw !== p.kind && (pda || p._kw === "pda")) p.mz0 = p.mz1 = null;      // m/z and nm are different ranges: the choice of the kind clears it
+  p._kw = p.kind;
+  if (pda) { p.mz0 ??= p.mz1; p.mz1 ??= p.mz0; }      // a wavelength range has both ends, or none
+  if (b) { b.dataset.t0 ??= b.title; b.textContent = pda ? "λ" : "XIC"; b.title = pda ? I18N.t("panel.wl.title") : b.dataset.t0; }
+  return !pda || p.mz0 == null ? "" : `<label class="muted" title="${I18N.t("ctl.wl.title")}"><i>λ</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz0)}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(p.mz1)}"> nm</label>`;
+}
+/** A trace of the DAD at the wavelengths nm0..nm1 (a PDA chromatogram) under panel `from`. @param {any} from @param {number} nm0 @param {number} nm1 @param {number} [k] */
+async function wlOpen(from, nm0 = 250, nm1 = 260, k) {
+  if (!window.UVSPEC) window.UVSPEC = await import("./uv-spettro.js");
+  return window.UVSPEC.openWl(from, nm0, nm1, k);
 }
 // A new spectrum from a chromatogram (double click, right click) is the "live" one: it sits right under the chromatogram (the older ones slide down),
 // and only it follows clicks, cursor, arrows and selections. The older ones are frozen: they keep their time in the title and stay children of the
@@ -252,12 +277,17 @@ function freezeSpec(s) {
 function liveSpec(s, from) {
   E.panels.filter(q => q !== s && q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   s.link = from.id; s.src = from.id; ctl(s);
-  if (from.cur != null && s.r0 == null) { const dt = scanStep(); s.r0 = from.cur - dt / 2; s.r1 = from.cur + dt / 2; }
+  if (from.cur != null && (s.uv || s.r0 == null)) { const dt = s.uv ? 0 : scanStep() / 2, sh = s.uv && from.kind === "pda" && window.DISP ? DISP.pdaShift(from) : 0; s.r0 = from.cur - dt - sh; s.r1 = from.cur + dt - sh; }
   draw(s); uiSave();
 }
-function newSpec(from, r0, r1, k, link = from.id) {
+COMANDI.gestore("panel.link", { leggi: p => JSON.stringify([p.link ?? null, p.src ?? null, p.title, p.r0 ?? null, p.r1 ?? null]), applica: (p, snap) => { [p.link, p.src, p.title, p.r0, p.r1] = JSON.parse(snap); ctl(p); } });   // freeze/follow from the menu or the bar is one undoable step; newSpec freezes without one
+/** @param {any} s */
+const spLinkFreeze = s => COMANDI.fai("panel.link", s, () => freezeSpec(s));
+/** @param {any} s @param {any} from */
+const spLinkFollow = (s, from) => COMANDI.fai("panel.link", s, () => liveSpec(s, from));
+function newSpec(from, r0, r1, k, link = from.id, extra = {}) {
   if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
-  const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec });
+  const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? ptProduct(from.prec) : PT.spec, ...extra });
   
   // Disable transition temporarily so it doesn't fly from the bottom
   s.el.classList.add("drag");
@@ -269,7 +299,7 @@ function newSpec(from, r0, r1, k, link = from.id) {
   stackAfter(s, from); relayout(); fitHost();
   if (UIP.beside && window.AFFIANCA) AFFIANCA.accanto(s, from);        // the option «Spectrum beside the chromatogram»: same row when there is room (affianca.js)
   // Do NOT reveal(s) so the viewport does not shift randomly
-  return s;
+  return apriAnnullabile(s);
 }
 
 // The peak a click on the spectrum means: a click inside the box of a peak label gives exactly that peak; otherwise the peak the mouse box highlights (p._a.snap).
@@ -314,6 +344,8 @@ function ctxFor(p, e, x, px, py) {
     items.push("-");
     if (p.sel) items.push({ label: I18N.t("ctx.spec.avgSel"), fn: () => newSpec(p, p.sel[0], p.sel[1], f.k) });
     items.push({ label: I18N.t("ctx.spec.atRt"), fn: () => newSpec(p, x - dt / 2, x + dt / 2, f.k) });
+  } else if (p.type === "spec" && p.uv) {
+    items.push({ label: I18N.t("ctx.uv.where", { nm: Math.round(x) }), dim: true }, "-", ...AZIONI.per({ vista: "uv", p, x, px, py, e, near }));
   } else if (p.type === "spec") {                              // the actions of the registry azioni/1 (spettro.js and the modules that add theirs)
     const a = p._a, m = specPick(p, px, py);                  // the SAME peak that the label and the mouse box show; on empty space the m/z entries are grey
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…";
@@ -350,10 +382,19 @@ function ctxFor(p, e, x, px, py) {
       p.cur = at; newSpec(p, r0, r1, kk);          // every new spectrum is LIVE right under the chromatogram; the previous ones freeze
       if (c.dbl) draw(p);
     } });
-  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
+  // PDA trace: the double click gives the UV spectrum at that time of the detector (the trace may be shown later by «Allinea PDA e massa»); with a selection, the mean (uv-spettro.js)
+  /** @param {any} p */
+  const pdaT = p => (window.DISP ? DISP.pdaShift(p) : 0);
+  reg({ id: "chrom.uvAtRt", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", nome: () => T("ctx.uv.atRt"), doppioOrd: 3,
+    doppio: /** @param {any} c */ c => c.p.kind === "pda" && !!c.p._a && !c.p.el.classList.contains("max"),
+    esegui: /** @param {any} c */ c => { if (c.dbl) { c.p.sel = null; c.p.cur = c.x; draw(c.p); } return uvOpen(c.p, c.k, c.x - pdaT(c.p), c.x - pdaT(c.p)); } });
+  reg({ id: "chrom.uvAvgSel", gruppo: "extract", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.uv.avgSel"),
+    esegui: /** @param {any} c */ c => uvOpen(c.p, c.k, c.p.sel[0] - pdaT(c.p), c.p.sel[1] - pdaT(c.p)) });
+  reg({ id: "chrom.wl", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind === "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.wl" }, nome: () => T("ctx.chrom.wl"), esegui: /** @param {any} c */ c => wlOpen(c.p) });
+  reg({ id: "chrom.xic", gruppo: "xic", viste: ["chrom"], visibile: /** @param {any} c */ c => c.p.kind !== "pda", scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.xic"), esegui: /** @param {any} c */ c => openXic(null, { after: c.p }) });
   reg({ id: "xic.addIon", gruppo: "xic", viste: ["xic"], scorciatoia: { tasto: "x", dove: "chart", et: "scorc.xic" }, nome: () => T("ctx.chrom.addIon"), esegui: /** @param {any} c */ c => openXic(c.p) });
   reg({ id: "chrom.annotate", gruppo: "tools", ordine: 9, nome: () => T("ctx.annotate.point"),
-    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { c.p.anns.push({ x: c.x, text: v }); draw(c.p); } } });
+    esegui: /** @param {any} c */ async c => { const v = await ask(T("ctx.annotate.prompt", { rt: c.x.toFixed(2) }), ""); if (v) { COMANDI.fai("spec.annotation", c.p, () => c.p.anns.push({ x: c.x, text: v })); draw(c.p); } } });
 })();
 
 // the actions common to every graph but the map (registry azioni/1): zoom reset (first in the menu, grey without a zoom) and the annotations (last, grey away from one);
@@ -362,7 +403,7 @@ function ctxFor(p, e, x, px, py) {
 async function editAnn(p, ann) {
   const v = await ask(I18N.t("ctx.ann.prompt"), ann.text);
   if (v == null) return;
-  if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v;
+  COMANDI.fai("spec.annotation", p, () => { if (v === "") p.anns = p.anns.filter(/** @param {any} a */ a => a !== ann); else ann.text = v; });
   draw(p);
 }
 (() => {
@@ -374,7 +415,7 @@ async function editAnn(p, ann) {
   reg({ id: "ann.edit", gruppo: "ann", ordine: 1, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near, doppio: /** @param {any} c */ c => !!c.near, doppioOrd: 1,
     nome: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => editAnn(c.p, c.near) });
   reg({ id: "ann.delete", gruppo: "ann", ordine: 2, visibile: /** @param {any} c */ c => !!c.near, disponibile: /** @param {any} c */ c => !!c.near,
-    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); draw(c.p); } });
+    nome: /** @param {any} c */ c => T("ctx.ann.delete", { text: c.near ? c.near.text : "…" }), esegui: /** @param {any} c */ c => { COMANDI.fai("spec.annotation", c.p, () => { c.p.anns = c.p.anns.filter(/** @param {any} a */ a => a !== c.near); }); draw(c.p); } });
 })();
 
 // LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
@@ -402,7 +443,7 @@ async function showMethod(sel) {
   const again = () => showMethod(sel);
   const f = E.files[E.cur], held = METODO_M.any();      // the Agilent *.m method folders loaded outside any run (metodo-m.js) show here too
   if (!f) return held ? showHeldMethods("") : info(I18N.t("method.none"));
-  let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
+  let m; try { m = await J("api/method?k=" + f.k); } catch (e_) { const e = /** @type {Lanciato} */ (e_); return held ? showHeldMethods(I18N.t("method.error", { message: EH(e.message) })) : info(I18N.t("method.error", { message: EH(e.message) })); }
   const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${EH(a)}</td><td>${EH(String(b))}</td></tr>`;   // values come from the file: always escaped here
   const pol = ["positive", "negative", "mixed", "unknown"].includes(m.polarity) ? I18N.t(`method.pol.${m.polarity}`) : m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
@@ -468,7 +509,7 @@ function loadDam() {
       if (j.error) throw I18N.err(j);
       if (typeof ST !== "undefined") { ST.methods = j.methods || ST.methods; renderMethods(); }
       methodWarn(); showMethod();
-    } catch (e) { info(I18N.t("method.error", { message: EH(e.message) })); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); info(I18N.t("method.error", { message: EH(e.message) })); }
   };
   inp.click();
 }
@@ -479,11 +520,11 @@ function openBT() { window.open("https://biotransformer.ca/new", "_blank", "noop
 window.openBT = openBT;
 
 // ------------------------------------------------------------------ barra strumenti
-Q("#np-chrom").onclick = () => reveal(addPanel("chrom", {}));
-Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 })); };
+Q("#np-chrom").onclick = () => reveal(apriAnnullabile(addPanel("chrom", {})));
+Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(apriAnnullabile(addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }))); };
 Q("#np-xic").onclick = () => openXic(null);
-Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(addPanel("map", { k: f?.k ?? 0, tab: "full" })); };
-Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
+Q("#np-map").onclick = () => { const f = scanFiles(tabFiles("full").filter(x => x.vis))[0] || scanFiles(tabFiles("full"))[0]; reveal(apriAnnullabile(addPanel("map", { k: f?.k ?? 0, tab: "full" }))); };
+Q("#np-mrm").onclick = () => reveal(apriAnnullabile(addPanel("mrm", { imode: "man", intf: "all" })));
 const closeAllBtn = Q("#np-closeall");
 if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { STATO.aggiunta(true, "add-files"); try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
@@ -542,10 +583,13 @@ ESC.registra({
   aperto: () => E.panels.some(q => pendKey(q)) || measAperta(E.active),
   chiudi: () => {
     const p = E.panels.find(q => pendKey(q)); if (!p) return measClear(E.active);
-    if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
-    const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
-    draw(p); uiSave();
-    if (measAperta(E.active)) measClear(E.active);                          // the ruler goes away with the same press
+    const passo = () => {
+      if (p._ibkA) p._ibkA = null; else { if (p.meas.list.length) p.meas.ref = null; else p.meas = null; }
+      const q = Q("#qtip"); if (q && q._pd) { q.hidden = true; q._pd = null; }
+      draw(p); uiSave();
+      if (measAperta(E.active)) measClear(E.active);                          // the ruler goes away with the same press
+    };
+    if (p.type === "spec") COMANDI.fai("spec.ruler", p, passo); else passo();   // one press = one undo step
   },
 });
 document.addEventListener("keydown", e => {
@@ -641,7 +685,7 @@ async function calcRun() {
       Q("#calcdlg").close();
       openXic([...tabPanels()].reverse().find(q => q.type === "xic") || null, { formula: r.formula, adduct: b.dataset.a });
     });
-  } catch (e) { sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
 }
 Q("#calcin").oninput = calcRun;
 
@@ -673,3 +717,5 @@ Q("#calcin").oninput = calcRun;
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
   addEventListener("scroll", hide, true);
 })();
+// the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (comandi.js)
+COMANDI.gestore("spec.annotation", { leggi: p => JSON.stringify(p.anns || []), applica: (p, snap) => { p.anns = JSON.parse(snap); } });

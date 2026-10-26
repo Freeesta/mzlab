@@ -43,6 +43,13 @@ impl Value {
             _ => None,
         }
     }
+    /// The members of an object, in their order; empty for any other value.
+    pub fn entries(&self) -> &[(String, Value)] {
+        match self {
+            Value::Obj(m) => m,
+            _ => &[],
+        }
+    }
     pub fn arr(&self) -> &[Value] {
         match self {
             Value::Arr(a) => a,
@@ -65,7 +72,11 @@ struct P<'a> {
 
 impl P<'_> {
     fn ws(&mut self) {
-        while self.i < self.b.len() && matches!(self.b[self.i], b' ' | b'\n' | b'\r' | b'\t') {
+        while self
+            .b
+            .get(self.i)
+            .is_some_and(|c| matches!(c, b' ' | b'\n' | b'\r' | b'\t'))
+        {
             self.i += 1;
         }
     }
@@ -79,7 +90,7 @@ impl P<'_> {
         }
     }
     fn lit(&mut self, s: &[u8], v: Value) -> Result<Value> {
-        if self.b[self.i..].starts_with(s) {
+        if self.b.get(self.i..).is_some_and(|r| r.starts_with(s)) {
             self.i += s.len();
             Ok(v)
         } else {
@@ -148,16 +159,16 @@ impl P<'_> {
     }
     fn number(&mut self) -> Result<Value> {
         let s = self.i;
-        while self.i < self.b.len()
-            && matches!(
-                self.b[self.i],
-                b'0'..=b'9' | b'-' | b'+' | b'.' | b'e' | b'E'
-            )
+        while self
+            .b
+            .get(self.i)
+            .is_some_and(|c| matches!(c, b'0'..=b'9' | b'-' | b'+' | b'.' | b'e' | b'E'))
         {
             self.i += 1;
         }
-        std::str::from_utf8(&self.b[s..self.i])
-            .ok()
+        self.b
+            .get(s..self.i)
+            .and_then(|r| std::str::from_utf8(r).ok())
             .and_then(|t| t.parse::<f64>().ok())
             .map(Value::Num)
             .ok_or_else(bad)
@@ -295,6 +306,32 @@ impl Out {
 
 pub use crate::jsonround::round;
 
+/// A parsed value written back as it came (object keys in their order).
+pub fn write_value(o: &mut Out, v: &Value) {
+    match v {
+        Value::Null => o.raw("null"),
+        Value::Bool(b) => o.raw(if *b { "true" } else { "false" }),
+        Value::Num(x) => o.num(*x),
+        Value::Str(t) => o.str(t),
+        Value::Arr(a) => {
+            o.raw("[");
+            for (i, x) in a.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" });
+                write_value(o, x);
+            }
+            o.raw("]")
+        }
+        Value::Obj(m) => {
+            o.raw("{");
+            for (i, (k, x)) in m.iter().enumerate() {
+                o.raw(if i > 0 { "," } else { "" }).str(k).raw(":");
+                write_value(o, x);
+            }
+            o.raw("}")
+        }
+    };
+}
+
 /// Python's `format(x, "g")` (six significant digits, no trailing zeros).
 pub fn fmt_g(x: f64) -> String {
     if x == 0.0 {
@@ -321,6 +358,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn parses_and_writes() {
         let v = parse(r#"{"a":[1,2.5,null,"xè\n"],"b":{"c":true}}"#.as_bytes()).unwrap();
         assert_eq!(v.get("a").unwrap().at(1).unwrap().f64(), Some(2.5));

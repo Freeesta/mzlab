@@ -320,3 +320,33 @@ fn tree_candidates_carry_the_scores_apart_and_obey_the_filters() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// `tol_ppm` replaces `tol_da`: q0 is within 13 ppm of Alpha on every fragment, so 30 ppm gives the score of the Da window and 1 ppm pairs nothing.
+#[test]
+fn tol_ppm_replaces_the_fragment_window_in_da() {
+    let dir = fixture("ppm");
+    let score = |params: &str| -> Option<(f64, usize)> {
+        run(&dir, "spectral_entropy", params);
+        let h = hits(&dir);
+        let best = h
+            .get("hits")
+            .unwrap()
+            .arr()
+            .iter()
+            .find(|x| x.get("query").unwrap().str() == Some("q0"))
+            .map(|b| {
+                assert_eq!(b.get("name").unwrap().str(), Some("Alpha"));
+                (
+                    b.get("score").unwrap().f64().unwrap(),
+                    b.get("shared").unwrap().f64().unwrap() as usize,
+                )
+            });
+        best
+    };
+    let da = score(r#"{"tol_da":0.01}"#).unwrap();
+    assert_eq!(score(r#"{"tol_da":0.01,"tol_ppm":30}"#), Some(da));
+    // tol_da is ignored once tol_ppm is set
+    assert_eq!(score(r#"{"tol_da":0.0001,"tol_ppm":30}"#), Some(da));
+    assert_eq!(score(r#"{"tol_da":0.01,"tol_ppm":1}"#), None);
+    let _ = std::fs::remove_dir_all(&dir);
+}

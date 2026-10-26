@@ -34,6 +34,26 @@ fn recipe_of(p: &UntParams) -> Recipe {
     r
 }
 
+/// `run::file_key` of the untargeted engine: its `.mzfeatf` carries only the tolerances of the join in the meta, so the hash is taken from the parameters of
+/// detection itself (`u` + 16 hex digits). `check_stored` cannot compare it with the meta and relies on the file name.
+pub fn file_key<R: ReadAt>(params: &str, index: &Index<R>) -> Result<String> {
+    let p = UntParams::from_json(params)?;
+    let text = format!(
+        "crate={} feat={}\npolarity={:?}\nadap={:?}\nbaseline={:?}\nresolve={:?}",
+        mzlab_feat::CRATE_VERSION,
+        mzlab_feat::FEAT_VERSION,
+        p.polarity,
+        p.adap,
+        p.baseline,
+        p.resolve
+    );
+    let h = mzlab_feat::recipe::fingerprint(&text);
+    Ok(crate::cache::key_of(
+        &source_sha256(index),
+        &format!("u{}", &h[..16]),
+    ))
+}
+
 /// Median interval between MS1 scans, seconds (the `dt` that the rows of the table use to turn heights into areas).
 fn scan_interval<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<f64> {
     let Some(si) = ix.section_of(1, p.polarity) else {

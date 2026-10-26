@@ -12,6 +12,9 @@
 //! the start of the region, no point within ± `search_rt` is lower, and the apex is at least `min_ratio` times that minimum; the closed region must then
 //! pass the shape filter on both edges, otherwise it is dropped and the walk goes on from the minimum.
 
+use crate::broad::{detect_broad, BroadParams};
+use mzlab_core::error::Result;
+
 /// Parameters of the resolver (mzmine names in the comments; values of `tools/bench/parametri/mzmine/predefinita.json`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct MinParams {
@@ -49,6 +52,20 @@ impl Default for MinParams {
     }
 }
 
+impl MinParams {
+    /// Sets the peak duration range (minutes).
+    pub fn with_duration(mut self, duration: (f64, f64)) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    /// Sets the upper limit of the peak duration in minutes (keeping the lower limit as it is).
+    pub fn with_max_duration(mut self, max_duration: f64) -> Self {
+        self.duration.1 = max_duration;
+        self
+    }
+}
+
 /// The trace on ALL the MS1 scans of the file, in scan order: `y[i]` is the intensity of its point in scan `i` (0 where the trace has none, so a
 /// missing scan closes a region) and `mz[i]` its m/z (0 where `y[i]` is 0).
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -71,6 +88,8 @@ pub struct Feature {
     pub area_s: f64,
     /// First and last scan of the peak, both included.
     pub scans: (usize, usize),
+    /// From the broad-band pass.
+    pub broad: bool,
 }
 
 /// Quantile as `MathUtils.calcQuantile`: sort, then the mean of the values at `floor((n-1)·q)` and `ceil((n-1)·q)` (no other interpolation);
@@ -230,6 +249,7 @@ fn make_feature(rt: &[f64], c: &Chrom, s: usize, e: usize) -> Feature {
         area,
         area_s: area * 60.0,
         scans: (s, e),
+        broad: false,
     }
 }
 
@@ -244,4 +264,38 @@ pub fn resolve(c: &Chrom, rt: &[f64], p: &MinParams) -> Vec<Feature> {
         .into_iter()
         .map(|(s, e)| make_feature(rt, c, s, e))
         .collect()
+}
+
+/// [`resolve`] plus the broad bands: the narrow regions (found on the thresholded copy as ever) are inpainted away from the ORIGINAL trace, which is
+/// searched by `broad::detect_broad` before the quantile threshold could shave the band. With `bp.enabled == false` it is exactly [`resolve`].
+pub fn resolve_with_broad(
+    c: &Chrom,
+    rt: &[f64],
+    p: &MinParams,
+    bp: &BroadParams,
+) -> Result<Vec<Feature>> {
+    if !bp.enabled || c.y.len() != rt.len() || c.mz.len() != rt.len() {
+        return Ok(resolve(c, rt, p));
+    }
+    let mut y = c.y.clone();
+    let narrow = regions(rt, &mut y, p);
+    let mut out: Vec<Feature> = narrow
+        .iter()
+        .map(|&(s, e)| make_feature(rt, c, s, e))
+        .collect();
+    let rt_s: Vec<f64> = rt.iter().map(|m| m * 60.0).collect();
+    for b in detect_broad(&rt_s, &c.mz, &c.y, &narrow, bp)? {
+        out.push(Feature {
+            mz: b.mz,
+            rt_apex: b.rt_apex / 60.0,
+            rt_start: b.rt_lo / 60.0,
+            rt_end: b.rt_hi / 60.0,
+            height: b.height,
+            area: b.area_s / 60.0,
+            area_s: b.area_s,
+            scans: (b.scan_lo, b.scan_hi),
+            broad: true,
+        });
+    }
+    Ok(out)
 }

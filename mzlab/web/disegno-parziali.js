@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Partial structures of the drawing: a set of atoms inside brackets with a delta «+O -H2» (a change whose position is unknown: a hydroxylation somewhere on
 // the ring). Stored in the drawing as a data S-group of Ketcher on the atoms (fieldName «MZLAB», fieldData = the delta, context «Fragment»), so it is saved in
 // the .ket and travels with the molfile. Brackets and text are drawn by parentesi.js over the canvas; formula, mass and m/z with the delta come from the Rust

@@ -164,9 +164,36 @@ pub(super) fn rt_predict() -> Step {
     Step {
         ins: vec![
             Port::new("candidates", DataType::Candidates, "Candidates with a structure").requires(hr()),
-            Port::new("standards", DataType::Table, "Identified features of the campaign with their RT"),
+            Port::new("standards", DataType::Table, "Identified features of the campaign with their RT (CSV smiles,rt)"),
+            Port {
+                optional: true,
+                ..Port::new("queries", DataType::Table, "Observed RT of each query (CSV query,rt); absent: the rt of the hit")
+            },
         ],
         outs: vec![Port::new("candidates", DataType::Candidates, "Candidates with the RT evidence")],
+        params: vec![
+            Param::text("parent", "Parent structure")
+                .doc("SMILES of the parent compound: each candidate then gets delta_logp (Crippen) against it"),
+            Param::number("parent_rt", "Parent RT")
+                .min(0.0)
+                .unit("min")
+                .doc("With a parent: the direction of the RT change (rt_dir) and whether it agrees with delta_logp (rt_dir_agrees)"),
+            Param::number("polarity_margin", "logP margin")
+                .min(0.0)
+                .default_num(0.3)
+                .doc("A change of logP within this margin gives no direction"),
+            Param::number("rt_margin", "RT margin")
+                .min(0.0)
+                .default_num(0.2)
+                .unit("min")
+                .doc("A change of RT within this margin gives no direction"),
+            Param::choice("order", "Order", &["none", "residual"])
+                .default_str("none")
+                .doc("residual: within each query the candidates with the smallest |residual| first; a candidate without a prediction last"),
+            Param::boolean("drop_outside", "Drop outside the window")
+                .default_bool(false)
+                .doc("On: the candidates whose RT falls outside the window are removed (logp_window only)"),
+        ],
         algorithms: vec![logp_window(), forest()],
         default_algorithm: Some("logp_window"),
         per_item: true,
@@ -195,7 +222,10 @@ fn logp_window() -> Algorithm {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("min")
-                .doc("Dwell volume over flow; the gradient itself ([[t, %B], ...]) is read from the campaign")
+                .doc("Dwell volume over flow, used with the gradient: the compound is taken to meet the %B of the gradient this long before its RT")
+                .advanced(),
+            Param::text("lc_gradient", "Gradient")
+                .doc("The %B profile as t:%B pairs separated by semicolons (minutes, ascending), e.g. 0:5;10:95;12:95. Given: the window is fitted on the largest %B met, so rt_pred, rt_resid and the window are in %B (rt_unit) and the floor 0 means 3 %B; empty: the fit is on the RT in minutes")
                 .advanced(),
             Param::boolean("rt_logp_terms", "Score terms")
                 .default_bool(false)

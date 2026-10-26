@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Archive of the browser version: the files the student opened and their .mzidx indexes live in OPFS (the origin private file system),
 // outside the memory of the page. The Rust engine's worker (rust-worker.js) and the index builders use this module, so they are the only places that hold
 // OPFS handles; each is opened for one write and closed at once. Reading goes through File objects (getFile).
@@ -31,7 +31,7 @@ export async function locked(kind, name, fn) {
   const key = "mzlab-file:" + kind + "/" + name, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), WAIT_MS);
   try {
     return await L.request(key, { mode: "exclusive", signal: ctl.signal }, async () => { clearTimeout(timer); return fn(); });
-  } catch (e) {
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_);
     if (e && e.name === "AbortError") throw fail("error.fileInUse", { file: name });
     throw e;
   } finally { clearTimeout(timer); }
@@ -72,7 +72,7 @@ const dir = async kind => (await root()).getDirectoryHandle(kind, { create: true
 export function writeFull(ah, data, at) {
   let done = 0;
   try { while (done < data.length) { const n = ah.write(data.subarray(done), { at: at + done }); if (!(n > 0)) break; done += n; } }
-  catch (e) { if (!(e && e.name === "QuotaExceededError")) throw e; }
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); if (!(e && e.name === "QuotaExceededError")) throw e; }
   return done;
 }
 // the error.quota of the page (as a string, like the other errors of the engine): `needed` bytes in all, the room left asked to the browser
@@ -136,7 +136,7 @@ export async function promote(kind, from, to) {
 // ---- read leases: the worker of the engine reads an index in use through a SyncAccessHandle (direct, no copy through the browser process, which a File read has).
 // The handle is exclusive, so it is closed after LEASE_IDLE ms without reads and whenever the worker has no request in flight (parkAll; another tab can write the file), before this worker writes, moves or removes the file,
 // and reopened by wake() at the next request. Without a handle (taken, or not supported) leaseRead() answers -1 and the caller reads the File as before.
-const LEASE_IDLE = 2000, leases = new Map();
+const LEASE_IDLE = 2000, leases = new Map();   // a lease keeps the FileSystemFileHandle (`fh`) of its file between two openings
 const lkey = (kind, name) => kind + "/" + name;
 function park(l) { clearTimeout(l.timer); l.timer = 0; if (l.ah) { try { l.ah.close(); } catch (_) { /* already closed */ } l.ah = null; } }
 function arm(l) { l.timer = setTimeout(() => { const rest = l.last + LEASE_IDLE - performance.now(); if (rest > 0) { arm(l); } else park(l); }, LEASE_IDLE); }
@@ -144,7 +144,13 @@ async function openLease(l) {
   if (l.ah || l.open) return l.open;
   l.open = (async () => {
     try {
-      const ah = await (await (await dir(l.kind)).getFileHandle(l.name)).createSyncAccessHandle();
+      // the handle of the file (and of its directory) is kept between two openings: a request that wakes the lease does not walk the tree again; any failure looks the file up afresh
+      let ah;
+      try { ah = await (l.fh || (l.fh = await (await (l.dh || (l.dh = await dir(l.kind)))).getFileHandle(l.name))).createSyncAccessHandle(); }
+      catch (e_) { const e = /** @type {Lanciato} */ (e_);
+        if (!l.fh || (e && e.name === "NoModificationAllowedError")) { l.fh = l.dh = null; throw e; }
+        l.fh = l.dh = null; l.dh = await dir(l.kind); ah = await (l.fh = await l.dh.getFileHandle(l.name)).createSyncAccessHandle();
+      }
       // dropped while it was opening: never keep a handle nobody owns
       if (l.dead) { try { ah.close(); } catch (_) { /* already closed */ } return; }
       l.ah = ah; l.last = performance.now(); arm(l);
@@ -158,7 +164,7 @@ export async function dropLease(kind, name) { const k = lkey(kind, name), l = le
 export async function lease(kind, name) {
   if (!available()) return false;
   const k = lkey(kind, name);
-  if (!leases.has(k)) leases.set(k, { kind, name, ah: null, timer: 0, last: 0, open: null, dead: false });
+  if (!leases.has(k)) leases.set(k, { kind, name, ah: null, fh: null, dh: null, timer: 0, last: 0, open: null, dead: false });
   const l = leases.get(k); await openLease(l); return !!l.ah;
 }
 export async function parkAll() { for (const l of leases.values()) { await l.open; park(l); } }

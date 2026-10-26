@@ -101,6 +101,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             id: 0,
             nome: m.nome.clone(),
             scansioni: d.indice.len(),
+            dimensione: None,
         }],
         sha1: ole.sha1_hex(),
         nome: m.nome,

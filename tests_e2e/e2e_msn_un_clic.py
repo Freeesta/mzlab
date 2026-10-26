@@ -57,7 +57,8 @@ try:
             added = pg.evaluate("""(async f => { const r = await fetch('api/msnlib/aggiungi', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ libreria: '', molecola_id: 'STD', k: 0, formula: f }) }); const j = await r.json(); return j.error ? j : j.libreria })""", ion)
             assert isinstance(added, str), added
             pg.evaluate(PUT, added)
-            pg.evaluate(f"""{FLOWS}.plan.steps.push({{ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: {{ query: 'g.graph', library: 'file:lib.json' }}, params: {{}} }})""")
+            # the scheduler runs only a plan that checks: a query file of the plan and the library of the tree
+            pg.evaluate(f"""(() => {{ const S = {FLOWS}, l = S.plan.steps.find(s => s.step.startsWith('msn.library_export')); S.plan.inputs.push({{ name: 'q.mgf', type: 'spectra', sha256: '' }}); S.plan.steps.push({{ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: {{ query: 'file:q.mgf', library: l.id + '.library' }}, params: {{}} }}) }})()""")
             pg.click('button[aria-label="Run the plan in this browser"]')
             try: pg.wait_for_function("document.querySelectorAll('.fl-slots a[download]').length === 4", timeout=60000)
             except Exception: raise AssertionError("note: " + pg.inner_text(".fl-note[role=status]") + " | " + pg.inner_text(".fl-slots"))

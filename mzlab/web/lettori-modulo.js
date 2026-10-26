@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The readers modules in the page (docs/agenti/lettori-modulo.md): `LETTORI_MOD` opens, in a worker of its own (lettori-worker.js, started on the first request; each family's .wasm loaded when a file of it arrives), the files of a family that
 // the engine does not read, and gives their mzML as a File of OPFS. `shell.js moduloToMzml` (rule R of upload0) decides which files go here. Module loaded by carica.js.
 
@@ -65,9 +65,10 @@ const LETTORI_MOD = {
     return used.has((base + ".mzML").toLowerCase()) ? name + ".mzML" : base + ".mzML";
   },
   /** the File that stands for a sample the engine refused, in the list of the files until `shell.js moduloToMzml` converts it (members: [{ name, blob }]) */
-  stand(/** @type {string} */ name, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ fam) {
+  stand(/** @type {string} */ name, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ fam, /** @type {number | null | undefined} */ sampleSize = undefined) {
     const f = new File([JSON.stringify({ mzlab: "modulo1" })], name);
-    Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size: members.reduce((a, m) => a + m.blob.size, 0) } });
+    const size = sampleSize != null ? sampleSize : (members.length === 1 ? members[0].blob.size : null);
+    Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size } });
     return f;
   },
   /** what the module sees in a dataset */

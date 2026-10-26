@@ -227,6 +227,34 @@ fn the_wavelet_peak_model_is_an_algorithm_of_the_detection() {
 }
 
 #[test]
+fn the_broad_band_pass_is_one_switch_of_the_wavelet_model() {
+    let (dir, _) = fixture("broad");
+    let (plan, data, out) = (dir.join("plan.json"), dir.join("data"), dir.join("out"));
+    let run = |set: &[&str]| {
+        let mut args = vec![p(&plan), "--in", p(&data), "--out", p(&out)];
+        for s in set {
+            args.extend(["--set", s]);
+        }
+        flow_run(&args)
+    };
+    let o = run(&["det.algorithm=centwave", "det.broad_peaks=true"]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let as_run = std::fs::read_to_string(out.join("plan.json")).unwrap();
+    assert!(as_run.contains("\"broad_peaks\":true"), "{as_run}");
+    assert_eq!(
+        run(&["det.broad_peaks=true"]).code,
+        2,
+        "the pass belongs to centwave only"
+    );
+    assert_eq!(
+        run(&["det.algorithm=centwave", "det.broad_peaks=3"]).code,
+        2,
+        "a boolean"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn dry_run_writes_nothing_and_the_exit_codes_say_what_is_wrong() {
     let (dir, _) = fixture("dry");
     let plan = dir.join("plan.json");
@@ -325,6 +353,61 @@ fn the_recipe_of_the_layers_gives_the_bytes_of_flow_run() {
         "the layers change the table"
     );
     assert!(mzlab_feat_wasm::run::layers_from_json(r#"{"step":1}"#).is_err());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn the_parallel_alignment_reports_its_progress_and_the_bytes_do_not_change() {
+    use mzlab_core::budget::MemBudget;
+    use mzlab_feat_wasm::run;
+
+    use crate::flow_base::{open, Files};
+
+    let (dir, _) = fixture("progress");
+    let (data, out) = (dir.join("data"), dir.join("out"));
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&data),
+        "--out",
+        p(&out),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let names = ["s_t000", "s_t010", "s_t030"];
+    let peaks: Vec<PathBuf> = names
+        .iter()
+        .map(|k| out.join(format!("det-{k}.mzfeatf")))
+        .collect();
+    let mut recipe =
+        run::recipe_for_estimated("", &mut open(&out.join("idx-s_t000.mzidx")).unwrap()).unwrap();
+    recipe.fill_gaps = true;
+    recipe.weak_files = 1;
+    let idx = |k: usize| open(&out.join(format!("idx-{}.mzidx", names[k])));
+    let (mut plain, mut with) = (Vec::new(), Vec::new());
+    let budget = MemBudget::mb(1024.0);
+    run::align_to_par(
+        &mut Files(peaks.clone()),
+        &budget,
+        &recipe,
+        &idx,
+        &mut plain,
+    )
+    .unwrap();
+    let mut seen: Vec<(usize, usize)> = Vec::new();
+    run::align_to_par_progress(
+        &mut Files(peaks),
+        &budget,
+        &recipe,
+        &idx,
+        &mut with,
+        &mut |d, n| seen.push((d, n)),
+    )
+    .unwrap();
+    assert!(plain == with, "the callback changes nothing");
+    // the alignment (one unit in memory), the weak tier and the gap filling of the three files
+    assert_eq!(seen.first(), Some(&(0, 7)), "{seen:?}");
+    assert_eq!(seen.last(), Some(&(7, 7)), "{seen:?}");
+    assert!(seen.windows(2).all(|w| w[0].0 <= w[1].0), "{seen:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 

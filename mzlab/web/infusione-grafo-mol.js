@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Molecule drawings of the «Fragmentation graph»: the 2D molfile of the SMILES of the tab (OpenChemLib, loaded on first use), sent back to the graph as the option
 // `molfile`, and the SVG of the molecule or of the parent of a fragment with the atoms of the cut piece highlighted (vermillion fill and dashed ring: the
 // colour is never the only cue). A fragment drawing is a hypothesis of the cleavage candidates, never a result. Used by infusione-grafo*.js.

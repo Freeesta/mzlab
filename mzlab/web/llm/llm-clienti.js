@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The clients of the assistant: the worker + iframe `trasporto.html` in the site, the native routes `llm/*` in the desktop app (the key stays in Rust), and the helpers that
 // say which providers a page can reach. Loaded by llm-impostazioni.js only after the user turned the assistant on.
 
@@ -40,7 +40,13 @@ export class SiteClient {
   send(conv, sink, replay) {
     return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, conv: JSON.stringify(conv), transport: replay ? "replay" : "net" }); });
   }
+  /** a request already built by Rust (a call of a subagent): the events come to `sink` like those of `send` @param {string} provider @param {string} model @param {string} request JSON of the request @param {(e: LlmEvent) => void} sink */
+  sendRaw(provider, model, request, sink) {
+    return new Promise((ok, no) => { const id = "c" + (++this.n); this.calls.set(id, { ok, no }); this.sinks.set(id, sink); this.lastId = id; this.worker.postMessage({ op: "send", id, provider, model, request, transport: "net" }); });
+  }
   stop() { if (this.lastId) this.worker.postMessage({ op: "abort", id: this.lastId }); }
+  /** whether the provider needs a key that this page does not hold (a model on this computer needs none) @param {string} id */
+  async needsKey(id) { const p = (await this.providers()).find(x => x.id === id); return !!p && !p.local && !this.hasKey; }
   /** @param {string} text @param {boolean} strict */
   async replay(text, strict) { return (await this.call("replay.load", { text, strict })).turns; }
   /** the iframe with the key field; created only here, after the consent @param {HTMLElement} box @param {Provider} p @param {Record<string, string>} labels @param {string} title */
@@ -74,8 +80,13 @@ export class DesktopClient {
   /** @param {object} conv @param {(e: LlmEvent) => void} sink @param {boolean} replay */
   async send(conv, sink, replay) {
     if (replay) throw { key: "err.llm.replay.format", params: {} };
+    await this.poll(await this.post("llm/send", { conv: JSON.stringify(conv) }), sink);
+  }
+  /** a request already built by Rust (a call of a subagent), sent by the app with the key it holds @param {string} provider @param {string} _model @param {string} request JSON @param {(e: LlmEvent) => void} sink */
+  async sendRaw(provider, _model, request, sink) { await this.poll(await this.post("llm/send", { provider, request }), sink); }
+  /** @param {{id: string}} job @param {(e: LlmEvent) => void} sink */
+  async poll({ id }, sink) {
     this.stopped = false;
-    const { id } = await this.post("llm/send", { conv: JSON.stringify(conv) });
     this.cur = id;
     for (;;) {
       const r = await this.post("llm/poll", { id });
@@ -84,6 +95,8 @@ export class DesktopClient {
       await new Promise(ok => setTimeout(ok, 120));
     }
   }
+  /** whether the provider needs a key that the app does not hold, asked to the app each time (the key may have been forgotten since) @param {string} id */
+  async needsKey(id) { const r = await this.post("llm/providers"), p = JSON.parse(r.providers).providers.find((/** @type {Provider} */ x) => x.id === id); return !!p && !p.local && !(r.has_key || {})[id]; }
   stop() { this.stopped = true; if (this.cur) this.post("llm/abort", { id: this.cur }).catch(() => {}); }
   /** @param {string} provider @param {string} key */
   async setKey(provider, key) { await this.post("llm/key/set", { provider, key }); this.hasKey = true; }

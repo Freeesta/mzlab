@@ -8,7 +8,8 @@
 //! * `gnps_cosine`: the GNPS-style cosine with the rules of the precursor-aware pipeline of Attributio (rewritten from the rules): precursor region
 //!   and peaks below 1% of the base peak removed, square-root intensities, greedy pairing by decreasing product within an absolute tolerance.
 
-use crate::clean::{entropy_of, weighted};
+use crate::clean::weighted;
+use crate::frag_tol::FragTol;
 use crate::sortutil;
 
 /// A spectrum for scoring.
@@ -29,52 +30,60 @@ pub fn match_peaks(
     a_it: &[f64],
     b_mz: &[f64],
     b_it: &[f64],
-    tol: f64,
+    tol: impl Into<FragTol>,
 ) -> Vec<(usize, usize)> {
-    let mut c: Vec<(usize, usize, f64)> = Vec::new();
+    let mut s = MatchScratch::default();
+    match_peaks_into(a_mz, a_it, b_mz, b_it, tol, &mut s);
+    s.out
+}
+
+/// The buffers of `match_peaks_into`, reused from one library spectrum to the next.
+#[derive(Default)]
+pub struct MatchScratch {
+    cand: Vec<(usize, usize, f64)>,
+    ua: Vec<bool>,
+    ub: Vec<bool>,
+    /// The pairs of the last call.
+    pub out: Vec<(usize, usize)>,
+}
+
+/// `match_peaks` with the result in `s.out` and no allocation once the buffers have grown.
+pub fn match_peaks_into(
+    a_mz: &[f64],
+    a_it: &[f64],
+    b_mz: &[f64],
+    b_it: &[f64],
+    tol: impl Into<FragTol>,
+    s: &mut MatchScratch,
+) {
+    let tol = tol.into();
+    s.cand.clear();
     for i in 0..a_mz.len() {
-        let mut j = lower_bound(b_mz, a_mz[i] - tol);
-        while j < b_mz.len() && b_mz[j] <= a_mz[i] + tol {
-            c.push((i, j, a_it[i] * b_it[j]));
+        let w = tol.at(a_mz[i]);
+        let mut j = lower_bound(b_mz, a_mz[i] - w);
+        while j < b_mz.len() && b_mz[j] <= a_mz[i] + w {
+            s.cand.push((i, j, a_it[i] * b_it[j]));
             j += 1;
         }
     }
-    sortutil::sort_by(&mut c, |x, y| y.2.total_cmp(&x.2));
-    let (mut ua, mut ub) = (vec![false; a_mz.len()], vec![false; b_mz.len()]);
-    let mut out = Vec::new();
-    for (i, j, _) in c {
-        if !ua[i] && !ub[j] {
-            ua[i] = true;
-            ub[j] = true;
-            out.push((i, j));
+    sortutil::sort_by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
+    s.ua.clear();
+    s.ua.resize(a_mz.len(), false);
+    s.ub.clear();
+    s.ub.resize(b_mz.len(), false);
+    s.out.clear();
+    for &(i, j, _) in &s.cand {
+        if !s.ua[i] && !s.ub[j] {
+            s.ua[i] = true;
+            s.ub[j] = true;
+            s.out.push((i, j));
         }
     }
-    out
 }
 
 /// Entropy similarity for given pairs: `1 - (2 S_AB - S_A - S_B) / ln 4`, clipped to [0, 1].
 pub fn entropy_from_pairs(a_it: &[f64], b_it: &[f64], pairs: &[(usize, usize)]) -> f64 {
-    let (pa, pb) = (weighted(a_it), weighted(b_it));
-    let (mut ia, mut ib) = (vec![false; pa.len()], vec![false; pb.len()]);
-    let mut m: Vec<f64> = Vec::with_capacity(pa.len() + pb.len());
-    for &(i, j) in pairs {
-        m.push((pa[i] + pb[j]) / 2.0);
-        ia[i] = true;
-        ib[j] = true;
-    }
-    m.extend(
-        pa.iter()
-            .enumerate()
-            .filter(|(i, _)| !ia[*i])
-            .map(|(_, v)| v / 2.0),
-    );
-    m.extend(
-        pb.iter()
-            .enumerate()
-            .filter(|(j, _)| !ib[*j])
-            .map(|(_, v)| v / 2.0),
-    );
-    (1.0 - (2.0 * entropy_of(&m) - entropy_of(&pa) - entropy_of(&pb)) / 4f64.ln()).clamp(0.0, 1.0)
+    crate::prep::entropy_from_pairs(a_it, b_it, pairs)
 }
 
 /// Contribution of one matched pair of entropy-weighted intensities `(a, b)` to the entropy similarity (the similarity is the sum over the pairs).
@@ -110,32 +119,11 @@ pub struct PairScores {
     pub pairs: Vec<(usize, usize)>,
 }
 
-pub fn pair_scores(a: &Spec, b: &Spec, tol: f64) -> PairScores {
-    let pairs = match_peaks(&a.mz, &a.it, &b.mz, &b.it, tol);
-    let entropy = entropy_from_pairs(&a.it, &b.it, &pairs);
-    let cosine = cosine_from_pairs(&a.it, &b.it, &pairs);
-    let dot: f64 = pairs.iter().map(|&(i, j)| (a.it[i] * b.it[j]).sqrt()).sum();
-    let na: f64 = a.it.iter().sum();
-    let nb: f64 = b.it.iter().sum();
-    let na_m: f64 = pairs.iter().map(|&(i, _)| a.it[i]).sum();
-    let nb_m: f64 = pairs.iter().map(|&(_, j)| b.it[j]).sum();
-    let ratio = |d: f64, x: f64, y: f64| {
-        if x > 0.0 && y > 0.0 {
-            d / (x * y).sqrt()
-        } else {
-            0.0
-        }
-    };
-    PairScores {
-        entropy,
-        cosine,
-        // forward: all peaks of the query, only the matched ones of the library; reverse: the opposite (NIST naming)
-        forward: ratio(dot, na, nb_m),
-        reverse: ratio(dot, na_m, nb),
-        shared: pairs.len(),
-        explained: if na > 0.0 { na_m / na } else { 0.0 },
-        pairs,
-    }
+pub fn pair_scores(a: &Spec, b: &Spec, tol: impl Into<FragTol>) -> PairScores {
+    let mut sc = crate::prep::Scorer::new(a);
+    let mut r = sc.score(a, b, tol);
+    r.pairs = sc.pairs().to_vec();
+    r
 }
 
 /// Hybrid pairs (brute force, the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by
@@ -144,11 +132,11 @@ pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
     let (pa, pb) = (weighted(&a.it), weighted(&b.it));
     let delta = a.prec - b.prec;
     let mut c: Vec<(usize, usize, f64)> = Vec::new();
-    for i in 0..a.mz.len() {
-        for j in 0..b.mz.len() {
-            let d = a.mz[i] - b.mz[j];
+    for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
+        for (j, (&mb, &wb)) in b.mz.iter().zip(&pb).enumerate() {
+            let d = ma - mb;
             if d.abs() <= tol || (d - delta).abs() <= tol {
-                c.push((i, j, pair_term(pa[i], pb[j])));
+                c.push((i, j, pair_term(wa, wb)));
             }
         }
     }
@@ -213,7 +201,8 @@ pub struct ModCosine {
 }
 
 /// Modified cosine: candidate pairs at shift 0 and at `delta = prec(q) - prec(lib)`, one-to-one greedy by decreasing `sqrt(Iq Il)`.
-pub fn modified_cosine(q: &Spec, lib: &Spec, tol: f64) -> ModCosine {
+pub fn modified_cosine(q: &Spec, lib: &Spec, tol: impl Into<FragTol>) -> ModCosine {
+    let tol = tol.into();
     let a = top32(q);
     let b = top32(lib);
     let delta = q.prec - lib.prec;
@@ -226,8 +215,9 @@ pub fn modified_cosine(q: &Spec, lib: &Spec, tol: f64) -> ModCosine {
     for i in 0..a.mz.len() {
         for &sh in shifts {
             let t = a.mz[i] - sh;
-            let mut j = lower_bound(&b.mz, t - tol);
-            while j < b.mz.len() && b.mz[j] <= t + tol {
+            let w = tol.at(a.mz[i]);
+            let mut j = lower_bound(&b.mz, t - w);
+            while j < b.mz.len() && b.mz[j] <= t + w {
                 c.push((i, j, (a.it[i] * b.it[j]).sqrt(), sh != 0.0));
                 j += 1;
             }

@@ -19,6 +19,7 @@ mod feat_msn;
 mod feat_untargeted;
 mod flow_live;
 mod flow_progress;
+mod flow_reuse;
 mod flow_run;
 mod flow_stage;
 pub mod idxbuild;

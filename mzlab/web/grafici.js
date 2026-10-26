@@ -24,8 +24,8 @@ async function diffTrace(p, s, o0) {
   }
   if (p.type === "chrom") {
     const pda = p.kind === "pda", lv = p.flv ?? f.lv, prec = !pda && f.kind === "ms2" ? p.prec : null;
-    return memo(`dc${s.k}|${p.kind}|${lv}|${pda ? "" : p.mz0 ?? ""}|${pda ? "" : p.mz1 ?? ""}|${prec ?? ""}|${p.filt ?? ""}${SUBREF.qs(o)}`,
-      () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (!pda && p.mz0 != null ? `&mz0=${p.mz0}` : "") + (!pda && p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
+    return memo(`dc${s.k}|${p.kind}|${lv}|${p.mz0 ?? ""}|${p.mz1 ?? ""}|${prec ?? ""}|${p.filt ?? ""}${SUBREF.qs(o)}`,
+      () => J(`api/chrom?k=${s.k}&kind=${p.kind}&level=${lv}` + (p.mz0 != null ? `&mz0=${p.mz0}` : "") + (p.mz1 != null ? `&mz1=${p.mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(p.filt) + SUBREF.qs(o)));
   }
   const j = await memo(`dm${s.k}${SUBREF.qs(o)}`, () => J(`api/mrm?k=${s.k}${SUBREF.qs(o)}`));
   const t = j.files[0].transitions.find(q => `${q.q1}>${q.q3}` === s.ion);
@@ -42,7 +42,7 @@ async function corrected(p, all) {
       const d = await diffTrace(p, s, so);
       if (d && d.rt.length) { x = d.rt; y = d.y; note.push(I18N.t(p.bk !== "" && p.bk != null && E.files[+p.bk] ? "corr.note.blank" : "corr.note.sub")); cb = true; }
     }
-    const r = FONDO.apply(x, y, fo), yraw = y;
+    if (!out.length && FONDOP.wants(fo)) await FONDOP.auto(fo, x, y); const r = FONDO.apply(x, y, fo), yraw = y;
     if (r) { y = r.y; note.push(I18N.t(fo.mode === "tract" ? "corr.note.ibk" : "corr.note.baseline")); }
     out.push({ ...s, x, y, corr: note.join(" "), ibl: r ? r.ibl : null, bl: r && r.bl || null, yraw: r ? yraw : null, ze: r ? FONDO.zoneEnd(x, fo) : -Infinity, cb, cf: !!r });
   }
@@ -83,7 +83,7 @@ async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
-    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.kind === "pda" ? null : p.mz0, p.kind === "pda" ? null : p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
+    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
     const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea PDA e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
     if (sh) r.forEach(s => { s.x = Array.from(s.x, v => v + sh); });
     return r.filter(s => s.x.length);
@@ -122,18 +122,18 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
   g.clearRect(0, 0, W, H);
   const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / (32 * fz()))));
   frame(g, W, H, nice(x0, x1, o.xn || Math.max(8, Math.round((W - M.l - M.r) / (75 * fz())))).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
-  if (y0 < 0) { g.save(); g.strokeStyle = css("--line"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + .5); g.lineTo(W - M.r, Math.round(Y(0)) + .5); g.stroke(); g.restore(); }   // zero line
+  if (y0 < 0) { g.save(); g.strokeStyle = ecss("--line"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + .5); g.lineTo(W - M.r, Math.round(Y(0)) + .5); g.stroke(); g.restore(); }   // zero line
   return { X, Y };
 }
 // axis lines, tick marks, tick labels and titles (shared by all the plots)
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
-  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(12);
+  const ink = ecss("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(12);
   g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
   let needL = 0; for (const [, lab] of yt) needL = Math.max(needL, g.measureText(lab).width);
   g.canvas._needL = Math.ceil(needL + 6 + 4 + 14 * fz());                  // room for the numbers (right aligned at M.l - 6) and the title; the panels of a view take the widest
   g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5 * fz()); }
   g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
-  g.fillStyle = css("--ink"); g.font = fpx(12);
+  g.fillStyle = ecss("--ink"); g.font = fpx(12);
   const fnt = t => t === "m/z" ? fpx(12, "italic ") : fpx(12);           // m/z is always in italics
   if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6 * fz()); }
   if (ytitle) { g.font = fnt(ytitle); g.translate(1 + 12 * fz(), (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
@@ -147,10 +147,10 @@ function drawAnn(p, g, a, px, py, W, gap) {
   if (by < M.t + 1) { by = Math.max(M.t + 1, Math.min(py - h / 2, p._a.H - M.b - h - 1)); bx = px + 14; if (bx + w > W - M.r) bx = px - 14 - w; }       // no room above: to the side
   bx = Math.max(M.l + 2, Math.min(W - M.r - w - 2, bx));
   const ex = Math.max(bx, Math.min(bx + w, px)), ey = by + h < py ? by + h : (by > py ? by : by + h / 2);                       // where the thin line meets the box
-  g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(px, py - 4); g.lineTo(ex, ey); g.stroke(); g.setLineDash([]);       // thin, grey, dashed, 4 px above the tip: never the colour of the trace (it would look like a taller peak)
+  g.strokeStyle = ecss("--muted"); g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(px, py - 4); g.lineTo(ex, ey); g.stroke(); g.setLineDash([]);       // thin, grey, dashed, 4 px above the tip: never the colour of the trace (it would look like a taller peak)
   const r = 4; g.beginPath(); g.moveTo(bx + r, by); g.lineTo(bx + w - r, by); g.quadraticCurveTo(bx + w, by, bx + w, by + r); g.lineTo(bx + w, by + h - r); g.quadraticCurveTo(bx + w, by + h, bx + w - r, by + h); g.lineTo(bx + r, by + h); g.quadraticCurveTo(bx, by + h, bx, by + h - r); g.lineTo(bx, by + r); g.quadraticCurveTo(bx, by, bx + r, by); g.closePath();
-  g.fillStyle = css("--panel"); g.fill(); g.strokeStyle = css("--muted"); g.stroke();
-  g.fillStyle = css("--ink"); g.textAlign = "left"; g.fillText(a.text, bx + 6, by + 14);
+  g.fillStyle = ecss("--panel"); g.fill(); g.strokeStyle = ecss("--muted"); g.stroke();
+  g.fillStyle = ecss("--ink"); g.textAlign = "left"; g.fillText(a.text, bx + 6, by + 14);
   g.restore();
   (p._a.lbls = p._a.lbls || []).push({ x: bx, y: by, w, h, ann: a, tip: `<b>${EH(a.text)}</b><div class="sm">${I18N.t("draw.ann.tip")}</div>` });
 }
@@ -182,7 +182,7 @@ async function draw(p) {
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -197,17 +197,16 @@ function setCorr(p, v) {
 // chromatogram / XIC / MRM: two independent choices, always applied in the same order (the file first, then the background on the difference)
 function setSub(p, v) { pushCampi(p, "storia.bianco"); p.bk = v[0] === "f" ? +v.slice(1) : ""; ctl(p); draw(p); uiSave(); }
 // thin grey baseline of a trace (stacked and waterfall views)
-function baseLine(g, y, xa, xb) { g.save(); g.strokeStyle = css("--line"); g.lineWidth = 1; g.beginPath(); g.moveTo(xa, y); g.lineTo(xb, y); g.stroke(); g.restore(); }
+function baseLine(g, y, xa, xb) { g.save(); g.strokeStyle = ecss("--line"); g.lineWidth = 1; g.beginPath(); g.moveTo(xa, y); g.lineTo(xb, y); g.stroke(); g.restore(); }
 // choosing stacked or waterfall switches the automatic background on, unless the student already picked one
 function fondoOnStack(p, mode) { if (mode !== "ovl" && p.fondo && p.fondo.mode === "none") p.fondo = { ...p.fondo, mode: "auto", w: p.fondo.w || 1, ib: null }; }
 function setFondo(p, v) {
-  pushCampi(p, "storia.fondo"); const f = p.fondo; p._pickIbk = false;
-  if (v === "snip") { p.fondo = { ...f, mode: "auto", w: f.w || 1, ib: null }; }
-  else if (v === "tract") {
-    if (f.ib) f.mode = "tract";
-    else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }
+  const f = p.fondo; p._pickIbk = false;
+  if (v === "tract") {
+    if (f.ib) { pushCampi(p, "storia.fondo"); f.mode = "tract"; }
+    else if (p.sel && p.sel[1] > p.sel[0]) { ibkSet(p, "mean", [...p.sel]); p.sel = null; }      // ibkSet records its own step
     else { p._pickIbk = true; info(I18N.t("ibk.pick")); }
-  } else p.fondo = { ...f, mode: "none", w: f.w || 1, ib: null };
+  } else if (v === "flat") FONDOP.on(p); else { pushCampi(p, "storia.fondo"); p.fondo = { ...f, mode: v === "snip" ? "auto" : "none", w: f.w || 1, ib: null }; }
   ctl(p); draw(p); uiSave();
 }
 const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
@@ -215,9 +214,9 @@ const ibkLevels = l => fmtA(l.lvl) + (l.lvl2 != null ? " " + I18N.t("ibk.andShor
 function ibkChip(p) {
   const fo = p.fondo, ib = ibOf(p), auto = !!fo && fo.mode === "auto"; if (!ib && !auto) return;
   const s0 = p._a && p._a.sr && p._a.sr[0], l0 = s0 && s0.ibl, bl = s0 && s0.bl, zd = fo.zd != null ? fo.zd : FONDO.ZD;
-  const chip = document.createElement("span"); chip.className = "ibk";
+  const chip = document.createElement("span"); chip.className = "ibk"; const flat = ib && ib.flat ? FONDOP.chip(p, ib, l0 ? ibkLevels(l0) : "", chip) : null;
   chip.title = I18N.t(ib ? "ibk.chip.title" : "fondo.chip.auto.title");
-  const main = ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "";
+  const main = flat || (ib ? I18N.t("ibk.chip", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", stat: ibkStat(ib) }) : bl ? I18N.t("fondo.chip.auto", { min: fmtA(bl.min), max: fmtA(bl.max) }) : "");
   chip.innerHTML = `${main} <label title="${I18N.t("fondo.zone.title")}">${I18N.t("fondo.zone.label")} <input type="number" data-ib="zd" min="0" step="0.1" value="${+zd.toFixed(2)}" style="width:4.2em" aria-label="${I18N.t("fondo.zone.title")}"> min</label> <button data-ib="det" title="${I18N.t("fondo.zone.detect.title")}">${I18N.t("fondo.zone.detect")}</button> <label><input type="checkbox" data-ib="clip" ${p.clipDraw ? "checked" : ""}> ${I18N.t("ibk.clip.label")}</label>` +
     (ib ? ` <button data-ib="spec" title="${I18N.t("ibk.spec.title")}">${I18N.t("ibk.spec")}</button>` : "") + ` <button data-ib="off">${I18N.t("ibk.off")}</button>`;
   chip.querySelector("[data-ib=clip]").onchange = e => { p.clipDraw = e.target.checked; draw(p); uiSave(); };
@@ -225,14 +224,16 @@ function ibkChip(p) {
   chip.querySelector("[data-ib=det]").onclick = () => { const z = s0 ? FONDO.front(s0.x, s0.yraw || s0.y) : null; if (z == null) return info(I18N.t("fondo.zone.none")); fo.zd = z; draw(p); uiSave(); };
   const sp = chip.querySelector("[data-ib=spec]"); if (sp) sp.onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
-  (p.corrbar || p.leg).appendChild(chip);
+  (p.corrbar || p.leg).appendChild(chip); if (flat) FONDOP.wire(p, chip);
 }
+// hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (comandi.js)
+COMANDI.gestore("series.visibility", { leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]), applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; } });
 // the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
 function ibkSpectra(p) {
   const ib = ibOf(p); if (!ib) return;
   const sp = E.panels.filter(q => q.type === "spec" && (q.link === p.id || q.src === p.id));
   if (!sp.length) return info(I18N.t("ibk.noSpectra"));
-  sp.forEach(q => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; ctl(q); draw(q); }); uiSave();
+  sp.forEach(q => { COMANDI.fai("spec.background", q, () => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; }); ctl(q); draw(q); }); uiSave();
 }
 function ibkSet(p, mode, a, b) {
   if (!(a && a[1] > a[0])) return info(I18N.t("ibk.badRange"));
@@ -246,7 +247,7 @@ function ibkPick(p, mode, iv) {
 function ibkMenuItems(p) {
   const it = [], iv = p.sel && p.sel[1] > p.sel[0] ? p.sel : null;
   if (iv && !ibOf(p)) it.push({ label: I18N.t("ibk.menu.sub"), fn: () => { ibkSet(p, "mean", [...iv]); p.sel = null; ctl(p); draw(p); } });
-  if (ibOf(p)) it.push({ label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
+  if (ibOf(p)) it.push(...FONDOP.menu(p), { label: I18N.t("ibk.menu.off"), fn: () => setFondo(p, "") });
   return it;
 }
 // the background-of-a-stretch entries of the menu of a trace (registry azioni/1): the rows of ibkMenuItems
@@ -262,14 +263,14 @@ function legend(p, all, note = "") {
     const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}" data-h="x|${f.k}|${p.traces[0].mz}" title="${I18N.t("leg.toggle.title")}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
-    p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; }); draw(p); });
+    p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
   } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
-  p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { t.label = v; draw(p); } });
-  p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); ctl(p); draw(p); });
-  p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; draw(p); });
+  p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMANDI.fai("xic.traces", p, () => { t.label = v; }); draw(p); } });
+  p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { COMANDI.fai("xic.traces", p, () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); }); ctl(p); draw(p); });
+  p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; COMANDI.fai("series.visibility", p, () => { if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; }); draw(p); });
   legCollapse(p);
   ibkChip(p);
   if (window.SUBREF) SUBREF.chip(p);
@@ -294,17 +295,17 @@ function traceMax(s, x0, x1) {
 // the zero line (dashed; with a background it is the background itself, labelled) and the grey band of the initial zone
 function zeroMarks(g, sr, X, Y, W, H, band) {
   const fo = sr.some(s => s.cf), y0 = Math.round(Y(0));
-  g.save(); g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(M.l, y0 + 0.5); g.lineTo(W - M.r, y0 + 0.5); g.stroke(); g.restore();
-  if (fo) { g.save(); g.font = fpx(11); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText(I18N.t("axis.zero"), W - M.r - 4, y0 - 4); g.restore(); }
+  g.save(); g.strokeStyle = ecss("--muted"); g.lineWidth = 1; g.setLineDash([5, 3]); g.beginPath(); g.moveTo(M.l, y0 + 0.5); g.lineTo(W - M.r, y0 + 0.5); g.stroke(); g.restore();
+  if (fo) { g.save(); g.font = fpx(11); g.textAlign = "right"; g.fillStyle = ecss("--muted"); g.fillText(I18N.t("axis.zero"), W - M.r - 4, y0 - 4); g.restore(); }
   const s0 = band && sr.find(s => s.cf), xb = s0 ? Math.min(X(s0.ze), W - M.r) : 0;
   if (xb > M.l) { g.fillStyle = "rgba(120,120,120,.22)"; g.fillRect(M.l, M.t, xb - M.l, H - M.t - M.b); }
 }
 async function drawLines(p) {
-  const all = await seriesOf(p);
+  const all = await seriesOf(p); if (window.ETPK && !p._a) await ETPK.ready(p, all.filter(s => !isHid(p, s)));       // the first drawing of a panel waits a moment for the peak labels (drawn once)
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
   if (!sr.length) {
-    g.clearRect(0, 0, W, H); g.fillStyle = css("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : MSG[p.type], M.l, 30);
+    g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(all.length ? I18N.t("leg.allHidden") : MSG[p.type], M.l, 30);
     p._a = null; if (all.length) legend(p, all); else { p.leg.innerHTML = ""; if (p.corrbar) p.corrbar.innerHTML = ""; } return;
   }
   let lo = Infinity, hi = -Infinity;
@@ -330,7 +331,7 @@ async function drawLines(p) {
   const U = (s, v) => s.off + v / s.sc;
   const yzf = !!p.zoomY && !stk && !logy;                       // y zoom (box, or drag on the numbers at the left of the axis): tall peaks are cut at the top
   const nrm = !stk && !!p.norm100 && !p.log;
-  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels
+  let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
   if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
@@ -353,18 +354,18 @@ async function drawLines(p) {
   if ((ymin < 0 || withFondo) && !stk && !logy) zeroMarks(g, sr, X, Y, W, H, withFondo && !p._exp);
   if (ibOf(p) && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = ibOf(p), bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
-    g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
-    g.font = fpx(12); g.textAlign = "left"; g.fillStyle = css("--muted");
+    g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }); if (ib.flat) FONDOP.drawGrip(g, ib, X, W);
+    g.font = fpx(12); g.textAlign = "left"; g.fillStyle = ecss("--muted");
     g.fillText(I18N.t("ibk.band", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", extra: sr.length > 1 ? I18N.t("ibk.firstTrace") : "" }), Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }
-  if (p.band && !p._exp) { g.save(); g.globalAlpha = .14; g.fillStyle = css("--accent"); g.fillRect(X(p.band[0]), M.t, Math.max(2, X(p.band[1]) - X(p.band[0])), H - M.t - M.b); g.restore(); }      // scans averaged by the spectrum under this XIC (xic-spettro.js)
+  if (p.band && !p._exp) { g.save(); g.globalAlpha = .14; g.fillStyle = ecss("--accent"); g.fillRect(X(p.band[0]), M.t, Math.max(2, X(p.band[1]) - X(p.band[0])), H - M.t - M.b); g.restore(); }      // scans averaged by the spectrum under this XIC (xic-spettro.js)
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
   if (stk) {
     g.font = fpx(12); g.textAlign = "left";
     const hrw = !!window.BANCO && BANCO.on();
     sr.forEach(s => { if (s.grp != null && sr.find(q => q.row === s.row) !== s) return; const y = Y(s.off); baseLine(g, y, M.l, W - M.r); const lab = s.grp != null && s.rlabel ? s.rlabel : s.name, t = lab.length > 34 ? lab.slice(0, 33) + "…" : lab;
-      if (hrw) { const nl = "NL: " + rowMax[s.row].toExponential(2).replace("e+", "E"); g.save(); g.textAlign = "right"; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(nl, W - M.r - 4, y - 4); g.fillStyle = css("--muted"); g.fillText(nl, W - M.r - 4, y - 4); g.restore(); }
-      g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
+      if (hrw) { const nl = "NL: " + rowMax[s.row].toExponential(2).replace("e+", "E"); g.save(); g.textAlign = "right"; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(nl, W - M.r - 4, y - 4); g.fillStyle = ecss("--muted"); g.fillText(nl, W - M.r - 4, y - 4); g.restore(); }
+      g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
   g.save(); g.beginPath(); g.rect(M.l + 1.5, M.t - 1, W - M.l - M.r - 1.5, H - M.t - M.b + 2); g.clip();   // the line (1.8 px wide) must not overdraw the y axis
   const tags = [];
@@ -375,7 +376,7 @@ async function drawLines(p) {
       const pts = [];
       s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; });
       if (first == null) continue;
-      g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = css("--panel"); g.fill();
+      g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
       baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
       g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
       g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
@@ -383,7 +384,7 @@ async function drawLines(p) {
     }
     g.restore(); g.save();                                       // time labels last (nothing draws over them), with a halo from --panel so they read on both themes
     g.font = fpx(12, "bold "); g.textAlign = "left"; g.lineWidth = 3; g.lineJoin = "round";
-    for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = css("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
+    for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
@@ -431,7 +432,7 @@ async function drawLines(p) {
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
-    g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
+    g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
     const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area) }) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
@@ -439,7 +440,7 @@ async function drawLines(p) {
     let top = 0; sr.forEach(s => { const i = nearIdx(s.x, a.x); top = Math.max(top, U(s, s.ys[i])); });
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(top))), W, 26);
   }
-  if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); }      // the gradient over the traces (PNG included)
+  if (window.GRADIENTE) { GRADIENTE.ensure(p); if (p.overlay) GRADIENTE.draw(p, g, p._a); } if (window.ETPK && !cas) ETPK.draw(p, g, sr, { X, Y, U, x0, x1, W });      // the gradient over the traces (PNG included); then RT + m/z or nm of the main peaks (etichette-picchi.js)
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
@@ -569,7 +570,7 @@ function mapView(A, B, rt0, rt1, mz0, mz1) {
 async function drawMap(p) {
   if (window.MAPPA) { MAPPA.corrInit(p); MAPPA.corrPick(p); }                // an old panel gets its «Correzione»; a stretch chosen with Alt + drag becomes the background
   const { g, W, H } = setup(p.cv);
-  const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
+  const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
   const isPda = p.mapKind === "pda" || p.kind === "pda";
   const sf = isPda ? tabFiles(p.tab) : scanFiles(tabFiles(p.tab)); if (!sf.length) return say(I18N.t("map.noScans"));
   let f = E.browse && E.files[E.cur] && E.files[E.cur].kind === p.tab ? E.files[E.cur] : E.files[p.k];
@@ -591,7 +592,7 @@ async function drawMap(p) {
   const X = v => M.l + (v - x0) / (x1 - x0) * pw, Yv = v => H - M.b - (v - y0) / (y1 - y0) * ph;
   frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), +t.toFixed(2)]), nice(y0, y1, 6).map(t => [Yv(t), Math.round(t)]), XT_RT, isPda ? "nm" : "m/z");
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.16)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), ph); }
-  if (p.cur != null && !p._exp) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.cur), M.t); g.lineTo(X(p.cur), H - M.b); g.stroke(); g.setLineDash([]); }
+  if (p.cur != null && !p._exp) { g.strokeStyle = ecss("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.cur), M.t); g.lineTo(X(p.cur), H - M.b); g.stroke(); g.setLineDash([]); }
   const mzAt = py => y1 - (py - M.t) / ph * (y1 - y0);
   p._a = { x0, x1, y0, y1, X, Y: Yv, W, H, full: ext.rt, fullY: ext.mz, grid: { rt: [rt0, rt1], mz: [mzA, mzB] }, f, mzAt, map: true, pda: isPda, dmz: A.dmz, ref: rf,
     mat: B ? null : { v: im.v, nrt: A.nrt, nmz: A.nmz, rt0, rt1, mz0: A.mz0, dmz: A.dmz },          // the matrix of the sight's preview (mappa.js)

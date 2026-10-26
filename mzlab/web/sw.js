@@ -1,19 +1,22 @@
+// @ts-strict
 // Service worker of the browser version (added to the site root by tools/build_site.py; the local program does not use it).
 // After the first visit the whole program works offline: the app files are fetched from the network first (so a new
 // version is picked up as soon as there is one) and the big, rarely changing ones (Ketcher; the Python of mzFinder) come from the cache.
 try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
 const APP = (typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-") + "__APP__", BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", e => e.waitUntil((async () => {
+/** @type {ServiceWorkerGlobalScope} */
+const sw = /** @type {any} */ (self);
+sw.addEventListener("install", () => sw.skipWaiting());
+sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
   const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
   for (const k of await caches.keys()) {
     if (k.startsWith("qqq-") || (k.startsWith(pfx) && k !== APP && k !== BIG)) {
       await caches.delete(k);
     }
   }
-  await self.clients.claim();
+  await sw.clients.claim();
 })()));
-self.addEventListener("fetch", e => {
+sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin || req.headers.has("range")) return;
   if (url.pathname.includes("/static/librerie/")) return;           // the spectral-library packages go to the folder of the user, not to a second copy in the cache

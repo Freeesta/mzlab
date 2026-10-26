@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  The numbers of the table of the products for the page: the .wasm «table» of wasm-feat/manifest.json (route tp_table) read over the .mzfeat of the last Dig.
 // The roles of the files (treated, t0, blank) go to Rust as a campioni/1 built in ONE place, samplesOf, from the model campioni/2 of finder-ruoli.js. Imported by tpmine-worker.js on the first request.
 

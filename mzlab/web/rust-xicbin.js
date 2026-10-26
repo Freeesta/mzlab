@@ -1,3 +1,4 @@
+// @ts-strict
 // api/xicbin for rust-bridge.js: the XIC as doubles. Layout: 4 bytes = length of the JSON header {mz, tol, traces:[{k, n}]}, the header, zeros up to a multiple of 8, then per trace rt (n doubles) and y (n doubles).
 
 /** @param {number} mz @param {number} tol @param {{k: number, rt: ArrayLike<number>, y: ArrayLike<number>}[]} list */

@@ -29,6 +29,9 @@ pub mod fileroutes;
 pub mod hrroutes;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod chromeleon;
+pub mod chrom_fondo;
+#[cfg(test)]
+mod chrom_fondo_test;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod hashio;
 pub mod hrscanbin;
@@ -39,6 +42,7 @@ pub mod gradient;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod idxcache;
 pub mod idxnuovo;
+pub mod blocchi;
 pub mod idxread;
 pub mod isoscore;
 pub mod itemroutes;
@@ -90,6 +94,9 @@ pub mod mzml;
 mod mzmlarray;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
+pub mod mzmlsrm;
+#[cfg(feature = "mappa-dad")]
+mod mzml_dad;
 pub mod numarray;
 pub mod numpress;
 pub mod mzmlwrite;
@@ -97,10 +104,14 @@ pub mod mzmlwrite;
 pub mod mzmlvalida;
 pub mod pace;
 pub mod peakq;
+#[cfg(test)]
+mod peakq_reach_test;
 pub mod peaks;
 pub mod peakext;
+pub mod etichette_picchi;
 pub mod signal;
 pub mod sortc;
+pub mod spare;
 pub mod source_ramp;
 pub mod profspec;
 pub mod project;
@@ -144,6 +155,7 @@ pub mod subxic;
 pub mod subpeaks;
 pub mod upload;
 pub mod window;
+pub mod zip;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod xmltree;
 pub mod similarity;
@@ -154,6 +166,7 @@ pub mod statistica;
 pub mod statmat;
 pub mod statref;
 pub mod statroute;
+pub mod kendrick;
 pub mod stats;
 pub mod tracestat;
 pub mod subformulas;

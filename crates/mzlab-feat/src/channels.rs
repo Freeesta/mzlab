@@ -9,7 +9,7 @@ use crate::trace::{filled, reserve, Params, TOUCH_HEIGHT};
 /// A run of scans in one channel.
 #[derive(Clone, Copy)]
 pub(crate) struct Seg {
-    pub(crate) chan: i64,
+    pub(crate) chan: i32,
     pub(crate) mzc: f64,
     pub(crate) apex: u32,
     pub(crate) n: u32,
@@ -17,6 +17,8 @@ pub(crate) struct Seg {
     pub(crate) tot: f64,
     pub(crate) a: u32,
     pub(crate) z: u32,
+    /// Found by the broad-band pass (`broad.rs`).
+    pub(crate) broad: bool,
 }
 
 /// The peaks of a slab in the order (scan, table position): a stable counting sort of `pos`, which `segments` uses instead of sorting each channel.
@@ -38,6 +40,8 @@ pub(crate) fn by_scan(pos: &[u32]) -> Result<Vec<u32>> {
 }
 
 /// The channels that can make a run: (first peak, end, next free slot of its block of the order) and the channel of every peak.
+// (a, last, tot, mzw, n, mx, apexI, apex): the segment being grown.
+type OpenSeg = (u32, u32, f64, f64, u32, f64, f64, u32);
 type Chans = (Vec<(u32, u32, u32)>, Vec<u32>);
 
 fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result<Chans> {
@@ -46,9 +50,9 @@ fn find_channels(lmz: &[f64], it: &[f64], shift: f64, keep_floor: f64) -> Result
     let mut chan_of = filled(n, u32::MAX)?;
     let mut s = 0;
     while s < n {
-        let b = libm::floor(lmz[s] + shift) as i64;
+        let b = libm::floor(lmz[s] + shift) as i32;
         let mut e = s + 1;
-        while e < n && libm::floor(lmz[e] + shift) as i64 == b {
+        while e < n && libm::floor(lmz[e] + shift) as i32 == b {
             e += 1;
         }
         let cmax = it[s..e]
@@ -93,11 +97,11 @@ pub(crate) fn segments(
     }
     for &(s, e, _) in &chans {
         let (s, e) = (s as usize, e as usize);
-        let b = libm::floor(lmz[s] + shift) as i64;
+        let b = libm::floor(lmz[s] + shift) as i32;
         let order = &order[s..e];
         let mut k = 0;
         // current segment
-        let mut cur: Option<(u32, u32, f64, f64, u32, f64, f64, u32)> = None; // (a, last, tot, mzw, n, mx, apexI, apex)
+        let mut cur: Option<OpenSeg> = None; // (a, last, tot, mzw, n, mx, apexI, apex)
         while k < order.len() {
             let ps = pos[order[k] as usize];
             let (mut ii, mut mw) = (0.0f64, 0.0f64);
@@ -135,7 +139,7 @@ pub(crate) fn segments(
 
 fn push_seg(
     out: &mut Vec<Seg>,
-    chan: i64,
+    chan: i32,
     c: (u32, u32, f64, f64, u32, f64, f64, u32),
     p: &Params,
 ) -> Result<()> {
@@ -151,6 +155,7 @@ fn push_seg(
             tot,
             a,
             z,
+            broad: false,
         });
     }
     Ok(())
@@ -189,13 +194,23 @@ fn link(segs: &[Seg], p: &Params, parent: &mut [u32]) {
     } else {
         TOUCH_HEIGHT
     };
+    // the neighbour channel of the segments of one channel: (channel, first, end)
+    let mut next = (i32::MIN, 0, 0);
     for i in 0..m {
         let c = segs[i].chan;
-        let lo = segs.partition_point(|s| s.chan < c + 1);
-        let hi = segs.partition_point(|s| s.chan <= c + 1);
+        if next.0 != c {
+            let lo = segs.partition_point(|s| s.chan < c + 1);
+            next = (c, lo, lo + segs[lo..].partition_point(|s| s.chan <= c + 1));
+        }
+        let (lo, hi) = (next.1, next.2);
         let si = &segs[i];
-        for j in lo..hi {
-            let sj = &segs[j];
+        // The segments of a channel come in scan order and apart (both `a` and `z` ascend), so those within reach of `si` are a run of them.
+        let reach = si.a as i64 - max_gap;
+        let from = lo + segs[lo..hi].partition_point(|s| (s.z as i64) < reach);
+        for (j, sj) in segs.iter().enumerate().take(hi).skip(from) {
+            if sj.a as i64 > si.z as i64 + max_gap {
+                break;
+            }
             let ov = sj.z.min(si.z) as i64 - sj.a.max(si.a) as i64 + 1;
             // neither the half overlap nor the touching test can hold below this
             if ov < 1 - max_gap {
@@ -279,7 +294,11 @@ fn join(segs: &[Seg], parent: &mut [u32]) -> Result<Vec<Seg>> {
             tot: tots[g],
             a: a2[g],
             z: z2[g],
+            broad: false,
         });
     }
     Ok(out)
 }
+
+#[cfg(test)]
+mod tests;

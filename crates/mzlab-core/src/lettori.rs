@@ -136,6 +136,7 @@ pub struct Campione {
     pub id: u32,
     pub nome: String,
     pub scansioni: usize,
+    pub dimensione: Option<u64>,
 }
 
 /// Where the bytes of a scan lie in the original: member of the `FileSet`, offset, length (what the `.mzidx` of a vendor file will store).
@@ -206,11 +207,23 @@ pub trait Lettore {
     fn dad_map(&mut self, _c: usize) -> Result<Option<String>> {
         Ok(None)
     }
+    /// UV spectrum JSON of the DAD / PDA of sample `c` between the times `rt0` and `rt1`, if it has the optical matrix.
+    fn dad_spectrum(&mut self, _c: usize, _rt0: f64, _rt1: f64) -> Result<Option<String>> {
+        Ok(None)
+    }
+    /// Trace of the DAD / PDA of sample `c` at the wavelengths `nm0`..`nm1` (JSON `{rt, y, nm0, nm1, n}`), if it has the optical matrix.
+    fn dad_wavelength(&mut self, _c: usize, _nm0: f64, _nm1: f64) -> Result<Option<String>> {
+        Ok(None)
+    }
     /// The `metodo/1` document of the sample (`docs/agenti/metodo.md`).
     fn metodo(&mut self, c: usize) -> Result<String>;
     /// The header of the mzML of sample `c` (instrument, sources, hashes); `None`: `lettori_mzml::scrivi` makes a plain one from the format.
     fn testata_mzml(&mut self, _c: usize) -> Result<Option<Header>> {
         Ok(None)
+    }
+    /// What the scan table needs of `testata_mzml` (instrument, sources, analyzers); a reader whose header is costly gives a lighter one. Default: `testata_mzml`.
+    fn testata_tabella(&mut self, c: usize) -> Result<Option<Header>> {
+        self.testata_mzml(c)
     }
     /// What the mzML says of a spectrum besides its points (SIM mark, scan window).
     fn extra_mzml(&self, _s: &Spectrum) -> SpectrumExtra {

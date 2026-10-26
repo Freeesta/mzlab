@@ -57,23 +57,41 @@
    * @typedef {{ series: () => any, key: (r: any) => string, level: (r: any) => string | number | null }} Decide the level decided by the chemist (45_tabui_decisioni.js): the series of the run, the key of a row and its proposed level
    */
 
-  const STATES = /** @type {Record<string, [string, string]>} */ ({ detected: ["●", "detected"], filled: ["◐", "filled"], targeted: ["◌", "targeted"], absent: ["○", "absent"], na: ["–", "n/a"] });
   const lsGet = (/** @type {string} */ k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const lsSet = (/** @type {string} */ k, /** @type {string} */ v) => { try { localStorage.setItem(k, v); } catch (_) { /* private mode: the choice is not kept */ } };
   /** the help of a key: only a marker, the popover of the page (TPHELP) opens it; no `title` */
   const tt = (/** @type {string | undefined} */ k) => k && G.TPHELP ? ` data-tt="${k}"` : "";
+  const { spark, state, cells, dots, legend, areaScale, paint, AREA_NOTE, level, pred, area } = G.TPTAB_MARKS;
   const plain = (/** @type {string} */ html) => { const t = document.createElement("template"); t.innerHTML = html; return (t.content.textContent || "").replace(/\s+/g, " ").trim(); };
 
+  /** same order as `localeCompare` without arguments, but the collator is built once */
+  const collator = new Intl.Collator();
   /** rows ordered by the sort value of a column (empty values last, ties in the original order) */
   function sortRows(/** @type {any[]} */ rows, /** @type {any} */ c, /** @type {number} */ dir) {
     if (!c || !c.sort) return rows;
-    const f = c.sort, v = new Map(rows.map((r, i) => [r, { v: f(r), i }]));
-    return [...rows].sort((a, b) => {
-      const x = /** @type {any} */ (v.get(a)), y = /** @type {any} */ (v.get(b));
+    const f = c.sort, v = rows.map((r, i) => ({ r, v: f(r), i }));
+    v.sort((x, y) => {
       if (x.v == null || y.v == null) return x.v == null && y.v == null ? x.i - y.i : x.v == null ? 1 : -1;
-      const d = typeof x.v === "string" ? x.v.localeCompare(y.v) : x.v - y.v;
+      const d = typeof x.v === "string" ? collator.compare(x.v, y.v) : x.v - y.v;
       return d ? d * dir : x.i - y.i;
     });
+    return v.map(x => x.r);
+  }
+
+  /** redraws only the rows `ids` (a row that opens or closes) in a list without a window; false when the whole table has to be drawn (virtual list, a row is missing) */
+  function redrawOnly(/** @type {any} */ c, /** @type {(number | null)[]} */ ids) {
+    const want = [...new Set(ids.filter(x => x != null))], tr = (/** @type {any} */ id) => /** @type {HTMLElement | null} */ (c.body.querySelector(`tr.clk[data-id="${id}"]`));
+    if (c.isVirt() || want.some(id => !tr(id))) return false;
+    const had = document.activeElement instanceof HTMLElement && c.host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
+    c.panel.remove();
+    for (const id of want) {
+      const row = /** @type {HTMLElement} */ (tr(id)), next = row.nextElementSibling;
+      if (next && next.classList.contains("tpt-exp")) next.remove();
+      row.outerHTML = c.rowHtml(c.rowOf(id), Number(row.getAttribute("aria-rowindex")) - 2);
+    }
+    const slot = c.body.querySelector(".tpt-slot"); if (slot) slot.appendChild(c.panel);
+    if (had != null) { const bt = c.body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
+    return true;
   }
 
   /**
@@ -129,14 +147,19 @@
       });
     }
     const stk = (/** @type {Col} */ c, /** @type {number} */ i) => c.sticky || c.width ? ` style="${c.sticky ? `left:var(--tpt-l${i},0);` : ""}${c.width ? `max-width:${c.width}px` : ""}"` : "";
+    /** what does not depend on the row, per column, made again by every `draw`: the start of the cell (class), the end of its tag (fixed/width style) and whether it holds the id of the row @type {{ a: string, z: string, id: boolean }[]} */
+    let tpl = [];
+    const makeTpl = () => {
+      const idCol = cols.findIndex(c => c.key === "identity");
+      tpl = cols.map((c, i) => { const k = [c.num ? "n" : "", i === 0 ? "tpt-c0" : "", c.sticky ? "tpt-stk" : ""].filter(Boolean).join(" "); return { a: `<td${k ? ` class="${k}"` : ""}`, z: `${stk(c, i)}>`, id: i === (idCol < 0 ? 0 : idCol) }; });
+    };
     /** @param {any} r @param {number} idx the index in the list of rows */
     function rowHtml(r, idx) {
-      const id = idOf(r), on = st.open === id, pinned = o.pin ? o.pin(r) : false;
-      const idCol = cols.findIndex(c => c.key === "identity");
-      return `<tr class="clk${on ? " sel" : ""}${o.rowClass && o.rowClass(r) ? " " + o.rowClass(r) : ""}" data-id="${id}" aria-rowindex="${idx + 2}">${cols.map((c, i) => {
-        const k = [c.num ? "n" : "", i === 0 ? "tpt-c0" : "", c.sticky ? "tpt-stk" : ""].filter(Boolean).join(" ");
+      const id = idOf(r), on = st.open === id, pinned = o.pin ? o.pin(r) : false, rc = o.rowClass ? o.rowClass(r) : "";
+      return `<tr class="clk${on ? " sel" : ""}${rc ? " " + rc : ""}" data-id="${id}" aria-rowindex="${idx + 2}">${cols.map((c, i) => {
         const tg = i === 0 ? `<button type="button" class="tpt-tg" data-tg="${id}" aria-expanded="${on}" aria-controls="${panel.id}" aria-label="Details of ${esc(o.name(r))}"><span aria-hidden="true">${on ? "▾" : "▸"}</span></button>${pinned ? `<span class="tpt-pin" tabindex="0" role="img" aria-label="Pinned: the parent"${tt("ft.pin.parent")}>★</span>` : ""}` : "";
-        return `<td${k ? ` class="${k}"` : ""}${i === (idCol < 0 ? 0 : idCol) ? ` id="${o.id}-i-${id}"` : ""}${stk(c, i)}>${tg}${c.cell(r)}</td>`;
+        const t = tpl[i];
+        return `${t.a}${t.id ? ` id="${o.id}-i-${id}"` : ""}${t.z}${tg}${c.cell(r)}</td>`;
       }).join("")}</tr>${on ? `<tr class="tpt-exp"><td colspan="${cols.length}"><div class="tpt-slot"></div></td></tr>` : ""}`;
     }
     const spacer = (/** @type {number} */ n) => n > 0 ? `<tr class="tpt-sp" aria-hidden="true" style="height:${n * rowH}px"><td colspan="${cols.length}"></td></tr>` : "";
@@ -154,7 +177,7 @@
     }
     function draw() {
       const had = document.activeElement instanceof HTMLElement && host.contains(document.activeElement) ? document.activeElement.getAttribute("data-tg") : null;
-      panel.remove(); drawHead();
+      panel.remove(); drawHead(); makeTpl();
       const p = st.pinned.length, n = st.rest.length, [a, b] = windowOf(); st.a = a; st.b = b;
       const oi = st.open == null ? -1 : st.rest.findIndex(r => idOf(r) === st.open);
       const idx = [];
@@ -169,6 +192,7 @@
       const slot = body.querySelector(".tpt-slot"); if (slot) slot.appendChild(panel);
       if (had != null) { const bt = body.querySelector(`[data-tg="${had}"]`); if (bt instanceof HTMLElement) bt.focus(); }
     }
+    const redrawRows = (/** @type {(number | null)[]} */ ids) => redrawOnly({ host, body, panel, rowHtml, rowOf, isVirt }, ids);
     let raf = 0;
     wrap.addEventListener("scroll", () => {
       if (!isVirt() || raf) return;
@@ -177,19 +201,34 @@
 
     // ---- the filter, the order and the pinned row
     const chipTests = () => (o.chips || []).filter(c => st.chips.has(c.key));
+    /** lower-case search text of each row, kept only while the user types in the search box (any other refresh drops it, so edited rows are never stale) @type {Map<any, string> | null} */
+    let hay = null;
+    /** all the rows that are not pinned, ordered by the current column: a chip or the search then only filters it instead of sorting again; dropped by every refresh that is not a filter change @type {{ key: string | null, dir: number, list: any[], vals: any[] } | null} */
+    let ordered = null;
     function derive() {
       const ts = chipTests(), q = st.q.trim().toLowerCase();
       const groups = new Map(), alone = /** @type {Chip[]} */ ([]);       // chips with the same `group` add rows (any of them); the others narrow the list (all of them)
       for (const c of ts) if (c.group) groups.set(c.group, [...(groups.get(c.group) || []), c]); else alone.push(c);
-      const ok = (/** @type {any} */ r) => alone.every(c => c.test(r)) && [...groups.values()].every(g => g.some((/** @type {Chip} */ c) => c.test(r))) && (!q || !o.search || o.search(r).toLowerCase().includes(q));
+      const ok = (/** @type {any} */ r) => alone.every(c => c.test(r)) && [...groups.values()].every(g => g.some((/** @type {Chip} */ c) => c.test(r))) && (!q || !o.search || hayOf(r).includes(q));
+      const hayOf = (/** @type {any} */ r) => { if (!hay) return /** @type {Function} */ (o.search)(r).toLowerCase(); let h = hay.get(r); if (h === undefined) { h = /** @type {Function} */ (o.search)(r).toLowerCase(); hay.set(r, h); } return h; };
       const pinned = o.pin ? st.rows.filter(r => /** @type {Function} */ (o.pin)(r)) : [];
-      const rest = (o.chips || o.search) ? st.rows.filter(r => !(o.pin && o.pin(r)) && ok(r)) : st.rows.filter(r => !(o.pin && o.pin(r)));
-      st.pinned = pinned; st.rest = sortRows(rest, o.cols.find(x => x.key === st.sort), st.dir); st.list = [...pinned, ...st.rest];
+      const sc = o.cols.find(x => x.key === st.sort);
+      // a sort value edited in place (no refresh in between) is noticed here: the cached order is then built again
+      if (ordered && sc && sc.sort && ordered.vals.some((v, i) => /** @type {Function} */ (sc.sort)(/** @type {any} */ (ordered).list[i]) !== v)) ordered = null;
+      if (!ordered || ordered.key !== st.sort || ordered.dir !== st.dir) {
+        const list = sortRows(o.pin ? st.rows.filter(r => !(/** @type {Function} */ (o.pin))(r)) : st.rows, sc, st.dir);
+        ordered = { key: st.sort, dir: st.dir, list, vals: sc && sc.sort ? list.map(sc.sort) : [] };
+      }
+      const rest = (o.chips || o.search) ? ordered.list.filter(ok) : ordered.list;
+      st.pinned = pinned; st.rest = rest; st.list = [...pinned, ...st.rest];
       if (count) count.textContent = `${st.list.length} of ${st.rows.length} rows`;
       if (o.onCount) o.onCount(st.list.length, st.rows.length);
       if (isVirt() && !o.height) { wrap.classList.add("tpt-h"); wrap.style.maxHeight = "520px"; }
     }
-    function refresh() {
+    /** @param {"type" | "filter"} [how] "type" = the search box changed (keeps the search texts and the order), "filter" = a chip changed (keeps the order); else everything is read again */
+    function refresh(how) {
+      hay = how === "type" && o.search ? hay || new Map() : null;
+      if (!how) ordered = null;
       derive();
       if (st.open != null && !st.list.some(r => idOf(r) === st.open)) { st.open = null; panel.innerHTML = ""; }
       draw();
@@ -237,16 +276,16 @@
     /** @param {number} id */
     function open(id) {
       const r = rowOf(id); if (!r) return false;
-      const fresh = st.open !== id;
+      const fresh = st.open !== id, prev = st.open;
       if (fresh && isVirt() && !trOf(id)) reveal(st.list.indexOf(r));
-      anchored(id, () => { st.open = id; if (fresh) { buildPanel(r); draw(); fill(r); } else draw(); });
+      anchored(id, () => { st.open = id; if (fresh) { buildPanel(r); if (!redrawRows([prev, id])) draw(); fill(r); } else draw(); });
       if (fresh) { live.textContent = `Details of ${o.name(r)} opened`; }
       showPanel(id);
       return true;
     }
     function close() {
       const id = st.open; if (id == null) return;
-      anchored(id, () => { st.open = null; panel.innerHTML = ""; draw(); });
+      anchored(id, () => { st.open = null; panel.innerHTML = ""; if (!redrawRows([id])) draw(); });
       live.textContent = "Details closed";
     }
     /** @param {number} id */
@@ -293,11 +332,11 @@
       b.setAttribute("aria-pressed", String(on)); lsSet(kChips, JSON.stringify([...st.chips]));
       if (o.onFilter) o.onFilter([...st.chips]);
       if (isVirt()) wrap.scrollTop = 0;
-      refresh();
+      refresh("filter");
     }
     host.querySelectorAll("[data-chip]").forEach(b => b.addEventListener("click", () => { const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.chip); setChip(k, !st.chips.has(k)); }));
     const q = /** @type {HTMLInputElement | null} */ (host.querySelector(".tpt-q"));
-    if (q) q.addEventListener("input", () => { st.q = q.value; refresh(); });
+    if (q) q.addEventListener("input", () => { st.q = q.value; refresh("type"); });
     host.querySelectorAll("[data-vc]").forEach(b => b.addEventListener("change", () => {
       const k = /** @type {string} */ (/** @type {HTMLElement} */ (b).dataset.vc);
       if (/** @type {HTMLInputElement} */ (b).checked) st.vis.add(k); else st.vis.delete(k);
@@ -362,70 +401,6 @@
     };
   }
 
-  /** a small line chart of the areas along the treatment, readable for a screen reader (values in the label); the data are also in the row and in the sheet
-   * @param {number[]} series @param {string} [what] */
-  function spark(series, what) {
-    const mx = Math.max(...series) || 1, w = 70, ht = 18;
-    const pts = series.map((v, i) => `${(i / Math.max(1, series.length - 1) * (w - 4) + 2).toFixed(1)},${(ht - 2 - v / mx * (ht - 4)).toFixed(1)}`).join(" ");
-    const lab = `${what || "area"} along the treatment, from 0 to ${Math.round(mx)}: ${series.map(v => Math.round(v)).join(", ")}`;
-    return `<svg width="${w}" height="${ht}" role="img" aria-label="${lab}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`;
-  }
-
-  /** the symbol of the state of an area: ● detected, ◐ filled, ◌ targeted, ○ absent, – n/a (the shape says it, not the colour)
-   * @param {string} s */
-  function state(s) {
-    const [sym, word] = STATES[s] || STATES.na;
-    return `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" role="img" aria-label="${word}"${tt("ft.state." + s)}>${sym}</span>`;
-  }
-  const AREA_NOTE = "white = none, darker green = larger area";
-  const sci = (/** @type {number} */ v) => !Number.isFinite(v) ? "–" : v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(1) : String(+v.toPrecision(3));
-  /** a point u in 0..1 of the green scale of five CSS variables `--tpr-g0..4` (light → dark, one hue): a mix of the two stops around it */
-  function ramp(/** @type {number} */ u) {
-    const x = Math.max(0, Math.min(1, u)) * 4, i = Math.min(3, Math.floor(x)), f = Math.round((x - i) * 100);
-    return `color-mix(in srgb,var(--tpr-g${i + 1}) ${f}%,var(--tpr-g${i}))`;
-  }
-  /** the position on the green scale of the areas of one row: log10 of the area against the maximum of the row over three decades (the maximum is 1; no area → null, drawn white).
-   * @param {(number | null | undefined)[]} areas @returns {(a: number | null | undefined) => number | null} */
-  function areaScale(areas) {
-    const mx = Math.max(0, ...areas.filter((/** @type {any} */ a) => typeof a === "number" && Number.isFinite(a)).map(Number));
-    return a => !(typeof a === "number" && a > 0 && mx > 0) ? null : Math.max(0.08, Math.min(1, 1 + Math.log10(a / mx) / 3));
-  }
-  /** the class and the style of a square for the position `u` of the scale: white when there is no area, the symbol dark on the light greens and white on the dark ones
-   * @param {number | null} u */
-  const paint = u => ({ cls: u == null ? "" : u < 0.6 ? " on-k" : " on-w", style: u == null ? "" : ` style="background:${ramp(u)}"` });
-  /** group of a sample in the order of the row: 0 blank or dark, 1 t0, 2 timed, 3 other @param {{ type?: string, time?: number | null }} x */
-  const grp = x => /^(blank|dark|bianco|buio)/i.test(x.type || "") ? 0 : (/^t0/i.test(x.type || "") || x.time === 0) ? 1 : typeof x.time === "number" && Number.isFinite(x.time) ? 2 : 3;
-  /** a row of symbols, at most `max` and then «+N»; the label sums them up («5 detected, 1 filled»).
-   * With `info` (one `{file, type, time, area}` per state) the samples go in the order of the matrix (blank / dark, t0, growing times), every symbol is a focusable stop with its help
-   * (sample, time, area, state) and its background says the area on the log scale of the matrix (darker = more); the shape still says the state.
-   * @param {string[]} states @param {number} [max] @param {{ file?: string, type?: string, time?: number | null, area?: number }[]} [info] */
-  function cells(states, max = 12, info) {
-    const n = /** @type {Record<string, number>} */ ({}); for (const s of states) n[s] = (n[s] || 0) + 1;
-    const lab = Object.keys(STATES).filter(k => n[k]).map(k => `${n[k]} ${STATES[k][1]}`).join(", ") || "no samples";
-    const sym = (/** @type {string} */ s) => `<span class="tpt-st tpt-st-${STATES[s] ? s : "na"}" aria-hidden="true">${(STATES[s] || STATES.na)[0]}</span>`;
-    const more = (/** @type {number} */ k) => k > max ? `<span class="tpt-more">+${k - max}</span>` : "";
-    if (!info || info.length !== states.length) return `<span class="tpt-cells" role="img" aria-label="${lab}">${states.slice(0, max).map(sym).join("")}${more(states.length)}</span>`;
-    const ix = states.map((_, i) => i).sort((a, b) => grp(info[a]) - grp(info[b]) || (+(info[a].time ?? 0)) - (+(info[b].time ?? 0))), sc = areaScale(info.map(x => x.area));
-    const GN = ["blank / dark", "t0", "timed", "other"], esq = (/** @type {string} */ t) => t.replace(/"/g, "&quot;");
-    const one = (/** @type {number} */ i, /** @type {number} */ k) => {
-      const x = info[i], a = x.area, g = grp(x), [, word] = STATES[states[i]] || STATES.na, pr = paint(sc(a));
-      const tip = `${x.file ? x.file + " · " : ""}${x.type || GN[g]}${typeof x.time === "number" ? ", time " + x.time : ""} · area ${typeof a === "number" ? sci(a) : "none"} · peak ${word}`;
-      return `<span class="tpt-cell${pr.cls}${k && grp(info[ix[k - 1]]) !== g ? " tpt-gs" : ""}" role="img" aria-label="${esq(tip)}"${G.TPHELP ? ` tabindex="0" data-tt="ft.riga.cell" data-tt-text="${esq(tip)}"` : ""}${pr.style}>${sym(states[i])}</span>`;
-    };
-    return `<span class="tpt-cells tpt-cells-g" role="group" aria-label="${lab}">${ix.slice(0, max).map(one).join("")}${more(states.length)}</span>`;
-  }
-  /** one dot per condition: ● present, ○ absent (the shape says it, not the colour); the label names the conditions («present in O2, Air; absent in N2»)
-   * @param {{ id: string, present: boolean }[]} items */
-  function dots(items) {
-    const yes = items.filter(c => c.present).map(c => c.id), no = items.filter(c => !c.present).map(c => c.id);
-    const esc = (/** @type {string} */ t) => t.replace(/[&<>"]/g, ch => /** @type {any} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
-    const lab = [yes.length ? "present in " + yes.join(", ") : "", no.length ? "absent in " + no.join(", ") : ""].filter(Boolean).join("; ");
-    return `<span class="tpt-cells tpt-dots" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${items.map(c => `<span aria-hidden="true">${c.present ? "●" : "○"}</span>`).join("")}</span>`;
-  }
-  /** the legend of the symbols under the table; with `area` it also says what the green of the squares means @param {string[]} keys @param {boolean} [area] */
-  function legend(keys, area) {
-    return `<div class="tpt-leg">${area ? `<span>${AREA_NOTE}</span>` : ""}${keys.map(k => `<span${G.TPHELP ? ` tabindex="0"` : ""}${tt("ft.state." + k)}>${state(k)} ${(STATES[k] || STATES.na)[1]}</span>`).join("")}</div>`;
-  }
   /** the options of a table with decisions: the badge of the Lvl column shows the decided level, two chips filter by it, the export adds two columns @param {Opts} o @param {Decide} d @returns {Opts} */
   function withDecisions(o, d) {
     const get = (/** @type {any} */ r) => G.TPDEC.get(d.series(), d.key(r));
@@ -435,26 +410,5 @@
       { key: "hidenottp", label: "Hide not a TP", help: "ft.chip.hidenottp", test: (/** @type {any} */ r) => { const x = get(r); return !(x && x.level === G.TPDEC.NOT_TP); } }];
     return { ...o, cols, chips };
   }
-  /** the badge of the Schymanski level («L3», «L2a»); a level decided by the chemist has the double border and the proposed one in the label (none when
-   * the programme proposed no level, as at unit resolution) @param {string | number} lv @param {{ decided?: string | number | null }} [opt] */
-  function level(lv, opt) {
-    const L = G.LIVELLI, tag = (/** @type {any} */ x) => L ? L.tag(x) : "L" + x, cls = (/** @type {any} */ x) => L ? L.cls(x) : "lv-" + x;
-    const d = opt && opt.decided, prop = lv != null && lv !== "" ? `; proposed ${tag(lv)}` : "; no level proposed";
-    if (d === "nottp") return `<span class="lvb tpt-nottp" role="img" aria-label="Not a TP, decided by the chemist${prop}"${tt("ft.col.level")}>${prop.startsWith("; proposed") ? `<s>${tag(lv)}</s> ` : ""}not a TP</span>`;
-    if (d != null && d !== "") return `<span class="lvb ${cls(d)} tpt-dec" role="img" aria-label="${tag(d)}, decided by the chemist${prop}"${tt("ft.col.level")}>${tag(d)}</span>`;
-    return `<span class="lvb ${cls(lv)}" role="img" aria-label="${tag(lv)}, proposed"${tt("ft.col.level")}>${tag(lv)}</span>`;
-  }
-  /** the badge of the prediction scale («Prev. 2»): only the outline, so it is not taken for a level @param {number} n */
-  function pred(n) {
-    return `<span class="lvb pd-${n}" role="img" aria-label="Prev. ${n}, prediction scale"${tt("ft.col.pred")}>Prev. ${n}</span>`;
-  }
-
-  /** an area in engineering notation, never with the suffixes k / M: 821430000 -> «821.43e+6»; a value that rounds up to 1000.00 moves to the next power @param {number} v */
-  const area = v => {
-    if (!Number.isFinite(v) || v === 0) return "0";
-    let e = Math.floor(Math.log10(Math.abs(v)) / 3) * 3, m = (v / 10 ** e).toFixed(2);
-    if (Math.abs(+m) >= 1000) { e += 3; m = (v / 10 ** e).toFixed(2); }
-    return m + "e" + (e < 0 ? "-" : "+") + Math.abs(e);
-  };
   G.TPTAB = { mount, spark, state, cells, dots, legend, areaScale, paint, AREA_NOTE, level, pred, area };
 })();

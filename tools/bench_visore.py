@@ -1,6 +1,6 @@
 """Speed of the viewer gestures on the built site (Rust/WASM engine, Chromium headless, synthetic files) and, optionally, of the native engine.
 
-    python3 tools/bench_visore.py [CASES] [--site DIR] [--wd DIR] [--reps N] [--mreps N] [--json] [--native] [--g7 DIR]
+    python3 tools/bench_visore.py [CASES] [--site DIR] [--wd DIR] [--reps N] [--mreps N] [--json] [--native] [--g7 DIR] [--only-g2]
 
 CASES (default `lr,hrc`): `lr` 3200-like Full Scan (1500 scans x 500 centroids), `hrc` Orbitrap centroids (3000 x 3000), `hrc_big` (6000 x 5000), `hrp` Orbitrap
 profile (400 x 50 000), `lr20` (20 `lr` files), `hr15` (15 `hrc` files); `NAME:SCANSxPEAKS` changes the size, `NAME:SCANSxPEAKSxFILES` also the number of files.
@@ -21,6 +21,8 @@ import bench_mappa as bm  # noqa: E402
 
 CASES = {"lr": ("lr", 1500, 500, 1), "hrc": ("hrc", 3000, 3000, 1), "hrc_big": ("hrc", 6000, 5000, 1), "hrp": ("hrp", 400, 50_000, 1),
          "lr20": ("lr", 1500, 500, 20), "hr15": ("hrc", 3000, 3000, 15)}
+ONLY_M = False
+ONLY_G2 = False
 OPEN_MS = 1500000                                              # the opening of the files gives up after this many ms (the case is reported as not measured)
 SYN = {"3k": 3_000, "50k": 50_000, "1M": 1_000_000}          # traces served by the bench for the m/z 1001 / 1002 / 1003 (G5)
 
@@ -92,7 +94,7 @@ def build_site(out):
     w = out / "static" / "wasm" / "mzlab_wasm_bg.wasm"
     if shutil.which("npm"):
         env = {**os.environ, "RUNNER_TEMP": str(out.parent / "runner_tmp")}
-        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), "1703936", "engine"], cwd=ROOT, env=env, check=False)
+        subprocess.run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(w), "1884160", "engine"], cwd=ROOT, env=env, check=False)
 
 
 def stats(v):
@@ -256,17 +258,33 @@ class Viewer(Gestures):
         s.out["M_memory"] = {"xics": s.mreps, "run_s": round(time.time() - t, 1), "js_heap_MB_before": h0, "js_heap_MB_after": h1, "engine_MB_before": w0, "engine_MB_after": w1,
                              "engine_peak_MB": s.ev("Math.round(__V.wmem / 1048576)"), "chromium_rss_MB": bm.rss_mb(), "panels_after": s.ev("E.panels.length")}
 
+    # ---- M of the lens (V-5): `mreps` distinct ions previewed one after the other (the 64-entry cache of the lens turns over), growth every quarter
+    def mem_lens(s):
+        heap = "(async () => { for (let i = 0; i < 4; i++) { if (window.gc) window.gc(); await new Promise(r => setTimeout(r, 50)); } return Math.round(((performance.memory || {}).usedJSHeapSize || 0) / 1048576 * 10) / 10; })()"
+        if not s.ev("!!window.XICLENS"): return
+        s.ev(f"{s.panel('spec')}.cv.scrollIntoView()"); s.quiet(); s.take()
+        h0 = s.ev(heap); w0 = s.ev("Math.round(__V.wcur / 1048576)"); steps = [{"n": 0, "js_heap_MB": h0, "engine_MB": w0}]
+        t = time.time(); q = max(1, s.mreps // 4)
+        for a in range(0, s.mreps, q):
+            s.ev(f"""(async ([a, b]) => {{ const p = {s.panel('spec')}; for (let i = a; i < b; i++) {{ const m = 60 + i + (i > 938 ? 5 : 0); XICLENS.show(p, m);
+              await new Promise(r => {{ const w = () => (XICLENS.shown(p) === m && XICLENS.trace(p)) ? r() : setTimeout(w, 2); w(); }}); }} XICLENS.close(p); }})([{a}, {min(a + q, s.mreps)}])""")
+            s.quiet(); steps.append({"n": min(a + q, s.mreps), "js_heap_MB": s.ev(heap), "engine_MB": s.ev("Math.round(__V.wcur / 1048576)")})
+        s.out["M_lens"] = {"previews": s.mreps, "run_s": round(time.time() - t, 1), "steps": steps, "cache_after": s.ev("XICLENS.cacheSize()"), "engine_peak_MB": s.ev("Math.round(__V.wmem / 1048576)"),
+                           "js_heap_growth_MB": round(steps[-1]["js_heap_MB"] - h0, 1), "engine_growth_MB": steps[-1]["engine_MB"] - w0, "chromium_rss_MB": bm.rss_mb()}
+
 
 def run_case(pg, port, name, files, reps, mreps, one_synthetic):
     v = Viewer(pg, reps, mreps); v.open(port, name, files)
+    if ONLY_M: v.mem_lens(); return v.out
     v.g1()
     multi = len(files) > 1
     if multi: v.ev("setVisOf(E.files.slice(1), false)"); v.quiet(600); v.take()
     v.g2()
+    if ONLY_G2: return v.out
     if multi: v.g3()
     v.g4(); v.g6(); v.g5(synthetic=one_synthetic)
     if multi: v.ev("setVisOf(E.files.slice(1), false)"); v.quiet(600); v.take()      # M counts the XICs of one file: G3 has its own
-    v.mem()
+    v.mem(); v.mem_lens()
     return v.out
 
 
@@ -320,6 +338,8 @@ def table(o):
         g = o["G4_sweep_spectrum"]; rows.append(("G4_sweep_spectrum", f'frames {g["frames"]}, p50 {g["frame_p50"]} ms, p95 {g["frame_p95"]} ms, long tasks {g["long_tasks"]}'))
     if "M_memory" in o:
         m = o["M_memory"]; rows.append(("M_memory", f'{m["xics"]} XICs in {m["run_s"]} s: JS heap {m["js_heap_MB_before"]} -> {m["js_heap_MB_after"]} MB, engine {m["engine_MB_before"]} -> {m["engine_MB_after"]} MB (peak {m["engine_peak_MB"]}), RSS {m["chromium_rss_MB"]} MB'))
+    if "M_lens" in o:
+        m = o["M_lens"]; rows.append(("M_lens", f'{m["previews"]} previews in {m["run_s"]} s: JS heap {" -> ".join(str(x["js_heap_MB"]) for x in m["steps"])} MB, engine {" -> ".join(str(x["engine_MB"]) for x in m["steps"])} MB (peak {m["engine_peak_MB"]}), cache {m["cache_after"]}, RSS {m["chromium_rss_MB"]} MB'))
     return f"\n### {o['case']}\n| measure | value |\n|---|---|\n" + "\n".join(f"| {a} | {b} |" for a, b in rows)
 
 
@@ -341,12 +361,12 @@ def md(path):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("cases", nargs="?", default="lr,hrc"); ap.add_argument("--site", type=Path); ap.add_argument("--wd", type=Path)
     ap.add_argument("--reps", type=int, default=30); ap.add_argument("--mreps", type=int, default=1000); ap.add_argument("--json", action="store_true")
-    ap.add_argument("--port", type=int, default=8873); ap.add_argument("--native", action="store_true"); ap.add_argument("--g7", type=Path)
+    ap.add_argument("--port", type=int, default=8873); ap.add_argument("--only-g2", action="store_true", help="only G1 and G2 (the XIC panel)"); ap.add_argument("--only-m", action="store_true", help="only the M of the lens (V-5)"); ap.add_argument("--native", action="store_true"); ap.add_argument("--g7", type=Path)
     ap.add_argument("--g7-site", type=Path, help="open this big mzML in the browser and time XICs on its index (G7 on the site)")
     ap.add_argument("--open-min", type=int, default=25, help="minutes the opening of the files of a case may take")
     ap.add_argument("--g7-size", default="80000x6000", help="SCANSxPEAKS of the file of --g7 (80000x6000 = 2.6 GB of mzML)")
     ap.add_argument("--md", type=Path, help="print the starting table from the JSON lines of a previous run and stop")
-    a = ap.parse_args(); global OPEN_MS; OPEN_MS = a.open_min * 60000
+    a = ap.parse_args(); global OPEN_MS, ONLY_M, ONLY_G2; OPEN_MS = a.open_min * 60000; ONLY_M = a.only_m; ONLY_G2 = a.only_g2
     if a.md: return print(md(a.md))
     wd = a.wd or Path(tempfile.gettempdir()) / "bench_visore"; wd.mkdir(parents=True, exist_ok=True)
     t_all = time.time(); mach = machine(); print(json.dumps({"machine": mach}) if a.json else f"machine: {mach['cpu']} x{mach['cores']}, commit {mach['commit']}", flush=True)

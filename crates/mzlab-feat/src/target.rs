@@ -9,6 +9,7 @@
 
 mod extract;
 pub mod join;
+pub mod merge;
 pub mod null;
 pub mod offset;
 
@@ -49,6 +50,13 @@ pub struct TargetParams {
     pub ms2: Ms2Params,
     /// Da added to the m/z of every hypothesis before it is looked for: the offset of the calibration of a unit-resolution instrument (`offset::estimate`).
     pub mz_offset: f64,
+    /// A peak with at least this many points (but fewer than `min_points`) is accepted as an estimate (`REASON_ESTIMATED` in `qreason` of its row);
+    /// `None` = off, `min_points` is the limit.
+    pub estimate_points: Option<u16>,
+    /// Largest step back, % of the apex height, that the trace may make on the way up and on the way down of an accepted peak; `None` = no check.
+    pub shape_tol_pct: Option<f64>,
+    /// Rows of hypotheses within `ppm` in m/z whose RT windows overlap become one row (`TargetRow::merged`, `merge::merge_overlapping`).
+    pub merge_overlap: bool,
 }
 
 impl Default for TargetParams {
@@ -68,6 +76,9 @@ impl Default for TargetParams {
             decoys: 64,
             ms2: Ms2Params::default(),
             mz_offset: 0.0,
+            estimate_points: None,
+            shape_tol_pct: None,
+            merge_overlap: false,
         }
     }
 }
@@ -118,6 +129,8 @@ pub struct TargetRow {
     pub ms2_total: u32,
     /// Chance that random ions give as many hits in this window (1 when the density was not measured).
     pub coincidence: f64,
+    /// Other hypotheses folded into this row by `merge::merge_overlapping` (empty unless `TargetParams::merge_overlap`).
+    pub merged: Vec<u32>,
 }
 
 impl TargetRow {
@@ -202,6 +215,9 @@ impl TargetResult {
             b.extend_from_slice(&r.rt.to_le_bytes());
             b.extend_from_slice(&r.coincidence.to_le_bytes());
             b.extend_from_slice(&r.ms2_total.to_le_bytes());
+            for &h in &r.merged {
+                b.extend_from_slice(&h.to_le_bytes());
+            }
             for c in &r.cells {
                 b.push(c.state);
                 b.extend_from_slice(&c.area.to_le_bytes());
@@ -407,6 +423,7 @@ fn make_row(
         n_detected: count(CELL_DETECTED),
         n_targeted: count(CELL_TARGETED),
         coincidence,
+        merged: Vec::new(),
         cells,
     }
 }
@@ -441,5 +458,8 @@ fn assemble<R: ReadAt>(
         res.rows.push(row);
     }
     res.found = res.rows.len() as u32;
+    if p.merge_overlap {
+        merge::merge_overlapping(&mut res.rows, p);
+    }
     Ok(())
 }

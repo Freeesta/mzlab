@@ -37,7 +37,7 @@ const RIFERIMENTO = (() => {
     if (window.LISTE && LISTE.ready && LISTE.hasUser) {
       await LISTE.ready();
       if (LISTE.hasUser()) {
-        const ppm = (window.UIP && UIP.hrPpm) || 5, pol = (fo[0] && fo[0].polarity) || "positive";
+        const ppm = (/** @type {any} */ (window).UIP && UIP.hrPpm) || 5, pol = (fo[0] && fo[0].polarity) || "positive";
         lst = tb.features.map(f => LISTE.userMatches(f.mz, pol, ppm) || []);
       }
     }
@@ -156,7 +156,7 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
           // the instrument fragments the ion in other cycles: the MS2 scan closest in time
           const D = DDA.ready(f.k), s2 = E.panels.find(q => q.id === s1.duo && q.el);
           if (D && s2 && D.sid) {
-            const tol = Math.max(0.02, mz * ((window.UIP && UIP.hrPpm) || 5) * 1e-6);
+            const tol = Math.max(0.02, mz * ((/** @type {any} */ (window).UIP && UIP.hrPpm) || 5) * 1e-6);
             let best = -1;
             for (let i = 0; i < D.sid.length; i++) if (D.prec[i] != null && Math.abs(D.prec[i] - mz) <= tol && (best < 0 || Math.abs(D.rt[i] - apex) < Math.abs(D.rt[best] - apex))) best = i;
             if (best >= 0) { DDA.selectMs2(s2, D.sid[best]); break; }
@@ -165,7 +165,7 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
         }
       }
       say("ref.opened");
-    } catch (err) { if (note) note.textContent = String(err && err.message || err); }
+    } catch (err_) { const err = /** @type {Lanciato} */ (err_); if (note) note.textContent = String(err && err.message || err); }
   }
 
   // ---------------------------------------------------------------- export (parameters and reference included: reproducibility)

@@ -8,9 +8,10 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::famalign::{align_families, align_ions};
 use crate::family::analyse_families;
-use crate::gapfill::fill_file;
+use crate::gapfill::{fill_apply, fill_file, fill_find};
 use crate::isotopes::group;
 use crate::pipeline::analyse_with;
+use crate::prog::Prog;
 use crate::quality::assess;
 use crate::recipe::{Mode, Recipe, WEAK_RATIO};
 use crate::rtmap::{build, RtMap};
@@ -125,7 +126,17 @@ pub fn align_and_fill<R: ReadAt>(
             weak: None,
         })
     };
-    let (mut table, filled) = finish(table, &mut { strong }, files.len(), r, None, None, open)?;
+    let (mut table, filled) = finish(
+        table,
+        &mut { strong },
+        files.len(),
+        r,
+        None,
+        None,
+        open,
+        None,
+        &mut Prog::off(),
+    )?;
     crate::rowmeta::compute_in(&mut table, r.row_window(), &mut |k, (lo, hi)| {
         let mut part = FileFeatures {
             dt: files[k].dt,
@@ -144,7 +155,100 @@ pub fn align_and_fill<R: ReadAt>(
     Ok((table, filled))
 }
 
+/// The cells a file fills: (row, area).
+type Cells = Vec<(usize, f64)>;
+
+/// Waits for the `n` files counted in `finished` and tells `prog` how many are done, as they finish; gives up when `stalled` says the workers are gone.
+#[cfg(not(target_family = "wasm"))]
+fn report_finished(
+    finished: &(std::sync::Mutex<usize>, std::sync::Condvar),
+    n: usize,
+    prog: &mut Prog,
+    stalled: impl Fn() -> bool,
+) {
+    let mut seen = 0;
+    while seen < n {
+        let mut g = finished.0.lock().unwrap_or_else(|e| e.into_inner());
+        while *g == seen && !stalled() {
+            g = finished
+                .1
+                .wait_timeout(g, std::time::Duration::from_millis(50))
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+        let now = *g;
+        drop(g);
+        if now == seen {
+            return;
+        }
+        prog.tick(now - seen);
+        seen = now;
+    }
+}
+
+/// The gap filling of every file, a few threads at a time (`open` can be called from any thread): the cells of a file are found without changing the table and written in file order,
+/// the cells `fill_file` fills one file after the other. Where threads are missing (wasm) the files go one by one.
+fn fill_threads<R: ReadAt>(
+    table: &mut Aligned,
+    n: usize,
+    map: Option<&RtMap>,
+    r: &Recipe,
+    open: &(dyn Fn(usize) -> Result<Index<R>> + Sync),
+    prog: &mut Prog,
+) -> Result<usize> {
+    #[cfg(not(target_family = "wasm"))]
+    let workers = std::thread::available_parallelism().map_or(1, |w| w.get());
+    #[cfg(target_family = "wasm")]
+    let workers = 1;
+    let mut found: Vec<Option<Result<Cells>>> = (0..n).map(|_| None).collect();
+    {
+        let al: &Aligned = table;
+        let find = |k: usize| {
+            open(k).and_then(|mut ix| fill_find(&mut ix, al, k, map, &r.detect, &r.fill))
+        };
+        #[cfg(not(target_family = "wasm"))]
+        if workers > 1 && n > 1 {
+            let next = std::sync::atomic::AtomicUsize::new(0);
+            let slots = std::sync::Mutex::new(&mut found);
+            // files finished so far: the calling thread reports them while the workers run
+            let finished = (std::sync::Mutex::new(0usize), std::sync::Condvar::new());
+            std::thread::scope(|s| {
+                let handles: Vec<_> = (0..workers.min(n))
+                    .map(|_| {
+                        s.spawn(|| loop {
+                            let k = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            if k >= n {
+                                break;
+                            }
+                            let f = find(k);
+                            slots.lock().unwrap_or_else(|e| e.into_inner())[k] = Some(f);
+                            *finished.0.lock().unwrap_or_else(|e| e.into_inner()) += 1;
+                            finished.1.notify_all();
+                        })
+                    })
+                    .collect();
+                report_finished(&finished, n, prog, || {
+                    handles.iter().all(|h| h.is_finished())
+                });
+            });
+        }
+        for (k, slot) in found.iter_mut().enumerate() {
+            if slot.is_none() {
+                *slot = Some(find(k));
+                prog.tick(1);
+            }
+        }
+    }
+    let mut filled = 0;
+    for (k, f) in found.into_iter().enumerate() {
+        let f = f.unwrap_or_else(|| Ok(Vec::new()))?;
+        filled += fill_apply(table, k, &f);
+    }
+    Ok(filled)
+}
+
 /// Weak tier, map of RT and gap filling on the aligned table of the strong peaks. `strong(k)` gives the table of file `k` (only its m/z and RT are read).
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn finish<R: ReadAt>(
     mut table: Aligned,
     strong: &mut dyn FnMut(usize) -> Result<StrongFile>,
@@ -153,6 +257,8 @@ pub(crate) fn finish<R: ReadAt>(
     budget: Option<&MemBudget>,
     spill: Option<&mut dyn Spill>,
     mut open: impl FnMut(usize) -> Result<Index<R>>,
+    par_open: Option<&(dyn Fn(usize) -> Result<Index<R>> + Sync)>,
+    prog: &mut Prog,
 ) -> Result<(Aligned, usize)> {
     if r.weak_files > 0 {
         let mut weak = Weak::new(spill);
@@ -168,6 +274,7 @@ pub(crate) fn finish<R: ReadAt>(
                 None => weak_candidates(&mut open(k)?, r)?,
             };
             weak.add(unheld(&candidates, &s.table, r), budget)?;
+            prog.tick(1);
         }
         let ions = weak.recurring(r, budget)?;
         table.append_unheld(&ions, r.align.ion.ppm, r.fill.rt_tol);
@@ -175,12 +282,17 @@ pub(crate) fn finish<R: ReadAt>(
     let map: RtMap = build(&table, &r.rt);
     let map = map.ok().then_some(&map);
     let mut filled = 0;
-    for k in 0..n {
-        if !r.fill_gaps {
-            break;
+    if r.fill_gaps {
+        match par_open {
+            Some(po) => filled = fill_threads(&mut table, n, map, r, po, prog)?,
+            None => {
+                for k in 0..n {
+                    let mut index = open(k)?;
+                    filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
+                    prog.tick(1);
+                }
+            }
         }
-        let mut index = open(k)?;
-        filled += fill_file(&mut index, &mut table, k, map, &r.detect, &r.fill)?;
     }
     table.sort_rows();
     Ok((table, filled))

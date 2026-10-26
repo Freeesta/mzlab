@@ -348,6 +348,7 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             id: 1,
             nome: stem,
             scansioni: indice.len(),
+            dimensione: None,
         }],
         nome,
         limiti: *limiti,

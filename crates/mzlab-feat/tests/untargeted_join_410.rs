@@ -73,6 +73,7 @@ fn rows_like_mzmine() {
                     height: num(r, "height"),
                     area: num(r, "area"),
                     filled: false,
+                    broad: false,
                 })
                 .collect()
         })

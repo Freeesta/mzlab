@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The graph of the «Fragmentation graph» tab: a thin adapter between the state of the tab (view, filters, rule labels, molecule drawings) and the pure drawer
 // msngrafo-vista.js, which the Flow and the stand-alone HTML use too. Selection, path from the root, keys, zoom and move: see the drawer.
 import { G, TXT, chosen } from "./infusione-grafo-stato.js";

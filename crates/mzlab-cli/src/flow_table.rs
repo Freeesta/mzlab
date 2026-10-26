@@ -25,6 +25,28 @@ fn number(job: &Job, name: &str) -> Option<f64> {
     param(job, name).and_then(|v| v.f64())
 }
 
+/// The options of the blank rule that differ from the defaults, as the fields that follow `valore`.
+fn blank_extra(job: &Job) -> String {
+    let text = |k: &str| param(job, k).and_then(|v| v.str());
+    let mut o = String::new();
+    let mut put = |key: &str, v: &str| o.push_str(&format!(",\"{key}\":\"{v}\""));
+    match text("blank_quantity") {
+        Some("height") => put("grandezza", "altezza"),
+        Some("norm_area") => put("grandezza", "area_norm"),
+        _ => {}
+    }
+    if text("blank_stat") == Some("max") {
+        put("statistica", "massimo");
+    }
+    if text("blank_scope") == Some("each_feature") {
+        put("ambito", "ciascuna");
+    }
+    if param(job, "blank_subtract").and_then(|v| v.bool()) == Some(true) {
+        o.push_str(",\"sottrai\":true");
+    }
+    o
+}
+
 /// `{"normalizza":..., "filtra":[...]}`: the rules in the order of the descriptor, each one only when its parameter is set.
 pub fn spec_text(job: &Job) -> String {
     let mut rules: Vec<String> = Vec::new();
@@ -38,9 +60,15 @@ pub fn spec_text(job: &Job) -> String {
     rule("min_rilevati", number(job, "min_detected"), "");
     rule("min_area", number(job, "min_area"), "");
     rule("min_altezza", number(job, "min_height"), "");
-    rule("bianco", number(job, "blank_ratio"), "");
+    rule("bianco", number(job, "blank_ratio"), &blank_extra(job));
     let qc_files = number(job, "qc_min_files").unwrap_or(QC_MIN_FILES as f64);
     let extra = format!(",\"qc_min_files\":{qc_files}");
+    let zero = param(job, "qc_zero").and_then(|v| v.bool()) == Some(true);
+    let extra = if zero {
+        format!("{extra},\"qc_zero\":true")
+    } else {
+        extra
+    };
     rule("qc_cv_max", number(job, "qc_cv_max"), &extra);
     if let Some(ppm) = number(job, "dup_ppm") {
         let rt = number(job, "dup_rt").unwrap_or(0.1);

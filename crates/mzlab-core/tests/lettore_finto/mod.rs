@@ -267,6 +267,7 @@ impl Finto {
                 id: 7,
                 nome: "finto".into(),
                 scansioni: schede.len(),
+                dimensione: None,
             }],
             indice,
             schede,

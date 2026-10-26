@@ -7,6 +7,9 @@
 mod attributio_comune;
 use attributio_comune::*;
 use mzlab_feat::attributio::io::{Io, MemFiles};
+use mzlab_feat::attributio::readers::feature_decisions::{
+    load_feature_decisions, write_feature_decisions,
+};
 use mzlab_feat::attributio::review::alternatives::{same_formula, AltSources};
 use mzlab_feat::attributio::review::banco::review_json;
 use mzlab_feat::attributio::review::libraries::{LibFormat, LibInput, LibraryIndex};
@@ -311,4 +314,48 @@ fn a_decision_against_the_proposal_needs_a_note() {
     let box_ = decision("").replace("diagnostic_fragment\"", "magic\"");
     assert!(decision_text(&io, "campagna_banco", &box_).is_err());
     let _ = &mut files;
+}
+
+/// Accept, reject, accept on three days leaves three rows and the last one decides; the run (`plan_sha256`, `engine_version`) is written as the last two
+/// columns from the first row that has it, the older rows keep them empty, and the file with no run at all has neither column.
+#[test]
+fn accept_reject_accept_leaves_three_rows_and_the_last_wins_with_its_run() {
+    let mut files = banco_files();
+    let accept1 = decide(&mut files, &decision(""));
+    assert!(!accept1.text.contains("plan_sha256"));
+    let reject = decision("")
+        .replace("2026-10-16", "2026-10-17")
+        .replace(r#""level":"2b""#, r#""level":"3""#);
+    decide(&mut files, &reject);
+    let run = r#","plan_sha256":"0123abcd","engine_version":"1.2.3""#;
+    let accept2 = decision(run).replace("2026-10-16", "2026-10-18");
+    let saved = decide(&mut files, &accept2);
+    assert_eq!(saved.added, 1);
+    let t = load_feature_decisions(Some(&saved.text), "f.csv").expect("load");
+    let mine: Vec<usize> = (0..t.len())
+        .filter(|&r| t.get(r, "feature_id") == "15")
+        .collect();
+    assert_eq!(mine.len(), 3);
+    assert_eq!(
+        t.columns[t.columns.len() - 2..],
+        ["plan_sha256", "engine_version"]
+    );
+    assert_eq!(t.get(mine[2], "level"), "2b");
+    assert_eq!(t.get(mine[1], "level"), "3");
+    assert_eq!(
+        (
+            t.get(mine[2], "plan_sha256"),
+            t.get(mine[2], "engine_version")
+        ),
+        ("0123abcd", "1.2.3")
+    );
+    assert_eq!(
+        (
+            t.get(mine[0], "plan_sha256"),
+            t.get(mine[1], "engine_version")
+        ),
+        ("", "")
+    );
+    assert_eq!(write_feature_decisions(&t), saved.text);
+    assert_eq!(row_of(&files, 15)[0].level_sub, "b");
 }

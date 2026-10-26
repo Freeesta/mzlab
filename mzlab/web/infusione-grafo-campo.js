@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The «Ion formula» field of the «Fragmentation graph»: a formula typed, or a molecule chosen in the search box of the molecule database; the adduct for the
 // polarity of the file and the SMILES. The text goes to the engine as it is; a chosen molecule only fills the field (formula + adduct, SMILES).
 import { ADDUCTS, G, polarityOf, startAdduct } from "./infusione-grafo-stato.js";

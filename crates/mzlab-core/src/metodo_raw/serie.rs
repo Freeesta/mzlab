@@ -129,7 +129,7 @@ fn unico(base: String, usati: &mut Vec<String>) -> String {
 }
 
 fn specs_stato(log: &StatusLog) -> Vec<Spec> {
-    if log.times_min.len() != log.records.len() {
+    if log.times_min().len() != log.records().len() {
         return Vec::new();
     }
     let (mut out, mut usati, mut sezione) = (Vec::new(), Vec::new(), String::new());
@@ -143,7 +143,7 @@ fn specs_stato(log: &StatusLog) -> Vec<Spec> {
             continue;
         }
         let mut s = Statistiche::default();
-        for (r, t) in log.records.iter().zip(&log.times_min) {
+        for (r, t) in log.records().iter().zip(log.times_min()) {
             if let (Some(y), true) = (numero(r, i), t.is_finite()) {
                 s.push(y);
             }
@@ -238,7 +238,7 @@ pub fn indice_trailer(h: &GenericDataHeader, scans: &[Scansione], righe: Righe) 
 pub fn serie_stato(log: &StatusLog, id: &str) -> Option<Serie> {
     let s = specs_stato(log).into_iter().find(|s| s.voce.id == id)?;
     let (mut t, mut y) = (Vec::new(), Vec::new());
-    for (r, tm) in log.records.iter().zip(&log.times_min) {
+    for (r, tm) in log.records().iter().zip(log.times_min()) {
         if let (Some(v), true) = (numero(r, s.campo), tm.is_finite()) {
             t.push(f64::from(*tm));
             y.push(v);

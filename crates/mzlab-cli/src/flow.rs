@@ -14,11 +14,13 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_digl::uv::uv_job;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_insilico::insilico_job;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
-pub use crate::flow_out::{run_plan_cached, run_plan_notify};
+pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
 use crate::flow_pace::Watch;
 use crate::flow_reactivity::reactivity_job;
 use crate::flow_read::{blobs, load, named, Loaded};
@@ -27,6 +29,10 @@ use crate::flow_stats::stats_job;
 
 #[path = "flow_live.rs"]
 pub mod live;
+#[path = "flow_plausible.rs"]
+mod plausible;
+#[path = "flow_rtpredict.rs"]
+mod rtpredict;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)
@@ -146,6 +152,8 @@ pub struct FileRunner {
     done: Option<DoneFn>,
     /// The cache of `work` (`flow_cache.rs`); none: every job runs and nothing is kept.
     cache: Option<crate::flow_cache::Cache>,
+    /// Only look in the cache: a job whose key is not there fails with `err.flow.probe.miss` instead of running (`flow_probe.rs`).
+    pub(crate) probe: bool,
     /// Working memory in MB of the alignment (`--budget-mb`; else the automatic one of this computer). The bytes written do not depend on it.
     pub(crate) budget_mb: f64,
     /// A live run: the cancel flag and the progress of each job it runs (`flow_live.rs`).
@@ -164,6 +172,7 @@ impl FileRunner {
             progress: None,
             done: None,
             cache: None,
+            probe: false,
             budget_mb: mzlab_core::budget_auto::native_auto_mb(),
             watch: None,
         }
@@ -348,21 +357,19 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
-    (
-        "spectra.insilico",
-        Exec::File("candidates", crate::flow_insilico::insilico_job),
-    ),
+    ("spectra.insilico", Exec::File("candidates", insilico_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
+    ("chrom.uv_peaks", Exec::File("peaks", uv_job)),
     ("annot.level", Exec::File("annot", level_job)),
     (
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),
     ),
-    ("tp.link", Exec::File("tp", crate::flow_link::link_job)),
+    ("tp.link", Exec::Made(crate::flow_link::link_job)),
     (
         "table.filter",
         Exec::File("table", crate::flow_table::filter_job),
@@ -411,10 +418,13 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
     EXECUTORS
         .iter()
         .chain(crate::flow_msnlib::EXECUTORS)
+        .chain(crate::flow_refilter::review::EXECUTORS)
         .chain(crate::flow_msnfigura::EXECUTORS)
         .chain(crate::flow_tablematch::EXECUTORS)
         .chain(crate::flow_chimeric::EXECUTORS)
         .chain(crate::flow_lookup::EXECUTORS)
+        .chain(rtpredict::EXECUTORS)
+        .chain(plausible::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?
@@ -444,7 +454,16 @@ impl Runner for FileRunner {
             .zip(key.as_deref())
             .and_then(|(c, k)| c.take(self, job, k));
         let cached = hit.is_some();
-        let made = hit.map_or_else(|| dispatch(self, job), Ok);
+        let made = hit.map_or_else(
+            || {
+                if self.probe {
+                    Err(Error::new("err.flow.probe.miss"))
+                } else {
+                    dispatch(self, job)
+                }
+            },
+            Ok,
+        );
         let made = made.map_err(|e| self.cancelled_or(job, e));
         if let (Ok(m), Some(c), Some(k), false) = (&made, &self.cache, key, cached) {
             c.put(k, m, self.lineage(&m.artifact));

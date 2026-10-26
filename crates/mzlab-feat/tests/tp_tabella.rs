@@ -57,6 +57,7 @@ fn with_block() -> Aligned {
         signs: &[[0; 10]; 4],
         parent: (300.0, 5.0),
         fragments: None,
+        infusion: None,
         params: &p,
         rules: None,
     };

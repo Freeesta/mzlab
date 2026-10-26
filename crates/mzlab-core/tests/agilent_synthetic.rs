@@ -412,3 +412,64 @@ fn a_run_with_only_data_ms_opens() {
     )
     .is_err());
 }
+
+#[test]
+fn single_precision_centroids_read_like_the_double_ones() {
+    // values exact in f32, so both layouts must give the same run
+    let s = sample();
+    let read = |(idx, peak): (Vec<u8>, Vec<u8>)| {
+        let d = AgilentD::open(
+            "x.D",
+            &Files {
+                ms_scan: &idx,
+                ms_peak_len: peak.len() as u64,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let mut p = peak.clone();
+        let run = d.run(&mut p).unwrap();
+        let out = conv_aiuto::mzml(FileSet {
+            membri: vec![
+                conv_aiuto::membro("x.D/AcqData/MSScan.bin", &idx),
+                conv_aiuto::membro("x.D/AcqData/MSPeak.bin", &peak),
+            ],
+        });
+        (run, mzml::read(&out[..]).unwrap())
+    };
+    let (wide, _) = read(encode(&s));
+    let (narrow, back) = read(encode_f32(&s));
+    assert_eq!(narrow.spectra.len(), 3, "the empty scan is left out");
+    assert_eq!(narrow.spectra[1].mz, vec![50.5, 84.0, 86.25]);
+    assert_eq!(narrow.spectra[1].intensity_f64(1), 1000.0);
+    for (a, b) in narrow.spectra.iter().zip(&wide.spectra) {
+        assert_eq!(a.mz, b.mz);
+        assert!((0..a.mz.len()).all(|i| a.intensity_f64(i) == b.intensity_f64(i)));
+    }
+    assert_eq!(
+        narrow.chromatograms[0].intensity[1], 1661.0,
+        "TIC = sum of the points"
+    );
+    assert_eq!(back.spectra.len(), 3);
+}
+
+#[test]
+fn a_block_of_neither_width_is_an_error() {
+    let (mut idx, peak) = encode_f32(&sample());
+    // ByteCount of the first record: 12 bytes for 3 points
+    let at = 160 + 144;
+    idx[at..at + 4].copy_from_slice(&12i32.to_le_bytes());
+    let d = AgilentD::open(
+        "x.D",
+        &Files {
+            ms_scan: &idx,
+            ms_peak_len: peak.len() as u64,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let e = d.run(&mut peak.clone()).err().unwrap();
+    // the LC/MS variant reports the same block as a profile one
+    assert_eq!(e.key, "err.file.agilent");
+    assert!(e.to_string().contains("12 bytes"), "{e}");
+}

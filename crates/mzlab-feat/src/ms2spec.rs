@@ -61,11 +61,13 @@ fn fitting<'a, R: ReadAt>(
 }
 
 /// The peaks of the scans `wanted` (indices into `Index::scans`) of the MS2 section of a polarity, by scan.
+type Peaks = (Vec<f64>, Vec<f64>);
+
 pub(crate) fn read_peaks<R: ReadAt>(
     index: &mut Index<R>,
     polarity: i8,
     wanted: &[u32],
-) -> Result<HashMap<u32, (Vec<f64>, Vec<f64>)>> {
+) -> Result<HashMap<u32, Peaks>> {
     let mut out = HashMap::new();
     let Some(si) = index.section_of(2, Some(polarity)) else {
         return Ok(out);

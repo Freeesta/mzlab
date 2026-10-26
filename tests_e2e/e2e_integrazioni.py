@@ -12,10 +12,10 @@ r = Run(port=8883, wd="/tmp/wd83")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_selector("text=Carica dati")
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2500)
-        pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.intf=p._a.sr[0].key;p.el.scrollIntoView({{block:'center'}})}})()"); pg.wait_for_timeout(400)
+        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+        pg.evaluate(f"(()=>{{const p={XP};setActive(p);p.imode=null;p.intf=p._a.sr[0].key;p.el.scrollIntoView({{block:'center'}})}})()"); frames(pg, 2)
         def n(): return pg.evaluate(f"{XP}.ints.length")
         def add(a, b): return pg.evaluate(f"(()=>{{const p={XP};return addInt(p,p._a.sr.find(s=>s.key==='{KEY}')||p._a.sr[0],{a},{b})}})()")
         KEY = pg.evaluate(f"{XP}._a.sr[0].key")
@@ -40,35 +40,35 @@ try:
             assert add(15.6, 16.2) is True
             c = xy(15.6); y = c["yb"] - 30
             pg.mouse.move(c["x"], y); pg.mouse.down()
-            t = xy(14.0); pg.mouse.move(t["x"], y, steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+            t = xy(14.0); pg.mouse.move(t["x"], y, steps=8); pg.mouse.up(); frames(pg, 3)
             a = pg.evaluate(f"{XP}.ints[2].a"); print("C.a after drag", a)
             assert abs(a - 15.2) < 1e-6, a
         step("dragging a border stops at the neighbouring peak", drag)
         def sel_del():
-            c = xy(14.3, 30); pg.mouse.click(c["x"], c["yb"] - 6); pg.wait_for_timeout(300)
+            c = xy(14.3, 30); pg.mouse.click(c["x"], c["yb"] - 6); attendi(pg, f"{XP}.isel!=null")
             sid = pg.evaluate(f"{XP}.isel"); bid = pg.evaluate(f"{XP}.ints[0].id"); assert sid == bid, (sid, bid)
-            pg.keyboard.press("Delete"); pg.wait_for_timeout(300)
+            pg.keyboard.press("Delete"); attendi(pg, f"{XP}.ints.length===2")
             assert n() == 2 and pg.evaluate(f"{XP}.ints.every(i=>i.id!=={bid})")
-            pg.keyboard.press("Control+z"); pg.wait_for_timeout(300); assert n() == 3
+            pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.ints.length===3"); assert n() == 3
         step("click selects a peak, Delete removes it, Ctrl+Z brings it back", sel_del)
         def order():
-            pg.evaluate(f"(()=>{{const p={XP};pushZh(p);p.zoom=[13,17];draw(p);p.isel=p.ints[0].id}})()"); pg.keyboard.press("Backspace"); pg.wait_for_timeout(300)
+            pg.evaluate(f"(()=>{{const p={XP};pushZh(p);p.zoom=[13,17];draw(p);p.isel=p.ints[0].id}})()"); pg.keyboard.press("Backspace"); attendi(pg, f"{XP}.ints.length===2")
             assert n() == 2 and pg.evaluate(f"{XP}.zoom") == [13, 17], "Backspace with a selected peak removes it, not the zoom"
-            pg.keyboard.press("Control+z"); pg.wait_for_timeout(200); assert n() == 3 and pg.evaluate(f"{XP}.zoom") == [13, 17]
-            pg.keyboard.press("Control+z"); pg.wait_for_timeout(200); assert pg.evaluate(f"{XP}.zoom") is None
+            pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.ints.length===3"); assert n() == 3 and pg.evaluate(f"{XP}.zoom") == [13, 17]
+            pg.keyboard.press("Control+z"); attendi(pg, f"{XP}.zoom==null"); assert pg.evaluate(f"{XP}.zoom") is None
         step("Ctrl+Z undoes the last action, integration or zoom", order)
         def menu():
             labs = pg.evaluate(f"(()=>{{const p={XP};return intMenuItems(p,14.9,null,0).map(i=>i.label||i)}})()")
             assert labs[0] == "Elimina questa integrazione" and "Elimina tutte le integrazioni di questo pannello" in labs, labs
         step("context menu: delete this one first, then all", menu)
         def table():
-            pg.evaluate("showInts()"); pg.wait_for_timeout(400)
+            pg.evaluate("showInts()"); attendi(pg, "document.querySelectorAll('button[data-del]').length===3")
             assert pg.locator("button[data-del]").count() == 3
-            pg.locator("button[data-del]").first.click(); pg.wait_for_timeout(400)
+            pg.locator("button[data-del]").first.click(); attendi(pg, "document.querySelectorAll('button[data-del]').length===2")
             assert pg.locator("button[data-del]").count() == 2 and n() == 2
         step("table: × deletes the row and the peak from the graph", table)
         def legacy():
-            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); pg.wait_for_timeout(400)
+            pg.evaluate(f"(()=>{{const p={XP},i=p.ints[0];p.ints.push({{...i,id:E.seq++,a:i.a+0.1,b:i.b+0.1}});showInts()}})()"); attendi(pg, "document.querySelector('#bigbody').innerText.includes('sovrapposto')")
             assert "sovrapposto" in pg.inner_text("#bigbody")
         step("old overlapping integrations load and are marked", legacy)
         pg.evaluate("document.querySelector('#bigdlg')&&document.querySelector('#bigdlg').open&&document.querySelector('#bigdlg').close()")

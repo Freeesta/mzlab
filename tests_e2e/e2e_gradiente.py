@@ -16,7 +16,7 @@ r = Run(port=8865, wd="/tmp/wd_gradiente")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(F)]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [str(F)]); pg.wait_for_selector("#pick", state="attached")
         pg.click("text=Carica dati"); ready(pg)
         def listed():
             a = pg.evaluate("E.files[0].analog"); assert len(a) == 1 and a[0]["kind"] == "pressure" and a[0]["unit"] == "pascal" and a[0]["n"] == 6000, a
@@ -51,22 +51,22 @@ try:
         step("pasted text from Excel becomes a gradient", paste)
         TIC = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic')"
         def ctx_items():
-            pg.evaluate(f"(()=>{{const p={TIC};p.el.scrollIntoView({{block:'center'}})}})()"); pg.wait_for_timeout(300)
+            pg.evaluate(f"(()=>{{const p={TIC};p.el.scrollIntoView({{block:'center'}})}})()"); frames(pg, 3)
             b = pg.evaluate(f"(()=>{{const p={TIC},r=p.cv.getBoundingClientRect();return [r.left+p._a.X(10),r.top+r.height*0.5]}})()")
             pg.mouse.click(b[0], b[1], button="right"); pg.wait_for_selector("#ctx:not([hidden])")
             labs = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(e=>e.textContent)")
             pg.keyboard.press("Escape"); return labs
         def no_entry():
-            pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}"); pg.wait_for_timeout(300)
-            pg.evaluate("(async () => { await GRADIENTE.set(E.files[0], null); redrawAll(); })()"); pg.wait_for_timeout(1200); ready(pg)
+            pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}"); frames(pg, 2)
+            pg.evaluate("(async () => { await GRADIENTE.set(E.files[0], null); redrawAll(); })()"); ready(pg)
             assert not any("gradiente" in l.lower() for l in ctx_items())
         step("right click on a chromatogram: no gradient entry without a gradient", no_entry)
         def entry():
             pg.evaluate("(async () => { const g = (await (await fetch('api/gradient_parse', {method:'POST', body: JSON.stringify({fmt:'course'})})).json()).gradient; await GRADIENTE.set(E.files[0], g); })()")
-            pg.evaluate("redrawAll()"); pg.wait_for_timeout(1200); ready(pg)
+            pg.evaluate("redrawAll()"); ready(pg)
             labs = ctx_items(); assert any("Mostra il gradiente" in l for l in labs), labs
             pg.evaluate(f"(()=>{{const p={TIC};p.cv.dispatchEvent(new MouseEvent('contextmenu',{{bubbles:true,clientX:300,clientY:300}}))}})()")
-            pg.click("#ctx [role=menuitemcheckbox]:has-text('gradiente')"); pg.wait_for_timeout(800); ready(pg)
+            pg.click("#ctx [role=menuitemcheckbox]:has-text('gradiente')"); ready(pg)
             assert pg.evaluate(f"{TIC}.overlay") == "grad"
             assert pg.evaluate("palette = BARRA.commands.find(c=>c.id==='gradient'); !!palette && palette.visible()")
         step("the entry appears with a gradient and turns the overlay on (and the palette has it)", entry)
@@ -77,10 +77,10 @@ try:
             assert "57.5" in pg.evaluate(f"{TIC}.ch.getAttribute('aria-valuetext')")
         step("right axis, %B at 11.5 min and in the cursor reading", reading)
         def aligned():
-            pg.evaluate("addPanel('chrom',{tab:'full',kind:'pda'})"); pg.wait_for_timeout(1500); ready(pg)
+            pg.evaluate("addPanel('chrom',{tab:'full',kind:'pda'})"); ready(pg)
             LN = "E.panels.filter(p=>p.type==='chrom'&&p.tab==='full')"
             for w, h in ((1280, 2200), (1440, 2200), (1680, 2200), (1024, 1366)):
-                pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(1300); ready(pg)
+                pg.set_viewport_size({"width": w, "height": h}); ready(pg)
                 e = pg.evaluate(f"{LN}.map(p=>{{const r=p.cv.getBoundingClientRect(),a=p._a;return [r.left+a.X(a.x0),r.left+a.X(a.x1)]}})")
                 assert len(e) == 2 and abs(e[0][0] - e[1][0]) <= 1 and abs(e[0][1] - e[1][1]) <= 1, (w, e)
         step("TIC with %B and PDA without keep the same plot edges (1280/1440/1680/iPad)", aligned)
@@ -89,7 +89,7 @@ try:
             r = pg.evaluate(f"GRADIENTE.reading({TIC}, 12.5)"); assert abs(r["b"] - 65) < 1e-6 and abs(r["bcol"] - 57.5) < 1e-6, r
         step("a delay of 1.0 min moves the reading at the column", delay)
         def saved():
-            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(300)
+            pg.evaluate("uiSave(true)"); attendi(pg, "!!NB.ui")
             u = pg.evaluate("NB.ui.panels.filter(q=>q.overlay).map(q=>[q.overlay,q.gdelay])"); assert u == [["grad", 1]], u
             assert pg.evaluate("!!GRADIENTE.exportState()")
         step("overlay and delay are saved with the session; the gradient goes to the .mzflow", saved)
@@ -99,7 +99,7 @@ try:
         step("the PDA-mass delay is measured by the server", pdadelay)
         def kind_press():
             pg.evaluate("{const d=Q('#bigdlg'); if (d.open) d.close()}")
-            pg.evaluate("addPanel('chrom',{tab:'full',kind:'press'})"); pg.wait_for_timeout(1500); ready(pg)
+            pg.evaluate("addPanel('chrom',{tab:'full',kind:'press'})"); ready(pg)
             P = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='press')"
             opts = pg.evaluate(f"[...{P}.el.querySelectorAll('select[data-o=kind] option')].map(o=>o.textContent)"); assert "Pressione della pompa" in opts, opts
             v = pg.evaluate(f"(()=>{{const a={P}._a;return {{n:a.sr.length,unit:a.sr[0].unit,y1:a.sr[0].y[a.sr[0].x.findIndex(t=>t>=1)],lab:{P}.leg.textContent+{P}.corrbar.textContent}}}})()")
@@ -109,7 +109,7 @@ try:
         step("the pressure is in the chromatogram selector, in bar, with the unit note and the shared axis", kind_press)
         def press_overlay():
             T2 = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full'&&p.kind==='tic')"
-            pg.evaluate(f"{T2}.overlay='press'; redrawAll()"); pg.wait_for_timeout(1500); ready(pg)
+            pg.evaluate(f"{T2}.overlay='press'; redrawAll()"); ready(pg)
             assert pg.evaluate(f"{T2}._a.press") is True
             pg.evaluate(f"(()=>{{{T2}.cur=1.0;cursorLine({T2})}})()")
             assert "bar" in pg.evaluate(f"{T2}.ch.getAttribute('aria-valuetext')")

@@ -66,10 +66,7 @@ pub type Layer = (String, Vec<(String, Value)>);
 
 /// The recipe of a Flow run: the one of the panel on the first index, then the parameters of each feature step in order (`steps::recipe_map`). The native
 /// `flow run` and the browser runner both build it here, so the same plan gives the same bytes.
-pub fn recipe_of_layers<R: ReadAt>(
-    first: &mut Index<R>,
-    layers: &[Layer],
-) -> Result<Recipe> {
+pub fn recipe_of_layers<R: ReadAt>(first: &mut Index<R>, layers: &[Layer]) -> Result<Recipe> {
     let mut r = recipe_for_estimated("", first)?;
     apply_layers(&mut r, layers)?;
     Ok(r)
@@ -268,6 +265,9 @@ pub fn align_to_spilling<R: ReadAt, W: WriteAt>(
     write_table_to(sink, &table, r, &origin, &mut (&[][..]))
 }
 
+mod par;
+pub use par::{align_to_par, align_to_par_progress};
+
 /// What the targeted pass leaves for the proofs: the registry of the hypotheses with their outcomes and the rows found.
 pub struct HypoRun {
     pub registry: Registry,
@@ -275,6 +275,8 @@ pub struct HypoRun {
     /// The rules as read (bytes of the file) and the profile chosen: the proofs look for their differences of mass among the rows (`tp::rete`).
     pub rules_src: Vec<u8>,
     pub profile: Option<String>,
+    /// Neutral formula of the parent: the formula candidates of the rows formed and not explained start from it (empty = none).
+    pub parent: String,
 }
 
 impl HypoRun {
@@ -366,6 +368,7 @@ pub fn hypotheses<R: ReadAt>(
         result,
         rules_src: rules.to_vec(),
         profile,
+        parent: parent.to_string(),
     })
 }
 
@@ -401,6 +404,7 @@ pub fn hypotheses_stored<R: ReadAt>(
         result,
         rules_src: rules.to_vec(),
         profile,
+        parent: parent.to_string(),
     })
 }
 

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Search box for a molecule (ARIA combobox with a listbox): types a name, a formula or a mass and shows the molecules of the database (the one search of the engine).
 // The caller gives every text (`testi`), so a tool shows its own language; an optional «Manage» button opens the window «Molecules». Used by the tools that need a
 // molecule (Tabui, Infusion MSn, ...) and by tests/e2e_molecole_ui.py.

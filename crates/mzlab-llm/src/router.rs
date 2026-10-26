@@ -32,9 +32,32 @@ impl Route {
             .collect()
     }
 
+    /// The readers that serve the `need_data` of this route, once each, in the order named (`plan` and `rows` have no reader: the orchestrator's tools give them).
+    pub fn readers(&self) -> Vec<&'static str> {
+        let mut out: Vec<&'static str> = Vec::new();
+        for r in self.need_data().into_iter().filter_map(reader_of) {
+            if !out.contains(&r) {
+                out.push(r);
+            }
+        }
+        out
+    }
+
     pub fn suspicious(&self) -> bool {
         self.0.get("suspicious").and_then(Value::bool) == Some(true)
     }
+}
+
+/// The reader (role of `assist-ruoli-1.json`) that serves one `need_data` of the router.
+pub fn reader_of(need: &str) -> Option<&'static str> {
+    Some(match need {
+        "inspection" => "metadati",
+        "chromatograms" => "cromatografia",
+        "proposals" => "parametri",
+        "tabcheck" => "interprete",
+        "views" => "grafici",
+        _ => return None,
+    })
 }
 
 fn bad(field: &str) -> Error {

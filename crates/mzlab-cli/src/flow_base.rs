@@ -214,12 +214,15 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<
     let budget = MemBudget::mb(r.budget_mb);
     let mut bytes = Vec::new();
     let mut src = Files(lin.peaks.clone());
-    run::align_to(
+    let gate = r.gate(job);
+    let mut pace = gate.pace();
+    run::align_to_par_progress(
         &mut src,
         &budget,
         &recipe,
-        |k| open(&lin.index[k]),
+        &|k| open(&lin.index[k]),
         &mut bytes,
+        &mut pace,
     )?;
     let out = out_path(r, job, "mzfeat");
     std::fs::write(&out, bytes).map_err(io)?;

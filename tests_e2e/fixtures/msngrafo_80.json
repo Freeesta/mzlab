@@ -1,0 +1,3772 @@
+{
+ "formato": "msngrafo/1",
+ "motore": "1.0.1",
+ "sorgente": {
+  "nome": "msn.mzML",
+  "sha256_idx": "72908de343010abfa77e8155d1e013dae3bb7d4ca97e98d35905ff7ed2e0428b"
+ },
+ "opzioni": {
+  "ppm": 5,
+  "da_min": 0.002,
+  "min_rel": 2,
+  "max_picchi": 120,
+  "isotopi": false,
+  "attivazione": null,
+  "formula": null,
+  "smiles": null,
+  "ppm_formula": 10,
+  "mz_basso": 150,
+  "ppm_basso": 20,
+  "prove_min": 1,
+  "scelte": []
+ },
+ "polarita": 1,
+ "ione": null,
+ "avvisi": [],
+ "radici": [
+  "n0"
+ ],
+ "conteggi": {
+  "nodi": 80,
+  "archi": 90,
+  "scartati_pesanti": 0,
+  "scartati_isotopi": 0,
+  "scartati_deboli": 0,
+  "scartati_formula": 0
+ },
+ "nodi": [
+  {
+   "id": "n0",
+   "mz": 500.0,
+   "dev_ppm": 0,
+   "livello": 1,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 0,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n1",
+   "mz": 460.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n2",
+   "mz": 457.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n3",
+   "mz": 454.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n4",
+   "mz": 451.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n5",
+   "mz": 448.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n6",
+   "mz": 445.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n7",
+   "mz": 442.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n8",
+   "mz": 439.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n9",
+   "mz": 436.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n10",
+   "mz": 433.0,
+   "dev_ppm": 0,
+   "livello": 2,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 1,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n11",
+   "mz": 420.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n12",
+   "mz": 417.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n13",
+   "mz": 414.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n14",
+   "mz": 411.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n15",
+   "mz": 408.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n16",
+   "mz": 405.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n17",
+   "mz": 402.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n18",
+   "mz": 399.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n19",
+   "mz": 396.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n20",
+   "mz": 393.0,
+   "dev_ppm": 0,
+   "livello": 3,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 2,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n21",
+   "mz": 380.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n22",
+   "mz": 377.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n23",
+   "mz": 374.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n24",
+   "mz": 371.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n25",
+   "mz": 368.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n26",
+   "mz": 365.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n27",
+   "mz": 362.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n28",
+   "mz": 359.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n29",
+   "mz": 356.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n30",
+   "mz": 353.0,
+   "dev_ppm": 0,
+   "livello": 4,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 3,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n31",
+   "mz": 340.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n32",
+   "mz": 337.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n33",
+   "mz": 334.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n34",
+   "mz": 331.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n35",
+   "mz": 328.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n36",
+   "mz": 325.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n37",
+   "mz": 322.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n38",
+   "mz": 319.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n39",
+   "mz": 316.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n40",
+   "mz": 313.0,
+   "dev_ppm": 0,
+   "livello": 5,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 4,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n41",
+   "mz": 300.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n42",
+   "mz": 297.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n43",
+   "mz": 294.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n44",
+   "mz": 291.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n45",
+   "mz": 288.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n46",
+   "mz": 285.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n47",
+   "mz": 282.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n48",
+   "mz": 279.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n49",
+   "mz": 276.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n50",
+   "mz": 273.0,
+   "dev_ppm": 0,
+   "livello": 6,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 5,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n51",
+   "mz": 260.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n52",
+   "mz": 257.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n53",
+   "mz": 254.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n54",
+   "mz": 251.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n55",
+   "mz": 248.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n56",
+   "mz": 245.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n57",
+   "mz": 242.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n58",
+   "mz": 239.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n59",
+   "mz": 236.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n60",
+   "mz": 233.0,
+   "dev_ppm": 0,
+   "livello": 7,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 6,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n61",
+   "mz": 220.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n62",
+   "mz": 217.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n63",
+   "mz": 214.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n64",
+   "mz": 211.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n65",
+   "mz": 208.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n66",
+   "mz": 205.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n67",
+   "mz": 202.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n68",
+   "mz": 199.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n69",
+   "mz": 196.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 8
+   },
+   "formula": null
+  },
+  {
+   "id": "n70",
+   "mz": 193.0,
+   "dev_ppm": 0,
+   "livello": 8,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 37.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 7,
+    "riga": 9
+   },
+   "formula": null
+  },
+  {
+   "id": "n71",
+   "mz": 180.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 100.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 0
+   },
+   "formula": null
+  },
+  {
+   "id": "n72",
+   "mz": 177.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 93.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 1
+   },
+   "formula": null
+  },
+  {
+   "id": "n73",
+   "mz": 174.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 86.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 2
+   },
+   "formula": null
+  },
+  {
+   "id": "n74",
+   "mz": 171.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 79.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 3
+   },
+   "formula": null
+  },
+  {
+   "id": "n75",
+   "mz": 168.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 72.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 4
+   },
+   "formula": null
+  },
+  {
+   "id": "n76",
+   "mz": 165.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 65.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 5
+   },
+   "formula": null
+  },
+  {
+   "id": "n77",
+   "mz": 162.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 58.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 6
+   },
+   "formula": null
+  },
+  {
+   "id": "n78",
+   "mz": 159.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 51.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 7
+   },
+   "formula": null
+  },
+  {
+   "id": "n79",
+   "mz": 156.0,
+   "dev_ppm": 0,
+   "livello": 9,
+   "isolato": false,
+   "albero": [],
+   "osservazioni": 1,
+   "rel_max": 44.0,
+   "isotopo_di": null,
+   "m1": null,
+   "isolamento": {
+    "larghezza": null,
+    "a_monte": 1,
+    "stretto": true
+   },
+   "non_spiegati": null,
+   "pos": {
+    "col": 8,
+    "riga": 8
+   },
+   "formula": null
+  }
+ ],
+ "archi": [
+  {
+   "da": "n0",
+   "a": "n1",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 25.2
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n2",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 10.4
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n3",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 86.8
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n4",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 6.8
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n5",
+   "perdita": {
+    "da_massa": 52.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 38.7
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n6",
+   "perdita": {
+    "da_massa": 55.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 19.8
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n7",
+   "perdita": {
+    "da_massa": 58.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 79.0
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n8",
+   "perdita": {
+    "da_massa": 61.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 43.3
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n9",
+   "perdita": {
+    "da_massa": 64.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 56.2
+    }
+   ]
+  },
+  {
+   "da": "n0",
+   "a": "n10",
+   "perdita": {
+    "da_massa": 67.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x2",
+     "livello": 2,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 37.1
+    }
+   ]
+  },
+  {
+   "da": "n7",
+   "a": "n11",
+   "perdita": {
+    "da_massa": 22.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 12.5
+    }
+   ]
+  },
+  {
+   "da": "n2",
+   "a": "n12",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 24.8
+    }
+   ]
+  },
+  {
+   "da": "n3",
+   "a": "n12",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 54.8
+    }
+   ]
+  },
+  {
+   "da": "n4",
+   "a": "n13",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 77.7
+    }
+   ]
+  },
+  {
+   "da": "n9",
+   "a": "n14",
+   "perdita": {
+    "da_massa": 25.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 33.9
+    }
+   ]
+  },
+  {
+   "da": "n4",
+   "a": "n15",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 89.0
+    }
+   ]
+  },
+  {
+   "da": "n4",
+   "a": "n16",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 59.5
+    }
+   ]
+  },
+  {
+   "da": "n6",
+   "a": "n17",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 84.8
+    }
+   ]
+  },
+  {
+   "da": "n2",
+   "a": "n18",
+   "perdita": {
+    "da_massa": 58.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 37.3
+    }
+   ]
+  },
+  {
+   "da": "n8",
+   "a": "n19",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 91.4
+    }
+   ]
+  },
+  {
+   "da": "n9",
+   "a": "n20",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x3",
+     "livello": 3,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 9.3
+    }
+   ]
+  },
+  {
+   "da": "n16",
+   "a": "n21",
+   "perdita": {
+    "da_massa": 25.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 66.3
+    }
+   ]
+  },
+  {
+   "da": "n14",
+   "a": "n22",
+   "perdita": {
+    "da_massa": 34.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 67.7
+    }
+   ]
+  },
+  {
+   "da": "n17",
+   "a": "n23",
+   "perdita": {
+    "da_massa": 28.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 12.4
+    }
+   ]
+  },
+  {
+   "da": "n12",
+   "a": "n24",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 35.4
+    }
+   ]
+  },
+  {
+   "da": "n15",
+   "a": "n25",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 21.6
+    }
+   ]
+  },
+  {
+   "da": "n19",
+   "a": "n26",
+   "perdita": {
+    "da_massa": 31.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 22.9
+    }
+   ]
+  },
+  {
+   "da": "n16",
+   "a": "n27",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 60.6
+    }
+   ]
+  },
+  {
+   "da": "n14",
+   "a": "n28",
+   "perdita": {
+    "da_massa": 52.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 74.8
+    }
+   ]
+  },
+  {
+   "da": "n15",
+   "a": "n28",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 13.1
+    }
+   ]
+  },
+  {
+   "da": "n19",
+   "a": "n29",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 22.7
+    }
+   ]
+  },
+  {
+   "da": "n17",
+   "a": "n30",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x4",
+     "livello": 4,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 13.4
+    }
+   ]
+  },
+  {
+   "da": "n26",
+   "a": "n31",
+   "perdita": {
+    "da_massa": 25.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 54.9
+    }
+   ]
+  },
+  {
+   "da": "n30",
+   "a": "n31",
+   "perdita": {
+    "da_massa": 13.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 9.1
+    }
+   ]
+  },
+  {
+   "da": "n26",
+   "a": "n32",
+   "perdita": {
+    "da_massa": 28.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 5.9
+    }
+   ]
+  },
+  {
+   "da": "n25",
+   "a": "n33",
+   "perdita": {
+    "da_massa": 34.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 22.4
+    }
+   ]
+  },
+  {
+   "da": "n26",
+   "a": "n34",
+   "perdita": {
+    "da_massa": 34.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 40.7
+    }
+   ]
+  },
+  {
+   "da": "n24",
+   "a": "n35",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 15.6
+    }
+   ]
+  },
+  {
+   "da": "n21",
+   "a": "n36",
+   "perdita": {
+    "da_massa": 55.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 88.6
+    }
+   ]
+  },
+  {
+   "da": "n27",
+   "a": "n37",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 7.0
+    }
+   ]
+  },
+  {
+   "da": "n24",
+   "a": "n38",
+   "perdita": {
+    "da_massa": 52.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 64.5
+    }
+   ]
+  },
+  {
+   "da": "n25",
+   "a": "n38",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 79.5
+    }
+   ]
+  },
+  {
+   "da": "n23",
+   "a": "n39",
+   "perdita": {
+    "da_massa": 58.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 76.5
+    }
+   ]
+  },
+  {
+   "da": "n26",
+   "a": "n39",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 35.6
+    }
+   ]
+  },
+  {
+   "da": "n23",
+   "a": "n40",
+   "perdita": {
+    "da_massa": 61.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 91.5
+    }
+   ]
+  },
+  {
+   "da": "n26",
+   "a": "n40",
+   "perdita": {
+    "da_massa": 52.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x5",
+     "livello": 5,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 82.1
+    }
+   ]
+  },
+  {
+   "da": "n37",
+   "a": "n41",
+   "perdita": {
+    "da_massa": 22.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 27.1
+    }
+   ]
+  },
+  {
+   "da": "n40",
+   "a": "n42",
+   "perdita": {
+    "da_massa": 16.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 26.6
+    }
+   ]
+  },
+  {
+   "da": "n34",
+   "a": "n43",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 85.6
+    }
+   ]
+  },
+  {
+   "da": "n35",
+   "a": "n44",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 19.1
+    }
+   ]
+  },
+  {
+   "da": "n36",
+   "a": "n45",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 45.0
+    }
+   ]
+  },
+  {
+   "da": "n35",
+   "a": "n46",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 24.2
+    }
+   ]
+  },
+  {
+   "da": "n34",
+   "a": "n47",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 5.0
+    }
+   ]
+  },
+  {
+   "da": "n33",
+   "a": "n48",
+   "perdita": {
+    "da_massa": 55.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 7.2
+    }
+   ]
+  },
+  {
+   "da": "n38",
+   "a": "n48",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 70.5
+    }
+   ]
+  },
+  {
+   "da": "n32",
+   "a": "n49",
+   "perdita": {
+    "da_massa": 61.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 28.5
+    }
+   ]
+  },
+  {
+   "da": "n40",
+   "a": "n50",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x6",
+     "livello": 6,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 58.6
+    }
+   ]
+  },
+  {
+   "da": "n41",
+   "a": "n51",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 15.1
+    }
+   ]
+  },
+  {
+   "da": "n43",
+   "a": "n52",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 26.7
+    }
+   ]
+  },
+  {
+   "da": "n43",
+   "a": "n53",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 87.3
+    }
+   ]
+  },
+  {
+   "da": "n50",
+   "a": "n53",
+   "perdita": {
+    "da_massa": 19.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 77.0
+    }
+   ]
+  },
+  {
+   "da": "n50",
+   "a": "n54",
+   "perdita": {
+    "da_massa": 22.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 76.3
+    }
+   ]
+  },
+  {
+   "da": "n49",
+   "a": "n55",
+   "perdita": {
+    "da_massa": 28.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 25.6
+    }
+   ]
+  },
+  {
+   "da": "n46",
+   "a": "n56",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 10.4
+    }
+   ]
+  },
+  {
+   "da": "n47",
+   "a": "n57",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 73.3
+    }
+   ]
+  },
+  {
+   "da": "n46",
+   "a": "n58",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 89.1
+    }
+   ]
+  },
+  {
+   "da": "n49",
+   "a": "n59",
+   "perdita": {
+    "da_massa": 40.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 73.2
+    }
+   ]
+  },
+  {
+   "da": "n41",
+   "a": "n60",
+   "perdita": {
+    "da_massa": 67.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x7",
+     "livello": 7,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 43.5
+    }
+   ]
+  },
+  {
+   "da": "n57",
+   "a": "n61",
+   "perdita": {
+    "da_massa": 22.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 90.9
+    }
+   ]
+  },
+  {
+   "da": "n57",
+   "a": "n62",
+   "perdita": {
+    "da_massa": 25.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 58.3
+    }
+   ]
+  },
+  {
+   "da": "n52",
+   "a": "n63",
+   "perdita": {
+    "da_massa": 43.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 32.2
+    }
+   ]
+  },
+  {
+   "da": "n58",
+   "a": "n63",
+   "perdita": {
+    "da_massa": 25.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 33.6
+    }
+   ]
+  },
+  {
+   "da": "n59",
+   "a": "n64",
+   "perdita": {
+    "da_massa": 25.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 45.2
+    }
+   ]
+  },
+  {
+   "da": "n53",
+   "a": "n65",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 38.8
+    }
+   ]
+  },
+  {
+   "da": "n54",
+   "a": "n66",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 32.8
+    }
+   ]
+  },
+  {
+   "da": "n55",
+   "a": "n67",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 12.3
+    }
+   ]
+  },
+  {
+   "da": "n56",
+   "a": "n68",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 47.4
+    }
+   ]
+  },
+  {
+   "da": "n52",
+   "a": "n69",
+   "perdita": {
+    "da_massa": 61.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 10.6
+    }
+   ]
+  },
+  {
+   "da": "n54",
+   "a": "n69",
+   "perdita": {
+    "da_massa": 55.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 9.5
+    }
+   ]
+  },
+  {
+   "da": "n54",
+   "a": "n70",
+   "perdita": {
+    "da_massa": 58.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 64.2
+    }
+   ]
+  },
+  {
+   "da": "n57",
+   "a": "n70",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x8",
+     "livello": 8,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 89.4
+    }
+   ]
+  },
+  {
+   "da": "n69",
+   "a": "n71",
+   "perdita": {
+    "da_massa": 16.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 10.9
+    }
+   ]
+  },
+  {
+   "da": "n69",
+   "a": "n72",
+   "perdita": {
+    "da_massa": 19.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 63.6
+    }
+   ]
+  },
+  {
+   "da": "n69",
+   "a": "n73",
+   "perdita": {
+    "da_massa": 22.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 79.7
+    }
+   ]
+  },
+  {
+   "da": "n62",
+   "a": "n74",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 71.4
+    }
+   ]
+  },
+  {
+   "da": "n63",
+   "a": "n75",
+   "perdita": {
+    "da_massa": 46.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 82.7
+    }
+   ]
+  },
+  {
+   "da": "n68",
+   "a": "n76",
+   "perdita": {
+    "da_massa": 34.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 89.4
+    }
+   ]
+  },
+  {
+   "da": "n64",
+   "a": "n77",
+   "perdita": {
+    "da_massa": 49.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 6.9
+    }
+   ]
+  },
+  {
+   "da": "n69",
+   "a": "n78",
+   "perdita": {
+    "da_massa": 37.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 30.8
+    }
+   ]
+  },
+  {
+   "da": "n61",
+   "a": "n79",
+   "perdita": {
+    "da_massa": 64.0,
+    "formula": null,
+    "ppm": null,
+    "compatibile": []
+   },
+   "isolamento": false,
+   "misure": [
+    {
+     "albero": "x9",
+     "livello": 9,
+     "att": "cid",
+     "ce": 35,
+     "n_scansioni": 10,
+     "rel": 48.0
+    }
+   ]
+  }
+ ],
+ "spettri": []
+,"vista":{"versione":1,"algoritmo":"best-path/1","regola":"Fewest steps from a root; ties: the highest smallest relative intensity along the path (the most intense measure of each arc), then more isolated arcs, then the smaller precursor id","ordine":["n0","n1","n3","n2","n4","n5","n6","n7","n8","n9","n10","n12","n18","n13","n16","n15","n17","n11","n19","n14","n20","n24","n25","n21","n27","n23","n28","n30","n26","n29","n22","n35","n38","n33","n36","n37","n39","n40","n31","n34","n32","n44","n46","n48","n45","n41","n42","n43","n50","n49","n47","n56","n58","n51","n60","n52","n53","n54","n55","n59","n57","n68","n63","n65","n69","n66","n67","n70","n64","n61","n62","n76","n75","n71","n72","n73","n78","n77","n79","n74"],"nodi":[{"id":"n0","livelli":[1],"rel":100,"rel_max":100,"best":{"da":null,"passi":0,"costo":[0,null,0]},"entranti":0,"comune":false,"albero":{"col":0,"riga":0},"radiale":{"anello":0,"angolo":0}},{"id":"n1","livelli":[2],"rel":25.2,"rel_max":100,"best":{"da":"n0","passi":1,"costo":[1,25.2,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":0},"radiale":{"anello":1,"angolo":5.14}},{"id":"n2","livelli":[2],"rel":10.4,"rel_max":93,"best":{"da":"n0","passi":1,"costo":[1,10.4,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":2},"radiale":{"anello":1,"angolo":15.43}},{"id":"n3","livelli":[2],"rel":86.8,"rel_max":86,"best":{"da":"n0","passi":1,"costo":[1,86.8,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":1},"radiale":{"anello":1,"angolo":41.14}},{"id":"n4","livelli":[2],"rel":6.8,"rel_max":79,"best":{"da":"n0","passi":1,"costo":[1,6.8,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":3},"radiale":{"anello":1,"angolo":87.43}},{"id":"n5","livelli":[2],"rel":38.7,"rel_max":72,"best":{"da":"n0","passi":1,"costo":[1,38.7,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":4},"radiale":{"anello":1,"angolo":118.29}},{"id":"n6","livelli":[2],"rel":19.8,"rel_max":65,"best":{"da":"n0","passi":1,"costo":[1,19.8,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":5},"radiale":{"anello":1,"angolo":133.71}},{"id":"n7","livelli":[2],"rel":79,"rel_max":58,"best":{"da":"n0","passi":1,"costo":[1,79,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":6},"radiale":{"anello":1,"angolo":149.14}},{"id":"n8","livelli":[2],"rel":43.3,"rel_max":51,"best":{"da":"n0","passi":1,"costo":[1,43.3,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":7},"radiale":{"anello":1,"angolo":236.57}},{"id":"n9","livelli":[2],"rel":56.2,"rel_max":44,"best":{"da":"n0","passi":1,"costo":[1,56.2,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":8},"radiale":{"anello":1,"angolo":334.29}},{"id":"n10","livelli":[2],"rel":37.1,"rel_max":37,"best":{"da":"n0","passi":1,"costo":[1,37.1,0]},"entranti":1,"comune":false,"albero":{"col":1,"riga":9},"radiale":{"anello":1,"angolo":354.86}},{"id":"n11","livelli":[3],"rel":12.5,"rel_max":100,"best":{"da":"n7","passi":2,"costo":[2,12.5,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":6},"radiale":{"anello":2,"angolo":149.14}},{"id":"n12","livelli":[3],"rel":54.8,"rel_max":93,"best":{"da":"n3","passi":2,"costo":[2,54.8,0]},"entranti":2,"comune":true,"albero":{"col":2,"riga":0},"radiale":{"anello":2,"angolo":41.14}},{"id":"n13","livelli":[3],"rel":77.7,"rel_max":86,"best":{"da":"n4","passi":2,"costo":[2,6.8,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":2},"radiale":{"anello":2,"angolo":66.86}},{"id":"n14","livelli":[3],"rel":33.9,"rel_max":79,"best":{"da":"n9","passi":2,"costo":[2,33.9,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":8},"radiale":{"anello":2,"angolo":329.14}},{"id":"n15","livelli":[3],"rel":89,"rel_max":72,"best":{"da":"n4","passi":2,"costo":[2,6.8,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":4},"radiale":{"anello":2,"angolo":77.14}},{"id":"n16","livelli":[3],"rel":59.5,"rel_max":65,"best":{"da":"n4","passi":2,"costo":[2,6.8,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":3},"radiale":{"anello":2,"angolo":97.71}},{"id":"n17","livelli":[3],"rel":84.8,"rel_max":58,"best":{"da":"n6","passi":2,"costo":[2,19.8,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":5},"radiale":{"anello":2,"angolo":133.71}},{"id":"n18","livelli":[3],"rel":37.3,"rel_max":51,"best":{"da":"n2","passi":2,"costo":[2,10.4,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":1},"radiale":{"anello":2,"angolo":15.43}},{"id":"n19","livelli":[3],"rel":91.4,"rel_max":44,"best":{"da":"n8","passi":2,"costo":[2,43.3,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":7},"radiale":{"anello":2,"angolo":236.57}},{"id":"n20","livelli":[3],"rel":9.3,"rel_max":37,"best":{"da":"n9","passi":2,"costo":[2,9.3,0]},"entranti":1,"comune":false,"albero":{"col":2,"riga":9},"radiale":{"anello":2,"angolo":344.57}},{"id":"n21","livelli":[4],"rel":66.3,"rel_max":100,"best":{"da":"n16","passi":3,"costo":[3,6.8,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":2},"radiale":{"anello":3,"angolo":87.43}},{"id":"n22","livelli":[4],"rel":67.7,"rel_max":93,"best":{"da":"n14","passi":3,"costo":[3,33.9,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":9},"radiale":{"anello":3,"angolo":324}},{"id":"n23","livelli":[4],"rel":12.4,"rel_max":86,"best":{"da":"n17","passi":3,"costo":[3,12.4,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":4},"radiale":{"anello":3,"angolo":128.57}},{"id":"n24","livelli":[4],"rel":35.4,"rel_max":79,"best":{"da":"n12","passi":3,"costo":[3,35.4,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":0},"radiale":{"anello":3,"angolo":41.14}},{"id":"n25","livelli":[4],"rel":21.6,"rel_max":72,"best":{"da":"n15","passi":3,"costo":[3,6.8,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":1},"radiale":{"anello":3,"angolo":77.14}},{"id":"n26","livelli":[4],"rel":22.9,"rel_max":65,"best":{"da":"n19","passi":3,"costo":[3,22.9,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":7},"radiale":{"anello":3,"angolo":231.43}},{"id":"n27","livelli":[4],"rel":60.6,"rel_max":58,"best":{"da":"n16","passi":3,"costo":[3,6.8,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":3},"radiale":{"anello":3,"angolo":102.86}},{"id":"n28","livelli":[4],"rel":74.8,"rel_max":51,"best":{"da":"n14","passi":3,"costo":[3,33.9,0]},"entranti":2,"comune":true,"albero":{"col":3,"riga":5},"radiale":{"anello":3,"angolo":334.29}},{"id":"n29","livelli":[4],"rel":22.7,"rel_max":44,"best":{"da":"n19","passi":3,"costo":[3,22.7,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":8},"radiale":{"anello":3,"angolo":313.71}},{"id":"n30","livelli":[4],"rel":13.4,"rel_max":37,"best":{"da":"n17","passi":3,"costo":[3,13.4,0]},"entranti":1,"comune":false,"albero":{"col":3,"riga":6},"radiale":{"anello":3,"angolo":138.86}},{"id":"n31","livelli":[5],"rel":54.9,"rel_max":100,"best":{"da":"n26","passi":4,"costo":[4,22.9,0]},"entranti":2,"comune":true,"albero":{"col":4,"riga":7},"radiale":{"anello":4,"angolo":159.43}},{"id":"n32","livelli":[5],"rel":5.9,"rel_max":93,"best":{"da":"n26","passi":4,"costo":[4,5.9,0]},"entranti":1,"comune":false,"albero":{"col":4,"riga":9},"radiale":{"anello":4,"angolo":174.86}},{"id":"n33","livelli":[5],"rel":22.4,"rel_max":86,"best":{"da":"n25","passi":4,"costo":[4,6.8,0]},"entranti":1,"comune":false,"albero":{"col":4,"riga":2},"radiale":{"anello":4,"angolo":77.14}},{"id":"n34","livelli":[5],"rel":40.7,"rel_max":79,"best":{"da":"n26","passi":4,"costo":[4,22.9,0]},"entranti":1,"comune":false,"albero":{"col":4,"riga":8},"radiale":{"anello":4,"angolo":226.29}},{"id":"n35","livelli":[5],"rel":15.6,"rel_max":72,"best":{"da":"n24","passi":4,"costo":[4,15.6,0]},"entranti":1,"comune":false,"albero":{"col":4,"riga":0},"radiale":{"anello":4,"angolo":36}},{"id":"n36","livelli":[5],"rel":88.6,"rel_max":65,"best":{"da":"n21","passi":4,"costo":[4,6.8,0]},"entranti":1,"comune":false,"albero":{"col":4,"riga":3},"radiale":{"anello":4,"angolo":87.43}},{"id":"n37","livelli":[5],"rel":7,"rel_max":58,"best":{"da":"n27","passi":4,"costo":[4,6.8,0]},"entranti":1,"comune":false,"albero":{"col":4,"riga":4},"radiale":{"anello":4,"angolo":102.86}},{"id":"n38","livelli":[5],"rel":64.5,"rel_max":51,"best":{"da":"n24","passi":4,"costo":[4,35.4,0]},"entranti":2,"comune":true,"albero":{"col":4,"riga":1},"radiale":{"anello":4,"angolo":56.57}},{"id":"n39","livelli":[5],"rel":35.6,"rel_max":44,"best":{"da":"n26","passi":4,"costo":[4,22.9,0]},"entranti":2,"comune":true,"albero":{"col":4,"riga":5},"radiale":{"anello":4,"angolo":272.57}},{"id":"n40","livelli":[5],"rel":82.1,"rel_max":37,"best":{"da":"n26","passi":4,"costo":[4,22.9,0]},"entranti":2,"comune":true,"albero":{"col":4,"riga":6},"radiale":{"anello":4,"angolo":293.14}},{"id":"n41","livelli":[6],"rel":27.1,"rel_max":100,"best":{"da":"n37","passi":5,"costo":[5,6.8,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":4},"radiale":{"anello":5,"angolo":102.86}},{"id":"n42","livelli":[6],"rel":26.6,"rel_max":93,"best":{"da":"n40","passi":5,"costo":[5,22.9,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":5},"radiale":{"anello":5,"angolo":282.86}},{"id":"n43","livelli":[6],"rel":85.6,"rel_max":86,"best":{"da":"n34","passi":5,"costo":[5,22.9,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":6},"radiale":{"anello":5,"angolo":216}},{"id":"n44","livelli":[6],"rel":19.1,"rel_max":79,"best":{"da":"n35","passi":5,"costo":[5,15.6,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":0},"radiale":{"anello":5,"angolo":25.71}},{"id":"n45","livelli":[6],"rel":45,"rel_max":72,"best":{"da":"n36","passi":5,"costo":[5,6.8,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":3},"radiale":{"anello":5,"angolo":87.43}},{"id":"n46","livelli":[6],"rel":24.2,"rel_max":65,"best":{"da":"n35","passi":5,"costo":[5,15.6,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":1},"radiale":{"anello":5,"angolo":41.14}},{"id":"n47","livelli":[6],"rel":5,"rel_max":58,"best":{"da":"n34","passi":5,"costo":[5,5,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":9},"radiale":{"anello":5,"angolo":257.14}},{"id":"n48","livelli":[6],"rel":70.5,"rel_max":51,"best":{"da":"n38","passi":5,"costo":[5,35.4,0]},"entranti":2,"comune":true,"albero":{"col":5,"riga":2},"radiale":{"anello":5,"angolo":56.57}},{"id":"n49","livelli":[6],"rel":28.5,"rel_max":44,"best":{"da":"n32","passi":5,"costo":[5,5.9,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":8},"radiale":{"anello":5,"angolo":174.86}},{"id":"n50","livelli":[6],"rel":58.6,"rel_max":37,"best":{"da":"n40","passi":5,"costo":[5,22.9,0]},"entranti":1,"comune":false,"albero":{"col":5,"riga":7},"radiale":{"anello":5,"angolo":298.29}},{"id":"n51","livelli":[7],"rel":15.1,"rel_max":100,"best":{"da":"n41","passi":6,"costo":[6,6.8,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":2},"radiale":{"anello":6,"angolo":97.71}},{"id":"n52","livelli":[7],"rel":26.7,"rel_max":93,"best":{"da":"n43","passi":6,"costo":[6,22.9,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":4},"radiale":{"anello":6,"angolo":210.86}},{"id":"n53","livelli":[7],"rel":87.3,"rel_max":86,"best":{"da":"n43","passi":6,"costo":[6,22.9,0]},"entranti":2,"comune":true,"albero":{"col":6,"riga":5},"radiale":{"anello":6,"angolo":241.71}},{"id":"n54","livelli":[7],"rel":76.3,"rel_max":79,"best":{"da":"n50","passi":6,"costo":[6,22.9,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":6},"radiale":{"anello":6,"angolo":298.29}},{"id":"n55","livelli":[7],"rel":25.6,"rel_max":72,"best":{"da":"n49","passi":6,"costo":[6,5.9,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":7},"radiale":{"anello":6,"angolo":169.71}},{"id":"n56","livelli":[7],"rel":10.4,"rel_max":65,"best":{"da":"n46","passi":6,"costo":[6,10.4,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":0},"radiale":{"anello":6,"angolo":36}},{"id":"n57","livelli":[7],"rel":73.3,"rel_max":58,"best":{"da":"n47","passi":6,"costo":[6,5,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":9},"radiale":{"anello":6,"angolo":257.14}},{"id":"n58","livelli":[7],"rel":89.1,"rel_max":51,"best":{"da":"n46","passi":6,"costo":[6,15.6,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":1},"radiale":{"anello":6,"angolo":46.29}},{"id":"n59","livelli":[7],"rel":73.2,"rel_max":44,"best":{"da":"n49","passi":6,"costo":[6,5.9,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":8},"radiale":{"anello":6,"angolo":180}},{"id":"n60","livelli":[7],"rel":43.5,"rel_max":37,"best":{"da":"n41","passi":6,"costo":[6,6.8,0]},"entranti":1,"comune":false,"albero":{"col":6,"riga":3},"radiale":{"anello":6,"angolo":108}},{"id":"n61","livelli":[8],"rel":90.9,"rel_max":100,"best":{"da":"n57","passi":7,"costo":[7,5,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":8},"radiale":{"anello":7,"angolo":252}},{"id":"n62","livelli":[8],"rel":58.3,"rel_max":93,"best":{"da":"n57","passi":7,"costo":[7,5,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":9},"radiale":{"anello":7,"angolo":262.29}},{"id":"n63","livelli":[8],"rel":32.2,"rel_max":86,"best":{"da":"n52","passi":7,"costo":[7,22.9,0]},"entranti":2,"comune":true,"albero":{"col":7,"riga":1},"radiale":{"anello":7,"angolo":190.29}},{"id":"n64","livelli":[8],"rel":45.2,"rel_max":79,"best":{"da":"n59","passi":7,"costo":[7,5.9,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":7},"radiale":{"anello":7,"angolo":180}},{"id":"n65","livelli":[8],"rel":38.8,"rel_max":72,"best":{"da":"n53","passi":7,"costo":[7,22.9,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":2},"radiale":{"anello":7,"angolo":241.71}},{"id":"n66","livelli":[8],"rel":32.8,"rel_max":65,"best":{"da":"n54","passi":7,"costo":[7,22.9,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":4},"radiale":{"anello":7,"angolo":293.14}},{"id":"n67","livelli":[8],"rel":12.3,"rel_max":58,"best":{"da":"n55","passi":7,"costo":[7,5.9,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":5},"radiale":{"anello":7,"angolo":169.71}},{"id":"n68","livelli":[8],"rel":47.4,"rel_max":51,"best":{"da":"n56","passi":7,"costo":[7,10.4,0]},"entranti":1,"comune":false,"albero":{"col":7,"riga":0},"radiale":{"anello":7,"angolo":36}},{"id":"n69","livelli":[8],"rel":10.6,"rel_max":44,"best":{"da":"n52","passi":7,"costo":[7,10.6,0]},"entranti":2,"comune":true,"albero":{"col":7,"riga":3},"radiale":{"anello":7,"angolo":216}},{"id":"n70","livelli":[8],"rel":64.2,"rel_max":37,"best":{"da":"n54","passi":7,"costo":[7,22.9,0]},"entranti":2,"comune":true,"albero":{"col":7,"riga":6},"radiale":{"anello":7,"angolo":303.43}},{"id":"n71","livelli":[9],"rel":10.9,"rel_max":100,"best":{"da":"n69","passi":8,"costo":[8,10.6,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":2},"radiale":{"anello":8,"angolo":200.57}},{"id":"n72","livelli":[9],"rel":63.6,"rel_max":93,"best":{"da":"n69","passi":8,"costo":[8,10.6,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":3},"radiale":{"anello":8,"angolo":210.86}},{"id":"n73","livelli":[9],"rel":79.7,"rel_max":86,"best":{"da":"n69","passi":8,"costo":[8,10.6,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":4},"radiale":{"anello":8,"angolo":221.14}},{"id":"n74","livelli":[9],"rel":71.4,"rel_max":79,"best":{"da":"n62","passi":8,"costo":[8,5,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":8},"radiale":{"anello":8,"angolo":262.29}},{"id":"n75","livelli":[9],"rel":82.7,"rel_max":72,"best":{"da":"n63","passi":8,"costo":[8,22.9,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":1},"radiale":{"anello":8,"angolo":190.29}},{"id":"n76","livelli":[9],"rel":89.4,"rel_max":65,"best":{"da":"n68","passi":8,"costo":[8,10.4,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":0},"radiale":{"anello":8,"angolo":36}},{"id":"n77","livelli":[9],"rel":6.9,"rel_max":58,"best":{"da":"n64","passi":8,"costo":[8,5.9,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":6},"radiale":{"anello":8,"angolo":180}},{"id":"n78","livelli":[9],"rel":30.8,"rel_max":51,"best":{"da":"n69","passi":8,"costo":[8,10.6,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":5},"radiale":{"anello":8,"angolo":231.43}},{"id":"n79","livelli":[9],"rel":48,"rel_max":44,"best":{"da":"n61","passi":8,"costo":[8,5,0]},"entranti":1,"comune":false,"albero":{"col":8,"riga":7},"radiale":{"anello":8,"angolo":252}}],"archi":[{"da":"n0","a":"n1","best":true},{"da":"n0","a":"n2","best":true},{"da":"n0","a":"n3","best":true},{"da":"n0","a":"n4","best":true},{"da":"n0","a":"n5","best":true},{"da":"n0","a":"n6","best":true},{"da":"n0","a":"n7","best":true},{"da":"n0","a":"n8","best":true},{"da":"n0","a":"n9","best":true},{"da":"n0","a":"n10","best":true},{"da":"n7","a":"n11","best":true},{"da":"n2","a":"n12","best":false},{"da":"n3","a":"n12","best":true},{"da":"n4","a":"n13","best":true},{"da":"n9","a":"n14","best":true},{"da":"n4","a":"n15","best":true},{"da":"n4","a":"n16","best":true},{"da":"n6","a":"n17","best":true},{"da":"n2","a":"n18","best":true},{"da":"n8","a":"n19","best":true},{"da":"n9","a":"n20","best":true},{"da":"n16","a":"n21","best":true},{"da":"n14","a":"n22","best":true},{"da":"n17","a":"n23","best":true},{"da":"n12","a":"n24","best":true},{"da":"n15","a":"n25","best":true},{"da":"n19","a":"n26","best":true},{"da":"n16","a":"n27","best":true},{"da":"n14","a":"n28","best":true},{"da":"n15","a":"n28","best":false},{"da":"n19","a":"n29","best":true},{"da":"n17","a":"n30","best":true},{"da":"n26","a":"n31","best":true},{"da":"n30","a":"n31","best":false},{"da":"n26","a":"n32","best":true},{"da":"n25","a":"n33","best":true},{"da":"n26","a":"n34","best":true},{"da":"n24","a":"n35","best":true},{"da":"n21","a":"n36","best":true},{"da":"n27","a":"n37","best":true},{"da":"n24","a":"n38","best":true},{"da":"n25","a":"n38","best":false},{"da":"n23","a":"n39","best":false},{"da":"n26","a":"n39","best":true},{"da":"n23","a":"n40","best":false},{"da":"n26","a":"n40","best":true},{"da":"n37","a":"n41","best":true},{"da":"n40","a":"n42","best":true},{"da":"n34","a":"n43","best":true},{"da":"n35","a":"n44","best":true},{"da":"n36","a":"n45","best":true},{"da":"n35","a":"n46","best":true},{"da":"n34","a":"n47","best":true},{"da":"n33","a":"n48","best":false},{"da":"n38","a":"n48","best":true},{"da":"n32","a":"n49","best":true},{"da":"n40","a":"n50","best":true},{"da":"n41","a":"n51","best":true},{"da":"n43","a":"n52","best":true},{"da":"n43","a":"n53","best":true},{"da":"n50","a":"n53","best":false},{"da":"n50","a":"n54","best":true},{"da":"n49","a":"n55","best":true},{"da":"n46","a":"n56","best":true},{"da":"n47","a":"n57","best":true},{"da":"n46","a":"n58","best":true},{"da":"n49","a":"n59","best":true},{"da":"n41","a":"n60","best":true},{"da":"n57","a":"n61","best":true},{"da":"n57","a":"n62","best":true},{"da":"n52","a":"n63","best":true},{"da":"n58","a":"n63","best":false},{"da":"n59","a":"n64","best":true},{"da":"n53","a":"n65","best":true},{"da":"n54","a":"n66","best":true},{"da":"n55","a":"n67","best":true},{"da":"n56","a":"n68","best":true},{"da":"n52","a":"n69","best":true},{"da":"n54","a":"n69","best":false},{"da":"n54","a":"n70","best":true},{"da":"n57","a":"n70","best":false},{"da":"n69","a":"n71","best":true},{"da":"n69","a":"n72","best":true},{"da":"n69","a":"n73","best":true},{"da":"n62","a":"n74","best":true},{"da":"n63","a":"n75","best":true},{"da":"n68","a":"n76","best":true},{"da":"n64","a":"n77","best":true},{"da":"n69","a":"n78","best":true},{"da":"n61","a":"n79","best":true}]}}

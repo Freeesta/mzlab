@@ -109,7 +109,7 @@ function bind(f, again) {
     const buf = await fl.slice(0, 2 * 1024 * 1024).arrayBuffer();
     const dec = o => new TextDecoder("utf-16le").decode(buf.slice(o, o + ((buf.byteLength - o) & ~1)));
     const pick = [dec(0), dec(1)].map(s => s.replace(/[^\x20-\x7e°µ]+/g, "\n")).sort((a, b) => (b.match(/%B/g) || []).length - (a.match(/%B/g) || []).length)[0].slice(0, 400000);
-    try { edit(await parse(pick, "chromeleon")); } catch (e) { if (e.key === "gradient.err.noScript") msg(T("grad.rawNone")); else throw e; }
+    try { edit(await parse(pick, "chromeleon")); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.key === "gradient.err.noScript") msg(T("grad.rawNone")); else throw e; }
   }));
 }
 
@@ -238,7 +238,7 @@ function importState(o) { if (o && typeof o === "object") { NB.gradienti = { ...
 if (typeof AZIONI !== "undefined") {
   /** @param {string} id @param {string} nome @param {string} aria @param {(c: any) => boolean} have */
   const over = (id, nome, aria, have) => AZIONI.registra({ id: "chrom." + id, gruppo: "view", viste: ["chrom", "xic", "mrm"], visibile: have, attiva: c => c.p.overlay === id,
-    nome: () => T(nome), aria: () => T(aria), esegui: c => { c.p.overlay = c.p.overlay === id ? null : id; drawSoon(c.p); uiSave(); } });
+    nome: () => T(nome), aria: () => T(aria), esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.overlay = c.p.overlay === id ? null : id; }); drawSoon(c.p); uiSave(); } });
   over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
   over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));
 }

@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // The wait of the «Fragmentation graph» tab: the bar over the phases of api/msn_grafo (events «mzlab-msngrafo» of rust-msngrafo-pagina.js) and the watch
 // that turns a request with no news for STALL_MS into an error with «Copy diagnosis» (never silence). Used by infusione-grafo.js. docs/agenti/lettura-nativa.md.
 

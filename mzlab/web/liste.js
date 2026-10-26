@@ -1,3 +1,4 @@
+// @ts-strict
 "use strict";
 // Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists).
 // ONE engine for every list of reference: unit resolution (nominal m/z ±0.5 Da, ordered by proximity) and high resolution (ppm tolerance).
@@ -243,14 +244,14 @@ const LISTE = (() => {
     KEY_LISTS = typeof NOMI !== "undefined" ? NOMI.KEY("liste.attive") : "qqq.liste.attive";
   const IDB_STORE = "liste_utente";
 
-  const ST = {
+  const ST = /** @type {{ lists: any[], userLists: any[], idx: any, loading: Promise<void> | null, err: any, runs: WeakMap<object, any> }} */ ({
     lists: [],           // built-in lists (/api/contaminants: Keller 2008)
     userLists: [],       // lists uploaded by the user from CSV, persisted in IndexedDB
     idx: null,
     loading: null,
     err: null,
     runs: new WeakMap()
-  };
+  });
 
   const rd = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const wr = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode / quota */ } };
@@ -326,7 +327,7 @@ const LISTE = (() => {
   async function idbSaveUserList(list) {
     const db = await idbOpen();
     if (!db) return;
-    return new Promise(res => {
+    return new Promise(/** @param {(v?: any) => void} res */ res => {
       try {
         const t = db.transaction(IDB_STORE, "readwrite");
         t.objectStore(IDB_STORE).put(list);
@@ -339,7 +340,7 @@ const LISTE = (() => {
   async function idbDeleteUserList(id) {
     const db = await idbOpen();
     if (!db) return;
-    return new Promise(res => {
+    return new Promise(/** @param {(v?: any) => void} res */ res => {
       try {
         const t = db.transaction(IDB_STORE, "readwrite");
         t.objectStore(IDB_STORE).delete(id);
@@ -455,7 +456,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x) { if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }

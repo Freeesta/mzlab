@@ -9,7 +9,7 @@ use mzlab_core::step::{
 use crate::hypo::HypoParams;
 
 pub(super) use super::tabui_draw::{draw, render};
-pub(super) use super::tabui_link::{link, network, position};
+pub(super) use super::tabui_link::{link, network, position, review};
 
 /// The `.wasm` that runs the hypotheses (the `hr` group of mzFinder) and its fixed ceiling in bytes (`limit_hr` of `tools/build_feat_wasm.sh`).
 const HR_WASM: &str = "hr";
@@ -17,6 +17,9 @@ const HR_CEILING: u64 = 1_212_416;
 /// The `.wasm` of the interpretation of the rows (`limit_interp`).
 pub(super) const INTERP_WASM: &str = "interp";
 pub(super) const INTERP_CEILING: u64 = 512_000;
+/// The `.wasm` of the table of mzFinder (`limit_table`), which carries the network of the products (`rete_build`).
+pub(super) const TABLE_WASM: &str = "table";
+pub(super) const TABLE_CEILING: u64 = 614_400;
 
 /// Every step of the Tabui chain of `mzlab-feat`, in the order of the chain.
 pub fn registry() -> Vec<Step> {
@@ -26,6 +29,7 @@ pub fn registry() -> Vec<Step> {
         link(),
         position(),
         network(),
+        review(),
         render(),
         draw(),
     ]

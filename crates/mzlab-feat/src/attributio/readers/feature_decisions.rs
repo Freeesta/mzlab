@@ -1,7 +1,8 @@
 // Ported from Attributio readers/feature_decisions.py.
 //! The chemist's decisions on single features of a campaign: one `;`-separated file declared in `[curation] feature_decisions`, with the columns
 //! `pol;feature_id;mz;rt;level;name;identity;decided_on;decided_by;justification` and the optional ones (`group`, the evidence, `rt_check`, the provenance of
-//! the review, and `evidence_checklist`: the checks the chemist ticked before a 2b, separated by `|`; read if there, always written last).
+//! the review, and `evidence_checklist`: the checks the chemist ticked before a 2b, separated by `|`; read if there, always written last), then `plan_sha256` and
+//! `engine_version` of the Flow run the decision comes from (only in files that have a value for them).
 //! `level` `2b` (probable structure from diagnostic fragments, in-silico spectra or an unambiguous chemical context; only the chemist writes it, needs
 //! `justification`), `3a` (few positional/isomeric candidates among homologues), `3b` (a generic class with many plausible isomers), `3` (a Level 2 goes to
 //! Level 3 without saying which; never raises a level), `2` (a record) or empty; `name` replaces the
@@ -54,6 +55,9 @@ pub const OPTIONAL_COLUMNS: [&str; 16] = [
     "evidence_ref_source",
     "evidence_checklist",
 ];
+/// The run a decision comes from, copied from `prov/1` (`plan_sha256`, `agent.version`) when it was made from a Flow run: read if there, written last, and only
+/// once a row has a value, so a file without them is read and written back as it was.
+pub const PROVENANCE_COLUMNS: [&str; 2] = ["plan_sha256", "engine_version"];
 /// The fields a decision is compared on when the review app saves one.
 pub const DECISION_FIELDS: [&str; 14] = [
     "level",
@@ -403,6 +407,14 @@ pub fn merge_decisions(
             .map(|c| existing.get(r, c).to_string())
             .collect();
         ex.rows.push(row);
+    }
+    // the columns of the run appear in the file with the first row that has a value for them
+    for c in PROVENANCE_COLUMNS {
+        let given = (0..new.len()).any(|n| !new.get(n, c).trim().is_empty());
+        if given && !ex.columns.iter().any(|x| x == c) {
+            ex.columns.push(c.to_string());
+            ex.rows.iter_mut().for_each(|row| row.push(String::new()));
+        }
     }
     let mut stats = MergeStats::default();
     for n in 0..new.len() {

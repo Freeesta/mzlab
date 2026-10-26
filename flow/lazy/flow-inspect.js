@@ -34,7 +34,7 @@
       box.append(ul);
     }
     if (node.key === "import") box.append(dataState(el), ...(F.importBox ? [F.importBox(S)] : []));
-    if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : F.addFilesBox ? el("div", {}, dataState(el), F.addFilesBox(S)) : dataState(el));
+    if (node.kind === "input") { box.append(node.file && node.file.type === "samples" && F.samplesEditor ? F.samplesEditor(S, node.file) : node.file && node.file.type === "structure" && F.parentEditor ? F.parentEditor(S, node.file) : node.file && node.file.type === "transform" && F.decisionsEditor ? F.decisionsEditor(S, node.file) : F.addFilesBox ? el("div", {}, dataState(el), F.addFilesBox(S)) : dataState(el));
       if (!c.simple) box.append(F.btn("x", `Remove ${node.title}`, () => c.remove(node), "Remove")); return box; }
     for (const id of node.ids) {
       const inst = F.instanceOf(S.plan, id), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]));

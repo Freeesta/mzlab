@@ -1,6 +1,5 @@
-// TPMINE-PRIVATE  Pipeline of mzFinder in the browser: the Web Workers that run the feature engine (crates/mzlab-feat-wasm, two .wasm of their own: `feat` = detection and
-// alignment, `proofs` = hypotheses and graph of the proofs) and the supervisor that drives them. One file, two roles:
-//   - imported by the page as a module (from a Blob URL, like the other files of mzFinder): `createFeatPool(...)` is the supervisor;
+// @ts-strict TPMINE-PRIVATE  Pipeline of mzFinder in the browser: the Web Workers that run the feature engine (crates/mzlab-feat-wasm, two .wasm of their own: `feat` = detection and
+// alignment, `proofs` = hypotheses and graph of the proofs) and the supervisor that drives them. One file, two roles:   - imported by the page as a module (from a Blob URL, like the other files of mzFinder): `createFeatPool(...)` is the supervisor;
 //   - started as a module Worker (the same URL): the worker below. It reads the .mzidx files with OPFS synchronous handles (`createSyncAccessHandle`: the only reads the
 //     .wasm can do while it runs, no SharedArrayBuffer) and hands the page byte arrays that are transferred, never views on the memory of the .wasm.
 // One worker = one file at a time (detection) or one series (alignment, hypotheses, proofs: sequential, in the same worker); at most min(cores - 1, 4) workers (2 on iPad);
@@ -36,10 +35,9 @@ function createCore(opts) {
   const { workerUrl, wasm, notify = () => {}, WorkerClass = Worker } = opts;
   const limit = Math.max(1, opts.size || 1);
   const slots = new Set();                      // every worker alive: { w, busy, loaded:Set, dead }
-  const st = { archive: null, cancelled: false };
+  const st = /** @type {{ archive: any, cancelled: boolean }} */ ({ archive: null, cancelled: false });
   const queue = [];                             // jobs waiting for a worker: { run(slot), resolve, reject, tried }
   const rest = idleRest(opts.idleMs ?? IDLE_MS, st, slots, queue, s => kill(s));
-
   function spawn() {
     const slot = { w: new WorkerClass(workerUrl, { type: "module" }), busy: false, loaded: new Set(), dead: false, calls: new Map(), seq: 0 };
     slot.w.onmessage = ev => { const d = ev.data, c = slot.calls.get(d.id); if (!c) return; if (d.progress) { if (c.step) c.step(d.progress[0], d.progress[1]); return; } slot.calls.delete(d.id); c(d); };
@@ -74,7 +72,6 @@ function createCore(opts) {
     slot.loaded.add(which);
   }
   function kill(slot) { slot.dead = true; slots.delete(slot); try { slot.w.terminate(); } catch (_) { /* gone */ } }
-
   function pump() {
     while (queue.length) {
       let slot = [...slots].find(s => !s.busy && !s.dead);
@@ -110,7 +107,6 @@ function createCore(opts) {
   const copy = list => list.map(b => b.slice());      // inputs of a job that may run again are copied, never transferred
   return { st, slots, queue, spawn, call, submit, cancelJob, kill, copy, rest, classesText };
 }
-
 // the folder of a campaign as the worker reads it
 const folder = (root, files) => JSON.stringify({ root, files: files.map(f => ({ path: f.path, size: f.file.size })) });
 // cancelJob(id) of a core: a queued job is rejected, a running one loses its worker alone and is not tried again; false when no such job
@@ -214,6 +210,9 @@ function rowOps(submit, call) {
     crossPolarity: ({ pos, neg, params }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "cross_polarity", pos: pos.slice(), neg: neg.slice(), params: params || "" })).text; }),
     interpBuild: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "interp_build", ...m, table: m.table.slice() })).bytes; }),
     interpRow: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "table_interp", ...m, table: m.table.slice() })).text; }),
+    linkEvidence: m => submit(async (slot, load) => { await load("proofs"); const r = await call(slot, { op: "tp_link_evidence", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) }); slot.recycle = true; return r; }),
+    tpPost: m => submit(async (slot, load) => { await load(m.kind === "network" ? "table" : "interp"); return (await call(slot, { op: "tp_post", ...m, tp: m.tp.slice(), table: m.table && m.table.slice(), rules: m.rules && m.rules.slice() })).text; }),
+    linkInterp: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "tp_link_interp", ...m, table: m.table.slice() })).bytes; }),
   };
 }
 
@@ -299,6 +298,7 @@ export function createFeatPool(opts) {
       const e = await this.evidence({ table, state: h.state, minutes, parentMz, parentRt, recipe });
       return { table: e.table, tried: h.tried, found: h.found, registry: h.registry, msHypotheses: h.ms };
     },
+    op: (which, msg) => submit(async (slot, load) => { await load(which); return call(slot, { ...msg, which }); }),   // one call of the .wasm `which` in a worker of the pool (the cache of the detections)
     // the archive worker (the only one that writes OPFS): path = "mzlab/feat/<name>"
     fs: {
       async _call(msg, transfer) {
@@ -309,6 +309,7 @@ export function createFeatPool(opts) {
       async read(path) { return (await this._call({ op: "fs.read", path })).bytes; },
       async exists(path) { return (await this._call({ op: "fs.stat", path })).size >= 0; },
       remove(path) { return this._call({ op: "fs.remove", path }); },
+      trim(dir, cap) { return this._call({ op: "fs.trim", dir, cap }); },   // keeps the newest files of the folder within `cap` bytes (0 empties it): { freed }
     },
     cancel() {                                  // everything stops: running jobs are lost with their workers, the queued ones are rejected
       st.cancelled = true;
@@ -331,8 +332,7 @@ export function createFeatPool(opts) {
 // ---------------------------------------------------------------- worker side
 const WASM_KEYS = ["error.featState"];                  // keys that only the .wasm returns (the page translates them)
 const mods = {}, mems = {};                              // { feat, proofs, untargeted, ... }: the wasm-bindgen modules
-let hypo = null;                              // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence)
-let scratch = new Uint8Array(1 << 16);        // buffer reused by the reads of the .mzidx
+let hypo = null, scratch = new Uint8Array(1 << 16);   // Hypotheses of the last run_hypotheses (kept in the memory of this worker for evidence); buffer reused by the reads of the .mzidx
 
 async function dirOf(parts, create) {
   let d = await navigator.storage.getDirectory(); for (const p of parts) d = await d.getDirectoryHandle(p, { create }); return d;
@@ -374,8 +374,7 @@ async function init(m) {
   const ex = await mod.default({ module_or_path: bytes });
   mods[m.which] = mod; mems[m.which] = ex.memory;
 }
-const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []);
-const arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
+const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []), arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 const OPS = {
   async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
@@ -384,7 +383,10 @@ const OPS = {
     try { mods.feat.detect_file_to(f.read, f.sizes[0], m.name, m.recipe, out.write, (d, t) => self.postMessage({ id: m.id, progress: [d, t] })); return { bytes: out.bytes() }; } finally { f.close(); }   // the .wasm calls back at most once per 1 %; the pool hands `progress` to the step of the call
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
+  async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },
+  async tp_link_interp(m) { const f = await openAll(m.paths), out = memSink(); try { mods.interp.tp_link_interp(new Uint8Array(m.table), m.parent, m.registry, m.polarity, m.params, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
+  async tp_post(m) { const t = new Uint8Array(m.tp), i = mods.interp; return { text: m.kind === "filter" ? i.tp_refilter(t, m.hypotheses, m.params) : m.kind === "review" ? i.tp_review(t, m.decisions) : m.kind === "position" ? i.tp_position(t, m.smiles, m.formula, m.params) : mods.table.rete_build((_, off, len) => new Uint8Array(m.table).subarray(off, off + len), m.table.byteLength, (_, off, len) => t.subarray(off, off + len), t.length, m.samples, new Uint8Array(m.rules), m.ppm, m.minFragments) }; },
   async detect_unt(m) {
     const f = await openAll([m.path]), out = memSink();
     try { mods.untargeted.detect_untargeted_to(f.read, f.sizes[0], m.name, m.params, out.write); return { bytes: out.bytes() }; } finally { f.close(); }
@@ -467,6 +469,11 @@ function describe(e) {
 }
 // the Banco 2b (`.wasm` `attributio_rev`): the review of one feature, and the decisions file after a decision
 Object.assign(OPS, {
+  async file_key(m) { const f = await openAll([m.path]), w = mods[m.which]; try { return { text: (m.which === "untargeted" ? w.file_key_untargeted : w.file_key)(f.read, f.sizes[0], m.name, m.recipe) }; } finally { f.close(); } },
+  async check_stored(m) { return { text: mods[m.which].check_stored(new Uint8Array(m.bytes), m.key) }; },
+  async "fs.trim"(m) { const dir = await dirOf(m.dir.split("/").filter(Boolean), true), all = []; let freed = 0;
+    for await (const [n, h] of /** @type {any} */ (dir).entries()) if (h.kind === "file") all.push({ n, f: await h.getFile() });
+    let size = all.reduce((a, x) => a + x.f.size, 0); for (const x of all.sort((a, b) => a.f.lastModified - b.f.lastModified)) if (size > m.cap) { await dir.removeEntry(x.n); size -= x.f.size; freed += x.f.size; } return { freed }; },
   attributio_review: m => viaFiles(m, (read, write) => mods.attributio_rev.review_to(read, m.names, m.feature, m.pol, m.classes || "", write)),
   attributio_export: m => viaFiles(m, (read, write) => mods[m.which].export_to(read, m.names, m.kind, write)),
   attributio_ms2: m => viaFiles(m, (read, write) => mods.attributio_ms2.ms2_to(read, m.names, m.request, write)),

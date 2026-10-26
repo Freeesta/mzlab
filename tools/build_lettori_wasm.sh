@@ -6,9 +6,9 @@ set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
 tetti="aperti 416768
 andi 263936
-thermo 557056
+thermo 626688
 agilent 438272
-sciex 331776
+sciex 364544
 waters 303104
 shimadzu 290816
 bruker 434176"

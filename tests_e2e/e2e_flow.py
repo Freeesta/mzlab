@@ -345,7 +345,7 @@ try:
             pg.fill('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "10"); pg.press('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "Tab")
             attendi(pg, "FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256 !== '%s'" % sha)
             assert pg.evaluate("Object.values(FLOW.current.samples)[0].campioni[1].tempo_min") == 10
-            pg.evaluate("() => { E.files = window.__e; }")
+            assert "No t0" in pg.inner_text('.flx-smp-roles') and "1 blank" in pg.inner_text('.flx-smp-roles'); pg.evaluate("() => { E.files = window.__e; }")
         step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
 
         def samples_fix():
@@ -461,12 +461,13 @@ try:
             pg.click('#flx-run'); slots = ".fl-slots li"
             go = 'button[aria-label="Run the plan on this computer"]'
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.includes('Data tab')")      # Run started the first run by itself
-            pg.evaluate("window.__missing = ''")
+            pg.evaluate("window.__missing = ''"); attendi(pg, "/^0 steps reused, \\d+ to compute$/.test(document.querySelector('.fl-cli [data-reuse]').textContent)")
+            assert "flow/reuse" in pg.evaluate("window.__ops"); n = pg.evaluate("document.querySelector('.flx-list').__flow.plan.steps.length"); pg.evaluate("window.__reused = %d" % n)
             pg.click(go); attendi(pg, "document.querySelector('.fl-slots li').textContent.includes('done in 0.9 s')")      # while the run goes: the first step is done, the others wait
             assert "Running" in pg.inner_text(".fl-cli .fl-note") and "waiting" in pg.inner_text(slots + ":last-child")
             attendi(pg, "document.querySelector('.fl-cli .fl-note').textContent.startsWith('Finished')")
             assert "done in 1.2 s" in pg.inner_text(slots + ":first-child") and "reused" in pg.inner_text(slots + ":last-child") and "1 steps reused" in pg.inner_text(".fl-cli .fl-note") and "/tmp/mzlab-flow/out" in pg.inner_text(".fl-cli .fl-note")
-            pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
+            attendi(pg, "document.querySelector('.fl-cli [data-reuse]').textContent === '%d steps reused, 0 to compute'" % n); pg.click('button[aria-label="Fit all steps in view"]'); pg.click('.fln:has-text("Build feature table")'); pg.click('.fl-insp button[aria-label="Open t.csv"]')
             attendi(pg, "document.querySelector('.flx-table td') && document.querySelector('.flx-table td').textContent === '1'")
         step("desktop: «Run on this computer» says which file to open first, then lists each step as done", desktop_run)
         def desktop_cards():

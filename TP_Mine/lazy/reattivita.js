@@ -1,4 +1,5 @@
 // @ts-check
+// @ts-strict
 // TPMINE-PRIVATE  TPREATT: the panel of reactivity of the parent compound in Tabui (administrator mode only). It shows a `reatt/1` (docs/agenti/reattivita.md): the 2D drawing with a halo under the heavy atoms,
 // the 3D model (TPV3D, viewer3d.js), the cards f(−) (default), f(0), f(+), Info, Notes and JSON, the threshold, the table per atom (TDATI) and the exports (XYZ, SMILES, JSON, CSV) with «How to cite».
 // Every value is a «Prev.» (prediction for the isolated molecule in implicit water); no level is assigned and no class of positions is reordered or removed. Texts in English, without keys of lang/.

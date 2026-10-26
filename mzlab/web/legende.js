@@ -1,4 +1,4 @@
-// @ts-check
+// @ts-strict
 // Legend of a graph: never on top of the data. Of the four corners of the plot area it takes the one with the least ink under it
 // (peaks, lines, labels are read from the canvas); if none is free the intensity axis gets headroom (p._legPad) and the graph is drawn again once.
 const LEGENDE_INK = 3;                                  // dots of ink tolerated under the legend box

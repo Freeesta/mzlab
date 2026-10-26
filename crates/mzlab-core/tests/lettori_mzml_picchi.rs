@@ -21,6 +21,7 @@ fn finto(profilo_ok: bool) -> Finto {
             id: 0,
             nome: "a".into(),
             scansioni: n,
+            dimensione: None,
         }],
         indice: (0..n)
             .map(|k| VoceScansione {
