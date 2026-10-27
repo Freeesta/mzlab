@@ -1,7 +1,7 @@
 # Copertura di Tabui (mzFinder) da parte di mzFlow
 Pacchetto per colmare i buchi: `flow-pacchetto-tabui.md`.
 Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzione di Tabui, il passo o il modello di mzFlow che la copre e se oggi si può eseguire. «Eseguibile» = il passo ha un esecutore in `EXECUTORS` di `crates/mzlab-cli/src/flow.rs` (`flow::executable`), quindi gira con `mzlab-cli flow run` e con «Run on this computer» dell'app desktop (`flow/run`, stesso motore).
-Il sito esegue una parte dei passi con l'esecutore web (`F.runners.web`, «This browser», `docs/agenti/flow-web.md`): `index.mzidx`, `features.detect|align|gapfill`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network`, `tp.review` e i passi MSn; gli altri restano al computer (`via: "computer"`). `F.runners` ha `cli`, `web` e, nell'app, `desktop`.
+Il sito esegue una parte dei passi con l'esecutore web (`F.runners.web`, «This browser», `docs/agenti/flow-web.md`): `index.mzidx`, `features.detect|align|gapfill`, `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network`, `tp.review`, `tp.dig_lr` e i passi MSn; gli altri restano al computer (`via: "computer"`). `F.runners` ha `cli`, `web` e, nell'app, `desktop`.
 
 ## Prove fatte sul codice
 - Il registro del CLI (`flow::steps()`) contiene la catena di base, `features.table`, `spectra.centroid`, Attributio, `spectra.ms2`, `meta.compare` e tutta la famiglia di Tabui (`mzlab_chem::step::tabui()`); un passo senza esecutore dà `err.flow.step.native` (`tp.generate` ora si esegue).

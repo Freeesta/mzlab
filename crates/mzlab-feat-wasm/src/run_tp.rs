@@ -18,12 +18,18 @@ use mzlab_feat::tp::TpRoles;
 
 use crate::run::{self, RowSources};
 
+// `lib.rs` is at its line limit, so the Dig inputs of `tp.dig_lr` (shared by the CLI and the browser) hang here.
+#[path = "run_dig.rs"]
+pub mod dig;
+
 /// The parent file as written: a JSON `{"formula"|"neutral", "smiles", "rt"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
 /// `formula` is empty when the file gives only a SMILES.
 pub struct ParentFile {
     pub formula: String,
     pub smiles: String,
     pub rt: Option<f64>,
+    /// The adduct of the parent ion when the file says a valid one, else `[M+H]+` (its sign is the polarity of the products).
+    pub adduct: String,
 }
 
 pub fn read_parent(bytes: &[u8]) -> ParentFile {
@@ -47,10 +53,14 @@ pub fn read_parent(bytes: &[u8]) -> ParentFile {
             .find(|x| !x.is_empty())
             .unwrap_or_default();
         let rt = v.get("rt").and_then(Value::f64).filter(|t| t.is_finite());
+        let adduct = Some(s("adduct"))
+            .filter(|a| elements::ion_mz(0.0, a).is_some())
+            .unwrap_or_else(|| "[M+H]+".into());
         return ParentFile {
             formula,
             smiles: s("smiles"),
             rt,
+            adduct,
         };
     }
     let line = text.lines().next().unwrap_or("").trim().to_string();
@@ -61,12 +71,14 @@ pub fn read_parent(bytes: &[u8]) -> ParentFile {
             formula: line,
             smiles: String::new(),
             rt: None,
+            adduct: "[M+H]+".into(),
         }
     } else {
         ParentFile {
             formula: String::new(),
             smiles: line,
             rt: None,
+            adduct: "[M+H]+".into(),
         }
     }
 }
