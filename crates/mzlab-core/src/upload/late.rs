@@ -18,10 +18,7 @@ pub(super) fn source_text(name: &str, size: u64, probe: &str, sha256: &str) -> S
 
 pub(super) fn tabella_con(mut t: Table, source_json: String) -> ScanTable {
     let (json, c) = t.drain_json();
-    let run = format!(
-        "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}}}",
-        t.nce, t.hr1, t.n_chromatograms
-    );
+    let run = t.run_json();
     ScanTable {
         level: c.level,
         polarity: c.polarity,

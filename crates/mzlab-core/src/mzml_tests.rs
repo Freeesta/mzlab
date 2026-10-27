@@ -119,3 +119,45 @@ fn helpers_give_the_items_of_one_thread_in_the_same_order() {
         }
     }
 }
+
+/// The same file with its data type, compression and polarity once as inline cvParams and once in shared `referenceableParamGroup`s.
+fn shared(groups: bool) -> String {
+    let enc = |raw: Vec<u8>| base64::engine::general_purpose::STANDARD.encode(deflate(&raw));
+    let mz = enc([100.5f32, 200.25, 300.0]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect());
+    let it = enc([10.0f32, 20.0, 30.0]
+        .iter()
+        .flat_map(|v| v.to_le_bytes())
+        .collect());
+    let (head, pol, ty, zl) = if groups {
+        (
+            r#"<referenceableParamGroupList count="3"><referenceableParamGroup id="neg"><cvParam accession="MS:1000129" name="negative scan"/></referenceableParamGroup><referenceableParamGroup id="f32z"><cvParam accession="MS:1000521" name="32-bit float"/><cvParam accession="MS:1000574" name="zlib compression"/></referenceableParamGroup><referenceableParamGroup id="prof"><cvParam accession="MS:1000128" name="profile spectrum"/></referenceableParamGroup></referenceableParamGroupList>"#,
+            r#"<referenceableParamGroupRef ref="neg"/><referenceableParamGroupRef ref="prof"/>"#,
+            r#"<referenceableParamGroupRef ref="f32z"/>"#,
+            "",
+        )
+    } else {
+        (
+            "",
+            r#"<cvParam accession="MS:1000129" name="negative scan"/><cvParam accession="MS:1000128" name="profile spectrum"/>"#,
+            r#"<cvParam accession="MS:1000521" name="32-bit float"/>"#,
+            r#"<cvParam accession="MS:1000574" name="zlib compression"/>"#,
+        )
+    };
+    format!(
+        r#"<mzML>{head}<run><spectrumList count="1"><spectrum index="0" id="scan=1" defaultArrayLength="3"><cvParam accession="MS:1000511" name="ms level" value="1"/>{pol}<binaryDataArrayList><binaryDataArray>{ty}{zl}<cvParam accession="MS:1000514" name="m/z array"/><binary>{mz}</binary></binaryDataArray><binaryDataArray>{ty}{zl}<cvParam accession="MS:1000515" name="intensity array"/><binary>{it}</binary></binaryDataArray></binaryDataArrayList></spectrum></spectrumList></run></mzML>"#
+    )
+}
+
+#[test]
+fn shared_param_groups_read_like_inline_cvparams() {
+    let inline = read(shared(false).as_bytes()).unwrap();
+    let grouped = read(shared(true).as_bytes()).unwrap();
+    assert_eq!(inline.spectra, grouped.spectra);
+    let s = &grouped.spectra[0];
+    assert_eq!((s.polarity, s.profile), (-1, true));
+    assert_eq!(s.mz, vec![100.5, 200.25, 300.0]);
+    assert_eq!(s.intensity, vec![10.0, 20.0, 30.0]);
+}
