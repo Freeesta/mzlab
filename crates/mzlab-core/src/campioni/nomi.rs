@@ -178,7 +178,9 @@ fn blank_kind(low: &str) -> Option<String> {
         low.split(|c: char| !c.is_ascii_alphanumeric())
             .any(|w| w.starts_with(pre))
     };
-    if word("solv") {
+    if word("wash") {
+        Some("wash".into())
+    } else if word("solv") {
         Some("solvent".into())
     } else if word("proc") {
         Some("procedure".into())
@@ -240,6 +242,50 @@ fn assign_series(out: &mut [Campione], prefixes: &[Option<String>]) {
                     .map_or(String::new(), |s| s.to_string())
             }
         };
+    }
+}
+
+/// The first word of a stem when it can be a matrix: 2-4 letters followed by more name (`TW` in `TW_PMS_T05`).
+fn matrix_word(stem: &str) -> Option<&str> {
+    let (w, rest) = stem.split_once(is_sep)?;
+    let ok = (2..=4).contains(&w.len()) && w.chars().all(|c| c.is_ascii_alphabetic());
+    (ok && !rest.is_empty()).then_some(w)
+}
+
+/// The matrix and the group proposed from the shape `MAT_COND_Tnn`: the first word of the names when at least two different words each start
+/// two or more files (`TW`, `MQ`), whatever they are. The group of a timed file is `MAT-COND` (its series without the matrix). Nothing is
+/// proposed with a single word: one matrix says nothing the series does not.
+fn assign_matrix(out: &mut [Campione]) {
+    let words: Vec<Option<String>> = out
+        .iter()
+        .map(|c| matrix_word(&guess_sample(&c.file).0).map(String::from))
+        .collect();
+    let mut counts: Vec<(&String, usize)> = Vec::new();
+    for w in words.iter().flatten() {
+        match counts.iter_mut().find(|(k, _)| *k == w) {
+            Some(e) => e.1 += 1,
+            None => counts.push((w, 1)),
+        }
+    }
+    counts.retain(|e| e.1 >= 2);
+    if counts.len() < 2 {
+        return;
+    }
+    for (c, w) in out.iter_mut().zip(&words) {
+        let Some(w) = w.as_ref().filter(|w| counts.iter().any(|e| e.0 == *w)) else {
+            continue;
+        };
+        c.matrix = w.clone();
+        let cond = c
+            .series
+            .get(w.len()..)
+            .map(|r| r.trim_start_matches(is_sep));
+        if let (true, Some(cond)) = (
+            c.series.starts_with(w.as_str()),
+            cond.filter(|r| !r.is_empty()),
+        ) {
+            c.group = format!("{w}-{cond}");
+        }
     }
 }
 
@@ -308,6 +354,7 @@ pub fn proponi_spiegato(files: &[(String, String, String)]) -> Vec<Proposta> {
         out.push(c);
     }
     assign_series(&mut out, &prefixes);
+    assign_matrix(&mut out);
     number_replicates(&mut out);
     for (c, w) in out.iter_mut().zip(&written) {
         if let Some(n) = w {

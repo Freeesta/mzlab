@@ -56,10 +56,30 @@
     nome: String(f.file), sha256: f.sha256 || "", polarita: f.polarity === "positive" ? [1] : f.polarity === "negative" ? [-1] : f.polarity === "mixed" ? [1, -1] : [], rt_min: f.rt_min ?? null, rt_max: f.rt_max ?? null,
     mz_min: f.mz_min ?? null, mz_max: f.mz_max ?? null, scansioni: (f.ms1 || 0) + (f.ms2 || 0) || null, modello: f.instrument || "" }));
 
+  /** the rows of Data with what their names say added (`proponi3`: series, matrix, group, kind of blank, and role, time and replicate where Data's user has not set them);
+   * what was set in the Data tab (a role, a time, a replicate) stays @param {any} v3 */
+  const withNames = async v3 => {
+    const open = (typeof E !== "undefined" && Array.isArray(E.files) ? E.files : []).filter((/** @type {any} */ f) => f && !f.gone && f.file), by = new Map(open.map((/** @type {any} */ f) => [String(f.file).split("#")[0], f]));
+    let prop;
+    try { prop = await call("proponi3", { files: open.map((/** @type {any} */ f) => ({ name: String(f.file).split("#")[0], sha256: f.sha256 || "", kind: f.kind === "infusion" ? "msn" : "" })) }); } catch (_) { return v3; }
+    const named = new Map(prop.campioni.map((/** @type {any} */ p) => [p.file, p]));
+    const rows = v3.campioni.map((/** @type {any} */ r) => {
+      const p = /** @type {any} */ (named.get(r.file)), f = /** @type {any} */ (by.get(r.file));
+      if (!p || !f) return r;
+      const o = { ...r };
+      for (const k of ["serie", "gruppo", "matrice"]) if (!o[k]) o[k] = p[k];
+      if (!f.role) { o.tipo = p.tipo; o.tipo_bianco = p.tipo_bianco; }
+      if (f.tconf == null) for (const k of ["tempo", "unita_tempo", "tempo_min", "tempo_confermato"]) o[k] = p[k];
+      if (!f.rep) o.replica = p.replica;
+      return o;
+    });
+    return { ...v3, campioni: rows };
+  };
+
   /** the document of the files open in Data, completed from the files; null when none is open */
   const fromData = async () => {
     const d = F.samplesFromData(); if (!d) return null;
-    const v3 = await toV3(d), info = fileInfo();
+    const v3 = await withNames(await toV3(d)), info = fileInfo();
     if (!info.length) return v3;
     try { return (await call("dal_file", { campioni: v3, file: info })).campioni; } catch (_) { return v3; }
   };
