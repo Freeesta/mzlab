@@ -185,3 +185,16 @@ fn a_deep_cascade_with_many_nodes_is_an_infusion() {
     assert!(got.is_some(), "no infusion");
     assert!(con_msn(&v, None, "x.mzML"));
 }
+
+#[test]
+fn one_fixed_precursor_over_an_lc_run_is_not_an_infusion() {
+    // a targeted MS2 of a standard (one precursor, one energy, every scan the same key) is an LC run
+    let v: Vec<Scan> = (0..300)
+        .map(|i| msn(i as f64 * 0.03, &[(243.0, 25.0)]))
+        .collect();
+    assert_eq!(infusione(&v, None, "BTZ_std_10ppm.mzML"), None);
+    assert!(!con_msn(&v, None, "BTZ_std_10ppm.mzML"));
+    // the same structure in a file that says infusion in its name keeps the hint, with its reason
+    let n = infusione(&v, None, "BTZ_infusion.mzML").unwrap();
+    assert_eq!(n.motivo, "nome");
+}
