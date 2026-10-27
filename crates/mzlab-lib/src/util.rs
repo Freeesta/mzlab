@@ -2,8 +2,9 @@
 
 use crate::error::{Error, Result};
 
-const fn crc_table() -> [u32; 256] {
-    let mut t = [0u32; 256];
+/// Tables of the slicing-by-8 CRC32C: `T[0]` is the plain byte table, `T[k]` advances a byte through `k` more zero bytes.
+const fn crc_tables() -> [[u32; 256]; 8] {
+    let mut t = [[0u32; 256]; 8];
     let mut i = 0;
     while i < 256 {
         let mut c = i as u32;
@@ -16,23 +17,46 @@ const fn crc_table() -> [u32; 256] {
             };
             k += 1;
         }
-        t[i] = c;
+        t[0][i] = c;
+        i += 1;
+    }
+    let mut i = 0;
+    while i < 256 {
+        let mut k = 1;
+        while k < 8 {
+            let p = t[k - 1][i];
+            t[k][i] = (p >> 8) ^ t[0][(p & 0xFF) as usize];
+            k += 1;
+        }
         i += 1;
     }
     t
 }
-static TABLE: [u32; 256] = crc_table();
+static TABLE: [[u32; 256]; 8] = crc_tables();
 
 /// CRC32C (Castagnoli), as in iSCSI: `crc32c(b"123456789") == 0xE3069283`.
 pub fn crc32c(data: &[u8]) -> u32 {
     crc32c_update(0, data)
 }
 
-/// Continues a CRC32C: `crc32c_update(crc32c(a), b) == crc32c(a ++ b)`.
+/// Continues a CRC32C: `crc32c_update(crc32c(a), b) == crc32c(a ++ b)`. Eight bytes per step: every page and block read is checked, so this is on the search path.
 pub fn crc32c_update(prev: u32, data: &[u8]) -> u32 {
     let mut c = !prev;
-    for &b in data {
-        c = TABLE[((c ^ b as u32) & 0xFF) as usize] ^ (c >> 8);
+    let mut it = data.chunks_exact(8);
+    for w in &mut it {
+        let lo = u32::from_le_bytes([w[0], w[1], w[2], w[3]]) ^ c;
+        let hi = u32::from_le_bytes([w[4], w[5], w[6], w[7]]);
+        c = TABLE[7][(lo & 0xFF) as usize]
+            ^ TABLE[6][((lo >> 8) & 0xFF) as usize]
+            ^ TABLE[5][((lo >> 16) & 0xFF) as usize]
+            ^ TABLE[4][(lo >> 24) as usize]
+            ^ TABLE[3][(hi & 0xFF) as usize]
+            ^ TABLE[2][((hi >> 8) & 0xFF) as usize]
+            ^ TABLE[1][((hi >> 16) & 0xFF) as usize]
+            ^ TABLE[0][(hi >> 24) as usize];
+    }
+    for &b in it.remainder() {
+        c = TABLE[0][((c ^ b as u32) & 0xFF) as usize] ^ (c >> 8);
     }
     !c
 }
@@ -103,6 +127,22 @@ mod tests {
         assert_eq!(crc32c(b"123456789"), 0xE306_9283);
         assert_eq!(crc32c(b""), 0);
         assert_eq!(crc32c_update(crc32c(b"1234"), b"56789"), 0xE306_9283);
+        // the eight-byte steps agree with the plain byte-at-a-time definition on every length and alignment
+        let data: Vec<u8> = (0..200u32).map(|i| (i * 31 + 7) as u8).collect();
+        for n in 0..data.len() {
+            let mut c = !0u32;
+            for &b in &data[3..n.max(3)] {
+                c ^= b as u32;
+                for _ in 0..8 {
+                    c = if c & 1 != 0 {
+                        (c >> 1) ^ 0x82F6_3B78
+                    } else {
+                        c >> 1
+                    };
+                }
+            }
+            assert_eq!(crc32c(&data[3..n.max(3)]), !c, "len {n}");
+        }
     }
 
     #[test]

@@ -255,6 +255,27 @@ fn rt_minutes(c: &Rec) -> Option<f64> {
     Some(if unit.starts_with('s') { v / 60.0 } else { v })
 }
 
+/// The retention index of a record: `RI`, `RetentionIndex`, `Kovats`, MassBank `KOVATS_RI`; a plausible positive number only.
+fn ri_of(c: &Rec) -> Option<f64> {
+    let v = parse_float(c.get(&[
+        "ri",
+        "retentionindex",
+        "kovats",
+        "kovatsri",
+        "kovatsretentionindex",
+    ])?);
+    (v.is_finite() && v > 0.0 && v < 20_000.0).then_some(v)
+}
+
+/// Electron ionisation named by the ionisation or the spectrum type («EI», «EI-B», «electron ionization»).
+fn is_ei(c: &Rec) -> bool {
+    c.get(&["ionization", "ionizationtype", "ionisation", "spectrumtype"])
+        .is_some_and(|v| {
+            let v = v.trim().to_ascii_lowercase();
+            v == "ei" || v.starts_with("ei-") || v.starts_with("ei ") || v.contains("electron")
+        })
+}
+
 /// Turns a record into a spectrum or counts why not.
 fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
     let prec = parse_float(
@@ -294,6 +315,7 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         license: g(&["license", "licence"]),
     };
     let rt = rt_minutes(&c);
+    let (ri, ei) = (ri_of(&c), is_ei(&c));
     stats.read += 1;
     Some(Spectrum {
         prec,
@@ -302,6 +324,8 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         it: c.it,
         meta,
         rt,
+        ri,
+        ei,
     })
 }
 
@@ -566,11 +590,15 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             "AC$CHROMATOGRAPHY" => {
                 if let Some(x) = sub(v, "RETENTION_TIME") {
                     c.field("retentiontime".into(), &x);
+                } else if let Some(x) = sub(v, "KOVATS_RI") {
+                    c.field("kovatsri".into(), &x);
                 }
             }
             "AC$MASS_SPECTROMETRY" => {
                 if let Some(x) = sub(v, "ION_MODE") {
                     c.field("ionmode".into(), &x);
+                } else if let Some(x) = sub(v, "IONIZATION") {
+                    c.field("ionization".into(), &x);
                 } else if let Some(x) = sub(v, "COLLISION_ENERGY") {
                     c.field("collisionenergy".into(), &x);
                 }
