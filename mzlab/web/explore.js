@@ -449,7 +449,8 @@ async function bootSession0() {
       // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
       vis = (k === first);
     }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: s.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file);
+    return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: t.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
