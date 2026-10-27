@@ -83,6 +83,8 @@
     "../../mzlab/web/visualizza.js",
     "../../mzlab/web/cromato.js",
     "../../mzlab/web/calcola.js",
+    "../../mzlab/web/calc-addotti-html.js",
+    "../../mzlab/web/calc-addotti.js",
     "../../mzlab/web/perdite.js",
     "../../mzlab/web/scroll.js",
     "../../mzlab/web/spettro.js",

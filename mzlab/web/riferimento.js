@@ -144,6 +144,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
       const apex = row && row.rt != null ? row.rt : rt;
       if (!f || typeof newSpec !== "function" || !np) return;
       const near = await nearScan(f.k, apex);
+      // a hidden file would send the spectrum to a visible one: the file of the apex is shown first
+      if (!f.vis && typeof setVisOf === "function") setVisOf([f], true);
       const s1 = newSpec(np, near ? near.rt - NEAR : apex - NEAR, near ? near.rt + NEAR : apex + NEAR, f.k);
       // a data-dependent file: the MS2 scans of this ion, if the instrument took any
       if (window.DDA && f.dda && s1) {

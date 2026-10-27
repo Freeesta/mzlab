@@ -34,12 +34,12 @@ try:
             for w in ("Full Scan", "+ Chromatogram", "+ Spectrum", "+ RT-m/z map", "Method"): assert w.lower() in pg.inner_text("#v-data").lower(), w
         step("first view of Data: no Italian", first_view)
         def sidebar():
-            for t in ("calc", "losses", "adducts", "lists"):
+            for t in ("calc", "losses", "lists"):
                 pg.click(f"#stbar [data-cmd={t}]"); attendi(pg, f"BARRA.curTab === '{t}'"); frames(pg, 2)
                 it = italian(pg); assert not it, (t, it)
             pg.click("#stbar [data-cmd=file]"); attendi(pg, "BARRA.curTab === 'file'"); it = italian(pg); assert not it, ("file", it)
             pg.click("#sb-x"); frames(pg, 3)
-        step("sidebar tabs: calculator, losses, adducts, lists", sidebar)
+        step("sidebar tabs: calculator, losses, lists", sidebar)
         def periodic():
             pg.click("#np-pt"); attendi(pg, "/Hydrogen|Carbon/.test(document.querySelector('#refdlg').innerText)")
             assert "Hydrogen" in pg.inner_text("#refdlg") or "Carbon" in pg.inner_text("#refdlg"), pg.inner_text("#refdlg")[:200]

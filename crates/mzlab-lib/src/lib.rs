@@ -23,6 +23,7 @@ pub mod libset;
 )]
 pub mod parse;
 pub mod prep;
+pub mod preset;
 #[warn(
     clippy::unwrap_used,
     clippy::indexing_slicing,

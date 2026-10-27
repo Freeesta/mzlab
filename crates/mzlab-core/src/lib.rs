@@ -15,6 +15,7 @@ pub mod bench_stats;
 pub mod budget;
 pub mod budget_auto;
 pub mod centroidi;
+pub mod adduct_table;
 pub mod analysis;
 pub mod axisroutes;
 pub mod components;
