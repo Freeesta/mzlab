@@ -12,7 +12,7 @@
   const mins = (/** @type {any} */ n) => `${n.rt0.toFixed(2)}–${n.rt1.toFixed(2)}`;
   /** The cell that takes a node: the active one if it can show scans of a file, else the chromatogram of the infusion tab. */
   function target(/** @type {any} */ p) {
-    if (p && BANCO.eligible(p) && INF.isInf(E.files[p.k ?? E.cur])) return p;
+    if (p && BANCO.eligible(p) && INF.hasTree(E.files[p.k ?? E.cur])) return p;
     return E.panels.find(q => q.type === "chrom" && q.tab === "infusion") || E.panels.find(q => q.type === "spec" && q.tab === "infusion") || null;
   }
   /** Opens the node in a spectrum cell of its own (compare two energies side by side). */
@@ -103,9 +103,8 @@
   /** @param {HTMLElement} b @param {any} p @param {number} tok */
   async function render(b, p, tok) {
     view = { b, p };
-    const t = target(p), f = E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);
-    if (!f || !INF.isInf(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
-    if (!b.querySelector(".inf-ctl")) b.innerHTML = `<div class="muted">…</div>`;
+    const t = target(p), f = p && p.stand ? E.files[p.k] : E.files[(t && t.k) ?? E.cur] || E.files.find(INF.hasTree);   // stand: the file Flow's Explore names
+    if (!f || !INF.hasTree(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
     const j = await INF.tree(f.k);
     if (tok !== (window.BANCO && BANCO.token())) return;
     const lv = INF.O.lv, cur = t && t.filt, ckey = j.livelli.join() + (INF.single() ? "g" : "");
@@ -170,6 +169,7 @@
   }
   /** At loading the side bar shows the tree of the infusion file just added (the active one, else the last added) instead of the file list: one panel, the others untouched. */
   function autoOpen(/** @type {any[]} */ added) {
+    void INF.probe(added);
     const inf = added.filter(INF.isInf);
     if (!inf.length || !window.BARRA) return;
     const cur = E.files[E.cur], f = INF.isInf(cur) && inf.includes(cur) ? cur : inf[inf.length - 1];
@@ -178,5 +178,18 @@
   }
   /** The only file loaded when it is an infusion: the «Fragmentation graph» (infusione-grafo.js) belongs to that case. */
   const single = () => { const l = E.files.filter((/** @type {any} */ f) => !f.gone); return l.length === 1 && INF.isInf(l[0]); };
-  Object.assign(INF, { render, refresh, target, single, setOpt, warm, autoOpen });
+  /** Files with channels of level 2 or more (api/canali): the tree tab belongs to them too, whatever the experiment type says. */
+  const HAS = new Map();
+  const hasTree = (/** @type {any} */ f) => !!f && !f.gone && (INF.isInf(f) || HAS.get(f.k) === true);
+  const any = () => E.files.some(hasTree);
+  /** Looks for the MSn channels of the files and brings the tab in when one is found. */
+  async function probe(/** @type {any[]} */ files) {
+    let changed = false;
+    for (const f of files) {
+      if (!f || f.gone || HAS.has(f.k)) continue;
+      try { const j = await J(`api/canali?k=${f.k}`); const has = j.canali.some((/** @type {any} */ c) => (c.fam === "ms" || c.fam === "dd") && c.liv >= 2); HAS.set(f.k, has); changed ||= has && !INF.isInf(f); } catch (e) { console.info("INF probe", e); }
+    }
+    if (changed && window.BARRA) BARRA.syncMode();
+  }
+  Object.assign(INF, { render, refresh, target, single, setOpt, warm, autoOpen, hasTree, any, probe });
 })();

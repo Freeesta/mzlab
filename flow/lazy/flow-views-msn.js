@@ -64,7 +64,9 @@
     }
     if (!shown.size) return shown;
     if (S.redraw) S.redraw();
-    if (graph) {
+    // a job that ends while someone types (Auto-run) leaves the graph in the Results: opening it would take the focus from the field
+    const typing = document.activeElement instanceof HTMLElement && document.activeElement.matches("input, textarea, select, [contenteditable]");
+    if (graph && !typing) {
       F.openResult(graph);
       setTimeout(() => { const h = document.querySelector(".flx-res h3"); if (h instanceof HTMLElement) h.focus({ preventScroll: true }); }, 0);
     }

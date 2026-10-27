@@ -19,10 +19,10 @@ const SCARICA = (() => {
   const META = ".mzlab";
   const pieceRel = (/** @type {string} */ id, /** @type {number} */ i) => `${META}/${id}.${String(i).padStart(3, "0")}.piece`;
 
-  // the catalog: the same checks as the Rust side (`parse_catalog`): format, plain ids, pieces that belong to their package, sizes that add up
+  // the catalog (`librerie/2` = `librerie/1` + `fonti`, the sources with their mode site|external|link): the same checks as the Rust side (`parse_catalog`): format, plain ids, pieces that belong to their package, sizes that add up
   function parseCatalog(/** @type {string} */ text) {
     /** @type {LibCatalog} */ let c; try { c = JSON.parse(text); } catch (e) { throw err("lib.dl.err.catalog", { detail: "json" }); }
-    if (!c || c.formato !== "librerie/1" || !Array.isArray(c.librerie)) throw err("lib.dl.err.catalog", { detail: String(c && c.formato) });
+    if (!c || !["librerie/1", "librerie/2"].includes(c.formato) || !Array.isArray(c.librerie)) throw err("lib.dl.err.catalog", { detail: String(c && c.formato) });
     const plain = (/** @type {unknown} */ id) => typeof id === "string" && /^[A-Za-z0-9_-]+$/.test(id);
     for (const p of c.librerie) {
       if (!plain(p.id) || !Array.isArray(p.pezzi) || !p.sha256 || !p.versione) throw err("lib.dl.err.catalog", { detail: String(p.id) });
@@ -30,7 +30,7 @@ const SCARICA = (() => {
       if (p.pezzi.reduce((s, x) => s + x.dimensione, 0) !== p.dimensione) throw err("lib.dl.err.catalog", { detail: "size of " + p.id });
     }
     for (const e of c.esterne || []) if (!plain(e.id) || !/^https:\/\//.test(e.url || "")) throw err("lib.dl.err.catalog", { detail: String(e.id) });
-    c.esterne = c.esterne || [];
+    c.esterne = c.esterne || []; c.fonti = c.fonti || [];
     return c;
   }
 

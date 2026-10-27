@@ -272,7 +272,7 @@ fn mrm_with_product_ion_scans_is_mixed() {
 }
 
 #[test]
-fn a_file_with_only_a_uv_trace_has_no_channel_yet() {
+fn a_uv_flag_without_the_trace_header_lists_no_channel() {
     let c = Canali::da(
         &[],
         &[],
@@ -298,4 +298,96 @@ fn memory_beyond_the_scan_table_is_at_most_eight_bytes_per_scan() {
     let c = da(&scans);
     assert_eq!(c.v.len(), 2 + 1 + 4);
     assert!(c.byte() <= 8 * n, "{} bytes for {n} scans", c.byte());
+}
+
+/// A scan of a `.wiff` as the index holds it: no filter, the id of the experiment, the precursor of the method (if any).
+fn scan_wiff(cycle: usize, exp: usize, level: u8, prec: Option<f64>) -> Scan {
+    Scan {
+        level,
+        rt: cycle as f64 * 0.05,
+        precursor: prec,
+        native: format!("sample=1 period=1 cycle={cycle} experiment={exp}"),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn wiff_ems_and_epi_at_fixed_precursors_are_ms_channels_with_a_sigla() {
+    // EMS, then two product-ion experiments with their own precursor
+    let mut scans = vec![];
+    for c in 1..=10 {
+        scans.push(scan_wiff(c, 1, 1, None));
+        scans.push(scan_wiff(c, 2, 2, Some(230.1)));
+        scans.push(scan_wiff(c, 3, 2, Some(305.0)));
+    }
+    let c = da(&scans);
+    let ms: Vec<_> = c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).collect();
+    assert_eq!(ms.len(), 3);
+    assert_eq!((ms[0].sigla, ms[0].livello), (Some("EMS"), 1));
+    assert_eq!(ms[0].etichetta, "MS¹ EMS");
+    assert!(ms[1..].iter().all(|x| x.sigla == Some("EPI") && x.n == 10));
+    assert!(c.v.iter().all(|x| x.famiglia != Famiglia::Dd));
+}
+
+#[test]
+fn wiff_ida_dependent_scans_are_one_dd_channel() {
+    // EMS and three dependent EPI slots with no precursor in the method; a slot is empty (no scan) in some cycles
+    let mut scans = vec![];
+    for c in 1..=10 {
+        scans.push(scan_wiff(c, 1, 1, None));
+        for e in 2..=4 {
+            if (c + e) % 3 != 0 {
+                scans.push(scan_wiff(c, e, 2, None));
+            }
+        }
+    }
+    let n_epi = scans.iter().filter(|s| s.level == 2).count() as u32;
+    let c = da(&scans);
+    let dd: Vec<_> = c.v.iter().filter(|x| x.famiglia == Famiglia::Dd).collect();
+    assert_eq!(dd.len(), 1);
+    assert_eq!(
+        (dd[0].id.as_str(), dd[0].sigla, dd[0].n),
+        ("dd:2:EPI", Some("EPI"), n_epi)
+    );
+    assert_eq!(dd[0].genitore, Some(0));
+    assert_eq!(dd[0].omologo, "dd|2|EPI");
+    assert!(dd[0].spettri);
+    assert_eq!(c.v.iter().filter(|x| x.famiglia == Famiglia::Ms).count(), 1);
+    assert_eq!(c.tipo.proposto, "lc-dda");
+}
+
+#[test]
+fn a_scan_without_the_wiff_id_has_no_wiff_sigla() {
+    let c = da(&[scan(1, 0.0, &[]), scan(2, 0.1, &[(222.0, 30.0)])]);
+    assert!(c.v.iter().skip(2).all(|x| x.sigla.is_none()));
+}
+
+#[test]
+fn mrm_label_is_the_method_name_else_the_transition() {
+    // the ids msconvert and the engine write: the name rides in `name=`, the label reads it back
+    let ids = [
+        "SRM SIC Q1=230 Q3=162 sample=1 period=1 experiment=1 transition=0 ce=25 dwell=50 name=bentazone 1",
+        "SRM SIC Q1=230 Q3=190 sample=1 period=1 experiment=1 transition=1 ce=18 dwell=50",
+    ];
+    let chroms: Vec<Chrom> = ids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| {
+            let (q1, q3, ce, name) = crate::mzmlhead::srm_id(id);
+            Chrom {
+                index: i,
+                id: id.to_string(),
+                kind: "srm".into(),
+                q1,
+                q3,
+                ce,
+                name,
+                n: Some(100),
+                ..Default::default()
+            }
+        })
+        .collect();
+    let c = Canali::da(&[], &chroms, &Facts::default(), "m.mzML");
+    assert_eq!(c.v[1].etichetta, "MRM 230→162 @25 «bentazone 1»");
+    assert_eq!(c.v[2].etichetta, "MRM 230→190 @18");
 }

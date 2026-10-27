@@ -58,7 +58,7 @@ try:
                     assert m["pageOver"] <= 0, m                                   # the page does not scroll sideways
                     assert m["tableR"] <= m["cardR"] + 1 or m["filesOver"] > 0, m  # the table fits, or scrolls inside its own box
                     assert m["cardOver"] <= 1, m                                   # nothing is cut by the card
-                    assert pg.locator("#tp-files td[title]").first.get_attribute("title").startswith("very_long"), "tooltip with the full name"
+                    assert pg.locator("#tp-files .tp-fn[data-tt]").first.get_attribute("data-tt-text").startswith("very_long"), "the help of the name has the full name"
                 step(f"{w}px, {n} files: the table stays in the panel", go)
             pg.close()
         b.close()

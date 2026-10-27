@@ -46,6 +46,8 @@ fn spectrum(r: &mut Rng, hr: bool) -> Spectrum {
         it,
         meta: Meta::default(),
         rt: None,
+        ri: None,
+        ei: false,
     }
 }
 

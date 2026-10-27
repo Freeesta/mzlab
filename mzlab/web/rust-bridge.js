@@ -91,7 +91,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     });
   }
   api.start = () => { if (!worker && !api.disabled) spawn(); }; BUD.wire(api, () => worker);
-  api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
+  api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } }; api.blobOf = name => blobs.get(base(name)) || null;   // the file as the page was given it (the Export mzML of Flow)
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
@@ -140,7 +140,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     stats.rust++;
     return { status: 200, text: r.info, ms: performance.now() - t0 };
   }
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero|canali)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {

@@ -485,8 +485,8 @@ function placeLeg(p) {
 }
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
 function afterDraw(p) {
-  const rl = p.el.querySelector(".rtl");  // retention time of the spectrum, next to the title
-  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? "fermo a " + rt : rt; } }
+  const rl = p.el.querySelector(".rtl");           // retention time of the spectrum, next to the title
+  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? "fermo a " + rt : rt; } }
   if (window.BANCO) BANCO.header(p);
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (p.type !== "spec" && p.type !== "map" && p._rngOn != null && p._rngOn !== rngIsOn(p)) ctl(p);  // the «Range» button follows zooming too
@@ -638,6 +638,7 @@ function ctl(p) {
   hdRestore(p);
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl"), wl = p.type === "chrom" ? wlCtl(p) : "";
   t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === PT.xic ? I18N.t("panel.title.xicOne", { label: p.traces[0].label }) : ptitle(p.title);  // a single trace is named in the title
+  if (window.SPECBAR && p.type === "spec") SPECBAR.title(p, t);
   t.style.display = p.type === "chrom" && p.title === PT.chrom ? "none" : "";  // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
   const T0 = p.tab || E.tab, prodTab = T0 === "ms2", ms2c = p.type === "chrom" && prodTab, mrmP = p.type === "mrm";
@@ -713,7 +714,7 @@ function ctl(p) {
     const vf = f.filter(x => x.vis);  // the menu lists the files ticked in the list (the same as the TIC)
     if (!prodTab && !fol && vf.length && !vf.some(x => x.k === p.k)) { p.k = vf[0].k; p.kSet = false; }
     const act = E.files[fol ? E.cur : p.k] || {}, precN = prodTab ? (act.ms2_exps || []).filter(e => e.prec != null).sort((a, b) => a.prec - b.prec) : [];
-    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : chk("all", I18N.t("ctl.spec.all"), fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
+    c.innerHTML = `<select data-o="k" aria-label="${I18N.t("ctl.map.file")}"${off(fol, FW)}>${(prodTab && fl.length ? fl : vf.length ? vf : f).map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${prodTab ? "" : SPECBAR.overlay(p, fol || ONEF, fol ? FW : I18N.t("ctl.files.one"))}` +
             (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", I18N.t("ctl.spec.levelMs2"))}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       corrWidget(p, { files: f.filter(x => x.kind !== "mrm"), cur: p.bg === "w" ? "tract" : p.bg === "x" ? "" : p.bg !== "" && p.bg != null ? "f" + p.bg : sref0 ? "f" + sref0.k : "", snip: false, dis: "", tractDesc: I18N.t("corr.tract.spec") }) + corrInfo(p) +
       (p.bg === "w" ? FONDOSP.box(p) : "") +
@@ -721,8 +722,8 @@ function ctl(p) {
   }
   if (p.type === "spec" && (c.firstElementChild || p.uv) && !prodTab) {  // «Follows: panel N» (live) or «Fixed»: the menu chooses which chromatogram drives the spectrum
     const srcP = p.link ? E.panels.find(q => q.id === p.link) : null, n = srcP && srcP.num ? srcP.num : "?";
-    const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? I18N.t("spec.follow", { n }) : I18N.t("spec.follow.none")} &#9662;</button>`;
-    c.querySelectorAll(".fol").forEach(x => x.remove());  // UV controls are not rewritten by innerHTML
+    const fh = `<button type="button" class="lk fol${p.link ? " on" : ""}" aria-haspopup="menu" aria-label="${EH(p.link ? I18N.t("spec.follow.aria", { n }) : I18N.t("spec.follow.none.aria"))}" title="${EH(I18N.t(p.link ? "spec.follow.title" : "spec.follow.none.title"))}">${p.link ? "\u2190" + n : "\u2298"}</button>`;
+    c.querySelectorAll(".fol").forEach(x => x.remove());          // UV controls are not rewritten by innerHTML
     if (c.firstElementChild) c.firstElementChild.insertAdjacentHTML("afterend", fh); else c.innerHTML = fh;
     const fb = c.querySelector(".fol");
     if (!p.link) fb.classList.remove("lk");

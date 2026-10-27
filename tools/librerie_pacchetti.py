@@ -2,12 +2,14 @@
 
     python tools/librerie_pacchetti.py --out site/static/librerie            # downloads the pinned MassBank release (Zenodo)
     python tools/librerie_pacchetti.py --out DIR --zip MassBank.zip          # an already downloaded copy (tests, local use)
+    python tools/librerie_pacchetti.py --check-catalog                       # schema of tools/librerie_catalogo.json (exit 1 on any problem)
 
 1. The MassBank-data release below is downloaded and its SHA-256 is checked (a different file stops the build).
 2. Only the ESI-MS2 records whose licence is CC0, CC BY or CC BY-SA are kept (never NC, never the German data licence, never GNPS / MoNA / HMDB / NIST:
    those only come from the user). The 61 records of the UniTO standards (tests/golden/librerie/massbank_unito, CC BY) are a package of their own.
 3. The records of each polarity are built into a `.mzlib` by the Rust builder (crates/mzlab-lib, example `build`), cut into pieces of 4 MiB with a SHA-256
-   each (resumable download without Range, checked piece by piece, no change to the CSP) and described in `catalogo.json` (format `librerie/1`).
+   each (resumable download without Range, checked piece by piece, no change to the CSP) and described in `catalogo.json` (format `librerie/2`: the packages plus `fonti`, the hand-written list of tools/librerie_catalogo.json with the mode `site`|`external`|`link` of each source;
+   `esterne` stays for the readers of `librerie/1`).
 
 Where the download is not possible (network, Zenodo down) the script writes nothing and exits with 0 and a warning: the site is still published,
 without packages (the page says so). A wrong SHA-256 of the download is an error.
@@ -38,19 +40,14 @@ ZIP_SHA256 = "12c6a922929f9bf2484c46586b6101512a415e44680558883b0630c6e47905fb"
 DOI = f"10.5281/zenodo.{ZENODO_RECORD}"
 KEEP_LICENSES = ("CC0", "CC BY", "CC BY-SA")
 PIECE = 4 * 1024 * 1024
-CATALOG_FORMAT = "librerie/1"
+CATALOG_FORMAT = "librerie/2"
+CATALOG_SOURCES = ROOT / "tools" / "librerie_catalogo.json"
+FREE_LICENSES = ("CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0")      # the only ones a `site` source may have (redistribution with attribution)
+MODES = ("site", "external", "link")
+GROUPS = ("base", "specialised")
+KINDS = ("experimental", "in_silico")
+TECHS = ("lc_msms", "gc_ei", "msn")
 UNITO_DIR = ROOT / "tests" / "golden" / "librerie" / "massbank_unito"
-
-# Official addresses for the download of the desktop app (only with the switch «Scarica librerie pubbliche da fonti esterne» on; the web page never uses them).
-# `sha256` is null where the source changes over time: the app then trusts the HTTPS of the source and shows the SHA-256 it computed.
-EXTERNAL = [
-    {"id": "gnps-cc0", "nome": "GNPS (spettri di libreria, CC0)", "sorgente": "GNPS", "licenza": "CC0",
-     "url": "https://external.gnps2.org/gnpslibrary/GNPS-LIBRARY.mgf", "formato": "mgf", "dimensione": None, "sha256": None,
-     "nota": "aggiornato dalla fonte: nessuna impronta fissa"},
-    {"id": "massbank-msp", "nome": "MassBank Europe (tutti i record, MSP)", "sorgente": "MassBank Europe", "licenza": "per record (anche NC): il file non la riporta",
-     "url": f"https://github.com/MassBank/MassBank-data/releases/download/{VERSION}/MassBank_NISTformat.msp", "formato": "msp", "dimensione": 137309196,
-     "sha256": "cf49e1b293f1c8c1b4a645123638826eea70db656bd76e09ea0c47a1a56fc269", "nota": f"versione {VERSION}"},
-]
 
 ATTRIBUTION = ("Spettri di MassBank Europe (https://massbank.eu), release " + VERSION + " (doi:" + DOI + "): ogni record conserva autori, accessione e licenza "
                "(CC0, CC BY o CC BY-SA). Il pacchetto nel suo insieme si usa secondo CC BY-SA 4.0.")
@@ -176,6 +173,54 @@ def entry(lib_id: str, nome: str, pol: int, version: str, source: str, link: str
             "lettore_min": h["lettore_min"], "attribuzione": attribution, "pezzi": split(mzlib, out_dir, lib_id)}
 
 
+def load_sources() -> list[dict]:
+    return json.loads(CATALOG_SOURCES.read_text(encoding="utf-8"))["fonti"]
+
+
+def check_sources(fonti: list[dict]) -> list[str]:
+    """Problems of the hand-written list: ids unique and plain, fields present, `site` only with a free licence, `external` only with a download, `verificato` a date."""
+    bad, seen = [], set()
+    need = ("id", "gruppo", "nome", "url", "licenza", "formato", "kind", "tech", "pol", "doi", "verificato", "modo", "download", "dimensione", "sha256")
+    for f in fonti:
+        i = f.get("id", "?")
+        miss = [k for k in need if k not in f]
+        if miss:
+            bad.append(f"{i}: missing {', '.join(miss)}")
+            continue
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", i) or i in seen:
+            bad.append(f"{i}: id not plain or repeated")
+        seen.add(i)
+        if f["modo"] not in MODES or f["gruppo"] not in GROUPS or f["kind"] not in KINDS or f["tech"] not in TECHS or f["pol"] not in (-1, 0, 1):
+            bad.append(f"{i}: mode, group, kind, tech or polarity out of range")
+        if f["modo"] == "site" and f["licenza"] not in FREE_LICENSES:
+            bad.append(f"{i}: `site` needs a free licence, not {f['licenza']}")
+        if f["modo"] == "external" and not str(f["download"] or "").startswith("https://"):
+            bad.append(f"{i}: `external` needs an https download")
+        if not re.fullmatch(r"\d{4}-\d\d-\d\d", str(f["verificato"])):
+            bad.append(f"{i}: `verificato` is not a date")
+        if f["sha256"] is not None and not re.fullmatch(r"[0-9a-f]{64}", f["sha256"]):
+            bad.append(f"{i}: sha256 malformed")
+    return bad
+
+
+def external_entries(fonti: list[dict]) -> list[dict]:
+    """The `external` sources in the shape the readers of `librerie/1` know (the desktop app downloads these)."""
+    keys = ("id", "nome", "url", "formato", "dimensione", "sha256", "licenza")
+    return [{**{k: f[k] for k in keys}, "url": f["download"], "sorgente": f["nome"]} for f in fonti if f["modo"] == "external"]
+
+
+def sources_with_packages(fonti: list[dict], libs: list[dict]) -> list[dict]:
+    """`site` sources take size and SHA-256 from the package built here; one whose package was not built is left out."""
+    by = {p["id"]: p for p in libs}
+    out = []
+    for f in fonti:
+        if f["modo"] != "site":
+            out.append(f)
+        elif f["id"] in by:
+            out.append({**f, "dimensione": by[f["id"]]["dimensione"], "sha256": by[f["id"]]["sha256"]})
+    return out
+
+
 def default_builder() -> list[str]:
     exe = ROOT / "target" / "release" / "examples" / ("build.exe" if os.name == "nt" else "build")
     if not exe.is_file():
@@ -229,7 +274,11 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
             build_mzlib(builder, work / "unito.txt", mz)
             libs.append(entry("unito-standard", "Standard dell'Università di Torino (esempio HR)", 0, "1", "Università di Torino", "https://github.com/Freeesta/mzlab",
                               "CC BY 4.0", lic_unito, {"UniTO": n_unito}, mz, out_dir, UNITO_ATTRIBUTION))
-        cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "librerie": libs, "esterne": EXTERNAL}
+        fonti = load_sources()
+        bad = check_sources(fonti)
+        if bad:
+            raise SystemExit("tools/librerie_catalogo.json: " + "; ".join(bad))
+        cat = {"formato": CATALOG_FORMAT, "pezzo": PIECE, "librerie": libs, "esterne": external_entries(fonti), "fonti": sources_with_packages(fonti, libs)}
         (out_dir / "catalogo.json").write_text(json.dumps(cat, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         total = sum(sum(p["dimensione"] for p in lib["pezzi"]) for lib in libs)
         print(f"catalogo.json: {len(libs)} packages, {total / 1e6:.1f} MB in {sum(len(lib['pezzi']) for lib in libs)} pieces")
@@ -238,10 +287,17 @@ def run(out_dir: Path, zip_path: Path | None, builder: list[str] | None, version
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", required=True, type=Path, help="folder that becomes static/librerie/ of the site")
+    ap.add_argument("--check-catalog", action="store_true", help="check tools/librerie_catalogo.json and exit")
+    ap.add_argument("--out", type=Path, help="folder that becomes static/librerie/ of the site")
     ap.add_argument("--zip", type=Path, help="an already downloaded MassBank-data zip (not checked against the pinned SHA-256)")
     ap.add_argument("--builder", nargs="+", help="command that builds IN.txt OUT.mzlib (default: the `build` example of crates/mzlab-lib)")
     a = ap.parse_args()
+    if a.check_catalog:
+        bad = check_sources(load_sources())
+        print("\n".join(bad) if bad else "catalogo ok")
+        sys.exit(1 if bad else 0)
+    if not a.out:
+        ap.error("--out is required")
     run(a.out, a.zip, a.builder)
 
 

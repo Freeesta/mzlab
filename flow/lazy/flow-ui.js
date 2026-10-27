@@ -46,8 +46,10 @@
   /** whether the assistant may exist on this page: profile «ricerca», switched on, a consent for the provider (llm-agente.js checks again) */
   F.llmOn = () => {
     const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
-    let p = ""; try { p = localStorage.getItem("mzlab.profilo") || ""; } catch (_) { /* blocked */ }
-    if (p !== "corso" && p !== "ricerca") p = /** @type {any} */ (window).MZLAB_DESKTOP ? "ricerca" : "corso";
+    // the profile rule of uipProfile() in settings.js (not loaded yet when the Flow is built): administrator mode or the desktop app
+    const w = /** @type {any} */ (window), key = (/** @type {string} */ k) => (typeof NOMI !== "undefined" ? NOMI.KEY(k) : "mzlab." + k);
+    let admin = false; try { admin = localStorage.getItem(key("admin")) === "1" || localStorage.getItem(key("teoria.esteso")) === "1"; } catch (_) { /* blocked */ }
+    const p = admin || w.MZLAB_DESKTOP ? "ricerca" : "corso";
     const s = read("mzlab.llm");
     return p === "ricerca" && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
   };
@@ -117,7 +119,7 @@
 .flw .fl-ports label,.flw .fl-ports .fl-pn{display:flex;gap:5px;align-items:center}.flw select,.flw input[type=number],.flw input[type=text]{min-height:28px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;max-width:100%}
 .flw .fl-out{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:12px}.flw .fl-probs{margin:6px 0 0;padding:0;list-style:none;color:var(--bad)}.flw .fl-probs li{display:flex;gap:5px;align-items:flex-start}.flw .fl-probs svg{flex:none;margin-top:2px}
 .flw .fl-note{color:var(--muted)}.flw .fl-goal{padding:6px 10px;border-radius:8px;background:var(--sel)}.flw .fl-goal.ok{color:var(--ok)}.flw .fl-empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
-.flw .fl-form{display:grid;grid-template-columns:minmax(130px,max-content) minmax(0,1fr);gap:4px 10px;margin:6px 0;align-items:center}.flw .fl-form select,.flw .fl-form input[type=number],.flw .fl-form input[type=text]{max-width:420px}.flw .fl-form .fl-ds{grid-column:2;font-size:12px;color:var(--muted)}.flw .fl-form input[type=checkbox]{width:24px;height:24px}
+.flw .fl-form{display:grid;grid-template-columns:minmax(130px,max-content) minmax(0,1fr);gap:4px 10px;margin:6px 0;align-items:center}.flw .fl-form select,.flw .fl-form input[type=number],.flw .fl-form input[type=text]{max-width:420px}.flw .fl-form .fl-tipnote{grid-column:2;font-size:12px;color:var(--muted)}.flw .fl-form .fl-tipnote[hidden]{display:none}.flw .fl-tip{min-width:24px;min-height:24px;padding:0}@media(pointer:coarse){.flw .fl-tip{min-width:40px;min-height:40px}}.flw .fl-form input[type=checkbox]{width:24px;height:24px}
 .flw .fl-cli{border:1px solid var(--accent);border-radius:8px;padding:8px 10px;background:var(--panel)}.flw .fl-cli code{display:block;white-space:pre-wrap;word-break:break-all;background:var(--soft);padding:6px;border-radius:6px;margin:6px 0}
 .flw details>summary{cursor:pointer;color:var(--accent);margin:4px 0}.flw .fl-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 @keyframes flIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}

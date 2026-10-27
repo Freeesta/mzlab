@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // High-resolution mass spectrometry (HRMS) target and suspect screening UI and coordination.
 "use strict";
 
@@ -6,7 +7,7 @@ const LISTE_TARGET = (function() {
   const CORE = (typeof window !== "undefined" && /** @type {any} */ (window).LISTE_TARGET_CORE) ||
     (typeof module !== "undefined" && /** @type {any} */ (module).require ? /** @type {any} */ (module).require("./liste-target-core.js") : {});
 
-  const EH = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const EH = (/** @type {any} */ s) => String(s ?? "").replace(/[&<>"']/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }))[c]);
 
   const ROUTE = "api/molecules/";
 
@@ -36,7 +37,7 @@ const LISTE_TARGET = (function() {
     return j;
   }
 
-  function showMatch(m) {
+  function showMatch(/** @type {TgtMatch} */ m) {
     if (typeof /** @type {any} */ (window).xicDirect === "function") {
       /** @type {any} */ (window).xicDirect(m.target_mz);
     }
@@ -136,7 +137,7 @@ const LISTE_TARGET = (function() {
     `;
   }
 
-  function renderRow(m, idx) {
+  function renderRow(/** @type {TgtMatch} */ m, /** @type {number} */ idx) {
     const badgeStyle = m.proposal === "Prev. 1" ? "color:#166534;background:#dcfce7;font-weight:bold"
       : m.proposal === "Prev. 2" ? "color:#1e40af;background:#dbeafe" : "color:#854d0e;background:#fef9c3";
     const deltaStr = (m.ppm_error >= 0 ? "+" : "") + m.ppm_error.toFixed(1);
@@ -179,7 +180,7 @@ const LISTE_TARGET = (function() {
     return [];
   }
 
-  function setupFilterEvents(container, refresh) {
+  function setupFilterEvents(/** @type {HTMLElement} */ container, /** @type {() => void} */ refresh) {
     const txt = container.querySelector("#ts-filter-txt");
     const propSeg = container.querySelector("#ts-filter-prop");
     if (txt) txt.oninput = () => refresh();
@@ -194,7 +195,7 @@ const LISTE_TARGET = (function() {
     }
   }
 
-  function setupUploadHandler(container, onCustomLoaded) {
+  function setupUploadHandler(/** @type {HTMLElement} */ container, /** @type {(doc: Bag) => void} */ onCustomLoaded) {
     const btn = container.querySelector("#ts-upload-btn");
     const fileIn = container.querySelector("#ts-csv-file");
     const sel = container.querySelector("#ts-list-sel");
@@ -216,7 +217,7 @@ const LISTE_TARGET = (function() {
     };
   }
 
-  function getSelectedAdducts(container) {
+  function getSelectedAdducts(/** @type {HTMLElement} */ container) {
     const adducts = [];
     if (container.querySelector("#ts-ad-mh")?.checked) adducts.push("[M+H]+");
     if (container.querySelector("#ts-ad-mna")?.checked) adducts.push("[M+Na]+");
@@ -224,7 +225,7 @@ const LISTE_TARGET = (function() {
     return adducts.length ? adducts : ["[M+H]+"];
   }
 
-  async function executeScreening(entries, opts, callbacks) {
+  async function executeScreening(/** @type {TgtEntry[]} */ entries, /** @type {Bag} */ opts, /** @type {{ shouldAbort: () => boolean, onProgress: (done: number, tot: number, hits: TgtMatch[]) => void }} */ callbacks) {
     const spectra = await fetchSessionSpectra();
     const ms1 = spectra.filter((/** @type {any} */ s) => s.level === 1);
     const ms2 = spectra.filter((/** @type {any} */ s) => s.level === 2);
@@ -255,7 +256,7 @@ const LISTE_TARGET = (function() {
     return hits;
   }
 
-  function setupExport(btn, getMatches) {
+  function setupExport(/** @type {HTMLElement | null} */ btn, /** @type {() => TgtMatch[]} */ getMatches) {
     if (!btn) return;
     btn.onclick = () => {
       const csv = (CORE.csvExport || csvExport)(getMatches());
@@ -266,11 +267,11 @@ const LISTE_TARGET = (function() {
     };
   }
 
-  function mount(container) {
+  function mount(/** @type {HTMLElement} */ container) {
     if (!container) return;
     container.innerHTML = panelHtml();
 
-    let allMatches = [], customDoc = null, abortScreening = false;
+    let /** @type {TgtMatch[]} */ allMatches = [], /** @type {Bag | null} */ customDoc = null, abortScreening = false;
     const elTbody = container.querySelector("#ts-tbody");
     const elCount = container.querySelector("#ts-count");
     const elStatus = container.querySelector("#ts-status");
@@ -320,7 +321,7 @@ const LISTE_TARGET = (function() {
       }
       const callbacks = {
         shouldAbort: () => abortScreening,
-        onProgress: (done, tot, hits) => {
+        onProgress: (/** @type {number} */ done, /** @type {number} */ tot, /** @type {TgtMatch[]} */ hits) => {
           allMatches = (CORE.sortMatches || sortMatches)(hits);
           renderMatches();
           elStatus.textContent = `Screened ${done}/${tot} substances (${allMatches.length} proposed hits)...`;
@@ -337,7 +338,7 @@ const LISTE_TARGET = (function() {
     btnStop.onclick = () => { abortScreening = true; };
     setupExport(btnExport, () => allMatches);
     setupFilterEvents(container, renderMatches);
-    setupUploadHandler(container, doc => { customDoc = doc; });
+    setupUploadHandler(container, (/** @type {Bag} */ doc) => { customDoc = doc; });
     renderMatches();
   }
 
@@ -355,14 +356,14 @@ const LISTE_TARGET = (function() {
   }
 
   // Fallbacks forwarding to CORE
-  const calcTargetMz = (e, a) => CORE.calcTargetMz ? CORE.calcTargetMz(e, a) : NaN;
-  const estimateNoise = (y) => CORE.estimateNoise ? CORE.estimateNoise(y) : 1.0;
-  const detectChromPeaks = (rt, y, s, a, n) => CORE.detectChromPeaks ? CORE.detectChromPeaks(rt, y, s, a, n) : [];
-  const extractXic = (sp, lo, hi) => CORE.extractXic ? CORE.extractXic(sp, lo, hi) : { rt: [], y: [], maxY: 0 };
-  const evaluatePeak = (e, a, mz, ms1, ms2, pk, op) => CORE.evaluatePeak ? CORE.evaluatePeak(e, a, mz, ms1, ms2, pk, op) : null;
-  const sortMatches = (m) => CORE.sortMatches ? CORE.sortMatches(m) : m;
-  const cercaTargets = (l, s, o) => CORE.cercaTargets ? CORE.cercaTargets(l, s, o) : [];
-  const csvExport = (m) => CORE.csvExport ? CORE.csvExport(m) : "";
+  const calcTargetMz = (/** @type {TgtEntry} */ e, /** @type {string} */ a) => CORE.calcTargetMz ? CORE.calcTargetMz(e, a) : NaN;
+  const estimateNoise = (/** @type {number[]} */ y) => CORE.estimateNoise ? CORE.estimateNoise(y) : 1.0;
+  const detectChromPeaks = (/** @type {number[]} */ rt, /** @type {number[]} */ y, /** @type {number} */ s, /** @type {number} */ a, /** @type {number} */ n) => CORE.detectChromPeaks ? CORE.detectChromPeaks(rt, y, s, a, n) : [];
+  const extractXic = (/** @type {TgtSpec[]} */ sp, /** @type {number} */ lo, /** @type {number} */ hi) => CORE.extractXic ? CORE.extractXic(sp, lo, hi) : { rt: [], y: [], maxY: 0 };
+  const evaluatePeak = (/** @type {TgtEntry} */ e, /** @type {string} */ a, /** @type {number} */ mz, /** @type {TgtSpec[]} */ ms1, /** @type {TgtSpec[]} */ ms2, /** @type {TgtPeak} */ pk, /** @type {TgtOpts} */ op) => CORE.evaluatePeak ? CORE.evaluatePeak(e, a, mz, ms1, ms2, pk, op) : null;
+  const sortMatches = (/** @type {TgtMatch[]} */ m) => CORE.sortMatches ? CORE.sortMatches(m) : m;
+  const cercaTargets = (/** @type {TgtEntry[]} */ l, /** @type {TgtSpec[]} */ s, /** @type {Partial<TgtOpts>} */ o) => CORE.cercaTargets ? CORE.cercaTargets(l, s, o) : [];
+  const csvExport = (/** @type {TgtMatch[]} */ m) => CORE.csvExport ? CORE.csvExport(m) : "";
 
   return {
     mount,
