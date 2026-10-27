@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-FILES = sorted(str(p.relative_to(ROOT)) for pat in ("docs/schemi/steps*.json", "mzfinder/steps-*.json") for p in ROOT.glob(pat))
+FILES = sorted(p.relative_to(ROOT).as_posix() for pat in ("docs/schemi/steps*.json", "mzfinder/steps-*.json") for p in ROOT.glob(pat))
 MAX_LABEL, MAX_TIP = 8, 20
 
 

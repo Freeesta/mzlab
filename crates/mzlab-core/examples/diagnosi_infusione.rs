@@ -1,4 +1,4 @@
-//! Why is a file an infusion (or not)? `cargo run --release -p mzlab-core --example diagnosi_infusione -- FILE.mzML`
+//! Why is a file an infusion (or not)? `cargo run --release -p mzlab-core --example diagnosi_infusione -- FILE.mzML [FILE2.mzML ...]`
 //! Prints scans per level, the RT range, every distinct MSn key with its scans and RT range, the TIC variation and the verdict of `infusione`.
 //! For Federico's files: paste the output into the chat; nothing leaves the computer.
 use std::collections::BTreeMap;
@@ -10,19 +10,30 @@ use mzlab_core::mzidx::build_mzml;
 use mzlab_core::upload;
 
 fn main() {
-    let path = std::env::args()
-        .nth(1)
-        .expect("usage: diagnosi_infusione FILE.mzML");
-    let name = std::path::Path::new(&path)
+    let paths: Vec<String> = std::env::args().skip(1).collect();
+    assert!(
+        !paths.is_empty(),
+        "usage: diagnosi_infusione FILE.mzML [FILE2.mzML ...]"
+    );
+    for (i, path) in paths.iter().enumerate() {
+        if i > 0 {
+            println!("\n----------------------------------------\n");
+        }
+        report(path);
+    }
+}
+
+fn report(path: &str) {
+    let name = std::path::Path::new(path)
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
-    let size = std::fs::metadata(&path).expect("size").len();
-    let table = upload::prepare(&mut File::open(&path).expect("file"), size, &name)
+    let size = std::fs::metadata(path).expect("size").len();
+    let table = upload::prepare(&mut File::open(path).expect("file"), size, &name)
         .expect("scan table")
         .table;
     let tmp = std::env::temp_dir().join(format!("diagnosi_{}.mzidx", std::process::id()));
     let mut out = File::create(&tmp).expect("tmp");
-    build_mzml(&table, File::open(&path).expect("file"), &mut out, 64 << 20).expect("index");
+    build_mzml(&table, File::open(path).expect("file"), &mut out, 64 << 20).expect("index");
     let isize = std::fs::metadata(&tmp).expect("size").len();
     let idx = Index::open(File::open(&tmp).expect("tmp"), isize).expect("open index");
     let _ = std::fs::remove_file(&tmp);

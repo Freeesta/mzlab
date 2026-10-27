@@ -20,6 +20,8 @@ pub mod flow;
 mod flow_apply;
 mod flow_base;
 #[cfg(test)]
+mod flow_bentazone_export_tests;
+#[cfg(test)]
 mod flow_bentazone_tests;
 mod flow_cache;
 mod flow_centroid;
