@@ -131,15 +131,15 @@ pub struct Table {
 /// header says nothing, from a Thermo filter token (`pr`, `cnl`, `cng`). Never from a name.
 pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
     const TERMS: [(&str, &str); 6] = [
-        ("MS:1000341", "PREC"),
-        ("MS:1000326", "NL"),
-        ("MS:1000325", "NG"),
-        ("MS:1000789", "EMC"),
-        ("MS:1000790", "TDF"),
-        ("MS:1000791", "ER"),
+        ("accession=\"MS:1000341\"", "PREC"),
+        ("accession=\"MS:1000326\"", "NL"),
+        ("accession=\"MS:1000325\"", "NG"),
+        ("accession=\"MS:1000789\"", "EMC"),
+        ("accession=\"MS:1000790\"", "TDF"),
+        ("accession=\"MS:1000791\"", "ER"),
     ];
-    for (acc, k) in TERMS {
-        if h.contains(&format!("accession=\"{acc}\"")) {
+    for (pat, k) in TERMS {
+        if h.contains(pat) {
             return Some(k);
         }
     }

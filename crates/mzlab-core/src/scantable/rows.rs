@@ -336,7 +336,7 @@ impl Rows {
         } else {
             Msn::default()
         };
-        if m.ce.is_none() && h.contains("MS:1000045") {
+        if m.ce.is_none() && h.contains("accession=\"MS:1000045\"") {
             m.ce = cv(h, "MS:1000045").and_then(float);
         }
         let icref = hs.find("<scan").and_then(|p| {
@@ -373,7 +373,7 @@ impl Rows {
                 .filter(|v| *v != 0.0)
                 .unwrap_or(0.0),
             an: self.head.analyzer(filt, icref),
-            kind: super::kind_of(h, filt).filter(|_| level > 1),
+            kind: (level > 1).then(|| super::kind_of(h, filt)).flatten(),
             mob: super::mobility_of_header(h),
             filter: self.intern(filt),
             profile: h.contains("accession=\"MS:1000128\""),
@@ -438,7 +438,7 @@ impl Rows {
             polarity,
             tic: Some(tic).filter(|v| *v != 0.0).unwrap_or(0.0),
             an: self.head.analyzer(filt, None),
-            kind: super::kind_of("", filt).filter(|_| level > 1),
+            kind: (level > 1).then(|| super::kind_of("", filt)).flatten(),
             filter: self.intern(filt),
             profile: sp.profile,
             parent: None,
