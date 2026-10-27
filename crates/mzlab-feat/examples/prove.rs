@@ -114,7 +114,7 @@ fn load_truth(path: &str) -> Truth {
 fn registry(formula: &str, neg: bool) -> Registry {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let rules =
-        Rules::parse(&std::fs::read(root.join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap();
+        Rules::parse(&std::fs::read(root.join("TP_Mine/data/regole_tp_2.json")).unwrap()).unwrap();
     let inp = HypoInputs {
         parent: formula,
         suspects: None,

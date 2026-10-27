@@ -145,7 +145,7 @@ fn rule_chain() -> Algorithm {
         ..algorithm(
             "rule_chain",
             "Rules, suspects, families and lists",
-            "Parent times the rules of TP_Mine/data/regole_tp.json (profile of the campaign), merged with the other sources by net formula change; ids follow the order of m/z (crates/mzlab-feat/src/hypo/sources.rs). Prediction level 2 literature, 3 class, 4 generic.",
+            "Parent times the rules of TP_Mine/data/regole_tp_2.json (profile of the campaign), merged with the other sources by net formula change; ids follow the order of m/z (crates/mzlab-feat/src/hypo/sources.rs). Prediction level 2 literature, 3 class, 4 generic.",
             Status::Available,
         )
     }

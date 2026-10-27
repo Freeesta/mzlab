@@ -40,9 +40,9 @@ async function upload(name, blob) {
   return id;
 }
 
-/** the rules of the hypotheses: regole_tp.json with the rows of the user's list of transformations @param {string} base @param {string | undefined} list */
+/** the rules of the hypotheses: regole_tp_2.json with the rows of the user's list of transformations @param {string} base @param {string | undefined} list */
 async function rulesOf(base, list) {
-  const rules = await (await fetch(base + "mzfinder/regole_tp.json")).text(), tr = (list || "").trim();
+  const rules = await (await fetch(base + "mzfinder/regole_tp_2.json")).text(), tr = (list || "").trim();
   return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
 }
 

@@ -40,7 +40,7 @@ PARENT = {"name": "parent", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "addu
 nat.mkdir()
 (tmp / "files.json").write_text(json.dumps(FILES)); (tmp / "parent.json").write_text(json.dumps(PARENT))
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-finder-lr-wasm", "--example", "finder_lr", "--", str(nat), str(tmp / "files.json"), str(tmp / "parent.json"),
-                str(ROOT / "TP_Mine" / "data" / "regole_tp.json"), *[f["path"] for f in series]], cwd=ROOT, check=True, capture_output=True)
+                str(ROOT / "TP_Mine" / "data" / "regole_tp_2.json"), *[f["path"] for f in series]], cwd=ROOT, check=True, capture_output=True)
 native = {"run": json.loads((nat / "run.json").read_text()), "detail": json.loads((nat / "detail.json").read_text())}
 data = site / "static" / "dati_finder"; data.mkdir(exist_ok=True)
 for n in names:

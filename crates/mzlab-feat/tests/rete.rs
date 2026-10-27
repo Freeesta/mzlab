@@ -10,7 +10,7 @@ use mzlab_feat::tp::{TpBlock, KIN_POSSIBLE, KIN_PROBABLE, ST_PARENT, ST_TP, ST_U
 const PROTON: f64 = 1.007276;
 
 fn rules() -> Rules {
-    Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp.json")).unwrap()
+    Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp_2.json")).unwrap()
 }
 
 fn neutral_mass(f: &str) -> f64 {
@@ -74,14 +74,14 @@ fn the_arcs_follow_the_rules_and_the_time_course() {
             (1, 2, "hydroxylation"),
             (1, 3, "dihydroxylation"),
             (1, 4, "dehydrogenation"),
-            (1, 5, "loss_of_propene_n_deisopropylation"),
+            (1, 5, "n_deisopropylation"),
             (2, 3, "hydroxylation"),
             (2, 4, "dehydration"),
         ]
     );
-    // the unexplained row and the unrelated formula are not nodes; the arc of a class rule says so
+    // the unexplained row and the unrelated formula are not nodes; the arc of a literature rule says so
     assert!(r.nodes.iter().all(|n| n.row.id != 6));
-    assert_eq!(r.arcs[3].scope, "class");
+    assert_eq!(r.arcs[3].scope, "literature");
     assert_eq!(r.arcs[2].delta, "\u{2212}2H");
     assert!(r
         .arcs
