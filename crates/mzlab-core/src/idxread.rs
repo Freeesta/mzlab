@@ -318,13 +318,14 @@ impl<R: ReadAt> Index<R> {
                 off: o,
             });
         }
-        let keys = match meta.get("keys") {
+        let keys: Vec<(String, usize)> = match meta.get("keys") {
             Some(Value::Obj(o)) => o
                 .iter()
                 .filter_map(|(k, v)| v.f64().map(|i| (k.clone(), i as usize)))
                 .collect(),
             _ => return Err(bad()),
         };
+        crate::idxcheck::check(&sections, &keys, size)?;
         let n = sections.len();
         Ok(Index {
             r,
@@ -362,13 +363,23 @@ impl<R: ReadAt> Index<R> {
         self.run.get("hr1").and_then(Value::bool).unwrap_or(false)
     }
 
-    fn read_f64(&mut self, off: u64, n: usize) -> Result<Vec<f64>> {
+    /// `n` 8-byte elements at `off`, as bytes.
+    fn read_bytes(&mut self, off: u64, n: usize) -> Result<Vec<u8>> {
+        let len = n
+            .checked_mul(8)
+            .ok_or_else(|| Error::new("error.badIndex"))?;
         let mut b = Vec::new();
-        b.try_reserve_exact(n * 8)
+        b.try_reserve_exact(len)
             .map_err(|_| Error::memory_budget())?;
-        b.resize(n * 8, 0);
+        b.resize(len, 0);
         self.r.read_at(off, &mut b)?;
-        Ok(b.chunks_exact(8)
+        Ok(b)
+    }
+
+    fn read_f64(&mut self, off: u64, n: usize) -> Result<Vec<f64>> {
+        Ok(self
+            .read_bytes(off, n)?
+            .chunks_exact(8)
             .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
             .collect())
     }
@@ -379,9 +390,8 @@ impl<R: ReadAt> Index<R> {
             let s = self.sections[si].clone();
             let n = s.n_scans;
             let rt = self.read_f64(s.off[0], n)?;
-            let mut b = vec![0u8; n * 8];
-            self.r.read_at(s.off[2], &mut b)?;
-            let scan_ids = b
+            let scan_ids = self
+                .read_bytes(s.off[2], n)?
                 .chunks_exact(8)
                 .map(|c| i64::from_le_bytes(c.try_into().unwrap()))
                 .collect();
