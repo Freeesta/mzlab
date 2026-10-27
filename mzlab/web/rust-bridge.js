@@ -15,7 +15,7 @@ import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
 import { indexXicBin } from "./rust-xicbin.js";
-import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
+import { compileOnce, simdOk, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
@@ -90,7 +90,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
   }
-  api.start = () => { if (!worker && !api.disabled) spawn(); }; BUD.wire(api, () => worker);
+  api.start = () => { if (!worker && !api.disabled) { if (simdOk()) spawn(); else off(api, slots, notify, "error.noSimd"); } }; BUD.wire(api, () => worker);
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } }; api.blobOf = name => blobs.get(base(name)) || null;   // the file as the page was given it (the Export mzML of Flow)
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
