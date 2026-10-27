@@ -37,6 +37,7 @@ try:
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
             if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
                 stage(pg, [EX / "FullScan_t0.mzML", EX / "FullScan_t30.mzML"])
+                attendi(pg, "!document.querySelector('#opbtn').disabled", timeout=60000)           # enabled once the staged files are checked (slow runner)
                 pg.click("#opbtn"); ready(pg)
             assert pg.evaluate("E.files.length") >= 2
             pg.evaluate(SEED)
