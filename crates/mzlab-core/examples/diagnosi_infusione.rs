@@ -43,6 +43,15 @@ fn main() {
     );
     println!("scans per level: {levels:?}");
 
+    keys_report(scans);
+    tic_report(scans);
+    match infusione(scans, None, &name) {
+        Some(i) => println!("verdict: infusion, reason {} · levels {} · nodes {} · kind in the Dati view: {}", i.motivo, i.livelli, i.nodi, if con_msn(scans, None, &name) { "infusion" } else { "not infusion (constant RT or MS1 only)" }),
+        None => println!("verdict: not an infusion (no fixed precursors in blocks of at least two segments, no hint in the name)"),
+    }
+}
+
+fn keys_report(scans: &[mzlab_core::idxread::Scan]) {
     // key of an MSn scan: the filter path with activation and energy, else the precursor
     let key = |s: &mzlab_core::idxread::Scan| match s.path.as_deref() {
         Some(p) if !p.is_empty() => p
@@ -71,7 +80,9 @@ fn main() {
     if keys.len() > 60 {
         println!("  ... {} more keys", keys.len() - 60);
     }
+}
 
+fn tic_report(scans: &[mzlab_core::idxread::Scan]) {
     // TIC of the MS1 scans (all scans without MS1): variation and number of peaks above a fifth of the maximum
     let tic: Vec<f64> = scans
         .iter()
@@ -94,9 +105,4 @@ fn main() {
         "TIC: CV {:.2} · {peaks} local maxima above 20 % of the maximum",
         if mean > 0.0 { sd / mean } else { 0.0 }
     );
-
-    match infusione(scans, None, &name) {
-        Some(i) => println!("verdict: infusion, reason {} · levels {} · nodes {} · kind in the Dati view: {}", i.motivo, i.livelli, i.nodi, if con_msn(scans, None, &name) { "infusion" } else { "not infusion (constant RT or MS1 only)" }),
-        None => println!("verdict: not an infusion (no fixed precursors in blocks of at least two segments, no hint in the name)"),
-    }
 }
