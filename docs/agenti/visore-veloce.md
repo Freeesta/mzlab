@@ -106,6 +106,7 @@ Dove va il tempo: il tempo misurato comprende la richiesta `api/xic` (JSON dal m
 
 ## Infusione
 - **Pulsante «XIC» e lente spenti**: se il file dello spettro è un'infusione (`f.kind === "infusion"` del motore, regola di `infusione.rs`, oppure `infus|fia|direct|syringe` nel nome) il pulsante «XIC» della barra dello spettro è disabilitato con il tooltip `xicbtn.infusion` e la lente (`lensArgs` in `xic-spettro.js`) non si apre: non c'è un cromatogramma vero. Prova: `tests_e2e/e2e_xic_infusione.py`; la regola dei dati in `infusione/tests.rs`: cascata MSn fino a MS8 con più di 64 chiavi = infusione; una sola chiave su tutta la corsa (MS2 mirato LC) no.
+- **Diagnosi**: `cargo run --release -p mzlab-core --example diagnosi_infusione -- FILE.mzML` stampa scansioni per livello, intervallo RT, chiavi MSn con scansioni e RT, CV del TIC e il verdetto di `infusione` con il motivo.
 
 ## Disegno dei tracciati dalla finestra (decima.js)
 - **Modulo**: `mzlab/web/decima.js` (modulo ES puro, `// @ts-strict`, in `tools/tipi/moduli.json` e `stretto2.json`): `isSorted` (x mai decrescente, in cache per array), `windowIdx` (ricerca binaria dell'intervallo [x0, x1], senza punti fuori), `amax`/`amin` (massimo e minimo di un intervallo senza spread: `Math.max(...a)` dà `RangeError` oltre ~10^5 valori), `m4` (quattro vertici per colonna di pixel: primo, più basso, più alto, ultimo).
@@ -118,4 +119,3 @@ Dove va il tempo: il tempo misurato comprende la richiesta `api/xic` (JSON dal m
 - **G2 e G6 (2 giri alternati prima/dopo, p50 / p95 ms)**: G2 XIC di un file 23,2 / 30,4 e 17,7 / 24,1 -> 19,4 / 25,4 e 17,4 / 22,0; G6 freccia 5,7 / 9,1 e 5,3 / 7,0 -> 5,2 / 6,0 e 5,4 / 8,5 (G1 invariato): nessun peggioramento oltre il rumore fra giri.
 - **Dove va il tempo che resta (1M, zoom a vista intera)**: `amax` + `amin` ~7,7 ms per passo (tre passate su 1M valori: massimo, minimo di `traceMax` e minimo dell'asse), `m4` ~2 ms, e `keyOf` di `etichette-picchi.js` somma tutti i valori a ogni disegno (~1 ms; il file non è di questo lavoro).
 - **Provato e scartato**: caricare il modulo con `await import()` a ogni disegno costava 1,5-2 ms di p50 sullo spostamento (TIC, XIC 3k): il risultato è in `window.DECIMA` e `||=` non attende dalla seconda volta.
-
