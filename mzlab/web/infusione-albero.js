@@ -136,7 +136,15 @@
     if (regroup) redraw();
     uiSave();
   }
+  /** At loading the side bar shows the tree of the infusion file just added (the active one, else the last added) instead of the file list: one panel, the others untouched. */
+  function autoOpen(/** @type {any[]} */ added) {
+    const inf = added.filter(INF.isInf);
+    if (!inf.length || !window.BARRA) return;
+    const cur = E.files[E.cur], f = INF.isInf(cur) && inf.includes(cur) ? cur : inf[inf.length - 1];
+    if (f.k !== E.cur) activeFile(f.k);
+    BARRA.setTab("alb", { noFocus: true, instant: true });
+  }
   /** The only file loaded when it is an infusion: the «Fragmentation graph» (infusione-grafo.js) belongs to that case. */
   const single = () => { const l = E.files.filter((/** @type {any} */ f) => !f.gone); return l.length === 1 && INF.isInf(l[0]); };
-  Object.assign(INF, { render, refresh, target, single, setOpt, warm });
+  Object.assign(INF, { render, refresh, target, single, setOpt, warm, autoOpen });
 })();
