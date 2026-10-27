@@ -162,7 +162,7 @@ I18N.add("en", {
   "cmd.maplock.lab": "Lock",
   "cmd.maplock.name": "Lock the sight",
   "cmd.maplock.tip": "Freeze the sight at this point: the mouse is free and the XIC and the spectrum stay (L)",
-  "cmd.maplock.kw": "lock sight freeze padlock map",
+  "cmd.maplock.kw": "lock unlock sight freeze padlock map",
   "cmd.mapmark.lab": "Mark",
   "cmd.mapmark.name": "Mark the point",
   "cmd.mapmark.tip": "Mark this point on the map with its number, RT and m/z in the table (like the marked points)",
