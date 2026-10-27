@@ -86,7 +86,7 @@ pub struct ParentLr {
     pub formula: String,
     pub neutral_mass: f64,
     pub mz: f64,
-    /// The adduct of the parent ion (`[M+H]+` by default): its sign is the polarity the products are looked for in.
+    /// The adduct of `mz` (`[M+H]+` unless the parent says another); the hypotheses and their alternatives are read in it.
     pub adduct: String,
     /// Formula of the [M+H]+ ion (`None` for another adduct or without a formula).
     pub ion_formula: Option<String>,
@@ -197,8 +197,8 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
             formula: p.formula(),
             neutral_mass: mass(&p.neutral),
             mz: p.mz,
+            adduct: p.adduct.clone(),
             ion_formula: (p.adduct == "[M+H]+").then(|| fmt(&p.ion)),
-            adduct: p.adduct,
             smiles: p.smiles,
         });
     }

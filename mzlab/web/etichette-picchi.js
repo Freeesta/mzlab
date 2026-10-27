@@ -48,10 +48,10 @@ async function ready(p, sr, ms = 12) {
   finally { clearTimeout(timer); keys.forEach(k => claimed.delete(k)); }
 }
 
-/** Text of the label and of its tooltip: the time of the apex only (the m/z or the wavelength is in the title and the legend). @param {any} l */
+/** Text of the label (the number alone on the plot, with "min" in the data table) and of its tooltip: the time of the apex only (the m/z or the wavelength is in the title and the legend). @param {any} l */
 function texts(l) {
   const rt = l.rt.toFixed(2);
-  return { label: `${rt} min`, tip: T("etpk.tip.rt", { rt }) };
+  return { label: rt, withUnit: `${rt} min`, tip: T("etpk.tip.rt", { rt }) };
 }
 
 /**
@@ -77,7 +77,9 @@ function draw(p, g, sr, c) {
         if (top >= M.t && !lbls.some((/** @type {any} */ o) => b.x < o.x + o.w + GAP && o.x < b.x + b.w + GAP && b.y < o.y + o.h && o.y < b.y + b.h)) box = b;
       }
       if (!box) continue;
-      g.strokeStyle = ecss("--panel"); g.strokeText(label, x, box.y + h - 4); g.fillStyle = ecss("--muted"); g.fillText(label, x, box.y + h - 4);
+      // a background of the plot colour and the strongest text colour: the dashed cursor passes behind it (cursorLine leaves a gap)
+      g.fillStyle = ecss("--panel"); g.fillRect(box.x, box.y, box.w, box.h);
+      g.strokeStyle = ecss("--panel"); g.strokeText(label, x, box.y + h - 4); g.fillStyle = ecss("--ink"); g.fillText(label, x, box.y + h - 4);
       lbls.push({ ...box, tip, text: label, etpk: true });
     }
   }
@@ -131,7 +133,7 @@ const toggle = p => { COMANDI.fai("spec.display", p, () => { p.etpk = !on(p, p._
 /** The labels of trace `s` shown now (none when off, not ready or not the labelled trace): [{ rt, apex, text }] for the data table. @param {any} p @param {any} s */
 function rows(p, s) {
   const a = p._a; if (!a || !a.sr || !on(p, a.sr.length) || (a.sr.length > 1 && a.sr[0] !== s)) return [];
-  return (labelsOf(p, s) || []).filter(l => l.rt >= a.x0 && l.rt <= a.x1).map(l => ({ rt: l.rt, apex: l.apex, text: texts(l).label }));
+  return (labelsOf(p, s) || []).filter(l => l.rt >= a.x0 && l.rt <= a.x1).map(l => ({ rt: l.rt, apex: l.apex, text: texts(l).withUnit }));
 }
 
 if (typeof AZIONI !== "undefined") {

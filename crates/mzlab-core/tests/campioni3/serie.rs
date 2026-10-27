@@ -143,3 +143,25 @@ fn a_reinjection_keeps_its_id_and_is_flagged() {
     );
     assert_eq!(field(&cs[1], "campione_id"), "TW-PMS-T5-R");
 }
+
+#[test]
+fn a_p_in_a_time_is_the_decimal_point_and_the_order_is_numeric() {
+    let names = [
+        "MQ_PMS_T10p25.mzML",
+        "MQ_PMS_T2p5.mzML",
+        "MQ_PMS_T00.mzML",
+        "MQ_PMS_T0p5.mzML",
+        "MQ_PMS_T10.mzML",
+    ];
+    let mut got: Vec<(f64, &str)> = super::many(&names)
+        .iter()
+        .zip(names)
+        .map(|(c, n)| (c.time_min.unwrap_or(f64::NAN), n))
+        .collect();
+    let times: Vec<f64> = got.iter().map(|g| g.0).collect();
+    assert_eq!(times, [10.25, 2.5, 0.0, 0.5, 10.0], "{got:?}");
+    got.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let order: Vec<&str> = got.iter().map(|g| g.1).collect();
+    assert_eq!(order[1], "MQ_PMS_T0p5.mzML");
+    assert_eq!(order[4], "MQ_PMS_T10p25.mzML");
+}

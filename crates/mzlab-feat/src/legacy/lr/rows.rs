@@ -43,7 +43,7 @@ pub struct Hyp {
     pub pred: u8,
 }
 
-/// The hypotheses of the rules (those of the parent adduct, at least one step), sorted by steps and m/z.
+/// The hypotheses of the rules (in `adduct`, the one of the parent; at least one step), sorted by steps and m/z.
 pub fn hypotheses(registry: &str, adduct: &str) -> Res<Vec<Hyp>> {
     if registry.trim().is_empty() {
         return Ok(Vec::new());

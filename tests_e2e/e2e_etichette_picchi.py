@@ -34,13 +34,19 @@ try:
         def tic():
             txt = [l[0] for l in labels(pg, 1)]
             big = [t for t in txt if t.startswith("14.3")]
-            assert big and big[0].endswith(" min") and all("·" not in t and "m/z" not in t for t in txt), txt
+            assert big and float(big[0]) > 0 and "min" not in big[0] and all("·" not in t and "m/z" not in t for t in txt), txt
         step("TIC: the tallest peak is labelled with its time only", tic)
         def zones():
             # the run is 0.5-20 min: no label in the solvent front (first 3 min) or in the last 5 min
             rts = [float(l[0].split(" ")[0]) for l in labels(pg, 1)]
             assert rts and all(3.0 <= t <= 15.2 for t in rts), rts
         step("TIC: no label in the first 3 min or in the last 5 min", zones)
+        def cursor_behind():
+            # the dashed cursor passes behind a label: its overlay is cut where the label box crosses it
+            lb = labels(pg, 1)[0]
+            m = pg.evaluate(f"(() => {{ const p = {CH}; p.cur = p._a.x0 + 0 * 1; const l = {LB}[0]; const rt = p._a.x0 + (l.x + l.w / 2 - p._a.X(p._a.x0)) / (p._a.X(p._a.x1) - p._a.X(p._a.x0)) * (p._a.x1 - p._a.x0); p.cur = rt; cursorLine(p); return p.cl.style.maskImage || p.cl.style.webkitMaskImage || ''; }})()")
+            assert "transparent" in m, m
+        step("the cursor line is cut behind a peak label", cursor_behind)
         def tip():
             t = pg.evaluate(f"{LB}[0].tip"); assert "RT" in t and "min" in t and "m/z" not in t, t
         step("each label has a tooltip", tip)

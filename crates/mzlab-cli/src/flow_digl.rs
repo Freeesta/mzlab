@@ -11,6 +11,7 @@ use mzlab_feat_wasm::run;
 use crate::flow::{all_inputs, read_one, write_made, FileRunner};
 use crate::flow_base::{open, rebuild, Files};
 use crate::flow_link::parent_of;
+use crate::flow_nature::of_files;
 use mzlab_core::flow::Artifact;
 
 // `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
@@ -127,10 +128,15 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     );
     let p = parent_of(&parent.1)?;
     let mut recipe = rebuild(&lin)?;
-    // the sign of the parent adduct is the polarity the products are looked for in
-    if p.adduct.ends_with('-') {
-        recipe.detect.polarity = Some(-1);
-    }
+    // the polarity the files say (a negative series is looked for as [M-H]-); a mix or no scans read as positive, as before
+    let polarity: i8 = recipe
+        .detect
+        .polarity
+        .filter(|&p| p != 0)
+        .or_else(|| p.adduct.ends_with('-').then_some(-1))
+        .or_else(|| of_files(&indexes).polarity)
+        .unwrap_or(1);
+    recipe.detect.polarity = Some(polarity);
     let mut ix = indexes.iter().map(open).collect::<Result<Vec<_>>>()?;
     let hypo = run::hypotheses_stored(
         &mut ix,
@@ -158,7 +164,14 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     who.raw("{\"name\":\"parent\",\"neutral\":")
         .str(&p.formula)
         .raw(",\"adduct\":")
-        .str(&p.adduct)
+        .str(
+            &if p.adduct == "[M+H]+" && polarity < 0 {
+                "[M-H]-"
+            } else {
+                p.adduct.as_str()
+            }
+            .to_string(),
+        )
         .raw("}");
     let d = lr::dig(
         &files.0,
