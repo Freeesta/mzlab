@@ -286,10 +286,8 @@ function legCollapse(p) {
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
 function traceMax(DC, s, x0, x1) {
   let m = 1e-9, neg = 0;
-  const srt = DC.isSorted(s.x);
   for (const za of [s.ze ?? -Infinity, -Infinity]) {
-    if (srt) { const [i0, i1] = DC.windowIdx(s.x, Math.max(x0, za), x1); m = DC.amax(s.ys, i0, i1, m); neg = DC.amin(s.ys, i0, i1, neg); }
-    else for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= za) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    [m, neg] = DC.extent(s.x, s.ys, Math.max(x0, za), x1, m, neg);
     if (m > 1e-9 || neg < 0) break;
   }
   return { m, neg };
@@ -340,10 +338,7 @@ async function drawLines(p) {
   let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
-  if (!stk && !logy) for (const s of sr) {
-    if (DC.isSorted(s.x)) { const [i0, i1] = DC.windowIdx(s.x, Math.max(x0, s.ze ?? -Infinity), x1); ymin = DC.amin(s.ys, i0, i1, ymin); }
-    else for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
-  }
+  if (!stk && !logy) for (const s of sr) ymin = DC.extent(s.x, s.ys, Math.max(x0, s.ze ?? -Infinity), x1, -Infinity, ymin)[1];
   if (ymin < 0) ymin *= 1.08;
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
@@ -396,19 +391,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
-    if (DC.isSorted(s.x)) {                                    // the window by binary search, four vertices per pixel column (decima.js)
-      const [i0, i1] = DC.windowIdx(s.x, x0, x1), v = DC.m4(s.x, s.ys, i0, i1, X, val => Y(U(s, val)));
-      for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
-    } else {
-      let curX = -999, minY, maxY, firstY, lastY, minFirst = true;
-      const flush = (cx) => { if (curX === -999) return; if (!st) { g.moveTo(cx, firstY); st = true; } else g.lineTo(cx, firstY); if (minFirst) { g.lineTo(cx, minY); g.lineTo(cx, maxY); } else { g.lineTo(cx, maxY); g.lineTo(cx, minY); } g.lineTo(cx, lastY); };
-      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = Math.round(X(r)), py = Y(U(s, s.ys[i]));
-        if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = py; minFirst = true; }
-        else { if (py < minY) { minY = py; if (maxY === firstY) minFirst = true; } if (py > maxY) { maxY = py; if (minY === firstY) minFirst = false; } lastY = py; }
-      });
-      flush(curX);
-    }
+    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);

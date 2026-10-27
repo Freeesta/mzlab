@@ -1,5 +1,5 @@
 // Checks mzlab/web/decima.js against the point-by-point loop it replaced (grafici.js drawLines), on synthetic traces; prints one JSON object. See tests/test_decima.py.
-import { amax, amin, isSorted, m4, windowIdx } from "../mzlab/web/decima.js";
+import { amax, amin, isSorted, m4, polyline, polylineScan, windowIdx } from "../mzlab/web/decima.js";
 
 let seed = 12345;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -50,6 +50,7 @@ for (const [name, x, y] of traces()) {
     const V = kind === "lin" ? v => 300 - (v - 0) / ymax * 250 : v => 300 - log(Math.max(v, 1)) / 6 * 250;
     const [i0, i1] = windowIdx(x, x0, x1);
     const got = m4(x, y, i0, i1, X, V), want = reference(Array.from(x), Array.from(y), x0, x1, X, V);
+    if (!same(polylineScan(x, y, x0, x1, X, V), want) || !same(polyline(x, y, x0, x1, X, V), want)) out.mismatches.push(`polyline ${name} [${x0.toFixed(3)},${x1.toFixed(3)}] W=${W} ${kind}`);
     if (!same(got, want)) out.mismatches.push(`${name} [${x0.toFixed(3)},${x1.toFixed(3)}] W=${W} ${kind}`);
     // no apex lost: the highest and the lowest value of every column are vertices of that column
     const cols = new Map();
@@ -70,6 +71,8 @@ for (let t = 0; t < 100000; t++) {
   if (i0 !== wantLo || i1 !== wantHi || (idx.length === 0 && i1 > i0 && b >= a)) bad++;
 }
 out.window_idx_bad = bad;
+// an unsorted axis goes through the scan and still gives the old vertices
+{ const xs = [5, 1, 3, 3, 9, 2, 8], ys = [1, 7, 2, 9, 4, 4, 6], X = r => r * 10, V = v => 100 - v; out.unsorted_ok = same(polyline(xs, ys, 0, 9, X, V), reference(xs, ys, 0, 9, X, V)); }
 
 // ten to the six values: no RangeError (Math.max(...a) throws above ~10^5), NaN ignored, ranges
 const big = Float64Array.from({ length: 1000000 }, (_, i) => Math.sin(i) * 1e3); big[777777] = 5e9; big[123456] = -7e9; big[5] = NaN;

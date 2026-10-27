@@ -11,10 +11,10 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = synth("decima")
 r = Run(port=8866, wd="/tmp/wd_decima")
-# one panel: the picture with decima.js, then with isSorted() false (the old loop), at the full view and at three zooms
+# one panel: the picture with decima.js, then with the point-by-point scans (the old loop), at the full view and at three zooms
 SHOTS = """async ([id, fr]) => {
   const p = E.panels.find(q => q.id === id), out = [];
-  const real = window.DECIMA ||= await import('./decima.js'), old = { ...real, isSorted: () => false };
+  const real = window.DECIMA ||= await import('./decima.js'), old = { ...real, polyline: real.polylineScan, extent: real.extentScan };
   const a0 = p._a; const lo = a0.full[0], hi = a0.full[1];
   for (const z of [null, [lo + (hi - lo) * 0.3, lo + (hi - lo) * 0.5], [lo + (hi - lo) * 0.05, lo + (hi - lo) * 0.12], [hi - (hi - lo) * 0.4, hi]]) {
     p.zoom = z; window.DECIMA = real; await draw(p); const n = p.cv.toDataURL();

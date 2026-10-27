@@ -74,3 +74,43 @@ export function m4(x, y, i0, i1, X, V) {
   }
   return out;
 }
+
+/**
+ * Highest and lowest value of y over the points with lo <= x <= hi, starting from the given bounds (any x order; the window search is used when x is sorted).
+ * @param {Vec} x @param {Vec} y @param {number} lo @param {number} hi @param {number} [mx] @param {number} [mn] @returns {[number, number]}
+ */
+export function extent(x, y, lo, hi, mx = -Infinity, mn = Infinity) {
+  if (isSorted(x)) { const [i0, i1] = windowIdx(x, lo, hi); return [amax(y, i0, i1, mx), amin(y, i0, i1, mn)]; }
+  return extentScan(x, y, lo, hi, mx, mn);
+}
+
+/** extent() point by point, for any x order. @param {Vec} x @param {Vec} y @param {number} lo @param {number} hi @param {number} mx @param {number} mn @returns {[number, number]} */
+export function extentScan(x, y, lo, hi, mx, mn) {
+  for (let i = 0; i < x.length; i++) if (x[i] >= lo && x[i] <= hi) { if (y[i] > mx) mx = y[i]; if (y[i] < mn) mn = y[i]; }
+  return [mx, mn];
+}
+
+/**
+ * The polyline of a trace in the window [x0, x1] as flat [px, py, ...]: m4 when x is sorted, else the point-by-point loop (columns of consecutive points only).
+ * @param {Vec} x @param {Vec} y @param {number} x0 @param {number} x1 @param {(v: number) => number} X @param {(v: number) => number} V @returns {number[]}
+ */
+export function polyline(x, y, x0, x1, X, V) {
+  if (isSorted(x)) { const [i0, i1] = windowIdx(x, x0, x1); return m4(x, y, i0, i1, X, V); }
+  return polylineScan(x, y, x0, x1, X, V);
+}
+
+/** polyline() point by point, for any x order. @param {Vec} x @param {Vec} y @param {number} x0 @param {number} x1 @param {(v: number) => number} X @param {(v: number) => number} V @returns {number[]} */
+export function polylineScan(x, y, x0, x1, X, V) {
+  /** @type {number[]} */
+  const out = [];
+  let curX = -999, minY = 0, maxY = 0, firstY = 0, lastY = 0, minFirst = true;
+  const flush = (/** @type {number} */ cx) => { if (curX === -999) return; out.push(cx, firstY); if (minFirst) out.push(cx, minY, cx, maxY); else out.push(cx, maxY, cx, minY); out.push(cx, lastY); };
+  for (let i = 0; i < x.length; i++) {
+    const r = x[i]; if (r < x0 || r > x1) continue;
+    const px = Math.round(X(r)), py = V(y[i]);
+    if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = py; minFirst = true; }
+    else { if (py < minY) { minY = py; if (maxY === firstY) minFirst = true; } if (py > maxY) { maxY = py; if (minY === firstY) minFirst = false; } lastY = py; }
+  }
+  flush(curX);
+  return out;
+}
