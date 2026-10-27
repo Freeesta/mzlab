@@ -71,7 +71,7 @@
     function view() {
       const V = $("#tp-view"), s = st.summary;
       const list = s.rows.filter(r => r.label !== "progenitore" && good(r));
-      T = null; if (st.gv) { st.gv.destroy(); st.gv = null; }
+      T = null; if (st.gv) { st.gv.destroy(); st.gv = null; } if (st.gk) { st.gk.destroy(); st.gk = null; }
       if (st.view === "tab") {
         const nd = s.rows.filter(notFound).length;
         V.innerHTML = `${nd ? `<label class="mut" style="display:inline-flex;gap:6px;align-items:center;min-height:24px"><input type="checkbox" id="tp-nd"> Show searched, not detected (${nd})</label>` : ""}${s.gruppi ? condFilterHtml(s.gruppi) : ""}<div id="tp-tbl"></div>`;
@@ -85,6 +85,11 @@
       } else if (st.view === "map") {
         V.innerHTML = `<div class="card"><div class="mut">Each node is an ion that passes the criteria: the radius follows the maximum area, the colour the confidence (green strong, amber possible, purple unexpected). Lines show the transformation (Δ formula). Click a node for details.</div><div id="tp-map"></div></div>`;
         mapView($("#tp-map"));
+      } else if (st.view === "kin" && s.gruppi) {
+        V.innerHTML = `<div class="card" id="tp-gk"><span class="mut" role="status">Loading the kinetics...</span></div>`;
+        const host = $("#tp-gk"), W = /** @type {any} */ (window);
+        W.TPLAZY.load("gruppi-vista.js").then(() => { if (st.view === "kin" && host.isConnected) st.gk = W.TPGRUPPI_VIEW.kinetics(host, s.gruppi, { parentName: s.parent.name || s.parent.formula }); })
+          .catch(() => { host.textContent = "The kinetics by condition could not be loaded."; });
       } else if (st.view === "kin") {
         V.innerHTML = `<div class="card"><h3>All kinetics, each at its own maximum (100 %)</h3><canvas id="tp-c-all" style="height:320px"></canvas><div class="row" id="tp-leg-all"></div></div>`;
         const top = list.filter(r => r.kind === "candidate").slice(0, 8), par = s.rows.find(r => r.label === "progenitore");

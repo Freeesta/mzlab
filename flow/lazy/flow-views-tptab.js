@@ -38,6 +38,20 @@
     const { el } = F, rows = (j.rows || []).slice(0, 300), times = j.times || [];
     const d = F.readTptabDetail(j);
     F.drawTable(host, { caption: `${label}, detail`, head: d.head, rows: d.rows, label: `Detail of ${label}`, ids: d.ids });
+    if (rows.length && j.gruppi && j.gruppi.conditions && j.gruppi.conditions.length > 1 && /** @type {any} */ (globalThis).TPLAZY) {
+      // several conditions: one curve per condition (the Tabui chart, with its data table), not the areas of all the files in one line
+      const box = el("div", { class: "flx-one" }); host.append(box);
+      const G = /** @type {any} */ (globalThis);
+      G.TPLAZY.load("gruppi-vista.js").then(() => {
+        if (!box.isConnected) return;
+        const v = G.TPGRUPPI_VIEW.kinetics(box, j.gruppi, { parentName: label });
+        const stop = F.onSelect((/** @type {string | null} */ id, /** @type {string} */ from) => {
+          if (!box.isConnected) { stop(); return; }
+          if (from !== "kinetics" && id != null && Number.isFinite(Number(id))) v.selectRow(Number(id));
+        });
+      }).catch(() => { box.textContent = "The kinetics by condition could not be loaded."; });
+      return;
+    }
     if (!rows.length || !times.length) return;
     const show = el("div", { class: "flx-one" }), pick = /** @type {HTMLSelectElement} */ (el("select", { "aria-label": "Product to draw", onchange: () => { draw(Number(pick.value)); F.select(String(rows[Number(pick.value)].row), "kinetics"); } }, ...rows.map((/** @type {any} */ r, /** @type {number} */ i) => el("option", { value: String(i), text: `${r.id} (m/z ${fx(r.mz, 4)})` }))));
     /** @param {number} i */

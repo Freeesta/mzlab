@@ -95,6 +95,11 @@
           }
          }
         },
+        "dark": {
+         "type": "array",
+         "description": "optional, present only when the dark controls of the condition have known times: their mean area at each time (same items as kin)",
+         "items": {"$ref": "#/properties/rows/items/properties/cond/items/properties/kin/items"}
+        },
         "prev": {
          "type": ["object", "null"],
          "description": "null where the row is not present and for the row marked is_parent",
