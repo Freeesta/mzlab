@@ -32,9 +32,9 @@ try:
         step("window «Metodo» of a QqQ file: as before", method_qqq)
         def losses_qqq():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
-            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')")
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=g28] .nlm small')")
             print(hit, ex)
-            assert "CO" in hit and "C2H4" in hit and ex is None, (hit, ex)                       # QqQ: ±0.5 Da and no exact masses
+            assert hit == ["g28"] and ex is None, (hit, ex)                                      # QqQ: ±0.5 Da and no exact masses (CO and C2H4 share the row of nominal mass 28)
             pg.evaluate("document.querySelector('#refdlg').close()")
         step("neutral losses with a QqQ file: ±0.5 Da and no exact masses", losses_qqq)
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
@@ -63,10 +63,10 @@ try:
         step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)
         def losses():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
-            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')?.textContent")
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=g28] .nlm small')?.textContent")
             print(hit, ex)
-            assert hit == ["CO"] and ex == "27.9949", (hit, ex)                                  # 3 mDa: CO yes, C2H4 (28.0313) no
-            assert "Stessa massa nominale (28)" in pg.inner_text("#refdlg")      # the sentence about equal nominal masses stays
+            assert hit == ["g28"] and ex == "27.9949", (hit, ex)                                 # the shared row of mass 28 is hit by CO (3 mDa); C2H4 (28.0313) is not what matches
+            assert "stesso Δm, risoluzione unitaria" in pg.inner_text("#refdlg")      # the shared row of equal nominal mass says so
             pg.evaluate("document.querySelector('#refdlg').close()")
         step("neutral losses with an Orbitrap file: exact masses and «Cerca Δm» within 3 mDa", losses)
     r.close()
