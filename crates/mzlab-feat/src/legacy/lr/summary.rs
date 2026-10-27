@@ -304,7 +304,7 @@ fn head_json(o: &mut Out, d: &LrDig) {
         .str(&d.parent.formula)
         .raw(",\"neutral_mass\":")
         .num(round(d.parent.neutral_mass, 4));
-    o.raw(",\"adduct\":\"[M+H]+\",\"mz\":")
+    o.raw(",\"adduct\":").str(&d.parent.adduct).raw(",\"mz\":")
         .num(round(d.parent.mz, 4))
         .raw("}");
 }

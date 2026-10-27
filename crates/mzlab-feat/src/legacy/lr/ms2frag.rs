@@ -92,6 +92,12 @@ pub fn loss_formula(loss: f64, precursor: &Formula, tol: f64) -> Option<String> 
         .map(|x| label(&x.1))
 }
 
+/// The ion formula of `adduct` from the neutral formula of the row (`None` when it does not parse, is empty or the adduct is unknown).
+pub fn ion_formula(neutral: &str, adduct: &str) -> Option<Formula> {
+    parse_formula(neutral).ok().filter(|f| !f.is_empty())?;
+    parse_formula(&crate::legacy::series::ion_of(neutral, adduct)?.0).ok()
+}
+
 /// The ion formula of `[M+H]+` from the neutral formula of the row (`None` when it does not parse or is empty).
 pub fn protonated(neutral: &str) -> Option<Formula> {
     let mut f = parse_formula(neutral).ok().filter(|f| !f.is_empty())?;
@@ -103,7 +109,19 @@ pub fn protonated(neutral: &str) -> Option<Formula> {
 /// than `PRECURSOR_GAP`; with their losses. `precursor` is the centre of the isolation window of the scan; `neutral` the formula of the row (or of
 /// the parent when the row has none). A fragment with a formula gets the exact difference to `[M+H]+`; the others the closest usual loss within `tol`.
 pub fn find(precursor: f64, neutral: &str, ions: &[Ion], min_rel: f64, tol: f64) -> Vec<Found> {
-    let pf = protonated(neutral);
+    find_ion(precursor, neutral, "[M+H]+", ions, min_rel, tol)
+}
+
+/// `find` for the precursor ion of any adduct (the losses are taken from its formula).
+pub fn find_ion(
+    precursor: f64,
+    neutral: &str,
+    adduct: &str,
+    ions: &[Ion],
+    min_rel: f64,
+    tol: f64,
+) -> Vec<Found> {
+    let pf = ion_formula(neutral, adduct);
     let top = ions
         .iter()
         .filter(|i| precursor - i.mz > PRECURSOR_GAP)

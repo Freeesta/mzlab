@@ -126,7 +126,11 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         read_one(r, job, "parent")?,
     );
     let p = parent_of(&parent.1)?;
-    let recipe = rebuild(&lin)?;
+    let mut recipe = rebuild(&lin)?;
+    // the sign of the parent adduct is the polarity the products are looked for in
+    if p.adduct.ends_with('-') {
+        recipe.detect.polarity = Some(-1);
+    }
     let mut ix = indexes.iter().map(open).collect::<Result<Vec<_>>>()?;
     let hypo = run::hypotheses_stored(
         &mut ix,
@@ -153,7 +157,9 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let mut who = Out::default();
     who.raw("{\"name\":\"parent\",\"neutral\":")
         .str(&p.formula)
-        .raw(",\"adduct\":\"[M+H]+\"}");
+        .raw(",\"adduct\":")
+        .str(&p.adduct)
+        .raw("}");
     let d = lr::dig(
         &files.0,
         &who.0,

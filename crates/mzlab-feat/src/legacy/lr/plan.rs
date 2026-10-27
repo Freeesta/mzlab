@@ -86,6 +86,8 @@ pub struct ParentLr {
     pub formula: String,
     pub neutral_mass: f64,
     pub mz: f64,
+    /// The adduct of the parent ion (`[M+H]+` by default): its sign is the polarity the products are looked for in.
+    pub adduct: String,
     /// Formula of the [M+H]+ ion (`None` for another adduct or without a formula).
     pub ion_formula: Option<String>,
     /// The SMILES of the parent, for the fragmentation tree.
@@ -196,6 +198,7 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
             neutral_mass: mass(&p.neutral),
             mz: p.mz,
             ion_formula: (p.adduct == "[M+H]+").then(|| fmt(&p.ion)),
+            adduct: p.adduct,
             smiles: p.smiles,
         });
     }
@@ -210,11 +213,18 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
         .ok_or(
             "the neutral molecular formula, the SMILES or the m/z of the parent ion is required",
         )?;
-    let shift = ion_mz(0.0, "[M+H]+").unwrap_or(1.007276);
+    let adduct = v
+        .get("adduct")
+        .and_then(Value::str)
+        .filter(|a| ion_mz(0.0, a).is_some())
+        .unwrap_or("[M+H]+")
+        .to_string();
+    let shift = ion_mz(0.0, &adduct).unwrap_or(1.007276);
     Ok(ParentLr {
         formula: String::new(),
         neutral_mass: mz - shift,
         mz,
+        adduct,
         ion_formula: None,
         smiles: None,
     })
