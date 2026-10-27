@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // «Fragments» of the drawing: right click on a bond gives the two pieces it would leave (formula, neutral mass, m/z of [F+H]+), and a table lists every cut
 // of the molecule. The numbers come from the Rust graph (crates/mzlab-feat-grafo-wasm, `fragments`), fed with the V2000 molfile of the piece so that the atom
 // order is the one of Ketcher (a SMILES from Indigo is renumbered). Hydrogens: each side takes one H per bond order, as in mzFinder's cleavages.

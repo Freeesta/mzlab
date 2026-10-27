@@ -78,6 +78,10 @@ try:
             pg.click("#inf-sort"); attendi(pg, "document.querySelector('#inf-tree th[aria-sort=none]')", 10000)
             assert ids() == tree, "the third click gives back the tree"
         step("the Intensity column sorts the rows (highest, lowest, back to the tree)", sort)
+        def graph():
+            pg.click("#inf-graph"); attendi(pg, "BARRA.curTab === 'gra'", 10000)
+            drawer(pg, "alb"); pg.wait_for_selector("#inf-tree tbody tr", timeout=30000)
+        step("«Fragmentation graph» in the tree controls opens the graph tab", graph)
         def labels():
             t = pg.evaluate("""[...document.querySelectorAll('.inf-f')].map(l => [l.querySelector('span').textContent, l.title, l.querySelector('select').offsetHeight])""")
             assert [x[0] for x in t] == ["Level", "Mass tolerance", "Collision energies", "Spectrum"] or pg.evaluate("I18N.lang") != "en", t

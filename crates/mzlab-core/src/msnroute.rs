@@ -54,6 +54,9 @@ impl<R: ReadAt> Routes<R> {
     /// The filter of a request; `msn:<id>` is a node of the tree of the grouping of the request (`err.msn.node` when there is none).
     pub(crate) fn filtro<'a>(&mut self, f: Option<&'a str>) -> Result<Option<Filtro<'a>>> {
         let Some(f) = f else { return Ok(None) };
+        if let Some(id) = f.strip_prefix("canale:") {
+            return self.filtro_canale(id).map(Some);
+        }
         let Some(id) = f.strip_prefix("msn:") else {
             return Ok(Some(Filtro::Testo(f)));
         };
@@ -131,6 +134,8 @@ pub(crate) enum Filtro<'a> {
 pub(crate) struct Msn {
     pub alberi: Vec<(Raggruppa, Arc<Albero>)>,
     pub opz: Opz,
+    /// The chromatogram headers the page gave and the channels built from them (`canali::rotte`).
+    pub canali: crate::canali::Stato,
 }
 
 /// `nom` (or absent), `0.01` (Da) or `10ppm`.

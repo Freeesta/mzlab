@@ -62,8 +62,6 @@ I18N.add("en", {
   "spec.follow.none.title": "Spectrum fixed at its time. Pick a chromatogram to follow",
   "spec.follow.aria": "The spectrum follows panel {n}: choose which chromatogram it follows",
   "spec.follow.title": "This spectrum follows the chromatogram: a click, the cursor or the arrows update it. Pick another chromatogram or «none»",
-  "spec.follow.none": "Fixed",
-  "spec.follow": "Follows: panel {n}",
   "xic.empty": "empty",
   "xic.ion1": "Ion 1",
   "xic.ionN": "Ion {n}",
