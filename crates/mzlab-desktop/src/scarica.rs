@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::librerie::{Folder, META};
+use crate::scarica_fonti::CatalogSource;
 use crate::update::{sha256_hex, Source};
 
 /// The highest `.mzlib` version this app reads (`mzlab_lib::format::VERSION`; a test keeps them equal).
@@ -104,12 +105,15 @@ pub struct Catalog {
     pub librerie: Vec<Package>,
     #[serde(default)]
     pub esterne: Vec<External>,
+    /// `librerie/2`: every source of the menu with its mode (empty in `librerie/1`)
+    #[serde(default)]
+    pub fonti: Vec<CatalogSource>,
 }
 
 pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, DlError> {
     let c: Catalog = serde_json::from_slice(bytes)
         .map_err(|e| DlError::new("lib.dl.err.catalog", e.to_string()))?;
-    if c.formato != "librerie/1" {
+    if c.formato != "librerie/1" && c.formato != "librerie/2" {
         return Err(DlError::new("lib.dl.err.catalog", c.formato));
     }
     // names that become file names: plain only
@@ -126,6 +130,12 @@ pub fn parse_catalog(bytes: &[u8]) -> Result<Catalog, DlError> {
         {
             return Err(DlError::new("lib.dl.err.catalog", format!("id {id}")));
         }
+    }
+    if c.fonti
+        .iter()
+        .any(|f| !["site", "external", "link"].contains(&f.modo.as_str()))
+    {
+        return Err(DlError::new("lib.dl.err.catalog", "fonti"));
     }
     for p in &c.librerie {
         for pc in &p.pezzi {

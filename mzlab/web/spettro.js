@@ -53,8 +53,9 @@ const specPol = p => { const f = p._a && p._a.data && p._a.data[0] && p._a.data[
 // opens the sidebar tab of the neutral losses filtered on |dm|, or the adducts when dm is a usual adduct exchange
 function dmOpen(dm, hr, polarity, losses) {
   const ad = !losses && !!adductPair(dm, hr, polarity), q = String(+Math.abs(dm).toFixed(hr ? 4 : 1));
-  if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "adducts" : "losses", ad ? {} : { q });
+  if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "calc" : "losses", ad ? {} : { q });
   else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
+  if (ad) setTimeout(() => CALCADD.showDelta(+Math.abs(dm).toFixed(hr ? 4 : 1)), 150);
 }
 /** right click on the label of a measure: straight to the losses or adducts tab; true when the click was on a label */
 function measCtx(p, px, py) {

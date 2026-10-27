@@ -82,3 +82,8 @@ Un file per lavoro in `docs/agenti/prompt-flow-ux/` (formato a 7 punti, ramo e d
 | F — pannello Terminal | `F.md` | `claude/flow-terminal` | E |
 
 A, B, C ed E partono insieme; D dopo A; F dopo E. I file sorgente sono disgiunti; i test e2e comuni (`e2e_flow.py`, `e2e_flow_msn.py`) si toccano solo nelle righe del proprio lavoro.
+
+## 6. Carte e viste (stato)
+
+- **Nomi e gruppi** (`flow-names.js`): `F.NAMES` dà un nome inglese a ogni passo (l'id non si mostra mai); `F.GROUPS` sono gruppi di Simple fuori dalla base (Export = `msn.library_export` + `msn.table_export`); `F.INFUSION_STEPS` sono i passi che leggono l'infusione di Data senza `file:` nel piano e ricevono l'arco da Raw files (`F.canvasModel`, `flow-fix.js`).
+- **Carta di vista** (`F.STEP_VIEWS`): una carta `kind: "view"` (chiave `view:<istanza>`) accanto al passo, fuori dal piano (`mzflow/2` invariato); è spenta finché `S.results` non ha il risultato del suo tipo, poi apre `F.openResult` con il fuoco nella vista. Con ≤ 5 carte `F.layout` usa W 250, H 88.

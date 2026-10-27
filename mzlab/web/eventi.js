@@ -79,7 +79,7 @@ function attach(p) {
     if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair";
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
-    if (p.rd) p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
+    if (p.rd) p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : (a.map ? "RT " : "") + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) + ASSE.tag(drag) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
     showHover(p, px, py); if (drag) p.tip.hidden = true; if (p.type === "spec" && window.XICLENS) XICLENS.move(p, px, py, !!drag);
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py, e);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
@@ -605,7 +605,6 @@ document.addEventListener("keydown", e => {
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
 });
 const CALC = { ans: 0, tape: /** @type {{ e: any, r: any }[]} */ ([]), fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
-let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
 // the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
 function calcTape() {
   const tp = Q("#calctape"); tp.hidden = !CALC.tape.length || !Q("#calcpad") || Q("#calcpad").hidden;
@@ -631,20 +630,11 @@ Q("#calcin").onkeydown = ev => {
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if (ev.key.length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
-// the optional field «m/z osservata» of the calculator: only with a high-resolution file loaded (the field stays outside #calcout, so what is typed survives the redraws)
-function calcObs(on) {
-  let w = Q("#calcobsw");
-  if (!w && on) {
-    Q("#calcsum").insertAdjacentHTML("afterend", '<label id="calcobsw" class="sm muted" style="display:block;margin:4px 0" title="' + I18N.t("calc.obs.title") + '">' + I18N.t("calc.obs") + ' <input id="calcobs" inputmode="decimal" autocomplete="off" style="width:130px;margin:0 0 0 6px"></label>');
-    Q("#calcobs").oninput = calcRun; w = Q("#calcobsw");
-  }
-  if (w) w.hidden = !on;
-}
 async function calcRun() {
   const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t);
-  pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
-  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; res.textContent = ""; return; }
+  pad.hidden = !ex; res.hidden = !ex || !t; Q("#calcadd").hidden = ex && !!t; if (nlBtn) nlBtn.hidden = true; calcTape();
+  if (!t) { sum.innerHTML = ""; res.textContent = ""; await CALCADD.render(""); return; }
   if (ex) {
     out.innerHTML = ""; const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
     if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
@@ -662,30 +652,7 @@ async function calcRun() {
     }
     sum.innerHTML = r.err ? EH(r.err) : ""; return;
   }
-  try {
-    const r = await getFormula(t, "");
-    const want = defAdduct();
-    sum.innerHTML = t.replace(/\s+/g, "") !== r.formula ? I18N.t("calc.interpreted", { formula: fmtFormula(r.formula) }) : "";      // what was calculated, when the capitals were fixed
-    // only the adducts of the polarity of the files shown (positive files: [M+H]+, [M+Na]+...; negative: [M-H]-...); no files or mixed: both, under ESI+ / ESI-; a small link shows the other polarity
-    const fl = shown().length ? shown() : E.files.filter(f => f.vis), pos = fl.some(f => f.polarity === "positive"), neg = fl.some(f => f.polarity === "negative");
-    const mine = pos && !neg ? "+" : neg && !pos ? "-" : "", both = !mine || CALC_MORE;
-    const ent = Object.entries(r.adducts), isPos = a => a.endsWith("+");
-    // high resolution (an Orbitrap / Q-TOF file is loaded): m/z with the decimals of the profile and, if the student writes the m/z measured, the error in ppm of each adduct (the program does not guess which one it is)
-    const hrf = window.HR ? E.files.filter(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))) : [], hr = hrf.length > 0, dd = hr ? Math.max(HR.dec(hrf, 1), HR.dec(hrf, 2)) : 4;
-    calcObs(hr); const ob = hr ? numIt(Q("#calcobs").value) : NaN, hasObs = hr && Number.isFinite(ob) && ob > 0;
-    const rowOf = ([a, v]) => `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${hr ? v.mz5.toFixed(dd) : v.mz.toFixed(4)}</td>${hasObs ? `<td title="${((ob - v.mz5) * 1000).toFixed(1)} mDa">${HR.ppm(ob, v.mz5).toFixed(1)}</td>` : ""}<td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="${I18N.t("calc.xic.title")}">XIC</button></td></tr>`;
-    const grp = (lab, rows) => rows.length ? `<tr class="pg"><td colspan="${hasObs ? 5 : 4}"><b>${lab}</b></td></tr>` + rows.map(rowOf).join("") : "";
-    const P = ent.filter(([a]) => isPos(a)), N = ent.filter(([a]) => !isPos(a));
-    const body = !both ? (mine === "+" ? P : N).map(rowOf).join("") : !mine ? grp("ESI+", P) + grp("ESI\u2212", N) : mine === "+" ? grp("ESI+", P) + grp("ESI\u2212", N) : grp("ESI\u2212", N) + grp("ESI+", P);
-    const more = mine ? `<p class="sm"><a href="#" id="calcmore">${CALC_MORE ? I18N.t("calc.moreOnly", { pol: mine === "+" ? "ESI+" : "ESI\u2212" }) : I18N.t("calc.moreAlso", { pol: mine === "+" ? "ESI\u2212" : "ESI+" })}</a></p>` : "";
-    out.innerHTML = `<p>${I18N.t("calc.neutral", { formula: fmtFormula(r.formula), mass: r.neutral.toFixed(4), nominal: r.nominal_neutral })}</p>
-      <table><tr><th>${I18N.t("calc.col.adduct")}</th><th>${I18N.t("calc.col.exact")}</th>${hasObs ? `<th>${I18N.t("calc.col.ppm")}</th>` : ""}<th>${I18N.t("calc.col.nominal")}</th><th></th></tr>${body}</table>${more}`;
-    const mo = out.querySelector("#calcmore"); if (mo) mo.onclick = e => { e.preventDefault(); CALC_MORE = !CALC_MORE; calcRun(); };
-    out.querySelectorAll("button[data-m]").forEach(b => b.onclick = () => {
-      Q("#calcdlg").close();
-      openXic([...tabPanels()].reverse().find(q => q.type === "xic") || null, { formula: r.formula, adduct: b.dataset.a });
-    });
-  } catch (e_) { const e = /** @type {Lanciato} */ (e_); sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
+  await CALCADD.render(t);
 }
 Q("#calcin").oninput = calcRun;
 

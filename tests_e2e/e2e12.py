@@ -39,7 +39,7 @@ with sync_playwright() as p:
         c = pg.locator('.pnl.chrom').first
         c.locator('[data-a=iauto]').click(); box = c.locator("canvas").bounding_box()
         x = pg.evaluate("E.panels[0]._a.X(14.33)"); pg.mouse.click(box["x"] + x, box["y"] + 120); pg.wait_for_timeout(500)
-        assert pg.is_visible("#askdlg") and "non si integra" in pg.inner_text("#asktxt") and pg.evaluate("E.panels[0].ints.length") == 0
+        assert pg.is_visible("#askdlg") and "non sul TIC" in pg.inner_text("#asktxt") and pg.evaluate("E.panels[0].ints.length") == 0
         pg.click("#askno"); c.locator('[data-a=iauto]').click()
         # zoom tool on the chromatogram
         c.locator('[data-a=izoom]').click()

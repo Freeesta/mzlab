@@ -124,15 +124,41 @@ try:
             kinds = pg.evaluate("Object.values(document.querySelector('.flx-list').__flow.results).flat().map(r => r.type).sort()")
             assert kinds == ["library", "report", "table"], kinds
             pg.locator(".flx-res .ig-node").nth(1).click()
-            pg.wait_for_selector(".flx-res .fl-b:has-text('Use ')", timeout=10000)
-            pg.locator(".flx-res .fl-b:has-text('Use ')").first.click()
-            sc = pg.evaluate("(document.querySelector('.flx-list').__flow.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')).params || {}).scelte")
-            assert sc and "=" in sc, sc
+            pg.wait_for_selector(".flx-res .ig-cands", timeout=10000)   # the panel of the ion is the one of the Fragmentation graph tab of Data
+            if not pg.locator(".flx-res .ig-use:not([disabled])").count():   # «Use» is offered only to an ion with several candidates
+                for i in range(2, pg.locator(".flx-res .ig-node").count()):
+                    pg.locator(".flx-res .ig-node").nth(i).click(); pg.wait_for_selector(".flx-res .ig-cands", timeout=10000)
+                    if pg.locator(".flx-res .ig-use:not([disabled])").count(): break
+            if pg.locator(".flx-res .ig-use:not([disabled])").count():
+                pg.locator(".flx-res .ig-use:not([disabled])").first.click()
+                sc = pg.evaluate("(document.querySelector('.flx-list').__flow.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')).params || {}).scelte")
+                assert sc and "=" in sc, sc
             pg.click(".flx-res [aria-pressed=false]")
             assert pg.locator(".flx-res table").count() >= 1
             assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], "no route the engine could not serve"
             pg.evaluate("document.querySelector('.flx-res').remove()")
         step("the graph view draws one box per ion and «Use» writes the choice in scelte", graph_view)
+        def cards():
+            # Raw files → Fragmentation graph → {Export, View graph}; no id on a card; the view card is on once the run made the graph
+            names = pg.evaluate("[...document.querySelectorAll('.fln .fln-t')].map(n => n.textContent).sort()")
+            assert {"Export", "Fragmentation graph", "Raw files", "View graph"} <= set(names), names
+            assert pg.locator(".fl-lines path").count() >= 3, "an arc from Raw files, one to Export, one to View graph"
+            shown = pg.inner_text("#flx-root")
+            assert not any(i in shown for i in ("spectra.msn_graph", "msn.library_export", "msn.table_export")), "no step id on the page"
+            pos = pg.evaluate("Object.fromEntries([...document.querySelectorAll('.fln')].map(n => [n.querySelector('.fln-t').textContent, n.offsetLeft]))")
+            assert pos["Raw files"] < pos["Fragmentation graph"] < pos["Export"] == pos["View graph"], pos
+            assert pg.locator('.fln[data-key^="view:"]:not([aria-disabled])').count() == 1, "the view is on after the run"
+            pg.locator('.fln[data-key^="view:"]').click()
+            pg.wait_for_selector(".flx-res .ig-node", timeout=30000)
+            assert pg.evaluate("document.activeElement && document.activeElement.closest('.flx-res') !== null"), "the focus is inside the view"
+            g = json.loads(got["r"]["files"][0]["text"])
+            pg.click('.flx-res button:has-text("Radial")'); pg.wait_for_selector(".flx-res .ig-node", timeout=10000)
+            assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "the radial view draws every ion"
+            pg.locator(".flx-res .ig-node").first.click(); pg.wait_for_selector(".flx-res .ig-cands", timeout=10000)
+            pg.click('.flx-res button:has-text("Open in Data")')
+            attendi(pg, "document.getElementById('ig-wrap') && document.querySelector('#ig-wrap .ig-node')", 60000)
+            pg.click('#nav button[data-v="flow"]'); pg.evaluate("document.querySelector('.flx-res') && document.querySelector('.flx-res').remove()")
+        step("the cards: Raw files, Fragmentation graph, Export and View graph; the view opens with Tree/Radial, the ion panel and Open in Data", cards)
         def empty():
             pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i); null")
             try: x = pg.evaluate(RUN, {"formula": ION})

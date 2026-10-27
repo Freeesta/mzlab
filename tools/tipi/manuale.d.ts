@@ -40,7 +40,7 @@ type LibQuery = Record<string, string | number>;
 type LibDir = { kind: string, name: string, list(sub?: string): Promise<LibEnt[]>, file(rel: string): Promise<LibFile>, write(rel: string, data: string | Blob | Uint8Array): Promise<void>, remove(rel: string): Promise<void>, replace(tmp: string, rel: string): Promise<void>, reader(file: LibFile): (off: number, len: number) => Uint8Array };  // same interface for handles and for the native folder
 type LibPiece = { file: string, dimensione: number, sha256: string };
 type LibPkg = { id: string, versione: string, sha256: string, dimensione: number, pezzi: LibPiece[], lettore_min?: number, spettri?: number, picchi?: number, polarita?: number };  // an entry of the catalog
-type LibCatalog = { formato: string, librerie: LibPkg[], esterne?: { id: string, url: string }[] };
+type LibCatalog = { formato: string, librerie: LibPkg[], esterne?: { id: string, url: string }[], fonti?: { id: string, modo: string }[] };
 type LibErr = Error & { key: string, params: Record<string, unknown> };
 type LibFetch = (url: string, opts?: RequestInit) => Promise<Response>;
 // File System Access API members the bundled libs do not have (libreria-cartella.js reads and writes the folders with them).
@@ -50,3 +50,20 @@ interface FileSystemSyncAccessHandle { close(): void; flush(): void; getSize(): 
 type DrawKet = any;  // Ketcher editor object or one of its parts (vendor bundle, untyped)
 type DrawLine = [string | number, string][];  // one line of a drawing label: pieces [text, "sub" | "sup" | "it" | ""]
 type DrawStruct = { formula: string, mass: number, n: Record<string, number>, q: number, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing
+/** A file of the loading table / of ST.files as the engine reports it (shell.js, explore.js): the fields differ by experiment, so only `name` is fixed. */
+type FileRiga = { name: string; [k: string]: any };
+/** A file open in the session (E.files): `file` is its name in the session, `gone` marks one taken away. */
+type FileAperto = { file: string; label?: string; gone?: boolean; color?: string; [k: string]: any };
+/** A file still to be opened one by one (E.pending). */
+type Pendiente = { file: string; label: string; state: string; msg?: string };
+/** A file as the loading code handles it: the File of the picker or of a converter, plus the records that makers (Rust engine, readers module) attach. */
+type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any } };
+/** What one loading collects for the notice after it (shell.js reportLoad). */
+type CaricaRep = { unopen: { name: string; ext: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
+
+/** Loose record from the untyped engine: a panel, a session entry or a JSON reply (explore.js). */
+type Bag = Record<string, any>;
+/** One colour palette of explore.js PALS. */
+type Palette = { seq?: string[]; seqDark?: string[]; a?: number; b?: number; aDark?: number; bDark?: number; cat: string[]; catDark: string[]; blank: string; blankDark: string; std: string; stdDark: string; dash?: boolean; lw?: number; plain?: boolean; hc?: boolean; hue?: (u: number) => string };
+/** A (real or synthetic) event that opens the context menu of explore.js menu(). */
+type CtxEv = { preventDefault: () => void, clientX: number, clientY: number, kbd?: boolean, lp?: boolean };
