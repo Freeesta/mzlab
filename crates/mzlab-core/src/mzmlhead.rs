@@ -4,8 +4,8 @@
 //! without a regex engine (it would cost size in the WASM). The bytes come through a `ReadAt`.
 
 use crate::error::{Error, Result};
-use crate::mzmlarray::{decode_array, Inflate, Want};
 use crate::idxread::ReadAt;
+use crate::mzmlarray::{decode_array, Inflate, Want};
 
 /// Values an array may inflate to at least (see `decode`).
 const MIN_VALUES: usize = 8 << 20;
@@ -242,7 +242,11 @@ impl<R: ReadAt> Mzml<R> {
         let chunk = self.read(c.start, c.end)?;
         let (mut t, mut y): (Option<Vec<f64>>, Option<Vec<f64>>) = (None, None);
         for (head, data) in arrays(&chunk) {
-            let a = decode(&head, &data, c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0))?;
+            let a = decode(
+                &head,
+                &data,
+                c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0),
+            )?;
             if head.contains("MS:1000595") {
                 t.get_or_insert(a);
             } else {
@@ -612,6 +616,13 @@ pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64
         .unwrap_or(crate::numarray::Num::F64);
     let zlib = head.contains("accession=\"MS:1000574\"");
     let text = String::from_utf8_lossy(data);
-    let (values, _) = decode_array(num, zlib, &text, expected.max(MIN_VALUES), &mut Inflate::new(), Want::F64)?;
+    let (values, _) = decode_array(
+        num,
+        zlib,
+        &text,
+        expected.max(MIN_VALUES),
+        &mut Inflate::new(),
+        Want::F64,
+    )?;
     Ok(values)
 }

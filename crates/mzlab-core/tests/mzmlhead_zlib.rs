@@ -33,7 +33,10 @@ fn read(bytes: Vec<u8>) -> mzlab_core::error::Result<(Vec<f64>, Vec<f64>)> {
 
 #[test]
 fn honest_array_reads() {
-    let v: Vec<u8> = [1.0f64, 2.0, 3.0].iter().flat_map(|x| x.to_le_bytes()).collect();
+    let v: Vec<u8> = [1.0f64, 2.0, 3.0]
+        .iter()
+        .flat_map(|x| x.to_le_bytes())
+        .collect();
     let (t, y) = read(file(3, &zlib_b64(&v), &zlib_b64(&v))).unwrap();
     assert_eq!((t, y), (vec![1.0, 2.0, 3.0], vec![1.0, 2.0, 3.0]));
 }
@@ -42,7 +45,10 @@ fn honest_array_reads() {
 fn bomb_is_an_error_not_an_oom() {
     // 200 MB of zeros compress to ~200 KB; the array declares 3 points
     let bomb = zlib_b64(&vec![0u8; 200 << 20]);
-    let ok: Vec<u8> = [1.0f64, 2.0, 3.0].iter().flat_map(|x| x.to_le_bytes()).collect();
+    let ok: Vec<u8> = [1.0f64, 2.0, 3.0]
+        .iter()
+        .flat_map(|x| x.to_le_bytes())
+        .collect();
     let e = read(file(3, &bomb, &zlib_b64(&ok))).unwrap_err();
     assert_eq!(e.key, "error.memoryBudget");
 }
