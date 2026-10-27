@@ -157,7 +157,8 @@
   const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ls", I18N.t("icon.nl"), lossTab, bindLoss]];
   function open(which, opt = {}) {
     // the adducts are the calculator's: the old request opens it
-    if (which === "ad") { const c = Qs("#calcdlg"); if (c && c.hidden && window.calcToggleFloat) window.calcToggleFloat(); return; }
+    // in Dati the calculator lives in the sidebar tab, elsewhere it floats
+    if (which === "ad") { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else { const c = Qs("#calcdlg"); if (c && c.hidden && window.calcToggleFloat) window.calcToggleFloat(); } return; }
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
     const show = id => {
