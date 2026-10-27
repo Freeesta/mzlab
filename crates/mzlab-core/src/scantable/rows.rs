@@ -147,16 +147,16 @@ pub(crate) struct Rows {
     level_of: HashMap<Arc<str>, u8>,
     /// The texts that many rows repeat (filter strings, activation names): one allocation each.
     pool: HashSet<Arc<str>>,
+    window: super::DeclaredWindow,
 }
 
 impl Rows {
     pub(super) fn with(head: Head) -> Rows {
         Rows {
+            window: Default::default(),
             head,
             rows: Vec::new(),
-            refs: HashMap::new(),
-            level_of: HashMap::new(),
-            pool: HashSet::new(),
+            refs: HashMap::new(), level_of: HashMap::new(), pool: HashSet::new(),
         }
     }
 
@@ -247,13 +247,7 @@ fn resolution(hs: &str, h: &str) -> Option<f64> {
 impl Rows {
     /// Links every MSn row to its parent (`_link_parents`) and closes the table.
     pub(crate) fn finish(self, n_chromatograms: usize) -> Table {
-        let Rows {
-            head,
-            mut rows,
-            refs,
-            level_of,
-            pool,
-        } = self;
+        let Rows { head, mut rows, refs, level_of, pool, window } = self;
         // only reading needed them; the tables below are what the peak of this step is made of
         drop((level_of, pool));
         let by_native: HashMap<&str, usize> = rows
@@ -297,6 +291,7 @@ impl Rows {
             nce: head.nce,
             hr1,
             n_chromatograms,
+            window: window.span,
         }
     }
 }
@@ -329,6 +324,7 @@ impl Rows {
         };
         let rt = rt_minutes(h);
         let level = lvl.and_then(float).map_or(1, |v| v as u8);
+        self.window.note(h, level);
         let hs = h.split("<precursorList").next().unwrap_or("");
         let filt = cv(hs, "MS:1000512").unwrap_or("");
         let mut m = if level > 1 {

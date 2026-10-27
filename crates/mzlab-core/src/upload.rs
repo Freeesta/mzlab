@@ -207,10 +207,7 @@ fn prepared(
     sha256: String,
     probe: String,
 ) -> Prepared {
-    let run = format!(
-        "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}}}",
-        t.nce, t.hr1, t.n_chromatograms
-    );
+    let run = t.run_json();
     let table = ScanTable {
         level: t.rows.iter().map(|s| s.level).collect(),
         polarity: t.rows.iter().map(|s| s.polarity).collect(),

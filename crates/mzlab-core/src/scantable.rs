@@ -124,6 +124,35 @@ pub struct Table {
     pub nce: bool,
     pub hr1: bool,
     pub n_chromatograms: usize,
+    /// Lowest and highest m/z of the scan windows the method declares for the first 50 survey scans (`Run.scan_window_ms1`).
+    pub window: Option<(f64, f64)>,
+}
+
+/// The scan windows of the first 50 survey scans, as their union.
+#[derive(Default)]
+pub(crate) struct DeclaredWindow {
+    pub span: Option<(f64, f64)>,
+    surveys: usize,
+}
+
+impl DeclaredWindow {
+    pub fn note(&mut self, h: &str, level: u8) {
+        if level != 1 || self.surveys >= 50 {
+            return;
+        }
+        self.surveys += 1;
+        if let (Some(a), Some(z)) = (cv(h, "MS:1000501").and_then(float), cv(h, "MS:1000500").and_then(float)) {
+            self.span = Some(self.span.map_or((a, z), |(lo, hi)| (lo.min(a), hi.max(z))));
+        }
+    }
+}
+
+impl Table {
+    /// The `run` object of the index metadata (`scan_window` only when the scans declare one).
+    pub fn run_json(&self) -> String {
+        let w = self.window.map_or(String::new(), |(a, b)| format!(",\"scan_window\":[{a:?},{b:?}]"));
+        format!("{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}}}", self.nce, self.hr1, self.n_chromatograms)
+    }
 }
 
 /// The scan type of a spectrum, from the CV term of its header (`MS:1000341` precursor ion, `MS:1000326` constant neutral loss, `MS:1000325`
