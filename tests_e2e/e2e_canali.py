@@ -17,7 +17,7 @@ ds.make(D / "s")
 S = D / "s"
 ds.full_scan(D / "DAD-t0.mzML", 0, np.random.default_rng(3), dad=True)
 def load(pg, files):
-    stage(pg, files); pg.click("text=Carica dati"); ready(pg); pg.wait_for_timeout(800)
+    stage(pg, files); pg.click("text=Carica dati"); ready(pg); attendi(pg, f"E.files.length >= {len(files)}")
 def chans(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.canali.map(c => c.fam + ':' + c.omo))")
 def tipo(pg, k): return pg.evaluate(f"CANALI.canali({k}).then(j => j.tipo.proposto)")
 def idx(pg, label): return pg.evaluate(f"E.files.find(f => (f.label || f.name || '').includes({label!r})).k")
@@ -47,7 +47,7 @@ try:
         step("DAD file opens", dad)
         pg.evaluate("setTab('full')"); ready(pg)
         def tree():
-            pg.click("[data-o=canali]"); pg.wait_for_timeout(400)
+            pg.click("[data-o=canali]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
             n = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert n >= 5, n
             assert pg.evaluate("document.querySelector('.can-pop [role=tree]').getAttribute('aria-label')")
             lv = pg.evaluate("[...document.querySelectorAll('.can-pop [role=treeitem]')].map(e => e.getAttribute('aria-level'))"); assert "2" in lv, lv
@@ -55,7 +55,7 @@ try:
         step("tree with levels, aria and the exact id in the title", tree)
         def two():
             before = pg.evaluate("E.panels.find(p => p.type==='chrom').canali")
-            pg.click(".can-pop [role=treeitem][data-omo^='ms|1']"); ready(pg); pg.wait_for_timeout(600)
+            pg.click(".can-pop [role=treeitem][data-omo^='ms|1']"); ready(pg); frames(pg, 6)
             c = pg.evaluate("E.panels.find(p => p.type==='chrom').canali"); assert c and len(c) == 2, (before, c)
             ns = pg.evaluate("E.panels.find(p => p.type==='chrom')._a.sr.length"); assert ns >= 4, ns
         step("two channels over several files = more traces", two)
@@ -71,13 +71,13 @@ try:
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('.can-pop').hidden")
         step("keyboard: arrows, space, Escape", keys)
         def size():
-            pg.click("[data-o=canali]"); pg.wait_for_timeout(300)
+            pg.click("[data-o=canali]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
             h = pg.evaluate("Math.min(...[...document.querySelectorAll('.can-pop .can-row')].filter(e => e.offsetParent).map(e => e.getBoundingClientRect().height))"); assert h >= 24, h
             b = pg.evaluate("document.querySelector('[data-o=canali]').getBoundingClientRect().height"); assert b >= 24, b
             pg.keyboard.press("Escape")
         step("targets of at least 24 px", size)
         def miss():
-            pg.evaluate("(() => { const p = E.panels.find(p => p.type==='chrom'); p.canali = [CANALI.albero(E.files.filter(f=>f.kind==='full')).find(n => n.omo.startsWith('ms|2')).omo]; draw(p); })()"); ready(pg); pg.wait_for_timeout(600)
+            pg.evaluate("(() => { const p = E.panels.find(p => p.type==='chrom'); p.canali = [CANALI.albero(E.files.filter(f=>f.kind==='full')).find(n => n.omo.startsWith('ms|2')).omo]; draw(p); })()"); ready(pg); frames(pg, 6)
             t = pg.evaluate("E.panels.find(p => p.type==='chrom').leg.innerText"); assert "—" in t, t
         step("a file without the channel: «—» in the legend", miss)
         def xic():
@@ -94,10 +94,10 @@ try:
         r.b.close(); pg = r.page(p)
         load(pg, [S / "B_MRM-t0.mzML", S / "B_MRM-t5.mzML"])
         def mrm():
-            pg.evaluate("setTab('mrm')"); ready(pg); pg.wait_for_timeout(1500)
-            pg.click("[data-o=canali]"); pg.wait_for_timeout(300)
+            pg.evaluate("setTab('mrm')"); ready(pg); attendi(pg, "document.querySelector('[data-o=canali]')")
+            pg.click("[data-o=canali]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
             rows = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert rows == 2, rows
-            pg.click(".can-pop [role=treeitem] >> nth=1"); ready(pg); pg.wait_for_timeout(500)
+            pg.click(".can-pop [role=treeitem] >> nth=1"); ready(pg); frames(pg, 6)
             tr = pg.evaluate("E.panels.find(p => p.type==='mrm').tr"); assert isinstance(tr, list) and len(tr) == 1, tr
         step("MRM panel: srm channels give the transitions", mrm)
     r.close()

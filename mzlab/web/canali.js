@@ -109,7 +109,7 @@
   const nodeKey = n => srmKey(/** @type {any} */ ({ id: n.ids[0] }));
   /** the omologhi that the panel shows as ticked @param {any} p @param {Nodo[]} tree */
   function ticked(p, tree) {
-    if (p.type !== "mrm") return new Set(chosen(p));
+    if (!ESP.mrm(p)) return new Set(chosen(p));
     const all = !p.tr || (Array.isArray(p.tr) && !p.tr.length), want = new Set(Array.isArray(p.tr) ? p.tr : [p.tr]);
     return new Set(tree.filter(n => n.fam === "srm" && (all || want.has(nodeKey(n)))).map(n => n.omo));
   }
@@ -118,7 +118,7 @@
     ensure(p);
     const files = filesOf(p), tree = albero(files);
     if (!tree.length) return "";
-    const only = p.type === "mrm", sel = ticked(p, tree), open = !!p._canOpen;
+    const only = ESP.mrm(p), sel = ticked(p, tree), open = !!p._canOpen;
     const n = only ? [...sel].length : chosen(p).length;
     const head = `<div class="can-hd" aria-hidden="true"><span>${T("canali.col.canale")}</span><span>${T("canali.col.sigla")}</span><span>n</span><span>RT</span>${files.length > 1 ? `<span>${T("canali.col.file")}</span>` : ""}</div>`;
     return `<span class="can"><button class="bt canb${n > 1 ? " on" : ""}" type="button" data-o="canali" aria-haspopup="tree" aria-expanded="${open}" title="${EH(T("canali.btn.title"))}" aria-label="${EH(T("canali.btn.aria", { n }))}"><span>${T("canali.btn")}</span>${n > 1 ? ` <b>${n}</b>` : ""}</button>` +
@@ -128,7 +128,7 @@
   /** a click on a row: the channel is ticked or not @param {any} p @param {string} omo @param {Nodo[]} tree */
   function toggle(p, omo, tree) {
     COMANDI.fai("panel.source", p, () => {
-      if (p.type === "mrm") {
+      if (ESP.mrm(p)) {
         const srm = tree.filter(n => n.fam === "srm"), cur = new Set(ticked(p, tree));
         if (cur.has(omo)) cur.delete(omo); else cur.add(omo);
         const pick = srm.filter(n => cur.has(n.omo)).map(nodeKey);
@@ -212,10 +212,7 @@
   /** the channel an experiment type starts on in the file (esperimenti.js says which kind of channel) @param {any} f @returns {Promise<Canale | null>} */
   async function iniziale(f) {
     const c = await canali(f.k).catch(() => null); if (!c) return null;
-    const d = ESP.predefinito(c.tipo.proposto), v = c.canali;
-    const pick = d.canale === "ms1" ? v.find(x => x.fam === "ms" && x.liv === 1) : d.canale === "ms2" ? v.find(x => x.fam === "ms" && x.liv === 2)
-      : d.canale === "profondo" ? v.filter(x => x.fam === "ms").sort((a, b) => b.liv - a.liv)[0] : d.canale === "srm" ? v.find(x => x.fam === "srm" && srmKey(x) === (CAL.quant || "")) || v.find(x => x.fam === "srm")
-      : d.canale === "uv" ? v.find(x => x.fam === "uv") : null;
+    const v = c.canali, pick = ESP.scegli(c.tipo.proposto, v, (/** @type {any} */ x) => srmKey(x) === (CAL.quant || ""));
     return pick || v.find(x => x.fam === "tic") || null;
   }
   /** the type of experiment the engine proposes for a file (null until its channels are known) @param {any} f */
