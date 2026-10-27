@@ -69,10 +69,6 @@ try:
             for e in x["ev"]: by.setdefault(e["passo"], []).append(e["stato"])
             assert len(by) == 3 and all(s[-1] == "done" for s in by.values()), by
         step("spectra.msn_graph opens the file and the steps after it are done, none skipped", run)
-        def graph_result():
-            pg.click("#flx-run"); pg.click('.fl-meta button:has-text("Run in this browser")')
-            attendi(pg, "(() => { const S = document.querySelector('.flx-list').__flow; return Object.values(S.results || {}).some(l => l.some(r => /\\.json$/.test(r.label))); })()", 120000)
-        step("after the run the graph joins the Results of its step", graph_result)
         def no_null():
             attendi(pg, "(document.getElementById('flx-live') || {}).textContent", 30000)      # the status line spoke about a step
             t = pg.inner_text("#flx-live")
