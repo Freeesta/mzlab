@@ -9,7 +9,7 @@ import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 import { initContaminants } from "./disegno-contaminanti.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+import { indigo } from "./disegno-indigo.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
 /** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
@@ -343,14 +343,6 @@ const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textC
   for (let i = 0; i < chg.length; i += 8) L.push("M  CHG" + n3(Math.min(8, chg.length - i)) + chg.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join(""));
   L.push("M  END");
   return L.join("\n");
-}
-// Ketcher's structure service (Indigo) hangs when two conversions overlap: every SMILES / conversion call goes through this one queue. A slot is released
-// after 20 s at most, so a conversion that never answers cannot block the ones behind it.
-let indigoQ = /** @type {Promise<any>} */ (Promise.resolve());
-/** @template T @param {() => Promise<T>} fn @returns {Promise<T>} */
-function indigo(fn) {
-  const run = indigoQ.then(fn), slot = Promise.race([run.then(() => {}, () => {}), new Promise(ok => setTimeout(ok, 20000))]);
-  indigoQ = slot; return run;
 }
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
