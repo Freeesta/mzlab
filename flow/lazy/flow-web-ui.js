@@ -41,7 +41,12 @@
         for (const f of (res && res.files) || []) {
           const a = el("a", { href: URL.createObjectURL(new Blob([f.text], { type: "text/plain" })), download: f.name, text: f.name });
           slots.get(f.id)?.append(" · ", a);
+          // a text a view can show (the graph, a table) joins the Results of its step
+          const inst = F.instanceOf(S.plan, f.id), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : null), item = { type: "", label: f.name, text: async () => f.text };
+          const port = step && F.ports(step.out).find((/** @type {any} */ q) => F.viewFor(q.type, { ...item, type: q.type }));
+          if (port) { item.type = port.type; S.results = S.results || {}; S.results[f.id] = [item]; }
         }
+        if (S.redraw) S.redraw();
       } catch (e) { note.textContent = F.message(/** @type {any} */ (e)); }
       document.removeEventListener("flow:web-step", onStep);
       go.dataset.busy = ""; gate();
