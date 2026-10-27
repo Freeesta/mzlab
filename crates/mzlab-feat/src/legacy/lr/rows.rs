@@ -93,7 +93,10 @@ pub fn hypotheses(registry: &str, adduct: &str) -> Res<Vec<Hyp>> {
             .cmp(&out[b].steps)
             .then(out[a].mz.total_cmp(&out[b].mz))
     });
-    Ok(ord.into_iter().map(|i| promote(out[i].clone(), adduct)).collect())
+    Ok(ord
+        .into_iter()
+        .map(|i| promote(out[i].clone(), adduct))
+        .collect())
 }
 
 /// The merge by nominal mass orders the formulas of one ion by their text, so its leader may be a way of two steps while an alternative takes one: the
