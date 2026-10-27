@@ -72,7 +72,9 @@
     try {
       lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
       // the browser storage held by another tab: the loading screen says so
-      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;
+      // reopening takes about 0.15 s per stored file (an index each): the limit grows with the files in the storage, 240 samples took 36 s
+      const stored = await (async () => { let n = 0; try { for await (const _ of /** @type {any} */ (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files")).keys()) n++; } catch (_) { /* nothing stored yet */ } return n; })();
+      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * stored;
       const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), stall))]);
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
