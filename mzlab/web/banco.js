@@ -474,12 +474,8 @@ const BANCO = (() => {
     };
     b.querySelector("#hri-off").onclick = () => { if (sp) { COMANDI.fai("spec.isotopes", sp, () => { sp.iso = null; }); draw(sp); } };
   }
-  function tIdn(b, p) {
-    const sp = specOf(p), f = cFile(p);
-    b.innerHTML = `<div class="muted">${I18N.t("bn.idn.note")}</div><div class="row"><button type="button" id="hri-s">${I18N.t("bn.idn.search")}</button><button type="button" id="hri-a">${I18N.t("bn.idn.all")}</button></div><div class="muted sm">${I18N.t("bn.idn.hint")}</div>`;
-    b.querySelector("#hri-s").onclick = () => { if (sp && sp.level === 2 && window.LIB) LIB.searchFrom(sp); else nearMsg(I18N.t("bn.idn.needMs2")); };
-    b.querySelector("#hri-a").onclick = () => { const f2 = f && (f.kind === "ms2" ? f : E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === "ms2")); if (f2 && window.LIB) LIB.identifyAll(f2.k); else nearMsg(I18N.t("lib.noMs2")); };
-  }
+  // TODO mzFlow: identificazione su feature table — the «identify all the MS2 of the file» button left this tab (LIB.identifyAll stays for the Flow work)
+  const tIdn = async (b, p, tok) => { await carica("m:ident-pannello.js"); const sp = specOf(p); return IDP.render(b, sp && sp.level === 2 ? sp : null, () => tok !== ist.tok); };
   const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); return INFG.render(b, p, tok); } };
   let infoRaf = 0;
   function renderInfo() {

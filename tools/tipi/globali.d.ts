@@ -35,6 +35,7 @@ declare var FAIR: any;
 declare var FIG: any;
 declare var GRADIENTE: any;
 declare var I18N: any;
+declare var IDP: any;
 declare var INFG: any;
 declare var INFGAPRI: any;
 declare var KMDCALC: any;

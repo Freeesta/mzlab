@@ -399,7 +399,6 @@
   "og.lossHint": "Suggerimento su una riga della tabella; {dm} = differenza di massa dal candidato, {lost} = stessa differenza arrotondata.",
   "og.waitN": "Contatore di secondi durante il calcolo; {s} = secondi trascorsi.",
   "bn.com.hint": "«Segui» / «Follow» = la casella bn.com.follow.",
-  "bn.idn.hint": "«Cerca nelle librerie» = lib.search.title.",
   "bn.dec.n": "Voce del menu dei decimali; {n} = numero di decimali.",
   "bn.drop": "Suggerimento del pulsante «×» di un grafico impilato; {name} = etichetta del grafico.",
   "bn.h.nParams": "Riga sopra la tabella dell'intestazione di una scansione; {n} = numero di parametri.",
@@ -747,5 +746,9 @@
   "etpk.tip.nm": "Tooltip dell'etichetta di un picco del PDA/UV; {rt} = RT (min), {v} = lunghezza d'onda del massimo (nm).",
   "etpk.tip.xic": "Tooltip dell'etichetta di un picco di XIC; {rt} = RT (min), {v} = m/z estratto.",
   "etpk.tip.mrm": "Tooltip dell'etichetta di un picco di MRM; {rt} = RT (min), {v} = transizione Q1>Q3.",
-  "tdati.etpk": "Riga della tabella per un picco con etichetta (RT e grandezza che lo definisce); {v} = testo dell'etichetta, es. «14.26 · 254 nm»."
+  "tdati.etpk": "Riga della tabella per un picco con etichetta (RT e grandezza che lo definisce); {v} = testo dell'etichetta, es. «14.26 · 254 nm».",
+  "bn.idn.spec": "Riga sopra il pulsante di ricerca; {rt} = RT con unità, {mz} = m/z del precursore, {pol} = + o −.",
+  "bn.idn.loaded": "Esito del caricamento di file o cartella; {n} = librerie caricate, {m} = file ignorati.",
+  "bn.idn.dl": "Nome accessibile e tooltip dell'icona di scarico; {name} = nome e versione della libreria.",
+  "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria."
 }

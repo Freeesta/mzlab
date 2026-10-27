@@ -51,7 +51,7 @@ try:
             tab("cmp"); pg.wait_for_selector("#cx-mz", timeout=10000); pg.click("#cx-exp"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
             tab("iso"); pg.fill("#hri-f", "C13H24N4O3S"); pg.fill("#hri-r", "35000"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.iso&&p.iso.formula==='C13H24N4O3S'&&p.iso.R===35000)")
-            tab("idn"); assert "Identifica tutte" in body()
+            tab("idn"); assert "Carica cartella" in body() and "Identifica tutte" not in body(), body()
         step("composition, isotopes and libraries open the functions that already exist", launchers)
         def persist():
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.banco.info')).tab") == "idn"

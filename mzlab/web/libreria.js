@@ -603,6 +603,6 @@ const LIB = (() => {
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
   if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.identAll", gruppo: "lib", viste: ["chrom"], nome: () => I18N.t("ctx.chrom.identAll"),
     visibile: c => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), esegui: c => identifyAll(c.k) });
-  return { open, addFiles, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
+  return { open, addFiles, queryOf, profOf, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;
