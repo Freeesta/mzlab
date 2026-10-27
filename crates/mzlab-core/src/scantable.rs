@@ -98,7 +98,7 @@ pub struct Row {
     pub an: &'static str,
     /// The native id, the same allocation as the key of `Rows::level_of`.
     pub native: Arc<str>,
-    /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
+    /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EMC`, `TDF`, `ER`): see `kind_of`.
     pub kind: Option<&'static str>,
     /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
     pub mob: Option<(f64, &'static str)>,
@@ -127,15 +127,16 @@ pub struct Table {
 }
 
 /// The scan type of a spectrum, from the CV term of its header (`MS:1000341` precursor ion, `MS:1000326` constant neutral loss, `MS:1000325`
-/// constant neutral gain, `MS:1000789` enhanced multiply charged and `MS:1000790` time-delayed fragmentation, both shown as `EPI`) or, when the
+/// constant neutral gain, `MS:1000789` enhanced multiply charged `EMC`, `MS:1000790` time-delayed fragmentation `TDF`, `MS:1000791` enhanced resolution `ER`) or, when the
 /// header says nothing, from a Thermo filter token (`pr`, `cnl`, `cng`). Never from a name.
 pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
-    const TERMS: [(&str, &str); 5] = [
+    const TERMS: [(&str, &str); 6] = [
         ("MS:1000341", "PREC"),
         ("MS:1000326", "NL"),
         ("MS:1000325", "NG"),
-        ("MS:1000789", "EPI"),
-        ("MS:1000790", "EPI"),
+        ("MS:1000789", "EMC"),
+        ("MS:1000790", "TDF"),
+        ("MS:1000791", "ER"),
     ];
     for (acc, k) in TERMS {
         if h.contains(&format!("accession=\"{acc}\"")) {

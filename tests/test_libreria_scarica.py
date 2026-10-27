@@ -106,3 +106,10 @@ const v = (stato, versione) => [{ tipo: "pacchetto", nome: "massbank-pos.mzlib",
 return { ok: S.parseCatalog(good).librerie.length, bad, notJson, st: [S.stateOf(pk.pkg, []), S.stateOf(pk.pkg, v("pronta", "2")), S.stateOf(pk.pkg, v("pronta", "1")), S.stateOf(pk.pkg, v("aggiornamento", "1")), S.stateOf(pk.pkg, v("danneggiata", "2"))] };""")
     assert r["ok"] == 1 and set(r["bad"]) == {"lib.dl.err.catalog"} and len(r["bad"]) == 5 and r["notJson"] == "lib.dl.err.catalog"
     assert r["st"] == ["new", "installed", "update", "update", "damaged"]
+
+
+def test_the_catalog_v2_is_accepted_with_its_sources_and_v1_still_is():
+    r = run(SETUP + """
+const pk = mk(7, "2"), v2 = S.parseCatalog(JSON.stringify({ formato: "librerie/2", librerie: [pk.pkg], fonti: [{ id: "massbank-pos", modo: "site" }] })), v1 = S.parseCatalog(JSON.stringify({ formato: "librerie/1", librerie: [] }));
+return { fonti: v2.fonti.length, v1: v1.fonti.length };""")
+    assert r == {"fonti": 1, "v1": 0}

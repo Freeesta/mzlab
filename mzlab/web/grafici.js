@@ -79,6 +79,7 @@ async function ms2trSeries(p) {
 async function rawSeries(p) {
   if (p.type === "chrom" && isAnalog(p.kind)) return analogSeries(p);
   if (p.type === "chrom" && p.ranges && p.ranges.length && window.BANCO) return BANCO.rangeSeries(p);       // stacked graphs of the bench (banco.js)
+  if (window.CANALI && CANALI.on(p)) return CANALI.series(p, shownFor(p));        // the channels the student ticked (canali.js)
   if (p.type === "chrom" && (p.tab || E.tab) === "ms2" && !isAnalog(p.kind) && p.kind !== "pda") { const s = await ms2trSeries(p); if (s) return s; }
   if (p.type === "chrom") {
     let fl = shownFor(p);
@@ -91,7 +92,7 @@ async function rawSeries(p) {
   const files = shownFor(p);
   if (p.type === "xic") {
     const ts = p.traces, out = [];
-    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv).then(d => ({
+    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.canale) : null).then(d => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
       color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));
@@ -182,7 +183,7 @@ async function draw(p) {
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -260,12 +261,13 @@ function legend(p, all, note = "") {
     const files = scanFiles(shownFor(p)), one = p.traces.length === 1;
     const dsw = (c, d) => d && d.length ? `<i style="background:repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)"></i>` : sw(c);
     const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}" title="${I18N.t("leg.toggle.title")}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}" title="${I18N.t("leg.rename.title")}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
-    const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}" data-h="x|${f.k}|${p.traces[0].mz}" title="${I18N.t("leg.toggle.title")}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
+    const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}" title="${I18N.t("leg.toggle.title")}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
   } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
+  if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMANDI.fai("xic.traces", p, () => { t.label = v; }); draw(p); } });
@@ -284,14 +286,17 @@ function legCollapse(p) {
 }
 
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
-function traceMax(s, x0, x1) {
+function traceMax(DC, s, x0, x1) {
   let m = 1e-9, neg = 0;
   for (const za of [s.ze ?? -Infinity, -Infinity]) {
-    for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= za) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    [m, neg] = DC.extent(s.x, s.ys, Math.max(x0, za), x1, m, neg);
     if (m > 1e-9 || neg < 0) break;
   }
   return { m, neg };
 }
+// the smoothed and the clipped copies of a trace depend on the data only: a zoom or a pan draws again with the same arrays
+const SMOOTHED = new WeakMap(), CLIPPED = new WeakMap();
+const cachedMap = (cache, a, f) => { let r = cache.get(a); if (!r) { r = f(a); cache.set(a, r); } return r; };
 // the zero line (dashed; with a background it is the background itself, labelled) and the grey band of the initial zone
 function zeroMarks(g, sr, X, Y, W, H, band) {
   const fo = sr.some(s => s.cf), y0 = Math.round(Y(0));
@@ -301,6 +306,7 @@ function zeroMarks(g, sr, X, Y, W, H, band) {
   if (xb > M.l) { g.fillStyle = "rgba(120,120,120,.22)"; g.fillRect(M.l, M.t, xb - M.l, H - M.t - M.b); }
 }
 async function drawLines(p) {
+  const DC = (/** @type {any} */ (window).DECIMA ||= await import("./decima.js"));       // loaded once; later drawings do not wait for the module system
   const all = await seriesOf(p); if (window.ETPK && !p._a) await ETPK.ready(p, all.filter(s => !isHid(p, s)));       // the first drawing of a panel waits a moment for the peak labels (drawn once)
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
@@ -317,9 +323,9 @@ async function drawLines(p) {
   const flo = Math.floor(lo * 10 + 1e-6) / 10, fhi = Math.ceil(hi * 10 - 1e-6) / 10, x0 = p.zoom ? p.zoom[0] : flo, x1 = p.zoom ? p.zoom[1] : fhi;
   const so = window.SUBREF ? SUBREF.eff(p) : null, clipDraw = !!p.clipDraw || !!(so && so.clip);
   sr.forEach(s => {
-    s.ys = smooth(s.y, p.smooth ? 3 : 0);
-    if (clipDraw) s.ys = s.ys.map(v => Math.max(0, v));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
-    const { m, neg } = traceMax(s, x0, x1);
+    s.ys = p.smooth ? cachedMap(SMOOTHED, s.y, y => smooth(y, 3)) : s.y;
+    if (clipDraw) s.ys = cachedMap(CLIPPED, s.ys, ys => ys.map(v => Math.max(0, v)));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
+    const { m, neg } = traceMax(DC, s, x0, x1);
     s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
   const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
@@ -334,7 +340,7 @@ async function drawLines(p) {
   let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
-  if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
+  if (!stk && !logy) for (const s of sr) ymin = DC.extent(s.x, s.ys, Math.max(x0, s.ze ?? -Infinity), x1, -Infinity, ymin)[1];
   if (ymin < 0) ymin *= 1.08;
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
@@ -387,14 +393,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
-    let curX = -999, minY, maxY, firstY, lastY, minFirst = true;
-    const flush = (cx) => { if (curX === -999) return; if (!st) { g.moveTo(cx, firstY); st = true; } else g.lineTo(cx, firstY); if (minFirst) { g.lineTo(cx, minY); g.lineTo(cx, maxY); } else { g.lineTo(cx, maxY); g.lineTo(cx, minY); } g.lineTo(cx, lastY); };
-    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = Math.round(X(r)), py = Y(U(s, s.ys[i]));
-      if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = py; minFirst = true; }
-      else { if (py < minY) { minY = py; if (maxY === firstY) minFirst = true; } if (py > maxY) { maxY = py; if (minY === firstY) minFirst = false; } lastY = py; }
-    });
-    flush(curX);
+    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);
@@ -444,7 +445,7 @@ async function drawLines(p) {
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
-    return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    return { px, rt: x, html: `<b>${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
   legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
@@ -489,7 +490,6 @@ function zoomYTo(p, lo, hi, quiet) {
   if (!quiet) draw(p);
 }
 function zoomTo(p, z0, z1) { const [f0, f1] = p._a.full; p.zoom = clampView(z0, z1, f0, f1); draw(p); }
-
 // ---- RT-m/z map (like Xcalibur's "Ion Map" and MZmine's 2D viewer): each pixel is the mean intensity of one ion at one instant
 const DIV = [[0, [213, 94, 0]], [0.5, [250, 250, 246]], [1, [0, 114, 178]]];       // Okabe-Ito vermilion #D55E00 <-> white <-> blue #0072B2: readable by colour-blind people
 function lut(stops) {

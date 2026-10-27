@@ -15,19 +15,21 @@
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
+  // true while the main scripts run: a tool registered then gets its tab when they are all done (turnOn), so its markup is drawn with the help (TPHELP) and the other later scripts in place
+  let settling = false;
   const adminOn = () => { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } };
   /** a tool with admin:true is shown only in the administrator mode */
   const shown = t => !t.admin || adminOn();
   const reg = window.QTOOLS = {
     ctx: /** @type {any} */ (null),                                     // set before the scripts run: {base: URL of the site static folder, meta, files}
     list: () => on ? tools.filter(shown) : [],
-    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t)) addTab(t); render(); },
+    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t) && !settling) addTab(t); render(); },
   };
 
   // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
   const lazyDone = /** @type {Map<string, Promise<void>>} */ (new Map());
-  /** starts the downloads of all the names together (the script tags below then hit the cache), so a long list costs one round trip, not one per file; a `low` priority is for files that nobody waits for yet @param {string[]} names @param {boolean} [low] */
-  const warmLazy = (names, low) => { for (const n of names) if (!lazyWarm.has(n)) { lazyWarm.add(n); fetch(DIR + "lazy/" + n, low ? { priority: "low" } : undefined).catch(() => lazyWarm.delete(n)); } };
+  /** starts the downloads of all the names together (the script tags below then take the same download even while it runs: a preload; a `low` one is a plain fetch, because nobody uses it yet and a preload left unused makes the browser warn), so a long list costs one round trip, not one per file; a `low` priority is for files that nobody waits for yet @param {string[]} names @param {boolean} [low] */
+  const warmLazy = (names, low) => { for (const n of names) if (!lazyWarm.has(n)) { lazyWarm.add(n); const url = DIR + "lazy/" + n; if (low) { fetch(url, { priority: "low" }).catch(() => lazyWarm.delete(n)); continue; } const l = document.createElement("link"); l.rel = "preload"; l.as = "script"; l.href = url; l.onload = l.onerror = () => l.remove(); document.head.appendChild(l); } };
   const lazyWarm = /** @type {Set<string>} */ (new Set());
   /** @param {...string} names @returns {Promise<void>} */
   const lazyLoad = async (...names) => { warmLazy(names); for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
@@ -118,12 +120,12 @@
     document.addEventListener("tpview", x.fn);
     tabs.set(t.id, x);
   }
-  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e) { x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
+  function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
   function openTool(t) {
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Close">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
-    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e) { host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
+    try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
   }
 
   // ---- loading (once per page): index, then extra files + the scripts' downloads in parallel, then the scripts run in order
@@ -140,7 +142,8 @@
     const texts = await Promise.all(names.map(n => get(n, "text")));
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
-    for (const n of js) await runScript(n);
+    settling = true;
+    try { for (const n of js) await runScript(n); } finally { settling = false; }
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, admin: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };

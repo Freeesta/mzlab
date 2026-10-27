@@ -38,6 +38,15 @@ const PEAK_KEYS: [&str; 6] = [
     "broad_peaks",
 ];
 
+/// `[min, max]` minutes (`Some(None)` for null = all rows); `None` when the value is not a range.
+fn rt_range(v: &Value) -> Option<Option<(f64, f64)>> {
+    if matches!(v, Value::Null) {
+        return Some(None);
+    }
+    let (a, b) = (v.at(0)?.f64()?, v.at(1)?.f64()?);
+    (a.is_finite() && b.is_finite() && b >= a).then_some(Some((a, b)))
+}
+
 fn set_peak(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
     if k == "algorithm" {
         r.detect.peak = match v.str() {
@@ -107,6 +116,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
                 *defect = num()?;
             }
         }
+        ("features.detect", "rt_range") => r.rt_range = rt_range(v).ok_or_else(|| bad(step, k))?,
         ("features.detect", "budget") => r.detect.budget = int()?,
         ("features.detect", "min_points") => r.detect.min_points = num()? as u32,
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
@@ -179,6 +189,9 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 v.push(("peak_width_s", Value::Arr(vec![n(a), n(b)])));
                 v.push(("snr", n(c.snr)));
                 v.push(("broad_peaks", Value::Bool(c.broad.enabled)));
+            }
+            if let Some((a, b)) = r.rt_range {
+                v.push(("rt_range", Value::Arr(vec![n(a), n(b)])));
             }
             match r.detect.axis {
                 MassAxis::Ppm => v.push(("axis", Value::Str("ppm".into()))),

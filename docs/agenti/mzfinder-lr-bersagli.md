@@ -18,4 +18,4 @@ Lo studente acquisisce una MS2 su uno ione perché l'ha visto nel full scan: se 
 ```
 MZLAB_DATI=<percorso> cargo run --release -p mzlab-finder-lr-wasm --example finder_lr -- OUT FILES.json PARENT.json RULES.json --diag --ms2 N MZML...
 ```
-(`FILES.json` e `PARENT.json` come per l'e2e `e2e_tpmine_lr_rust.py`; `RULES.json` = `TP_Mine/data/regole_tp.json`). `--diag` stampa, per ogni picco di traccia senza riga PRIMA dei bersagli, le righe della tabella entro 0,5 Da e 0,5 min dall'apice (m/z, RT, punteggio, celle, criteri) e il passo del Dig che le perde: ipotesi vicina (isomeri), criteri, assenza dalla tabella (rilevamento). Scrivere l'esito in `scratchpad/consegne/TABUI_MS2_LR_DATI.md` del privato.
+(`FILES.json` e `PARENT.json` come per l'e2e `e2e_tpmine_lr_rust.py`; `RULES.json` = `TP_Mine/data/regole_tp_2.json`). `--diag` stampa, per ogni picco di traccia senza riga PRIMA dei bersagli, le righe della tabella entro 0,5 Da e 0,5 min dall'apice (m/z, RT, punteggio, celle, criteri) e il passo del Dig che le perde: ipotesi vicina (isomeri), criteri, assenza dalla tabella (rilevamento). Scrivere l'esito in `scratchpad/consegne/TABUI_MS2_LR_DATI.md` del privato.

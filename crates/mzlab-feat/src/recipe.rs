@@ -33,6 +33,8 @@ pub struct Recipe {
     pub fill: FillParams,
     /// Fill the gaps of the aligned table with the integration of the raw traces (L6).
     pub fill_gaps: bool,
+    /// Keeps only the rows whose RT (minutes) lies in `[min, max]`; common to every file. `None` = all rows.
+    pub rt_range: Option<(f64, f64)>,
     /// Weak tier: peaks from `WEAK_RATIO` of `detect.min_height` up are kept as rows only if this many files show them (0 = no weak tier).
     pub weak_files: usize,
     /// How the MS2 spectrum of a row is made for the proofs and the exports; not part of the text, so the `.mzfeatf` keep their fingerprint.
@@ -66,6 +68,7 @@ impl Default for Recipe {
             rt: RtParams::default(),
             fill: FillParams::default(),
             fill_gaps: true,
+            rt_range: None,
             weak_files: WEAK_FILES,
             ms2: crate::ms2spec::SpecOpts::default(),
             min_height_basis: None,
@@ -120,7 +123,9 @@ impl Recipe {
             self.fill,
             self.weak_files,
             if self.fill_gaps { "" } else { "\nfill=off" }
-        )
+        ) + &self
+            .rt_range
+            .map_or(String::new(), |r| format!("\nrt_range={r:?}"))
     }
 
     /// Fingerprint (16 hex digits) of `file_text`: the name of the per-file cache.

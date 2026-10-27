@@ -56,7 +56,11 @@ export async function statRoute(path, body, { rpc }) {
   if (path === "/api/ricerca") return { status: 200, text: (await rpc({ op: "lr_ricerca", body })).info };
   if (path === "/api/flow/command") {
     let r;
-    try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e) { r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }
+    try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e_) { const e = /** @type {Lanciato} */ (e_); r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }
+    return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
+  }
+  if (path === "/api/flow/line") {
+    const r = (await rpc({ op: "lr_flow_line", body })).info;
     return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
   }
   if (path.startsWith("/api/flow/sched/")) return { status: 200, text: (await rpc({ op: "lr_flow_sched", sop: path.slice(16), body })).info };

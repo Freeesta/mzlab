@@ -43,8 +43,8 @@ try:
             assert pg.locator(".pnl.xic select[data-o=corr]").count() == 0, "no longer a plain select"
             b.click(); pg.wait_for_timeout(150)
             pg.keyboard.press("Escape"); pg.click('.pnl.xic [data-o="bkg"]'); pg.wait_for_timeout(150)      # the background has its own menu, independent from the file
-            items = pg.locator(".pnl.xic .corrw >> nth=1 >> .corri"); assert items.count() == 3 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
-            t = pg.inner_text(".pnl.xic .corrw >> nth=1 >> .corrm"); assert "Nessuna" in t and "Fondo di un tratto" in t and "Fondo automatico" in t, t
+            items = pg.locator(".pnl.xic .corrw >> nth=1 >> .corri"); assert items.count() == 4 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
+            t = pg.inner_text(".pnl.xic .corrw >> nth=1 >> .corrm"); assert "Nessuna" in t and "Fondo di un tratto" in t and "Fondo: finestra piatta" in t and "Fondo automatico" in t, t
             pg.click('.pnl.xic .corri[data-c="snip"]'); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').fondo.mode") == "auto" and "Fondo automatico" in pg.get_attribute('.pnl.xic [data-o="bkg"]', "aria-label")
             pg.screenshot(path=SH + "correzione.png")

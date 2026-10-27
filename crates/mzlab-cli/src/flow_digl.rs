@@ -1,5 +1,5 @@
 //! The native executor of `tp.dig_lr@1`: the low-resolution Dig of mzFinder (`legacy::lr::dig`: calibration on the parent, candidates of the rules of
-//! `regole_tp.json`, criteria, score and labels) on a unit-resolution series made by this plan. Its output is the JSON `api.run` of the page.
+//! `regole_tp_2.json`, criteria, score and labels) on a unit-resolution series made by this plan. Its output is the JSON `api.run` of the page.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
@@ -13,7 +13,11 @@ use crate::flow_base::{open, rebuild, Files};
 use crate::flow_link::parent_of;
 use mzlab_core::flow::Artifact;
 
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp.json");
+// `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
+#[path = "flow_uv.rs"]
+pub(crate) mod uv;
+
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
 /// The steps of this crate besides `features.table`, in the order of the registry.
 pub fn cli_steps() -> Vec<Step> {
@@ -27,6 +31,7 @@ pub fn cli_steps() -> Vec<Step> {
         mzlab_feat::steps::table_match(),
         crate::flow_lookup::lookup_step(),
         dig_lr_step(),
+        uv::uv_step(),
     ]
 }
 

@@ -13,6 +13,8 @@ pub struct Facts {
     pub n_chromatograms: i64,
     pub srm: usize,
     pub pda: bool,
+    /// (first, last time, points) of the PDA trace; `None` without a PDA.
+    pub pda_rt: Option<(f64, f64, i64)>,
     /// "positive" | "negative" | "mixed" | "unknown", read from the header (used when a file has no scans).
     pub header_polarity: String,
     /// (min, max) retention time over the SRM chromatograms.
@@ -55,16 +57,18 @@ pub struct Part {
     pub mode: &'static str, // "ms1" | "ms2" | "mrm"
     pub pol: Option<i8>,
     pub tag: String,
-    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EPI`), `None` for the ordinary ones.
+    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EMC`, `TDF`, `ER`), `None` for the ordinary ones.
     pub kind: Option<&'static str>,
 }
 
 /// The scan types in the order they are listed, with the name shown for each.
-const KINDS: [(&str, &str); 4] = [
+const KINDS: [(&str, &str); 6] = [
     ("PREC", "Precursor ion"),
     ("NL", "Neutral loss"),
     ("NG", "Neutral gain"),
-    ("EPI", "EPI"),
+    ("EMC", "EMC"),
+    ("TDF", "TDF"),
+    ("ER", "ER"),
 ];
 
 fn kind_name(k: &str) -> &'static str {
@@ -736,6 +740,12 @@ pub fn facts_from<M: ReadAt>(
         pda: chroms.iter().any(|c| c.kind == "pda"),
         ..Default::default()
     };
+    if let Some(c) = chroms.iter().find(|c| c.kind == "pda") {
+        let (t, _) = m.chromatogram(c)?;
+        if let (Some(a), Some(b)) = (t.first(), t.last()) {
+            f.pda_rt = Some((round(*a, 4), round(*b, 4), t.len() as i64));
+        }
+    }
     for c in chroms
         .iter()
         .filter(|c| c.kind == "pressure" || c.kind == "analog")

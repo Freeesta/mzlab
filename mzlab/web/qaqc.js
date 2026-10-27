@@ -73,7 +73,7 @@ const QAQC = (() => {
     const out = [];
     for (const ion of st.ions) {
       try { const q = await query(ion.mz, ion.rt, false); out.push({ ion, files: q.files.map(f => f.file), roles: q.roles, r: q.r }); }
-      catch (e) { out.push({ ion, error: String(e && e.message || e) }); }
+      catch (e_) { const e = /** @type {Lanciato} */ (e_); out.push({ ion, error: String(e && e.message || e) }); }
     }
     res.ions = out;
     res.at = new Date().toISOString();
@@ -203,7 +203,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   }
   async function refresh(box) {
     const msg = box.querySelector("#qq-msg");
-    try { await run(); if (msg) msg.textContent = ""; } catch (e) { if (msg) msg.textContent = String(e && e.message || e); }
+    try { await run(); if (msg) msg.textContent = ""; } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (msg) msg.textContent = String(e && e.message || e); }
     paintIons(box);
     if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("qaqc_measure", { n: st.ions.length });
   }
@@ -233,7 +233,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
           await runRatio(); paint(box); if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("qaqc_ratio", { thr: st.thr });
         }
         msg.textContent = "";
-      } catch (err) { msg.textContent = String(err && err.message || err); }
+      } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); }
     };
   }
 

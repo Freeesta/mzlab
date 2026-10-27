@@ -127,7 +127,7 @@ fn kind(c: &Chrom) -> ChromKind {
         "pressure" => ChromKind::Pressure,
         "srm" => ChromKind::Srm,
         "analog" => ChromKind::Analog,
-        _ if c.id.starts_with("SIC ") => ChromKind::Sic,
+        _ if c.id.starts_with("SIC ") || c.id.starts_with("SIM SIC ") => ChromKind::Sic,
         _ => ChromKind::Other,
     }
 }

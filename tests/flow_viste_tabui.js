@@ -3,7 +3,7 @@ const fs = require("fs"), vm = require("vm"), path = require("path"), assert = r
 const eq = (a, b) => assert.strictEqual(JSON.stringify(a), JSON.stringify(b));
 const root = path.resolve(__dirname, "..");
 const ctx = vm.createContext({});
-for (const f of ["registry", "results", "views-attributio", "views-tabui"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
+for (const f of ["registry", "results", "views-attributio", "views-tabui", "views-tptab"]) vm.runInContext(fs.readFileSync(path.join(root, "flow/lazy/flow-" + f + ".js"), "utf8"), ctx);
 const F = ctx.FLOW;
 // the Tabui views: the product table words the status bytes, the conditions give a matrix per product, the reading of a row lists what it found
 const tp = F.readTptab({ rows: [{ row: 3, id: 7, mz: 200.1, rt: 4.5, status: 0, kinship: 3, via: 9, n_det: 4, max_area: 1500.4, tmax: 30, in_t0: false, in_blank: true, blank_ratio: 0.25 }] });
@@ -14,5 +14,8 @@ const ip = F.readInterp({ id: 5, change: { delta: "+O", ion_formula: "C8H10O", p
 eq(ip.summary.rows.filter(r => ["Change", "MS2 scans", "Mixed spectra left out", "Modified cosine to the parent"].includes(r[0])), [["Change", "+O"], ["MS2 scans", "2"], ["Mixed spectra left out", "1"], ["Modified cosine to the parent", "0.812"]]);
 eq(ip.classes.rows, [["1", "ring", "open", "", "0.6", "", ""]]);
 eq(F.readReatt({ atoms: [{ i: 0, el: 6, heavy_index: 0, q: -0.1234, f_minus: 0.3333 }] }).rows[0], ["0", "6", "0", "-0.123", "", "", "0.333", ""]);
+// the detail: kinetics by time, the notes in words, the best formula candidates, the conditions where the product is present
+const dt = F.readTptabDetail({ times: [5, 10], rows: [{ row: 3, series: [10.4, 200], notes: 17, fit_candidates: [{ neutral_formula: "C8H9NO", ppm: 1.234, total: 0.912 }] }], gruppi: { conditions: [{ id: "O2" }, { id: "N2" }], rows: [{ row: 3, cond: [{ present: true }, { present: false }] }] } });
+eq(dt.rows[0], ["3", "5: 10; 10: 200", "in time 0, taken out by the blank", "C8H9NO (1.2 ppm, 0.91)", "O2"]);
 eq([F.viewFor("tp", { label: "x.json" }).id, F.viewFor("tp", { label: "x.csv" }).id], ["tp", "table"]);
 console.log("ok");

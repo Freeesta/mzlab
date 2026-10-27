@@ -79,7 +79,7 @@ onmessage = async ev => {
     if (ac) { ac.flush(); ac.close(); ac = null; }
     await dropSpill();
     postMessage({ op: "done", stats: JSON.parse(stats), ms: Math.round(performance.now() - t0) });
-  } catch (e) {
+  } catch (e_) { const e = /** @type {Lanciato|string} */ (e_);
     if (ah) { try { ah.close(); } catch (_) { /* already closed */ } }
     if (ac) { try { ac.close(); } catch (_) { /* already closed */ } }
     if (fonte) fonte.close();

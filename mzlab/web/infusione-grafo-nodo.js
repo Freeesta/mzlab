@@ -147,7 +147,7 @@ async function saveDrawing(/** @type {any} */ n) {
 
 /** Fills the panel of a node. `redo` asks for the graph again (a candidate was chosen), `again` draws the panel again. */
 export function nodePanel(/** @type {HTMLElement} */ host, /** @type {any} */ n, /** @type {{ redo: () => void, again: () => void }} */ cb) {
-  if (!n) { host.innerHTML = h`<p class="muted sm">${I18N.t("msngrafo.pick")}</p>`; return; }
+  if (!n) { host.innerHTML = ""; return; }
   host.innerHTML = h`<h4>${I18N.t("msngrafo.node.title", { level: n.livello, mz: n.mz.toFixed(4) })}</h4>` + candidates(n) + activationLine(n) + lossLine(n) + rulesPanel(n) + breaksPanel(n) + isolation(n) + unexplained(n) + warnings(n) + roNote() + drawBox(n);
   fillCuts(host, n);
   host.querySelectorAll(".ig-use").forEach(b => b.addEventListener("click", () => {

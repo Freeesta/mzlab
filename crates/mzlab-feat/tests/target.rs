@@ -93,8 +93,8 @@ fn targeted_pass_is_deterministic_capped_and_counted() {
         })
         .collect();
     let (mut ix, feats) = load(&dir);
-    let rules =
-        Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap();
+    let rules = Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap())
+        .unwrap();
     let inp = Inputs {
         parent: &parent,
         suspects: None,

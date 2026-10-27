@@ -23,7 +23,9 @@ try:
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
         def CORR(v):      # the "Correzione" drop-down: open it, click the choice
-            pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150); pg.click(f'.pnl.xic .corri[data-c="{v}"]')      # «Sottrai» (file) and «Fondo» are two menus
+            pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150)      # «Sottrai» (file) and «Fondo» are two menus
+            if v.startswith("f"): pg.select_option('.pnl.xic [data-o="corrf"]', v[1:])      # the file entry has a chooser of the file
+            else: pg.click(f'.pnl.xic .corri[data-c="{v}"]')
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
@@ -49,7 +51,7 @@ try:
             pg.click("#xic-no")
         step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
         def blank():
-            pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)
             base = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y)]))"); print("before:", base)
             pg.evaluate("E.files[2].type='blank'"); pg.evaluate(f"ctl(E.panels[{xi}])"); pg.wait_for_timeout(300)
