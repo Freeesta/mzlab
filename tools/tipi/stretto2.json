@@ -206,6 +206,7 @@
     "../../mzlab/web/liste-target.js",
     "../../mzlab/web/manifesto.js",
     "../../mzlab/web/uv-spettro.js",
+    "../../mzlab/web/decima.js",
     "../../mzlab/web/migra.js",
     "../../mzlab/web/export-pezzi.js",
     "../../mzlab/web/origine.js",

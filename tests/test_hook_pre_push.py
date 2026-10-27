@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import controlla  # noqa: E402
@@ -20,6 +22,7 @@ def repo(tmp_path):
     return tmp_path
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows has no executable bit")
 def test_installs_removes_and_respects_foreign_hook(tmp_path):
     r = repo(tmp_path)
     assert "installed" in ih.installa(r)
