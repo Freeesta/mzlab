@@ -53,12 +53,12 @@ try:
         # the list view is the editor under the canvas: the same plan, started empty here; the setup clicks are not part of the budget below
         pg.click('[data-tab="list"]'); pg.click('button[aria-label="Start a new plan"]'); pg.evaluate("document.querySelector('.flx-pal').remove()")
         def palette():
-            assert pg.locator(".fl-it").count() == 35, pg.locator(".fl-it").count()
+            assert pg.locator(".fl-it").count() == 47, pg.locator(".fl-it").count()
             assert pg.locator(".fl-pal details").count() == 3
             pg.fill("#fl-filter", "formula"); attendi(pg, "[...document.querySelectorAll('.fl-it')].filter(b => !b.hidden).length >= 2")
-            assert pg.locator(".fl-it:visible").count() < 35
+            assert pg.locator(".fl-it:visible").count() < 47
             pg.fill("#fl-filter", "")
-        step("palette: 35 steps in three packages, the filter narrows it", palette)
+        step("palette: 47 steps in three packages, the filter narrows it", palette)
         def build():
             pg.evaluate("window.__n = {click: 1, key: 0}")      # the tab click counts; the palette checks and the list-view setup before do not
             for s in ["convert.mzml", "index.mzidx", "features.detect", "features.align"]: add(pg, s)
@@ -111,10 +111,11 @@ try:
             pg.select_option("#fl-alg-detect", "masstrace")
         step("the form: only differences from the default are written; a planned algorithm is refused", parameters)
         def goal():
-            attendi(pg, "document.querySelector('.fl-goal').textContent.includes('cannot reach')")
+            # «Draw a structure» needs no input, so the level can always be reached: the page says what comes next, with raw files only and with spectra and a library too
+            attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet. Next:')")
             pg.select_option("#fl-add-input", "spectra"); pg.select_option("#fl-add-input", "library")
             attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet')")
-        step("the goal: identification needs spectra and a library, and the page says so", goal)
+        step("the goal: the page says the chain does not reach the identification level and what comes next", goal)
         def keyboard_and_motion():
             pg.focus('.fl-it[data-step="table.filter"]'); pg.keyboard.press("Enter")
             attendi(pg, "document.querySelectorAll('.fl-card').length === 5")

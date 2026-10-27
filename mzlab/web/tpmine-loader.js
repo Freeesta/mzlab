@@ -28,8 +28,8 @@
 
   // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
   const lazyDone = /** @type {Map<string, Promise<void>>} */ (new Map());
-  /** starts the downloads of all the names together with a preload (the script tags below then take the same download, even while it is still running), so a long list costs one round trip, not one per file; a `low` priority is for files that nobody waits for yet @param {string[]} names @param {boolean} [low] */
-  const warmLazy = (names, low) => { for (const n of names) if (!lazyWarm.has(n)) { lazyWarm.add(n); const l = document.createElement("link"); l.rel = "preload"; l.as = "script"; l.href = DIR + "lazy/" + n; if (low) l.setAttribute("fetchpriority", "low"); l.onload = l.onerror = () => l.remove(); document.head.appendChild(l); } };
+  /** starts the downloads of all the names together (the script tags below then take the same download even while it runs: a preload; a `low` one is a plain fetch, because nobody uses it yet and a preload left unused makes the browser warn), so a long list costs one round trip, not one per file; a `low` priority is for files that nobody waits for yet @param {string[]} names @param {boolean} [low] */
+  const warmLazy = (names, low) => { for (const n of names) if (!lazyWarm.has(n)) { lazyWarm.add(n); const url = DIR + "lazy/" + n; if (low) { fetch(url, { priority: "low" }).catch(() => lazyWarm.delete(n)); continue; } const l = document.createElement("link"); l.rel = "preload"; l.as = "script"; l.href = url; l.onload = l.onerror = () => l.remove(); document.head.appendChild(l); } };
   const lazyWarm = /** @type {Set<string>} */ (new Set());
   /** @param {...string} names @returns {Promise<void>} */
   const lazyLoad = async (...names) => { warmLazy(names); for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
