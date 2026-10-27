@@ -23,6 +23,8 @@ pub struct Infusione {
     pub motivo: &'static str,
     pub livelli: u8,
     pub nodi: usize,
+    /// Distinct MSn keys (energies kept), the number that `MAX_KEYS` limits.
+    pub chiavi: usize,
 }
 
 const MAX_KEYS: usize = 512;
@@ -115,11 +117,13 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusio
     crate::sortc::slice_ord(&mut nominal);
     nominal.dedup();
     let nodi = nominal.len();
+    let chiavi = keys.iter().collect::<std::collections::HashSet<_>>().len();
     let out = |motivo| {
         Some(Infusione {
             motivo,
             livelli,
             nodi,
+            chiavi,
         })
     };
     let (lo, hi) = scans
@@ -154,7 +158,7 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusio
     }
 }
 
-/// `"msn":{motivo, livelli, nodi}` of an infusion, else `"msn":null` (`iteminfo`, `sniff`).
+/// `"msn":{motivo, livelli, nodi, chiavi}` of an infusion, else `"msn":null` (`iteminfo`, `sniff`).
 pub(crate) fn json(o: &mut Out, m: Option<&Infusione>) {
     o.raw(",\"msn\":");
     match m {
@@ -165,6 +169,8 @@ pub(crate) fn json(o: &mut Out, m: Option<&Infusione>) {
             .int(m.livelli as i64)
             .raw(",\"nodi\":")
             .int(m.nodi as i64)
+            .raw(",\"chiavi\":")
+            .int(m.chiavi as i64)
             .raw("}"),
         None => o.raw("null"),
     };

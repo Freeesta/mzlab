@@ -68,7 +68,8 @@ fn tune_blocks_are_an_infusion() {
         Infusione {
             motivo: "blocchi",
             livelli: 4,
-            nodi: 4
+            nodi: 4,
+            chiavi: 4
         }
     );
 }
