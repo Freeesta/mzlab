@@ -8,16 +8,29 @@ pub mod codec;
 pub mod contrib;
 pub mod decoy;
 pub mod error;
+pub mod flash;
+mod flash_resolve;
 pub mod format;
-pub mod io;
-#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
-pub mod parse;
-#[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
-pub mod read;
-pub mod prep;
 pub mod frag_tol;
+pub mod io;
+pub mod libinfo;
+pub mod libset;
+#[warn(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::cast_possible_truncation
+)]
+pub mod parse;
+pub mod prep;
+#[warn(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::cast_possible_truncation
+)]
+pub mod read;
 pub mod scores;
 pub mod search;
+pub mod sha256;
 pub mod sortutil;
 pub mod spec;
 pub mod util;

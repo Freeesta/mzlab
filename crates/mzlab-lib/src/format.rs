@@ -1,27 +1,42 @@
-//! Constants and fixed-size records of the `.mzlib` v1 format (the byte-by-byte specification is docs/agenti/librerie.md).
+//! Constants and fixed-size records of the `.mzlib` format (v1, and v2 which adds the retention index, the library info and the InChIKey hashes) (the byte-by-byte specification is docs/agenti/librerie.md).
 
 use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32, le_u64};
 
 pub const MAGIC: [u8; 4] = *b"MZLB";
-pub const VERSION: u16 = 1;
+pub const VERSION: u16 = 2;
 /// A reader older than this cannot read the file.
 pub const MIN_READER: u16 = 1;
 pub const HEADER_LEN: usize = 36;
 pub const SECTION_ENTRY_LEN: usize = 32;
 pub const MAX_SECTIONS: u32 = 64;
-/// Where the first section starts (the header and the section table are written last).
-pub const HEAD_RESERVED: u64 = 256;
+/// Where the first section starts (the header and the section table are written last): 256 bytes in v1, 512 in v2 (seven sections).
+pub const HEAD_RESERVED: u64 = 512;
+pub const HEAD_RESERVED_V1: u64 = 256;
+
+pub fn head_reserved(version: u16) -> u64 {
+    if version >= 2 {
+        HEAD_RESERVED
+    } else {
+        HEAD_RESERVED_V1
+    }
+}
 
 pub const SEC_SPECTRA: u32 = 1;
 pub const SEC_PEAKS: u32 = 2;
 pub const SEC_META: u32 = 3;
 pub const SEC_FRAG: u32 = 4;
 pub const SEC_NL: u32 = 5;
+/// JSON blob (v2): kind, technique, counters, source, version, sha256 (see `libinfo`).
+pub const SEC_LIBINFO: u32 = 6;
+/// One `u64` per spectrum (v2): FNV-1a of the first 14 characters of the InChIKey, 0 when there is none.
+pub const SEC_INCHI: u32 = 7;
 
 pub const SPECTRA_PER_PEAK_CHUNK: u32 = 512;
 pub const RECORDS_PER_META_CHUNK: u32 = 128;
 pub const RECORDS_PER_TABLE_CHUNK: u32 = 4096;
-pub const SPEC_REC_LEN: usize = 32;
+/// Size of a spectra-table record: 32 bytes in v1, 36 in v2 (the retention index `f32` is appended).
+pub const SPEC_REC_LEN: usize = 36;
+pub const SPEC_REC_LEN_V1: usize = 32;
 pub const CHUNK_ENTRY_LEN: usize = 40;
 pub const METHOD_RAW: u8 = 0;
 pub const METHOD_ZSTD: u8 = 1;
@@ -39,6 +54,17 @@ pub const INT_MAX: f64 = 65535.0;
 pub const FLAG_FEW_PEAKS: u16 = 1;
 /// The retention time (minutes, `f32` in bytes 28..32 of the spectra record) is known.
 pub const FLAG_HAS_RT: u16 = 2;
+/// The retention index (Kovats, `f32` in bytes 32..36 of a v2 record) is known.
+pub const FLAG_HAS_RI: u16 = 4;
+
+/// Record length of the spectra table in a file of this format version.
+pub fn spec_rec_len(version: u16) -> usize {
+    if version >= 2 {
+        SPEC_REC_LEN
+    } else {
+        SPEC_REC_LEN_V1
+    }
+}
 
 /// Order of spectra in the table: polarity first (negative, unknown, positive), then precursor m/z.
 pub fn pol_key(pol: i8) -> u8 {
@@ -62,6 +88,8 @@ pub struct SpecRec {
     pub scale: f32,
     /// Retention time in minutes; meaningful only with `FLAG_HAS_RT` (bytes 28..32, zero in files that predate it).
     pub rt: f32,
+    /// Retention index; meaningful only with `FLAG_HAS_RI` (bytes 32..36, absent in v1 files).
+    pub ri: f32,
 }
 
 impl SpecRec {
@@ -76,6 +104,7 @@ impl SpecRec {
         b[20..24].copy_from_slice(&self.orig.to_le_bytes());
         b[24..28].copy_from_slice(&self.scale.to_bits().to_le_bytes());
         b[28..32].copy_from_slice(&self.rt.to_bits().to_le_bytes());
+        b[32..36].copy_from_slice(&self.ri.to_bits().to_le_bytes());
         b
     }
 
@@ -90,7 +119,17 @@ impl SpecRec {
             orig: le_u32(b, 20),
             scale: le_f32(b, 24),
             rt: le_f32(b, 28),
+            ri: if b.len() >= SPEC_REC_LEN {
+                le_f32(b, 32)
+            } else {
+                0.0
+            },
         }
+    }
+
+    /// The retention index, when the library entry has one.
+    pub fn ri_val(&self) -> Option<f64> {
+        (self.flags & FLAG_HAS_RI != 0 && self.ri.is_finite()).then_some(self.ri as f64)
     }
 
     /// The retention time in minutes, when the library entry has one.
