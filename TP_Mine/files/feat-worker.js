@@ -213,6 +213,7 @@ function rowOps(submit, call) {
     linkEvidence: m => submit(async (slot, load) => { await load("proofs"); const r = await call(slot, { op: "tp_link_evidence", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) }); slot.recycle = true; return r; }),
     tpPost: m => submit(async (slot, load) => { await load(m.kind === "network" ? "table" : "interp"); return (await call(slot, { op: "tp_post", ...m, tp: m.tp.slice(), table: m.table && m.table.slice(), rules: m.rules && m.rules.slice() })).text; }),
     linkInterp: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "tp_link_interp", ...m, table: m.table.slice() })).bytes; }),
+    digLr: m => submit(async (slot, load) => { await load("proofs"); await load("finder_lr"); return (await call(slot, { op: "dig_lr", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) })).text; }),
   };
 }
 
@@ -384,6 +385,14 @@ const OPS = {
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },
+  // tp.dig_lr: the hypotheses searched in the stored peaks (`proofs`, `tp_dig_inputs`) and the Dig of the unit-resolution series (`finder_lr`), the JSON of `mzlab-cli flow run`
+  async dig_lr(m) {
+    const f = await openAll(m.paths);
+    try {
+      const p = mods.proofs.tp_dig_inputs(m.rules, m.parent, m.structure, m.samples, m.names, m.recipe, arrays(m.peaks), f.read, f.sizes);
+      try { const d = mods.finder_lr.finder_lr_dig(p.files(), p.who(), m.settings, new Uint8Array(m.table), p.registry(), f.read, f.sizes); try { return { text: d.summary("{}") + "\n" }; } finally { d.free(); } } finally { p.free(); }
+    } finally { f.close(); }
+  },
   async tp_link_interp(m) { const f = await openAll(m.paths), out = memSink(); try { mods.interp.tp_link_interp(new Uint8Array(m.table), m.parent, m.registry, m.polarity, m.params, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
   async tp_post(m) { const t = new Uint8Array(m.tp), i = mods.interp; return { text: m.kind === "filter" ? i.tp_refilter(t, m.hypotheses, m.params) : m.kind === "review" ? i.tp_review(t, m.decisions) : m.kind === "position" ? i.tp_position(t, m.smiles, m.formula, m.params) : mods.table.rete_build((_, off, len) => new Uint8Array(m.table).subarray(off, off + len), m.table.byteLength, (_, off, len) => t.subarray(off, off + len), t.length, m.samples, new Uint8Array(m.rules), m.ppm, m.minFragments) }; },
