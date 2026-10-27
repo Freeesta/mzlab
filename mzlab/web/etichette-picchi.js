@@ -87,8 +87,8 @@ function texts(l) {
 function draw(p, g, sr, c) {
   if (!on(p, sr.length) || !sr.length || p.mode === "cas") return;
   const a = p._a, lbls = a.lbls = a.lbls || [], pw = c.W - M.l - M.r, room = Math.max(1, Math.min(8, Math.floor(pw / 120)));
-  g.save(); g.font = fpx(11, ""); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
-  const h = 11 * fz() + 4;
+  g.save(); g.font = fpx(12, ""); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
+  const h = 12 * fz() + 4;
   for (const s of sr.length > 1 ? [sr[0]] : sr) {
     const list = labelsOf(p, s); if (!list) continue;
     const seen = list.filter(l => l.rt >= c.x0 && l.rt <= c.x1).sort((u, v) => v.height - u.height).slice(0, room);
@@ -137,8 +137,8 @@ function uvMaxima(p, nm, y) {
 function drawUv(p, g, c) {
   if (!on(p, 1) || !p._a) return;
   const list = uvMaxima(p, c.nm, c.y); if (!list) return;
-  const lbls = p._a.lbls = p._a.lbls || [], room = Math.max(1, Math.min(8, Math.floor((c.W - M.l - M.r) / 70))), h = 11 * fz() + 4;
-  g.save(); g.font = fpx(11, "bold "); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
+  const lbls = p._a.lbls = p._a.lbls || [], room = Math.max(1, Math.min(8, Math.floor((c.W - M.l - M.r) / 70))), h = 12 * fz() + 4;
+  g.save(); g.font = fpx(12, "bold "); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 3;
   for (const l of list.filter(o => c.nm[o.apex] >= c.x0 && c.nm[o.apex] <= c.x1).sort((u, v) => v.height - u.height).slice(0, room)) {
     const label = T("etpk.nm", { v: String(Math.round(c.nm[l.apex])) }), w = g.measureText(label).width + 6;
     const x = Math.max(M.l + w / 2 + 2, Math.min(c.W - M.r - w / 2 - 2, c.X(c.nm[l.apex])));
