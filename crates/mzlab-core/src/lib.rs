@@ -46,6 +46,7 @@ pub mod idxnuovo;
 pub mod blocchi;
 pub mod idxread;
 pub mod idxsearch;
+pub mod idxwalk;
 pub mod isoscore;
 pub mod itemroutes;
 pub mod infusione;
