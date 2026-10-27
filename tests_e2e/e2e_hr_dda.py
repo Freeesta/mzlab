@@ -82,6 +82,9 @@ try:
         def reload():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[7])})()"); pg.wait_for_timeout(1500)
             saved(pg); pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length > 0 && E.panels.length > 0", 90000); ready(pg)
+            # the restored trio is laid out after ready(): wait for the geometry the asserts below check (a failure still ends in them)
+            try: attendi(pg, "(()=>{try{const t=" + TRIO + ";return !!t.s2&&t.s2.sid!=null&&t.s1.y===t.c.y+t.c.h&&t.s2.y>=t.s1.y+t.s1.h}catch(e){return false}})()", 20000)
+            except Exception: pass
             c, s1, s2 = pg.evaluate(GEO); sid = pg.evaluate("(()=>{const t=" + TRIO + ";return t.s2.sid})()"); print(c, s1, s2, sid)
             assert s2 and s1[1] == c[1] + c[3] and s2[1] >= s1[1] + s1[3] and sid is not None
         step("after a reload the trio and the chosen MS2 are back", reload)

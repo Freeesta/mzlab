@@ -42,11 +42,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-core-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-core-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -103,11 +103,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-feat-a-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-feat-a-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -155,11 +155,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-feat-b-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-feat-b-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache

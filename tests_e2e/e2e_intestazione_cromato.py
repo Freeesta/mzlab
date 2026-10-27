@@ -89,11 +89,11 @@ try:
         def follow():
             pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); ready(pg); pg.wait_for_selector(".pnl.spec .fol.on")
             S = ".pnl.spec"; fol = pg.locator(f'{S} .fol.on').first
-            assert "Segue: pann." in fol.inner_text() and "on" in fol.get_attribute("class").split() and fol.get_attribute("aria-label")
+            assert fol.inner_text().strip().startswith("\u2190") and "on" in fol.get_attribute("class").split() and "segue il pannello" in fol.get_attribute("aria-label")
             fol.click(); attendi(pg, "!document.getElementById('ctx').hidden")
             t = pg.inner_text("#ctx"); assert "Nessuno (spettro fisso)" in t and "Pannello" in t, t
             pg.locator("#ctx div", has_text="Nessuno").click(); attendi(pg, "E.panels.filter(p=>p.type==='spec').every(p=>!p.link)")
-            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .fol', has_text="Fisso").count() >= 1
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec').every(p=>!p.link)") and pg.locator(f'{S} .fol:not(.on)').count() >= 1 and "fisso" in pg.locator(f'{S} .fol:not(.on)').first.get_attribute("aria-label")
             pg.locator(f'{S} .fol').first.click(); pg.locator("#ctx div", has_text="Pannello").first.click(); attendi(pg, "E.panels.some(p=>p.type==='spec'&&p.link)")
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.link)")
         step("spectrum chip: follows panel N, menu picks the chromatogram or «none» (fixed)", follow)
