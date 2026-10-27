@@ -22,6 +22,8 @@ eq(F.TEMPLATES.filter(t => t.more).map(t => t.id), ["bentazone", "targeted", "tp
   const series = by("tpseries");
   eq(["tp.generate", "tp.filter", "table.filter", "tp.network"].every(s => F.findStep(series, s)), true);
   assert.ok(series.inputs.some(f => f.type === "samples"));
+  // the reliable-rows filter reads the table of the alignment, not the registry of the filters
+  eq(F.findStep(series, "table.filter").in.table, "gapfill.table");
   // the MSn template has its own plan: no feature-table base, the graph feeds the two exports
   const msn = by("msn");
   eq(msn.steps.map(s => s.step.split("@")[0]), ["spectra.msn_graph", "msn.library_export", "msn.table_export"]);

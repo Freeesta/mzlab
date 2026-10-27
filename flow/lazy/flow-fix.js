@@ -39,6 +39,10 @@
       const port = F.ports(nstep.in).find((/** @type {FlowPort} */ x) => x.name === name);
       if (port && ref) F.setPort(net, port, [].concat(ref));
     }
+    // the filter of the rows reads the table of the alignment, not the registry of the filters of the TP chain (the last table the add-ons made)
+    const rel = F.findStep(S.plan, "table.filter"), gap = F.findStep(S.plan, "features.gapfill"), rstep = rel && reg.byId.get("table.filter");
+    const tport = rstep && F.ports(rstep.in).find((/** @type {FlowPort} */ x) => x.name === "table");
+    if (rel && gap && tport) F.setPort(rel, tport, [`${gap.id}.table`]);
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
       const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);
