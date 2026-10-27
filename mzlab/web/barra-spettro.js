@@ -9,9 +9,9 @@
   function title(p, t) {
     const rl = p.el.querySelector(".rtl"); if (rl) rl.title = T("ctl.spec.rt");
     if (!t) return;
-    if (p.uv || p.title !== "@spec") { t.removeAttribute("role"); t.removeAttribute("aria-label"); return; }
+    if (p.uv || p.title !== PT.spec) { t.removeAttribute("role"); t.removeAttribute("aria-label"); return; }
     const n = p.level > 1 ? p.level : 1;
-    const h = `MS<sup>${n}</sup>`; if (t.innerHTML !== h) t.innerHTML = h;
+    if (t.firstChild?.nodeValue !== "MS" || t.querySelector("sup")?.textContent !== String(n)) { const u = document.createElement("sup"); u.textContent = String(n); t.replaceChildren("MS", u); }
     t.setAttribute("role", "img"); t.setAttribute("aria-label", T("ctl.spec.lv", { n }));
   }
   /** number of files drawn in the spectrum (several only in overlay) @param {any} p */
