@@ -4,14 +4,15 @@
 # Called by tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
+# zlib-rs (flate2: inflate x2.1 in wasm) weighs +30 KB per family that converts: andi, agilent, sciex, waters, shimadzu and bruker moved up by that, measured value rounded to 256 B
 tetti="aperti 458624
-andi 263936
+andi 291584
 thermo 626688
-agilent 438272
-sciex 364544
-waters 303104
-shimadzu 290816
-bruker 434176"
+agilent 455936
+sciex 374272
+waters 325888
+shimadzu 323072
+bruker 455168"
 # the families that have readers (a family without readers is skipped and is born with its own package)
 con_lettori="agilent sciex thermo aperti andi waters shimadzu bruker"
 out=${1:-site/static}/wasm-lettori
