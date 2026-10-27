@@ -10,8 +10,9 @@ use crate::io::{ExtentStore, Scratch, Sink};
 use crate::libinfo::{inchikey14, Declared, Detect};
 use crate::sortutil;
 use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
-use crate::util::{crc32c, get_varint, le_f32, le_f64, le_u16, le_u32, put_varint};
+use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32, put_varint};
 
+#[path = "build_parts/index.rs"]
 mod index;
 pub(crate) use index::read_meta_record;
 use index::{chunk_dir_bytes, copy_stream, entry_bytes, write_index};
