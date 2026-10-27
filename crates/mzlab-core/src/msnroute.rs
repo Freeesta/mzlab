@@ -82,6 +82,9 @@ impl<R: ReadAt> Routes<R> {
         o.raw("{\"formato\":\"msn_albero/1\",\"ms1\":{\"n\":").int(a.ms1.len() as i64);
         let (t0, t1) = span(&mut a.ms1.iter().copied());
         o.raw(",\"rt0\":").opt(t0.is_finite().then(|| round(t0, 4))).raw(",\"rt1\":").opt(t1.is_finite().then(|| round(t1, 4)));
+        // mean total ion current per scan of a group of scans
+        let mean_tic = |ix: &[usize]| if ix.is_empty() { 0.0 } else { ix.iter().map(|&i| scans[i].tic).sum::<f64>() / ix.len() as f64 };
+        o.raw(",\"tic\":").num(round(mean_tic(&a.ms1), 1));
         let mut livelli: Vec<u8> = a.nodi.iter().map(|n| n.livello).collect();
         crate::sortc::slice_ord(&mut livelli);
         livelli.dedup();
@@ -97,6 +100,7 @@ impl<R: ReadAt> Routes<R> {
             o.raw(",\"prec\":").num(m).raw(",\"att\":").str(&act).raw(",\"ce\":").opt((!ce.is_nan()).then_some(ce));
             let (t0, t1) = span(&mut n.scansioni.iter().copied());
             o.raw(",\"n\":").int(n.scansioni.len() as i64).raw(",\"rt0\":").num(round(t0, 4)).raw(",\"rt1\":").num(round(t1, 4));
+            o.raw(",\"tic\":").num(round(mean_tic(&n.scansioni), 1));
             o.raw(",\"blocchi\":[");
             for (j, (b0, b1)) in bl.iter().enumerate() {
                 o.raw(if j > 0 { ",[" } else { "[" }).num(round(scans[*b0].rt, 4)).raw(",").num(round(scans[*b1].rt, 4)).raw("]");
