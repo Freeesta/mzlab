@@ -178,7 +178,7 @@ function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
       (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
       /** @type {any} */ let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
-      if (!smi) { try { smi = plainSmiles(await K.getSmiles()); } catch (_) {} }
+      if (!smi) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m) return;
@@ -344,10 +344,18 @@ const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textC
   L.push("M  END");
   return L.join("\n");
 }
+// Ketcher's structure service (Indigo) hangs when two conversions overlap: every SMILES / conversion call goes through this one queue. A slot is released
+// after 20 s at most, so a conversion that never answers cannot block the ones behind it.
+let indigoQ = /** @type {Promise<any>} */ (Promise.resolve());
+/** @template T @param {() => Promise<T>} fn @returns {Promise<T>} */
+function indigo(fn) {
+  const run = indigoQ.then(fn), slot = Promise.race([run.then(() => {}, () => {}), new Promise(ok => setTimeout(ok, 20000))]);
+  indigoQ = slot; return run;
+}
 /** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
-    const r = await Promise.race([K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {}), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 20000))]);
+    const r = await Promise.race([indigo(() => K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {})), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 20000))]);
     return String(r.struct || "").trim().split(/\s+/)[0] || null;
   } catch (_) { return null; }
 }
@@ -690,7 +698,7 @@ function noBackground(/** @type {string} */ svgText) {
 }
 async function image(/** @type {string} */ format) {
   await start();
-  const raw = ketWithoutPartials(await K.getKet()), gen = (/** @type {DrawKet} */ k) => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
+  const raw = ketWithoutPartials(await K.getKet()), gen = (/** @type {DrawKet} */ k) => indigo(() => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" }));
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
@@ -757,7 +765,7 @@ Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!
   catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K, undefined, ids => pieceMolfile(ids)); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
+window.TPDraw = { when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initContaminants(k => I18N.t(k)); } });
 try { if (S.view === "draw") { start(); initContaminants(k => I18N.t(k)); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
