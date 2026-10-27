@@ -196,9 +196,9 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         if hi2 - lo2 + 1 < p.min_scans {
             continue;
         }
-        // a limit shared with a neighbour sits on a valley, not on the baseline: the baseline there is a vertical drop to the level of the other limit
+        // a limit that IS the valley shared with a neighbour (not merely next to one) sits on a valley, not on the baseline: the baseline there is a vertical drop to the level of the other limit
         let (mut yl, mut yh) = (y[lo2], y[hi2]);
-        match (left_stop.is_some(), right_stop.is_some()) {
+        match (left_stop == Some(lo2), right_stop == Some(hi2)) {
             (true, false) => yl = yh,
             (false, true) => yh = yl,
             (true, true) => {

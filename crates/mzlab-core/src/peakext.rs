@@ -69,16 +69,15 @@ pub fn parabola_apex(rt: &[f64], y: &[f64], i: usize, st: &TraceStats) -> (f64, 
     (rt[i] + q.xa, var.max(0.0).sqrt(), q.height)
 }
 
-/// FWHM (minutes) by linear interpolation at half of the apex of the smoothed trace `ys`.
-fn fwhm(rt: &[f64], ys: &[f64], apex: usize) -> f64 {
-    let n = ys.len();
+/// FWHM (minutes) by linear interpolation at half of the apex of the smoothed trace `ys`, searched between the limits `lo` and `hi` of the peak.
+fn fwhm(rt: &[f64], ys: &[f64], apex: usize, lo: usize, hi: usize) -> f64 {
     let half = 0.5 * ys[apex];
     let mut li = apex;
-    while li > 0 && ys[li] > half {
+    while li > lo && ys[li] > half {
         li -= 1;
     }
     let mut ri = apex;
-    while ri < n - 1 && ys[ri] > half {
+    while ri < hi && ys[ri] > half {
         ri += 1;
     }
     let tl = if li < apex && ys[li] <= half {
@@ -97,7 +96,7 @@ fn fwhm(rt: &[f64], ys: &[f64], apex: usize) -> f64 {
 /// Apex time and sigma, FWHM and reliability of `pk`, found on the smoothed trace `ys` (`Detection::ys`); `st` is `TraceStats::new(rt, ys)`, shared by the
 /// peaks of the trace.
 pub fn extras(rt: &[f64], ys: &[f64], pk: &Peak, st: &TraceStats) -> Extras {
-    let w = fwhm(rt, ys, pk.apex_i);
+    let w = fwhm(rt, ys, pk.apex_i, pk.lo, pk.hi);
     let scans = if st.dt > 0.0 { w / st.dt } else { 0.0 };
     let (apex_rt, apex_sigma, _) = parabola_apex(rt, ys, pk.apex_i, st);
     Extras {

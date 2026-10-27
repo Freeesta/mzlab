@@ -441,12 +441,12 @@ def detect_peaks(rt, y, snr: float = 5.0, min_scans: int = 3, baseline: str = "a
         # one more point on each side if the signal is already below the fraction (the foot)
         lo2, hi2 = max(lo - 1, 0), min(hi + 1, n - 1)
         half = 0.5 * h
-        # FWHM by interpolation
+        # FWHM by interpolation, inside the limits of the peak (a neighbour's valley above half height must not be walked through)
         li = apex
-        while li > 0 and ys[li] > half:
+        while li > lo2 and ys[li] > half:
             li -= 1
         ri = apex
-        while ri < n - 1 and ys[ri] > half:
+        while ri < hi2 and ys[ri] > half:
             ri += 1
         tl = rt[li] + (half - ys[li]) / max(ys[li + 1] - ys[li], 1e-12) * (rt[li + 1] - rt[li]) if (li < apex and ys[li] <= half) else rt[li]
         tr = rt[ri] - (half - ys[ri]) / max(ys[ri - 1] - ys[ri], 1e-12) * (rt[ri] - rt[ri - 1]) if (ri > apex and ys[ri] <= half) else rt[ri]
