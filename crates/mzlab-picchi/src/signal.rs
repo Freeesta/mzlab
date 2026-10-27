@@ -1,6 +1,6 @@
 //! Signal helpers of the peak picker: noise, Savitzky-Golay (with derivatives), SNIP and AsLS baselines, Ricker CWT.
 //! Line-by-line ports of the helpers of `ionfamily.py`; the Python engine is the reference.
-pub(crate) fn median(v: &[f64]) -> f64 {
+pub fn median(v: &[f64]) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
@@ -20,7 +20,7 @@ pub(crate) fn median(v: &[f64]) -> f64 {
 }
 
 /// `median` of the values of `v` that goes through `scratch` (kept between calls, so a loop of medians allocates once).
-pub(crate) fn median_in(v: impl Iterator<Item = f64>, scratch: &mut Vec<f64>) -> f64 {
+pub fn median_in(v: impl Iterator<Item = f64>, scratch: &mut Vec<f64>) -> f64 {
     scratch.clear();
     scratch.extend(v);
     if scratch.is_empty() {
@@ -83,13 +83,13 @@ fn solve_in(a: &mut [f64], b: &mut [f64], x: &mut [f64], n: usize) -> bool {
 }
 
 /// Solves A x = b (A square, row-major, n x n) by Gaussian elimination with partial pivoting. None if singular.
-pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+pub fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
     let mut x = vec![0.0; n];
     solve_in(&mut a, &mut b, &mut x, n).then_some(x)
 }
 
 /// `solve` for 3 x 3 on the stack (the quadratic fit of a peak apex): the same operations in the same order.
-pub(crate) fn solve3(mut a: [f64; 9], mut b: [f64; 3]) -> Option<[f64; 3]> {
+pub fn solve3(mut a: [f64; 9], mut b: [f64; 3]) -> Option<[f64; 3]> {
     let mut x = [0.0; 3];
     solve_in(&mut a, &mut b, &mut x, 3).then_some(x)
 }
@@ -97,7 +97,7 @@ pub(crate) fn solve3(mut a: [f64; 9], mut b: [f64; 3]) -> Option<[f64; 3]> {
 /// `solve` for a matrix with two sub- and two super-diagonals (the AsLS system). It runs the same operations in the same order as `solve`, skipping
 /// only the exact zeros outside the band that partial pivoting can reach (lower 2, upper 4), so the result is bit-identical; a non-finite result is
 /// recomputed by `solve`, where a stray infinity could still reach those zeros.
-pub(crate) fn solve_banded(a: Vec<f64>, b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+pub fn solve_banded(a: Vec<f64>, b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
     let (mut a2, mut b2) = (a.clone(), b.clone());
     let banded = (|| {
         for c in 0..n {
@@ -146,7 +146,7 @@ pub(crate) fn solve_banded(a: Vec<f64>, b: Vec<f64>, n: usize) -> Option<Vec<f64
 }
 
 /// Savitzky-Golay convolution coefficients (odd window), derivative order `deriv`, unit spacing, ordered like `np.convolve` wants.
-pub(crate) fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64> {
+pub fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64> {
     let half = (window / 2) as i64;
     let m = poly + 1;
     // pinv(A)[deriv] = row `deriv` of (A^T A)^-1 A^T, A[i][j] = x_i^j
@@ -169,7 +169,7 @@ pub(crate) fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64
     c
 }
 
-pub(crate) fn reflect(i: i64, n: i64) -> usize {
+pub fn reflect(i: i64, n: i64) -> usize {
     // numpy "reflect" padding (the edge is not repeated); valid while |offset| < n
     let mut j = i;
     if j < 0 {
@@ -216,7 +216,7 @@ pub fn savgol_d(y: &[f64], window: usize, poly: usize, deriv: usize) -> Vec<f64>
         .collect()
 }
 
-pub(crate) fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
+pub fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
     let n = y.len();
     let mut v: Vec<f64> = y
         .iter()
@@ -250,7 +250,7 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
     fp[j] + (x - xp[j]) * (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j])
 }
 
-pub(crate) fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
+pub fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
     asls_with(y, lam, p, iters, max_n, solve_banded)
 }
 
@@ -318,7 +318,7 @@ fn asls_with(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize, solver: So
     (0..n).map(|i| z[i].min(y[i])).collect()
 }
 
-pub(crate) fn ricker(width: f64, n: usize) -> Vec<f64> {
+pub fn ricker(width: f64, n: usize) -> Vec<f64> {
     let h = (n / 2) as i64;
     (-h..=h)
         .map(|x| {
@@ -328,7 +328,7 @@ pub(crate) fn ricker(width: f64, n: usize) -> Vec<f64> {
         .collect()
 }
 
-pub(crate) fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
+pub fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
     let n = y.len();
     widths
         .iter()
