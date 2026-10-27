@@ -418,3 +418,16 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cadd-diffs{margin-top:12px}.cadd-diffs summary{cursor:pointer;min-height:28px;font-weight:600}
 .cadd-diffs .cadd-f{margin:8px 0 4px}.cadd-diffs ul{margin:4px 0;padding-left:18px}
 @media (pointer:coarse){.cadd .seg button,.cadt .cxic,.cadd-more{min-height:40px}.cadt th,.cadt td{height:40px}}
+/* precursor tree of an MSn infusion (infusione-albero.js): three groups of labelled controls on one row that wraps cleanly, rows with a visible selection */
+.inf-ctl{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;margin-bottom:8px}
+.inf-g{display:flex;flex-wrap:wrap;gap:8px 8px}
+.inf-f{display:flex;flex-direction:column;gap:2px;font-size:11px;font-weight:600;color:var(--muted)}
+.inf-f select{min-height:28px;box-sizing:border-box;font-size:13px;font-weight:400;color:var(--ink)}
+#inf-busy{align-self:center;font-size:12px}
+#inf-wrap{overflow-x:auto}
+#inf-tree tbody tr{cursor:pointer}
+#inf-tree tbody tr[aria-selected=true]{background:var(--sel);box-shadow:inset 4px 0 0 var(--accent)}
+#inf-tree tbody tr[aria-selected=true] td{font-weight:700}
+#inf-tree tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#inf-tree[aria-busy=true]{cursor:progress}
+.msn sup{font-size:.72em}
