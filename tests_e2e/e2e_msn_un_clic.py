@@ -33,7 +33,12 @@ try:
             pg.evaluate(f"""() => {{ const S = {FLOWS}, inst = S.plan.steps[0];
               const box = FLOW.form(inst, FLOW.stepOf(S.reg, inst), () => {{}}); box.id = 'tmpform'; document.body.append(box); }}""")
             pg.wait_for_selector("#tmpform .molc input", timeout=30000)
-            pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000); pg.click("#tmpform .molc li >> nth=0")
+            pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000)
+            # a job that ends while the box is being used keeps the focus and the list
+            pg.evaluate(f"""() => {{ const S = {FLOWS}; FLOW.webMsnAfterRun(S, [{{ id: S.plan.steps[0].id, name: 'typing.json', text: '{{"formato":"msngrafo/1","nodi":[],"archi":[],"spettri":[]}}' }}]); }}""")
+            assert pg.evaluate("document.activeElement.matches('#tmpform .molc input')") and pg.locator("#tmpform .molc li").first.is_visible(), "the graph took the focus from the box"
+            pg.evaluate(f"{FLOWS}.results = {{}}")
+            pg.click("#tmpform .molc li >> nth=0")
             pg.wait_for_function(f"(() => {{ const p = {FLOWS}.plan.steps[0].params || {{}}; return !!p.formula; }})()", timeout=30000)
             pg.evaluate("document.querySelector('#tmpform').remove()")
         step("the molecule typed in the box fills the ion, the adduct and the SMILES", prepare)
