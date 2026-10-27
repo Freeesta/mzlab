@@ -55,8 +55,8 @@
   // ---------------------------------------------------------------- toolbar
   /** @param {any} p */
   function refresh(p) {
-    const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]');
-    if (p.uv) { for (const x of [b, l]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
+    const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]'), pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
+    if (p.uv) { for (const x of [b, l, pv]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
     const off = infusion(p);
     if (off && (s.pend || s.sel)) { s.pend = false; s.sel = null; }
     if (b) {
@@ -64,6 +64,11 @@
       const bt = /** @type {HTMLButtonElement} */ (b), tip = T(off ? "xicbtn.infusion" : "xicbtn.title");
       if (bt.disabled !== off) bt.disabled = off;
       if (bt.title !== tip) bt.title = tip;
+    }
+    if (pv) {
+      const on = !!UIP.xicLens && !off;
+      pv.classList.toggle("on", on); pv.setAttribute("aria-pressed", String(on));
+      if (pv.disabled !== off) pv.disabled = off;
     }
     if (l) {
       l.hidden = !s.sel;
@@ -136,7 +141,7 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     if (window.XICLENS) XICLENS.sync(p);
-    const s = ST.get(p); if (s && infusion(p) !== /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]'))?.disabled) refresh(p);
+    const s = ST.get(p); if (s && (infusion(p) !== /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]'))?.disabled || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && !infusion(p)))) refresh(p);
     if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
@@ -237,7 +242,16 @@
     // Space on the button presses it: the walk over the scans (scroll.js) must not take it
     for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); });
     l.onclick = () => openPop(p);
+    const pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
+    if (pv) pv.onclick = () => setLens(!UIP.xicLens);
     refresh(p);
+  }
+  /** the lens preference from the button of any spectrum panel (the Settings switch is the other place) @param {boolean} on */
+  function setLens(on) {
+    UIP.xicLens = on; uipSave();
+    if (!on && window.XICLENS) XICLENS.closeAll();
+    const sw = /** @type {HTMLInputElement | null} */ (document.getElementById("uip-xiclens")); if (sw) sw.checked = on;
+    E.panels.forEach((/** @type {any} */ q) => { if (q.type === "spec" && q.el) refresh(q); });
   }
   /** the m/z of the peak a pixel means: the nearest peak label within 34 px, otherwise the peak the mouse box highlights (null: none) @param {any} p @param {number} px @returns {number | null} */
   function target(p, px) {
@@ -300,6 +314,6 @@
     } catch (e) { /* draw() asks again */ }
   }
 
-  /** @type {any} */ (window).XICBTN = { wire, prefetch, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** @type {any} */ (window).XICBTN = { wire, prefetch, setLens, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();

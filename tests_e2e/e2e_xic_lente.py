@@ -50,8 +50,12 @@ try:
                 assert not (r["l"] - 1 <= t["x"] <= r["r"] + 1 and r["t"] - 1 <= t["y"] <= r["b"] + 1), ("the lens is over the pointer", r, t)
                 assert not (r["l"] - 1 <= t["x"] <= r["r"] + 1 and t["y"] - 8 <= r["b"]), ("the lens is over the peak", r, t)
                 rects.append(round(r["l"] - r["cl"]))
-            lab = pg.evaluate("(()=>{const l=document.querySelector('.pnl .xl .xl-f');return [l.textContent,l.title,document.querySelector('.pnl .xl').getAttribute('aria-label')]})()")
-            assert lab[0] and lab[1] == lab[0] and lab[0] in lab[2], lab
+            lab = pg.evaluate("(()=>{const l=document.querySelector('.pnl .xl .xl-f'),e=document.querySelector('.pnl .xl');return [l.textContent,e.title,e.getAttribute('aria-label')]})()")
+            assert lab[0].startswith("· ") and lab[1] and lab[0].endswith(lab[1]) and lab[1] in lab[2], lab
+            one = pg.evaluate("(()=>{const t=document.querySelector('.pnl .xl .xl-t'),m=t.querySelector('.xl-m'),f=t.querySelector('.xl-f');return [t.getBoundingClientRect().height,Math.abs(m.getBoundingClientRect().top-f.getBoundingClientRect().top),m.textContent]})()")
+            assert one[0] <= 17 and one[1] < 3 and one[2].startswith("m/z ") and "\u2013" in one[2], one
+            ax = pg.evaluate("(()=>{const x=document.querySelector('.pnl .xl:not([hidden]) .xl-x'),b=x.getBoundingClientRect(),k=[...x.children].map(c=>c.getBoundingClientRect());return [x.scrollWidth<=x.clientWidth+1,k.every(r=>r.left>=b.left-1&&r.right<=b.right+1),[...x.children].map(c=>c.textContent)]})()")
+            assert ax[0] and ax[1] and ax[2][2].endswith(" min") and all(ax[2]), ax
         step("the lens is in a fixed corner of the plot (the other one when the peak or the pointer is in it), with the file name", fixed_place)
         def right_click():
             t = pk()[2]; pg.keyboard.press("Escape"); pg.mouse.move(2, 2); frames(pg, 2)
@@ -117,10 +121,17 @@ try:
             assert pg.evaluate(f"{XP}.traces.length") == 1
         step("keyboard only: the key chooses, the lens is reached with Tab, T gives the data table, Enter opens the panel; axe", key_only)
         def pref():
-            pg.evaluate("UIP.xicLens=false"); ps = pk(); t = ps[1]
+            pg.evaluate("XICBTN.setLens(false)"); ps = pk(); t = ps[1]
             pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 5); assert not pg.query_selector(LENS)
-            pg.evaluate("UIP.xicLens=true")
+            pg.evaluate("XICBTN.setLens(true)")
         step("the preference switches the lens off", pref)
+        def toggle():
+            B = ".pnl [data-a=xicp]"; v = [pg.get_attribute(B, "aria-pressed"), pg.get_attribute(B, "title")]; assert v == ["true", pg.evaluate("I18N.t('xiclens.toggle')")], v
+            pg.click(B); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "false" and not pg.evaluate("UIP.xicLens")
+            ps = pk(); t = ps[1]; pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 5); assert not pg.query_selector(LENS)
+            pg.click(B); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "true" and pg.evaluate("UIP.xicLens")
+            pg.keyboard.press("Escape")
+        step("the button of the bar switches the lens on and off (aria-pressed), on by default", toggle)
         def touch():
             ps = pk(); t = ps[0]; pg.mouse.move(2, 2); frames(pg, 2)
             pg.mouse.click(t["x"], t["y"]); pg.wait_for_selector(LENS, timeout=10000)
