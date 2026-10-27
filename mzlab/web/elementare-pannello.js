@@ -60,7 +60,7 @@ function cxTableHtml(/** @type {any} */ res, /** @type {number} */ sel, /** @typ
   const sc = res.results.some((/** @type {any} */ r) => r.score), mda = res.unit === "mda";
   const dl = (/** @type {any} */ r) => String(mda ? r.delta_mda : r.delta_ppm), tot = (/** @type {any} */ r) => (r.score ? (+r.score.total).toFixed(2) : "");
   const cell = (/** @type {string} */ cls, /** @type {string} */ v, /** @type {string} */ html) => `<td${cls ? ` class="${cls}"` : ""} data-copy="${EH(v)}" tabindex="-1">${html}</td>`;
-  return `<table aria-labelledby="cx-h-res" aria-describedby="cx-desc"><thead><tr><th>${cxT("cx.idx")}</th><th title="${EH(cxT("cx.desc"))}">${cxT("cx.formula")}</th><th class="num">${cxT("comp.col.rdb")}</th><th class="num">${cxT(mda ? "cx.delta.mda" : "cx.delta.ppm")}</th>${sc ? `<th class="num" title="${EH(cxScoreTip(s))}">${cxT("cx.score")}</th>` : ""}</tr></thead><tbody>
+  return `<table aria-labelledby="cx-h-res" aria-describedby="cx-desc"><thead><tr><th>${cxT("cx.idx")}</th><th>${cxT("cx.formula")}</th><th class="num">${cxT("comp.col.rdb")}</th><th class="num">${cxT(mda ? "cx.delta.mda" : "cx.delta.ppm")}</th>${sc ? `<th class="num" title="${EH(cxScoreTip(s))}">${cxT("cx.score")}</th>` : ""}</tr></thead><tbody>
     ${res.results.map((/** @type {any} */ r, /** @type {number} */ i) => `<tr data-i="${i}" tabindex="0" aria-selected="${i === sel}"><td>${i + 1}</td>${cell("", r.formula, `<b>${fmtFormula(r.formula)}</b>`)}${cell("num", String(r.rdb), String(r.rdb))}${cell("num", dl(r), dl(r))}${sc ? cell("num", tot(r), tot(r)) : ""}</tr>`).join("")}</tbody></table>`;
 }
 
@@ -98,7 +98,7 @@ function cxPanel(/** @type {HTMLElement} */ b, /** @type {any} */ ctx) {
   const show = () => {
     const o = $("#cx-out"), res = st.res, s = C.rd();
     if (!res.results.length) { $("#cx-desc").textContent = ""; o.innerHTML = cxNote("comp.none"); return; }
-    $("#cx-desc").textContent = t("cx.desc") + " " + (res.results.some((/** @type {any} */ r) => r.score) ? cxScoreTip(s) : t("cx.sort.err"));
+    $("#cx-desc").textContent = (res.results.some((/** @type {any} */ r) => r.score) ? cxScoreTip(s) : t("cx.sort.err"));
     o.innerHTML = cxTableHtml(res, st.sel, s); cxBindTable(o, st, copied);
   };
   const run = async () => {

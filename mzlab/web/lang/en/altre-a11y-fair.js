@@ -385,7 +385,6 @@ I18N.add("en", {
   "cx.set": "Element set",
   "cx.load.tip": "Replace the elements below with this set",
   "cx.save.tip": "Save the elements below as a named set",
-  "cx.desc": "Candidates compatible with the mass, not identifications.",
   "cx.score.tip": "Score (0–1, higher is better; the list is sorted by it): weighted mean of the mass term (a Gaussian of the error, σ = {s} ppm), the match of the isotope pattern and the share of MS2 explained, with weights {w}; a missing term is left out.",
   "cx.delta.ppm": "Δ ppm",
   "cx.delta.mda": "Δ mDa",

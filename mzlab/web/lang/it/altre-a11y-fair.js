@@ -385,7 +385,6 @@ I18N.add("it", {
   "cx.set": "Insieme di elementi",
   "cx.load.tip": "Sostituisce gli elementi qui sotto con questo insieme",
   "cx.save.tip": "Salva gli elementi qui sotto come insieme con nome",
-  "cx.desc": "Candidati compatibili con la massa, non identificazioni.",
   "cx.score.tip": "Punteggio (0–1, più alto è meglio; la lista è ordinata per questo): media pesata del termine di massa (una gaussiana dell'errore, σ = {s} ppm), dell'accordo del profilo isotopico e della quota di MS2 spiegata, con pesi {w}; un termine mancante è escluso.",
   "cx.delta.ppm": "Δ ppm",
   "cx.delta.mda": "Δ mDa",
