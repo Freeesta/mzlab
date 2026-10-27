@@ -18,12 +18,12 @@ const BANCO = (() => {
 #hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
 #hrinfo[hidden]{display:none}#sb-panels>#hrinfo{height:auto!important;min-height:100%;max-height:none;resize:none;margin:0;border:0;border-radius:0}
 #hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#sb-panels>#hrinfo #hri-ttl{display:none}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
-#hri-body .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}#hri-body .row input[type=text],#hri-body .row input:not([type]){min-width:0;padding:2px 6px}#hri-body select{padding:2px 4px;max-width:100%;min-width:0}#hri-body button{padding:2px 8px}#hri-body .muted.sm{font-size:11px;line-height:1.35}
-#hri-body table{border-collapse:collapse;width:100%}#hri-body td,#hri-body th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}#hri-body td.num,#hri-body th.num{text-align:right}
-#hri-body td.v{white-space:normal;word-break:break-all}#hri-body h4{margin:8px 0 2px;font-size:12px}#hri-body .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
-#hri-list{position:relative;overflow:auto;height:100%}#hri-list .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
-#hri-list .hd span{cursor:pointer;padding:2px 2px;text-align:right}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}#hri-list .r span{text-align:right;padding-right:2px}.sb-n{font-weight:400;color:var(--muted)}
-#hri-list .r:hover{background:var(--sel)}#hri-list .r.cur{background:var(--sel);font-weight:600}
+:is(#hri-body,.hri-body) .row label{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;max-width:100%}:is(#hri-body,.hri-body) .row input[type=text],:is(#hri-body,.hri-body) .row input:not([type]){min-width:0;padding:2px 6px}:is(#hri-body,.hri-body) select{padding:2px 4px;max-width:100%;min-width:0}:is(#hri-body,.hri-body) button{padding:2px 8px}:is(#hri-body,.hri-body) .muted.sm{font-size:11px;line-height:1.35}
+:is(#hri-body,.hri-body) table{border-collapse:collapse;width:100%}:is(#hri-body,.hri-body) td,:is(#hri-body,.hri-body) th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}:is(#hri-body,.hri-body) td.num,:is(#hri-body,.hri-body) th.num{text-align:right}
+:is(#hri-body,.hri-body) td.v{white-space:normal;word-break:break-all}:is(#hri-body,.hri-body) h4{margin:8px 0 2px;font-size:12px}:is(#hri-body,.hri-body) .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+:is(#hri-list,.hri-list){position:relative;overflow:auto;height:100%}:is(#hri-list,.hri-list) .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
+:is(#hri-list,.hri-list) .hd span{cursor:pointer;padding:2px 2px;text-align:right}:is(#hri-list,.hri-list) .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}:is(#hri-list,.hri-list) .r span{text-align:right;padding-right:2px}.sb-n{font-weight:400;color:var(--muted)}
+:is(#hri-list,.hri-list) .r:hover{background:var(--sel)}:is(#hri-list,.hri-list) .r.cur{background:var(--sel);font-weight:600}
 .hrw #flst{max-height:34vh;overflow:auto}
 .bsp{position:fixed;z-index:10005;width:min(420px,94vw);max-height:70vh;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px}
 .bsp .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bsp select{min-height:24px;max-width:100%}
@@ -385,6 +385,7 @@ const BANCO = (() => {
     b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
   }
   function goScan(p, sid, rt, k) {
+    if (p.stand) return;
     const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) : p;
     if (c && c.type !== "spec") { c.cur = rt; if (c.zoom && (rt < c.zoom[0] || rt > c.zoom[1])) { const w = c.zoom[1] - c.zoom[0]; c.zoom = clampView(rt - w / 2, rt + w / 2, c._a.full[0], c._a.full[1]); draw(c); } else cursorLine(c); pushLinked(c, rt - NEAR, rt + NEAR, k, true, {}); }
     else if (p.type === "spec") { p.r0 = rt - NEAR; p.r1 = rt + NEAR; p.si = null; draw(p); }
@@ -398,13 +399,13 @@ const BANCO = (() => {
     const cols = [["no", "N"], ["rt", "RT"], ["prec", I18N.t("bn.l.prec")], ["tic", "TIC"], ["bpmz", I18N.t("bn.l.bp")], ["bpint", I18N.t("bn.l.int")]], H = 20;
     let idx = t.sid.map((_, i) => i), sk = null, sd = 1;
     // the count sits in the header of the side panel (readable by screen readers as «976 scans»); the click is explained by the title of the table
-    const ttl = Q("#sb-title");
+    const ttl = p.stand ? null : Q("#sb-title");
     if (ttl) {
       ttl.querySelectorAll(".sb-n,.sr-only").forEach(x => x.remove());
       ttl.insertAdjacentHTML("beforeend", `<span class="sb-n" aria-hidden="true"> · ${t.n}</span><span class="sr-only"> ${esc(I18N.t("bn.l.count", { n: t.n }))}</span>`);
     }
-    b.innerHTML = `<div id="hri-list" title="${esc(I18N.t("bn.l.click"))}" aria-description="${esc(I18N.t("bn.l.click"))}"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
-    const L = b.querySelector("#hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
+    b.innerHTML = `<div class="hri-list"${p.stand ? "" : ' id="hri-list"'} title="${esc(I18N.t("bn.l.click"))}" aria-description="${esc(I18N.t("bn.l.click"))}"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
+    const L = b.querySelector(".hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
     // fixed decimals per column, so the digits line up
     const fx = { no: v => v, rt: v => (+v).toFixed(3), prec: v => (v == null ? "" : (+v).toFixed(3)), tic: v => (+v).toExponential(2), bpmz: v => (+v).toFixed(4), bpint: v => (+v).toExponential(2) };
     const paint = () => {
@@ -484,6 +485,13 @@ const BANCO = (() => {
   }
   // TODO mzFlow: identificazione su feature table — the «identify all the MS2 of the file» button left this tab (LIB.identifyAll stays for the Flow work)
   const tIdn = async (b, p, tok) => { await carica("m:ident-pannello.js"); const sp = specOf(p); return IDP.render(b, sp && sp.level === 2 ? sp : null, () => tok !== ist.tok); };
+  // the tabs «File and instrument», «Scans» and «Precursor tree» of the bar for file k in a container of the caller (Flow's Explore): the same functions on a stand-in cell that moves no panel
+  const FILE_TABS = { fil: tFil, lst: tLst, alb: (b, p, tok) => INF.render(b, p, tok) };
+  async function fileView(host, k, tab) {
+    const p = { type: "spec", k, level: 1, stand: true }, tok = ist.tok = (ist.tok || 0) + 1;
+    host.classList.add("hri-body"); host.innerHTML = `<div class="muted">…</div>`;
+    try { await FILE_TABS[tab](host, p, tok); } catch (e) { if (tok === ist.tok) host.innerHTML = `<span class="fail">${esc(/** @type {any} */ (e).message)}</span>`; }
+  }
   const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); return INFG.render(b, p, tok); } };
   let infoRaf = 0;
   function renderInfo() {
@@ -572,6 +580,6 @@ const BANCO = (() => {
     if (!b._ro && typeof FRAME !== "undefined" && FRAME.ro) { b._ro = true; FRAME.ro(host, fitRow); }
     b.hidden = false; sync2(); infoBar(); fitRow();
   }
-  return { token: () => ist.tok, copyPng, copyText, fitRow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
+  return { token: () => ist.tok, fileView, copyPng, copyText, fitRow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
 })();
 window.BANCO = BANCO;

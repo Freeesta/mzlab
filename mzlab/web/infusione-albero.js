@@ -49,7 +49,7 @@
   /** @param {HTMLElement} b @param {any} p @param {number} tok */
   async function render(b, p, tok) {
     view = { b, p };
-    const t = target(p), f = E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);
+    const t = target(p), f = p && p.stand ? E.files[p.k] : E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);   // stand: the file Flow's Explore names
     if (!f || !INF.isInf(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
     if (!b.querySelector(".inf-ctl")) b.innerHTML = `<div class="muted">…</div>`;
     const j = await INF.tree(f.k);

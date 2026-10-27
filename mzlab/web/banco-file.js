@@ -3,13 +3,13 @@
 // every section; «Scans by type» as a list: name and count on a line, the RT range small under it) and the helper of the MS level label (MS<sup>n</sup>),
 // also used by the other tabs of the bar. Loaded by banco.js on first use; the numbers come from /api/fileinfo, nothing is computed here.
 
-const CSS = `#hri-body .fi-kv{display:grid;grid-template-columns:minmax(9ch,34%) minmax(0,1fr);gap:2px 8px;margin:0}
-#hri-body .fi-kv dt{color:var(--muted);overflow-wrap:break-word}#hri-body .fi-kv dd{margin:0;overflow-wrap:anywhere;user-select:text}
-#hri-body .fi-nw{white-space:nowrap}#hri-body .fi-ph{text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
-#hri-body .fi-types{list-style:none;margin:0;padding:0}#hri-body .fi-types li{display:grid;grid-template-columns:minmax(6ch,1fr) auto;gap:0 8px;padding:2px 0;border-bottom:1px solid var(--line)}
-#hri-body .fi-tn{min-width:0}#hri-body .fi-w{display:inline-block;max-width:100%;overflow-wrap:anywhere}#hri-body .fi-c{white-space:nowrap;text-align:right;min-width:6ch;font-variant-numeric:tabular-nums;font-weight:600}
-#hri-body .fi-rt{grid-column:1/-1;white-space:nowrap;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
-#hri-body sup,.ms-lv sup{font-size:.75em;line-height:0}`;
+const CSS = `:is(#hri-body,.hri-body) .fi-kv{display:grid;grid-template-columns:minmax(9ch,34%) minmax(0,1fr);gap:2px 8px;margin:0}
+:is(#hri-body,.hri-body) .fi-kv dt{color:var(--muted);overflow-wrap:break-word}:is(#hri-body,.hri-body) .fi-kv dd{margin:0;overflow-wrap:anywhere;user-select:text}
+:is(#hri-body,.hri-body) .fi-nw{white-space:nowrap}:is(#hri-body,.hri-body) .fi-ph{text-decoration:underline dotted;text-underline-offset:2px;cursor:help}
+:is(#hri-body,.hri-body) .fi-types{list-style:none;margin:0;padding:0}:is(#hri-body,.hri-body) .fi-types li{display:grid;grid-template-columns:minmax(6ch,1fr) auto;gap:0 8px;padding:2px 0;border-bottom:1px solid var(--line)}
+:is(#hri-body,.hri-body) .fi-tn{min-width:0}:is(#hri-body,.hri-body) .fi-w{display:inline-block;max-width:100%;overflow-wrap:anywhere}:is(#hri-body,.hri-body) .fi-c{white-space:nowrap;text-align:right;min-width:6ch;font-variant-numeric:tabular-nums;font-weight:600}
+:is(#hri-body,.hri-body) .fi-rt{grid-column:1/-1;white-space:nowrap;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+:is(#hri-body,.hri-body) sup,.ms-lv sup{font-size:.75em;line-height:0}`;
 
 /** @param {unknown} s */
 const esc = s => EH(String(s ?? ""));
