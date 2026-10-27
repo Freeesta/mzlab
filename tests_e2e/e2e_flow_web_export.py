@@ -1,6 +1,6 @@
-"""Flow «This browser» export.table_csv and export.mztab (flow-live-jobs.js `tableExport`, `export_table_auto` of the `table` .wasm): over the five demo full-scan files the browser writes the CSV (full and
-FBMN quant) and the mzTab-M that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes them from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without).
-Run from the repo root: python3 tests_e2e/e2e_flow_dig_lr.py"""
+"""Flow «This browser» export.table_csv, export.mztab and table.filter (flow-live-jobs.js `tableExport`, `tableFilter`, `export_table_auto` and `table_view_auto` of the `table` .wasm): over the five demo full-scan files the browser writes the CSV (full and
+FBMN quant), the mzTab-M and the filter view that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes them from OPFS. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without).
+Run from the repo root: python3 tests_e2e/e2e_flow_web_export.py"""
 import json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -29,7 +29,8 @@ PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "ty
                   {"id": "gap", "step": "features.gapfill@1", "in": {"table": "ali.table", "index": ["idx.index"]}},
                   {"id": "csv", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
                   {"id": "quant", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"kind": "quant"}},
-                  {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}}]}
+                  {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
+                  {"id": "flt", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 3, "normalize": "sum"}}]}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_web_export_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
@@ -85,19 +86,19 @@ try:
 
         def first():
             r = pg.evaluate(RUN, [PLAN, SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            for i in ("csv", "quant", "mzt"):
+            for i in ("csv", "quant", "mzt", "flt"):
                 assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             kept = pg.evaluate(KEPT)
-            for name, nat_name in (("csv.csv", "csv.csv"), ("quant.csv", "quant.csv"), ("mzt.mzTab", "mzt.mzTab")):
+            for name, nat_name in (("csv.csv", "csv.csv"), ("quant.csv", "quant.csv"), ("mzt.mzTab", "mzt.mzTab"), ("flt.json", "flt.json")):
                 assert name in kept, (name, list(kept))
                 nat = (run / "out" / nat_name).read_text(); web = kept[name]
                 at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
                 assert nat == web and len(nat) > 100, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 100):at + 100], web[max(0, at - 100):at + 100])
-        step("the CSV, the quant CSV and the mzTab-M of the browser are the files of the native flow run", first)
+        step("the CSV, the quant CSV, the mzTab-M and the filter view of the browser are the files of the native flow run", first)
 
         def again():
             r = pg.evaluate(RUN, [PLAN, SAMPLES]); assert not r.get("err"), r
-            assert not [e for e in r["ev"] if e["passo"] in ("csv", "quant", "mzt") and e["stato"] == "running"], r["ev"]
+            assert not [e for e in r["ev"] if e["passo"] in ("csv", "quant", "mzt", "flt") and e["stato"] == "running"], r["ev"]
         step("a second run takes the files from OPFS", again)
         b.close()
 finally:

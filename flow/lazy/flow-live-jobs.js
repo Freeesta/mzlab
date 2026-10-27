@@ -236,6 +236,25 @@
     });
   };
 
+  /** table.filter: the view of the table of the alignment under the rules the step spells (`table_view_auto` of the `table` .wasm, the Rust `flow run` calls), kept like the MSn results under the key of the job.
+   * A table that is not this plan's alignment, or without samples, stays with the computer @param {any} x @param {any} spec @param {any} inst */
+  const tableFilter = async (x, spec, inst) => {
+    const j = job(spec), p = await kit().getPool(), key = await sha(spec.key), hit = await recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const up0 = x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]), isTable = !!up0 && ["features.align", "features.gapfill"].includes(base(up0));
+    const al = isTable ? x.alignOf(up0) : null, alKey = al && x.keys.get(x.jk({ instance: al.id, item: null }));
+    const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = x.S.samplesJson && x.S.samplesJson[sref];
+    if (!alKey || !samples || !await has(p, DIR + alKey + ".mzfeat")) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst)), ...(inst.params || {}) });
+    return detached(x, spec, inst, async () => {
+      const r = { name: inst.id + ".json", text: await p.tableView({ table: await p.fs.read(DIR + alKey + ".mzfeat"), samples, params }) };
+      await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+    });
+  };
+
   /** tp.link@2 (flow-web-tp.js): the hypotheses searched in the series, the proofs on the table of the alignment and the interpretation of the rows, in two calls to the pool (the same Rust as `flow run`); the `.mzfeat`
    * is kept in OPFS under the plan_key of the job. A file of hypotheses or a table that is not this plan's stays with the computer @param {any} x @param {any} spec @param {any} inst */
   const tpLink = async (x, spec, inst) => {
@@ -258,5 +277,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": msn, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();

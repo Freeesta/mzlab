@@ -10,6 +10,7 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 pub mod core;
+pub mod filterspec;
 pub mod pol;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
@@ -151,6 +152,14 @@ pub fn export_table_auto(table_read: Function, size: f64, samples_json: &str, ta
     let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
     let pol = pol::of_table(&mut table_reader(table_read.clone()), size as u64, &ix).map_err(js_err)?;
     core::table_file(&mut table_reader(table_read), size as u64, &samples, "", table_sha256, pol, kind).map_err(js_err)
+}
+
+/// The `view/1` of the whole table under the rules a `table.filter` step spells in `params_json` (`filterspec::spec_from_json`), the one `flow run` writes; `samples_json` may be `campioni/2`.
+#[wasm_bindgen]
+pub fn table_view_auto(table_read: Function, size: f64, samples_json: &str, params_json: &str) -> std::result::Result<String, JsValue> {
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let spec = filterspec::spec_from_json(params_json).map_err(js_err)?;
+    core::view_json(&mut table_reader(table_read), size as u64, &samples, &spec).map_err(js_err)
 }
 
 /// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row
