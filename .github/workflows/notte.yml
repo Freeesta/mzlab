@@ -47,8 +47,19 @@ jobs:
       - name: Install
         run: python -m pip install -e ".[test]" pytest-xdist
       # one install of the toolchain of rust-toolchain.toml before the workers start: several workers asking rustup for it at once corrupt the install
+      # `rustup show` exits 0 even when the install is rolled back (macOS night 45: «detected conflict: bin/cargo-clippy», then «no active toolchain»): check the
+      # toolchain really works, and on a failure remove the partial install and retry
       - name: Rust toolchain
-        run: rustup show
+        shell: bash
+        run: |
+          ch=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
+          for i in 1 2 3; do
+            rustup show > /dev/null 2>&1 || true
+            if cargo --version && cargo clippy --version; then break; fi
+            [ "$i" = 3 ] && exit 1
+            rustup toolchain uninstall "$ch" || true
+            sleep 10
+          done
       # --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
       - name: Unit tests
         run: python -m pytest -q -n auto --dist loadfile tests
