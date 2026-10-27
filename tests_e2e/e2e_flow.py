@@ -111,8 +111,7 @@ try:
             pg.select_option("#fl-alg-detect", "masstrace")
         step("the form: only differences from the default are written; a planned algorithm is refused", parameters)
         def goal():
-            # «Draw a structure» needs no input, so the level can always be reached: the page says what comes next, with raw files only and with spectra and a library too
-            attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet. Next:')")
+            attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet. Next:')")      # «Draw a structure» needs no input: the level is always reachable
             pg.select_option("#fl-add-input", "spectra"); pg.select_option("#fl-add-input", "library")
             attendi(pg, "document.querySelector('.fl-goal').textContent.includes('does not reach the identification level yet')")
         step("the goal: the page says the chain does not reach the identification level and what comes next", goal)
