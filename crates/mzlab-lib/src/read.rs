@@ -7,11 +7,18 @@ use crate::codec::decompress;
 use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::Source;
+use crate::libinfo::LibInfo;
+use crate::sha256::sha256;
 use crate::spec::Meta;
 use crate::util::{crc32c, le_u16, le_u32, le_u64, vec_with_capacity, zeroed};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+
+mod dirs;
+mod entries;
+mod verify;
+use dirs::{read_chunked, read_index_dir, read_section_table, read_v2_parts};
 
 /// Cache budget in bytes: desktop and ordinary browsers / iPad and phones. The one place where the numbers live.
 pub const CACHE_BYTES: usize = 64 << 20;
@@ -119,6 +126,8 @@ struct IndexDir {
 pub struct Light {
     /// Highest entropy-weighted intensity of each spectrum.
     pub scale: Vec<f32>,
+    /// Natural logarithm of `scale` (0 where the scale is not positive): lets the Flash score take `ln` of an index intensity from a table.
+    pub ln_scale: Vec<f64>,
     /// Precursor in 1e-5 Da units (`round(prec * 1e5)`), the value the neutral-loss index is built from.
     pub precq: Vec<u32>,
 }
@@ -131,7 +140,17 @@ pub struct Library<S: Source> {
     meta: Chunked,
     frag: IndexDir,
     nl: IndexDir,
+    /// Record length of the spectra table (32 in v1 files, 36 in v2).
+    rec_len: usize,
+    info: LibInfo,
+    /// The per-spectrum InChIKey hashes (v2): where they are, and the decoded array once asked for.
+    inchi_at: Option<SectionEntry>,
+    inchi: std::cell::OnceCell<Vec<u64>>,
+    /// SHA-256 of the header and the section table, which carry the CRC of every directory: changes whenever the content does.
+    fingerprint: [u8; 32],
     cache: RefCell<Cache>,
+    /// Blocks and pages whose CRC was already checked: a block that was evicted from the cache is read again without a second pass over its bytes.
+    verified: RefCell<std::collections::HashSet<(Kind, u32)>>,
     /// The last chunk used of each kind (table, peaks, meta): consecutive spectra of a scan sit in the same chunk, and this skips the hashed cache lookup.
     recent: RefCell<[Held; 3]>,
     light: std::cell::OnceCell<Light>,
@@ -192,7 +211,8 @@ impl<S: Source> Library<S> {
             return Err(Error::corrupt("header"));
         }
         let table_len = HEADER_LEN as u64 + header.n_sections as u64 * SECTION_ENTRY_LEN as u64;
-        if table_len + 4 > HEAD_RESERVED.min(flen) {
+        let reserved = head_reserved(version);
+        if table_len + 4 > reserved.min(flen) {
             return Err(Error::corrupt("header"));
         }
         let head = read_vec(&src, 0, table_len + 4)?;
@@ -203,19 +223,9 @@ impl<S: Source> Library<S> {
         {
             return Err(Error::corrupt("sections"));
         }
-        let mut secs = Vec::new();
-        for i in 0..header.n_sections as usize {
-            let at = HEADER_LEN + i * SECTION_ENTRY_LEN;
-            let e = SectionEntry::from_bytes(tail(&head, at, "sections")?);
-            if e.offset.checked_add(e.length).is_none_or(|end| end > flen)
-                || e.offset < HEAD_RESERVED
-                || e.dir_len as u64 > e.length
-            {
-                return Err(Error::corrupt("section"));
-            }
-            secs.push(e);
-        }
+        let secs = read_section_table(&head, header.n_sections, flen, reserved)?;
         let n = header.n_spectra;
+        let rec_len = spec_rec_len(version);
         let table = read_chunked(
             &src,
             section(&secs, SEC_SPECTRA)?,
@@ -247,13 +257,12 @@ impl<S: Source> Library<S> {
                 }
             }
         }
-        if table
-            .entries
-            .iter()
-            .any(|e| e.method != METHOD_RAW || e.stored != e.raw)
-        {
+        if table.entries.iter().any(|e| {
+            e.method != METHOD_RAW || e.stored != e.raw || !(e.raw as usize).is_multiple_of(rec_len)
+        }) {
             return Err(Error::corrupt("directory"));
         }
+        let (info, inchi_at) = read_v2_parts(&src, &secs, n)?;
         Ok(Library {
             src,
             header,
@@ -262,12 +271,18 @@ impl<S: Source> Library<S> {
             meta,
             frag,
             nl,
+            rec_len,
+            info,
+            inchi_at,
+            inchi: std::cell::OnceCell::new(),
+            fingerprint: sha256(&[&head]),
             cache: RefCell::new(Cache {
                 map: HashMap::new(),
                 bytes: 0,
                 budget: cache_bytes,
                 tick: 0,
             }),
+            verified: RefCell::new(std::collections::HashSet::new()),
             recent: RefCell::new([None, None, None]),
             light: std::cell::OnceCell::new(),
             block_reads: std::cell::Cell::new(0),
@@ -281,6 +296,7 @@ impl<S: Source> Library<S> {
         }
         let n = self.header.n_spectra as usize;
         let mut scale = vec_with_capacity::<f32>(n)?;
+        let mut ln_scale = vec_with_capacity::<f64>(n)?;
         let mut precq = vec_with_capacity::<u32>(n)?;
         for (ci, e) in self.table.entries.iter().enumerate() {
             let raw = match self.cache.borrow_mut().get((Kind::Table, to_u32(ci)?)) {
@@ -293,17 +309,57 @@ impl<S: Source> Library<S> {
                     Rc::new(decompress(&stored, e.method, e.raw as usize)?)
                 }
             };
-            for r in raw.chunks_exact(SPEC_REC_LEN) {
+            for r in raw.chunks_exact(self.rec_len) {
                 let rec = SpecRec::from_bytes(r);
                 scale.push(rec.scale);
+                ln_scale.push(if rec.scale > 0.0 {
+                    (rec.scale as f64).ln()
+                } else {
+                    0.0
+                });
                 precq.push(crate::clean::quant_mz(rec.prec));
             }
         }
         if scale.len() != n {
             return Err(Error::corrupt("table"));
         }
-        let _ = self.light.set(Light { scale, precq });
+        let _ = self.light.set(Light {
+            scale,
+            ln_scale,
+            precq,
+        });
         Ok(self.light.get().expect("just set"))
+    }
+
+    /// What the library says about itself; empty for a v1 file.
+    pub fn info(&self) -> &LibInfo {
+        &self.info
+    }
+
+    /// Identifies the content of this file (see the field): equal fingerprints, equal libraries.
+    pub fn fingerprint(&self) -> [u8; 32] {
+        self.fingerprint
+    }
+
+    /// InChIKey hash of every spectrum in table order (0 = none); all zeros for a v1 file. Read and checked on first use.
+    pub fn inchikeys(&self) -> Result<&[u64]> {
+        if let Some(v) = self.inchi.get() {
+            return Ok(v);
+        }
+        let n = self.header.n_spectra as usize;
+        let mut v = vec_with_capacity::<u64>(n)?;
+        match self.inchi_at {
+            Some(e) => {
+                let b = read_vec(&self.src, e.offset, e.dir_len as u64)?;
+                if crc32c(&b) != e.crc {
+                    return Err(Error::corrupt("inchikey"));
+                }
+                v.extend(b.chunks_exact(8).map(|c| le_u64(c, 0)));
+            }
+            None => v.resize(n, 0),
+        }
+        let _ = self.inchi.set(v);
+        Ok(self.inchi.get().expect("just set"))
     }
 
     pub fn n_spectra(&self) -> u32 {
@@ -353,6 +409,18 @@ impl<S: Source> Library<S> {
         Ok(v)
     }
 
+    /// Checks the CRC of a block the first time it is read; later reads of the same block (after an eviction) trust the first check.
+    fn check_crc(&self, id: (Kind, u32), bytes: &[u8], crc: u32) -> Result<()> {
+        if self.verified.borrow().contains(&id) {
+            return Ok(());
+        }
+        if crc32c(bytes) != crc {
+            return Err(Error::corrupt("crc"));
+        }
+        self.verified.borrow_mut().insert(id);
+        Ok(())
+    }
+
     fn chunk_cached(&self, kind: Kind, idx: u32) -> Result<Rc<Vec<u8>>> {
         if let Some(v) = self.cache.borrow_mut().get((kind, idx)) {
             return Ok(v);
@@ -369,9 +437,7 @@ impl<S: Source> Library<S> {
             .ok_or_else(|| Error::corrupt("chunk"))?;
         debug_assert!(e.raw <= max);
         let stored = read_vec(&self.src, c.off + e.offset, e.stored as u64)?;
-        if crc32c(&stored) != e.crc {
-            return Err(Error::corrupt("crc"));
-        }
+        self.check_crc((kind, idx), &stored, e.crc)?;
         let raw = Rc::new(decompress(&stored, e.method, e.raw as usize)?);
         self.block_reads.set(self.block_reads.get() + 1);
         self.cache.borrow_mut().put((kind, idx), raw.clone());
@@ -383,8 +449,8 @@ impl<S: Source> Library<S> {
             return Err(Error::corrupt("index"));
         }
         let c = self.chunk(Kind::Table, i / RECORDS_PER_TABLE_CHUNK)?;
-        let at = (i % RECORDS_PER_TABLE_CHUNK) as usize * SPEC_REC_LEN;
-        c.get(at..at + SPEC_REC_LEN)
+        let at = (i % RECORDS_PER_TABLE_CHUNK) as usize * self.rec_len;
+        c.get(at..at + self.rec_len)
             .map(SpecRec::from_bytes)
             .ok_or_else(|| Error::corrupt("chunk"))
     }
@@ -481,11 +547,11 @@ impl<S: Source> Library<S> {
         }
         let ci = to_u32(c - 1)?;
         let chunk = self.chunk(Kind::Table, ci)?;
-        let n_in = chunk.len() / SPEC_REC_LEN;
+        let n_in = chunk.len() / self.rec_len;
         let (mut lo, mut hi) = (0usize, n_in);
         while lo < hi {
             let m = (lo + hi) / 2;
-            let r = SpecRec::from_bytes(tail(&chunk, m * SPEC_REC_LEN, "chunk")?);
+            let r = SpecRec::from_bytes(tail(&chunk, m * self.rec_len, "chunk")?);
             if less(pol_key(r.pol), r.prec) {
                 lo = m + 1;
             } else {
@@ -548,187 +614,6 @@ impl<S: Source> Library<S> {
     pub fn index_entries(&self, nl: bool) -> u64 {
         self.index_dir(nl).n_entries
     }
-
-    fn page(&self, nl: bool, p: u32) -> Result<Rc<Vec<u8>>> {
-        let kind = if nl { Kind::Nl } else { Kind::Frag };
-        if let Some(v) = self.cache.borrow_mut().get((kind, p)) {
-            return Ok(v);
-        }
-        let d = self.index_dir(nl);
-        let (_, count, crc) = *d
-            .pages
-            .get(p as usize)
-            .ok_or_else(|| Error::corrupt("page"))?;
-        let bytes = read_vec(
-            &self.src,
-            d.data_off + p as u64 * PAGE_BYTES as u64,
-            count as u64 * ENTRY_BYTES as u64,
-        )?;
-        if crc32c(&bytes) != crc {
-            return Err(Error::corrupt("crc"));
-        }
-        let v = Rc::new(bytes);
-        self.block_reads.set(self.block_reads.get() + 1);
-        self.cache.borrow_mut().put((kind, p), v.clone());
-        Ok(v)
-    }
-
-    /// Calls `f(mz_q, spectrum, intensity_q)` for every entry of an index with `lo <= m/z <= hi` (quantised units), in m/z order.
-    pub fn for_each_entry(
-        &self,
-        nl: bool,
-        lo: u32,
-        hi: u32,
-        mut f: impl FnMut(u32, u32, u16),
-    ) -> Result<()> {
-        let d = self.index_dir(nl);
-        if d.pages.is_empty() || lo > hi {
-            return Ok(());
-        }
-        let first = d.pages.partition_point(|p| p.0 < lo).saturating_sub(1);
-        for (p, pg) in d.pages.iter().enumerate().skip(first) {
-            if pg.0 > hi {
-                break;
-            }
-            let b = self.page(nl, to_u32(p)?)?;
-            let c = pg.1 as usize;
-            for j in 0..c {
-                let mz = le_u32(&b, j * 4);
-                if mz < lo {
-                    continue;
-                }
-                if mz > hi {
-                    break;
-                }
-                f(mz, le_u32(&b, c * 4 + j * 4), le_u16(&b, c * 8 + j * 2));
-            }
-        }
-        Ok(())
-    }
-
-    /// Reads and checks everything (every block and page against its CRC, the peak counts against the table): `Ok` only for a sound file.
-    pub fn verify(&self) -> Result<()> {
-        let n = self.header.n_spectra;
-        let mut peaks = 0u64;
-        let mut prev: Option<(u8, f64)> = None;
-        for i in 0..n {
-            let r = self.rec(i)?;
-            let k = (pol_key(r.pol), r.prec);
-            if let Some(p) = prev {
-                if p.0 > k.0 || (p.0 == k.0 && p.1 > k.1) || r.first_peak as u64 != peaks {
-                    return Err(Error::corrupt("table"));
-                }
-            }
-            prev = Some(k);
-            peaks += r.n_peaks as u64;
-            let (mz, _) = self.peaks_q(i)?;
-            if !mz.is_sorted_by(|a, b| a < b) {
-                return Err(Error::corrupt("peaks"));
-            }
-            self.meta(i)?;
-        }
-        if peaks != self.header.n_peaks {
-            return Err(Error::corrupt("peaks"));
-        }
-        for nl in [false, true] {
-            let d = self.index_dir(nl);
-            let mut total = 0u64;
-            let mut last = 0u32;
-            for (p, pg) in d.pages.iter().enumerate() {
-                let b = self.page(nl, to_u32(p)?)?;
-                let c = pg.1 as usize;
-                for j in 0..c {
-                    let (mz, sp) = (le_u32(&b, j * 4), le_u32(&b, c * 4 + j * 4));
-                    if mz < last || sp >= n {
-                        return Err(Error::corrupt("index"));
-                    }
-                    last = mz;
-                }
-                total += c as u64;
-            }
-            if total != d.n_entries {
-                return Err(Error::corrupt("index"));
-            }
-        }
-        Ok(())
-    }
-}
-
-fn read_chunked<S: Source>(
-    src: &S,
-    s: &SectionEntry,
-    expect_chunks: u32,
-    max_raw: u32,
-) -> Result<Chunked> {
-    let d = read_vec(src, s.offset, s.dir_len as u64)?;
-    if crc32c(&d) != s.crc || d.len() < 8 {
-        return Err(Error::corrupt("directory"));
-    }
-    let n = le_u32(&d, 0);
-    if n != expect_chunks || d.len() as u64 != chunk_dir_len(n) {
-        return Err(Error::corrupt("directory"));
-    }
-    let mut entries = vec_with_capacity(n as usize)?;
-    for i in 0..n as usize {
-        let e = ChunkEntry::from_bytes(tail(&d, 8 + i * CHUNK_ENTRY_LEN, "directory")?);
-        let end = e.offset.checked_add(e.stored as u64);
-        if e.raw > max_raw
-            || end.is_none_or(|x| x > s.length)
-            || e.offset < s.dir_len as u64
-            || e.stored > e.raw.saturating_add(1024)
-            || e.first_pol_key > 2
-        {
-            return Err(Error::corrupt("directory"));
-        }
-        entries.push(e);
-    }
-    Ok(Chunked {
-        off: s.offset,
-        entries,
-    })
-}
-
-fn read_index_dir<S: Source>(src: &S, s: &SectionEntry) -> Result<IndexDir> {
-    let d = read_vec(src, s.offset, s.dir_len as u64)?;
-    if crc32c(&d) != s.crc || d.len() < 16 {
-        return Err(Error::corrupt("directory"));
-    }
-    let n_entries = le_u64(&d, 0);
-    let n_pages = le_u32(&d, 8);
-    let epp = le_u32(&d, 12);
-    if epp != ENTRIES_PER_PAGE
-        || d.len() as u64 != page_dir_len(n_pages)
-        || n_entries.div_ceil(epp as u64) != n_pages as u64
-    {
-        return Err(Error::corrupt("directory"));
-    }
-    let mut pages = vec_with_capacity(n_pages as usize)?;
-    let mut sum = 0u64;
-    for i in 0..n_pages as usize {
-        let at = 16 + i * PAGE_DIR_ENTRY_LEN;
-        let p = (le_u32(&d, at), le_u32(&d, at + 4), le_u32(&d, at + 8));
-        if p.1 == 0 || p.1 > epp || (i + 1 < n_pages as usize && p.1 != epp) {
-            return Err(Error::corrupt("directory"));
-        }
-        sum += p.1 as u64;
-        pages.push(p);
-    }
-    if sum != n_entries {
-        return Err(Error::corrupt("directory"));
-    }
-    let data_off = s.offset + s.dir_len as u64;
-    let need = pages.last().map_or(0, |p| {
-        (n_pages as u64 - 1) * PAGE_BYTES as u64 + p.1 as u64 * ENTRY_BYTES as u64
-    });
-    if data_off + need > s.offset + s.length {
-        return Err(Error::corrupt("section"));
-    }
-    Ok(IndexDir {
-        off: s.offset,
-        data_off,
-        n_entries,
-        pages,
-    })
 }
 
 #[allow(dead_code)]

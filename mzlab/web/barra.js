@@ -19,10 +19,10 @@ const BARRA = (() => {
   const SHEET = 900;                // below this width the panel is a sheet that replaces the workspace
   const AUTO_W = 1100;              // below this width the panel hides by itself (the first thing to go, before the charts); a tool button brings it back
   const PHONE_W = 600;
-  const MAIN = new Set(["file", "calc", "losses", "adducts", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
+  const MAIN = new Set(["file", "calc", "losses", "lists", "scan", "form", "idn"]);      // the tools that keep their words longest
   const LEVELS = ["all", "main", "none"];
   const HYST = 8;                   // px of slack asked before a richer level comes back (no flicker at the edge)
-  const DROP_ORDER = ["ptable", "qaqc", "lists", "adducts", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
+  const DROP_ORDER = ["ptable", "qaqc", "lists", "losses", "idn", "form", "scan"];       // first to go into "Altro" (File and Calculator never do)
 
   let _tab = "file";
   let _open = false;
@@ -58,7 +58,9 @@ const BARRA = (() => {
   const sheet = () => window.innerWidth < SHEET;
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
   const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : Math.min(defaultW(), typeof namesWidth === "function" ? namesWidth(defaultW()) : defaultW())));
-  const validTab = id => ["file", "calc", "losses", "adducts", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
+  // the adducts live in the calculator: a saved or old request for the tab opens it
+  const tabOf = id => (id === "adducts" ? "calc" : id);
+  const validTab = id => ["file", "calc", "losses", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
   const IC = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -90,7 +92,6 @@ const BARRA = (() => {
     { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inData(), run: () => toggle("file") },
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inData() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },
     { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
-    { id: "adducts", dom: "np-ad", ic: () => QI("adduct"), panel: "adducts", run: () => (inData() ? toggle("adducts") : window.QQQRef && QQQRef.open("ad")) },
     { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
     { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
@@ -138,11 +139,14 @@ const BARRA = (() => {
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
-  // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
-  if (window.MAPPA) MAPPA.CMDS.filter(c => c.viste.includes("map")).forEach(c => CMD.push({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
-  // the arrangement of the panel in use (actions disp.* of azioni/1, registered by affianca.js): only in the palette, for the active panel when the action applies to it
-  const dispCtx = () => { const p = typeof E !== "undefined" ? E.active : null; return p && p.el ? { vista: p.type, p } : null; };
-  if (typeof AZIONI !== "undefined") AZIONI.voci.filter(a => a.gruppo === "disp").forEach(a => CMD.push({ id: a.id, bar: false, group: "graphs", ic: () => AZIONI_ICONE.svg(a.icona || ""), visible: () => { const c = inData() && dispCtx(); return !!c && AZIONI.mostra(a, c) && AZIONI.pronta(a, c); }, run: () => { const c = dispCtx(); if (c) AZIONI.esegui(a.id, c); } }));
+  // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here) and the arrangement ones: only in the palette; added once, by BARRA.late() when mappa.js / affianca.js load after this file (first paint)
+  const lateCmds = () => {
+    const addCmd = (/** @type {any} */ c) => { if (!CMD.some(x => x.id === c.id)) CMD.push(c); };
+    if (window.MAPPA) MAPPA.CMDS.filter(c => c.viste.includes("map")).forEach(c => addCmd({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
+    // the arrangement of the panel in use (actions disp.* of azioni/1, registered by affianca.js): only in the palette, for the active panel when the action applies to it
+    const dispCtx = () => { const p = typeof E !== "undefined" ? E.active : null; return p && p.el ? { vista: p.type, p } : null; };
+    if (typeof AZIONI !== "undefined") AZIONI.voci.filter(a => a.gruppo === "disp").forEach(a => addCmd({ id: a.id, bar: false, group: "graphs", ic: () => AZIONI_ICONE.svg(a.icona || ""), visible: () => { const c = inData() && dispCtx(); return !!c && AZIONI.mostra(a, c) && AZIONI.pronta(a, c); }, run: () => { const c = dispCtx(); if (c) AZIONI.esegui(a.id, c); } }));
+  }; lateCmds();
   // the two clean slates (reset.js): a short question says what is lost; also in the gear
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
   /** @type {(id: any) => any} */
@@ -162,7 +166,7 @@ const BARRA = (() => {
     _w = okW ? Math.round(s.w) : defaultW();
     _wUser = okW && (s.u === true || (s.u === undefined && _w !== defaultW()));
     if (!_wUser) _w = defaultW();
-    _tab = validTab(s.tab) ? s.tab : "file";
+    _tab = validTab(tabOf(s.tab)) ? tabOf(s.tab) : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil", "alb", "gra"].includes(s.last.scan)) _last.scan = s.last.scan;
@@ -261,7 +265,7 @@ const BARRA = (() => {
   }
 
   function setPanelVisible(id) {
-    const map = { file: "#sb-panel-file", calc: "#sb-panel-calc", losses: "#sb-panel-losses", adducts: "#sb-panel-adducts", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
+    const map = { file: "#sb-panel-file", calc: "#sb-panel-calc", losses: "#sb-panel-losses", lists: "#sb-panel-lists", qaqc: "#sb-panel-qaqc", stat: "#sb-panel-stat" };
     Object.values(map).forEach(sel => { const p = Q1(sel); if (p) p.hidden = true; });
     const hr = Q1("#hrinfo");
     if (hr) hr.hidden = true;
@@ -305,7 +309,6 @@ const BARRA = (() => {
         if (typeof calcRun === "function") calcRun();
       }, 30);
     } else if (id === "losses") ensureLossesMounted(opt);
-    else if (id === "adducts") ensureAdductsMounted();
     else if (id === "lists") ensureListsMounted(opt);
     else if (id === "stat") { const pnl = Q1("#sb-panel-stat"); if (pnl && window.STAT) STAT.mount(pnl); }
     else if (id === "qaqc") { const pnl = Q1("#sb-panel-qaqc"); if (pnl && window.QAQC) QAQC.mount(pnl); }      // painted again at every opening: the files may have changed
@@ -321,15 +324,6 @@ const BARRA = (() => {
       }
     } else if (opt.q != null && window.QQQRef && typeof QQQRef.setLossQuery === "function") {
       QQQRef.setLossQuery(opt.q);
-    }
-  }
-
-  function ensureAdductsMounted() {
-    const pnl = Q1("#sb-panel-adducts");
-    if (!pnl || pnl.dataset.mounted) return;
-    if (window.QQQRef && typeof QQQRef.mountAdducts === "function") {
-      QQQRef.mountAdducts(pnl);
-      pnl.dataset.mounted = "1";
     }
   }
 
@@ -373,6 +367,7 @@ const BARRA = (() => {
 
   function show(id, opt = {}) {
     hintClose(true);
+    id = tabOf(id);
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
     if (!inData() || !validTab(id)) return false;
     const wasOpen = _open;
@@ -470,7 +465,7 @@ const BARRA = (() => {
   function splitHtml(c) {
     const last = byId(_last[c.id]);
     const full = `${name(c)}: ${name(last)}`;
-    return `<span class="tb-split" data-cmd="${c.id}" role="presentation">` +
+    return `<span class="tb-split" data-cmd="${c.id}" role="group" aria-label="${EHs(name(c))}">` +
       `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
@@ -583,6 +578,8 @@ const BARRA = (() => {
       const on = open && c.items.includes(_tab);
       b.classList.toggle("on", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
+      // the whole split group shows the state, the caret included
+      if (b.parentElement) b.parentElement.classList.toggle("on", on);
       const last = byId(_last[c.id]);
       const full = `${name(c)}: ${name(last)}`;
       b.title = full; b.setAttribute("aria-label", full);
@@ -1086,6 +1083,7 @@ const BARRA = (() => {
     hintShow,
     hintClose,
     commands: CMD,
+    late: lateCmds,
     setTab: show,
     show,
     toggle,

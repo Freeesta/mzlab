@@ -79,10 +79,9 @@ try:
             pg.screenshot(path=SH + "65_periodic.png")
         step("periodic table: hover shows masses and isotopes, click pins", periodic)
         def adducts():
-            pg.evaluate("QQQRef.open('ad')"); pg.fill("#ad-in", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#ad-tbl').innerText.includes('386')")
-            t = pg.inner_text("#ad-tbl"); assert "364" in t and "386" in t and "364.0" not in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+, rounded to the unit with low-resolution files loaded
-            pg.fill("#ad-in", "100"); attendi(pg, "document.querySelector('#ad-tbl').innerText.includes('101')"); assert "101" in pg.inner_text("#ad-tbl")
-            pg.screenshot(path=SH + "66_adducts.png")
+            pg.evaluate("QQQRef.open('ad')"); attendi(pg, "!document.querySelector('#calcdlg').hidden"); pg.fill("#calcin", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#calcout').innerText.includes('386')")
+            t = pg.inner_text("#calcout"); assert "364" in t and "386" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+ in the calculator, which now holds the adducts
+            pg.screenshot(path=SH + "66_adducts.png"); pg.click("#calcx")
             pg.evaluate("QQQRef.open('ls')"); attendi(pg, "!!document.querySelector('#nl-list .nlr[data-f=g42]')"); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("g42") == "42", m
             pg.click("#refx")
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
@@ -121,12 +120,12 @@ try:
         def breakbond():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
             # erase the amide C-N bond with Ketcher's own eraser tool (as a student would)
+            pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)      # first the tool: the layout may move, the position is read after it
             pos = pg.evaluate("""(()=>{const k=%s, st=k.editor.struct();let bid=null;st.bonds.forEach((b,id)=>{const a=st.atoms.get(b.begin).label,c=st.atoms.get(b.end).label;
                if((a==='N'&&c==='C'||a==='C'&&c==='N')&&bid===null){const o=[...st.bonds.values()].some(x=>(x.begin===(a==='C'?b.begin:b.end)||x.end===(a==='C'?b.begin:b.end))&&x.type===2);if(o)bid=id}});
                const b=st.bonds.get(bid),p1=st.atoms.get(b.begin).pp,p2=st.atoms.get(b.end).pp;
                const c=k.editor.render.paper.canvas, r=c.getBoundingClientRect(), vb=c.viewBox.baseVal, f=document.getElementById('kframe').getBoundingClientRect();
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
-            pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)
             pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"], sort=True)
             t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"]), t
             pg.screenshot(path=SH + "63_broken.png")

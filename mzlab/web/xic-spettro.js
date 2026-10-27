@@ -54,16 +54,23 @@
 
   // ---------------------------------------------------------------- toolbar
   /** @param {any} p */
+  /** tooltip of the XIC button: the infusion note, «XIC of N files» in overlay, else the how-to @param {any} p @param {boolean} off */
+  const tipOf = (p, off) => { const n = window.SPECBAR ? SPECBAR.nFiles(p) : 1; return off ? T("xicbtn.infusion") : n > 1 ? T("xicbtn.n", { n }) : T("xicbtn.title"); };
   function refresh(p) {
-    const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]');
-    if (p.uv) { for (const x of [b, l]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
+    const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]'), pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
+    if (p.uv) { for (const x of [b, l, pv]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
     const off = infusion(p);
     if (off && (s.pend || s.sel)) { s.pend = false; s.sel = null; }
     if (b) {
       b.classList.toggle("on", s.pend); b.setAttribute("aria-pressed", String(s.pend));
-      const bt = /** @type {HTMLButtonElement} */ (b), tip = T(off ? "xicbtn.infusion" : "xicbtn.title");
+      const bt = /** @type {HTMLButtonElement} */ (b), tip = tipOf(p, off);
       if (bt.disabled !== off) bt.disabled = off;
       if (bt.title !== tip) bt.title = tip;
+    }
+    if (pv) {
+      const on = !!UIP.xicLens && !off;
+      pv.classList.toggle("on", on); pv.setAttribute("aria-pressed", String(on));
+      if (pv.disabled !== off) pv.disabled = off;
     }
     if (l) {
       l.hidden = !s.sel;
@@ -136,7 +143,7 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     if (window.XICLENS) XICLENS.sync(p);
-    const s = ST.get(p); if (s && infusion(p) !== /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]'))?.disabled) refresh(p);
+    const s = ST.get(p), xb = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]')); if (s && (infusion(p) !== xb?.disabled || (xb && xb.title !== tipOf(p, infusion(p))) || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && !infusion(p)))) refresh(p);
     if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
@@ -237,7 +244,20 @@
     // Space on the button presses it: the walk over the scans (scroll.js) must not take it
     for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); });
     l.onclick = () => openPop(p);
+    const pv = document.createElement("button");           // the lens switch is built here (pannelli.js is at its start-up size cap)
+    pv.className = "bt xbp"; pv.dataset.a = "xicp"; pv.title = T("xiclens.toggle"); pv.setAttribute("aria-label", T("xiclens.toggle"));
+    pv.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>';
+    pv.onclick = () => setLens(!UIP.xicLens);
+    const mb = p.el.querySelector('.tbs [data-a="more"]'), g = document.createElement("span");       // its own group, the rightmost: the first one the header moves into the «⋯» menu when it is tight (fitHd)
+    g.className = "tbg"; g.append(pv); if (mb) mb.before(g); else b.after(pv);
     refresh(p);
+  }
+  /** the lens preference from the button of any spectrum panel (the Settings switch is the other place) @param {boolean} on */
+  function setLens(on) {
+    UIP.xicLens = on; uipSave();
+    if (!on && window.XICLENS) XICLENS.closeAll();
+    const sw = /** @type {HTMLInputElement | null} */ (document.getElementById("uip-xiclens")); if (sw) sw.checked = on;
+    E.panels.forEach((/** @type {any} */ q) => { if (q.type === "spec" && q.el) refresh(q); });
   }
   /** the m/z of the peak a pixel means: the nearest peak label within 34 px, otherwise the peak the mouse box highlights (null: none) @param {any} p @param {number} px @returns {number | null} */
   function target(p, px) {
@@ -300,6 +320,6 @@
     } catch (e) { /* draw() asks again */ }
   }
 
-  /** @type {any} */ (window).XICBTN = { wire, prefetch, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** @type {any} */ (window).XICBTN = { wire, prefetch, setLens, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();

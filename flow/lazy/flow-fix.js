@@ -122,11 +122,12 @@
     const present = (/** @type {any} */ g) => g.steps.some((/** @type {string} */ s) => F.findStep(plan, s));
     const lone = (/** @type {any} */ f) => !(simple && (f.type === "raw" || f.type === "mzml") && present(F.BASE[0]));
     for (const f of plan.inputs.filter(lone)) { nodes.push({ key: "file:" + f.name, kind: "input", title: F.INPUT_NAMES[f.type] || f.type, why: "Your data files.", cat: "input", ids: [], file: f }); owner.set("file:" + f.name, "file:" + f.name); }
-    const groups = simple ? F.BASE : [];
+    const groups = simple ? [...F.BASE, ...F.GROUPS] : [];
     for (const g of groups) {
       const insts = g.steps.map((/** @type {string} */ s) => F.findStep(plan, s)).filter(Boolean);
       if (!insts.length) continue;
-      nodes.push({ key: g.key, kind: "group", title: g.title, why: g.why, cat: g.key === "import" ? "input" : "process", ids: insts.map((/** @type {any} */ i) => i.id), locked: true });
+      const base = F.BASE.includes(g);
+      nodes.push({ key: g.key, kind: "group", title: g.title, why: g.why, cat: g.cat || (g.key === "import" ? "input" : "process"), ids: insts.map((/** @type {any} */ i) => i.id), locked: base });
       for (const i of insts) owner.set(i.id, g.key);
     }
     for (const inst of plan.steps) {
@@ -135,17 +136,31 @@
       nodes.push({ key: inst.id, kind: "step", title: name, why, cat, ids: [inst.id], locked: baseSteps.has(id) });
       owner.set(inst.id, inst.id);
     }
-    if (simple) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) owner.set("file:" + f.name, "import");
+    if (simple && present(F.BASE[0])) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) owner.set("file:" + f.name, "import");
     for (const inst of plan.steps) for (const [, v] of Object.entries(inst.in || {})) for (const r of [].concat(/** @type {any} */ (v))) {
       const src = r.startsWith("file:") ? owner.get(r) : owner.get(r.split(".")[0]), dst = owner.get(inst.id);
       if (src && dst && src !== dst) edges.add(src + "\u0000" + dst);
+    }
+    // a step that reads the infusion open in Data has no `file:` in the plan: the raw files still lead to it
+    for (const inst of plan.steps) if (F.INFUSION_STEPS.includes(inst.step.split("@")[0]) && !(inst.in && inst.in.source)) for (const f of plan.inputs.filter((/** @type {any} */ x) => x.type === "raw" || x.type === "mzml")) {
+      const src = owner.get("file:" + f.name), dst = owner.get(inst.id);
+      if (src && dst && src !== dst) edges.add(src + "\u0000" + dst);
+    }
+    // the view cards: beside a step that has a view, joined to it
+    for (const inst of plan.steps) {
+      const view = F.STEP_VIEWS[inst.step.split("@")[0]], from = owner.get(inst.id);
+      if (!view || !from) continue;
+      const key = "view:" + inst.id;
+      nodes.push({ key, kind: "view", title: view.title, why: view.why, cat: "output", ids: [], of: inst.id, result: view.result, locked: true });
+      edges.add(from + "\u0000" + key);
     }
     const keys = new Set(nodes.map(n => n.key));
     return { nodes, edges: [...edges].map(e => /** @type {[string, string]} */ (e.split("\u0000"))).filter(([a, b]) => keys.has(a) && keys.has(b)) };
   };
   /** left-to-right layout: the column is the longest path from the left, the row the order inside the column @param {any[]} nodes @param {[string, string][]} edges */
   F.layout = (nodes, edges) => {
-    const depth = new Map(nodes.map(n => [n.key, 0])), W = 280, H = 96;
+    // few cards: a tighter grid
+    const small = nodes.length <= 5, depth = new Map(nodes.map(n => [n.key, 0])), W = small ? 250 : 280, H = small ? 88 : 96;
     for (let k = 0; k < nodes.length; k++) for (const [a, b] of edges) depth.set(b, Math.max(/** @type {number} */ (depth.get(b)), /** @type {number} */ (depth.get(a)) + 1));
     const rows = new Map();
     for (const n of nodes) { const d = /** @type {number} */ (depth.get(n.key)), r = rows.get(d) || 0; rows.set(d, r + 1); n.x = 40 + d * W; n.y = 40 + r * H; }

@@ -60,7 +60,7 @@
  "tests_e2e/e2e_hr_dda.py": 17,
  "tests_e2e/e2e_hr_dda2.py": 17,
  "tests_e2e/e2e_hr_display.py": 11,
- "tests_e2e/e2e_hr_formule.py": 9,
+ "tests_e2e/e2e_hr_formule.py": 8,
  "tests_e2e/e2e_hr_identificazione.py": 2,
  "tests_e2e/e2e_hr_isotopi.py": 6,
  "tests_e2e/e2e_hr_mappa.py": 2,

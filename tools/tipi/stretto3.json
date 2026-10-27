@@ -1,0 +1,46 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "moduleDetection": "force",
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true
+  },
+  "include": [
+    "globali.d.ts",
+    "globali-nomi.d.ts",
+    "modello.d.ts",
+    "manuale.d.ts",
+    "manuale-dom.d.ts",
+    "../../mzlab/web/explore.js",
+    "../../mzlab/web/mappa-render.js",
+    "../../mzlab/web/mappa-tabella.js",
+    "../../mzlab/web/mappa.js",
+    "../../mzlab/web/libreria.js",
+    "../../mzlab/web/tavola-periodica.js",
+    "../../mzlab/web/molui.js",
+    "../../mzlab/web/shell.js",
+    "../../mzlab/web/libreria-cartella.js",
+    "../../mzlab/web/libreria-scarica.js",
+    "../../mzlab/web/archivio.js",
+    "../../mzlab/web/draw.js",
+    "../../mzlab/web/molecole-archivio.js",
+    "../../mzlab/web/molecole-campo.js",
+    "../../mzlab/web/molecole-modulo.js",
+    "../../mzlab/web/molecole-ui.js",
+    "../../mzlab/web/disegno-font.js",
+    "../../mzlab/web/disegno-contaminanti.js",
+    "../../mzlab/web/disegno-barra.js",
+    "../../mzlab/web/disegno-frammenti.js",
+    "../../mzlab/web/disegno-parziali.js",
+    "../../mzlab/web/manifesto.js",
+    "../../mzlab/web/mappa-estrai.js",
+    "../../mzlab/web/mappa3d.js"
+  ]
+}

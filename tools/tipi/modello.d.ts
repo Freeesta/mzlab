@@ -61,3 +61,9 @@ type Sessione = Array<Partial<MzFile> & { file: string }> | null;
 
 /** UIP (explore.js, saved in localStorage «qqq.prefs» by settings.js uipSave). */
 interface Preferenze { theme: "auto" | "light" | "dark"; pal: string; merge: boolean; hrPpm: number; hrDec: number; tog: boolean }
+
+/** One row of api/adduct_table (calc-addotti.js, calc-addotti-html.js). */
+type AdRow = { n: string, id: string, pol: number, common: boolean, k: number, z: number, add: string, sub: string, shift: number, mz4: number | null, mz5: number | null, mz1: number | null, nominal: number | null, ppm: number | null, m_if: number | null };
+
+/** The answer of api/adduct_table. */
+type AdTable = { formula: string | null, neutral: number | null, tol: number, rows: AdRow[], best: number | null, diffs: { pair: string, a: string, b: string, pol: number, d: number }[], delta?: { value: number, hits: { a: string, b: string, d: number, err_mda: number }[] } };

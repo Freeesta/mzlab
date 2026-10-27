@@ -204,7 +204,7 @@ function uipOpen(btn) {
     if (typeof redrawAll === "function") redrawAll();
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
-  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (!UIP.xicLens && window.XICLENS) XICLENS.closeAll(); });
+  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
   uipPriv(d, on);
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();

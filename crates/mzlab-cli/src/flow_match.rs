@@ -91,6 +91,8 @@ fn lib_spectra(lib: &Lib) -> mzlab_lib::error::Result<Vec<Spectrum>> {
             it,
             meta,
             rt: rec.rt_min(),
+            ri: rec.ri_val(),
+            ei: false,
         });
     }
     Ok(out)

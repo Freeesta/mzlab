@@ -7,9 +7,15 @@ use crate::codec::compress;
 use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
+use crate::libinfo::{inchikey14, Declared, Detect};
 use crate::sortutil;
 use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
-use crate::util::{crc32c, get_varint, le_f32, le_f64, le_u16, le_u32, put_varint};
+use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32, put_varint};
+
+#[path = "build_parts/index.rs"]
+mod index;
+pub(crate) use index::read_meta_record;
+use index::{chunk_dir_bytes, copy_stream, entry_bytes, write_index};
 
 const S_REC: usize = 0;
 const S_META: usize = 1;
@@ -19,11 +25,15 @@ const BUCKETS: usize = 128;
 const BUCKET_WIDTH: u32 = 16 * 100_000;
 const S_FRAG: usize = 3;
 const S_NL: usize = S_FRAG + BUCKETS;
-const N_STREAMS: usize = S_NL + BUCKETS;
+/// One `u64` InChIKey hash per spectrum, in arrival order of the sorted pass.
+const S_IK: usize = S_NL + BUCKETS;
+const N_STREAMS: usize = S_IK + 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct BuildOpts {
     pub clean: CleanOpts,
+    /// Kind and technique stated by the caller; what is left `None` is detected from the records.
+    pub declared: Declared,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -52,6 +62,9 @@ pub struct Builder<T: Scratch> {
     opts: BuildOpts,
     next_orig: u32,
     emptied: u64,
+    detect: Detect,
+    /// Source id, version and source SHA-256 written to the library info.
+    source: [String; 3],
 }
 
 impl<T: Scratch> Builder<T> {
@@ -62,7 +75,14 @@ impl<T: Scratch> Builder<T> {
             opts,
             next_orig: 0,
             emptied: 0,
+            detect: Detect::default(),
+            source: Default::default(),
         }
+    }
+
+    /// States where the library comes from (catalogue id, version, SHA-256 of the source file); written to the library info.
+    pub fn set_source(&mut self, source: &str, version: &str, sha256: &str) {
+        self.source = [source.into(), version.into(), sha256.into()];
     }
 
     pub fn len(&self) -> usize {
@@ -100,9 +120,13 @@ impl<T: Scratch> Builder<T> {
         let mx = q.iter().fold(0.0f64, |a, x| a.max(x.1));
         let mut rec: Vec<u8> = Vec::with_capacity(32 + q.len() * 6 + 64);
         let rt = s.rt.filter(|r| r.is_finite() && *r >= 0.0 && *r < 1e5);
+        let ri = s.ri.filter(|r| r.is_finite() && *r > 0.0 && *r < 1e5);
         let mut flags = if q.len() < 3 { FLAG_FEW_PEAKS } else { 0 };
         if rt.is_some() {
             flags |= FLAG_HAS_RT;
+        }
+        if ri.is_some() {
+            flags |= FLAG_HAS_RI;
         }
         rec.extend_from_slice(&s.prec.to_le_bytes());
         rec.push(s.pol as u8);
@@ -110,6 +134,8 @@ impl<T: Scratch> Builder<T> {
         rec.extend_from_slice(&flags.to_le_bytes());
         rec.extend_from_slice(&orig.to_le_bytes());
         rec.extend_from_slice(&(rt.unwrap_or(0.0) as f32).to_le_bytes());
+        rec.extend_from_slice(&(ri.unwrap_or(0.0) as f32).to_le_bytes());
+        rec.extend_from_slice(&inchikey14(&s.meta.inchikey).to_le_bytes());
         rec.extend_from_slice(&(q.len() as u16).to_le_bytes());
         for (mq, i) in &q {
             rec.extend_from_slice(&mq.to_le_bytes());
@@ -125,6 +151,7 @@ impl<T: Scratch> Builder<T> {
             .try_reserve(1)
             .map_err(|_| Error::memory_budget())?;
         self.store.append(S_REC, &rec)?;
+        self.detect.observe(s);
         self.keys.push(Key {
             prec: s.prec,
             pol_key: pol_key(s.pol),
@@ -179,9 +206,9 @@ impl<T: Scratch> Builder<T> {
             let i = i as u32;
             let mut buf = crate::util::zeroed(k.len as usize)?;
             self.store.read_at(S_REC, k.off as u64, &mut buf)?;
-            // record: prec f64 | pol | licence | flags u16 | orig u32 | rt f32 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
-            let n_pk = le_u16(&buf, 20) as usize;
-            let peaks_at = 22;
+            // record: prec f64 | pol | licence | flags u16 | orig u32 | rt f32 | ri f32 | inchikey14 u64 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
+            let n_pk = le_u16(&buf, 32) as usize;
+            let peaks_at = 34;
             let meta_at = peaks_at + n_pk * 6;
             let prec = le_f64(&buf, 0);
             let pol = buf[8] as i8;
@@ -238,8 +265,10 @@ impl<T: Scratch> Builder<T> {
                 orig: le_u32(&buf, 12),
                 scale,
                 rt: le_f32(&buf, 16),
+                ri: le_f32(&buf, 20),
             };
             self.store.append(S_TABLE, &rec.to_bytes())?;
+            self.store.append(S_IK, &buf[24..32])?;
             for j in 0..n_pk {
                 let q = ((p[j] / scale as f64) * INT_MAX)
                     .round()
@@ -377,6 +406,8 @@ impl<T: Scratch> Builder<T> {
             cursor = off + len;
         }
 
+        cursor = self.write_extras(out, &mut sections, cursor)?;
+
         // ---- header and section table
         let hdr = Header {
             version: VERSION,
@@ -405,134 +436,6 @@ impl<T: Scratch> Builder<T> {
             neg: neg_n,
         })
     }
-}
-
-fn entry_bytes(mz: u32, spec: u32, q: u16) -> [u8; ENTRY_BYTES] {
-    let mut b = [0u8; ENTRY_BYTES];
-    b[0..4].copy_from_slice(&mz.to_le_bytes());
-    b[4..8].copy_from_slice(&spec.to_le_bytes());
-    b[8..10].copy_from_slice(&q.to_le_bytes());
-    b
-}
-
-fn chunk_dir_bytes(dir: &[ChunkEntry]) -> Vec<u8> {
-    let mut b = Vec::with_capacity(8 + dir.len() * CHUNK_ENTRY_LEN);
-    b.extend_from_slice(&(dir.len() as u32).to_le_bytes());
-    b.extend_from_slice(&[0u8; 4]);
-    for d in dir {
-        b.extend_from_slice(&d.to_bytes());
-    }
-    b
-}
-
-fn copy_stream<T: Scratch, K: Sink>(
-    st: &ExtentStore<T>,
-    s: usize,
-    out: &mut K,
-    at: u64,
-) -> Result<()> {
-    let total = st.len(s);
-    let mut buf = crate::util::zeroed(1 << 20)?;
-    let mut done = 0u64;
-    while done < total {
-        let take = ((total - done) as usize).min(buf.len());
-        st.read_at(s, done, &mut buf[..take])?;
-        out.write_at(at + done, &buf[..take])?;
-        done += take as u64;
-    }
-    Ok(())
-}
-
-/// Reads the 128 bucket streams of one index in order, sorts each and lays the entries into 64 KB pages.
-/// Page: `count` entries as three arrays (m/z `u32`, spectrum `u32`, intensity `u16`), zero padded to 65536 bytes.
-fn write_index<T: Scratch, K: Sink>(
-    st: &ExtentStore<T>,
-    base: usize,
-    out: &mut K,
-    off: u64,
-) -> Result<(u64, Vec<u8>)> {
-    let total: u64 = (0..BUCKETS)
-        .map(|b| st.len(base + b) / ENTRY_BYTES as u64)
-        .sum();
-    let n_pages = total.div_ceil(ENTRIES_PER_PAGE as u64) as u32;
-    let dir_len = page_dir_len(n_pages);
-    let data_off = off + dir_len;
-    let mut dir: Vec<(u32, u32, u32)> = Vec::with_capacity(n_pages as usize);
-    let mut page: Vec<(u32, u32, u16)> = Vec::with_capacity(ENTRIES_PER_PAGE as usize);
-    let mut written = 0u64;
-    let flush = |page: &mut Vec<(u32, u32, u16)>,
-                 dir: &mut Vec<(u32, u32, u32)>,
-                 out: &mut K|
-     -> Result<()> {
-        if page.is_empty() {
-            return Ok(());
-        }
-        let c = page.len();
-        let mut b = vec![0u8; c * ENTRY_BYTES];
-        for (j, e) in page.iter().enumerate() {
-            b[j * 4..j * 4 + 4].copy_from_slice(&e.0.to_le_bytes());
-            b[c * 4 + j * 4..c * 4 + j * 4 + 4].copy_from_slice(&e.1.to_le_bytes());
-            b[c * 8 + j * 2..c * 8 + j * 2 + 2].copy_from_slice(&e.2.to_le_bytes());
-        }
-        let at = data_off + dir.len() as u64 * PAGE_BYTES as u64;
-        out.write_at(at, &b)?;
-        dir.push((page[0].0, c as u32, crc32c(&b)));
-        page.clear();
-        Ok(())
-    };
-    for b in 0..BUCKETS {
-        let len = st.len(base + b) as usize;
-        if len == 0 {
-            continue;
-        }
-        let mut raw = crate::util::zeroed(len)?;
-        st.read_at(base + b, 0, &mut raw)?;
-        let mut es: Vec<(u32, u32, u16)> = crate::util::vec_with_capacity(len / ENTRY_BYTES)?;
-        for c in raw.chunks_exact(ENTRY_BYTES) {
-            es.push((le_u32(c, 0), le_u32(c, 4), le_u16(c, 8)));
-        }
-        drop(raw);
-        sortutil::sort_by(&mut es, |a, b| a.cmp(b));
-        for e in es {
-            page.push(e);
-            written += 1;
-            if page.len() == ENTRIES_PER_PAGE as usize {
-                flush(&mut page, &mut dir, out)?;
-            }
-        }
-    }
-    flush(&mut page, &mut dir, out)?;
-    debug_assert_eq!(written, total);
-    let mut d = Vec::with_capacity(dir_len as usize);
-    d.extend_from_slice(&total.to_le_bytes());
-    d.extend_from_slice(&(dir.len() as u32).to_le_bytes());
-    d.extend_from_slice(&ENTRIES_PER_PAGE.to_le_bytes());
-    for (first, count, crc) in &dir {
-        d.extend_from_slice(&first.to_le_bytes());
-        d.extend_from_slice(&count.to_le_bytes());
-        d.extend_from_slice(&crc.to_le_bytes());
-    }
-    d.resize(dir_len as usize, 0);
-    out.write_at(off, &d)?;
-    // the file ends after the last page's used bytes (the slot is padded only when more pages follow)
-    let last_end = dir.len().saturating_sub(1) as u64 * PAGE_BYTES as u64
-        + dir.last().map_or(0, |p| p.1 as u64 * ENTRY_BYTES as u64);
-    Ok((dir_len + last_end, d))
-}
-
-/// Metadata field decoder shared with the reader: `META_FIELDS` strings in a row.
-pub(crate) fn read_meta_record(raw: &[u8], pos: &mut usize) -> Result<Meta> {
-    let mut f: [String; META_FIELDS] = Default::default();
-    for slot in f.iter_mut() {
-        let l = get_varint(raw, pos)? as usize;
-        let end = pos
-            .checked_add(l)
-            .filter(|e| *e <= raw.len())
-            .ok_or_else(|| Error::corrupt("meta"))?;
-        *slot = String::from_utf8_lossy(&raw[*pos..end]).into_owned();
-        *pos = end;
-    }
-    Ok(Meta::from_fields(f))
 }
 
 /// Convenience for tests and small libraries: builds in memory.

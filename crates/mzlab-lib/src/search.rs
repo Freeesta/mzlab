@@ -1,15 +1,16 @@
 //! Searching a library: identity (precursor window, every candidate scored on its peaks) and Flash-style open / neutral-loss / hybrid searches
 //! over the fragment and neutral-loss indexes (Li & Fiehn, Nat. Methods 2023), used for the analogues.
 
-use crate::clean::{clean, weighted, CleanOpts};
+use crate::clean::{clean, CleanOpts};
 use crate::error::Result;
+pub use crate::flash::{flash_scores, flash_scores_with, FlashMode, FlashScore};
+use crate::flash::{flash_top, FlashAcc};
 use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::prep::Scorer;
 use crate::read::Library;
-use crate::scores::{common_losses, modified_cosine, pair_scores, pair_term, ModCosine, Spec};
+use crate::scores::{common_losses, modified_cosine, pair_scores, ModCosine, Spec};
 use crate::sortutil;
-use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tol {
@@ -156,135 +157,6 @@ pub fn identity_with<S: Source>(
     Ok(light)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FlashMode {
-    /// Fragments equal within the tolerance.
-    Open,
-    /// Neutral losses (precursor − m/z) equal within the tolerance.
-    NeutralLoss,
-    /// Either: a peak pairs unshifted or shifted by the precursor difference; every peak pairs once.
-    Hybrid,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct FlashScore {
-    pub index: u32,
-    pub score: f64,
-    pub pairs: u32,
-}
-
-fn in_ranges(r: &[Range<u32>], i: u32) -> bool {
-    r.iter().any(|x| x.contains(&i))
-}
-
-/// Entropy similarity of the query against every spectrum in `ranges` that shares at least one pair, computed from the indexes only.
-/// Sorted by score, best first; spectra without a pair are not listed.
-pub fn flash_scores<S: Source>(
-    lib: &Library<S>,
-    q: &Query,
-    mode: FlashMode,
-    frag_da: f64,
-    ranges: &[Range<u32>],
-) -> Result<Vec<FlashScore>> {
-    flash_scores_with(lib, q, mode, frag_da, ranges)
-}
-
-/// `flash_scores` with the fragment tolerance as `FragTol`: in ppm the window of a query peak is that many ppm of its own m/z
-/// (the shifted window too, as in `modified_cosine`); a plain Da value gives the same bits as `flash_scores`.
-pub fn flash_scores_with<S: Source>(
-    lib: &Library<S>,
-    q: &Query,
-    mode: FlashMode,
-    frag: impl Into<FragTol>,
-    ranges: &[Range<u32>],
-) -> Result<Vec<FlashScore>> {
-    let frag = frag.into();
-    let light = lib.light()?;
-    let pa = weighted(&q.spec.it);
-    // (spectrum, query peak, library peak in 1e-5 Da units, contribution)
-    let mut pairs: Vec<(u32, u16, u32, f64)> = Vec::new();
-    let window = |x: f64, tol_q: f64| -> Option<(u32, u32)> {
-        let lo = (x - tol_q).ceil().max(0.0);
-        let hi = (x + tol_q).floor();
-        (hi >= 0.0 && lo <= hi && hi < u32::MAX as f64).then_some((lo as u32, hi as u32))
-    };
-    for (i, &mz) in q.spec.mz.iter().enumerate() {
-        let tol_q = frag.at(mz) * crate::clean::MZ_SCALE;
-        if mode != FlashMode::NeutralLoss {
-            if let Some((lo, hi)) = window(mz * crate::clean::MZ_SCALE, tol_q) {
-                lib.for_each_entry(false, lo, hi, |mq, sp, qi| {
-                    if in_ranges(ranges, sp) {
-                        let p = qi as f64 / 65535.0 * light.scale[sp as usize] as f64;
-                        pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
-                    }
-                })?;
-            }
-        }
-        if mode != FlashMode::Open {
-            if let Some((lo, hi)) = window((q.prec - mz) * crate::clean::MZ_SCALE, tol_q) {
-                lib.for_each_entry(true, lo, hi, |nq, sp, qi| {
-                    if in_ranges(ranges, sp) {
-                        let p = qi as f64 / 65535.0 * light.scale[sp as usize] as f64;
-                        let mq = light.precq[sp as usize].wrapping_sub(nq);
-                        pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
-                    }
-                })?;
-            }
-        }
-    }
-    Ok(score_pairs(pairs))
-}
-
-/// Best one-to-one score per spectrum from the `(spectrum, query peak, library peak, contribution)` candidates, best first.
-fn score_pairs(mut pairs: Vec<(u32, u16, u32, f64)>) -> Vec<FlashScore> {
-    sortutil::sort_by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
-    pairs.dedup_by(|b, a| (a.0, a.1, a.2) == (b.0, b.1, b.2));
-    let mut out: Vec<FlashScore> = Vec::new();
-    let mut k = 0;
-    while k < pairs.len() {
-        let sp = pairs[k].0;
-        let mut e = k;
-        while e < pairs.len() && pairs[e].0 == sp {
-            e += 1;
-        }
-        let g = &pairs[k..e];
-        let clean_group = g.windows(2).all(|w| w[0].1 != w[1].1) && {
-            let mut js: Vec<u32> = g.iter().map(|x| x.2).collect();
-            sortutil::sort_by(&mut js, |a, b| a.cmp(b));
-            js.windows(2).all(|w| w[0] != w[1])
-        };
-        let (score, n) = if clean_group {
-            (g.iter().map(|x| x.3).sum::<f64>(), g.len())
-        } else {
-            let mut order: Vec<usize> = (0..g.len()).collect();
-            sortutil::sort_by(&mut order, |&a, &b| {
-                g[b].3.total_cmp(&g[a].3).then(a.cmp(&b))
-            });
-            let (mut ui, mut uj) = (Vec::new(), Vec::new());
-            let (mut s, mut n) = (0.0, 0);
-            for x in order {
-                if !ui.contains(&g[x].1) && !uj.contains(&g[x].2) {
-                    ui.push(g[x].1);
-                    uj.push(g[x].2);
-                    s += g[x].3;
-                    n += 1;
-                }
-            }
-            (s, n)
-        };
-        out.push(FlashScore {
-            index: sp,
-            score: score.clamp(0.0, 1.0),
-            pairs: n as u32,
-        });
-        k = e;
-    }
-    sortutil::sort_by(&mut out, |a, b| {
-        b.score.total_cmp(&a.score).then(a.index.cmp(&b.index))
-    });
-    out
-}
-
 #[derive(Debug, Clone)]
 pub struct AnalogOpts {
     pub frag_da: f64,
@@ -330,18 +202,35 @@ pub struct AnalogHit {
 
 /// Analogues: Flash hybrid entropy search in the precursor window picks the candidates, the modified cosine (≥ `min_matched` peaks) ranks them.
 pub fn analogs<S: Source>(lib: &Library<S>, q: &Query, o: &AnalogOpts) -> Result<Vec<AnalogHit>> {
+    analogs_with(lib, q, o, &mut FlashAcc::new())
+}
+
+/// `analogs` with the accumulators of the caller (shared by the libraries of a set and across queries).
+pub fn analogs_with<S: Source>(
+    lib: &Library<S>,
+    q: &Query,
+    o: &AnalogOpts,
+    acc: &mut FlashAcc,
+) -> Result<Vec<AnalogHit>> {
     let pol = if o.pol != 0 { o.pol } else { q.pol };
     let ranges = lib.ranges(pol, q.prec - o.max_delta, q.prec + o.max_delta)?;
     let light = lib.light()?;
     let frag = FragTol::from_params(o.frag_da, o.frag_ppm);
-    let mut sc = flash_scores_with(lib, q, FlashMode::Hybrid, frag, &ranges)?;
     let pq = q.prec;
-    sc.retain(|s| {
-        s.pairs >= o.min_hybrid_pairs
-            && (light.precq[s.index as usize] as f64 / crate::clean::MZ_SCALE - pq).abs()
-                >= o.min_delta
-    });
-    sc.truncate(o.candidates);
+    let sc = flash_top(
+        lib,
+        q,
+        FlashMode::Hybrid,
+        frag,
+        &ranges,
+        acc,
+        Some(o.candidates),
+        |s| {
+            s.pairs >= o.min_hybrid_pairs
+                && (light.precq[s.index as usize] as f64 / crate::clean::MZ_SCALE - pq).abs()
+                    >= o.min_delta
+        },
+    )?;
     let mut out = Vec::new();
     for s in sc {
         let rec = lib.rec(s.index)?;

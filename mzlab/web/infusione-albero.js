@@ -46,39 +46,20 @@
       h`<div class="inf-g">${raw(sel("inf-tol", T("inf.tol"), T("inf.tol.tip"), [["nom", T("inf.tol.nom")], ["0.01", "0.01 Da"], ["10ppm", "10 ppm"]], O.tol))}${raw(sel("inf-ce", T("inf.ce"), T("inf.ce.tip"), [["1", T("inf.ce.sep")], ["0", T("inf.ce.mer")]], O.ce ? "1" : "0"))}</div>` +
       h`<div class="inf-g">${raw(sel("inf-sum", T("inf.avg"), T("inf.avg.tip"), [["0", T("inf.mean")], ["1", T("inf.sumL")]], O.sum ? "1" : "0"))}</div>`;
   }
-  /** @param {HTMLElement} b @param {any} p @param {number} tok */
-  async function render(b, p, tok) {
-    view = { b, p };
-    const t = target(p), f = E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);
-    if (!f || !INF.isInf(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
-    if (!b.querySelector(".inf-ctl")) b.innerHTML = `<div class="muted">…</div>`;
-    const j = await INF.tree(f.k);
-    if (tok !== (window.BANCO && BANCO.token())) return;
-    const lv = INF.O.lv, cur = t && t.filt, ckey = j.livelli.join();
-    // the controls stay in place (focus and open lists survive a change of option); the table is rebuilt only when its rows change
-    if (!b.querySelector(".inf-ctl") || b.dataset.infLv !== ckey) {
-      b.dataset.infLv = ckey;
-      b.innerHTML = h`<div class="inf-ctl">${raw(controls(j))}<span id="inf-busy" class="muted" role="status"></span></div><div id="inf-wrap"></div>`;
-      const on = (/** @type {string} */ id, /** @type {(v: string) => void} */ fn) => { const el = /** @type {HTMLSelectElement | null} */ (b.querySelector("#" + id)); if (el) el.onchange = () => fn(el.value); };
-      on("inf-lv", v => INF.setOpt("lv", +v));
-      on("inf-tol", v => INF.setOpt("tol", v));
-      on("inf-ce", v => INF.setOpt("ce", v === "1"));
-      on("inf-sum", v => INF.setOpt("sum", v === "1"));
-      ["inf-tol", "inf-ce"].forEach(id => { const el = b.querySelector("#" + id); if (el) el.addEventListener("focus", () => { const c = view && target(view.p); INF.warm((c && c.k) ?? E.cur); }); });
-    }
-    const wrap = /** @type {HTMLElement & { _j?: any }} */ (b.querySelector("#inf-wrap")), key = `${f.k}|${INF.O.tol}|${INF.O.ce}|${lv}`;
-    if (wrap.dataset.key === key && wrap._j === j && wrap.firstElementChild) return void mark(wrap.firstElementChild, cur);
-    wrap.dataset.key = key; wrap._j = j;
-    const rows = INF.rows(j).filter(r => !lv || r.n.livello <= lv);
-    const head = [raw(I18N.t("inf.col.prec")), ms("n"), I18N.t("inf.col.ce"), I18N.t("inf.col.n"), I18N.t("inf.col.min")].map((x, i) => raw(h`<th${raw(i === 3 ? ' class="num"' : "")}>${x}</th>`));
-    const first = h`<tr role="treeitem" aria-level="1" aria-selected="false" tabindex="-1" data-id=""><td>${ms(1)}</td><td>${ms(1)}</td><td></td><td class="num">${j.ms1.n}</td><td>${j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })}</td></tr>`;
-    const line = (/** @type {any} */ r) => {
-      const skip = r.n.salto ? " · " + I18N.t("inf.skip", { n: r.n.salto }) : "";
-      return h`<tr role="treeitem" aria-level="${r.depth + 1}" aria-selected="false" tabindex="-1" data-id="${r.n.id}" data-par="${r.n.genitore == null ? "" : r.n.genitore}" title="${r.path + skip}"><td style="padding-left:${r.depth * 14}px">${INF.prec(r.n)}</td><td>${ms(r.n.livello)}</td><td>${r.n.ce ?? ""}</td><td class="num">${r.n.n}</td><td>${mins(r.n)}</td></tr>`;
-    };
-    wrap.innerHTML = h`<table id="inf-tree" role="tree" aria-label="${I18N.t("inf.tree.aria")}"><thead><tr>${head}</tr></thead><tbody>${raw(first)}${rows.map(r => raw(line(r)))}</tbody></table>`;
-    const table = /** @type {HTMLElement} */ (wrap.firstElementChild);
-    mark(table, cur);
+  /** The table as shown (the survey row, then the nodes in display order), plain text with tabs: «MS3», not a superscript. */
+  const tsvOf = (/** @type {any} */ j, /** @type {any[]} */ rows) => [
+    [I18N.t("inf.col.prec"), "MSn", I18N.t("inf.col.ce"), I18N.t("inf.col.n"), I18N.t("inf.col.tic"), I18N.t("inf.col.min")],
+    ["", "MS1", "", j.ms1.n, j.ms1.tic, j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })],
+    ...rows.map(r => [INF.prec(r.n), "MS" + r.n.livello, r.n.ce ?? "", r.n.n, r.n.tic, mins(r.n)]),
+  ].map(r => r.join("\t")).join("\n");
+  async function copyTable(/** @type {HTMLElement} */ b) {
+    const wrap = /** @type {any} */ (b.querySelector("#inf-wrap"));
+    if (!wrap || !wrap._rows) return;
+    const txt = await PROV.tsv(tsvOf(wrap._j, wrap._rows), { table: "msn-precursors" });
+    try { await navigator.clipboard.writeText(txt); nearMsg(I18N.t("bn.copied.txt")); } catch (_) { info(I18N.t("bn.noClip")); }
+  }
+  /** Click, Enter, arrows and right-click of the table: the node goes to the active cell. */
+  function wire(/** @type {HTMLElement} */ b, /** @type {any} */ p, /** @type {any} */ f, /** @type {HTMLElement} */ table, /** @type {any[]} */ rows) {
     const byId = new Map(rows.map(r => [r.n.id, r]));
     const trs = /** @type {HTMLElement[]} */ ([...table.querySelectorAll("tbody tr")]);
     const cells0 = (/** @type {any} */ c) => { const { c: ch, specs } = INF.cells(c); [ch, ...specs].filter(Boolean).forEach(q => BANCO.setFilter(q, null, [])); };
@@ -102,6 +83,57 @@
       else if (e.key === "ArrowLeft") mv(trs.find(y => y.dataset.id === tr.dataset.par));
       else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(tr); }
     };
+  }
+  /** Sort of the Intensity column: 0 = the tree, -1 = highest first, 1 = lowest first. A sorted table is a flat list (the path stays in the title of the row). */
+  let sort = 0;
+  const num = (/** @type {number} */ v) => (v ? v.toExponential(2) : "0");
+  /** The table: survey row first, then the nodes in the order given. */
+  function tableHtml(/** @type {any} */ j, /** @type {any[]} */ rows, /** @type {number} */ order) {
+    const aria = order === 0 ? "none" : order < 0 ? "descending" : "ascending";
+    const tic = h`<button type="button" id="inf-sort" class="inf-sort" title="${I18N.t("inf.col.tic.tip")}">${I18N.t("inf.col.tic")}</button>`;
+    const head = [raw(I18N.t("inf.col.prec")), ms("n"), I18N.t("inf.col.ce"), I18N.t("inf.col.n"), raw(tic), I18N.t("inf.col.min")]
+      .map((x, i) => raw(h`<th${raw(i === 3 || i === 4 ? ' class="num"' : "")}${raw(i === 4 ? ` aria-sort="${aria}"` : "")}>${x}</th>`));
+    const first = h`<tr role="treeitem" aria-level="1" aria-selected="false" tabindex="-1" data-id=""><td>${ms(1)}</td><td>${ms(1)}</td><td></td><td class="num">${j.ms1.n}</td><td class="num">${num(j.ms1.tic)}</td><td>${j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })}</td></tr>`;
+    const line = (/** @type {any} */ r) => {
+      const skip = r.n.salto ? " · " + I18N.t("inf.skip", { n: r.n.salto }) : "";
+      return h`<tr role="treeitem" aria-level="${order ? 2 : r.depth + 1}" aria-selected="false" tabindex="-1" data-id="${r.n.id}" data-par="${r.n.genitore == null ? "" : r.n.genitore}" title="${r.path + skip}"><td style="padding-left:${order ? 0 : r.depth * 14}px">${INF.prec(r.n)}</td><td>${ms(r.n.livello)}</td><td>${r.n.ce ?? ""}</td><td class="num">${r.n.n}</td><td class="num">${num(r.n.tic)}</td><td>${mins(r.n)}</td></tr>`;
+    };
+    return h`<table id="inf-tree" role="tree" aria-label="${I18N.t("inf.tree.aria")}"><thead><tr>${head}</tr></thead><tbody>${raw(first)}${rows.map(r => raw(line(r)))}</tbody></table>`;
+  }
+  /** @param {HTMLElement} b @param {any} p @param {number} tok */
+  async function render(b, p, tok) {
+    view = { b, p };
+    const t = target(p), f = p && p.stand ? E.files[p.k] : E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);   // stand: the file Flow's Explore names
+    if (!f || !INF.isInf(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
+    if (!b.querySelector(".inf-ctl")) b.innerHTML = `<div class="muted">…</div>`;
+    const j = await INF.tree(f.k);
+    if (tok !== (window.BANCO && BANCO.token())) return;
+    const lv = INF.O.lv, cur = t && t.filt, ckey = j.livelli.join() + (INF.single() ? "g" : "");
+    // the controls stay in place (focus and open lists survive a change of option); the table is rebuilt only when its rows change
+    if (!b.querySelector(".inf-ctl") || b.dataset.infLv !== ckey) {
+      b.dataset.infLv = ckey;
+      b.innerHTML = h`<div class="inf-ctl">${raw(controls(j))}<button type="button" id="inf-copy" title="${I18N.t("inf.copy.tip")}">${I18N.t("inf.copy")}</button>${raw(INF.single() ? h`<button type="button" id="inf-graph">${I18N.t("bn.i9.gra")}</button>` : "")}<span id="inf-busy" class="muted" role="status"></span></div><div id="inf-wrap"></div>`;
+      const on = (/** @type {string} */ id, /** @type {(v: string) => void} */ fn) => { const el = /** @type {HTMLSelectElement | null} */ (b.querySelector("#" + id)); if (el) el.onchange = () => fn(el.value); };
+      on("inf-lv", v => INF.setOpt("lv", +v));
+      on("inf-tol", v => INF.setOpt("tol", v));
+      on("inf-ce", v => INF.setOpt("ce", v === "1"));
+      on("inf-sum", v => INF.setOpt("sum", v === "1"));
+      const cp = /** @type {HTMLElement | null} */ (b.querySelector("#inf-copy")); if (cp) cp.onclick = () => copyTable(b);
+      const gb = b.querySelector("#inf-graph"); if (gb) gb.addEventListener("click", () => { if (window.BARRA) BARRA.setTab("gra"); });
+      ["inf-tol", "inf-ce"].forEach(id => { const el = b.querySelector("#" + id); if (el) el.addEventListener("focus", () => { const c = view && target(view.p); INF.warm((c && c.k) ?? E.cur); }); });
+    }
+    const wrap = /** @type {HTMLElement & { _j?: any, _rows?: any[] }} */ (b.querySelector("#inf-wrap")), key = `${f.k}|${INF.O.tol}|${INF.O.ce}|${lv}|${sort}`;
+    if (wrap.dataset.key === key && wrap._j === j && wrap.firstElementChild) return void mark(wrap.firstElementChild, cur);
+    wrap.dataset.key = key; wrap._j = j;
+    const rows = INF.rows(j).filter(r => !lv || r.n.livello <= lv);
+    if (sort) rows.sort((x, y) => -sort * (y.n.tic - x.n.tic));
+    wrap._rows = rows;
+    wrap.innerHTML = tableHtml(j, rows, sort);
+    const sb = wrap.querySelector("#inf-sort");
+    if (sb) sb.addEventListener("click", () => { sort = sort === 0 ? -1 : sort === -1 ? 1 : 0; redraw(); });
+    const table = /** @type {HTMLElement} */ (wrap.firstElementChild);
+    mark(table, cur);
+    wire(b, p, f, table, rows);
   }
   /** Redraws the table of the open tab now (an option changed): no frame of waiting, no «…» in between. */
   function refresh() {
@@ -136,7 +168,15 @@
     if (regroup) redraw();
     uiSave();
   }
+  /** At loading the side bar shows the tree of the infusion file just added (the active one, else the last added) instead of the file list: one panel, the others untouched. */
+  function autoOpen(/** @type {any[]} */ added) {
+    const inf = added.filter(INF.isInf);
+    if (!inf.length || !window.BARRA) return;
+    const cur = E.files[E.cur], f = INF.isInf(cur) && inf.includes(cur) ? cur : inf[inf.length - 1];
+    if (f.k !== E.cur) activeFile(f.k);
+    BARRA.setTab("alb", { noFocus: true, instant: true });
+  }
   /** The only file loaded when it is an infusion: the «Fragmentation graph» (infusione-grafo.js) belongs to that case. */
   const single = () => { const l = E.files.filter((/** @type {any} */ f) => !f.gone); return l.length === 1 && INF.isInf(l[0]); };
-  Object.assign(INF, { render, refresh, target, single, setOpt, warm });
+  Object.assign(INF, { render, refresh, target, single, setOpt, warm, autoOpen });
 })();

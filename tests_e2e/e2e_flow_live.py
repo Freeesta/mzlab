@@ -183,7 +183,7 @@ try:
             path = lib.axe_path()
             if not path: print("SKIP axe: axe-core not available"); return
             pg.add_script_tag(path=path)
-            r = pg.evaluate("axe.run('#v-flow', {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag22aa']}}).then(x => x.violations.map(v => v.id + ': ' + v.nodes.length))")
+            r = pg.evaluate("axe.run('#v-flow', {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag22aa']}}).then(x => x.violations.map(v => v.id + ': ' + v.nodes.map(n => n.target.join(' ')).join(' | ')))")
             assert not r, r
         step("the cards and the table of files say what the steps did, by keyboard, with no axe violation", cards)
 
