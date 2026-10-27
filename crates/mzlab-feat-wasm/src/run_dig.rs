@@ -34,6 +34,7 @@ fn dig_polarity<I: ReadAt>(adduct: &str, recipe: &Recipe, indexes: &[Index<I>]) 
 
 /// `tp.dig_lr` up to `lr::dig`, shared by the native executor (`flow_digl.rs`) and the browser (`tp_dig_inputs`): the polarity, the hypotheses searched in the stored peaks
 /// of the series, and the JSON of the files (`names`, in the order of the table) and of the parent that the Dig reads. `[M+H]+` meeting a negative series is read as `[M-H]-`.
+#[allow(clippy::too_many_arguments)]
 pub fn dig_inputs<I: ReadAt>(
     rules: &[u8],
     p: &LinkParent,
