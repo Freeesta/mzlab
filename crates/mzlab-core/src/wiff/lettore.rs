@@ -200,6 +200,10 @@ fn dad_chrom(dad: Option<&super::dad::DadData>, id: &str) -> Option<Chromatogram
         }
         dad_chrom(self.parte(c)?.w.dad.as_ref(), id).ok_or_else(|| Error::new("error.badIndex").with("id", id))
     }
+    #[cfg(not(target_family = "wasm"))]
+    fn dad_dati(&mut self, c: usize) -> Result<Option<super::dad::DadData>> {
+        Ok(self.parte(c)?.w.dad.clone())
+    }
     #[cfg(feature = "mappa-dad")]
     fn dad_map(&mut self, c: usize) -> Result<Option<String>> {
         Ok(self.parte(c)?.w.dad.as_ref().map(|d| d.to_map_json()))

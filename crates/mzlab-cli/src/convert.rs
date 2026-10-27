@@ -34,7 +34,7 @@ usage: mzlab-cli convert INPUT... --out FOLDER [--zlib N] [--numpress] [--peaks 
   --report FILE.json   one object per input: ingresso, uscita, sha256, spettri, secondi, saltato, conv/1; or ingresso, errore, causa
   --fresh              converts every file again; without it a file already converted from the same bytes, with the same parameters and the same
                        program is not converted again
-  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks); the options above are the short forms
+  --set conv.NAME=V    a parameter of the step convert.mzml (zlib_level, numpress, peaks, dad); the options above are the short forms
   --help               this text
 
 progress goes to stderr, one line per file; stdout lists the mzML files, one per line

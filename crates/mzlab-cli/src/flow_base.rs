@@ -312,6 +312,11 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
             .params
             .iter()
             .any(|(k, v)| k == "numpress" && v.bool() == Some(true)),
+        dad: job
+            .resolved
+            .params
+            .iter()
+            .any(|(k, v)| k == "dad" && v.bool() == Some(true)),
         ..Opzioni::default()
     };
     let out = r.work.join(convert_file(
