@@ -6,8 +6,8 @@ from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
 from lib import free_port, attendi; PORT = free_port()
-site = Path(tempfile.mkdtemp()) / "site"
-subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)], check=True)
+subprocess.run([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], check=True)      # the site with the Rust engine (the grid asks it for the CSV and the checks)
+site = ROOT / "site"
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 for _ in range(2000):
     try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
@@ -25,11 +25,13 @@ try:
         t = pg.inner_text(".fl-insp")
         check("no file", "No file loaded" in t and pg.locator(".fl-insp button:has-text('Open Data')").count() == 1, t)
         check("no filler", "null" not in t.split() and "Ready." not in t and "What this step does" not in t and "Feeds into" not in t, t)
+        attendi(pg, "document.querySelectorAll('.flx-imp .fl-b').length > 2")      # the late modules (the card's table) arrive after the first draw
         check("buttons", pg.locator(".flx-imp button:has-text('Add files')").count() == 1 and pg.locator(".flx-imp button:has-text('Add a folder')").count() == 1)
         check("generate off", pg.locator(".flx-imp button:has-text('Generate metadata')").is_disabled())
         pg.set_input_files(".flx-imp input[type=file]", files=[{"name": "meta.csv", "mimeType": "text/csv", "buffer": b"File,Role,Time (min)\na.mzML,sample,10\nb.mzML,blank,\n"}])
-        attendi(pg, "document.querySelectorAll('.flx-imp .flx-table tbody tr').length === 2")
-        check("table", pg.locator(".flx-imp .flx-table input[aria-label^='Time of a.mzML']").input_value() == "10" and "2 rows read from meta.csv" in pg.inner_text(".flx-imp"), pg.inner_text(".flx-imp"))
+        attendi(pg, "document.querySelectorAll('.flx-imp .mg-bd [role=row]').length === 2")
+        cell = lambda col, row: pg.locator(f".flx-imp .mg-bd [role=row]:nth-child({row}) [aria-colindex='{col}']")
+        check("table", cell(8, 1).inner_text() == "10" and "2 rows read from meta.csv" in pg.inner_text(".flx-imp"), pg.inner_text(".flx-imp"))
         import io, zipfile
         xb = io.BytesIO()
         with zipfile.ZipFile(xb, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -37,7 +39,7 @@ try:
             zf.writestr("xl/worksheets/sheet1.xml", '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s"><v>3</v></c></row></sheetData></worksheet>')
         pg.set_input_files(".flx-imp input[type=file]", files=[{"name": "meta.xlsx", "mimeType": "application/octet-stream", "buffer": xb.getvalue()}])
         attendi(pg, "/rows read from meta.xlsx/.test(document.querySelector('.flx-imp').textContent)")
-        check("xlsx", pg.locator(".flx-imp .flx-table input[aria-label^='Series of a.mzML']").input_value() == "S9", pg.inner_text(".flx-imp"))
+        check("xlsx", cell(6, 1).inner_text() == "S9", pg.inner_text(".flx-imp"))
         pg.evaluate("E.files.push({file: 'a.mzML', name: 'a'}, {file: 'b.mzML', name: 'b'})")
         pg.click('.fln:has-text("Build feature table")'); pg.click('.fln:has-text("Import data")')
         attendi(pg, "!!document.querySelector('.fl-insp .fl-data') && /in Data/.test(document.querySelector('.fl-insp .fl-data').textContent)")
