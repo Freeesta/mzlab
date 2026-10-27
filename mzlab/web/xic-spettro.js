@@ -18,7 +18,7 @@
   /** the file of the spectrum @param {any} p */
   const specFile = p => p._a && p._a.data && p._a.data[0] ? p._a.data[0].f : null;
   /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusione.rs, or the same words in the file name) @param {any} p */
-  const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || !f.manual && /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "")); };
+  const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || !f.manual && /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "") || (!!window.CANALI && ESP.predefinito(CANALI.tipo(f)).lente === false)); };      // the table of the types of experiment (esperimenti.js) says whether the lens is proposed
   /** the high-resolution file among those the XIC reads, if any @param {any} p */
   const hrFile = p => (window.HR ? HR.xicFiles(p.tab).find((/** @type {any} */ f) => HR.isHr(f, f.lv)) : null) || null;
   const num = (/** @type {number} */ v) => String(+v.toFixed(5));
@@ -34,6 +34,12 @@
   function lowWin(p, sel) { return sel.tol != null ? [sel.m - sel.tol, sel.m + sel.tol] : xicWin(sel.m, sel.obs); }
   /** the trace of the XIC for the chosen ion: the default one of xicDirect, or with the tolerance written by the student @param {any} p @param {Sel} sel */
   function traceFor(p, sel) {
+    const t = traceFor0(p, sel), o = window.CANALI ? CANALI.xicOmo(p, specFile(p)) : null;      // the channel of the chromatogram the spectrum follows (canali.js)
+    if (o) t.canale = o;
+    return t;
+  }
+  /** @param {any} p @param {Sel} sel */
+  function traceFor0(p, sel) {
     const hf = hrFile(p);
     if (hf) {
       const t = HR.ionTrace(sel.m, { obs: sel.obs, tab: p.tab });
@@ -271,7 +277,7 @@
   function lensArgs(p, m) {
     const f = specFile(p); if (!f || infusion(p)) return null;
     const sel = { m, obs: true, tol: null }, tr = traceFor(p, sel);
-    return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel) };
+    return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel), canale: window.CANALI ? CANALI.idOf(f, tr.canale) : null };
   }
   /** the lens was committed: the same path as a click on the peak with the button waiting @param {any} p @param {number} m */
   function commit(p, m) { choose(p, m, true); extract(p, false); }

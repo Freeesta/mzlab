@@ -295,7 +295,8 @@ window.nbEnsure = async () => { if (!nbEverLoaded) await nbLoad(); };
 function panelRec(p) {
   return {
     type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
-    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
+    traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
+    canali: p.canali && p.canali.length ? p.canali : undefined,
     k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
     link: p.link ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.link) : -1, src: p.src ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.src) : -1,
     dda: p.dda != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
@@ -386,7 +387,10 @@ async function xicBin(/** @type {string} */ url) {
   return { mz: head.mz, tol: head.tol, traces };
 }
 // the caller in grafici.js spreads [mz, tol] from HR.xicArgs, so the middle arguments are a rest list for tsc
-const getXic = /** @type {(k: string | number, ...rest: (number | string | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
+// canale: the XIC inside the scans of a channel (api/xic, canali.js), otherwise the whole level
+const getXic = /** @type {(k: string | number, ...rest: (number | string | null | undefined)[]) => Promise<Bag>} */ ((k, mz, tol, lv, canale) => canale
+  ? memo(`x${k}|${mz}|${tol}|${lv}|${canale}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}&canale=${encodeURIComponent(canale)}`).then(j => j.traces ? j.traces[0] : j))
+  : memo(`x${k}|${mz}|${tol}|${lv}`, () => xicBin(`api/xicbin?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0])));
 // + "&hr=0" when high resolution is switched off (hr.js)
 const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");
 const getSpec = (/** @type {string | number} */ k, /** @type {number | string} */ a, /** @type {number | string} */ b, /** @type {number} */ lv, /** @type {unknown} */ pr, /** @type {number[] | null | undefined} */ bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}&bgf=${bg[3] ?? 1}&bgclip=${bg[4] ?? 1}` : "") + MERGE()));

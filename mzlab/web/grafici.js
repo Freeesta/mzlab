@@ -79,6 +79,7 @@ async function ms2trSeries(p) {
 async function rawSeries(p) {
   if (p.type === "chrom" && isAnalog(p.kind)) return analogSeries(p);
   if (p.type === "chrom" && p.ranges && p.ranges.length && window.BANCO) return BANCO.rangeSeries(p);       // stacked graphs of the bench (banco.js)
+  if (window.CANALI && CANALI.on(p)) return CANALI.series(p, shownFor(p));        // the channels the student ticked (canali.js)
   if (p.type === "chrom" && (p.tab || E.tab) === "ms2" && !isAnalog(p.kind) && p.kind !== "pda") { const s = await ms2trSeries(p); if (s) return s; }
   if (p.type === "chrom") {
     let fl = shownFor(p);
@@ -91,7 +92,7 @@ async function rawSeries(p) {
   const files = shownFor(p);
   if (p.type === "xic") {
     const ts = p.traces, out = [];
-    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv).then(d => ({
+    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.canale) : null).then(d => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
       color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));
@@ -266,6 +267,7 @@ function legend(p, all, note = "") {
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
   } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
+  if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMANDI.fai("xic.traces", p, () => { t.label = v; }); draw(p); } });
@@ -488,7 +490,6 @@ function zoomYTo(p, lo, hi, quiet) {
   if (!quiet) draw(p);
 }
 function zoomTo(p, z0, z1) { const [f0, f1] = p._a.full; p.zoom = clampView(z0, z1, f0, f1); draw(p); }
-
 // ---- RT-m/z map (like Xcalibur's "Ion Map" and MZmine's 2D viewer): each pixel is the mean intensity of one ion at one instant
 const DIV = [[0, [213, 94, 0]], [0.5, [250, 250, 246]], [1, [0, 114, 178]]];       // Okabe-Ito vermilion #D55E00 <-> white <-> blue #0072B2: readable by colour-blind people
 function lut(stops) {

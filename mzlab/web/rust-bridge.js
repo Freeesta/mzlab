@@ -134,7 +134,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
 
   async function indexRoute(s, k, path, u, t0) {
-    let r = await rpc({ op: "route", slot: k, path, query: u.search });
+    let r = await rpc(path === "/api/canali" && s.blob ? { op: "canali", slot: k, name: base(s.name).split("#")[0], blob: s.blob } : { op: "route", slot: k, path, query: u.search });      // the channels also read the chromatograms of the mzML (SRM, UV)
     if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
     if (r.dead || r.error || !r.info) return null;
     stats.rust++;
@@ -158,7 +158,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r) { stats.rust++; return { ...r, ms: performance.now() - t0 }; }
       return null;
     }
-    if (INDEX_ROUTES.test(path) && !hasRef(q)) {
+    if ((INDEX_ROUTES.test(path) || (path === "/api/xic" && q.get("canale"))) && !hasRef(q)) {       // a trace or a list inside a channel: the engine of the index builds the channels itself
       const s = slots[k0];
       if (!s) return null;
       await s.opening;
