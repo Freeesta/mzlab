@@ -12,7 +12,7 @@ use super::super::Res;
 use super::labels::{crit, score, status, Cell, GROWS, PERSISTS};
 use super::plan::{ParentLr, Settings};
 use super::{Entry, Offset};
-use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
+use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
 
 /// The calibration offset is measured on a parent row within this many Da of its [M+H]+ and applied up to the same limit.
 pub const OFFSET_MAX: f64 = 0.6;
@@ -145,7 +145,7 @@ pub fn cells(t: &Aligned, r: usize) -> Vec<Cell> {
     (0..t.n_files)
         .map(|k| {
             let c = t.cell(r, k);
-            if t.state[c] == CELL_ABSENT || !t.area[c].is_finite() {
+            if no_peak(t.state[c]) || !t.area[c].is_finite() {
                 return Cell::default();
             }
             let (a, w) = (f64::from(t.apex_rt[c]), f64::from(t.width[c]));

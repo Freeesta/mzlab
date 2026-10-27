@@ -52,7 +52,7 @@
     const { el } = F, list = node.kind === "input" ? [] : node.ids || [];
     if (!list.length) return null;
     const tbl = el("table", { class: "flx-table" }, el("caption", { text: "Files" }), el("thead", {}, el("tr", {}, ...["File", "Mode", "State", "Share", "Time", "Memory"].map(h => el("th", { scope: "col", text: h })))), el("tbody", {}));
-    return el("div", { class: "fln-files", "data-ids": list.join(" "), hidden: true }, el("div", { class: "flx-tablewrap" }, tbl));
+    return el("div", { class: "fln-files", "data-ids": list.join(" "), hidden: true }, el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": `Files of ${node.title}` }, tbl));
   };
 
   /** @param {HTMLElement} box */

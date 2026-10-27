@@ -470,7 +470,7 @@ const BARRA = (() => {
   function splitHtml(c) {
     const last = byId(_last[c.id]);
     const full = `${name(c)}: ${name(last)}`;
-    return `<span class="tb-split" data-cmd="${c.id}" role="presentation">` +
+    return `<span class="tb-split" data-cmd="${c.id}" role="group" aria-label="${EHs(name(c))}">` +
       `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
@@ -583,6 +583,8 @@ const BARRA = (() => {
       const on = open && c.items.includes(_tab);
       b.classList.toggle("on", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
+      // the whole split group shows the state, the caret included
+      if (b.parentElement) b.parentElement.classList.toggle("on", on);
       const last = byId(_last[c.id]);
       const full = `${name(c)}: ${name(last)}`;
       b.title = full; b.setAttribute("aria-label", full);
