@@ -26,7 +26,7 @@ export const fraz = (nativo, phase, frac) => {
 
 /**
  * @param {{ nativo: { stubOf: (n: string) => Promise<any>, toMzml: (m: any, post: (p: any) => void) => Promise<any> }, ARCH: any,
- *   indexPlain: (name: string, blob: Blob, onProgress: (p: any) => void) => Promise<File> }} d
+ *   indexPlain: (name: string, blob: Blob, onProgress: (p: any) => void) => Promise<File | null> }} d
  * @returns {(name: string, annuncia: Annuncia) => Promise<{ idx: File, mzml: Blob } | null>} null = a plain mzML: the file of the page is read as it is
  */
 export function createDerivata({ nativo, ARCH, indexPlain }) {

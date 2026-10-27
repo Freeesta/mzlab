@@ -267,7 +267,7 @@ I18N.add("en", {
   "calc.delta.none": "no pair of adducts within {tol} ppm",
   "calc.err.sign": "I do not understand this sign",
   "cursor.handle": "Current position in the chromatogram: drag the dot with a finger or a pen, or use the arrow keys to move one scan (Shift: five)",
-  "cursor.handle.value": "RT {rt} min",
+  "cursor.handle.value": "{rt} min",
   "calc.err.closeParen": "extra closing parenthesis",
   "calc.err.tooBig": "result too large",
   "bug.title.empty": "describe the problem",
