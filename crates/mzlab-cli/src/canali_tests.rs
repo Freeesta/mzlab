@@ -83,7 +83,10 @@ fn usage_errors_exit_with_2() {
 
 /// The files of `tools/dati_sintetici.py` the tests need, in a new folder; `None` without python3 and numpy.
 fn sintetici() -> Option<PathBuf> {
-    let d = std::env::temp_dir().join(format!("mzlab_cli_canali_dati_{}", std::process::id()));
+    // one directory per call: the tests run in parallel
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let d = std::env::temp_dir().join(format!("mzlab_cli_canali_dati_{}_{k}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     std::fs::create_dir_all(&d).unwrap();
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
