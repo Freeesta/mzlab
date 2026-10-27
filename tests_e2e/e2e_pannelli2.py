@@ -104,7 +104,7 @@ try:
             i = ids[1]; h = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", i); hp = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", ids[0])
             h0, p0 = h(), hp()
             pg.evaluate("id=>E.panels.find(q=>q.id===id).el.scrollIntoView({block:'center'})", i); frames(pg, 3)
-            bb = pg.evaluate("id=>{const e=E.panels.find(q=>q.id===id).el,r=e.querySelector('.pgrip.t').getBoundingClientRect(),b=e.getBoundingClientRect(),t=Math.max(r.top,b.top),u=Math.min(r.bottom,b.bottom);return [r.left+r.width/2,(t+u)/2]}", i)
+            bb = pg.evaluate("id=>{const r=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}", i)
             pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === {h0 + 60}")
             assert h() == h0 + 60 and hp() == p0 - 60, (h0, h(), p0, hp())     # splitter: the panel above gives what this one gains
             pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 300")
