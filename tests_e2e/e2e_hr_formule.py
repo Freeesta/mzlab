@@ -39,20 +39,20 @@ try:
         def copy():
             pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=f"http://127.0.0.1:{r.port}")
             clip = lambda: pg.evaluate("navigator.clipboard.readText()")
+            def clipis(v):
+                ok = pg.evaluate("async v => { for (let i = 0; i < 50; i++) { try { if ((await navigator.clipboard.readText()) === v) return true; } catch (e) { /* not focused yet */ } await new Promise(r => setTimeout(r, 100)); } return false; }", v)
+                assert ok, f"clipboard is {clip()!r}, wanted {v!r}"
             sel = "#cx-out tr[data-i='0']"
             cells = pg.evaluate("[...document.querySelectorAll('#cx-out tr[data-i=\"0\"] td')].map(c=>c.innerText.trim())")
-            pg.click(sel + " td:nth-child(2)"); pg.wait_for_timeout(300)
-            assert clip() == "C13H25N4O3S", repr(clip())
+            pg.click(sel + " td:nth-child(2)"); clipis("C13H25N4O3S")
             assert pg.get_attribute(sel, "aria-selected") == "true"
-            pg.click(sel + " td:nth-child(3)"); pg.wait_for_timeout(200); assert clip() == cells[2], (clip(), cells)
-            pg.click(sel + " td:nth-child(4)"); pg.wait_for_timeout(200); assert clip() == cells[3], (clip(), cells)
-            pg.click(sel + " td:nth-child(5)"); pg.wait_for_timeout(200); assert clip() == cells[4], (clip(), cells)
-            pg.click(sel + " td:nth-child(1)"); pg.wait_for_timeout(200); assert clip() == "C13H25N4O3S", clip()
-            assert "Copiata" in pg.inner_text("#cx-live"), pg.inner_text("#cx-live")
-            pg.evaluate("navigator.clipboard.writeText('x')"); pg.focus(sel); pg.keyboard.press("Control+c"); pg.wait_for_timeout(200)
-            assert clip() == "C13H25N4O3S", "Ctrl+C on the selected row copies the formula"
-            pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("Enter"); pg.wait_for_timeout(200)
-            assert clip() == cells[2], clip()
+            pg.click(sel + " td:nth-child(3)"); clipis(cells[2])
+            pg.click(sel + " td:nth-child(4)"); clipis(cells[3])
+            pg.click(sel + " td:nth-child(5)"); clipis(cells[4])
+            pg.click(sel + " td:nth-child(1)"); clipis("C13H25N4O3S")
+            pg.wait_for_function("document.querySelector('#cx-live').innerText.includes('Copiata')", timeout=5000)
+            pg.evaluate("navigator.clipboard.writeText('x')"); pg.focus(sel); pg.keyboard.press("Control+c"); clipis("C13H25N4O3S")
+            pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("Enter"); clipis(cells[2])
         step("a click on a cell copies only its value (formula, RDBE, Δ, score; Idx and Ctrl+C the formula); the row stays selected; the copy is announced", copy)
         def layout():
             assert pg.inner_text("label[for=cx-mz]").strip() == "Massa (m/z)", pg.inner_text("label[for=cx-mz]")
@@ -84,7 +84,7 @@ try:
         step("Δ column follows the unit of Tolerance (ppm | mDa); more than 5 rows scroll, never more than 10", unit_and_scroll)
         def speed():
             for els, mz in (("C:0-13,H:0-25,N:0-4,O:0-3,S:0-1", "317.16388"), ("C:0-60,H:0-120,N:0-10,O:0-12,S:0-3,P:0-3", "600.3")):
-                pg.evaluate("e=>{const t=document.querySelector('#cx-els');t.value=e;t.dispatchEvent(new Event('input'))}", els); pg.wait_for_timeout(400)
+                pg.evaluate("e=>{const t=document.querySelector('#cx-els');t.value=e;t.dispatchEvent(new Event('input'))}", els)
                 pg.evaluate("document.querySelector('#cx-out').innerHTML=''; window._t0=performance.now()")
                 pg.fill("#cx-mz", mz); pg.press("#cx-mz", "Enter")
                 pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=15000)

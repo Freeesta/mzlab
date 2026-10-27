@@ -17,8 +17,13 @@ fn best(mz: f64, ion: &str, tol: f64) -> (String, f64) {
     };
     let j: Value = serde_json::from_str(&compose(mz, &o).unwrap()).unwrap();
     let r = &j["results"][0];
-    if r.is_null() { panic!("{ion} {mz}: {j}"); }
-    (r["formula"].as_str().unwrap().to_string(), r["delta_ppm"].as_f64().unwrap())
+    if r.is_null() {
+        panic!("{ion} {mz}: {j}");
+    }
+    (
+        r["formula"].as_str().unwrap().to_string(),
+        r["delta_ppm"].as_f64().unwrap(),
+    )
 }
 
 #[test]
@@ -41,8 +46,14 @@ fn the_electron_has_the_right_sign() {
     // an m/z with the electron on the wrong side of the ion is about 6 ppm off at m/z 181 and 179 (2 x 0.55 mDa)
     let (_, plus) = best(181.070665 + 2.0 * ELECTRON, "[M+H]+", 10.0);
     let (_, minus) = best(179.056112 - 2.0 * ELECTRON, "[M-H]-", 10.0);
-    assert!((plus.abs() - 2.0 * ELECTRON / 181.07 * 1e6).abs() < 0.1, "{plus}");
-    assert!((minus.abs() - 2.0 * ELECTRON / 179.06 * 1e6).abs() < 0.1, "{minus}");
+    assert!(
+        (plus.abs() - 2.0 * ELECTRON / 181.07 * 1e6).abs() < 0.1,
+        "{plus}"
+    );
+    assert!(
+        (minus.abs() - 2.0 * ELECTRON / 179.06 * 1e6).abs() < 0.1,
+        "{minus}"
+    );
     // and the error of the same candidate has the sign of the m/z that was typed, in both modes
     assert!(plus < 0.0 && minus > 0.0, "{plus} {minus}");
 }
