@@ -105,9 +105,7 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
         Some(parse_formula(f)?)
     };
     let m = parsed.as_ref().map(mass);
-    let obs = number(obs);
-    let tol = number(tol).unwrap_or(5.0).abs();
-    let delta = number(delta);
+    let (obs, tol, delta) = (number(obs), number(tol).unwrap_or(5.0).abs(), number(delta));
     let shifts = CATALOG.iter().map(shift).collect::<Result<Vec<_>>>()?;
     let mut o = Out::default();
     o.raw("{\"formula\":");
@@ -120,8 +118,29 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
         .raw(",\"tol\":")
         .num(tol)
         .raw(",\"rows\":[");
+    let best = rows_json(&mut o, m, obs, tol, &shifts);
+    o.raw("],\"best\":")
+        .opt(best.map(|i| i as f64))
+        .raw(",\"diffs\":[");
+    diffs_json(&mut o, &shifts);
+    o.raw("]");
+    if let Some(dv) = delta {
+        delta_json(&mut o, dv.abs(), obs, tol, &shifts);
+    }
+    o.raw("}");
+    Ok(o.0)
+}
+
+/// The body of `rows`; returns the index of the row nearest to `obs` within `tol` ppm.
+fn rows_json(
+    o: &mut Out,
+    m: Option<f64>,
+    obs: Option<f64>,
+    tol: f64,
+    shifts: &[f64],
+) -> Option<usize> {
     let mut best: Option<(usize, f64)> = None;
-    for (i, (a, &s)) in CATALOG.iter().zip(&shifts).enumerate() {
+    for (i, (a, &s)) in CATALOG.iter().zip(shifts).enumerate() {
         let (k, z) = (f64::from(a.k), f64::from(a.z.abs()));
         let mz = m.map(|x| (k * x + s) / z);
         let ppm = mz.zip(obs).map(|(c, v)| (v - c) / c * 1e6);
@@ -162,17 +181,19 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
             .opt(obs.map(|v| round((v * z - s) / k, 4)))
             .raw("}");
     }
-    o.raw("],\"best\":")
-        .opt(best.map(|(i, _)| i as f64))
-        .raw(",\"diffs\":[");
+    best.map(|(i, _)| i)
+}
+
+/// The body of `diffs`: the characteristic differences between adducts.
+fn diffs_json(o: &mut Out, shifts: &[f64]) {
+    let sh = |n: &str| {
+        CATALOG
+            .iter()
+            .position(|x| x.name == n)
+            .map(|i| shifts[i])
+            .unwrap_or(0.0)
+    };
     for (j, (label, a, b)) in PAIRS.iter().enumerate() {
-        let sh = |n: &str| {
-            CATALOG
-                .iter()
-                .position(|x| x.name == n)
-                .map(|i| shifts[i])
-                .unwrap_or(0.0)
-        };
         o.raw(if j > 0 { ",{" } else { "{" })
             .raw("\"pair\":")
             .str(label)
@@ -186,30 +207,27 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
             .num(round(sh(a) - sh(b), 6))
             .raw("}");
     }
-    o.raw("]");
-    if let Some(dv) = delta {
-        o.raw(",\"delta\":{\"value\":")
-            .num(dv.abs())
-            .raw(",\"hits\":[");
-        for (j, (a, b, e)) in delta_hits(dv.abs(), obs.unwrap_or(DELTA_REF_MZ), tol, &shifts)
-            .iter()
-            .enumerate()
-        {
-            o.raw(if j > 0 { ",{" } else { "{" })
-                .raw("\"a\":")
-                .str(CATALOG[*a].name)
-                .raw(",\"b\":")
-                .str(CATALOG[*b].name);
-            o.raw(",\"d\":")
-                .num(round(shifts[*a] - shifts[*b], 6))
-                .raw(",\"err_mda\":")
-                .num(round(e * 1000.0, 2))
-                .raw("}");
-        }
-        o.raw("]}");
+}
+
+/// The `delta` object: the adduct pairs that explain the difference `dv` between two peaks.
+fn delta_json(o: &mut Out, dv: f64, obs: Option<f64>, tol: f64, shifts: &[f64]) {
+    o.raw(",\"delta\":{\"value\":").num(dv).raw(",\"hits\":[");
+    for (j, (a, b, e)) in delta_hits(dv, obs.unwrap_or(DELTA_REF_MZ), tol, shifts)
+        .iter()
+        .enumerate()
+    {
+        o.raw(if j > 0 { ",{" } else { "{" })
+            .raw("\"a\":")
+            .str(CATALOG[*a].name)
+            .raw(",\"b\":")
+            .str(CATALOG[*b].name);
+        o.raw(",\"d\":")
+            .num(round(shifts[*a] - shifts[*b], 6))
+            .raw(",\"err_mda\":")
+            .num(round(e * 1000.0, 2))
+            .raw("}");
     }
-    o.raw("}");
-    Ok(o.0)
+    o.raw("]}");
 }
 
 /// Pairs of singly charged adducts of one polarity whose shifts differ by `delta` within `tol` ppm of `ref_mz`; nearest first.
