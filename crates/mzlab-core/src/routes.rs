@@ -92,11 +92,11 @@ impl<R: ReadAt> Routes<R> {
 
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        if !self.has_scans() {
-            return Ok(crate::mrmroutes::no_scans(path, q));
-        }
+        if let Some(r) = self.canali_route(path, q) { return r; }
+        if !self.has_scans() { return Ok(crate::mrmroutes::no_scans(path, q)); }
         self.con_opz(q, |r| match path {
             "/api/chrom" => r.chrom(q),
+            "/api/xic" => r.xic_route(q),
             "/api/filters" => r.filters().map(Some),
             "/api/scanlist" => r.scanlist(q),
             "/api/nearest_scan" => r.nearest_scan(q),
@@ -360,7 +360,7 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
-fn trace(rt: &[f64], y: &[f64]) -> String {
+pub(crate) fn trace(rt: &[f64], y: &[f64]) -> String {
     let mut o = Out::default();
     o.raw("{\"rt\":")
         .rounded(rt, 4)

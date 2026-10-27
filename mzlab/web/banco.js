@@ -30,7 +30,7 @@ const BANCO = (() => {
 .bsp .lst{position:relative;overflow:auto;height:264px;border:1px solid var(--line);border-radius:4px}.bsp .lst:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .bsp .r{position:absolute;left:0;right:0;height:22px;line-height:22px;padding:0 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bsp .r:hover,.bsp .r.on{background:var(--sel)}.bsp .r.on{font-weight:600}
-.mslv{margin-left:8px;padding:0 8px;border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:14px;line-height:20px}`;
+`;
   document.head.appendChild(st);
   const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
   const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
@@ -239,9 +239,7 @@ const BANCO = (() => {
     if (ac && (p === ac || (p.type === "spec" && p.link === ac.id)) && ist.tab === "hdr") { clearTimeout(ist.t); ist.t = setTimeout(renderInfo, 250); }
     if (p.type !== "spec") return;
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
-    // the stage of the spectrum, well visible: MS1 / MS2
-    let lv = p.el.querySelector(".mslv"); if (!lv) { lv = document.createElement("b"); lv.className = "mslv"; rl.before(lv); }
-    const stage = p.level > 1 ? p.level : 1; if (lv.dataset.n !== String(stage)) { lv.dataset.n = String(stage); lv.innerHTML = `MS<sup>${stage}</sup>`; }
+    SPECBAR.title(p, p.el.querySelector(".ttl"));
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
     const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? Math.max(...d.y) : null;
     h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
@@ -432,7 +430,7 @@ const BANCO = (() => {
   const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
   function tCmp(b, p) {
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
-    ELEM.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
+    ELEMP.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
   }
   const ISO_AD = ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"];
   function tIso(b, p) {
