@@ -28,7 +28,7 @@ pub use prov::{
     prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
 pub use run::{
-    execute, file_roots, record, work, Artifact, Core, Ctx, Hooks, Job, Outcome, Results, Run,
+    execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job, Outcome, Results, Run,
     Runner,
 };
 pub use sched_route::{

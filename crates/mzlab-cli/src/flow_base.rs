@@ -12,7 +12,6 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
-use mzlab_core::json::Value;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::lettori_mzml::{Conversione, Picchi};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
@@ -20,14 +19,11 @@ use mzlab_core::mzmlwrite::{Opzioni, LIVELLO_ZLIB};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
-use mzlab_feat::steps::recipe_map;
 use mzlab_feat_wasm::run;
+use mzlab_feat_wasm::run_meta::{recipe, written, Estimate};
 
 use crate::flow::{io, FileRunner, Lineage, Made};
 use crate::flow_pace::{Gate, Gated, Stop, Stopping};
-
-/// A value the plan leaves out: name, value, proof.
-type Estimate = (String, Value, Value);
 
 pub(crate) fn open(path: &PathBuf) -> Result<Index<File>> {
     let f = File::open(path).map_err(io)?;
@@ -44,66 +40,6 @@ pub(crate) fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
         Some(k) => r.work.join(format!("{}-{k}.{ext}", job.instance.id)),
         None => r.work.join(format!("{}.{ext}", job.instance.id)),
     }
-}
-
-/// What the plan writes for `job`: the algorithm it chose, the values of its preset, then its own parameters (descriptor names).
-fn written(job: &Job) -> Vec<(String, Value)> {
-    let mut v: Vec<(String, Value)> = Vec::new();
-    if let Some(a) = job
-        .instance
-        .algorithm
-        .as_deref()
-        .filter(|_| job.step.id == "features.detect")
-    {
-        v.push(("algorithm".to_string(), Value::Str(a.into())));
-    }
-    let preset = job.instance.preset.as_deref();
-    let presets = job.step.presets.iter().filter(|p| Some(p.id) == preset);
-    for (k, x) in presets.flat_map(|p| p.params.iter()) {
-        v.push((k.to_string(), x.clone()));
-    }
-    for (k, x) in &job.instance.params {
-        v.retain(|(n, _)| n != k);
-        v.push((k.clone(), x.clone()));
-    }
-    v
-}
-
-/// The recipe of `job`: `base` with what the plan writes, and the values the plan leaves out that differ from the canonical ones (the estimates).
-fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
-    let w = written(job);
-    recipe_map::apply(&mut base, job.step.id, &w)?;
-    let resolved = &job.resolved.params;
-    let proof = Value::Str("profile of the first file of the series".into());
-    let estimates = recipe_map::values(&base, job.step.id)
-        .into_iter()
-        .filter(|(k, v)| {
-            !w.iter().any(|x| x.0 == *k)
-                && !job.resolved.noresult.contains(k)
-                && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
-        })
-        .map(|(k, v)| {
-            let why = match (k.as_str(), base.min_height_basis) {
-                ("min_height", Some((mode, sigma))) => Value::Obj(vec![
-                    (
-                        "basis".into(),
-                        Value::Str(
-                            "noise lump of the intensities of the first file of the series".into(),
-                        ),
-                    ),
-                    (
-                        "factor".into(),
-                        Value::Num(mzlab_feat::params_height::MIN_HEIGHT_FACTOR),
-                    ),
-                    ("mode".into(), Value::Num(mode)),
-                    ("sigma".into(), Value::Num(sigma)),
-                ]),
-                _ => proof.clone(),
-            };
-            (k, v, why)
-        })
-        .collect();
-    Ok((base, estimates))
 }
 
 /// `index.mzidx`: the index of one file (mzML or any single file a reader takes).
