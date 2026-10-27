@@ -249,7 +249,14 @@ fn asls_with(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize, solver: So
             .map(|b| y[b * k..(b + 1) * k].iter().sum::<f64>() / k as f64)
             .collect();
         let xd: Vec<f64> = (0..m).map(|b| (b as f64 + 0.5) * k as f64 - 0.5).collect();
-        let zd = asls_with(&yd, lam / (k as f64).powi(4), p, iters, usize::MAX / 4, solver);
+        let zd = asls_with(
+            &yd,
+            lam / (k as f64).powi(4),
+            p,
+            iters,
+            usize::MAX / 4,
+            solver,
+        );
         return (0..n)
             .map(|i| interp(i as f64, &xd, &zd).min(y[i]))
             .collect();
