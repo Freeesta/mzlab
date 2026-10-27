@@ -306,7 +306,7 @@ function zeroMarks(g, sr, X, Y, W, H, band) {
   if (xb > M.l) { g.fillStyle = "rgba(120,120,120,.22)"; g.fillRect(M.l, M.t, xb - M.l, H - M.t - M.b); }
 }
 async function drawLines(p) {
-  const DC = await import("./decima.js");
+  const DC = (/** @type {any} */ (window).DECIMA ||= await import("./decima.js"));       // loaded once; later drawings do not wait for the module system
   const all = await seriesOf(p); if (window.ETPK && !p._a) await ETPK.ready(p, all.filter(s => !isHid(p, s)));       // the first drawing of a panel waits a moment for the peak labels (drawn once)
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
