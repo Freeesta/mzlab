@@ -60,6 +60,15 @@ fn route<'a, R: ReadAt>(items: &[ItemMeta], routes: &'a mut Table<R>, k: i64) ->
     routes.get_mut(&it.slot)
 }
 
+/// The m/z window the method declares, for the survey scans of a unit-resolution file (centroids have points only where there is a peak, so the peaks alone
+/// would move the axis from file to file); empty for MS2, high resolution and an index that does not say.
+pub(crate) fn declared_survey_window<R: ReadAt>(r: &Routes<R>, level: u8) -> Vec<f64> {
+    match r.idx.declared_window() {
+        Some((lo, hi)) if level == 1 && !group_is_hr(&r.idx.scans, true) => vec![lo, hi],
+        _ => vec![],
+    }
+}
+
 /// `Session.grid(level)` over the files of the session.
 fn grid_of<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, level: u8) -> Result<Grid> {
     let (mut rts, mut mzs, mut hr) = (Vec::new(), Vec::new(), false);
@@ -76,6 +85,7 @@ fn grid_of<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, level: u8) -> R
             if let Some((lo, hi)) = r.idx.mz_range(si)? {
                 mzs.extend([lo, hi]);
             }
+            mzs.extend(declared_survey_window(r, level));
         }
     }
     Ok(session_grid(&rts, &mzs, hr))
@@ -134,9 +144,12 @@ fn norm_factor<R: ReadAt>(r: &mut Routes<R>, a: &Ask, sg: &Grid, norm: &str) -> 
     Ok(if t > 0.0 { ((if norm == "max" { 1.0 } else { 1000.0 }) / t) as f32 } else { 1.0 })
 }
 
-fn extent_value(e: Option<((f64, f64), (f64, f64))>) -> Value {
+fn extent_value(e: Option<((f64, f64), (f64, f64))>, window: Vec<f64>) -> Value {
     match e {
-        Some((rt, mz)) => Obj::new().put("rt", floats(&[rt.0, rt.1])).put("mz", floats(&[mz.0, mz.1])).done(),
+        Some((rt, mz)) => {
+            let mz = window.iter().fold(mz, |(lo, hi), &w| (lo.min(w), hi.max(w)));
+            Obj::new().put("rt", floats(&[rt.0, rt.1])).put("mz", floats(&[mz.0, mz.1])).done()
+        }
         None => Obj::new().put("rt", Value::Null).put("mz", Value::Null).done(),
     }
 }
@@ -177,7 +190,7 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
     let mut m = one_map(r, &a, &g, mz1)?;
     let mut o = map_head(&a, &g, mz1, hr);
     if a.region.is_none() {
-        o = o.put("extent", extent_value(r.data_extent(a.level)?));
+        o = o.put("extent", extent_value(r.data_extent(a.level)?, declared_survey_window(r, a.level)));
     }
     if let Some(rk) = refk {
         let norm = q.get("norm").unwrap_or("abs");

@@ -147,11 +147,13 @@ pub(crate) struct Rows {
     level_of: HashMap<Arc<str>, u8>,
     /// The texts that many rows repeat (filter strings, activation names): one allocation each.
     pool: HashSet<Arc<str>>,
+    window: super::DeclaredWindow,
 }
 
 impl Rows {
     pub(super) fn with(head: Head) -> Rows {
         Rows {
+            window: Default::default(),
             head,
             rows: Vec::new(),
             refs: HashMap::new(),
@@ -172,12 +174,12 @@ impl Rows {
 
     /// The shared allocation of a text that rows repeat.
     fn intern(&mut self, t: &str) -> Arc<str> {
-        if let Some(a) = self.pool.get(t) {
-            return a.clone();
-        }
-        let a: Arc<str> = Arc::from(t);
-        self.pool.insert(a.clone());
-        a
+        let known = self.pool.get(t).cloned();
+        known.unwrap_or_else(|| {
+            let a: Arc<str> = Arc::from(t);
+            self.pool.insert(a.clone());
+            a
+        })
     }
 
     /// The text of a reference to another scan: the allocation of that scan's native id when it is already known (a precursor comes after its parent).
@@ -202,20 +204,6 @@ impl Rows {
     /// Whether the last row alone makes the file high-resolution (`Table::hr1` takes the rows of every MS1 scan).
     pub(crate) fn ultima_hr(&self) -> bool {
         self.rows.last().is_some_and(|r| super::is_hr(&[r]))
-    }
-
-    /// From the header of a run, without writing it (`Head::da_testata`); `None` when the text would be needed.
-    pub(crate) fn da_testata(h: &Header) -> Option<Rows> {
-        Head::da_testata(h).map(Rows::with)
-    }
-
-    /// From the text of a document up to its first spectrum (the header `mzmlwrite` writes, with its `<run ` tag).
-    pub(crate) fn from_head(doc: &[u8]) -> Rows {
-        let at = find(doc, b"<run ");
-        let head = String::from_utf8_lossy(&doc[..at.unwrap_or(200000.min(doc.len()))]);
-        let lo = at.unwrap_or(0);
-        let run_text = String::from_utf8_lossy(&doc[lo..(lo + 2000).min(doc.len())]);
-        Rows::with(Head::parse(&head, &run_text))
     }
 }
 
@@ -253,6 +241,7 @@ impl Rows {
             refs,
             level_of,
             pool,
+            window,
         } = self;
         // only reading needed them; the tables below are what the peak of this step is made of
         drop((level_of, pool));
@@ -297,6 +286,7 @@ impl Rows {
             nce: head.nce,
             hr1,
             n_chromatograms,
+            window: window.span,
         }
     }
 }
@@ -329,6 +319,7 @@ impl Rows {
         };
         let rt = rt_minutes(h);
         let level = lvl.and_then(float).map_or(1, |v| v as u8);
+        self.window.note(h, level);
         let hs = h.split("<precursorList").next().unwrap_or("");
         let filt = cv(hs, "MS:1000512").unwrap_or("");
         let mut m = if level > 1 {
@@ -411,6 +402,7 @@ impl Rows {
             -1 => -1,
             _ => 0,
         };
+        self.window.note_span(extra.window, level);
         let m = plain_msn(sp, extra, filt);
         let res = extra
             .params
@@ -560,4 +552,20 @@ fn plain_msn(sp: &Spectrum, extra: &SpectrumExtra, filt: &str) -> Msn {
         };
     }
     m
+}
+
+impl Rows {
+    /// From the header of a run, without writing it (`Head::da_testata`); `None` when the text would be needed.
+    pub(crate) fn da_testata(h: &Header) -> Option<Rows> {
+        Head::da_testata(h).map(Rows::with)
+    }
+
+    /// From the text of a document up to its first spectrum (the header `mzmlwrite` writes, with its `<run ` tag).
+    pub(crate) fn from_head(doc: &[u8]) -> Rows {
+        let at = find(doc, b"<run ");
+        let head = String::from_utf8_lossy(&doc[..at.unwrap_or(200000.min(doc.len()))]);
+        let lo = at.unwrap_or(0);
+        let run_text = String::from_utf8_lossy(&doc[lo..(lo + 2000).min(doc.len())]);
+        Rows::with(Head::parse(&head, &run_text))
+    }
 }
