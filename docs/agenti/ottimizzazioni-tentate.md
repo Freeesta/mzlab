@@ -6,7 +6,7 @@ Esito: **adottata** (vedi `misure-velocita.md`), **scartata** (numeri sotto sogl
 
 | Data | Strada | Esito | Perché / numeri | Riprovare solo se |
 |---|---|---|---|---|
-| 22/10 | `.wasm` con `simd128` (20 Full Scan LR) | scartata | 9,1 s con contro 9,3 s senza; `.wasm` 773 contro 776 KB (`misure-diario.md`) | il carico cambia molto (non i Full Scan LR) |
+| 22/10 | `.wasm` con `simd128` (20 Full Scan LR) | adottata | 9,1 s con contro 9,3 s senza sui Full Scan LR (`misure-diario.md`); decisione di Federico: bersaglio desktop (Chrome/Edge 91, Firefox 89, Safari 16.4), un solo build; lettura e indice mzML più veloci (`wasm-potenziale.md` §3) | — |
 | 24/10 | `.raw`: tabella e «table + .mzidx» senza SHA-1 né `metodo/1` | adottata | −43…−71 % (raw-fast-mzidx-1) | — |
 | 25/10 | SIMD (AVX2) nella decodifica `.raw` (`to_mz_intensity_into`) | scartata | solo m/z 3,04 → 2,06 ns/punto (−14 % della sola conversione), centroidi senza margine, riscrittura sicura a due passate più lenta (9,4 ns/punto) | arriva un corpus con molti `.raw` in profilo |
 | 25/10 | Cache a blocchi nel lettore wasm (RAW-FAST-IO-WASM) | adottata, ridotta | prima versione: andi +537 B oltre il tetto; riuscita con 3 blocchi solo per thermo; tetti invariati; andi ha 192 B di margine, ogni modifica a `lettori-wasm/src/lib.rs` lo rischia | un tetto viene alzato con misura (tetto = misura ×1,10 a 4 KiB) |
