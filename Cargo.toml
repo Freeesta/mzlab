@@ -15,10 +15,7 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 
-# Hot crates of the .wasm builds at opt-level 3 (reading, indexing and peaks 1.4-2.8x faster; the rest of the code stays at "z"; docs/agenti/wasm-potenziale.md).
-[profile.release.package.mzlab-core]
-opt-level = 3
-
+# Hot dependencies of the .wasm builds at opt-level 3 (inflate, XML, base64); mzlab-core stays at "z" because it is shared by every module (docs/agenti/wasm-potenziale.md).
 [profile.release.package.miniz_oxide]
 opt-level = 3
 
