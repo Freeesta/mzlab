@@ -144,7 +144,11 @@ fn deep_cascade() -> Vec<Scan> {
     let mut rt = 0.0;
     let mut paths: Vec<Vec<f64>> = vec![vec![317.2]];
     for level in 3..=8 {
-        let last = paths.iter().filter(|p| p.len() == level - 2).cloned().collect::<Vec<_>>();
+        let last = paths
+            .iter()
+            .filter(|p| p.len() == level - 2)
+            .cloned()
+            .collect::<Vec<_>>();
         for (i, p) in last.iter().enumerate() {
             for b in 0..2 {
                 let mut q = p.clone();
@@ -171,8 +175,11 @@ fn deep_cascade() -> Vec<Scan> {
 #[test]
 fn a_deep_cascade_with_many_nodes_is_an_infusion() {
     let v = deep_cascade();
-    let keys: std::collections::HashSet<String> =
-        v.iter().filter(|s| s.level > 1).map(|s| key(s, false)).collect();
+    let keys: std::collections::HashSet<String> = v
+        .iter()
+        .filter(|s| s.level > 1)
+        .map(|s| key(s, false))
+        .collect();
     assert!(keys.len() > 64, "{}", keys.len());
     let got = infusione(&v, None, "Infusione_Timololo.mzML");
     assert!(got.is_some(), "no infusion");

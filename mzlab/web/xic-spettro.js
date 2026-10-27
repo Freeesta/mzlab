@@ -18,7 +18,7 @@
   /** the file of the spectrum @param {any} p */
   const specFile = p => p._a && p._a.data && p._a.data[0] ? p._a.data[0].f : null;
   /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusione.rs, or the same words in the file name) @param {any} p */
-  const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop())); };
+  const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "")); };
   /** the high-resolution file among those the XIC reads, if any @param {any} p */
   const hrFile = p => (window.HR ? HR.xicFiles(p.tab).find((/** @type {any} */ f) => HR.isHr(f, f.lv)) : null) || null;
   const num = (/** @type {number} */ v) => String(+v.toFixed(5));
