@@ -71,7 +71,7 @@ try:
             pg.keyboard.press("Escape"); until(pg, "document.querySelector('#calcin').value === ''"); assert pg.input_value("#calcin") == "" and not pg.evaluate("document.querySelector('#calcdlg').hidden"), "Esc clears first"
         step("keyboard: Enter = result, a new digit starts again, Ans, tape row, Esc clears", keyboard)
         def formula_hides_pad():
-            pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden")
+            pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden && document.querySelectorAll('#calcout table').length === 1")      # the table is drawn after the pad is hidden
             assert pg.evaluate("document.querySelector('#calcpad').hidden") and "C9H10Cl2N2O" in pg.inner_text("#calcout").replace(" ", "") and pg.locator("#calcout table").count() == 1
             assert pg.evaluate("document.querySelector('#calcres').hidden")
             pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
