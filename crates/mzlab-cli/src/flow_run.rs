@@ -16,6 +16,7 @@ use crate::flow::{executable, steps, FileRunner, Meter};
 pub(crate) use crate::flow_apply::apply_set;
 use crate::flow_json::{fail as jfail, invalid, Style, JSONL_MARK};
 use crate::Outcome;
+use mzlab_core::flow::apply_sets;
 
 pub(crate) const HELP: &str = "mzlab-cli flow run: runs a whole mzflow/2 plan (the plan of the Flow page) on files.
 
@@ -308,15 +309,23 @@ fn ready(a: &Args, reg: &[Step]) -> Result<Ready, Outcome> {
     })?;
     let hint = "the plan must be the mzflow/2 file the Flow page downloads";
     let mut plan = parse(&text).map_err(|e| jfail(st, 3, &e, &e.to_string(), hint))?;
-    let (setting, plain): (Vec<&String>, Vec<&String>) = a
-        .sets
-        .iter()
-        .partition(|s| s.contains(".algorithm=") || s.contains(".preset="));
-    for s in setting.into_iter().chain(plain) {
-        let err = Error::new("err.cli.set").with("set", s);
-        apply_set(&mut plan, reg, s)
-            .map_err(|e| jfail(st, 2, &err, &e, "mzlab-cli flow run --help"))?;
-    }
+    apply_sets(&mut plan, reg, &a.sets).map_err(|e| {
+        // the CLI keeps the text apart from the error: the page reads it from the parameters
+        let of = |k: &str| {
+            e.params
+                .iter()
+                .find(|(n, _)| *n == k)
+                .map(|(_, v)| v.as_str())
+        };
+        let err = Error::new("err.cli.set").with("set", of("set").unwrap_or(""));
+        jfail(
+            st,
+            2,
+            &err,
+            of("message").unwrap_or(""),
+            "mzlab-cli flow run --help",
+        )
+    })?;
     let plan_dir = plan_path
         .parent()
         .map_or(PathBuf::from("."), Path::to_path_buf);

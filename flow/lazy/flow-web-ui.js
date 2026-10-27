@@ -35,10 +35,11 @@
       document.addEventListener("flow:web-step", onStep);
       try {
         const res = await R.run(S);
-        note.textContent = "Finished. The results are kept in this browser (OPFS).";
-        if (await F.webAfterRun(S)) note.textContent += " The feature table is open below.";
-        // the MSn steps give their texts: one link each to save them
+        const shown = F.webMsnAfterRun(S, (res && res.files) || []), table = await F.webAfterRun(S);
+        note.textContent = shown.size ? "Done." : "Finished. The results are kept in this browser (OPFS)." + (table ? " The feature table is open below." : "");
+        // the MSn texts that are not in the Results get a link each to save them
         for (const f of (res && res.files) || []) {
+          if (shown.has(f.name)) continue;
           const a = el("a", { href: URL.createObjectURL(new Blob([f.text], { type: "text/plain" })), download: f.name, text: f.name });
           slots.get(f.id)?.append(" · ", a);
         }

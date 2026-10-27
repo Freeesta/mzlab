@@ -59,6 +59,10 @@ export async function statRoute(path, body, { rpc }) {
     try { r = (await rpc({ op: "lr_flow_command", body })).info; } catch (e_) { const e = /** @type {Lanciato} */ (e_); r = "E" + JSON.stringify({ error: String(e && e.message || e) }); }
     return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
   }
+  if (path === "/api/flow/line") {
+    const r = (await rpc({ op: "lr_flow_line", body })).info;
+    return r[0] === "E" ? { status: 400, text: r.slice(1) } : { status: 200, text: r };
+  }
   if (path.startsWith("/api/flow/sched/")) return { status: 200, text: (await rpc({ op: "lr_flow_sched", sop: path.slice(16), body })).info };
   if (path.startsWith("/api/campioni/")) return { status: 200, text: (await rpc({ op: "lr_campioni", cop: path.slice(14), body })).info };
   // molecules database (molecules/1): carica, cerca, get, elenca, da_csv, a_csv, a_json, valida, digest

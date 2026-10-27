@@ -27,6 +27,7 @@ try:
             assert "non sono confrontabili" in pg.inner_text("#modenote")
         step("mixed formats: the note on the loading screen", note)
         pg.click("text=Carica dati"); ready(pg)
+        pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()"); ready(pg)      # a low-resolution list opens only its first file
         pk = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('P_'))"); ck = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('C_'))")
         def show(k, a=14.6, b=14.8):
             pg.evaluate(f"(()=>{{const p={SPEC};p.all=false;p.k={k};p.r0={a};p.r1={b};p.zoom=null;p.si=null;draw(p)}})()"); pg.wait_for_timeout(1500)
@@ -57,6 +58,7 @@ try:
         def centroid():
             pg.evaluate("document.querySelector('#np-set').click()"); pg.wait_for_timeout(300)
             assert pg.is_checked("#uip-merge"), "the merge is on by default"
+            if not pg.evaluate("document.querySelector('#uip-merge').closest('details').open"): pg.click("details:has(#uip-merge) > summary")      # the section of the data starts closed
             show(ck, 14.2, 14.4)
             on = pg.evaluate(f"{SPEC}._a.data[0].d.mz.length")
             pg.uncheck("#uip-merge"); pg.wait_for_timeout(1500)

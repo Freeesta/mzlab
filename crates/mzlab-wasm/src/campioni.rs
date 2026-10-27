@@ -14,6 +14,12 @@ pub fn flow_command(plan: &str) -> Result<String, JsValue> {
     mzlab_core::flow::command_route(plan).map_err(|e| crate::error_json(&e))
 }
 
+/// The short command line of a plan, or the plan with the `--set` of a line applied (`mzlab_core::flow::line_route`): JSON in, text out.
+#[wasm_bindgen]
+pub fn flow_line(body: &str) -> Result<String, JsValue> {
+    mzlab_core::flow::line_route(body, None).map_err(|e| crate::error_json(&e))
+}
+
 /// The live scheduler of the Flow (`mzlab_core::flow::sched_route`): `op` is one of its operations, JSON in, JSON out.
 #[wasm_bindgen]
 pub fn flow_sched(op: &str, body: &str) -> Result<String, JsValue> {

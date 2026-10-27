@@ -27,7 +27,8 @@ try:
             pg.evaluate(f"removeFile(E.files[{k}])"); attendi(pg, f"E.files[{k}].gone === true && {pending}")
             assert dialogs() == 0, "no question"
             assert notice() == 0, "no visible notice"
-            assert "Removed" in pg.evaluate("document.getElementById('sb-live').textContent") or "Tolto" in pg.evaluate("document.getElementById('sb-live').textContent"), "announced to screen readers"
+            # the live region is cleared and filled again 30 ms later (storia.js say) so that the same text is announced twice: wait for it
+            attendi(pg, "/Removed|Tolto/.test(document.getElementById('sb-live').textContent)", 3000)
             pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files[{k}].gone === false")
             assert pg.evaluate(f"E.files[{k}].vis") is True, "Ctrl+Z puts the file back"
             pg.keyboard.press(f"{mod}+Shift+z"); attendi(pg, f"E.files[{k}].gone === true")
