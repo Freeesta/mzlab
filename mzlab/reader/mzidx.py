@@ -403,7 +403,11 @@ def source_and_run(run, sha256: str | None = None) -> tuple[dict, dict]:
     st = run.path.stat()
     source = {"name": run.path.name, "size": st.st_size, "mtime_ns": st.st_mtime_ns, "probe": probe(run),
               "sha256": sha256 if sha256 is not None else getattr(run, "sha256", "")}
-    return source, {"nce": bool(run.nce), "hr1": bool(getattr(run, "hr1", False)), "n_chromatograms": int(run.n_chromatograms)}
+    meta = {"nce": bool(run.nce), "hr1": bool(getattr(run, "hr1", False)), "n_chromatograms": int(run.n_chromatograms)}
+    win = run.scan_window_ms1() if hasattr(run, "scan_window_ms1") else None
+    if win:
+        meta["scan_window"] = [win[0], win[1]]
+    return source, meta
 
 
 def builder_inputs(run) -> list:
