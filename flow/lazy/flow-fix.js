@@ -23,6 +23,12 @@
     for (const id of addon.steps) if (!F.findStep(S.plan, id)) made = F.addStep(S.plan, S.reg, id);
     return made;
   };
+  /** the filter of the rows reads the table of the alignment, not the registry of the filters of the TP chain (the last table the add-ons made) @param {any} plan @param {any} reg */
+  const wireReliable = (plan, reg) => {
+    const rel = F.findStep(plan, "table.filter"), gap = F.findStep(plan, "features.gapfill"), rstep = rel && reg.byId.get("table.filter");
+    const tport = rstep && F.ports(rstep.in).find((/** @type {FlowPort} */ x) => x.name === "table");
+    if (rel && gap && tport) F.setPort(rel, tport, [`${gap.id}.table`]);
+  };
   /** a plan for a template: the base, then its add-ons @param {any} reg @param {any} tpl */
   F.templatePlan = (reg, tpl) => {
     // a template with its own steps (the MSn infusion) does not start from the feature-table base
@@ -39,6 +45,7 @@
       const port = F.ports(nstep.in).find((/** @type {FlowPort} */ x) => x.name === name);
       if (port && ref) F.setPort(net, port, [].concat(ref));
     }
+    wireReliable(S.plan, reg);
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
       const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);
