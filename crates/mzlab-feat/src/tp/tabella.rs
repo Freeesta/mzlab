@@ -9,7 +9,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out};
 
 use super::*;
-use crate::aligned::CELL_ABSENT;
+use crate::aligned::no_peak;
 use crate::samples::Sample;
 
 pub const TABLE_SCHEMA: &str = "tptab/1";
@@ -43,7 +43,7 @@ pub fn role_of(s: &Sample) -> Role {
 /// The area of the cell when the file has a peak there.
 pub(crate) fn measured(t: &Aligned, row: usize, file: usize) -> f64 {
     let c = t.cell(row, file);
-    if t.state[c] != CELL_ABSENT && t.area[c].is_finite() && t.area[c] > 0.0 {
+    if !no_peak(t.state[c]) && t.area[c].is_finite() && t.area[c] > 0.0 {
         t.area[c]
     } else {
         0.0
@@ -259,7 +259,7 @@ fn row_json(o: &mut Out, t: &Aligned, r: usize, cx: &Cx, first: bool) {
     }
     let max_h = tr_files.iter().fold(0.0f64, |m, &k| {
         let c = t.cell(r, k);
-        if t.state[c] == CELL_ABSENT || !kept(k) {
+        if no_peak(t.state[c]) || !kept(k) {
             m
         } else {
             m.max(f64::from(t.height[c]))

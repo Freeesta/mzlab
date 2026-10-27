@@ -36,6 +36,7 @@ pub mod rpc;
 mod rpc_lr;
 mod rpc_nat;
 pub mod scarica;
+pub mod scarica_fonti;
 pub mod store;
 pub mod update;
 

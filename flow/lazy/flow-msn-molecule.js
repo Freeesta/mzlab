@@ -23,7 +23,7 @@
           done();
         },
       });
-    }).catch(() => { host.textContent = "The molecule search is not available here: type the ion in the fields below."; });
+    }).catch(() => { host.textContent = "Molecule search unavailable: type the ion in the fields below."; });
     return host;
   };
 })();

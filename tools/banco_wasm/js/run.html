@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><script src="suite.js"></script>
+<script type="module">
+// ?v=VARIANT&reps=N: same suite as node_bench.mjs, with compileStreaming; the result is left in window.RESULT.
+const q = new URLSearchParams(location.search), v = q.get("v"), reps = +q.get("reps") || 5;
+try {
+  let a = performance.now(); const mod = await WebAssembly.compileStreaming(fetch(`v/${v}/wbench_bg.wasm`)); const tc = performance.now() - a;
+  const m = await import(`./v/${v}/wbench.js`);
+  a = performance.now(); m.initSync({ module: mod }); const ti = performance.now() - a;
+  const get = async p => new Uint8Array(await (await fetch(p)).arrayBuffer());
+  const files = { hr: await get("data/hr_prof.mzML"), lr: await get("data/B_FullMass-t15.mzML") };
+  if ((await fetch("data/x.raw", { method: "HEAD" })).ok) files.raw = await get("data/x.raw");
+  const r = await suite(m, files, reps, () => {});
+  window.RESULT = { variant: v, compile_ms: +tc.toFixed(1), inst_ms: +ti.toFixed(1),
+    ms: Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x.ms])), check: Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x.v])) };
+} catch (e) { window.RESULT = { variant: v, error: String(e) }; }
+</script>

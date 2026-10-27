@@ -280,3 +280,4 @@ function affAccanto(/** @type {any} */ s, /** @type {any} */ from) {
 
 const AFFIANCA = { accanto: affAccanto, grip: affGrip, sync: affSync, annulla: affAnnulla, ultimo: affUltimo, fai: affFai, rifai: affRifai, ripristina: affRipristina, eligible: affEligible };
 window.AFFIANCA = AFFIANCA;
+if (window.BARRA && BARRA.late) BARRA.late();

@@ -12,8 +12,7 @@ license = { text = "MIT" }
 
 [project.optional-dependencies]
 # jsonschema: only the test of the step descriptors (tests/test_step_descrittori.py); never in the site
-# pytest-xdist: tools/verifica.py spreads the files of tests/ over the CPUs (the serial suite does not fit in its 1200 s)
-test = ["pytest", "pytest-xdist", "jsonschema>=4.18"]
+test = ["pytest", "jsonschema>=4.18"]
 # solo per rigenerare tests/golden/librerie/ con tools/parita_librerie.py (non servono ai test né al sito)
 parita = ["ms_entropy>=1.5", "matchms>=0.33"]
 

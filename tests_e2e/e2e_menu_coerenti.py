@@ -70,7 +70,8 @@ try:
                     noic:its.filter(d=>!d.querySelector('.ic[aria-hidden=true] svg')).map(d=>d.dataset.azione),
                     bad:its.map(d=>d.dataset.azione).filter(i=>i&&!(AZIONI.voce(i)||{viste:[]}).viste.some(x=>x===v||x==='*'))}})""" + f"('{vista}')"); close()
                 assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (vista, r)
-                assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"] and "ann.edit" in r["ids"], r["ids"]
+                assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"], r["ids"]
+                assert "ann.edit" not in r["ids"], r["ids"]      # the annotation entries need an annotation under the pointer (none here: p.anns is empty)
                 assert (vista == "mrm") == ("chrom.specAtRt" not in r["ids"]), r["ids"]
         step("chromatogram and MRM: every entry of the menu is an action of the registry (data-azione)", trace_ids)
         def every_action():

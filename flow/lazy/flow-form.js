@@ -1,12 +1,35 @@
 // @ts-check
-// Flow (administrator mode): the form of one step, generated from its descriptor (step and algorithm parameters, with title, unit, limits, default and description),
-// plus the choice of algorithm and preset. The file keeps only what differs from the default (F.setParam). A field is committed on `change`, never on every key.
+// Flow (administrator mode): the form of one step, generated from its descriptor (step and algorithm parameters, with label, unit, limits and default; the sentence that
+// says what a field does is behind its «ⓘ», F.tip), plus the choice of algorithm and preset. The file keeps only what differs from the default (F.setParam). A field is committed on `change`, never on every key.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
   // the values of an enum are codes in the descriptor; these are the words shown
   /** @type {Record<string, Record<string, string>>} */
   const WORDS = { polarity: { "1": "positive", "-1": "negative", "0": "all scans" } };
+
+  /** the «ⓘ» of a field and its note: a click (or Enter) opens the note under the field, Esc, a second click or the focus elsewhere close it; the field points to the note (aria-describedby)
+   * @param {any} field the control the note describes @param {string} label the name of the field @param {string} text one sentence @param {string} id unique id of the note
+   * @returns {{ btn: any, note: any }} */
+  F.tip = (field, label, text, id) => {
+    const { el } = F, note = el("span", { class: "fl-tipnote", id, role: "note", hidden: true, text });
+    const btn = el("button", { type: "button", class: "fl-b fl-tip", "aria-label": `About ${label}`, "aria-expanded": "false", "aria-controls": id }, "ⓘ");
+    if (field) field.setAttribute("aria-describedby", id);
+    const shut = () => {
+      note.hidden = true; btn.setAttribute("aria-expanded", "false");
+      document.removeEventListener("keydown", onKey, true); document.removeEventListener("pointerdown", onAway, true); document.removeEventListener("focusin", onAway, true);
+    };
+    /** @param {KeyboardEvent} e */
+    function onKey(e) { if (e.key === "Escape") { shut(); btn.focus(); } }
+    /** @param {Event} e */
+    function onAway(e) { if (!btn.contains(/** @type {Node} */ (e.target)) && !note.contains(/** @type {Node} */ (e.target))) shut(); }
+    btn.addEventListener("click", () => {
+      if (!note.hidden) return shut();
+      note.hidden = false; btn.setAttribute("aria-expanded", "true");
+      document.addEventListener("keydown", onKey, true); document.addEventListener("pointerdown", onAway, true); document.addEventListener("focusin", onAway, true);
+    });
+    return { btn, note };
+  };
 
   /** @param {any} p @param {string} name @param {any} cur @param {(v: any) => void} set @param {string} id */
   const control = (p, name, cur, set, id) => {
@@ -36,14 +59,18 @@
     for (const [name, p] of entries) {
       const id = `fl-${prefix}-${inst.id}-${name}`, explicit = inst.params && name in inst.params, cur = explicit ? inst.params[name] : defaults[name];
       const set = (/** @type {any} */ v) => { F.setParam(inst, step, name, v); done(); };
-      const label = el("label", { for: p.type === "array" ? undefined : id, text: p.title + (p["x-unit"] ? ` (${p["x-unit"]})` : "") });
-      const reset = explicit ? F.btn("reset", `Back to the default: ${p.title}`, () => set(null)) : el("span");
-      // a value the program estimates from the data when the plan runs: say so, say how, and offer to fix it at the default
-      const est = p["x-estimate"] && !explicit && defaults[name] !== undefined ? el("span", { class: "flx-est" },
-        el("button", { type: "button", class: "fl-b", "aria-label": `How ${p.title} is estimated`, title: "Left empty, the program estimates this from your files when the plan runs (from the scan index of the first files) and records the value it used. Type a number, or use the fixed value, to decide it yourself." }, "ⓘ"),
-        F.btn("ok", `Use a fixed value for ${p.title}`, () => { inst.params = inst.params || {}; inst.params[name] = defaults[name]; done(); }, "Use fixed")) : null;
-      rows.push(label, el("span", { class: "fl-meta" }, control(p, name, cur, set, id), est, reset));
-      if (p.description) rows.push(el("span", { class: "fl-ds", text: p.description }));
+      const shown = p["x-label"] || p.title, text = shown + (p["x-unit"] ? ` (${p["x-unit"]})` : "");
+      const label = el("label", { for: p.type === "array" ? undefined : id, text });
+      const reset = explicit ? F.btn("reset", `Back to the default: ${shown}`, () => set(null)) : el("span");
+      const ctl = control(p, name, cur, set, id), tipText = p["x-tip"] || p.description;
+      const tip = tipText ? F.tip(ctl, shown, tipText, `${id}-tip`) : null;
+      // a value the program estimates from the data when the plan runs: say so and offer to fix it at the default
+      const estTip = p["x-estimate"] && !explicit && defaults[name] !== undefined ? F.tip(null, `${shown} estimate`, "Left empty, it is estimated from the scan index of your files when the plan runs.", `${id}-est`) : null;
+      const est = estTip ? el("span", { class: "flx-est" }, estTip.btn,
+        F.btn("ok", `Use a fixed value for ${shown}`, () => { inst.params = inst.params || {}; inst.params[name] = defaults[name]; done(); }, "Use fixed")) : null;
+      rows.push(label, el("span", { class: "fl-meta" }, ctl, tip && tip.btn, est, reset));
+      if (tip) rows.push(tip.note);
+      if (estTip) rows.push(estTip.note);
     }
     return rows;
   };
@@ -53,9 +80,11 @@
     const { el } = F, e = F.effective(inst, step), box = el("div", { class: "fl-form" });
     if (step.algorithms && step.algorithms.length) {
       const id = `fl-alg-${inst.id}`;
-      box.append(el("label", { for: id, text: "Algorithm" }), el("select", { id, "data-fk": id, onchange: (/** @type {any} */ ev) => { F.setAlgorithm(inst, step, ev.target.value || null); done(); } },
-        ...step.algorithms.map((/** @type {any} */ a) => el("option", { value: a.id, selected: !!e.algorithm && a.id === e.algorithm.id, text: a.title + (a.status === "planned" ? " (planned)" : "") }))));
-      if (e.algorithm && e.algorithm.doc) box.append(el("span"), el("span", { class: "fl-ds", text: e.algorithm.doc }));
+      const sel = el("select", { id, "data-fk": id, onchange: (/** @type {any} */ ev) => { F.setAlgorithm(inst, step, ev.target.value || null); done(); } },
+        ...step.algorithms.map((/** @type {any} */ a) => el("option", { value: a.id, selected: !!e.algorithm && a.id === e.algorithm.id, text: a.title + (a.status === "planned" ? " (planned)" : "") })));
+      const tip = e.algorithm && e.algorithm.doc ? F.tip(sel, "Algorithm", e.algorithm.doc, `${id}-tip`) : null;
+      box.append(el("label", { for: id, text: "Algorithm" }), el("span", { class: "fl-meta" }, sel, tip && tip.btn));
+      if (tip) box.append(el("span"), tip.note);
     }
     if (F.msnMolecule && inst.step.startsWith("spectra.msn_graph@")) box.append(F.msnMolecule(inst, step, done));
     const presets = F.presetList(step);

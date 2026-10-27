@@ -1,0 +1,10 @@
+{
+ "formato": "preset/1",
+ "preset": [
+  {"id": "experimental", "kinds": ["experimental"], "ids": []},
+  {"id": "environmental", "kinds": [], "ids": ["massbank-*", "dimspec-pfas", "multims2", "msdial-*"]},
+  {"id": "metabolomics", "kinds": [], "ids": ["msdial-*", "mona-*", "gnps-*", "lipidblast-*"]},
+  {"id": "natural_products", "kinds": [], "ids": ["gnps-*", "isdb-*"]},
+  {"id": "forensic", "kinds": [], "ids": ["swgdrug"]}
+ ]
+}

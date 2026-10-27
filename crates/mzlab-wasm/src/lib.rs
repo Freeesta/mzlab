@@ -14,7 +14,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca;
+mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;

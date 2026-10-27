@@ -186,6 +186,8 @@ impl Importer {
             it: it.to_vec(),
             meta,
             rt: None,
+            ri: None,
+            ei: false,
         });
         self.drain().map_err(js_err)
     }
