@@ -276,8 +276,14 @@ fn assign_matrix(out: &mut [Campione]) {
             continue;
         };
         c.matrix = w.clone();
-        let cond = c.series.get(w.len()..).map(|r| r.trim_start_matches(is_sep));
-        if let (true, Some(cond)) = (c.series.starts_with(w.as_str()), cond.filter(|r| !r.is_empty())) {
+        let cond = c
+            .series
+            .get(w.len()..)
+            .map(|r| r.trim_start_matches(is_sep));
+        if let (true, Some(cond)) = (
+            c.series.starts_with(w.as_str()),
+            cond.filter(|r| !r.is_empty()),
+        ) {
             c.group = format!("{w}-{cond}");
         }
     }
