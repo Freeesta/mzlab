@@ -15,7 +15,8 @@ def step(name, fn):
 if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("SKIP cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm"); sys.exit(0)
 
-NAMES = ["FullScan_t0", "FullScan_t5", "FullScan_t10", "FullScan_t15", "FullScan_t30"]
+# the demo files under names that sort like the plan: the browser lists the indexes of OPFS by name, `flow run` takes the order of the plan
+NAMES = ["FullScan_t00", "FullScan_t05", "FullScan_t10", "FullScan_t15", "FullScan_t30"]
 TIMES = [0, 5, 10, 15, 30]
 PARENT = json.dumps({"formula": "C14H13F4N3O2S"})
 def sample(n, t):
@@ -35,7 +36,7 @@ subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", 
 from lib_sito import add_wasm; add_wasm(site)
 from lib import build_feat; build_feat(site / "static", env)
 run = tmp / "run"; run.mkdir()
-for n in NAMES: shutil.copy2(ROOT / "mzlab" / "web" / "esempi" / (n + ".mzML"), run / (n + ".mzML"))
+for n, t in zip(NAMES, TIMES): shutil.copy2(ROOT / "mzlab" / "web" / "esempi" / ("FullScan_t%d.mzML" % t), run / (n + ".mzML"))
 (run / "plan.json").write_text(json.dumps(PLAN)); (run / "samples.json").write_text(SAMPLES); (run / "parent.json").write_text(PARENT)
 subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "plan.json"), "--in", str(run), "--out", str(run / "out")], cwd=ROOT, check=True, capture_output=True)
 print("native outputs:", sorted(x.name for x in (run / "out").iterdir() if not x.name.endswith(".mzidx")))
