@@ -44,6 +44,7 @@ pub mod gradient;
 pub mod idxcache;
 pub mod idxnuovo;
 pub mod blocchi;
+mod idxcheck;
 pub mod idxread;
 pub mod idxsearch;
 pub mod isoscore;
