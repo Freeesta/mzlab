@@ -406,6 +406,7 @@
   "bn.iso.failed": "Avviso quando il profilo isotopico non si calcola; {message} = testo dell'errore.",
   "bn.scan.count": "Riga sotto l'elenco del selettore «+ scansione»; {n} = numero di scansioni.",
   "bn.l.count": "Riga sopra l'elenco delle scansioni; {n} = numero di scansioni.",
+  "bn.f.rtType": "Seconda riga di un tipo di scansione (sezione «Scansioni per tipo»); {a} e {b} = primo e ultimo RT in minuti.",
   "bn.maxRanges": "Avviso quando si supera il numero massimo di grafici impilati; {n} = massimo.",
   "bn.pks.done": "Messaggio dopo «Integra in tutte le celle»; {t} = tempo del picco in minuti, {n} = tracce integrate.",
   "err.formula.unreadable": "{formula} = testo scritto dall'utente.",

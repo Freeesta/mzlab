@@ -50,6 +50,7 @@
     "../../mzlab/web/gradiente.js",
     "../../mzlab/web/idxpool.js",
     "../../mzlab/web/infusione-grafo.js",
+    "../../mzlab/web/banco-file.js",
     "../../mzlab/web/infusione-grafo-campo.js",
     "../../mzlab/web/infusione-grafo-css.js",
     "../../mzlab/web/infusione-grafo-cerca.js",

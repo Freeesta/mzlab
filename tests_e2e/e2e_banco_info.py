@@ -36,7 +36,7 @@ try:
         step("tab 1: the header of the scan under the cursor, with every parameter of the file; it follows the next scan", hdr)
         def lst():
             tab("lst"); pg.wait_for_selector("#hri-list .r", timeout=15000)
-            t = pg.inner_text("#hri-body").split("\n")[0]; n = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.sr[0].x.length"); assert str(n) in t, (t, n)
+            t = pg.inner_text("#sb-title"); n = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.sr[0].x.length"); assert str(n) in t, (t, n)
             c0 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').cur")
             pg.evaluate("document.querySelector('#hri-list').scrollTop=2000"); pg.wait_for_timeout(300)
             pg.locator("#hri-list .r").nth(2).click(); pg.wait_for_timeout(800)

@@ -22,7 +22,7 @@ const BANCO = (() => {
 #hri-body table{border-collapse:collapse;width:100%}#hri-body td,#hri-body th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}#hri-body td.num,#hri-body th.num{text-align:right}
 #hri-body td.v{white-space:normal;word-break:break-all}#hri-body h4{margin:8px 0 2px;font-size:12px}#hri-body .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 #hri-list{position:relative;overflow:auto;height:100%}#hri-list .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
-#hri-list .hd span{cursor:pointer;padding:2px 2px}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap}
+#hri-list .hd span{cursor:pointer;padding:2px 2px;text-align:right}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}#hri-list .r span{text-align:right;padding-right:2px}.sb-n{font-weight:400;color:var(--muted)}
 #hri-list .r:hover{background:var(--sel)}#hri-list .r.cur{background:var(--sel);font-weight:600}
 .hrw #flst{max-height:34vh;overflow:auto}
 .bsp{position:fixed;z-index:10005;width:min(420px,94vw);max-height:70vh;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px}
@@ -368,7 +368,8 @@ const BANCO = (() => {
     const f = cFile(p), rt = cRt(p); if (!f || rt == null) return null;
     return J(`api/nearest_scan?k=${f.k}&rt=${rt}&level=${cLevel(p)}${p.filt ? "&filter=" + encodeURIComponent(p.filt) : ""}`).catch(() => null);
   }
-  const kv = rows => `<table>${rows.map(([a, b]) => `<tr><td class="muted">${esc(a)}</td><td class="v">${esc(b)}</td></tr>`).join("")}</table>`;
+  // a value is text, or {h} for HTML built here (MS levels with their superscript)
+  const kv = rows => `<table>${rows.map(([a, b]) => `<tr><td class="muted">${esc(a)}</td><td class="v">${b && b.h != null ? b.h : esc(b)}</td></tr>`).join("")}</table>`;
   async function tHdr(b, p, tok) {
     const n = await cScan(p);
     if (tok !== ist.tok) return;
@@ -376,7 +377,9 @@ const BANCO = (() => {
     const h = await J(`api/scaninfo?k=${cFile(p).k}&sid=${n.sid}`).catch(e => ({ error: e.message }));
     if (tok !== ist.tok) return;
     if (h.error) return void (b.innerHTML = `<span class="fail">${esc(h.error)}</span>`);
-    const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), "MS" + h.level], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
+    await carica("m:banco-file.js");
+    if (tok !== ist.tok) return;
+    const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), { h: BFIL.msLv(h.level) }], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
       [I18N.t("bn.h.isoWin"), h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], [I18N.t("bn.h.act"), [h.act, h.ce != null ? I18N.t("bn.h.energy") + " " + h.ce : ""].filter(Boolean).join(" ")], [I18N.t("bn.h.res"), h.res ? Math.round(h.res) : ""],
       [I18N.t("bn.h.analyzer"), h.analyzer || ""], [I18N.t("bn.h.spectrum"), h.profile ? I18N.t("hr.mode.profile") : I18N.t("hr.mode.centroid")], ["TIC", h.tic != null ? (+h.tic).toExponential(3) : ""]].filter(x => x[1] !== "" && x[1] != null);
     b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
@@ -394,9 +397,16 @@ const BANCO = (() => {
     if (t.error) return void (b.innerHTML = `<span class="fail">${esc(t.error)}</span>`);
     const cols = [["no", "N"], ["rt", "RT"], ["prec", I18N.t("bn.l.prec")], ["tic", "TIC"], ["bpmz", I18N.t("bn.l.bp")], ["bpint", I18N.t("bn.l.int")]], H = 20;
     let idx = t.sid.map((_, i) => i), sk = null, sd = 1;
-    b.innerHTML = `<div class="muted" style="margin-bottom:3px">${I18N.t("bn.l.count", { n: t.n })}${p.filt ? " · " + esc(p.filt) : ` · MS${cLevel(p)}`}. ${I18N.t("bn.l.click")}</div><div id="hri-list"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
+    // the count sits in the header of the side panel (readable by screen readers as «976 scans»); the click is explained by the title of the table
+    const ttl = Q("#sb-title");
+    if (ttl) {
+      ttl.querySelectorAll(".sb-n,.sr-only").forEach(x => x.remove());
+      ttl.insertAdjacentHTML("beforeend", `<span class="sb-n" aria-hidden="true"> · ${t.n}</span><span class="sr-only"> ${esc(I18N.t("bn.l.count", { n: t.n }))}</span>`);
+    }
+    b.innerHTML = `<div id="hri-list" title="${esc(I18N.t("bn.l.click"))}" aria-description="${esc(I18N.t("bn.l.click"))}"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
     const L = b.querySelector("#hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
-    const fx = { no: v => v, rt: v => num(v, 3), prec: v => (v == null ? "" : num(v, 3)), tic: v => (+v).toExponential(2), bpmz: v => num(v, 4), bpint: v => (+v).toExponential(2) };
+    // fixed decimals per column, so the digits line up
+    const fx = { no: v => v, rt: v => (+v).toFixed(3), prec: v => (v == null ? "" : (+v).toFixed(3)), tic: v => (+v).toExponential(2), bpmz: v => (+v).toFixed(4), bpint: v => (+v).toExponential(2) };
     const paint = () => {
       const a = Math.max(0, Math.floor((L.scrollTop - H) / H)), z = Math.min(idx.length, a + Math.ceil(L.clientHeight / H) + 3);
       R.innerHTML = idx.slice(a, z).map((i, j) => `<div class="r${cur != null && Math.abs(t.rt[i] - cur) < 1e-4 ? " cur" : ""}" data-i="${i}" style="position:absolute;top:${(a + j) * H}px;left:0;right:0">${cols.map(c => `<span>${esc(fx[c[0]](t[c[0]][i]))}</span>`).join("")}</div>`).join("");
@@ -412,11 +422,9 @@ const BANCO = (() => {
     const j = await J(`api/fileinfo?k=${f.k}`).catch(e => ({ error: e.message }));
     if (tok !== ist.tok) return;
     if (j.error) return void (b.innerHTML = `<span class="fail">${esc(j.error)}</span>`);
-    const rg = Object.entries(j.mz_range || {}).map(([l, v]) => `MS${l}: ${num(v[0], 2)} – ${num(v[1], 2)}`).join(" · ");
-    b.innerHTML = `<h4 style="margin-top:0">${I18N.t("side.file")}</h4>` + kv([[I18N.t("lib.col.name"), j.file], [I18N.t("bn.f.date"), j.start || I18N.t("bn.f.noDate")], [I18N.t("bn.f.rtRange"), `${num(j.rt[0], 2)} – ${num(j.rt[1], 2)}`], [I18N.t("bn.f.mzRange"), rg], [I18N.t("lib.all.scans"), `${j.scans} (${Object.entries(j.levels).map(([l, n]) => `MS${l}: ${n}`).join(", ")})`]])
-      + `<h4>${I18N.t("bn.f.instrument")}</h4>` + kv([[I18N.t("bn.f.model"), j.instrument], [I18N.t("bn.f.serial"), j.serial], [I18N.t("bn.f.analyzers"), (j.analyzers || []).join(", ")], [I18N.t("bn.f.components"), (j.components || []).join(", ")]])
-      + `<h4>${I18N.t("bn.f.software")}</h4>` + kv([["Software", (j.software || []).join(", ")], [I18N.t("bn.f.source"), (j.source_files || []).join(", ")], [I18N.t("bn.f.conversion"), (j.conversion || []).join(", ")]])
-      + `<h4>${I18N.t("bn.f.byType")}</h4>` + kv(j.filters.map(g => [g.key, `${g.n} · RT ${num(g.rt0, 2)}–${num(g.rt1, 2)}`])) + `<div class="muted" style="margin-top:6px">${I18N.t("bn.f.note")}</div>`;
+    await carica("m:banco-file.js");
+    if (tok !== ist.tok) return;
+    b.innerHTML = BFIL.fileHtml(j);
   }
   // the spectra already drawn by the cell: m/z of its highest peak, for the launchers
   const topMz = p => { const d = p && p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!d || !d.y || !d.y.length) return null; let j = 0; d.y.forEach((v, i) => { if (v > d.y[j]) j = i; }); return d.mz[j]; };
