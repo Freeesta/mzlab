@@ -111,7 +111,7 @@ export async function collect() {
 /** manifesto.json as bytes. @param {Entry[]} files @param {Left[]} left @param {Date} when */
 export function manifest(files, left, when) {
   return text(JSON.stringify({
-    format: FORMAT, app: W.APP_NAME || "mzLab", version: W.MZLAB_VERSION || null, created: when.toISOString(),
+    format: FORMAT, app: W.APP_NAME || "", version: W.MZLAB_VERSION || null, created: when.toISOString(),
     files: files.map(f => ({ name: f.name, bytes: f.bytes.length, what: f.what })), excluded: left,
   }, null, 1));
 }

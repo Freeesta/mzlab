@@ -148,6 +148,7 @@
     if (hit) {
       x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text });
       await M.keep(hit.name, hit.text);
+      F.webMsnAfterRun(x.S, [x.files.get(inst.id)]);
       await x.call("cached", { job: j });
       return {};
     }
@@ -157,6 +158,7 @@
       const r = await M.one(inst, { plan: x.plan, k: M.infusion(x.S), graph: null, phase: (/** @type {number} */ frac) => { x.call("progress", { job: j, frac }).catch(() => {}); } });
       await remember(p, key, r);
       x.files.set(inst.id, { id: inst.id, ...r });
+      F.webMsnAfterRun(x.S, [x.files.get(inst.id)]);
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
   };

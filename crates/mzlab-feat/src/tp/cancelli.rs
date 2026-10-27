@@ -3,7 +3,7 @@
 use mzlab_core::error::{Error, Result};
 
 use super::*;
-use crate::aligned::CELL_ABSENT;
+use crate::aligned::no_peak;
 use crate::evid::match_hypotheses;
 use crate::hypo::{SRC_CLEAVAGE, SRC_IMPORTED, SRC_NETWORK, SRC_RULE};
 
@@ -29,7 +29,7 @@ pub(super) fn parent_row(inp: &TpInputs) -> Option<usize> {
 /// The area of the cell when the file has a peak there (not absent, finite, above zero).
 fn measured(t: &Aligned, row: usize, file: usize) -> Option<f64> {
     let c = row * t.n_files + file;
-    (t.state[c] != CELL_ABSENT && t.area[c].is_finite() && t.area[c] > 0.0).then_some(t.area[c])
+    (!no_peak(t.state[c]) && t.area[c].is_finite() && t.area[c] > 0.0).then_some(t.area[c])
 }
 
 /// Largest area of a row over some files (0 where none has a peak).
