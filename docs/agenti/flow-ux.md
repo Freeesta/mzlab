@@ -31,7 +31,7 @@ Studio della prova di Federico in Flow web (modello «Fragmentation tree of a st
 Schizzo (prova HTML e foto Playwright fatte fuori dal repository):
 
 ```
-[Flow] (Canvas|List) [Templates▾] [+ Add step] (Simple|Advanced) ↶ ↷ ⤢   ✓ Ready  [⚠ 0] [▶ Run|▾] [>_ Terminal] [⋯]
+[Flow] (Canvas|List) [Templates▾] [+ Add step] (Simple|Advanced) ↶ ↷ ⤢   ✓ Ready  [⚠ 0] [Auto-run] [▶ Run] [>_ Terminal] [⋯]
 ┌──────────── canvas (≈50 %) ───────────────────────────┐┃┌──────── inspector (≈50 %) ────────────┐
 │ ┌Raw files──────┐   ┌Fragmentation graph┐   ┌Export─────────┐ │ Fragmentation graph                   │
 │ │1 file·Orbitrap│──▶│timolol·[M+H]+     │─┬▶│Library · Table│ │ Builds the MSn tree of one infusion.  │
@@ -49,8 +49,8 @@ Schizzo (prova HTML e foto Playwright fatte fuori dal repository):
 | Simple / Advanced | resta |
 | Undo, Redo, Fit | solo icone con `aria-label` e `title` (bersagli ≥ 24 px, 40 al tocco) |
 | Checklist | icona ⚠ con il numero dei problemi, accanto allo stato |
-| Open | nel menu ⋯ come «Open plan…» (insieme a «Download plan») |
-| Live, Pause, Run now | Run diventa pulsante diviso `▶ Run|▾`: nel ▾ la casella «Auto-run on changes» (= Live); «Pause» compare solo mentre lavori live sono attivi; «Run now» resta com'è (solo quando serve) |
+| Open | tolto dalla barra: il piano si apre dalla List view; «Download plan» nel menu ⋯ |
+| Live, Pause, Run now | interruttore piccolo «Auto-run» (= Live) accanto a «▶ Run»; «Pause» compare solo mentre Auto-run ha lavori attivi; «Run now» resta com'è (solo quando serve) |
 | Run on CLI, ▾ | un pulsante «>_ Terminal» (pannello del §2) |
 | Ready to run | «✓ Ready» / «⚠ 2 to fix» |
 
@@ -59,73 +59,29 @@ Schizzo (prova HTML e foto Playwright fatte fuori dal repository):
 - Grafo MSn: Raw files → Fragmentation graph → {Export, View graph}. «Export» è un gruppo Simple dei due passi d'esportazione (Advanced li mostra separati); «View graph» è una carta di vista, non un passo del piano (la CLI non cambia): appare accanto a ogni passo che ha una vista registrata e si accende quando il risultato esiste.
 - Descrizioni: sotto il campo resta solo l'etichetta (≤ 8 parole, unità tra parentesi); la frase va in un «ⓘ» che apre/chiude una nota vicino al campo (clic, Invio, Esc; `aria-describedby` sul campo): niente `title` come unico veicolo (tastiera e tocco, WCAG 1.4.13). Una frase sola, ≤ 20 parole.
 
-## 4. Decisioni di Federico
+## 4. Decisioni
 
-1. **Nomi** (gli id interni restano): `spectra.msn_graph` «Fragmentation graph» (alt. «MSn tree», «Build fragmentation tree»); `msn.library_export` «Save as library» (alt. «Library export (MSP)»); `msn.table_export` «Save as tables» (alt. «Table export (CSV)»); gruppo «Export» (alt. «Save results»); carta «View graph» (alt. «Explore graph»). Gli altri nove senza nome li propone DEV-D dal titolo del descrittore.
-2. **Live**: dentro Run ▾ come «Auto-run on changes», acceso di norma (consigliato) / spento di norma / tolto.
-3. **Open**: nel menu ⋯ (consigliato) / tolto (il piano si apre anche trascinando il file).
-4. **View** come carta di vista fuori dal piano (consigliato) / passo vero `view.msn_graph` (cambia CLI e JSON).
-5. **Terminale**: pannello fatto in casa (consigliato, nessuna dipendenza) / xterm.js / pty reale nell'app.
-6. **Titoli Rust**: accorciare i `title` dei descrittori oltre 8 parole (tocca la CLI `--help`) oppure accorciarli solo nell'interfaccia.
-7. **Inspector** al 50 % sempre o solo per piani con ≤ 5 carte.
+**Prese** (Federico, via COO): nomi `spectra.msn_graph` «Fragmentation graph», `msn.library_export` «Save as library», `msn.table_export` «Save as tables», gruppo «Export», carta «View graph» (id invariati); «Open» tolto dalla barra (il piano si apre dalla List view); «Live» → interruttore piccolo «Auto-run»; Canvas/List interruttore piccolo nella barra; inspector da metà pagina; Export e View a destra del grafo; terminale fatto in casa (niente xterm.js né pty) con «Copied» visibile, riga modificabile e «Run here».
+
+**Regola dei testi** (Federico, per tutta l'interfaccia): pochi testi; niente paragrafi esplicativi dove l'interfaccia si capisce da sola; tooltip SOLO per dire cosa fa un campo o cosa inserirvi, mai opinioni, avvisi o cautele; un testo che non dice cosa fa o cosa inserire si toglie (con la sua chiave i18n).
+
+**Aperte**:
+1. «Auto-run» acceso di norma (come il Live di oggi) o spento.
+2. «View graph» come carta di vista fuori dal piano (scelta dei prompt) o passo vero del piano (cambia CLI e JSON).
+3. Accorciare anche i `title`/`description` dei descrittori Rust (cambia l'aiuto della CLI; scelta del prompt B) o solo l'interfaccia.
+4. Tooltip di Auto-run: «Run again when an input or setting changes» (Live riparte anche ai cambi dei parametri) o il testo più corto «Run again when an input changes».
 
 ## 5. Prompt dei lavori
 
-Ordine: A → B → C → D → E → F. A, B, C ed E non toccano gli stessi file e possono andare in parallelo; D dopo A; F dopo E. C dopo l'unione di FLOW-INFUSIONE-RAW (stesso nodo Raw files). I file sorgente sono disgiunti; i test e2e comuni (`e2e_flow.py`, `e2e_flow_msn.py`) si toccano solo nelle righe del proprio lavoro.
+Un file per lavoro in `docs/agenti/prompt-flow-ux/` (formato a 7 punti, ramo e dipendenze in testa, regole comuni e regola dei testi incluse):
 
-### DEV-A — Il grafo si apre dopo la corsa
-- **Ruolo**: DEV Sonnet, Flow web (amministratore, solo inglese). Leggi `docs/agenti/flow-web.md` e questo file §1.
-- **Contesto**: la corsa MSn (Run e Live) è «done» ma il grafo msngrafo/1 non si apre: i testi restano in `res.files` (link) e `live.files`; `F.openMsnGraph` esiste ed è scollegato.
-- **Perimetro**: `flow/lazy/flow-run-end.js`, `flow-web-ui.js`, `flow-live-jobs.js` (solo il lavoro `msn`), `flow-views-msn.js`, `tests_e2e/e2e_flow_msn.py`. Non toccare `flow-shell.js`, `flow-names.js`, `flow-fix.js`, il nodo Raw files.
-- **Lavoro**: (1) `F.webMsnAfterRun(S, files)` in `flow-run-end.js`: ogni testo MSn entra in `S.results[istanza]` come elemento `{type, label, text}` (`.json` → vista del grafo, `.msp` → library, `.csv` → table), sostituendo quello con la stessa etichetta; (2) chiamalo da `F.webRunUi` e quando un lavoro `msn` del live finisce; (3) a fine corsa si apre da solo il grafo (come la tabella delle feature), col fuoco sul titolo della vista; (4) registra la vista del grafo per il suo tipo in `flow-views-msn.js` se `flow-report.js` non basta.
-- **Accettazione**: dopo Run o Live il pannello del nodo del grafo ha «Results» con il grafo apribile e i due file scaricabili; il grafo si apre da solo; nessun `window.MZLAB_LR_MISS`.
-- **Prove**: `python3 tests_e2e/e2e_flow_msn.py` (togli l'apertura a mano della riga 118, verifica `.ig-wrap svg` dopo Run e dopo una modifica in Live), `tsc` del progetto `tools/tipi/`, `python3 tools/verifica.py --cambiati`.
-- **Consegna**: PR `claude/flow-msn-risultati`, una riga in `docs/agenti/flow-web.md`; messaggio al COO (≤5 righe, SHA a CI verde).
+| Lavoro | File | Ramo | Dipende da |
+|---|---|---|---|
+| A — il grafo si apre dopo la corsa | `A.md` | `claude/flow-msn-risultati` | — |
+| B — etichette corte, descrizioni nei tooltip | `B.md` | `claude/flow-tooltip` | — |
+| C — Raw files: tabella, tipo, esplora, mzML | `C.md` | `claude/flow-raw-files` | FLOW-INFUSIONE-RAW unita |
+| D — nomi umani, Export e View graph | `D.md` | `claude/flow-nomi-viste` | A |
+| E — barra compatta, inspector a metà | `E.md` | `claude/flow-barra` | — |
+| F — pannello Terminal | `F.md` | `claude/flow-terminal` | E |
 
-### DEV-B — Descrizioni nei suggerimenti
-- **Ruolo**: DEV Sonnet, modulo dei parametri del Flow. Leggi `docs/agenti/flow-grafica.md` (moduli) e §3 di questo file.
-- **Contesto**: sotto ogni campo c'è una frase (`flow-form.js:46`, `:57`); Federico vuole etichette brevi e la frase nel suggerimento, per tutti i moduli.
-- **Perimetro**: `flow/lazy/flow-form.js`, `flow-msn-molecule.js` (solo le sue note), CSS di `flow-ui.js` (`.fl-ds`), un test pytest nuovo, i test e2e che cercano `.fl-ds`. Non toccare i descrittori Rust né `flow-inspect.js`.
-- **Lavoro**: (1) aiuto `F.tip(id, text)`: pulsante «ⓘ» 24×24 (40 al tocco) con `aria-label` «About <etichetta>», `aria-expanded`, che apre una nota `role="note"` sotto il campo, legata con `aria-describedby`; chiusura con Esc, nuovo clic o fuoco altrove; (2) `description` e `doc` dell'algoritmo passano da `span.fl-ds` al suggerimento (nessuna frase visibile di norma).
-- **Lavoro (segue)**: (3) l'«ⓘ» della stima usa lo stesso aiuto; (4) regola di scrittura nel file d'area: etichetta ≤ 8 parole, suggerimento una frase ≤ 20 parole; un test che elenca i titoli dei descrittori oltre 8 parole con una lista nota che può solo scendere.
-- **Accettazione**: nessuna `.fl-ds` visibile senza clic; ogni campo con descrizione ha il suo «ⓘ» raggiungibile da tastiera; `e2e_axe_grafici` e axe del Flow senza nuove violazioni.
-- **Prove**: `python3 tests_e2e/e2e_flow.py`, `e2e_flow_liste.py`, `e2e_flow_import.py`, pytest nuovo, `tsc`, `tools/verifica.py --cambiati`.
-- **Consegna**: PR `claude/flow-tooltip`; riga in `flow-grafica.md`; messaggio al COO.
-
-### DEV-C — Raw files: tabella, tipo di acquisizione, esplora, mzML
-- **Ruolo**: DEV Sonnet, nodo Raw files del Flow. Leggi `docs/agenti/flow-grafica.md`, `docs/agenti/dati.md` (barra del banco) e §1 qui.
-- **Contesto**: il nodo mostra «N files in Data: …» (`flow-inspect.js:19`); Data ha già `api/method`, la barra del banco (`banco.js:349`: `hdr`, `lst`, `fil`, `alb`) e `to_mzml` nel wasm dei lettori. FLOW-INFUSIONE-RAW possiede il caricamento `.raw` e i messaggi d'errore del nodo: parti dopo la sua unione e non toccarli.
-- **Perimetro**: file nuovo `flow/lazy/flow-raw-files.js` (in `LATE` di `flow-tool.js`), la riga 19 di `flow-inspect.js`, un'esportazione minima in `banco.js` (funzione che disegna un pannello `fil|lst|alb` per il file `k` in un contenitore dato, senza copiare codice), Rust solo se il tipo di acquisizione non è già calcolato.
-- **Lavoro**: (1) tabella ordinata (nome, tipo: LC-MS / infusione / DDA / DIA / MSn / SRM-MRM, polarità, strumento, livelli MS, dimensione) da `ST.files` + `api/method`; se la classificazione non esiste in Rust, aggiungila in `mzlab-core` come campo della rotta esistente, con test di parità; (2) per riga un solo pulsante «Explore» che apre sotto la tabella le schede File and instrument / Scans / Precursor tree riusando la funzione di `banco.js`; (3) «Export mzML»: un `.mzML` aperto si scarica così com'è; un formato del fornitore passa da `to_mzml` nel worker dei lettori.
-- **Accettazione**: con l'infusione Orbitrap la riga dice «Infusion · MSn (MS1–MS8) · positive · Orbitrap Fusion»; l'esplorazione mostra gli stessi dati di Data; il mzML scaricato si riapre in Data.
-- **Prove**: e2e nuovo `tests_e2e/e2e_flow_rawfiles.py` (file sintetici di `tools/dati_sintetici.py`), parità Rust se aggiunta, `tsc`, `tools/verifica.py --cambiati`.
-- **Consegna**: PR `claude/flow-raw-files`; righe in `flow-grafica.md` e `dati.md`; messaggio al COO.
-
-### DEV-D — Nomi umani, Export e View, collegamento con Data
-- **Ruolo**: DEV Sonnet, carte del Flow. Leggi `flow-grafica.md` e §1, §3, §4 qui; parti dopo l'unione di DEV-A.
-- **Contesto**: `F.nameOf` mostra gli id dei passi senza nome; Raw files non è collegato ai passi MSn; Export e View non esistono come carte.
-- **Perimetro**: `flow/lazy/flow-names.js`, `flow-fix.js` (`canvasModel`, `layout`), `flow-canvas.js` (solo la carta di vista), `flow-msn-graph.js`, i test e2e del Flow che leggono i titoli delle carte. Non toccare `flow-shell.js` né `flow-run-*.js`.
-- **Lavoro**: (1) `F.NAMES` per i 12 passi senza nome (nomi del §4 dopo la scelta di Federico; mai la parola «formula» da sola); (2) gruppi Simple anche fuori dalla base (`F.GROUPS`: «Export» = `msn.library_export` + `msn.table_export`).
-- **Lavoro (segue)**: (3) arco da Raw files ai passi che leggono l'infusione di Data anche senza `file:` nel piano; (4) carta di vista «View graph» (fuori dal piano) accanto a un passo con vista registrata, spenta finché non c'è risultato, che apre `F.openMsnGraph` grande; (5) nella vista del grafo: albero/radiale e pannello dello ione dai moduli di Data (`msngrafo-vista.js`, `infusione-grafo-nodo.js`) e «Open in Data» che apre la scheda del grafo sullo stesso file: nessuna copia di codice; (6) disposizione compatta con ≤ 5 carte.
-- **Accettazione**: il modello MSn si disegna Raw files → Fragmentation graph → {Export, View graph}; nessun id visibile nelle carte né nella riga di stato; Advanced mostra i passi separati; il piano `mzflow/2` esportato è identico a prima.
-- **Prove**: `e2e_flow.py`, `e2e_flow_msn.py`, `e2e_flow_web.py`, `flow_rule_tests.rs` invariato, `tsc`, `tools/verifica.py --cambiati`.
-- **Consegna**: PR `claude/flow-nomi-viste`; righe in `flow-grafica.md`; messaggio al COO.
-
-### DEV-E — Barra compatta e inspector a metà
-- **Ruolo**: DEV Sonnet, guscio del Flow. Leggi `flow-grafica.md`, `flow-live.md` e §3, §4 qui.
-- **Contesto**: la barra ha 17 controlli su due righe; «Open» apre un piano; «Live» è l'esecuzione automatica.
-- **Perimetro**: `flow/lazy/flow-shell.js`, `flow-shell-css.js`, `flow-live-bar.js`, `flow/js/flow-tool.js` (scheletro della barra), i test e2e che usano `data-tab`, `#flx-live-on`, «Open», «Run on CLI». Non toccare `flow-run-ui.js` (è di DEV-F): il pulsante «>_ Terminal» chiama `actions().toggle` come la freccia di oggi e tiene l'id `flx-cli-show`.
-- **Lavoro**: (1) `Canvas|List` piccolo nella barra, «Plan (JSON)» e «Open plan…» / «Download plan» nel menu ⋯; (2) Undo/Redo/Fit solo icone; Checklist come ⚠ con il numero; (3) Run diviso con ▾: «Auto-run on changes» (stato e id del Live di oggi), «Pause» visibile solo con lavori live attivi; (4) un solo «>_ Terminal» al posto di «Run on CLI» e ▾; (5) `--insp` iniziale 50 % (240 px–70 %), il valore resta per la sessione.
-- **Accettazione**: una riga a 1280 px, nessuno scorrimento orizzontale a 360 px, ogni bersaglio ≥ 24 px (40 al tocco), tastiera completa, nessun testo perso per i lettori di schermo.
-- **Prove**: `e2e_flow.py`, `e2e_flow_live.py`, `e2e_flow_annulla.py`, `e2e_flow_web.py`, `e2e_axe_grafici`, `tsc`, `tools/verifica.py --cambiati`.
-- **Consegna**: PR `claude/flow-barra`; righe in `flow-grafica.md` e `flow-live.md`; messaggio al COO.
-
-### DEV-F — Pannello Terminal
-- **Ruolo**: DEV Sonnet, Rust + colla JS. Leggi `docs/agenti/rust-flow.md`, `cli.md`, §2 qui; parti dopo l'unione di DEV-E.
-- **Contesto**: `api/flow/command` dà uno script lungo; la CLI accetta `--set`; `apply_set` sta in `mzlab-cli/src/flow_apply.rs`.
-- **Perimetro**: `crates/mzlab-core/src/flow/` (`command.rs` + modulo nuovo della riga), `crates/mzlab-cli/src/flow_apply.rs` (diventa un rimando al core), il ponte wasm e la rotta dell'app desktop della sola `flow/line`, `flow/lazy/flow-run-ui.js`, file nuovo `flow/lazy/flow-terminal.js`, test. Non toccare `flow-shell.js`.
-- **Lavoro**: (1) in Rust la riga corta (`mzlab-cli flow run plan.json --in <cartella> --set …`, un `--set` per parametro diverso dal default) e la rotta `flow/line` (riga + piano → piano con i `--set` applicati o errore `err.cli.*`), con lo stesso `apply_set` della CLI; (2) pannello: uscita in `<pre aria-live="polite">`, riga in `input` monospaziato, copia all'apertura con «Copied ✓» nel pannello, «Run here» (browser: `F.runners.web`; app: `flow/run`), «Reset», «Show script»; uscita = una riga per evento di passo con i nomi umani.
-- **Lavoro (segue)**: (3) `--in/--out` nel browser: riga che dice che si usano i file di Data.
-- **Accettazione**: modificare `--set graph.ppm=5` e premere «Run here» dà lo stesso piano che `mzlab-cli flow run --set graph.ppm=5`; un `--set` sbagliato mostra l'errore della CLI; tutto da tastiera.
-- **Prove**: test Rust di parità riga↔CLI, `cargo test -p mzlab-core -p mzlab-cli`, e2e nuovo `tests_e2e/e2e_flow_terminal.py`, `tsc`, `tools/verifica.py --cambiati`.
-- **Consegna**: PR `claude/flow-terminal`; righe in `rust-flow.md`, `cli.md`, `flow-grafica.md`; messaggio al COO.
+A, B, C ed E partono insieme; D dopo A; F dopo E. I file sorgente sono disgiunti; i test e2e comuni (`e2e_flow.py`, `e2e_flow_msn.py`) si toccano solo nelle righe del proprio lavoro.
