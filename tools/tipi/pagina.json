@@ -43,6 +43,7 @@
     "../../mzlab/web/icons-modi.js",
     "../../mzlab/web/modi.js",
     "../../mzlab/web/ordine.js",
+    "../../mzlab/web/tipo-file.js",
     "../../mzlab/web/ruoli-carica.js",
     "../../mzlab/web/ruoli-celle.js",
     "../../mzlab/web/progresso.js",
