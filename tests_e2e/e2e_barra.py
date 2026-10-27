@@ -58,6 +58,23 @@ try:
             h = pg.evaluate("Q('#tools').offsetHeight"); s = sel()
             assert h > 45 and s["w"] <= 700 * 0.6 + 2, (h, s)
         step("narrow window: the bar wraps", narrow)
+        def split_state():
+            # a split button is one control: the active state, the border and the group name cover main part and caret
+            info = pg.evaluate("[...document.querySelectorAll('#stbar .tb-split')].map(g => ({id: g.dataset.cmd, role: g.getAttribute('role'), name: g.getAttribute('aria-label'), on: g.classList.contains('on'), main: g.querySelector('.tb-main').getAttribute('aria-pressed'), car: g.querySelector('.tb-car').getAttribute('aria-haspopup') + '/' + g.querySelector('.tb-car').getAttribute('aria-expanded'), mb: getComputedStyle(g.querySelector('.tb-main')).borderTopColor, cb: getComputedStyle(g.querySelector('.tb-car')).borderTopColor, mbg: getComputedStyle(g.querySelector('.tb-main')).backgroundColor, cbg: getComputedStyle(g.querySelector('.tb-car')).backgroundColor}))")
+            assert info, "no split button in the bar"
+            for g in info:
+                assert g["role"] == "group" and g["name"] and g["car"] == "menu/false", g
+                if g["on"]: assert g["main"] == "true" and g["mb"] == g["cb"] and g["mbg"] == g["cbg"], g
+                else: assert g["main"] == "false", g
+            return info
+        def splits():
+            info = split_state(); assert not any(g["on"] for g in info), info
+            for g in info:
+                pg.click(f'#stbar [data-cmd-main="{g["id"]}"]'); pg.wait_for_timeout(300)
+                now = {x["id"]: x for x in split_state()}
+                assert now[g["id"]]["on"], now[g["id"]]
+                assert not any(x["on"] for k, x in now.items() if k != g["id"]), now
+        step("every split button: main part and caret share the active state", splits)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
