@@ -402,6 +402,8 @@ I18N.add("it", {
   "inf.col.ce": "CE",
   "inf.col.n": "Scansioni",
   "inf.col.min": "min",
+  "inf.copy": "Copia tabella",
+  "inf.copy.tip": "Copia la tabella (testo con tabulazioni)",
   "inf.skip": "{n, plural, one {# generazione mancante} other {# generazioni mancanti}}",
   "llm.g": "Assistente",
   "llm.on.label": "Assistente (spento di default)",

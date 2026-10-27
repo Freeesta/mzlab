@@ -59,6 +59,14 @@ try:
                 pg.select_option("#" + sid, v); attendi(pg, "document.querySelectorAll('#inf-tree tbody tr').length > 1 && !document.querySelector('#hri-body > .muted')", 10000)
                 assert 1 < pg.locator("#inf-tree tbody tr").count() <= NODES + 1, sid
         step("Level, Tolerance, Energies and Spectrum redraw the table at once", controls)
+        def copy():
+            pg.evaluate("window.__clip = null; navigator.clipboard.writeText = async t => { window.__clip = t; }")
+            pg.click("#inf-copy"); attendi(pg, "window.__clip !== null", 10000)
+            lines = [l for l in pg.evaluate("window.__clip").split("\n") if not l.startswith("# ")]
+            n = pg.locator("#inf-tree tbody tr").count()
+            assert len(lines) == n + 1 and all(len(l.split("\t")) == 5 for l in lines), (n, lines[:3])
+            assert lines[1].split("\t")[1] == "MS1" and any(l.split("\t")[1] == "MS3" for l in lines), lines[:4]
+        step("«Copy table» puts the shown rows on the clipboard as tab-separated text (MS3, not a superscript)", copy)
         def labels():
             t = pg.evaluate("""[...document.querySelectorAll('.inf-f')].map(l => [l.querySelector('span').textContent, l.title, l.querySelector('select').offsetHeight])""")
             assert [x[0] for x in t] == ["Level", "Mass tolerance", "Collision energies", "Spectrum"] or pg.evaluate("I18N.lang") != "en", t
