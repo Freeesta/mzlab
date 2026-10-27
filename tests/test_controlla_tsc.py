@@ -13,6 +13,7 @@ ct = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ct)
 
 
+@pytest.mark.skipif(not hasattr(os, "killpg"), reason="process groups are POSIX only")
 def test_hung_install_is_killed_with_its_children_and_gives_a_clear_error(tmp_path, capsys):
     marca = tmp_path / "figlio.pid"
     # the parent starts a child (like npx does) and both sleep forever

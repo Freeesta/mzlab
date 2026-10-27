@@ -21,7 +21,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     # measured on the runners: macOS 3.11 took 10.5 min serially; with the xdist workers (as in test.yml) and the cargo builds of the wasm tests 25 min is the ceiling
     timeout-minutes: 25
+    # Windows: the tests compare bytes and sizes of the checked-out files (LF) and read text files with the default encoding (UTF-8 here, as on Linux and macOS)
+    env:
+      PYTHONUTF8: "1"
     steps:
+      - name: Check out with LF endings
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:

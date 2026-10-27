@@ -87,5 +87,5 @@ def test_svg_options_drop_abs_and_cip_text():
         "console.log(JSON.stringify([/abs/.test(a),/abs/.test(b),/>\\(?[RS]\\)?</.test(b)]));});"
     )
     ocl = JS.parent / "vendor" / "openchemlib.js"
-    out = subprocess.run([shutil.which("node"), "-e", code], check=True, capture_output=True, text=True, env={"OCL": ocl.as_uri(), "PATH": os.pathsep.join(["/usr/bin", "/usr/local/bin", str(Path(shutil.which("node")).parent)])}).stdout
+    out = subprocess.run([shutil.which("node"), "-e", code], check=True, capture_output=True, text=True, env={**os.environ, "OCL": ocl.as_uri()}).stdout
     assert json.loads(out) == [True, False, False]
