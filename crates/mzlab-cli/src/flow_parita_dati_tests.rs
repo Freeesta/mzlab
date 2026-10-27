@@ -1,5 +1,5 @@
 //! Engine parity on the real HR series (`dati/HRMS/Timolol/` of the private data repository): the indexes, the "Feature table" plan (index, detect, align,
-//! gapfill) run twice natively, and the table of the page chain (`run::recipe_for`, the one the browser WASM runs) must be byte for byte the same.
+//! gapfill) run twice natively, and the table of the page chain (`run::recipe_of_layers`, the one the browser runner builds) must be byte for byte the same.
 //! Skipped without the data repository (`MZLAB_DATI`). Nothing measured on the data is written here: only the time and the peak RSS go to stderr.
 
 use std::path::{Path, PathBuf};
@@ -98,7 +98,7 @@ fn native_runs(dir: &Path, names: &[String]) -> Vec<(String, Vec<u8>)> {
     for k in 0..2 {
         let out = work.join(format!("run{k}"));
         std::fs::create_dir_all(&out).unwrap();
-        let (_, prov) = mzlab_cli::flow::run_plan(plan.as_bytes(), dir, &out, 1 + k, None).unwrap();
+        let (_, prov) = crate::flow::run_plan(plan.as_bytes(), dir, &out, 1 + k, None).unwrap();
         assert!(!prov.contains("\"error\""), "{prov}");
         runs.push(folder(&out));
     }
