@@ -2,14 +2,12 @@
 //! parameters of the step spell, in the language of the engine (`filtra`/`normalizza`). The roles come from the samples file, `campioni/1` or `campioni/2`.
 
 use crate::flow::{read_one, write_made, FileRunner};
-use mzlab_core::campioni;
 use mzlab_core::error::Result;
 use mzlab_core::flow::Artifact;
 use mzlab_core::flow::Job;
-use mzlab_core::json::{parse, Out};
+use mzlab_core::json::Out;
 use mzlab_core::step::DataType;
 use mzlab_feat::filters::QC_MIN_FILES;
-use mzlab_feat::samples::{self, Sample};
 use mzlab_feat::store::Slice;
 use mzlab_feat_table_wasm::core::view_json;
 
@@ -93,38 +91,9 @@ pub fn spec_text(job: &Job) -> String {
     )
 }
 
-/// The samples as `campioni/1` text, whichever of the two schemas the file has.
+/// The samples as `campioni/1` text, whichever of the two schemas the file has (the rule is shared with the browser).
 pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
-    let doc = parse(bytes)?;
-    if doc.get("schema").and_then(|v| v.str()) != Some("campioni/2") {
-        return Ok(String::from_utf8_lossy(bytes).into_owned());
-    }
-    let mut out: Vec<Sample> = Vec::new();
-    for c in campioni::from_json(bytes)? {
-        let kind = match c.kind.as_str() {
-            "infusion" => campioni::tipo_v1(&c.file).to_string(),
-            k => k.to_string(),
-        };
-        let group = if matches!(kind.as_str(), "sample" | "std" | "calibration") {
-            String::new()
-        } else {
-            kind.clone()
-        };
-        out.push(Sample {
-            file: c.file,
-            sha256: c.sha256,
-            kind,
-            time_min: c.time_min,
-            replicate: c.replicate,
-            group,
-            conc: c.conc,
-            unit: c.unit,
-            order: c.order,
-            istd: c.istd,
-            note: c.note,
-        });
-    }
-    Ok(samples::to_json(&out))
+    mzlab_feat_table_wasm::pol::samples_v1(bytes)
 }
 
 /// The `view` text of the table under the rules of the job.
