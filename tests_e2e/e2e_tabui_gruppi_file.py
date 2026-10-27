@@ -33,7 +33,7 @@ else:                                                      # fresh sources of mz
 NAMES = ["G_O2_t30.mzML", "G_O2_t60.mzML", "G_N2_t30.mzML", "G_N2_t60.mzML", "G_blank.mzML"]      # names only: the table needs no data
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-errs = []; reqs = []
+errs = []; reqs = []; tags = []
 for _ in range(100):
     try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1).close(); break
     except Exception: srv.poll()
@@ -48,7 +48,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');}catch(_){}")
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")      # Tabui exists only in the administrator mode
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        ctx.on("request", lambda r: reqs.append(r.url))
+        ctx.on("request", lambda r: reqs.append(r.url)); ctx.on("request", lambda r: tags.append(r.url) if r.resource_type == "script" else None)
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
 
@@ -73,7 +73,7 @@ try:
         }"""
         def open_table():
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
-            n = len([u for u in mine() if u.endswith("/gruppi-campioni.js")])      # the request log: the resource timing buffer is full of Flow's files
+            n = len([u for u in tags if u.endswith("/lazy/gruppi-campioni.js")])      # the script tags in the request log (the resource timing buffer is full of Flow's files; the warm-up fetch is not a tag)
             assert n == 1, ("the script is asked for once", n, mine())
             assert pg.locator(f"{G} tr .tpg-cond").count() == len(NAMES)
             assert pg.evaluate("window.GRCHANGES.length") >= 1, "the page is told what the table holds at once"
