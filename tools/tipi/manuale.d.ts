@@ -24,3 +24,7 @@ type Voce = { name: string; kind?: string; use: boolean; type: string; role?: st
 
 /** What a `catch` of the page receives: an Error, an `api/` answer `{error, error_key, params}` or `{json}` of a failed fetch; `message` is typed as present (as on an Error), the other fields are optional and the code checks what it reads. */
 type Lanciato = { message: string; name?: string; key?: string; fatal?: boolean; stack?: string; error?: string; error_key?: string; params?: any; json?: any; [k: string]: any };
+
+/** An element found by a selector on `[data-x]` attributes: the `dataset` keys are there because the selector asked for them. */
+type ElementoDati = HTMLElement & { dataset: Record<string, string> };
+type CampoDati = HTMLInputElement & { dataset: Record<string, string> };
