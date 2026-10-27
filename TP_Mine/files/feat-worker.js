@@ -375,7 +375,7 @@ async function init(m) {
 }
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []), arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 const OPS = {
-  async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
+  async init(m) { await init(m); const x = mods[m.which]; return { version: x.version?.(), crate: x.crate_version?.() }; },
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
