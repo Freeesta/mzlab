@@ -29,6 +29,16 @@
     const S = { plan: tpl.steps ? F.newPlan() : F.basePlan(reg), reg };
     for (const id of tpl.steps || []) F.addStep(S.plan, reg, id);
     for (const a of tpl.addons) F.addAddon(S, F.ADDONS.find((/** @type {any} */ x) => x.id === a));
+    // the hypotheses read the polarity and the resolution of the files unless the plan writes them: the index goes in
+    const gen = F.findStep(S.plan, "tp.generate"), idx = F.findStep(S.plan, "index.mzidx"), gstep = gen && reg.byId.get("tp.generate");
+    const iport = gstep && F.ports(gstep.in).find((/** @type {FlowPort} */ x) => x.name === "index");
+    if (gen && idx && iport && !gen.in.index) F.setPort(gen, iport, [`${idx.id}.index`]);
+    // the network reads the rows of the link (a filter keeps a view, not a table) and the same sample list, for the time course
+    const net = F.findStep(S.plan, "tp.network"), link = F.findStep(S.plan, "tp.link"), nstep = net && reg.byId.get("tp.network");
+    if (net && link && nstep) for (const [name, ref] of [["table", link.id + ".tp"], ["samples", link.in.samples]]) {
+      const port = F.ports(nstep.in).find((/** @type {FlowPort} */ x) => x.name === name);
+      if (port && ref) F.setPort(net, port, [].concat(ref));
+    }
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
       const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);
