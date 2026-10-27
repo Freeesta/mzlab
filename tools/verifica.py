@@ -201,7 +201,7 @@ def js_syntax(results) -> None:
 def pytest(results, timeout) -> None:
     if not has("pytest"):
         results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
-    # serial pytest needs more than 20 min on a 4-CPU runner: with pytest-xdist the files are spread over the CPUs
+    # serial pytest needs more than 20 min on a 4-CPU runner; with pytest-xdist it still reached 96% at 1200 s on the Linux runner, hence 1800 s (see main)
     par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
     rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *par, "tests"], LOG / "pytest.log", timeout)
     last = [l for l in out.strip().splitlines() if re.search(r"passed|failed|error", l)][-1:] or out.strip().splitlines()[-1:]
@@ -449,7 +449,7 @@ def main() -> None:
         codice(results)
         if a.teoria:
             teoria(results)
-        pytest(results, 1200)
+        pytest(results, 1800)
         if not a.rapida:
             prova_hr(results)
     if not a.senza_e2e:
