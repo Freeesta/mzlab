@@ -15,6 +15,19 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 
+# Hot crates of the .wasm builds at opt-level 3 (reading, indexing and peaks 1.4-2.8x faster; the rest of the code stays at "z"; docs/agenti/wasm-potenziale.md).
+[profile.release.package.mzlab-core]
+opt-level = 3
+
+[profile.release.package.miniz_oxide]
+opt-level = 3
+
+[profile.release.package.quick-xml]
+opt-level = 3
+
+[profile.release.package.base64]
+opt-level = 3
+
 # Desktop app only (`cargo tauri build --features app -- --profile desktop`): speed over size; the .wasm builds keep `release`.
 [profile.desktop]
 inherits = "release"
