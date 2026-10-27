@@ -63,10 +63,15 @@
     const inst = F.instanceOf(S.plan, p.instance), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]));
     if (p.key === "err.flow.port.missing" && step) {
       const port = F.ports(step.in).find((/** @type {FlowPort} */ x) => x.name === p.port);
-      if (port) return { text: `Needs ${F.INPUT_NAMES[port.type] ? F.INPUT_NAMES[port.type].toLowerCase() : port.title.toLowerCase()}.`, fix: fixFor(S, inst, port) };
+      if (port) {
+        const what = F.INPUT_NAMES[port.type] ? F.INPUT_NAMES[port.type].toLowerCase() : port.title.toLowerCase(), prod = F.INPUT_TYPES.includes(port.type) ? null : producerOf(S, port);
+        return { text: prod ? `Needs ${what}: it comes from “${F.nameOf(prod.id)[0]}”, which this plan does not have yet.` : `Needs ${what}.`, fix: fixFor(S, inst, port) };
+      }
     }
     return { text: F.message(p), fix: null };
   };
+  /** the first step the plan lacks that makes what the port reads @param {any} S @param {FlowPort} port */
+  const producerOf = (S, port) => S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
   /** @param {any} S @param {any} inst @param {FlowPort} port */
   const fixFor = (S, inst, port) => {
     if (F.INPUT_TYPES.includes(port.type)) {
@@ -77,7 +82,7 @@
         if (data) void F.samplesSet(S, input, data).then(() => { if (S.redraw) S.redraw(); });
       } };
     }
-    const prod = S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
+    const prod = producerOf(S, port);
     if (!prod) return null;
     return { label: `Add “${F.nameOf(prod.id)[0]}”`, run() {
       const made = F.addStep(S.plan, S.reg, prod.id), o = F.ports(prod.out).find((/** @type {FlowPort} */ x) => F.fit(S.reg, x.type, port) === "ok");
