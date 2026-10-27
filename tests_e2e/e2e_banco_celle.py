@@ -24,7 +24,7 @@ try:
         def listing():
             pg.wait_for_function("(()=>{const s=document.querySelector('.pnl.chrom .bfw select[data-bf=filt]');return s&&s.options.length>1})()", timeout=20000)
             t = pg.evaluate("[...document.querySelector('.pnl.chrom .bfw select[data-bf=filt]').options].map(o=>o.textContent)")
-            assert any("Full ms" in x and "×" in x for x in t), t
+            assert any("MS¹" in x and "×" in x for x in t), t
         step("the menu lists the scan types of the file with their counts", listing)
         def ms2filter():
             pg.evaluate("setTab('ms2')"); attendi(pg, "E.panels.some(p=>p.type==='chrom'&&p.tab==='ms2'&&p._a)"); pg.evaluate("ms2Switch(null)"); frames(pg, 3)

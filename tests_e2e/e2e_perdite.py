@@ -126,7 +126,7 @@ try:
             shut(pg, "#refx")
             l = lbl_pos(300, 321.9819); assert l and l[3] and "[M+Na]" in l[2] and "[M+H]" in l[2], l
             pg.mouse.click(l[0], l[1], button="right"); pg.wait_for_timeout(500)
-            assert pg.evaluate("BARRA.curTab === 'adducts'"), "right click on an adduct label: adducts tab"
+            assert pg.evaluate("BARRA.curTab === 'calc'"), "right click on an adduct label: the calculator tab, which holds the adducts table"
             shut(pg, "#refx")
         step("4.8: ruler label: right click straight to losses / adducts, short adduct symbol with the full form in the tip", ruler_label)
     r.close()
