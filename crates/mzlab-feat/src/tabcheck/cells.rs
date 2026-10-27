@@ -1,7 +1,7 @@
 //! The checks of `tabcheck/1` on the shape of the cells: long traces, cells missing in a group, polarity and units.
 
 use super::*;
-use crate::aligned::{CELL_ABSENT, CELL_DETECTED};
+use crate::aligned::{no_peak, CELL_DETECTED};
 
 /// A trace this many times wider than the median is long; the share of the rows that warns.
 const LONG_FACTOR: f64 = 5.0;
@@ -113,7 +113,7 @@ pub(super) fn missing_cells(e: &Env) -> Check {
             .map(|&r| {
                 files
                     .iter()
-                    .filter(|&&k| e.t.state[r * e.t.n_files + k] == CELL_ABSENT)
+                    .filter(|&&k| no_peak(e.t.state[r * e.t.n_files + k]))
                     .count()
             })
             .sum::<usize>();
@@ -186,7 +186,7 @@ pub(super) fn polarity_units(e: &Env) -> Check {
     }
     if e.rows.iter().any(|&r| {
         (0..e.t.n_files).any(|k| {
-            e.t.state[r * e.t.n_files + k] != CELL_ABSENT
+            !no_peak(e.t.state[r * e.t.n_files + k])
                 && !(e.t.area[r * e.t.n_files + k].is_finite()
                     && e.t.area[r * e.t.n_files + k] >= 0.0)
         })
