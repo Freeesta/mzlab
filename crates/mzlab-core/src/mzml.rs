@@ -7,6 +7,7 @@ pub(crate) mod help;
 use help::Decode;
 use crate::numarray::Num;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::io::{BufReader, Read};
 
 use quick_xml::events::{BytesStart, Event};
@@ -338,6 +339,9 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
     let mut in_precursor_list = false;
     let mut in_analyzer = false;
 
+    let mut groups: HashMap<String, Vec<[String; 5]>> = HashMap::new();
+    // the `referenceableParamGroup` being read: id and its cvParams (name, accession, value, unitName, unitAccession)
+    let mut group: Option<(String, Vec<[String; 5]>)> = None;
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
         match ev {
@@ -402,70 +406,104 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                         });
                     }
                     "binary" if !empty => in_binary = true,
-                    "cvParam" => {
+                    "referenceableParamGroup" if !empty => {
+                        group = get(&attrs(e), "id").map(|id| (id.to_string(), Vec::new()));
+                    }
+                    "cvParam" if group.is_some() => {
                         let a = attrs(e);
+                        let own = |k| get(&a, k).unwrap_or("").to_string();
+                        let cv = [own("name"), own("accession"), own("value"), own("unitName"), own("unitAccession")];
+                        if let Some((_, list)) = group.as_mut() {
+                            list.push(cv);
+                        }
+                    }
+                    "cvParam" | "referenceableParamGroupRef" => {
+                        let a = attrs(e);
+                        // a cvParam is one entry; a group reference replays the cvParams of its group, in the same order
+                        let group_list: Vec<[&str; 5]>;
+                        let one: [[&str; 5]; 1];
+                        let list: &[[&str; 5]] = if name == "cvParam" {
+                            one = [[
+                                get(&a, "name").unwrap_or(""),
+                                get(&a, "accession").unwrap_or(""),
+                                get(&a, "value").unwrap_or(""),
+                                get(&a, "unitName").unwrap_or(""),
+                                get(&a, "unitAccession").unwrap_or(""),
+                            ]];
+                            &one
+                        } else {
+                            group_list = get(&a, "ref")
+                                .and_then(|r| groups.get(r))
+                                .into_iter()
+                                .flatten()
+                                .map(|cv| [&*cv[0], &*cv[1], &*cv[2], &*cv[3], &*cv[4]])
+                                .collect();
+                            &group_list
+                        };
+                        for &[name_cv, acc_cv, value_cv, unit_cv, unit_acc_cv] in list {
                         if in_analyzer {
-                            out.item(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()), f)?;
-                        }
-                        let acc = get(&a, "accession").unwrap_or("");
-                        let value = get(&a, "value").unwrap_or("");
-                        let unit = get(&a, "unitName").unwrap_or("");
-                        let unit_acc = get(&a, "unitAccession").unwrap_or("");
-                        let seconds = unit.starts_with("second") || unit_acc == "UO:0000010";
-                        if let (Scope::Chromatogram, Some(c)) = (scope, chrom.as_mut()) {
-                            match acc {
-                                "MS:1000812" | "MS:1000813" => c.pda = true,
-                                "MS:1003019" => c.pressure = true,
-                                "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473"
-                                | "MS:1001472" => c.ms_term = true,
-                                _ => {}
+                                out.item(Item::Analyzer(name_cv.to_string()), f)?;
                             }
-                        }
-                        if let Some(arr) = array.as_mut() {
-                            match acc {
-                                "MS:1000514" => arr.kind = ArrayKind::Mz,
-                                "MS:1000515" => {
-                                    arr.kind = ArrayKind::Intensity;
-                                    if let (false, Some(c)) = (unit.is_empty(), chrom.as_mut()) {
-                                        c.unit = unit.to_string();
-                                    }
-                                }
-                                "MS:1000595" => {
-                                    arr.kind = ArrayKind::Time;
-                                    arr.seconds = seconds;
-                                }
-                                "MS:1000574" => arr.zlib = true,
-                                "MS:1002312" | "MS:1002313" | "MS:1002314" => {
-                                    return Err(Error::new("err.file.numpress"))
-                                }
-                                _ => {
-                                    if let Some(n) = Num::of_accession(acc) {
-                                        arr.num = n;
-                                    } else if let Some(u) = mobility_of(acc) {
-                                        (arr.kind, arr.mobility) = (ArrayKind::Mobility, u);
-                                    }
+                            let acc: &str = acc_cv;
+                            let value: &str = value_cv;
+                            let unit: &str = unit_cv;
+                            let unit_acc: &str = unit_acc_cv;
+                            let seconds = unit.starts_with("second") || unit_acc == "UO:0000010";
+                            if let (Scope::Chromatogram, Some(c)) = (scope, chrom.as_mut()) {
+                                match acc {
+                                    "MS:1000812" | "MS:1000813" => c.pda = true,
+                                    "MS:1003019" => c.pressure = true,
+                                    "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473"
+                                    | "MS:1001472" => c.ms_term = true,
+                                    _ => {}
                                 }
                             }
-                        } else if let (Scope::Spectrum, Some(s)) = (scope, spec.as_mut()) {
-                            match acc {
-                                "MS:1000804" => s.uv = true,
-                                "MS:1000511" if !in_precursor_list => {
-                                    // A level is a small integer; `as` saturates and maps NaN to 0.
-                                    #[allow(clippy::cast_possible_truncation)]
-                                    let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
-                                    s.level = level
+                            if let Some(arr) = array.as_mut() {
+                                match acc {
+                                    "MS:1000514" => arr.kind = ArrayKind::Mz,
+                                    "MS:1000515" => {
+                                        arr.kind = ArrayKind::Intensity;
+                                        if let (false, Some(c)) = (unit.is_empty(), chrom.as_mut()) {
+                                            c.unit = unit.to_string();
+                                        }
+                                    }
+                                    "MS:1000595" => {
+                                        arr.kind = ArrayKind::Time;
+                                        arr.seconds = seconds;
+                                    }
+                                    "MS:1000574" => arr.zlib = true,
+                                    "MS:1002312" | "MS:1002313" | "MS:1002314" => {
+                                        return Err(Error::new("err.file.numpress"))
+                                    }
+                                    _ => {
+                                        if let Some(n) = Num::of_accession(acc) {
+                                            arr.num = n;
+                                        } else if let Some(u) = mobility_of(acc) {
+                                            (arr.kind, arr.mobility) = (ArrayKind::Mobility, u);
+                                        }
+                                    }
                                 }
-                                "MS:1000130" => s.polarity = 1,
-                                "MS:1000129" => s.polarity = -1,
-                                "MS:1000128" => s.profile = true,
-                                "MS:1000512" if !in_precursor_list => s.filter = value.to_string(),
-                                "MS:1000016" => {
-                                    s.rt = value.parse().unwrap_or(0.0);
-                                    s.rt_seconds = seconds;
+                            } else if let (Scope::Spectrum, Some(s)) = (scope, spec.as_mut()) {
+                                match acc {
+                                    "MS:1000804" => s.uv = true,
+                                    "MS:1000511" if !in_precursor_list => {
+                                        // A level is a small integer; `as` saturates and maps NaN to 0.
+                                        #[allow(clippy::cast_possible_truncation)]
+                                        let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
+                                        s.level = level
+                                    }
+                                    "MS:1000130" => s.polarity = 1,
+                                    "MS:1000129" => s.polarity = -1,
+                                    "MS:1000128" => s.profile = true,
+                                    "MS:1000512" if !in_precursor_list => s.filter = value.to_string(),
+                                    "MS:1000016" => {
+                                        s.rt = value.parse().unwrap_or(0.0);
+                                        s.rt_seconds = seconds;
+                                    }
+                                    "MS:1000744" => s.selected = value.parse().ok(),
+                                    "MS:1000827" => s.target = value.parse().ok(),
+                                    _ => s.mobility_scan = s.mobility_scan.or_else(|| mobility_of(acc).zip(value.parse().ok()).map(|(u, v)| (v, u))),
                                 }
-                                "MS:1000744" => s.selected = value.parse().ok(),
-                                "MS:1000827" => s.target = value.parse().ok(),
-                                _ => s.mobility_scan = s.mobility_scan.or_else(|| mobility_of(acc).zip(value.parse().ok()).map(|(u, v)| (v, u))),
                             }
                         }
                     }
@@ -498,6 +536,11 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                     }
                     "precursorList" => in_precursor_list = false,
                     "analyzer" => in_analyzer = false,
+                    "referenceableParamGroup" => {
+                        if let Some((id, list)) = group.take() {
+                            groups.insert(id, list);
+                        }
+                    }
                     "spectrum" => {
                         if let Some(s) = spec.take().filter(|s| !s.uv) {
                             out.spectrum(s, f)?;
