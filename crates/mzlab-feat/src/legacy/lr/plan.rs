@@ -213,12 +213,18 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
         .ok_or(
             "the neutral molecular formula, the SMILES or the m/z of the parent ion is required",
         )?;
-    let shift = ion_mz(0.0, "[M+H]+").unwrap_or(1.007276);
+    let adduct = v
+        .get("adduct")
+        .and_then(Value::str)
+        .filter(|a| ion_mz(0.0, a).is_some())
+        .unwrap_or("[M+H]+")
+        .to_string();
+    let shift = ion_mz(0.0, &adduct).unwrap_or(1.007276);
     Ok(ParentLr {
         formula: String::new(),
         neutral_mass: mz - shift,
         mz,
-        adduct: "[M+H]+".into(),
+        adduct,
         ion_formula: None,
         smiles: None,
     })

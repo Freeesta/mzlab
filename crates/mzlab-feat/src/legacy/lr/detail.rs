@@ -201,7 +201,7 @@ pub fn detail<R: ReadAt>(
 }
 
 /// `delta`, `alternatives` and `candidates`: the identities that fit the trace of the row, the row's own first and then by the distance from the observed centroid. At unit
-/// resolution several neutral formulas share the nominal m/z: each one with its [M+H]+ formula, the calculated m/z and `dmz` = observed centroid
+/// resolution several neutral formulas share the nominal m/z: each one with its ion formula of the parent adduct, the calculated m/z and `dmz` = observed centroid
 /// minus the offset minus the calculated m/z (Da; `null` without a peak). The page lists them; it does not choose.
 struct Cand {
     name: String,

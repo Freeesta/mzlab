@@ -49,6 +49,17 @@ fn args() -> (Vec<String>, bool, usize) {
     (a, diag, ms2)
 }
 
+/// As finder-lr.js: the sign of the parent adduct is the polarity of the hypotheses.
+fn hypotheses_recipe(r: &mzlab_feat::recipe::Recipe, parent: &str) -> mzlab_feat::recipe::Recipe {
+    let neg = serde_json::from_str::<serde_json::Value>(parent)
+        .ok()
+        .and_then(|v| v["adduct"].as_str().map(|a| a.ends_with('-')))
+        .unwrap_or(false);
+    let mut rh = r.clone();
+    rh.detect.polarity = neg.then_some(-1);
+    rh
+}
+
 fn main() {
     let (a, diag, ms2) = args();
     let (out, files, parent, rules) = (
@@ -93,7 +104,8 @@ fn main() {
     let (feats, origin) = run::read_files(&stored).unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = idxs[..cols].iter().map(|b| open(b)).collect();
     let refs: Vec<_> = feats.iter().collect();
-    let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &r).unwrap();
+    let rh = hypotheses_recipe(&r, &parent);
+    let h = run::hypotheses(&mut ix, &refs, &rules, "", formula, None, &rh).unwrap();
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();
     let settings = std::env::var("FINDER_LR_SETTINGS").unwrap_or_else(|_| "{}".into());
     let mut d = lr::dig(
