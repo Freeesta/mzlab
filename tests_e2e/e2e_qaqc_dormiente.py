@@ -41,7 +41,7 @@ try:
 
         def tour_taccuino():
             assert "qaqc" not in pg.evaluate("JSON.stringify(NB)").lower()
-            for tab in ("file", "calc", "losses", "adducts", "lists", "stat"):
+            for tab in ("file", "calc", "losses", "lists", "stat"):
                 drawer(pg, tab); assert "QA/QC" not in pg.inner_text("#sb-pane"), tab
             assert not pg.evaluate("(typeof TOUR!=='undefined'&&TOUR.steps?JSON.stringify(TOUR.steps):'')").count("qaqc")
             assert pg.evaluate("window.QAQC && typeof QAQC.roleOf") == "function", "roles (QC, dark) still work"
