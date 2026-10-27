@@ -521,16 +521,20 @@ impl Rows {
                 None => activation_in_filter(filt),
             };
         }
-        let first_ref = || {
-            m.precs
-                .iter()
-                .find_map(|e| e.refer.clone().filter(|r| !r.is_empty()))
-        };
-        if let Some(r) = immediate_ref.filter(|_| level > 2).or_else(first_ref) {
+        if let Some(r) = parent_ref(&m.precs, immediate_ref, level) {
             self.refs.insert(self.rows.len(), r);
         }
         m
     }
+}
+
+/// The scan an MSn row points to as its parent: for MS3+ the ref of the immediate precursor, else (and for MS2) the first ref listed.
+fn parent_ref(precs: &[Prec], immediate_ref: Option<Arc<str>>, level: u8) -> Option<Arc<str>> {
+    immediate_ref.filter(|_| level > 2).or_else(|| {
+        precs
+            .iter()
+            .find_map(|e| e.refer.clone().filter(|r| !r.is_empty()))
+    })
 }
 
 /// The precursor part of a row of a scan whose reader gave a plain precursor: what the writer says of it (its window, with offsets when the reader knows
