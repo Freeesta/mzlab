@@ -4,13 +4,13 @@
 // button «XIC» (xic-spettro.js) and the line of the scan the spectrum shows. Transient: no state, no area, no integration. It sits in a fixed place, a top corner
 // of the plot (the other one when the peak or the pointer is in it; the whole width, narrow plots), never at the pointer. A click or Enter on the lens
 // makes it the XIC panel of the button (XICBTN.commit). Values come from api/xicbin as the engine gives them; the drawing keeps min and max of every pixel column.
-// Classic helpers used by name: xicBin, UIP, E, M, ecss, fmt, ESC, TDATI, XICBTN.
+// Classic helpers used by name: xicBin, J, UIP, E, M, ecss, fmt, ESC, TDATI, XICBTN.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
   const W = 176, H = 112, LAB = 16, AX = 16, EDGE = 2, CLEAR = 12, CACHE_MAX = 64;      // LAB: the one title row (ion · file); AX: the row of the minutes
   /** @typedef {{ rt: number[], y: number[] }} Trace */
-  /** @typedef {{ m: number, req: { f: any, args: any[], text: string }, key: string }} Want */
+  /** @typedef {{ m: number, req: { f: any, args: any[], text: string, canale?: string | null }, key: string }} Want */
   /** @type {WeakMap<any, any>} */
   const ST = new WeakMap();
   /** @type {Map<string, Trace>} least recently used last */
@@ -80,7 +80,8 @@
     if (t) { show(p, s, w, t); return; }
     busy = true; const my = ++seq;
     const [mz, tol] = w.req.args, f = w.req.f;
-    xicBin(`api/xicbin?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}`).then(j => j.traces[0]).then(tr => {
+    const can = w.req.canale;      // inside the channel the spectrum follows (canali.js), otherwise the whole level
+    (can ? J(`api/xic?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}&canale=${encodeURIComponent(can)}`).then(j => j.traces ? j.traces[0] : j) : xicBin(`api/xicbin?k=${f.k}&mz=${mz}&tol=${tol}&level=${f.lv}`).then(j => j.traces[0])).then(tr => {
       busy = false; if (!tr) return;
       keep(w.key, tr);
       if (my === seq && want === w && cur === p) show(p, s, w, tr, true); else pump(p);
@@ -176,7 +177,7 @@
     const req = XICBTN.lensArgs(p, m); if (!req) return;
     const s = st(p);
     if (!s.wired) { s.wired = true; p.cv.addEventListener("wheel", () => close(p), { passive: true }); p.cv.addEventListener("contextmenu", () => close(p)); }
-    const key = `${req.f.k}|${req.f.lv}|${req.args.join("|")}`;
+    const key = `${req.f.k}|${req.f.lv}|${req.args.join("|")}|${req.canale || ""}`;
     if (cur && cur !== p) close(cur);
     cur = p; s.sticky = sticky; s.scan = viewKey(p);
     if (!want || want.key !== key) { want = { m, req, key }; s.said = ""; }

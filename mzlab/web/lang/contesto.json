@@ -756,5 +756,7 @@
   "bn.idn.spec": "Riga sopra il pulsante di ricerca; {rt} = RT con unità, {mz} = m/z del precursore, {pol} = + o −.",
   "bn.idn.loaded": "Esito del caricamento di file o cartella; {n} = librerie caricate, {m} = file ignorati.",
   "bn.idn.dl": "Nome accessibile e tooltip dell'icona di scarico; {name} = nome e versione della libreria.",
-  "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria."
+  "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria.",
+  "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
+  "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di scansioni, {a} e {b} = RT iniziale e finale in minuti."
 }

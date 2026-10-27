@@ -24,6 +24,13 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   await Promise.all(ks.map(k => slots[k].opening));
   if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) return null;
   const done = text => { stats.rust++; return { status: 200, text, ms: performance.now() - t0 }; };
+  // the channels of a file: its scans and the SRM/SIC chromatograms of the mzML (canali.js)
+  if (path === "/api/canali") {
+    const s = slots[ks[0]];
+    if (ks.length !== 1 || !s.blob) return null;
+    const r = await rpc({ op: "canali", slot: ks[0], name: base(s.name).split("#")[0], blob: s.blob });
+    return r.dead || r.error || !r.info ? null : done(r.info);
+  }
   // instrument and software from the head of the mzML, counts and m/z range from the index
   if (path === "/api/fileinfo") {
     const s = slots[ks[0]];

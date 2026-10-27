@@ -11,11 +11,24 @@ const ESP = (() => {
     { id: "infusion", ordine: 4, etichetta: I18N.t("inf.name"), didattica: "msn", spettri: true, vista: "tic-spettro", nodi: true },
   ];
   const voce = id => voci.find(v => v.id === id);
+  // What an experiment type of api/canali (tipo.proposto) starts on: the kind of channel of the first trace (canali.js picks the channel of the file) and
+  // whether the XIC lens is proposed. A default, not a permission: a type never switches a tool off.
+  const predefiniti = {
+    "lc-full": { canale: "tic", lente: true },
+    "lc-ms2-mirato": { canale: "ms2", lente: true },
+    "lc-dda": { canale: "ms1", lente: true },
+    "lc-mrm": { canale: "srm", lente: true },
+    "infusione-msn": { canale: "profondo", lente: false },
+    "misto": { canale: "tic", lente: true },
+    "solo-uv": { canale: "uv", lente: true },
+  };
+  /** @param {string | null | undefined} tipo */
+  const predefinito = tipo => predefiniti[tipo || ""] || predefiniti["lc-full"];
   /** @param {any} p */
   // the experiment of a panel: the MRM panel is its own, the other ones follow their tab
   const di = p => p.type === "mrm" ? "mrm" : p.tab;
   return {
-    formato: "esperimenti/1", voci, voce,
+    formato: "esperimenti/1", voci, voce, predefiniti, predefinito,
     ids: voci.map(v => v.id),
     // [id, label] in order: what the tab bar and the overview list
     coppie: voci.map(v => [v.id, v.etichetta]),

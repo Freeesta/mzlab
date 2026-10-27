@@ -440,7 +440,7 @@ async function handle(ev) {
       case "specexact": info = engine.spectrum_exact(m.slot, m.query || "", readerFor(m.blob)); break;   // api/spectrum of ONE scan of a centroid HR file: exact peaks from the mzML
       case "mrm": info = engine.mrm(m.slot, m.blob.size, readerFor(m.blob)); break;                       // SRM transitions from the chromatograms of the mzML
       case "mrmchrom": info = engine.mrm_chrom(m.slot, m.blob.size, readerFor(m.blob), m.kind); break;   // api/chrom of an MRM file: a chromatogram of the mzML
-      case "fileinfo": info = engine.fileinfo(m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index
+      case "fileinfo": case "canali": info = (m.op === "canali" ? engine.canali : engine.fileinfo).call(engine, m.slot, m.name, m.blob.size, readerFor(m.blob)); break;      // api/fileinfo: the head of the mzML + the index; api/canali: the channels of its scans and chromatograms
       case "origin": info = engine.origin(m.items, m.k, m.query); break;                // api/origin over the session: "" = Python's (a file without index)
       case "subxic": info = engine.subxic(m.slot, m.k, m.query); break;                   // api/subxic of a high-resolution survey: "" = Python's
       case "map": info = await mapOp(m); break;                                          // api/map, mapsnap, mappunti, mappunti3d, maptiles over the session: "" = Python's             // api/map, mapsnap, mappunti, mappunti3d over the session: "" = Python's

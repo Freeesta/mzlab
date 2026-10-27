@@ -8,6 +8,7 @@ declare var AgilentD: any;
 declare var BFIL: any;
 declare var BrukerD: any;
 declare var CAMPIONI: any;
+declare var CANALI: any;
 declare var CARTELLA: any;
 declare var CMD: any;
 declare var CONC_MGL: any;

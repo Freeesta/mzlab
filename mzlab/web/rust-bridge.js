@@ -158,7 +158,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r) { stats.rust++; return { ...r, ms: performance.now() - t0 }; }
       return null;
     }
-    if (INDEX_ROUTES.test(path) && !hasRef(q)) {
+    if ((INDEX_ROUTES.test(path) || (path === "/api/xic" && q.get("canale"))) && !hasRef(q)) {       // a trace or a list inside a channel: the engine of the index builds the channels itself
       const s = slots[k0];
       if (!s) return null;
       await s.opening;
@@ -179,7 +179,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
-    if (/^\/api\/(ms2tr|fileinfo|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
+    if (/^\/api\/(ms2tr|fileinfo|canali|msn_grafo|msn_grafo\/export|msnlib\/aggiungi|msnlib\/cerca)$/.test(path)) return infoRoute(path, u, { slots, rpc, base, stats, t0, init });
     if (path === "/api/scaninfo") {
       const s = slots[k0], sid = num(q, "sid", NaN);
       if (!s) return null;

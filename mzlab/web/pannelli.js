@@ -675,7 +675,8 @@ function ctl(p) {
   const parBox = inner => `<span class="cpar"><button class="bt rngb${rngOn ? " on" : ""}" type="button" data-a="cpar" aria-expanded="${!!p._parOpen}" title="${I18N.t("ctl.range.title")}. ${I18N.t("ctl.range.note")}" aria-description="${I18N.t("ctl.range.note")}" aria-label="${I18N.t("ctl.range")}${rngOn ? " (" + I18N.t("ctl.range.set") + ")" : ""}">${IC_RANGE}<span>${I18N.t("ctl.range")}</span></button>${rngOn ? `<button class="bt rngx" type="button" data-a="rngx" title="${I18N.t("ctl.range.clear")}" aria-label="${I18N.t("ctl.range.clear")}">&times;</button>` : ""}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option>${anKinds.map(([v, a]) => `<option value="${EH(v)}" ${p.kind === v ? "selected" : ""}>${EH(v === "press" ? I18N.t("ctl.kind.press") : a.id)}</option>`).join("")}${window.REGISTRO && REGISTRO.has(TF) ? `<option value="reg" ${p.kind === "reg" ? "selected" : ""} title="${I18N.t("ctl.kind.reg.title")}">${I18N.t("ctl.kind.reg")}</option>` : ""}</select>${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
+  const canBtn = window.CANALI && ((p.type === "chrom" && !ms2c && p.kind !== "pda" && !isAnalog(p.kind)) || mrmP) ? CANALI.html(p) : "";      // the channels of the files (canali.js)
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="${I18N.t("ctl.kind.title")}"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>${I18N.t("ctl.kind.tic")}</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="${I18N.t("ctl.kind.bpc.title")}">${I18N.t("ctl.kind.bpc")}</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="${I18N.t("ctl.kind.pda.title")}">${I18N.t("ctl.kind.pda")}</option>${anKinds.map(([v, a]) => `<option value="${EH(v)}" ${p.kind === v ? "selected" : ""}>${EH(v === "press" ? I18N.t("ctl.kind.press") : a.id)}</option>`).join("")}${window.REGISTRO && REGISTRO.has(TF) ? `<option value="reg" ${p.kind === "reg" ? "selected" : ""} title="${I18N.t("ctl.kind.reg.title")}">${I18N.t("ctl.kind.reg")}</option>` : ""}</select>${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${canBtn}${view}${corr}${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;  // xed: lower / upper m/z of an ion read in high resolution (ppm window)
@@ -686,7 +687,7 @@ function ctl(p) {
   }
   if (p.type === "mrm") {
     const isMulti = Array.isArray(p.tr) && p.tr.length > 1;
-    c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${view}${corr}${parBox(rtbar + lrExtra)}`;
+    c.innerHTML = `<select data-o="tr" title="${I18N.t("ctl.mrm.tr.title")}"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>${I18N.t("ctl.mrm.all")}</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${canBtn}${fsel}${view}${corr}${parBox(rtbar + lrExtra)}`;
   }
   if (p.type === "map") {
     const sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
@@ -765,12 +766,14 @@ function ctl(p) {
       if (lo != null && hi != null && hi > lo) { pushZh(p); zoomTo(p, lo, hi); uiSave(); }
     };
     else if (k === "corrf") { /* wired by the Correzione button just below */ }
+    else if (k === "canali") { /* wired by canali.js just below */ }
     else if (k === "corr") corrWire(x, v => (p.type === "spec" || p.type === "map" ? setCorr(p, v) : setSub(p, v)));
     else if (k === "bkg") corrWire(x, v => setFondo(p, v));
     else if (k === "cinfo") corrInfoWire(p, x);
     else if (k === "snipw") x.onchange = () => { pushCampi(p, "storia.fondo"); p.fondo.w = Math.max(0.2, +x.value || 1); draw(p); uiSave(); };
         else x.onchange = () => choosePanelOption(p, k, x);
   });
+  if (window.CANALI) CANALI.wire(p, c);
   if (window.REGISTRO && p.kind === "reg") REGISTRO.wire(p, c);       // registro-serie.js: the search box of the channels
   syncTb(p);
   fitHdSoon(p);
@@ -999,6 +1002,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
       if (k === "bk" || k === "bg") pushCampi(p, "storia.bianco"); else if (k === "mode") fondoOnStack(p, x.value);
       p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" || x.value === "x" ? x.value : +x.value;
+      if (p.type === "chrom" && (k === "kind" || k === "prec" || k === "tr")) p.canali = undefined;      // the older selectors and the channels are two ways to say the same thing: the last one wins
       if (p.type === "spec" && k === "k") p.kSet = true;      // the file chosen in the menu stays until another choice or a click on a trace of the TIC
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
       if (["level", "all", "snip", "bg", "kind", "mapKind", "mz0", "mz1", "scale", "mode"].includes(k) || (k === "k" && p.type === "map")) { if (k === "mapKind") { p.zoom = null; p.zoomY = null; } ctl(p); }
@@ -1007,7 +1011,7 @@ function choosePanelOption(/** @type {Pannello} */ p, /** @type {string} */ k, /
 }
 
 // the choices of the panel menu (file, level, precursor, kind, mode, m/z limits, scale…) with what they reset are one undoable action (comandi.js)
-const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi"];
+const SORGENTE = ["k", "kSet", "level", "prec", "all", "kind", "canali", "mode", "mz0", "mz1", "tr", "mapKind", "norm", "scale", "gamma", "log", "meas", "zoom", "zoomY", "bw0", "bw1", "bwi"];
 COMANDI.gestore("panel.source", {
   leggi: p => JSON.stringify([SORGENTE.filter(k => p[k] !== undefined).map(k => [k, p[k]]), p.fondo]),  // the background setting is reset by a mode choice
   applica: (p, snap) => { const [campi, bg] = JSON.parse(snap), o = new Map(campi); if (bg == null) delete p.fondo; else p.fondo = bg; SORGENTE.forEach(k => { if (o.has(k)) p[k] = o.get(k); else delete p[k]; }); ctl(p); syncTb(p); },
