@@ -18,6 +18,7 @@ declare var CACHE: any;
 declare var CAL: any;
 declare var CALC: any;
 declare var CALCADD: any;
+declare var CALCADDHTML: any;
 declare var CAMPIONI: any;
 declare var CARTELLA: any;
 declare var CDOC: any;

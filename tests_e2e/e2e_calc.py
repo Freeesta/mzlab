@@ -140,12 +140,12 @@ try:
             pg.click("#nav [data-v=draw]"); frames(pg, 3)
             pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")        # the floating drop-down: same content as the sidebar tab
             pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table")
-            pg.set_viewport_size({"width": 320, "height": 800}); pg.wait_for_timeout(300)
+            pg.set_viewport_size({"width": 320, "height": 800}); attendi(pg, "innerWidth === 320"); frames(pg, 3)
             try:
                 assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no page-level horizontal scroll at 320 px"
                 assert pg.evaluate("(()=>{const r=document.querySelector('#calcdlg').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()"), "the calculator fits 320 px"
             finally:
-                pg.set_viewport_size({"width": 1440, "height": 900}); pg.wait_for_timeout(300)
+                pg.set_viewport_size({"width": 1440, "height": 900}); attendi(pg, "innerWidth === 1440"); frames(pg, 3)
                 pg.click("#calcx")
                 pg.click("#nav [data-v=data]"); frames(pg, 3)
         step("320 px: no horizontal scroll of the page", narrow)
