@@ -87,6 +87,7 @@
     "../../mzlab/web/dda.js",
     "../../mzlab/web/cromato.js",
     "../../mzlab/web/calcola.js",
+    "../../mzlab/web/calc-addotti.js",
     "../../mzlab/web/perdite.js",
     "../../mzlab/web/liste.js",
     "../../mzlab/web/scroll.js",

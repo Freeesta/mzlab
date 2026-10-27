@@ -84,8 +84,6 @@ declare var PROG_PHASE_KEY: any;
 declare var PROG_W: any;
 declare var QA11Y: any;
 declare var QADD: any;
-declare var QADD_DIFFS: any;
-declare var QADD_VIEW: any;
 declare var QICON: any;
 declare var QQQRef: any;
 declare var QQQ_BROWSER: any;

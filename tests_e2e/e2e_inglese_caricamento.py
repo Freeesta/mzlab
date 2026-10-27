@@ -29,8 +29,8 @@ try:
         pg.goto(url); pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         def header():
             h = pg.inner_text("header")
-            for w in ("Calculator", "Losses", "Adducts", "Lists", "Table", "More"): assert w in h, (w, h)
-            assert pg.get_attribute("#np-ad", "aria-label") == "ESI adducts" and pg.get_attribute("#np-pt", "aria-label") == "Periodic table"
+            for w in ("Calculator", "Losses", "Lists", "Table", "More"): assert w in h, (w, h)
+            assert pg.locator("#np-ad").count() == 0 and pg.get_attribute("#np-pt", "aria-label") == "Periodic table"
             pg.click("#tb-more"); pg.wait_for_selector("#stmenu"); assert pg.get_attribute("#np-pc", "title").startswith("Opens PubChem"), pg.get_attribute("#np-pc", "title")
             pg.keyboard.press("Escape")
             assert pg.get_attribute("header .hq", "title") == "About mzLab", pg.get_attribute("header .hq", "title")

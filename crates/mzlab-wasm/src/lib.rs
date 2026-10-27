@@ -612,6 +612,12 @@ pub fn formula_mz(formula: &str, adduct: &str) -> Result<String, JsValue> {
     mzlab_core::elements::formula_mz(formula, if adduct.is_empty() { None } else { Some(adduct) }).map_err(|e| error_json(&e))
 }
 
+/// `/api/adduct_table`: the adduct catalogue with the m/z of a formula and the matches of an observed m/z (`mzlab-core::adduct_table`); an error is JSON with a key.
+#[wasm_bindgen]
+pub fn adduct_table(formula: &str, obs: &str, tol: &str, delta: &str) -> Result<String, JsValue> {
+    mzlab_core::adduct_table::table(formula, obs, tol, delta).map_err(|e| error_json(&e))
+}
+
 /// `api/composition` from its query string (`?mz=...&elements=...`): the JSON of the formulas that fit, or empty when Python must answer.
 #[wasm_bindgen]
 pub fn composition(query: &str) -> String {
