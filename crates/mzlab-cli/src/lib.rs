@@ -104,6 +104,7 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+mod canali_cmd;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_figura;
@@ -132,6 +133,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli tutor eval CASES --blocchi F (--replay DIR | --solo-recupero)   score the Teoria tutor on the eval cases (tutor --help)
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli canali FILE [--out PATH]   the channels of a file as JSON (canali --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
@@ -425,6 +427,7 @@ pub fn execute(args: &[String]) -> Outcome {
         Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
         Some("msn-graph") => return msn_graph_cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
+        Some("canali") => return canali_cmd::run(args.collect()),
         Some("convert") => return convert::run(args.collect()),
         #[cfg(not(target_family = "wasm"))]
         Some("validate") => return validate::run(args),
@@ -497,3 +500,5 @@ mod msn_lib_tests;
 mod tutor_tests;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod validate_tests;
+#[cfg(test)]
+mod canali_tests;

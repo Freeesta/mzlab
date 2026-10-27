@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), canali/K_MIRATO, K_BLOCCHI, K_DDA (targeted MS2 in LC, MSn in blocks, DDA with 70 precursors: the channel tests), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -49,7 +49,7 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None, filt=None) -> str:
     p = ""
     if prec is not None:
         w = ""
@@ -67,7 +67,8 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
             + ('<cvParam cvRef="MS" accession="MS:1000129" name="negative scan" value=""/>' if neg else '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>') +
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
-            f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList>{p}<binaryDataArrayList count="2">'
+            f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/>' + (f'<cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="{filt}"/>' if filt else '')
+            + f'</scan></scanList>{p}<binaryDataArrayList count="2">'
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
 
 
@@ -211,6 +212,51 @@ def mixed_mrm_epi(path: Path, rng) -> None:
         frag = np.array([152.2, 194.2, 224.1, 305.2]); it = np.array([0.5, 1.0, 0.2, 0.3]) * 1e5 * _g(rt, 14.3, 0.1) * rng.normal(1, 0.05, 4)
         specs.append(_spec(i, rt, frag, it, level=2, prec=364.1 + (i % 2), ce=30.0))       # two triggering precursors alternate: not one block of a single precursor (that would be an infusion)
     _write(path, specs, [_chrom(0, "TIC", t, q + ql), _chrom(1, srm(0, "194.1", "Quant"), t, q, pol), _chrom(2, srm(1, "152.1", "Qual"), t, ql, pol)])
+
+
+def _canali_scan(i, rt, rng, level, mz0, filt, prec=None, ce=None):
+    mz = np.sort(rng.uniform(60, 400, 6)); it = rng.lognormal(_log(2e3), 0.5, 6)
+    return _spec(i, rt, mz, it, level=level, prec=prec, ce=ce, filt=filt)
+
+
+def canali_mirato(path: Path, rng) -> None:
+    """Targeted MS2 in LC: a survey scan and the product-ion scans of two FIXED precursors (222.1 and 305.0, 35 eV) at every cycle."""
+    specs = []
+    for c, rt in enumerate(np.linspace(0.5, 20.0, 100)):
+        specs.append(_canali_scan(len(specs), rt, rng, 1, 0, "ITMS + c ESI Full ms [50.00-400.00]"))
+        for k, p in enumerate((222.1, 305.0)):
+            specs.append(_canali_scan(len(specs), rt + 0.003 * (k + 1), rng, 2, 0, f"ITMS + c ESI Full ms2 {p:.2f}@cid35.00 [50.00-{p + 10:.2f}]", prec=p, ce=35.0))
+    _write(path, specs, [])
+
+
+def canali_blocchi(path: Path, rng) -> None:
+    """MSn in blocks (infusion): a survey scan, then 20 scans of MS2 317.2 > 20 of MS3 317.2>261.1 > 20 of MS3 317.2>299.2, each held in turn."""
+    specs, rt = [], 0.0
+    for path_ in ((317.2,), (317.2, 261.1), (317.2, 299.2)):
+        specs.append(_canali_scan(len(specs), rt, rng, 1, 0, "ITMS + c ESI Full ms [100.00-400.00]"))
+        stages = " ".join(f"{m:.2f}@cid{25 + 5 * k}.00" for k, m in enumerate(path_))
+        for _ in range(20):
+            rt += 0.01
+            specs.append(_canali_scan(len(specs), rt, rng, len(path_) + 1, 0, f"ITMS + c ESI d Full ms{len(path_) + 1} {stages} [50.00-330.00]", prec=path_[-1], ce=25.0 + 5 * (len(path_) - 1)))
+    _write(path, specs, [])
+
+
+def canali_dda(path: Path, rng) -> None:
+    """DDA: a survey scan and one MS2 of a different precursor (70 distinct ones) at every cycle."""
+    specs = []
+    for c, rt in enumerate(np.linspace(0.5, 20.0, 70)):
+        specs.append(_canali_scan(len(specs), rt, rng, 1, 0, "FTMS + p ESI Full ms [100.00-500.00]"))
+        p = 150.0 + 4.0 * c
+        specs.append(_canali_scan(len(specs), rt + 0.005, rng, 2, 0, f"FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.00-{p + 10:.2f}]", prec=p, ce=30.0))
+    _write(path, specs, [])
+
+
+def canali_casi(out: Path) -> Path:
+    """The files of the channel tests (`mzlab-cli canali`): K_MIRATO, K_BLOCCHI, K_DDA, in their own folder so that the globs of the other files are unchanged."""
+    out = Path(out); out.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(97)
+    canali_mirato(out / "K_MIRATO-t0.mzML", rng); canali_blocchi(out / "K_BLOCCHI-t0.mzML", rng); canali_dda(out / "K_DDA-t0.mzML", rng)
+    return out
 
 
 def mixed_polarity(path: Path, rng) -> None:
@@ -488,6 +534,7 @@ def make(out: Path) -> Path:
     from dati_sintetici_serie import dia, qc_series
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
+    canali_casi(out / "canali")                       # written last, in a folder of its own: nothing else changes
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 
