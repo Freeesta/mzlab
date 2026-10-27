@@ -55,6 +55,7 @@
     "ft.chip.weak": "Weak evidence: rows that fail a criterion a product cannot do without (a real chromatographic peak, persistence, formation over time, a parent that falls) or score below 50. Hidden by default, never removed: one click shows them.",
     "ft.sum.formula": "Neutral formula of the parent: the molecule, without the adduct.",
     "ft.sum.mz": "Calculated m/z of the ion of the parent that the Dig extracts.",
+    "ft.sum.fukui": "The three heavy atoms of the parent with the highest predicted f(−), the most likely sites of attack (a prediction, not a result).",
     "ft.sum.rt": "Retention time of the parent, from the apex of its XIC.",
     "ft.sum.half": "Half-life of the parent: the time in which its area halves, from a first-order fit of the areas over time.",
     "ft.sum.offset": "Shift of the observed m/z of the parent from the calculated one, applied to every extracted m/z (calibration of the instrument).",
