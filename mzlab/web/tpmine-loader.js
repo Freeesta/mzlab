@@ -21,13 +21,13 @@
   const reg = window.QTOOLS = {
     ctx: /** @type {any} */ (null),                                     // set before the scripts run: {base: URL of the site static folder, meta, files}
     list: () => on ? tools.filter(shown) : [],
-    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t)) addTab(t); render(); },
+    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && ready && shown(t)) addTab(t); render(); },
   };
 
   // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
   const lazyDone = /** @type {Map<string, Promise<void>>} */ (new Map());
-  /** starts the downloads of all the names together (the script tags below then hit the cache), so a long list costs one round trip, not one per file; a `low` priority is for files that nobody waits for yet @param {string[]} names @param {boolean} [low] */
-  const warmLazy = (names, low) => { for (const n of names) if (!lazyWarm.has(n)) { lazyWarm.add(n); fetch(DIR + "lazy/" + n, low ? { priority: "low" } : undefined).catch(() => lazyWarm.delete(n)); } };
+  /** starts the downloads of all the names together with a preload (the script tags below then take the same download, even while it is still running), so a long list costs one round trip, not one per file; a `low` priority is for files that nobody waits for yet @param {string[]} names @param {boolean} [low] */
+  const warmLazy = (names, low) => { for (const n of names) if (!lazyWarm.has(n)) { lazyWarm.add(n); const l = document.createElement("link"); l.rel = "preload"; l.as = "script"; l.href = DIR + "lazy/" + n; if (low) l.setAttribute("fetchpriority", "low"); l.onload = l.onerror = () => l.remove(); document.head.appendChild(l); } };
   const lazyWarm = /** @type {Set<string>} */ (new Set());
   /** @param {...string} names @returns {Promise<void>} */
   const lazyLoad = async (...names) => { warmLazy(names); for (const n of names) { let p = lazyDone.get(n); if (!p) { p = runScript("lazy/" + n); lazyDone.set(n, p); p.catch(() => lazyDone.delete(n)); } await p; } };
@@ -51,6 +51,8 @@
 
   // ---- launcher bar and tool host
   let bar = null, host = null, on = false, loaded = null;
+  // true once every script has run: a tab whose script registers earlier keeps the loading note, because its open() looks for helpers (help, side panel) that later scripts define
+  let ready = false;
   const css = `#qt-bar{position:fixed;left:12px;bottom:12px;z-index:80;display:flex;gap:6px;align-items:center;background:var(--panel,#fff);border:1px solid var(--accent,#7a5c1e);border-radius:20px;padding:4px 10px;box-shadow:0 2px 10px rgba(0,0,0,.2);font:13px system-ui,sans-serif}
 #qt-bar button{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--accent,#7a5c1e);cursor:pointer;font:inherit;font-weight:600;padding:2px 4px}
 #qt-bar button:hover{text-decoration:underline}
@@ -141,6 +143,7 @@
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
     for (const n of js) await runScript(n);
+    ready = true;
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, admin: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };

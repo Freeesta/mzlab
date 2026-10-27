@@ -76,7 +76,8 @@ try:
             assert pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 4
             assert sorted(n for n in pg.evaluate("ST.files.map(f => f.name)") if n.startswith("lotto")) == [f"lotto_s{i}.mzML" for i in range(1, 5)]
             assert pg.evaluate("Date.now()") - t0 < 10000
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+            assert pg.evaluate("CONVROWS.rows.every(r => r.cached)"), "the samples are not marked as loaded from cache"
+            pg.evaluate("CONVROWS.clearDone()")
         step("the same pair again is «Loaded from cache»: no copy, no new index, no duplicate", again)
 
         def many():                                     # one .wiff with 48 samples: each builder opens only its own sample (wiff::lettore::apri_solo), none waits on the others
@@ -84,9 +85,10 @@ try:
             seen, still = follow(pg, lambda s: s["busy"] == 0 and sum(n.startswith("molti_s") for n in s["files"]) == 48)
             assert sum(n.startswith("molti_s") for n in seen[-1]["files"]) == 48, seen[-1]
             assert still <= 5, f"the loading was still for {still:.1f} s"
-            items = pg.locator("#flist .cvsum li").all_inner_texts()
-            assert len(items) == 48 and all("Loaded ✓ (40 scans," in t for t in items), items[:3]
-            pg.locator("#flist .cvsum [data-cvact=close]").click()
+            assert pg.locator("#flist .cvsum").count() == 0, "a loading that went well shows no summary box"
+            items = pg.evaluate("CONVROWS.rows.map(r => r.state + '|' + CONVROWS.label(r))")
+            assert len(items) == 48 and all(t.startswith("done|") and "Loaded ✓ (40 scans," in t for t in items), items[:3]
+            pg.evaluate("CONVROWS.clearDone()")
         step("a container of 48 samples loads them all, never still for more than 5 s", many)
         def truncated():                                # a truncated .wiff.scan: the sample loads with the scans it has, and its row and the totals say how many are missing
             pg.set_input_files("#pick", [str(D / "corto.wiff"), str(D / "corto.wiff.scan")])

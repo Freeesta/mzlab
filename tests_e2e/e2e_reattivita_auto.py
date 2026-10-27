@@ -68,7 +68,7 @@ try:
             assert not pg.evaluate("document.querySelector('#tp-reatt .tpr') || !document.querySelector('#tp-reatt-ctl').hidden || document.querySelector('#tp-reatt-ctl').firstChild"), "panel or bar without administrator mode"
             assert not chem(), chem()
         step("without mzlab.admin a Dig shows no panel and downloads no .wasm chem", nonadmin)
-        base.append(dig())
+        base.extend(dig() for _ in range(3))      # the floor of a few runs: one Dig varies by 150 ms or more on a busy machine
 
         pg.evaluate("localStorage.setItem('mzlab.admin', '1')")
         pg.fill("#tp-smi", "CCO"); pg.wait_for_function("window.TPREATTAUTO && window.TPREATTAUTO.info().smiles === 'CCO'", timeout=60000); pg.fill("#tp-smi", SMILES)           # the structure is drawn again: scripts load, the panel waits
@@ -142,7 +142,7 @@ try:
         step("a SMILES the engine refuses gives «failed» with the reason and a «Retry» button", failed)
 
         def timing():
-            adm = [dig(), dig()]; pg.wait_for_function("window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
+            adm = [dig() for _ in range(5)]; pg.wait_for_function("window.TPREATTAUTO.info().phase === 'done'", timeout=120000)
             a, bm = min(adm), min(base)
             print(f"Dig ms: without reactivity {base}, with it armed {adm}")
             assert a <= bm * 1.05 or a - bm <= 200, (a, bm)
