@@ -15,6 +15,6 @@
     t.setAttribute("role", "img"); t.setAttribute("aria-label", T("ctl.spec.lv", { n }));
   }
   /** number of files drawn in the spectrum (several only in overlay) @param {any} p */
-  const nFiles = p => p.all ? tabFiles(p.tab || E.tab).filter((/** @type {any} */ f) => f.vis && !f.gone && f.kind !== "mrm").length : 1;
+  const nFiles = p => p.all ? tabFiles(p.tab || E.tab).filter((/** @type {any} */ f) => f.vis && !f.gone).length : 1;
   window.SPECBAR = { overlay, title, nFiles };
 })();
