@@ -116,11 +116,11 @@ try:
         def graph_view():
             g = json.loads(got["r"]["files"][0]["text"])
             # Run in the page opens the graph by itself under the canvas, and the three texts join the Results of their nodes
-            pg.locator('button[aria-label="Run the plan in this browser"]').click()
+            pg.click("#flx-run")
             pg.wait_for_selector(".flx-res .ig-node", timeout=60000)
             assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "one box per ion"
             assert pg.locator(".flx-res [aria-pressed=true]").first.inner_text() == "Graph"
-            assert pg.evaluate("document.activeElement && document.activeElement.closest('.flx-res') !== null"), "the focus is on the title of the view"
+            attendi(pg, "document.activeElement && document.activeElement.matches('.flx-res h3')", 10000)
             kinds = pg.evaluate("Object.values(document.querySelector('.flx-list').__flow.results).flat().map(r => r.type).sort()")
             assert kinds == ["library", "report", "table"], kinds
             pg.locator(".flx-res .ig-node").nth(1).click()
