@@ -2,6 +2,8 @@
 #![allow(dead_code)]
 use mzlab_lib::spec::{Meta, Spectrum};
 
+pub mod flash_pairs;
+
 pub struct Rng(pub u64);
 impl Rng {
     pub fn next(&mut self) -> u64 {
@@ -64,6 +66,8 @@ pub fn synth(r: &mut Rng, i: usize, n: usize) -> Spectrum {
             },
         },
         rt: None,
+        ri: None,
+        ei: false,
     }
 }
 

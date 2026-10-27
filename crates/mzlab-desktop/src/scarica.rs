@@ -17,7 +17,7 @@ use crate::librerie::{Folder, META};
 use crate::update::{sha256_hex, Source};
 
 /// The highest `.mzlib` version this app reads (`mzlab_lib::format::VERSION`; a test keeps them equal).
-pub const READER: u16 = 1;
+pub const READER: u16 = 2;
 pub const CATALOG: &str = "static/librerie/catalogo.json";
 const LIBS_DIR: &str = "static/librerie/";
 /// Hosts the external downloads may use (and follow redirects to): the sources named in the catalog and where they keep their files.

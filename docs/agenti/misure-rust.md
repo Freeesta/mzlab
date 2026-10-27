@@ -110,3 +110,6 @@ Metriche (numeri solo nel repository privato): TP di letteratura in vista, regio
 Dopo `wasm-bindgen --target web` e `wasm-opt -Oz` (binaryen da npm): 496 569 B dopo `wasm-opt` (388 039 B senza i siti e il disegno): sopra il cancello di 470 000 B e sotto il tetto di 512 000 B, che non si alza; l'albero MSn lo costruisce ancora `interp` stesso e è un'eccezione accettata per ora: `interp` non deve crescere oltre; ogni peso nuovo si paga prima spostando l'albero in `finder_msn` (piccola PR a parte). Gli altri `.wasm` non cambiano peso.
 Clic Tabui: `misure-clic.md`; mzTab-M: `misure-esporta.md`.
 Gesti del visualizzatore, sito e nativo: `tools/bench_visore.py`; tabella in `visore-veloce.md`.
+
+## Librerie spettrali: `libset_bench` (nativo, 1 milione di spettri sintetici, `cargo run --release -p mzlab-lib --example libset_bench -- 1000000 unit|hr [librerie]`)
+hr, 1 libreria: identità 0.06 ms/query a caldo (0.28 a freddo); analoghi 51 ms; ricerca aperta ibrida con accumulatori piatti 49–52 ms contro 138 ms della versione a coppie (×2.8). unit, 1 libreria: identità 1.4 ms (1.7 a freddo); analoghi 73–93 ms; ibrida aperta 77–106 ms (la macchina varia) contro 207–230 ms a coppie (×2.1–2.8). unit, 3 librerie da 1M ciascuna fuse: identità 1.5 ms, ibrida aperta 70–81 ms per libreria cercata.

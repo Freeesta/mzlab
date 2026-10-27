@@ -66,6 +66,10 @@ pub struct Spectrum {
     pub meta: Meta,
     /// Retention time in minutes, when the record states one.
     pub rt: Option<f64>,
+    /// Retention index (Kovats), when the record states one.
+    pub ri: Option<f64>,
+    /// The record is an electron-ionisation spectrum (its ionisation or spectrum type says EI).
+    pub ei: bool,
 }
 
 /// Licence classes of the `u8` in the spectra table (the exact text stays in the metadata).
