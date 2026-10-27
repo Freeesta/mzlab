@@ -92,7 +92,7 @@ try:
             titles = pg.evaluate("[...document.querySelectorAll('.fln-t')].map(e => e.textContent)")
             assert "Build feature table" in titles, titles
             pg.locator(".fln", has_text="Build feature table").first.click()
-            pg.wait_for_timeout(1500)
+            pg.wait_for_selector('.fl-results button[aria-label="Open series.mzfeat"]', timeout=30000)
             assert pg.locator('.fl-results button[aria-label="Open series.mzfeat"]').count(), (pg.evaluate("(async () => { const i = await FLOW.webTableItem(); return String(!!i) })()"), pg.evaluate("(document.querySelector('.fl-results') || {}).outerHTML"))
             pg.locator('.fl-results button[aria-label="Open series.mzfeat"]').click()
             pg.wait_for_selector(".flx-res .flw-feat table", timeout=120000)
