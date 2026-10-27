@@ -52,9 +52,11 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
 
+        # the scripts of Tabui in lazy/ (the Flow tab, in the administrator mode, warms its own flow-*.js there)
+        mine = lambda: [u for u in reqs if "/mzfinder/lazy/" in u and u.rsplit("/", 1)[-1] in {f.name for f in (ROOT / "TP_Mine" / "lazy").glob("*.js")}]
         def lazy_idle():
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go", timeout=60000)
-            assert not [u for u in reqs if "/mzfinder/lazy/" in u], [u for u in reqs if "/lazy/" in u]
+            assert not mine(), mine()
             idx = pg.evaluate("fetch('static/mzfinder/indice.json').then(r => r.json()).then(j => j.lazy)")
             assert "gruppi-campioni.js" in idx, idx
         step("opening Tabui downloads nothing from lazy/ (the file is listed in indice.json)", lazy_idle)
@@ -71,8 +73,8 @@ try:
         }"""
         def open_table():
             pg.evaluate(MOUNT, NAMES); pg.wait_for_selector(f"{G} table .tpg-cond", timeout=120000)
-            n = pg.evaluate("performance.getEntriesByType('resource').filter(e => e.name.includes('/mzfinder/lazy/gruppi-campioni.js')).length")
-            assert n == 1, ("the script is asked for once", n, [u for u in reqs if "/lazy/" in u])
+            n = len([u for u in mine() if u.endswith("/gruppi-campioni.js")])      # the request log: the resource timing buffer is full of Flow's files
+            assert n == 1, ("the script is asked for once", n, mine())
             assert pg.locator(f"{G} tr .tpg-cond").count() == len(NAMES)
             assert pg.evaluate("window.GRCHANGES.length") >= 1, "the page is told what the table holds at once"
         step("the lazy script loads once and the table appears", open_table)
