@@ -103,6 +103,8 @@ Canale                         Sigla   n     RT (min)
 
 **Lista scan.** Sempre del canale selezionato (`api/scanlist?canale`), anche in LR.
 
+**Testi.** Pochi testi: niente paragrafi dove l'interfaccia si capisce da sola; tooltip solo per dire cosa fa un campo o cosa inserirvi, mai opinioni, avvisi o cautele.
+
 **Schede dei kind.** Nel primo giro restano (adattatore: la scheda sceglie il canale iniziale); quando i pannelli usano solo canali, le schede `full/ms2/mrm` si fondono in un'area di lavoro unica (decisione di Federico, §5).
 
 ## 4. Migrazione senza rompere
@@ -130,57 +132,5 @@ Pipeline TP (priorità 3): i passi del Flow ricevono un canale (`ms:<chiave MS1>
 - Default per tipo (canale iniziale, lente proposta): tabella in `esperimenti.js`, modificabile.
 - Nessuna dipendenza nuova; nessun cambio del formato `.mzidx` salvo la colonna `exp` facoltativa di DEV-b (da confermare).
 
-## 6. Prompt dei DEV (Sonnet; in ordine; perimetri disgiunti)
-### DEV-a · CANALI-MOTORE
-1. **Ruolo**: DEV Sonnet, Rust core.
-2. **Contesto**: `docs/agenti/canali-dati.md` §2; `iteminfo.rs`, `infusione.rs`, `routes.rs:151-268` (`chrom_raw`, `filters`), `msnroute.rs:55`, `mzmlhead.rs:96`.
-3. **Perimetro**: nuovi `crates/mzlab-core/src/canali.rs` (+ `canali/tests.rs`), registrazione in `lib.rs` e in `routes.rs`; `xic_raw` con filtro di canale; sottocomando `mzlab-cli canali`; riga in `docs/agenti/rust-rotte.md`. Niente JS, niente `.wiff`.
-4. **Lavoro**: `Canali::da(scans, chroms, facts)` come in §2 (famiglie `tic, bpc, ms, dd, srm, sim, uv, analog`, `genitore`, `omologo`, tetto 64 → `dd:`); `api/canali?k` (`canali/1`); `canale=` su `chrom`, `xic`, `scanlist`, `spectrum` tradotto nei filtri esistenti; `Tipo.proposto` da `infusione.rs`.
-5. **Accettazione**: per i file sintetici di `tools/dati_sintetici.py` (full, DDA, MSn a blocchi, MS2 mirato, MRM) l'elenco atteso; `chrom?canale=ms:<k>` = `chrom?filt=<k>` byte per byte; XIC per canale ≠ XIC per livello su un file con due precursori; memoria ≤ 8 B/scan oltre la tabella.
-6. **Prove**: `cargo test -p mzlab-core canali`, `cargo test -p mzlab-cli`, `python3 tools/pre_pr.py`.
-7. **Consegna**: PR `claude/canali-motore`, messaggio al Coordinatore (SHA a CI verde).
-
-### DEV-b · CANALI-WIFF
-1. **Ruolo**: DEV Sonnet, lettore `.wiff`.
-2. **Contesto**: `docs/agenti/wiff.md`, `wiff-varianti.md`, `canali-dati.md` §2; `wiff/modi.rs`, `wiff/run.rs`, `wiff/mod.rs:120`.
-3. **Perimetro**: `crates/mzlab-core/src/wiff/*` e la funzione di `canali.rs` che legge la sigla (dopo DEV-a).
-4. **Lavoro**: sigla per esperimento nel canale (EMS, EPI, MRM, Prec, NL, Q1MI→`sim:`); IDA EMS→EPI → `dd:2:EPI`; lettura dei periodi > 0 se un campione li ha (senza: test che lo dichiara); proposta, non attuazione, della colonna `exp` del `.mzidx` in `docs/agenti/mzidx.md` se il `native` non basta.
-5. **Accettazione**: i campioni QTRAP di `dati/3200 qtrap/` (repository privato via `percorso()`) danno i canali attesi (MRM con nome della transizione, EPI per precursore); `.wiff`→mzML invariato (id SRM come msconvert).
-6. **Prove**: `cargo test -p mzlab-core wiff`, `tools/verifica.py --cambiati`.
-7. **Consegna**: PR `claude/canali-wiff`, messaggio al Coordinatore.
-
-### DEV-c · CANALI-UV
-1. **Ruolo**: DEV Sonnet, UV e analogici.
-2. **Contesto**: `canali-dati.md` §2, `docs/agenti/dati-3200.md`; `wiff/dad*.rs`, `mzml_dad.rs`, `itemroutes.rs:144-231`, `analog.rs`.
-3. **Perimetro**: famiglie `uv`/`analog` in `canali.rs` (funzioni proprie) e `chrom?canale=uv:…|an:…`; niente decodifica nuova di Shimadzu/Agilent.
-4. **Lavoro**: `uv:twc`, `uv:<nm>±bw` derivato (stessa traccia di `kind=pda&mz0&mz1`), `an:<i>` con unità; spettro UV per scan via `canale=uv:*`.
-5. **Accettazione**: parità con `api/chrom?kind=pda` e `api/analog`; file mzML DAD sintetico.
-6. **Prove**: `cargo test -p mzlab-core canali_uv`.
-7. **Consegna**: PR `claude/canali-uv`, messaggio al Coordinatore.
-
-### DEV-d · CANALI-SELETTORE
-1. **Ruolo**: DEV Sonnet, pagina Dati.
-2. **Contesto**: `canali-dati.md` §3, `docs/agenti/dati.md`, `accessibilita.md`; `pannelli.js:643-689`, `grafici.js:53-113`, `tabs.js:146-156`, `xic-lente.js`. Parte dopo DEV-a e dopo l'unione di `claude/xic-infusione`.
-3. **Perimetro**: nuovo `mzlab/web/canali.js` (modulo `m:`, `@ts-check`, in `tools/tipi/`), selettore nel pannello cromatogramma, XIC e lente sul canale, chiavi in `lang/it.js`/`en.js`; non toccare albero, lista scan, tabella.
-4. **Lavoro**: albero `role="tree"` (TIC in cima, n, RT, unione per `omologo`), tracce multiple, legenda «—» per i file senza canale, `TDATI`; il pannello `mrm` diventa un cromatogramma con canali `srm:`; i selettori `kind/prec/tr` restano dietro l'adattatore.
-5. **Accettazione**: i sette casi di §3 aprono con il canale di default; overlay di una transizione su 3 file; `e2e_axe_grafici` verde; `window.MZLAB_LR_MISS` vuoto; `tour.js` valido.
-6. **Prove**: nuovo `tests_e2e/e2e_canali.py`, `tools/verifica.py --cambiati`.
-7. **Consegna**: PR `claude/canali-selettore`, messaggio al Coordinatore.
-
-### DEV-e · CANALI-VISTE
-1. **Ruolo**: DEV Sonnet, albero e lista scan.
-2. **Contesto**: `canali-dati.md` §3, `infusione-grafo.md`, `msn-grafo-vista.md`; `infusione.js`, `infusione-albero.js`, `barra.js:105-106`, `banco.js:38-91`. Parte dopo DEV-d e dopo ALBERO-PRECURSORI-UI.
-3. **Perimetro**: quei file e i loro e2e; nessun file di DEV-d.
-4. **Lavoro**: scheda «alb» per ogni file con MSn (condizione = canali `ms:` di livello ≥2, non `INF.any()`); clic su un nodo = selezione del canale; lista scan su `api/scanlist?canale` anche in LR; «gra» resta per l'infusione singola.
-5. **Accettazione**: bentazone mirato e timololo mostrano l'albero; DDA mostra l'aggregato; e2e dell'infusione invariati.
-6. **Prove**: e2e dell'albero e del Banco, `--cambiati`.
-7. **Consegna**: PR `claude/canali-viste`, messaggio al Coordinatore.
-
-### DEV-f · CANALI-TABELLA
-1. **Ruolo**: DEV Sonnet, tabella «1. Data files».
-2. **Contesto**: `canali-dati.md` §3-5, `docs/agenti/dati-carico.md`; `shell.js:71-139`, `esperimenti.js`, `iteminfo.rs:92-160`, il menu del tipo di VISORE-ZOOM. Parte dopo DEV-d.
-3. **Perimetro**: `shell.js`, `esperimenti.js`, `iteminfo.rs` (solo `Tipo`), e2e della tabella.
-4. **Lavoro**: una riga per file; colonna «Tipo» = `tipo.utente ?? tipo.proposto` con il menu esistente; colonna «Canali» (n, titolo con l'elenco); `ESP` → default (canale iniziale, lente proposta) senza permessi; `file_parts` resta solo per le sessioni salvate (migrazione).
-5. **Accettazione**: un file DDA = una riga; cambiare il tipo cambia solo i default; sessioni vecchie si aprono; avviso nome≠tipo invariato.
-6. **Prove**: e2e della tabella di carico, `tools/verifica.py --cambiati`, `pre_pr.py`.
-7. **Consegna**: PR `claude/canali-tabella`, messaggio al Coordinatore.
+## 6. Prompt dei DEV
+Uno per file in `docs/agenti/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `c.md` UV e analogici, `d.md` selettore, `e.md` albero e lista scan, `f.md` tabella): formato a 7 punti, con ramo e dipendenze in testa. Ordine: A → (B, C, D in parallelo; D dopo `claude/xic-infusione`) → (E dopo ALBERO-PRECURSORI-UI, F) in parallelo.
