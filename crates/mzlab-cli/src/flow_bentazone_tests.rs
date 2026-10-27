@@ -182,7 +182,7 @@ pub(crate) fn plan(params: &dyn Fn(&str) -> String, lr: bool) -> String {
     )
 }
 
-fn run(d: &Path, text: &str) -> Result<String, String> {
+pub(crate) fn run(d: &Path, text: &str) -> Result<String, String> {
     let (done, prov) = crate::flow::run_plan(text.as_bytes(), d, &d.join("work"), 2, None)
         .map_err(|e| format!("{} {:?}", e.key, e.params))?;
     if !done.skipped.is_empty() || prov.contains("\"error\"") {

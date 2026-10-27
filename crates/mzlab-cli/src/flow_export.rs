@@ -1,7 +1,10 @@
 //! The native executors of `export.table_csv` and `export.mztab`: the table file (`mzlab_feat_table_wasm::core::table_file`, the one the page
 //! downloads) of a `.mzfeat` with the roles of the samples file, as CSV or as mzTab-M, so the plan and the page write the same bytes.
 
+use std::path::PathBuf;
+
 use crate::flow::{io, read_one, FileRunner};
+use crate::flow_nature::of_files;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
@@ -20,8 +23,24 @@ pub(crate) fn polarity(table: &[u8]) -> Result<i32> {
     })
 }
 
+/// Polarity of the table: the recipe when it names one, else the one the files of its lineage have (the table the page makes names none either),
+/// positive when neither says.
+pub(crate) fn polarity_of(table: &[u8], files: &[PathBuf]) -> Result<i32> {
+    let (_, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
+    let recipe = meta.get("recipe").and_then(|r| r.str()).unwrap_or("");
+    if recipe.contains("polarity: Some(") && !recipe.contains("polarity: Some(0)") {
+        return polarity(table);
+    }
+    Ok(of_files(files).polarity.map_or(1, i32::from))
+}
+
 /// The text of the file `kind` of the table, whole (no view: a filter view keeps no reference to its table).
-pub(crate) fn export_text(table: &[u8], samples: &[u8], kind: &str) -> Result<String> {
+pub(crate) fn export_text(
+    table: &[u8],
+    samples: &[u8],
+    kind: &str,
+    files: &[PathBuf],
+) -> Result<String> {
     if table.first() == Some(&b'{') {
         return Err(Error::new("err.flow.export.view"));
     }
@@ -33,14 +52,22 @@ pub(crate) fn export_text(table: &[u8], samples: &[u8], kind: &str) -> Result<St
         &samples,
         "",
         &sha,
-        polarity(table)?,
+        polarity_of(table, files)?,
         kind,
     )
 }
 
 fn export_job(r: &FileRunner, job: &Job, kind: &str, ext: &str) -> Result<Artifact> {
     let (table, samples) = (read_one(r, job, "table")?, read_one(r, job, "samples")?);
-    let text = export_text(&table.1, &samples.1, kind)?;
+    let files = job
+        .inputs
+        .iter()
+        .find(|(p, _)| p == "table")
+        .and_then(|(_, v)| v.first())
+        .and_then(|a| r.lineage(a))
+        .map(|l| l.index)
+        .unwrap_or_default();
+    let text = export_text(&table.1, &samples.1, kind, &files)?;
     let out = r.work.join(format!("{}.{ext}", job.instance.id));
     std::fs::write(&out, text).map_err(io)?;
     r.keep(out, DataType::Report)
