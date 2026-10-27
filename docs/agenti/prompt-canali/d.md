@@ -12,6 +12,7 @@
 4. **Lavoro**:
    - `canali.js`: `canali(k)` (cache di `api/canali`), `traccia(k, id, opz)`, `omologhi(files, omo)`.
    - Selettore ad albero (`role="tree"`, tastiera con frecce, `aria-label`) nel pannello cromatogramma: TIC in cima, figli per genitore, colonne Canale · Sigla · n · RT; con più file le righe si uniscono per `omologo` e mostrano quanti file le hanno. Più canali spuntati = più tracce.
+   - L'`omologo` usa la CE arrotondata all'intero; la CE esatta del file sta nel `title` della riga del canale.
    - Il pannello salva `omologo`, non l'indice; un file senza quel canale compare in legenda con «—». Colori Okabe-Ito da variabili CSS; tabella dei dati `TDATI` con una colonna per file e canale.
    - Il pannello `mrm` diventa un pannello cromatogramma con canali `srm:` (stesse tracce, stessa scelta quant/qual di `calLoad`).
    - XIC e lente: `api/xic?canale=` del canale selezionato.

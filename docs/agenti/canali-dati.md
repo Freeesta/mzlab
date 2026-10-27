@@ -126,11 +126,12 @@ Pipeline TP (priorità 3): i passi del Flow ricevono un canale (`ms:<chiave MS1>
 ## 5. Decisioni per Federico (lettura scelta in attesa di risposta)
 - Nomi: «Canali» (it) / «Channels» (en); «Tipo di esperimento» resta come etichetta. Scelto così.
 - TIC del file = tutti gli scan MS (come il TIC del costruttore), con `MS1` come figlio. Scelto così.
-- Schede `full/ms2/mrm`: restano finché DEV-d/e non sono uniti; la fusione in un'area unica è una decisione a parte.
+- Schede `full/ms2/mrm`: restano nei lavori a-f; la fusione in un'area unica (stessi strumenti per ogni file) è la direzione, lavoro successivo a D ed E.
 - Una riga per file nella tabella (niente parti). Scelto così, in DEV-f.
 - DDA: tetto 64 chiavi per livello prima dell'aggregato `dd:`. Scelto così.
 - Default per tipo (canale iniziale, lente proposta): tabella in `esperimenti.js`, modificabile.
-- Nessuna dipendenza nuova; nessun cambio del formato `.mzidx` salvo la colonna `exp` facoltativa di DEV-b (da confermare).
+- Nessuna dipendenza nuova; nessun cambio del formato `.mzidx`: la colonna `exp` di DEV-b resta una proposta.
+- Nomi visibili del Tipo: «LC full scan», «LC MS²», «LC DDA», «LC MRM», «MSn infusion», «mixed», «UV only» (id interni invariati); overlay con CE arrotondata all'intero, CE esatta nel `title` del canale.
 
 ## 6. Prompt dei DEV
 Uno per file in `docs/agenti/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `c.md` UV e analogici, `d.md` selettore, `e.md` albero e lista scan, `f.md` tabella): formato a 7 punti, con ramo e dipendenze in testa. Ordine: A → (B, C, D in parallelo; D dopo `claude/xic-infusione`) → (E dopo ALBERO-PRECURSORI-UI, F) in parallelo.

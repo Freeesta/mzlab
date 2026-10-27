@@ -7,6 +7,7 @@
 3. **Perimetro**: `shell.js`, `esperimenti.js`, `explore.js` (solo `KIND`/`kindOf`/`tabFiles`), in Rust solo `Tipo.utente` in `canali.rs` e il suo salvataggio nella sessione; e2e della tabella; chiavi in `lang/it/canali.js`/`lang/en/canali.js`. Non riscrivere il menu del tipo di VISORE-ZOOM: lo riusa e ne legge il valore. Il nodo Raw files del Flow (ARCH-G FLOW-UX, DEV-C) mostra lo stesso tipo leggendo `api/canali`: nessuna classificazione nel Flow; avvisa il Coordinatore se quel nodo calcola il tipo per conto suo.
 4. **Lavoro**:
    - Una riga per file: le parti di `file_parts` diventano canali (DDA, MRM+EPI, positivo+negativo = una riga). `file_parts` resta solo per aprire sessioni salvate (migrazione) e per le schede `full/ms2/mrm`, che restano.
+   - Nomi visibili del Tipo (uguali in it e en): `lc-full` «LC full scan», `lc-ms2-mirato` «LC MS²», `lc-dda` «LC DDA», `lc-mrm` «LC MRM», `infusione-msn` «MSn infusion», `misto` «mixed», `solo-uv` «UV only»; gli id restano interni.
    - Colonna «Tipo» = `tipo.utente ?? tipo.proposto`, modificabile con il menu esistente; il valore scelto cambia solo i default (canale iniziale, lente proposta), mai quali strumenti esistono.
    - Colonna «Canali»: numero; il `title` elenca i canali (cosa contiene, nient'altro).
    - `ESP` diventa una tabella di default per tipo: niente `spettri:false` che spegne strumenti; `usable` vale per ogni file con almeno un canale.
