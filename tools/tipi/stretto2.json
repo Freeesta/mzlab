@@ -144,8 +144,6 @@
     "../../mzlab/web/an-trappola.js",
     "../../mzlab/web/an-util.js",
     "../../mzlab/web/browser.js",
-    "../../mzlab/web/libreria-cartella.js",
-    "../../mzlab/web/libreria-scarica.js",
     "../../mzlab/web/telefono-scheda.js",
     "../../mzlab/web/archivio.js",
     "../../mzlab/web/llm/llm-consenso.js",
