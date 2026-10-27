@@ -158,12 +158,10 @@ function previewOps(submit, call, opts) {
     family(file, recipe) { return submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "family", path: file.path, name: file.name, recipe })).json); }); },
   };
 }
-
 /** drift of the RT of the parent along a series (JSON of mzlab_feat::params_drift): `stored` = the .mzfeatf of its files, `baseRtTol` = the tolerance from the peak width (NaN = none) */
 function driftOps(submit, call, copy) {
   return { drift: ({ stored, parentMz, baseRtTol }) => submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol })).json); }) };
 }
-
 function proofOps(submit, call, copy, opts) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
@@ -385,14 +383,6 @@ const OPS = {
   },
   async interp_build(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table), out = memSink(); try { mods.interp.interp_build((_, off, len) => t.subarray(off, off + len), t.length, m.parent, m.registry, m.polarity, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async tp_link_evidence(m) { const f = await openAll(m.paths); try { const r = mods.proofs.tp_link_evidence(m.rules, m.parent, m.structure, m.hypotheses, new Uint8Array(m.table), m.samples, m.recipe, m.polarity, m.budgetMb || 0, arrays(m.peaks), f.read, f.sizes), o = { table: r.table(), registry: r.registry(), parent: r.parent(), polarity: r.polarity(), infusion: r.infusion() }; r.free(); return o; } finally { f.close(); } },
-  // tp.dig_lr: the hypotheses searched in the stored peaks (`proofs`, `tp_dig_inputs`) and the Dig of the unit-resolution series (`finder_lr`), the JSON of `mzlab-cli flow run`
-  async dig_lr(m) {
-    const f = await openAll(m.paths);
-    try {
-      const p = mods.proofs.tp_dig_inputs(m.rules, m.parent, m.structure, m.samples, m.names, m.recipe, arrays(m.peaks), f.read, f.sizes);
-      try { const d = mods.finder_lr.finder_lr_dig(p.files(), p.who(), m.settings, new Uint8Array(m.table), p.registry(), f.read, f.sizes); try { return { text: d.summary("{}") + "\n" }; } finally { d.free(); } } finally { p.free(); }
-    } finally { f.close(); }
-  },
   async tp_link_interp(m) { const f = await openAll(m.paths), out = memSink(); try { mods.interp.tp_link_interp(new Uint8Array(m.table), m.parent, m.registry, m.polarity, m.params, f.read, f.sizes, m.infusion, out.write); } finally { f.close(); } return { bytes: out.bytes() }; },
   async table_interp(m) { const t = new Uint8Array(m.table); return { text: mods.interp.table_interp((_, off, len) => t.subarray(off, off + len), t.length, m.id) }; },
   async tp_post(m) { const t = new Uint8Array(m.tp), i = mods.interp; return { text: m.kind === "filter" ? i.tp_refilter(t, m.hypotheses, m.params) : m.kind === "review" ? i.tp_review(t, m.decisions) : m.kind === "position" ? i.tp_position(t, m.smiles, m.formula, m.params) : mods.table.rete_build((_, off, len) => new Uint8Array(m.table).subarray(off, off + len), m.table.byteLength, (_, off, len) => t.subarray(off, off + len), t.length, m.samples, new Uint8Array(m.rules), m.ppm, m.minFragments) }; },
@@ -460,6 +450,7 @@ const OPS = {
   async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
 };
 
+OPS.dig_lr = async m => { const f = await openAll(m.paths); try { const p = mods.proofs.tp_dig_inputs(m.rules, m.parent, m.structure, m.samples, m.names, m.recipe, arrays(m.peaks), f.read, f.sizes); try { const d = mods.finder_lr.finder_lr_dig(p.files(), p.who(), m.settings, new Uint8Array(m.table), p.registry(), f.read, f.sizes); try { return { text: d.summary("{}") + "\n" }; } finally { d.free(); } } finally { p.free(); } } finally { f.close(); } };   // tp.dig_lr: the hypotheses searched in the stored peaks (proofs) and the Dig of the series (finder_lr)
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {
   let buf = new Uint8Array(1 << 20), n = 0;

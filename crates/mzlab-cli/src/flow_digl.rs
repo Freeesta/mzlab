@@ -127,7 +127,7 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let p = parent_of(&parent.1)?;
     let mut recipe = rebuild(&lin)?;
     let mut ix = indexes.iter().map(open).collect::<Result<Vec<_>>>()?;
-    let inputs = run_tp::dig_inputs(
+    let inputs = run_tp::dig::dig_inputs(
         RULES,
         &run_tp::LinkParent {
             formula: &p.formula,
