@@ -13,7 +13,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | header (schermo intero, logo, (i)), area e tabella di caricamento, avvio progressivo (`AVVIO`), regola «interfaccia subito» | `docs/agenti/intestazione.md`, `avvio.md`, `avvio-rapido.md` |
 | barra di caricamento unica per ogni formato (`progresso.js`, `PROGRESSO`, evento `mzlab-index`, pesi delle fasi, prove di monotonia) | `docs/agenti/progresso.md` |
 | carica una cartella, cartella puntata e ricordata (elenco in grigio, «Altri», desktop) | `docs/agenti/dati-cartella.md` |
-| mappa RT×m/z, mirino, navigazione, visore 3D | `docs/agenti/dati-mappa.md` |
+| mappa RT×m/z, mirino, navigazione | `docs/agenti/dati-mappa.md` (visore 3D: `dati-mappa-3d.md`) |
 | velocità della mappa: misure dei gesti (`tools/bench_mappa.py`), diagnosi e pacchetti P1-P10 | `docs/agenti/mappa-fluida.md` |
 | liste, correzione, flusso di lavoro, QA/QC, statistica, rapporto | `docs/agenti/dati-strumenti.md` |
 | fatti sui dati del 3200, gradiente, tracce analogiche, tabelle dei dati, tema | `docs/agenti/dati-3200.md` |
@@ -26,7 +26,8 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | metodo di acquisizione (`metodo/1`, `metodo.rs`, `metodo_wiff`, `metodo_raw`, schema) | `docs/agenti/metodo.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` (tabelle untargeted e identità: `mzfinder-untargeted.md`; tabelle terze parti: `mzfinder-import.md`; validazione: `mzfinder-validazione.md`; tabella prodotti HR: `mzfinder-tabella.md`; indice sospetti: `sospetti.md`; scavo LR: `mzfinder-lr.md`, bersagli: `mzfinder-lr-bersagli.md`, passo «1 · Files»: `mzfinder-file.md`, interfaccia MS2: `mzfinder-ms2.md`, regola MS2: `mzfinder-ms2-regola.md`) |
-| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`) |
+| mzFinder: Dig in diretta (`js/24_tpmine_diretta.js`, `TPLIVE`), coppie progenitore-TP e interfaccia HR (`js/21_tpmine_hr.js`, `mass_network`, previsione) | `docs/agenti/mzfinder-diretta.md`, `mzfinder-coppie.md` (nucleo: `mzfinder.md`) |
+| mzFinder nel browser (`crates/mzlab-feat-wasm`, `TP_Mine/files/feat-worker.js`, pannello Pipeline `TP_Mine/js/32_pipeline.js`, stima dei parametri `crates/mzlab-feat/src/params.rs`) | `docs/agenti/mzfeat-wasm.md` (famiglia di un file a richiesta, `family_record`: `mzfeat-wasm-famiglia.md`; pannello «Pipeline»: `mzfeat-wasm-pannello.md`) |
 | scandump, oracolo RFR | `docs/agenti/scandump.md` |
 | velocità del lettore Thermo `.raw`: criteri A1-A7 e B1-B5, banco `thermo_banco`, `tools/bench/thermo_velocita.py`, numeri di partenza contro RFR (T-7) | `docs/agenti/thermo-velocita.md` |
 | conversione `.raw` → mzML: banco `raw_mzml_banco`, `tools/bench/raw_mzml.py`, T_min, punti di partenza V1-V9, cause di D8 e D11, caso denso sintetico | `docs/agenti/raw-mzml.md` |
@@ -44,10 +45,11 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | ingresso di mzFinder: `.mzidx` per ogni file scelto o da IndexedDB (`TP_Mine/files/finder-idx.js`), lista di trasformazioni dell'utente in Rust | `docs/agenti/mzfinder-ingresso.md` |
 | Feature table nella Pipeline (passi 5-6: QC, barra dei filtri, `PIPET` con `TPTAB` e riga espansa `TPRIGA`) | `docs/agenti/mzfeat-tabella-vista.md` |
 | pseudo-spettri MS2 da DIA (`dia.rs`, `spectra.ms2` con `dia_pseudo`) | `docs/agenti/dia.md` |
-| pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`; bande larghe: `mzfeat-broad.md`) |
-| Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` (binario MZ: `attributio-mz.md`; isotopi: `attributio-isotopi.md`; Banco 2b: `attributio-banco.md`; esportazioni: `attributio-export.md`; abbinamento: `attributio-abbinamento.md`; identità: `attributio-identita.md`; revisione: `attributio-revisione.md`; pannello: `attributio-pannello.md`; formule: `attributio-formula.md`) |
+| pipeline delle feature HR in Rust (`crates/mzlab-feat`) | `docs/agenti/mzfeat.md` (prove e misure: `mzfeat-prove.md`; tabella, id e campioni: `mzfeat-tabella.md`; vista dei prodotti `tp/1`: `mzfeat-tp.md`; bande larghe: `mzfeat-broad.md`; cinetica: `mzfeat-cinetica.md`; correzione dell'RT: `mzfeat-rt.md`) |
+| Attributio in Rust (cascata dei livelli, Banco 2b, binario MZ di rilevamento alla mzmine: `crates/mzlab-feat/src/attributio/`, `untargeted/`, `.wasm` `attributio*` e `untargeted`) | `docs/agenti/attributio.md` (binario MZ: `attributio-mz.md`, parità con mzmine: `attributio-mz-parita.md`; isotopi: `attributio-isotopi.md`; Banco 2b: `attributio-banco.md`; esportazioni: `attributio-export.md`; abbinamento: `attributio-abbinamento.md`; identità: `attributio-identita.md`; revisione: `attributio-revisione.md`; pannello: `attributio-pannello.md`; formule: `attributio-formula.md`) |
 | vista «Compare conditions» di Tabui (`TP_Mine/lazy/gruppi-vista.js`: matrice TP × condizione, UpSet, grafici, esportazioni; contratto `gruppi/1`) | `docs/agenti/gruppi-vista.md` (studio: `docs/studi/TABUI_GRUPPI_ESPERIMENTI.md`) |
 | grafo di frammentazione MSn dell'infusione (`msngrafo/1`: ioni uniti fra livelli ed energie, formule proposte dei frammenti, scheda «Fragmentation graph») e libreria di alberi MSn degli standard (`msnlib/1`, protocollo di acquisizione) | `docs/agenti/msn-grafo.md` (libreria: `msnlib.md`; vista: `msn-grafo-vista.md`; scheda «Fragmentation graph» nella vista Dati: `infusione-grafo.md`; tagli per un nodo: `msn-grafo-strutture.md`; interpretazione dei frammenti: `msn-interpreta.md`; prove delle regole: `msn-regole-prove.md`; manuale: `msn-manuale.md`; figura: `msn-figura.md`) |
+| formule dei frammenti del grafo MSn (`msngrafo/formule.rs`, `candidati.rs`, `annota.rs`: ingresso, radice, finestre, vincolo DAG, perdite) | `docs/agenti/msn-grafo-formule.md` (sintesi: `msn-grafo.md`) |
 | motore MS2 sperimentale, frammentazione in silico alla MetFrag, attribuzione dei frammenti alla MS-FINDER, previsione dell'RT (`attributio/ms2_engine/`) | `docs/agenti/attributio-ms2.md` |
 | interpretazione per riga dei TP (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, blocco `interp` nel `.mzfeat`, `.wasm` `interp`, rotte `table_interp`) | `docs/agenti/interp.md` |
 | rete dei prodotti (`crates/mzlab-feat/src/rete/`, `rete/1`: archi per regola su `tp/1`, passi, coordinate, motivo dell'arco) | `docs/agenti/rete.md` |
@@ -67,14 +69,14 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | formato `.mzidx` | `docs/agenti/mzidx.md` |
 | cosa i file grezzi contengono e non estraiamo ancora (regola «nessuna perdita») | `docs/agenti/grezzi-non-estratti.md` |
 | errori di lettura dei file: causa breve, «Dettagli», «Copia diagnosi» (`diagnosi.js`), mzML sintetico stile msconvert | `docs/agenti/diagnosi.md` |
-| assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` |
+| assistente LLM: catalogo `strumenti/1` | `docs/agenti/llm.md` (subagenti e letture: `llm-subagenti.md`) |
 | assistente LLM: esecutore dei lettori sulla pagina (`llm-agente.js`, router, `sub`) | `docs/agenti/llm-lettori.md` |
 | riga di comando `mzlab-cli features` (`crates/mzlab-cli`: feature table in CSV, stesso motore e ricetta della pagina) | `docs/agenti/cli.md` (passo per passo: `cli-passi.md`) |
 | agenti esterni (Claude Code, Cowork) che usano `mzlab-cli` dalla shell: sequenza, codici, esempi di piani | `docs/agenti/per-agenti.md` |
 | lettura nativa di `.raw`, `.wiff`, `.D` nel sito (campioni, OPFS, avanzamento, mzML su richiesta) | `docs/agenti/lettura-nativa.md` |
-| motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md`, `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
+| motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` (+ `rust-rotte.md`, `rust-desktop.md` (mzFinder nativo: `rust-desktop-finder.md`), `rust-mzidx.md`, `rust-step.md`: descrittori `step/1`, `rust-flow.md`: piani `mzflow/2`, controllo e `prov/1`) |
 | record della struttura chimica `mol/1` (`crates/mzlab-mol`: tipi, JSON, hash del nucleo; lettori SMILES/molfile) | `docs/agenti/mol.md` (studio: `docs/studi/STRUTTURA_DATO.md`) |
-| misure dei motori | `docs/agenti/misure.md` (clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
+| misure dei motori | `docs/agenti/misure.md` (misure Rust e dei moduli: `misure-rust.md`; clic del flusso Tabui: `misure-clic.md`; conversione: `misure-convertitore.md`; formati di ingresso del Flow: `misure-formati.md`; esportazioni: `misure-esporta.md`) |
 | struttura dei test, test nuovi | `docs/agenti/test.md` |
 | workflow GitHub condizionali (concurrency, pages, job saltati) | `docs/agenti/ci-veloce.md` |
 | contratto dei lettori dei produttori (`lettori.rs`, trait `Lettore`, registro, `Limiti`), aggiungere un formato | `docs/agenti/estendere.md` |
