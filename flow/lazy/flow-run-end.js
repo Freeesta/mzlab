@@ -39,6 +39,37 @@
     return all.find(r => r.type === "table" && /\.mzfeat$/i.test(r.label) && (r.file || r.load)) || all.find(r => /\.(csv|tsv|txt)$/i.test(r.label)) || null;
   };
 
+  const SERIES = "mzlab/flow/series.mzfeat";
+  /** the table «This browser» kept in OPFS (the pool's reader, as the live jobs use it) as a result item of the same form as the desktop's (`load` reads it); null when the browser cannot or the file is not there @returns {Promise<any>} */
+  F.webTableItem = async () => {
+    const R = F.runners && F.runners.web;
+    if (!R || !R.available()) return null;
+    try {
+      const pool = await R.kit.getPool();
+      if (!(await pool.fs.exists(SERIES))) return null;
+      return { type: "table", label: "series.mzfeat", load: async () => new File([await pool.fs.read(SERIES)], "series.mzfeat") };
+    } catch (_) { return null; }
+  };
+
+  /** the step whose output is the table of a web run (the last of fill gaps or align) @param {any} S */
+  F.webTableStep = S => {
+    const base = (/** @type {any} */ i) => String(i.step).split("@")[0], steps = S.plan.steps;
+    return steps.findLast((/** @type {any} */ i) => base(i) === "features.gapfill") || steps.findLast((/** @type {any} */ i) => base(i) === "features.align") || null;
+  };
+
+  /** a web run ended: the table kept in OPFS joins the Results of its step and opens as after a desktop run; without the file or the step the run note stays as it is @param {any} S @returns {Promise<boolean>} */
+  F.webAfterRun = async S => {
+    const inst = F.webTableStep(S), item = inst && await F.webTableItem();
+    if (!item) return false;
+    S.results = S.results || {};
+    S.results[inst.id] = [...(S.results[inst.id] || []).filter((/** @type {any} */ r) => r.label !== item.label), item];
+    if (S.redraw) S.redraw();
+    await F.afterRun(S);
+    // the run box redraws after the run: the focus goes back to the title of the view once it has
+    setTimeout(() => { const h = document.querySelector(".flx-res h3"); if (h instanceof HTMLElement) h.focus({ preventScroll: true }); }, 0);
+    return true;
+  };
+
   /** a run ended: open the table by itself. A made file that is read on demand (`load`) is read first; a file that cannot be read leaves the buttons of the Results as they were @param {any} S */
   F.afterRun = async S => {
     const item = F.endItem(S);

@@ -36,6 +36,7 @@
       try {
         const res = await R.run(S);
         note.textContent = "Finished. The results are kept in this browser (OPFS).";
+        if (await F.webAfterRun(S)) note.textContent += " The feature table is open below.";
         // the MSn steps give their texts: one link each to save them
         for (const f of (res && res.files) || []) {
           const a = el("a", { href: URL.createObjectURL(new Blob([f.text], { type: "text/plain" })), download: f.name, text: f.name });
