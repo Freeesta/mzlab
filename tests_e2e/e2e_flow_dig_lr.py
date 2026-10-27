@@ -88,7 +88,9 @@ try:
             kept = pg.evaluate(KEPT)
             assert "dig.dig.json" in kept, list(kept)
             nat = (run / "out" / "dig.json").read_text()
-            assert nat == kept["dig.dig.json"], (nat[:300], kept["dig.dig.json"][:300])
+            web = kept["dig.dig.json"]
+            at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
+            assert nat == web, ("first difference at", at, len(nat), len(web), nat[max(0, at - 150):at + 150], web[max(0, at - 150):at + 150])
         step("tp.dig_lr in the browser gives the JSON of the native flow run", first)
 
         def again():
