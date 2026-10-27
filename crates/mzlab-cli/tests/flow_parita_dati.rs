@@ -76,32 +76,8 @@ fn peak_rss_mb() -> u64 {
         .map_or(0, |kb| kb / 1024)
 }
 
-#[test]
-fn the_real_series_gives_the_same_bytes_in_every_engine() {
-    let Some((dir, files)) = series() else {
-        eprintln!("SKIP flow_parita_dati: no data repository (MZLAB_DATI) or no mzML in dati/HRMS/Timolol");
-        return;
-    };
-    let t0 = Instant::now();
-    let names: Vec<String> = files.iter().map(|p| name(p)).collect();
-    let bytes: Vec<Vec<u8>> = files.iter().map(|p| std::fs::read(p).unwrap()).collect();
-
-    // 1. the index of every file, built twice
-    let idxs: Vec<Vec<u8>> = names
-        .iter()
-        .zip(&bytes)
-        .map(|(n, b)| index_of(b, n))
-        .collect();
-    for ((n, b), first) in names.iter().zip(&bytes).zip(&idxs) {
-        same(
-            &format!("{n}.mzidx"),
-            first,
-            &index_of(b, n),
-            "index built twice",
-        );
-    }
-
-    // 2. the plan natively, twice
+/// The "Feature table" plan run natively with 1 and 2 workers: the files of the first run (the two must agree byte for byte).
+fn native_runs(dir: &Path, names: &[String]) -> Vec<(String, Vec<u8>)> {
     let inputs: Vec<String> = names
         .iter()
         .map(|n| format!(r#"{{"name":"{n}","type":"raw"}}"#))
@@ -137,8 +113,13 @@ fn the_real_series_gives_the_same_bytes_in_every_engine() {
         same(&x.0, &x.1, &y.1, "native run (1 worker vs 2)");
         assert_eq!(sha256_hex(&x.1), sha256_hex(&y.1));
     }
+    let _ = std::fs::remove_dir_all(&work);
+    runs.swap_remove(0)
+}
 
-    // 3. the chain of the browser runner (`run::recipe_of_layers`, the floor estimated on each file for detection) over the indexes in memory
+/// The bytes of the table of the browser-runner chain over the indexes in memory.
+fn page_chain(names: &[String], idxs: &[Vec<u8>]) -> Vec<u8> {
+    // the chain of the browser runner (`run::recipe_of_layers`, the floor estimated on each file for detection) over the indexes in memory
     let open = |k: usize| Index::open(idxs[k].clone(), idxs[k].len() as u64);
     let layers = run::layers_from_json(
         r#"[{"step":"features.detect","params":{}},{"step":"features.align","params":{}},{"step":"features.gapfill","params":{}}]"#,
@@ -154,7 +135,38 @@ fn the_real_series_gives_the_same_bytes_in_every_engine() {
         .collect();
     let r = run::recipe_of_layers(&mut open(0).unwrap(), &layers).unwrap();
     let (tables, origin) = run::read_files(&det).unwrap();
-    let page = run::align(&tables, &origin, &r, open).unwrap();
+    run::align(&tables, &origin, &r, open).unwrap()
+}
+
+#[test]
+fn the_real_series_gives_the_same_bytes_in_every_engine() {
+    let Some((dir, files)) = series() else {
+        eprintln!("SKIP flow_parita_dati: no data repository (MZLAB_DATI) or no mzML in dati/HRMS/Timolol");
+        return;
+    };
+    let t0 = Instant::now();
+    let names: Vec<String> = files.iter().map(|p| name(p)).collect();
+    let bytes: Vec<Vec<u8>> = files.iter().map(|p| std::fs::read(p).unwrap()).collect();
+
+    // 1. the index of every file, built twice
+    let idxs: Vec<Vec<u8>> = names
+        .iter()
+        .zip(&bytes)
+        .map(|(n, b)| index_of(b, n))
+        .collect();
+    for ((n, b), first) in names.iter().zip(&bytes).zip(&idxs) {
+        same(
+            &format!("{n}.mzidx"),
+            first,
+            &index_of(b, n),
+            "index built twice",
+        );
+    }
+
+    // 2. the plan natively, twice
+    let a = native_runs(&dir, &names);
+    // 3. the chain of the browser runner
+    let page = page_chain(&names, &idxs);
     let flow = &a
         .iter()
         .find(|f| f.0 == "gap.mzfeat")
@@ -168,5 +180,4 @@ fn the_real_series_gives_the_same_bytes_in_every_engine() {
         t0.elapsed().as_secs_f64(),
         peak_rss_mb()
     );
-    let _ = std::fs::remove_dir_all(&work);
 }
