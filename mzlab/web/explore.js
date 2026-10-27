@@ -449,7 +449,8 @@ async function bootSession0() {
       // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
       vis = (k === first);
     }
-    return { ...s, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: s.kind === "ms2" ? 2 : 1 };
+    const t = TIPOF.apply(s, s.file);
+    return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: t.kind === "ms2" ? 2 : 1 };
   });
   paintFiles();
   if (window.HR) HR.notice(E.files);
@@ -471,6 +472,7 @@ async function bootSession0() {
     // @ts-ignore toolbar() below is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    if (added.length && window.INF && INF.autoOpen) INF.autoOpen(added);
     return;
   }
   if (first > 0 && isFirstLoad) STATO.file(first, "first"); renderFileList();
@@ -481,6 +483,7 @@ async function bootSession0() {
   ensureLayout();
   // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
   toolbar(); uiSave();
+  if (window.INF && INF.autoOpen) INF.autoOpen(E.files);
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
 async function apexSpectrum(c, sp) {

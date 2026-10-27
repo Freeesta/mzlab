@@ -17,6 +17,8 @@
   const live = p => { const s = ST.get(p); return s && s.xp && E.panels.includes(s.xp) ? s.xp : null; };
   /** the file of the spectrum @param {any} p */
   const specFile = p => p._a && p._a.data && p._a.data[0] ? p._a.data[0].f : null;
+  /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusione.rs, or the same words in the file name) @param {any} p */
+  const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || !f.manual && /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "")); };
   /** the high-resolution file among those the XIC reads, if any @param {any} p */
   const hrFile = p => (window.HR ? HR.xicFiles(p.tab).find((/** @type {any} */ f) => HR.isHr(f, f.lv)) : null) || null;
   const num = (/** @type {number} */ v) => String(+v.toFixed(5));
@@ -55,7 +57,14 @@
   function refresh(p) {
     const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]');
     if (p.uv) { for (const x of [b, l]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
-    if (b) { b.classList.toggle("on", s.pend); b.setAttribute("aria-pressed", String(s.pend)); }
+    const off = infusion(p);
+    if (off && (s.pend || s.sel)) { s.pend = false; s.sel = null; }
+    if (b) {
+      b.classList.toggle("on", s.pend); b.setAttribute("aria-pressed", String(s.pend));
+      const bt = /** @type {HTMLButtonElement} */ (b), tip = T(off ? "xicbtn.infusion" : "xicbtn.title");
+      if (bt.disabled !== off) bt.disabled = off;
+      if (bt.title !== tip) bt.title = tip;
+    }
     if (l) {
       l.hidden = !s.sel;
       if (s.sel) { const t = ionText(p, s.sel); l.textContent = t; l.setAttribute("aria-label", T("xicbtn.ion.aria", { ion: t })); }
@@ -127,7 +136,8 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     if (window.XICLENS) XICLENS.sync(p);
-    const s = ST.get(p); if (!s || !live(p)) return;
+    const s = ST.get(p); if (s && infusion(p) !== /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]'))?.disabled) refresh(p);
+    if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
   /** @param {any} p */
@@ -166,6 +176,7 @@
   // ---------------------------------------------------------------- the button, the label, the pop-up
   /** the button was pressed @param {any} p @param {boolean} add */
   function press(p, add) {
+    if (infusion(p)) return;
     const s = st(p);
     if (s.sel) { extract(p, add); return; }
     s.pend = !s.pend; refresh(p);
@@ -238,7 +249,7 @@
   }
   /** what the lens asks the engine for the ion m of this spectrum: the file of the spectrum, the (m/z, tolerance) of the XIC button, the label @param {any} p @param {number} m */
   function lensArgs(p, m) {
-    const f = specFile(p); if (!f) return null;
+    const f = specFile(p); if (!f || infusion(p)) return null;
     const sel = { m, obs: true, tol: null }, tr = traceFor(p, sel);
     return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel) };
   }
@@ -246,7 +257,7 @@
   function commit(p, m) { choose(p, m, true); extract(p, false); }
   /** a click on the spectrum, no drag: with the ruler on (or a measure open) it stays the ruler's; otherwise the nearest peak is chosen, and extracted when the button is waiting @param {any} p @param {number} px @param {number} py */
   function click(p, px, py) {
-    if (p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
+    if (infusion(p) || p.rul || (p.meas && p.meas.ref != null) || !p._a || !p._a.snap) return false;
     const m = target(p, px);
     if (m == null) return false;
     const s = st(p);
