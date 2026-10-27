@@ -18,12 +18,15 @@ if not (ROOT / "site" / "static" / "wasm" / "mzlab_wasm.js").exists():
 REAL = os.environ.get("MZLAB_CARICO_DIR")
 D = Path(REAL) if REAL else Path(tempfile.mkdtemp(prefix="wiff240_"))
 if not REAL:
-    for pol in ("EMSp", "EMSm"):
-        for i in range(1, int(os.environ.get('MZLAB_CARICO_N', 120)) + 1):
-            subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D), "--name", f"{pol}_{i:03d}", "--samples", "1", "--scans", "60", "--points", "300", "--seed", str(i)], check=True, capture_output=True)
+    from concurrent.futures import ThreadPoolExecutor
+    def make(job):
+        pol, i = job
+        subprocess.run([sys.executable, str(ROOT / "tools" / "wiff_grande.py"), str(D), "--name", f"{pol}_{i:03d}", "--samples", "1", "--scans", "60", "--points", "300", "--seed", str(i)], check=True, capture_output=True)
+    with ThreadPoolExecutor(4) as ex: list(ex.map(make, [(pol, i) for pol in ("EMSp", "EMSm") for i in range(1, int(os.environ.get("MZLAB_CARICO_N", 120)) + 1)]))
 NAMES = sorted(p.name for p in D.glob("*.wiff"))
 FILES = [str(D / n) for n in NAMES] + [str(D / (n + ".scan")) for n in NAMES]
-SAMPLES = [n[:-5] + ".mzML" for n in NAMES]                        # the sample of a one-sample pair is named after the file
+COUNTS = json.loads((D / "counts.json").read_text()) if (D / "counts.json").exists() else {}      # samples per file (folders of multi-sample files); default 1
+SAMPLES = [n[:-5] + ".mzML" if COUNTS.get(n[:-5], 1) == 1 else f"{n[:-5]}_s{i}.mzML" for n in NAMES for i in range(1, COUNTS.get(n[:-5], 1) + 1)]      # a one-sample file is named after the file, else x_s<id>
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 import urllib.request
 for _ in range(50):
@@ -64,7 +67,7 @@ try:
 
         pg.set_input_files("#pick", FILES)
         s, peak = follow(pg, cdp, bcdp, lambda s: s["busy"] == 0 and len(s["files"]) >= len(SAMPLES))
-        print(f"   measure: {len(NAMES)} pairs, {peak['s']:.0f} s total, {peak['s'] / len(NAMES):.2f} s/pair, peak {peak['mb']:.0f} MB (all chromium processes), page heap {peak['heap']:.0f} MB, builders {peak['builders']}, OPFS {opfs():.2f} GB")
+        print(f"   measure: {len(NAMES)} pairs, {len(SAMPLES)} samples, {peak['s']:.0f} s total, {peak['s'] / len(NAMES):.2f} s/pair, peak {peak['mb']:.0f} MB (all chromium processes), page heap {peak['heap']:.0f} MB, builders {peak['builders']}, OPFS {opfs():.2f} GB")
         if os.environ.get("MZLAB_CARICO_SOLO"): c.close(); shutil.rmtree(prof, ignore_errors=True); sys.exit(0)      # only the measure of the first drop
         def all_in():
             assert len(s["files"]) == len(SAMPLES), (len(s["files"]), s["files"][:5])
@@ -78,20 +81,29 @@ try:
             assert pg.evaluate("(() => { const a = ST.files.map(f => f.name); sortFiles(); return JSON.stringify(a) === JSON.stringify(ST.files.map(f => f.name)); })()"), "the list is not in the order of the rule"
         step("the list is in the order of the rule, not of the arrival", order)
         def again():
-            pg.set_input_files("#pick", FILES)
+            some = [f for f in FILES if any(f.startswith(str(D / n)) for n in NAMES[:24])]          # 24 of the pairs again (all 240 take 70 s from the cache)
+            pg.set_input_files("#pick", some)
             t0 = time.time(); pg.wait_for_function("UPBUSY === 0 && CONVROWS.rows.length > 0", timeout=300000)
             assert len([n for n in pg.evaluate("ST.files.map(f => f.name)") if n in set(SAMPLES)]) == len(SAMPLES), "duplicates or losses"
             print(f"   measure: second drop {time.time() - t0:.1f} s")
-            assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == len(SAMPLES), "not all from the cache"
+            assert pg.locator("#flist .cvsum").count() == 0 and pg.evaluate("CONVROWS.rows.filter(r => r.state === 'done').length") == 24 * (len(SAMPLES) // len(NAMES)), "not all from the cache"
         step("the same pairs again enter without duplicates", again)
-        def reverse():                                  # the same files dropped in the opposite order: the same list
-            pg.reload(); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
-            pg.set_input_files("#pick", FILES[::-1])
-            pg.wait_for_function(f"UPBUSY === 0 && ST.files.length >= {len(SAMPLES)}", timeout=900000)
-            assert [n for n in pg.evaluate("ST.files.map(f => f.name)") if n in set(SAMPLES)] == order1
-        step("dropped in the opposite order the list is the same", reverse)
+        FRESH = f"http://127.0.0.1:{PORT}/?motore=rust&lr=1&riparti=1"      # an empty storage
+        def reopen():                                   # the page opened again with everything stored: the limit of the reopening grows with the files, so the list comes back
+            t0 = time.time(); pg.reload(); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=300000)
+            print(f"   measure: reload with {len(SAMPLES)} samples stored {time.time() - t0:.1f} s")
+            pg.wait_for_function(f"ST.files.length >= {len(SAMPLES)}", timeout=60000)
+        step("the page opened again brings back all the samples", reopen)
+        def reverse():                                  # half of the files dropped in the opposite order: the same relative order
+            pg.goto(FRESH); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            half = [n for n in NAMES[::2]]; mine = [f for n in half for f in (str(D / n), str(D / (n + ".scan")))][::-1]
+            want = [s for s in order1 if any(s.startswith(n[:-5]) for n in half)]
+            pg.set_input_files("#pick", mine)
+            pg.wait_for_function(f"UPBUSY === 0 && ST.files.length >= {len(want)}", timeout=900000)
+            assert [n for n in pg.evaluate("ST.files.map(f => f.name)") if n in set(want)] == want
+        step("dropped in the opposite order the list has the same order", reverse)
         def cancel():
-            pg.reload(); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
+            pg.goto(FRESH); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             half = FILES[: len(NAMES) // 2] + FILES[len(NAMES): len(NAMES) + len(NAMES) // 2]
             pg.set_input_files("#pick", half)
             pg.wait_for_function("CONVROWS.rows.some(r => r.state === 'done')", timeout=300000)
