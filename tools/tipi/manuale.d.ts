@@ -47,3 +47,6 @@ type LibFetch = (url: string, opts?: RequestInit) => Promise<Response>;
 interface FileSystemFileHandle { move(name: string): Promise<void>; move(dir: FileSystemDirectoryHandle, name: string): Promise<void>; createSyncAccessHandle(): Promise<FileSystemSyncAccessHandle> }
 interface FileSystemDirectoryHandle { entries(): AsyncIterableIterator<[string, FileSystemHandle]> }
 interface FileSystemSyncAccessHandle { close(): void; flush(): void; getSize(): number; truncate(size: number): void; read(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number; write(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number }
+type DrawKet = any;  // Ketcher editor object or one of its parts (vendor bundle, untyped)
+type DrawLine = [string | number, string][];  // one line of a drawing label: pieces [text, "sub" | "sup" | "it" | ""]
+type DrawStruct = { formula: string, mass: number, n: Record<string, number>, q: number, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing
