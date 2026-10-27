@@ -21,6 +21,8 @@
     "../../mzlab/web/mappa-render.js",
     "../../mzlab/web/mappa-tabella.js",
     "../../mzlab/web/mappa.js",
+    "../../mzlab/web/libreria-cartella.js",
+    "../../mzlab/web/libreria-scarica.js",
     "../../mzlab/web/mappa-estrai.js",
     "../../mzlab/web/mappa3d.js"
   ]
