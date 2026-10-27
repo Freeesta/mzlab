@@ -136,3 +136,45 @@ fn an_msn_infusion_is_one_item_not_survey_plus_product_ions() {
     assert!(!con_msn(&[msn(1.0, &[(317.2, 25.0)])], None, "x.mzML"));
     assert!(!con_msn(&prm(), None, "x.mzML"));
 }
+
+/// A cascade infusion: 90 MS1 scans over the run and, between the surveys, MSn scans down to MS8; each tree node (a path of fixed
+/// precursors) is held for its own stretch of time at two energies, so there are more than 64 distinct keys.
+fn deep_cascade() -> Vec<Scan> {
+    let mut v = vec![];
+    let mut rt = 0.0;
+    let mut paths: Vec<Vec<f64>> = vec![vec![317.2]];
+    for level in 3..=8 {
+        let last = paths.iter().filter(|p| p.len() == level - 2).cloned().collect::<Vec<_>>();
+        for (i, p) in last.iter().enumerate() {
+            for b in 0..2 {
+                let mut q = p.clone();
+                q.push(300.0 - level as f64 * 20.0 - (i * 2 + b) as f64 * 3.0);
+                paths.push(q);
+            }
+        }
+    }
+    for (n, p) in paths.iter().enumerate() {
+        for ce in [30.0, 35.0] {
+            if n % 3 == 0 {
+                v.push(ms1(rt));
+            }
+            for _ in 0..12 {
+                rt += 0.01;
+                let stages: Vec<(f64, f64)> = p.iter().map(|m| (*m, ce)).collect();
+                v.push(msn(rt, &stages));
+            }
+        }
+    }
+    v
+}
+
+#[test]
+fn a_deep_cascade_with_many_nodes_is_an_infusion() {
+    let v = deep_cascade();
+    let keys: std::collections::HashSet<String> =
+        v.iter().filter(|s| s.level > 1).map(|s| key(s, false)).collect();
+    assert!(keys.len() > 64, "{}", keys.len());
+    let got = infusione(&v, None, "Infusione_Timololo.mzML");
+    assert!(got.is_some(), "no infusion");
+    assert!(con_msn(&v, None, "x.mzML"));
+}
