@@ -434,8 +434,7 @@ const OPS = {
     const f = await openAll(m.paths), t = new Uint8Array(m.table);
     try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
-  async table_file(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.export_table_auto((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.sha, m.kind, f.read, f.sizes) }; } finally { f.close(); } },
-  async cross_polarity(m) { const p = new Uint8Array(m.pos), n = new Uint8Array(m.neg); return { text: mods.table.cross_polarity((_, off, len) => p.subarray(off, off + len), p.length, (_, off, len) => n.subarray(off, off + len), n.length, m.params) }; },
+  async cross_polarity(m) { const p = new Uint8Array(m.pos), n = new Uint8Array(m.neg); return { text: mods.table.cross_polarity((_, off, len) => p.subarray(off, off + len), p.length, (_, off, len) => n.subarray(off, off + len), n.length, m.params) }; }, async table_file(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.export_table_auto((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.sha, m.kind, f.read, f.sizes) }; } finally { f.close(); } },
   async rowtraces(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_row_traces((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.id, f.read, f.sizes, m.ppm) }; } finally { f.close(); } },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {
