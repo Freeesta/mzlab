@@ -91,6 +91,10 @@ fn generate() -> Step {
                 optional: true,
                 ..Port::new("features", DataType::Table, "Feature table (families already found)")
             },
+            Port {
+                optional: true,
+                ..Port::new("index", DataType::Mzidx, "Scan index of each file: gives the polarity and the unit resolution the plan leaves unwritten").many()
+            },
         ],
         outs: vec![Port::new("hypotheses", DataType::Transform, "Hypotheses: formula, m/z, adduct, source and weakest prediction level")],
         params: vec![

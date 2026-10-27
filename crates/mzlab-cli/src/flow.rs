@@ -376,7 +376,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ),
     (
         "tp.generate",
-        Exec::File("hypotheses", crate::flow_generate::generate_job),
+        Exec::Made(crate::flow_generate::generate_job),
     ),
     (
         "tp.filter",

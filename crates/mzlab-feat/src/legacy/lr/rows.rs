@@ -43,8 +43,8 @@ pub struct Hyp {
     pub pred: u8,
 }
 
-/// The hypotheses of the rules ([M+H]+, at least one step), sorted by steps and m/z.
-pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
+/// The hypotheses of the rules (in `adduct`, the one of the parent; at least one step), sorted by steps and m/z.
+pub fn hypotheses(registry: &str, adduct: &str) -> Res<Vec<Hyp>> {
     if registry.trim().is_empty() {
         return Ok(Vec::new());
     }
@@ -69,7 +69,7 @@ pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
         .map(Value::arr)
         .unwrap_or_default()
         .iter()
-        .filter(|h| text(h, "adduct") == "[M+H]+")
+        .filter(|h| text(h, "adduct") == adduct)
         .filter(|h| {
             strs(h, "sources")
                 .iter()
@@ -93,12 +93,15 @@ pub fn hypotheses(registry: &str) -> Res<Vec<Hyp>> {
             .cmp(&out[b].steps)
             .then(out[a].mz.total_cmp(&out[b].mz))
     });
-    Ok(ord.into_iter().map(|i| promote(out[i].clone())).collect())
+    Ok(ord
+        .into_iter()
+        .map(|i| promote(out[i].clone(), adduct))
+        .collect())
 }
 
 /// The merge by nominal mass orders the formulas of one ion by their text, so its leader may be a way of two steps while an alternative takes one: the
 /// shortest way leads (the Dig names the row after it); the rest stay as alternatives.
-fn promote(h: Hyp) -> Hyp {
+fn promote(h: Hyp, adduct: &str) -> Hyp {
     let steps = |l: &str| l.matches('+').count() as u32 + 1;
     let parsed = |a: &String| {
         let (f, rest) = a.split_once(" (")?;
@@ -109,7 +112,7 @@ fn promote(h: Hyp) -> Hyp {
             f.to_string(),
             label.to_string(),
             neutral,
-            ion_mz(neutral, "[M+H]+")?,
+            ion_mz(neutral, adduct)?,
         ))
     };
     let best = h
