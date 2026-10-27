@@ -3,7 +3,7 @@
 Pulsante «XIC» e lente dello spettro sui file d'infusione, regola `infusione.rs` e suo comando di diagnosi.
 
 - **Pulsante «XIC» e lente spenti**: se il file dello spettro è un'infusione (`f.kind === "infusion"` del motore, regola di `infusione.rs`, oppure `infus|fia|direct|syringe` nel nome) il pulsante «XIC» della barra dello spettro è disabilitato con il tooltip `xicbtn.infusion` e la lente (`lensArgs` in `xic-spettro.js`) non si apre: non c'è un cromatogramma vero. Prova: `tests_e2e/e2e_xic_infusione.py`; la regola dei dati in `infusione/tests.rs`: cascata MSn fino a MS8 con più di 64 chiavi = infusione; una sola chiave su tutta la corsa (MS2 mirato LC) no.
-- **Diagnosi**: `cargo run --release -p mzlab-core --example diagnosi_infusione -- FILE.mzML` stampa scansioni per livello, intervallo RT, chiavi MSn con scansioni e RT, CV del TIC e il verdetto di `infusione` con il motivo.
+- **Diagnosi**: `cargo run --release -p mzlab-core --example diagnosi_infusione -- FILE.mzML [FILE2.mzML ...]` stampa (un blocco per file, da incollare in chat) scansioni per livello, intervallo RT, chiavi MSn con scansioni e RT, CV del TIC e il verdetto di `infusione` con il motivo.
 
 ## Disegno dei tracciati dalla finestra (decima.js)
 - **Modulo**: `mzlab/web/decima.js` (modulo ES puro, `// @ts-strict`, in `tools/tipi/moduli.json` e `stretto2.json`): `isSorted` (x mai decrescente, in cache per array), `windowIdx` (ricerca binaria dell'intervallo [x0, x1], senza punti fuori), `amax`/`amin` (massimo e minimo di un intervallo senza spread: `Math.max(...a)` dà `RangeError` oltre ~10^5 valori), `m4` (quattro vertici per colonna di pixel: primo, più basso, più alto, ultimo).
