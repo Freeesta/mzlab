@@ -2,8 +2,9 @@
 //! alone, plus two hints (the LC part of the `.raw` method, the file name). The shape of the TIC is not used: measured, it does not separate.
 //!
 //! - constant RT (or one scan): `rt_costante`;
-//! - B, fixed precursors: at most 64 distinct MSn keys, median scans per key >= 10, keys with >= 5 scans cover >= 95 % of the MSn scans;
-//! - C, long blocks: >= 80 % of the MSn scans lie in consecutive runs of the same key at least 5 long (the MS1 scans are a key of their own).
+//! - B, fixed precursors: at most 512 distinct MSn keys (a cascade down to MS8 at several energies has well over 64), median scans per key >= 10, keys with >= 5 scans cover >= 95 % of the MSn scans;
+//! - C, long blocks: >= 80 % of the MSn scans lie in consecutive runs of the same key at least 5 long (the MS1 scans are a key of their own), with at least
+//!   two distinct keys (segments of time): a single key over the whole run is a targeted MS2 of an LC run.
 //!
 //! Infusion = constant RT, or B and C (`blocchi`), or B and a `.raw` method without LC (`metodo_senza_lc`), or B and a name with
 //! `infus`/`fia`/`direct`/`syringe` (`nome`). A targeted LC run (PRM) has B but cycles its precursors (no C); a DDA run has neither.
@@ -24,7 +25,7 @@ pub struct Infusione {
     pub nodi: usize,
 }
 
-const MAX_KEYS: usize = 64;
+const MAX_KEYS: usize = 512;
 const MIN_MEDIAN: usize = 10;
 const MIN_SCANS: usize = 5;
 const MIN_COVER: f64 = 0.95;
@@ -140,7 +141,9 @@ pub fn infusione(scans: &[Scan], lc: Option<bool>, nome: &str) -> Option<Infusio
             false => None,
         })
         .collect();
-    if long_blocks(&order, msn.len()) {
+    // one key over the whole run is a targeted MS2 of an LC run (a chromatographic peak), not an infusion: blocks need at least two segments
+    let segments = keys.iter().collect::<std::collections::HashSet<_>>().len();
+    if segments >= 2 && long_blocks(&order, msn.len()) {
         out("blocchi")
     } else if lc == Some(false) {
         out("metodo_senza_lc")
