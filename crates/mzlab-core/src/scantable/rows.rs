@@ -494,7 +494,10 @@ impl Rows {
         if m.precs.is_empty() && (h.contains("MS:1000744") || h.contains("MS:1000827")) {
             m.precs.push(precursor_element(h, None));
         }
+        // the parent of an MS3+ is its immediate precursor, not the first one listed (which may be the MS1)
+        let mut immediate_ref = None;
         if let Some(e) = immediate(&m.precs, &m.path, level, &self.level_of) {
+            immediate_ref = e.refer.clone().filter(|r| !r.is_empty());
             m.prec = e.selected.or(e.target);
             if let Some(t) = e.target.or(m.prec) {
                 let lo = match (e.lo, e.target) {
@@ -518,11 +521,12 @@ impl Rows {
                 None => activation_in_filter(filt),
             };
         }
-        if let Some(r) = m
-            .precs
-            .iter()
-            .find_map(|e| e.refer.clone().filter(|r| !r.is_empty()))
-        {
+        let first_ref = || {
+            m.precs
+                .iter()
+                .find_map(|e| e.refer.clone().filter(|r| !r.is_empty()))
+        };
+        if let Some(r) = immediate_ref.filter(|_| level > 2).or_else(first_ref) {
             self.refs.insert(self.rows.len(), r);
         }
         m
