@@ -7,12 +7,17 @@ on:
   schedule:
     - cron: "17 2 * * *"   # 02:17 UTC, every night
   workflow_dispatch:
+    inputs:
+      solo:
+        description: "Only these e2e on the browser jobs, comma separated (e.g. e2e20); unit tests and the complete verification are skipped"
+        default: ""
 
 permissions:
   contents: read
 
 jobs:
   pytest:
+    if: inputs.solo == ''
     strategy:
       fail-fast: false
       matrix:
@@ -99,7 +104,7 @@ jobs:
           sudo fc-cache -f
           fc-match system-ui
       - name: Smoke tests
-        run: python tools/verifica.py --browser ${{ matrix.browser }} --fumo
+        run: python tools/verifica.py --browser ${{ matrix.browser }} ${{ inputs.solo != '' && format('--solo {0}', inputs.solo) || '--fumo' }}
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
@@ -119,6 +124,7 @@ jobs:
   # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
   # in three parallel parts (tools/verifica.py --parte K/3: part 1 also does syntax, texts, pytest and prova_hr), each with its own report .verifica/ultimo.md
   completa:
+    if: inputs.solo == ''
     name: completa (${{ matrix.parte }}/3)
     strategy:
       fail-fast: false
