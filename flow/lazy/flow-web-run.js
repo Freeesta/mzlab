@@ -41,10 +41,22 @@
     return held.length ? held : out;
   };
 
+  /** the context of the Tabui package once it holds the data files: the Flow tab runs from the early scripts, before the loader has filled `ctx.files`, so a run started at once would find the rules and the worker missing @param {string} name a file that must be there */
+  const tpCtx = async name => {
+    for (let i = 0; i < 600; i++) {
+      const c = G.QTOOLS && G.QTOOLS.ctx;
+      if (c && c.files && c.files[name]) return c;
+      await (G.TPLAZY && G.TPLAZY.whenLoaded ? G.TPLAZY.whenLoaded().catch(() => {}) : Promise.resolve());
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return G.QTOOLS && G.QTOOLS.ctx;
+  };
+  F.tpCtx = tpCtx;
+
   /** the pool of feat-worker.js with the `feat` .wasm of the site; made once */
   const getPool = async () => {
     if (pool) return pool;
-    const c = G.QTOOLS.ctx, u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href;
+    const c = await tpCtx("feat-worker.js"), u = (/** @type {string} */ p) => new URL("wasm-feat/" + p, c.base).href;
     const man = await (await fetch(u("manifest.json"))).json();
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(/* webpackIgnore: true */ url);

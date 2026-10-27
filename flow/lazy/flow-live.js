@@ -194,9 +194,11 @@
       for (const inst of b.plan.steps) emitWeb(x, { passo: inst.id, stato: "waiting", via: here(inst) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
       return;
     }
-    for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) await call(x, "set_identity", { name, text: id });
+    // a changed fingerprint (an index that was loading is now in OPFS) re-keys the jobs only at the next `update`, even when the plan text is the same
+    let rekey = false;
+    for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) { await call(x, "set_identity", { name, text: id }); rekey = true; }
     x.ids = b.ids;
-    if (text === x.sent) return;
+    if (text === x.sent && !rekey) return;
     x.sent = text;
     for (const c of await call(x, "update", { plan: JSON.parse(text) })) {
       const key = jk(c);
