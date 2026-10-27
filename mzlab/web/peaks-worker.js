@@ -35,7 +35,7 @@ onmessage = async ev => {
       const out = new Float64Array(2);
       postMessage({ id: m.id, v: main_peak(m.x, m.y, m.refine, out) ? { x: out[0], y: out[1] } : null });
     } else postMessage({ id: m.id, error: "unknown operation" });
-  } catch (e) {
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_);
     postMessage({ id: m.id, error: String((e && e.message) || e) });
   }
 };

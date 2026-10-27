@@ -84,7 +84,7 @@ pub struct Scan {
 }
 
 /// The scan types that are not a plain full or product-ion scan, as the row of the index names them.
-pub const KINDS: [&str; 4] = ["PREC", "NL", "NG", "EPI"];
+pub const KINDS: [&str; 6] = ["PREC", "NL", "NG", "EMC", "TDF", "ER"];
 
 impl Scan {
     /// The mobility of the whole scan and its unit (`k0`, `ms`), `None` when the scan has none.
@@ -97,7 +97,7 @@ impl Scan {
         (!self.mob.is_nan()).then_some((f64::from(self.mob), unit))
     }
 
-    /// `PREC`, `NL`, `NG` or `EPI`, `None` for an ordinary scan.
+    /// `PREC`, `NL`, `NG`, `EMC`, `TDF` or `ER`, `None` for an ordinary scan.
     pub fn kind_name(&self) -> Option<&'static str> {
         usize::from(self.kind)
             .checked_sub(1)

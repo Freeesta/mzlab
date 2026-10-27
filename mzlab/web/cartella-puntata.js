@@ -86,7 +86,7 @@ const CartPuntApri = (() => {
       const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
       await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
       S.opened.add(x.path);
-    } catch (e) { CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
     CartPuntVista.render();
   }
 

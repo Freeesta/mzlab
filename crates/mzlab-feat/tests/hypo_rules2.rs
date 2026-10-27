@@ -17,6 +17,9 @@ fn file() -> Vec<u8> {
     std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap()
 }
 
+/// The flat `regole_tp/1` layout that files of earlier versions still have (the shipped file is `/2`).
+const V1: &str = r#"{"format":"regole_tp","version":1,"regole":[{"id":"hydroxylation","delta_formula":"+O","passi_max":2,"livello_previsione":4,"fonte":"transformation_table","direzione_rt":"libera"}]}"#;
+
 fn run(rules: &Rules, groups: Option<&[String]>) -> Registry {
     let frags: Vec<String> = Vec::new();
     let inp = Inputs {
@@ -80,8 +83,8 @@ fn the_file_has_three_profiles_and_the_default_is_photocatalysis() {
 
 #[test]
 fn a_v1_file_is_still_read_and_says_so() {
-    let r =
-        Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap();
+    let v1 = V1.as_bytes();
+    let r = Rules::parse(v1).unwrap();
     assert_eq!((r.version, r.profile.as_str()), (1, ""));
     assert!(r
         .rules
@@ -89,13 +92,10 @@ fn a_v1_file_is_still_read_and_says_so() {
         .all(|x| x.groups_all.is_empty() && x.groups_any.is_empty() && !x.fallback));
     assert_eq!(run(&r, None).rules_version, 1);
     assert_eq!(
-        Rules::parse_profile(
-            &std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap(),
-            Some("fotocatalisi")
-        )
-        .err()
-        .unwrap()
-        .key,
+        Rules::parse_profile(v1, Some("fotocatalisi"))
+            .err()
+            .unwrap()
+            .key,
         "error.hypo.rulesVersion"
     );
 }

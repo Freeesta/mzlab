@@ -40,6 +40,12 @@ fn fixture(tag: &str) -> PathBuf {
     d
 }
 
+fn rules_path(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../TP_Mine/data")
+        .join(name)
+}
+
 fn plan(tail: &str) -> String {
     let raw: Vec<String> = NAMES
         .iter()
@@ -97,11 +103,7 @@ fn page(d: &Path) -> (Vec<u8>, String) {
         samples.trim()
     );
     let parent = format!(r#"{{"name":"parent","neutral":"{FORMULA}","adduct":"[M+H]+"}}"#);
-    let rules = std::fs::read(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../TP_Mine/data/regole_tp.json"
-    ))
-    .unwrap();
+    let rules = std::fs::read(rules_path("regole_tp_2.json")).unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = (0..NAMES.len()).map(open).collect();
     let refs: Vec<_> = f.iter().collect();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", FORMULA, None, &r).unwrap();

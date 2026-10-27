@@ -203,3 +203,13 @@ def test_ms1_range_reaction_of_rfr_is_not_a_reaction():
     assert len(compare.reactions_of(ms2)) == 1
     other = dict(ms1, reactions=[{"precursor": 500, "iso_width": 2}])
     assert len(compare.reactions_of(other)) == 1
+
+
+def test_ms1_reaction_matching_a_filter_range_is_not_a_reaction():
+    react = {"precursor": 442.036, "iso_width": 617.272, "activation": "HCD"}
+    ms1 = {"level": 1, "filter": "FTMS + p ESI Full ms [133.4000-750.6720]", "mz_low": 133.0, "mz_high": 751.0, "reactions": [react]}
+    assert compare.reactions_of(ms1) == []
+    two = dict(ms1, filter="FTMS + p ESI Full ms [100.0000-200.0000, 133.4000-750.6720]", mz_low=100.0, mz_high=751.0)
+    assert compare.reactions_of(two) == []
+    assert len(compare.reactions_of(dict(ms1, level=2))) == 1
+    assert len(compare.reactions_of(dict(ms1, reactions=[dict(react, precursor=500)]))) == 1

@@ -53,7 +53,7 @@ try:
                 stage(q, [TMP])
                 q.click("text=Carica dati"); attendi(q, "typeof E !== 'undefined' && E.files.length >= 1")
                 q.wait_for_selector("#tour-invito", timeout=5000); axe(q, "'#tour-invito'")
-                q.click("#tour-inv-no"); q.click("#np-set"); q.wait_for_selector("#uipset"); q.click("#uip-tour")
+                q.click("#tour-inv-no"); q.click("#np-set"); q.wait_for_selector("#uipset"); q.evaluate("document.getElementById('uip-g-app').open = true"); q.click("#uip-tour")
                 q.wait_for_selector("#tour-dialog", timeout=3000)
                 for i in range(15):
                     axe(q, "'#tour-dialog'")

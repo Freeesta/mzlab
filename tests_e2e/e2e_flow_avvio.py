@@ -55,7 +55,7 @@ try:
             assert pg.locator("#flx-root").count() == 0
             assert pg.get_attribute("#flx-sk", "aria-busy") == "true"
             labels = pg.locator("#flx-sk button").all_inner_texts()
-            for want in ("Templates", "Add analysis", "Simple", "Advanced", "Undo", "Fit", "Checklist", "Open", "Run", "Canvas", "List view"): assert want in labels, (want, labels)
+            for want in ("Templates", "Add step", "Simple", "Advanced", "Undo", "Fit", "Auto-run", "Run", "Terminal", "Canvas", "List"): assert want in labels, (want, labels)
             assert pg.locator("#flx-sk h2").inner_text() == "Flow"
             assert pg.locator("#flx-sk .flx-sk-cv").count() == 1
         step("the skeleton (bar, tabs, canvas) is there while NOTHING of CORE, the lists or the .wasm has arrived", skeleton)

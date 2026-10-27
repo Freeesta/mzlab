@@ -55,16 +55,18 @@ pub struct Part {
     pub mode: &'static str, // "ms1" | "ms2" | "mrm"
     pub pol: Option<i8>,
     pub tag: String,
-    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EPI`), `None` for the ordinary ones.
+    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EMC`, `TDF`, `ER`), `None` for the ordinary ones.
     pub kind: Option<&'static str>,
 }
 
 /// The scan types in the order they are listed, with the name shown for each.
-const KINDS: [(&str, &str); 4] = [
+const KINDS: [(&str, &str); 6] = [
     ("PREC", "Precursor ion"),
     ("NL", "Neutral loss"),
     ("NG", "Neutral gain"),
-    ("EPI", "EPI"),
+    ("EMC", "EMC"),
+    ("TDF", "TDF"),
+    ("ER", "ER"),
 ];
 
 fn kind_name(k: &str) -> &'static str {

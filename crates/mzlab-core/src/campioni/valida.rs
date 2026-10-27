@@ -11,6 +11,8 @@ pub struct Avviso {
     pub severity: &'static str,
     pub file: Option<usize>,
     pub series: String,
+    /// The free column a finding is about (`missingValue`, `typeMismatch`); empty otherwise.
+    pub column: String,
 }
 
 fn push(
@@ -25,6 +27,7 @@ fn push(
         severity,
         file,
         series: series.to_string(),
+        column: String::new(),
     });
 }
 
@@ -111,7 +114,7 @@ pub fn valida(cs: &[Campione]) -> Vec<Avviso> {
     out
 }
 
-/// `{"avvisi":[{"codice","gravita","file","serie"}],"bloccante"}`: `bloccante` when one finding is an error (mzFinder does not start).
+/// `{"avvisi":[{"codice","gravita","file","serie"[,"colonna"]}],"bloccante"}`: `bloccante` when one finding is an error (mzFinder does not start).
 pub fn valida_json(a: &[Avviso]) -> String {
     let mut j = Out::default();
     j.raw("{\"avvisi\":[");
@@ -127,7 +130,11 @@ pub fn valida_json(a: &[Avviso]) -> String {
             Some(f) => j.int(f as i64),
             None => j.raw("null"),
         };
-        j.raw(",\"serie\":").str(&x.series).raw("}");
+        j.raw(",\"serie\":").str(&x.series);
+        if !x.column.is_empty() {
+            j.raw(",\"colonna\":").str(&x.column);
+        }
+        j.raw("}");
     }
     let blocks = a.iter().any(|x| x.severity == "error");
     j.raw("],\"bloccante\":")
@@ -171,7 +178,7 @@ pub fn per_tp(cs: &[Campione]) -> PerTp {
             "blank" => &mut p.blank,
             "dark" => &mut p.dark,
             "infusion" => &mut p.infusion,
-            "qc" => &mut p.qc,
+            "qc" | "pool" => &mut p.qc,
             _ => &mut p.std,
         };
         list.push(i);

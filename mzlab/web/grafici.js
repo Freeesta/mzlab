@@ -182,7 +182,7 @@ async function draw(p) {
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -284,14 +284,17 @@ function legCollapse(p) {
 }
 
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
-function traceMax(s, x0, x1) {
+function traceMax(DC, s, x0, x1) {
   let m = 1e-9, neg = 0;
   for (const za of [s.ze ?? -Infinity, -Infinity]) {
-    for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= za) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    [m, neg] = DC.extent(s.x, s.ys, Math.max(x0, za), x1, m, neg);
     if (m > 1e-9 || neg < 0) break;
   }
   return { m, neg };
 }
+// the smoothed and the clipped copies of a trace depend on the data only: a zoom or a pan draws again with the same arrays
+const SMOOTHED = new WeakMap(), CLIPPED = new WeakMap();
+const cachedMap = (cache, a, f) => { let r = cache.get(a); if (!r) { r = f(a); cache.set(a, r); } return r; };
 // the zero line (dashed; with a background it is the background itself, labelled) and the grey band of the initial zone
 function zeroMarks(g, sr, X, Y, W, H, band) {
   const fo = sr.some(s => s.cf), y0 = Math.round(Y(0));
@@ -301,6 +304,7 @@ function zeroMarks(g, sr, X, Y, W, H, band) {
   if (xb > M.l) { g.fillStyle = "rgba(120,120,120,.22)"; g.fillRect(M.l, M.t, xb - M.l, H - M.t - M.b); }
 }
 async function drawLines(p) {
+  const DC = (/** @type {any} */ (window).DECIMA ||= await import("./decima.js"));       // loaded once; later drawings do not wait for the module system
   const all = await seriesOf(p); if (window.ETPK && !p._a) await ETPK.ready(p, all.filter(s => !isHid(p, s)));       // the first drawing of a panel waits a moment for the peak labels (drawn once)
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
@@ -317,9 +321,9 @@ async function drawLines(p) {
   const flo = Math.floor(lo * 10 + 1e-6) / 10, fhi = Math.ceil(hi * 10 - 1e-6) / 10, x0 = p.zoom ? p.zoom[0] : flo, x1 = p.zoom ? p.zoom[1] : fhi;
   const so = window.SUBREF ? SUBREF.eff(p) : null, clipDraw = !!p.clipDraw || !!(so && so.clip);
   sr.forEach(s => {
-    s.ys = smooth(s.y, p.smooth ? 3 : 0);
-    if (clipDraw) s.ys = s.ys.map(v => Math.max(0, v));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
-    const { m, neg } = traceMax(s, x0, x1);
+    s.ys = p.smooth ? cachedMap(SMOOTHED, s.y, y => smooth(y, 3)) : s.y;
+    if (clipDraw) s.ys = cachedMap(CLIPPED, s.ys, ys => ys.map(v => Math.max(0, v)));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
+    const { m, neg } = traceMax(DC, s, x0, x1);
     s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
   const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
@@ -334,7 +338,7 @@ async function drawLines(p) {
   let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
-  if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
+  if (!stk && !logy) for (const s of sr) ymin = DC.extent(s.x, s.ys, Math.max(x0, s.ze ?? -Infinity), x1, -Infinity, ymin)[1];
   if (ymin < 0) ymin *= 1.08;
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
@@ -387,14 +391,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
-    let curX = -999, minY, maxY, firstY, lastY, minFirst = true;
-    const flush = (cx) => { if (curX === -999) return; if (!st) { g.moveTo(cx, firstY); st = true; } else g.lineTo(cx, firstY); if (minFirst) { g.lineTo(cx, minY); g.lineTo(cx, maxY); } else { g.lineTo(cx, maxY); g.lineTo(cx, minY); } g.lineTo(cx, lastY); };
-    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = Math.round(X(r)), py = Y(U(s, s.ys[i]));
-      if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = py; minFirst = true; }
-      else { if (py < minY) { minY = py; if (maxY === firstY) minFirst = true; } if (py > maxY) { maxY = py; if (minY === firstY) minFirst = false; } lastY = py; }
-    });
-    flush(curX);
+    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);

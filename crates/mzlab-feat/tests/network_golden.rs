@@ -126,7 +126,7 @@ fn dig() -> Dig {
 
 #[test]
 fn mass_network_does_not_change() {
-    let rules = Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp.json")).unwrap();
+    let rules = Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp_2.json")).unwrap();
     let got = mass_network(&dig(), &rules);
     assert!(got.contains("\"edges\""), "{got}");
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(GOLDEN);

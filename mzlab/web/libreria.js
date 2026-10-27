@@ -34,10 +34,10 @@ const LIB = (() => {
   const call2 = (cmd, payload = {}, prog) => new Promise((ok, no) => { const reqId = ++seq; pend.set(reqId, { ok, no, prog }); try { w().postMessage({ cmd, reqId, ...payload }); } catch (e) { pend.delete(reqId); no(e); } });
   const call = async (cmd, payload = {}, prog) => {
     try { return await call1(cmd, payload, prog); }
-    catch (e) { if (!(e && e.fatal)) throw e; restart(); return call1(cmd, payload, prog); }
+    catch (e_) { const e = /** @type {Lanciato} */ (e_); if (!(e && e.fatal)) throw e; restart(); return call1(cmd, payload, prog); }
   };
   // for the tests: which engine answers, and a way to kill it
-  const engine = { info: () => call1("engine"), async crash() { try { await call1("crash"); } catch (e) { if (e && e.fatal) restart(); else throw e; } }, get fallback() { return forceJs; } };
+  const engine = { info: () => call1("engine"), async crash() { try { await call1("crash"); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e && e.fatal) restart(); else throw e; } }, get fallback() { return forceJs; } };
   const EHt = t => (typeof EH === "function" ? EH(t) : String(t));
   const fmtN = n => I18N.num(+n);
   const dlgCss = `<style>#libdlg,#libres{max-width:min(1100px,96vw);width:min(1100px,96vw)}#libdlg{width:min(720px,96vw)}#libdlg .drop{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;margin:8px 0}#libdlg .drop.over{border-color:var(--accent);background:var(--sel)}
@@ -110,7 +110,7 @@ const LIB = (() => {
       const input = d.querySelector("#lib-file"), dirin = d.querySelector("#lib-dirin"), drop = d.querySelector("#lib-drop");
       d.querySelector("#lib-pick").onclick = () => input.click();
       d.querySelector("#lib-pickdir").onclick = () => dirin.click();
-      d.querySelector("#lib-fchoose").onclick = async () => { try { await chooseFolder(); } catch (e) { if (e && e.name !== "AbortError") d.querySelector("#lib-st").innerHTML = `<div class="err">${EHt(e.message)}</div>`; } refresh(); };
+      d.querySelector("#lib-fchoose").onclick = async () => { try { await chooseFolder(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e && e.name !== "AbortError") d.querySelector("#lib-st").innerHTML = `<div class="err">${EHt(e.message)}</div>`; } refresh(); };
       d.querySelector("#lib-fgrant").onclick = async () => { await grantOnce(); refresh(); };
       d.querySelector("#lib-fbrowser").onclick = async () => { await useBrowserFolder(); refresh(); };
       d.querySelector("#lib-fscan").onclick = () => refresh();
@@ -151,7 +151,7 @@ const LIB = (() => {
       box.querySelectorAll("[data-idx]").forEach(b => b.onclick = () => indexOne(b.dataset.idx));
       if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = f.mode === "opfs" || f.mode == null ? I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")) : ""; }
       if (f.mode === "opfs" && navigator.storage && /** @type {any} */ (navigator.storage).persist) { await (await import("./archivio.js")).persistOnce(); const p = await navigator.storage.persisted(); d.querySelector("#lib-fnote").textContent = I18N.t("lib.folder.noteOpfs") + (p ? "" : " " + I18N.t("lib.folder.persistNo")); }
-    } catch (e) { box.innerHTML = h`<p class="err">${e.message}</p>`; }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); box.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   const CARTELLA_stem = n => String(n).replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
   async function indexOne(name) {
@@ -160,7 +160,7 @@ const LIB = (() => {
     try {
       const r = await call("index", { name }, m => { st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
       st.innerHTML = `<div class="sm">${EHt(name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}.</div>`;
-    } catch (e) { st.innerHTML = h`<div class="err">${name}: ${e.message}</div>`; }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = h`<div class="err">${name}: ${e.message}</div>`; }
     await refresh();
   }
   async function indexAll() { for (const n of [...toIndex]) await indexOne(n); }
@@ -185,7 +185,7 @@ const LIB = (() => {
       avail = T() ? await call("catalog", { cat: (await nativeJson("lib_catalog")).catalog }) : await call("catalog");
       avail.cfg = T() ? await T().invoke("lib_get_config") : null;
       renderAvail();
-    } catch (e) { box.innerHTML = h`<p class="err">${e.message}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); box.innerHTML = h`<p class="err">${e.message}</p>`; d.querySelector("#lib-avail-go").hidden = true; }
   }
   function renderAvail() {
     const d = /** @type {any} */ (document.getElementById("libdlg")), box = d.querySelector("#lib-avail-list"), A = avail, st = new Map(A.avail.map(a => [a.id, a.stato]));
@@ -219,9 +219,9 @@ const LIB = (() => {
       }
       for (const id of xids) {
         try { await nativeJson("lib_download_external", { id }); done++; const e = avail.cat.esterne.find(x => x.id === id); await refresh(); await indexOne(`${e.id}.${e.formato}`); }
-        catch (e) { fails.push(`${name(id)}: ${e.message}`); }
+        catch (e_) { const e = /** @type {Lanciato} */ (e_); fails.push(`${name(id)}: ${e.message}`); }
       }
-    } catch (e) { fails.push(e.message); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); fails.push(e.message); }
     finally { if (off) off(); busy = false; go.disabled = false; cn.hidden = true; }
     fails.forEach(f => A.fail("", f)); for (let i = 0; i < done; i++) A.ok();
     A.end(done ? { head: I18N.t("lib.avail.done", { n: done }) } : undefined);
@@ -235,7 +235,7 @@ const LIB = (() => {
       try {
         const r = await call("add", { file: f }, m => { st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.readN", { n: fmtN(m.n), pct: Math.round(m.read / m.total * 100) })}</div><progress max="${m.total}" value="${m.read}"></progress>`; });
         st.innerHTML = `<div class="sm">${EHt(f.name)}: ${I18N.t("lib.doneN", { n: fmtN(r.info.n) })}${r.info.dropped ? ", " + I18N.t("lib.droppedN", { n: fmtN(r.info.dropped) }) : ""}.</div>`;
-      } catch (e) { st.innerHTML = `<div class="err">${EHt(f.name)}: ${EHt(e.message)}</div>`; }
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = `<div class="err">${EHt(f.name)}: ${EHt(e.message)}</div>`; }
       await refresh();
     }
   }
@@ -394,7 +394,7 @@ const LIB = (() => {
       try {
         st.res = await call("search", { peaks: q.peaks, prec: st.prec, pol: q.pol, tol: { v: st.v, unit: st.unit }, frag: st.frag }); st.sel = 0;
         msg(st.res.libs ? I18N.t("lib.results", { n: st.res.results.length, ms: Math.round(performance.now() - t0) }) : "");
-      } catch (e) { st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
       show();
     };
     d.querySelector("#lr-go").onclick = run;
@@ -488,7 +488,7 @@ const LIB = (() => {
       try {
         const [a, b] = await Promise.all([call("search", { peaks: q.peaks, prec: st.prec, pol: q.pol, tol: { v: st.v, unit: "ppm" }, frag: st.frag }), call("analogs", { peaks: q.peaks, prec: st.prec, pol: q.pol, frag: st.frag, maxDelta: 200, max: 10 })]);
         st.res = a; st.an = b; msg(a.libs ? I18N.t("lib.results", { n: a.results.length, ms: Math.round(performance.now() - t0) }) : "");
-      } catch (e) { st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
       show();
     };
     thresholdsBind(d, show);
@@ -588,7 +588,7 @@ const LIB = (() => {
         st.innerHTML = `<div class="sm">${I18N.t("lib.all.summary", { q: queries.length, ms: Math.round(performance.now() - t0), g: groups.length, r: rows.length })}</div>`;
       };
       show(false);
-    } catch (e) { st.innerHTML = h`<p class="err">${e.message}</p>`; }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = h`<p class="err">${e.message}</p>`; }
   }
   function gotoScan(sid, d) {                         // the MS2 panel of the DDA trio shows that scan
     try {
@@ -603,6 +603,6 @@ const LIB = (() => {
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
   if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.identAll", gruppo: "lib", viste: ["chrom"], nome: () => I18N.t("ctx.chrom.identAll"),
     visibile: c => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), esegui: c => identifyAll(c.k) });
-  return { open, addFiles, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
+  return { open, addFiles, queryOf, profOf, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
 })();
 window.LIB = LIB;

@@ -138,7 +138,7 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
       const msg = box.querySelector("#prof-msg"), go = box.querySelector("#prof-go");
       go.disabled = true; msg.textContent = "";
       try { await run(st.text, st.rt); paintRes(box); }
-      catch (err) { msg.textContent = String(err && err.message || err); }
+      catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); }
       go.disabled = false;
     };
   }
@@ -147,7 +147,7 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
     st.text = String(mz); st.rt = String(rt); save();
     if (window.BARRA) BARRA.setTab("stat", { noFocus: true, instant: true });
     const box = document.querySelector("#stat-profile");
-    if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err) { const m = box.querySelector("#prof-msg"); if (m) m.textContent = String(err && err.message || err); } }
+    if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); const m = box.querySelector("#prof-msg"); if (m) m.textContent = String(err && err.message || err); } }
     return res;
   }
 

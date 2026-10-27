@@ -27,7 +27,7 @@ const RAPPORTO = (() => {
   async function fileInfo(f) {
     try { const j = await J(`api/fileinfo?k=${f.k}`); return { nome: f.file, strumento: j.instrument || "", seriale: j.serial || "", componenti: j.components || [], analizzatori: j.analyzers || [], software: j.software || [],
       conversione: j.conversion || [], inizio: j.start || "", scansioni: j.scans, livelli: j.levels || {}, rt: j.rt || [], filtri: Object.keys(j.filters || {}).length ? j.filters : undefined, mz: j.mz_range || undefined }; }
-    catch (e) { return { nome: f.file, errore: String(e && e.message || e) }; }
+    catch (e_) { const e = /** @type {Lanciato} */ (e_); return { nome: f.file, errore: String(e && e.message || e) }; }
   }
   const slim = r => ({ mz: r.mz, rt: r.rt, finestra_rt: r.win, tolleranza: r.tol, unita: r.unit, mediana_area: r.median_area, deriva_rt_per_file: r.rt_drift_per_file, deriva_area_per_file: r.area_drift_per_file,
     cv_area: r.cv_area, cv_area_qc: r.cv_area_qc, accuratezza_massa: r.mass_accuracy, righe: r.rows });

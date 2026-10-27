@@ -58,7 +58,7 @@ const KMD = (() => {
       const tol = numIt(box.querySelector("#kmd-tol").value), mn = parseInt(box.querySelector("#kmd-min").value, 10);
       st.unit = box.querySelector("#kmd-unit").value; st.tol = tol > 0 ? tol : 3; st.min = mn >= 2 ? mn : 3; save();
       const msg = box.querySelector("#kmd-msg"); if (msg) msg.textContent = "";
-      try { await compute(); } catch (err) { if (msg) msg.textContent = String(err && err.message || err); res = null; }
+      try { await compute(); } catch (err_) { const err = /** @type {Lanciato} */ (err_); if (msg) msg.textContent = String(err && err.message || err); res = null; }
       paintRes(box);
     };
     box.onclick = e => {

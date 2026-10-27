@@ -70,7 +70,7 @@ const isCal=f=>f.type==="standard";
 // value from the name, in the unit of the table
 const concFrom=f=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
-  ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...f,time,type,conc,use:o?o.use:true,
+  ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed}});
   if(list.some(f=>!old[f.name]))hrMixPreselect();
@@ -99,22 +99,27 @@ function renderMethods(){const el=$("#mlist");
 const EXPN={full:"Full Scan",ms2:"MS2 (Product Ion)",mrm:"MRM",infusion:I18N.t("inf.name")},expn=k=>k==="empty"?I18N.t("load.exp.empty"):EXPN[k]||k;
 // Full Scan + MS2 = DDA; polarities and precursor counts are not shown
 const mixedText=m=>{const ns=[];for(const p of m){const n=p.name==="MS2"&&ns.includes("Full Scan")?"DDA":p.name;if(!ns.includes(n))ns.push(n)}return ns.join(" + ")};
-const expCell=f=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind?`<b>${expn(f.kind)}</b>${f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""}`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
-function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div class="fail sm">${I18N.t("load.exp.nameHint",{hint:expn(f.hint),kind:expn(f.kind)})}</div>`:""}
+// the experiment type is a menu: "Auto: <type>" (what the engine detects, the reason in the tooltip) or a type chosen by hand, remembered per file
+const expSel=(f,attr,cur,auto,tip)=>`<select ${attr} class="sm" aria-label="${I18N.t("load.table.experiment")}" title="${esc(tip)}">${auto==null?`<option value="" disabled ${cur==null?"selected":""}>${I18N.t("load.exp.setAll")}</option>`:`<option value="" ${cur==null?"selected":""}>${I18N.t("load.exp.auto",{name:expn(auto)})}</option>`}${TIPOF.KINDS.map(k=>`<option value="${k}" ${k===cur?"selected":""}>${expn(k)}</option>`).join("")}</select>`;
+const expCell=f=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind in GORD?expSel(f,`data-exp="${esc(f.name)}"`,TIPOF.manual(f.name),f.kindAuto||f.kind,TIPOF.why(f))+(f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""):f.kind?`<b>${expn(f.kind)}</b>`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
+// the types of the files change in place (table, viewer, XIC button) and the table is sorted again
+function expSet(names,kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach(f=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);sortFiles();renderFiles()}
 function renderFiles(){const F=ST.files,el=$("#flist");
   const hasCal=F.some(f=>f.use&&isCal(f)),hasTime=F.some(f=>f.time!=null),tu=tunitGet(),tuSel=`<select id="tunit" title="${I18N.t("load.table.tunit.title")}" aria-label="${I18N.t("load.table.tunit.title")}">${Object.keys(TIME_UNITS).map(k=>`<option value="${k}" ${k===tu?"selected":""}>${tunitLabel(k)}</option>`).join("")}</select>`,unitSel=`<select id="cunit" title="${I18N.t("load.table.unit.title")}">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   // GUESS: concentration cells
   const ncol=7+(hasCal?1:0),GUESS=` title="${I18N.t("load.guess.title")}"`;
   let last="",rows="";
   F.forEach((f,i)=>{if(CONVROWS.holds(f.name))return;const g=loadGrp(f).key;
-    if(g!==last){last=g;const mem=F.filter(x=>loadGrp(x).key===g&&!CONVROWS.holds(x.name));rows+=`<tr class="grp"><td colspan="${ncol}">${loadGrpName(f)}${typeof polHead==="function"&&["full","ms2","mrm"].includes(f.kind)&&!(f.mixed&&f.mixed.length>1)?polHead(mem):""} <span class="muted">${I18N.t("load.group.count",{n:mem.length})}</span></td></tr>`}
-    rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${CONVQ.label(f.name)?` <span class="muted sm" data-cvq="${esc(f.name)}">${esc(CONVQ.label(f.name))}</span>`:""} ${typeof polSign==="function"?polSign(f,F):""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
+    if(g!==last){last=g;const mem=F.filter(x=>loadGrp(x).key===g&&!CONVROWS.holds(x.name));rows+=`<tr class="grp"><td colspan="${ncol}">${loadGrpName(f)}${typeof polHead==="function"&&["full","ms2","mrm"].includes(f.kind)&&!(f.mixed&&f.mixed.length>1)?polHead(mem):""} <span class="muted">${I18N.t("load.group.count",{n:mem.length})}</span>${f.kind in GORD&&!(f.mixed&&f.mixed.length>1)&&mem.length>1?" "+expSel(f,`data-expg="${esc(g)}"`,null,null,I18N.t("load.exp.setAll")):""}</td></tr>`}
+    rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${CONVQ.label(f.name)?` <span class="muted sm" data-cvq="${esc(f.name)}">${esc(CONVQ.label(f.name))}</span>`:""} ${typeof polSign==="function"?polSign(f,F):""}</td><td>${expCell(f)}</td>`+
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu)+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`});
   rows+=CONVROWS.html(ncol);
   el.innerHTML=(F.length||CONVROWS.running().length?(CONV.native().length?`<details class="muted sm" id="advconv" style="margin-top:8px"><summary>${I18N.t("conv.adv")}</summary><label><input type="checkbox" id="npress" ${CONV.numpress?"checked":""}> ${I18N.t("conv.np")}</label><button type="button" class="hq" data-help="numpress" aria-label="${I18N.t("help.numpress.title")}">?</button></details>`:"")+(CONVQ.ready()?`<div style="margin-top:8px"><button type="button" class="sec sm" id="saveall" title="${I18N.t("conv.q.saveTitle")}">${I18N.t("conv.q.save")}</button></div>`:CONV.size>1?`<div style="margin-top:8px"><button type="button" class="sec sm" id="dlall" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dlall")}</button></div>`:"")+`<table style="margin-top:8px"><tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")}${hasTime?` ${tuSel}`:""}</th>${hasCal?`<th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th>`:""}<th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`+rows+`</table>`:"")+CONVROWS.summary();
   CONVROWS.wire(el);
+  el.querySelectorAll("[data-exp]").forEach(x=>x.onchange=()=>expSet([x.dataset.exp],x.value));
+  el.querySelectorAll("[data-expg]").forEach(x=>x.onchange=()=>expSet(F.filter(y=>loadGrp(y).key===x.dataset.expg&&!CONVROWS.holds(y.name)).map(y=>y.name),x.value));
   el.querySelectorAll("[data-k]").forEach(x=>{
     x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;let v=x.value;
       if(k==="time"||k==="conc"){const dk=k==="time"&&RUOLI.roleOf(f)==="dark";v=parseDecimal(x.value,dk);if(Number.isNaN(v)){x.setAttribute("aria-invalid","true");x.title=I18N.t("load.table.num.bad");x.classList.add("bad");return}x.removeAttribute("aria-invalid");if(k==="time")v=dk?darkTime(timeStored(v,tunitGet())):timeStored(v,tunitGet())}
@@ -196,7 +201,7 @@ async function wiffToMzml(files,box,signal){const rb=window.MZLAB_RUST_READY?awa
       const s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       // the module's answer for the pair holds for its samples (moduloWants)
       s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
-    catch(x){const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
+    catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
     CONVROWS.drop(e.row)}
@@ -228,7 +233,7 @@ async function moduloToMzml(files,box,rep){
     CONVROWS.add(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
     try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,p=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
       ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
-    catch(e){ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
+    catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm)}}
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
@@ -293,7 +298,7 @@ async function fetchDemo(names,signal){const out=[];
   try{for(const n of names){CONVROWS.set(n,"get",0);const r=await fetch("static/esempi/"+n,{signal});if(!r.ok)throw new Error(n);const len=+(r.headers.get("content-length")||0),parts=[];let got=0;
       if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;CONVROWS.set(n,"get",len?Math.floor(40*Math.min(1,got/len)):0,undefined,{done:got,total:len})}}else parts.push(await r.blob());
       CONVROWS.set(n,"wait",40);CONVROWS.base(n,40);out.push(new File(parts,n))}}
-  catch(e){if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
+  catch(e_){const e=/** @type {Lanciato} */(e_);if(signal.aborted)names.forEach(n=>CONVROWS.finish(n,"cancel"));else{names.forEach(n=>CONVROWS.drop(n));fail(I18N.t("load.demo.error",{message:e.message}))}return []}
   return out}
 // `demo`: names of example files still to download (static/esempi): their rows are in the list at once, in order, and the download is the first part of each row
 async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
@@ -323,7 +328,7 @@ async function upload0(files,into,box,signal){
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
       if(j.error)throw I18N.err(j);const x=(j.files||[]).find(y=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
       LOADFAIL.delete(f.name)}
-    catch(e){LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
+    catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
       // a sample of a maker's file: the error stays on its row, with «Details» and the trace of the loading
       if(CONVROWS.find(f.name)&&f.mzlabNat){CONVROWS.finish(f.name,"fail",{msg:e.message,diag:d});return}
@@ -342,8 +347,10 @@ async function upload0(files,into,box,signal){
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
-$("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
-$("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
+$("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{const go=flowOpen(e.target),p=CartCarica.fromInput(e.target.files);e.target.value="";if(go)p.then(idle).then(directDone)};
+// Flow's «Add files» and «Add a folder» set data-flow-open on the input: the files read are then opened at once, as dropped ones are (Flow reads the open files, not the loading table)
+const flowOpen=el=>{const on=el.dataset.flowOpen==="1";delete el.dataset.flowOpen;return on};
+$("#drop").onclick=()=>{delete $("#pick").dataset.flowOpen;$("#pick").click()};$("#pick").onchange=e=>{const go=flowOpen(e.target),p=upload([...e.target.files],"data");e.target.value="";if(go)p.then(idle).then(directDone)};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
 // a dropped folder is read by cartella-carica.js
@@ -369,7 +376,7 @@ async function openRest(rest,tok){
     // taken off the list: not read
     const p=E.pending.find(x=>x.file===s.file&&x.state==="wait");if(!p)continue;
     try{await post("api/explore",{samples:[s],append:true})}
-    catch(e){p.state="err";p.msg=e.message;renderFileList();continue}
+    catch(e_){const e=/** @type {Lanciato} */(e_);p.state="err";p.msg=e.message;renderFileList();continue}
     // LR: the overlay is redrawn at most every ~200 ms, whatever the number of files that arrived
     added.push(p);if(Date.now()-last>=200)await boot();
   }
@@ -397,7 +404,7 @@ async function directDone(){
   fresh.forEach(f=>{f.use=!!f.hr===world});
   const skipped=fresh.filter(f=>!f.use).length,n=fresh.length-skipped;
   try{if(n)await openStaged(false);directNote(skipped?"files.drop.mixed":"files.drop.done",{n,m:skipped})}
-  catch(e){directNote("files.drop.fail",{msg:e.message})}
+  catch(e_){const e=/** @type {Lanciato} */(e_);directNote("files.drop.fail",{msg:e.message})}
   renderFiles()}
 (()=>{const dz=$("#dfiles");
   ["dragenter","dragover"].forEach(t=>dz.addEventListener(t,e=>{if(!dropReady()||!dropHasFiles(e))return;e.preventDefault();dropZone(true)}));
@@ -413,7 +420,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
     // the time of a dark is negative whatever way it got here (name, table, old project)
     ST.files.forEach(f=>{if(RUOLI.roleOf(f)==="dark")f.time=darkTime(f.time)});
     await openStaged(true)}
-  catch(e){
+  catch(e_){const e=/** @type {Lanciato} */(e_);
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 
       <button id="hrmix-replace" class="btn">${I18N.t("load.hrmix.replace")}</button> 
@@ -428,7 +435,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
           await post("api/new",{});
           await post("api/explore",{samples:ST.files.filter(f=>usable(f)&&!isOpen(f)).map(f=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:null}))});
           STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave();
-        }catch(e2){$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
+        }catch(e2_){const e2=/** @type {Lanciato} */(e2_);$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
       };
     } else {
       $("#gomsg").innerHTML=h`<span class="fail">${e.message}</span>`;

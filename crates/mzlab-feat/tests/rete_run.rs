@@ -32,7 +32,7 @@ const ROWS: [(f64, f64, [f64; 7]); 3] = [
 ];
 
 fn rules() -> Vec<u8> {
-    include_bytes!("../../../TP_Mine/data/regole_tp.json").to_vec()
+    include_bytes!("../../../TP_Mine/data/regole_tp_2.json").to_vec()
 }
 
 fn campioni() -> String {
