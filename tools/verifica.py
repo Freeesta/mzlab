@@ -71,7 +71,8 @@ def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, floa
         p = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout)
         out, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
     except subprocess.TimeoutExpired as e:
-        out, rc = f"{(e.stdout or b'').decode('utf-8', 'replace') if isinstance(e.stdout, bytes) else (e.stdout or '')}\nTIMEOUT dopo {timeout} s", 124
+        txt = lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else (v or "")
+        out, rc = f"{txt(e.stdout)}\n{txt(e.stderr)}\nTIMEOUT dopo {timeout} s", 124
     except FileNotFoundError as e:
         out, rc = f"comando non trovato: {e}", 127
     log.write_text(out, encoding="utf-8")
@@ -203,7 +204,8 @@ def pytest(results, timeout) -> None:
         results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
     # serial pytest needs more than 20 min on a 4-CPU runner; with pytest-xdist it still reached 96% at 1200 s on the Linux runner, hence 1800 s (see main)
     par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
-    rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *par, "tests"], LOG / "pytest.log", timeout)
+    # faulthandler dumps the stack of a test that runs for over 7 min, so a hang names its test in the log (the dots do not)
+    rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "faulthandler_timeout=420", "--durations=10", *par, "tests"], LOG / "pytest.log", timeout)
     last = [l for l in out.strip().splitlines() if re.search(r"passed|failed|error", l)][-1:] or out.strip().splitlines()[-1:]
     fails = [l for l in out.splitlines() if l.startswith(("FAILED", "ERROR"))][:6]
     results.append(("pytest", "OK" if rc == 0 else "FAIL", dt, (fails or []) + last if rc else last))
