@@ -106,6 +106,9 @@ pub fn quality(rt: &[f64], y: &[f64], lo: usize, hi: usize, noise: f64) -> Quali
     Quality { gaussian, asymmetry, noise_score }
 }
 
+/// Half width (points) of the window that measures the scatter of the raw points around a maximum.
+const LOCAL_NOISE_HALF: usize = 4;
+
 #[derive(Debug, Clone, Copy)]
 pub struct ProminenceParams {
     /// A peak must stand out of its valleys by at least `snr` times the noise.
@@ -162,6 +165,14 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     // local maxima and their prominence
     let (left_min, right_min) = (reach_min(&ys, false), reach_min(&ys, true));
     let mut cand: Vec<(usize, f64)> = Vec::new();
+    // sampling noise rides on the signal (counting noise grows with the height): the scatter of the raw points around the smoothed ones near
+    // each maximum, so that a ripple on the top or the shoulder of one peak is not a peak of its own
+    let sq: Vec<f64> = std::iter::once(0.0)
+        .chain(y[..n].iter().zip(&ys).scan(0.0, |acc, (a, b)| {
+            *acc += (a - b).powi(2);
+            Some(*acc)
+        }))
+        .collect();
     for j in 1..n - 1 {
         if !(ys[j] > ys[j - 1] && ys[j] >= ys[j + 1] && ys[j] > 0.0) {
             continue;
@@ -169,7 +180,9 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         // lowest point between the apex and the next higher point on each side (or the trace end)
         let (left, rm) = (left_min[j], right_min[j]);
         let prom = ys[j] - left.max(rm);
-        if prom >= need {
+        let (a, b) = (j.saturating_sub(LOCAL_NOISE_HALF), (j + LOCAL_NOISE_HALF + 1).min(n));
+        let local = ((sq[b] - sq[a]) / (b - a) as f64).sqrt();
+        if prom >= need && prom >= p.snr * local {
             cand.push((j, prom));
         }
     }

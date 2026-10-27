@@ -79,3 +79,66 @@ fn overlapping_peaks_keep_the_drop_line() {
         }
     }
 }
+
+/// Complementary error function (Numerical Recipes `erfcc`, relative error below 1.2e-7).
+fn erfc(x: f64) -> f64 {
+    let z = x.abs();
+    let t = 1.0 / (1.0 + 0.5 * z);
+    let poly = -z * z - 1.265_512_23
+        + t * (1.000_023_68
+            + t * (0.374_091_96
+                + t * (0.096_784_18
+                    + t * (-0.186_288_06
+                        + t * (0.278_868_07
+                            + t * (-1.135_203_98
+                                + t * (1.488_515_87 + t * (-0.822_152_23 + t * 0.170_872_77))))))));
+    let r = t * poly.exp();
+    if x >= 0.0 {
+        r
+    } else {
+        2.0 - r
+    }
+}
+
+/// Exponentially modified Gaussian: a narrow peak with a steep rise and a longer right tail.
+fn emg(t: f64, c: f64, tau: f64, a: f64) -> f64 {
+    a / (2.0 * tau)
+        * (SIGMA * SIGMA / (2.0 * tau * tau) - (t - c) / tau).exp()
+        * erfc((SIGMA * SIGMA / tau - (t - c)) / (SIGMA * 2f64.sqrt()))
+}
+
+/// One asymmetric peak (sigma 0.05 min, right tail) with counting noise gets exactly one label: the ripple on its rising side or top was
+/// a second peak in some of these 200 noisy copies.
+#[test]
+fn one_asymmetric_peak_is_one_peak() {
+    for (dt, tau, amp) in [
+        (0.01, 0.05, 300.0),
+        (0.01, 0.1, 300.0),
+        (0.01, 0.1, 3000.0),
+        (0.02, 0.1, 300.0),
+    ] {
+        for seed0 in 0..200u64 {
+            let mut seed = seed0 * 7919 + 13;
+            let mut rnd = || {
+                seed = seed
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                (seed >> 33) as f64 / f64::from(1u32 << 31) - 0.5
+            };
+            let rt: Vec<f64> = (0..(20.0 / dt) as usize).map(|i| i as f64 * dt).collect();
+            let y: Vec<f64> = rt
+                .iter()
+                .map(|&t| {
+                    let m = emg(t, 11.2, tau, amp) * 0.125 + 20.0;
+                    let noise: f64 = (0..12).map(|_| rnd() + 0.5).sum::<f64>() - 6.0;
+                    (m + m.sqrt() * noise).max(0.0).round()
+                })
+                .collect();
+            let near = detect_prominence(&rt, &y, ProminenceParams::default())
+                .iter()
+                .filter(|p| (rt[p.apex_i] - 11.25).abs() < 0.5)
+                .count();
+            assert_eq!(near, 1, "dt {dt} tau {tau} amp {amp} seed {seed0}");
+        }
+    }
+}
