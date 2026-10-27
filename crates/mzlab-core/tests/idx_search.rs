@@ -42,7 +42,10 @@ fn search_equals_a_count() {
         blocks += np.div_ceil(BLOCK);
         // the edges, the first m/z of every block, and values on both sides of them
         let mut qs = vec![-1e9, -5.0, 0.0, 99.9999999, 100.0, 100.25, 1e9, 12345.6];
-        for k in (0..np).step_by(BLOCK as usize).chain([np.saturating_sub(1)]) {
+        for k in (0..np)
+            .step_by(BLOCK as usize)
+            .chain([np.saturating_sub(1)])
+        {
             let m = mz.get(k as usize).copied().unwrap_or(0.0);
             qs.extend([m, m - 1e-3, m + 1e-3]);
         }
@@ -50,14 +53,23 @@ fn search_equals_a_count() {
         for v in qs {
             let q = if f4 { v as f32 as f64 } else { v };
             for right in [false, true] {
-                let want = mz.iter().take_while(|&&x| if right { x <= q } else { x < q }).count() as u64;
-                assert_eq!(ix.search(si, v, right).unwrap(), want, "section {si} v {v} right {right}");
+                let want = mz
+                    .iter()
+                    .take_while(|&&x| if right { x <= q } else { x < q })
+                    .count() as u64;
+                assert_eq!(
+                    ix.search(si, v, right).unwrap(),
+                    want,
+                    "section {si} v {v} right {right}"
+                );
             }
         }
     }
     assert!(blocks > 4, "the test needs sections of several blocks");
     // a search of a cold section: the fence, then one block
-    let si = (0..ix.sections.len()).max_by_key(|&s| ix.sections[s].n_peaks).unwrap();
+    let si = (0..ix.sections.len())
+        .max_by_key(|&s| ix.sections[s].n_peaks)
+        .unwrap();
     let mut fresh = Index::open(Counting(b.clone(), reads.clone()), b.len() as u64).unwrap();
     let before = reads.get();
     fresh.search(si, 700.0, false).unwrap();
