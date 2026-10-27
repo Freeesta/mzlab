@@ -51,7 +51,7 @@ try:
             t = pg.inner_text("#calcdlg"); print(t[:400])
             assert "errore (ppm)" in t, t
             e = pg.evaluate("[...document.querySelectorAll('#calcout tr')].map(r=>[...r.children].map(c=>c.textContent))[1]"); print(e)
-            assert abs(float(e[2]) - 0.8) < 0.15, e                                         # (364.0740 - 364.07374) / 364.07374 = 0.7 ppm
+            assert abs(float(e[3]) - 0.7) < 0.15, e                                         # row: adduct, shift, m/z, ppm, XIC; (364.0740 - 364.07374) / 364.07374 = 0.7 ppm
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with an Orbitrap file: 4 decimals and the error in ppm of the observed m/z", calc_hr)
         def method():
