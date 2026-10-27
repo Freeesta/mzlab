@@ -133,6 +133,7 @@ pub mod roi_cluster;
 pub mod roles;
 pub mod ricerca;
 pub mod jsonround;
+pub mod canali;
 pub mod routes;
 pub mod routes_xicbin;
 pub mod scaninfo;
