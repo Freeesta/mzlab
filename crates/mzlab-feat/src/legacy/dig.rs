@@ -16,7 +16,7 @@ use super::Res;
 use crate::evid::points::PointsTable;
 use crate::evid::Kind;
 use crate::rtmap::{build, RtMap, RtParams};
-use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED};
+use crate::table::{no_peak, Aligned, CELL_FILLED};
 use crate::tp::{NOTE_CHIMERIC_MS2, NOTE_ISF_COELUTES, NO_PARENT, ST_ISF};
 
 /// Isolation centre within this many ppm of the m/z of the row (`select_ms2`).
@@ -191,7 +191,7 @@ fn limits(t: &Aligned, r: usize) -> Vec<(f64, f64)> {
         .map(|k| {
             let c = r * t.n_files + k;
             let (a, w) = (f64::from(t.apex_rt[c]), f64::from(t.width[c]));
-            if t.state[c] == CELL_ABSENT {
+            if no_peak(t.state[c]) {
                 (f64::NAN, f64::NAN)
             } else if a.is_finite() && w.is_finite() {
                 (a - w / 2.0, a + w / 2.0)
@@ -208,7 +208,7 @@ pub(super) fn areas(t: &Aligned, r: usize) -> Vec<f64> {
     (0..t.n_files)
         .map(|k| {
             let c = r * t.n_files + k;
-            if t.state[c] == CELL_ABSENT || !t.area[c].is_finite() {
+            if no_peak(t.state[c]) || !t.area[c].is_finite() {
                 0.0
             } else {
                 t.area[c]

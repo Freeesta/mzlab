@@ -115,18 +115,23 @@ try:
         step("the table is the CSV of the modifications", table)
         def graph_view():
             g = json.loads(got["r"]["files"][0]["text"])
-            pg.evaluate("g => { const h = document.createElement('div'); h.id = 'tmpgraph'; document.body.append(h); FLOW.openMsnGraph(h, g, 'g.graph'); }", g)
-            pg.wait_for_selector("#tmpgraph .ig-node", timeout=30000)
-            assert pg.locator("#tmpgraph .ig-node").count() == len(g["nodi"]), "one box per ion"
-            assert pg.locator("#tmpgraph [aria-pressed=true]").first.inner_text() == "Graph"
-            pg.locator("#tmpgraph .ig-node").nth(1).click()
-            pg.wait_for_selector("#tmpgraph .fl-b:has-text('Use ')", timeout=10000)
-            pg.locator("#tmpgraph .fl-b:has-text('Use ')").first.click()
+            # Run in the page opens the graph by itself under the canvas, and the three texts join the Results of their nodes
+            pg.click("#flx-run")
+            pg.wait_for_selector(".flx-res .ig-node", timeout=60000)
+            assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "one box per ion"
+            assert pg.locator(".flx-res [aria-pressed=true]").first.inner_text() == "Graph"
+            attendi(pg, "document.activeElement && document.activeElement.matches('.flx-res h3')", 10000)
+            kinds = pg.evaluate("Object.values(document.querySelector('.flx-list').__flow.results).flat().map(r => r.type).sort()")
+            assert kinds == ["library", "report", "table"], kinds
+            pg.locator(".flx-res .ig-node").nth(1).click()
+            pg.wait_for_selector(".flx-res .fl-b:has-text('Use ')", timeout=10000)
+            pg.locator(".flx-res .fl-b:has-text('Use ')").first.click()
             sc = pg.evaluate("(document.querySelector('.flx-list').__flow.plan.steps.find(s => s.step.startsWith('spectra.msn_graph')).params || {}).scelte")
             assert sc and "=" in sc, sc
-            pg.click("#tmpgraph [aria-pressed=false]")
-            assert pg.locator("#tmpgraph table").count() >= 1
-            pg.evaluate("document.querySelector('#tmpgraph').remove()")
+            pg.click(".flx-res [aria-pressed=false]")
+            assert pg.locator(".flx-res table").count() >= 1
+            assert pg.evaluate("window.MZLAB_LR_MISS || []") == [], "no route the engine could not serve"
+            pg.evaluate("document.querySelector('.flx-res').remove()")
         step("the graph view draws one box per ion and «Use» writes the choice in scelte", graph_view)
         def empty():
             pg.evaluate("window.__f = window.__f || window.fetch; window.fetch = (u, i) => String(u).includes('api/msn_grafo') ? Promise.resolve(new Response(JSON.stringify({ formato: 'msngrafo/1', nodi: [], archi: [], spettri: [] }))) : window.__f(u, i); null")
@@ -153,6 +158,9 @@ try:
                 assert len(msn) == 3 and all(e["stato"] in ("done", "reused") and e["via"] == "browser" for e in msn), last
                 assert [f["name"].rsplit(".", 1)[1] for f in x["files"]] == ["json", "msp", "csv"], x["files"]
                 assert [mask(f["text"]) for f in x["files"]] == [mask(f["text"]) for f in ref["files"]], "the texts of the scheduler differ from the runner of the MSn plan"
+                # a job of the scheduler that finishes (Auto-run too) puts its texts in the Results and opens the graph without the run box
+                assert pg.evaluate("Object.values(document.querySelector('.flx-list').__flow.results).flat().filter(r => r.type === 'report').length") >= 1, "the graph joined the Results"
+                pg.wait_for_selector(".flx-res .ig-node", timeout=30000)
             finally: pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow; S.plan.steps = S.plan.steps.filter(s => s.id !== 'ixmix'); }")
         step("a plan with an index step besides the MSn steps runs them in the scheduler, with the same texts", mixed)
         def no_ion():

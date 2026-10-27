@@ -37,6 +37,7 @@ try:
         def off():
             b = pg2.evaluate("(() => { const e = document.querySelector('[data-a=xicb]'); return [e.disabled, e.title]; })()")
             assert b[0] is True and b[1] == pg2.evaluate("I18N.t('xicbtn.infusion')") and b[1] != "xicbtn.infusion", b
+            pv = pg2.evaluate("(() => { const e = document.querySelector('[data-a=xicp]'); return [e.disabled, e.getAttribute('aria-pressed')]; })()"); assert pv == [True, "false"], pv
             assert not hover_peak(pg2), "the lens opened on an infusion"
         step("infusion: XIC button disabled with its tooltip, no lens", off)
     r.close()

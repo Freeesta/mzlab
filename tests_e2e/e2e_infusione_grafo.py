@@ -39,8 +39,8 @@ STAND_IN = """(fx) => {
       if (q.get("formula") === "C99H99+") j.avvisi.push({ chiave: "warn.msngrafo.mostUnexplained", albero: "", nodo: null });
       return Promise.resolve(jr(j));
     }
-    if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", nome: "Exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
-    if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", nome: "Exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
+    if (path === "api/molecules/cerca") return Promise.resolve(jr([{ id: "ik:TESTONLY", nome: "exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"], punteggio: 1 }]));
+    if (path === "api/molecules/get") return Promise.resolve(jr({ id: "ik:TESTONLY", nome: "exampline", formula: "C14H15N3O5", massa: 305.1, smiles: "CCOC(=O)c1ccccc1N", addotti: ["[M+H]+"] }));
     if (path === "api/msnlib/aggiungi") { const b = JSON.parse(init.body), tag = "entry:" + b.molecola_id + "\\n"; const dup = (b.libreria || "").includes(tag); return Promise.resolve(jr({ libreria: dup ? b.libreria : (b.libreria || "") + tag, doppione: dup })); }
     if (path === "api/msnlib/cerca") return Promise.resolve(jr({ formato: "msncerca/1", opzioni: {}, candidati: [
       { id: "STD-1", ione: "C14H15N3O5 [M+H]+", att: [], delta_ppm: 0.4, punteggi: { ms2: 0.91, albero: 0.8, perdite: null }, prove: { picchi_comuni: 5, nodi_allineati: 3, nodi_ignoto: 4, perdite_comuni: 2, perdite_ignoto: 3 }, analogo: null },
@@ -153,7 +153,7 @@ try:
             best = sum(1 for a in V["archi"] if a["best"])
             assert pg.locator(".ig-arc.best").count() == best and pg.locator(".ig-arc.alt").count() == len(V["archi"]) - best
             assert pg.evaluate("document.querySelector('.ig-svg').textContent").count("Δ 87.980 Da") >= 1
-            assert "Shortest observed path" in pg.inner_text("#ig-bp") or pg.evaluate("I18N.lang") != "en"
+            assert pg.locator("#ig-bp").count() == 0 and "Shortest observed path" not in pg.inner_text("body")
             assert pg.evaluate(OVERLAP) == 0
         step("labels: m/z, % of the base peak, MS levels, losses as Δ Da, subscripts apart, plain aria-label, doubled border for common ions", labels)
         def views():
@@ -284,7 +284,53 @@ try:
             last = pg.evaluate("window.__REQ.filter(r=>r[0]==='api/msn_grafo').slice(-1)[0][1]")
             assert "formula=C14H15N3O5+%5BM%2BH%5D%2B" in last.replace("%20", "+") and "smiles=" in last, last
         step("a molecule chosen in the search box fills the ion formula with the adduct and the SMILES; the id is kept", names)
-        step("the ion field shows formula and adduct", lambda: (_ for _ in ()).throw(AssertionError(pg.input_value("#ig-ion"))) if pg.input_value("#ig-ion") != "C14H15N3O5 [M+H]+" else None)
+        def ionfield():
+            assert pg.input_value("#ig-ion") == "C14H15N3O5" and pg.input_value("#ig-add") == "[M+H]+", pg.input_value("#ig-ion")
+            assert "<sub>14</sub>" in pg.inner_html("#ig-ionfmt") and pg.locator("#ig-ion").evaluate("e=>e.tagName") == "INPUT"
+            pg.fill("#ig-ion", "C8H11N4O2+"); assert "<sup>+</sup>" in pg.inner_html("#ig-ionfmt")
+            pg.fill("#ig-ion", "C14H15N3O5")
+            attendi(pg, "document.querySelector('#ig-sum sub')")
+        step("the ion field has the formula only (the adduct is its select), with a subscript preview; the ion line has subscripts", ionfield)
+        def capital():
+            assert pg.input_value("#ig-mol input") == "Exampline" and pg.evaluate("INFG.G.mol.nome") == "exampline"
+            pg.fill("#ig-mol input", "Exam"); pg.wait_for_selector("#ig-mol [role=option]", timeout=5000)
+            assert pg.inner_text("#ig-mol [role=option] span") == "Exampline"
+        step("the molecule name shows its first letter in capitals; the stored name does not change", capital)
+        def fullscreen():
+            pg.click("#ig-bar [data-z=in]"); sc = pg.evaluate("document.querySelector('.ig-svg').getAttribute('width')")
+            pg.click(".ig-node[data-id=n2]")
+            assert pg.get_attribute("#ig-fs", "aria-label") == pg.get_attribute("#ig-fs", "title") and pg.get_attribute("#ig-fs", "aria-pressed") == "false"
+            pg.click("#ig-fs")
+            assert pg.evaluate("getComputedStyle(document.querySelector('#ig-stage')).position") == "fixed" and pg.get_attribute("#ig-fs", "aria-pressed") == "true"
+            assert pg.evaluate("document.querySelector('#ig-stage').getBoundingClientRect().width") > 1000
+            assert pg.evaluate("document.querySelector('.ig-svg').getAttribute('width')") == sc and pg.locator(".ig-node.sel[data-id=n2]").count() == 1
+            assert pg.evaluate("document.querySelector('header').hasAttribute('inert')")
+            pg.keyboard.press("Escape")
+            assert pg.evaluate("document.querySelector('#ig-stage').classList.contains('ig-max')") is False and pg.evaluate("document.activeElement.id") == "ig-fs"
+            assert not pg.evaluate("document.querySelector('header').hasAttribute('inert')")
+            assert pg.evaluate("document.querySelector('.ig-svg').getAttribute('width')") == sc and pg.locator(".ig-node.sel[data-id=n2]").count() == 1
+            pg.click("#ig-fs"); pg.click("#ig-fs"); assert pg.evaluate("document.querySelector('#ig-stage').classList.contains('ig-max')") is False
+        step("full screen like the panels: button with an accessible name, Esc leaves, the zoom and the selected ion stay, the rest is inert meanwhile", fullscreen)
+        def gestures():
+            W = "document.querySelector('#ig-wrap')"
+            w0 = pg.evaluate("+document.querySelector('.ig-svg').getAttribute('width')")
+            ev = pg.evaluate("""() => { const w = document.querySelector('#ig-wrap'), r = w.getBoundingClientRect();
+              const mk = (o) => new WheelEvent('wheel', Object.assign({ bubbles: true, cancelable: true, clientX: r.left + 40, clientY: r.top + 40 }, o));
+              const a = w.dispatchEvent(mk({ deltaY: -100, ctrlKey: true })), b = w.dispatchEvent(mk({ deltaY: -100, metaKey: true })), c = w.dispatchEvent(mk({ deltaX: 30, deltaY: 40 }));
+              const out = document.querySelector('h1,header,body').dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 50 }));
+              return [a, b, c, out]; }""")
+            assert ev == [False, False, False, True], ev
+            w1 = pg.evaluate("+document.querySelector('.ig-svg').getAttribute('width')")
+            assert w1 > w0 * 1.5, (w0, w1)
+            pg.evaluate("(w => { w.scrollLeft = 0; w.scrollTop = 0; })(document.querySelector('#ig-wrap'))")
+            pg.evaluate("""() => { const w = document.querySelector('#ig-wrap'); w.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX: 60, deltaY: 30 })); }""")
+            assert pg.evaluate(W + ".scrollLeft") > 0 and pg.evaluate(W + ".scrollTop") > 0
+            sl = pg.evaluate(W + ".scrollLeft")
+            pg.evaluate("""() => { const w = document.querySelector('#ig-wrap'), r = w.getBoundingClientRect(), o = (t, x) => w.dispatchEvent(new PointerEvent(t, { pointerId: 7, pointerType: 'mouse', button: 0, bubbles: true, clientX: x, clientY: r.top + 30 }));
+              o('pointerdown', r.left + 200); o('pointermove', r.left + 150); o('pointermove', r.left + 100); o('pointerup', r.left + 100); }""")
+            assert pg.evaluate(W + ".scrollLeft") > sl + 40, (sl, pg.evaluate(W + ".scrollLeft"))
+            pg.click("#ig-bar [data-z=fit]"); assert pg.evaluate("+document.querySelector('.ig-svg').getAttribute('width')") < w1
+        step("gestures on the canvas of the side panel: Ctrl/Cmd + wheel zooms, wheel scrolls, drag pans; nothing is blocked outside", gestures)
         # the real engine (the .wasm msngrafo of the site, no stand-in): the cut table of a node of the synthetic file
         pg4 = r.b.new_page(viewport={"width": 1500, "height": 1900}); pg4.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg4, "window.qqReady === true")
         load(pg4, [F], 6000, 1)

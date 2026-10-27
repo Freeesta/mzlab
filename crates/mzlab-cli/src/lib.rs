@@ -13,6 +13,7 @@ use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+mod canali_cmd;
 pub mod convert;
 mod convert_report;
 pub mod flow;
@@ -132,6 +133,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli tutor eval CASES --blocchi F (--replay DIR | --solo-recupero)   score the Teoria tutor on the eval cases (tutor --help)
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
+       mzlab-cli canali FILE [--out PATH]   the channels of a file as JSON (canali --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
@@ -273,51 +275,6 @@ impl Outcome {
     }
 }
 
-/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
-fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
-    let mut args = args.peekable();
-    if args.next_if(|a| a == "compare").is_some() {
-        return match msn_graph_compare::esegui(args) {
-            Ok((t, out)) => emit(t, &out),
-            Err(e) => Outcome::fail(&e.to_string()),
-        };
-    }
-    if args.next_if(|a| a == "complete").is_some() {
-        return match msn_graph::completa_cmd(args) {
-            Ok((t, out)) => emit(t, &out),
-            Err(e) => Outcome::fail(&e),
-        };
-    }
-    if args.next_if(|a| a == "figure").is_some() {
-        return msn_uscite::figure_cmd(args)
-            .map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()));
-    }
-    let a = match msn_graph::parse_args(args) {
-        Ok(Some(a)) => a,
-        Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    // one folder per call: the tests run several in one process
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-msn{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp)
-        .map_err(io)
-        .and_then(|_| msn_graph::esegui(&a, &tmp));
-    let _ = std::fs::remove_dir_all(&tmp);
-    let r = r
-        .map_err(|e| e.to_string())
-        .and_then(|t| msn_graph::figure_files(&a, &t).map(|f| (t, f)));
-    match r {
-        Err(e) => Outcome::fail(&e),
-        Ok((t, files)) => {
-            let mut o = emit(t, &a.out);
-            o.stdout.extend(files.into_bytes());
-            o
-        }
-    }
-}
-
 /// The text to the standard output, or to the file of `--out`.
 fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
     match out {
@@ -404,7 +361,14 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 5] = ["llm", "steps", "tutor", "explain-missing", "msn-rules"];
+const PLAIN: [&str; 6] = [
+    "llm",
+    "steps",
+    "tutor",
+    "explain-missing",
+    "msn-rules",
+    "canali",
+];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     match command {
@@ -412,6 +376,7 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
         "steps" => steps_cmd::run(args),
         "explain-missing" => flow_explain::run(args),
         "msn-rules" => msn_rules::run(args),
+        "canali" => canali_cmd::run(args),
         _ => tutor::run(args),
     }
 }
@@ -423,7 +388,7 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
         Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
-        Some("msn-graph") => return msn_graph_cmd(args),
+        Some("msn-graph") => return msn_graph::cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
         #[cfg(not(target_family = "wasm"))]

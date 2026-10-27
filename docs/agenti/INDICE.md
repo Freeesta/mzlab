@@ -66,6 +66,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | ruoli dei file, tempi e metadati dei campioni (`campioni/2` e `/3`, `mzlab-core/src/campioni/`: proposte dai nomi, modelli di nome, CSV, colonne libere, dati dal file, avvisi, migrazione, indici per il percorso TP) | `docs/agenti/campioni.md` |
 | derivati (`.mzidx`, `.mzfeat`, `.mzfeatf`) di formato più nuovo del programma: `error.newerFormat`, sola lettura | `docs/agenti/formato-nuovo.md` |
 | tetti dei .wasm di mzFinder, moduli fusi (gruppo HR e Attributio), build separata `MZLAB_WASM_SEPARATI` | `docs/agenti/wasm-tetti.md` |
+| potenziale di WebAssembly (profili `opt-level`, SIMD128, binaryen, zlib-rs, thread, memory64, browser minimi; misure e prompt DEV) | `docs/agenti/wasm-potenziale.md` (prompt: `docs/studi/PROMPT_WASM_POTENZIALE/`) |
 | esportazione di tutti i dati dell'utente: inventario dello storage nel browser, scrittore ZIP (`zip.rs`) | `docs/agenti/esporta-dati.md` |
 | contratto di memoria dei moduli WASM (`mzlab-core::budget`, uscite a offset, lastre, flusso delle prove) | `docs/agenti/memoria.md` |
 | formato `.mzidx` | `docs/agenti/mzidx.md` |

@@ -1,14 +1,15 @@
 // @ts-strict
+// @ts-noany
 // Shared chemistry presentation helpers: formula composition (order-free comparison, Hill order), theme-aware molecule SVG, compound-name display.
 // Classic script: window.MOLUI in the page, module.exports for the node tests.
 (function (root) {
   // ---- formulas: composition = {element: count}; the order of the elements never matters
   const SYM = /^[A-Z][a-z]?/;
-  function parse(text) {
+  function parse(/** @type {unknown} */ text) {
     // a trailing charge does not change the composition
     const s = String(text || "").replace(/\s+/g, "").replace(/\]?[+-]\d*$/, "");
     if (!s) return null;
-    let total = {};
+    let total = /** @type {Record<string, number>} */ ({});
     for (const part of s.split(/[·.*]/)) {       // hydrates / adducts: CuSO4·5H2O -> CuSO4 + 5 H2O
       if (!part) return null;
       const lead = /^(\d+)/.exec(part), k = lead ? +lead[1] : 1, body = lead ? part.slice(lead[1].length) : part;
@@ -18,8 +19,8 @@
     }
     return Object.keys(total).length ? total : null;
   }
-  function parseBody(s) {
-    const stack = [{}];
+  function parseBody(/** @type {string} */ s) {
+    const stack = /** @type {Record<string, number>[]} */ ([{}]);
     let i = 0;
     while (i < s.length) {
       const ch = s[i];
@@ -44,27 +45,27 @@
     return stack.length === 1 ? stack[0] : null;
   }
   // Hill order: C, H, then alphabetical; without C everything is alphabetical (H included)
-  function hill(c) {
+  function hill(/** @type {Record<string, number>} */ c) {
     const els = Object.keys(c).filter(e => c[e] > 0);
     const order = "C" in c ? ["C", ...(els.includes("H") ? ["H"] : []), ...els.filter(e => e !== "C" && e !== "H").sort()] : els.sort();
     return order.map(e => e + (c[e] !== 1 ? c[e] : "")).join("");
   }
-  const hillOf = text => { const c = parse(text); return c ? hill(c) : String(text || ""); };
+  const hillOf = (/** @type {unknown} */ text) => { const c = parse(text); return c ? hill(c) : String(text || ""); };
   // compare two formulas: {ok, a, b (both in Hill order), diffs: [{el, a, b}]}; ok is null when one of them cannot be read
-  function compare(fa, fb) {
+  function compare(/** @type {unknown} */ fa, /** @type {unknown} */ fb) {
     const ca = parse(fa), cb = parse(fb);
     if (!ca || !cb) return { ok: null, a: ca ? hill(ca) : String(fa || ""), b: cb ? hill(cb) : String(fb || ""), diffs: [] };
     const diffs = [...new Set([...Object.keys(ca), ...Object.keys(cb)])].sort().filter(e => (ca[e] || 0) !== (cb[e] || 0)).map(el => ({ el, a: ca[el] || 0, b: cb[el] || 0 }));
     return { ok: !diffs.length, a: hill(ca), b: hill(cb), diffs };
   }
-  function mismatchText(fa, fb, la = "formula", lb = "SMILES") {
+  function mismatchText(/** @type {unknown} */ fa, /** @type {unknown} */ fb, la = "formula", lb = "SMILES") {
     const r = compare(fa, fb);
     if (r.ok !== false) return "";
     return `The ${la} (${r.a}) does not match the ${lb} (${r.b}): ` + r.diffs.map(d => `${d.el}: ${la} ${d.a}, ${lb} ${d.b}`).join("; ") + ".";
   }
 
   // ---- compound names: only the first letter is capitalised (acronyms, digits, Greek letters, inner capitals stay as they are); presentation only
-  const cap = s => { s = String(s == null ? "" : s); return /^[a-z]/.test(s) ? s[0].toUpperCase() + s.slice(1) : s; };
+  const cap = (/** @type {string | null | undefined} */ s) => { s = String(s == null ? "" : s); return /^[a-z]/.test(s) ? s[0].toUpperCase() + s.slice(1) : s; };
 
   // ---- molecule SVG (OpenChemLib): bonds and carbon labels follow the text colour, heteroatoms use theme-aware CSS variables.
   // The letter of the element is always drawn, so colour is never the only cue.
@@ -73,7 +74,7 @@
   const DARK = { o: "#ff7b6e", n: "#8fa6ff", f: "#6bdc86", s: "#e6cb3a", cl: "#6bdc86", br: "#f0996f", i: "#dc9bf2", p: "#ffa94d", def: "#c8cdd4" };
   const KEYS = Object.keys(LIGHT);
   function css() {
-    const vars = (m, o) => KEYS.map(k => `${o}${k}:${m[k]}`).join(";");
+    const vars = (/** @type {Record<string, string>} */ m, /** @type {string} */ o) => KEYS.map(k => `${o}${k}:${m[k]}`).join(";");
     const L = vars(LIGHT, "--mol-"), D = vars(DARK, "--mol-");
     return `:root{${L}}@media (prefers-color-scheme:dark){:root:not([data-theme=light]){${D}}}:root[data-theme=dark]{${D}}` +
       KEYS.map(k => `svg.molsvg .mol-${k}{fill:var(--mol-${k})}`).join("") + `svg.molsvg{color:var(--ink,#1c1f23)}`;
@@ -83,12 +84,12 @@
     const st = document.createElement("style"); st.id = "molui-css"; st.textContent = css(); document.head.appendChild(st);
   }
   // mode "themed" (default): classes + currentColor, follows the page theme at run time; "light" / "dark": a standalone file with literal colours and a background
-  function svg(raw, mode = "themed") {
-    const pal = mode === "dark" ? DARK : LIGHT, standalone = mode === "light" || mode === "dark", ink = mode === "dark" ? "#e4e7eb" : "#000000";
+  function svg(/** @type {unknown} */ raw, mode = "themed") {
+    const pal = /** @type {Record<string, string>} */ (mode === "dark" ? DARK : LIGHT), standalone = mode === "light" || mode === "dark", ink = mode === "dark" ? "#e4e7eb" : "#000000";
     let out = String(raw).replace(/(fill|stroke)="rgb\((\d+),(\d+),(\d+)\)"/g, (all, attr, r, g, b) => {
       const key = `${r},${g},${b}`;
       if (key === "0,0,0") return standalone ? `${attr}="${ink}"` : `${attr}="currentColor"`;
-      const el = ATOM_RGB[key] || "def";
+      const el = /** @type {Record<string, string>} */ (ATOM_RGB)[key] || "def";
       if (key === "255,255,255") return all;
       return standalone ? `${attr}="${pal[el]}"` : attr === "fill" ? `fill="${pal[el]}" class="mol-${el}"` : `${attr}="${pal[el]}"`;
     });
