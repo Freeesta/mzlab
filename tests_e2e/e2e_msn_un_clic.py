@@ -48,8 +48,8 @@ try:
             pg.wait_for_selector(".flx-res .ig-node", timeout=30000)
         step("one click runs graph, library and table, puts the three files in the Results and opens the graph", one_click)
         def texts():
-            got = pg.evaluate(f"""Promise.all(Object.values({FLOWS}.results).flat().sort((a, b) => a.label.localeCompare(b.label)).map(r => r.text()))""")
-            csv, g, msp = got
+            by = pg.evaluate(f"""(async () => {{ const o = {{}}; for (const r of Object.values({FLOWS}.results).flat()) o[r.label.split('.').pop()] = await r.text(); return o }})()""")
+            g, msp, csv = by["json"], by["msp"], by["csv"]
             j = json.loads(g)
             assert j["formato"] == "msngrafo/1" and j.get("interpretazione"), list(j)[:12]
             assert "Name:" in msp and "Num Peaks:" in msp
