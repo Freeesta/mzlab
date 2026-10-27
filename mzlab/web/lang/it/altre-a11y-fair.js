@@ -255,7 +255,7 @@ I18N.add("it", {
   "calc.col.nominal": "all'unità",
   "calc.err.sign": "non capisco questo segno",
   "cursor.handle": "Posizione corrente nel cromatogramma: trascina il pallino col dito o la penna, oppure usa le frecce per spostarti di una scansione (Maiusc: cinque)",
-  "cursor.handle.value": "RT {rt} min",
+  "cursor.handle.value": "{rt} min",
   "calc.err.closeParen": "parentesi chiusa di troppo",
   "calc.err.tooBig": "risultato troppo grande",
   "bug.title.empty": "descrivi il problema",
