@@ -28,6 +28,7 @@ declare var ConvUI: any;
 declare var DESKDEF: any;
 declare var DESKUPD: any;
 declare var DIAG: any;
+declare var ELEMP: any;
 declare var ERRORI: any;
 declare var ETPK: any;
 declare var EXPORT_PEZZI: any;
