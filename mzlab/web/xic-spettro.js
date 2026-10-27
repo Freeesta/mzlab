@@ -242,8 +242,11 @@
     // Space on the button presses it: the walk over the scans (scroll.js) must not take it
     for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); });
     l.onclick = () => openPop(p);
-    const pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
-    if (pv) pv.onclick = () => setLens(!UIP.xicLens);
+    const pv = document.createElement("button");           // the lens switch is built here (pannelli.js is at its start-up size cap)
+    pv.className = "bt xbp"; pv.dataset.a = "xicp"; pv.title = T("xiclens.toggle"); pv.setAttribute("aria-label", T("xiclens.toggle"));
+    pv.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>';
+    pv.onclick = () => setLens(!UIP.xicLens);
+    b.after(pv);
     refresh(p);
   }
   /** the lens preference from the button of any spectrum panel (the Settings switch is the other place) @param {boolean} on */
