@@ -68,6 +68,9 @@ pub(super) fn detect() -> Step {
             .default_num(200_000.0)
             .unit("counts"),
         axis(),
+        Param::pair("rt_range", "RT range", 0.0)
+            .unit("min")
+            .doc("Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows"),
         Param::number("mass_defect", "Mass defect")
             .unit("Da")
             .estimate()
