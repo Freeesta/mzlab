@@ -44,6 +44,7 @@
     return { rows, unknown, error: rows.length ? "" : "The table has no rows." };
   };
   F.parseMetadata = parseMetadata;
+  F.META_HEADERS = COLS;
 
   /** the metadata of the files open in Data with the patches of a table laid over them; files the table names but Data does not have are added from the table alone
    * @param {any} base the current document @param {Record<string, any>[]} patches @returns {any} */
@@ -67,12 +68,10 @@
       const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
       let text = "";
       try { text = /\.xlsx$/i.test(f.name) ? await F.xlsxToText(await f.arrayBuffer()) : await f.text(); } catch (err) { say.textContent = `${f.name}: ${(/** @type {any} */ (err)).message || err}`; return; }
-      const r = F.parseMetadata(text, G.CDOC ? G.CDOC.KINDS : []);
-      if (r.error) { say.textContent = `${f.name}: ${r.error}`; return; }
-      const cur = (S.samples && S.samples[input.name]) || F.samplesFromData() || { schema: "campioni/2", campioni: [] };
-      await F.samplesSet(S, input, F.applyMetadata(cur, r.rows));
-      const open = new Set(F.dataFiles()), absent = r.rows.filter((/** @type {any} */ x) => !open.has(x.file)).length;
-      say.textContent = `${r.rows.length} rows read from ${f.name}.` + (absent ? ` ${absent} not in Data.` : "") + (r.unknown.length ? ` Unknown roles left unchanged: ${r.unknown.join(", ")}.` : "");
+      try {
+        const r = await F.metaImport(S, input, text);
+        say.textContent = `${r.count} rows read from ${f.name}.` + (r.absent ? ` ${r.absent} not in Data.` : "");
+      } catch (err) { say.textContent = `${f.name}: ${(/** @type {any} */ (err)).message || err}`; return; }
       drawTable();
     } });
     box.append(
