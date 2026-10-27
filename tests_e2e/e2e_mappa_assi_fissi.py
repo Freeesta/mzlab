@@ -53,6 +53,18 @@ try:
             pg.evaluate(f"{M}.zoom=null;{M}.zoomY=null;draw({M})"); shown(); attendi(pg, f"{M}._a.x0<1")
             assert view(pg) == seen["a-wide"], (view(pg), seen["a-wide"])
         step("file menu: same behaviour; back to the whole view", menu)
+        def scale():
+            refs = lambda: pg.evaluate(f"{M}._img.ref")
+            own = {}
+            for lbl in ("a-wide", "b-narrow", "c-mid"):
+                pg.locator(".pnl.map select[data-o=k]").select_option(label=lbl); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==={lbl!r}"); shown(); own[lbl] = refs()
+            assert len(set(own.values())) > 1, own                                        # each file has its own top of the scale
+            pg.locator(".pnl.map [data-mz=fix]").evaluate("e => e.click()"); attendi(pg, f"{M}._img.ref!=={own['c-mid']}"); shown()
+            fixed = {}
+            for lbl in ("a-wide", "b-narrow", "c-mid"):
+                pg.locator(".pnl.map select[data-o=k]").select_option(label=lbl); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==={lbl!r}"); shown(); fixed[lbl] = refs()
+            assert len(set(fixed.values())) == 1 and fixed["a-wide"] == max(own.values()), (own, fixed)
+        step("fixed colour scale: the same top on every file (the highest of the files)", scale)
         b.close()
     r.close()
 except Exception as e:

@@ -4,6 +4,7 @@
 // RT x m/z map, the parts that do not touch the page (classic script, loaded before mappa.js; node loads it with require).
 //   splat(v, nrt, nmz, sx, sy)   the «Liscia» look of a zoomed region: every cell spreads its value as a gaussian tent (max, not sum: heights stay those of the
 //                                matrix) as wide as the m/z resolution (sy, in bins) and the scan spacing (sx, in bins), so a peak stays one continuous blob
+//   ref(v)                       the intensity that gets the top of the colour scale: the 99.5th percentile of the non-zero values (one huge peak does not flatten the rest)
 //   snrOf(mz, y, lo, hi)         S/N of each peak: its intensity over the noise of its neighbourhood (median + 1.4826 MAD of the other peaks within a band in m/z)
 //   pick(mz, y, o)               which peaks get a m/z label, best first: the active peak, then the best S/N of each band of the visible window, then the best S/N left
 (() => {
@@ -105,7 +106,14 @@
     }
     return Object.assign(ord, { all });
   }
-  const MAPREND = { splat, snrOf, pick, GROUP_DA };
+  /** @param {ArrayLike<number>} v @returns {number} */
+  function ref(v) {
+    const nz = []; for (let i = 0; i < v.length; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
+    const n = Math.min(nz.length, 10000), samp = new Float64Array(n), s = nz.length / (n || 1); for (let i = 0; i < n; i++) samp[i] = nz[Math.floor(i * s)];
+    samp.sort();
+    return n ? samp[Math.min(n - 1, Math.floor(n * 0.995))] : 1;
+  }
+  const MAPREND = { splat, snrOf, pick, ref, GROUP_DA };
   if (typeof window !== "undefined") /** @type {any} */ (window).MAPREND = MAPREND;
   if (typeof module !== "undefined") module.exports = MAPREND;
 })();
