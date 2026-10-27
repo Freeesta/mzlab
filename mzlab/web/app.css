@@ -129,6 +129,8 @@ html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,
 #stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 7px 4px 5px}
 #stbar.lab-all .tb.on,#stbar.lab-all .tb[aria-pressed=true],#stbar.lab-main .tb.on[data-main],#stbar.lab-main .tb[data-main][aria-pressed=true]{border-color:var(--accent)}
 #stbar .tb.on,#stbar .tb[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+/* an active split button is one control: the caret takes the state of the main part */
+#stbar .tb-split.on .tb-car,#stbar.lab-all .tb-split.on .tb-car,#stbar.lab-main .tb-split.on .tb-main[data-main]+.tb-car{background:var(--sel);border-color:var(--accent);color:var(--accent)}
 /* header buttons: one focus ring, only from the keyboard, drawn INSIDE the button (#stbar clips what falls outside) and never the browser's double ring */
 header button:focus:not(:focus-visible),header a:focus:not(:focus-visible){outline:none}
 header button:focus-visible,header a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
