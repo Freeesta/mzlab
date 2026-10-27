@@ -207,7 +207,7 @@ pub struct Section {
     pub n_scans: usize,
     pub n_peaks: u64,
     pub n_fence: usize,
-    off: [u64; 10],
+    pub(crate) off: [u64; 10],
 }
 
 const NAMES: [&str; 10] = [
@@ -225,7 +225,7 @@ pub struct ScanArrays {
 }
 
 pub struct Index<R: ReadAt> {
-    r: R,
+    pub(crate) r: R,
     pub scans: Vec<Scan>,
     pub keys: Vec<(String, usize)>,
     pub sections: Vec<Section>,
@@ -234,6 +234,7 @@ pub struct Index<R: ReadAt> {
     pub(crate) cache: Vec<(usize, u8, u64, Vec<u8>, u64)>, // (section, array, block, bytes, tick of the last use)
     pub(crate) arrays: Vec<Option<ScanArrays>>,
     pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
+    pub(crate) work: Vec<u8>,         // read buffer of `walk`, kept between calls
 }
 
 /// Whether the header is of an index of a vendor file (version 2 with `FLAG_LETTORE`) or of an mzML (version 1); `None` for any other.
@@ -335,6 +336,7 @@ impl<R: ReadAt> Index<R> {
             cache: Vec::new(),
             arrays: vec![None; n],
             arrays_tick: vec![0; n],
+            work: Vec::new(),
         })
     }
 
@@ -451,69 +453,5 @@ impl<R: ReadAt> Index<R> {
             }
         }
         Ok(lo)
-    }
-
-    /// `pos` and `inten` of the peaks `a..b`, handed to `f` in pieces of at most 64 K peaks, in table order.
-    pub fn each_peak(
-        &mut self,
-        si: usize,
-        a: u64,
-        b: u64,
-        mut f: impl FnMut(usize, f64, f64),
-    ) -> Result<()> {
-        const STEP: u64 = 1 << 16;
-        let s = self.sections[si].clone();
-        let w = if s.f4 { 4 } else { 8 } as u64;
-        let mut i = a;
-        while i < b {
-            let c = (b - i).min(STEP) as usize;
-            let mut ib = vec![0u8; c * w as usize];
-            let mut mb = vec![0u8; c * w as usize];
-            let mut pb = vec![0u8; c * 4];
-            self.r.read_at(s.off[8] + i * w, &mut ib)?;
-            self.r.read_at(s.off[7] + i * w, &mut mb)?;
-            self.r.read_at(s.off[9] + i * 4, &mut pb)?;
-            for j in 0..c {
-                let (it, mz) = if w == 4 {
-                    (
-                        f32::from_le_bytes(ib[j * 4..j * 4 + 4].try_into().unwrap()) as f64,
-                        f32::from_le_bytes(mb[j * 4..j * 4 + 4].try_into().unwrap()) as f64,
-                    )
-                } else {
-                    (
-                        f64::from_le_bytes(ib[j * 8..j * 8 + 8].try_into().unwrap()),
-                        f64::from_le_bytes(mb[j * 8..j * 8 + 8].try_into().unwrap()),
-                    )
-                };
-                let pos = i32::from_le_bytes(pb[j * 4..j * 4 + 4].try_into().unwrap()) as usize;
-                f(pos, mz, it);
-            }
-            i += c as u64;
-        }
-        Ok(())
-    }
-
-    /// Summed intensity of the peaks `a..b` in every scan of the section (`np.bincount(pos, weights=inten, minlength=n)`).
-    pub fn sum_window(&mut self, si: usize, a: u64, b: u64) -> Result<Vec<f64>> {
-        let n = self.sections[si].n_scans;
-        let mut out = vec![0.0; n];
-        self.each_peak(si, a, b, |p, _mz, y| {
-            if p < n {
-                out[p] += y;
-            }
-        })?;
-        Ok(out)
-    }
-
-    /// Highest intensity of the peaks `a..b` in every scan (0 where there are none).
-    pub fn max_window(&mut self, si: usize, a: u64, b: u64) -> Result<Vec<f64>> {
-        let n = self.sections[si].n_scans;
-        let mut out = vec![0.0; n];
-        self.each_peak(si, a, b, |p, _mz, y| {
-            if p < n && y > out[p] {
-                out[p] = y;
-            }
-        })?;
-        Ok(out)
     }
 }
