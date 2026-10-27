@@ -448,7 +448,7 @@ def main() -> None:
     parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
     if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
         ap.error("--parte wants K/N with 1 <= K <= N")
-    if not a.fumo and not a.ultimi_falliti and (not parte or parte[0] == 1):
+    if not a.fumo and not a.ultimi_falliti and not a.solo and (not parte or parte[0] == 1):      # --solo = e2e only: `--solo e2e_rust` after part 5 ran a second pytest past 1800 s
         js_syntax(results)
         i18n(results)
         codice(results)
