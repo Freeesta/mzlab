@@ -43,3 +43,6 @@ Fotografia del codice per decidere se Tabui si può dismettere: per ogni funzion
 `export.table_csv` ed `export.mztab` chiamano `table_file`, la stessa funzione che la pagina chiede al `.wasm` della tabella (`export_table`): stessi byte per colonne, ordine, nomi e formato numerico, provato da `flow_bentazone_export_tests.rs` su una tabella rilevata dal piano (positivo e negativo) e da `flow_export_tests.rs`. La polarità che `table_file` scrive (mzTab-M, MS2) la decidono i file quando il piano non la scrive: ``export_job` la legge dagli indici della catena della tabella (la ricetta della tabella, come quella della pagina, non la scrive).
 
 Differenze note: i campioni passano da `campioni/2` a `campioni/1` (`flow_table::samples_text`, gruppo = ruolo per i non campioni); l'esportazione non segue la vista di `table.filter`; la tabella di `tp.link@2` (colonne dello stato dei TP) non è un ingresso di `export.table_csv`.
+
+## Modello Bentazone
+Il modello «Bentazone / transformation products» (palette, sotto «More templates»): la catena TP intera. `templatePlan` collega `index` a `tp.generate` (polarità e risoluzione le decidono i file) e `tp.network` alle righe e ai campioni di `tp.link` (una vista di `tp.filter` non è una tabella); prova: `tests/flow_modelli_partenza.js` e `flow_bentazone_tests.rs` (stesso cablaggio, eseguito).
