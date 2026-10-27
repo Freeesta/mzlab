@@ -20,7 +20,7 @@ try:
             t = [x.strip().replace("fermo a ", "") for x in pg.locator(".pnl.spec .rtl").all_inner_texts()]       # the frozen ones say "fermo a ..."
             rts = [float(x.split()[0]) for x in t if x.endswith(" min")]       # the pixel under the click gives 10.0 ± 0.03 min, whatever the width of the page
             assert any(abs(v - 10.0) < 0.1 for v in rts) and any(abs(v - 14.3) < 0.1 for v in rts), t
-            hd = pg.evaluate("[...document.querySelectorAll('.pnl.spec')].pop().querySelector('.hd').innerText"); assert "Spettro di massa" in hd and "RT" in hd, hd
+            hd = pg.evaluate("[...document.querySelectorAll('.pnl.spec')].pop().querySelector('.hd').innerText"); assert "MS1" in hd and " min" in hd, hd                      # title «MS¹» and the time of the scan without «RT»
         step("each double click opens a new spectrum, RT next to the title", dbl)
         pg.screenshot(path=SH + "161_dbl.png")
         def arrows():

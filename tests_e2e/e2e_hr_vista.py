@@ -18,16 +18,16 @@ try:
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 6000, 2)
         pg.wait_for_timeout(2500)
         def panels():
-            v = pg.evaluate("(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null),s2=E.panels.find(p=>p.dda!=null);return {w1:s1.w,w2:s2.w,host:hostWidth(),y1:s1.y,h1:s1.h,y2:s2.y,l1:s1.el.querySelector('.mslv').textContent,l2:s2.el.querySelector('.mslv').textContent}})()"); print(v)
+            v = pg.evaluate("(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null),s2=E.panels.find(p=>p.dda!=null);return {w1:s1.w,w2:s2.w,host:hostWidth(),y1:s1.y,h1:s1.h,y2:s2.y,l1:s1.el.querySelector('.ttl').textContent,l2:s2.el.querySelector('.ttl').textContent}})()"); print(v)
             assert v["l1"] == "MS1" and v["l2"] == "MS2", v
             assert abs(v["w1"] - v["host"]) <= 2 and abs(v["w2"] - v["host"]) <= 2 and v["y2"] >= v["y1"] + v["h1"], v
         step("MS1 at full width with its mark, the MS2 panel under it with «MS2»", panels)
 
         def extra():
             v = pg.evaluate("""(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null);DDA.addMs2(s1);DDA.addMs2(s1);fitHost();return 1})()""")
-            pg.wait_for_function("E.panels.filter(p=>p.dda!=null&&p.el&&p.el.querySelector('.mslv')).length===3", timeout=15000)
+            pg.wait_for_function("E.panels.filter(p=>p.dda!=null&&p.el&&p.el.querySelector('.ttl')).length===3", timeout=15000)
             v = pg.evaluate("""(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null);
-              const r=E.panels.filter(p=>p.dda===s1.id).map(p=>({x:p.x,w:p.w,y:p.y,l:p.el.querySelector('.mslv').textContent}));return {r,W:hostWidth(),w1:s1.w,y1:s1.y,h1:s1.h}})()""")
+              const r=E.panels.filter(p=>p.dda===s1.id).map(p=>({x:p.x,w:p.w,y:p.y,l:p.el.querySelector('.ttl').textContent}));return {r,W:hostWidth(),w1:s1.w,y1:s1.y,h1:s1.h}})()""")
             print(v)
             assert len(v["r"]) == 3 and all(q["l"] == "MS2" and q["y"] == v["r"][0]["y"] and q["y"] >= v["y1"] + v["h1"] - 1 for q in v["r"]), v
             assert sorted(q["x"] for q in v["r"]) == [q["x"] for q in sorted(v["r"], key=lambda q: q["x"])] and len({q["x"] for q in v["r"]}) == 3, v
