@@ -71,7 +71,7 @@ fn keys_report(scans: &[mzlab_core::idxread::Scan]) {
         e.2 = e.2.max(s.rt);
     }
     println!(
-        "distinct MSn keys: {} (the rule accepts 2-512 with a median of at least 10 scans)",
+        "key count {}/512 (the rule accepts 2-512 keys with a median of at least 10 scans)",
         keys.len()
     );
     for (k, (n, a, b)) in keys.iter().take(60) {
