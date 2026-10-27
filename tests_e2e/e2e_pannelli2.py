@@ -112,6 +112,11 @@ try:
             pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 320")
             assert h() == 320, h()
         step("panels: the top grip moves the boundary with the panel above, double click = default height, arrows on the focused grip", drag_top)
+        def header_free():
+            pg.evaluate("window.scrollTo(0,0)")
+            hit = pg.evaluate("""() => E.panels.filter(q => q.full && q.el.offsetParent).map(q => { const b = q.el.querySelector('.hd').getBoundingClientRect(); const t = b.top > q.el.getBoundingClientRect().top && document.elementFromPoint(b.left + 8, b.top + 2); return [q.id, (t && t.className) || '']; }).filter(([, c]) => /pgrip/.test(c))""")
+            assert not hit, hit                                                 # the 24 px grips must not cover the header: a drag there moves the panel
+        step("panels: the resize grips do not cover the panel header", header_free)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

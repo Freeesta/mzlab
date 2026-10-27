@@ -1007,7 +1007,8 @@ window.MAPPA = (() => {
   const H0 = 300, HMIN = 190, h0 = p => p.type === "map" ? 360 : H0;
   const css = document.createElement("style");
   css.textContent = "#dpanels .pnl{resize:none;max-width:100%}.pnl .pgrip{position:absolute;left:12px;right:12px;height:24px;z-index:5;cursor:ns-resize;touch-action:none}" +
-    ".pnl .pgrip.t{top:-11px}.pnl .pgrip.b{bottom:-11px}.pnl .pgrip::after{content:'';position:absolute;left:50%;top:10px;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
+    // 24 px box as before (WCAG 2.5.8, axe target-size) but clipped so that only 5 px of it, along the panel edge, take the pointer: the header stays draggable
+    ".pnl .pgrip.t{top:-11px;clip-path:inset(0 0 8px 0)}.pnl .pgrip.b{bottom:-11px;clip-path:inset(8px 0 0 0)}.pnl .pgrip.t::after{top:12px}.pnl .pgrip.b::after{top:8px}.pnl .pgrip::after{content:'';position:absolute;left:50%;width:34px;height:4px;margin-left:-17px;border-radius:2px;background:var(--line);opacity:0;transition:opacity .15s}" +
     ".pnl:hover .pgrip::after,.pnl .pgrip:focus-visible::after,.pnl .pgrip.on::after{opacity:1}.pnl .pgrip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}@media (pointer:coarse){.pnl .pgrip::after{opacity:.8}}" +
     "@media (prefers-reduced-motion:reduce){.pnl .pgrip::after{transition:none}}";
   document.head.appendChild(css);
