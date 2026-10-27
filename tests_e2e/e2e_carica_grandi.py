@@ -39,7 +39,7 @@ def check(count, seen, got):
     assert ok + len(failed) == count, f"{ok} loaded + {len(failed)} failed != {count} "
     assert len(failed) >= 1 and ok >= 1, f"the room should fit some of the {count} files and not all: {ok} loaded, {len(failed)} failed"
     assert "not enough space" in text or "abbastanza spazio" in text, "the failed files are explained as lack of space"
-    assert any("%" in m for m in seen), f"the overlay never showed a percentage while reading: {seen[:5]}"
+    assert any("%" in m for m in seen), f"the overlay never showed a percentage while reading: {len(seen)} texts, first {seen[:3]}, last {seen[-3:]}"
 def too_many():           # the start screen is hidden once the files that fit have opened: its text is read too; under 50 MB each, so no check up front: a file or an index cut short by the browser is caught after writing
     check(*scenario(600, 6000, 80))
 def room_enough():        # room for everything: pressed while reading, the button waits for the last file, then opens them ALL and the loading screen goes away
