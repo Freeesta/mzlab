@@ -12,6 +12,7 @@ mod json;
 mod json3;
 mod modello;
 mod nomi;
+mod parole_bianco;
 mod posizioni;
 mod regex;
 mod ricollega;

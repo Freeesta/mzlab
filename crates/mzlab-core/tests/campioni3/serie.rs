@@ -165,3 +165,24 @@ fn a_p_in_a_time_is_the_decimal_point_and_the_order_is_numeric() {
     assert_eq!(order[1], "MQ_PMS_T0p5.mzML");
     assert_eq!(order[4], "MQ_PMS_T10p25.mzML");
 }
+
+#[test]
+fn blank_words_make_a_blank_only_without_a_time_or_a_series() {
+    let kind = |n: &str| mzlab_core::campioni::ruolo_e_minuti(n).0;
+    for n in [
+        "MQ_Wash_1.mzML",
+        "MQ_blk.mzML",
+        "milli-q_2.mzML",
+        "20300101_neg_008_MQ_Wash.mzML",
+    ] {
+        assert_eq!(kind(n), "blank", "{n}");
+    }
+    for n in [
+        "MQ_PMS_T00.mzML",
+        "TW_H2O2_T00.mzML",
+        "MQ_PMS_T2p5.mzML",
+        "SQ_PMS_T5.mzML",
+    ] {
+        assert_ne!(kind(n), "blank", "{n}");
+    }
+}
