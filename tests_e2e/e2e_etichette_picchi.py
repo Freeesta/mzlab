@@ -1,4 +1,4 @@
-"""Labels of the main peaks of the chromatograms (etichette-picchi.js): RT + base peak m/z on a TIC (synthetic Full Scan), RT + wavelength on a PDA trace (synthetic
+"""Labels of the main peaks of the chromatograms (etichette-picchi.js): RT + base peak m/z on a TIC (synthetic Full Scan), the time alone on a PDA trace (synthetic
 DAD with two maxima at different wavelengths); the control shows and hides them, they never overlap, follow the zoom, enter the table of the data and pass axe."""
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -78,12 +78,12 @@ try:
             def pda():
                 pg.evaluate(f"(()=>{{const c={CH}; const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
                 attendi(pg, f"{CH}.kind==='pda' && {CH}._a")
-                attendi(pg, f"{LB}.filter(l => l.text.includes('nm')).length >= 2")
+                attendi(pg, f"{LB}.filter(l => l.etpk && /^\\d+\\.\\d{{2}}$/.test(l.text)).length >= 2")
                 ls = labels(pg, 2); txt = sorted(l[0] for l in ls)
                 for i, a in enumerate(ls):
                     for b in ls[i + 1:]: assert not overlap(a, b), (a, b)
-                assert any(t.startswith("1.0") and "260 nm" in t for t in txt) and any(t.startswith("2.0") and "320 nm" in t for t in txt), txt
-            step("PDA: two peaks, two wavelengths (260 and 320 nm), labels apart", pda)
+                assert any(t.startswith("1.0") for t in txt) and any(t.startswith("2.0") for t in txt) and all("nm" not in t for t in txt), txt      # the label is the time alone: the wavelength is in the title and the legend
+            step("PDA: two peaks (maxima at 260 and 320 nm), time labels apart", pda)
     finally:
         r2.close()
 finally:

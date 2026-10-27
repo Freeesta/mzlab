@@ -85,8 +85,9 @@ try:
         step("1.6: grey dashed line, hidden out of the zoom, back in view", annot)
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
-            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); attendi(pg, r"/^\d+\.\d{2} min/.test(document.querySelector('.pnl.spec .rtl').textContent)")
-            t = pg.inner_text(".pnl.spec .rtl"); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
+            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); LIVE = "[...document.querySelectorAll('.pnl.spec .rtl')].map(e => e.textContent).filter(t => !t.startsWith('fermo a'))[0]"      # the pinned spectra read «fermo a RT», the order of the panels is not fixed
+            attendi(pg, r"/^\d+\.\d{2} min/.test(" + LIVE + ")")
+            t = pg.evaluate(LIVE); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)
     r.close()
 except Exception as e:
