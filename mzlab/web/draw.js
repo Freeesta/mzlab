@@ -404,7 +404,7 @@ async function showInfo() {
 }
 async function showInfo1() {
   const sc = Q("#sel-card"), pc = Q("#prop-card"); if (!K || !sc || !pc) return;
-  await loadOCL();
+  await loadOCL(); if (!K.editor) return;
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
   if (!set.size) { sc.hidden = true; pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.select")) + '</div>'; return; }   // the table is filled only for a selected molecule
@@ -536,7 +536,7 @@ function labelParts(/** @type {DrawStruct} */ d0) {
 }
 const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked || Q("#lb-a").checked;
 function drawLabels() {
-  if (!K) return;
+  if (!K || !K.editor || !K.editor.render) return;       // Ketcher not ready yet (slow runner) or already torn down
   const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
   let g = svg.querySelector("#" + (typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels")); // kept from the old name: renaming it would break DOM lookups/styles
   if (!g) { g = doc.createElementNS(ns, "g"); g.id = typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels"; g.setAttribute("pointer-events", "none"); }
@@ -772,7 +772,7 @@ document.addEventListener("nbreset", () => {
 // ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass
 // geometry of the labels (same numbers as drawLabels): a box per structure, in the user units of Ketcher's svg
 function labelBoxes() {
-  if (!K || !(Q("#lb-f").checked || Q("#lb-m").checked)) return [];
+  if (!K || !K.editor || !K.editor.render || !(Q("#lb-f").checked || Q("#lb-m").checked)) return [];
   const sc = K.editor.render.options.microModeScale || 40, size = 13;
   return structures().map(d => {
     const lines = labelParts(d), w = Math.max(...lines.map(l => textWidth(l, size))), x = d.cx * sc, y = d.y * sc + 30;

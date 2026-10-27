@@ -64,6 +64,7 @@ Il ponte WASM della pipeline L1-L9 di `mzlab-feat` (formati e livelli: `mzfeat.m
 - Le API del `.wasm` hanno la granularità delle fasi sopra; le rotte desktop `feat/*` non esistono.
 - Misura (4 CPU, 4 worker; 13 `.mzidx` Orbitrap da ~82 MB, 147 ipotesi): detect 18,3 s, align 6,2 s, proofs 13,6 s, totale 39,4 s, `.mzfeat` con `evid` uguale al nativo; picco per worker: detect 100 MB, align 158 MB, proofs 204 MB.
 - `tests_e2e/e2e_feat_run.py` stampa la tabella dei tempi; con `MZLAB_FEAT_MZIDX=<cartella>` e `MZLAB_FEAT_PARENT=FORMULA:MZ:RT` usa file veri (profilo persistente) e verifica totale < 60 s e detect ≤ 128 MB; `e2e_feat_cache.py` prova la cache.
+- `tests_e2e/e2e_feat_na.py` (serie ritagliata in RT di `tools/feat_ritagliata.py`, anche con `rt_range`): le celle `CELL_NA` ci sono e `.wasm` e nativo danno gli stessi byte.
 
 ## Prove
 - `tests/test_feat_wasm.py` (+ `tests/feat_wasm_node.js`): `.mzfeatf`, `.mzfeat` ed `evid` del WASM hanno lo stesso SHA-256 del nativo sulla serie sintetica `piccolo`.
