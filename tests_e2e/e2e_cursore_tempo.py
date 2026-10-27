@@ -1,4 +1,4 @@
-"""Chromatogram cursor: the mouse box, the pass-over line, the peak labels and the handle say only the time («14.33 min»), never the m/z (it is in the title and the legend). TIC and XIC."""
+"""Chromatogram cursor: the mouse box, the pass-over line and the handle say only the time («14.33 min»), the peak labels the number alone («14.33»), never the m/z (it is in the title and the legend). TIC and XIC."""
 import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -28,9 +28,9 @@ try:
             tip, rd, lbl, cur = probe(pg, sel); print(sel, tip, rd, lbl, cur)
             assert tip and TIME.match(tip), tip
             assert TIME.match(rd), rd
-            assert lbl and all(TIME.match(t) for t in lbl), lbl
+            assert lbl and all(re.match(r"^\d+\.\d{2}$", t) for t in lbl), lbl          # on the plot the peak label is the number alone ("min" is in the data table)
             assert TIME.match(cur), cur
-        step("TIC: one number with «min» in the mouse box, the line, the peak labels and the handle, no m/z", lambda: check("chrom"))
+        step("TIC: the time with «min» in the mouse box, the line and the handle, the number alone in the peak labels, no m/z", lambda: check("chrom"))
         def xic():
             pg.evaluate("xicDirect(364.3)"); ready(pg); frames(pg, 10)
             pg.wait_for_function("(()=>{const p=E.panels.find(p=>p.type==='xic');return p&&p._a&&p._a.sr&&p._a.sr.length})()", timeout=15000); frames(pg, 6)
