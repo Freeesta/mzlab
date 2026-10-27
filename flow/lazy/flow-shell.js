@@ -89,7 +89,7 @@
     }
     let dismissed = false;
     // the node of the feature table: open from the first drawing, so its settings are at hand without choosing a template
-    const tableKey = () => { const n = nodeOfStep("features.detect"); return n ? n.key : ""; };
+    const tableKey = () => { const i = F.findStep(S.plan, "features.detect"), n = i && nodeOfStep(i.id); return n ? n.key : ""; };
     const tplCard = (/** @type {any} */ t) => el("button", { type: "button", class: "flx-tc", "data-tpl": t.id, onclick: () => applyTemplate(t) },
       el("span", { class: "flx-pre", "aria-hidden": "true", style: "--cc:" + F.CATS.input.color }, el("i"), el("b"), el("i", { style: "--cc:" + F.CATS.process.color }), ...t.addons.flatMap((/** @type {string} */ _) => [el("b"), el("i", { style: "--cc:" + F.CATS.search.color })])),
       el("strong", { text: t.name }), el("small", { text: t.good }), ...(t.help ? [el("small", { class: "flx-help", text: t.help })] : []));

@@ -127,7 +127,7 @@ try:
             pg.evaluate("document.querySelector('details[data-pkg=attributio]').open = true")
             add(pg, "spectra.match")
             attendi(pg, "!!document.querySelector('#fl-card-match')")
-            assert pg.locator('button[aria-label="Compare algorithms of detect"]').count() == 0     # one available algorithm only
+            assert pg.locator('button[aria-label="Compare algorithms of align"]').count() == 0 and pg.locator('button[aria-label="Compare algorithms of detect"]').count() == 1     # one available algorithm only / two
             pg.click('button[aria-label="Compare algorithms of match"]')
             attendi(pg, "!!document.querySelector('#fl-card-compare')")
             assert pg.locator("#fl-card-compare .fl-var").count() == 2
@@ -335,17 +335,18 @@ try:
         def samples_in_place():
             # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
             pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); FLOW.addInput(S.plan, 'samples'); S.redraw(); }""")
-            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.flx-smp')")
-            assert pg.locator('.flx-smp button[aria-label^="Take"]').is_disabled(), "From Data needs open files"
+            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.fl-insp .mg-sc')")
+            assert pg.locator('.fl-insp button[aria-label^="Take"]').is_disabled(), "From Data needs open files"
             pg.evaluate("""() => { window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }]; FLOW.current.redraw(); }""")
-            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.flx-smp') && !document.querySelector('.flx-smp button[aria-label^=Take]').disabled")
-            pg.click('.flx-smp button[aria-label^="Take"]')
-            attendi(pg, "document.querySelectorAll('.flx-smp tbody tr').length === 2 && /^[0-9a-f]{12}/.test(document.querySelector('.flx-smp-sha').textContent)")
+            pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.fl-insp .mg-sc') && !document.querySelector('.fl-insp button[aria-label^=Take]').disabled")
+            pg.click('.fl-insp button[aria-label^="Take"]')
+            attendi(pg, "document.querySelector('.fl-insp .mg-sc').getAttribute('aria-rowcount') === '3' && /^[0-9a-f]{12}/.test(document.querySelector('.fl-insp code').textContent)")
             sha = pg.evaluate("FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256"); assert len(sha) == 64, sha
-            pg.fill('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "10"); pg.press('.flx-smp tbody tr:nth-child(2) input[aria-label^="Time of"]', "Tab")
+            c = pg.evaluate("+document.querySelector('.fl-insp [role=columnheader]:has(button[aria-label=\\'Sort by Time\\'])').getAttribute('aria-colindex') - 1")
+            pg.click(f".fl-insp .mg-sc [data-r='1'][data-c='{c}']"); pg.keyboard.press("Enter"); pg.keyboard.press("Control+a"); pg.keyboard.type("10"); pg.keyboard.press("Tab")
             attendi(pg, "FLOW.current.plan.inputs.find(i => i.type === 'samples').sha256 !== '%s'" % sha)
             assert pg.evaluate("Object.values(FLOW.current.samples)[0].campioni[1].tempo_min") == 10
-            assert "No t0" in pg.inner_text('.flx-smp-roles') and "1 blank" in pg.inner_text('.flx-smp-roles'); pg.evaluate("() => { E.files = window.__e; }")
+            assert "No t0" in pg.inner_text('.fl-insp'); pg.evaluate("() => { E.files = window.__e; }")
         step("the sample list is filled from Data or edited in place, and the input keeps its SHA-256", samples_in_place)
 
         def samples_fix():
@@ -434,11 +435,11 @@ try:
             pg.set_input_files('.fl-insp input[type=file]', files=[{"name": "tp.json", "mimeType": "application/json", "buffer": tp}])
             attendi(pg, "document.querySelectorAll('.flx-sticks .flx-bar').length === 2")
             assert "Probable" in pg.inner_text(".flx-res-body") and "present, area 900" in pg.inner_text(".flx-res-body") and "absent" in pg.inner_text(".flx-res-body")
-            assert pg.locator(".flx-sticks").get_attribute("role") == "img" and pg.locator(".flx-one .flx-table td").nth(1).inner_text() == "900"
+            assert pg.locator(".flx-sticks[aria-label$='in each condition']").get_attribute("role") == "img" and pg.locator(".flx-one:has(.flx-sticks[aria-label$='in each condition']) .flx-table td").nth(1).inner_text() == "900"
             # one selection: a click on a product (or Enter on the focused row) draws it in the conditions block and marks the sets it belongs to; the picker answers the other way
             rows = ".flx-res-body .flx-table tbody tr[data-id]"
             pg.click(rows + '[data-id="2"]'); attendi(pg, "document.querySelector('.flx-res-body select').value === '1'")
-            assert "TP 8" in pg.locator(".flx-sticks").get_attribute("aria-label") and pg.locator(".flx-res-body tr.flx-sel").count() >= 2
+            assert "TP 8" in pg.locator(".flx-sticks[aria-label$='in each condition']").get_attribute("aria-label") and pg.locator(".flx-res-body tr.flx-sel").count() >= 2
             sets = ".flx-res-body tr[data-members]"
             assert pg.locator(sets + ".flx-member").count() == 1 and "O2 + N2" in pg.locator(sets + ".flx-member").inner_text()
             pg.locator(rows + '[data-id="1"]').first.focus(); pg.keyboard.press("Enter")
@@ -475,7 +476,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('.fln-live')].every(n => n.hidden || n.querySelector('.fln-lm svg'))")
             assert "flow/live/events" in pg.evaluate("window.__ops") and "flow/progress" not in pg.evaluate("window.__ops")
             pg.click("#flx-live-pause"); attendi(pg, "window.__ops.includes('flow/live/pause')")
-            assert pg.get_attribute("#flx-live-pause", "aria-pressed") == "true" and "Resume" in pg.inner_text("#flx-live-pause")
+            attendi(pg, "document.querySelector('#flx-live-pause').getAttribute('aria-pressed') === 'true' && document.querySelector('#flx-live-pause').textContent.includes('Resume')")     # the bar follows the answer of the engine
             pg.click("#flx-live-pause"); attendi(pg, "window.__ops.includes('flow/live/resume')")
             pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps[S.plan.steps.length - 1]; i.params = i.params || {}; i.params.min_height = 7; S.refresh(); }"); attendi(pg, "window.__ops.includes('flow/live/update')")
             pg.evaluate("() => { const S = document.querySelector('.flx-list').__flow, i = S.plan.steps[S.plan.steps.length - 1]; delete i.params.min_height; S.refresh(); }")
