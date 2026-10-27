@@ -22,10 +22,10 @@ def scenario(n_ms1, n_ms2, mb_each):
             for k in range(count):
                 f = os.path.join(d, f"grande{k + 1}.mzML"); mzml_grande.write(f, n_ms1=n_ms1, n_ms2=n_ms2, seed=k + 1); names.append(f)
             pg.evaluate("window.__seen = []; new MutationObserver(() => window.__seen.push(document.getElementById('ldmsg').textContent)).observe(document.getElementById('ldmsg'), {childList: true, characterData: true, subtree: true})")          # what the overlay says, at every change
+            pg.evaluate("addEventListener('mzlab-index', () => document.getElementById('opbtn').click(), {once: true})")     # pressed at the first sign of progress: a click from the test came too late on a fast runner, with every file already read and nothing left to show
             pg.set_input_files("#pick", names)
             pg.wait_for_function("UPBUSY > 0 || ST.files.length > 0 || QQQ_LOADFAIL.size > 0")
             t0 = time.time()
-            pg.click("#opbtn")                                              # pressed while the files are still being read
             while time.time() - t0 < 600 and pg.evaluate("UPBUSY") > 0: time.sleep(0.3)
             pg.wait_for_timeout(500)
             return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + [...document.getElementById('start').querySelectorAll('*')].filter(e => !e.closest('.diagbox')).map(e => e.childNodes.length && [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ')).join(' ')]")
