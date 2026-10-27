@@ -54,6 +54,8 @@
 
   // ---------------------------------------------------------------- toolbar
   /** @param {any} p */
+  /** tooltip of the XIC button: the infusion note, «XIC of N files» in overlay, else the how-to @param {any} p @param {boolean} off */
+  const tipOf = (p, off) => { const n = window.SPECBAR ? SPECBAR.nFiles(p) : 1; return off ? T("xicbtn.infusion") : n > 1 ? T("xicbtn.n", { n }) : T("xicbtn.title"); };
   function refresh(p) {
     const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]'), pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
     if (p.uv) { for (const x of [b, l, pv]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
@@ -61,7 +63,7 @@
     if (off && (s.pend || s.sel)) { s.pend = false; s.sel = null; }
     if (b) {
       b.classList.toggle("on", s.pend); b.setAttribute("aria-pressed", String(s.pend));
-      const bt = /** @type {HTMLButtonElement} */ (b), tip = T(off ? "xicbtn.infusion" : "xicbtn.title");
+      const bt = /** @type {HTMLButtonElement} */ (b), tip = tipOf(p, off);
       if (bt.disabled !== off) bt.disabled = off;
       if (bt.title !== tip) bt.title = tip;
     }
@@ -141,7 +143,7 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     if (window.XICLENS) XICLENS.sync(p);
-    const s = ST.get(p); if (s && (infusion(p) !== /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]'))?.disabled || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && !infusion(p)))) refresh(p);
+    const s = ST.get(p), xb = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]')); if (s && (infusion(p) !== xb?.disabled || (xb && xb.title !== tipOf(p, infusion(p))) || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && !infusion(p)))) refresh(p);
     if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }

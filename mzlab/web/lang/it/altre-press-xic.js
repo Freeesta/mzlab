@@ -62,8 +62,6 @@ I18N.add("it", {
   "spec.follow.none.title": "Spettro fisso al suo tempo. Scegli un cromatogramma da seguire",
   "spec.follow.aria": "Lo spettro segue il pannello {n}: scegli quale cromatogramma segue",
   "spec.follow.title": "Questo spettro segue il cromatogramma: un clic, il cursore o le frecce lo aggiornano. Scegli un altro cromatogramma o «nessuno»",
-  "spec.follow.none": "Fisso",
-  "spec.follow": "Segue: pann. {n}",
   "xic.empty": "vuoto",
   "xic.ion1": "Ione 1",
   "xic.ionN": "Ione {n}",

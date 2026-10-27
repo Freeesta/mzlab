@@ -128,6 +128,7 @@ declare var UVSPEC: any;
 declare var WORKFLOW: any;
 declare var WatersRaw: any;
 declare var XICBTN: any;
+declare var SPECBAR: any;
 declare var XICLENS: any;
 declare var XLSX_MIME: any;
 declare var __m3d: any;
