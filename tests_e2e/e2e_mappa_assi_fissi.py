@@ -33,23 +33,24 @@ try:
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         nxt, prv = ".pnl.map [data-a=mapnav][data-d='1']", ".pnl.map [data-a=mapnav][data-d='-1']"
         lab = lambda: pg.evaluate(f"E.files.find(f=>f.k==={M}.k).label")
+        shown = lambda: (ready(pg), attendi(pg, f"!!{M}._a && {M}._a.f.k==={M}.k"))        # the map is drawn for the file of the panel
         seen = {}
         def whole():
-            seen[lab()] = view(pg)
+            shown(); seen[lab()] = view(pg)
             for _ in range(2):
-                pg.wait_for_timeout(600); before = lab(); pg.click(nxt); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label!=={before!r}"); ready(pg); pg.wait_for_timeout(500); seen[lab()] = view(pg)
+                before = lab(); pg.click(nxt); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label!=={before!r}"); shown(); seen[lab()] = view(pg)
             vs = list(seen.values()); assert len(vs) == 3 and vs[0] == vs[1] == vs[2], seen
             v = vs[0]; assert v["x"][0] < 1 and v["x"][1] > 19.9 and v["y"][0] < 131 and v["y"][1] > 349, v          # the union: the widest file sets the limits
         step("whole view: the same axes on every file, the union of the data", whole)
         def zoomed():
-            pg.evaluate(f"{M}.zoom=[3,8];{M}.zoomY=[200,260];draw({M})"); ready(pg); pg.wait_for_timeout(300)
-            pg.click(prv); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==='b-narrow'"); ready(pg); pg.wait_for_timeout(500)
+            pg.evaluate(f"{M}.zoom=[3,8];{M}.zoomY=[200,260];draw({M})"); shown(); attendi(pg, f"{M}._a.x0===3")
+            pg.click(prv); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==='b-narrow'"); shown()
             v = view(pg); assert v == {"x": [3, 8], "y": [200, 260]}, v
         step("a chosen zoom stays when the file changes", zoomed)
         def menu():
-            pg.locator(".pnl.map select[data-o=k]").select_option(index=0); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==='a-wide'"); ready(pg); pg.wait_for_timeout(500)
+            pg.locator(".pnl.map select[data-o=k]").select_option(index=0); attendi(pg, f"E.files.find(f=>f.k==={M}.k).label==='a-wide'"); shown()
             assert view(pg) == {"x": [3, 8], "y": [200, 260]}
-            pg.evaluate(f"{M}.zoom=null;{M}.zoomY=null;draw({M})"); ready(pg); pg.wait_for_timeout(300)
+            pg.evaluate(f"{M}.zoom=null;{M}.zoomY=null;draw({M})"); shown(); attendi(pg, f"{M}._a.x0<1")
             assert view(pg) == seen["a-wide"], (view(pg), seen["a-wide"])
         step("file menu: same behaviour; back to the whole view", menu)
         b.close()
