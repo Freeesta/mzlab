@@ -26,22 +26,21 @@ SHOTS = """async ([id, fr]) => {
 }"""
 try:
     with sync_playwright() as p:
-        pg = r.page(p)
-        load(pg, [D / "B_FullMass-t0.mzML", D / "HR_DDA-Exploris-t30.mzML"], 6000, 3); ready(pg)
-        def panels():
-            return pg.evaluate("E.panels.filter(p => p.type === 'chrom' && p.cv.clientWidth > 30).map(p => p.id)")
-        def tic():
-            ids = panels(); assert ids, "no chromatogram panel"
-            for i in ids:
-                ok = pg.evaluate(SHOTS, [i, None]); assert all(ok), f"panel {i}: pictures differ at zoom {ok}"
-        step("TIC of LR and HR files: same picture as the old loop at 4 zooms", tic)
-        def xic():
-            pid = pg.evaluate("(() => { const q = xicDirect(E.files[0].mz0 || 301.1, null); return q ? q.id : null; })()")
-            ready(pg); frames(pg, 4)
-            ids = pg.evaluate("E.panels.filter(p => p.type === 'xic' && p._a).map(p => p.id)"); assert ids, "no XIC panel"
-            for i in ids:
-                ok = pg.evaluate(SHOTS, [i, None]); assert all(ok), f"xic {i}: pictures differ at zoom {ok}"
-        step("XIC: same picture as the old loop at 4 zooms", xic)
+        for label, f, nf in (("LR", "B_FullMass-t0.mzML", 1), ("HR", "HR_DDA-Exploris-t30.mzML", 2)):
+            pg = r.page(p)
+            load(pg, [D / f], 6000, nf); ready(pg)
+            def tic():
+                ids = pg.evaluate("E.panels.filter(p => p.type === 'chrom' && p.cv.clientWidth > 30).map(p => p.id)"); assert ids, "no chromatogram panel"
+                for i in ids:
+                    ok = pg.evaluate(SHOTS, [i, None]); assert all(ok), f"panel {i}: pictures differ at zoom {ok}"
+            step(f"{label} TIC: same picture as the old loop at 4 zooms", tic)
+            def xic():
+                pg.evaluate("xicDirect(301.1, null)"); ready(pg); frames(pg, 4)
+                ids = pg.evaluate("E.panels.filter(p => p.type === 'xic' && p._a).map(p => p.id)"); assert ids, "no XIC panel"
+                for i in ids:
+                    ok = pg.evaluate(SHOTS, [i, None]); assert all(ok), f"xic {i}: pictures differ at zoom {ok}"
+            step(f"{label} XIC: same picture as the old loop at 4 zooms", xic)
+            pg.close()
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
