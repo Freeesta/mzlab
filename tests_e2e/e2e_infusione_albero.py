@@ -55,9 +55,8 @@ try:
             assert all(x[3] for x in m), m              # the controls stay in place (focus and open lists survive)
             assert m[0][1] < m[0][0] and m[1][1] == m[1][0] + (m[0][0] - m[0][1]), m
             assert all(x[2] < 50 for x in m), m
-            pg.wait_for_timeout(400)
             for sid, v in (("inf-ce", "0"), ("inf-ce", "1"), ("inf-tol", "0.01"), ("inf-tol", "nom")):
-                pg.select_option("#" + sid, v); pg.wait_for_timeout(400)
+                pg.select_option("#" + sid, v); attendi(pg, "document.querySelectorAll('#inf-tree tbody tr').length > 1 && !document.querySelector('#hri-body > .muted')", 10000)
                 assert 1 < pg.locator("#inf-tree tbody tr").count() <= NODES + 1, sid
         step("Level, Tolerance, Energies and Spectrum redraw the table at once", controls)
         def labels():
@@ -67,7 +66,7 @@ try:
         step("four labelled controls of the same height, each with its tooltip", labels)
         for w, theme in ((900, "light"), (900, "dark"), (480, "light"), (480, "dark")):
             def fit(w=w, theme=theme):
-                pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"document.getElementById('dfiles').style.width='{620 if w >= 900 else 300}px'"); pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); pg.wait_for_timeout(500)
+                pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"document.getElementById('dfiles').style.width='{620 if w >= 900 else 300}px'"); pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); attendi(pg, "document.getElementById('dfiles').offsetWidth >= 290", 10000)
                 drawer(pg, "alb"); pg.wait_for_selector(".inf-ctl", timeout=10000)
                 g = pg.evaluate("""() => { const c = document.querySelector('.inf-ctl'), b = document.getElementById('hri-body'); const tops = [...c.querySelectorAll('.inf-f')].map(x => Math.round(x.getBoundingClientRect().top));
                   return {tops, over: b.scrollWidth > b.clientWidth + 1, cw: c.getBoundingClientRect().width} }""")
