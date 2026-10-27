@@ -35,7 +35,7 @@ fn convert_mzml() -> Step {
         Param::integer("zlib_level", "Compression level")
             .min(0.0)
             .max(9.0)
-            .default_num(1.0)
+            .default_num(2.0)
             .doc("zlib level of the binary arrays, 0 (none) to 9 (smallest)")
             .advanced(),
         Param::boolean("numpress", "MS-Numpress")
