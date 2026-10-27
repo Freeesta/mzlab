@@ -482,6 +482,71 @@
    "licenza": "CC0",
    "url": "https://external.gnps2.org/gnpslibrary/ALL_GNPS_NO_PROPOGATED.mgf",
    "sito": "https://external.gnps2.org/gnpslibrary"
+  },
+  {
+   "id": "msdial-msms-pos",
+   "nome": "MS-DIAL public MS/MS (+)",
+   "versione": "2024-04-10",
+   "fonte": "Zenodo 10951913",
+   "polarita": 1,
+   "livello": 2,
+   "formato": "msp",
+   "dimensione": 269325487,
+   "licenza": "CC BY 4.0",
+   "url": "https://zenodo.org/records/10951913/files/MSMS_Public_EXP_Pos_VS17.msp?download=1",
+   "sito": "https://zenodo.org/records/10951913"
+  },
+  {
+   "id": "msdial-msms-neg",
+   "nome": "MS-DIAL public MS/MS (−)",
+   "versione": "2024-04-10",
+   "fonte": "Zenodo 10951913",
+   "polarita": -1,
+   "livello": 2,
+   "formato": "msp",
+   "dimensione": 49176461,
+   "licenza": "CC BY 4.0",
+   "url": "https://zenodo.org/records/10951913/files/MSMS_Public_EXP_NEG_VS17.msp?download=1",
+   "sito": "https://zenodo.org/records/10951913"
+  },
+  {
+   "id": "msdial-gcms-fiehnri",
+   "nome": "MS-DIAL GC-EI (Fiehn RI)",
+   "versione": "2024-04-10",
+   "fonte": "Zenodo 10951913",
+   "polarita": 0,
+   "livello": 2,
+   "formato": "msp",
+   "dimensione": 23073288,
+   "licenza": "CC BY 4.0",
+   "url": "https://zenodo.org/records/10951913/files/GCMS%20DB-Public-FiehnRI-VS3.msp?download=1",
+   "sito": "https://zenodo.org/records/10951913"
+  },
+  {
+   "id": "msdial-gcms-kovats",
+   "nome": "MS-DIAL GC-EI (Kovats RI)",
+   "versione": "2024-04-10",
+   "fonte": "Zenodo 10951913",
+   "polarita": 0,
+   "livello": 2,
+   "formato": "msp",
+   "dimensione": 23075883,
+   "licenza": "CC BY 4.0",
+   "url": "https://zenodo.org/records/10951913/files/GCMS%20DB-Public-KovatsRI-VS3.msp?download=1",
+   "sito": "https://zenodo.org/records/10951913"
+  },
+  {
+   "id": "massbank-msp",
+   "nome": "MassBank Europe (all records)",
+   "versione": "2026.03",
+   "fonte": "MassBank",
+   "polarita": 0,
+   "livello": 2,
+   "formato": "msp",
+   "dimensione": 137309196,
+   "licenza": "per record",
+   "url": "https://github.com/MassBank/MassBank-data/releases/download/2026.03/MassBank_NISTformat.msp",
+   "sito": "https://github.com/MassBank/MassBank-data/releases/tag/2026.03"
   }
  ]
 }

@@ -40,7 +40,7 @@ type LibQuery = Record<string, string | number>;
 type LibDir = { kind: string, name: string, list(sub?: string): Promise<LibEnt[]>, file(rel: string): Promise<LibFile>, write(rel: string, data: string | Blob | Uint8Array): Promise<void>, remove(rel: string): Promise<void>, replace(tmp: string, rel: string): Promise<void>, reader(file: LibFile): (off: number, len: number) => Uint8Array };  // same interface for handles and for the native folder
 type LibPiece = { file: string, dimensione: number, sha256: string };
 type LibPkg = { id: string, versione: string, sha256: string, dimensione: number, pezzi: LibPiece[], lettore_min?: number, spettri?: number, picchi?: number, polarita?: number };  // an entry of the catalog
-type LibCatalog = { formato: string, librerie: LibPkg[], esterne?: { id: string, url: string }[] };
+type LibCatalog = { formato: string, librerie: LibPkg[], esterne?: { id: string, url: string }[], fonti?: { id: string, modo: string }[] };
 type LibErr = Error & { key: string, params: Record<string, unknown> };
 type LibFetch = (url: string, opts?: RequestInit) => Promise<Response>;
 // File System Access API members the bundled libs do not have (libreria-cartella.js reads and writes the folders with them).
