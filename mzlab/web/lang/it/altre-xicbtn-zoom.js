@@ -2,6 +2,7 @@ I18N.add("it", {
   "zoom.mz": "m/z {lo}–{hi}",
   "zoom.rt": "RT {lo}–{hi} min",
   "xicbtn.title": "Estrae subito lo XIC dell'ione scelto nello spettro e lo mostra nel pannello sotto. Senza un ione scelto: clic su un picco (o tasti , e .). Maiusc: aggiunge lo ione come traccia in più",
+  "xicbtn.infusion": "Infusione: nessun cromatogramma",
   "xicbtn.aria": "Estrai lo XIC dell'ione scelto",
   "xicbtn.pend": "Clic su un picco: ne estrae lo XIC · Esc annulla",
   "xicbtn.ion.title": "Ione e tolleranza dello XIC: clic o Invio per scriverli",

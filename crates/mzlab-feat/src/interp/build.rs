@@ -16,7 +16,7 @@ use crate::chem::posizioni::{Peak, Pol};
 use crate::legacy::ms2::{Consensus, Ms2Sorted};
 use crate::legacy::series::{Hyp, Parent};
 use crate::prof::{report, time};
-use crate::table::{Aligned, CELL_ABSENT};
+use crate::table::{no_peak, Aligned};
 use crate::tp::{NO_PARENT, ST_PARENT, ST_TP, ST_UNEXPLAINED};
 
 pub type Res<T> = Result<T, String>;
@@ -74,7 +74,7 @@ struct Work {
 /// The window of the peak of `row` in file `k`: the edges of the row around the apex of that file; `NaN` where the row has no peak there.
 fn limits(t: &Aligned, row: usize, k: usize) -> (f64, f64) {
     let cell = row * t.n_files + k;
-    if t.state[cell] == CELL_ABSENT {
+    if no_peak(t.state[cell]) {
         return (f64::NAN, f64::NAN);
     }
     let apex = if t.apex_rt[cell].is_finite() {
@@ -97,7 +97,7 @@ fn limits(t: &Aligned, row: usize, k: usize) -> (f64, f64) {
 
 fn best_file(t: &Aligned, row: usize) -> usize {
     (0..t.n_files)
-        .filter(|&k| t.state[row * t.n_files + k] != CELL_ABSENT)
+        .filter(|&k| !no_peak(t.state[row * t.n_files + k]))
         .max_by(|&a, &b| t.area[row * t.n_files + a].total_cmp(&t.area[row * t.n_files + b]))
         .unwrap_or(0)
 }
