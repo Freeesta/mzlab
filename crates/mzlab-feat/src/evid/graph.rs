@@ -154,20 +154,6 @@ pub fn match_hypotheses(hyps: &[Hypothesis], aligned: &Aligned) -> Vec<Option<us
     match_hypotheses_in(hyps, aligned, HYPOTHESIS_PPM)
 }
 
-/// `match_hypotheses` for a table whose tolerances are `tp_ppm` (`TpParams.ppm`; negative = the unit axis, a window in Da).
-pub fn match_hypotheses_for(
-    hyps: &[Hypothesis],
-    aligned: &Aligned,
-    tp_ppm: f64,
-) -> Vec<Option<usize>> {
-    let win = if tp_ppm < 0.0 {
-        crate::axis::da(crate::axis::LR_TOL)
-    } else {
-        HYPOTHESIS_PPM
-    };
-    match_hypotheses_in(hyps, aligned, win)
-}
-
 /// `match_hypotheses` with the window of m/z given (ppm, or minus Da at unit resolution).
 pub fn match_hypotheses_in(hyps: &[Hypothesis], aligned: &Aligned, win: f64) -> Vec<Option<usize>> {
     let mut by_mz: Vec<usize> = (0..hyps.len()).collect();
@@ -189,20 +175,13 @@ pub fn match_hypotheses_in(hyps: &[Hypothesis], aligned: &Aligned, win: f64) -> 
     (0..aligned.len())
         .map(|r| {
             let at = |k: usize| closest(aligned.member_mz[k], f64::from(aligned.member_rt[k]));
-            let roots = aligned
-                .members(r)
-                .filter(|&k| aligned.member_role[k] == ROLE_M);
+            let roots = aligned.members(r).filter(|&k| aligned.member_role[k] == ROLE_M);
             // the root of the family speaks first, then the reference ion of the row, then the other ions
             roots
                 .clone()
                 .find_map(at)
                 .or_else(|| closest(aligned.mz[r], aligned.rt[r]))
-                .or_else(|| {
-                    aligned
-                        .members(r)
-                        .filter(|&k| aligned.member_role[k] != ROLE_M)
-                        .find_map(at)
-                })
+                .or_else(|| aligned.members(r).filter(|&k| aligned.member_role[k] != ROLE_M).find_map(at))
         })
         .collect()
 }
@@ -329,9 +308,7 @@ pub fn build_graph(inp: &Inputs) -> Vec<Identity> {
 
 /// `ids` in the order of the graph.
 pub fn sort_graph(ids: &mut Vec<Identity>) {
-    crate::sortc::any_by(ids, |a, b| {
-        super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b))
-    });
+    crate::sortc::any_by(ids, |a, b| super::prepared::order(&super::prepared::Key::of(a), &super::prepared::Key::of(b)));
 }
 
 /// Everything that grades an identity: the proofs in a fixed order, the library MS2 proof apart, the detections and the filled cells.
