@@ -3,6 +3,7 @@
 //! Numpress is not supported (an error with a key, as in the Python reader).
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
+mod cv;
 pub(crate) mod help;
 use help::Decode;
 use crate::numarray::Num;
@@ -330,14 +331,9 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
 fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
-    let mut scope = Scope::None;
     let (mut n_spec, mut n_chrom) = (0usize, 0usize);
-    let mut spec: Option<Spec> = None;
-    let mut chrom: Option<Chrom> = None;
-    let mut array: Option<Array> = None;
+    let mut cur = cv::Cur::default();
     let mut in_binary = false;
-    let mut in_precursor_list = false;
-    let mut in_analyzer = false;
 
     let mut groups: HashMap<String, Vec<[String; 5]>> = HashMap::new();
     // the `referenceableParamGroup` being read: id and its cvParams (name, accession, value, unitName, unitAccession)
@@ -352,7 +348,7 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                 match name {
                     "spectrum" => {
                         let a = attrs(e);
-                        spec = Some(Spec {
+                        cur.spec = Some(Spec {
                             index: get(&a, "index")
                                 .and_then(|v| v.parse().ok())
                                 .unwrap_or(n_spec),
@@ -372,12 +368,12 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                             uv: false,
                             arrays: Vec::new(),
                         });
-                        scope = Scope::Spectrum;
-                        in_precursor_list = false;
+                        cur.scope = Scope::Spectrum;
+                        cur.in_precursor_list = false;
                     }
                     "chromatogram" => {
                         let a = attrs(e);
-                        chrom = Some(Chrom {
+                        cur.chrom = Some(Chrom {
                             index: get(&a, "index")
                                 .and_then(|v| v.parse().ok())
                                 .unwrap_or(n_chrom),
@@ -391,12 +387,12 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                             pressure: false,
                             ms_term: false,
                         });
-                        scope = Scope::Chromatogram;
+                        cur.scope = Scope::Chromatogram;
                     }
-                    "precursorList" => in_precursor_list = true,
-                    "analyzer" if !empty => in_analyzer = true,
+                    "precursorList" => cur.in_precursor_list = true,
+                    "analyzer" if !empty => cur.in_analyzer = true,
                     "binaryDataArray" => {
-                        array = Some(Array {
+                        cur.array = Some(Array {
                             kind: ArrayKind::Other,
                             num: Num::F64,
                             zlib: false,
@@ -440,84 +436,21 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                                 .collect();
                             &group_list
                         };
-                        for &[name_cv, acc_cv, value_cv, unit_cv, unit_acc_cv] in list {
-                        if in_analyzer {
-                                out.item(Item::Analyzer(name_cv.to_string()), f)?;
-                            }
-                            let acc: &str = acc_cv;
-                            let value: &str = value_cv;
-                            let unit: &str = unit_cv;
-                            let unit_acc: &str = unit_acc_cv;
-                            let seconds = unit.starts_with("second") || unit_acc == "UO:0000010";
-                            if let (Scope::Chromatogram, Some(c)) = (scope, chrom.as_mut()) {
-                                match acc {
-                                    "MS:1000812" | "MS:1000813" => c.pda = true,
-                                    "MS:1003019" => c.pressure = true,
-                                    "MS:1000235" | "MS:1000627" | "MS:1000628" | "MS:1001473"
-                                    | "MS:1001472" => c.ms_term = true,
-                                    _ => {}
-                                }
-                            }
-                            if let Some(arr) = array.as_mut() {
-                                match acc {
-                                    "MS:1000514" => arr.kind = ArrayKind::Mz,
-                                    "MS:1000515" => {
-                                        arr.kind = ArrayKind::Intensity;
-                                        if let (false, Some(c)) = (unit.is_empty(), chrom.as_mut()) {
-                                            c.unit = unit.to_string();
-                                        }
-                                    }
-                                    "MS:1000595" => {
-                                        arr.kind = ArrayKind::Time;
-                                        arr.seconds = seconds;
-                                    }
-                                    "MS:1000574" => arr.zlib = true,
-                                    "MS:1002312" | "MS:1002313" | "MS:1002314" => {
-                                        return Err(Error::new("err.file.numpress"))
-                                    }
-                                    _ => {
-                                        if let Some(n) = Num::of_accession(acc) {
-                                            arr.num = n;
-                                        } else if let Some(u) = mobility_of(acc) {
-                                            (arr.kind, arr.mobility) = (ArrayKind::Mobility, u);
-                                        }
-                                    }
-                                }
-                            } else if let (Scope::Spectrum, Some(s)) = (scope, spec.as_mut()) {
-                                match acc {
-                                    "MS:1000804" => s.uv = true,
-                                    "MS:1000511" if !in_precursor_list => {
-                                        // A level is a small integer; `as` saturates and maps NaN to 0.
-                                        #[allow(clippy::cast_possible_truncation)]
-                                        let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
-                                        s.level = level
-                                    }
-                                    "MS:1000130" => s.polarity = 1,
-                                    "MS:1000129" => s.polarity = -1,
-                                    "MS:1000128" => s.profile = true,
-                                    "MS:1000512" if !in_precursor_list => s.filter = value.to_string(),
-                                    "MS:1000016" => {
-                                        s.rt = value.parse().unwrap_or(0.0);
-                                        s.rt_seconds = seconds;
-                                    }
-                                    "MS:1000744" => s.selected = value.parse().ok(),
-                                    "MS:1000827" => s.target = value.parse().ok(),
-                                    _ => s.mobility_scan = s.mobility_scan.or_else(|| mobility_of(acc).zip(value.parse().ok()).map(|(u, v)| (v, u))),
-                                }
-                            }
+                        for &cv in list {
+                            cur.apply(cv, out, f)?;
                         }
                     }
                     _ => {}
                 }
                 if empty && name == "binaryDataArray" {
                     // an empty element has no data: close it at once
-                    if let (Some(arr), Some(s)) = (array.take(), spec.as_mut()) {
+                    if let (Some(arr), Some(s)) = (cur.array.take(), cur.spec.as_mut()) {
                         s.arrays.push(arr);
                     }
                 }
             }
             Event::Text(ref t) if in_binary => {
-                if let Some(arr) = array.as_mut() {
+                if let Some(arr) = cur.array.as_mut() {
                     arr.text.push_str(&t.xml10_content());
                 }
             }
@@ -526,34 +459,34 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                 match name {
                     "binary" => in_binary = false,
                     "binaryDataArray" => {
-                        if let Some(arr) = array.take() {
-                            match scope {
-                                Scope::Spectrum => spec.as_mut().map(|s| s.arrays.push(arr)),
-                                Scope::Chromatogram => chrom.as_mut().map(|c| c.arrays.push(arr)),
+                        if let Some(arr) = cur.array.take() {
+                            match cur.scope {
+                                Scope::Spectrum => cur.spec.as_mut().map(|s| s.arrays.push(arr)),
+                                Scope::Chromatogram => cur.chrom.as_mut().map(|c| c.arrays.push(arr)),
                                 Scope::None => None,
                             };
                         }
                     }
-                    "precursorList" => in_precursor_list = false,
-                    "analyzer" => in_analyzer = false,
+                    "precursorList" => cur.in_precursor_list = false,
+                    "analyzer" => cur.in_analyzer = false,
                     "referenceableParamGroup" => {
                         if let Some((id, list)) = group.take() {
                             groups.insert(id, list);
                         }
                     }
                     "spectrum" => {
-                        if let Some(s) = spec.take().filter(|s| !s.uv) {
+                        if let Some(s) = cur.spec.take().filter(|s| !s.uv) {
                             out.spectrum(s, f)?;
                             n_spec += 1;
                         }
-                        scope = Scope::None;
+                        cur.scope = Scope::None;
                     }
                     "chromatogram" => {
-                        if let Some(c) = chrom.take() {
+                        if let Some(c) = cur.chrom.take() {
                             out.chromatogram(c, f)?;
                             n_chrom += 1;
                         }
-                        scope = Scope::None;
+                        cur.scope = Scope::None;
                     }
                     _ => {}
                 }
