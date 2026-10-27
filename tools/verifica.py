@@ -201,7 +201,9 @@ def js_syntax(results) -> None:
 def pytest(results, timeout) -> None:
     if not has("pytest"):
         results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
-    rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"], LOG / "pytest.log", timeout)
+    # serial pytest needs more than 20 min on a 4-CPU runner: with pytest-xdist the files are spread over the CPUs
+    par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
+    rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *par, "tests"], LOG / "pytest.log", timeout)
     last = [l for l in out.strip().splitlines() if re.search(r"passed|failed|error", l)][-1:] or out.strip().splitlines()[-1:]
     fails = [l for l in out.splitlines() if l.startswith(("FAILED", "ERROR"))][:6]
     results.append(("pytest", "OK" if rc == 0 else "FAIL", dt, (fails or []) + last if rc else last))
