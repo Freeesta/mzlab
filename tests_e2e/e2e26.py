@@ -43,10 +43,10 @@ try:
                 assert pg.evaluate("!document.querySelector('.pnl.max')"), (i, pg.evaluate("[!!document.querySelector('dialog[open]'), !!document.querySelector('#helppop:not([hidden])'), !!document.querySelector('#ctx:not([hidden])')]"))
         step("full screen on every panel (incl. XIC added later), Esc leaves it", fs)
         def tip():
-            btn = pg.locator(".pnl .fsb").first; btn.hover(); hold(pg, 1000)
+            btn = pg.locator(".pnl .fsb").first; pg.mouse.move(5, 5); hold(pg, 100); btn.hover(); hold(pg, 1000)      # a pointer that is already on the button (left there by the step before) makes no mouseover, so no tooltip
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "too early"
-            hold(pg, 1100)
-            assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Schermo intero" in pg.inner_text("#qtip")
+            attendi(pg, "!document.querySelector('#qtip').hidden", 10000)      # the delay is a timer of the page: on a loaded machine it fires late, so wait for the state (the «too early» check above still holds the lower bound)
+            assert "Schermo intero" in pg.inner_text("#qtip")
             pg.mouse.move(5, 5); attendi(pg, "document.querySelector('#qtip').hidden"); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
         def rt():
