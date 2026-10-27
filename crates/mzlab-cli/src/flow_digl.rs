@@ -6,7 +6,9 @@ use mzlab_core::flow::Job;
 use mzlab_core::json::Out;
 use mzlab_core::step::{DataType, Facets, Param, Port, RunsIn, Step};
 use mzlab_feat::legacy::lr::{self, plan::Settings, summary::summary};
+use mzlab_feat::recipe::Recipe;
 use mzlab_feat_wasm::run;
+use std::path::PathBuf;
 
 use crate::flow::{all_inputs, read_one, write_made, FileRunner};
 use crate::flow_base::{open, rebuild, Files};
@@ -98,6 +100,26 @@ fn settings_json(job: &Job) -> String {
 }
 
 /// `tp.dig_lr`: the columns are the files of the table, in order; the hypotheses come from the rules of the Dig.
+/// The polarity the Dig looks in: the recipe's, else the sign of the parent adduct, else what the files say (a mix or no scans read as positive).
+fn polarity_of(adduct: &str, recipe: &Recipe, indexes: &[PathBuf]) -> i8 {
+    recipe
+        .detect
+        .polarity
+        .filter(|&p| p != 0)
+        .or_else(|| adduct.ends_with('-').then_some(-1))
+        .or_else(|| of_files(indexes).polarity)
+        .unwrap_or(1)
+}
+
+/// The adduct of the parent ion: the one written, or [M-H]- when the default meets a negative series.
+fn adduct_of(adduct: &str, polarity: i8) -> &str {
+    if adduct == "[M+H]+" && polarity < 0 {
+        "[M-H]-"
+    } else {
+        adduct
+    }
+}
+
 pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let table_in = job
         .inputs
@@ -128,14 +150,7 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     );
     let p = parent_of(&parent.1)?;
     let mut recipe = rebuild(&lin)?;
-    // the polarity the files say (a negative series is looked for as [M-H]-); a mix or no scans read as positive, as before
-    let polarity: i8 = recipe
-        .detect
-        .polarity
-        .filter(|&p| p != 0)
-        .or_else(|| p.adduct.ends_with('-').then_some(-1))
-        .or_else(|| of_files(&indexes).polarity)
-        .unwrap_or(1);
+    let polarity = polarity_of(&p.adduct, &recipe, &indexes);
     recipe.detect.polarity = Some(polarity);
     let mut ix = indexes.iter().map(open).collect::<Result<Vec<_>>>()?;
     let hypo = run::hypotheses_stored(
@@ -164,14 +179,7 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     who.raw("{\"name\":\"parent\",\"neutral\":")
         .str(&p.formula)
         .raw(",\"adduct\":")
-        .str(
-            &if p.adduct == "[M+H]+" && polarity < 0 {
-                "[M-H]-"
-            } else {
-                p.adduct.as_str()
-            }
-            .to_string(),
-        )
+        .str(adduct_of(&p.adduct, polarity))
         .raw("}");
     let d = lr::dig(
         &files.0,
