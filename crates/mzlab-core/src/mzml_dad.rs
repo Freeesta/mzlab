@@ -114,7 +114,7 @@ fn from_array(head: &str, data: &[u8]) -> Option<DadData> {
     let (nt, nl) = (user(head, "n_rt")? as usize, user(head, "n_wl")? as usize);
     let (t0, t1) = (user(head, "rt_start")?, user(head, "rt_stop")?);
     let (w0, step) = (user(head, "wl_start")?, user(head, "wl_step")?);
-    let vals = decode(head, data).ok()?;
+    let vals = decode(head, data, nt.saturating_mul(nl)).ok()?;
     let at = |n: usize, a: f64, d: f64| (0..n).map(|i| a + d * i as f64).collect::<Vec<_>>();
     let dt = if nt > 1 {
         (t1 - t0) / (nt - 1) as f64
@@ -138,7 +138,7 @@ fn uv_row(block: &[u8]) -> Option<(f64, Vec<f64>, Vec<f64>)> {
     }
     let (mut wl, mut ab) = (None, None);
     for (head, data) in arrays(block) {
-        let a = decode(&head, &data).ok()?;
+        let a = decode(&head, &data, 0).ok()?;
         if head.contains("MS:1000617") {
             wl = Some(a);
         } else if head.contains("MS:1000515") {

@@ -350,6 +350,12 @@ impl<R: ReadAt> Index<R> {
         self.keys.iter().find(|(n, _)| *n == k).map(|(_, i)| *i)
     }
 
+    /// The m/z window the method declares for the survey scans (`run.scan_window`); None for an index that does not say.
+    pub fn declared_window(&self) -> Option<(f64, f64)> {
+        let w = self.run.get("scan_window")?;
+        Some((w.at(0)?.f64()?, w.at(1)?.f64()?))
+    }
+
     pub fn hr1(&self) -> bool {
         self.run.get("hr1").and_then(Value::bool).unwrap_or(false)
     }
