@@ -71,6 +71,7 @@ MATRIX = """() => { const heads = [...document.querySelectorAll('#gv-mx thead bu
 def load(pg, paths):
     pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
+    pg.wait_for_function("!!document.getElementById('pick').onchange", timeout=60000)      # the Dati scripts start after the tab: the input has no handler before
     pg.set_input_files("#pick", paths)
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(paths)}", timeout=240000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=240000)
