@@ -66,8 +66,8 @@ try:
         step("four labelled controls of the same height, each with its tooltip", labels)
         for w, theme in ((900, "light"), (900, "dark"), (480, "light"), (480, "dark")):
             def fit(w=w, theme=theme):
-                pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"document.getElementById('dfiles').style.width='{620 if w >= 900 else 300}px'"); pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); attendi(pg, "document.getElementById('dfiles').offsetWidth >= 290", 10000)
-                drawer(pg, "alb"); pg.wait_for_selector(".inf-ctl", timeout=10000)
+                pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"document.getElementById('dfiles').style.width='{620 if w >= 900 else 300}px'"); pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+                drawer(pg, "alb"); pg.wait_for_selector(".inf-ctl", timeout=10000); attendi(pg, "document.getElementById('hri-body').clientWidth > 200", 10000); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
                 g = pg.evaluate("""() => { const c = document.querySelector('.inf-ctl'), b = document.getElementById('hri-body'); const tops = [...c.querySelectorAll('.inf-f')].map(x => Math.round(x.getBoundingClientRect().top));
                   return {tops, over: b.scrollWidth > b.clientWidth + 1, cw: c.getBoundingClientRect().width} }""")
                 if os.environ.get("ALBERO_SHOTS"): pg.locator("#hrinfo").screenshot(path=f"{os.environ['ALBERO_SHOTS']}/albero_{w}_{theme}.png")
