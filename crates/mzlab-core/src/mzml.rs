@@ -165,6 +165,26 @@ fn attrs<'a>(e: &'a BytesStart) -> Vec<(&'a str, Cow<'a, str>)> {
     out
 }
 
+const CV_KEYS: [&str; 5] = ["name", "accession", "value", "unitName", "unitAccession"];
+
+/// The five cvParam attributes in `CV_KEYS` order, read in one pass without allocating a list.
+fn cv_attrs<'a>(e: &'a BytesStart) -> [Cow<'a, str>; 5] {
+    let mut out: [Cow<'a, str>; 5] = Default::default();
+    for a in e.attributes().with_checks(false).filter_map(|a| a.ok()) {
+        let key = a.key.into_inner();
+        if let Some(slot) = CV_KEYS
+            .iter()
+            .position(|k| *k == key)
+            .and_then(|i| out.get_mut(i))
+        {
+            *slot = a
+                .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                .unwrap_or_default();
+        }
+    }
+    out
+}
+
 fn get<'a>(a: &'a [(&str, Cow<str>)], name: &str) -> Option<&'a str> {
     a.iter().find(|(k, _)| *k == name).map(|(_, v)| v.as_ref())
 }
@@ -406,28 +426,23 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
                         group = get(&attrs(e), "id").map(|id| (id.to_string(), Vec::new()));
                     }
                     "cvParam" if group.is_some() => {
-                        let a = attrs(e);
-                        let own = |k| get(&a, k).unwrap_or("").to_string();
-                        let cv = [own("name"), own("accession"), own("value"), own("unitName"), own("unitAccession")];
+                        let cv = cv_attrs(e).map(|v| v.into_owned());
                         if let Some((_, list)) = group.as_mut() {
                             list.push(cv);
                         }
                     }
                     "cvParam" | "referenceableParamGroupRef" => {
-                        let a = attrs(e);
+                        let own: [Cow<str>; 5];
+                        let a;
                         // a cvParam is one entry; a group reference replays the cvParams of its group, in the same order
                         let group_list: Vec<[&str; 5]>;
                         let one: [[&str; 5]; 1];
                         let list: &[[&str; 5]] = if name == "cvParam" {
-                            one = [[
-                                get(&a, "name").unwrap_or(""),
-                                get(&a, "accession").unwrap_or(""),
-                                get(&a, "value").unwrap_or(""),
-                                get(&a, "unitName").unwrap_or(""),
-                                get(&a, "unitAccession").unwrap_or(""),
-                            ]];
+                            own = cv_attrs(e);
+                            one = [[&*own[0], &*own[1], &*own[2], &*own[3], &*own[4]]];
                             &one
                         } else {
+                            a = attrs(e);
                             group_list = get(&a, "ref")
                                 .and_then(|r| groups.get(r))
                                 .into_iter()
@@ -451,7 +466,12 @@ fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut 
             }
             Event::Text(ref t) if in_binary => {
                 if let Some(arr) = cur.array.as_mut() {
-                    arr.text.push_str(&t.xml10_content());
+                    // base64 has no entities and decode_array drops white space itself: take the raw text unless it has a reference
+                    if t.contains('&') {
+                        arr.text.push_str(&t.xml10_content());
+                    } else {
+                        arr.text.push_str(t);
+                    }
                 }
             }
             Event::End(ref e) => {

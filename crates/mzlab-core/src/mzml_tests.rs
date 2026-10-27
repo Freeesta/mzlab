@@ -161,3 +161,18 @@ fn shared_param_groups_read_like_inline_cvparams() {
     assert_eq!(s.mz, vec![100.5, 200.25, 300.0]);
     assert_eq!(s.intensity, vec![10.0, 20.0, 30.0]);
 }
+
+#[test]
+fn base64_split_by_white_space_and_character_references_reads_the_same() {
+    let plain = shared(false);
+    for gap in ["\r\n", "&#10;", " &#13;\n "] {
+        let split = plain
+            .replace("<binary>", &format!("<binary>{gap}"))
+            .replace("</binary>", &format!("{gap}</binary>"));
+        let (a, b) = (
+            read(plain.as_bytes()).unwrap(),
+            read(split.as_bytes()).unwrap(),
+        );
+        assert_eq!(a.spectra, b.spectra, "{gap:?}");
+    }
+}
