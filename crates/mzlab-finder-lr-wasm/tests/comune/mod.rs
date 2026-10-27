@@ -233,7 +233,7 @@ pub fn dig_at(
     let table = run::align(&feats, &origin, &r, |k| Ok(open(&idxs[k]))).unwrap();
     let rules = std::fs::read(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../TP_Mine/data/regole_tp.json"
+        "/../../TP_Mine/data/regole_tp_2.json"
     ))
     .unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = idxs.iter().map(|b| open(b)).collect();

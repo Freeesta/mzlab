@@ -65,7 +65,7 @@ fn dig_set(neutral: &str, settings: &str) -> lr::LrDig {
     let (feats, _) = run::read_files(&d.feats).unwrap();
     let rules = std::fs::read(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../TP_Mine/data/regole_tp.json"
+        "/../../TP_Mine/data/regole_tp_2.json"
     ))
     .unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = d.idxs.iter().map(|b| open(b)).collect();
