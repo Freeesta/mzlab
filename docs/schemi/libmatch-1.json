@@ -1,0 +1,87 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "libmatch/1",
+ "title": "libmatch/1: library match of one query spectrum, by compound",
+ "description": "Format «libmatch/1» (crates/mzlab-lib/src/matchres.rs, docs/agenti/librerie.md): the compounds found in a set of spectral libraries, exact before analog before in_silico, each with all its matching spectra (best score first) and the peak pairs a mirror plot draws. delta_mz = query precursor minus library precursor. confidence is always null here: the cascade of the Flow fills it from experimental, hr, scores and peaks.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "hr", "mask", "top_compounds", "libraries", "compounds"],
+ "properties": {
+  "schema": {"const": "libmatch/1"},
+  "hr": {"type": "boolean"},
+  "mask": {"type": "integer", "minimum": 0, "maximum": 65535},
+  "top_compounds": {"type": "integer", "minimum": 1},
+  "libraries": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["index", "name", "kind"],
+    "properties": {
+     "index": {"type": "integer", "minimum": 0},
+     "name": {"type": "string"},
+     "kind": {"enum": ["experimental", "in_silico"]}
+    }
+   }
+  },
+  "compounds": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["inchikey14", "name", "formula", "smiles", "badge", "experimental", "confidence", "spectra"],
+    "properties": {
+     "inchikey14": {"type": "string"},
+     "name": {"type": "string"},
+     "formula": {"type": "string"},
+     "smiles": {"type": "string"},
+     "badge": {"enum": ["exact", "analog", "in_silico"]},
+     "experimental": {"type": "boolean"},
+     "confidence": {"type": "null"},
+     "spectra": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": ["library", "index", "accession", "score", "score_kind", "reverse", "explained", "matched", "of", "direct", "shifted", "delta_ppm", "delta_mz", "adduct", "ce", "instrument", "licence", "libraries", "pairs"],
+       "properties": {
+        "library": {"type": "integer", "minimum": 0},
+        "index": {"type": "integer", "minimum": 0},
+        "accession": {"type": "string"},
+        "score": {"type": "number", "minimum": 0},
+        "score_kind": {"enum": ["entropy", "modified_cosine"]},
+        "reverse": {"type": "number", "minimum": 0},
+        "explained": {"type": "number", "minimum": 0},
+        "matched": {"type": "integer", "minimum": 0},
+        "of": {"type": "integer", "minimum": 0},
+        "direct": {"type": "integer", "minimum": 0},
+        "shifted": {"type": "integer", "minimum": 0},
+        "delta_ppm": {"type": "number"},
+        "delta_mz": {"type": "number"},
+        "adduct": {"type": "string"},
+        "ce": {"type": "string"},
+        "instrument": {"type": "string"},
+        "licence": {"type": "string"},
+        "libraries": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "pairs": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query_mz", "library_mz", "kind"],
+          "properties": {
+           "query_mz": {"type": "number"},
+           "library_mz": {"type": "number"},
+           "kind": {"enum": ["direct", "shifted", "loss"]}
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
