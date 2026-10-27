@@ -64,7 +64,8 @@
       const fresh = !seen.has(node.key);
       const probs = F.nodeProblems(S, node), cat = F.CATS[node.cat], sel = ui.selected() === node.key, st = F.nodeState(S, node), bad = !st.ok;
       const chip = el("span", { class: "fln-chip " + (bad ? "warn" : "ok") }, icon(bad ? "warn" : "ok", 12), el("span", { text: st.word }));
-      const c = el("div", { class: "fln" + (sel ? " sel" : "") + (bad ? " bad" : "") + (fresh ? " fl-new" : ""), tabindex: 0, role: "button", "data-key": node.key, "aria-pressed": sel,
+      // a group, not a button: the card holds buttons of its own (axe nested-interactive)
+      const c = el("div", { class: "fln" + (sel ? " sel" : "") + (bad ? " bad" : "") + (fresh ? " fl-new" : ""), tabindex: 0, role: "group", "data-key": node.key, "aria-current": sel ? "true" : null,
         "aria-label": `${node.title}. ${cat.word}. ${F.summary(S, node)}. ${probs.length ? probs[0].text : st.word}`, style: `left:${node.x}px;top:${node.y}px;--cc:${cat.color}`,
         onclick: () => ui.select(node.key),
         onkeydown: (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ui.select(node.key); } else if ((e.key === "Delete" || e.key === "Backspace") && !node.locked && node.kind !== "input") { e.preventDefault(); ui.remove(node); } } },
