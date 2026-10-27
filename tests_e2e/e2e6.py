@@ -79,9 +79,9 @@ try:
             pg.screenshot(path=SH + "65_periodic.png")
         step("periodic table: hover shows masses and isotopes, click pins", periodic)
         def adducts():
-            pg.evaluate("QQQRef.open('ad')"); attendi(pg, "!document.querySelector('#calcdlg').hidden"); pg.fill("#calcin", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#calcout').innerText.includes('386')")
+            shut(pg, "#refx"); pg.evaluate("BARRA.setTab('calc')"); attendi(pg, "BARRA.curTab === 'calc' && !!document.querySelector('#calcin').offsetParent"); pg.fill("#calcin", "C14H13F4N3O2S"); attendi(pg, "document.querySelector('#calcout').innerText.includes('386')")
             t = pg.inner_text("#calcout"); assert "364" in t and "386" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+ in the calculator, which now holds the adducts
-            pg.screenshot(path=SH + "66_adducts.png"); pg.click("#calcx")
+            pg.screenshot(path=SH + "66_adducts.png"); shut(pg, "#calcx")
             pg.evaluate("QQQRef.open('ls')"); attendi(pg, "!!document.querySelector('#nl-list .nlr[data-f=g42]')"); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("g42") == "42", m
             pg.click("#refx")
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
