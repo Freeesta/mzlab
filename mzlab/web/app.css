@@ -413,3 +413,6 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #inf-tree tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 #inf-tree[aria-busy=true]{cursor:progress}
 .msn sup{font-size:.72em}
+#inf-tree .inf-sort{border:0;background:none;padding:2px 4px;min-height:24px;min-width:24px;font:inherit;font-weight:600;color:inherit;cursor:pointer}
+#inf-tree th[aria-sort=descending] .inf-sort::after{content:" \25BC"}
+#inf-tree th[aria-sort=ascending] .inf-sort::after{content:" \25B2"}

@@ -48,9 +48,9 @@
   }
   /** The table as shown (the survey row, then the nodes in display order), plain text with tabs: «MS3», not a superscript. */
   const tsvOf = (/** @type {any} */ j, /** @type {any[]} */ rows) => [
-    [I18N.t("inf.col.prec"), "MSn", I18N.t("inf.col.ce"), I18N.t("inf.col.n"), I18N.t("inf.col.min")],
-    ["", "MS1", "", j.ms1.n, j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })],
-    ...rows.map(r => [INF.prec(r.n), "MS" + r.n.livello, r.n.ce ?? "", r.n.n, mins(r.n)]),
+    [I18N.t("inf.col.prec"), "MSn", I18N.t("inf.col.ce"), I18N.t("inf.col.n"), I18N.t("inf.col.tic"), I18N.t("inf.col.min")],
+    ["", "MS1", "", j.ms1.n, j.ms1.tic, j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })],
+    ...rows.map(r => [INF.prec(r.n), "MS" + r.n.livello, r.n.ce ?? "", r.n.n, r.n.tic, mins(r.n)]),
   ].map(r => r.join("\t")).join("\n");
   async function copyTable(/** @type {HTMLElement} */ b) {
     const wrap = /** @type {any} */ (b.querySelector("#inf-wrap"));
@@ -84,6 +84,22 @@
       else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(tr); }
     };
   }
+  /** Sort of the Intensity column: 0 = the tree, -1 = highest first, 1 = lowest first. A sorted table is a flat list (the path stays in the title of the row). */
+  let sort = 0;
+  const num = (/** @type {number} */ v) => (v ? v.toExponential(2) : "0");
+  /** The table: survey row first, then the nodes in the order given. */
+  function tableHtml(/** @type {any} */ j, /** @type {any[]} */ rows, /** @type {number} */ order) {
+    const aria = order === 0 ? "none" : order < 0 ? "descending" : "ascending";
+    const tic = h`<button type="button" id="inf-sort" class="inf-sort" title="${I18N.t("inf.col.tic.tip")}">${I18N.t("inf.col.tic")}</button>`;
+    const head = [raw(I18N.t("inf.col.prec")), ms("n"), I18N.t("inf.col.ce"), I18N.t("inf.col.n"), raw(tic), I18N.t("inf.col.min")]
+      .map((x, i) => raw(h`<th${raw(i === 3 || i === 4 ? ' class="num"' : "")}${raw(i === 4 ? ` aria-sort="${aria}"` : "")}>${x}</th>`));
+    const first = h`<tr role="treeitem" aria-level="1" aria-selected="false" tabindex="-1" data-id=""><td>${ms(1)}</td><td>${ms(1)}</td><td></td><td class="num">${j.ms1.n}</td><td class="num">${num(j.ms1.tic)}</td><td>${j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })}</td></tr>`;
+    const line = (/** @type {any} */ r) => {
+      const skip = r.n.salto ? " · " + I18N.t("inf.skip", { n: r.n.salto }) : "";
+      return h`<tr role="treeitem" aria-level="${order ? 2 : r.depth + 1}" aria-selected="false" tabindex="-1" data-id="${r.n.id}" data-par="${r.n.genitore == null ? "" : r.n.genitore}" title="${r.path + skip}"><td style="padding-left:${order ? 0 : r.depth * 14}px">${INF.prec(r.n)}</td><td>${ms(r.n.livello)}</td><td>${r.n.ce ?? ""}</td><td class="num">${r.n.n}</td><td class="num">${num(r.n.tic)}</td><td>${mins(r.n)}</td></tr>`;
+    };
+    return h`<table id="inf-tree" role="tree" aria-label="${I18N.t("inf.tree.aria")}"><thead><tr>${head}</tr></thead><tbody>${raw(first)}${rows.map(r => raw(line(r)))}</tbody></table>`;
+  }
   /** @param {HTMLElement} b @param {any} p @param {number} tok */
   async function render(b, p, tok) {
     view = { b, p };
@@ -105,18 +121,15 @@
       const cp = /** @type {HTMLElement | null} */ (b.querySelector("#inf-copy")); if (cp) cp.onclick = () => copyTable(b);
       ["inf-tol", "inf-ce"].forEach(id => { const el = b.querySelector("#" + id); if (el) el.addEventListener("focus", () => { const c = view && target(view.p); INF.warm((c && c.k) ?? E.cur); }); });
     }
-    const wrap = /** @type {HTMLElement & { _j?: any, _rows?: any[] }} */ (b.querySelector("#inf-wrap")), key = `${f.k}|${INF.O.tol}|${INF.O.ce}|${lv}`;
+    const wrap = /** @type {HTMLElement & { _j?: any, _rows?: any[] }} */ (b.querySelector("#inf-wrap")), key = `${f.k}|${INF.O.tol}|${INF.O.ce}|${lv}|${sort}`;
     if (wrap.dataset.key === key && wrap._j === j && wrap.firstElementChild) return void mark(wrap.firstElementChild, cur);
     wrap.dataset.key = key; wrap._j = j;
     const rows = INF.rows(j).filter(r => !lv || r.n.livello <= lv);
+    if (sort) rows.sort((x, y) => -sort * (y.n.tic - x.n.tic));
     wrap._rows = rows;
-    const head = [raw(I18N.t("inf.col.prec")), ms("n"), I18N.t("inf.col.ce"), I18N.t("inf.col.n"), I18N.t("inf.col.min")].map((x, i) => raw(h`<th${raw(i === 3 ? ' class="num"' : "")}>${x}</th>`));
-    const first = h`<tr role="treeitem" aria-level="1" aria-selected="false" tabindex="-1" data-id=""><td>${ms(1)}</td><td>${ms(1)}</td><td></td><td class="num">${j.ms1.n}</td><td>${j.ms1.rt0 == null ? "" : mins({ rt0: j.ms1.rt0, rt1: j.ms1.rt1 })}</td></tr>`;
-    const line = (/** @type {any} */ r) => {
-      const skip = r.n.salto ? " · " + I18N.t("inf.skip", { n: r.n.salto }) : "";
-      return h`<tr role="treeitem" aria-level="${r.depth + 1}" aria-selected="false" tabindex="-1" data-id="${r.n.id}" data-par="${r.n.genitore == null ? "" : r.n.genitore}" title="${r.path + skip}"><td style="padding-left:${r.depth * 14}px">${INF.prec(r.n)}</td><td>${ms(r.n.livello)}</td><td>${r.n.ce ?? ""}</td><td class="num">${r.n.n}</td><td>${mins(r.n)}</td></tr>`;
-    };
-    wrap.innerHTML = h`<table id="inf-tree" role="tree" aria-label="${I18N.t("inf.tree.aria")}"><thead><tr>${head}</tr></thead><tbody>${raw(first)}${rows.map(r => raw(line(r)))}</tbody></table>`;
+    wrap.innerHTML = tableHtml(j, rows, sort);
+    const sb = wrap.querySelector("#inf-sort");
+    if (sb) sb.addEventListener("click", () => { sort = sort === 0 ? -1 : sort === -1 ? 1 : 0; redraw(); });
     const table = /** @type {HTMLElement} */ (wrap.firstElementChild);
     mark(table, cur);
     wire(b, p, f, table, rows);
