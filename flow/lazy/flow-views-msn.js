@@ -1,7 +1,7 @@
 // @ts-check
 // Flow (administrator mode): the result view of the step spectra.msn_graph, the fragmentation graph msngrafo/1 of an MSn infusion. Its tables are the modifications
 // (neutral losses between ions, with the formulas of both ions) and the ions with their proposed sub-formulas, the same columns as the CSV of msn.table_export.
-// flow-report.js hands a report JSON of this schema to F.openMsnGraph.
+// flow-report.js hands a report JSON of this schema to F.openMsnGraph; F.webMsnAfterRun puts the texts an MSn run made in the Results and opens the graph.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -48,4 +48,36 @@
     else F.drawTable(tables, { caption: `${label}, modifications`, head: t.modifications.head, rows: t.modifications.rows, label: `Modifications of ${label}` });
     if (t.nodes.rows.length) F.drawTable(tables, { caption: `${label}, ions`, head: t.nodes.head, rows: t.nodes.rows, label: `Ions of ${label}` });
   };
+
+  /** the texts the MSn steps made join the Results of their step: the graph (msngrafo/1) as a report, the MSP as a library, the CSV as a table; the graph opens under the canvas. Gives the names now in the Results @param {any} S @param {{id: string, name: string, text: string}[]} files @returns {Set<string>} */
+  F.webMsnAfterRun = (S, files) => {
+    const shown = new Set(), type = (/** @type {any} */ f) => /\.msp$/i.test(f.name) ? "library" : /\.csv$/i.test(f.name) ? "table" : /\.json$/i.test(f.name) && /"formato"\s*:\s*"msngrafo\/1"/.test(f.text.slice(0, 200)) ? "report" : "";
+    let graph = null;
+    S.results = S.results || {};
+    for (const f of files || []) {
+      const t = type(f);
+      if (!t) continue;
+      const item = { type: t, label: f.name, msn: true, text: async () => f.text };
+      S.results[f.id] = [...(S.results[f.id] || []).filter((/** @type {any} */ r) => r.label !== f.name), item];
+      shown.add(f.name);
+      if (t === "report") graph = item;
+    }
+    if (!shown.size) return shown;
+    if (S.redraw) S.redraw();
+    if (graph) {
+      F.openResult(graph);
+      setTimeout(() => { const h = document.querySelector(".flx-res h3"); if (h instanceof HTMLElement) h.focus({ preventScroll: true }); }, 0);
+    }
+    return shown;
+  };
+
+  // the library (MSP) and the CSV table an MSn step made (`msn` is set by F.webMsnAfterRun): a download button, and the CSV also as a table; it goes first so it wins over the generic table view
+  const msnFile = { id: "msn-file", title: "MSn file", types: ["library", "table"], accepts: (/** @type {any} */ item) => item.msn === true, open: async (/** @type {HTMLElement} */ host, /** @type {any} */ item) => {
+    const text = await item.text(), name = item.label, table = F.VIEWS.find((/** @type {any} */ v) => v.id === "table");
+    host.append(F.btn("export", `Download ${name}`, () => {
+      const a = F.el("a", { href: URL.createObjectURL(new Blob([text], { type: "text/plain" })), download: name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, "Download"));
+    if (table && /\.csv$/i.test(name)) await table.open(host, item);
+  } };
+  if (F.VIEWS) F.VIEWS.unshift(msnFile);
 })();

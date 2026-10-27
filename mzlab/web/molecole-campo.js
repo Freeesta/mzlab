@@ -7,7 +7,7 @@ import { cerca } from "./molecole-archivio.js";
 /** @typedef {import("./molecole-archivio.js").Trovata} Trovata */
 /**
  * @typedef {{ label: string, placeholder?: string, none: string, count: (n: number) => string, manage?: string }} TestiCampo
- * @typedef {{ testi: TestiCampo, onScegli: (m: Trovata) => void, limite?: number, ppm?: number, gestisci?: (() => void) | null, valore?: string }} OpzioniCampo
+ * @typedef {{ testi: TestiCampo, onScegli: (m: Trovata) => void, limite?: number, ppm?: number, gestisci?: (() => void) | null, valore?: string, etichetta?: (nome: string) => string }} OpzioniCampo
  */
 
 const STYLE_ID = "molc-style";
@@ -52,7 +52,7 @@ function costruisci(/** @type {string} */ id, /** @type {TestiCampo} */ testi) {
  */
 export function campo(host, opz) {
   if (!document.getElementById(STYLE_ID)) { const st = document.createElement("style"); st.id = STYLE_ID; st.textContent = CSS; document.head.appendChild(st); }
-  const { testi } = opz, id = "molc" + ++seq;
+  const { testi } = opz, id = "molc" + ++seq, etichetta = opz.etichetta || ((/** @type {string} */ n) => n);
   const { root, input, lista, stato } = costruisci(id, testi);
   if (opz.valore) input.value = opz.valore;
   if (opz.gestisci !== null && testi.manage) {
@@ -80,7 +80,7 @@ export function campo(host, opz) {
   const sceglie = (/** @type {number} */ i) => {
     const m = trovate[i];
     if (!m) return;
-    input.value = m.nome;
+    input.value = etichetta(m.nome);
     apre(false);
     stato.textContent = "";
     opz.onScegli(m);
@@ -90,7 +90,7 @@ export function campo(host, opz) {
       const li = document.createElement("li");
       li.id = `${id}-o${i}`; li.setAttribute("role", "option"); li.setAttribute("aria-selected", "false");
       const n = document.createElement("span"), f = document.createElement("span"), z = document.createElement("span");
-      n.textContent = m.nome; f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.massa.toFixed(4);
+      n.textContent = etichetta(m.nome); f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.massa.toFixed(4);
       li.append(n, f, z);
       li.onmousedown = ev => ev.preventDefault();
       li.onclick = () => sceglie(i);

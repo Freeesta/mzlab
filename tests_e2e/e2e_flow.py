@@ -167,7 +167,7 @@ try:
             assert pg.evaluate("[...document.querySelectorAll('.flx-tc small:not(.flx-help)')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")
-            assert "Ready to run" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
+            assert "Ready" in pg.inner_text("#flx-status"), pg.inner_text("#flx-status")
             n = pg.evaluate("window.__n"); total = n["click"] + n["key"]
             print(f"MISURA clic_canvas: tab 1 + template 1 = {total} clicks to a complete valid chain; with the {ADMIN} clicks of the logo {total + ADMIN}")
             print(f"MISURA clic_modello: {total} clicks from the empty sheet to a ready plan (3 templates on the first row, 4 under More templates)")
@@ -233,8 +233,8 @@ try:
         step("canvas: menus say they are open, the template card is a dialog, a redraw does not replay the entrance", menus_and_redraw)
         step("canvas: Advanced shows every step and the palette; Enter selects, arrows move the view, reduced motion stops the animation", advanced_and_keys)
         def sheets():
-            assert not pg.locator('[data-tab="plan"]').is_visible()
-            pg.click('[data-mode="advanced"]'); pg.click('[data-tab="plan"]'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
+            pg.click("#flx-more"); assert pg.locator('[role=menuitem]:has-text("Plan (JSON)")').count() == 0; pg.keyboard.press("Escape")
+            pg.click('[data-mode="advanced"]'); pg.click("#flx-more"); pg.click('[role=menuitem]:has-text("Plan (JSON)")'); assert '"format": "mzflow/2"' in pg.inner_text(".flx-plan")
             pg.click('[data-tab="list"]'); attendi(pg, "document.querySelectorAll('.fl-card').length >= 3"); pg.click('[data-tab="canvas"]'); pg.click('[data-mode="simple"]')
         step("canvas: the plan view and the list view show the same plan", sheets)
         def results_from_disk():

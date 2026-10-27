@@ -138,16 +138,14 @@ const BARRA = (() => {
     { id: "pubchem", dom: "np-pc", more: true, ic: () => ICONS.ext, run: () => window.open("https://pubchem.ncbi.nlm.nih.gov/", "_blank", "noopener") },
     { id: "bio", dom: "np-bt", more: true, ic: () => ICONS.ext, run: () => window.openBT && window.openBT() }
   ];
-  // mappa.js and affianca.js may load after this file (first paint reads it early): they call BARRA.late() when ready, so each command is added once
-  const addCmd = (/** @type {any} */ c) => { if (!CMD.some(x => x.id === c.id)) CMD.push(c); };
-  // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here): only in the palette
+  // the commands of the 2D map (the list lives in mappa.js, one for the menu, the bar on the map and here) and the arrangement ones: only in the palette; added once, by BARRA.late() when mappa.js / affianca.js load after this file (first paint)
   const lateCmds = () => {
+    const addCmd = (/** @type {any} */ c) => { if (!CMD.some(x => x.id === c.id)) CMD.push(c); };
     if (window.MAPPA) MAPPA.CMDS.filter(c => c.viste.includes("map")).forEach(c => addCmd({ id: c.id, bar: false, group: "graphs", ic: () => MAPPA.SV(MAPPA.ICO[c.ic]), visible: () => inData() && MAPPA.paletteOk(c), run: () => MAPPA.paletteRun(c.id) }));
     // the arrangement of the panel in use (actions disp.* of azioni/1, registered by affianca.js): only in the palette, for the active panel when the action applies to it
     const dispCtx = () => { const p = typeof E !== "undefined" ? E.active : null; return p && p.el ? { vista: p.type, p } : null; };
     if (typeof AZIONI !== "undefined") AZIONI.voci.filter(a => a.gruppo === "disp").forEach(a => addCmd({ id: a.id, bar: false, group: "graphs", ic: () => AZIONI_ICONE.svg(a.icona || ""), visible: () => { const c = inData() && dispCtx(); return !!c && AZIONI.mostra(a, c) && AZIONI.pronta(a, c); }, run: () => { const c = dispCtx(); if (c) AZIONI.esegui(a.id, c); } }));
-  };
-  lateCmds();
+  }; lateCmds();
   // the two clean slates (reset.js): a short question says what is lost; also in the gear
   CMD.forEach(c => { if (c.search) { c.bar = false; delete c.more; } });      // a command found only by the search lives in no bar and no menu
   /** @type {(id: any) => any} */
@@ -475,7 +473,7 @@ const BARRA = (() => {
   function splitHtml(c) {
     const last = byId(_last[c.id]);
     const full = `${name(c)}: ${name(last)}`;
-    return `<span class="tb-split" data-cmd="${c.id}" role="presentation">` +
+    return `<span class="tb-split" data-cmd="${c.id}" role="group" aria-label="${EHs(name(c))}">` +
       `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
       `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
@@ -588,6 +586,8 @@ const BARRA = (() => {
       const on = open && c.items.includes(_tab);
       b.classList.toggle("on", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
+      // the whole split group shows the state, the caret included
+      if (b.parentElement) b.parentElement.classList.toggle("on", on);
       const last = byId(_last[c.id]);
       const full = `${name(c)}: ${name(last)}`;
       b.title = full; b.setAttribute("aria-label", full);

@@ -1,0 +1,29 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "moduleDetection": "force",
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true
+  },
+  "include": [
+    "globali.d.ts",
+    "globali-nomi.d.ts",
+    "modello.d.ts",
+    "manuale.d.ts",
+    "manuale-dom.d.ts",
+    "../../mzlab/web/mappa-render.js",
+    "../../mzlab/web/mappa-tabella.js",
+    "../../mzlab/web/mappa.js",
+    "../../mzlab/web/libreria-cartella.js",
+    "../../mzlab/web/libreria-scarica.js",
+    "../../mzlab/web/mappa-estrai.js",
+    "../../mzlab/web/mappa3d.js"
+  ]
+}
