@@ -6,7 +6,9 @@ use mzlab_core::upload::prepare;
 fn text_without_mzml_is_refused_with_its_name() {
     let mut bytes = b"\x00\x01\x02 this is not xml ".repeat(400);
     let size = bytes.len() as u64;
-    let e = prepare(&mut bytes, size, "nonxml.mzML").err().expect("refused");
+    let e = prepare(&mut bytes, size, "nonxml.mzML")
+        .err()
+        .expect("refused");
     assert_eq!(e.key, "err.file.notMzml");
     assert_eq!(e.params, vec![("name", "nonxml.mzML".to_string())]);
 }

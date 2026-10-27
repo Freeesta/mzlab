@@ -15,6 +15,7 @@ use crate::mzidx_lettore;
 use crate::scantable::{self, Table};
 use crate::window::Windowed;
 mod late;
+mod non_mzml;
 #[cfg(not(target_arch = "wasm32"))]
 pub use late::prepare_late;
 
@@ -146,7 +147,7 @@ pub fn prepare_in<R: ReadAt>(
     known: Option<(String, String)>,
     budget: Option<&MemBudget>,
 ) -> Result<Prepared> {
-    refuse_not_mzml(r, size, name)?;
+    non_mzml::refuse(r, size, name)?;
     let t = scantable::read_in(&mut Windowed::new(r, size), size, budget)?;
     let (sha256, probe) = match known {
         Some(k) => k,
@@ -158,20 +159,6 @@ pub fn prepare_in<R: ReadAt>(
     Ok(da_tabella_mzml(t, name, size, sha256, probe))
 }
 
-/// The mzML reader of the Python engine refuses a file without "mzML" in its first 4096 bytes (`err.file.notMzml`): the scan table of a text that is
-/// no mzML would be empty and the file would load as «no data» with no word on why. Readers of vendor sets (`lettore`) hold no mzML bytes and pass.
-fn refuse_not_mzml<R: ReadAt>(r: &mut R, size: u64, name: &str) -> Result<()> {
-    if r.lettore().is_some() {
-        return Ok(());
-    }
-    let mut head = vec![0u8; size.min(4096) as usize];
-    r.read_at(0, &mut head)?;
-    if head.windows(4).any(|w| w == b"mzML") {
-        return Ok(());
-    }
-    Err(Error::new("err.file.notMzml").with("name", name))
-}
-
 /// Native only: `prepare` with the fingerprints taken by a second thread (`r2`, a second reader of the same file) while the scan table is read.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
@@ -180,7 +167,7 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
     size: u64,
     name: &str,
 ) -> Result<Prepared> {
-    refuse_not_mzml(r, size, name)?;
+    non_mzml::refuse(r, size, name)?;
     std::thread::scope(|s| {
         let h = s.spawn(move || fingerprint(&mut r2, size, Passata::senza_sha1(size)));
         let t = scantable::read(&mut Windowed::new(r, size), size);
