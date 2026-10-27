@@ -472,6 +472,7 @@ async function bootSession0() {
     // @ts-ignore toolbar() below is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll();
     const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    if (added.length && window.INF && INF.autoOpen) INF.autoOpen(added);
     return;
   }
   if (first > 0 && isFirstLoad) STATO.file(first, "first"); renderFileList();
@@ -482,6 +483,7 @@ async function bootSession0() {
   ensureLayout();
   // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
   toolbar(); uiSave();
+  if (window.INF && INF.autoOpen) INF.autoOpen(E.files);
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
 async function apexSpectrum(c, sp) {

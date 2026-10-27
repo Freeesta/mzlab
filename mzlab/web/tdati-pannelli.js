@@ -59,7 +59,9 @@ function text(p) {
   const a = p._a; if (!a) return T("a11y.empty");
   if (p.uv && a.uvd) return T("a11y.uv", { title: ptitle(p), rt: a.uvd.n > 1 ? a.uvd.rt.toFixed(2) + "–" + a.uvd.rt1.toFixed(2) : a.uvd.rt.toFixed(2), a: nm(a.x0, 0), b: nm(a.x1, 0), y: nm(Math.max(...a.uvd.y), 1) });
   if (p.type === "spec") {
-    const n = a.data ? a.data[0].d.mz.filter((m, i) => m >= a.x0 && m <= a.x1 && a.data[0].d.y[i] >= (p.thr ?? 5) / 100 * Math.max(...a.data[0].d.y, 1e-9)).length : 0;
+    // the top of the spectrum once, not once per peak (a spectrum of thousands of peaks made every drawing wait for a second)
+    let n = 0;
+    if (a.data) { const d = a.data[0].d, thr = (p.thr ?? 5) / 100 * d.y.reduce((m, v) => (v > m ? v : m), 1e-9); d.mz.forEach((m, i) => { if (m >= a.x0 && m <= a.x1 && d.y[i] >= thr) n++; }); }
     return T("a11y.spec", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), n });
   }
   if (p.type === "map") return T(a.pda ? "a11y.mapPda" : "a11y.map", { title: ptitle(p), a: nm(a.x0, 2), b: nm(a.x1, 2), c: nm(a.y0, 1), d: nm(a.y1, 1) });

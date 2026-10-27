@@ -20,19 +20,18 @@
 
   // the skeleton has the size of the real shell (bar, tabs, canvas, side box) so nothing jumps when it is replaced; colours come from the page variables
   const SK_CSS = ".flx-sk{display:flex;flex-direction:column;gap:8px;min-width:0}.flx-sk *{box-sizing:border-box}.flx-sk-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.flx-sk-bar h2{margin:0 4px 0 0;font-size:16px}"
-    + ".flx-sk-bar button,.flx-sk-tabs button{min-height:28px;padding:2px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);font:inherit}.flx-sk-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}.flx-sk-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none}"
-    + ".flx-sk-tabs button:first-child{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}.flx-sk-body{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;align-items:start}.flx-sk-cv{border:1px solid var(--line);border-radius:10px;background:var(--panel);height:min(70vh,640px);min-height:340px}.flx-sk-side{border:1px solid var(--line);border-radius:10px;background:var(--panel);min-height:120px}"
+    + ".flx-sk-bar button{min-height:28px;padding:2px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);font:inherit}"
+    + ".flx-sk-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:start}.flx-sk-cv{border:1px solid var(--line);border-radius:10px;background:var(--panel);height:min(70vh,640px);min-height:340px}.flx-sk-side{border:1px solid var(--line);border-radius:10px;background:var(--panel);min-height:120px}"
     + "@media (max-width:900px){.flx-sk-body{grid-template-columns:minmax(0,1fr)}}";
   /** @param {HTMLElement} sec */
   const skeleton = sec => {
     if (!document.getElementById("flx-sk-css")) { const st = document.createElement("style"); st.id = "flx-sk-css"; st.textContent = SK_CSS; document.head.append(st); }
     const mk = (/** @type {string} */ tag, /** @type {string} */ cls, /** @type {string} */ text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; };
-    const bar = mk("div", "flx-sk-bar", ""), tabs = mk("div", "flx-sk-tabs", "");
+    const bar = mk("div", "flx-sk-bar", "");
     bar.append(mk("h2", "", "Flow"));
-    for (const t of ["Templates", "Add analysis", "Simple", "Advanced", "Undo", "Redo", "Fit", "Checklist", "Open", "Run"]) { const b = /** @type {HTMLButtonElement} */ (mk("button", "", t)); b.type = "button"; b.disabled = true; bar.append(b); }
-    for (const t of ["Canvas", "List view"]) { const b = /** @type {HTMLButtonElement} */ (mk("button", "", t)); b.type = "button"; b.disabled = true; tabs.append(b); }
+    for (const t of ["Canvas", "List", "Templates", "Add step", "Simple", "Advanced", "Undo", "Redo", "Fit", "Auto-run", "Run", "Terminal"]) { const b = /** @type {HTMLButtonElement} */ (mk("button", "", t)); b.type = "button"; b.disabled = true; bar.append(b); }
     const body = mk("div", "flx-sk-body", ""); body.append(mk("div", "flx-sk-cv", ""), mk("div", "flx-sk-side", ""));
-    const root = mk("div", "flx-sk", ""); root.id = "flx-sk"; root.setAttribute("aria-busy", "true"); root.append(bar, tabs, body);
+    const root = mk("div", "flx-sk", ""); root.id = "flx-sk"; root.setAttribute("aria-busy", "true"); root.append(bar, body);
     sec.replaceChildren(root);
   };
 
