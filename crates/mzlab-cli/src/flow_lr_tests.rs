@@ -170,3 +170,17 @@ fn tp_link_reads_a_unit_resolution_table() {
     assert!((t.mz[parent] - 364.074).abs() < 0.6, "{}", t.mz[parent]);
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_parent_file_gives_the_adduct_that_sets_the_polarity_of_the_dig() {
+    use crate::flow_link::parent_of;
+    let p = parent_of(br#"{"neutral": "C10H12N2O3S", "adduct": "[M-H]-"}"#).unwrap();
+    assert_eq!(p.adduct, "[M-H]-");
+    assert_eq!(parent_of(b"C10H12N2O3S").unwrap().adduct, "[M+H]+");
+    assert_eq!(
+        parent_of(br#"{"neutral": "C10H12N2O3S", "adduct": "nonsense"}"#)
+            .unwrap()
+            .adduct,
+        "[M+H]+"
+    );
+}

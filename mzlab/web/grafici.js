@@ -558,10 +558,10 @@ function mapImage(p, A, B, scale, norm = "abs") {
   ctx.putImageData(im, 0, 0);
   return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
 }
-// The whole view of the map: the union of the stretches with data of the files shown (first to last scan with peaks; lowest to highest m/z) with a small
-// margin, inside the grid. A file without the extent (an older answer) or without data keeps the whole grid. Nothing is extrapolated.
-function mapView(A, B, rt0, rt1, mz0, mz1) {
-  const ex = [A, B].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
+// The whole view of the map: the union of the stretches with data (first to last scan with peaks; lowest to highest m/z) of the files shown and of the other open files
+// of the tab, so the axes stay put when the file changes, with a small margin, inside the grid. A file without the extent or without data keeps the whole grid.
+function mapView(A, B, rt0, rt1, mz0, mz1, others = []) {
+  const ex = [A, B, ...others].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
   if (!ex.length) return { rt: [rt0, rt1], mz: [mz0, mz1] };
   const lo = (i, k) => Math.min(...ex.map(e => e[k][i])), hi = (i, k) => Math.max(...ex.map(e => e[k][i]));
   const a = lo(0, "rt"), b = hi(1, "rt"), c = lo(0, "mz"), d = hi(1, "mz"), pr = Math.max((b - a) * 0.01, 1e-3), pm = Math.max((d - c) * 0.01, 0.5);
@@ -578,11 +578,11 @@ async function drawMap(p) {
   const lv = isPda ? "pda" : f.lv;
   const se = window.SUBREF ? SUBREF.eff(p) : null;
   const rf = !isPda && se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
-  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null;
+  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null, others = await Promise.all(sf.filter(q => q.k !== f.k && (isPda || q.lv === lv) && !(rf && q.k === rf.k)).map(q => getMap(q.k, lv, mapBg(p)).catch(() => null)));      // the other files of the tab, same level: their extents fix the whole view
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
   const im = mapImage(p, A, B, p.scale, p.norm || "abs");
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
-  const ext = mapView(A, B, rt0, rt1, mzA, mzB);                     // the whole view is where the files have data (no empty bands at the sides)
+  const ext = mapView(A, B, rt0, rt1, mzA, mzB, others);                     // the whole view is where the files have data (no empty bands at the sides)
   const x0 = p.zoom ? p.zoom[0] : ext.rt[0], x1 = p.zoom ? p.zoom[1] : ext.rt[1], y0 = p.zoomY ? p.zoomY[0] : ext.mz[0], y1 = p.zoomY ? p.zoomY[1] : ext.mz[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = p.scale === "gamma" ? I18N.t("map.sc.gamma", { g: p.gamma || 0.6 }) : I18N.t(`map.sc.${p.scale}`);

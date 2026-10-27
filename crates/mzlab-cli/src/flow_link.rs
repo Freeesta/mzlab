@@ -27,12 +27,14 @@ use mzlab_core::step::DataType;
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
-/// The parent of the file: neutral formula, SMILES when there is one, and the retention time when the file says it.
+/// The parent of the file: neutral formula, SMILES when there is one, and the retention time and the adduct when the file says them.
 pub struct Parent {
     pub formula: String,
     pub smiles: String,
     pub structure: String,
     pub rt: Option<f64>,
+    /// The adduct of the parent ion when the file says it (`[M-H]-`): its sign is the polarity of the products; `[M+H]+` otherwise.
+    pub adduct: String,
 }
 
 fn param(job: &Job, name: &str) -> Option<f64> {
@@ -48,7 +50,7 @@ pub fn link_params(job: &Job) -> LinkParams {
     mzlab_feat_wasm::interp::link_params(&|n| param(job, n))
 }
 
-/// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
+/// The parent file: a JSON `{"formula"|"neutral", "smiles", "rt", "adduct"}`, or one line with a formula (written as `elements::fmt` writes it) or a SMILES.
 pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
     let text = String::from_utf8_lossy(bytes);
     let text = text.trim();
@@ -98,11 +100,18 @@ pub fn parent_of(bytes: &[u8]) -> Result<Parent> {
     if formula.is_empty() {
         return Err(Error::new("error.hypo.noParent"));
     }
+    let adduct = json
+        .as_ref()
+        .and_then(|v| v.get("adduct").and_then(Value::str))
+        .map(|a| a.trim().to_string())
+        .filter(|a| elements::ion_mz(0.0, a).is_some())
+        .unwrap_or_else(|| "[M+H]+".into());
     Ok(Parent {
         formula,
         smiles,
         structure,
         rt,
+        adduct,
     })
 }
 
