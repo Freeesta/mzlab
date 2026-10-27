@@ -148,6 +148,9 @@
   }
   /** the events of the control of a panel (after ctl() wrote it) @param {any} p @param {HTMLElement} c */
   function wire(p, c) {
+    // the older selectors (kind, precursor, transition) and the channels say the same thing: the last choice wins
+    const cc = /** @type {any} */ (c);
+    if (!cc._canR) { cc._canR = true; c.addEventListener("change", e => { if (/^(kind|prec|tr)$/.test((/** @type {HTMLElement} */ (e.target)).dataset?.o || "")) p.canali = undefined; }, true); }
     const b = /** @type {HTMLElement | null} */ (c.querySelector('[data-o="canali"]')), pop = /** @type {HTMLElement | null} */ (c.querySelector(".can-pop"));
     if (!b || !pop) return;
     const tree = albero(filesOf(p));
