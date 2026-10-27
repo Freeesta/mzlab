@@ -31,7 +31,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1200})
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
-        tab = lambda t: (pg.evaluate(f"BARRA.setTab('{t}')"), pg.wait_for_timeout(1200))
+        tab = lambda t: (pg.evaluate(f"BARRA.setTab('{t}')"), frames(pg, 3))
         def real():
             tab("fil"); pg.wait_for_selector("#hri-body .fi-kv", timeout=15000)
             dt = pg.evaluate("[...document.querySelectorAll('#hri-body .fi-kv dt')].map(e=>Math.round(e.getBoundingClientRect().width))"); assert len(dt) >= 4 and len(set(dt)) == 1, dt
@@ -44,7 +44,7 @@ try:
                 pg.evaluate(f"document.documentElement.dataset.theme='{theme}'")
                 for w in (320, 420, 900):
                     pg.add_style_tag(content=f"#dfiles{{width:{w}px!important;min-width:{w}px!important}}")
-                    pg.evaluate("j=>{document.querySelector('#hri-body').innerHTML=BFIL.fileHtml(j)}", J); pg.wait_for_timeout(200)
+                    pg.evaluate("j=>{document.querySelector('#hri-body').innerHTML=BFIL.fileHtml(j)}", J); frames(pg, 2)
                     m = pg.evaluate(MEASURE); ctx = (theme, w, m)
                     assert m["n"] == 4 and m["narrow"] == 0 and m["wrapped"] == 0 and not m["broken"] and m["over"] <= 1 and len(set(m["dt"])) == 1, ctx
         step("scans by type from 320 to 900 px, light and dark: no cell under 6 ch, count and RT on one line, no word broken", mock)
