@@ -544,10 +544,21 @@ fn read_listed<R: ReadAt>(
             .copied()
             .chain(std::iter::once(last + 11 + 1))
             .collect();
-        for (&a, &limit) in offs.iter().zip(&limits) {
+        // the start of the next header, read together with the tail of the spectrum before it (each read is a call into OPFS on the site)
+        let mut ahead: Vec<u8> = Vec::new();
+        for (i, (&a, &limit)) in offs.iter().zip(&limits).enumerate() {
             let mut n: u64 = 4096;
+            let mut pre = Some(std::mem::take(&mut ahead));
             let (chunk, c) = loop {
-                let chunk = src.read(a, (a + n).min(limit))?;
+                let end = (a + n).min(limit);
+                let want = (end.min(size) - a) as usize;
+                let chunk = match pre.take() {
+                    Some(mut p) if !p.is_empty() && p.len() >= want => {
+                        p.truncate(want);
+                        p
+                    }
+                    _ => src.read(a, end)?,
+                };
                 let c = find(&chunk, b"<binaryDataArrayList");
                 if c.is_some() || a + n >= limit {
                     break (chunk, c);
@@ -561,8 +572,14 @@ fn read_listed<R: ReadAt>(
                 }
                 Some(_) => {
                     let from = limit.saturating_sub(64).max(a);
-                    let tail = src.read(from, limit)?;
-                    match tail.windows(11).rposition(|w| w == b"</spectrum>") {
+                    // `limit` is where the next spectrum starts
+                    let more = offs
+                        .get(i + 1)
+                        .map_or(0, |_| 4096.min(limits[i + 1] - limit));
+                    let mut blk = src.read(from, limit + more)?;
+                    let cut = blk.len().min((limit - from) as usize);
+                    ahead = blk.split_off(cut);
+                    match blk.windows(11).rposition(|w| w == b"</spectrum>") {
                         Some(e) => from + e as u64 + 11,
                         None => limit,
                     }
