@@ -121,12 +121,12 @@ try:
         def breakbond():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); lbl(["C8H9NO2", "nominal mass 151"])
             # erase the amide C-N bond with Ketcher's own eraser tool (as a student would)
+            pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)      # first the tool: the layout may move, the position is read after it
             pos = pg.evaluate("""(()=>{const k=%s, st=k.editor.struct();let bid=null;st.bonds.forEach((b,id)=>{const a=st.atoms.get(b.begin).label,c=st.atoms.get(b.end).label;
                if((a==='N'&&c==='C'||a==='C'&&c==='N')&&bid===null){const o=[...st.bonds.values()].some(x=>(x.begin===(a==='C'?b.begin:b.end)||x.end===(a==='C'?b.begin:b.end))&&x.type===2);if(o)bid=id}});
                const b=st.bonds.get(bid),p1=st.atoms.get(b.begin).pp,p2=st.atoms.get(b.end).pp;
                const c=k.editor.render.paper.canvas, r=c.getBoundingClientRect(), vb=c.viewBox.baseVal, f=document.getElementById('kframe').getBoundingClientRect();
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
-            pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); frames(pg, 5)
             pg.mouse.click(pos["x"], pos["y"]); lbl(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"], sort=True)
             t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "nominal mass 44", "C6H7NO", "nominal mass 109"]), t
             pg.screenshot(path=SH + "63_broken.png")

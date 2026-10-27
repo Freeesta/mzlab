@@ -1,37 +1,15 @@
 // @ts-strict
-// Labels of the main peaks of a chromatogram, as in Xcalibur: the RT of the apex and the quantity that defines the peak ("14.26 · 301.14" = base peak m/z of
-// the apex scan, "14.26 · 254 nm" = absorbance maximum of the DAD at the apex; XIC and MRM: the extracted ion). Which peaks and which maximum is worked out by
-// the Rust engine (QUALITA.labels / QUALITA.mainPeak, qualita.js); this file only asks at rest, caches, places the labels and draws them (grafici.js drawLines).
+// Labels of the main peaks of a chromatogram, as in Xcalibur: the time of the apex ("14.26 min"; the ion is in the title and the legend). Which peaks is worked
+// out by the Rust engine (QUALITA.labels, qualita.js); this file only asks at rest, caches, places the labels and draws them (grafici.js drawLines).
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 const MAXC = 12, REL = 0.05, SNR = 5, GAP = 4;           // candidates asked of the engine, relative height, S/N, pixels between two labels
-/** @type {Map<string, { list: { apex: number, rt: number, height: number, snr: number, q: { kind: string, v: string } | null }[] } | "wait">} */
+/** @type {Map<string, { list: { apex: number, rt: number, height: number, snr: number }[] } | "wait">} */
 const cache = new Map();
 /** @type {Map<string, Promise<void>>} the labels being worked out, and those a drawing is waiting for (it draws them itself) */
 const pending = new Map(), claimed = new Set();
 
 /** Labels are on by default for one visible trace; a student's choice (p.etpk) wins. @param {any} p @param {number} n visible traces */
 const on = (p, n) => !isAnalog(p.kind) && (typeof p.etpk === "boolean" ? p.etpk : n <= 1);
-const mzText = (/** @type {number} */ v) => v.toFixed(Math.abs(v * 100 - Math.round(v * 100)) < 1e-6 ? 2 : 4);
-
-/** The defining quantity of the peak at `rt`, or null (RT only). @param {any} p @param {any} s @param {number} rt */
-async function quantity(p, s, rt) {
-  if (p.type === "xic" && s.mz != null) return { kind: "xic", v: mzText(+s.mz) };
-  if (!ESP.spettri(p)) return s.ion ? { kind: "mrm", v: String(s.ion) } : null;
-  if (p.type !== "chrom") return null;
-  if (p.kind === "pda") {
-    if (p.mz0 != null && p.mz1 != null) return { kind: "nm", v: String(Math.round((p.mz0 + p.mz1) / 2)) };
-    const t = rt - (window.DISP ? DISP.pdaShift(p) : 0), d = await (await fetch(`api/uvspec?k=${s.k}&rt0=${t}&rt1=${t}`)).json();
-    const m = d && !d.error && d.nm ? await QUALITA.mainPeak(d.nm, d.mau, true) : null;
-    return m ? { kind: "nm", v: String(Math.round(m.x)) } : null;
-  }
-  const f = E.files[s.k]; if (!f || !scanFiles([f]).length) return null;
-  const lv = p.flv ?? f.lv, n = await nearScan(s.k, rt), dt = scanStep();
-  const d = await getSpec(s.k, n ? n.rt - NEAR : rt - dt / 2, n ? n.rt + NEAR : rt + dt / 2, lv, prk(lv > 1 ? p.prec : null, p.filt), null);
-  if (!d || !d.mz || !d.mz.length) return null;
-  const lo = p.mz0 ?? -Infinity, hi = p.mz1 ?? Infinity, ix = d.mz.map((/** @type {number} */ _, /** @type {number} */ i) => i).filter((/** @type {number} */ i) => d.mz[i] >= lo && d.mz[i] <= hi);
-  const m = await QUALITA.mainPeak(ix.map((/** @type {number} */ i) => d.mz[i]), ix.map((/** @type {number} */ i) => d.y[i]), false);
-  return m ? { kind: "mz", v: mzText(m.x) } : null;
-}
 
 /** @param {any} s */
 const keyOf = (p, s) => { let sum = 0; for (let i = 0; i < s.y.length; i++) sum += s.y[i]; return [p.type, p.kind, s.key, s.x.length, +sum.toFixed(1), p.flv, p.mz0, p.mz1, p.prec, p.filt, p.pdaAlign ? DISP.pdaShift(p) : 0].join("|"); };
@@ -47,7 +25,7 @@ function labelsOf(p, s) {
     let list = [];
     try {
       const found = (window.QUALITA ? await QUALITA.labels(s.x, s.y, MAXC, REL, SNR, true) : null) || [];
-      list = await Promise.all(found.map(async l => ({ ...l, rt: s.x[l.apex], q: await quantity(p, s, s.x[l.apex]).catch(() => null) })));
+      list = found.map((/** @type {any} */ l) => ({ ...l, rt: s.x[l.apex] }));
     } catch (e) { list = []; }
     cache.set(key, { list }); pending.delete(key);
     if (window.drawSoon && !claimed.has(key)) drawSoon(p);
@@ -70,13 +48,10 @@ async function ready(p, sr, ms = 12) {
   finally { clearTimeout(timer); keys.forEach(k => claimed.delete(k)); }
 }
 
-/** Text of the label and of its tooltip. @param {any} l */
+/** Text of the label and of its tooltip: the time of the apex only (the m/z or the wavelength is in the title and the legend). @param {any} l */
 function texts(l) {
-  const rt = l.rt.toFixed(2), q = l.q;
-  if (!q) return { label: rt, tip: T("etpk.tip.rt", { rt }) };
-  const v = q.kind === "nm" ? T("etpk.nm", { v: q.v }) : q.v;
-  const tip = { mz: "etpk.tip.mz", nm: "etpk.tip.nm", xic: "etpk.tip.xic", mrm: "etpk.tip.mrm" }[/** @type {"mz" | "nm" | "xic" | "mrm"} */ (q.kind)];
-  return { label: `${rt} · ${v}`, tip: T(tip, { rt, v: q.v }) };
+  const rt = l.rt.toFixed(2);
+  return { label: `${rt} min`, tip: T("etpk.tip.rt", { rt }) };
 }
 
 /**

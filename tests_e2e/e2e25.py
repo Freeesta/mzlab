@@ -40,7 +40,7 @@ try:
             assert "Dimensione testo" not in t and "tema" in t.lower() and "colori dei grafici" in t.lower()
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 4 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
+            assert pg.locator("#uipset input[type=checkbox]").count() == 5 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 0      # the merge of the centroids; no «Mostra tutti gli esperimenti insieme» (it is the only view)
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per file (predefinito)", "Per tempo", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
             assert pg.input_value("#uip-pal") == "file"
             pg.check("input[name=uip-th][value=dark]", force=True); pg.wait_for_timeout(400)

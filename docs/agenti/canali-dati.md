@@ -72,7 +72,7 @@ Adattatore: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<nodo>` resta, `level`/`
 
 **Costruzione per formato.**
 - mzML/mzXML e Thermo `.raw`: chiavi da `Scan::key()`; SIM = chiave MS1 con «SIM»; cromatogrammi `srm`/`pda`/`pressure` dalla coda (`mzmlhead`).
-- `.wiff`: sigla da `modi.rs` per esperimento; MRM → `srm:` dai cromatogrammi per transizione (nome del metodo come etichetta); EMS/EPI → `ms:`, o `dd:2:EPI` se IDA; Prec/NL → `ms:` con sigla; DAD → `uv:`.
+- `.wiff` (realizzato per EMS, EPI, MRM; `canali/wiff.rs`): sigla da `modi.rs` per livello; MRM → `srm:` dai cromatogrammi per transizione (nome del metodo come etichetta); EMS/EPI → `ms:`, o `dd:2:EPI` se IDA; Prec/NL → `ms:` con sigla; DAD → `uv:`.
 - Shimadzu/Agilent `.D`/Waters: dai cromatogrammi dei lettori (`ChromKind`); PDA appena decodificato (fuori da questo piano).
 
 ## 3. Interfaccia proposta

@@ -103,9 +103,8 @@
   /** @param {HTMLElement} b @param {any} p @param {number} tok */
   async function render(b, p, tok) {
     view = { b, p };
-    const t = target(p), f = E.files[(t && t.k) ?? E.cur] || E.files.find(INF.hasTree);
+    const t = target(p), f = p && p.stand ? E.files[p.k] : E.files[(t && t.k) ?? E.cur] || E.files.find(INF.hasTree);   // stand: the file Flow's Explore names
     if (!f || !INF.hasTree(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
-    if (!b.querySelector(".inf-ctl")) b.innerHTML = `<div class="muted">…</div>`;
     const j = await INF.tree(f.k);
     if (tok !== (window.BANCO && BANCO.token())) return;
     const lv = INF.O.lv, cur = t && t.filt, ckey = j.livelli.join() + (INF.single() ? "g" : "");
