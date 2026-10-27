@@ -90,7 +90,6 @@ I18N.add("en", {
   "bn.f.placeholder": "Placeholder recorded in the file",
   "bn.f.rtType": "RT {a}–{b} min",
   "bn.f.byType": "Scans by type",
-  "bn.f.note": "The «Status log» and the Xcalibur method are not in the mzML files: nothing is made up here.",
   "bn.iso.note": "Theoretical isotope pattern on the spectrum of the cell, at the resolution of the scan.",
   "bn.iso.formula": "Neutral formula",
   "bn.iso.output": "Output",

@@ -45,7 +45,7 @@ try:
             a = pg.evaluate("[...document.querySelectorAll('#hri-list .r')].slice(0,4).map(r=>+r.children[3].innerText)"); assert a == sorted(a), a
         step("tab 2: the list of the scans (all of them, scrolling), a row moves the cell, a column sorts", lst)
         def fil():
-            tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t and "Status log" in t, t[:300]
+            tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t, t[:300]
         step("tab 3: file and instrument as the mzML says them", fil)
         def launchers():
             tab("cmp"); pg.wait_for_selector("#cx-mz", timeout=10000); pg.click("#cx-exp"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
