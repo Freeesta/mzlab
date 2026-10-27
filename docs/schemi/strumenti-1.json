@@ -394,7 +394,7 @@
                     "type":"integer",
                     "minimum":0,
                     "maximum":9,
-                    "default":1,
+                    "default":2,
                     "description":"zlib level of the binary arrays, 0 (none) to 9 (smallest)"
                   },
                   {
