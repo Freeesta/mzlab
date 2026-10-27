@@ -332,8 +332,7 @@ try:
             assert pg.evaluate("window.__fa.campioni") is None
             pg.click('.flx-res button[aria-label="Close the results"]')
         step("a finished run opens the Feature table by itself, with the sample roles of the plan", end_of_run)
-        def samples_in_place():
-            # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
+        def samples_in_place():   # the sample list is filled in place: «From Data» takes the open files, «Edit» changes a row, the input keeps the SHA-256 of the canonical document
             pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); FLOW.addInput(S.plan, 'samples'); S.redraw(); }""")
             pg.click('.fln:has-text("Sample list")'); attendi(pg, "document.querySelector('.fl-insp .mg-sc')")
             assert pg.locator('.fl-insp button[aria-label^="Take"]').is_disabled(), "From Data needs open files"
@@ -352,8 +351,7 @@ try:
         def samples_fix():
             # a step that asks for the sample list: the one-click remedy adds it filled from the files open in Data (MISURA clic_campioni)
             pg.evaluate("""() => { const S = FLOW.current; S.samples = {}; S.plan.inputs = S.plan.inputs.filter(i => i.type !== 'samples'); window.__e = E.files; E.files = [{ file: 'blank.mzML', role: 'blank', type: 'blank' }, { file: 'x_t5.mzML', role: 'sample', time: 5, type: 'sample' }];
-              FLOW.addStep(S.plan, S.reg, 'table.filter'); for (const i of S.plan.inputs.filter(i => i.type === 'samples')) FLOW.removeInput(S.plan, i.name); S.redraw(); }""")
-            # no step asks for the list yet (the port is optional), so the remedy is built from the problem the checker would give
+              FLOW.addStep(S.plan, S.reg, 'table.filter'); for (const i of S.plan.inputs.filter(i => i.type === 'samples')) FLOW.removeInput(S.plan, i.name); S.redraw(); }""")   # no step asks for the list yet (the port is optional), so the remedy is built from the problem the checker would give
             label = pg.evaluate("""() => { const S = FLOW.current, inst = S.plan.steps.find(s => s.step.startsWith('table.filter')); window.__fix = FLOW.friendly(S, { key: 'err.flow.port.missing', instance: inst.id, port: 'samples' }).fix; return window.__fix.label; }""")
             assert label == "Add sample list from Data", label
             pg.evaluate("() => window.__fix.run()")
