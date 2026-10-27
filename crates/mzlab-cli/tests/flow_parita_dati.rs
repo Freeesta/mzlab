@@ -98,8 +98,7 @@ fn native_runs(dir: &Path, names: &[String]) -> Vec<(String, Vec<u8>)> {
     for k in 0..2 {
         let out = work.join(format!("run{k}"));
         std::fs::create_dir_all(&out).unwrap();
-        let (_, prov) =
-            mzlab_cli::flow::run_plan(plan.as_bytes(), &dir, &out, 1 + k, None).unwrap();
+        let (_, prov) = mzlab_cli::flow::run_plan(plan.as_bytes(), dir, &out, 1 + k, None).unwrap();
         assert!(!prov.contains("\"error\""), "{prov}");
         runs.push(folder(&out));
     }
