@@ -7,6 +7,9 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzmlarray::{decode_array, Inflate, Want};
 
+mod tags;
+use tags::{find_tag, time_in_seconds};
+
 /// Values an array may inflate to at least (see `decode`).
 const MIN_VALUES: usize = 8 << 20;
 const MAX_REGION: u64 = 256 << 20;
@@ -20,26 +23,6 @@ fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     let tail = h.get(from..).filter(|_| !n.is_empty())?;
     tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
-}
-/// Start of the next element named `tag` (`b"<run"`): the name must be followed by XML white space or `>`, so `<runX` and `<binaryDataArrayList` do not count.
-pub(crate) fn find_tag(h: &[u8], tag: &[u8], from: usize) -> Option<usize> {
-    let mut at = from;
-    while let Some(p) = find(h, tag, at) {
-        if h.get(p + tag.len())
-            .is_some_and(|c| c.is_ascii_whitespace() || *c == b'>')
-        {
-            return Some(p);
-        }
-        at = p + 1;
-    }
-    None
-}
-
-/// Whether a cvParam of the chromatogram names the time array in seconds, whatever the order of its attributes and whether `value` is there.
-fn time_in_seconds(chunk: &[u8]) -> bool {
-    text(chunk).split('<').any(|tag| {
-        attr(tag, "name") == Some("time array") && attr(tag, "unitAccession") == Some("UO:0000010")
-    })
 }
 pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
