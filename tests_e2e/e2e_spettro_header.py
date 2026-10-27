@@ -44,9 +44,9 @@ try:
         step("the file menu keeps at least 100 px", menu)
         def active():
             pg.evaluate("setActive(E.panels.find(q => q.type === 'spec'))")
-            st = pg.evaluate("(() => { const e = document.querySelector('.pnl.act'), c = getComputedStyle(e); return [c.outlineStyle, c.boxShadow, e.dataset.pair ? c.backgroundImage : '']; })()")
-            # the spectrum follows a chromatogram, so it is paired: its bar is the one of the pair (a gradient), not the inset shadow of an unpaired panel
-            assert st[0] == "none" and ("inset" in st[1] or "gradient" in st[2]), st
+            st = pg.evaluate("(() => { const e = document.querySelector('.pnl.act'), c = getComputedStyle(e); return [c.outlineStyle, c.borderLeftStyle, c.borderLeftWidth]; })()")
+            # the side bar of the active (or paired) panel is its own 4 px left border, which follows the corner radius; no frame around the panel
+            assert st[0] == "none" and st[1] == "solid" and st[2] == "4px", st
         step("the active panel has no frame, a bar on the left", active)
 finally:
     r.close()
