@@ -38,7 +38,7 @@
     try { simple = localStorage.getItem("mzlab.flow.mode") !== "advanced"; } catch (_) { /* private mode */ }
     const live = el("div", { class: "flx-toast", role: "status", id: "flx-live" });
     const toast = (/** @type {string} */ msg) => { say(msg, null); setTimeout(() => { if (live.textContent === msg) live.replaceChildren(); }, 2500); };
-    const say = (/** @type {string} */ msg, /** @type {(() => void) | null} */ undo) => { live.replaceChildren(el("span", { text: msg }), undo ? btn("undo", "Undo", () => { undo(); }, "Undo") : null); };
+    const say = (/** @type {string} */ msg, /** @type {(() => void) | null} */ undo) => { live.replaceChildren(...[el("span", { text: msg }), undo ? btn("undo", "Undo", () => { undo(); }, "Undo") : null].filter(Boolean)); };
     /** a change made by the canvas: edit, then let the shared refresh redraw everything @param {() => void} fn @param {string} [focus] */
     const go = (fn, focus) => { fn(); S.refresh(focus === undefined ? null : focus); };
     const cvUi = {

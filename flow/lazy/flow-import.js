@@ -86,7 +86,8 @@
   /** the buttons that add files and folders through the loaders of the Data tab; the plan redraws when the files in Data change @param {any} S */
   const addFilesBox = S => {
     const box = F.el("div", { class: "fl-meta" }), say = F.el("span", { class: "fl-note", role: "status" });
-    const click = (/** @type {string} */ id) => { const n = document.getElementById(id); if (n) n.click(); else say.textContent = "The Data tab has no loader here."; };
+    // data-flow-open: the loaders of the Data tab open what they read (otherwise the files wait, unopened, in the loading table of Data and Flow sees none)
+    const click = (/** @type {string} */ id) => { const n = document.getElementById(id); if (n) { n.dataset.flowOpen = "1"; say.textContent = "Reading the files… a failure is told in the Data tab."; n.click(); } else say.textContent = "The Data tab has no loader here."; };
     box.append(F.btn("plus", "Add data files from the computer", () => click("pick"), "Add files"), F.btn("file", "Add a whole folder of data files", () => click("pickdir"), "Add a folder"), say);
     let seen = F.dataFiles().join("\n");   // the Data loaders tell nobody: look for a change while the box is on the page
     const timer = setInterval(() => {

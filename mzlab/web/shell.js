@@ -342,8 +342,10 @@ async function upload0(files,into,box,signal){
   await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
-$("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{CartCarica.fromInput(e.target.files);e.target.value=""};
-$("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
+$("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=e=>{const go=flowOpen(e.target),p=CartCarica.fromInput(e.target.files);e.target.value="";if(go)p.then(idle).then(directDone)};
+// Flow's «Add files» and «Add a folder» set data-flow-open on the input: the files read are then opened at once, as dropped ones are (Flow reads the open files, not the loading table)
+const flowOpen=el=>{const on=el.dataset.flowOpen==="1";delete el.dataset.flowOpen;return on};
+$("#drop").onclick=()=>{delete $("#pick").dataset.flowOpen;$("#pick").click()};$("#pick").onchange=e=>{const go=flowOpen(e.target),p=upload([...e.target.files],"data");e.target.value="";if(go)p.then(idle).then(directDone)};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
 // a dropped folder is read by cartella-carica.js
