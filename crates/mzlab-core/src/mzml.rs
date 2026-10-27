@@ -172,8 +172,12 @@ fn cv_attrs<'a>(e: &'a BytesStart) -> [Cow<'a, str>; 5] {
     let mut out: [Cow<'a, str>; 5] = Default::default();
     for a in e.attributes().with_checks(false).filter_map(|a| a.ok()) {
         let key = a.key.into_inner();
-        if let Some(i) = CV_KEYS.iter().position(|k| *k == key) {
-            out[i] = a
+        if let Some(slot) = CV_KEYS
+            .iter()
+            .position(|k| *k == key)
+            .and_then(|i| out.get_mut(i))
+        {
+            *slot = a
                 .normalized_value(quick_xml::XmlVersion::Implicit1_0)
                 .unwrap_or_default();
         }
