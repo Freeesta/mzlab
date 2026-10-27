@@ -119,3 +119,4 @@ Banco: crate di prova fuori dal repository con le funzioni vere di `mzlab-core` 
 
 ## 9. Come rifare le misure
 Il banco (DEV-5) costruisce lo stesso crate nelle varianti `base` (`z`, `-Oz`), `o3`, `o3simd`, `o3simd_zrs`, `mix` e lo esegue in Node (`initSync`) e in Chromium (Playwright, `compileStreaming`) con il mzML HR sintetico da 87 MB generato da `mzmlwrite` (seme fisso) e `B_FullMass-t15` di `dati_sintetici.py`. Ogni variante deve dare le stesse somme di controllo; i tempi si confrontano solo sulla stessa macchina, mediana di 5 giri.
+Nel cloud il banco non gira (`tools/wasm_opt.sh` solo in CI): il workflow `banco-wasm.yml` (solo `workflow_dispatch`, ingressi `varianti` e `giri`) lo lancia in CI su un ramo e scrive la tabella dei tempi nel riassunto del run; è un solo ramo per volta (per confrontare due rami si lancia due volte).
