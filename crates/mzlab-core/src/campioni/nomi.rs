@@ -51,14 +51,17 @@ fn starts(s: &[char], i: usize, w: &str) -> bool {
     s.len() >= i + w.len() && s[i..i + w.len()] == w[..]
 }
 
-/// `\d+(?:[.,]\d+)?`: the end positions, the one with the fraction first.
-fn number_ends(s: &[char], i: usize) -> Vec<usize> {
+/// `\d+(?:[.,]\d+)?` (also `\d+p\d+` after a `t`, as `T2p5`): the end positions, the one with the fraction first.
+fn number_ends(s: &[char], i: usize, p_point: bool) -> Vec<usize> {
     let d = digits(s, i);
     if d == i {
         return vec![];
     }
     let mut v = vec![];
-    if d < s.len() && (s[d] == '.' || s[d] == ',') && digits(s, d + 1) > d + 1 {
+    if d < s.len()
+        && (s[d] == '.' || s[d] == ',' || (p_point && s[d] == 'p'))
+        && digits(s, d + 1) > d + 1
+    {
         v.push(digits(s, d + 1));
     }
     v.push(d);
@@ -107,11 +110,11 @@ fn time_of(s: &[char]) -> Option<Time> {
     for p in after_prefix(s) {
         let after_t = p < s.len() && s[p] == 't';
         let i = if after_t { p + 1 } else { p };
-        for e in number_ends(s, i) {
+        for e in number_ends(s, i, after_t) {
             if let Some((unit, end)) = time_tail(s, e, after_t) {
                 let text: String = s[i..e]
                     .iter()
-                    .map(|c| if *c == ',' { '.' } else { *c })
+                    .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
                     .collect();
                 return Some(Time {
                     value: text.parse().unwrap_or(0.0),

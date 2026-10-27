@@ -263,11 +263,18 @@ pub fn link_evidence<I: ReadAt>(
 ) -> Result<LinkRun> {
     let polarity = polarity_of(given, recipe);
     recipe.detect.polarity = Some(polarity);
-    let hp = HypoParams {
-        polarity,
-        ..HypoParams::default()
+    // the engine searches the hypotheses of the recipe (merged by nominal m/z at unit resolution): the registry of `tp.generate` has to be that one
+    // (`nominal` taken from the files) or, as before the step read the files, the exact-mass one
+    let unit = recipe.align.ion.ppm < 0.0;
+    let same = |nominal: bool| -> Result<bool> {
+        let hp = HypoParams {
+            polarity,
+            nominal,
+            ..HypoParams::default()
+        };
+        Ok(hypotheses.trim() == generate_text(rules, p.formula, p.structure, &hp)?)
     };
-    if hypotheses.trim() != generate_text(rules, p.formula, p.structure, &hp)? {
+    if !same(unit)? && !(unit && same(false)?) {
         return Err(Error::new("err.flow.link.hypotheses").with("parent", p.formula));
     }
     let mz = parent_mz(p, polarity)?;

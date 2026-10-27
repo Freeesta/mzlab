@@ -331,7 +331,7 @@ pub fn dig<R: ReadAt>(
     if lc.is_empty() {
         return Err("full-scan (MS1) files of the sample are required: none found".into());
     }
-    let hyps = rows::hypotheses(registry)?;
+    let hyps = rows::hypotheses(registry, &parent.adduct)?;
     let mut chk = peakchk::Checks::new(&t);
     let around = near(&t, &[parent.mz], rows::OFFSET_MAX);
     peakchk::gate(&mut t, &mut chk, &around, &s, open)?;

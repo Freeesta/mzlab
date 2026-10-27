@@ -259,11 +259,11 @@ pub fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
         if i < s.len() && s[i] == 't' {
             i += 1;
         }
-        for e in number_ends(s, i, &['.', ',']) {
+        for e in number_ends(s, i, if i > p { &['.', ',', 'p'] } else { &['.', ','] }) {
             if let Some(m) = time_tail(s, e) {
                 let v: f64 = s[i..e]
                     .iter()
-                    .map(|c| if *c == ',' { '.' } else { *c })
+                    .map(|c| if *c == ',' || *c == 'p' { '.' } else { *c })
                     .collect::<String>()
                     .parse()
                     .unwrap_or(0.0);

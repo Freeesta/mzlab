@@ -19,6 +19,8 @@ mod convert_report;
 pub mod flow;
 mod flow_apply;
 mod flow_base;
+#[cfg(test)]
+mod flow_bentazone_tests;
 mod flow_cache;
 mod flow_centroid;
 #[cfg(test)]
@@ -73,6 +75,7 @@ mod flow_msnlib;
 mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
+mod flow_nature;
 mod flow_network;
 mod flow_out;
 mod flow_pace;
