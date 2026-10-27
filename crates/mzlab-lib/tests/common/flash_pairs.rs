@@ -52,6 +52,11 @@ pub fn reference<S: Source>(
     }
     sortutil::sort_by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
     pairs.dedup_by(|b, a| (a.0, a.1, a.2) == (b.0, b.1, b.2));
+    groups(&pairs)
+}
+
+/// One-to-one score of every spectrum from its sorted, de-duplicated candidates, and how many spectra had competing candidates.
+fn groups(pairs: &[(u32, u16, u32, f64)]) -> (Vec<FlashScore>, usize) {
     let mut out = Vec::new();
     let mut competing = 0;
     let mut k = 0;

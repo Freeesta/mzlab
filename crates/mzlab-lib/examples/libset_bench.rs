@@ -117,13 +117,44 @@ fn main() {
         frag_da: frag,
         ..AnalogOpts::default()
     };
+    bench_search(&ls, &queries, open_q, (&io, &ao), ft);
+    bench_reference(&ls, open_q, frag);
+}
+
+/// The pair-vector search of the same queries, one library after the other, as the timing reference.
+fn bench_reference(ls: &LibSet<Vec<u8>>, open_q: &[Query], frag: f64) {
+    let t = Instant::now();
+    let mut c = 0.0;
+    for q in open_q {
+        for k in 0..ls.len() {
+            let lib = ls.lib(k).unwrap();
+            let all = lib.ranges(1, f64::NEG_INFINITY, f64::INFINITY).unwrap();
+            c += flash_pairs::reference(lib, q, FlashMode::Hybrid, frag, &all)
+                .0
+                .iter()
+                .take(10)
+                .map(|h| h.score)
+                .sum::<f64>();
+        }
+    }
+    per_query("open hybrid, pair vector (reference)", open_q.len(), t, c);
+}
+
+/// Times the identity, analog and open searches of the set.
+fn bench_search(
+    ls: &LibSet<Vec<u8>>,
+    queries: &[Query],
+    open_q: &[Query],
+    (io, ao): (&IdentityOpts, &AnalogOpts),
+    ft: FragTol,
+) {
     // pass 1 reads cold chunks, pass 2 is warm
     for pass in ["cold", "warm"] {
         let t = Instant::now();
         let mut c = 0.0;
-        for q in &queries {
+        for q in queries {
             c += ls
-                .identity(q, &io, ft, ls.all())
+                .identity(q, io, ft, ls.all())
                 .unwrap()
                 .iter()
                 .map(|h| h.hit.entropy)
@@ -135,7 +166,7 @@ fn main() {
     let mut c = 0.0;
     for q in open_q {
         c += ls
-            .analogs(q, &ao, ls.all())
+            .analogs(q, ao, ls.all())
             .unwrap()
             .iter()
             .map(|h| h.hit.mc.cosine)
@@ -160,19 +191,4 @@ fn main() {
         }
         per_query("open hybrid, flat accumulators", open_q.len(), t, c);
     }
-    let t = Instant::now();
-    let mut c = 0.0;
-    for q in open_q {
-        for k in 0..ls.len() {
-            let lib = ls.lib(k).unwrap();
-            let all = lib.ranges(1, f64::NEG_INFINITY, f64::INFINITY).unwrap();
-            c += flash_pairs::reference(lib, q, FlashMode::Hybrid, frag, &all)
-                .0
-                .iter()
-                .take(10)
-                .map(|h| h.score)
-                .sum::<f64>();
-        }
-    }
-    per_query("open hybrid, pair vector (reference)", open_q.len(), t, c);
 }

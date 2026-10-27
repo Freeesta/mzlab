@@ -4,6 +4,7 @@
 
 use crate::clean::{weighted, MZ_SCALE};
 use crate::error::Result;
+use crate::fast_ln::fast_ln;
 use crate::flash_resolve::score_pairs;
 use crate::frag_tol::FragTol;
 use crate::io::Source;
@@ -38,32 +39,6 @@ pub fn by_score(a: &FlashScore, b: &FlashScore) -> std::cmp::Ordering {
 fn ln_q() -> &'static [f64] {
     static T: std::sync::OnceLock<Vec<f64>> = std::sync::OnceLock::new();
     T.get_or_init(|| (0..=65535u32).map(|q| (q as f64 / 65535.0).ln()).collect())
-}
-
-/// Natural logarithm to ~1e-13 relative error (range reduction to [√½, √2) and the atanh series), about three times faster than `f64::ln`;
-/// subnormal, zero, negative or non-finite arguments use `f64::ln`.
-#[inline]
-fn fast_ln(x: f64) -> f64 {
-    let bits = x.to_bits();
-    let ex = ((bits >> 52) & 0x7ff) as i64;
-    if ex == 0 || ex == 0x7ff || x < 0.0 {
-        return x.ln();
-    }
-    let mut e = ex - 1023;
-    let mut m = f64::from_bits((bits & 0x000F_FFFF_FFFF_FFFF) | (1023u64 << 52));
-    if m > std::f64::consts::SQRT_2 {
-        m *= 0.5;
-        e += 1;
-    }
-    let t = (m - 1.0) / (m + 1.0);
-    let t2 = t * t;
-    let poly = 1.0
-        + t2 * (1.0 / 3.0
-            + t2 * (1.0 / 5.0
-                + t2 * (1.0 / 7.0
-                    + t2 * (1.0 / 9.0
-                        + t2 * (1.0 / 11.0 + t2 * (1.0 / 13.0 + t2 * (1.0 / 15.0)))))));
-    e as f64 * std::f64::consts::LN_2 + 2.0 * t * poly
 }
 
 /// Entropy term of one pair (as `scores::pair_term`) with `c = a ln a` and `ln_b` known: one logarithm instead of three.
@@ -151,7 +126,30 @@ impl FlashAcc {
             self.staged += 1;
         }
     }
+}
 
+/// `(spectrum, query peak, library peak in 1e-5 Da, contribution)` of a staged entry.
+#[inline]
+fn pair_of(e: &Ent, pa: &[f64], pc: &[f64], light: &Light) -> Option<(u32, u16, u32, f64)> {
+    let sp = e.sp & !NL_BIT;
+    let k = sp as usize;
+    let (&sc, &ls, &p, &c, &lq) = (
+        light.scale.get(k)?,
+        light.ln_scale.get(k)?,
+        pa.get(e.i as usize)?,
+        pc.get(e.i as usize)?,
+        ln_q().get(e.qi as usize)?,
+    );
+    let term = term_of(p, c, e.qi as f64 / 65535.0 * sc as f64, lq + ls);
+    let mz = if e.sp & NL_BIT != 0 {
+        light.precq.get(k)?.wrapping_sub(e.mz)
+    } else {
+        e.mz
+    };
+    Some((sp, e.i, mz, term))
+}
+
+impl FlashAcc {
     /// Scores every staged pair into the slots, bucket by bucket. When the search ends with this very flush (`last`, and no flush before), each
     /// bucket is also scanned right after it is scored, while its slots are hot, for the pairs of the spectra in conflict (`conf`).
     fn flush(&mut self, pa: &[f64], pc: &[f64], light: &Light, last: bool) {
@@ -194,7 +192,13 @@ impl FlashAcc {
         self.buckets = buckets;
         self.done = dones;
     }
+}
 
+fn in_ranges(r: &[Range<u32>], i: u32) -> bool {
+    r.iter().any(|x| x.contains(&i))
+}
+
+impl FlashAcc {
     /// Adds one pair; a repeated query or library peak (or a signature collision) marks the spectrum as in conflict.
     #[inline]
     fn add(&mut self, sp: u32, qi: u16, lib_mz: u32, term: f64) {
@@ -237,31 +241,6 @@ impl FlashAcc {
         self.conf.clear();
         self.conf_ready = false;
     }
-}
-
-/// `(spectrum, query peak, library peak in 1e-5 Da, contribution)` of a staged entry.
-#[inline]
-fn pair_of(e: &Ent, pa: &[f64], pc: &[f64], light: &Light) -> Option<(u32, u16, u32, f64)> {
-    let sp = e.sp & !NL_BIT;
-    let k = sp as usize;
-    let (&sc, &ls, &p, &c, &lq) = (
-        light.scale.get(k)?,
-        light.ln_scale.get(k)?,
-        pa.get(e.i as usize)?,
-        pc.get(e.i as usize)?,
-        ln_q().get(e.qi as usize)?,
-    );
-    let term = term_of(p, c, e.qi as f64 / 65535.0 * sc as f64, lq + ls);
-    let mz = if e.sp & NL_BIT != 0 {
-        light.precq.get(k)?.wrapping_sub(e.mz)
-    } else {
-        e.mz
-    };
-    Some((sp, e.i, mz, term))
-}
-
-fn in_ranges(r: &[Range<u32>], i: u32) -> bool {
-    r.iter().any(|x| x.contains(&i))
 }
 
 /// Entropy similarity of the query against every spectrum in `ranges` that shares at least one pair, computed from the indexes only.
@@ -408,51 +387,8 @@ pub fn flash_top<S: Source>(
             }
         }
         if conflicts {
-            let flags = &acc.slots;
-            let conflicted = |sp: u32| {
-                flags
-                    .get(sp as usize)
-                    .is_some_and(|s| s.cnt & CONFLICT != 0)
-            };
-            let mut pairs: Vec<(u32, u16, u32, f64)> = Vec::new();
-            if acc.conf_ready {
-                out.extend(
-                    score_pairs(std::mem::take(&mut acc.conf))
-                        .into_iter()
-                        .filter(|s| accept(s)),
-                );
-            } else if acc.overflow {
-                walk(
-                    lib,
-                    q,
-                    mode,
-                    frag,
-                    ranges,
-                    |nl, sp, i, v, qi| {
-                        if conflicted(sp) {
-                            let e = Ent {
-                                sp: if nl { sp | NL_BIT } else { sp },
-                                mz: v,
-                                i,
-                                qi,
-                            };
-                            pairs.extend(pair_of(&e, &pa, &pc, light));
-                        }
-                    },
-                    || {},
-                )?;
-                out.extend(score_pairs(pairs).into_iter().filter(|s| accept(s)));
-            } else {
-                // Bucket by bucket: each sort stays small and cache-resident.
-                for b in &acc.buckets {
-                    let pairs: Vec<_> = b
-                        .iter()
-                        .filter(|e| conflicted(e.sp & !NL_BIT))
-                        .filter_map(|e| pair_of(e, &pa, &pc, light))
-                        .collect();
-                    out.extend(score_pairs(pairs).into_iter().filter(|s| accept(s)));
-                }
-            }
+            let pairs = conflict_scores(lib, q, mode, frag, ranges, acc, (&pa, &pc), light)?;
+            out.extend(pairs.into_iter().filter(|s| accept(s)));
         }
         Ok(out)
     });
@@ -465,18 +401,59 @@ pub fn flash_top<S: Source>(
     Ok(out)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::fast_ln;
-
-    #[test]
-    fn fast_ln_matches_std() {
-        let mut x = 1e-9f64;
-        while x < 1e9 {
-            let (a, b) = (fast_ln(x), x.ln());
-            assert!((a - b).abs() <= 1e-12 * b.abs().max(1.0), "{x}: {a} vs {b}");
-            x *= 1.0137;
-        }
-        assert!(fast_ln(0.0).is_infinite() && fast_ln(-1.0).is_nan());
+/// One-to-one scores of the spectra flagged in conflict: from the pairs collected by the only flush, else from the retained entries, else from a second walk.
+#[allow(clippy::too_many_arguments)]
+fn conflict_scores<S: Source>(
+    lib: &Library<S>,
+    q: &Query,
+    mode: FlashMode,
+    frag: FragTol,
+    ranges: &[Range<u32>],
+    acc: &mut FlashAcc,
+    (pa, pc): (&[f64], &[f64]),
+    light: &Light,
+) -> Result<Vec<FlashScore>> {
+    let flags = &acc.slots;
+    let conflicted = |sp: u32| {
+        flags
+            .get(sp as usize)
+            .is_some_and(|s| s.cnt & CONFLICT != 0)
+    };
+    if acc.conf_ready {
+        return Ok(score_pairs(std::mem::take(&mut acc.conf)));
     }
+    if acc.overflow {
+        let mut pairs: Vec<(u32, u16, u32, f64)> = Vec::new();
+        walk(
+            lib,
+            q,
+            mode,
+            frag,
+            ranges,
+            |nl, sp, i, v, qi| {
+                if conflicted(sp) {
+                    let e = Ent {
+                        sp: if nl { sp | NL_BIT } else { sp },
+                        mz: v,
+                        i,
+                        qi,
+                    };
+                    pairs.extend(pair_of(&e, pa, pc, light));
+                }
+            },
+            || {},
+        )?;
+        return Ok(score_pairs(pairs));
+    }
+    // Bucket by bucket: each sort stays small and cache-resident.
+    let mut out = Vec::new();
+    for b in &acc.buckets {
+        let pairs: Vec<_> = b
+            .iter()
+            .filter(|e| conflicted(e.sp & !NL_BIT))
+            .filter_map(|e| pair_of(e, pa, pc, light))
+            .collect();
+        out.extend(score_pairs(pairs));
+    }
+    Ok(out)
 }

@@ -114,26 +114,6 @@ pub struct LibSet<S: Source> {
 
 /// Key of a duplicate: InChIKey hash, polarity, precursor to 0.001, the `KEY_PEAKS` highest peaks (by rank, m/z to 0.01 Da).
 type DupKey = (u64, i8, i64, u64);
-
-fn fnv(h: &mut u64, x: u64) {
-    for b in x.to_le_bytes() {
-        *h ^= b as u64;
-        *h = h.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-}
-
-fn top_peaks_hash(mz: &[u32], it: &[u16]) -> u64 {
-    let mut idx: Vec<usize> = (0..mz.len()).collect();
-    sortutil::sort_by(&mut idx, |&a, &b| it[b].cmp(&it[a]).then(mz[a].cmp(&mz[b])));
-    idx.truncate(KEY_PEAKS);
-    sortutil::sort_by(&mut idx, |&a, &b| mz[a].cmp(&mz[b]));
-    let mut h = 0xcbf2_9ce4_8422_2325u64;
-    for i in idx {
-        fnv(&mut h, ((mz[i] as u64) + 500) / 1000);
-    }
-    h
-}
-
 impl<S: Source> LibSet<S> {
     pub fn new(libs: Vec<Library<S>>) -> Result<Self> {
         if libs.len() > MAX_LIBS {
@@ -192,7 +172,16 @@ impl<S: Source> LibSet<S> {
     pub fn set_sidecar(&mut self, s: Sidecar) {
         self.sidecar = Some(s);
     }
+}
 
+fn fnv(h: &mut u64, x: u64) {
+    for b in x.to_le_bytes() {
+        *h ^= b as u64;
+        *h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+}
+
+impl<S: Source> LibSet<S> {
     /// Finds the same spectrum in several libraries: every spectrum gets the id of its duplicate group and the mask of the libraries holding the group.
     pub fn dedup(&self) -> Result<Sidecar> {
         let total = *self.base.last().unwrap_or(&0) as usize;
@@ -226,103 +215,18 @@ impl<S: Source> LibSet<S> {
             libs,
         })
     }
-
-    fn tag<T>(&self, lib: usize, hit: T, index: u32, mask: u16) -> SetHit<T> {
-        let global = self.base[lib] as usize + index as usize;
-        let (group, libs) = match &self.sidecar {
-            Some(s) => (
-                s.group.get(global).copied(),
-                s.libs.get(global).copied().unwrap_or(0) & mask,
-            ),
-            None => (None, 1 << lib),
-        };
-        SetHit {
-            lib: lib as u16,
-            index,
-            hit,
-            group,
-            libs,
-        }
-    }
-
-    /// Fuses per-library hits: ordered by `cmp`, then library, then spectrum; one hit per duplicate group (the best), at most `top`.
-    fn fuse<T: Clone>(
-        &self,
-        mut all: Vec<SetHit<T>>,
-        top: usize,
-        cmp: impl Fn(&T, &T) -> Ordering,
-    ) -> Vec<SetHit<T>> {
-        all.sort_by(|a, b| {
-            cmp(&a.hit, &b.hit)
-                .then(a.lib.cmp(&b.lib))
-                .then(a.index.cmp(&b.index))
-        });
-        let mut seen: std::collections::HashSet<u32> = std::collections::HashSet::new();
-        all.retain(|h| h.group.is_none_or(|g| seen.insert(g)));
-        all.truncate(top);
-        all
-    }
-
-    fn selected(&self, mask: u16) -> impl Iterator<Item = usize> + '_ {
-        (0..self.libs.len()).filter(move |k| mask & (1 << k) != 0)
-    }
-
-    /// Identity search in the libraries of the mask: the best `o.top` hits by entropy, a duplicate group once.
-    pub fn identity(
-        &self,
-        q: &Query,
-        o: &IdentityOpts,
-        frag: FragTol,
-        mask: u16,
-    ) -> Result<Vec<SetHit<Hit>>> {
-        let mut all = Vec::new();
-        for k in self.selected(mask) {
-            for h in identity_with(&self.libs[k], q, o, frag)? {
-                let i = h.index;
-                all.push(self.tag(k, h, i, mask));
-            }
-        }
-        Ok(self.fuse(all, o.top.max(1), |a, b| {
-            b.entropy
-                .total_cmp(&a.entropy)
-                .then(b.cosine.total_cmp(&a.cosine))
-        }))
-    }
-
-    /// Analogue search in the libraries of the mask (accumulators shared), best `o.top` by modified cosine.
-    pub fn analogs(&self, q: &Query, o: &AnalogOpts, mask: u16) -> Result<Vec<SetHit<AnalogHit>>> {
-        let mut all = Vec::new();
-        let mut acc = self.acc.borrow_mut();
-        for k in self.selected(mask) {
-            for h in analogs_with(&self.libs[k], q, o, &mut acc)? {
-                let i = h.index;
-                all.push(self.tag(k, h, i, mask));
-            }
-        }
-        Ok(self.fuse(all, o.top.max(1), |a, b| {
-            b.mc.cosine.total_cmp(&a.mc.cosine)
-        }))
-    }
-
-    /// Open / neutral-loss / hybrid search over the whole index of each library of the mask (spectra of polarity `pol`, 0 = any): the best `keep` by score.
-    pub fn open(
-        &self,
-        q: &Query,
-        mode: FlashMode,
-        frag: FragTol,
-        pol: i8,
-        keep: usize,
-        mask: u16,
-    ) -> Result<Vec<SetHit<FlashScore>>> {
-        let mut all = Vec::new();
-        let mut acc = self.acc.borrow_mut();
-        for k in self.selected(mask) {
-            let lib = &self.libs[k];
-            let ranges = lib.ranges(pol, f64::NEG_INFINITY, f64::INFINITY)?;
-            for s in flash_top(lib, q, mode, frag, &ranges, &mut acc, Some(keep), |_| true)? {
-                all.push(self.tag(k, s, s.index, mask));
-            }
-        }
-        Ok(self.fuse(all, keep, |a, b| b.score.total_cmp(&a.score)))
-    }
 }
+
+fn top_peaks_hash(mz: &[u32], it: &[u16]) -> u64 {
+    let mut idx: Vec<usize> = (0..mz.len()).collect();
+    sortutil::sort_by(&mut idx, |&a, &b| it[b].cmp(&it[a]).then(mz[a].cmp(&mz[b])));
+    idx.truncate(KEY_PEAKS);
+    sortutil::sort_by(&mut idx, |&a, &b| mz[a].cmp(&mz[b]));
+    let mut h = 0xcbf2_9ce4_8422_2325u64;
+    for i in idx {
+        fnv(&mut h, ((mz[i] as u64) + 500) / 1000);
+    }
+    h
+}
+
+mod search;

@@ -8,6 +8,7 @@ pub mod codec;
 pub mod contrib;
 pub mod decoy;
 pub mod error;
+mod fast_ln;
 pub mod flash;
 mod flash_resolve;
 pub mod format;
