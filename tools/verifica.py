@@ -202,14 +202,10 @@ def js_syntax(results) -> None:
 def pytest(results, timeout) -> None:
     if not has("pytest"):
         results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
-    # The tests that call cargo (tools/valida/nativo.py, the wasm readers, the CLI) used to start their builds together under xdist, each waiting on the lock of the others:
-    # in the nightly one worker sat for the whole 1800 s in `cargo build --release ... --example nativo` (tests/test_valida_hr.py). One build up front, with its own log and limit, names a stuck build and leaves the tests only the run.
-    if shutil.which("cargo"):
-        rc, out, dt = sh(["cargo", "build", "--release", "--locked", "-p", "mzlab-feat-wasm", "--example", "nativo"], LOG / "pytest-cargo.log", 1500)
-        if not rc:
-            rc, out, dt2 = sh(["cargo", "build", "--release", "--locked", "-p", "mzlab-cli"], LOG / "pytest-cargo-cli.log", 1500); dt += dt2
-        if rc:
-            results.append(("pytest (cargo build)", "FAIL", dt, out.strip().splitlines()[-6:])); return
+    # one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example nativo` (test_valida_hr.py)
+    for pkg in (["-p", "mzlab-feat-wasm", "--example", "nativo"], ["-p", "mzlab-cli"]) if shutil.which("cargo") else []:
+        rc, out, dt = sh(["cargo", "build", "--release", "--locked", *pkg], LOG / "pytest-cargo.log", 1500)
+        if rc: results.append(("pytest (cargo build)", "FAIL", dt, out.strip().splitlines()[-6:])); return
     # serial pytest needs more than 20 min on a 4-CPU runner; with pytest-xdist it still reached 96% at 1200 s on the Linux runner, hence 1800 s (see main)
     par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
     # faulthandler dumps the stack of a test that runs for over 7 min, so a hang names its test in the log (the dots do not)
