@@ -13,6 +13,7 @@ use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+mod canali_cmd;
 pub mod convert;
 mod convert_report;
 pub mod flow;
@@ -104,7 +105,6 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
-mod canali_cmd;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_figura;
@@ -275,51 +275,6 @@ impl Outcome {
     }
 }
 
-/// `mzlab-cli msn-graph ...`: the graph (or the line of numbers) to the standard output or `--out`.
-fn msn_graph_cmd(args: impl Iterator<Item = String>) -> Outcome {
-    let mut args = args.peekable();
-    if args.next_if(|a| a == "compare").is_some() {
-        return match msn_graph_compare::esegui(args) {
-            Ok((t, out)) => emit(t, &out),
-            Err(e) => Outcome::fail(&e.to_string()),
-        };
-    }
-    if args.next_if(|a| a == "complete").is_some() {
-        return match msn_graph::completa_cmd(args) {
-            Ok((t, out)) => emit(t, &out),
-            Err(e) => Outcome::fail(&e),
-        };
-    }
-    if args.next_if(|a| a == "figure").is_some() {
-        return msn_uscite::figure_cmd(args)
-            .map_or_else(|e| Outcome::fail(&e), |t| Outcome::ok(t.into_bytes()));
-    }
-    let a = match msn_graph::parse_args(args) {
-        Ok(Some(a)) => a,
-        Ok(None) => return Outcome::ok(format!("{}\n", msn_graph::HELP).into_bytes()),
-        Err(e) => return Outcome::fail(&e),
-    };
-    // one folder per call: the tests run several in one process
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-msn{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp)
-        .map_err(io)
-        .and_then(|_| msn_graph::esegui(&a, &tmp));
-    let _ = std::fs::remove_dir_all(&tmp);
-    let r = r
-        .map_err(|e| e.to_string())
-        .and_then(|t| msn_graph::figure_files(&a, &t).map(|f| (t, f)));
-    match r {
-        Err(e) => Outcome::fail(&e),
-        Ok((t, files)) => {
-            let mut o = emit(t, &a.out);
-            o.stdout.extend(files.into_bytes());
-            o
-        }
-    }
-}
-
 /// The text to the standard output, or to the file of `--out`.
 fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
     match out {
@@ -406,7 +361,14 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 5] = ["llm", "steps", "tutor", "explain-missing", "msn-rules"];
+const PLAIN: [&str; 6] = [
+    "llm",
+    "steps",
+    "tutor",
+    "explain-missing",
+    "msn-rules",
+    "canali",
+];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     match command {
@@ -414,6 +376,7 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
         "steps" => steps_cmd::run(args),
         "explain-missing" => flow_explain::run(args),
         "msn-rules" => msn_rules::run(args),
+        "canali" => canali_cmd::run(args),
         _ => tutor::run(args),
     }
 }
@@ -425,9 +388,8 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("features") => {}
         Some("flow") => return flow_cmd(args),
         Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
-        Some("msn-graph") => return msn_graph_cmd(args),
+        Some("msn-graph") => return msn_graph::cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
-        Some("canali") => return canali_cmd::run(args.collect()),
         Some("convert") => return convert::run(args.collect()),
         #[cfg(not(target_family = "wasm"))]
         Some("validate") => return validate::run(args),
@@ -500,5 +462,3 @@ mod msn_lib_tests;
 mod tutor_tests;
 #[cfg(all(test, not(target_family = "wasm")))]
 mod validate_tests;
-#[cfg(test)]
-mod canali_tests;

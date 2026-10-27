@@ -130,6 +130,8 @@ pub(crate) enum Filtro<'a> {
 pub(crate) struct Msn {
     pub alberi: Vec<(Raggruppa, Arc<Albero>)>,
     pub opz: Opz,
+    /// The chromatogram headers the page gave and the channels built from them (`canali::rotte`).
+    pub canali: crate::canali::Stato,
 }
 
 /// `nom` (or absent), `0.01` (Da) or `10ppm`.

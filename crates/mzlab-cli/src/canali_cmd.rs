@@ -42,7 +42,9 @@ pub fn canali(file: &std::path::Path, tmp: &std::path::Path) -> Result<String> {
     let idx = tmp.join("0.mzidx");
     crate::build_index(file, &idx, DEFAULT_BUDGET)?;
     let mut r = Routes::new(crate::open(&idx)?);
-    let nome = file.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned());
+    let nome = file
+        .file_name()
+        .map_or(String::new(), |n| n.to_string_lossy().into_owned());
     if nome.to_lowercase().ends_with(".mzml") {
         let scans_end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
         let f = File::open(file).map_err(io)?;
@@ -66,10 +68,16 @@ pub fn run(args: Vec<String>) -> Outcome {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-canali{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp).map_err(io).and_then(|_| canali(&file, &tmp));
+    let r = std::fs::create_dir_all(&tmp)
+        .map_err(io)
+        .and_then(|_| canali(&file, &tmp));
     let _ = std::fs::remove_dir_all(&tmp);
     match r {
         Err(e) => Outcome::fail(&format!("{} {:?}", e.key, e.params)),
         Ok(t) => crate::emit(t + "\n", &out),
     }
 }
+
+#[cfg(test)]
+#[path = "canali_tests.rs"]
+mod tests;

@@ -214,51 +214,6 @@ def mixed_mrm_epi(path: Path, rng) -> None:
     _write(path, specs, [_chrom(0, "TIC", t, q + ql), _chrom(1, srm(0, "194.1", "Quant"), t, q, pol), _chrom(2, srm(1, "152.1", "Qual"), t, ql, pol)])
 
 
-def _canali_scan(i, rt, rng, level, mz0, filt, prec=None, ce=None):
-    mz = np.sort(rng.uniform(60, 400, 6)); it = rng.lognormal(_log(2e3), 0.5, 6)
-    return _spec(i, rt, mz, it, level=level, prec=prec, ce=ce, filt=filt)
-
-
-def canali_mirato(path: Path, rng) -> None:
-    """Targeted MS2 in LC: a survey scan and the product-ion scans of two FIXED precursors (222.1 and 305.0, 35 eV) at every cycle."""
-    specs = []
-    for c, rt in enumerate(np.linspace(0.5, 20.0, 100)):
-        specs.append(_canali_scan(len(specs), rt, rng, 1, 0, "ITMS + c ESI Full ms [50.00-400.00]"))
-        for k, p in enumerate((222.1, 305.0)):
-            specs.append(_canali_scan(len(specs), rt + 0.003 * (k + 1), rng, 2, 0, f"ITMS + c ESI Full ms2 {p:.2f}@cid35.00 [50.00-{p + 10:.2f}]", prec=p, ce=35.0))
-    _write(path, specs, [])
-
-
-def canali_blocchi(path: Path, rng) -> None:
-    """MSn in blocks (infusion): a survey scan, then 20 scans of MS2 317.2 > 20 of MS3 317.2>261.1 > 20 of MS3 317.2>299.2, each held in turn."""
-    specs, rt = [], 0.0
-    for path_ in ((317.2,), (317.2, 261.1), (317.2, 299.2)):
-        specs.append(_canali_scan(len(specs), rt, rng, 1, 0, "ITMS + c ESI Full ms [100.00-400.00]"))
-        stages = " ".join(f"{m:.2f}@cid{25 + 5 * k}.00" for k, m in enumerate(path_))
-        for _ in range(20):
-            rt += 0.01
-            specs.append(_canali_scan(len(specs), rt, rng, len(path_) + 1, 0, f"ITMS + c ESI d Full ms{len(path_) + 1} {stages} [50.00-330.00]", prec=path_[-1], ce=25.0 + 5 * (len(path_) - 1)))
-    _write(path, specs, [])
-
-
-def canali_dda(path: Path, rng) -> None:
-    """DDA: a survey scan and one MS2 of a different precursor (70 distinct ones) at every cycle."""
-    specs = []
-    for c, rt in enumerate(np.linspace(0.5, 20.0, 70)):
-        specs.append(_canali_scan(len(specs), rt, rng, 1, 0, "FTMS + p ESI Full ms [100.00-500.00]"))
-        p = 150.0 + 4.0 * c
-        specs.append(_canali_scan(len(specs), rt + 0.005, rng, 2, 0, f"FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.00-{p + 10:.2f}]", prec=p, ce=30.0))
-    _write(path, specs, [])
-
-
-def canali_casi(out: Path) -> Path:
-    """The files of the channel tests (`mzlab-cli canali`): K_MIRATO, K_BLOCCHI, K_DDA, in their own folder so that the globs of the other files are unchanged."""
-    out = Path(out); out.mkdir(parents=True, exist_ok=True)
-    rng = np.random.default_rng(97)
-    canali_mirato(out / "K_MIRATO-t0.mzML", rng); canali_blocchi(out / "K_BLOCCHI-t0.mzML", rng); canali_dda(out / "K_DDA-t0.mzML", rng)
-    return out
-
-
 def mixed_polarity(path: Path, rng) -> None:
     """Positive and negative scans alternate at every cycle (Full Scan only)."""
     ions = [(364.4, 14.3, 0.06, 2e7), (362.4, 14.3, 0.06, 1e7)]
@@ -531,7 +486,7 @@ def make(out: Path) -> Path:
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     subtraction_series(out)                           # written last: nothing else changes
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from dati_sintetici_serie import dia, qc_series
+    from dati_sintetici_serie import dia, qc_series; from dati_sintetici_canali import canali_casi
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
     canali_casi(out / "canali")                       # written last, in a folder of its own: nothing else changes
@@ -540,6 +495,5 @@ def make(out: Path) -> Path:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
+    if len(sys.argv) != 2: sys.exit(__doc__)
     print(make(Path(sys.argv[1])))

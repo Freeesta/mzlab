@@ -78,13 +78,11 @@ pub struct Routes<R: ReadAt> {
     pub pol: Option<i8>,
     /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
     pub(crate) msn: crate::msnroute::Msn,
-    /// The chromatogram headers the page gave and the channels built from them (`canali::rotte`).
-    pub(crate) canali: crate::canali::Stato,
 }
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), pol: None, msn: Default::default(), canali: Default::default() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -94,15 +92,8 @@ impl<R: ReadAt> Routes<R> {
 
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        if path == "/api/canali" {
-            return Ok(Some(self.canali().json()));
-        }
-        if let Some(id) = q.some("canale").filter(|_| Self::es_con_canale(path)) {
-            return self.con_canale(path, q, id);
-        }
-        if !self.has_scans() {
-            return Ok(crate::mrmroutes::no_scans(path, q));
-        }
+        if let Some(r) = self.canali_route(path, q) { return r; }
+        if !self.has_scans() { return Ok(crate::mrmroutes::no_scans(path, q)); }
         self.con_opz(q, |r| match path {
             "/api/chrom" => r.chrom(q),
             "/api/xic" => r.xic_route(q),
