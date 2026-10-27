@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use super::MAX_CHIAVI;
+use super::{wiff, MAX_CHIAVI};
 use crate::idxread::Scan;
 
 /// A group of scans while the channels are being counted.
@@ -70,6 +70,9 @@ pub(super) fn attivazione_di(s: &Scan) -> (String, Option<f64>) {
 
 /// The id of the channel a scan belongs to. For an MS2 scan the key of the scan does not name the precursor, the channel does.
 pub(super) fn id_ms(s: &Scan, percorso: &[i64]) -> String {
+    if wiff::dipendente(s) {
+        return wiff::ID_IDA.into();
+    }
     let key = s.key();
     if s.level != 2 || percorso.is_empty() {
         return format!("ms:{key}");
@@ -85,7 +88,7 @@ pub(super) fn sigla_di(s: &Scan) -> Option<&'static str> {
     if s.level <= 1 && s.filter.to_ascii_lowercase().contains(" sim ") {
         return Some("SIM");
     }
-    s.kind_name()
+    s.kind_name().or_else(|| wiff::sigla(s))
 }
 
 pub(super) fn pol_label(pol: i8) -> &'static str {
@@ -101,6 +104,19 @@ pub(super) fn nuovo_gruppo(id: String, s: &Scan, percorso: Vec<i64>) -> Gruppo {
     let (act, ce) = attivazione_di(s);
     let ce_int = ce.map(|c| c.round() as i64);
     let sigla = sigla_di(s);
+    if id == wiff::ID_IDA {
+        return Gruppo {
+            id,
+            level: s.level,
+            n: 0,
+            rt: (f64::INFINITY, f64::NEG_INFINITY),
+            pol: s.polarity,
+            percorso,
+            sigla,
+            etichetta: format!("{} {} IDA", apice(s.level), sigla.unwrap_or_default()),
+            omologo: format!("dd|{}|{}", s.level, sigla.unwrap_or_default()),
+        };
+    }
     let masse = percorso
         .iter()
         .map(i64::to_string)
@@ -188,7 +204,10 @@ pub(super) fn distingui_polarita(gruppi: &mut [Gruppo]) {
 /// Too many keys at a level: one aggregate (DDA). Returns the final groups and `verso[k]`, the final group of group `k`.
 pub(super) fn fondi_dd(gruppi: Vec<Gruppo>) -> (Vec<Gruppo>, Vec<u32>) {
     let mut chiavi: HashMap<u8, usize> = HashMap::new();
-    for g in gruppi.iter().filter(|g| g.level >= 2) {
+    for g in gruppi
+        .iter()
+        .filter(|g| g.level >= 2 && !g.id.starts_with("dd:"))
+    {
         *chiavi.entry(g.level).or_default() += 1;
     }
     let mut dd_livelli: Vec<u8> = chiavi
@@ -201,7 +220,7 @@ pub(super) fn fondi_dd(gruppi: Vec<Gruppo>) -> (Vec<Gruppo>, Vec<u32>) {
     let mut verso: Vec<u32> = vec![0; gruppi.len()];
     let mut dd_pos: HashMap<u8, u32> = HashMap::new();
     for (k, g) in gruppi.into_iter().enumerate() {
-        if !dd_livelli.contains(&g.level) {
+        if !dd_livelli.contains(&g.level) || g.id.starts_with("dd:") {
             finali.push(g);
             verso[k] = (finali.len() - 1) as u32;
             continue;
