@@ -335,6 +335,7 @@ impl State {
             "conv_cancel" => return self.conv_cancel(p),
             "flow/read" => return self.flow_read(p),
             "flow/liste" => return text(mzlab_feat::liste::route(&p.to_string())?),     // checks a list of the user and gives its SHA-256 (`liste::route`)
+            "flow/line" => return text(mzlab_core::flow::line_route(&p.to_string(), Some(&mzlab_cli::flow::steps()))?),   // the short line of a plan, or the plan with its --set applied
             "flow/progress" => return self.flow_progress(p),
             "flow/report" => return self.flow_report(p),
             "flow/reuse" => return self.flow_reuse(p),                                   // steps the cache would give back, before Run (`flow_reuse.rs`)
