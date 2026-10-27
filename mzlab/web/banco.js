@@ -489,7 +489,7 @@ const BANCO = (() => {
       const p = act(), b = Q("#hri-body"); if (!b) return;
       Q("#hri-ttl").textContent = (I9.find(x => x[0] === ist.tab) || [])[1] + (p ? "" : "");
       if (!p) return void (b.innerHTML = `<div class="muted">${I18N.t("bn.noCellText")}</div>`);
-      const tok = ist.tok = (ist.tok || 0) + 1; b.innerHTML = `<div class="muted">…</div>`;
+      const tok = ist.tok = (ist.tok || 0) + 1; if (ist.tab !== "alb") b.innerHTML = `<div class="muted">…</div>`;       // the tree tab keeps its controls and rows while it refreshes (infusione-albero.js)
       Promise.resolve(BODY[ist.tab](b, p, tok)).catch(e => { if (tok === ist.tok) b.innerHTML = `<span class="fail">${esc(e.message)}</span>`; });
     });
   }
