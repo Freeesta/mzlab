@@ -1,6 +1,6 @@
 // @ts-check
 // Flow (administrator mode): what the Run buttons of the bar do. «Run» runs the plan where Flow can (this computer in the desktop app, else this browser);
-// «Run on CLI» copies the command of the native runner at once and a small arrow shows it in a box you can edit. Used by flow-shell.js.
+// «Terminal» opens the panel of flow-terminal.js (the command line of the native runner, copied at once, editable, runnable here). Used by flow-shell.js.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
@@ -16,19 +16,11 @@
     const { el, btn } = F;
     /** @type {HTMLElement | null} */ let shown = null, arrow = null;
     const shut = () => { c.root.querySelectorAll(".fl-cli").forEach(n => n.remove()); shown = null; if (arrow) arrow.setAttribute("aria-expanded", "false"); };
-    const text = async () => F.cliFill((await F.runners.cli.run(S)).text, S.cliFolder || "");
-    const copy = async (/** @type {string} */ t) => { try { await navigator.clipboard.writeText(t); c.say("Copied"); } catch (_) { c.say("Could not copy: select the text and copy it."); } };
 
     const panel = async () => {
       shut();
-      const ta = el("textarea", { class: "fl-cmd", rows: 12, spellcheck: false, "aria-label": "Command for a terminal (you can edit it)" });
-      const raw = (await F.runners.cli.run(S)).text;
-      ta.value = F.cliFill(raw, S.cliFolder || "");
-      const folder = el("input", { type: "text", id: "flx-cli-folder", placeholder: "/Users/you/Data", value: S.cliFolder || "", "aria-label": "Folder with your files",
-        oninput: (/** @type {any} */ e) => { S.cliFolder = e.target.value; ta.value = F.cliFill(raw, S.cliFolder); } });
-      const box = el("div", { class: "fl-cli" }, el("label", { class: "fl-note" }, el("span", { text: "Folder with your files " }), folder),
-        el("p", { class: "fl-note", text: "Paste the folder path; a browser can't see it. Then paste the command in a terminal." }), ta,
-        el("div", { class: "fl-meta" }, btn("export", "Download the plan", S.download, "Download plan"), btn("copy", "Copy the command", () => copy(ta.value), "Copy"), btn("x", "Close", shut, "Close")));
+      const box = F.terminalPanel(S, { say: c.say });
+      box.addEventListener("fl-close", shut);
       c.place(box); shown = box;
       return box;
     };
@@ -44,11 +36,10 @@
         const go = /** @type {HTMLButtonElement | null} */ (box.querySelector('button[aria-label^="Run the plan"]'));
         if (go && !go.disabled) go.click();
       },
-      copy: async () => { await copy(await text()); },
-      /** the arrow beside «Run on CLI»: show or hide the editable command @param {HTMLElement} a */
+      /** the Terminal button: show or hide the panel @param {HTMLElement} a */
       toggle: async a => {
         arrow = a;
-        if (shown && shown.isConnected && shown.querySelector("textarea")) { shut(); return; }
+        if (shown && shown.isConnected && shown.querySelector(".fl-line")) { shut(); return; }
         await panel(); a.setAttribute("aria-expanded", "true");
       },
     };
