@@ -104,7 +104,7 @@ try:
             i = ids[1]; h = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", i); hp = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", ids[0])
             h0, p0 = h(), hp()
             pg.evaluate("id=>E.panels.find(q=>q.id===id).el.scrollIntoView({block:'center'})", i); frames(pg, 3)
-            bb = pg.evaluate("id=>{const r=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}", i)
+            bb = pg.evaluate("id=>{const e=E.panels.find(q=>q.id===id).el,r=e.querySelector('.pgrip.t').getBoundingClientRect(),b=e.getBoundingClientRect(),t=Math.max(r.top,b.top),u=Math.min(r.bottom,b.bottom);return [r.left+r.width/2,(t+u)/2]}", i)
             pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === {h0 + 60}")
             assert h() == h0 + 60 and hp() == p0 - 60, (h0, h(), p0, hp())     # splitter: the panel above gives what this one gains
             pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 300")
@@ -112,6 +112,11 @@ try:
             pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); attendi(pg, f"E.panels.find(q=>q.id==={i}).h === 320")
             assert h() == 320, h()
         step("panels: the top grip moves the boundary with the panel above, double click = default height, arrows on the focused grip", drag_top)
+        def header_free():
+            pg.evaluate("window.scrollTo(0,0)")
+            hit = pg.evaluate("""() => E.panels.filter(q => q.full && q.el.offsetParent).map(q => { const b = q.el.querySelector('.hd').getBoundingClientRect(); const t = b.top > q.el.getBoundingClientRect().top && document.elementFromPoint(b.left + 8, b.top + 2); return [q.id, (t && t.className) || '']; }).filter(([, c]) => /pgrip/.test(c))""")
+            assert not hit, hit                                                 # the 24 px grips must not cover the header: a drag there moves the panel
+        step("panels: the resize grips do not cover the panel header", header_free)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
