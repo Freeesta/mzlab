@@ -38,10 +38,60 @@ try:
         step("317.1639 gives C13H25N4O3S with the default limits", candidates)
         def copy():
             pg.context.grant_permissions(["clipboard-read", "clipboard-write"], origin=f"http://127.0.0.1:{r.port}")
-            pg.click("#cx-out tr[data-i='0']"); pg.wait_for_timeout(300)
-            t = pg.evaluate("navigator.clipboard.readText()"); assert t.startswith("C13H25N4O3S\t"), repr(t)
-            assert pg.get_attribute("#cx-out tr[data-i='0']", "aria-selected") == "true"
-        step("a click on a row selects and copies it", copy)
+            clip = lambda: pg.evaluate("navigator.clipboard.readText()")
+            sel = "#cx-out tr[data-i='0']"
+            cells = pg.evaluate("[...document.querySelectorAll('#cx-out tr[data-i=\"0\"] td')].map(c=>c.innerText.trim())")
+            pg.click(sel + " td:nth-child(2)"); pg.wait_for_timeout(300)
+            assert clip() == "C13H25N4O3S", repr(clip())
+            assert pg.get_attribute(sel, "aria-selected") == "true"
+            pg.click(sel + " td:nth-child(3)"); pg.wait_for_timeout(200); assert clip() == cells[2], (clip(), cells)
+            pg.click(sel + " td:nth-child(4)"); pg.wait_for_timeout(200); assert clip() == cells[3], (clip(), cells)
+            pg.click(sel + " td:nth-child(5)"); pg.wait_for_timeout(200); assert clip() == cells[4], (clip(), cells)
+            pg.click(sel + " td:nth-child(1)"); pg.wait_for_timeout(200); assert clip() == "C13H25N4O3S", clip()
+            assert "Copiata" in pg.inner_text("#cx-live"), pg.inner_text("#cx-live")
+            pg.evaluate("navigator.clipboard.writeText('x')"); pg.focus(sel); pg.keyboard.press("Control+c"); pg.wait_for_timeout(200)
+            assert clip() == "C13H25N4O3S", "Ctrl+C on the selected row copies the formula"
+            pg.keyboard.press("ArrowRight"); pg.keyboard.press("ArrowRight"); pg.keyboard.press("Enter"); pg.wait_for_timeout(200)
+            assert clip() == cells[2], clip()
+        step("a click on a cell copies only its value (formula, RDBE, Δ, score; Idx and Ctrl+C the formula); the row stays selected; the copy is announced", copy)
+        def layout():
+            assert pg.inner_text("label[for=cx-mz]").strip() == "Massa (m/z)", pg.inner_text("label[for=cx-mz]")
+            assert pg.is_hidden("#cx-help") if pg.query_selector("#cx-help") else True
+            body = pg.inner_text(".cx"); assert "Un clic su una riga" not in body and "Aiuto" not in body, body[:200]
+            assert pg.input_value("#cx-max") == "5", pg.input_value("#cx-max")
+            assert pg.get_attribute("#cx-max", "max") == "10" and pg.get_attribute("#cx-max", "min") == "1"
+            pg.fill("#cx-max", "99"); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "10", pg.input_value("#cx-max")
+            pg.fill("#cx-max", "0"); pg.press("#cx-max", "Tab"); assert pg.input_value("#cx-max") == "1", pg.input_value("#cx-max")
+            pg.fill("#cx-max", "5"); pg.press("#cx-max", "Tab")
+            assert pg.inner_text("label[for=cx-pre]").strip() == "Insieme di elementi"
+            labs = pg.evaluate("[...document.querySelectorAll('#cx-pre option')].map(o=>o.textContent)"); assert labs == ["CHNO (organiche)", "CHNOSP", "CHNOSP + alogeni"], labs
+            assert "Sostituisce gli elementi qui sotto" in pg.get_attribute("#cx-load", "title") and "Salva gli elementi qui sotto" in pg.get_attribute("#cx-save", "title")
+            assert pg.get_attribute("#cx-out th.num:last-child", "title"), "the Score header explains itself"
+            assert pg.get_attribute("#cx-out table", "aria-describedby") == "cx-desc" and "non identificazioni" in pg.inner_text("#cx-desc")
+        step("layout: Massa (m/z), no Help and no note, 5 results by default and 1-10 clamp, element set with its tips, Score tooltip", layout)
+        def unit_and_scroll():
+            pg.select_option("#cx-unit", "mda"); pg.fill("#cx-tol", "30"); pg.press("#cx-tol", "Tab")
+            pg.wait_for_function("document.querySelector('#cx-out thead').innerText.includes('mDa')", timeout=15000)
+            pg.select_option("#cx-unit", "ppm"); pg.wait_for_function("document.querySelector('#cx-out thead').innerText.includes('ppm')", timeout=15000)
+            pg.evaluate("document.querySelector('#cx-els').value='C:0-30,H:0-60,N:0-6,O:0-8,S:0-2'; document.querySelector('#cx-els').dispatchEvent(new Event('input'))")
+            pg.fill("#cx-tol", "20"); pg.fill("#cx-max", "10"); pg.press("#cx-max", "Tab"); pg.fill("#cx-mz", "317.1639"); pg.press("#cx-mz", "Enter")
+            pg.wait_for_function("document.querySelectorAll('#cx-out tr[data-i]').length > 5", timeout=15000)
+            n = pg.evaluate("document.querySelectorAll('#cx-out tr[data-i]').length"); assert 5 < n <= 10, n
+            assert pg.evaluate("(()=>{const o=document.querySelector('#cx-out');return o.scrollHeight>o.clientHeight})()"), "the table scrolls beyond the visible rows"
+            pg.evaluate("document.querySelector('#cx-els').value='C:0-13,H:0-25,N:0-4,O:0-3,S:0-1'; document.querySelector('#cx-els').dispatchEvent(new Event('input'))")
+            pg.fill("#cx-tol", "5"); pg.fill("#cx-max", "5"); pg.press("#cx-max", "Tab")
+            pg.wait_for_function("document.querySelectorAll('#cx-out tr[data-i]').length === 1", timeout=15000)
+        step("Δ column follows the unit of Tolerance (ppm | mDa); more than 5 rows scroll, never more than 10", unit_and_scroll)
+        def speed():
+            for els, mz in (("C:0-13,H:0-25,N:0-4,O:0-3,S:0-1", "317.16388"), ("C:0-60,H:0-120,N:0-10,O:0-12,S:0-3,P:0-3", "600.3")):
+                pg.evaluate("e=>{const t=document.querySelector('#cx-els');t.value=e;t.dispatchEvent(new Event('input'))}", els); pg.wait_for_timeout(400)
+                pg.evaluate("document.querySelector('#cx-out').innerHTML=''; window._t0=performance.now()")
+                pg.fill("#cx-mz", mz); pg.press("#cx-mz", "Enter")
+                pg.wait_for_selector("#cx-out table, #cx-out .muted", timeout=15000)
+                ms = pg.evaluate("performance.now()-window._t0"); print("calculation", els, mz, round(ms), "ms")
+                assert ms < 1000, ms
+            pg.evaluate("e=>{const t=document.querySelector('#cx-els');t.value=e;t.dispatchEvent(new Event('input'))}", "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1"); pg.fill("#cx-mz", "317.1639")
+        step("the calculation answers within a second even with wide limits (the time is printed)", speed)
         def edit():
             pg.fill(".cx-els input[data-f=max][data-i='0']", "5"); pg.wait_for_timeout(800)
             assert pg.input_value("#cx-els") if False else pg.evaluate("document.querySelector('#cx-els').value").startswith("C:0-5,"), "the table edits the text"
@@ -82,7 +132,7 @@ try:
                 pg.set_viewport_size({"width": w, "height": 1000}); pg.wait_for_timeout(300)
                 drawer(pg, "cmp"); pg.fill("#cx-mz", "317.1639"); pg.wait_for_selector("#cx-out tr[data-i]", timeout=20000); ready(pg)
                 bad = pg.evaluate("""() => { const R = document.querySelector('#dfiles').getBoundingClientRect(), out = [];
-                  document.querySelectorAll('#dfiles *').forEach(e => { if (!e.offsetParent || e.closest('#cx-out,.cx-els')) return; if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+                  document.querySelectorAll('#dfiles *').forEach(e => { if (!e.offsetParent || e.closest('#cx-out,.cx-els,.sr-only')) return; if (![...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
                     const cs = getComputedStyle(e), b = e.getBoundingClientRect(); if ((e.scrollWidth > e.clientWidth + 1 && cs.overflowX !== 'visible') || b.right > R.right + 1) out.push([e.id || e.className || e.tagName, e.textContent.trim().slice(0, 30)]); }); return out; }""")
                 assert not bad, f"at {w}: {bad[:3]}"
                 pg.locator("#dfiles").screenshot(path=os.path.join(SHOTS, f"hr_formule_{w}.png"))

@@ -6,16 +6,23 @@
 // High-resolution world only. Classic script, loaded after composizione.js (it uses COMP at run time).
 const ELEM = (() => {
   const css0 = document.createElement("style");
-  css0.textContent = `.cx{display:flex;flex-direction:column;gap:6px}.cx-row{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}.cx-row label{display:inline-flex;align-items:center;gap:4px}
-.cx input[type=text],.cx input[type=number]{width:64px;padding:2px 5px;min-width:0}.cx select{padding:2px 4px;min-width:0;max-width:100%}
-.cx-sec{font-weight:600;font-size:12px;margin-top:2px;padding-top:4px;border-top:1px solid var(--line)}
-.cx-out{max-height:210px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
-.cx-out table,.cx-els{border-collapse:collapse;width:100%}.cx-out th,.cx-out td,.cx-els th,.cx-els td{padding:1px 6px;text-align:left;white-space:nowrap;font-size:11px;line-height:1.5}
-.cx-out th,.cx-els th{position:sticky;top:0;background:var(--soft);z-index:1}.cx-out td.num,.cx-out th.num,.cx-els td.num,.cx-els th.num{text-align:right}
+  css0.textContent = `.cx,.cx-els{--cx-row:24px}.cx{display:flex;flex-direction:column;gap:var(--sp-4);min-width:0}.cx-title{font-size:14px;margin:0}
+.cx-sec{font-weight:600;font-size:12px;margin:var(--sp-2) 0 0;padding-top:var(--sp-3);border-top:1px solid var(--line)}
+.cx-grid{display:grid;grid-template-columns:minmax(7em,40%) minmax(0,1fr);gap:var(--sp-3) var(--sp-4);align-items:center}.cx-grid>label{color:var(--muted)}
+.cx input[type=text],.cx input[type=number],.cx select{box-sizing:border-box;width:100%;min-width:0;min-height:var(--cx-row);padding:2px 5px}.cx input[type=number]{text-align:right}
+.cx-pair{display:flex;gap:var(--sp-3);align-items:center;min-width:0}.cx-pair>*{flex:1 1 0}.cx-pair>span{flex:0 0 auto}
+.cx button{min-height:var(--cx-row);min-width:var(--cx-row);padding:2px 8px}
+.cx-out{max-height:calc(var(--cx-row) * 6 + 2px);overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.cx-out table,.cx-els{border-collapse:collapse;width:100%}.cx-out th,.cx-out td,.cx-els th,.cx-els td{padding:0 6px;text-align:left;white-space:nowrap;font-size:11px;height:var(--cx-row)}
+.cx-out th,.cx-els th{position:sticky;top:0;background:var(--soft);z-index:1;font-weight:600}.cx-out td.num,.cx-out th.num,.cx-els td.num,.cx-els th.num{text-align:right;font-variant-numeric:tabular-nums}
 .cx-out tr[data-i]{cursor:pointer}.cx-out tr[data-i]:hover{background:var(--sel)}.cx-out tr[aria-selected=true]{background:var(--sel);font-weight:600;outline:1px solid var(--accent);outline-offset:-1px}
-.cx-els input{width:44px!important;text-align:right}.cx-els td button{padding:0 6px}.cx-add{display:flex;gap:4px;margin-top:3px;align-items:center}
-.cx-btns{display:flex;flex-wrap:wrap;gap:4px;align-items:center}.cx-btns button{padding:2px 8px}.cx-btns select{flex:1 1 90px}
-.cx-pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:2px;margin-top:4px}.cx-pt button{padding:1px 0;font-size:11px;min-width:0;line-height:1.4}.cx-pt button.on{background:var(--accent);color:#fff;border-color:var(--accent)}.cx-pt button:disabled{opacity:.3}`;
+.cx-out td[data-copy]{cursor:copy}.cx-out td:focus-visible,.cx-out tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.cx-out th[title]{cursor:help}
+.cx-els{table-layout:fixed}.cx-els th:nth-child(1){width:17%}.cx-els th:nth-child(2),.cx-els th:nth-child(3){width:19%}.cx-els th:nth-child(4){width:15%}.cx-els th:nth-child(5){width:21%}.cx-els th:last-child{width:calc(var(--cx-row) + 4px)}
+.cx-els th,.cx-els td{padding:0 3px}.cx-els input{width:100%!important;min-width:0;box-sizing:border-box;text-align:right}.cx-els td button{padding:0;width:var(--cx-row)}.cx-els td:last-child{text-align:center}
+.cx-add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--sp-3);margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px dashed var(--line);align-items:center}
+.cx-btns{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}.cx-set{padding-bottom:var(--sp-3)}
+.cx-pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:2px;margin-top:4px}.cx-pt button{padding:1px 0;font-size:11px;min-width:0;line-height:1.4}.cx-pt button.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}.cx-pt button:disabled{opacity:.3}
+@media (pointer:coarse){.cx,.cx-els{--cx-row:40px}}`;
   document.head.appendChild(css0);
   const t = (k, p) => I18N.t(k, p);
   // the elements of composition.py (Python MASS)
@@ -77,7 +84,7 @@ const ELEM = (() => {
     d.mz.forEach((m, i) => { if (Math.abs(m - mzCalc) <= w && (b < 0 || d.y[i] > d.y[b])) b = i; });
     return b < 0 ? null : d.mz[b];
   }
-  // «Applica»: the formula (a candidate) is written under the m/z of the matching peak of the spectrum panel
+  // «Apply»: the formula (a candidate) is written under the m/z of the matching peak of the spectrum panel
   function applyTo(sp, r, q) {
     if (!sp) return nearMsg(t("bn.needSpec"));
     const d = sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d, m = peakFor(d, r.mz_calc, q.tol, q.unit);
@@ -88,60 +95,92 @@ const ELEM = (() => {
   const copyText = async s => { try { await navigator.clipboard.writeText(s); } catch (e) { const a = document.createElement("textarea"); a.value = s; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch (e2) { /* no clipboard */ } a.remove(); } };
 
   // ---------------------------------------------------------------- the compact panel of the drawer
+  // the panel lists at most MAX_RES candidates, DEF_RES by default (the table scrolls beyond the visible rows)
+  const MAX_RES = 10, DEF_RES = 5;
   let pending = null;
   const takeCtx = () => { const c = pending; pending = null; return c; };
   function panel(b, ctx) {
-    const C = COMP, st0 = C.rd(), pol = ctx.polarity === "negative" ? "-" : "+";
+    const C = COMP, st0 = C.rd(), pol = ctx.polarity === "negative" ? "-" : ctx.polarity === "positive" ? "+" : "";
     const opt = (v, cur, l) => `<option value="${EH(v)}"${v === cur ? " selected" : ""}>${l}</option>`;
     const presets = { ...C.BUILTIN, ...(st0.presets || {}) };
+    const ions = C.IONS.filter(i => !pol || (pol === "+" ? !/-$/.test(i[0]) : /-$/.test(i[0])));
+    const ion0 = st0["ion" + (pol || "+")] || (pol === "-" ? "[M-H]-" : "[M+H]+");
     b.innerHTML = `<div class="cx">
-      <div class="cx-row"><label>${t("cx.mass")} <input id="cx-mz" type="text" inputmode="decimal" style="width:96px" value="${ctx.mz != null ? (+ctx.mz).toFixed(5) : ""}"></label><label>${t("comp.max")} <input id="cx-max" type="number" min="1" max="200" value="${st0.max ?? 10}"></label></div>
-      <div id="cx-out" class="cx-out" aria-live="polite"></div>
-      <div class="cx-sec">${t("cx.limits")}</div>
-      <div class="cx-row"><label>${t("cx.charge")} <select id="cx-ion">${C.IONS.filter(i => (pol === "+" ? !/-$/.test(i[0]) : /-$/.test(i[0]))).map(i => opt(i[0], st0["ion" + pol] || (pol === "+" ? "[M+H]+" : "[M-H]-"), i[1])).join("")}</select></label>
-        <label>${t("comp.nitrogen")} <select id="cx-n">${opt("none", st0.n || "none", t("comp.n.none"))}${opt("even", st0.n || "none", t("comp.n.even"))}${opt("odd", st0.n || "none", t("comp.n.odd"))}</select></label></div>
-      <div class="cx-row"><label>${t("comp.tol")} <input id="cx-tol" type="number" min="0" step="any" value="${st0.tol ?? 5}"> <select id="cx-unit">${opt("ppm", st0.unit || "ppm", "ppm")}${opt("mda", st0.unit || "ppm", "mDa")}</select></label>
-        <label>${t("comp.col.rdb")} <input id="cx-r0" type="number" step="any" value="${st0.r0 ?? -1}" aria-label="${t("comp.rdbFrom")}"> – <input id="cx-r1" type="number" step="any" value="${st0.r1 ?? 100}" aria-label="${t("comp.rdbTo")}"></label></div>
-      <div class="cx-sec">${t("comp.elements")}</div>
+      <h3 class="cx-title">${t("cx.title")}</h3>
+      <div class="cx-grid"><label for="cx-mz">${t("cx.mass")}</label><input id="cx-mz" type="text" inputmode="decimal" value="${ctx.mz != null ? (+ctx.mz).toFixed(5) : ""}">
+        <label for="cx-max">${t("comp.max")}</label><input id="cx-max" type="number" min="1" max="${MAX_RES}" value="${Math.min(MAX_RES, Math.max(1, st0.cxmax ?? DEF_RES))}"></div>
+      <h4 class="cx-sec" id="cx-h-res">${t("cx.results")}</h4>
+      <div id="cx-out" class="cx-out" role="region" aria-labelledby="cx-h-res" aria-live="polite"></div>
+      <span id="cx-desc" class="sr-only"></span><span id="cx-live" class="sr-only" role="status"></span>
+      <h4 class="cx-sec">${t("cx.limits")}</h4>
+      <div class="cx-grid"><label for="cx-ion">${t("cx.charge")}</label><select id="cx-ion">${ions.map(i => opt(i[0], ion0, i[1])).join("")}</select>
+        <label for="cx-n">${t("comp.nitrogen")}</label><select id="cx-n">${opt("none", st0.n || "none", t("comp.n.none"))}${opt("even", st0.n || "none", t("comp.n.even"))}${opt("odd", st0.n || "none", t("comp.n.odd"))}</select>
+        <label for="cx-tol">${t("comp.tol")}</label><span class="cx-pair"><input id="cx-tol" type="number" min="0" step="any" value="${st0.tol ?? 5}"><select id="cx-unit" aria-label="${t("comp.tol")}">${opt("ppm", st0.unit || "ppm", "ppm")}${opt("mda", st0.unit || "ppm", "mDa")}</select></span>
+        <label for="cx-r0" id="cx-rl">${t("comp.col.rdb")}</label><span class="cx-pair" role="group" aria-labelledby="cx-rl"><input id="cx-r0" type="number" step="any" value="${st0.r0 ?? -1}" aria-label="${t("comp.rdbFrom")}"><span aria-hidden="true">–</span><input id="cx-r1" type="number" step="any" value="${st0.r1 ?? 100}" aria-label="${t("comp.rdbTo")}"></span></div>
+      <h4 class="cx-sec">${t("comp.elements")}</h4>
+      <div class="cx-grid cx-set"><label for="cx-pre">${t("cx.set")}</label><select id="cx-pre">${Object.keys(presets).map(k => `<option>${EH(k)}</option>`).join("")}</select></div>
+      <div class="cx-btns cx-set"><button id="cx-load" type="button" title="${t("cx.load.tip")}">${t("comp.load")}</button><button id="cx-save" type="button" title="${t("cx.save.tip")}">${t("comp.saveAs")}</button></div>
       <textarea id="cx-els" hidden>${EH(st0.els || DEFAULT_ELS)}</textarea><div id="cx-elt"></div>
-      <div class="cx-btns"><select id="cx-pre" aria-label="${t("comp.load")}">${Object.keys(presets).map(k => `<option>${EH(k)}</option>`).join("")}</select><button id="cx-load" type="button">${t("comp.load")}</button><button id="cx-save" type="button">${t("comp.saveAs")}</button></div>
-      <div class="cx-btns"><button id="cx-apply" type="button" class="go">${t("cx.apply")}</button><button id="cx-help" type="button">${t("cx.help")}</button><button id="cx-exp" type="button" aria-label="${t("cx.expand")}" title="${t("cx.expand")}">⤢</button></div>
-      <div class="muted sm">${t("cx.note")}</div></div>`;
-    const $ = s => b.querySelector(s), ta = $("#cx-els"); let res = null, sel = 0, tm = 0, seq = 0;
-    const read = () => ({ mz: C.num($("#cx-mz").value), ion: $("#cx-ion").value, tol: C.num($("#cx-tol").value) ?? 5, unit: $("#cx-unit").value, max: Math.max(1, parseInt($("#cx-max").value) || 10),
-      n: $("#cx-n").value, r0: C.num($("#cx-r0").value) ?? -1, r1: C.num($("#cx-r1").value) ?? 100, els: ta.value.replace(/\s+/g, "") });
+      <div class="cx-btns"><button id="cx-apply" type="button" class="go">${t("cx.apply")}</button><button id="cx-exp" type="button" aria-label="${t("cx.expand")}" title="${t("cx.expand")}">⤢</button></div></div>`;
+    const $ = s => b.querySelector(s), ta = $("#cx-els"); let res = null, sel = 0, tm = 0, seq = 0, busy = false, again = false, lastSig = "";
+    const read = () => ({ mz: C.num($("#cx-mz").value), ion: $("#cx-ion").value, tol: C.num($("#cx-tol").value) ?? 5, unit: $("#cx-unit").value,
+      max: Math.min(MAX_RES, Math.max(1, Number.isNaN(parseInt($("#cx-max").value)) ? DEF_RES : parseInt($("#cx-max").value))), n: $("#cx-n").value, r0: C.num($("#cx-r0").value) ?? -1, r1: C.num($("#cx-r1").value) ?? 100, els: ta.value.replace(/\s+/g, "") });
+    // what the screen reader hears: the value copied, or the note on the table
+    const say = m => { $("#cx-live").textContent = ""; setTimeout(() => { $("#cx-live").textContent = m; }, 30); };
+    const copied = v => { copyText(v); say(t("cx.copied", { f: v })); nearMsg(t("cx.copied", { f: v })); };
     const show = () => {
-      const o = $("#cx-out");
-      if (!res.results.length) { o.innerHTML = `<div class="muted sm" style="padding:6px">${t("comp.none")}</div>`; return; }
-      const sc = res.results.some(r => r.score);
-      o.innerHTML = `<table aria-label="${t("comp.title")}"><thead><tr><th>${t("cx.idx")}</th><th>${t("cx.formula")}</th><th class="num">${t("comp.col.rdb")}</th><th class="num">Δ ppm</th>${sc ? `<th class="num">${t("cx.score")}</th>` : ""}</tr></thead><tbody>
-        ${res.results.map((r, i) => `<tr data-i="${i}" tabindex="0" aria-selected="${i === sel}"><td>${i + 1}</td><td><b>${fmtFormula(r.formula)}</b></td><td class="num">${r.rdb}</td><td class="num">${r.delta_ppm}</td>${sc ? `<td class="num">${r.score ? (+r.score.total).toFixed(2) : ""}</td>` : ""}</tr>`).join("")}</tbody></table>`;
+      const o = $("#cx-out"), d = $("#cx-desc");
+      if (!res.results.length) { d.textContent = ""; o.innerHTML = `<div class="muted sm" style="padding:6px">${t("comp.none")}</div>`; return; }
+      const sc = res.results.some(r => r.score), mda = res.unit === "mda", s = C.rd(), tip = t("cx.score.tip", { s: s.sppm ?? 3, w: [s.w0 ?? 1, s.w1 ?? 2, s.w2 ?? 1].join(" : ") });
+      d.textContent = t("cx.desc") + " " + (sc ? tip : t("cx.sort.err"));
+      const dl = r => String(mda ? r.delta_mda : r.delta_ppm), cell = (cls, v, html) => `<td${cls ? ` class="${cls}"` : ""} data-copy="${EH(v)}" tabindex="-1">${html}</td>`;
+      o.innerHTML = `<table aria-labelledby="cx-h-res" aria-describedby="cx-desc"><thead><tr><th>${t("cx.idx")}</th><th title="${EH(t("cx.desc"))}">${t("cx.formula")}</th><th class="num">${t("comp.col.rdb")}</th><th class="num">${t(mda ? "cx.delta.mda" : "cx.delta.ppm")}</th>${sc ? `<th class="num" title="${EH(tip)}">${t("cx.score")}</th>` : ""}</tr></thead><tbody>
+        ${res.results.map((r, i) => `<tr data-i="${i}" tabindex="0" aria-selected="${i === sel}"><td>${i + 1}</td>${cell("", r.formula, `<b>${fmtFormula(r.formula)}</b>`)}${cell("num", String(r.rdb), String(r.rdb))}${cell("num", dl(r), dl(r))}${sc ? cell("num", r.score ? (+r.score.total).toFixed(2) : "", r.score ? (+r.score.total).toFixed(2) : "") : ""}</tr>`).join("")}</tbody></table>`;
       const rows = [...o.querySelectorAll("tr[data-i]")];
-      const pick = (i, copy) => { sel = i; rows.forEach((x, j) => x.setAttribute("aria-selected", String(j === i))); if (copy) { const r = res.results[i]; copyText(`${r.formula}\t${r.rdb}\t${r.delta_ppm}`); nearMsg(t("cx.copied", { f: r.formula })); } };
-      rows.forEach((tr, i) => { tr.onclick = () => pick(i, true); tr.onkeydown = ev => {
-        if (((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "c") || ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(i, true); }
-        else if (ev.key === "ArrowDown" && rows[i + 1]) { ev.preventDefault(); rows[i + 1].focus(); pick(i + 1, false); }
-        else if (ev.key === "ArrowUp" && rows[i - 1]) { ev.preventDefault(); rows[i - 1].focus(); pick(i - 1, false); } }; });
+      const pick = i => { sel = i; rows.forEach((x, j) => x.setAttribute("aria-selected", String(j === i))); };
+      // a cell copies its own value; the row (and Ctrl+C or Enter on it) copies the formula
+      const cellsOf = (/** @type {Element} */ tr) => /** @type {HTMLElement[]} */ ([...tr.querySelectorAll("td[tabindex]")]);
+      rows.forEach((tr, i) => {
+        tr.onclick = ev => { pick(i); const c = /** @type {HTMLElement|null} */ ((/** @type {Element} */ (ev.target)).closest("td[data-copy]")), v = c ? c.dataset.copy : res.results[i].formula; if (v) copied(v); };
+        tr.onkeydown = ev => {
+          const c = /** @type {HTMLElement|null} */ ((/** @type {Element} */ (ev.target)).closest("td[tabindex]")), cs = cellsOf(tr), k = c ? cs.indexOf(c) : -1;
+          if (((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "c") || ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(i); const v = c ? c.dataset.copy : res.results[i].formula; if (v) copied(v); }
+          else if (ev.key === "ArrowDown" && rows[i + 1]) { ev.preventDefault(); (k >= 0 ? cellsOf(rows[i + 1])[k] : rows[i + 1]).focus(); pick(i + 1); }
+          else if (ev.key === "ArrowUp" && rows[i - 1]) { ev.preventDefault(); (k >= 0 ? cellsOf(rows[i - 1])[k] : rows[i - 1]).focus(); pick(i - 1); }
+          else if (ev.key === "ArrowRight" && k < cs.length - 1) { ev.preventDefault(); cs[k + 1].focus(); }
+          else if (ev.key === "ArrowLeft" && k >= 0) { ev.preventDefault(); (k > 0 ? cs[k - 1] : tr).focus(); }
+        };
+      });
     };
     const run = async () => {
-      const v = read(), o = $("#cx-out"), my = ++seq;
-      if (v.mz == null || !(v.mz > 0)) { res = null; o.innerHTML = `<div class="muted sm" style="padding:6px">${t("cx.noMz")}</div>`; return; }
-      C.wr({ ...C.rd(), tol: v.tol, unit: v.unit, max: v.max, n: v.n, r0: v.r0, r1: v.r1, els: ta.value, ["ion" + pol]: v.ion });
+      const v = read(), o = $("#cx-out");
+      if (v.mz == null || !(v.mz > 0)) { res = null; lastSig = ""; $("#cx-desc").textContent = ""; o.innerHTML = `<div class="muted sm" style="padding:6px">${t("cx.noMz")}</div>`; return; }
+      const sig = JSON.stringify(v) + (C.rd().rules || []); if (sig === lastSig) return;
+      // one request at a time: while the engine works the last change waits, and only the newest input is sent afterwards
+      if (busy) { again = true; return; }
+      busy = true; lastSig = sig; const my = ++seq;
+      C.wr({ ...C.rd(), tol: v.tol, unit: v.unit, cxmax: v.max, n: v.n, r0: v.r0, r1: v.r1, els: ta.value, ["ion" + (pol || "+")]: v.ion });
       const s = C.rd(), q = { mz: v.mz, ion: v.ion, tol: v.tol, unit: v.unit, max: v.max, n: v.n, rdb: `${v.r0},${v.r1}`, elements: v.els, rules: (s.rules || []).join(",") };
       C.scoreParams(q, ctx.spec ? C.prepSpec(ctx.spec, s) : null, "", s);
+      o.setAttribute("aria-busy", "true");
       try {
         const j = await J("api/composition?" + C.qs(q));
-        if (my !== seq) return;
-        res = C.afterFit(j, s); sel = 0; show();
-      } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (my === seq) o.innerHTML = `<span class="fail" style="padding:6px">${EH(e.message)}</span>`; }
+        if (my === seq && !again) { res = C.afterFit(j, s); sel = 0; show(); }
+      } catch (e_) { const e = /** @type {Lanciato} */ (e_); lastSig = ""; if (my === seq) o.innerHTML = `<span class="fail" style="padding:6px">${EH(e.message)}</span>`; }
+      busy = false; o.removeAttribute("aria-busy");
+      if (again) { again = false; run(); }
     };
-    const later = () => { clearTimeout(tm); tm = setTimeout(run, 250); };
-    ["#cx-mz", "#cx-max", "#cx-ion", "#cx-n", "#cx-tol", "#cx-unit", "#cx-r0", "#cx-r1"].forEach(s => { $(s).oninput = later; $(s).onchange = later; });
+    const later = (ms = 120) => { clearTimeout(tm); tm = setTimeout(run, ms); };
+    const now = () => { clearTimeout(tm); run(); };
+    // typing waits a moment; Enter, leaving the field and the menus calculate at once
+    ["#cx-mz", "#cx-max", "#cx-tol", "#cx-r0", "#cx-r1"].forEach(s => { $(s).oninput = () => later(); $(s).onchange = now; });
+    ["#cx-ion", "#cx-n", "#cx-unit"].forEach(s => { $(s).onchange = now; });
+    $("#cx-mz").onkeydown = ev => { if (ev.key === "Enter") now(); };
+    $("#cx-max").onchange = () => { $("#cx-max").value = String(read().max); now(); };
     bindEls($("#cx-elt"), ta, later);
-    $("#cx-load").onclick = () => { ta.value = presets[$("#cx-pre").value] || ta.value; ta.dispatchEvent(new Event("input")); later(); };
+    $("#cx-load").onclick = () => { ta.value = presets[$("#cx-pre").value] || ta.value; ta.dispatchEvent(new Event("input")); now(); };
     $("#cx-save").onclick = async () => { const n = await ask(t("comp.presetName"), ""); if (!n) return; const s = C.rd(); s.presets = { ...(s.presets || {}), [n]: ta.value }; C.wr(s); toast(t("comp.saved")); };
     $("#cx-apply").onclick = () => { if (!res || !res.results.length) return nearMsg(t("comp.none")); applyTo(ctx.sp, res.results[sel], read()); };
-    $("#cx-help").onclick = () => big(t("cx.help.title"), `<div style="white-space:pre-line">${EH(t("cx.help.body"))}</div>`);
     $("#cx-exp").onclick = () => { const v = read(); C.open({ mz: v.mz, spec: ctx.spec, polarity: ctx.polarity, sp: ctx.sp, ion: v.ion }); };
     run();
   }
