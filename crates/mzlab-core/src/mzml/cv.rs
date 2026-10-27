@@ -75,33 +75,38 @@ impl Cur {
                 }
             }
         } else if let (Scope::Spectrum, Some(s)) = (self.scope, self.spec.as_mut()) {
-            match acc {
-                "MS:1000804" => s.uv = true,
-                "MS:1000511" if !self.in_precursor_list => {
-                    // A level is a small integer; `as` saturates and maps NaN to 0.
-                    #[allow(clippy::cast_possible_truncation)]
-                    let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
-                    s.level = level
-                }
-                "MS:1000130" => s.polarity = 1,
-                "MS:1000129" => s.polarity = -1,
-                "MS:1000128" => s.profile = true,
-                "MS:1000512" if !self.in_precursor_list => s.filter = value.to_string(),
-                "MS:1000016" => {
-                    s.rt = value.parse().unwrap_or(0.0);
-                    s.rt_seconds = seconds;
-                }
-                "MS:1000744" => s.selected = value.parse().ok(),
-                "MS:1000827" => s.target = value.parse().ok(),
-                _ => {
-                    s.mobility_scan = s.mobility_scan.or_else(|| {
-                        mobility_of(acc)
-                            .zip(value.parse().ok())
-                            .map(|(u, v)| (v, u))
-                    })
-                }
-            }
+            spectrum_cv(s, acc, value, seconds, self.in_precursor_list);
         }
         Ok(())
+    }
+}
+
+/// A cvParam of a `<spectrum>` (level, polarity, retention time, selected ion, ...).
+fn spectrum_cv(s: &mut Spec, acc: &str, value: &str, seconds: bool, in_precursor_list: bool) {
+    match acc {
+        "MS:1000804" => s.uv = true,
+        "MS:1000511" if !in_precursor_list => {
+            // A level is a small integer; `as` saturates and maps NaN to 0.
+            #[allow(clippy::cast_possible_truncation)]
+            let level = value.parse::<f64>().map(|v| v as u8).unwrap_or(1);
+            s.level = level
+        }
+        "MS:1000130" => s.polarity = 1,
+        "MS:1000129" => s.polarity = -1,
+        "MS:1000128" => s.profile = true,
+        "MS:1000512" if !in_precursor_list => s.filter = value.to_string(),
+        "MS:1000016" => {
+            s.rt = value.parse().unwrap_or(0.0);
+            s.rt_seconds = seconds;
+        }
+        "MS:1000744" => s.selected = value.parse().ok(),
+        "MS:1000827" => s.target = value.parse().ok(),
+        _ => {
+            s.mobility_scan = s.mobility_scan.or_else(|| {
+                mobility_of(acc)
+                    .zip(value.parse().ok())
+                    .map(|(u, v)| (v, u))
+            })
+        }
     }
 }
