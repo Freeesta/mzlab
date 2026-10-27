@@ -104,7 +104,7 @@ jobs:
           sudo fc-cache -f
           fc-match system-ui
       - name: Smoke tests
-        run: python tools/verifica.py --browser ${{ matrix.browser }} ${{ inputs.solo != '' && format('--solo {0}', inputs.solo) || '--fumo' }}
+        run: python tools/verifica.py --browser ${{ matrix.browser }} --fumo ${{ inputs.solo != '' && format('--solo {0}', inputs.solo) || '' }}
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
