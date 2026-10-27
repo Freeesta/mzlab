@@ -28,13 +28,13 @@ def scenario(n_ms1, n_ms2, mb_each):
             pg.click("#opbtn")                                              # pressed while the files are still being read
             while time.time() - t0 < 600 and pg.evaluate("UPBUSY") > 0: time.sleep(0.3)
             pg.wait_for_timeout(500)
-            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + document.getElementById('start').textContent]")
+            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + [...document.getElementById('start').querySelectorAll('*')].filter(e => !e.closest('.diagbox')).map(e => e.childNodes.length && [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ')).join(' ')]")
     finally:
         r.close()
         for f in names: os.remove(f)
         os.rmdir(d)
 def check(count, seen, got):
-    ok, failed, text = got
+    ok, failed, text = got      # the text leaves out the closed «Details» box (.diagbox): it carries the technical error on purpose, only what the student sees must be free of raw keys
     assert "error.badIndex" not in text and "badIndex" not in text, "raw key in the page"
     assert ok + len(failed) == count, f"{ok} loaded + {len(failed)} failed != {count} "
     assert len(failed) >= 1 and ok >= 1, f"the room should fit some of the {count} files and not all: {ok} loaded, {len(failed)} failed"
