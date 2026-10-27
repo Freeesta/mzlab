@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Job «tipi»: runs tsc on the projects (pagina, moduli, worker, stretto, stretto-worker, stretto2, stretto2-worker) and compares the errors per file with tools/tipi/base_errori.json.
+"""Job «tipi»: runs tsc on the projects (pagina, moduli, worker, stretto, stretto-worker, stretto2, stretto2-worker, stretto3, stretto3-worker) and compares the errors per file with tools/tipi/base_errori.json.
 
 Fails when a file has more errors than its base, or has errors and is not in the base. The base only goes down:
 `--aggiorna` rewrites it with min(base, now) and refuses to raise a number or add a file. Errors in vendor/ and wasm/ are not counted.
@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 RADICE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE = os.path.join(RADICE, "tools", "tipi", "base_errori.json")
-PROGETTI = ("pagina", "moduli", "worker", "stretto", "stretto-worker", "stretto2", "stretto2-worker")
+PROGETTI = ("pagina", "moduli", "worker", "stretto", "stretto-worker", "stretto2", "stretto2-worker", "stretto3", "stretto3-worker")
 TSC = ["npx", "--yes", "-p", "typescript@5.9.3", "tsc", "-p"]
 INSTALLA_S, INSTALLA_PROVE = 60, 3      # the install of tsc by npx sometimes hangs on the runner: 60 s per try, the first plus 2 retries
 RIGA = re.compile(r"^(\S+?)\(\d+,\d+\): error TS\d+")

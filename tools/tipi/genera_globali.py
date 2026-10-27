@@ -3,7 +3,8 @@
 
 globali.d.ts  = `declare var X: any` for every `window.X = ...` and for the names of the classic scripts that tsc reads as CommonJS (module.exports).
 globali-nomi.d.ts = `declare var X: any` for every top-level name of the classic scripts, for the projects that do not include them (moduli, worker).
-stretto.json/stretto2.json (pagina/moduli) and stretto-worker.json/stretto2-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with `strict` (no noImplicitAny; catch variables `unknown` in stretto2*, `any` in TP_Mine/flow): they must have 0 errors.
+stretto.json/stretto2.json/stretto3.json (pagina/moduli) and stretto-worker.json/stretto2-worker.json/stretto3-worker.json (worker) = the files marked `// @ts-strict` (first lines), checked with `strict` (no noImplicitAny; catch variables `unknown` in stretto2*, `any` in TP_Mine/flow): they must have 0 errors.
+stretto3*.json = the files marked `// @ts-noany` as well (first lines): `strict` plus `noImplicitAny`, catch variables `unknown`; 0 errors, a marked file that gets an implicit `any` back fails the job.
 `--controlla` writes nothing and exits 1 when: a file of mzlab/web or TP_Mine is in no project, a top-level name is defined in two classic scripts,
 or the generated files are out of date.
 """
@@ -68,6 +69,7 @@ def genera():
 
 
 STRETTO_TESTA = "// @ts-strict"
+NOANY_TESTA = "// @ts-noany"
 
 
 LIBERI = ("TP_Mine/", "flow/")   # kept at level 1 (catch variables `any`) until their owners close
@@ -75,13 +77,22 @@ LIBERI = ("TP_Mine/", "flow/")   # kept at level 1 (catch variables `any`) until
 
 def stretto(progetti=("pagina", "moduli"), lib=("ES2022", "DOM", "DOM.Iterable"), tipi=("globali.d.ts", "globali-nomi.d.ts", "modello.d.ts", "manuale.d.ts", "manuale-dom.d.ts"), livello=1):
     """tools/tipi/stretto*.json: the files of the given projects with `// @ts-strict` in their first lines, checked with `strict` (noImplicitAny stays off from base.json).
-    Level 1 = TP_Mine/ and flow/ files, catch variables stay `any`; level 2 = all the others, catch variables are `unknown`. No file is in both."""
+    Level 1 = TP_Mine/ and flow/ files, catch variables stay `any`; level 2 = all the others, catch variables are `unknown`;
+    level 3 = files that also have `// @ts-noany` (any folder), with noImplicitAny on. No file is in two levels."""
     files = []
     for nome in progetti:
         for p in elenco(nome):
-            if STRETTO_TESTA in "\n".join(leggi(p).split("\n")[:3]) and p.startswith(LIBERI) == (livello == 1):
+            testa = "\n".join(leggi(p).split("\n")[:3])
+            if STRETTO_TESTA not in testa:
+                if NOANY_TESTA in testa:
+                    raise SystemExit(f"{p}: `// @ts-noany` needs `// @ts-strict` in the first 3 lines too")
+                continue
+            mio = 3 if NOANY_TESTA in testa else (1 if p.startswith(LIBERI) else 2)
+            if mio == livello:
                 files.append("../../" + p)
-    opzioni = {"lib": list(lib), "moduleDetection": "force", "strict": True, "useUnknownInCatchVariables": livello == 2, "strictNullChecks": True}
+    opzioni = {"lib": list(lib), "moduleDetection": "force", "strict": True, "useUnknownInCatchVariables": livello >= 2, "strictNullChecks": True}
+    if livello == 3:
+        opzioni["noImplicitAny"] = True
     return json.dumps({"extends": "./base.json", "compilerOptions": opzioni, "include": list(tipi) + files}, indent=2) + "\n"
 
 
@@ -90,8 +101,9 @@ def stretto_worker(livello=1):
 
 
 def stretti():
-    """{file name: content} of the four stretto*.json."""
-    return {"stretto.json": stretto(), "stretto-worker.json": stretto_worker(), "stretto2.json": stretto(livello=2), "stretto2-worker.json": stretto_worker(2)}
+    """{file name: content} of the six stretto*.json."""
+    return {"stretto.json": stretto(), "stretto-worker.json": stretto_worker(), "stretto2.json": stretto(livello=2), "stretto2-worker.json": stretto_worker(2),
+            "stretto3.json": stretto(livello=3), "stretto3-worker.json": stretto_worker(3)}
 
 
 def main():
