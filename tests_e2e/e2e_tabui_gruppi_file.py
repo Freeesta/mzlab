@@ -117,11 +117,12 @@ try:
         step("the reference condition is chosen, kept in NB.gruppi_opts and given to the page", reference)
 
         def keyboard():
-            pg.focus(f"{G} .tpg-role[data-i='4']"); pg.keyboard.press("ArrowDown")
-            pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value !== 'blank'", timeout=20000)
-            pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('tpg-role') && document.activeElement.value !== 'blank'", timeout=20000)      # drawn again, the focus is back
-            pg.keyboard.press("ArrowUp"); pg.wait_for_function(f"document.querySelector('{G} .tpg-role[data-i=\"4\"]').value === 'blank'", timeout=20000)
-            pg.wait_for_function("document.activeElement && document.activeElement.classList.contains('tpg-role') && document.activeElement.value === 'blank'", timeout=20000)      # drawn again, the focus is back
+            R4 = f"{G} .tpg-role[data-i='4']"
+            def arrow(key, want_blank):       # the select changes at once, the table is drawn again after: wait for a NEW select (the old one is marked) so the next key never meets the redraw halfway
+                pg.focus(R4); pg.evaluate(f"document.querySelector(\"{R4}\").dataset.old = '1'"); pg.keyboard.press(key)
+                pg.wait_for_function(f"(() => {{ const e = document.querySelector('{G} .tpg-role[data-i=\"4\"]'); return e && !e.dataset.old && (e.value === 'blank') === {str(want_blank).lower()} && document.activeElement === e; }})()", timeout=20000)
+            arrow("ArrowDown", False)
+            arrow("ArrowUp", True)
             pg.focus(f"{G} .tpg-cond[data-i='1']"); pg.keyboard.press("Tab")
             assert pg.evaluate("document.activeElement.classList.contains('tpg-time')"), pg.evaluate("document.activeElement.outerHTML")
         step("keyboard: arrows in the role select; Tab goes from condition to time", keyboard)
