@@ -21,6 +21,26 @@ pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     let tail = h.get(from..).filter(|_| !n.is_empty())?;
     tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
 }
+/// Start of the next element named `tag` (`b"<run"`): the name must be followed by XML white space or `>`, so `<runX` and `<binaryDataArrayList` do not count.
+pub(crate) fn find_tag(h: &[u8], tag: &[u8], from: usize) -> Option<usize> {
+    let mut at = from;
+    while let Some(p) = find(h, tag, at) {
+        if h.get(p + tag.len())
+            .is_some_and(|c| c.is_ascii_whitespace() || *c == b'>')
+        {
+            return Some(p);
+        }
+        at = p + 1;
+    }
+    None
+}
+
+/// Whether a cvParam of the chromatogram names the time array in seconds, whatever the order of its attributes and whether `value` is there.
+fn time_in_seconds(chunk: &[u8]) -> bool {
+    text(chunk).split('<').any(|tag| {
+        attr(tag, "name") == Some("time array") && attr(tag, "unitAccession") == Some("UO:0000010")
+    })
+}
 pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
 }
@@ -143,7 +163,7 @@ pub fn mobility_kind<R: ReadAt>(m: &mut Mzml<R>) -> Result<Option<&'static str>>
     let mut n: u64 = 1 << 16;
     loop {
         let chunk = m.read(0, n)?;
-        let span = find(&chunk, b"<spectrum ", 0)
+        let span = find_tag(&chunk, b"<spectrum", 0)
             .and_then(|a| find(&chunk, b"</spectrum>", a).map(|b| (a, b + 11)));
         if let Some(body) = span.and_then(|(a, b)| chunk.get(a..b)) {
             for (head, _) in arrays(body) {
@@ -189,7 +209,7 @@ impl<R: ReadAt> Mzml<R> {
         let region = self.read(scans_end, self.size)?;
         let mut out: Vec<Chrom> = vec![];
         let mut pos = 0usize;
-        while let Some(a) = find(&region, b"<chromatogram ", pos) {
+        while let Some(a) = find_tag(&region, b"<chromatogram", pos) {
             let Some(b) = find(&region, b"</chromatogram>", a) else {
                 break;
             };
@@ -256,13 +276,8 @@ impl<R: ReadAt> Mzml<R> {
         let (mut t, y) = (t.unwrap_or_default(), y.unwrap_or_default());
         let n = t.len().min(y.len());
         let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-        let seconds = text(part(&chunk, 0, list)).contains("unitName=\"second\"")
-            || find(
-                &chunk,
-                b"name=\"time array\" value=\"\" unitCvRef=\"UO\" unitAccession=\"UO:0000010\"",
-                0,
-            )
-            .is_some();
+        let seconds =
+            text(part(&chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(&chunk);
         if seconds {
             t.iter_mut().for_each(|v| *v /= 60.0);
         }
@@ -289,7 +304,7 @@ impl<R: ReadAt> Mzml<R> {
         let mut want = (256u64 << 10).min(limit);
         loop {
             let probe = self.read(0, want)?;
-            let ok = match find(&probe, b"<run ", 0) {
+            let ok = match find_tag(&probe, b"<run", 0) {
                 Some(p) => (p as u64 + extra) <= want,
                 None => false,
             };
@@ -303,7 +318,7 @@ impl<R: ReadAt> Mzml<R> {
     /// The part of the file before `<run `, as text (the header the instrument facts come from).
     fn head(&mut self) -> Result<String> {
         let probe = self.until_run(0)?;
-        let end = find(&probe, b"<run ", 0).unwrap_or_else(|| probe.len().saturating_sub(1));
+        let end = find_tag(&probe, b"<run", 0).unwrap_or_else(|| probe.len().saturating_sub(1));
         Ok(text(part(&probe, 0, end)))
     }
 
@@ -315,7 +330,7 @@ impl<R: ReadAt> Mzml<R> {
     /// The start of the file up to `<run ` plus `extra` bytes, as text (`metodo/1` needs the whole `userParam` that follows the tag).
     pub fn run_head(&mut self, extra: u64) -> Result<String> {
         let probe = self.until_run(extra)?;
-        let run = find(&probe, b"<run ", 0);
+        let run = find_tag(&probe, b"<run", 0);
         let end = run
             .map_or(0, |p| p)
             .saturating_add(usize::try_from(extra).unwrap_or(usize::MAX));
@@ -343,7 +358,7 @@ impl<R: ReadAt> Mzml<R> {
     /// Thermo nativeID format in the header: the "collision energy" is relative (NCE), not eV.
     pub fn nce(&mut self) -> Result<bool> {
         let probe = self.read(0, self.size.min(200_000))?;
-        let end = match find(&probe, b"<run ", 0) {
+        let end = match find_tag(&probe, b"<run", 0) {
             Some(p) if p > 0 => p,
             _ => probe.len(),
         };
@@ -470,7 +485,7 @@ impl<R: ReadAt> Mzml<R> {
     /// (instrumentConfiguration id, analyzer code) in file order, and nothing else (`Run._read_header`).
     pub fn analyzers(&mut self) -> Result<Vec<(String, String)>> {
         let probe = self.until_run(0)?;
-        let end = match find(&probe, b"<run ", 0) {
+        let end = match find_tag(&probe, b"<run", 0) {
             Some(p) if p > 0 => p,
             _ => probe.len().min(200_000),
         };
@@ -589,7 +604,7 @@ fn named_value(h: &str, key: &str) -> Option<f64> {
 pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
     let mut out = vec![];
     let mut pos = 0;
-    while let Some(a) = find(chunk, b"<binaryDataArray ", pos) {
+    while let Some(a) = find_tag(chunk, b"<binaryDataArray", pos) {
         let Some(b) = find(chunk, b"</binaryDataArray>", a) else {
             break;
         };
