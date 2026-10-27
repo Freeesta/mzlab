@@ -84,7 +84,7 @@ try:
             pg.evaluate("document.querySelector('#np-calc2').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
             t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.07" in t and "363.0665" in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
-            pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
+            pg.locator("#calcout button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
             assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1

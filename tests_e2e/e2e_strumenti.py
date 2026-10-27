@@ -83,7 +83,7 @@ try:
             pg.click("#stbar [data-cmd=losses]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Perdite neutre' && document.querySelector('#stbar [data-cmd=losses]').getAttribute('aria-pressed') === 'true'")
             assert pg.inner_text("#sb-title") == "Perdite neutre" and not pg.is_visible("#calcdlg")
             assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "true"
-            pg.click("#stbar [data-cmd=losses]"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Perdite neutre'"); shown("#sb-panel-losses"); assert pg.inner_text("#sb-title") == "Perdite neutre" and pg.is_visible("#sb-panel-losses")
+            pg.click("#stbar [data-cmd=losses]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "false", "a second click on the same tool hides the panel"
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
@@ -101,6 +101,7 @@ try:
             pg.keyboard.press("End"); attendi(pg, "BARRA.width === 560"); assert pg.evaluate("BARRA.width") == 560
             pg.keyboard.press("Enter"); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300
             pg.evaluate("BARRA.setWidth(1000)"); assert pg.evaluate("BARRA.width") == 560, "never wider than 560 px"
+            attendi(pg, FOLLOW)
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), "the charts follow the narrower page"
             h.dblclick(); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300, "double click = the automatic width"
             pg.click("#sb-x"); gone("#dfiles")
@@ -136,7 +137,7 @@ try:
             st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "losses" and st["open"] and "pinned" not in st, st
             pg.reload(); ready(pg)
             assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'losses'"), "open, tool, side and width come back"
-            assert pg.is_visible("#sb-panel-adducts"), "the restored panel is painted"
+            assert pg.is_visible("#sb-panel-losses"), "the restored panel is painted"
             pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
             pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
@@ -214,9 +215,9 @@ try:
         def hr_menu():
             pg.focus("#stbar [data-cmd-car=scan]"); pg.keyboard.press("ArrowDown"); pg.wait_for_selector("#stmenu")
             items = pg.evaluate("[...document.querySelectorAll('#stmenu [role^=menuitem]')].map(b=>b.innerText.trim())")
-            assert items == ["Intestazione della scansione", "Elenco delle scansioni", "File e strumento"], items
-            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst' && document.querySelector('#sb-title').innerText === 'Elenco delle scansioni'")
-            assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst" and pg.inner_text("#sb-title") == "Elenco delle scansioni"
+            assert items == ["Intestazione della scansione", "Elenco delle scansioni", "File e strumento", "Albero dei precursori"], items
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst' && document.querySelector('#sb-title').innerText.startsWith('Elenco delle scansioni')")
+            assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst" and pg.inner_text("#sb-title").startswith("Elenco delle scansioni")
             assert pg.evaluate("document.querySelector('#stbar [data-cmd-main=scan]').getAttribute('aria-label')") == "Scansione: Elenco delle scansioni"
             assert pg.get_attribute("#stbar [data-cmd-main=scan]", "aria-pressed") == "true"
             pg.keyboard.press("Escape"); frames(pg, 3)
@@ -249,7 +250,7 @@ try:
         # ------------------------------------------------------------------ narrow windows, iPad, phone
         def stretta():
             resize(1500, 1000)
-            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'adducts'")
+            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'calc'")
             assert pg.evaluate("BARRA.open && !BARRA.sheet")
             pg.set_viewport_size({"width": 800, "height": 900})
             attendi(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet

@@ -147,10 +147,10 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           restore-keys: |
-            sito-${{ matrix.parte }}-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-${{ matrix.parte }}-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       - name: Reuse the compiled crates of the cache
         run: python3 tools/ci_cargo_mtime.py restore
       - name: wasm-bindgen CLI (the version of Cargo.lock)

@@ -1,0 +1,39 @@
+# By hand only: the wasm bench of tools/banco_wasm.py (jobs of mzlab-core compiled in several build variants, run in Node), with the site's own wasm-opt (tools/wasm_opt.sh, CI only).
+# The table of times goes to the summary of the run. Not a check of any pull request: no required name changes.
+name: banco-wasm
+
+on:
+  workflow_dispatch:
+    inputs:
+      varianti:
+        description: "variants of tools/banco_wasm.py, comma separated (the first is the base of the table)"
+        default: "base,o3"
+      giri:
+        description: "repetitions per job, the median is kept"
+        default: "5"
+
+permissions:
+  contents: read
+
+jobs:
+  banco:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Python for the synthetic data
+        run: python3 -m pip install numpy
+      - name: Bench
+        env:
+          VARIANTI: ${{ inputs.varianti }}
+          GIRI: ${{ inputs.giri }}
+        run: |
+          python3 tools/banco_wasm.py --varianti "$VARIANTI" --giri "$GIRI" 2> banco.err | tee banco.out
+          { echo '### banco-wasm'; grep -v '^{' banco.out; } >> "$GITHUB_STEP_SUMMARY"
+          cat banco.err

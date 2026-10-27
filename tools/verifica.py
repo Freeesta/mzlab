@@ -202,13 +202,13 @@ def js_syntax(results) -> None:
 def pytest(results, timeout) -> None:
     if not has("pytest"):
         results.append(("pytest", "SKIP", 0, ["pytest non installato: python3 tools/verifica.py --setup"])); return
-    # serial pytest needs 20+ min on 4 CPUs (1800 s with xdist); one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example nativo` (test_valida_hr.py)
+    # serial pytest needs 20+ min on 4 CPUs (1800 s with xdist); one serial cargo build up front: under xdist the tests that call cargo built together and one worker sat 1800 s on `--example nativo` (test_valida_hr.py); the cargo shim first in PATH as in test.yml, so no `cargo run` holds the lock for minutes (night 43)
+    env = None if os.name == "nt" else {**os.environ, "PATH": str(ROOT / "tools" / "ci_cargo") + os.pathsep + os.environ.get("PATH", "")}; par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
     for pkg in (["-p", "mzlab-feat-wasm", "--example", "nativo"], ["-p", "mzlab-cli"]) if shutil.which("cargo") else []:
-        rc, out, dt = sh(["cargo", "build", "--release", "--locked", *pkg], LOG / "pytest-cargo.log", 1500)
+        rc, out, dt = sh(["cargo", "build", "--release", "--locked", *pkg], LOG / "pytest-cargo.log", 1500, env=env)
         if rc: results.append(("pytest (cargo build)", "FAIL", dt, out.strip().splitlines()[-6:])); return
-    par = ["-n", "auto", "--dist", "loadfile"] if has("xdist") else []
     # faulthandler dumps the stack of a test that runs for over 7 min, so a hang names its test in the log (the dots do not)
-    rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "faulthandler_timeout=420", "--durations=10", *par, "tests"], LOG / "pytest.log", timeout)
+    rc, out, dt = sh([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "faulthandler_timeout=420", "--durations=10", *par, "tests"], LOG / "pytest.log", timeout, env=env)
     last = [l for l in out.strip().splitlines() if re.search(r"passed|failed|error", l)][-1:] or out.strip().splitlines()[-1:]
     fails = [l for l in out.splitlines() if l.startswith(("FAILED", "ERROR"))][:6]
     results.append(("pytest", "OK" if rc == 0 else "FAIL", dt, (fails or []) + last if rc else last))
