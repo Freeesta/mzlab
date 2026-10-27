@@ -184,10 +184,10 @@ fn kind_span(
 
 /// The word that gave the kind of blank (`solv…` or `proc…`).
 fn blank_span(low: &[char], c: &Campione) -> Option<(usize, usize)> {
-    let pre = if c.blank_kind.as_deref() == Some("solvent") {
-        "solv"
-    } else {
-        "proc"
+    let pre = match c.blank_kind.as_deref() {
+        Some("solvent") => "solv",
+        Some("wash") => "wash",
+        _ => "proc",
     };
     c.blank_kind.as_ref()?;
     let mut i = 0;

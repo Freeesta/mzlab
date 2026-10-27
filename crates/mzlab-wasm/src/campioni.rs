@@ -2,7 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 
-/// `op` is `proponi`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest`, `migra`, `modello`, `dal_file`, `csv_leggi` or `csv_scrivi` (see `campioni::route`); JSON in, JSON out, an error is JSON with a key.
+/// `op` is `proponi`, `proponi3`, `valida`, `da_legacy`, `per_tp`, `canonico`, `digest`, `migra`, `modello`, `dal_file`, `csv_leggi` or `csv_scrivi` (see `campioni::route`); JSON in, JSON out, an error is JSON with a key.
 #[wasm_bindgen]
 pub fn campioni(op: &str, input: &str) -> Result<String, JsValue> {
     mzlab_core::campioni::route_tutto(op, input).map_err(|e| crate::error_json(&e))

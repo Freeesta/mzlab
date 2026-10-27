@@ -51,7 +51,7 @@
       }
      },
      "tipo": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc", "pool"]},
-     "tipo_bianco": {"enum": ["solvent", "procedure", null]},
+     "tipo_bianco": {"enum": ["solvent", "procedure", "wash", null]},
      "tempo": {"type": ["number", "null"]},
      "unita_tempo": {"enum": ["s", "min", "h", "d"]},
      "tempo_min": {"type": ["number", "null"]},

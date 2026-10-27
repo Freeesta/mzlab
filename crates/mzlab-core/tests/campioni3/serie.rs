@@ -143,3 +143,126 @@ fn a_reinjection_keeps_its_id_and_is_flagged() {
     );
     assert_eq!(field(&cs[1], "campione_id"), "TW-PMS-T5-R");
 }
+
+#[test]
+fn a_p_in_a_time_is_the_decimal_point_and_the_order_is_numeric() {
+    let names = [
+        "MQ_PMS_T10p25.mzML",
+        "MQ_PMS_T2p5.mzML",
+        "MQ_PMS_T00.mzML",
+        "MQ_PMS_T0p5.mzML",
+        "MQ_PMS_T10.mzML",
+    ];
+    let mut got: Vec<(f64, &str)> = super::many(&names)
+        .iter()
+        .zip(names)
+        .map(|(c, n)| (c.time_min.unwrap_or(f64::NAN), n))
+        .collect();
+    let times: Vec<f64> = got.iter().map(|g| g.0).collect();
+    assert_eq!(times, [10.25, 2.5, 0.0, 0.5, 10.0], "{got:?}");
+    got.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let order: Vec<&str> = got.iter().map(|g| g.1).collect();
+    assert_eq!(order[1], "MQ_PMS_T0p5.mzML");
+    assert_eq!(order[4], "MQ_PMS_T10p25.mzML");
+}
+
+#[test]
+fn blank_words_make_a_blank_only_without_a_time_or_a_series() {
+    let kind = |n: &str| mzlab_core::campioni::ruolo_e_minuti(n).0;
+    for n in [
+        "MQ_Wash_1.mzML",
+        "MQ_blk.mzML",
+        "milli-q_2.mzML",
+        "20300101_neg_008_MQ_Wash.mzML",
+    ] {
+        assert_eq!(kind(n), "blank", "{n}");
+    }
+    for n in [
+        "MQ_PMS_T00.mzML",
+        "TW_H2O2_T00.mzML",
+        "MQ_PMS_T2p5.mzML",
+        "SQ_PMS_T5.mzML",
+    ] {
+        assert_ne!(kind(n), "blank", "{n}");
+    }
+}
+
+#[test]
+fn washes_are_blanks_of_kind_wash_and_no_reference() {
+    let names = [
+        "MQ_Wash_init.mzML",
+        "MQ_Wash_1.mzML",
+        "MQ_blk.mzML",
+        "MQ_PMS_T05.mzML",
+    ];
+    let cs = super::many(&names);
+    let kinds: Vec<(&str, Option<&str>)> = cs
+        .iter()
+        .map(|c| (c.kind.as_str(), c.blank_kind.as_deref()))
+        .collect();
+    assert_eq!(
+        kinds[..3],
+        [
+            ("blank", Some("wash")),
+            ("blank", Some("wash")),
+            ("blank", None)
+        ],
+        "{kinds:?}"
+    );
+    let p = mzlab_core::campioni::per_tp(&cs);
+    assert_eq!(p.blank, [2]);
+    assert_eq!(p.treated, [3]);
+}
+
+#[test]
+fn matrix_and_group_come_from_the_first_word_shared_by_several_files() {
+    let names = [
+        "TW_PMS_T00.mzML",
+        "TW_PMS_T05.mzML",
+        "TW_PMSD_T00.mzML",
+        "TW_PMSD_T05.mzML",
+        "TW_blk.mzML",
+        "MQ_PMS_T00.mzML",
+        "MQ_PMS_T05.mzML",
+        "MQ_blk.mzML",
+        "MQ_std_X_1ppm.mzML",
+    ];
+    let cs = super::many(&names);
+    let got: Vec<(&str, &str, &str)> = cs
+        .iter()
+        .map(|c| (c.matrix.as_str(), c.series.as_str(), c.group.as_str()))
+        .collect();
+    assert_eq!(got[0], ("TW", "TW_PMS", "TW-PMS"));
+    assert_eq!(got[2], ("TW", "TW_PMSD", "TW-PMSD"));
+    assert_eq!(got[4], ("TW", "", ""));
+    assert_eq!(got[5], ("MQ", "MQ_PMS", "MQ-PMS"));
+    assert_eq!(got[8].0, "MQ");
+    // one blank per matrix: both are the first of their matrix
+    assert_eq!((cs[4].replicate, cs[7].replicate), (1, 1));
+}
+
+#[test]
+fn a_single_first_word_proposes_no_matrix() {
+    let cs = super::many(&["X_TiO2_t005min", "X_TiO2_t010min", "X_blank"]);
+    assert!(cs.iter().all(|c| c.matrix.is_empty() && c.group.is_empty()));
+}
+
+#[test]
+fn proponi3_gives_a_campioni_3_with_the_matrix() {
+    let input = r#"{"files":[{"name":"TW_PMS_T00.mzML"},{"name":"TW_PMS_T05.mzML"},{"name":"TW_blk.mzML"},{"name":"MQ_PMS_T00.mzML"},{"name":"MQ_PMS_T05.mzML"},{"name":"MQ_Wash_1.mzML"}]}"#;
+    let v: serde_json::Value =
+        serde_json::from_str(&mzlab_core::campioni::route("proponi3", input).unwrap()).unwrap();
+    assert_eq!(v["schema"], "campioni/3");
+    let cs = v["campioni"].as_array().unwrap();
+    let f = |i: usize, k: &str| cs[i][k].clone();
+    assert_eq!(
+        (f(0, "matrice"), f(0, "gruppo"), f(0, "serie")),
+        ("TW".into(), "TW-PMS".into(), "TW_PMS".into())
+    );
+    assert_eq!(f(3, "matrice"), "MQ");
+    assert_eq!(f(3, "tempo_min").as_f64(), Some(0.0));
+    assert_eq!(
+        (f(5, "tipo"), f(5, "tipo_bianco")),
+        ("blank".into(), "wash".into())
+    );
+}

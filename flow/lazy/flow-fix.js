@@ -29,6 +29,16 @@
     const S = { plan: tpl.steps ? F.newPlan() : F.basePlan(reg), reg };
     for (const id of tpl.steps || []) F.addStep(S.plan, reg, id);
     for (const a of tpl.addons) F.addAddon(S, F.ADDONS.find((/** @type {any} */ x) => x.id === a));
+    // the hypotheses read the polarity and the resolution of the files unless the plan writes them: the index goes in
+    const gen = F.findStep(S.plan, "tp.generate"), idx = F.findStep(S.plan, "index.mzidx"), gstep = gen && reg.byId.get("tp.generate");
+    const iport = gstep && F.ports(gstep.in).find((/** @type {FlowPort} */ x) => x.name === "index");
+    if (gen && idx && iport && !gen.in.index) F.setPort(gen, iport, [`${idx.id}.index`]);
+    // the network reads the rows of the link (a filter keeps a view, not a table) and the same sample list, for the time course
+    const net = F.findStep(S.plan, "tp.network"), link = F.findStep(S.plan, "tp.link"), nstep = net && reg.byId.get("tp.network");
+    if (net && link && nstep) for (const [name, ref] of [["table", link.id + ".tp"], ["samples", link.in.samples]]) {
+      const port = F.ports(nstep.in).find((/** @type {FlowPort} */ x) => x.name === name);
+      if (port && ref) F.setPort(net, port, [].concat(ref));
+    }
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
       const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);
@@ -63,10 +73,15 @@
     const inst = F.instanceOf(S.plan, p.instance), step = inst && (F.stepOf ? F.stepOf(S.reg, inst) : S.reg.byId.get(inst.step.split("@")[0]));
     if (p.key === "err.flow.port.missing" && step) {
       const port = F.ports(step.in).find((/** @type {FlowPort} */ x) => x.name === p.port);
-      if (port) return { text: `Needs ${F.INPUT_NAMES[port.type] ? F.INPUT_NAMES[port.type].toLowerCase() : port.title.toLowerCase()}.`, fix: fixFor(S, inst, port) };
+      if (port) {
+        const what = F.INPUT_NAMES[port.type] ? F.INPUT_NAMES[port.type].toLowerCase() : port.title.toLowerCase(), prod = F.INPUT_TYPES.includes(port.type) ? null : producerOf(S, port);
+        return { text: prod ? `Needs ${what}: it comes from “${F.nameOf(prod.id)[0]}”, which this plan does not have yet.` : `Needs ${what}.`, fix: fixFor(S, inst, port) };
+      }
     }
     return { text: F.message(p), fix: null };
   };
+  /** the first step the plan lacks that makes what the port reads @param {any} S @param {FlowPort} port */
+  const producerOf = (S, port) => S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
   /** @param {any} S @param {any} inst @param {FlowPort} port */
   const fixFor = (S, inst, port) => {
     if (F.INPUT_TYPES.includes(port.type)) {
@@ -77,7 +92,7 @@
         if (data) void F.samplesSet(S, input, data).then(() => { if (S.redraw) S.redraw(); });
       } };
     }
-    const prod = S.reg.steps.find((/** @type {any} */ s) => s.id !== "meta.compare" && !F.findStep(S.plan, s.id) && F.ports(s.out).some((/** @type {FlowPort} */ o) => F.fit(S.reg, o.type, port) === "ok"));
+    const prod = producerOf(S, port);
     if (!prod) return null;
     return { label: `Add “${F.nameOf(prod.id)[0]}”`, run() {
       const made = F.addStep(S.plan, S.reg, prod.id), o = F.ports(prod.out).find((/** @type {FlowPort} */ x) => F.fit(S.reg, x.type, port) === "ok");

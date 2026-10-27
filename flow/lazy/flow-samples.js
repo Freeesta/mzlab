@@ -12,11 +12,45 @@
     return files.length && G.CDOC ? G.CDOC.doc(files) : null;
   };
 
+  /** what the files open in Data say of themselves: the polarity of all of them (±1, null for a mix or none) and the resolution of their MS1 scans ("hr", "lr", null for a mix or when unknown)
+   * @returns {{polarity: number | null, resolution: string | null}} */
+  F.fileNature = () => {
+    const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.filter((/** @type {any} */ f) => f && !f.gone && f.file && f.kind !== "infusion") : [];
+    const one = (/** @type {any[]} */ a) => (a.length && a.every(x => x === a[0]) ? a[0] : null);
+    const pols = open.map((/** @type {any} */ f) => (f.polarity === "negative" ? -1 : f.polarity === "positive" ? 1 : 0)).filter(Boolean);
+    const res = open.map((/** @type {any} */ f) => (f.prof1 ? (f.prof1.hr ? "hr" : "lr") : null)).filter(Boolean);
+    return { polarity: open.length && pols.length === open.length ? one(pols) : null, resolution: open.length && res.length === open.length ? one(res) : null };
+  };
+
+  /** the parameters of a step that the open files decide: `polarity` when they agree (and the step offers it), `nominal` for unit-resolution files @param {any} step @returns {Record<string, any>} */
+  F.fromFiles = step => {
+    const n = F.fileNature(), props = (step.params && step.params.properties) || {}, out = /** @type {Record<string, any>} */ ({});
+    if (n.polarity != null && props.polarity && (props.polarity.enum || []).includes(n.polarity)) out.polarity = n.polarity;
+    if (n.resolution === "lr" && props.nominal) out.nominal = true;
+    return out;
+  };
+
+  /** a node made with files open starts with the preset that fits their resolution (written, so the form shows it and the user changes it) @param {any} inst @param {any} step */
+  F.inheritPreset = (inst, step) => {
+    const res = F.fileNature().resolution;
+    if (!res || inst.preset != null) return;
+    const fit = F.presetList(step).find((/** @type {any} */ p) => p.when && (p.when.resolution || []).includes(res));
+    if (fit && fit.id !== step.default_preset) F.setPreset(inst, fit.id);
+  };
+
+  /** the instance of a plan to run: the preset of the files and the parameters they decide, written where the plan has not chosen and the descriptor default differs @param {any} inst @param {any} step */
+  F.inheritNature = (inst, step) => {
+    F.inheritPreset(inst, step);
+    const plain = F.defaults(inst, step, true);
+    for (const [name, v] of Object.entries(F.fromFiles(step))) if (!(inst.params && name in inst.params) && v !== plain[name]) { inst.params = inst.params || {}; inst.params[name] = v; }
+  };
+
   /** the plan to run in the app and what the page tells about it: the files open in the Data tab become its scan inputs (the first placeholder input of a scan type is replaced by one input per file,
    * wired where it was; a plan that already names a Data file keeps it), `warns` lists the profile files met by a step whose chosen algorithm needs centroids. Never changes S.plan
    * @param {any} S @returns {{plan: any, names: string[], warns: string[]}} */
   F.runPlanFromData = S => {
     const plan = JSON.parse(JSON.stringify(S.plan)), warns = /** @type {string[]} */ ([]);
+    for (const inst of plan.steps) { const step = F.stepOf(S.reg, inst); if (step) F.inheritNature(inst, step); }
     const open = typeof E !== "undefined" && Array.isArray(E.files) ? E.files.filter((/** @type {any} */ f) => f && !f.gone && f.file) : [];
     const held = [...new Set(open.map((/** @type {any} */ f) => String(f.file).split("#")[0]))];
     const scan = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml");

@@ -400,3 +400,17 @@ pub fn breakdown_fields(o: &mut Out, id: u32, b: &Breakdown) {
     }
     o.raw("]");
 }
+
+/// `match_hypotheses` for a table whose tolerances are `tp_ppm` (`TpParams.ppm`; negative = the unit axis, a window in Da).
+pub fn match_hypotheses_for(
+    hyps: &[crate::hypo::Hypothesis],
+    aligned: &crate::table::Aligned,
+    tp_ppm: f64,
+) -> Vec<Option<usize>> {
+    let win = if tp_ppm < 0.0 {
+        crate::axis::da(crate::axis::LR_TOL)
+    } else {
+        HYPOTHESIS_PPM
+    };
+    match_hypotheses_in(hyps, aligned, win)
+}

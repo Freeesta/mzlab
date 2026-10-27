@@ -12,6 +12,7 @@ mod json;
 mod json3;
 mod modello;
 mod nomi;
+mod parole_bianco;
 mod posizioni;
 mod regex;
 mod ricollega;
@@ -45,8 +46,8 @@ pub const TIPI: [&str; 9] = [
     "qc",
     "pool",
 ];
-/// Kinds of blank (optional: every blank is subtracted the same way).
-pub const TIPI_BIANCO: [&str; 2] = ["solvent", "procedure"];
+/// Kinds of blank (optional: a solvent and a procedure blank are subtracted the same way; a wash only cleans the system and is no reference).
+pub const TIPI_BIANCO: [&str; 3] = ["solvent", "procedure", "wash"];
 /// Units of a time as written: seconds, minutes, hours, days.
 pub const UNITA_TEMPO: [&str; 4] = ["s", "min", "h", "d"];
 
@@ -201,7 +202,7 @@ fn number_replicates_pairwise(cs: &mut [Campione]) {
 /// (`{"session","qaqc","campioni1","mzflow"}`, see `json::da_legacy`); JSON in, JSON out.
 pub fn route(op: &str, input: &str) -> Result<String> {
     match op {
-        "proponi" | "proponi_spiegato" => {
+        "proponi" | "proponi_spiegato" | "proponi3" => {
             let v = crate::json::parse(input.as_bytes())?;
             let s = |f: &crate::json::Value, k: &str| {
                 f.get(k).and_then(|x| x.str()).unwrap_or("").to_string()
@@ -215,6 +216,13 @@ pub fn route(op: &str, input: &str) -> Result<String> {
                 .collect();
             if op == "proponi_spiegato" {
                 return Ok(proposte_json(&proponi_spiegato(&files)));
+            }
+            if op == "proponi3" {
+                let tabella = Tabella {
+                    campioni: proponi(&files),
+                    colonne: Vec::new(),
+                };
+                return Ok(to_json3(&tabella));
             }
             Ok(to_json(&proponi(&files)))
         }

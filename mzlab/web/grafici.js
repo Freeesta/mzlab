@@ -535,18 +535,13 @@ function mapNorm(m, norm) {
   let t = 0; for (let i = 0; i < m.length; i++) t = norm === "max" ? Math.max(t, m[i]) : t + m[i];
   const f = t > 0 ? (norm === "max" ? 1 : 1000) / t : 1, o = new Float32Array(m.length); for (let i = 0; i < m.length; i++) o[i] = m[i] * f; return o;
 }
-function mapImage(p, A, B, scale, norm = "abs") {
+function mapImage(p, A, B, scale, norm = "abs", fix = 0) {
   const dop = window.MAPPA ? MAPPA.diffOpt(!!B) : { show: "all", thr: B ? 0.02 : 0.004, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
-  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}${scale === "gamma" ? p.gamma || 0.6 : ""}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}`;
+  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}${scale === "gamma" ? p.gamma || 0.6 : ""}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}|${fix}`;
   if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
   const n = A.m.length, v = new Float32Array(n);
   if (B && B.d) v.set(B.d); else { const mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null; for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i]; }
-  const nz = []; for (let i = 0; i < n; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
-  let samp = nz; if (nz.length > 10000) {
-    samp = []; const s = nz.length / 10000; for (let i = 0; i < 10000; i++) samp.push(nz[Math.floor(i * s)]);
-  }
-  samp.sort((a, b) => a - b);
-  const ref = samp.length ? samp[Math.min(samp.length - 1, Math.floor(samp.length * 0.995))] : 1, floor = dop.thr;        // 99.5th percentile: one huge peak does not flatten the rest
+  const ref = fix > 0 ? fix : MAPREND.ref(v), floor = dop.thr;        // 99.5th percentile (MAPREND.ref), or the common one of the open files with the fixed scale
   const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : scale === "gamma" ? Math.pow(r, p.gamma || 0.6) : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
   const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
@@ -558,10 +553,10 @@ function mapImage(p, A, B, scale, norm = "abs") {
   ctx.putImageData(im, 0, 0);
   return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
 }
-// The whole view of the map: the union of the stretches with data of the files shown (first to last scan with peaks; lowest to highest m/z) with a small
-// margin, inside the grid. A file without the extent (an older answer) or without data keeps the whole grid. Nothing is extrapolated.
-function mapView(A, B, rt0, rt1, mz0, mz1) {
-  const ex = [A, B].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
+// The whole view of the map: the union of the stretches with data (first to last scan with peaks; lowest to highest m/z) of the files shown and of the other open files
+// of the tab, so the axes stay put when the file changes, with a small margin, inside the grid. A file without the extent or without data keeps the whole grid.
+function mapView(A, B, rt0, rt1, mz0, mz1, others = []) {
+  const ex = [A, B, ...others].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
   if (!ex.length) return { rt: [rt0, rt1], mz: [mz0, mz1] };
   const lo = (i, k) => Math.min(...ex.map(e => e[k][i])), hi = (i, k) => Math.max(...ex.map(e => e[k][i]));
   const a = lo(0, "rt"), b = hi(1, "rt"), c = lo(0, "mz"), d = hi(1, "mz"), pr = Math.max((b - a) * 0.01, 1e-3), pm = Math.max((d - c) * 0.01, 0.5);
@@ -578,11 +573,12 @@ async function drawMap(p) {
   const lv = isPda ? "pda" : f.lv;
   const se = window.SUBREF ? SUBREF.eff(p) : null;
   const rf = !isPda && se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
-  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null;
+  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null, others = await Promise.all(sf.filter(q => q.k !== f.k && (isPda || q.lv === lv) && !(rf && q.k === rf.k)).map(q => getMap(q.k, lv, mapBg(p)).catch(() => null)));      // the other files of the tab, same level: their extents fix the whole view
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
-  const im = mapImage(p, A, B, p.scale, p.norm || "abs");
+  const fix = !B && window.MAPPA && MAPPA.diffOpt(false).fix ? Math.max(...[A, ...others].filter(Boolean).map(o => o.m._r?.[p.norm || "abs"] ?? ((o.m._r ||= {})[p.norm || "abs"] = MAPREND.ref(mapNorm(o.m, p.norm || "abs"))))) : 0;      // fixed colour scale: the top is the same on every file
+  const im = mapImage(p, A, B, p.scale, p.norm || "abs", fix);
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
-  const ext = mapView(A, B, rt0, rt1, mzA, mzB);                     // the whole view is where the files have data (no empty bands at the sides)
+  const ext = mapView(A, B, rt0, rt1, mzA, mzB, others);                     // the whole view is where the files have data (no empty bands at the sides)
   const x0 = p.zoom ? p.zoom[0] : ext.rt[0], x1 = p.zoom ? p.zoom[1] : ext.rt[1], y0 = p.zoomY ? p.zoomY[0] : ext.mz[0], y1 = p.zoomY ? p.zoomY[1] : ext.mz[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = p.scale === "gamma" ? I18N.t("map.sc.gamma", { g: p.gamma || 0.6 }) : I18N.t(`map.sc.${p.scale}`);

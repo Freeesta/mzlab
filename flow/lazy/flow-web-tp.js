@@ -21,7 +21,7 @@
   const engine = async () => {
     if (loaded) return loaded;
     loaded = (async () => {
-      const c = G.QTOOLS.ctx, man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
+      const c = await F.tpCtx("regole_tp_2.json"), man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
       const rules = c.files["regole_tp_2.json"];
       if (!rules || !man.proofs) throw fail("error.featFailed");
       return { hr: await open(c.base, man.proofs), grafo: man.grafo ? await open(c.base, man.grafo) : null, rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules };

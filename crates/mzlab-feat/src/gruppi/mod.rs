@@ -116,6 +116,8 @@ pub struct CondRow {
     pub t_half_rise: Option<f64>,
     pub rate_rel: Option<f64>,
     pub kin: Vec<KinPt>,
+    /// The dark controls of the condition along the treatment (empty when they have no known time).
+    pub dark: Vec<KinPt>,
     pub prev: Option<Prev>,
 }
 
@@ -350,6 +352,7 @@ fn cond_row(cx: &Ctx, r: usize, c: &CondModel, k: &CondCalc) -> CondRow {
         t_half_rise: shape.and_then(|s| forme::t_half_rise(s, &k.kin)),
         rate_rel: None,
         kin: k.kin.clone(),
+        dark: presenza::dark_course(cx, r, c),
         prev,
     }
 }

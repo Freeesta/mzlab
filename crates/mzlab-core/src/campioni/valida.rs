@@ -175,6 +175,8 @@ pub fn per_tp(cs: &[Campione]) -> PerTp {
                 minutes = Some(0.0);
                 &mut p.t0
             }
+            // a wash cleans the system: it is no reference and no sample, so it takes part like a standard
+            "blank" if c.blank_kind.as_deref() == Some("wash") => &mut p.std,
             "blank" => &mut p.blank,
             "dark" => &mut p.dark,
             "infusion" => &mut p.infusion,

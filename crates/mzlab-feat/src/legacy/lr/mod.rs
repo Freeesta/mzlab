@@ -189,11 +189,14 @@ pub const PARENT_OK: &str = "parent of the series";
 
 /// A candidate of a parent that `parent_check` does not confirm: it stays in the table, `debole` (score at most 40), because a match to the
 /// transformations of a parent that is not in the files is no evidence of a product.
-fn orphan(e: &mut Entry) {
+fn orphan(e: &mut Entry, parent: &ParentLr) {
     e.criteria.push(labels::crit(
         PARENT_OK,
         "fail",
-        "the parent is not a chromatographic peak that falls over time in these files: the match to its transformations is no evidence".into(),
+        format!(
+            "the parent ion {} at m/z {:.2} is not a chromatographic peak that falls over time in these files (check the adduct of the parent): the match to its transformations is no evidence",
+            parent.adduct, parent.mz
+        ),
     ));
     e.score = e.score.map(|x| x.min(40.0));
     e.label = "debole";
@@ -331,7 +334,7 @@ pub fn dig<R: ReadAt>(
     if lc.is_empty() {
         return Err("full-scan (MS1) files of the sample are required: none found".into());
     }
-    let hyps = rows::hypotheses(registry)?;
+    let hyps = rows::hypotheses(registry, &parent.adduct)?;
     let mut chk = peakchk::Checks::new(&t);
     let around = near(&t, &[parent.mz], rows::OFFSET_MAX);
     peakchk::gate(&mut t, &mut chk, &around, &s, open)?;
@@ -364,7 +367,7 @@ pub fn dig<R: ReadAt>(
             .iter_mut()
             .filter(|e| !e.unexpected && e.id != 0 && e.score.is_some())
         {
-            orphan(e);
+            orphan(e, &parent);
         }
     }
     let (entries, unexpected_left) = keep_unexpected(entries, s.max_unexpected);

@@ -94,6 +94,12 @@
       "err.flow.run": "The run could not start.",
       "err.scan.outside": "The file has no scan the step can read. Open an MSn infusion (MS2 or deeper) in the Data tab, wait until it is read, then run again.",
       "err.flow.compare.few": "A comparison needs at least two variants.",
+      "error.featFailed": "The Tabui engine could not start (its rules or its structure module are missing). Reload the page and run again.",
+      "error.featWorker": "A worker of the pipeline stopped working. Run again; if it happens again, close other tabs to free memory.",
+      "error.featWasmHash": "The pipeline engine did not download correctly (its checksum is wrong). Reload the page.",
+      "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
+      "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
+      "error.featMemory": `Not enough memory for the «${q.fase}» phase (about ${q.stima_mb} MB needed of ${q.budget_mb} MB).`,
     };
     return M[p.key] || p.key;
   };
