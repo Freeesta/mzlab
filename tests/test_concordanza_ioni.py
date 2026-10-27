@@ -113,8 +113,15 @@ def test_the_synthetic_files_are_written_again_with_the_same_content(tmp_path):
     testo = (ORO / "LEGGIMI.md").read_text(encoding="utf-8")
     assert len(shas) == 4
     for nome, h in shas.items():
-        assert f"`{nome}`: `{h}`" in testo, nome
+        # the pinned hashes are the ones of Linux: the last bit of libm/SIMD floats on another platform (seen on Windows with Python 3.14) can move a value across the 6-digit rounding;
+        # elsewhere only the equality of two runs is checked
+        if sys.platform == "linux":
+            assert f"`{nome}`: `{h}`" in testo, nome
         assert (tmp_path / nome).stat().st_size < 2_000_000
+    if sys.platform != "linux":
+        altra = tmp_path / "again"
+        altra.mkdir()
+        assert oro_mzmine.genera(altra) == shas
 
 
 def test_the_gold_csv_have_the_documented_content():

@@ -1,0 +1,18 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "WebWorker"
+    ],
+    "moduleDetection": "force",
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true
+  },
+  "include": [
+    "manuale.d.ts",
+    "manuale-worker.d.ts"
+  ]
+}

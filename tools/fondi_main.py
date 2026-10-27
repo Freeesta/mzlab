@@ -30,6 +30,8 @@ GENERATI: dict[str, list[str]] = {
     "tools/tipi/stretto-worker.json": [PY, "tools/tipi/genera_globali.py"],
     "tools/tipi/stretto2.json": [PY, "tools/tipi/genera_globali.py"],
     "tools/tipi/stretto2-worker.json": [PY, "tools/tipi/genera_globali.py"],
+    "tools/tipi/stretto3.json": [PY, "tools/tipi/genera_globali.py"],
+    "tools/tipi/stretto3-worker.json": [PY, "tools/tipi/genera_globali.py"],
     "docs/agenti/mappa.md": [PY, "tools/indice.py"],
 }
 
