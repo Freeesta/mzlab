@@ -65,11 +65,7 @@ Schizzo (prova HTML e foto Playwright fatte fuori dal repository):
 
 **Regola dei testi** (Federico, per tutta l'interfaccia): pochi testi; niente paragrafi esplicativi dove l'interfaccia si capisce da sola; tooltip SOLO per dire cosa fa un campo o cosa inserirvi, mai opinioni, avvisi o cautele; un testo che non dice cosa fa o cosa inserire si toglie (con la sua chiave i18n).
 
-**Aperte**:
-1. «Auto-run» acceso di norma (come il Live di oggi) o spento.
-2. «View graph» come carta di vista fuori dal piano (scelta dei prompt) o passo vero del piano (cambia CLI e JSON).
-3. Accorciare anche i `title`/`description` dei descrittori Rust (cambia l'aiuto della CLI; scelta del prompt B) o solo l'interfaccia.
-4. Tooltip di Auto-run: «Run again when an input or setting changes» (Live riparte anche ai cambi dei parametri) o il testo più corto «Run again when an input changes».
+**Prese in seguito**: Auto-run acceso di norma come oggi; «View graph» è una carta fuori dal piano (CLI e JSON invariati); B tocca solo l'interfaccia: testi brevi in `x-label`/`x-tip` dei descrittori, `title`/`description` (aiuto della CLI) invariati; tooltip di Auto-run «Run again when an input or setting changes».
 
 ## 5. Prompt dei lavori
 

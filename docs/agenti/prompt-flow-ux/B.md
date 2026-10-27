@@ -18,15 +18,15 @@ DEV Sonnet del modulo dei parametri del Flow. Leggi `docs/agenti/flow-grafica.md
 Sotto ogni campo di ogni modulo c'è una frase: la `description` del parametro e il `doc` dell'algoritmo dei descrittori `step/1` in Rust, scritti come `span.fl-ds` in `flow/lazy/flow-form.js:46` e `:57`. Federico: «esistono i tooltip apposta». Le stime hanno già un «ⓘ» con `title` (`flow-form.js:42`). I descrittori arrivano alla pagina dai JSON generati (`docs/schemi/steps-*.json`, `mzfinder/steps-*.json`), rigenerati con i comandi elencati in `tools/fondi_main.py`.
 
 ## 3. Perimetro
-Tocchi: `flow/lazy/flow-form.js`, `flow/lazy/flow-msn-molecule.js` (solo i suoi testi), il CSS `.fl-ds` in `flow/lazy/flow-ui.js`, le SOLE stringhe `title`/`description`/`doc` dei descrittori Rust dei passi (nessun nome, tipo, default o limite) e i JSON generati rigenerati con il loro strumento, un test pytest nuovo, i test e2e che cercano `.fl-ds`, una riga in `docs/agenti/flow-grafica.md`.
+Tocchi: `flow/lazy/flow-form.js`, `flow/lazy/flow-msn-molecule.js` (solo i suoi testi), il CSS `.fl-ds` in `flow/lazy/flow-ui.js`, `crates/mzlab-core/src/step/` (due campi facoltativi del parametro e la loro scrittura in `json.rs`), le definizioni dei passi in Rust SOLO per aggiungere i testi brevi dell'interfaccia, i JSON generati rigenerati con il loro strumento, un test pytest nuovo, i test e2e che cercano `.fl-ds`, una riga in `docs/agenti/flow-grafica.md` e in `docs/agenti/rust-step.md`.
 Non tocchi: `flow-inspect.js`, `flow-shell.js`, `flow-names.js`, `flow-fix.js`, il nodo Raw files.
 
 ## 4. Lavoro
 1. Aiuto `F.tip(field, text)` in `flow-form.js`: pulsante «ⓘ» 24×24 (40 al tocco) con `aria-label` «About <etichetta>» e `aria-expanded`, che apre e chiude una nota `role="note"` sotto il campo, legata al campo con `aria-describedby`; si chiude con Esc, un nuovo clic o il fuoco altrove (WCAG 1.4.13). Mai `title` come unico veicolo.
 2. `description` e `doc` passano da `span.fl-ds` al tooltip: di norma sotto il campo resta solo l'etichetta (con l'unità tra parentesi).
 3. L'«ⓘ» delle stime usa lo stesso aiuto, con il testo ridotto a cosa fa il campo lasciato vuoto.
-4. Riscrivi le stringhe Rust con la regola: etichetta ≤ 8 parole; tooltip UNA frase ≤ 20 parole che dice cosa fa il campo o cosa inserire; via opinioni, avvisi, cautele e rimandi («see the manual»). Rigenera i JSON con i comandi di `tools/fondi_main.py`; `flow_rule_tests.rs` resta verde.
-5. Test pytest nuovo: ogni `title` dei JSON dei passi ≤ 8 parole e ogni `description` una frase ≤ 20 parole, con una lista di eccezioni che può solo scendere.
+4. Decisione (Federico): l'aiuto della CLI NON cambia. `title`, `description` e `doc` restano come sono; aggiungi al parametro (e all'algoritmo) due campi facoltativi scritti nel JSON come `x-label` (etichetta ≤ 8 parole) e `x-tip` (UNA frase ≤ 20 parole che dice cosa fa il campo o cosa inserire; via opinioni, avvisi, cautele, rimandi). La pagina usa `x-label`/`x-tip` quando ci sono, altrimenti `title`/`description`. Scrivili per i passi dei modelli (MSn per primi), rigenera i JSON con i comandi di `tools/fondi_main.py`; `flow_rule_tests.rs` resta verde.
+5. Test pytest nuovo: per ogni parametro dei JSON dei passi, l'etichetta mostrata (`x-label` o `title`) ≤ 8 parole e il tooltip (`x-tip` o `description`) una frase ≤ 20 parole, con una lista di eccezioni che può solo scendere; un secondo controllo verifica che `title` e `description` siano invariati rispetto a `origin/main` (l'aiuto della CLI non cambia).
 
 ## 5. Accettazione
 - Nessuna `.fl-ds` visibile senza un clic; ogni campo con descrizione ha il suo «ⓘ» raggiungibile da tastiera.
