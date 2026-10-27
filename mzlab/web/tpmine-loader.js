@@ -15,13 +15,15 @@
 
   // ---- registry: tools register themselves after the scripts are loaded. {id, name, icon (svg string), desc, open(body, ctx)}
   const tools = [];
+  // true while the main scripts run: a tool registered then gets its tab when they are all done (turnOn), so its markup is drawn with the help (TPHELP) and the other later scripts in place
+  let settling = false;
   const adminOn = () => { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } };
   /** a tool with admin:true is shown only in the administrator mode */
   const shown = t => !t.admin || adminOn();
   const reg = window.QTOOLS = {
     ctx: /** @type {any} */ (null),                                     // set before the scripts run: {base: URL of the site static folder, meta, files}
     list: () => on ? tools.filter(shown) : [],
-    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t)) addTab(t); render(); },
+    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t) && !settling) addTab(t); render(); },
   };
 
   // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
@@ -140,7 +142,8 @@
     const texts = await Promise.all(names.map(n => get(n, "text")));
     names.forEach((n, i) => { files[n] = texts[i]; });
     await Promise.all(warm);
-    for (const n of js) await runScript(n);
+    settling = true;
+    try { for (const n of js) await runScript(n); } finally { settling = false; }
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
   const PLACEHOLDER = { id: "tpmine", nav: true, admin: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };

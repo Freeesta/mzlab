@@ -25,6 +25,8 @@ fn sp(mz: &[f64], name: &str) -> Spectrum {
             ..Default::default()
         },
         rt: None,
+        ri: None,
+        ei: false,
     }
 }
 

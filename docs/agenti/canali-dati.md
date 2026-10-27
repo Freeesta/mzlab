@@ -1,5 +1,5 @@
 # Canali dei dati: un file = un insieme di canali
-Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta e un'euristica per i default; gli strumenti lavorano sul canale selezionato. Nulla qui è ancora implementato: le sezioni 1-4 descrivono lo stato e il piano, la 6 i prompt dei DEV.
+Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta e un'euristica per i default; gli strumenti lavorano sul canale selezionato. Il motore (§2: `canali.rs`, `api/canali`, `canale=`, `mzlab-cli canali`) è realizzato; le sezioni 1, 3-4 descrivono stato e piano, la 6 i prompt dei DEV.
 
 ## 1. Stato attuale (prove nel codice)
 **Classificazione (Rust).** `item_info` (`crates/mzlab-core/src/iteminfo.rs:459-530`) dà a ogni elemento `kind` ∈ `full|ms2|mrm|infusion|empty`: `infusion` se `infusione::infusione` (`infusione.rs:110`) riconosce precursori fissi (B: ≤64 chiavi MSn, mediana ≥10 scan) e blocchi lunghi (C) o metodo `.raw` senza LC o nome `infus|fia|direct|syringe`; poi `ms2` (MSn), `full` (solo MS1), `mrm` (solo SRM). Un file «misto» è spezzato in elementi (`file_parts`, `iteminfo.rs:92`: livello × tipo di scan PREC/NL/NG/EMC/TDF/ER × polarità + «MRM»), ognuno con il suo `kind`.
@@ -72,7 +72,7 @@ Adattatore: `canale=ms:<k>` ≡ `filt=<k>`, `canale=msn:<nodo>` resta, `level`/`
 
 **Costruzione per formato.**
 - mzML/mzXML e Thermo `.raw`: chiavi da `Scan::key()`; SIM = chiave MS1 con «SIM»; cromatogrammi `srm`/`pda`/`pressure` dalla coda (`mzmlhead`).
-- `.wiff`: sigla da `modi.rs` per esperimento; MRM → `srm:` dai cromatogrammi per transizione (nome del metodo come etichetta); EMS/EPI → `ms:`, o `dd:2:EPI` se IDA; Prec/NL → `ms:` con sigla; DAD → `uv:`.
+- `.wiff` (realizzato per EMS, EPI, MRM; `canali/wiff.rs`): sigla da `modi.rs` per livello; MRM → `srm:` dai cromatogrammi per transizione (nome del metodo come etichetta); EMS/EPI → `ms:`, o `dd:2:EPI` se IDA; Prec/NL → `ms:` con sigla; DAD → `uv:`.
 - Shimadzu/Agilent `.D`/Waters: dai cromatogrammi dei lettori (`ChromKind`); PDA appena decodificato (fuori da questo piano).
 
 ## 3. Interfaccia proposta

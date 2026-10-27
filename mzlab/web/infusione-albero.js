@@ -103,22 +103,23 @@
   /** @param {HTMLElement} b @param {any} p @param {number} tok */
   async function render(b, p, tok) {
     view = { b, p };
-    const t = target(p), f = E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);
+    const t = target(p), f = p && p.stand ? E.files[p.k] : E.files[(t && t.k) ?? E.cur] || E.files.find(INF.isInf);   // stand: the file Flow's Explore names
     if (!f || !INF.isInf(f)) return void (b.innerHTML = h`<div class="muted">${I18N.t("inf.none")}</div>`);
     if (!b.querySelector(".inf-ctl")) b.innerHTML = `<div class="muted">…</div>`;
     const j = await INF.tree(f.k);
     if (tok !== (window.BANCO && BANCO.token())) return;
-    const lv = INF.O.lv, cur = t && t.filt, ckey = j.livelli.join();
+    const lv = INF.O.lv, cur = t && t.filt, ckey = j.livelli.join() + (INF.single() ? "g" : "");
     // the controls stay in place (focus and open lists survive a change of option); the table is rebuilt only when its rows change
     if (!b.querySelector(".inf-ctl") || b.dataset.infLv !== ckey) {
       b.dataset.infLv = ckey;
-      b.innerHTML = h`<div class="inf-ctl">${raw(controls(j))}<button type="button" id="inf-copy" title="${I18N.t("inf.copy.tip")}">${I18N.t("inf.copy")}</button><span id="inf-busy" class="muted" role="status"></span></div><div id="inf-wrap"></div>`;
+      b.innerHTML = h`<div class="inf-ctl">${raw(controls(j))}<button type="button" id="inf-copy" title="${I18N.t("inf.copy.tip")}">${I18N.t("inf.copy")}</button>${raw(INF.single() ? h`<button type="button" id="inf-graph">${I18N.t("bn.i9.gra")}</button>` : "")}<span id="inf-busy" class="muted" role="status"></span></div><div id="inf-wrap"></div>`;
       const on = (/** @type {string} */ id, /** @type {(v: string) => void} */ fn) => { const el = /** @type {HTMLSelectElement | null} */ (b.querySelector("#" + id)); if (el) el.onchange = () => fn(el.value); };
       on("inf-lv", v => INF.setOpt("lv", +v));
       on("inf-tol", v => INF.setOpt("tol", v));
       on("inf-ce", v => INF.setOpt("ce", v === "1"));
       on("inf-sum", v => INF.setOpt("sum", v === "1"));
       const cp = /** @type {HTMLElement | null} */ (b.querySelector("#inf-copy")); if (cp) cp.onclick = () => copyTable(b);
+      const gb = b.querySelector("#inf-graph"); if (gb) gb.addEventListener("click", () => { if (window.BARRA) BARRA.setTab("gra"); });
       ["inf-tol", "inf-ce"].forEach(id => { const el = b.querySelector("#" + id); if (el) el.addEventListener("focus", () => { const c = view && target(view.p); INF.warm((c && c.k) ?? E.cur); }); });
     }
     const wrap = /** @type {HTMLElement & { _j?: any, _rows?: any[] }} */ (b.querySelector("#inf-wrap")), key = `${f.k}|${INF.O.tol}|${INF.O.ce}|${lv}|${sort}`;

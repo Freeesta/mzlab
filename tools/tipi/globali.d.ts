@@ -101,6 +101,7 @@ declare var RAPPORTO_FLOW: any;
 declare var REGISTRO: any;
 declare var SCARICA: any;
 declare var SCORCIATOIE: any;
+declare var SPECBAR: any;
 declare var SUBREF: any;
 declare var TABELLA: any;
 declare var TAVOLA: any;

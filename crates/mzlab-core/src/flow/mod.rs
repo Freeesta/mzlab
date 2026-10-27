@@ -6,6 +6,9 @@ mod canon;
 mod check;
 mod command;
 mod corsa;
+mod line;
+#[cfg(test)]
+mod line_tests;
 mod order;
 mod parse;
 mod prov;
@@ -18,6 +21,7 @@ pub use canon::{cache_key, canonical, value_text, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
 pub use command::{command, route as command_route};
 pub use corsa::{build as corsa_build, Corsa, Uscita};
+pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
 pub use order::{levels, plan_order};
 pub use parse::parse;
 pub use prov::{

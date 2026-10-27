@@ -52,10 +52,10 @@ try:
             for fr in (0.4, 0.6):
                 b = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return [q.left+p._a.X(p._a.full[0]+(p._a.full[1]-p._a.full[0])*{fr}),q.top+q.height*0.4]}})()")
                 pg.mouse.dblclick(b[0], b[1]); frames(pg, 2)
-            attendi(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a RT '))})()")
+            attendi(pg, "(()=>{const s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');return s.length>=2&&s.every(p=>p.el.querySelector('.lk')||p.el.querySelector('.rtl').textContent.startsWith('fermo a '))})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>[!!p.link,!!p.el.querySelector('.lk'),p.el.querySelector('.rtl').textContent])"); print(info)
             assert sum(1 for i in info if i[1]) == 1 and sum(1 for i in info if i[0]) == 1, info
-            assert all(i[2].startswith("fermo a RT ") for i in info if not i[1]), info
+            assert all(i[2].startswith("fermo a ") for i in info if not i[1]), info
             # a spectrum linked by hand to the same chromatogram (an old notebook): only the newest stays live
             pg.evaluate(f"(()=>{{const c={CH},s=E.panels.filter(p=>p.type==='spec'&&p.tab==='full');s.forEach(x=>x.link=c.id);s.forEach(ctl)}})()")
             info = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab==='full').map(p=>!!p.el.querySelector('.lk'))"); assert sum(info) == 1, info
@@ -85,8 +85,8 @@ try:
         step("1.6: grey dashed line, hidden out of the zoom, back in view", annot)
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
-            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); attendi(pg, r"/RT \d+\.\d{2} min/.test(document.querySelector('.pnl.spec .rtl').textContent)")
-            t = pg.inner_text(".pnl.spec .rtl"); import re; assert re.search(r"RT \d+\.\d{2} min", t) and not re.search(r"RT \d+\.\d{3}", t), t
+            pg.mouse.click(c["x"], c["y"]); frames(pg, 3); pg.keyboard.press("ArrowRight"); attendi(pg, r"/^\d+\.\d{2} min/.test(document.querySelector('.pnl.spec .rtl').textContent)")
+            t = pg.inner_text(".pnl.spec .rtl"); import re; assert re.search(r"^\d+\.\d{2} min", t) and not re.search(r"^\d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)
     r.close()
 except Exception as e:

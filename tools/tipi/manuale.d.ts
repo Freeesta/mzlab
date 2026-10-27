@@ -47,3 +47,23 @@ type LibFetch = (url: string, opts?: RequestInit) => Promise<Response>;
 interface FileSystemFileHandle { move(name: string): Promise<void>; move(dir: FileSystemDirectoryHandle, name: string): Promise<void>; createSyncAccessHandle(): Promise<FileSystemSyncAccessHandle> }
 interface FileSystemDirectoryHandle { entries(): AsyncIterableIterator<[string, FileSystemHandle]> }
 interface FileSystemSyncAccessHandle { close(): void; flush(): void; getSize(): number; truncate(size: number): void; read(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number; write(buffer: ArrayBufferView | ArrayBuffer, options?: { at?: number }): number }
+type DrawKet = any;  // Ketcher editor object or one of its parts (vendor bundle, untyped)
+type DrawLine = [string | number, string][];  // one line of a drawing label: pieces [text, "sub" | "sup" | "it" | ""]
+type DrawStruct = { formula: string, mass: number, n: Record<string, number>, q: number, cx: number, y: number, x0: number, x1: number, y0: number, y1: number };  // a connected structure of the drawing
+/** A file of the loading table / of ST.files as the engine reports it (shell.js, explore.js): the fields differ by experiment, so only `name` is fixed. */
+type FileRiga = { name: string; [k: string]: any };
+/** A file open in the session (E.files): `file` is its name in the session, `gone` marks one taken away. */
+type FileAperto = { file: string; label?: string; gone?: boolean; color?: string; [k: string]: any };
+/** A file still to be opened one by one (E.pending). */
+type Pendiente = { file: string; label: string; state: string; msg?: string };
+/** A file as the loading code handles it: the File of the picker or of a converter, plus the records that makers (Rust engine, readers module) attach. */
+type FileCarica = File & { mzlabNat?: { members: { name: string; blob: Blob }[]; probed?: { motivi: string[] }; c?: number; [k: string]: any }; mzlabModulo?: { fam: string; members?: { name: string; blob: Blob }[]; c?: number; [k: string]: any } };
+/** What one loading collects for the notice after it (shell.js reportLoad). */
+type CaricaRep = { unopen: { name: string; ext: string }[]; other: string[]; errs: Record<string, string[]>; moved: { dam: string[]; data: string[] }; notes: string[]; diag?: Record<string, any>; [k: string]: any };
+
+/** Loose record from the untyped engine: a panel, a session entry or a JSON reply (explore.js). */
+type Bag = Record<string, any>;
+/** One colour palette of explore.js PALS. */
+type Palette = { seq?: string[]; seqDark?: string[]; a?: number; b?: number; aDark?: number; bDark?: number; cat: string[]; catDark: string[]; blank: string; blankDark: string; std: string; stdDark: string; dash?: boolean; lw?: number; plain?: boolean; hc?: boolean; hue?: (u: number) => string };
+/** A (real or synthetic) event that opens the context menu of explore.js menu(). */
+type CtxEv = { preventDefault: () => void, clientX: number, clientY: number, kbd?: boolean, lp?: boolean };
