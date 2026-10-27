@@ -234,7 +234,6 @@ pub struct Index<R: ReadAt> {
     pub(crate) cache: Vec<(usize, u8, u64, Vec<u8>, u64)>, // (section, array, block, bytes, tick of the last use)
     pub(crate) arrays: Vec<Option<ScanArrays>>,
     pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
-    pub(crate) work: Vec<u8>,         // read buffer of `walk`, kept between calls
 }
 
 /// Whether the header is of an index of a vendor file (version 2 with `FLAG_LETTORE`) or of an mzML (version 1); `None` for any other.
@@ -336,7 +335,6 @@ impl<R: ReadAt> Index<R> {
             cache: Vec::new(),
             arrays: vec![None; n],
             arrays_tick: vec![0; n],
-            work: Vec::new(),
         })
     }
 

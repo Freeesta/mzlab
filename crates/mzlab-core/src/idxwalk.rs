@@ -35,15 +35,20 @@ impl<R: ReadAt> Index<R> {
         mut f: impl FnMut(usize, f64, f64),
     ) -> Result<()> {
         const STEP: u64 = 1 << 16;
-        let (off, f4, n_scans) = {
+        let (off, f4, n_scans, n_peaks) = {
             let s = &self.sections[si];
-            (s.off, s.f4, s.n_scans as u64)
+            (s.off, s.f4, s.n_scans as u64, s.n_peaks)
         };
+        // a window past the table holds no peaks (the bytes there belong to other arrays)
+        let b = b.min(n_peaks);
         let w = if f4 { 4 } else { 8 } as u64;
-        // one work buffer per index: intensities, then m/z, then positions of the piece
-        let mut work = std::mem::take(&mut self.work);
+        // one work buffer for the whole call, sized for the first piece: intensities, then m/z, then positions
+        let first = b.saturating_sub(a).min(STEP) as usize;
+        let mut work = Vec::new();
+        work.try_reserve_exact(first * (2 * w as usize + 4))
+            .map_err(|_| Error::memory_budget())?;
         let mut i = a;
-        let done = (|| {
+        {
             while i < b {
                 let c = (b - i).min(STEP) as usize;
                 let cw = c * w as usize;
@@ -74,10 +79,8 @@ impl<R: ReadAt> Index<R> {
                 }
                 i += c as u64;
             }
-            Ok(())
-        })();
-        self.work = work;
-        done
+        }
+        Ok(())
     }
 
     /// Summed intensity of the peaks `a..b` in every scan of the section (`np.bincount(pos, weights=inten, minlength=n)`).
