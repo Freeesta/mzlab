@@ -74,6 +74,7 @@
     "../../mzlab/web/manifesto.js",
     "../../mzlab/web/mappa-estrai.js",
     "../../mzlab/web/uv-spettro.js",
+    "../../mzlab/web/decima.js",
     "../../mzlab/web/mappa3d.js",
     "../../mzlab/web/migra.js",
     "../../mzlab/web/export-pezzi.js",
