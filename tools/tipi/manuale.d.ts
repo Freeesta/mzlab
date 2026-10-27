@@ -67,3 +67,24 @@ type Bag = Record<string, any>;
 type Palette = { seq?: string[]; seqDark?: string[]; a?: number; b?: number; aDark?: number; bDark?: number; cat: string[]; catDark: string[]; blank: string; blankDark: string; std: string; stdDark: string; dash?: boolean; lw?: number; plain?: boolean; hc?: boolean; hue?: (u: number) => string };
 /** A (real or synthetic) event that opens the context menu of explore.js menu(). */
 type CtxEv = { preventDefault: () => void, clientX: number, clientY: number, kbd?: boolean, lp?: boolean };
+
+/** A target of the HR screening list (liste-target-core.js): a mass the list does not have is NaN/missing at run time and the core falls back from the adduct table to the monoisotopic mass. */
+type TgtEntry = { id: string; name_en: string; neutral_formula: string; mz?: Record<string, number>; mz_mh: number; mz_mna: number; mz_mnh4: number; monoisotopic_mass: number; [k: string]: any };
+/** A spectrum as the target core reads it: `intensity` or `y`, `precursor` or `prec` depending on the maker. */
+type TgtSpec = { rt: number; level?: number; mz?: number[]; intensity?: number[]; y?: number[]; precursor?: number | null; prec?: number | null; [k: string]: any };
+/** One chromatographic peak found by the target core. */
+type TgtPeak = { apex_idx: number; rt_apex: number; rt_start: number; rt_end: number; height: number; area: number; sn_ratio: number; right: number };
+/** The options of a target search, with the defaults applied. */
+type TgtOpts = { tolerance_ppm: number; min_sn: number; min_area: number; adducts: string[] };
+/** One hit of a target search (evaluatePeak). */
+type TgtMatch = { id: string; name_en: string; neutral_formula: string; adduct: string; target_mz: number; observed_mz: number; ppm_error: number; rt_apex: number; rt_start: number; rt_end: number; height: number; area: number; sn_ratio: number; isotope_score: number | null; ms2_matched: boolean; proposal: string; motif: string };
+
+/** One point of a gradient program (gradiente.js): time in min, %B and the optional flow in mL/min. */
+type GradPt = { t: number; b: number; flow?: number | null };
+/** A gradient model as the engine and the notebook keep it (api/gradient). */
+type GradModel = { source: string; points: GradPt[]; run_time?: number; nonlinear?: boolean; [k: string]: any };
+/** A row of the gradient table being edited: the cells are still text (or the numbers of the loaded model). */
+type GradRow = Record<string, number | string | null>;
+
+/** A row of the files being read, converted and indexed (CONVROWS in conversione.js). */
+type ConvRow = { name: string; state: string; pc: number | null; floor?: number; mono?: boolean; det?: { done: number; total: number } | null; sub?: { done: number; total: number } | null; t0?: number; seen?: number; tr?: string[]; last?: string; scans?: number; kind?: string; missing?: number; cached?: boolean; secs?: number; msg?: string; diag?: any; mem?: string };
