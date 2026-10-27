@@ -134,6 +134,7 @@ pub mod roles;
 pub mod ricerca;
 pub mod jsonround;
 pub mod canali;
+pub mod canali_uv;
 pub mod routes;
 pub mod routes_xicbin;
 pub mod scaninfo;

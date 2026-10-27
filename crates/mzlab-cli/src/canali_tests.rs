@@ -108,6 +108,22 @@ fn sintetici() -> Option<PathBuf> {
 }
 
 #[test]
+fn mrm_file_lists_its_uv_trace_as_a_root() {
+    let Some(d) = sintetici() else { return };
+    // MRM: the TIC of the maker, one channel per transition
+    let v = canali_di(&d.join("B_MRM.mzML"));
+    assert_eq!(
+        ids(&v),
+        ["tic", "srm:364.1>194.1@20", "srm:364.1>152.1@20", "uv:twc"]
+    );
+    assert_eq!(proposto(&v), "lc-mrm");
+    let uv = ids(&v).iter().position(|i| i == "uv:twc").unwrap();
+    let c = &v.get("canali").unwrap().arr()[uv];
+    assert!(matches!(c.get("gen"), Some(g) if g.f64().is_none()));
+    assert_eq!(c.get("fam").unwrap().str(), Some("uv"));
+}
+
+#[test]
 fn channels_of_the_synthetic_files() {
     let Some(d) = sintetici() else { return };
     // targeted MS2 in LC: the survey scan and one channel per fixed precursor, each hanging from the survey
@@ -150,12 +166,11 @@ fn channels_of_the_synthetic_files() {
     assert_eq!(proposto(&v), "lc-dda");
     // the lab-like MS2 file: two precursors, no survey scan
     let v = canali_di(&d.join("B_MS2.mzML"));
-    assert_eq!(ids(&v), ["tic", "bpc", "ms:ms2 229", "ms:ms2 305"]);
+    assert_eq!(
+        ids(&v),
+        ["tic", "bpc", "ms:ms2 229", "ms:ms2 305", "uv:twc"]
+    );
     assert_eq!((campo(&v, 2, "n"), campo(&v, 3, "n")), (503.0, 502.0));
-    // MRM: the TIC of the maker, one channel per transition
-    let v = canali_di(&d.join("B_MRM.mzML"));
-    assert_eq!(ids(&v), ["tic", "srm:364.1>194.1@20", "srm:364.1>152.1@20"]);
-    assert_eq!(proposto(&v), "lc-mrm");
     // MRM + EPI: the triggered scans next to the transitions
     let v = canali_di(&d.join("C_MRM-EPI.mzML"));
     assert_eq!(
@@ -182,4 +197,68 @@ fn channels_of_the_synthetic_files() {
         .sum();
     assert_eq!(ms2, 320.0);
     let _ = std::fs::remove_dir_all(&d);
+}
+
+/// An mzML with a TWC (a 2 × 2 `dad_matrix` is not needed for the trace) and a pump pressure trace: `--canale` reads them as the old routes do.
+#[test]
+fn canale_reads_a_uv_and_an_analog_trace() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_canale_uv_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let arr = |acc: &str, unit: &str, v: &str| {
+        format!("<binaryDataArray encodedLength=\"1\"><cvParam accession=\"MS:1000523\" name=\"64-bit float\"/><cvParam accession=\"{acc}\" name=\"x\"{unit}/><binary>{v}</binary></binaryDataArray>")
+    };
+    let b64 = |v: &[f64]| {
+        const A: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let raw: Vec<u8> = v.iter().flat_map(|x| x.to_le_bytes()).collect();
+        let mut o = String::new();
+        for c in raw.chunks(3) {
+            let n = (c[0] as u32) << 16
+                | (*c.get(1).unwrap_or(&0) as u32) << 8
+                | *c.get(2).unwrap_or(&0) as u32;
+            for k in 0..4 {
+                o.push(if k <= c.len() {
+                    A[(n >> (18 - 6 * k) & 63) as usize] as char
+                } else {
+                    '='
+                });
+            }
+        }
+        o
+    };
+    let chrom = |i: usize, id: &str, acc: &str, unit: &str| {
+        format!("<chromatogram index=\"{i}\" id=\"{id}\" defaultArrayLength=\"2\"><cvParam accession=\"{acc}\" name=\"x\"/><binaryDataArrayList count=\"2\">{}{}</binaryDataArrayList></chromatogram>", arr("MS:1000595", "", &b64(&[0.0, 0.03])), arr("MS:1000515", unit, &b64(&[1.0, 2.0])))
+    };
+    let xml = format!(
+        "<mzML><run><chromatogramList count=\"2\">{}{}</chromatogramList></run></mzML>",
+        chrom(0, "TWC", "MS:1000813", ""),
+        chrom(1, "Pump Pressure", "MS:1003019", " unitName=\"bar\"")
+    );
+    let f = dir.join("u.mzML");
+    std::fs::write(&f, xml).unwrap();
+    let p = f.to_string_lossy().into_owned();
+    let run = |extra: &[&str]| {
+        let mut a = vec!["canali".to_string(), p.clone()];
+        a.extend(extra.iter().map(|s| s.to_string()));
+        execute(&a)
+    };
+    let ids = ids(&canali_di(&f));
+    assert!(
+        ids.contains(&"uv:twc".to_string()) && ids.contains(&"an:1".to_string()),
+        "{ids:?}"
+    );
+    assert_eq!(proposto(&canali_di(&f)), "solo-uv");
+    let twc = run(&["--canale", "uv:twc"]);
+    assert_eq!(twc.code, 0, "{}", twc.stderr);
+    assert_eq!(
+        String::from_utf8(twc.stdout).unwrap(),
+        "{\"rt\":[0,0.03],\"y\":[1,2]}\n"
+    );
+    let an = run(&["--canale", "an:1", "--n", "50"]);
+    assert_eq!(an.code, 0, "{}", an.stderr);
+    assert!(String::from_utf8(an.stdout)
+        .unwrap()
+        .contains("\"unit\":\"bar\""));
+    assert_eq!(run(&["--canale", "tic"]).code, 2);
+    assert_eq!(run(&["--rt", "1"]).code, 2);
+    let _ = std::fs::remove_dir_all(&dir);
 }

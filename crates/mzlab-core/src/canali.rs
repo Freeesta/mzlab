@@ -24,7 +24,7 @@ pub enum Famiglia {
     Dd,
     Srm,
     Sim,
-    /// Filled by the UV/analog work; no channel of these families is built here.
+    /// Built by `canali_uv`.
     Uv,
     Analog,
 }
@@ -309,6 +309,7 @@ impl Canali {
         collega_genitori(&mut v, base, &rango, &finali, radice);
         canali_srm(&mut v, chroms, facts, radice);
         canali_sim(&mut v, chroms, facts, radice);
+        crate::canali_uv::aggiungi(&mut v, chroms, facts);
         let tipo = tipo_di(scans, &v, facts, nome);
         Canali { v, scan_ids, tipo }
     }

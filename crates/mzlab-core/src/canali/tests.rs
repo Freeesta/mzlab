@@ -272,7 +272,7 @@ fn mrm_with_product_ion_scans_is_mixed() {
 }
 
 #[test]
-fn a_file_with_only_a_uv_trace_has_no_channel_yet() {
+fn a_uv_flag_without_the_trace_header_lists_no_channel() {
     let c = Canali::da(
         &[],
         &[],
