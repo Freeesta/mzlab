@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // Search box for a molecule (ARIA combobox with a listbox): types a name, a formula or a mass and shows the molecules of the database (the one search of the engine).
 // The caller gives every text (`testi`), so a tool shows its own language; an optional «Manage» button opens the window «Molecules». Used by the tools that need a
 // molecule (Tabui, Infusion MSn, ...) and by tests/e2e_molecole_ui.py.
@@ -102,7 +103,7 @@ export function campo(host, opz) {
   const cercaOra = async () => {
     const mio = ++token, t = input.value.trim();
     if (t.length < 2) { trovate = []; apre(false); stato.textContent = ""; return; }
-    let r;
+    /** @type {Trovata[]} */ let r;
     try { r = await cerca(t, opz.limite || 8, opz.ppm || 10); } catch (_) { r = []; }
     if (mio !== token) return;
     trovate = r;
