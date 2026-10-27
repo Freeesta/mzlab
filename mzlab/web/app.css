@@ -420,3 +420,6 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .pnl .leg .tg.act{font-weight:700}
 .pnl .ctl .fol{margin-left:2px}
 @media (pointer:coarse){.pnl .ovb{min-width:40px;min-height:40px}}
+#inf-tree .inf-sort{border:0;background:none;padding:2px 4px;min-height:24px;min-width:24px;font:inherit;font-weight:600;color:inherit;cursor:pointer}
+#inf-tree th[aria-sort=descending] .inf-sort::after{content:" \25BC"}
+#inf-tree th[aria-sort=ascending] .inf-sort::after{content:" \25B2"}

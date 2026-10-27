@@ -9,7 +9,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 
 use crate::rtmap::RtMap;
 use crate::sweep::{ppm_ranges, windows};
-use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED};
+use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED, CELL_NA};
 use crate::trace::{filled, Params, SLAB_PEAKS};
 
 /// Parameters of the integration (defaults of `fill_gaps` and `trace_area`).
@@ -143,14 +143,29 @@ struct Todo {
     i1: usize,
 }
 
+/// A cell the file cannot measure: the expected apex lies outside the RT the file acquired.
+const NOT_MEASURED: f64 = f64::NAN;
+
 /// The cells of `file` to integrate, sorted by m/z (then by row).
-fn todo(al: &Aligned, file: usize, rt: &[f64], map: Option<&RtMap>, p: &FillParams) -> Vec<Todo> {
+fn todo(
+    al: &Aligned,
+    file: usize,
+    rt: &[f64],
+    map: Option<&RtMap>,
+    p: &FillParams,
+    na: &mut Vec<usize>,
+) -> Vec<Todo> {
     let nf = al.n_files;
+    let (first, last) = (rt[0], rt[rt.len() - 1]);
     let mut out = Vec::new();
     for row in (0..al.len()).filter(|&r| al.state[r * nf + file] == CELL_ABSENT) {
         let Some((c, w)) = expected_window(al, row, file, map, p) else {
             continue;
         };
+        if c < first || c > last {
+            na.push(row);
+            continue;
+        }
         let i0 = rt.partition_point(|&r| r < c - w);
         let i1 = rt.partition_point(|&r| r <= c + w);
         if i1 > i0 {
@@ -201,11 +216,12 @@ pub fn fill_find<R: ReadAt>(
         return Ok(Vec::new());
     }
     let dt = median(rt.windows(2).map(|w| w[1] - w[0]).collect()) * 60.0;
-    let list = todo(al, file, &rt, map, p);
+    let mut na = Vec::new();
+    let list = todo(al, file, &rt, map, p, &mut na);
     let ranges = ppm_ranges(&list.iter().map(|t| t.mz).collect::<Vec<_>>(), p.ppm);
     let pad = p.long_trace + p.max_gap + 2;
     let max_peaks = (params.budget / 24).clamp(1024, SLAB_PEAKS);
-    let mut found: Vec<(usize, f64)> = Vec::new();
+    let mut found: Vec<(usize, f64)> = na.into_iter().map(|r| (r, NOT_MEASURED)).collect();
     windows(index, si, &ranges, max_peaks, |q, a, b, slab| {
         let t = &list[q];
         let (s0, s1) = (t.i0.saturating_sub(pad), (t.i1 + pad).min(nscan));
@@ -219,12 +235,18 @@ pub fn fill_find<R: ReadAt>(
     Ok(found)
 }
 
-/// Writes the cells `fill_find` found; returns how many.
+/// Writes the cells `fill_find` found (a NaN area is a cell the file did not measure: `CELL_NA`); returns how many were filled.
 pub fn fill_apply(al: &mut Aligned, file: usize, found: &[(usize, f64)]) -> usize {
     let nf = al.n_files;
+    let mut filled = 0;
     for &(row, area) in found {
         al.area[row * nf + file] = area;
-        al.state[row * nf + file] = CELL_FILLED;
+        if area.is_nan() {
+            al.state[row * nf + file] = CELL_NA;
+        } else {
+            al.state[row * nf + file] = CELL_FILLED;
+            filled += 1;
+        }
     }
-    found.len()
+    filled
 }
