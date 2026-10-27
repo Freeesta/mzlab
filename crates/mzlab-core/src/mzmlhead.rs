@@ -3,13 +3,12 @@
 //! `metadata`, `_read_header` and `Item._header_polarity` of `mzlab/reader/mzml.py`). Text is searched as the Python regular expressions do,
 //! without a regex engine (it would cost size in the WASM). The bytes come through a `ReadAt`.
 
-use std::io::Read;
-
-use base64::Engine;
-
 use crate::error::{Error, Result};
+use crate::mzmlarray::{decode_array, Inflate, Want};
 use crate::idxread::ReadAt;
 
+/// Values an array may inflate to at least (see `decode`).
+const MIN_VALUES: usize = 8 << 20;
 const MAX_REGION: u64 = 256 << 20;
 /// The most `mobility_kind` reads to find the end of the first spectrum.
 const MOBILITY_PROBE: u64 = 32 << 20;
@@ -243,7 +242,7 @@ impl<R: ReadAt> Mzml<R> {
         let chunk = self.read(c.start, c.end)?;
         let (mut t, mut y): (Option<Vec<f64>>, Option<Vec<f64>>) = (None, None);
         for (head, data) in arrays(&chunk) {
-            let a = decode(&head, &data)?;
+            let a = decode(&head, &data, c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0))?;
             if head.contains("MS:1000595") {
                 t.get_or_insert(a);
             } else {
@@ -603,29 +602,16 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
     out
 }
 
-pub(crate) fn decode(head: &str, data: &[u8]) -> Result<Vec<f64>> {
-    let clean: Vec<u8> = data
-        .iter()
-        .copied()
-        .filter(|c| !c.is_ascii_whitespace())
-        .collect();
-    let mut raw = base64::engine::general_purpose::STANDARD
-        .decode(&clean)
-        .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
-    if !raw.is_empty() && head.contains("accession=\"MS:1000574\"") {
-        let mut out = vec![];
-        flate2::read::ZlibDecoder::new(&raw[..])
-            .read_to_end(&mut out)
-            .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
-        raw = out;
-    }
+/// One chromatogram array: the same decoder as the spectra (`mzmlarray`), so a zlib bomb stops at `expected` values, never below 8M values (the
+/// declared length of a PDA matrix chromatogram is shorter than its array).
+pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64>> {
     let num = ["MS:1000521", "MS:1000519", "MS:1000522"]
         .iter()
         .find(|a| head.contains(&format!("accession=\"{a}\"")))
         .and_then(|a| crate::numarray::Num::of_accession(a))
         .unwrap_or(crate::numarray::Num::F64);
-    Ok(raw
-        .chunks_exact(num.width())
-        .map(|c| num.value(c))
-        .collect())
+    let zlib = head.contains("accession=\"MS:1000574\"");
+    let text = String::from_utf8_lossy(data);
+    let (values, _) = decode_array(num, zlib, &text, expected.max(MIN_VALUES), &mut Inflate::new(), Want::F64)?;
+    Ok(values)
 }
