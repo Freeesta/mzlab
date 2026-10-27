@@ -120,11 +120,14 @@ pub struct ProminenceParams {
     pub frac: f64,
     /// Window of the light Savitzky-Golay smoothing used to find the maxima (odd).
     pub smooth: usize,
+    /// ... and by at least this many times the scatter of the raw points around the smoothed ones near the maximum (counting noise grows
+    /// with the height), so that a ripple on the top or the shoulder of one peak is not a peak of its own; 0 = off.
+    pub local_snr: f64,
 }
 
 impl Default for ProminenceParams {
     fn default() -> Self {
-        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.05, smooth: 5 }
+        ProminenceParams { snr: 5.0, rel_prominence: 0.01, min_scans: 3, frac: 0.05, smooth: 5, local_snr: 0.0 }
     }
 }
 
@@ -165,8 +168,6 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     // local maxima and their prominence
     let (left_min, right_min) = (reach_min(&ys, false), reach_min(&ys, true));
     let mut cand: Vec<(usize, f64)> = Vec::new();
-    // sampling noise rides on the signal (counting noise grows with the height): the scatter of the raw points around the smoothed ones near
-    // each maximum, so that a ripple on the top or the shoulder of one peak is not a peak of its own
     for j in 1..n - 1 {
         if !(ys[j] > ys[j - 1] && ys[j] >= ys[j + 1] && ys[j] > 0.0) {
             continue;
@@ -177,9 +178,13 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
         if prom < need {
             continue;
         }
+        if p.local_snr <= 0.0 {
+            cand.push((j, prom));
+            continue;
+        }
         let (a, b) = (j.saturating_sub(LOCAL_NOISE_HALF), (j + LOCAL_NOISE_HALF + 1).min(n));
         let local = ((a..b).map(|i| (y[i] - ys[i]).powi(2)).sum::<f64>() / (b - a) as f64).sqrt();
-        if prom >= p.snr * local {
+        if prom >= p.local_snr * local {
             cand.push((j, prom));
         }
     }

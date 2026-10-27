@@ -134,7 +134,11 @@ fn one_asymmetric_peak_is_one_peak() {
                     (m + m.sqrt() * noise).max(0.0).round()
                 })
                 .collect();
-            let near = detect_prominence(&rt, &y, ProminenceParams::default())
+            let params = ProminenceParams {
+                local_snr: 5.0,
+                ..Default::default()
+            };
+            let near = detect_prominence(&rt, &y, params)
                 .iter()
                 .filter(|p| (rt[p.apex_i] - 11.25).abs() < 0.5)
                 .count();
