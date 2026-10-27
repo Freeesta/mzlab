@@ -312,6 +312,29 @@ pub fn match_query<S: Source>(set: &LibSet<S>, q: &Query, p: &MatchParams) -> Re
             })?;
         }
     }
+    let mut compounds = group_by_compound(set, found);
+    compounds.truncate(p.top_compounds.max(1));
+    let libraries = (0..set.len() as u16)
+        .map(|k| LibRef {
+            index: k,
+            name: p.lib_names.get(k as usize).cloned().unwrap_or_default(),
+            kind: lib_kind(set, k).as_str(),
+        })
+        .collect();
+    Ok(MatchResult {
+        hr: matches!(p.exact, Tol::Ppm(_)),
+        mask: p.mask,
+        top_compounds: p.top_compounds.max(1),
+        libraries,
+        compounds,
+    })
+}
+
+/// Groups the spectra by compound and orders them: badge, then best score.
+fn group_by_compound<S: Source>(
+    set: &LibSet<S>,
+    found: Vec<(Badge, SpectrumMatch, Meta)>,
+) -> Vec<Compound> {
     let mut groups: Vec<(String, Compound)> = Vec::new();
     for (badge, sm, meta) in found {
         let (key, ik) = compound_key(&meta);
@@ -356,21 +379,7 @@ pub fn match_query<S: Source>(set: &LibSet<S>, q: &Query, p: &MatchParams) -> Re
             .then(b.spectra[0].score.total_cmp(&a.spectra[0].score))
             .then(a.name.cmp(&b.name))
     });
-    compounds.truncate(p.top_compounds.max(1));
-    let libraries = (0..set.len() as u16)
-        .map(|k| LibRef {
-            index: k,
-            name: p.lib_names.get(k as usize).cloned().unwrap_or_default(),
-            kind: lib_kind(set, k).as_str(),
-        })
-        .collect();
-    Ok(MatchResult {
-        hr: matches!(p.exact, Tol::Ppm(_)),
-        mask: p.mask,
-        top_compounds: p.top_compounds.max(1),
-        libraries,
-        compounds,
-    })
+    compounds
 }
 
 mod json;

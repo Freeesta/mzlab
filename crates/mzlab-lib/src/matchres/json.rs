@@ -15,66 +15,65 @@ fn text(o: &mut String, s: &str) {
 }
 
 fn field(o: &mut String, name: &str) {
-    if !o.ends_with(['{', '[']) {
+    if !(o.ends_with("{") || o.ends_with("[")) {
         o.push(',');
     }
     let _ = write!(o, "\"{name}\":");
 }
 
-fn spectrum(o: &mut String, m: &SpectrumMatch) {
-    o.push('{');
-    field(o, "library");
-    let _ = write!(o, "{}", m.lib);
-    field(o, "index");
-    let _ = write!(o, "{}", m.index);
-    field(o, "accession");
-    text(o, &m.accession);
-    field(o, "score");
-    num(o, m.score);
-    field(o, "score_kind");
-    text(o, m.score_kind);
-    field(o, "reverse");
-    num(o, m.reverse);
-    field(o, "explained");
-    num(o, m.explained);
-    field(o, "matched");
-    let _ = write!(o, "{}", m.matched);
-    field(o, "of");
-    let _ = write!(o, "{}", m.of);
-    field(o, "direct");
-    let _ = write!(o, "{}", m.direct);
-    field(o, "shifted");
-    let _ = write!(o, "{}", m.shifted);
-    field(o, "delta_ppm");
-    num(o, m.delta_ppm);
-    field(o, "delta_mz");
-    num(o, m.delta_mz);
-    field(o, "adduct");
-    text(o, &m.adduct);
-    field(o, "ce");
-    text(o, &m.ce);
-    field(o, "instrument");
-    text(o, &m.instrument);
-    field(o, "licence");
-    text(o, &m.licence);
-    field(o, "libraries");
-    let _ = write!(o, "{}", m.libs);
+fn int(o: &mut String, name: &str, v: impl std::fmt::Display) {
+    field(o, name);
+    let _ = write!(o, "{v}");
+}
+
+fn flt(o: &mut String, name: &str, v: f64) {
+    field(o, name);
+    num(o, v);
+}
+
+fn txt(o: &mut String, name: &str, v: &str) {
+    field(o, name);
+    text(o, v);
+}
+
+fn pairs(o: &mut String, pairs: &[PeakPair]) {
     field(o, "pairs");
     o.push('[');
-    for (i, p) in m.pairs.iter().enumerate() {
+    for (i, p) in pairs.iter().enumerate() {
         if i > 0 {
             o.push(',');
         }
-        o.push('{');
-        field(o, "query_mz");
-        num(o, p.query_mz);
-        field(o, "library_mz");
-        num(o, p.library_mz);
-        field(o, "kind");
-        text(o, p.kind.as_str());
-        o.push('}');
+        o.push_str("{");
+        flt(o, "query_mz", p.query_mz);
+        flt(o, "library_mz", p.library_mz);
+        txt(o, "kind", p.kind.as_str());
+        o.push_str("}");
     }
-    o.push_str("]}");
+    o.push(']');
+}
+
+fn spectrum(o: &mut String, m: &SpectrumMatch) {
+    o.push_str("{");
+    int(o, "library", m.lib);
+    int(o, "index", m.index);
+    txt(o, "accession", &m.accession);
+    flt(o, "score", m.score);
+    txt(o, "score_kind", m.score_kind);
+    flt(o, "reverse", m.reverse);
+    flt(o, "explained", m.explained);
+    int(o, "matched", m.matched);
+    int(o, "of", m.of);
+    int(o, "direct", m.direct);
+    int(o, "shifted", m.shifted);
+    flt(o, "delta_ppm", m.delta_ppm);
+    flt(o, "delta_mz", m.delta_mz);
+    txt(o, "adduct", &m.adduct);
+    txt(o, "ce", &m.ce);
+    txt(o, "instrument", &m.instrument);
+    txt(o, "licence", &m.licence);
+    int(o, "libraries", m.libs);
+    pairs(o, &m.pairs);
+    o.push_str("}");
 }
 
 impl MatchResult {
@@ -95,14 +94,14 @@ impl MatchResult {
             if i > 0 {
                 o.push(',');
             }
-            o.push('{');
+            o.push_str("{");
             field(&mut o, "index");
             let _ = write!(o, "{}", l.index);
             field(&mut o, "name");
             text(&mut o, &l.name);
             field(&mut o, "kind");
             text(&mut o, l.kind);
-            o.push('}');
+            o.push_str("}");
         }
         o.push(']');
         field(&mut o, "compounds");
@@ -111,7 +110,7 @@ impl MatchResult {
             if i > 0 {
                 o.push(',');
             }
-            o.push('{');
+            o.push_str("{");
             field(&mut o, "inchikey14");
             text(&mut o, &c.inchikey14);
             field(&mut o, "name");
