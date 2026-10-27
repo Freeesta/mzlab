@@ -131,7 +131,7 @@ fn extras_of_a_trace_equal_the_old_ones() {
     let st = TraceStats::new(&rt, &d.ys);
     for pk in &d.peaks {
         let e = extras(&rt, &d.ys, pk, &st);
-        let w = fwhm(&rt, &d.ys, pk.apex_i);
+        let w = fwhm(&rt, &d.ys, pk.apex_i, pk.lo, pk.hi);
         let dt = median_dt(&rt);
         let (apex_rt, apex_sigma, _) = legacy_apex(&rt, &d.ys, pk.apex_i);
         assert_eq!(e.apex_rt.to_bits(), apex_rt.to_bits());

@@ -667,7 +667,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
     let n = rt.len().min(y.len());
     let (rt, y) = (&rt[..n], &y[..n]);
     let found = if mode == 1 {
-        peakq::detect_prominence(rt, y, peakq::ProminenceParams::default())
+        peakq::detect_prominence(rt, y, peakq::ProminenceParams { local_snr: 5.0, ..Default::default() })
     } else {
         peaks::detect_peaks(rt, y, peaks::Params::default())
     };
