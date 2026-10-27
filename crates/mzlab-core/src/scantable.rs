@@ -136,12 +136,25 @@ pub(crate) struct DeclaredWindow {
 }
 
 impl DeclaredWindow {
+    /// From the header text of a spectrum.
     pub fn note(&mut self, h: &str, level: u8) {
+        let w = match (
+            cv(h, "MS:1000501").and_then(float),
+            cv(h, "MS:1000500").and_then(float),
+        ) {
+            (Some(a), Some(z)) => Some((a, z)),
+            _ => None,
+        };
+        self.note_span(w, level);
+    }
+
+    /// From the window a reader gives (the one the header would say).
+    pub fn note_span(&mut self, w: Option<(f64, f64)>, level: u8) {
         if level != 1 || self.surveys >= 50 {
             return;
         }
         self.surveys += 1;
-        if let (Some(a), Some(z)) = (cv(h, "MS:1000501").and_then(float), cv(h, "MS:1000500").and_then(float)) {
+        if let Some((a, z)) = w {
             self.span = Some(self.span.map_or((a, z), |(lo, hi)| (lo.min(a), hi.max(z))));
         }
     }
@@ -150,8 +163,13 @@ impl DeclaredWindow {
 impl Table {
     /// The `run` object of the index metadata (`scan_window` only when the scans declare one).
     pub fn run_json(&self) -> String {
-        let w = self.window.map_or(String::new(), |(a, b)| format!(",\"scan_window\":[{a:?},{b:?}]"));
-        format!("{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}}}", self.nce, self.hr1, self.n_chromatograms)
+        let w = self.window.map_or(String::new(), |(a, b)| {
+            format!(",\"scan_window\":[{a:?},{b:?}]")
+        });
+        format!(
+            "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}}}",
+            self.nce, self.hr1, self.n_chromatograms
+        )
     }
 }
 
