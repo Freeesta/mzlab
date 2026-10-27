@@ -32,6 +32,10 @@ fn register_index_open_and_route() {
     let tic = text(r("route", json!({"slot": 0, "path": "/api/chrom", "query": "?k=0&kind=tic&level=1"})).unwrap());
     assert!(tic.starts_with("{\"rt\":["), "{tic}");
     assert_eq!(text(r("route", json!({"slot": 9, "path": "/api/chrom", "query": ""})).unwrap()), "", "a slot that is not open is not answered");
+    // api/canali reads the chromatograms of the mzML too (op `canali`, as the wasm engine); the plain route then serves the same channels from the cache
+    let canali = text(r("canali", json!({"slot": 0, "name": name, "fid": id})).unwrap());
+    assert!(canali.starts_with("{\"v\":\"canali/1\""), "{canali}");
+    assert_eq!(text(r("route", json!({"slot": 0, "path": "/api/canali", "query": "?k=0"})).unwrap()), canali);
     assert!(r("nope", json!({})).is_err());
     let tic_of = |pol: i64| {
         r("idxopen", json!({"slot": 1, "name": name, "pol": pol})).unwrap();

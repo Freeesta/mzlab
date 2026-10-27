@@ -202,6 +202,17 @@ impl State {
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
+            // api/canali: the channels of the scans plus the SRM/SIC chromatograms of the mzML (as `Engine::canali` of the wasm)
+            "canali" => {
+                let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
+                let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+                let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
+                let mut m = Mzml::new(rd, size);
+                let chroms = m.chromatograms(end)?;
+                let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+                r.pon_cromatogrammi(s("name"), &chroms, &facts);
+                text(r.canali().json())
+            }
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
