@@ -359,10 +359,19 @@ def last_failed() -> set[str]:
     return {m.group(1) for m in re.finditer(r"^- FAIL +(e2e\w*)", text, re.M) if (E2E / f"{m.group(1)}.py").exists()}
 
 
-def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
+def parte_di(names: list[str], k: int, n: int) -> list[str]:
+    """Part k of n (1-based) of the e2e `names`: the slow ones first, dealt round-robin, so the parts take about the same time and are the same on every call."""
+    rank = [x for x in LENTI if x in names] + [x for x in names if x not in LENTI]
+    return [x for i, x in enumerate(rank) if i % n == k - 1]
+
+
+def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | None = None) -> None:
     names = sorted(p.stem for p in E2E.glob("e2e*.py") if p.stem not in NOT_TESTS)
     if only:
         names = [n for n in names if n in only]
+    if parte:
+        keep = set(parte_di(names, *parte))
+        names = [n for n in names if n in keep]
     if not browser_ok():
         results.append(("e2e", "SKIP", 0, ["Playwright/Chromium non disponibili: python3 tools/verifica.py --setup"])); return
     mz, src = data_dir()
@@ -416,6 +425,7 @@ def main() -> None:
     ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
                     help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
     ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
+    ap.add_argument("--parte", default="", metavar="K/N", help="only part K of N of the complete run (the CI of notte.yml): part 1 also does syntax, texts, pytest and prova_hr, every part a share of the e2e")
     ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
     ap.add_argument("--tutto", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
     a = ap.parse_args()
@@ -427,7 +437,10 @@ def main() -> None:
         setup()
     results: list = []
     t0 = time.time()
-    if not a.fumo and not a.ultimi_falliti:
+    parte = tuple(int(x) for x in a.parte.split("/")) if a.parte else None
+    if parte and not (len(parte) == 2 and 1 <= parte[0] <= parte[1]):
+        ap.error("--parte wants K/N with 1 <= K <= N")
+    if not a.fumo and not a.ultimi_falliti and (not parte or parte[0] == 1):
         js_syntax(results)
         i18n(results)
         codice(results)
@@ -448,7 +461,7 @@ def main() -> None:
             results.append(("e2e scelti da --cambiati", "INFO", 0, [why]))
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
         if run and not (a.ultimi_falliti and not only):
-            e2e(results, only, a.timeout, "", a.paralleli)
+            e2e(results, only, a.timeout, "", a.paralleli, parte)
     noti = noti_rossi()
     extra = noti_verdi(results, noti)
     results = [(n, "NOTO", dt, ["known: " + noti[n]] + notes[:1]) if st == "FAIL" and n in noti else

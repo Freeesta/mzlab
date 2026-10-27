@@ -19,8 +19,14 @@ jobs:
         os: [macos-latest, windows-latest]
         python: ["3.11", "3.14"]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    # measured on the runners: macOS 3.11 took 10.5 min serially; with the xdist workers (as in test.yml) and the cargo builds of the wasm tests 25 min is the ceiling
+    timeout-minutes: 25
+    # Windows: the tests compare bytes and sizes of the checked-out files (LF) and read text files with the default encoding (UTF-8 here, as on Linux and macOS)
+    env:
+      PYTHONUTF8: "1"
     steps:
+      - name: Check out with LF endings
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -28,9 +34,13 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Install
-        run: python -m pip install -e ".[test]"
+        run: python -m pip install -e ".[test]" pytest-xdist
+      # one install of the toolchain of rust-toolchain.toml before the workers start: several workers asking rustup for it at once corrupt the install
+      - name: Rust toolchain
+        run: rustup show
+      # --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
       - name: Unit tests
-        run: python -m pytest -q tests
+        run: python -m pytest -q -n auto --dist loadfile tests
 
   browser:
     name: browser (${{ matrix.os }}, ${{ matrix.browser }})
@@ -104,9 +114,15 @@ jobs:
           if-no-files-found: ignore
 
   # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
+  # in three parallel parts (tools/verifica.py --parte K/3: part 1 also does syntax, texts, pytest and prova_hr), each with its own report .verifica/ultimo.md
   completa:
+    name: completa (${{ matrix.parte }}/3)
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [1, 2, 3]
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -148,11 +164,16 @@ jobs:
           sudo cp tools/fontconfig/56-prefer-inter.conf /etc/fonts/conf.d/
           sudo fc-cache -f
           fc-match system-ui
-      - name: Complete verification
-        run: python tools/verifica.py --browser chromium
+      # the step has its own ceiling, so the report steps below still run if a part hangs
+      - name: Complete verification (part ${{ matrix.parte }}/3)
+        timeout-minutes: 50
+        run: python tools/verifica.py --browser chromium --parte ${{ matrix.parte }}/3
       # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
+      # verifica.py rewrites .verifica/ultimo.md, so the report of the part is kept apart first
       - name: Rust engine on the built site
+        if: matrix.parte == 3 && !cancelled()
         run: |
+          cp .verifica/ultimo.md .verifica/ultimo-parte.md || true
           python tools/build_site.py
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
           if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
@@ -161,20 +182,23 @@ jobs:
           python tools/verifica.py --browser chromium --solo e2e_rust
       # times and memory of the two engines (skipped without the real data: bench.py needs Full Scan files)
       - name: Measures
+        if: matrix.parte == 3
         continue-on-error: true
         run: python tools/bench.py --memoria
       - name: Print the logs of the failed tests (readable in the job log)
-        if: failure()
+        if: always()
         shell: bash
         run: |
           [ -f .verifica/ultimo.md ] || { echo "No .verifica/ultimo.md: verifica.py stopped before writing its report (see the log of the failed step above)"; exit 0; }
+          [ ! -f .verifica/ultimo-parte.md ] || { echo "--- part report"; cut -c1-2000 .verifica/ultimo-parte.md; echo "--- e2e_rust report"; }
           cat .verifica/ultimo.md | cut -c1-2000
+          grep -c '^- FAIL' .verifica/ultimo.md || true
           for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
-      - name: Logs of the failed tests
-        if: failure()
+      - name: Report and logs of the part
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: notte-completa
+          name: notte-completa-${{ matrix.parte }}
           path: .verifica/
           include-hidden-files: true
           if-no-files-found: ignore
