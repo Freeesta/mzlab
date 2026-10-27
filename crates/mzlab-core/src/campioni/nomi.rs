@@ -4,7 +4,17 @@
 
 use super::posizioni::{self, Proposta};
 use super::{number_replicates, Campione};
-use crate::project::{guess_conc, guess_sample};
+use super::parole_bianco::is_blank_name;
+use crate::project::{guess_conc, guess_sample as guess_stem};
+
+/// `project::guess_sample` plus the blank words of `data/nomi-bianco.json` (`MQ_Wash_1`), which the parity with `project.py` does not carry.
+fn guess_sample(name: &str) -> (String, Option<f64>, &'static str) {
+    let (stem, time, guess) = guess_stem(name);
+    if guess == "sample" && is_blank_name(&stem.to_lowercase()) {
+        return (stem, None, "blank");
+    }
+    (stem, time, guess)
+}
 
 const CAL_WORDS: [&str; 6] = [
     "cal",
