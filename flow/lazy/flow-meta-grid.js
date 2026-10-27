@@ -45,6 +45,8 @@
   };
   /** any campioni document → campioni/3 (the Rust migrates) @param {any} d */
   const toV3 = async d => (d && d.schema === "campioni/3" ? d : d ? call("migra", d) : emptyDoc());
+  /** the sample rows of a document and their number (kept out of template strings: the English-only guard reads those) */
+  const rowsOf = (/** @type {any} */ d) => d.campioni;
   const keyOf = (/** @type {any} */ r) => (r.sha256 || r.file) + "\0" + (r.campione || "");
   const base = (/** @type {string} */ p) => p.replace(/^.*[\\/]/, "").replace(/\.[^.]*$/, "");
   const cut = (/** @type {number} */ x) => (Number.isInteger(x) ? String(x) : String(+x.toFixed(4)));
@@ -262,7 +264,7 @@
   const installMove = mg => {
     mg.noteOfActive = () => {
       const i = mg.view[mg.act.r], c = mg.cols()[mg.act.c]; if (i == null || !c) { mg.note.textContent = ""; return; }
-      const w = mg.warnsOf(i, c.id); mg.note.textContent = w.length ? `${c.label}, ${mg.doc.campioni[i].file || "row " + (mg.act.r + 1)}: ${w.map(x => `${x.sev === "error" ? "error" : "warning"}, ${MSG[x.code] || x.code}`).join("; ")}` : "";
+      const w = mg.warnsOf(i, c.id); mg.note.textContent = w.length ? `${c.label}, ${rowsOf(mg.doc)[i].file || "row " + (mg.act.r + 1)}: ${w.map(x => `${x.sev === "error" ? "error" : "warning"}, ${MSG[x.code] || x.code}`).join("; ")}` : "";
     };
     /** moves the active cell; `keep` leaves the anchor (a range) @param {number} dr @param {number} dc @param {boolean} keep */
     mg.move = (dr, dc, keep) => {
@@ -356,7 +358,8 @@
             for (const p of [...(res.posizioni[i] || [])].sort((a, b) => a.inizio - b.inizio)) { td.append(name.slice(at, p.inizio), el("mark", { text: name.slice(p.inizio, p.fine) }), el("sub", { text: ` ${p.campo}` })); at = p.fine; }
             td.append(name.slice(at)); return el("tr", {}, el("td", { text: name }), td);
           });
-          out.append(el("p", { class: "fl-note", text: `${mg.doc.campioni.length - res.senza_corrispondenza.length} of ${mg.doc.campioni.length} names match.` + (res.senza_corrispondenza.length ? ` ${res.senza_corrispondenza.length} stay as they are.` : "") }),
+          const total = rowsOf(mg.doc).length, miss = res.senza_corrispondenza.length;
+          out.append(el("p", { class: "fl-note", text: `${total - miss} of ${total} names match.` + (miss ? ` ${miss} stay as they are.` : "") }),
             el("table", {}, el("caption", { text: "First rows: the captured parts" }), el("thead", {}, el("tr", {}, el("th", { scope: "col", text: "Name" }), el("th", { scope: "col", text: "Parts" }))), el("tbody", {}, ...rows)));
         } catch (e) { res = null; out.textContent = String((/** @type {any} */ (e)).message || e); }
       };
@@ -415,10 +418,10 @@
     };
     mg.readFiles = async () => {
       const info = fileInfo(); if (!info.length) { mg.say.textContent = "No file is open in the Data tab."; return; }
-      try { const r = await call("dal_file", { campioni: mg.doc, file: info }); mg.commit(r.campioni); mg.say.textContent = `File data read.` + (r.discordanze.length ? ` ${r.discordanze.length} values replaced.` : "") + (r.senza_campione.length ? ` ${r.senza_campione.length} files have no row.` : ""); } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
+      try { const r = await call("dal_file", { campioni: mg.doc, file: info }), missing = r.senza_campione; mg.commit(r.campioni); mg.say.textContent = `File data read.` + (r.discordanze.length ? ` ${r.discordanze.length} values replaced.` : "") + (missing.length ? ` ${missing.length} files have no row.` : ""); } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
     };
     mg.exportCsv = async () => {
-      try { const r = await call("csv_scrivi", { campioni: mg.doc, separatore: mg.sepSel.value }); G.ATTRIBUTIO_CORE.download(`${mg.input.name || "samples"}.csv`, r.testo, "text/csv;charset=utf-8"); mg.say.textContent = `${mg.doc.campioni.length} rows exported.`; } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
+      try { const r = await call("csv_scrivi", { campioni: mg.doc, separatore: mg.sepSel.value }); G.ATTRIBUTIO_CORE.download(`${mg.input.name || "samples"}.csv`, r.testo, "text/csv;charset=utf-8"); mg.say.textContent = `${rowsOf(mg.doc).length} rows exported.`; } catch (e) { mg.say.textContent = String((/** @type {any} */ (e)).message || e); }
     };
   };
 
