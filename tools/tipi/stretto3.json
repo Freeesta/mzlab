@@ -22,6 +22,7 @@
     "../../mzlab/web/mappa-render.js",
     "../../mzlab/web/mappa-tabella.js",
     "../../mzlab/web/mappa.js",
+    "../../mzlab/web/libreria.js",
     "../../mzlab/web/tavola-periodica.js",
     "../../mzlab/web/molui.js",
     "../../mzlab/web/shell.js",
