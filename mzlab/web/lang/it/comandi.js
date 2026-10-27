@@ -162,7 +162,7 @@ I18N.add("it", {
   "cmd.maplock.lab": "Blocca",
   "cmd.maplock.name": "Blocca il mirino",
   "cmd.maplock.tip": "Ferma il mirino su questo punto: il mouse è libero e XIC e spettro restano (L)",
-  "cmd.maplock.kw": "blocca mirino lucchetto mappa",
+  "cmd.maplock.kw": "blocca sblocca mirino lucchetto mappa",
   "cmd.mapmark.lab": "Marca",
   "cmd.mapmark.name": "Marca il punto",
   "cmd.mapmark.tip": "Segna questo punto sulla mappa con il suo numero, RT e m/z nella tabella (come i punti marcati)",

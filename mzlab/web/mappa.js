@@ -128,7 +128,8 @@ window.MAPPA = (() => {
     return [+x0.toFixed(5), +x1.toFixed(5), +y0.toFixed(5), +y1.toFixed(5), nrt, nmz];
   }
   // The region is asked with a margin (a quarter of the view on each side): a pan or a small zoom inside it is already sharp and asks nothing.
-  const MARGIN = 0.25, SLACK = 1.5;
+  // SLACK must exceed 1 + 2 * MARGIN: at strong zoom the bins are capped by the scan step, so the wide region has the view's bin count and is exactly that much coarser
+  const MARGIN = 0.25, SLACK = 1 + 2 * MARGIN + 0.05;
   function regionWide(p, A, x0, x1, y0, y1, pw, ph) {
     const dx = (x1 - x0) * MARGIN, dy = (y1 - y0) * MARGIN, k = 1 + 2 * MARGIN;
     return regionGrid(p, A, Math.max(A.rt0, x0 - dx), Math.min(A.rt1, x1 + dx), Math.max(A.mz0, y0 - dy), Math.min(A.mz0 + A.nmz * A.dmz, y1 + dy), pw * k, ph * k);
@@ -401,9 +402,12 @@ window.MAPPA = (() => {
   }
   // Continuous area turned on its side: every point while there is at most one per pixel row (zoomed in), otherwise the highest of each row (min-max decimation: no peak top is lost).
   function profSide(g, sp, pr, Y, x0, x1, ymax, col) {
-    const m = sp.pmz, v = sp.py, X = u => x0 + (x1 - x0) * u / ymax, rows = new Map(), n = pr.i1 - pr.i0;
-    for (let i = pr.i0; i < pr.i1; i++) { const r = Math.round(Y(m[i])), u = rows.get(r); if (u === undefined || v[i] > u) rows.set(r, v[i]); }
-    const pts = rows.size >= n ? Array.from({ length: n }, (_, k) => [Y(m[pr.i0 + k]), v[pr.i0 + k]]) : [...rows].sort((p, q) => q[0] - p[0]);
+    const m = sp.pmz, v = sp.py, X = u => x0 + (x1 - x0) * u / ymax, rows = new Map();
+    // the zeros put back at both sides of a gap of exactly two steps land on the same m/z: one point there
+    const idx = []; for (let i = pr.i0; i < pr.i1; i++) if (i === pr.i0 || m[i] !== m[i - 1]) idx.push(i);
+    const n = idx.length;
+    for (const i of idx) { const r = Math.round(Y(m[i])), u = rows.get(r); if (u === undefined || v[i] > u) rows.set(r, v[i]); }
+    const pts = rows.size >= n ? idx.map(i => [Y(m[i]), v[i]]) : [...rows].sort((p, q) => q[0] - p[0]);
     const trace = () => { g.beginPath(); g.moveTo(X(pts[0][1]), pts[0][0]); for (const q of pts) g.lineTo(X(q[1]), q[0]); };
     trace(); g.lineTo(x0, pts[pts.length - 1][0]); g.lineTo(x0, pts[0][0]); g.closePath();
     const al = g.globalAlpha; g.globalAlpha = al * .25; g.fillStyle = col; g.fill(); g.globalAlpha = al; trace();
@@ -1001,6 +1005,7 @@ window.MAPPA = (() => {
 
   return { smooth: liscia, guide, dbl, open3d, addPointAt, grpShape, shapePath, spectrumAt, init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, CMDS, ICO, SV, corrState, corrInit, setCorr, corrQ, corrPick, optChips, explain, grow, redraw: frame, layoutNow: layout, touched, barFor, lockBtn, ptText, ad2, itemsFor, showMenu, runCmd, help, paletteOk, paletteRun, extract, peakStep, apexStep, madNoise, dropFile };
 })();
+if (window.BARRA && BARRA.late) BARRA.late();
 
 // ---- panels: grips on the top and bottom edge (mouse, touch and pen), double click = default height; the width is always the column's
 (() => {
