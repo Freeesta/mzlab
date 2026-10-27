@@ -7,7 +7,12 @@ fn get(f: &str, obs: &str, tol: &str, delta: &str) -> Value {
 }
 
 fn row<'a>(t: &'a Value, n: &str) -> &'a Value {
-    t["rows"].as_array().unwrap().iter().find(|r| r["n"] == n).unwrap()
+    t["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["n"] == n)
+        .unwrap()
 }
 
 fn near(a: &Value, b: f64, eps: f64) {
@@ -53,7 +58,10 @@ fn the_ion_mz_follows_k_and_z() {
 #[test]
 fn an_observed_mz_marks_the_adduct_and_the_neutral_mass() {
     let t = get("C13H26N4", "261.2051", "5", "");
-    assert_eq!(t["rows"][t["best"].as_u64().unwrap() as usize]["n"], "[M+Na]+");
+    assert_eq!(
+        t["rows"][t["best"].as_u64().unwrap() as usize]["n"],
+        "[M+Na]+"
+    );
     assert!(row(&t, "[M+Na]+")["ppm"].as_f64().unwrap().abs() < 1.0);
     assert!(row(&t, "[M+H]+")["ppm"].as_f64().unwrap().abs() > 5.0);
     let t = get("C13H26N4", "261.2051", "0.01", "");
@@ -66,19 +74,40 @@ fn an_observed_mz_without_formula_gives_the_neutral_mass_of_each_adduct() {
     assert!(t["neutral"].is_null() && t["best"].is_null());
     near(&row(&t, "[M+Na]+")["m_if"], 238.2157, 1e-3);
     near(&row(&t, "[M+H]+")["m_if"], 260.1978, 1e-3);
-    near(&row(&t, "[2M+H]+")["m_if"], (261.2051 - 1.007276) / 2.0, 1e-3);
-    near(&row(&t, "[M+2H]2+")["m_if"], 261.2051 * 2.0 - 2.014553, 1e-3);
+    near(
+        &row(&t, "[2M+H]+")["m_if"],
+        (261.2051 - 1.007276) / 2.0,
+        1e-3,
+    );
+    near(
+        &row(&t, "[M+2H]2+")["m_if"],
+        261.2051 * 2.0 - 2.014553,
+        1e-3,
+    );
     assert!(row(&t, "[M+Na]+")["ppm"].is_null());
 }
 
 #[test]
 fn the_characteristic_differences_and_the_delta_search() {
     let t = get("", "", "", "21.9819");
-    let d: Vec<(String, f64)> = t["diffs"].as_array().unwrap().iter().map(|x| (x["pair"].as_str().unwrap().to_string(), x["d"].as_f64().unwrap())).collect();
+    let d: Vec<(String, f64)> = t["diffs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| {
+            (
+                x["pair"].as_str().unwrap().to_string(),
+                x["d"].as_f64().unwrap(),
+            )
+        })
+        .collect();
     assert!(d.contains(&("Na − H".to_string(), 21.981945)) || (d[0].1 - 21.981945).abs() < 1e-5);
     assert!((d.iter().find(|x| x.0 == "Cl").unwrap().1 - 35.976678).abs() < 1e-5);
     let h = t["delta"]["hits"].as_array().unwrap();
-    assert_eq!((h[0]["a"].as_str(), h[0]["b"].as_str()), (Some("[M+Na]+"), Some("[M+H]+")));
+    assert_eq!(
+        (h[0]["a"].as_str(), h[0]["b"].as_str()),
+        (Some("[M+Na]+"), Some("[M+H]+"))
+    );
     let none = get("", "", "5", "100");
     assert!(none["delta"]["hits"].as_array().unwrap().is_empty());
     let nh4 = get("", "", "", "17.0265");

@@ -405,13 +405,13 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #calcdlg .cadd-f input{margin:0;min-height:32px;font-variant-numeric:tabular-nums}
 .cadd .seg button{min-width:44px;min-height:32px;font-size:12px}
 .cadd-wrap{overflow-x:auto;margin:4px 0}.cadd-wrap:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.cadt{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
-.cadt th,.cadt td{padding:0 6px;height:32px;text-align:left;font-weight:400;border-bottom:1px solid var(--line);white-space:nowrap}
-.cadt thead th{font-size:11px;color:var(--muted);height:28px}
+.cadt{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.cadt th,.cadt td{padding:0 3px;height:32px;text-align:left;font-weight:400;border-bottom:1px solid var(--line);white-space:nowrap}
+.cadt thead th{font-size:11px;color:var(--muted);height:28px;white-space:normal;line-height:1.1;vertical-align:bottom}
 .cadt .num{text-align:right}
 .cadt tbody th[scope=row]:not(.num){font-weight:600}
 .cadt tr.hit{background:color-mix(in srgb,var(--accent) 14%,transparent)}.cadt tr.hit td,.cadt tr.hit th{font-weight:700}
-.cadt .cxic{min-width:40px;min-height:28px;padding:0 8px;font-size:12px}
+.cadt .cxic{min-width:28px;min-height:26px;padding:0 4px;font-size:11px}
 .cadd-more{background:none;border:0;padding:0 4px;min-height:28px;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
 .cadd-more:focus-visible,.cadd-diffs summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cadd-match{margin:4px 0;font-weight:600}.cadd-match.muted{font-weight:400}

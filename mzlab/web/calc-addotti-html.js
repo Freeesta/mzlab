@@ -20,16 +20,16 @@ const CALCADDHTML = (() => {
   function mainHtml(t, hasM, hasObs, st) {
     const dd = decimals(), mzOf = (/** @type {AdRow} */ r) => (r.mz5 == null || r.mz4 == null ? "" : dd > 4 ? r.mz5.toFixed(dd) : r.mz4.toFixed(4));
     const idx = (/** @type {AdRow} */ r) => t.rows.indexOf(r), mine = t.rows.filter(r => r.pol === st.pol), best = t.best == null ? null : t.rows[t.best];
-    const cols = 2 + (hasM ? 2 : 0) + (hasM && hasObs ? 1 : 0) + (hasObs ? 1 : 0) + (hasM ? 1 : 0);
+    const unit = hasM && !hasObs, mif = hasObs && !hasM, cols = 2 + (hasM ? 1 : 0) + (unit ? 1 : 0) + (hasM && hasObs ? 1 : 0) + (mif ? 1 : 0) + (hasM ? 1 : 0);
     const head = `<tr><th scope="col">${I18N.t("calc.col.adduct")}</th><th scope="col" class="num">${I18N.t("calc.col.delta")}</th>`
-      + (hasM ? `<th scope="col" class="num">${I18N.t("calc.col.exact")}</th><th scope="col" class="num">${I18N.t("calc.col.nominal")}</th>` : "")
-      + (hasM && hasObs ? `<th scope="col" class="num">${I18N.t("calc.col.ppm")}</th>` : "") + (hasObs ? `<th scope="col" class="num">${I18N.t("calc.col.mif")}</th>` : "") + (hasM ? '<td></td>' : "") + "</tr>";
+      + (hasM ? `<th scope="col" class="num">${I18N.t("calc.col.exact")}</th>` : "") + (unit ? `<th scope="col" class="num">${I18N.t("calc.col.nominal")}</th>` : "")
+      + (hasM && hasObs ? `<th scope="col" class="num">${I18N.t("calc.col.ppm")}</th>` : "") + (mif ? `<th scope="col" class="num">${I18N.t("calc.col.mif")}</th>` : "") + (hasM ? '<td></td>' : "") + "</tr>";
     const row = (/** @type {AdRow} */ r) => {
       const hit = best === r, mz = mzOf(r);
       return `<tr class="${hit ? "hit" : ""}"><th scope="row">${hit ? `<span aria-hidden="true">✓ </span><span class="sr-only">${I18N.t("calc.add.match")} </span>` : ""}${fmtAdduct(r.n)}</th><td class="num">${shiftText(r)}</td>`
-        + (hasM ? `<td class="num">${mz}</td><td class="num">${r.nominal}</td>` : "")
+        + (hasM ? `<td class="num">${mz}</td>` : "") + (unit ? `<td class="num">${r.nominal}</td>` : "")
         + (hasM && hasObs ? `<td class="num">${r.ppm == null ? "" : sgn(r.ppm) + Math.abs(r.ppm).toFixed(1)}</td>` : "")
-        + (hasObs ? `<td class="num">${r.m_if == null ? "" : r.m_if.toFixed(4)}</td>` : "")
+        + (mif ? `<td class="num">${r.m_if == null ? "" : r.m_if.toFixed(4)}</td>` : "")
         + (hasM ? `<td><button type="button" class="cxic" data-i="${idx(r)}" title="${I18N.t("calc.xic.title")}" aria-label="${EH(I18N.t("calc.xic.aria", { adduct: r.n, mz }))}">XIC</button></td>` : "") + "</tr>";
     };
     const common = mine.filter(r => r.common), rare = mine.filter(r => !r.common), open = st.more || (best != null && rare.includes(best));

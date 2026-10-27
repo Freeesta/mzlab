@@ -16,8 +16,24 @@ struct Def {
     common: bool,
 }
 
-const fn d(name: &'static str, id: &'static str, k: u8, add: &'static str, sub: &'static str, z: i8, common: bool) -> Def {
-    Def { name, id, k, add, sub, z, common }
+const fn d(
+    name: &'static str,
+    id: &'static str,
+    k: u8,
+    add: &'static str,
+    sub: &'static str,
+    z: i8,
+    common: bool,
+) -> Def {
+    Def {
+        name,
+        id,
+        k,
+        add,
+        sub,
+        z,
+        common,
+    }
 }
 
 /// Most frequent first, per polarity.
@@ -73,13 +89,21 @@ fn shift(a: &Def) -> Result<f64> {
 
 /// A typed number (comma or point); anything unreadable counts as not given, the page checks what the student typed.
 fn number(t: &str) -> Option<f64> {
-    t.trim().replace(',', ".").parse::<f64>().ok().filter(|v| v.is_finite())
+    t.trim()
+        .replace(',', ".")
+        .parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite())
 }
 
 /// `api/adduct_table`: the rows of every adduct (shift, and with `f` or `obs` the m/z, ppm and implied neutral mass), the characteristic
 /// differences and, with `delta`, the pairs of adducts that explain it. Empty text = not given; `tol` is in ppm (default 5).
 pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
-    let parsed = if f.trim().is_empty() { None } else { Some(parse_formula(f)?) };
+    let parsed = if f.trim().is_empty() {
+        None
+    } else {
+        Some(parse_formula(f)?)
+    };
     let m = parsed.as_ref().map(mass);
     let obs = number(obs);
     let tol = number(tol).unwrap_or(5.0).abs();
@@ -91,7 +115,11 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
         Some(p) => o.str(&fmt(p)),
         None => o.raw("null"),
     };
-    o.raw(",\"neutral\":").opt(m.map(|x| round(x, 4))).raw(",\"tol\":").num(tol).raw(",\"rows\":[");
+    o.raw(",\"neutral\":")
+        .opt(m.map(|x| round(x, 4)))
+        .raw(",\"tol\":")
+        .num(tol)
+        .raw(",\"rows\":[");
     let mut best: Option<(usize, f64)> = None;
     for (i, (a, &s)) in CATALOG.iter().zip(&shifts).enumerate() {
         let (k, z) = (f64::from(a.k), f64::from(a.z.abs()));
@@ -102,27 +130,81 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
                 best = Some((i, p));
             }
         }
-        o.raw(if i > 0 { ",{" } else { "{" }).raw("\"n\":").str(a.name).raw(",\"id\":").str(a.id);
-        o.raw(",\"pol\":").int(i64::from(a.z.signum())).raw(",\"common\":").raw(if a.common { "true" } else { "false" });
-        o.raw(",\"k\":").int(i64::from(a.k)).raw(",\"z\":").int(i64::from(a.z));
-        o.raw(",\"add\":").str(a.add).raw(",\"sub\":").str(a.sub).raw(",\"shift\":").num(round(s, 6));
-        o.raw(",\"mz4\":").opt(mz.map(|c| round(c, 4))).raw(",\"mz5\":").opt(mz.map(|c| round(c, 5)));
-        o.raw(",\"mz1\":").opt(mz.map(|c| round_half_up(c, 1))).raw(",\"nominal\":").opt(mz.map(|c| round_half_up(c, 0)));
+        o.raw(if i > 0 { ",{" } else { "{" })
+            .raw("\"n\":")
+            .str(a.name)
+            .raw(",\"id\":")
+            .str(a.id);
+        o.raw(",\"pol\":")
+            .int(i64::from(a.z.signum()))
+            .raw(",\"common\":")
+            .raw(if a.common { "true" } else { "false" });
+        o.raw(",\"k\":")
+            .int(i64::from(a.k))
+            .raw(",\"z\":")
+            .int(i64::from(a.z));
+        o.raw(",\"add\":")
+            .str(a.add)
+            .raw(",\"sub\":")
+            .str(a.sub)
+            .raw(",\"shift\":")
+            .num(round(s, 6));
+        o.raw(",\"mz4\":")
+            .opt(mz.map(|c| round(c, 4)))
+            .raw(",\"mz5\":")
+            .opt(mz.map(|c| round(c, 5)));
+        o.raw(",\"mz1\":")
+            .opt(mz.map(|c| round_half_up(c, 1)))
+            .raw(",\"nominal\":")
+            .opt(mz.map(|c| round_half_up(c, 0)));
         o.raw(",\"ppm\":").opt(ppm.map(|p| round(p, 2)));
-        o.raw(",\"m_if\":").opt(obs.map(|v| round((v * z - s) / k, 4))).raw("}");
+        o.raw(",\"m_if\":")
+            .opt(obs.map(|v| round((v * z - s) / k, 4)))
+            .raw("}");
     }
-    o.raw("],\"best\":").opt(best.map(|(i, _)| i as f64)).raw(",\"diffs\":[");
+    o.raw("],\"best\":")
+        .opt(best.map(|(i, _)| i as f64))
+        .raw(",\"diffs\":[");
     for (j, (label, a, b)) in PAIRS.iter().enumerate() {
-        let sh = |n: &str| CATALOG.iter().position(|x| x.name == n).map(|i| shifts[i]).unwrap_or(0.0);
-        o.raw(if j > 0 { ",{" } else { "{" }).raw("\"pair\":").str(label).raw(",\"a\":").str(a).raw(",\"b\":").str(b);
-        o.raw(",\"pol\":").int(if a.ends_with('+') { 1 } else { -1 }).raw(",\"d\":").num(round(sh(a) - sh(b), 6)).raw("}");
+        let sh = |n: &str| {
+            CATALOG
+                .iter()
+                .position(|x| x.name == n)
+                .map(|i| shifts[i])
+                .unwrap_or(0.0)
+        };
+        o.raw(if j > 0 { ",{" } else { "{" })
+            .raw("\"pair\":")
+            .str(label)
+            .raw(",\"a\":")
+            .str(a)
+            .raw(",\"b\":")
+            .str(b);
+        o.raw(",\"pol\":")
+            .int(if a.ends_with('+') { 1 } else { -1 })
+            .raw(",\"d\":")
+            .num(round(sh(a) - sh(b), 6))
+            .raw("}");
     }
     o.raw("]");
     if let Some(dv) = delta {
-        o.raw(",\"delta\":{\"value\":").num(dv.abs()).raw(",\"hits\":[");
-        for (j, (a, b, e)) in delta_hits(dv.abs(), obs.unwrap_or(DELTA_REF_MZ), tol, &shifts).iter().enumerate() {
-            o.raw(if j > 0 { ",{" } else { "{" }).raw("\"a\":").str(CATALOG[*a].name).raw(",\"b\":").str(CATALOG[*b].name);
-            o.raw(",\"d\":").num(round(shifts[*a] - shifts[*b], 6)).raw(",\"err_mda\":").num(round(e * 1000.0, 2)).raw("}");
+        o.raw(",\"delta\":{\"value\":")
+            .num(dv.abs())
+            .raw(",\"hits\":[");
+        for (j, (a, b, e)) in delta_hits(dv.abs(), obs.unwrap_or(DELTA_REF_MZ), tol, &shifts)
+            .iter()
+            .enumerate()
+        {
+            o.raw(if j > 0 { ",{" } else { "{" })
+                .raw("\"a\":")
+                .str(CATALOG[*a].name)
+                .raw(",\"b\":")
+                .str(CATALOG[*b].name);
+            o.raw(",\"d\":")
+                .num(round(shifts[*a] - shifts[*b], 6))
+                .raw(",\"err_mda\":")
+                .num(round(e * 1000.0, 2))
+                .raw("}");
         }
         o.raw("]}");
     }
@@ -133,7 +215,9 @@ pub fn table(f: &str, obs: &str, tol: &str, delta: &str) -> Result<String> {
 /// Pairs of singly charged adducts of one polarity whose shifts differ by `delta` within `tol` ppm of `ref_mz`; nearest first.
 fn delta_hits(delta: f64, ref_mz: f64, tol: f64, shifts: &[f64]) -> Vec<(usize, usize, f64)> {
     let win = tol * 1e-6 * ref_mz;
-    let single: Vec<usize> = (0..CATALOG.len()).filter(|&i| CATALOG[i].k == 1 && CATALOG[i].z.abs() == 1).collect();
+    let single: Vec<usize> = (0..CATALOG.len())
+        .filter(|&i| CATALOG[i].k == 1 && CATALOG[i].z.abs() == 1)
+        .collect();
     let mut hits = Vec::new();
     for &a in &single {
         for &b in &single {
