@@ -6,10 +6,7 @@ use super::detect::Group;
 use super::{Buf, Centroid, Mode, Params, SHOULDER};
 
 /// Second derivative of the raw signal at `j` (quadratic fit over `l` points): c_k = 2 (k^2 - mu) / sum (k^2 - mu)^2.
-fn second(buf: &Buf, l: usize, j: usize) -> f64 {
-    let m = ((l - 1) / 2) as f64;
-    let mu = m * (m + 1.0) / 3.0;
-    let den: f64 = (0..l).map(|i| ((i as f64 - m).powi(2) - mu).powi(2)).sum();
+fn second(buf: &Buf, l: usize, (m, mu, den): (f64, f64, f64), j: usize) -> f64 {
     let mut acc = 0.0;
     for i in 0..l {
         let t = j as isize + i as isize - (l as isize - 1) / 2;
@@ -18,6 +15,14 @@ fn second(buf: &Buf, l: usize, j: usize) -> f64 {
         }
     }
     acc
+}
+
+/// The constants of `second` for a window of `l` points: (centre, mean of k^2, normaliser).
+fn second_consts(l: usize) -> (f64, f64, f64) {
+    let m = ((l - 1) / 2) as f64;
+    let mu = m * (m + 1.0) / 3.0;
+    let den: f64 = (0..l).map(|i| ((i as f64 - m).powi(2) - mu).powi(2)).sum();
+    (m, mu, den)
 }
 
 /// The residual window around `j` after the main Gaussian: (positive residual, its weighted m/z, highest value, background sum).
@@ -48,6 +53,7 @@ pub(super) fn find(
     area: f64,
 ) -> Vec<Centroid> {
     let l = p.sg_len();
+    let consts = second_consts(l);
     let dist = (0.6 * p.wb() as f64).ceil() as usize;
     let h = buf.s[g.apex] - buf.b[g.apex];
     let mut out = Vec::new();
@@ -59,7 +65,7 @@ pub(super) fn find(
             if j < g.lo as isize || j > g.hi as isize {
                 break;
             }
-            let v = second(buf, l, j as usize);
+            let v = second(buf, l, consts, j as usize);
             if v < 0.0 && best.is_none_or(|(b, _)| v < b) {
                 best = Some((v, j as usize));
             }
@@ -88,3 +94,6 @@ pub(super) fn find(
     }
     out
 }
+
+#[cfg(test)]
+mod tests;
