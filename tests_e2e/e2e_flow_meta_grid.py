@@ -1,11 +1,11 @@
 """Flow, the metadata grid of the Import data card (docs/agenti/flow-grafica.md): virtual rows, keyboard, paste of a spreadsheet block, sort, filter, name pattern, free columns, CSV, SHA of the saved document, axe.
 Run from the repo root: python3 tests_e2e/e2e_flow_meta_grid.py"""
-import subprocess, sys, tempfile, socket, time
+import subprocess, sys, tempfile, socket
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools")); sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-from lib import free_port, attendi, axe_path; PORT = free_port(); AXE = axe_path()
+from lib import free_port, attendi, frames, axe_path; PORT = free_port(); AXE = axe_path()
 subprocess.run([sys.executable, str(ROOT / "tools" / "prepara_sito.py")], check=True)      # the site with the Rust engine (the grid asks it for the CSV and the checks)
 site = ROOT / "site"
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -24,7 +24,7 @@ try:
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.click('#nav button[data-v="flow"]'); attendi(pg, "document.querySelectorAll('.fln').length === 2")
-        pg.evaluate("MZLAB_RUST_READY.then(() => fetch('api/session').then(r => r.text()))"); time.sleep(1.5)      # the first sync of the session empties E.files: push after it
+        pg.evaluate("MZLAB_RUST_READY.then(() => fetch('api/session').then(r => r.text()))"); frames(pg, 30)      # the first sync of the session empties E.files: push after it
         pg.evaluate("n => { for (let i = 0; i < n; i++) E.files.push({file: 'run' + String(i).padStart(3, '0') + '.mzML', name: 'run' + i}); }", N)
         pg.click('.fln:has-text("Import data")'); attendi(pg, "!!document.querySelector('.flx-imp [role=grid]')")
         attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N + 1}'")
