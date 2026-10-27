@@ -19,6 +19,19 @@ pub(crate) fn median(v: &[f64]) -> f64 {
     }
 }
 
+/// `median` of the values of `v` that goes through `scratch` (kept between calls, so a loop of medians allocates once).
+pub(crate) fn median_in(v: impl Iterator<Item = f64>, scratch: &mut Vec<f64>) -> f64 {
+    scratch.clear();
+    scratch.extend(v);
+    if scratch.is_empty() {
+        return 0.0;
+    }
+    if let Some(m) = crate::sortc::select_median(scratch) {
+        return m;
+    }
+    median(scratch)
+}
+
 /// Robust noise sigma from the first differences (MAD).
 pub fn noise_level(y: &[f64]) -> f64 {
     if y.len() < 4 {
@@ -30,8 +43,8 @@ pub fn noise_level(y: &[f64]) -> f64 {
     1.4826 * median(&dev) / 2f64.sqrt()
 }
 
-/// Solves A x = b (A square, row-major, n x n) by Gaussian elimination with partial pivoting. None if singular.
-pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+/// Gaussian elimination with partial pivoting on `a` (n x n, row-major) and `b`, both overwritten; the solution goes to `x`. False if singular.
+fn solve_in(a: &mut [f64], b: &mut [f64], x: &mut [f64], n: usize) -> bool {
     for c in 0..n {
         let mut p = c;
         for r in c + 1..n {
@@ -40,7 +53,7 @@ pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f6
             }
         }
         if a[p * n + c].abs() < 1e-300 {
-            return None;
+            return false;
         }
         if p != c {
             for k in 0..n {
@@ -59,7 +72,6 @@ pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f6
             }
         }
     }
-    let mut x = vec![0.0; n];
     for r in (0..n).rev() {
         let mut s = b[r];
         for k in r + 1..n {
@@ -67,7 +79,19 @@ pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f6
         }
         x[r] = s / a[r * n + r];
     }
-    Some(x)
+    true
+}
+
+/// Solves A x = b (A square, row-major, n x n) by Gaussian elimination with partial pivoting. None if singular.
+pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+    let mut x = vec![0.0; n];
+    solve_in(&mut a, &mut b, &mut x, n).then_some(x)
+}
+
+/// `solve` for 3 x 3 on the stack (the quadratic fit of a peak apex): the same operations in the same order.
+pub(crate) fn solve3(mut a: [f64; 9], mut b: [f64; 3]) -> Option<[f64; 3]> {
+    let mut x = [0.0; 3];
+    solve_in(&mut a, &mut b, &mut x, 3).then_some(x)
 }
 
 /// Savitzky-Golay convolution coefficients (odd window), derivative order `deriv`, unit spacing, ordered like `np.convolve` wants.
