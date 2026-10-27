@@ -16,6 +16,7 @@ pub mod frag_tol;
 pub mod io;
 pub mod libinfo;
 pub mod libset;
+pub mod matchres;
 #[warn(
     clippy::unwrap_used,
     clippy::indexing_slicing,
@@ -35,6 +36,7 @@ pub mod search;
 pub mod sha256;
 pub mod sortutil;
 pub mod spec;
+pub mod stein;
 pub mod util;
 
 pub use error::{Error, Result};

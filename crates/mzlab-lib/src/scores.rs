@@ -11,6 +11,7 @@
 use crate::clean::weighted;
 use crate::frag_tol::FragTol;
 use crate::sortutil;
+pub use crate::stein::{hybrid_entropy, ri_factor, stein_cosine, SteinOpts, SteinScore};
 
 /// A spectrum for scoring.
 #[derive(Debug, Clone, Default)]
