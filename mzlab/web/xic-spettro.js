@@ -246,7 +246,8 @@
     pv.className = "bt xbp"; pv.dataset.a = "xicp"; pv.title = T("xiclens.toggle"); pv.setAttribute("aria-label", T("xiclens.toggle"));
     pv.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>';
     pv.onclick = () => setLens(!UIP.xicLens);
-    b.after(pv);
+    const mb = p.el.querySelector('.tbs [data-a="more"]'), g = document.createElement("span");       // its own group, the rightmost: the first one the header moves into the «⋯» menu when it is tight (fitHd)
+    g.className = "tbg"; g.append(pv); if (mb) mb.before(g); else b.after(pv);
     refresh(p);
   }
   /** the lens preference from the button of any spectrum panel (the Settings switch is the other place) @param {boolean} on */

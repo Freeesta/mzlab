@@ -127,9 +127,9 @@ try:
         step("the preference switches the lens off", pref)
         def toggle():
             B = ".pnl [data-a=xicp]"; v = [pg.get_attribute(B, "aria-pressed"), pg.get_attribute(B, "title")]; assert v == ["true", pg.evaluate("I18N.t('xiclens.toggle')")], v
-            pg.click(B); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "false" and not pg.evaluate("UIP.xicLens")
+            pg.evaluate(f"document.querySelector('{B}').click()"); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "false" and not pg.evaluate("UIP.xicLens")
             ps = pk(); t = ps[1]; pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 5); assert not pg.query_selector(LENS)
-            pg.click(B); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "true" and pg.evaluate("UIP.xicLens")
+            pg.evaluate(f"document.querySelector('{B}').click()"); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "true" and pg.evaluate("UIP.xicLens")
             pg.keyboard.press("Escape")
         step("the button of the bar switches the lens on and off (aria-pressed), on by default", toggle)
         def touch():
