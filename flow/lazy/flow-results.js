@@ -97,6 +97,15 @@
     for (const { id, port } of mine) {
       const made = (S.results[id] || []).filter((/** @type {any} */ r) => r.type === port.type);
       for (const r of made) box.append(F.btn("file", `Open ${r.label}`, () => F.openResult(r), r.label));
+      // after a reload the table of the last web run is still in OPFS
+      const last = F.webTableStep && F.webTableStep(S);
+      if (!made.length && port.type === "table" && last && last.id === id) {
+        const slot = el("span", {}); box.append(slot);
+        F.webTableItem().then((/** @type {any} */ item) => {
+          if (!item || !slot.isConnected) return;
+          slot.append(F.btn("file", `Open ${item.label}`, async () => { S.results[id] = [item]; item.file = await item.load(); F.openResult(item); }, item.label));
+        });
+      }
       const pick = el("input", { type: "file", hidden: true, accept: ".csv,.tsv,.txt,.json,.mgf,.msp,.mzfeat", "aria-label": `Choose a ${port.title} file`, onchange: (/** @type {any} */ e) => {
         const f = e.target.files && e.target.files[0]; if (!f) return;
         const item = { type: port.type, label: f.name, file: f, text: () => f.text() };
