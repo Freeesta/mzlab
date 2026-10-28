@@ -25,7 +25,7 @@ export async function openSource(kind, name, blob) {
   } catch (_) { ah = null; }
   if (!ah) return { read: viaBlob, close() {}, hand: false };
   const h = ah;
-  let buf = new Uint8Array(1 << 20);
+  let buf = new Uint8Array(0);   // grown to the length asked
   return {
     hand: true,
     read(o, n) {

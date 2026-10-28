@@ -70,7 +70,11 @@ impl BlockReader {
     }
 }
 
-const BLOCK: usize = 1 << 20;
+// Read block asked to JS: SyncAccessHandle.read is ~2.5x faster per byte at 4 MiB than at 1 MiB in Chromium (docs/studi/wasm-potenza.md 3e).
+// The JS readers size their reuse buffer from the length asked, so this is the only place the number lives.
+const BLOCK: usize = 4 << 20;
+// Output is flushed to JS every 4 MiB, independent of the read block.
+const WRITE_FLUSH: usize = 4 << 20;
 
 impl Read for BlockReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
@@ -127,7 +131,7 @@ impl BlockWriter {
 impl Write for BlockWriter {
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
         self.buf.extend_from_slice(data);
-        if self.buf.len() >= 4 * BLOCK {
+        if self.buf.len() >= WRITE_FLUSH {
             self.flush_block()?;
         }
         Ok(data.len())
