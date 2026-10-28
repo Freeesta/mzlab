@@ -4,7 +4,7 @@
 mod comune_sqlite;
 
 use comune_sqlite::*;
-use mzlab_lettori::bruker::sqlite_min::Val;
+use mzlab_lettori::bruker::sqlite_min::{Sqlite, Val};
 
 fn blob_v(b: &[u8]) -> Vec<u8> {
     // serial type 12 + 2 * len: a blob
@@ -80,8 +80,8 @@ fn albero(primo: u32) -> Vec<u8> {
     [int, l1, l2, ov].concat()
 }
 
-#[test]
-fn righe_cols_da_gli_stessi_valori_di_righe() {
+/// Tables `A` (rowid alias), `W` (WITHOUT ROWID) and `T` (two leaves, an overflow chain).
+fn tre_tabelle() -> Sqlite {
     let a = foglia(&[
         vec![V::N, V::T("a"), V::R(1.5), V::I(7)],
         vec![V::I(40), V::T("bé"), V::N],
@@ -98,7 +98,7 @@ fn righe_cols_da_gli_stessi_valori_di_righe() {
         })
         .collect();
     let w = pagina(10, 0, &celle, 0);
-    let mut s = apri_db(
+    apri_db(
         db(&[
             (
                 "A",
@@ -118,42 +118,52 @@ fn righe_cols_da_gli_stessi_valori_di_righe() {
         ]),
         None,
     )
+    .unwrap()
+}
+
+/// `righe_cols` gives, for every choice of columns, what `righe` gives for them.
+fn confronta(s: &mut Sqlite, nome: &str) {
+    let t = s.tabella(nome).unwrap().clone();
+    let mut tutte_le_righe: Vec<Vec<Val>> = Vec::new();
+    s.righe(&t, |r| {
+        tutte_le_righe.push(r.to_vec());
+        Ok(true)
+    })
     .unwrap();
-    for nome in ["A", "W", "T"] {
-        let t = s.tabella(nome).unwrap().clone();
-        let mut tutte_le_righe: Vec<Vec<Val>> = Vec::new();
-        s.righe(&t, |r| {
-            tutte_le_righe.push(r.to_vec());
+    assert!(tutte_le_righe.len() >= 2, "{nome}");
+    let n = t.colonne.len();
+    // every subset of the columns in table order, in reverse order, and with a missing one and a repeated one
+    let mut scelte: Vec<Vec<Option<usize>>> = Vec::new();
+    for m in 0u32..(1 << n) {
+        let v: Vec<Option<usize>> = (0..n).filter(|i| m >> i & 1 == 1).map(Some).collect();
+        scelte.push(v.iter().rev().copied().collect());
+        scelte.push(v);
+    }
+    scelte.push(vec![Some(0), None, Some(0), Some(n - 1), Some(n + 3)]);
+    for idx in scelte {
+        let attese: Vec<Vec<Val>> = tutte_le_righe
+            .iter()
+            .map(|r| {
+                idx.iter()
+                    .map(|i| i.and_then(|i| r.get(i).cloned()).unwrap_or(Val::Null))
+                    .collect()
+            })
+            .collect();
+        let mut avute: Vec<Vec<Val>> = Vec::new();
+        s.righe_cols(&t, &idx, |r| {
+            avute.push(r.to_vec());
             Ok(true)
         })
         .unwrap();
-        assert!(tutte_le_righe.len() >= 2, "{nome}");
-        let n = t.colonne.len();
-        // every subset of the columns in table order, in reverse order, and with a missing one and a repeated one
-        let mut scelte: Vec<Vec<Option<usize>>> = Vec::new();
-        for m in 0u32..(1 << n) {
-            let v: Vec<Option<usize>> = (0..n).filter(|i| m >> i & 1 == 1).map(Some).collect();
-            scelte.push(v.iter().rev().copied().collect());
-            scelte.push(v);
-        }
-        scelte.push(vec![Some(0), None, Some(0), Some(n - 1), Some(n + 3)]);
-        for idx in scelte {
-            let attese: Vec<Vec<Val>> = tutte_le_righe
-                .iter()
-                .map(|r| {
-                    idx.iter()
-                        .map(|i| i.and_then(|i| r.get(i).cloned()).unwrap_or(Val::Null))
-                        .collect()
-                })
-                .collect();
-            let mut avute: Vec<Vec<Val>> = Vec::new();
-            s.righe_cols(&t, &idx, |r| {
-                avute.push(r.to_vec());
-                Ok(true)
-            })
-            .unwrap();
-            assert_eq!(avute, attese, "{nome} {idx:?}");
-        }
+        assert_eq!(avute, attese, "{nome} {idx:?}");
+    }
+}
+
+#[test]
+fn righe_cols_da_gli_stessi_valori_di_righe() {
+    let mut s = tre_tabelle();
+    for nome in ["A", "W", "T"] {
+        confronta(&mut s, nome);
     }
     // the tree really was walked: interior page, both leaves and the overflow chain
     let t = s.tabella("T").unwrap().clone();
@@ -176,10 +186,8 @@ fn righe_cols_da_gli_stessi_valori_di_righe() {
 }
 
 /// Timing of a full scan of a 10^6-row table: all columns (`righe`) against the two that are needed.
-#[test]
-#[ignore]
-fn timing_of_a_million_row_scan() {
-    let n_rows = 1_000_000usize;
+/// The pages of a two-level table of `n_rows` rows: the root (page 2), then the middle pages, then the leaves.
+fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
     let mut leaves: Vec<Vec<u8>> = Vec::new();
     let mut maxes: Vec<u64> = Vec::new();
     let mut cells: Vec<Vec<u8>> = Vec::new();
@@ -227,7 +235,14 @@ fn timing_of_a_million_row_scan() {
         }
     }
     let root = pagina(5, 0, &root_cells, 3 + n_mid as u32 - 1);
-    // table rooted at page 2 = root; mids at 3.., leaves after
+    (root, mids, leaves)
+}
+
+#[test]
+#[ignore]
+fn timing_of_a_million_row_scan() {
+    let n_rows = 1_000_000usize;
+    let (root, mids, leaves) = grande(n_rows);
     let sql = "CREATE TABLE B (Id INTEGER PRIMARY KEY, A INTEGER, X REAL, Name TEXT, Z INTEGER)";
     let mut img = db(&[("B", sql, root)]);
     for p in mids.iter().chain(leaves.iter()) {
