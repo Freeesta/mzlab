@@ -15,7 +15,11 @@ fn bridging_double_bonds_leave_the_central_ring_alone() {
     let smi = "C1(=C2C3=CC=CC=C3C3=CC=CC=C23)C=CC(=C2C3=CC=CC=C3C3=CC=CC=C23)C=C1";
     assert_eq!(count(smi), (24, 38));
     let m = Mol::from_smiles(smi).unwrap();
-    assert!((m.crippen_logp() - 8.077).abs() < 5e-4, "{}", m.crippen_logp());
+    assert!(
+        (m.crippen_logp() - 8.077).abs() < 5e-4,
+        "{}",
+        m.crippen_logp()
+    );
     assert_eq!(count("C=C1C=CC(=C)C=C1"), (0, 8));
 }
 
