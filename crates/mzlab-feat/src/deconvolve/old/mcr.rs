@@ -200,7 +200,7 @@ fn calc_lof(d: &[Vec<f64>], c: &[Vec<f64>], s: &[Vec<f64>]) -> f64 {
     100.0 * (sum_r2 / sum_d2.max(1e-300)).sqrt()
 }
 
-pub(in crate::deconvolve) fn mcr_als(
+pub(crate) fn mcr_als(
     d: &[Vec<f64>],
     k: usize,
     unimodal: bool,
@@ -246,7 +246,7 @@ pub(in crate::deconvolve) fn mcr_als(
     (c, s, lof)
 }
 
-pub(in crate::deconvolve) fn interp_linear(x: &[f64], xp: &[f64], fp: &[f64]) -> Vec<f64> {
+pub(crate) fn interp_linear(x: &[f64], xp: &[f64], fp: &[f64]) -> Vec<f64> {
     if xp.is_empty() || fp.is_empty() {
         return vec![0.0; x.len()];
     }
