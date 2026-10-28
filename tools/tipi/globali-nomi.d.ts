@@ -321,6 +321,7 @@ declare var attach: any;
 declare var autoEdges: any;
 declare var autoInt: any;
 declare var axes: any;
+declare var b64F32: any;
 declare var baseLine: any;
 declare var big: any;
 declare var bindDragDrop: any;
