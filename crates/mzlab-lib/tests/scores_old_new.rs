@@ -178,10 +178,10 @@ fn common_losses_equal_the_allocating_version_on_100k_cases() {
     let mut r = Rng(0xdead_beef_cafe_f00d);
     for _ in 0..100_000 {
         let (mut a, mut b) = (spec(&mut r, 400), spec(&mut r, 400));
-        if r.next() % 50 == 0 {
+        if r.next().is_multiple_of(50) {
             a.prec = 0.0;
         }
-        if r.next() % 50 == 0 {
+        if r.next().is_multiple_of(50) {
             b.prec = -1.0;
         }
         assert_eq!(

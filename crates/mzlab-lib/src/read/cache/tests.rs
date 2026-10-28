@@ -24,29 +24,23 @@ impl Naive {
             self.bytes -= old.0;
         }
         while self.bytes > self.budget && self.map.len() > 1 {
-            let oldest = *self
-                .map
-                .iter()
-                .min_by_key(|(_, e)| e.1)
-                .map(|(k, _)| k)
-                .unwrap();
+            let Some(oldest) = self.map.iter().min_by_key(|(_, e)| e.1).map(|(k, _)| *k) else {
+                break;
+            };
             if oldest == k {
                 break;
             }
-            self.bytes -= self.map.remove(&oldest).unwrap().0;
+            self.bytes -= self.map.remove(&oldest).map_or(0, |e| e.0);
         }
     }
 
     fn set_budget(&mut self, bytes: usize) {
         self.budget = bytes;
         while self.bytes > self.budget && !self.map.is_empty() {
-            let oldest = *self
-                .map
-                .iter()
-                .min_by_key(|(_, e)| e.1)
-                .map(|(k, _)| k)
-                .unwrap();
-            self.bytes -= self.map.remove(&oldest).unwrap().0;
+            let Some(oldest) = self.map.iter().min_by_key(|(_, e)| e.1).map(|(k, _)| *k) else {
+                break;
+            };
+            self.bytes -= self.map.remove(&oldest).map_or(0, |e| e.0);
         }
     }
 }

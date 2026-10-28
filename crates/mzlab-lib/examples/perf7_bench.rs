@@ -139,7 +139,7 @@ fn bench_flash(lib: &Library<&[u8]>, queries: &[Query], reps: usize) {
             h = 0xcbf2_9ce4_8422_2325u64;
             for q in queries {
                 let v =
-                    flash_top(&lib, q, mode, 0.01, &ranges, &mut acc, Some(10), |_| true).unwrap();
+                    flash_top(lib, q, mode, 0.01, &ranges, &mut acc, Some(10), |_| true).unwrap();
                 cnt += v.len();
                 check += v
                     .iter()
@@ -164,7 +164,7 @@ fn bench_flash(lib: &Library<&[u8]>, queries: &[Query], reps: usize) {
 }
 
 fn bench_parse(set: &[Spectrum], reps: usize) {
-    let text = mgf_of(&set[..]);
+    let text = mgf_of(&set[..set.len().min(50_000)]);
     let mut best = f64::MAX;
     let mut nrec = 0;
     for _ in 0..reps {
