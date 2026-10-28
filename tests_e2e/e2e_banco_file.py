@@ -66,6 +66,18 @@ try:
             assert pg.evaluate("getComputedStyle(document.querySelector('#hri-list .r span')).fontVariantNumeric") == "tabular-nums" or "tabular" in pg.evaluate("getComputedStyle(document.querySelector('#hri-list .r')).fontVariantNumeric")
             tab("hdr"); assert "·" not in pg.inner_text("#sb-title") or str(n) not in pg.inner_text("#sb-title"), "the count leaves with the tab"
         step("list of the scans: count beside the title, no line above the table, fixed decimals per column", lst)
+        def lst_scroll():
+            tab("lst"); pg.wait_for_selector("#hri-list .r", timeout=15000)
+            pg.evaluate("window.__r0 = document.querySelector('#hri-list .r'); document.querySelector('#hri-list').scrollTop += 3")
+            pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+            assert pg.evaluate("window.__r0 === document.querySelector('#hri-list .r') && window.__r0.isConnected"), "rows rebuilt although the visible interval did not change"
+            far = pg.evaluate("(() => { const L = document.querySelector('#hri-list'); return L.scrollHeight - L.clientHeight > 2 * L.clientHeight; })()")
+            if far:
+                pg.evaluate("(() => { const L = document.querySelector('#hri-list'); L.scrollTop = L.scrollHeight; })()")
+                pg.wait_for_function("window.__r0 && !window.__r0.isConnected", timeout=5000)
+            row = pg.locator("#hri-list .r").nth(2); i = row.get_attribute("data-i"); row.click()
+            assert pg.evaluate("document.querySelectorAll('#hri-list .r.cur').length") == 1 and pg.evaluate(f"document.querySelector('#hri-list .r.cur').dataset.i") == i, "the click on a row (delegated) marks it"
+        step("list of the scans: rows rebuilt only when the interval changes, the click works through the delegated handler", lst_scroll)
         assert not [e for e in r.errs if e[0] != "console.warning"], r.errs[:5]
     r.close()
 except Exception as e:

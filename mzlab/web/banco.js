@@ -117,8 +117,11 @@ const BANCO = (() => {
     const H = 22; /** @type {any[]} */ let rows = []; let cur = 0;
     const cur0 = () => { const c = p.link != null ? E.panels.find(q => q.id === p.link) : null; return c && c.cur != null ? c.cur : p.r0 != null && p.r1 != null ? (p.r0 + p.r1) / 2 : null; };
     const txt = (/** @type {any} */ s) => `${s.no} · ${s.rt.toFixed(3)} min · MS${s.level}${s.prec != null ? " → " + s.prec.toFixed(2) : ""}`;
+    let pk = "", pr = rows;                 // what is on the screen: rebuilt only when the interval, the selected row or the list changes
     const paint = () => {
-      const a = Math.max(0, Math.floor(L.scrollTop / H) - 2), z = Math.min(rows.length, a + Math.ceil(L.clientHeight / H) + 5);
+      const a = Math.max(0, Math.floor(L.scrollTop / H) - 2), z = Math.min(rows.length, a + Math.ceil(L.clientHeight / H) + 5), k = a + "|" + z + "|" + cur;
+      if (k === pk && rows === pr) return;
+      pk = k; pr = rows;
       L.innerHTML = h`<div style="height:${rows.length * H}px"></div>${raw(rows.slice(a, z).map((s, j) => h`<div class="r${a + j === cur ? " on" : ""}" role="option" id="bsp-${a + j}" aria-selected="${a + j === cur}" data-i="${a + j}" style="top:${(a + j) * H}px">${txt(s)}</div>`).join(""))}`;
       L.setAttribute("aria-activedescendant", "bsp-" + cur);
     };
@@ -244,7 +247,7 @@ const BANCO = (() => {
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
     SPECBAR.title(p, p.el.querySelector(".ttl"));
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
-    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? Math.max(...d.y) : null;
+    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? maxOf(d.y) : null;
     h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
   }
   function decorate(p, c) {
@@ -409,13 +412,17 @@ const BANCO = (() => {
     const L = b.querySelector(".hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
     // fixed decimals per column, so the digits line up
     const fx = { no: v => v, rt: v => (+v).toFixed(3), prec: v => (v == null ? "" : (+v).toFixed(3)), tic: v => (+v).toExponential(2), bpmz: v => (+v).toFixed(4), bpint: v => (+v).toExponential(2) };
-    const paint = () => {
+    // the rows are rebuilt only when the visible interval (a, z) changes (or the order does): a click that starts during a scroll is not lost under a fresh row
+    let pa = -1, pz = -1;
+    const paint = (/** @type {boolean} */ force = false) => {
       const a = Math.max(0, Math.floor((L.scrollTop - H) / H)), z = Math.min(idx.length, a + Math.ceil(L.clientHeight / H) + 3);
+      if (!force && a === pa && z === pz) return;
+      pa = a; pz = z;
       R.innerHTML = idx.slice(a, z).map((i, j) => `<div class="r${cur != null && Math.abs(t.rt[i] - cur) < 1e-4 ? " cur" : ""}" data-i="${i}" style="position:absolute;top:${(a + j) * H}px;left:0;right:0">${cols.map(c => `<span>${esc(fx[c[0]](t[c[0]][i]))}</span>`).join("")}</div>`).join("");
-      R.querySelectorAll(".r").forEach(r => { r.onclick = () => { const i = +r.dataset.i; goScan(p, t.sid[i], t.rt[i], f.k); R.querySelectorAll(".r").forEach(x => x.classList.toggle("cur", x === r)); }; });
     };
-    L.onscroll = paint;
-    L.querySelectorAll(".hd span").forEach(h => { h.onclick = () => { const c = h.dataset.c; sd = sk === c ? -sd : 1; sk = c; idx.sort((x, y) => sd * ((t[c][x] ?? -Infinity) - (t[c][y] ?? -Infinity)) || x - y); L.scrollTop = 0; paint(); }; });
+    R.onclick = e => { const r = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".r")); if (!r) return; const i = +(r.dataset.i || 0); goScan(p, t.sid[i], t.rt[i], f.k); R.querySelectorAll(".r").forEach(x => x.classList.toggle("cur", x === r)); };
+    L.onscroll = () => paint();
+    L.querySelectorAll(".hd span").forEach(h => { h.onclick = () => { const c = h.dataset.c; sd = sk === c ? -sd : 1; sk = c; idx.sort((x, y) => sd * ((t[c][x] ?? -Infinity) - (t[c][y] ?? -Infinity)) || x - y); L.scrollTop = 0; paint(true); }; });
     paint();
     if (cur != null) { const i0 = t.rt.findIndex(v => v >= cur - 1e-4); if (i0 >= 0) { L.scrollTop = Math.max(0, i0 * H - 40); paint(); } }
   }
