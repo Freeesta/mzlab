@@ -76,7 +76,7 @@ fn mean(v: &[f64]) -> f64 {
 }
 
 /// The row of the standard, or an error naming that there is none.
-fn standard(t: &Aligned, r: &Reference) -> Result<usize> {
+pub(crate) fn standard(t: &Aligned, r: &Reference) -> Result<usize> {
     match *r {
         Reference::Id(id) => t.row_of_id(id),
         Reference::Nearest {

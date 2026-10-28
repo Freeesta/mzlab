@@ -206,7 +206,7 @@ pub(super) mod mcr {
                 sum_d2 += d[i][j] * d[i][j];
             }
         }
-        99.0 * (sum_r2 / sum_d2.max(1e-300)).sqrt()
+        100.0 * (sum_r2 / sum_d2.max(1e-300)).sqrt()
     }
 
     pub(in crate::deconvolve) fn mcr_als(

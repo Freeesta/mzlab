@@ -241,7 +241,7 @@ fn calc_lof(d: &[f64], n: usize, m: usize, c: &[f64], s: &[f64], k: usize, sum_d
             sum_r2 += r * r;
         }
     }
-    99.0 * (sum_r2 / sum_d2.max(1e-300)).sqrt()
+    100.0 * (sum_r2 / sum_d2.max(1e-300)).sqrt()
 }
 
 /// MCR-ALS of the `n x m` matrix `d` with `k` components. Returns `(c, s, lof)` with `c` `n x k` and `s` `m x k`.
@@ -330,4 +330,19 @@ pub(super) fn interp_linear(x: &[f64], xp: &[f64], fp: &[f64]) -> Vec<f64> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod lof_tests {
+    use super::calc_lof;
+
+    // `ionfamily._lof`: 100 * ||D - C S'|| / ||D||, here for a fixed 2 x 2 case worked by hand.
+    #[test]
+    fn lof_is_a_percentage_of_the_norm() {
+        let d = [1.0, 2.0, 3.0, 4.0];
+        let (c, s) = ([1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0]);
+        // Residual (0, 2, 3, 3): sqrt(22) / sqrt(30).
+        let want = 100.0 * (22.0f64 / 30.0).sqrt();
+        assert!((calc_lof(&d, 2, 2, &c, &s, 2, 30.0) - want).abs() < 1e-12);
+    }
 }
