@@ -98,7 +98,7 @@ export async function draw(p) {
   const rt = d.n > 1 ? `${d.rt0.toFixed(2)}–${d.rt1.toFixed(2)}` : d.rt0.toFixed(2);
   p._a = { x0, x1, y0, y1, ymin: y0, ymax: y1, yfull, full, W, H, X, Y, f, uvd: { nm, y, rt: d.rt0, rt1: d.rt1, n: d.n },
     yinv: (/** @type {number} */ py) => y1 - (py - M.t) / ph * (y1 - y0),
-    hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(w); return { px: X(nm[i]), html: `<b>${nm[i].toFixed(0)} nm</b><div>${y[i].toFixed(2)} mAU</div>` }; } };
+    hov: (/** @type {number} */ px) => { const w = x0 + (px - M.l) / pw * (x1 - x0), i = near(w); return { px: X(nm[i]), html: `<b>${T("hov.nm", { v: nm[i].toFixed(0) })}</b><div>${T("map.hov.mean")}: <b>${T("hov.mau", { v: y[i].toFixed(2) })}</b></div>` }; } };
   if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima (etichette-picchi.js)
   p.leg.innerHTML = h`<span><i style="background:${f.color}"></i>${f.label}</span> · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = "";
