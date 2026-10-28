@@ -66,15 +66,6 @@ fn refuse_newer(meta: &Value, kind: &str) -> Result<()> {
     Ok(())
 }
 
-/// A count or an offset of the meta: a whole number from 0 to 2^53 (the JSON number is a double; a negative, fractional or absurd one is a damaged file, never a silent 0 or a saturated cast).
-fn whole(e: &Value, k: &str) -> Result<u64> {
-    e.get(k)
-        .and_then(|v| v.f64())
-        .filter(|v| v.fract() == 0.0 && (0.0..=9007199254740992.0).contains(v))
-        .map(|v| v as u64)
-        .ok_or_else(bad)
-}
-
 /// A container opened: its meta and where its data start. The arrays are read by offset, one column at a time, never the whole file.
 pub(crate) struct Opened {
     pub(crate) meta: Value,
@@ -117,6 +108,15 @@ pub(crate) fn open<R: ReadAt>(r: &mut R, size: u64, kind: &str) -> Result<Opened
     };
     opened.check(size)?;
     Ok(opened)
+}
+
+/// A count or an offset of the meta: a whole number from 0 to 2^53 (the JSON number is a double; a negative, fractional or absurd one is a damaged file, never a silent 0 or a saturated cast).
+fn whole(e: &Value, k: &str) -> Result<u64> {
+    e.get(k)
+        .and_then(|v| v.f64())
+        .filter(|v| v.fract() == 0.0 && (0.0..=9007199254740992.0).contains(v))
+        .map(|v| v as u64)
+        .ok_or_else(bad)
 }
 
 impl Opened {

@@ -6,6 +6,7 @@
 use std::borrow::Cow;
 
 use super::colonne::infer;
+use super::csv_campi::{records, Cells};
 use super::json::legacy_kind;
 use super::{
     number_replicates, tabella_da_value, to_json3, Campione, Cell, Colonna, Tabella, TipoColonna,
@@ -40,7 +41,7 @@ const FIXED: [&str; 23] = [
     "composto",
 ];
 
-fn bad(row: usize, col: &str) -> Error {
+pub(super) fn bad(row: usize, col: &str) -> Error {
     Error::new("error.badCsv")
         .with("riga", row)
         .with("colonna", col)
@@ -77,123 +78,6 @@ fn field_of(h: &str) -> Option<&'static str> {
         "dose" => "dose",
         _ => return None,
     })
-}
-
-type Cells<'a> = Vec<(Cow<'a, str>, bool)>;
-
-/// The field being read: a run of `text` still borrowed (`start..`), the text that came before it when the field stopped being one slice (`""`, text after a closing quote), and the flags.
-struct Field {
-    owned: String,
-    has_owned: bool,
-    start: usize,
-    /// End of the run when a closing quote ended it (the quote itself is not content).
-    stop: Option<usize>,
-    quoted: bool,
-}
-
-impl Field {
-    /// Whether what the field holds so far, with the run ending at `end`, is blank (a quote opens a quoted field only then).
-    fn blank(&self, text: &str, end: usize) -> bool {
-        self.owned.trim().is_empty() && text[self.start..end].trim().is_empty()
-    }
-
-    /// Whether the field holds nothing at all (before any trimming), with the run ending at `end`.
-    fn empty(&self, end: usize) -> bool {
-        self.owned.is_empty() && self.start >= end
-    }
-
-    /// The finished field, its run ending at `end` (the closing quote's position when there was one), and the start of the next.
-    fn take<'a>(&mut self, text: &'a str, end: usize, next: usize) -> (Cow<'a, str>, bool) {
-        let end = self.stop.unwrap_or(end);
-        let run = &text[self.start..end];
-        let v = if self.has_owned {
-            self.owned.push_str(run);
-            Cow::Owned(std::mem::take(&mut self.owned))
-        } else if self.quoted {
-            Cow::Borrowed(run)
-        } else {
-            Cow::Borrowed(run.trim())
-        };
-        let quoted = std::mem::take(&mut self.quoted);
-        self.has_owned = false;
-        self.stop = None;
-        self.start = next;
-        (v, quoted)
-    }
-}
-
-/// The records of `text`: quoted fields keep their separators and newlines (`""` is a quote); a field is trimmed unless quoted. A field is a slice of `text` unless it holds a `""` or text after
-/// its closing quote. Scans bytes: `"`, `\n`, `\r` and the separator are the only bytes that matter and none of them occurs inside a multi-byte character.
-fn records(text: &str, sep: char) -> Result<Vec<Cells<'_>>> {
-    let text = text.trim_start_matches('\u{feff}');
-    let bytes = text.as_bytes();
-    let mut sb = [0u8; 4];
-    let sepb = sep.encode_utf8(&mut sb).as_bytes();
-    let special = |b: u8| matches!(b, b'"' | b'\n' | b'\r') || b == sepb[0];
-    let mut out: Vec<Cells> = Vec::new();
-    let (mut row, mut width): (Cells, usize) = (Vec::new(), 0);
-    let mut f = Field {
-        owned: String::new(),
-        has_owned: false,
-        start: 0,
-        stop: None,
-        quoted: false,
-    };
-    let (mut at, mut inq) = (0, false);
-    while let Some(d) = bytes[at..].iter().position(|&b| special(b)) {
-        let j = at + d;
-        let b = bytes[j];
-        at = j + 1;
-        if inq {
-            if b != b'"' {
-                continue;
-            }
-            if bytes.get(j + 1) == Some(&b'"') {
-                // `""`: the first quote is content, the second is skipped
-                f.owned.push_str(&text[f.start..=j]);
-                (f.has_owned, f.start, at) = (true, j + 2, j + 2);
-                continue;
-            }
-            inq = false;
-            let ends = match bytes.get(j + 1) {
-                None => true,
-                Some(&n) => matches!(n, b'\n' | b'\r') || bytes[j + 1..].starts_with(sepb),
-            };
-            if ends {
-                f.stop = Some(j);
-            } else {
-                f.owned.push_str(&text[f.start..j]);
-                (f.has_owned, f.start) = (true, j + 1);
-            }
-        } else if b == b'"' && f.blank(text, j) {
-            f.owned.clear();
-            (f.has_owned, f.start, f.quoted, inq) = (false, j + 1, true, true);
-        } else if b == sepb[0] && bytes[j..].starts_with(sepb) {
-            at = j + sepb.len();
-            row.push(f.take(text, j, at));
-        } else if b == b'\n' || b == b'\r' {
-            if b == b'\r' && bytes.get(j + 1) == Some(&b'\n') {
-                at += 1;
-            }
-            row.push(f.take(text, j, at));
-            let blank = row.len() == 1 && row[0].0.is_empty() && !row[0].1;
-            if blank {
-                row.clear();
-            } else {
-                width = width.max(row.len());
-                out.push(std::mem::replace(&mut row, Vec::with_capacity(width)));
-            }
-        }
-    }
-    if inq {
-        return Err(bad(out.len() + 1, ""));
-    }
-    let end = f.stop.unwrap_or(bytes.len());
-    if !f.empty(end) || !row.is_empty() {
-        row.push(f.take(text, bytes.len(), bytes.len()));
-        out.push(row);
-    }
-    Ok(out)
 }
 
 /// The separator of the first line: the one of `,` `;` tab used most outside quotes (`,` when none).
@@ -339,6 +223,19 @@ fn time_of<'a>(
     Ok(())
 }
 
+/// Each header: Ok(fixed field) or Err(free column name); an empty or repeated name is an error.
+fn heads_of(head: &Cells) -> Result<Vec<std::result::Result<&'static str, String>>> {
+    let mut heads = Vec::new();
+    for (h, _) in head {
+        let f = field_of(h).ok_or_else(|| h.trim().to_string());
+        if f.as_ref().err().is_some_and(|n| n.is_empty()) || heads.contains(&f) {
+            return Err(bad(1, h));
+        }
+        heads.push(f);
+    }
+    Ok(heads)
+}
+
 /// Reads `text`; `sep` None = detected; `declared` gives the type of the free columns it names (the others are inferred).
 pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabella> {
     let recs = records(text, sep.unwrap_or_else(|| detect(text)))?;
@@ -348,15 +245,7 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             colonne: declared.to_vec(),
         });
     };
-    // each header: Ok(fixed field) or Err(free column name)
-    let mut heads: Vec<std::result::Result<&'static str, String>> = Vec::new();
-    for (h, _) in head {
-        let f = field_of(h).ok_or_else(|| h.trim().to_string());
-        if f.as_ref().err().is_some_and(|n| n.is_empty()) || heads.contains(&f) {
-            return Err(bad(1, h));
-        }
-        heads.push(f);
-    }
+    let heads = heads_of(head)?;
     let mut free: Vec<(String, Vec<Option<&str>>)> = (heads.iter())
         .filter_map(|h| h.as_ref().err())
         .map(|h| (h.clone(), Vec::new()))
@@ -571,200 +460,4 @@ pub fn csv_scrivi(input: &str) -> Result<String> {
     let mut j = Out::default();
     j.raw("{\"testo\":").str(&text).raw("}");
     Ok(j.0)
-}
-
-#[cfg(test)]
-mod prove {
-    use super::*;
-
-    /// The first parser, char by char, kept as the reference the byte scanner is compared with.
-    /// (was) quoted fields keep their separators and newlines (`""` is a quote); a field is trimmed unless quoted.
-    fn records_ref(text: &str, sep: char) -> Result<Vec<Vec<(String, bool)>>> {
-        let mut out: Vec<Vec<(String, bool)>> = Vec::new();
-        let (mut row, mut cur, mut quoted, mut inq) =
-            (Vec::<(String, bool)>::new(), String::new(), false, false);
-        let mut it = text.trim_start_matches('\u{feff}').chars().peekable();
-        let end = |row: &mut Vec<(String, bool)>, cur: &mut String, quoted: &mut bool| {
-            let v = if *quoted {
-                std::mem::take(cur)
-            } else {
-                cur.trim().to_string()
-            };
-            cur.clear();
-            row.push((v, std::mem::take(quoted)));
-        };
-        while let Some(c) = it.next() {
-            if inq {
-                match (c, it.peek()) {
-                    ('"', Some('"')) => {
-                        cur.push('"');
-                        it.next();
-                    }
-                    ('"', _) => inq = false,
-                    _ => cur.push(c),
-                }
-            } else if c == '"' && cur.trim().is_empty() {
-                cur.clear();
-                inq = true;
-                quoted = true;
-            } else if c == sep {
-                end(&mut row, &mut cur, &mut quoted);
-            } else if c == '\n' || c == '\r' {
-                if c == '\r' && it.peek() == Some(&'\n') {
-                    it.next();
-                }
-                end(&mut row, &mut cur, &mut quoted);
-                let blank = row.len() == 1 && row[0].0.is_empty() && !row[0].1;
-                let r = std::mem::take(&mut row);
-                if !blank {
-                    out.push(r);
-                }
-            } else {
-                cur.push(c);
-            }
-        }
-        if inq {
-            return Err(bad(out.len() + 1, ""));
-        }
-        if !cur.is_empty() || !row.is_empty() {
-            end(&mut row, &mut cur, &mut quoted);
-            out.push(row);
-        }
-        Ok(out)
-    }
-
-    fn owned(r: Result<Vec<Cells<'_>>>) -> Result<Vec<Vec<(String, bool)>>> {
-        r.map(|rows| {
-            rows.into_iter()
-                .map(|r| r.into_iter().map(|(v, q)| (v.into_owned(), q)).collect())
-                .collect()
-        })
-    }
-
-    fn same(text: &str, sep: char) {
-        assert_eq!(
-            owned(records(text, sep)),
-            records_ref(text, sep),
-            "{text:?} sep {sep:?}"
-        );
-    }
-
-    /// Every text up to 6 symbols of an alphabet made of the awkward ones, for the three separators.
-    #[test]
-    fn byte_scanner_equals_char_parser_on_every_short_text() {
-        let alpha = ['a', ' ', '"', ',', ';', '\n', '\r', 'é'];
-        for sep in [',', ';', '\t'] {
-            let mut texts = vec![String::new()];
-            let mut level = vec![String::new()];
-            for _ in 0..6 {
-                level = level
-                    .iter()
-                    .flat_map(|t| alpha.iter().map(move |c| format!("{t}{c}")))
-                    .collect();
-                texts.extend(level.iter().cloned());
-            }
-            for t in &texts {
-                same(t, sep);
-            }
-        }
-    }
-
-    #[test]
-    fn byte_scanner_equals_char_parser_on_random_texts() {
-        let alpha = [
-            'a', 'b', ' ', ' ', '"', '"', ',', ';', '\t', '\n', '\r', 'é', '€', '\u{a0}',
-            '\u{feff}',
-        ];
-        let mut s = 0x9e3779b97f4a7c15u64;
-        for _ in 0..200_000 {
-            s = s
-                .wrapping_mul(6364136223846793005)
-                .wrapping_add(1442695040888963407);
-            let len = (s >> 60) as usize + (s >> 20 & 0x1f) as usize;
-            let mut t = String::new();
-            let mut x = s;
-            for _ in 0..len {
-                x = x
-                    .wrapping_mul(6364136223846793005)
-                    .wrapping_add(1442695040888963407);
-                t.push(alpha[(x >> 33) as usize % alpha.len()]);
-            }
-            same(&t, [',', ';', '\t', 'é'][(s >> 7) as usize % 4]);
-        }
-    }
-
-    #[test]
-    fn records_of_the_awkward_cases() {
-        let cells = |t: &str| owned(records(t, ',')).unwrap();
-        let c = |v: &str, q: bool| (v.to_string(), q);
-        assert_eq!(
-            cells("a,\"x,y\",c\n"),
-            vec![vec![c("a", false), c("x,y", true), c("c", false)]]
-        );
-        assert_eq!(
-            cells("\"l1\nl2\",z"),
-            vec![vec![c("l1\nl2", true), c("z", false)]]
-        );
-        assert_eq!(
-            cells("\"say \"\"hi\"\"\""),
-            vec![vec![c("say \"hi\"", true)]]
-        );
-        assert_eq!(
-            cells("ab\"c,d"),
-            vec![vec![c("ab\"c", false), c("d", false)]]
-        );
-        assert_eq!(
-            cells("\"abc\" ,d"),
-            vec![vec![c("abc ", true), c("d", false)]]
-        );
-        assert_eq!(
-            cells("a\rb\r\nc\n\n\nd"),
-            vec![
-                vec![c("a", false)],
-                vec![c("b", false)],
-                vec![c("c", false)],
-                vec![c("d", false)]
-            ]
-        );
-        assert_eq!(
-            cells("\u{feff}a,é€\n"),
-            vec![vec![c("a", false), c("é€", false)]]
-        );
-        assert_eq!(
-            cells("  x  ,\"  y  \""),
-            vec![vec![c("x", false), c("  y  ", true)]]
-        );
-        assert!(records("\"open", ',').is_err());
-    }
-
-    /// 10^5 rows of 12 columns: the two parsers, best of 5.
-    #[test]
-    #[ignore = "timing"]
-    fn timing_of_the_parsers() {
-        let mut t = String::from("file,sha256,campione_id,polarita,gruppo,tipo,tempo,unita_tempo,replica,concentrazione,unita,note\n");
-        for i in 0..100_000 {
-            t += &format!(
-                "run_{i:06}.mzML,{:064x},S{i},pos,g{},sample,{}.5,min,{},{}.25,ppm,\"note, {i}\"\n",
-                i * 7919,
-                i % 9,
-                i % 40,
-                i % 3 + 1,
-                i % 50
-            );
-        }
-        let best = |f: &dyn Fn() -> usize| {
-            (0..5)
-                .map(|_| {
-                    let t0 = std::time::Instant::now();
-                    let n = f();
-                    assert_eq!(n, 100_001);
-                    t0.elapsed().as_secs_f64() * 1e3
-                })
-                .fold(f64::MAX, f64::min)
-        };
-        let old = best(&|| records_ref(&t, ',').unwrap().len());
-        let new = best(&|| records(&t, ',').unwrap().len());
-        let all = best(&|| leggi(&t, None, &[]).unwrap().campioni.len() + 1);
-        eprintln!("records old {old:.2} ms · new {new:.2} ms · leggi (whole) {all:.2} ms");
-    }
 }
