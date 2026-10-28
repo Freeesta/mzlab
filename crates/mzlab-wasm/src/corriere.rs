@@ -8,22 +8,50 @@ use wasm_bindgen::prelude::*;
 
 /// The courier of `build_mzidx`; without the two functions (`window` 0) every spectrum is decoded by the builder itself.
 pub(crate) struct JsCorriere {
-    pub(crate) send: Option<Function>,
-    pub(crate) take: Option<Function>,
-    pub(crate) window: usize,
+    send: Option<Function>,
+    take: Option<Function>,
+    window: usize,
+}
+
+impl JsCorriere {
+    /// From the helpers of `idx-aiuti.js` ({send, take, window}); anything else gives no helper.
+    pub(crate) fn new(o: &JsValue) -> Self {
+        // `Reflect.get` of undefined throws: no helper
+        let get = |k: &str| js_sys::Reflect::get(o, &k.into()).ok();
+        let f = |k: &str| get(k).and_then(|v| v.dyn_into::<Function>().ok());
+        let window = get("window").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        JsCorriere {
+            send: f("send"),
+            take: f("take"),
+            window: window.max(0.0) as usize,
+        }
+    }
 }
 
 impl Corriere for JsCorriere {
     fn window(&self) -> usize {
-        if self.send.is_some() && self.take.is_some() { self.window } else { 0 }
+        if self.send.is_some() && self.take.is_some() {
+            self.window
+        } else {
+            0
+        }
     }
     fn send(&mut self, seq: u64, job: &[u8], bound: usize) -> bool {
         let Some(f) = &self.send else { return false };
-        f.call3(&JsValue::NULL, &(seq as f64).into(), &Uint8Array::from(job), &(bound as f64).into())
-            .is_ok_and(|v| v.is_truthy())
+        f.call3(
+            &JsValue::NULL,
+            &(seq as f64).into(),
+            &Uint8Array::from(job),
+            &(bound as f64).into(),
+        )
+        .is_ok_and(|v| v.is_truthy())
     }
     fn take(&mut self, seq: u64) -> Option<Vec<u8>> {
-        let v = self.take.as_ref()?.call1(&JsValue::NULL, &(seq as f64).into()).ok()?;
+        let v = self
+            .take
+            .as_ref()?
+            .call1(&JsValue::NULL, &(seq as f64).into())
+            .ok()?;
         v.dyn_ref::<Uint8Array>().map(Uint8Array::to_vec)
     }
 }

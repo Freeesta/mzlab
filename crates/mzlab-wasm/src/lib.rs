@@ -550,8 +550,7 @@ impl Engine {
 
 /// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with
 /// `write(offset, bytes)`. The scan table (levels, polarities as signed bytes, RT and TIC as little-endian `f64`, the JSON rows,
-/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`).
-/// `aiuto_send`/`aiuto_take` (with `aiuto_window` jobs out at most) give the arrays to helper workers (`corriere.rs`); the bytes are the same without them. Returns the statistics as JSON;
+/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`); `aiuti` ({send, take, window} or undefined) gives the arrays to helper workers (`corriere.rs`), same bytes. Returns the statistics as JSON;
 /// errors are JSON with a key (`error.memoryBudget` when memory cannot be reserved).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -571,9 +570,7 @@ pub fn build_mzidx(
     spill_put: Option<Function>,
     spill_get: Option<Function>,
     cap_mb: f64,
-    aiuto_send: Option<Function>,
-    aiuto_take: Option<Function>,
-    aiuto_window: u32,
+    aiuti: JsValue,
 ) -> Result<String, JsValue> {
     mzlab_core::stima::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
     let table = mzidx::ScanTable {
@@ -588,19 +585,15 @@ pub fn build_mzidx(
     };
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
-    let mut spill = spill_put
-        .zip(spill_get)
-        .map(|(put, get)| nativi::JsSpill { put, get });
-    let mut aiuti = corriere::JsCorriere { send: aiuto_send, take: aiuto_take, window: aiuto_window as usize };
+    let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
     let st = mzidx::build_mzml_corriere(
         &table,
         BlockReader::new(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
-        &mut aiuti,
-    )
-    .map_err(|e| error_json(&e))?;
+        &mut corriere::JsCorriere::new(&aiuti),
+    ).map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes

@@ -4,7 +4,10 @@
 
 use super::Decode;
 use crate::error::Result;
-use crate::mzml::{assemble, decode_peaks, finish_chromatogram, finish_spectrum, Arr, ArrayKind, Chrom, Item, Mobility, Peaks, Spec, Spectrum};
+use crate::mzml::picchi::{assemble, decode_peaks, Arr, Peaks};
+use crate::mzml::{
+    finish_chromatogram, finish_spectrum, ArrayKind, Chrom, Item, Mobility, Spec, Spectrum,
+};
 use crate::mzmlarray::Inflate;
 use crate::numarray::Num;
 use std::collections::VecDeque;
@@ -33,7 +36,7 @@ impl Decodificatore {
     pub fn decode(&mut self, job: &[u8]) -> Option<Vec<u8>> {
         let (len, arrays) = read_job(job)?;
         let p = decode_peaks(arrays.into_iter(), len, &mut self.0).ok()?;
-        Some(write_peaks(&p))
+        write_peaks(&p)
     }
 }
 
@@ -41,19 +44,29 @@ const KINDS: [ArrayKind; 3] = [ArrayKind::Mz, ArrayKind::Intensity, ArrayKind::M
 const NUMS: [Num; 4] = [Num::F32, Num::F64, Num::I32, Num::I64];
 
 /// `len` u64, then per array: kind, number type, zlib (one byte each), the length of the text (u32) and the text. Little endian.
-fn write_job(s: &Spec) -> (Vec<u8>, usize) {
+/// `None` for a text over 4 GB: the parser decodes that spectrum itself.
+fn write_job(s: &Spec) -> Option<(Vec<u8>, usize)> {
     let mut out = Vec::new();
     out.extend_from_slice(&(s.len as u64).to_le_bytes());
     let mut bound = 16;
     for a in s.arrays.iter().filter(|a| KINDS.contains(&a.kind)) {
         let k = KINDS.iter().position(|&k| k == a.kind).unwrap_or(0);
         let n = NUMS.iter().position(|&n| n == a.num).unwrap_or(0);
-        out.extend_from_slice(&[k as u8, n as u8, u8::from(a.zlib)]);
-        out.extend_from_slice(&(a.text.len() as u32).to_le_bytes());
+        out.extend_from_slice(&[
+            u8::try_from(k).ok()?,
+            u8::try_from(n).ok()?,
+            u8::from(a.zlib),
+        ]);
+        out.extend_from_slice(&u32::try_from(a.text.len()).ok()?.to_le_bytes());
         out.extend_from_slice(a.text.as_bytes());
-        bound += 8 + s.len * if a.kind == ArrayKind::Intensity { 12 } else { 8 };
+        bound += 8 + s.len
+            * if a.kind == ArrayKind::Intensity {
+                12
+            } else {
+                8
+            };
     }
-    (out, bound)
+    Some((out, bound))
 }
 
 fn read_job(job: &[u8]) -> Option<(usize, Vec<Arr<'_>>)> {
@@ -61,37 +74,56 @@ fn read_job(job: &[u8]) -> Option<(usize, Vec<Arr<'_>>)> {
     let (mut at, mut arrays) = (8, Vec::new());
     while at < job.len() {
         let h = job.get(at..at + 7)?;
-        let n = u32::from_le_bytes(h.get(3..7)?.try_into().ok()?) as usize;
-        let text = std::str::from_utf8(job.get(at + 7..at + 7 + n)?).ok()?;
+        let n = usize::try_from(u32::from_le_bytes(h.get(3..7)?.try_into().ok()?)).ok()?;
+        let end = (at + 7).checked_add(n)?;
+        let text = std::str::from_utf8(job.get(at + 7..end)?).ok()?;
         arrays.push(Arr {
             kind: *KINDS.get(usize::from(*h.first()?))?,
             num: *NUMS.get(usize::from(*h.get(1)?))?,
             zlib: *h.get(2)? == 1,
             text,
         });
-        at += 7 + n;
+        at = end;
     }
     Some((len, arrays))
 }
 
 /// The counts of mz, intensity, wide (or `u32::MAX` for none) and mobility (the same), then the values: m/z `f64`, intensity `f32`, wide and mobility `f64`.
-fn write_peaks(p: &Peaks) -> Vec<u8> {
+/// `None` for a count that does not fit (the parser decodes that spectrum itself).
+fn write_peaks(p: &Peaks) -> Option<Vec<u8>> {
     let none = u32::MAX;
-    let count = |v: Option<&Vec<f64>>| v.map_or(none, |v| v.len() as u32);
-    let mut out = Vec::with_capacity(16 + 8 * p.mz.len() + 4 * p.it.len() + 8 * (p.wide.as_ref().map_or(0, Vec::len) + p.mob.as_ref().map_or(0, Vec::len)));
-    for c in [p.mz.len() as u32, p.it.len() as u32, count(p.wide.as_ref()), count(p.mob.as_ref())] {
+    let len = |n: usize| u32::try_from(n).ok().filter(|&c| c != none);
+    let count = |v: Option<&Vec<f64>>| v.map_or(Some(none), |v| len(v.len()));
+    let mut out = Vec::with_capacity(
+        16 + 8 * p.mz.len()
+            + 4 * p.it.len()
+            + 8 * (p.wide.as_ref().map_or(0, Vec::len) + p.mob.as_ref().map_or(0, Vec::len)),
+    );
+    for c in [
+        len(p.mz.len())?,
+        len(p.it.len())?,
+        count(p.wide.as_ref())?,
+        count(p.mob.as_ref())?,
+    ] {
         out.extend_from_slice(&c.to_le_bytes());
     }
-    p.mz.iter().for_each(|x| out.extend_from_slice(&x.to_le_bytes()));
-    p.it.iter().for_each(|x| out.extend_from_slice(&x.to_le_bytes()));
+    p.mz.iter()
+        .for_each(|x| out.extend_from_slice(&x.to_le_bytes()));
+    p.it.iter()
+        .for_each(|x| out.extend_from_slice(&x.to_le_bytes()));
     for v in [&p.wide, &p.mob].into_iter().flatten() {
-        v.iter().for_each(|x| out.extend_from_slice(&x.to_le_bytes()));
+        v.iter()
+            .for_each(|x| out.extend_from_slice(&x.to_le_bytes()));
     }
-    out
+    Some(out)
 }
 
 fn read_peaks(b: &[u8]) -> Option<Peaks> {
-    let c = |i: usize| b.get(4 * i..4 * i + 4).and_then(|s| s.try_into().ok()).map(u32::from_le_bytes);
+    let c = |i: usize| {
+        b.get(4 * i..4 * i + 4)
+            .and_then(|s| s.try_into().ok())
+            .map(u32::from_le_bytes)
+    };
     let (nm, ni, nw, nb) = (c(0)? as usize, c(1)? as usize, c(2)?, c(3)?);
     let mut at = 16usize;
     // the next `n` values of `w` bytes
@@ -100,13 +132,30 @@ fn read_peaks(b: &[u8]) -> Option<Peaks> {
         at += s.len();
         Some(s)
     };
-    let f64s = |s: &[u8]| s.chunks_exact(8).map(|x| f64::from_le_bytes(x.try_into().unwrap_or_default())).collect::<Vec<f64>>();
+    let f64s = |s: &[u8]| {
+        s.chunks_exact(8)
+            .map(|x| f64::from_le_bytes(x.try_into().unwrap_or_default()))
+            .collect::<Vec<f64>>()
+    };
     let mz = f64s(take(nm, 8)?);
-    let it = take(ni, 4)?.chunks_exact(4).map(|x| f32::from_le_bytes(x.try_into().unwrap_or_default())).collect();
-    let mut opt = |n: u32| if n == u32::MAX { Some(None) } else { take(n as usize, 8).map(|s| Some(f64s(s))) };
+    let it = take(ni, 4)?
+        .chunks_exact(4)
+        .map(|x| f32::from_le_bytes(x.try_into().unwrap_or_default()))
+        .collect();
+    let mut opt = |n: u32| {
+        if n == u32::MAX {
+            Some(None)
+        } else {
+            take(n as usize, 8).map(|s| Some(f64s(s)))
+        }
+    };
     let wide = opt(nw)?;
     let mob = opt(nb)?;
-    (16 + 8 * nm + 4 * ni + 8 * (wide.as_ref().map_or(0, Vec::len) + mob.as_ref().map_or(0, Vec::len)) == b.len()).then_some(Peaks { mz, it, wide, mob })
+    (16 + 8 * nm
+        + 4 * ni
+        + 8 * (wide.as_ref().map_or(0, Vec::len) + mob.as_ref().map_or(0, Vec::len))
+        == b.len())
+    .then_some(Peaks { mz, it, wide, mob })
 }
 
 enum Slot {
@@ -126,13 +175,16 @@ pub(crate) struct Sent<'a> {
     dead: bool,
 }
 
-fn items(r: Result<(Spectrum, Option<Mobility>)>) -> Result<Vec<Item>> {
-    r.map(|(sp, m)| m.map(Item::Mobility).into_iter().chain([Item::Spectrum(sp)]).collect())
-}
-
 impl<'a> Sent<'a> {
     pub(crate) fn new(c: &'a mut dyn Corriere) -> Self {
-        Sent { c, inf: Inflate::new(), queue: VecDeque::new(), next: 0, out: 0, dead: false }
+        Sent {
+            c,
+            inf: Inflate::new(),
+            queue: VecDeque::new(),
+            next: 0,
+            out: 0,
+            dead: false,
+        }
     }
 
     /// The front job's answer (waiting for it), put in its place.
@@ -174,6 +226,15 @@ impl<'a> Sent<'a> {
     }
 }
 
+fn items(r: Result<(Spectrum, Option<Mobility>)>) -> Result<Vec<Item>> {
+    r.map(|(sp, m)| {
+        m.map(Item::Mobility)
+            .into_iter()
+            .chain([Item::Spectrum(sp)])
+            .collect()
+    })
+}
+
 impl Decode for Sent<'_> {
     fn spectrum(&mut self, s: Spec, f: &mut dyn FnMut(Item)) -> Result<()> {
         let window = self.c.window();
@@ -184,10 +245,7 @@ impl Decode for Sent<'_> {
         }
         // only the jobs that go out take a number: those out are always the last `out` numbers
         let seq = self.next;
-        if window > 0 && {
-            let (job, bound) = write_job(&s);
-            self.c.send(seq, &job, bound)
-        } {
+        if window > 0 && write_job(&s).is_some_and(|(job, bound)| self.c.send(seq, &job, bound)) {
             self.next += 1;
             self.queue.push_back(Slot::Out(seq, s));
             self.out += 1;

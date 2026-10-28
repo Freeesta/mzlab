@@ -23,6 +23,11 @@ onmessage = async ev => {
   const m = ev.data;
   if (m.op === "module") { if (!ready) { wasmModule = m.module || null; initWith(m.module); } startInit(); return; }
   await waiting; await ready;
+  await build(m);
+};
+
+// One index: the source read in slices, the index and its scratch file written to OPFS; the answer is a "done" or "error" message.
+async function build(m) {
   let ah = null, ac = null, sh = null, fonte = null, spName = null, fullAt = 0, endAt = 0, dir = null, aiuti = null;
   const dropSpill = async () => {                                   // the scratch file is never kept
     if (sh) { try { sh.truncate(0); sh.close(); } catch (_) { /* already closed */ } sh = null; }
@@ -74,7 +79,7 @@ onmessage = async ev => {
       // helpers only where workers can share memory; without them the builder decodes alone (same code, same bytes)
       if (m.aiuti > 0 && self.crossOriginIsolated) aiuti = await creaAiuti(m.aiuti, wasmModule);
       stats = build_mzidx(blob.size, read, write, levels, pols, rt, tic, rows, source, run, hr1, m.budget, spill ? spill.put : undefined, spill ? spill.get : undefined, m.cap || 0,
-        aiuti ? aiuti.send : undefined, aiuti ? aiuti.take : undefined, aiuti ? aiuti.window : 0);
+        aiuti || undefined);
       if (aiuti) { aiuti.chiudi(); aiuti = null; }
     }
     if (fonte) { fonte.close(); fonte = null; }
@@ -96,4 +101,4 @@ onmessage = async ev => {
     // a JSON string {"error_key", "params"} is an error of the builder itself; anything else (RuntimeError: unreachable, out of memory) lost the instance
     postMessage({ op: "error", text, fatal: !fullAt && !(typeof e === "string" && e.startsWith("{")) });
   }
-};
+}
