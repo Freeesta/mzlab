@@ -16,8 +16,12 @@ use crate::scantable::{self, Table};
 use crate::window::Windowed;
 mod late;
 mod non_mzml;
+mod passata;
+#[cfg(test)]
+mod tests;
 #[cfg(not(target_arch = "wasm32"))]
 pub use late::prepare_late;
+pub use passata::Passata;
 
 const PROBE: u64 = 65536;
 const STEP: u64 = 1 << 20;
@@ -29,65 +33,13 @@ pub struct Prepared {
 }
 
 fn hex(b: &[u8]) -> String {
-    b.iter().map(|x| format!("{x:02x}")).collect()
-}
-
-/// The three fingerprints of one file taken in one pass, fed piece by piece in file order (`aggiorna`): SHA-256 (identity), SHA-1 of every byte (the
-/// `sourceFile` of the mzML) and the `probe` (SHA-1 of the size, the first and the last 64 KB).
-pub struct Passata {
-    size: u64,
-    seen: u64,
-    sha256: Sha256,
-    /// `None` when the caller does not want the SHA-1 of every byte (an mzML upload: only the SHA-256 and the `probe` are used).
-    sha1: Option<Sha1>,
-    head: Vec<u8>,
-    tail: Vec<u8>,
-}
-
-impl Passata {
-    pub fn new(size: u64) -> Passata {
-        Passata {
-            size,
-            seen: 0,
-            sha256: Sha256::new(),
-            sha1: Some(Sha1::new()),
-            head: Vec::new(),
-            tail: Vec::new(),
-        }
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut s = String::with_capacity(b.len() * 2);
+    for x in b {
+        s.push(char::from(DIGITS[usize::from(x >> 4)]));
+        s.push(char::from(DIGITS[usize::from(x & 15)]));
     }
-    /// Only the SHA-256 and the `probe`: `fine` gives an empty SHA-1.
-    pub fn senza_sha1(size: u64) -> Passata {
-        Passata {
-            sha1: None,
-            ..Passata::new(size)
-        }
-    }
-    pub fn aggiorna(&mut self, b: &[u8]) {
-        self.sha256.update(b);
-        if let Some(h) = self.sha1.as_mut() {
-            h.update(b);
-        }
-        let n = (PROBE as usize)
-            .saturating_sub(self.head.len())
-            .min(b.len());
-        self.head.extend_from_slice(&b[..n]);
-        let old = self.tail.len();
-        let from = (old + b.len()).saturating_sub(PROBE as usize);
-        self.tail.drain(..from.min(old));
-        self.tail.extend_from_slice(&b[from.saturating_sub(old)..]);
-        self.seen += b.len() as u64;
-    }
-    /// `(sha256, sha1, probe)` as lower-case hex; `None` when the pieces given are not exactly `size` bytes.
-    pub fn fine(self) -> Option<(String, String, String)> {
-        if self.seen != self.size {
-            return None;
-        }
-        Some((
-            hex(&self.sha256.finalize()),
-            self.sha1.map(|h| hex(&h.finalize())).unwrap_or_default(),
-            probe_hex(self.size, &self.head, &self.tail),
-        ))
-    }
+    s
 }
 
 fn probe_hex(size: u64, head: &[u8], tail: &[u8]) -> String {
@@ -101,10 +53,17 @@ fn probe_hex(size: u64, head: &[u8], tail: &[u8]) -> String {
 /// The `probe` of a file of `size` bytes, reading only its first and last 64 KB (what `Passata` gives, for a caller that already has the SHA-256).
 pub fn probe<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
     let n = size.min(PROBE) as usize;
-    let (mut head, mut tail) = (vec![0u8; n], vec![0u8; n]);
-    r.read_at(0, &mut head)?;
-    r.read_at(size - n as u64, &mut tail)?;
-    Ok(probe_hex(size, &head, &tail))
+    // no read of length 0 (a JS callback may refuse it); a file that fits in the window has the same head and tail
+    let mut head = vec![0u8; n];
+    if n > 0 {
+        r.read_at(0, &mut head)?;
+    }
+    if size > PROBE {
+        let mut tail = vec![0u8; n];
+        r.read_at(size - n as u64, &mut tail)?;
+        return Ok(probe_hex(size, &head, &tail));
+    }
+    Ok(probe_hex(size, &head, &head))
 }
 
 /// Reads the whole file once for its three fingerprints (`Passata`): `(sha256, sha1, probe)`.

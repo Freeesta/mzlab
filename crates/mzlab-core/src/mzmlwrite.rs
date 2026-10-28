@@ -271,10 +271,17 @@ pub(crate) fn io(_: std::io::Error) -> Error {
 
 /// `s` with `&`, `<`, `>` and `"` escaped, in one pass (a text with none of them is copied once).
 fn esc(s: &str) -> String {
-    if !s.bytes().any(|b| matches!(b, b'&' | b'<' | b'>' | b'"')) {
-        return s.to_string();
-    }
     let mut out = String::with_capacity(s.len() + 16);
+    esc_into(&mut out, s);
+    out
+}
+
+/// `esc` appended to `out`.
+fn esc_into(out: &mut String, s: &str) {
+    if !s.bytes().any(|b| matches!(b, b'&' | b'<' | b'>' | b'"')) {
+        out.push_str(s);
+        return;
+    }
     for c in s.chars() {
         match c {
             '&' => out.push_str("&amp;"),
@@ -284,7 +291,6 @@ fn esc(s: &str) -> String {
             c => out.push(c),
         }
     }
-    out
 }
 
 /// The dwell time (userParam, read back by `mzmlhead`), then the precursor with its activation and the product of an SRM transition. The collision energy and the dwell
@@ -319,51 +325,81 @@ pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {
 }
 
 fn cv(acc: &str, name: &str, value: impl std::fmt::Display) -> String {
-    use std::fmt::Write;
     // room for the fixed text and a number: a `format!` starts from the length of its literal and grows while the value is written
     let mut s = String::with_capacity(acc.len() + name.len() + 256);
-    let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>");
+    cv_into(&mut s, acc, name, value);
     s
 }
 
-fn window_xml(w: Option<(f64, f64)>) -> String {
-    match w {
-        Some((lo, hi)) => {
-            let mut s = String::with_capacity(768);
-            s.push_str("<scanWindowList count=\"1\"><scanWindow>");
-            s += &mz_cv("MS:1000501", "scan window lower limit", lo);
-            s += &mz_cv("MS:1000500", "scan window upper limit", hi);
-            s.push_str("</scanWindow></scanWindowList>");
-            s
-        }
-        None => String::new(),
+/// `cv` appended to `s`: the header of a spectrum is written without a temporary string per parameter.
+fn cv_into(s: &mut String, acc: &str, name: &str, value: impl std::fmt::Display) {
+    use std::fmt::Write;
+    let _ = write!(
+        s,
+        "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\"/>"
+    );
+}
+
+fn window_into(s: &mut String, w: Option<(f64, f64)>) {
+    if let Some((lo, hi)) = w {
+        s.push_str("<scanWindowList count=\"1\"><scanWindow>");
+        mz_cv_into(s, "MS:1000501", "scan window lower limit", lo);
+        mz_cv_into(s, "MS:1000500", "scan window upper limit", hi);
+        s.push_str("</scanWindow></scanWindowList>");
     }
 }
 
 fn mz_cv(acc: &str, name: &str, value: f64) -> String {
-    unit_cv(acc, name, value, "MS:1000040", "m/z")
-}
-
-#[cfg(feature = "precursori")]
-fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
-    use std::fmt::Write;
-    let mut v = String::with_capacity(32);
-    let _ = write!(v, "{value}");
-    unit_cv_str(acc, name, &v, "MS", unit_acc, unit_name)
-}
-
-#[cfg(not(feature = "precursori"))]
-fn unit_cv(acc: &str, name: &str, value: f64, unit_acc: &str, unit_name: &str) -> String {
-    use std::fmt::Write;
-    let mut s = String::with_capacity(acc.len() + name.len() + unit_acc.len() + unit_name.len() + 128);
-    let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>");
+    let mut s = String::with_capacity(acc.len() + name.len() + 160);
+    mz_cv_into(&mut s, acc, name, value);
     s
 }
 
+fn mz_cv_into(s: &mut String, acc: &str, name: &str, value: f64) {
+    unit_cv_into(s, acc, name, value, "MS:1000040", "m/z");
+}
+
+/// A cvParam with a unit (`MS`) whose value is a number, appended to `s`.
+fn unit_cv_into(
+    s: &mut String,
+    acc: &str,
+    name: &str,
+    value: f64,
+    unit_acc: &str,
+    unit_name: &str,
+) {
+    use std::fmt::Write;
+    let _ = write!(s, "<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"{name}\" value=\"{value}\" unitCvRef=\"MS\" unitAccession=\"{unit_acc}\" unitName=\"{unit_name}\"/>");
+}
+
 #[cfg(feature = "precursori")]
-/// A cvParam with a unit whose value is already text; `unit_ref` is the CV that defines the unit (`MS` or `UO`).
-fn unit_cv_str(acc: &str, name: &str, value: &str, unit_ref: &str, unit_acc: &str, unit_name: &str) -> String {
-    ["<cvParam cvRef=\"MS\" accession=\"", acc, "\" name=\"", name, "\" value=\"", value, "\" unitCvRef=\"", unit_ref, "\" unitAccession=\"", unit_acc, "\" unitName=\"", unit_name, "\"/>"].concat()
+/// A cvParam with a unit whose value is already text, appended to `s`; `unit_ref` is the CV that defines the unit (`MS` or `UO`).
+fn unit_cv_str_into(
+    s: &mut String,
+    acc: &str,
+    name: &str,
+    value: &str,
+    unit_ref: &str,
+    unit_acc: &str,
+    unit_name: &str,
+) {
+    for x in [
+        "<cvParam cvRef=\"MS\" accession=\"",
+        acc,
+        "\" name=\"",
+        name,
+        "\" value=\"",
+        value,
+        "\" unitCvRef=\"",
+        unit_ref,
+        "\" unitAccession=\"",
+        unit_acc,
+        "\" unitName=\"",
+        unit_name,
+        "\"/>",
+    ] {
+        s.push_str(x);
+    }
 }
 
 /// The `sourceFileList` of the header; the schema wants at least one child, so no source means no list.
@@ -404,23 +440,20 @@ use codifica::{Codifica, Data};
 #[cfg(not(target_family = "wasm"))]
 mod pool;
 mod testa;
-pub(crate) use testa::spectrum_head;
+pub(crate) use testa::{spectrum_head, spectrum_head_into};
 #[cfg(feature = "precursori")]
 mod spettro;
 #[cfg(feature = "precursori")]
 pub use spettro::{attivazione_da_nome, CvPar, Precursore};
 #[cfg(feature = "precursori")]
-use spettro::{params_xml, precursor_list};
+use spettro::{params_into, precursor_list_into};
 
-/// The cvParams of `<scan>` the reader gives besides the start time and the filter.
-fn scan_xml(extra: &SpectrumExtra) -> String {
+/// Appends the cvParams of `<scan>` the reader gives besides the start time and the filter.
+fn scan_into(s: &mut String, extra: &SpectrumExtra) {
     #[cfg(feature = "precursori")]
-    return params_xml(&extra.scan_params);
+    params_into(s, &extra.scan_params);
     #[cfg(not(feature = "precursori"))]
-    {
-        let _ = extra;
-        String::new()
-    }
+    let _ = (s, extra);
 }
 #[cfg(any(not(target_family = "wasm"), feature = "indice"))]
 mod indice;

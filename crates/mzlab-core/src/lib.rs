@@ -103,6 +103,7 @@ pub mod mzmlsrm;
 mod mzml_dad;
 pub mod numarray;
 pub mod numpress;
+pub mod attivazioni;
 pub mod mzmlwrite;
 #[cfg(not(target_family = "wasm"))]
 pub mod mzmlvalida;
