@@ -152,7 +152,7 @@ fn keep_first<T: PartialEq>(v: &mut Vec<T>) {
     }
 }
 
-type NumberKey = (String, String, Option<u64>, Option<u64>, Option<i8>, String);
+type NumberKey<'a> = (&'a str, &'a str, Option<u64>, Option<u64>, Option<i8>, &'a str);
 
 /// The replicates counted again: 1-based among the files with the same series, role, minutes, concentration, polarity and matrix.
 pub fn number_replicates(cs: &mut [Campione]) {
@@ -167,18 +167,25 @@ pub fn number_replicates(cs: &mut [Campione]) {
     let bits = |x: Option<f64>| x.map(|v| if v == 0.0 { 0 } else { v.to_bits() });
     let mut seen: std::collections::HashMap<NumberKey, u32> =
         std::collections::HashMap::with_capacity(cs.len());
-    for c in cs.iter_mut() {
-        let key = (
-            c.series.clone(),
-            c.role().to_string(),
-            bits(c.time_min),
-            bits(c.conc),
-            c.polarity,
-            c.matrix.clone(),
-        );
-        let n = seen.entry(key).or_insert(0);
-        *n += 1;
-        c.replicate = *n;
+    // the keys borrow the files: the counts are collected first and written after
+    let counts: Vec<u32> = cs
+        .iter()
+        .map(|c| {
+            let key = (
+                c.series.as_str(),
+                c.role(),
+                bits(c.time_min),
+                bits(c.conc),
+                c.polarity,
+                c.matrix.as_str(),
+            );
+            let n = seen.entry(key).or_insert(0);
+            *n += 1;
+            *n
+        })
+        .collect();
+    for (c, n) in cs.iter_mut().zip(counts) {
+        c.replicate = n;
     }
 }
 
