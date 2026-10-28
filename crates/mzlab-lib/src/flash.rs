@@ -8,7 +8,7 @@ use crate::fast_ln::fast_ln;
 use crate::flash_resolve::score_pairs;
 use crate::frag_tol::FragTol;
 use crate::io::Source;
-use crate::read::{Library, Light};
+use crate::read::{Library, Light, LightRec};
 use crate::search::Query;
 use crate::sortutil;
 use std::ops::Range;
@@ -128,53 +128,73 @@ impl FlashAcc {
     }
 }
 
-/// `(spectrum, query peak, library peak in 1e-5 Da, contribution)` of a staged entry.
+/// Spectrum and library peak (1e-5 Da) of a staged entry, `None` when the entry points outside the tables (corrupt data).
 #[inline]
-fn pair_of(e: &Ent, pa: &[f64], pc: &[f64], light: &Light) -> Option<(u32, u16, u32, f64)> {
+fn locate(e: &Ent, n_query: usize, light: &Light) -> Option<(u32, u32)> {
     let sp = e.sp & !NL_BIT;
-    let k = sp as usize;
-    let (&sc, &ls, &p, &c, &lq) = (
-        light.scale.get(k)?,
-        light.ln_scale.get(k)?,
-        pa.get(e.i as usize)?,
-        pc.get(e.i as usize)?,
-        ln_q().get(e.qi as usize)?,
-    );
-    let term = term_of(p, c, e.qi as f64 / 65535.0 * sc as f64, lq + ls);
+    let r = light.recs.get(sp as usize)?;
+    if e.i as usize >= n_query {
+        return None;
+    }
     let mz = if e.sp & NL_BIT != 0 {
-        light.precq.get(k)?.wrapping_sub(e.mz)
+        r.precq.wrapping_sub(e.mz)
     } else {
         e.mz
     };
-    Some((sp, e.i, mz, term))
+    Some((sp, mz))
+}
+
+/// Contribution of a staged entry (as `scores::pair_term`); the caller has checked it with `locate`.
+#[inline]
+fn term_at(e: &Ent, pa: &[f64], pc: &[f64], lq: &[f64], r: &LightRec) -> f64 {
+    let (a, c) = (pa[e.i as usize], pc[e.i as usize]);
+    term_of(
+        a,
+        c,
+        e.qi as f64 / 65535.0 * r.scale as f64,
+        lq[e.qi as usize] + r.ln_scale,
+    )
+}
+
+/// `(spectrum, query peak, library peak in 1e-5 Da, contribution)` of a staged entry.
+#[inline]
+fn pair_of(e: &Ent, pa: &[f64], pc: &[f64], light: &Light) -> Option<(u32, u16, u32, f64)> {
+    let (sp, mz) = locate(e, pa.len(), light)?;
+    let r = light.recs.get(sp as usize)?;
+    Some((sp, e.i, mz, term_at(e, pa, pc, ln_q(), r)))
 }
 
 impl FlashAcc {
-    /// Scores every staged pair into the slots, bucket by bucket. When the search ends with this very flush (`last`, and no flush before), each
-    /// bucket is also scanned right after it is scored, while its slots are hot, for the pairs of the spectra in conflict (`conf`).
+    /// Scores every staged pair into the slots, bucket by bucket. The conflicts of a bucket are found first, from the signatures alone; the entropy
+    /// terms are then summed only for the spectra without a conflict. When the search ends with this very flush (`last`, and no flush before),
+    /// the pairs of the spectra in conflict (`conf`) are scored in the same pass, while the slots are hot.
     fn flush(&mut self, pa: &[f64], pc: &[f64], light: &Light, last: bool) {
         let single = last && self.flushes == 0;
         self.flushes += 1;
         let mut buckets = std::mem::take(&mut self.buckets);
         let mut dones = std::mem::take(&mut self.done);
-        let mut tmp: Vec<(u32, u16, u32, f64)> = Vec::new();
+        let lq = ln_q();
         for (b, done) in buckets.iter().zip(dones.iter_mut()) {
-            tmp.clear();
-            for e in b.iter().skip(*done) {
-                if let Some(p) = pair_of(e, pa, pc, light) {
-                    self.add(p.0, p.1, p.2, p.3);
-                    if single {
-                        tmp.push(p);
-                    }
+            let fresh = b.get(*done..).unwrap_or_default();
+            for e in fresh {
+                if let Some((sp, mz)) = locate(e, pa.len(), light) {
+                    self.mark(sp, e.i, mz);
                 }
             }
-            if single {
-                let slots = &self.slots;
-                self.conf.extend(tmp.iter().filter(|p| {
-                    slots
-                        .get(p.0 as usize)
-                        .is_some_and(|s| s.cnt & CONFLICT != 0)
-                }));
+            for e in fresh {
+                let Some((sp, mz)) = locate(e, pa.len(), light) else {
+                    continue;
+                };
+                let (Some(s), Some(r)) =
+                    (self.slots.get_mut(sp as usize), light.recs.get(sp as usize))
+                else {
+                    continue;
+                };
+                if s.cnt & CONFLICT == 0 {
+                    s.sum += term_at(e, pa, pc, lq, r);
+                } else if single {
+                    self.conf.push((sp, e.i, mz, term_at(e, pa, pc, lq, r)));
+                }
             }
             *done = b.len();
         }
@@ -194,54 +214,10 @@ impl FlashAcc {
     }
 }
 
-fn in_ranges(r: &[Range<u32>], i: u32) -> bool {
-    r.iter().any(|x| x.contains(&i))
-}
+mod sel;
+use sel::Sel;
 
-impl FlashAcc {
-    /// Adds one pair; a repeated query or library peak (or a signature collision) marks the spectrum as in conflict.
-    #[inline]
-    fn add(&mut self, sp: u32, qi: u16, lib_mz: u32, term: f64) {
-        let Some(s) = self.slots.get_mut(sp as usize) else {
-            return;
-        };
-        let c = s.cnt;
-        if c == 0 {
-            self.touched.push(sp);
-        }
-        let bq = 1u64 << (qi & 63);
-        let bl = 1u64 << ((lib_mz as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 58);
-        let clash = (s.used_q & bq != 0) || (s.used_l & bl != 0);
-        s.used_q |= bq;
-        s.used_l |= bl;
-        s.sum += term;
-        let n = if c & COUNT == COUNT {
-            COUNT
-        } else {
-            (c & COUNT) + 1
-        };
-        s.cnt = n | (c & CONFLICT) | if clash || n == COUNT { CONFLICT } else { 0 };
-    }
-
-    fn reset(&mut self) {
-        for &sp in &self.touched {
-            if let Some(s) = self.slots.get_mut(sp as usize) {
-                *s = Slot::default();
-            }
-        }
-        self.touched.clear();
-        for (b, done) in self.buckets.iter_mut().zip(self.done.iter_mut()) {
-            b.clear();
-            *done = 0;
-        }
-        self.staged = 0;
-        self.retained = 0;
-        self.overflow = false;
-        self.flushes = 0;
-        self.conf.clear();
-        self.conf_ready = false;
-    }
-}
+mod flush;
 
 /// Entropy similarity of the query against every spectrum in `ranges` that shares at least one pair, computed from the indexes only.
 /// Sorted by score, best first; spectra without a pair are not listed.
@@ -302,6 +278,7 @@ fn walk<S: Source>(
         let hi = (x + tol_q).floor();
         (hi >= 0.0 && lo <= hi && hi < u32::MAX as f64).then_some((lo as u32, hi as u32))
     };
+    let sel = Sel::new(ranges, lib.n_spectra());
     for (i, &mz) in q.spec.mz.iter().enumerate() {
         let tol_q = frag.at(mz) * MZ_SCALE;
         for nl in [false, true] {
@@ -315,7 +292,7 @@ fn walk<S: Source>(
             };
             if let Some((lo, hi)) = window(x, tol_q) {
                 lib.for_each_entry(nl, lo, hi, |v, sp, qi| {
-                    if in_ranges(ranges, sp) {
+                    if sel.has(sp) {
                         f(nl, sp, i as u16, v, qi);
                     }
                 })?;
