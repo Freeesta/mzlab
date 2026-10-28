@@ -1,6 +1,6 @@
 """Flow, the metadata grid of the Import data card (docs/agenti/flow-grafica.md): virtual rows, keyboard, paste of a spreadsheet block, sort, filter, name pattern, free columns, CSV, SHA of the saved document, axe.
 Run from the repo root: python3 tests_e2e/e2e_flow_meta_grid.py"""
-import subprocess, sys, tempfile, socket
+import json, subprocess, sys, tempfile, socket
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -67,7 +67,8 @@ try:
         pg.click(f"{g} button[aria-label='Sort by Time']"); check("sort", pg.get_attribute(f"{g} [role=columnheader]:has(button[aria-label='Sort by Time'])", "aria-sort") == "ascending")
         pg.click(f"{g} button[aria-label='Sort by Time']"); check("sort desc", pg.get_attribute(f"{g} [role=columnheader]:has(button[aria-label='Sort by Time'])", "aria-sort") == "descending")
         pg.select_option(".flx-imp select[aria-label='Filter column']", label="Condition"); pg.fill(".flx-imp input[aria-label='Filter text']", "PMS"); pg.keyboard.press("Enter")
-        attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N // 6 + 1}'")
+        try: attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N // 6 + 1}'")
+        except TimeoutError: raise AssertionError("filter never reached %d rows: %s" % (N // 6, pg.evaluate("(() => { const g = document.querySelector('.flx-imp [role=grid]'); return JSON.stringify({rows: g.getAttribute('aria-rowcount'), chips: document.querySelectorAll('.mg-chip').length, col: document.querySelector('.flx-imp select[aria-label=\"Filter column\"]').value, text: document.querySelector('.flx-imp input[aria-label=\"Filter text\"]').value, bad: %s}) })()" % json.dumps(bad))))
         check("filter", pg.locator(".mg-chip").count() == 1)
         pg.click(".mg-chip button"); attendi(pg, f"document.querySelector('.flx-imp [role=grid]').getAttribute('aria-rowcount') === '{N + 1}'")
         # a free column
