@@ -492,7 +492,7 @@ async function bootSession0() {
   if (window.INF && INF.autoOpen) INF.autoOpen(E.files);
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
-async function apexSpectrum(/** @type {Bag} */ c, /** @type {Bag} */ sp) {
+async function apexSpectrum(/** @type {Bag} */ c, /** @type {Pannello} */ sp) {
   try {
     const all = (await rawSeries(c)).filter((/** @type {Bag} */ s) => E.files[s.k] && E.files[s.k].kind !== "mrm");
     let best = null;
@@ -512,7 +512,7 @@ function hostWidth() {
 function fitWidth() {
   const w = Q("#dpanels").clientWidth; if (w < 100) return;
   const st = stackOrder();
-  E.panels.forEach((/** @type {Bag} */ p) => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
+  E.panels.forEach((/** @type {Pannello} */ p) => { if (p.full && !dockedP(p) && !hasDocked(p) && !LAYOUT.inRiga(p, st) && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
   // panels side by side follow the width too (and stack when it is too narrow)
   const rows = st.some((/** @type {Bag} */ q) => LAYOUT.inRiga(q, st));
   // Full Scan and MS2 of a DDA file side by side only when the page is wide enough
@@ -544,7 +544,7 @@ function restoreUi() {
   u.panels.forEach((/** @type {Bag} */ sp, /** @type {number} */ i) => { for (const k of ["dda", "dock", "duo"]) if (sp[k] != null) made[i][k] = sp[k] >= 0 && made[sp[k]] ? made[sp[k]].id : null; });
   if (window.DDA) DDA.restored(made);
   // one live spectrum per chromatogram, even in an old notebook
-  made.forEach((/** @type {Bag} */ q) => { if (q.type === "spec" && q.link) ctl(q); });
+  made.forEach((/** @type {Pannello} */ q) => { if (q.type === "spec" && q.link) ctl(q); });
   if (E.files[E.cur]?.kind !== E.tab) STATO.file((tabFiles()[0] || { k: 0 }).k, "notebook");
   // a session saved with one type at a time: the blocks go one under the other
   if (typeof stackBlocks === "function") stackBlocks();
@@ -876,7 +876,7 @@ function renderNav() {
   [Q("#fprev"), Q("#fnext"), Q("#fsel")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
   if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
   // the graphs' own file choosers depend on the mode
-  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach((/** @type {Bag} */ q) => q.el && ctl(q)); }
+  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (/** @type {any} */ (renderNav)._sig !== sig) { /** @type {any} */ (renderNav)._sig = sig; E.panels.forEach((/** @type {Pannello} */ q) => q.el && ctl(q)); }
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = (/** @type {Event & { target: HTMLSelectElement }} */ e) => activeFile(+e.target.value);
@@ -1002,7 +1002,7 @@ async function dl(/** @type {string} */ name, /** @type {string | Blob | Uint8Ar
 }
 const LOCALE = I18N.lang === "it" ? "it-IT" : "en-GB";           // dates in the exported files
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
-function plotSheets(/** @type {Bag} */ p) {
+function plotSheets(/** @type {Pannello} */ p) {
   const a = p._a; if (!a) return null;
   const cols = [], yt = p.kind === "pda" ? I18N.t("export.col.pdaSignal") : p.kind === "press" ? I18N.t("axis.pressure") : I18N.t("export.col.intensity");
   if (p.type === "spec" && a.uvd) cols.push(["nm", a.uvd.nm], [I18N.t("tdati.col.mau"), a.uvd.y]);

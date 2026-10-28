@@ -39,7 +39,7 @@ const DDA = (() => {
   const extras = (/** @type {Bag} */ s1) => E.panels.filter((/** @type {Bag} */ q) => q.extra && q.dda === s1.id && q.el);
   const target = (/** @type {Bag} */ s1) => { const a = E.active; return a && a.dda === s1.id && a.el ? a : byId(s1.duo); };   // the MS2 panel that receives the next choice: the active one of this Full Scan, else the first
   const joined = (/** @type {Bag} */ a, /** @type {Bag} */ b) => !!(a && b && (a.type === "chrom" || a.type === "xic") && b.type === "spec" && b.link === a.id && b.duo != null && byId(b.duo));        // chromatogram + Full Scan of a trio touch
-  const set = (/** @type {Bag} */ q, /** @type {Bag} */ o) => { let ch = false; for (const k in o) if (Math.abs((q[k] || 0) - o[k]) > 0.5) { q[k] = o[k]; ch = true; } if (ch) apply(q); return ch; };
+  const set = (/** @type {Pannello} */ q, /** @type {Bag} */ o) => { let ch = false; for (const k in o) if (Math.abs((q[k] || 0) - o[k]) > 0.5) { q[k] = o[k]; ch = true; } if (ch) apply(q); return ch; };
   function sync() {
     try {
       let W = 0;                                     // read only when a trio exists: the width forces a layout, and sync runs on every panel change
@@ -58,7 +58,7 @@ const DDA = (() => {
   }
 
   // ---------------------------------------------------------------- creation
-  function make(/** @type {Bag} */ c, /** @type {Bag} */ s1) {
+  function make(/** @type {Pannello} */ c, /** @type {Bag} */ s1) {
     try {
       const f = E.files[s1.k]; if (!f || !f.dda || f.kind !== "full") return null;
       const f2 = ms2Item(f); if (!f2) return null;
@@ -107,14 +107,14 @@ const DDA = (() => {
     }
     return I18N.t("dda.click");
   }
-  async function selectMs2(/** @type {Bag} */ s2, /** @type {string | number} */ sid, /** @type {Bag} */ o = {}) {
+  async function selectMs2(/** @type {Pannello} */ s2, /** @type {string | number} */ sid, /** @type {Bag} */ o = {}) {
     try {
       const s1 = byId(s2.dda); if (!s1) return false;
       const c = s1.link != null ? byId(s1.link) : null, f = E.files[s1.k];
       const D = await get(f.k), i = D.idx.get(sid); if (i == null) return false;
       s2.sid = sid; s2.avg = null; s2.r0 = D.rt[i] - 1e-4; s2.r1 = D.rt[i] + 1e-4;
       s1.ddaSel = { sid, i };
-      const dec = HR.prof(E.files[s2.k], 2).dec;
+      const dec = HR.prof(E.files[/** @type {number} */ (s2.k)], 2).dec;
       s2.title = "MS2 di " + (D.prec[i] != null ? D.prec[i].toFixed(dec) : "?"); ctl(s2);
       if (c && D.parent[i] != null && o.parent !== false) {            // the cursor goes to the parent Full Scan, which s1 shows exactly
         const prt = D.prt[i];
@@ -128,8 +128,8 @@ const DDA = (() => {
     } catch (e) { return fail("selectMs2", e); }
   }
   // the MS2 scans of the file in the order of the acquisition, optionally only those of the followed ion
-  function list(/** @type {Bag} */ s2, /** @type {Bag} */ D) {
-    const f = E.files[s2.k], out = [];
+  function list(/** @type {Pannello} */ s2, /** @type {Bag} */ D) {
+    const f = E.files[/** @type {number} */ (s2.k)], out = [];
     for (let i = 0; i < D.sid.length; i++) {
       if (s2.ion != null && !(D.prec[i] != null && Math.abs(D.prec[i] - s2.ion) <= tolOf(f, s2.ion))) continue;
       out.push(i);
@@ -138,7 +138,7 @@ const DDA = (() => {
       for (let i = 0; i < D.sid.length; i++) if (D.lo[i] != null && D.lo[i] <= s2.ion && D.hi[i] >= s2.ion) out.push(i);
     return out;
   }
-  async function step(/** @type {Bag} */ s2, /** @type {number} */ d) {
+  async function step(/** @type {Pannello} */ s2, /** @type {number} */ d) {
     try {
       const s1 = byId(s2.dda), f = E.files[s1.k], D = await get(f.k);
       if (s2.sid == null) {                                                // nothing shown yet (an ion without MS2 of its own): the first / last scan that holds it in its window

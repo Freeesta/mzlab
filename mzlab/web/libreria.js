@@ -358,7 +358,7 @@ const LIB = (() => {
       return best ? (dm < 0 ? "−" : "+") + best[1] + " " + I18N.t("lib.simplest") : null;
     } catch (e) { return null; }
   }
-  async function searchFrom(/** @type {Bag} */ p) {
+  async function searchFrom(/** @type {Pannello} */ p) {
     ensureCss();
     const q = queryOf(p);
     if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
@@ -432,7 +432,7 @@ const LIB = (() => {
     const m = new Map(); rs.forEach((/** @type {Bag} */ r, /** @type {number} */ i) => { r._i = i; const k = LIVELLI.ikKey(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
     return [...m.values()];
   }
-  async function whatIs(/** @type {Bag} */ p) {
+  async function whatIs(/** @type {Pannello} */ p) {
     ensureCss();
     const q = queryOf(p); if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
     let d = /** @type {any} */ (document.getElementById("libres"));

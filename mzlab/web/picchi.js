@@ -264,14 +264,14 @@ const lastMs2 = () => {
   const p = specHere((/** @type {Bag} */ a) => a.hrp && window.DDA), q = p && p._pm != null ? DDA.ms2For(p, p._pm)[0] : null;
   return q ? { p, j: q.j } : null;
 };
-function hoverMark(/** @type {Bag} */ p, /** @type {number} */ px) {
+function hoverMark(/** @type {Pannello} */ p, /** @type {number} */ px) {
   if (!p._a || p._a.markN == null || markOn(p)) { if (p._mk != null) { p._mk = null; drawSoon(p); } return; }
   const l = (p._a.lbls || []).find((/** @type {Bag} */ b) => (b.fl != null || b.nb) && Math.abs(px - (b.x + b.w / 2)) <= 9), k = l ? (l.fl != null ? l.fl : "n" + l.nb[0]) : null;
   if (k !== (p._mk ?? null)) { p._mk = k; drawSoon(p); }
 }
 // The window of a spectrum holds no scan of the kind shown (DDA, MS1/MS2 filters): the window moves to the nearest scan of that kind (on a tie the earlier one)
 // and the cursor of the chromatogram it follows snaps to it. False only when the file has no such scan at all.
-async function snapNearest(/** @type {Bag} */ p, /** @type {Bag} */ f) {
+async function snapNearest(/** @type {Pannello} */ p, /** @type {Bag} */ f) {
   try {
     const pr = p.prec != null && p.prec !== "" ? `&precursor=${p.prec}` : "", ft = p.filt ? `&filter=${encodeURIComponent(p.filt)}` : "";
     const n = await J(`api/nearest_scan?k=${f.k}&rt=${(p.r0 + p.r1) / 2}&level=${p.level || 1}${pr}${ft}`);
@@ -281,15 +281,15 @@ async function snapNearest(/** @type {Bag} */ p, /** @type {Bag} */ f) {
     return true;
   } catch (e) { return false; }
 }
-/** @param {Bag} p @param {boolean} [snapped] */
+/** @param {Pannello} p @param {boolean} [snapped] */
 async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
   const say = (/** @type {string} */ t) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
-  if (!isDda && !p.all && p.level === 1 && E.files[p.k] && !E.files[p.k].vis) { const v = shownFor(p).find((/** @type {Bag} */ x) => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
-  const targetK = p.link ? p.k : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : p.k);
-  const base = isDda ? [E.files[p.k]] : p.all ? shownFor(p) : [E.files[targetK]];
+  if (!isDda && !p.all && p.level === 1 && E.files[/** @type {number} */ (p.k)] && !E.files[/** @type {number} */ (p.k)].vis) { const v = shownFor(p).find((/** @type {Bag} */ x) => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
+  const targetK = p.link ? /** @type {number} */ (p.k) : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : /** @type {number} */ (p.k));
+  const base = isDda ? [E.files[/** @type {number} */ (p.k)]] : p.all ? shownFor(p) : [E.files[targetK]];
   let files = scanFiles(base.filter(Boolean));
   if (!files.length) return say(I18N.t("spec.isMrm"));
   if (!isDda && p.level === 2 && p.prec != null && p.prec !== "") {          // an MS2 experiment is a precursor: only the files that have it (as the chromatograms)
