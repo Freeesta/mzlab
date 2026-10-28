@@ -4,17 +4,11 @@
 
 use super::{bad, Experiment, Wiff, HEADER_PRECURSOR};
 
-/// Offset of the polarity in `ExperimentHeader` (u32: 0 positive, 1 negative).
-const HEADER_POLARITY: usize = 86;
 use crate::error::Result;
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
-pub const CODE_MRM: u32 = 4;
-pub const CODE_PRECURSOR_ION: u32 = 5;
-pub const CODE_NEUTRAL_LOSS: u32 = 7;
-pub const CODE_PRODUCT: u32 = 11;
-pub const CODE_FULL: u32 = 15;
+pub use super::modi::{spectrum_term, CODE_FULL, CODE_MRM, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION};
 
 /// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
 pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Experiment]) {
@@ -73,22 +67,8 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
         return Err(bad(&format!("periods={p}")));
     }
     for (i, e) in ex.iter_mut().enumerate() {
-        e.polarity = ole
-            .read(&format!(
-                "MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader"
-            ))
-            .and_then(|h| {
-                h.get(HEADER_POLARITY..HEADER_POLARITY + 4)
-                    .and_then(|b| <[u8; 4]>::try_from(b).ok())
-                    .map(u32::from_le_bytes)
-            })
-            .and_then(|v| match v {
-                0 => Some(1),
-                1 => Some(-1),
-                _ => None,
-            });
         match e.code {
-            Some(CODE_MRM | CODE_FULL | CODE_PRODUCT) => {}
+            Some(c) if super::modi::nativo(Some(c)) => {}
             Some(CODE_PRECURSOR_ION | CODE_NEUTRAL_LOSS) => {
                 let header = ole.read(&format!("MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader")).unwrap_or_default();
                 e.level = 2;
@@ -97,7 +77,13 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
                     .map(|b| f64::from_le_bytes(b.try_into().unwrap_or([0; 8])))
                     .filter(|m| m.is_finite() && *m > 0.0);
             }
-            Some(c) => return Err(bad(&format!("scan type code {c} (experiment {})", i + 1))),
+            Some(c) if !super::modi::confermato(Some(c)) => {
+                if crate::wiff::dad::wiff2_sample_info(ole, sample).is_some() {
+                    return Err(bad("wiff2"));
+                }
+                return Err(bad(&format!("scan type code {c} (experiment {})", i + 1)));
+            }
+            Some(_) => {}
             None => return Err(bad(&format!("no scan type code (experiment {})", i + 1))),
         }
     }
@@ -105,11 +91,6 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
 }
 
 impl Wiff {
-    /// The polarity of the scans of experiment `e`: the one of its header, else the sign of the ion spray voltage of the method.
-    pub(super) fn polarity_of(&self, e: &Experiment) -> i8 {
-        e.polarity.unwrap_or(self.polarity)
-    }
-
     /// True when the engine's reader (written for the 3200 QTRAP: full scans, product-ion scans and MRM) would not read this sample as the file is:
     /// another instrument model, or a scan type besides those three.
     pub fn variante(&self) -> bool {
@@ -121,16 +102,7 @@ impl Wiff {
             || self
                 .experiments
                 .iter()
-                .any(|e| !matches!(e.code, Some(CODE_MRM | CODE_FULL | CODE_PRODUCT)))
-    }
-}
-
-/// The CV term of the spectrum type of an experiment: `None` for the types that need none (full scan, product-ion scan).
-pub fn spectrum_term(code: Option<u32>) -> Option<(&'static str, &'static str)> {
-    match code {
-        Some(CODE_PRECURSOR_ION) => Some(("MS:1000341", "precursor ion spectrum")),
-        Some(CODE_NEUTRAL_LOSS) => Some(("MS:1000326", "constant neutral loss spectrum")),
-        _ => None,
+                .any(|e| !super::modi::nativo(e.code))
     }
 }
 

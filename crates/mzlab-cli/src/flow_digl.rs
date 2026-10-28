@@ -1,19 +1,23 @@
 //! The native executor of `tp.dig_lr@1`: the low-resolution Dig of mzFinder (`legacy::lr::dig`: calibration on the parent, candidates of the rules of
-//! `regole_tp.json`, criteria, score and labels) on a unit-resolution series made by this plan. Its output is the JSON `api.run` of the page.
+//! `regole_tp_2.json`, criteria, score and labels) on a unit-resolution series made by this plan. Its output is the JSON `api.run` of the page.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::Out;
 use mzlab_core::step::{DataType, Facets, Param, Port, RunsIn, Step};
 use mzlab_feat::legacy::lr::{self, plan::Settings, summary::summary};
-use mzlab_feat_wasm::run;
+use mzlab_feat_wasm::run_tp;
 
 use crate::flow::{all_inputs, read_one, write_made, FileRunner};
 use crate::flow_base::{open, rebuild, Files};
 use crate::flow_link::parent_of;
 use mzlab_core::flow::Artifact;
 
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp.json");
+// `lib.rs` is at its line limit, so the module of `chrom.uv_peaks` hangs here, where the steps of the crate are listed.
+#[path = "flow_uv.rs"]
+pub(crate) mod uv;
+
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
 /// The steps of this crate besides `features.table`, in the order of the registry.
 pub fn cli_steps() -> Vec<Step> {
@@ -27,6 +31,7 @@ pub fn cli_steps() -> Vec<Step> {
         mzlab_feat::steps::table_match(),
         crate::flow_lookup::lookup_step(),
         dig_lr_step(),
+        uv::uv_step(),
     ]
 }
 
@@ -91,7 +96,6 @@ fn settings_json(job: &Job) -> String {
     o.0
 }
 
-/// `tp.dig_lr`: the columns are the files of the table, in order; the hypotheses come from the rules of the Dig.
 pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let table_in = job
         .inputs
@@ -121,40 +125,29 @@ pub(crate) fn dig_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
         read_one(r, job, "parent")?,
     );
     let p = parent_of(&parent.1)?;
-    let recipe = rebuild(&lin)?;
+    let mut recipe = rebuild(&lin)?;
     let mut ix = indexes.iter().map(open).collect::<Result<Vec<_>>>()?;
-    let hypo = run::hypotheses_stored(
+    let inputs = run_tp::dig::dig_inputs(
+        RULES,
+        &run_tp::LinkParent {
+            formula: &p.formula,
+            smiles: &p.smiles,
+            structure: &p.structure,
+            rt: None,
+        },
+        &p.adduct,
+        &names,
+        &String::from_utf8_lossy(&samples.1),
+        &mut recipe,
         &mut ix,
         &mut Files(lin.peaks.clone()),
-        RULES,
-        &p.structure,
-        &p.formula,
-        None,
-        &recipe,
     )?;
-    let mut files = Out::default();
-    files.raw("{\"files\":[");
-    for (i, n) in names.iter().enumerate() {
-        files
-            .raw(if i == 0 { "" } else { "," })
-            .raw("{\"name\":")
-            .str(n)
-            .raw(",\"kind\":\"full\"}");
-    }
-    files
-        .raw("],\"campioni\":")
-        .raw(String::from_utf8_lossy(&samples.1).trim())
-        .raw("}");
-    let mut who = Out::default();
-    who.raw("{\"name\":\"parent\",\"neutral\":")
-        .str(&p.formula)
-        .raw(",\"adduct\":\"[M+H]+\"}");
     let d = lr::dig(
-        &files.0,
-        &who.0,
+        &inputs.files,
+        &inputs.who,
         &settings_json(job),
         &table.1,
-        &hypo.registry.to_json(),
+        &inputs.registry,
         &mut |k| open(&indexes[k]).map_err(|e| e.key.to_string()),
     )
     .map_err(|e| Error::new("err.flow.dig").with("detail", e))?;

@@ -354,6 +354,46 @@ fn an_input_without_sha_is_identified_by_the_text_the_caller_gives() {
     assert_ne!(a.key(&jid("conv|f1.raw")), v2.key(&jid("conv|f1.raw")));
 }
 
+/// Two files that carry the same placeholder fingerprint (the page sends `loading` for every index it is still waiting for) never share a job key: a key that held no name made
+/// every detection of the series land in one file.
+#[test]
+fn files_with_the_same_identity_get_different_keys() {
+    let text = plan_text(&["f1.raw", "f2.raw"], 1, 1)
+        .replace("\"sha256\":\"sha-f1.raw\"", "\"sha256\":\"\"")
+        .replace("\"sha256\":\"sha-f2.raw\"", "\"sha256\":\"\"");
+    let p = parse(text.as_bytes()).unwrap();
+    let same = [
+        ("f1.raw".to_string(), "loading".to_string()),
+        ("f2.raw".to_string(), "loading".to_string()),
+    ];
+    let s = Sched::new(&p, &registry(), "test-1", &same);
+    for step in ["conv", "cen", "idx", "det"] {
+        assert_ne!(
+            s.key(&jid(&format!("{step}|f1.raw"))),
+            s.key(&jid(&format!("{step}|f2.raw"))),
+            "{step}"
+        );
+    }
+}
+
+/// A fingerprint set after the session started (the index of a file that was loading) takes effect at the next `update`, even with the plan unchanged: the page must call it.
+#[test]
+fn a_new_identity_rekeys_the_jobs_at_the_next_update() {
+    let text = plan_text(&["f1.raw"], 1, 1).replace("\"sha256\":\"sha-f1.raw\"", "\"sha256\":\"\"");
+    let p = parse(text.as_bytes()).unwrap();
+    let mut s = Sched::new(
+        &p,
+        &registry(),
+        "test-1",
+        &[("f1.raw".into(), "loading".into())],
+    );
+    let before = s.key(&jid("det|f1.raw")).map(String::from);
+    s.set_identity("f1.raw", "10:1:centroid");
+    assert_eq!(s.key(&jid("det|f1.raw")).map(String::from), before);
+    s.update(&p);
+    assert_ne!(s.key(&jid("det|f1.raw")).map(String::from), before);
+}
+
 #[test]
 fn a_node_shows_its_worst_job_and_the_mean_share() {
     let mut s = sched(&["f1.raw", "f2.raw"]);

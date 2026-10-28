@@ -23,6 +23,17 @@ def node(body, data):
 
 
 @needs_node
+def test_ref_is_the_995th_percentile_of_the_nonzero_values():
+    rng = np.random.default_rng(3)
+    for n in (50, 40000):                                   # under and over the 10 000 sample
+        v = np.where(rng.random(n) < 0.5, 0.0, -rng.lognormal(3, 1, n))
+        got = node("console.log(JSON.stringify(R.ref(Float32Array.from(d.v))))", {"v": v.tolist()})
+        a = np.sort(np.abs(v[v != 0]))
+        assert got == pytest.approx(float(a[min(len(a) - 1, int(len(a) * 0.995))]), rel=0.05 if n > 10000 else 1e-5)
+    assert node("console.log(JSON.stringify(R.ref([0,0])))", {}) == 1                            # nothing to scale: 1
+
+
+@needs_node
 def test_splat_keeps_height_and_joins_lines():
     nrt, nmz = 40, 60
     v = np.zeros((nrt, nmz)); v[10:30, 20] = 5.0; v[10:30, 27] = 3.0        # two thin lines in m/z (a centroid per scan, 7 bins apart)

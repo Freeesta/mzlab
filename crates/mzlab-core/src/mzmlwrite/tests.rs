@@ -99,3 +99,60 @@ fn esc_gives_what_the_four_replacements_gave() {
         assert_eq!(esc(s), before(s), "{s:?}");
     }
 }
+
+#[test]
+fn the_base_peak_of_equal_intensities_is_the_last_and_a_short_wide_array_counts_as_zeros() {
+    let sp = Spectrum {
+        index: 0,
+        id: "scan=1".into(),
+        level: 1,
+        rt: 1.0,
+        polarity: 1,
+        mz: vec![100.0, 200.0, 300.0, 400.0],
+        intensity: vec![5.0, 9.0, 9.0, 1.0],
+        ..Default::default()
+    };
+    let head = spectrum_head(0, &sp, &SpectrumExtra::default());
+    assert!(
+        head.contains("name=\"base peak m/z\" value=\"300\""),
+        "{head}"
+    );
+    assert!(head.contains("name=\"total ion current\" value=\"24\""));
+    let short = Spectrum {
+        wide: Some(vec![5.0, 9.0]),
+        ..sp
+    };
+    let head = spectrum_head(0, &short, &SpectrumExtra::default());
+    assert!(
+        head.contains("name=\"base peak m/z\" value=\"200\"")
+            && head.contains("name=\"total ion current\" value=\"14\""),
+        "{head}"
+    );
+}
+
+#[cfg(feature = "sciex")]
+#[test]
+fn a_cv_parameter_of_the_file_is_escaped_in_the_header() {
+    let sp = Spectrum {
+        index: 0,
+        id: "a&b".into(),
+        level: 1,
+        mz: vec![100.0],
+        intensity: vec![1.0],
+        ..Default::default()
+    };
+    let extra = SpectrumExtra {
+        params: vec![
+            ("cv:MS:1000999".into(), "q \"x\" <y>".into()),
+            ("k<".into(), "v&".into()),
+        ],
+        ..Default::default()
+    };
+    let head = spectrum_head(0, &sp, &extra);
+    assert!(head.contains("id=\"a&amp;b\""));
+    assert!(
+        head.contains("accession=\"MS:1000999\" name=\"q &quot;x&quot; &lt;y&gt;\" value=\"\"/>"),
+        "{head}"
+    );
+    assert!(head.contains("<userParam name=\"k&lt;\" value=\"v&amp;\"/>"));
+}

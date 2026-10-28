@@ -7,20 +7,37 @@ on:
   schedule:
     - cron: "17 2 * * *"   # 02:17 UTC, every night
   workflow_dispatch:
+    inputs:
+      solo:
+        description: "Only these e2e on the browser jobs, comma separated (e.g. e2e20); unit tests and the complete verification are skipped"
+        default: ""
 
 permissions:
   contents: read
 
 jobs:
   pytest:
+    if: inputs.solo == ''
     strategy:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
         python: ["3.11", "3.14"]
+        include:
+          # the pull-request workflow (test.yml) runs Linux on 3.11 only; Linux 3.14 runs here
+          - {os: ubuntu-latest, python: "3.14"}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    # measured on the runners: macOS 3.11 took 10.5 min serially; with the xdist workers (as in test.yml) and the cargo builds of the wasm tests 25 min is the ceiling
+    timeout-minutes: 25
+    # Windows: the tests compare bytes and sizes of the checked-out files (LF) and read text files with the default encoding (UTF-8 here, as on Linux and macOS)
+    env:
+      PYTHONUTF8: "1"
     steps:
+      - name: Check out with LF endings
+        # text=auto in .gitattributes checks out CRLF on Windows (core.eol=native); the tests pin LF bytes
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -28,9 +45,24 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Install
-        run: python -m pip install -e ".[test]"
+        run: python -m pip install -e ".[test]" pytest-xdist
+      # one install of the toolchain of rust-toolchain.toml before the workers start: several workers asking rustup for it at once corrupt the install
+      # `rustup show` exits 0 even when the install is rolled back (macOS night 45: «detected conflict: bin/cargo-clippy», then «no active toolchain»): check the
+      # toolchain really works, and on a failure remove the partial install and retry
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          ch=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
+          for i in 1 2 3; do
+            rustup show > /dev/null 2>&1 || true
+            if cargo --version && cargo clippy --version; then break; fi
+            [ "$i" = 3 ] && exit 1
+            rustup toolchain uninstall "$ch" || true
+            sleep 10
+          done
+      # --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once)
       - name: Unit tests
-        run: python -m pytest -q tests
+        run: python -m pytest -q -n auto --dist loadfile tests
 
   browser:
     name: browser (${{ matrix.os }}, ${{ matrix.browser }})
@@ -86,7 +118,7 @@ jobs:
           sudo fc-cache -f
           fc-match system-ui
       - name: Smoke tests
-        run: python tools/verifica.py --browser ${{ matrix.browser }} --fumo
+        run: python tools/verifica.py --browser ${{ matrix.browser }} --fumo ${{ inputs.solo != '' && format('--solo {0}', inputs.solo) || '' }}
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
@@ -103,10 +135,72 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
-  # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
-  completa:
+  # The .wasm of the built site (engine, libraries, readers, mzFinder) as the three jobs of sito-rust.yml build them, with the same caches (the run on main fills them):
+  # without them the parts of `completa` would run on a site with only the engine (e2e_tpmine_rust, e2e_uv_spettro and the like fail for it).
+  sito:
+    if: inputs.solo == ''
+    name: sito (${{ matrix.parte }})
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [core, feat-a, feat-b]
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - id: rcache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: sito-v2-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          restore-keys: |
+            sito-v2-${{ matrix.parte }}-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
+      - name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Build the .wasm
+        run: |
+          mkdir -p site/static
+          if [ "${{ matrix.parte }}" = core ]; then
+            cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+            wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
+            tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2744320 engine
+            cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
+            wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
+            tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
+            tools/build_lettori_wasm.sh site/static
+          else
+            tools/build_feat_wasm.sh site/static "${{ matrix.parte == 'feat-a' && 'a' || 'b' }}"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wasm-${{ matrix.parte }}
+          path: site/static
+          retention-days: 1
+
+
+  # the complete verification: JS syntax, pytest, prova_hr and every e2e (synthetic data: the tests that need the real data are skipped)
+  # in five parallel parts (tools/verifica.py --parte K/5: part 1 also does syntax, texts, pytest and prova_hr), each with its own report .verifica/ultimo.md
+  completa:
+    if: inputs.solo == ''
+    name: completa (${{ matrix.parte }}/5)
+    needs: sito
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [1, 2, 3, 4, 5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -139,8 +233,19 @@ jobs:
           restore-keys: sito-e2e-${{ runner.os }}-
       - name: Install
         run: |
-          python -m pip install -e ".[test]" playwright axe-playwright-python pillow
+          python -m pip install -e ".[test]" playwright axe-playwright-python pillow pytest-xdist
           python -m playwright install --with-deps chromium
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: wasm-*
+          path: wasm-artifacts
+          merge-multiple: true
+      # the site of the e2e tests with every .wasm: tools/prepara_sito.py then finds it up to date and builds nothing
+      - name: Site with the .wasm of the sito job
+        run: |
+          python tools/build_site.py
+          cp -r wasm-artifacts/. site/static/
+          tools/build_feat_wasm.sh site/static manifest
       # The layout tests are measured with Inter (the font system-ui resolves to on the development machines); the runner would fall back to the wider DejaVu Sans
       - name: Fonts of the layout tests (Inter as system-ui)
         run: |
@@ -148,11 +253,16 @@ jobs:
           sudo cp tools/fontconfig/56-prefer-inter.conf /etc/fonts/conf.d/
           sudo fc-cache -f
           fc-match system-ui
-      - name: Complete verification
-        run: python tools/verifica.py --browser chromium
+      # the step has its own ceiling, so the report steps below still run if a part hangs
+      - name: Complete verification (part ${{ matrix.parte }}/5)
+        timeout-minutes: 50
+        run: python tools/verifica.py --browser chromium --parte ${{ matrix.parte }}/5
       # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
+      # verifica.py rewrites .verifica/ultimo.md, so the report of the part is kept apart first
       - name: Rust engine on the built site
+        if: matrix.parte == 5 && !cancelled()
         run: |
+          cp .verifica/ultimo.md .verifica/ultimo-parte.md || true
           python tools/build_site.py
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
           if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then cargo install wasm-bindgen-cli --version "$ver" --locked --force; fi
@@ -161,20 +271,23 @@ jobs:
           python tools/verifica.py --browser chromium --solo e2e_rust
       # times and memory of the two engines (skipped without the real data: bench.py needs Full Scan files)
       - name: Measures
+        if: matrix.parte == 5
         continue-on-error: true
         run: python tools/bench.py --memoria
       - name: Print the logs of the failed tests (readable in the job log)
-        if: failure()
+        if: always()
         shell: bash
         run: |
           [ -f .verifica/ultimo.md ] || { echo "No .verifica/ultimo.md: verifica.py stopped before writing its report (see the log of the failed step above)"; exit 0; }
+          [ ! -f .verifica/ultimo-parte.md ] || { echo "--- part report"; cut -c1-2000 .verifica/ultimo-parte.md; echo "--- e2e_rust report"; }
           cat .verifica/ultimo.md | cut -c1-2000
+          grep -c '^- FAIL' .verifica/ultimo.md || true
           for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
-      - name: Logs of the failed tests
-        if: failure()
+      - name: Report and logs of the part
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: notte-completa
+          name: notte-completa-${{ matrix.parte }}
           path: .verifica/
           include-hidden-files: true
           if-no-files-found: ignore

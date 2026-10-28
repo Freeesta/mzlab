@@ -11,7 +11,7 @@
 //! `group_items` works on a plain list (the rows of one file, which is what mzmine groups); `group` takes the rows of an aligned table, whose height is
 //! the mean over the files where the ion was detected.
 
-use crate::table::{Aligned, CELL_ABSENT};
+use crate::table::{no_peak, Aligned};
 
 /// Distance between isotopologues of mzmine (`isotopeDistance`), Da.
 pub const ISOTOPE_STEP: f64 = 1.0033;
@@ -200,7 +200,7 @@ pub fn items_of(t: &Aligned) -> Vec<Item> {
             let (mut sum, mut n) = (0.0, 0u32);
             for k in 0..t.n_files {
                 let c = t.cell(r, k);
-                if t.state[c] != CELL_ABSENT {
+                if !no_peak(t.state[c]) {
                     sum += f64::from(t.height[c]);
                     n += 1;
                 }

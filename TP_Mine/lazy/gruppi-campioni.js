@@ -35,14 +35,14 @@
     });
   }
 
-  /** one row of the table @param {any} R @param {string} id @param {Campione} c @param {number} i @param {string} n name, escaped @param {boolean} checked @param {boolean} seen the user already saw the condition */
-  function rowHtml(R, id, c, i, n, checked, seen) {
+  /** one row of the table; `more`: the entries carry campioni/3 fields (sample ID, matrix), shown read-only @param {any} R @param {string} id @param {Campione} c @param {number} i @param {string} n name, escaped @param {boolean} checked @param {boolean} seen the user already saw the condition */
+  function rowHtml(R, id, c, i, n, checked, seen, more) {
       const timed = TIMED.includes(c.tipo), tprop = timed && c.tempo != null && !c.tempo_confermato, cprop = !!c.serie && !seen;
       return `<tr${tprop || cprop ? ' class="tpg-prop"' : ""}><td><input type="checkbox" id="${id}-s${i}" class="tpg-sel" data-i="${i}" aria-label="Select ${n}"${checked ? " checked" : ""}></td><td>${n}</td>`
         + `<td><select class="tpg-role" id="${id}-r${i}" data-i="${i}" aria-label="Role of ${n}">${R.ROLES.map((/** @type {string} */ r) => `<option${r === c.tipo ? " selected" : ""}>${r}</option>`).join("")}</select></td>`
         + `<td><input class="tpg-cond" id="${id}-c${i}" data-i="${i}" list="${id}-dl" autocomplete="off" aria-label="Condition of ${n}" placeholder="${TIMED.includes(c.tipo) ? "" : "shared"}" value="${esc(c.serie)}"${cprop ? ' title="Proposed from the name: Confirm conditions keeps it"' : ""}></td>`
         + `<td><input class="tpg-time" id="${id}-t${i}" data-i="${i}" type="text" inputmode="decimal" autocomplete="off" aria-label="Time of ${n}"${timed ? "" : " disabled"} value="${c.tempo == null ? "" : c.tempo}"${tprop ? ' title="Proposed from the name: Enter confirms"' : ""}></td>`
-        + `<td><input class="tpg-rep" id="${id}-p${i}" data-i="${i}" type="number" min="1" step="1" aria-label="Replicate of ${n}" value="${c.replica ?? ""}"></td></tr>`;
+        + `<td><input class="tpg-rep" id="${id}-p${i}" data-i="${i}" type="number" min="1" step="1" aria-label="Replicate of ${n}" value="${c.replica ?? ""}"></td>${more ? `<td>${esc(/** @type {any} */ (c).campione_id || "")}${/** @type {any} */ (c).reiniezione ? " (re-injection)" : ""}</td><td>${esc(/** @type {any} */ (c).matrice || "")}</td>` : ""}</tr>`;
   }
 
   /** the warnings of the Rust, one span per code and condition @param {{codice: string, gravita: string, file: string, serie: string}[]} avvisi @param {boolean} several more than one condition: name it */
@@ -89,15 +89,15 @@
     /** @param {string=} focus id of the element that takes the focus again */
     async function draw(focus) {
       if (dead) return;
-      const k = conds(), shared = k.length >= 2, u = cs.find(c => c.tempo != null);
-      const rows = cs.map((c, i) => rowHtml(R, id, c, i, esc(files[i]), sel.has(i), sure.has(c.file))).join("");
+      const k = conds(), shared = k.length >= 2, u = cs.find(c => c.tempo != null), more = cs.some(c => /** @type {any} */ (c).campione_id || /** @type {any} */ (c).matrice);
+      const rows = cs.map((c, i) => rowHtml(R, id, c, i, esc(files[i]), sel.has(i), sure.has(c.file), more)).join("");
       el.innerHTML = `<div class="tpg"><style>${CSS}</style>`
         + `<div class="tpg-bar"><strong>Files, conditions and times</strong><label>Time unit <select id="${id}-u" aria-label="Unit of the times of the files">${R.UNITS.map((/** @type {string} */ x) => `<option${u && u.unita_tempo === x ? " selected" : ""}>${x}</option>`).join("")}</select></label>`
         + `<button type="button" id="${id}-set"${sel.size ? "" : " disabled"}>Set condition…</button><button type="button" id="${id}-ok" title="Keeps the conditions and the times proposed from the names">Confirm conditions</button>`
         + `<label${shared ? "" : " hidden"}>Reference condition <select id="${id}-ref" aria-label="Reference condition">${["", ...k].map(x => `<option value="${esc(x)}"${x === ref ? " selected" : ""}>${x ? esc(x) : "none"}</option>`).join("")}</select></label></div>`
         + `<div class="tpg-bar" id="${id}-setrow"${setOpen ? "" : " hidden"}><label>Condition for the ${sel.size} selected file${sel.size === 1 ? "" : "s"} <input id="${id}-sv" list="${id}-dl" autocomplete="off" aria-label="Condition for the selected files"></label><button type="button" id="${id}-apply">Apply</button><button type="button" id="${id}-cancel">Cancel</button></div>`
         + `<datalist id="${id}-dl">${k.map(x => `<option value="${esc(x)}">`).join("")}</datalist>`
-        + `<table><caption class="sr-only">Role, condition, time and replicate of each file</caption><tr><th scope="col"><input type="checkbox" id="${id}-all" aria-label="Select all files"${sel.size === cs.length && cs.length ? " checked" : ""}></th><th scope="col">File</th><th scope="col">Role</th><th scope="col">Condition</th><th scope="col">Time</th><th scope="col">Replicate</th></tr>${rows}</table>`
+        + `<table><caption class="sr-only">Role, condition, time and replicate of each file</caption><tr><th scope="col"><input type="checkbox" id="${id}-all" aria-label="Select all files"${sel.size === cs.length && cs.length ? " checked" : ""}></th><th scope="col">File</th><th scope="col">Role</th><th scope="col">Condition</th><th scope="col">Time</th><th scope="col">Replicate</th>${more ? '<th scope="col">Sample ID</th><th scope="col">Matrix</th>' : ""}</tr>${rows}</table>`
         + `<div class="tpg-w" id="${id}-w" role="status"></div></div>`;
       wire(); await warn();
       if (focus) { const f = /** @type {HTMLElement | null} */ (el.querySelector("#" + focus)); if (f) f.focus(); }

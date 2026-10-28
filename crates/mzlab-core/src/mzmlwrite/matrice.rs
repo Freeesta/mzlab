@@ -1,12 +1,11 @@
 //! `Codifica::array`: one `<binaryDataArray>` of a spectrum or a chromatogram (floats or numpress, zlib, base64).
 
-use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use base64::Engine;
 
 use super::codifica::{Codifica, Data};
-use super::{spectrum_head, SpectrumExtra};
+use super::{spectrum_head_into, SpectrumExtra};
 use crate::error::Result;
 use crate::mzml::Spectrum;
 use crate::numpress::{self, Np};
@@ -20,7 +19,7 @@ impl Codifica {
         extra: &SpectrumExtra,
         s: &mut String,
     ) -> Result<()> {
-        s.push_str(&spectrum_head(index, sp, extra));
+        spectrum_head_into(s, index, sp, extra);
         *s += "<binaryDataArrayList count=\"2\">\n";
         let res = self.arrays(s, sp);
         *s += "</binaryDataArrayList></spectrum>\n";
@@ -30,24 +29,17 @@ impl Codifica {
     fn arrays(&mut self, s: &mut String, sp: &Spectrum) -> Result<()> {
         let np = self.opz.numpress && sp.mz.len() >= 3;
         if np {
-            self.array(s, "mz", "mz", Data::Np(Np::Linear, Cow::Borrowed(&sp.mz)))?;
+            self.array(s, "mz", "mz", Data::Np(Np::Linear, &sp.mz))?;
         } else {
             self.array(s, "mz", "mz", Data::F64(&sp.mz))?;
         }
-        match (&sp.wide, np) {
-            (Some(w), false) => self.array(s, "intensity", "counts", Data::F64(w)),
-            (None, false) => self.array(s, "intensity", "counts", Data::F32(&sp.intensity)),
-            (Some(w), true) => self.array(
-                s,
-                "intensity",
-                "counts",
-                Data::Np(Np::Slof, Cow::Borrowed(w)),
-            ),
-            (None, true) => {
-                let v: Vec<f64> = sp.intensity.iter().map(|&x| f64::from(x)).collect();
-                self.array(s, "intensity", "counts", Data::Np(Np::Slof, Cow::Owned(v)))
-            }
-        }
+        let data = match (&sp.wide, np) {
+            (Some(w), false) => Data::F64(w),
+            (None, false) => Data::F32(&sp.intensity),
+            (Some(w), true) => Data::Np(Np::Slof, w),
+            (None, true) => Data::NpF32(&sp.intensity),
+        };
+        self.array(s, "intensity", "counts", data)
     }
 
     /// Appends `<binaryDataArray>` to `s`: the values as little-endian floats (or a numpress codec), zlib (level `Opzioni::livello`) and base64.
@@ -56,35 +48,27 @@ impl Codifica {
         // (accession, name) of the number type or of the numpress codec, and whether zlib follows
         let (acc, name, zlib): (&str, &str, bool) = match &data {
             Data::F64(v) => {
-                self.raw.reserve(v.len() * 8);
-                v.iter()
-                    .for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
+                le_bytes(&mut self.raw, v, |x| x.to_le_bytes());
                 ("MS:1000523", "64-bit float", true)
             }
             Data::F32(v) => {
-                self.raw.reserve(v.len() * 4);
-                v.iter()
-                    .for_each(|x| self.raw.extend_from_slice(&x.to_le_bytes()));
+                le_bytes(&mut self.raw, v, |x| x.to_le_bytes());
                 ("MS:1000521", "32-bit float", true)
             }
-            Data::Np(np, v) => {
-                self.np = match np {
-                    Np::Slof => numpress::encode_slof(v, numpress::slof_fixed_point(v)),
-                    _ => numpress::encode_linear(v, numpress::linear_fixed_point(v)),
-                };
-                self.raw.extend_from_slice(&self.np);
-                (
-                    if *np == Np::Slof {
-                        "MS:1002314"
-                    } else {
-                        "MS:1002312"
-                    },
-                    "",
-                    false,
-                )
+            Data::Np(Np::Slof, v) => {
+                numpress::encode_slof_into(&mut self.raw, v, numpress::slof_fixed_point(v));
+                ("MS:1002314", "", false)
+            }
+            Data::NpF32(v) => {
+                numpress::encode_slof_f32_into(&mut self.raw, v, numpress::slof_fixed_point_f32(v));
+                ("MS:1002314", "", false)
+            }
+            Data::Np(_, v) => {
+                numpress::encode_linear_into(&mut self.raw, v, numpress::linear_fixed_point(v));
+                ("MS:1002312", "", false)
             }
         };
-        let is_np = matches!(data, Data::Np(..));
+        let is_np = matches!(data, Data::Np(..) | Data::NpF32(..));
         let mut zlib = zlib;
         if is_np {
             // zlib after the codec only when it makes the array smaller
@@ -98,7 +82,11 @@ impl Codifica {
         }
         let len = self.packed.len().div_ceil(3) * 4;
         let ((unit_acc, unit_name), (cv, label)) = (unit_term(unit), kind_term(kind));
-        let unit_cv = if unit == "time" { "UO" } else { "MS" };
+        let unit_cv = if matches!(unit, "time" | "nm" | "au") {
+            "UO"
+        } else {
+            "MS"
+        };
         let _ = write!(s, "<binaryDataArray encodedLength=\"{len}\">");
         if is_np {
             // the values are 64-bit floats once decoded; the codec (and zlib with it) replaces the compression term
@@ -114,11 +102,22 @@ impl Codifica {
     }
 }
 
+/// `out` = the little-endian bytes of `v` (`N` bytes each): sized once and filled in chunks, which the compiler turns into one copy on a little-endian
+/// machine (the crate forbids `unsafe`, so no cast of the slice to bytes).
+fn le_bytes<T: Copy, const N: usize>(out: &mut Vec<u8>, v: &[T], to_le: impl Fn(T) -> [u8; N]) {
+    out.resize(v.len() * N, 0);
+    for (c, x) in out.chunks_exact_mut(N).zip(v) {
+        c.copy_from_slice(&to_le(*x));
+    }
+}
+
 /// (accession, name) of the unit of an array.
 fn unit_term(unit: &str) -> (&'static str, &'static str) {
     match unit {
         "time" => ("UO:0000031", "minute"),
         "mz" => ("MS:1000040", "m/z"),
+        "nm" => ("UO:0000018", "nanometer"),
+        "au" => ("UO:0000269", "absorbance unit"),
         _ => ("MS:1000131", "number of detector counts"),
     }
 }
@@ -128,6 +127,7 @@ fn kind_term(kind: &str) -> (&'static str, &'static str) {
     match kind {
         "time" => ("MS:1000595", "time array"),
         "mz" => ("MS:1000514", "m/z array"),
+        "wavelength" => ("MS:1000617", "wavelength array"),
         _ => ("MS:1000515", "intensity array"),
     }
 }

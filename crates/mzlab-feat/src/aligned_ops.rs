@@ -103,6 +103,22 @@ impl Aligned {
     /// least `files` files (noise and constant background do not appear and disappear only once).
     pub fn retain_recurring(&mut self, files: usize) {
         let nf = self.n_files;
+        self.retain_rows(|t, r| {
+            let cells = &t.state[r * nf..(r + 1) * nf];
+            let on: Vec<usize> = (0..nf).filter(|&k| cells[k] == CELL_DETECTED).collect();
+            let run = on.len() >= files && on[on.len() - 1] - on[0] + 1 == on.len();
+            run && on[0] != 0
+        });
+    }
+
+    /// Keeps the rows whose RT is in `[lo, hi]` minutes (the order of the rows does not change).
+    pub fn retain_rt(&mut self, lo: f64, hi: f64) {
+        self.retain_rows(|t, r| t.rt[r] >= lo && t.rt[r] <= hi);
+    }
+
+    /// Keeps the rows for which `keep(table, row)` is true; the cells, the members and the summaries follow their row.
+    fn retain_rows(&mut self, keep: impl Fn(&Aligned, usize) -> bool) {
+        let nf = self.n_files;
         let mut out = Aligned {
             n_files: nf,
             ..Aligned::default()
@@ -112,10 +128,7 @@ impl Aligned {
             out.member_start.push(0);
         }
         for r in 0..self.len() {
-            let cells = &self.state[r * nf..(r + 1) * nf];
-            let on: Vec<usize> = (0..nf).filter(|&k| cells[k] == CELL_DETECTED).collect();
-            let run = on.len() >= files && on[on.len() - 1] - on[0] + 1 == on.len();
-            if !run || on[0] == 0 {
+            if !keep(self, r) {
                 continue;
             }
             out.mz.push(self.mz[r]);

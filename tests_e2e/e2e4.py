@@ -19,7 +19,7 @@ try:
         def hover_chrom():
             c = pt(pg, 0, 14.33); pg.mouse.move(c["px"] - 30, c["py"]); pg.mouse.move(c["px"], c["py"], steps=4); pg.wait_for_timeout(300)
             t = pg.inner_text(".pnl.chrom .tip"); print("TIP:", t.replace("\n", " | "))
-            assert "RT 14.3" in t and "B_FullMass" in t
+            assert "14.3" in t and " min" in t and "RT" not in t and "B_FullMass" in t
             vis = pg.evaluate("[...document.querySelectorAll('.vl')].filter(v=>!v.hidden).length"); print("visible vlines:", vis); assert vis >= 1
             pg.screenshot(path=SH + "41_hover.png")
         step("hover tooltip + synced line", hover_chrom)
@@ -36,7 +36,7 @@ try:
             a = pg.evaluate("(()=>{const p=E.panels[0],a=p._a;return {n:a.sr.length}})()")
             c = pt(pg, 0, 14.33, ymz=1.45); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
             pg.locator("#ctx div", has_text="Integra il picco").first.click(); pg.wait_for_timeout(500)
-            assert pg.is_visible("#askdlg") and "non si integra" in pg.inner_text("#asktxt"), "TIC must refuse the integration"
+            assert pg.is_visible("#askdlg") and "non sul TIC" in pg.inner_text("#asktxt"), "TIC must refuse the integration"
             pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
         step("TIC refuses integration (only XIC)", stack_int)
         def logv():

@@ -165,7 +165,7 @@ const WORKFLOW = (() => {
       try {
         const wf = await FILESICURI.readJson(file);
         await applyWorkflow(wf, file.name);
-      } catch (err) {
+      } catch (err_) { const err = /** @type {Lanciato} */ (err_);
         const why = err && (err.message === "tooBig" || err.message === "tooDeep") ? I18N.t(err.message === "tooBig" ? "workflow.err.tooBig" : "workflow.err.tooDeep") : EH(err && err.message || "");
         info(EH(I18N.t("workflow.err.invalidFormat")) + " " + why);
       }

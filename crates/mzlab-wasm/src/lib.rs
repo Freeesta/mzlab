@@ -14,7 +14,7 @@ use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca;
+mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;
@@ -70,7 +70,7 @@ impl BlockReader {
     }
 }
 
-const BLOCK: usize = 1 << 20;
+const BLOCK: usize = 4 << 20; // 4 MiB: ~2.5x faster OPFS reads than 1 MiB in Chromium (docs/studi/wasm-potenza.md 3e); JS buffers grow to it
 
 impl Read for BlockReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
@@ -127,7 +127,7 @@ impl BlockWriter {
 impl Write for BlockWriter {
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
         self.buf.extend_from_slice(data);
-        if self.buf.len() >= 4 * BLOCK {
+        if self.buf.len() >= BLOCK {
             self.flush_block()?;
         }
         Ok(data.len())
@@ -369,9 +369,9 @@ impl Engine {
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
-    /// Number of scans of one level (the capacity a trace needs).
+    /// Number of scans of one level (the capacity a trace needs); `u32::MAX` when no run is open at `slot` (the worker answers `err.file.raw`, as the desktop engine).
     pub fn count(&self, slot: u32, level: u8) -> u32 {
-        self.runs.get(&slot).map_or(0, |r| {
+        self.runs.get(&slot).map_or(u32::MAX, |r| {
             r.spectra.iter().filter(|s| s.level == level).count() as u32
         })
     }
@@ -399,10 +399,10 @@ impl Engine {
         }
     }
 
-    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range).
+    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range, `u32::MAX` when no run is open at `slot`).
     pub fn spectra_len(&self, slot: u32, level: u8, i0: u32, i1: u32) -> u32 {
         let Some(r) = self.runs.get(&slot) else {
-            return 0;
+            return u32::MAX;
         };
         let mut len = 2usize;
         let mut pos = 0u32;
@@ -667,7 +667,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
     let n = rt.len().min(y.len());
     let (rt, y) = (&rt[..n], &y[..n]);
     let found = if mode == 1 {
-        peakq::detect_prominence(rt, y, peakq::ProminenceParams::default())
+        peakq::detect_prominence(rt, y, peakq::ProminenceParams { local_snr: 5.0, ..Default::default() })
     } else {
         peaks::detect_peaks(rt, y, peaks::Params::default())
     };

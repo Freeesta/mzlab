@@ -17,23 +17,45 @@ pub struct Peak {
 
 pub const MIN_SCANS_RELIABLE: usize = 6;
 
-use crate::signal::{asls_baseline, cwt_ricker, median, snip_baseline, solve};
+use crate::signal::{asls_baseline, cwt_ricker, median_in, snip_baseline, solve3};
 pub use crate::signal::{noise_level, savgol};
 
+/// The quadratic fit over `i ± 2` of `_parabola_apex`, on the stack: the points relative to the apex time, the normal matrix, the coefficients and the
+/// apex of the parabola clamped to the points.
+pub struct Quad {
+    pub xs: [f64; 5],
+    pub len: usize,
+    pub ata: [f64; 9],
+    pub c: [f64; 3],
+    pub xa: f64,
+    pub height: f64,
+}
 
-/// Height of the quadratic fit around index `i` (the second moment is not needed here), as `_parabola_apex`.
-pub(crate) fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
+/// What the fit around an index gives.
+pub enum Fit {
+    /// Fewer than 3 points in the window.
+    Short,
+    /// Singular normal matrix or a parabola that does not close downwards.
+    Flat,
+    Peak(Quad),
+}
+
+/// `_parabola_apex(rt, y, i)` up to the apex: the least squares parabola over `i ± 2`.
+pub fn quad_fit(rt: &[f64], y: &[f64], i: usize) -> Fit {
     let n = y.len();
-    let half = 2usize;
-    let a = i.saturating_sub(half);
-    let b = (i + half + 1).min(n);
+    let a = i.saturating_sub(2);
+    let b = (i + 3).min(n);
     if b - a < 3 {
-        return y[i];
+        return Fit::Short;
     }
-    let xs: Vec<f64> = rt[a..b].iter().map(|t| t - rt[i]).collect();
-    let mut ata = vec![0.0; 9];
-    let mut aty = vec![0.0; 3];
-    for (x, &yy) in xs.iter().zip(&y[a..b]) {
+    let len = b - a;
+    let mut xs = [0.0; 5];
+    for (x, t) in xs.iter_mut().zip(&rt[a..b]) {
+        *x = t - rt[i];
+    }
+    let mut ata = [0.0; 9];
+    let mut aty = [0.0; 3];
+    for (x, &yy) in xs[..len].iter().zip(&y[a..b]) {
         for j in 0..3 {
             aty[j] += x.powi(j as i32) * yy;
             for k in 0..3 {
@@ -41,17 +63,30 @@ pub(crate) fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
             }
         }
     }
-    let coef = match solve(ata, aty, 3) {
-        Some(c) => c,
-        None => return y[i],
+    let Some(c) = solve3(ata, aty) else {
+        return Fit::Flat;
     };
-    let (c0, c1, c2) = (coef[0], coef[1], coef[2]);
-    if c2 >= 0.0 {
-        return y[i];
+    if c[2] >= 0.0 {
+        return Fit::Flat;
     }
-    let (lo, hi) = (xs[0], xs[xs.len() - 1]);
-    let xa = (-c1 / (2.0 * c2)).clamp(lo, hi);
-    c0 + c1 * xa + c2 * xa * xa
+    let xa = (-c[1] / (2.0 * c[2])).clamp(xs[0], xs[len - 1]);
+    let height = c[0] + c[1] * xa + c[2] * xa * xa;
+    Fit::Peak(Quad {
+        xs,
+        len,
+        ata,
+        c,
+        xa,
+        height,
+    })
+}
+
+/// Height of the quadratic fit around index `i` (the second moment is not needed here), as `_parabola_apex`.
+pub fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
+    match quad_fit(rt, y, i) {
+        Fit::Peak(q) => q.height,
+        _ => y[i],
+    }
 }
 
 fn trapz(y: &[f64], x: &[f64]) -> f64 {
@@ -135,11 +170,12 @@ fn ridge_lines(c: &[Vec<f64>], widths: &[f64]) -> Vec<Ridge> {
                 .collect()
         })
         .collect();
+    // one buffer for the two medians of every scale
+    let mut scratch = Vec::new();
     let scale_noise: Vec<f64> = (0..nw)
         .map(|i| {
-            let m = median(&c[i]);
-            let dev: Vec<f64> = c[i].iter().map(|v| (v - m).abs()).collect();
-            (median(&dev) * 1.4826).max(1e-12)
+            let m = median_in(c[i].iter().copied(), &mut scratch);
+            (median_in(c[i].iter().map(|v| (v - m).abs()), &mut scratch) * 1.4826).max(1e-12)
         })
         .collect();
     let mut ridges: Vec<Ridge> = Vec::new();
@@ -173,7 +209,13 @@ fn ridge_lines(c: &[Vec<f64>], widths: &[f64]) -> Vec<Ridge> {
 }
 
 /// The apexes `(index, ridge SNR, width)` that the ridges support, in order of position.
-fn ridge_apexes(ridges: &[Ridge], widths: &[f64], ys: &[f64], noise: f64, snr: f64) -> Vec<(usize, f64, f64)> {
+fn ridge_apexes(
+    ridges: &[Ridge],
+    widths: &[f64],
+    ys: &[f64],
+    noise: f64,
+    snr: f64,
+) -> Vec<(usize, f64, f64)> {
     let n = ys.len();
     let mut found: Vec<(usize, f64, f64)> = Vec::new();
     let mut taken: Vec<usize> = Vec::new();
@@ -220,7 +262,13 @@ fn ridge_apexes(ridges: &[Ridge], widths: &[f64], ys: &[f64], noise: f64, snr: f
 }
 
 /// Borders, area and height of each apex; the peaks with fewer scans than `min_scans` are dropped; by decreasing height.
-fn peaks_of(found: Vec<(usize, f64, f64)>, rt: &[f64], yc: &[f64], ys: &[f64], params: &Params) -> Vec<Peak> {
+fn peaks_of(
+    found: Vec<(usize, f64, f64)>,
+    rt: &[f64],
+    yc: &[f64],
+    ys: &[f64],
+    params: &Params,
+) -> Vec<Peak> {
     let n = ys.len();
     let mut peaks = Vec::new();
     for (apex, rsn, _w) in found {
@@ -281,5 +329,10 @@ pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
     let ridges = ridge_lines(&c, &widths);
     let found = ridge_apexes(&ridges, &widths, &ys, noise, params.snr);
     let peaks = peaks_of(found, rt, &yc, &ys, &params);
-    Detection { yc, ys, noise, peaks }
+    Detection {
+        yc,
+        ys,
+        noise,
+        peaks,
+    }
 }

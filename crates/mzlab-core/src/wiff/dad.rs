@@ -162,8 +162,10 @@ fn dad_wl_chrom(
             .wavelengths_nm
             .iter()
             .enumerate()
-            .find(|(_, &w)| (w - nm).abs() <= 0.5 * dad.wl_step_nm + 1e-6)
-            .map(|(j, _)| j)?;
+            .map(|(j, &w)| (j, w, (w - nm).abs()))
+            .filter(|x| x.2 <= 0.5 * dad.wl_step_nm + 1e-6)
+            .min_by(|a, b| a.2.total_cmp(&b.2).then(a.1.total_cmp(&b.1)))
+            .map(|x| x.0)?;
         vec![best]
     };
     if cols.is_empty() {
@@ -429,14 +431,14 @@ impl TofSampleData {
         })
     }
 
-    /// Converts a TDC tick index `bin` into $m/z$ using scan `scan_idx`'s `(a, t0)` calibration: $m/z = ((\text{bin} \times \Delta t_{\text{TDC}} - t_0) \times a)^2$.
+    /// Converts a TDC tick index `bin` into $m/z$ using scan `scan_idx`'s `(a, t0)` calibration: $m/z = ((\text{bin} \times \Delta t_{\text{TDC}} - t_0) \times a)^2$; a bin before `t0` has no m/z (0.0).
     pub fn bin_to_mz(&self, scan_idx: usize, bin: u32) -> f64 {
         let (a, t0) = self
             .scan_calibration
             .get(scan_idx)
             .map_or((self.initial_a, self.initial_t0), |&(a, t0, _)| (a, t0));
         let root = (f64::from(bin) * self.tdc_bin_time_ns - t0) * a;
-        root * root
+        root.max(0.0) * root.max(0.0)
     }
 }
 
@@ -492,3 +494,6 @@ pub fn decode_tof_block(block: &[u8]) -> Result<Vec<(u32, u32)>> {
     }
     Ok(pts)
 }
+#[cfg(test)]
+#[path = "dad_tests.rs"]
+mod tests;

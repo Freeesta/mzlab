@@ -19,10 +19,11 @@ export function upgrade(db) {
   if (!db.objectStoreNames.contains("molecole")) db.createObjectStore("molecole", { keyPath: "id" });
 }
 
+/** @param {string} name */
 export function openOldDatabase(name) {
   return new Promise(resolve => {
     let createdEmpty = false;
-    let req;
+    /** @type {IDBOpenDBRequest} */ let req;
     try {
       req = indexedDB.open(name);
     } catch (_) {
@@ -46,6 +47,7 @@ export function openOldDatabase(name) {
   });
 }
 
+/** @param {IDBDatabase} db @param {string} storeName */
 export function countStore(db, storeName) {
   return new Promise(resolve => {
     if (!db.objectStoreNames.contains(storeName)) return resolve(0);
@@ -60,6 +62,7 @@ export function countStore(db, storeName) {
   });
 }
 
+/** @param {IDBDatabase} oldDb @param {IDBDatabase} newDb @param {string} storeName */
 export function copyStore(oldDb, newDb, storeName) {
   return new Promise((resolve, reject) => {
     try {
@@ -101,6 +104,7 @@ export function copyStore(oldDb, newDb, storeName) {
   });
 }
 
+/** @param {IDBDatabase} db @param {string} key */
 export function getKv(db, key) {
   return new Promise(resolve => {
     if (!db.objectStoreNames.contains("kv")) return resolve(undefined);
@@ -115,6 +119,7 @@ export function getKv(db, key) {
   });
 }
 
+/** @param {IDBDatabase} db @param {string} key @param {unknown} val */
 export function putKv(db, key, val) {
   return new Promise((resolve, reject) => {
     try {
@@ -129,6 +134,7 @@ export function putKv(db, key, val) {
   });
 }
 
+/** @param {IDBDatabase} newDb @param {string} oldName */
 async function doMigration(newDb, oldName) {
   if (typeof indexedDB === "undefined") return;
   try {
@@ -187,14 +193,16 @@ async function doMigration(newDb, oldName) {
   }
 }
 
+/** @param {IDBDatabase} newDb @param {string} [oldName] */
 export function migrateIdb(newDb, oldName = DB_OLD) {
   const L = typeof navigator !== "undefined" && navigator.locks;
   return L ? L.request("mzlab-idb-migra", { mode: "exclusive" }, () => doMigration(newDb, oldName)) : doMigration(newDb, oldName);
 }
 
 // A function that gives one connection for the whole life of the worker; it closes itself when another tab needs to upgrade the database.
+/** @param {() => void} [onblocked] */
 export function lab(onblocked) {
-  let dbP = null;
+  /** @type {Promise<IDBDatabase> | null} */ let dbP = null;
   return () => dbP || (dbP = new Promise((res, rej) => {
     const r = indexedDB.open(DB_NAME, DB_VER);
     r.onupgradeneeded = () => upgrade(r.result);

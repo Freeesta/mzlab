@@ -1,0 +1,72 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "campioni/3",
+ "title": "campioni/3: metadata of the files of a series",
+ "description": "campioni/2 plus the physical sample, polarity, matrix, batch, date and time, group and free typed columns: one entry per file (a physical sample measured in both polarities is two files with the same campione_id). Read from the CSV or the names by `csv_leggi` and `modello`, completed from the files by `dal_file`, checked by `valida`. A campioni/2 document is read and migrated (the new fields empty). Canonical JSON: keys in alphabetical order, files sorted by ordine_iniezione, columns and free values by name: the same metadata give the same bytes and the same SHA-256 whatever the order they were written in.",
+ "type": "object",
+ "required": ["campioni", "colonne", "schema"],
+ "properties": {
+  "schema": {"const": "campioni/3"},
+  "colonne": {
+   "type": "array",
+   "description": "the declared free columns; the values of the files are in `extra`",
+   "items": {
+    "type": "object",
+    "required": ["nome", "tipo"],
+    "properties": {
+     "nome": {"type": "string"},
+     "tipo": {"enum": ["testo", "numero", "categoria"]},
+     "valori": {"type": "array", "items": {"type": "string"}, "description": "the allowed values of a category (sorted)"},
+     "obbligatoria": {"type": "boolean", "description": "every file must have a value (missingValue); absent = false"}
+    }
+   }
+  },
+  "campioni": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": ["acquisito", "campione", "campione_id", "composto", "concentrazione", "extra", "file", "gruppo", "istd", "lotto", "matrice", "note", "ordine_iniezione", "polarita", "reiniezione", "replica", "serie", "sha256", "tempo", "tempo_confermato", "tempo_min", "tipo", "tipo_bianco", "unita", "unita_tempo"],
+    "properties": {
+     "file": {"type": "string"},
+     "sha256": {"type": "string", "description": "SHA-256 of the raw file: the key (the name can change); empty when not known yet"},
+     "campione": {"type": "string", "description": "the sample inside a file that holds several (index or inner name); empty when the file is one sample"},
+     "campione_id": {"type": "string", "description": "the physical sample; the two polarities of one sample share it"},
+     "polarita": {"enum": [1, -1, null], "description": "from the file (dal_file) or proposed by a name model"},
+     "matrice": {"type": "string"},
+     "lotto": {"type": "string", "description": "the batch of disegno/1; empty = the default batch"},
+     "acquisito": {"type": ["string", "null"], "description": "ISO YYYY-MM-DDTHH:MM[:SS], local time of the instrument PC, from the file"},
+     "gruppo": {"type": "string"},
+     "extra": {"type": "object", "description": "free columns: name -> text or number, typed by `colonne`"},
+     "dati_file": {
+      "type": "object",
+      "description": "what the file says about itself (dal_file), never edited by the user; present only when read from the file",
+      "properties": {
+       "modello": {"type": "string"},
+       "metodo": {"type": "string"},
+       "mz_min": {"type": ["number", "null"]},
+       "mz_max": {"type": ["number", "null"]},
+       "rt_min": {"type": ["number", "null"]},
+       "rt_max": {"type": ["number", "null"]},
+       "scansioni": {"type": ["number", "null"]}
+      }
+     },
+     "tipo": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc", "pool"]},
+     "tipo_bianco": {"enum": ["solvent", "procedure", "wash", null]},
+     "tempo": {"type": ["number", "null"]},
+     "unita_tempo": {"enum": ["s", "min", "h", "d"]},
+     "tempo_min": {"type": ["number", "null"]},
+     "tempo_confermato": {"type": "boolean"},
+     "serie": {"type": "string"},
+     "reiniezione": {"type": "boolean", "description": "a re-injection (ID suffix -R): a distinct injection, left out of the kinetics by the pages"},
+     "replica": {"type": "integer", "minimum": 1},
+     "concentrazione": {"type": ["number", "null"]},
+     "unita": {"type": ["string", "null"]},
+     "ordine_iniezione": {"type": "integer", "minimum": 1},
+     "istd": {"type": "boolean"},
+     "note": {"type": "string"},
+     "composto": {"type": "string"}
+    }
+   }
+  }
+ }
+}

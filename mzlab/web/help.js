@@ -21,7 +21,6 @@ const HELP = {
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],
   "liste": [I18N.t("help.liste.title"), I18N.t("help.liste.body")],
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
-  "adducts": [I18N.t("help.adducts.title"), I18N.t("help.adducts.body")],
   "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
   // the download link is pointless inside the desktop app
   "header": ["", I18N.t("help.header.body") + (window.__TAURI__ || !SITO_PUBBLICO.scaricaApp ? "" : I18N.t("help.header.app"))],

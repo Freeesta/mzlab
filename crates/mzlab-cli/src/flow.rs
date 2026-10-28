@@ -14,8 +14,10 @@ use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_digl::uv::uv_job;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_insilico::insilico_job;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
@@ -355,15 +357,13 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
-    (
-        "spectra.insilico",
-        Exec::File("candidates", crate::flow_insilico::insilico_job),
-    ),
+    ("spectra.insilico", Exec::File("candidates", insilico_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
+    ("chrom.uv_peaks", Exec::File("peaks", uv_job)),
     ("annot.level", Exec::File("annot", level_job)),
     (
         "tp.network",
@@ -376,7 +376,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ),
     (
         "tp.generate",
-        Exec::File("hypotheses", crate::flow_generate::generate_job),
+        Exec::Made(crate::flow_generate::generate_job),
     ),
     (
         "tp.filter",

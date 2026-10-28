@@ -38,6 +38,7 @@ I18N.add("it", {
   "err.request.tooLarge": "Richiesta troppo grande.",
   "error.engineRestarted": "Il motore Rust si è riavviato: i file sono stati riaperti, puoi continuare.",
   "error.engineLowered": "Il motore ha finito la memoria. Le fasi finite sono salvate; riparte con meno memoria e i file sono stati riaperti.",
+  "error.noSimd": "Questo browser è troppo vecchio per il motore di calcolo (serve WebAssembly SIMD): aggiorna Chrome o Edge alla 91 o successiva, Firefox alla 89 o successiva, Safari alla 16.4 o successiva.",
   "error.engineFallback": "Il motore di calcolo si è fermato di nuovo: ricarica la pagina (i file salvati restano).",
   "err.route.unavailable": "Questa operazione non è disponibile per questi dati.",
   "error.newerFormat": "Indice o tabella preparati da una versione più recente di mzLab (formato {version}): resta com'è e non viene sovrascritto. Aggiorna la pagina o l'app per aprirlo; qui non si analizza.",

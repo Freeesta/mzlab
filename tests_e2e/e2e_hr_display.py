@@ -40,13 +40,15 @@ try:
             assert "cromatogramma" in pg.inner_text(".dsp") and "Normalizza" in pg.inner_text(".dsp")
         step("right click on a chromatogram → its own list", menu_chrom)
         def extend():
+            n0 = pg.evaluate("document.querySelectorAll('.dsp input[type=checkbox]').length")       # the options the list already has (normalise, peak time labels)
             pg.evaluate("DISP.register('chrom', {id:'zz', label:'disp.norm100', kind:'check', get:p=>!!p.zz, set:(p,v)=>{p.zz=v}})")
-            pg.evaluate("BANCO.renderInfo()"); pg.wait_for_function("document.querySelectorAll('.dsp input[type=checkbox]').length==2", timeout=5000)
+            pg.evaluate("BANCO.renderInfo()"); pg.wait_for_function(f"document.querySelectorAll('.dsp input[type=checkbox]').length=={n0 + 1}", timeout=5000)
         step("extendable: a package registers an option for a kind of chart", extend)
         def palette():
-            pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta", timeout=5000); pg.keyboard.type("opzioni di vis"); pg.wait_for_timeout(300)
-            assert "Opzioni di visualizzazione" in pg.inner_text("#pal-l")
-            pg.keyboard.press("Enter"); pg.wait_for_timeout(500); assert pg.evaluate("BARRA.curTab") == "disp"
+            drawer(pg, "file")      # leave the tab the previous step opened: the wait for 'disp' below must prove the command ran (the palette runs it after a timeout)
+            pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta", timeout=5000); attendi(pg, "document.activeElement && document.activeElement.id === 'pal-in'"); pg.keyboard.type("opzioni di vis")
+            attendi(pg, "document.querySelector('#pal-l') && document.querySelector('#pal-l').innerText.includes('Opzioni di visualizzazione')")
+            pg.keyboard.press("Enter"); attendi(pg, "BARRA.curTab === 'disp'")
         step("«Display options» is a command of the palette", palette)
         def iso():
             pg.evaluate("setActive(E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp))")

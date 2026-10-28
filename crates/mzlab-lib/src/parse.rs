@@ -45,7 +45,7 @@ pub fn detect(name: &str, head: &[u8]) -> Result<Format> {
     if ext_is(&[".json", ".jsonl", ".ndjson"]) {
         return Ok(Format::Json);
     }
-    let h = String::from_utf8_lossy(&head[..head.len().min(8192)]).into_owned();
+    let h = String::from_utf8_lossy(head.get(..8192).unwrap_or(head)).into_owned();
     let first = h.trim_start_matches('\u{feff}').trim_start();
     if h.to_ascii_uppercase().contains("BEGIN IONS") {
         Ok(Format::Mgf)
@@ -76,41 +76,43 @@ fn next_number(s: &[u8], pos: &mut usize) -> Option<f64> {
 
 /// Like `next_number`, also giving the start of the match.
 fn find_number(s: &[u8], pos: &mut usize) -> Option<(usize, f64)> {
+    // Out-of-range reads give 0, which matches none of the characters tested below.
+    let at = |k: usize| s.get(k).copied().unwrap_or(0);
     let n = s.len();
     let mut i = *pos;
     while i < n {
         let start = i;
         let mut j = i;
-        if j < n && (s[j] == b'+' || s[j] == b'-') {
+        if at(j) == b'+' || at(j) == b'-' {
             j += 1;
         }
         let d0 = j;
-        while j < n && s[j].is_ascii_digit() {
+        while at(j).is_ascii_digit() {
             j += 1;
         }
         let mut ok = j > d0;
         if ok {
-            if j < n && s[j] == b'.' {
+            if at(j) == b'.' {
                 j += 1;
-                while j < n && s[j].is_ascii_digit() {
+                while at(j).is_ascii_digit() {
                     j += 1;
                 }
             }
-        } else if j < n && s[j] == b'.' && j + 1 < n && s[j + 1].is_ascii_digit() {
+        } else if at(j) == b'.' && at(j + 1).is_ascii_digit() {
             j += 1;
-            while j < n && s[j].is_ascii_digit() {
+            while at(j).is_ascii_digit() {
                 j += 1;
             }
             ok = true;
         }
         if ok {
-            if j < n && (s[j] == b'e' || s[j] == b'E') {
+            if at(j) == b'e' || at(j) == b'E' {
                 let mut k = j + 1;
-                if k < n && (s[k] == b'+' || s[k] == b'-') {
+                if at(k) == b'+' || at(k) == b'-' {
                     k += 1;
                 }
                 let e0 = k;
-                while k < n && s[k].is_ascii_digit() {
+                while at(k).is_ascii_digit() {
                     k += 1;
                 }
                 if k > e0 {
@@ -118,8 +120,9 @@ fn find_number(s: &[u8], pos: &mut usize) -> Option<(usize, f64)> {
                 }
             }
             *pos = j;
-            return std::str::from_utf8(&s[start..j])
-                .ok()
+            return s
+                .get(start..j)
+                .and_then(|b| std::str::from_utf8(b).ok())
                 .and_then(|t| t.parse().ok())
                 .map(|v| (start, v));
         }
@@ -252,6 +255,27 @@ fn rt_minutes(c: &Rec) -> Option<f64> {
     Some(if unit.starts_with('s') { v / 60.0 } else { v })
 }
 
+/// The retention index of a record: `RI`, `RetentionIndex`, `Kovats`, MassBank `KOVATS_RI`; a plausible positive number only.
+fn ri_of(c: &Rec) -> Option<f64> {
+    let v = parse_float(c.get(&[
+        "ri",
+        "retentionindex",
+        "kovats",
+        "kovatsri",
+        "kovatsretentionindex",
+    ])?);
+    (v.is_finite() && v > 0.0 && v < 20_000.0).then_some(v)
+}
+
+/// Electron ionisation named by the ionisation or the spectrum type («EI», «EI-B», «electron ionization»).
+fn is_ei(c: &Rec) -> bool {
+    c.get(&["ionization", "ionizationtype", "ionisation", "spectrumtype"])
+        .is_some_and(|v| {
+            let v = v.trim().to_ascii_lowercase();
+            v == "ei" || v.starts_with("ei-") || v.starts_with("ei ") || v.contains("electron")
+        })
+}
+
 /// Turns a record into a spectrum or counts why not.
 fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
     let prec = parse_float(
@@ -291,6 +315,7 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         license: g(&["license", "licence"]),
     };
     let rt = rt_minutes(&c);
+    let (ri, ei) = (ri_of(&c), is_ei(&c));
     stats.read += 1;
     Some(Spectrum {
         prec,
@@ -299,6 +324,8 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         it: c.it,
         meta,
         rt,
+        ri,
+        ei,
     })
 }
 
@@ -350,12 +377,12 @@ impl<F: FnMut(Spectrum)> Parser<F> {
         let mut start = 0;
         for (i, &b) in data.iter().enumerate() {
             if b == b'\n' {
-                self.add_line_bytes(&data[start..i]);
+                self.add_line_bytes(data.get(start..i).unwrap_or_default());
                 self.end_line();
                 start = i + 1;
             }
         }
-        self.add_line_bytes(&data[start..]);
+        self.add_line_bytes(data.get(start..).unwrap_or_default());
     }
 
     fn add_line_bytes(&mut self, part: &[u8]) {
@@ -563,11 +590,15 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             "AC$CHROMATOGRAPHY" => {
                 if let Some(x) = sub(v, "RETENTION_TIME") {
                     c.field("retentiontime".into(), &x);
+                } else if let Some(x) = sub(v, "KOVATS_RI") {
+                    c.field("kovatsri".into(), &x);
                 }
             }
             "AC$MASS_SPECTROMETRY" => {
                 if let Some(x) = sub(v, "ION_MODE") {
                     c.field("ionmode".into(), &x);
+                } else if let Some(x) = sub(v, "IONIZATION") {
+                    c.field("ionization".into(), &x);
                 } else if let Some(x) = sub(v, "COLLISION_ENERGY") {
                     c.field("collisionenergy".into(), &x);
                 }
@@ -690,8 +721,8 @@ fn scalar(v: &Value) -> Option<String> {
         Value::String(s) => Some(s.clone()),
         Value::Number(n) => Some(n.to_string()),
         Value::Bool(b) => Some(b.to_string()),
-        Value::Array(a) if !a.is_empty() && a.iter().all(|x| !x.is_object() && !x.is_array()) => {
-            scalar(&a[0])
+        Value::Array(a) if a.iter().all(|x| !x.is_object() && !x.is_array()) => {
+            a.first().and_then(scalar)
         }
         _ => None,
     }

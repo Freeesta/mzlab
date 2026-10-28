@@ -168,7 +168,7 @@ const PCA = (() => {
       e.preventDefault();
       const mn = numIt(box.querySelector("#pca-min").value), k = parseInt(box.querySelector("#pca-k").value, 10), msg = box.querySelector("#pca-msg");
       st.min = mn >= 0 ? mn : 0; st.k = k >= 1 ? k : 1; st.transform = box.querySelector("#pca-tr").value; st.scaling = box.querySelector("#pca-sc").value; save(); msg.textContent = "";
-      try { await run(); paintRes(box); } catch (err) { msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
+      try { await run(); paintRes(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
     };
     box.onclick = e => {
       if (e.target.id === "pca-help") { const h = box.querySelector("#pca-help-text"); h.hidden = !h.hidden; e.target.setAttribute("aria-expanded", String(!h.hidden)); return; }

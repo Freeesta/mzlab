@@ -8,8 +8,8 @@ use mzlab_core::error::{Error, Result};
 
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::{
-    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, Posizione, VoceCromatogramma,
-    VoceLettore, VoceScansione, CONTRATTO,
+    Campione, Campo, Fiducia, FileSet, Formato, Lettore, Limiti, VoceCromatogramma, VoceLettore,
+    VoceScansione, CONTRATTO,
 };
 
 use mzlab_core::metodo::sha1_hex;
@@ -17,8 +17,10 @@ use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
 
 use mzlab_core::mzmlwrite::{Header, SpectrumExtra};
 
+use super::mzxml_finestra::{somme_picchi, Finestra};
 use super::mzxml_indice::{self, Riga};
 use super::mzxml_precursori::precursori_di;
+use super::mzxml_voce::voce;
 
 use super::mzxml_scan::{self as scan, attr, each, Tag, Testa};
 
@@ -30,7 +32,7 @@ const TESTA: usize = 4096;
 const TESTA_SCANSIONE: u64 = 1 << 20;
 const UNITA: &str = "number of detector counts";
 /// The most `nameValue`/`precursorMz` elements kept for a scan.
-const TETTO: usize = 256;
+pub(super) const TETTO: usize = 256;
 
 pub const VOCE: VoceLettore = VoceLettore {
     id: "mzxml",
@@ -106,7 +108,7 @@ impl LettoreMzxml {
             filter: v.filtro,
             precursor: v.precursore,
             intensity: p.intensita.iter().map(|&x| x as f32).collect(),
-            wide: p.a_64_bit.then(|| p.intensita.clone()),
+            wide: p.a_64_bit.then_some(p.intensita),
             mz: p.mz,
         };
         Ok((s, extra_di(&t, &self.indice)))
@@ -122,20 +124,22 @@ impl LettoreMzxml {
             if !(if tic { manca_tic } else { manca_bpi }) {
                 continue;
             }
-            let (s, _) = self.spettro(k)?;
+            let (tic_k, bpi_k) = self.somme(k)?;
             if manca_tic {
-                self.indice[k].tic = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+                self.indice[k].tic = tic_k;
                 self.tic_noto[k] = true;
             }
             if manca_bpi {
-                self.bpi[k] = Some(
-                    (0..s.mz.len())
-                        .map(|i| s.intensity_f64(i))
-                        .fold(0.0, f64::max),
-                );
+                self.bpi[k] = Some(bpi_k);
             }
         }
         Ok(())
+    }
+
+    /// TIC and base peak intensity of scan `k` from its peaks, without building the spectrum.
+    fn somme(&mut self, k: usize) -> Result<(f64, f64)> {
+        let byte = self.byte(k)?;
+        somme_picchi(&byte, &self.limiti)
     }
 
     /// The scans a chromatogram sums: the MS1 ones, or all of them when the file has no MS1.
@@ -195,9 +199,10 @@ impl Lettore for LettoreMzxml {
 
     fn non_portati(&self) -> &'static [(&'static str, &'static str)] {
         use mzlab_core::conv::FUORI_MODELLO;
-        &[
-            ("text of the header elements, scanOrigin, maldi, separation, spotting and processingOperation", FUORI_MODELLO),
-        ]
+        &[(
+            "text of the header elements, scanOrigin, maldi, separation, spotting and processingOperation",
+            FUORI_MODELLO,
+        )]
     }
 
     fn campioni(&self) -> &[Campione] {
@@ -290,16 +295,22 @@ impl LettoreMzxml {
 
     /// The index entries, from the attributes at the start of each scan.
     fn costruisci_indice(&mut self) -> Result<()> {
+        let mut fin = Finestra::default();
         for k in 0..self.righe.len() {
             let r = self.righe[k];
             let mut n = 4096u64;
             let (noto, bpi, v) = loop {
-                let b = self.leggi(r.start, (r.end - r.start).min(n))?;
+                let b = fin.leggi(
+                    self.dati.as_mut(),
+                    self.dim,
+                    r.start,
+                    (r.end - r.start).min(n),
+                )?;
                 if b.windows(6).any(|w| w == b"<peaks")
                     || n >= r.end - r.start
                     || n >= TESTA_SCANSIONE
                 {
-                    let testo = String::from_utf8_lossy(&b);
+                    let testo = String::from_utf8_lossy(b);
                     let t = scan::testa(&testo, TETTO)?;
                     break (
                         numero(t.scan, "totIonCurrent").is_some(),
@@ -352,54 +363,6 @@ pub(super) fn numero(t: Tag, n: &str) -> Option<f64> {
         .parse()
         .ok()
         .filter(|x: &f64| x.is_finite())
-}
-
-fn polarita(t: &str) -> i8 {
-    match t.trim() {
-        "+" | "positive" | "Positive" => 1,
-        "-" | "negative" | "Negative" => -1,
-        _ => 0,
-    }
-}
-
-/// The filter of a scan: its `filterLine`, with the scan type in front for SRM/MRM scans whose line does not say it (the SRM traces are found by it).
-fn filtro(t: Tag) -> String {
-    let linea = attr(t, "filterLine").trim();
-    let tipo = attr(t, "scanType").trim();
-    let basso = linea.to_ascii_lowercase();
-    let srm = ["srm", "mrm", "crm"]
-        .iter()
-        .any(|x| tipo.eq_ignore_ascii_case(x));
-    if srm && !basso.contains("srm") && !basso.contains("mrm") {
-        format!("{tipo} {linea}").trim().to_string()
-    } else {
-        linea.to_string()
-    }
-}
-
-/// The index entry of scan `k` from its attributes.
-fn voce(k: usize, r: Riga, t: &Testa) -> Result<VoceScansione> {
-    let lunghezza = u32::try_from(r.end - r.start).map_err(|_| Error::memory_budget())?;
-    let num = attr(t.scan, "num").trim();
-    Ok(VoceScansione {
-        id: if num.is_empty() {
-            format!("scan={}", k + 1)
-        } else {
-            format!("scan={num}")
-        },
-        rt: scan::minuti(attr(t.scan, "retentionTime")).unwrap_or(0.0),
-        livello: numero(t.scan, "msLevel").map_or(1, |l| l.clamp(1.0, 255.0) as u8),
-        polarita: polarita(attr(t.scan, "polarity")),
-        tic: numero(t.scan, "totIonCurrent").unwrap_or(0.0),
-        picco_base: numero(t.scan, "basePeakMz"),
-        filtro: filtro(t.scan),
-        precursore: t.precursori.iter().rev().find_map(|p| p.1.parse().ok()),
-        posizione: Some(Posizione {
-            membro: 0,
-            offset: r.start,
-            lunghezza,
-        }),
-    })
 }
 
 /// The `userParam`s, the window and the precursors of a scan for the mzML we write.

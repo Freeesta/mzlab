@@ -18,6 +18,10 @@ mod live;
 
 pub use live::{file_roots, work, Core, Ctx, Hooks, Results};
 
+#[path = "run_web.rs"]
+mod web;
+pub use web::{record_jobs, route as record_route};
+
 /// A file the plan reads or a step made, identified by its content.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Artifact {

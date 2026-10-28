@@ -59,6 +59,8 @@
     const step = reg.byId.get(stepId), inst = { id: F.freshId(plan, stepId), step: `${stepId}@${step.version}`, in: {} };
     plan.steps.push(inst);
     F.autoWire(plan, reg, inst);
+    // a node made after the files are open starts with what they say (preset; the polarity and the unit resolution come through F.defaults); the form shows it and changes it
+    if (F.inheritPreset) F.inheritPreset(inst, step);
     return inst;
   };
   /** removes an instance and every reference to it @param {any} plan @param {string} id */

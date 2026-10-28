@@ -1,0 +1,71 @@
+# Wasm bench of the real mzlab-core functions (docs/agenti/wasm-potenziale.md §9; driven by tools/banco_wasm.py).
+# Own [workspace]: it is not part of the root workspace and builds only when the bench asks.
+[package]
+name = "wbench"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# zlib-rs in place of miniz_oxide behind flate2 (also inside mzlab-core)
+zlibrs = ["mzlab-core/banco-zlib-rs"]
+# the Thermo `.raw` jobs (`raw_parse`, `raw_index`); the orchestrator turns it on when a `.raw` is available
+thermo = ["mzlab-core/thermo", "mzlab-core/precursori"]
+
+[dependencies]
+mzlab-core = { path = "../../crates/mzlab-core", default-features = false, features = ["mappa-dad"] }
+wasm-bindgen = "0.2"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+
+[workspace]
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true
+codegen-units = 1
+
+[profile.o3]
+inherits = "release"
+opt-level = 3
+
+# O3 only on the hot crates (the mix of the study)
+[profile.mix]
+inherits = "release"
+[profile.mix.package.mzlab-core]
+opt-level = 3
+[profile.mix.package.miniz_oxide]
+opt-level = 3
+[profile.mix.package.quick-xml]
+opt-level = 3
+[profile.mix.package.base64]
+opt-level = 3
+
+# One hot crate at a time at O3 (per-crate gain/size choice of the wasm profiles)
+[profile.sol_core]
+inherits = "release"
+[profile.sol_core.package.mzlab-core]
+opt-level = 3
+[profile.sol_miniz]
+inherits = "release"
+[profile.sol_miniz.package.miniz_oxide]
+opt-level = 3
+[profile.sol_xml]
+inherits = "release"
+[profile.sol_xml.package.quick-xml]
+opt-level = 3
+[profile.sol_b64]
+inherits = "release"
+[profile.sol_b64.package.base64]
+opt-level = 3
+[profile.sol_deps]
+inherits = "release"
+[profile.sol_deps.package.miniz_oxide]
+opt-level = 3
+[profile.sol_deps.package.quick-xml]
+opt-level = 3
+[profile.sol_deps.package.base64]
+opt-level = 3

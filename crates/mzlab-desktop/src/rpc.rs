@@ -202,6 +202,8 @@ impl State {
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
+            "msngrafo" => self.op_msngrafo(eng, p),
+            "canali" => self.op_canali(eng, p),
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
@@ -211,6 +213,19 @@ impl State {
             }
             _ => Err(Error::new("rpc.unknown")),
         }
+    }
+
+    /// api/canali: the channels of the scans plus the SRM/SIC chromatograms of the mzML (as `Engine::canali` of the wasm).
+    fn op_canali(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+        let slot = p["slot"].as_u64().unwrap_or(0) as u32;
+        let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
+        let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let (rd, size) = self.src_slot(&mut eng.nat, slot, p["fid"].as_u64().unwrap_or(0) as u32)?;
+        let mut m = Mzml::new(rd, size);
+        let chroms = m.chromatograms(end)?;
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+        r.pon_cromatogrammi(p["name"].as_str().unwrap_or(""), &chroms, &facts);
+        text(r.canali().json())
     }
 
     #[allow(unused_variables)]
@@ -330,11 +345,15 @@ impl State {
         match op {
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
+            "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)
+            "mzml2cen" => return self.mzml_to_cen(p),                                       // a centroid copy of a profile mzML: long, it does not hold the engine
+            "lr_index_cen" => return self.lr_index_cen(p["name"].as_str().unwrap_or("")),   // the index of a sample as centroids, on a thread of the build pool
             "conv_add" => return self.conv_add(p),
             "conv_list" => return self.conv_list(p),
             "conv_cancel" => return self.conv_cancel(p),
             "flow/read" => return self.flow_read(p),
             "flow/liste" => return text(mzlab_feat::liste::route(&p.to_string())?),     // checks a list of the user and gives its SHA-256 (`liste::route`)
+            "flow/line" => return text(mzlab_core::flow::line_route(&p.to_string(), Some(&mzlab_cli::flow::steps()))?),   // the short line of a plan, or the plan with its --set applied
             "flow/progress" => return self.flow_progress(p),
             "flow/report" => return self.flow_report(p),
             "flow/reuse" => return self.flow_reuse(p),                                   // steps the cache would give back, before Run (`flow_reuse.rs`)
