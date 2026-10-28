@@ -52,6 +52,7 @@
     "../../mzlab/web/fair.js",
     "../../mzlab/web/gradiente.js",
     "../../mzlab/web/idxpool.js",
+    "../../mzlab/web/bufpool.js",
     "../../mzlab/web/ident-catalogo.js",
     "../../mzlab/web/ident-pannello.js",
     "../../mzlab/web/infusione-grafo.js",

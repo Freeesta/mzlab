@@ -103,6 +103,24 @@ try:
             print(v)
             assert v["tab"] == "full" and abs(v["ion"] - 346.1218) < 0.003 and v["sid"] is not None and abs(v["prec"] - 346.1218) < 0.003, v
         step("MS2 tab of a DDA file: list of the precursors (4 decimals, sortable); a row shows its most intense MS2 next to the Full Scan", plist)
+        def slow_list(delay, expect_ok):                 # the panels of the Full Scan appear `delay` ms after the click: showMs2 waits for them (5 s at most)
+            pg.evaluate("setTab('ms2',true)"); attendi(pg, "!!document.querySelector('#ddalist') || !!E.panels.find(p=>p.tab==='ms2')")
+            pg.evaluate("E.panels.filter(p=>p.tab==='full').forEach(p=>closePanel(p))")
+            pg.evaluate("window.__tab0 = window.setTab; window.__slow = " + str(delay) + "; window.setTab = (...a) => window.__slow && a[0] === 'full' ? void setTimeout(() => window.__tab0(...a), window.__slow) : window.__tab0(...a)")
+            try:
+                pg.evaluate("document.querySelector('#qnote') && (document.querySelector('#qnote').hidden = true)")
+                drawer(pg); pg.click("#ddalist"); attendi(pg, "!!document.querySelector('#ddatb tr[data-r]')"); pg.click("#ddatb tr[data-r]:has-text('346.12')")
+                if expect_ok:
+                    attendi(pg, "(()=>{const s=E.panels.find(p=>p.dda!=null);return !!(s && s.sid != null)})()", 15000)
+                    v = pg.evaluate("(()=>{const s=E.panels.find(p=>p.dda!=null);return {sid:s&&s.sid,ion:s&&s.ion}})()")
+                    assert v["sid"] is not None and abs(v["ion"] - 346.1218) < 0.003, v
+                    assert not pg.evaluate("(()=>{const q=document.querySelector('#qnote');return !!q && !q.hidden && /in tempo|in time/.test(q.textContent)})()"), "slow notice shown although the panels came"
+                else:
+                    attendi(pg, "(()=>{const q=document.querySelector('#qnote');return !!q && !q.hidden && /in tempo|in time/.test(q.textContent)})()", 9000)
+            finally:
+                pg.evaluate("window.__slow = 0; window.setTab = window.__tab0")
+        step("showMs2 waits for a slow Full Scan panel (2.2 s, more than the old fixed 0.7 s) and then selects the MS2", lambda: slow_list(2200, True))
+        step("showMs2 gives up after 5 s with a clear message", lambda: slow_list(60000, False))
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

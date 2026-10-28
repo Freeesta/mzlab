@@ -50,7 +50,7 @@ function attach(p) {
     });
   }
   cv.onmousemove = e => {
-    const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
+    const a = p._a; if (!a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, x = xd(px);     // one layout read per event
     if (p.type === "spec" && a.markN != null) hoverMark(p, px);
     if (drag && drag.pan) {                                   // Shift + drag: pans the view
       const c = a.map ? ASSE.clip(drag.g, e, px - drag.x0, py - drag.y0) : { dx: px - drag.x0, dy: py - drag.y0, ax: null }; drag.ax = c.ax; if (a.map && window.MAPPA) MAPPA.guide(p, c.ax && { ax: c.ax, x: drag.x0, y: drag.y0 });     // map: Ctrl/⌘ + Shift or X / Y = one direction only (asse.js)
@@ -105,7 +105,7 @@ function attach(p) {
   cv.addEventListener("mousemove", e => pendHint(p, e));
   cv.onmouseleave = e => { if (p.type === "spec" && window.XICLENS) XICLENS.leave(p, e); if (p._mk != null) { p._mk = null; drawSoon(p); } axisHint(null, {}); pendHint(p, {}); hideHover(p); lb.hidden = true; if (p.rd) p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
-    if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
+    if (e.button !== 0 || !p._a) return; const bb = cv.getBoundingClientRect(), px = e.clientX - bb.left, py = e.clientY - bb.top, a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, g: ASSE.gest(true), z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null, zo: p.zoom ? [...p.zoom] : null, zyo: p.zoomY ? [...p.zoomY] : null }; return; }
     if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
