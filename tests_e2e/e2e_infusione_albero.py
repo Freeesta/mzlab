@@ -81,7 +81,15 @@ try:
         def graph():
             pg.click("#inf-graph"); attendi(pg, "BARRA.curTab === 'gra'", 10000)
             drawer(pg, "alb"); pg.wait_for_selector("#inf-tree tbody tr", timeout=30000)
+        def late_graph():
+            # the graph module arrives AFTER the student went back to the tree: it must not repaint the body
+            pg.evaluate("""() => { window.__lateGraph = false; const o = window.carica; window.carica = async n => { const r = await o(n); if (/infusione-grafo/.test(n)) { await new Promise(f => setTimeout(f, 1200)); window.__lateGraph = true; } return r; }; }""")
+            pg.evaluate("BARRA.setTab('gra', {noFocus: true, instant: true})"); attendi(pg, "BARRA.curTab === 'gra'", 10000)
+            pg.evaluate("BARRA.setTab('alb', {noFocus: true, instant: true})"); attendi(pg, "BARRA.curTab === 'alb' && !!document.querySelector('#inf-tree tbody tr')", 10000)
+            attendi(pg, "window.__lateGraph === true", 10000); frames(pg, 5)
+            assert pg.evaluate("!!document.querySelector('#inf-tree tbody tr') && !document.querySelector('#ig-open')"), "the late graph repainted the tree tab"
         step("«Fragmentation graph» in the tree controls opens the graph tab", graph)
+        step("a graph that arrives late does not repaint the tree tab", late_graph)
         def labels():
             t = pg.evaluate("""[...document.querySelectorAll('.inf-f')].map(l => [l.querySelector('span').textContent, l.title, l.querySelector('select').offsetHeight])""")
             assert [x[0] for x in t] == ["Level", "Mass tolerance", "Collision energies", "Spectrum"] or pg.evaluate("I18N.lang") != "en", t

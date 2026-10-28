@@ -174,7 +174,7 @@ async function run(/** @type {HTMLElement} */ b, /** @type {any} */ file) {
   await prepareMolfile();
   const ok = await fetchGraph(file.k);
   stop();
-  if (hung || !ok || mine !== tokenNow || !b.isConnected) return;
+  if (hung || !ok || mine !== tokenNow || !b.isConnected || b.querySelector("#ig-msg") !== msg) return;       // the tab was redrawn (another tab took the body) while the answer travelled
   if (G.error) mostraErrore(msg, G.error, G.errorObj, file);
   else msg.innerHTML = summary() + warnLines();
   drawBody(b, file, false);

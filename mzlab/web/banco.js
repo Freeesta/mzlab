@@ -493,7 +493,7 @@ const BANCO = (() => {
     host.classList.add("hri-body"); host.innerHTML = `<div class="muted">…</div>`;
     try { await FILE_TABS[tab](host, p, tok); } catch (e) { if (tok === ist.tok) host.innerHTML = `<span class="fail">${esc(/** @type {any} */ (e).message)}</span>`; }
   }
-  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); return INFG.render(b, p, tok); } };
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, idn: tIdn, disp: (b, p) => DISP.panel(b, p), alb: (b, p, tok) => INF.render(b, p, tok), gra: async (b, p, tok) => { await carica("m:infusione-grafo.js"); if (tok !== ist.tok) return; return INFG.render(b, p, tok); } };
   let infoRaf = 0;
   function renderInfo() {
     const card = Q("#hrinfo"); if (!card || card.hidden) return;
