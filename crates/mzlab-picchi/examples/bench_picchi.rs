@@ -51,19 +51,17 @@ fn trace(n: usize) -> (Vec<f64>, Vec<f64>) {
     (rt, y)
 }
 
-fn main() {
-    let (rt, y) = trace(10_000);
-    let (_, y2) = trace(2_000);
+fn asls_benches(y: &[f64], y2: &[f64]) {
     time(
         "asls 10000 pts (max_n 160)",
         20,
-        || asls_baseline(&y, 1e5, 0.01, 10, 160),
+        || asls_baseline(y, 1e5, 0.01, 10, 160),
         |v| fp(v),
     );
     time(
         "asls 2000 pts (full size)",
         3,
-        || asls_baseline(&y2, 1e5, 0.01, 10, usize::MAX / 4),
+        || asls_baseline(y2, 1e5, 0.01, 10, usize::MAX / 4),
         |v| fp(v),
     );
     time(
@@ -72,6 +70,12 @@ fn main() {
         || asls_baseline(&y[..160], 1e5, 0.01, 10, 160),
         |v| fp(v),
     );
+}
+
+fn main() {
+    let (rt, y) = trace(10_000);
+    let (_, y2) = trace(2_000);
+    asls_benches(&y, &y2);
     time(
         "detect_full 10000 pts",
         20,
