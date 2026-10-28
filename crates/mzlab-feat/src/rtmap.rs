@@ -67,7 +67,11 @@ pub(crate) fn nanmedian(v: impl Iterator<Item = f64>) -> f64 {
     if n % 2 == 1 {
         *mid
     } else {
-        let below = lower.iter().copied().max_by(f64::total_cmp).unwrap_or(f64::NAN);
+        let below = lower
+            .iter()
+            .copied()
+            .max_by(f64::total_cmp)
+            .unwrap_or(f64::NAN);
         (below + *mid) / 2.0
     }
 }

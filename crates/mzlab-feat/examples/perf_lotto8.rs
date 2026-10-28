@@ -138,7 +138,6 @@ fn bench_norm(refs: &[&FileFeatures], files: usize) {
 }
 
 fn bench_isotopes(one: &FileFeatures, n: usize) {
-
     best(
         &format!("isotopes {n}"),
         || {
@@ -188,6 +187,7 @@ fn bench_rtwarp() {
     }
 }
 
+#[allow(clippy::needless_range_loop)]
 fn bench_deconvolve() {
     // 200 scans of 30 co-eluting isomers with 60 fragments each
     let mut rng = Rng(7);
