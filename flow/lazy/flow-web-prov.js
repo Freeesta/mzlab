@@ -15,7 +15,8 @@
     const done = (/** @type {MessageEvent} */ ev) => {
       if (ev.data.id !== id) return;
       w.removeEventListener("message", done);
-      if (ev.data.error) reject(Object.assign(new Error(ev.data.error.text), ev.data.error)); else resolve(JSON.parse(ev.data.json));
+      if (ev.data.error) { reject(Object.assign(new Error(ev.data.error.text), ev.data.error)); return; }
+      try { resolve(JSON.parse(ev.data.json)); } catch (e) { reject(e); }
     };
     w.addEventListener("message", done);
     w.postMessage({ id, wasm, ...m });

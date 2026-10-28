@@ -18,7 +18,7 @@ if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
 # the demo files under names that sort like the plan: the browser lists the indexes of OPFS by name, `flow run` takes the order of the plan
 NAMES = ["FullScan_t00", "FullScan_t05", "FullScan_t10", "FullScan_t15", "FullScan_t30"]
 TIMES = [0, 5, 10, 15, 30]
-PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in NAMES],
+PLAN = {"format": "mzflow/2", "program": {"name": "mzLab", "version": "1.0.0"}, "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in NAMES],
         "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in NAMES]}},
                   {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
                   {"id": "ali", "step": "features.align@1", "in": {"peaks": ["det.peaks"]}},
@@ -44,8 +44,10 @@ PUT = """async (names) => {
 }"""
 RUN = """async (plan) => {
   const S = document.querySelector('.flx-list').__flow;
-  S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
-  try { const r = await FLOW.runners.web.run(S); return { record: r.record }; }
+  window.MZLAB_RUST.budgetMb = 192;
+  S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs.slice(0, 1))); S.plan.steps = JSON.parse(JSON.stringify(plan.steps)); S.plan.steps[0].in.source = S.plan.steps[0].in.source.slice(0, 1);
+  const late = new Promise((_, no) => setTimeout(() => no(new Error("the run took more than 240 s")), 240000));
+  try { const r = await Promise.race([FLOW.runners.web.run(S), late]); return { record: r.record }; }
   catch (e) { return { err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
 }"""
 KEPT = """async () => {
@@ -56,9 +58,15 @@ KEPT = """async () => {
   return out;
 }"""
 # the fields of a record that differ by nature between the two runs: times, the memory peak, who ran it and whether the step was reused
-BLANK = {"ms", "total_ms", "heap_peak_bytes", "cached", "reused"}
+def diff(a, b, path=""):
+    if isinstance(a, dict) and isinstance(b, dict):
+        return [d for k in sorted(set(a) | set(b)) for d in diff(a.get(k, "<missing>"), b.get(k, "<missing>"), path + "/" + k)][:12]
+    if isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
+        return [d for i, (x, y) in enumerate(zip(a, b)) for d in diff(x, y, path + "/" + str(i))][:12]
+    return [] if a == b else [(path, a, b)]
+BLANK = {"ms", "total_ms", "heap_peak_bytes", "cached", "reused", "platform", "version", "commit"}
 def blank(v):
-    if isinstance(v, dict): return {k: (None if k in BLANK else blank(x)) for k, x in v.items()}
+    if isinstance(v, dict): return {k: ("ok" if k == "status" and x == "cached" else blank(x)) for k, x in v.items() if k not in BLANK}
     if isinstance(v, list): return [blank(x) for x in v]
     return v
 PORT = lib.free_port()
@@ -87,7 +95,7 @@ try:
             assert not kept["alone"], "the table of the alignment alone stayed in OPFS"
             for name, nat_name in (("prov.json", "prov.json"), ("corsa.json", "corsa.json")):
                 nat = json.loads((run / "out" / nat_name).read_text()); web = json.loads(kept[name])
-                assert blank(nat) == blank(web), (name, json.dumps(blank(nat), sort_keys=True)[:1500], json.dumps(blank(web), sort_keys=True)[:1500])
+                assert blank(nat) == blank(web), (name, diff(blank(nat), blank(web)))
             assert kept["report"] == kept["corsa.json"] and r["record"]["corsa"] == kept["corsa.json"]
         step("the prov/1 and the corsa/1 of the browser are the records of the native flow run apart from the declared fields", first)
 

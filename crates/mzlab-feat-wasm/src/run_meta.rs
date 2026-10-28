@@ -188,11 +188,12 @@ mod export {
     use js_sys::{Array, Function};
     use wasm_bindgen::prelude::*;
 
-    /// SHA-256 (hex) of file 0 of `read(0, offset, length)` (`file_sha`).
+    /// `{"bytes","sha256"}` of file 0 of `read(0, offset, length)` (`file_sha`).
     #[wasm_bindgen]
     pub fn flow_file_sha(read: Function, size: f64) -> std::result::Result<String, JsValue> {
         let mut r = crate::JsReader { read, k: 0 };
-        super::file_sha(&mut r, size as u64).map_err(crate::js_err)
+        let sha = super::file_sha(&mut r, size as u64).map_err(crate::js_err)?;
+        Ok(format!("{{\"bytes\":{size},\"sha256\":\"{sha}\"}}"))
     }
 
     /// `{"bytes","sha256"}` of the source file an index (file 0 of `read`) was made from: what the plan names as input in the record of a run.
