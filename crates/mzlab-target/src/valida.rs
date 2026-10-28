@@ -1,7 +1,12 @@
 // Validation logic for target screening entries and adduct mass coherence.
 use serde::{Deserialize, Serialize};
 
-use crate::entry::TargetEntry;
+use mzlab_core::elements::{mass, parse_formula};
+
+use crate::entry::{AdductType, TargetEntry};
+
+/// Largest accepted gap (Da) between the stated monoisotopic mass and the mass of the Neutral formula (the same 1 mDa as the adduct checks).
+const FORMULA_MASS_TOLERANCE: f64 = 0.001;
 
 /// Validation error encountered during entry inspection.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,6 +30,9 @@ pub struct ValidationReport {
     pub stereo_to_verify: usize,
     /// Collection of validation errors encountered.
     pub errors: Vec<ValidationError>,
+    /// Findings that do not invalidate an entry (a mass that disagrees with its Neutral formula).
+    #[serde(default)]
+    pub warnings: Vec<ValidationError>,
 }
 
 impl ValidationReport {
@@ -41,6 +49,7 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
     let mut salts_or_hydrates = 0;
     let mut stereo_to_verify = 0;
     let mut errors = Vec::new();
+    let mut warnings = Vec::new();
 
     for entry in entries {
         let mut entry_errors = Vec::new();
@@ -59,8 +68,8 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
         }
 
         // Theoretical mass coherence checks:
-        // [M+H]+ m/z: monoisotopic mass + 1.007276 +/- 0.001
-        let expected_mh = entry.monoisotopic_mass + 1.007276;
+        // [M+H]+ m/z: monoisotopic mass + proton +/- 0.001
+        let expected_mh = entry.monoisotopic_mass + AdductType::MH.delta_mass();
         if (entry.mz_mh - expected_mh).abs() > 0.001 {
             entry_errors.push(format!(
                 "Incoherent [M+H]+ m/z: got {}, expected theoretical {}",
@@ -68,8 +77,8 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
             ));
         }
 
-        // [M+Na]+ m/z: monoisotopic mass + 22.989218 +/- 0.001
-        let expected_mna = entry.monoisotopic_mass + 22.989218;
+        // [M+Na]+ m/z: monoisotopic mass + Na+ +/- 0.001
+        let expected_mna = entry.monoisotopic_mass + AdductType::MNa.delta_mass();
         if (entry.mz_mna - expected_mna).abs() > 0.001 {
             entry_errors.push(format!(
                 "Incoherent [M+Na]+ m/z: got {}, expected theoretical {}",
@@ -77,13 +86,27 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
             ));
         }
 
-        // [M+NH4]+ m/z: monoisotopic mass + 18.033823 +/- 0.001
-        let expected_mnh4 = entry.monoisotopic_mass + 18.033823;
+        // [M+NH4]+ m/z: monoisotopic mass + NH4+ +/- 0.001
+        let expected_mnh4 = entry.monoisotopic_mass + AdductType::MNH4.delta_mass();
         if (entry.mz_mnh4 - expected_mnh4).abs() > 0.001 {
             entry_errors.push(format!(
                 "Incoherent [M+NH4]+ m/z: got {}, expected theoretical {}",
                 entry.mz_mnh4, expected_mnh4
             ));
+        }
+
+        // A formula that parses but weighs something else than the stated mass would give a wrong isotope pattern.
+        if let Ok(f) = parse_formula(&entry.neutral_formula) {
+            let from_formula = mass(&f);
+            if (entry.monoisotopic_mass - from_formula).abs() > FORMULA_MASS_TOLERANCE {
+                warnings.push(ValidationError {
+                    entry_id: entry.id.clone(),
+                    message: format!(
+                        "Monoisotopic mass {} does not match Neutral formula {} (theoretical {:.6})",
+                        entry.monoisotopic_mass, entry.neutral_formula, from_formula
+                    ),
+                });
+            }
         }
 
         if entry.check_flags.is_salt_or_hydrate {
@@ -111,5 +134,6 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
         salts_or_hydrates,
         stereo_to_verify,
         errors,
+        warnings,
     }
 }
