@@ -197,6 +197,54 @@ fn ridge_solve(a: &[f64], n: usize, m: usize, f: &[f64], k: usize) -> Vec<f64> {
     out
 }
 
+fn pav(v: &[f64]) -> Vec<f64> {
+    let (mut vals, mut wts): (Vec<f64>, Vec<usize>) =
+        (Vec::with_capacity(v.len()), Vec::with_capacity(v.len()));
+    for &x in v {
+        vals.push(x);
+        wts.push(1);
+        while vals.len() > 1 && vals[vals.len() - 2] > vals[vals.len() - 1] {
+            let l = vals.len();
+            let (tot, wt) = (
+                vals[l - 2] * wts[l - 2] as f64 + vals[l - 1] * wts[l - 1] as f64,
+                wts[l - 2] + wts[l - 1],
+            );
+            vals.pop();
+            vals.pop();
+            wts.pop();
+            wts.pop();
+            vals.push(tot / wt as f64);
+            wts.push(wt);
+        }
+    }
+    let mut out = Vec::with_capacity(v.len());
+    for (val, wt) in vals.into_iter().zip(wts) {
+        out.extend(std::iter::repeat_n(val, wt));
+    }
+    out
+}
+
+fn isotonic_up_down(c: &[f64]) -> Vec<f64> {
+    if c.is_empty() {
+        return Vec::new();
+    }
+    let k = argmax(c);
+    let left = pav(&c[..=k]);
+    let right_rev: Vec<f64> = c[k..].iter().copied().rev().collect();
+    let right: Vec<f64> = pav(&right_rev).into_iter().rev().collect();
+    let mut out = Vec::with_capacity(c.len());
+    out.extend_from_slice(&left[..k]);
+    out.push(if let (Some(&l), Some(&r)) = (left.get(k), right.first()) {
+        l.max(r)
+    } else {
+        c[k]
+    });
+    if right.len() > 1 {
+        out.extend_from_slice(&right[1..]);
+    }
+    out
+}
+
 fn update_c(d: &[f64], n: usize, m: usize, s: &[f64], k: usize, unimodal: bool) -> Vec<f64> {
     let mut c = ridge_solve(d, n, m, s, k);
     if unimodal {

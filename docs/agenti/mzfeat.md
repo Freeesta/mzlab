@@ -60,6 +60,9 @@ Il crate esegue la rivelazione (livello L1 della pipeline): dai picchi MS1 di un
 `cargo run --release -p mzlab-feat --example feat -- FILE.mzidx... [--neg] [--budget-mb N] [--analyse] [--tsv DIR]` stampa per file tempo, picco di memoria (`VmHWM`, un processo per file), numero di feature e SHA-256 della tabella (stesso SHA con budget di memoria diversi). Le misure sono in `misure.md`.
 `--analyse` esegue tutta la pipeline e stampa tempi per passo e conteggi (`--no-split` salta il taglio dei massimi), `--tsv DIR` scrive la tabella; `python3 tools/valida/picchi.py DIR_VERITA DIR_TSV` la confronta con la verità dei sintetici di `sintetici_identita.py`.
 
+## Esempio `examples/perf_lotto8.rs`
+`cargo run --release -p mzlab-feat --example perf_lotto8 [N_FEATURE] [N_FILE]` misura il tempo migliore e lo SHA-256 dell'uscita di allineamento, normalizzazione, isotopi, deriva dell'RT (LOESS e RANSAC) e deconvoluzione; lo stesso SHA prima e dopo una modifica prova che l'uscita non è cambiata.
+
 ## Trappole
 - Il `.mzidx` di un MS1 ad alta risoluzione tiene m/z e intensità in `f32` (`hr1`): `each_peak` li allarga a `f64`, come fa Python con `astype(float64)`; le soglie (2e4, 2e5) sono esatte in `f32`, quindi i confronti coincidono.
 - La somma di una cella o di un segmento è sequenziale; `np.add.reduceat` somma a coppie sopra 8 elementi: la differenza è sotto 1e-15 relativo e le aree si confrontano a 1e-4.

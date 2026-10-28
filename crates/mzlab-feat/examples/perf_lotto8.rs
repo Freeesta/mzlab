@@ -111,24 +111,8 @@ fn f64s(v: &[f64]) -> Vec<u8> {
     v.iter().flat_map(|x| x.to_bits().to_le_bytes()).collect()
 }
 
-fn main() {
-    let arg = |i: usize, d: usize| {
-        std::env::args()
-            .nth(i)
-            .and_then(|a| a.parse().ok())
-            .unwrap_or(d)
-    };
-    let (n, files) = (arg(1, 50_000), arg(2, 40));
-
-    let tables = series(n, files, false);
-    let refs: Vec<&FileFeatures> = tables.iter().collect();
-    best(
-        &format!("align {n} x {files}"),
-        || align(&refs, &AlignParams::default()).expect("align"),
-        bytes,
-    );
-
-    let al = align(&refs, &AlignParams::default()).expect("align");
+fn bench_norm(refs: &[&FileFeatures], files: usize) {
+    let al = align(refs, &AlignParams::default()).expect("align");
     let samples: Vec<Sample> = (0..files)
         .map(|k| Sample {
             file: format!("f{k}.mzML"),
@@ -151,8 +135,10 @@ fn main() {
             |v| f64s(v),
         );
     }
+}
 
-    let one = &tables[0];
+fn bench_isotopes(one: &FileFeatures, n: usize) {
+
     best(
         &format!("isotopes {n}"),
         || {
@@ -167,7 +153,9 @@ fn main() {
             v
         },
     );
+}
 
+fn bench_rtwarp() {
     let drifted = series(100_000, 6, true);
     let drefs: Vec<&FileFeatures> = drifted.iter().collect();
     let coarse = align(
@@ -198,7 +186,9 @@ fn main() {
             |m| f64s(&m.shift),
         );
     }
+}
 
+fn bench_deconvolve() {
     // 200 scans of 30 co-eluting isomers with 60 fragments each
     let mut rng = Rng(7);
     let (scans, isomers) = (200usize, 30usize);
@@ -258,4 +248,26 @@ fn main() {
             |r| format!("{r:?}").into_bytes(),
         );
     }
+}
+
+fn main() {
+    let arg = |i: usize, d: usize| {
+        std::env::args()
+            .nth(i)
+            .and_then(|a| a.parse().ok())
+            .unwrap_or(d)
+    };
+    let (n, files) = (arg(1, 50_000), arg(2, 40));
+
+    let tables = series(n, files, false);
+    let refs: Vec<&FileFeatures> = tables.iter().collect();
+    best(
+        &format!("align {n} x {files}"),
+        || align(&refs, &AlignParams::default()).expect("align"),
+        bytes,
+    );
+    bench_norm(&refs, files);
+    bench_isotopes(&tables[0], n);
+    bench_rtwarp();
+    bench_deconvolve();
 }
