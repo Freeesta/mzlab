@@ -261,3 +261,68 @@ fn the_srm_bytes_and_the_centroid_index_of_a_native_sample() {
     );
     assert!(r("lr_index_cen", json!({"name": "nope"})).is_err());
 }
+
+#[test]
+fn the_graph_of_a_native_sample_is_that_of_its_mzml() {
+    let dir = tempfile::tempdir().unwrap();
+    let d = dir.path().join("src/x.D/AcqData");
+    std::fs::create_dir_all(&d).unwrap();
+    let (idx, peak) = agilent_synth::encode(&agilent_synth::sample());
+    std::fs::write(d.join("MSScan.bin"), idx).unwrap();
+    std::fs::write(d.join("MSPeak.bin"), peak).unwrap();
+    let st = state(dir.path());
+    let r = |op: &str, p: Value| st.rpc(op, &p, &[]);
+    let mut members = Vec::new();
+    for n in ["MSScan.bin", "MSPeak.bin"] {
+        let (fid, _) = st.pick(d.join(n)).unwrap();
+        members.push(json!({"name": format!("x.D/AcqData/{n}"), "fid": fid}));
+    }
+    let nat = json!({"key": "k", "c": 0, "id": 0, "centroid": false, "members": members});
+    r("lr_put", json!({"name": "x", "nat": nat})).unwrap();
+    r("lr_index", json!({"name": "x"})).unwrap();
+    r("idxopen", json!({"slot": 3, "name": "x"})).unwrap();
+
+    // the same sample as a plain mzML, as «Download .mzML» writes it
+    let made: Value = serde_json::from_str(&text(
+        r("nat2mzml", json!({"name": "x", "pid": 1})).unwrap(),
+    ))
+    .unwrap();
+    let id = made["id"].as_u64().unwrap();
+    r("lr_put", json!({"name": "x.mzML", "fid": id})).unwrap();
+    r("lr_index", json!({"name": "x.mzML"})).unwrap();
+    r("idxopen", json!({"slot": 4, "name": "x.mzML"})).unwrap();
+
+    let ask = |slot: u32, name: &str, more: Value| {
+        let mut p = json!({"slot": slot, "name": name, "fid": id, "query": ""});
+        p.as_object_mut()
+            .unwrap()
+            .extend(more.as_object().unwrap().clone());
+        match r("msngrafo", p) {
+            Ok(Answer::Text(t)) => Ok(t),
+            Ok(Answer::Bytes(_)) => panic!("bytes"),
+            Err(e) => Err(e.key.to_string()),
+        }
+    };
+    let want = ask(4, "x.mzML", json!({}));
+    let got = ask(3, "x", json!({}));
+    // the graph names the file it was made from and the hash of its index (which holds the name of the index): all else is the same
+    let norm = |s: Result<String, String>| {
+        s.map(|t| {
+            let mut j: Value = serde_json::from_str(&t).unwrap();
+            j["sorgente"] = json!(null);
+            j
+        })
+    };
+    assert_ne!(
+        got,
+        Err("err.route.unavailable".to_string()),
+        "a native sample is served"
+    );
+    assert_eq!(norm(got.clone()), norm(want));
+    // the second request reads what the first one wrote
+    assert_eq!(ask(3, "x", json!({})), got);
+    assert_eq!(
+        ask(3, "x", json!({"esporta": true})).is_ok(),
+        ask(4, "x.mzML", json!({"esporta": true})).is_ok()
+    );
+}

@@ -14,7 +14,7 @@ use mzlab_core::msngrafo::{
 };
 use mzlab_core::routes::Query;
 use mzlab_core::sorgente::SorgenteLettore;
-use mzlab_core::{Error, Result};
+use mzlab_core::{lettori_mzml, Error, Result};
 use mzlab_feat::chem::strutture::strutture_testo;
 use serde_json::{json, Value};
 
@@ -28,20 +28,29 @@ const PPM_STRUTTURA: f64 = 10.0;
 
 impl State {
     /// `msngrafo {slot, name, fid, query, esporta?, cerca?, libreria?, molecola?}`: the graph of the file `name` (its `.mzidx` and the mzML at `slot`), or its export as text,
-    /// or the library text with an entry added (`libreria` given), or the library search (`cerca`). A sample of a maker's file has no mzML to read here: `err.route.unavailable`.
+    /// or the library text with an entry added (`libreria` given), or the library search (`cerca`). A sample of a maker's file is read from the mzML made from it (`derived_mzml`:
+    /// written once to the temporary folder with its own index), as the `.wasm` does with its copy on OPFS.
     pub(crate) fn op_msngrafo(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
         let s = |k: &str| p[k].as_str().unwrap_or("");
         let slot = p["slot"].as_u64().unwrap_or(0) as u32;
+        let name = s("name");
         if eng.nat.is_native(slot) {
-            return Err(Error::new("err.route.unavailable"));
+            let (key, mut mzml) = self.derived_mzml(name)?;
+            return self.msn_run(p, &key, &mut mzml);
         }
         let (mut mzml, _) =
             self.src_slot(&mut eng.nat, slot, p["fid"].as_u64().unwrap_or(0) as u32)?;
-        let (idx_map, idx_size) = map_file(&self.indexer()?.path(s("name"))?)?;
+        self.msn_run(p, name, &mut mzml)
+    }
+
+    /// The graph, export, library entry or search of `msngrafo` over the index `idx_name` and the mzML `mzml`; the graph carries the name the page gave.
+    fn msn_run(&self, p: &Value, idx_name: &str, mzml: &mut dyn ReadAt) -> Result<Answer> {
+        let s = |k: &str| p[k].as_str().unwrap_or("");
+        let (idx_map, idx_size) = map_file(&self.indexer()?.path(idx_name)?)?;
         let mut q = Query::parse(s("query"));
         add_expected(&mut q);
         let name = s("name");
-        let mut run = || graph(MapAt(idx_map.0.clone()), idx_size, &mut mzml, name, &q);
+        let mut run = || graph(MapAt(idx_map.0.clone()), idx_size, &mut *mzml, name, &q);
         if p["cerca"].as_bool().unwrap_or(false) {
             let o = opzioni_cerca(&|k| q.get(k).map(String::from))?;
             let (_, j, _) = run()?;
@@ -60,6 +69,53 @@ impl State {
         o.raw("{\"libreria\":").str(&l).raw(",\"doppione\":");
         o.raw(if doppione { "true}" } else { "false}" });
         text(o.0)
+    }
+
+    /// The mzML made from the native sample `name` and the name of its index: written once to the temporary folder and indexed, kept for the next request while the
+    /// sample (its members' sizes and times, the scan reading) is the same.
+    fn derived_mzml(&self, name: &str) -> Result<(String, MapAt)> {
+        let nat = self.nat_of(name)?;
+        let mut sig = format!("{}|{}", nat.c, nat.centroid);
+        for (n, path) in &nat.members {
+            let m = std::fs::metadata(path).map_err(|e| io_error(&e))?;
+            let t = m
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok());
+            sig += &format!("|{n}:{}:{}", m.len(), t.map_or(0, |d| d.as_nanos()));
+        }
+        let h = sig
+            .bytes()
+            .fold(5381u32, |h, b| h.wrapping_mul(33) ^ b as u32);
+        let safe: String = name
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() || "._-".contains(c) {
+                    c
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let key = format!("msn~{safe}~{h:x}");
+        let tmp = std::env::temp_dir().join(format!("mzlab-{}-{key}.mzML", std::process::id()));
+        let indexer = self.indexer()?;
+        let ready =
+            std::fs::metadata(&tmp).is_ok_and(|m| m.len() > 0) && indexer.size(&key).is_some();
+        if !ready {
+            let mut l = nativi::open(&nat.members, nat.centroid)?;
+            let mut out =
+                std::io::BufWriter::new(std::fs::File::create(&tmp).map_err(|e| io_error(&e))?);
+            lettori_mzml::scrivi_con(&mut *l, nat.c, &mut out, &mut |_, _| {}, Default::default())?;
+            std::io::Write::flush(&mut out).map_err(|e| io_error(&e))?;
+            drop(out);
+            indexer.build(&tmp, &key, None)?;
+            let mut g = self.lock_inner();
+            if !g.temps.contains(&tmp) {
+                g.temps.push(tmp.clone());
+            }
+        }
+        Ok((key, map_file(&tmp)?.0))
     }
 
     /// `lr_index_cen {name}`: the index of a sample of a maker's file with its scans as centroids, as `<name>.cen.mzidx` apart from the one of the Data tab.
