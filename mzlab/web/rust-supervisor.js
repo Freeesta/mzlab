@@ -11,15 +11,6 @@ export function compileOnce(/** @type {URL} */ url) {
   })());
 }
 
-// True when this browser runs SIMD128 (every .wasm is built with it, one binary and no fallback): a tiny module with a v128.const is validated, no library.
-// `globalThis.MZLAB_NO_SIMD` is a test switch that makes the check fail.
-export function simdOk() {
-  if (/** @type {any} */ (globalThis).MZLAB_NO_SIMD) return false;
-  try {
-    return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, 10, 23, 1, 21, 0, 253, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 11]));
-  } catch (_) { return false; }
-}
-
 // A death with the signature of a lack of memory: a trap or `rust_oom` after the memory had grown past 64 MB (`peak` = the largest memory the worker reported):
 // the file is too big for the budget, not a fault to retry as it is.
 export function oomSign(/** @type {{ panic?: string | null, text?: string, mem?: number } | undefined} */ info, /** @type {number} */ peak) {

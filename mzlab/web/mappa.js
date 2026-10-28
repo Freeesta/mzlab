@@ -1008,7 +1008,7 @@ window.MAPPA = (() => {
     big(T("m3d.err.title"), `<p>${I18N.t(`m3d.err.${k}`)}</p>${k === "nowebgl2" ? `<p>${T("m3d.err.how")}</p>` : ""}<p>${T("m3d.err.2d")}</p><pre class="m3d-tech" tabindex="0" aria-label="${T("m3d.err.tech")}">${esc(tech)}</pre>`);
   }
   async function open3d(/** @type {PannelloMappa} */ p, /** @type {HTMLElement} */ opener) {
-    let mod; try { mod = await import("./mappa3d.js"); } catch (e_) { const e = /** @type {Lanciato} */ (e_); console.error(e); return failure3d("import", String(e && e.message || e), {}); }
+    let mod; if (window.CAPACITA && !CAPACITA.serve("mappa3d", opener)) return; try { mod = await import("./mappa3d.js"); } catch (e_) { const e = /** @type {Lanciato} */ (e_); console.error(e); return failure3d("import", String(e && e.message || e), {}); }
     try { mod.open(p, opener); } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       const k = e && e.kind ? e.kind : "error"; console.error("mzLab 3D:", k, e && e.detail || e, e && e.diag || "");
       failure3d(k, e && e.detail != null ? e.detail : String(e && e.message || e), e && e.diag || {});

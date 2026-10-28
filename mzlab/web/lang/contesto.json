@@ -757,5 +757,6 @@
   "bn.idn.dl": "Nome accessibile e tooltip dell'icona di scarico; {name} = nome e versione della libreria.",
   "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria.",
   "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
-  "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di scansioni, {a} e {b} = RT iniziale e finale in minuti."
+  "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di scansioni, {a} e {b} = RT iniziale e finale in minuti.",
+  "cap.missing": "Avviso accanto a un comando disattivato perché il browser non ha la funzione; {funzione} = nome della funzione (es. Mappa 3D); segue il link all'app."
 }

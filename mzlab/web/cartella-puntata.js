@@ -32,7 +32,7 @@ const CartPP = (() => {
 
   /** @type {{ handle: any, name: string, perm: string, items: any[], opened: Set<any>, stats: Map<any, any>, busy: boolean, obs: any, timer: any, native: any, deb?: any }} */
   const S = { handle: null, name: "", perm: "none", items: [], opened: new Set(), stats: new Map(), busy: false, obs: null, timer: 0, native: null };
-  const supported = () => typeof window !== "undefined" && !!/** @type {any} */ (window).showDirectoryPicker;
+  const supported = () => typeof window !== "undefined" && !!window.CAPACITA && CAPACITA.ha("cartellaLocale") && !!/** @type {any} */ (window).showDirectoryPicker;
   return { kindOf, collect, pairScan, visible, sameList, S, supported };
 })();
 
