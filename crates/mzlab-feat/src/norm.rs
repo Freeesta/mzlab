@@ -14,7 +14,12 @@ use crate::samples::Sample;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Reference {
     Id(u32),
-    Nearest { mz: f64, rt: f64, ppm: f64, rt_tol: f64 },
+    Nearest {
+        mz: f64,
+        rt: f64,
+        ppm: f64,
+        rt_tol: f64,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,13 +49,22 @@ pub fn measured(t: &Aligned, row: usize, file: usize) -> Option<f64> {
     (t.state[c] != CELL_ABSENT && a.is_finite() && a > 0.0).then_some(a)
 }
 
+/// Median by selection: the same one or two middle values as a full sort in `total_cmp` order.
 fn median(mut v: Vec<f64>) -> f64 {
-    crate::sortc::by(&mut v, f64::total_cmp);
-    match v.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => v[n / 2],
-        n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
+    let n = v.len();
+    if n == 0 {
+        return f64::NAN;
     }
+    let (lower, mid, _) = v.select_nth_unstable_by(n / 2, f64::total_cmp);
+    if n % 2 == 1 {
+        return *mid;
+    }
+    let below = lower
+        .iter()
+        .copied()
+        .max_by(f64::total_cmp)
+        .unwrap_or(f64::NAN);
+    (below + *mid) / 2.0
 }
 
 fn mean(v: &[f64]) -> f64 {
@@ -62,14 +76,29 @@ fn mean(v: &[f64]) -> f64 {
 }
 
 /// The row of the standard, or an error naming that there is none.
-fn standard(t: &Aligned, r: &Reference) -> Result<usize> {
+pub(crate) fn standard(t: &Aligned, r: &Reference) -> Result<usize> {
     match *r {
         Reference::Id(id) => t.row_of_id(id),
-        Reference::Nearest { mz, rt, ppm, rt_tol } => {
+        Reference::Nearest {
+            mz,
+            rt,
+            ppm,
+            rt_tol,
+        } => {
             let tol = mz * ppm * 1e-6;
+            // Both offsets count, each in units of its tolerance: a candidate on the edge of the m/z window with the closest RT does not beat the
+            // standard on the exact mass a little farther in RT. The first of equal distances wins.
+            let scaled = |d: f64, tol: f64| if tol > 0.0 { d / tol } else { 0.0 };
+            let dist = |i: usize| {
+                let (dm, dr) = (
+                    scaled((t.mz[i] - mz).abs(), tol),
+                    scaled((t.rt[i] - rt).abs(), rt_tol),
+                );
+                dm * dm + dr * dr
+            };
             (0..t.len())
                 .filter(|&i| (t.mz[i] - mz).abs() <= tol && (t.rt[i] - rt).abs() <= rt_tol)
-                .min_by(|&a, &b| (t.rt[a] - rt).abs().total_cmp(&(t.rt[b] - rt).abs()))
+                .min_by(|&a, &b| dist(a).total_cmp(&dist(b)))
         }
     }
     .ok_or_else(|| Error::new("error.normNoStandard"))
@@ -77,15 +106,22 @@ fn standard(t: &Aligned, r: &Reference) -> Result<usize> {
 
 /// The statistic of every file (NaN where the file has no cell that counts) for a method that reads the whole file.
 fn per_file(t: &Aligned, method: &Method, istd: Option<usize>) -> Vec<f64> {
+    let cells = |k: usize| (0..t.len()).filter_map(move |r| measured(t, r, k));
     (0..t.n_files)
-        .map(|k| {
-            let cells: Vec<f64> = (0..t.len()).filter_map(|r| measured(t, r, k)).collect();
-            match (method, istd) {
-                (_, Some(row)) => measured(t, row, k).unwrap_or(f64::NAN),
-                (Method::Sum, _) if !cells.is_empty() => cells.iter().sum(),
-                (Method::Median, _) => median(cells),
-                _ => f64::NAN,
+        .map(|k| match (method, istd) {
+            (_, Some(row)) => measured(t, row, k).unwrap_or(f64::NAN),
+            (Method::Sum, _) => {
+                // streamed in row order, like the sum of the collected cells
+                let mut n = 0usize;
+                let sum: f64 = cells(k).inspect(|_| n += 1).sum();
+                if n > 0 {
+                    sum
+                } else {
+                    f64::NAN
+                }
             }
+            (Method::Median, _) => median(cells(k).collect()),
+            _ => f64::NAN,
         })
         .collect()
 }
@@ -112,7 +148,16 @@ pub fn factors(t: &Aligned, samples: &[Sample], method: &Method) -> Result<Vec<f
         Method::Sum => mean(&counted),
         _ => median(counted),
     };
-    Ok(stat.iter().map(|&s| if s.is_finite() && s > 0.0 { target / s } else { f64::NAN }).collect())
+    Ok(stat
+        .iter()
+        .map(|&s| {
+            if s.is_finite() && s > 0.0 {
+                target / s
+            } else {
+                f64::NAN
+            }
+        })
+        .collect())
 }
 
 /// The normalised area of a cell, `None` where the file has no peak.
@@ -133,7 +178,12 @@ impl Method {
                 j.str("istd").raw(",\"istd\":");
                 match r {
                     Reference::Id(id) => j.raw("{\"id\":").int(i64::from(*id)),
-                    Reference::Nearest { mz, rt, ppm, rt_tol } => j
+                    Reference::Nearest {
+                        mz,
+                        rt,
+                        ppm,
+                        rt_tol,
+                    } => j
                         .raw("{\"mz\":")
                         .num(*mz)
                         .raw(",\"rt\":")
@@ -159,6 +209,10 @@ impl Method {
             Some("istd") => {
                 let o = v.get("istd").ok_or_else(bad)?;
                 if let Some(id) = num(o, "id") {
+                    // an id is a whole number that fits a row id: `as u32` would clamp a negative or huge one to a real row
+                    if !(id.fract() == 0.0 && (0.0..=f64::from(u32::MAX)).contains(&id)) {
+                        return Err(bad());
+                    }
                     return Ok(Method::Istd(Reference::Id(id as u32)));
                 }
                 match (num(o, "mz"), num(o, "rt")) {
@@ -175,3 +229,6 @@ impl Method {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
