@@ -29,8 +29,8 @@ RECORD = """() => { window.__pc = {}; window.__over = false;
   const read = () => { for (const c of document.querySelectorAll('#flist td[data-cvrow]')) { const b = c.querySelector('[role=progressbar]'); if (b) (window.__pc[c.dataset.cvrow] = window.__pc[c.dataset.cvrow] || []).push(Number(b.getAttribute('aria-valuenow'))); } };
   new MutationObserver(read).observe(document.querySelector('#flist'), { subtree: true, attributes: true, attributeFilter: ['aria-valuenow'], childList: true });
   window.__tx = new Set(); window.__head = new Set(); window.__live = 0;
-  new MutationObserver(() => { for (const x of document.querySelectorAll('#flist [data-cvtxt]')) window.__tx.add(x.textContent.trim()); for (const h of document.querySelectorAll('#flist [data-cvhead]')) window.__head.add(h.textContent);
-    window.__live += document.querySelectorAll('#flist [aria-live]').length; }).observe(document.querySelector('#flist'), { subtree: true, characterData: true, childList: true });
+  new MutationObserver(() => { for (const x of document.querySelectorAll('#flist td[data-cvrow]')) window.__tx.add(x.title.trim());   /* the long text of a row is its title */ for (const h of document.querySelectorAll('#flist [data-cvhead]')) window.__head.add(h.textContent);
+    window.__live += document.querySelectorAll('#flist [aria-live]').length; }).observe(document.querySelector('#flist'), { subtree: true, characterData: true, childList: true, attributes: true, attributeFilter: ['title'] });
   window.__ph = []; addEventListener('mzlab-index', e => window.__ph.push([e.detail.name, e.detail.phase || '', e.detail.frac, performance.now()])); }"""
 
 try:

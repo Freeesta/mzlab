@@ -71,7 +71,7 @@ try:
                 pg.evaluate("CONVROWS.set('x_s1.mzML', 'run', 40)")
                 # the bars are repainted at most every 100 ms (CONVROWS.queue), so the new value is polled for, not read at once
                 pg.wait_for_function("""() => { const c = document.querySelector("#flist [data-cvrow='x_s1.mzML']"), b = c && c.querySelector('[role=progressbar]'), t = c && c.querySelector('[data-cvtxt]');
-                    return !!b && b.getAttribute('aria-valuenow') === '40' && !!t && t.textContent.includes('40'); }""", timeout=10000)
+                    return !!b && b.getAttribute('aria-valuenow') === '40' && !!t && c.textContent.includes('40'); }""", timeout=10000)
                 assert pg.locator("#flist [data-cvrow='x_s2.mzML'] [data-cvtxt]").inner_text().strip() != ""
             finally:                                     # also when a check fails: a row left behind would break the steps after this one
                 pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
