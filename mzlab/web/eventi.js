@@ -675,9 +675,17 @@ Q("#calcin").oninput = calcRun;
     timer = setTimeout(() => {
       if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
       tip.hidden = false;
-      const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
-      tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
-      tip.style.top = (r.bottom + h + 10 < innerHeight ? r.bottom + 6 : Math.max(6, r.top - h - 6)) + "px";
+      // never over the element it describes: below, else above, else beside it (flipped at the edges)
+      const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6;
+      const cx = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2));
+      let x = cx, y;
+      if (r.bottom + m + h + m <= innerHeight) y = r.bottom + m;
+      else if (r.top - m - h >= m) y = r.top - m - h;
+      else {
+        y = Math.max(m, Math.min(innerHeight - h - m, r.top));
+        x = r.right + m + w + m <= innerWidth ? r.right + m : Math.max(m, r.left - m - w);
+      }
+      tip.style.left = x + "px"; tip.style.top = y + "px";
     }, delay);
   });
   document.addEventListener("mouseout", e => { if (cur && !(e.relatedTarget && cur.contains(e.relatedTarget))) hide(); });
