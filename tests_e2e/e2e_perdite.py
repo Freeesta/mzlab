@@ -96,12 +96,22 @@ try:
             pg.locator("#nl-pol [data-p='-']").click(); pg.locator('#nl-list [data-d="g28"]').click()
             RUN = """() => axe.run(document.querySelector('#sb-panel-losses'), {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.map(v => [v.id, v.impact, v.nodes.length]))"""
             v = pg.evaluate(RUN); assert not v, v
-            for w, h in [(1440, 900), (400, 800)]:
-                pg.set_viewport_size({"width": w, "height": h})
-                if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
-                sw = pg.evaluate("(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"); assert not any(sw), (w, sw)
-                tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
-            pg.set_viewport_size({"width": 1400, "height": 1000})
+            SW = "(()=>{const r=document.querySelector('#sb-panel-losses');return [r.scrollWidth>r.clientWidth+1,document.documentElement.scrollWidth>innerWidth]})()"
+            try:
+                for w, h in [(1440, 900), (400, 800)]:
+                    pg.set_viewport_size({"width": w, "height": h})
+                    if not pg.is_visible("#sb-panel-losses"): pg.evaluate("BARRA.setTab('losses')")
+                    # the layout settles after the resize event; wait for the state, then report who overflows
+                    try: attendi(pg, f"!({SW}).some(Boolean)", 5000)
+                    except TimeoutError: pass
+                    sw = pg.evaluate(SW)
+                    if any(sw):
+                        wide = pg.evaluate("[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).slice(0,6).map(e=>e.tagName+'#'+e.id+'.'+e.className+' '+Math.round(e.getBoundingClientRect().right))")
+                        raise AssertionError(f"horizontal overflow {(w, sw, pg.evaluate('innerWidth'), wide)}")
+                    tgt = pg.evaluate("[...document.querySelectorAll('#nl-list .nlrow')].every(b=>{const q=b.getBoundingClientRect();return q.width>=24&&q.height>=24})"); assert tgt, w
+            finally:
+                # later steps assume the desktop viewport even when this one fails
+                pg.set_viewport_size({"width": 1400, "height": 1000})
             pg.locator('#nl-list [data-d="g28"]').click(); pg.locator("#nl-pol [data-p='-']").click(); shut(pg, "#refx")
         step("axe without violations on the panel; 1440 and 400 px without horizontal scroll; targets ≥ 24 px", narrow_axe)
         def ruler():
