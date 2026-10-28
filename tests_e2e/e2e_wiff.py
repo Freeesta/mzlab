@@ -84,9 +84,9 @@ try:
             st = pg.evaluate(JSON, "api/state")["j"]
             f = {x["name"]: x for x in st["files"]}
             assert set(f) == {"one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"}, list(f)
-            groups = pg.evaluate("Array.from(document.querySelectorAll('#flist tr.grp')).map(tr=>tr.textContent)")
-            assert any("MRM" in g for g in groups) and any("Full Scan" in g for g in groups), (groups, st["files"][0])
-        step("the experiment type is recognised (Full Scan and MRM groups)", kinds)
+            groups = pg.evaluate("Array.from(document.querySelectorAll('#flist tr[data-grp]')).map(tr=>tr.dataset.grp)")
+            assert any(g.endswith(":mrm") for g in groups) and any(g.endswith(":full") for g in groups), (groups, st["files"][0])
+        step("the experiment type is recognised (Full Scan and MRM rows)", kinds)
         def listed_without_python():
             assert not pyodide(reqs), pyodide(reqs)[:3]
         step("conversion and list: Pyodide was not requested", listed_without_python)
