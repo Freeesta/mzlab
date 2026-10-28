@@ -11,13 +11,13 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0")])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        frames(pg, 3); pg.click("text=Carica dati"); ready(pg)
         cdp = pg.context.new_cdp_session(pg); cdp.send("Performance.enable")
         layouts = lambda: next(m["value"] for m in cdp.send("Performance.getMetrics")["metrics"] if m["name"] == "LayoutCount")
         res = {}
         def fits():
             for w in WIDTHS:
-                pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(500); pg.evaluate("BARRA.fit()")
+                pg.set_viewport_size({"width": w, "height": 900}); frames(pg, 3); pg.evaluate("BARRA.fit()")
                 a = layouts(); pg.evaluate("BARRA.fit()"); n = layouts() - a
                 over = pg.evaluate("(()=>{const b=document.querySelector('#stbar');return b.scrollWidth-b.clientWidth})()")
                 res[w] = (pg.evaluate("BARRA.labelLevel"), n)
@@ -30,9 +30,9 @@ try:
             assert lv == sorted(lv, reverse=True), res          # wider bar never has less text than a narrower one
         step("label level never grows as the bar narrows", steps_down)
         def ctrlb():
-            pg.set_viewport_size({"width": 1440, "height": 900}); pg.wait_for_timeout(400)
+            pg.set_viewport_size({"width": 1440, "height": 900}); frames(pg, 3)
             before = pg.evaluate("BARRA.isOpen()")
-            pg.keyboard.press("Control+b"); pg.wait_for_timeout(400)
+            pg.keyboard.press("Control+b"); frames(pg, 3)
             assert pg.evaluate("BARRA.isOpen()") != before, "Ctrl+B did not toggle the drawer"
         step("Ctrl+B toggles the drawer (merged keydown handler)", ctrlb)
 finally:
