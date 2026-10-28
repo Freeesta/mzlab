@@ -6,6 +6,9 @@
 
 mod colonne;
 mod csv;
+mod csv_campi;
+#[cfg(test)]
+mod csv_prove;
 mod dal_file;
 mod idcampione;
 mod json;

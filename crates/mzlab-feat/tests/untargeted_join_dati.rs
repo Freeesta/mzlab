@@ -59,8 +59,7 @@ fn load_lists(d: &std::path::Path, stems: &[String]) -> Vec<Vec<Feature>> {
                     rt_end: x[c("rt_range:max")].parse().unwrap(),
                     height: x[c("height")].parse().unwrap(),
                     area: x[c("area")].parse().unwrap(),
-                    filled: false,
-                    broad: false,
+                    ..Feature::default()
                 })
                 .collect(),
         );

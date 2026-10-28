@@ -3,7 +3,10 @@
 //! `time` (minutes), `dose` (`25 ppm`) and the like are read too, and an unknown column becomes a free column (a number when every value is one).
 //! What `csv_scrivi` writes `csv_leggi` reads back unchanged (`tempo_min` is derived, `dati_file` is not in the table).
 
+use std::borrow::Cow;
+
 use super::colonne::infer;
+use super::csv_campi::{records, Cells};
 use super::json::legacy_kind;
 use super::{
     number_replicates, tabella_da_value, to_json3, Campione, Cell, Colonna, Tabella, TipoColonna,
@@ -38,10 +41,19 @@ const FIXED: [&str; 23] = [
     "composto",
 ];
 
-fn bad(row: usize, col: &str) -> Error {
+pub(super) fn bad(row: usize, col: &str) -> Error {
     Error::new("error.badCsv")
         .with("riga", row)
         .with("colonna", col)
+}
+
+/// `v.to_lowercase()`, without a copy when `v` is already lower-case ASCII (the usual cell).
+fn lower(v: &str) -> Cow<'_, str> {
+    if v.bytes().any(|b| b.is_ascii_uppercase() || !b.is_ascii()) {
+        Cow::Owned(v.to_lowercase())
+    } else {
+        Cow::Borrowed(v)
+    }
 }
 
 /// The field a header names (the fixed name, or a synonym), None for a free column.
@@ -66,62 +78,6 @@ fn field_of(h: &str) -> Option<&'static str> {
         "dose" => "dose",
         _ => return None,
     })
-}
-
-type Cells = Vec<(String, bool)>;
-
-/// The records of `text`: quoted fields keep their separators and newlines (`""` is a quote); a field is trimmed unless quoted.
-fn records(text: &str, sep: char) -> Result<Vec<Cells>> {
-    let mut out: Vec<Cells> = Vec::new();
-    let (mut row, mut cur, mut quoted, mut inq) = (Cells::new(), String::new(), false, false);
-    let mut it = text.trim_start_matches('\u{feff}').chars().peekable();
-    let end = |row: &mut Cells, cur: &mut String, quoted: &mut bool| {
-        let v = if *quoted {
-            std::mem::take(cur)
-        } else {
-            cur.trim().to_string()
-        };
-        cur.clear();
-        row.push((v, std::mem::take(quoted)));
-    };
-    while let Some(c) = it.next() {
-        if inq {
-            match (c, it.peek()) {
-                ('"', Some('"')) => {
-                    cur.push('"');
-                    it.next();
-                }
-                ('"', _) => inq = false,
-                _ => cur.push(c),
-            }
-        } else if c == '"' && cur.trim().is_empty() {
-            cur.clear();
-            inq = true;
-            quoted = true;
-        } else if c == sep {
-            end(&mut row, &mut cur, &mut quoted);
-        } else if c == '\n' || c == '\r' {
-            if c == '\r' && it.peek() == Some(&'\n') {
-                it.next();
-            }
-            end(&mut row, &mut cur, &mut quoted);
-            let blank = row.len() == 1 && row[0].0.is_empty() && !row[0].1;
-            let r = std::mem::take(&mut row);
-            if !blank {
-                out.push(r);
-            }
-        } else {
-            cur.push(c);
-        }
-    }
-    if inq {
-        return Err(bad(out.len() + 1, ""));
-    }
-    if !cur.is_empty() || !row.is_empty() {
-        end(&mut row, &mut cur, &mut quoted);
-        out.push(row);
-    }
-    Ok(out)
 }
 
 /// The separator of the first line: the one of `,` `;` tab used most outside quotes (`,` when none).
@@ -155,7 +111,7 @@ fn num(v: &str) -> Option<f64> {
 }
 
 fn flag(v: &str) -> Option<bool> {
-    match v.to_lowercase().as_str() {
+    match lower(v).as_ref() {
         "true" | "1" | "si" | "sì" | "yes" | "y" | "vero" => Some(true),
         "false" | "0" | "no" | "n" | "falso" => Some(false),
         _ => None,
@@ -163,10 +119,7 @@ fn flag(v: &str) -> Option<bool> {
 }
 
 fn unit_of(v: &str) -> Option<&'static str> {
-    super::UNITA_TEMPO
-        .iter()
-        .copied()
-        .find(|u| *u == v.to_lowercase())
+    super::UNITA_TEMPO.iter().copied().find(|u| *u == lower(v))
 }
 
 fn whole(v: &str) -> Option<u32> {
@@ -185,7 +138,7 @@ fn dose(v: &str) -> Option<(f64, Option<String>)> {
 
 /// Gives `c` the value of one fixed column; false when the value is not one the column takes.
 fn put(c: &mut Campione, f: &str, v: &str) -> bool {
-    let pol = |p: &str| match p.to_lowercase().as_str() {
+    let pol = |p: &str| match lower(p).as_ref() {
         "1" | "+1" | "+" | "pos" | "positive" => Some(1),
         "-1" | "-" | "neg" | "negative" => Some(-1),
         _ => None,
@@ -205,10 +158,7 @@ fn put(c: &mut Campione, f: &str, v: &str) -> bool {
         "unita" => c.unit = (!v.is_empty()).then(|| v.into()),
         "polarita" => return v.is_empty() || pol(v).map(|p| c.polarity = Some(p)).is_some(),
         "tipo" => {
-            return v.is_empty()
-                || legacy_kind(&v.to_lowercase())
-                    .map(|k| c.kind = k.into())
-                    .is_some()
+            return v.is_empty() || legacy_kind(&lower(v)).map(|k| c.kind = k.into()).is_some()
         }
         "tipo_bianco" => {
             return v.is_empty()
@@ -236,32 +186,54 @@ fn put(c: &mut Campione, f: &str, v: &str) -> bool {
     true
 }
 
+/// The positions of the columns of the times in the header.
+struct TimeCols {
+    unit: Option<usize>,
+    time: Option<usize>,
+    minutes: Option<usize>,
+    confirmed: Option<usize>,
+}
+
 /// The times of one row: `tempo` + `unita_tempo`, else `tempo_min`; confirmed as written, else when there is one.
-fn time_of(c: &mut Campione, row: usize, get: &dyn Fn(&str) -> Option<String>) -> Result<()> {
-    let unit = match get("unita_tempo").filter(|u| !u.is_empty()) {
-        Some(u) => unit_of(&u).ok_or_else(|| bad(row, "unita_tempo"))?,
+fn time_of<'a>(
+    c: &mut Campione,
+    row: usize,
+    tc: &TimeCols,
+    cell: &dyn Fn(usize) -> &'a str,
+) -> Result<()> {
+    let get = |i: Option<usize>| i.map(cell).filter(|v| !v.is_empty());
+    let unit = match get(tc.unit) {
+        Some(u) => unit_of(u).ok_or_else(|| bad(row, "unita_tempo"))?,
         None => "min",
     };
-    let (t, u, col) = match (
-        get("tempo").filter(|t| !t.is_empty()),
-        get("tempo_min").filter(|t| !t.is_empty()),
-    ) {
+    let (t, u, col) = match (get(tc.time), get(tc.minutes)) {
         (Some(t), _) => (Some(t), unit, "tempo"),
         (None, Some(t)) => (Some(t), "min", "tempo_min"),
         _ => (None, unit, "tempo"),
     };
-    let t = t
-        .map(|t| num(&t).ok_or_else(|| bad(row, col)))
-        .transpose()?;
+    let t = t.map(|t| num(t).ok_or_else(|| bad(row, col))).transpose()?;
     c.set_time(t, u);
     if c.kind == "t0" && t.is_none() {
         c.time_min = Some(0.0);
     }
-    c.time_confirmed = match get("tempo_confermato").filter(|v| !v.is_empty()) {
-        Some(v) => flag(&v).ok_or_else(|| bad(row, "tempo_confermato"))?,
+    c.time_confirmed = match get(tc.confirmed) {
+        Some(v) => flag(v).ok_or_else(|| bad(row, "tempo_confermato"))?,
         None => t.is_some(),
     };
     Ok(())
+}
+
+/// Each header: Ok(fixed field) or Err(free column name); an empty or repeated name is an error.
+fn heads_of(head: &Cells) -> Result<Vec<std::result::Result<&'static str, String>>> {
+    let mut heads = Vec::new();
+    for (h, _) in head {
+        let f = field_of(h).ok_or_else(|| h.trim().to_string());
+        if f.as_ref().err().is_some_and(|n| n.is_empty()) || heads.contains(&f) {
+            return Err(bad(1, h));
+        }
+        heads.push(f);
+    }
+    Ok(heads)
 }
 
 /// Reads `text`; `sep` None = detected; `declared` gives the type of the free columns it names (the others are inferred).
@@ -273,35 +245,37 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
             colonne: declared.to_vec(),
         });
     };
-    // each header: Ok(fixed field) or Err(free column name)
-    let mut heads: Vec<std::result::Result<&'static str, String>> = Vec::new();
-    for (h, _) in head {
-        let f = field_of(h).ok_or_else(|| h.trim().to_string());
-        if f.as_ref().err().is_some_and(|n| n.is_empty()) || heads.contains(&f) {
-            return Err(bad(1, h));
-        }
-        heads.push(f);
-    }
+    let heads = heads_of(head)?;
     let mut free: Vec<(String, Vec<Option<&str>>)> = (heads.iter())
         .filter_map(|h| h.as_ref().err())
         .map(|h| (h.clone(), Vec::new()))
         .collect();
     let mut cs = Vec::with_capacity(rows.len());
     let mut written: Vec<Option<u32>> = Vec::with_capacity(rows.len());
-    let has = |f: &str| heads.iter().any(|h| h.as_ref().ok() == Some(&f));
+    let at = |f: &str| heads.iter().position(|h| h.as_ref().ok() == Some(&f));
+    let tc = TimeCols {
+        unit: at("unita_tempo"),
+        time: at("tempo"),
+        minutes: at("tempo_min"),
+        confirmed: at("tempo_confermato"),
+    };
+    let replica = at("replica");
+    // the free column of each header position (the names are distinct, in header order)
+    let free_at: Vec<usize> = heads
+        .iter()
+        .scan(0, |k, h| {
+            let i = *k;
+            *k += usize::from(h.is_err());
+            Some(i)
+        })
+        .collect();
     for (r, cells) in rows.iter().enumerate() {
         let row = r + 2;
         if cells.len() > head.len() {
             return Err(bad(row, ""));
         }
-        let cell = |i: usize| cells.get(i).map(|c| c.0.as_str()).unwrap_or("");
+        let cell = |i: usize| cells.get(i).map(|c| c.0.as_ref()).unwrap_or("");
         let mut c = Campione::new("", "", r as u32 + 1);
-        let get = |name: &str| {
-            heads
-                .iter()
-                .position(|h| h.as_ref().ok() == Some(&name))
-                .map(|i| cell(i).to_string())
-        };
         for (i, h) in heads.iter().enumerate() {
             match h {
                 Ok(f)
@@ -314,20 +288,17 @@ pub fn leggi(text: &str, sep: Option<char>, declared: &[Colonna]) -> Result<Tabe
                         return Err(bad(row, f));
                     }
                 }
-                Err(n) => {
+                Err(_) => {
                     let q = cells.get(i).is_some_and(|c| c.1);
-                    let k = free.iter().position(|(m, _)| m == n).unwrap_or(0);
-                    free[k].1.push((!cell(i).is_empty() || q).then(|| cell(i)));
+                    free[free_at[i]]
+                        .1
+                        .push((!cell(i).is_empty() || q).then(|| cell(i)));
                 }
                 _ => {}
             }
         }
-        time_of(&mut c, row, &get)?;
-        written.push(
-            has("replica")
-                .then(|| get("replica").and_then(|v| whole(&v)))
-                .flatten(),
-        );
+        time_of(&mut c, row, &tc, &cell)?;
+        written.push(replica.and_then(|i| whole(cell(i))));
         cs.push(c);
     }
     number_replicates(&mut cs);

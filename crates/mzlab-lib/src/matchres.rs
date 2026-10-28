@@ -335,12 +335,15 @@ fn group_by_compound<S: Source>(
     set: &LibSet<S>,
     found: Vec<(Badge, SpectrumMatch, Meta)>,
 ) -> Vec<Compound> {
-    let mut groups: Vec<(String, Compound)> = Vec::new();
+    // insertion order is kept in `compounds`; the map only finds the group of a key
+    let mut compounds: Vec<Compound> = Vec::new();
+    let mut at: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for (badge, sm, meta) in found {
         let (key, ik) = compound_key(&meta);
         let exp = lib_kind(set, sm.lib) == Kind::Experimental;
-        match groups.iter_mut().find(|g| g.0 == key) {
-            Some((_, c)) => {
+        match at.get(&key) {
+            Some(&g) => {
+                let c = &mut compounds[g];
                 c.badge = if badge.rank() < c.badge.rank() {
                     badge
                 } else {
@@ -349,9 +352,9 @@ fn group_by_compound<S: Source>(
                 c.experimental |= exp;
                 c.spectra.push(sm);
             }
-            None => groups.push((
-                key,
-                Compound {
+            None => {
+                at.insert(key, compounds.len());
+                compounds.push(Compound {
                     inchikey14: ik,
                     name: meta.name,
                     formula: meta.formula,
@@ -359,11 +362,10 @@ fn group_by_compound<S: Source>(
                     badge,
                     experimental: exp,
                     spectra: vec![sm],
-                },
-            )),
+                });
+            }
         }
     }
-    let mut compounds: Vec<Compound> = groups.into_iter().map(|g| g.1).collect();
     for c in &mut compounds {
         c.spectra.sort_by(|a, b| {
             b.score
