@@ -56,7 +56,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | **Motore della pagina nell'app** | | | | | | |
 | Grafo MSn dalla vista Dati (`api/msn_grafo`, op `msngrafo`) | sì (`rpc_msn.rs`; un campione nativo no: `err.route.unavailable`) | sì | sito↔CLI sì (`test_msngrafo_wasm.py`); app↔CLI sì (`parita_msn.rs`) | solo campione nativo | S | 1 |
 | Indice a centroidi (`lr_index_cen`), copia a centroidi (`mzml2cen`), SRM per mzFinder LR (`natsrm`) | `lr_index_cen`, `mzml2cen`, `natsrm` sì (`rpc_msn.rs`) | sì (`rust-worker.js:316`, `:409`, `:427`) | app↔core sì (`parita_msn.rs`); app↔`.wasm` non eseguito qui (manca `wasm-bindgen`) | confronto diretto col `.wasm` | M | 1 |
-| Rotte comuni (TIC, XIC, spettri, MRM, mappe, DAD, statistica…) | sì | sì | parziale: `crates/mzlab-desktop/tests/dad.rs` (DAD: stesse stringhe del `.wasm`); nessun test generale rotta per rotta | da fare (test) | M | 1 |
+| Rotte comuni (TIC, XIC, spettri, MRM, mappe, DAD, statistica…) | sì | sì | parziale: `crates/mzlab-desktop/tests/parita_rotte.rs` (31 passi su `.wasm` e app: indice, scansioni, mappe, TIC/XIC/spettri; uguali tranne `tic` su slot mai aperto: app `err.file.raw`, `.wasm` traccia vuota) e `dad.rs` (DAD); mancano MRM su campione con transizioni e statistica | da fare (MRM, statistica) | M | 1 |
 | mzFinder HR (`feat/*`, `finder/*`, untargeted) | sì | sì | sì: `crates/mzlab-desktop/tests/feat.rs`, `feat_untargeted.rs` | — | — | — |
 | **Lettura e conversione** | | | | | | |
 | Lettura diretta senza mzML intermedio | sì (8 famiglie) | parziale: motore (3200, Agilent GC/MS, mzML) e Thermo; 6 famiglie via mzML in OPFS | — | da fare (`formati-matrice.md`, punto 6) | L | 2 |
