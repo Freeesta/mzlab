@@ -329,7 +329,9 @@ fn features_cmd(args: impl Iterator<Item = String>) -> Outcome {
         Ok(None) => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Err(e) => return Outcome::fail(&e),
     };
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}", std::process::id()));
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-feat{k}", std::process::id()));
     let r = std::fs::create_dir_all(&tmp)
         .map_err(io)
         .and_then(|_| features(&a.files, &a.params, &tmp));
