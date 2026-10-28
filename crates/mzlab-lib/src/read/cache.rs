@@ -37,8 +37,7 @@ impl Cache {
         self.order.push_back((self.tick, k));
         if self.order.len() > 4 * self.map.len() + 64 {
             let map = &self.map;
-            self.order
-                .retain(|(t, k)| map.get(k).is_some_and(|e| e.1 == *t));
+            self.order.retain(|(t, k)| live(map, k, *t));
         }
         self.tick
     }
@@ -76,7 +75,14 @@ impl Cache {
             self.drop_block(oldest);
         }
     }
+}
 
+/// Whether the use `(t, k)` of the order is the current one of its block.
+fn live(map: &HashMap<Key, (Rc<Vec<u8>>, u64)>, k: &Key, t: u64) -> bool {
+    map.get(k).is_some_and(|e| e.1 == t)
+}
+
+impl Cache {
     /// Changes the budget; the excess is dropped at once, oldest first.
     pub(super) fn set_budget(&mut self, bytes: usize) {
         self.budget = bytes;
@@ -97,7 +103,7 @@ impl Cache {
     /// The least recently used block, taken out of the order (not out of the map).
     fn pop_oldest(&mut self) -> Option<Key> {
         while let Some((t, k)) = self.order.pop_front() {
-            if self.map.get(&k).is_some_and(|e| e.1 == t) {
+            if live(&self.map, &k, t) {
                 return Some(k);
             }
         }

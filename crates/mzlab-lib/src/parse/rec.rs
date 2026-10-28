@@ -54,15 +54,6 @@ pub(super) fn norm_key<'a>(k: &str, buf: &'a mut [u8; 32]) -> &'a str {
         .unwrap_or("")
 }
 
-pub(super) struct Rec {
-    /// The fields kept, by `K`; `set` tells which of them the record has (the first occurrence of a key wins).
-    pub(super) vals: [String; N_KEYS],
-    pub(super) set: u64,
-    pub(super) mz: Vec<f64>,
-    pub(super) it: Vec<f64>,
-    pub(super) extra_peaks: bool,
-}
-
 impl Default for Rec {
     fn default() -> Rec {
         Rec {
@@ -73,6 +64,15 @@ impl Default for Rec {
             extra_peaks: false,
         }
     }
+}
+
+pub(super) struct Rec {
+    /// The fields kept, by `K`; `set` tells which of them the record has (the first occurrence of a key wins).
+    pub(super) vals: [String; N_KEYS],
+    pub(super) set: u64,
+    pub(super) mz: Vec<f64>,
+    pub(super) it: Vec<f64>,
+    pub(super) extra_peaks: bool,
 }
 
 impl Rec {
