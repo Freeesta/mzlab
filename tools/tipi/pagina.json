@@ -68,6 +68,7 @@
     "../../mzlab/web/fondo-spettro.js",
     "../../mzlab/web/fondo-piatto.js",
     "../../mzlab/web/mappa-vicino.js",
+    "../../mzlab/web/xic-lente-disegno.js",
     "../../mzlab/web/pannelli.js",
     "../../mzlab/web/pannelli-annulla.js",
     "../../mzlab/web/affianca.js",
