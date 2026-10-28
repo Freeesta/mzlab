@@ -6,7 +6,10 @@ use std::time::Instant;
 use mzlab_target::parse_target_csv;
 
 fn main() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/data/liste/sostanze_hrms.csv");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/data/liste/sostanze_hrms.csv"
+    );
     let text = std::fs::read_to_string(path).unwrap();
     let (head, body) = text.split_once('\n').unwrap();
     let mut big = String::with_capacity(body.len() * 160);
@@ -27,5 +30,10 @@ fn main() {
             h = (h ^ b as u64).wrapping_mul(0x100000001b3);
         }
     }
-    println!("rows {} hash {h:016x} time {:.0} ms ({} bytes)", e.len(), el.as_secs_f64() * 1e3, big.len());
+    println!(
+        "rows {} hash {h:016x} time {:.0} ms ({} bytes)",
+        e.len(),
+        el.as_secs_f64() * 1e3,
+        big.len()
+    );
 }

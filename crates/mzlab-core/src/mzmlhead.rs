@@ -7,6 +7,7 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzmlarray::{decode_array, Inflate, Want};
 
+mod lettura;
 mod tags;
 use tags::{find_tag, time_in_seconds};
 
@@ -286,30 +287,6 @@ impl<R: ReadAt> Mzml<R> {
         Ok((t, y))
     }
 
-    /// The time axis (minutes) of a chromatogram, decoding only the time array; `None` when the declared length does not equal the decoded one (the caller then reads both arrays).
-    pub fn chromatogram_times(&mut self, c: &Chrom) -> Result<Option<Vec<f64>>> {
-        let chunk = self.read(c.start, c.end)?;
-        let expected = c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0);
-        let mut t = None;
-        for (head, data) in arrays(&chunk) {
-            if has_accession(&head, "MS:1000595") {
-                t = Some(decode(&head, data, expected)?);
-                break;
-            }
-        }
-        let Some(mut t) = t else { return Ok(None) };
-        if c.n != i64::try_from(t.len()).ok() {
-            return Ok(None);
-        }
-        let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-        let seconds =
-            text(part(&chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(&chunk);
-        if seconds {
-            t.iter_mut().for_each(|v| *v /= 60.0);
-        }
-        Ok(Some(t))
-    }
-
     /// The unit written on the intensity array of a chromatogram, or "".
     pub fn chromatogram_unit(&mut self, c: &Chrom) -> Result<String> {
         let chunk = self.read(c.start, c.end)?;
@@ -360,45 +337,6 @@ impl<R: ReadAt> Mzml<R> {
             .map_or(0, |p| p)
             .saturating_add(usize::try_from(extra).unwrap_or(usize::MAX));
         Ok(text(part(&probe, 0, end.min(probe.len()))))
-    }
-
-    /// Polarity written in the header (used when a file has no scans, e.g. MRM): positive, negative, mixed or unknown.
-    pub fn header_polarity(&mut self) -> Result<String> {
-        const POS: &[u8] = b"accession=\"MS:1000130\"";
-        const NEG: &[u8] = b"accession=\"MS:1000129\"";
-        const BLOCK: u64 = 4 << 20;
-        let total = self.size.min(MAX_REGION);
-        let (mut pos, mut neg) = (false, false);
-        let mut buf: Vec<u8> = vec![];
-        let mut at = 0u64;
-        // Blocks overlap by the longest needle minus one byte, so a match across a block edge is seen; the scan stops at `</run>` or when both are found.
-        while at < total && !(pos && neg) {
-            let end = (at + BLOCK).min(total);
-            buf.extend_from_slice(&self.read(at, end)?);
-            at = end;
-            let mut lim = buf.len();
-            let mut last = false;
-            if let Some(e) = find(&buf, b"</run>", 0) {
-                (lim, last) = (e, true);
-            } else if at == total {
-                (lim, last) = (buf.len().saturating_sub(1), true);
-            }
-            let h = part(&buf, 0, lim);
-            pos |= find(h, POS, 0).is_some();
-            neg |= find(h, NEG, 0).is_some();
-            if last {
-                break;
-            }
-            let keep = (POS.len() - 1).max(5).min(buf.len());
-            buf.drain(..buf.len() - keep);
-        }
-        Ok(match (pos, neg) {
-            (true, false) => "positive",
-            (false, true) => "negative",
-            (true, true) => "mixed",
-            _ => "unknown",
-        }
-        .into())
     }
 
     /// Thermo nativeID format in the header: the "collision energy" is relative (NCE), not eV.
@@ -689,137 +627,5 @@ pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64
 }
 
 #[cfg(test)]
-mod find_tests {
-    use super::*;
-
-    fn linear(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
-        let tail = h.get(from..).filter(|_| !n.is_empty())?;
-        tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
-    }
-
-    #[test]
-    fn find_equals_window_scan() {
-        let h = b"<a><b></b><run></run><run>x</run>";
-        for n in [
-            &b"</run>"[..],
-            b"<",
-            b"",
-            b"x</run>",
-            b"<run>x",
-            b"zz",
-            h,
-            b"<a><b></b><run></run><run>x</run>>",
-        ] {
-            for from in 0..h.len() + 3 {
-                assert_eq!(find(h, n, from), linear(h, n, from), "{n:?} {from}");
-            }
-        }
-    }
-
-    #[test]
-    fn accession_needle_matches_format() {
-        let head = r#"<cvParam accession="MS:1000521" x="MS:1000522"/> accession="MS:10005230""#;
-        for x in [
-            "MS:1000521",
-            "MS:1000522",
-            "MS:1000523",
-            "MS:100052",
-            "MS:10005230",
-        ] {
-            assert_eq!(
-                has_accession(head, x),
-                head.contains(&format!("accession=\"{x}\"")),
-                "{x}"
-            );
-        }
-    }
-}
-
-#[cfg(test)]
-mod polarity_tests {
-    use super::*;
-
-    fn old_polarity(all: &[u8]) -> &'static str {
-        let end = find(all, b"</run>", 0).unwrap_or_else(|| all.len().saturating_sub(1));
-        let h = part(all, 0, end);
-        match (
-            find(h, b"accession=\"MS:1000130\"", 0).is_some(),
-            find(h, b"accession=\"MS:1000129\"", 0).is_some(),
-        ) {
-            (true, false) => "positive",
-            (false, true) => "negative",
-            (true, true) => "mixed",
-            _ => "unknown",
-        }
-    }
-
-    #[test]
-    fn streamed_polarity_equals_whole_read() {
-        const POS: &[u8] = b"accession=\"MS:1000130\"";
-        const NEG: &[u8] = b"accession=\"MS:1000129\"";
-        let block = 4usize << 20;
-        let mut cases: Vec<Vec<u8>> = vec![];
-        // markers placed around the block edge, after and before `</run>`, at the very end, and absent
-        for pad in [
-            0,
-            100,
-            block - 30,
-            block - 22,
-            block - 21,
-            block - 1,
-            block,
-            block + 5,
-            2 * block - 10,
-        ] {
-            for (a, b, run) in [
-                (Some(POS), None, true),
-                (Some(NEG), Some(POS), true),
-                (None, None, true),
-                (Some(POS), None, false),
-                (Some(NEG), None, false),
-            ] {
-                let mut v = vec![b' '; pad];
-                if let Some(a) = a {
-                    v.extend_from_slice(a);
-                }
-                v.extend_from_slice(&[b' '; 7]);
-                if let Some(b) = b {
-                    v.extend_from_slice(b);
-                }
-                if run {
-                    v.extend_from_slice(b"</run>");
-                    v.extend_from_slice(POS);
-                }
-                cases.push(v);
-            }
-        }
-        // a marker ending exactly on the last byte, and one straddling `</run>`
-        let mut v = vec![b' '; 50];
-        v.extend_from_slice(POS);
-        cases.push(v);
-        let mut v = POS.to_vec();
-        v.extend_from_slice(b"</ru");
-        cases.push(v);
-        for c in cases {
-            let size = c.len() as u64;
-            let mut m = Mzml::new(c.clone(), size);
-            assert_eq!(
-                m.header_polarity().unwrap(),
-                old_polarity(&c),
-                "len {}",
-                c.len()
-            );
-        }
-    }
-
-    #[test]
-    fn times_only_matches_the_full_read() {
-        let doc = br#"<chromatogram index="0" id="SRM SIC 1 -> 2" defaultArrayLength="3"><binaryDataArrayList><binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000595"/><cvParam unitName="second"/><binary>AAAAAAAAAAAAAAAAAADwPwAAAAAAAABA</binary></binaryDataArray><binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000515"/><binary>AAAAAAAAAAAAAAAAAADwPwAAAAAAAABA</binary></binaryDataArray></binaryDataArrayList></chromatogram>"#;
-        let mut m = Mzml::new(doc.to_vec(), doc.len() as u64);
-        let c = m.chromatograms(0).unwrap().remove(0);
-        let (t, _) = m.chromatogram(&c).unwrap();
-        let got = m.chromatogram_times(&c).unwrap().unwrap();
-        assert_eq!(got, t);
-        assert_eq!(got.len(), 3);
-    }
-}
+#[path = "mzmlhead_tests.rs"]
+mod tests;

@@ -309,6 +309,10 @@ fn noise_level_keeps_its_bits_also_with_nan_and_infinity() {
                 _ => {}
             }
         }
-        assert_eq!(noise_level(&y).to_bits(), old_noise_level(&y).to_bits(), "case {case}");
+        assert_eq!(
+            noise_level(&y).to_bits(),
+            old_noise_level(&y).to_bits(),
+            "case {case}"
+        );
     }
 }

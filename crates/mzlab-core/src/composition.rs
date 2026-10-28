@@ -430,6 +430,14 @@ fn broken(form: &[i64], ctx: &RuleCtx, r_db: f64, half_ok: bool) -> [bool; 10] {
     out
 }
 
+/// A grid hit kept for the rule checks: its row in the flat `xs`, the mass error, the double-bond count and the rules it fails.
+struct Cand {
+    at: usize,
+    e: f64,
+    r_db: f64,
+    failed: [bool; 10],
+}
+
 /// Formulas of the ion at `mz`, as the JSON of `/api/composition` (without the isotope-peak and fragment scores).
 pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     if mz.is_nan() || mz <= 0.0 {
@@ -589,12 +597,6 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     let half_ok = o.ion == "[M]+" || o.ion == "[M]-";
     // a candidate is a row of `xs` (carbons, hydrogens, then the grid row), `ns` numbers wide
     let ns = 2 + no;
-    struct Cand {
-        at: usize,
-        e: f64,
-        r_db: f64,
-        failed: [bool; 10],
-    }
     let mut xs: Vec<i64> = vec![];
     let mut cands: Vec<Cand> = vec![];
     let (mut b, mut bn) = (vec![0i64; bases.len()], vec![0i64; bases.len()]);

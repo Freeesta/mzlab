@@ -24,7 +24,9 @@ fn main() {
         let t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".as_bytes();
         let mut s = String::new();
         for c in b.chunks(3) {
-            let v = (c[0] as u32) << 16 | (*c.get(1).unwrap_or(&0) as u32) << 8 | *c.get(2).unwrap_or(&0) as u32;
+            let v = (c[0] as u32) << 16
+                | (*c.get(1).unwrap_or(&0) as u32) << 8
+                | *c.get(2).unwrap_or(&0) as u32;
             for k in 0..4 {
                 s.push(t[((v >> (18 - 6 * k)) & 63) as usize] as char);
             }
@@ -42,7 +44,9 @@ fn main() {
     let mut h = 0u64;
     for _ in 0..20 {
         let f = facts_from(&mut m, 0, 50, true).unwrap();
-        h ^= f.srm_rt.map_or(0, |(a, b)| a.to_bits() ^ b.to_bits().rotate_left(7));
+        h ^= f
+            .srm_rt
+            .map_or(0, |(a, b)| a.to_bits() ^ b.to_bits().rotate_left(7));
     }
     let f = facts_from(&mut m, 0, 50, true).unwrap();
     println!("srm {} rt {:?}", f.srm, f.srm_rt);

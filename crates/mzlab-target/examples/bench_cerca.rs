@@ -4,12 +4,17 @@
 use std::time::Instant;
 
 use mzlab_core::mzml::Spectrum;
-use mzlab_target::{cerca_targets, AdductType, CheckFlags, TargetEntry, TargetList, TargetSearchOptions};
+use mzlab_target::{
+    cerca_targets, AdductType, CheckFlags, TargetEntry, TargetList, TargetSearchOptions,
+};
 
 struct Lcg(u64);
 impl Lcg {
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0 >> 33
     }
     fn unit(&mut self) -> f64 {
@@ -49,9 +54,17 @@ fn main() {
     let mut entries = Vec::new();
     let mut peaks: Vec<(f64, f64, f64)> = Vec::new(); // mz, rt apex, height
     for k in 0..n_targets {
-        let (c, h, n, o) = (6 + r.next() % 20, 6 + r.next() % 30, r.next() % 5, r.next() % 6);
+        let (c, h, n, o) = (
+            6 + r.next() % 20,
+            6 + r.next() % 30,
+            r.next() % 5,
+            r.next() % 6,
+        );
         let formula = format!("C{c}H{h}N{n}O{o}");
-        let mass = 12.0 * c as f64 + 1.00782503223 * h as f64 + 14.00307400443 * n as f64 + 15.99491461957 * o as f64;
+        let mass = 12.0 * c as f64
+            + 1.00782503223 * h as f64
+            + 14.00307400443 * n as f64
+            + 15.99491461957 * o as f64;
         let e = entry(k, &formula, mass);
         if k % 10 == 0 {
             peaks.push((e.mz_mh, 1.0 + r.unit() * 28.0, 1e5 + r.unit() * 1e6));
@@ -94,5 +107,9 @@ fn main() {
     for b in format!("{m:?}").bytes() {
         h = (h ^ b as u64).wrapping_mul(0x100000001b3);
     }
-    println!("matches {} hash {h:016x} time {:.0} ms", m.len(), el.as_secs_f64() * 1e3);
+    println!(
+        "matches {} hash {h:016x} time {:.0} ms",
+        m.len(),
+        el.as_secs_f64() * 1e3
+    );
 }
