@@ -12,8 +12,8 @@
   Mentre la lista si apre così (`E._seq`, test `e2e_carica_scheda`) i passi successivi non cambiano scheda: resta quella del primo passo; un file aggiunto più tardi apre la scheda del suo tipo.
   `bootSession` ricarica la vista al massimo ogni ~200 ms (un solo ridisegno per gruppo di file arrivati); i file nuovi seguono le regole del primo caricamento (HR: si apre solo il primo). Un file che fallisce resta in rosso col messaggio, gli altri continuano; un file tolto dall'elenco non si legge. `e2e_progressivo`.
 
-## Gruppi della tabella e riepilogo
-- La tabella di carico raggruppa prima per strumento (`loadGrp` in `shell.js`: bassa risoluzione, poi alta risoluzione `f.hr`, campo di `sniff.rs`), poi per esperimento; un file con più parti (Full Scan + DDA/IDA) ha un gruppo suo, mai quello dell'MS2 puro. Test: `e2e_carico_gruppi`.
+## Gruppi della riga e riepilogo
+- La tabella di carico non ha righe di gruppo: le righe restano nell'ordine di arrivo (`CONVROWS.rank`; una modifica dello studente lo scioglie e la tabella torna ordinata da `sortFiles`). Il gruppo di una riga (`loadGrp` in `shell.js`: bassa risoluzione, poi alta risoluzione `f.hr`, poi esperimento; un file con più parti Full Scan + DDA/IDA ha il suo, mai quello dell'MS2 puro) sta in `data-grp` e nell'etichetta «HR». Test: `e2e_carico_gruppi`.
 - Il riquadro sotto la tabella (`CONVROWS.summary()`) elenca solo errori, annullati e file con scansioni mancanti; se è andato tutto bene non compare.
 
 ## Bassa e alta risoluzione insieme

@@ -71,7 +71,7 @@ try:
                 pg.evaluate("CONVROWS.set('x_s1.mzML', 'run', 40)")
                 # the bars are repainted at most every 100 ms (CONVROWS.queue), so the new value is polled for, not read at once
                 pg.wait_for_function("""() => { const c = document.querySelector("#flist [data-cvrow='x_s1.mzML']"), b = c && c.querySelector('[role=progressbar]'), t = c && c.querySelector('[data-cvtxt]');
-                    return !!b && b.getAttribute('aria-valuenow') === '40' && !!t && t.textContent.includes('40'); }""", timeout=10000)
+                    return !!b && b.getAttribute('aria-valuenow') === '40' && !!t && c.textContent.includes('40'); }""", timeout=10000)
                 assert pg.locator("#flist [data-cvrow='x_s2.mzML'] [data-cvtxt]").inner_text().strip() != ""
             finally:                                     # also when a check fails: a row left behind would break the steps after this one
                 pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
@@ -84,9 +84,9 @@ try:
             st = pg.evaluate(JSON, "api/state")["j"]
             f = {x["name"]: x for x in st["files"]}
             assert set(f) == {"one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"}, list(f)
-            groups = pg.evaluate("Array.from(document.querySelectorAll('#flist tr.grp')).map(tr=>tr.textContent)")
-            assert any("MRM" in g for g in groups) and any("Full Scan" in g for g in groups), (groups, st["files"][0])
-        step("the experiment type is recognised (Full Scan and MRM groups)", kinds)
+            groups = pg.evaluate("Array.from(document.querySelectorAll('#flist tr[data-grp]')).map(tr=>tr.dataset.grp)")
+            assert any(g.endswith(":mrm") for g in groups) and any(g.endswith(":full") for g in groups), (groups, st["files"][0])
+        step("the experiment type is recognised (Full Scan and MRM rows)", kinds)
         def listed_without_python():
             assert not pyodide(reqs), pyodide(reqs)[:3]
         step("conversion and list: Pyodide was not requested", listed_without_python)

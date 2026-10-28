@@ -400,6 +400,24 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 @media(max-width:560px){.pk-row{grid-template-columns:1fr 84px}
 .pk-row>span:last-child{grid-column:1/-1}}
 td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cvrow] .prog{height:4px}
+/* loading table: fixed columns and fixed blocks from the first row, so no phase of the loading moves anything */
+.cvtool{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;min-height:36px;margin-top:8px}
+.cvtool .cvl,.cvtool .cvr2{display:flex;align-items:center;gap:8px;min-height:32px}
+.cvtool [data-off]{visibility:hidden}
+.cvtool .cvr2 details{margin:0}
+.ldwrap{margin-top:8px;overflow-x:auto}
+.ldtab{table-layout:fixed;width:100%;min-width:760px}
+.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:19%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:96px}
+.ldtab td,.ldtab th{overflow-wrap:anywhere}
+.ldtab tbody td{height:48px}
+.ldtab td select,.ldtab td input[type=text]{max-width:100%;box-sizing:border-box}
+.ldtab .cvst{display:grid;grid-template-columns:minmax(0,1fr) 8ch 6ch;gap:0 8px;align-items:baseline}
+.ldtab .cvst>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ldtab .cvst>span+span{text-align:right}
+.ldtab tr.cvr[data-st=fail] [data-cvtxt]{color:var(--bad)}
+.ldtab tr.cvr .prog i,.convprog .prog i{width:100%;transform-origin:left center;transform:scaleX(0)}
+.convprog[data-idle]{visibility:hidden}
+.convprog .cp-head{min-height:34px}.convprog .cp-phase{min-height:1.6em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.convprog [data-r=detail]{min-height:1.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(prefers-reduced-motion:no-preference){.ldtab tr.cvr .prog i,.convprog .prog i{transition:transform .35s linear}}
 
 /* m/z calculator: adduct table */
 .cadd{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:6px 0}.cadd[hidden]{display:none}
