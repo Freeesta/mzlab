@@ -82,7 +82,8 @@ try:
         def killed():
             pg.evaluate("window.NOTES.length = 0")
             r = pg.evaluate("""async ([names, recipe]) => { const pr = POOL.detectAll(names.map(n => ({ name: n, path: "idx/" + n })), recipe);
-              await new Promise(r => setTimeout(r, 150)); POOL._killBusy();
+              const hit = await new Promise(res => { const t = setInterval(() => { const n = POOL._killBusy(); if (n) { clearInterval(t); res(n); } }, 2); pr.then(() => { clearInterval(t); res(0); }, () => { clearInterval(t); res(0); }); });
+              if (!hit) throw new Error("the jobs ended before any worker was busy");
               const out = await pr; const res = {}; for (let i = 0; i < names.length; i++) res[names[i] + ".mzfeatf"] = await SHA(out[i]); return res; }""", [idx, RECIPE])
             for k, v in r.items(): assert v == native[k], k
             assert "tpmine.feat.restarted" in pg.evaluate("window.NOTES"), pg.evaluate("window.NOTES")
