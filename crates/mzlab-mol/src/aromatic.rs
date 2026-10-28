@@ -8,8 +8,13 @@ use std::collections::{BTreeSet, VecDeque};
 impl Mol {
     /// For every entry of `bonds`: whether the bond belongs to an aromatic ring.
     pub fn aromatic_bonds(&self) -> Vec<bool> {
+        self.aromatic_flags().1
+    }
+
+    /// For every atom and for every entry of `bonds`: the aromatic flags from one perception (what `aromatic_atoms` and `aromatic_bonds` return separately).
+    pub fn aromatic_flags(&self) -> (Vec<bool>, Vec<bool>) {
         let g = Graph::new(self);
-        let rings = g.rings();
+        let rings = &g.rings;
         let mut flag = vec![false; self.bonds.len()];
         let small: Vec<&Ring> = rings
             .iter()
@@ -39,17 +44,17 @@ impl Mol {
                 }
             }
         }
-        flag
+        let mut atoms = vec![false; self.atoms.len()];
+        for (b, _) in flag.iter().enumerate().filter(|(_, &f)| f) {
+            atoms[self.bonds[b].a as usize] = true;
+            atoms[self.bonds[b].b as usize] = true;
+        }
+        (atoms, flag)
     }
 
     /// For every atom: whether it sits in an aromatic ring.
     pub fn aromatic_atoms(&self) -> Vec<bool> {
-        let mut out = vec![false; self.atoms.len()];
-        for (b, _) in self.aromatic_bonds().iter().enumerate().filter(|(_, &f)| f) {
-            out[self.bonds[b].a as usize] = true;
-            out[self.bonds[b].b as usize] = true;
-        }
-        out
+        self.aromatic_flags().0
     }
 }
 
@@ -64,15 +69,17 @@ impl<'a> Graph<'a> {
             m,
             adj,
             in_ring: vec![false; m.atoms.len()],
+            rings: Vec::new(),
         };
-        for r in g.rings() {
+        g.rings = g.find_rings();
+        for r in &g.rings {
             r.atoms.iter().for_each(|&a| g.in_ring[a] = true);
         }
         g
     }
 
     /// The shortest ring through every ring bond, each ring once (sorted by atoms).
-    fn rings(&self) -> Vec<Ring> {
+    fn find_rings(&self) -> Vec<Ring> {
         let mut seen: BTreeSet<Vec<usize>> = BTreeSet::new();
         let mut out = Vec::new();
         for (k, b) in self.m.bonds.iter().enumerate() {
@@ -176,6 +183,7 @@ struct Graph<'a> {
     /// (neighbour, bond index)
     adj: Vec<Vec<(usize, usize)>>,
     in_ring: Vec<bool>,
+    rings: Vec<Ring>,
 }
 
 fn huckel(electrons: Option<usize>) -> bool {
