@@ -29,7 +29,7 @@ impl Default for Cur {
 
 impl Cur {
     /// Applies `[name, accession, value, unitName, unitAccession]` to the element being read.
-    pub(super) fn apply<D: Decode>(
+    pub(super) fn apply<D: Decode + ?Sized>(
         &mut self,
         [name, acc, value, unit, unit_acc]: [&str; 5],
         out: &mut D,

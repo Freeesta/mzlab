@@ -96,7 +96,10 @@ let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
 const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone)
-const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
+const ISOLATED = !!self.crossOriginIsolated && typeof SharedArrayBuffer === "function";
+// the size from which a file gains from helper workers (the notice of capacita.js is only shown for such a file)
+const BIG_IDX = 32 << 20;
+const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, isolated: ISOLATED, notify: key => postMessage({ op: "notice", key }) }));
 /** @type {(key: string, params?: object) => never} */
 const jerr = (key, params = {}) => { throw JSON.stringify({ error_key: key, params }); };
 const NO_RUN = 0xFFFFFFFF;                                                  // what count and spectra_len of the engine answer for a slot with no run open
@@ -280,6 +283,8 @@ async function lrIndex(m) {
   const inputs = job ? null : Array.from(prepare_upload(f.size, readerFor(f), m.name, ...prints(m.name, f.size), BUDGET_MB)).slice(0, 8);
   const early_tic = earlyTicOf(job, inputs);
   if (early_tic) onProgress({ frac: 0.05, phase: "scan", done: 0, total: early_tic.rt.length, early_tic });
+  // a large mzML without shared memory is indexed by the builder alone: the page says that parallel indexing is off (capacita.js)
+  if (!job && !ISOLATED && f.size >= BIG_IDX) postMessage({ op: "cap-off", fn: "indiceParallelo" });
   const res = await idxPool().build(job ? { name: m.name, nat: job, part, partCen, onProgress }
     : { name: m.name, blob: f, inputs, part, cap: BUDGET_MB, onProgress });      // frac: how far the builder has read
   if (partCen) {                                                                // the centroid index of a profile sample, made in the same decoding; for a sample of centroids the builder wrote nothing

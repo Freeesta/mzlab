@@ -6,6 +6,7 @@ use crate::mzmlarray::{decode_array, Inflate, Want};
 mod cv;
 pub(crate) mod help;
 use help::Decode;
+pub use help::corriere::{Corriere, Decodificatore};
 use crate::numarray::Num;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -223,29 +224,69 @@ struct Chrom {
     ms_term: bool,
 }
 
-fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobility>)> {
-    let (mut mz, mut it, mut wide) = (Vec::new(), Vec::new(), None);
-    let (mut mob, mut mob_unit) = (None, "");
-    for a in &s.arrays {
+/// The decoded arrays of a spectrum before they become a `Spectrum` (`assemble`): also what a decoder in another instance sends back (`help::corriere`).
+#[derive(Default)]
+struct Peaks {
+    mz: Vec<f64>,
+    it: Vec<f32>,
+    wide: Option<Vec<f64>>,
+    mob: Option<Vec<f64>>,
+}
+
+/// What `decode_peaks` needs of one array.
+#[derive(Clone, Copy)]
+struct Arr<'a> {
+    kind: ArrayKind,
+    num: Num,
+    zlib: bool,
+    text: &'a str,
+}
+
+impl Array {
+    fn arr(&self) -> Arr<'_> {
+        Arr { kind: self.kind, num: self.num, zlib: self.zlib, text: &self.text }
+    }
+}
+
+// one copy in the binary: the parser and the helpers of the browser share it
+#[inline(never)]
+fn decode_peaks<'a>(arrays: impl Iterator<Item = Arr<'a>>, len: usize, inf: &mut Inflate) -> Result<Peaks> {
+    let mut p = Peaks::default();
+    for a in arrays {
         match a.kind {
-            ArrayKind::Mobility => {
-                mob = Some(decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0);
-                mob_unit = a.mobility;
-            }
-            ArrayKind::Mz => mz = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0,
+            ArrayKind::Mobility => p.mob = Some(decode_array(a.num, a.zlib, a.text, len, inf, Want::F64)?.0),
+            ArrayKind::Mz => p.mz = decode_array(a.num, a.zlib, a.text, len, inf, Want::F64)?.0,
             ArrayKind::Intensity => {
                 if a.num == Num::F32 {
-                    it = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F32)?.1;
-                    wide = None;
+                    p.it = decode_array(a.num, a.zlib, a.text, len, inf, Want::F32)?.1;
+                    p.wide = None;
                 } else {
-                    let (w, f) = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::Both)?;
-                    it = f;
-                    wide = Some(w);
+                    let (w, f) = decode_array(a.num, a.zlib, a.text, len, inf, Want::Both)?;
+                    p.it = f;
+                    p.wide = Some(w);
                 }
             }
             _ => {}
         }
     }
+    Ok(p)
+}
+
+fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobility>)> {
+    let p = decode_peaks(s.arrays.iter().map(Array::arr), s.len, inf)?;
+    Ok(assemble(s, p))
+}
+
+/// The spectrum of the header `s` with its decoded arrays `p`.
+#[inline(never)]
+fn assemble(s: Spec, p: Peaks) -> (Spectrum, Option<Mobility>) {
+    let Peaks { mut mz, mut it, mut wide, mob } = p;
+    let mob_unit = s
+        .arrays
+        .iter()
+        .rev()
+        .find(|a| a.kind == ArrayKind::Mobility)
+        .map_or("", |a| a.mobility);
     let n = mz.len().min(it.len());
     mz.truncate(n);
     it.truncate(n);
@@ -260,7 +301,7 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
         unit: mob_unit,
         scan: s.mobility_scan,
     });
-    Ok((Spectrum {
+    (Spectrum {
         index: s.index,
         id: s.id,
         level: s.level,
@@ -272,7 +313,7 @@ fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobil
         mz,
         intensity: it,
         wide,
-    }, mobility))
+    }, mobility)
 }
 
 fn number_after(id: &str, key: &str) -> Option<f64> {
@@ -348,7 +389,12 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     help::parse_with(reader, &mut f, &mut help::Plain(Inflate::new()))
 }
 
-fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
+/// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
+pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
+    help::parse_with(reader, &mut f, &mut help::corriere::Sent::new(c))
+}
+
+fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<()> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let (mut n_spec, mut n_chrom) = (0usize, 0usize);
