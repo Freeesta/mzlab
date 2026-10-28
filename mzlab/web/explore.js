@@ -247,7 +247,7 @@ function nbClean(/** @type {Bag} */ j) {
 }
 // two tabs (or a stale tab after the browser was closed and reopened) must not overwrite each other: only the fields THIS tab changed since it read the notebook win over the stored copy
 function nbMerge(/** @type {Bag} */ remote) {
-  const out = { ...nbClean(remote) }, same = (/** @type {unknown} */ a, /** @type {unknown} */ b) => JSON.stringify(a) === JSON.stringify(b);
+  const out = { ...nbClean(remote) }, same = (/** @type {unknown} */ a, /** @type {unknown} */ b) => a === b || JSON.stringify(a) === JSON.stringify(b);
   for (const k of new Set([...Object.keys(NB), ...Object.keys(nbBase)])) {
     if (same(NB[k], nbBase[k])) continue;
     if (NB[k] === undefined) delete out[k]; else out[k] = NB[k];
@@ -262,7 +262,7 @@ function nbSave(now = false) {
     let remote = nbRemote;
     if (!now) { try { remote = await (await fetch("api/notebook")).json(); } catch (_) { /* keep the last copy read */ } }
     const out = nbMerge(remote || nbBase), body = JSON.stringify(out);
-    nbLast = JSON.stringify(NB); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = out;
+    const snap = JSON.stringify(NB); nbLast = snap; nbBase = JSON.parse(snap); nbRemote = out;
     fetch("api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
   };
   if (now) go(); else nbTimer = setTimeout(go, 500);
@@ -271,7 +271,7 @@ let nbEverLoaded = false;
 async function nbLoad() {
   let j = {};
   try { j = nbClean(await (await fetch("api/notebook")).json()); } catch (_) { /* first time, or the storage is not answering */ }
-  Object.assign(NB, j); nbBase = JSON.parse(JSON.stringify(NB)); nbRemote = j; nbLast = JSON.stringify(NB);
+  Object.assign(NB, j); const snap = JSON.stringify(NB); nbBase = JSON.parse(snap); nbRemote = j; nbLast = snap;
   nbEverLoaded = true;
   // notebook v1: roles of the Data view, QC and dark roles of qqq.qaqc -> campioni/2, without loss
   if (CDOC.isOld(NB.session)) {
@@ -332,8 +332,6 @@ const lightTint = (/** @type {string} */ c) => { const m = /^#([0-9a-f]{6})$/i.e
 const fz = () => 1;        // (the text size of the graphs follows the browser zoom: Ctrl/Cmd + and −)
 const fpx = (/** @type {number} */ n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ data (cached)
-const CACHE = new Map();
-const memo = (/** @type {string} */ key, /** @type {() => Promise<unknown>} */ fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch((/** @type {unknown} */ e) => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
 const J = (/** @type {string} */ u) => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw I18N.err(j); return j; });
 // precursor + scan filter (high-resolution bench: the type of scan chosen in a cell) travel together in the "precursor" slot of the caches and the requests
 const prk = (/** @type {unknown} */ pr, /** @type {string | undefined} */ ft) => ft ? `${pr ?? ""}~${ft}` : pr;
@@ -383,7 +381,7 @@ async function xicBin(/** @type {string} */ url) {
   if (!r.ok) { let m = new Error(I18N.t("err.http", { status: r.status })); try { const j = await r.json(); if (j && j.error) m = I18N.err(j); } catch (e) { /* not JSON */ } throw m; }
   const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
   let off = (4 + hl + 7) & ~7;
-  const traces = head.traces.map((/** @type {Bag} */ t) => { const rt = Array.from(new Float64Array(buf, off, t.n)), y = Array.from(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
+  const traces = head.traces.map((/** @type {Bag} */ t) => { const rt = f64Arr(new Float64Array(buf, off, t.n)), y = f64Arr(new Float64Array(buf, off + 8 * t.n, t.n)); off += 16 * t.n; return { k: t.k, rt, y }; });
   return { mz: head.mz, tol: head.tol, traces };
 }
 // the caller in grafici.js spreads [mz, tol] from HR.xicArgs, so the middle arguments are a rest list for tsc
