@@ -205,19 +205,21 @@ fn entries(units: &[PathBuf]) -> Vec<Entry> {
         .iter()
         .map(|(_, n, id)| out_name(n, *id, false))
         .collect();
+    let clash = |k: usize| short.iter().filter(|s| **s == short[k]).count() > 1;
+    let outs: Vec<String> = (0..all.len())
+        .map(|k| out_name(&all[k].1, all[k].2, clash(k)))
+        .collect();
     let mut made = Vec::new();
     for (k, (input, name, id)) in all.iter().enumerate() {
-        let clash = short.iter().filter(|s| **s == short[k]).count() > 1;
-        let label = id.map_or(name.clone(), |i| format!("{name}@{i}"));
+        let plain = id.map_or(name.clone(), |i| format!("{name}@{i}"));
         let unique = all.iter().filter(|(_, n, i)| (n, i) == (name, id)).count() == 1;
+        // two inputs of one name (two folders) keep their position in it, or the second file would replace the first
+        let taken = outs.iter().filter(|o| **o == outs[k]).count() > 1;
+        let (lead, mark) = (format!("{k}/"), format!("{k}-"));
         made.push(Entry {
             input: input.clone(),
-            label: if unique {
-                label
-            } else {
-                format!("{k}/{label}")
-            },
-            out: out_name(name, *id, clash),
+            label: format!("{}{plain}", if unique { "" } else { &lead }),
+            out: format!("{}{}", if taken { &mark } else { "" }, outs[k]),
         });
     }
     made
