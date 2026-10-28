@@ -218,13 +218,8 @@ pub(crate) fn unsafe_match(body: &str) -> Option<String> {
         .map(|x| x.to_lowercase().next().unwrap_or(x))
         .collect();
     let at = |p: usize, w: &str| {
-        c[p..]
-            .iter()
-            .zip(w.chars())
-            .filter(|(a, b)| a == &b)
-            .count()
-            == w.chars().count()
-            && c.len() - p >= w.chars().count()
+        let mut it = c[p..].iter();
+        w.chars().all(|x| it.next() == Some(&x))
     };
     for p in 0..c.len() {
         if c[p] == '<' {
