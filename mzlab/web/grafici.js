@@ -380,7 +380,8 @@ async function drawLines(p) {
       const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
       g.beginPath();
       const pts = [];
-      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; });
+      const [a0, a1] = spanOf(s.x, x0, x1);                  // the window by binary search (the bounds are still tested)
+      for (let i = a0; i < a1; i++) { const r = s.x[i]; if (r < x0 || r > x1) continue; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; }
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
       baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
@@ -513,8 +514,7 @@ const mapPal = () => window.MAPPA && MAPPA.prefs.pal === "cividis" ? "cividis" :
 const mapBg = p => window.MAPPA ? MAPPA.corrQ(p) : "";                    // the request suffix of the background correction of the panel ("", "&bg=1" or a stretch)
 const palCss = (name, diff) => diff ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : `linear-gradient(90deg,${MAP_PAL[name].map(c => `rgb(${c})`).join(",")})`;
 const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg}`, () => J(lv === "pda" ? `api/map?k=${k}&kind=pda${bg}` : `api/map?k=${k}&level=${lv}${bg}`).then(j => {
-  const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-  return { ...j, m: new Float32Array(u.buffer) };
+  return { ...j, m: b64F32(j.data, Number.isInteger(j.nrt) && Number.isInteger(j.nmz) ? j.nrt * j.nmz : null) };
 }));
 // Whether a file has a PDA matrix (RT x wavelength) for the map: a PDA trace alone is not one and the browser engine reads none, so the answer is probed once
 // from the route (a plain fetch: the error is the answer, not a message) and kept on the file (`_pdaMap`); true re-renders the controls of the map panels, which then offer the PDA choice.
