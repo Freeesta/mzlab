@@ -161,15 +161,20 @@ fn by_score(c: &mut Vec<Cand>, top: usize) {
     c.truncate(top);
 }
 
-fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<Cand>> {
-    let tol = prec_tol(
+/// The precursor window of the exact search: `exact_ppm` for the modified cosine (the analogues cover the rest), else `precursor_ppm`.
+fn exact_tol(job: &Job, alg: &str) -> Tol {
+    prec_tol(
         job,
         if alg == "modified_cosine" {
             "exact_ppm"
         } else {
             "precursor_ppm"
         },
-    );
+    )
+}
+
+fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<Cand>> {
+    let tol = exact_tol(job, alg);
     let o = IdentityOpts {
         prec_tol: tol,
         frag_da: num(job, "tol_da"),
@@ -177,9 +182,16 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
         top: usize::MAX,
     };
     let frag = frag_tol(job);
+    let (peaks, min_score, min_shared) = (
+        want_peaks(job),
+        num(job, "min_score"),
+        num(job, "min_shared"),
+    );
     let hits = identity_with(lib, q, &o, frag).map_err(|_| Error::new("err.flow.match.library"))?;
     let mut out = Vec::new();
     for h in hits {
+        // the pairs of the modified cosine are listed from the very alignment that scored them
+        let mut matched = None;
         let (score, shared, pairs, t) = match alg {
             "cosine" => (
                 h.cosine,
@@ -193,6 +205,7 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
             "modified_cosine" => {
                 let m = modified_cosine(&q.spec, &h.spec, frag);
                 let p = m.pairs.iter().map(|&(i, j, _)| (i, j)).collect();
+                matched = peaks.then(|| evidence::from_modified(&m));
                 (m.cosine, m.matched, p, terms.then(|| mod_terms(&m)))
             }
             _ => (
@@ -207,17 +220,11 @@ fn exact(lib: &Lib, q: &Query, job: &Job, alg: &str, terms: bool) -> Result<Vec<
             ),
         };
         // the gates of the entropy algorithm; the other two rank everything inside the precursor window
-        if alg == "spectral_entropy"
-            && (score < num(job, "min_score") || (shared as f64) < num(job, "min_shared"))
-        {
+        if alg == "spectral_entropy" && (score < min_score || (shared as f64) < min_shared) {
             continue;
         }
-        let matched = want_peaks(job).then(|| match alg {
-            "modified_cosine" => {
-                evidence::from_modified(&modified_cosine(&q.spec, &h.spec, o.frag_da))
-            }
-            _ => evidence::from_pairs(&q.spec, &h.spec, &h.pairs),
-        });
+        let matched =
+            matched.or_else(|| peaks.then(|| evidence::from_pairs(&q.spec, &h.spec, &h.pairs)));
         out.push(Cand {
             index: h.index,
             score,
@@ -286,11 +293,13 @@ struct Fdr {
 /// The identity search of every query of the batch against the library with decoys (the score of the algorithm, entropy as `decoy::search_fdr`), one `Fdr` per query.
 fn batch_fdr(lib: &Lib, queries: &[Option<Query>], job: &Job, alg: &str) -> Result<Vec<Fdr>> {
     let mut best = Vec::with_capacity(queries.len());
+    // the window of the candidates the q-values are read on
+    let tol = exact_tol(job, alg);
     for q in queries {
         best.push(match q {
             Some(q) => {
                 let o = IdentityOpts {
-                    prec_tol: prec_tol(job, "precursor_ppm"),
+                    prec_tol: tol,
                     frag_da: num(job, "tol_da"),
                     pol: q.pol,
                     top: usize::MAX,
