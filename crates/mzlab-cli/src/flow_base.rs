@@ -20,7 +20,11 @@ use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
 use mzlab_feat_wasm::run;
-use mzlab_feat_wasm::run_meta::{recipe, written, Estimate};
+use mzlab_feat_wasm::run::meta::{recipe, written, Estimate};
+
+#[cfg(test)]
+#[path = "flow_record_tests.rs"]
+mod flow_record_tests;
 
 use crate::flow::{io, FileRunner, Lineage, Made};
 use crate::flow_pace::{Gate, Gated, Stop, Stopping};

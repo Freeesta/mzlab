@@ -144,23 +144,6 @@ pub fn job_meta<R: ReadAt>(
     Ok(Meta { estimates, mem })
 }
 
-/// `job_meta` as JSON: `{"estimates":[{"name","value","proof"}],"mem":{"mb","via"}|null}`.
-pub fn meta_json(m: &Meta) -> String {
-    let mut o = Out::default();
-    o.raw("{\"estimates\":[");
-    for (i, (name, value, proof)) in m.estimates.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(name);
-        o.raw(",\"value\":").raw(&value_text(value));
-        o.raw(",\"proof\":").raw(&value_text(proof)).raw("}");
-    }
-    o.raw("],\"mem\":");
-    match m.mem {
-        Some((mb, via)) => o.raw("{\"mb\":").num(mb).raw(",\"via\":").str(via).raw("}"),
-        None => o.raw("null"),
-    };
-    o.raw("}").0.clone()
-}
-
 /// A sink that keeps nothing: `Hashing` over it only hashes what passes.
 struct Discard;
 
@@ -181,6 +164,25 @@ pub fn file_sha<R: ReadAt>(r: &mut R, size: u64) -> Result<String> {
         at += n as u64;
     }
     Ok(out.finish().2)
+}
+
+/// `job_meta` as JSON: `{"estimates":[{"name","value","proof"}],"mem":{"mb","via"}|null}`.
+pub fn meta_json(m: &Meta) -> String {
+    let mut o = Out::default();
+    o.raw("{\"estimates\":[");
+    for (i, (name, value, proof)) in m.estimates.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"name\":")
+            .str(name);
+        o.raw(",\"value\":").raw(&value_text(value));
+        o.raw(",\"proof\":").raw(&value_text(proof)).raw("}");
+    }
+    o.raw("],\"mem\":");
+    match m.mem {
+        Some((mb, via)) => o.raw("{\"mb\":").num(mb).raw(",\"via\":").str(via).raw("}"),
+        None => o.raw("null"),
+    };
+    o.raw("}").0.clone()
 }
 
 #[cfg(feature = "detect")]
@@ -237,23 +239,5 @@ mod export {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct Bytes(Vec<u8>);
-
-    impl ReadAt for Bytes {
-        fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
-            buf.copy_from_slice(&self.0[off as usize..off as usize + buf.len()]);
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn the_sha_of_a_file_read_in_pieces_is_the_sha_of_its_bytes() {
-        let data: Vec<u8> = (0..(2 << 20) + 17).map(|i| (i * 31 % 251) as u8).collect();
-        let want = mzlab_core::budget::sha256_hex(&data);
-        let size = data.len() as u64;
-        assert_eq!(file_sha(&mut Bytes(data), size).unwrap(), want);
-    }
-}
+#[path = "run_meta_tests.rs"]
+mod tests;

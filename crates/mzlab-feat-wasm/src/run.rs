@@ -1,6 +1,9 @@
 //! The steps of the pipeline as plain Rust over any `ReadAt`: the bridge (`lib.rs`) gives them JavaScript readers, the native example gives them files, so the
 //! `.mzfeat` of the browser and the one of the desktop come from the same code and the same bytes.
 
+#[path = "run_meta.rs"]
+pub mod meta;
+
 use mzlab_core::budget::{MemBudget, WriteAt};
 use mzlab_core::elements;
 use mzlab_core::error::{Error, Result};

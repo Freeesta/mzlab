@@ -25,7 +25,9 @@ fn bad() -> Error {
 
 /// The artifact a job reports for one output: `{"sha256","bytes","type"}` and the file name `label`, else `<instance>[-<root>].<ext>` as `flow run` names it.
 fn artifact(ctx: &Ctx, id: &JobId, o: &Value) -> Result<Artifact> {
-    let ty = text(o, "type").and_then(DataType::from_name).ok_or_else(bad)?;
+    let ty = text(o, "type")
+        .and_then(DataType::from_name)
+        .ok_or_else(bad)?;
     let label = match (text(o, "label"), text(o, "ext")) {
         (Some(l), _) => l.to_string(),
         (None, Some(ext)) => match ctx.item_root(id) {
@@ -77,7 +79,10 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
         ));
     }
     o.ms = r.get("ms").and_then(Value::f64).unwrap_or(0.0);
-    o.heap_peak_bytes = r.get("heap_peak_bytes").and_then(Value::f64).map(|b| b as u64);
+    o.heap_peak_bytes = r
+        .get("heap_peak_bytes")
+        .and_then(Value::f64)
+        .map(|b| b as u64);
     o.mem = r.get("mem").and_then(mem);
     o.warnings = r
         .get("warnings")
@@ -95,7 +100,9 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
 pub fn record_jobs(plan_text: &[u8], registry: &[Step], jobs: &str) -> Result<(Run, String)> {
     let plan = parse(plan_text)?;
     if let Some(p) = check(&plan, registry, Platform::current()).first() {
-        return Err(Error::new("err.flow.check").with("instance", &p.instance).with("error_key", p.error_key));
+        return Err(Error::new("err.flow.check")
+            .with("instance", &p.instance)
+            .with("error_key", p.error_key));
     }
     let sched = Sched::new(&plan, registry, env!("CARGO_PKG_VERSION"), &[]);
     let ctx = Ctx::new(&plan, registry, &sched)?;
@@ -133,7 +140,10 @@ pub fn route(op: &str, body: &str, agent: &Agent) -> Result<String> {
                 .collect();
             let uscite: Vec<Uscita> = kept
                 .iter()
-                .map(|(n, t)| Uscita { name: n, bytes: t.as_bytes() })
+                .map(|(n, t)| Uscita {
+                    name: n,
+                    bytes: t.as_bytes(),
+                })
                 .collect();
             Ok(corsa_build(&prov, &uscite)?.json())
         }

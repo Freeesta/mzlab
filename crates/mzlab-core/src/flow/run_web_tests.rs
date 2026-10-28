@@ -71,10 +71,18 @@ impl Runner for Reporting {
             self.reports.lock().unwrap().push(o.0.clone());
             return Err(Error::new("err.flow.sample").with("name", "x"));
         }
-        let seen: Vec<&str> = job.inputs.iter().flat_map(|(_, v)| v.iter().map(|a| a.sha256.as_str())).collect();
+        let seen: Vec<&str> = job
+            .inputs
+            .iter()
+            .flat_map(|(_, v)| v.iter().map(|a| a.sha256.as_str()))
+            .collect();
         let sha = crate::budget::sha256_hex(format!("{id}|{}", seen.join(",")).as_bytes());
         let out = &job.step.outs[0];
-        let (ext, ty) = if *id == "idx" { ("mzidx", DataType::Mzidx) } else { ("mzfeat", DataType::Table) };
+        let (ext, ty) = if *id == "idx" {
+            ("mzidx", DataType::Mzidx)
+        } else {
+            ("mzfeat", DataType::Table)
+        };
         let label = match &job.item_root {
             Some(r) => format!("{id}-{r}.{ext}"),
             None => format!("{id}.{ext}"),
@@ -85,12 +93,20 @@ impl Runner for Reporting {
         o.raw("\"estimates\":[{\"name\":\"ppm\",\"value\":5,\"proof\":\"profile\"}],");
         o.raw("\"ms\":0.5,\"mem\":{\"mb\":3.9,\"via\":\"memory\"},\"warnings\":[\"warn.flow.x\"],\"cached\":false}");
         self.reports.lock().unwrap().push(o.0.clone());
-        let a = Artifact { sha256: sha, bytes: 42, ty, label: Some(label) };
+        let a = Artifact {
+            sha256: sha,
+            bytes: 42,
+            ty,
+            label: Some(label),
+        };
         Ok(Outcome {
             outputs: vec![(out.name.to_string(), a)],
             estimates: vec![("ppm".into(), Value::Num(5.0), Value::Str("profile".into()))],
             ms: 0.5,
-            mem: Some(Mem { mb: 3.9, via: "memory" }),
+            mem: Some(Mem {
+                mb: 3.9,
+                via: "memory",
+            }),
             warnings: vec!["warn.flow.x".into()],
             ..Outcome::default()
         })
@@ -98,24 +114,43 @@ impl Runner for Reporting {
 }
 
 fn agent() -> Agent {
-    Agent { name: "mzLab".into(), version: "x".into(), commit: None, platform: "native" }
+    Agent {
+        name: "mzLab".into(),
+        version: "x".into(),
+        commit: None,
+        platform: "native",
+    }
 }
 
 fn both(tab_fails: bool) -> (String, String) {
     let text = text();
-    let r = Reporting { reports: Mutex::new(Vec::new()), tab_fails };
+    let r = Reporting {
+        reports: Mutex::new(Vec::new()),
+        tab_fails,
+    };
     let native = execute(&parse(text.as_bytes()).unwrap(), &registry(), &r, 1).unwrap();
     // reports arrive in any order
     let mut reports = r.reports.into_inner().unwrap();
     reports.reverse();
-    let (web, _) = record_jobs(text.as_bytes(), &registry(), &format!("[{}]", reports.join(","))).unwrap();
-    (prov_json(&agent(), Some("p"), &native), prov_json(&agent(), Some("p"), &web))
+    let (web, _) = record_jobs(
+        text.as_bytes(),
+        &registry(),
+        &format!("[{}]", reports.join(",")),
+    )
+    .unwrap();
+    (
+        prov_json(&agent(), Some("p"), &native),
+        prov_json(&agent(), Some("p"), &web),
+    )
 }
 
 #[test]
 fn the_reports_of_the_jobs_give_the_record_of_execute() {
     let (native, web) = both(false);
-    assert!(native.contains("idx-a.mzidx") && native.contains("\"mem_mb\":3.9"), "{native}");
+    assert!(
+        native.contains("idx-a.mzidx") && native.contains("\"mem_mb\":3.9"),
+        "{native}"
+    );
     assert_eq!(web, native);
 }
 
@@ -130,12 +165,19 @@ fn a_failed_job_and_a_missing_report_are_recorded_as_in_execute() {
 
 #[test]
 fn the_route_refuses_what_it_cannot_read() {
-    let r = Reporting { reports: Mutex::new(Vec::new()), tab_fails: false };
+    let r = Reporting {
+        reports: Mutex::new(Vec::new()),
+        tab_fails: false,
+    };
     execute(&parse(text().as_bytes()).unwrap(), &registry(), &r, 1).unwrap();
     let jobs = format!("[{}]", r.reports.into_inner().unwrap().join(","));
     let mut reg = Out::default();
     reg.raw("[]");
-    let body = format!("{{\"plan\":{},\"registry\":{},\"jobs\":{jobs}}}", Out::default().str(&text()).0, reg.0);
+    let body = format!(
+        "{{\"plan\":{},\"registry\":{},\"jobs\":{jobs}}}",
+        Out::default().str(&text()).0,
+        reg.0
+    );
     // an unknown registry is an error, not a record
     assert!(route("prov", &body, &agent()).is_err());
     assert!(route("nothing", "{}", &agent()).is_err());
