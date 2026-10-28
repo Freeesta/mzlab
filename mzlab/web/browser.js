@@ -10,7 +10,17 @@
   // an old browser cannot run the engine: say it clearly instead of staying blank
   // OPFS keeps the files and their indexes
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);
-  try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).then(isolateOnce).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  // the first visit starts not isolated (everything works as before); once the service worker (which adds COOP/COEP) is active the page reloads ONCE,
+  // at the first moment with no work going on (no open file). The session guard prevents loops; ?cap-off=isolamento turns it off.
+  function isolateOnce() {
+    try {
+      if (window.crossOriginIsolated || /[?&]cap-off=[^&]*isolamento/.test(location.search) || sessionStorage.getItem("mzlab.coiReload")) return;
+      const idle = () => typeof E === "undefined" || !Array.isArray(E.files) || !E.files.some((/** @type {any} */ f) => f && !f.gone);
+      const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", "1"); } catch (_) { return; } location.reload(); };
+      navigator.serviceWorker.ready.then(() => { if (navigator.serviceWorker.controller) go(); else navigator.serviceWorker.addEventListener("controllerchange", go, { once: true }); });
+    } catch (_) { /* stays not isolated */ }
+  }
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
   // the phase of the start (window.qqPhaseCur = {key, pct}: a catalog key and the percentage when known) replaces the phrase in the single status line of #loading
   // (ldRefresh() in index.html); an ERROR replaces it too, clearly, in the language of the page
