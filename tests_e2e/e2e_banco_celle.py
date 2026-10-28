@@ -33,8 +33,12 @@ try:
             opts = pg.evaluate("[...document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
             key = [o[0] for o in opts if "ms2" in o[0]][0]
             n = int(opts[[o[0] for o in opts].index(key)][1].split("×")[1].replace(" ", ""))
-            pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key); attendi(pg, f"(()=>{{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return !!(c&&c.filt==={json.dumps(key)}&&c._a&&c._a.sr)}})()")
-            got = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {filt:c.filt,flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()")
+            GOT = "(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {filt:c.filt,flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()"
+            pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key)
+            # the previous chromatogram (all scans) stays in _a.sr until the filtered one is drawn: wait for the filtered scan count itself
+            try: attendi(pg, f"(()=>{{const g={GOT};return g.filt==={json.dumps(key)}&&g.n==={n}}})()", timeout=20000)
+            except TimeoutError: pass
+            got = pg.evaluate(GOT)
             assert got["filt"] == key and got["flv"] == 2 and got["n"] == n, (got, key, n)
         step("choosing an MS2 type: the chromatogram has exactly the scans of that type", ms2filter)
         def pin():
