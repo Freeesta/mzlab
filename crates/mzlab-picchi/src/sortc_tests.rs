@@ -13,7 +13,7 @@ fn sorts_like_the_standard_stable_sort() {
         let a: Vec<(u32, u32)> = (0..n).map(|i| (r() % 20, i as u32)).collect();
         let (mut x, mut y) = (a.clone(), a.clone());
         by(&mut x, |p, q| p.0.cmp(&q.0));
-        y.sort_by(|p, q| p.0.cmp(&q.0));
+        y.sort_by_key(|p| p.0);
         assert_eq!(x, y, "n = {n}");
         let (mut z, mut w) = (a.clone(), a.clone());
         by_key(&mut z, |p| p.1 % 7);
@@ -22,7 +22,7 @@ fn sorts_like_the_standard_stable_sort() {
         let mut s: Vec<String> = a.iter().map(|p| format!("{}-{}", p.0, p.1)).collect();
         let mut t = s.clone();
         any_by(&mut s, |p, q| p.len().cmp(&q.len()));
-        t.sort_by(|p, q| p.len().cmp(&q.len()));
+        t.sort_by_key(|p| p.len());
         assert_eq!(s, t);
     }
 }
@@ -41,7 +41,7 @@ fn any_by_is_stable_on_many_sequences_with_ties() {
             .collect();
         let (mut x, mut y) = (a.clone(), a);
         any_by(&mut x, |p, q| p.0.cmp(&q.0));
-        y.sort_by(|p, q| p.0.cmp(&q.0));
+        y.sort_by_key(|p| p.0);
         assert_eq!(x, y, "round {round}");
     }
 }

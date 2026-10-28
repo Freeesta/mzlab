@@ -303,6 +303,7 @@ fn format_proposal_and_motif(
 }
 
 /// Evaluate a chromatographic peak against target entry and assign proposal.
+#[allow(clippy::too_many_arguments)]
 fn evaluate_peak(
     entry: &crate::entry::TargetEntry,
     adduct: AdductType,

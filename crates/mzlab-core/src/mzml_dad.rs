@@ -28,7 +28,7 @@ impl<R: ReadAt> Mzml<R> {
             if let Some(p) = find(&tail, b"<chromatogramList", 0) {
                 for (head, data) in arrays(&tail[p..]) {
                     if head.contains("value=\"dad_matrix\"") {
-                        return Ok(from_array(&head, &data));
+                        return Ok(from_array(&head, data));
                     }
                 }
                 return Ok(None);
@@ -138,7 +138,7 @@ fn uv_row(block: &[u8]) -> Option<(f64, Vec<f64>, Vec<f64>)> {
     }
     let (mut wl, mut ab) = (None, None);
     for (head, data) in arrays(block) {
-        let a = decode(&head, &data, 0).ok()?;
+        let a = decode(&head, data, 0).ok()?;
         if head.contains("MS:1000617") {
             wl = Some(a);
         } else if head.contains("MS:1000515") {

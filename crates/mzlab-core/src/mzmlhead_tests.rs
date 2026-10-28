@@ -1,5 +1,6 @@
 //! Tests of the sibling module (loaded with `#[path]`, so they see its private items).
 
+#![allow(clippy::unwrap_used)]
 use super::*;
 fn linear(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     let tail = h.get(from..).filter(|_| !n.is_empty())?;

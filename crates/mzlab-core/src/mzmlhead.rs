@@ -22,20 +22,17 @@ fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
 }
 
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
-    let tail = h.get(from..).filter(|_| !n.is_empty())?;
+    let tail = h.get(from..)?;
+    let (first, rest) = n.split_first()?;
     // Scanning for the first byte beats a window compare on XML, where `<` is rare inside base64 runs.
-    let (first, rest) = (n[0], &n[1..]);
     let mut i = 0;
-    while tail.len() - i >= n.len() {
-        let s = i + tail[i..=tail.len() - n.len()]
-            .iter()
-            .position(|&b| b == first)?;
-        if &tail[s + 1..s + n.len()] == rest {
-            return Some(s + from);
+    loop {
+        let at = i + tail.get(i..)?.iter().position(|b| b == first)?;
+        if tail.get(at + 1..at + n.len())? == rest {
+            return Some(at + from);
         }
-        i = s + 1;
+        i = at + 1;
     }
-    None
 }
 pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
@@ -265,7 +262,7 @@ impl<R: ReadAt> Mzml<R> {
         for (head, data) in arrays(&chunk) {
             let a = decode(
                 &head,
-                &data,
+                data,
                 c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0),
             )?;
             if head.contains("MS:1000595") {

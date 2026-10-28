@@ -187,7 +187,11 @@ fn ridge_lines(c: &[Vec<f64>], widths: &[f64]) -> Vec<Ridge> {
     for (i, mx) in peaks_per_scale.iter().enumerate() {
         open.clear();
         open.extend(ridges.iter().enumerate().filter_map(|(k, r)| {
-            (r.last_scale + 1 == i || r.last_scale + 2 == i).then(|| (*r.pos.last().unwrap(), k))
+            if r.last_scale + 1 == i || r.last_scale + 2 == i {
+                Some((*r.pos.last().unwrap(), k))
+            } else {
+                None
+            }
         }));
         crate::sortc::by(&mut open, |a, b| a.cmp(b));
         let reach = (widths[i] / 2.0).max(1.0);

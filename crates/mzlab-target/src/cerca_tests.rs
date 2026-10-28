@@ -1,5 +1,6 @@
 //! Tests of the sibling module (loaded with `#[path]`, so they see its private items).
 
+#![allow(clippy::manual_is_multiple_of)]
 use super::*;
 struct Lcg(u64);
 impl Lcg {
