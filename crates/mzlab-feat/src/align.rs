@@ -128,15 +128,13 @@ fn limit_span(x: &[f64], runs: Vec<(usize, usize)>, max_span: f64) -> Vec<(usize
             out.push((a, b));
             continue;
         }
-        let mut cuts: Vec<usize> = (a + 1..b).filter(|&i| gap(i) == top).collect();
-        cuts.push(b);
-        let mut from = a;
-        let mut pieces = Vec::with_capacity(cuts.len());
-        for c in cuts {
-            pieces.push((from, c, depth + 1));
-            from = c;
+        // The pieces go on the stack from the last to the first, so they come off in order.
+        let mut end = b;
+        for c in (a + 1..b).rev().filter(|&i| gap(i) == top) {
+            stack.push((c, end, depth + 1));
+            end = c;
         }
-        stack.extend(pieces.into_iter().rev());
+        stack.push((a, end, depth + 1));
     }
     out
 }
@@ -172,7 +170,8 @@ fn split_slab(
             }
         }
     }
-    *items = sorted.iter().map(|x| x.1).collect();
+    items.clear();
+    items.extend(sorted.iter().map(|x| x.1));
     if let Some(gap) = p.split_gap {
         groups = split_duplicates(files.len(), &sorted, groups, gap)?;
     }
@@ -224,8 +223,15 @@ fn split_duplicates(
     Ok(out)
 }
 
-/// Appends one group to `out` (largest area per file gives apex and limits; weighted m/z and RT).
-fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: Option<&RtMap>) {
+/// Appends one group to `out`: per file the largest area and the largest height of its features in the group (as `features.align` of mzFinder; the
+/// two can come from different features), the apex and the width of the feature of the largest area; weighted m/z and RT. `best` is scratch.
+fn push_group(
+    files: &[&FileFeatures],
+    items: &[Item],
+    out: &mut Aligned,
+    adj: Option<&RtMap>,
+    best: &mut Vec<Option<u32>>,
+) {
     let nf = out.n_files;
     let base = out.area.len();
     out.area.resize(base + nf, 0.0);
@@ -233,7 +239,8 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: O
     out.apex_rt.resize(base + nf, f32::NAN);
     out.width.resize(base + nf, f32::NAN);
     out.state.resize(base + nf, CELL_ABSENT);
-    let mut best: Vec<Option<u32>> = vec![None; nf];
+    best.clear();
+    best.resize(nf, None);
     for &(k, i) in items {
         let (f, k) = (files[k as usize], k as usize);
         let i = i as usize;
@@ -289,6 +296,7 @@ pub fn align_grouped(
             Vec::new()
         },
     };
+    let mut best = Vec::new();
     let mut emit = |items: &[Item]| {
         if record {
             let g = out.table.len() as u32;
@@ -296,7 +304,7 @@ pub fn align_grouped(
                 out.group_of[k as usize][i as usize] = g;
             }
         }
-        push_group(files, items, &mut out.table, adj);
+        push_group(files, items, &mut out.table, adj, &mut best);
     };
     if keep {
         let mut at = 0;
@@ -359,4 +367,75 @@ fn flush(
     }
     slab.clear();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `limit_span` as it was before the pieces were pushed straight onto the stack.
+    fn limit_span_before(
+        x: &[f64],
+        runs: Vec<(usize, usize)>,
+        max_span: f64,
+    ) -> Vec<(usize, usize)> {
+        let mut out = Vec::with_capacity(runs.len());
+        let mut stack: Vec<(usize, usize, u32)> =
+            runs.into_iter().rev().map(|(a, b)| (a, b, 0)).collect();
+        while let Some((a, b, depth)) = stack.pop() {
+            if depth >= 32 || b - a < 2 || x[b - 1] - x[a] <= max_span {
+                out.push((a, b));
+                continue;
+            }
+            let gap = |i: usize| x[i] - x[i - 1];
+            let top = (a + 1..b).map(gap).fold(f64::MIN, f64::max);
+            if top <= 0.0 {
+                out.push((a, b));
+                continue;
+            }
+            let mut cuts: Vec<usize> = (a + 1..b).filter(|&i| gap(i) == top).collect();
+            cuts.push(b);
+            let mut from = a;
+            let mut pieces = Vec::with_capacity(cuts.len());
+            for c in cuts {
+                pieces.push((from, c, depth + 1));
+                from = c;
+            }
+            stack.extend(pieces.into_iter().rev());
+        }
+        out
+    }
+
+    #[test]
+    fn limit_span_cuts_where_it_did_with_ties_and_several_runs() {
+        let mut seed = 5u64;
+        let mut r = |n: u64| {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (seed >> 33) % n
+        };
+        for case in 0..3000 {
+            let n = r(40) as usize;
+            // few distinct gaps, so that the largest one is often tied
+            let mut x = Vec::with_capacity(n);
+            let mut at = 0.0;
+            for _ in 0..n {
+                at += [0.0, 1.0, 1.0, 2.0, 2.0, 5.0][r(6) as usize];
+                x.push(at);
+            }
+            let cut = if n > 0 { r(n as u64 + 1) as usize } else { 0 };
+            let runs = if case % 2 == 0 {
+                vec![(0, n)]
+            } else {
+                vec![(0, cut), (cut, n)]
+            };
+            let span = [0.5, 3.0, 6.0, 20.0][case % 4];
+            assert_eq!(
+                limit_span_before(&x, runs.clone(), span),
+                limit_span(&x, runs, span),
+                "case {case}"
+            );
+        }
+    }
 }
