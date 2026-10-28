@@ -15,6 +15,9 @@ use mzlab_core::lettori::Limiti;
 
 use std::collections::{HashMap, HashSet};
 
+mod cols;
+use cols::record_in;
+
 const MAGIC: &[u8; 16] = b"SQLite format 3\0";
 
 /// The pages of a b-tree interior or leaf, of a table.
@@ -176,19 +179,31 @@ impl Sqlite {
     }
 
     fn pagina_n(&mut self, n: u32) -> Result<Vec<u8>> {
+        let mut p = Vec::new();
+        self.pagina_in(n, &mut p)?;
+        Ok(p)
+    }
+
+    /// Page `n` into `buf` (its capacity is kept from one page to the next); the log wins over the main file.
+    fn pagina_in(&mut self, n: u32, buf: &mut Vec<u8>) -> Result<()> {
         if n == 0 || u64::from(n) > self.pagine {
             return Err(guasto("page number"));
         }
         let pagina = self.pagina;
         if let Some((w, mappa)) = &mut self.wal {
             if let Some(&off) = mappa.get(&n) {
-                return leggi(&mut **w, off, pagina);
+                return leggi_in(&mut **w, off, pagina, buf);
             }
         }
         if u64::from(n) > self.pagine_main {
             return Err(guasto("page beyond the file"));
         }
-        leggi(&mut self.main, (u64::from(n) - 1) * pagina as u64, pagina)
+        leggi_in(
+            &mut self.main,
+            (u64::from(n) - 1) * pagina as u64,
+            pagina,
+            buf,
+        )
     }
 
     /// Calls `f(rowid, values)` for each row of the table rooted at `radice`, in rowid order; `f` returns `false` to stop. Rows are visited once: the walk is iterative, bounded in depth and
@@ -197,12 +212,38 @@ impl Sqlite {
     where
         F: FnMut(i64, Vec<Val>) -> Result<bool>,
     {
+        self.scorri_con(radice, None, |rowid, v| f(rowid, std::mem::take(v)))
+    }
+
+    /// The header of page `n` held in `p`: where it starts, its type, its number of cells and where the cell pointers begin.
+    fn intesta(&self, p: &[u8], n: u32) -> Result<(usize, u8, usize, usize)> {
+        let base = if n == 1 { 100 } else { 0 };
+        let tipo = *p.get(base).ok_or_else(|| guasto("page"))?;
+        let ncelle = u16_be(p, base + 3).ok_or_else(|| guasto("page"))?;
+        let cap = base
+            + if matches!(tipo, INT_TAB | INT_IDX) {
+                12
+            } else {
+                8
+            };
+        if cap + 2 * ncelle > self.pagina {
+            return Err(guasto("cell count"));
+        }
+        Ok((base, tipo, ncelle, cap))
+    }
+
+    /// `scorri` that decodes only the record positions `voglio` marks `true` (the others are `Val::Null`; `None` = all) and hands `f` one vector reused from row to row, which `f` may take from.
+    pub fn scorri_con<F>(&mut self, radice: u32, voglio: Option<&[bool]>, mut f: F) -> Result<()>
+    where
+        F: FnMut(i64, &mut Vec<Val>) -> Result<bool>,
+    {
         let mut pila: Vec<Passo> = vec![Passo::Pagina(radice, 0)];
         let mut viste = HashSet::new();
+        let (mut p, mut q, mut riga) = (Vec::new(), Vec::new(), Vec::new());
         while let Some(passo) = pila.pop() {
             let (n, prof) = match passo {
-                Passo::Riga(v) => {
-                    if !f(0, v)? {
+                Passo::Riga(mut v) => {
+                    if !f(0, &mut v)? {
                         return Ok(());
                     }
                     continue;
@@ -213,18 +254,8 @@ impl Sqlite {
             if !viste.insert(n) {
                 return Err(guasto("page cycle"));
             }
-            let p = self.pagina_n(n)?;
-            let base = if n == 1 { 100 } else { 0 };
-            let tipo = *p.get(base).ok_or_else(|| guasto("page"))?;
-            let ncelle = u16_be(&p, base + 3).ok_or_else(|| guasto("page"))?;
-            let cap = if matches!(tipo, INT_TAB | INT_IDX) {
-                base + 12
-            } else {
-                base + 8
-            };
-            if cap + 2 * ncelle > self.pagina {
-                return Err(guasto("cell count"));
-            }
+            self.pagina_in(n, &mut p)?;
+            let (base, tipo, ncelle, cap) = self.intesta(&p, n)?;
             let npag = self.pagina;
             let celle = |i: usize| -> Result<usize> {
                 let c = u16_be(&p, cap + 2 * i).ok_or_else(|| guasto("cell pointer"))?;
@@ -248,7 +279,8 @@ impl Sqlite {
                     pila.push(Passo::Pagina(destra, prof + 1));
                     for i in (0..ncelle).rev() {
                         let c = celle(i)?;
-                        let (_, v) = self.cella(&p, c + 4, true)?;
+                        let mut v = Vec::new();
+                        self.cella(&p, c + 4, true, voglio, &mut q, &mut v)?;
                         pila.push(Passo::Riga(v));
                         pila.push(Passo::Pagina(
                             u32_be(&p, c).ok_or_else(|| guasto("cell"))?,
@@ -259,8 +291,9 @@ impl Sqlite {
                 FOGLIA_TAB | FOGLIA_IDX => {
                     for i in 0..ncelle {
                         let c = celle(i)?;
-                        let (rowid, v) = self.cella(&p, c, tipo == FOGLIA_IDX)?;
-                        if !f(rowid, v)? {
+                        let rowid =
+                            self.cella(&p, c, tipo == FOGLIA_IDX, voglio, &mut q, &mut riga)?;
+                        if !f(rowid, &mut riga)? {
                             return Ok(());
                         }
                     }
@@ -272,7 +305,16 @@ impl Sqlite {
     }
 
     /// A cell: payload (with its overflow chain) decoded into values; `indice`: a cell of an index tree (no rowid, other payload limit), `c` at its payload size.
-    fn cella(&mut self, p: &[u8], c: usize, indice: bool) -> Result<(i64, Vec<Val>)> {
+    /// The values go to `out` (`voglio` as in `scorri_con`), the rowid is returned; `q` is the page buffer of the overflow chain.
+    fn cella(
+        &mut self,
+        p: &[u8],
+        c: usize,
+        indice: bool,
+        voglio: Option<&[bool]>,
+        q: &mut Vec<u8>,
+        out: &mut Vec<Val>,
+    ) -> Result<i64> {
         let (tot, a) = varint(p.get(c..).unwrap_or(&[])).ok_or_else(|| guasto("cell"))?;
         let (rowid, b) = if indice {
             (0, 0)
@@ -300,26 +342,30 @@ impl Sqlite {
                 m
             }
         };
-        let mut dati = p
+        let locale_p = p
             .get(inizio..inizio + locale)
-            .ok_or_else(|| guasto("cell payload"))?
-            .to_vec();
-        if (locale as u64) < tot {
-            let mut next = u32_be(p, inizio + locale).ok_or_else(|| guasto("overflow"))?;
-            let max_pagine = tot / (u as u64 - 4) + 2;
-            let mut viste = 0u64;
-            while (dati.len() as u64) < tot {
-                viste += 1;
-                if viste > max_pagine {
-                    return Err(guasto("overflow chain"));
-                }
-                let q = self.pagina_n(next)?;
-                next = u32_be(&q, 0).ok_or_else(|| guasto("overflow"))?;
-                let resta = (tot as usize - dati.len()).min(u - 4);
-                dati.extend_from_slice(q.get(4..4 + resta).ok_or_else(|| guasto("overflow"))?);
-            }
+            .ok_or_else(|| guasto("cell payload"))?;
+        if (locale as u64) >= tot {
+            // no overflow: the record is read where it lies in the page
+            record_in(locale_p, &self.limiti, voglio, out)?;
+            return Ok(rowid as i64);
         }
-        Ok((rowid as i64, record(&dati, &self.limiti)?))
+        let mut dati = locale_p.to_vec();
+        let mut next = u32_be(p, inizio + locale).ok_or_else(|| guasto("overflow"))?;
+        let max_pagine = tot / (u as u64 - 4) + 2;
+        let mut viste = 0u64;
+        while (dati.len() as u64) < tot {
+            viste += 1;
+            if viste > max_pagine {
+                return Err(guasto("overflow chain"));
+            }
+            self.pagina_in(next, q)?;
+            next = u32_be(q, 0).ok_or_else(|| guasto("overflow"))?;
+            let resta = (tot as usize - dati.len()).min(u - 4);
+            dati.extend_from_slice(q.get(4..4 + resta).ok_or_else(|| guasto("overflow"))?);
+        }
+        record_in(&dati, &self.limiti, voglio, out)?;
+        Ok(rowid as i64)
     }
 
     /// All rows of table `t` with the `INTEGER PRIMARY KEY` column filled in from the rowid.
@@ -390,9 +436,16 @@ pub struct Sqlite {
 
 /// Reads `n` bytes at `off` (an error when the file is shorter).
 pub(super) fn leggi(d: &mut dyn ReadAt, off: u64, n: usize) -> Result<Vec<u8>> {
-    let mut b = vec![0u8; n];
-    d.read_at(off, &mut b).map_err(|_| guasto("short read"))?;
+    let mut b = Vec::new();
+    leggi_in(d, off, n, &mut b)?;
     Ok(b)
+}
+
+/// `leggi` into `b`, which keeps its capacity.
+fn leggi_in(d: &mut dyn ReadAt, off: u64, n: usize, b: &mut Vec<u8>) -> Result<()> {
+    b.clear();
+    b.resize(n, 0);
+    d.read_at(off, b).map_err(|_| guasto("short read"))
 }
 
 /// A varint of up to 9 bytes at the start of `b`: (value, bytes used).
@@ -422,54 +475,8 @@ pub(super) fn u32_be(b: &[u8], o: usize) -> Option<u32> {
 
 /// The values of a record: header (size, serial types) then the bodies.
 pub fn record(b: &[u8], limiti: &Limiti) -> Result<Vec<Val>> {
-    let (hl, mut o) = varint(b).ok_or_else(|| guasto("record header"))?;
-    let hl = usize::try_from(hl).map_err(|_| guasto("record header"))?;
-    if hl > b.len() || hl < o {
-        return Err(guasto("record header"));
-    }
-    let mut tipi = Vec::new();
-    while o < hl {
-        let (t, n) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
-        o += n;
-        tipi.push(t);
-        limiti.voci_ok(tipi.len() as u64)?;
-    }
-    let mut corpo = hl;
-    let mut out = Vec::with_capacity(tipi.len());
-    for t in tipi {
-        let len = match t {
-            0 | 8 | 9 => 0,
-            1 => 1,
-            2 => 2,
-            3 => 3,
-            4 => 4,
-            5 => 6,
-            6 | 7 => 8,
-            10 | 11 => return Err(guasto("serial type")),
-            n => ((n - 12) / 2) as usize,
-        };
-        let s = b
-            .get(corpo..corpo.checked_add(len).ok_or_else(|| guasto("record"))?)
-            .ok_or_else(|| guasto("record body"))?;
-        corpo += len;
-        out.push(match t {
-            0 => Val::Null,
-            8 => Val::Int(0),
-            9 => Val::Int(1),
-            1..=6 => {
-                let mut v: i64 = if s[0] & 0x80 != 0 { -1 } else { 0 };
-                for &x in s {
-                    v = (v << 8) | i64::from(x);
-                }
-                Val::Int(v)
-            }
-            7 => Val::Real(f64::from_be_bytes(
-                s.try_into().map_err(|_| guasto("real"))?,
-            )),
-            n if n % 2 == 0 => Val::Blob(s.to_vec()),
-            _ => Val::Text(String::from_utf8_lossy(s).into_owned()),
-        });
-    }
+    let mut out = Vec::new();
+    record_in(b, limiti, None, &mut out)?;
     Ok(out)
 }
 
