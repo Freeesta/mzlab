@@ -158,7 +158,9 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         let (k0, ncell) = (k0 as i64, (k1 - k0) as usize + 1);
-        if n_scans.saturating_mul(ncell).saturating_mul(4) > MAX_BYTES.min(TABLE_CAP.load(std::sync::atomic::Ordering::Relaxed)) {
+        if n_scans.saturating_mul(ncell).saturating_mul(4)
+            > MAX_BYTES.min(TABLE_CAP.load(std::sync::atomic::Ordering::Relaxed))
+        {
             return Ok(None);
         }
         let mut cells = vec![0.0f32; n_scans * ncell];
