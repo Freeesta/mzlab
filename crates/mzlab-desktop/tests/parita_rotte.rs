@@ -92,7 +92,7 @@ fn on_desktop(st: &State, fid: u32, s: &Value) -> Got {
     }
 }
 
-/// The steps both engines get, in order; the last one is the known difference.
+/// The steps both engines get, in order; the last three read a slot that was never opened (an error in both).
 fn plan() -> Vec<Value> {
     let items = json!([{"slot": 0, "label": NAME, "time": 0.0, "full": true}]).to_string();
     let r =
@@ -129,6 +129,8 @@ fn plan() -> Vec<Value> {
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 0.0}),
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 1.0}),
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
+        json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
+        json!({"op": "spectra", "slot": 8, "level": 1, "i0": 0, "i1": 5, "bin": 0.0}),
     ]
 }
 
@@ -154,24 +156,12 @@ fn run_wasm(pkg: &str, dir: &Path, plan: &[Value]) -> Vec<Value> {
     wasm
 }
 
-/// Known differences, held as they are so that they cannot change unseen: `tic` on a slot that was never opened is an error in the app
-/// (`with_run`, engine.rs:248-254) and an empty trace in the `.wasm` (`case "tic"`, rust-worker.js:456).
+/// Every answer of the app must be the one of the `.wasm`; the plan must not be vacuous (the main routes answer).
 fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value]) {
-    let known: Vec<(usize, Got, Got)> = vec![(
-        plan.len() - 1,
-        Got::Err("err.file.raw".into()),
-        Got::Numbers(vec![]),
-    )];
     let mut differ = Vec::new();
-    for (k, (s, w)) in plan.iter().zip(wasm).enumerate() {
+    for (s, w) in plan.iter().zip(wasm) {
         let (app, site) = (on_desktop(st, fid, s), from_wasm(w));
-        if let Some((_, a, b)) = known.iter().find(|(i, _, _)| *i == k) {
-            if (&app, &site) != (a, b) {
-                differ.push(format!(
-                    "{s}\n  known difference changed\n  app:  {app:.300?}\n  wasm: {site:.300?}"
-                ));
-            }
-        } else if app != site {
+        if app != site {
             differ.push(format!("{s}\n  app:  {app:.300?}\n  wasm: {site:.300?}"));
         }
     }
@@ -182,6 +172,10 @@ fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value]) {
         plan.len(),
         differ.join("\n")
     );
+    // a slot that was never opened is an error with the same key in both
+    for w in &wasm[wasm.len() - 3..] {
+        assert_eq!(from_wasm(w), Got::Err("err.file.raw".into()));
+    }
     // the plan is not vacuous: the main routes do answer
     for k in [1, 14, 15, 22, 25, 26] {
         let nothing = match from_wasm(&wasm[k]) {
