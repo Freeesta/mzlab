@@ -65,6 +65,6 @@ I18N.add("en", {
   "ctx.chrom.etpk": "Main peak labels",
   "ctx.chrom.etpk.aria": "Show or hide the retention time on the main peaks",
   "etpk.nm": "{v} nm",
-  "etpk.tip.rt": "Peak at RT {rt} min",
+  "etpk.tip.int": "intensity <b>{y}</b>",
   "ctx.spec.generate": "Generate formula (m/z {mz})…"
 });
