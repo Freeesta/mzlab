@@ -27,8 +27,11 @@
     "../../mzlab/web/mappa-render.js",
     "../../mzlab/web/mappa-tabella.js",
     "../../mzlab/web/mappa.js",
+    "../../mzlab/web/tabs.js",
     "../../mzlab/web/libreria.js",
+    "../../mzlab/web/tabella.js",
     "../../mzlab/web/tavola-periodica.js",
+    "../../mzlab/web/tables.js",
     "../../mzlab/web/barra.js",
     "../../mzlab/web/molui.js",
     "../../mzlab/web/shell.js",
@@ -50,6 +53,7 @@
     "../../mzlab/web/liste-target.js",
     "../../mzlab/web/manifesto.js",
     "../../mzlab/web/mappa-estrai.js",
-    "../../mzlab/web/mappa3d.js"
+    "../../mzlab/web/mappa3d.js",
+    "../../mzlab/web/sottrazione.js"
   ]
 }
