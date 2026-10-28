@@ -43,3 +43,29 @@ opt-level = 3
 opt-level = 3
 [profile.mix.package.base64]
 opt-level = 3
+
+# One hot crate at a time at O3 (per-crate gain/size choice of the wasm profiles)
+[profile.sol_core]
+inherits = "release"
+[profile.sol_core.package.mzlab-core]
+opt-level = 3
+[profile.sol_miniz]
+inherits = "release"
+[profile.sol_miniz.package.miniz_oxide]
+opt-level = 3
+[profile.sol_xml]
+inherits = "release"
+[profile.sol_xml.package.quick-xml]
+opt-level = 3
+[profile.sol_b64]
+inherits = "release"
+[profile.sol_b64.package.base64]
+opt-level = 3
+[profile.sol_deps]
+inherits = "release"
+[profile.sol_deps.package.miniz_oxide]
+opt-level = 3
+[profile.sol_deps.package.quick-xml]
+opt-level = 3
+[profile.sol_deps.package.base64]
+opt-level = 3
