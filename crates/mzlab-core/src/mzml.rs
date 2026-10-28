@@ -4,8 +4,10 @@
 
 use crate::mzmlarray::{decode_array, Inflate, Want};
 mod cv;
+mod picchi;
 pub(crate) mod help;
 use help::Decode;
+pub use help::corriere::{Corriere, Decodificatore};
 use crate::numarray::Num;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -224,56 +226,10 @@ struct Chrom {
 }
 
 fn finish_spectrum(s: Spec, inf: &mut Inflate) -> Result<(Spectrum, Option<Mobility>)> {
-    let (mut mz, mut it, mut wide) = (Vec::new(), Vec::new(), None);
-    let (mut mob, mut mob_unit) = (None, "");
-    for a in &s.arrays {
-        match a.kind {
-            ArrayKind::Mobility => {
-                mob = Some(decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0);
-                mob_unit = a.mobility;
-            }
-            ArrayKind::Mz => mz = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F64)?.0,
-            ArrayKind::Intensity => {
-                if a.num == Num::F32 {
-                    it = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::F32)?.1;
-                    wide = None;
-                } else {
-                    let (w, f) = decode_array(a.num, a.zlib, &a.text, s.len, inf, Want::Both)?;
-                    it = f;
-                    wide = Some(w);
-                }
-            }
-            _ => {}
-        }
-    }
-    let n = mz.len().min(it.len());
-    mz.truncate(n);
-    it.truncate(n);
-    if let Some(w) = wide.as_mut() {
-        w.truncate(n);
-    }
-    // an array of another length does not belong to these peaks
-    let mob = mob.filter(|m| m.len() == n && n > 0);
-    let mobility = (mob.is_some() || s.mobility_scan.is_some()).then_some(Mobility {
-        index: s.index,
-        values: mob,
-        unit: mob_unit,
-        scan: s.mobility_scan,
-    });
-    Ok((Spectrum {
-        index: s.index,
-        id: s.id,
-        level: s.level,
-        rt: if s.rt_seconds { s.rt / 60.0 } else { s.rt },
-        polarity: s.polarity,
-        profile: s.profile,
-        filter: s.filter,
-        precursor: s.selected.or(s.target),
-        mz,
-        intensity: it,
-        wide,
-    }, mobility))
+    let p = picchi::decode_peaks(s.arrays.iter().map(Array::arr), s.len, inf)?;
+    Ok(picchi::assemble(s, p))
 }
+
 
 fn number_after(id: &str, key: &str) -> Option<f64> {
     let k = id.find(key)? + key.len();
@@ -348,7 +304,12 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     help::parse_with(reader, &mut f, &mut help::Plain(Inflate::new()))
 }
 
-fn parse_loop<R: Read, D: Decode>(reader: R, f: &mut dyn FnMut(Item), out: &mut D) -> Result<()> {
+/// `parse` with the arrays decoded by another instance through `c` (the browser's helper workers, `help::corriere`): the same items in the same order.
+pub fn parse_corriere<R: Read, F: FnMut(Item)>(reader: R, mut f: F, c: &mut dyn Corriere) -> Result<()> {
+    help::parse_with(reader, &mut f, &mut help::corriere::Sent::new(c))
+}
+
+fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode) -> Result<()> {
     let mut xml = Reader::from_reader(BufReader::with_capacity(1 << 16, reader));
     let mut buf = Vec::new();
     let (mut n_spec, mut n_chrom) = (0usize, 0usize);

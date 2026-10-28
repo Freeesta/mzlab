@@ -13,7 +13,7 @@ use crate::mzidx_ordine::ordina_secchi;
 use crate::mzidx_spill::{leggi_parti, Parti, Spill};
 use crate::mzml::Spectrum;
 mod late;
-pub use late::build_mzml_late;
+pub use late::{build_mzml_corriere, build_mzml_late};
 
 pub const BLOCK: u64 = 16384;
 const ALIGN: u64 = 64;
