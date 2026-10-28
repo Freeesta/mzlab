@@ -97,7 +97,7 @@ fn plan() -> Vec<Value> {
     let items = json!([{"slot": 0, "label": NAME, "time": 0.0, "full": true}]).to_string();
     let r =
         |path: &str, query: &str| json!({"op": "route", "slot": 0, "path": path, "query": query});
-    vec![
+    let mut steps = vec![
         json!({"op": "idxopen", "slot": 0, "name": NAME}),
         r("/api/chrom", "?k=0&kind=tic&level=1"),
         r("/api/chrom", "?k=0&kind=bpc&level=1"),
@@ -128,21 +128,41 @@ fn plan() -> Vec<Value> {
         json!({"op": "xic", "slot": 7, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 0.0}),
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 1.0}),
+    ];
+    steps.extend(stat_steps());
+    steps.extend([
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
         json!({"op": "xic", "slot": 8, "level": 1, "mz": 300.0, "tol": 0.5, "px": 0}),
         json!({"op": "spectra", "slot": 8, "level": 1, "i0": 0, "i1": 5, "bin": 0.0}),
-    ]
+    ]);
+    steps
+}
+
+/// The first case of each statistics route of the committed reference (`tests/golden/ref/statistica.json`, invented tables): profile, blank, reference, PCA.
+fn stat_steps() -> Vec<Value> {
+    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden/ref/statistica.json");
+    let cases: Vec<Value> = serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
+    let mut seen = Vec::new();
+    let mut out = Vec::new();
+    for c in &cases {
+        let path = c["path"].as_str().unwrap().to_string();
+        if !seen.contains(&path) {
+            out.push(json!({"op": "lr_stat", "path": path, "body": c["body"].to_string()}));
+            seen.push(path);
+        }
+    }
+    out
 }
 
 /// Runs the plan on the built `.wasm` (Node) over the same `.mzidx` and example.
-fn run_wasm(pkg: &str, dir: &Path, plan: &[Value]) -> Vec<Value> {
+fn run_wasm(pkg: &str, dir: &Path, idx: &Path, mzml: &Path, plan: &[Value]) -> Vec<Value> {
     let plan_file = dir.join("plan.json");
     std::fs::write(&plan_file, serde_json::to_string(&plan).unwrap()).unwrap();
     let out = Command::new("node")
         .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/rotte_wasm_node.js"))
         .arg(pkg)
-        .arg(dir.join("idx").join(format!("{NAME}.mzidx")))
-        .arg(example())
+        .arg(idx)
+        .arg(mzml)
         .arg(&plan_file)
         .output()
         .expect("node runs");
@@ -157,7 +177,7 @@ fn run_wasm(pkg: &str, dir: &Path, plan: &[Value]) -> Vec<Value> {
 }
 
 /// Every answer of the app must be the one of the `.wasm`; the plan must not be vacuous (the main routes answer).
-fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value]) {
+fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value], answers: &[usize]) {
     let mut differ = Vec::new();
     for (s, w) in plan.iter().zip(wasm) {
         let (app, site) = (on_desktop(st, fid, s), from_wasm(w));
@@ -172,12 +192,8 @@ fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value]) {
         plan.len(),
         differ.join("\n")
     );
-    // a slot that was never opened is an error with the same key in both
-    for w in &wasm[wasm.len() - 3..] {
-        assert_eq!(from_wasm(w), Got::Err("err.file.raw".into()));
-    }
     // the plan is not vacuous: the main routes do answer
-    for k in [1, 14, 15, 22, 25, 26] {
+    for &k in answers {
         let nothing = match from_wasm(&wasm[k]) {
             Got::Err(_) => true,
             Got::Text(t) => t.is_empty(),
@@ -206,6 +222,112 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         .unwrap();
     st.rpc("lr_index", &json!({"name": NAME}), &[]).unwrap();
     let plan = plan();
-    let wasm = run_wasm(&pkg, dir.path(), &plan);
-    compare(&st, fid, &plan, &wasm);
+    let wasm = run_wasm(
+        &pkg,
+        dir.path(),
+        &dir.path().join("idx").join(format!("{NAME}.mzidx")),
+        &example(),
+        &plan,
+    );
+    compare(
+        &st,
+        fid,
+        &plan,
+        &wasm,
+        &[1, 14, 15, 22, 25, 26, 30, 31, 32, 33],
+    );
+    // a slot that was never opened is an error with the same key in both
+    for w in &wasm[wasm.len() - 3..] {
+        assert_eq!(from_wasm(w), Got::Err("err.file.raw".into()));
+    }
+}
+
+/// A small SRM acquisition made for the test: three MS1 scans and three SRM traces, written by the writer of the core.
+fn srm_mzml() -> Vec<u8> {
+    use mzlab_core::mzml::{ChromKind, Chromatogram, Spectrum};
+    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
+    let h = Header {
+        run: "srm".into(),
+        sources: vec!["srm.mzML".into()],
+        software: ("mzLab".into(), "0".into()),
+        ..Default::default()
+    };
+    let mut w = MzmlWriter::new(Vec::new(), &h).unwrap();
+    w.open_spectra(3).unwrap();
+    for t in 0..3 {
+        let s = Spectrum {
+            index: t,
+            id: format!("scan={}", t + 1),
+            level: 1,
+            rt: t as f64 * 0.1,
+            polarity: 1,
+            mz: vec![200.0, 300.0],
+            intensity: vec![100.0, 50.0 + t as f32],
+            ..Default::default()
+        };
+        w.spectrum(&s).unwrap();
+    }
+    w.close_spectra().unwrap();
+    w.open_chromatograms(3).unwrap();
+    for (i, (q1, q3)) in [(300.1, 150.2), (300.1, 180.3), (350.2, 200.1)]
+        .into_iter()
+        .enumerate()
+    {
+        let time: Vec<f64> = (0..20).map(|k| k as f64 * 0.05).collect();
+        let intensity: Vec<f64> = time
+            .iter()
+            .map(|t| 1000.0 * (i as f64 + 1.0) * (-((t - 0.5) / 0.1).powi(2)).exp() + 5.0)
+            .collect();
+        let c = Chromatogram {
+            index: i,
+            id: format!("SRM SIC Q1={q1} Q3={q3} ce=20 name=T{i}"),
+            kind: ChromKind::Srm,
+            q1: Some(q1),
+            q3: Some(q3),
+            unit: String::new(),
+            time,
+            intensity,
+        };
+        w.chromatogram(&c).unwrap();
+    }
+    w.close_chromatograms().unwrap();
+    w.finish().unwrap()
+}
+
+#[test]
+fn an_srm_file_gives_the_same_transitions_and_traces_in_the_app_and_in_the_wasm() {
+    let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("srm.mzML");
+    std::fs::write(&file, srm_mzml()).unwrap();
+    let st = State::new();
+    st.set_data_folder(dir.path().join("app"));
+    st.set_index_folder(dir.path().join("idx")).unwrap();
+    let (fid, _) = st.pick(file.clone()).unwrap();
+    st.rpc("lr_put", &json!({"name": "srm.mzML", "fid": fid}), &[])
+        .unwrap();
+    st.rpc("lr_index", &json!({"name": "srm.mzML"}), &[])
+        .unwrap();
+    let r =
+        |path: &str, query: &str| json!({"op": "route", "slot": 0, "path": path, "query": query});
+    let plan = vec![
+        json!({"op": "idxopen", "slot": 0, "name": "srm.mzML"}),
+        json!({"op": "mrm", "slot": 0}),
+        json!({"op": "mrmchrom", "slot": 0, "kind": "tic"}),
+        json!({"op": "mrmchrom", "slot": 0, "kind": "bpc"}),
+        json!({"op": "canali", "slot": 0, "name": "srm.mzML"}),
+        json!({"op": "fileinfo", "slot": 0, "name": "srm.mzML"}),
+        r("/api/filters", ""),
+        r("/api/chrom", "?k=0&kind=tic&level=1"),
+    ];
+    let idx = dir.path().join("idx").join("srm.mzML.mzidx");
+    let wasm = run_wasm(&pkg, dir.path(), &idx, &file, &plan);
+    compare(&st, fid, &plan, &wasm, &[1, 2, 4, 5]);
+    // the transitions of the file are in the answer
+    let Got::Text(mrm) = from_wasm(&wasm[1]) else {
+        panic!("mrm gave no text")
+    };
+    assert!(mrm.contains("150.2") && mrm.contains("200.1"), "{mrm}");
 }

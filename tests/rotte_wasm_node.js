@@ -3,7 +3,8 @@
 // a step: {op, slot, ...}; an answer: {s: text} | {f64: [numbers]} | {b: hex} | {e: error text}
 const fs = require("fs");
 const path = require("path");
-const { Engine } = require(path.join(process.argv[2], "mzlab_wasm.js"));
+const wasm = require(path.join(process.argv[2], "mzlab_wasm.js"));
+const { Engine } = wasm;
 const idx = fs.readFileSync(process.argv[3]), mzml = fs.readFileSync(process.argv[4]);
 const plan = JSON.parse(fs.readFileSync(process.argv[5], "utf8"));
 const reader = buf => (off, len) => new Uint8Array(buf.subarray(off, off + len));
@@ -26,6 +27,7 @@ const run = s => {
     case "specexact": return { s: e.spectrum_exact(s.slot, s.query || "", rdMzml) };
     case "map": return { s: e.map_route(s.path, s.items, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
+    case "lr_stat": return { s: wasm.stat_post(s.path, s.body) };
     case "open": return { s: e.open(s.slot, mzml.length, rdMzml) };
     case "tic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.tic(s.slot, s.level, s.px || 0, out), out); }
     case "xic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.xic(s.slot, s.level, s.mz, s.tol, s.px || 0, out), out); }
