@@ -7,15 +7,18 @@ use crate::codec::compress;
 use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
-use crate::libinfo::{inchikey14, Declared, Detect};
+use crate::libinfo::{Declared, Detect};
 use crate::sortutil;
-use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
-use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32, put_varint};
+use crate::spec::{Meta, Spectrum, META_FIELDS};
+use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32};
 
 #[path = "build_parts/index.rs"]
 mod index;
 pub(crate) use index::read_meta_record;
 use index::{chunk_dir_bytes, copy_stream, entry_bytes, write_index};
+#[path = "build_parts/record.rs"]
+mod record;
+use record::{quantise_into, record_into};
 
 const S_REC: usize = 0;
 const S_META: usize = 1;
@@ -108,17 +111,7 @@ impl<T: Scratch> Builder<T> {
         let (mz, it) = clean(s.prec, &s.mz, &s.it, &self.opts.clean);
         // quantise; peaks that land on the same m/z unit are merged
         let mut q = std::mem::take(&mut self.q_buf);
-        q.clear();
-        for (m, i) in mz.iter().zip(&it) {
-            if *m >= MAX_MZ {
-                continue;
-            }
-            let mq = quant_mz(*m);
-            match q.last_mut() {
-                Some(l) if l.0 == mq => l.1 += i,
-                _ => q.push((mq, *i)),
-            }
-        }
+        quantise_into(&mz, &it, &mut q);
         if q.is_empty() || !(s.prec > 0.0 && s.prec < MAX_MZ) {
             self.emptied += 1;
             self.q_buf = q;
@@ -127,33 +120,7 @@ impl<T: Scratch> Builder<T> {
         let mx = q.iter().fold(0.0f64, |a, x| a.max(x.1));
         let mut rec = std::mem::take(&mut self.rec_buf);
         rec.clear();
-        let rt = s.rt.filter(|r| r.is_finite() && *r >= 0.0 && *r < 1e5);
-        let ri = s.ri.filter(|r| r.is_finite() && *r > 0.0 && *r < 1e5);
-        let mut flags = if q.len() < 3 { FLAG_FEW_PEAKS } else { 0 };
-        if rt.is_some() {
-            flags |= FLAG_HAS_RT;
-        }
-        if ri.is_some() {
-            flags |= FLAG_HAS_RI;
-        }
-        rec.extend_from_slice(&s.prec.to_le_bytes());
-        rec.push(s.pol as u8);
-        rec.push(licence::class_of(&s.meta.license));
-        rec.extend_from_slice(&flags.to_le_bytes());
-        rec.extend_from_slice(&orig.to_le_bytes());
-        rec.extend_from_slice(&(rt.unwrap_or(0.0) as f32).to_le_bytes());
-        rec.extend_from_slice(&(ri.unwrap_or(0.0) as f32).to_le_bytes());
-        rec.extend_from_slice(&inchikey14(&s.meta.inchikey).to_le_bytes());
-        rec.extend_from_slice(&(q.len() as u16).to_le_bytes());
-        for (mq, i) in &q {
-            rec.extend_from_slice(&mq.to_le_bytes());
-            let iq = ((i / mx) * INT_MAX).round().clamp(1.0, INT_MAX) as u16;
-            rec.extend_from_slice(&iq.to_le_bytes());
-        }
-        for f in s.meta.fields() {
-            put_varint(&mut rec, f.len() as u64);
-            rec.extend_from_slice(f.as_bytes());
-        }
+        record_into(&mut rec, s, &q, mx, orig);
         let off = u32::try_from(self.store.len(S_REC)).map_err(|_| Error::too_large("records"))?;
         self.keys
             .try_reserve(1)

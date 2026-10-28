@@ -115,6 +115,14 @@ fn main() {
             Query::new(s.prec + 14.0, 1, &s.mz, &it)
         })
         .collect();
+    bench_flash(&lib, &queries, reps);
+
+    bench_parse(&set, reps);
+
+    bench_fdr(&mut r, reps);
+}
+
+fn bench_flash(lib: &Library<&[u8]>, queries: &[Query], reps: usize) {
     let ranges = lib.ranges(1, 0.0, 2000.0).unwrap();
     for (name, mode) in [
         ("open", FlashMode::Open),
@@ -129,7 +137,7 @@ fn main() {
             cnt = 0;
             check = 0.0;
             h = 0xcbf2_9ce4_8422_2325u64;
-            for q in &queries {
+            for q in queries {
                 let v =
                     flash_top(&lib, q, mode, 0.01, &ranges, &mut acc, Some(10), |_| true).unwrap();
                 cnt += v.len();
@@ -153,8 +161,10 @@ fn main() {
             best * 1e3 / queries.len() as f64
         );
     }
+}
 
-    let text = mgf_of(&set[..n.min(50_000)]);
+fn bench_parse(set: &[Spectrum], reps: usize) {
+    let text = mgf_of(&set[..]);
     let mut best = f64::MAX;
     let mut nrec = 0;
     for _ in 0..reps {
@@ -167,7 +177,9 @@ fn main() {
         "parse MGF {} MB: best {best:.3} s, {nrec} records",
         text.len() >> 20
     );
+}
 
+fn bench_fdr(r: &mut Rng, reps: usize) {
     let mut ts = Vec::new();
     let mut ds = Vec::new();
     for _ in 0..200_000 {
