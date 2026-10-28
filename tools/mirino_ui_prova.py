@@ -1,7 +1,7 @@
 """Draws the XIC lens plot (XICDRAW) on synthetic traces in three widths and checks the pixels; writes PNGs next to this file. No app, no lab data."""
 import pathlib, math, json
 from playwright.sync_api import sync_playwright
-HERE = pathlib.Path(__file__).resolve().parent; JS = (HERE.parent.parent / "mzlab/web/xic-lente-disegno.js").read_text(encoding="utf-8")
+ROOT = pathlib.Path(__file__).resolve().parent.parent; HERE = ROOT / "esperimenti/mirino-ui"; JS = (ROOT / "mzlab/web/xic-lente-disegno.js").read_text(encoding="utf-8")
 CASES = {"stretto": (0.05, True), "largo": (1.2, True), "rumore": (None, False)}
 PAGE = "<body style='margin:0;background:#fff'><div id=o style='display:flex;flex-wrap:wrap;gap:8px;padding:8px;align-items:flex-start'></div></body>"
 RUN = """([widths,cases])=>{const o=document.getElementById('o'),out={};
