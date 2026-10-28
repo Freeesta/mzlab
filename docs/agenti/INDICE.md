@@ -101,3 +101,4 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | pulsante «XIC» e lente XIC spenti sui file d'infusione, regola dei dati `infusione.rs` (chiavi, blocchi, nome), comando `diagnosi_infusione` | `docs/agenti/infusione-lente.md` |
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
+| tooltip: regola (solo se aggiungono informazione), inventario, hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |

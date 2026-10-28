@@ -126,7 +126,7 @@ I18N.add("it", {
   "tbl.pt.info": "Isotopi e masse dell'elemento",
   "tbl.diff.title": "Differenze di massa tra addotti",
   "tbl.add.more": "Altri",
-  "tbl.loss.exactTitle": "Massa esatta, da elements.py",
+  "tbl.loss.exactTitle": "Massa esatta",
   "tbl.loss.detail": "massa esatta <b>{m}</b> · <span class=\"muted\">meccanismo:</span> {mech}",
   "tbl.loss.detailLr": "<span class=\"muted\">meccanismo:</span> {mech}",
   "tbl.loss.sameShort": "stesso Δm, risoluzione unitaria",
