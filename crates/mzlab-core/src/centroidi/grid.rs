@@ -7,6 +7,7 @@ use super::{Buf, Params};
 pub(super) fn fill(mz: &[f64], y: &[f64], p: &Params, buf: &mut Buf) {
     buf.x.clear();
     buf.v.clear();
+    buf.sorted = false;
     let n = mz.len().min(y.len());
     if n == 0 {
         return;
@@ -16,6 +17,7 @@ pub(super) fn fill(mz: &[f64], y: &[f64], p: &Params, buf: &mut Buf) {
     } else {
         sparse(&mz[..n], &y[..n], p.step, buf);
     }
+    buf.sorted = buf.x.windows(2).all(|w| w[0] <= w[1]);
 }
 
 /// Largest dense grid (bins) built for one scan; a wider range falls back to the sparse path instead of exhausting memory.
