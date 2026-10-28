@@ -3,7 +3,9 @@ checkout gives every file the time of the checkout, so every crate would be comp
 content equals the one recorded in `target/.mzlab-tree` when the cache was saved (changed or new files keep the checkout time and are rebuilt);
 `record` writes that file just before the cache is saved, but only for the files whose crate cargo really rebuilt in this run (a fingerprint newer than the
 stamp `restore` leaves): a run that failed before compiling, or restored an older cache, must not vouch for sources its `target` never saw. Without a record
-`restore` does nothing; it writes `record=true|false` to $GITHUB_OUTPUT so test.yml can let a pull request seed a cache that has none."""
+`restore` does nothing; it writes `record=true|false` to $GITHUB_OUTPUT so test.yml can let a pull request seed a cache that has none.
+The record also names the job that wrote it: a `target` holds only the build variants (profile, target, features) its own job compiles, so a record
+of another job (a restore-key fallback) vouches for sources whose variant here may be stale, and `restore` ignores it."""
 import os
 import subprocess
 import sys
@@ -12,6 +14,8 @@ from pathlib import Path
 RECORD = Path("target/.mzlab-tree")
 # touched by `restore`; a crate whose .fingerprint is newer than this was compiled by the run
 STAMP = Path("target/.mzlab-stamp")
+# the CI job that wrote the record (empty outside CI)
+JOB = Path("target/.mzlab-job")
 # 2001-01-01: older than anything a cached build wrote
 OLD = 978307200
 
@@ -26,6 +30,11 @@ def read_record() -> dict[str, str]:
     if not RECORD.is_file():
         return {}
     return dict(line.split("\t", 1)[::-1] for line in RECORD.read_text(encoding="utf-8").splitlines())
+
+
+def same_job() -> bool:
+    written = JOB.read_text(encoding="utf-8") if JOB.is_file() else ""
+    return written == os.environ.get("GITHUB_JOB", "")
 
 
 def crate_of(path: str) -> str | None:
@@ -58,6 +67,9 @@ def restore() -> int:
     if not found:
         print("no record of the cached tree: every crate is rebuilt")
         return 0
+    if not same_job():
+        print("the cached tree was recorded by another job: every crate is rebuilt")
+        return 0
     prev = read_record()
     kept = 0
     for path, blob in tree().items():
@@ -70,7 +82,7 @@ def restore() -> int:
 
 def record() -> int:
     """Writes the files already vouched for plus those of the crates compiled since `restore`; the rest is left out and so rebuilt next time."""
-    prev = read_record()
+    prev = read_record() if same_job() else {}
     names, any_new = built_crates(STAMP.stat().st_mtime) if STAMP.is_file() else (set(), False)
     out = {}
     for path, blob in tree().items():
@@ -80,6 +92,7 @@ def record() -> int:
             out[path] = blob
     RECORD.parent.mkdir(parents=True, exist_ok=True)
     RECORD.write_text("".join(f"{blob}\t{path}\n" for path, blob in out.items()), encoding="utf-8")
+    JOB.write_text(os.environ.get("GITHUB_JOB", ""), encoding="utf-8")
     return 0
 
 

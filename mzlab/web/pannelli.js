@@ -561,7 +561,7 @@ async function pngWithMeta(/** @type {Blob} */ blob, /** @type {string[][]} */ f
     const ch = new Uint8Array(12 + body.length - 4), dv = new DataView(ch.buffer);
     dv.setUint32(0, body.length - 4); ch.set(body, 4); dv.setUint32(ch.length - 4, crc32(body)); parts.push(ch);
   });
-  parts.push(src.slice(33)); return new Blob(parts, { type: "image/png" });
+  parts.push(src.subarray(33)); return new Blob(parts, { type: "image/png" });
 }
 
 // ---- «Correzione»: ONE menu for chromatogram and spectrum (None · Subtract file with its chooser · Background of a stretch · Automatic baseline). Icon + one-line hints;

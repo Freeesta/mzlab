@@ -6,7 +6,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use mzlab_feat::untargeted::adap::{build, build_slabs, slab_count, AdapParams, Ms1Scan};
+use mzlab_feat::untargeted::adap::{
+    build, build_slabs, slab_count, AdapParams, Ms1Scan, SlabStream,
+};
 
 mod untargeted_common;
 
@@ -240,4 +242,64 @@ fn slabs_give_the_same_chromatograms() {
     assert!(slab_count(&scans, &p, small) > 5);
     assert_eq!(build_slabs(&scans, &p, small), whole);
     assert_eq!(build_slabs(&scans, &p, usize::MAX / 4), whole);
+}
+
+/// The points of the scans in the order of the peak table of the `.mzidx`: m/z ascending, then scan, then position in the scan.
+fn in_table_order(scans: &[Ms1Scan]) -> Vec<(f64, f32, u32)> {
+    let mut v: Vec<(f64, f32, u32)> = scans
+        .iter()
+        .enumerate()
+        .flat_map(|(k, s)| {
+            s.mz.iter()
+                .zip(&s.int)
+                .map(move |(&m, &i)| (m, i, k as u32))
+        })
+        .collect();
+    v.sort_by(|a, b| a.0.total_cmp(&b.0));
+    v
+}
+
+#[test]
+fn slab_stream_gives_the_chromatograms_of_every_budget() {
+    let scans = big();
+    let p = AdapParams::default();
+    let whole = build(&scans, &p);
+    let points = in_table_order(&scans);
+    for budget in [1 << 16, 1 << 20, 1 << 23, usize::MAX / 4] {
+        let mut out = Vec::new();
+        let mut slabs = 0;
+        let mut stream = SlabStream::new(scans.len(), &p, budget);
+        let mut f = |c: Vec<_>| {
+            slabs += 1;
+            out.extend(c);
+        };
+        for &(m, i, k) in &points {
+            assert!(stream.push(m, i, k, &mut f));
+        }
+        stream.finish(&mut f);
+        assert_eq!(out, whole, "budget {budget}");
+        // the cuts are those of `build_slabs`
+        assert_eq!(slabs, slab_count(&scans, &p, budget), "budget {budget}");
+        assert_eq!(build_slabs(&scans, &p, budget), whole);
+    }
+}
+
+#[test]
+fn slab_stream_refuses_points_out_of_order_and_handles_no_points() {
+    let p = AdapParams::default();
+    let mut slabs = Vec::new();
+    let mut stream = SlabStream::new(10, &p, 1 << 20);
+    let mut f = |c: Vec<_>| slabs.push(c);
+    assert!(stream.push(300.0, 5e4, 0, &mut f));
+    assert!(stream.push(f64::NAN, 5e4, 1, &mut f));
+    assert!(!stream.push(299.0, 5e4, 2, &mut f));
+    stream.finish(&mut f);
+    assert_eq!(slabs.len(), 1);
+    // no points: one empty slab, as `each_slab` gives
+    let mut n = 0;
+    SlabStream::new(10, &p, 1 << 20).finish(&mut |c: Vec<_>| {
+        assert!(c.is_empty());
+        n += 1;
+    });
+    assert_eq!(n, 1);
 }

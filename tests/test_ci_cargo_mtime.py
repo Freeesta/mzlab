@@ -10,8 +10,9 @@ TOOL = Path(__file__).resolve().parents[1] / "tools" / "ci_cargo_mtime.py"
 OLD = 978307200
 
 
-def run(repo: Path, mode: str) -> None:
-    subprocess.run([sys.executable, str(TOOL), mode], cwd=repo, check=True, capture_output=True)
+def run(repo: Path, mode: str, job: str | None = None) -> None:
+    env = {**os.environ, "GITHUB_JOB": job} if job is not None else None
+    subprocess.run([sys.executable, str(TOOL), mode], cwd=repo, check=True, capture_output=True, env=env)
 
 
 def git(repo: Path, *args: str) -> None:
@@ -92,3 +93,17 @@ def test_without_a_record_restore_changes_nothing(tmp_path):
     before = mtime(repo, "crates/mzlab-lib/src/lib.rs")
     run(repo, "restore")
     assert mtime(repo, "crates/mzlab-lib/src/lib.rs") == before
+
+
+def test_a_record_of_another_job_is_not_trusted(tmp_path):
+    # the det job compiled mzlab-core for its own variant; the misc-b variant in the same target/ may be stale
+    repo = make_repo(tmp_path)
+    run(repo, "restore", "rust-det")
+    compile_crate(repo, "mzlab-core")
+    run(repo, "record", "rust-det")
+    os.utime(repo / "crates/mzlab-core/src/lib.rs", None)
+    run(repo, "restore", "rust-misc-b")
+    assert mtime(repo, "crates/mzlab-core/src/lib.rs") != OLD
+    # the same job reuses its own record
+    run(repo, "restore", "rust-det")
+    assert mtime(repo, "crates/mzlab-core/src/lib.rs") == OLD

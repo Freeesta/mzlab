@@ -157,3 +157,7 @@ required-features = ["interp"]
 [[test]]
 name = "rt_descriptors"
 required-features = ["record", "attributio"]
+
+[[example]]
+name = "perf_lotto5"
+required-features = ["untargeted"]

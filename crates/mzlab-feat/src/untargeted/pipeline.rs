@@ -13,17 +13,17 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
 
-use super::adap::{each_slab, AdapParams, Chrom as AdapChrom, Ms1Scan};
+use super::adap::{AdapParams, Chrom as AdapChrom};
 use super::arpls;
 use super::gapfill::{fill, GapParams};
 use super::ident::{ident, IdentParams};
 use super::isotopes::{group, IsoParams, Representative};
 use super::join::{align, JoinParams};
-use super::resolve::{resolve_with_broad, Chrom as Trace, MinParams};
+use super::pipeline_stream::{common_mode_params, each_slab, Kept, TraceBuf};
+use super::resolve::{resolve_with_broad, MinParams};
 use super::table::to_aligned;
 use super::Feature;
 use crate::broad::BroadParams;
-use crate::broad_gt::{share, TraceBank};
 use crate::quality::REASON_BROAD;
 use crate::table::{Aligned, FileFeatures};
 
@@ -144,10 +144,13 @@ impl UntParams {
                 return Err(bad());
             }
         }
-        p.polarity = match v.get("polarity").and_then(Value::f64) {
-            Some(x) if x < 0.0 => Some(-1),
-            Some(_) => Some(1),
-            None => None,
+        p.polarity = match v.get("polarity") {
+            None | Some(Value::Null) => None,
+            Some(x) => match x.f64() {
+                Some(1.0) => Some(1),
+                Some(-1.0) => Some(-1),
+                _ => return Err(bad()),
+            },
         };
         p.gap.polarity = p.polarity;
         let null = Value::Null;
@@ -252,6 +255,12 @@ impl From<&super::resolve::Feature> for Feature {
             area: f.area,
             filled: false,
             broad: f.broad,
+            apex: f.apex_scan as u32,
+            scan_lo: f.scans.0 as u32,
+            scan_hi: f.scans.1 as u32,
+            npts: f.npts.min(u16::MAX as usize) as u16,
+            snr: f.snr as f32,
+            fwhm: f.fwhm_scans as f32,
         }
     }
 }
@@ -295,44 +304,6 @@ fn read_iso(v: &Value, p: &mut UntParams) -> Result<()> {
     Ok(())
 }
 
-/// The MS1 scans of a section with the peaks at or above `noise` (the centroid mass detector), one `Ms1Scan` per scan of the section, m/z ascending.
-fn ms1_scans<R: ReadAt>(ix: &mut Index<R>, si: usize, noise: f64) -> Result<Vec<Ms1Scan>> {
-    let mut scans: Vec<Ms1Scan> = ix
-        .arrays(si)?
-        .rt
-        .iter()
-        .enumerate()
-        .map(|(k, &rt)| Ms1Scan {
-            index: k,
-            rt,
-            ..Ms1Scan::default()
-        })
-        .collect();
-    let n = ix.sections[si].n_peaks;
-    ix.each_peak(si, 0, n, |pos, mz, inten| {
-        if inten >= noise {
-            if let Some(s) = scans.get_mut(pos) {
-                s.mz.push(mz);
-                s.int.push(inten as f32);
-            }
-        }
-    })?;
-    Ok(scans)
-}
-
-/// The chromatogram of the ADAP builder as the trace on ALL the scans that the resolver wants (zero where it has no point).
-fn full_trace(c: &AdapChrom, nscans: usize) -> Trace {
-    let mut t = Trace {
-        mz: vec![0.0; nscans],
-        y: vec![0.0; nscans],
-    };
-    for ((&s, &y), &m) in c.scan.iter().zip(&c.int).zip(&c.point_mz) {
-        t.mz[s as usize] = m;
-        t.y[s as usize] = y as f64;
-    }
-    t
-}
-
 /// What the store keeps of a feature: RT, limits and height in `f32`.
 fn stored(mut f: Feature) -> Feature {
     f.rt = f.rt as f32 as f64;
@@ -342,60 +313,47 @@ fn stored(mut f: Feature) -> Feature {
     f
 }
 
-/// With the common-mode option of the broad pass on: the parameters with the gradient mode G(t) of the file in `broad.common`, found by a first pass
-/// over the persistent chromatograms (the span between their first and last scan covers 400 scans or 30 % of the run). `None` when the option is off
-/// or the file has too few of them.
-fn common_mode_params(scans: &[Ms1Scan], axis: &[f64], p: &UntParams) -> Option<UntParams> {
-    let b = &p.broad;
-    if !(b.enabled && b.gt) || b.common.is_some() {
-        return None;
-    }
-    let mut bank = TraceBank::new(scans.len(), b.decimate);
-    let mut failed = false;
-    each_slab(scans, &p.adap, p.slab_bytes, |chroms| {
-        for c in &chroms {
-            let (Some(&lo), Some(&hi)) = (c.scan.iter().min(), c.scan.iter().max()) else {
-                continue;
-            };
-            let mut t = full_trace(c, scans.len());
-            if let Some(bl) = &p.baseline {
-                t.y = bl.apply(axis, &t.y);
-            }
-            failed |= bank
-                .add(lo as usize, &t.y[lo as usize..=hi as usize])
-                .is_err();
-        }
-    });
-    let cm = bank.finish().ok().flatten().filter(|_| !failed)?;
-    let mut q = p.clone();
-    q.broad.common = share(Some(cm));
-    Some(q)
-}
-
 /// ADAP + resolver on the MS1 scans of one file: its list of features, sorted by m/z (then RT). Memory: the points of one slab of m/z at a time.
 pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Feature>> {
     let Some(si) = ix.section_of(1, p.polarity) else {
         return Ok(Vec::new());
     };
-    let scans = ms1_scans(ix, si, p.adap.noise)?;
     // the RT of mzmine is a float: the resolver compares distances on that axis
-    let axis: Vec<f64> = scans.iter().map(|s| s.rt as f32 as f64).collect();
-    let with_gt = common_mode_params(&scans, &axis, p);
+    let axis: Vec<f64> = ix
+        .arrays(si)?
+        .rt
+        .iter()
+        .map(|&rt| rt as f32 as f64)
+        .collect();
+    let mut kept = Kept(Some((Vec::new(), 0)));
+    let with_gt = common_mode_params(ix, si, &axis, p, &mut kept)?;
     let p = with_gt.as_ref().unwrap_or(p);
     let mut out = Vec::new();
     let mut failed = None;
-    each_slab(&scans, &p.adap, p.slab_bytes, |chroms| {
+    let mut buf = TraceBuf::new(axis.len());
+    let mut resolve_slab = |chroms: Vec<AdapChrom>| {
         for c in &chroms {
-            let mut t = full_trace(c, scans.len());
-            if let Some(b) = &p.baseline {
-                t.y = b.apply(&axis, &t.y);
-            }
-            match resolve_with_broad(&t, &axis, &p.resolve, &p.broad) {
+            buf.load(c);
+            let res = match &p.baseline {
+                Some(b) => {
+                    let mut y = b.apply(&axis, &buf.t.y);
+                    std::mem::swap(&mut buf.t.y, &mut y);
+                    let r = resolve_with_broad(&buf.t, &axis, &p.resolve, &p.broad);
+                    std::mem::swap(&mut buf.t.y, &mut y);
+                    r
+                }
+                None => resolve_with_broad(&buf.t, &axis, &p.resolve, &p.broad),
+            };
+            match res {
                 Ok(fs) => out.extend(fs.iter().map(|f| stored(f.into()))),
                 Err(e) => failed = failed.take().or(Some(e)),
             }
         }
-    });
+    };
+    match kept.0 {
+        Some((slabs, _)) => slabs.into_iter().for_each(&mut resolve_slab),
+        None => each_slab(ix, si, axis.len(), p, resolve_slab)?,
+    }
     if let Some(e) = failed {
         return Err(e);
     }
@@ -431,7 +389,7 @@ pub fn run_series<R: ReadAt>(
     Ok(t)
 }
 
-/// The features of a file as the table of the store (`.mzfeatf`): area in counts x seconds, the columns that mzmine does not give stay at their neutral value.
+/// The features of a file as the table of the store (`.mzfeatf`): area in counts x seconds, the scans, point count and (broad bands) SNR and width that the resolver knows; the columns that mzmine does not give stay at their neutral value.
 pub fn to_file_features(list: &[Feature]) -> FileFeatures {
     let n = list.len();
     FileFeatures {
@@ -441,16 +399,16 @@ pub fn to_file_features(list: &[Feature]) -> FileFeatures {
         right: list.iter().map(|f| f.rt_end as f32).collect(),
         area: list.iter().map(|f| f.area * MIN_TO_S).collect(),
         height: list.iter().map(|f| f.height as f32).collect(),
-        apex: vec![0; n],
-        scan_lo: vec![0; n],
-        scan_hi: vec![0; n],
-        npts: vec![0; n],
+        apex: list.iter().map(|f| f.apex).collect(),
+        scan_lo: list.iter().map(|f| f.scan_lo).collect(),
+        scan_hi: list.iter().map(|f| f.scan_hi).collect(),
+        npts: list.iter().map(|f| f.npts).collect(),
         flags: vec![0; n],
         iso_group: vec![0; n],
         charge: vec![0; n],
         shape: vec![0.0; n],
-        snr: vec![0.0; n],
-        fwhm: vec![0.0; n],
+        snr: list.iter().map(|f| f.snr).collect(),
+        fwhm: list.iter().map(|f| f.fwhm).collect(),
         asym: vec![0.0; n],
         gaps: vec![0; n],
         qreason: list
@@ -479,6 +437,12 @@ pub fn from_file_features(f: &FileFeatures) -> Vec<Feature> {
             area: f.area[i] / MIN_TO_S,
             filled: false,
             broad: f.qreason[i] & REASON_BROAD != 0,
+            apex: f.apex[i],
+            scan_lo: f.scan_lo[i],
+            scan_hi: f.scan_hi[i],
+            npts: f.npts[i],
+            snr: f.snr[i],
+            fwhm: f.fwhm[i],
         })
         .collect()
 }
