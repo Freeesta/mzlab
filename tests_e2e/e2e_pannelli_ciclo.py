@@ -31,8 +31,8 @@ try:
             o = cdp.send("Runtime.evaluate", {"expression": "document"})["result"]["objectId"]
             return sum(1 for l in cdp.send("DOMDebugger.getEventListeners", {"objectId": o})["listeners"] if l["type"] == "keyup")
         def map_cycle():
-            pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(300)
-            pg.evaluate("closePanel(E.panels.find(q=>q.type==='map'))"); pg.wait_for_timeout(50)
+            pg.evaluate("addPanel('map',{tab:'full'})"); attendi(pg, "E.panels.some(q=>q.type==='map'&&q._a)")
+            pg.evaluate("closePanel(E.panels.find(q=>q.type==='map'))")
         def map_leak():
             map_cycle(); base = keyups()
             for _ in range(10): map_cycle()
