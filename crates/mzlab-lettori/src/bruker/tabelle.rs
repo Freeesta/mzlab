@@ -238,8 +238,9 @@ impl Dati {
     /// The properties of the property group of the first frame (the method settings that stay constant), with the names and units the file defines.
     fn proprieta(&mut self, db: &mut Sqlite, limiti: &Limiti) -> Result<()> {
         let mut gruppo = None;
-        righe(db, limiti, "Frames", &["PropertyGroup"], |r| {
-            gruppo = gruppo.or_else(|| r[0].i64());
+        righe_fino(db, limiti, "Frames", &["PropertyGroup"], |r| {
+            gruppo = r[0].i64();
+            gruppo.is_none()
         })?;
         let Some(gruppo) = gruppo else {
             return Ok(());
@@ -347,25 +348,37 @@ pub struct Dati {
     pub tims: Vec<(String, String)>,
 }
 
-/// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows.
+/// The rows of `nome` with only `colonne`, in that order (`Null` for a column the file lacks). A missing table is no rows. The other columns of a row are skipped, not decoded.
 fn righe<F>(db: &mut Sqlite, limiti: &Limiti, nome: &str, colonne: &[&str], mut f: F) -> Result<()>
 where
     F: FnMut(&[Val]),
+{
+    righe_fino(db, limiti, nome, colonne, |r| {
+        f(r);
+        true
+    })
+}
+
+/// `righe` that stops at the first row `f` answers `false` for.
+fn righe_fino<F>(
+    db: &mut Sqlite,
+    limiti: &Limiti,
+    nome: &str,
+    colonne: &[&str],
+    mut f: F,
+) -> Result<()>
+where
+    F: FnMut(&[Val]) -> bool,
 {
     let Some(t) = db.tabella(nome).cloned() else {
         return Ok(());
     };
     let idx: Vec<Option<usize>> = colonne.iter().map(|c| t.col(c)).collect();
     let mut n = 0u64;
-    db.righe(&t, |r| {
+    db.righe_cols(&t, &idx, |r| {
         n += 1;
         limiti.voci_ok(n)?;
-        let v: Vec<Val> = idx
-            .iter()
-            .map(|i| i.and_then(|i| r.get(i).cloned()).unwrap_or(Val::Null))
-            .collect();
-        f(&v);
-        Ok(true)
+        Ok(f(r))
     })
 }
 

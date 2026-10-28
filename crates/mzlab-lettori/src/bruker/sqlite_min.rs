@@ -176,19 +176,31 @@ impl Sqlite {
     }
 
     fn pagina_n(&mut self, n: u32) -> Result<Vec<u8>> {
+        let mut p = Vec::new();
+        self.pagina_in(n, &mut p)?;
+        Ok(p)
+    }
+
+    /// Page `n` into `buf` (its capacity is kept from one page to the next); the log wins over the main file.
+    fn pagina_in(&mut self, n: u32, buf: &mut Vec<u8>) -> Result<()> {
         if n == 0 || u64::from(n) > self.pagine {
             return Err(guasto("page number"));
         }
         let pagina = self.pagina;
         if let Some((w, mappa)) = &mut self.wal {
             if let Some(&off) = mappa.get(&n) {
-                return leggi(&mut **w, off, pagina);
+                return leggi_in(&mut **w, off, pagina, buf);
             }
         }
         if u64::from(n) > self.pagine_main {
             return Err(guasto("page beyond the file"));
         }
-        leggi(&mut self.main, (u64::from(n) - 1) * pagina as u64, pagina)
+        leggi_in(
+            &mut self.main,
+            (u64::from(n) - 1) * pagina as u64,
+            pagina,
+            buf,
+        )
     }
 
     /// Calls `f(rowid, values)` for each row of the table rooted at `radice`, in rowid order; `f` returns `false` to stop. Rows are visited once: the walk is iterative, bounded in depth and
@@ -197,12 +209,22 @@ impl Sqlite {
     where
         F: FnMut(i64, Vec<Val>) -> Result<bool>,
     {
+        self.scorri_con(radice, None, |rowid, v| f(rowid, std::mem::take(v)))
+    }
+
+    /// `scorri` that decodes only the record positions `voglio` marks `true` (the others are `Val::Null`; `None` = all) and hands `f` one vector reused from row to row, which `f` may take from.
+    pub fn scorri_con<F>(&mut self, radice: u32, voglio: Option<&[bool]>, mut f: F) -> Result<()>
+    where
+        F: FnMut(i64, &mut Vec<Val>) -> Result<bool>,
+    {
         let mut pila: Vec<Passo> = vec![Passo::Pagina(radice, 0)];
         let mut viste = HashSet::new();
+        // one page, one overflow page and one row, reused: a walk allocates for the values it keeps, not for each page
+        let (mut p, mut q, mut riga) = (Vec::new(), Vec::new(), Vec::new());
         while let Some(passo) = pila.pop() {
             let (n, prof) = match passo {
-                Passo::Riga(v) => {
-                    if !f(0, v)? {
+                Passo::Riga(mut v) => {
+                    if !f(0, &mut v)? {
                         return Ok(());
                     }
                     continue;
@@ -213,7 +235,7 @@ impl Sqlite {
             if !viste.insert(n) {
                 return Err(guasto("page cycle"));
             }
-            let p = self.pagina_n(n)?;
+            self.pagina_in(n, &mut p)?;
             let base = if n == 1 { 100 } else { 0 };
             let tipo = *p.get(base).ok_or_else(|| guasto("page"))?;
             let ncelle = u16_be(&p, base + 3).ok_or_else(|| guasto("page"))?;
@@ -248,7 +270,8 @@ impl Sqlite {
                     pila.push(Passo::Pagina(destra, prof + 1));
                     for i in (0..ncelle).rev() {
                         let c = celle(i)?;
-                        let (_, v) = self.cella(&p, c + 4, true)?;
+                        let mut v = Vec::new();
+                        self.cella(&p, c + 4, true, voglio, &mut q, &mut v)?;
                         pila.push(Passo::Riga(v));
                         pila.push(Passo::Pagina(
                             u32_be(&p, c).ok_or_else(|| guasto("cell"))?,
@@ -259,8 +282,9 @@ impl Sqlite {
                 FOGLIA_TAB | FOGLIA_IDX => {
                     for i in 0..ncelle {
                         let c = celle(i)?;
-                        let (rowid, v) = self.cella(&p, c, tipo == FOGLIA_IDX)?;
-                        if !f(rowid, v)? {
+                        let rowid =
+                            self.cella(&p, c, tipo == FOGLIA_IDX, voglio, &mut q, &mut riga)?;
+                        if !f(rowid, &mut riga)? {
                             return Ok(());
                         }
                     }
@@ -272,7 +296,16 @@ impl Sqlite {
     }
 
     /// A cell: payload (with its overflow chain) decoded into values; `indice`: a cell of an index tree (no rowid, other payload limit), `c` at its payload size.
-    fn cella(&mut self, p: &[u8], c: usize, indice: bool) -> Result<(i64, Vec<Val>)> {
+    /// The values go to `out` (`voglio` as in `scorri_con`), the rowid is returned; `q` is the page buffer of the overflow chain.
+    fn cella(
+        &mut self,
+        p: &[u8],
+        c: usize,
+        indice: bool,
+        voglio: Option<&[bool]>,
+        q: &mut Vec<u8>,
+        out: &mut Vec<Val>,
+    ) -> Result<i64> {
         let (tot, a) = varint(p.get(c..).unwrap_or(&[])).ok_or_else(|| guasto("cell"))?;
         let (rowid, b) = if indice {
             (0, 0)
@@ -300,26 +333,30 @@ impl Sqlite {
                 m
             }
         };
-        let mut dati = p
+        let locale_p = p
             .get(inizio..inizio + locale)
-            .ok_or_else(|| guasto("cell payload"))?
-            .to_vec();
-        if (locale as u64) < tot {
-            let mut next = u32_be(p, inizio + locale).ok_or_else(|| guasto("overflow"))?;
-            let max_pagine = tot / (u as u64 - 4) + 2;
-            let mut viste = 0u64;
-            while (dati.len() as u64) < tot {
-                viste += 1;
-                if viste > max_pagine {
-                    return Err(guasto("overflow chain"));
-                }
-                let q = self.pagina_n(next)?;
-                next = u32_be(&q, 0).ok_or_else(|| guasto("overflow"))?;
-                let resta = (tot as usize - dati.len()).min(u - 4);
-                dati.extend_from_slice(q.get(4..4 + resta).ok_or_else(|| guasto("overflow"))?);
-            }
+            .ok_or_else(|| guasto("cell payload"))?;
+        if (locale as u64) >= tot {
+            // no overflow: the record is read where it lies in the page
+            record_in(locale_p, &self.limiti, voglio, out)?;
+            return Ok(rowid as i64);
         }
-        Ok((rowid as i64, record(&dati, &self.limiti)?))
+        let mut dati = locale_p.to_vec();
+        let mut next = u32_be(p, inizio + locale).ok_or_else(|| guasto("overflow"))?;
+        let max_pagine = tot / (u as u64 - 4) + 2;
+        let mut viste = 0u64;
+        while (dati.len() as u64) < tot {
+            viste += 1;
+            if viste > max_pagine {
+                return Err(guasto("overflow chain"));
+            }
+            self.pagina_in(next, q)?;
+            next = u32_be(q, 0).ok_or_else(|| guasto("overflow"))?;
+            let resta = (tot as usize - dati.len()).min(u - 4);
+            dati.extend_from_slice(q.get(4..4 + resta).ok_or_else(|| guasto("overflow"))?);
+        }
+        record_in(&dati, &self.limiti, voglio, out)?;
+        Ok(rowid as i64)
     }
 
     /// All rows of table `t` with the `INTEGER PRIMARY KEY` column filled in from the rowid.
@@ -343,6 +380,47 @@ impl Sqlite {
                 }
             }
             f(&v)
+        })
+    }
+}
+
+impl Sqlite {
+    /// Rows of `t` with only the columns `colonne` (positions in the table, `None` = a column the file lacks, read as NULL), in that order and with the same values `righe` gives for them: the
+    /// `INTEGER PRIMARY KEY` filled in from the rowid and the key of a `WITHOUT ROWID` table put back in its place. The other columns of the record are skipped, not decoded, and `f` gets a vector
+    /// that is reused from row to row.
+    pub fn righe_cols<F>(&mut self, t: &Tabella, colonne: &[Option<usize>], mut f: F) -> Result<()>
+    where
+        F: FnMut(&[Val]) -> Result<bool>,
+    {
+        // where in the record each wanted column lies
+        let pos: Vec<Option<usize>> = match &t.ordine {
+            Some(o) => colonne
+                .iter()
+                .map(|c| c.and_then(|c| o.iter().rposition(|&x| x == c)))
+                .collect(),
+            None => colonne.to_vec(),
+        };
+        let mut mascherati = vec![false; pos.iter().flatten().max().map_or(0, |&m| m + 1)];
+        for &p in pos.iter().flatten() {
+            mascherati[p] = true;
+        }
+        // a position asked twice is cloned the first time and moved the last
+        let ultima: Vec<bool> = (0..pos.len())
+            .map(|j| pos[j].is_none() || !pos[j + 1..].contains(&pos[j]))
+            .collect();
+        let alias = t.alias_rowid.filter(|_| t.ordine.is_none());
+        let mut out: Vec<Val> = Vec::with_capacity(colonne.len());
+        self.scorri_con(t.radice, Some(&mascherati), |rowid, v| {
+            out.clear();
+            for (j, p) in pos.iter().enumerate() {
+                out.push(match p.and_then(|p| v.get_mut(p).map(|x| (p, x))) {
+                    Some((p, Val::Null)) if alias == Some(p) => Val::Int(rowid),
+                    Some((_, x)) if ultima[j] => std::mem::replace(x, Val::Null),
+                    Some((_, x)) => x.clone(),
+                    None => Val::Null,
+                });
+            }
+            f(&out)
         })
     }
 }
@@ -390,9 +468,16 @@ pub struct Sqlite {
 
 /// Reads `n` bytes at `off` (an error when the file is shorter).
 pub(super) fn leggi(d: &mut dyn ReadAt, off: u64, n: usize) -> Result<Vec<u8>> {
-    let mut b = vec![0u8; n];
-    d.read_at(off, &mut b).map_err(|_| guasto("short read"))?;
+    let mut b = Vec::new();
+    leggi_in(d, off, n, &mut b)?;
     Ok(b)
+}
+
+/// `leggi` into `b`, which keeps its capacity.
+fn leggi_in(d: &mut dyn ReadAt, off: u64, n: usize, b: &mut Vec<u8>) -> Result<()> {
+    b.clear();
+    b.resize(n, 0);
+    d.read_at(off, b).map_err(|_| guasto("short read"))
 }
 
 /// A varint of up to 9 bytes at the start of `b`: (value, bytes used).
@@ -422,21 +507,33 @@ pub(super) fn u32_be(b: &[u8], o: usize) -> Option<u32> {
 
 /// The values of a record: header (size, serial types) then the bodies.
 pub fn record(b: &[u8], limiti: &Limiti) -> Result<Vec<Val>> {
-    let (hl, mut o) = varint(b).ok_or_else(|| guasto("record header"))?;
+    let mut out = Vec::new();
+    record_in(b, limiti, None, &mut out)?;
+    Ok(out)
+}
+
+/// `record` into `out` (cleared first). With `voglio`, only the positions it marks `true` are decoded (text and blobs are not copied for the others, which are `Val::Null`); the whole record
+/// is still checked, so a damaged one is refused the same way.
+fn record_in(b: &[u8], limiti: &Limiti, voglio: Option<&[bool]>, out: &mut Vec<Val>) -> Result<()> {
+    out.clear();
+    let (hl, o0) = varint(b).ok_or_else(|| guasto("record header"))?;
     let hl = usize::try_from(hl).map_err(|_| guasto("record header"))?;
-    if hl > b.len() || hl < o {
+    if hl > b.len() || hl < o0 {
         return Err(guasto("record header"));
     }
-    let mut tipi = Vec::new();
+    // first the count of the serial types (and its limit), then the types again with the bodies
+    let (mut o, mut n) = (o0, 0u64);
     while o < hl {
-        let (t, n) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
-        o += n;
-        tipi.push(t);
-        limiti.voci_ok(tipi.len() as u64)?;
+        let (_, k) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
+        o += k;
+        n += 1;
+        limiti.voci_ok(n)?;
     }
-    let mut corpo = hl;
-    let mut out = Vec::with_capacity(tipi.len());
-    for t in tipi {
+    out.reserve(n as usize);
+    let (mut o, mut corpo) = (o0, hl);
+    for pos in 0..n as usize {
+        let (t, k) = varint(&b[o..hl]).ok_or_else(|| guasto("serial type"))?;
+        o += k;
         let len = match t {
             0 | 8 | 9 => 0,
             1 => 1,
@@ -452,6 +549,10 @@ pub fn record(b: &[u8], limiti: &Limiti) -> Result<Vec<Val>> {
             .get(corpo..corpo.checked_add(len).ok_or_else(|| guasto("record"))?)
             .ok_or_else(|| guasto("record body"))?;
         corpo += len;
+        if voglio.is_some_and(|m| !m.get(pos).copied().unwrap_or(false)) {
+            out.push(Val::Null);
+            continue;
+        }
         out.push(match t {
             0 => Val::Null,
             8 => Val::Int(0),
@@ -470,7 +571,7 @@ pub fn record(b: &[u8], limiti: &Limiti) -> Result<Vec<Val>> {
             _ => Val::Text(String::from_utf8_lossy(s).into_owned()),
         });
     }
-    Ok(out)
+    Ok(())
 }
 
 enum Passo {

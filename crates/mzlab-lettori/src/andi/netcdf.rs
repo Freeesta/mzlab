@@ -35,6 +35,30 @@ impl Tipo {
             Tipo::Double => 8,
         }
     }
+    /// Appends to `out` the values of the big-endian elements of `b` (a whole number of them): the type is matched once for the piece, not for each element.
+    fn valori(self, b: &[u8], out: &mut Vec<f64>) {
+        match self {
+            Tipo::Byte => out.extend(b.iter().map(|&x| f64::from(x as i8))),
+            Tipo::Char => out.extend(b.iter().map(|&x| f64::from(x))),
+            Tipo::Short => out.extend(
+                b.chunks_exact(2)
+                    .map(|x| f64::from(i16::from_be_bytes([x[0], x[1]]))),
+            ),
+            Tipo::Int => out.extend(
+                b.chunks_exact(4)
+                    .map(|x| f64::from(i32::from_be_bytes([x[0], x[1], x[2], x[3]]))),
+            ),
+            Tipo::Float => out.extend(
+                b.chunks_exact(4)
+                    .map(|x| f64::from(f32::from_be_bytes([x[0], x[1], x[2], x[3]]))),
+            ),
+            Tipo::Double => out.extend(
+                b.chunks_exact(8)
+                    .map(|x| f64::from_be_bytes([x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]])),
+            ),
+        }
+    }
+
     /// One big-endian value of this type.
     fn valore(self, b: &[u8]) -> f64 {
         let a = |n: usize| -> [u8; 8] {
@@ -52,6 +76,9 @@ impl Tipo {
         }
     }
 }
+
+/// The most bytes of a variable held at once when it is decoded.
+const PEZZO: usize = 1 << 18;
 
 impl Cur<'_> {
     fn bytes(&mut self, n: u64) -> Result<Vec<u8>> {
@@ -273,46 +300,106 @@ impl Cdf {
         da: u64,
         n: u64,
     ) -> Result<Vec<u8>> {
-        let w = v.tipo.larghezza();
+        let mut out = Vec::new();
+        let totale = self.controlla(limiti, v, da, n)?;
+        out.try_reserve_exact(totale)
+            .map_err(|_| Error::memory_budget())?;
+        self.a_pezzi(dati, v, da, n, |b| out.extend_from_slice(b))?;
+        Ok(out)
+    }
+
+    /// The window `da..da + n` lies inside `v` and its bytes fit the budget: the number of bytes.
+    fn controlla(&self, limiti: &Limiti, v: &Var, da: u64, n: u64) -> Result<usize> {
         let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
         if fine > self.elementi(v) {
             return Err(guasto("read past the end of a variable"));
         }
         let totale = n
-            .checked_mul(w)
+            .checked_mul(v.tipo.larghezza())
             .filter(|&t| t <= limiti.byte)
             .ok_or_else(Error::memory_budget)?;
-        let mut out = vec![0u8; usize::try_from(totale).map_err(|_| Error::memory_budget())?];
-        let (mut e, mut k) = (da, 0usize);
+        usize::try_from(totale).map_err(|_| Error::memory_budget())
+    }
+
+    /// Hands `f` the bytes of elements `da..da + n` of `v`, in order and in pieces of whole elements. A variable that is not a record one is read in pieces of `PEZZO` bytes. A record
+    /// variable is spread over the records (`epr` elements in each, one record every `recsize` bytes): when its elements are not far apart the records of a piece are read at once, as
+    /// one window of the file, and its elements picked out of it; otherwise one block per record is read, as the format lays it out.
+    fn a_pezzi(
+        &self,
+        dati: &mut dyn ReadAt,
+        v: &Var,
+        da: u64,
+        n: u64,
+        mut f: impl FnMut(&[u8]),
+    ) -> Result<()> {
+        let w = v.tipo.larghezza();
+        let fine = da.saturating_add(n);
         let epr = if v.record {
             per_record(&self.dim, v).max(1)
         } else {
             u64::MAX
         };
+        let (rs, blocco_b) = (self.recsize, epr.saturating_mul(w));
+        let finestra = v.record && blocco_b <= rs && rs <= PEZZO as u64 && rs <= 16 * blocco_b;
+        let mut buf = Vec::new();
+        let mut gat = Vec::new();
+        let leggi =
+            |dati: &mut dyn ReadAt, pos: u64, len: usize, buf: &mut Vec<u8>| -> Result<()> {
+                if pos
+                    .checked_add(len as u64)
+                    .is_none_or(|f| f > self.dimensione)
+                {
+                    return Err(guasto("variable data past the end of the file"));
+                }
+                buf.clear();
+                buf.resize(len, 0);
+                dati.read_at(pos, buf)
+            };
+        let mut e = da;
         while e < fine {
+            if finestra {
+                let (r0, i0) = (e / epr, e % epr);
+                // the records of this piece (as many as fit in `PEZZO` bytes, not past the last element asked for) and where its last element ends
+                let r1 = ((fine - 1) / epr).min(r0 + (PEZZO as u64 / rs).max(1) - 1);
+                let e_fine = fine.min((r1 + 1) * epr);
+                let fine_r = (e_fine - 1) % epr + 1;
+                let inizio = v.begin.saturating_add(r0 * rs).saturating_add(i0 * w);
+                let len = ((r1 - r0) * rs + fine_r * w - i0 * w) as usize;
+                leggi(dati, inizio, len, &mut buf)?;
+                if rs == blocco_b {
+                    f(&buf);
+                } else {
+                    gat.clear();
+                    for r in r0..=r1 {
+                        let (a, b) = (
+                            if r == r0 { i0 } else { 0 },
+                            if r == r1 { fine_r } else { epr },
+                        );
+                        let off = ((r - r0) * rs + a * w - i0 * w) as usize;
+                        gat.extend_from_slice(&buf[off..off + ((b - a) * w) as usize]);
+                    }
+                    f(&gat);
+                }
+                e = e_fine;
+                continue;
+            }
             let (pos, blocco) = if v.record {
                 let (r, i) = (e / epr, e % epr);
                 (
                     v.begin
-                        .saturating_add(r.saturating_mul(self.recsize))
+                        .saturating_add(r.saturating_mul(rs))
                         .saturating_add(i * w),
                     (epr - i).min(fine - e),
                 )
             } else {
                 (v.begin.saturating_add(e * w), fine - e)
             };
-            let len = (blocco * w) as usize;
-            if pos
-                .checked_add(len as u64)
-                .is_none_or(|f| f > self.dimensione)
-            {
-                return Err(guasto("variable data past the end of the file"));
-            }
-            dati.read_at(pos, &mut out[k..k + len])?;
-            k += len;
+            let blocco = blocco.min((PEZZO as u64 / w).max(1));
+            leggi(dati, pos, (blocco * w) as usize, &mut buf)?;
+            f(&buf);
             e += blocco;
         }
-        Ok(out)
+        Ok(())
     }
 
     /// Elements `da..da + n` of `v` as numbers (`scale_factor` and `add_offset` are not applied here).
@@ -325,10 +412,13 @@ impl Cdf {
         n: u64,
     ) -> Result<Vec<f64>> {
         limiti.voci_ok(n)?;
-        let b = self.grezzi(dati, limiti, v, da, n)?;
-        Ok(b.chunks_exact(v.tipo.larghezza() as usize)
-            .map(|x| v.tipo.valore(x))
-            .collect())
+        // the values are decoded piece by piece, never the whole window as bytes first
+        self.controlla(limiti, v, da, n)?;
+        let mut out = Vec::new();
+        out.try_reserve_exact(n as usize)
+            .map_err(|_| Error::memory_budget())?;
+        self.a_pezzi(dati, v, da, n, |b| v.tipo.valori(b, &mut out))?;
+        Ok(out)
     }
 
     /// The strings of a `char` variable (rows of its last dimension, trailing NULs and spaces cut).
