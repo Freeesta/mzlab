@@ -51,3 +51,70 @@ fn noise_has_the_same_bits_without_the_difference_vector() {
         }
     }
 }
+
+/// `background` as it was: every block sorts its whole window again.
+fn old_background(buf: &mut Buf, wb: usize, mean: bool) -> Vec<f64> {
+    let n = buf.s.len();
+    let bs = ((2.5 * wb as f64).round() as usize).max(1);
+    let half = 5 * wb;
+    let nb = n.div_ceil(bs);
+    let (mut cen, mut val) = (Vec::new(), Vec::new());
+    for b in 0..nb {
+        let c = (b * bs + bs / 2).min(n - 1);
+        let (lo, hi) = (c.saturating_sub(half), (c + half).min(n - 1));
+        let mut tmp = buf.s[lo..=hi].to_vec();
+        cen.push(c);
+        let q = lower(&mut tmp, 0.25);
+        val.push(if mean {
+            let k = ((tmp.len() - 1) as f64 * 0.75).floor() as usize;
+            tmp[..=k].iter().sum::<f64>() / (k + 1) as f64
+        } else {
+            q
+        });
+    }
+    let mut out = Vec::new();
+    let mut b = 0;
+    for j in 0..n {
+        while b + 1 < nb && cen[b + 1] <= j {
+            b += 1;
+        }
+        if j <= cen[0] || b + 1 >= nb {
+            out.push(if j <= cen[0] { val[0] } else { val[nb - 1] });
+        } else {
+            let f = (j - cen[b]) as f64 / (cen[b + 1] - cen[b]) as f64;
+            out.push(val[b] + f * (val[b + 1] - val[b]));
+        }
+    }
+    out
+}
+
+#[test]
+fn the_sliding_background_has_the_same_bits_as_sorting_every_window() {
+    let mut s = 12345u64;
+    for n in (3..60).chain([200, 999, 1000, 4001, 9000]) {
+        for wb in [1, 2, 3, 7, 12, 40] {
+            for mean in [false, true] {
+                let mut a = Buf::default();
+                for _ in 0..n {
+                    s ^= s >> 12;
+                    s ^= s << 25;
+                    s ^= s >> 27;
+                    let r = s.wrapping_mul(0x2545F4914F6CDD1D) >> 40;
+                    // many zeros and repeated values, some large ones
+                    a.s.push(if r.is_multiple_of(3) {
+                        0.0
+                    } else {
+                        (r % 17) as f64 / 3.0 + if r.is_multiple_of(101) { 500.0 } else { 0.0 }
+                    });
+                }
+                let want = old_background(&mut a, wb, mean);
+                background(&mut a, wb, mean);
+                let (x, y): (Vec<u64>, Vec<u64>) = (
+                    a.b.iter().map(|v| v.to_bits()).collect(),
+                    want.iter().map(|v| v.to_bits()).collect(),
+                );
+                assert_eq!(x, y, "n={n} wb={wb} mean={mean}");
+            }
+        }
+    }
+}
