@@ -104,6 +104,7 @@ impl Cache {
             estimates: e.estimates.clone(),
             warnings: e.warnings.clone(),
             file: e.said.clone(),
+            mem: None,
         })
     }
 }
