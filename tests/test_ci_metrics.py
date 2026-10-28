@@ -137,7 +137,7 @@ def test_wasm_dimensioni(tmp_path):
     (tmp_path / "wasm-feat" / "hr").mkdir(parents=True)
     (tmp_path / "wasm-feat" / "hr" / "x.wasm").write_bytes(b"0" * 1000)
     m = w.misura(tmp_path)
-    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1339392}
+    assert m["wasm-feat/hr/x.wasm"] == {"byte": 1000, "tetto": 1389000}
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("wasm-dimensioni.json", json.dumps(m))

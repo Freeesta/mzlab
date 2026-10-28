@@ -45,10 +45,10 @@ fn artifact(ctx: &Ctx, id: &JobId, o: &Value) -> Result<Artifact> {
 }
 
 fn mem(v: &Value) -> Option<Mem> {
-    let via = match text(v, "via")? {
-        "memory" => "memory",
-        "slabs" => "slabs",
-        _ => "refused",
+    let via = if text(v, "via")? == "slabs" {
+        "slabs"
+    } else {
+        "memory"
     };
     Some(Mem {
         mb: v.get("mb")?.f64()?,
@@ -79,10 +79,6 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
         ));
     }
     o.ms = r.get("ms").and_then(Value::f64).unwrap_or(0.0);
-    o.heap_peak_bytes = r
-        .get("heap_peak_bytes")
-        .and_then(Value::f64)
-        .map(|b| b as u64);
     o.mem = r.get("mem").and_then(mem);
     o.warnings = r
         .get("warnings")
@@ -91,7 +87,6 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
         .filter_map(|w| w.str().map(str::to_string))
         .collect();
     o.cached = r.get("cached").and_then(Value::bool).unwrap_or(false);
-    o.file = r.get("file").filter(|f| !f.is_null()).cloned();
     Ok(o)
 }
 
