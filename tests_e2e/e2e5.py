@@ -24,7 +24,9 @@ try:
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
         def CORR(v):      # the "Correzione" drop-down: open it, click the choice
             pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150)      # «Sottrai» (file) and «Fondo» are two menus
-            if v.startswith("f"): pg.select_option('.pnl.xic [data-o="corrf"]', v[1:])      # the file entry has a chooser of the file
+            if v.startswith("f"):      # the file entry has a chooser of the file
+                try: pg.select_option('.pnl.xic [data-o="corrf"]', v[1:], timeout=30000)
+                except Exception as e: raise AssertionError("file chooser: " + pg.evaluate("(v) => JSON.stringify({sel: [...document.querySelectorAll('.pnl.xic [data-o=corrf]')].map(s => ({vis: s.offsetParent !== null, opts: [...s.options].map(o => o.value)})), want: v, pop: [...document.querySelectorAll('.pnl.xic .cpop')].map(c => c.hidden), files: E.files.map(f => [f.k, f.type, f.vis, f.kind])})", v[1:]) + " | " + str(e).replace("\n", " ")[:300])
             else: pg.click(f'.pnl.xic .corri[data-c="{v}"]')
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
