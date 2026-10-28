@@ -79,7 +79,7 @@ I18N.add("it", {
   "xic.err.empty": "Scrivi un valore di m/z oppure la formula neutra.",
   "xic.err.row": "Una riga non è valida: scrivi un m/z oppure una formula neutra.",
   "tip.raw": "grezzo {v}",
-  "tip.area": "<b>Area</b> {area} <span class=\"sm\">conteggi·s</span>",
+  "tip.area": "<b>Area</b> {area} <span class=\"sm\">conteggi·s</span> · intensità <b>{y}</b>",
   "tip.more": "... e altre {n}",
   "spec.isMrm": "Questo file è MRM: contiene solo cromatogrammi di transizioni, non spettri.",
   "spec.pickRange": "Clicca o trascina sul cromatogramma per scegliere l'intervallo di tempo, oppure usa ← → dopo aver messo il cursore.",
