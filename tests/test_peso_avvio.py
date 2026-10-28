@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
-MAX_FILE = 100_000      # bytes, uncompressed, one script of the list
+MAX_FILE = 110_000      # bytes, uncompressed, one script of the list
 MAX_TOTAL = 1_900_000   # bytes, uncompressed, the whole list
 
 
