@@ -74,7 +74,7 @@ I18N.add("en", {
   "ctl.map.scale.lin": "linear",
   "ctl.map.scale.log": "log",
   "ctl.map.norm.need": "It is only needed for the difference: first choose the file to subtract.",
-  "ctl.map.norm.title": "Before subtracting two different experiments it is better to make them comparable: «to the maximum» divides each map by its most intense point; «to the total» by the sum of all intensities (in per mille). With «absolute» the counts are subtracted as they are.",
+  "ctl.map.norm.title": "Before subtracting two experiments: «to the maximum» divides each map by its most intense point; «to the total» by the sum of intensities (per mille); «absolute» subtracts the counts as they are.",
   "ctl.map.norm.abs": "absolute intensity",
   "ctl.map.norm.max": "normalize to the maximum",
   "ctl.map.norm.tic": "normalize to the total",
