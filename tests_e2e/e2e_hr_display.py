@@ -45,6 +45,7 @@ try:
             pg.evaluate("BANCO.renderInfo()"); pg.wait_for_function(f"document.querySelectorAll('.dsp input[type=checkbox]').length=={n0 + 1}", timeout=5000)
         step("extendable: a package registers an option for a kind of chart", extend)
         def palette():
+            drawer(pg, "file")      # leave the tab the previous step opened: the wait for 'disp' below must prove the command ran (the palette runs it after a timeout)
             pg.keyboard.press("Control+k"); pg.wait_for_selector("#paletta", timeout=5000); attendi(pg, "document.activeElement && document.activeElement.id === 'pal-in'"); pg.keyboard.type("opzioni di vis")
             attendi(pg, "document.querySelector('#pal-l') && document.querySelector('#pal-l').innerText.includes('Opzioni di visualizzazione')")
             pg.keyboard.press("Enter"); attendi(pg, "BARRA.curTab === 'disp'")
