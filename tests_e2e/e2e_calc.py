@@ -39,7 +39,7 @@ try:
         def lower():
             pg.fill("#calcin", "c14h13f4n3o2s"); until(pg, "document.querySelector('#calcsum').innerText.includes('interpretata come')")
             assert "interpretata come" in pg.inner_text("#calcsum") and "C14H13F4N3O2S" in pg.inner_text("#calcsum").replace(" ", "")
-            t = pg.inner_text("#calcout"); assert "364.07" in t and "1 decimale" not in t and "spostato di qualche decimo" not in t, t
+            t = pg.inner_text("#calcout"); assert "364.1" in t and "364.07" not in t and "1 decimale" not in t and "spostato di qualche decimo" not in t, t
             pg.fill("#calcin", "C9h10Cl2n2O"); until(pg, SUM + ".includes('C9H10Cl2N2O')"); assert "C9H10Cl2N2O" in pg.inner_text("#calcsum").replace(" ", "")
             pg.fill("#calcin", "co"); until(pg, SUM + ".includes('CO')"); assert "CO" in pg.inner_text("#calcsum"), pg.inner_text("#calcsum")
         step("lower-case formula: interpreted line, no extra column / sentence", lower)
@@ -99,11 +99,11 @@ try:
         def observed():
             pg.fill("#calcobs", "261.2049"); pg.wait_for_selector(".cadd-wrap tr.hit")
             assert pg.inner_text(".cadd-wrap tr.hit th").replace("\u2713", "").strip().endswith("[M+Na]+"), pg.inner_text(".cadd-wrap tr.hit")
-            assert "[M+Na]+" in pg.inner_text(".cadd-match") and "ppm" in pg.inner_text(".cadd-match")
+            assert "[M+Na]+" in pg.inner_text(".cadd-match") and "Da" in pg.inner_text(".cadd-match")
             pg.fill("#calcobs", "300.1"); pg.wait_for_function("document.querySelector('.cadd-match.muted')")
             assert "5" in pg.inner_text(".cadd-match") and pg.locator(".cadd-wrap tr.hit").count() == 0
             pg.fill("#calctol", "100000"); pg.wait_for_function("!document.querySelector('.cadd-match.muted')")
-            pg.fill("#calctol", "5"); pg.fill("#calcobs", "")
+            pg.fill("#calctol", "0.5"); pg.fill("#calcobs", "")
         step("observed m/z: matching row highlighted, none within the tolerance, tolerance field", observed)
         def without_formula():
             pg.fill("#calcin", ""); pg.fill("#calcobs", "239.2230"); pg.wait_for_selector(".cadd-wrap tbody tr")

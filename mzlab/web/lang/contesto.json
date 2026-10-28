@@ -758,5 +758,9 @@
   "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria.",
   "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
   "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di scansioni, {a} e {b} = RT iniziale e finale in minuti.",
-  "cap.missing": "Avviso accanto a un comando disattivato perché il browser non ha la funzione; {funzione} = nome della funzione (es. Mappa 3D); segue il link all'app."
+  "cap.missing": "Avviso accanto a un comando disattivato perché il browser non ha la funzione; {funzione} = nome della funzione (es. Mappa 3D); segue il link all'app.",
+  "calc.add.hitDa": "Riga sopra la tabella degli addotti in bassa risoluzione quando l'm/z osservata combacia; {adduct} con apici (HTML), {ppm} scarto in Da con segno e due decimali.",
+  "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
+  "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
+  "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»)."
 }

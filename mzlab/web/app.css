@@ -124,7 +124,7 @@ html.i18n-wait body>:not(header){visibility:hidden}html.i18n-wait header{visibil
 #stbar .tb .tl{display:none}
 /* label levels, chosen by barra.js from the measured space: lab-all (words on every button), lab-main (only on the main tools), none */
 #stbar.lab-all .tb .tl,#stbar.lab-main .tb[data-main] .tl{display:inline}
-#stbar.lab-all .tb,#stbar.lab-main .tb[data-main]{border-color:var(--line);border-radius:999px;padding:4px 10px 4px 8px}
+#stbar.lab-all .tb,#stbar.lab-main .tb[data-main]{border-color:var(--line);border-radius:999px;padding:4px 8px 4px 6px}
 #stbar.lab-all .tb-split .tb-main,#stbar.lab-main .tb-split .tb-main[data-main]{border-radius:999px 0 0 999px}
 #stbar.lab-all .tb-split .tb-car,#stbar.lab-main .tb-split .tb-main[data-main]+.tb-car{border-color:var(--line);border-radius:0 999px 999px 0;padding:4px 7px 4px 5px}
 #stbar.lab-all .tb.on,#stbar.lab-all .tb[aria-pressed=true],#stbar.lab-main .tb.on[data-main],#stbar.lab-main .tb[data-main][aria-pressed=true]{border-color:var(--accent)}
@@ -418,6 +418,24 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cadd-more:focus-visible,.cadd-diffs summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cadd-match{margin:4px 0;font-weight:600}.cadd-match.muted{font-weight:400}
 .cadd-diffs{margin-top:12px}.cadd-diffs summary{cursor:pointer;min-height:28px;font-weight:600}
+/* «What can this number be?»: small, muted and scrollable under the calculator; the same groups in the Adducts and Neutral losses panels */
+.cq{margin-top:var(--sp-3);font-size:12px;color:var(--muted)}
+.cq-t{margin:0 0 2px;font-size:12px;font-weight:600;color:var(--muted)}
+#calcout{max-height:40vh;overflow-y:auto}
+.cq-g{border-top:1px solid var(--line);padding:2px 0}
+.cq-g>summary{cursor:pointer;min-height:28px;display:flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}
+.cq-g>summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cq-n{min-width:18px;padding:0 5px;border:1px solid var(--line);border-radius:9px;text-align:center;font-size:11px;font-weight:400;color:var(--muted)}
+.cq-l{margin:2px 0 4px 16px;padding:0}.cq-l li{margin:3px 0;color:var(--ink)}
+.cq-lb{background:none;border:0;padding:2px 4px;min-height:24px;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+.cq-lb:focus-visible,.cq-link:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cq-ld{margin:2px 0 4px 0}
+.cq-links{margin:4px 0}.cq-link{background:none;border:0;padding:0 4px;min-height:28px;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}.cq-link[hidden]{display:none}
+.cq-none{margin:6px 0}
+.cq-ctl .seg button{min-width:44px;min-height:32px;font-size:12px}
+@media (pointer:coarse){.cq-lb,.cq-link,.cq-g>summary{min-height:40px}}
+#sb-panel-adducts .nlbar{flex-wrap:wrap;gap:4px}#sb-panel-adducts .nlbar input{width:100%;max-width:100%;box-sizing:border-box}
+
 .cadd-diffs .cadd-f{margin:8px 0 4px}.cadd-diffs ul{margin:4px 0;padding-left:18px}
 @media (pointer:coarse){.cadd .seg button,.cadt .cxic,.cadd-more{min-height:40px}.cadt th,.cadt td{height:40px}}
 /* precursor tree of an MSn infusion (infusione-albero.js): three groups of labelled controls on one row that wraps cleanly, rows with a visible selection */

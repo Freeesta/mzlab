@@ -44,9 +44,9 @@ try:
             assert pg.get_attribute("#stbar", "role") == "toolbar" and pg.get_attribute("#stbar", "aria-label") == "Strumenti"
             assert pg.locator("#sidebar-tablist").count() == 0, "no rail"
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
-            assert ids == ["file", "calc", "losses", "lists", "ptable", "more", "search"], ids
+            assert ids == ["file", "calc", "adducts", "losses", "lists", "ptable", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.innerText.trim())")
-            assert lab == ["File", "Calcolatrice", "Perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
+            assert lab == ["File", "Calcolatrice", "Addotti", "Perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
@@ -197,7 +197,7 @@ try:
 
         def hr_barra():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
-            assert ids == ["file", "calc", "losses", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
+            assert ids == ["file", "calc", "adducts", "losses", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
             pg.set_viewport_size({"width": 1800, "height": 1000}); attendi(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
             assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
@@ -250,7 +250,7 @@ try:
         # ------------------------------------------------------------------ narrow windows, iPad, phone
         def stretta():
             resize(1500, 1000)
-            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'calc'")
+            pg.evaluate("BARRA.setTab('calc',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'calc'")
             assert pg.evaluate("BARRA.open && !BARRA.sheet")
             pg.set_viewport_size({"width": 800, "height": 900})
             attendi(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet

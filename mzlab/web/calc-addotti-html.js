@@ -16,35 +16,37 @@ const CALCADDHTML = (() => {
     return hrf.length ? Math.max(HR.dec(hrf, 1), HR.dec(hrf, 2)) : 4;
   };
 
-  /** @param {AdTable} t @param {boolean} hasM @param {boolean} hasObs @param {{ pol: number, more: boolean, diffs: boolean, delta: string }} st */
+  // low resolution: one decimal and the error in Da (the tolerance is in Da there); high resolution: the decimals above and the error in ppm
+  /** @param {AdTable} t @param {boolean} hasM @param {boolean} hasObs @param {{ pol: number, more: boolean, lr?: boolean, tolDa?: number }} st */
   function mainHtml(t, hasM, hasObs, st) {
-    const dd = decimals(), mzOf = (/** @type {AdRow} */ r) => (r.mz5 == null || r.mz4 == null ? "" : dd > 4 ? r.mz5.toFixed(dd) : r.mz4.toFixed(4));
+    const lr = !!st.lr, dd = lr ? 1 : decimals(), mzOf = (/** @type {AdRow} */ r) => (lr ? (r.mz1 == null ? "" : r.mz1.toFixed(1)) : r.mz5 == null || r.mz4 == null ? "" : dd > 4 ? r.mz5.toFixed(dd) : r.mz4.toFixed(4));
+    const errOf = (/** @type {AdRow} */ r) => (r.ppm == null ? "" : lr ? sgn(r.ppm) + Math.abs(r.ppm * (r.mz4 || 0) * 1e-6).toFixed(2) : sgn(r.ppm) + Math.abs(r.ppm).toFixed(1));
     const idx = (/** @type {AdRow} */ r) => t.rows.indexOf(r), mine = t.rows.filter(r => r.pol === st.pol), best = t.best == null ? null : t.rows[t.best];
     const unit = hasM && !hasObs, mif = hasObs && !hasM, cols = 2 + (hasM ? 1 : 0) + (unit ? 1 : 0) + (hasM && hasObs ? 1 : 0) + (mif ? 1 : 0) + (hasM ? 1 : 0);
     const head = `<tr><th scope="col">${I18N.t("calc.col.adduct")}</th><th scope="col" class="num">${I18N.t("calc.col.delta")}</th>`
       + (hasM ? `<th scope="col" class="num">${I18N.t("calc.col.exact")}</th>` : "") + (unit ? `<th scope="col" class="num">${I18N.t("calc.col.nominal")}</th>` : "")
-      + (hasM && hasObs ? `<th scope="col" class="num">${I18N.t("calc.col.ppm")}</th>` : "") + (mif ? `<th scope="col" class="num">${I18N.t("calc.col.mif")}</th>` : "") + (hasM ? '<td></td>' : "") + "</tr>";
+      + (hasM && hasObs ? `<th scope="col" class="num">${I18N.t(lr ? "calc.col.da" : "calc.col.ppm")}</th>` : "") + (mif ? `<th scope="col" class="num">${I18N.t("calc.col.mif")}</th>` : "") + (hasM ? '<td></td>' : "") + "</tr>";
     const row = (/** @type {AdRow} */ r) => {
       const hit = best === r, mz = mzOf(r);
       return `<tr class="${hit ? "hit" : ""}"><th scope="row">${hit ? `<span aria-hidden="true">✓ </span><span class="sr-only">${I18N.t("calc.add.match")} </span>` : ""}${fmtAdduct(r.n)}</th><td class="num">${shiftText(r)}</td>`
         + (hasM ? `<td class="num">${mz}</td>` : "") + (unit ? `<td class="num">${r.nominal}</td>` : "")
-        + (hasM && hasObs ? `<td class="num">${r.ppm == null ? "" : sgn(r.ppm) + Math.abs(r.ppm).toFixed(1)}</td>` : "")
-        + (mif ? `<td class="num">${r.m_if == null ? "" : r.m_if.toFixed(4)}</td>` : "")
+        + (hasM && hasObs ? `<td class="num">${errOf(r)}</td>` : "")
+        + (mif ? `<td class="num">${r.m_if == null ? "" : r.m_if.toFixed(lr ? 1 : 4)}</td>` : "")
         + (hasM ? `<td><button type="button" class="cxic" data-i="${idx(r)}" title="${I18N.t("calc.xic.title")}" aria-label="${EH(I18N.t("calc.xic.aria", { adduct: r.n, mz }))}">XIC</button></td>` : "") + "</tr>";
     };
     const common = mine.filter(r => r.common), rare = mine.filter(r => !r.common), open = st.more || (best != null && rare.includes(best));
     const more = `<tr class="cmore"><td colspan="${cols}"><button type="button" class="cadd-more" aria-expanded="${open}">${I18N.t("tbl.add.more")}</button></td></tr>`;
     let line = "";
-    if (hasM) line = `<p>${I18N.t("calc.neutral", { formula: fmtFormula(t.formula || ""), mass: (t.neutral || 0).toFixed(4), nominal: Math.round(t.neutral || 0) })}</p>`;
+    if (hasM) line = `<p>${I18N.t("calc.neutral", { formula: fmtFormula(t.formula || ""), mass: (t.neutral || 0).toFixed(lr ? 1 : 4), nominal: Math.round(t.neutral || 0) })}</p>`;
     if (hasM && hasObs) {
       line += best
-        ? `<p class="cadd-match">${I18N.t("calc.add.hit", { adduct: fmtAdduct(best.n), ppm: sgn(best.ppm || 0) + Math.abs(best.ppm || 0).toFixed(1) })}${best.pol === st.pol ? "" : " (" + (best.pol > 0 ? "ESI+" : "ESI−") + ")"}</p>`
-        : `<p class="cadd-match muted">${I18N.t("calc.add.none", { tol: t.tol })}</p>`;
+        ? `<p class="cadd-match">${I18N.t(lr ? "calc.add.hitDa" : "calc.add.hit", { adduct: fmtAdduct(best.n), ppm: errOf(best) })}${best.pol === st.pol ? "" : " (" + (best.pol > 0 ? "ESI+" : "ESI−") + ")"}</p>`
+        : `<p class="cadd-match muted">${I18N.t(lr ? "calc.add.noneDa" : "calc.add.none", { tol: lr ? st.tolDa : t.tol })}</p>`;
     }
     return `${line}<div class="cadd-wrap" role="region" tabindex="0" aria-label="${I18N.t("calc.add.region")}"><table class="cadt"><thead>${head}</thead><tbody>${common.map(row).join("")}${more}${open ? rare.map(row).join("") : ""}</tbody></table></div>`;
   }
 
-  /** @param {AdTable} t @param {{ diffs: boolean, delta: string }} st */
+  /** @param {AdTable} t @param {{ diffs: boolean, delta: string, pol?: number }} st */
   function diffsHtml(t, st) {
     const rows = t.diffs.map(d => `<tr><th scope="row" class="num">${sgn(d.d)}${Math.abs(d.d).toFixed(4)}</th><td>${fmtFormula(d.pair)}</td><td>${d.pol > 0 ? "ESI+" : "ESI−"}</td></tr>`).join("");
     return `<details class="cadd-diffs" id="cadd-diffs"${st.diffs ? " open" : ""}><summary>${I18N.t("tbl.diff.title")}</summary>
