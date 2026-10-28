@@ -20,7 +20,11 @@ fn is_key(c: char) -> bool {
 
 type Matcher<'a> = dyn FnMut(&[char], usize) -> Option<(usize, String)> + 'a;
 
-fn replace_all(text: &str, f: &mut Matcher) -> String {
+fn replace_all(text: &str, trigger: char, f: &mut Matcher) -> String {
+    // every matcher starts at its trigger character: a text without it is returned as it is
+    if !text.contains(trigger) {
+        return text.to_string();
+    }
     let c: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
     let mut i = 0;
@@ -55,7 +59,7 @@ fn run(c: &[char], i: usize, delim: char) -> Option<usize> {
 pub fn render(text: &str, file: &str, line: usize, ctx: &mut Ctx) -> Result<String, LibroError> {
     let mut hold: Vec<String> = Vec::new();
     // `code` and $math$ are held before escaping
-    let mut t = replace_all(text, &mut |c, i| {
+    let mut t = replace_all(text, '`', &mut |c, i| {
         run(c, i, '`').map(|j| {
             (
                 j + 1,
@@ -66,7 +70,7 @@ pub fn render(text: &str, file: &str, line: usize, ctx: &mut Ctx) -> Result<Stri
             )
         })
     });
-    t = replace_all(&t, &mut |c, i| {
+    t = replace_all(&t, '$', &mut |c, i| {
         if c[i] != '$' || (i > 0 && (c[i - 1] == '\\' || c[i - 1] == '$')) {
             return None;
         }
@@ -84,13 +88,13 @@ pub fn render(text: &str, file: &str, line: usize, ctx: &mut Ctx) -> Result<Stri
         })
     });
     t = escape(&t, false);
-    t = replace_all(&t, &mut |c, i| {
+    t = replace_all(&t, '[', &mut |c, i| {
         cite(c, i).map(|(end, body)| (end, keep(&mut hold, cite_html(&body, ctx))))
     });
     // links may fail on an unsupported target: the first error stops the render
     let mut err: Option<LibroError> = None;
     let teoria = ctx.teoria;
-    t = replace_all(&t, &mut |c, i| {
+    t = replace_all(&t, '[', &mut |c, i| {
         let (end, label, href) = link(c, i)?;
         match link_html(&label, &href, file, line, teoria) {
             Ok(html) => Some((end, keep(&mut hold, html))),
@@ -109,7 +113,7 @@ pub fn render(text: &str, file: &str, line: usize, ctx: &mut Ctx) -> Result<Stri
         "<span class=\"ipotesi\" title=\"hypothesis, to be verified\">[I]</span>".to_string(),
     );
     t = t.replace("[I]", &tag);
-    t = replace_all(&t, &mut |c, i| {
+    t = replace_all(&t, '@', &mut |c, i| {
         reference(c, i).map(|(end, kind, id)| {
             (
                 end,
@@ -120,11 +124,11 @@ pub fn render(text: &str, file: &str, line: usize, ctx: &mut Ctx) -> Result<Stri
             )
         })
     });
-    t = replace_all(&t, &mut bold);
-    t = replace_all(&t, &mut |c, i| emph(c, i, '*', "i"));
-    t = replace_all(&t, &mut |c, i| emph(c, i, '_', "em"));
-    t = replace_all(&t, &mut |c, i| tight(c, i, '~', "sub"));
-    t = replace_all(&t, &mut |c, i| tight(c, i, '^', "sup"));
+    t = replace_all(&t, '*', &mut bold);
+    t = replace_all(&t, '*', &mut |c, i| emph(c, i, '*', "i"));
+    t = replace_all(&t, '_', &mut |c, i| emph(c, i, '_', "em"));
+    t = replace_all(&t, '~', &mut |c, i| tight(c, i, '~', "sub"));
+    t = replace_all(&t, '^', &mut |c, i| tight(c, i, '^', "sup"));
     Ok(restore(&t, &hold))
 }
 

@@ -41,8 +41,11 @@ fn base_letter(c: char) -> char {
         "àáâãäåçèéêëìíîïñòóôõöùúûüýÿāăąćĉċčďēĕėęěĝğġģĥĩīĭįĵķĺļľńņňōŏőŕŗřśŝşšţťũūŭůűųŵŷźżž";
     const TO: &str =
         "aaaaaaceeeeiiiinooooouuuuyyaaaccccdeeeeegggghiiiijklllnnnooorrrssssttuuuuuuwyzzz";
+    if c.is_ascii() {
+        return c;
+    }
     match FROM.chars().position(|f| f == c) {
-        Some(p) => TO.chars().nth(p).unwrap_or(c),
+        Some(p) => TO.as_bytes()[p] as char,
         None => c,
     }
 }
