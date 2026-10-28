@@ -5,11 +5,25 @@ use crate::inline::{render, Ctx};
 use crate::scan::{explicit_id, head};
 use crate::splitlines;
 
+/// The headings of the source; lines inside a raw ```html block are HTML, not headings (the converter skips them the same way).
 fn headings(md: &str) -> Vec<(usize, String, String)> {
-    splitlines(md)
-        .into_iter()
-        .filter_map(|l| head(l).map(|(level, text)| (level, text, l.trim_end().to_string())))
-        .collect()
+    let lines = splitlines(md);
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let l = lines[i];
+        if l.trim_end() == "```html" {
+            if let Some(j) = (i + 1..lines.len()).find(|&k| lines[k].trim_end() == "```") {
+                i = j + 1;
+                continue;
+            }
+        }
+        if let Some((level, text)) = head(l) {
+            out.push((level, text, l.trim_end().to_string()));
+        }
+        i += 1;
+    }
+    out
 }
 
 /// Whether the headings differ in the text of some h2/h3 title (the search index then has to be rebuilt), or why the change is not allowed.

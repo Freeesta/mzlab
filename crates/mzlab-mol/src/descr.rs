@@ -14,7 +14,7 @@ pub(crate) struct Ctx<'a> {
 
 impl<'a> Ctx<'a> {
     pub fn new(m: &'a Mol) -> Self {
-        let abond = m.aromatic_bonds();
+        let (ar, abond) = m.aromatic_flags();
         let n = m.atoms.len();
         let mut nb = vec![Vec::new(); n];
         let mut hs: Vec<u32> = m.atoms.iter().map(|a| a.h as u32).collect();
@@ -33,12 +33,7 @@ impl<'a> Ctx<'a> {
                 }
             }
         }
-        Ctx {
-            m,
-            nb,
-            hs,
-            ar: m.aromatic_atoms(),
-        }
+        Ctx { m, nb, hs, ar }
     }
     pub fn sym(&self, i: usize) -> &str {
         &self.m.atoms[i].el
@@ -153,9 +148,26 @@ impl Mol {
 
     /// Topological polar surface area (Ertl 2000) from N and O only, the usual default that leaves out S and P.
     pub fn tpsa(&self) -> f64 {
-        let c = Ctx::new(self);
-        (0..self.atoms.len()).map(|i| tpsa_atom(&c, i)).sum()
+        tpsa_of(&Ctx::new(self))
     }
+}
+
+fn tpsa_of(c: &Ctx) -> f64 {
+    (0..c.m.atoms.len()).map(|i| tpsa_atom(c, i)).sum()
+}
+
+fn hbd_of(c: &Ctx) -> u32 {
+    (0..c.m.atoms.len())
+        .filter(|&i| matches!(c.sym(i), "N" | "O") && c.hs[i] > 0)
+        .count() as u32
+}
+
+fn hba_of(c: &Ctx) -> u32 {
+    (0..c.m.atoms.len()).filter(|&i| acceptor(c, i)).count() as u32
+}
+
+fn rotors_of(c: &Ctx) -> u32 {
+    (0..c.m.bonds.len()).filter(|&k| rotatable(c, k)).count() as u32
 }
 
 fn acceptor(c: &Ctx, i: usize) -> bool {
@@ -182,24 +194,19 @@ fn acceptor(c: &Ctx, i: usize) -> bool {
 impl Mol {
     /// Hydrogen-bond donors: N and O atoms that carry at least one hydrogen.
     pub fn hbd(&self) -> u32 {
-        let c = Ctx::new(self);
-        (0..self.atoms.len())
-            .filter(|&i| matches!(c.sym(i), "N" | "O") && c.hs[i] > 0)
-            .count() as u32
+        hbd_of(&Ctx::new(self))
     }
 
     /// Hydrogen-bond acceptors: neutral-or-anionic O except aromatic o, and N with a free lone pair (pyridine-type n, imine, nitrile and
     /// amine N whose neighbours are all sp3 carbons).
     pub fn hba(&self) -> u32 {
-        let c = Ctx::new(self);
-        (0..self.atoms.len()).filter(|&i| acceptor(&c, i)).count() as u32
+        hba_of(&Ctx::new(self))
     }
 
     /// Rotatable bonds: single, acyclic, between two non-terminal atoms, not next to a triple bond, not on an atom of an acyl group (amide,
     /// ester, acid, thio analogues), and not on a CF3 / tert-butyl carbon.
     pub fn rotatable_bonds(&self) -> u32 {
-        let c = Ctx::new(self);
-        (0..self.bonds.len()).filter(|&k| rotatable(&c, k)).count() as u32
+        rotors_of(&Ctx::new(self))
     }
 
     /// Average molecular weight; isotope-labelled atoms count with their mass number.
@@ -218,14 +225,15 @@ impl Mol {
 
     /// Every descriptor at once.
     pub fn descriptors(&self) -> Descriptors {
-        let (logp, mr) = crippen::contributions(&Ctx::new(self));
+        let c = Ctx::new(self);
+        let (logp, mr) = crippen::contributions(&c);
         Descriptors {
             logp,
             mr,
-            tpsa: self.tpsa(),
-            hbd: self.hbd(),
-            hba: self.hba(),
-            rotors: self.rotatable_bonds(),
+            tpsa: tpsa_of(&c),
+            hbd: hbd_of(&c),
+            hba: hba_of(&c),
+            rotors: rotors_of(&c),
             mw: self.molecular_weight(),
         }
     }

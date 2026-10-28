@@ -18,3 +18,12 @@ function spanOf(a, lo, hi) {
   let i1 = lowerIdx(a, hi); while (i1 < a.length && a[i1] <= hi) i1++;
   return [lowerIdx(a, lo), i1];
 }
+// The float32 array packed in a base64 string (the map routes). A payload that is not base64, or whose size is not a whole number of float32 (or not `n` of them), throws a plain Error.
+function b64F32(str, n) {
+  let bin; try { bin = atob(str); } catch (e) { throw new Error("corrupt map payload: not base64"); }
+  if (bin.length % 4) throw new Error("corrupt map payload: length " + bin.length + " is not a multiple of 4");
+  const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const m = new Float32Array(u.buffer);
+  if (n != null && m.length !== n) throw new Error("corrupt map payload: " + m.length + " values, expected " + n);
+  return m;
+}

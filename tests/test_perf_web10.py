@@ -18,7 +18,7 @@ const fs = require('fs');
 const web = process.argv[1];
 // the helpers of numeri.js, evaluated alone
 const gsrc = fs.readFileSync(web + '/numeri.js', 'utf8');
-const H = new Function(gsrc + '; return { maxOf, minOf, maxAbs, lowerIdx, spanOf };')();
+const H = new Function(gsrc + '; return { maxOf, minOf, maxAbs, lowerIdx, spanOf, b64F32 };')();
 let seed = 12345; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
 """
 
@@ -117,3 +117,19 @@ for (const n of [1, 5, 40, 500]) for (const m of [2, 3, 7, 30]) for (const d of 
 console.log(JSON.stringify({ same }));
 """)
     assert r["same"] is True
+
+
+def test_map_payload_decoding_and_corrupt_payload_error():
+    r = run(r"""
+global.atob = s => Buffer.from(s, 'base64').toString('latin1');
+const f = new Float32Array([1.5, -2, 0, 1e9]), b64 = Buffer.from(f.buffer).toString('base64'), out = {};
+out.same = Array.from(H.b64F32(b64, 4)).join() === Array.from(f).join() && H.b64F32(b64) instanceof Float32Array;
+const msg = fn => { try { fn(); return null; } catch (e) { return e instanceof Error ? e.message : 'not an Error'; } };
+out.badLen = msg(() => H.b64F32(Buffer.from([1, 2, 3, 4, 5]).toString('base64')));
+out.badCount = msg(() => H.b64F32(b64, 5));
+global.atob = () => { throw new DOMException('bad', 'InvalidCharacterError'); };
+out.notB64 = msg(() => H.b64F32('%%%'));
+console.log(JSON.stringify(out));
+""")
+    assert r["same"] is True
+    assert "multiple of 4" in r["badLen"] and "expected 5" in r["badCount"] and "not base64" in r["notB64"]
