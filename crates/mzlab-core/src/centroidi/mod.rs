@@ -92,7 +92,6 @@ pub struct Buf {
     pub(crate) v: Vec<f64>,
     pub(crate) s: Vec<f64>,
     pub(crate) b: Vec<f64>,
-    pub(crate) tmp: Vec<f64>,
     pub(crate) pad: Vec<f64>,
     /// True when `x` is non-decreasing (set by `grid::fill`), so a window of m/z can be found by bisection.
     pub(crate) sorted: bool,
