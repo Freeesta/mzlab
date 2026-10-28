@@ -15,9 +15,10 @@ export function poolSize(small, cores) {
 }
 
 // Helper workers for a builder that starts while `used` workers (itself included) run in a pool of `size` (poolSize: cores - 1, at most 4): alone, it gets
-// `size` helpers (one per core beside its own, at most 4); with others running, the free places; none without shared memory or below 3 cores.
+// `size` helpers (one per core beside its own, at most 4); with others running, the free places; never one alone (it costs more than it gives), none without shared memory.
 export function aiutiPer(size, used, isolated) {
-  return !isolated || size < 2 ? 0 : used <= 1 ? size : Math.max(0, size - used);
+  const n = !isolated ? 0 : used <= 1 ? size : size - used;
+  return n >= 2 ? n : 0;
 }
 
 // The workers of calculation of ALL the pools of one engine (index builders, .wiff conversions) count against one gate: at most `size` run together

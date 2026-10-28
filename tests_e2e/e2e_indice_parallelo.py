@@ -50,7 +50,7 @@ window.R = { runs: [] };
 try {
   await init();
   R.isolated = self.crossOriginIsolated;
-  // the helpers of a builder: one per core beside its own (at most 4) when alone, the free places otherwise, none below 3 cores or without isolation
+  // the helpers of a builder: one per core beside its own (at most 4) when alone, the free places otherwise, never a single one, none without isolation
   R.per = [[2, 1, true], [4, 1, true], [8, 1, true], [16, 1, true], [8, 2, true], [8, 3, true], [8, 1, false]].map(([c, u, i]) => aiutiPer(poolSize(false, c), u, i));
   const name = "par.mzML", bytes = new Uint8Array(await (await fetch(name)).arrayBuffer());
   const root = await navigator.storage.getDirectory();
@@ -128,8 +128,8 @@ try:
         for x in r["runs"]: assert x["sha"] == next(y["sha"] for y in got[True]["runs"] if y["budget"] == x["budget"]), x
     step("without isolation the helpers asked for are not started: same bytes, no error", not_isolated)
     def helper_count():
-        assert got[True]["per"] == [0, 3, 4, 4, 2, 1, 0], got[True]["per"]
-    step("helpers per builder: min(4, cores - 1) when alone, the free places otherwise, none below 3 cores or without isolation", helper_count)
+        assert got[True]["per"] == [0, 3, 4, 4, 2, 0, 0], got[True]["per"]
+    step("helpers per builder: min(4, cores - 1) when alone, the free places otherwise, never a single one, none without isolation", helper_count)
     def same_as_native():
         n = native(src, tmp)
         if n is None: print("   no cargo: native comparison skipped"); return
