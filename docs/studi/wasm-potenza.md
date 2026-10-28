@@ -6,7 +6,7 @@ Studio ARCH WASM-POTENZA (sola lettura del prodotto: misure in una cartella temp
 
 **Risposta**:
 - Già al massimo: SIMD128 (unico build), `compileStreaming` con un solo `WebAssembly.Module` passato ai worker, OPFS con `SyncAccessHandle`, risposte del motore con trasferibili, Web Locks, binaryen 132, zlib-rs.
-- Leve vere, misurate: (1) `opt-level = 3` sui crate caldi (§3c); (2) blocco di lettura OPFS 1 → 4 MiB: in Chromium la lettura passa da ~490 a ~1230 MB/s (§3e); (3) isolamento COOP/COEP dal nostro `sw.js`: funziona nei tre motori con una ricarica di 0,2-0,4 s, e apre `SharedArrayBuffer`: 4 worker su un buffer condiviso 55-103 ms contro 122-842 ms con copie a messaggi (§3b), base per indicizzare un file grande in parallelo.
+- Leve vere, misurate: (1) `opt-level = 3` sui crate caldi: 10-30 % in Firefox e WebKit su indice, centroidi e composizioni (§3c); (2) blocco di lettura OPFS 1 → 4 MiB: in Chromium la lettura passa da ~490 a ~1230 MB/s (§3e); (3) isolamento COOP/COEP dal nostro `sw.js`: funziona nei tre motori con una ricarica di 0,2-0,4 s, e apre `SharedArrayBuffer`: 4 worker su un buffer condiviso 55-103 ms contro 122-842 ms con copie a messaggi (§3b), base per indicizzare un file grande in parallelo.
 - Da lasciare: WebGPU per il calcolo (WGSL non ha `f64`: niente parità con l'app), `DecompressionStream` (17-58× più lento dell'inflate wasm sugli array), relaxed SIMD (risultati diversi fra CPU), thread Rust (`std` precompilata non sicura con più thread), memory64, WasmGC, exception handling, tail call, JSPI, Scheduler API.
 
 ## 2. Come si è misurato
@@ -21,7 +21,7 @@ Colonne: Cr = Chromium 153, Fx = Firefox 157, Wk = WebKit 27.2 (misurati qui). �
 |---|---|---|---|---|---|---|
 | a SIMD128 | `.cargo/config.toml` `+simd128`; `rust-supervisor.js:16` `simdOk` → `error.noSimd` | sì / sì / sì (Safari ≥ 16.4) | inflate 534 → 462 ms Cr, = Fx, 468 → 487 Wk; lettura/indice +5-15 % | tutto il motore (Dati, Flow, HR): resta così, passa da `capacita` | S (in A) | fatto |
 | b thread + SAB | nessun COOP/COEP; pool a messaggi `idxpool.js` | isolamento via `sw.js`: sì / sì / sì; senza: no | 4 worker su SAB 103 / 55 / 66 ms contro copie 265 / 842 / 300 e 1 worker 869 / 462 / 548 | solo l'indice parallelo di un file (N = 1) | M (D) + L (E) | 1 |
-| c flag di build | `release` `z` + LTO + `-Oz`; O3 solo `mzlab-picchi` | — | vedi §3c (O3 sui crate caldi) | — | S | 1 |
+| c flag di build | `release` `z` + LTO + `-Oz`; O3 solo `mzlab-picchi` | — | O3 sui crate caldi: indice HR −10 / −10 / 0 %, composizioni −7 / −23 / −25 %, centroidi −1 / −10 / −30 %; +12 % gzip | — | S (B) | 1 |
 | d caricamento | `compileStreaming` + un `Module` per tutti i worker; `sw.js` rete-poi-cache; moduli a richiesta | sì / sì / sì | motore 4,3 MB (senza `wasm-opt`): compilazione 9 / 41 / 20 ms; da Cache API 13 / 95 / 42 ms | — | — | 3 |
 | e OPFS | `SyncAccessHandle` nei worker, blocco 1 MiB (`mzlab-wasm/src/lib.rs:73`); cartella con `showDirectoryPicker` | sync sì / sì / sì; più lettori `read-only` sì / no / no; `showDirectoryPicker` sì / no / no | lettura Cr 1 MiB 461-521 MB/s, 4 MiB 1191-1273, 8 MiB 1432-1630; Fx 4,7 → 5,7 GB/s; Wk ~6-7 GB/s piatto | cartella puntata (già oggi), nient'altro | S (C) | 1 |
 | f WebGPU | non usato (`mappa3d.js` usa WebGL2) | sì (SwiftShader) / no / no qui; Safari 26 e Chrome sì | istogramma 8 M interi: JS 15 ms, GPU 113 ms (SwiftShader); WGSL senza `f64` | — | — | lasciare |
@@ -39,7 +39,10 @@ Le sonde `WebAssembly.validate` di SIMD128 danno vero nei tre. Sull'inflate (zli
 - `Atomics.waitAsync` c'è nei tre: serve solo con il buffer condiviso (attese fra worker senza bloccare).
 
 ### 3c Flag di build
-OPT_PLACEHOLDER
+- Banco del motore vero (`tools/banco_wasm.py --varianti zsimd,mixsimd,o3simd --chromium --giri 3 --lavoro DIR`, con le varianti `zsimd` = profilo del sito di oggi e `mixsimd` = O3 su `mzlab-core`, `miniz_oxide`, `quick-xml`, `base64`, aggiunte al dizionario `VARIANTI` in memoria; Firefox e WebKit con `run.html` dello stesso banco servito dalla cartella `DIR`). Stesse somme di controllo nelle tre varianti e nei quattro motori.
+- Variante «crate caldi» contro oggi (ms, Cr / Fx / Wk): indice HR 4254 → 3840 / 4962 → 4452 / 4174 → 4219; 200 composizioni 4144 → 3860 / 4071 → 3142 / 4173 → 3114; centroidi 2966 → 2922 / 4696 → 4223 / 4062 → 2823; lettura LR 18,8 → 12,2 / 19 → 27 / 19 → 13 (millisecondi piccoli, rumore). Node 22: indice HR ×1,42, centroidi ×3,3, composizioni ×2,2.
+- O3 su tutto: lettura HR 820 → 731 / 1014 → 854 / 825 → 773, indice HR −8 / −18 / −10 %. Peso del banco: 498 470 B (231 807 gzip) → 586 140 (259 869, +12 % gzip) con i crate caldi, 596 741 con O3 su tutto.
+- Lettura: V8 di Chromium 153 recupera quasi tutto il divario di `z` (guadagno 0-10 %); Firefox e WebKit guadagnano 10-30 % su indice, centroidi e composizioni. Per «massimo in ogni browser» la leva vale. I picchi (`mzlab-picchi`) sono già a O3 nel sito; `-C target-cpu` in wasm non aggiunge nulla oltre alle feature già scelte. Prompt WASM-B (sostituisce DEV-2 di `PROMPT_WASM_POTENZIALE`).
 
 ### 3d Compilazione e caricamento
 `WebAssembly.compileStreaming` del motore senza `wasm-opt` (4 282 274 B) dalla rete locale senza cache: 29,5 / 56 / 105 ms; `WebAssembly.compile` da `ArrayBuffer` 8,8 / 41 / 20 ms; da Cache API 13 / 95 / 42 ms. Il costo è il download, già tenuto da `sw.js`; un `WebAssembly.Module` non si salva più in IndexedDB. `instantiateStreaming` non cambia nulla (compiliamo una volta e istanziamo in ogni worker). Nessuna leva.
@@ -57,7 +60,8 @@ Chromium headless con SwiftShader: adattatore sì, istogramma di 8 M interi gius
 - `postMessage` di 64 MB andata e ritorno: copia 217 / 155 / 132 ms, trasferito 0,4 / 0 / 1 ms. Le risposte del motore (`rust-worker.js:172,417,465`) e i pezzi dei convertitori già trasferiscono; restano copie piccole (`peaks-worker.js` con `Array.from`, `impronta-worker.js:24`): nessuna leva misurabile.
 
 ### 3h WebAssembly recente
-Sonde nei tre motori di prova: SIMD128, relaxed SIMD, tail call, exnref, extended-const, GC, multi-memory, memory64, JSPI e JS String Builtins tutti presenti (WebKit 27.2 è più avanti del Safari stabile, che per `features.json` non ha memory64 né relaxed SIMD). Per noi: relaxed SIMD rompe il determinismo (FMA, min/max dipendono dalla CPU); memory64 non serve (budget sotto 4 GiB, `memoria.md`) e costa controlli in più; WasmGC, exnref e tail call non li genera Rust stabile; JSPI non serve (le letture sono già sincrone nei worker). **Lasciare**, con la sonda in `capacita` solo se un DEV futuro ne ha bisogno.
+Sonde nei tre motori di prova: SIMD128, relaxed SIMD, tail call, exnref, extended-const, GC, multi-memory, memory64, JSPI e JS String Builtins tutti presenti (WebKit 27.2 è più avanti del Safari stabile, che per `features.json` non ha memory64 né relaxed SIMD).
+- Per noi: relaxed SIMD rompe il determinismo (FMA, min/max dipendono dalla CPU); memory64 non serve (budget sotto 4 GiB, `memoria.md`) e costa controlli in più; WasmGC, exnref e tail call non li genera Rust stabile; JSPI non serve (le letture sono già sincrone nei worker). **Lasciare**, con la sonda in `capacita` solo se un DEV futuro ne ha bisogno.
 
 ### 3i Altre API
 - **OffscreenCanvas**: 2D nei worker nei tre; 20 ridisegni di una spezzata da 200 000 punti bloccano il thread principale 121 / 910 / 407 ms, nel worker la pagina resta libera (pausa massima 13 / 56 / 234 ms; in WebKit poco guadagno). Vale solo per i grafici che oggi bloccano: WASM-F misura prima.
@@ -92,7 +96,7 @@ Sono secondi percorsi per browser senza una funzione; con la regola nuova divent
 | prio | prompt | voce | costo | guadagno |
 |---|---|---|---|---|
 | 1 | `a.md` WASM-A capacita + avviso | regola | M | prerequisito di D, E, F |
-| 1 | `b.md` WASM-B O3 sui crate caldi | c | S | §3c |
+| 1 | `b.md` WASM-B O3 sui crate caldi | c | S | 10-30 % in Firefox e WebKit, 0-10 % in Chromium |
 | 1 | `c.md` WASM-C blocco OPFS 4 MiB | e | S | lettura Chromium ×2,4 (−100 ms per 87 MB) |
 | 1 | `d.md` WASM-D isolamento in `sw.js` | b | M | apre `SharedArrayBuffer` nei tre motori |
 | 1 | `e.md` WASM-E indice parallelo su SAB | b | L | fino a ×4 sulla parte divisibile (misura prima) |

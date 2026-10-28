@@ -1,7 +1,4 @@
-# Browser bench of docs/studi/wasm-potenza.md. Unpack: python3 -c "import re,os,sys;t=open(sys.argv[1]).read();[(os.makedirs(os.path.dirname(p) or '.',exist_ok=True),open(p,'w').write(b)) for p,b in re.findall(r'^=== (\S+) ===\n(.*?)(?=^=== |\Z)',t,re.S|re.M)]" banco-browser.txt
-# then: bash prepara.sh /path/to/mzlab ; python3 run.py chromium "" ; python3 run.py chromium "coi=1&only=parallel" ; PAGE=lock.html python3 run.py chromium
-# firefox/webkit: PLAYWRIGHT_BROWSERS_PATH=<dir> python3 -m playwright install firefox webkit (+ install-deps webkit), same commands with firefox|webkit; webkit OPFS needs PERSIST=1
-=== prepara.sh ===
+# Browser bench of docs/studi/wasm-potenza.md. Unpack: python3 -c "import re,os,sys;t=open(sys.argv[1]).read();[(os.makedirs(os.path.dirname(p) or '.',exist_ok=True),open(p,'w').write(b)) for p,b in re.findall(r'^=== prepara.sh ===
 # builds the inflate module three ways (site profile z+SIMD, O3 without and with SIMD), the engine without wasm-bindgen, and the payload
 set -e; R="$1"; cp "$R/rust-toolchain.toml" infl/; F="-C link-arg=--max-memory=4294967296"
 (cd infl && RUSTFLAGS="$F -C target-feature=+simd128" cargo build -q --release --target wasm32-unknown-unknown && RUSTFLAGS="$F -C target-feature=+simd128" cargo build -q --profile o3 --target wasm32-unknown-unknown && RUSTFLAGS="$F" CARGO_TARGET_DIR=target-nosimd cargo build -q --profile o3 --target wasm32-unknown-unknown)
@@ -206,6 +203,8 @@ async function scheduler() {
     sessionStorage.setItem("coiT0", String(performance.timeOrigin + t0)); location.reload(); return;
   }
   if (sessionStorage.getItem("coiT0")) R.coi_reload_ms = Math.round(performance.timeOrigin + now() - +sessionStorage.getItem("coiT0"));
+  { const xs = []; for (let k = 0; k < 5; k++) { const t0 = now(); wasmCaps(); xs.push(now() - t0); } R.wasmCaps_ms = +med(xs).toFixed(2); }
+  { const t0 = now(); const w0 = W(); await ask(w0, { op: "caps" }); w0.terminate(); R.workerCaps_ms = +(now() - t0).toFixed(1); }
   R.wasm = wasmCaps(); await run("js", jsCaps);
   const w = W(); R.worker = await ask(w, { op: "caps" }); w.terminate();
   const only = (q.get("only") || "transfer,parallel,opfs,inflate,offscreen,gpu,compile,scheduler").split(",");
@@ -323,3 +322,20 @@ pub unsafe extern "C" fn inflate_many(src: *const u8, lens: *const u32, n: usize
 // FNV-1a of a buffer, the check value that proves the bytes are the same
 #[no_mangle]
 pub unsafe extern "C" fn fnv(p: *const u8, n: usize) -> u32 { let s = std::slice::from_raw_parts(p, n); let mut h: u32 = 0x811c9dc5; for &b in s { h ^= b as u32; h = h.wrapping_mul(16777619); } h }
+=== ffwk.py ===
+# python3 ffwk.py LAVORO browser variants... : runs tools/banco_wasm run.html in firefox/webkit (same files as banco_wasm.py --lavoro)
+import json, sys, threading, functools, http.server, socketserver, os, shutil
+from playwright.sync_api import sync_playwright
+lav, name, vs = sys.argv[1], sys.argv[2], sys.argv[3:]
+for f in ("suite.js", "run.html"): shutil.copy(f"/home/user/mzlab/tools/banco_wasm/js/{f}", f"{lav}/{f}")
+class H(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".wasm": "application/wasm", ".js": "text/javascript", ".mjs": "text/javascript"}
+    def log_message(self, *a): pass
+srv = socketserver.ThreadingTCPServer(("127.0.0.1", 0), functools.partial(H, directory=lav)); srv.daemon_threads = True
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+with sync_playwright() as p:
+    b = getattr(p, name).launch(**({"executable_path": "/opt/pw-browsers/chromium"} if name == "chromium" else {}))
+    for v in vs:
+        pg = b.new_page(); pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/run.html?v={v}&reps=3")
+        pg.wait_for_function("window.RESULT", timeout=3600000); print(json.dumps({"browser": name, "version": b.version, **pg.evaluate("window.RESULT")}), flush=True); pg.close()
+    b.close()
