@@ -26,7 +26,6 @@
     "../../mzlab/web/dda.js",
     "../../mzlab/web/liste.js",
     "../../mzlab/web/mappa-render.js",
-    "../../mzlab/web/mappa-dati.js",
     "../../mzlab/web/mappa-tabella.js",
     "../../mzlab/web/mappa.js",
     "../../mzlab/web/tabs.js",
