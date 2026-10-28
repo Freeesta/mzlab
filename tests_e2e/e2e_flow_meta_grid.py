@@ -40,10 +40,10 @@ try:
             c = CONDS[i % 6]; t = (i // 6) % 10
             rows.append("\t".join([f"{'TW' if i % 2 else 'MQ'}-{c}-T{t}", "sample", "TW" if i % 2 else "MQ", c, f"{'TW' if i % 2 else 'MQ'}-{c}", str(t)]))
         pg.click(f"{g} [role=gridcell][aria-colindex='3'][data-r='0']")
-        ms = pg.evaluate("""async text => { const sc = document.querySelector('.flx-imp [role=grid]'), dt = new DataTransfer(); dt.setData('text/plain', text);
-            const t0 = performance.now(); sc.dispatchEvent(new ClipboardEvent('paste', {clipboardData: dt, bubbles: true, cancelable: true})); return performance.now() - t0; }""", "\n".join(rows) + "\n")
+        ms, said = pg.evaluate("""async text => { const sc = document.querySelector('.flx-imp [role=grid]'), dt = new DataTransfer(); dt.setData('text/plain', text);
+            const t0 = performance.now(); sc.dispatchEvent(new ClipboardEvent('paste', {clipboardData: dt, bubbles: true, cancelable: true})); return [performance.now() - t0, document.querySelector('.flx-imp').innerText]; }""", "\n".join(rows) + "\n")
         check("paste 240x6 under 300 ms", ms < 300, ms)
-        check("paste says", "cells written" in pg.inner_text(".flx-imp"), pg.inner_text(".flx-imp")[:300])
+        check("paste says", "cells written" in said, said[:300])          # read in the same task as the paste: the check that follows the edit replaces this line with its own summary
         check("cell value", pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text() == "MQ-N2-T0" or pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text() == "TW-N2-T0", pg.locator(f"{g} [data-r='1'][data-c='2']").inner_text())
         # the saved document: its SHA is the canonical one
         attendi(pg, """(async () => { const S = FLOW.current, i = (S.plan.inputs || []).find(x => x.type === 'samples') || S.metaInput; return !!i && /^[0-9a-f]{64}$/.test(i.sha256) && (await CDOC.canonical(S.samples[i.name])).sha256 === i.sha256; })()""")
