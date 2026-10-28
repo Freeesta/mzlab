@@ -101,13 +101,18 @@ window.MAPPA = (() => {
     let t = 0; for (let i = 0; i < m.length; i++) t = norm === "max" ? Math.max(t, m[i]) : t + m[i];
     return t > 0 ? (norm === "max" ? 1 : 1000) / t : 1;
   }
+  // base64 of little-endian float32 (the matrix of api/map) as a Float32Array; the native decoder where the browser has one
+  const b64f32 = (/** @type {string} */ b64) => {
+    const native = /** @type {any} */ (Uint8Array).fromBase64;
+    let u; if (native) u = native.call(Uint8Array, b64); else { const bin = atob(b64); u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); }
+    return new Float32Array(u.buffer, 0, u.length >> 2);
+  };
   // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
   // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
   // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
   const diffOpt = (diff = true) => ({ show: PREF.neg === false ? "up" : "all", thr: PREF.thr ?? (diff ? 0.02 : 0.004), rttol: PREF.rttol ?? 0.1, fix: !!PREF.fix });
   const diffMap = (/** @type {number} */ k, /** @type {number | null} */ ref, /** @type {number} */ lv, /** @type {string} */ norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then((/** @type {Record<string, any>} */ j) => {
-    const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    return new Float32Array(u.buffer);
+    return b64f32(j.data);
   }));
   // regions held by the page: the oldest ones leave the cache of explore.js when they pass a byte budget (smaller on small devices)
   const REG = { map: new Map(), bytes: 0, max: ((/** @type {any} */ (navigator)).deviceMemory || 4) <= 2 ? 48e6 : 96e6, ms: 0 };
@@ -118,9 +123,9 @@ window.MAPPA = (() => {
   const getRegion = (/** @type {number} */ k, /** @type {number} */ lv, /** @type {number[]} */ r, extra = "") => {
     const key = `mzr${k}|${lv}|${r.join("|")}${extra}`, t0 = performance.now();
     return memo(key, () => J(`api/map?k=${k}&level=${lv}&rt0=${r[0]}&rt1=${r[1]}&mz0=${r[2]}&mz1=${r[3]}&nrt=${r[4]}&nmz=${r[5]}${extra}`).then((/** @type {Record<string, any>} */ j) => {
-      const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-      REG.ms = performance.now() - t0; regionKeep(key, u.length);
-      return { ...j, m: new Float32Array(u.buffer) };
+      const m = b64f32(j.data);
+      REG.ms = performance.now() - t0; regionKeep(key, m.byteLength);
+      return { ...j, m };
     }));
   };
   // a fast route is asked soon after the last change, a slow one only after the pause
@@ -408,12 +413,14 @@ window.MAPPA = (() => {
   }
   // Continuous area turned on its side: every point while there is at most one per pixel row (zoomed in), otherwise the highest of each row (min-max decimation: no peak top is lost).
   function profSide(/** @type {CanvasRenderingContext2D} */ g, /** @type {Record<string, any>} */ sp, /** @type {Record<string, any>} */ pr, /** @type {(v: number) => number} */ Y, /** @type {number} */ x0, /** @type {number} */ x1, /** @type {number} */ ymax, /** @type {string} */ col) {
-    const m = sp.pmz, v = sp.py, X = (/** @type {number} */ u) => x0 + (x1 - x0) * u / ymax, rows = new Map();
+    const m = sp.pmz, v = sp.py, X = (/** @type {number} */ u) => x0 + (x1 - x0) * u / ymax;
     // the zeros put back at both sides of a gap of exactly two steps land on the same m/z: one point there
     /** @type {number[]} */ const idx = []; for (let i = pr.i0; i < pr.i1; i++) if (i === pr.i0 || m[i] !== m[i - 1]) idx.push(i);
     const n = idx.length;
-    for (const i of idx) { const r = Math.round(Y(m[i])), u = rows.get(r); if (u === undefined || v[i] > u) rows.set(r, v[i]); }
-    const pts = rows.size >= n ? idx.map(i => [Y(m[i]), v[i]]) : [...rows].sort((p, q) => q[0] - p[0]);
+    // m/z ascends and Y descends, so the pixel rows come in order: one pass keeps the highest value of each row
+    /** @type {number[][]} */ const rows = [];
+    for (const i of idx) { const r = Math.round(Y(m[i])), last = rows[rows.length - 1]; if (last && last[0] === r) { if (v[i] > last[1]) last[1] = v[i]; } else rows.push([r, v[i]]); }
+    const pts = rows.length >= n ? idx.map(i => [Y(m[i]), v[i]]) : rows;
     const trace = () => { g.beginPath(); g.moveTo(X(pts[0][1]), pts[0][0]); for (const q of pts) g.lineTo(X(q[1]), q[0]); };
     trace(); g.lineTo(x0, pts[pts.length - 1][0]); g.lineTo(x0, pts[0][0]); g.closePath();
     const al = g.globalAlpha; g.globalAlpha = al * .25; g.fillStyle = col; g.fill(); g.globalAlpha = al; trace();
@@ -637,7 +644,14 @@ window.MAPPA = (() => {
     if (p.zoomY && (q.mz < a.y0 || q.mz > a.y1)) { const h = a.y1 - a.y0; p.zoomY = clampV(q.mz - h / 2, q.mz + h / 2, a.fullY[0], a.fullY[1]); ch = true; }
     if (ch) draw(p);
   }
-  const madNoise = (/** @type {ArrayLike<number>} */ y) => { const v = Array.from(y).filter(x => x > 0).sort((m, n) => m - n); if (!v.length) return 0; const med = v[v.length >> 1], d = v.map(x => Math.abs(x - med)).sort((m, n) => m - n); return 1.4826 * d[d.length >> 1]; };
+  // median of a sorted array (the mean of the two middle values when the length is even)
+  const medSorted = (/** @type {Float64Array} */ a) => { const h = a.length >> 1; return a.length & 1 ? a[h] : (a[h - 1] + a[h]) / 2; };
+  const madNoise = (/** @type {ArrayLike<number>} */ y) => {
+    const v = new Float64Array(y.length); let n = 0; for (let i = 0; i < y.length; i++) if (y[i] > 0) v[n++] = y[i];
+    if (!n) return 0;
+    const a = v.subarray(0, n).sort(), med = medSorted(a); for (let i = 0; i < n; i++) a[i] = Math.abs(a[i] - med);
+    return 1.4826 * medSorted(a.sort());
+  };
   function peakStep(/** @type {Record<string, any>} */ sp, /** @type {number} */ mz, /** @type {number} */ dir) {
     if (!sp || !sp.mz || !sp.mz.length) return null;
     const thr = 3 * madNoise(sp.y), n = sp.mz.length;
