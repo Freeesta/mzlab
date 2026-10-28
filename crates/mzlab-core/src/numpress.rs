@@ -371,3 +371,5 @@ fn slof_fp(max: f64) -> f64 {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_into;

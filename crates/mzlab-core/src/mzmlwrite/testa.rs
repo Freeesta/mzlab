@@ -111,39 +111,8 @@ pub(crate) fn spectrum_head_into(
         mz_cv_into(s, "MS:1000528", "lowest observed m/z", lo);
         mz_cv_into(s, "MS:1000527", "highest observed m/z", hi);
     }
-    #[cfg(feature = "precursori")]
-    params_into(s, &extra.cv_params);
-    for (k, v) in &extra.params {
-        #[cfg(feature = "sciex")]
-        if let Some(acc) = k.strip_prefix("cv:") {
-            // the accession and the term come from the file: escaped like the other texts
-            s.push_str("<cvParam cvRef=\"MS\" accession=\"");
-            esc_into(s, acc);
-            s.push_str("\" name=\"");
-            esc_into(s, v);
-            s.push_str("\" value=\"\"/>");
-            continue;
-        }
-        s.push_str("<userParam name=\"");
-        esc_into(s, k);
-        s.push_str("\" value=\"");
-        esc_into(s, v);
-        s.push_str("\"/>");
-    }
-    s.push_str("<scanList count=\"1\">");
-    cv_into(s, "MS:1000795", "no combination", "");
-    let _ = write!(s, "<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>", sp.rt);
-    // The filter string is a scan-level term: the CV only allows it under <scan>.
-    if !sp.filter.is_empty() {
-        s.push_str(
-            "<cvParam cvRef=\"MS\" accession=\"MS:1000512\" name=\"filter string\" value=\"",
-        );
-        esc_into(s, &sp.filter);
-        s.push_str("\"/>");
-    }
-    scan_into(s, extra);
-    window_into(s, extra.window);
-    s.push_str("</scan></scanList>");
+    params_into_head(s, extra);
+    scan_list_into(s, sp, extra);
     #[cfg(feature = "precursori")]
     if !extra.precursors.is_empty() {
         precursor_list_into(s, &extra.precursors);
@@ -176,4 +145,46 @@ fn plain_precursor_into(s: &mut String, p: f64, extra: &SpectrumExtra) {
     #[cfg(not(any(feature = "sciex", feature = "precursori")))]
     let _ = extra;
     s.push_str("</activation></precursor></precursorList>");
+}
+
+/// Appends the cvParams the reader gave for the spectrum and its userParams (a `cv:` one is a term of the file: the sciex reader).
+fn params_into_head(s: &mut String, extra: &SpectrumExtra) {
+    #[cfg(feature = "precursori")]
+    params_into(s, &extra.cv_params);
+    for (k, v) in &extra.params {
+        #[cfg(feature = "sciex")]
+        if let Some(acc) = k.strip_prefix("cv:") {
+            // the accession and the term come from the file: escaped like the other texts
+            s.push_str("<cvParam cvRef=\"MS\" accession=\"");
+            esc_into(s, acc);
+            s.push_str("\" name=\"");
+            esc_into(s, v);
+            s.push_str("\" value=\"\"/>");
+            continue;
+        }
+        s.push_str("<userParam name=\"");
+        esc_into(s, k);
+        s.push_str("\" value=\"");
+        esc_into(s, v);
+        s.push_str("\"/>");
+    }
+}
+
+/// Appends the `<scanList>`: start time, filter string, the reader's scan parameters and the scan window.
+fn scan_list_into(s: &mut String, sp: &Spectrum, extra: &SpectrumExtra) {
+    use std::fmt::Write;
+    s.push_str("<scanList count=\"1\">");
+    cv_into(s, "MS:1000795", "no combination", "");
+    let _ = write!(s, "<scan><cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"{}\" unitCvRef=\"UO\" unitAccession=\"UO:0000031\" unitName=\"minute\"/>", sp.rt);
+    // The filter string is a scan-level term: the CV only allows it under <scan>.
+    if !sp.filter.is_empty() {
+        s.push_str(
+            "<cvParam cvRef=\"MS\" accession=\"MS:1000512\" name=\"filter string\" value=\"",
+        );
+        esc_into(s, &sp.filter);
+        s.push_str("\"/>");
+    }
+    scan_into(s, extra);
+    window_into(s, extra.window);
+    s.push_str("</scan></scanList>");
 }

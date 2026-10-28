@@ -27,7 +27,23 @@ pub fn da_nome(nome: &str) -> Option<(&'static str, &'static str)> {
         .map(|a| (a.1, a.2))
 }
 
-/// The name of the first method of the table whose accession `ha` finds in the activation.
-pub fn nome_di(ha: impl Fn(&str) -> bool) -> Option<&'static str> {
-    ATTIVAZIONI.iter().find(|a| ha(a.1)).map(|a| a.0)
+/// The name of the first method of the table that the element (the text of a `<precursor>`) has as `accession="..."`.
+pub fn nome_in(e: &str) -> Option<&'static str> {
+    ATTIVAZIONI
+        .iter()
+        .find(|a| ha_accession(e, a.1))
+        .map(|a| a.0)
+}
+
+/// Whether `e` has `accession="<acc>"` (no allocation: the terms are looked up for every precursor).
+fn ha_accession(e: &str, acc: &str) -> bool {
+    let mut from = 0;
+    while let Some(i) = e[from..].find(acc) {
+        let at = from + i;
+        if e[..at].ends_with("accession=\"") && e[at + acc.len()..].starts_with('"') {
+            return true;
+        }
+        from = at + 1;
+    }
+    false
 }

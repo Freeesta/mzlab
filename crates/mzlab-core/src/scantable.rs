@@ -268,23 +268,10 @@ fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
         selected: get("744"),
         charge: ch.filter(|c| *c != 0.0).map(|c| c as i64),
         refer,
-        act: crate::attivazioni::nome_di(|acc| has_accession(e, acc)),
+        act: crate::attivazioni::nome_in(e),
         ce: get("045"),
         pint: get("042"),
     }
-}
-
-/// Whether the element has `accession="<acc>"` (no allocation: the activation terms are looked up for every precursor).
-fn has_accession(e: &str, acc: &str) -> bool {
-    let mut from = 0;
-    while let Some(i) = e[from..].find(acc) {
-        let at = from + i;
-        if e[..at].ends_with("accession=\"") && e[at + acc.len()..].starts_with('"') {
-            return true;
-        }
-        from = at + 1;
-    }
-    false
 }
 
 /// `_filter_path`: `(\d+\.\d+)@([a-z]+)(\d+\.\d+)` (case-insensitive) in a Thermo filter string.
