@@ -40,7 +40,7 @@ window.MAPPA = (() => {
   // ---------------------------------------------------------------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
   function init(/** @type {Pannello} */ p) {
     if (p._mzInit || !p.cv) return; p._mzInit = true;
-    preload3d();
+    preload3d(); /** @type {any} */ (window).MAPPA_WARM?.();
     const cv = /** @type {HTMLCanvasElement} */ (p.cv), grid = document.createElement("div");
     grid.className = "mzgrid"; cv.before(grid); grid.appendChild(cv);
     const ov = document.createElement("canvas"); ov.className = "mzov"; ov.setAttribute("aria-hidden", "true"); grid.appendChild(ov);

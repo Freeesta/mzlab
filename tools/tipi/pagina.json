@@ -102,6 +102,7 @@
     "../../mzlab/web/mirino.js",
     "../../mzlab/web/mappa-render.js",
     "../../mzlab/web/mappa-dati.js",
+    "../../mzlab/web/mappa-caldo.js",
     "../../mzlab/web/mappa-tabella.js",
     "../../mzlab/web/mappa.js",
     "../../mzlab/web/xlsx.js",

@@ -154,6 +154,27 @@ fn maps(out: File, bytes: u64) {
         "k=0&level=1&rt0=14&rt1=16&mz0=300&mz1=302&nrt=600&nmz=400",
         1,
     );
+    let one = |routes: &mut HashMap<u32, Routes<File>>, q: &str| {
+        map_route("/api/map", &items, routes, &Query::parse(q))
+            .unwrap()
+            .unwrap_or_default()
+    };
+    let (full, bg) = (
+        one(&mut routes, "k=0&level=1"),
+        one(&mut routes, "k=0&level=1&bg=1"),
+    );
+    routes.get_mut(&0).unwrap().set_scan_cells(false);
+    let t = Instant::now();
+    let peaks = one(&mut routes, "k=0&level=1");
+    println!(
+        "map full from the peaks {:>7.1} ms",
+        t.elapsed().as_secs_f64() * 1e3
+    );
+    println!(
+        "same as the cells: full {} bg {}",
+        full == peaks,
+        bg == one(&mut routes, "k=0&level=1&bg=1")
+    );
     drop(routes);
     println!("rss peak {:.0} MB", rss_mb());
 }
