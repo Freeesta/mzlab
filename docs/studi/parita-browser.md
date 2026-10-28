@@ -61,7 +61,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | **Lettura e conversione** | | | | | | |
 | Lettura diretta senza mzML intermedio | sì (8 famiglie) | parziale: motore (3200, Agilent GC/MS, mzML) e Thermo; 6 famiglie via mzML in OPFS | — | da fare (`formati-matrice.md`, punto 6) | L | 2 |
 | `.wiff` → mzML con DAD (`opz.dad`) | sì | no (DAD solo come mappa/spettro) | no | da fare; tetto del modulo da misurare | M | 3 |
-| Conversione a mzML (stesso `mzmlwrite`) | sì (coda, `core − 1` fili) | sì (su richiesta, in sequenza) | **no**: nessun test confronta il `to_mzml` dei moduli `.wasm` con `mzlab-cli convert` (`test_lettori_wasm.py` controlla solo i tetti) | da fare (test) | M | 1 |
+| Conversione a mzML (stesso `mzmlwrite`) | sì (coda, `core − 1` fili) | sì (su richiesta, in sequenza) | parziale: `test_lettori_parita.py` confronta gli SHA-256 dell'mzML indicizzato di `mzlab-cli convert` e del `to_mzml` dei moduli per aperti, agilent, waters, shimadzu, sciex; thermo, bruker, andi senza dataset sintetico pubblico | da fare (test per le 3 famiglie) | S | 1 |
 | mzML con numpress in ingresso | non verificato nell'app (il core lo rifiuta) | sì (modulo `aperti`) | no | da fare (prova) | S | 2 |
 | `mzlab-cli validate` (mzML: struttura, PSI-MS, indice, SHA-1) | sì | no | — | da fare | M | 3 |
 | `mzlab-cli canali` | sì | sì (`api/canali`) | non verificato | da fare (test) | S | 3 |

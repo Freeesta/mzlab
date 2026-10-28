@@ -46,7 +46,7 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     fn avvia(out: W, h: &Header, opz: Opzioni, indexed: bool) -> Result<Self> {
-        let indexed = indexed && cfg!(not(target_family = "wasm"));
+        let indexed = indexed && cfg!(any(not(target_family = "wasm"), feature = "indice"));
         let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
         if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
         s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
@@ -422,9 +422,9 @@ fn scan_xml(extra: &SpectrumExtra) -> String {
         String::new()
     }
 }
-#[cfg(not(target_family = "wasm"))]
+#[cfg(any(not(target_family = "wasm"), feature = "indice"))]
 mod indice;
-#[cfg(target_family = "wasm")]
+#[cfg(all(target_family = "wasm", not(feature = "indice")))]
 #[path = "mzmlwrite/indice_wasm.rs"]
 mod indice;
 #[cfg(test)]
