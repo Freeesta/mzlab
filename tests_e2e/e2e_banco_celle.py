@@ -73,8 +73,8 @@ try:
             assert t and "NL: " in t, t
         step("the spectrum cell has a short header with the NL", head)
         def active():
-            pg.evaluate("E.panels[0].el.scrollIntoView({block:'center'})"); frames(pg, 2)
-            box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + 30, box["y"] + 30); attendi(pg, "!!document.querySelector('.pnl.act')")
+            # locator.click waits for the canvas to stop moving: the product's own smooth scrolls were still running when a measured box was clicked
+            pg.locator(".pnl.chrom canvas").first.click(position={"x": 30, "y": 30}); attendi(pg, "!!document.querySelector('.pnl.act')")
             sh = pg.evaluate("getComputedStyle(document.querySelector('.pnl.act')).boxShadow"); assert sh and sh != "none", sh
         step("the active cell has an outline", active)
     r.close()
