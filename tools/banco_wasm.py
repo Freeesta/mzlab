@@ -37,6 +37,11 @@ VARIANTI = {
     "o3simd_zrs": ("o3", SIMD, "zlibrs"),
     "mix": ("mix", "", ""),
     "mix_zrs": ("mix", "", "zlibrs"),
+    "sol_core": ("sol_core", "", ""),
+    "sol_miniz": ("sol_miniz", "", ""),
+    "sol_xml": ("sol_xml", "", ""),
+    "sol_b64": ("sol_b64", "", ""),
+    "sol_deps": ("sol_deps", "", ""),
 }
 HR_SCANS, HR_PEAKS = 1200, 400   # the 87 MB profile mzML of the study
 # jobs in the order of the table; the label is the row of §3 of the study
