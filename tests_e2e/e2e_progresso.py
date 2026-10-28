@@ -58,7 +58,7 @@ try:
         step("the bar of each row only goes forward and is not 100 before the end of its file", forward)
         def one_bar():
             assert pg.evaluate("document.querySelectorAll('#up .loadbar').length") == 0, "the card has no bar of its own: the rows carry the progress"
-            assert pg.evaluate("document.querySelectorAll('#up .prog').length") == 0, "a second bar is left"
+            assert pg.evaluate("[...document.querySelectorAll('#up .prog')].filter(b => !b.closest('.convprog')).length") == 0, "a second bar is left"
         step("one system: no bar in the card", one_bar)
         def texts():
             tx = pg.evaluate("[...window.__tx]"); head = pg.evaluate("[...window.__head]"); print("   texts:", tx, "heads:", head[:3])

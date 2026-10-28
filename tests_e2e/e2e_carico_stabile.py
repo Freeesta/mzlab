@@ -27,12 +27,13 @@ for _ in range(50):
 
 PROBE = """() => { window.__snap = []; window.__ls = [];
   const box = e => { if (!e) return 0; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top + scrollY), Math.round(b.width), Math.round(b.height)]; };
-  const snap = () => { const t = document.querySelector('#flist .ldtab'); if (!t) return null; const rows = [...t.querySelectorAll('tbody tr')]; if (!rows.some(r => r.classList.contains('cvr'))) return null;
-    const mid = rows[Math.floor(rows.length / 2)];
-    return JSON.stringify({ th: [...t.querySelectorAll('th')].map(box), tab: box(t), tool: box(document.querySelector('#flist .cvtool')), up: box(document.getElementById('up')), n: rows.length,
-      rows: rows.map(r => Math.round(r.getBoundingClientRect().top + scrollY)), bars: rows.map(r => box(r.querySelector('.prog'))),
-      cells: [rows[0], mid].map(r => ['[data-cvtxt]', '[data-cvnum]', '[data-cvwhen]'].map(s => box(r.querySelector(s)))) }); };
-  const loop = () => { const s = snap(); if (s) window.__snap.push([performance.now(), s]); requestAnimationFrame(loop); }; loop();
+  const snap = () => { const t = document.querySelector('#flist .ldtab'); if (!t) return null; const rows = [...t.querySelectorAll('tbody tr')]; if (!rows.length) return null;
+    const run = rows.some(r => r.classList.contains('cvr')), mid = rows[Math.floor(rows.length / 2)];
+    const core = JSON.stringify({ th: [...t.querySelectorAll('th')].map(box), tab: box(t), tool: box(document.querySelector('#flist .cvtool')), up: box(document.getElementById('up')), n: rows.length,
+      rows: rows.map(r => Math.round(r.getBoundingClientRect().top + scrollY)) });
+    const detail = run ? JSON.stringify({ bars: rows.map(r => box(r.querySelector('.prog'))), cells: [rows[0], mid].map(r => ['[data-cvtxt]', '[data-cvnum]', '[data-cvwhen]'].map(s => box(r.querySelector(s)))) }) : '';
+    return [core, detail]; };
+  const loop = () => { const s = snap(); if (s) window.__snap.push([performance.now(), s[0], s[1]]); requestAnimationFrame(loop); }; loop();
   new PerformanceObserver(l => { for (const e of l.getEntries()) window.__ls.push([e.startTime, e.value, e.sources.map(x => [x.node && (x.node.id || x.node.className || x.node.nodeName), x.node && x.node.parentElement && (x.node.parentElement.id || x.node.parentElement.className), JSON.stringify(x.previousRect), JSON.stringify(x.currentRect)])]); }).observe({ type: 'layout-shift', buffered: true }); }"""
 
 try:
@@ -47,7 +48,7 @@ try:
         pg.evaluate(PROBE)
         pg.set_input_files("#pick", FILES)
         attendi(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= {N} && !PROGRESSO.busy()", 240000)
-        pg.wait_for_timeout(600)
+        attendi(pg, "(window.__end = window.__end || performance.now()) && performance.now() - window.__end > 600", 10000)      # some frames after the end
         snaps = pg.evaluate("window.__snap"); ls = pg.evaluate("window.__ls")
         print("   frames with the loading table:", len(snaps))
         def skeleton():
@@ -56,21 +57,23 @@ try:
             first = json.loads(snaps[0][1]); assert first["n"] == N, ("rows at the first frame", first["n"])
         step("all the rows are there from the first frame", skeleton)
         def still():
-            kinds = {}
-            for t, s in snaps: kinds.setdefault(s, []).append(t)
-            if len(kinds) > 1:
-                import json
-                a, b2 = [json.loads(k) for k in list(kinds)[:2]]
-                diff = [k for k in a if a[k] != b2[k]]
-                raise AssertionError(f"{len(kinds)} different layouts, first difference in {diff}: {[a[k] for k in diff][:1]} -> {[b2[k] for k in diff][:1]}")
-        step("columns, headings, bars, status cells and blocks never move until the last file is ready", still)
+            import json
+            for col, label in ((1, "table, headings, blocks, rows"), (2, "bars and status cells")):
+                kinds = {}
+                for fr in snaps:
+                    if fr[col]: kinds.setdefault(fr[col], []).append(fr[0])
+                if len(kinds) > 1:
+                    a, b2 = [json.loads(k) for k in list(kinds)[:2]]
+                    diff = [k for k in a if a[k] != b2[k]]
+                    raise AssertionError(f"{label}: {len(kinds)} different layouts, first difference in {diff}: {[a[k] for k in diff][:1]} -> {[b2[k] for k in diff][:1]}")
+        step("table, columns, headings, bars, status cells, blocks and row order never move, not even when the loading ends", still)
         def shifts():
             start, end = snaps[0][0], snaps[-1][0]; print('   window', round(start), round(end)); tot = sum(e[1] for e in ls if start + 40 <= e[0] <= end)
             for e in ls:
                 if start + 40 <= e[0] <= end: print('   shift', round(e[0]), round(e[1], 4), e[2][:3])
             print("   layout-shift in the loading:", round(tot, 4))
             assert tot < 0.002, tot
-        step("no layout-shift entry in the loading", shifts)
+        step("no layout-shift entry from the first row to the end", shifts)
         def done():
             assert pg.evaluate("document.querySelectorAll('#flist tr.cvr').length") == 0
             assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= N

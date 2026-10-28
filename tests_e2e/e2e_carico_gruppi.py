@@ -1,5 +1,5 @@
-"""Loading table with mixed files: the groups follow the instrument first (low resolution, then high resolution), then the experiment;
-a DDA/IDA file is never listed with the plain MS2 files. A loading that went well leaves no summary box."""
+"""Loading table with mixed files: no group lines, the rows keep the order of arrival; each row carries its group (instrument, experiment) in data-grp and an HR tag;
+a DDA/IDA file is never grouped with the plain MS2 files. A loading that went well leaves no summary box."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pathlib
@@ -19,14 +19,14 @@ try:
         ds.hr_dda(D / "HR_DDA-Exploris-t0.mzML", np.random.default_rng(3)); files.append(D / "HR_DDA-Exploris-t0.mzML")
         stage(pg, files)
         def groups():
-            g = pg.locator("#flist tr.grp").all_inner_texts(); print(g)
-            low = [x for x in g if "HR" not in x]
-            assert any("Full Scan + DDA" in x for x in low) and any("MRM" in x for x in g), g
-            if hr:
-                i = [k for k, x in enumerate(g) if "HR" in x]
-                assert i and i[0] > max(k for k, x in enumerate(g) if "HR" not in x), g
-                assert not any("MS2 (Product Ion)" in x and "HR" in x for x in g), g
-        step("groups: low resolution first, high resolution apart, DDA never under plain MS2", groups)
+            rows = pg.evaluate("[...document.querySelectorAll('#flist tr[data-grp]')].map(r => [r.dataset.grp, r.children[1].childNodes[0].textContent.trim(), r.children[1].innerText])"); print(rows)
+            assert pg.locator("#flist tr.grp").count() == 0, "no group lines: nothing appears or moves"
+            assert [r[1] for r in rows] == [f.name for f in files], rows           # the order of arrival, as the rows had while loading
+            keys = [r[0] for r in rows]
+            assert any(k.startswith("lr:mix:") and "DDA" in k for k in keys) and any(k.startswith("lr:") and "MRM" in k for k in keys), keys
+            assert all(("HR" in r[2]) == r[0].startswith("hr:") for r in rows), rows
+            assert not any(k.startswith("hr:") and "ms2" in k for k in keys), keys
+        step("no group lines: the rows keep their order, the group is a key and the HR tag, DDA never under plain MS2", groups)
         def quiet():
             pg.click("#opbtn"); ready(pg)
             assert pg.locator("#flist .cvsum").count() == 0

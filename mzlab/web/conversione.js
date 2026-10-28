@@ -97,9 +97,12 @@ const CONVROWS = {
   timer: /** @type {any} */ (0),
   liveN: "",
   pq: false,
-  was: false,
+  // order of arrival of the files (name -> number), the order of the rows of the loading table until the user edits a value (thaw)
+  pos: /** @type {Map<string, number>} */ (new Map()),
   dirty: /** @type {Set<any>} */ (new Set()),
   tq: /** @type {any} */ (0),
+  rank(/** @type {string} */ name) { const k = this.pos.get(name); return k == null ? -1 : k; },
+  thaw() { this.pos.clear(); },
   find(/** @type {string} */ name) { return this.rows.find(r => r.name === name); },
   running() { return this.rows.filter(r => !CONV_FINAL.includes(r.state)); },
   // a row; `mem` describes the members without their names (".wiff 1.2 MB + .wiff.scan 57.0 MB", for the diagnosis)
@@ -107,6 +110,7 @@ const CONVROWS = {
     const r = this.find(name), now = Date.now();
     if (r && !CONV_FINAL.includes(r.state)) return;
     if (r) this.rows.splice(this.rows.indexOf(r), 1);
+    if (!this.pos.has(name)) this.pos.set(name, this.pos.size);
     this.rows.push({ name, state, pc: null, sub: null, t0: now, seen: now, tr: [`0.0 s ${state}`], last: "", mem: mem || "" });
     // the card of the conversion has its place from the first row on, so that it does not push the table down when the conversion starts
     if (mem && typeof document !== "undefined") ConvUI.reserve(document.getElementById("up"));
@@ -152,19 +156,7 @@ const CONVROWS = {
     this.pq = true;
     Promise.resolve().then(() => { this.pq = false; this.draw(); });
   },
-  draw() {
-    if (typeof renderFiles === "function") renderFiles();
-    const run = this.running().length > 0;
-    if (this.was && !run) this.settle();
-    this.was = run;
-  },
-  // the end of the batch: the card goes away and the rows take their final order, with one soft fade (the only move of the loading)
-  settle() {
-    if (typeof document === "undefined") return;
-    ConvUI.release();
-    const t = document.querySelector("#flist .ldtab");
-    if (t) { t.classList.add("cv-settle"); setTimeout(() => t.classList.remove("cv-settle"), 250); }
-  },
+  draw() { if (typeof renderFiles === "function") renderFiles(); },
   clock() {
     if (this.timer || typeof setInterval === "undefined") return;
     this.timer = setInterval(() => {
@@ -321,12 +313,13 @@ const CONV_CARD = `<div class="cp-head"><b data-r="file"></b> <button type="butt
       <div class="cp-phase"><span data-r="phase" role="status" aria-live="polite"></span> <span class="cp-beat muted" data-r="beat" role="status" aria-live="polite"></span></div>
       <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-r="bar"><i></i></div><div class="muted sm cp-num" data-r="detail"></div>`;
 const ConvUI = {
-  // the card of the conversion, empty and invisible but with its final size, in `box` from the first file of the batch (CONVROWS.add): group() fills it, release() takes it away at the end
+  // the card of the conversion, empty and invisible but with its final size, in `box` from the first file of the batch (CONVROWS.add): group() fills it and end() leaves it with the result
+  // (it stays, so the page does not move when the loading ends); the next batch takes the place of a finished card with an empty one of the same size
   reserve(/** @type {HTMLElement | null} */ box) {
-    if (!box || box.querySelector(":scope > .convprog")) return;
+    if (!box) return;
+    const old = box.querySelector(":scope > .convprog"); if (old && !old.hasAttribute("data-done")) return; if (old) old.remove();
     const el = document.createElement("div"); el.className = "convprog"; el.setAttribute("data-idle", ""); el.setAttribute("aria-hidden", "true"); el.innerHTML = CONV_CARD; box.appendChild(el);
   },
-  release() { document.querySelectorAll("#up > .convprog").forEach(e => e.remove()); },
   group(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes) {
     /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p), n = sizes.length, ctl = new AbortController(), t0 = Date.now();
     const el = box.querySelector(":scope > .convprog[data-idle]") || document.createElement("div"); el.className = "convprog"; el.setAttribute("role", "group"); el.setAttribute("aria-label", T("conv.aria"));
@@ -387,7 +380,11 @@ const ConvUI = {
         touch("idx" + [...indexed.values()].join(","));
         tick(); show();
       },
-      end() { clearInterval(timer); timer = null; el.remove(); },
+      end() {
+        clearInterval(timer); timer = null; if (!el.isConnected) return;
+        q("file").textContent = ""; cancel.style.visibility = "hidden"; q("beat").innerHTML = ""; q("phase").textContent = T("conv.row.groupDone");
+        q("detail").textContent = CONVROWS.rows.length ? CONVROWS.ready() : ""; setBar(100); el.setAttribute("data-done", "");
+      },
     };
   },
 };

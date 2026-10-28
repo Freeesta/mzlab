@@ -417,7 +417,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .ldtab tr.cvr .prog i,.convprog .prog i{width:100%;transform-origin:left center;transform:scaleX(0)}
 .convprog[data-idle]{visibility:hidden}
 .convprog .cp-head{min-height:34px}.convprog .cp-phase{min-height:1.6em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.convprog [data-r=detail]{min-height:1.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media(prefers-reduced-motion:no-preference){.ldtab tr.cvr .prog i,.convprog .prog i{transition:transform .35s linear}.ldtab.cv-settle{animation:cvsettle .15s ease-out}@keyframes cvsettle{from{opacity:.4}to{opacity:1}}}
+@media(prefers-reduced-motion:no-preference){.ldtab tr.cvr .prog i,.convprog .prog i{transition:transform .35s linear}}
 
 /* m/z calculator: adduct table */
 .cadd{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:6px 0}.cadd[hidden]{display:none}
