@@ -96,21 +96,16 @@ try:
             pg.click(".cadd-more")
             pg.click("#calcpol button[data-p='1']"); pg.wait_for_function("document.querySelector('.cadd-wrap tbody th').textContent.includes('[M+H]')")
         step("ESI+/ESI- switch, remembered, More shows the rare adducts", polarity)
-        def observed():
-            pg.fill("#calcobs", "261.2049"); pg.wait_for_selector(".cadd-wrap tr.hit")
-            assert pg.inner_text(".cadd-wrap tr.hit th").replace("\u2713", "").strip().endswith("[M+Na]+"), pg.inner_text(".cadd-wrap tr.hit")
-            assert "[M+Na]+" in pg.inner_text(".cadd-match") and "Da" in pg.inner_text(".cadd-match")
-            pg.fill("#calcobs", "300.1"); pg.wait_for_function("document.querySelector('.cadd-match.muted')")
-            assert "5" in pg.inner_text(".cadd-match") and pg.locator(".cadd-wrap tr.hit").count() == 0
-            pg.fill("#calctol", "100000"); pg.wait_for_function("!document.querySelector('.cadd-match.muted')")
-            pg.fill("#calctol", "0.5"); pg.fill("#calcobs", "")
-        step("observed m/z: matching row highlighted, none within the tolerance, tolerance field", observed)
-        def without_formula():
-            pg.fill("#calcin", ""); pg.fill("#calcobs", "239.2230"); pg.wait_for_selector(".cadd-wrap tbody tr")
+        def no_observed_field():
+            assert pg.locator("#calcobs").count() == 0 and pg.locator("#calcctl [data-r]").count() == 0, "no observed m/z field and no High/Low switch"
+            assert pg.locator("#calcctl .cq-mode").count() == 1, "the detected resolution is a small text"
+            pg.fill("#calctol", "100000"); frames(pg, 25); pg.fill("#calctol", "5")
+        step("no observed m/z field, no High/Low switch; the tolerance field stays", no_observed_field)
+        def typed_number():
+            pg.fill("#calcin", "239.2230"); pg.wait_for_selector(".cadd-wrap tbody tr")
             rows = pg.evaluate(TXT); assert rows[0][0] == "[M+H]+" and rows[0][-1] == "238.2157", rows[0]
             assert pg.locator(".cxic").count() == 0, "no XIC without a formula"
-            pg.fill("#calcobs", "")
-        step("observed m/z without a formula: M if this adduct", without_formula)
+        step("a typed number is the m/z looked up: M if this adduct", typed_number)
         def diffs():
             pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector("#cadd-diffs")
             assert pg.get_attribute("#cadd-diffs", "open") is None, "closed by default"

@@ -42,8 +42,8 @@
   };
   // the world of the loaded data, shared with the lists panel: true = HR (or no data), false = low resolution
   window.TBL_HR = hrOn;
-  // the Neutral losses panel follows the high / low resolution choice of the calculator block (calc-qui.js); until one is made it is the world of the files
-  const resHr = () => (typeof CALCQUI !== "undefined" ? CALCQUI.isHr() : hrOn());
+  // the Neutral losses panel follows the resolution the calculator block detects (calc-qui.js: the files, or the number typed)
+  const resHr = () => (typeof CALCQUI !== "undefined" ? CALCQUI.isHr(CALCQUI.arg(NL.q, 0)) : hrOn());
   const NL_CHEV = '<svg class="nlch" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6l3 3 3-3"/></svg>';
   // ---------------------------------------------------------------- common neutral losses (MS/MS and in-source)
   // The masses are computed from the formulas (exact mass rounded to the integer); the "typical of" column summarises what the reviews below
@@ -54,7 +54,7 @@
   // state kept while the window is open (the ruler of the spectrum can fill q)
   const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };
   const fl = (/** @type {string} */ f) => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
-  const NL_TOL = (/** @type {number} */ q) => (typeof CALCQUI !== "undefined" ? CALCQUI.diffDa(CALCQUI.opts(), q) : resHr() ? 0.003 : 0.5);
+  const NL_TOL = (/** @type {number} */ q) => (typeof CALCQUI !== "undefined" ? CALCQUI.diffDa(CALCQUI.opts({ kind: "num", text: String(q) }), q) : resHr() ? 0.003 : 0.5);
   const lossDet = (/** @type {Bag} */ l) => {
     const m = massOf(l.f);
     // unit resolution: no exact mass (it would need mass accuracy); HR adds it with four decimals
