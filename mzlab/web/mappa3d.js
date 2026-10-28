@@ -78,14 +78,15 @@ void main() {
 }`;
 const STICK_FS = PRE + `in vec3 vC; out vec4 o; void main() { o = vec4(vC, 1.0); }`;
 const ROW_VS = PRE + `
-uniform sampler2D uH; uniform sampler2D uPal; uniform ivec2 uN; uniform mat4 uVP; uniform vec3 uBox; uniform int uRow, uMode; uniform float uSigned, uLift;
+uniform sampler2D uH; uniform sampler2D uPal; uniform ivec2 uN; uniform mat4 uVP; uniform vec3 uBox; uniform int uRow, uMode, uStep; uniform float uSigned, uLift;
 out vec3 vC;
 void main() {
+  int row = uRow + gl_InstanceID * uStep;      // fall mode: one instance per drawn row (uStep rows apart); a single row is drawn with one instance
   int j = uMode == 0 ? gl_VertexID / 2 : gl_VertexID; bool top = uMode != 0 || (gl_VertexID & 1) == 0;
-  float z = texelFetch(uH, ivec2(j, uRow), 0).r;
+  float z = texelFetch(uH, ivec2(j, row), 0).r;
   float t = uSigned > 0.5 ? 0.5 - 0.5 * clamp(z, -1.0, 1.0) : clamp(z, 0.0, 1.0);
   vC = texture(uPal, vec2(t, 0.5)).rgb;
-  gl_Position = uVP * vec4((float(uRow) / float(uN.x - 1) - 0.5) * uBox.x, (top ? z * uBox.y : 0.0) + uLift, (0.5 - float(j) / float(uN.y - 1)) * uBox.z, 1.0);
+  gl_Position = uVP * vec4((float(row) / float(uN.x - 1) - 0.5) * uBox.x, (top ? z * uBox.y : 0.0) + uLift, (0.5 - float(j) / float(uN.y - 1)) * uBox.z, 1.0);
 }`;
 const ROW_FS = PRE + `uniform int uMode; uniform vec3 uBg; uniform vec4 uFlat; in vec3 vC; out vec4 o;
 void main() { if (uFlat.a > 0.0) o = uFlat; else if (uMode == 0) o = vec4(mix(uBg, vC, 0.16), 1.0); else o = vec4(vC, 1.0); }`;
@@ -320,10 +321,10 @@ export function open(p, opener) {
   const scaleT = (/** @type {number} */ r) => P.hs === "lin" ? r : P.hs === "log" ? Math.log10(1 + 1000 * r) / 3 : Math.sqrt(r);
   const thr = () => (prefs.thr ?? (V.signed ? 0.02 : 0.004));
   function process() {
-    const g = V.g, raw = V.raw, n = raw.length, nz = [];
-    for (let i = 0; i < n; i += Math.max(1, n >> 17)) { const x = Math.abs(raw[i]); if (x > 0) nz.push(x); }
-    nz.sort((u, v) => u - v);
-    V.refv = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;
+    const g = V.g, raw = V.raw, n = raw.length, st = Math.max(1, n >> 17), nz = new Float32Array(Math.ceil(n / st));   // raw is a Float32Array: the sample sorts natively, the same values in the same order
+    let m = 0; for (let i = 0; i < n; i += st) { const x = Math.abs(raw[i]); if (x > 0) nz[m++] = x; }
+    nz.subarray(0, m).sort();
+    V.refv = m ? nz[Math.min(m - 1, Math.floor(m * 0.995))] : 1;
     const Z = new Float32Array(n), th = thr();
     for (let i = 0; i < n; i++) { const x = raw[i], r = Math.min(1, Math.abs(x) / V.refv); Z[i] = r < th ? 0 : (x < 0 ? -1 : 1) * scaleT(r); }
     V.Z = P.sig > 0.05 ? blur(Z, g.nrt, g.nmz, P.sig) : Z;
@@ -336,9 +337,10 @@ export function open(p, opener) {
   function upload() {
     const g = V.g, F = { internal: gl.R32F, format: gl.RED };
     mkTex("h", g.nmz, g.nrt, F, gl.FLOAT, V.Z, gl.NEAREST);
-    mkTex("pal", 256, 1, { internal: gl.RGBA8, format: gl.RGBA }, gl.UNSIGNED_BYTE, new Uint8Array(palData().buffer.slice(0)), gl.LINEAR);
+    // the palette changes with the palette choice and with a difference map only: the Z of a new threshold leaves it as it is
+    const tab = palData(); if (V.palTab !== tab) { V.palTab = tab; mkTex("pal", 256, 1, { internal: gl.RGBA8, format: gl.RGBA }, gl.UNSIGNED_BYTE, new Uint8Array(tab.buffer.slice(0)), gl.LINEAR); }
     // the colour image of the floor: j upwards = m/z upwards
-    const px4 = new Uint8Array(g.nrt * g.nmz * 4), tab = palData();
+    const px4 = new Uint8Array(g.nrt * g.nmz * 4);
     for (let i = 0; i < g.nrt; i++) for (let j = 0; j < g.nmz; j++) {
       const z = V.Z[i * g.nmz + j], q = V.signed ? Math.round(127.5 - 127.5 * clamp(z, -1, 1)) : Math.round(clamp(z, 0, 1) * 255), o = (j * g.nrt + i) * 4;
       px4[o] = tab[q * 4]; px4[o + 1] = tab[q * 4 + 1]; px4[o + 2] = tab[q * 4 + 2]; px4[o + 3] = 255;
@@ -417,9 +419,10 @@ export function open(p, opener) {
       gl.uniform3f(s.u.uBg, bg[0], bg[1], bg[2]); gl.uniform4f(s.u.uFlat, 0, 0, 0, 0); bindT(s.u.uH, "h", 0); bindT(s.u.uPal, "pal", 1);
       const step = Math.max(1, Math.ceil(g.nrt / 140));
       gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 1);
-      for (let i = 0; i < g.nrt; i += step) { gl.uniform1i(s.u.uRow, i); gl.uniform1i(s.u.uMode, 0); gl.uniform1f(s.u.uLift, 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, g.nmz * 2); }
+      const rows = Math.ceil(g.nrt / step); gl.uniform1i(s.u.uRow, 0); gl.uniform1i(s.u.uStep, step);
+      gl.uniform1i(s.u.uMode, 0); gl.uniform1f(s.u.uLift, 0); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, g.nmz * 2, rows);
       gl.disable(gl.POLYGON_OFFSET_FILL);
-      for (let i = 0; i < g.nrt; i += step) { gl.uniform1i(s.u.uRow, i); gl.uniform1i(s.u.uMode, 1); gl.uniform1f(s.u.uLift, 0.0006); gl.drawArrays(gl.LINE_STRIP, 0, g.nmz); }
+      gl.uniform1i(s.u.uMode, 1); gl.uniform1f(s.u.uLift, 0.0006); gl.drawArraysInstanced(gl.LINE_STRIP, 0, g.nmz, rows); gl.uniform1i(s.u.uStep, 0);
     } else if (cont && nCont) {
       const s = PR.line; gl.useProgram(s.p); gl.uniformMatrix4fv(s.u.uVP, false, VP); gl.uniform1f(s.u.uA, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, bufs.cont); const lp = gl.getAttribLocation(s.p, "aP"), lc = gl.getAttribLocation(s.p, "aC");
@@ -543,10 +546,12 @@ export function open(p, opener) {
     // long press = the menu
     if (e.pointerType !== "mouse" && ptrs.size === 1) { const at = { x: e.offsetX, y: e.offsetY, cx: e.clientX, cy: e.clientY }; lpT = setTimeout(() => { if (ptrs.size === 1 && moved < 8) { lpDone = true; openMenu({ ...at, lp: true }); } }, 550); }
   });
+  /** @type {number[] | null} */ let hov = null; let hovRaf = 0;
+  function hoverPick() { hovRaf = 0; if (!alive || V.lock || !hov) return; const h = pick(hov[0], hov[1]); if (h) setCur(h.i, h.j); }
   glc.addEventListener("pointermove", (/** @type {PointerEvent} */ e) => {
     const q = ptrs.get(e.pointerId);
     // locked: the cursor stays
-    if (!q) { if (V.lock) return; const h = pick(e.offsetX, e.offsetY); if (h) setCur(h.i, h.j); return; }
+    if (!q) { if (V.lock) return; hov = [e.offsetX, e.offsetY]; hovRaf ||= FRAME.next(hoverPick); return; }   // the ray is cast once per frame, at the last position
     const dx = e.offsetX - q.x, dy = e.offsetY - q.y; q.x = e.offsetX; q.y = e.offsetY; moved += Math.abs(dx) + Math.abs(dy);
     if (ptrs.size === 2) {                                  // two fingers: move, and pinch = zoom
       const [A, B] = [...ptrs.values()], dist = Math.hypot(A.x - B.x, A.y - B.y); if (lastPinch) V.cam.d = clamp(V.cam.d * lastPinch / dist, 0.2, 12); lastPinch = dist; panBy(dx / 2, dy / 2); V.dirty = true; return;
@@ -679,7 +684,7 @@ export function open(p, opener) {
   let offRo = () => {};
   function close() { if (dlg.open) dlg.close(); }
   dlg.addEventListener("close", () => {
-    alive = false; stop(); FRAME.cancel(raf); offRo(); const ext = gl.getExtension("WEBGL_lose_context"); if (ext) ext.loseContext(); { const c = ctxEl(); if (c && dlg.contains(c)) document.body.appendChild(c); } dlg.remove();
+    alive = false; stop(); FRAME.cancel(raf); FRAME.cancel(hovRaf); offRo(); const ext = gl.getExtension("WEBGL_lose_context"); if (ext) ext.loseContext(); { const c = ctxEl(); if (c && dlg.contains(c)) document.body.appendChild(c); } dlg.remove();
     try { draw(p); } catch (e) { /* the panel is gone */ }
     if (opener && opener.isConnected) opener.focus();
   });

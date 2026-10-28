@@ -97,8 +97,13 @@ const CONVROWS = {
   onCancel: null,
   timer: /** @type {any} */ (0),
   liveN: "",
+  pq: false,
+  // order of arrival of the files (name -> number), the order of the rows of the loading table until the user edits a value (thaw)
+  pos: /** @type {Map<string, number>} */ (new Map()),
   dirty: /** @type {Set<any>} */ (new Set()),
   tq: /** @type {any} */ (0),
+  rank(/** @type {string} */ name) { const k = this.pos.get(name); return k == null ? -1 : k; },
+  thaw() { this.pos.clear(); },
   find(/** @type {string} */ name) { return this.rows.find(r => r.name === name); },
   running() { return this.rows.filter(r => !CONV_FINAL.includes(r.state)); },
   // a row; `mem` describes the members without their names (".wiff 1.2 MB + .wiff.scan 57.0 MB", for the diagnosis)
@@ -106,7 +111,11 @@ const CONVROWS = {
     const r = this.find(name), now = Date.now();
     if (r && !CONV_FINAL.includes(r.state)) return;
     if (r) this.rows.splice(this.rows.indexOf(r), 1);
-    this.rows.push({ name, state, pc: null, sub: null, t0: now, seen: now, tr: [`0.0 s ${state}`], last: "", mem: mem || "" }); this.paint(); this.clock();
+    if (!this.pos.has(name)) this.pos.set(name, this.pos.size);
+    this.rows.push({ name, state, pc: null, sub: null, t0: now, seen: now, tr: [`0.0 s ${state}`], last: "", mem: mem || "" });
+    // the card of the conversion has its place from the first row on, so that it does not push the table down when the conversion starts
+    if (mem && typeof document !== "undefined") ConvUI.reserve(document.getElementById("up"));
+    this.paint(); this.clock();
   },
   // `det` = bytes { done, total } of a download or a copy; `sub` = scans { done, total }. A row of a loading (`base`) never goes back
   set(/** @type {string} */ name, /** @type {string} */ state, /** @type {number | null | undefined} */ pc, /** @type {{ done: number, total: number } | null | undefined} */ sub, /** @type {{ done: number, total: number } | null | undefined} */ det) {
@@ -115,7 +124,7 @@ const CONVROWS = {
     const was = r.state, was_pc = r.pc, was_sub = r.sub ? r.sub.done : -1, now = Date.now();
     r.state = state; r.pc = pc == null ? null : pc; if (sub !== undefined) r.sub = sub && sub.total ? sub : null; if (det !== undefined) r.det = det && det.total ? det : null;
     if (was !== state || was_pc !== r.pc || (r.sub ? r.sub.done : -1) !== was_sub || det) r.seen = now;
-    if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.paint(); } else if (r.seen === now) this.queue(r);
+    if (was !== state) { (r.tr = r.tr || []).push(`${((now - (r.t0 || now)) / 1000).toFixed(1)} s ${state}${r.pc == null ? "" : " " + r.pc + "%"}`); this.fill(r); } else if (r.seen === now) this.queue(r);
   },
   // at most one repaint of the bars every 100 ms: the first change goes at once, the others of the window together at its end
   queue(/** @type {ConvRow} */ r) {
@@ -137,18 +146,24 @@ const CONVROWS = {
     (r.tr = r.tr || []).push(`${r.secs.toFixed(1)} s ${state}`); r.state = state; r.seen = now;
     if (state === "done") CONVQ.add(name);
     if (r.diag) r.diag.dettagli.trace = this.trace([r]);
-    this.paint();
+    if (this.running().length) this.fill(r); else this.paint();
   },
   drop(/** @type {string} */ name) { const i = this.rows.findIndex(r => r.name === name); if (i >= 0) { this.rows.splice(i, 1); this.paint(); } },
   // the rows that ended go away (a new loading, «Close»)
   clearDone() { const n = this.rows.length; this.rows = this.running(); if (n !== this.rows.length) this.paint(); },
-  paint() { if (typeof renderFiles === "function") renderFiles(); },
+  // the table is drawn again at most once per task, however many rows change together (a whole batch is added in one loop); the rows themselves change in place (fill)
+  paint() {
+    if (this.pq) return;
+    this.pq = true;
+    Promise.resolve().then(() => { this.pq = false; this.draw(); });
+  },
+  draw() { if (typeof renderFiles === "function") renderFiles(); },
   clock() {
     if (this.timer || typeof setInterval === "undefined") return;
     this.timer = setInterval(() => {
       const run = this.running();
       for (const r of run) this.fill(r);
-      const h = typeof document !== "undefined" && document.querySelector("#flist [data-cvhead]"); if (h && run.length) { const t = this.ready(); if (h.textContent !== t) h.textContent = t; }
+      if (run.length) this.head();
       if (!run.length) { clearInterval(this.timer); this.timer = 0; }
     }, 1000);
   },
@@ -168,13 +183,37 @@ const CONVROWS = {
     return q >= CONV_QUIET && r.state !== "wait" ? `${t} · ${I18N.t("conv.row.quiet", { s: Math.floor(q / 1000) })}` : t;
   },
   cell(/** @type {string} */ name) { const q = document.getElementById("flist"); return q ? q.querySelector(`td[data-cvrow="${CSS.escape(name)}"]`) : null; },
+  // the short state of a row, always the same size: a word for the phase, the percent (or the scans of a finished file) and the time. The long text (MB, scans, «no news for…») is the title and the aria-label
+  short(/** @type {ConvRow} */ r) {
+    const T = (/** @type {string} */ k) => I18N.t(k);
+    if (r.state === "done") return { txt: T(r.cached ? "conv.st.cached" : "conv.st.done"), num: I18N.fix(r.scans || 0, 0) };
+    if (r.state === "fail") return { txt: r.msg || T("conv.st.fail"), num: "" };
+    if (r.state === "cancel") return { txt: T("conv.st.cancel"), num: "" };
+    return { txt: T(convStKey(r.state)), num: r.pc == null ? "" : r.pc + "%" };
+  },
+  // the time of a row: the clock while it runs, the total once it is done
+  clockOf(/** @type {ConvRow} */ r) { return r.state === "done" ? convElapsed(1000 * (r.secs || 0)) : this.when(r).split(" · ")[0]; },
   fill(/** @type {ConvRow} */ r) {
     const c = this.cell(r.name); if (!c) return;
-    const lab = this.label(r), bar = c.querySelector(".prog"), txt = c.querySelector("[data-cvtxt]"), w = c.querySelector("[data-cvwhen]");
-    if (txt && txt.textContent !== lab) txt.textContent = lab;
-    if (w) { const t = this.when(r); if (w.textContent !== t) w.textContent = t; }
-    if (bar) { bar.setAttribute("aria-label", r.name + ": " + lab); if (r.pc == null) bar.removeAttribute("aria-valuenow"); else bar.setAttribute("aria-valuenow", String(r.pc)); bar.querySelector("i").style.width = (r.pc || 0) + "%"; }
+    const lab = this.label(r), sh = this.short(r), bar = c.querySelector(".prog"), txt = c.querySelector("[data-cvtxt]"), num = c.querySelector("[data-cvnum]"), w = c.querySelector("[data-cvwhen]");
+    const pc = r.state === "done" ? 100 : r.pc, q = this.when(r), tip = q && q.includes(" · ") ? lab + " · " + q.split(" · ")[1] : lab;
+    if (txt && txt.textContent !== sh.txt) txt.textContent = sh.txt;
+    if (num && num.textContent !== sh.num) num.textContent = sh.num;
+    if (w) { const t = this.clockOf(r); if (w.textContent !== t) w.textContent = t; }
+    if (c.title !== tip) c.title = tip;
+    if (c.parentElement) { c.parentElement.setAttribute("aria-busy", String(!CONV_FINAL.includes(r.state))); c.parentElement.dataset.st = r.state; }
+    if (bar) { bar.setAttribute("aria-label", r.name + ": " + lab); if (pc == null) bar.removeAttribute("aria-valuenow"); else bar.setAttribute("aria-valuenow", String(pc)); bar.querySelector("i").style.transform = `scaleX(${(pc || 0) / 100})`; }
+    this.head();
   },
+  // the group line (count and clock) and the buttons that appear while the loading goes on: they only change what they show, the space is always there
+  head() {
+    if (typeof document === "undefined") return;
+    const h = document.querySelector("#flist [data-cvhead]"); if (h && this.running().length) { const t = this.ready(); if (h.textContent !== t) h.textContent = t; }
+    const st = this.toolState();
+    for (const k of Object.keys(st)) { const e = document.querySelector(`#flist [data-cvtool=${k}]`); if (e) this.show(e, st[k]); }
+  },
+  show(/** @type {Element} */ e, /** @type {boolean} */ on) { if (on) { e.removeAttribute("data-off"); e.removeAttribute("inert"); } else { e.setAttribute("data-off", ""); e.setAttribute("inert", ""); } },
+  toolState() { return /** @type {Record<string, boolean>} */ ({ adv: CONV.native().length > 0, save: CONVQ.ready(), dl: !CONVQ.ready() && CONV.size > 1 }); },
   // the trace of the loading for the diagnosis: no file names (the rows are numbered), the members by extension and size, the phases with their times, the last message of the worker
   trace(/** @type {ConvRow[]} */ rows) {
     const nav = typeof navigator !== "undefined" ? /** @type {any} */ (navigator) : {}, now = Date.now();
@@ -199,17 +238,28 @@ const CONVROWS = {
     }
     return I18N.t("conv.row.ready", { done, n, time: convElapsed(Date.now() - t0) });
   },
-  // the rows running, for the table of the list (a heading row with the files ended of all, «Cancel» and «Details», then one row per file), `ncol` = the columns of the table
-  html(/** @type {number} */ ncol) {
-    const run = this.running(); if (!run.length) return "";
-    /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p), n = this.rows.length;
-    const act = this.onCancel ? ` <button type="button" class="sec sm" data-cvact="cancel" title="${T("load.cancel.title")}">${T("conv.cancel")}</button>` : "";
-    const det = `<div class="diag" data-cvdiag><button type="button" class="sec sm" data-a="diagdet" aria-expanded="false">${T("diag.details")}</button><div class="diagbox" hidden><pre data-cvtrace></pre><button type="button" class="sec" data-a="diagcopy">${T("diag.copy")}</button></div></div>`;
-    const head = `<tr class="grp"><td colspan="${ncol}">${T("conv.row.group")} <span class="muted cp-num" data-cvhead>${this.ready()}</span>${act}${det}</td></tr>`;
-    return head + this.rows.filter(r => r.state !== "fail" && r.state !== "cancel").map(r => {
-      const end = r.state === "done", lab = this.label(r), pc = end ? 100 : r.pc, now = pc == null ? "" : ` aria-valuenow="${pc}"`;
-      return `<tr aria-busy="${!end}"><td></td><td>${esc(r.name)}</td><td colspan="${ncol - 2}" data-cvrow="${esc(r.name)}"><div class="muted sm"><span data-cvtxt>${esc(lab)}</span> <span class="cp-num" data-cvwhen>${esc(this.when(r))}</span></div>` +
-        `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="width:${pc || 0}%"></i></div></td></tr>`;
+  // the bar over the table: the line of the group (count, clock, «Cancel», «Details»), the buttons of the converted files and the options. It is always there while a table is, so nothing
+  // appears or goes away at the phases; what is not needed is invisible (data-off) and cannot be reached
+  tools() {
+    /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p);
+    const run = this.running().length > 0, st = this.toolState(), off = (/** @type {boolean} */ on) => (on ? "" : " data-off inert");
+    const det = `<span class="diag" data-cvdiag><button type="button" class="sec sm" data-a="diagdet" aria-expanded="false">${T("diag.details")}</button><span class="diagbox" hidden><pre data-cvtrace></pre><button type="button" class="sec" data-a="diagcopy">${T("diag.copy")}</button></span></span>`;
+    return `<div class="cvtool"><div class="cvl"${off(run)} data-cvtool="grp"><b>${T("conv.row.group")}</b> <span class="muted cp-num" data-cvhead>${run ? this.ready() : ""}</span> <button type="button" class="sec sm" data-cvact="cancel" title="${T("load.cancel.title")}">${T("conv.cancel")}</button>${det}</div>` +
+      `<div class="cvr2"><details class="muted sm" id="advconv" data-cvtool="adv"${off(st.adv)}><summary>${T("conv.adv")}</summary><label><input type="checkbox" id="npress" ${CONV.numpress ? "checked" : ""}> ${T("conv.np")}</label><button type="button" class="hq" data-help="numpress" aria-label="${T("help.numpress.title")}" title="${T("help.numpress.title")}">?</button></details>` +
+      `<button type="button" class="sec sm" id="saveall" data-cvtool="save"${off(st.save)} title="${T("conv.q.saveTitle")}">${T("conv.q.save")}</button><button type="button" class="sec sm" id="dlall" data-cvtool="dl"${off(st.dl)} title="${T("conv.dl.title")}">${T("conv.dlall")}</button></div></div>`;
+  },
+  // the table of the loading: the columns have a fixed width from the first row, so no phase moves them; `head` = the row of headings, `body` = the rows
+  table(/** @type {string} */ head, /** @type {string} */ body) {
+    return `<div class="ldwrap"><table class="ldtab"><colgroup><col class="c-use"><col><col class="c-exp"><col class="c-typ"><col class="c-tim"><col class="c-con"><col class="c-siz"><col class="c-act"></colgroup><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+  },
+  // the rows of the files in the batch, one for each file from the first moment: the same eight cells as a loaded file (the state takes the cells of experiment to concentration)
+  html() {
+    if (!this.running().length) return "";
+    const listed = typeof ST !== "undefined" && ST.files ? new Set(ST.files.map((/** @type {{ name: string }} */ f) => f.name)) : new Set();
+    return this.rows.filter(r => r.state === "done" || r.state !== "fail" && r.state !== "cancel" || !listed.has(r.name)).map(r => {
+      const end = r.state === "done", lab = this.label(r), sh = this.short(r), pc = end ? 100 : r.pc, now = pc == null ? "" : ` aria-valuenow="${pc}"`;
+      return `<tr class="cvr" aria-busy="${!CONV_FINAL.includes(r.state)}" data-st="${r.state}"><td></td><td>${esc(r.name)}</td><td colspan="4" data-cvrow="${esc(r.name)}" title="${esc(lab)}"><div class="cvst sm"><span data-cvtxt>${esc(sh.txt)}</span><span class="cp-num" data-cvnum>${esc(sh.num)}</span><span class="cp-num" data-cvwhen>${esc(this.clockOf(r))}</span></div>` +
+        `<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100"${now} aria-label="${esc(r.name + ": " + lab)}"><i style="transform:scaleX(${(pc || 0) / 100})"></i></div></td><td></td><td></td></tr>`;
     }).join("");
   },
   // the count of the ended rows by kind of file (full scan, MS2, MRM, infusion, mixed, other), the failed, cancelled and truncated ones, and the time from the first start to the last end
@@ -226,6 +276,7 @@ const CONVROWS = {
   },
   // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a file with scans missing; a loading that went well shows nothing; «Close» once nothing runs
   summary() {
+    if (this.running().length) return "";
     const all = this.rows.filter(r => CONV_FINAL.includes(r.state)), end = all.filter(r => r.state !== "done" || r.missing); if (!end.length) return "";
     /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p), run = this.running().length;
     const li = end.map(r => {
@@ -259,19 +310,27 @@ const CONVROWS = {
 const CONV_W = 0.75;         // share of the bar taken by the conversion; the rest is the indexing
 const FIG = "\u2007";        // figure space: as wide as a digit
 const convPad = (/** @type {string | number | null} */ s, /** @type {number} */ w) => String(s).padStart(w, FIG);
-const ConvUI = {
-  group(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes) {
-    /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p), n = sizes.length, ctl = new AbortController(), t0 = Date.now();
-    const el = document.createElement("div"); el.className = "convprog"; el.setAttribute("role", "group"); el.setAttribute("aria-label", T("conv.aria"));
-    el.innerHTML = `<div class="cp-head"><b data-r="file"></b> <button type="button" class="sec sm" data-r="cancel"></button></div>
+const CONV_CARD = `<div class="cp-head"><b data-r="file"></b> <button type="button" class="sec sm" data-r="cancel"></button></div>
       <div class="cp-phase"><span data-r="phase" role="status" aria-live="polite"></span> <span class="cp-beat muted" data-r="beat" role="status" aria-live="polite"></span></div>
       <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-r="bar"><i></i></div><div class="muted sm cp-num" data-r="detail"></div>`;
+const ConvUI = {
+  // the card of the conversion, empty and invisible but with its final size, in `box` from the first file of the batch (CONVROWS.add): group() fills it and end() leaves it with the result
+  // (it stays, so the page does not move when the loading ends); the next batch takes the place of a finished card with an empty one of the same size
+  reserve(/** @type {HTMLElement | null} */ box) {
+    if (!box) return;
+    const old = box.querySelector(":scope > .convprog"); if (old && !old.hasAttribute("data-done")) return; if (old) old.remove();
+    const el = document.createElement("div"); el.className = "convprog"; el.setAttribute("data-idle", ""); el.setAttribute("aria-hidden", "true"); el.innerHTML = CONV_CARD; box.appendChild(el);
+  },
+  group(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes) {
+    /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p), n = sizes.length, ctl = new AbortController(), t0 = Date.now();
+    const el = box.querySelector(":scope > .convprog[data-idle]") || document.createElement("div"); el.className = "convprog"; el.setAttribute("role", "group"); el.setAttribute("aria-label", T("conv.aria"));
+    el.removeAttribute("data-idle"); el.removeAttribute("aria-hidden"); el.innerHTML = CONV_CARD;
     const q = (/** @type {string} */ s) => el.querySelector(`[data-r=${s}]`);
     const cancel = q("cancel"); cancel.textContent = T("conv.cancel"); cancel.title = cancel.ariaLabel = T("conv.cancel.title");
     cancel.onclick = () => { cancel.disabled = true; q("phase").textContent = T("conv.cancelling"); ctl.abort(); };
-    box.appendChild(el);
+    if (!el.isConnected) box.appendChild(el);
     const bar = q("bar"), fill = bar.querySelector("i");
-    const setBar = (/** @type {number | null | undefined} */ pc) => { if (pc == null) { bar.removeAttribute("aria-valuenow"); fill.style.width = "0%"; } else { bar.setAttribute("aria-valuenow", String(pc)); fill.style.width = pc + "%"; } };
+    const setBar = (/** @type {number | null | undefined} */ pc) => { if (pc == null) { bar.removeAttribute("aria-valuenow"); fill.style.transform = "scaleX(0)"; } else { bar.setAttribute("aria-valuenow", String(pc)); fill.style.transform = `scaleX(${pc / 100})`; } };
     let beatStage = "", cur = -1, /** @type {Bag | null} */ last = null, doneFrac = 0, stage = "converting", beat = "", changed = t0, key = "", phaseKey = "", indexed = new Map(), nIdx = 0, /** @type {any} */ timer = null, maxPc = 0;
     const idxMean = () => nIdx ? [...indexed.values()].reduce((a, b) => a + b, 0) / (100 * nIdx) : 0;
     const show = () => {
@@ -283,7 +342,8 @@ const ConvUI = {
       if (lab !== phaseKey && !cancel.disabled) { phaseKey = lab; q("phase").textContent = lab; }
       bar.setAttribute("aria-label", lab); setBar(pc);
       let d;
-      if (stage === "indexing") d = T("conv.detail.indexed", { done: [...indexed.values()].filter(v => v >= 100).length, total: nIdx, elapsed });
+      // one count and one clock for the whole loading: the same line as the group over the table
+      if (stage === "indexing") d = CONVROWS.rows.length ? CONVROWS.ready() : T("conv.detail.indexed", { done: [...indexed.values()].filter(v => v >= 100).length, total: nIdx, elapsed });
       else if (last && last.copied != null) d = T("conv.detail.handover", { done: convMB(last.copied), total: convMB(last.size), elapsed });
       else if (last && last.scansTotal) {
         const w = String(Math.round(last.scansTotal)).length, fp = convPercent(last);
@@ -317,11 +377,15 @@ const ConvUI = {
         if (!indexed.has(name)) nIdx++;
         // never backwards: the builder reads the file more than once
         indexed.set(name, Math.max(indexed.get(name) || 0, pc));
-        if (stage !== "indexing") { stage = "indexing"; q("file").textContent = ""; cancel.hidden = true; }
+        if (stage !== "indexing") { stage = "indexing"; q("file").textContent = ""; cancel.style.visibility = "hidden"; }
         touch("idx" + [...indexed.values()].join(","));
         tick(); show();
       },
-      end() { clearInterval(timer); timer = null; el.remove(); },
+      end() {
+        clearInterval(timer); timer = null; if (!el.isConnected) return;
+        q("file").textContent = ""; cancel.style.visibility = "hidden"; q("beat").innerHTML = ""; q("phase").textContent = T("conv.row.groupDone");
+        q("detail").textContent = CONVROWS.rows.length ? CONVROWS.ready() : ""; setBar(100); el.setAttribute("data-done", "");
+      },
     };
   },
 };
@@ -373,6 +437,8 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
   }
   return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
 }
+// the short word of the state of a row (CONVROWS.short): the phase without numbers
+function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
 // the text key of the state of a row of the files being converted (CONVROWS)
 function convRowKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.row.open", get: "conv.row.get", load: "conv.row.loadn", idx: "conv.row.idx", wait: "conv.row.wait", run: "conv.row.run", conv: "conv.row.conv", index: "conv.row.index", nread: "conv.row.nread", nopen: "conv.row.nopen", nscan: "conv.row.nscan", nchrom: "conv.row.nchrom", cancel: "conv.row.cancel" })[state] || "conv.row.wait"; }
 // "m:ss" or "h:mm:ss" from milliseconds
@@ -381,4 +447,4 @@ function convElapsed(/** @type {number} */ ms) {
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { convName, wiffName, convRowKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };

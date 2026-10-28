@@ -380,7 +380,8 @@ async function drawLines(p) {
       const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
       g.beginPath();
       const pts = [];
-      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; });
+      const [a0, a1] = spanOf(s.x, x0, x1);                  // the window by binary search (the bounds are still tested)
+      for (let i = a0; i < a1; i++) { const r = s.x[i]; if (r < x0 || r > x1) continue; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; }
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
       baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
@@ -434,7 +435,7 @@ async function drawLines(p) {
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area) }) }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area), y: fmt(r.height) }) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
@@ -445,7 +446,7 @@ async function drawLines(p) {
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
-    return { px, rt: x, html: `<b>${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    return { px, rt: x, html: `<b>${I18N.t("hov.rt", { v: x.toFixed(2) })}</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
   legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
@@ -513,8 +514,7 @@ const mapPal = () => window.MAPPA && MAPPA.prefs.pal === "cividis" ? "cividis" :
 const mapBg = p => window.MAPPA ? MAPPA.corrQ(p) : "";                    // the request suffix of the background correction of the panel ("", "&bg=1" or a stretch)
 const palCss = (name, diff) => diff ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : `linear-gradient(90deg,${MAP_PAL[name].map(c => `rgb(${c})`).join(",")})`;
 const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg}`, () => J(lv === "pda" ? `api/map?k=${k}&kind=pda${bg}` : `api/map?k=${k}&level=${lv}${bg}`).then(j => {
-  const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-  return { ...j, m: new Float32Array(u.buffer) };
+  return { ...j, m: b64F32(j.data, Number.isInteger(j.nrt) && Number.isInteger(j.nmz) ? j.nrt * j.nmz : null) };
 }));
 // Whether a file has a PDA matrix (RT x wavelength) for the map: a PDA trace alone is not one and the browser engine reads none, so the answer is probed once
 // from the route (a plain fetch: the error is the answer, not a message) and kept on the file (`_pdaMap`); true re-renders the controls of the map panels, which then offer the PDA choice.
@@ -596,7 +596,7 @@ async function drawMap(p) {
   p._a.hov = (px, py) => {
     const rt = xOf(p, px), mz = mzAt(py), i = Math.min(A.nrt - 1, Math.max(0, Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt))), j = Math.min(A.nmz - 1, Math.max(0, Math.floor((mz - A.mz0) / A.dmz)));
     const v = im.v[i * A.nmz + j];
-    return { px, rt, html: isPda ? `<div>${rt.toFixed(2)} min, ${mz.toFixed(1)} nm</div><div>${(B && v > 0 ? "+" : "") + fmt(v)} mAU</div>` : I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
+    return { px, rt, html: isPda ? `<b>${I18N.t("hov.rt", { v: rt.toFixed(2) })} · ${I18N.t("hov.nm", { v: mz.toFixed(1) })}</b><div>${I18N.t(B ? "map.hov.diff" : "map.hov.mean")}: <b>${I18N.t("hov.mau", { v: (B && v > 0 ? "+" : "") + fmt(v) })}</b></div>` : I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
   const rng = B ? [`<span title="${EH(I18N.t("map.leg2d.up.tip"))}">${I18N.t("map.leg2d.up")}</span>`, `<span title="${EH(I18N.t("map.leg2d.down.tip"))}">${I18N.t("map.leg2d.down")}</span>`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? "" : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span>`;

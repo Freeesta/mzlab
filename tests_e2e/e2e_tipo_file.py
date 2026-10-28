@@ -4,6 +4,14 @@ import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__fil
 from lib import *
 from lib_hr import synth
 steps = []
+def all_to(pg, kind):
+    # Rows keep their place until the first edit, then re-sort: pick whichever row is not yet of the wanted type.
+    for _ in range(4):
+        i = pg.evaluate("kind => ST.files.map(f => f.kind).findIndex(k => k !== kind)", kind)
+        if i < 0: return
+        name = pg.evaluate("ST.files[%d].name" % i)
+        row = pg.locator("#flist tr", has_text=name).locator(SEL)
+        row.select_option(kind); frames(pg, 4)
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
@@ -26,16 +34,16 @@ try:
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 4)
             kinds = pg.evaluate("ST.files.map(f => f.kind + ':' + f.kindAuto).sort()")
             assert kinds == ["full:full", "infusion:full"], kinds
-            assert pg.locator("tr.grp").count() == 2
-        step("a manual type applies at once and moves the file to its group", one)
+            assert len(set(pg.evaluate("Array.from(document.querySelectorAll('#flist tr[data-grp]')).map(tr => tr.dataset.grp)"))) == 2
+        step("a manual type applies at once and changes the row label, not its place", one)
         def grp():
-            pg.locator(SEL).nth(0).select_option("full"); pg.locator(SEL).nth(1).select_option("full"); frames(pg, 4)
-            assert pg.locator("select[data-expg]").count() == 1
-            pg.locator("select[data-expg]").first.select_option("ms2"); frames(pg, 4)
+            all_to(pg, "full")
+            assert pg.locator("select[data-expg]").count() == 0 and pg.locator("tr.grp").count() == 0
+            all_to(pg, "ms2")
             assert pg.evaluate("ST.files.every(f => f.kind === 'ms2')")
-        step("the group select sets the whole group", grp)
+        step("no group line or group select; each row sets its own type", grp)
         def remembered():
-            pg.locator("select[data-expg]").first.select_option("full"); frames(pg, 2)
+            all_to(pg, "full")
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 3)
             pg.click("text=Carica dati"); ready(pg)
             info = pg.evaluate("[E.files.map(f => [f.file, f.kind, f.kindAuto, f.manual]), TIPOF.manual(ST.files[0].name), ST.files.map(f=>f.name), localStorage.getItem('mzlab.filekind')]")

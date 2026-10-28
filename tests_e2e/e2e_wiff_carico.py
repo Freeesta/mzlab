@@ -27,7 +27,7 @@ for _ in range(50):
     try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
     except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 # what the student sees of the loading: the rows of the table, the list of the ended ones, the bar of the card; the bar of PROGRESSO; the rows of CONVROWS
-LOOK = """JSON.stringify({see: [...document.querySelectorAll('#flist [data-cvrow], #up .loadbar')].map(e => e.innerText).join('|'), pc: PROGRESSO.state().pc, busy: UPBUSY,
+LOOK = """JSON.stringify({see: [...document.querySelectorAll('#flist [data-cvrow], #up .loadbar')].map(e => e.innerText + ' ' + e.title).join('|'), pc: PROGRESSO.state().pc, busy: UPBUSY,
   rows: CONVROWS.rows.map(r => [r.name, r.state]), files: ST.files.map(f => f.name)})"""
 
 def follow(pg, until, limit=300):
