@@ -202,6 +202,7 @@ impl State {
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
+            "msngrafo" => self.op_msngrafo(eng, p),
             "canali" => self.op_canali(eng, p),
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
@@ -344,6 +345,9 @@ impl State {
         match op {
             "natsamples" => return self.nat_samples(p),                                     // reading a container takes its time: it does not hold the engine either
             "nat2mzml" => return self.nat_to_mzml(p),
+            "natsrm" => return self.nat_srm(p),                                             // the traces of a sample for mzFinder (no mzML)
+            "mzml2cen" => return self.mzml_to_cen(p),                                       // a centroid copy of a profile mzML: long, it does not hold the engine
+            "lr_index_cen" => return self.lr_index_cen(p["name"].as_str().unwrap_or("")),   // the index of a sample as centroids, on a thread of the build pool
             "conv_add" => return self.conv_add(p),
             "conv_list" => return self.conv_list(p),
             "conv_cancel" => return self.conv_cancel(p),
