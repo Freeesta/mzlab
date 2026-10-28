@@ -77,11 +77,11 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             ~/.cargo/bin/cargo-machete
             target
-          key: rust-v2-${{ runner.os }}-lint-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-lint-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-lint-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-lint-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -129,11 +129,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-wasm-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-wasm-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-wasm-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-wasm-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -189,12 +189,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-wasmguard-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-wasmguard-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-wasmguard-
-            rust-v2-${{ runner.os }}-wasm-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-wasmguard-
+            rust-v3-${{ runner.os }}-wasm-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -245,12 +245,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-det-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-det-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-det-
-            rust-v2-${{ runner.os }}-wasm-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-det-
+            rust-v3-${{ runner.os }}-wasm-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -298,12 +298,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-testfeat-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-testfeat-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-testfeat-
-            rust-v2-${{ runner.os }}-test-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-testfeat-
+            rust-v3-${{ runner.os }}-test-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -358,12 +358,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-testcore-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-testcore-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-testcore-
-            rust-v2-${{ runner.os }}-test-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-testcore-
+            rust-v3-${{ runner.os }}-test-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -416,12 +416,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-testmisca-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-testmisca-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-testmisca-
-            rust-v2-${{ runner.os }}-test-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-testmisca-
+            rust-v3-${{ runner.os }}-test-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -477,12 +477,12 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: rust-v2-${{ runner.os }}-testmiscb-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
+          key: rust-v3-${{ runner.os }}-testmiscb-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}
           # the kind-specific caches first, then any older cache (the one of the single job) so the first run is not cold
           restore-keys: |
-            rust-v2-${{ runner.os }}-testmiscb-
-            rust-v2-${{ runner.os }}-test-
-            rust-v2-${{ runner.os }}-
+            rust-v3-${{ runner.os }}-testmiscb-
+            rust-v3-${{ runner.os }}-test-
+            rust-v3-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
