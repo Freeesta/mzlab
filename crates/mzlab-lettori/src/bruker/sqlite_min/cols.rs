@@ -45,7 +45,12 @@ impl Sqlite {
 
 /// `record` into `out` (cleared first). With `voglio`, only the positions it marks `true` are decoded (text and blobs are not copied for the others, which are `Val::Null`); the whole record
 /// is still checked, so a damaged one is refused the same way.
-pub(super) fn record_in(b: &[u8], limiti: &Limiti, voglio: Option<&[bool]>, out: &mut Vec<Val>) -> Result<()> {
+pub(super) fn record_in(
+    b: &[u8],
+    limiti: &Limiti,
+    voglio: Option<&[bool]>,
+    out: &mut Vec<Val>,
+) -> Result<()> {
     out.clear();
     let (hl, o0) = varint(b).ok_or_else(|| guasto("record header"))?;
     let hl = usize::try_from(hl).map_err(|_| guasto("record header"))?;

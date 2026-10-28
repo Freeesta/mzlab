@@ -222,9 +222,9 @@ fn grande(n_rows: usize) -> (Vec<u8>, Vec<Vec<u8>>, Vec<Vec<u8>>) {
         let lo = m * per_mid;
         let hi = ((m + 1) * per_mid).min(leaves.len());
         let mut cs = Vec::new();
-        for k in lo..hi - 1 {
+        for (k, max) in maxes.iter().enumerate().take(hi - 1).skip(lo) {
             let mut c = (first_leaf + k as u32).to_be_bytes().to_vec();
-            c.extend(varint(maxes[k]));
+            c.extend(varint(*max));
             cs.push(c);
         }
         mids.push(pagina(5, 0, &cs, first_leaf + hi as u32 - 1));

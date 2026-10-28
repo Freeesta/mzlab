@@ -176,10 +176,10 @@ fn a_long_spectrum_crosses_windows_and_takes_few_reads() {
     for registri in [true, false] {
         let (mut l, letture) = apri(file(&s, 6, 6, registri, true));
         let aperte = letture.get();
-        for k in 0..2 {
+        for (k, scan) in s.iter().enumerate().take(2) {
             let sp = l.scansione(0, k).unwrap();
             assert_eq!(sp.mz.len(), 40_000);
-            for (i, (mz, it)) in s[k].iter().enumerate() {
+            for (i, (mz, it)) in scan.iter().enumerate() {
                 assert_eq!(
                     (sp.mz[i], sp.intensity_f64(i)),
                     (*mz, *it),
@@ -213,9 +213,9 @@ fn every_type_of_the_arrays_reads_the_same_in_any_layout() {
     for registri in [true, false] {
         for (tm, ti) in [(3, 3), (4, 4), (5, 5), (6, 6), (6, 4), (5, 3)] {
             let (mut l, _) = apri(file(&s, tm, ti, registri, true));
-            for k in 0..4 {
+            for (k, scan) in s.iter().enumerate().take(4) {
                 let sp = l.scansione(0, k).unwrap();
-                let mut atteso = s[k].clone();
+                let mut atteso = scan.clone();
                 atteso.sort_by(|a, b| a.0.total_cmp(&b.0));
                 assert_eq!(
                     sp.mz,

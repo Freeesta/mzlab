@@ -4,7 +4,6 @@ use super::csv::*;
 use super::csv_campi::{records, Cells};
 use crate::error::Result;
 
-
 /// The first parser, char by char, kept as the reference the byte scanner is compared with.
 /// (was) quoted fields keep their separators and newlines (`""` is a quote); a field is trimmed unless quoted.
 fn records_ref(text: &str, sep: char) -> Result<Vec<Vec<(String, bool)>>> {
@@ -100,8 +99,7 @@ fn byte_scanner_equals_char_parser_on_every_short_text() {
 #[test]
 fn byte_scanner_equals_char_parser_on_random_texts() {
     let alpha = [
-        'a', 'b', ' ', ' ', '"', '"', ',', ';', '\t', '\n', '\r', 'é', '€', '\u{a0}',
-        '\u{feff}',
+        'a', 'b', ' ', ' ', '"', '"', ',', ';', '\t', '\n', '\r', 'é', '€', '\u{a0}', '\u{feff}',
     ];
     let mut s = 0x9e3779b97f4a7c15u64;
     for _ in 0..200_000 {

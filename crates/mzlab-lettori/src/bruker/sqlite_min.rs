@@ -215,6 +215,23 @@ impl Sqlite {
         self.scorri_con(radice, None, |rowid, v| f(rowid, std::mem::take(v)))
     }
 
+    /// The header of page `n` held in `p`: where it starts, its type, its number of cells and where the cell pointers begin.
+    fn intesta(&self, p: &[u8], n: u32) -> Result<(usize, u8, usize, usize)> {
+        let base = if n == 1 { 100 } else { 0 };
+        let tipo = *p.get(base).ok_or_else(|| guasto("page"))?;
+        let ncelle = u16_be(p, base + 3).ok_or_else(|| guasto("page"))?;
+        let cap = base
+            + if matches!(tipo, INT_TAB | INT_IDX) {
+                12
+            } else {
+                8
+            };
+        if cap + 2 * ncelle > self.pagina {
+            return Err(guasto("cell count"));
+        }
+        Ok((base, tipo, ncelle, cap))
+    }
+
     /// `scorri` that decodes only the record positions `voglio` marks `true` (the others are `Val::Null`; `None` = all) and hands `f` one vector reused from row to row, which `f` may take from.
     pub fn scorri_con<F>(&mut self, radice: u32, voglio: Option<&[bool]>, mut f: F) -> Result<()>
     where
@@ -238,13 +255,7 @@ impl Sqlite {
                 return Err(guasto("page cycle"));
             }
             self.pagina_in(n, &mut p)?;
-            let base = if n == 1 { 100 } else { 0 };
-            let tipo = *p.get(base).ok_or_else(|| guasto("page"))?;
-            let ncelle = u16_be(&p, base + 3).ok_or_else(|| guasto("page"))?;
-            let cap = base + if matches!(tipo, INT_TAB | INT_IDX) { 12 } else { 8 };
-            if cap + 2 * ncelle > self.pagina {
-                return Err(guasto("cell count"));
-            }
+            let (base, tipo, ncelle, cap) = self.intesta(&p, n)?;
             let npag = self.pagina;
             let celle = |i: usize| -> Result<usize> {
                 let c = u16_be(&p, cap + 2 * i).ok_or_else(|| guasto("cell pointer"))?;
