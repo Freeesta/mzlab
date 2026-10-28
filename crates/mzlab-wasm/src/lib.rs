@@ -70,7 +70,7 @@ impl BlockReader {
     }
 }
 
-const BLOCK: usize = 1 << 20;
+const BLOCK: usize = 4 << 20; // 4 MiB: ~2.5x faster OPFS reads than 1 MiB in Chromium (docs/studi/wasm-potenza.md 3e); JS buffers grow to it
 
 impl Read for BlockReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
@@ -127,7 +127,7 @@ impl BlockWriter {
 impl Write for BlockWriter {
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
         self.buf.extend_from_slice(data);
-        if self.buf.len() >= 4 * BLOCK {
+        if self.buf.len() >= BLOCK {
             self.flush_block()?;
         }
         Ok(data.len())

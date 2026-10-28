@@ -72,7 +72,7 @@ async function tilesDrop(/** @type {string | null} */ name, /** @type {Set<strin
 const rdStat = { ms: 0, n: 0, bytes: 0, hand: 0 };
 function readerFor(blob, held) {
   const fr = new FileReaderSync();
-  let buf = held ? new Uint8Array(1 << 20) : null;
+  let buf = held ? new Uint8Array(0) : null;   // grown to the block the WASM asks for (BLOCK in mzlab-wasm)
   return (offset, length) => {
     const t = performance.now();
     let out = null;
