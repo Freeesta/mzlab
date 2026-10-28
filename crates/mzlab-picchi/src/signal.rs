@@ -1,6 +1,6 @@
 //! Signal helpers of the peak picker: noise, Savitzky-Golay (with derivatives), SNIP and AsLS baselines, Ricker CWT.
 //! Line-by-line ports of the helpers of `ionfamily.py`; the Python engine is the reference.
-pub(crate) fn median(v: &[f64]) -> f64 {
+pub fn median(v: &[f64]) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
@@ -19,6 +19,19 @@ pub(crate) fn median(v: &[f64]) -> f64 {
     }
 }
 
+/// `median` of the values of `v` that goes through `scratch` (kept between calls, so a loop of medians allocates once).
+pub fn median_in(v: impl Iterator<Item = f64>, scratch: &mut Vec<f64>) -> f64 {
+    scratch.clear();
+    scratch.extend(v);
+    if scratch.is_empty() {
+        return 0.0;
+    }
+    if let Some(m) = crate::sortc::select_median(scratch) {
+        return m;
+    }
+    median(scratch)
+}
+
 /// Robust noise sigma from the first differences (MAD).
 pub fn noise_level(y: &[f64]) -> f64 {
     if y.len() < 4 {
@@ -30,8 +43,8 @@ pub fn noise_level(y: &[f64]) -> f64 {
     1.4826 * median(&dev) / 2f64.sqrt()
 }
 
-/// Solves A x = b (A square, row-major, n x n) by Gaussian elimination with partial pivoting. None if singular.
-pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+/// Gaussian elimination with partial pivoting on `a` (n x n, row-major) and `b`, both overwritten; the solution goes to `x`. False if singular.
+fn solve_in(a: &mut [f64], b: &mut [f64], x: &mut [f64], n: usize) -> bool {
     for c in 0..n {
         let mut p = c;
         for r in c + 1..n {
@@ -40,7 +53,7 @@ pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f6
             }
         }
         if a[p * n + c].abs() < 1e-300 {
-            return None;
+            return false;
         }
         if p != c {
             for k in 0..n {
@@ -59,7 +72,6 @@ pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f6
             }
         }
     }
-    let mut x = vec![0.0; n];
     for r in (0..n).rev() {
         let mut s = b[r];
         for k in r + 1..n {
@@ -67,11 +79,74 @@ pub(crate) fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f6
         }
         x[r] = s / a[r * n + r];
     }
-    Some(x)
+    true
+}
+
+/// Solves A x = b (A square, row-major, n x n) by Gaussian elimination with partial pivoting. None if singular.
+pub fn solve(mut a: Vec<f64>, mut b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+    let mut x = vec![0.0; n];
+    solve_in(&mut a, &mut b, &mut x, n).then_some(x)
+}
+
+/// `solve` for 3 x 3 on the stack (the quadratic fit of a peak apex): the same operations in the same order.
+pub fn solve3(mut a: [f64; 9], mut b: [f64; 3]) -> Option<[f64; 3]> {
+    let mut x = [0.0; 3];
+    solve_in(&mut a, &mut b, &mut x, 3).then_some(x)
+}
+
+/// `solve` for a matrix with two sub- and two super-diagonals (the AsLS system). It runs the same operations in the same order as `solve`, skipping
+/// only the exact zeros outside the band that partial pivoting can reach (lower 2, upper 4), so the result is bit-identical; a non-finite result is
+/// recomputed by `solve`, where a stray infinity could still reach those zeros.
+pub fn solve_banded(a: Vec<f64>, b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
+    let (mut a2, mut b2) = (a.clone(), b.clone());
+    let banded = (|| {
+        for c in 0..n {
+            let last = (c + 2).min(n - 1);
+            let mut p = c;
+            for r in c + 1..=last {
+                if a2[r * n + c].abs() > a2[p * n + c].abs() {
+                    p = r;
+                }
+            }
+            if a2[p * n + c].abs() < 1e-300 {
+                return None;
+            }
+            let hi = (c + 4).min(n - 1);
+            if p != c {
+                for k in c..=hi {
+                    a2.swap(c * n + k, p * n + k);
+                }
+                b2.swap(c, p);
+            }
+            let d = a2[c * n + c];
+            for r in c + 1..=last {
+                let f = a2[r * n + c] / d;
+                if f != 0.0 {
+                    for k in c..=hi {
+                        a2[r * n + k] -= f * a2[c * n + k];
+                    }
+                    b2[r] -= f * b2[c];
+                }
+            }
+        }
+        let mut x = vec![0.0; n];
+        for r in (0..n).rev() {
+            let mut s = b2[r];
+            for k in r + 1..=(r + 4).min(n - 1) {
+                s -= a2[r * n + k] * x[k];
+            }
+            x[r] = s / a2[r * n + r];
+        }
+        Some(x)
+    })();
+    match banded {
+        Some(x) if x.iter().all(|v| v.is_finite()) => Some(x),
+        _ => solve(a, b, n),
+    }
 }
 
 /// Savitzky-Golay convolution coefficients (odd window), derivative order `deriv`, unit spacing, ordered like `np.convolve` wants.
-pub(crate) fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64> {
+pub fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64> {
     let half = (window / 2) as i64;
     let m = poly + 1;
     // pinv(A)[deriv] = row `deriv` of (A^T A)^-1 A^T, A[i][j] = x_i^j
@@ -94,7 +169,7 @@ pub(crate) fn savgol_coeffs(window: usize, poly: usize, deriv: usize) -> Vec<f64
     c
 }
 
-pub(crate) fn reflect(i: i64, n: i64) -> usize {
+pub fn reflect(i: i64, n: i64) -> usize {
     // numpy "reflect" padding (the edge is not repeated); valid while |offset| < n
     let mut j = i;
     if j < 0 {
@@ -127,7 +202,9 @@ pub fn savgol_d(y: &[f64], window: usize, poly: usize, deriv: usize) -> Vec<f64>
             (0..window)
                 .map(|k| {
                     let src = i as i64 + k as i64 - half as i64;
-                    let v = if n > half {
+                    let v = if (0..ni).contains(&src) {
+                        y[src as usize]
+                    } else if n > half {
                         y[reflect(src, ni)]
                     } else {
                         y[src.clamp(0, ni - 1) as usize]
@@ -139,21 +216,20 @@ pub fn savgol_d(y: &[f64], window: usize, poly: usize, deriv: usize) -> Vec<f64>
         .collect()
 }
 
-pub(crate) fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
+pub fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
     let n = y.len();
     let mut v: Vec<f64> = y
         .iter()
         .map(|&x| (((x.max(0.0) + 1.0).sqrt() + 1.0).ln() + 1.0).ln())
         .collect();
     let top = iters.min((n / 2).saturating_sub(1).max(1));
+    let mut a = vec![0.0; n];
     for w in 1..=top {
-        let a: Vec<f64> = (0..n)
-            .map(|i| {
-                let right = if i + w < n { v[i + w] } else { v[n - 1] };
-                let left = if i >= w { v[i - w] } else { v[0] };
-                (right + left) / 2.0
-            })
-            .collect();
+        for (i, ai) in a.iter_mut().enumerate() {
+            let right = if i + w < n { v[i + w] } else { v[n - 1] };
+            let left = if i >= w { v[i - w] } else { v[0] };
+            *ai = (right + left) / 2.0;
+        }
         for i in 0..n {
             v[i] = v[i].min(a[i]);
         }
@@ -174,7 +250,14 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
     fp[j] + (x - xp[j]) * (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j])
 }
 
-pub(crate) fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
+pub fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
+    asls_with(y, lam, p, iters, max_n, solve_banded)
+}
+
+type Solver = fn(Vec<f64>, Vec<f64>, usize) -> Option<Vec<f64>>;
+
+/// `asls_baseline` with the linear solver as a parameter (the tests compare the banded one with the dense `solve`).
+fn asls_with(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize, solver: Solver) -> Vec<f64> {
     let n = y.len();
     if n < 5 {
         let m = y.iter().cloned().fold(f64::INFINITY, f64::min);
@@ -190,7 +273,14 @@ pub(crate) fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: us
             .map(|b| y[b * k..(b + 1) * k].iter().sum::<f64>() / k as f64)
             .collect();
         let xd: Vec<f64> = (0..m).map(|b| (b as f64 + 0.5) * k as f64 - 0.5).collect();
-        let zd = asls_baseline(&yd, lam / (k as f64).powi(4), p, iters, usize::MAX / 4);
+        let zd = asls_with(
+            &yd,
+            lam / (k as f64).powi(4),
+            p,
+            iters,
+            usize::MAX / 4,
+            solver,
+        );
         return (0..n)
             .map(|i| interp(i as f64, &xd, &zd).min(y[i]))
             .collect();
@@ -213,7 +303,7 @@ pub(crate) fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: us
             a[i * n + i] += w[i];
         }
         let b: Vec<f64> = (0..n).map(|i| w[i] * y[i]).collect();
-        z = match solve(a, b, n) {
+        z = match solver(a, b, n) {
             Some(s) => s,
             None => break,
         };
@@ -228,7 +318,7 @@ pub(crate) fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: us
     (0..n).map(|i| z[i].min(y[i])).collect()
 }
 
-pub(crate) fn ricker(width: f64, n: usize) -> Vec<f64> {
+pub fn ricker(width: f64, n: usize) -> Vec<f64> {
     let h = (n / 2) as i64;
     (-h..=h)
         .map(|x| {
@@ -238,7 +328,7 @@ pub(crate) fn ricker(width: f64, n: usize) -> Vec<f64> {
         .collect()
 }
 
-pub(crate) fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
+pub fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
     let n = y.len();
     widths
         .iter()
@@ -260,3 +350,6 @@ pub(crate) fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests;

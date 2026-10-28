@@ -34,7 +34,7 @@ try:
         step("profile scan: continuous line, many points", whole)
         def zoom():
             for _ in range(25):
-                pg.mouse.wheel(0, -300); ready(pg)
+                ctrl_wheel(pg, 0, -300); ready(pg)
                 n, full, h = pts()
                 if n == full: break
             assert full >= 5 and n == full, (n, full)                                             # zoomed in: every original point is drawn

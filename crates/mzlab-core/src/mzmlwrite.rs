@@ -11,8 +11,8 @@ use crate::mzml::{ChromKind, Chromatogram, Spectrum};
 /// The version of the PSI-MS CV every file declares, indexed or not.
 const CV_VERSION: &str = "4.2.6";
 
-/// The zlib level of the arrays. Level 1 is the fastest and 6 the default of zlib: on the synthetic spectra of `examples/mzml_scrivi.rs` level 1 writes 2.3 times faster than 6 and the file is 0.3 % larger.
-pub const LIVELLO_ZLIB: u32 = 1;
+/// The zlib level of the arrays (zlib-rs). Level 1 of zlib-rs is its quick mode and writes a 35 % larger file than level 2 on the noisy profile matrix of `mzml_dad_tests`; level 2 costs the same time and 7 % more bytes than miniz at level 1.
+pub const LIVELLO_ZLIB: u32 = 2;
 
 /// How the arrays are written.
 #[derive(Debug, Clone, Copy)]
@@ -24,11 +24,13 @@ pub struct Opzioni {
     pub numpress: bool,
     /// Threads that encode the arrays when the spectra come through `MzmlWriter::spettri` (`thread_predefinito`); 0 and 1 encode on the calling thread. The bytes written do not depend on it.
     pub thread: usize,
+    /// Also write the optical (DAD / PDA) matrix of the sample, one `MS:1000804` spectrum per instant, after the scans (`MzmlWriter::uv_spectrum`). Off: the file is the same as without it.
+    pub dad: bool,
 }
 
 impl Default for Opzioni {
     fn default() -> Self {
-        Opzioni { livello: LIVELLO_ZLIB, numpress: false, thread: thread_predefinito() }
+        Opzioni { livello: LIVELLO_ZLIB, numpress: false, thread: thread_predefinito(), dad: false }
     }
 }
 
@@ -394,6 +396,8 @@ fn component_list(h: &Header) -> String {
 
 mod codifica;
 mod matrice;
+#[cfg(not(target_family = "wasm"))]
+mod uv;
 mod thread;
 pub use thread::thread_predefinito;
 use codifica::{Codifica, Data};

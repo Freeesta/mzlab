@@ -42,7 +42,7 @@ def test_empty_archive_and_empty_file(out):
 @pytest.mark.skipif(not shutil.which("unzip"), reason="unzip not available")
 def test_unzip_accepts_them(out):
     for n in ("n.zip", "zero.zip", "uno_vuoto.zip"):
-        r = subprocess.run(["unzip", "-t", str(out / n)], capture_output=True, text=True)
+        r = subprocess.run(["unzip", "-t", str(out / n)], capture_output=True, text=True, encoding="utf-8", errors="replace")   # macOS unzip prints the è of a name as a raw byte
         # unzip exits 1 for a warning-only run and 0 for ok; an empty archive is "zipfile is empty" (exit 1) on Info-ZIP
         assert r.returncode in (0, 1), r.stdout + r.stderr
         if n == "n.zip":

@@ -125,7 +125,8 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   // text entry keeps the undo of the browser; a button, checkbox, range or select does not (the key must reach the stack)
   const TESTO = "input:not([type=checkbox],[type=radio],[type=range],[type=button],[type=submit],[type=reset],[type=color],[type=file],[type=image]),textarea,[contenteditable='true'],[contenteditable='']";
   const idle = (/** @type {Element | null} */ t) => !!(t && t.closest && t.closest(TESTO)) || !!document.querySelector("dialog[open]");
-  const inDati = () => { const d = document.getElementById("dpanels"); return !!(d && d.offsetParent); };
+  // the panels container is hidden when every file was removed, but the key must still undo that removal
+  const inDati = () => { const d = document.getElementById("dpanels"); return !!(d && d.offsetParent) || !!(window.BARRA && BARRA.isDataView()); };
   document.addEventListener("keydown", e => {
     const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
     if (!mod || e.altKey || (k !== "z" && k !== "y") || (k === "y" && (e.shiftKey || e.metaKey))) return;

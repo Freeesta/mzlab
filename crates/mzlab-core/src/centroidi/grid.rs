@@ -11,19 +11,33 @@ pub(super) fn fill(mz: &[f64], y: &[f64], p: &Params, buf: &mut Buf) {
     if n == 0 {
         return;
     }
-    if regular(&mz[..n], p.step) {
+    if regular(&mz[..n], p.step) && dense_fits(&mz[..n], p.step) {
         dense(&mz[..n], &y[..n], p.step, buf);
     } else {
         sparse(&mz[..n], &y[..n], p.step, buf);
     }
 }
 
-/// True when every point sits on the grid of the first one (within 5 % of a step).
+/// Largest dense grid (bins) built for one scan; a wider range falls back to the sparse path instead of exhausting memory.
+const MAX_BINS: usize = 1 << 22;
+
+/// True when the step is usable, the points are finite and ascending, and every one sits on the grid of the first (within 5 % of a step).
 fn regular(mz: &[f64], step: f64) -> bool {
+    if !(step > 0.0 && step.is_finite()) {
+        return false;
+    }
+    let mut prev = mz[0];
     mz.iter().all(|&m| {
         let q = (m - mz[0]) / step;
-        (q - q.round()).abs() <= 0.05
+        let ok = m >= prev && (q - q.round()).abs() <= 0.05;
+        prev = m;
+        ok
     })
+}
+
+/// True when the dense grid of this (regular, ascending) scan stays within `MAX_BINS`.
+fn dense_fits(mz: &[f64], step: f64) -> bool {
+    ((mz[mz.len() - 1] - mz[0]) / step).round() < MAX_BINS as f64
 }
 
 fn dense(mz: &[f64], y: &[f64], step: f64, buf: &mut Buf) {
@@ -54,3 +68,6 @@ fn sparse(mz: &[f64], y: &[f64], step: f64, buf: &mut Buf) {
         buf.v.push(y[i]);
     }
 }
+
+#[cfg(test)]
+mod tests;

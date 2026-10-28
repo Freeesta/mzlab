@@ -1,8 +1,10 @@
 // @ts-strict
+// @ts-noany
 "use strict";
 // RT x m/z map, the parts that do not touch the page (classic script, loaded before mappa.js; node loads it with require).
 //   splat(v, nrt, nmz, sx, sy)   the «Liscia» look of a zoomed region: every cell spreads its value as a gaussian tent (max, not sum: heights stay those of the
 //                                matrix) as wide as the m/z resolution (sy, in bins) and the scan spacing (sx, in bins), so a peak stays one continuous blob
+//   ref(v)                       the intensity that gets the top of the colour scale: the 99.5th percentile of the non-zero values (one huge peak does not flatten the rest)
 //   snrOf(mz, y, lo, hi)         S/N of each peak: its intensity over the noise of its neighbourhood (median + 1.4826 MAD of the other peaks within a band in m/z)
 //   pick(mz, y, o)               which peaks get a m/z label, best first: the active peak, then the best S/N of each band of the visible window, then the best S/N left
 (() => {
@@ -13,7 +15,8 @@
     for (let d = 0; d <= r; d++) w[d] = r ? Math.exp(-d * d / (2 * sigma * sigma)) : 1;
     return { r, w };
   }
-  /** One non-negative matrix, v[i * nmz + j] (i = scan bin, j = m/z bin): scatter from the non-zero cells only (a region is mostly empty). */
+  /** One non-negative matrix, v[i * nmz + j] (i = scan bin, j = m/z bin): scatter from the non-zero cells only (a region is mostly empty).
+   * @param {Float32Array} u @param {number} nrt @param {number} nmz @param {{ r: number, w: Float32Array }} kx @param {{ r: number, w: Float32Array }} ky */
   function spread(u, nrt, nmz, kx, ky) {
     let cur = u;
     if (ky.r) {
@@ -44,8 +47,8 @@
     for (let i = 0; i < v.length; i++) o[i] = P[i] >= N[i] ? P[i] : -N[i];
     return o;
   }
-  const med = (a) => { const s = Float64Array.from(a).sort(), n = s.length; return n % 2 ? s[(n - 1) >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2; };
-  /** Level of the noise of a list of intensities: median + 1.4826 MAD (the typical height of a noise peak, robust to a few real ones). */
+  const med = (/** @type {ArrayLike<number>} */ a) => { const s = Float64Array.from(a).sort(), n = s.length; return n % 2 ? s[(n - 1) >> 1] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+  /** Level of the noise of a list of intensities: median + 1.4826 MAD (the typical height of a noise peak, robust to a few real ones). @param {ArrayLike<number>} a */
   function level(a) {
     const m = med(a), d = new Float64Array(a.length); for (let i = 0; i < a.length; i++) d[i] = Math.abs(a[i] - m);
     return m + 1.4826 * med(d);
@@ -60,8 +63,8 @@
     const n = mz.length, idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => mz[a] - mz[b]), m = idx.map(i => mz[i]), v = idx.map(i => Math.abs(y[i]));
     const H = o.band || Math.max(15, (hi - lo) / 4), MIN = 6; let gmax = 0; for (const x of v) if (x > gmax) gmax = x;
     const floor = Math.max(gmax * 1e-4, 1e-12), wide = level(v.length >= MIN ? v : [gmax * 0.02]);
-    const lb = (x) => { let a = 0, b = n; while (a < b) { const h = (a + b) >> 1; if (m[h] < x) a = h + 1; else b = h; } return a; };
-    const out = [];
+    const lb = (/** @type {number} */ x) => { let a = 0, b = n; while (a < b) { const h = (a + b) >> 1; if (m[h] < x) a = h + 1; else b = h; } return a; };
+    /** @type {{ i: number, snr: number, noise: number }[]} */ const out = [];
     for (let k = 0; k < n; k++) {
       if (m[k] < lo || m[k] > hi) continue;
       const a = lb(m[k] - H), z = lb(m[k] + H + 1e-9), band = [];
@@ -80,8 +83,8 @@
    * @returns {{ i: number, snr: number, noise: number, act?: boolean }[] & { all: { i: number, snr: number, noise: number }[] }} candidates, best first (`all`: the S/N of every visible peak): the caller draws them in order until they fit
    */
   function pick(mz, y, o) {
-    const { lo, hi } = o, strategy = o.strategy || "bands", bands = Math.max(1, o.bands || 4), quota = o.quota || 1, minSnr = o.minSnr ?? 5, ab = (i) => Math.abs(y[i]);
-    const all = snrOf(mz, y, lo, hi, o), by = all.slice().sort((a, b) => ab(b.i) - ab(a.i)), seen = [], keep = [];
+    const { lo, hi } = o, strategy = o.strategy || "bands", bands = Math.max(1, o.bands || 4), quota = o.quota || 1, minSnr = o.minSnr ?? 5, ab = (/** @type {number} */ i) => Math.abs(y[i]);
+    const all = snrOf(mz, y, lo, hi, o), by = all.slice().sort((a, b) => ab(b.i) - ab(a.i)), seen = /** @type {number[]} */ ([]), keep = /** @type {typeof all} */ ([]);
     // the highest of each group of peaks
     for (const c of by) if (!seen.some(k => Math.abs(mz[k] - mz[c.i]) <= GROUP_DA)) { seen.push(c.i); keep.push(c); }
     let top = 0; for (const c of by) { top = Math.max(top, ab(c.i)); break; }
@@ -91,7 +94,7 @@
       const ok = keep.filter(c => c.snr >= minSnr).sort((a, b) => b.snr - a.snr);
       if (strategy === "snr") ord = ok;
       else {
-        const w = (hi - lo) / bands || 1, first = [], per = new Array(bands).fill(0);
+        const w = (hi - lo) / bands || 1, first = /** @type {typeof all} */ ([]), per = new Array(bands).fill(0);
         for (const c of ok) { const b = Math.min(bands - 1, Math.max(0, Math.floor((mz[c.i] - lo) / w))); if (per[b] < quota) { per[b]++; first.push(c); } }
         ord = first.concat(ok.filter(c => !first.includes(c)));
       }
@@ -103,7 +106,14 @@
     }
     return Object.assign(ord, { all });
   }
-  const MAPREND = { splat, snrOf, pick, GROUP_DA };
+  /** @param {ArrayLike<number>} v @returns {number} */
+  function ref(v) {
+    const nz = []; for (let i = 0; i < v.length; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
+    const n = Math.min(nz.length, 10000), samp = new Float64Array(n), s = nz.length / (n || 1); for (let i = 0; i < n; i++) samp[i] = nz[Math.floor(i * s)];
+    samp.sort();
+    return n ? samp[Math.min(n - 1, Math.floor(n * 0.995))] : 1;
+  }
+  const MAPREND = { splat, snrOf, pick, ref, GROUP_DA };
   if (typeof window !== "undefined") /** @type {any} */ (window).MAPREND = MAPREND;
   if (typeof module !== "undefined") module.exports = MAPREND;
 })();

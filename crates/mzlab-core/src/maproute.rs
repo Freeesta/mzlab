@@ -3,6 +3,7 @@
 //! or profile points. `Ok(None)` = Python's: a parameter that Python must reject with its own error.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use base64::Engine;
 
@@ -42,12 +43,16 @@ fn index(q: &Query, k: &str) -> Option<i64> {
     q.some(k)?.parse().ok()
 }
 
-fn b64(bytes: Vec<u8>) -> Value {
-    text(&base64::engine::general_purpose::STANDARD.encode(bytes))
+fn b64(bytes: &[u8]) -> Value {
+    Value::Str(base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
 fn f32s(a: &[f32]) -> Value {
-    b64(a.iter().flat_map(|v| v.to_le_bytes()).collect())
+    let mut bytes = Vec::with_capacity(a.len() * 4);
+    for v in a {
+        bytes.extend_from_slice(&v.to_le_bytes());
+    }
+    b64(&bytes)
 }
 
 /// Every file of the session has its index (an item without a route is an MRM file).
@@ -58,6 +63,15 @@ fn indexed<R: ReadAt>(items: &[ItemMeta], routes: &Table<R>) -> bool {
 fn route<'a, R: ReadAt>(items: &[ItemMeta], routes: &'a mut Table<R>, k: i64) -> Option<&'a mut Routes<R>> {
     let it = items.get(usize::try_from(k).ok()?)?;
     routes.get_mut(&it.slot)
+}
+
+/// The m/z window the method declares, for the survey scans of a unit-resolution file (centroids have points only where there is a peak, so the peaks alone
+/// would move the axis from file to file); empty for MS2, high resolution and an index that does not say.
+pub(crate) fn declared_survey_window<R: ReadAt>(r: &Routes<R>, level: u8) -> Vec<f64> {
+    match r.idx.declared_window() {
+        Some((lo, hi)) if level == 1 && !group_is_hr(&r.idx.scans, true) => vec![lo, hi],
+        _ => vec![],
+    }
 }
 
 /// `Session.grid(level)` over the files of the session.
@@ -76,6 +90,7 @@ fn grid_of<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, level: u8) -> R
             if let Some((lo, hi)) = r.idx.mz_range(si)? {
                 mzs.extend([lo, hi]);
             }
+            mzs.extend(declared_survey_window(r, level));
         }
     }
     Ok(session_grid(&rts, &mzs, hr))
@@ -109,10 +124,10 @@ fn parse_ask(q: &Query, with_ref: bool) -> Option<Ask> {
 }
 
 /// The map of file `k` on the grid `g` (`mz1` = end of the m/z axis), with the background taken away when asked.
-fn one_map<R: ReadAt>(r: &mut Routes<R>, a: &Ask, g: &Grid, mz1: f64) -> Result<Vec<f32>> {
+fn one_map<R: ReadAt>(r: &mut Routes<R>, a: &Ask, g: &Grid, mz1: f64) -> Result<Arc<Vec<f32>>> {
     let m = match a.region {
-        Some(_) => r.region_map(a.level, (g.rt0, g.rt1), g.nrt, (g.mz0, mz1), (g.nmz, a.log), a.mean)?,
-        None => r.ion_map(a.level, g, a.mean)?.to_vec(),
+        Some(_) => Arc::new(r.region_map(a.level, (g.rt0, g.rt1), g.nrt, (g.mz0, mz1), (g.nmz, a.log), a.mean)?),
+        None => r.ion_map(a.level, g, a.mean)?,
     };
     if !(a.bg || a.stretch.is_some()) {
         return Ok(m);
@@ -121,7 +136,7 @@ fn one_map<R: ReadAt>(r: &mut Routes<R>, a: &Ask, g: &Grid, mz1: f64) -> Result<
         Some(s) => r.stretch_background(a.level, s, (g.mz0, mz1), (g.nmz, a.log))?,
         None => r.run_background(a.level, (g.mz0, mz1), (g.nmz, a.log), a.mean)?,
     };
-    Ok(subtract_constant(&m, g.nmz, &bg))
+    Ok(Arc::new(subtract_constant(&m, g.nmz, &bg)))
 }
 
 /// `_map_factor`: the normalisation of a whole map before a comparison.
@@ -134,9 +149,12 @@ fn norm_factor<R: ReadAt>(r: &mut Routes<R>, a: &Ask, sg: &Grid, norm: &str) -> 
     Ok(if t > 0.0 { ((if norm == "max" { 1.0 } else { 1000.0 }) / t) as f32 } else { 1.0 })
 }
 
-fn extent_value(e: Option<((f64, f64), (f64, f64))>) -> Value {
+fn extent_value(e: Option<((f64, f64), (f64, f64))>, window: Vec<f64>) -> Value {
     match e {
-        Some((rt, mz)) => Obj::new().put("rt", floats(&[rt.0, rt.1])).put("mz", floats(&[mz.0, mz.1])).done(),
+        Some((rt, mz)) => {
+            let mz = window.iter().fold(mz, |(lo, hi), &w| (lo.min(w), hi.max(w)));
+            Obj::new().put("rt", floats(&[rt.0, rt.1])).put("mz", floats(&[mz.0, mz.1])).done()
+        }
         None => Obj::new().put("rt", Value::Null).put("mz", Value::Null).done(),
     }
 }
@@ -177,11 +195,12 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
     let mut m = one_map(r, &a, &g, mz1)?;
     let mut o = map_head(&a, &g, mz1, hr);
     if a.region.is_none() {
-        o = o.put("extent", extent_value(r.data_extent(a.level)?));
+        o = o.put("extent", extent_value(r.data_extent(a.level)?, declared_survey_window(r, a.level)));
     }
     if let Some(rk) = refk {
         let norm = q.get("norm").unwrap_or("abs");
-        let sg = grid_of(items, routes, a.level)?;
+        // without a region `g` already is the grid of the session
+        let sg = if a.region.is_none() { g } else { grid_of(items, routes, a.level)? };
         let rttol = number(q, "rttol").unwrap_or(0.1);
         let w = py_round(rttol / ((g.rt1 - g.rt0) / g.nrt as f64).max(1e-9)).max(0.0) as usize;
         let mut wm = 0;
@@ -198,7 +217,7 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
         let fb = norm_factor(rr, &a, &sg, norm)?;
         let Some(r) = route(items, routes, k) else { return Ok(None) };
         let fa = norm_factor(r, &a, &sg, norm)?;
-        m = diff_tolerant(&m.iter().map(|v| v * fa).collect::<Vec<_>>(), &b.iter().map(|v| v * fb).collect::<Vec<_>>(), g.nrt, g.nmz, w, wm);
+        m = Arc::new(diff_tolerant(&m.iter().map(|v| v * fa).collect::<Vec<_>>(), &b.iter().map(|v| v * fb).collect::<Vec<_>>(), g.nrt, g.nmz, w, wm));
         o = o.i("ref", rk).n("rttol", rttol).i("w", w as i64).i("wm", wm as i64);
     }
     Ok(Some(crate::jsonb::write(&o.put("data", f32s(&m)).done())))
@@ -294,8 +313,9 @@ fn sticks<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Re
     let Some(r) = route(items, routes, k) else { return Ok(None) };
     let s = r.sticks(level, (rt0, rt1), (mz0, mz1), cap)?;
     let o = Obj::new().i("k", k).i("level", level as i64).n("rt0", rt0).n("rt1", rt1).n("mz0", mz0).n("mz1", mz1).i("n", s.rt.len() as i64).i("total", s.total as i64);
-    let mz: Vec<u8> = s.mz.iter().flat_map(|v| v.to_le_bytes()).collect();
-    Ok(Some(crate::jsonb::write(&o.put("rt", f32s(&s.rt)).put("mz", b64(mz)).put("inten", f32s(&s.inten)).done())))
+    let mut mz = Vec::with_capacity(s.mz.len() * 8);
+    s.mz.iter().for_each(|v| mz.extend_from_slice(&v.to_le_bytes()));
+    Ok(Some(crate::jsonb::write(&o.put("rt", f32s(&s.rt)).put("mz", b64(&mz)).put("inten", f32s(&s.inten)).done())))
 }
 
 /// `api/maptiles`: the cells of the view from the pyramid of tiles of file `k` (rows = groups of 2^`tile_level` scans, cells of `dmz` Da from `mz0`).

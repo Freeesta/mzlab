@@ -72,14 +72,16 @@
     try {
       lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
       // the browser storage held by another tab: the loading screen says so
-      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;
+      // reopening takes about 0.15 s per stored file (an index each): the limit grows with the files in the storage, 240 samples took 36 s
+      const stored = await (async () => { let n = 0; try { for await (const _ of /** @type {any} */ (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files")).keys()) n++; } catch (_) { /* nothing stored yet */ } return n; })();
+      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * stored;
       const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), stall))]);
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
       window.qqStep = ""; phase(null); perfMark("motore pronto");
     }
-    catch (e) {
+    catch (e_) { const e = /** @type {Lanciato} */ (e_);
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
@@ -89,7 +91,7 @@
   };
   const ready = lrInit();
   ready.catch(() => {});
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|xicbin|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo|msnlib\/aggiungi|msnlib\/cerca)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|xicbin|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|canali|msn_grafo|msnlib\/aggiungi|msnlib\/cerca)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });

@@ -23,9 +23,10 @@ indice = []
 banco-zlib-rs = ["flate2/zlib-rs"]
 
 [dependencies]
+mzlab-picchi = { path = "../mzlab-picchi" }
 quick-xml = "0.42"
 base64 = "0.23"
-flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 opentfraw = { path = "../../vendor/opentfraw", optional = true }
 sha1 = { version = "0.11", default-features = false }
 sha2 = { version = "0.11", default-features = false }

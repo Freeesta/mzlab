@@ -48,7 +48,7 @@ try:
         step("the arcs carry the id of their rule; a weak rule is tagged; a sum shows both", labels)
         def panel():
             pg.click(".ig-node[data-id=n3]"); pg.wait_for_selector(".ig-rl", timeout=10000)
-            txt = pg.inner_text(".ig-rl"); assert "loss_co2" in txt and "CO2" in txt and "carbon dioxide" in txt.lower(), txt
+            txt = pg.inner_text(".ig-rl"); assert "loss_co2" in txt and "CO₂" in txt and "carbon dioxide" in txt.lower(), txt
             a = pg.locator(".ig-rl a.ig-src").first
             assert a.get_attribute("href").startswith("https://doi.org/10.1039/c5np00073d") and "noopener" in a.get_attribute("rel") and a.get_attribute("target") == "_blank"
             assert "identified" not in txt.lower()
@@ -69,7 +69,7 @@ try:
         step("the thresholds say where they come from and «to be calibrated»", thr)
         def flt():
             n0 = pg.locator(".ig-node").count(); a0 = pg.locator(".ig-arc").count()
-            box = pg.locator(".ig-flt").bounding_box(); assert box["height"] >= 24 and box["width"] >= 24, box
+            box = pg.locator(".ig-flt:has(#ig-rf)").bounding_box(); assert box["height"] >= 24 and box["width"] >= 24, box
             pg.focus("#ig-rf"); pg.keyboard.press("Space"); attendi(pg, "INFG.G.rf === true")
             assert pg.locator(".ig-arc").count() == 3 < a0 and pg.locator(".ig-node").count() < n0, (pg.locator(".ig-arc").count(), pg.locator(".ig-node").count())
             assert pg.evaluate("document.activeElement.id") == "ig-rf"

@@ -48,7 +48,7 @@ I18N.add("en", {
   "tour.pannello.titolo": "Panel tools",
   "tour.pannello.testo": "Smoothing, background correction, integration, Download (image or data for Excel) and full screen. Right-clicking the plot gives more actions.",
   "tour.barra.titolo": "The toolbar",
-  "tour.barra.testo": "File list, m/z calculator, neutral losses, adducts, reference lists and the periodic table open from here: the panel sits next to the plots, which narrow to make room. The «Panel» button (Ctrl/⌘+B) shows or hides it. The rest is under «More».",
+  "tour.barra.testo": "File list, m/z calculator, neutral losses, reference lists and the periodic table open from here: the panel sits next to the plots, which narrow to make room. The «Panel» button (Ctrl/⌘+B) shows or hides it. The rest is under «More».",
   "tour.metodo.titolo": "The instrument method",
   "tour.metodo.testo": "What the instrument measured: scan type, polarity, mass range and method settings.",
   "tour.ingranaggio.titolo": "Settings, Theory and this tour",

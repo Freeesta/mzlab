@@ -11,9 +11,10 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:900]))
 LEVELS = [("wide", 3.0, 60.0), ("middle", 1.0, 15.0), ("narrow", 0.4, 4.0)]
-STRIPE = """(() => { const c = %s.cv, g = c.getContext('2d'), d = c.width / c.getBoundingClientRect().width, a = %s._a;
+STRIPE = """(() => { const c = %s.cv, d = c.width / c.getBoundingClientRect().width, a = %s._a;
   const x0 = Math.round((a.X(a.x0) + 4) * d), x1 = Math.round((a.X(a.x1) - 4) * d), y0 = Math.round((a.Y(a.y1) + 4) * d), y1 = Math.round((a.Y(a.y0) - 4) * d);
-  const w = x1 - x0, h = y1 - y0, im = g.getImageData(x0, y0, w, h).data, L = i => im[i] * .3 + im[i + 1] * .59 + im[i + 2] * .11; let s = 0, n = 0, mean = 0;
+  const w = x1 - x0, h = y1 - y0, sc = document.createElement('canvas'); sc.width = w; sc.height = h; const g = sc.getContext('2d', {willReadFrequently: true}); g.drawImage(c, x0, y0, w, h, 0, 0, w, h);      // a copy read from a scratch canvas: reading the page canvas itself makes Chrome warn about willReadFrequently
+  const im = g.getImageData(0, 0, w, h).data, L = i => im[i] * .3 + im[i + 1] * .59 + im[i + 2] * .11; let s = 0, n = 0, mean = 0;
   for (let y = 0; y < h - 1; y++) for (let x = 0; x < w; x += 2) { const i = (y * w + x) * 4; s += Math.abs(L(i) - L(i + w * 4)); n++; mean += L(i); }
   return { stripe: s / n, mean: mean / n, w, h }; })()""" % (M, M)
 try:

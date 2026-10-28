@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // Partial structures of the drawing: a set of atoms inside brackets with a delta «+O -H2» (a change whose position is unknown: a hydroxylation somewhere on
 // the ring). Stored in the drawing as a data S-group of Ketcher on the atoms (fieldName «MZLAB», fieldData = the delta, context «Fragment»), so it is saved in
 // the .ket and travels with the molfile. Brackets and text are drawn by parentesi.js over the canvas; formula, mass and m/z with the delta come from the Rust
@@ -56,7 +57,7 @@ export function multiShape(/** @type {any} */ st, /** @type {number[]} */ ids) {
 
 /** the multicentre attachments of the drawing (data S-groups «MZLAB_ENDPTS» whose atoms have the right shape) */
 export function multis(/** @type {any} */ K) {
-  const st = K.editor.struct(); /** @type {Multi[]} */ const out = [];
+  const st = K.editor.struct(); const out = /** @type {Multi[]} */ ([]);
   st.sgroups.forEach((/** @type {any} */ sg) => {
     if (sg.type !== "DAT" || !sg.data || sg.data.fieldName !== KEY_M) return;
     const m = multiShape(st, [...sg.atoms]); if (m) out.push({ atoms: [...sg.atoms], ...m });
@@ -114,7 +115,7 @@ export const removePartial = (/** @type {any} */ K, /** @type {number[]} */ ids,
 export function multiMolfile(/** @type {any} */ K, /** @type {number[]} */ ids, /** @type {Multi[]} */ ms) {
   const st = K.editor.struct(), set = new Set(ids), idx = new Map(ids.map((id, n) => [id, n + 1])), atoms = ids.map(i => st.atoms.get(i));
   if (atoms.some((/** @type {any} */ a) => !/^[A-Z][a-z]?$/.test(a.label))) return null;
-  const f = (/** @type {number} */ v) => v.toFixed(4), A = [], B = [], drop = new Set(ms.map(m => m.bond));
+  const f = (/** @type {number} */ v) => v.toFixed(4), A = /** @type {string[]} */ ([]), B = /** @type {string[]} */ ([]), drop = new Set(ms.map(m => m.bond));
   atoms.forEach((/** @type {any} */ a, /** @type {number} */ k) => A.push(`M  V30 ${k + 1} ${a.label} ${f(a.pp.x)} ${f(-a.pp.y)} 0 0${a.charge ? " CHG=" + a.charge : ""}`));
   st.bonds.forEach((/** @type {any} */ b, /** @type {number} */ k) => { if (set.has(b.begin) && set.has(b.end) && !drop.has(k)) B.push(`${b.type >= 1 && b.type <= 4 ? b.type : 1} ${idx.get(b.begin)} ${idx.get(b.end)}`); });
   for (const m of ms.filter(q => set.has(q.sub))) {

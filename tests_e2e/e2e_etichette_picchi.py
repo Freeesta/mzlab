@@ -1,4 +1,4 @@
-"""Labels of the main peaks of the chromatograms (etichette-picchi.js): RT + base peak m/z on a TIC (synthetic Full Scan), RT + wavelength on a PDA trace (synthetic
+"""Labels of the main peaks of the chromatograms (etichette-picchi.js): RT + base peak m/z on a TIC (synthetic Full Scan), the time alone on a PDA trace (synthetic
 DAD with two maxima at different wavelengths); the control shows and hides them, they never overlap, follow the zoom, enter the table of the data and pass axe."""
 import sys, os, math, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -32,21 +32,26 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [str(MS)]); pg.click("text=Carica dati"); ready(pg)
         def tic():
-            attendi(pg, f"{LB}.some(l => l.text.includes('·'))")
             txt = [l[0] for l in labels(pg, 1)]
             big = [t for t in txt if t.startswith("14.3")]
-            assert big and "364" in big[0], txt
-        step("TIC: the tallest peak is labelled with RT and base peak m/z", tic)
+            assert big and float(big[0]) > 0 and "min" not in big[0] and all("·" not in t and "m/z" not in t for t in txt), txt
+        step("TIC: the tallest peak is labelled with its time only", tic)
         def zones():
             # the run is 0.5-20 min: no label in the solvent front (first 3 min) or in the last 5 min
             rts = [float(l[0].split(" ")[0]) for l in labels(pg, 1)]
             assert rts and all(3.0 <= t <= 15.2 for t in rts), rts
         step("TIC: no label in the first 3 min or in the last 5 min", zones)
+        def cursor_behind():
+            # the dashed cursor passes behind a label: its overlay is cut where the label box crosses it
+            lb = labels(pg, 1)[0]
+            m = pg.evaluate(f"(() => {{ const p = {CH}; p.cur = p._a.x0 + 0 * 1; const l = {LB}[0]; const rt = p._a.x0 + (l.x + l.w / 2 - p._a.X(p._a.x0)) / (p._a.X(p._a.x1) - p._a.X(p._a.x0)) * (p._a.x1 - p._a.x0); p.cur = rt; cursorLine(p); return p.cl.style.maskImage || p.cl.style.webkitMaskImage || ''; }})()")
+            assert "transparent" in m, m
+        step("the cursor line is cut behind a peak label", cursor_behind)
         def tip():
-            t = pg.evaluate(f"{LB}[0].tip"); assert "RT" in t and "min" in t, t
+            t = pg.evaluate(f"{LB}[0].tip"); assert "RT" in t and "min" in t and "m/z" not in t, t
         step("each label has a tooltip", tip)
         def table():
-            d = pg.evaluate(f"TDATI_P.data({CH})"); assert any("364" in str(r[0]) for r in d["rows"]), len(d["rows"])
+            d = pg.evaluate(f"TDATI_P.data({CH})"); assert d["rows"] and any("14.3" in str(r[0]) for r in d["rows"]), len(d["rows"])
         step("the table of the data lists the labels", table)
         def zoom():
             pg.evaluate(f"(()=>{{const p={CH}; p.zoom=[13.5,15.5]; draw(p)}})()"); frames(pg, 3)
@@ -73,12 +78,12 @@ try:
             def pda():
                 pg.evaluate(f"(()=>{{const c={CH}; const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
                 attendi(pg, f"{CH}.kind==='pda' && {CH}._a")
-                attendi(pg, f"{LB}.filter(l => l.text.includes('nm')).length >= 2")
+                attendi(pg, f"{LB}.filter(l => l.etpk && /^\\d+\\.\\d{{2}}$/.test(l.text)).length >= 2")
                 ls = labels(pg, 2); txt = sorted(l[0] for l in ls)
                 for i, a in enumerate(ls):
                     for b in ls[i + 1:]: assert not overlap(a, b), (a, b)
-                assert any(t.startswith("1.0") and "260 nm" in t for t in txt) and any(t.startswith("2.0") and "320 nm" in t for t in txt), txt
-            step("PDA: two peaks, two wavelengths (260 and 320 nm), labels apart", pda)
+                assert any(t.startswith("1.0") for t in txt) and any(t.startswith("2.0") for t in txt) and all("nm" not in t for t in txt), txt      # the label is the time alone: the wavelength is in the title and the legend
+            step("PDA: two peaks (maxima at 260 and 320 nm), time labels apart", pda)
     finally:
         r2.close()
 finally:

@@ -4,7 +4,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network", "tp.review"];
+  const STEPS = ["tp.generate", "tp.link", "tp.filter", "tp.position", "tp.network", "tp.review", "tp.dig_lr"];
   /** @type {Promise<any> | null} */ let loaded = null;
   const fail = (/** @type {string} */ key, /** @type {any} */ params = {}) => Object.assign(new Error(key), { key, params });
 
@@ -21,7 +21,7 @@
   const engine = async () => {
     if (loaded) return loaded;
     loaded = (async () => {
-      const c = G.QTOOLS.ctx, man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
+      const c = await F.tpCtx("regole_tp_2.json"), man = await (await fetch(new URL("wasm-feat/manifest.json", c.base).href)).json();
       const rules = c.files["regole_tp_2.json"];
       if (!rules || !man.proofs) throw fail("error.featFailed");
       return { hr: await open(c.base, man.proofs), grafo: man.grafo ? await open(c.base, man.grafo) : null, rules: typeof rules === "string" ? new TextEncoder().encode(rules) : rules };
@@ -58,6 +58,13 @@
     try { return { ...await parentOf(S, inst), samples, hypotheses: (await generate(S, gen)).text }; } catch (e) { throw asError(e); }
   };
 
+  /** the inputs of tp.dig_lr that are text: the parent with its structure and the samples (the table, the peaks and the indexes come from the files of the series) @param {any} S @param {any} inst */
+  const digInputs = async (S, inst) => {
+    const sref = (F.refs(inst, "samples")[0] || "").replace(/^file:/, ""), samples = S.samplesJson && S.samplesJson[sref];
+    if (!samples) throw fail("err.flow.input.missing", { input: sref });
+    try { return { ...await parentOf(S, inst), samples }; } catch (e) { throw asError(e); }
+  };
+
   const NAMES = /** @type {Record<string, string>} */ ({ "tp.filter": ".filtri.json", "tp.position": ".sites.json", "tp.network": ".rete.json", "tp.review": ".review.json" });
   const step = (/** @type {any} */ i) => String(i && i.step).split("@")[0];
 
@@ -91,12 +98,12 @@
         if (!m.table) return null;
         const pr = JSON.parse(params); m.ppm = pr.ppm ?? 10; m.minFragments = pr.min_fragments ?? 0;
         m.samples = (sref && S.samplesJson && S.samplesJson[sref]) || "";
-        const rules = G.QTOOLS.ctx.files["regole_tp.json"];
+        const rules = G.QTOOLS.ctx.files["regole_tp_2.json"];
         m.rules = typeof rules === "string" ? new TextEncoder().encode(rules) : rules;
       }
       return { name: inst.id + NAMES[kind], text: await c.p.tpPost(m) };
     } catch (e) { throw asError(e); }
   };
 
-  F.webTp = { STEPS, generate, linkInputs, post };
+  F.webTp = { STEPS, generate, linkInputs, digInputs, post };
 })();

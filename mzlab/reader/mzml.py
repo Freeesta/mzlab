@@ -667,6 +667,17 @@ class Run:
         return {"instrument": model, "serial": ser.group(1) if ser else "", "components": comp, "analyzers": sorted(set(self._ic.values())),
                 "source_files": src, "software": [f"{n} {v}".strip() for v, n in soft]}
 
+    def scan_window_ms1(self):
+        """(lowest, highest) m/z of the scan windows of the first 50 survey scans, or None (what the index keeps as `run.scan_window`)."""
+        lo = hi = None
+        for s in [x for x in self.scans if x.level == 1][:50]:
+            h = self._mm[s.start:s.end].decode("utf-8", "replace")
+            a, b = _cv(h, "MS:1000501"), _cv(h, "MS:1000500")
+            if a and b:
+                lo = _float(a) if lo is None else min(lo, _float(a))
+                hi = _float(b) if hi is None else max(hi, _float(b))
+        return (lo, hi) if lo is not None else None
+
     def scan_window(self):
         """(lowest, highest) m/z of the scan windows, or None."""
         lo = hi = None

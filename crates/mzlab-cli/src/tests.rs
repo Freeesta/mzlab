@@ -1,6 +1,9 @@
 //! `mzlab-cli features` writes the same table as the page: the CSV of the CLI on three synthetic mzML files is compared, character by character, with the one
 //! the pipeline of the app gives on indexes built in memory (`run::recipe_for` -> `run::detect` -> `run::align` -> the export "full" of the table). Synthetic data only.
 
+#[path = "flow_parita_dati_tests.rs"]
+mod flow_parita_dati_tests;
+
 use std::path::Path;
 
 use mzlab_core::budget::sha256_hex;

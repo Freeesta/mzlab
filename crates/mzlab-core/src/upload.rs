@@ -15,6 +15,7 @@ use crate::mzidx_lettore;
 use crate::scantable::{self, Table};
 use crate::window::Windowed;
 mod late;
+mod non_mzml;
 #[cfg(not(target_arch = "wasm32"))]
 pub use late::prepare_late;
 
@@ -146,6 +147,7 @@ pub fn prepare_in<R: ReadAt>(
     known: Option<(String, String)>,
     budget: Option<&MemBudget>,
 ) -> Result<Prepared> {
+    non_mzml::refuse(r, size, name)?;
     let t = scantable::read_in(&mut Windowed::new(r, size), size, budget)?;
     let (sha256, probe) = match known {
         Some(k) => k,
@@ -165,6 +167,7 @@ pub fn prepare_parallelo<R: ReadAt, R2: ReadAt + Send>(
     size: u64,
     name: &str,
 ) -> Result<Prepared> {
+    non_mzml::refuse(r, size, name)?;
     std::thread::scope(|s| {
         let h = s.spawn(move || fingerprint(&mut r2, size, Passata::senza_sha1(size)));
         let t = scantable::read(&mut Windowed::new(r, size), size);
@@ -204,10 +207,7 @@ fn prepared(
     sha256: String,
     probe: String,
 ) -> Prepared {
-    let run = format!(
-        "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}}}",
-        t.nce, t.hr1, t.n_chromatograms
-    );
+    let run = t.run_json();
     let table = ScanTable {
         level: t.rows.iter().map(|s| s.level).collect(),
         polarity: t.rows.iter().map(|s| s.polarity).collect(),

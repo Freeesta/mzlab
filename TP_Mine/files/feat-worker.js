@@ -158,12 +158,10 @@ function previewOps(submit, call, opts) {
     family(file, recipe) { return submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "family", path: file.path, name: file.name, recipe })).json); }); },
   };
 }
-
 /** drift of the RT of the parent along a series (JSON of mzlab_feat::params_drift): `stored` = the .mzfeatf of its files, `baseRtTol` = the tolerance from the peak width (NaN = none) */
 function driftOps(submit, call, copy) {
   return { drift: ({ stored, parentMz, baseRtTol }) => submit(async (slot, load) => { await load("feat"); return JSON.parse((await call(slot, { op: "drift", files: copy(stored), parentMz, baseRtTol })).json); }) };
 }
-
 function proofOps(submit, call, copy, opts) {
   return {
     // L7 (hypotheses of the parent searched in every file) and L8-L9 (graph of the proofs on the table) in two workers of their own: the hypotheses worker is closed
@@ -195,8 +193,8 @@ function proofOps(submit, call, copy, opts) {
 // Methods of the pool that read one row or one spectrum of the table (MS2 file, traces, compositions).
 function rowOps(submit, call) {
   return {
-    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text.
-    ms2File: ({ table, samples, spec, sha, pol, kind, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text; }),
+    // MS2 file of the table (FBMN `.mgf`, SIRIUS `.ms`): the best MS2 of each row is read from the .mzidx of its file (OPFS). Resolves with the text. `tableFile`: CSV or mzTab-M in the polarity of the table and its files (as `flow run`).
+    ms2File: ({ table, samples, spec, sha, pol, kind, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "ms2file", table: table.slice(), samples, spec, sha, pol, kind, paths })).text; }), tableFile: ({ table, samples, sha, kind, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "table_file", table: table.slice(), samples, sha, kind, paths })).text; }), tableView: ({ table, samples, params }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "table_view", table: table.slice(), samples, params })).text; }),
     // XIC of every file, MS1 at the best apex and MS2 of one row (`riga_tracce/1`), read from the .mzidx in OPFS. Resolves with the text.
     rowTraces: ({ table, samples, id, ppm, paths }) => submit(async (slot, load) => { await load("table"); return (await call(slot, { op: "rowtraces", table: table.slice(), samples, id, ppm, paths })).text; }),
     // Candidate elemental compositions of one feature from its MS1 spectrum (`.wasm` `untargeted`, `formula_id/1`): `mz`, `y` the spectrum, `featureMz` the monoisotopic m/z,
@@ -213,6 +211,7 @@ function rowOps(submit, call) {
     linkEvidence: m => submit(async (slot, load) => { await load("proofs"); const r = await call(slot, { op: "tp_link_evidence", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) }); slot.recycle = true; return r; }),
     tpPost: m => submit(async (slot, load) => { await load(m.kind === "network" ? "table" : "interp"); return (await call(slot, { op: "tp_post", ...m, tp: m.tp.slice(), table: m.table && m.table.slice(), rules: m.rules && m.rules.slice() })).text; }),
     linkInterp: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "tp_link_interp", ...m, table: m.table.slice() })).bytes; }),
+    digLr: m => submit(async (slot, load) => { await load("proofs"); await load("finder_lr"); return (await call(slot, { op: "dig_lr", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) })).text; }),
   };
 }
 
@@ -324,7 +323,7 @@ export function createFeatPool(opts) {
     set onProgress(f) { opts.onProgress = f; },
     get workers() { return slots.size; },
     // for the tests: the worker that is working dies as a crashed tab would
-    _killBusy() { for (const s of slots) if (s.busy) { s.lost("killed"); try { s.w.terminate(); } catch (_) { /* gone */ } } },
+    _killBusy() { let n = 0; for (const s of slots) if (s.busy) { n++; s.lost("killed"); try { s.w.terminate(); } catch (_) { /* gone */ } } return n; },
     _die() { return submit(async (slot, load) => { await load("feat"); await call(slot, { op: "die" }); }); },
   };
 }
@@ -376,7 +375,7 @@ async function init(m) {
 }
 const reply = (id, r, transfer) => self.postMessage({ id, ok: true, ...r }, transfer || []), arrays = list => list.map(b => (b instanceof Uint8Array ? b : new Uint8Array(b)));
 const OPS = {
-  async init(m) { await init(m); return { version: mods[m.which].version(), crate: mods[m.which].crate_version() }; },
+  async init(m) { await init(m); const x = mods[m.which]; return { version: x.version?.(), crate: x.crate_version?.() }; },
   async alias(m) { mods[m.which] = mods[m.of]; mems[m.which] = mems[m.of]; return {}; },
   async detect(m) {
     const f = await openAll([m.path]), out = memSink();
@@ -435,7 +434,7 @@ const OPS = {
     const f = await openAll(m.paths), t = new Uint8Array(m.table);
     try { return { text: mods.table.export_ms2((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.spec, m.sha, m.pol, m.kind, f.read, f.sizes) }; } finally { f.close(); }
   },
-  async cross_polarity(m) { const p = new Uint8Array(m.pos), n = new Uint8Array(m.neg); return { text: mods.table.cross_polarity((_, off, len) => p.subarray(off, off + len), p.length, (_, off, len) => n.subarray(off, off + len), n.length, m.params) }; },
+  async cross_polarity(m) { const p = new Uint8Array(m.pos), n = new Uint8Array(m.neg); return { text: mods.table.cross_polarity((_, off, len) => p.subarray(off, off + len), p.length, (_, off, len) => n.subarray(off, off + len), n.length, m.params) }; }, async table_file(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.export_table_auto((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.sha, m.kind, f.read, f.sizes) }; } finally { f.close(); } }, async table_view(m) { const t = new Uint8Array(m.table); return { text: mods.table.table_view_auto((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.params) }; },
   async rowtraces(m) { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_row_traces((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.id, f.read, f.sizes, m.ppm) }; } finally { f.close(); } },
   async "fs.write"(m) { await writeFile(m.path, m.bytes); return {}; },
   async "fs.read"(m) {
@@ -451,6 +450,7 @@ const OPS = {
   async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
 };
 
+OPS.dig_lr = async m => { const f = await openAll(m.paths); try { const p = mods.proofs.tp_dig_inputs(m.rules, m.parent, m.structure, m.samples, m.names, m.recipe, arrays(m.peaks), f.read, f.sizes); try { const d = mods.finder_lr.finder_lr_dig(p.files(), p.who(), m.settings, new Uint8Array(m.table), p.registry(), f.read, f.sizes); try { return { text: d.summary("{}") + "\n" }; } finally { d.free(); } } finally { p.free(); } } finally { f.close(); } };   // tp.dig_lr: the hypotheses searched in the stored peaks (proofs) and the Dig of the series (finder_lr)
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {
   let buf = new Uint8Array(1 << 20), n = 0;

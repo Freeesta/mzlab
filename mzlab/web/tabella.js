@@ -122,15 +122,15 @@ const TABELLA = (() => {
     const msg = s => { const m = box.querySelector("#feat-msg"); if (m) m.textContent = s || ""; };
     const done = () => { box.querySelector("#feat-sum").innerHTML = summary(); msg(""); };
     box.onchange = e => {
-      if (e.target.id === "feat-file" && e.target.files[0]) e.target.files[0].text().then(tx => { try { fromText(tx); paint(box); } catch (err) { msg(String(err.message || err)); } });
+      if (e.target.id === "feat-file" && e.target.files[0]) e.target.files[0].text().then(tx => { try { fromText(tx); paint(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg(String(err.message || err)); } });
     };
     box.onclick = async e => {
       if (e.target.id === "feat-go") {
         const b = e.target; b.disabled = true; msg("");
         try { await fromList(box.querySelector("#feat-list").value, (i, n) => { msg(t("feat.progress", { i, n })); box.querySelector("#feat-msg").classList.remove("bad"); }); paint(box); }
-        catch (err) { msg(String(err.message || err)); box.querySelector("#feat-msg").classList.add("bad"); }
+        catch (err_) { const err = /** @type {Lanciato} */ (err_); msg(String(err.message || err)); box.querySelector("#feat-msg").classList.add("bad"); }
         b.disabled = false;
-      } else if (e.target.id === "feat-mzf") { try { fromMzFinder(); paint(box); } catch (err) { msg(String(err.message || err)); } }
+      } else if (e.target.id === "feat-mzf") { try { fromMzFinder(); paint(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg(String(err.message || err)); } }
       else if (e.target.id === "feat-clear") { tb = null; document.dispatchEvent(new CustomEvent("tabella")); paint(box); }
       const tr = e.target.closest("#feat-tab tbody tr");
       if (tr && window.PROFILO) PROFILO.show(tr.dataset.mz, tr.dataset.rt);

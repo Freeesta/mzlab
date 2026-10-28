@@ -26,8 +26,8 @@ try:
             assert o[1].startswith("spec*") and abs(float(o[1].split("@")[1]) - 14.3) < 0.3, o       # newest right under, and live
             assert sum(1 for t in o if t.startswith("spec*")) == 1, o   # only one live
             ttl = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.type==='spec').sort((a,b)=>a.y-b.y).map(p=>p.el.querySelector('.fol').textContent)"); print(ttl)
-            assert "pann. " in ttl[0] and all("pann. " not in t and "Fisso" in t for t in ttl[1:]), ttl
-            rt = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.type==='spec').sort((a,b)=>a.y-b.y).map(p=>p.el.querySelector('.rtl').textContent)"); assert all("RT" in t and "min" in t for t in rt), rt      # the time is written once, next to the title
+            assert ttl[0].startswith("\u2190") and all(t == "\u2298" for t in ttl[1:]), ttl
+            rt = pg.evaluate("E.panels.filter(p=>p.tab===E.tab&&p.type==='spec').sort((a,b)=>a.y-b.y).map(p=>p.el.querySelector('.rtl').textContent)"); assert all("RT" not in t and "min" in t for t in rt), rt      # the time is written once, next to the title
         step("full scan: 3 double clicks -> newest on top and live, older frozen with the RT next to the title", triple)
         def single():
             before = pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.tab===E.tab).map(p=>[p.id,p.r0])")

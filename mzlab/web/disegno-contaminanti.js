@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // Contaminant chooser of the Quick draw box (Disegno): lists the built-in contaminants (Keller 2008) whose structure is KNOWN and puts the SMILES of the chosen one in the SMILES field.
 // A structure is known only when the molecules database has a record with the same formula AND the same name (or a synonym); nothing is guessed from the formula alone.
 import { cerca, prendi } from "./molecole-archivio.js";

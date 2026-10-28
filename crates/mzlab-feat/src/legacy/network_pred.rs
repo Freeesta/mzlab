@@ -125,7 +125,7 @@ mod tests {
     use super::*;
 
     fn rules() -> Rules {
-        Rules::parse(include_bytes!("../../../../TP_Mine/data/regole_tp.json")).unwrap()
+        Rules::parse(include_bytes!("../../../../TP_Mine/data/regole_tp_2.json")).unwrap()
     }
 
     fn c(f: &[(&str, i64)]) -> Counts {

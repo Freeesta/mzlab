@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 // "Disegno": Ketcher (structures, fragments, arrows, text). Bundled in web/vendor: no internet needed.
 // The page only draws and labels: the student does the chemistry (no formula/adduct/fragment tables here, on purpose).
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
@@ -8,19 +9,19 @@ import { applyFont, mountFont } from "./disegno-font.js";
 import { mountBar } from "./disegno-barra.js";
 import { initContaminants } from "./disegno-contaminanti.js";
 import { fragmentItems } from "./disegno-frammenti.js";
-import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
-let OCL = null;
+import { indigo } from "./disegno-indigo.js"; import { partialItems, drawPartials, plainSmiles, partialExport, ketWithoutPartials, addExportPartials } from "./disegno-parziali.js";
+/** @type {any} */ let OCL = null;                         // OpenChemLib module (vendor bundle, untyped)
 const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
-const Q = s => document.querySelector(s);
-let K = null, starting = null, restored = false, timer = null, startTimeout = null;
+const Q = (/** @type {string} */ s) => document.querySelector(s);
+let K = /** @type {DrawKet} */ (null), starting = /** @type {Promise<DrawKet> | null} */ (null), restored = false, timer = /** @type {number | undefined} */ (undefined), startTimeout = /** @type {number | undefined} */ (undefined);
 
-let kldTimer = null, kldN = 0;
+let kldTimer = /** @type {number | undefined} */ (undefined), kldN = 0;
 function start() {
   if (starting) return starting;
   const fr = Q("#kframe");
   starting = new Promise((resolve, reject) => {
-    const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); } };
+    const on = (/** @type {MessageEvent} */ e) => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); clearTimeout(startTimeout); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
     Q("#kload").hidden = false;
     const dots = Q("#kld-dots");
@@ -49,20 +50,20 @@ function start() {
     
     const doc = fr.contentDocument;
     if (doc && doc.body) {
-      doc.body.addEventListener("dragover", e => { e.preventDefault(); e.stopPropagation(); });
-      doc.body.addEventListener("drop", async e => {
+      doc.body.addEventListener("dragover", (/** @type {Event} */ e) => { e.preventDefault(); e.stopPropagation(); });
+      doc.body.addEventListener("drop", async (/** @type {DragEvent} */ e) => {
         e.preventDefault(); e.stopPropagation();
-        const file = e.dataTransfer.files[0];
+        const file = /** @type {DataTransfer} */ (e.dataTransfer).files[0];
         let txt = "";
         if (file) txt = await file.text();
-        else txt = e.dataTransfer.getData("text/plain");
+        else txt = /** @type {DataTransfer} */ (e.dataTransfer).getData("text/plain");
         if (txt) {
           try {
             const before = await k.getKet();
             await k.addFragment(txt);
             if (await k.getKet() === before) dnote(I18N.t("draw.import.unsupported"));
             else { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); }
-          } catch (err) { dnote(I18N.t("draw.import.failed", { message: err.message })); }
+          } catch (err_) { const err = /** @type {Lanciato} */ (err_); dnote(I18N.t("draw.import.failed", { message: err.message })); }
         }
       });
     }
@@ -73,12 +74,12 @@ function start() {
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
-let kBar = null;                                                           // drop-down toolbar (disegno-barra.js), null = Ketcher's own bars
+/** @type {ReturnType<typeof mountBar> | null} */ let kBar = null;                                                           // drop-down toolbar (disegno-barra.js), null = Ketcher's own bars
 // zoom in / zoom out / reset (100 % and centred) next to the centre button: buttons, no plain-key shortcuts (Ketcher uses «+» and «-» for the charge)
-function addZoomButtons(d, fr, fullBtn, btn) {
-  const ZB = [["zoom-in-tp", "draw.zoom.in", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6M11 8v6"/>', () => stepZoom(1.25)],
+function addZoomButtons(/** @type {Document} */ d, /** @type {HTMLIFrameElement} */ fr, /** @type {HTMLElement} */ fullBtn, /** @type {HTMLElement} */ btn) {
+  const ZB = /** @type {[string, string, string, () => void][]} */ ([["zoom-in-tp", "draw.zoom.in", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6M11 8v6"/>', () => stepZoom(1.25)],
               ["zoom-out-tp", "draw.zoom.out", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5M8 11h6"/>', () => stepZoom(0.8)],
-              ["zoom-reset-tp", "draw.zoom.reset", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/><text x="11" y="13.6" font-size="7" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif">1:1</text>', () => { fitZoom(K, fr); drawLabels(); }]];
+              ["zoom-reset-tp", "draw.zoom.reset", '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/><text x="11" y="13.6" font-size="7" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif">1:1</text>', () => { fitZoom(K, fr); drawLabels(); }]]);
   let after = btn;
   ZB.forEach(([id, key, ico, fn]) => {
     if (d.querySelector('[data-testid="' + id + '"]')) return;
@@ -92,19 +93,19 @@ function addZoomButtons(d, fr, fullBtn, btn) {
   });
 }
 // the «Show panels» pill (outside the iframe, top right) is centred on the top bar; the bar keeps a free strip under it so no button is covered (icon only on a narrow editor)
-function placePill(d) {
+function placePill(/** @type {Document} */ d) {
   const pill = document.querySelector("#side-toggle"), corner = document.querySelector("#side-corner"), top = d.querySelector('[class*="App-module_top"]');
   if (!pill || !corner || !top) return;
   const inCorner = pill.parentNode === corner;
-  pill.classList.toggle("ico", inCorner && d.defaultView.innerWidth < 600);
+  pill.classList.toggle("ico", inCorner && /** @type {Window} */ (d.defaultView).innerWidth < 600);
   const tb = top.getBoundingClientRect();
   corner.style.top = Math.max(0, Math.round(tb.top + (tb.height - pill.offsetHeight) / 2)) + "px";
   d.documentElement.style.setProperty("--tpill", inCorner ? pill.offsetWidth + 14 + "px" : "0px");
 }
 let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
-function hideMacro(fr) {
+function hideMacro(/** @type {HTMLIFrameElement} */ fr) {
   try {
-    const d = fr.contentDocument, st = d.createElement("style");
+    const d = /** @type {Document} */ (fr.contentDocument), st = d.createElement("style");
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
@@ -166,7 +167,7 @@ function hideMacro(fr) {
     }
 
     // Context menu on canvas / molecule
-    d.addEventListener("contextmenu", async ev => {
+    d.addEventListener("contextmenu", async (/** @type {MouseEvent} */ ev) => {
       const st = K && K.editor && K.editor.struct();
       if (!st || st.isBlank()) return;
       const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr); return; }      // right click on the label under a molecule
@@ -174,10 +175,10 @@ function hideMacro(fr) {
       ev.stopPropagation();
       const sel = K.editor.selection() || {};
       const set = new Set(sel.atoms || []);
-      (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+      (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
       /** @type {any} */ let smi = "";
       if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
-      if (!smi) { try { smi = plainSmiles(await K.getSmiles()); } catch (_) {} }
+      if (!smi) { try { smi = plainSmiles(await indigo(() => K.getSmiles())); } catch (_) {} }
       const frRect = fr.getBoundingClientRect();
       const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
       const m = Q("#ctx"); if (!m) return;
@@ -213,7 +214,7 @@ function hideMacro(fr) {
     }, true);
 
     const fit = () => {
-      const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches, root = d.documentElement;
+      const w = /** @type {Window} */ (d.defaultView).innerWidth, h = /** @type {Window} */ (d.defaultView).innerHeight, coarse = /** @type {Window} */ (d.defaultView).matchMedia("(pointer:coarse)").matches, root = d.documentElement;
       root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.3 : 1.05, (w - 24) / 1020)).toFixed(3)));
       // the side columns (rings, tools, atoms) grow as much as the height allows: measured at zoom 1, because the visible buttons depend on the choice of tools
       root.style.setProperty("--ksz", "1");
@@ -223,7 +224,7 @@ function hideMacro(fr) {
       root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.2, (h - th - 24) / need)).toFixed(3)));
     };
     const fit0 = fit; kFit = () => { fit0(); placePill(d); };
-    fit(); placePill(d); d.defaultView.addEventListener("resize", () => kFit());
+    fit(); placePill(d); /** @type {Window} */ (d.defaultView).addEventListener("resize", () => kFit());
     d.head.appendChild(st);
     kBar = mountBar(d, k => I18N.t(k));
     applyTools();
@@ -261,8 +262,8 @@ function applyTools() {
     let st = d.getElementById("tp-tools"); if (!st) { st = d.createElement("style"); st.id = "tp-tools"; d.head.appendChild(st); }
     st.textContent = off.length ? off.join(",") + "{display:none!important}" : "";
     // a group of the side toolbars whose buttons are all hidden would stay as an empty white box: it is hidden too
-    const w = d.defaultView;
-    d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *, [class*="RightToolbar-module_buttons"] > *').forEach(g => {
+    const w = /** @type {Window} */ (d.defaultView);
+    d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *, [class*="RightToolbar-module_buttons"] > *').forEach((/** @type {HTMLElement} */ g) => {
       g.style.display = "";
       const bs = g.matches("[data-testid]") ? [g] : [...g.querySelectorAll("[data-testid]")];          // a bare button (periodic table) is its own group
       if (bs.length === 0 || bs.every(b => b.getClientRects().length === 0)) g.style.display = "none";   // no box = hidden by the sheet or by a parent
@@ -276,14 +277,14 @@ function toolCard() {
   const ch = toolChoice();
   box.innerHTML = TOOLS.map(([k]) => `<div style="margin:2px 0"><label><input type="checkbox" data-t="${k}" ${ch[k] ? "checked" : ""}> ${I18N.t(`draw.tools.${k}`)}</label></div>`).join("") +
     '<div class="bar" style="margin-top:6px"><button type="button" id="tools-all">' + I18N.t("draw.tools.showAll") + '</button><button type="button" id="tools-def">' + I18N.t("draw.tools.essentialOnly") + '</button></div>';
-  const save = o => { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) { /* this tab only */ } applyTools(); toolCard(); };
-  box.querySelectorAll("input[data-t]").forEach(i => i.onchange = () => save({ ...toolChoice(), [i.dataset.t]: i.checked }));
+  const save = (/** @type {Record<string, boolean>} */ o) => { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) { /* this tab only */ } applyTools(); toolCard(); };
+  box.querySelectorAll("input[data-t]").forEach((/** @type {HTMLInputElement} */ i) => i.onchange = () => save({ ...toolChoice(), [/** @type {string} */ (i.dataset.t)]: i.checked }));
   Q("#tools-all").onclick = () => save(Object.fromEntries(TOOLS.map(([k]) => [k, true])));
   Q("#tools-def").onclick = () => { try { localStorage.removeItem(TKEY); } catch (_) { /* nothing saved */ } applyTools(); toolCard(); };
 }
 toolCard(); mountFont(Q("#font-body"), () => K, k => I18N.t(k));
 // Zoom preset: 100%. Re-centres if there is content.
-function fitZoom(k, fr) {
+function fitZoom(/** @type {DrawKet} */ k, /** @type {HTMLIFrameElement} */ fr) {
   try {
     if (typeof k.editor.zoom !== "function") return;
     k.editor.zoom(1);
@@ -292,7 +293,7 @@ function fitZoom(k, fr) {
     if (st && !st.isBlank() && typeof k.editor.zoomAccordingContent === "function") { k.editor.zoomAccordingContent(st); k.editor.centerStruct(); }
   } catch (_) { /* default zoom */ }
 }
-function stepZoom(f) {
+function stepZoom(/** @type {number} */ f) {
   try {
     const e = K && K.editor; if (!e || typeof e.zoom !== "function") return;
     e.zoom(Math.min(4, Math.max(0.2, e.zoom() * f)));
@@ -316,52 +317,52 @@ async function changed() {
   showInfo();
 }
 // small warning line under the SMILES field (invalid SMILES, Ketcher not started); empty = hidden
-const dnote = msg => { const w = Q("#smi-warn"); w.textContent = msg || ""; w.hidden = !msg; };
+const dnote = (/** @type {string} */ msg) => { const w = Q("#smi-warn"); w.textContent = msg || ""; w.hidden = !msg; };
 
 // ------------------------------------------------------------------ SMILES of the selection and property estimates
 // Pieces = connected parts of the drawing (or of the selected atoms only). Each piece is written as a molfile from Ketcher's structure; Ketcher's own
 // engine (Indigo, same as the SMILES of the whole canvas) turns it into SMILES and OpenChemLib reads that for MoleculeProperties.
 // Open valences of a cut piece are closed with H (implicit H).
-function pieces(only) {
+/** @param {Set<number> | null} [only] */ function pieces(only) {
   const st = K.editor.struct(), ids = [...st.atoms.keys()].filter(i => !only || only.has(i)), up = new Map(ids.map(i => [i, i]));
-  const root = i => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
-  st.bonds.forEach(b => { if (up.has(b.begin) && up.has(b.end)) { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); } });
+  const root = (/** @type {number} */ i) => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
+  st.bonds.forEach((/** @type {DrawKet} */ b) => { if (up.has(b.begin) && up.has(b.end)) { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); } });
   const groups = new Map();
   ids.forEach(i => { const r = root(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(i); });
-  const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map(i => st.atoms.get(i).pp.x)), y: Math.min(...g.map(i => st.atoms.get(i).pp.y)) }));
+  const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.x)), y: Math.min(...g.map((/** @type {number} */ i) => st.atoms.get(i).pp.y)) }));
   return out.sort((a, b) => a.x - b.x || a.y - b.y);
 }
-function pieceMolfile(ids, noCharge) {
+/** @param {number[]} ids @param {Set<number>} [noCharge] */ function pieceMolfile(ids, noCharge) {
   const st = K.editor.struct(), set = new Set(ids), idx = new Map(ids.map((id, n) => [id, n + 1])), atoms = ids.map(i => st.atoms.get(i));
   if (atoms.some(a => !(a.label in MONO))) return null;                      // R groups, abbreviations...: no structure
-  const bonds = []; st.bonds.forEach(b => { if (set.has(b.begin) && set.has(b.end)) bonds.push(b); });
-  const f = (v, w) => v.toFixed(4).padStart(w), n3 = v => String(v).padStart(3), chg = [];
+  const bonds = /** @type {DrawKet[]} */ ([]); st.bonds.forEach((/** @type {DrawKet} */ b) => { if (set.has(b.begin) && set.has(b.end)) bonds.push(b); });
+  const f = (/** @type {number} */ v, /** @type {number} */ w) => v.toFixed(4).padStart(w), n3 = (/** @type {number} */ v) => String(v).padStart(3), chg = /** @type {[number, number][]} */ ([]);
   const L = ["", "  qqq", "", `${n3(atoms.length)}${n3(bonds.length)}  0  0  0  0  0  0  0  0999 V2000`];
-  atoms.forEach((a, k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge && !(noCharge && noCharge.has(ids[k]))) chg.push([k + 1, a.charge]); });
-  bonds.forEach(b => L.push(`${n3(idx.get(b.begin))}${n3(idx.get(b.end))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}  0  0  0  0`));
+  atoms.forEach((a, /** @type {DrawKet} */ k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge && !(noCharge && noCharge.has(ids[k]))) chg.push([k + 1, a.charge]); });
+  bonds.forEach(b => L.push(`${n3(/** @type {number} */ (idx.get(b.begin)))}${n3(/** @type {number} */ (idx.get(b.end)))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}  0  0  0  0`));
   for (let i = 0; i < chg.length; i += 8) L.push("M  CHG" + n3(Math.min(8, chg.length - i)) + chg.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join(""));
   L.push("M  END");
   return L.join("\n");
 }
-async function pieceSmiles(ids, noCharge) {
+/** @param {number[]} ids @param {Set<number>} [noCharge] */ async function pieceSmiles(ids, noCharge) {
   const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
-    const r = await Promise.race([K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {}), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 20000))]);
+    const r = await Promise.race([indigo(() => K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {})), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 20000))]);
     return String(r.struct || "").trim().split(/\s+/)[0] || null;
   } catch (_) { return null; }
 }
 // Neutral form of a charged piece: drop |net charge| charges of the same sign from atoms that can take the H back (COO- -> COOH, NH3+ -> NH2,
 // pyridinium NH+ -> pyridine). A charge that cannot be dropped (quaternary ammonium, O+ ...) is permanent: null. Nitro and N-oxide groups (+ and -
 // together, net 0) are never touched.
-const VMAX = { N: 3, O: 2, S: 2, P: 3 };
-function neutralPlan(ids, q) {
+const VMAX = /** @type {Record<string, number>} */ ({ N: 3, O: 2, S: 2, P: 3 });
+function neutralPlan(/** @type {number[]} */ ids, /** @type {number} */ q) {
   const st = K.editor.struct(), set = new Set(ids), bs = new Map(ids.map(i => [i, 0]));
-  st.bonds.forEach(b => { if (set.has(b.begin) && set.has(b.end)) { const o = b.type === 1 ? 1 : b.type === 2 ? 2 : b.type === 3 ? 3 : 1.5; bs.set(b.begin, bs.get(b.begin) + o); bs.set(b.end, bs.get(b.end) + o); } });
-  const ok = ids.filter(i => { const a = st.atoms.get(i); return a.charge && Math.sign(a.charge) === Math.sign(q) && Math.abs(a.charge) === 1 && VMAX[a.label] && bs.get(i) <= VMAX[a.label] + 0.01; });
+  st.bonds.forEach((/** @type {DrawKet} */ b) => { if (set.has(b.begin) && set.has(b.end)) { const o = b.type === 1 ? 1 : b.type === 2 ? 2 : b.type === 3 ? 3 : 1.5; bs.set(b.begin, /** @type {number} */ (bs.get(b.begin)) + o); bs.set(b.end, /** @type {number} */ (bs.get(b.end)) + o); } });
+  const ok = ids.filter(i => { const a = st.atoms.get(i); return a.charge && Math.sign(a.charge) === Math.sign(q) && Math.abs(a.charge) === 1 && VMAX[a.label] && /** @type {number} */ (bs.get(i)) <= VMAX[a.label] + 0.01; });
   return ok.length >= Math.abs(q) ? new Set(ok.slice(0, Math.abs(q))) : null;
 }
 // «Spezza il legame»: the Delete key of Ketcher on a selection made only of bonds removes the bonds and keeps the atoms (the same as the eraser on a bond)
-function breakBonds(ids) {
+function breakBonds(/** @type {number[]} */ ids) {
   try {
     const d = Q("#kframe").contentDocument, bonds = ids || (K.editor.selection() || {}).bonds || []; if (!bonds.length) return false;
     K.editor.selection({ bonds: [...bonds] });                       // only the bonds: Delete would also remove the selected atoms
@@ -376,18 +377,18 @@ function breakBonds(ids) {
   } catch (_) { return false; }
 }
 window.breakBonds = breakBonds;
-const fragHelpers = { pieces: () => pieces(), pieceMolfile: ids => pieceMolfile(ids), t: (k, p) => I18N.t(k, p), copy: s => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
-  num: v => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: o => window.TDATI.table(o), ask: (q, d) => ask(EH(q), d), note: s => (window.toast ? toast(s) : dnote(s)) };
+const fragHelpers = { pieces: () => pieces(), pieceMolfile: (/** @type {number[]} */ ids) => pieceMolfile(ids), t: /** @type {(k: string, p?: Record<string, unknown>) => string} */ ((k, p) => I18N.t(k, p)), copy: (/** @type {string} */ s) => { navigator.clipboard.writeText(s).catch(() => {}); if (window.toast) toast(I18N.t("draw.copy.done")); },
+  num: (/** @type {number} */ v) => { const dec = +Q("#lb-dec").value; return dec ? rh(v, dec).toFixed(dec) : String(rh(v, 0)); }, table: (/** @type {Record<string, unknown>} */ o) => window.TDATI.table(o), ask: /** @type {(q: string, d?: string) => Promise<string | null>} */ ((q, d) => ask(EH(q), d)), note: (/** @type {string} */ s) => (window.toast ? toast(s) : dnote(s)) };
 // selects the bonds between the given pairs of atoms (ids as in the SMILES just loaded) so Ketcher highlights them; returns how many were found
-function markBonds(pairs) {
-  const ids = []; K.editor.struct().bonds.forEach((b, id) => { if (pairs.some(([a, c]) => (b.begin === a && b.end === c) || (b.begin === c && b.end === a))) ids.push(id); });
+function markBonds(/** @type {[number, number][]} */ pairs) {
+  const ids = /** @type {number[]} */ ([]); K.editor.struct().bonds.forEach((/** @type {DrawKet} */ b, /** @type {number} */ id) => { if (pairs.some(([a, c]) => (b.begin === a && b.end === c) || (b.begin === c && b.end === a))) ids.push(id); });
   K.editor.selection(ids.length ? { bonds: ids } : null);
   return ids.length;
 }
 
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
-function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
-const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`;
+function cutBonds(/** @type {Set<number>} */ set) { let n = 0; K.editor.struct().bonds.forEach((/** @type {DrawKet} */ b) => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
+const copyBtn = /** @type {(text: string, label?: string) => string} */ ((text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`);
 let infoRun = 0;
 // One run at a time: Ketcher's structure service (Indigo) can hang when several conversions overlap, so a change that arrives while a run is going
 // only marks "again" and the run repeats once with the final selection.
@@ -396,18 +397,18 @@ async function showInfo() {
   if (infoBusy) { infoAgain = true; return; }
   infoBusy = true;
   try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
-  catch (e) {                                                                  // never leave an empty or stale box: say what went wrong
+  catch (e_) { const e = /** @type {Lanciato} */ (e_);                                                                  // never leave an empty or stale box: say what went wrong
     console.error("QqQ Draw: properties not computed", e);
     const pc = Q("#prop-card"); if (pc) { pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.failed", { message: e && e.message ? e.message : e })) + '</div>'; }
   } finally { infoBusy = false; }
 }
 async function showInfo1() {
   const sc = Q("#sel-card"), pc = Q("#prop-card"); if (!K || !sc || !pc) return;
-  await loadOCL();
+  await loadOCL(); if (!K.editor) return;
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
-  (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  (sel.bonds || []).forEach((/** @type {number} */ id) => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
   if (!set.size) { sc.hidden = true; pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.select")) + '</div>'; return; }   // the table is filled only for a selected molecule
-  const all = /** @type {any[]} */ (pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) })));
+  const all = /** @type {any[]} */ (pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map((/** @type {number} */ i) => st.atoms.get(i))) })));
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
     p.smi = await pieceSmiles(p.ids); p.mol = null;
     if (p.smi) { try { p.mol = OCL.Molecule.fromSmiles(p.smi); } catch (_) { /* no properties */ } }
@@ -437,7 +438,7 @@ async function showInfo1() {
     if (neutOn && p.counter) continue;                                          // counter-ions are dropped
     const ion = p.c.q !== 0, m = ion ? (neutOn ? p.nmol : null) : p.mol;       // an ion: its neutral form, or nothing when the charge is kept
     if (ion && neutOn && !m) perm = true;
-    const pr = m ? new OCL.MoleculeProperties(m) : null, v = (x, d) => m ? x.toFixed(d) : "&ndash;";
+    const pr = m ? new OCL.MoleculeProperties(m) : null, v = (/** @type {number} */ x, /** @type {number} */ d) => m ? x.toFixed(d) : "&ndash;";
     if (m && ion) usedNeutral = true;
     const fo = m ? m.getMolecularFormula().formula : formulaOf(p.c.n).formula;       // a cut piece is closed with H: the formula is that of the SMILES shown
     const sign = ion && !m ? (p.c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : "";
@@ -451,26 +452,26 @@ async function showInfo1() {
 }
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { const tg = /** @type {any} */ (e.target); if (tg && tg.id === "prop-neut") { neutOn = tg.checked; showInfo(); } });
-const fmtF = f => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
+const fmtF = (/** @type {string} */ f) => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 document.addEventListener("click", e => { const tg = /** @type {any} */ (e.target), b = tg.closest && tg.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast(I18N.t("draw.copy.smilesToast")); b.textContent = I18N.t("draw.copy.done"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, 1200); } catch (_) { /* clipboard blocked */ } } });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
 // but is NOT part of the structure (undo, .ket and SMILES are untouched). Added as text to the exported images.
-const MONO = { H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.99491462, F: 18.99840322, Na: 22.98976928, Mg: 23.9850417, Al: 26.98153853,
+const MONO = /** @type {Record<string, number>} */ ({ H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.99491462, F: 18.99840322, Na: 22.98976928, Mg: 23.9850417, Al: 26.98153853,
   Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
-  As: 74.9215965, Se: 79.9165213, Br: 78.9183371, Sn: 119.9021947, I: 126.904473, Hg: 201.970643, B: 11.0093054, Li: 7.01600455 };
+  As: 74.9215965, Se: 79.9165213, Br: 78.9183371, Sn: 119.9021947, I: 126.904473, Hg: 201.970643, B: 11.0093054, Li: 7.01600455 });
 const ELECTRON = 0.00054858;
 // one entry per connected structure: formula (Hill order), charge, monoisotopic mass, bounding box (Ketcher coordinates, y down)
 // counts {C: 8, H: 9, ...} -> Hill formula and monoisotopic mass
-function formulaOf(n) {
+function formulaOf(/** @type {Record<string, number>} */ n) {
   const keys = Object.keys(n).filter(k => n[k] > 0).sort();
   const order = n.C > 0 ? ["C", ...(n.H > 0 ? ["H"] : []), ...keys.filter(k => k !== "C" && k !== "H")] : keys;
   return { formula: order.map(k => k + (n[k] > 1 ? n[k] : "")).join(""), mass: order.reduce((m, k) => m + MONO[k] * n[k], 0) };
 }
 // element counts of some atoms of the drawing (with the H they carry in the drawing); null if an atom has no formula
-function countAtoms(atoms) {
-  const n = {}; let q = 0;
+function countAtoms(/** @type {DrawKet[]} */ atoms) {
+  const n = /** @type {Record<string, number>} */ ({}); let q = 0;
   for (const a of atoms) {
     if (!(a.label in MONO)) return null;                 // R groups, "any atom", abbreviations: no formula
     n[a.label] = (n[a.label] || 0) + 1;
@@ -482,14 +483,14 @@ function countAtoms(atoms) {
 function structures() {
   if (!K) return [];
   const st = K.editor.struct(), ids = [...st.atoms.keys()], up = new Map(ids.map(i => [i, i]));
-  const root = i => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
-  st.bonds.forEach(b => { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); });
+  const root = (/** @type {number} */ i) => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
+  st.bonds.forEach((/** @type {DrawKet} */ b) => { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); });
   const groups = new Map();
   ids.forEach(i => { const r = root(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(st.atoms.get(i)); });
-  const out = [];
+  const out = /** @type {DrawStruct[]} */ ([]);
   groups.forEach(atoms => {
     const c = countAtoms(atoms); if (!c || !atoms.length) return;
-    const xs = atoms.map(a => a.pp.x), ys = atoms.map(a => a.pp.y);
+    const xs = atoms.map((/** @type {DrawKet} */ a) => a.pp.x), ys = atoms.map((/** @type {DrawKet} */ a) => a.pp.y);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     out.push({ ...formulaOf(c.n), n: c.n, q: c.q, cx: (x0 + x1) / 2, y: y1, x0, x1, y0, y1 });
   });
@@ -498,19 +499,19 @@ function structures() {
 // reaction arrows: what changes from the structure before the arrow to the one after it (e.g. "+O", "-CH2")
 function arrowDeltas() {
   if (!K || !Q("#lb-a").checked) return [];            // optional, off by default: the students do this calculation themselves
-  const comps = structures(), out = [];
-  K.editor.struct().rxnArrows.forEach(ar => {
+  const comps = structures(), out = /** @type {{ x: number, y: number, parts: DrawLine }[]} */ ([]);
+  K.editor.struct().rxnArrows.forEach((/** @type {DrawKet} */ ar) => {
     const [p0, p1] = ar.pos, left = p0.x <= p1.x ? p0 : p1, right = p0.x <= p1.x ? p1 : p0, ym = (p0.y + p1.y) / 2;
-    const near = c => ym >= c.y0 - 1.5 && ym <= c.y1 + 1.5;                // roughly on the same line as the arrow
+    const near = (/** @type {DrawStruct} */ c) => ym >= c.y0 - 1.5 && ym <= c.y1 + 1.5;                // roughly on the same line as the arrow
     const before = comps.filter(c => near(c) && c.cx < left.x).sort((a, b) => b.x1 - a.x1)[0];
     const after = comps.filter(c => near(c) && c.cx > right.x).sort((a, b) => a.x0 - b.x0)[0];
     if (!before || !after) return;
-    const els = [...new Set([...Object.keys(before.n), ...Object.keys(after.n)])], gain = {}, loss = {};
+    const els = [...new Set([...Object.keys(before.n), ...Object.keys(after.n)])], gain = /** @type {Record<string, number>} */ ({}), loss = /** @type {Record<string, number>} */ ({});
     for (const e of els) { const d = (after.n[e] || 0) - (before.n[e] || 0); if (d > 0) gain[e] = d; if (d < 0) loss[e] = -d; }
-    const conv = f => f === "H3N" ? "NH3" : f;                              // Hill order would write H3N: students know NH3
+    const conv = (/** @type {string} */ f) => f === "H3N" ? "NH3" : f;                              // Hill order would write H3N: students know NH3
     const g = conv(formulaOf(gain).formula), l = conv(formulaOf(loss).formula), dm = after.mass - before.mass;
-    const parts = [];
-    const push = (sign, f) => { parts.push([sign, ""]); for (const m of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); } parts.push([" ", ""]); };
+    const parts = /** @type {DrawLine} */ ([]);
+    const push = (/** @type {string} */ sign, /** @type {string} */ f) => { parts.push([sign, ""]); for (const m of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); } parts.push([" ", ""]); };
     if (g) push("+", g); if (l) push("\u2212", l);
     if (!g && !l) parts.push([I18N.t("draw.labels.sameFormula") + " ", ""]);
     parts.push([`\u0394m ${dm >= 0 ? "+" : "\u2212"}${Math.round(Math.abs(dm))}`, ""]);   // unit resolution: the integer is enough
@@ -519,8 +520,8 @@ function arrowDeltas() {
   return out;
 }
 // text of a label as LINES of pieces: [[text, "sub" | "sup" | "it" | ""], ...] (formula on the first line, "m/z 241" in italics on the next)
-function labelParts(d0) {
-  const d = d0, parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
+function labelParts(/** @type {DrawStruct} */ d0) {
+  const d = d0, parts = /** @type {DrawLine} */ ([]), f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
   if (f) {
     for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
@@ -535,7 +536,7 @@ function labelParts(d0) {
 }
 const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked || Q("#lb-a").checked;
 function drawLabels() {
-  if (!K) return;
+  if (!K || !K.editor || !K.editor.render) return;       // Ketcher not ready yet (slow runner) or already torn down
   const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
   let g = svg.querySelector("#" + (typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels")); // kept from the old name: renaming it would break DOM lookups/styles
   if (!g) { g = doc.createElementNS(ns, "g"); g.id = typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels"; g.setAttribute("pointer-events", "none"); }
@@ -544,20 +545,20 @@ function drawLabels() {
   drawPartials(K, svg, sc);                               // brackets of the partial structures, always drawn
   if (!labelsOn()) return;
   // the Ketcher canvas stays white in every app theme, so the labels (and the exports) always use the dark-on-white colours
-  const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
+  const text = (/** @type {number} */ x, /** @type {number} */ y, /** @type {DrawLine[]} */ lines, /** @type {string} */ color, /** @type {number} */ size) => lines.forEach((/** @type {DrawLine} */ parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
   for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
   for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], "#2b5c8a", 12);
 }
 // the same labels as Ketcher text objects, only in the copy of the drawing that is exported
 const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";
 // pieces -> plain text with Unicode subscripts/superscripts (only for the fallback: Ketcher text objects)
-const plain = parts => parts.map(([t, k]) => k === "sub" ? String(t).replace(/\d/g, c => SUBC[+c])
+const plain = (/** @type {DrawLine} */ parts) => parts.map(([t, k]) => k === "sub" ? String(t).replace(/\d/g, c => SUBC[+c])
   : k === "sup" ? String(t).replace(/\+/g, "\u207a").replace(/\u2212/g, "\u207b").replace(/\d/g, c => SUPC[+c]) : t).join("");
-function ketWithLabels(ket) {
+function ketWithLabels(/** @type {string} */ ket) {
   if (!labelsOn()) return ket;
   const j = JSON.parse(ket);
-  const add = (lines, x, y, px) => {                       // one Ketcher text object, one block per line, italic pieces marked
-    const blocks = lines.map((parts, n) => {
+  const add = (/** @type {DrawLine[]} */ lines, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ px) => {                       // one Ketcher text object, one block per line, italic pieces marked
+    const blocks = lines.map((/** @type {DrawLine} */ parts, n) => {
       const text = plain(parts), ranges = [{ offset: 0, length: text.length, style: `CUSTOM_FONT_SIZE_${px}px` }]; let off = 0;
       for (const [t, k] of parts) { const len = plain([[t, k]]).length; if (k === "it") ranges.push({ offset: off, length: len, style: "ITALIC" }); off += len; }
       return { key: "qqq" + j.root.nodes.length + "_" + n, text, type: "unstyled", depth: 0, inlineStyleRanges: ranges, entityRanges: [], data: {} };
@@ -579,9 +580,9 @@ document.addEventListener("nbloaded", () => {      // older notebooks only have 
   drawLabels();
 });
 // the two example drawings (made with this very tab: see tests_e2e/make_examples.py)
-Q("#ex-link").onclick = e => {
+Q("#ex-link").onclick = (/** @type {Event} */ e) => {
   e.preventDefault();
-  const fig = (src, alt, cap) => `<figure style="margin:0 0 14px"><img src="static/${src}" alt="${alt}" style="max-width:100%;height:auto"><figcaption class="muted sm">${cap}</figcaption></figure>`;
+  const fig = (/** @type {string} */ src, /** @type {string} */ alt, /** @type {string} */ cap) => `<figure style="margin:0 0 14px"><img src="static/${src}" alt="${alt}" style="max-width:100%;height:auto"><figcaption class="muted sm">${cap}</figcaption></figure>`;
   window.big(I18N.t("draw.examples.title"),
     fig("esempio-trasformazione.png", EH(I18N.t("draw.examples.transform.alt")), I18N.t("draw.examples.transform.caption")) +
     fig("esempio-frammentazione.png", EH(I18N.t("draw.examples.fragment.alt")), I18N.t("draw.examples.fragment.caption")));
@@ -592,12 +593,12 @@ Q("#ex-link").onclick = e => {
 // the position of the structures in the exported SVG is found by matching the bond end points with the atom positions of the
 // .ket (the export scale is 40 px per unit), then the labels are added as <text>. If the match fails, the old way is used.
 const EXPORT_SCALE = 40;
-function exportOffset(svgText, ket) {
+function exportOffset(/** @type {string} */ svgText, /** @type {Record<string, any>} */ ket) {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
   doc.querySelectorAll("defs").forEach(d => d.remove());
-  const atoms = [];
-  Object.keys(ket).filter(k => /^mol\d+$/.test(k)).forEach(k => (ket[k].atoms || []).forEach(a => a.location && atoms.push([a.location[0] * EXPORT_SCALE, -a.location[1] * EXPORT_SCALE])));
-  const ends = [];
+  const atoms = /** @type {[number, number][]} */ ([]);
+  Object.keys(ket).filter(k => /^mol\d+$/.test(k)).forEach(k => (ket[k].atoms || []).forEach((/** @type {DrawKet} */ a) => a.location && atoms.push([a.location[0] * EXPORT_SCALE, -a.location[1] * EXPORT_SCALE])));
+  const ends = /** @type {[number, number][]} */ ([]);
   doc.querySelectorAll("path").forEach(pa => {
     const n = (pa.getAttribute("d") || "").match(/-?\d+(?:\.\d+)?/g);
     const tr = (pa.getAttribute("transform") || "").match(/matrix\(([^)]*)\)/);                 // Ketcher draws in ket units with matrix(40,0,0,40,tx,ty)
@@ -611,10 +612,10 @@ function exportOffset(svgText, ket) {
   // symmetric molecules (rings) match well at several shifts: keep only shifts that leave every atom inside the picture
   // (Ketcher crops the picture tightly around the drawing), then take the best supported one
   const vb = (doc.documentElement.getAttribute("viewBox") || "0 0 0 0").split(/[\s,]+/).map(Number);
-  const inside = (ox, oy) => atoms.every(([ax, ay]) => ax + ox >= vb[0] - 3 && ax + ox <= vb[0] + vb[2] + 3 && ay + oy >= vb[1] - 3 && ay + oy <= vb[1] + vb[3] + 3);
+  const inside = (/** @type {number} */ ox, /** @type {number} */ oy) => atoms.every(([ax, ay]) => ax + ox >= vb[0] - 3 && ax + ox <= vb[0] + vb[2] + 3 && ay + oy >= vb[1] - 3 && ay + oy <= vb[1] + vb[3] + 3);
   const ranked = [...votes].sort((p, q) => q[1] - p[1]).slice(0, 40);
   const need = Math.max(2, Math.min(atoms.length, 3));
-  const pick = ranked.find(([k, c]) => c >= need && inside(...k.split(",").map(Number)));
+  const pick = ranked.find(([k, c]) => c >= need && inside(.../** @type {[number, number]} */ (k.split(",").map(Number))));
   if (!pick) return null;
   const [bx, by] = pick[0].split(",").map(Number);
   // refine with the matching pairs
@@ -623,15 +624,15 @@ function exportOffset(svgText, ket) {
   return { ox: sx / m, oy: sy / m };
 }
 const svgNS = "http://www.w3.org/2000/svg";
-let _meas = null;
-const textWidth = (parts, size) => {
-  _meas = _meas || document.createElement("canvas").getContext("2d");
-  return parts.reduce((w, [s, k]) => { _meas.font = `${k === "it" ? "italic " : ""}${k && k !== "it" ? size * 0.72 : size}px Arial, Helvetica, sans-serif`; return w + _meas.measureText(String(s)).width; }, 0);
+/** @type {CanvasRenderingContext2D | null} */ let _meas = null;
+const textWidth = (/** @type {DrawLine} */ parts, /** @type {number} */ size) => {
+  const meas = _meas = _meas || /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d"));
+  return parts.reduce((w, [s, k]) => { meas.font = `${k === "it" ? "italic " : ""}${k && k !== "it" ? size * 0.72 : size}px Arial, Helvetica, sans-serif`; return w + meas.measureText(String(s)).width; }, 0);
 };
-function svgLabel(doc, parts, x, y, size, color) {
+function svgLabel(/** @type {Document} */ doc, /** @type {DrawLine} */ parts, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ size, /** @type {string} */ color) {
   const t = doc.createElementNS(svgNS, "text");
-  t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", "middle");
-  t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", size); t.setAttribute("fill", color);
+  t.setAttribute("x", String(x)); t.setAttribute("y", String(y)); t.setAttribute("text-anchor", "middle");
+  t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", String(size)); t.setAttribute("fill", color);
   let shift = 0;                                   // current vertical shift in em: tspans carry dy relative to the previous one
   for (const [txt, k] of parts) {
     const want = k === "sub" ? 0.28 : k === "sup" ? -0.45 : 0, sp = doc.createElementNS(svgNS, "tspan");
@@ -642,14 +643,14 @@ function svgLabel(doc, parts, x, y, size, color) {
   }
   return t;
 }
-function addExportLabels(svgText, ket) {
+function addExportLabels(/** @type {string} */ svgText, /** @type {Record<string, any>} */ ket) {
   const off = exportOffset(svgText, ket); if (!off) return null;
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
   const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
   if (vb.length !== 4 || vb.some(isNaN)) return null;
   const g = doc.createElementNS(svgNS, "g"); g.setAttribute("id", typeof NOMI !== "undefined" ? NOMI.KEY("labels") : "qqq-labels"); // kept from the old name: renaming it would break DOM lookups/styles
   let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
-  const put = (lines, x, y, size, color) => lines.forEach((parts, i) => {
+  const put = (/** @type {DrawLine[]} */ lines, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ size, /** @type {string} */ color) => lines.forEach((/** @type {DrawLine} */ parts, /** @type {number} */ i) => {
     const yy = y + i * size * 1.3;
     g.appendChild(svgLabel(doc, parts, x, yy, size, color));
     const w = textWidth(parts, size);
@@ -670,7 +671,7 @@ function addExportLabels(svgText, ket) {
 
 // ------------------------------------------------------------------ export
 // Ketcher crops the picture tightly around the structures and can cut a text object written near the edge: add a margin on every side
-function padSvg(svgText, px) {
+function padSvg(/** @type {string} */ svgText, /** @type {number} */ px) {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
   const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
   if (vb.length !== 4 || vb.some(isNaN)) return svgText;
@@ -682,14 +683,14 @@ function padSvg(svgText, px) {
   return new XMLSerializer().serializeToString(doc);
 }
 // transparent export: drop the white background rectangle that Ketcher draws behind the structures
-function noBackground(svgText) {
+function noBackground(/** @type {string} */ svgText) {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
   doc.querySelectorAll("rect").forEach(q => { if (!q.closest("defs") && /^(rgb\(100%,\s*100%,\s*100%\)|#fff(fff)?|white)$/i.test(q.getAttribute("fill") || "")) q.remove(); });
   return new XMLSerializer().serializeToString(doc);
 }
-async function image(format) {
+async function image(/** @type {string} */ format) {
   await start();
-  const raw = ketWithoutPartials(await K.getKet()), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
+  const raw = ketWithoutPartials(await K.getKet()), gen = (/** @type {DrawKet} */ k) => indigo(() => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" }));
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
@@ -697,7 +698,7 @@ async function image(format) {
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
-  svgText = svgText.replace(/<svg\b([^>]*)>/, (m, at) => `<svg${at}><title>${EH(I18N.t(clear ? "draw.export.svgTitle.clear" : "draw.export.svgTitle.white", { app: APP_NAME, stamp: stamp().slice(-15, -5) }))}</title>`);
+  svgText = svgText.replace(/<svg\b([^>]*)>/, (/** @type {string} */ m, /** @type {string} */ at) => `<svg${at}><title>${EH(I18N.t(clear ? "draw.export.svgTitle.clear" : "draw.export.svgTitle.white", { app: APP_NAME, stamp: stamp().slice(-15, -5) }))}</title>`);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
   // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
@@ -717,19 +718,19 @@ async function image(format) {
 // ---- export file names: disegno_AAAA-MM-GG_HHMM.<ext>; one base name for PNG, JPEG, SVG and .ket of the same minute, "_trasparente" for a transparent
 // PNG/SVG, "-2", "-3" for a repeated name; ASCII lower case only (works on Mac, Windows and the web). The student can change the base name.
 const AUTO = /^(disegno|drawing)_\d{4}-\d\d-\d\d_\d{4}$/, usedNames = new Map();
-const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, "0"); return `${I18N.t("draw.export.filePrefix")}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
-const cleanName = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/_{2,}/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 60);
+const stamp = () => { const d = new Date(), z = (/** @type {number} */ n) => String(n).padStart(2, "0"); return `${I18N.t("draw.export.filePrefix")}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
+const cleanName = (/** @type {unknown} */ t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/_{2,}/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 60);
 function freshName() { const f = Q("#ex-name"); if (!f.value.trim() || AUTO.test(f.value.trim())) f.value = stamp(); }
-function exportName(ext, clear) {
+/** @param {string} ext @param {boolean} [clear] */ function exportName(ext, clear) {
   freshName();
   const base = (cleanName(Q("#ex-name").value) || stamp()) + (clear ? "_" + I18N.t("draw.export.transparentSuffix") : ""), key = base + "." + ext, n = (usedNames.get(key) || 0) + 1;
   usedNames.set(key, n);
   return base + (n > 1 ? "-" + n : "") + "." + ext;
 }
 Q("#ex-name").addEventListener("change", () => { const c = cleanName(Q("#ex-name").value); Q("#ex-name").value = c || stamp(); NB.drawName = AUTO.test(Q("#ex-name").value) ? "" : Q("#ex-name").value; nbSave(); });
-const exwarn = msg => { const w = Q("#ex-warn"); w.textContent = msg || ""; w.hidden = !msg; };
+const exwarn = (/** @type {string} */ msg) => { const w = Q("#ex-warn"); w.textContent = msg || ""; w.hidden = !msg; };
 // every export goes through here: a failure is written in the page instead of being silent
-async function doExport(kind) {
+async function doExport(/** @type {string} */ kind) {
   exwarn("");
   try {
     await start();
@@ -739,7 +740,7 @@ async function doExport(kind) {
     if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
     saveBlob(blob, exportName(kind, clear));
     if (window.toast) toast(I18N.t("draw.export.saved"));
-  } catch (e) { exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_); exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
 Q("#ex-png").onclick = () => doExport("png");
 Q("#ex-jpg").onclick = () => doExport("jpg");
@@ -753,10 +754,10 @@ Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
   try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; Q("#ex-cont").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ drawLabels(); } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
-  catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 // Tabui's «Draw»: `when()` resolves when the editor is ready; `load(smiles)` shows a structure in it (undo restores the previous drawing)
-window.TPDraw = { when: async () => { await start(); return true; }, load: async smi => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async pairs => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await K.getSmiles()); }, partial: async () => { await start(); return partialExport(K, undefined, ids => pieceMolfile(ids)); }, ready: () => !!K, undo: redo => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
+window.TPDraw = { when: async () => { await start(); return true; }, load: async (/** @type {string} */ smi) => { await start(); await K.setMolecule(smi); try { fitZoom(K, Q("#kframe")); } catch (_) { /* zoom is cosmetic */ } }, mark: async (/** @type {[number, number][]} */ pairs) => { await start(); return markBonds(pairs); }, image, info: showInfo, smiles: async () => { await start(); return plainSmiles(await indigo(() => K.getSmiles())); }, partial: async () => { await start(); return indigo(() => partialExport(K, undefined, ids => pieceMolfile(ids))); }, ready: () => !!K, undo: (/** @type {boolean} */ redo) => { const ed = K && K.editor; if (ed && typeof ed.undo === "function" && typeof ed.redo === "function") redo ? ed.redo() : ed.undo(); } };
 document.addEventListener("tpview", e => { if (/** @type {any} */ (e).detail.view === "draw") { start(); initContaminants(k => I18N.t(k)); } });
 try { if (S.view === "draw") { start(); initContaminants(k => I18N.t(k)); } } catch (_) { /* S not there yet: the first tpview starts it */ }   // a direct address (#/draw, Cmd+Shift+R): the editor starts without waiting for the engine
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
@@ -771,14 +772,14 @@ document.addEventListener("nbreset", () => {
 // ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass
 // geometry of the labels (same numbers as drawLabels): a box per structure, in the user units of Ketcher's svg
 function labelBoxes() {
-  if (!K || !(Q("#lb-f").checked || Q("#lb-m").checked)) return [];
+  if (!K || !K.editor || !K.editor.render || !(Q("#lb-f").checked || Q("#lb-m").checked)) return [];
   const sc = K.editor.render.options.microModeScale || 40, size = 13;
   return structures().map(d => {
     const lines = labelParts(d), w = Math.max(...lines.map(l => textWidth(l, size))), x = d.cx * sc, y = d.y * sc + 30;
     return { d, x0: x - w / 2 - 6, x1: x + w / 2 + 6, y0: y - size - 4, y1: y + (lines.length - 1) * size * 1.3 + 8 };
   });
 }
-function labelHit(ev) {
+function labelHit(/** @type {MouseEvent} */ ev) {
   try {
     const svg = K.editor.render.paper.canvas, m = svg.getScreenCTM(); if (!m) return null;
     const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const u = pt.matrixTransform(m.inverse());
@@ -787,13 +788,13 @@ function labelHit(ev) {
   } catch (_) { return null; }
 }
 // formula as the student can paste it in the Data view: Hill formula, then the charge (C10H14N+, C6H5O2-)
-const formulaText = d => d.formula + (d.q ? (Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "-") : "");
-const massText = d => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(rh(raw, 0)); };
-function labelMenu(ev, d, fr) {
+const formulaText = (/** @type {DrawStruct} */ d) => d.formula + (d.q ? (Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "-") : "");
+const massText = (/** @type {DrawStruct} */ d) => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(rh(raw, 0)); };
+function labelMenu(/** @type {MouseEvent} */ ev, /** @type {DrawStruct} */ d, /** @type {HTMLElement} */ fr) {
   const m = Q("#ctx"); if (!m) return;
   const fr0 = fr.getBoundingClientRect(), mx = fr0.left + ev.clientX, my = fr0.top + ev.clientY;
   m.innerHTML = "";
-  const item = (label, text) => { const e = document.createElement("div"); e.textContent = label; e.onclick = () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast(I18N.t("draw.copy.done")); }; m.appendChild(e); };
+  const item = (/** @type {string} */ label, /** @type {string} */ text) => { const e = document.createElement("div"); e.textContent = label; e.onclick = () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast(I18N.t("draw.copy.done")); }; m.appendChild(e); };
   item(I18N.t("draw.ctx.copyFormula", { formula: formulaText(d) }), formulaText(d));
   item(I18N.t(d.q ? "draw.ctx.copyMassMz" : "draw.ctx.copyMass", { mass: massText(d) }), massText(d));
   m.hidden = false;
@@ -801,7 +802,7 @@ function labelMenu(ev, d, fr) {
 }
 // ------------------------------------------------------------------ side cards: hide / show (more room to draw), remembered in this browser
 const SKEY = typeof NOMI !== "undefined" ? NOMI.KEY("disegno.riquadri") : "qqq.disegno.riquadri";
-function sideApply(hidden) {
+function sideApply(/** @type {boolean} */ hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
   const b = Q("#side-toggle"); Q("#side-toggle .tl").textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide"); b.setAttribute("aria-label", Q("#side-toggle .tl").textContent);
   Q(hidden ? "#side-corner" : "#side-row").appendChild(b);   // the button sits above the cards, or in the canvas corner when they are hidden
@@ -811,10 +812,10 @@ function sideApply(hidden) {
 Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
 try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle .tl").textContent = I18N.t("draw.side.show"); Q("#side-toggle").setAttribute("aria-label", I18N.t("draw.side.show")); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
 // ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
-function frameExtras(fr) {
+function frameExtras(/** @type {HTMLIFrameElement} */ fr) {
   const d = fr.contentDocument; if (!d) return;
   d.documentElement.style.overscrollBehaviorX = "none"; d.body.style.overscrollBehaviorX = "none";
-  d.addEventListener("wheel", e => { if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }, { passive: false });
+  d.addEventListener("wheel", (/** @type {WheelEvent} */ e) => { if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }, { passive: false });
 }
 // ------------------------------------------------------------------ shortcuts card: depends on the device (macOS / Windows and Linux / tablet)
 (() => {

@@ -81,29 +81,34 @@ fn median(tmp: &mut [f64]) -> f64 {
     tmp[(tmp.len() - 1) / 2]
 }
 
+/// sigma = 1.4826 MAD / sqrt(2) of the first differences `v[a+1] - v[a]` .. `v[b] - v[b-1]`; `pad` is scratch.
+fn mad_sigma(v: &[f64], a: usize, b: usize, pad: &mut Vec<f64>) -> f64 {
+    pad.clear();
+    pad.extend((a..b).map(|i| v[i + 1] - v[i]));
+    let med = median(pad);
+    pad.clear();
+    pad.extend((a..b).map(|i| (v[i + 1] - v[i] - med).abs()));
+    1.4826 * median(pad) / std::f64::consts::SQRT_2
+}
+
 /// Noise of a continuous scan: sigma = 1.4826 MAD(first differences) / sqrt(2) per block of 10 w, then the 25th percentile of the blocks (>= 5 values).
 pub(super) fn noise(buf: &mut Buf, wb: usize) -> f64 {
-    let d: Vec<f64> = buf.v.windows(2).map(|w| w[1] - w[0]).collect();
-    let bl = 10 * wb;
+    let nd = buf.v.len().saturating_sub(1);
     let mut sig = Vec::new();
-    for ch in d.chunks(bl).filter(|c| c.len() >= 5) {
-        buf.pad.clear();
-        buf.pad.extend_from_slice(ch);
-        let med = median(&mut buf.pad);
-        buf.pad.clear();
-        buf.pad.extend(ch.iter().map(|v| (v - med).abs()));
-        sig.push(1.4826 * median(&mut buf.pad) / std::f64::consts::SQRT_2);
+    for a in (0..nd).step_by(10 * wb) {
+        let b = (a + 10 * wb).min(nd);
+        if b - a >= 5 {
+            sig.push(mad_sigma(&buf.v, a, b, &mut buf.pad));
+        }
     }
     if sig.is_empty() {
-        buf.pad.clear();
-        buf.pad.extend_from_slice(&d);
-        if buf.pad.is_empty() {
+        if nd == 0 {
             return 1e-300;
         }
-        let med = median(&mut buf.pad);
-        buf.pad.clear();
-        buf.pad.extend(d.iter().map(|v| (v - med).abs()));
-        sig.push(1.4826 * median(&mut buf.pad) / std::f64::consts::SQRT_2);
+        sig.push(mad_sigma(&buf.v, 0, nd, &mut buf.pad));
     }
     lower(&mut sig, 0.25).max(1e-300)
 }
+
+#[cfg(test)]
+mod tests;

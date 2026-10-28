@@ -15,7 +15,7 @@ try:
         lab = lambda: dict(pg.evaluate("E.files.map(f => [f.file, f.label])"))
         def labels():
             l = lab()
-            assert l["C_IDA-t0.mzML#MS1"] == "C_IDA-t0 · Full Scan", l
+            assert l["C_IDA-t0.mzML#MS1"] == "C_IDA-t0", l                 # the survey of a DDA file is named after the file only (noFullScan)
             assert l["C_IDA-t0.mzML#MS2"] == "C_IDA-t0 · DDA", l
             assert l["C_MRM-EPI-t0.mzML#MRM"] == "C_MRM-EPI-t0 · MRM", l
             assert l["C_MRM-EPI-t0.mzML#MS2"] == "C_MRM-EPI-t0 · MS2", l
@@ -27,7 +27,7 @@ try:
         step("no MS1 in the file list or the file menu", nomore)
         def reload():
             saved(pg); pg.reload(); pg.wait_for_timeout(1500); ready(pg)
-            assert "C_IDA-t0 · Full Scan" in lab().values(), lab()
+            assert "C_IDA-t0" in lab().values() and "C_IDA-t0 · DDA" in lab().values(), lab()
         step("restored from the notebook", reload)
 finally:
     r.close()

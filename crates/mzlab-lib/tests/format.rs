@@ -207,6 +207,8 @@ fn spectra_without_peaks_after_cleaning_are_counted_not_stored() {
         it: vec![1.0, 1.0],
         meta: Default::default(),
         rt: None,
+        ri: None,
+        ei: false,
     });
     let (_, info) = build_in_memory(&set, BuildOpts::default()).unwrap();
     assert_eq!((info.n_spectra, info.emptied), (10, 1));
@@ -222,7 +224,9 @@ fn small_file() -> Vec<u8> {
         .0
 }
 
-fn read_all(bytes: &[u8]) -> Result<Vec<(Vec<u32>, Vec<u16>, String)>, String> {
+type Rows = Vec<(Vec<u32>, Vec<u16>, String)>;
+
+fn read_all(bytes: &[u8]) -> Result<Rows, String> {
     let lib = Library::open(bytes, CACHE_BYTES).map_err(|e| e.key.to_string())?;
     lib.verify().map_err(|e| e.key.to_string())?;
     let mut v = Vec::new();

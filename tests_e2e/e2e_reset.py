@@ -9,7 +9,7 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_reset.py")][-1]
-        steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+        steps.append((name, f"FAIL line {ln}: " + " | ".join(l.strip() for l in str(e).split("\n") if l.strip())[:600]))
 r = Run(port=8889, wd="/tmp/wd_reset")
 SEED = """async () => {
   const root = await navigator.storage.getDirectory();
@@ -33,10 +33,12 @@ try:
         pg = ctx.new_page(); pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
-            pg.goto(base); pg.wait_for_timeout(800)
+            pg.goto(base); pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
+            if pg.evaluate("!!S.sess"): attendi(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files; staging over it hides #opbtn behind the loading screen
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
             if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
                 stage(pg, [EX / "FullScan_t0.mzML", EX / "FullScan_t30.mzML"])
+                attendi(pg, "!document.querySelector('#opbtn').disabled", timeout=60000)           # enabled once the staged files are checked (slow runner)
                 pg.click("#opbtn"); ready(pg)
             assert pg.evaluate("E.files.length") >= 2
             pg.evaluate(SEED)

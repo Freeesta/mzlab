@@ -71,7 +71,7 @@ try:
             assert pg.locator("#hrbar .hl").first.inner_text().strip() != "", "words next to the icons when there is room"
         step("one row, one pair of arrows per meaning, one undo/redo, words next to the icons", one_row)
         def narrow():
-            pg.set_viewport_size({"width": 760, "height": 1400}); pg.wait_for_timeout(600)
+            pg.set_viewport_size({"width": 600, "height": 1400}); pg.wait_for_timeout(600)
             tops = pg.evaluate("(()=>{const t=[...document.querySelectorAll('#tools button,#tools select,#hrbar button')].filter(b=>b.offsetParent).map(b=>b.getBoundingClientRect().top);return Math.max(...t)-Math.min(...t)<12?[0]:t})()")
             assert len(tops) == 1, tops
             assert pg.is_visible("#hr-more"), "what does not fit goes into the «⋯» menu"

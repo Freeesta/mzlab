@@ -95,8 +95,13 @@ try:
         step("Alt+1-3 change view (by code)", views)
         def open_files():
             assert not pg.evaluate("!!document.querySelector('dialog[open]')"), "a dialog is still open"
-            pg.evaluate("document.activeElement && document.activeElement.blur()")
-            with pg.expect_file_chooser(timeout=20000): pg.keyboard.press("Control+o")
+            for tries in range(4):      # the Draw editor (Ketcher iframe) of the previous step can take the focus when it finishes loading, late on a slow runner: the key then goes to the iframe; blur again and retry
+                pg.evaluate("document.activeElement && document.activeElement.blur()")
+                try:
+                    with pg.expect_file_chooser(timeout=6000): pg.keyboard.press("Control+o")
+                    return
+                except Exception as e:
+                    if tries == 3: raise
         step("Ctrl+O opens the file chooser", open_files)
         def palette_key():
             pg.keyboard.press("Control+k"); attendi(pg, "PALETTE.isOpen")

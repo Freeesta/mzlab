@@ -6,7 +6,7 @@ use mzlab_core::elements;
 use mzlab_core::error::Result;
 use mzlab_core::json::Out;
 
-use crate::aligned::{Aligned, CELL_ABSENT, CELL_DETECTED};
+use crate::aligned::{no_peak, Aligned, CELL_DETECTED};
 
 pub const SCHEMA: &str = "plausible/1";
 /// Example rows listed by a check.
@@ -152,7 +152,7 @@ fn checks(t: &Aligned, unit: bool, l: &Limits) -> Vec<Check> {
             if a < 0.0 || h < 0.0 {
                 neg = true;
             }
-            if t.state[c] != CELL_ABSENT {
+            if !no_peak(t.state[c]) {
                 seen = true;
             }
             if t.state[c] == CELL_DETECTED {

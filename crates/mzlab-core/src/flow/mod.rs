@@ -6,6 +6,9 @@ mod canon;
 mod check;
 mod command;
 mod corsa;
+mod line;
+#[cfg(test)]
+mod line_tests;
 mod order;
 mod parse;
 mod prov;
@@ -18,14 +21,15 @@ pub use canon::{cache_key, canonical, value_text, Resolved};
 pub use check::{check, conversion_path, Platform, Problem};
 pub use command::{command, route as command_route};
 pub use corsa::{build as corsa_build, Corsa, Uscita};
+pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
 pub use order::{levels, plan_order};
 pub use parse::parse;
 pub use prov::{
     prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
 pub use run::{
-    execute, file_roots, record, work, Artifact, Core, Ctx, Hooks, Job, Outcome, Results, Run,
-    Runner,
+    execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
+    Outcome, Results, Run, Runner,
 };
 pub use sched_route::{
     act as sched_act, ask as sched_ask, cancels as sched_cancels, route as sched_route,
