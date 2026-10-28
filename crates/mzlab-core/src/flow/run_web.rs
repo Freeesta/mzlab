@@ -56,14 +56,10 @@ fn mem(v: &Value) -> Option<Mem> {
     })
 }
 
-/// The outcome of one job from its report; a report with `error_key` is a failure with its values in `params`.
+/// The outcome of one job from its report; a report with `error_key` is a failure.
 fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
     if let Some(key) = text(r, "error_key") {
-        let mut e = Error::new(leak(key));
-        for (k, v) in r.get("params").map_or(&[][..], Value::entries) {
-            e = e.with(leak(k), v.str().unwrap_or(""));
-        }
-        return Err(e);
+        return Err(Error::new(leak(key)));
     }
     let mut o = Outcome::default();
     for x in r.get("outputs").map_or(&[][..], Value::arr) {
@@ -80,12 +76,6 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
     }
     o.ms = r.get("ms").and_then(Value::f64).unwrap_or(0.0);
     o.mem = r.get("mem").and_then(mem);
-    o.warnings = r
-        .get("warnings")
-        .map_or(&[][..], Value::arr)
-        .iter()
-        .filter_map(|w| w.str().map(str::to_string))
-        .collect();
     o.cached = r.get("cached").and_then(Value::bool).unwrap_or(false);
     Ok(o)
 }

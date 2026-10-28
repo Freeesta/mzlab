@@ -67,9 +67,9 @@ impl Runner for Reporting {
             None => o.raw("null"),
         };
         if job.instance.id == "tab" && self.tab_fails {
-            o.raw(",\"error_key\":\"err.flow.sample\",\"params\":{\"name\":\"x\"}}");
+            o.raw(",\"error_key\":\"err.flow.sample\"}");
             self.reports.lock().unwrap().push(o.0.clone());
-            return Err(Error::new("err.flow.sample").with("name", "x"));
+            return Err(Error::new("err.flow.sample"));
         }
         let seen: Vec<&str> = job
             .inputs
@@ -91,7 +91,7 @@ impl Runner for Reporting {
         o.raw(",\"ext\":").str(ext).raw(",\"type\":").str(ty.name());
         o.raw(",\"sha256\":").str(&sha).raw(",\"bytes\":42}],");
         o.raw("\"estimates\":[{\"name\":\"ppm\",\"value\":5,\"proof\":\"profile\"}],");
-        o.raw("\"ms\":0.5,\"mem\":{\"mb\":3.9,\"via\":\"memory\"},\"warnings\":[\"warn.flow.x\"],\"cached\":false}");
+        o.raw("\"ms\":0.5,\"mem\":{\"mb\":3.9,\"via\":\"memory\"},\"cached\":false}");
         self.reports.lock().unwrap().push(o.0.clone());
         let a = Artifact {
             sha256: sha,
@@ -107,7 +107,6 @@ impl Runner for Reporting {
                 mb: 3.9,
                 via: "memory",
             }),
-            warnings: vec!["warn.flow.x".into()],
             ..Outcome::default()
         })
     }
