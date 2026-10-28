@@ -16,7 +16,8 @@
 //!
 //! Scan identity is the position in the `scans` slice. Output order: by m/z interval, like the Java (which then sorts the rows by RT).
 //! Memory: `build_slabs` cuts the m/z axis where the gap between two points exceeds twice the tolerance, so no interval crosses a cut, and builds a slab at a
-//! time (`docs/agenti/memoria.md`); the result equals `build`.
+//! time (`docs/agenti/memoria.md`); the result equals `build`. `SlabStream` does the same cuts on points that arrive already in m/z order (the peak table of
+//! the `.mzidx`), so a caller never holds more than one slab of points.
 
 use std::collections::BTreeMap;
 
@@ -368,5 +369,59 @@ pub fn each_slab(
     let cuts = cuts(scans, p, (budget_bytes / POINT_BYTES).max(1));
     for w in cuts.windows(2) {
         f(run(gather(scans, Some((w[0], w[1]))), scans.len(), p));
+    }
+}
+
+/// The slabs of `each_slab` for points that arrive in ascending m/z (the order of the peak table of the `.mzidx`): the cut is the same, a slab of at least
+/// `budget_bytes / POINT_BYTES` points ends at the first gap wider than twice the tolerance, so the chromatograms equal those of `build`.
+pub struct SlabStream<'a> {
+    nscans: usize,
+    p: &'a AdapParams,
+    per_slab: usize,
+    pts: Vec<Pt>,
+    /// Points of the current slab so far (also those that `gather` drops for a NaN intensity) and the m/z of the last one.
+    count: usize,
+    last: f64,
+}
+
+impl<'a> SlabStream<'a> {
+    pub fn new(nscans: usize, p: &'a AdapParams, budget_bytes: usize) -> Self {
+        SlabStream {
+            nscans,
+            p,
+            per_slab: (budget_bytes / POINT_BYTES).max(1),
+            pts: Vec::new(),
+            count: 0,
+            last: f64::NEG_INFINITY,
+        }
+    }
+
+    /// Adds the point of scan `scan`; a finished slab goes to `f` first. False (point ignored) when `mz` is lower than the previous one: the stream is not sorted.
+    pub fn push(&mut self, mz: f64, int: f32, scan: u32, f: &mut impl FnMut(Vec<Chrom>)) -> bool {
+        if mz.is_nan() {
+            return true;
+        }
+        if mz < self.last {
+            return false;
+        }
+        if self.count >= self.per_slab && mz - self.last > 2.0 * self.p.tol(mz) * (1.0 + 1e-9) {
+            self.flush(f);
+        }
+        self.count += 1;
+        self.last = mz;
+        if !int.is_nan() {
+            self.pts.push(Pt { int, mz, scan });
+        }
+        true
+    }
+
+    /// Hands the last slab to `f`.
+    pub fn finish(mut self, f: &mut impl FnMut(Vec<Chrom>)) {
+        self.flush(f);
+    }
+
+    fn flush(&mut self, f: &mut impl FnMut(Vec<Chrom>)) {
+        self.count = 0;
+        f(run(std::mem::take(&mut self.pts), self.nscans, self.p));
     }
 }
