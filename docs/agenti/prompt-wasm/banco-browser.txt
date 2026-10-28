@@ -1,0 +1,325 @@
+# Browser bench of docs/studi/wasm-potenza.md. Unpack: python3 -c "import re,os,sys;t=open(sys.argv[1]).read();[(os.makedirs(os.path.dirname(p) or '.',exist_ok=True),open(p,'w').write(b)) for p,b in re.findall(r'^=== (\S+) ===\n(.*?)(?=^=== |\Z)',t,re.S|re.M)]" banco-browser.txt
+# then: bash prepara.sh /path/to/mzlab ; python3 run.py chromium "" ; python3 run.py chromium "coi=1&only=parallel" ; PAGE=lock.html python3 run.py chromium
+# firefox/webkit: PLAYWRIGHT_BROWSERS_PATH=<dir> python3 -m playwright install firefox webkit (+ install-deps webkit), same commands with firefox|webkit; webkit OPFS needs PERSIST=1
+=== prepara.sh ===
+# builds the inflate module three ways (site profile z+SIMD, O3 without and with SIMD), the engine without wasm-bindgen, and the payload
+set -e; R="$1"; cp "$R/rust-toolchain.toml" infl/; F="-C link-arg=--max-memory=4294967296"
+(cd infl && RUSTFLAGS="$F -C target-feature=+simd128" cargo build -q --release --target wasm32-unknown-unknown && RUSTFLAGS="$F -C target-feature=+simd128" cargo build -q --profile o3 --target wasm32-unknown-unknown && RUSTFLAGS="$F" CARGO_TARGET_DIR=target-nosimd cargo build -q --profile o3 --target wasm32-unknown-unknown)
+cp infl/target/wasm32-unknown-unknown/release/infl.wasm www/infl-z.wasm; cp infl/target/wasm32-unknown-unknown/o3/infl.wasm www/infl-simd.wasm; cp infl/target-nosimd/wasm32-unknown-unknown/o3/infl.wasm www/infl-nosimd.wasm
+(cd "$R" && CARGO_TARGET_DIR="$PWD/../tgt-banco" cargo build -q -p mzlab-wasm --release --target wasm32-unknown-unknown); cp "$R/../tgt-banco/wasm32-unknown-unknown/release/mzlab_wasm.wasm" www/engine.wasm
+python3 gen.py www
+=== gen.py ===
+# Synthetic spectrum-like payload: 20000 arrays of 400 float64 m/z (random walk), each zlib-compressed (per-array, as in mzML),
+# plus the concatenation compressed as one stream (whole-file case). Fixed seed.
+import random, struct, zlib, json, sys
+random.seed(7); out = sys.argv[1]
+arrays = []
+for i in range(20000):
+    x = 100.0; a = []
+    for _ in range(400): x += random.random() * 2.0; a.append(x)
+    arrays.append(struct.pack("<400d", *a))
+raw = b"".join(arrays)
+chunks = [zlib.compress(a, 6) for a in arrays]
+open(out + "/many.bin", "wb").write(b"".join(chunks))
+open(out + "/many.json", "w").write(json.dumps([len(c) for c in chunks]))
+open(out + "/one.zlib", "wb").write(zlib.compress(raw, 6))
+print(len(raw), sum(map(len, chunks)), "fnv", hex(__import__("functools").reduce(lambda h, b: ((h ^ b) * 16777619) & 0xffffffff, raw[:1], 0x811c9dc5)))
+=== run.py ===
+# python3 run.py chromium|firefox|webkit [query]  -> JSON of window.R. Static server without COOP/COEP (like GitHub Pages).
+import json, sys, threading, functools, http.server, socketserver, os
+from playwright.sync_api import sync_playwright
+www = os.path.join(os.path.dirname(os.path.abspath(__file__)), "www")
+class H(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".wasm": "application/wasm", ".js": "text/javascript"}
+    def log_message(self, *a): pass
+srv = socketserver.ThreadingTCPServer(("127.0.0.1", 0), functools.partial(H, directory=www)); srv.daemon_threads = True
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+name, qs = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else "")
+args = {"chromium": ["--enable-unsafe-webgpu", "--enable-features=Vulkan", "--use-angle=swiftshader", "--use-webgpu-adapter=swiftshader"]}.get(name, [])
+with sync_playwright() as p:
+    kw = {"executable_path": "/opt/pw-browsers/chromium"} if name == "chromium" else {}
+    if os.environ.get("PERSIST"):
+        import tempfile; b = getattr(p, name).launch_persistent_context(tempfile.mkdtemp(), args=args, **kw); pg = b.pages[0] if b.pages else b.new_page(); b.version = name
+    else:
+        b = getattr(p, name).launch(args=args, **kw); pg = b.new_page()
+    pg; pg.on("console", lambda m: print("console:", m.text, file=sys.stderr)); pg.on("pageerror", lambda e: print("pageerror:", e, file=sys.stderr))
+    pg.goto(f"http://127.0.0.1:{srv.server_address[1]}/{os.environ.get('PAGE', 'index.html')}?{qs}")
+    pg.wait_for_function("window.DONE === true", timeout=600000)
+    print(json.dumps({"browser": name, "version": b.version, **pg.evaluate("window.R")}))
+    b.close()
+=== www/index.html ===
+<!doctype html><meta charset="utf-8"><title>bench</title><canvas id="c" width="1200" height="400"></canvas><script type="module" src="bench.js"></script>
+=== www/bench.js ===
+// Browser capability and speed bench for the wasm-potenza study. Results land in window.R; window.DONE = true at the end.
+const R = (window.R = { ua: navigator.userAgent, cores: navigator.hardwareConcurrency });
+const now = () => performance.now();
+const med = (a) => a.slice().sort((x, y) => x - y)[a.length >> 1];
+const q = new URLSearchParams(location.search);
+// minimal wasm module with one func () -> () whose body is `body` (locals already excluded), plus optional extra sections
+function mod(body, extra = []) {
+  const b = [0, ...body]; const code = [1, b.length, ...b];
+  return new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 4, 1, 96, 0, 0, 3, 2, 1, 0, ...extra, 10, code.length, ...code]);
+}
+const v128 = [253, 12, ...new Array(16).fill(0)];
+const val = (u8) => { try { return WebAssembly.validate(u8); } catch (_) { return false; } };
+function wasmCaps() {
+  const c = {};
+  c.simd128 = val(mod([...v128, 26, 11]));
+  c.relaxedSimd = val(mod([...v128, ...v128, ...v128, 253, 133, 2, 26, 11]));
+  c.tailCall = val(mod([18, 0, 11]));
+  c.exnref = val(mod([31, 64, 0, 11, 11]));
+  c.extendedConst = val(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 6, 9, 1, 127, 0, 65, 1, 65, 2, 106, 11]));
+  c.gc = val(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 3, 1, 95, 0]));
+  c.multiMemory = val(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 5, 5, 2, 0, 0, 0, 0]));
+  c.memory64 = (() => { for (const k of ["address", "index"]) { try { new WebAssembly.Memory({ initial: 1, [k]: "i64" }); return true; } catch (_) {} } return false; })();
+  c.sharedMemory = (() => { try { return new WebAssembly.Memory({ initial: 1, maximum: 1, shared: true }).buffer instanceof SharedArrayBuffer; } catch (_) { return false; } })();
+  c.jspi = typeof WebAssembly.Suspending === "function";
+  c.compileStreaming = typeof WebAssembly.compileStreaming === "function";
+  c.jsStringBuiltins = (() => { try { return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]), { builtins: ["js-string"] }); } catch (_) { return false; } })();
+  return c;
+}
+async function jsCaps() {
+  const c = { crossOriginIsolated: self.crossOriginIsolated, sab: typeof SharedArrayBuffer === "function", waitAsync: typeof Atomics.waitAsync === "function",
+    structuredClone: typeof structuredClone === "function", locks: !!navigator.locks, schedulerPostTask: !!(self.scheduler && self.scheduler.postTask), schedulerYield: !!(self.scheduler && self.scheduler.yield),
+    opfs: !!(navigator.storage && navigator.storage.getDirectory), showDirectoryPicker: !!self.showDirectoryPicker, showOpenFilePicker: !!self.showOpenFilePicker,
+    offscreenCanvas: typeof OffscreenCanvas === "function", transferControlToOffscreen: !!HTMLCanvasElement.prototype.transferControlToOffscreen,
+    abTransfer: !!ArrayBuffer.prototype.transfer, resizableAB: (() => { try { return new ArrayBuffer(1, { maxByteLength: 2 }).resizable === true; } catch (_) { return false; } })(),
+    float16Array: typeof Float16Array === "function", responseBytes: !!Response.prototype.bytes, storagePersist: !!(navigator.storage && navigator.storage.persist),
+    webgpu: !!navigator.gpu, webgl2: !!document.createElement("canvas").getContext("webgl2"), requestIdleCallback: typeof requestIdleCallback === "function",
+    fileSystemObserver: typeof self.FileSystemObserver === "function", compressionStream: typeof CompressionStream === "function" };
+  c.dsFormats = [];
+  for (const f of ["gzip", "deflate", "deflate-raw", "brotli", "zstd"]) { try { new DecompressionStream(f); c.dsFormats.push(f); } catch (_) {} }
+  if (navigator.gpu) { try { const a = await navigator.gpu.requestAdapter(); c.gpuAdapter = a ? ((a.info && (a.info.vendor + "/" + a.info.architecture + "/" + a.info.description)) || "yes") : null; c.gpuF16 = !!(a && a.features.has("shader-f16")); } catch (x) { c.gpuAdapter = "err " + x; } }
+  return c;
+}
+const W = () => new Worker("worker.js");
+const ask = (w, msg, tr = []) => new Promise((res) => { w.onmessage = (e) => res(e.data); w.postMessage(msg, tr); });
+async function transfer() {
+  const w = W(); const r = {}; const MB = 64;
+  for (const t of [false, true]) {
+    const xs = [];
+    for (let k = 0; k < 5; k++) { const buf = new ArrayBuffer(MB << 20); new Uint8Array(buf)[0] = 1; const t0 = now(); await ask(w, { op: "echo", buf, transfer: t }, t ? [buf] : []); xs.push(now() - t0); }
+    r[(t ? "transfer" : "copy") + "_roundtrip_64MB_ms"] = +med(xs).toFixed(2);
+  }
+  w.terminate(); return r;
+}
+async function parallel() {
+  // the same work on one 128 MB Float64Array: 1 worker; 4 workers each receiving a copied quarter (message pool); 4 workers on one SharedArrayBuffer
+  const N = 16 << 20, r = {};
+  const make = (buf) => { const f = new Float64Array(buf); for (let i = 0; i < N; i++) f[i] = (i % 1000) * 0.01; return f; };
+  const src = make(new ArrayBuffer(N * 8));
+  const ws = [W(), W(), W(), W()];
+  let xs = [];
+  for (let k = 0; k < 3; k++) { const t0 = now(); await ask(ws[0], { op: "work", buf: src.buffer.slice(0) }); xs.push(now() - t0); }
+  r.one_worker_ms = Math.round(med(xs)); xs = [];
+  for (let k = 0; k < 3; k++) { const t0 = now(); await Promise.all(ws.map((w, i) => ask(w, { op: "work", buf: src.buffer.slice(i * N * 2, (i + 1) * N * 2) }))); xs.push(now() - t0); }
+  r.four_workers_copy_ms = Math.round(med(xs)); xs = [];
+  if (self.crossOriginIsolated) {
+    const sab = new SharedArrayBuffer(N * 8); new Float64Array(sab).set(src);
+    for (let k = 0; k < 3; k++) { const t0 = now(); await Promise.all(ws.map((w, i) => ask(w, { op: "work", sab, a: i * N / 4, b: (i + 1) * N / 4 }))); xs.push(now() - t0); }
+    r.four_workers_sab_ms = Math.round(med(xs));
+  }
+  ws.forEach((w) => w.terminate()); return r;
+}
+async function inflate() {
+  const r = {};
+  const many = new Uint8Array(await (await fetch("many.bin")).arrayBuffer()); const lens = await (await fetch("many.json")).json(); const one = new Uint8Array(await (await fetch("one.zlib")).arrayBuffer());
+  const OUT = 64000000;
+  const fnv = (u8) => { let h = 0x811c9dc5; for (let i = 0; i < u8.length; i += 4096) { h ^= u8[i]; h = Math.imul(h, 16777619) >>> 0; } return h; };
+  const dsAll = async (u8) => new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+  let xs = [], out;
+  for (let k = 0; k < 3; k++) { const t0 = now(); out = await dsAll(one); xs.push(now() - t0); }
+  r.ds_one_stream_64MB_ms = Math.round(med(xs)); r.ds_check = fnv(out); xs = [];
+  for (let k = 0; k < 3; k++) {
+    const t0 = now(); const parts = []; let off = 0;
+    for (const l of lens) { parts.push(await dsAll(many.subarray(off, off + l))); off += l; }
+    const got = parts; xs.push(now() - t0); if (k === 0) { out = new Uint8Array(OUT); let o = 0; for (const g of got) { out.set(g, o); o += g.length; } }
+  }
+  r.ds_20000_arrays_ms = Math.round(med(xs)); r.ds_many_check = fnv(out);
+  for (const v of ["z", "nosimd", "simd"]) {
+    const { instance } = await WebAssembly.instantiateStreaming(fetch(`infl-${v}.wasm`), {}); const e = instance.exports;
+    const ps = e.alloc(many.length), pl = e.alloc(lens.length * 4), pd = e.alloc(OUT);
+    new Uint8Array(e.memory.buffer, ps, many.length).set(many); new Uint32Array(e.memory.buffer, pl, lens.length).set(lens);
+    xs = []; let n = 0;
+    for (let k = 0; k < 3; k++) { const t0 = now(); n = e.inflate_many(ps, pl, lens.length, pd, OUT); xs.push(now() - t0); }
+    r[`wasm_${v}_20000_arrays_ms`] = Math.round(med(xs)); r[`wasm_${v}_check`] = fnv(new Uint8Array(e.memory.buffer, pd, n));
+  }
+  return r;
+}
+async function offscreen() {
+  const pts = new Float32Array(400000); for (let i = 0; i < pts.length; i += 2) { pts[i] = (i / pts.length) * 1200; pts[i + 1] = 200 + 150 * Math.sin(i * 0.001) * Math.random(); }
+  const r = {}; const reps = 20;
+  const c = document.getElementById("c"); const g = c.getContext("2d"); let t0 = now();
+  for (let k = 0; k < reps; k++) { g.clearRect(0, 0, 1200, 400); g.beginPath(); for (let i = 0; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); }
+  r.main_thread_blocked_ms = Math.round(now() - t0);
+  if (c.transferControlToOffscreen) {
+    const c2 = document.createElement("canvas"); c2.width = 1200; c2.height = 400; document.body.append(c2);
+    const off = c2.transferControlToOffscreen(); const w = W(); t0 = now(); let longest = 0, last = now();
+    const tick = setInterval(() => { const t = now(); longest = Math.max(longest, t - last); last = t; }, 4);
+    const res = await ask(w, { op: "off", canvas: off, pts, reps }, [off]); clearInterval(tick);
+    r.worker_draw_ms = Math.round(res.ms); r.main_longest_gap_during_worker_ms = Math.round(longest); w.terminate();
+  }
+  return r;
+}
+async function gpu() {
+  if (!navigator.gpu) return { skipped: "no navigator.gpu" };
+  const a = await navigator.gpu.requestAdapter(); if (!a) return { skipped: "no adapter" };
+  const dev = await a.requestDevice(); const N = 1 << 23, BINS = 4096; const errs = []; dev.addEventListener("uncapturederror", (ev) => errs.push(String(ev.error.message)));
+  const data = new Uint32Array(N); for (let i = 0; i < N; i++) data[i] = (Math.imul(i, 2654435761) >>> 0) % BINS;
+  let t0 = now(); const cpu = new Uint32Array(BINS); for (let i = 0; i < N; i++) cpu[data[i]]++; const cpuMs = now() - t0;
+  const sb = dev.createBuffer({ size: N * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST }); dev.queue.writeBuffer(sb, 0, data);
+  const hb = dev.createBuffer({ size: BINS * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+  const rb = dev.createBuffer({ size: BINS * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  const m = dev.createShaderModule({ code: `@group(0) @binding(0) var<storage, read> d: array<u32>; @group(0) @binding(1) var<storage, read_write> h: array<atomic<u32>>;
+    @compute @workgroup_size(256) fn main(@builtin(global_invocation_id) id: vec3<u32>) { if (id.x < arrayLength(&d)) { atomicAdd(&h[d[id.x]], 1u); } }` });
+  const p = dev.createComputePipeline({ layout: "auto", compute: { module: m, entryPoint: "main" } });
+  const bg = dev.createBindGroup({ layout: p.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: sb } }, { binding: 1, resource: { buffer: hb } }] });
+  const xs = []; let got;
+  for (let k = 0; k < 3; k++) {
+    t0 = now(); dev.queue.writeBuffer(hb, 0, new Uint32Array(BINS)); const e = dev.createCommandEncoder(); const pass = e.beginComputePass(); pass.setPipeline(p); pass.setBindGroup(0, bg);
+    pass.dispatchWorkgroups(Math.ceil(N / 256)); pass.end(); e.copyBufferToBuffer(hb, 0, rb, 0, BINS * 4); dev.queue.submit([e.finish()]);
+    await rb.mapAsync(GPUMapMode.READ); got = new Uint32Array(rb.getMappedRange().slice(0)); rb.unmap(); xs.push(now() - t0);
+  }
+  return { histogram_8M_cpu_js_ms: Math.round(cpuMs), histogram_8M_gpu_ms: Math.round(med(xs)), same: got.every((v, i) => v === cpu[i]), errs, f64InWgsl: false };
+}
+async function compile() {
+  const url = "engine.wasm"; const r = {}; let xs = [];
+  const head = await fetch(url, { method: "HEAD" }); if (!head.ok) return { skipped: "no engine.wasm" };
+  r.bytes = +head.headers.get("content-length");
+  for (let k = 0; k < 5; k++) { const t0 = now(); await WebAssembly.compileStreaming(fetch(url, { cache: "no-store" })); xs.push(now() - t0); } r.compileStreaming_nostore_ms = +med(xs).toFixed(1); xs = [];
+  const ab = await (await fetch(url)).arrayBuffer();
+  for (let k = 0; k < 5; k++) { const t0 = now(); await WebAssembly.compile(ab); xs.push(now() - t0); } r.compile_arraybuffer_ms = +med(xs).toFixed(1); xs = [];
+  for (let k = 0; k < 5; k++) { const t0 = now(); new WebAssembly.Module(ab); xs.push(now() - t0); } r.sync_module_ms = +med(xs).toFixed(1); xs = [];
+  const cache = await caches.open("bench"); await cache.put(url, await fetch(url));
+  for (let k = 0; k < 5; k++) { const t0 = now(); await WebAssembly.compileStreaming(await cache.match(url)); xs.push(now() - t0); } r.compileStreaming_from_cacheAPI_ms = +med(xs).toFixed(1);
+  await caches.delete("bench"); return r;
+}
+async function scheduler() {
+  if (!(self.scheduler && self.scheduler.postTask)) return { skipped: true, inSelf: "scheduler" in self, keys: self.scheduler ? Object.getOwnPropertyNames(Object.getPrototypeOf(self.scheduler)).join(",") : "" };
+  const order = []; await Promise.all([self.scheduler.postTask(() => order.push("bg"), { priority: "background" }), self.scheduler.postTask(() => order.push("ub"), { priority: "user-blocking" })]);
+  return { order: order.join(",") };
+}
+(async () => {
+  const run = async (k, f) => { try { R[k] = await f(); } catch (x) { R[k] = { err: String(x && x.message || x) }; } };
+  if (q.get("coi") === "1" && !self.crossOriginIsolated) {
+    const t0 = now(); await navigator.serviceWorker.register("coi-sw.js"); await navigator.serviceWorker.ready;
+    sessionStorage.setItem("coiT0", String(performance.timeOrigin + t0)); location.reload(); return;
+  }
+  if (sessionStorage.getItem("coiT0")) R.coi_reload_ms = Math.round(performance.timeOrigin + now() - +sessionStorage.getItem("coiT0"));
+  R.wasm = wasmCaps(); await run("js", jsCaps);
+  const w = W(); R.worker = await ask(w, { op: "caps" }); w.terminate();
+  const only = (q.get("only") || "transfer,parallel,opfs,inflate,offscreen,gpu,compile,scheduler").split(",");
+  if (only.includes("transfer")) await run("transfer", transfer);
+  if (only.includes("parallel")) await run("parallel", parallel);
+  if (only.includes("opfs")) await run("opfs", async () => { const w2 = W(); const r = await ask(w2, { op: "opfs", mb: 256 }); w2.terminate(); return r; });
+  if (only.includes("inflate")) await run("inflate", inflate);
+  if (only.includes("offscreen")) await run("offscreen", offscreen);
+  if (only.includes("gpu")) await run("gpu", gpu);
+  if (only.includes("compile")) await run("compile", compile);
+  if (only.includes("scheduler")) await run("scheduler", scheduler);
+  window.DONE = true;
+})();
+=== www/worker.js ===
+const now = () => performance.now();
+async function opfsBench(mb) {
+  const root = await navigator.storage.getDirectory(); const fh = await root.getFileHandle("bench.bin", { create: true });
+  const ah = await fh.createSyncAccessHandle(); const n = mb * 1048576; const blk = new Uint8Array(8 << 20);
+  for (let i = 0; i < blk.length; i++) blk[i] = (i * 2654435761) >>> 24;
+  let t = now(); ah.truncate(0); for (let o = 0; o < n; o += blk.length) ah.write(blk, { at: o }); ah.flush(); const w = now() - t;
+  const r = { write_MBs: Math.round(mb / (w / 1000)) };
+  for (const b of [64 << 10, 256 << 10, 1 << 20, 2 << 20, 4 << 20, 8 << 20, 16 << 20]) {
+    const buf = new Uint8Array(b); const xs = [];
+    for (let k = 0; k < 3; k++) { let s = 0; t = now(); for (let o = 0; o < n; o += b) { ah.read(buf, { at: o }); s += buf[0]; } xs.push(now() - t); }
+    xs.sort((x, y) => x - y); r["sync_read_" + (b >> 10) + "K_MBs"] = Math.round(mb / (xs[1] / 1000));
+  }
+  ah.close();
+  t = now(); const ab = await (await fh.getFile()).arrayBuffer(); r.file_arrayBuffer_MBs = Math.round(mb / ((now() - t) / 1000)); if (ab.byteLength !== n) r.err = "len";
+  t = now(); let got = 0; const rd = (await fh.getFile()).stream().getReader(); for (;;) { const { done, value } = await rd.read(); if (done) break; got += value.length; } r.file_stream_MBs = Math.round(mb / ((now() - t) / 1000));
+  await root.removeEntry("bench.bin");
+  return r;
+}
+function drawOff(canvas, pts, reps) {
+  const g = canvas.getContext("2d"); const t = now();
+  for (let k = 0; k < reps; k++) { g.clearRect(0, 0, canvas.width, canvas.height); g.beginPath(); for (let i = 0; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); }
+  return now() - t;
+}
+function work(f64, a, b) { let s = 0; for (let i = a; i < b; i++) { const x = f64[i]; s += Math.sqrt(x * x + 1) * Math.log1p(x); } return s; }
+onmessage = async (e) => {
+  const m = e.data;
+  if (m.op === "echo") postMessage(m.buf, m.transfer ? [m.buf] : []);
+  else if (m.op === "opfs") { try { postMessage(await opfsBench(m.mb)); } catch (x) { postMessage({ err: String(x) }); } }
+  else if (m.op === "off") { postMessage({ ms: drawOff(m.canvas, m.pts, m.reps) }); }
+  else if (m.op === "work") { const f = m.sab ? new Float64Array(m.sab) : new Float64Array(m.buf); const t = now(); const s = work(f, m.a ?? 0, m.b ?? f.length); postMessage({ s, ms: now() - t }); }
+  else if (m.op === "caps") {
+    let opfsSync = false; try { const r = await navigator.storage.getDirectory(); const h = await r.getFileHandle("p.tmp", { create: true }); const a = await h.createSyncAccessHandle(); a.close(); await r.removeEntry("p.tmp"); opfsSync = true; } catch (_) {}
+    let off2d = false; try { off2d = !!new OffscreenCanvas(4, 4).getContext("2d"); } catch (_) {}
+    let offgl2 = false; try { offgl2 = !!new OffscreenCanvas(4, 4).getContext("webgl2"); } catch (_) {}
+    postMessage({ opfsSyncInWorker: opfsSync, offscreen2dInWorker: off2d, offscreenWebgl2InWorker: offgl2, gpuInWorker: !!self.navigator.gpu, locksInWorker: !!navigator.locks });
+  }
+};
+=== www/coi-sw.js ===
+// Adds COOP/COEP to every same-origin response (what GitHub Pages does not send), the coi-serviceworker trick.
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch", (e) => {
+  if (e.request.cache === "only-if-cached" && e.request.mode !== "same-origin") return;
+  e.respondWith(fetch(e.request).then((r) => {
+    if (r.status === 0) return r;
+    const h = new Headers(r.headers);
+    h.set("Cross-Origin-Embedder-Policy", "require-corp"); h.set("Cross-Origin-Opener-Policy", "same-origin"); h.set("Cross-Origin-Resource-Policy", "same-origin");
+    return new Response(r.body, { status: r.status, statusText: r.statusText, headers: h });
+  }));
+});
+=== www/lock.html ===
+<!doctype html><meta charset="utf-8"><script type="module">
+const src = `let ah; onmessage = async (e) => { const m = e.data; try {
+  if (m.op === "open") { const r = await navigator.storage.getDirectory(); const fh = await r.getFileHandle("l.bin", { create: true }); ah = m.mode ? await fh.createSyncAccessHandle({ mode: m.mode }) : await fh.createSyncAccessHandle(); postMessage("ok " + (ah.mode || "")); }
+  else { ah && ah.close(); postMessage("closed"); } } catch (x) { postMessage("err " + x.name); } };`;
+const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+const ask = (w, m) => new Promise((r) => { w.onmessage = (e) => r(e.data); w.postMessage(m); });
+const R = {};
+for (const mode of [undefined, "read-only", "readwrite-unsafe"]) {
+  const a = new Worker(url), b = new Worker(url);
+  const ra = await ask(a, { op: "open", mode }), rb = await ask(b, { op: "open", mode });
+  R[String(mode)] = ra + " | second: " + rb; await ask(a, { op: "close" }); await ask(b, { op: "close" }); a.terminate(); b.terminate();
+}
+window.R = R; window.DONE = true;
+</script>
+=== infl/Cargo.toml ===
+[package]
+name = "infl"
+version = "0.1.0"
+edition = "2021"
+[lib]
+crate-type = ["cdylib"]
+[dependencies]
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true
+codegen-units = 1
+[profile.o3]
+inherits = "release"
+opt-level = 3
+=== infl/src/lib.rs ===
+use flate2::{Decompress, FlushDecompress};
+#[no_mangle]
+pub extern "C" fn alloc(n: usize) -> *mut u8 { let mut v = Vec::<u8>::with_capacity(n); let p = v.as_mut_ptr(); std::mem::forget(v); p }
+// Inflates `n` zlib streams laid out back to back (lengths in `lens`), returns the total output bytes.
+#[no_mangle]
+pub unsafe extern "C" fn inflate_many(src: *const u8, lens: *const u32, n: usize, dst: *mut u8, cap: usize) -> usize {
+    let mut off = 0usize; let mut out = 0usize;
+    for i in 0..n {
+        let l = *lens.add(i) as usize;
+        let s = std::slice::from_raw_parts(src.add(off), l);
+        let d = std::slice::from_raw_parts_mut(dst.add(out), cap - out);
+        let mut z = Decompress::new(true);
+        z.decompress(s, d, FlushDecompress::Finish).unwrap();
+        out += z.total_out() as usize; off += l;
+    }
+    out
+}
+// FNV-1a of a buffer, the check value that proves the bytes are the same
+#[no_mangle]
+pub unsafe extern "C" fn fnv(p: *const u8, n: usize) -> u32 { let s = std::slice::from_raw_parts(p, n); let mut h: u32 = 0x811c9dc5; for &b in s { h ^= b as u32; h = h.wrapping_mul(16777619); } h }
