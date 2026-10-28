@@ -4,8 +4,9 @@
 # Called by tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
-tetti="aperti 416768
-andi 263936
+# aperti and andi carry the indexed-mzML writer (feature `indice` of mzlab-core, ~3 KB) so that to_mzml is byte for byte the mzML of `mzlab-cli convert` (tests/test_lettori_parita.py): measure + 0.4%
+tetti="aperti 421000
+andi 268000
 thermo 626688
 agilent 438272
 sciex 364544
