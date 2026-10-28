@@ -48,10 +48,10 @@ async function ready(p, sr, ms = 12) {
   finally { clearTimeout(timer); keys.forEach(k => claimed.delete(k)); }
 }
 
-/** Text of the label (the number alone on the plot, with "min" in the data table) and of its tooltip: the time of the apex only (the m/z or the wavelength is in the title and the legend). @param {any} l */
-function texts(l) {
+/** Text of the label (the number alone on the plot, with "min" in the data table) and of its tooltip: the intensity of the apex (the time is the label itself, the m/z or the wavelength is in the title and the legend). @param {any} l @param {any} [s] */
+function texts(l, s) {
   const rt = l.rt.toFixed(2);
-  return { label: rt, withUnit: `${rt} min`, tip: T("etpk.tip.rt", { rt }) };
+  return { label: rt, withUnit: `${rt} min`, tip: s && s.ys[l.apex] != null ? T("etpk.tip.int", { y: fmt(s.ys[l.apex]) }) : "" };
 }
 
 /**
@@ -68,7 +68,7 @@ function draw(p, g, sr, c) {
     const list = labelsOf(p, s); if (!list) continue;
     const seen = list.filter(l => l.rt >= c.x0 && l.rt <= c.x1).sort((u, v) => v.height - u.height).slice(0, room);
     for (const l of seen) {
-      const { label, tip } = texts(l), w = g.measureText(label).width + 6, ys = s.ys[l.apex];
+      const { label, tip } = texts(l, s), w = g.measureText(label).width + 6, ys = s.ys[l.apex];
       if (ys == null) continue;
       const x = Math.max(M.l + w / 2 + 2, Math.min(c.W - M.r - w / 2 - 2, c.X(l.rt)));
       let top = Math.max(M.t + 2, c.Y(c.U(s, ys)) - 5 - h), box = null;
@@ -80,10 +80,20 @@ function draw(p, g, sr, c) {
       // a background of the plot colour and the strongest text colour: the dashed cursor passes behind it (cursorLine leaves a gap)
       g.fillStyle = ecss("--panel"); g.fillRect(box.x, box.y, box.w, box.h);
       g.strokeStyle = ecss("--panel"); g.strokeText(label, x, box.y + h - 4); g.fillStyle = ecss("--ink"); g.fillText(label, x, box.y + h - 4);
-      lbls.push({ ...box, tip, text: label, etpk: true });
+      lbls.push({ ...box, tip, text: label, etpk: true, rt: l.rt, ax: c.X(l.rt), ay: c.Y(c.U(s, ys)) });
     }
   }
   g.restore();
+}
+
+/**
+ * The peak label of a chromatogram that a pointer at (px, py) means: the label box plus TOL px around it, and the strip over the peak from the label down to its apex.
+ * Its `rt` is the apex time of the label (the same number that is written), so a click or a right click a little to the side still speaks of that peak. @param {any} p @param {number} px @param {number} py
+ */
+function hit(p, px, py) {
+  const a = p._a, TOL = 8; if (!a || !a.lbls || p.type === "spec" || p.type === "map") return null;
+  return a.lbls.find((/** @type {any} */ l) => l.etpk && l.rt != null && (
+    (px >= l.x - TOL && px <= l.x + l.w + TOL && py >= l.y - TOL && py <= l.y + l.h + TOL) || (Math.abs(px - l.ax) <= TOL && py >= l.y && py <= l.ay + TOL))) || null;
 }
 
 /** @type {Map<string, { apex: number, height: number }[] | "wait">} */
@@ -133,11 +143,11 @@ const toggle = p => { COMANDI.fai("spec.display", p, () => { p.etpk = !on(p, p._
 /** The labels of trace `s` shown now (none when off, not ready or not the labelled trace): [{ rt, apex, text }] for the data table. @param {any} p @param {any} s */
 function rows(p, s) {
   const a = p._a; if (!a || !a.sr || !on(p, a.sr.length) || (a.sr.length > 1 && a.sr[0] !== s)) return [];
-  return (labelsOf(p, s) || []).filter(l => l.rt >= a.x0 && l.rt <= a.x1).map(l => ({ rt: l.rt, apex: l.apex, text: texts(l).withUnit }));
+  return (labelsOf(p, s) || []).filter(l => l.rt >= a.x0 && l.rt <= a.x1).map(l => ({ rt: l.rt, apex: l.apex, text: texts(l, s).withUnit }));
 }
 
 if (typeof AZIONI !== "undefined") {
   AZIONI.registra({ id: "chrom.etpk", gruppo: "view", viste: ["chrom", "xic", "mrm", "spec"], visibile: (/** @type {any} */ c) => c.vista !== "spec" ? !isAnalog(c.p.kind) : !!c.p.uv, attiva: (/** @type {any} */ c) => on(c.p, c.p._a && c.p._a.sr ? c.p._a.sr.length : 1),
     nome: () => T("ctx.chrom.etpk"), aria: () => T("ctx.chrom.etpk.aria"), esegui: (/** @type {any} */ c) => toggle(c.p) });
 }
-window.ETPK = { on, draw, drawUv, labelsOf, ready, rows, toggle };
+window.ETPK = { on, draw, drawUv, labelsOf, ready, rows, toggle, hit };

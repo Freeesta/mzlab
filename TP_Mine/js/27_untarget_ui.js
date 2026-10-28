@@ -32,7 +32,7 @@
     if (!document.getElementById("unt-css")) { const s = document.createElement("style"); s.id = "unt-css"; s.textContent = CSS; document.head.appendChild(s); }
     if (!dlg) {
       dlg = document.createElement("dialog"); dlg.id = "unt"; dlg.className = "tp"; dlg.setAttribute("aria-label", "Feature tables"); document.body.appendChild(dlg);
-      dlg.innerHTML = `<div class="top"><h3>Feature tables</h3><button type="button" id="unt-x" aria-label="Close">&times;</button></div>
+      dlg.innerHTML = `<div class="top"><h3>Feature tables</h3><button type="button" id="unt-x" aria-label="Close" title="Close">&times;</button></div>
         <p class="mut" style="margin:6px 0">Load the files of one table (an mzMine table or FBMN quant table, its MGF with the MS<sup>2</sup>, the annotations, the GNPS2 library file, or an MS-DIAL alignment). Everything stays in this browser.
         Each feature with an MS<sup>2</sup> is searched in the loaded libraries: the result is a candidate with a level and its evidence, never an identification.</p>
         <div class="drop" id="unt-drop">Drop the files here <button type="button" id="unt-pick">Choose files...</button><input type="file" id="unt-in" multiple hidden accept=".csv,.tsv,.txt,.mgf"></div>

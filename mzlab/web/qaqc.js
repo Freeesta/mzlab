@@ -160,7 +160,7 @@ const QAQC = (() => {
     const col = COL[i % COL.length];
     const c1 = chart(t("qaqc.chart.rt", { ion: ion.label }), [{ label: ion.label, vals: rows.map(x => (x ? x.drt : null)), color: col }], o.roles, "ΔRT (min)");
     const c2 = chart(t("qaqc.chart.area", { ion: ion.label }), [{ label: ion.label, vals: rows.map(x => (x ? x.rel : null)), color: col }], o.roles, t("qaqc.col.rel"));
-    return `<div class="qq-ion"><div class="qq-h"><b>${eh(ion.label)}</b> <span class="sm">m/z ${eh(fmt(ion.mz, 4))} · RT ${eh(fmt(ion.rt, 2))} · ${t(ion.kind === "known" ? "qaqc.kind.known" : "qaqc.kind.is")}</span> <button type="button" data-rm="${ion.id}" aria-label="${eh(t("qaqc.remove", { n: ion.label }))}">×</button></div>${c1}${c2}<ul class="sm qq-sum">${sum.join("")}</ul><div class="qq-scroll">${table(head, body)}</div></div>`;
+    return `<div class="qq-ion"><div class="qq-h"><b>${eh(ion.label)}</b> <span class="sm">m/z ${eh(fmt(ion.mz, 4))} · RT ${eh(fmt(ion.rt, 2))} · ${t(ion.kind === "known" ? "qaqc.kind.known" : "qaqc.kind.is")}</span> <button type="button" data-rm="${ion.id}" aria-label="${eh(t("qaqc.remove", { n: ion.label }))}" title="${eh(t("qaqc.remove", { n: ion.label }))}">×</button></div>${c1}${c2}<ul class="sm qq-sum">${sum.join("")}</ul><div class="qq-scroll">${table(head, body)}</div></div>`;
   }
   function ratioBlock(rt) {
     if (!rt) return "";

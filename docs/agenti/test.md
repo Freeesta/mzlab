@@ -36,4 +36,8 @@
 
 `python3 tools/fondi_main.py` fa `git fetch` e `git merge origin/main`; se restano in conflitto solo file generati (tabella `GENERATI` in testa al file: schemi `steps-*`/`strumenti-1`/`records-1`, `tools/tipi/globali*.d.ts`, `stretto*.json`, `mappa.md`) li prende da main, li rigenera con il loro strumento e conclude il merge; per ogni altro conflitto si ferma e stampa i file. Poi `pre_pr.py --veloce`. Uscita 0 / 1 (conflitti umani) / 2 (controlli rossi). Un file generato nuovo va aggiunto a `GENERATI`. Prova: `tests/test_fondi_main.py`.
 
+`python3 tools/pre_pr.py`: controlli della CI in ordine, si ferma al primo rosso. Locale (browser presente) = giro completo (clippy se cambia Rust, e2e dei file cambiati); cloud (`CLAUDE_CODE_REMOTE` o Playwright assente) = giro `--veloce` (mappa, soglie, i18n, Teoria, globali, tsc, import e2e, hash CSP, fmt se cambia Rust, sintassi JS se cambia `mzlab/web/`), uscita 0 e avviso che clippy ed e2e li fa la CI; `--completo` forza tutto (e2e senza browser: uscita 2). 
+
+Se il diff di `pre_pr.py` contro `origin/main` tocca solo documenti (lista di `tools/ci_solo_doc.py`) fa solo mappa, soglie ed eventuale Teoria e stampa «solo documenti». Prova: `tests/test_pre_pr.py`.
+
 Hook pre-push: `python3 tools/installa_hook.py` mette `tools/hook_pre_push.sh` in `.git/hooks/pre-push` (lo fa già lo SessionStart di `.claude/settings.json`; non tocca un hook altrui, `--togli` lo rimuove): lancia `pre_pr.py --veloce` e rifiuta il push se esce con errore (salta con `git push --no-verify`). `controlla.py` avvisa dal 90 % del tetto (450 righe, 22,5 KB) i file toccati da più di 5 degli ultimi 50 merge di `origin/main`. Il modello di PR è `.github/pull_request_template.md`. Prova: `tests/test_hook_pre_push.py`.
