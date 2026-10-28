@@ -38,8 +38,12 @@ pub(super) fn lower(tmp: &mut [f64], q: f64) -> f64 {
     tmp[((tmp.len() - 1) as f64 * q).floor() as usize]
 }
 
+/// A value of the smoothed signal with its index.
+type Item = (f64, usize);
+
 /// `buf.b`: 25th percentile of the smoothed signal within +-5 w of the centre of each block of 2.5 w, linear between the centres. With `mean` (counts:
 /// a mostly empty scan has a 25th percentile of zero, which would make every stray count a peak) the mean of the lowest 75 % of the values instead.
+/// The window only moves forward, so its sorted copy is updated (old values out, new ones merged in) instead of sorted again for every block.
 pub(super) fn background(buf: &mut Buf, wb: usize, mean: bool) {
     let n = buf.s.len();
     let bs = ((2.5 * wb as f64).round() as usize).max(1);
@@ -47,16 +51,55 @@ pub(super) fn background(buf: &mut Buf, wb: usize, mean: bool) {
     let nb = n.div_ceil(bs);
     let mut cen = Vec::with_capacity(nb);
     let mut val = Vec::with_capacity(nb);
+    // (value, index) sorted by value; equal values are the same bits, so the order among them does not matter.
+    let (mut win, mut next, mut add): (Vec<Item>, Vec<Item>, Vec<Item>) =
+        (Vec::new(), Vec::new(), Vec::new());
+    let mut hi_seen: Option<usize> = None;
+    let by_value = |a: &(f64, usize), b: &(f64, usize)| a.0.total_cmp(&b.0);
     for b in 0..nb {
         let c = (b * bs + bs / 2).min(n - 1);
         let (lo, hi) = (c.saturating_sub(half), (c + half).min(n - 1));
-        buf.tmp.clear();
-        buf.tmp.extend_from_slice(&buf.s[lo..=hi]);
+        match hi_seen {
+            Some(h) if lo <= h + 1 => {
+                add.clear();
+                add.extend((h + 1..=hi).map(|i| (buf.s[i], i)));
+                crate::sortc::by(&mut add, by_value);
+                next.clear();
+                let (mut i, mut j) = (0, 0);
+                loop {
+                    while i < win.len() && win[i].1 < lo {
+                        i += 1;
+                    }
+                    match (win.get(i), add.get(j)) {
+                        (Some(x), Some(y)) if by_value(y, x).is_lt() => {
+                            next.push(*y);
+                            j += 1;
+                        }
+                        (Some(x), _) => {
+                            next.push(*x);
+                            i += 1;
+                        }
+                        (None, Some(y)) => {
+                            next.push(*y);
+                            j += 1;
+                        }
+                        (None, None) => break,
+                    }
+                }
+                std::mem::swap(&mut win, &mut next);
+            }
+            _ => {
+                win.clear();
+                win.extend((lo..=hi).map(|i| (buf.s[i], i)));
+                crate::sortc::by(&mut win, by_value);
+            }
+        }
+        hi_seen = Some(hi);
         cen.push(c);
-        let q = lower(&mut buf.tmp, 0.25);
+        let q = win[((win.len() - 1) as f64 * 0.25).floor() as usize].0;
         val.push(if mean {
-            let k = ((buf.tmp.len() - 1) as f64 * 0.75).floor() as usize;
-            buf.tmp[..=k].iter().sum::<f64>() / (k + 1) as f64
+            let k = ((win.len() - 1) as f64 * 0.75).floor() as usize;
+            win[..=k].iter().map(|p| p.0).sum::<f64>() / (k + 1) as f64
         } else {
             q
         });

@@ -134,7 +134,7 @@ Pipeline TP (priorità 3): i passi del Flow ricevono un canale (`ms:<chiave MS1>
 - Nomi visibili del Tipo: «LC full scan», «LC MS²», «LC DDA», «LC MRM», «MSn infusion», «mixed», «UV only» (id interni invariati); overlay con CE arrotondata all'intero, CE esatta nel `title` del canale.
 
 ## 6. Prompt dei DEV
-Uno per file in `docs/agenti/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `c.md` UV e analogici, `d.md` selettore, `e.md` albero e lista scan, `f.md` tabella): formato a 7 punti, con ramo e dipendenze in testa. Ordine: A → (B, C, D in parallelo; D dopo `claude/xic-infusione`) → (E dopo ALBERO-PRECURSORI-UI, F) in parallelo.
+Uno per file in `docs/archivio/prompt-canali/` (`a.md` motore, `b.md` `.wiff`, `c.md` UV e analogici, `d.md` selettore, `e.md` albero e lista scan, `f.md` tabella): formato a 7 punti, con ramo e dipendenze in testa. Ordine: A → (B, C, D in parallelo; D dopo `claude/xic-infusione`) → (E dopo ALBERO-PRECURSORI-UI, F) in parallelo.
 
 ## 7. Selettore dei canali (pagina Dati)
 `canali.js` (`window.CANALI`, `canali.css`, chiavi `canali.*`): il pulsante «Canali» dei pannelli cromatogramma e MRM apre un albero (`role=tree`, frecce/Spazio/Esc) con i canali fusi per omologo (`p.canali`, salvato da `panelRec`; MRM: `p.tr`); una traccia per file × canale, «—» in legenda se il file non ha il canale, XIC dentro il canale con `canale=`. Il motore serve `api/canali` (`Routes::canali`, metodo wasm `canali`) e `canale=` su chrom/xic/scanlist/spectrum/nearest_scan; transizioni e UV passano da `api/mrm`. Il canale iniziale per tipo sta in `ESP.predefinito` (`esperimenti.js`).

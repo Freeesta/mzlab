@@ -70,7 +70,7 @@ Schizzo (prova HTML e foto Playwright fatte fuori dal repository):
 
 ## 5. Prompt dei lavori
 
-Un file per lavoro in `docs/agenti/prompt-flow-ux/` (formato a 7 punti, ramo e dipendenze in testa, regole comuni e regola dei testi incluse):
+Un file per lavoro in `docs/archivio/prompt-flow-ux/` (formato a 7 punti, ramo e dipendenze in testa, regole comuni e regola dei testi incluse):
 
 | Lavoro | File | Ramo | Dipende da |
 |---|---|---|---|

@@ -147,8 +147,12 @@
   "xic.lowRes": "Sotto la riga di uno ione nella finestra XIC; {unit} = finestra di m/z (HTML).",
   "xic.interpreted": "{formula} = formula con pedici (HTML).",
   "ibk.yes": "Descrizione del fondo di un tratto (legenda, Excel, immagini); {ranges} = intervalli di tempo, {stat} = media/mediana/retta, {clip} = «, negativi a 0» oppure vuoto.",
+  "hov.rt": "Intestazione dell'hover dei grafici; {v} = tempo di ritenzione in minuti.",
+  "hov.nm": "Intestazione dell'hover; {v} = lunghezza d'onda in nm.",
+  "hov.mau": "Valore di assorbanza nell'hover; {v} = numero, unità mAU.",
   "ibk.and": "Due intervalli di tempo del fondo a retta: «0-1 min e 5-6 min».",
   "draw.error": "Scritta sul grafico quando il disegno fallisce; {message} = testo tecnico.",
+  "lst.tgt.row.tip": "{rt} è il tempo di ritenzione del picco, in minuti.",
   "ibk.chip.title": "Il nome «linea di base automatica» è corr.snip.",
   "ibk.chip": "Etichetta accanto al grafico; {ranges} = intervalli, {levels} = livello/i in cps, {stat} = media/mediana/retta.",
   "ibk.first": "Il nome tra virgolette è la voce di menu del clic destro (ctx.ibk.line).",
@@ -198,7 +202,6 @@
   "leg.note.rowScale": "Nota sotto la legenda dei grafici impilati; {h} = altezza di una riga in cps.",
   "map.hov.bin": "Riquadro del mouse sulla mappa 2D; {lo} e {hi} = estremi della cella in m/z.",
   "map.leg2d.mean": "Legenda della mappa 2D; {scale} = scala dei colori (radice/lineare/log).",
-  "tip.peakLabel": "Riquadro del mouse sull'etichetta di un picco; {mz} = m/z.",
   "zoom.mz": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in m/z.",
   "zoom.rt": "Scritta sul grafico ingrandito; {lo} e {hi} = estremi in minuti.",
   "cursor.handle.value": "Valore letto da un lettore di schermo sul pallino del cursore del cromatogramma; {rt} = tempo di ritenzione in minuti.",
@@ -750,7 +753,7 @@
   "uv.leg.mean": "Legenda dello spettro UV medio; {rt} = intervallo RT (min), {n} = numero di spettri mediati.",
   "uv.leg.one": "Legenda dello spettro UV di un solo istante; {rt} = RT (min).",
   "etpk.nm": "Lunghezza d'onda in nanometri nell'etichetta di un picco del PDA/UV (es. «14.26 · 254 nm»); {v} = lunghezza d'onda.",
-  "etpk.tip.rt": "Tooltip dell'etichetta di un picco del cromatogramma; {rt} = RT (min).",
+  "etpk.tip.int": "Tooltip dell'etichetta di un picco del cromatogramma; {y} = intensità dell'apice.",
   "tdati.etpk": "Riga della tabella per un picco con etichetta (il tempo del picco); {v} = testo dell'etichetta, es. «14.26 min».",
   "bn.idn.spec": "Riga sopra il pulsante di ricerca; {rt} = RT con unità, {mz} = m/z del precursore, {pol} = + o −.",
   "bn.idn.loaded": "Esito del caricamento di file o cartella; {n} = librerie caricate, {m} = file ignorati.",
@@ -762,5 +765,7 @@
   "calc.add.hitDa": "Riga sopra la tabella degli addotti in bassa risoluzione quando l'm/z osservata combacia; {adduct} con apici (HTML), {ppm} scarto in Da con segno e due decimali.",
   "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
   "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
-  "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»)."
+  "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»).",
+  "cq.mode.hr.files": "Testo piccolo sotto la calcolatrice: risoluzione alta rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «Orbitrap Exploris 120»).",
+  "cq.mode.lr.files": "Testo piccolo sotto la calcolatrice: risoluzione bassa (unitaria) rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «QTRAP 3200»)."
 }

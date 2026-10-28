@@ -1,6 +1,6 @@
 # Confronto spettrale con le librerie: motore unico per mzFlow e pannello laterale
 
-Studio d'architettura (sola lettura del prodotto). Ogni scelta è una raccomandazione con il suo perché; le decisioni aperte per Federico stanno in fondo (§13). Prompt dei lavori: `docs/agenti/prompt-match/{a..f}.md`.
+Studio d'architettura (sola lettura del prodotto). Ogni scelta è una raccomandazione con il suo perché; le decisioni aperte per Federico stanno in fondo (§13). Prompt dei lavori: `docs/archivio/prompt-match/{a..f}.md`.
 
 ## 1. Cosa c'è già (misurato, da non rifare)
 - **Formato `.mzlib` v1** (`crates/mzlab-lib`, ~5000 righe, senza `unsafe`): record di spettro da 32 B (precursore, polarità, licenza `u8`, RT `f32` facoltativo), picchi m/z quantizzati a 1e-5 Da (`u32`) e intensità `u16` in blocchi da 512 spettri compressi zstd, metadati (10 campi: nome, addotto, CE, strumento, formula, InChIKey, SMILES, accessione, autori, licenza) in blocchi da 128, **indici Flash su frammenti e perdite neutre** (voci da 10 B in pagine da 64 KB, ordinate per m/z).

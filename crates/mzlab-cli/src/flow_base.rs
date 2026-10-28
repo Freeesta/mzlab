@@ -92,10 +92,11 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
     // Each file takes its own base recipe, as the page does (`detect_file`): on the unit axis the mass defect and the floor come from the file.
-    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&path)?)?)?;
-    let name = r.source_name(input);
+    // one open of the index serves the recipe and the detection
     let gate = r.gate(job);
     let mut index = open_gated(&path, &gate)?;
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut index)?)?;
+    let name = r.source_name(input);
     let bytes = run::detect(&mut index, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
     // The weak candidates are made here, with the other files of the level at the same time, so the alignment and the gap filling do not detect again.
@@ -150,7 +151,7 @@ fn weak_path(peaks: &Path) -> PathBuf {
 
 /// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the
 /// parameters of `job`.
-fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<Made> {
+fn table(r: &FileRunner, job: &Job, recipe: &Recipe, mut lin: Lineage) -> Result<Made> {
     let budget = MemBudget::mb(r.budget_mb);
     let mut bytes = Vec::new();
     let mut src = Files(lin.peaks.clone());
@@ -159,7 +160,7 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<
     run::align_to_par_progress(
         &mut src,
         &budget,
-        &recipe,
+        recipe,
         &|k| open(&lin.index[k]),
         &mut bytes,
         &mut pace,
@@ -209,21 +210,32 @@ fn align_setup(r: &FileRunner, job: &Job) -> Result<(Recipe, Lineage, Vec<Estima
 /// table is not filled after the fact, alignment and filling run again on the peaks of that table, which gives the bytes of the page's single call).
 pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let (recipe, lin, estimates) = align_setup(r, job)?;
+    let peaks = lin.peaks.clone();
+    let made = table(r, job, &recipe, lin)?;
     Ok(Made {
         estimates,
-        ..table(r, job, recipe, lin)?
+        mem: mem_of(r, &recipe, peaks),
+        ..made
     })
 }
 
 /// The memory the alignment of `job` asks for under the budget of the runner and the way it takes (`slabs::stima`); none for another step or when the
-/// inputs cannot be read yet (the step itself reports why).
-pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
+/// inputs cannot be read yet (the step itself reports why); `known` is the figure the step worked out while it ran, kept as it is.
+pub(crate) fn align_mem(r: &FileRunner, job: &Job, known: Option<Mem>) -> Option<Mem> {
+    if known.is_some() {
+        return known;
+    }
     if !matches!(job.step.id, "features.align" | "features.gapfill") {
         return None;
     }
     let (recipe, lin, _) = align_setup(r, job).ok()?;
-    let rows = slabs::rows_of(&mut Files(lin.peaks)).ok()?;
-    let way = slabs::stima(&rows, &recipe, (r.budget_mb * 1048576.0) as usize);
+    mem_of(r, &recipe, lin.peaks)
+}
+
+/// The memory the alignment of the `.mzfeatf` files `peaks` asks for under the budget of the runner.
+fn mem_of(r: &FileRunner, recipe: &Recipe, peaks: Vec<PathBuf>) -> Option<Mem> {
+    let rows = slabs::rows_of(&mut Files(peaks)).ok()?;
+    let way = slabs::stima(&rows, recipe, (r.budget_mb * 1048576.0) as usize);
     Some(Mem {
         mb: way.bytes as f64 / 1048576.0,
         via: way.via.name(),

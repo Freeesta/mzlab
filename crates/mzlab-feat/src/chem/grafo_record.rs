@@ -21,7 +21,7 @@ impl Mol {
             }
         }
         let (flag_atoms, flag_bonds) = if aromatic {
-            (rec.aromatic_atoms(), rec.aromatic_bonds())
+            rec.aromatic_flags()
         } else {
             (vec![false; rec.atoms.len()], vec![false; rec.bonds.len()])
         };

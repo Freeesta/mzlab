@@ -49,6 +49,32 @@ try:
             assert "Schermo intero" in pg.inner_text("#qtip")
             pg.mouse.move(5, 5); attendi(pg, "document.querySelector('#qtip').hidden"); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
+        def tipbox():
+            # the tooltip never covers the element it describes (selects, buttons, table cells)
+            sel = pg.locator("select[title], select[data-tip], .pnl .fsb, #tools button[title]")
+            n = min(sel.count(), 6); assert n, "no element with a tooltip"
+            for i in range(n):
+                el = sel.nth(i)
+                if not el.is_visible(): continue
+                pg.mouse.move(5, 5); hold(pg, 100); el.hover()
+                attendi(pg, "!document.querySelector('#qtip').hidden", 10000)
+                ov = pg.evaluate("(el)=>{const a=el.getBoundingClientRect(),b=document.querySelector('#qtip').getBoundingClientRect();return a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom}", el.element_handle())
+                assert not ov, ("tooltip overlaps its element", i)
+            pg.mouse.move(5, 5)
+        step("tooltip never overlaps its element", tipbox)
+        def longpress():
+            # touch has no hover: a long press on a button shows its tooltip; a short one does not
+            btn = pg.locator(".pnl .fsb").first; box = btn.bounding_box(); x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            fire = "(a)=>{const b=document.querySelector('.pnl .fsb');for(const t of a){b.dispatchEvent(new PointerEvent(t,{pointerType:'touch',bubbles:true,cancelable:true,clientX:%f,clientY:%f}))}}" % (x, y)
+            pg.mouse.move(5, 5); hold(pg, 100)
+            pg.evaluate(fire, ["pointerdown"]); hold(pg, 200); pg.evaluate(fire, ["pointerup"])
+            assert pg.evaluate("document.querySelector('#qtip').hidden"), "a short touch must not show the tooltip"
+            pg.evaluate(fire, ["pointerdown"])
+            attendi(pg, "!document.querySelector('#qtip').hidden", 5000)
+            assert "Schermo intero" in pg.inner_text("#qtip")
+            pg.evaluate(fire, ["pointerup"])
+            attendi(pg, "document.querySelector('#qtip').hidden", 8000)
+        step("long press on a button shows its tooltip on touch", longpress)
         def rt():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab===E.tab)"); assert ci >= 0
             pg.evaluate(f"E.panels[{ci}].el.scrollIntoView({{block:'center'}})"); frames(pg, 3)

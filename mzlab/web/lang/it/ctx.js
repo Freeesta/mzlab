@@ -65,6 +65,6 @@ I18N.add("it", {
   "ctx.chrom.etpk": "Etichette dei picchi principali",
   "ctx.chrom.etpk.aria": "Mostra o nascondi il tempo di ritenzione sui picchi principali",
   "etpk.nm": "{v} nm",
-  "etpk.tip.rt": "Picco a RT {rt} min",
+  "etpk.tip.int": "intensità <b>{y}</b>",
   "ctx.spec.generate": "Genera formula (m/z {mz})…"
 });
