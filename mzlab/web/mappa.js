@@ -54,7 +54,7 @@ window.MAPPA = (() => {
     });
     cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
     cv.addEventListener("keydown", e => key(p, e));
-    document.addEventListener("keyup", e => { if (p.cv.isConnected) shiftUp(p, e); });
+    document.addEventListener("keyup", e => { if (p.cv.isConnected) shiftUp(p, e); }, { signal: p._ac.signal });
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
     const tbs = p.el.querySelector(".tbs"); tbs.insertBefore(navBar(p), tbs.children[1] || null); navSync(p); touchInit(p, cv);
     const ro = FRAME.ro(cv, () => { if (mirOn(p)) { overlay(p); margins(p); } });

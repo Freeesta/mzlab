@@ -27,7 +27,18 @@ try:
             for _ in range(20): cycle()
             assert count() == base, (base, count())
             assert pg.evaluate("STATO.verifica()") == []
+        def keyups():
+            o = cdp.send("Runtime.evaluate", {"expression": "document"})["result"]["objectId"]
+            return sum(1 for l in cdp.send("DOMDebugger.getEventListeners", {"objectId": o})["listeners"] if l["type"] == "keyup")
+        def map_cycle():
+            pg.evaluate("addPanel('map',{tab:'full'})"); pg.wait_for_timeout(300)
+            pg.evaluate("closePanel(E.panels.find(q=>q.type==='map'))"); pg.wait_for_timeout(50)
+        def map_leak():
+            map_cycle(); base = keyups()
+            for _ in range(10): map_cycle()
+            assert keyups() == base, (base, keyups())
         step("20 open/close cycles: listeners do not grow", leak)
+        step("10 map open/close cycles: no extra keyup listener on document", map_leak)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]
