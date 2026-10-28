@@ -7,7 +7,10 @@ from lib import ROOT, free_port, ready
 
 PORT = free_port(); errs = []
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+import socket
+for _ in range(200000):         # connect until the server listens (refused connections return at once)
+    try: socket.create_connection(("127.0.0.1", PORT), timeout=1).close(); break
+    except OSError: pass
 URL = f"http://127.0.0.1:{PORT}/"
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
@@ -28,7 +31,7 @@ try:
             assert pg.evaluate("typeof SharedArrayBuffer === 'function' && new WebAssembly.Memory({initial:1,maximum:1,shared:true}).buffer instanceof SharedArrayBuffer")
         step("first visit: one reload, then isolated", first)
         def once():
-            pg.wait_for_timeout(3000); n = len(navs); pg.wait_for_timeout(2000); assert len(navs) == n, "reloaded again"
+            ready(pg); n = len(navs); ready(pg, settle=2000); assert len(navs) == n, "reloaded again"
             assert pg.evaluate("window.CAPACITA && CAPACITA.snapshot().isolamento === true")
         step("no second reload; capacita.isolamento", once)
         def dati():
@@ -42,12 +45,12 @@ try:
         def ketcher():
             fr = pg.evaluate("""() => { const f = document.getElementById('kframe'); return !!f; }""")
             assert fr
-            pg.evaluate("location.hash = '#/draw'"); pg.wait_for_timeout(500)
+            pg.evaluate("location.hash = '#/draw'")
             pg.wait_for_function("document.getElementById('kframe').contentDocument && document.getElementById('kframe').contentDocument.body && document.getElementById('kframe').contentDocument.body.children.length > 0", timeout=60000)
         step("Ketcher opens", ketcher)
         step("no COEP error in console", lambda: (_ for _ in ()).throw(AssertionError(msgs[:3])) if any("COEP" in m or "Cross-Origin-Embedder" in m or "ERR_BLOCKED_BY_RESPONSE" in m for m in msgs) else None)
         def capoff():
-            c = b.new_context(); q = c.new_page(); q.add_init_script(SKIP_TOUR); q.goto(URL + "?cap-off=isolamento"); q.wait_for_timeout(6000)
+            c = b.new_context(); q = c.new_page(); q.add_init_script(SKIP_TOUR); q.goto(URL + "?cap-off=isolamento"); ready(q, settle=3000)
             assert not q.evaluate("crossOriginIsolated") and q.evaluate("!sessionStorage.getItem('mzlab.coiReload')"), "must not reload"
             c.close()
         step("?cap-off=isolamento: no reload", capoff)
