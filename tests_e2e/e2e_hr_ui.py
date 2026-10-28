@@ -45,15 +45,12 @@ try:
         def calc_hr():
             pg.click("#np-calc2"); pg.wait_for_timeout(400)
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
-            assert pg.is_visible("#calcobs"), "no field for the observed m/z"
+            assert pg.locator("#calcobs").count() == 0 and pg.locator("#calcctl [data-r]").count() == 0, "no observed field, no High/Low switch"
             t = pg.inner_text("#calcdlg"); assert "364.0737" in t and "errore (ppm)" not in t, t
-            pg.fill("#calcobs", "364.0740"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#calcdlg"); print(t[:400])
-            assert "errore (ppm)" in t, t
-            e = pg.evaluate("[...document.querySelectorAll('#calcout tr')].map(r=>[...r.children].map(c=>c.textContent))[1]"); print(e)
-            assert abs(float(e[3]) - 0.7) < 0.15, e                                         # row: adduct, shift, m/z, ppm, XIC; (364.0740 - 364.07374) / 364.07374 = 0.7 ppm
+            m = pg.inner_text("#calcctl .cq-mode"); assert "alta" in m and "Exploris" in m, m          # the Orbitrap file decides: high resolution, named
+            assert pg.input_value("#calctol") == "5"
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
-        step("calculator with an Orbitrap file: 4 decimals and the error in ppm of the observed m/z", calc_hr)
+        step("calculator with an Orbitrap file: 4 decimals, high resolution detected from the file", calc_hr)
         def method():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_function("document.querySelector('#bigdlg') && document.querySelector('#bigdlg').innerText.includes('Parametri delle scansioni')", timeout=30000)
             t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))

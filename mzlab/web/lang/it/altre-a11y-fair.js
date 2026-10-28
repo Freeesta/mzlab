@@ -241,8 +241,6 @@ I18N.add("it", {
   "chk.pdaSignal": "segnale presente (TWC)",
   "chk.pdaNone": "segnale assente nel file",
   "calc.tape.title": "Rimette il risultato nel campo per continuare il conto",
-  "calc.obs": "m/z osservata (facoltativo)",
-  "calc.obs.title": "Scrivi la m/z misurata",
   "calc.toLosses": "Cerca Δm = {v} nel pannello Perdite neutre",
   "calc.interpreted": "interpretata come <b>{formula}</b>",
   "calc.xic.title": "Estrae questo ione (XIC)",

@@ -27,7 +27,7 @@ const table=async(f,obs,tol,delta)=>{{asked.push({{f,obs,tol,delta}});const ref=
   if(d&&Math.abs(21.98194-d)<=win)hits.push({{a:'[M+Na]+',b:'[M+H]+',d:21.98194,err_mda:(21.98194-d)*1000}});
   return {{formula:f||null,neutral:null,tol:+tol,rows:[],best:null,diffs:[{{pair:'Na',a:'[M+Na]+',b:'[M+H]+',pol:1,d:21.98194}}],delta:delta?{{value:d,hits}}:undefined}}}};
 const dep={{idx,find:LISTE.find,findNominal:LISTE.findNominal,table,mass,losses:P.LOSSES,lossCombos:P.lossCombos}};
-const HR={{hr:true,pol:1,tol:5,obs:null,dec:4}},LR={{hr:false,pol:1,tol:0.5,obs:null,dec:1}};
+const HR={{hr:true,pol:1,tol:5,dec:4}},LR={{hr:false,pol:1,tol:0.5,dec:1}};
 """
 
 
@@ -90,3 +90,23 @@ def test_the_adduct_table_has_ppm_in_high_resolution_only():
 def test_the_nearest_group_comes_first():
     r = run("const g=await CQ.gruppi(CQ.arg('18.0106',0),HR,dep);console.log(JSON.stringify(g[0].id))")
     assert r == "perdite"
+
+
+def test_the_resolution_comes_from_what_is_typed_when_no_file_is_open():
+    r = run("const m=t=>{const a=CQ.arg(t,0);return [CQ.mode(a).hr,CQ.mode(a).src,CQ.opts(a).tol]};console.log(JSON.stringify([m('214'),m('214.1'),m('214.0896'),m('214,0896'),m('C9H10N2O'),m('')]))")
+    assert r == [[False, "short", 0.5], [False, "short", 0.5], [True, "decimals", 5], [True, "decimals", 5], [True, "formula", 5], [False, "none", 0.5]]
+
+
+def test_the_open_files_decide_the_resolution_and_name_the_instrument():
+    r = run("CQ.follow(()=>({hr:false,name:'QTRAP 3200'}),()=>1);const a=CQ.arg('214.0896',0);const lo=CQ.opts(a);CQ.follow(()=>({hr:true,name:'Orbitrap'}),()=>1);const hi=CQ.opts(CQ.arg('214',0));console.log(JSON.stringify([lo.hr,lo.mode,lo.tol,hi.hr,hi.mode.name,hi.tol]))")
+    assert r == [False, {"hr": False, "src": "files", "name": "QTRAP 3200"}, 0.5, True, "Orbitrap", 5]
+
+
+def test_there_is_no_resolution_switch_and_no_observed_value_in_the_choices():
+    r = run("console.log(JSON.stringify([Object.keys(CQ.st),Object.keys(CQ.opts(CQ.arg('214',0)))]))")
+    assert r[0] == ["ppm", "da", "pol"] and "obs" not in r[1] and "res" not in r[0]
+
+
+def test_the_typed_number_is_the_observed_value_of_the_adduct_table():
+    r = run("asked.length=0;await CQ.gruppi(CQ.arg('177.1023',0),HR,dep);console.log(JSON.stringify(asked.find(a=>!a.delta)))")
+    assert float(r["obs"]) == pytest.approx(177.1023) and r["f"] == ""

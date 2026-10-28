@@ -1,5 +1,5 @@
 """«What can this number be?» under the Calculator, the Adducts panel and the Neutral losses panel (no data file needed):
-groups for 214 / 30 / 18 / 100+114 / 21.98, High / Low resolution, polarity, observed m/z, cross-links, keystroke time, no engine miss."""
+groups for 214 / 30 / 18 / 100+114 / 21.98, resolution detected from the number (no switch), polarity, no observed field, no layout jump, cross-links, keystroke time, no engine miss."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -20,47 +20,61 @@ try:
             frames(pg, 2); frames(pg, 25)
         def groups(): return pg.evaluate("[...document.querySelectorAll('#calcout > details.cq-g, #calcout > details')].map(d => d.dataset.g || d.id)")
         def txt(): return pg.inner_text("#calcout")
-        def setres(w):
-            pg.click(f"#calcres button[data-r={w}]"); frames(pg, 25)
-        def hr_default():
-            assert pg.get_attribute("#calcres button[data-r=hr]", "aria-pressed") == "true"
+        def mode(): return pg.inner_text("#calcctl .cq-mode")
+        def height(): return pg.evaluate("document.documentElement.scrollHeight")
+        def auto_default():
+            assert pg.locator("#calcctl [data-r]").count() == 0 and pg.locator("#calcobs").count() == 0, "no High/Low switch, no observed field"
+            assert "bassa" in mode() and "nessun file" in mode(), mode()
             assert pg.is_visible("#calcctl") and pg.is_visible("#calcout")
-        step("no file: High resolution is the default, the zone is below the keys", hr_default)
+        step("no file: low resolution by default, said in small text; no switch, no observed field", auto_default)
         def lr_214():
-            setres("lr"); type_("214")
-            assert pg.get_attribute("#calcres button[data-r=lr]", "aria-pressed") == "true"
-            assert "ppm" not in pg.inner_text("#calcctl").lower(), pg.inner_text("#calcctl")
+            type_("214")
+            assert "bassa" in mode() and "meno di 3" in mode(), mode()
+            assert "ppm" not in pg.inner_text("#calcctl").lower().replace(mode().lower(), ""), pg.inner_text("#calcctl")
             assert pg.input_value("#calctol") == "0.5"
-        step("Low resolution: Da tolerance, no ppm in the choices", lr_214)
+        step("214: low resolution from the number, Da tolerance, no ppm in the choices", lr_214)
         def lr_30():
-            type_("30"); assert "CH2O" in txt() or "CH₂O" in txt(), txt()[:300]
-        step("30 in Low resolution lists CH2O among the neutral losses", lr_30)
+            type_("30"); assert "CH2O" in txt() or "CH\u2082O" in txt(), txt()[:300]
+        step("30 lists CH2O among the neutral losses", lr_30)
         def lr_18():
-            type_("18"); assert "perdite" in groups() or "perdite" in str(groups()), groups(); assert "H2O" in txt() or "H₂O" in txt()
+            type_("18"); assert "perdite" in str(groups()), groups(); assert "H2O" in txt() or "H\u2082O" in txt()
         step("18 lists water", lr_18)
         def sum_():
             type_("100+114"); assert pg.inner_text("#calcsum") is not None
             assert pg.evaluate("CALCQUI.arg(document.querySelector('#calcin').value, 0).v") == 214
         step("100+114: the argument is the result 214", sum_)
         def hr_diff():
-            setres("hr"); type_("21.98")
+            type_("21.98")
+            assert "bassa" in mode(), mode()
+            type_("21.9819")
+            assert "alta" in mode() and "3 o pi" in mode(), mode()
             assert pg.input_value("#calctol") == "5"
             assert "Na" in txt() and "H" in txt(), txt()[:300]
-            assert pg.is_visible("#calcout details[data-g=diff]") or "Na" in txt()
-        step("21.98 in High resolution: the adduct difference Na - H", hr_diff)
+        step("21.9819 (3+ decimals): high resolution detected, ppm tolerance, the difference Na - H", hr_diff)
+        def formula_mode():
+            type_("C9H10N2O"); assert "alta" in mode() and "formula" in mode(), mode()
+        step("a formula is searched in high resolution", formula_mode)
         def pol():
             pg.click("#calcpol button[data-p='-1']"); frames(pg, 25)
             assert pg.get_attribute("#calcpol button[data-p='-1']", "aria-pressed") == "true"
             pg.click("#calcpol button[data-p='1']"); frames(pg, 25)
         step("polarity buttons toggle aria-pressed", pol)
-        def obs():
-            type_("C9H10N2O"); pg.fill("#calcobs", "163.0866"); pg.evaluate("document.querySelector('#calcobs').dispatchEvent(new Event('input',{bubbles:true}))"); frames(pg, 2); frames(pg, 25)
-            assert "ppm" in txt(), txt()[:300]
-            setres("lr"); frames(pg, 25)
-            assert "ppm" not in txt().lower().replace("ppm)", "") or True
-        step("formula + observed m/z: the comparison appears in the adduct table", obs)
+        def files_decide():
+            pg.evaluate("CALCQUI.follow(() => ({ hr: false, name: 'QTRAP 3200' }), () => 1)"); type_("21.9819")
+            assert "bassa" in mode() and "QTRAP 3200" in mode() and pg.input_value("#calctol") == "0.5", mode()
+            pg.evaluate("CALCQUI.follow(() => ({ hr: true, name: 'Orbitrap Exploris 120' }), () => 1)"); type_("214")
+            assert "alta" in mode() and "Exploris" in mode() and pg.input_value("#calctol") == "5", mode()
+            pg.evaluate("CALCQUI.follow(() => null, () => 1)"); type_("")
+        step("an open file decides the resolution and names the instrument", files_decide)
+        def no_jump():
+            type_("")
+            ys = {}
+            for v in ("", "214", "214.0896", "C9H10N2O", "100+114"):
+                type_(v); ys[v] = pg.evaluate("[document.querySelector('#calcsum'), document.querySelector('#calcpad'), document.querySelector('#calctape')].map(e => e.getBoundingClientRect().top)")
+            assert all(abs(a - b) < 1 for a, b in zip(ys[""], ys["214"])) and all(abs(a - b) < 1 for a, b in zip(ys[""], ys["214.0896"])), ys
+        step("typing a number moves nothing above the groups (the result row has its space from the start)", no_jump)
         def timing():
-            setres("hr"); type_("")
+            type_("")
             t = pg.evaluate("""async () => { const el = document.querySelector('#calcin'); const ts = [];
               for (const v of ['2','21','214','2143','214.1']) { el.value = v; const t0 = performance.now(); el.dispatchEvent(new Event('input', {bubbles:true})); await CALCQUI.render(CALCQUI.calc); ts.push(performance.now() - t0); }
               return ts }""")
@@ -88,9 +102,9 @@ try:
             pg.click("#reftitle ~ *", timeout=1000) if False else None
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.click("#np-nl"); attendi(pg, "document.querySelector('#refdlg').open && document.querySelector('#nl-q')")
-            pg.click("#nlqres button[data-r=lr]"); pg.fill("#nl-q", "30"); frames(pg, 25)
+            pg.fill("#nl-q", "30"); frames(pg, 25)
             t = pg.inner_text("#nl-res"); assert "CH2O" in t or "CH₂O" in t, t[:300]
-            assert "ppm" not in pg.inner_text("#nl-ctl").lower() or pg.get_attribute("#nlqres button[data-r=hr]", "aria-pressed") == "true"
+            assert pg.locator("#nl-ctl [data-r]").count() == 0 and "bassa" in pg.inner_text("#nl-ctl .cq-mode")
         step("Neutral losses panel: shared groups for 30", to_loss)
         def link():
             pg.click("#nl-to-ad"); frames(pg, 25)
