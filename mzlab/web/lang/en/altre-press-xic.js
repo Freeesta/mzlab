@@ -79,7 +79,7 @@ I18N.add("en", {
   "xic.err.empty": "Type an m/z value or the neutral formula.",
   "xic.err.row": "A row is not valid: type an m/z or a neutral formula.",
   "tip.raw": "raw {v}",
-  "tip.area": "<b>Area</b> {area} <span class=\"sm\">counts·s</span>",
+  "tip.area": "<b>Area</b> {area} <span class=\"sm\">counts·s</span> · intensity <b>{y}</b>",
   "tip.more": "... and {n} more",
   "spec.isMrm": "This file is MRM: it contains only transition chromatograms, no spectra.",
   "spec.pickRange": "Click or drag on the chromatogram to choose the time interval, or use ← → after placing the cursor.",

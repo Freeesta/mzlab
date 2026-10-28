@@ -156,7 +156,7 @@
   "ibk.chip": "Etichetta accanto al grafico; {ranges} = intervalli, {levels} = livello/i in cps, {stat} = media/mediana/retta.",
   "ibk.first": "Il nome tra virgolette è la voce di menu del clic destro (ctx.ibk.line).",
   "ibk.band": "Scritta nella banda grigia del grafico; {extra} = «(prima traccia)» oppure vuoto.",
-  "tip.area": "Riquadro sull'etichetta di un'area integrata; {area} = valore.",
+  "tip.area": "Riquadro sull'etichetta di un'area integrata; {area} = valore, {y} = intensità dell'apice.",
   "tip.more": "Riquadro del mouse sul cromatogramma: tracce non elencate.",
   "map.height3d": "Scritta sulla mappa 3D; {scale} = scala dei colori.",
   "map.hov": "Riquadro del mouse sulla mappa; {what} = «differenza» oppure «intensità media».",
