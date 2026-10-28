@@ -188,6 +188,7 @@ declare var RIC_MAX_ADDUCTS: any;
 declare var RIC_MAX_THEORY: any;
 declare var RIC_NUMBER: any;
 declare var RIFERIMENTO: any;
+declare var RIGHELLO: any;
 declare var RUOLI: any;
 declare var RawHtml: any;
 declare var S: any;
