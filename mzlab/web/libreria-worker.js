@@ -411,7 +411,16 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   }
   const smallDevice = () => { const ua = (self.navigator && navigator.userAgent) || ""; return /iPad|iPhone|Android|Mobile/i.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1); };
   const isW = (/** @type {{ store?: string } | null | undefined} */ info) => !!(info && info.store === "mzlib");
-  const blobReader = (/** @type {Blob} */ blob) => { const fr = new FileReaderSync(); return (/** @type {number} */ off, /** @type {number} */ len) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len))); };
+  // Small reads are served from one 256 KiB window per reader (a FileReaderSync round trip per few KB dominates the cost of reading a library), large ones go straight to the Blob.
+  const blobReader = (/** @type {Blob} */ blob) => {
+    const fr = new FileReaderSync(), WIN = 1 << 18; let wOff = 0, win = /** @type {Uint8Array | null} */ (null);
+    const direct = (/** @type {number} */ off, /** @type {number} */ len) => new Uint8Array(fr.readAsArrayBuffer(blob.slice(off, off + len)));
+    return (/** @type {number} */ off, /** @type {number} */ len) => {
+      if (len > WIN / 2) return direct(off, len);
+      if (!win || off < wOff || off + len > wOff + win.length) { wOff = off; win = direct(off, WIN); }
+      return win.subarray(off - wOff, off - wOff + len);
+    };
+  };
   const WLIBS = new Map();                      // id -> { lib (wasm Lib), info }
   function rebalance() { if (!W || !WLIBS.size) return; const per = W.total_cache_budget(smallDevice()) / WLIBS.size; for (const e of WLIBS.values()) e.lib.set_cache_budget(per); }
   async function mzlibBlob(/** @type {string} */ id) {

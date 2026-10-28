@@ -127,17 +127,59 @@ pub fn pair_scores(a: &Spec, b: &Spec, tol: impl Into<FragTol>) -> PairScores {
     r
 }
 
-/// Hybrid pairs (brute force, the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by
+/// True when the values are in ascending order (no NaN): the window searches below need it, and the callers' spectra have it.
+fn ascending(v: &[f64]) -> bool {
+    v.windows(2).all(|w| w[0] <= w[1])
+}
+
+/// Indexes `j` of the ascending `b` with `|(a - b[j]) - shift| <= tol` as a range. `a - b[j]` and the subtractions after it only ever round the same
+/// way for larger `b[j]`, so the values that satisfy the test are contiguous and the two bounds are binary searches.
+fn window_of(b: &[f64], a: f64, shift: f64, tol: f64) -> std::ops::Range<usize> {
+    let lo = b.partition_point(|&m| (a - m) - shift > tol);
+    let hi = b.partition_point(|&m| (a - m) - shift >= -tol);
+    if lo < hi {
+        lo..hi
+    } else {
+        0..0
+    }
+}
+
+/// Hybrid pairs (the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by
 /// `delta = prec(a) - prec(b)`, within `tol`; one-to-one, the pairs with the highest contribution to the entropy similarity first.
 pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
     let (pa, pb) = (weighted(&a.it), weighted(&b.it));
     let delta = a.prec - b.prec;
     let mut c: Vec<(usize, usize, f64)> = Vec::new();
-    for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
-        for (j, (&mb, &wb)) in b.mz.iter().zip(&pb).enumerate() {
-            let d = ma - mb;
-            if d.abs() <= tol || (d - delta).abs() <= tol {
-                c.push((i, j, pair_term(wa, wb)));
+    if ascending(&b.mz) {
+        for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
+            let (w1, w2) = (
+                window_of(&b.mz, ma, 0.0, tol),
+                window_of(&b.mz, ma, delta, tol),
+            );
+            // the candidates of both windows in the order of `j`, each once
+            let (mut j1, mut j2) = (w1.start, w2.start);
+            while j1 < w1.end || j2 < w2.end {
+                let j = if j1 < w1.end && (j2 >= w2.end || j1 <= j2) {
+                    j1
+                } else {
+                    j2
+                };
+                if j1 == j {
+                    j1 += 1;
+                }
+                if j2 == j {
+                    j2 += 1;
+                }
+                c.push((i, j, pair_term(wa, pb[j])));
+            }
+        }
+    } else {
+        for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
+            for (j, (&mb, &wb)) in b.mz.iter().zip(&pb).enumerate() {
+                let d = ma - mb;
+                if d.abs() <= tol || (d - delta).abs() <= tol {
+                    c.push((i, j, pair_term(wa, wb)));
+                }
             }
         }
     }
@@ -156,14 +198,50 @@ pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
 
 /// Neutral losses (precursor − m/z) in common, one-to-one within `tol` (the pairs with the highest intensity product first).
 pub fn common_losses(a: &Spec, b: &Spec, tol: f64) -> usize {
+    common_losses_with(a, b, tol, &mut MatchScratch::default())
+}
+
+/// `common_losses` with the buffers of the caller. The losses are the precursor minus each m/z, taken from the last peak to the first (so they
+/// ascend); they are computed where they are used, with the same operations as the vectors they replace, so the count is the same.
+pub fn common_losses_with(a: &Spec, b: &Spec, tol: f64, s: &mut MatchScratch) -> usize {
     if a.prec <= 0.0 || b.prec <= 0.0 {
         return 0;
     }
-    let la: Vec<f64> = a.mz.iter().rev().map(|m| a.prec - m).collect();
-    let lb: Vec<f64> = b.mz.iter().rev().map(|m| b.prec - m).collect();
-    let ia: Vec<f64> = a.it.iter().rev().copied().collect();
-    let ib: Vec<f64> = b.it.iter().rev().copied().collect();
-    match_peaks(&la, &ia, &lb, &ib, tol).len()
+    let (na, nb) = (a.mz.len(), b.mz.len());
+    let la = |k: usize| a.prec - a.mz[na - 1 - k];
+    let lb = |k: usize| b.prec - b.mz[nb - 1 - k];
+    s.cand.clear();
+    for i in 0..na {
+        let x = la(i);
+        let (mut lo, mut hi) = (0, nb);
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if lb(mid) < x - tol {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let mut j = lo;
+        while j < nb && lb(j) <= x + tol {
+            s.cand.push((i, j, a.it[na - 1 - i] * b.it[nb - 1 - j]));
+            j += 1;
+        }
+    }
+    sortutil::sort_by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
+    s.ua.clear();
+    s.ua.resize(na, false);
+    s.ub.clear();
+    s.ub.resize(nb, false);
+    let mut n = 0;
+    for &(i, j, _) in &s.cand {
+        if !s.ua[i] && !s.ub[j] {
+            s.ua[i] = true;
+            s.ub[j] = true;
+            n += 1;
+        }
+    }
+    n
 }
 
 // ---------------------------------------------------------------- modified cosine (the analogue score of the library window)
@@ -293,12 +371,31 @@ pub fn gnps_match_prepared(
     modified: bool,
 ) -> GnpsMatch {
     let mut c: Vec<(usize, usize, f64, bool)> = Vec::new();
-    for i in 0..am.len() {
-        for j in 0..bm.len() {
-            if (am[i] - bm[j]).abs() <= tol {
+    let shifting = modified && delta.abs() > tol;
+    if ascending(bm) {
+        // The ordering below is total (product, unshifted first, then the indices), so the candidates need not come in any order.
+        for (i, &x) in am.iter().enumerate() {
+            let w1 = window_of(bm, x, 0.0, tol);
+            for j in w1.clone() {
                 c.push((i, j, ai[i] * bi[j], false));
-            } else if modified && delta.abs() > tol && (am[i] - (bm[j] + delta)).abs() <= tol {
-                c.push((i, j, ai[i] * bi[j], true));
+            }
+            if shifting {
+                // a reference peak at `m` pairs with the sample peak at `m + delta` when `x - (m + delta)` is within `tol`
+                let lo = bm.partition_point(|&m| x - (m + delta) > tol);
+                let hi = bm.partition_point(|&m| x - (m + delta) >= -tol);
+                for j in (lo..hi.max(lo)).filter(|j| !w1.contains(j)) {
+                    c.push((i, j, ai[i] * bi[j], true));
+                }
+            }
+        }
+    } else {
+        for i in 0..am.len() {
+            for j in 0..bm.len() {
+                if (am[i] - bm[j]).abs() <= tol {
+                    c.push((i, j, ai[i] * bi[j], false));
+                } else if shifting && (am[i] - (bm[j] + delta)).abs() <= tol {
+                    c.push((i, j, ai[i] * bi[j], true));
+                }
             }
         }
     }

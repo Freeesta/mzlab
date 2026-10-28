@@ -131,7 +131,14 @@ pub fn make_decoy(s: &Spectrum, kind: DecoyKind, seed: u64) -> Spectrum {
         }
         DecoyKind::Precursor => {
             let delta = SHIFT_MIN + (SHIFT_MAX - SHIFT_MIN) * r.unit();
-            d.prec = s.prec + if r.next_u64() & 1 == 0 { delta } else { -delta };
+            let up = r.next_u64() & 1 == 0;
+            // moving down must stay above 1 Da: a low precursor goes up instead (the draw still consumes the same random numbers)
+            d.prec = s.prec
+                + if up || s.prec - delta <= 1.0 {
+                    delta
+                } else {
+                    -delta
+                };
         }
     }
     d.meta.accession = format!("{DECOY_PREFIX}{}", s.meta.accession);
@@ -208,10 +215,6 @@ pub fn best_scores_with<S: Source>(
     Ok(b)
 }
 
-fn count_ge(sorted_desc: &[f32], s: f32) -> usize {
-    sorted_desc.partition_point(|&x| x >= s)
-}
-
 /// Standard target-decoy q-values: FDR(s) = #decoy ≥ s / #target ≥ s, q = the minimum of the FDR over all scores ≤ s (monotone).
 /// One value per target, in the order given; equal scores get equal values, so the result does not depend on the order of the input.
 /// A score that is not finite gets q = 1.
@@ -221,14 +224,18 @@ pub fn lib_fdr(scores_target: &[f32], scores_decoy: &[f32], kind: DecoyKind) -> 
     let mut d = finite(scores_decoy);
     sortutil::sort_by(&mut t, |a, b| b.total_cmp(a));
     sortutil::sort_by(&mut d, |a, b| b.total_cmp(a));
-    // distinct target scores from the lowest: running minimum of the FDR
+    // distinct target scores from the lowest: running minimum of the FDR; both counts move with linear pointers (`t[..i]` and `d[..j]` hold the
+    // scores >= the current one)
     let mut q_of: Vec<(f32, LibFdr)> = Vec::new();
     let mut run = 1.0f32;
     let mut i = t.len();
+    let mut j = d.len();
     while i > 0 {
         let s = t[i - 1];
-        let nt = count_ge(&t, s);
-        let nd = count_ge(&d, s);
+        while j > 0 && d[j - 1] < s {
+            j -= 1;
+        }
+        let (nt, nd) = (i, j);
         run = run.min((nd as f32 / nt as f32).min(1.0));
         q_of.push((
             s,
@@ -239,7 +246,9 @@ pub fn lib_fdr(scores_target: &[f32], scores_decoy: &[f32], kind: DecoyKind) -> 
                 decoy_kind: kind,
             },
         ));
-        i = t.partition_point(|&x| x > s);
+        while i > 0 && t[i - 1] == s {
+            i -= 1;
+        }
     }
     let none = LibFdr {
         q_value: 1.0,
@@ -254,7 +263,7 @@ pub fn lib_fdr(scores_target: &[f32], scores_decoy: &[f32], kind: DecoyKind) -> 
                 return none;
             }
             let k = q_of.partition_point(|(x, _)| *x < s);
-            q_of[k].1
+            q_of.get(k).map_or(none, |e| e.1)
         })
         .collect()
 }
@@ -374,5 +383,76 @@ mod tests {
         assert!((p.prec - s.prec).abs() >= SHIFT_MIN && (p.prec - s.prec).abs() <= SHIFT_MAX);
         assert_eq!(p.mz, s.mz);
         assert_ne!(decoy_seed(&s, 1), decoy_seed(&s, 2));
+    }
+
+    /// Reference of the previous implementation (binary searches for both counts).
+    fn lib_fdr_old(t: &[f32], d: &[f32]) -> Vec<(f32, u32, u32)> {
+        let fin = |v: &[f32]| -> Vec<f32> { v.iter().cloned().filter(|x| x.is_finite()).collect() };
+        let (mut ts, mut ds) = (fin(t), fin(d));
+        ts.sort_by(|a, b| b.total_cmp(a));
+        ds.sort_by(|a, b| b.total_cmp(a));
+        let ge = |v: &[f32], s: f32| v.partition_point(|&x| x >= s);
+        let mut q_of: Vec<(f32, (f32, u32, u32))> = Vec::new();
+        let mut run = 1.0f32;
+        let mut i = ts.len();
+        while i > 0 {
+            let s = ts[i - 1];
+            let (nt, nd) = (ge(&ts, s), ge(&ds, s));
+            run = run.min((nd as f32 / nt as f32).min(1.0));
+            q_of.push((s, (run, nt as u32, nd as u32)));
+            i = ts.partition_point(|&x| x > s);
+        }
+        t.iter()
+            .map(|&s| {
+                if !s.is_finite() {
+                    return (1.0, 0, 0);
+                }
+                q_of[q_of.partition_point(|(x, _)| *x < s)].1
+            })
+            .collect()
+    }
+
+    #[test]
+    fn lib_fdr_matches_the_binary_search_version_on_random_lists() {
+        let mut r = XorShift::new(7);
+        for _ in 0..10_000 {
+            let nt = (r.next_u64() % 40) as usize;
+            let nd = (r.next_u64() % 40) as usize;
+            // coarse grid so that ties are frequent; some NaN / infinite scores
+            let mut draw = |r: &mut XorShift| -> f32 {
+                match r.next_u64() % 40 {
+                    0 => f32::NAN,
+                    1 => f32::INFINITY,
+                    _ => (r.next_u64() % 12) as f32 / 10.0,
+                }
+            };
+            let t: Vec<f32> = (0..nt).map(|_| draw(&mut r)).collect();
+            let d: Vec<f32> = (0..nd).map(|_| draw(&mut r)).collect();
+            let new: Vec<(f32, u32, u32)> = lib_fdr(&t, &d, DecoyKind::Fragments)
+                .iter()
+                .map(|f| (f.q_value, f.n_target_ge, f.n_decoy_ge))
+                .collect();
+            assert_eq!(new, lib_fdr_old(&t, &d), "t={t:?} d={d:?}");
+        }
+        assert!(lib_fdr(&[], &[0.5], DecoyKind::Fragments).is_empty());
+        assert_eq!(qvalues(&[0.5], &[]), vec![0.0]);
+    }
+
+    #[test]
+    fn precursor_decoy_never_goes_below_one_dalton() {
+        for prec in [3.0, 6.0, 20.0, 51.0, 300.0] {
+            for seed in 1..200u64 {
+                let s = Spectrum {
+                    prec,
+                    pol: 1,
+                    mz: vec![1.5],
+                    it: vec![1.0],
+                    ..Default::default()
+                };
+                let p = make_decoy(&s, DecoyKind::Precursor, seed);
+                assert!(p.prec > 1.0, "prec {prec} seed {seed} -> {}", p.prec);
+                assert!((p.prec - prec).abs() >= SHIFT_MIN);
+            }
+        }
     }
 }

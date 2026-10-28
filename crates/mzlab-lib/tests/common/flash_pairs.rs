@@ -30,7 +30,7 @@ pub fn reference<S: Source>(
             if let Some((lo, hi)) = window(mz * 1e5, t) {
                 lib.for_each_entry(false, lo, hi, |mq, sp, qi| {
                     if in_ranges(sp) {
-                        let p = qi as f64 / 65535.0 * light.scale[sp as usize] as f64;
+                        let p = qi as f64 / 65535.0 * light.recs[sp as usize].scale as f64;
                         pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
                     }
                 })
@@ -41,8 +41,8 @@ pub fn reference<S: Source>(
             if let Some((lo, hi)) = window((q.prec - mz) * 1e5, t) {
                 lib.for_each_entry(true, lo, hi, |nq, sp, qi| {
                     if in_ranges(sp) {
-                        let p = qi as f64 / 65535.0 * light.scale[sp as usize] as f64;
-                        let mq = light.precq[sp as usize].wrapping_sub(nq);
+                        let p = qi as f64 / 65535.0 * light.recs[sp as usize].scale as f64;
+                        let mq = light.recs[sp as usize].precq.wrapping_sub(nq);
                         pairs.push((sp, i as u16, mq, pair_term(pa[i], p)));
                     }
                 })

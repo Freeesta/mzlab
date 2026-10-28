@@ -5,7 +5,6 @@
 use crate::error::{Error, Result};
 use crate::spec::{Meta, Spectrum, MAX_FIELD_BYTES, MAX_RAW_PEAKS};
 use serde_json::Value;
-use std::collections::HashMap;
 
 /// A text line longer than this is skipped (counted as broken); an unbounded line would eat the memory.
 const MAX_LINE: usize = 16 << 20;
@@ -45,26 +44,35 @@ pub fn detect(name: &str, head: &[u8]) -> Result<Format> {
     if ext_is(&[".json", ".jsonl", ".ndjson"]) {
         return Ok(Format::Json);
     }
-    let h = String::from_utf8_lossy(head.get(..8192).unwrap_or(head)).into_owned();
+    let h = String::from_utf8_lossy(head.get(..8192).unwrap_or(head));
     let first = h.trim_start_matches('\u{feff}').trim_start();
-    if h.to_ascii_uppercase().contains("BEGIN IONS") {
+    if h.as_bytes()
+        .windows(10)
+        .any(|w| w.eq_ignore_ascii_case(b"BEGIN IONS"))
+    {
         Ok(Format::Mgf)
     } else if first.starts_with('{') || first.starts_with('[') {
         Ok(Format::Json)
-    } else if h.lines().any(|l| {
-        l.trim_start()
-            .to_ascii_uppercase()
-            .starts_with("ACCESSION:")
-    }) {
+    } else if h
+        .lines()
+        .any(|l| starts_with_ci(l.trim_start(), "ACCESSION:"))
+    {
         Ok(Format::MassBank)
     } else if h.lines().any(|l| {
-        let l = l.trim().to_ascii_lowercase();
-        l.starts_with("name:") || l.starts_with("name :")
+        let l = l.trim();
+        starts_with_ci(l, "name:") || starts_with_ci(l, "name :")
     }) {
         Ok(Format::Msp)
     } else {
         Err(Error::new("lib.err.unknown"))
     }
+}
+
+/// `t` starts with `p`, ignoring the case of ASCII letters (`p` is ASCII).
+fn starts_with_ci(t: &str, p: &str) -> bool {
+    t.as_bytes()
+        .get(..p.len())
+        .is_some_and(|h| h.eq_ignore_ascii_case(p.as_bytes()))
 }
 
 // ---------------------------------------------------------------- numbers
@@ -76,8 +84,16 @@ fn next_number(s: &[u8], pos: &mut usize) -> Option<f64> {
 
 /// Like `next_number`, also giving the start of the match.
 fn find_number(s: &[u8], pos: &mut usize) -> Option<(usize, f64)> {
+    find_number_c(s, pos, false)
+}
+
+/// `find_number`; with `comma` a «,» counts as the decimal point (the text is read as if every comma were a point).
+fn find_number_c(s: &[u8], pos: &mut usize, comma: bool) -> Option<(usize, f64)> {
     // Out-of-range reads give 0, which matches none of the characters tested below.
-    let at = |k: usize| s.get(k).copied().unwrap_or(0);
+    let at = |k: usize| match s.get(k).copied().unwrap_or(0) {
+        b',' if comma => b'.',
+        c => c,
+    };
     let n = s.len();
     let mut i = *pos;
     while i < n {
@@ -120,11 +136,13 @@ fn find_number(s: &[u8], pos: &mut usize) -> Option<(usize, f64)> {
                 }
             }
             *pos = j;
-            return s
-                .get(start..j)
-                .and_then(|b| std::str::from_utf8(b).ok())
-                .and_then(|t| t.parse().ok())
-                .map(|v| (start, v));
+            let text = s.get(start..j).and_then(|b| std::str::from_utf8(b).ok());
+            return match text {
+                Some(t) if comma && t.contains(',') => t.replace(',', ".").parse().ok(),
+                Some(t) => t.parse().ok(),
+                None => None,
+            }
+            .map(|v| (start, v));
         }
         i += 1;
     }
@@ -133,14 +151,12 @@ fn find_number(s: &[u8], pos: &mut usize) -> Option<(usize, f64)> {
 
 /// JS `parseFloat` after turning a comma into a point: a numeric prefix, else NaN.
 fn parse_float(s: &str) -> f64 {
-    let t = s.trim_start().replace(',', ".");
-    let b = t.as_bytes();
+    let b = s.trim_start().as_bytes();
     let mut pos = 0;
-    let before = b.len();
-    match next_number(b, &mut pos) {
-        Some(v)
-            if t.starts_with(|c: char| c == '+' || c == '-' || c == '.' || c.is_ascii_digit())
-                && pos <= before =>
+    match find_number_c(b, &mut pos, true) {
+        Some((_, v))
+            if b.first()
+                .is_some_and(|c| matches!(c, b'+' | b'-' | b'.' | b',' | b'0'..=b'9')) =>
         {
             v
         }
@@ -194,17 +210,108 @@ fn pol_from(mode: &str, adduct: &str, charge: &str) -> i8 {
     }
 }
 
-#[derive(Default)]
+/// Declares the record fields that are read (normalised keys, see `key_of`): `K`, its number and `slot_of`. Any other key of a record is not kept.
+macro_rules! keys {
+    ($($name:ident = $lit:literal),* $(,)?) => {
+        #[derive(Clone, Copy)]
+        #[allow(clippy::enum_variant_names)]
+        enum K { $($name),* }
+        const N_KEYS: usize = [$($lit),*].len();
+        fn slot_of(k: &str) -> Option<K> {
+            match k { $($lit => Some(K::$name),)* _ => None }
+        }
+    };
+}
+
+keys! {
+    PrecursorMz = "precursormz", Precursor = "precursor", PrecursorSlash = "precursorm/z", PepMass = "pepmass",
+    PrecursorType = "precursortype", Adduct = "adduct", IonAdduct = "ionadduct",
+    IonMode = "ionmode", Polarity = "polarity", IonizationMode = "ionizationmode", Charge = "charge",
+    Name = "name", Title = "title", CompoundName = "compoundname", ChName = "chname", RecordTitle = "recordtitle",
+    CollisionEnergy = "collisionenergy", Ce = "ce", InstrumentType = "instrumenttype", Instrument = "instrument",
+    Formula = "formula", MolFormula = "molformula", MolecularFormula = "molecularformula",
+    InchiKey = "inchikey", InchiKeySmiles = "inchikeysmiles", Smiles = "smiles", IsomericSmiles = "isomericsmiles",
+    Accession = "accession", SpectrumId = "spectrumid", LibId = "libid", Usi = "usi", Db = "db#", Id = "id",
+    Authors = "authors", Author = "author", License = "license", Licence = "licence",
+    RtInSeconds = "rtinseconds", RetentionTime = "retentiontime", Rt = "rt", RtInMinutes = "rtinminutes",
+    RetentionTimeMin = "retentiontimemin",
+    Ri = "ri", RetentionIndex = "retentionindex", Kovats = "kovats", KovatsRi = "kovatsri",
+    KovatsRetentionIndex = "kovatsretentionindex",
+    Ionization = "ionization", IonizationType = "ionizationtype", Ionisation = "ionisation", SpectrumType = "spectrumtype",
+}
+
+const _: () = assert!(N_KEYS <= 64);
+
+/// `key_of` into a stack buffer: no known key is longer than the buffer, so a longer one gives `""`, which is none of them.
+fn norm_key<'a>(k: &str, buf: &'a mut [u8; 32]) -> &'a str {
+    let mut n = 0;
+    for c in k
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '_' && *c != '-')
+        .flat_map(|c| c.to_lowercase())
+    {
+        let w = c.len_utf8();
+        let Some(out) = buf.get_mut(n..n + w) else {
+            return "";
+        };
+        c.encode_utf8(out);
+        n += w;
+    }
+    buf.get(..n)
+        .and_then(|b| std::str::from_utf8(b).ok())
+        .unwrap_or("")
+}
+
 struct Rec {
-    f: HashMap<String, String>,
+    /// The fields kept, by `K`; `set` tells which of them the record has (the first occurrence of a key wins).
+    vals: [String; N_KEYS],
+    set: u64,
     mz: Vec<f64>,
     it: Vec<f64>,
     extra_peaks: bool,
 }
 
+impl Default for Rec {
+    fn default() -> Rec {
+        Rec {
+            vals: std::array::from_fn(|_| String::new()),
+            set: 0,
+            mz: Vec::new(),
+            it: Vec::new(),
+            extra_peaks: false,
+        }
+    }
+}
+
 impl Rec {
-    fn field(&mut self, k: String, v: &str) {
-        self.f.entry(k).or_insert_with(|| v.to_string());
+    /// Empties the record for the next one (the field strings keep their room).
+    fn reset(&mut self) {
+        self.set = 0;
+        self.mz.clear();
+        self.it.clear();
+        self.extra_peaks = false;
+    }
+
+    fn field(&mut self, k: K, v: &str) {
+        let bit = 1u64 << (k as u32);
+        if self.set & bit == 0 {
+            self.set |= bit;
+            if let Some(slot) = self.vals.get_mut(k as usize) {
+                slot.clear();
+                slot.push_str(v);
+            }
+        }
+    }
+
+    /// `field` by a normalised key; a key that is not one of the fields is dropped.
+    fn field_str(&mut self, key: &str, v: &str) {
+        if let Some(k) = slot_of(key) {
+            self.field(k, v);
+        }
+    }
+
+    fn has(&self, k: K) -> bool {
+        self.set & (1u64 << (k as u32)) != 0
     }
 
     fn peak(&mut self, m: f64, i: f64) {
@@ -229,18 +336,21 @@ impl Rec {
         }
     }
 
-    fn get(&self, keys: &[&str]) -> Option<&str> {
-        keys.iter().find_map(|k| self.f.get(*k).map(|s| s.as_str()))
+    fn get(&self, keys: &[K]) -> Option<&str> {
+        keys.iter()
+            .find(|k| self.has(**k))
+            .and_then(|k| self.vals.get(*k as usize))
+            .map(|s| s.as_str())
     }
 }
 
 /// The retention time of a record in minutes: minute keys as they are (a trailing «s»/«sec» unit means seconds), «rtinseconds» (MGF) divided by 60.
 fn rt_minutes(c: &Rec) -> Option<f64> {
-    let secs = parse_float(c.get(&["rtinseconds"]).unwrap_or(""));
+    let secs = parse_float(c.get(&[K::RtInSeconds]).unwrap_or(""));
     if secs.is_finite() && secs >= 0.0 {
         return Some(secs / 60.0);
     }
-    let raw = c.get(&["retentiontime", "rt", "rtinminutes", "retentiontimemin"])?;
+    let raw = c.get(&[K::RetentionTime, K::Rt, K::RtInMinutes, K::RetentionTimeMin])?;
     let v = parse_float(raw);
     if !v.is_finite() || v < 0.0 {
         return None;
@@ -258,28 +368,33 @@ fn rt_minutes(c: &Rec) -> Option<f64> {
 /// The retention index of a record: `RI`, `RetentionIndex`, `Kovats`, MassBank `KOVATS_RI`; a plausible positive number only.
 fn ri_of(c: &Rec) -> Option<f64> {
     let v = parse_float(c.get(&[
-        "ri",
-        "retentionindex",
-        "kovats",
-        "kovatsri",
-        "kovatsretentionindex",
+        K::Ri,
+        K::RetentionIndex,
+        K::Kovats,
+        K::KovatsRi,
+        K::KovatsRetentionIndex,
     ])?);
     (v.is_finite() && v > 0.0 && v < 20_000.0).then_some(v)
 }
 
 /// Electron ionisation named by the ionisation or the spectrum type («EI», «EI-B», «electron ionization»).
 fn is_ei(c: &Rec) -> bool {
-    c.get(&["ionization", "ionizationtype", "ionisation", "spectrumtype"])
-        .is_some_and(|v| {
-            let v = v.trim().to_ascii_lowercase();
-            v == "ei" || v.starts_with("ei-") || v.starts_with("ei ") || v.contains("electron")
-        })
+    c.get(&[
+        K::Ionization,
+        K::IonizationType,
+        K::Ionisation,
+        K::SpectrumType,
+    ])
+    .is_some_and(|v| {
+        let v = v.trim().to_ascii_lowercase();
+        v == "ei" || v.starts_with("ei-") || v.starts_with("ei ") || v.contains("electron")
+    })
 }
 
 /// Turns a record into a spectrum or counts why not.
-fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
+fn finish(c: &mut Rec, stats: &mut Stats) -> Option<Spectrum> {
     let prec = parse_float(
-        c.get(&["precursormz", "precursor", "precursorm/z", "pepmass"])
+        c.get(&[K::PrecursorMz, K::Precursor, K::PrecursorSlash, K::PepMass])
             .unwrap_or(""),
     );
     if prec.is_nan() || prec <= 0.0 {
@@ -293,35 +408,41 @@ fn finish(c: Rec, stats: &mut Stats) -> Option<Spectrum> {
         return None;
     }
     let adduct = c
-        .get(&["precursortype", "adduct", "ionadduct"])
+        .get(&[K::PrecursorType, K::Adduct, K::IonAdduct])
         .unwrap_or("");
     let pol = pol_from(
-        c.get(&["ionmode", "polarity", "ionizationmode"])
+        c.get(&[K::IonMode, K::Polarity, K::IonizationMode])
             .unwrap_or(""),
         adduct,
-        c.get(&["charge"]).unwrap_or(""),
+        c.get(&[K::Charge]).unwrap_or(""),
     );
-    let g = |keys: &[&str]| limit(c.get(keys).unwrap_or(""));
+    let g = |keys: &[K]| limit(c.get(keys).unwrap_or(""));
     let meta = Meta {
-        name: g(&["name", "title", "compoundname", "chname", "recordtitle"]),
+        name: g(&[
+            K::Name,
+            K::Title,
+            K::CompoundName,
+            K::ChName,
+            K::RecordTitle,
+        ]),
         adduct: limit(adduct),
-        ce: g(&["collisionenergy", "ce"]),
-        instrument: g(&["instrumenttype", "instrument"]),
-        formula: g(&["formula", "molformula", "molecularformula"]),
-        inchikey: g(&["inchikey", "inchikeysmiles"]),
-        smiles: g(&["smiles", "isomericsmiles"]),
-        accession: g(&["accession", "spectrumid", "libid", "usi", "db#", "id"]),
-        authors: g(&["authors", "author"]),
-        license: g(&["license", "licence"]),
+        ce: g(&[K::CollisionEnergy, K::Ce]),
+        instrument: g(&[K::InstrumentType, K::Instrument]),
+        formula: g(&[K::Formula, K::MolFormula, K::MolecularFormula]),
+        inchikey: g(&[K::InchiKey, K::InchiKeySmiles]),
+        smiles: g(&[K::Smiles, K::IsomericSmiles]),
+        accession: g(&[K::Accession, K::SpectrumId, K::LibId, K::Usi, K::Db, K::Id]),
+        authors: g(&[K::Authors, K::Author]),
+        license: g(&[K::License, K::Licence]),
     };
-    let rt = rt_minutes(&c);
-    let (ri, ei) = (ri_of(&c), is_ei(&c));
+    let rt = rt_minutes(c);
+    let (ri, ei) = (ri_of(c), is_ei(c));
     stats.read += 1;
     Some(Spectrum {
         prec,
         pol,
-        mz: c.mz,
-        it: c.it,
+        mz: std::mem::take(&mut c.mz),
+        it: std::mem::take(&mut c.it),
         meta,
         rt,
         ri,
@@ -338,6 +459,8 @@ pub struct Parser<F: FnMut(Spectrum)> {
     line: Vec<u8>,
     skipping: bool,
     cur: Option<Rec>,
+    /// The record of the last spectrum, emptied, for the next one.
+    spare: Option<Rec>,
     in_peaks: bool,
     // JSON splitting
     depth: u32,
@@ -356,6 +479,7 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             line: Vec::new(),
             skipping: false,
             cur: None,
+            spare: None,
             in_peaks: false,
             depth: 0,
             in_str: false,
@@ -447,11 +571,18 @@ impl<F: FnMut(Spectrum)> Parser<F> {
 
     fn emit(&mut self) {
         self.in_peaks = false;
-        if let Some(c) = self.cur.take() {
-            if let Some(s) = finish(c, &mut self.stats) {
+        if let Some(mut c) = self.cur.take() {
+            let s = finish(&mut c, &mut self.stats);
+            c.reset();
+            self.spare = Some(c);
+            if let Some(s) = s {
                 (self.cb)(s);
             }
         }
+    }
+
+    fn new_rec(&mut self) -> Rec {
+        self.spare.take().unwrap_or_default()
     }
 
     // ------------------------------------------------ MSP
@@ -464,22 +595,26 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             return;
         }
         if let Some((k, v)) = split_key(t, ':') {
-            let key = key_of(k);
+            let mut kb = [0u8; 32];
+            let key = norm_key(k, &mut kb);
             if !self.in_peaks || key == "name" {
                 // a «Name:» line always starts a new record, even without the blank line
                 if self.cur.is_some()
                     && key == "name"
-                    && (self.in_peaks
-                        || self.cur.as_ref().is_some_and(|c| c.f.contains_key("name")))
+                    && (self.in_peaks || self.cur.as_ref().is_some_and(|c| c.has(K::Name)))
                 {
                     self.emit();
                 }
-                let c = self.cur.get_or_insert_with(Rec::default);
+                if self.cur.is_none() {
+                    self.cur = Some(self.new_rec());
+                }
                 if key == "numpeaks" {
                     self.in_peaks = true;
                     return;
                 }
-                c.field(key, v.trim());
+                if let Some(c) = self.cur.as_mut() {
+                    c.field_str(key, v.trim());
+                }
                 return;
             }
         }
@@ -487,7 +622,7 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             if !t.starts_with(|c: char| c == '-' || c == '+' || c == '.' || c.is_ascii_digit()) {
                 return;
             }
-            self.cur = Some(Rec::default());
+            self.cur = Some(self.new_rec());
         }
         self.in_peaks = true;
         if let Some(c) = self.cur.as_mut() {
@@ -501,16 +636,15 @@ impl<F: FnMut(Spectrum)> Parser<F> {
         if t.is_empty() {
             return;
         }
-        let up = t.to_ascii_uppercase();
-        if up.starts_with("BEGIN IONS") {
+        if starts_with_ci(t, "BEGIN IONS") {
             if self.cur.is_some() {
                 self.drop_broken();
             }
-            self.cur = Some(Rec::default());
+            self.cur = Some(self.new_rec());
             self.in_peaks = false;
             return;
         }
-        if up.starts_with("END IONS") {
+        if starts_with_ci(t, "END IONS") {
             if self.cur.is_some() {
                 self.emit();
             }
@@ -519,7 +653,8 @@ impl<F: FnMut(Spectrum)> Parser<F> {
         let Some(c) = self.cur.as_mut() else { return };
         if !t.starts_with(|ch: char| ch == '-' || ch == '+' || ch == '.' || ch.is_ascii_digit()) {
             if let Some((k, v)) = split_key(t, '=') {
-                let key = key_of(k);
+                let mut kb = [0u8; 32];
+                let key = norm_key(k, &mut kb);
                 if key == "pepmass" {
                     // the first number only (the second is the intensity of the precursor)
                     let vt = v.trim();
@@ -527,9 +662,9 @@ impl<F: FnMut(Spectrum)> Parser<F> {
                     let first = find_number(vt.as_bytes(), &mut pos)
                         .map(|(st, _)| &vt[st..pos])
                         .unwrap_or(vt);
-                    c.field("precursormz".into(), first);
+                    c.field(K::PrecursorMz, first);
                 } else {
-                    c.field(key, v.trim());
+                    c.field_str(key, v.trim());
                 }
                 return;
             }
@@ -558,16 +693,14 @@ impl<F: FnMut(Spectrum)> Parser<F> {
         let Some((k, v)) = split_key_mb(t) else {
             return;
         };
-        if k == "ACCESSION"
-            && self
-                .cur
-                .as_ref()
-                .is_some_and(|c| c.f.contains_key("accession"))
-        {
+        if k == "ACCESSION" && self.cur.as_ref().is_some_and(|c| c.has(K::Accession)) {
             self.emit();
         }
         self.in_peaks = false;
-        let c = self.cur.get_or_insert_with(Rec::default);
+        if self.cur.is_none() {
+            self.cur = Some(self.new_rec());
+        }
+        let Some(c) = self.cur.as_mut() else { return };
         let v = v.trim();
         // «SUBKEY value» lines
         let sub = |v: &str, name: &str| -> Option<String> {
@@ -575,43 +708,43 @@ impl<F: FnMut(Spectrum)> Parser<F> {
             a.eq_ignore_ascii_case(name).then(|| b.trim().to_string())
         };
         match k {
-            "ACCESSION" => c.field("accession".into(), v),
-            "RECORD_TITLE" => c.field("recordtitle".into(), v),
-            "CH$NAME" => c.field("chname".into(), v),
-            "CH$FORMULA" => c.field("formula".into(), v),
-            "CH$SMILES" => c.field("smiles".into(), v),
+            "ACCESSION" => c.field(K::Accession, v),
+            "RECORD_TITLE" => c.field(K::RecordTitle, v),
+            "CH$NAME" => c.field(K::ChName, v),
+            "CH$FORMULA" => c.field(K::Formula, v),
+            "CH$SMILES" => c.field(K::Smiles, v),
             "CH$LINK" => {
                 if let Some(x) = sub(v, "INCHIKEY") {
-                    c.field("inchikey".into(), &x);
+                    c.field(K::InchiKey, &x);
                 }
             }
-            "AC$INSTRUMENT" => c.field("instrument".into(), v),
-            "AC$INSTRUMENT_TYPE" => c.field("instrumenttype".into(), v),
+            "AC$INSTRUMENT" => c.field(K::Instrument, v),
+            "AC$INSTRUMENT_TYPE" => c.field(K::InstrumentType, v),
             "AC$CHROMATOGRAPHY" => {
                 if let Some(x) = sub(v, "RETENTION_TIME") {
-                    c.field("retentiontime".into(), &x);
+                    c.field(K::RetentionTime, &x);
                 } else if let Some(x) = sub(v, "KOVATS_RI") {
-                    c.field("kovatsri".into(), &x);
+                    c.field(K::KovatsRi, &x);
                 }
             }
             "AC$MASS_SPECTROMETRY" => {
                 if let Some(x) = sub(v, "ION_MODE") {
-                    c.field("ionmode".into(), &x);
+                    c.field(K::IonMode, &x);
                 } else if let Some(x) = sub(v, "IONIZATION") {
-                    c.field("ionization".into(), &x);
+                    c.field(K::Ionization, &x);
                 } else if let Some(x) = sub(v, "COLLISION_ENERGY") {
-                    c.field("collisionenergy".into(), &x);
+                    c.field(K::CollisionEnergy, &x);
                 }
             }
             "MS$FOCUSED_ION" => {
                 if let Some(x) = sub(v, "PRECURSOR_M/Z") {
-                    c.field("precursormz".into(), &x);
+                    c.field(K::PrecursorMz, &x);
                 } else if let Some(x) = sub(v, "PRECURSOR_TYPE") {
-                    c.field("precursortype".into(), &x);
+                    c.field(K::PrecursorType, &x);
                 }
             }
-            "LICENSE" => c.field("license".into(), v),
-            "AUTHORS" => c.field("authors".into(), v),
+            "LICENSE" => c.field(K::License, v),
+            "AUTHORS" => c.field(K::Authors, v),
             "PK$PEAK" => self.in_peaks = true,
             _ => {}
         }
@@ -681,9 +814,12 @@ impl<F: FnMut(Spectrum)> Parser<F> {
                 return;
             }
         };
-        let mut rec = Rec::default();
+        let mut rec = self.new_rec();
         flatten(&v, &mut rec, 0);
-        if let Some(s) = finish(rec, &mut self.stats) {
+        let s = finish(&mut rec, &mut self.stats);
+        rec.reset();
+        self.spare = Some(rec);
+        if let Some(s) = s {
             (self.cb)(s);
         }
     }
@@ -792,7 +928,7 @@ fn flatten(v: &Value, rec: &mut Rec, depth: u32) {
                 peaks_from(val, rec);
             }
         } else if let Some(s) = scalar(val) {
-            rec.field(key, &s);
+            rec.field_str(&key, &s);
         }
     }
     for (k, val) in o {
@@ -800,7 +936,7 @@ fn flatten(v: &Value, rec: &mut Rec, depth: u32) {
         if let Value::Array(a) = val {
             if key == "names" {
                 if let Some(n) = a.iter().find_map(|x| x.get("name").and_then(scalar)) {
-                    rec.field("name".into(), &n);
+                    rec.field(K::Name, &n);
                 }
             }
             for item in a {
@@ -810,7 +946,7 @@ fn flatten(v: &Value, rec: &mut Rec, depth: u32) {
                         m.get("value").and_then(scalar),
                     ) {
                         if m.len() <= 6 && m.contains_key("value") {
-                            rec.field(key_of(&n), &val);
+                            rec.field_str(&key_of(&n), &val);
                         }
                     }
                 }
