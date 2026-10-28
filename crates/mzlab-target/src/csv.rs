@@ -265,11 +265,15 @@ fn parse_float_col(
             line,
             column: col.to_string(),
         })?;
-    raw.parse::<f64>().map_err(|_| ParseError::InvalidFloat {
-        line,
-        column: col.to_string(),
-        value: raw.to_string(),
-    })
+    // NaN and infinities parse as f64 but would corrupt the m/z indexes and the checks (every comparison with NaN is false)
+    raw.parse::<f64>()
+        .ok()
+        .filter(|v| v.is_finite())
+        .ok_or_else(|| ParseError::InvalidFloat {
+            line,
+            column: col.to_string(),
+            value: raw.to_string(),
+        })
 }
 
 struct RowMeta {

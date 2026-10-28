@@ -184,3 +184,35 @@ fn test_formula_mass_warnings() {
     ]);
     assert!(r.warnings.is_empty());
 }
+
+const HEADER: &str = "id,name_en,name_it,neutral_formula,monoisotopic_mass,mz_MH,mz_MNa,mz_MNH4,smiles,inchikey,inchikey_connectivity,cas,pubchem_cid,effect_class,chemical_class,role,psychoactive,synonyms,check";
+
+fn row(mass: &str, mh: &str) -> String {
+    format!("{HEADER}\nx,X,X,C7H17N,{mass},{mh},138.12532,133.169923,CCC(C)CC(C)N,YAHRDLICUYEDAU-UHFFFAOYSA-N,YAHRDLICUYEDAU,,7753,stimulant,others,active_principle,yes,,\n")
+}
+
+#[test]
+fn test_valori_non_finiti_rifiutati_dal_csv() {
+    assert!(parse_target_csv(Cursor::new(row("115.1361", "116.143376"))).is_ok());
+    for bad in ["NaN", "nan", "-nan", "inf", "-inf", "infinity"] {
+        for text in [row(bad, "116.143376"), row("115.1361", bad)] {
+            assert!(
+                parse_target_csv(Cursor::new(text)).is_err(),
+                "{bad} must be rejected"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_valori_non_finiti_rifiutati_dalla_validazione() {
+    let mut entries = parse_target_csv(Cursor::new(row("115.1361", "116.143376"))).unwrap();
+    assert!(validate_entries(&entries).is_valid());
+    entries[0].monoisotopic_mass = f64::NAN;
+    assert!(!validate_entries(&entries).is_valid());
+    entries[0].monoisotopic_mass = f64::INFINITY;
+    assert!(!validate_entries(&entries).is_valid());
+    entries[0].monoisotopic_mass = 115.1361;
+    entries[0].mz_mh = f64::NAN;
+    assert!(!validate_entries(&entries).is_valid());
+}
