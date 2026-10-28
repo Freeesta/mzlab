@@ -2,20 +2,23 @@
 //! (polarity, precursor) order and streamed into the peak and metadata blocks, while the Flash index entries are routed to m/z buckets in the
 //! scratch space and sorted one bucket at a time. In memory: one small key per spectrum, the open blocks and one bucket.
 
-use crate::clean::{clean, quant_mz, weighted, CleanOpts, MAX_MZ};
+use crate::clean::{clean, quant_mz, weighted_into, CleanOpts, MAX_MZ};
 use crate::codec::compress;
 use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
-use crate::libinfo::{inchikey14, Declared, Detect};
+use crate::libinfo::{Declared, Detect};
 use crate::sortutil;
-use crate::spec::{licence, Meta, Spectrum, META_FIELDS};
-use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32, put_varint};
+use crate::spec::{Meta, Spectrum, META_FIELDS};
+use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32};
 
 #[path = "build_parts/index.rs"]
 mod index;
 pub(crate) use index::read_meta_record;
 use index::{chunk_dir_bytes, copy_stream, entry_bytes, write_index};
+#[path = "build_parts/record.rs"]
+mod record;
+use record::{quantise_into, record_into};
 
 const S_REC: usize = 0;
 const S_META: usize = 1;
@@ -63,6 +66,9 @@ pub struct Builder<T: Scratch> {
     next_orig: u32,
     emptied: u64,
     detect: Detect,
+    /// Buffers of `add`, reused from one spectrum to the next.
+    q_buf: Vec<(u32, f64)>,
+    rec_buf: Vec<u8>,
     /// Source id, version and source SHA-256 written to the library info.
     source: [String; 3],
 }
@@ -76,6 +82,8 @@ impl<T: Scratch> Builder<T> {
             next_orig: 0,
             emptied: 0,
             detect: Detect::default(),
+            q_buf: Vec::new(),
+            rec_buf: Vec::new(),
             source: Default::default(),
         }
     }
@@ -102,50 +110,17 @@ impl<T: Scratch> Builder<T> {
         self.next_orig = self.next_orig.wrapping_add(1);
         let (mz, it) = clean(s.prec, &s.mz, &s.it, &self.opts.clean);
         // quantise; peaks that land on the same m/z unit are merged
-        let mut q: Vec<(u32, f64)> = Vec::with_capacity(mz.len());
-        for (m, i) in mz.iter().zip(&it) {
-            if *m >= MAX_MZ {
-                continue;
-            }
-            let mq = quant_mz(*m);
-            match q.last_mut() {
-                Some(l) if l.0 == mq => l.1 += i,
-                _ => q.push((mq, *i)),
-            }
-        }
+        let mut q = std::mem::take(&mut self.q_buf);
+        quantise_into(&mz, &it, &mut q);
         if q.is_empty() || !(s.prec > 0.0 && s.prec < MAX_MZ) {
             self.emptied += 1;
+            self.q_buf = q;
             return Ok(false);
         }
         let mx = q.iter().fold(0.0f64, |a, x| a.max(x.1));
-        let mut rec: Vec<u8> = Vec::with_capacity(32 + q.len() * 6 + 64);
-        let rt = s.rt.filter(|r| r.is_finite() && *r >= 0.0 && *r < 1e5);
-        let ri = s.ri.filter(|r| r.is_finite() && *r > 0.0 && *r < 1e5);
-        let mut flags = if q.len() < 3 { FLAG_FEW_PEAKS } else { 0 };
-        if rt.is_some() {
-            flags |= FLAG_HAS_RT;
-        }
-        if ri.is_some() {
-            flags |= FLAG_HAS_RI;
-        }
-        rec.extend_from_slice(&s.prec.to_le_bytes());
-        rec.push(s.pol as u8);
-        rec.push(licence::class_of(&s.meta.license));
-        rec.extend_from_slice(&flags.to_le_bytes());
-        rec.extend_from_slice(&orig.to_le_bytes());
-        rec.extend_from_slice(&(rt.unwrap_or(0.0) as f32).to_le_bytes());
-        rec.extend_from_slice(&(ri.unwrap_or(0.0) as f32).to_le_bytes());
-        rec.extend_from_slice(&inchikey14(&s.meta.inchikey).to_le_bytes());
-        rec.extend_from_slice(&(q.len() as u16).to_le_bytes());
-        for (mq, i) in &q {
-            rec.extend_from_slice(&mq.to_le_bytes());
-            let iq = ((i / mx) * INT_MAX).round().clamp(1.0, INT_MAX) as u16;
-            rec.extend_from_slice(&iq.to_le_bytes());
-        }
-        for f in s.meta.fields() {
-            put_varint(&mut rec, f.len() as u64);
-            rec.extend_from_slice(f.as_bytes());
-        }
+        let mut rec = std::mem::take(&mut self.rec_buf);
+        rec.clear();
+        record_into(&mut rec, s, &q, mx, orig);
         let off = u32::try_from(self.store.len(S_REC)).map_err(|_| Error::too_large("records"))?;
         self.keys
             .try_reserve(1)
@@ -159,6 +134,8 @@ impl<T: Scratch> Builder<T> {
             off,
             len: rec.len() as u32,
         });
+        self.q_buf = q;
+        self.rec_buf = rec;
         Ok(true)
     }
 
@@ -197,6 +174,12 @@ impl<T: Scratch> Builder<T> {
         let mut pk_it: Vec<u16> = Vec::new();
         let mut pk_first = 0u32;
         let mut meta_raw: Vec<u8> = Vec::new();
+        // buffers of the per-spectrum loop, reused from one spectrum to the next
+        let mut buf: Vec<u8> = Vec::new();
+        let mut mzq_list: Vec<u32> = Vec::new();
+        let mut iq_list: Vec<u16> = Vec::new();
+        let mut raw_it: Vec<f64> = Vec::new();
+        let mut p: Vec<f64> = Vec::new();
         let mut meta_first = 0u32;
         let mut meta_bytes = 0u64;
         let mut n_peaks = 0u64;
@@ -204,7 +187,10 @@ impl<T: Scratch> Builder<T> {
 
         for (i, k) in keys.iter().enumerate() {
             let i = i as u32;
-            let mut buf = crate::util::zeroed(k.len as usize)?;
+            buf.clear();
+            buf.try_reserve(k.len as usize)
+                .map_err(|_| Error::memory_budget())?;
+            buf.resize(k.len as usize, 0);
             self.store.read_at(S_REC, k.off as u64, &mut buf)?;
             // record: prec f64 | pol | licence | flags u16 | orig u32 | rt f32 | ri f32 | inchikey14 u64 | n u16 | n x (mz u32, it u16) | 10 x (varint len, bytes)
             let n_pk = le_u16(&buf, 32) as usize;
@@ -238,8 +224,8 @@ impl<T: Scratch> Builder<T> {
             let first_peak = u32::try_from(n_peaks).map_err(|_| Error::too_large("peaks"))?;
             // peaks
             let mut prev = 0u32;
-            let mut mzq_list: Vec<u32> = Vec::with_capacity(n_pk);
-            let mut iq_list: Vec<u16> = Vec::with_capacity(n_pk);
+            mzq_list.clear();
+            iq_list.clear();
             for j in 0..n_pk {
                 let mq = le_u32(&buf, peaks_at + j * 6);
                 let iq = le_u16(&buf, peaks_at + j * 6 + 4);
@@ -251,8 +237,9 @@ impl<T: Scratch> Builder<T> {
             }
             n_peaks += n_pk as u64;
             // weighted intensities for the index, from the stored (quantised) values
-            let raw_it: Vec<f64> = iq_list.iter().map(|v| *v as f64 / INT_MAX).collect();
-            let p = weighted(&raw_it);
+            raw_it.clear();
+            raw_it.extend(iq_list.iter().map(|v| *v as f64 / INT_MAX));
+            weighted_into(&raw_it, &mut p);
             let pmax = p.iter().fold(0.0f64, |a, x| a.max(*x));
             let scale = pmax as f32;
             let rec = SpecRec {
@@ -319,9 +306,10 @@ impl<T: Scratch> Builder<T> {
                 });
                 self.store.append(S_META, &stored)?;
                 let next = align8(meta_bytes + stored.len() as u64);
+                // padding to the next multiple of 8: at most 7 zero bytes
                 self.store.append(
                     S_META,
-                    &vec![0u8; (next - meta_bytes - stored.len() as u64) as usize],
+                    &[0u8; 8][..(next - meta_bytes - stored.len() as u64) as usize],
                 )?;
                 meta_bytes = next;
                 meta_raw.clear();

@@ -128,15 +128,13 @@ fn limit_span(x: &[f64], runs: Vec<(usize, usize)>, max_span: f64) -> Vec<(usize
             out.push((a, b));
             continue;
         }
-        let mut cuts: Vec<usize> = (a + 1..b).filter(|&i| gap(i) == top).collect();
-        cuts.push(b);
-        let mut from = a;
-        let mut pieces = Vec::with_capacity(cuts.len());
-        for c in cuts {
-            pieces.push((from, c, depth + 1));
-            from = c;
+        // The pieces go on the stack from the last to the first, so they come off in order.
+        let mut end = b;
+        for c in (a + 1..b).rev().filter(|&i| gap(i) == top) {
+            stack.push((c, end, depth + 1));
+            end = c;
         }
-        stack.extend(pieces.into_iter().rev());
+        stack.push((a, end, depth + 1));
     }
     out
 }
@@ -172,6 +170,7 @@ fn split_slab(
             }
         }
     }
+    // A fresh vector, not a reuse of `items`: freeing the old slab buffer here keeps the peak of the wasm memory (tests/test_guardie_memoria.py) where it was.
     *items = sorted.iter().map(|x| x.1).collect();
     if let Some(gap) = p.split_gap {
         groups = split_duplicates(files.len(), &sorted, groups, gap)?;
@@ -224,8 +223,15 @@ fn split_duplicates(
     Ok(out)
 }
 
-/// Appends one group to `out` (largest area per file gives apex and limits; weighted m/z and RT).
-fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: Option<&RtMap>) {
+/// Appends one group to `out`: per file the largest area and the largest height of its features in the group (as `features.align` of mzFinder; the
+/// two can come from different features), the apex and the width of the feature of the largest area; weighted m/z and RT. `best` is scratch.
+fn push_group(
+    files: &[&FileFeatures],
+    items: &[Item],
+    out: &mut Aligned,
+    adj: Option<&RtMap>,
+    best: &mut Vec<Option<u32>>,
+) {
     let nf = out.n_files;
     let base = out.area.len();
     out.area.resize(base + nf, 0.0);
@@ -233,7 +239,8 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: O
     out.apex_rt.resize(base + nf, f32::NAN);
     out.width.resize(base + nf, f32::NAN);
     out.state.resize(base + nf, CELL_ABSENT);
-    let mut best: Vec<Option<u32>> = vec![None; nf];
+    best.clear();
+    best.resize(nf, None);
     for &(k, i) in items {
         let (f, k) = (files[k as usize], k as usize);
         let i = i as usize;
@@ -289,6 +296,7 @@ pub fn align_grouped(
             Vec::new()
         },
     };
+    let mut best = Vec::new();
     let mut emit = |items: &[Item]| {
         if record {
             let g = out.table.len() as u32;
@@ -296,7 +304,7 @@ pub fn align_grouped(
                 out.group_of[k as usize][i as usize] = g;
             }
         }
-        push_group(files, items, &mut out.table, adj);
+        push_group(files, items, &mut out.table, adj, &mut best);
     };
     if keep {
         let mut at = 0;
@@ -360,3 +368,6 @@ fn flush(
     slab.clear();
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

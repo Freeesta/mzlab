@@ -143,3 +143,44 @@ fn test_rfc4180_parsing_casi_limite() {
     let res = parse_target_csv(Cursor::new(bad_csv));
     assert!(res.is_err());
 }
+
+#[test]
+fn test_formula_mass_warnings() {
+    let entries = parse_target_csv(File::open(path_sostanze_csv()).unwrap()).unwrap();
+    assert!(validate_entries(&entries).warnings.is_empty());
+
+    let base = entries[0].clone();
+    let with = |formula: &str, mass: f64| {
+        let mut e = base.clone();
+        e.neutral_formula = formula.to_string();
+        e.monoisotopic_mass = mass;
+        e.mz_mh = mass + AdductType::MH.delta_mass();
+        e.mz_mna = mass + AdductType::MNa.delta_mass();
+        e.mz_mnh4 = mass + AdductType::MNH4.delta_mass();
+        e
+    };
+    // right formula, within 1 mDa, parenthesised and lower-case written: no warning
+    let good = vec![
+        with("C6H12O6", 180.063388),
+        with("C6H12O6", 180.0640),
+        with("C(OH)2", 46.005479),
+        with("c6h12o6", 180.063388),
+    ];
+    let r = validate_entries(&good);
+    assert!(r.is_valid() && r.warnings.is_empty(), "{:?}", r.warnings);
+
+    // a formula that weighs 2 H less than the stated mass: kept as valid, flagged once
+    let r = validate_entries(&[with("C6H10O6", 180.063388)]);
+    assert!(r.is_valid());
+    assert_eq!(r.warnings.len(), 1);
+    assert_eq!(r.warnings[0].entry_id, base.id);
+    assert!(r.warnings[0].message.contains("C6H10O6"));
+
+    // unreadable formulas (isotope marks, ionic charges, unsupported elements) cannot be weighed: no warning
+    let r = validate_entries(&[
+        with("[13C]C5H12O6", 181.067),
+        with("C10H12N+", 146.0964),
+        with("C6H12FeO6", 180.063388),
+    ]);
+    assert!(r.warnings.is_empty());
+}

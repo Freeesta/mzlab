@@ -6,6 +6,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::lettori::Limiti;
 
+mod pezzi;
+
 /// The bytes of the window the header is read through.
 const FINESTRA: u64 = 1 << 16;
 /// The longest name of a dimension, attribute or variable.
@@ -35,6 +37,30 @@ impl Tipo {
             Tipo::Double => 8,
         }
     }
+    /// Appends to `out` the values of the big-endian elements of `b` (a whole number of them): the type is matched once for the piece, not for each element.
+    fn valori(self, b: &[u8], out: &mut Vec<f64>) {
+        match self {
+            Tipo::Byte => out.extend(b.iter().map(|&x| f64::from(x as i8))),
+            Tipo::Char => out.extend(b.iter().map(|&x| f64::from(x))),
+            Tipo::Short => out.extend(
+                b.chunks_exact(2)
+                    .map(|x| f64::from(i16::from_be_bytes([x[0], x[1]]))),
+            ),
+            Tipo::Int => out.extend(
+                b.chunks_exact(4)
+                    .map(|x| f64::from(i32::from_be_bytes([x[0], x[1], x[2], x[3]]))),
+            ),
+            Tipo::Float => out.extend(
+                b.chunks_exact(4)
+                    .map(|x| f64::from(f32::from_be_bytes([x[0], x[1], x[2], x[3]]))),
+            ),
+            Tipo::Double => out.extend(
+                b.chunks_exact(8)
+                    .map(|x| f64::from_be_bytes([x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]])),
+            ),
+        }
+    }
+
     /// One big-endian value of this type.
     fn valore(self, b: &[u8]) -> f64 {
         let a = |n: usize| -> [u8; 8] {
@@ -52,6 +78,9 @@ impl Tipo {
         }
     }
 }
+
+/// The most bytes of a variable held at once when it is decoded.
+const PEZZO: usize = 1 << 18;
 
 impl Cur<'_> {
     fn bytes(&mut self, n: u64) -> Result<Vec<u8>> {
@@ -264,57 +293,6 @@ impl Cdf {
             .fold(1u64, |a, &d| a.saturating_mul(self.lunghezza_dim(d)))
     }
 
-    /// The bytes of elements `da..da + n` of `v`.
-    fn grezzi(
-        &self,
-        dati: &mut dyn ReadAt,
-        limiti: &Limiti,
-        v: &Var,
-        da: u64,
-        n: u64,
-    ) -> Result<Vec<u8>> {
-        let w = v.tipo.larghezza();
-        let fine = da.checked_add(n).ok_or_else(Error::memory_budget)?;
-        if fine > self.elementi(v) {
-            return Err(guasto("read past the end of a variable"));
-        }
-        let totale = n
-            .checked_mul(w)
-            .filter(|&t| t <= limiti.byte)
-            .ok_or_else(Error::memory_budget)?;
-        let mut out = vec![0u8; usize::try_from(totale).map_err(|_| Error::memory_budget())?];
-        let (mut e, mut k) = (da, 0usize);
-        let epr = if v.record {
-            per_record(&self.dim, v).max(1)
-        } else {
-            u64::MAX
-        };
-        while e < fine {
-            let (pos, blocco) = if v.record {
-                let (r, i) = (e / epr, e % epr);
-                (
-                    v.begin
-                        .saturating_add(r.saturating_mul(self.recsize))
-                        .saturating_add(i * w),
-                    (epr - i).min(fine - e),
-                )
-            } else {
-                (v.begin.saturating_add(e * w), fine - e)
-            };
-            let len = (blocco * w) as usize;
-            if pos
-                .checked_add(len as u64)
-                .is_none_or(|f| f > self.dimensione)
-            {
-                return Err(guasto("variable data past the end of the file"));
-            }
-            dati.read_at(pos, &mut out[k..k + len])?;
-            k += len;
-            e += blocco;
-        }
-        Ok(out)
-    }
-
     /// Elements `da..da + n` of `v` as numbers (`scale_factor` and `add_offset` are not applied here).
     pub fn leggi(
         &self,
@@ -325,10 +303,13 @@ impl Cdf {
         n: u64,
     ) -> Result<Vec<f64>> {
         limiti.voci_ok(n)?;
-        let b = self.grezzi(dati, limiti, v, da, n)?;
-        Ok(b.chunks_exact(v.tipo.larghezza() as usize)
-            .map(|x| v.tipo.valore(x))
-            .collect())
+        // the values are decoded piece by piece, never the whole window as bytes first
+        self.controlla(limiti, v, da, n)?;
+        let mut out = Vec::new();
+        out.try_reserve_exact(n as usize)
+            .map_err(|_| Error::memory_budget())?;
+        self.a_pezzi(dati, v, da, n, |b| v.tipo.valori(b, &mut out))?;
+        Ok(out)
     }
 
     /// The strings of a `char` variable (rows of its last dimension, trailing NULs and spaces cut).

@@ -605,19 +605,19 @@ function exportOffset(/** @type {string} */ svgText, /** @type {Record<string, a
     const [a, b, c, d, e, f] = tr ? tr[1].split(/[\s,]+/).map(Number) : [1, 0, 0, 1, 0, 0];
     if (n && (pa.getAttribute("d") || "").trim()[0] === "M") for (let i = 0; i + 1 < n.length; i += 2) ends.push([a * +n[i] + c * +n[i + 1] + e, b * +n[i] + d * +n[i + 1] + f]);
   });
-  const votes = new Map();
+  const OFS = 1048576, SPAN = 2097152, votes = new Map(), shift = (/** @type {number} */ k) => /** @type {[number, number]} */ ([Math.floor(k / SPAN) - OFS, k % SPAN - OFS]);   // a shift (dx, dy) is one number: both inside +-2^20 px, which every drawing is
   for (const [ax, ay] of atoms) for (const [ex, ey] of ends) {
-    const k = Math.round(ex - ax) + "," + Math.round(ey - ay); votes.set(k, (votes.get(k) || 0) + 1);
+    const dx = Math.round(ex - ax) + OFS, dy = Math.round(ey - ay) + OFS, k = dx * SPAN + dy;
+    if (dx >= 0 && dy >= 0 && dx < SPAN && dy < SPAN) votes.set(k, (votes.get(k) || 0) + 1);
   }
   // symmetric molecules (rings) match well at several shifts: keep only shifts that leave every atom inside the picture
   // (Ketcher crops the picture tightly around the drawing), then take the best supported one
   const vb = (doc.documentElement.getAttribute("viewBox") || "0 0 0 0").split(/[\s,]+/).map(Number);
   const inside = (/** @type {number} */ ox, /** @type {number} */ oy) => atoms.every(([ax, ay]) => ax + ox >= vb[0] - 3 && ax + ox <= vb[0] + vb[2] + 3 && ay + oy >= vb[1] - 3 && ay + oy <= vb[1] + vb[3] + 3);
-  const ranked = [...votes].sort((p, q) => q[1] - p[1]).slice(0, 40);
-  const need = Math.max(2, Math.min(atoms.length, 3));
-  const pick = ranked.find(([k, c]) => c >= need && inside(.../** @type {[number, number]} */ (k.split(",").map(Number))));
+  const ranked = [...votes].sort((p, q) => q[1] - p[1]).slice(0, 40), need = Math.max(2, Math.min(atoms.length, 3));
+  const pick = ranked.find(([k, c]) => c >= need && inside(...shift(k)));
   if (!pick) return null;
-  const [bx, by] = pick[0].split(",").map(Number);
+  const [bx, by] = shift(pick[0]);
   // refine with the matching pairs
   let sx = 0, sy = 0, m = 0;
   for (const [ax, ay] of atoms) for (const [ex, ey] of ends) if (Math.abs(ex - ax - bx) <= 1.5 && Math.abs(ey - ay - by) <= 1.5) { sx += ex - ax; sy += ey - ay; m++; }

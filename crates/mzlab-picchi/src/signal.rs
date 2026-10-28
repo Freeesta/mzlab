@@ -37,10 +37,27 @@ pub fn noise_level(y: &[f64]) -> f64 {
     if y.len() < 4 {
         return 0.0;
     }
-    let d: Vec<f64> = y.windows(2).map(|w| w[1] - w[0]).collect();
-    let m = median(&d);
-    let dev: Vec<f64> = d.iter().map(|v| (v - m).abs()).collect();
-    1.4826 * median(&dev) / 2f64.sqrt()
+    let mut buf: Vec<f64> = y.windows(2).map(|w| w[1] - w[0]).collect();
+    // one buffer for both medians: a selection reorders it, and the sort of the NaN fallback depends on the order, so that case is rebuilt
+    let (m, reordered) = match crate::sortc::select_median(&mut buf) {
+        Some(m) => (m, true),
+        None => (median(&buf), false),
+    };
+    for v in buf.iter_mut() {
+        *v = (*v - m).abs();
+    }
+    let mad = match crate::sortc::select_median(&mut buf) {
+        Some(mad) => mad,
+        None => {
+            if reordered {
+                for (v, w) in buf.iter_mut().zip(y.windows(2)) {
+                    *v = ((w[1] - w[0]) - m).abs();
+                }
+            }
+            median(&buf)
+        }
+    };
+    1.4826 * mad / 2f64.sqrt()
 }
 
 /// Gaussian elimination with partial pivoting on `a` (n x n, row-major) and `b`, both overwritten; the solution goes to `x`. False if singular.
@@ -94,55 +111,83 @@ pub fn solve3(mut a: [f64; 9], mut b: [f64; 3]) -> Option<[f64; 3]> {
     solve_in(&mut a, &mut b, &mut x, 3).then_some(x)
 }
 
-/// `solve` for a matrix with two sub- and two super-diagonals (the AsLS system). It runs the same operations in the same order as `solve`, skipping
-/// only the exact zeros outside the band that partial pivoting can reach (lower 2, upper 4), so the result is bit-identical; a non-finite result is
-/// recomputed by `solve`, where a stray infinity could still reach those zeros.
-pub fn solve_banded(a: Vec<f64>, b: Vec<f64>, n: usize) -> Option<Vec<f64>> {
-    let (mut a2, mut b2) = (a.clone(), b.clone());
-    let banded = (|| {
-        for c in 0..n {
-            let last = (c + 2).min(n - 1);
-            let mut p = c;
-            for r in c + 1..=last {
-                if a2[r * n + c].abs() > a2[p * n + c].abs() {
-                    p = r;
-                }
+/// Slots per row of the band storage of the AsLS system: two sub-diagonals, the diagonal and four super-diagonals (two of the matrix and two of fill-in
+/// from the row swaps of partial pivoting); the entry (r, k) is at `r * BAND + k + 2 - r`.
+const BAND: usize = 7;
+
+/// Slot of the entry (r, k) in band storage.
+#[inline]
+fn at(r: usize, k: usize) -> usize {
+    r * BAND + k + 2 - r
+}
+
+/// Solves A x = b for the AsLS matrix held in band storage `ab` (n rows of `BAND` slots), overwriting `ab` and `b`. It runs the same operations in the same
+/// order as `solve` on the dense matrix, skipping only the exact zeros outside the band that partial pivoting can reach (lower 2, upper 4), so the
+/// result is bit-identical. None if singular.
+fn solve_band(ab: &mut [f64], b: &mut [f64], n: usize) -> Option<Vec<f64>> {
+    for c in 0..n {
+        let last = (c + 2).min(n - 1);
+        let mut p = c;
+        for r in c + 1..=last {
+            if ab[at(r, c)].abs() > ab[at(p, c)].abs() {
+                p = r;
             }
-            if a2[p * n + c].abs() < 1e-300 {
-                return None;
+        }
+        if ab[at(p, c)].abs() < 1e-300 {
+            return None;
+        }
+        let hi = (c + 4).min(n - 1);
+        if p != c {
+            for k in c..=hi {
+                ab.swap(at(c, k), at(p, k));
             }
-            let hi = (c + 4).min(n - 1);
-            if p != c {
+            b.swap(c, p);
+        }
+        let d = ab[at(c, c)];
+        for r in c + 1..=last {
+            let f = ab[at(r, c)] / d;
+            if f != 0.0 {
                 for k in c..=hi {
-                    a2.swap(c * n + k, p * n + k);
+                    ab[at(r, k)] -= f * ab[at(c, k)];
                 }
-                b2.swap(c, p);
-            }
-            let d = a2[c * n + c];
-            for r in c + 1..=last {
-                let f = a2[r * n + c] / d;
-                if f != 0.0 {
-                    for k in c..=hi {
-                        a2[r * n + k] -= f * a2[c * n + k];
-                    }
-                    b2[r] -= f * b2[c];
-                }
+                b[r] -= f * b[c];
             }
         }
-        let mut x = vec![0.0; n];
-        for r in (0..n).rev() {
-            let mut s = b2[r];
-            for k in r + 1..=(r + 4).min(n - 1) {
-                s -= a2[r * n + k] * x[k];
-            }
-            x[r] = s / a2[r * n + r];
-        }
-        Some(x)
-    })();
-    match banded {
-        Some(x) if x.iter().all(|v| v.is_finite()) => Some(x),
-        _ => solve(a, b, n),
     }
+    let mut x = vec![0.0; n];
+    for r in (0..n).rev() {
+        let mut s = b[r];
+        for k in r + 1..=(r + 4).min(n - 1) {
+            s -= ab[at(r, k)] * x[k];
+        }
+        x[r] = s / ab[at(r, r)];
+    }
+    Some(x)
+}
+
+/// The penalty `lam * D2^T D2` (D2 = second differences) in band storage, each entry summed over the rows of D2 in order.
+fn penalty_band(n: usize, lam: f64) -> Vec<f64> {
+    let mut pb = vec![0.0; n * BAND];
+    for r in 0..n - 2 {
+        let c = [(r, 1.0), (r + 1, -2.0), (r + 2, 1.0)];
+        for &(i, vi) in &c {
+            for &(j, vj) in &c {
+                pb[at(i, j)] += lam * vi * vj;
+            }
+        }
+    }
+    pb
+}
+
+/// The dense n x n matrix of a band (the rare fallback of `asls_baseline`, and the tests).
+fn dense_of_band(ab: &[f64], n: usize) -> Vec<f64> {
+    let mut a = vec![0.0; n * n];
+    for i in 0..n {
+        for j in i.saturating_sub(2)..(i + 3).min(n) {
+            a[i * n + j] = ab[at(i, j)];
+        }
+    }
+    a
 }
 
 /// Savitzky-Golay convolution coefficients (odd window), derivative order `deriv`, unit spacing, ordered like `np.convolve` wants.
@@ -197,23 +242,34 @@ pub fn savgol_d(y: &[f64], window: usize, poly: usize, deriv: usize) -> Vec<f64>
     let half = window / 2;
     let c = savgol_coeffs(window, poly, deriv);
     let ni = n as i64;
-    (0..n)
-        .map(|i| {
-            (0..window)
-                .map(|k| {
-                    let src = i as i64 + k as i64 - half as i64;
-                    let v = if (0..ni).contains(&src) {
-                        y[src as usize]
-                    } else if n > half {
-                        y[reflect(src, ni)]
-                    } else {
-                        y[src.clamp(0, ni - 1) as usize]
-                    };
-                    v * c[window - 1 - k]
-                })
-                .sum()
-        })
-        .collect()
+    // taps of the point `i` that reach outside the trace read reflected (or clamped) samples; inside, the window is a plain slice
+    let edge = |i: usize| -> f64 {
+        (0..window)
+            .map(|k| {
+                let src = i as i64 + k as i64 - half as i64;
+                let v = if (0..ni).contains(&src) {
+                    y[src as usize]
+                } else if n > half {
+                    y[reflect(src, ni)]
+                } else {
+                    y[src.clamp(0, ni - 1) as usize]
+                };
+                v * c[window - 1 - k]
+            })
+            .sum()
+    };
+    let (first, last) = (half.min(n), n.saturating_sub(half).max(half.min(n)));
+    let mut out = Vec::with_capacity(n);
+    out.extend((0..first).map(edge));
+    out.extend((first..last).map(|i| {
+        y[i - half..i - half + window]
+            .iter()
+            .zip(c.iter().rev())
+            .map(|(&v, &ck)| v * ck)
+            .sum::<f64>()
+    }));
+    out.extend((last..n).map(edge));
+    out
 }
 
 pub fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
@@ -250,14 +306,8 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
     fp[j] + (x - xp[j]) * (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j])
 }
 
+/// Asymmetric least squares baseline: `iters` weighted smoothing solves of a pentadiagonal system. More than `max_n` points are averaged down first.
 pub fn asls_baseline(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize) -> Vec<f64> {
-    asls_with(y, lam, p, iters, max_n, solve_banded)
-}
-
-type Solver = fn(Vec<f64>, Vec<f64>, usize) -> Option<Vec<f64>>;
-
-/// `asls_baseline` with the linear solver as a parameter (the tests compare the banded one with the dense `solve`).
-fn asls_with(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize, solver: Solver) -> Vec<f64> {
     let n = y.len();
     if n < 5 {
         let m = y.iter().cloned().fold(f64::INFINITY, f64::min);
@@ -273,39 +323,36 @@ fn asls_with(y: &[f64], lam: f64, p: f64, iters: usize, max_n: usize, solver: So
             .map(|b| y[b * k..(b + 1) * k].iter().sum::<f64>() / k as f64)
             .collect();
         let xd: Vec<f64> = (0..m).map(|b| (b as f64 + 0.5) * k as f64 - 0.5).collect();
-        let zd = asls_with(
-            &yd,
-            lam / (k as f64).powi(4),
-            p,
-            iters,
-            usize::MAX / 4,
-            solver,
-        );
+        let zd = asls_baseline(&yd, lam / (k as f64).powi(4), p, iters, usize::MAX / 4);
         return (0..n)
             .map(|i| interp(i as f64, &xd, &zd).min(y[i]))
             .collect();
     }
-    // P = lam * D2^T D2 (D2 = second differences)
-    let mut pm = vec![0.0; n * n];
-    for r in 0..n - 2 {
-        let c = [(r, 1.0), (r + 1, -2.0), (r + 2, 1.0)];
-        for &(i, vi) in &c {
-            for &(j, vj) in &c {
-                pm[i * n + j] += lam * vi * vj;
-            }
-        }
-    }
+    let pb = penalty_band(n, lam);
+    let mut ab = vec![0.0; n * BAND];
     let mut w = vec![1.0; n];
     let mut z = y.to_vec();
     for _ in 0..iters {
-        let mut a = pm.clone();
+        ab.copy_from_slice(&pb);
         for i in 0..n {
-            a[i * n + i] += w[i];
+            ab[at(i, i)] += w[i];
         }
-        let b: Vec<f64> = (0..n).map(|i| w[i] * y[i]).collect();
-        z = match solver(a, b, n) {
+        let mut b: Vec<f64> = (0..n).map(|i| w[i] * y[i]).collect();
+        // a singular or non-finite band solve is redone on the dense matrix, where a stray infinity could still reach the zeros outside the band
+        let solved = solve_band(&mut ab, &mut b, n).filter(|x| x.iter().all(|v| v.is_finite()));
+        z = match solved {
             Some(s) => s,
-            None => break,
+            None => {
+                let mut a = dense_of_band(&pb, n);
+                for i in 0..n {
+                    a[i * n + i] += w[i];
+                }
+                let b: Vec<f64> = (0..n).map(|i| w[i] * y[i]).collect();
+                match solve(a, b, n) {
+                    Some(s) => s,
+                    None => break,
+                }
+            }
         };
         let w_new: Vec<f64> = (0..n)
             .map(|i| if y[i] > z[i] { p } else { 1.0 - p })
@@ -336,17 +383,28 @@ pub fn cwt_ricker(y: &[f64], widths: &[f64]) -> Vec<Vec<f64>> {
             let k = ((10.0 * w).min(n as f64 - 1.0) as usize) | 1;
             let wv = ricker(w, k);
             let h = (k / 2) as i64;
-            (0..n)
-                .map(|i| {
-                    // np.convolve(np.pad(y, h, edge), wv, valid): the kernel is symmetric
-                    (0..k)
-                        .map(|j| {
-                            let src = (i as i64 + j as i64 - h).clamp(0, n as i64 - 1) as usize;
-                            y[src] * wv[k - 1 - j]
-                        })
-                        .sum::<f64>()
-                })
-                .collect()
+            // np.convolve(np.pad(y, h, edge), wv, valid): the kernel is symmetric; near the ends the samples are clamped to the edge
+            let edge = |i: usize| -> f64 {
+                (0..k)
+                    .map(|j| {
+                        let src = (i as i64 + j as i64 - h).clamp(0, n as i64 - 1) as usize;
+                        y[src] * wv[k - 1 - j]
+                    })
+                    .sum::<f64>()
+            };
+            let h = h as usize;
+            let (first, last) = (h.min(n), n.saturating_sub(h).max(h.min(n)));
+            let mut out = Vec::with_capacity(n);
+            out.extend((0..first).map(edge));
+            out.extend((first..last).map(|i| {
+                y[i - h..i - h + k]
+                    .iter()
+                    .zip(wv.iter().rev())
+                    .map(|(&v, &c)| v * c)
+                    .sum::<f64>()
+            }));
+            out.extend((last..n).map(edge));
+            out
         })
         .collect()
 }

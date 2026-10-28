@@ -9,7 +9,9 @@ use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::prep::Scorer;
 use crate::read::Library;
-use crate::scores::{common_losses, modified_cosine, pair_scores, ModCosine, Spec};
+use crate::scores::{
+    common_losses_with, modified_cosine, pair_scores, MatchScratch, ModCosine, Spec,
+};
 use crate::sortutil;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -149,10 +151,11 @@ pub fn identity_with<S: Source>(
     }
     sortutil::sort_any_by(&mut light, order);
     light.truncate(top);
+    let mut scratch = MatchScratch::default();
     for h in light.iter_mut() {
         h.spec = spec_of(lib, h.index, h.prec)?;
         h.pairs = pair_scores(&q.spec, &h.spec, frag).pairs;
-        h.nl_shared = common_losses(&q.spec, &h.spec, frag.at(q.prec));
+        h.nl_shared = common_losses_with(&q.spec, &h.spec, frag.at(q.prec), &mut scratch);
     }
     Ok(light)
 }
@@ -227,7 +230,7 @@ pub fn analogs_with<S: Source>(
         Some(o.candidates),
         |s| {
             s.pairs >= o.min_hybrid_pairs
-                && (light.precq[s.index as usize] as f64 / crate::clean::MZ_SCALE - pq).abs()
+                && (light.recs[s.index as usize].precq as f64 / crate::clean::MZ_SCALE - pq).abs()
                     >= o.min_delta
         },
     )?;

@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use crate::rtmap::RtMap;
 use crate::sweep::{ppm_ranges, windows};
 use crate::table::{Aligned, CELL_ABSENT, CELL_FILLED, CELL_NA};
-use crate::trace::{filled, Params, SLAB_PEAKS};
+use crate::trace::{reserve, Params, SLAB_PEAKS};
 
 /// Parameters of the integration (defaults of `fill_gaps` and `trace_area`).
 #[derive(Debug, Clone, Copy)]
@@ -96,10 +96,21 @@ pub(crate) fn trace_area(
     dt: f64,
     p: &FillParams,
 ) -> Option<f64> {
-    let x: Vec<f64> = y
-        .iter()
-        .map(|&v| if v >= p.floor { v } else { 0.0 })
-        .collect();
+    trace_area_in(y, s0, i0, i1, dt, p, &mut Vec::new())
+}
+
+/// `trace_area` with `x` as the buffer of the thresholded series, so that a file's cells share one allocation.
+fn trace_area_in(
+    y: &[f64],
+    s0: usize,
+    i0: usize,
+    i1: usize,
+    dt: f64,
+    p: &FillParams,
+    x: &mut Vec<f64>,
+) -> Option<f64> {
+    x.clear();
+    x.extend(y.iter().map(|&v| if v >= p.floor { v } else { 0.0 }));
     let (a0, a1) = (i0 - s0, i1 - s0);
     let mut apex = None;
     for j in a0..a1 {
@@ -222,12 +233,15 @@ pub fn fill_find<R: ReadAt>(
     let pad = p.long_trace + p.max_gap + 2;
     let max_peaks = (params.budget / 24).clamp(1024, SLAB_PEAKS);
     let mut found: Vec<(usize, f64)> = na.into_iter().map(|r| (r, NOT_MEASURED)).collect();
+    let (mut y, mut x) = (Vec::new(), Vec::new());
     windows(index, si, &ranges, max_peaks, |q, a, b, slab| {
         let t = &list[q];
         let (s0, s1) = (t.i0.saturating_sub(pad), (t.i1 + pad).min(nscan));
-        let mut y = filled(s1 - s0, 0.0f64)?;
+        y.clear();
+        reserve(&mut y, s1 - s0)?;
+        y.resize(s1 - s0, 0.0f64);
         slab.add_trace(a, b, s0, &mut y)?;
-        if let Some(area) = trace_area(&y, s0, t.i0, t.i1, dt, p).filter(|&v| v > 0.0) {
+        if let Some(area) = trace_area_in(&y, s0, t.i0, t.i1, dt, p, &mut x).filter(|&v| v > 0.0) {
             found.push((t.row, area));
         }
         Ok(())
