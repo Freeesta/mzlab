@@ -53,16 +53,18 @@ pub fn quad_fit(rt: &[f64], y: &[f64], i: usize) -> Fit {
     for (x, t) in xs.iter_mut().zip(&rt[a..b]) {
         *x = t - rt[i];
     }
-    let mut ata = [0.0; 9];
+    // ata[j][k] is the sum of x^(j+k): the five power sums, each added up in point order, fill the nine entries
+    let mut m = [0.0; 5];
     let mut aty = [0.0; 3];
     for (x, &yy) in xs[..len].iter().zip(&y[a..b]) {
-        for j in 0..3 {
-            aty[j] += x.powi(j as i32) * yy;
-            for k in 0..3 {
-                ata[j * 3 + k] += x.powi((j + k) as i32);
-            }
+        for (j, mj) in m.iter_mut().enumerate() {
+            *mj += x.powi(j as i32);
+        }
+        for (j, t) in aty.iter_mut().enumerate() {
+            *t += x.powi(j as i32) * yy;
         }
     }
+    let ata = [m[0], m[1], m[2], m[1], m[2], m[3], m[2], m[3], m[4]];
     let Some(c) = solve3(ata, aty) else {
         return Fit::Flat;
     };
@@ -89,9 +91,10 @@ pub fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
     }
 }
 
-fn trapz(y: &[f64], x: &[f64]) -> f64 {
-    (1..y.len())
-        .map(|i| (y[i] + y[i - 1]) / 2.0 * (x[i] - x[i - 1]))
+/// Trapezoid area of `y.max(0)` over `x` between the indices `lo` and `hi` (inclusive), the terms summed in order.
+fn trapz_pos(y: &[f64], x: &[f64], lo: usize, hi: usize) -> f64 {
+    (lo + 1..=hi)
+        .map(|i| (y[i].max(0.0) + y[i - 1].max(0.0)) / 2.0 * (x[i] - x[i - 1]))
         .sum()
 }
 
@@ -179,23 +182,39 @@ fn ridge_lines(c: &[Vec<f64>], widths: &[f64]) -> Vec<Ridge> {
         })
         .collect();
     let mut ridges: Vec<Ridge> = Vec::new();
+    // (last position, ridge) of the ridges that can still be joined at the scale being read, by position
+    let mut open: Vec<(usize, usize)> = Vec::new();
     for (i, mx) in peaks_per_scale.iter().enumerate() {
-        for &pos in mx {
-            let mut joined = false;
-            for r in ridges.iter_mut() {
-                if r.last_scale + 1 == i || r.last_scale + 2 == i {
-                    let last = *r.pos.last().unwrap() as f64;
-                    if (last - pos as f64).abs() <= (widths[i] / 2.0).max(1.0) {
-                        r.pos.push(pos);
-                        r.val.push(c[i][pos] / scale_noise[i]);
-                        r.scale.push(i);
-                        r.last_scale = i;
-                        joined = true;
-                        break;
-                    }
-                }
+        open.clear();
+        open.extend(ridges.iter().enumerate().filter_map(|(k, r)| {
+            if r.last_scale + 1 == i || r.last_scale + 2 == i {
+                Some((*r.pos.last().unwrap(), k))
+            } else {
+                None
             }
-            if !joined {
+        }));
+        crate::sortc::by(&mut open, |a, b| a.cmp(b));
+        let reach = (widths[i] / 2.0).max(1.0);
+        // positions are integers: the bisection takes a margin of one, the exact test below decides
+        let margin = reach.ceil() as usize + 1;
+        for &pos in mx {
+            let from = open.partition_point(|&(last, _)| last < pos.saturating_sub(margin));
+            // the first ridge, in creation order, that is close enough and has not taken a position of this scale yet
+            let hit = open[from..]
+                .iter()
+                .take_while(|&&(last, _)| last <= pos + margin)
+                .filter(|&&(last, k)| {
+                    ridges[k].last_scale != i && (last as f64 - pos as f64).abs() <= reach
+                })
+                .map(|&(_, k)| k)
+                .min();
+            if let Some(k) = hit {
+                let r = &mut ridges[k];
+                r.pos.push(pos);
+                r.val.push(c[i][pos] / scale_noise[i]);
+                r.scale.push(i);
+                r.last_scale = i;
+            } else {
                 ridges.push(Ridge {
                     pos: vec![pos],
                     val: vec![c[i][pos] / scale_noise[i]],
@@ -284,8 +303,7 @@ fn peaks_of(
         let lo2 = lo.saturating_sub(1);
         let hi2 = (hi + 1).min(n - 1);
         let hh = parabola_height(rt, ys, apex);
-        let seg: Vec<f64> = yc[lo2..=hi2].iter().map(|v| v.max(0.0)).collect();
-        let area = trapz(&seg, &rt[lo2..=hi2]);
+        let area = trapz_pos(yc, rt, lo2, hi2);
         let ns = hi2 - lo2 + 1;
         if ns < params.min_scans {
             continue;
@@ -336,3 +354,7 @@ pub fn detect_full(rt: &[f64], y: &[f64], params: Params) -> Detection {
         peaks,
     }
 }
+
+#[cfg(test)]
+#[path = "peaks_tests.rs"]
+mod tests;

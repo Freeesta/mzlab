@@ -1,4 +1,5 @@
 // RFC 4180 CSV parser and target entry deserializer.
+use std::borrow::Cow;
 use std::fmt;
 use std::io::Read;
 
@@ -73,81 +74,122 @@ impl std::error::Error for ParseError {
     }
 }
 
-/// Tokenize and parse raw CSV text adhering to RFC 4180 standards.
-pub fn parse_rfc4180_str(content: &str) -> Result<Vec<Vec<String>>, ParseError> {
-    let mut records = Vec::new();
-    let mut current_record = Vec::new();
-    let mut current_field = String::new();
-    let mut in_quotes = false;
-    let mut chars = content.chars().peekable();
-    let mut line_num = 1usize;
-    let mut field_started = false;
+/// A tokenized CSV text: every field of every record, fields borrowed from the text unless a quote had to be unescaped or joined.
+struct Records<'a> {
+    fields: Vec<Cow<'a, str>>,
+    /// End of each record in `fields`.
+    ends: Vec<usize>,
+}
 
-    while let Some(c) = chars.next() {
-        if in_quotes {
-            if c == '"' {
-                if let Some(&'"') = chars.peek() {
-                    chars.next();
-                    current_field.push('"');
-                } else {
-                    in_quotes = false;
-                }
+impl<'a> Records<'a> {
+    fn len(&self) -> usize {
+        self.ends.len()
+    }
+
+    fn row(&self, k: usize) -> &[Cow<'a, str>] {
+        let a = if k == 0 { 0 } else { self.ends[k - 1] };
+        &self.fields[a..self.ends[k]]
+    }
+}
+
+/// How a field ended: by a comma, by a line break, or by the end of the text.
+enum FieldEnd {
+    Comma,
+    Line,
+    Eof,
+}
+
+/// Position of the first field separator or line break in `b` from `from`.
+fn field_stop(b: &[u8], from: usize) -> usize {
+    b[from..]
+        .iter()
+        .position(|&c| matches!(c, b',' | b'\r' | b'\n'))
+        .map_or(b.len(), |k| from + k)
+}
+
+/// Read the field that starts at `*i`, leave `*i` after its terminator and count line breaks in `line`.
+/// A field opens a quote only at its first byte; any later quote is data, and text after a closing quote is joined to the quoted text.
+fn read_field<'a>(
+    s: &'a str,
+    i: &mut usize,
+    line: &mut usize,
+) -> Result<(Cow<'a, str>, FieldEnd), ParseError> {
+    let b = s.as_bytes();
+    let start = *i;
+    let (field, stop) = if b.get(start) == Some(&b'"') {
+        let mut owned = String::new();
+        let mut seg = start + 1;
+        let close = loop {
+            let Some(k) = b[seg..].iter().position(|&c| c == b'"') else {
+                *line += b[seg..].iter().filter(|&&c| c == b'\n').count();
+                return Err(ParseError::CsvFormat {
+                    line: *line,
+                    message: "Unclosed quote at end of CSV".to_string(),
+                });
+            };
+            let q = seg + k;
+            *line += b[seg..q].iter().filter(|&&c| c == b'\n').count();
+            if b.get(q + 1) == Some(&b'"') {
+                owned.push_str(&s[seg..q]);
+                owned.push('"');
+                seg = q + 2;
             } else {
-                if c == '\n' {
-                    line_num += 1;
-                }
-                current_field.push(c);
+                break q;
             }
+        };
+        let stop = field_stop(b, close + 1);
+        let field = if owned.is_empty() && stop == close + 1 {
+            Cow::Borrowed(&s[seg..close])
         } else {
-            match c {
-                '"' => {
-                    if !field_started {
-                        in_quotes = true;
-                        field_started = true;
-                    } else {
-                        current_field.push('"');
-                    }
-                }
-                ',' => {
-                    current_record.push(std::mem::take(&mut current_field));
-                    field_started = false;
-                }
-                '\r' => {
-                    if let Some(&'\n') = chars.peek() {
-                        chars.next();
-                    }
-                    line_num += 1;
-                    current_record.push(std::mem::take(&mut current_field));
-                    field_started = false;
-                    records.push(std::mem::take(&mut current_record));
-                }
-                '\n' => {
-                    line_num += 1;
-                    current_record.push(std::mem::take(&mut current_field));
-                    field_started = false;
-                    records.push(std::mem::take(&mut current_record));
-                }
-                _ => {
-                    field_started = true;
-                    current_field.push(c);
-                }
+            owned.push_str(&s[seg..close]);
+            owned.push_str(&s[close + 1..stop]);
+            Cow::Owned(owned)
+        };
+        (field, stop)
+    } else {
+        let stop = field_stop(b, start);
+        (Cow::Borrowed(&s[start..stop]), stop)
+    };
+    let (end, next) = match b.get(stop) {
+        None => (FieldEnd::Eof, stop),
+        Some(b',') => (FieldEnd::Comma, stop + 1),
+        Some(&c) => {
+            *line += 1;
+            let crlf = c == b'\r' && b.get(stop + 1) == Some(&b'\n');
+            (FieldEnd::Line, stop + 1 + usize::from(crlf))
+        }
+    };
+    *i = next;
+    Ok((field, end))
+}
+
+/// Split CSV text into records and fields (RFC 4180, tolerant of quotes in the middle of a field); a leading byte order mark is dropped.
+fn tokenize(content: &str) -> Result<Records<'_>, ParseError> {
+    let s = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let mut rec = Records {
+        fields: Vec::new(),
+        ends: Vec::new(),
+    };
+    let (mut i, mut line) = (0usize, 1usize);
+    while i < s.len() {
+        loop {
+            let (field, end) = read_field(s, &mut i, &mut line)?;
+            rec.fields.push(field);
+            if !matches!(end, FieldEnd::Comma) {
+                break;
             }
         }
+        rec.ends.push(rec.fields.len());
     }
+    Ok(rec)
+}
 
-    if in_quotes {
-        return Err(ParseError::CsvFormat {
-            line: line_num,
-            message: "Unclosed quote at end of CSV".to_string(),
-        });
-    }
-
-    if field_started || !current_field.is_empty() || !current_record.is_empty() {
-        current_record.push(current_field);
-        records.push(current_record);
-    }
-
-    Ok(records)
+/// Tokenize and parse raw CSV text adhering to RFC 4180 standards.
+pub fn parse_rfc4180_str(content: &str) -> Result<Vec<Vec<String>>, ParseError> {
+    let rec = tokenize(content)?;
+    Ok((0..rec.len())
+        .map(|k| rec.row(k).iter().map(|f| f.to_string()).collect())
+        .collect())
 }
 
 struct HeaderIndices {
@@ -173,7 +215,7 @@ struct HeaderIndices {
 }
 
 impl HeaderIndices {
-    fn from_header(header: &[String]) -> Result<Self, ParseError> {
+    fn from_header(header: &[Cow<'_, str>]) -> Result<Self, ParseError> {
         let find = |name: &str| -> Result<usize, ParseError> {
             header
                 .iter()
@@ -211,7 +253,7 @@ impl HeaderIndices {
 }
 
 fn parse_float_col(
-    row: &[String],
+    row: &[Cow<'_, str>],
     idx: usize,
     col: &'static str,
     line: usize,
@@ -240,13 +282,13 @@ struct RowMeta {
 }
 
 fn parse_meta_fields(
-    row: &[String],
+    row: &[Cow<'_, str>],
     h: &HeaderIndices,
     line: usize,
 ) -> Result<RowMeta, ParseError> {
-    let get_str = |idx: usize, col: &'static str| -> Result<String, ParseError> {
+    let get_str = |idx: usize, col: &'static str| -> Result<&str, ParseError> {
         row.get(idx)
-            .map(|s| s.trim().to_string())
+            .map(|s| s.trim())
             .ok_or_else(|| ParseError::MissingColumn {
                 line,
                 column: col.to_string(),
@@ -257,7 +299,7 @@ fn parse_meta_fields(
     let cas = if cas_raw.is_empty() {
         None
     } else {
-        Some(cas_raw)
+        Some(cas_raw.to_string())
     };
 
     let cid_raw = get_str(h.pubchem_cid, "pubchem_cid")?;
@@ -269,7 +311,7 @@ fn parse_meta_fields(
             .map_err(|_| ParseError::InvalidInteger {
                 line,
                 column: "pubchem_cid".to_string(),
-                value: cid_raw.clone(),
+                value: cid_raw.to_string(),
             })?;
         Some(val)
     };
@@ -286,8 +328,9 @@ fn parse_meta_fields(
     } else {
         syn_raw
             .split('|')
-            .map(|s| s.trim().to_string())
+            .map(|s| s.trim())
             .filter(|s| !s.is_empty())
+            .map(str::to_string)
             .collect()
     };
 
@@ -311,7 +354,11 @@ fn parse_meta_fields(
     })
 }
 
-fn parse_row(row: &[String], h: &HeaderIndices, line: usize) -> Result<TargetEntry, ParseError> {
+fn parse_row(
+    row: &[Cow<'_, str>],
+    h: &HeaderIndices,
+    line: usize,
+) -> Result<TargetEntry, ParseError> {
     let get_str = |idx: usize, col: &'static str| -> Result<String, ParseError> {
         row.get(idx)
             .map(|s| s.trim().to_string())
@@ -357,25 +404,30 @@ pub fn parse_target_csv(mut reader: impl Read) -> Result<Vec<TargetEntry>, Parse
     reader
         .read_to_string(&mut content)
         .map_err(ParseError::Io)?;
-    let records = parse_rfc4180_str(&content)?;
+    let records = tokenize(&content)?;
 
-    let (header, data_rows) = records.split_first().ok_or_else(|| ParseError::CsvFormat {
-        line: 0,
-        message: "Empty CSV input".to_string(),
-    })?;
+    if records.len() == 0 {
+        return Err(ParseError::CsvFormat {
+            line: 0,
+            message: "Empty CSV input".to_string(),
+        });
+    }
+    let indices = HeaderIndices::from_header(records.row(0))?;
+    let mut entries = Vec::with_capacity(records.len() - 1);
 
-    let indices = HeaderIndices::from_header(header)?;
-    let mut entries = Vec::with_capacity(data_rows.len());
-
-    for (row_idx, row) in data_rows.iter().enumerate() {
-        let line_num = row_idx + 2;
+    for k in 1..records.len() {
+        let line_num = k + 1;
+        let row = records.row(k);
         // Skip trailing empty lines
         if row.is_empty() || (row.len() == 1 && row[0].trim().is_empty()) {
             continue;
         }
-        let entry = parse_row(row, &indices, line_num)?;
-        entries.push(entry);
+        entries.push(parse_row(row, &indices, line_num)?);
     }
 
     Ok(entries)
 }
+
+#[cfg(test)]
+#[path = "csv_tests.rs"]
+mod tests;
