@@ -204,13 +204,22 @@ fn blank_span(low: &[char], c: &Campione) -> Option<(usize, usize)> {
     None
 }
 
+/// Characters of the last path component (`/` or `\`).
+fn base_len(name: &str) -> usize {
+    name.rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(name)
+        .chars()
+        .count()
+}
+
 /// The spans of the role, the blank kind, the time and the concentration of a file; `time` is the span of the time in the stem.
 pub fn of_file(name: &str, c: &Campione, stem: &str, time: Option<(usize, usize)>) -> Spans {
     let chars: Vec<char> = name.chars().collect();
     let low: Vec<char> = name.to_lowercase().chars().collect();
     let stem_c: Vec<char> = stem.chars().collect();
     let stem_low: Vec<char> = stem.to_lowercase().chars().collect();
-    let base = name.rsplit('/').next().unwrap_or(name).chars().count();
+    let base = base_len(name);
     let ok = low.len() == chars.len() && stem_low.len() == stem_c.len() && base >= stem_c.len();
     let off = chars.len().saturating_sub(base);
     let mut items = Vec::new();

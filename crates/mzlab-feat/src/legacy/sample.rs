@@ -14,7 +14,7 @@ pub struct Guess {
 
 /// `Path(name).stem`: the last component without its last suffix.
 pub fn stem(name: &str) -> String {
-    let base = name.rsplit('/').next().unwrap_or(name);
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
     match base.rfind('.') {
         Some(i) if i > 0 && i + 1 < base.len() => base[..i].to_string(),
         _ => base.to_string(),
