@@ -152,7 +152,14 @@ fn keep_first<T: PartialEq>(v: &mut Vec<T>) {
     }
 }
 
-type NumberKey<'a> = (&'a str, &'a str, Option<u64>, Option<u64>, Option<i8>, &'a str);
+type NumberKey<'a> = (
+    &'a str,
+    &'a str,
+    Option<u64>,
+    Option<u64>,
+    Option<i8>,
+    &'a str,
+);
 
 /// The replicates counted again: 1-based among the files with the same series, role, minutes, concentration, polarity and matrix.
 pub fn number_replicates(cs: &mut [Campione]) {

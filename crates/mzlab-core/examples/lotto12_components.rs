@@ -7,7 +7,9 @@ use mzlab_core::components::estimate_components;
 fn matrix(n: usize, m: usize, comps: usize) -> Vec<f64> {
     let mut seed = 987654321u64;
     let mut rnd = move || {
-        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (seed >> 11) as f64 / (1u64 << 53) as f64
     };
     let mut d = vec![0.0; n * m];
@@ -41,7 +43,10 @@ fn main() {
             h = h.wrapping_mul(1099511628211) ^ s as u64;
         }
         sum ^= h;
-        println!("{n}x{m}: {ms:8.2} ms  k={} efa={:?} hash={h:016x}", r.k, r.efa_start);
+        println!(
+            "{n}x{m}: {ms:8.2} ms  k={} efa={:?} hash={h:016x}",
+            r.k, r.efa_start
+        );
     }
     println!("total hash {sum:016x}");
 }
