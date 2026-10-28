@@ -19,6 +19,8 @@ import { ha, stato, nota, serve } from "./capacita.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
+// plain Array from doubles (the answer is stringified next): the loop beats Array.from on a typed array
+const arr = a => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -129,7 +131,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     const r = await rpc({ op, slot: k, level, px, ...extra });
     if (r.dead || r.error) return null;
     const a = new Float64Array(r.buf, 0, r.len), n = r.n;
-    const out = { rt: Array.from(a.subarray(0, n)), y: Array.from(a.subarray(n, 2 * n)) };
+    const out = { rt: arr(a.subarray(0, n)), y: arr(a.subarray(n, 2 * n)) };
     recycle(r.buf);
     return out;
   };
@@ -242,7 +244,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       let w = 2;
       for (let c = 0; c < a[1]; c++) {
         const sid = a[w], rt = a[w + 1], n = a[w + 2]; w += 3;
-        scans.push({ i: i0 + c, sid, rt, mode: "centroid", mz: Array.from(a.subarray(w, w + n)), y: Array.from(a.subarray(w + n, w + 2 * n)) });
+        scans.push({ i: i0 + c, sid, rt, mode: "centroid", mz: arr(a.subarray(w, w + n)), y: arr(a.subarray(w + n, w + 2 * n)) });
         w += 2 * n;
       }
       body = { n: a[0], scans };

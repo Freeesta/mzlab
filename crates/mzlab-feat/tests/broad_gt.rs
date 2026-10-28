@@ -112,3 +112,30 @@ fn few_traces_give_no_common_mode() {
     bank.add(0, &vec![1.0; 100]).unwrap();
     assert!(bank.finish().unwrap().is_none());
 }
+
+#[test]
+fn offer_then_push_row_is_add() {
+    // 3000 traces of every length and start: the bank doubles its stride several times, and `offer` must count exactly as `add` does
+    let mut rng = Lcg(3);
+    let (mut a, mut b) = (TraceBank::new(N, 8), TraceBank::new(N, 8));
+    let mut built = 0usize;
+    for i in 0..3000usize {
+        let len = [30, 399, 400, 500, 1200, 1300][i % 6];
+        let scan0 = (i * 37) % 900;
+        let y: Vec<f64> = (0..len)
+            .map(|k| 1e5 + 1e4 * (k as f64 / 80.0).sin() + rng.next(1e3))
+            .collect();
+        a.add(scan0, &y).unwrap();
+        if b.offer(scan0, len) {
+            built += 1;
+            b.push_row(scan0, &y).unwrap();
+        }
+    }
+    assert!(
+        built < 1200,
+        "{built}: the stride must spare most of the traces"
+    );
+    let (ga, gb) = (a.finish().unwrap(), b.finish().unwrap());
+    assert!(ga.is_some());
+    assert!(ga == gb);
+}
