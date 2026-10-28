@@ -99,6 +99,9 @@ const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));          
 const idxPool = () => lrPool || (lrPool = createPool({ workerUrl: new URL("./idx-worker.js", import.meta.url), moduleUrl: new URL("./wasm/mzlab_wasm_bg.wasm", import.meta.url), module: wasmModule, gate, size: poolSize(SMALL, navigator.hardwareConcurrency), budget: SMALL ? 32 : 64, notify: key => postMessage({ op: "notice", key }) }));
 /** @type {(key: string, params?: object) => never} */
 const jerr = (key, params = {}) => { throw JSON.stringify({ error_key: key, params }); };
+const NO_RUN = 0xFFFFFFFF;                                                  // what count and spectra_len of the engine answer for a slot with no run open
+const runSpectraLen = m => { const n = engine.spectra_len(m.slot, m.level, m.i0, m.i1); if (n === NO_RUN) jerr("err.file.raw", { detail: "slot not open" }); return n; };
+const runCount = m => { const n = engine.count(m.slot, m.level); if (n === NO_RUN) jerr("err.file.raw", { detail: "slot not open" }); return n; };
 async function fileOf(name) {
   if (!lrFile.has(name)) { const f = await ARCH.get("files", name); if (!f) jerr("err.session.fileNotFound"); lrFile.set(name, f); }
   return lrFile.get(name);
@@ -453,10 +456,10 @@ async function handle(ev) {
       case "down": lowerBudget(m); break; case "budget": BUDGET_MB = m.mb; engine.set_budget_mb(m.mb); break;   // down: one level lower by Rust's rule; budget: the value the supervisor sends at startup
       case "close": engine.close(m.slot); blobs.delete(m.slot); tileName.delete(m.slot); break;   case "reset": engine.close_all(); blobs.clear(); tileName.clear(); break;
       case "crash": if (m.grow) wasmMem.grow(m.grow * 16); engine.crash(); break;        // test hook: the supervisor must recover (grow = MB of memory taken first, the signature of a lack of memory)
-      case "tic": out = take(2 * engine.count(m.slot, m.level)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
-      case "xic": out = take(2 * engine.count(m.slot, m.level)); n = engine.xic(m.slot, m.level, m.mz, m.tol, m.px || 0, out); break;   case "idxxicbin": { const r = idxXicBin(m); if (r) { out = r.out; n = r.n; } break; }   // the XIC of the index as [rt(n), y(n)] doubles (api/xicbin)
+      case "tic": out = take(2 * runCount(m)); n = engine.tic(m.slot, m.level, m.px || 0, out); break;
+      case "xic": out = take(2 * runCount(m)); n = engine.xic(m.slot, m.level, m.mz, m.tol, m.px || 0, out); break;   case "idxxicbin": { const r = idxXicBin(m); if (r) { out = r.out; n = r.n; } break; }   // the XIC of the index as [rt(n), y(n)] doubles (api/xicbin)
       case "spectra": {
-        const len = engine.spectra_len(m.slot, m.level, m.i0, m.i1);
+        const len = runSpectraLen(m);
         if (!len) { n = 0; break; }
         out = take(len); n = engine.spectra(m.slot, m.level, m.i0, m.i1, m.bin, out); break;
       }

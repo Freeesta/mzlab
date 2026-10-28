@@ -369,9 +369,9 @@ impl Engine {
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
-    /// Number of scans of one level (the capacity a trace needs).
+    /// Number of scans of one level (the capacity a trace needs); `u32::MAX` when no run is open at `slot` (the worker answers `err.file.raw`, as the desktop engine).
     pub fn count(&self, slot: u32, level: u8) -> u32 {
-        self.runs.get(&slot).map_or(0, |r| {
+        self.runs.get(&slot).map_or(u32::MAX, |r| {
             r.spectra.iter().filter(|s| s.level == level).count() as u32
         })
     }
@@ -399,10 +399,10 @@ impl Engine {
         }
     }
 
-    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range).
+    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range, `u32::MAX` when no run is open at `slot`).
     pub fn spectra_len(&self, slot: u32, level: u8, i0: u32, i1: u32) -> u32 {
         let Some(r) = self.runs.get(&slot) else {
-            return 0;
+            return u32::MAX;
         };
         let mut len = 2usize;
         let mut pos = 0u32;
