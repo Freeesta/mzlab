@@ -92,24 +92,12 @@ fn on_desktop(st: &State, fid: u32, s: &Value) -> Got {
     }
 }
 
-#[test]
-fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
-    let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
-        return;
-    };
-    let dir = tempfile::tempdir().unwrap();
-    let st = State::new();
-    st.set_data_folder(dir.path().join("app"));
-    st.set_index_folder(dir.path().join("idx")).unwrap();
-    let (fid, _) = st.pick(example()).unwrap();
-    st.rpc("lr_put", &json!({"name": NAME, "fid": fid}), &[])
-        .unwrap();
-    st.rpc("lr_index", &json!({"name": NAME}), &[]).unwrap();
-
+/// The steps both engines get, in order; the last one is the known difference.
+fn plan() -> Vec<Value> {
     let items = json!([{"slot": 0, "label": NAME, "time": 0.0, "full": true}]).to_string();
     let r =
         |path: &str, query: &str| json!({"op": "route", "slot": 0, "path": path, "query": query});
-    let plan: Vec<Value> = vec![
+    vec![
         json!({"op": "idxopen", "slot": 0, "name": NAME}),
         r("/api/chrom", "?k=0&kind=tic&level=1"),
         r("/api/chrom", "?k=0&kind=bpc&level=1"),
@@ -141,14 +129,17 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 0.0}),
         json!({"op": "spectra", "slot": 7, "level": 1, "i0": 0, "i1": 5, "bin": 1.0}),
         json!({"op": "tic", "slot": 8, "level": 1, "px": 0}),
-    ];
+    ]
+}
 
-    let plan_file = dir.path().join("plan.json");
+/// Runs the plan on the built `.wasm` (Node) over the same `.mzidx` and example.
+fn run_wasm(pkg: &str, dir: &Path, plan: &[Value]) -> Vec<Value> {
+    let plan_file = dir.join("plan.json");
     std::fs::write(&plan_file, serde_json::to_string(&plan).unwrap()).unwrap();
     let out = Command::new("node")
         .arg(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/rotte_wasm_node.js"))
-        .arg(&pkg)
-        .arg(dir.path().join("idx").join(format!("{NAME}.mzidx")))
+        .arg(pkg)
+        .arg(dir.join("idx").join(format!("{NAME}.mzidx")))
         .arg(example())
         .arg(&plan_file)
         .output()
@@ -160,17 +151,20 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
     );
     let wasm: Vec<Value> = serde_json::from_slice(&out.stdout).unwrap();
     assert_eq!(wasm.len(), plan.len());
+    wasm
+}
 
-    // Known differences, held as they are so that they cannot change unseen: `tic` on a slot that was never opened is an error in the app
-    // (`with_run`, engine.rs:248-254) and an empty trace in the `.wasm` (`case "tic"`, rust-worker.js:456).
+/// Known differences, held as they are so that they cannot change unseen: `tic` on a slot that was never opened is an error in the app
+/// (`with_run`, engine.rs:248-254) and an empty trace in the `.wasm` (`case "tic"`, rust-worker.js:456).
+fn compare(st: &State, fid: u32, plan: &[Value], wasm: &[Value]) {
     let known: Vec<(usize, Got, Got)> = vec![(
         plan.len() - 1,
         Got::Err("err.file.raw".into()),
         Got::Numbers(vec![]),
     )];
     let mut differ = Vec::new();
-    for (k, (s, w)) in plan.iter().zip(&wasm).enumerate() {
-        let (app, site) = (on_desktop(&st, fid, s), from_wasm(w));
+    for (k, (s, w)) in plan.iter().zip(wasm).enumerate() {
+        let (app, site) = (on_desktop(st, fid, s), from_wasm(w));
         if let Some((_, a, b)) = known.iter().find(|(i, _, _)| *i == k) {
             if (&app, &site) != (a, b) {
                 differ.push(format!(
@@ -202,4 +196,22 @@ fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
             plan[k], wasm[k]
         );
     }
+}
+
+#[test]
+fn every_common_route_gives_the_same_answer_in_the_app_and_in_the_wasm() {
+    let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(dir.path().join("app"));
+    st.set_index_folder(dir.path().join("idx")).unwrap();
+    let (fid, _) = st.pick(example()).unwrap();
+    st.rpc("lr_put", &json!({"name": NAME, "fid": fid}), &[])
+        .unwrap();
+    st.rpc("lr_index", &json!({"name": NAME}), &[]).unwrap();
+    let plan = plan();
+    let wasm = run_wasm(&pkg, dir.path(), &plan);
+    compare(&st, fid, &plan, &wasm);
 }
