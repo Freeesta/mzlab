@@ -22,10 +22,27 @@ fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
 
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     let tail = h.get(from..).filter(|_| !n.is_empty())?;
-    tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
+    // Scanning for the first byte beats a window compare on XML, where `<` is rare inside base64 runs.
+    let (first, rest) = (n[0], &n[1..]);
+    let mut i = 0;
+    while tail.len() - i >= n.len() {
+        let s = i + tail[i..=tail.len() - n.len()]
+            .iter()
+            .position(|&b| b == first)?;
+        if &tail[s + 1..s + n.len()] == rest {
+            return Some(s + from);
+        }
+        i = s + 1;
+    }
+    None
 }
 pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
+}
+/// Whether `head` carries `accession="<x>"`, without building the needle.
+fn has_accession(head: &str, x: &str) -> bool {
+    head.match_indices(x)
+        .any(|(i, _)| head[..i].ends_with("accession=\"") && head[i + x.len()..].starts_with('"'))
 }
 fn is_word(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
@@ -207,7 +224,7 @@ impl<R: ReadAt> Mzml<R> {
                 kind: "other".into(),
                 ..Default::default()
             };
-            let acc = |x: &str| h.contains(&format!("accession=\"{x}\""));
+            let acc = |x: &str| has_accession(&h, x);
             if cid == "TIC" || cid.starts_with("TIC ") {
                 d.kind = "tic".into();
             } else if cid == "BPC" {
@@ -256,7 +273,7 @@ impl<R: ReadAt> Mzml<R> {
                 y.get_or_insert(a);
             }
         }
-        let (mut t, y) = (t.unwrap_or_default(), y.unwrap_or_default());
+        let (mut t, mut y) = (t.unwrap_or_default(), y.unwrap_or_default());
         let n = t.len().min(y.len());
         let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
         let seconds =
@@ -265,7 +282,32 @@ impl<R: ReadAt> Mzml<R> {
             t.iter_mut().for_each(|v| *v /= 60.0);
         }
         t.truncate(n);
-        Ok((t, y.get(..n).unwrap_or_default().to_vec()))
+        y.truncate(n);
+        Ok((t, y))
+    }
+
+    /// The time axis (minutes) of a chromatogram, decoding only the time array; `None` when the declared length does not equal the decoded one (the caller then reads both arrays).
+    pub fn chromatogram_times(&mut self, c: &Chrom) -> Result<Option<Vec<f64>>> {
+        let chunk = self.read(c.start, c.end)?;
+        let expected = c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0);
+        let mut t = None;
+        for (head, data) in arrays(&chunk) {
+            if has_accession(&head, "MS:1000595") {
+                t = Some(decode(&head, data, expected)?);
+                break;
+            }
+        }
+        let Some(mut t) = t else { return Ok(None) };
+        if c.n != i64::try_from(t.len()).ok() {
+            return Ok(None);
+        }
+        let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
+        let seconds =
+            text(part(&chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(&chunk);
+        if seconds {
+            t.iter_mut().for_each(|v| *v /= 60.0);
+        }
+        Ok(Some(t))
     }
 
     /// The unit written on the intensity array of a chromatogram, or "".
@@ -322,13 +364,34 @@ impl<R: ReadAt> Mzml<R> {
 
     /// Polarity written in the header (used when a file has no scans, e.g. MRM): positive, negative, mixed or unknown.
     pub fn header_polarity(&mut self) -> Result<String> {
-        let all = self.read(0, self.size.min(MAX_REGION))?;
-        let end = find(&all, b"</run>", 0).unwrap_or_else(|| all.len().saturating_sub(1));
-        let h = part(&all, 0, end);
-        let (pos, neg) = (
-            find(h, b"accession=\"MS:1000130\"", 0).is_some(),
-            find(h, b"accession=\"MS:1000129\"", 0).is_some(),
-        );
+        const POS: &[u8] = b"accession=\"MS:1000130\"";
+        const NEG: &[u8] = b"accession=\"MS:1000129\"";
+        const BLOCK: u64 = 4 << 20;
+        let total = self.size.min(MAX_REGION);
+        let (mut pos, mut neg) = (false, false);
+        let mut buf: Vec<u8> = vec![];
+        let mut at = 0u64;
+        // Blocks overlap by the longest needle minus one byte, so a match across a block edge is seen; the scan stops at `</run>` or when both are found.
+        while at < total && !(pos && neg) {
+            let end = (at + BLOCK).min(total);
+            buf.extend_from_slice(&self.read(at, end)?);
+            at = end;
+            let mut lim = buf.len();
+            let mut last = false;
+            if let Some(e) = find(&buf, b"</run>", 0) {
+                (lim, last) = (e, true);
+            } else if at == total {
+                (lim, last) = (buf.len().saturating_sub(1), true);
+            }
+            let h = part(&buf, 0, lim);
+            pos |= find(h, POS, 0).is_some();
+            neg |= find(h, NEG, 0).is_some();
+            if last {
+                break;
+            }
+            let keep = (POS.len() - 1).max(5).min(buf.len());
+            buf.drain(..buf.len() - keep);
+        }
         Ok(match (pos, neg) {
             (true, false) => "positive",
             (false, true) => "negative",
@@ -584,7 +647,7 @@ fn named_value(h: &str, key: &str) -> Option<f64> {
 }
 
 /// Every `<binaryDataArray ...>...</binaryDataArray>`: (the head up to `<binary>`, the base64 text).
-pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
+pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, &[u8])> {
     let mut out = vec![];
     let mut pos = 0;
     while let Some(a) = find_tag(chunk, b"<binaryDataArray", pos) {
@@ -595,8 +658,8 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
         let k = find(t, b"<binary>", 0);
         let head = text(part(t, 0, k.unwrap_or(t.len())));
         let data = match (k, find(t, b"</binary>", 0)) {
-            (Some(k), Some(e)) if e >= k + 8 => part(t, k + 8, e).to_vec(),
-            _ => vec![],
+            (Some(k), Some(e)) if e >= k + 8 => part(t, k + 8, e),
+            _ => &[],
         };
         out.push((head, data));
         pos = b + 18;
@@ -609,10 +672,10 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
 pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64>> {
     let num = ["MS:1000521", "MS:1000519", "MS:1000522"]
         .iter()
-        .find(|a| head.contains(&format!("accession=\"{a}\"")))
+        .find(|a| has_accession(head, a))
         .and_then(|a| crate::numarray::Num::of_accession(a))
         .unwrap_or(crate::numarray::Num::F64);
-    let zlib = head.contains("accession=\"MS:1000574\"");
+    let zlib = has_accession(head, "MS:1000574");
     let text = String::from_utf8_lossy(data);
     let (values, _) = decode_array(
         num,
@@ -623,4 +686,140 @@ pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64
         Want::F64,
     )?;
     Ok(values)
+}
+
+#[cfg(test)]
+mod find_tests {
+    use super::*;
+
+    fn linear(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
+        let tail = h.get(from..).filter(|_| !n.is_empty())?;
+        tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
+    }
+
+    #[test]
+    fn find_equals_window_scan() {
+        let h = b"<a><b></b><run></run><run>x</run>";
+        for n in [
+            &b"</run>"[..],
+            b"<",
+            b"",
+            b"x</run>",
+            b"<run>x",
+            b"zz",
+            h,
+            b"<a><b></b><run></run><run>x</run>>",
+        ] {
+            for from in 0..h.len() + 3 {
+                assert_eq!(find(h, n, from), linear(h, n, from), "{n:?} {from}");
+            }
+        }
+    }
+
+    #[test]
+    fn accession_needle_matches_format() {
+        let head = r#"<cvParam accession="MS:1000521" x="MS:1000522"/> accession="MS:10005230""#;
+        for x in [
+            "MS:1000521",
+            "MS:1000522",
+            "MS:1000523",
+            "MS:100052",
+            "MS:10005230",
+        ] {
+            assert_eq!(
+                has_accession(head, x),
+                head.contains(&format!("accession=\"{x}\"")),
+                "{x}"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod polarity_tests {
+    use super::*;
+
+    fn old_polarity(all: &[u8]) -> &'static str {
+        let end = find(all, b"</run>", 0).unwrap_or_else(|| all.len().saturating_sub(1));
+        let h = part(all, 0, end);
+        match (
+            find(h, b"accession=\"MS:1000130\"", 0).is_some(),
+            find(h, b"accession=\"MS:1000129\"", 0).is_some(),
+        ) {
+            (true, false) => "positive",
+            (false, true) => "negative",
+            (true, true) => "mixed",
+            _ => "unknown",
+        }
+    }
+
+    #[test]
+    fn streamed_polarity_equals_whole_read() {
+        const POS: &[u8] = b"accession=\"MS:1000130\"";
+        const NEG: &[u8] = b"accession=\"MS:1000129\"";
+        let block = 4usize << 20;
+        let mut cases: Vec<Vec<u8>> = vec![];
+        // markers placed around the block edge, after and before `</run>`, at the very end, and absent
+        for pad in [
+            0,
+            100,
+            block - 30,
+            block - 22,
+            block - 21,
+            block - 1,
+            block,
+            block + 5,
+            2 * block - 10,
+        ] {
+            for (a, b, run) in [
+                (Some(POS), None, true),
+                (Some(NEG), Some(POS), true),
+                (None, None, true),
+                (Some(POS), None, false),
+                (Some(NEG), None, false),
+            ] {
+                let mut v = vec![b' '; pad];
+                if let Some(a) = a {
+                    v.extend_from_slice(a);
+                }
+                v.extend_from_slice(&[b' '; 7]);
+                if let Some(b) = b {
+                    v.extend_from_slice(b);
+                }
+                if run {
+                    v.extend_from_slice(b"</run>");
+                    v.extend_from_slice(POS);
+                }
+                cases.push(v);
+            }
+        }
+        // a marker ending exactly on the last byte, and one straddling `</run>`
+        let mut v = vec![b' '; 50];
+        v.extend_from_slice(POS);
+        cases.push(v);
+        let mut v = POS.to_vec();
+        v.extend_from_slice(b"</ru");
+        cases.push(v);
+        for c in cases {
+            let size = c.len() as u64;
+            let mut m = Mzml::new(c.clone(), size);
+            assert_eq!(
+                m.header_polarity().unwrap(),
+                old_polarity(&c),
+                "len {}",
+                c.len()
+            );
+        }
+    }
+
+    #[test]
+    fn times_only_matches_the_full_read() {
+        let doc = br#"<chromatogram index="0" id="SRM SIC 1 -> 2" defaultArrayLength="3"><binaryDataArrayList><binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000595"/><cvParam unitName="second"/><binary>AAAAAAAAAAAAAAAAAADwPwAAAAAAAABA</binary></binaryDataArray><binaryDataArray><cvParam accession="MS:1000523"/><cvParam accession="MS:1000515"/><binary>AAAAAAAAAAAAAAAAAADwPwAAAAAAAABA</binary></binaryDataArray></binaryDataArrayList></chromatogram>"#;
+        let mut m = Mzml::new(doc.to_vec(), doc.len() as u64);
+        let c = m.chromatograms(0).unwrap().remove(0);
+        let (t, _) = m.chromatogram(&c).unwrap();
+        let got = m.chromatogram_times(&c).unwrap().unwrap();
+        assert_eq!(got, t);
+        assert_eq!(got.len(), 3);
+    }
 }
