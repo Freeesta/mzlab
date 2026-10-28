@@ -88,6 +88,29 @@ impl Kept {
     }
 }
 
+/// Offers one chromatogram to the bank and, when the bank wants it, builds its trace (baseline applied) and stores it. True when the storing failed.
+fn sample(
+    bank: &mut TraceBank,
+    buf: &mut TraceBuf,
+    c: &AdapChrom,
+    axis: &[f64],
+    p: &UntParams,
+) -> bool {
+    let (Some(&lo), Some(&hi)) = (c.scan.iter().min(), c.scan.iter().max()) else {
+        return false;
+    };
+    let (lo, hi) = (lo as usize, hi as usize);
+    if !bank.offer(lo, hi - lo + 1) {
+        return false;
+    }
+    buf.load(c);
+    let pushed = match &p.baseline {
+        Some(bl) => bank.push_row(lo, &bl.apply(axis, &buf.t.y)[lo..=hi]),
+        None => bank.push_row(lo, &buf.t.y[lo..=hi]),
+    };
+    pushed.is_err()
+}
+
 /// With the common-mode option of the broad pass on: the parameters with the gradient mode G(t) of the file in `broad.common`, found by a first pass
 /// over the persistent chromatograms (the span between their first and last scan covers 400 scans or 30 % of the run). `None` when the option is off
 /// or the file has too few of them. Only the chromatograms the bank samples are built as traces; `kept` receives the chromatograms for the second pass.
@@ -108,19 +131,7 @@ pub(super) fn common_mode_params<R: ReadAt>(
     let mut failed = false;
     each_slab(ix, si, axis.len(), p, |chroms| {
         for c in &chroms {
-            let (Some(&lo), Some(&hi)) = (c.scan.iter().min(), c.scan.iter().max()) else {
-                continue;
-            };
-            let (lo, hi) = (lo as usize, hi as usize);
-            if !bank.offer(lo, hi - lo + 1) {
-                continue;
-            }
-            buf.load(c);
-            let pushed = match &p.baseline {
-                Some(bl) => bank.push_row(lo, &bl.apply(axis, &buf.t.y)[lo..=hi]),
-                None => bank.push_row(lo, &buf.t.y[lo..=hi]),
-            };
-            failed |= pushed.is_err();
+            failed |= sample(&mut bank, &mut buf, c, axis, p);
         }
         kept.keep(chroms, p.slab_bytes / 4);
     })?;
