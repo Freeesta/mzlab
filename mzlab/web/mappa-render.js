@@ -64,14 +64,44 @@
     const H = o.band || Math.max(15, (hi - lo) / 4), MIN = 6; let gmax = 0; for (const x of v) if (x > gmax) gmax = x;
     const floor = Math.max(gmax * 1e-4, 1e-12), wide = level(v.length >= MIN ? v : [gmax * 0.02]);
     const lb = (/** @type {number} */ x) => { let a = 0, b = n; while (a < b) { const h = (a + b) >> 1; if (m[h] < x) a = h + 1; else b = h; } return a; };
+    // The band of a peak is the window [a, z) without the peaks within GROUP_DA of it. Its edges only move forward from one peak to the next, so the
+    // band is kept as a sorted array that gains and loses a few values per peak (the noise needs its median and the median of the distances to it).
+    const sorted = new Float64Array(n), inc = new Uint8Array(n); let size = 0, a0 = 0, z0 = 0, g0 = 0, h0 = 0;
+    const at = (/** @type {number} */ x) => { let a = 0, b = size; while (a < b) { const h = (a + b) >> 1; if (sorted[h] < x) a = h + 1; else b = h; } return a; };
+    const toggle = (/** @type {number} */ j) => {
+      const p = at(v[j]);
+      if (inc[j]) { sorted.copyWithin(p, p + 1, size); size--; } else { sorted.copyWithin(p + 1, p, size); sorted[p] = v[j]; size++; }
+      inc[j] ^= 1;
+    };
+    const sync = (/** @type {number} */ j, /** @type {number} */ a, /** @type {number} */ z, /** @type {number} */ g, /** @type {number} */ h) => { if ((j >= a && j < z && !(j >= g && j < h)) !== !!inc[j]) toggle(j); };
+    // k-th smallest (0-based) of the distances to `med`: the values below it, nearest first, and the values above it, nearest first, are two sorted lists
+    const dist = (/** @type {number} */ med, /** @type {number} */ p, /** @type {number} */ k) => {
+      let lo = Math.max(0, k + 1 - (size - p)), hi = Math.min(k + 1, p);       // how many of the k + 1 smallest come from the lower side
+      while (lo < hi) {
+        const t = (lo + hi) >> 1, dl = med - sorted[p - 1 - t], ur = sorted[p + k - t] - med;      // lower t-th against the upper one that would follow it
+        if (dl <= ur) lo = t + 1; else hi = t;
+      }
+      const t = lo, c = t > 0 ? med - sorted[p - t] : -Infinity, d = k + 1 - t > 0 ? sorted[p + k - t] - med : -Infinity;
+      return Math.max(c, d);
+    };
     /** @type {{ i: number, snr: number, noise: number }[]} */ const out = [];
     for (let k = 0; k < n; k++) {
       if (m[k] < lo || m[k] > hi) continue;
-      const a = lb(m[k] - H), z = lb(m[k] + H + 1e-9), band = [];
-      // the peak and its isotopes are not noise
-      for (let j = a; j < z; j++) if (Math.abs(m[j] - m[k]) > GROUP_DA) band.push(v[j]);
-      const noise = Math.max(band.length >= MIN ? level(band) : wide, floor);
-      out.push({ i: idx[k], snr: v[k] / noise, noise });
+      const a = lb(m[k] - H), z = lb(m[k] + H + 1e-9);
+      let g = k, h = k + 1; while (g > 0 && Math.abs(m[g - 1] - m[k]) <= GROUP_DA) g--; while (h < n && Math.abs(m[h] - m[k]) <= GROUP_DA) h++;     // the peak and its isotopes are not noise
+      for (let j = Math.min(a0, a); j < Math.max(a0, a); j++) sync(j, a, z, g, h);
+      for (let j = Math.min(z0, z); j < Math.max(z0, z); j++) sync(j, a, z, g, h);
+      for (let j = Math.min(g0, g); j < Math.max(g0, g); j++) sync(j, a, z, g, h);
+      for (let j = Math.min(h0, h); j < Math.max(h0, h); j++) sync(j, a, z, g, h);
+      a0 = a; z0 = z; g0 = g; h0 = h;
+      let noise = wide;
+      if (size >= MIN) {
+        const med = size % 2 ? sorted[(size - 1) >> 1] : (sorted[size / 2 - 1] + sorted[size / 2]) / 2;
+        let p = at(med); while (p < size && sorted[p] <= med) p++;               // values <= med are the lower side
+        const mad = size % 2 ? dist(med, p, (size - 1) >> 1) : (dist(med, p, size / 2 - 1) + dist(med, p, size / 2)) / 2;
+        noise = med + 1.4826 * mad;
+      }
+      out.push({ i: idx[k], snr: v[k] / Math.max(noise, floor), noise: Math.max(noise, floor) });
     }
     return out;
   }
@@ -86,7 +116,12 @@
     const { lo, hi } = o, strategy = o.strategy || "bands", bands = Math.max(1, o.bands || 4), quota = o.quota || 1, minSnr = o.minSnr ?? 5, ab = (/** @type {number} */ i) => Math.abs(y[i]);
     const all = snrOf(mz, y, lo, hi, o), by = all.slice().sort((a, b) => ab(b.i) - ab(a.i)), seen = /** @type {number[]} */ ([]), keep = /** @type {typeof all} */ ([]);
     // the highest of each group of peaks
-    for (const c of by) if (!seen.some(k => Math.abs(mz[k] - mz[c.i]) <= GROUP_DA)) { seen.push(c.i); keep.push(c); }
+    // (seen: the m/z of the kept peaks, sorted: only the two neighbours of a peak can be within GROUP_DA)
+    for (const c of by) {
+      const x = mz[c.i]; let a = 0, b = seen.length; while (a < b) { const h = (a + b) >> 1; if (seen[h] < x) a = h + 1; else b = h; }
+      if ((a < seen.length && Math.abs(seen[a] - x) <= GROUP_DA) || (a > 0 && Math.abs(seen[a - 1] - x) <= GROUP_DA)) continue;
+      seen.splice(a, 0, x); keep.push(c);
+    }
     let top = 0; for (const c of by) { top = Math.max(top, ab(c.i)); break; }
     /** @type {typeof keep} */ let ord;
     if (strategy === "abs") ord = keep.filter(c => ab(c.i) >= top * 0.05);
