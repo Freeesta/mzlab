@@ -669,15 +669,9 @@ Q("#calcin").oninput = calcRun;
     const txt = t.dataset.tip, html = t.dataset.tiph;
     if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
     tip.hidden = false;
-    const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6;
-    const cx = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2));
-    let x = cx, y;
-    if (r.bottom + m + h + m <= innerHeight) y = r.bottom + m;
-    else if (r.top - m - h >= m) y = r.top - m - h;
-    else {
-      y = Math.max(m, Math.min(innerHeight - h - m, r.top));
-      x = r.right + m + w + m <= innerWidth ? r.right + m : Math.max(m, r.left - m - w);
-    }
+    const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6, below = r.bottom + m + h + m <= innerHeight, above = r.top - m - h >= m;
+    let x = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2)), y = below ? r.bottom + m : r.top - m - h;
+    if (!below && !above) { y = Math.max(m, Math.min(innerHeight - h - m, r.top)); x = r.right + m + w + m <= innerWidth ? r.right + m : Math.max(m, r.left - m - w); }
     tip.style.left = x + "px"; tip.style.top = y + "px";
   };
   document.addEventListener("mouseover", e => {
@@ -695,14 +689,13 @@ Q("#calcin").oninput = calcRun;
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
   // touch has no hover: a long press (0.6 s) on a button or control shows its tooltip for a moment; the click that follows the release is swallowed. Graphs and file rows keep their long press = right click (touch.js)
   let lpT = null, lpX = 0, lpY = 0, lpDone = 0;
-  const lpStop = () => { clearTimeout(lpT); lpT = null; };
+  const lpStop = () => clearTimeout(lpT);
   document.addEventListener("pointerdown", e => {
     lpStop(); if (e.pointerType !== "touch") return;
     const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (!t || t.closest("dialog[open], canvas, .fl, .pnl .cv")) return;
     lpX = e.clientX; lpY = e.clientY;
     lpT = setTimeout(() => {
-      lpT = null;
       if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
       if (!t.dataset.tip && !t.dataset.tiph) return;
       show(t); lpDone = Date.now(); cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
