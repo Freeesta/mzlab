@@ -7,6 +7,7 @@ declare var AZIONI_ICONE: any;
 declare var AgilentD: any;
 declare var BFIL: any;
 declare var BrukerD: any;
+declare var CALCQUI: any;
 declare var CAMPIONI: any;
 declare var CANALI: any;
 declare var CAPACITA: any;

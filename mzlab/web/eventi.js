@@ -630,29 +630,29 @@ Q("#calcin").onkeydown = ev => {
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
   if (ev.key.length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
-async function calcRun() {
-  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
+// the groups under the calculator («what can this number be?», calc-qui*.js) follow the field
+function calcRun() {
+  const t = Q("#calcin").value.trim(), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t);
-  pad.hidden = !ex; res.hidden = !ex || !t; Q("#calcadd").hidden = ex && !!t; if (nlBtn) nlBtn.hidden = true; calcTape();
-  if (!t) { sum.innerHTML = ""; res.textContent = ""; await CALCADD.render(""); return; }
-  if (ex) {
-    out.innerHTML = ""; const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
-    if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
-      nlBtn.hidden = false;
-      const vabs = calcFmt(Math.abs(r.v));
-      nlBtn.title = I18N.t("calc.toLosses", { v: vabs });
-      nlBtn.onclick = () => {
-        if (window.BARRA && BARRA.isDataView()) {
-          BARRA.setTab("losses", { q: vabs });
-        } else {
-          calcBox.close();
-          if (window.QQQRef) QQQRef.open("ls", { q: vabs });
-        }
-      };
-    }
-    sum.innerHTML = r.err ? EH(r.err) : ""; return;
+  pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
+  if (CALCQUI.calc) CALCQUI.later(CALCQUI.calc);
+  if (!t) { sum.innerHTML = ""; res.textContent = ""; return; }
+  if (!ex) return;
+  const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+  if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
+    nlBtn.hidden = false;
+    const vabs = calcFmt(Math.abs(r.v));
+    nlBtn.title = I18N.t("calc.toLosses", { v: vabs });
+    nlBtn.onclick = () => {
+      if (window.BARRA && BARRA.isDataView()) {
+        BARRA.setTab("losses", { q: vabs });
+      } else {
+        calcBox.close();
+        if (window.QQQRef) QQQRef.open("ls", { q: vabs });
+      }
+    };
   }
-  await CALCADD.render(t);
+  sum.innerHTML = r.err ? EH(r.err) : "";
 }
 Q("#calcin").oninput = calcRun;
 

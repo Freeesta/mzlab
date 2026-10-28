@@ -17,7 +17,7 @@ try:
         def calc_qqq():
             pg.click("#np-calc2"); pg.wait_for_timeout(400)
             pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#calcdlg"); assert "364.0737" in t and not pg.locator("#calcobsw").count(), t       # QqQ: 4 decimals as before, no field for the observed value
+            t = pg.inner_text("#calcdlg"); assert "364.1" in t and "364.0737" not in t, t       # QqQ (low resolution): one decimal, the observed m/z is an optional field of the zone below
             assert "errore (ppm)" not in t
             shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with a QqQ file only: as before", calc_qqq)

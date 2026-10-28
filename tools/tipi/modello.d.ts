@@ -67,3 +67,6 @@ type AdRow = { n: string, id: string, pol: number, common: boolean, k: number, z
 
 /** The answer of api/adduct_table. */
 type AdTable = { formula: string | null, neutral: number | null, tol: number, rows: AdRow[], best: number | null, diffs: { pair: string, a: string, b: string, pol: number, d: number }[], delta?: { value: number, hits: { a: string, b: string, d: number, err_mda: number }[] } };
+/** «What can this number be?» (calc-qui*.js): the choices and a group of candidates. */
+type CqState = { res: "hr" | "lr" | null, ppm: string, da: string, pol: 1 | -1 | null, obs: string };
+type CqGroup = { id: string, n: number, near: number, items: any[], tab?: any, formula?: boolean, obs?: boolean, catalogue?: boolean };
