@@ -19,6 +19,8 @@ import { ha, stato, nota, serve } from "./capacita.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
+// plain Array from doubles (the answer is stringified next): the loop beats Array.from on a typed array
+const arr = a => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -123,8 +125,6 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   api.stop = () => { if (worker) { worker.terminate(); worker = null; } };                // reset.js: the worker holds sync handles on the files
   api.rpc = rpc;                                                       // for lr.js (the engine of the page)
 
-  // plain Array from doubles (the answer is stringified next): the loop beats Array.from on a typed array
-  const arr = a => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));
   const trace = async (k, op, level, extra, px) => {

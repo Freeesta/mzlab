@@ -25,7 +25,7 @@ def run(code, data=None):
 
 @needs_node
 def test_mad_noise_is_the_scaled_median_absolute_deviation_of_the_positive_values():
-    src = cut("mappa.js", "const medSorted", "  function peakStep")
+    src = (WEB / "mappa-dati.js").read_text(encoding="utf-8") + "const madNoise = MAPDATI.madNoise;"
     rng = np.random.default_rng(5)
     for n in (1, 2, 3, 10, 11, 500, 501):
         y = np.where(rng.random(n) < .3, 0.0, rng.lognormal(3, 1, n))
@@ -51,7 +51,7 @@ def test_smooth_matches_the_map_version():
 
 @needs_node
 def test_float64_to_array_and_base64_float32():
-    src = cut("explore.js", "const f64Arr", "\n// api/xicbin") + cut("mappa.js", "const b64f32", "  // ----")
+    src = "const navigator = {};" + (WEB / "cache-dati.js").read_text(encoding="utf-8") + (WEB / "mappa-dati.js").read_text(encoding="utf-8") + "const b64f32 = MAPDATI.b64f32;"
     code = src + """
 const a=Float64Array.from([1.5,-0,2e-7,1e21]);const o=f64Arr(a);
 const f=Float32Array.from([1,2.5,-3]);const b=Buffer.from(f.buffer).toString('base64');
@@ -84,7 +84,7 @@ console.log(JSON.stringify(same))"""
 
 @needs_node
 def test_cache_keeps_to_its_byte_budget_and_recent_answers():
-    src = cut("explore.js", "const CACHE = new Map()", "const J = ")
+    src = (WEB / "cache-dati.js").read_text(encoding="utf-8")
     code = "const navigator={};" + src + """
 CACHE_BUD.max=1200;
 (async()=>{

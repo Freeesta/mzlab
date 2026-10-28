@@ -332,28 +332,6 @@ const lightTint = (/** @type {string} */ c) => { const m = /^#([0-9a-f]{6})$/i.e
 const fz = () => 1;        // (the text size of the graphs follows the browser zoom: Ctrl/Cmd + and −)
 const fpx = (/** @type {number} */ n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ data (cached)
-const CACHE = new Map();
-// byte budget of the cache: the answers that were used least recently leave first (they are asked again if needed)
-const CACHE_BUD = { max: ((/** @type {any} */ (navigator)).deviceMemory || 4) <= 2 ? 96e6 : 256e6, size: new WeakMap() };
-const cacheBytes = (/** @type {any} */ v, d = 0) => {
-  if (!v || typeof v !== "object") return 16;
-  if (ArrayBuffer.isView(v)) return v.byteLength;
-  if (Array.isArray(v)) { if (!v.length || typeof v[0] !== "object" || d > 2) return 8 * v.length; let n = 0; for (const e of v) n += cacheBytes(e, d + 1); return n; }
-  let n = 64; for (const k in v) n += cacheBytes(v[k], d + 1);
-  return n;
-};
-const cacheAccount = (/** @type {string} */ key, /** @type {Promise<unknown>} */ pr, /** @type {unknown} */ v) => {
-  if (CACHE.get(key) !== pr) return;
-  CACHE_BUD.size.set(pr, cacheBytes(v));
-  let total = 0; for (const e of CACHE.values()) total += CACHE_BUD.size.get(e) || 0;
-  for (const [k, e] of CACHE) { if (total <= CACHE_BUD.max || k === key) break; if (CACHE_BUD.size.has(e)) { total -= CACHE_BUD.size.get(e) || 0; CACHE.delete(k); } }
-};
-const memo = (/** @type {string} */ key, /** @type {() => Promise<unknown>} */ fn) => {
-  if (CACHE.has(key)) { const hit = CACHE.get(key); CACHE.delete(key); CACHE.set(key, hit); return hit; }        // a hit becomes the newest
-  const pr = fn().catch((/** @type {unknown} */ e) => { if (CACHE.get(key) === pr) CACHE.delete(key); throw e; });
-  CACHE.set(key, pr); pr.then(v => cacheAccount(key, pr, v), () => {});
-  return pr;
-};
 const J = (/** @type {string} */ u) => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw I18N.err(j); return j; });
 // precursor + scan filter (high-resolution bench: the type of scan chosen in a cell) travel together in the "precursor" slot of the caches and the requests
 const prk = (/** @type {unknown} */ pr, /** @type {string | undefined} */ ft) => ft ? `${pr ?? ""}~${ft}` : pr;
@@ -397,8 +375,6 @@ const getMs2Tr = (/** @type {string | number} */ k) => memo(`m2t${k}`, () => J(`
   }
   return CHROM1.sent(memo(key, () => J(url)));
 };
-// a plain Array from doubles: the consumers push, map and stringify it; the loop is several times faster than Array.from on a typed array
-const f64Arr = (/** @type {Float64Array} */ a) => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
 // api/xicbin: 4 bytes = length of the JSON header {mz, tol, traces:[{k, n}]}, the header, zeros up to a multiple of 8, then per trace rt and y as float64; the same {k, rt, y} as api/xic
 async function xicBin(/** @type {string} */ url) {
   const r = await fetch(url);
