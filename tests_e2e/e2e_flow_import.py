@@ -39,6 +39,9 @@ try:
             zf.writestr("xl/worksheets/sheet1.xml", '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2" t="s"><v>3</v></c></row></sheetData></worksheet>')
         pg.set_input_files(".flx-imp input[type=file]", files=[{"name": "meta.xlsx", "mimeType": "application/octet-stream", "buffer": xb.getvalue()}])
         attendi(pg, "/rows read from meta.xlsx/.test(document.querySelector('.flx-imp').textContent)")
+        # the status line is written before the grid redraws: wait for the cell itself
+        try: attendi(pg, "(document.querySelector(\".flx-imp .mg-bd [role=row]:nth-child(1) [aria-colindex='6']\") || {}).textContent === 'S9'", 10000)
+        except TimeoutError: pass
         check("xlsx", cell(6, 1).inner_text() == "S9", pg.inner_text(".flx-imp"))
         pg.evaluate("E.files.push({file: 'a.mzML', name: 'a'}, {file: 'b.mzML', name: 'b'})")
         pg.click('.fln:has-text("Build feature table")'); pg.click('.fln:has-text("Import data")')

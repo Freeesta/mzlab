@@ -45,6 +45,7 @@
     "../../mzlab/web/disegno-barra.js",
     "../../mzlab/web/disegno-frammenti.js",
     "../../mzlab/web/disegno-parziali.js",
+    "../../mzlab/web/disegno-indigo.js",
     "../../mzlab/web/parentesi.js",
     "../../mzlab/web/fair.js",
     "../../mzlab/web/gradiente.js",

@@ -48,7 +48,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 # the slowest e2e (seconds, measured in the CI): they start first, so the pool does not end waiting for one of them
-LENTI = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]
+LENTI = ["e2e_tpmine_lr_rust", "e2e_tpmine_ingresso", "e2e_tpmine_transf"]; SOLI = ["e2e_carica_grandi"]      # SOLI fill the browser storage and memory on purpose: run alone after the pool, so the tests beside them never starve
 NOT_TESTS = {"lib", "synth"}          # helpers and measurements, not tests
 # e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra.
 # e2e_cromato is not here yet: it fails in WebKit (the dialog of the integrations has no S/N box) and in Firefox (waterfall step), both only in those browsers.
@@ -184,7 +184,7 @@ def js_syntax(results) -> None:
     files = [f for f in web.glob("*.js") if f.name not in ("elements.js",)] + list((web / "teoria").glob("*.js"))
     for f in files:
         src = f
-        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "disegno-barra.js", "disegno-font.js", "disegno-contaminanti.js", "disegno-frammenti.js", "disegno-parziali.js", "parentesi.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-centroidi.js", "rust-opfs.js", "rust-metodo.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "xic-spettro.js", "xic-lente.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
+        if f.name in ("browser-worker.js", "archivio.js", "qqq-db.js", "draw.js", "disegno-barra.js", "disegno-font.js", "disegno-contaminanti.js", "disegno-frammenti.js", "disegno-parziali.js", "disegno-indigo.js", "parentesi.js", "sw.js", "rust-worker.js", "rust-bridge.js", "rust-scans.js", "migra.js", "manifesto.js", "pulizia.js", "rust-recycle.js", "rust-diff.js", "rust-centroidi.js", "rust-opfs.js", "rust-metodo.js", "mappa3d.js", "workflow.js", "fair.js", "perf.js", "xic-spettro.js", "xic-lente.js", "qualita.js", "peaks-worker.js"):        # module-style files: checked as .mjs (as the CI does)
             src = tmp / (f.stem + ".mjs"); shutil.copy(f, src)
         p = subprocess.run(["node", "--check", str(src)], capture_output=True, text=True)
         if p.returncode:
@@ -414,9 +414,9 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
     from concurrent.futures import ThreadPoolExecutor
     lenti = [n for n in LENTI if n in todo]
     with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
-        for r in ex.map(one, lenti + [n for n in todo if n not in lenti]):
+        for r in ex.map(one, lenti + [n for n in todo if n not in lenti and n not in SOLI]):
             out_by[r[0]] = r
-    results.extend(out_by[n] for n in names)
+    out_by.update({n: one(n) for n in SOLI if n in todo}); results.extend(out_by[n] for n in names)
     results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
 
 

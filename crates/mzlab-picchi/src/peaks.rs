@@ -22,7 +22,7 @@ pub use crate::signal::{noise_level, savgol};
 
 /// The quadratic fit over `i ± 2` of `_parabola_apex`, on the stack: the points relative to the apex time, the normal matrix, the coefficients and the
 /// apex of the parabola clamped to the points.
-pub(crate) struct Quad {
+pub struct Quad {
     pub xs: [f64; 5],
     pub len: usize,
     pub ata: [f64; 9],
@@ -32,7 +32,7 @@ pub(crate) struct Quad {
 }
 
 /// What the fit around an index gives.
-pub(crate) enum Fit {
+pub enum Fit {
     /// Fewer than 3 points in the window.
     Short,
     /// Singular normal matrix or a parabola that does not close downwards.
@@ -41,7 +41,7 @@ pub(crate) enum Fit {
 }
 
 /// `_parabola_apex(rt, y, i)` up to the apex: the least squares parabola over `i ± 2`.
-pub(crate) fn quad_fit(rt: &[f64], y: &[f64], i: usize) -> Fit {
+pub fn quad_fit(rt: &[f64], y: &[f64], i: usize) -> Fit {
     let n = y.len();
     let a = i.saturating_sub(2);
     let b = (i + 3).min(n);
@@ -82,7 +82,7 @@ pub(crate) fn quad_fit(rt: &[f64], y: &[f64], i: usize) -> Fit {
 }
 
 /// Height of the quadratic fit around index `i` (the second moment is not needed here), as `_parabola_apex`.
-pub(crate) fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
+pub fn parabola_height(rt: &[f64], y: &[f64], i: usize) -> f64 {
     match quad_fit(rt, y, i) {
         Fit::Peak(q) => q.height,
         _ => y[i],

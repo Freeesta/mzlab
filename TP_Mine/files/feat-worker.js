@@ -323,7 +323,7 @@ export function createFeatPool(opts) {
     set onProgress(f) { opts.onProgress = f; },
     get workers() { return slots.size; },
     // for the tests: the worker that is working dies as a crashed tab would
-    _killBusy() { for (const s of slots) if (s.busy) { s.lost("killed"); try { s.w.terminate(); } catch (_) { /* gone */ } } },
+    _killBusy() { let n = 0; for (const s of slots) if (s.busy) { n++; s.lost("killed"); try { s.w.terminate(); } catch (_) { /* gone */ } } return n; },
     _die() { return submit(async (slot, load) => { await load("feat"); await call(slot, { op: "die" }); }); },
   };
 }

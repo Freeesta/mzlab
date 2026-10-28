@@ -202,6 +202,7 @@ impl State {
                 let chroms = m.chromatograms(end)?;
                 text(mzlab_core::itemroutes::mrm_chrom(&mut m, &chroms, if s("kind").is_empty() { "tic" } else { s("kind") })?)
             }
+            "canali" => self.op_canali(eng, p),
             "fileinfo" => {
                 let r = eng.idx.get_mut(&u("slot")).ok_or_else(bad_index)?;
                 let (rd, size) = self.src_slot(&mut eng.nat, u("slot"), u("fid"))?;
@@ -211,6 +212,19 @@ impl State {
             }
             _ => Err(Error::new("rpc.unknown")),
         }
+    }
+
+    /// api/canali: the channels of the scans plus the SRM/SIC chromatograms of the mzML (as `Engine::canali` of the wasm).
+    fn op_canali(&self, eng: &mut Eng, p: &Value) -> Result<Answer> {
+        let slot = p["slot"].as_u64().unwrap_or(0) as u32;
+        let r = eng.idx.get_mut(&slot).ok_or_else(bad_index)?;
+        let end = r.idx.scans.iter().map(|s| s.end).max().unwrap_or(0);
+        let (rd, size) = self.src_slot(&mut eng.nat, slot, p["fid"].as_u64().unwrap_or(0) as u32)?;
+        let mut m = Mzml::new(rd, size);
+        let chroms = m.chromatograms(end)?;
+        let facts = mzlab_core::iteminfo::facts_from(&mut m, end, chroms.len() as i64, true)?;
+        r.pon_cromatogrammi(p["name"].as_str().unwrap_or(""), &chroms, &facts);
+        text(r.canali().json())
     }
 
     #[allow(unused_variables)]

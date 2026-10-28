@@ -110,11 +110,11 @@ pub mod pace;
 pub mod peakq;
 #[cfg(test)]
 mod peakq_reach_test;
-pub mod peaks;
+pub use mzlab_picchi::peaks;
 pub mod peakext;
 pub mod etichette_picchi;
-pub mod signal;
-pub mod sortc;
+pub use mzlab_picchi::signal;
+pub use mzlab_picchi::sortc;
 pub mod spare;
 pub mod source_ramp;
 pub mod profspec;
