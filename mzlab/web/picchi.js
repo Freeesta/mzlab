@@ -22,7 +22,12 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
 function sgFilter(/** @type {number[]} */ y, /** @type {number} */ m, /** @type {boolean} */ deriv) {                         // half window m (window 2m+1), edges replicated
   const n = y.length, out = new Array(n), mm = m * (m + 1) * (2 * m + 1) / 3;
   const w = []; for (let j = -m; j <= m; j++) w.push(deriv ? j / mm : 3 * (3 * m * m + 3 * m - 1 - 5 * j * j) / ((2 * m - 1) * (2 * m + 1) * (2 * m + 3)));
-  for (let i = 0; i < n; i++) { let v = 0; for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))]; out[i] = v; }
+  for (let i = 0; i < n; i++) {
+    let v = 0;
+    if (i >= m && i + m < n) for (let j = -m; j <= m; j++) v += w[j + m] * y[i + j];
+    else for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))];
+    out[i] = v;
+  }
   return out;
 }
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
@@ -38,16 +43,16 @@ function autoEdges(s, x, ref = 0) {
   const mCoarse = Math.max(2, Math.round(0.03 / dt / 2)), co = sgFilter(y, mCoarse, false);
   const lo = Math.max(0, nearIdx(xs, x - 0.25) - a0), hi = Math.min(N - 1, nearIdx(xs, x + 0.25) - a0);
   let m0 = lo; for (let j = lo; j <= hi; j++) if (co[j] > co[m0]) m0 = j;
-  const cmin = Math.min(...co), half = cmin + (co[m0] - cmin) / 2;
+  const cmin = minOf(co), half = cmin + (co[m0] - cmin) / 2;
   let hl = m0, hr = m0; while (hl > 0 && co[hl] > half) hl--; while (hr < N - 1 && co[hr] > half) hr++;
   const m = Math.max(PK.minHalf, Math.min(60, Math.round((hr - hl) * 0.3)));                         // half window = 30% of FWHM -> window about 60% of FWHM
   const sm = sgFilter(y, m, false), d = sgFilter(y, m, true);
   let k = Math.max(0, m0 - m); const k1 = Math.min(N - 1, m0 + m); for (let j = k; j <= k1; j++) if (sm[j] > sm[k]) k = j;   // apex of the smoothed trace
   const w0 = Math.max(0, k - Math.round(PK.win / dt)), w1 = Math.min(N - 1, k + Math.round(PK.win / dt));          // baseline window (min)
-  const res = []; for (let j = w0; j <= w1; j++) res.push(Math.abs(y[j] - sm[j])); res.sort((p, q) => p - q);
+  const res = new Float64Array(w1 - w0 + 1); for (let j = w0; j <= w1; j++) res[j - w0] = Math.abs(y[j] - sm[j]); res.sort(); 
   const nman = PK.noise === "manual" && PK.nr1 > PK.nr0 ? noiseSD(xs, s.y, PK.nr0, PK.nr1) : null;                    // noise from the region the student chose (no peaks there)
-  const noise = nman != null && nman > 0 ? nman : Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((a, v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
-  const low = []; for (let j = w0; j <= w1; j++) low.push(sm[j]); low.sort((p, q) => p - q);
+  const noise = nman != null && nman > 0 ? nman : Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((/** @type {number} */ a, /** @type {number} */ v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
+  const low = new Float64Array(w1 - w0 + 1); for (let j = w0; j <= w1; j++) low[j - w0] = sm[j]; low.sort();
   const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0);
   const isMrm = (s.key && s.key.startsWith("m|")) || s.tr != null;
   const frac = (isMrm || (noise > 0 && H / noise > 800)) ? Math.min(PK.edgeFrac / 100, Math.max(0.005, 5 * noise / Math.max(H, 1))) : PK.edgeFrac / 100;
@@ -281,6 +286,33 @@ async function snapNearest(/** @type {Pannello} */ p, /** @type {Bag} */ f) {
     return true;
   } catch (e) { return false; }
 }
+// Builds p._a.snap of drawSpec: the peak nearest to a pixel, by binary search around it (the loops keep their exact tests).
+function makeSnap(/** @type {Bag[]} */ data, /** @type {(m: number) => number} */ X, /** @type {number} */ x0, /** @type {number} */ x1, /** @type {number} */ W, /** @type {boolean} */ isDiff, /** @type {any} */ hrp) {
+  // indices of x.d.mz that can lie within 14 px of a pixel (and inside [x0, x1]): a binary search, the callers keep their own tests
+  const near = (/** @type {Bag} */ x, /** @type {number} */ px) => { const k = (x1 - x0) / (W - M.l - M.r); return spanOf(x.d.mz, Math.max(x0, x0 + (px - 16 - M.l) * k), Math.min(x1, x0 + (px + 16 - M.l) * k)); };
+  return (/** @type {number} */ px) => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
+    if (isDiff) {                                          // a difference: the nearest line, up or down, as it is
+      /** @type {any} */ let b = null;
+      for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] === 0) continue; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd)) b = { dd, m, y: x.d.y[j], f: x.f, multi: x.multi, prec: x.prec }; } }
+      return b && { m: b.m, y: b.y, y0: b.y, f: b.f, multi: b.multi, prec: b.prec };
+    }
+    if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
+      /** @type {any} */ let b = null;
+      for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= 0) continue; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; } }
+      return b && { m: b.m, y: b.y, y0: b.y0, f: b.f, multi: b.multi, prec: b.prec };
+    }
+    /** @type {any} */ let best = null;
+    for (const x of data) { const mz = x.d.mz, [a0, a1] = near(x, px); for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= 0) continue; const dd = Math.abs(X(m) - px); if (dd < 14 && (!best || dd < best.dd)) best = { dd, m, j, x }; } }
+    if (!best) return null;
+    const { mz, y } = best.x.d; let jb = best.j;
+    const [c0, c1] = spanOf(mz, best.m - 0.5 - 1e-6, best.m + 0.5 + 1e-6);          // the tests below are exact; the span only skips what cannot pass
+    for (let j = c0; j < c1; j++) if (Math.abs(mz[j] - best.m) <= 0.35 && y[j] > y[jb]) jb = j;
+    const [e0, e1] = spanOf(mz, mz[jb] - 0.5 - 1e-6, mz[jb] + 0.5 + 1e-6);
+    let sw = 0, sm = 0; for (let j = e0; j < e1; j++) if (Math.abs(mz[j] - mz[jb]) <= 0.5 && y[j] > 0) { sw += y[j]; sm += mz[j] * y[j]; }
+    return { m: sw > 0 ? sm / sw : mz[jb], y: y[jb], y0: (best.x.d.y0 || y)[jb], f: best.x.f, multi: best.x.multi, prec: best.x.prec };
+  };
+}
+
 /** @param {Pannello} p @param {boolean} [snapped] */
 async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
@@ -333,8 +365,8 @@ async function drawSpec(p, snapped) {
       x.d = nd;
     });
   }
-  const mzs = data.flatMap(x => x.d.mz);
-  if (!mzs.length) {
+  const nMz = data.reduce((/** @type {number} */ n, /** @type {Bag} */ x) => n + x.d.mz.length, 0);
+  if (!nMz) {
     if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0])) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
     return say(I18N.t("spec.noScan"));
   }
@@ -343,10 +375,14 @@ async function drawSpec(p, snapped) {
   const H = HF;
   const isDiff = data.some(x => x.d.diff), relY = rel && !isDiff;            // a difference from the reference: bars up (higher in the sample) and down (higher in the reference)
   const lineOf = (/** @type {Bag} */ x) => x.d.pmz && !p.sticks;                  // a profile file is drawn as a line (the peaks are drawn as bars only if the student asks)
-  const inRange = (/** @type {number} */ lo, /** @type {number} */ hi) => Math.max(1e-9, ...data.flatMap(x => { let m = 0; const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y]; y.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (mz[i] >= lo && mz[i] <= hi && v > m) m = v; }); return [m]; }));
+  const inRange = (/** @type {number} */ lo, /** @type {number} */ hi) => {
+    let top = 1e-9;
+    for (const x of data) { const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], [i0, i1] = spanOf(mz, lo, hi); for (let i = i0; i < i1 && i < y.length; i++) { const v = y[i]; if (mz[i] >= lo && mz[i] <= hi && v > top) top = v; } }
+    return top;
+  };
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
   const wide = files.reduce((/** @type {number[]} */ r, /** @type {Bag} */ f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
-  const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [Math.min(...mzs) - 2, Math.max(...mzs) + 2];
+  const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [Math.min(...data.map((/** @type {Bag} */ x) => minOf(x.d.mz))) - 2, Math.max(...data.map((/** @type {Bag} */ x) => maxOf(x.d.mz))) + 2];
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)
@@ -366,29 +402,11 @@ async function drawSpec(p, snapped) {
     if (ymin < 0) { g.fillStyle = ecss("--diff-neg"); g.fillText("▼ " + I18N.t("spec.diff.downAxis"), M.l + 8, H - M.b - 8); }
     g.restore();
   }
-  p._a.snap = (/** @type {number} */ px) => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
-    if (isDiff) {                                          // a difference: the nearest line, up or down, as it is
-      /** @type {any} */ let b = null;
-      data.forEach(x => x.d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1 || x.d.y[j] === 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd)) b = { dd, m, y: x.d.y[j], f: x.f, multi: x.multi, prec: x.prec }; }));
-      return b && { m: b.m, y: b.y, y0: b.y, f: b.f, multi: b.multi, prec: b.prec };
-    }
-    if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
-      /** @type {any} */ let b = null;
-      data.forEach(x => x.d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; }));
-      return b && { m: b.m, y: b.y, y0: b.y0, f: b.f, multi: b.multi, prec: b.prec };
-    }
-    /** @type {any} */ let best = null;
-    data.forEach(x => x.d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!best || dd < best.dd)) best = { dd, m, j, x }; }));
-    if (!best) return null;
-    const { mz, y } = best.x.d; let jb = best.j;
-    for (let j = 0; j < mz.length; j++) if (Math.abs(mz[j] - best.m) <= 0.35 && y[j] > y[jb]) jb = j;
-    let sw = 0, sm = 0; for (let j = 0; j < mz.length; j++) if (Math.abs(mz[j] - mz[jb]) <= 0.5 && y[j] > 0) { sw += y[j]; sm += mz[j] * y[j]; }
-    return { m: sw > 0 ? sm / sw : mz[jb], y: y[jb], y0: (best.x.d.y0 || y)[jb], f: best.x.f, multi: best.x.multi, prec: best.x.prec };
-  };
+  p._a.snap = makeSnap(data, X, x0, x1, W, isDiff, hrp);
   const cont = hrp && window.LISTE ? LISTE.forSpec(data[0].d.mz, data[0].d.y, files[0] && files[0].polarity, UIP.hrPpm) : null;       // known contaminants: only in the box that opens on a peak (high resolution only)
   p._a.cont = cont;
   const cst = (/** @type {Bag} */ x) => { if (!cont) return () => null; const c = x.cs = x.cs || new Map(); return (/** @type {number} */ j) => { let r = c.get(j); if (r === undefined) { r = cont.state(x.d.mz[j]); c.set(j, r); } return r; }; };     // contaminant state of a peak (HR only): compatible entries, hidden or not
-  const hidOf = (/** @type {Bag} */ x) => { const f = cst(x), t1 = 0.01 * Math.max(...x.d.y, 1e-9); return (/** @type {number} */ j) => !p.showHid && x.d.y[j] >= t1 && !!(f(j) && f(j).hid); };
+  const hidOf = (/** @type {Bag} */ x) => { const f = cst(x), t1 = 0.01 * maxOf(x.d.y, 1e-9); return (/** @type {number} */ j) => !p.showHid && x.d.y[j] >= t1 && !!(f(j) && f(j).hid); };
   p._a.hov = (/** @type {number} */ px) => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
     const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
@@ -400,33 +418,36 @@ async function drawSpec(p, snapped) {
     g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
     if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
     g.beginPath();
+    const [vis0, vis1] = spanOf(x.d.mz, x0, x1);           // the bars, the cut-bar triangles and the labels visit only the peaks inside the window
     if (p.dots && !x.d.diff) {                                           // «only points»: every point is a dot, nothing joins them (isolated peaks stay isolated)
       const [mz, y] = x.d.pmz ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y], r = 2.5 + LWX(); g.fillStyle = color;
-      mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1 || y[j] <= 0) return; g.beginPath(); g.arc(X(m), Y(y[j]), r, 0, 6.2832); g.fill(); });
+      const [a0, a1] = spanOf(mz, x0, x1);
+      for (let j = a0; j < a1; j++) { const m = mz[j]; if (m < x0 || m > x1 || y[j] <= 0) continue; g.beginPath(); g.arc(X(m), Y(y[j]), r, 0, 6.2832); g.fill(); }
     } else if (lineOf(x)) {                                                     // profile: continuous line with a light fill under it
       const pm = x.d.pmz, py = x.d.py; let on = false;
-      let curX = -999, /** @type {number} */ minY, /** @type {number} */ maxY, /** @type {number} */ firstY, /** @type {number} */ lastY, minFirst = true;
+      let curX = -999, minY = 0, maxY = 0, firstY = 0, lastY = 0, minFirst = true;
       const flush = (/** @type {number} */ cx) => { if (curX === -999) return; if (!on) { g.moveTo(cx, firstY); on = true; } else g.lineTo(cx, firstY); if (minFirst) { g.lineTo(cx, minY); g.lineTo(cx, maxY); } else { g.lineTo(cx, maxY); g.lineTo(cx, minY); } g.lineTo(cx, lastY); };
-      pm.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 - 0.5 || m > x1 + 0.5) return; const px = Math.round(X(m)), pvy = Y(py[j]);
+      const [a0, a1] = spanOf(pm, x0 - 0.5, x1 + 0.5);
+      for (let j = a0; j < a1; j++) { const m = pm[j]; if (m < x0 - 0.5 || m > x1 + 0.5) continue; const px = Math.round(X(m)), pvy = Y(py[j]);
         if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = pvy; minFirst = true; }
         else { if (pvy < minY) { minY = pvy; if (maxY === firstY) minFirst = true; } if (pvy > maxY) { maxY = pvy; if (minY === firstY) minFirst = false; } lastY = pvy; }
-      });
+      }
       flush(curX);
       g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = color; g.fill(); g.restore(); }
       g.beginPath();
     } else if (x.d.diff) {                                             // difference: orange up (higher in the sample), blue down (higher in the reference)
-      [[1, ecss("--diff-pos")], [-1, ecss("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); x.d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke(); });
+      [[1, ecss("--diff-pos")], [-1, ecss("--diff-neg")]].forEach(([sg, col]) => { g.strokeStyle = col; g.beginPath(); for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] * sg <= 0) continue; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke(); });
       g.strokeStyle = ecss("--muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + 0.5); g.lineTo(W - M.r, Math.round(Y(0)) + 0.5); g.stroke();      // the zero line
-    } else { const hid = cont ? hidOf(x) : null, /** @type {number[]} */ dim = []; x.d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1) return; if (hid && hid(j)) { dim.push(j); return; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
+    } else { const hid = cont ? hidOf(x) : null, /** @type {number[]} */ dim = []; for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1) continue; if (hid && hid(j)) { dim.push(j); continue; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); } g.stroke();
       if (dim.length) { g.save(); g.strokeStyle = ecss("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
     g.fillStyle = color;                                          // a small triangle on every cut bar
-    x.d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); });
+    for (let j = vis0; j < vis1; j++) { const m = x.d.mz[j]; if (m < x0 || m > x1 || x.d.y[j] <= ymax) continue; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); }
   });
   g.restore();
   const d0 = data[0].d, /** @type {[number, number][]} */ pk = [];
-  const top0 = Math.max(...d0.y.map(Math.abs), 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
+  const top0 = maxAbs(d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
   const hid0 = cont ? hidOf(data[0]) : null;
-  d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); });
+  { const [a0, a1] = spanOf(d0.mz, x0, x1); for (let j = a0; j < a1; j++) { const m = d0.mz[j]; if (m >= x0 && m <= x1 && Math.abs(d0.y[j]) >= thr && d0.y[j] <= ymax && d0.y[j] >= ymin && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); } }
   pk.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
   /** @type {{ x: number, w: number }[]} */ const used = [];
   g.fillStyle = ecss("--ink"); g.textAlign = "center"; g.font = fpx(12);
@@ -490,7 +511,7 @@ async function drawSpec(p, snapped) {
 function contMarks(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {(v: number) => number} */ X, /** @type {(v: number) => number} */ Y, /** @type {number} */ W, /** @type {Bag[]} */ data, /** @type {(x: Bag) => (j: number) => Bag | null} */ cst, /** @type {(x: Bag) => (j: number) => boolean} */ hidOf, /** @type {number} */ x0, /** @type {number} */ x1, /** @type {number} */ ymax) {
   const a = p._a; a.cmarks = []; a.chid = 0; a.cvis = 0;
   if (!a.cont) return;
-  const d = data[0].d, f = cst(data[0]), top = Math.max(...d.y, 1e-9), /** @type {Bag[]} */ list = [];
+  const d = data[0].d, f = cst(data[0]), top = maxOf(d.y, 1e-9), /** @type {Bag[]} */ list = [];
   d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (d.y[j] < 0.01 * top) return; const s = f(j); if (!s || !s.all.length) return; if (s.hid) a.chid++; else a.cvis++; if (m >= x0 && m <= x1 && d.y[j] <= ymax && (!s.hid || p.showHid)) list.push({ m, j, y: d.y[j], s }); });
   list.sort((u, v) => v.y - u.y);
   g.save(); g.lineWidth = 1.4;
@@ -532,7 +553,7 @@ function contLegend(/** @type {Bag} */ p) {
   const l = p.leg2.querySelector(".cont-lb");
   if (l) l.onclick = (/** @type {MouseEvent} */ e) => {
     e.stopPropagation();
-    const L = window.LISTE, f = a.cont, d = a.data[0].d, top = Math.max(...d.y, 1e-9), /** @type {Bag[]} */ rows = [];
+    const L = window.LISTE, f = a.cont, d = a.data[0].d, top = maxOf(d.y, 1e-9), /** @type {Bag[]} */ rows = [];
     d.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (d.y[j] < 0.01 * top) return; const s = f.state(m); if (s.all.length && !s.hid) rows.push({ m, y: d.y[j], s }); });
     rows.sort((u, v) => v.y - u.y);
     const b = l.getBoundingClientRect(), ev = { preventDefault() {}, clientX: b.left, clientY: b.bottom, kbd: e.detail === 0 };

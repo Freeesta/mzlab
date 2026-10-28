@@ -384,7 +384,7 @@ export function open(p, opener) {
     const c = Q("hist"), r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1); c.width = Math.max(10, Math.round((r.width || 280) * d)); c.height = Math.round(46 * d);
     const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")), W = c.width, H = c.height, nb = 64, h = new Float64Array(nb), raw = V.raw;
     for (let i = 0; i < raw.length; i += Math.max(1, raw.length >> 18)) { const x = Math.abs(raw[i]) / V.refv; if (x > 0) h[clamp(Math.floor((Math.log10(Math.min(1, x)) + 4) / 4 * nb), 0, nb - 1)]++; }
-    const mx = Math.max(...h.map(v => Math.log1p(v)), 1); g.clearRect(0, 0, W, H); g.fillStyle = css("--muted");
+    let mx = 1; for (let i = 0; i < nb; i++) mx = Math.max(mx, Math.log1p(h[i])); g.clearRect(0, 0, W, H); g.fillStyle = css("--muted");
     for (let i = 0; i < nb; i++) { const bh = Math.log1p(h[i]) / mx * (H - 4); g.fillRect(i * W / nb + 1, H - bh, W / nb - 1, bh); }
     const th = thr(), xx = clamp((Math.log10(Math.max(th, 1e-4)) + 4) / 4, 0, 1) * W; g.strokeStyle = css("--accent"); g.lineWidth = 2 * d; g.beginPath(); g.moveTo(xx, 0); g.lineTo(xx, H); g.stroke();
   }

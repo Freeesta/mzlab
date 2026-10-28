@@ -382,7 +382,8 @@ const DDA = (() => {
     return out.map(g => {
       const v = new Map(); g.idx.forEach(i => v.set(D.prec[i], (v.get(D.prec[i]) || 0) + 1));
       const best = g.idx.reduce((b, i) => ((D.pint[i] || 0) > (D.pint[b] || 0) ? i : b), g.idx[0]);
-      return { mz: [...v.entries()].sort((a, b) => b[1] - a[1])[0][0], n: g.idx.length, rt0: Math.min(...g.idx.map(i => D.rt[i])), rt1: Math.max(...g.idx.map(i => D.rt[i])), best, idx: g.idx };
+      let rt0 = Infinity, rt1 = -Infinity; for (const i of g.idx) { const t = D.rt[i]; if (t < rt0) rt0 = t; if (t > rt1) rt1 = t; }
+      return { mz: [...v.entries()].sort((a, b) => b[1] - a[1])[0][0], n: g.idx.length, rt0, rt1, best, idx: g.idx };
     });
   }
   async function openList() {

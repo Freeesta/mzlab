@@ -7,6 +7,7 @@
 // Principle 1 of AGENTS.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
 const LISTE = (() => {
   // ---------------------------------------------------------------- pure part
+  const PROTON = 1.007276;                      // [M+H]+ / [M-H]- shift, the value of the adduct tables of the page (liste-target-core.js, fair.js)
   const tolDa = (/** @type {number} */ mz, /** @type {number} */ ppm) => Math.max(mz * ppm * 1e-6, mz < 200 ? 0.001 : 0);
 
   // index: the active lists, one array per polarity sorted by m/z (a list item with pol 0 goes in both)
@@ -63,6 +64,12 @@ const LISTE = (() => {
     return nominal ? out.sort((p, q) => Math.abs(p.diffDa) - Math.abs(q.diffDa)) : out.sort((p, q) => Math.abs(p.err) - Math.abs(q.err));
   }
 
+  // true when an entry of the list `listId` lies within the ppm window of an m/z: the same window as find(), nothing allocated
+  function hasMatch(/** @type {Bag | null} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number} */ mz, /** @type {number} */ ppm, /** @type {string} */ listId) {
+    const t = tolDa(mz, typeof ppm === "number" ? ppm : 5);
+    for (const a of idx ? arrays(idx, pol) : []) for (let i = lower(a, mz - t); i < a.length && a[i].mz <= mz + t; i++) if (a[i].list === listId) return true;
+    return false;
+  }
   // Nominal search at unit resolution (default ±0.5 Da, ordered by proximity |Δ m/z|)
   function findNominal(/** @type {Bag} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number} */ mz, tolDaVal = 0.5) {
     return find(idx, pol, mz, tolDaVal, true);
@@ -70,14 +77,17 @@ const LISTE = (() => {
 
   // series: three or more consecutive members (n, n+1, n+2...) of the same polymer and adduct among the peaks of the spectrum.
   function seriesRuns(/** @type {Bag} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number[]} */ mzs, /** @type {number} */ ppm, minRun = 3) {
-    const found = new Map();
-    mzs.forEach((/** @type {number} */ m) => find(idx, pol, m, ppm).forEach(it => {
-      if (it.series && it.series.n != null) {
+    const found = new Map(), arrs = arrays(idx, pol), /** @type {Bag[]} */ hit = [];
+    // same entries and same order as find() would give for each peak (by |error|, ties in list order), without cloning or deduplicating what is not a series member
+    for (const m of mzs) {
+      const t = tolDa(m, typeof ppm === "number" ? ppm : 5);
+      hit.length = 0; for (const a of arrs) for (let i = lower(a, m - t); i < a.length && a[i].mz <= m + t; i++) if (a[i].series && a[i].series.n != null) hit.push(a[i]);
+      if (hit.length > 1) hit.sort((p, q) => Math.abs((m - p.mz) / p.mz * 1e6) - Math.abs((m - q.mz) / q.mz * 1e6));
+      for (const it of hit) {
         const k = it.list + ":" + it.series.id;
-        if (!found.has(k)) found.set(k, new Map());
-        found.get(k).set(it.series.n, it);
+        found.get(k)?.set(it.series.n, it) ?? found.set(k, new Map([[it.series.n, it]]));
       }
-    }));
+    }
     const out = new Map();
     found.forEach((byN, k) => {
       const ns = [...byN.keys()].sort((a, b) => a - b);
@@ -143,11 +153,17 @@ const LISTE = (() => {
     return -1;
   }
 
+  // separator of the header line: the more frequent of ; and , outside double quotes
+  function headSep(/** @type {string} */ line) {
+    let semi = 0, comma = 0, q = false;
+    for (const c of line) { if (c === '"') q = !q; else if (!q) { if (c === ";") semi++; else if (c === ",") comma++; } }
+    return semi > comma ? ";" : ",";
+  }
   function csvParse(/** @type {string} */ text) {
     // «# mzLab ...» = provenance line of our own exports
     const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));
     if (!lines.length) return [];
-    const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ";" : ",";
+    const sep = headSep(lines[0]);
     const head = csvSplit(lines[0], sep);
 
     const cMz = matchCol(head, ["mz", "m/z", "monoisotopic_mass", "monoisotopicmass", "exact_mass", "exactmass", "mass", "massa"]);
@@ -381,7 +397,7 @@ const LISTE = (() => {
         const idx = ensure(); if (!idx) return "";
         let runs = ST.runs.get(mzs);
         if (!runs || runs.ppm !== ppm) {
-          const top = Math.max(0, ...ys), /** @type {number[]} */ sel = [];
+          const top = maxOf(ys, 0), /** @type {number[]} */ sel = [];
           mzs.forEach((/** @type {number} */ x, /** @type {number} */ i) => { if (ys[i] >= top * 0.01) sel.push(x); });
           runs = { ppm, map: seriesRuns(idx, polarity, sel, ppm) };
           ST.runs.set(mzs, runs);
@@ -405,7 +421,7 @@ const LISTE = (() => {
   // m => true when the m/z matches a Keller 2008 entry; null while the lists load. Independent of the global contaminant switch: it serves "remove contaminants" of a spectrum.
   function keller(/** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
     const idx = ST.idx || ensure(); if (!idx) return null;
-    return (/** @type {number} */ m) => find(idx, polarity, m, ppm).some(x => x.list === "keller");
+    return (/** @type {number} */ m) => hasMatch(idx, polarity, m, ppm, "keller");
   }
 
   // Peak tables (HR): compatible entries of an m/z, split into shown and hidden-by-exclusion; null if the switch is off
@@ -489,7 +505,7 @@ const LISTE = (() => {
             if (!r.formula) r.formula = mf.formula;
             if (!(r.mz > 0)) {
               const exactM = mf.absoluteWeight;
-              r.mz = r.polarity === -1 ? exactM - 1.007276 : exactM + 1.007276;
+              r.mz = r.polarity === -1 ? exactM - PROTON : exactM + PROTON;
             }
           } catch (_) { /* invalid smiles */ }
         }
@@ -843,6 +859,7 @@ const LISTE = (() => {
     buildIndex,
     find,
     findNominal,
+    hasMatch,
     seriesRuns,
     tipHtml,
     csvSplit,

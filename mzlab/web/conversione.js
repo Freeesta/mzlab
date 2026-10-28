@@ -189,7 +189,7 @@ const CONVROWS = {
   },
   // the one summary of the loading: «3 of 5 ready · 0:12»; the screen readers hear it (a polite region of its own) only when the count of the ready files changes, never the clock
   ready() {
-    const n = this.rows.length, done = n - this.running().length, t0 = Math.min(...this.rows.map(r => r.t0 || Date.now()));
+    const n = this.rows.length, done = n - this.running().length, t0 = minOf(this.rows.map(r => r.t0 || Date.now()));
     if (typeof document !== "undefined" && this.liveN !== done + "/" + n) {
       this.liveN = done + "/" + n;
       let el = document.getElementById("cvlive");
@@ -220,7 +220,7 @@ const CONVROWS = {
     const parts = Object.keys(CONV_SUM).filter(k => by.has(k)).map(k => T(CONV_SUM[k], { n: I18N.fix(by.get(k), 0) }));
     const hit = end.filter((/** @type {ConvRow} */ r) => r.cached).length; if (hit) parts.push(T("conv.sum.cached", { n: I18N.fix(hit, 0) }));
     const miss = end.filter((/** @type {ConvRow} */ r) => r.missing).length; if (miss) parts.push(T("conv.sum.missing", { n: I18N.fix(miss, 0) }));
-    const t0 = Math.min(...end.map((/** @type {ConvRow} */ r) => r.t0 || 0)), t1 = Math.max(...end.map((/** @type {ConvRow} */ r) => (r.t0 || 0) + 1000 * (r.secs || 0)));
+    const t0 = minOf(end.map((/** @type {ConvRow} */ r) => r.t0 || 0)), t1 = maxOf(end.map((/** @type {ConvRow} */ r) => (r.t0 || 0) + 1000 * (r.secs || 0)));
     return T("conv.sum.head", { n: I18N.fix(end.length, 0), parts: parts.join(", "), time: convElapsed(t1 - t0) });
   },
   // under the table only what needs attention: the error with «Details» and «Copy diagnosis», «Cancelled», a file with scans missing; a loading that went well shows nothing; «Close» once nothing runs
