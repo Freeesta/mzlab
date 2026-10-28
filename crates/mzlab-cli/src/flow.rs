@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
+use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
@@ -221,6 +221,7 @@ pub(crate) struct Made {
     pub warnings: Vec<String>,
     /// What a per-file step says of its file (`{"via": "centroided" | "passthrough", ...}`).
     pub file: Option<Value>,
+    pub mem: Option<Mem>, // the memory of an alignment, when its step already worked it out
 }
 
 impl Made {
@@ -231,6 +232,7 @@ impl Made {
             estimates: Vec::new(),
             warnings: Vec::new(),
             file: None,
+            mem: None,
         }
     }
 }
@@ -482,14 +484,13 @@ impl Runner for FileRunner {
                 made.as_ref().err().map(|e| e.to_string()),
             );
         }
-        let made = made?;
-        let mem = crate::flow_base::align_mem(self, job);
+        let mut made = made?;
         Ok(Outcome {
             outputs: vec![(made.port.to_string(), made.artifact)],
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
-            mem,
+            mem: crate::flow_base::align_mem(self, job, made.mem.take()),
             warnings: made.warnings,
             file: made.file,
             cached,
