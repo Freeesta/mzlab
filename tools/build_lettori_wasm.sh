@@ -6,15 +6,15 @@ set -eu
 # family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
 # mzlab-picchi at opt-level 3 (peaks 3.1x) moved agilent, sciex and bruker up by 79-228 B, rounded to 256 B
 # zlib-rs (flate2: inflate x2.1 in wasm) weighs +30 KB per family that converts: andi, agilent, sciex, waters, shimadzu and bruker moved up by that, measured value rounded to 256 B
-# every family carries the indexed-mzML writer (feature `indice` of mzlab-core, +1.9 to +3.2 KB) so that to_mzml is byte for byte the mzML of `mzlab-cli convert` (tests/test_lettori_parita.py): the limits of the line above moved up by that, rounded to 256 B
-tetti="aperti 461312
-andi 294912
+# every family carries the indexed-mzML writer (feature `indice` of mzlab-core, +1.9 to +3.2 KB) so that to_mzml is byte for byte the mzML of `mzlab-cli convert` (tests/test_lettori_parita.py): the limits of the line above moved up to the size measured by the CI, rounded to 256 B
+tetti="aperti 460800
+andi 294656
 thermo 626688
-agilent 458240
-sciex 376832
-waters 329216
+agilent 457984
+sciex 376576
+waters 328960
 shimadzu 325120
-bruker 458752"
+bruker 458496"
 # the families that have readers (a family without readers is skipped and is born with its own package)
 con_lettori="agilent sciex thermo aperti andi waters shimadzu bruker"
 out=${1:-site/static}/wasm-lettori

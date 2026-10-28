@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TETTI = {"aperti": 461312, "andi": 294912, "thermo": 626688, "agilent": 458240, "sciex": 376832, "waters": 329216, "shimadzu": 325120, "bruker": 458752}
+TETTI = {"aperti": 460800, "andi": 294656, "thermo": 626688, "agilent": 457984, "sciex": 376576, "waters": 328960, "shimadzu": 325120, "bruker": 458496}
 
 
 def tabella():
