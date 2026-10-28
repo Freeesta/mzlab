@@ -22,7 +22,7 @@
     const q = /** @type {HTMLInputElement} */ (root.querySelector(`#${id}-q`)), loss = /** @type {HTMLElement} */ (root.querySelector(`#${id}-loss`));
     if (opt.q != null) q.value = String(opt.q);
     const view = CALCQUI.mount({
-      ctl: /** @type {HTMLElement} */ (root.querySelector(`#${id}-ctl`)), out: /** @type {HTMLElement} */ (root.querySelector(`#${id}-out`)), idp: id, obs: true, quiet: true,
+      ctl: /** @type {HTMLElement} */ (root.querySelector(`#${id}-ctl`)), out: /** @type {HTMLElement} */ (root.querySelector(`#${id}-out`)), idp: id, quiet: true,
       groups: ["addotti", "diff"], arg: () => ({ text: q.value, ans: 0 }),
     });
     const upd = () => { loss.hidden = !numberOf(q.value); CALCQUI.later(view); };

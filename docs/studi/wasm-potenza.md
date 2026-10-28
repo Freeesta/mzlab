@@ -1,5 +1,5 @@
 # Potenza del browser: cosa usare, come rilevarlo, cosa lasciare
-Studio ARCH WASM-POTENZA (sola lettura del prodotto: misure in una cartella temporanea). Parte da `docs/agenti/wasm-potenziale.md` (profili, SIMD128, binaryen, zlib-rs: non ripetuti) e guarda le API del browser. Prompt DEV in `docs/agenti/prompt-wasm/` (`a.md`…`f.md`), banco riproducibile in `docs/agenti/prompt-wasm/banco-browser.txt`.
+Studio ARCH WASM-POTENZA (sola lettura del prodotto: misure in una cartella temporanea). Parte da `docs/agenti/wasm-potenziale.md` (profili, SIMD128, binaryen, zlib-rs: non ripetuti) e guarda le API del browser. Prompt DEV in `docs/archivio/prompt-wasm/` (`a.md`…`f.md`), banco riproducibile in `docs/archivio/prompt-wasm/banco-browser.txt`.
 
 ## 1. Regola e risposta secca
 **Regola di Federico (28/10)**: il sito è la punta di diamante e usa il meglio dei browser recenti (Chrome/Edge, Firefox, Safari aggiornati). Si controlla funzione per funzione con feature detection, mai lo user agent, in un punto unico (`capacita`, prompt WASM-A). La funzione che manca si disattiva da sola con l'avviso comune «non disponibile in questo browser: usa l'app» (link) e si riattiva da sola quando il browser la supporta; il resto del sito funziona sempre. Nessun motore di riserva nel sito: il ripiego è l'app. Parità sito/app: stessi byte.

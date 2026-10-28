@@ -8,16 +8,22 @@
 (() => {
   const Q1 = (/** @type {string} */ s) => /** @type {HTMLElement | null} */ (document.querySelector(s));
   const H = CALCQUIHTML, DEBOUNCE = 90;
-  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, obs?: boolean, quiet?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
+  /** @typedef {{ ctl: HTMLElement, out: HTMLElement, idp: string, quiet?: boolean, numOnly?: boolean, arg: () => { text: string, ans: number }, groups?: string[], pol?: () => 1 | -1 | null, after?: (a: any, gs: CqGroup[]) => void }} CqCfg */
   /** @typedef {{ cfg: CqCfg, open: Set<string>, all: Set<string>, more: boolean, diffs: boolean, delta: string, seq: number, timer: number, tab: any, formula: string }} CqView */
   const views = /** @type {CqView[]} */ ([]);
   const prune = () => { for (let i = views.length - 1; i >= 0; i--) if (!views[i].cfg.out.isConnected) views.splice(i, 1); };      // a panel redrawn leaves its old view behind
   const memo = /** @type {Map<string, number>} */ (new Map());
   const mass = (/** @type {string} */ f) => { const c = memo.get(f); if (c != null) return c; const m = QQQRef.massOf(f); memo.set(f, m); return m; };
 
-  // first visit: resolution and polarity follow the files shown (negative only = ESI-; no file or a high-resolution one = high resolution)
+  // resolution and polarity follow the files shown (negative only = ESI-); a file is high resolution when its profile says so, and the instrument names the reason
   const files = () => (typeof E !== "undefined" ? E.files.filter((/** @type {any} */ f) => !f.gone) : []);
-  CALCQUI.follow(() => (window.TBL_HR ? window.TBL_HR() : true), () => (files().some((/** @type {any} */ f) => f.polarity === "negative") && !files().some((/** @type {any} */ f) => f.polarity === "positive") ? -1 : 1));
+  const filesMode = () => {
+    const fs = files();
+    if (!fs.length) return null;
+    const hf = window.HR ? fs.find((/** @type {any} */ f) => HR.isHr(f, 1) || HR.isHr(f, 2)) : null, f = hf || fs[0], p = f.prof1 || {};
+    return { hr: !!hf, name: String(f.instrument || (p.an && p.an !== "?" ? p.an : "") || f.label || f.file || "") };
+  };
+  CALCQUI.follow(filesMode, () => (files().some((/** @type {any} */ f) => f.polarity === "negative") && !files().some((/** @type {any} */ f) => f.polarity === "positive") ? -1 : 1));
   CALCQUI.load();
 
   async function deps() {
@@ -26,16 +32,16 @@
   }
   /** @param {CqView} v */
   function options(v) {
-    const o = CALCQUI.opts(), p = v.cfg.pol ? v.cfg.pol() : null;
+    const t = v.cfg.arg(), o = CALCQUI.opts(CALCQUI.arg(t.text, t.ans)), p = v.cfg.pol ? v.cfg.pol() : null;
     if (p) o.pol = p;
-    if (!v.cfg.obs) o.obs = null;
     return o;
   }
 
   /** Draws the groups of the view for its argument (the newest call wins). @param {CqView} v */
   async function render(v) {
     const my = ++v.seq, o = options(v), t = v.cfg.arg(), a = CALCQUI.arg(t.text, t.ans);
-    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && a.kind === "none" && !o.obs) { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field says nothing until something is typed
+    sync(v);                                                                                  // the detected resolution (text and tolerance) follows what is typed
+    if (v.cfg.numOnly && a.kind !== "num" || v.cfg.quiet && a.kind === "none") { v.cfg.out.innerHTML = ""; return; }      // a panel with its own field says nothing until something is typed
     let gs = await CALCQUI.gruppi(a, o, await deps());
     if (my !== v.seq) return;
     if (v.cfg.groups) gs = gs.filter(g => /** @type {string[]} */ (v.cfg.groups).includes(g.id));
@@ -50,10 +56,10 @@
   /** The choices row of a view follows the shared choices. @param {CqView} v */
   function sync(v) {
     const o = options(v), c = v.cfg.ctl, put = (/** @type {string} */ id, /** @type {string} */ val) => { const i = /** @type {HTMLInputElement | null} */ (c.querySelector("#" + v.cfg.idp + id)); if (i && document.activeElement !== i) i.value = val; };
-    c.querySelectorAll(".cq-ctl [data-r]").forEach(b => { const on = (b.getAttribute("data-r") === "hr") === o.hr; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
     c.querySelectorAll(".cq-ctl [data-p]").forEach(b => { const on = +(b.getAttribute("data-p") || 0) === o.pol; b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on)); });
     const tl = c.querySelector(".cq-tl"); if (tl) tl.textContent = I18N.t(o.hr ? "calc.tol" : "calc.tol.da");
-    put("tol", String(o.tol)); put("obs", CALCQUI.st.obs);
+    const md = c.querySelector(".cq-mode"); if (md) md.textContent = H.modeText(o);
+    put("tol", String(o.tol));
   }
 
   /** @param {CqCfg} cfg */
@@ -61,18 +67,16 @@
     prune();
     const v = /** @type {CqView} */ ({ cfg, open: new Set(), all: new Set(), more: false, diffs: false, delta: "", seq: 0, timer: 0, tab: null, formula: "" });
     views.push(v);
-    cfg.ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v), { obs: cfg.obs, obsValue: CALCQUI.st.obs });
+    cfg.ctl.innerHTML = H.ctrlHtml(cfg.idp, options(v));
     const set = (/** @type {Partial<CqState>} */ p) => CALCQUI.set(p), tolKey = () => (options(v).hr ? "ppm" : "da");
     cfg.ctl.addEventListener("click", ev => {
       const b = /** @type {HTMLElement} */ (ev.target).closest("button");
       if (!b) return;
-      if (b.dataset.r) set({ res: b.dataset.r === "lr" ? "lr" : "hr" });
-      else if (b.dataset.p) set({ pol: +b.dataset.p > 0 ? 1 : -1 });
+      if (b.dataset.p) set({ pol: +b.dataset.p > 0 ? 1 : -1 });
     });
     cfg.ctl.addEventListener("input", ev => {
       const i = /** @type {HTMLInputElement} */ (ev.target);
       if (i.id === cfg.idp + "tol") set({ [tolKey()]: i.value });
-      else if (i.id === cfg.idp + "obs") set({ obs: i.value });
     });
     bindOut(v);
     sync(v); later(v);
@@ -104,8 +108,8 @@
       const i = /** @type {HTMLInputElement} */ (ev.target);
       if (i.id !== "cadd-delta") return;
       v.delta = i.value.trim();
-      const o = options(v), ref = o.obs || 400;
-      CALCADD.table("", o.obs ? String(o.obs) : "", String(CALCQUI.ppmFor(o, ref, true)), v.delta).then(r => { const d = out.querySelector("#cadd-dres"); if (d && i.value.trim() === v.delta) d.innerHTML = CALCADDHTML.deltaHtml(r); }).catch(() => { /* the field is the student's: keep what is shown */ });
+      const o = options(v);
+      CALCADD.table("", "", String(CALCQUI.ppmFor(o, 400, true)), v.delta).then(r => { const d = out.querySelector("#cadd-dres"); if (d && i.value.trim() === v.delta) d.innerHTML = CALCADDHTML.deltaHtml(r); }).catch(() => { /* the field is the student's: keep what is shown */ });
     });
   }
   /** @param {CqView} v @param {number} i */
@@ -133,7 +137,7 @@
 
   // the calculator's own: the argument is its field (or the RESULT of the operation in it), the line under it says how a formula was read
   const calc = mount({
-    ctl: /** @type {HTMLElement} */ (Q1("#calcctl")), out: /** @type {HTMLElement} */ (Q1("#calcout")), idp: "calc", obs: true,
+    ctl: /** @type {HTMLElement} */ (Q1("#calcctl")), out: /** @type {HTMLElement} */ (Q1("#calcout")), idp: "calc",
     arg: () => ({ text: /** @type {HTMLInputElement} */ (Q1("#calcin")).value, ans: CALC.ans }),
     after: (a, gs) => {
       if (a.kind !== "formula") return;

@@ -72,7 +72,7 @@ const LISTE_TARGET = (function() {
             </select>
           </label>
           <input type="file" id="ts-csv-file" accept=".csv,.txt" style="display:none">
-          <button type="button" id="ts-upload-btn" style="font-size:12px" title="Load custom target list from CSV">Upload CSV</button>
+          <button type="button" id="ts-upload-btn" style="font-size:12px" title="${I18N.t("lst.tgt.upload.tip")}">Upload CSV</button>
 
           <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px">
             <span>Tol &plusmn; ppm</span>
@@ -142,7 +142,7 @@ const LISTE_TARGET = (function() {
       : m.proposal === "Prev. 2" ? "color:#1e40af;background:#dbeafe" : "color:#854d0e;background:#fef9c3";
     const deltaStr = (m.ppm_error >= 0 ? "+" : "") + m.ppm_error.toFixed(1);
     const ms2Badge = m.ms2_matched ? "<span style='color:#166534'>Yes</span>" : "<span class='muted'>No</span>";
-    return `<tr data-m-idx="${idx}" style="cursor:pointer" title="Click to view XIC and spectrum at RT ${m.rt_apex.toFixed(2)} min">
+    return `<tr data-m-idx="${idx}" style="cursor:pointer" title="${I18N.t("lst.tgt.row.tip", { rt: m.rt_apex.toFixed(2) })}">
       <td><span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;${badgeStyle}">${EH(m.proposal)}</span></td>
       <td><b>${EH(m.name_en)}</b></td>
       <td class="font-mono">${EH(m.neutral_formula) || "&ndash;"}</td>

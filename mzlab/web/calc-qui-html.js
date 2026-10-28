@@ -11,15 +11,22 @@ const CALCQUIHTML = (() => {
   const err = (/** @type {number} */ d, /** @type {number} */ dec) => sgn(d) + Math.abs(d).toFixed(dec);
   const loss = (/** @type {Bag} */ l) => (window.QQQRef ? QQQRef.lossName(l) : `<b>${EH(l.f)}</b>`);
 
-  /** The choices row: resolution, tolerance, optional observed m/z, polarity. Ids are `<idp>res|tol|obs|pol` (the calculator's are calcres… as before).
-   * @param {string} idp @param {{ hr: boolean, tol: number, pol: number }} o @param {{ obs?: boolean, obsValue?: string }} [c] */
-  function ctrlHtml(idp, o, c = {}) {
+  /** Small text saying which resolution was detected and why (never a button). @param {{ hr: boolean, mode: { src: string, name: string } }} o */
+  function modeText(o) {
+    const n = { name: o.mode.name };
+    if (o.mode.src === "files") return o.hr ? T("cq.mode.hr.files", n) : T("cq.mode.lr.files", n);
+    if (o.mode.src === "formula") return T("cq.mode.hr.formula");
+    if (o.mode.src === "decimals") return T("cq.mode.hr.decimals");
+    return T(o.mode.src === "short" ? "cq.mode.lr.short" : "cq.mode.lr.none");
+  }
+  /** The choices row: detected resolution (text), tolerance, polarity. Ids are `<idp>tol|pol`.
+   * @param {string} idp @param {{ hr: boolean, tol: number, pol: number, mode: { src: string, name: string } }} o */
+  function ctrlHtml(idp, o) {
     const on = (/** @type {boolean} */ b) => ` class="${b ? "on" : ""}" aria-pressed="${b}"`;
     return `<div class="cadd cq-ctl" role="group" aria-label="${EH(T("cq.ctl"))}">
-      <span class="seg" id="${idp}res" role="group" aria-label="${EH(T("cq.res"))}"><button type="button" data-r="hr"${on(o.hr)} title="${EH(T("cq.res.hr.title"))}">${T("cq.res.hr")}</button><button type="button" data-r="lr"${on(!o.hr)} title="${EH(T("cq.res.lr.title"))}">${T("cq.res.lr")}</button></span>
       <label class="cadd-f"><span class="cq-tl">${T(o.hr ? "calc.tol" : "calc.tol.da")}</span><input id="${idp}tol" inputmode="decimal" autocomplete="off" value="${o.tol}"></label>
-      ${c.obs ? `<label class="cadd-f"><span>${T("calc.obs")}</span><input id="${idp}obs" inputmode="decimal" autocomplete="off" title="${EH(T("calc.obs.title"))}" value="${EH(c.obsValue || "")}"></label>` : ""}
-      <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}"><button type="button" data-p="1"${on(o.pol > 0)}>ESI+</button><button type="button" data-p="-1"${on(o.pol < 0)}>ESI&minus;</button></span></div>`;
+      <span class="seg" id="${idp}pol" role="group" aria-label="${EH(T("calc.pol"))}"><button type="button" data-p="1"${on(o.pol > 0)}>ESI+</button><button type="button" data-p="-1"${on(o.pol < 0)}>ESI&minus;</button></span>
+      <span class="cq-mode muted" aria-live="polite">${EH(modeText(o))}</span></div>`;
   }
 
   const rowsOf = (/** @type {string} */ gid, /** @type {string[]} */ lis, /** @type {boolean} */ all) => {
@@ -61,5 +68,5 @@ const CALCQUIHTML = (() => {
       return `<details class="cq-g" data-g="${g.id}"${open ? " open" : ""}><summary>${T(/** @type {Bag} */ (TITLE)[g.id])}${n}</summary>${body}</details>`;
     }).join("");
   }
-  return { ctrlHtml, groupsHtml };
+  return { ctrlHtml, groupsHtml, modeText };
 })();

@@ -25,8 +25,10 @@ pub(super) fn estimate_noise(y: &[f64], buf: &mut Vec<f64>) -> f64 {
     buf.clear();
     buf.extend_from_slice(y);
     let med = median_of(buf);
-    buf.clear();
-    buf.extend(y.iter().map(|v| (v - med).abs()));
+    // `buf` is a permutation of `y`: turn it into the absolute deviations in place
+    for v in buf.iter_mut() {
+        *v = (*v - med).abs();
+    }
     let n = median_of(buf) * 1.4826;
     if n > 1e-6 {
         n
@@ -103,4 +105,53 @@ pub(super) fn strongest(
         }
     }
     best
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The noise as computed with a second buffer filled from `y` (the form before the in-place one).
+    fn noise_reference(y: &[f64]) -> f64 {
+        if y.is_empty() {
+            return 1.0;
+        }
+        let mut a = y.to_vec();
+        let med = median_of(&mut a);
+        let mut b: Vec<f64> = y.iter().map(|v| (v - med).abs()).collect();
+        let n = median_of(&mut b) * 1.4826;
+        if n > 1e-6 {
+            n
+        } else {
+            1.0
+        }
+    }
+
+    #[test]
+    fn in_place_noise_equals_the_two_buffer_form() {
+        let mut seed = 12345u64;
+        let mut next = move || {
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            (seed >> 33) as f64 / 1e4
+        };
+        let mut buf = Vec::new();
+        for len in (0..60).chain([199, 1000, 3000]) {
+            let mut y: Vec<f64> = (0..len).map(|_| next()).collect();
+            for variant in 0..3 {
+                match variant {
+                    1 if len > 3 => y[len / 2] = f64::NAN,
+                    2 => y.iter_mut().for_each(|v| *v = 7.0),
+                    _ => {}
+                }
+                let got = estimate_noise(&y, &mut buf);
+                assert_eq!(
+                    got.to_bits(),
+                    noise_reference(&y).to_bits(),
+                    "len {len} variant {variant}"
+                );
+            }
+        }
+    }
 }

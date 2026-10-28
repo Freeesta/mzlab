@@ -42,10 +42,10 @@ const ELEM = (() => {
     const draw = () => {
       const rows = parse(ta.value), used = new Set(rows.map(r => r.s));
       host.innerHTML = `<table class="cx-els"><thead><tr><th>${t("cx.col.iso")}</th><th class="num">${t("cx.col.min")}</th><th class="num">${t("cx.col.max")}</th><th class="num">${t("cx.col.db")}</th><th class="num">${t("cx.col.mass")}</th><th></th></tr></thead><tbody>
-        ${rows.map((r, i) => r.raw != null ? `<tr><td colspan="5" class="muted">${EH(r.raw)}</td><td><button type="button" data-del="${i}" aria-label="${t("cx.remove", { el: EH(r.raw) })}">×</button></td></tr>` : (() => {
+        ${rows.map((r, i) => r.raw != null ? `<tr><td colspan="5" class="muted">${EH(r.raw)}</td><td><button type="button" data-del="${i}" aria-label="${t("cx.remove", { el: EH(r.raw) })}" title="${t("cx.remove", { el: EH(r.raw) })}">×</button></td></tr>` : (() => {
           const ii = isoInfo(r.s);
           return `<tr><td><b>${lab(r.s)}</b></td><td class="num"><input type="number" min="0" data-i="${i}" data-f="min" value="${r.n0}" aria-label="${t("cx.col.min")} ${EH(r.s)}"></td><td class="num"><input type="number" min="0" data-i="${i}" data-f="max" value="${r.n1}" aria-label="${t("cx.col.max")} ${EH(r.s)}"></td>
-            <td class="num">${DBEQ[baseOf(r.s)] != null ? DBEQ[baseOf(r.s)] : ""}</td><td class="num">${ii ? ii.mass.toFixed(5) : ""}</td><td><button type="button" data-del="${i}" aria-label="${t("cx.remove", { el: EH(r.s) })}">×</button></td></tr>`;
+            <td class="num">${DBEQ[baseOf(r.s)] != null ? DBEQ[baseOf(r.s)] : ""}</td><td class="num">${ii ? ii.mass.toFixed(5) : ""}</td><td><button type="button" data-del="${i}" aria-label="${t("cx.remove", { el: EH(r.s) })}" title="${t("cx.remove", { el: EH(r.s) })}">×</button></td></tr>`;
         })()).join("")}</tbody></table>
         <div class="cx-add"><select aria-label="${t("cx.add")}">${[...SUPPORTED, ...ISOT].filter(s => !used.has(s)).map(s => `<option value="${s}">${optLabel(s)}</option>`).join("")}</select><button type="button" data-add>${t("cx.add")}</button></div>`;
       const put = () => { ta.value = ser(rows); if (onch) onch(); };
