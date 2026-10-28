@@ -236,6 +236,7 @@ declare var WAIT0: any;
 declare var WIFF_WAIT: any;
 declare var WatersRaw: any;
 declare var XICDRAW: any;
+declare var XICPIECES: any;
 declare var XIC_ADDUCTS: any;
 declare var XIC_BELOW: any;
 declare var XIC_DRIFT: any;

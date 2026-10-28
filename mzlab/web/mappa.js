@@ -467,7 +467,7 @@ window.MAPPA = (() => {
     const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
     const X = (/** @type {number} */ v) => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
     g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
-    for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < ml - 1 || x > mr + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
+    XICDRAW.axis(g, X, a.x0, a.x1, { base: H - mb, labelY: H - mb + 13, lo: 1, hi: W - 1, color: ink, font: fpx(11) });
     if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), ml + 4, mt + 8); return; }
     let tr = xi.tr || [], ymax = 0, sg = false;
     // preview of a difference: the matrix already holds A − B
@@ -500,9 +500,10 @@ window.MAPPA = (() => {
       g.lineWidth = 1;
     } else
     tr.forEach((/** @type {Record<string, any>} */ t, /** @type {number} */ n) => {
-      const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; g.globalAlpha = prev ? .5 : 1; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
-      for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
-      g.stroke(); g.setLineDash([]); g.lineWidth = 1; g.globalAlpha = 1;
+      // drawn like the XIC of the lens: filled trace, no apex lost, the number on the apex of the first one
+      const f = E.files[t.k], v = XICDRAW.slice(/** @type {{ rt: number[], y: number[] }} */ (t), a.x0, a.x1), b = XICDRAW.apex(v); if (!v.rt.length) return;
+      g.globalAlpha = prev ? .5 : 1; XICDRAW.trace(g, v, X, Y, H - mb, pw, f ? f.color : ink, n ? [4, 3] : undefined);
+      if (!n && !prev && XICDRAW.clearPeak(v, b)) { g.font = fpx(11); XICDRAW.apexLabel(g, v, b, X(v.rt[b]), Y(v.y[b]), ml, mr, ecss("--ink")); } g.globalAlpha = 1;
     });
     g.fillStyle = ecss("--ink"); g.textAlign = "left";
     const lo = xi.c - xi.tol, hi = xi.c + xi.tol;

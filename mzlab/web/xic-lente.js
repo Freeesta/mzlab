@@ -29,7 +29,7 @@
     el.innerHTML = '<canvas aria-hidden="true"></canvas>';
     const cv = /** @type {HTMLCanvasElement} */ (el.querySelector("canvas")), dpr = window.devicePixelRatio || 1;
     cv.height = Math.round((H - 2) * dpr); cv.style.height = H - 2 + "px";
-    s = { el, cv, m: null, key: "", dis: null, sticky: false, scan: "", tr: null, raf: 0, said: "", wired: false, text: "", file: "", w: W, ptr: null };
+    s = { el, cv, m: null, key: "", dis: null, sticky: false, scan: "", tr: null, raf: 0, said: "", wired: false, text: "", file: "", color: "", w: W, ptr: null };
     ST.set(p, s); fit(s, W);
     p.cv.after(el);
     el.addEventListener("click", () => commitOf(p));
@@ -89,7 +89,7 @@
   }
   /** a fresh response is drawn at once (it is not in the pointer handler, and waiting for the next frame would add one to the preview); a cached trace waits for the frame @param {any} p @param {any} s @param {Want} w @param {Trace} t @param {boolean} [now] */
   function show(p, s, w, t, now) {
-    s.tr = t; s.m = w.m; s.text = w.req.text; s.file = w.req.f.label || "";
+    s.tr = t; s.m = w.m; s.text = w.req.text; s.file = w.req.f.label || ""; s.color = w.req.f.color || "";
     place(p, s, w.m, p._a.data[0].d);
     s.el.title = withFile(s);
     s.el.hidden = false;
@@ -100,12 +100,7 @@
   // ---------------------------------------------------------------- drawing
   /** the apex of a trace (first maximum) @param {Trace} t */
   const apex = XICDRAW.apex;
-  /** the apex is worth a time label: at least 3 times the median and wider than one point (more than one point at half height) @param {Trace} t @param {number} b */
-  function clearPeak(t, b) {
-    const top = t.y[b]; if (!(top > 0) || t.rt.length < 3) return false;
-    const med = [...t.y].sort((u, v) => u - v)[t.y.length >> 1];
-    return top >= 3 * med && t.y.filter(v => v >= top / 2).length > 1;
-  }
+  const clearPeak = XICDRAW.clearPeak;
   /** @param {any} p @param {any} s */
   function paint(p, s) {
     const t = /** @type {Trace | null} */ (s.tr); if (!t || cur !== p) return;
@@ -115,7 +110,7 @@
     s.cv.title = "";
     if (!t.rt.length) { g.clearRect(0, 0, s.w, H); g.fillStyle = ecss("--muted"); g.font = "10px sans-serif"; g.fillText(T("xiclens.empty"), 6, H / 2); return; }
     const label = clearPeak(t, b);
-    XICDRAW.draw(g, s.w, H - 2, t, { line: ecss("--line"), ink: ecss("--ink"), muted: ecss("--muted"), accent: ecss("--accent"), scanRt: scanRt(p), label });
+    XICDRAW.draw(g, s.w, H - 2, t, { line: ecss("--line"), ink: ecss("--ink"), muted: ecss("--muted"), accent: s.color || ecss("--accent"), scanRt: scanRt(p), label });
     if (label) s.cv.title = T("xiclens.rt");
     const msg = T("xiclens.say", { ion: withFile(s), rt: t.rt[b].toFixed(2), y: fmt(t.y[b]) });
     s.el.setAttribute("aria-label", msg + " " + T("xiclens.keys"));
