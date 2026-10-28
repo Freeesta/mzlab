@@ -150,7 +150,9 @@ try:
             svg = open(ds["svg"].path(), encoding="utf-8").read(); assert "<title>" in svg
             assert open(ds["jpg"].path(), "rb").read(2) == b"\xff\xd8"
             assert open(ds["ket"].path(), encoding="utf-8").read().lstrip().startswith("{")
-            again = grab("png").suggested_filename; assert again == names["png"].replace(".png", "-2.png"), again
+            again = grab("png").suggested_filename
+            # same minute: "-2" is added; if the minute changed in between (23:39 -> 23:40) the name is simply the new minute's, with no suffix
+            assert again == names["png"].replace(".png", "-2.png") or (pat.match(again) and again != names["png"] and "-" not in again.split("_")[-1]), again
             # transparent
             pg.check("#ex-nobg"); pg.wait_for_timeout(300)
             assert pg.is_disabled("#ex-jpg") and "trasparenza" in (pg.get_attribute("#ex-jpg", "title") or "")
