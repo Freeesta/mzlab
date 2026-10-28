@@ -18,10 +18,13 @@ def step(name, fn):
 D = synth("flowmsn")
 F = write_msn(D / "MSn_synth_t01.mzML", caffeine_nodes(), n_scans=12)
 ION = "C8H11N4O2+"
-_cli = subprocess.run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--interpreta"], cwd=ROOT, capture_output=True, encoding="utf-8")
-# a failure of the reference command must show its stderr in the log (a bare CalledProcessError hid the cause)
-if _cli.returncode: sys.exit("msn-graph reference failed (exit %d):\n%s" % (_cli.returncode, _cli.stderr[-3000:]))
-cli = _cli.stdout
+# the reference command compiles mzlab-cli (minutes when cold): it runs in the background while the page loads and the plan runs, and the `graph` step collects it
+_cli = subprocess.Popen(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-cli", "--", "msn-graph", str(F), "--formula", ION, "--interpreta"], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+def cli_text():
+    out, err = _cli.communicate()
+    # a failure of the reference command must show its stderr in the log (a bare CalledProcessError hid the cause)
+    if _cli.returncode: raise AssertionError("msn-graph reference failed (exit %d): %s" % (_cli.returncode, err[-3000:]))
+    return out
 mask = lambda t: re.sub(r'"sha256_idx":"[0-9a-f]*"', '"sha256_idx":""', t)
 RUN = """async (patch) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
@@ -75,6 +78,7 @@ try:
         step("a plan of MSn steps only goes through the scheduler and gives the same texts as the functions of the steps", same)
         def graph():
             t = got["r"]["files"][0]["text"]
+            cli = cli_text()
             assert mask(t) == mask(cli), (len(t), len(cli))
         step("the graph is the text of mzlab-cli msn-graph --interpreta (the template starts with the interpretation on)", graph)
         def molecule_box():
@@ -244,7 +248,9 @@ try:
         miss = pg.evaluate("(window.MZLAB_LR_MISS||[]).slice()")
         step("no request left unanswered by the engine", lambda: (_ for _ in ()).throw(AssertionError(miss)) if miss else None)
     r.close()
+    if _cli.poll() is None: _cli.kill()
 except Exception as e:
+    if _cli.poll() is None: _cli.kill()
     steps.append(("run", "FAIL " + str(e)[:300]))
     try: r.close()
     except Exception: pass

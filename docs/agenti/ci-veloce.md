@@ -28,6 +28,7 @@
   `campioni::number_replicates` conta le repliche con una `HashMap` (chiave serie, ruolo, minuti, conc.) invece del confronto a coppie: `campioni_posizioni` (34 000 nomi) 60 s → 1,5 s; con un NaN in `time_min`/`conc` ripiega sul confronto a coppie.
   Le guardie di memoria (`tests/test_guardie_memoria.py`, `tests/test_feat_wasm.py`) costruiscono, generano le serie e misurano in parallelo, ciascuna misura nella sua cartella: 112 s → 57 s con le build in cache.
 
+- **`e2e_flow_msn`**: il riferimento `mzlab-cli msn-graph` (compila `mzlab-cli`, 211 s a freddo in locale) parte in background all'inizio e il passo `graph` ne raccoglie l'uscita, così la compilazione si sovrappone alla pagina; stessi 21 casi di prima.
 - **Misura dei job Rust** (mediana su PR verdi, cache calde, secondi): `rust` (feat) 107, `rust-core` 172, `rust-misc` 155, `rust-wasm` 186, `rust-lint` 30, `deny` 23; tempo totale del workflow 563. `rust-misc` è ora diviso in `rust-misc-a` e `rust-misc-b` e il determinismo sta in `rust-det`. Il percorso Rust è il più lento fra `rust-core`, `rust-det` e `rust-wasm`: abbassarne uno solo sposta il collo di bottiglia sugli altri.
 - **Misura di `sito-rust`** (stessa base): `sito-wasm-core` 254 (motore, librerie e circa 160 s di lettori), `sito-wasm-feat-a` 166, `sito-wasm-feat-b` 190, `sito-e2e` 174; tempo totale 807. Il job più lungo della costruzione è `sito-wasm-core`.
 
