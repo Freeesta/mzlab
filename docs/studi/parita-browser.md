@@ -48,7 +48,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `structure.draw` (Ketcher) | no | sì | — | limite: editor JS in iframe; un disegno non è un calcolo | — | — |
 | `chrom.uv_peaks`, `quant.calibrate` | sì | no | no | da fare | M | 3 |
 | **Flow: registro e controllo** | | | | | | |
-| `prov/1` e `corsa/1` di una corsa | sì (`flow/run`, `flow/live finish`, `flow report`) | no: `live.run` non scrive `prov/1` (`flow-live.js:303`); il rapporto si apre solo da file | `test_corsa_schema.py` (solo nativo) | da fare: lo scheduler nel `.wasm` non espone `finish` | M | 1 |
+| `prov/1` e `corsa/1` di una corsa | sì (`flow/run`, `flow/live finish`, `flow report`) | sì per la catena base (`flow-web-prov.js`, `record_prov`/`record_corsa`); gli altri passi no | `e2e_flow_web_prov.py`, `flow_record_tests.rs` | da fare: passi fuori catena (tp.*, msn, export, table.filter, centroid) | M | 1 |
 | Controllo del piano (`flow check`) | sì (Rust `check.rs`) | sì ma in JS (`flow/lazy/flow-check.js:2`) | `test_flow_grafico.py` (casi JS↔Rust) | da fare: viola «Tutto in Rust»; va nel motore come `flow_line` | M | 2 |
 | Liste dell'utente (`flow/liste`, `liste/1`) | sì (app) | no: campo di testo (`flow-live.md`, «Liste dell'utente») | `e2e_flow_liste.py` (rotta finta) | da fare: `mzlab_feat::liste::route` non è nel `.wasm` | S | 2 |
 | Riuso prima di Run (`flow/reuse`) | sì (app) | equivalente diverso (chiavi in OPFS) | no | scelta (due cache) | — | 3 |

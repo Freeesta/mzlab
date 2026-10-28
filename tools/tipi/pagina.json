@@ -246,6 +246,7 @@
     "../../flow/lazy/flow-live-bar.js",
     "../../flow/lazy/flow-live-desktop.js",
     "../../flow/lazy/flow-live-jobs.js",
+    "../../flow/lazy/flow-web-prov.js",
     "../../flow/lazy/flow-live.js",
     "../../flow/lazy/flow-web-msn.js",
     "../../flow/lazy/flow-msn-molecule.js",

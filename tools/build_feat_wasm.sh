@@ -9,7 +9,7 @@ want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 limit=512000
 limit_untargeted=524288   # untargeted: +2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator
 limit_table=614400   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
-limit_hr=1339392   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1099407 (+10 %); the six separate ones measured 2037856 under 6 x 512000); the only cap of the group (docs/agenti/wasm-tetti.md)
+limit_hr=1389000   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1384565 with flow_job_meta, the estimates of the record of a run in the browser; before 1302880); the only cap of the group (docs/agenti/wasm-tetti.md)
 limit_attributio=1536000   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1395661 (+10 %); the four separate ones measured 2494394 under 512000 + 942080 + 659456 + 479232); the only cap of the group (docs/agenti/misure.md)
 limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
