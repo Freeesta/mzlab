@@ -67,12 +67,9 @@ pub fn ord<T: Copy + Ord>(v: &mut [T]) {
     by(v, |a, b| a.cmp(b));
 }
 
-/// Stable sort of any items: the order is found on indices, then the items are moved.
-pub fn any_by<T, F: FnMut(&T, &T) -> Ordering>(v: &mut Vec<T>, mut cmp: F) {
-    let mut idx: Vec<u32> = (0..v.len() as u32).collect();
-    by(&mut idx, |&a, &b| cmp(&v[a as usize], &v[b as usize]));
-    let mut slots: Vec<Option<T>> = v.drain(..).map(Some).collect();
-    v.extend(idx.iter().filter_map(|&i| slots[i as usize].take()));
+/// Stable sort of any items: the order is found on indices, then the items are moved in place.
+pub fn any_by<T, F: FnMut(&T, &T) -> Ordering>(v: &mut Vec<T>, cmp: F) {
+    slice_by(v.as_mut_slice(), cmp);
 }
 
 /// Stable sort of any items by a key.
@@ -246,6 +243,25 @@ mod tests {
             any_by(&mut s, |p, q| p.len().cmp(&q.len()));
             t.sort_by(|p, q| p.len().cmp(&q.len()));
             assert_eq!(s, t);
+        }
+    }
+
+    #[test]
+    fn any_by_is_stable_on_many_sequences_with_ties() {
+        let mut seed = 5u64;
+        let mut r = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (seed >> 33) as u32
+        };
+        for round in 0..10_000u32 {
+            let n = (r() % 40) as usize;
+            let a: Vec<(u32, String)> = (0..n)
+                .map(|i| (r() % (1 + round % 6), format!("v{i}")))
+                .collect();
+            let (mut x, mut y) = (a.clone(), a);
+            any_by(&mut x, |p, q| p.0.cmp(&q.0));
+            y.sort_by(|p, q| p.0.cmp(&q.0));
+            assert_eq!(x, y, "round {round}");
         }
     }
 
