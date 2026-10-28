@@ -9,6 +9,9 @@ const plan = JSON.parse(fs.readFileSync(process.argv[5], "utf8"));
 const reader = buf => (off, len) => new Uint8Array(buf.subarray(off, off + len));
 const rdIdx = reader(idx), rdMzml = reader(mzml);
 const e = new Engine();
+// as rust-worker.js: count and spectra_len answer 0xFFFFFFFF for a slot with no run open, and the worker turns it into err.file.raw
+const NO_RUN = 0xFFFFFFFF, noRun = () => JSON.stringify({ error_key: "err.file.raw", params: {} });
+const runCount = s => { const n = e.count(s.slot, s.level); if (n === NO_RUN) throw noRun(); return n; };
 const trace = (n, out) => ({ f64: Array.from(out.subarray(0, n)) });
 const run = s => {
   switch (s.op) {
@@ -24,9 +27,9 @@ const run = s => {
     case "map": return { s: e.map_route(s.path, s.items, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
     case "open": return { s: e.open(s.slot, mzml.length, rdMzml) };
-    case "tic": { const out = new Float64Array(2 * e.count(s.slot, s.level)); return trace(2 * e.tic(s.slot, s.level, s.px || 0, out), out); }
-    case "xic": { const out = new Float64Array(2 * e.count(s.slot, s.level)); return trace(2 * e.xic(s.slot, s.level, s.mz, s.tol, s.px || 0, out), out); }
-    case "spectra": { const out = new Float64Array(e.spectra_len(s.slot, s.level, s.i0, s.i1)); return trace(e.spectra(s.slot, s.level, s.i0, s.i1, s.bin, out), out); }
+    case "tic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.tic(s.slot, s.level, s.px || 0, out), out); }
+    case "xic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.xic(s.slot, s.level, s.mz, s.tol, s.px || 0, out), out); }
+    case "spectra": { const n = e.spectra_len(s.slot, s.level, s.i0, s.i1); if (n === NO_RUN) throw noRun(); const out = new Float64Array(n); return trace(e.spectra(s.slot, s.level, s.i0, s.i1, s.bin, out), out); }
     default: throw new Error("unknown step " + s.op);
   }
 };

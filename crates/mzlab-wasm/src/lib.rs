@@ -369,15 +369,10 @@ impl Engine {
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
-    /// Number of scans of one level (the capacity a trace needs); `err.file.raw` when no run is open at `slot`, as in the desktop engine.
-    pub fn count(&self, slot: u32, level: u8) -> Result<u32, JsValue> {
-        let r = self.run(slot)?;
-        Ok(r.spectra.iter().filter(|s| s.level == level).count() as u32)
-    }
-
-    fn run(&self, slot: u32) -> Result<&mzlab_core::mzml::Run, JsValue> {
-        self.runs.get(&slot).ok_or_else(|| {
-            error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "slot not open"))
+    /// Number of scans of one level (the capacity a trace needs); `u32::MAX` when no run is open at `slot` (the worker answers `err.file.raw`, as the desktop engine).
+    pub fn count(&self, slot: u32, level: u8) -> u32 {
+        self.runs.get(&slot).map_or(u32::MAX, |r| {
+            r.spectra.iter().filter(|s| s.level == level).count() as u32
         })
     }
 
@@ -404,9 +399,11 @@ impl Engine {
         }
     }
 
-    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range; `err.file.raw` when no run is open at `slot`).
-    pub fn spectra_len(&self, slot: u32, level: u8, i0: u32, i1: u32) -> Result<u32, JsValue> {
-        let r = self.run(slot)?;
+    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range, `u32::MAX` when no run is open at `slot`).
+    pub fn spectra_len(&self, slot: u32, level: u8, i0: u32, i1: u32) -> u32 {
+        let Some(r) = self.runs.get(&slot) else {
+            return u32::MAX;
+        };
         let mut len = 2usize;
         let mut pos = 0u32;
         for s in r.spectra.iter().filter(|s| s.level == level) {
@@ -415,7 +412,11 @@ impl Engine {
             }
             pos += 1;
         }
-        Ok(if i0 >= pos { 0 } else { len as u32 })
+        if i0 >= pos {
+            0
+        } else {
+            len as u32
+        }
     }
 
     /// Centroid scans `i0..=i1` of one level in bins of `bin_da` (unit resolution), into `out`:
