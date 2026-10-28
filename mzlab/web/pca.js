@@ -125,7 +125,7 @@ const PCA = (() => {
     const el = box.querySelector("#pca-res");
     if (!el) return;
     if (!res) { el.innerHTML = ""; return; }
-    el.innerHTML = `${stepsHtml()}<h4 class="sm" style="margin:8px 0 2px">${t("pca.scores")} <button type="button" id="pca-help" class="pca-q" aria-expanded="false" aria-controls="pca-help-text" aria-label="${eh(t("pca.help"))}">?</button></h4>
+    el.innerHTML = `${stepsHtml()}<h4 class="sm" style="margin:8px 0 2px">${t("pca.scores")} <button type="button" id="pca-help" class="pca-q" aria-expanded="false" aria-controls="pca-help-text" aria-label="${eh(t("pca.help"))}" title="${eh(t("pca.help"))}">?</button></h4>
 <p class="sm" id="pca-help-text" hidden>${t("pca.help.text")}</p>${scoresSvg()}${CAMPIONI.gradientLegend()}<p class="sm">${t("pca.traj")}</p>
 <h4 class="sm" style="margin:8px 0 2px">${t("pca.loadings")}</h4>${loadingsSvg()}<p class="sm">${t("pca.stab.note")}</p>${tableHtml()}
 <div class="qq-form"><button type="button" id="pca-xlsx">Excel</button></div>`;

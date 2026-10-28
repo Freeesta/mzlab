@@ -60,7 +60,16 @@ pub(super) fn centroid_at(
 ) -> Option<f64> {
     let (lo, hi) = (c - half, c + half);
     let (mut sw, mut swm) = (0.0, 0.0);
-    for i in 0..buf.x.len() {
+    // Only bins within one step of the window can overlap it; the others add nothing, so the sums are the same as over the whole grid.
+    let (first, last) = if buf.sorted {
+        (
+            buf.x.partition_point(|&x| x < lo - p.step),
+            buf.x.partition_point(|&x| x <= hi + p.step),
+        )
+    } else {
+        (0, buf.x.len())
+    };
+    for i in first..last {
         let (a, b) = (buf.x[i] - 0.5 * p.step, buf.x[i] + 0.5 * p.step);
         let frac = ((b.min(hi) - a.max(lo)) / p.step).clamp(0.0, 1.0);
         if frac <= 0.0 || skip.is_some_and(|t| buf.v[i] >= t) {

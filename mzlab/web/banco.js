@@ -446,7 +446,7 @@ const BANCO = (() => {
   function tIso(b, p) {
     const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {}, cd = iso.cd || {};
     const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select>`;
-    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc type="number" min="0" max="1000" step="any" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
+    const adRow = (a, c, k) => `<div class="row hri-ad"><label>${k ? "" : I18N.t("lib.col.adduct")} <select data-ad aria-label="${I18N.t("lib.col.adduct")}">${ISO_AD.map(x => `<option${x === a ? " selected" : ""}>${x}</option>`).join("")}</select></label><label>${I18N.t("bn.iso.conc")} <input data-conc type="number" min="0" max="1000" step="any" value="${c}" style="width:56px"></label>${k ? `<button type="button" data-delad aria-label="${I18N.t("bn.iso.delAd")}" title="${I18N.t("bn.iso.delAd")}">×</button>` : ""}</div>`;
     const adds = iso.adds && iso.adds.length ? iso.adds : [{ ad: iso.ad || "[M+H]+", c: 100 }];
     b.innerHTML = `<div class="muted">${I18N.t("bn.iso.note")}</div>
       <div class="row"><label>${I18N.t("bn.iso.formula")} <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:130px"></label></div>
