@@ -13,6 +13,13 @@ use crate::routes::Routes;
 
 /// Tables over this many bytes are not built (the map is summed from the peaks).
 const MAX_BYTES: usize = 64 << 20;
+/// The engine's own ceiling for a table (a quarter of its cache budget); a table over it is not built, so a tiny budget never grows the memory.
+static TABLE_CAP: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(usize::MAX);
+
+/// Sets the largest table the engine may build (bytes); the wasm engine ties it to its cache budget.
+pub fn set_table_cap(bytes: usize) {
+    TABLE_CAP.store(bytes, std::sync::atomic::Ordering::Relaxed);
+}
 /// The phases a session grid has: high resolution cells start at whole numbers, unit resolution ones at `n - 0.2`.
 const PHASES: [f64; 2] = [0.0, 0.8];
 
@@ -151,7 +158,7 @@ impl<R: ReadAt> Routes<R> {
             return Ok(None);
         }
         let (k0, ncell) = (k0 as i64, (k1 - k0) as usize + 1);
-        if n_scans.saturating_mul(ncell).saturating_mul(4) > MAX_BYTES {
+        if n_scans.saturating_mul(ncell).saturating_mul(4) > MAX_BYTES.min(TABLE_CAP.load(std::sync::atomic::Ordering::Relaxed)) {
             return Ok(None);
         }
         let mut cells = vec![0.0f32; n_scans * ncell];
