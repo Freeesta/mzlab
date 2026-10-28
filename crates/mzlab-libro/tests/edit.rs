@@ -236,3 +236,14 @@ fn the_headings_check_allows_only_retitled_sections_with_their_anchors() {
     .unwrap_err()
     .contains("glossary"));
 }
+
+#[test]
+fn a_reversed_line_range_is_an_unknown_block_not_a_panic() {
+    for src in ["5-2", "3-2", "qa24-23", "qa5-2"] {
+        assert_eq!(
+            edit(src, "Testo"),
+            Err("Unknown block.".to_string()),
+            "{src}"
+        );
+    }
+}
