@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::idxread::ReadAt;
-use crate::mapcells::{cell_of, clipped_cell, frac};
 use crate::mapgrid::Grid;
 use crate::routes::Routes;
 
@@ -19,10 +18,10 @@ const PHASES: [f64; 2] = [0.0, 0.8];
 
 /// A peak too close to a cell edge for the table: its place in the index, scan, m/z and intensity.
 pub struct Edge {
-    at: u64,
-    pos: usize,
-    mz: f64,
-    y: f64,
+    pub(crate) at: u64,
+    pub(crate) pos: usize,
+    pub(crate) mz: f64,
+    pub(crate) y: f64,
 }
 
 /// The tables of one file, by level and phase (code, tick of last use), and the switch of the parity tests (`off` = every map is summed from the peaks).
@@ -33,13 +32,13 @@ pub struct CellStore {
 }
 
 pub struct ScanCells {
-    phase: f64,
+    pub(crate) phase: f64,
     /// Number of the first cell: cell `k` is `[k + phase, k + phase + 1)`.
-    k0: i64,
-    ncell: usize,
-    n_scans: usize,
-    cells: Vec<f32>,
-    edge: Vec<Edge>,
+    pub(crate) k0: i64,
+    pub(crate) ncell: usize,
+    pub(crate) n_scans: usize,
+    pub(crate) cells: Vec<f32>,
+    pub(crate) edge: Vec<Edge>,
 }
 
 impl ScanCells {
@@ -58,7 +57,7 @@ impl ScanCells {
     }
 
     /// Per cell `row_of(p) * nmz + j` the maximum over the scans `p` that `row_of` gives a row, of the table cells `first + j * w ..first + (j + 1) * w`.
-    fn fold(
+    pub(crate) fn fold(
         &self,
         rows: usize,
         (nmz, w): (usize, i64),
@@ -85,7 +84,7 @@ impl ScanCells {
 
 /// The phase of a grid whose cells are `w` Da wide from `mz0`: `Some(index in PHASES)` when `w` is a whole number of Da and the edges are whole numbers
 /// or `n - 0.2` (the grid of the session, or the region of a zoomed-out view whose cells are whole nominal masses); returns the width as a whole number.
-fn phase_of(mz0: f64, w: f64) -> Option<(usize, i64)> {
+pub(crate) fn phase_of(mz0: f64, w: f64) -> Option<(usize, i64)> {
     if !(w >= 1.0 - 1e-12 && (w - w.round()).abs() < 1e-9 && w < 1e4) {
         return None;
     }
@@ -102,15 +101,6 @@ fn near_edge(f: f64, mz: f64) -> bool {
     f < band || 1.0 - f < band
 }
 
-/// Bytes of the per-scan cells of all the files; they go in the same LRU as the maps.
-pub fn cells_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    files
-        .values()
-        .flat_map(|r| r.cells.tables.iter())
-        .map(|c| c.2.bytes())
-        .sum()
-}
-
 impl<R: ReadAt> Routes<R> {
     /// For the parity tests: false = every map is summed from the peaks, as before the cells.
     pub fn set_scan_cells(&mut self, on: bool) {
@@ -122,9 +112,20 @@ impl<R: ReadAt> Routes<R> {
     pub fn cell_tables(&self) -> usize {
         self.cells.tables.len()
     }
+}
 
+/// Bytes of the per-scan cells of all the files; they go in the same LRU as the maps.
+pub fn cells_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
+    files
+        .values()
+        .flat_map(|r| r.cells.tables.iter())
+        .map(|c| c.2.bytes())
+        .sum()
+}
+
+impl<R: ReadAt> Routes<R> {
     /// The table of a level and phase, built on first use; None when there is none to build (no peaks, too big, an odd m/z range).
-    fn scan_cells(&mut self, level: u8, code: usize) -> Result<Option<Arc<ScanCells>>> {
+    pub(crate) fn scan_cells(&mut self, level: u8, code: usize) -> Result<Option<Arc<ScanCells>>> {
         if let Some(c) = self
             .cells
             .tables
@@ -190,90 +191,5 @@ impl<R: ReadAt> Routes<R> {
             return Ok(false);
         };
         Ok(self.scan_cells(level, code)?.is_some())
-    }
-
-    /// The cells (as `accumulate` gives them, maximum) of the whole-file map of the session grid `g` from the table; None when the grid or the file
-    /// has no table. `bins` = RT row of each scan, `at` = the column of a m/z as the grid works it out.
-    pub(crate) fn session_from_cells(
-        &mut self,
-        level: u8,
-        g: &Grid,
-        bins: &[usize],
-        at: &dyn Fn(f64) -> f64,
-    ) -> Result<Option<Vec<f64>>> {
-        let Some((code, w)) = phase_of(g.mz0, g.dmz).filter(|_| !self.cells.off) else {
-            return Ok(None);
-        };
-        let Some(sc) = self.scan_cells(level, code)? else {
-            return Ok(None);
-        };
-        let first = (g.mz0 - sc.phase).round() as i64;
-        let mut acc = sc.fold(g.nrt, (g.nmz, w), first, |p| Some(bins[p]));
-        for e in &sc.edge {
-            if let Some(c) = cell_of(bins[e.pos], at(e.mz), g.nmz) {
-                if (e.y as f32) as f64 > acc[c] {
-                    acc[c] = (e.y as f32) as f64;
-                }
-            }
-        }
-        Ok(Some(acc))
-    }
-
-    /// The cells of `run_background` (maximum, groups of `grp` scans, `nmz` cells from `mz0` to `mz1`) from the table, for the peaks `a..b` of the window.
-    pub(crate) fn background_from_cells(
-        &mut self,
-        level: u8,
-        (mz0, mz1): (f64, f64),
-        nmz: usize,
-        (a, b): (u64, u64),
-        grp: usize,
-    ) -> Result<Option<Vec<f64>>> {
-        let Some((code, w)) = phase_of(mz0, (mz1 - mz0) / nmz as f64).filter(|_| !self.cells.off)
-        else {
-            return Ok(None);
-        };
-        let Some(sc) = self.scan_cells(level, code)? else {
-            return Ok(None);
-        };
-        let first = (mz0 - sc.phase).round() as i64;
-        let mut acc = sc.fold(sc.n_scans.div_ceil(grp), (nmz, w), first, |p| Some(p / grp));
-        for e in sc.edge.iter().filter(|e| e.at >= a && e.at < b) {
-            let c = clipped_cell(e.pos / grp, frac(e.mz, mz0, mz1, false) * nmz as f64, nmz);
-            if (e.y as f32) as f64 > acc[c] {
-                acc[c] = (e.y as f32) as f64;
-            }
-        }
-        Ok(Some(acc))
-    }
-
-    /// The cells of `region_map` (maximum, linear m/z) from the table when the cells are whole nominal masses; `bins` = RT row of each scan, `inside` = the scans in the RT range.
-    pub(crate) fn region_from_cells(
-        &mut self,
-        level: u8,
-        (mz0, mz1): (f64, f64),
-        (nrt, nmz): (usize, usize),
-        (a, b): (u64, u64),
-        (bins, inside): (&[usize], &[bool]),
-    ) -> Result<Option<Vec<f64>>> {
-        let Some((code, w)) = phase_of(mz0, (mz1 - mz0) / nmz as f64).filter(|_| !self.cells.off)
-        else {
-            return Ok(None);
-        };
-        let Some(sc) = self.scan_cells(level, code)? else {
-            return Ok(None);
-        };
-        let first = (mz0 - sc.phase).round() as i64;
-        let mut acc = sc.fold(nrt, (nmz, w), first, |p| inside[p].then_some(bins[p]));
-        for e in sc
-            .edge
-            .iter()
-            .filter(|e| e.at >= a && e.at < b && inside[e.pos])
-        {
-            let c = clipped_cell(bins[e.pos], frac(e.mz, mz0, mz1, false) * nmz as f64, nmz);
-            if (e.y as f32) as f64 > acc[c] {
-                acc[c] = (e.y as f32) as f64;
-            }
-        }
-        Ok(Some(acc))
     }
 }
