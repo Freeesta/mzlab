@@ -45,7 +45,7 @@
     v.cfg.out.innerHTML = H.groupsHtml(gs, o, v, { formula: a.kind === "formula" });
     if (v.cfg.after) v.cfg.after(a, gs);
   }
-  const later = (/** @type {CqView} */ v) => { clearTimeout(v.timer); v.timer = window.setTimeout(() => render(v).catch(e => { v.cfg.out.innerHTML = `<p class="muted">${EH(e && e.message || "")}</p>`; }), DEBOUNCE); };
+  const later = (/** @type {CqView} */ v) => { clearTimeout(v.timer); v.timer = window.setTimeout(() => render(v).catch(e => { v.cfg.out.innerHTML = h`<p class="muted">${e && e.message || ""}</p>`; }), DEBOUNCE); };
 
   /** The choices row of a view follows the shared choices. @param {CqView} v */
   function sync(v) {

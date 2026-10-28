@@ -9,7 +9,6 @@
 const CALCQUI = (() => {
   const C = typeof calcIsExpr === "function" ? { calcIsExpr, calcEval } : require("./calcola.js");
   const HR_FLOOR = 0.003;                                   // Da: the narrowest window for a mass DIFFERENCE in high resolution (as the Neutral losses table always had)
-  const DIFF_REF = 400;                                     // m/z the adduct engine uses for the ppm window of a difference when no observed m/z is given
   const LIMIT = 6;                                          // rows shown per group before «show all»
   const num = (/** @type {unknown} */ s) => parseFloat(String(s == null ? "" : s).trim().replace(",", "."));
 
@@ -62,6 +61,18 @@ const CALCQUI = (() => {
     return r.v != null && isFinite(r.v) ? { kind: "num", v: r.v, text: t } : { kind: "none", v: NaN, text: t };
   }
 
+  return {
+    st, load, save, set, opts, isHr, pol, arg, diffDa, ppmFor, num, LIMIT,
+    onChange: (/** @type {() => void} */ f) => { subs.push(f); },
+    /** How the choices follow the files while the student has not chosen. */
+    follow: (/** @type {() => boolean} */ hr, /** @type {() => 1 | -1} */ p) => { filesHr = hr; filesPol = p; },
+  };
+})();
+
+// The groups of candidates (second part of CALCQUI: the choices above, the groups here)
+const CALCQUIG = (() => {
+  const DIFF_REF = 400;                                     // m/z the adduct engine uses for the ppm window of a difference when no observed m/z is given
+  const { diffDa, ppmFor } = CALCQUI;
   /** Known ions of the lists (contaminants, Keller, suspects) at `v` as an ion m/z. */
   function liste(/** @type {number} */ v, /** @type {any} */ o, /** @type {any} */ dep) {
     if (!dep.idx) return null;
@@ -109,12 +120,6 @@ const CALCQUI = (() => {
     gs.push(ad, df);
     return gs.filter(g => g && (g.n > 0 || g.id === "diff" && g.catalogue)).sort((x, y) => x.near - y.near);
   }
-
-  return {
-    st, load, save, set, opts, isHr, pol, arg, gruppi, liste, perdite, diffDa, ppmFor, num, LIMIT,
-    onChange: (/** @type {() => void} */ f) => { subs.push(f); },
-    /** How the choices follow the files while the student has not chosen. */
-    follow: (/** @type {() => boolean} */ hr, /** @type {() => 1 | -1} */ p) => { filesHr = hr; filesPol = p; },
-  };
+  return Object.assign(CALCQUI, { gruppi, liste, perdite });
 })();
 if (typeof module !== "undefined") module.exports = CALCQUI;

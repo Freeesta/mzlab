@@ -20,6 +20,7 @@ declare var CALC: any;
 declare var CALCADD: any;
 declare var CALCADDHTML: any;
 declare var CALCQUI: any;
+declare var CALCQUIG: any;
 declare var CALCQUIHTML: any;
 declare var CAMPIONI: any;
 declare var CARTELLA: any;
