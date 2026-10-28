@@ -60,7 +60,8 @@ export function snapshot() {
 /** A worker tells what only it can see (e.g. {opfsSync: true, offscreen2d: true}). */
 export function nota(/** @type {Partial<Record<Nome, boolean>>} */ cap) {
   Object.assign(state.found, cap); state.done = null; rileva();
-  for (const f of Object.keys(REQUISITI)) if (stato(f) === "no") segnala(f);
+  // only the functions that depend on what the worker just told (the others are reported where they are used)
+  for (const f of Object.keys(REQUISITI)) if (REQUISITI[f].some(n => n in cap) && stato(f) === "no") segnala(f);
 }
 
 /** "si" | "no" | "verifica" (a worker has not told yet: the function stays on). The app (desktop) has the native engine: everything is "si". */

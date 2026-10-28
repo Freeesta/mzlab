@@ -32,9 +32,11 @@ try:
         b = p.chromium.launch(); r.b = b
         def clean():
             pg = load(b)
-            assert pg.evaluate(NOTE) == 0, "notice without cap-off"
+            assert pg.evaluate(NOTE) == 0, "notice without cap-off: " + str(pg.evaluate("[CAPACITA.snapshot(), document.getElementById('cap-live').innerText]"))
             assert all(pg.evaluate(f"CAPACITA.stato('{f}')") != "no" for f in set(FN.values()) if f != "indiceParallelo"), "a function is off in a normal Chromium"
             open_example(pg); assert pg.evaluate(NOTE) == 0, "notice after opening a file"
+            attendi(pg, "CAPACITA.statoCap('opfsSync') !== 'verifica'")            # the engine worker told it in its ready message
+            assert pg.evaluate("CAPACITA.statoCap('opfsSync')") == "si"
         step("no cap-off: no notice, Dati works", clean)
         def cost():
             pg = load(b); xs = sorted(pg.evaluate("[0,1,2,3,4].map(() => { const t = performance.now(); CAPACITA.rileva(true); return performance.now() - t; })"))
