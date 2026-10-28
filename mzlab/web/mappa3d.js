@@ -181,7 +181,7 @@ function dialogHtml({ f, lv, hr, files, others, V, P, prefs, opt }) {
 <div class="rw"><label>${T("m3d.sig")} <input type="range" data-m="sig" min="0" max="4" step="0.5" value="${P.sig}" aria-label="${T("m3d.sig")}"></label></div></details>
 <details open><summary>${T("m3d.g.views")}</summary>
 <div class="rw"><button data-m="v1" title="${T("m3d.v.top.title")}">1 ${T("m3d.v.top")}</button><button data-m="v2" title="${T("m3d.v.rt.title")}">2 ${T("m3d.v.rt")}</button><button data-m="v3" title="${T("m3d.v.mz.title")}">3 ${T("m3d.v.mz")}</button><button data-m="v4">4 ${T("m3d.v.iso")}</button></div>
-<div class="rw"><button data-m="reset" title="R">${T("m3d.reset")} (R)</button><button data-m="png">${T("m3d.png")}</button></div></details></aside>`;
+<div class="rw"><button data-m="reset">${T("m3d.reset")} (R)</button><button data-m="png">${T("m3d.png")}</button></div></details></aside>`;
 }
 
 function blur(/** @type {Float32Array} */ Z, /** @type {number} */ nx, /** @type {number} */ ny, /** @type {number} */ s) {

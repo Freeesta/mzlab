@@ -125,7 +125,7 @@ I18N.add("en", {
   "tbl.pt.info": "Isotopes and masses of the element",
   "tbl.diff.title": "Adduct mass differences",
   "tbl.add.more": "More",
-  "tbl.loss.exactTitle": "Exact mass, from elements.py",
+  "tbl.loss.exactTitle": "Exact mass",
   "tbl.loss.detail": "exact mass <b>{m}</b> · <span class=\"muted\">mechanism:</span> {mech}",
   "tbl.loss.detailLr": "<span class=\"muted\">mechanism:</span> {mech}",
   "tbl.loss.sameShort": "same Δm, unit resolution",
