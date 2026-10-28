@@ -455,7 +455,7 @@ async function drawSpec(p, snapped) {
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m), t = m.toFixed(DEC), w = g.measureText(t).width; if (used.length >= NL || used.some(u => Math.abs(u.x - px) < (u.w + w) / 2 + 8)) continue; used.push({ x: px, w }); const fo = p.fm && p.fm.find((/** @type {Bag} */ z) => Math.abs(z.m - m) < 1e-4), up = fo ? 13 * fz() : 0;   // a formula applied to the peak (candidate, italic) sits between the m/z and the bar
     g.fillText(t, px, y < 0 ? Y(y) + 15 : Y(y) - 4 - up);
     if (fo) { g.save(); g.font = fpx(11, "italic "); g.fillStyle = ecss("--accent"); g.fillText(subText(fo.text), px, Y(y) - 4); g.restore(); }
-    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
+    lbls.push({ m, x: px - w / 2 - 3, y: y < 0 ? Y(y) + 3 : Y(y) - 4 - up - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: (p._a.hov(px) || { html: "" }).html }); }
   g.font = fpx(12);
   contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
   if (window.XICBTN) XICBTN.mark(p, g, X, Y, W, d0);   // the peak chosen for the XIC button
