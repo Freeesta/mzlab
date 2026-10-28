@@ -664,6 +664,22 @@ Q("#calcin").oninput = calcRun;
   const SEL = "[title], [data-tip], [data-tiph]";
   let timer = null, cur = null;
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
+  // draws the tooltip of t: below, else above, else beside it (never over the element it describes); a tooltip made of HTML (data-tiph) wins over the plain text
+  const show = (/** @type {HTMLElement} */ t) => {
+    const txt = t.dataset.tip, html = t.dataset.tiph;
+    if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
+    tip.hidden = false;
+    const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6;
+    const cx = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2));
+    let x = cx, y;
+    if (r.bottom + m + h + m <= innerHeight) y = r.bottom + m;
+    else if (r.top - m - h >= m) y = r.top - m - h;
+    else {
+      y = Math.max(m, Math.min(innerHeight - h - m, r.top));
+      x = r.right + m + w + m <= innerWidth ? r.right + m : Math.max(m, r.left - m - w);
+    }
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  };
   document.addEventListener("mouseover", e => {
     const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
     if (t === cur) return;
@@ -673,24 +689,28 @@ Q("#calcin").oninput = calcRun;
     const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     const delay = t.closest(".fl") ? 1000 : TIP_DELAY;
-    timer = setTimeout(() => {
-      if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
-      tip.hidden = false;
-      // never over the element it describes: below, else above, else beside it (flipped at the edges)
-      const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6;
-      const cx = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2));
-      let x = cx, y;
-      if (r.bottom + m + h + m <= innerHeight) y = r.bottom + m;
-      else if (r.top - m - h >= m) y = r.top - m - h;
-      else {
-        y = Math.max(m, Math.min(innerHeight - h - m, r.top));
-        x = r.right + m + w + m <= innerWidth ? r.right + m : Math.max(m, r.left - m - w);
-      }
-      tip.style.left = x + "px"; tip.style.top = y + "px";
-    }, delay);
+    timer = setTimeout(() => show(t), delay);
   });
   document.addEventListener("mouseout", e => { if (cur && !(e.relatedTarget && cur.contains(e.relatedTarget))) hide(); });
   ["mousedown", "keydown", "wheel"].forEach(ev => document.addEventListener(ev, hide, true));
+  // touch has no hover: a long press (0.6 s) on a button or control shows its tooltip for a moment; the click that follows the release is swallowed. Graphs and file rows keep their long press = right click (touch.js)
+  let lpT = null, lpX = 0, lpY = 0, lpDone = 0;
+  const lpStop = () => { clearTimeout(lpT); lpT = null; };
+  document.addEventListener("pointerdown", e => {
+    lpStop(); if (e.pointerType !== "touch") return;
+    const el = /** @type {HTMLElement} */ (e.target), t = /** @type {HTMLElement | null} */ (el.closest && el.closest(SEL));
+    if (!t || t.closest("dialog[open], canvas, .fl, .pnl .cv")) return;
+    lpX = e.clientX; lpY = e.clientY;
+    lpT = setTimeout(() => {
+      lpT = null;
+      if (t.hasAttribute("title")) { t.dataset.tip = /** @type {string} */ (t.getAttribute("title")); t.removeAttribute("title"); }
+      if (!t.dataset.tip && !t.dataset.tiph) return;
+      show(t); lpDone = Date.now(); cur = t; clearTimeout(timer); timer = setTimeout(hide, 2800);
+    }, 600);
+  }, true);
+  document.addEventListener("pointermove", e => { if (lpT && Math.hypot(e.clientX - lpX, e.clientY - lpY) > 10) lpStop(); }, true);
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, lpStop, true));
+  document.addEventListener("click", e => { if (Date.now() - lpDone < 700) { e.stopPropagation(); e.preventDefault(); lpDone = 0; } }, true);
   addEventListener("scroll", hide, true);
 })();
 // the notes of a graph (spectrum, chromatogram, XIC, MRM) are one undoable action (comandi.js)

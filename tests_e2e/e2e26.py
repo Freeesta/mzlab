@@ -62,6 +62,19 @@ try:
                 assert not ov, ("tooltip overlaps its element", i)
             pg.mouse.move(5, 5)
         step("tooltip never overlaps its element", tipbox)
+        def longpress():
+            # touch has no hover: a long press on a button shows its tooltip; a short one does not
+            btn = pg.locator(".pnl .fsb").first; box = btn.bounding_box(); x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            fire = "(a)=>{const b=document.querySelector('.pnl .fsb');for(const t of a){b.dispatchEvent(new PointerEvent(t,{pointerType:'touch',bubbles:true,cancelable:true,clientX:%f,clientY:%f}))}}" % (x, y)
+            pg.mouse.move(5, 5); hold(pg, 100)
+            pg.evaluate(fire, ["pointerdown"]); hold(pg, 200); pg.evaluate(fire, ["pointerup"])
+            assert pg.evaluate("document.querySelector('#qtip').hidden"), "a short touch must not show the tooltip"
+            pg.evaluate(fire, ["pointerdown"])
+            attendi(pg, "!document.querySelector('#qtip').hidden", 5000)
+            assert "Schermo intero" in pg.inner_text("#qtip")
+            pg.evaluate(fire, ["pointerup"])
+            attendi(pg, "document.querySelector('#qtip').hidden", 8000)
+        step("long press on a button shows its tooltip on touch", longpress)
         def rt():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab===E.tab)"); assert ci >= 0
             pg.evaluate(f"E.panels[{ci}].el.scrollIntoView({{block:'center'}})"); frames(pg, 3)
