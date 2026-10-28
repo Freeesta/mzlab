@@ -74,7 +74,7 @@ I18N.add("it", {
   "ctl.map.scale.lin": "lineare",
   "ctl.map.scale.log": "log",
   "ctl.map.norm.need": "Serve solo per la differenza: scegli prima il file da sottrarre.",
-  "ctl.map.norm.title": "Prima di sottrarre due esperimenti diversi conviene renderli confrontabili: «al massimo» divide ogni mappa per il suo punto più intenso; «al totale» per la somma di tutte le intensità (in per mille). Con «assoluta» si sottraggono i conteggi così come sono.",
+  "ctl.map.norm.title": "Prima di sottrarre due esperimenti: «al massimo» divide ogni mappa per il suo punto più intenso; «al totale» per la somma delle intensità (per mille); «assoluta» sottrae i conteggi così come sono.",
   "ctl.map.norm.abs": "intensità assoluta",
   "ctl.map.norm.max": "normalizza al massimo",
   "ctl.map.norm.tic": "normalizza al totale",
