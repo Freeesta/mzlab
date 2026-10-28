@@ -59,10 +59,12 @@ const LIB = (() => {
   // what the worker is told; `waiting` = a remembered folder that needs a click to be allowed again
   let /** @type {Bag} */ folderMsg = { mode: "opfs" }, /** @type {Promise<void> | null} */ folderInit = null, /** @type {Bag | null} */ waiting = null;
   const folderInfo = { mode: "opfs", name: "", needsGrant: false };
+  // the folder of the computer needs showDirectoryPicker (capacita.js)
+  const folderOk = () => !!(window.CAPACITA ? CAPACITA.ha("cartellaLocale") : true) && !!/** @type {any} */ (window).showDirectoryPicker;
   function folderStart() {
     if (!folderInit) folderInit = (async () => {
       if (window.MZLAB_DESKTOP) { folderMsg = { mode: "native", base: BASE }; folderInfo.mode = "native"; return; }
-      if (/** @type {any} */ (window).showDirectoryPicker && LS.get(NOMI.KEY("lib.cartella")) === "fs") {
+      if (folderOk() && LS.get(NOMI.KEY("lib.cartella")) === "fs") {
         const h = await dirGet();
         if (h) {
           let perm = "prompt"; try { perm = await h.queryPermission({ mode: "readwrite" }); } catch (e) { /* old handle */ }
@@ -111,7 +113,7 @@ const LIB = (() => {
       const input = d.querySelector("#lib-file"), dirin = d.querySelector("#lib-dirin"), drop = d.querySelector("#lib-drop");
       d.querySelector("#lib-pick").onclick = () => input.click();
       d.querySelector("#lib-pickdir").onclick = () => dirin.click();
-      d.querySelector("#lib-fchoose").onclick = async () => { try { await chooseFolder(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e && e.name !== "AbortError") d.querySelector("#lib-st").innerHTML = `<div class="err">${EHt(e.message)}</div>`; } refresh(); };
+      d.querySelector("#lib-fchoose").onclick = async (/** @type {Event} */ ev) => { if (!T() && !folderOk()) { CAPACITA.serve("cartella", /** @type {HTMLElement} */ (ev.currentTarget)); return; } try { await chooseFolder(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e && e.name !== "AbortError") d.querySelector("#lib-st").innerHTML = `<div class="err">${EHt(e.message)}</div>`; } refresh(); };
       d.querySelector("#lib-fgrant").onclick = async () => { await grantOnce(); refresh(); };
       d.querySelector("#lib-fbrowser").onclick = async () => { await useBrowserFolder(); refresh(); };
       d.querySelector("#lib-fscan").onclick = () => refresh();
@@ -136,8 +138,8 @@ const LIB = (() => {
       const r = await call("list"), L = r.libs, V = r.voci || [], inV = new Set(V.map((/** @type {Bag} */ v) => v.id));
       const f = r.folder || { mode: folderInfo.mode, name: "" };
       d.querySelector("#lib-fwhere").innerHTML = `<b>${EHt(f.mode === "native" ? I18N.t("lib.folder.native", { name: f.name }) : f.mode === "fs" ? I18N.t("lib.folder.fs", { name: folderInfo.name || f.name }) : I18N.t("lib.folder.opfs"))}</b>${r.folderError ? ` · <span class="err">${EHt(I18N.t("lib.folder.error", { name: r.folderError }))}</span>` : ""}`;
-      const bc = d.querySelector("#lib-fchoose"); bc.hidden = !(T() || /** @type {any} */ (window).showDirectoryPicker); bc.textContent = I18N.t(T() ? "lib.folder.change" : "lib.folder.choose");
-      d.querySelector("#lib-fgrant").hidden = !folderInfo.needsGrant; d.querySelector("#lib-fbrowser").hidden = !(/** @type {any} */ (window).showDirectoryPicker && !T() && (folderInfo.mode === "fs" || folderInfo.needsGrant));
+      const bc = d.querySelector("#lib-fchoose"); bc.hidden = false; if (!T() && !folderOk()) CAPACITA.serve("cartella", bc); bc.textContent = I18N.t(T() ? "lib.folder.change" : "lib.folder.choose");
+      d.querySelector("#lib-fgrant").hidden = !folderInfo.needsGrant; d.querySelector("#lib-fbrowser").hidden = !(folderOk() && !T() && (folderInfo.mode === "fs" || folderInfo.needsGrant));
       d.querySelector("#lib-fnote").textContent = f.mode === "opfs" ? I18N.t("lib.folder.noteOpfs") : "";
       toIndex = V.filter((/** @type {Bag} */ v) => v.tipo === "sorgente" && (v.stato === "da_indicizzare" || v.stato === "danneggiata")).map((/** @type {Bag} */ v) => v.nome);
       d.querySelector("#lib-fall").hidden = toIndex.length < 2;

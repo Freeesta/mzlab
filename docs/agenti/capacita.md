@@ -1,0 +1,8 @@
+# Capacità del browser e avviso comune
+
+- `capacita.js` (modulo ES, primo della lista di `carica.js`; `window.CAPACITA` per gli script classici): feature detection, mai lo user agent; sonde della pagina una volta per caricamento (≈0,1 ms), niente salvato, la funzione torna da sola quando il browser la supporta.
+- Nomi: `simd128`, `opfs`, `opfsSync`, `cartellaLocale`, `webgl2`, `isolamento`, `offscreen2d`, `locks`. `opfsSync` e `offscreen2d` vivono solo nei worker: li riporta il worker del motore in `ready.cap` (`rust-bridge.js` → `nota()`); finché non arriva la capacità è «in verifica» e la funzione resta accesa.
+- `REQUISITI`: funzione → capacità (`motore`: simd128+opfs+opfsSync; `cartella`: cartellaLocale; `mappa3d`: webgl2; `indiceParallelo`: isolamento). Una funzione si spegne solo se manca una SUA capacità. `serve(funzione, comando)` → true, oppure false con l'avviso.
+- `avviso-capacita.js`: `aria-disabled` sul comando, nota `cap.missing` con il link all'app accanto, una riga riassuntiva in `#cap-live` (`aria-live=polite`); colori da variabili CSS. Nell'app desktop tutto è «si» (motore nativo).
+- Prova: `?cap-off=nome1,nome2` o `MZLAB_CAP_OFF` (assorbe `MZLAB_NO_SIMD`). Test: `e2e_capacita`.
+- Punti collegati: motore (`rust-bridge.js` `start`), cartella puntata (`cartella-puntata.js` `supported`), cartella delle librerie (`libreria.js` `folderOk`), mappa 3D (`mappa.js` `open3d`). Restano ripieghi decisi da Federico (OPFS al posto della cartella, `FileReaderSync`, `nowebgl2` di un contesto che poi non si crea).
