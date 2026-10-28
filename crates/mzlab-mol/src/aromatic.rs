@@ -69,11 +69,13 @@ impl<'a> Graph<'a> {
             m,
             adj,
             in_ring: vec![false; m.atoms.len()],
+            ring_bond: vec![false; m.bonds.len()],
             rings: Vec::new(),
         };
         g.rings = g.find_rings();
         for r in &g.rings {
             r.atoms.iter().for_each(|&a| g.in_ring[a] = true);
+            r.bonds.iter().for_each(|&b| g.ring_bond[b] = true);
         }
         g
     }
@@ -147,16 +149,17 @@ impl<'a> Graph<'a> {
         if at.rad != 0 || !self.in_ring[a] {
             return None;
         }
-        let double: Vec<usize> = self.adj[a]
+        let double: Vec<(usize, usize)> = self.adj[a]
             .iter()
             .filter(|&&(_, k)| self.m.bonds[k].o == 2)
-            .map(|&(v, _)| v)
+            .copied()
             .collect();
         if self.adj[a].iter().any(|&(_, k)| self.m.bonds[k].o == 3) || double.len() > 1 {
             return None;
         }
-        if let Some(&v) = double.first() {
-            if self.in_ring[v] {
+        if let Some(&(v, k)) = double.first() {
+            // a double bond that lies on a ring counts; one that only links two ring atoms (a bridge between separate rings) is exocyclic
+            if self.ring_bond[k] {
                 return Some(1);
             }
             let exo = self.m.atoms[v].el.as_str();
@@ -183,6 +186,8 @@ struct Graph<'a> {
     /// (neighbour, bond index)
     adj: Vec<Vec<(usize, usize)>>,
     in_ring: Vec<bool>,
+    /// For every bond: whether it lies on a ring.
+    ring_bond: Vec<bool>,
     rings: Vec<Ring>,
 }
 
