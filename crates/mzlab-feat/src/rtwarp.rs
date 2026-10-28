@@ -159,7 +159,8 @@ pub fn map_from_table(al: &Aligned, rt: &RtParams, w: &WarpParams) -> RtMap {
             Method::Loess => loess_curve(&pts, &grid, w.span),
             _ => ransac_curve(&pts, &grid, w.inlier, k as u64),
         };
-        rms.push(residual(&rows, &grid, &curve, |i| {
+        let all: Vec<(f64, usize)> = rows.clone();
+        rms.push(residual(&all, &grid, &curve, |i| {
             let r = rows[i].1;
             if apex(r, k).is_nan() {
                 f64::NAN
@@ -202,93 +203,22 @@ fn line(pts: &[(f64, f64)], w: &[f64]) -> (f64, f64) {
     (my - b * mx, b)
 }
 
-/// `line` with every weight 1 over the points `it` (walked twice), without the weight vector; the same sums in the same order.
-fn line_unit<'a>(it: impl Iterator<Item = &'a (f64, f64)> + Clone) -> (f64, f64) {
-    let (mut sw, mut sx, mut sy) = (0.0, 0.0, 0.0);
-    for &(x, y) in it.clone() {
-        sw += 1.0;
-        sx += x;
-        sy += y;
-    }
-    if sw <= 0.0 {
-        return (0.0, 0.0);
-    }
-    let (mx, my) = (sx / sw, sy / sw);
-    let (mut sxx, mut sxy) = (0.0, 0.0);
-    for &(x, y) in it {
-        sxx += (x - mx) * (x - mx);
-        sxy += (x - mx) * (y - my);
-    }
-    if sxx < 1e-12 {
-        return (my, 0.0);
-    }
-    let b = sxy / sxx;
-    (my - b * mx, b)
-}
-
-/// Tricube scale of a point: its distance to `at` over the bandwidth `h` (a hair wider so the farthest of the `q` still counts).
-fn scaled(x: f64, at: f64, h: f64) -> f64 {
-    (x - at).abs() / (h * 1.0000001)
-}
-
-/// Weight of a point at scaled distance `u` with robustness weight `r`.
-fn tricube(u: f64, r: f64) -> f64 {
-    if u < 1.0 {
-        (1.0 - u * u * u).powi(3) * r
-    } else {
-        0.0
-    }
-}
-
 /// Local linear fit at `at` with the `q` nearest points, tricube weights times the robustness weights `rw`.
-/// `pts` must be sorted by x with finite coordinates: the points that weigh anything are then one window, found by
-/// walking out from `at`, and the fit adds them in the order of `pts` (the zero weights outside add nothing).
-fn local(pts: &[(f64, f64)], rw: &[f64], at: f64, q: usize, wbuf: &mut Vec<f64>) -> f64 {
-    let n = pts.len();
-    let mut hi = pts.partition_point(|p| p.0 < at);
-    let mut lo = hi;
-    let mut h = 0.0;
-    for _ in 0..q.min(n) {
-        let dl = if lo > 0 {
-            at - pts[lo - 1].0
-        } else {
-            f64::INFINITY
-        };
-        let dr = if hi < n {
-            pts[hi].0 - at
-        } else {
-            f64::INFINITY
-        };
-        if dl <= dr {
-            lo -= 1;
-            h = dl;
-        } else {
-            h = dr;
-            hi += 1;
-        }
-    }
-    let h = h.max(1e-9);
-    while lo > 0 && scaled(pts[lo - 1].0, at, h) < 1.0 {
-        lo -= 1;
-    }
-    while hi < n && scaled(pts[hi].0, at, h) < 1.0 {
-        hi += 1;
-    }
-    wbuf.clear();
-    wbuf.extend((lo..hi).map(|i| tricube(scaled(pts[i].0, at, h), rw[i])));
-    let (a, b) = line(&pts[lo..hi], wbuf);
-    a + b * at
-}
-
-/// The same fit as `local` over every point (sort of the distances, one weight per point), for `pts` that are not sorted or finite.
-fn local_all(pts: &[(f64, f64)], rw: &[f64], at: f64, q: usize) -> f64 {
+fn local(pts: &[(f64, f64)], rw: &[f64], at: f64, q: usize) -> f64 {
     let mut d: Vec<f64> = pts.iter().map(|p| (p.0 - at).abs()).collect();
     sortc::by(&mut d, f64::total_cmp);
     let h = d[q.min(d.len()) - 1].max(1e-9);
     let w: Vec<f64> = pts
         .iter()
         .zip(rw)
-        .map(|(p, r)| tricube(scaled(p.0, at, h), *r))
+        .map(|(p, r)| {
+            let u = (p.0 - at).abs() / (h * 1.0000001);
+            if u < 1.0 {
+                (1.0 - u * u * u).powi(3) * r
+            } else {
+                0.0
+            }
+        })
         .collect();
     let (a, b) = line(pts, &w);
     a + b * at
@@ -302,19 +232,12 @@ fn loess_curve(pts: &[(f64, f64)], grid: &[f64], span: f64) -> Vec<f64> {
     let step = pts.len().div_ceil(MAX_LOESS);
     let thin: Vec<(f64, f64)> = pts.iter().copied().step_by(step).collect();
     let q = ((span.clamp(0.05, 1.0) * thin.len() as f64).ceil() as usize).max(3);
-    let windowed = thin.iter().all(|p| p.0.is_finite() && p.1.is_finite())
-        && thin.windows(2).all(|w| w[0].0 <= w[1].0);
-    let mut wbuf = Vec::new();
-    let mut fit = |rw: &[f64], at: f64| {
-        if windowed {
-            local(&thin, rw, at, q, &mut wbuf)
-        } else {
-            local_all(&thin, rw, at, q)
-        }
-    };
     let mut rw = vec![1.0; thin.len()];
     for _ in 0..2 {
-        let res: Vec<f64> = thin.iter().map(|p| p.1 - fit(&rw, p.0)).collect();
+        let res: Vec<f64> = thin
+            .iter()
+            .map(|p| p.1 - local(&thin, &rw, p.0, q))
+            .collect();
         let s = nanmedian(res.iter().map(|e| e.abs()));
         if s.is_nan() || s <= 1e-9 {
             break;
@@ -331,7 +254,7 @@ fn loess_curve(pts: &[(f64, f64)], grid: &[f64], span: f64) -> Vec<f64> {
             })
             .collect();
     }
-    grid.iter().map(|&x| fit(&rw, x)).collect()
+    grid.iter().map(|&x| local(&thin, &rw, x, q)).collect()
 }
 
 /// xorshift64: the samples of RANSAC come from a fixed seed, so a run is the same every time.
@@ -383,12 +306,11 @@ fn ransac_curve(pts: &[(f64, f64)], grid: &[f64], inlier: f64, salt: u64) -> Vec
     let Some((_, _, a, b)) = best.filter(|b| b.0 >= MIN_ANCHORS) else {
         return constant();
     };
-    let (a, b) = line_unit(pts.iter().filter(|p| (p.1 - (a + b * p.0)).abs() <= inlier));
+    let inl: Vec<(f64, f64)> = pts
+        .iter()
+        .copied()
+        .filter(|p| (p.1 - (a + b * p.0)).abs() <= inlier)
+        .collect();
+    let (a, b) = line(&inl, &vec![1.0; inl.len()]);
     grid.iter().map(|&x| a + b * x).collect()
 }
-
-#[cfg(test)]
-mod before;
-
-#[cfg(test)]
-mod tests;

@@ -170,8 +170,8 @@ fn split_slab(
             }
         }
     }
-    items.clear();
-    items.extend(sorted.iter().map(|x| x.1));
+    // A fresh vector, not a reuse of `items`: freeing the old slab buffer here keeps the peak of the wasm memory (tests/test_guardie_memoria.py) where it was.
+    *items = sorted.iter().map(|x| x.1).collect();
     if let Some(gap) = p.split_gap {
         groups = split_duplicates(files.len(), &sorted, groups, gap)?;
     }
