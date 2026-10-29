@@ -12,6 +12,7 @@ pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
 pub mod modi;
+pub mod nomi;
 #[cfg(feature = "estesi")]
 mod bpc;
 mod run;
