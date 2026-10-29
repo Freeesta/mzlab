@@ -127,8 +127,15 @@
   /** the state of the grid, the columns, the text of a cell and the findings of `valida` @param {any} mg */
   const installState = mg => {
     const { el } = F;
-    Object.assign(mg, { doc: emptyDoc(), ver: 0, timer: 0, warns: new Map(), pairRows: new Set(), view: [], gidx: [], sort: null, group: "", filters: [], act: { r: 0, c: 0 }, anc: { r: 0, c: 0 }, editing: null, hasFocus: false, summary: "" });
+    Object.assign(mg, { doc: emptyDoc(), ver: 0, timer: 0, warns: new Map(), pairRows: new Set(), view: [], gidx: [], sort: null, group: "", filters: [], act: { r: 0, c: 0 }, anc: { r: 0, c: 0 }, editing: null, hasFocus: false, summary: "", guessed: new Set() });
     mg.say = el("p", { class: "fl-note", role: "status" });
+    // one click: every time read from a file name counts as confirmed (the check runs again and the count goes away)
+    mg.confirm = F.btn("ok", "Mark every time guessed from the file names as confirmed", () => {
+      const rows = [...mg.guessed]; if (!rows.length) return;
+      mg.commit(mg.patch(mg.doc, rows.map((/** @type {number} */ i) => [i, { ...mg.doc.campioni[i], tempo_confermato: true }])));
+      mg.say.textContent = `${rows.length} guessed time${rows.length === 1 ? "" : "s"} confirmed.`;
+    }, "Confirm guesses");
+    mg.confirm.hidden = true; mg.confirm.style.alignSelf = "flex-start";
     mg.note = el("p", { class: "fl-note", role: "status", "aria-live": "polite" });
     mg.cols = () => [...FIXED, ...mg.doc.colonne.map((/** @type {any} */ c) => ({ id: "x:" + c.nome, label: c.nome, w: 110, kind: c.tipo === "categoria" ? "xcat" : c.tipo === "numero" ? "xnum" : "text", opts: c.valori }))].concat(FROMFILE);
 
@@ -180,15 +187,19 @@
 
     /** the findings of `valida` by cell: row|column id @param {any} avvisi */
     mg.indexWarns = avvisi => {
-      mg.warns = new Map(); mg.pairRows = new Set(); let e = 0, w = 0, n = 0; const series = /** @type {string[]} */ ([]);
+      mg.warns = new Map(); mg.pairRows = new Set(); mg.guessed = new Set(); let e = 0, w = 0; const series = /** @type {string[]} */ ([]);
       for (const a of avvisi) {
-        if (a.gravita === "error") e++; else if (a.gravita === "warning") w++; else n++;
+        if (a.gravita === "error") e++; else if (a.gravita === "warning") w++;
+        if (a.codice === "timeUnconfirmed" && a.file != null) mg.guessed.add(a.file);
         if (a.file == null) { if (a.gravita !== "info") series.push(`${MSG[a.codice] || a.codice}${a.serie ? " in " + a.serie : ""}`); continue; }
         const col = a.colonna ? (FIXED.some(f => f.id === a.colonna) ? a.colonna : "x:" + a.colonna) : CELL_OF[a.codice] || "file", k = a.file + "|" + col;
         mg.warns.set(k, [...(mg.warns.get(k) || []), { code: a.codice, sev: a.gravita }]);
         if (a.codice === "pairMissing") mg.pairRows.add(a.file);
       }
-      mg.summary = `${e} errors, ${w} warnings, ${n} notes.` + (series.length ? " " + [...new Set(series)].join("; ") + "." : "");
+      const u = mg.guessed.size, other = Math.max(0, e - u), plural = (/** @type {number} */ k) => (k === 1 ? "" : "s");
+      const said = [u ? `${u} time${plural(u)} guessed from file names: check ${u === 1 ? "it" : "them"}.` : "", other ? `${other} other problem${plural(other)} to fix.` : "", w ? `${w} warning${plural(w)}.` : ""].filter(Boolean);
+      mg.summary = (said.length ? said.join(" ") : "No problems found.") + (series.length ? " " + [...new Set(series)].join("; ") + "." : "");
+      mg.confirm.hidden = !u;
     };
     mg.warnsOf = (/** @type {number} */ row, /** @type {string} */ col) => mg.warns.get(row + "|" + col) || [];
   };
@@ -457,7 +468,7 @@
       F.btn("search", "Fill the grid from the file names with a pattern", mg.patternPanel, "Fill from name pattern…"), F.btn("flow", "Add, rename, retype or delete free columns", mg.columnsPanel, "Columns…"),
       F.btn("import", "Read a CSV or TSV table", () => mg.fileIn.click(), "Import CSV"), mg.fileIn, mg.sepSel, F.btn("export", "Download the grid as CSV", mg.exportCsv, "Export CSV"),
       F.btn("export", "Download the sample list as JSON", () => { const j = mg.S.samplesJson && mg.S.samplesJson[mg.input.name]; if (j) G.ATTRIBUTIO_CORE.download(mg.input.name, j, "application/json"); }, "Download JSON"), el("span", { class: "fl-note", text: "SHA-256 " }), mg.sha);
-    mg.root.append(mg.bar, el("div", { class: "mg-bar" }, mg.groupSel, el("label", { class: "fl-note" }, "Filter: ", mg.fcol), mg.ftext, F.btn("plus", "Add the filter", mg.addFilter, "Filter")), mg.chips, mg.panel, mg.say,
+    mg.root.append(mg.bar, el("div", { class: "mg-bar" }, mg.groupSel, el("label", { class: "fl-note" }, "Filter: ", mg.fcol), mg.ftext, F.btn("plus", "Add the filter", mg.addFilter, "Filter")), mg.chips, mg.panel, mg.say, mg.confirm,
       el("p", { class: "fl-note", text: "Arrows move, Enter or typing edits, Tab moves right while editing, Ctrl+D fills down, Ctrl+V pastes a block from a spreadsheet." }), mg.sc, mg.note);
 
     // start: the document of the plan, else the files open in Data (the grid opens by itself)
