@@ -293,9 +293,10 @@ impl Lettore for LettoreAndi {
             .iter()
             .filter(|v| v.dims == sx.dims && v.tipo != super::netcdf::Tipo::Char)
         {
-            let x = self
+            let mut x = self
                 .cdf
                 .leggi(&mut self.dati, &self.limiti, v, k as u64, 1)?;
+            scala(&mut x, v);
             out.push(Campo {
                 nome: v.nome.clone(),
                 valore: x.first().map(|x| x.to_string()).unwrap_or_default(),
