@@ -28,7 +28,6 @@ OFF = 0.3                       # instrument m/z offset seen in the lab files
 TIMES = [0, 5, 10, 15, 30, 45, 60]
 STANDARDS = {"0_06": 0.06, "0_6": 0.6, "2_4": 2.4, "7_2": 7.2, "12": 12.0, "18": 18.0}
 
-
 def _libm(f):
     """numpy's exp/log/sin/power choose SIMD code by CPU (AVX-512 or not) and may differ in the last bit; the scalar libm is the same
     on every runner, so the files, their SHA-256 (the keys of tests/golden/e2e) and the golden answers do not depend on the machine."""
