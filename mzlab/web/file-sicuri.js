@@ -20,6 +20,22 @@ const FILESICURI = (() => {
     return max;
   }
 
+  /** Number of JSON values in `text` (the root, every array element and every object member value), counted outside strings without recursion:
+   * the root, plus one per comma, plus one per non-empty container. Same count as the calls of a JSON.parse reviver on valid JSON.
+   * @type {(text: string) => number} */
+  function countNodes(text) {
+    let n = 1, inStr = false, prev = 0;
+    for (let i = 0; i < text.length; i++) {
+      const c = text.charCodeAt(i);
+      if (inStr) { if (c === 92) i++; else if (c === 34) inStr = false; continue; }
+      if (c === 34) inStr = true;
+      else if (c === 44) n++;
+      else if ((c === 93 && prev !== 91) || (c === 125 && prev !== 123)) n++;
+      if (c !== 32 && c !== 9 && c !== 10 && c !== 13) prev = c;
+    }
+    return n;
+  }
+
   /** Error whose message is the reason code and whose `key` is the i18n key of its text.
    * @type {(code: "tooBig" | "tooDeep") => Error & { key: string }} */
   const fail = code => Object.assign(new Error(code), { key: "workflow.err." + code });
@@ -31,6 +47,13 @@ const FILESICURI = (() => {
     const { maxBytes = MAX_BYTES, maxDepth = MAX_DEPTH, maxNodes = MAX_NODES } = lim;
     if (typeof text !== "string" || text.length > maxBytes) throw fail("tooBig");
     if (depthOf(text) > maxDepth) throw fail("tooDeep");
+    // Fast path: without a backslash a forbidden key can only be written literally, so a text that holds none of the names needs no reviver
+    // (a JSON escape such as \u005f would hide the name from the search, hence the backslash test); the node cap is then counted by countNodes
+    if (!text.includes("\\") && !/__proto__|constructor|prototype/.test(text)) {
+      const v = JSON.parse(text);
+      if (countNodes(text) > maxNodes) throw fail("tooBig");
+      return v;
+    }
     let n = 0;
     return JSON.parse(text, function (k, v) {
       if (++n > maxNodes) throw fail("tooBig");
@@ -70,5 +93,5 @@ const FILESICURI = (() => {
   /** @type {(v: any, lo: number, hi: number) => number | null} */
   const num = (v, lo, hi) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : null;
 
-  return { parse, readJson, readText, assignKnown, num, depthOf };
+  return { parse, readJson, readText, assignKnown, num, depthOf, countNodes };
 })();
