@@ -456,6 +456,7 @@ declare var flCompact: any;
 declare var flGrpGet: any;
 declare var flGrpSet: any;
 declare var flowOpen: any;
+declare var flushAll: any;
 declare var fmt: any;
 declare var fmt2: any;
 declare var fmtA: any;
