@@ -66,7 +66,7 @@ impl Write for BlockWriter {
 /// The error as the JSON text the page parses; strings go through `json::Out::str`, so control characters are valid `\u0001`.
 fn error_text(e: &mzlab_core::Error) -> String {
     let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"error_key\":").str(&e.key).raw(",\"params\":{");
+    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
     for (i, (k, v)) in e.params.iter().enumerate() {
         if i > 0 {
             o.raw(",");
