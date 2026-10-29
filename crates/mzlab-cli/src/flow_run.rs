@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::Error;
 use mzlab_core::flow::{
-    canonical, execute, parse, plan_order, prov_json, Agent, Job, Plan, Platform, Problem, Run,
+    build_agent, canonical, execute, parse, plan_order, prov_json, Agent, Job, Plan, Platform,
+    Problem, Run,
 };
 use mzlab_core::step::Step;
 
@@ -195,14 +196,17 @@ pub(crate) fn problem_text(p: &Problem) -> String {
     format!("{}{dot}{}:{}", p.instance, p.port, p.error_key)
 }
 
-/// The program that ran: version of the crate and, when the build knows it (`MZLAB_COMMIT`), the commit.
+/// The program that ran: the keys of `build_agent` and the SHA-256 of this executable as module `mzlab-cli` (left out when it can't be read).
 fn agent() -> Agent {
-    Agent {
-        name: "mzLab".into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-        commit: option_env!("MZLAB_COMMIT").map(str::to_string),
-        platform: Platform::current().name(),
+    let mut a = build_agent("mzLab");
+    if let Some(sha) = std::env::current_exe()
+        .ok()
+        .and_then(|p| std::fs::read(p).ok())
+        .map(|b| sha256_hex(&b))
+    {
+        a.modules.push(("mzlab-cli".into(), sha));
     }
+    a
 }
 
 /// Runs a checked `plan` with `runner`; returns the run and its `prov/1` text (`plan_sha256` of the text the plan was read from).

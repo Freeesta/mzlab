@@ -131,6 +131,16 @@ fn reports(out: &Path, plan: &str) -> Vec<String> {
     jobs
 }
 
+/// `modules` (the SHA-256 of the executable) is the one key only the CLI writes: the page passes the hashes of its own `.wasm`.
+fn without_modules(text: &str) -> String {
+    let from = text.find(",\"modules\":{").unwrap();
+    format!(
+        "{}{}",
+        &text[..from],
+        &text[from + text[from..].find('}').unwrap() + 1..]
+    )
+}
+
 #[test]
 fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
     let (dir, _) = fixture("record");
@@ -153,15 +163,41 @@ fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
         .raw(&reports(&out, &plan).join(","))
         .raw("]}");
     let prov = mzlab_core::flow::sched_route("record_prov", &body.0).unwrap();
-    let native = std::fs::read_to_string(out.join("prov.json")).unwrap();
+    let native = without_modules(&std::fs::read_to_string(out.join("prov.json")).unwrap());
     assert_eq!(untimed(&prov), untimed(&native));
     let mut c = Out::default();
     c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
     let corsa = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
-    let native = std::fs::read_to_string(out.join("corsa.json")).unwrap();
+    let native = without_modules(&std::fs::read_to_string(out.join("corsa.json")).unwrap());
     assert_eq!(untimed(&corsa), untimed(&native));
     assert!(matches!(
         mzlab_core::json::parse(prov.as_bytes()),
         Ok(Value::Obj(_))
     ));
+}
+
+#[test]
+fn prov_names_the_executable_that_ran() {
+    let (dir, _) = fixture("module");
+    let out = dir.join("out");
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&out),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let prov =
+        mzlab_core::json::parse(std::fs::read(out.join("prov.json")).unwrap().as_slice()).unwrap();
+    let exe = std::fs::read(std::env::current_exe().unwrap()).unwrap();
+    let agent = prov.get("agent").unwrap();
+    assert_eq!(
+        agent
+            .get("modules")
+            .and_then(|m| m.get("mzlab-cli"))
+            .and_then(|s| s.str()),
+        Some(mzlab_core::budget::sha256_hex(&exe).as_str())
+    );
+    assert!(agent.get("target").is_some());
 }
