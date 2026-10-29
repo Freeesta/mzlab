@@ -1,0 +1,215 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "mzrun/1",
+ "title": "mzrun/1: one analysis, as a record or as a preset",
+ "description": "The file `*.mzrun.json`: ONE canonical JSON (docs/agenti/mzrun.md) in two modes. `record` replicates a run exactly (plan, every resolved parameter, input fingerprints, resources, decisions, prov/1, result digests); `preset` keeps the parameters only, with file-role slots instead of files, and starts a new analysis. `plan` is the `mzflow/2` object and `prov` the `prov/1` object of docs/studi/workflow/contract.schema.json, verbatim. No lab data, no personal names, no absolute paths.",
+ "type": "object",
+ "required": ["schema", "kind", "min_reader", "self_sha256", "engine", "plan", "plan_sha256", "resolved", "resources", "seeds", "revisions", "limits"],
+ "properties": {
+  "schema": {"const": "mzrun/1"},
+  "kind": {"enum": ["record", "preset"]},
+  "min_reader": {"type": "integer", "minimum": 1, "description": "the lowest schema version that reads this file; a reader below it opens it read-only (error.newerFormat)"},
+  "self_sha256": {"$ref": "#/$defs/sha256", "description": "SHA-256 of the canonical text of this object with this key removed: the fingerprint of the file"},
+  "engine": {"$ref": "#/$defs/engine"},
+  "plan": {"$ref": "workflow-contract/1-draft#/$defs/mzflow2", "description": "the mzflow/2 object, verbatim; in a preset the inputs are slots (name = slot, sha256 = 64 zeros, steps read file:SLOT)"},
+  "plan_sha256": {"$ref": "#/$defs/sha256"},
+  "resolved": {
+   "type": "object",
+   "description": "instance -> every parameter, canonical: mzflow/2 keeps only the differences from the defaults",
+   "additionalProperties": {
+    "type": "object",
+    "required": ["step", "params"],
+    "properties": {
+     "step": {"$ref": "#/$defs/stepId"},
+     "algorithm": {"$ref": "#/$defs/algorithmId"},
+     "preset": {"type": "string"},
+     "params": {"type": "object"},
+     "pin": {"type": "object", "additionalProperties": {"enum": ["fixed", "estimate"]}, "description": "parameter -> fixed (the user's value) or estimate (the step estimates it again)"},
+     "estimates": {"type": "object", "description": "parameter -> proof of the estimate"}
+    },
+    "additionalProperties": false
+   }
+  },
+  "inputs": {"type": "array", "description": "record only", "items": {"$ref": "#/$defs/input"}},
+  "slots": {"type": "array", "description": "preset only", "items": {"$ref": "#/$defs/slot"}},
+  "roles_sha256": {"$ref": "#/$defs/sha256", "description": "digest of the campioni/2 document (record)"},
+  "resources": {"type": "array", "items": {"$ref": "#/$defs/resource"}},
+  "seeds": {"type": "object", "description": "instance.param -> integer", "additionalProperties": {"type": "integer"}},
+  "decisions": {"type": "array", "description": "the manual acts of the chemist, in order", "items": {"$ref": "#/$defs/decision"}},
+  "revisions": {"type": "integer", "minimum": 0, "description": "how many times the parameters changed during the run"},
+  "plan_chain": {"type": "array", "items": {"$ref": "#/$defs/sha256"}, "description": "plan_sha256 of every revision, in order"},
+  "runs": {"type": "array", "description": "sub-records of a run per polarity (ESI+ and ESI- are two templates merged at the end)", "items": {"$ref": "#/$defs/subrecord"}},
+  "merge": {
+   "type": "object",
+   "required": ["instance", "params", "params_sha256"],
+   "properties": {"instance": {"type": "string"}, "params": {"type": "object"}, "params_sha256": {"$ref": "#/$defs/sha256"}},
+   "additionalProperties": false
+  },
+  "prov": {"$ref": "workflow-contract/1-draft#/$defs/prov1", "description": "record only"},
+  "results": {"$ref": "#/$defs/results", "description": "record only"},
+  "limits": {"type": "array", "items": {"$ref": "#/$defs/limit"}},
+  "compat": {"$ref": "#/$defs/compat"},
+  "related": {
+   "type": "object",
+   "properties": {"doi": {"type": "string", "pattern": "^10\\.[0-9]{4,9}/\\S+$"}, "source_record_sha256": {"$ref": "#/$defs/sha256"}},
+   "additionalProperties": false
+  }
+ },
+ "additionalProperties": false,
+ "allOf": [
+  {
+   "if": {"properties": {"kind": {"const": "record"}}, "required": ["kind"]},
+   "then": {"required": ["inputs", "prov", "results", "roles_sha256", "decisions"], "not": {"required": ["slots"]}}
+  },
+  {
+   "if": {"properties": {"kind": {"const": "preset"}}, "required": ["kind"]},
+   "then": {"required": ["slots"], "not": {"anyOf": [{"required": ["inputs"]}, {"required": ["prov"]}, {"required": ["results"]}]}}
+  }
+ ],
+ "$defs": {
+  "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+  "name": {"type": "string", "minLength": 1, "pattern": "^(?![/~\\\\]|[A-Za-z]:[\\\\/]).+$", "description": "no absolute path: a leading /, ~, backslash or drive letter is refused"},
+  "stepId": {"type": "string", "pattern": "^[a-z]+(\\.[a-z][a-z0-9_]*)+@[0-9]+$"},
+  "algorithmId": {"type": "string", "pattern": "^[a-z][a-z0-9_]*@[0-9]+$"},
+  "engine": {
+   "type": "object",
+   "description": "the engine that wrote the file (in a preset: the origin)",
+   "required": ["name", "version", "commit", "platform"],
+   "properties": {
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "platform": {"enum": ["wasm", "native"]},
+    "target": {"type": "string"},
+    "rustc": {"type": "string"},
+    "cargo_lock_sha256": {"$ref": "#/$defs/sha256"},
+    "modules": {"type": "object", "description": "module name -> SHA-256 of its .wasm or native binary", "additionalProperties": {"$ref": "#/$defs/sha256"}}
+   },
+   "additionalProperties": false
+  },
+  "input": {
+   "type": "object",
+   "required": ["alias", "sha256", "bytes", "type", "role"],
+   "properties": {
+    "alias": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_+.-]{0,63}$", "description": "S01, BLK_P1...: no path, no URL"},
+    "name": {"$ref": "#/$defs/name", "description": "the original file name, optional"},
+    "sha256": {"$ref": "#/$defs/sha256"},
+    "bytes": {"type": "integer", "minimum": 0},
+    "type": {"$ref": "workflow-contract/1-draft#/$defs/dataType"},
+    "role": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"], "description": "tipo of campioni/2"},
+    "tipo_bianco": {"enum": ["solvent", "procedure", "wash", null]},
+    "polarity": {"enum": ["+", "-"]},
+    "injection_order": {"type": "integer", "minimum": 1},
+    "replicate": {"type": "integer", "minimum": 1},
+    "series": {"type": "string"},
+    "raw_sha256": {"$ref": "#/$defs/sha256", "description": "the vendor file this input was converted from"},
+    "converter": {
+     "type": "object",
+     "required": ["name", "version"],
+     "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "image_digest": {"type": "string"}},
+     "additionalProperties": false
+    }
+   },
+   "additionalProperties": false
+  },
+  "slot": {
+   "type": "object",
+   "required": ["slot", "type", "role"],
+   "properties": {
+    "slot": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$", "description": "e.g. blank.procedure"},
+    "type": {"$ref": "workflow-contract/1-draft#/$defs/dataType"},
+    "role": {"enum": ["sample", "t0", "blank", "dark", "infusion", "std", "calibration", "qc"]},
+    "polarity": {"enum": ["+", "-"]},
+    "min": {"type": "integer", "minimum": 0},
+    "max": {"type": "integer", "minimum": 1}
+   },
+   "additionalProperties": false
+  },
+  "resource": {
+   "type": "object",
+   "required": ["kind", "id", "version", "sha256", "bytes", "builtin"],
+   "properties": {
+    "kind": {"enum": ["library", "suspects", "adducts", "transformations", "rules", "other"]},
+    "id": {"$ref": "#/$defs/name"},
+    "version": {"type": "string"},
+    "licence": {"type": "string"},
+    "url": {"type": "string", "pattern": "^https?://"},
+    "retrieved": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "sha256": {"$ref": "#/$defs/sha256"},
+    "bytes": {"type": "integer", "minimum": 0},
+    "builtin": {"type": "boolean"}
+   },
+   "additionalProperties": false
+  },
+  "decision": {
+   "type": "object",
+   "required": ["seq", "kind", "target", "before", "after"],
+   "properties": {
+    "seq": {"type": "integer", "minimum": 1},
+    "kind": {"enum": ["tpdec", "feature", "role", "param"]},
+    "target": {"type": "string"},
+    "before": {},
+    "after": {},
+    "note_sha256": {"$ref": "#/$defs/sha256"},
+    "input_sha256": {"$ref": "#/$defs/sha256"}
+   },
+   "additionalProperties": false
+  },
+  "results": {
+   "type": "object",
+   "required": ["entities", "results_digest"],
+   "properties": {
+    "entities": {"type": "object", "description": "entity name -> SHA-256", "additionalProperties": {"$ref": "#/$defs/sha256"}},
+    "results_digest": {"$ref": "#/$defs/sha256", "description": "SHA-256 of the lines `name<TAB>sha256\\n` sorted by name; ms, heap_peak_bytes, cached and the agent are not in it"}
+   },
+   "additionalProperties": false
+  },
+  "limit": {
+   "type": "object",
+   "required": ["code"],
+   "properties": {
+    "code": {"enum": ["vendor.conversion.external", "resource.online.unpinned", "step.nondeterministic", "engine.differs", "llm.assisted", "input.missing", "preset.param.new", "preset.param.migrated"]},
+    "detail": {"type": "string"}
+   },
+   "additionalProperties": false
+  },
+  "compat": {
+   "type": "object",
+   "description": "the report of applying a preset written by another engine",
+   "required": ["from_engine", "changes"],
+   "properties": {
+    "from_engine": {"$ref": "#/$defs/engine"},
+    "changes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": ["instance", "param", "kind", "confirmed"],
+      "properties": {
+       "instance": {"type": "string"},
+       "param": {"type": "string"},
+       "kind": {"enum": ["new", "migrated", "removed"]},
+       "value": {},
+       "confirmed": {"type": "boolean"}
+      },
+      "additionalProperties": false
+     }
+    }
+   },
+   "additionalProperties": false
+  },
+  "subrecord": {
+   "type": "object",
+   "required": ["polarity", "plan", "plan_sha256", "resolved", "inputs", "prov", "results"],
+   "properties": {
+    "polarity": {"enum": ["+", "-"]},
+    "plan": {"$ref": "workflow-contract/1-draft#/$defs/mzflow2"},
+    "plan_sha256": {"$ref": "#/$defs/sha256"},
+    "resolved": {"type": "object"},
+    "inputs": {"type": "array", "items": {"$ref": "#/$defs/input"}},
+    "prov": {"$ref": "workflow-contract/1-draft#/$defs/prov1"},
+    "results": {"$ref": "#/$defs/results"}
+   },
+   "additionalProperties": false
+  }
+ }
+}
