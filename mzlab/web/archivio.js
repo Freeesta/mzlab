@@ -98,7 +98,14 @@ async function writeNow(/** @type {string} */ kind, /** @type {string} */ name, 
   const ah = await fh.createSyncAccessHandle();
   try {
     ah.truncate(0);
-    for (let off = 0; off < size; off += STEP) { const b = await chunk(off, Math.min(STEP, size - off)); await writeAll(ah, b, off); if (after) await after(b, off); }
+    // block N+1 is read while block N is written and hashed (`after` still sees the pieces in file order); a failed read is surfaced when its turn comes
+    const read = (/** @type {number} */ off) => { const p = Promise.resolve(chunk(off, Math.min(STEP, size - off))); p.catch(() => {}); return p; };
+    let next = size > 0 ? read(0) : null;
+    for (let off = 0; off < size; off += STEP) {
+      const b = await /** @type {Promise<Uint8Array>} */ (next);
+      next = off + STEP < size ? read(off + STEP) : null;
+      await writeAll(ah, b, off); if (after) await after(b, off);
+    }
     ah.flush();
     // the browser took the writes but the file is shorter (quota reached)
     if (ah.getSize() < size) throw await quotaError(size);
@@ -176,8 +183,10 @@ export async function lease(/** @type {string} */ kind, /** @type {string} */ na
   if (!leases.has(k)) leases.set(k, { kind, name, ah: null, fh: null, dh: null, timer: 0, last: 0, open: null, dead: false });
   const l = /** @type {Lease} */ (leases.get(k)); await openLease(l); return !!l.ah;
 }
-export async function parkAll() { for (const l of leases.values()) { await l.open; park(l); } }
-export async function wake() { await Promise.all([...leases.values()].map(l => (l.ah ? (l.last = performance.now(), 0) : openLease(l)))); }
+// bumped by every wake(): a parkAll() that was waiting on an opening when a request woke the leases must not close the handles that request is about to read
+let wakeGen = 0;
+export async function parkAll() { const g = wakeGen; for (const l of leases.values()) { await l.open; if (g !== wakeGen) return; park(l); } }
+export async function wake() { wakeGen++; await Promise.all([...leases.values()].map(l => (l.ah ? (l.last = performance.now(), 0) : openLease(l)))); }
 /** bytes read into `buf` at `at` (the number read), or -1 when there is no handle */
 export function leaseRead(/** @type {string} */ kind, /** @type {string} */ name, /** @type {Uint8Array} */ buf, /** @type {number} */ at) {
   const l = leases.get(lkey(kind, name));
