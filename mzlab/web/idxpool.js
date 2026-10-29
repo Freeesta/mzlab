@@ -49,8 +49,8 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
   }
   function run(job) {
     active++; if (gate) gate.used++;
-    let w;
-    const end = () => { if (running.get(job) === w) running.delete(job); try { w.terminate(); } catch (_) { /* gone */ } active--; if (gate) gate.used--; };
+    let w, ended = false, inited = false;           // per run: a late event of a worker already ended must not end it twice
+    const end = () => { if (ended) return; ended = true; if (running.get(job) === w) running.delete(job); try { w.terminate(); } catch (_) { /* gone */ } active--; if (gate) gate.used--; };
     // the worker is lost: once more at the front of the queue, then the error
     const retry = (reason, text) => {
       end();
@@ -60,11 +60,11 @@ export function createPool({ workerUrl, size, budget = 64, isolated = false, aiu
     try { w = new WorkerClass(workerUrl, { type: "module" }); } catch (e) { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: String(e) }); return wake(); }
     running.set(job, w);
     (moduleUrl || module ? getModule() : Promise.resolve(null)).then(module => { if (!job.done) { try { w.postMessage({ op: "module", module }); } catch (_) { /* gone */ } } });
-    w.onerror = e => { if (job.done) return; if (job.inited) retry("crash", e.message); else { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: e.message }); wake(); } };
+    w.onerror = e => { if (job.done || ended) return; if (inited) retry("crash", e.message); else { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: e.message }); wake(); } };
     w.onmessage = ev => {
       const m = ev.data;
-      if (job.done) return;
-      if (m.op === "ready") { job.inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, part: job.part, partCen: job.partCen, budget: job.budget || budget, cap: job.cap, nat: job.nat, name: job.name, aiuti: job.nat ? 0 : aiuti ?? aiutiPer(limit, gate ? gate.used : active, isolated) }, job.transfer || []); return; }   // aiuti: the helpers of an mzML builder (aiutiPer)
+      if (job.done || ended) return;
+      if (m.op === "ready") { inited = true; w.postMessage(job.msg || { blob: job.blob, inputs: job.inputs, part: job.part, partCen: job.partCen, budget: job.budget || budget, cap: job.cap, nat: job.nat, name: job.name, aiuti: job.nat ? 0 : aiuti ?? aiutiPer(limit, gate ? gate.used : active, isolated) }, job.transfer || []); return; }   // aiuti: the helpers of an mzML builder (aiutiPer)
       if (m.op === "progress") { if (job.onProgress) job.onProgress(m); return; }
       if (m.op === "unavailable") { end(); off = true; finish(job, { ok: false, reason: "unavailable", text: m.text }); wake(); return; }
       if (m.op === "done") { end(); finish(job, { ok: true, stats: m.stats, ms: m.ms, parts: m.parts }); wake(); return; }
