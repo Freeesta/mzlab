@@ -98,6 +98,7 @@ I18N.add("en", {
   "panel.scanOf": "scan of {f}",
   "panel.pair.from": "Follows panel {n}: it shows the spectrum of the scan chosen there",
   "panel.pairArrow.title": "The spectrum below shows the product ions of the precursor chosen in the chromatogram above",
+  "panel.rt.held": "held at {rt}",
   "panel.title.isosim": "Isotope simulation",
   "panel.title.compositeBare": "Composite spectrum",
   "panel.dl.png": "Image (PNG)",

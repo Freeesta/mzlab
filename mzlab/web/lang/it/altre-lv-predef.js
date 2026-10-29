@@ -98,6 +98,7 @@ I18N.add("it", {
   "panel.scanOf": "scansione di {f}",
   "panel.pair.from": "Segue il pannello {n}: il suo spettro è quello della scansione scelta lì",
   "panel.pairArrow.title": "Lo spettro sotto mostra gli ioni prodotto del precursore scelto nel cromatogramma sopra",
+  "panel.rt.held": "fermo a {rt}",
   "panel.title.isosim": "Simulazione isotopica",
   "panel.title.compositeBare": "Spettro composito",
   "panel.dl.png": "Immagine (PNG)",

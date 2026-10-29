@@ -178,6 +178,7 @@
   "chk.reachesTo": "{t} = ultimo RT del file in minuti.",
   "aff.where": "Annuncio per i lettori di schermo dopo uno spostamento; {n} = numero del pannello, {r} = riga, {t} = righe totali, {i} = posizione nella riga, {m} = pannelli nella riga.",
   "panel.num.title": "Suggerimento sul numerino del pannello; {n} = numero (1-9), è anche il tasto da premere.",
+  "panel.rt.held": "Etichetta del tempo di ritenzione accanto al titolo di uno spettro fermato (non seguito al cursore); {rt} = tempo già formattato, es. «12.34 min» o «12.30-12.50 min».",
   "panel.pair.to": "Suggerimento sull'etichetta «→ n» del grafico sorgente; {n} = numero del pannello (spettro) che lo segue.",
   "panel.scanOf": "Etichetta nell'intestazione di un cromatogramma con più file sovrapposti che guida uno spettro: {f} = nome del file attivo, di cui sono le scansioni.",
   "panel.pair.from": "Suggerimento sull'etichetta «← n» dello spettro; {n} = numero del pannello (cromatogramma) che lo guida.",
