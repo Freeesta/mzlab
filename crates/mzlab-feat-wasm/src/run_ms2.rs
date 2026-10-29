@@ -1,10 +1,12 @@
 //! `spectra.ms2` in the browser: the MGF of the MS2 scans of one mzML (`mzlab_feat::flow_ms2::ms2_text`, the function `flow run` calls). The page calls it once per file, in the order
 //! of the plan, and joins the texts, which is what the function does for several files. The feature table of the step is the CSV of `export.table_csv` (`features`).
 
+#[cfg(feature = "flow_ms2")]
 use mzlab_feat::flow_ms2::{ms2_text, Ms2Params};
 use wasm_bindgen::prelude::*;
 
 /// The MGF of `mzml` (named `name`, the stem names the spectra), under the parameters of the step as JSON merged with its defaults. Errors are JSON `{"error_key","params"}` texts.
+#[cfg(feature = "flow_ms2")]
 #[wasm_bindgen]
 pub fn flow_ms2(
     params_json: &str,

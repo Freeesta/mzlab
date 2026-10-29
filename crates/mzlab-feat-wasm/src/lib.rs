@@ -39,7 +39,7 @@ pub mod msn;
 pub mod progress_js;
 pub mod run;
 pub mod spill_js; pub mod run_evid;
-#[cfg(feature = "flow_ms2")]
+#[cfg(any(feature = "flow_ms2", feature = "flow_formula"))]
 pub mod run_ms2;
 pub mod run_tp; pub mod stima;
 #[cfg(feature = "proofs")]
