@@ -57,9 +57,9 @@ def rss_mb():
 
 class Rss(threading.Thread):
     """Peak of the resident memory of every Chromium process, sampled every 0.25 s"""
-    def __init__(s): super().__init__(daemon=True); s.peak, s.stop = 0.0, False
+    def __init__(s): super().__init__(daemon=True); s.peak, s.halt = 0.0, threading.Event()
     def run(s):
-        while not s.stop: s.peak = max(s.peak, rss_mb()); time.sleep(0.25)
+        while not s.halt.wait(0.25): s.peak = max(s.peak, rss_mb())
 
 
 def launch(p, rate=1):
@@ -119,7 +119,7 @@ def part_hr(p, r, n):
         q.evaluate("document.querySelector('#flist .fl, .fl')?.click()"); q.wait_for_function("E.panels.some(p => p._a)", timeout=600000)
         o["reopen_first_draw_s"] = round(time.time() - t, 2)
     finally:
-        rss.stop = True; o["rss_peak_mb"] = round(rss.peak, 1); b.close()
+        rss.halt.set(); o["rss_peak_mb"] = round(rss.peak, 1); b.close()
     return o
 
 
@@ -159,7 +159,7 @@ def part_export(p, r):
         b.close()
     b, ctx, pg = launch(p)
     try:
-        start_page(pg, r.port); pg.wait_for_timeout(1500)                                         # the engine of the page is up
+        start_page(pg, r.port); ready(pg)                                         # the engine of the page is up
         a = [pg.evaluate(PACK, [mod, 0]) for _ in range(4)]; o["worker_app_first_ms"] = round(a[0], 1); o["worker_app_ms"] = med(a[1:])
         big = pg.evaluate(BIG, [mod, OPFS_MB]); o.update({f"opfs_{k}": round(v, 1) for k, v in big.items()})
         o["opfs_total_export_ms"] = round(sum(big[k] for k in ("collect_read_opfs", "pack", "zip_worker", "blob")), 1)
