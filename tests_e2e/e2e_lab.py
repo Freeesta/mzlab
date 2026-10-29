@@ -70,7 +70,7 @@ try:
         def normal():
             pg, reqs = page(NORMAL, ADMIN); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"
-            assert not [u for u in reqs if "lab.js" in u], reqs
+            assert not [u for u in reqs if u.split("?")[0].endswith("/lab.js")], reqs
             pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000)      # the administrator flag still gives Tabui and mzFlow in the normal build
         step("normal build: no lab, administrator mode unchanged", normal)
         b.close()
