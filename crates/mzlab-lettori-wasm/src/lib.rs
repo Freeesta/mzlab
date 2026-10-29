@@ -9,6 +9,8 @@ use wasm_bindgen::prelude::*;
 
 pub mod sessione;
 use sessione::Sessioni;
+#[cfg(any(feature = "aperti", feature = "tutte"))]
+mod valida;
 
 /// Bytes sent to `sink` at a time.
 const BLOCCO: usize = 64 << 10;

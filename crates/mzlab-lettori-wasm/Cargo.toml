@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # the families, forwarded to mzlab-lettori: tools/build_lettori_wasm.sh builds one .wasm per family with --no-default-features --features <family>
-aperti = ["mzlab-lettori/aperti"]
+aperti = ["mzlab-lettori/aperti", "mzlab-core/valida"]
 andi = ["mzlab-lettori/andi"]
 thermo = ["mzlab-lettori/thermo"]
 agilent = ["mzlab-lettori/agilent"]
@@ -18,7 +18,7 @@ sciex = ["mzlab-lettori/sciex"]
 waters = ["mzlab-lettori/waters"]
 shimadzu = ["mzlab-lettori/shimadzu"]
 bruker = ["mzlab-lettori/bruker"]
-tutte = ["mzlab-lettori/tutte"]
+tutte = ["mzlab-lettori/tutte", "mzlab-core/valida"]
 
 [dependencies]
 js-sys = "0.3.106"

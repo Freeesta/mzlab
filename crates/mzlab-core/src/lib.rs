@@ -100,7 +100,7 @@ mod mzml_dad;
 pub mod numarray;
 pub mod numpress;
 pub mod mzmlwrite;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(any(not(target_family = "wasm"), feature = "valida"))]
 pub mod mzmlvalida;
 pub mod pace;
 pub mod peakq;
