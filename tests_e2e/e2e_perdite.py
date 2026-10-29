@@ -87,7 +87,7 @@ try:
             d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "Levsen" not in d, d
             assert "(" in pg.inner_text("#nl-res") and "." in pg.inner_text("#nl-res"), "decimals in HR"
             pg.evaluate("window.HR.isHr=()=>false"); pg.fill("#nl-q", "62")
-            import re; assert not re.search(r"\d\.\d", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: rounded to the unit
+            import re; assert not re.search(r"\d\.\d{2,}", pg.inner_text("#nl-res")), pg.inner_text("#nl-res")      # LR: masses to one decimal at most (and the error in Da), never the four decimals of HR
             pg.fill("#nl-q", "")
         step("LR rounded to the unit / HR with four decimals, no references in both", hr_version)
         def narrow_axe():

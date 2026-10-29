@@ -213,8 +213,9 @@ try:
         UVS = "E.panels.filter(q=>q.uv&&q._a)"
         def demo_uv_at(rt, nm):
             dbl(pg, CH, rt)
-            attendi(pg, f"(()=>{{const u={UVS}.pop(); return !!u && Math.abs(u._a.uvd.rt - {rt}) < 0.15}})()")
-            a = pg.evaluate(f"(()=>{{const u={UVS}.pop()._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
+            AT = f"{UVS}.filter(q=>Math.abs(q._a.uvd.rt - {rt}) < 0.15)"      # a new spectrum goes under the graph, above the older ones: pick the one of this time, not the last
+            attendi(pg, f"{AT}.length > 0")
+            a = pg.evaluate(f"(()=>{{const u={AT}[0]._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
             assert a["n"] == 201 and a["nm0"] == 200 and a["nm1"] == 400 and abs(a["rt"] - rt) < 0.1 and abs(a["mx"] - nm) <= 4, a
         def demo_open():
             pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
