@@ -127,6 +127,25 @@ def test_pressure_unit_kept_by_our_writer_is_used(tmp_path):
     assert abs(np.interp(0.5, a["t"], a["y"]) - 2700 * 0.0689476) < 0.5 and abs(np.interp(15, a["t"], a["y"]) - 6000 * 0.0689476) < 0.01
 
 
+def _xcalibur_like(n=60000):
+    """A pump pressure like the one Xcalibur shows for a 35 min run: ~138 bar at 0.5 min, ~148 at 16-21, a dip to ~65 at 29.3, back to ~140; a pump-stroke ripple of 3 bar."""
+    t = np.linspace(0, 35, n)
+    base = np.interp(t, [0, 4, 16, 21, 22, 29.3, 32, 35], [138, 140, 148, 148, 146, 65, 140, 138])
+    return t, base + 1.5 * np.sign(np.sin(2 * np.pi * t / 0.05))
+
+
+@pytest.mark.parametrize("unit,k", [("pascal", 1e5), ("psi", 1 / 0.0689476), ("bar", 1.0)])
+def test_pressure_values_and_ripple_survive(unit, k):
+    """The displayed magnitude is the one of the instrument (~138 bar, not 14 or 1400) and the reduction for drawing keeps the envelope of the ripple."""
+    t, bar = _xcalibur_like()
+    y = analog.pressure_to_bar(bar * k, unit)
+    assert abs(np.interp(0.5, t, y) - 138) < 3 and abs(y[np.argmin(np.abs(t - 29.3))] - 65) < 3
+    tt, yy = analog.reduce_minmax(t, y, 2000)
+    assert abs(np.interp(0.5, tt, yy) - 138) < 3 and abs(yy[(tt > 28.5) & (tt < 30.5)].min() - 63.5) < 1.0
+    win = (tt > 10) & (tt < 10.5)
+    assert yy[win].max() - yy[win].min() > 2.9        # the 3 bar peak-to-peak of the pump strokes is still there
+
+
 def test_gradient_route(pressure_app):
     assert _get(pressure_app, "/api/gradient", k=0)[1] == {"gradient": None}
     code, _, body, _ = dispatch(pressure_app, "POST", "/api/gradient", {}, __import__("io").BytesIO(json.dumps({"k": 0, "text": SCRIPT, "fmt": "chromeleon"}).encode()), len(json.dumps({"k": 0, "text": SCRIPT, "fmt": "chromeleon"})))
