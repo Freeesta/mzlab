@@ -30,3 +30,11 @@ def test_loading_helpers_of_the_worker(tmp_path):
     r = subprocess.run(["node", str(ROOT / "tests" / "carica_worker_node.mjs"), str(tmp_path)], capture_output=True, text=True, check=False)
     assert r.returncode == 0, (r.stdout + r.stderr)[-3000:]
     assert r.stdout.strip() == "ok"
+
+
+def test_every_close_of_an_lr_slot_forgets_the_open_index_gate():
+    """lrOpen skips open_index for an index it already opened: whatever closes the engine's slots must make the gate forget, or the next lrOpen finds the slot empty (badIndex, files never ready)."""
+    src = (WEB / "rust-worker.js").read_text(encoding="utf-8")
+    closers = [ln for ln in src.splitlines() if "engine.close_all()" in ln or re.search(r"engine\.close\(slotOf\(", ln)]
+    assert len(closers) >= 3
+    assert all("openGate." in ln or "for (const n of [...lrFile.keys()]) engine.close" in ln for ln in closers), closers
