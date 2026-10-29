@@ -20,7 +20,9 @@ function openingStato(/** @type {string} */ msg,/** @type {number | null} */ pct
 function openingFile(/** @type {number} */ i,/** @type {string} */ st){if(OPEN.files[i])OPEN.files[i].st=st;openingRender()}
 function openingFiles(){OPEN.files=ST.files.filter(usable).map((/** @type {FileRiga} */ f,/** @type {number} */ i)=>({label:f.name,st:i?"wait":"read"}))}
 function openingStart(){openingFiles();OPEN.msg="";OPEN.pct=null;const a=$("#opn-act");a.textContent="";a.hidden=true;
-  STATO.apertura(true,"opening");applyView();openMark("area");$("#opening").focus()}
+  STATO.apertura(true,"opening");applyView();openMark("area");$("#opening").focus();
+  // a veil raised by someone else (the tour's example loader) or by this click while nothing was usable comes down: the work area replaces it
+  if(!$("#loading").hidden)loading(false)}
 function openingEnd(){if(!S.opening)return;STATO.apertura(false,"opening");applyView()}
 // Cancel of the copies under way: a button inside the skeleton, or the action of the veil when that is what is up
 function openingCancel(/** @type {() => void} */ fn){if(!S.opening){ldAction(I18N.t("conv.cancel"),fn);return}

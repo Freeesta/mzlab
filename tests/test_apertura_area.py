@@ -30,8 +30,9 @@ const S = { view: "data", sess: null, adding: false, opening: false };
 const STATO = { apertura(on) { S.opening = !!on; log.push("apertura:" + on); }, aggiunta(on) { S.adding = !!on; } };
 let UPBUSY = %(upbusy)s, WAITING = false, WAIT0 = 0, idleRes = null;
 const ST = { unit: "u", files: %(files)s }, usable = f => f.use, checkGo = () => {}, RUOLI = { roleOf: () => "x", commit() {} }, darkTime = t => t;
+fake("#loading").hidden = true;
 const applyView = () => { log.push("view:" + (S.opening ? "opening" : "data")); openingView(!!S.opening); };
-const loading = v => log.push("veil:" + v), ldAction = (l) => log.push("ldAction:" + !!l), loadingStato = () => {}, waitStato = () => {}, convElapsed = () => "0s", PROGRESSO = { subscribe() {} };
+const loading = v => { log.push("veil:" + v); fake("#loading").hidden = !v; }, ldAction = (l) => log.push("ldAction:" + !!l), loadingStato = () => {}, waitStato = () => {}, convElapsed = () => "0s", PROGRESSO = { subscribe() {} };
 const idle = () => UPBUSY > 0 ? new Promise(ok => { idleRes = ok; }) : Promise.resolve();
 const cancelLoads = () => {};
 const E = { files: [], panels: [], pending: [] }, CU = { u: ["u"] }, isCal = () => false;
@@ -123,3 +124,17 @@ def test_cancel_with_nothing_left_goes_back_to_the_table(tmp_path):
   console.log(JSON.stringify({ log, opening: S.opening }));
 """, USABLE, upbusy=1)
     assert r["opening"] is False and r["log"][-1] == "view:data" and "explore:start" not in r["log"]
+
+
+def test_a_veil_raised_by_the_caller_comes_down_when_the_area_goes_up(tmp_path):
+    # TOUR.caricaEsempio raises the veil itself and then clicks the button: nobody else lowers it
+    r = run(tmp_path, """
+  fake("#loading").hidden = false;
+  let go; gate = new Promise(ok => { go = ok; });
+  const p = $("#opbtn").onclick();
+  await new Promise(r => setTimeout(r, 20));
+  const mid = $("#loading").hidden;
+  go(); await p;
+  console.log(JSON.stringify({ mid, log }));
+""", USABLE)
+    assert r["mid"] is True and r["log"].count("veil:false") == 1

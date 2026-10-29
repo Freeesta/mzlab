@@ -428,7 +428,7 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;OPEN.t={};open
     if(!ST.files.some(usable)){openingEnd();checkGo();return}
     // the time of a dark is negative whatever way it got here (name, table, old project)
     ST.files.forEach((/** @type {FileRiga} */ f)=>{if(RUOLI.roleOf(f)==="dark")f.time=darkTime(f.time)});
-    if(S.opening){openingFiles();openingRender()}else{openingStart();veilOn(false)}
+    if(S.opening){openingFiles();openingRender()}else{openingStart();veil=false}
     await openStaged(true)}
   catch(e_){const e=/** @type {Lanciato} */(e_);openingEnd();
     if(e.key==="err.hr.mix"){
