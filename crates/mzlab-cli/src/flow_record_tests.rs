@@ -131,6 +131,16 @@ fn reports(out: &Path, plan: &str) -> Vec<String> {
     jobs
 }
 
+/// `modules` (the SHA-256 of the executable) is the one key only the CLI writes: the page passes the hashes of its own `.wasm`.
+fn without_modules(text: &str) -> String {
+    let from = text.find(",\"modules\":{").unwrap();
+    format!(
+        "{}{}",
+        &text[..from],
+        &text[from + text[from..].find('}').unwrap() + 1..]
+    )
+}
+
 #[test]
 fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
     let (dir, _) = fixture("record");
@@ -153,19 +163,12 @@ fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
         .raw(&reports(&out, &plan).join(","))
         .raw("]}");
     let prov = mzlab_core::flow::sched_route("record_prov", &body.0).unwrap();
-    // `modules` (the SHA-256 of the executable) is the one key only the CLI writes: the page passes the hashes of its own `.wasm`
-    let native = std::fs::read_to_string(out.join("prov.json")).unwrap();
-    let from = native.find(",\"modules\":{").unwrap();
-    let native = format!(
-        "{}{}",
-        &native[..from],
-        &native[from + native[from..].find('}').unwrap() + 1..]
-    );
+    let native = without_modules(&std::fs::read_to_string(out.join("prov.json")).unwrap());
     assert_eq!(untimed(&prov), untimed(&native));
     let mut c = Out::default();
     c.raw("{\"prov\":").str(&prov).raw(",\"uscite\":[]}");
     let corsa = mzlab_core::flow::sched_route("record_corsa", &c.0).unwrap();
-    let native = std::fs::read_to_string(out.join("corsa.json")).unwrap();
+    let native = without_modules(&std::fs::read_to_string(out.join("corsa.json")).unwrap());
     assert_eq!(untimed(&corsa), untimed(&native));
     assert!(matches!(
         mzlab_core::json::parse(prov.as_bytes()),
