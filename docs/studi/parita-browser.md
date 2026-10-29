@@ -34,7 +34,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
 | `meta.compare` | sì | no | no | da fare | M | 3 |
 | **Flow: identificazione (Attributio)** | | | | | | |
-| `formula.ms1` | sì | pannello (`untargeted_formula_id`); nel Flow no: `hr` +145 166 B oltre il tetto, `untargeted` +134 405 B oltre il tetto (testo in libreria, `flow_formula_web_tests.rs`) | `flow_formula_web_tests.rs` | eccezione di parità richiesta | M | 2 |
+| `formula.ms1` | sì | pannello (`untargeted_formula_id`); nel Flow no: `hr` +145 166 B (76 490 B oltre il tetto), `untargeted` +134 405 B (91 588 B oltre il tetto) (testo in libreria, `flow_formula_web_tests.rs`) | `flow_formula_web_tests.rs` | eccezione di parità richiesta | M | 2 |
 | `spectra.ms2` | sì | sì (`F.webIdent.ms2`: `.wasm` `hr`, `flow_ms2`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
 | `formula.ms2` | sì | sì (`F.webIdent.ms2Formula`: `.wasm` `attributio-all`, `flow_formula_ms2`) | `e2e_flow_web_ident2.py` (formule da file), `flow_formula_web_tests.rs` | fatto | | |
 | `spectra.chimeric`, `spectra.insilico` | sì | pannello (`.wasm` `attributio-all`: `ms2_to`) | `parita_attributio_ms2.json` (non verificato se sito↔app) | da fare | M | 2 |
