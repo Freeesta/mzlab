@@ -44,43 +44,7 @@ fn opts(job: &Job) -> Opts {
     o
 }
 
-/// The feature table as the CSV "full": header and rows; the area columns are `datafile:NAME:area`.
-pub(crate) struct Table {
-    pub(crate) id: usize,
-    pub(crate) mz: usize,
-    pub(crate) rt: usize,
-    pub(crate) areas: Vec<(String, usize)>,
-    pub(crate) rows: Vec<Vec<String>>,
-}
-
-pub(crate) fn read_table(bytes: &[u8]) -> Result<Table> {
-    let text = String::from_utf8_lossy(bytes);
-    let mut lines = text.lines();
-    let head: Vec<&str> = lines.next().unwrap_or("").split(',').collect();
-    let col = |n: &str| {
-        head.iter()
-            .position(|h| *h == n)
-            .ok_or_else(|| Error::new("err.flow.formula.table").with("column", n))
-    };
-    let areas = head
-        .iter()
-        .enumerate()
-        .filter_map(|(k, h)| {
-            h.strip_prefix("datafile:")?
-                .strip_suffix(":area")
-                .map(|n| (n.to_string(), k))
-        })
-        .collect();
-    Ok(Table {
-        id: col("id")?,
-        mz: col("mz")?,
-        rt: col("rt")?,
-        areas,
-        rows: lines
-            .map(|l| l.split(',').map(String::from).collect())
-            .collect(),
-    })
-}
+pub(crate) use mzlab_feat::flow_ms2::read_table;
 
 fn stem(name: &str) -> String {
     name.rsplit_once('.').map_or(name, |p| p.0).to_string()

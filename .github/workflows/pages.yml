@@ -13,26 +13,28 @@ permissions:
 
 # No run is ever cancelled: a running build/deploy finishes (the site always gets a new version), and of the runs waiting
 # GitHub keeps only the newest, so quick merges in a row end in one more deploy of the last commit, never in none.
+# The group is on the whole workflow: the parallel jobs of two runs never overlap. A branch run (workflow_dispatch) has a group of its own, so it never displaces a run of main.
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'pages-build' || format('pages-build-{0}', github.ref) }}
+  cancel-in-progress: false
+
+# The site is built in parallel jobs and put together by `assemble`: `wasm-core` (engine, libraries, readers), `wasm-feat-a` and `wasm-feat-b` (mzFinder, the two halves of tools/build_feat_wasm.sh), `packages` (spectral libraries and suspect index); each hands its static/ subtree over as an artifact.
 jobs:
-  build:
+
+  wasm-core:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    concurrency:
-      group: pages-build
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
-      - name: Build the site
-        run: python tools/build_site.py
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
       # the identity of the build for option_env! (prov/1, corsa/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
       - name: Build identity of the WASM modules
         run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
-      # every run restores the newest cache; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
+      # every run restores the newest cache of its kind; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
       - id: rcache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -41,28 +43,30 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
-          restore-keys: pages-rust-${{ runner.os }}-
+          key: pages-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          # the cache of this kind first, then the older single cache, so the first run is not cold
+          restore-keys: |
+            pages-core-${{ runner.os }}-
+            pages-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
         run: python3 tools/ci_cargo_mtime.py restore
-      - name: Build the WASM engine (only in the published site, never committed)
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
         run: |
           ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
-          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then
-            cargo install wasm-bindgen-cli --version "$ver" --locked --force
-          fi
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Build the WASM engine, the libraries and the readers (only in the published site, never committed)
+        run: |
+          mkdir -p site/static
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
           tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2744320 engine @motore
-      - name: Build the libraries WASM engine (a .wasm of its own, fetched only when the libraries are opened; never committed)
-        run: |
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
           tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
-      - name: Build the mzFinder WASM engines (the .wasm of their own, under 500 KB each, with their SHA-256; never committed)
-        run: tools/build_feat_wasm.sh site/static
+          # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
+          tools/build_lettori_wasm.sh site/static
       - name: Record the tree of the cache
         if: steps.rcache.outputs.cache-hit != 'true'
         run: python3 tools/ci_cargo_mtime.py record
@@ -76,6 +80,145 @@ jobs:
             ~/.cargo/bin/wasm-bindgen
             target
           key: ${{ steps.rcache.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pages-core
+          path: |
+            site/static/wasm
+            site/static/wasm-lib
+            site/static/wasm-lettori
+          retention-days: 1
+
+  wasm-feat-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      # the identity of the build for option_env! (prov/1, corsa/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      - name: Build identity of the WASM modules
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
+      # every run restores the newest cache of its kind; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
+      - id: rcache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: pages-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          # the cache of this kind first, then the older single cache, so the first run is not cold
+          restore-keys: |
+            pages-feat-a-${{ runner.os }}-
+            pages-rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Build the mzFinder WASM engines, part a (the .wasm of their own, under 500 KB each; the manifest is written by `assemble`; never committed)
+        run: |
+          mkdir -p site/static
+          tools/build_feat_wasm.sh site/static a
+      - name: Record the tree of the cache
+        if: steps.rcache.outputs.cache-hit != 'true'
+        run: python3 tools/ci_cargo_mtime.py record
+      - name: Save the Rust cache
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pages-feat-a
+          # a single path would drop its own name from the artifact: site/static holds only wasm-feat here, so the prefix stays
+          path: site/static
+          retention-days: 1
+
+  wasm-feat-b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      # the identity of the build for option_env! (prov/1, corsa/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      - name: Build identity of the WASM modules
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
+      # every run restores the newest cache of its kind; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
+      - id: rcache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: pages-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          # the cache of this kind first, then the older single cache, so the first run is not cold
+          restore-keys: |
+            pages-feat-b-${{ runner.os }}-
+            pages-rust-${{ runner.os }}-
+      # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
+      - name: wasm-bindgen CLI (the version of Cargo.lock)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          wasm-bindgen --version 2>/dev/null | grep -q "$ver" || cargo install wasm-bindgen-cli --version "$ver" --locked --force
+      - name: Build the mzFinder WASM engines, part b (the .wasm of their own, under 500 KB each; the manifest is written by `assemble`; never committed)
+        run: |
+          mkdir -p site/static
+          tools/build_feat_wasm.sh site/static b
+      - name: Record the tree of the cache
+        if: steps.rcache.outputs.cache-hit != 'true'
+        run: python3 tools/ci_cargo_mtime.py record
+      - name: Save the Rust cache
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: steps.rcache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pages-feat-b
+          # a single path would drop its own name from the artifact: site/static holds only wasm-feat here, so the prefix stays
+          path: site/static
+          retention-days: 1
+
+  packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      # the builder of the packages is a native example of mzlab-lib: cargo builds it when the cache of the packages is cold
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - run: mkdir -p site/static
       - name: Restore the spectral-library packages from the cache (pinned MassBank release, built with the Rust builder, never committed)
         id: libcache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -166,6 +309,37 @@ jobs:
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pages-packages
+          # site/static holds only librerie and mzfinder/sospetti here, so the prefix stays
+          path: site/static
+          if-no-files-found: ignore
+          retention-days: 1
+
+  assemble:
+    needs: [wasm-core, wasm-feat-a, wasm-feat-b, packages]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      # build.json names the rustc of the pinned toolchain
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - name: Build the site
+        run: python tools/build_site.py
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: pages-*
+          path: parts
+          merge-multiple: true
+      - name: Put the parts into the site, then the manifest of mzFinder (it needs both halves)
+        run: |
+          cp -r parts/. site/static/
+          tools/build_feat_wasm.sh site/static manifest
       - name: Record the .wasm modules in static/build.json (they are in place now)
         run: python3 tools/build_site.py --build-json
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
@@ -173,7 +347,9 @@ jobs:
           path: site
 
   deploy:
-    needs: build
+    needs: assemble
+    # a branch (workflow_dispatch to try the workflow) builds but never publishes
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

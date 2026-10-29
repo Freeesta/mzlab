@@ -438,7 +438,7 @@ pub fn table_match() -> Step {
         outs: vec![Port::new("hits", DataType::Candidates, "Library candidates per row (query = id of the row)")],
         params,
         runs_in: RunsIn {
-            wasm: None,
+            wasm: Some("table + lib"),
             wasm_ceiling_bytes: None,
             native: true,
         },

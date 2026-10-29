@@ -32,6 +32,29 @@ pub fn version() -> String {
     "mzlib/1".to_string()
 }
 
+/// The text of `spectra.match` / `table.match` (`mzlab_lib::flowmatch`, the function `flow run` calls): `query` and `library` are the files as they are (the format is told from the
+/// name and the content; a library may be an `.mzlib`), `params_json` the parameters of the step merged with the defaults of its descriptor. The `tree` algorithm is not served.
+/// The error is the JSON `{"error_key", "params"}` text.
+#[wasm_bindgen]
+pub fn flow_match(
+    step: &str,
+    algorithm: &str,
+    params_json: &str,
+    query_name: &str,
+    query: &[u8],
+    library_name: &str,
+    library: &[u8],
+) -> std::result::Result<String, JsValue> {
+    mzlab_lib::flowmatch::match_json(
+        step,
+        algorithm,
+        params_json,
+        (query_name, query),
+        (library_name, library),
+    )
+    .map_err(|e| JsValue::from_str(&e))
+}
+
 /// Total bytes of block cache for all the open libraries: 64 MB, 32 MB on iPad and phones (the one place is `mzlab_lib::read`).
 #[wasm_bindgen]
 pub fn total_cache_budget(small_device: bool) -> f64 {

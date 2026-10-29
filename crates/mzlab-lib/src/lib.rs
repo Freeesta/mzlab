@@ -11,6 +11,8 @@ pub mod error;
 mod fast_ln;
 pub mod flash;
 mod flash_resolve;
+#[cfg(feature = "flow")]
+pub mod flowmatch;
 pub mod format;
 pub mod frag_tol;
 pub mod io;

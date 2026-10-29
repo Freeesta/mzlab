@@ -9,19 +9,14 @@ use mzlab_core::budget::sha256_hex;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
-use mzlab_feat::store::{read_table_from, Slice};
+use mzlab_feat::store::Slice;
 use mzlab_feat_table_wasm::core::table_file;
 use mzlab_feat_table_wasm::pol;
 
-/// Polarity the detection of the table ran in: the recipe in its meta is text (`detect=Params { .. polarity: Some(-1) .. }`); positive when it names none.
+/// Polarity the detection of the table ran in (`pol::recipe_polarity`, which `table.match` writes its MGF with); read by the tests that rebuild that MGF.
+#[cfg(test)]
 pub(crate) fn polarity(table: &[u8]) -> Result<i32> {
-    let (_, meta) = read_table_from(&mut Slice(table), table.len() as u64)?;
-    let recipe = meta.get("recipe").and_then(|r| r.str()).unwrap_or("");
-    Ok(if recipe.contains("polarity: Some(-1)") {
-        -1
-    } else {
-        1
-    })
+    pol::recipe_polarity(&mut Slice(table), table.len() as u64)
 }
 
 /// Polarity of the table: the rule of `mzlab_feat_table_wasm::pol` (the recipe, else the files of its lineage), the one the browser applies.

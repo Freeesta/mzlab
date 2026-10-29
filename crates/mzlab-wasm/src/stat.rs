@@ -11,9 +11,3 @@ pub fn stat_post(path: &str, body: &str) -> String {
         Some(Err(json)) => format!("E{json}"),
     }
 }
-
-/// `api/kmd`: the JSON answer of the Kendrick mass defect analysis, prefixed with `E` for an error (status 400).
-#[wasm_bindgen]
-pub fn kmd_post(body: &str) -> String {
-    stat_post("api/kmd", body)
-}

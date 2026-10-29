@@ -114,11 +114,6 @@ impl Engine {
         Ok(())
     }
 
-    /// Forgets the dataset of `slot` (with the index: `close`).
-    pub fn native_detach(&mut self, slot: u32) {
-        self.nat.forget(slot);
-    }
-
     /// `metodo/1` of the sample of `slot` from its reader; `""` when `slot` is not native.
     pub fn native_metodo(&mut self, slot: u32) -> Result<String, JsValue> {
         let Some((ds, c)) = self.nat.slots.get(&slot).cloned() else {
