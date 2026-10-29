@@ -76,7 +76,12 @@ const LETTORI_MOD = {
   /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once */
   async toMzml(/** @type {string} */ fam, /** @type {Member[]} */ members, /** @type {number} */ c, /** @type {string} */ dest, /** @type {((p: any) => void) | undefined} */ onProgress, /** @type {AbortSignal | undefined} */ signal) {
     if (signal && signal.aborted) throw cancelled();
-    const w = start(), drop = () => navigator.storage.getDirectory().then(d => d.getDirectoryHandle("mzlab")).then(d => d.getDirectoryHandle("conv")).then(d => d.removeEntry(dest)).catch(() => {});
+    const w = start(), drop = async () => {
+      // the terminated worker may still hold the file for a moment: try again a few times
+      for (let k = 0; k < 3; k++) {
+        try { const d = await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab"); await (await d.getDirectoryHandle("conv")).removeEntry(dest); return; } catch (e) { if (/** @type {any} */ (e).name === "NotFoundError") return; await new Promise(r => setTimeout(r, 100 * (k + 1))); }
+      }
+    };
     const onAbort = () => { w.postMessage({ op: "cancel" }, []); w.terminate(); if (w === worker) worker = null; const e = cancelled(); for (const p of wait.values()) p.no(e); wait.clear(); drop(); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     try {
