@@ -101,8 +101,8 @@ function renderMethods(){const el=$("#mlist");
 const EXPN=/** @type {Record<string, string>} */ ({full:"Full Scan",ms2:"MS2 (Product Ion)",mrm:"MRM",infusion:I18N.t("inf.name")}),expn=(/** @type {string} */ k)=>k==="empty"?I18N.t("load.exp.empty"):EXPN[k]||k;
 // Full Scan + MS2 = DDA; polarities and precursor counts are not shown
 const mixedText=(/** @type {{ name: string }[]} */ m)=>{const ns=/** @type {string[]} */ ([]);for(const p of m){const n=p.name==="MS2"&&ns.includes("Full Scan")?"DDA":p.name;if(!ns.includes(n))ns.push(n)}return ns.join(" + ")};
-// the experiment type is a menu: "Auto: <type>" (what the engine detects, the reason in the tooltip) or a type chosen by hand, remembered per file
-const expSel=(/** @type {FileRiga} */ f,/** @type {string} */ attr,/** @type {string | null | undefined} */ cur,/** @type {string | null | undefined} */ auto,/** @type {string} */ tip)=>`<select ${attr} class="sm" aria-label="${I18N.t("load.table.experiment")}" title="${esc(tip)}">${auto==null?`<option value="" disabled ${cur==null?"selected":""}>${I18N.t("load.exp.setAll")}</option>`:`<option value="" ${cur==null?"selected":""}>${I18N.t("load.exp.auto",{name:expn(auto)})}</option>`}${TIPOF.KINDS.map((/** @type {string} */ k)=>`<option value="${k}" ${k===cur?"selected":""}>${expn(k)}</option>`).join("")}</select>`;
+// the experiment type is a menu: the detected type by its plain name (the reason in the tooltip) or a type chosen by hand, marked "(manual)", with "Back to detected" as the first option; remembered per file
+const expSel=(/** @type {FileRiga} */ f,/** @type {string} */ attr,/** @type {string | null | undefined} */ cur,/** @type {string | null | undefined} */ auto,/** @type {string} */ tip)=>`<select ${attr} class="sm" aria-label="${I18N.t("load.table.experiment")}" title="${esc(tip)}">${auto==null?`<option value="" disabled ${cur==null?"selected":""}>${I18N.t("load.exp.setAll")}</option>`:`<option value="" ${cur==null?"selected":""}>${cur==null?expn(auto):I18N.t("load.exp.backAuto",{name:expn(auto)})}</option>`}${TIPOF.KINDS.map((/** @type {string} */ k)=>`<option value="${k}" ${k===cur?"selected":""}>${k===cur?I18N.t("load.exp.manual",{name:expn(k)}):expn(k)}</option>`).join("")}</select>`;
 const expCell=(/** @type {FileRiga} */ f)=>f.kind&&f.mixed&&f.mixed.length?`<b>${esc(mixedText(f.mixed))}</b>`:f.kind in GORD?expSel(f,`data-exp="${esc(f.name)}"`,TIPOF.manual(f.name),f.kindAuto||f.kind,TIPOF.why(f))+(f.polarity==="mixed"?` <span class="muted sm">${I18N.t("load.exp.polMixed")}</span>`:""):f.kind?`<b>${expn(f.kind)}</b>`:`<span class="muted">${I18N.t("load.exp.unread")}</span>`;
 // the types of the files change in place (table, viewer, XIC button) and the table is sorted again
 function expSet(/** @type {string[]} */ names,/** @type {string | null | undefined} */ kind){names.forEach(n=>TIPOF.set(n,kind||null));ST.files.forEach((/** @type {FileRiga} */ f)=>{if(names.includes(f.name))Object.assign(f,TIPOF.apply(f,f.name))});TIPOF.viewer(names);CONVROWS.thaw();sortFiles();renderFiles()}
@@ -227,16 +227,19 @@ async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown
   const M=window.LETTORI_MOD;if(!M||!files.length)return files;
   const jobs=new Map();for(const f of files){const fam=await moduloWants(M,f);if(fam)jobs.set(f,fam)}if(!jobs.size)return files;
   const g=ConvUI.group(box,[...jobs.keys()].map(f=>NATIVO.size(f))),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
+  // every file of the batch has its row (Queued) from the start, so the count over the table is the count of the headline
+  const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name,taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
   let i=0;
   for(const f of files){
     if(!jobs.has(f)){out.push(f);continue}
-    i++;const lot=f.mzlabModulo||f.mzlabNat,mem=lot?lot.members:[{name:f.name,blob:f}],nm=f.mzlabModulo||f.mzlabNat?f.name:M.mzmlName(f.name,taken);taken.push(nm);
+    i++;const lot=f.mzlabModulo||f.mzlabNat,mem=lot?lot.members:[{name:f.name,blob:f}],nm=names.get(f);
     if(g.signal.aborted)continue;
-    CONVROWS.add(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
+    CONVROWS.set(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
     try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
       ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
     catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm)}}
+  for(const nm of names.values())CONVROWS.drop(nm);
   out.panel=g;return out}
 // true where the engine converts .raw itself (desktop, ?motore=rust): the guide then appears only for the formats it cannot convert
 let CONVERT_RAW=false;

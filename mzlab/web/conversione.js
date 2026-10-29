@@ -343,7 +343,7 @@ const ConvUI = {
       bar.setAttribute("aria-label", lab); setBar(pc);
       let d;
       // one count and one clock for the whole loading: the same line as the group over the table
-      if (stage === "indexing") d = CONVROWS.rows.length ? CONVROWS.ready() : T("conv.detail.indexed", { done: [...indexed.values()].filter(v => v >= 100).length, total: nIdx, elapsed });
+      if (stage === "indexing") d = CONVROWS.rows.length ? T("conv.detail.elapsed", { elapsed }) : T("conv.detail.indexed", { done: [...indexed.values()].filter(v => v >= 100).length, total: nIdx, elapsed });
       else if (last && last.copied != null) d = T("conv.detail.handover", { done: convMB(last.copied), total: convMB(last.size), elapsed });
       else if (last && last.scansTotal) {
         const w = String(Math.round(last.scansTotal)).length, fp = convPercent(last);
