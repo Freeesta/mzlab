@@ -155,14 +155,14 @@ fn every_mode_is_read_or_refused_exactly_as_the_matrix_says() {
             }
         }
     }
-    // the confirmed codes and the readable modes are the same five
+    // the confirmed codes and the readable modes are the same six
     let confirmed: Vec<&str> = modi
         .iter()
         .filter(|(_, m)| m["codice_confermato"] == true)
         .map(|(s, _)| s.as_str())
         .collect();
     assert_eq!(confirmed, read);
-    assert_eq!(read, ["EMS", "EPI", "MRM", "NL", "PREC"]);
+    assert_eq!(read, ["EMS", "EPI", "MRM", "NL", "PREC", "Q1"]);
 }
 
 /// The refused modes are refused through the registry too (the page's path), with the same detail.
@@ -180,4 +180,62 @@ fn the_registry_refuses_the_same_modes_with_the_same_detail() {
             assert_eq!(detail(&err), today["detail"].as_str().unwrap(), "{sigla}");
         }
     }
+}
+
+/// The mzML of sample `c` (0-based) of the pair `name`, with the file name replaced so two pairs compare.
+fn mzml(dir: &Path, name: &str, c: usize) -> String {
+    let mut l = lettori::apri(set(dir, name), &Limiti::sito()).unwrap();
+    let xml = String::from_utf8(
+        mzlab_core::lettori_mzml::scrivi(&mut *l, c, Vec::new(), &mut |_, _| {}).unwrap(),
+    )
+    .unwrap()
+    .replace(name, "X");
+    // the checksums differ: the two files differ in the scan-type code
+    let mut parts: Vec<&str> = xml.split("name=\"SHA-1\" value=\"").collect();
+    for p in parts.iter_mut().skip(1) {
+        *p = &p[p.find('"').unwrap()..];
+    }
+    parts.concat()
+}
+
+/// Q1 (code 0) is read as an EMS level-1 profile scan, also by the samples that take their method from Method1 (a batch run with one method).
+#[test]
+fn q1_reads_like_ems_and_the_method_one_fallback_serves_every_sample() {
+    let Some((dir, modi)) = generate() else {
+        return;
+    };
+    assert_eq!(modi["Q1"]["campioni"].as_array().unwrap().len(), 3);
+    for sample in modi["Q1"]["campioni"].as_array().unwrap() {
+        check(&dir, "Q1", sample);
+    }
+    let ole = container(std::fs::read(dir.join("Q1.wiff")).unwrap(), "Q1").unwrap();
+    let mut scan = std::fs::read(dir.join("Q1.wiff.scan")).unwrap();
+    for n in 1..=3 {
+        let w = Wiff::open(&ole, "Q1", Some(scan.len() as u64), n).unwrap();
+        assert_eq!(w.experiments.len(), 1, "sample {n}");
+        assert_eq!(w.experiments[0].code, Some(0), "sample {n}");
+        assert!(
+            !w.variante(),
+            "sample {n}: a 3200 QTRAP Q1 scan is not a variant"
+        );
+        let run = w.run(&mut scan).unwrap();
+        assert!(run.spectra.iter().all(|s| s.level == 1 && s.profile));
+    }
+    // same content as EMS apart from the sample ids: header, spectra and TIC
+    let (q1, ems) = (mzml(&dir, "Q1", 0), mzml(&dir, "EMS", 0));
+    assert_eq!(q1, ems);
+    assert_eq!(mzml(&dir, "Q1", 2).matches("<spectrum ").count(), 4);
+    assert!(mzml(&dir, "Q1", 2).contains("sample=3 period=1 cycle=4 experiment=1"));
+}
+
+/// Q1MI (code 1) stays refused, the message names the code.
+#[test]
+fn q1mi_is_still_refused_with_its_code() {
+    let Some((dir, _)) = generate() else {
+        return;
+    };
+    let err = lettori::apri(set(&dir, "Q1MI"), &Limiti::sito())
+        .err()
+        .unwrap();
+    assert_eq!(detail(&err), "scan type code 1 (experiment 1)");
 }

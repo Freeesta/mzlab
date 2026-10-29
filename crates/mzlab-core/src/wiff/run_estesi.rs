@@ -48,9 +48,12 @@ impl Wiff {
         }
     }
 
-    /// True when experiment `e` is a full scan: its spectra give a TIC chromatogram (the other scan experiments give none).
+    /// True when experiment `e` is a full scan (EMS or Q1): its spectra give a TIC chromatogram (the other scan experiments give none).
     pub(crate) fn is_full_scan(&self, e: usize) -> bool {
-        self.experiments.get(e).and_then(|x| x.code) == Some(super::super::estesi::CODE_FULL)
+        matches!(
+            self.experiments.get(e).and_then(|x| x.code),
+            Some(super::super::estesi::CODE_FULL | super::super::estesi::CODE_Q1)
+        )
     }
 
     /// Gives the spectra one at a time to `on` (profile; the empty scans are left out) and returns the chromatograms of the MRM blocks.
