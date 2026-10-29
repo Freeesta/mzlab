@@ -91,12 +91,12 @@ impl<R: ReadAt> Routes<R> {
         if i0 > i1 || i1 - i0 + 1 > MAX_SCANS || i0 < 0 || i0 as usize >= sel.len() {
             return Ok(None);
         }
-        let ar = self.idx.arrays(si)?.clone();
+        let (ar, scans) = self.idx.arrays_scans(si)?;
         let merge = q.get("merge") == Some("1") && !hr.on;
         let mut rows = Vec::new();
         for j in i0 as usize..=(i1 as usize).min(sel.len() - 1) {
             let (sid, rt) = (ar.scan_ids[sel[j]], ar.rt[sel[j]]);
-            let (mut mz, mut y) = mzml.spettro(&self.idx.scans[sid as usize])?;
+            let (mut mz, mut y) = mzml.spettro(&scans[sid as usize])?;
             if !hr.on && !mz.is_empty() && !(raw_filt && filt.is_some()) {
                 (mz, y) = bin_cells(&mz, &y, bin);
             }
