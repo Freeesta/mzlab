@@ -47,10 +47,7 @@ fn header(pad: usize, tail: usize, with_run: bool) -> Vec<u8> {
 }
 
 /// (calls, bytes) the source sees for `f` under the window cache.
-fn measure<F>(data: &[u8], f: F) -> (Head, usize, u64)
-where
-    F: FnOnce(&mut Source<'_, Windowed<'_, Counting>>) -> Result<Head>,
-{
+fn measure(data: &[u8], new: bool) -> (Head, usize, u64) {
     let size = data.len() as u64;
     let mut c = Counting {
         data: data.to_vec(),
@@ -60,7 +57,12 @@ where
     let h = {
         let mut w = Windowed::new(&mut c, size);
         let mut src = Source { r: &mut w, size };
-        f(&mut src).unwrap()
+        if new {
+            read_head(&mut src)
+        } else {
+            old_head(&mut src)
+        }
+        .unwrap()
     };
     (h, c.calls, c.bytes)
 }
@@ -73,20 +75,20 @@ fn head_is_unchanged_and_the_first_read_is_reused() {
     let none = header(300_000, 3_000_000, false);
     let tiny = header(10, 5000, false);
     for data in [&near, &far, &none, &tiny] {
-        let (old, _, _) = measure(data, |s| old_head(s));
-        let (new, _, _) = measure(data, |s| read_head(s));
+        let (old, _, _) = measure(data, false);
+        let (new, _, _) = measure(data, true);
         assert_eq!(old, new);
     }
-    let (_, oc, ob) = measure(&near, |s| old_head(s));
-    let (_, nc, nb) = measure(&near, |s| read_head(s));
+    let (_, oc, ob) = measure(&near, false);
+    let (_, nc, nb) = measure(&near, true);
     eprintln!("near: {oc} reads {ob} B -> {nc} reads {nb} B");
     assert_eq!(oc - nc, 1, "one source read less");
     assert!(ob - nb >= 1 << 20, "about a window less: {ob} -> {nb}");
     // no `<run ` and a 200 000 B head that fits in the first read: one read
-    let (_, nc, _) = measure(&none, |s| read_head(s));
+    let (_, nc, _) = measure(&none, true);
     assert_eq!(nc, 1);
     // `<run ` beyond the first read: the old reads are kept
-    let (_, oc, _) = measure(&far, |s| old_head(s));
-    let (_, nc, _) = measure(&far, |s| read_head(s));
+    let (_, oc, _) = measure(&far, false);
+    let (_, nc, _) = measure(&far, true);
     assert!(nc <= oc);
 }
