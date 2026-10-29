@@ -355,6 +355,7 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     const CartCarica = {{ note: () => {{}} }};
     let UPBUSY = 0;
     const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null }};
+    const FILETAB = {{ flush: () => {{}} }};
     function checkGo() {{}}
     function fail() {{}}
     const IDLE = [];
