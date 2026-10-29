@@ -32,14 +32,16 @@ try:
             assert first[3] == pg.evaluate("TIPOF.KINDS") and all("manual" not in o.lower() and "detected" not in o.lower() for o in pg.evaluate("Array.from(document.querySelector('%s').options).map(o => o.textContent)" % SEL)), first
         step("the types are listed plainly, the detected one is selected, with its reason", auto)
         def one():
+            name = pg.evaluate(f"document.querySelector('{SEL}').dataset.exp")
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 4)
+            SELF = f"select[data-exp='{name}']"      # the table is sorted again by experiment: the changed row follows its group
             kinds = pg.evaluate("ST.files.map(f => f.kind + ':' + f.kindAuto).sort()")
             assert kinds == ["full:full", "infusion:full"], kinds
             assert len(set(pg.evaluate("Array.from(document.querySelectorAll('#flist tr[data-grp]')).map(tr => tr.dataset.grp)"))) == 2
-            opts = pg.evaluate("Array.from(document.querySelector('%s').options).map(o => [o.value, o.textContent, o.selected])" % SEL)
+            opts = pg.evaluate("Array.from(document.querySelector(\"%s\").options).map(o => [o.value, o.textContent, o.selected])" % SELF)
             sel = [o for o in opts if o[2]]
             assert len(sel) == 1 and sel[0][0] == "infusion" and not any("manual" in o[1].lower() for o in opts), opts
-        step("a manual type applies at once and changes the row label, not its place", one)
+        step("a manual type applies at once and changes the row label and the row follows its experiment group", one)
         def grp():
             all_to(pg, "full")
             assert pg.locator("select[data-expg]").count() == 0 and pg.locator("tr.grp").count() == 0
