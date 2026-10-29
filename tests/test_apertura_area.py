@@ -20,6 +20,7 @@ def cut(name, start, end):
 HARNESS = """
 const log = [], els = {};
 const fake = id => els[id] || (els[id] = new Proxy({ id, hidden: false, innerHTML: "", textContent: "", disabled: false, inert: false, style: {}, attrs: {}, onclick: null,
+  classList: (() => { const c = new Set(); return { toggle(k, on) { if (on) c.add(k); else c.delete(k); }, add: k => c.add(k), remove: k => c.delete(k), contains: k => c.has(k) }; })(),
   setAttribute(k, v) { this.attrs[k] = v; }, focus() {}, appendChild() {}, get firstElementChild() { return fake(id + ">i"); } }, {}));
 const $ = id => fake(id);
 const document = { createElement: () => ({ style: {} }) };
@@ -66,9 +67,9 @@ def test_work_area_is_up_before_the_first_file_is_read_and_the_veil_never_is(tmp
   let go; gate = new Promise(ok => { go = ok; });
   const p = $("#opbtn").onclick();
   await new Promise(r => setTimeout(r, 20));
-  const mid = { log: [...log], opening: S.opening, explored, title: $("#opn-title").textContent, list: $("#opn-list").innerHTML, tools: $("#tools").inert, panels: $("#dpanels").hidden };
+  const mid = { log: [...log], opening: S.opening, explored, title: $("#opn-title").textContent, list: $("#opn-list").innerHTML, tools: $("#tools").inert, panels: $("#v-data").classList.contains("opn") };
   go(); await p;
-  console.log(JSON.stringify({ mid, log, opening: S.opening, enabled: !$("#opbtn").disabled, marks: Object.keys(window.MZLAB_OPEN.t), tools: $("#tools").inert, panels: $("#dpanels").hidden }));
+  console.log(JSON.stringify({ mid, log, opening: S.opening, enabled: !$("#opbtn").disabled, marks: Object.keys(window.MZLAB_OPEN.t), tools: $("#tools").inert, panels: $("#v-data").classList.contains("opn") }));
 """, USABLE)
     mid = r["mid"]
     assert mid["opening"] is True and mid["explored"] == 0 and "view:opening" in mid["log"]

@@ -162,7 +162,9 @@ async function groupFiles(f, off = false) {
 /** Side bar width that holds the longest file name (label + box, colour square and padding); the default width when no file is open. */
 let _nameCtx = /** @type {CanvasRenderingContext2D | null} */ (null);
 function namesWidth(/** @type {number} */ dflt) {
-  const names = E.files.filter((/** @type {any} */ f) => !f.gone).map((/** @type {any} */ f) => String(f.label || ""));
+  let names = E.files.filter((/** @type {any} */ f) => !f.gone).map((/** @type {any} */ f) => String(f.label || ""));
+  // while the files are being opened the panel already has its final width: the labels are the ticked file names without extension
+  if (!names.length && S.opening) names = ST.files.filter(usable).map((/** @type {FileRiga} */ f) => f.name.replace(/\.[^.]+$/, ""));
   if (!names.length) return dflt;
   const g = (_nameCtx ||= /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d"))), nm = document.querySelector("#flst .nm");
   g.font = nm ? getComputedStyle(nm).font : "600 13px system-ui, sans-serif";
