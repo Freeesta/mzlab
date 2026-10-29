@@ -62,7 +62,8 @@ errs = []; reqs = []
 for _ in range(100):
     try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1).close(); break
     except Exception: srv.poll()
-lazy = lambda: sorted({u.rsplit("/", 1)[-1] for u in reqs if "/mzfinder/lazy/" in u})
+# the scripts of Tabui in lazy/ (the Flow tab, in the administrator mode, warms its own flow-*.js there)
+lazy = lambda: sorted({u.rsplit("/", 1)[-1] for u in reqs if "/mzfinder/lazy/" in u} & {f.name for f in (ROOT / "TP_Mine" / "lazy").glob("*.js")})
 HEAD = "[...document.querySelectorAll('#tp-t thead th')].map(t => t.textContent.trim())"
 MATRIX = """() => { const heads = [...document.querySelectorAll('#gv-mx thead button[data-sort]')].map(b => b.dataset.sort).filter(k => !['name','mz','rt'].includes(k));
   return Object.fromEntries([...document.querySelectorAll('#gv-mx tbody tr[data-row]')].map(r => { const td = [...r.querySelectorAll('td')]; return [r.dataset.row + '|' + r.querySelector('th button').textContent.trim() + '|' + Math.round(parseFloat(td[0].textContent)),
@@ -71,6 +72,7 @@ MATRIX = """() => { const heads = [...document.querySelectorAll('#gv-mx thead bu
 def load(pg, paths):
     pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
     pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
+    pg.wait_for_function("!!document.getElementById('pick').onchange", timeout=60000)      # the Dati scripts start after the tab: the input has no handler before
     pg.set_input_files("#pick", paths)
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {len(paths)}", timeout=240000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=240000)

@@ -66,7 +66,7 @@ const FONDO = (() => {
   function apply(x, y, fo) {
     if (!fo || fo.mode === "none") return null;
     if (fo.mode === "tract" && fo.ib) { const t = tract(x, y, fo.ib); return { y: y.map((v, i) => v - t.f(x[i])), ibl: t }; }
-    if (fo.mode === "auto") { const bl = auto(x, y, fo.w || 1, fo.zd); return bl ? { y: y.map((v, i) => v - bl[i]), ibl: null, bl: { min: Math.min(...bl), max: Math.max(...bl) } } : null; }
+    if (fo.mode === "auto") { const bl = auto(x, y, fo.w || 1, fo.zd); return bl ? { y: y.map((v, i) => v - bl[i]), ibl: null, bl: { min: minOf(bl), max: maxOf(bl) } } : null; }
     return null;
   }
   /** The state of a panel from a saved one or an old notebook (snip / snipw / ibk). @param {any} o */

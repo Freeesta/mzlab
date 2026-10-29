@@ -191,3 +191,98 @@ fn riconosce_ms_con_certezza_e_cromatografia_con_meno() {
         Fiducia::No
     );
 }
+
+#[test]
+fn l_intestazione_applica_scale_factor_e_add_offset() {
+    let mut l = apri_andi(andi_ms(&Corsa {
+        scala_tempo: Some((0.5, 10.0)),
+        ..PIATTA
+    }));
+    for k in 0..SCANSIONI {
+        let campi = l.intestazione(0, k).unwrap();
+        let t = campi
+            .iter()
+            .find(|c| c.nome == "scan_acquisition_time")
+            .unwrap();
+        let atteso = 60.0 + 1.5 * k as f64;
+        assert_eq!(t.valore.parse::<f64>().unwrap(), atteso, "scan {k}");
+    }
+}
+
+#[test]
+fn l_indice_e_l_asse_dei_tempi_applicano_scale_factor_e_add_offset() {
+    let mut l = apri_andi(andi_ms(&Corsa {
+        scala_tempo: Some((0.5, 10.0)),
+        ..PIATTA
+    }));
+    let rt = |k: usize| (60.0 + 1.5 * k as f64) / 60.0;
+    for (k, voce) in l.indice(0).unwrap().to_vec().iter().enumerate() {
+        assert!(
+            (voce.rt - rt(k)).abs() < 1e-9,
+            "index scan {k}: {}",
+            voce.rt
+        );
+        assert!((l.scansione(0, k).unwrap().rt - rt(k)).abs() < 1e-9);
+    }
+    for id in ["TIC", "BPC"] {
+        let c = l.cromatogramma(0, id).unwrap();
+        for (k, t) in c.time.iter().enumerate() {
+            assert!((t - rt(k)).abs() < 1e-9, "{id} point {k}: {t}");
+        }
+    }
+}
+
+#[test]
+fn il_tempo_dei_punti_e_la_ritenzione_analogica_applicano_scale_factor_e_add_offset() {
+    let scala = |v: &mut Vb| {
+        v.att.push(("scale_factor".into(), At::N(6, vec![0.5])));
+        v.att.push(("add_offset".into(), At::N(6, vec![10.0])));
+    };
+    // ANDI-MS without scan_acquisition_time: the time of a scan is `time_values` at its first point
+    let n = 6;
+    let dims = [("point_number", 0u32), ("scan_number", n as u32)];
+    let mut tv = var(
+        "time_values",
+        &[0],
+        6,
+        (0..n)
+            .map(|k| (60.0 + 1.5 * k as f64 - 10.0) / 0.5)
+            .collect(),
+    );
+    scala(&mut tv);
+    let vars = vec![
+        var("scan_index", &[1], 4, (0..n).map(|k| k as f64).collect()),
+        var("point_count", &[1], 4, vec![1.0; n]),
+        var("mass_values", &[0], 6, vec![100.0; n]),
+        var("intensity_values", &[0], 6, vec![5.0; n]),
+        tv,
+    ];
+    let mut l = apri_andi(cdf(false, &dims, &globali_ms(&PIATTA), &vars, n as u32));
+    for (k, v) in l.indice(0).unwrap().iter().enumerate() {
+        assert!(
+            (v.rt - (60.0 + 1.5 * k as f64) / 60.0).abs() < 1e-9,
+            "time_values scan {k}: {}",
+            v.rt
+        );
+    }
+    // ANDI-Chromatography with a scaled raw_data_retention
+    let m = 5;
+    let dims = [("point_number", 0u32), ("_32_byte_string", 32)];
+    let mut r = var(
+        "raw_data_retention",
+        &[0],
+        6,
+        (0..m).map(|i| (30.0 + i as f64 - 10.0) / 0.5).collect(),
+    );
+    scala(&mut r);
+    let vars = vec![var("ordinate_values", &[0], 6, vec![1.0; m]), r];
+    let g = vec![("detector_name".to_string(), t("FID1A"))];
+    let mut l = apri_andi(cdf(false, &dims, &g, &vars, m as u32));
+    let c = l.cromatogramma(0, "FID1A").unwrap();
+    for (i, x) in c.time.iter().enumerate() {
+        assert!(
+            (x - (30.0 + i as f64) / 60.0).abs() < 1e-9,
+            "retention point {i}: {x}"
+        );
+    }
+}

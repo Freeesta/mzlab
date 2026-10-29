@@ -44,9 +44,9 @@ try:
             assert pg.get_attribute("#stbar", "role") == "toolbar" and pg.get_attribute("#stbar", "aria-label") == "Strumenti"
             assert pg.locator("#sidebar-tablist").count() == 0, "no rail"
             ids = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.dataset.cmd)")
-            assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "more", "search"], ids
+            assert ids == ["file", "calc", "adducts", "losses", "lists", "ptable", "more", "search"], ids
             lab = pg.evaluate("[...document.querySelectorAll('#stbar > button[data-cmd]')].filter(b=>!b.hidden).map(b=>b.innerText.trim())")
-            assert lab == ["File", "Calcolatrice", "Perdite", "Addotti", "Liste", "Tavola", "Altro", "Cerca"], lab
+            assert lab == ["File", "Calcolatrice", "Addotti", "Perdite", "Liste", "Tavola", "Altro", "Cerca"], lab
             for b in pg.query_selector_all("#stbar > button[data-cmd]"):
                 if b.is_visible(): assert b.get_attribute("aria-label") and b.get_attribute("title") and b.query_selector("svg"), b.get_attribute("data-cmd")
             assert pg.evaluate("document.querySelectorAll('header button#np-pc, header button#np-bt').length") == 0, "PubChem and BioTransformer only in «Altro»"
@@ -80,10 +80,10 @@ try:
         def cambia():
             pg.click("#stbar [data-cmd=calc]"); shown("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Calcolatrice m/z'")
             assert pg.is_visible("#calcdlg") and pg.inner_text("#sb-title") == "Calcolatrice m/z", pg.inner_text("#sb-title")
-            pg.click("#stbar [data-cmd=adducts]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Addotti ESI' && document.querySelector('#stbar [data-cmd=adducts]').getAttribute('aria-pressed') === 'true'")
-            assert pg.inner_text("#sb-title") == "Addotti ESI" and not pg.is_visible("#calcdlg")
-            assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=adducts]", "aria-pressed") == "true"
-            pg.click("#stbar [data-cmd=losses]"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Perdite neutre'"); shown("#sb-panel-losses"); assert pg.inner_text("#sb-title") == "Perdite neutre" and pg.is_visible("#sb-panel-losses")
+            pg.click("#stbar [data-cmd=losses]"); gone("#calcdlg"); attendi(pg, "document.querySelector('#sb-title').innerText === 'Perdite neutre' && document.querySelector('#stbar [data-cmd=losses]').getAttribute('aria-pressed') === 'true'")
+            assert pg.inner_text("#sb-title") == "Perdite neutre" and not pg.is_visible("#calcdlg")
+            assert pg.get_attribute("#stbar [data-cmd=calc]", "aria-pressed") == "false" and pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "true"
+            pg.click("#stbar [data-cmd=losses]"); gone("#sb-panel-losses"); assert pg.get_attribute("#stbar [data-cmd=losses]", "aria-pressed") == "false", "a second click on the same tool hides the panel"
             pg.click("#stbar [data-cmd=lists]"); shown("#sb-panel-lists"); assert pg.is_visible("#sb-panel-lists")
             pg.click("#stbar [data-cmd=ptable]"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "the table stays a window"
             pg.evaluate("document.querySelector('#refdlg').close()")
@@ -101,6 +101,7 @@ try:
             pg.keyboard.press("End"); attendi(pg, "BARRA.width === 560"); assert pg.evaluate("BARRA.width") == 560
             pg.keyboard.press("Enter"); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300
             pg.evaluate("BARRA.setWidth(1000)"); assert pg.evaluate("BARRA.width") == 560, "never wider than 560 px"
+            attendi(pg, FOLLOW)
             assert pg.evaluate("E.panels.filter(p=>p.full).every(p=>Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"), "the charts follow the narrower page"
             h.dblclick(); attendi(pg, "BARRA.width >= 280 && BARRA.width <= 300"); assert 280 <= pg.evaluate("BARRA.width") <= 300, "double click = the automatic width"
             pg.click("#sb-x"); gone("#dfiles")
@@ -131,12 +132,12 @@ try:
         step("side by drag and drop of the header (drop zones, preview, charts move) and Alt+Shift+arrows; remembered in mzlab.barra.lato", lato)
 
         def ricorda():
-            pg.click("#stbar [data-cmd=adducts]"); attendi(pg, "BARRA.curTab === 'adducts'")
+            pg.click("#stbar [data-cmd=losses]"); attendi(pg, "BARRA.curTab === 'losses'")
             pg.evaluate("BARRA.setWidth(320)"); pg.evaluate("BARRA.setSide('right')")
-            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "adducts" and st["open"] and "pinned" not in st, st
+            st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))"); assert st["w"] == 320 and st["tab"] == "losses" and st["open"] and "pinned" not in st, st
             pg.reload(); ready(pg)
-            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'adducts'"), "open, tool, side and width come back"
-            assert pg.is_visible("#sb-panel-adducts"), "the restored panel is painted"
+            assert pg.is_visible("#dfiles") and pg.evaluate("BARRA.side === 'right' && BARRA.width === 320 && BARRA.curTab === 'losses'"), "open, tool, side and width come back"
+            assert pg.is_visible("#sb-panel-losses"), "the restored panel is painted"
             pg.click("#sb-x"); pg.evaluate("BARRA.setSide('left')"); pg.reload(); ready(pg)
             assert not pg.is_visible("#dfiles"), "hidden when it was left hidden"
             pg.evaluate("localStorage.setItem('mzlab.barra.lato','bogus'); localStorage.setItem('mzlab.barra.lr', JSON.stringify({tab:'calc', pinned:true, open:true, w:0}))"); pg.reload(); ready(pg)
@@ -183,7 +184,7 @@ try:
         def disegno():
             pg.click("#nav [data-v=draw]"); gone("#stbar [data-cmd=file]")
             assert not pg.is_visible("#stbar [data-cmd=file]"), "no File outside the Dati view"
-            pg.click("#np-ad"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "in Disegno the tools are the windows of before"
+            pg.click("#np-pt"); attendi(pg, "document.querySelector('#refdlg').open"); assert pg.evaluate("document.querySelector('#refdlg').open"), "in Disegno the tools are the windows of before"
             pg.evaluate("document.querySelector('#refdlg').close()")
             pg.click("#np-calc2"); shown("#calcdlg"); assert pg.is_visible("#calcdlg") and pg.evaluate("!BARRA.open")
             pg.click("#np-calc2"); gone("#calcdlg"); assert not pg.is_visible("#calcdlg")
@@ -196,7 +197,7 @@ try:
 
         def hr_barra():
             ids = pg.evaluate("[...document.querySelectorAll('#stbar button[data-cmd],#stbar [data-cmd-main]')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.dataset.cmd||b.dataset.cmdMain)")
-            assert ids == ["file", "calc", "losses", "adducts", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
+            assert ids == ["file", "calc", "adducts", "losses", "lists", "ptable", "scan", "form", "idn", "more", "search"], ids
             pg.set_viewport_size({"width": 1800, "height": 1000}); attendi(pg, "document.documentElement.dataset.barLab === 'all'")        # the words need room: the panel pill takes its own word from the bar
             lab = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.innerText.trim()).filter(Boolean)")
             assert all(x in lab for x in ("Scansione", "Formule", "Librerie")), lab         # the HR group keeps its words as long as the main tools do
@@ -214,9 +215,9 @@ try:
         def hr_menu():
             pg.focus("#stbar [data-cmd-car=scan]"); pg.keyboard.press("ArrowDown"); pg.wait_for_selector("#stmenu")
             items = pg.evaluate("[...document.querySelectorAll('#stmenu [role^=menuitem]')].map(b=>b.innerText.trim())")
-            assert items == ["Intestazione della scansione", "Elenco delle scansioni", "File e strumento"], items
-            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst' && document.querySelector('#sb-title').innerText === 'Elenco delle scansioni'")
-            assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst" and pg.inner_text("#sb-title") == "Elenco delle scansioni"
+            assert items == ["Intestazione della scansione", "Elenco delle scansioni", "File e strumento", "Albero dei precursori"], items
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); shown("#hrinfo"); attendi(pg, "BARRA.curTab === 'lst' && document.querySelector('#sb-title').innerText.startsWith('Elenco delle scansioni')")
+            assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "lst" and pg.inner_text("#sb-title").startswith("Elenco delle scansioni")
             assert pg.evaluate("document.querySelector('#stbar [data-cmd-main=scan]').getAttribute('aria-label')") == "Scansione: Elenco delle scansioni"
             assert pg.get_attribute("#stbar [data-cmd-main=scan]", "aria-pressed") == "true"
             pg.keyboard.press("Escape"); frames(pg, 3)
@@ -239,9 +240,9 @@ try:
         step("HR menus from the keyboard (↓ opens, ↓ Enter chooses), last item kept on the button and reopened by a click, 6 tools in all", hr_menu)
 
         def hr_stato():
-            pg.click("#stbar [data-cmd=adducts]"); pg.evaluate("BARRA.setWidth(400)")
+            pg.click("#stbar [data-cmd=losses]"); pg.evaluate("BARRA.setWidth(400)")
             hr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.hr'))"); lr = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr')||'null')")
-            assert hr["open"] and hr["w"] == 400 and hr["tab"] == "adducts" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
+            assert hr["open"] and hr["w"] == 400 and hr["tab"] == "losses" and hr["last"]["scan"] == "lst" and hr["last"]["form"] == "iso", hr
             assert lr is None or lr.get("w") != 400, "LR and HR keep separate states"
             pg.click("#sb-x")
         step("HR state in mzlab.barra.hr (pinned, width, tool, last item of each menu), separate from LR", hr_stato)
@@ -249,7 +250,7 @@ try:
         # ------------------------------------------------------------------ narrow windows, iPad, phone
         def stretta():
             resize(1500, 1000)
-            pg.evaluate("BARRA.setTab('adducts',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'adducts'")
+            pg.evaluate("BARRA.setTab('calc',{noFocus:true})"); attendi(pg, "BARRA.open && !BARRA.sheet && BARRA.curTab === 'calc'")
             assert pg.evaluate("BARRA.open && !BARRA.sheet")
             pg.set_viewport_size({"width": 800, "height": 900})
             attendi(pg, "!BARRA.open")           # below 1100 px the side panel closes by itself; the tool button gives it back, as a sheet

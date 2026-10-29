@@ -152,13 +152,17 @@ impl Store {
         Ok(e)
     }
 
+    /// Forgets `name`; the files made by the app go with it unless another entry (a sibling sample of the same upload) still uses them.
     pub fn remove(&mut self, name: &str) {
         self.load();
         if let Some(e) = self.files.remove(name) {
             if let Ok(own) = self.own_dir() {
                 let paths = e.nat.iter().flat_map(|n| n.members.iter().map(|m| m.1.clone())).chain([e.path.clone()]);
                 for p in paths.filter(|p| p.starts_with(&own)) {
-                    let _ = std::fs::remove_file(p);
+                    let used = self.files.values().any(|o| o.path == p || o.nat.iter().any(|n| n.members.iter().any(|m| m.1 == p)));
+                    if !used {
+                        let _ = std::fs::remove_file(p);
+                    }
                 }
             }
             self.save_files();
@@ -345,3 +349,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "store_tests.rs"]
+mod sibling_tests;

@@ -111,6 +111,14 @@ try:
             html = pg.evaluate("""() => { const S = document.querySelector('.flx-list').__flow, h = document.createElement('div'); h.append(FLOW.decisionsEditor(S, S.plan.inputs.find(i => i.name === 'decisions.json'))); return h.innerHTML; }""")
             assert "Decided level of 434.2108@1.00" in html and "Note for 100.0000@5.00" in html and "Download" in html, html[:600]
         step("the editor lists the decisions with their labels", editor)
+        def detail():
+            html = pg.evaluate("""() => { const h = document.createElement('div'); document.body.append(h);
+              FLOW.openTabui(JSON.stringify({ schema: 'tptab/1', times: [5, 10, 20], rows: [{ row: 1, id: 7, mz: 200.1, rt: 2, status: 0, kinship: 3, via: 1, notes: 1, n_det: 3, max_area: 90, tmax: 20, in_t0: false, in_blank: false, series: [10, 40, 90],
+                fit_candidates: [{ neutral_formula: 'C8H9NO', ppm: 1.2, total: 0.9 }] }] }), 'tp.json', h);
+              const out = { svg: !!h.querySelector('svg[aria-label]'), tables: h.querySelectorAll('table').length, text: h.textContent }; h.remove(); return out; }""")
+            assert html["svg"] and html["tables"] == 3, html
+            assert "5: 10; 10: 40; 20: 90" in html["text"] and "C8H9NO" in html["text"] and "in time 0" in html["text"], html["text"][:600]
+        step("the products view adds the kinetics, notes and formula candidates with the chart and its table", detail)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

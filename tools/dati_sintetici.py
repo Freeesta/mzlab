@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), canali/K_MIRATO, K_BLOCCHI, K_DDA (targeted MS2 in LC, MSn in blocks, DDA with 70 precursors: the channel tests), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -28,7 +28,6 @@ OFF = 0.3                       # instrument m/z offset seen in the lab files
 TIMES = [0, 5, 10, 15, 30, 45, 60]
 STANDARDS = {"0_06": 0.06, "0_6": 0.6, "2_4": 2.4, "7_2": 7.2, "12": 12.0, "18": 18.0}
 
-
 def _libm(f):
     """numpy's exp/log/sin/power choose SIMD code by CPU (AVX-512 or not) and may differ in the last bit; the scalar libm is the same
     on every runner, so the files, their SHA-256 (the keys of tests/golden/e2e) and the golden answers do not depend on the machine."""
@@ -49,7 +48,7 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None, filt=None) -> str:
     p = ""
     if prec is not None:
         w = ""
@@ -67,7 +66,8 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
             + ('<cvParam cvRef="MS" accession="MS:1000129" name="negative scan" value=""/>' if neg else '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>') +
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
-            f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList>{p}<binaryDataArrayList count="2">'
+            f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/>' + (f'<cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="{filt}"/>' if filt else '')
+            + f'</scan></scanList>{p}<binaryDataArrayList count="2">'
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
 
 
@@ -77,16 +77,17 @@ def _chrom(i, cid, t, y, extra="", yunit="") -> str:
             + _arr("MS:1000515", "intensity array", y, f' unitName="{yunit}"' if yunit else "") + "</binaryDataArrayList></chromatogram>")
 
 
-def pressure_trace(rt_end: float = 15.0, n: int = 6000):
-    """Pump pressure like a Thermo file converted with msconvert: declared in pascal, values ten times too high (278 bar at 1 min really shows 2.78e8)."""
+def pressure_trace(rt_end: float = 15.0, n: int = 6000, counts: bool = False):
+    """Pump pressure: in pascal, 270 bar + 8 bar/min. `counts`: 10 x that of a real file (shape 270, 210, 180, 600), unit given by `_pressure_chrom`."""
     t = np.linspace(0, rt_end, n)
-    bar = 270 + 8 * t + 20 * _sin(t * 3)
-    return t, bar * 1e5 * 10
+    return (t, np.interp(t, [0, 0.5, 5.6, 13, 14.5, 15], [275, 270, 210, 180, 185, 600]) * 10) if counts else (t, (270 + 8 * t + 20 * _sin(t * 3)) * 1e5)
 
 
-def _pressure_chrom(i: int) -> str:
-    t, y = pressure_trace()
-    return _chrom(i, "Pump Pressure 1", t, y, '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>', "pascal")
+def _pressure_chrom(i: int, mode: str = "") -> str:
+    """mode "" = pascal; "counts" = counts, no pressure unit; "psi" = counts on the array and the unit in the `unità` userParam, as our mzML writer does."""
+    t, y = pressure_trace(counts=bool(mode))
+    cv = '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>' + ('<userParam name="unità" value="psi"/>' if mode == "psi" else "")
+    return _chrom(i, "Pump Pressure 1", t, y, cv, "number of detector counts" if mode else "pascal")
 
 
 def _write(path: Path, specs: list[str], chroms: list[str]) -> None:
@@ -113,7 +114,7 @@ def _pda(rng, total, rt_end=22.0):
     return t, y
 
 
-def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = False, dad: bool = False) -> None:
+def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool | str = False, dad: bool = False) -> None:
     k = 0.035
     P = 2.0e7 * _exp(-k * t)
     comps = [  # (m/z observed, RT, sigma, amplitude)
@@ -138,7 +139,7 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = Fal
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
         specs.append(_spec(i, rt, mz, it, neg=neg)); tic.append(it.sum()); bpc.append(it.max())
     tp, yp = _pda(rng, _exp(-k * t))
-    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3)] if pressure else []))
+    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3, "" if pressure is True else pressure)] if pressure else []))
     if dad:                                           # opt-in: the extra array changes the bytes, so the golden answers keyed by SHA-256 keep the default
         sys.path.insert(0, str(Path(__file__).resolve().parent)); from dati_sintetici_dad import inject_dad; inject_dad(path, t)
 
@@ -485,14 +486,14 @@ def make(out: Path) -> Path:
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     subtraction_series(out)                           # written last: nothing else changes
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from dati_sintetici_serie import dia, qc_series
+    from dati_sintetici_serie import dia, qc_series; from dati_sintetici_canali import canali_casi
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
+    canali_casi(out / "canali")                       # written last, in a folder of its own: nothing else changes
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
+    if len(sys.argv) != 2: sys.exit(__doc__)
     print(make(Path(sys.argv[1])))

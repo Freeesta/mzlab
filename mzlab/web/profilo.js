@@ -68,7 +68,7 @@ const PROFILO = (() => {
     if (!pts.length) return `<p class="sm">${t("prof.nopoints")}</p>`;
     const u = tunitGet(), W = 300, H = 140, L = 44, R = 8, T = 8, B = 24;
     const xs = pts.map(p => p.time), ys = pts.map(p => p[key]);
-    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(0, ...ys), y1 = Math.max(...ys);
+    let x0 = minOf(xs), x1 = maxOf(xs), y0 = minOf(ys, 0), y1 = maxOf(ys);
     if (x1 === x0) { x0 -= 1; x1 += 1; }
     if (y1 === y0) y1 = y0 + 1;
     const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
@@ -138,7 +138,7 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
       const msg = box.querySelector("#prof-msg"), go = box.querySelector("#prof-go");
       go.disabled = true; msg.textContent = "";
       try { await run(st.text, st.rt); paintRes(box); }
-      catch (err) { msg.textContent = String(err && err.message || err); }
+      catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); }
       go.disabled = false;
     };
   }
@@ -147,7 +147,7 @@ ${tableHtml(res)}<div class="qq-form"><button type="button" id="prof-copy">${t("
     st.text = String(mz); st.rt = String(rt); save();
     if (window.BARRA) BARRA.setTab("stat", { noFocus: true, instant: true });
     const box = document.querySelector("#stat-profile");
-    if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err) { const m = box.querySelector("#prof-msg"); if (m) m.textContent = String(err && err.message || err); } }
+    if (box) { paint(box); try { await run(st.text, st.rt); paintRes(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); const m = box.querySelector("#prof-msg"); if (m) m.textContent = String(err && err.message || err); } }
     return res;
   }
 

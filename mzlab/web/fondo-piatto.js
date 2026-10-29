@@ -64,7 +64,7 @@ const FONDOP = (() => {
     const st = I18N.t(ib.mod ? "fondo.flat.mod" : "fondo.flat.auto"), ranges = ibkRange(ib.a, 2);
     const html = `${I18N.t("fondo.flat.chip", { ranges, levels })} <span class="muted">(${st})</span> <button type="button" data-ib="fl-" title="${I18N.t("fondo.flat.left")}" aria-label="${I18N.t("fondo.flat.left")}">◀</button>`
       + `<button type="button" data-ib="fl+" title="${I18N.t("fondo.flat.right")}" aria-label="${I18N.t("fondo.flat.right")}">▶</button>`
-      + (ib.mod ? ` <button type="button" data-ib="fl0" title="${I18N.t("fondo.flat.restore")}">↺ ${I18N.t("fondo.flat.restore")}</button>` : "");
+      + (ib.mod ? ` <button type="button" data-ib="fl0">↺ ${I18N.t("fondo.flat.restore")}</button>` : "");
     el.setAttribute("role", "group"); el.setAttribute("aria-label", I18N.t("fondo.flat.aria", { state: st, ranges }));
     return html;
   }

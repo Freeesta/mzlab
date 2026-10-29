@@ -1,5 +1,5 @@
 //! The list of transformations of mzFinder in Rust (`legacy::transf`) against the frozen answers of the former Python engine:
-//! the rows, the rules that the list adds to `TP_Mine/data/regole_tp.json`, the `lit:` references and the error texts.
+//! the rows, the rules that the list adds to `TP_Mine/data/regole_tp_2.json`, the `lit:` references and the error texts.
 
 use mzlab_feat::hypo::Rules;
 use mzlab_feat::legacy::transf;
@@ -24,8 +24,9 @@ fn transformations_match_python() {
         &std::fs::read(root.join("tests/golden/finder_transf.json")).unwrap(),
     )
     .unwrap();
-    let base = std::fs::read(root.join("TP_Mine/data/regole_tp.json")).unwrap();
-    let n_base = Rules::parse(&base).unwrap().rules.len();
+    let base = std::fs::read(root.join("TP_Mine/data/regole_tp_2.json")).unwrap();
+    let base_rules = Rules::parse(&base).unwrap().rules;
+    let n_base = base_rules.len();
     for case in golden["cases"].as_array().unwrap() {
         let (name, text) = (
             case["name"].as_str().unwrap(),
@@ -57,7 +58,16 @@ fn transformations_match_python() {
             assert_eq!(r.id, w["name"].as_str().unwrap(), "{name}");
             assert_eq!(flat(&r.delta), counts(&w["delta"]), "{name}: {}", r.id);
         }
-        let lit: Vec<_> = merged.iter().filter(|r| r.level == 2).collect();
+        // the shipped rules already have literature rows: only those the list sets or changes count
+        let lit: Vec<_> = merged
+            .iter()
+            .filter(|r| r.level == 2)
+            .filter(|r| {
+                !base_rules
+                    .iter()
+                    .any(|b| b.id == r.id && b.source == r.source)
+            })
+            .collect();
         let want = case["literature"].as_array().unwrap();
         assert_eq!(lit.len(), want.len(), "{name}: literature");
         for w in want {

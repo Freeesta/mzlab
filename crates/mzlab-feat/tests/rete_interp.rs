@@ -111,7 +111,7 @@ fn the_rows_and_the_arcs_come_from_the_interpretation() {
         (2, 1, Some(10.0))
     );
 
-    let rules = Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp.json")).unwrap();
+    let rules = Rules::parse(include_bytes!("../../../TP_Mine/data/regole_tp_2.json")).unwrap();
     let r = build(&tp, &p, &v, &rules, &ReteParams::default());
     let arcs: Vec<_> = r
         .arcs

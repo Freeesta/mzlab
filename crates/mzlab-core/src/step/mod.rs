@@ -171,6 +171,10 @@ pub struct Param {
     pub noresult: bool,
     /// A text that is a list of the user, `liste/1` (`transformations` or `adducts`): the page edits it as a table, the CSV of the list is the value.
     pub list: Option<&'static str>,
+    /// Short label of the form (`x-label`, up to 8 words); the CLI keeps `title`.
+    pub label: Option<&'static str>,
+    /// One sentence that says what the field does or what to type (`x-tip`, up to 20 words); the CLI keeps `doc`.
+    pub tip: Option<&'static str>,
 }
 
 impl Param {
@@ -188,6 +192,8 @@ impl Param {
             estimate: false,
             noresult: false,
             list: None,
+            label: None,
+            tip: None,
         }
     }
     pub fn number(name: &'static str, title: &'static str) -> Param {
@@ -261,6 +267,14 @@ impl Param {
     }
     pub fn doc(mut self, d: &'static str) -> Param {
         self.doc = Some(d);
+        self
+    }
+    pub fn label(mut self, l: &'static str) -> Param {
+        self.label = Some(l);
+        self
+    }
+    pub fn tip(mut self, t: &'static str) -> Param {
+        self.tip = Some(t);
         self
     }
     pub fn advanced(mut self) -> Param {

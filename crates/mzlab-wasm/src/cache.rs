@@ -40,12 +40,14 @@ impl Engine {
     pub fn set_budget_mb(&mut self, mb: f64) {
         let mb = if mb.is_finite() && mb > 0.0 { mb } else { BUDGET_DEFAULT_MB };
         (self.cache_cap, self.work_cap) = split(mb);
+        mzlab_core::mapscan::set_table_cap(self.cache_cap / 4);
         self.trim_cache();
     }
 
     /// Budget of the cache in MB (0 = the default of `set_budget_mb`); kept for the callers that set only the cache.
     pub fn set_cache_budget(&mut self, mb: f64) {
         self.cache_cap = (mb.max(0.0) * 1048576.0) as usize;
+        mzlab_core::mapscan::set_table_cap(if self.cache_cap == 0 { split(BUDGET_DEFAULT_MB).0 / 4 } else { self.cache_cap / 4 });
     }
 
     /// Bytes held by the cache: the maps and the arrays and blocks of the indexes of all the files.

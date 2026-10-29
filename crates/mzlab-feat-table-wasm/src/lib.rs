@@ -10,6 +10,9 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 pub mod core;
+pub mod filterspec;
+pub mod pol;
+pub mod rows_mgf;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";
@@ -76,13 +79,6 @@ pub fn tp_table(table_read: Function, size: f64, samples_json: &str, rows_json: 
     core::tp_table_json(&mut table_reader(table_read), size as u64, samples_json, rows_json).map_err(js_err)
 }
 
-/// `tp_table` with the conditions of the series: `campioni_json` = the `campioni/2` of the files, `infos_json` = `[{"row","neutral_formula","ion_formula","ppm"}]`.
-/// With two or more conditions the `tptab/1` carries `gruppi` (`gruppi/1`); with fewer it is the one of `tp_table`.
-#[wasm_bindgen]
-pub fn tp_table_cond(table_read: Function, size: f64, samples_json: &str, rows_json: &str, campioni_json: &str, infos_json: &str) -> std::result::Result<String, JsValue> {
-    core::tp_table_cond_json(&mut table_reader(table_read), size as u64, samples_json, rows_json, campioni_json, infos_json).map_err(js_err)
-}
-
 /// The network of the products (`rete/1`): `table_read` is the `.mzfeat` with the block `tp/1` (`size` bytes), `interp_read` the one with the block `interp/1`
 /// (`interp_size` bytes; the same file when it carries both), `campioni_json` the `campioni/2` of the series ("" = no time course) and `rules` the table
 /// of transformations (`regole_tp`).
@@ -139,6 +135,27 @@ pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &
     core::table_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind).map_err(js_err)
 }
 
+/// A table file as `export_table`, written in the polarity the table and the files of its lineage give (`pol::of_table`), the one `flow run` uses; the view is the whole table.
+/// The `.mzidx` of the files are read as `index_read(k, offset, length)`, `index_sizes[k]` bytes each (none when they are not at hand).
+#[wasm_bindgen]
+pub fn export_table_auto(table_read: Function, size: f64, samples_json: &str, table_sha256: &str, kind: &str, index_read: Function, index_sizes: Vec<f64>) -> std::result::Result<String, JsValue> {
+    let mut ix = Vec::new();
+    for (k, s) in index_sizes.iter().enumerate() {
+        if let Ok(i) = Index::open(JsReader { read: index_read.clone(), k: k as u32 }, *s as u64) { ix.push(i); }
+    }
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let pol = pol::of_table(&mut table_reader(table_read.clone()), size as u64, &ix).map_err(js_err)?;
+    core::table_file(&mut table_reader(table_read), size as u64, &samples, "", table_sha256, pol, kind).map_err(js_err)
+}
+
+/// The `view/1` of the whole table under the rules a `table.filter` step spells in `params_json` (`filterspec::spec_from_json`), the one `flow run` writes; `samples_json` may be `campioni/2`.
+#[wasm_bindgen]
+pub fn table_view_auto(table_read: Function, size: f64, samples_json: &str, params_json: &str) -> std::result::Result<String, JsValue> {
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let spec = filterspec::spec_from_json(params_json).map_err(js_err)?;
+    core::view_json(&mut table_reader(table_read), size as u64, &samples, &spec).map_err(js_err)
+}
+
 /// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row
 /// (`index_read(k, offset, length)`, `index_sizes[k]` bytes).
 #[wasm_bindgen]
@@ -149,6 +166,45 @@ pub fn export_ms2(table_read: Function, size: f64, samples_json: &str, spec: &st
         Index::open(JsReader { read: index_read.clone(), k: k as u32 }, size as u64)
     };
     core::ms2_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind, open).map_err(js_err)
+}
+
+/// The query of `table.match`: the MGF of the rows of the table that have an MS2 spectrum, the id of the row as the accession (`rows_mgf::rows_mgf`, the one `flow run` calls). `params_json` is the object of
+/// the resolved parameters of the step (`ms2_spectrum`, `ms2_background`); the `.mzidx` of the files are read as in `export_ms2`. A missing index is `err.flow.tablematch.files`.
+#[wasm_bindgen]
+pub fn table_match_rows(
+    table_read: Function,
+    size: f64,
+    samples_json: &str,
+    params_json: &str,
+    table_sha256: &str,
+    index_read: Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, JsValue> {
+    let params = match mzlab_core::json::parse(params_json.as_bytes()).map_err(js_err)? {
+        mzlab_core::json::Value::Obj(o) => o,
+        _ => Vec::new(),
+    };
+    let open = |k: usize| {
+        let size = *index_sizes
+            .get(k)
+            .ok_or_else(|| Error::new("err.flow.tablematch.files"))?;
+        Index::open(
+            JsReader {
+                read: index_read.clone(),
+                k: k as u32,
+            },
+            size as u64,
+        )
+    };
+    rows_mgf::rows_mgf(
+        &mut table_reader(table_read),
+        size as u64,
+        samples_json.as_bytes(),
+        &params,
+        table_sha256,
+        open,
+    )
+    .map_err(js_err)
 }
 
 /// The `polpair/1` of two `.mzfeat` of the same files, one per polarity: the rows of the positive table that have the same neutral mass, RT and course in

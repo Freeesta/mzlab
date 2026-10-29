@@ -52,7 +52,7 @@ const PCA = (() => {
   // ---------------------------------------------------------------- drawing
   const W = 320, H = 250, L = 46, R = 10, T = 10, B = 34;
   function frame(xs, ys, xl, yl) {
-    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    let x0 = minOf(xs), x1 = maxOf(xs), y0 = minOf(ys), y1 = maxOf(ys);
     const px = (x1 - x0 || 1) * 0.1, py = (y1 - y0 || 1) * 0.1;
     x0 -= px; x1 += px; y0 -= py; y1 += py;
     const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);
@@ -125,7 +125,7 @@ const PCA = (() => {
     const el = box.querySelector("#pca-res");
     if (!el) return;
     if (!res) { el.innerHTML = ""; return; }
-    el.innerHTML = `${stepsHtml()}<h4 class="sm" style="margin:8px 0 2px">${t("pca.scores")} <button type="button" id="pca-help" class="pca-q" aria-expanded="false" aria-controls="pca-help-text" aria-label="${eh(t("pca.help"))}">?</button></h4>
+    el.innerHTML = `${stepsHtml()}<h4 class="sm" style="margin:8px 0 2px">${t("pca.scores")} <button type="button" id="pca-help" class="pca-q" aria-expanded="false" aria-controls="pca-help-text" aria-label="${eh(t("pca.help"))}" title="${eh(t("pca.help"))}">?</button></h4>
 <p class="sm" id="pca-help-text" hidden>${t("pca.help.text")}</p>${scoresSvg()}${CAMPIONI.gradientLegend()}<p class="sm">${t("pca.traj")}</p>
 <h4 class="sm" style="margin:8px 0 2px">${t("pca.loadings")}</h4>${loadingsSvg()}<p class="sm">${t("pca.stab.note")}</p>${tableHtml()}
 <div class="qq-form"><button type="button" id="pca-xlsx">Excel</button></div>`;
@@ -168,7 +168,7 @@ const PCA = (() => {
       e.preventDefault();
       const mn = numIt(box.querySelector("#pca-min").value), k = parseInt(box.querySelector("#pca-k").value, 10), msg = box.querySelector("#pca-msg");
       st.min = mn >= 0 ? mn : 0; st.k = k >= 1 ? k : 1; st.transform = box.querySelector("#pca-tr").value; st.scaling = box.querySelector("#pca-sc").value; save(); msg.textContent = "";
-      try { await run(); paintRes(box); } catch (err) { msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
+      try { await run(); paintRes(box); } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); res = null; paintRes(box); }
     };
     box.onclick = e => {
       if (e.target.id === "pca-help") { const h = box.querySelector("#pca-help-text"); h.hidden = !h.hidden; e.target.setAttribute("aria-expanded", String(!h.hidden)); return; }

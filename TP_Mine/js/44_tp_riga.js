@@ -376,7 +376,13 @@
     if (!ex || Math.abs(ex.prec - prec) > 0.6) return toInfusion(prec, file);
     setView("data");
     const f = file ? dataFiles("ms2").find(x => base(x.name || x.file) === base(file)) : null;
-    if (fin(rt) && typeof goMs2 === "function") await goMs2({ prec: ex.prec, rt, k2: f ? f.k : ex.k });
+    if (fin(rt) && typeof goMs2 === "function") {
+      const k2 = f ? f.k : ex.k;
+      await goMs2({ prec: ex.prec, rt, k2 });
+      // goMs2 only moves a spectrum that is already linked: a tab with the chromatogram alone gets its spectrum, then the scan of `rt`
+      const c = tabPanels("ms2").find((/** @type {any} */ q) => q.type === "chrom");
+      if (c && !E.panels.some((/** @type {any} */ q) => q.type === "spec" && q.link === c.id)) { await ms2Spectrum(ex.prec); pushLinked(c, /** @type {number} */ (rt) - 0.005, /** @type {number} */ (rt) + 0.005, k2); }
+    }
     else { setTab("ms2", true); await ms2Spectrum(ex.prec); }
     return true;
   }

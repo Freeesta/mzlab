@@ -42,6 +42,26 @@
     "structure.render": ["Draw the change", "output", "Draws the parent with the modified position marked."],
     "structure.draw": ["Draw a structure", "input", "Lets you draw the parent compound."],
     "structure.reactivity": ["Where it reacts", "search", "Estimates which parts of the parent are most reactive."],
+    "spectra.msn_graph": ["Fragmentation graph", "process", "Builds the tree of fragments and neutral losses of one infusion."],
+    "msn.library_export": ["Save as library", "output", "Writes the spectra of the tree as a library file."],
+    "msn.table_export": ["Save as tables", "output", "Writes the ions and the losses of the graph as CSV tables."],
+    "chrom.uv_peaks": ["Find UV peaks", "process", "Integrates the peaks of the UV trace of each file."],
+    "features.table": ["Feature table", "process", "Detects and aligns the features of the files and writes the table."],
+    "quant.calibrate": ["Apply calibration curves", "process", "Turns the signal of each compound into a concentration with the curves you imported."],
+    "spectra.ms2": ["Read MS2 spectra", "input", "Reads the MS2 scans of data-dependent runs as spectra."],
+    "table.drift": ["Correct drift", "process", "Brings each batch to the level of the QC files along the injection order."],
+    "table.kmd": ["Kendrick mass defect", "search", "Lists the series of ions that share the same mass defect."],
+    "table.pca": ["Explore with PCA", "process", "Shows how the samples group along the main components."],
+    "table.stats": ["Compare conditions", "process", "Tests each compound between the conditions of the design."],
+    "tp.dig_lr": ["Dig unit-resolution series", "search", "Scores the possible products of a parent in a series at unit resolution."],
+    "table.plausible": ["Check the values", "process", "Runs seven sanity checks on the numbers of the table and reports what looks wrong."],
+    "export.inclusion": ["Save inclusion list", "output", "Writes the m/z and time windows of the expected products as a CSV for the next acquisition."],
+    "export.mztab": ["Save table as mzTab-M", "output", "Writes the feature table as an mzTab-M file, an open format for sharing results."],
+    "tp.review": ["Decide the levels", "search", "Keeps your decision for each row: a level, a note, or not a product."],
+    "msn.figure": ["Save graph as figure", "output", "Draws the fragmentation graph as an SVG, an HTML page or a PNG."],
+    "meta.compare": ["Compare algorithms", "process", "Runs a step once per variant on the same data and measures how the outputs differ."],
+    "spectra.lookup": ["Find spectra in a library", "search", "Pulls from a library the entries with a given name, accession or precursor m/z."],
+    "table.match": ["Match table rows to library", "search", "Compares the fragment spectrum of every table row with a library of known compounds."],
   };
   F.INPUT_NAMES = { raw: "Raw files", mzml: "mzML files", mzidx: "Scan index", spectra: "MS2 spectra", library: "Spectral library", structure: "Parent structure", samples: "Sample list", table: "Feature table" };
 
@@ -50,6 +70,14 @@
     { key: "import", title: "Import data", why: F.NAMES["index.mzidx"][2], steps: ["spectra.centroid", "index.mzidx"] },
     { key: "table", title: "Build feature table", why: "Finds peaks in every file, aligns them and fills gaps: one row per compound.", steps: ["features.detect", "features.align", "features.gapfill"] },
   ];
+  /** groups of steps that Simple draws as one card beside the base (Advanced shows the steps apart); a group is drawn only when the plan has one of its steps */
+  F.GROUPS = [
+    { key: "export", title: "Export", why: "Saves the graph as a library and as tables.", steps: ["msn.library_export", "msn.table_export"], cat: "output" },
+  ];
+  /** steps that read the infusion open in Data with no file in the plan: the canvas joins them to the raw files */
+  F.INFUSION_STEPS = ["spectra.msn_graph"];
+  /** steps with a view: a card beside the step, off until the run made a result of this type (a view is not a step of the plan) */
+  F.STEP_VIEWS = { "spectra.msn_graph": { title: "View graph", why: "Opens the fragmentation graph.", result: "report" } };
   /** the analyses a user adds to the base */
   F.ADDONS = [
     { id: "formulas", name: "Molecular formulas", line: "Suggest formulas for each feature.", steps: ["formula.ms1"] },
@@ -75,6 +103,7 @@
     { id: "table", name: "Feature table", good: "Good for: a first look at your data.", addons: [] },
     { id: "identify", name: "Untargeted analysis", good: "Good for: unknown compounds in real samples, with formulas and library matches.", addons: ["formulas", "match", "level"] },
     { id: "msn", name: "Fragmentation tree of a standard", good: "Good for: an MSn infusion of a known compound: its fragments, neutral losses and sub-formulas, as a library and a table.", help: "Fragmentation rules: CID vs HCD (see the MSn manual).", steps: ["spectra.msn_graph", "msn.library_export", "msn.table_export"], params: { "spectra.msn_graph": { interpreta: true } }, addons: [] },
+    { id: "bentazone", name: "Bentazone / transformation products", good: "Good for: a parent degraded over time (bentazone or any other), positive or negative, unit or high resolution: the files decide the polarity and the resolution.", addons: ["tp", "tpfilter", "position", "network"], more: true },
     { id: "targeted", name: "Targeted check", good: "Good for: a list of compounds you already suspect.", addons: ["formulas", "match", "level", "regulatory"], more: true },
     { id: "tpseries", name: "TP time series", good: "Good for: how products rise and fall over the minutes of a treatment (needs a sample list with times).", addons: ["tp", "tpfilter", "reliable", "network"], more: true },
     { id: "standards", name: "Standards check", good: "Good for: checking that the standards and the blanks behave before you trust a table (needs a sample list).", addons: ["reliable"], params: { "table.filter": { qc_cv_max: 30 } }, more: true },

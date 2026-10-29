@@ -1,4 +1,4 @@
-//! Hypotheses of the targeted pass: with the rules file `TP_Mine/data/regole_tp.json` the hypotheses of the rules have the masses of the frozen
+//! Hypotheses of the targeted pass: with the rules file `TP_Mine/data/regole_tp_2.json` the hypotheses of the rules have the masses of the frozen
 //! answers of the former Python list (golden file `ipotesi_regole.json`), the order and the ids are stable (same SHA-256 twice), and the other
 //! sources work.
 
@@ -15,7 +15,7 @@ fn root() -> PathBuf {
 }
 
 fn rules() -> Rules {
-    Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp.json")).unwrap()).unwrap()
+    Rules::parse(&std::fs::read(root().join("TP_Mine/data/regole_tp_2.json")).unwrap()).unwrap()
 }
 
 fn none<'a>() -> Inputs<'a> {

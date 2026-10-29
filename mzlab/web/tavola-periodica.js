@@ -1,13 +1,15 @@
 // @ts-check
 // @ts-strict
+// @ts-noany
 "use strict";
 // Periodic table with isotopes and abundances: ONE place for the markup, the layout and the behaviour, used by the program
 // (tables.js, dialog "Tavola periodica") and by the Teoria (teoria/strumenti/tavola.js). The data of the elements is elements.js.
 // Classic script (not an ES module) because the Teoria must also work from file://, where module scripts are blocked.
 // TAVOLA.create({ elements, t, nome }) -> { periodic(), bindPeriodic(root), info(element) }
 //   t(key, params): the texts (keys tbl.pt.*, tbl.na; the program passes I18N.t, the Teoria its Italian table); nome(element): its name.
+/** @typedef {{ z: number, s: string, w: number | null, r: number, c: number, iso: number[][] }} TavEl */
 window.TAVOLA = (() => {
-  const H = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const H = (/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]);
   // layout: fixed row heights, so the table never changes size; the info box scrolls if needed. Colours only from the page variables
   // (light, dark, high contrast); the focus ring is drawn inside the cell, so no scrolling parent can cut it.
   const CSS = `.pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));grid-template-rows:repeat(7,46px) 12px repeat(2,46px);gap:3px;margin:8px 0;padding:2px;position:relative}
@@ -20,11 +22,11 @@ window.TAVOLA = (() => {
 .pt-gap{grid-row:8;grid-column:3/18;font-size:10px;color:var(--muted);align-self:center}.pt-bar{display:inline-block;height:8px;background:var(--accent);border-radius:2px}
 @media (forced-colors:active){.pt-c.pin,.pt-c:focus-visible{outline-color:Highlight}.pt-bar{background:CanvasText}}`;
   let styled = false;
-  function create({ elements, t, nome }) {
+  function create(/** @type {{ elements: TavEl[], t: (key: string, params?: Record<string, unknown>) => string, nome: (e: TavEl) => string }} */ { elements, t, nome }) {
     if (!styled) { styled = true; const s = document.createElement("style"); s.id = "tavola-css"; s.textContent = CSS; document.head.appendChild(s); }
     const EL = Object.fromEntries(elements.map(e => [e.s, e]));
   const ORGANIC = new Set(["H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "Na", "K", "Si"]);
-  function info(e) {
+  function info(/** @type {TavEl} */ e) {
     const main = e.iso.length ? e.iso.reduce((a, b) => (b[2] > a[2] ? b : a)) : null;
     let h = `<div class="pt-big"><span>${e.z}</span><b>${H(e.s)}</b></div><div><b style="font-size:15px">${H(nome(e))}</b></div>
       <div>${t("tbl.pt.avgWeight", { w: e.w != null ? e.w : t("tbl.na") })}</div>`;
@@ -49,12 +51,12 @@ window.TAVOLA = (() => {
     // (click pins it); the most common elements of organic molecules are highlighted.
     return `<div class="pt">${cells}<div class="pt-info" id="pt-info" tabindex="0" role="region" aria-label="${H(t("tbl.pt.info"))}" aria-live="polite">${info(EL.C)}</div><div class="pt-gap">${t("tbl.pt.gap")}</div></div>`;
   }
-  function bindPeriodic(root) {
-    let pinned = null; const box = root.querySelector("#pt-info");
-    root.querySelectorAll(".pt-c").forEach(c => {
-      c.onmouseenter = c.onfocus = () => { if (!pinned) box.innerHTML = info(EL[c.dataset.s]); };
+  function bindPeriodic(/** @type {HTMLElement} */ root) {
+    /** @type {string | null | undefined} */ let pinned = null; const box = /** @type {HTMLElement} */ (root.querySelector("#pt-info"));
+    /** @type {NodeListOf<HTMLElement>} */ (root.querySelectorAll(".pt-c")).forEach(c => {
+      c.onmouseenter = c.onfocus = () => { if (!pinned) box.innerHTML = info(EL[/** @type {string} */ (c.dataset.s)]); };
       c.onclick = () => { root.querySelectorAll(".pt-c.pin").forEach(x => x.classList.remove("pin")); if (pinned === c.dataset.s) { pinned = null; return; }
-        pinned = c.dataset.s; c.classList.add("pin"); box.innerHTML = info(EL[pinned]); };
+        pinned = c.dataset.s; c.classList.add("pin"); box.innerHTML = info(EL[/** @type {string} */ (pinned)]); };
     });
   }
     return { periodic, bindPeriodic, info };

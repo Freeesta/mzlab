@@ -8,6 +8,9 @@ use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 
 use crate::flow_ident_tests::fixture;
 
+#[path = "flow_ms2_dia_tests.rs"]
+mod dia_tests;
+
 fn scan(
     index: usize,
     level: u8,
@@ -29,7 +32,7 @@ fn scan(
 }
 
 /// MS1, MS2 of Alpha (window 1 Da, charge 1), MS2 of another ion (window 10 Da, charge 2); each MS2 precursor has an intensity.
-fn dda_mzml() -> Vec<u8> {
+pub(crate) fn dda_mzml() -> Vec<u8> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {
@@ -159,6 +162,7 @@ fn descriptor_export_is_up_to_date() {
         crate::flow_msnfigura::figure_step(),
         crate::flow_compare::compare_step(),
         crate::flow_digl::dig_lr_step(),
+        crate::flow_digl::uv::uv_step(),
         crate::flow_quant::quant_step(),
         crate::flow_lookup::lookup_step(),
         mzlab_feat::steps::table_match(),

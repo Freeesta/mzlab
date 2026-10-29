@@ -11,6 +11,7 @@
 use crate::clean::weighted;
 use crate::frag_tol::FragTol;
 use crate::sortutil;
+pub use crate::stein::{hybrid_entropy, ri_factor, stein_cosine, SteinOpts, SteinScore};
 
 /// A spectrum for scoring.
 #[derive(Debug, Clone, Default)]
@@ -126,17 +127,59 @@ pub fn pair_scores(a: &Spec, b: &Spec, tol: impl Into<FragTol>) -> PairScores {
     r
 }
 
-/// Hybrid pairs (brute force, the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by
+/// True when the values are in ascending order (no NaN): the window searches below need it, and the callers' spectra have it.
+fn ascending(v: &[f64]) -> bool {
+    v.windows(2).all(|w| w[0] <= w[1])
+}
+
+/// Indexes `j` of the ascending `b` with `|(a - b[j]) - shift| <= tol` as a range. `a - b[j]` and the subtractions after it only ever round the same
+/// way for larger `b[j]`, so the values that satisfy the test are contiguous and the two bounds are binary searches.
+fn window_of(b: &[f64], a: f64, shift: f64, tol: f64) -> std::ops::Range<usize> {
+    let lo = b.partition_point(|&m| (a - m) - shift > tol);
+    let hi = b.partition_point(|&m| (a - m) - shift >= -tol);
+    if lo < hi {
+        lo..hi
+    } else {
+        0..0
+    }
+}
+
+/// Hybrid pairs (the reference of the Flash hybrid search): a peak of `a` pairs with a peak of `b` at the same m/z or shifted by
 /// `delta = prec(a) - prec(b)`, within `tol`; one-to-one, the pairs with the highest contribution to the entropy similarity first.
 pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
     let (pa, pb) = (weighted(&a.it), weighted(&b.it));
     let delta = a.prec - b.prec;
     let mut c: Vec<(usize, usize, f64)> = Vec::new();
-    for i in 0..a.mz.len() {
-        for j in 0..b.mz.len() {
-            let d = a.mz[i] - b.mz[j];
-            if d.abs() <= tol || (d - delta).abs() <= tol {
-                c.push((i, j, pair_term(pa[i], pb[j])));
+    if ascending(&b.mz) {
+        for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
+            let (w1, w2) = (
+                window_of(&b.mz, ma, 0.0, tol),
+                window_of(&b.mz, ma, delta, tol),
+            );
+            // the candidates of both windows in the order of `j`, each once
+            let (mut j1, mut j2) = (w1.start, w2.start);
+            while j1 < w1.end || j2 < w2.end {
+                let j = if j1 < w1.end && (j2 >= w2.end || j1 <= j2) {
+                    j1
+                } else {
+                    j2
+                };
+                if j1 == j {
+                    j1 += 1;
+                }
+                if j2 == j {
+                    j2 += 1;
+                }
+                c.push((i, j, pair_term(wa, pb[j])));
+            }
+        }
+    } else {
+        for (i, (&ma, &wa)) in a.mz.iter().zip(&pa).enumerate() {
+            for (j, (&mb, &wb)) in b.mz.iter().zip(&pb).enumerate() {
+                let d = ma - mb;
+                if d.abs() <= tol || (d - delta).abs() <= tol {
+                    c.push((i, j, pair_term(wa, wb)));
+                }
             }
         }
     }
@@ -155,14 +198,50 @@ pub fn hybrid_pairs(a: &Spec, b: &Spec, tol: f64) -> Vec<(usize, usize)> {
 
 /// Neutral losses (precursor − m/z) in common, one-to-one within `tol` (the pairs with the highest intensity product first).
 pub fn common_losses(a: &Spec, b: &Spec, tol: f64) -> usize {
+    common_losses_with(a, b, tol, &mut MatchScratch::default())
+}
+
+/// `common_losses` with the buffers of the caller. The losses are the precursor minus each m/z, taken from the last peak to the first (so they
+/// ascend); they are computed where they are used, with the same operations as the vectors they replace, so the count is the same.
+pub fn common_losses_with(a: &Spec, b: &Spec, tol: f64, s: &mut MatchScratch) -> usize {
     if a.prec <= 0.0 || b.prec <= 0.0 {
         return 0;
     }
-    let la: Vec<f64> = a.mz.iter().rev().map(|m| a.prec - m).collect();
-    let lb: Vec<f64> = b.mz.iter().rev().map(|m| b.prec - m).collect();
-    let ia: Vec<f64> = a.it.iter().rev().copied().collect();
-    let ib: Vec<f64> = b.it.iter().rev().copied().collect();
-    match_peaks(&la, &ia, &lb, &ib, tol).len()
+    let (na, nb) = (a.mz.len(), b.mz.len());
+    let la = |k: usize| a.prec - a.mz[na - 1 - k];
+    let lb = |k: usize| b.prec - b.mz[nb - 1 - k];
+    s.cand.clear();
+    for i in 0..na {
+        let x = la(i);
+        let (mut lo, mut hi) = (0, nb);
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if lb(mid) < x - tol {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let mut j = lo;
+        while j < nb && lb(j) <= x + tol {
+            s.cand.push((i, j, a.it[na - 1 - i] * b.it[nb - 1 - j]));
+            j += 1;
+        }
+    }
+    sortutil::sort_by(&mut s.cand, |x, y| y.2.total_cmp(&x.2));
+    s.ua.clear();
+    s.ua.resize(na, false);
+    s.ub.clear();
+    s.ub.resize(nb, false);
+    let mut n = 0;
+    for &(i, j, _) in &s.cand {
+        if !s.ua[i] && !s.ub[j] {
+            s.ua[i] = true;
+            s.ub[j] = true;
+            n += 1;
+        }
+    }
+    n
 }
 
 // ---------------------------------------------------------------- modified cosine (the analogue score of the library window)
@@ -255,233 +334,8 @@ pub fn modified_cosine(q: &Spec, lib: &Spec, tol: impl Into<FragTol>) -> ModCosi
     }
 }
 
-// ---------------------------------------------------------------- GNPS-style cosine
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct GnpsMatch {
-    pub cosine: f64,
-    pub reverse: f64,
-    pub matched: usize,
-    pub n_shifted: usize,
-    /// `(index in the cleaned sample, index in the cleaned reference, shifted)`.
-    pub pairs: Vec<(usize, usize, bool)>,
-}
-
-/// Peaks at or above `precursor - 0.5` and below 1% of the base peak are removed; intensities become square roots.
-pub fn gnps_prepare(mz: &[f64], it: &[f64], prec: f64) -> (Vec<f64>, Vec<f64>) {
-    let mx = it.iter().cloned().fold(0.0, f64::max);
-    let (mut m, mut v) = (Vec::new(), Vec::new());
-    for (x, y) in mz.iter().zip(it) {
-        if *y > 0.0 && *x < prec - 0.5 && *y >= 0.01 * mx {
-            m.push(*x);
-            v.push(y.sqrt());
-        }
-    }
-    (m, v)
-}
-
-/// The matching of `gnps_cosine` on spectra already prepared (`gnps_prepare`: the intensities are the square roots) and an explicit shift `delta`
-/// (sample precursor minus reference precursor): callers that clean the peaks their own way, or score against a precursor that is not the reference's, use this.
-pub fn gnps_match_prepared(
-    am: &[f64],
-    ai: &[f64],
-    bm: &[f64],
-    bi: &[f64],
-    delta: f64,
-    tol: f64,
-    modified: bool,
-) -> GnpsMatch {
-    let mut c: Vec<(usize, usize, f64, bool)> = Vec::new();
-    for i in 0..am.len() {
-        for j in 0..bm.len() {
-            if (am[i] - bm[j]).abs() <= tol {
-                c.push((i, j, ai[i] * bi[j], false));
-            } else if modified && delta.abs() > tol && (am[i] - (bm[j] + delta)).abs() <= tol {
-                c.push((i, j, ai[i] * bi[j], true));
-            }
-        }
-    }
-    sortutil::sort_by(&mut c, |x, y| {
-        y.2.total_cmp(&x.2)
-            .then(x.3.cmp(&y.3))
-            .then(y.0.cmp(&x.0))
-            .then(y.1.cmp(&x.1))
-    });
-    let (mut ua, mut ub) = (vec![false; am.len()], vec![false; bm.len()]);
-    let (mut dot, mut na_m, mut n_shifted) = (0.0, 0.0, 0usize);
-    let mut pairs = Vec::new();
-    for (i, j, w, sh) in c {
-        if !ua[i] && !ub[j] {
-            ua[i] = true;
-            ub[j] = true;
-            dot += w;
-            na_m += ai[i] * ai[i];
-            pairs.push((i, j, sh));
-            if sh {
-                n_shifted += 1;
-            }
-        }
-    }
-    let na: f64 = ai.iter().map(|v| v * v).sum::<f64>().sqrt();
-    let nb: f64 = bi.iter().map(|v| v * v).sum::<f64>().sqrt();
-    let ratio = |d: f64, x: f64, y: f64| if x > 0.0 && y > 0.0 { d / (x * y) } else { 0.0 };
-    GnpsMatch {
-        cosine: ratio(dot, na, nb),
-        reverse: ratio(dot, na_m.sqrt(), nb),
-        matched: pairs.len(),
-        n_shifted,
-        pairs,
-    }
-}
-
-/// GNPS cosine of a sample against a reference with an absolute tolerance in Da. `modified`: a reference peak at `m` may also pair with a sample
-/// peak at `m + delta`, `delta = prec(sample) - prec(reference)`. Ties in the product: the unshifted pair first, then the higher indices.
-pub fn gnps_cosine(sample: &Spec, reference: &Spec, tol: f64, modified: bool) -> GnpsMatch {
-    let (am, ai) = gnps_prepare(&sample.mz, &sample.it, sample.prec);
-    let (bm, bi) = gnps_prepare(&reference.mz, &reference.it, reference.prec);
-    gnps_match_prepared(
-        &am,
-        &ai,
-        &bm,
-        &bi,
-        sample.prec - reference.prec,
-        tol,
-        modified,
-    )
-}
+mod gnps;
+pub use gnps::{gnps_cosine, gnps_match_prepared, gnps_prepare, GnpsMatch};
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn sp(mz: &[f64], it: &[f64], prec: f64) -> Spec {
-        Spec {
-            mz: mz.to_vec(),
-            it: it.to_vec(),
-            prec,
-        }
-    }
-
-    #[test]
-    fn identical_spectra_score_one() {
-        let s = sp(
-            &[100.0, 150.0, 200.0, 250.0],
-            &[1000.0, 500.0, 250.0, 100.0],
-            400.0,
-        );
-        let r = pair_scores(&s, &s, 0.01);
-        assert!((r.cosine - 1.0).abs() < 1e-12 && (r.entropy - 1.0).abs() < 1e-12 && r.shared == 4);
-        assert!(
-            (r.forward - 1.0).abs() < 1e-12
-                && (r.reverse - 1.0).abs() < 1e-12
-                && (r.explained - 1.0).abs() < 1e-12
-        );
-    }
-
-    #[test]
-    fn no_common_peaks_score_zero() {
-        let a = sp(&[100.0, 150.0, 200.0], &[10.0, 5.0, 2.0], 0.0);
-        let b = sp(&[101.0, 151.5, 300.0], &[10.0, 5.0, 2.0], 0.0);
-        let r = pair_scores(&a, &b, 0.01);
-        assert!(r.cosine == 0.0 && r.entropy.abs() < 1e-12 && r.shared == 0 && r.explained == 0.0);
-    }
-
-    #[test]
-    fn tolerance_decides_the_pairs() {
-        let a = sp(&[100.0, 150.0, 200.0], &[10.0, 8.0, 6.0], 0.0);
-        let b = sp(&[100.004, 150.5, 200.008], &[10.0, 8.0, 6.0], 0.0);
-        let (tight, loose) = (pair_scores(&a, &b, 0.01), pair_scores(&a, &b, 1.0));
-        assert!(
-            tight.shared == 2
-                && loose.shared == 3
-                && 0.0 < tight.cosine
-                && tight.cosine < loose.cosine
-                && loose.cosine <= 1.0
-                && 0.0 < tight.entropy
-                && tight.entropy < 1.0
-        );
-    }
-
-    #[test]
-    fn entropy_matches_a_hand_computation_for_two_peaks() {
-        // A = two equal peaks, B = one of them: S_A = ln 2 < 3 -> weight 0.25 + 0.25 ln 2 (both stay 0.5); B is a single peak (p = 1)
-        let a = sp(&[100.0, 200.0], &[1.0, 1.0], 0.0);
-        let b = sp(&[100.0], &[1.0], 0.0);
-        let r = pair_scores(&a, &b, 0.01);
-        let h = |p: &[f64]| {
-            -p.iter()
-                .filter(|v| **v > 0.0)
-                .map(|v| v * v.ln())
-                .sum::<f64>()
-        };
-        let m = [(0.5 + 1.0) / 2.0, 0.5 / 2.0];
-        let expected = 1.0 - (2.0 * h(&m) - h(&[0.5, 0.5]) - 0.0) / 4f64.ln();
-        assert!(
-            (r.entropy - expected).abs() < 1e-12,
-            "{} vs {expected}",
-            r.entropy
-        );
-    }
-
-    #[test]
-    fn the_pair_term_sums_to_the_similarity() {
-        let a = sp(
-            &[100.0, 150.0, 200.0, 250.0],
-            &[1000.0, 500.0, 250.0, 100.0],
-            0.0,
-        );
-        let b = sp(
-            &[100.0, 150.0, 220.0, 250.0],
-            &[800.0, 100.0, 600.0, 300.0],
-            0.0,
-        );
-        let r = pair_scores(&a, &b, 0.01);
-        let (pa, pb) = (weighted(&a.it), weighted(&b.it));
-        let sum: f64 = r.pairs.iter().map(|&(i, j)| pair_term(pa[i], pb[j])).sum();
-        assert!((sum - r.entropy).abs() < 1e-12, "{sum} vs {}", r.entropy);
-    }
-
-    #[test]
-    fn modified_cosine_pairs_at_shift_zero_and_at_the_precursor_difference() {
-        let lib = sp(
-            &[60.5, 100.1, 150.2, 200.3, 250.4],
-            &[100.0, 400.0, 900.0, 300.0, 200.0],
-            300.1,
-        );
-        let q = sp(
-            &[60.5, 100.1, 166.2, 216.3, 266.4],
-            &[100.0, 400.0, 900.0, 300.0, 200.0],
-            316.1,
-        );
-        let r = modified_cosine(&q, &lib, 0.01);
-        let plain = pair_scores(&q, &lib, 0.01);
-        assert!(
-            r.matched == 5
-                && r.shifted == 3
-                && r.cosine > 0.99
-                && plain.cosine < 0.5
-                && (r.delta - 16.0).abs() < 1e-9
-        );
-    }
-
-    #[test]
-    fn gnps_rules() {
-        let a = sp(
-            &[100.0, 120.0, 150.0, 200.0, 299.9],
-            &[100.0, 30.0, 50.0, 0.5, 100.0],
-            300.0,
-        );
-        let b = sp(
-            &[100.01, 150.0, 200.0, 299.9],
-            &[100.0, 50.0, 80.0, 100.0],
-            300.0,
-        );
-        let r = gnps_cosine(&a, &b, 0.02, false);
-        // a: the peak at 299.9 is in the precursor region and the one at 200 is below 1%; the one at 120 has no partner
-        assert_eq!(r.matched, 2);
-        assert!(
-            r.reverse > r.cosine,
-            "reverse ignores the unmatched peaks of the sample"
-        );
-    }
-}
+mod tests;

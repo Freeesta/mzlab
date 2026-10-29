@@ -164,7 +164,7 @@ pub fn detail<R: ReadAt>(
         .num(round(e.mz_x, 3));
     o.raw(",\"mz_observed\":")
         .opt(e.observed.map(|v| round(v, 3)));
-    candidates_json(&mut o, e);
+    candidates_json(&mut o, e, &d.parent.adduct);
     o.raw(",\"score\":")
         .opt(e.score)
         .raw(",\"label\":")
@@ -201,7 +201,7 @@ pub fn detail<R: ReadAt>(
 }
 
 /// `delta`, `alternatives` and `candidates`: the identities that fit the trace of the row, the row's own first and then by the distance from the observed centroid. At unit
-/// resolution several neutral formulas share the nominal m/z: each one with its [M+H]+ formula, the calculated m/z and `dmz` = observed centroid
+/// resolution several neutral formulas share the nominal m/z: each one with its ion formula of the parent adduct, the calculated m/z and `dmz` = observed centroid
 /// minus the offset minus the calculated m/z (Da; `null` without a peak). The page lists them; it does not choose.
 struct Cand {
     name: String,
@@ -212,7 +212,7 @@ struct Cand {
     own: bool,
 }
 
-fn candidates_json(o: &mut Out, e: &Entry) {
+fn candidates_json(o: &mut Out, e: &Entry, adduct: &str) {
     o.raw(",\"delta\":").str(&e.delta).raw(",\"alternatives\":");
     strs(o, &e.alternatives);
     let drift = e.observed.map(|v| v - e.mz_x);
@@ -224,7 +224,7 @@ fn candidates_json(o: &mut Out, e: &Entry) {
     let rows: Vec<Cand> = list
         .into_iter()
         .map(|(l, f, own)| {
-            let ion = crate::legacy::series::ion_of(&f, "[M+H]+");
+            let ion = crate::legacy::series::ion_of(&f, adduct);
             let mz = if own || f == e.formula {
                 e.mz
             } else {

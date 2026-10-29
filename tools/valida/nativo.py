@@ -22,7 +22,7 @@ from .tabelle import Tabella
 DTYPE = {"f64": "<f8", "f32": "<f4", "u32": "<u4", "u16": "<u2", "u8": "u1", "i8": "i1"}
 CELLA_RILEVATA, CELLA_MIRATA, CELLA_RIEMPITA, CELLA_ASSENTE = 0, 1, 2, 3
 ESEMPIO = ROOT / "target" / "release" / "examples" / "nativo"
-REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp.json")
+REGOLE = Path(os.environ.get("MZLAB_REGOLE") or ROOT / "TP_Mine" / "data" / "regole_tp_2.json")
 
 
 def apri(dati: bytes) -> tuple[dict, dict]:
@@ -102,10 +102,18 @@ def costruisci_esempio() -> None:
 
 def esegui(percorsi_idx: list[str], formula_neutra: str, mz_genitore: float, rt_genitore: float, uscita: Path, smiles: str = "") -> Serie:
     """Runs the example on the indexes (in this order) and reads the result from `uscita`; `smiles` is the structure of the parent, as the page passes it."""
-    costruisci_esempio()
     uscita.mkdir(parents=True, exist_ok=True)
-    subprocess.run([str(ESEMPIO), str(uscita), *percorsi_idx, "--parent", formula_neutra, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(mz_genitore), "--parent-rt", repr(rt_genitore)],
-                   cwd=ROOT, check=True, capture_output=True)
+    cmd = [str(ESEMPIO), str(uscita), *percorsi_idx, "--parent", formula_neutra, *(["--smiles", smiles] if smiles else []), "--rules", str(REGOLE), "--parent-mz", repr(mz_genitore), "--parent-rt", repr(rt_genitore)]
+    # another xdist worker building the same target with other features can replace the binary under us: rebuild once, then say what is there
+    for tentativo in range(2):
+        costruisci_esempio()
+        try:
+            subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True)
+            break
+        except FileNotFoundError:
+            if tentativo:
+                cartella = ESEMPIO.parent
+                raise FileNotFoundError(f"{ESEMPIO} missing after a second build; {cartella} holds {sorted(x.name for x in cartella.iterdir()) if cartella.is_dir() else 'nothing (no such folder)'}")
     return leggi_serie(uscita, [Path(x).name for x in percorsi_idx])
 
 

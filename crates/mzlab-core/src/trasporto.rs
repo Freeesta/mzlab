@@ -53,7 +53,7 @@ pub fn encode_indice(v: &[VoceScansione]) -> Vec<u8> {
     let byte_id: usize = v.iter().map(|r| r.id.len()).sum();
     let n = v.len();
     let mut o: Vec<u8> = Vec::with_capacity(
-        TESTA_INDICE + n * (6 * 8 + 4 + 4 + 2) + (filtri.len() + 1) * 4 + 4 + byte_filtri + byte_id,
+        TESTA_INDICE + n * (7 * 8 + 4 + 4 + 2) + (filtri.len() + 1) * 4 + 4 + byte_filtri + byte_id,
     );
     for x in [
         PROTOCOLLO,
@@ -165,7 +165,7 @@ pub fn decode_indice(b: &[u8]) -> Result<Vec<VoceScansione>> {
     let prec = l.f64s(n)?;
     let pos = l.f64s(n * 3)?;
     let quale = l.u32s(n)?;
-    let off_f = l.u32s(nf + 1)?;
+    let off_f = l.u32s(nf.checked_add(1).ok_or_else(|| guasto("index"))?)?;
     let off_i = l.u32s(n + 1)?;
     let liv = l.prendi(n)?;
     let pol = l.prendi(n)?;

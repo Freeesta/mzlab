@@ -1,6 +1,6 @@
 # mzFinder bassa risoluzione in Rust
 
-Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, full scan) gira in Rust: le righe della tabella sono i picchi della pipeline di `crates/mzlab-feat` (profilo `lr`: rilevamento, allineamento, ipotesi L7 con `regole_tp.json`), poi un adattatore scrive il JSON delle chiamate `run` e `detail`, che `20_tpmine.js` e `24_tpmine_diretta.js` leggono senza modifiche.
+Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, full scan) gira in Rust: le righe della tabella sono i picchi della pipeline di `crates/mzlab-feat` (profilo `lr`: rilevamento, allineamento, ipotesi L7 con `regole_tp_2.json`), poi un adattatore scrive il JSON delle chiamate `run` e `detail`, che `20_tpmine.js` e `24_tpmine_diretta.js` leggono senza modifiche.
 
 ## Scavo LR: file
 - `legacy/lr/cond.rs` (vista, punteggio e generazione per condizione) e `gruppi_out.rs` (blocco `gruppi` dell'uscita): `docs/agenti/gruppi.md`.
@@ -10,7 +10,7 @@ Lo Scavo («Dig») di mzFinder su una serie a risoluzione unitaria (3200 QTRAP, 
 - `TP_Mine/files/finder-lr.js` (modulo importato da `tpmine-worker.js`): `run(ctx, args)` → JSON di `api.run` oppure `false` (il worker risponde con un errore); `ofDig(ctx, fn, args)` per `detail`, `frag_tree`, `frag_tree_compare` quando `last === "rust-lr"`.
 ## Scavo LR: quando gira in Rust
 - Tutti i file di tipo `full` (e al più `ms2` e `mrm`), ognuno con il suo `.mzidx` in OPFS (`mzlab/idx/`), progenitore con formula o SMILES (`plan.rust`), trasformazioni predefinite. I file `ms2` (EPI) non sono colonne: `plan_json` li elenca in `ms2` e il worker ne apre l'indice dopo quello delle colonne.
-- File `mrm`: senza indice; `plan_json` li elenca in `mrm`, `finder-lr.js` ne legge il mzML dai byte inviati dalla pagina (`held` del worker) e `run` aggiunge `mrm` al riassunto. Un progenitore noto solo per m/z resta in Rust (nessuna ipotesi: la sua riga e gli ioni inattesi, registro vuoto); la lista di trasformazioni dell'utente (`a[3]`) si fonde in `regole_tp.json` con `finder_transformations`, come in HR.
+- File `mrm`: senza indice; `plan_json` li elenca in `mrm`, `finder-lr.js` ne legge il mzML dai byte inviati dalla pagina (`held` del worker) e `run` aggiunge `mrm` al riassunto. Un progenitore noto solo per m/z resta in Rust (nessuna ipotesi: la sua riga e gli ioni inattesi, registro vuoto); la lista di trasformazioni dell'utente (`a[3]`) si fonde in `regole_tp_2.json` con `finder_transformations`, come in HR.
 - Ordine nel worker: detect (fase `calibration`), ipotesi (`candidates`), allineamento e Scavo (`xic`, con il carico `live()` dei candidati che passano), poi `unexpected`, `ms2`, `tables`.
 
 ## Scavo LR: semantica

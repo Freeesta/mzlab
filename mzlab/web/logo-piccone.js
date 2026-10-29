@@ -2,7 +2,7 @@
 // Easter egg of the header logo: five hits with a small pickaxe turn the logo gold (or back to normal). Each hit shakes the logo and adds a
 // stage of cracks (1-4); the fifth shatters it into pieces and turns the logo GOLDEN (localStorage, as a trophy), the next round
 // of five hits gives the original logo back. Every fifth hit also flips the administrator mode (localStorage «qqq.admin», independent of the gold): on fires "mzlab:admin", off reloads
-// the page once the logo is whole, which drops the tools of the mode (Tabui and the like).
+// the page once the logo is whole, which drops the tools of the mode (the editor of the Teoria, the assistant and the like; Tabui and Flow do not depend on it).
 // No hit for a few seconds: the cracks close again. Reduced motion: no shake, no pickaxe, no shards, only the stages of cracks. Enter / Space on the focused logo = a hit.
 // Pickaxe, cracks and shards are inline SVG/CSS (no asset). The label of the logo (alt/title) never changes.
 (() => {

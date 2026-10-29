@@ -334,7 +334,7 @@ fn migration_of_the_old_places() {
 }
 
 /// The few keywords of JSON Schema that `docs/schemi/campioni-2.json` uses.
-fn fits(v: &Value, s: &Value) -> bool {
+pub(crate) fn fits(v: &Value, s: &Value) -> bool {
     let ty = |t: &str| match t {
         "object" => v.is_object(),
         "array" => v.is_array(),
@@ -439,3 +439,6 @@ fn canonical_json_and_schema() {
         "error.badCampioni"
     );
 }
+
+#[path = "campioni3/mod.rs"]
+mod campioni3;

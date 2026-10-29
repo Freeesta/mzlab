@@ -43,11 +43,28 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
-/// A `ReadAt` seen as `Read + Seek` (what `opentfraw` reads from).
+/// The window of `Stream`: `opentfraw` reads a few bytes at a time and a read of the source can cost a call into JS (the logic of `window::Windowed`, owned here because `Stream` owns its source).
+const FINESTRA: usize = 1 << 16;
+
+/// A `ReadAt` seen as `Read + Seek` (what `opentfraw` reads from), with a window that serves the short reads.
 struct Stream {
     inner: Box<dyn ReadAt>,
     pos: u64,
     len: u64,
+    at: u64,
+    buf: Vec<u8>,
+}
+
+impl Stream {
+    fn new(inner: Box<dyn ReadAt>, len: u64) -> Stream {
+        Stream {
+            inner,
+            pos: 0,
+            len,
+            at: 0,
+            buf: Vec::new(),
+        }
+    }
 }
 
 impl Read for Stream {
@@ -58,10 +75,25 @@ impl Read for Stream {
         let Some(out) = buf.get_mut(..n) else {
             return Ok(0);
         };
-        self.inner
-            .read_at(self.pos, out)
-            .map_err(|e| std::io::Error::other(e.key))?;
-        self.pos += n as u64;
+        let fine = self.pos + n as u64;
+        if n > FINESTRA {
+            self.inner
+                .read_at(self.pos, out)
+                .map_err(|e| std::io::Error::other(e.key))?;
+        } else if n > 0 {
+            if self.pos < self.at || fine > self.at + self.buf.len() as u64 {
+                let w = (self.len - self.pos).min(FINESTRA as u64) as usize;
+                self.buf.resize(w, 0);
+                self.at = self.pos;
+                if let Err(e) = self.inner.read_at(self.pos, &mut self.buf) {
+                    self.buf.clear();
+                    return Err(std::io::Error::other(e.key));
+                }
+            }
+            let a = (self.pos - self.at) as usize;
+            out.copy_from_slice(&self.buf[a..a + n]);
+        }
+        self.pos = fine;
         Ok(n)
     }
 }
@@ -108,11 +140,10 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
         .next()
         .unwrap_or("x.raw")
         .to_string();
-    let mut src = Stream {
-        inner: std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())),
-        pos: 0,
-        len: m.dim,
-    };
+    let mut src = Stream::new(
+        std::mem::replace(&mut m.dati, Box::new(Vec::<u8>::new())),
+        m.dim,
+    );
     let sha1 = m.sha1.take().map(Some);
     let raw = RawFileReader::open(&mut src).map_err(|e| crate::raw::thermo_error(&e))?;
     limiti.voci_ok(u64::from(raw.num_scans))?;
@@ -455,3 +486,7 @@ fn header_fields(
     );
     out
 }
+
+#[cfg(test)]
+#[path = "rawlettore_stream_tests.rs"]
+mod stream_tests;

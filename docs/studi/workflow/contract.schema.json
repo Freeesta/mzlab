@@ -579,13 +579,31 @@
        "type": "string"
       },
       "commit": {
-       "type": "string"
+       "type": "string",
+       "pattern": "^[0-9a-f]{7,40}$"
       },
       "platform": {
        "enum": [
         "wasm",
         "native"
        ]
+      },
+      "target": {
+       "type": "string"
+      },
+      "rustc": {
+       "type": "string"
+      },
+      "cargo_lock_sha256": {
+       "type": "string",
+       "pattern": "^[0-9a-f]{64}$"
+      },
+      "modules": {
+       "type": "object",
+       "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+       }
       }
      }
     },

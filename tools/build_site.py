@@ -5,12 +5,17 @@
 site/index.html + site/static/ (the web folder as is). The engine of the program, mzFinder included, is Rust (static/wasm/, static/wasm-feat/,
 built by the workflow): the site downloads nothing from the net and carries no Python. `--pyodide-dir DIR` and `--no-pyodide` are still
 accepted and do nothing (the workflows pass them). GitHub Pages serves the site as it is (.github/workflows/pages.yml).
+
+Lab variant (parallel site for a lab, tools/lab/README.md): `MZLAB_LAB=1 MZLAB_LAB_EXPIRES=YYYY-MM-DD python tools/build_site.py` adds tools/lab/lab.js
+(expiry page, only Data and Draw, banner), `noindex` and robots.txt. With MZLAB_LAB unset the output is byte for byte the normal site.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import json
+import os
 import re
 import shutil
 import sys
@@ -80,7 +85,7 @@ def pack_mzfinder(static: Path) -> None:
     dst.mkdir()
     js = [f.name for f in sorted((src / "js").glob("*.js"))]
     files = [f.name for f in sorted((src / "files").glob("*"))] if (src / "files").is_dir() else []
-    data = [f.name for f in sorted((src / "data").iterdir()) if f.suffix == ".csv" or f.name in ("cancello.json", "regole_tp.json", "regole_tp_2.json")] if (src / "data").is_dir() else []      # curated lists and the gate of quality, read by the scripts through QTOOLS.ctx.files
+    data = [f.name for f in sorted((src / "data").iterdir()) if f.suffix == ".csv" or f.name in ("cancello.json", "regole_tp_2.json")] if (src / "data").is_dir() else []      # curated lists and the gate of quality, read by the scripts through QTOOLS.ctx.files
     for n in data:
         shutil.copy2(src / "data" / n, dst / n)
     # the step/1 descriptors that generate the form of the Pipeline panel (one datum, the Rust side is checked against it)
@@ -108,19 +113,59 @@ def pack_mzfinder(static: Path) -> None:
     (dst / "indice.json").write_text(json.dumps({"early": early, "js": js, "lazy": lazy, "files": files + data}, indent=1), encoding="utf-8")
 
 
-def write_manifest(out: Path, version: str) -> None:
-    """static/manifest.json: SHA-256 and size of every file of the site (the desktop app downloads only the ones that changed),
-    the commit as `version` and `desktop_min`, the oldest native desktop binary this web part works with (crates/mzlab-desktop/DESKTOP_MIN).
-    sw.js is left out (the desktop app has no service worker) and so is the manifest itself."""
+def file_hashes(out: Path) -> dict:
+    """SHA-256 and size of every file of the site, by path under `out` (sw.js and the manifest itself left out)."""
     files = {}
     for f in sorted(out.rglob("*")):
         rel = f.relative_to(out).as_posix()
         if f.is_file() and rel not in ("sw.js", "static/manifest.json"):
             data = f.read_bytes()
             files[rel] = {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
+    return files
+
+
+def write_manifest(out: Path, version: str) -> None:
+    """static/manifest.json: SHA-256 and size of every file of the site (the desktop app downloads only the ones that changed),
+    the commit as `version` and `desktop_min`, the oldest native desktop binary this web part works with (crates/mzlab-desktop/DESKTOP_MIN).
+    sw.js is left out (the desktop app has no service worker) and so is the manifest itself."""
     desktop_min = (ROOT / "crates" / "mzlab-desktop" / "DESKTOP_MIN").read_text(encoding="utf-8").strip()
-    doc = {"version": version, "desktop_min": desktop_min, "files": files}
+    doc = {"version": version, "desktop_min": desktop_min, "files": file_hashes(out)}
     (out / "static" / "manifest.json").write_text(json.dumps(doc, indent=1, sort_keys=True), encoding="utf-8")
+
+
+def git_commit() -> str:
+    """The full 40-character commit of HEAD, or "dev" outside a checkout."""
+    try:
+        import subprocess
+        c = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+    except Exception:
+        c = ""
+    return c if re.fullmatch(r"[0-9a-f]{40}", c) else "dev"
+
+
+def rustc_version() -> str | None:
+    """`rustc -V` of the toolchain that builds the site, None when there is none."""
+    try:
+        import subprocess
+        v = subprocess.run(["rustc", "-V"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+    except Exception:
+        v = ""
+    return v or None
+
+
+def lock_sha256() -> str | None:
+    lock = ROOT / "Cargo.lock"
+    return hashlib.sha256(lock.read_bytes()).hexdigest() if lock.is_file() else None
+
+
+def write_build_json(out: Path, version: str, commit: str | None = None) -> None:
+    """static/build.json: the exact build of the site, {commit, version, rustc, cargo_lock_sha256, modules}; `modules` maps the path (under static/) of every
+    .wasm to its SHA-256 (the hashes of `file_hashes`), sorted. The .wasm files are built after this script in pages.yml, so
+    `python3 tools/build_site.py --build-json` writes it again once they are in place."""
+    static = out / "static"
+    modules = {rel[len("static/"):]: h["sha256"] for rel, h in file_hashes(out).items() if rel.startswith("static/") and rel.endswith(".wasm")}
+    doc = {"commit": commit or git_commit(), "version": version, "rustc": rustc_version(), "cargo_lock_sha256": lock_sha256(), "modules": dict(sorted(modules.items()))}
+    (static / "build.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
 
 
 def theory_entry() -> str:
@@ -135,13 +180,33 @@ def theory_entry() -> str:
     )
 
 
+def lab_expiry() -> str | None:
+    """The expiry date (YYYY-MM-DD, UTC) of the lab variant, or None for the normal build. A lab build without a valid date is refused."""
+    if os.environ.get("MZLAB_LAB") != "1":
+        return None
+    d = os.environ.get("MZLAB_LAB_EXPIRES", "")
+    try:
+        datetime.date.fromisoformat(d)
+    except ValueError:
+        raise SystemExit(f"MZLAB_LAB=1 needs MZLAB_LAB_EXPIRES=YYYY-MM-DD, got {d!r}")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+        raise SystemExit(f"MZLAB_LAB_EXPIRES must be YYYY-MM-DD, got {d!r}")
+    return d
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pyodide-dir", type=Path, help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--no-pyodide", action="store_true", help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--out", type=Path, default=ROOT / "site")
+    ap.add_argument("--build-json", action="store_true", help="only write static/build.json again, once the .wasm files are in the site")
     a = ap.parse_args()
     out = a.out
+    if a.build_json:
+        ver = json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["version"]
+        write_build_json(out, ver)
+        return
+    lab = lab_expiry()
     if out.exists():
         shutil.rmtree(out)
     static = out / "static"
@@ -157,21 +222,30 @@ def main() -> None:
     html = html.replace(tel, tel + '\n<script src="static/browser.js"></script>', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
     html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
-    html = html.replace("</head>", preview_tags() + "\n</head>", 1)
+    if lab:
+        # lab: first script of the head (before anything runs), no link preview and no canonical address pointing at the main site, not indexed
+        head = '<head><meta charset="utf-8">'
+        assert head in html
+        html = html.replace(head, head + '<script src="static/lab.js"></script><meta name="robots" content="noindex,nofollow">', 1)
+        (static / "lab.js").write_text((ROOT / "tools" / "lab" / "lab.js").read_text(encoding="utf-8").replace("__LAB_EXPIRES__", lab), encoding="utf-8")
+        (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
+        # lab: no example files at all (the demo mzML sets and the two example drawings are not shipped; lab.js hides their entry points)
+        shutil.rmtree(static / "esempi")
+        for png in static.glob("esempio-*.png"):
+            png.unlink()
+    else:
+        html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
     html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    (out / "theory").mkdir()
-    (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
+    if not lab:                                                  # the lab has no Teoria entry (its address goes back to #/data)
+        (out / "theory").mkdir()
+        (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     # program version and git commit for reproducibility (.mzflow)
-    try:
-        import subprocess
-        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip() or "dev"
-    except Exception:
-        commit = "dev"
+    commit = git_commit()
     ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "__init__.py").read_text(encoding="utf-8"))
     ver = ver_match.group(1) if ver_match else "0.1.0"
     (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
@@ -192,6 +266,7 @@ def main() -> None:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
     big = "v-" + hashlib.sha1(b"".join(f.name.encode() + f.read_bytes() for f in sorted((static / "vendor").rglob("*")) if f.is_file())).hexdigest()[:8]   # the content, not the size: a same-size change must not be served from the old cache
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
+    write_build_json(out, ver, commit)
     write_manifest(out, commit)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")

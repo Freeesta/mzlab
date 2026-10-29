@@ -31,7 +31,7 @@ try:
         def nxt():
             a = pg.evaluate("document.getElementById('tframe').contentWindow.location.pathname")
             pg.click("#stbar [data-tcmd=succ]"); pg.wait_for_function("(a)=>document.getElementById('tframe').contentWindow.location.pathname!==a", arg=a, timeout=10000)
-            pg.wait_for_selector("#stbar [data-tcmd=succ]")
+            pg.wait_for_function("document.querySelectorAll('#stbar [data-tcmd]').length === 4", timeout=10000)      # the bar is rebuilt on the load of the new chapter (which now has «Precedente»)
             assert pg.locator("#stbar [data-tcmd]").count() == 4
         step("Successivo changes chapter in the iframe and the bar stays", nxt)
         def menu():

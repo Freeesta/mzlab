@@ -12,7 +12,7 @@
 
   /**
    * @typedef {{ t: number, area: number | null, sd: number | null, n: number }} GKin
-   * @typedef {{ id: string, present: boolean, n_det: number, n_rep: number, area: number | null, area_sd: number | null, cv: number | null, ratio_ref: number | null, shape: string | null, t_max: number | null, t_half_rise: number | null, rate_rel: number | null, kin: GKin[], prev: Record<string, string> }} GCell
+   * @typedef {{ id: string, present: boolean, n_det: number, n_rep: number, area: number | null, area_sd: number | null, cv: number | null, ratio_ref: number | null, shape: string | null, t_max: number | null, t_half_rise: number | null, rate_rel: number | null, kin: GKin[], dark?: GKin[], prev: Record<string, string> }} GCell
    * @typedef {{ row: number, tp_name: string, mz: number, polarity: string, rt: number, neutral_formula: string | null, ion_formula?: string | null, ppm: number | null, other_polarity: number | null, present_in: string[], only_in: string | null, in_all: boolean, cond: GCell[] }} GRow
    * @typedef {{ id: string, factors: Record<string, string>, files: number[], times: number[], replicates: number, controls: Record<string, number[]>, parent: { k: number | null, half_life: number | null, remaining: number | null } }} GCond
    * @typedef {{ format: string, version: number, reference: string | null, norm: string, conditions: GCond[], rows: GRow[], sets: { conditions: string[], rows: number[] }[], warnings: { code: string, condition?: string }[], parent_name?: string }} Gruppi
@@ -46,7 +46,7 @@
 
   // ------------------------------------------------------------------ styles (page) and the rules of the charts (also written into the exported SVG, variables resolved)
   const SVGCSS = `.gv-svg text{font:11px system-ui,sans-serif;fill:var(--ink)}.gv-svg .mut{fill:var(--muted)}.gv-svg .ax{stroke:var(--muted);stroke-width:1;fill:none}.gv-svg .grid{stroke:var(--line);stroke-width:1}
-.gv-svg .ln{fill:none;stroke-width:2.2}.gv-svg .par{fill:none;stroke-width:1.4;stroke-dasharray:5 4;opacity:.85}.gv-svg .bar{stroke:var(--ink);stroke-width:.6}.gv-svg .sd{stroke:var(--ink);stroke-width:1.5}
+.gv-svg .ln{fill:none;stroke-width:2.2}.gv-svg .drk{fill:none;stroke-width:1.6;stroke-dasharray:2 3}.gv-svg .drk-pt{fill:var(--panel);stroke-width:1.5}.gv-svg .par{fill:none;stroke-width:1.4;stroke-dasharray:5 4;opacity:.85}.gv-svg .bar{stroke:var(--ink);stroke-width:.6}.gv-svg .sd{stroke:var(--ink);stroke-width:1.5}
 .gv-svg .dot{fill:var(--ink)}.gv-svg .on{fill:var(--accent)}.gv-svg .off{fill:var(--line)}.gv-svg .link{stroke:var(--ink);stroke-width:2}.gv-svg .tot{fill:var(--muted)}.gv-svg .setbar{fill:var(--ink)}.gv-svg .setbar.sel{fill:var(--accent)}
 .gv-svg .hit{fill:transparent;cursor:pointer}.gv-svg .hit:hover{fill:var(--sel)}.gv-svg .hit:focus-visible{fill:var(--sel);stroke:var(--accent);stroke-width:2;outline:none}`;
   const CSS = `.gv{--gv1:#0072B2;--gv2:#E69F00;--gv3:#009E73;--gv4:#D55E00;--gv5:#CC79A7;--gv6:#56B4E9;--gv7:#F0E442;--gv8:var(--ink);font-size:13px;color:var(--ink);width:100%;max-width:100%;min-width:0;contain:inline-size;position:relative}
@@ -197,7 +197,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
         ids.forEach((c, k) => { s += `<circle class="${on.includes(k) ? "dot" : "off"}" cx="${sx(i)}" cy="${TOPH + k * RH + RH / 2}" r="${on.includes(k) ? 5 : 3.5}"/>`; });
         s += `<rect class="hit" tabindex="0" role="button" aria-pressed="${sel}" data-set="${idx}" x="${x0 + i * SLOT}" y="0" width="${SLOT}" height="${H}" aria-label="${esc(set.conditions.join(" + "))}: ${set.rows.length} rows. Press to filter the matrix"><title>${esc(set.conditions.join(" + "))}: ${set.rows.length} rows</title></rect>`;
       });
-      box.innerHTML = `<div class="gv-bar"><button type="button" data-zoom="-" aria-label="Zoom out the UpSet plot">−</button><button type="button" data-zoom="+" aria-label="Zoom in the UpSet plot">+</button><button type="button" data-dl="up-svg">UpSet (SVG)</button><button type="button" data-dl="up-png">UpSet (PNG)</button>` +
+      box.innerHTML = `<div class="gv-bar"><button type="button" data-zoom="-" aria-label="Zoom out the UpSet plot" title="Zoom out the UpSet plot">−</button><button type="button" data-zoom="+" aria-label="Zoom in the UpSet plot" title="Zoom in the UpSet plot">+</button><button type="button" data-dl="up-svg">UpSet (SVG)</button><button type="button" data-dl="up-png">UpSet (PNG)</button>` +
         `${g.sets.length > MAXSETS ? `<span class="gv-sub">${MAXSETS} largest of ${g.sets.length} sets shown</span>` : ""}</div><div class="gv-fig gv-sc free" tabindex="0" role="region" aria-label="UpSet plot, scrollable">${s}</svg></div>`;
       const svg = /** @type {SVGElement} */ (Q("#gv-upsvg"));
       if (G.TDATI) {
@@ -210,11 +210,42 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     Object.assign(V, { drawUpset });
   }
 
+  /** which conditions are drawn: the ones that share a name part (a choice of curves; the numbers stay the Rust ones) */
+  function chooserPart(/** @type {any} */ V) {
+    const { ids, st } = V;
+    const parts = (/** @type {string} */ id) => id.split(/[_\s-]+/).filter(Boolean);
+    const cmpOptions = () => {
+      /** @type {{ value: string, label: string, ids: string[] }[]} */
+      const out = [];
+      const by = (/** @type {(p: string[]) => string} */ key, /** @type {string} */ tag, /** @type {string} */ word) => {
+        const m = new Map(); ids.forEach(id => { const p = parts(id); if (p.length > 1) m.set(key(p), [...(m.get(key(p)) || []), id]); });
+        m.forEach((v, k) => { if (v.length > 1 && v.length < ids.length) out.push({ value: `${tag}:${k}`, label: `${word} “${k}”: ${v.join(", ")}`, ids: v }); });
+      };
+      by(p => p.slice(1).join("_"), "end", "Same ending");
+      by(p => p[0], "start", "Same start");
+      return out;
+    };
+    const shown = () => { const o = cmpOptions().find(x => x.value === st.cmp); return o ? ids.filter(i => o.ids.includes(i)) : ids; };
+    V.shown = shown;
+    return { shown, cmpOptions };
+  }
+
+  function tpDataOf(/** @type {any} */ V, /** @type {GRow} */ r) {
+    const { shown, maxArea } = V, top = maxArea(r) || 1, rowsT = [];
+    for (const c of r.cond) if (shown().includes(c.id)) {
+      const own = Math.max(0, ...c.kin.map(k => k.area || 0)) || 1;
+      for (const [series, list] of /** @type {[string, GKin[]][]} */ ([["Treated", c.kin], ["Dark", c.dark || []]])) for (const k of list) rowsT.push([c.id, series, String(k.t), k.area == null ? "" : sci(k.area, 3), k.sd == null ? "" : sci(k.sd, 3), String(k.n), k.area == null ? "" : num(k.area / top * 100, 1), k.area == null ? "" : num(k.area / own * 100, 1)]);
+    }
+    return { title: `${r.tp_name}: area per condition`, head: ["Condition", "Series", "Time (min)", "Area", "Area SD", "n", "% of max", "% of own max"], rows: rowsT, rowHeader: true };
+  }
   function tpPart(/** @type {any} */ V) {
     const { g, el, opts, conds, ids, ref, rows, byRow, parent, hasF, hasP, st, cellOf, color, Q } = V;
     // ---- chart of the chosen TP
     const timesOf = (/** @type {GRow} */ r) => [...new Set(r.cond.flatMap(c => c.kin.map(k => k.t)))].sort((a, b) => a - b);
-    const maxArea = (/** @type {GRow} */ r) => Math.max(0, ...r.cond.flatMap(c => c.kin.map(k => (k.area || 0) + (k.sd || 0))));
+    const maxArea = (/** @type {GRow} */ r) => Math.max(0, ...r.cond.filter(c => shown().includes(c.id)).flatMap(c => [...c.kin, ...(c.dark || [])].map(k => (k.area || 0) + (k.sd || 0))));
+    const { shown, cmpOptions } = chooserPart(V);
+    const tpData = (/** @type {GRow} */ r) => tpDataOf(V, r);
+    V.maxArea = maxArea;
     function yAxis(/** @type {number} */ ymax, /** @type {number} */ L, /** @type {number} */ R, /** @type {number} */ T, /** @type {number} */ B, /** @type {string} */ mode) {
       const Y = (/** @type {number} */ v) => B - v / ymax * (B - T), step = niceStep(ymax / 4); let s = `<line class="ax" x1="${L}" y1="${T}" x2="${L}" y2="${B}"/><line class="ax" x1="${L}" y1="${B}" x2="${R}" y2="${B}"/>`;
       for (let v = 0; v <= ymax * 1.001; v += step) s += `<line class="grid" x1="${L}" x2="${R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="mut" x="${L - 4}" y="${Y(v) + 4}" text-anchor="end">${mode === "pct" ? Math.round(v) : sci(v, 1)}</text>`;
@@ -222,57 +253,57 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     }
     /** one plot: grouped bars (one time per condition) or curves; `cs` = the conditions drawn */
     function plot(/** @type {GRow} */ r, /** @type {string[]} */ cs, /** @type {{ ymax: number, small?: boolean }} */ o) {
-      const ts = timesOf(r), bars = ts.length <= 1, pct = st.mode === "pct", small = !!o.small, top = maxArea(r) || 1;
-      const val = (/** @type {number | null} */ a) => (a == null ? 0 : pct ? a / top * 100 : a);
+      const ts = timesOf(r), bars = ts.length <= 1, own = st.mode === "own" && !bars, pct = st.mode === "pct" || st.mode === "own", small = !!o.small, top = maxArea(r) || 1;
+      const ownTop = (/** @type {string} */ id) => { const c = cellOf(r, id); return Math.max(0, ...(c ? c.kin : []).map(k => k.area || 0)) || 1; };
+      const val = (/** @type {number | null} */ a, /** @type {string} */ id = "") => (a == null ? 0 : own ? a / ownTop(id) * 100 : pct ? a / top * 100 : a);
       const ymax = pct ? 100 : o.ymax, W = bars ? Math.max(small ? 150 : 320, 60 + cs.length * 46) : (small ? 190 : 420), H = small ? 120 : 230, L = small ? 44 : 56, R = W - 10, T = 12, B = H - (bars ? 56 : 30);
       const { s: ax, Y } = yAxis(ymax, L, R, T, B, pct ? "pct" : "area");
       let s = `<svg class="gv-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(r.tp_name)} across conditions" ${small ? "" : `style="width:${Math.round(W * st.zoom)}px"`}>${ax}`;
       if (bars) {
         const slot = (R - L) / cs.length;
         cs.forEach(id => {
-          const i = ids.indexOf(id), c = cellOf(r, id), k = c ? c.kin[c.kin.length - 1] : null, x = L + (cs.indexOf(id) + 0.5) * slot, a = c && c.present ? val(k ? k.area : c.area) : 0;
+          const i = ids.indexOf(id), c = cellOf(r, id), k = c ? c.kin[c.kin.length - 1] : null, x = L + (cs.indexOf(id) + 0.5) * slot, a = c && c.present ? val(k ? k.area : c.area, id) : 0;
           if (a > 0) s += `<rect class="bar" x="${x - Math.min(16, slot / 2 - 3)}" y="${Y(a)}" width="${2 * Math.min(16, slot / 2 - 3)}" height="${B - Y(a)}" fill="${color(i)}"/>`;
           else s += `<text class="mut" x="${x}" y="${B - 4}" text-anchor="middle">–</text>`;
           if (a > 0 && k && k.sd) s += `<line class="sd" x1="${x}" x2="${x}" y1="${Y(val(k.area - k.sd))}" y2="${Y(val(k.area + k.sd))}"/><line class="sd" x1="${x - 4}" x2="${x + 4}" y1="${Y(val(k.area + k.sd))}" y2="${Y(val(k.area + k.sd))}"/><line class="sd" x1="${x - 4}" x2="${x + 4}" y1="${Y(val(k.area - k.sd))}" y2="${Y(val(k.area - k.sd))}"/>`;
           s += `<text x="${x}" y="${B + 12}" text-anchor="end" transform="rotate(-35 ${x} ${B + 12})">${esc(id.length > 12 ? id.slice(0, 11) + "…" : id)}</text>`;
         });
       } else {
-        const t0 = ts[0], t1 = ts[ts.length - 1], X = (/** @type {number} */ t) => L + (t - t0) / (t1 - t0 || 1) * (R - L - 6) + 3;
+        const dts = cs.flatMap(id => (cellOf(r, id)?.dark || []).map(k => k.t)), t0 = Math.min(ts[0], ...dts), t1 = Math.max(ts[ts.length - 1], ...dts), X = (/** @type {number} */ t) => L + (t - t0) / (t1 - t0 || 1) * (R - L - 6) + 3;
         ts.forEach(t => { s += `<text class="mut" x="${X(t)}" y="${B + 14}" text-anchor="middle">${t}</text>`; });
         s += `<text class="mut" x="${(L + R) / 2}" y="${H - 4}" text-anchor="middle">Time (min)</text>`;
         cs.forEach(id => {
           const i = ids.indexOf(id), c = cellOf(r, id), pts = (c ? c.kin : []).filter(k => k.area != null);
-          if (pts.length > 1) s += `<path class="ln" stroke="${color(i)}" d="${pts.map((k, j) => `${j ? "L" : "M"}${X(k.t).toFixed(1)} ${Y(val(k.area)).toFixed(1)}`).join("")}"/>`;
-          pts.forEach(k => { if (k.sd) s += `<line class="sd" x1="${X(k.t)}" x2="${X(k.t)}" y1="${Y(val(k.area - k.sd))}" y2="${Y(val(k.area + k.sd))}"/>`; s += marker(i, +X(k.t).toFixed(1), +Y(val(k.area)).toFixed(1), color(i), small ? 3 : 4); });
+          if (pts.length > 1) s += `<path class="ln" stroke="${color(i)}" d="${pts.map((k, j) => `${j ? "L" : "M"}${X(k.t).toFixed(1)} ${Y(val(k.area, id)).toFixed(1)}`).join("")}"/>`;
+          const dk = (c ? c.dark || [] : []).filter(k => k.area != null);
+          if (dk.length) s += `<path class="drk" stroke="${color(i)}" d="${dk.map((k, j) => `${j ? "L" : "M"}${X(k.t).toFixed(1)} ${Y(val(k.area, id)).toFixed(1)}`).join("")}"/>` + dk.map(k => `<circle class="drk-pt" cx="${X(k.t).toFixed(1)}" cy="${Y(val(k.area, id)).toFixed(1)}" r="${small ? 2.5 : 3.5}" stroke="${color(i)}"/>`).join("");
+          pts.forEach(k => { if (k.sd) s += `<line class="sd" x1="${X(k.t)}" x2="${X(k.t)}" y1="${Y(val(k.area - k.sd, id))}" y2="${Y(val(k.area + k.sd, id))}"/>`; s += marker(i, +X(k.t).toFixed(1), +Y(val(k.area, id)).toFixed(1), color(i), small ? 3 : 4); });
           const pk = conds[i] && conds[i].parent.k;
           if (pct && pk && ts[0] === 0) s += `<path class="par" stroke="${color(i)}" d="${ts.map((t, j) => `${j ? "L" : "M"}${X(t).toFixed(1)} ${Y(100 * Math.exp(-pk * t)).toFixed(1)}`).join("")}"/>`;
         });
       }
       return s + "</svg>";
     }
-    function tpData(/** @type {GRow} */ r) {
-      const top = maxArea(r) || 1, rowsT = [];
-      for (const c of r.cond) for (const k of c.kin) rowsT.push([c.id, String(k.t), k.area == null ? "" : sci(k.area, 3), k.sd == null ? "" : sci(k.sd, 3), String(k.n), k.area == null ? "" : num(k.area / top * 100, 1)]);
-      return { title: `${r.tp_name}: area per condition`, head: ["Condition", "Time (min)", "Area", "Area SD", "n", "% of max"], rows: rowsT, rowHeader: true };
-    }
     function drawTp() {
       const box = Q("#gv-tp"), r = st.tp != null ? byRow.get(st.tp) : null;
       if (!r) { box.innerHTML = `<p class="gv-sub">Choose a TP in the matrix.</p>`; return; }
-      const many = ids.length > 8, ts = timesOf(r);
-      const legend = many ? "" : `<ul class="gv-leg" aria-label="Conditions">${ids.map((c, i) => `<li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">${marker(i, 7, 7, color(i), 4)}</svg>${esc(c)}${c === ref ? " (ref)" : ""}</li>`).join("")}${ts.length > 1 && st.mode === "pct" ? `<li><svg width="26" height="10" aria-hidden="true"><path class="par" d="M1 5H25" stroke="var(--ink)" fill="none" stroke-width="1.6" stroke-dasharray="5 4"/></svg>Parent (first-order fit from k)</li>` : ""}</ul>`;
+      const sh = shown(), ts = timesOf(r), curves = ts.length > 1, many = sh.length > 1 && (st.layout === "side" ? curves || sh.length > 8 : st.layout === "auto" && sh.length > 8), hasDark = sh.some(id => (cellOf(r, id)?.dark || []).length > 0);
+      const legend = many ? "" : `<ul class="gv-leg" aria-label="Conditions">${sh.map((c, i) => `<li><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">${marker(i, 7, 7, color(i), 4)}</svg>${esc(c)}${c === ref ? " (ref)" : ""}</li>`).join("")}${ts.length > 1 && st.mode === "pct" ? `<li><svg width="26" height="10" aria-hidden="true"><path class="par" d="M1 5H25" stroke="var(--ink)" fill="none" stroke-width="1.6" stroke-dasharray="5 4"/></svg>Parent (first-order fit from k)</li>` : ""}${hasDark && curves ? `<li><svg width="26" height="10" aria-hidden="true"><path class="drk" d="M1 5H25" stroke="var(--ink)" fill="none" stroke-width="1.6" stroke-dasharray="2 3"/></svg>Dark control (hollow markers)</li>` : ""}</ul>`;
       const top = maxArea(r) || 1;
       let figs;
-      if (many) figs = `<div class="gv-multi" role="group" aria-label="${esc(r.tp_name)}: one small chart per condition">${ids.map(c => `<figure><figcaption>${esc(c)}${c === ref ? " (ref)" : ""}</figcaption>${plot(r, [c], { ymax: top * 1.08, small: true })}</figure>`).join("")}</div>`;
-      else figs = `<div class="gv-fig gv-sc free" tabindex="0" role="region" aria-label="Chart of ${esc(r.tp_name)}, scrollable" id="gv-tpfig">${plot(r, ids, { ymax: top * 1.08 })}</div>`;
+      if (many) figs = `<div class="gv-multi" role="group" aria-label="${esc(r.tp_name)}: one small chart per condition">${sh.map(c => `<figure><figcaption>${esc(c)}${c === ref ? " (ref)" : ""}</figcaption>${plot(r, [c], { ymax: top * 1.08, small: true })}</figure>`).join("")}</div>`;
+      else figs = `<div class="gv-fig gv-sc free" tabindex="0" role="region" aria-label="Chart of ${esc(r.tp_name)}, scrollable" id="gv-tpfig">${plot(r, sh, { ymax: top * 1.08 })}</div>`;
       box.innerHTML = `<div class="gv-bar">${V.fixed ? "" : `<label for="gv-tpsel">TP</label><select id="gv-tpsel">${rows.map(x => `<option value="${x.row}">${esc(x.tp_name)} (m/z ${num(x.mz, 1)}, RT ${num(x.rt, 1)})</option>`).join("")}</select>`}` +
-        `<span role="group" aria-label="Value shown"><button type="button" data-mode="area" aria-pressed="${st.mode === "area"}">Area</button><button type="button" data-mode="pct" aria-pressed="${st.mode === "pct"}">% of max</button></span>` +
-        `<button type="button" data-zoom="-" aria-label="Zoom out the chart">−</button><button type="button" data-zoom="+" aria-label="Zoom in the chart">+</button><button type="button" data-dl="tp-svg">Chart (SVG)</button><button type="button" data-dl="tp-png">Chart (PNG)</button>` +
+        `<span role="group" aria-label="Value shown"><button type="button" data-mode="area" aria-pressed="${st.mode === "area"}">Area</button><button type="button" data-mode="pct" aria-pressed="${st.mode === "pct"}">% of max</button>${curves ? `<button type="button" data-mode="own" aria-pressed="${st.mode === "own"}">% of each own max</button>` : ""}</span>` +
+        `${curves && ids.length > 1 ? `<span role="group" aria-label="Layout of the curves"><button type="button" data-layout="overlay" aria-pressed="${!many}">Overlaid</button><button type="button" data-layout="side" aria-pressed="${many}">Side by side</button></span>` : ""}` +
+        `${cmpOptions().length ? `<label for="gv-cmp">Compare</label><select id="gv-cmp"><option value="all">All conditions</option>${cmpOptions().map(o => `<option value="${esc(o.value)}"${o.value === st.cmp ? " selected" : ""}>${esc(o.label)}</option>`).join("")}</select>` : ""}` +
+        `<button type="button" data-zoom="-" aria-label="Zoom out the chart" title="Zoom out the chart">−</button><button type="button" data-zoom="+" aria-label="Zoom in the chart" title="Zoom in the chart">+</button><button type="button" data-dl="tp-svg">Chart (SVG)</button><button type="button" data-dl="tp-png">Chart (PNG)</button>` +
         `${many ? `<button type="button" data-tpdata>Data</button>` : ""}</div>` +
         `<p class="gv-sub">${ts.length > 1 ? "Curves: area against time, one per condition." : "Bars: area at the end point (error bar = standard deviation)."} ${esc(r.tp_name)}, m/z ${num(r.mz, 2)}, RT ${num(r.rt, 2)} min.</p>${legend}${figs}`;
       const pick = /** @type {HTMLSelectElement | null} */ (Q("#gv-tpsel")); if (pick) pick.value = String(r.row);
       const svgs = [...box.querySelectorAll("svg.gv-svg")].filter(x => !x.closest(".gv-leg"));
       if (G.TDATI) svgs.forEach((svg, i) => {
-        G.TDATI.describe(svg, `${r.tp_name}: ${ts.length > 1 ? "area against time" : "area at the end point"} for ${ids.length} conditions.`);
+        G.TDATI.describe(svg, `${r.tp_name}: ${ts.length > 1 ? "area against time" : "area at the end point"} for ${sh.length} conditions${hasDark && curves ? ", with the dark controls dashed" : ""}.`);
         G.TDATI.addButton(svg, () => tpData(r), many || i > 0); svg.setAttribute("tabindex", "0");
       });
       const tb = box.querySelector("[data-tpdata]"); if (tb) tb.addEventListener("click", () => G.TDATI && G.TDATI.table(tpData(r)));
@@ -323,12 +354,13 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     // ---- events
     const redraw = () => { V.drawFilterSelect(); V.drawMatrix(); V.drawUpset(); };
     el.addEventListener("click", ev => {
-      const t = /** @type {HTMLElement} */ (ev.target), b = t.closest ? /** @type {HTMLElement | null} */ (t.closest("[data-sort],[data-open],[data-set],[data-mode],[data-zoom],[data-dl],[data-ex]")) : null; if (!b) return;
+      const t = /** @type {HTMLElement} */ (ev.target), b = t.closest ? /** @type {HTMLElement | null} */ (t.closest("[data-sort],[data-open],[data-set],[data-mode],[data-layout],[data-zoom],[data-dl],[data-ex]")) : null; if (!b) return;
       const d = b.dataset;
       if (d.sort != null) { st.sort = { col: d.sort, dir: st.sort.col === d.sort ? -st.sort.dir : 1 }; V.drawMatrix(); el.querySelector(`[data-sort="${CSS_ESC(d.sort)}"]`)?.focus?.(); }
       else if (d.open != null) { select(+d.open, true); }
       else if (d.set != null) { const f = `set:${d.set}`; st.filter = st.filter === f ? "all" : f; redraw(); el.querySelector(`[data-set="${d.set}"]`)?.focus?.(); }
       else if (d.mode) { st.mode = d.mode; V.drawTp(); el.querySelector(`[data-mode="${d.mode}"]`)?.focus?.(); }
+      else if (d.layout) { st.layout = d.layout; V.drawTp(); el.querySelector(`[data-layout="${d.layout}"]`)?.focus?.(); }
       else if (d.zoom) { st.zoom = Math.max(0.6, Math.min(3, st.zoom * (d.zoom === "+" ? 1.25 : 0.8))); const host = b.closest("#gv-up") ? "up" : "tp"; if (host === "up") V.drawUpset(); else V.drawTp(); el.querySelector(`#gv-${host} [data-zoom="${d.zoom}"]`)?.focus?.(); }
       else if (d.dl) V.doDownload(d.dl);
       else if (d.ex) download(V.fileName(d.ex), V.csv(d.ex), d.ex === "json" ? "application/json" : "text/csv;charset=utf-8");
@@ -338,6 +370,7 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
       const t = /** @type {HTMLSelectElement} */ (ev.target);
       if (t.id === "gv-flt") { st.filter = t.value; redraw(); el.querySelector("#gv-flt")?.focus?.(); }
       else if (t.id === "gv-tpsel") select(+t.value, false);
+      else if (t.id === "gv-cmp") { st.cmp = t.value; V.drawTp(); el.querySelector("#gv-cmp")?.focus?.(); }
     });
     el.addEventListener("keydown", ev => {
       const t = /** @type {HTMLElement} */ (ev.target);
@@ -364,8 +397,8 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     const conds = g.conditions, ids = conds.map(c => c.id), ref = g.reference, rows = g.rows, byRow = new Map(rows.map(r => [r.row, r]));
     const parent = slug(opts.parentName || g.parent_name || "parent");
     const hasF = rows.some(r => r.neutral_formula || r.ion_formula), hasP = rows.some(r => r.ppm != null);
-    /** @type {{ filter: string, sort: { col: string, dir: number }, tp: number | null, mode: string, zoom: number }} */
-    const st = { filter: "all", sort: { col: "", dir: 1 }, tp: rows.length ? rows[0].row : null, mode: "area", zoom: 1 };
+    /** @type {{ filter: string, sort: { col: string, dir: number }, tp: number | null, mode: string, zoom: number, layout: string, cmp: string }} */
+    const st = { filter: "all", sort: { col: "", dir: 1 }, tp: rows.length ? rows[0].row : null, mode: "area", zoom: 1, layout: "auto", cmp: "all" };
     const cellOf = (/** @type {GRow} */ r, /** @type {string} */ id) => r.cond.find(c => c.id === id);
     const color = (/** @type {number} */ i) => COLORS[i % 8];
 
@@ -416,5 +449,15 @@ ${SVGCSS.replace(/\.gv-svg/g, ".gv .gv-svg")}`;
     return true;
   }
 
-  G.TPGRUPPI_VIEW = { mount, rowDetail, slug, sci };
+  /** the Kinetics tab of Tabui with several conditions: the chart of one TP at a time, one curve per condition (layout, value and comparison are the user's choice), the parent per condition and the exports
+   * @param {HTMLElement} el @param {Gruppi} g @param {GOpts} [opts] */
+  function kinetics(el, g, opts = {}) {
+    const V = context(el, g, opts);
+    el.innerHTML = `<div class="gv" data-gv><div id="gv-warn"></div><div id="gv-tp"></div><h3>Parent compound per condition</h3><div class="gv-sc free" id="gv-par"></div></div>`;
+    filterPart(V); tpPart(V); exportPart(V); eventPart(V);
+    V.drawWarnings(); V.drawTp(); V.drawParent();
+    return { destroy() { el.innerHTML = ""; }, selectRow(/** @type {number} */ id) { V.select(id, false); }, state() { return { tp: V.st.tp, mode: V.st.mode, layout: V.st.layout, cmp: V.st.cmp }; } };
+  }
+
+  G.TPGRUPPI_VIEW = { mount, rowDetail, kinetics, slug, sci };
 })();

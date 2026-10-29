@@ -275,3 +275,20 @@ fn help_lists_every_option() {
             .contains("mzlab-cli convert")
     );
 }
+
+/// The same file name in two folders gives two mzML files (the position in the name), not one replaced by the other; names without a clash stay as they are.
+#[test]
+fn the_same_name_in_two_folders_gives_two_files() {
+    let dir = folder("same_name");
+    let src = makers(&dir, false);
+    let other = dir.join("in2");
+    std::fs::create_dir_all(&other).unwrap();
+    std::fs::copy(src.join("a.mzXML"), other.join("a.mzXML")).unwrap();
+    let out = dir.join("out");
+    let o = convert(&[p(&src), p(&other), "--out", p(&out)]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let names: Vec<String> = mzmls(&out).into_iter().map(|f| f.0).collect();
+    assert_eq!(names, ["0-a.mzXML.mzML", "2-a.mzXML.mzML", "b.mzML"]);
+    assert_eq!(String::from_utf8(o.stdout).unwrap().lines().count(), 3);
+    let _ = std::fs::remove_dir_all(&dir);
+}

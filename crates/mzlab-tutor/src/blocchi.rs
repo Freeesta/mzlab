@@ -92,28 +92,31 @@ impl Page {
 }
 
 /// A paragraph cut into pieces of at most ~800 characters, at sentence ends when it can.
-pub(crate) fn cut(p: &str) -> Vec<String> {
+pub(crate) fn cut(mut p: &str) -> Vec<String> {
     let mut out = Vec::new();
-    let mut rest: Vec<char> = p.chars().collect();
-    while rest.len() > TARGET {
-        let sentence = (0..TARGET)
+    while p.chars().count() > TARGET {
+        let idx_at = |n: usize| p.char_indices().nth(n).map_or(p.len(), |(i, _)| i);
+        let (target_byte, ceiling_byte) = (idx_at(TARGET), idx_at(CEILING));
+        let sentence = p[..target_byte]
+            .char_indices()
             .rev()
-            .find(|&i| matches!(rest[i], '.' | '!' | '?' | ';') && rest.get(i + 1) == Some(&' '));
+            .find(|&(i, c)| {
+                matches!(c, '.' | '!' | '?' | ';') && p[i + c.len_utf8()..].starts_with(' ')
+            })
+            .map(|(i, c)| i + c.len_utf8());
         let at = sentence
-            .map(|i| i + 1)
-            .or_else(|| (TARGET..CEILING.min(rest.len())).find(|&i| rest[i] == ' '))
-            .unwrap_or(CEILING.min(rest.len()));
-        let head: String = rest[..at].iter().collect();
-        out.push(head.trim().to_string());
-        rest = rest[at..]
-            .iter()
-            .copied()
-            .skip_while(|c| c.is_whitespace())
-            .collect();
+            .or_else(|| {
+                p[target_byte..ceiling_byte]
+                    .find(' ')
+                    .map(|i| target_byte + i)
+            })
+            .unwrap_or(ceiling_byte);
+        out.push(p[..at].trim().to_string());
+        p = p[at..].trim_start();
     }
-    let tail: String = rest.iter().collect();
-    if !tail.trim().is_empty() {
-        out.push(tail.trim().to_string());
+    let tail = p.trim();
+    if !tail.is_empty() {
+        out.push(tail.to_string());
     }
     out
 }
@@ -170,10 +173,11 @@ pub fn build(pages: &[(String, String)]) -> Result<Value, String> {
             blocks.push(block_json(file, &pg.chapter, b));
         }
     }
+    let n = blocks.len();
     let mut top = Map::new();
-    top.insert("blocks".into(), Value::Array(blocks.clone()));
+    top.insert("blocks".into(), Value::Array(blocks));
     top.insert("chapters".into(), Value::Object(chapters));
-    top.insert("n".into(), json!(blocks.len()));
+    top.insert("n".into(), json!(n));
     top.insert("schema".into(), json!(crate::SCHEMA));
     Ok(Value::Object(top))
 }
@@ -191,3 +195,6 @@ pub fn to_text(v: &Value) -> String {
         v["schema"]
     )
 }
+
+#[cfg(test)]
+mod cut_tests;

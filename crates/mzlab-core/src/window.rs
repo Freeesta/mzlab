@@ -28,7 +28,7 @@ impl<'a, R: ReadAt> Windowed<'a, R> {
 
 impl<R: ReadAt> ReadAt for Windowed<'_, R> {
     fn read_at(&mut self, off: u64, out: &mut [u8]) -> Result<()> {
-        let end = off + out.len() as u64;
+        let end = off.saturating_add(out.len() as u64);
         if out.len() > WINDOW || end > self.size {
             return self.r.read_at(off, out);
         }

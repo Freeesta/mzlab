@@ -99,3 +99,22 @@ pub(super) fn testo(b: &[u8]) -> String {
         .filter(|&c| c != '\r')
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mzlab_core::lettori::Membro;
+
+    #[test]
+    fn windows_member_path_names_the_folder() {
+        let fs = FileSet {
+            membri: vec![Membro {
+                nome: "campione.raw\\_FUNC001.DAT".into(),
+                dim: 0,
+                dati: Box::new(Vec::<u8>::new()),
+                sha1: None,
+            }],
+        };
+        assert_eq!(Cartella::new(fs, Limiti::default()).nome, "campione.raw");
+    }
+}

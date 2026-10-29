@@ -46,7 +46,6 @@ fn paper_block_a_mzmine() {
         "md1||err.flow.step.unknown|step=spectra.centroid",
         "md2||err.flow.step.unknown|step=spectra.centroid",
         "eic||err.flow.param.unknown|param=mz_tol",
-        "eic||err.flow.param.unknown|param=rt_range",
         "res||err.flow.step.unknown|step=features.resolve",
         "iso||err.flow.step.unknown|step=features.isotopes",
         "aln||err.flow.param.unknown|param=mz_tol",
@@ -269,6 +268,7 @@ fn agent() -> Agent {
         version: "x".into(),
         commit: None,
         platform: "native",
+        ..Default::default()
     }
 }
 

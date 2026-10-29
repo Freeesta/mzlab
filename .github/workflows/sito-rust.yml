@@ -3,20 +3,20 @@
 # `sito-wasm-core`, `sito-wasm-feat-a` and `sito-wasm-feat-b` build the .wasm in parallel and hand them over as artifacts; `sito-e2e` runs the quick checks of tools/verifica.py
 # (JS syntax with Teoria and the shell, i18n, code map, sizes), builds the site, adds the artifacts and runs the e2e; `sito` is the summary (like rust-ok). pytest is not repeated here: test.yml runs it on every pull request
 # (3.11 and 3.14, with the wasm32 toolchain, so also the tests this job would skip).
-# The run on main fills the Rust caches (core, feat) when the Rust sources changed (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
+# The run on main fills the Rust caches (core, feat, e2e) when the Rust sources changed (every run restores the newest one); a cache saved on a pull request is not visible to the other pull requests.
 name: sito-rust
 
 on:
   push:
     branches: [main]
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "TP_Mine/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
   pull_request:
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
+    paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "TP_Mine/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
   workflow_dispatch:
     inputs:
       solo:
         description: "e2e to run (comma separated)"
-        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf"
+        default: "e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf"
 
 permissions:
   contents: read
@@ -42,11 +42,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-core-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-core-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-core-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -60,10 +60,10 @@ jobs:
           mkdir -p site/static
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1884160 engine
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2744320 engine @motore
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm-lib target/wasm32-unknown-unknown/release/mzlab_lib_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries
+          tools/wasm_opt.sh site/static/wasm-lib/mzlab_lib_wasm_bg.wasm 614400 libraries @motore
           # the readers (8 families, own manifest) build here, not in part b of build_feat_wasm.sh: it evens out the three jobs
           tools/build_lettori_wasm.sh site/static
       # saved right after the build, so a red e2e does not lose the cache (main only)
@@ -103,11 +103,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-feat-a-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-feat-a-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-feat-a-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -155,11 +155,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: sito-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
+          key: sito-v2-feat-b-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-m1
           # the cache of this kind first, then the older single cache, so the first run is not cold
           restore-keys: |
-            sito-feat-b-${{ runner.os }}-
-            sito-rust-${{ runner.os }}-
+            sito-v2-feat-b-${{ runner.os }}-
+            sito-v2-rust-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones (tools/ci_cargo_mtime.py)
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -213,6 +213,23 @@ jobs:
           python -m pip install -e ".[test]" playwright
           python -m playwright install --with-deps chromium
       # the checks of tools/verifica.py that are not pytest nor e2e, first: a syntax error stops the job in seconds
+      # the e2e tests call cargo (native build) side by side: one verified install of the pinned toolchain before them, else each asks rustup for it and they corrupt each other
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: python tools/ci_toolchain.py
+      # the two slow e2e (e2e_indice_parallelo, e2e_flow_msn) compile mzlab-core (example mzidx) and mzlab-cli in release natively: with the crates cached they only link (main saves the cache, as in test.yml)
+      - id: rcache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: sito-v2-e2e-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py') }}-m1
+          restore-keys: |
+            sito-v2-e2e-${{ runner.os }}-
+      - id: mtime
+        name: Reuse the compiled crates of the cache
+        run: python3 tools/ci_cargo_mtime.py restore
       - name: Quick checks (JS syntax, i18n, code map, sizes)
         run: |
           python - <<'PY'
@@ -240,7 +257,22 @@ jobs:
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'
-          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live' }}"
+          python tools/verifica.py --fumo --browser chromium --solo "${{ inputs.solo || 'e2e13,e2e_avvio,e2e_mzidx,e2e_indice_parallelo,e2e_rust,e2e_lr,e2e_wiff,e2e_tpmine_nativo,e2e_agilent,e2e_metodo,e2e_picchi_qualita,e2e_progressivo,e2e_libreria_wasm,e2e_libreria_cartella,e2e_libreria_scarica,e2e_tpmine1,e2e_tpmine_albero,e2e_tpmine_rtalign,e2e_tpmine_ms2,e2e_untarget,e2e_identita,e2e_pipeline,e2e_tpmine_ingresso,e2e_tpmine_lr_rust,e2e_tpmine_transf,e2e_flow_motore,e2e_flow_msn,e2e_msn_un_clic,e2e_flow_live' }}"
+      # saved right after the e2e (a red one keeps the build); incremental data is dropped so the cache stays small
+      - name: Prepare the cache of the native builds
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        run: |
+          find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} + || true
+          python3 tools/ci_cargo_mtime.py record
+          du -sm target | awk '{print "target to cache:", $1, "MB"}'
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: ${{ !cancelled() && github.ref == 'refs/heads/main' && steps.rcache.outputs.cache-hit != 'true' }}
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ steps.rcache.outputs.cache-primary-key }}
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash

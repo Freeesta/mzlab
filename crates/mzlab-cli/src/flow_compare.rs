@@ -9,6 +9,7 @@ use mzlab_core::flow::{check as check_core, Instance, Plan, Platform, Problem, R
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::json::{parse, round, Out, Value};
 use mzlab_core::step::{find as find_step, DataType, Param, Port, RunsIn, Status, Step};
+use std::collections::{HashMap, HashSet};
 
 /// The descriptor of the compare instance an expanded plan holds: it reads the output of every variant, in the order of `labels`.
 pub fn compare_step() -> Step {
@@ -276,6 +277,8 @@ struct Ranked {
     kind: &'static str,
     by: &'static str,
     keys: Vec<(String, Vec<String>)>,
+    /// Position of each key in `keys`, for the lookups.
+    at: HashMap<String, usize>,
 }
 
 fn field(v: &Value, k: &str) -> String {
@@ -294,15 +297,24 @@ fn ranked(bytes: &[u8]) -> Result<Ranked> {
         ("annot", "row", "rows", "id", "level")
     };
     let mut keys: Vec<(String, Vec<String>)> = Vec::new();
+    let mut at: HashMap<String, usize> = HashMap::new();
     for h in v.get(list).map_or(&[][..], Value::arr) {
         let (k, x) = (field(h, key), field(h, value));
         let x = if x.is_empty() { field(h, "name") } else { x };
-        match keys.iter_mut().find(|e| e.0 == k) {
-            Some(e) => e.1.push(x),
-            None => keys.push((k, vec![x])),
+        match at.get(&k) {
+            // a value listed twice for a key counts once, at its best rank
+            Some(&i) => {
+                if !keys[i].1.contains(&x) {
+                    keys[i].1.push(x);
+                }
+            }
+            None => {
+                at.insert(k.clone(), keys.len());
+                keys.push((k, vec![x]));
+            }
         }
     }
-    Ok(Ranked { kind, by, keys })
+    Ok(Ranked { kind, by, keys, at })
 }
 
 /// Spearman correlation of the order of the values both lists hold (None below three shared values).
@@ -335,14 +347,15 @@ fn overlap(a: &[String], b: &[String]) -> f64 {
 }
 
 fn find<'a>(r: &'a Ranked, key: &str) -> Option<&'a Vec<String>> {
-    r.keys.iter().find(|e| e.0 == key).map(|e| &e.1)
+    r.at.get(key).map(|&i| &r.keys[i].1)
 }
 
 /// The keys of all variants, in the order they first appear.
 fn all_keys(all: &[Ranked]) -> Vec<String> {
+    let mut seen: HashSet<&str> = HashSet::new();
     let mut keys: Vec<String> = Vec::new();
     for e in all.iter().flat_map(|r| &r.keys) {
-        if !keys.contains(&e.0) {
+        if seen.insert(e.0.as_str()) {
             keys.push(e.0.clone());
         }
     }

@@ -3,7 +3,11 @@
 // Peak measures from the Rust engine (crates/mzlab-core/src/peakq.rs): quality of an integrated peak and the two methods of finding peaks.
 // Loaded as a module after the classic scripts; picchi.js uses window.QUALITA. Every call resolves to null when the .wasm is not there
 // (the local development server does not build it) or the worker dies: the page then shows an empty cell, never an error.
+import { compileOnce } from "./rust-supervisor.js";
 const URL_WORKER = new URL("peaks-worker.js", import.meta.url);
+// The engine compiled once for the page (shared with the engine worker's supervisor): the worker instantiates it instead of fetching and compiling the .wasm again.
+const compile = compileOnce(new URL("wasm/mzlab_wasm_bg.wasm", import.meta.url));
+let setup = null;
 let worker = null, dead = false, seq = 0;
 const pending = new Map();
 
@@ -12,6 +16,8 @@ function start() {
   try {
     worker = new Worker(URL_WORKER, { type: "module" });
   } catch (_) { dead = true; return; }
+  const w = worker;
+  setup = compile().then(module => { w.postMessage({ op: "module", module }); });
   worker.onmessage = ev => { const p = pending.get(ev.data.id); if (p) { pending.delete(ev.data.id); p(ev.data.error ? null : ev.data.v); } };
   worker.onerror = () => { dead = true; worker = null; for (const p of pending.values()) p(null); pending.clear(); };
 }
@@ -22,7 +28,9 @@ function call(msg) {
     if (!worker) return res(null);
     const id = ++seq;
     pending.set(id, res);
-    worker.postMessage({ ...msg, id });
+    // The module message goes first; the operations queue behind it.
+    const w = worker;
+    setup.then(() => w.postMessage({ ...msg, id }));
   });
 }
 

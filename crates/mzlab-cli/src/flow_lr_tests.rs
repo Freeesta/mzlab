@@ -40,6 +40,12 @@ fn fixture(tag: &str) -> PathBuf {
     d
 }
 
+fn rules_path(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../TP_Mine/data")
+        .join(name)
+}
+
 fn plan(tail: &str) -> String {
     let raw: Vec<String> = NAMES
         .iter()
@@ -97,11 +103,7 @@ fn page(d: &Path) -> (Vec<u8>, String) {
         samples.trim()
     );
     let parent = format!(r#"{{"name":"parent","neutral":"{FORMULA}","adduct":"[M+H]+"}}"#);
-    let rules = std::fs::read(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../TP_Mine/data/regole_tp.json"
-    ))
-    .unwrap();
+    let rules = std::fs::read(rules_path("regole_tp_2.json")).unwrap();
     let mut ix: Vec<Index<Vec<u8>>> = (0..NAMES.len()).map(open).collect();
     let refs: Vec<_> = f.iter().collect();
     let h = run::hypotheses(&mut ix, &refs, &rules, "", FORMULA, None, &r).unwrap();
@@ -167,4 +169,18 @@ fn tp_link_reads_a_unit_resolution_table() {
     let parent = t.tp.parent_row as usize;
     assert!((t.mz[parent] - 364.074).abs() < 0.6, "{}", t.mz[parent]);
     let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_parent_file_gives_the_adduct_that_sets_the_polarity_of_the_dig() {
+    use crate::flow_link::parent_of;
+    let p = parent_of(br#"{"neutral": "C10H12N2O3S", "adduct": "[M-H]-"}"#).unwrap();
+    assert_eq!(p.adduct, "[M-H]-");
+    assert_eq!(parent_of(b"C10H12N2O3S").unwrap().adduct, "[M+H]+");
+    assert_eq!(
+        parent_of(br#"{"neutral": "C10H12N2O3S", "adduct": "nonsense"}"#)
+            .unwrap()
+            .adduct,
+        "[M+H]+"
+    );
 }

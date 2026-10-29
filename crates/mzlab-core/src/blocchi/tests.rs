@@ -73,3 +73,22 @@ fn two_streams_in_turn_cost_one_block_each_with_two_slots_and_a_block_per_read_w
     assert_eq!(run(1), 400);
     assert_eq!(run(2), 2);
 }
+
+#[test]
+fn a_range_that_wraps_past_u64_max_goes_to_the_fetch_and_is_refused() {
+    let data = file(10_000);
+    let dim = data.len() as u64;
+    let fetch = move |off: u64, buf: &mut [u8]| -> Result<()> {
+        match off.checked_add(buf.len() as u64) {
+            Some(end) if end <= dim => {
+                buf.copy_from_slice(&data[off as usize..end as usize]);
+                Ok(())
+            }
+            _ => Err(crate::Error::new("error.badIndex")),
+        }
+    };
+    let mut c = BlockCache::new(fetch, dim, 4096, 2);
+    assert!(c.read_at(u64::MAX - 2, &mut [0u8; 16]).is_err());
+    let mut b = [0u8; 16];
+    c.read_at(100, &mut b).unwrap();
+}

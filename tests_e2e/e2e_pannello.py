@@ -37,11 +37,11 @@ try:
                 pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4)
                 b0 = pg.evaluate(BOX)
                 assert not pg.is_visible("#dfiles") and pg.get_attribute("#sb-toggle", "aria-pressed") == "false" and b1["chart"]["w"] < b0["chart"]["w"] - 200, (b0, b1)
-                pg.click("#stbar [data-cmd=adducts]"); attendi(pg, "BARRA.curTab === 'adducts'"); frames(pg, 4)
-                b2 = pg.evaluate(BOX); assert pg.evaluate("BARRA.curTab") == "adducts" and b2["chart"]["w"] < b0["chart"]["w"] - 200 and not overlap(b2), b2
+                pg.click("#stbar [data-cmd=losses]"); attendi(pg, "BARRA.curTab === 'losses'"); frames(pg, 4)
+                b2 = pg.evaluate(BOX); assert pg.evaluate("BARRA.curTab") == "losses" and b2["chart"]["w"] < b0["chart"]["w"] - 200 and not overlap(b2), b2
                 pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles")
-                pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.evaluate("BARRA.curTab") == "adducts", "the toggle reopens the last tool"
-                pg.click("#stbar [data-cmd=adducts]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "a second click on the same tool hides it"
+                pg.click("#sb-toggle"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.evaluate("BARRA.curTab") == "losses", "the toggle reopens the last tool"
+                pg.click("#stbar [data-cmd=losses]"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles"), "a second click on the same tool hides it"
                 pg.keyboard.press("Control+b"); pg.wait_for_selector("#dfiles", state="visible"); frames(pg, 4); assert pg.is_visible("#dfiles"), "Ctrl+B"
                 pg.keyboard.press("Control+b"); pg.wait_for_selector("#dfiles", state="hidden"); frames(pg, 4); assert not pg.is_visible("#dfiles")
                 assert pg.evaluate("BARRA.commands.some(c => c.id === 'panel' && c.run)") and pg.locator("#sb-pin").count() == 0
@@ -68,7 +68,7 @@ try:
                 r, ctx, pg, errs = cold(p, 1440, 900, saved=saved)
                 try:
                     st = pg.evaluate("JSON.parse(localStorage.getItem('mzlab.barra.lr'))")
-                    assert "pinned" not in st and 280 <= st["w"] <= 560 and st["tab"] in ("file", "calc", "losses", "adducts", "lists", "qaqc", "stat") and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") in ("left", "right"), st
+                    assert "pinned" not in st and 280 <= st["w"] <= 560 and st["tab"] in ("file", "calc", "losses", "lists", "qaqc", "stat") and pg.evaluate("localStorage.getItem('mzlab.barra.lato')") in ("left", "right"), st
                     b = pg.evaluate(BOX); assert not overlap(b) and b["sw"] <= 1, b
                 finally: ctx.close(); r.close()
                 assert not errs, errs

@@ -9,6 +9,8 @@ const KEY_LOG = "mzlab.memBudget.log";
 const KEY_PROBE = "mzlab.memProbe";
 const KEY_LEVEL = "mzlab.memLevel";
 const LOG_MAX = 40;
+/** The probe starts at the latest after this idle wait, below the 800 ms `whenProbed` gives it, so a busy page does not leave it running after the policy went without it. */
+const IDLE_MAX_MS = 500;
 /** The manual choice has no control in the settings, so a value saved by an older version is ignored and cleaned. Set true to bring it back (with a control that calls `setBudget`). */
 const MANUAL_ENABLED = false;
 
@@ -48,7 +50,7 @@ function startProbe() {
   const ric = /** @type {any} */ (window).requestIdleCallback;
   return probing = new Promise(resolve => {
     const run = () => probe().then(r => { PROBE = r; if (r) writeSession(KEY_PROBE, JSON.stringify(r)); resolve(); });
-    if (ric) ric(run, { timeout: 1000 }); else setTimeout(run, 0);
+    if (ric) ric(run, { timeout: IDLE_MAX_MS }); else setTimeout(run, 0);
   });
 }
 

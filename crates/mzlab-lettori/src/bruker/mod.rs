@@ -7,5 +7,6 @@ pub mod sqlite_schema;
 pub mod sqlite_wal;
 pub mod tabelle;
 pub mod tdf;
+mod tdf_aiuti;
 pub mod testata;
 pub mod tsf;

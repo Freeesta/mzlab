@@ -46,6 +46,7 @@ impl LettoreAgilent {
             campioni,
             indice,
             srm: None,
+            sic: None,
         }
     }
 
@@ -293,15 +294,24 @@ fn trace(l: &mut LettoreAgilent, id: &str) -> Result<Chromatogram> {
         .iter()
         .position(|&k| k == key)
         .ok_or_else(bad)?;
-    let mut sic: BTreeMap<i64, (Vec<f64>, Vec<f64>)> = BTreeMap::new();
-    for i in l.scans.clone() {
-        let r = l.d.records[i].clone();
-        if r.scan_type == SCAN_SIM {
-            let (m, y) = l.points(&r)?;
-            super::run::add_sic(&mut sic, r.time_min, &m, &y);
+    if l.sic.is_none() {
+        let mut sic = SicTraces::new();
+        for i in l.scans.clone() {
+            let r = l.d.records[i].clone();
+            if r.scan_type == SCAN_SIM {
+                let (m, y) = l.points(&r)?;
+                super::run::add_sic(&mut sic, r.time_min, &m, &y);
+            }
         }
+        l.sic = Some(sic);
     }
-    let (time, intensity) = sic.remove(&key).ok_or_else(bad)?;
+    // an ion of the method that no scan carries (truncated run) is an empty trace
+    let (time, intensity) = l
+        .sic
+        .as_ref()
+        .and_then(|s| s.get(&key))
+        .cloned()
+        .unwrap_or_default();
     Ok(super::run::sic_chromatogram(index, key, time, intensity))
 }
 
@@ -374,6 +384,9 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
+/// The time and intensity of the SIC of each ion (key: m/z x 100).
+type SicTraces = BTreeMap<i64, (Vec<f64>, Vec<f64>)>;
+
 pub struct LettoreAgilent {
     d: AgilentD,
     peak: Option<Box<dyn ReadAt>>,
@@ -384,6 +397,8 @@ pub struct LettoreAgilent {
     indice: Vec<VoceScansione>,
     /// The SRM chromatograms of an MRM run, read on first use.
     srm: Option<Vec<Chromatogram>>,
+    /// The SIC of every ion found in the SIM scans, built on the first request so the data are read once.
+    sic: Option<SicTraces>,
 }
 
 /// The chromatograms of the run without their points: the TIC, the BPC and one SIC per ion of the SIM groups.

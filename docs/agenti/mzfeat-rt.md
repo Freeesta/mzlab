@@ -1,0 +1,8 @@
+# Correzione e allineamento dell'RT in `mzlab-feat` (`rtmap.rs`, `rtwarp.rs`)
+Seguito di `mzfeat.md`: `rtmap::build`, `rtwarp` (`WarpParams`, `warp_map`), `quality::keep_row`/`reason_text`.
+
+- `rtmap.rs`: `build(&Aligned, &RtParams) -> RtMap` (porting di `rtalign.build`): ancore = righe forti (altezza mediana ≥ 10 × `min_height`), isolate (nessun'altra riga entro 5 ppm e 0,5 min), con scarto fra file ≤ 0,5 min, viste in tutti i file (o nel 75 %); curva lineare a tratti per file fra le mediane di gruppi di ancore; `at`, `expected`, `reference`, `rms` per file. Senza almeno 3 ancore la mappa è vuota (`ok()` falso, scarti 0).
+- `rtwarp.rs`: correzione dell'RT tra file (`WarpParams`, `Method` off|piecewise|loess|ransac; ricetta `align.warp`, passo `features.align` `rt_warp`, `rt_coarse_gap`, `rt_span`, `rt_inlier`).
+- `rtwarp::warp_map`: allineamento grossolano (`coarse`: `rt_gap` ≥ `coarse_gap`, nessun taglio degli isomeri), ancore di `rtmap`, per file la curva (apice − RT di riferimento) in 33 nodi: mediane a blocchi (`rtmap::build`), LOESS lineare locale tricubo con 2 passaggi robusti (≤400 ancore) o retta RANSAC (200 campioni, seme fisso).
+- La mappa di `rtwarp` va a `align_grouped` (`adj`): in modo ione `famalign::align_ions` (soglie di `r.rt`), in modo famiglia sostituisce la mappa di `rtmap`; a pezzi `slabs::first_map`. `off` (predefinito) non cambia i byte.
+- `quality::keep_row` / `reason_text`: una riga della tabella allineata resta se almeno un file ha un picco buono; le scartate hanno il codice del motivo più frequente (`Q_SHAPE<0.5 in 13/13 files`). L'allineamento non sta in questo crate: lo chiama chi allinea.

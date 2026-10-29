@@ -29,8 +29,9 @@ const ACCESSION: [&str; 6] = [
     "MS:1002747",
     "MS:1002748",
 ];
-/// The bytes of the start of the file that `riconosci` looks at.
+/// The bytes of the start of the file that `riconosci` looks at first; it reads on (doubling) up to the end of the first spectrum, never past `TESTA_MAX`.
 const TESTA: usize = 64 << 10;
+const TESTA_MAX: usize = 16 << 20;
 pub const VOCE: VoceLettore = VoceLettore {
     id: "mzml-numpress",
     contratto: CONTRATTO,
@@ -188,24 +189,29 @@ impl LettoreNumpress {
                 spettro = Some(s);
             }
         })?;
-        let s = spettro
+        let mut s = spettro
             .ok_or_else(|| Error::new("err.file.xml").with("detail", "no spectrum in its bytes"))?;
+        // a spectrum without an id keeps the one of the index (`index={k}`), or `extra_mzml` would not find its extra
+        s.index = k;
+        if s.id.is_empty() {
+            s.id = self.indice[k].id.clone();
+        }
         *self.ultima.borrow_mut() = Some((k, extra_di(&byte)));
         Ok(s)
     }
 
     /// The header of the mzML we write (`testata_da`), with the SHA-1 of the file when the original names no source.
     fn testata(&mut self) -> Result<Header> {
-        if self.sha1.is_none() {
-            let dim = self.dim;
-            self.sha1 = Some(sha1_hex(&mut self.dati, dim).ok());
-        }
-        let sha1 = self.sha1.clone().flatten();
         let head = self.testa_xml()?;
         let mut h = testata_da(&head, &self.nome, &self.limiti)?;
         if h.sources.is_empty() {
+            // the whole-file SHA-1 is only worth reading when the original names no source
+            if self.sha1.is_none() {
+                let dim = self.dim;
+                self.sha1 = Some(sha1_hex(&mut self.dati, dim).ok());
+            }
             h.sources = vec![self.nome.clone()];
-            h.source_sha1 = sha1.into_iter().collect();
+            h.source_sha1 = self.sha1.clone().flatten().into_iter().collect();
         }
         if let Some(doc) = metodo::from_userparam(&head) {
             h.run_params.retain(|(k, _)| k != metodo::USERPARAM);
@@ -215,20 +221,39 @@ impl LettoreNumpress {
     }
 }
 
+/// Yes when a numpress accession shows up before the end of the first spectrum (the m/z array may be plain and hundreds of KB while only the intensities are numpress).
 fn riconosci(fs: &mut FileSet) -> Fiducia {
     let Some(i) = fs.trova(".mzml") else {
         return Fiducia::No;
     };
-    let head = fs.testa(i, TESTA);
-    let text = String::from_utf8_lossy(&head);
-    let numpress = ACCESSION
-        .iter()
-        .any(|a| text.contains(&format!("accession=\"{a}\"")));
-    if text.contains("<mzML") && numpress {
-        Fiducia::Si
-    } else {
-        Fiducia::No
+    let dim = fs.membri.get(i).map_or(0, |m| m.dim);
+    let mut n = TESTA;
+    loop {
+        let head = fs.testa(i, n);
+        let text = String::from_utf8_lossy(&head);
+        if ha_numpress(&text) {
+            return if text.contains("<mzML") {
+                Fiducia::Si
+            } else {
+                Fiducia::No
+            };
+        }
+        if !text.contains("<mzML")
+            || text.contains("</spectrum>")
+            || (n as u64) >= dim
+            || n >= TESTA_MAX
+        {
+            return Fiducia::No;
+        }
+        n = (n * 2).min(TESTA_MAX);
     }
+}
+
+/// Whether a cvParam of the text names one of the numpress codecs.
+fn ha_numpress(text: &str) -> bool {
+    ACCESSION
+        .iter()
+        .any(|a| text.contains(&format!("accession=\"{a}\"")))
 }
 
 impl Lettore for LettoreNumpress {

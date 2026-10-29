@@ -93,6 +93,13 @@ const ADDUCT_ATOMS: [Adduct; 11] = [
     ("[M]+", &[], 1),
     ("[M]-", &[], -1),
 ];
+/// The atoms an adduct of the table adds to M (negative: it takes them away) and the sign of its charge.
+pub fn adduct_atoms(name: &str) -> Option<(&'static [(&'static str, i64)], i32)> {
+    ADDUCT_ATOMS
+        .iter()
+        .find(|(n, _, _)| *n == name)
+        .map(|&(_, a, z)| (a, z))
+}
 const RATIO_RULES: [(&str, &str, f64, f64); 8] = [
     ("HC", "H", 0.2, 3.1),
     ("NC", "N", 0.0, 1.3),
@@ -261,20 +268,27 @@ pub fn ion_mass(counts: &[(String, i64)], z: i32) -> f64 {
     (s - z as f64 * ELECTRON) / (z.abs() as f64)
 }
 
+/// A pattern of at most five isotope peaks (M .. M+4) on the stack: the values and how many are in use.
+type Pat = ([f64; 5], usize);
+
+/// Convolution of two patterns, cut at M+4.
+fn conv(a: &Pat, b: &Pat) -> Pat {
+    let (a, b) = (&a.0[..a.1], &b.0[..b.1]);
+    let n = (a.len() + b.len() - 1).min(5);
+    let mut out = [0.0; 5];
+    for (k, o) in out.iter_mut().enumerate().take(n) {
+        *o = (0..a.len())
+            .filter(|&i| k >= i && k - i < b.len())
+            .map(|i| a[i] * b[k - i])
+            .fold(0.0, |s, v| s + v);
+    }
+    (out, n)
+}
+
 /// (M+1 / M, M+2 / M) of an ion formula at the natural abundances.
 pub fn isotope_ratios(counts: &[(String, i64)]) -> (f64, f64) {
-    fn conv(a: &[f64], b: &[f64]) -> Vec<f64> {
-        let n = (a.len() + b.len() - 1).min(5);
-        (0..n)
-            .map(|k| {
-                (0..a.len())
-                    .filter(|&i| k >= i && k - i < b.len())
-                    .map(|i| a[i] * b[k - i])
-                    .fold(0.0, |s, v| s + v)
-            })
-            .collect()
-    }
-    let mut pat = vec![1.0];
+    const ONE: Pat = ([1.0, 0.0, 0.0, 0.0, 0.0], 1);
+    let mut pat = ONE;
     for (el, k) in counts {
         if *k <= 0 || iso_info(el).is_some() {
             continue;
@@ -282,13 +296,14 @@ pub fn isotope_ratios(counts: &[(String, i64)]) -> (f64, f64) {
         let Some(iso) = ISO_PATTERN.iter().find(|(e, _)| e == el).map(|(_, p)| *p) else {
             continue;
         };
-        let mut single = vec![0.0; iso.iter().map(|(s, _)| *s).max().unwrap() + 1];
+        let mut single = [0.0; 5];
+        let len = iso.iter().map(|(s, _)| *s).max().unwrap() + 1;
         for (s, a) in iso {
             single[*s] += a;
         }
-        let tot: f64 = single.iter().sum();
-        single.iter_mut().for_each(|v| *v /= tot);
-        let (mut acc, mut base, mut e) = (vec![1.0], single, *k);
+        let tot: f64 = single[..len].iter().sum();
+        single[..len].iter_mut().for_each(|v| *v /= tot);
+        let (mut acc, mut base, mut e) = (ONE, (single, len), *k);
         while e > 0 {
             if e & 1 == 1 {
                 acc = conv(&acc, &base);
@@ -298,8 +313,7 @@ pub fn isotope_ratios(counts: &[(String, i64)]) -> (f64, f64) {
         }
         pat = conv(&pat, &acc);
     }
-    pat.resize(pat.len().max(5) + 5, 0.0);
-    (pat[1] / pat[0], pat[2] / pat[0])
+    (pat.0[1] / pat.0[0], pat.0[2] / pat.0[0])
 }
 
 pub struct Opts<'a> {
@@ -361,28 +375,47 @@ impl Default for Opts<'_> {
     }
 }
 
-/// Counts by base element (isotopes folded in), in the order of `bases`.
-fn folded(row: &[i64], base: &[&str], bases: &[&str]) -> Vec<i64> {
-    bases
-        .iter()
-        .map(|b| {
-            row.iter()
-                .zip(base)
-                .filter(|(_, x)| *x == b)
-                .map(|(v, _)| *v)
-                .sum()
-        })
-        .collect()
+/// Counts by base element (isotopes folded in) into `out`, in the order of `bases`; `slot[i]` is the position in `bases` of the base of symbol `i`.
+fn fold_into(row: &[i64], slot: &[usize], out: &mut [i64]) {
+    out.fill(0);
+    for (v, &k) in row.iter().zip(slot) {
+        out[k] += *v;
+    }
+}
+
+/// What `broken` needs about the base elements, looked up once instead of by name for every candidate.
+struct RuleCtx {
+    c: Option<usize>,
+    ratio_at: [Option<usize>; 8],
+    valence: Vec<i64>,
+}
+
+impl RuleCtx {
+    fn new(bases: &[&str]) -> Self {
+        let pos = |s: &str| bases.iter().position(|b| *b == s);
+        let mut ratio_at = [None; 8];
+        for (slot, (_, sym, _, _)) in ratio_at.iter_mut().zip(&RATIO_RULES) {
+            *slot = pos(sym);
+        }
+        RuleCtx {
+            c: pos("C"),
+            ratio_at,
+            valence: bases
+                .iter()
+                .map(|b| lookup(&VALENCE, b).unwrap_or(0))
+                .collect(),
+        }
+    }
 }
 
 /// Which rules a row BREAKS, in the order of `RULES`.
-fn broken(form: &[i64], bases: &[&str], r_db: f64, half_ok: bool) -> [bool; 10] {
-    let at = |s: &str| bases.iter().position(|b| *b == s).map_or(0, |i| form[i]);
-    let c = at("C");
+fn broken(form: &[i64], ctx: &RuleCtx, r_db: f64, half_ok: bool) -> [bool; 10] {
+    let at = |i: Option<usize>| i.map_or(0, |i| form[i]);
+    let c = at(ctx.c);
     let mut out = [false; 10];
-    for (i, (_, sym, lo, hi)) in RATIO_RULES.iter().enumerate() {
+    for (i, (_, _, lo, hi)) in RATIO_RULES.iter().enumerate() {
         let ratio = if c > 0 {
-            at(sym) as f64 / c as f64
+            at(ctx.ratio_at[i]) as f64 / c as f64
         } else {
             0.0
         };
@@ -391,17 +424,25 @@ fn broken(form: &[i64], bases: &[&str], r_db: f64, half_ok: bool) -> [bool; 10] 
     let whole = (r_db - r_db.round_ties_even()).abs() < 1e-6
         || (half_ok && (r_db - r_db.floor() - 0.5).abs() < 1e-6);
     out[8] = r_db < 0.0 || !whole;
-    let val = |b: &str| lookup(&VALENCE, b).unwrap_or(0);
-    let tot: i64 = bases.iter().zip(form).map(|(b, n)| val(b) * n).sum();
+    let tot: i64 = ctx.valence.iter().zip(form).map(|(v, n)| v * n).sum();
     let n_atoms: i64 = form.iter().sum();
-    let vmax = bases
+    let vmax = ctx
+        .valence
         .iter()
         .zip(form)
-        .map(|(b, n)| if *n > 0 { val(b) } else { 0 })
+        .map(|(v, n)| if *n > 0 { *v } else { 0 })
         .max()
         .unwrap_or(0);
     out[9] = n_atoms > 0 && !(tot % 2 == 0 && tot >= 2 * vmax && tot >= 2 * (n_atoms - 1));
     out
+}
+
+/// A grid hit kept for the rule checks: its row in the flat `xs`, the mass error, the double-bond count and the rules it fails.
+struct Cand {
+    at: usize,
+    e: f64,
+    r_db: f64,
+    failed: [bool; 10],
 }
 
 /// Formulas of the ion at `mz`, as the JSON of `/api/composition` (without the isotope-peak and fragment scores).
@@ -485,16 +526,20 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
         e.raw(",\"n_candidates\":0,\"results\":[]}");
         e.0
     };
-    // hits: (carbons, hydrogens, grid row, mass error)
-    let mut hits: Vec<(i64, i64, Vec<i64>, f64)> = vec![];
+    // hits: (carbons, hydrogens, mass error); the grid row of hit k is rows[k * no..][..no]
+    let no = others.len();
+    let mut hits: Vec<(i64, i64, f64)> = vec![];
+    let mut rows: Vec<i64> = vec![];
     let mut cur: Vec<i64> = others.iter().map(|(_, r)| r.0).collect();
+    // pre[k] = the first k terms of the dot product added up in order: stepping the last digits of the grid only redoes the tail of the sum, with the same roundings
+    let mut pre = vec![0.0f64; no + 1];
+    for k in 0..no {
+        pre[k + 1] = pre[k] + cur[k] as f64 * mo[k];
+    }
+    let r_top = mh * hmax as f64 + 12.0 * cmax as f64 + tol_da;
     for _ in 0..size {
-        let mut dot = 0.0;
-        for (i, v) in cur.iter().enumerate() {
-            dot += *v as f64 * mo[i];
-        }
-        let r = if others.is_empty() { t } else { t - dot };
-        if r >= -tol_da && r <= mh * hmax as f64 + 12.0 * cmax as f64 + tol_da {
+        let r = if others.is_empty() { t } else { t - pre[no] };
+        if r >= -tol_da && r <= r_top {
             let clo = (cmin as f64).max(((r - mh * hmax as f64 - tol_da) / 12.0).ceil()) as i64;
             let chi = (cmax as f64).min(((r + tol_da - mh * hmin as f64) / 12.0).floor()) as i64;
             for cm in clo..=chi {
@@ -503,14 +548,18 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
                     let h = h0.round_ties_even() as i64 + d;
                     let err = r - 12.0 * cm as f64 - h as f64 * mh;
                     if err.abs() <= tol_da && h >= hmin && h <= hmax {
-                        hits.push((cm, h, cur.clone(), err));
+                        hits.push((cm, h, err));
+                        rows.extend_from_slice(&cur);
                     }
                 }
             }
         }
-        for d in (0..cur.len()).rev() {
+        for d in (0..no).rev() {
             if cur[d] < others[d].1 .1 {
                 cur[d] += 1;
+                for k in d..no {
+                    pre[k + 1] = pre[k] + cur[k] as f64 * mo[k];
+                }
                 break;
             }
             cur[d] = others[d].1 .0;
@@ -525,82 +574,105 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     let mut bases: Vec<&str> = base.clone();
     crate::sortc::ord(&mut bases);
     bases.dedup();
+    let slot: Vec<usize> = base
+        .iter()
+        .map(|b| bases.iter().position(|x| x == b).unwrap())
+        .collect();
     let a: Vec<i64> = syms
         .iter()
         .map(|k| add.iter().find(|(e, _)| e == k).map_or(0, |(_, n)| *n))
         .collect();
-    let db = |b: &str| lookup(&DBEQ, b).unwrap_or(0.0);
-    struct Cand {
-        x: Vec<i64>,
-        nn: Vec<i64>,
-        e: f64,
-        r_db: f64,
-        failed: [bool; 10],
-    }
-    let mut cands: Vec<Cand> = vec![];
-    for (cm, h, g, e) in hits {
-        let mut x = vec![cm, h];
-        x.extend(g);
-        if x.iter().sum::<i64>() <= 0 {
-            continue;
-        }
-        let b = folded(&x, &base, &bases);
-        if let Some(p) = &par {
-            if bases.iter().zip(&b).any(|(bb, n)| {
-                *n > p
-                    .iter()
+    let db: Vec<f64> = bases
+        .iter()
+        .map(|b| lookup(&DBEQ, b).unwrap_or(0.0))
+        .collect();
+    let atomic: Vec<i64> = bases
+        .iter()
+        .map(|b| lookup(&ATOMIC_NUMBER, b).unwrap_or(0))
+        .collect();
+    let par_max: Option<Vec<i64>> = par.as_ref().map(|p| {
+        bases
+            .iter()
+            .map(|bb| {
+                p.iter()
                     .find(|(e, _)| e == bb)
                     .map_or(0, |(_, c)| *c as i64)
+            })
+            .collect()
+    });
+    let ctx = RuleCtx::new(&bases);
+    let half_ok = o.ion == "[M]+" || o.ion == "[M]-";
+    // a candidate is a row of `xs` (carbons, hydrogens, then the grid row), `ns` numbers wide
+    let ns = 2 + no;
+    let mut xs: Vec<i64> = vec![];
+    let mut cands: Vec<Cand> = vec![];
+    let (mut b, mut bn) = (vec![0i64; bases.len()], vec![0i64; bases.len()]);
+    let mut nn = vec![0i64; ns];
+    for (k, &(cm, h, e)) in hits.iter().enumerate() {
+        let x_at = xs.len();
+        xs.push(cm);
+        xs.push(h);
+        xs.extend_from_slice(&rows[k * no..(k + 1) * no]);
+        let x = &xs[x_at..];
+        let keep = (|| {
+            if x.iter().sum::<i64>() <= 0 {
+                return None;
+            }
+            fold_into(x, &slot, &mut b);
+            if let Some(pm) = &par_max {
+                if b.iter().zip(pm).any(|(n, m)| n > m) {
+                    return None;
+                }
+            }
+            for ((v, d), out) in x.iter().zip(&a).zip(nn.iter_mut()) {
+                *out = v - d;
+            }
+            if nn.iter().any(|v| *v < 0) {
+                return None;
+            }
+            fold_into(&nn, &slot, &mut bn);
+            let form = if add.is_empty() { &b } else { &bn };
+            let mut r_db = 0.0;
+            for (d, n) in db.iter().zip(form.iter()) {
+                r_db += *n as f64 * *d;
+            }
+            let r_db = 1.0 + r_db;
+            if !(r_db >= o.rdb.0 && r_db <= o.rdb.1) {
+                return None;
+            }
+            if o.nitrogen != "none" {
+                let n_e: i64 = atomic.iter().zip(&b).map(|(a, n)| a * n).sum::<i64>() - z as i64;
+                let odd = n_e.rem_euclid(2) == 1;
+                if (o.nitrogen == "even") == odd {
+                    return None;
+                }
+            }
+            let failed = broken(form, &ctx, r_db, half_ok);
+            if o.rules.iter().any(|rn| {
+                RULES
+                    .iter()
+                    .position(|r| r == rn)
+                    .is_some_and(|i| failed[i])
             }) {
-                continue;
+                return None;
             }
+            Some((r_db, failed))
+        })();
+        match keep {
+            Some((r_db, failed)) => cands.push(Cand {
+                at: x_at,
+                e,
+                r_db,
+                failed,
+            }),
+            None => xs.truncate(x_at),
         }
-        let nn: Vec<i64> = x.iter().zip(&a).map(|(v, d)| v - d).collect();
-        if nn.iter().any(|v| *v < 0) {
-            continue;
-        }
-        let bn = folded(&nn, &base, &bases);
-        let form = if add.is_empty() { &b } else { &bn };
-        let mut r_db = 0.0;
-        for (bb, n) in bases.iter().zip(form) {
-            r_db += *n as f64 * db(bb);
-        }
-        let r_db = 1.0 + r_db;
-        if !(r_db >= o.rdb.0 && r_db <= o.rdb.1) {
-            continue;
-        }
-        if o.nitrogen != "none" {
-            let n_e: i64 = bases
-                .iter()
-                .zip(&b)
-                .map(|(bb, n)| lookup(&ATOMIC_NUMBER, bb).unwrap_or(0) * n)
-                .sum::<i64>()
-                - z as i64;
-            let odd = n_e.rem_euclid(2) == 1;
-            if (o.nitrogen == "even") == odd {
-                continue;
-            }
-        }
-        let failed = broken(form, &bases, r_db, o.ion == "[M]+" || o.ion == "[M]-");
-        if o.rules.iter().any(|rn| {
-            RULES
-                .iter()
-                .position(|r| r == rn)
-                .is_some_and(|i| failed[i])
-        }) {
-            continue;
-        }
-        cands.push(Cand {
-            x,
-            nn,
-            e,
-            r_db,
-            failed,
-        });
     }
+    drop((hits, rows));
+    let row = |c: &Cand| -> &[i64] { &xs[c.at..c.at + ns] };
     // np.unique(axis=0): rows in lexicographic order, the first of equal rows kept
-    crate::sortc::slice_by(&mut cands, |p, q| p.x.cmp(&q.x));
-    cands.dedup_by(|b, a| a.x == b.x);
+    crate::sortc::slice_by(&mut cands, |p, q| row(p).cmp(row(q)));
+    cands.dedup_by(|b, a| row(a) == row(b));
     if cands.is_empty() {
         return Ok(empty(o.ion));
     }
@@ -636,16 +708,17 @@ pub fn compose(mz: f64, o: &Opts) -> Result<String> {
     };
     let mut res: Vec<Res> = vec![];
     for c in cands.iter().take(take) {
+        let x = row(c);
         let counts: Counts = syms
             .iter()
             .cloned()
-            .zip(c.x.iter().copied())
+            .zip(x.iter().copied())
             .filter(|(_, v)| *v != 0)
             .collect();
         let neutral: Counts = syms
             .iter()
             .cloned()
-            .zip(c.nn.iter().copied())
+            .zip(x.iter().zip(&a).map(|(v, d)| v - d))
             .filter(|(_, v)| *v != 0)
             .collect();
         let calc = ion_mass(&counts, z);

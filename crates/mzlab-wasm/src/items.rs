@@ -102,13 +102,13 @@ impl Engine {
         size: f64,
         read: Function,
     ) -> Result<String, JsValue> {
-        let (mut m, _) = self.chroms(slot, size, read)?;
+        let mut m = self.mzml_of(slot, size, read)?;
         mzlab_core::itemroutes::pda_map(&mut m).map_err(|e| error_json(&e))
     }
 
     /// `/api/uvxic`: the trace of the DAD at the wavelengths `nm0`..`nm1`.
     pub fn item_pda_wavelength(&mut self, slot: u32, size: f64, read: Function, nm0: f64, nm1: f64) -> Result<String, JsValue> {
-        let (mut m, _) = self.chroms(slot, size, read)?;
+        let mut m = self.mzml_of(slot, size, read)?;
         mzlab_core::itemroutes::pda_wavelength(&mut m, nm0, nm1).map_err(|e| error_json(&e))
     }
 
@@ -121,7 +121,7 @@ impl Engine {
         rt0: f64,
         rt1: f64,
     ) -> Result<String, JsValue> {
-        let (mut m, _) = self.chroms(slot, size, read)?;
+        let mut m = self.mzml_of(slot, size, read)?;
         mzlab_core::itemroutes::pda_spectrum(&mut m, rt0, rt1).map_err(|e| error_json(&e))
     }
 
@@ -162,6 +162,12 @@ impl Engine {
 impl Engine {
     pub(crate) fn labs(&self) -> Vec<Lab> {
         self.labs.iter().map(|(l, _)| l.clone()).collect()
+    }
+
+    /// The mzML of the file at `slot` without its chromatogram list (the optical matrix routes do not need it).
+    fn mzml_of(&mut self, slot: u32, size: f64, read: Function) -> Result<Mzml<Src<'_>>, JsValue> {
+        self.idx.get(&slot).ok_or_else(no_index)?;
+        self.nat.mzml(slot, read, size)
     }
 
     fn chroms(

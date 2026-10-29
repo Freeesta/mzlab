@@ -1,12 +1,17 @@
 //! The scan table of an mzML whose fingerprints are still being taken: `prepare_late` and the pieces `upload::prepare` shares with it.
 
-use super::{fingerprint, source_head, Passata};
-use crate::error::{Error, Result};
-use crate::idxread::ReadAt;
+use super::source_head;
 use crate::json::Out;
 use crate::mzidx::ScanTable;
-use crate::scantable::{self, Table};
-use crate::window::Windowed;
+use crate::scantable::Table;
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    super::{fingerprint, non_mzml, Passata},
+    crate::error::{Error, Result},
+    crate::idxread::ReadAt,
+    crate::scantable,
+    crate::window::Windowed,
+};
 
 /// The `source` object of the metadata of an mzML.
 pub(super) fn source_text(name: &str, size: u64, probe: &str, sha256: &str) -> String {
@@ -18,10 +23,7 @@ pub(super) fn source_text(name: &str, size: u64, probe: &str, sha256: &str) -> S
 
 pub(super) fn tabella_con(mut t: Table, source_json: String) -> ScanTable {
     let (json, c) = t.drain_json();
-    let run = format!(
-        "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}}}",
-        t.nce, t.hr1, t.n_chromatograms
-    );
+    let run = t.run_json();
     ScanTable {
         level: c.level,
         polarity: c.polarity,
@@ -43,6 +45,7 @@ pub fn prepare_late<R: ReadAt, R2: ReadAt + Send + 'static>(
     size: u64,
     name: &str,
 ) -> Result<(ScanTable, impl FnMut() -> Result<String>)> {
+    non_mzml::refuse(r, size, name)?;
     let prints = std::thread::spawn(move || fingerprint(&mut r2, size, Passata::senza_sha1(size)));
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
     let name = name.to_string();

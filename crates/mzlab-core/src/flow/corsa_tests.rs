@@ -81,3 +81,30 @@ fn refuses_what_is_not_prov() {
         .to_string()
         .contains("err.corsa.prov"));
 }
+
+#[test]
+fn engine_copies_the_build_keys_of_the_agent() {
+    let prov = PROV.replace(
+        r#""platform":"native"}"#,
+        r#""commit":"0123456789012345678901234567890123456789","platform":"native","target":"x86_64-linux","rustc":"rustc 1.90.0","cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#,
+    );
+    let c = build(&parse(prov.as_bytes()).unwrap(), &[]).unwrap();
+    let keys: Vec<&str> = c.engine.iter().map(|(k, _)| k.as_str()).collect();
+    assert_eq!(
+        keys,
+        [
+            "name",
+            "version",
+            "commit",
+            "platform",
+            "target",
+            "rustc",
+            "cargo_lock_sha256"
+        ]
+    );
+    assert_eq!(c.modules, vec![("mzlab-cli".to_string(), "cd".to_string())]);
+    assert!(c
+        .json()
+        .contains(r#""cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#));
+    assert!(corsa().modules.is_empty());
+}

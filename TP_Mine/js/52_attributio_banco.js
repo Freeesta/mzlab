@@ -139,8 +139,8 @@
       <p><strong>Proposal: ${esc(p.class)}</strong> (proposed level ${esc(p.proposed)}). The program proposes; the level is yours to decide.</p><ul>${reasons}</ul>
       ${p.best ? `<p>Best structure: ${esc(p.best.formula)} ${esc(p.best.adduct)} from ${esc(p.best.structure_from)}${p.best.ion_ppm != null ? `, ${num(p.best.ion_ppm, 2)} ppm` : ""}</p>` : ""}
       <div class="bn-grid"><div><h4>Mirror spectrum</h4>
-        <div class="row"><button type="button" data-zoom="in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out">−</button>
-        <button type="button" data-zoom="left" aria-label="Move left">←</button><button type="button" data-zoom="right" aria-label="Move right">→</button><button type="button" data-zoom="reset" aria-label="Reset zoom">Reset</button></div>
+        <div class="row"><button type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+        <button type="button" data-zoom="left" aria-label="Move left" title="Move left">←</button><button type="button" data-zoom="right" aria-label="Move right" title="Move right">→</button><button type="button" data-zoom="reset" aria-label="Reset zoom" title="Reset zoom">Reset</button></div>
         <div id="bn-mirror-box">${rev.has_ms2 ? mirrorSvg(view) : "<p>No MS2 for this feature.</p>"}</div></div>
         <div><h4>Isotopes</h4>${isotopeSvg(view.isotopes || []) || "<p>No isotope pattern.</p>"}<h4>Precursor purity</h4>
         <p>${esc(pur.badge || "")}${pur.purity != null ? ` (${num(pur.purity, 2)})` : ""}${(pur.badge_reasons || []).length ? ": " + esc(pur.badge_reasons.join("; ")) : ""}</p>
@@ -272,7 +272,7 @@
     }
     const rev = st.rev;
     sec.innerHTML = `<div class="row"><h3 tabindex="-1" id="bn-h">Bench 2b · ${esc(rev.pol)} ${esc(rev.id)} · m/z ${num(rev.mz)} · RT ${num(rev.rt, 2)} <span class="mut">(${ctx.index + 1} of ${n})</span></h3>
-      <button type="button" data-bn="prev" aria-label="Previous feature">←</button><button type="button" data-bn="next" aria-label="Next feature">→</button><button type="button" data-bn="close" aria-label="Close Bench 2b">Close</button></div>`
+      <button type="button" data-bn="prev" aria-label="Previous feature" title="Previous feature">←</button><button type="button" data-bn="next" aria-label="Next feature" title="Next feature">→</button><button type="button" data-bn="close" aria-label="Close Bench 2b" title="Close Bench 2b">Close</button></div>`
       + body(rev);
     sec.removeAttribute("aria-busy");
     for (const b of sec.querySelectorAll("[data-bn]")) b.addEventListener("click", () => { const k = /** @type {HTMLElement} */ (b).dataset.bn; if (k === "close") close(); else show(ctx.index + (k === "next" ? 1 : -1)); });

@@ -115,7 +115,7 @@ try:
             assert pg.locator("#pfas-tab tr.sel").count() == 1
         step("PFAS: a click opens the XIC and the MS2 scan", pfas_click)
         def unit():
-            pg.select_option("#kmd-unit", "CH2"); pg.click("#kmd-go"); pg.wait_for_function("KMD.params.unit==='CH2'", timeout=10000)
+            pg.select_option("#kmd-unit", "CH2"); pg.click("#kmd-go"); pg.wait_for_function("KMD.params.unit==='CH2' && KMD.result && KMD.result.unit.id==='CH2'", timeout=10000)      # the result follows the parameter
             assert pg.evaluate("KMD.result.series.length") == 0 or pg.evaluate("KMD.result.series[0].members.length") < 7, "another unit does not regroup the CF2 series"
             pg.reload(); pg.wait_for_timeout(1500); assert pg.evaluate("KMD.params.unit") == "CH2", "the parameters come back"
         step("another unit regroups, the parameters are saved", unit)

@@ -205,3 +205,24 @@ fn msntree_hangs_a_lone_node_from_the_nearest_ancestor() {
     // 195 > 156 > 138 has no 195 > 156: its parent is 195 (node 0), not the MS1
     assert_eq!(parents, [&Value::Null, &Value::from(0), &Value::from(0)]);
 }
+
+#[test]
+fn nodes_carry_the_mean_tic_per_scan() {
+    let mut r = routes();
+    let t = get(&mut r, "/api/msn_albero", "k=0");
+    let tree = mzlab_core::msnalbero::albero(&r.idx.scans, &Raggruppa::default());
+    for (n, want) in t["nodi"].as_array().unwrap().iter().zip(&tree.nodi) {
+        let mean = want
+            .scansioni
+            .iter()
+            .map(|&i| r.idx.scans[i].tic)
+            .sum::<f64>()
+            / want.scansioni.len() as f64;
+        assert!(
+            (n["tic"].as_f64().unwrap() - mean).abs() <= 0.05,
+            "{}: {} vs {mean}",
+            want.id,
+            n["tic"]
+        );
+    }
+}

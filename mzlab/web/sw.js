@@ -6,6 +6,22 @@ try { importScripts("static/nomi.js"); } catch (_) { /* local testing */ }
 const APP = (typeof NOMI !== "undefined" ? NOMI.CACHE_APP : "mzlab-app-") + "__APP__", BIG = (typeof NOMI !== "undefined" ? NOMI.CACHE_BIG : "mzlab-big-") + "__BIG__";
 /** @type {ServiceWorkerGlobalScope} */
 const sw = /** @type {any} */ (self);
+// Cross-origin isolation (SharedArrayBuffer) without server headers: every same-origin response gets COOP/COEP/CORP, also from the cache.
+// Everything of the site is same-origin; cross-origin fetches of the page are CORS requests, which require-corp does not block.
+/** @param {Response} res */
+const isolata = res => {
+  if (res.status === 0 || res.type === "opaqueredirect") return res;
+  const h = new Headers(res.headers);
+  h.set("Cross-Origin-Embedder-Policy", "require-corp"); h.set("Cross-Origin-Opener-Policy", "same-origin"); h.set("Cross-Origin-Resource-Policy", "same-origin");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+};
+/** True when the cached entry is the same resource as the fresh response (same ETag; else same Last-Modified and Content-Length; no validators: never). */
+const stessa = (/** @type {Response} */ a, /** @type {Response} */ b) => {
+  const et = a.headers.get("ETag");
+  if (et) return et === b.headers.get("ETag");
+  const lm = a.headers.get("Last-Modified"), cl = a.headers.get("Content-Length");
+  return !!lm && !!cl && lm === b.headers.get("Last-Modified") && cl === b.headers.get("Content-Length");
+};
 sw.addEventListener("install", () => sw.skipWaiting());
 sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
   const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
@@ -19,18 +35,19 @@ sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUnti
 sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin || req.headers.has("range")) return;
+  if (req.cache === "only-if-cached" && req.mode !== "same-origin") return;
   if (url.pathname.includes("/static/librerie/")) return;           // the spectral-library packages go to the folder of the user, not to a second copy in the cache
   const big = /\/static\/vendor\//.test(url.pathname);
   e.respondWith((async () => {
     const cache = await caches.open(big ? BIG : APP);
-    if (big) { const hit = await cache.match(req); if (hit) return hit; }
+    if (big) { const hit = await cache.match(req); if (hit) return isolata(hit); }
     try {
       const res = await fetch(req, big ? undefined : { cache: "no-cache" }); // revalidate: GitHub Pages sends max-age=600
-      if (res.status === 200) { try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ } }
-      return res;
+      if (res.status === 200) { try { const old = big ? undefined : await cache.match(req); if (!old || !stessa(old, res)) await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ } }
+      return isolata(res);
     } catch (err) {
       const hit = await cache.match(req, { ignoreSearch: true });
-      if (hit) return hit;
+      if (hit) return isolata(hit);
       throw err;
     }
   })());

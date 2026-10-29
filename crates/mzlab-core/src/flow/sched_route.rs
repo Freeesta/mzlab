@@ -3,7 +3,7 @@
 //! The registry is the `step/1` array the page already holds (`step::registry_from_value`). Design: `docs/agenti/flow-live.md`.
 
 use super::sched::{Command, Done, JobId, JobSpec, Landed, Limits, NodeView, Sched};
-use super::{parse, value_text, Plan};
+use super::{build_agent, parse, value_text, Agent, Plan};
 use crate::error::{Error, Result};
 use crate::json::{self, Out, Value};
 use crate::step::registry_from_value;
@@ -196,10 +196,18 @@ pub fn ask(s: &Sched, op: &str, body: &Value) -> Option<String> {
     })
 }
 
+/// The program that records a run made in the page: this engine (`wasm` on the site), the same keys as the CLI (`build_agent`).
+fn record_agent() -> Agent {
+    build_agent("mzLab")
+}
+
 /// One call. `new` builds the scheduler of the session (`plan`, `registry`, `version`, `identities`); `update` takes `plan`; the other ops are the methods of
 /// `Sched` (`next`, `started`, `progress`, `finished`, `cached`, `block`, `unblock`, `retry`, `pause`, `resume`, `jobs`, `nodes`, `events`, `rev`,
-/// `set_identity`, `set_resources`); `drop` forgets it.
+/// `set_identity`, `set_resources`); `drop` forgets it. `record_prov` and `record_corsa` write the record of a run the page made (`run_web.rs`).
 pub fn route(op: &str, body: &str) -> Result<String> {
+    if let Some(kind) = op.strip_prefix("record_") {
+        return super::record_route(kind, body, &record_agent());
+    }
     let body = json::parse(body.as_bytes())?;
     match op {
         "new" => return start(&body),

@@ -11,6 +11,8 @@ pub mod dad_map;
 pub mod dad_uv;
 pub mod idx;
 pub mod lettore;
+pub mod modi;
+pub mod nomi;
 #[cfg(feature = "estesi")]
 mod bpc;
 mod run;
@@ -26,13 +28,14 @@ pub(super) const SAMPLES: &str = "SampleSubtree/";
 /// Offsets inside `ExperimentHeader`: the precursor m/z (f64) and the scan-type code (u32).
 const HEADER_PRECURSOR: usize = 42;
 const HEADER_CODE: usize = 122;
-/// Scan-type codes seen in the headers (full scan, product-ion scan); anything else is read as a full scan.
-const CODE_PRODUCT: u32 = 11;
-const CODE_FULL: u32 = 15;
+/// Offset of the polarity in `ExperimentHeader`.
+const HEADER_POLARITY: usize = 86;
+use modi::{Uscita, CODE_PRODUCT};
 impl Wiff {
     /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
     pub(crate) fn scan_experiment(&self, e: usize) -> bool {
-        matches!(self.experiments.get(e).and_then(|x| x.code), Some(CODE_FULL | CODE_PRODUCT))
+        let code = self.experiments.get(e).and_then(|x| x.code);
+        modi::nativo(code) && code.and_then(modi::modo).is_some_and(|m| m.uscita == Uscita::Spettro)
     }
 }
 
@@ -52,7 +55,7 @@ pub struct Experiment {
     pub iso_half: Option<f64>,
     /// Detection window (s) of a scheduled MRM experiment (sMRM), when the method says it is scheduled.
     pub window_s: Option<u32>,
-    #[cfg(feature = "estesi")]
+    /// Polarity of the scans from the header (1 positive, -1 negative); `None` when the header does not say.
     pub polarity: Option<i8>,
 }
 
@@ -133,8 +136,14 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
             ce: None,
             iso_half: None,
             window_s: None,
-            #[cfg(feature = "estesi")]
-            polarity: None,
+            polarity: d
+                .get(HEADER_POLARITY..HEADER_POLARITY + 4)
+                .and_then(|b| <[u8; 4]>::try_from(b).ok())
+                .and_then(|b| match u32::from_le_bytes(b) {
+                    0 => Some(1),
+                    1 => Some(-1),
+                    _ => None,
+                }),
         });
     }
     out
@@ -241,9 +250,9 @@ pub(crate) mod estesi;
 #[path = "scan_estesi.rs"]
 pub mod scan;
 
-#[cfg(not(feature = "estesi"))]
 impl Wiff {
-    fn polarity_of(&self, _e: &Experiment) -> i8 {
-        self.polarity
+    /// The polarity of the scans of experiment `e`: the one of its header (offset 86, u32: 0 positive, 1 negative), else the sign of the ion spray voltage of the method.
+    pub(crate) fn polarity_of(&self, e: &Experiment) -> i8 {
+        e.polarity.unwrap_or(self.polarity)
     }
 }
