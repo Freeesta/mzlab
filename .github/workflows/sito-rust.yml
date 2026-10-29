@@ -213,6 +213,9 @@ jobs:
           python -m pip install -e ".[test]" playwright
           python -m playwright install --with-deps chromium
       # the checks of tools/verifica.py that are not pytest nor e2e, first: a syntax error stops the job in seconds
+      # the e2e tests call cargo (native build) side by side: one verified install of the pinned toolchain before them, else each asks rustup for it and they corrupt each other
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: python tools/ci_toolchain.py
       - name: Quick checks (JS syntax, i18n, code map, sizes)
         run: |
           python - <<'PY'

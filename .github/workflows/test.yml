@@ -67,7 +67,7 @@ jobs:
       - name: Toolchain (version pinned in rust-toolchain.toml) and wasm32 target
         if: steps.solo.outputs.solo != 'true'
         run: |
-          rustup show
+          python tools/ci_toolchain.py
           rustup target add wasm32-unknown-unknown
       # Only the 3.11 shards save a cache, one per shard (`solo311` runs the release builds of the slow tests, which 3.14 skips). The unprefixed key is the one saved before the shards existed.
       # Every run restores the newest cache; only main saves one (a pull request too, but only while the newest cache has no tree record, tools/ci_cargo_mtime.py), keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
@@ -200,7 +200,7 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-chromium-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
         if: steps.solo.outputs.solo != 'true'
-        run: rustup show
+        run: python tools/ci_toolchain.py
       - id: rcache
         if: steps.solo.outputs.solo != 'true'
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0

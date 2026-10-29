@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import ci_toolchain
+
 ROOT = Path(__file__).resolve().parent.parent
 WASM = ROOT / "target" / "wasm32-unknown-unknown" / "release" / "mzlab_wasm.wasm"
 
@@ -35,6 +37,11 @@ def up_to_date() -> bool:
 
 
 def main() -> int:
+    # before the tests that call cargo side by side (tools/verifica.py gives them RUSTUP_AUTO_INSTALL=0): one install, checked
+    why = ci_toolchain.ensure()
+    if why:
+        print(f"Rust toolchain of rust-toolchain.toml is not usable: {why}")
+        return 1
     if up_to_date():
         print("site/ is up to date")
         return 0
