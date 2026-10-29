@@ -1,6 +1,7 @@
-"""Flow «This browser» formula.ms1, formula.ms2 and annot.level (flow/lazy/flow-web-ident.js: `flow_ms1_rows` + `flow_ms1_join` of the `hr` .wasm, `flow_formula_ms2` and `flow_level` of the `attributio-all` .wasm):
-over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the formulas of the features at
-their MS1 apex, the sub-formulas that explain their MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. One feature has a library
+"""Flow «This browser» formula.ms2 and annot.level (flow/lazy/flow-web-ident.js: `flow_formula_ms2` and `flow_level` of the `attributio-all` .wasm; formula.ms1 stays with the computer, its candidate formulas
+enter the browser plan as the file f1.json that the native run wrote, because no site module has room for it: docs/agenti/flow-web.md):
+over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the sub-formulas that explain
+the MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. One feature has a library
 match (a level above the one without evidence), another has none. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_ident2.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -88,8 +89,15 @@ PLAN = {"format": "mzflow/2", "inputs": inputs(LIBSHA), "steps": BASE + [
     {"id": "f2", "step": "formula.ms2@1", "in": {"spectra": "ms2.spectra", "formulas": "f1.formulas"}},
     {"id": "lv", "step": "annot.level@1", "in": {"candidates": "mat.candidates", "formulas": "f1.formulas"}}]}
 out = native(PLAN, "plan")
-OUTS = ["f1.json", "f2.json", "lv.json"]
+OUTS = ["f2.json", "lv.json"]
 NAT = {n: (out / n).read_bytes() for n in OUTS}
+F1 = (out / "f1.json").read_text()
+WEB = json.loads(json.dumps(PLAN))
+WEB["inputs"].append({"name": "f1.json", "sha256": hashlib.sha256(F1.encode()).hexdigest(), "type": "formulas"})
+WEB["steps"] = [s for s in WEB["steps"] if s["id"] != "f1"]
+for s_ in WEB["steps"]:
+    for k, v in s_["in"].items():
+        if v == "f1.formulas": s_["in"][k] = "file:f1.json"
 print("native sizes:", {k: len(v) for k, v in NAT.items()})
 levels = json.loads(NAT["lv.json"])["rows"]
 assert any(r.get("name") == "TruePair" and r["level"] not in ("0", "5") for r in levels), levels
@@ -105,10 +113,10 @@ PUT = """async (names) => {
 }"""
 # the mzML the page has "open" for the steps that read it (the engine keeps the blob of every file it was given)
 HOLD = """async (name) => { const b = await (await fetch("static/dati_flow_ident/" + name + ".mzML")).blob(); window.MZLAB_RUST.noteUpload(name + ".mzML", b); return b.size; }"""
-RUN = """async ([plan, samples, lib]) => {
+RUN = """async ([plan, samples, lib, f1]) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
-  S.samplesJson = S.samplesJson || {}; S.samplesJson['samples.json'] = samples; S.samplesJson['lib.msp'] = lib;
+  S.samplesJson = S.samplesJson || {}; S.samplesJson['samples.json'] = samples; S.samplesJson['lib.msp'] = lib; S.samplesJson['f1.json'] = f1;
   document.addEventListener('flow:web-step', on);
   try { await FLOW.runners.web.run(S); return { ev }; }
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
@@ -146,27 +154,19 @@ try:
             assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             for i in ids:
                 assert any(e["passo"] == i and e["stato"] == expect and e["via"] == "browser" for e in r["ev"]), (i, expect, [e for e in r["ev"] if e["passo"] == i][-3:])
-        IDS = ["f1", "f2", "lv"]
+        IDS = ["f2", "lv"]
         def first():
-            r = pg.evaluate(RUN, [PLAN, SAMPLES, LIB]); check(r, IDS, "done")
+            r = pg.evaluate(RUN, [WEB, SAMPLES, LIB, F1]); check(r, IDS, "done")
             kept = pg.evaluate(KEPT)
             for name in OUTS:
                 assert name in kept, (name, list(kept))
                 web, nat = kept[name].encode(), NAT[name]
                 at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
                 assert sha(web) == sha(nat) and len(nat) > 40, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
-        step("formula.ms1, formula.ms2 and annot.level write the files of the native flow run", first)
+        step("formula.ms2 and annot.level write the files of the native flow run", first)
         def again():
-            r = pg.evaluate(RUN, [PLAN, SAMPLES, LIB]); check(r, IDS, "reused")
+            r = pg.evaluate(RUN, [WEB, SAMPLES, LIB, F1]); check(r, IDS, "reused")
         step("a second run takes them from OPFS", again)
-        def blocked():
-            # an mzML that is not open in Data stays with the computer
-            plan = json.loads(json.dumps(PLAN)); plan["steps"] = [s for s in plan["steps"] if s["id"] != "f1"] + [
-                {"id": "g1", "step": "formula.ms1@1", "in": {"features": "csv.report", "index": ["file:SIN_elsewhere.mzML"]}}]
-            plan["inputs"].append({"name": "SIN_elsewhere.mzML", "sha256": "", "type": "raw"})
-            r = pg.evaluate(RUN, [plan, SAMPLES, LIB])
-            assert any(e["passo"] == "g1" and e["stato"] == "blocked" for e in r["ev"]) or r.get("err"), [e for e in r["ev"] if e["passo"] == "g1"][-3:]
-        step("a formula.ms1 over an mzML that is not open in Data is blocked for the computer", blocked)
         def no_miss():
             miss = pg.evaluate("(window.MZLAB_LR_MISS || []).length"); assert miss == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("the engine had no route it could not serve", no_miss)

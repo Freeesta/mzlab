@@ -13,9 +13,9 @@ crate-type = ["cdylib", "rlib"]
 # (run_hypotheses, build_evidence), `mrm` = L1-L6 of the MRM files (detect_mrm_file, align_mrm_series; it carries the reader of the chromatograms of the mzML,
 # loaded only for an MRM series), `finder` = what the Pyodide of mzFinder served (classify, formula_info, identity_graph, polarity_pairs, the Dig of a high-resolution series and its fragmentation tree; it turns on `mzlab-feat/chem` for the SMILES), `finder_edge` = identity_graph, polarity_pairs and origin_evidence (a .wasm of its own, loaded when the page asks for one), `finder_msn` = the MSn tree of the standard, its library and the localisation of the products (loaded only when a file of the series is MSn). All on (the default) is the native build used by the tests and the examples.
 default = ["detect", "proofs", "mrm", "finder", "finder_msn", "finder_edge", "flow_ms2"]
-# `flow_ms2` = the text of `spectra.ms2` for the browser (`run_ms2.rs`) and, through `flow_formula`, of `formula.ms1`; in the `hr` .wasm, not in the separate builds.
-flow_ms2 = ["flow_formula"]
-# `flow_formula` = the text of `formula.ms1` for the browser (`run_formula.rs`); in the `hr` .wasm, not in the separate builds.
+# `flow_ms2` = the text of `spectra.ms2` for the browser (`run_ms2.rs`); in the `hr` .wasm, not in the separate builds.
+flow_ms2 = []
+# `flow_formula` = the text of `formula.ms1` (`run_formula.rs`). In no site module: it adds 145 166 B to `hr` (1 682 122 over the cap 1 605 632) and 134 405 B to `untargeted` (677 316 over 585 728); parity exception requested.
 flow_formula = ["mzlab-feat/untargeted"]
 detect = []
 proofs = []
