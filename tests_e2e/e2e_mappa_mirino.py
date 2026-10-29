@@ -22,6 +22,12 @@ def case(pg, label):
         pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); attendi(pg, M + ".el.classList.contains('max')"); ready(pg)
         pg.evaluate(COUNT)
     step(f"{label}: full screen, sight on", prepare)
+    def bitmaps():                                          # the margin plots are never stretched: bitmap aspect = box aspect (1 px)
+        for k in ("sp", "xc"):
+            w, h, cw, ch = pg.evaluate(f"(()=>{{const c={M}._mz.{k};return [c.width,c.height,c.clientWidth,c.clientHeight]}})()")
+            assert cw > 0 and ch > 0, (k, cw, ch)
+            assert abs(w / cw - h / ch) * min(cw, ch) <= 1.5, (k, w, h, cw, ch)
+    step(f"{label}: margin plots bitmap matches their box", bitmaps)
     c = box(); y0 = c[1] + c[3] * .5
     def sweep():
         pg.evaluate("window.__rq.length=0; window.__flMax=0")

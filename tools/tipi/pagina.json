@@ -69,6 +69,7 @@
     "../../mzlab/web/numeri.js",
     "../../mzlab/web/fondo-piatto.js",
     "../../mzlab/web/mappa-vicino.js",
+    "../../mzlab/web/mappa-margini.js",
     "../../mzlab/web/xic-lente-disegno.js",
     "../../mzlab/web/pannelli.js",
     "../../mzlab/web/pannelli-annulla.js",
