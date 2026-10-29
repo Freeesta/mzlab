@@ -139,3 +139,14 @@ def test_the_80_ion_graph_has_a_box_for_every_ion_and_no_two_overlap_in_both_vie
 
 def test_a_node_starts_with_what_the_open_files_say():
     assert node("flow_natura_file.js").strip() == "ok"
+
+
+def test_every_registered_step_has_a_display_name():
+    import re
+    src = (ROOT / "flow" / "lazy" / "flow-names.js").read_text(encoding="utf-8")
+    names = set(re.findall(r'^    "([a-z0-9_.]+)": \[', src, re.M))
+    ids = set()
+    for f in sorted((ROOT / "docs" / "schemi").glob("steps-*1.json")):
+        ids |= {s["id"] for s in json.loads(f.read_text(encoding="utf-8"))}
+    assert ids, "no registered step found"
+    assert not ids - names, f"steps without a display name: {sorted(ids - names)}"

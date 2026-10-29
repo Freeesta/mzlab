@@ -54,6 +54,14 @@
     "table.pca": ["Explore with PCA", "process", "Shows how the samples group along the main components."],
     "table.stats": ["Compare conditions", "process", "Tests each compound between the conditions of the design."],
     "tp.dig_lr": ["Dig unit-resolution series", "search", "Scores the possible products of a parent in a series at unit resolution."],
+    "table.plausible": ["Check the values", "process", "Runs seven sanity checks on the numbers of the table and reports what looks wrong."],
+    "export.inclusion": ["Save inclusion list", "output", "Writes the m/z and time windows of the expected products as a CSV for the next acquisition."],
+    "export.mztab": ["Save table as mzTab-M", "output", "Writes the feature table as an mzTab-M file, an open format for sharing results."],
+    "tp.review": ["Decide the levels", "search", "Keeps your decision for each row: a level, a note, or not a product."],
+    "msn.figure": ["Save graph as figure", "output", "Draws the fragmentation graph as an SVG, an HTML page or a PNG."],
+    "meta.compare": ["Compare algorithms", "process", "Runs a step once per variant on the same data and measures how the outputs differ."],
+    "spectra.lookup": ["Find spectra in a library", "search", "Pulls from a library the entries with a given name, accession or precursor m/z."],
+    "table.match": ["Match table rows to library", "search", "Compares the fragment spectrum of every table row with a library of known compounds."],
   };
   F.INPUT_NAMES = { raw: "Raw files", mzml: "mzML files", mzidx: "Scan index", spectra: "MS2 spectra", library: "Spectral library", structure: "Parent structure", samples: "Sample list", table: "Feature table" };
 
