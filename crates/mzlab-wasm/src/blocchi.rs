@@ -29,18 +29,6 @@ impl Fetch for JsFetch {
     }
 }
 
-/// Reads a file in blocks asked to JS (see `Fetch`).
-/// It also seeks (the `.raw` reader jumps from packet to packet): the last block stays in memory, so scans that follow each
-/// other cost one JS call per block, never one per read. It is a `BufRead` itself: a caller that wants buffering reads
-/// straight from the block, with no second copy of the file.
-pub(crate) struct BlockReader<F: Fetch = JsFetch> {
-    src: F,
-    pos: u64,
-    size: u64,
-    block: Vec<u8>,
-    block_start: u64,
-}
-
 impl BlockReader {
     pub(crate) fn new(read: Function, size: u64) -> Self {
         Self::with_fetch(JsFetch(read), size)
@@ -109,6 +97,18 @@ impl<F: Fetch> Seek for BlockReader<F> {
         self.pos = p.ok_or_else(|| std::io::Error::other("seek before the start"))?;
         Ok(self.pos)
     }
+}
+
+/// Reads a file in blocks asked to JS (see `Fetch`).
+/// It also seeks (the `.raw` reader jumps from packet to packet): the last block stays in memory, so scans that follow each
+/// other cost one JS call per block, never one per read. It is a `BufRead` itself: a caller that wants buffering reads
+/// straight from the block, with no second copy of the file.
+pub(crate) struct BlockReader<F: Fetch = JsFetch> {
+    src: F,
+    pos: u64,
+    size: u64,
+    block: Vec<u8>,
+    block_start: u64,
 }
 
 #[cfg(test)]
