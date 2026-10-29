@@ -878,7 +878,8 @@ function renderNav() {
   const cur = tabFiles().find((/** @type {FileAperto} */ f) => f.k === E.cur);
   const g = /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d")), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
   // as wide as the longest name (CSS sets the minimum and the maximum)
-  s.style.width = Math.ceil(maxOf([...s.options].map(o => g.measureText(o.textContent).width), 0) + 36) + "px";
+  // (the files still being read count too: the bar does not grow as they arrive)
+  s.style.width = Math.ceil(maxOf([...[...s.options].map(o => o.textContent), ...(E.pending || []).filter((/** @type {Pendiente} */ x) => x.state !== "err").map((/** @type {Pendiente} */ x) => shortName(x.label === x.file ? x.file.replace(/\.[^.]+$/, "") : x.label))].map(n => g.measureText(n).width), 0) + 36) + "px";
   // with a single file nothing here has a meaning
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");
   // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum

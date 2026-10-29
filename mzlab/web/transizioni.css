@@ -6,6 +6,9 @@
 @keyframes tr-pop{from{opacity:0;transform:scale(.98)}}
 @keyframes tr-drop{from{opacity:0;transform:translateY(6px)}}
 @keyframes tr-fade{from{opacity:0}}
+/* the work area replaces the opening skeleton: the toolbar, the panels and the side list fade in once (opacity only, nothing moves) */
+#v-data.opn-rev :is(#tools,#dpanels,#sb-panels){animation:tr-fade var(--t-med) var(--ease-out)}
+#v-data.opn-rev #dpanels .pnl{animation:none}
 /* menus, popovers, drop-downs: appear in --t-fast with a slight scale */
 #stmenu,#fpop,#colpop,#helppop,.sp-pop:not([hidden]),.subpop,.cpop,.hmore:not([hidden]),.corrm:not([hidden]){animation:tr-pop var(--t-fast) var(--ease-out);transform-origin:top left}
 /* dialogs, command palette, calculator: fade plus 6 px */
@@ -22,8 +25,8 @@ details[open]>:not(summary){animation:tr-fade var(--t-med) var(--ease-out)}
 /* the side panel while it slides out (transizioni.js keeps it on screen for one animation) */
 #dfiles.sb-leaving{display:flex!important;position:fixed!important;margin:0;pointer-events:none}
 /* reduced motion or no animation on the first paint: nothing moves */
-@media (prefers-reduced-motion:reduce){#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],dialog[open]::backdrop,#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*{animation:none!important}}
-:root[data-a11y-reduce] :is(#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*),:root[data-a11y-reduce] dialog[open]::backdrop,:root[data-a11y-reduce] #paletta{animation:none!important}
+@media (prefers-reduced-motion:reduce){#v-data.opn-rev :is(#tools,#dpanels,#sb-panels),#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],dialog[open]::backdrop,#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*{animation:none!important}}
+:root[data-a11y-reduce] :is(#v-data.opn-rev #tools,#v-data.opn-rev #dpanels,#v-data.opn-rev #sb-panels,#stmenu,#fpop,#colpop,#helppop,.sp-pop,.subpop,.cpop,.hmore,.corrm,dialog[open],#calcdlg,#paletta,#paletta .pal-b,section[id^="v-"],.pnl:not(.flash),details[open]>*),:root[data-a11y-reduce] dialog[open]::backdrop,:root[data-a11y-reduce] #paletta{animation:none!important}
 /* soft theme change (tema-morbido.js): colours fade over --tema-durata, the only place that sets it; the browser cross-fade of the page lasts the same */
 html.tema-tr,html.tema-tr *{transition:background-color var(--tema-durata) ease-in-out,color var(--tema-durata) ease-in-out,border-color var(--tema-durata) ease-in-out,fill var(--tema-durata) ease-in-out,stroke var(--tema-durata) ease-in-out!important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:var(--tema-durata);animation-timing-function:ease-in-out}
