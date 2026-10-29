@@ -477,22 +477,17 @@ document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.datas
   // the header icons sit next to their text label (the icon names are Italian)
   if(e.closest("header"))e.querySelectorAll("svg").forEach((/** @type {Element} */ v)=>{v.removeAttribute("aria-label");v.removeAttribute("role");v.setAttribute("aria-hidden","true")})});
 // What is downloaded when (decided 8/10/2026, measured on the site): the engine (~10 MB compressed) at once, because Dati needs it;
-// after it, one step per idle moment: OpenChemLib ~340 kB, then (fast connection) Ketcher, then the Teoria ~60 kB; Ketcher (~8.7 MB) only when the mouse goes on «Disegno», or when idle if the connection says it is fast
-// and not metered (Chrome: navigator.connection, downlink >= 10 Mbit/s, no data saver); the example files (~28 MB) only with their button.
+// after it, one step per idle moment: OpenChemLib ~340 kB, then the Teoria ~60 kB; Ketcher is warmed by first-paint.js (one policy: low priority, once loaded and no file loading,
+// not with data saving on) or at once when the mouse goes on «Disegno»; the example files (~28 MB) only with their button.
 /** @param {string} [as] */ function prefetch(/** @type {string[]} */ urls,as){urls.forEach(u=>{const l=document.createElement("link");l.rel=as==="module"?"modulepreload":"prefetch";l.href=u;if(as&&as!=="module")l.as=as;document.head.appendChild(l)})}
-let kPre=false;
-function prefetchKetcher(){if(kPre||window.QQQ_PHONE)return;kPre=true;
-  fetch("static/vendor/ketcher/index.html").then(r=>r.text()).then(t=>{const u=[...t.matchAll(/(?:src|href)="\.?\/?(assets\/[^"]+)"/g)].map(m=>"static/vendor/ketcher/"+m[1]);
-    u.forEach(x=>fetch(x,{priority:"low"}).then(r=>r.arrayBuffer()).catch(()=>{}))}).catch(()=>{kPre=false})}
 function prefetchIdle(){const idle=/** @type {any} */ (window).requestIdleCallback;
   const c=/** @type {any} */ (navigator).connection||{};if(c.saveData)return;
-  const fast=c.downlink>=10&&!/2g|3g/.test(c.effectiveType||"");
-  // one step per idle moment, in this order: Disegno (OpenChemLib, Ketcher if fast), then the Teoria (the Dati scripts are all in carica.js's list; the other language is fetched only when chosen)
-  const steps=[()=>prefetch(["static/vendor/openchemlib.js"],"module"),()=>{if(fast)prefetchKetcher()},
+  // one step per idle moment, in this order: Disegno (OpenChemLib), then the Teoria (the Dati scripts are all in carica.js's list; the other language is fetched only when chosen)
+  const steps=[()=>prefetch(["static/vendor/openchemlib.js"],"module"),
     ()=>{if(SITO_PUBBLICO.teoria)prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"])}];
   const next=()=>{const f=steps.shift();if(!f)return;f();idle?idle(next,{timeout:8000}):setTimeout(next,2000)};
   idle?idle(next,{timeout:8000}):setTimeout(next,2000)}
-{const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
+{const b=document.querySelector('#nav button[data-v="draw"]');if(b){const warm=()=>{const w=/** @type {any} */ (window).MZLAB_WARM_KETCHER;if(w)w()};b.addEventListener("pointerenter",warm,{once:true});b.addEventListener("focus",warm,{once:true})}}
 // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
 {const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}
 // Five logo hits turn the administrator mode on without a reload: the Teoria already open in the frame reloads, so its editor button and Alt+E appear
