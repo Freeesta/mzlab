@@ -221,7 +221,7 @@ I18N.add("it", {
   "cmd.gradient.tip": "Mostra o nasconde il gradiente %B sopra il cromatogramma attivo, con l'asse a destra",
   "cmd.gradient.kw": "gradiente %b fase mobile gradient mobile phase overlay",
   "cmd.pressure.lab": "Pressione",
-  "cmd.pressure.name": "Mostra la pressione (bar) sul cromatogramma",
+  "cmd.pressure.name": "Mostra la pressione sul cromatogramma",
   "cmd.pressure.tip": "Mostra o nasconde la pressione della pompa sopra il cromatogramma attivo, con l'asse a destra",
   "cmd.pressure.kw": "pressione pompa bar pressure pump overlay",
   "cmd.mapxic.menuWl": "Traccia a λ",

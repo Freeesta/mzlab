@@ -56,7 +56,7 @@ async function analogSeries(p) {
   if (p.kind === "reg") return window.REGISTRO ? REGISTRO.series(p, shownFor(p)) : [];
   const r = await Promise.all(shownFor(p).filter(f => analogOf(f, p.kind)).map(f => {
     const a = analogOf(f, p.kind);
-    return memo(`an${f.k}|${a.i}`, () => J(`api/analog?k=${f.k}&i=${a.i}&n=2000`)).then(d => ({ x: d.t, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `a|${f.k}|${a.i}`, ion: a.id, time: f.time, unit: d.unit, unitNote: d.unit_note }));
+    return memo(`an${f.k}|${a.i}`, () => J(`api/analog?k=${f.k}&i=${a.i}&n=2000`)).then(d => ({ x: d.t, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `a|${f.k}|${a.i}`, ion: a.id, time: f.time, unit: d.unit }));
   }));
   return r.filter(s => s.x.length);
 }
@@ -175,7 +175,7 @@ function syncView(p) {
 const XT_RT = I18N.t("axis.rt"), YT_I = I18N.t("axis.intensity");
 // title of the y axis: what the corrected trace is (blank file, background or both)
 const yTitleI = sr => { const b = sr.some(s => s.cb), f = sr.some(s => s.cf); return b || f ? I18N.t(b && f ? "axis.sampBlankFondo" : b ? "axis.sampBlank" : "axis.intFondo") : YT_I; };
-const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit && p.kind !== "press" ? ` (${sr[0].unit})` : "");
+const analogTitle = (p, sr) => p.kind === "reg" ? REGISTRO.title(p, sr) : (p.kind === "press" ? I18N.t("axis.pressure") : `${(analogOf(E.files[sr[0].k] || {}, p.kind) || {}).id || p.kind.slice(3)}`) + (sr[0] && sr[0].unit ? ` (${sr[0].unit})` : "");
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
   if (p.type === "map") {                                          // gestures come faster than frames: at most one map redraw per frame, the last request wins
@@ -448,7 +448,7 @@ async function drawLines(p) {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
     return { px, rt: x, html: `<b>${I18N.t("hov.rt", { v: x.toFixed(2) })}</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
-  legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
+  legend(p, all, (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
 
 // ---- mouse over the chart: vertical line + box with the values; the line also shows in the other panels with an RT axis

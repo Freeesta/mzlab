@@ -21,8 +21,8 @@ try:
         def listed():
             a = pg.evaluate("E.files[0].analog"); assert len(a) == 1 and a[0]["kind"] == "pressure" and a[0]["unit"] == "pascal" and a[0]["n"] == 6000, a
             j = pg.evaluate("(async () => await (await fetch('api/analog?k=0&i=%d&n=300')).json())()" % a[0]["i"])
-            assert j["unit"] == "bar" and j["unit_note"]["key"] == "analog.unit.tenfold" and abs(np.interp(1.0, j["t"], j["y"]) - 278) < 12, j["unit_note"]
-        step("the file lists its pressure trace; the unit is corrected", listed)
+            assert j["unit"] == "bar" and "unit_note" not in j and abs(np.interp(1.0, j["t"], j["y"]) - 278) < 12, j
+        step("the file lists its pressure trace, in bar, with no unit note", listed)
         def section():
             pg.click("#np-method"); pg.wait_for_selector("#grad-sec"); 
             assert pg.is_visible("#grad-course") and pg.is_visible("#grad-raw") and pg.is_visible("#grad-csv") and pg.is_visible("#grad-new")

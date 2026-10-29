@@ -24,7 +24,7 @@ function lineData(p) {
       if (b >= 0) rows.push([`${s.name} · ${T("tdati.apex", { a: nm(it.a, 2), b: nm(it.b, 2) })}`, nm(s.x[b], 4), nm(s.y[b], 1)]);
     });
   });
-  const unit = p.kind === "press" ? T("axis.pressure") : reg ? `${T("tdati.col.value")}${a.sr[0] && a.sr[0].unit ? " (" + a.sr[0].unit + ")" : ""}` : T("tdati.col.int");
+  const unit = p.kind === "press" ? `${T("axis.pressure")}${a.sr[0] && a.sr[0].unit ? " (" + a.sr[0].unit + ")" : ""}` : reg ? `${T("tdati.col.value")}${a.sr[0] && a.sr[0].unit ? " (" + a.sr[0].unit + ")" : ""}` : T("tdati.col.int");
   return { title: ptitle(p), head: [T("tdati.col.trace"), T("tdati.col.rt"), unit], rows, rowHeader: true, note: T("tdati.note.line", { a: nm(a.x0, 2), b: nm(a.x1, 2), n: MAXROWS }) };
 }
 function specData(p) {

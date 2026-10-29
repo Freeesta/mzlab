@@ -629,16 +629,23 @@ class Run:
         return t[:n], y[:n]
 
     def chromatogram_unit(self, i: int) -> str:
-        """The unit written on the intensity array of chromatogram i (unitName), or ''."""
+        """The unit of chromatogram i: the unitName of its intensity array or, when that is missing or only the generic ``number of detector counts``
+        (what our own mzML writer puts on every trace but the TIC), the unit kept in the userParam ``unità`` of the chromatogram; '' when there is none."""
         d = self.chromatograms()[i]
         chunk = bytes(self._mm[d["start"]:d["end"]])
+        unit = ""
         for blk in re.finditer(rb"<binaryDataArray .*?</binaryDataArray>", chunk, re.S):
             t = blk.group(0)
             head = t[:t.find(b"<binary>")].decode("utf-8", "replace")
             m = re.search(r'unitName="([^"]*)"', head)
             if "MS:1000595" not in head and m:
-                return m.group(1)
-        return ""
+                unit = m.group(1)
+                break
+        if unit in ("", "number of detector counts"):
+            m = re.search(r'<userParam name="unità" value="([^"]*)"', chunk[:chunk.find(b"<binaryDataArrayList")].decode("utf-8", "replace"))
+            if m:
+                return m.group(1).replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&")
+        return unit
 
     def metadata(self) -> dict:
         """Instrument, software and source file names from the mzML header."""

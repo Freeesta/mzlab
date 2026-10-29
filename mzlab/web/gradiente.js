@@ -192,6 +192,8 @@ function pressEnsure(/** @type {Bag} */ p) {
     J(`api/analog?k=${f.k}&i=${a.i}&n=2000`).then((/** @type {Bag} */ d) => { PRESS.set(k, d); if (typeof redrawSoon === "function") redrawSoon(); }, () => {});
   });
 }
+/** The unit of the first pressure curve: "bar" when the file declares a pressure unit, otherwise the unit the file gives. */
+const pressUnit = (/** @type {Bag[]} */ cs) => (cs[0] && cs[0].d.unit) || "";
 const pressCurves = (/** @type {Bag} */ p) => filesOf(p).map((/** @type {FileAperto} */ f) => ({ f, d: PRESS.get(f.k + "|" + (pressTrace(f) || {}).i) })).filter((/** @type {Bag} */ x) => x.d && x.d.t.length);
 const pressMax = (/** @type {Bag[]} */ cs) => { let m = 0; cs.forEach((/** @type {Bag} */ c) => c.d.y.forEach((/** @type {number} */ v) => { if (v > m) m = v; })); return m > 0 ? m * 1.08 : 1; };
 function drawPress(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {Bag} */ a) {
@@ -200,18 +202,17 @@ function drawPress(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */
   g.save(); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "left";
   g.beginPath(); g.moveTo(W - M.r + .5, M.t); g.lineTo(W - M.r + .5, H - M.b); g.stroke();
   for (const v of nice(0, top, 5)) { g.beginPath(); g.moveTo(W - M.r, Math.round(Y(v)) + .5); g.lineTo(W - M.r + 4, Math.round(Y(v)) + .5); g.stroke(); g.fillText(String(+v.toFixed(1)), W - M.r + 7, Y(v) + 3.5 * z); }
-  { const fp = 12 * z, ttl = rightLayout(nice(0, top, 5).map((/** @type {number} */ v) => String(+v.toFixed(1))), fp); g.save(); g.translate(W - M.r + ttl.titleX, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText(fitTitle("bar", ph, fp), 0, 0); g.restore(); }
+  { const fp = 12 * z, ttl = rightLayout(nice(0, top, 5).map((/** @type {number} */ v) => String(+v.toFixed(1))), fp); g.save(); g.translate(W - M.r + ttl.titleX, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText(fitTitle(pressUnit(cs), ph, fp), 0, 0); g.restore(); }
   g.beginPath(); g.rect(M.l, M.t, W - M.l - M.r, ph); g.clip();
   cs.forEach((/** @type {{ f: FileAperto, d: Bag }} */ { f, d }) => { g.strokeStyle = /** @type {string} */ (f.color); g.lineWidth = 1.6; g.setLineDash([6, 3]); g.beginPath(); d.t.forEach((/** @type {number} */ t, /** @type {number} */ i) => (i ? g.lineTo(X(t), Y(d.y[i])) : g.moveTo(X(t), Y(d.y[i])))); g.stroke(); });
   g.restore();
-  const note = cs.find((/** @type {Bag} */ c) => c.d.unit_note); if (note) { g.save(); g.font = fpx(11); g.fillStyle = css("--muted"); g.textAlign = "right"; g.fillText(T(note.d.unit_note.key, note.d.unit_note.params), W - M.r - 6, M.t + 14 * z); g.restore(); }
   a.press = true;
 }
 function pressAt(/** @type {Bag} */ d, /** @type {number} */ t) { if (!d.t.length || t < d.t[0] || t > d.t[d.t.length - 1]) return null; let lo = 0, hi = d.t.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; d.t[m] <= t ? lo = m : hi = m; } return d.y[Math.abs(d.t[lo] - t) <= Math.abs(d.t[hi] - t) ? lo : hi]; }
 function hoverPress(/** @type {Bag} */ p, /** @type {number} */ t, /** @type {number} */ py) {
   const a = p._a, cs = pressCurves(p); if (!a || !cs.length) return "";
   const ph = a.H - M.t - M.b, top = pressMax(cs);
-  return cs.map((/** @type {{ f: FileAperto, d: Bag }} */ { f, d }) => { const v = pressAt(d, t); return v != null && Math.abs(a.H - M.b - v / top * ph - py) <= 8 ? `<div><i style="background:${f.color}"></i>${T("press.read", { t: t.toFixed(2), p: v.toFixed(0) })}</div>` : ""; }).join("");
+  return cs.map((/** @type {{ f: FileAperto, d: Bag }} */ { f, d }) => { const v = pressAt(d, t); return v != null && Math.abs(a.H - M.b - v / top * ph - py) <= 8 ? `<div><i style="background:${f.color}"></i>${T("press.read", { t: t.toFixed(2), p: v.toFixed(0), u: pressUnit(cs) })}</div>` : ""; }).join("");
 }
 function draw(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /** @type {Bag} */ a) {
   if (p.overlay === "press") return drawPress(p, g, a);
@@ -246,7 +247,7 @@ function hover(/** @type {Bag} */ p, /** @type {number} */ t, /** @type {number}
   if (!vals.some(v => Math.abs(Y(v) - py) <= 8)) return "";
   return `<div><i style="background:${colorOf(p)}"></i>${T("grad.read", { t: t.toFixed(2), b: vals.length === 2 ? `${r.b.toFixed(1)} / ${r.bcol.toFixed(1)}` : vals[0].toFixed(1) })}${r.flow != null ? " · " + r.flow.toFixed(2) + " mL/min" : ""}</div>`;
 }
-const cursorText = (/** @type {Bag} */ p) => { if (p.overlay === "press") { const c = pressCurves(p)[0], v = c && p.cur != null ? pressAt(c.d, p.cur) : null; return v != null ? " · " + T("press.read.cursor", { p: v.toFixed(0) }) : ""; } const r = p.cur != null ? reading(p, p.cur) : null; return r ? " · " + T("grad.read.cursor", { b: /** @type {number} */ (r.bcol != null ? r.bcol : r.b).toFixed(1) }) : ""; };
+const cursorText = (/** @type {Bag} */ p) => { if (p.overlay === "press") { const c = pressCurves(p)[0], v = c && p.cur != null ? pressAt(c.d, p.cur) : null; return v != null ? " · " + T("press.read.cursor", { p: v.toFixed(0), u: pressUnit([c]) }) : ""; } const r = p.cur != null ? reading(p, p.cur) : null; return r ? " · " + T("grad.read.cursor", { b: /** @type {number} */ (r.bcol != null ? r.bcol : r.b).toFixed(1) }) : ""; };
 
 const exportState = () => (NB.gradienti && Object.keys(NB.gradienti).length ? NB.gradienti : null);
 function importState(/** @type {Bag} */ o) { if (o && typeof o === "object") { NB.gradienti = { ...(NB.gradienti || {}), ...o }; forget(); nbSave(); } }
