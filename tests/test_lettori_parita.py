@@ -1,6 +1,6 @@
 """Parity of the readers: the mzML that a readers module (.wasm, `to_mzml`, what the site writes in OPFS) gives for a dataset is byte for byte the one `mzlab-cli convert` writes
-(what the desktop app writes). One synthetic dataset per family that has a generator in the public repository (no laboratory data); the modules run in Node (wasm-bindgen --target nodejs).
-Families without an example here: thermo, bruker (see docs/studi/parita-browser.md). Needs the wasm32 target and wasm-bindgen-cli (the version of Cargo.lock); without them the test is skipped,
+(what the desktop app writes). One synthetic dataset per family (no laboratory data): Python generators for aperti, agilent, waters, shimadzu, sciex; the Rust example `sintetici`
+(crates/mzlab-lettori/examples, the writers of the reader tests) for thermo, bruker, andi. The modules run in Node (wasm-bindgen --target nodejs). Needs the wasm32 target and wasm-bindgen-cli (the version of Cargo.lock); without them the test is skipped,
 with MZLAB_GOLDEN_STRICT=1 it fails."""
 import base64
 import hashlib
@@ -140,10 +140,23 @@ def crea(fam: str, d: Path) -> Path:
         r = run([sys.executable, str(ROOT / "tools/wiff_grande.py"), str(d), "--name", "synt", "--samples", "1", "--scans", "60", "--points", "200"])
         assert r.returncode == 0, r.stderr[-1500:]
         return d / "synt.wiff"
+    if fam in SINTETICI_RUST:
+        sintetici(d.parent)
+        return d.parent / "sintetici" / SINTETICI_RUST[fam]
     raise AssertionError(fam)
 
 
-@pytest.mark.parametrize("fam", ["aperti", "agilent", "waters", "shimadzu", "sciex"])
+SINTETICI_RUST = {"thermo": "thermo/synt.raw", "bruker": "bruker/synt.d", "andi": "andi/synt.cdf"}
+
+
+def sintetici(base: Path):
+    """Runs the example that writes the Thermo, Bruker and ANDI datasets (once per test run)."""
+    if not (base / "sintetici").exists():
+        r = run(["cargo", "run", "--release", "--locked", "-q", "-p", "mzlab-lettori", "--features", "tutte", "--example", "sintetici", "--", str(base / "sintetici")])
+        assert r.returncode == 0, r.stderr[-2000:]
+
+
+@pytest.mark.parametrize("fam", ["aperti", "agilent", "waters", "shimadzu", "sciex", "thermo", "bruker", "andi"])
 def test_mzml_del_modulo_uguale_a_quello_del_cli(tools, fam):
     ds = crea(fam, tools["tmp"] / f"in_{fam}")
     cli = da_cli(tools, fam, ds)
