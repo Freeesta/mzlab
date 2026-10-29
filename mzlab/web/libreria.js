@@ -278,7 +278,7 @@ const LIB = (() => {
         rows: [...q.mz.map((/** @type {number} */ m, /** @type {number} */ i) => [I18N.t("lr.mirror.exp"), TDATI.num(m, 4), TDATI.num(q.it[i], 4)]), ...r.mz.map((/** @type {number} */ m, /** @type {number} */ i) => [I18N.t("lr.mirror.lib"), TDATI.num(m, 4), TDATI.num(r.it[i], 4)])] }));
     }
     const s = setup(cv), g = s.g, W = s.W, H = s.H, ml = 56, mr = 14, mt = 14, mb = 34, mid = mt + (H - mt - mb) / 2, half = (H - mt - mb) / 2 - 6;
-    const all = [...q.mz, ...r.mz], lo = Math.floor(Math.min(...all) / 10) * 10 - 5, hi = Math.ceil(Math.max(...all, r.prec) / 10) * 10 + 5, X = (/** @type {number} */ m) => ml + (m - lo) / (hi - lo) * (W - ml - mr);
+    const all = [...q.mz, ...r.mz], lo = Math.floor(minOf(all) / 10) * 10 - 5, hi = Math.ceil(maxOf(all, r.prec) / 10) * 10 + 5, X = (/** @type {number} */ m) => ml + (m - lo) / (hi - lo) * (W - ml - mr);
     const acc = css("--accent"), ink = css("--ink"), mut = css("--muted"), line = css("--line"), shc = css("--ok");
     g.clearRect(0, 0, W, H); g.fillStyle = css("--panel"); g.fillRect(0, 0, W, H);
     const common = { q: new Set(r.pairs.map((/** @type {Bag} */ p) => p[0])), l: new Set(r.pairs.map((/** @type {Bag} */ p) => p[1])) };

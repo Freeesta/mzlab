@@ -866,7 +866,7 @@ function renderNav() {
   const cur = tabFiles().find((/** @type {FileAperto} */ f) => f.k === E.cur);
   const g = /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d")), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
   // as wide as the longest name (CSS sets the minimum and the maximum)
-  s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";
+  s.style.width = Math.ceil(maxOf([...s.options].map(o => g.measureText(o.textContent).width), 0) + 36) + "px";
   // with a single file nothing here has a meaning
   const tf = tabFiles(), one = tf.length <= 1, why = I18N.t("nav.needMore");
   // one file shown (ticked) = the graphs follow it; several = overlaid, the active one drives the spectrum
@@ -1012,7 +1012,7 @@ function plotSheets(/** @type {Pannello} */ p) {
     else a.sr.forEach((/** @type {Bag} */ sr) => { cols.push([`RT (min) - ${sr.name}`, sr.x], [`${yt} - ${sr.name}`, sr.y]); });
   }
   if (!cols.length) return null;
-  const n = Math.max(...cols.map(c => c[1].length)), rows = [];
+  const n = maxOf(cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
   /** @type {any[]} */
   const out = [{ name: ptitle(p.title) || I18N.t("export.sheet.data"), head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];

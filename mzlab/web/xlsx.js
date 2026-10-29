@@ -52,8 +52,8 @@ function _cell(v, ref, bold) {
 }
 function _sheetXml(sh) {
   const rows = sh.head ? [sh.head.map(h => ({ v: h, b: true })), ...sh.rows] : sh.rows;
-  const ncol = Math.max(1, ...rows.map(r => r.length));
-  const widths = sh.widths || Array.from({ length: ncol }, (_, c) => Math.min(60, Math.max(10, ...rows.slice(0, 200).map(r => { const x = r[c] && typeof r[c] === "object" ? r[c].v : r[c]; return typeof x === "string" ? x.length + 2 : 12; }))));
+  const ncol = maxOf(rows.map(r => r.length), 1);
+  const widths = sh.widths || Array.from({ length: ncol }, (_, c) => Math.min(60, maxOf(rows.slice(0, 200).map(r => { const x = r[c] && typeof r[c] === "object" ? r[c].v : r[c]; return typeof x === "string" ? x.length + 2 : 12; }), 10)));
   let x = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0">` +
     (sh.head ? `<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>` : "") + `</sheetView></sheetViews><cols>` +
     widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("") + `</cols><sheetData>`;

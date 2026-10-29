@@ -92,7 +92,7 @@ function ogPlot(cv, o) {
   if (window.TDATI) TDATI.series(cv, o);                    // description and table of the data (tdati.js)
   const xs = o.series.flatMap(s => s.x), ys = o.series.flatMap(s => s.y).filter(isFinite);
   if (!xs.length) { g.fillStyle = css("--muted"); g.fillText(I18N.t("og.noData"), M.l, 30); return; }
-  let x0 = o.x0 ?? Math.min(...xs), x1 = o.x1 ?? Math.max(...xs), y0 = o.y0 ?? Math.min(0, ...ys), y1 = o.y1 ?? Math.max(...ys) * 1.05;
+  let x0 = o.x0 ?? minOf(xs), x1 = o.x1 ?? maxOf(xs), y0 = o.y0 ?? minOf(ys, 0), y1 = o.y1 ?? maxOf(ys) * 1.05;
   if (x1 === x0) { x0 -= 1; x1 += 1; } if (y1 === y0) y1 = y0 + 1;
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), Y = v => H - M.b - (v - y0) / (y1 - y0) * (H - M.t - M.b);
   frame(g, W, H, nice(x0, x1, 7).map(t => [X(t), +t.toFixed(2)]), nice(y0, y1, 4).map(t => [Y(t), ogN(t, 2)]), o.xl, o.yl);

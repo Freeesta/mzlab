@@ -57,7 +57,7 @@ const FAIR = (() => {
     const ck = check(spec, c, o); if (ck.errors.length) throw Object.assign(new Error("fair: " + ck.errors.map(x => x.key).join(",")), { errors: ck.errors });
     const pk = []; for (let i = 0; i < spec.mz.length; i++) if (spec.y[i] > 0) pk.push([spec.mz[i], spec.y[i]]);
     pk.sort((a, b) => a[0] - b[0]);
-    const top = Math.max(...pk.map(p => p[1]));
+    const top = maxOf(pk.map(p => p[1]));
     const pos = adductSign(o.precType) > 0, d = o.date instanceof Date ? o.date : new Date();
     const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
     const ce = spec.ce == null ? null : (spec.nce ? `${spec.ce} % (nominal)` : `${spec.ce} eV`);

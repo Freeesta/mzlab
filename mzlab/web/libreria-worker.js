@@ -218,7 +218,7 @@ function analogIndex(/** @type {LibIdx} */ idx, /** @type {LibQ} */ q, /** @type
 // peaks: [[mz, intensity], ...] -> the query, with the same normalisation as the library
 function queryOf(/** @type {number[][]} */ peaks, /** @type {number} */ prec, /** @type {number} */ pol) {
   const mz = peaks.map(p => p[0]), it = peaks.map(p => p[1]).map(Number);
-  if (!mz.length || !(Math.max(...it) > 0)) return null;
+  if (!mz.length || !(it.reduce((m, v) => (v > m || v !== v ? v : m), -Infinity) > 0)) return null;
   const t = topPeaks(mz.filter((_, i) => it[i] > 0), it.filter(v => v > 0));
   return { prec, pol, mz: t.mz, it: t.it };
 }

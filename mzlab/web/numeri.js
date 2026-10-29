@@ -1,12 +1,12 @@
 // @ts-check
 // Numeric helpers shared by the drawing and list code: extremes of big (typed) arrays without spread, lower bound, and the index span of an x window.
 // Loaded before grafici.js; used by picchi.js, liste.js, banco.js, conversione.js.
-// Largest / smallest value of an array or typed array, seeded with `init` (the fallback of an empty one). A NaN anywhere gives NaN, as Math.max(...a) did;
+// Largest / smallest value of an array or typed array, seeded with `init` (the fallback of an empty one). A NaN (or a value that is not a number) gives NaN, as Math.max(...a) did;
 // no spread, so a spectrum of 200 000 points cannot overflow the call stack (RangeError).
-function maxOf(a, init = -Infinity) { let m = init; for (let i = 0; i < a.length; i++) { const v = a[i]; if (v > m) m = v; else if (v !== v) return NaN; } return m; }
+function maxOf(a, init = -Infinity) { let m = init; for (let i = 0; i < a.length; i++) { const v = +a[i]; if (v > m) m = v; else if (v !== v) return NaN; } return m; }
 // Same, for the largest absolute value.
 function maxAbs(a, init = 0) { let m = init; for (let i = 0; i < a.length; i++) { const v = Math.abs(a[i]); if (v > m) m = v; else if (v !== v) return NaN; } return m; }
-function minOf(a, init = Infinity) { let m = init; for (let i = 0; i < a.length; i++) { const v = a[i]; if (v < m) m = v; else if (v !== v) return NaN; } return m; }
+function minOf(a, init = Infinity) { let m = init; for (let i = 0; i < a.length; i++) { const v = +a[i]; if (v < m) m = v; else if (v !== v) return NaN; } return m; }
 // First index with a[i] >= v in an ascending array.
 function lowerIdx(a, v) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; }
 const _ASC = new WeakMap();
