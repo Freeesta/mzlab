@@ -95,7 +95,7 @@ pub(super) fn detect() -> Step {
             .min(0.0)
             .max(1.0)
             .default_num(0.0)
-            .doc("Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges")
+            .doc("Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace")
             .advanced(),
         Param::integer("budget", "Working memory")
             .min(1.0)
