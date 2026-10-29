@@ -1,12 +1,13 @@
 // @ts-check
 // Flow (administrator mode): the identification steps that run in this browser. spectra.ms2 reads the mzML open in Data (`flow_ms2` of the `hr` .wasm, one file per call, in the pool),
 // spectra.match with the algorithms other than `tree` runs `flow_match` of the `lib` .wasm, table.match builds the MGF of the rows of the alignment with the `table` .wasm (`table_match_rows`, in the pool,
-// the indexes read from OPFS) and then matches it the same way: the Rust functions are the ones `flow run` calls, so the text is the same byte for byte. The library is a file the user gave
+// the indexes read from OPFS) and then matches it the same way, formula.ms1 reads the MS1 scan at the apex of each feature (`flow_ms1_rows` of the `hr` .wasm, one mzML per call, then `flow_ms1_join`), formula.ms2 and
+// annot.level run `flow_formula_ms2` and `flow_level` of the `attributio` .wasm on the texts of the steps upstream: the Rust functions are the ones `flow run` calls, so the text is the same byte for byte. The library is a file the user gave
 // the plan (its text in S.samplesJson, like a parent or a sample list); nothing is bundled or fetched. Results are kept in OPFS under the key of the job (flow-live-jobs.js). English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["spectra.ms2", "spectra.match", "table.match"];
+  const STEPS = ["spectra.ms2", "spectra.match", "table.match", "formula.ms1", "formula.ms2", "annot.level"];
   /** the largest mzML the page reads into memory for the step (bytes); a bigger file stays with the computer */
   const MAX_MZML = 256 * 1024 * 1024;
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
@@ -116,6 +117,64 @@
     });
   };
 
+  /** formula.ms1: the formulas of the features of the table at the MS1 scan of their apex, in the mzML files of the plan open in Data (one file per call; each call gives the rows whose largest area is in that file)
+   * @param {any} x @param {any} spec @param {any} inst */
+  const ms1Formula = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), feat = await textOf(x, p, inst, "features");
+    const key = await J().sha(spec.key + "\n" + (feat ? await J().sha(feat.text) : "")), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    const names = F.refs(inst, "index").map(String), blobOf = G.MZLAB_RUST && G.MZLAB_RUST.blobOf;
+    const blobs = blobOf && names.length && names.every((/** @type {string} */ r) => r.startsWith("file:")) ? names.map((/** @type {string} */ r) => blobOf(r.slice(5))) : [];
+    if (!feat || !blobs.length || blobs.some((/** @type {any} */ b) => !b) || blobs.reduce((/** @type {number} */ n, /** @type {any} */ b) => n + b.size, 0) > MAX_MZML) {
+      await x.call("block", { job: j, by: "platform.computer" }); return {};
+    }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = paramsOf(x, inst), features = enc(feat.text), list = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
+    return J().detached(x, spec, inst, async () => {
+      /** @type {string[]} */ const rows = [];
+      try {
+        for (let k = 0; k < blobs.length; k++) {
+          const mzml = new Uint8Array(await blobs[k].arrayBuffer());
+          for (const line of (await p.ident("proofs", "flow_ms1_rows", { params, features, names: list, index: k, mzml })).split("\n")) {
+            const tab = line.indexOf("\t"); if (tab > 0) rows[Number(line.slice(0, tab))] = line.slice(tab + 1);
+          }
+          x.call("progress", { job: j, frac: (k + 1) / blobs.length }).catch(() => {});
+        }
+        await keep(x, spec, inst, key, t0, await p.ident("proofs", "flow_ms1_join", { rows: rows.join("\n") }));
+      } catch (e) { throw asError(e); }
+    });
+  };
+
+  /** formula.ms2: the sub-formulas of the candidates that explain the peaks of the MGF of a spectra.ms2 of this plan @param {any} x @param {any} spec @param {any} inst */
+  const ms2Formula = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), spectra = await textOf(x, p, inst, "spectra"), formulas = await textOf(x, p, inst, "formulas");
+    if (!spectra || !formulas) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha(spec.key + "\n" + await J().sha(spectra.text) + "\n" + await J().sha(formulas.text)), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = paramsOf(x, inst), alg = algorithmOf(x, inst);
+    return J().detached(x, spec, inst, async () => {
+      let text;
+      try { text = await p.ident("attributio_ms2", "flow_formula_ms2", { alg, params, name: spectra.name, mgf: enc(spectra.text), formulas: enc(formulas.text) }); } catch (e) { throw asError(e); }
+      await keep(x, spec, inst, key, t0, text);
+    });
+  };
+
+  /** annot.level: the level of each query from the hits of a spectra.match of this plan and the candidate formulas @param {any} x @param {any} spec @param {any} inst */
+  const level = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), hits = await textOf(x, p, inst, "candidates"), formulas = await textOf(x, p, inst, "formulas");
+    if (!hits || !formulas) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha(spec.key + "\n" + await J().sha(hits.text) + "\n" + await J().sha(formulas.text)), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return J().detached(x, spec, inst, async () => {
+      let text;
+      try { text = await p.ident("attributio_ms2", "flow_level", { hits: enc(hits.text), formulas: enc(formulas.text) }); } catch (e) { throw asError(e); }
+      await keep(x, spec, inst, key, t0, text);
+    });
+  };
+
   // a library file for the match steps: its text is the content of the input (S.samplesJson) with its SHA-256, like the other text inputs of a plan
   F.extraResults.push((/** @type {any} */ S, /** @type {any} */ node) => {
     const insts = (node.ids || []).map((/** @type {string} */ id) => F.instanceOf(S.plan, id)).filter((/** @type {any} */ i) => i && ["spectra.match", "table.match"].includes(base(i)));
@@ -134,5 +193,5 @@
     return el("div", { class: "fl-results" }, pick, F.btn("import", "Choose the library file", () => pick.click(), "Library file…"), say);
   });
 
-  F.webIdent = { ms2, match, tableMatch, STEPS };
+  F.webIdent = { ms2, match, tableMatch, ms1Formula, ms2Formula, level, STEPS };
 })();

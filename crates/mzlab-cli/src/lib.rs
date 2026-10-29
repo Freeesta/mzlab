@@ -70,6 +70,7 @@ mod flow_match;
 mod flow_match_tests;
 mod flow_match_tree;
 #[cfg(test)]
+mod flow_formula_web_tests;
 mod flow_match_web_tests;
 mod flow_ms2;
 mod flow_msnfigura;

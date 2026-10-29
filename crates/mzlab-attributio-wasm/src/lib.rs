@@ -470,3 +470,26 @@ pub fn rt_descriptors_json(smiles: &str) -> String {
 pub fn rt_descriptors(smiles: &str) -> String {
     rt_descriptors_json(smiles)
 }
+
+/// `formula.ms2` in the browser: the text `flow run` writes (`mzlab_feat::flow_formula_ms2::ms2_text`). `algorithm` is the id of the plan ("" = the default), `params_json` the
+/// parameters of the step merged with its defaults, `mgf` the spectra and `formulas` the `formulas/1` text of the candidates. Errors are JSON `{"error_key","params"}` texts.
+#[cfg(feature = "all")]
+#[wasm_bindgen]
+pub fn flow_formula_ms2(
+    algorithm: &str,
+    params_json: &str,
+    name: &str,
+    mgf: &[u8],
+    formulas: &[u8],
+) -> Result<String, JsValue> {
+    let params = mzlab_feat::flow_ms2::json_params(params_json).map_err(js_err)?;
+    mzlab_feat::flow_formula_ms2::ms2_text(algorithm, &params, (name, mgf), &[formulas])
+        .map_err(js_err)
+}
+
+/// `annot.level` in the browser: the text `flow run` writes (`mzlab_feat::flow_level::level_text`) from the `candidates/1` and `formulas/1` texts.
+#[cfg(feature = "all")]
+#[wasm_bindgen]
+pub fn flow_level(hits: &[u8], formulas: &[u8]) -> Result<String, JsValue> {
+    mzlab_feat::flow_level::level_text(&[hits], &[formulas]).map_err(js_err)
+}

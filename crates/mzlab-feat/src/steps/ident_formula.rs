@@ -7,9 +7,9 @@ use mzlab_core::step::{
 
 use super::ident::{algorithm, attributio_step, hr, hr_ms2};
 
-/// The `.wasm` `untargeted` that runs `formula_id`, and its fixed ceiling (`limit` of `tools/build_feat_wasm.sh`).
-const UNTARGETED_WASM: &str = "untargeted";
-const UNTARGETED_CEILING: u64 = 512_000;
+/// The `.wasm` `hr` that runs `formula_id` in the browser (`flow_ms1_rows`), and its fixed ceiling (`limit_hr` of `tools/build_feat_wasm.sh`).
+const HR_WASM: &str = "hr";
+const HR_CEILING: u64 = 1_605_632;
 
 /// The ions `mzlab_core::composition::compose` knows (`ADDUCT_ATOMS`).
 const IONS: [&str; 11] = [
@@ -66,8 +66,8 @@ pub(super) fn ms1() -> Step {
         outs: vec![Port::new("formulas", DataType::Formulas, "Ranked formulas per feature")],
         params,
         runs_in: RunsIn {
-            wasm: Some(UNTARGETED_WASM),
-            wasm_ceiling_bytes: Some(UNTARGETED_CEILING),
+            wasm: Some(HR_WASM),
+            wasm_ceiling_bytes: Some(HR_CEILING),
             native: true,
         },
         algorithms: vec![compose_isotopes()],
