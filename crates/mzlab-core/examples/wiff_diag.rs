@@ -72,7 +72,7 @@ fn main() {
                 .experiments
                 .get(e)
                 .and_then(|x| x.code)
-                .is_some_and(|c| c == 15 || c == 11)
+                .is_some_and(|c| c == 15 || c == 11 || c == 0)
             {
                 "scan"
             } else {

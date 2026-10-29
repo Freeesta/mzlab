@@ -17,7 +17,7 @@ Studio architetturale (ARCH-H). Il «tipo di esperimento» diventa un'etichetta 
 - `Scan::key()` (`idxread.rs:132`) = filtro senza intervallo per MS1, `ms{n} <masse nominali> @act` per MSn; `/api/filters` (`routes.rs:212`) raggruppa gli scan per chiave `{key, level, n, rt0, rt1, pol}`, calcolato a richiesta, non salvato.
 - `/api/chrom?kind=tic|bpc&level&prec&filt&mz0&mz1` (`routes.rs:151`) filtra per chiave (`Filtro::Testo`) o per nodo dell'albero (`filt=msn:<id>`, `msnroute.rs:55`); `/api/scanlist?filt` idem.
 - Cromatogrammi non-scan: `mzml::ChromKind{Tic,Bpc,Pda,Pressure,Srm,Sic,Analog,Other}` (`mzml.rs:57`), lista a richiesta `mzmlhead::Chrom{index,id,kind,q1,q3,ce,name,dwell,n}` (`mzmlhead.rs:96`), nei `Facts` come `srm`, `pda`, `analog[]`.
-- `.wiff`: modi in `wiff/modi.rs:42-60` (Q1, Q1MI, Q3, Q3MI, MRM, Prec, PI, NL, EPI, ER, MS3, TDF, EMS, EMC; confermati i codici 4, 5, 7, 11, 15); MRM → un TIC + un cromatogramma `SRM SIC Q1= Q3= … experiment= transition=` per transizione (`wiff/run.rs:25-49`); DAD → `DadData` (`wiff/dad.rs:33`).
+- `.wiff`: modi in `wiff/modi.rs:42-60` (Q1, Q1MI, Q3, Q3MI, MRM, Prec, PI, NL, EPI, ER, MS3, TDF, EMS, EMC; confermati i codici 0, 4, 5, 7, 11, 15); MRM → un TIC + un cromatogramma `SRM SIC Q1= Q3= … experiment= transition=` per transizione (`wiff/run.rs:25-49`); DAD → `DadData` (`wiff/dad.rs:33`).
 - Thermo: filtro testuale in `Scan.filter`, `path` da `filter_path` (`scantable.rs:238`); SRM/CRM a scan → cromatogrammi per transizione (`mzlab-lettori/src/srm.rs`).
 
 **Dove si perde o si mescola informazione.**

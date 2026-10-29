@@ -4,7 +4,7 @@
 
 Writes OUT/modi/<SIGLA>.wiff + .wiff.scan for 14 modes (one 3200 QTRAP experiment, 4 cycles, version 2 blocks; EPI also a version 3 sample, EMS also a
 version 1 one) and OUT/modi/modi.json: per mode the code (ExperimentHeader +122), whether it is confirmed on real files, what the reader does today
-("letto" with level / precursor / CV type, or "rifiuto" with the exact `detail`) and what it should do once supported ("futuro"). Codes 0-3, 6, 12-14, 16 are
+("letto" with level / precursor / CV type, or "rifiuto" with the exact `detail`) and what it should do once supported ("futuro"). Code 0 (Q1, three samples with one shared Method1) is seen in real files and read like EMS; codes 1-3, 6, 12-14, 16 are
 guesses from the Analyst ScanType enum and the Q1MI / Q3MI blocks (one f32 per ion) are a hypothesis. A mode that gets supported changes its entry in
 modi.json: the test is the executable matrix. No laboratory data is used.
 """
@@ -26,10 +26,10 @@ MODES = {
     "EMS": (15, True, "scan", 1, None), "EMC": (16, False, "scan", 1, "MS:1000789"), "EPI": (11, True, "scan", 2, None),
     "ER": (12, False, "scan", 1, "MS:1000791"), "MRM": (4, True, "mrm", None, None), "MS3": (13, False, "scan", 3, None),
     "NL": (7, True, "scan", 2, "MS:1000326"), "PREC": (5, True, "scan", 2, "MS:1000341"), "PI": (6, False, "scan", 2, None),
-    "Q1": (0, False, "scan", 1, None), "Q1MI": (1, False, "ions", None, None), "Q3": (2, False, "scan", 1, None),
+    "Q1": (0, True, "scan", 1, None), "Q1MI": (1, False, "ions", None, None), "Q3": (2, False, "scan", 1, None),
     "Q3MI": (3, False, "ions", None, None), "TDF": (14, False, "scan", 2, None),
 }
-READ = {"EMS", "EPI", "MRM", "NL", "PREC"}
+READ = {"EMS", "EPI", "MRM", "NL", "PREC", "Q1"}
 
 
 def pts(k):
@@ -73,7 +73,7 @@ def oggi(sigla, code, kind, version):
         return {"esito": "rifiuto", "detail": f"scan type code {code} (experiment 1)"}
     if kind == "mrm":
         return {"esito": "letto", "spettri": 0, "cromatogrammi": 1 + len(TRS), "tipo": None}
-    sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1 if sigla == "EMS" else 2, PREC.get(sigla) if sigla != "EMS" else None, 1000.0 * k, pts(k), version)
+    sp = [w.spectrum(f"sample=1 period=1 cycle={k + 1} experiment=1", 1 if sigla in ("EMS", "Q1") else 2, PREC.get(sigla) if sigla not in ("EMS", "Q1") else None, 1000.0 * k, pts(k), version)
           for k in range(CYCLES)]
     return {"esito": "letto", "spettri": CYCLES, "livello": sp[0]["level"], "precursore": sp[0]["precursor"], "tipo": CV.get(sigla),
             "mz": sp[0]["mz"], "intensita": sp[0]["intensity"]}
@@ -90,8 +90,12 @@ def main(out=None):
             samples.append((2, 3))
         if sigla == "EMS":
             samples.append((2, 1))
+        if sigla == "Q1":
+            # a batch run: only Method1 exists, samples 2 and 3 take the experiment from it
+            samples += [(2, 2), (3, 2)]
         for n, version in samples:
-            wr.sample(n, blocks(sigla, kind, version), method(sigla, code), log="3200 QTRAP")
+            own = None if sigla == "Q1" and n > 1 else method(sigla, code)
+            wr.sample(n, blocks(sigla, kind, version), own, log="3200 QTRAP")
         wr.save(out, sigla)
         info[sigla] = {"codice": code, "codice_confermato": confirmed, "polarita": 1,
                        "campioni": [{"n": n, "versione": v, "oggi": oggi(sigla, code, kind, v)} for n, v in samples],

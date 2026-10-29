@@ -1,8 +1,10 @@
 //! Table of the scan-type codes of `ExperimentHeader` (+122) of a `.wiff`: Analyst abbreviation, MS level, CV term of the spectrum and the output kind
-//! of each. Read by `mod.rs`, `estesi.rs` and `lettore.rs`; the page shows the abbreviation as the exact type of an experiment. Codes 4, 5, 7, 11, 15 are
-//! seen in real files; the others follow the `ScanType` enum of Analyst and stay `confermato: false` until a file shows them.
+//! of each. Read by `mod.rs`, `estesi.rs` and `lettore.rs`; the page shows the abbreviation as the exact type of an experiment. Codes 0, 4, 5, 7, 11, 15 are
+//! seen in real files (0 is the Q1 MS full scan of a 3200 QTRAP: level-1 profile scans like EMS, its meaning inferred from the method name and the
+//! spectra); the others follow the `ScanType` enum of Analyst and stay `confermato: false` until a file shows them.
 
 /// Codes seen in real files.
+pub const CODE_Q1: u32 = 0;
 pub const CODE_MRM: u32 = 4;
 pub const CODE_PRECURSOR_ION: u32 = 5;
 pub const CODE_NEUTRAL_LOSS: u32 = 7;
@@ -41,7 +43,7 @@ use Uscita::{Sim, Spettro, Srm};
 
 #[rustfmt::skip]
 pub const MODI: [Modo; 17] = [
-    m(0, "Q1", 1, None, Spettro, false),
+    m(CODE_Q1, "Q1", 1, None, Spettro, true),
     m(1, "Q1MI", 1, None, Sim, false),
     m(2, "Q3", 1, None, Spettro, false),
     m(3, "Q3MI", 1, None, Sim, false),
@@ -66,9 +68,9 @@ pub fn modo(code: u32) -> Option<&'static Modo> {
         .filter(|x| x.code == code)
 }
 
-/// The engine's own reader (3200 QTRAP) handles MRM, product-ion and full scans only.
+/// The engine's own reader (3200 QTRAP) handles MRM, product-ion, full (EMS) and Q1 full scans only.
 pub fn nativo(code: Option<u32>) -> bool {
-    matches!(code, Some(CODE_MRM | CODE_PRODUCT | CODE_FULL))
+    matches!(code, Some(CODE_MRM | CODE_PRODUCT | CODE_FULL | CODE_Q1))
 }
 
 /// The readers module accepts a code only when its row is confirmed.
@@ -96,7 +98,10 @@ mod tests {
         assert!(modo(17).is_none());
         assert_eq!(sigla(Some(11)), Some("EPI"));
         assert_eq!(sigla(Some(15)), Some("EMS"));
-        assert!(confermato(Some(5)) && !confermato(Some(0)) && !confermato(None));
-        assert!(nativo(Some(4)) && !nativo(Some(5)));
+        assert!(
+            confermato(Some(5)) && confermato(Some(0)) && !confermato(Some(1)) && !confermato(None)
+        );
+        assert!(nativo(Some(4)) && nativo(Some(0)) && !nativo(Some(5)));
+        assert_eq!(sigla(Some(0)), Some("Q1"));
     }
 }

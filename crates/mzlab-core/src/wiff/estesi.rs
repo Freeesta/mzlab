@@ -1,5 +1,5 @@
 //! What the readers module (feature `estesi`) adds to the `.wiff` reader: the scan types of the other QTRAPs and the check that nothing
-//! the reader does not know is read as a full scan. Known: MRM (4), precursor-ion scan (5), neutral-loss scan (7), product-ion / EPI (11) and
+//! the reader does not know is read as a full scan. Known: Q1 full scan (0), MRM (4), precursor-ion scan (5), neutral-loss scan (7), product-ion / EPI (11) and
 //! survey / full scan (15). The TOF codes, any other code and a method with more than one period are `err.file.wiff` with the cause in `detail`.
 
 use super::{bad, Experiment, Wiff, HEADER_PRECURSOR};
@@ -8,7 +8,9 @@ use crate::error::Result;
 use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
-pub use super::modi::{spectrum_term, CODE_FULL, CODE_MRM, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION};
+pub use super::modi::{
+    spectrum_term, CODE_FULL, CODE_MRM, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_Q1,
+};
 
 /// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
 pub(crate) fn mark_windows(ole: &Ole, sample: u32, experiments: &mut [super::Experiment]) {
