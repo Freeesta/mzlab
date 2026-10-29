@@ -15,6 +15,13 @@ const isolata = res => {
   h.set("Cross-Origin-Embedder-Policy", "require-corp"); h.set("Cross-Origin-Opener-Policy", "same-origin"); h.set("Cross-Origin-Resource-Policy", "same-origin");
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 };
+/** True when the cached entry is the same resource as the fresh response (same ETag; else same Last-Modified and Content-Length; no validators: never). */
+const stessa = (/** @type {Response} */ a, /** @type {Response} */ b) => {
+  const et = a.headers.get("ETag");
+  if (et) return et === b.headers.get("ETag");
+  const lm = a.headers.get("Last-Modified"), cl = a.headers.get("Content-Length");
+  return !!lm && !!cl && lm === b.headers.get("Last-Modified") && cl === b.headers.get("Content-Length");
+};
 sw.addEventListener("install", () => sw.skipWaiting());
 sw.addEventListener("activate", (/** @type {ExtendableEvent} */ e) => e.waitUntil((async () => {
   const pfx = typeof NOMI !== "undefined" ? NOMI.CACHE_PREFIX : "mzlab-";
@@ -36,7 +43,7 @@ sw.addEventListener("fetch", (/** @type {FetchEvent} */ e) => {
     if (big) { const hit = await cache.match(req); if (hit) return isolata(hit); }
     try {
       const res = await fetch(req, big ? undefined : { cache: "no-cache" }); // revalidate: GitHub Pages sends max-age=600
-      if (res.status === 200) { try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ } }
+      if (res.status === 200) { try { const old = big ? undefined : await cache.match(req); if (!old || !stessa(old, res)) await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ } }
       return isolata(res);
     } catch (err) {
       const hit = await cache.match(req, { ignoreSearch: true });
