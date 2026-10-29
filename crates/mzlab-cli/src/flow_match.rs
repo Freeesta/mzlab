@@ -32,7 +32,7 @@ pub fn match_text(job: &Job, query: Named, library: Named) -> Result<String> {
         return crate::flow_match_tree::tree_text(job, query, library);
     }
     let m = MatchJob {
-        step: &job.step.id,
+        step: job.step.id,
         algorithm: Some(alg),
         params: &job.resolved.params,
     };
