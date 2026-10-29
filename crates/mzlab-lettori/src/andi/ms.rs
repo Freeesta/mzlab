@@ -3,7 +3,7 @@
 //! Written from the two ASTM specifications and the netCDF documentation, checked against files exported by ChemStation and MassHunter.
 
 use super::cromato;
-use super::netcdf::{Cdf, Var};
+use super::netcdf::{scala, Cdf};
 use super::testata::Testata;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::ReadAt;
@@ -131,11 +131,11 @@ impl LettoreAndi {
         if self.inizi[k] >= self.cdf.elementi(v) {
             return Ok(None);
         }
-        Ok(self
+        let mut x = self
             .cdf
-            .leggi(&mut self.dati, &self.limiti, v, self.inizi[k], 1)?
-            .first()
-            .copied())
+            .leggi(&mut self.dati, &self.limiti, v, self.inizi[k], 1)?;
+        scala(&mut x, v);
+        Ok(x.first().copied())
     }
 
     fn uno(&self, c: usize) -> Result<()> {
@@ -397,7 +397,7 @@ fn riconosci(fs: &mut FileSet) -> Fiducia {
     }
 }
 
-/// A whole variable of the scans as numbers (`None`: the file has no such variable).
+/// A whole variable of the scans as numbers, `scale_factor`/`add_offset` applied (`None`: the file has no such variable).
 fn colonna(
     cdf: &Cdf,
     dati: &mut dyn ReadAt,
@@ -407,17 +407,9 @@ fn colonna(
     let Some(v) = cdf.trova(nome) else {
         return Ok(None);
     };
-    cdf.leggi(dati, limiti, v, 0, cdf.elementi(v)).map(Some)
-}
-
-fn scala(x: &mut [f64], v: &Var) {
-    let (f, o) = (
-        v.numero("scale_factor").unwrap_or(1.0),
-        v.numero("add_offset").unwrap_or(0.0),
-    );
-    if f != 1.0 || o != 0.0 {
-        x.iter_mut().for_each(|y| *y = *y * f + o);
-    }
+    let mut x = cdf.leggi(dati, limiti, v, 0, cdf.elementi(v))?;
+    scala(&mut x, v);
+    Ok(Some(x))
 }
 
 fn indice_cattivo(k: usize) -> Error {

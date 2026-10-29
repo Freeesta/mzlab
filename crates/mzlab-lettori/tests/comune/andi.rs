@@ -254,7 +254,7 @@ pub fn punti(k: usize) -> Vec<(f64, f64)> {
 
 pub const SCANSIONI: usize = 6;
 
-fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
+pub fn globali_ms(c: &Corsa) -> Vec<(String, At)> {
     vec![
         ("experiment_title".to_string(), t("run one")),
         (

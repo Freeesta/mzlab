@@ -410,3 +410,14 @@ fn per_record(dim: &[Dim], v: &Var) -> u64 {
         .iter()
         .fold(1u64, |a, &d| a.saturating_mul(dim[d].lunghezza))
 }
+
+/// `x * scale_factor + add_offset` for the stored numbers of `v` (the file keeps `(t - offset) / factor`).
+pub(super) fn scala(x: &mut [f64], v: &Var) {
+    let (f, o) = (
+        v.numero("scale_factor").unwrap_or(1.0),
+        v.numero("add_offset").unwrap_or(0.0),
+    );
+    if f != 1.0 || o != 0.0 {
+        x.iter_mut().for_each(|y| *y = *y * f + o);
+    }
+}
