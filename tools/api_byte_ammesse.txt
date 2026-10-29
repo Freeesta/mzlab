@@ -11,3 +11,6 @@ cache.rs::tiles_export
 # RV-05: the readers module hands the index and each scan to the engine as one binary block (`trasporto.rs`), by design
 lib.rs::indice
 lib.rs::scansione
+# W2: the export/import ZIP is built in one pass and handed to the worker once; the old size+write pair parsed it twice and copied it in and out
+zip.rs::zip
+zip.rs::unzip
