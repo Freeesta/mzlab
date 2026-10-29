@@ -360,11 +360,11 @@
   });
   /** how Data classed a file of the live session (profile | centroid | mixed), or "" @param {string} name */
   const modeOf = name => { const it = x && x.ok ? x.item(name) : null; return it ? it.mode : ""; };
-  /** the words of the card «Centroid spectra»: how many files it centroided and how many were centroids already; "" for another card or before the files are known @param {string[]} ids */
+  /** the words of the card «Centroid spectra»: how many files are ready and why (centroided earlier, already centroided); "" for another card or before any file is listed @param {string[]} ids */
   const centroidNote = ids => {
     if (!x || !x.ok || !x.items.length || !ids.some(id => { const i = instOf(x, id); return i && base(i) === "spectra.centroid"; })) return "";
     const n = x.items.length, mode = x.items.filter((/** @type {any} */ i) => i.mode), done = mode.filter((/** @type {any} */ i) => x.profile(i) && i.cen).length, already = mode.filter((/** @type {any} */ i) => !x.profile(i)).length;
-    return mode.length ? `${done} of ${n} files centroided, ${already} already centroided` : "";
+    return F.liveView.centroidWords(n, mode.length, done, already);
   };
   F.live = { isCentroidStep: id => { const i = x && instOf(x, id); return !!i && base(i) === "spectra.centroid"; }, modeOf, centroidNote, run, preflight, attach, change, state: () => x, following: () => following, held: () => held, setLive, setHeld, runNow, active: () => !!(x && x.ok) };
   change();

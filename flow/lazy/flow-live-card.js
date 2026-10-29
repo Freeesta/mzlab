@@ -33,10 +33,11 @@
     const e = F.liveView.of(ids(line)), card = /** @type {HTMLElement | null} */ (line.closest(".fln"));
     if (!e) { line.dataset.state = ""; line.querySelector(".fln-lw")?.replaceChildren(); line.querySelector(".fln-lm")?.replaceChildren(); /** @type {HTMLElement} */ (line.querySelector(".fln-bar")).hidden = true; if (card) { card.removeAttribute("data-live"); if (card.dataset.lbl) card.setAttribute("aria-label", card.dataset.lbl); } return; }
     const v = F.liveView.look(e), note = F.live && F.live.centroidNote ? F.live.centroidNote(ids(line)) : "";
-    if (note && v.state !== "running") v.word = `${v.word} · ${note}`;
+    if (note && (v.state === "done" || v.state === "reused")) { v.title = `${note} · ${v.title}`; v.word = note.replace(/ \(.*\)$/, ""); }
+    else if (note && v.state === "blocked") v.title = `${v.title} (${note})`;
     const word = line.querySelector(".fln-lw"), bar = /** @type {HTMLElement} */ (line.querySelector(".fln-bar"));
     line.dataset.state = v.state; line.dataset.tone = v.tone;
-    if (word && word.textContent !== v.word) { word.textContent = v.word; word.setAttribute("title", v.word); }
+    if (word && word.textContent !== v.word) { word.textContent = v.word; word.setAttribute("title", v.title); }
     const m = line.querySelector(".fln-lm");
     if (m && m.dataset.mark !== v.icon) { m.dataset.mark = v.icon; m.replaceChildren(mark(v.icon)); }
     bar.hidden = v.state !== "running";
@@ -44,7 +45,7 @@
       if (v.frac === null) { bar.removeAttribute("aria-valuenow"); bar.classList.add("indet"); bar.style.removeProperty("--p"); }
       else { bar.classList.remove("indet"); bar.setAttribute("aria-valuenow", String(Math.round(v.frac * 100))); bar.style.setProperty("--p", Math.round(v.frac * 100) + "%"); }
     }
-    if (card) { card.dataset.live = v.state; if (card.dataset.lbl) card.setAttribute("aria-label", `${card.dataset.lbl}. ${v.word}`); }
+    if (card) { card.dataset.live = v.state; if (card.dataset.lbl) card.setAttribute("aria-label", `${card.dataset.lbl}. ${v.title}`); }
   };
 
   /** the table «Files» of the steps `list`: a row per job that has a file; hidden while there is none @param {any} node */

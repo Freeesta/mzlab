@@ -82,6 +82,10 @@ def test_the_review_view_queues_and_words_the_decisions():
     assert node("flow_review.js").strip() == "ok"
 
 
+def test_the_cards_of_flow_live_use_plain_words():
+    assert node("flow_live_words.js").strip() == "ok"
+
+
 def test_the_feature_table_view_reads_the_names_of_its_files():
     assert node("flow_feat_view.js").strip() == "ok"
 
