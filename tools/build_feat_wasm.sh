@@ -28,7 +28,7 @@ R=target/wasm32-unknown-unknown/release
 # HR group (detect, proofs, mrm, finder, finder_edge, finder_msn): ONE .wasm "hr" (the manifest keys of the six name it; the workers load it once). MZLAB_WASM_SEPARATI=1 builds the six as before.
 if [ -z "${MZLAB_WASM_SEPARATI:-}" ]; then
   if want a; then
-    cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,mrm,finder,finder_edge,finder_msn
+    cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,mrm,finder,finder_edge,finder_msn,flow_ms2
     wasm_pack "$out/hr" $R/mzlab_feat_wasm.wasm $limit_hr "mzFinder hr"
   fi
   group="untargeted interp"

@@ -17,8 +17,7 @@ const fail = (key, params, text) => Object.assign(new Error(text || key), { key,
 function idleRest(idleMs, st, slots, queue, kill) {
   let idle = null;
   const rest = () => {
-    clearTimeout(idle);
-    if (!idleMs) return;
+    clearTimeout(idle); if (!idleMs) return;
     idle = setTimeout(() => {
       if (queue.length || [...slots].some(s => s.busy) || (st.archive && st.archive.calls.size)) return rest();
       for (const s of [...slots]) kill(s);
@@ -212,6 +211,7 @@ function rowOps(submit, call) {
     tpPost: m => submit(async (slot, load) => { await load(m.kind === "network" ? "table" : "interp"); return (await call(slot, { op: "tp_post", ...m, tp: m.tp.slice(), table: m.table && m.table.slice(), rules: m.rules && m.rules.slice() })).text; }),
     linkInterp: m => submit(async (slot, load) => { await load("interp"); return (await call(slot, { op: "tp_link_interp", ...m, table: m.table.slice() })).bytes; }),
     digLr: m => submit(async (slot, load) => { await load("proofs"); await load("finder_lr"); return (await call(slot, { op: "dig_lr", ...m, table: m.table.slice(), rules: m.rules.slice(), peaks: m.peaks.map(b => b.slice()) })).text; }),
+    ident: (mod, op, m) => submit(async (slot, load) => { await load(mod); return (await call(slot, { op, ...Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v instanceof Uint8Array || v instanceof ArrayBuffer ? v.slice() : v])) })).text; }),   // flow-web-ident.js: flow_ms2 (`proofs`), table_match_rows (`table`)
   };
 }
 
@@ -449,7 +449,7 @@ const OPS = {
   },
   async die() { throw new WebAssembly.RuntimeError("unreachable"); },       // for the tests: a trap of the .wasm
 };
-
+Object.assign(OPS, { flow_ms2: async m => ({ text: mods.proofs.flow_ms2(m.params, m.name, new Uint8Array(m.mzml), m.features ? new Uint8Array(m.features) : undefined) }), table_match_rows: async m => { const f = await openAll(m.paths), t = new Uint8Array(m.table); try { return { text: mods.table.table_match_rows((_, off, len) => t.subarray(off, off + len), t.length, m.samples, m.params, m.sha, f.read, f.sizes) }; } finally { f.close(); } } });
 OPS.dig_lr = async m => { const f = await openAll(m.paths); try { const p = mods.proofs.tp_dig_inputs(m.rules, m.parent, m.structure, m.samples, m.names, m.recipe, arrays(m.peaks), f.read, f.sizes); try { const d = mods.finder_lr.finder_lr_dig(p.files(), p.who(), m.settings, new Uint8Array(m.table), p.registry(), f.read, f.sizes); try { return { text: d.summary("{}") + "\n" }; } finally { d.free(); } } finally { p.free(); } } finally { f.close(); } };   // tp.dig_lr: the hypotheses searched in the stored peaks (proofs) and the Dig of the series (finder_lr)
 // the sink of a step of the .wasm: write(offset, bytes) into one growing buffer (JavaScript memory, not the 256 MB of the .wasm); the step answers { bytes, sha256 }
 function memSink() {

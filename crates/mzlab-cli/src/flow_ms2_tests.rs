@@ -32,7 +32,7 @@ fn scan(
 }
 
 /// MS1, MS2 of Alpha (window 1 Da, charge 1), MS2 of another ion (window 10 Da, charge 2); each MS2 precursor has an intensity.
-fn dda_mzml() -> Vec<u8> {
+pub(crate) fn dda_mzml() -> Vec<u8> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {

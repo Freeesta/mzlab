@@ -11,7 +11,7 @@ use mzlab_feat_table_wasm::core::ms2_file;
 
 use crate::flow_link_tests::{fixture, hypotheses, series, FORMULA};
 
-const NAMES: [&str; 6] = [
+pub(crate) const NAMES: [&str; 6] = [
     "SIN_blank",
     "SIN_dark",
     "SIN_t0",
@@ -21,7 +21,7 @@ const NAMES: [&str; 6] = [
 ];
 
 /// The plan up to the aligned table, plus `extra` (steps appended).
-fn plan(extra: &str) -> String {
+pub(crate) fn plan(extra: &str) -> String {
     let raw: Vec<String> = NAMES
         .iter()
         .map(|n| format!(r#"{{"name":"{n}.mzML","type":"raw"}}"#))
@@ -41,7 +41,7 @@ fn plan(extra: &str) -> String {
     )
 }
 
-fn run(dir: &Path, extra: &str) {
+pub(crate) fn run(dir: &Path, extra: &str) {
     let (done, prov) =
         crate::flow::run_plan(plan(extra).as_bytes(), dir, &dir.join("work"), 2, None).unwrap();
     assert!(
