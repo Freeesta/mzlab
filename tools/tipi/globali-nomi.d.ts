@@ -140,6 +140,7 @@ declare var LWX: any;
 declare var M: any;
 declare var MAPDATI: any;
 declare var MAPFORME: any;
+declare var MAPMARGINI: any;
 declare var MAPTAB: any;
 declare var MAPVICINO: any;
 declare var MAP_PAL: any;

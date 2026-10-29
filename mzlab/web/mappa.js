@@ -58,7 +58,9 @@ window.MAPPA = (() => {
     p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
     const tbs = p.el.querySelector(".tbs"); tbs.insertBefore(navBar(p), tbs.children[1] || null); navSync(p); touchInit(p, cv);
     const ro = FRAME.ro(cv, () => { if (mirOn(p)) { overlay(p); margins(p); } });
-    st(p).ro = p._ro = ro;
+    // the margin plots follow their own box too: it changes without the map's (the panel grows by the XIC, a hidden canvas is shown)
+    const roMargins = MAPMARGINI.watch([sp, xc], () => { if (mirOn(p)) margins(p); });
+    st(p).ro = p._ro = () => { ro(); roMargins(); };
     const wrap = () => {
       if (!p._setMax || p._setMax._mz) return;
       const orig = p._setMax, f = (/** @type {boolean} */ on) => { orig(on); onMax(p, on); }; f._mz = true; p._setMax = f;
@@ -379,12 +381,7 @@ window.MAPPA = (() => {
   // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
   const xicTol = (/** @type {MzFile} */ f, /** @type {number} */ mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;
   const xicCentre = (/** @type {MzFile} */ f, /** @type {number} */ mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
-  function canvasOf(/** @type {Record<string, any>} */ c) {
-    const r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d);
-    // resizing reallocates the bitmap: only when the panel changed size
-    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-    const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height };
-  }
+  const canvasOf = (/** @type {Record<string, any>} */ c) => MAPMARGINI.sized(c, devicePixelRatio);
   // m/z labels of the sideways spectrum: beyond the tip of the bar (fixed gap) with a halo of the panel colour; if they do not fit they go above the bar,
   // to the left of the tip, so the bar never crosses its own text. The most intense peaks come first, a label never sits on another (by S/N, see MAPREND.pick). s.lbls keeps the boxes.
   function sideLabels(/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ W, /** @type {number[]} */ order, /** @type {(i: number) => Record<string, any>} */ get, /** @type {number} */ x0, /** @type {Record<string, any>} */ s, limit = 8) {
