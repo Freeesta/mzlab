@@ -10,6 +10,7 @@ import { buildNative } from "./rust-nativo.js";
 import { openSource } from "./lettura-sync.js";
 import { createEsterno } from "./lettore-esterno.js";
 import { creaAiuti } from "./idx-aiuti.js";
+import { makeSpill } from "./idx-spill.js";
 
 // a Thermo .raw is read through the `thermo` module, loaded here on the first one (lettore-esterno.js)
 const ext = createEsterno(native_external);
@@ -54,10 +55,7 @@ async function build(m) {
       spName = m.part.replace(/(\.part)?$/, ".sp.part");
       sh = await (await d.getFileHandle(spName, { create: true })).createSyncAccessHandle();
       sh.truncate(0);
-      spill = {
-        put: (off, data) => { if (writeFull(sh, data, off) < data.length) { fullAt = off + data.length; throw new Error("storage full"); } },
-        get: (off, n) => { const b = new Uint8Array(n); if (sh.read(b, { at: off }) < n) throw new Error("spill read"); return b; }
-      };
+      spill = makeSpill(sh, (off, n) => { fullAt = off + n; }, writeFull);
     // no scratch file (a handle that does not open): the rounds decode again, as always
     } catch (_) { spill = null; }
     // a dataset of a maker (rust-nativo.js): the index comes straight from its reader; the progress says the phase

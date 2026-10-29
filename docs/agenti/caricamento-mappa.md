@@ -127,6 +127,7 @@ mzlab/web/rust-nativo.js
 mzlab/web/rust-nativo-pagina.js
 mzlab/web/idx-worker.js
 mzlab/web/idxpool.js
+mzlab/web/idx-spill.js
 mzlab/web/idx-aiuti.js
 mzlab/web/idx-aiuto.js
 mzlab/web/archivio.js
