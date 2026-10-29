@@ -102,9 +102,10 @@ def test_no_redraw_while_the_pointer_is_down_on_the_list(tmp_path):
 def esm(tmp_path, files, code):
     for name in files:
         (tmp_path / name).write_text((WEB / name).read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / "package.json").write_text('{"type":"module"}')
     f = tmp_path / "t.mjs"
     f.write_text(code)
-    return json.loads(subprocess.run(["node", "--experimental-default-type=module", str(f)], check=True, capture_output=True, encoding="utf-8").stdout)
+    return json.loads(subprocess.run(["node", str(f)], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
 def test_a_member_without_sha1_does_not_inherit_the_earlier_one(tmp_path):
