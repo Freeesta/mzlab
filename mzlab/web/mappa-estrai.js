@@ -148,9 +148,8 @@ export function overlay(/** @type {PannelloMappa} */ p, /** @type {CanvasRenderi
   g.restore();
 }
 function plotArea(/** @type {PannelloMappa} */ p, /** @type {HTMLCanvasElement} */ c) {
-  const a = p._a, r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d);
-  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-  const g = /** @type {CanvasRenderingContext2D} */ (c.getContext("2d")); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height, a };
+  const { g, W, H } = MAPMARGINI.sized(c, devicePixelRatio);
+  return { g: /** @type {CanvasRenderingContext2D} */ (g), W, H, a: p._a };
 }
 export function margins(/** @type {PannelloMappa} */ p) {
   const s = ex(p); if (!s || !p._a) return; const m = MAPPA.st(p);
@@ -162,8 +161,8 @@ export function margins(/** @type {PannelloMappa} */ p) {
 // the same RT axis as the map; the integrated zone is filled
 function drawXic(/** @type {PannelloMappa} */ p, /** @type {HTMLCanvasElement} */ c, /** @type {MapEx} */ s) {
   const { g, W, H, a } = plotArea(p, c), mt = 10, mb = 22, ink = css("--muted"), ac = css("--accent");
-  const cr = p.cv.getBoundingClientRect(), xr = c.getBoundingClientRect();
-  const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
+  const o = MAPMARGINI.rel(p.cv, c);
+  const ml = o.x + M.l, mr = o.x + p.cv.clientWidth - M.r, pw = mr - ml;
   const x = (/** @type {number} */ v) => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
   g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
   g.textAlign = "center"; for (const t of nice(a.x0, a.x1, 8)) { const xx = x(t); if (xx >= ml - 1 && xx <= mr + 1) g.fillText(String(+t.toFixed(2)), xx, H - mb + 13); }
@@ -188,8 +187,8 @@ const guides = (/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */
 // the same m/z axis as the map, turned on its side; the m/z window is a band
 function drawSpec(/** @type {PannelloMappa} */ p, /** @type {HTMLCanvasElement} */ c, /** @type {MapEx} */ s) {
   const { g, W, H, a } = plotArea(p, c), ink = css("--muted"), ac = css("--accent"), x0 = 6, x1 = W - 8, b = s.box;
-  const cr = p.cv.getBoundingClientRect(), sr = c.getBoundingClientRect();
-  const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
+  const o = MAPMARGINI.rel(p.cv, c);
+  const mapTop = o.y + M.t, mapBot = o.y + p.cv.clientHeight - M.b, mapH = mapBot - mapTop;
   const Y = (/** @type {number} */ v) => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH;
   g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
   const ya = Y(b.mz1), yb = Y(b.mz0); g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(x0, ya, x1 - x0, yb - ya); g.globalAlpha = 1;
@@ -271,8 +270,7 @@ function found(/** @type {PannelloMappa} */ p, /** @type {HTMLElement} */ box) {
   box.appendChild(el);
   const c = el.querySelector("canvas"), t = s.xic;
   FRAME.next(() => {
-    const r = c.getBoundingClientRect(), dpr = Math.min(4, devicePixelRatio || 1); c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
-    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); const W = r.width, H = r.height, ml = 6, mb = 16, mt = 8;
+    const { g, W, H } = MAPMARGINI.sized(c, devicePixelRatio), ml = 6, mb = 16, mt = 8;
     if (!t || !t.rt.length) return;
     const lo = Math.min(...[ed ? ed.rt0 : q.rt, q.rt]) - 0.3, hi = Math.max(...[ed ? ed.rt1 : q.rt, q.rt]) + 0.3, pts = []; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= lo && t.rt[i] <= hi) pts.push(i);
     if (!pts.length) return; let ymax = Math.max(...pts.map(i => t.y[i])); const thr = (q.filters || []).filter((/** @type {MapFilter} */ f) => f.from === "height").map((/** @type {MapFilter} */ f) => f.thr); ymax = Math.max(ymax, ...thr) * 1.05;
