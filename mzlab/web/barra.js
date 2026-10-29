@@ -51,6 +51,8 @@ const BARRA = (() => {
   const storageKey = () => (isHrMode() ? K_HR : K_LR);
   const defaultW = () => (isHrMode() ? 340 : 300);
   const inData = () => typeof S !== "undefined" && S.view === "data" && !!S.sess && !S.adding;
+  // while the files are being opened (skeleton on screen, no session yet) the side panel and its toolbar button already have their final place: nothing moves when the session arrives
+  const inDataOrOpening = () => inData() || typeof S !== "undefined" && S.view === "data" && !!S.opening && !S.sess;
   /** A text field (or an open dialog) keeps its own keys: Alt+Shift+arrows select words there, like Ctrl/Cmd+Z undoes text. @param {EventTarget | null} t */
   const inCampo = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
   // context «theory»: the bar shows the commands of the Teoria (window.TCMD of the same-origin iframe), not the ones of the data
@@ -89,7 +91,7 @@ const BARRA = (() => {
   // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists.
   /** @type {any[]} */
   const CMD = [
-    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inData(), run: () => toggle("file") },
+    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening(), run: () => toggle("file") },
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inData() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },
     { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => (inData() ? toggle("adducts") : typeof CALCQUI !== "undefined" && CALCQUI.apriAddotti()) },
     { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
@@ -240,7 +242,7 @@ const BARRA = (() => {
   function applyLayout() {
     const v = Q1("#v-data"), aside = Q1("#dfiles");
     if (!v || !aside) return;
-    const shown = _open && inData();
+    const shown = _open && inDataOrOpening();
     const was = v.classList.contains("sb-open");
     const moved = shown && was && (_side === "right") !== v.classList.contains("sb-right");
     const change = shown !== was || shown && sheet() !== v.classList.contains("sb-sheet") || moved;
@@ -256,7 +258,7 @@ const BARRA = (() => {
     if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();
     const tg = Q1("#sb-toggle");
     if (tg) {
-      tg.hidden = !inData();
+      tg.hidden = !inDataOrOpening();
       tg.setAttribute("aria-pressed", shown ? "true" : "false");
       tg.classList.toggle("on", shown);
       const tl = tg.querySelector(".tl"); if (tl) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }

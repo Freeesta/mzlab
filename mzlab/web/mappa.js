@@ -420,8 +420,8 @@ window.MAPPA = (() => {
   function drawSide(p, pt, sp, prev) {
     const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
     const { g, W, H } = canvasOf(s.sp), ink = ecss("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
-    const cr = p.cv.getBoundingClientRect(), sr = s.sp.getBoundingClientRect();
-    const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
+    const o = MAPMARGINI.rel(p.cv, s.sp);
+    const mapTop = o.y + M.t, mapBot = o.y + p.cv.clientHeight - M.b, mapH = mapBot - mapTop;
     const Y = (/** @type {number} */ v) => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH, x0 = 6, x1 = W - 8;
     g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
     if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, Math.max(10, mapTop + 10)); return; }
@@ -460,8 +460,8 @@ window.MAPPA = (() => {
   function drawBottom(p, pt, xi, prev) {                                          // XIC under the map: the same RT axis
     const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
     const { g, W, H } = canvasOf(s.xc), ink = ecss("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
-    const cr = p.cv.getBoundingClientRect(), xr = s.xc.getBoundingClientRect();
-    const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
+    const o = MAPMARGINI.rel(p.cv, s.xc);
+    const ml = o.x + M.l, mr = o.x + p.cv.clientWidth - M.r, pw = mr - ml;
     const X = (/** @type {number} */ v) => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
     g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
     XICDRAW.axis(g, X, a.x0, a.x1, { base: H - mb, labelY: H - mb + 13, lo: 1, hi: W - 1, color: ink, font: fpx(11) });
@@ -474,7 +474,8 @@ window.MAPPA = (() => {
     const tic = sg && s.tic && s.tic.key === ticKey(a) ? s.tic : null;
     for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && Math.abs(t.y[i]) > ymax) ymax = Math.abs(t.y[i]);
     if (window.TDATI) { s.xc.setAttribute("aria-label", T("mappa.bot.title")); TDATI.series(s.xc, { title: T("mappa.bot.title"), xl: T("tdati.col.rt"), yl: T("tdati.col.int"), series: tr.map((/** @type {Record<string, any>} */ t) => ({ x: t.rt, y: t.y, name: t.label || t.name })).concat(tic ? [{ x: tic.rt, y: tic.y, name: "TIC A − B" }] : []) }, true); }
-    const lo0 = sg ? -ymax : 0, Y = (/** @type {number} */ v) => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax) || 1) * (H - mt - mb);
+    // zero always sits on the axis; 8% headroom above the highest point keeps the apex label inside the box
+    const lo0 = sg ? -ymax : 0, Y = (/** @type {number} */ v) => H - mb - (v - lo0) / ((sg ? 2 * ymax : ymax * 1.08) || 1) * (H - mt - mb);
     // intensity axis, like the other chromatograms
     g.beginPath(); g.moveTo(ml + .5, mt); g.lineTo(ml + .5, H - mb + .5); g.stroke();
     if (ymax) { g.textAlign = "right"; for (const t of nice(lo0, sg ? ymax : ymax, Math.max(2, Math.floor((H - mt - mb) / 28)))) { const y = Math.round(Y(t)) + .5; g.beginPath(); g.moveTo(ml - 4, y); g.lineTo(ml, y); g.stroke(); g.fillText(fmtA(t), ml - 6, y + 3.5); } }
