@@ -154,6 +154,7 @@ impl State {
                 self.store.lock().unwrap_or_else(|e| e.into_inner()).remove(name);
                 text("{}")
             }
+            "lr_valida" => self.validate_mzml(s("name")),
             "lr_composition" => text(mzlab_core::comproute::composition_route(&q()).unwrap_or_default()),
             "lr_stat" => match mzlab_core::statroute::stat_route(s("path"), s("body")) {
                 None => text(""),
@@ -192,6 +193,15 @@ impl State {
             // ---- the methods (.dam) and how an item was acquired
             _ => Err(Error::new("rpc.unknown")),
         }
+    }
+
+    /// «Validate mzML»: the report of `mzlab-cli validate --json` for a registered mzML (the page's `valida` module gives the same bytes).
+    fn validate_mzml(&self, name: &str) -> Result<Answer> {
+        let entry = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).filter(|e| e.nat.is_none());
+        let entry = entry.ok_or_else(|| Error::new("err.file.unknown").with("detail", name))?;
+        let file = std::fs::File::open(&entry.path).map_err(|e| Error::new("err.file.unknown").with("detail", e.to_string()))?;
+        let report = mzlab_core::mzmlvalida::valida(std::io::BufReader::new(file))?;
+        text(mzlab_core::mzmlvalida::json_un_file(name, &report))
     }
 
     fn method_or_gradient(&self, eng: &mut Eng, op: &str, item: &str) -> Result<Answer> {

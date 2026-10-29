@@ -767,5 +767,10 @@
   "cq.all": "Pulsante che apre tutte le righe di un gruppo di candidati; {n} = numero totale di righe.",
   "cq.none": "Riga sotto la calcolatrice quando nulla corrisponde al numero; {tol} = tolleranza con l'unità (es. «5 ppm» o «0.5 Da»).",
   "cq.mode.hr.files": "Testo piccolo sotto la calcolatrice: risoluzione alta rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «Orbitrap Exploris 120»).",
-  "cq.mode.lr.files": "Testo piccolo sotto la calcolatrice: risoluzione bassa (unitaria) rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «QTRAP 3200»)."
+  "cq.mode.lr.files": "Testo piccolo sotto la calcolatrice: risoluzione bassa (unitaria) rilevata dai file aperti; {name} = strumento o analizzatore del file (es. «QTRAP 3200»).",
+  "valida.title": "Titolo della finestra «Valida mzML»; {name} = nome del file (già protetto).",
+  "valida.caption": "Didascalia e nome accessibile della tabella dei problemi trovati; {name} = nome del file.",
+  "valida.counts": "Riga di riepilogo della validazione; {spectra}, {chroms} = numero di spettri e cromatogrammi del file; {errors}, {warnings} = numero di errori e di avvisi.",
+  "valida.more": "Nota sotto la tabella quando i problemi sono più delle righe mostrate; {n} = righe mostrate, {total} = problemi trovati.",
+  "valida.fail": "Messaggio quando la validazione non è riuscita; {detail} = causa tecnica (testo dell'errore)."
 }

@@ -36,6 +36,7 @@ I18N.add("it", {
   "files.ctx.rename": "Rinomina…",
   "files.ctx.color": "Cambia colore…",
   "files.ctx.resetColors": "Ripristina i colori automatici",
+  "files.ctx.validate": "Valida mzML",
   "files.ctx.remove": "Rimuovi dalla sessione…",
   "files.pop.all": "Tutti",
   "files.pop.none": "Nessuno",

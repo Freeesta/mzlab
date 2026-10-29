@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The .wasm modules of the readers, one per family of formats (crates/mzlab-lettori-wasm; each loaded only when a file of its family arrives, never committed), each under its limit after
+# The .wasm modules of the readers, one per family of formats (and `valida`, the mzML validator: no reader, its own module) (crates/mzlab-lettori-wasm; each loaded only when a file of its family arrives, never committed), each under its limit after
 # wasm-opt -Oz, and site/static/wasm-lettori/manifest.json with {family: {sha256, byte}} (the worker checks it): tools/build_lettori_wasm.sh <site/static>
 # Called by tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
@@ -14,9 +14,10 @@ agilent 606208
 sciex 475136
 waters 380928
 shimadzu 380928
-bruker 532480"
+bruker 532480
+valida 479744"
 # the families that have readers (a family without readers is skipped and is born with its own package)
-con_lettori="agilent sciex thermo aperti andi waters shimadzu bruker"
+con_lettori="agilent sciex thermo aperti andi waters shimadzu bruker valida"
 out=${1:-site/static}/wasm-lettori
 mkdir -p "$out"
 . tools/wasm_paralleli.sh   # the wasm-bindgen + wasm-opt of a family run in the background while cargo builds the next one

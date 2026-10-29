@@ -10,15 +10,19 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # the families, forwarded to mzlab-lettori: tools/build_lettori_wasm.sh builds one .wasm per family with --no-default-features --features <family>
-aperti = ["mzlab-lettori/aperti"]
-andi = ["mzlab-lettori/andi"]
-thermo = ["mzlab-lettori/thermo"]
-agilent = ["mzlab-lettori/agilent"]
-sciex = ["mzlab-lettori/sciex"]
-waters = ["mzlab-lettori/waters"]
-shimadzu = ["mzlab-lettori/shimadzu"]
-bruker = ["mzlab-lettori/bruker"]
-tutte = ["mzlab-lettori/tutte"]
+aperti = ["lettura", "mzlab-lettori/aperti"]
+andi = ["lettura", "mzlab-lettori/andi"]
+thermo = ["lettura", "mzlab-lettori/thermo"]
+agilent = ["lettura", "mzlab-lettori/agilent"]
+sciex = ["lettura", "mzlab-lettori/sciex"]
+waters = ["lettura", "mzlab-lettori/waters"]
+shimadzu = ["lettura", "mzlab-lettori/shimadzu"]
+bruker = ["lettura", "mzlab-lettori/bruker"]
+# the readers code of the families (probe, to_mzml, the sessions); the `valida` module has none of it
+lettura = []
+# the mzML validator alone: the module `valida` of the page (`mzlab-cli validate` in a .wasm)
+valida = ["mzlab-core/valida"]
+tutte = ["lettura", "mzlab-lettori/tutte"]
 
 [dependencies]
 js-sys = "0.3.106"

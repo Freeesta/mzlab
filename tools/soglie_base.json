@@ -99,7 +99,7 @@
   "crates/mzlab-feat/tests/attributio_spiegazioni.rs::purity_and_raw_proofs_equal_the_reference_tool": 148,
   "crates/mzlab-feat/tests/attributio_spiegazioni.rs::raw_proofs": 92,
   "crates/mzlab-feat/tests/attributio_spiegazioni.rs::rt_versus_logp_equals_the_reference_tool": 105,
-  "crates/mzlab-lettori-wasm/src/sessione.rs::Sessioni": 94,
+  "crates/mzlab-lettori-wasm/src/lettura/sessione.rs::Sessioni": 94,
   "crates/mzlab-lib-wasm/src/lib.rs::Importer": 143,
   "crates/mzlab-lib-wasm/src/lib.rs::analog_json": 144,
   "crates/mzlab-lib/src/build.rs::Builder": 354,

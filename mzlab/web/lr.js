@@ -22,6 +22,7 @@ import { engineRoute, statRoute } from "./lr-map.js";
 import { createMethodRoutes } from "./lr-method.js";
 import { mixesResolutions, sessionFiles } from "./lr-sessione.js";
 import { W } from "./nativo-fasi.js";
+import { validaMzml } from "./valida-mzml.js";
 
 /** @type {Map<string, any>} */
 const earlyTics = new Map();
@@ -190,6 +191,10 @@ export function createLr({ rb }) {
         { const r = await engineRoute(path, u.searchParams, { rb, rpc, items }); if (r !== undefined) return r; }          // maps, composition, sub-formulas: the Rust engine from the indexes (null = unavailable)
         if (path === "/api/notebook") { const v = JSON.parse((await rpc({ op: "lr_kv_get", key: "notebook" })).info).value; return { status: 200, text: v || "{}" }; }
         if (path === "/api/spazio") return { status: 200, text: (await rpc({ op: "lr_space" })).info };
+        if (path === "/api/mzml_valida") {          // «Validate mzML»: the report of `mzlab-cli validate --json` (the `valida` module in the browser, the native engine in the app)
+          const n = safeName(u.searchParams.get("name") || ""), r = n ? await validaMzml(n, rpc) : null;
+          return r === null ? fail("err.file.unknown", { detail: u.searchParams.get("name") || "" }) : { status: 200, text: r };
+        }
         return null;
       }
       if (method !== "POST") return null;

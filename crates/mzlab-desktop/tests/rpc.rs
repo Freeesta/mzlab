@@ -60,6 +60,23 @@ fn register_index_open_and_route() {
 }
 
 #[test]
+fn validate_mzml_gives_the_bytes_of_the_command_line_report() {
+    let ex = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../mzlab/web/esempi/FullScan_t10.mzML");
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    st.set_index_folder(data.path().join("idx")).unwrap();
+    let (id, _) = st.pick(ex.clone()).unwrap();
+    let name = "FullScan_t10.mzML";
+    st.rpc("lr_put", &json!({"name": name, "fid": id}), &[]).unwrap();
+    let got = text(st.rpc("lr_valida", &json!({"name": name}), &[]).unwrap());
+    let report = mzlab_core::mzmlvalida::valida(std::fs::File::open(&ex).unwrap()).unwrap();
+    assert_eq!(got, mzlab_core::mzmlvalida::json_un_file(name, &report));
+    assert!(got.starts_with("[{\"file\":\"FullScan_t10.mzML\",\"valid\":"), "{got}");
+    assert!(st.rpc("lr_valida", &json!({"name": "absent.mzML"}), &[]).is_err(), "a file that is not in the list");
+}
+
+#[test]
 fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone() {
     let data = tempfile::tempdir().unwrap();
     let st = State::new();

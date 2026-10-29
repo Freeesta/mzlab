@@ -2,7 +2,7 @@
 //! index, a scan, a chromatogram, the header of a scan and the method. Answers are JSON, or one byte array for the index and a scan (`mzlab_core::trasporto`); an error is `{error_key, params}`.
 use std::collections::HashMap;
 
-use crate::json_testo::{
+use super::json_testo::{
     campioni_json, cromatogramma_json, cromatogrammi_json, intestazione_json, testata_json,
 };
 use mzlab_core::json::Out;

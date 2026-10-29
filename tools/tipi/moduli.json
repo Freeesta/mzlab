@@ -102,6 +102,7 @@
     "../../mzlab/web/rust-nativo-pagina.js",
     "../../mzlab/web/lettori-famiglie.js",
     "../../mzlab/web/lettori-modulo.js",
+    "../../mzlab/web/valida-mzml.js",
     "../../mzlab/web/barra-spettro.js",
     "../../mzlab/web/xic-spettro.js",
     "../../mzlab/web/elementare-pannello.js",

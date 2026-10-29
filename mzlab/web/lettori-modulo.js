@@ -79,6 +79,8 @@ const LETTORI_MOD = {
     Object.defineProperty(f, "mzlabModulo", { value: { members, c, fam, size } });
     return f;
   },
+  /** the JSON text of `mzlab-cli validate --json` for an mzML, from the module `valida` (loaded now, apart from the readers) */
+  async valida(/** @type {Blob} */ blob, /** @type {string} */ name) { return /** @type {string} */ ((await ask({ op: "valida", fam: "valida", members: [{ name, blob }] })).text); },
   /** what the module sees in a dataset */
   async probe(/** @type {string} */ fam, /** @type {Member[]} */ members) { return /** @type {Probe} */ ((await ask({ op: "probe", fam, members })).info); },
   /** the mzML of sample `c` of a dataset as a File of OPFS (a Blob without OPFS); `signal` ends the worker, so the conversion stops at once */
