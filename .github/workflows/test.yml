@@ -81,8 +81,10 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pytest-wasm-v2-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py', 'tools/ci_cargo/cargo') }}-rel
+          key: pytest-wasm-v3-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py', 'tools/ci_cargo/cargo') }}-rel
+          # v2 caches (saved with the incremental data, 3.3 GB) are only a warm start: the first run on v3 saves a cache without it
           restore-keys: |
+            pytest-wasm-v3-${{ matrix.parte }}-${{ runner.os }}-
             pytest-wasm-v2-${{ matrix.parte }}-${{ runner.os }}-
             pytest-wasm-v2-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones
