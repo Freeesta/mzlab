@@ -63,23 +63,52 @@ Native builder (cargo example build; the memory is the peak RSS of the process):
 ## Match di tabelle di feature (`UNT_BENCH=1 python3 tests_e2e/e2e_untarget.py`, Chromium Linux, motore WebAssembly)
 5000 feature con MS2 (12 picchi) cercate in una libreria sintetica di 20 000 voci, polarità positiva, 10 ppm sul precursore: lettura della tabella e dell'MGF 0,1 s, ricerca e livelli 0,7 s (soglia 15 s, un solo giro). Con una libreria di 10^6 voci il costo è quello di «Identifica tutte le MS2» sopra (5000 richieste in circa 20 s). La lettura di un `merged_pos.csv` vero da 58 MB (249 colonne) non è misurata qui: si fa solo con `MZLAB_UNTARGET`.
 
-## Indice `.mzidx` (motore Python, Chromium Linux con profilo persistente)
-Sito con `.mzidx` in OPFS, una macchina, un giro. File sintetici: 20 Full Scan LR (2,4 MB), 15 HR DDA (78 MB, 15.800 scansioni). Apertura = invio, lettura, scrittura OPFS e indice; primo disegno = fino al TIC; riapertura = nuova pagina nello stesso profilo.
+## Indice `.mzidx` (Chromium Linux con profilo persistente)
+Sito con `.mzidx` in OPFS, una macchina. Le colonne «motore Python» (Pyodide) sono un giro e il termine di confronto: 20 Full Scan LR (2,4 MB), 15 HR DDA (78 MB, 15.800 scansioni). La colonna «HR, motore Rust» è la mediana di 3 giri di `tests_e2e/misura_pack.py` (4 CPU) su 15 HR DDA sintetici Orbitrap (61,3 MB, 11.880 scansioni, 30 voci: MS1 e MS2): per MB, 0,41 s/MB contro 2,14 s/MB del motore Python. Apertura = invio, lettura, scrittura OPFS e indice; primo disegno = fino al TIC; riapertura = nuova pagina nello stesso profilo.
 
-| misura | 20 Full Scan LR | 15 HR DDA |
-|---|---|---|
-| apertura (invio + lettura + indice), s | 8.65 | 166.62 |
-| primo disegno, s | 1.38 | 12.98 |
-| TIC + 5 XIC di ogni file, s | 1.47 | 6.04 |
-| mappa di tutti i file, s | 1.1 | 5.64 |
-| riapertura fino al primo disegno, s | 8.16 | 24.27 |
-| mappa di tutti i file dopo la riapertura, s | 1.19 | 7.49 |
-| spettro (mediana / max), ms | 2.5 / 9.6 | 7.5 / 21.8 |
-| XIC su tutti i file (mediana / max), ms | 45 / 66.1 | 500.3 / 551.7 |
-| cambio file, TIC (mediana / max), ms | 5.7 / 14.1 | 73.9 / 109.7 |
-| heap WASM dopo il lavoro, MB | 155.5 | 570.9 |
-| heap WASM dopo la riapertura, MB | 129.6 | 570.9 |
-| RSS massima del browser, MB | 831.3 | 1355.3 |
+| misura | 20 Full Scan LR (motore Python) | 15 HR DDA (motore Python) | 15 HR DDA, motore Rust |
+|---|---|---|---|
+| apertura (invio + lettura + indice), s | 8.65 | 166.62 | 24.84 |
+| primo disegno, s | 1.38 | 12.98 | 0.28 (clic su un file, file già indicizzati) |
+| TIC + 5 XIC di ogni file, s | 1.47 | 6.04 | 2.17 |
+| mappa di tutti i file, s | 1.1 | 5.64 | – |
+| riapertura fino al primo disegno, s | 8.16 | 24.27 | 3.4 |
+| mappa di tutti i file dopo la riapertura, s | 1.19 | 7.49 | – |
+| spettro (mediana / max), ms | 2.5 / 9.6 | 7.5 / 21.8 | – |
+| XIC su tutti i file (mediana / max), ms | 45 / 66.1 | 500.3 / 551.7 | 33.0 / 53.3 |
+| cambio file, TIC (mediana / max), ms | 5.7 / 14.1 | 73.9 / 109.7 | 9.9 / – |
+| heap WASM dopo il lavoro, MB | 155.5 | 570.9 | 32.0 (solo il worker del motore; i worker di indicizzazione non sono visti) |
+| heap WASM dopo la riapertura, MB | 129.6 | 570.9 | – |
+| RSS massima del browser, MB | 831.3 | 1355.3 | 1688.4 |
+
+## Esporta / importa i miei dati (`python3 tests_e2e/misura_pack.py --parts export`, Chromium Linux, sito costruito, mediana di 3 giri)
+`esporta-dati-worker.js` istanzia l'intero `.wasm` del motore (3,6 MB, 1,17 MB gzip) solo per `zip` / `unzip`. «Avvio» = dal `new Worker` alla prima risposta a uno `zip` di una voce. Il server di prova non comprime. ZIP di 50 MB in OPFS (5 file in `librerie/`, byte casuali) con il vero `esporta-dati.js`.
+
+| misura | ms |
+|---|---|
+| avvio a freddo (browser nuovo, cache HTTP vuota, localhost) | 52 |
+| avvio a freddo su 10 Mbit/s e 40 ms (non compresso) | 3234 |
+| avvio a caldo (cache HTTP e modulo compilato) | 40 |
+| avvio nella pagina con il motore già pronto (prima chiamata / seguenti) | 80 / 75 |
+| esportazione di 50 MB: lettura OPFS (`collect`) | 104 |
+| esportazione di 50 MB: `pack` | 34 |
+| esportazione di 50 MB: `zip` nel worker (avvio incluso) | 421 |
+| esportazione di 50 MB: Blob e indirizzo di scarico | 46 |
+| esportazione di 50 MB: totale | 613 |
+| importazione: `unzip` nel worker (50 MB) | 475 |
+
+## Disegno dei grafici sul thread principale (`python3 tests_e2e/misura_pack.py --parts draw`, Chromium Linux, sito costruito, mediana di 3 giri)
+Dall'azione a due fotogrammi dipinti; attività lunghe = `longtask` (> 50 ms) iniziate nella finestra; fotogrammi lunghi = `long-animation-frame` con lo script più lungo. CPU 1x e rallentata 4x (CDP). Mappa: un Full Scan sintetico di 1500 scansioni × 500 centroidi a 1920×1080, «f» = schermo intero (canvas 1604 → 1698 px). TIC e XIC: 20 Full Scan sintetici. Grafo MSn: `msngrafo_80.json` (80 ioni, SVG, non canvas) aperto da `#pick`.
+
+| azione | CPU | ms | attività lunghe (n / massima ms) | fotogrammi lunghi (n / massimo ms) | script |
+|---|---|---|---|---|---|
+| nuovo pannello TIC, 20 file | 1x / 4x | 30 / 139 | 0 / 1 (59) | 0 / 0 | – |
+| ridimensiona la finestra, 20 file | 1x / 4x | 66 / 339 | 0 / 2 (153) | 0 / 2 (172) | `pannelli.js` (rAF) |
+| XIC da un clic, 20 file | 1x / 4x | 81 / 312 | 0 / 2 (84) | 0 / 1 (138) | `pannelli.js` (rAF) |
+| mappa: apertura | 1x / 4x | 282 / 615 | 0 / 3 (166) | 0 / 2 (106) | `eventi.js` (clic) |
+| mappa: schermo intero | 1x / 4x | 223 / 396 | 1 (51) / 3 (146) | 1 (63) / 1 (127) | `pannelli.js` (rAF) |
+| mappa: ridimensiona la finestra | 1x / 4x | 119 / 545 | 1 (60) / 2 (255) | 0 / 2 (145) | `pannelli.js` (rAF) |
+| grafo MSn, 80 ioni | 1x / 4x | 261 / 487 | 0 / 1 (107) | 0 / 1 (166) | `infusione-grafo.js` (caricamento) |
 
 ## Costruttore del `.mzidx` (Chromium Linux 4 CPU)
 «python» = costruttore Python in Pyodide (`?pool=0`, il riferimento), «pool» = worker Rust (predefinito). Tempo = dall'invio dei file a tutti nell'elenco (l'indice di ciascuno è costruito nel frattempo); memoria = somma dei processi Chromium (massimo campionato ogni 0,25 s); `digest` = hash di TIC e 5 XIC di ogni file; riapertura = nuova pagina nello stesso profilo (le differenze tra le due righe sono rumore). File: esempi anonimi del sito (LR: Full Scan; HR: ritaglio Orbitrap ripetuto fino a 140 MB). Un giro per scenario.
@@ -106,7 +135,7 @@ Il motore Rust risponde dall'indice `.mzidx` (TIC, XIC, filtri, elenco scansioni
 |---|---|---|
 | avvio (pagina + motore), s | 5.38 | 4.37 |
 | apertura dei file fino al primo TIC, s | 2.27 | 2.24 |
-| TIC + 5 XIC di ogni file, s | 0.11 | 0.35 |
+| TIC + 5 XIC di ogni file, s | 0.11 | 0.35 | 2.17 |
 | RSS del browser, MB | 1033 | 1073 |
 
 ## Teoria da telefono (`tests_e2e/e2e_teoria_mobile.py`, `e2e_indirizzi.py`)
