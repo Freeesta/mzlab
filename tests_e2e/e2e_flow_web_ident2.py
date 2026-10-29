@@ -89,7 +89,7 @@ PLAN = {"format": "mzflow/2", "inputs": inputs(LIBSHA), "steps": BASE + [
     {"id": "f2", "step": "formula.ms2@1", "in": {"spectra": "ms2.spectra", "formulas": "f1.formulas"}},
     {"id": "lv", "step": "annot.level@1", "in": {"candidates": "mat.hits", "formulas": "f1.formulas"}}]}
 out = native(PLAN, "plan")
-OUTS = ["f2.json", "lv.json"]
+OUTS = ["ms2.mgf", "f2.json", "lv.json"]
 NAT = {n: (out / n).read_bytes() for n in OUTS}
 F1 = (out / "f1.json").read_text()
 WEB = json.loads(json.dumps(PLAN))
@@ -154,7 +154,7 @@ try:
             assert not r.get("err"), (r.get("err"), r["ev"][-4:])
             for i in ids:
                 assert any(e["passo"] == i and e["stato"] == expect and e["via"] == "browser" for e in r["ev"]), (i, expect, [e for e in r["ev"] if e["passo"] == i][-3:])
-        IDS = ["f2", "lv"]
+        IDS = ["ms2", "f2", "lv"]
         def first():
             r = pg.evaluate(RUN, [WEB, SAMPLES, LIB, F1]); check(r, IDS, "done")
             kept = pg.evaluate(KEPT)
