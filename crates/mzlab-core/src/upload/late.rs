@@ -1,6 +1,6 @@
 //! The scan table of an mzML whose fingerprints are still being taken: `prepare_late` and the pieces `upload::prepare` shares with it.
 
-use super::{fingerprint, source_head, Passata};
+use super::{fingerprint, non_mzml, source_head, Passata};
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::json::Out;
@@ -40,6 +40,7 @@ pub fn prepare_late<R: ReadAt, R2: ReadAt + Send + 'static>(
     size: u64,
     name: &str,
 ) -> Result<(ScanTable, impl FnMut() -> Result<String>)> {
+    non_mzml::refuse(r, size, name)?;
     let prints = std::thread::spawn(move || fingerprint(&mut r2, size, Passata::senza_sha1(size)));
     let t = scantable::read(&mut Windowed::new(r, size), size)?;
     let name = name.to_string();

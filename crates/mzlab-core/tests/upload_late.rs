@@ -53,3 +53,22 @@ fn late_source_gives_the_same_index() {
     }
     assert!(seen > 0, "no example files");
 }
+
+#[test]
+fn late_refuses_a_text_file_like_prepare() {
+    let path = std::env::temp_dir().join(format!("mzlab_notmzml_{}.mzML", std::process::id()));
+    std::fs::write(&path, b"just some text, no markup at all\n").unwrap();
+    let size = std::fs::metadata(&path).unwrap().len();
+    let want = prepare(&mut File::open(&path).unwrap(), size, "x.mzML").err();
+    let got = prepare_late(
+        &mut File::open(&path).unwrap(),
+        File::open(&path).unwrap(),
+        size,
+        "x.mzML",
+    )
+    .err();
+    std::fs::remove_file(&path).ok();
+    let want = want.expect("prepare refuses");
+    assert_eq!(want.key, "err.file.notMzml");
+    assert_eq!(got.expect("prepare_late refuses").key, "err.file.notMzml");
+}
