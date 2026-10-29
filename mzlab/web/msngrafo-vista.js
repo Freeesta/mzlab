@@ -81,7 +81,7 @@ export function vistaOf(/** @type {any} */ j) {
     versione: 1, algoritmo: null, regola: "", ordine: [], fallback: true,
     nodi: j.nodi.map((/** @type {any} */ n) => {
       const ins = into.get(n.id) || [], first = ins[0];
-      const rel = first ? maxOf(first.misure.map((/** @type {any} */ m) => m.rel), 0) : null;
+      const rel = first ? Math.max(...first.misure.map((/** @type {any} */ m) => m.rel), 0) : null;
       return { id: n.id, livelli: [n.livello], rel, rel_max: n.rel_max, best: { da: first ? first.da : null, passi: n.livello - 1, costo: [] }, entranti: ins.length, comune: ins.length > 1, albero: n.pos, radiale: null };
     }),
     archi: j.archi.map((/** @type {any} */ a, /** @type {number} */ i) => ({ da: a.da, a: a.a, best: into.get(a.a)[0] === a })),
@@ -191,7 +191,7 @@ export function layout(/** @type {any} */ j, /** @type {Opts} */ o, /** @type {{
   } else {
     // the roots sit in the middle; ring r grows from the ring inside until nothing overlaps
     const placed = /** @type {string[]} */ ([]);
-    const maxRing = maxOf(nodes.map((/** @type {any} */ n) => vx.get(n.id).radiale.anello), 0);
+    const maxRing = Math.max(0, ...nodes.map((/** @type {any} */ n) => vx.get(n.id).radiale.anello));
     const at = new Map();
     let radius = 0;
     for (let r = 0; r <= maxRing; r++) {
@@ -207,7 +207,7 @@ export function layout(/** @type {any} */ j, /** @type {Opts} */ o, /** @type {{
       for (let k = 0; clash(list) && k < 4000; k++) { radius += 10; list = put(radius); }
       for (const p of list) { at.set(p.id, p.box); placed.push(p.id); ring.set(p.id, r); angle.set(p.id, vx.get(p.id).radiale.angolo); }
     }
-    const xs = [...at.values()], x0 = minOf(xs.map(b => b.x)) - 20, y0 = minOf(xs.map(b => b.y)) - 20;
+    const xs = [...at.values()], x0 = Math.min(...xs.map(b => b.x)) - 20, y0 = Math.min(...xs.map(b => b.y)) - 20;
     for (const [id, b] of at) boxes.set(id, { x: b.x - x0, y: b.y - y0, w: b.w, h: b.h });
     centre = { x: -x0, y: -y0 };
   }
@@ -312,7 +312,7 @@ function drawArcs(/** @type {Element} */ g, /** @type {any} */ j, /** @type {Lay
   for (const a of sorted) {
     const p = L.boxes.get(a.da), q = L.boxes.get(a.a); if (!p || !q) continue;
     const best = bestSet.has(a.da + ">" + a.a), hot = on.has(a.da + ">" + a.a);
-    const rel = maxOf(a.misure.map((/** @type {any} */ m) => m.rel), 0);
+    const rel = Math.max(...a.misure.map((/** @type {any} */ m) => m.rel), 0);
     const cls = "ig-arc" + (best ? " best" : " alt") + (hot ? " on" : "") + (a.isolamento ? " iso" : "");
     const w = best ? (1 + Math.log10(1 + rel) * 1.2).toFixed(2) : "1";
     let mx, my, lx, ly;

@@ -187,9 +187,9 @@ console.log(JSON.stringify(out));
 
 
 def test_no_spread_extremes_left_in_the_data_files():
-    """Math.max(...a) / Math.min(...a) overflow the call stack on a big array: only the files with a separate script set or bounded UI lists may still use them."""
+    """Math.max(...a) / Math.min(...a) overflow the call stack on a big array: only the files that node tests or stand-alone pages load without numeri.js, and bounded UI lists, may still use them."""
     import re
-    allowed = {"calc-qui.js", "draw.js", "parentesi.js", "tour.js", "infusione-grafo.js", "infusione-grafo-regole.js", "libreria-worker.js", "numeri.js"}
+    allowed = {"calc-qui.js", "campioni.js", "fair.js", "layout.js", "msngrafo-vista.js", "xlsx.js", "draw.js", "parentesi.js", "tour.js", "infusione-grafo.js", "infusione-grafo-regole.js", "libreria-worker.js", "numeri.js"}
     rx = re.compile(r"Math\.(?:max|min)\([^()]*\.\.\.")
     bad = [f.name for f in WEB.glob("*.js") if f.name not in allowed and not f.name.startswith("mappa") and rx.search(f.read_text(encoding="utf-8"))]
     assert bad == []

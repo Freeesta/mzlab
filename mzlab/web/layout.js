@@ -40,7 +40,7 @@ const LAYOUT = (() => {
       if (!fit) {                                                                // narrow window: one under the other, each with its own height
         r.voci.forEach((v, i) => { rett.push({ id: v.id, x: 0, y, w: W, h: v.h }); y += v.h + (i < n - 1 ? gap : 0); });
       } else {
-        const h = maxOf(r.voci.map(v => v.h)), w = larghezze(r.voci.map(v => ({ ...v, min: v.min || minW })), avail);
+        const h = Math.max(...r.voci.map(v => v.h)), w = larghezze(r.voci.map(v => ({ ...v, min: v.min || minW })), avail);
         let x = 0;
         r.voci.forEach((v, i) => { const wi = i === n - 1 ? W - x : Math.floor(w[i]); rett.push({ id: v.id, x, y, w: wi, h }); x += wi + gap; });
         y += h;

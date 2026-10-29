@@ -73,7 +73,7 @@ const CAMPIONI = (() => {
   function timeFrac(t, times) {
     const v = times.filter(x => x != null);
     if (t == null || !v.length) return null;
-    const lo = minOf(v), hi = maxOf(v);
+    const lo = Math.min(...v), hi = Math.max(...v);
     return hi > lo ? (t - lo) / (hi - lo) : 0.5;
   }
 
@@ -153,7 +153,7 @@ const CAMPIONI = (() => {
     // the dark (negative time) is not a point of the gradient
     const tm = (fs || files()).filter(f => f.time != null && f.type === "sample" && kindOf(f) !== "dark");
     if (tm.length < 2) return "";
-    const lo = minOf(tm.map(f => f.time)), hi = maxOf(tm.map(f => f.time));
+    const lo = Math.min(...tm.map(f => f.time)), hi = Math.max(...tm.map(f => f.time));
     if (!(hi > lo)) return "";
     const stops = Array.from({ length: 6 }, (_, i) => `${typeof seqColor === "function" ? seqColor(i / 5) : "#888"} ${i * 20}%`).join(",");
     return `<span class="cmp-grad" role="img" aria-label="${eh(t("meta.grad.aria", { a: fmtTime(lo), b: fmtTime(hi) }))}"><span>${eh(fmtTime(lo))}</span><i style="background:linear-gradient(90deg,${stops})"></i><span>${eh(fmtTime(hi))}</span></span>`;
