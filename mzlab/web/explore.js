@@ -345,27 +345,31 @@ const getMs2Tr = (/** @type {string | number} */ k) => memo(`m2t${k}`, () => J(`
   addEventListener("mzlab-index", (/** @type {any} */ e) => {
     const d = e && e.detail;
     if (!d || !d.name) return;
+    // keyed by the base name: the parts of a multi-part file (x.mzML#full) share the early TIC of their file
+    const base = fileBase(d.name), parts = E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === base);
     if (d.early_tic) {
-      (E.earlyTic || (E.earlyTic = new Map())).set(d.name, d.early_tic);
-      const f = E.files.find((/** @type {FileAperto} */ x) => x.file === d.name || fileBase(x.file) === fileBase(d.name));
-      if (f) {
-        f._provisional = true;
+      (E.earlyTic || (E.earlyTic = new Map())).set(base, d.early_tic);
+      if (parts.length) {
+        parts.forEach((/** @type {FileAperto} */ f) => { f._provisional = true; });
         redrawAll();
       }
     } else if (d.phase === "open" || d.frac >= 1) {
-      if (E.earlyTic) E.earlyTic.delete(d.name);
-      const f = E.files.find((/** @type {FileAperto} */ x) => x.file === d.name || fileBase(x.file) === fileBase(d.name));
-      if (f && f._provisional) {
-        delete f._provisional;
+      if (E.earlyTic) E.earlyTic.delete(base);
+      const shown = parts.filter((/** @type {FileAperto} */ f) => f._provisional);
+      if (shown.length) {
+        shown.forEach((/** @type {FileAperto} */ f) => { delete f._provisional; });
         redrawAll();
       }
     }
   });
 })();
+// the provisional TIC is the MS1 one: only a level 1 TIC of the whole file may show it
+const earlyTicFor = (/** @type {string | null} */ name, /** @type {number} */ lv, /** @type {Map<string, any> | undefined} */ local, /** @type {((n: string) => any) | undefined} */ lr) =>
+  lv === 1 && name ? (local && local.get(fileBase(name))) || (lr && lr(fileBase(name))) : null;
 /** @param {string | number} k @param {string} kind @param {number} lv @param {number | string} [mz0] @param {number | string} [mz1] @param {unknown} [prec] @param {string} [filt] */ const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
   const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`;
   const f = E.files[k], name = f ? f.file : null;
-  const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? ((E.earlyTic && E.earlyTic.get(name)) || (/** @type {any} */ (window).MZLAB_LR?.earlyTic?.(name))) : null;
+  const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? earlyTicFor(name, lv, E.earlyTic, (/** @type {any} */ (window).MZLAB_LR)?.earlyTic) : null;
   const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt);
   if (early && !CACHE.has(key)) {
     CHROM1.once(key, () => J(url).then(res => {
@@ -423,6 +427,18 @@ async function methodWarn() {
 }
 async function bootSession() { await bootSession0(); methodWarn(); window.TOUR && TOUR.offri(); }
 const PEND = new WeakMap();      // object -> { key: { k: placeholder index, name: file name } }
+/** A file index follows its file name; a file not back yet (list reopened file by file) keeps its name in PEND and is found at a later step.
+ *  @param {any} o @param {string} key @param {any} none value while the file is missing @param {string[]} oldNames @param {{file: string}[]} files */
+function remapFileIndex(o, key, none, oldNames, files) {
+  const v = o[key], pend = (PEND.get(o) || {})[key];
+  // the placeholder written at an earlier step (even "") is still in place: the file may be back now
+  const pending = !!pend && String(pend.k) === String(v);
+  if (!pending && (v == null || v === "" || isNaN(+v))) return;
+  const name = pending ? pend.name : oldNames[+v], i = files.findIndex(f => f.file === name);
+  const out = i >= 0 ? (typeof v === "string" ? String(i) : i) : none;
+  if (i >= 0) { if (pend) delete PEND.get(o)[key]; } else if (name != null) PEND.set(o, { ...(PEND.get(o) || {}), [key]: { k: out, name } });
+  o[key] = out;
+}
 async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
@@ -461,13 +477,7 @@ async function bootSession0() {
   paintFiles();
   if (window.HR) HR.notice(E.files);
   // a file index follows its file name; a file not back yet (list reopened file by file) keeps its name in PEND and is found at a later step
-  const remap = (/** @type {any} */ o, /** @type {string} */ key, /** @type {any} */ none) => {
-    const v = o[key]; if (v == null || v === "" || isNaN(+v)) return;
-    const pend = (PEND.get(o) || {})[key], name = pend && String(pend.k) === String(v) ? pend.name : oldNames[+v], i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === name);
-    const out = i >= 0 ? (typeof v === "string" ? String(i) : i) : none;
-    if (i >= 0) { if (pend) delete PEND.get(o)[key]; } else if (name != null) PEND.set(o, { ...(PEND.get(o) || {}), [key]: { k: out, name } });
-    o[key] = out;
-  };
+  const remap = (/** @type {any} */ o, /** @type {string} */ key, /** @type {any} */ none) => remapFileIndex(o, key, none, oldNames, E.files);
   if (E.panels.length && oldNames.length) {                // later load: the panels stay
     E.panels.forEach((/** @type {Bag} */ p) => { remap(p, "k", 0); remap(p, "ref", 0); remap(p, "bk", ""); if (p.bg !== "w" && p.bg !== "x") remap(p, "bg", ""); });
     remap(E, "cur", 0);
