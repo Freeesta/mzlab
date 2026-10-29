@@ -52,7 +52,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | Controllo del piano (`flow check`) | sì (Rust `check.rs`) | sì ma in JS (`flow/lazy/flow-check.js:2`) | `test_flow_grafico.py` (casi JS↔Rust) | da fare: viola «Tutto in Rust»; va nel motore come `flow_line` | M | 2 |
 | Liste dell'utente (`flow/liste`, `liste/1`) | sì (app) | no: campo di testo (`flow-live.md`, «Liste dell'utente») | `e2e_flow_liste.py` (rotta finta) | da fare: `mzlab_feat::liste::route` non è nel `.wasm` | S | 2 |
 | Riuso prima di Run (`flow/reuse`) | sì (app) | equivalente diverso (chiavi in OPFS) | no | scelta (due cache) | — | 3 |
-| Comando copiabile (`api/flow/command`) | CLI sì; app non verificato (`lr_flow_command` assente dall'rpc) | sì | `flow_command_tests.rs` (solo nativo) | da fare (verifica) | S | 3 |
+| Comando copiabile (`api/flow/command`) | sì (CLI e app: `lr_flow_command` in `rpc_lr.rs`) | sì | sì: `parita_flow_command.rs` (piani validi e con errore: app = core byte per byte, e contro il `.wasm` con `MZLAB_WASM_PKG`) | — | — | — |
 | **Motore della pagina nell'app** | | | | | | |
 | Grafo MSn dalla vista Dati (`api/msn_grafo`, op `msngrafo`) | sì (`rpc_msn.rs`; un campione nativo dall'mzML ricavato) | sì | sito↔CLI sì (`test_msngrafo_wasm.py`); app↔CLI sì (`parita_msn.rs`; campione nativo = grafo del suo mzML, ma il campione sintetico non ha MS2) | — | — | — |
 | Indice a centroidi (`lr_index_cen`), copia a centroidi (`mzml2cen`), SRM per mzFinder LR (`natsrm`) | `lr_index_cen`, `mzml2cen`, `natsrm` sì (`rpc_msn.rs`) | sì (`rust-worker.js:316`, `:409`, `:427`) | app↔core sì (`parita_msn.rs`); app↔`.wasm` non eseguito qui (manca `wasm-bindgen`) | confronto diretto col `.wasm` | M | 1 |
@@ -62,7 +62,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | Lettura diretta senza mzML intermedio | sì (8 famiglie) | parziale: motore (3200, Agilent GC/MS, mzML) e Thermo; 6 famiglie via mzML in OPFS | — | da fare (`formati-matrice.md`, punto 6) | L | 2 |
 | `.wiff` → mzML con DAD (`opz.dad`) | sì | no (DAD solo come mappa/spettro) | no | da fare; tetto del modulo da misurare | M | 3 |
 | Conversione a mzML (stesso `mzmlwrite`) | sì (coda, `core − 1` fili) | sì (su richiesta, in sequenza) | parziale: `test_lettori_parita.py` confronta gli SHA-256 dell'mzML indicizzato di `mzlab-cli convert` e del `to_mzml` dei moduli per aperti, agilent, waters, shimadzu, sciex; thermo, bruker, andi senza dataset sintetico pubblico | da fare (test per le 3 famiglie) | S | 1 |
-| mzML con numpress in ingresso | non verificato nell'app (il core lo rifiuta) | sì (modulo `aperti`) | no | da fare (prova) | S | 2 |
+| mzML con numpress in ingresso | sì: il percorso nativo dell'app (`natsamples` + `lr_put` con `nat`) usa il registro dei lettori con `aperti`; il percorso mzML semplice lo rifiuta (`err.file.numpress`) come il motore del sito | sì (modulo `aperti`) | sì: `numpress_mzml.rs` (app nativa = mzML riscritto come fa il sito; entrambi = gemello senza numpress entro la precisione dei codec). Non provato: che la pagina dell'app mandi davvero l'mzML numpress al percorso nativo (`moduloWants`, serve il browser) | da verificare nel browser | S | 2 |
 | `mzlab-cli validate` (mzML: struttura, PSI-MS, indice, SHA-1) | sì | no | — | da fare | M | 3 |
 | `mzlab-cli canali` | sì | sì (`api/canali`) | sì: `test_canali_wasm.py` (byte per byte, `.wasm` contro CLI, su infusione MSn, SRM e SRM + prodotti) | — | — | — |
 | **Risorse** | | | | | | |
@@ -82,8 +82,8 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 
 ## Conti
 - **Passi del Flow** (48 nel registro): 44 eseguibili da `flow run`, 16 con un esecutore nel sito. **28 passi solo app/CLI**: 4 di catena e import, 11 di tabella ed esportazione, 8 di identificazione, 5 di struttura, MSn e quantificazione. Circa metà (colonna «pannello») ha già la funzione Rust nel `.wasm` di un pannello: manca l'esecutore del Flow e la prova. 3 passi non girano da nessuna parte (`features.ms2_link`, `annot.regulatory`, `annot.hazard`); `structure.draw` gira solo nel sito.
-- **Motore della pagina**: 13 operazioni del worker del sito senza ramo nell'app; 5 contano (`msngrafo`, `lr_index_cen`, `mzml2cen`, `natsrm`, `lr_flow_command`), le altre sono del solo `.wasm` (`budget`, `down`, `lr_flow_sched` sostituito da `flow/live/*`, …).
-- **Solo sito**: `structure.draw`, scheda telefono e, nell'app non verificati, i 5 rami sopra e il numpress in ingresso.
+- **Motore della pagina**: 13 operazioni del worker del sito senza ramo nell'app; 5 contano (`msngrafo`, `lr_index_cen`, `mzml2cen`, `natsrm`, `lr_flow_command`; tutte e 5 hanno il ramo nell'app), le altre sono del solo `.wasm` (`budget`, `down`, `lr_flow_sched` sostituito da `flow/live/*`, …).
+- **Solo sito**: `structure.draw`, scheda telefono e, nell'app, il numpress in ingresso dalla pagina (percorso nativo provato, instradamento della pagina non provato).
 - **Impossibili oggi (dichiarati)**: thread dentro un file, più di 4 GiB, download diretto delle librerie, fornitori LLM nel cloud dal sito (scelta), aggiornamento dell'app.
 - **Incoerenza da sistemare**: il descrittore `runs_in.wasm` nomina un modulo per passi che il sito non esegue (es. `table.filter` → `table`): «dove gira» va letto da un solo registro.
 
