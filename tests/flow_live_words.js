@@ -1,0 +1,33 @@
+// The words of a card in Flow live (flow/lazy/flow-live-view.js without the DOM): one exact string for every state and for the card «Centroid spectra». Exit code 1 on the first failure.
+const fs = require("fs"), vm = require("vm"), path = require("path"), assert = require("assert");
+const ctx = vm.createContext({ document: { dispatchEvent() {} }, CustomEvent: function () {} });
+ctx.FLOW = { message: p => `msg(${p.key})` };
+ctx.globalThis = ctx;
+vm.runInContext(fs.readFileSync(path.resolve(__dirname, "../flow/lazy/flow-live-view.js"), "utf8"), ctx);
+const V = ctx.FLOW.liveView, w = e => V.look(e).word;
+assert.strictEqual(w({ state: "waiting" }), "waiting");
+assert.strictEqual(w({ state: "running", frac: 0.42, di: 6, parte: 3 }), "3 of 6 files · 42 %");
+assert.strictEqual(w({ state: "running" }), "working");
+assert.strictEqual(w({ state: "done", ms: 12000 }), "done in 12 s");
+assert.strictEqual(w({ state: "reused" }), "Up to date (nothing changed)");
+assert.strictEqual(w({ state: "stale" }), "Settings changed: runs again on Run");
+assert.strictEqual(w({ state: "blocked", blocked_by: "platform.computer" }), "This step needs the desktop app (profile mzML). Use the app, or open the vendor file.");
+assert.strictEqual(w({ state: "blocked", blocked_by: "permission.memory" }), "Large files: allow more memory with Run now");
+assert.strictEqual(w({ state: "blocked" }), "Fix the plan first (see Issues)");
+assert.strictEqual(w({ state: "error", error: { error_key: "err.x", params: {} } }), "msg(err.x)");
+assert.strictEqual(w({ state: "error" }), "This step stopped with an error");
+assert.strictEqual(w({ state: "refused" }), "This step was refused");
+assert.strictEqual(w({ state: "skipped" }), "skipped");
+assert.strictEqual(w({ state: "paused" }), "paused");
+assert.strictEqual(w({ state: "cancelled" }), "cancelled");
+// the card «Centroid spectra»: (files, files with a known mode, profile files with a centroid index, files that were centroid)
+const c = V.centroidWords;
+assert.strictEqual(c(7, 7, 0, 7), "7 files ready (already centroided)");
+assert.strictEqual(c(7, 7, 7, 0), "7 files ready (centroided earlier)");
+assert.strictEqual(c(7, 0, 0, 0), "Reading 7 files…");
+assert.strictEqual(c(1, 1, 0, 1), "1 file ready (already centroided)");
+assert.strictEqual(c(3, 3, 1, 1), "2 of 3 files ready (1 centroided earlier, 1 already centroided)");
+assert.strictEqual(c(3, 3, 1, 2), "3 files ready (1 centroided earlier, 2 already centroided)");
+assert.strictEqual(c(3, 3, 0, 0), "0 of 3 files ready");
+assert.strictEqual(c(0, 0, 0, 0), "");
+console.log("ok");

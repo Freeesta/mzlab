@@ -26,18 +26,28 @@
   /** the reason of an error or a refusal, in the words of the page @param {any} e */
   const why = e => (e && e.error && e.error.error_key ? F.message({ key: e.error.error_key, params: e.error.params || {} }) : "");
 
-  /** the mark, the words and the look (ok, run, warn, bad, idle) of one node or job event @param {any} e @returns {{state: string, icon: string, word: string, tone: string, frac: number | null}} */
+  /** the words of the card «Centroid spectra» once its files are known: «7 files ready (already centroided)», «2 of 3 files ready (1 centroided earlier, 1 already centroided)»; «Reading 7 files…» while Data has not classed them @param {number} n files @param {number} known files whose mode is known @param {number} done profile files with a centroid index @param {number} already files that were centroid */
+  const centroidWords = (n, known, done, already) => {
+    const files = (/** @type {number} */ k) => `${k} file${k === 1 ? "" : "s"}`;
+    if (!n) return "";
+    if (!known) return `Reading ${files(n)}…`;
+    const ready = done + already, what = !done ? "already centroided" : !already ? "centroided earlier" : `${done} centroided earlier, ${already} already centroided`;
+    if (!ready) return `0 of ${files(n)} ready`;
+    return `${ready === n ? files(n) : `${ready} of ${files(n)}`} ready (${what})`;
+  };
+
+  /** the mark, the words and the look (ok, run, warn, bad, idle) of one node or job event; `title` is the full text for the tooltip @param {any} e @returns {{state: string, icon: string, word: string, title: string, tone: string, frac: number | null}} */
   const look = e => {
     const st = e.state, frac = typeof e.frac === "number" ? e.frac : null, many = (e.di || 0) > 1, files = many ? `${e.parte || 0} of ${e.di} files` : "";
-    const mk = (/** @type {string} */ icon, /** @type {string} */ word, /** @type {string} */ tone) => ({ state: st, icon, word, tone, frac });
+    const mk = (/** @type {string} */ icon, /** @type {string} */ word, /** @type {string} */ tone) => ({ state: st, icon, word, title: word, tone, frac });
     switch (st) {
       case "running": return mk("run", frac === null ? files || "working" : [files, percent(frac) + " %"].filter(Boolean).join(" · "), "run");
       case "done": return mk("ok", e.ms ? "done in " + seconds(e.ms) : "done", "ok");
-      case "reused": return mk("again", "reused", "ok");
-      case "stale": return mk("stale", "out of date", "warn");
-      case "error": return mk("bad", why(e) ? "error: " + why(e) : "error", "bad");
-      case "refused": return mk("bad", why(e) ? "refused: " + why(e) : "refused", "bad");
-      case "blocked": return mk("lock", e.blocked_by === "permission.memory" ? "needs your OK for memory" : e.blocked_by === "platform.computer" ? "needs a computer" : "fix the plan first", "warn");
+      case "reused": return mk("again", "Up to date (nothing changed)", "ok");
+      case "stale": return mk("stale", "Settings changed: runs again on Run", "warn");
+      case "error": return mk("bad", why(e) || "This step stopped with an error", "bad");
+      case "refused": return mk("bad", why(e) || "This step was refused", "bad");
+      case "blocked": return mk("lock", e.blocked_by === "permission.memory" ? "Large files: allow more memory with Run now" : e.blocked_by === "platform.computer" ? "This step needs the desktop app (profile mzML). Use the app, or open the vendor file." : "Fix the plan first (see Issues)", "warn");
       case "skipped": return mk("skip", "skipped", "idle");
       case "paused": return mk("pause", "paused", "idle");
       case "cancelled": return mk("skip", "cancelled", "idle");
@@ -63,6 +73,7 @@
   F.liveView = {
     TERMINAL,
     look,
+    centroidWords,
     seconds,
     /** the events of a read, in order @param {any[]} list */
     ingest(list) {
