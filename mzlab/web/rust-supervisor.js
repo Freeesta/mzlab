@@ -1,14 +1,22 @@
 // @ts-strict
 // Helpers of the supervisor of the Rust engine (rust-bridge.js).
 
-// The .wasm of the engine compiled once: `compileOnce(url)()` gives the same promise of a WebAssembly.Module every time (null when it cannot be compiled here:
-// the worker then compiles it by itself).
+// The .wasm of the engine compiled once per page: `compileOnce(url)()` gives the same promise of a WebAssembly.Module every time, from every caller that asks for the same `url.href`
+// (null when it cannot be compiled here: the worker then compiles it by itself). A failure drops the entry, so the next call tries again.
+const compiled = /** @type {Map<string, Promise<WebAssembly.Module | null>>} */ (new Map());
 export function compileOnce(/** @type {URL} */ url) {
-  /** @type {Promise<WebAssembly.Module | null> | null} */ let compiled = null;
-  return () => compiled || (compiled = (async () => {
-    try { return await WebAssembly.compileStreaming(fetch(url)); }
-    catch (_) { try { return await WebAssembly.compile(await (await fetch(url)).arrayBuffer()); } catch (e) { compiled = null; return null; } }
-  })());
+  const key = url.href;
+  return () => {
+    let p = compiled.get(key);
+    if (!p) {
+      p = (async () => {
+        try { return await WebAssembly.compileStreaming(fetch(url)); }
+        catch (_) { try { return await WebAssembly.compile(await (await fetch(url)).arrayBuffer()); } catch (e) { if (compiled.get(key) === p) compiled.delete(key); return null; } }
+      })();
+      compiled.set(key, p);
+    }
+    return p;
+  };
 }
 
 // A death with the signature of a lack of memory: a trap or `rust_oom` after the memory had grown past 64 MB (`peak` = the largest memory the worker reported):
