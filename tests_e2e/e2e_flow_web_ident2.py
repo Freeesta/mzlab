@@ -158,6 +158,7 @@ try:
         def first():
             r = pg.evaluate(RUN, [WEB, SAMPLES, LIB, F1]); check(r, IDS, "done")
             kept = pg.evaluate(KEPT)
+            if os.environ.get("DUMP"): Path(os.environ["DUMP"]).write_text(kept.get("ms2.mgf", "")); Path(os.environ["DUMP"] + ".nat").write_bytes(NAT["ms2.mgf"])
             for name in OUTS:
                 assert name in kept, (name, list(kept))
                 web, nat = kept[name].encode(), NAT[name]
