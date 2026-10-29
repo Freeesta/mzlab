@@ -15,7 +15,7 @@ r = Run(port=8899, wd="/tmp/wd_margini")
 def sizes(pg):
     return pg.evaluate("(()=>{const o={dpr:devicePixelRatio};for(const k of['sp','xc']){const c=" + M + "._mz[k];o[k]={w:c.width,h:c.height,cw:c.clientWidth,ch:c.clientHeight}}return o})()")
 def settle(pg):
-    ready(pg); frames(pg, 3); pg.wait_for_timeout(700)               # the FLIP animation lasts well under that
+    ready(pg); frames(pg, 3); attendi(pg, "document.getAnimations().length === 0"); frames(pg, 2)               # the FLIP animation of the panel is over
 def check(pg, label):
     s = sizes(pg); d = s["dpr"]
     for k in ("sp", "xc"):
