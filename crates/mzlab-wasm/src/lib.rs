@@ -10,7 +10,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::routes::{Query, Routes};
 use mzlab_core::{analysis, budget::MemBudget, mzidx, mzml, peakq, peaks};
 use std::collections::HashMap;
-use std::io::{BufReader, Read, Seek, SeekFrom, Write};
+use std::io::Write;
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
@@ -21,88 +21,13 @@ mod zip;
 mod nativi;
 mod corriere;
 mod nativi_motore;
+mod blocchi;
+pub(crate) use blocchi::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
 pub fn version() -> String {
     mzlab_core::version().to_string()
-}
-
-/// Reads a file in blocks asked to JS: `read(offset, length) -> Uint8Array` (a slice of the Blob read synchronously in the worker).
-/// It also seeks (the `.raw` reader jumps from packet to packet): the last block stays in memory, so scans that follow each
-/// other cost one JS call per block, never one per read.
-struct BlockReader {
-    read: Function,
-    pos: u64,
-    size: u64,
-    block: Vec<u8>,
-    block_start: u64,
-}
-
-impl BlockReader {
-    fn new(read: Function, size: u64) -> Self {
-        BlockReader {
-            read,
-            pos: 0,
-            size,
-            block: Vec::new(),
-            block_start: 0,
-        }
-    }
-
-    fn fill(&mut self) -> std::io::Result<()> {
-        let want = (BLOCK as u64).min(self.size - self.pos);
-        let block = self
-            .read
-            .call2(
-                &JsValue::NULL,
-                &(self.pos as f64).into(),
-                &(want as f64).into(),
-            )
-            .map_err(|_| std::io::Error::other("block read failed"))?;
-        let block: Uint8Array = block
-            .dyn_into()
-            .map_err(|_| std::io::Error::other("block is not a Uint8Array"))?;
-        self.block.clear();
-        self.block.resize(block.length() as usize, 0);
-        block.copy_to(&mut self.block);
-        self.block_start = self.pos;
-        Ok(())
-    }
-}
-
-const BLOCK: usize = 4 << 20; // 4 MiB: ~2.5x faster OPFS reads than 1 MiB in Chromium (docs/studi/wasm-potenza.md 3e); JS buffers grow to it
-
-impl Read for BlockReader {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if buf.is_empty() || self.pos >= self.size {
-            return Ok(0);
-        }
-        let end = self.block_start + self.block.len() as u64;
-        if self.pos < self.block_start || self.pos >= end {
-            self.fill()?;
-            if self.block.is_empty() {
-                return Ok(0);
-            }
-        }
-        let off = (self.pos - self.block_start) as usize;
-        let n = buf.len().min(self.block.len() - off);
-        buf[..n].copy_from_slice(&self.block[off..off + n]);
-        self.pos += n as u64;
-        Ok(n)
-    }
-}
-
-impl Seek for BlockReader {
-    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
-        let p = match to {
-            SeekFrom::Start(p) => Some(p),
-            SeekFrom::End(d) => self.size.checked_add_signed(d),
-            SeekFrom::Current(d) => self.pos.checked_add_signed(d),
-        };
-        self.pos = p.ok_or_else(|| std::io::Error::other("seek before the start"))?;
-        Ok(self.pos)
-    }
 }
 
 /// Sends what is written to JS in blocks: `sink(Uint8Array)`; the page keeps the pieces as Blob parts (outside the WASM memory).
@@ -138,17 +63,22 @@ impl Write for BlockWriter {
     }
 }
 
+/// The error as the JSON text the page parses; strings go through `json::Out::str`, so control characters are valid `\u0001`.
+fn error_text(e: &mzlab_core::Error) -> String {
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
+    for (i, (k, v)) in e.params.iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.str(k).raw(":").str(v);
+    }
+    o.raw("}}");
+    o.0
+}
+
 pub(crate) fn error_json(e: &mzlab_core::Error) -> JsValue {
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|(k, v)| format!("\"{}\":{:?}", k, v))
-        .collect();
-    JsValue::from_str(&format!(
-        "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
-        e.key,
-        params.join(",")
-    ))
+    JsValue::from_str(&error_text(e))
 }
 
 fn r1(v: f64) -> f64 {
@@ -211,8 +141,7 @@ impl Engine {
     /// `{"spectra": n, "levels": {"1": [scans, profile scans], ...}, "unit": bool, "chromatograms": m}`.
     pub fn open(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
         self.runs.remove(&slot);
-        let reader = BufReader::with_capacity(1 << 20, BlockReader::new(read, size as u64));
-        let mut run = mzml::read(reader).map_err(|e| error_json(&e))?;
+        let mut run = mzml::read(js_blocks(read, size as u64)).map_err(|e| error_json(&e))?;
         self.fits_work(&run)?;
         // No `Engine::runs` route reads the 64-bit intensities (tic/xic/spectra use the f32 `intensity`): drop them.
         for s in &mut run.spectra {
@@ -588,7 +517,7 @@ pub fn build_mzidx(
     let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
     let st = mzidx::build_mzml_corriere(
         &table,
-        BlockReader::new(read, size as u64),
+        js_blocks(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
@@ -713,6 +642,13 @@ fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn error_text_is_valid_json_for_control_characters() {
+        let e = mzlab_core::Error::new("error.x").with("name", "a\u{1}b\"c\\d\u{200b}");
+        let v = mzlab_core::json::parse(super::error_text(&e).as_bytes()).expect("valid JSON");
+        assert_eq!(v.get("params").and_then(|p| p.get("name")).and_then(|n| n.str()), Some("a\u{1}b\"c\\d\u{200b}"));
+    }
+
     #[test]
     fn version_matches_core() {
         assert_eq!(super::version(), mzlab_core::version());
