@@ -21,7 +21,7 @@ try:
         def quick_reload(mark):
             # the change and the reload come within ~50 ms: far inside the debounce
             pg.evaluate("m => { NB.flushMark = m; nbSave(); }", mark)
-            pg.wait_for_timeout(50)
+            hold(pg, 50)
             pg.reload(); pg.wait_for_function("typeof nbEnsure === 'function'", timeout=90000)
             pg.evaluate("nbEnsure()")
             return pg.evaluate("NB.flushMark")
@@ -36,7 +36,7 @@ try:
         def ui_change():
             pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 1", timeout=90000); ready(pg)
             pg.evaluate("() => { NB.flushMark = 'ui'; uiSave(); }")
-            pg.wait_for_timeout(50)
+            hold(pg, 50)
             pg.reload(); pg.wait_for_function("typeof E !== 'undefined' && E.files.length === 1", timeout=90000)
             assert pg.evaluate("NB.flushMark") == "ui", "the debounced uiSave was lost"
         step("a change queued in uiSave (800 ms) survives an immediate reload", ui_change)
