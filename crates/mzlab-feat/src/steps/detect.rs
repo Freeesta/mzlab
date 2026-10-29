@@ -76,6 +76,27 @@ pub(super) fn detect() -> Step {
             .estimate()
             .doc("Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty")
             .advanced(),
+        Param::integer("min_points", "Minimum points")
+            .min(2.0)
+            .default_num(5.0)
+            .advanced(),
+        Param::integer("max_gap", "Maximum gap")
+            .min(0.0)
+            .default_num(2.0)
+            .unit("scans")
+            .advanced(),
+        Param::integer("long_trace", "Long trace")
+            .min(1.0)
+            .default_num(400.0)
+            .unit("scans")
+            .doc("A trace longer than this is background and is not taken")
+            .advanced(),
+        Param::number("merge_overlap", "Merge overlap")
+            .min(0.0)
+            .max(1.0)
+            .default_num(0.0)
+            .doc("Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges")
+            .advanced(),
         Param::integer("budget", "Working memory")
             .min(1.0)
             .default_num(96_000_000.0)
@@ -157,29 +178,7 @@ fn masstrace() -> Algorithm {
             spectrum_mode: vec!["centroid", "profile"],
             ..Applicability::default()
         },
-        params: vec![
-            Param::integer("min_points", "Minimum points")
-                .min(2.0)
-                .default_num(5.0)
-                .advanced(),
-            Param::integer("max_gap", "Maximum gap")
-                .min(0.0)
-                .default_num(2.0)
-                .unit("scans")
-                .advanced(),
-            Param::integer("long_trace", "Long trace")
-                .min(1.0)
-                .default_num(400.0)
-                .unit("scans")
-                .doc("A trace longer than this is background and is not taken")
-                .advanced(),
-            Param::number("merge_overlap", "Merge overlap")
-                .min(0.0)
-                .max(1.0)
-                .default_num(0.0)
-                .doc("Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges")
-                .advanced(),
-        ],
+        params: Vec::new(),
         status: Status::Available,
     }
 }

@@ -560,11 +560,11 @@
                   "axis",
                   "rt_range",
                   "mass_defect",
-                  "budget",
                   "min_points",
                   "max_gap",
                   "long_trace",
                   "merge_overlap",
+                  "budget",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -596,7 +596,6 @@
                     "type":"number",
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
                   },
-                  {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
                   {"type":"integer","minimum":0,"default":2,"description":"Maximum gap"},
                   {
@@ -612,6 +611,7 @@
                     "default":0,
                     "description":"Two rows of the two grids within the mass tolerance are one ion when their scans overlap by this share of the shorter trace; 0 keeps only the test of apex and edges"
                   },
+                  {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
                   {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
                   {
                     "type":"array",

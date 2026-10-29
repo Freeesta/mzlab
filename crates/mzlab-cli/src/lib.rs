@@ -31,6 +31,8 @@ mod flow_chimeric;
 #[cfg(test)]
 mod flow_chimeric_tests;
 mod flow_compare;
+#[cfg(test)]
+mod flow_detect_algorithm_tests;
 mod flow_digl;
 mod flow_drift;
 #[cfg(test)]

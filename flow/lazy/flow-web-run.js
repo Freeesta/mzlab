@@ -88,7 +88,8 @@
     const layers = [];
     for (const inst of plan.steps) {
       const id = base(inst);
-      if (LAYERED.includes(id)) layers.push({ step: id, params: inst.params || {} });
+      // the algorithm of the detection is a parameter of its layer (as `flow run` writes it): without it the pool computes the default one
+      if (LAYERED.includes(id)) layers.push({ step: id, params: id === "features.detect" && inst.algorithm ? { algorithm: inst.algorithm, ...inst.params } : inst.params || {} });
       if (inst === upto) break;
     }
     return JSON.stringify({ fill: plan.steps.some((/** @type {any} */ i) => base(i) === "features.gapfill"), layers });
