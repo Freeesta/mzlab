@@ -75,7 +75,7 @@ window.RAPPORTO_FLOW = (() => {
 
   /** @param {Corsa} c */
   function timing(c) {
-    // No numeri.js here (this file is loaded alone, lazily): a plain loop, not Math.max(...spread).
+    // No numeri.js here (this file is loaded alone, lazily): a plain loop, no spread into Math.max.
     let max = 1; for (const s of c.steps) if (s.ms > max) max = s.ms;
     const row = 22, left = 150, w = 520;
     const bars = c.steps.map((s, i) => {
