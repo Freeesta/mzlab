@@ -86,13 +86,23 @@ try:
         check("csv export", txt.splitlines()[0].startswith("file") or "file" in txt.splitlines()[0], txt[:120]); check("csv rows", len(txt.strip().splitlines()) == N + 1, len(txt.splitlines()))
         # warnings of valida: a status line for the active cell, a mark on the cell
         pg.keyboard.press("Escape")
-        attendi(pg, "/errors, .* warnings/.test(document.querySelector('.flx-imp [role=status]').textContent) || /errors/.test(document.querySelector('.flx-imp').textContent)")
+        attendi(pg, "/guessed from file names|No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
         check("status roles", pg.locator(".flx-imp [role=status]").count() >= 2)
         check("colours from variables", "var(--" in pg.evaluate("[...document.styleSheets].flatMap(s => { try { return [...s.cssRules].map(r => r.cssText); } catch (e) { return []; } }).filter(t => t.includes('.mg-err')).join(' ')"))
         if AXE:
             pg.add_script_tag(path=AXE)
             v = pg.evaluate("axe.run('.flx-imp', {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.nodes.length, v.nodes.slice(0,2).map(n => n.target.join(' '))]))")
             check("axe", not v, v)
+        # times read from file names: said in plain words, one click confirms them all and the check runs again
+        pg.evaluate("names => { E.files.length = 0; for (const n of names) E.files.push({file: n + '.mzML', name: n}); }", ["X_T00", "X_T01", "X_T02", "X_T05", "X_T2p5", "X_T10", "X_T24"])
+        pg.click(".flx-imp button[aria-label='Take the roles, times and data of the files open in Data']")
+        attendi(pg, "/\\d+ times? guessed from file names: check/.test(document.querySelector('.flx-imp').textContent)")
+        says = pg.inner_text(".flx-imp [role=status]"); check("plain summary", "errors" not in says and "warnings" not in says, says)
+        btn = ".flx-imp button[aria-label='Mark every time guessed from the file names as confirmed']"
+        check("confirm visible", pg.is_visible(btn)); pg.screenshot(path=str(HERE / "shots" / "flow_meta_grid_guessed.png")) if (HERE / "shots").is_dir() else None
+        pg.click(btn)
+        attendi(pg, "!/guessed from file names/.test(document.querySelector('.flx-imp').textContent) && /No problems|other problem|warning/.test(document.querySelector('.flx-imp').textContent)")
+        check("confirm gone", not pg.is_visible(btn))
         check("no page errors", not errs, errs[:3])
         b.close()
 finally:
