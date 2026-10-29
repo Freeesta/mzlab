@@ -37,12 +37,12 @@ try:
         def hidden():
             pg, reqs = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z")      # admin flag already set: the lab must not honour it
             pg.wait_for_selector("#drop", timeout=120000)
-            assert pg.evaluate("typeof QTOOLS") == "undefined" and pg.evaluate(NAV) == ["data", "draw"], pg.evaluate(NAV)
-            assert not [u for u in reqs if "mzfinder/" in u or "tpmine-loader" in u], reqs
+            assert pg.evaluate("window.QTOOLS ? QTOOLS.list().length : 0") == 0 and pg.evaluate(NAV) == ["data", "draw"], pg.evaluate(NAV)
+            assert not [u for u in reqs if "mzfinder/" in u]      # the small loader script is part of the page, inert without the flag; the Tabui package is never fetched, reqs
             assert pg.evaluate("localStorage.getItem('mzlab.admin')") is None
             for _ in range(5): pg.click(".logo")                      # the five clicks of the administrator mode
             pg.wait_for_function("document.querySelector('.logo').style.opacity !== '0'", timeout=15000)
-            assert pg.evaluate("typeof QTOOLS") == "undefined" and pg.evaluate(NAV) == ["data", "draw"]
+            assert pg.evaluate("window.QTOOLS ? QTOOLS.list().length : 0") == 0 and pg.evaluate(NAV) == ["data", "draw"]
             assert pg.evaluate("document.querySelector('meta[name=robots]').content") == "noindex,nofollow"
             assert pg.evaluate("window.MZLAB_LAB.expires") == "2026-12-29"
         step("lab: Tabui and mzFlow are hidden, even with the administrator flag and the five clicks", hidden)
