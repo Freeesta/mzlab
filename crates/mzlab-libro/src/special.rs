@@ -175,6 +175,9 @@ impl Parser<'_> {
         if !src.chars().all(|c| is_w(c) || matches!(c, '.' | '/' | '-')) {
             return self.err(at, format!("unsupported figure path {src:?}"));
         }
+        if self.fig.contains_key(&fid) {
+            return self.err(at, format!("duplicate figure id {fid}"));
+        }
         let num = format!("{}.{}", self.prefix, self.fig.len() + 1);
         self.fig.insert(fid.clone(), num.clone());
         let mut c = self.inl(cap.as_deref().unwrap_or(""), at)?;

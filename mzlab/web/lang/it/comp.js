@@ -1,6 +1,7 @@
 I18N.add("it", {
-  "comp.preset.organic": "C H N O (organiche)",
-  "comp.preset.halogens": "C H N O S P + alogeni",
+  "comp.preset.organic": "CHNO (organiche)",
+  "comp.preset.chnosp": "CHNOSP",
+  "comp.preset.halogens": "CHNOSP + alogeni",
   "comp.ion.plus": "ione così com'è (+)",
   "comp.ion.minus": "ione così com'è (−)",
   "comp.ion.radical": "M⁺• (radicale catione)",

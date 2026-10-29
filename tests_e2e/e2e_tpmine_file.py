@@ -90,7 +90,7 @@ try:
 
         def tip():
             assert pg.is_visible("#tp-cond"), "the conditions section is not shown"
-            pg.locator("#tp-files .tp-fn").last.hover()
+            pg.locator("#tp-files tr:not([hidden]) .tp-fn").last.hover()   # the list shows MAXV rows, the others wait behind «show more»
             pg.wait_for_selector("#tph-pop:not([hidden])", timeout=5000)
             r = pg.evaluate("""(() => { const a = document.getElementById('tph-pop').getBoundingClientRect(), b = document.querySelector('#tp-cond summary').getBoundingClientRect();
               return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top; })()""")

@@ -35,12 +35,16 @@ fn convert_mzml() -> Step {
         Param::integer("zlib_level", "Compression level")
             .min(0.0)
             .max(9.0)
-            .default_num(1.0)
+            .default_num(2.0)
             .doc("zlib level of the binary arrays, 0 (none) to 9 (smallest)")
             .advanced(),
         Param::boolean("numpress", "MS-Numpress")
             .default_bool(false)
             .doc("Lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files")
+            .advanced(),
+        Param::boolean("dad", "Optical detector")
+            .default_bool(false)
+            .doc("Also write the UV / PDA matrix of the sample as MS:1000804 spectra (one per instant, wavelengths in nm) after the scans; off: the file is the one written without the option")
             .advanced(),
     ];
     Step {
@@ -114,6 +118,10 @@ mod tests {
         assert_eq!(
             conv.param("numpress").unwrap().default,
             Some(crate::json::Value::Bool(o.numpress))
+        );
+        assert_eq!(
+            conv.param("dad").unwrap().default,
+            Some(crate::json::Value::Bool(o.dad))
         );
         let idx = find("index.mzidx");
         assert_eq!(

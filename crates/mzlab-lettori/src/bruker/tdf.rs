@@ -4,6 +4,7 @@ use super::blocco::{decodifica, leggi_blocco, Picchi};
 use super::spettri::{costruisci, somma, Desc};
 use super::sqlite_min::Sqlite;
 use super::tabelle::Dati;
+use super::tdf_aiuti::{cartella, indice_cattivo, somma_scan};
 use super::testata::Testata;
 use super::tsf;
 use mzlab_core::error::{Error, Result};
@@ -60,7 +61,7 @@ impl LettoreBruker {
             .unwrap_or(2);
         let campioni = vec![Campione {
             id: 0,
-            nome: db_m.nome.rsplit_once('/').map_or("", |x| x.0).to_string(),
+            nome: cartella(&db_m.nome).unwrap_or("").to_string(),
             scansioni: desc.len(),
             dimensione: None,
         }];
@@ -192,7 +193,7 @@ impl LettoreBruker {
             precursor: d.mz_prec,
             mz,
             intensity: y.iter().map(|&x| x as f32).collect(),
-            wide: largo.then(|| y.clone()),
+            wide: largo.then_some(y),
         })
     }
 
@@ -205,13 +206,22 @@ impl LettoreBruker {
             if self.desc[k].livello != 1 {
                 // a frame that cannot be read leaves a 0: the error comes when the spectrum itself is asked for
                 let d = self.desc[k].clone();
-                if let Ok((_, y, _)) = self.punti(&d) {
-                    self.indice[k].tic = y.iter().sum();
+                if let Some(t) = self.somma_punti(&d) {
+                    self.indice[k].tic = t;
                 }
             }
         }
         self.tic_noto = true;
         Ok(())
+    }
+
+    /// The sum of the intensities of spectrum `d`; for a TDF frame straight from the points of its scan ranges (the counts are whole numbers, so the order of the sum does not matter).
+    fn somma_punti(&mut self, d: &Desc) -> Option<f64> {
+        if self.tsf {
+            return self.punti(d).ok().map(|(_, y, _)| y.iter().sum());
+        }
+        let p = self.picchi(d.frame).ok()?;
+        Some(somma_scan(p, &d.scan))
     }
 
     fn traccia(&mut self, id: &str) -> Result<Chromatogram> {
@@ -225,16 +235,19 @@ impl LettoreBruker {
         let ks: Vec<usize> = (0..self.desc.len())
             .filter(|&k| !ms1 || self.desc[k].livello == 1)
             .collect();
-        self.completa()?;
+        // the TIC of a survey scan is in `Frames`: only a run without survey scans needs the points
+        if tic && !ms1 {
+            self.completa()?;
+        }
         let mut intensity = Vec::with_capacity(ks.len());
         for &k in &ks {
             intensity.push(if tic {
                 self.indice[k].tic
             } else {
-                self.spettro(k)?
-                    .intensity
-                    .iter()
-                    .fold(0.0f64, |m, &x| m.max(f64::from(x)))
+                // the peaks of the spectrum, without the m/z axis the maximum does not need
+                let d = self.desc.get(k).cloned().ok_or_else(|| indice_cattivo(k))?;
+                let (_, y, _) = self.punti(&d)?;
+                y.iter().fold(0.0f64, |m, &x| m.max(f64::from(x as f32)))
             });
         }
         Ok(Chromatogram {
@@ -380,11 +393,7 @@ impl Lettore for LettoreBruker {
         self.uno(c)?;
         let (f, nomi) = self.file();
         let doc = self.testata.documento(f);
-        let cartella = self
-            .nome
-            .rsplit_once('/')
-            .map_or(self.nome.as_str(), |x| x.0)
-            .to_string();
+        let cartella = cartella(&self.nome).unwrap_or(&self.nome).to_string();
         Ok(Some(self.testata.header(&cartella, &nomi, doc)))
     }
 
@@ -463,10 +472,6 @@ fn apri_tsf(fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
 fn prendi(fs: &mut FileSet, suffisso: &str) -> Option<mzlab_core::lettori::Membro> {
     let i = fs.trova(suffisso)?;
     Some(fs.membri.remove(i))
-}
-
-fn indice_cattivo(k: impl std::fmt::Display) -> Error {
-    Error::new("error.badIndex").with("k", k)
 }
 
 pub struct LettoreBruker {

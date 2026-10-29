@@ -137,7 +137,7 @@ impl Ctx {
     }
 
     /// The job `id` as the runner gets it, with what it reads.
-    fn job(&self, id: &JobId, inputs: Ins) -> Job<'_> {
+    pub fn job(&self, id: &JobId, inputs: Ins) -> Job<'_> {
         let k = self.position(&id.instance).unwrap_or(0);
         let item = id
             .item
@@ -271,6 +271,13 @@ impl Ctx {
     /// The jobs of each instance of the plan, in the order of its items.
     pub fn ids(&self) -> &[Vec<JobId>] {
         &self.ids
+    }
+
+    /// The file-name root of the input a `per_item` job is about (`Job::item_root`); none for a job of the whole instance.
+    pub fn item_root(&self, id: &JobId) -> Option<&str> {
+        let name = id.item.as_deref()?;
+        let p = self.plan.inputs.iter().position(|f| f.name == name)?;
+        Some(&self.roots[p])
     }
 }
 

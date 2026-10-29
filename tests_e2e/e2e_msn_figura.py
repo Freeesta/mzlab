@@ -5,7 +5,9 @@ from pathlib import Path
 from lib import *
 
 ROOT = Path(__file__).resolve().parent.parent
-CLI = os.environ.get("MZLAB_CLI") or str(ROOT / "target" / "debug" / "mzlab-cli")
+CLI = os.environ.get("MZLAB_CLI") or str(ROOT / "target" / "debug" / ("mzlab-cli.exe" if os.name == "nt" else "mzlab-cli"))
+if not Path(CLI).exists():          # the nightly run builds no binary beforehand
+    subprocess.run(["cargo", "build", "--locked", "-q", "-p", "mzlab-cli"], cwd=ROOT, check=True)
 AXE = axe_path()
 steps = []
 def step(name, fn):

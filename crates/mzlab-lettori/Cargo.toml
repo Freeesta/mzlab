@@ -20,11 +20,11 @@ tutte = ["aperti", "andi", "thermo", "agilent", "sciex", "waters", "shimadzu", "
 
 [dependencies]
 # no default features: each family module carries only the readers of its own family (`thermo` turns on the Thermo reader of the core)
-mzlab-core = { path = "../mzlab-core", default-features = false, features = ["estesi"] }
+mzlab-core = { path = "../mzlab-core", default-features = false, features = ["estesi", "indice"] }
 
 # the decoders of the peaks of an mzXML (base64 and zlib), versions as in mzlab-core
 base64 = "0.23"
-flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 # the zstd decoder of the Bruker blocks (already in the workspace for the .mzlib format); without the checksum feature: the blocks have none
 ruzstd = { version = "0.9", optional = true, default-features = false, features = ["std"] }

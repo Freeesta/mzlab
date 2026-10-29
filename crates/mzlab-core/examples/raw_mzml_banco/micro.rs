@@ -128,6 +128,7 @@ fn xml() -> Value {
         livello: 0,
         numpress: false,
         thread: 1,
+        dad: false,
     };
     let mut righe = Vec::new();
     for punti in [0usize, 64, 526] {

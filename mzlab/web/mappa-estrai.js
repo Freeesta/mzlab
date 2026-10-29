@@ -1,20 +1,34 @@
 // @ts-strict
+// @ts-noany
 // «How an XIC and a spectrum are extracted» on the RT x m/z map (module, loaded the first time the view is turned on from mappa.js).
 // The student places a box on the map (m/z window x RT window; drag it, drag its edges); beside the map the XIC of the m/z window (sum of the
 // intensities with m/z inside the window, against RT) and the mean spectrum of the RT window are drawn from the SAME box, the integrated zone is
 // coloured, dashed guides link the box to the axes of the two plots, and the numbers are written under the map. Nothing is labelled and nothing is
 // found for the student: the position is always theirs (principle 1). The data are the ones of /api/xic and /api/spectrum.
+/**
+ * @typedef {{ rt0: number, rt1: number, mz0: number, mz1: number }} MapBox  the box of the student: an RT window (min) and an m/z window
+ * @typedef {{ rt: number[], y: number[] }} MapXic  @typedef {{ mz: number[], y: number[] }} MapSpec
+ * @typedef {{ area: number | null, height: number | null, rtMax: number | null, mzMax: number | null, nPts: number }} MapMeasure
+ * @typedef {{ x: number, y: number, box: MapBox }} MapStart  where a drag began
+ * @typedef {{ l?: boolean, r?: boolean, t?: boolean, b?: boolean, move?: boolean }} MapGrab  the edges (or the inside) of the box under the pointer
+ * @typedef {{ key: string, label: string, thr: number, value?: number, from?: string, cmp?: string, unit?: string, note?: string }} MapFilter
+ * @typedef {{ id: string | number, mz: number, rt: number, ppm?: number, rt0?: number, rt1?: number, filters?: MapFilter[] }} MapFeature  a feature found by mzFinder
+ * @typedef {{ box: MapBox, gen: number, t: number, xic: (MapXic & { c: number, tol: number }) | null, spec: (MapSpec & { rt0: number, rt1: number, n: number }) | null, num: MapMeasure | null,
+ *   win: MapBox | null, k?: number, fresh?: boolean }} MapEx  the state of the extraction (st(p).ex)
+ */
+/** @param {string} k @param {Record<string, any>} [o] */
 const T = (k, o) => I18N.t(k, o);
 const MIN_RT = 0.004;                                   // smallest RT window (min)
 // smallest m/z window (Da): a few ppm in high resolution
-const minMz = p => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 1e-4 : 0.05;
+const minMz = (/** @type {PannelloMappa} */ p) => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 1e-4 : 0.05;
+/** @param {PannelloMappa} p @returns {MapEx} */
 const ex = p => MAPPA.st(p).ex;
-const dp = p => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 4 : 2;
-const num = (v, d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
+const dp = (/** @type {PannelloMappa} */ p) => window.HR && HR.isHr(p._a.f, p._a.f.lv || 1) ? 4 : 2;
+const num = (/** @type {number | null | undefined} */ v, /** @type {number} */ d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
 
 // ---------------------------------------------------------------- numbers (pure: tests/test_mappa_estrai.py runs the same rule in numpy through node)
-export function measure(xic, spec, w) {
-  const out = { area: null, height: null, rtMax: null, mzMax: null, nPts: 0 };
+export function measure(/** @type {MapXic | null} */ xic, /** @type {MapSpec | null} */ spec, /** @type {MapBox} */ w) {
+  /** @type {MapMeasure} */ const out = { area: null, height: null, rtMax: null, mzMax: null, nPts: 0 };
   if (xic && xic.rt && xic.rt.length) {
     let i0 = -1, i1 = -1;
     for (let i = 0; i < xic.rt.length; i++) if (xic.rt[i] >= w.rt0 && xic.rt[i] <= w.rt1) { if (i0 < 0) i0 = i; i1 = i; }
@@ -33,20 +47,20 @@ export function measure(xic, spec, w) {
 }
 
 // ---------------------------------------------------------------- the box
-function defaultBox(p) {
+function defaultBox(/** @type {PannelloMappa} */ p) {
   const a = p._a, f = a.f, q = MAPPA.point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 };
   const hr = window.HR && HR.isHr(f, f.lv || 1), half = hr ? HR.tolDa(f, q.mz, f.lv || 1) : 0, win = hr ? [q.mz - half, q.mz + half] : xicWin(q.mz, true);
   const w = Math.max(4 * scanStep(), (a.x1 - a.x0) / 20);
   return { rt0: q.rt - w / 2, rt1: q.rt + w / 2, mz0: win[0], mz1: win[1] };
 }
-function clampBox(p, b) {
-  const a = p._a, MIN_MZ = minMz(p), lim = (lo, hi, min, f0, f1) => { let w = Math.max(hi - lo, min); if (lo < f0) { lo = f0; hi = lo + w; } if (hi > f1) { hi = f1; lo = Math.max(f0, hi - w); } return [lo, hi]; };
+function clampBox(/** @type {PannelloMappa} */ p, /** @type {MapBox} */ b) {
+  const a = p._a, MIN_MZ = minMz(p), lim = (/** @type {number} */ lo, /** @type {number} */ hi, /** @type {number} */ min, /** @type {number} */ f0, /** @type {number} */ f1) => { let w = Math.max(hi - lo, min); if (lo < f0) { lo = f0; hi = lo + w; } if (hi > f1) { hi = f1; lo = Math.max(f0, hi - w); } return [lo, hi]; };
   [b.rt0, b.rt1] = lim(b.rt0, b.rt1, MIN_RT, a.full[0], a.full[1]); [b.mz0, b.mz1] = lim(b.mz0, b.mz1, MIN_MZ, a.fullY[0], a.fullY[1]);
 }
 // pixel rectangle (y0 = top)
-const px = (p, b) => { const a = p._a; return { x0: a.X(b.rt0), x1: a.X(b.rt1), y0: a.Y(b.mz1), y1: a.Y(b.mz0) }; };
+const px = (/** @type {PannelloMappa} */ p, /** @type {MapBox} */ b) => { const a = p._a; return { x0: a.X(b.rt0), x1: a.X(b.rt1), y0: a.Y(b.mz1), y1: a.Y(b.mz0) }; };
 // what is at (x, y): an edge, a corner, the inside, or nothing
-function grab(p, x, y, tol) {
+function grab(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ tol) {
   const b = ex(p).box, r = px(p, b);
   // a thin box is easy to hit: its hit area is at least 18 px
   const hh = Math.max(r.y1 - r.y0, 18), hw = Math.max(r.x1 - r.x0, 18), cy = (r.y0 + r.y1) / 2, cx = (r.x0 + r.x1) / 2;
@@ -56,29 +70,29 @@ function grab(p, x, y, tol) {
   if (L || R || Tp || B) return { l: L, r: R, t: Tp, b: B };
   return { move: true };
 }
-const cursorOf = h => !h ? "" : h.move ? "move" : (h.l && h.t) || (h.r && h.b) ? "nwse-resize" : (h.r && h.t) || (h.l && h.b) ? "nesw-resize" : h.l || h.r ? "ew-resize" : "ns-resize";
-function drag(p, h, start, x, y) {
+const cursorOf = (/** @type {MapGrab | null} */ h) => !h ? "" : h.move ? "move" : (h.l && h.t) || (h.r && h.b) ? "nwse-resize" : (h.r && h.t) || (h.l && h.b) ? "nesw-resize" : h.l || h.r ? "ew-resize" : "ns-resize";
+function drag(/** @type {PannelloMappa} */ p, /** @type {MapGrab} */ h, /** @type {MapStart} */ start, /** @type {number} */ x, /** @type {number} */ y) {
   const a = p._a, s = ex(p), b = s.box, o = start.box, MIN_MZ = minMz(p), dRt = xOf(p, x) - xOf(p, start.x), dMz = a.mzAt(y) - a.mzAt(start.y);
   if (h.move) { b.rt0 = o.rt0 + dRt; b.rt1 = o.rt1 + dRt; b.mz0 = o.mz0 + dMz; b.mz1 = o.mz1 + dMz; }
   else { if (h.l) b.rt0 = Math.min(o.rt0 + dRt, o.rt1 - MIN_RT); if (h.r) b.rt1 = Math.max(o.rt1 + dRt, o.rt0 + MIN_RT); if (h.t) b.mz1 = Math.max(o.mz1 + dMz, o.mz0 + MIN_MZ); if (h.b) b.mz0 = Math.min(o.mz0 + dMz, o.mz1 - MIN_MZ); }
   clampBox(p, b); changed(p);
 }
-export function down(p, e, x, y) {
+export function down(/** @type {PannelloMappa} */ p, /** @type {PointerEvent} */ e, /** @type {number} */ x, /** @type {number} */ y) {
   const s = ex(p); if (!s) return false;
   const h = grab(p, x, y, e.pointerType === "touch" ? 14 : 6); if (!h) return false;
   e.preventDefault(); const start = { x, y, box: { ...s.box } }, r = p.cv.getBoundingClientRect();
-  const mv = ev => drag(p, h, start, ev.clientX - r.left, ev.clientY - r.top);
+  const mv = (/** @type {MouseEvent} */ ev) => drag(p, h, start, ev.clientX - r.left, ev.clientY - r.top);
   const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); };
   addEventListener("mousemove", mv); addEventListener("mouseup", up); return true;
 }
 // a finger on the box moves it; returns the function that follows the finger, or null
-export function touch(p, x, y) {
+export function touch(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y) {
   const s = ex(p); if (!s) return null; const h = grab(p, x, y, 16); if (!h) return null;
-  const start = { x, y, box: { ...s.box } }; return (nx, ny) => drag(p, h, start, nx, ny);
+  const start = { x, y, box: { ...s.box } }; return (/** @type {number} */ nx, /** @type {number} */ ny) => drag(p, h, start, nx, ny);
 }
-export function hover(p, x, y) { const s = ex(p); if (!s) return false; p.cv.style.cursor = cursorOf(grab(p, x, y, 6)); return true; }
+export function hover(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y) { const s = ex(p); if (!s) return false; p.cv.style.cursor = cursorOf(grab(p, x, y, 6)); return true; }
 // arrows move the box by one scan / one bin, Alt + arrows resize it
-export function key(p, e) {
+export function key(/** @type {PannelloMappa} */ p, /** @type {KeyboardEvent} */ e) {
   const s = ex(p), a = p._a; if (!s || !a || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return false;
   const MIN_MZ = minMz(p), b = s.box, dir = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : -1, dt = scanStep(), dm = Math.max(MIN_MZ, (b.mz1 - b.mz0) / 4), horiz = e.key === "ArrowLeft" || e.key === "ArrowRight";
   if (e.altKey) { if (horiz) { b.rt0 -= dir * dt / 2; b.rt1 += dir * dt / 2; } else { b.mz0 -= dir * dm / 2; b.mz1 += dir * dm / 2; } }
@@ -89,8 +103,8 @@ export function key(p, e) {
 }
 
 // ---------------------------------------------------------------- data: the XIC of the m/z window and the mean spectrum of the RT window, from the API
-function changed(p) { const s = ex(p); s.gen++; MAPPA.redraw(p); clearTimeout(s.t); s.t = setTimeout(() => load(p), 90); }
-async function load(p) {
+function changed(/** @type {PannelloMappa} */ p) { const s = ex(p); s.gen++; MAPPA.redraw(p); clearTimeout(s.t); s.t = setTimeout(() => load(p), 90); }
+async function load(/** @type {PannelloMappa} */ p) {
   const s = ex(p); if (!s || !p._a) return; const f = p._a.f, lv = f.lv || 1, b = { ...s.box }, gen = s.gen, c = (b.mz0 + b.mz1) / 2, tol = (b.mz1 - b.mz0) / 2;
   s.k = f.k;
   try {
@@ -110,10 +124,10 @@ async function load(p) {
   } catch (e) { /* nothing to show: the plots keep their title */ }
 }
 // read by the tests
-export function numbers(p) { const s = ex(p); return s && s.num ? { win: s.win, ...s.num } : null; }
+export function numbers(/** @type {PannelloMappa} */ p) { const s = ex(p); return s && s.num ? { win: s.win, ...s.num } : null; }
 
 // ---------------------------------------------------------------- drawing
-export function overlay(p, g) {
+export function overlay(/** @type {PannelloMappa} */ p, /** @type {CanvasRenderingContext2D} */ g) {
   const s = ex(p), a = p._a; if (!s || !a) return;
   const r = px(p, s.box), L = a.W - M.r, Bt = a.H - M.b, ac = css("--accent"), ink = css("--ink");
   g.save();
@@ -133,12 +147,11 @@ export function overlay(p, g) {
   }
   g.restore();
 }
-function plotArea(p, c) {
-  const a = p._a, r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d);
-  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-  const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, r.width, r.height); return { g, W: r.width, H: r.height, a };
+function plotArea(/** @type {PannelloMappa} */ p, /** @type {HTMLCanvasElement} */ c) {
+  const { g, W, H } = MAPMARGINI.sized(c, devicePixelRatio);
+  return { g: /** @type {CanvasRenderingContext2D} */ (g), W, H, a: p._a };
 }
-export function margins(p) {
+export function margins(/** @type {PannelloMappa} */ p) {
   const s = ex(p); if (!s || !p._a) return; const m = MAPPA.st(p);
   // another file: the plots are asked again for the same box
   if (s.k !== p._a.f.k) { s.k = p._a.f.k; load(p); }
@@ -146,11 +159,11 @@ export function margins(p) {
   if (!m.sp.hidden) drawSpec(p, m.sp, s);
 }
 // the same RT axis as the map; the integrated zone is filled
-function drawXic(p, c, s) {
+function drawXic(/** @type {PannelloMappa} */ p, /** @type {HTMLCanvasElement} */ c, /** @type {MapEx} */ s) {
   const { g, W, H, a } = plotArea(p, c), mt = 10, mb = 22, ink = css("--muted"), ac = css("--accent");
-  const cr = p.cv.getBoundingClientRect(), xr = c.getBoundingClientRect();
-  const ml = (cr.left - xr.left) + M.l, mr = (cr.right - xr.left) - M.r, pw = mr - ml;
-  const x = v => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
+  const o = MAPMARGINI.rel(p.cv, c);
+  const ml = o.x + M.l, mr = o.x + p.cv.clientWidth - M.r, pw = mr - ml;
+  const x = (/** @type {number} */ v) => ml + (v - a.x0) / (a.x1 - a.x0) * pw;
   g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(ml, H - mb + .5); g.lineTo(mr, H - mb + .5); g.stroke();
   g.textAlign = "center"; for (const t of nice(a.x0, a.x1, 8)) { const xx = x(t); if (xx >= ml - 1 && xx <= mr + 1) g.fillText(String(+t.toFixed(2)), xx, H - mb + 13); }
   g.textAlign = "left"; const b = s.box, xa = x(b.rt0), xb = x(b.rt1);
@@ -158,7 +171,7 @@ function drawXic(p, c, s) {
   g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(xa, mt, xb - xa, H - mt - mb); g.globalAlpha = 1;
   const t = s.xic; if (!t || !t.rt.length) { g.fillStyle = css("--ink"); g.fillText(T("mapex.xic.title"), ml + 4, mt + 8); guides(g, xa, xb, mt, H - mb, ac); return; }
   let ymax = 0; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
-  const y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
+  const y = (/** @type {number} */ v) => H - mb - v / (ymax || 1) * (H - mt - mb);
   // the filled area: between the two edges of the box
   g.beginPath(); let first = true, started = false;
   const pts = []; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1) pts.push(i);
@@ -170,13 +183,13 @@ function drawXic(p, c, s) {
   g.fillStyle = css("--ink"); g.fillText(`XIC ${num(s.win ? s.win.mz0 : b.mz0, 2)}–${num(s.win ? s.win.mz1 : b.mz1, 2)} · max ${fmt(ymax)}`, ml + 4, mt + 8);
   if (s.num && s.num.rtMax != null && s.num.rtMax >= a.x0 && s.num.rtMax <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([2, 3]); g.beginPath(); g.moveTo(x(s.num.rtMax) + .5, mt); g.lineTo(x(s.num.rtMax) + .5, H - mb); g.stroke(); g.setLineDash([]); }
 }
-const guides = (g, xa, xb, y0, y1, col) => { g.save(); g.strokeStyle = col; g.setLineDash([5, 4]); g.beginPath(); for (const xx of [xa, xb]) { g.moveTo(Math.round(xx) + .5, y0); g.lineTo(Math.round(xx) + .5, y1); } g.stroke(); g.restore(); };
+const guides = (/** @type {CanvasRenderingContext2D} */ g, /** @type {number} */ xa, /** @type {number} */ xb, /** @type {number} */ y0, /** @type {number} */ y1, /** @type {string} */ col) => { g.save(); g.strokeStyle = col; g.setLineDash([5, 4]); g.beginPath(); for (const xx of [xa, xb]) { g.moveTo(Math.round(xx) + .5, y0); g.lineTo(Math.round(xx) + .5, y1); } g.stroke(); g.restore(); };
 // the same m/z axis as the map, turned on its side; the m/z window is a band
-function drawSpec(p, c, s) {
+function drawSpec(/** @type {PannelloMappa} */ p, /** @type {HTMLCanvasElement} */ c, /** @type {MapEx} */ s) {
   const { g, W, H, a } = plotArea(p, c), ink = css("--muted"), ac = css("--accent"), x0 = 6, x1 = W - 8, b = s.box;
-  const cr = p.cv.getBoundingClientRect(), sr = c.getBoundingClientRect();
-  const mapTop = (cr.top - sr.top) + M.t, mapBot = (cr.bottom - sr.top) - M.b, mapH = mapBot - mapTop;
-  const Y = v => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH;
+  const o = MAPMARGINI.rel(p.cv, c);
+  const mapTop = o.y + M.t, mapBot = o.y + p.cv.clientHeight - M.b, mapH = mapBot - mapTop;
+  const Y = (/** @type {number} */ v) => mapBot - (v - a.y0) / (a.y1 - a.y0) * mapH;
   g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink; g.beginPath(); g.moveTo(x0 + .5, mapTop); g.lineTo(x0 + .5, mapBot); g.stroke();
   const ya = Y(b.mz1), yb = Y(b.mz0); g.globalAlpha = .14; g.fillStyle = ac; g.fillRect(x0, ya, x1 - x0, yb - ya); g.globalAlpha = 1;
   g.save(); g.strokeStyle = ac; g.setLineDash([5, 4]); g.beginPath(); for (const yy of [ya, yb]) { g.moveTo(x0, Math.round(yy) + .5); g.lineTo(x1, Math.round(yy) + .5); } g.stroke(); g.restore();
@@ -194,10 +207,10 @@ function drawSpec(p, c, s) {
 }
 
 // ---------------------------------------------------------------- the numbers and the rule, under the map
-function table(p) {
+function table(/** @type {PannelloMappa} */ p) {
   const s = ex(p), m = MAPPA.st(p); if (!s || !m.grid) return; const hr = window.HR && HR.isHr(p._a.f, p._a.f.lv || 1), d = hr ? 4 : 2;
   let box = m.exBox; if (!box) { box = m.exBox = document.createElement("div"); box.className = "mzex"; box.setAttribute("role", "region"); box.setAttribute("aria-label", T("mapex.region")); (m.tab || m.grid).after(box); }
-  const n = s.num, w = s.win || s.box, row = (k, lab, v, u) => `<div class="mzex-r"><dt>${T(lab)}</dt><dd><output data-k="${k}" aria-label="${T(lab)}">${v}</output>${u ? ` <span class="muted">${u}</span>` : ""}</dd></div>`;
+  const n = s.num, w = s.win || s.box, row = (/** @type {string} */ k, /** @type {string} */ lab, /** @type {string} */ v, /** @type {string} */ u) => `<div class="mzex-r"><dt>${T(lab)}</dt><dd><output data-k="${k}" aria-label="${T(lab)}">${v}</output>${u ? ` <span class="muted">${u}</span>` : ""}</dd></div>`;
   box.innerHTML = `<p class="mzex-d">${T("mapex.intro")}</p><dl class="mzex-n">` +
     row("mz", "mapex.n.mz", `${num(w.mz0, d)} – ${num(w.mz1, d)}`, `(± ${num((w.mz1 - w.mz0) / 2, d)})`) + row("rt", "mapex.n.rt", `${num(w.rt0, 3)} – ${num(w.rt1, 3)}`, "min") +
     row("area", "mapex.n.area", n && n.area != null ? fmt(n.area) : "–", T("mapex.u.area")) + row("height", "mapex.n.height", n && n.height != null ? fmt(n.height) : "–", T("mapex.u.height")) +
@@ -211,8 +224,8 @@ function table(p) {
 // ---------------------------------------------------------------- high resolution only: the features that mzFinder has already found (read-only, switched off at the start)
 // window.MAPFEAT.features(file) -> [{ id, mz, rt, ppm, rt0?, rt1?, filters?: [{ key, label, thr, value?, from?: "height", cmp?: ">=" | "<=", unit?, note? }] }] or null;
 // it is written by mzFinder from the result it already holds (TP_Mine/js/31_map_features.js): nothing is computed again in the engine.
-const feats = p => { const f = p._a && p._a.f; try { return (window.MAPFEAT && f && window.HR && HR.isHr(f, f.lv || 1) ? MAPFEAT.features(f) : null) || []; } catch (e) { return []; } };
-export function featOverlay(p, g) {
+const feats = (/** @type {PannelloMappa} */ p) => { const f = p._a && p._a.f; try { return (window.MAPFEAT && f && window.HR && HR.isHr(f, f.lv || 1) ? MAPFEAT.features(f) : null) || []; } catch (e) { return []; } };
+export function featOverlay(/** @type {PannelloMappa} */ p, /** @type {CanvasRenderingContext2D} */ g) {
   const a = p._a, s = MAPPA.st(p); if (!a) return; g.save();
   for (const q of feats(p)) {
     if (q.rt < a.x0 || q.rt > a.x1 || q.mz < a.y0 || q.mz > a.y1) continue;
@@ -222,28 +235,28 @@ export function featOverlay(p, g) {
   }
   g.restore();
 }
-function featAt(p, x, y, tol = 9) {
+function featAt(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y, tol = 9) {
   const a = p._a; let best = null, bd = tol * tol;
   for (const q of feats(p)) { const d = (a.X(q.rt) - x) ** 2 + (a.Y(q.mz) - y) ** 2; if (d <= bd) { bd = d; best = q; } }
   return best;
 }
-export function featHover(p, x, y) {
+export function featHover(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y) {
   const q = featAt(p, x, y); if (!q) return false; const v = MAPPA.valueAt(p, q.rt, q.mz);
   if (p.rd) p.rd.textContent = T("mapfeat.read", { mz: q.mz.toFixed(dp(p)), rt: q.rt.toFixed(2), v: v == null ? "–" : fmt(v) }); p.cv.style.cursor = "pointer"; return true;
 }
-export function featClick(p, x, y) { const q = featAt(p, x, y, 11); if (!q) return false; selectFeat(p, q); return true; }
-export async function selectFeat(p, q) {
+export function featClick(/** @type {PannelloMappa} */ p, /** @type {number} */ x, /** @type {number} */ y) { const q = featAt(p, x, y, 11); if (!q) return false; selectFeat(p, q); return true; }
+export async function selectFeat(/** @type {PannelloMappa} */ p, /** @type {MapFeature} */ q) {
   const m = MAPPA.st(p); m.fsel = q.id; m.fq = q; m.fedges = q.rt0 != null && q.rt1 != null ? { rt0: q.rt0, rt1: q.rt1, auto: false } : null;
   if (!m.ex) await MAPPA.explain(p, true);
   const s = ex(p); if (!s) return; const d = q.mz * (q.ppm ?? 5) * 1e-6, w = Math.max(0.15, 4 * scanStep()) / 2;
   s.box = { mz0: q.mz - d, mz1: q.mz + d, rt0: m.fedges ? m.fedges.rt0 : q.rt - w, rt1: m.fedges ? m.fedges.rt1 : q.rt + w }; s.fresh = !m.fedges; clampBox(p, s.box); changed(p);
 }
-export function featClear(p) { const m = MAPPA.st(p); m.fsel = null; m.fq = null; m.fedges = null; if (m.exBox) table(p); MAPPA.redraw(p); }
+export function featClear(/** @type {PannelloMappa} */ p) { const m = MAPPA.st(p); m.fsel = null; m.fq = null; m.fedges = null; if (m.exBox) table(p); MAPPA.redraw(p); }
 // «How it was found»: window, peak with its edges, the filters with their thresholds
-function found(p, box) {
+function found(/** @type {PannelloMappa} */ p, /** @type {HTMLElement} */ box) {
   const m = MAPPA.st(p), s = ex(p), q = m.fq; let el = box.querySelector(".mzex-found"); if (el) el.remove(); if (!q || !s) return;
-  const n = s.num || {}, d = dp(p), ppm = q.ppm ?? 5, dm = q.mz * ppm * 1e-6, ed = m.fedges;
-  const rows = (q.filters || []).map(f => {
+  const n = /** @type {Partial<MapMeasure>} */ (s.num || {}), d = dp(p), ppm = q.ppm ?? 5, dm = q.mz * ppm * 1e-6, ed = m.fedges;
+  const rows = (q.filters || []).map((/** @type {MapFilter} */ f) => {
     const v = f.value != null ? f.value : f.from === "height" ? n.height : null, ok = v != null && (f.cmp === "<=" ? v <= f.thr : v >= f.thr);
     return `<tr><th scope="row">${EH(f.label)}</th><td>${v == null ? "–" : fmt(v)}${f.unit ? " " + EH(f.unit) : ""}</td><td>${f.cmp === "<=" ? "≤" : "≥"} ${fmt(f.thr)}</td><td>${v == null ? EH(f.note || "–") : ok ? T("mapfeat.pass") : T("mapfeat.below")}</td></tr>`;
   }).join("");
@@ -257,12 +270,11 @@ function found(p, box) {
   box.appendChild(el);
   const c = el.querySelector("canvas"), t = s.xic;
   FRAME.next(() => {
-    const r = c.getBoundingClientRect(), dpr = Math.min(4, devicePixelRatio || 1); c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
-    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); const W = r.width, H = r.height, ml = 6, mb = 16, mt = 8;
+    const { g, W, H } = MAPMARGINI.sized(c, devicePixelRatio), ml = 6, mb = 16, mt = 8;
     if (!t || !t.rt.length) return;
     const lo = Math.min(...[ed ? ed.rt0 : q.rt, q.rt]) - 0.3, hi = Math.max(...[ed ? ed.rt1 : q.rt, q.rt]) + 0.3, pts = []; for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= lo && t.rt[i] <= hi) pts.push(i);
-    if (!pts.length) return; let ymax = Math.max(...pts.map(i => t.y[i])); const thr = (q.filters || []).filter(f => f.from === "height").map(f => f.thr); ymax = Math.max(ymax, ...thr) * 1.05;
-    const X = v => ml + (v - lo) / (hi - lo) * (W - 2 * ml), Y = v => H - mb - v / ymax * (H - mb - mt), ink = css("--ink"), ac = css("--accent"), mu = css("--muted");
+    if (!pts.length) return; let ymax = Math.max(...pts.map(i => t.y[i])); const thr = (q.filters || []).filter((/** @type {MapFilter} */ f) => f.from === "height").map((/** @type {MapFilter} */ f) => f.thr); ymax = Math.max(ymax, ...thr) * 1.05;
+    const X = (/** @type {number} */ v) => ml + (v - lo) / (hi - lo) * (W - 2 * ml), Y = (/** @type {number} */ v) => H - mb - v / ymax * (H - mb - mt), ink = css("--ink"), ac = css("--accent"), mu = css("--muted");
     if (ed) { g.globalAlpha = .35; g.fillStyle = ac; g.beginPath(); g.moveTo(X(ed.rt0), Y(0)); for (const i of pts) if (t.rt[i] >= ed.rt0 && t.rt[i] <= ed.rt1) g.lineTo(X(t.rt[i]), Y(t.y[i])); g.lineTo(X(ed.rt1), Y(0)); g.closePath(); g.fill(); g.globalAlpha = 1;
       g.strokeStyle = ac; g.setLineDash([4, 3]); g.beginPath(); for (const v of [ed.rt0, ed.rt1]) { g.moveTo(X(v) + .5, mt); g.lineTo(X(v) + .5, H - mb); } g.stroke(); g.setLineDash([]); }
     g.strokeStyle = ink; g.lineWidth = 1.3; g.beginPath(); pts.forEach((i, k) => k ? g.lineTo(X(t.rt[i]), Y(t.y[i])) : g.moveTo(X(t.rt[i]), Y(t.y[i]))); g.stroke(); g.lineWidth = 1;
@@ -273,12 +285,12 @@ function found(p, box) {
 }
 
 // ---------------------------------------------------------------- on and off
-export function start(p) {
+export function start(/** @type {PannelloMappa} */ p) {
   const m = MAPPA.st(p); if (m.ex || !p._a || !p._a.map) return;
   m.ex = { box: defaultBox(p), gen: 0, t: 0, xic: null, spec: null, num: null, win: null }; clampBox(p, m.ex.box);
   MAPPA.layoutNow(p); MAPPA.redraw(p); table(p); load(p);
 }
-export function stop(p) {
+export function stop(/** @type {PannelloMappa} */ p) {
   const m = MAPPA.st(p), s = m.ex; if (!s) return; clearTimeout(s.t); m.ex = null;
   if (m.exBox) { m.exBox.remove(); m.exBox = null; MAPPA.grow(p, "ex", 0); }
   p.cv.style.cursor = ""; MAPPA.layoutNow(p); MAPPA.redraw(p);

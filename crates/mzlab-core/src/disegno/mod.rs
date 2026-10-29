@@ -137,7 +137,11 @@ pub fn proponi(cs: &[Campione]) -> Disegno {
             .map(|c| Lotto {
                 file: c.file.clone(),
                 sha256: c.sha256.clone(),
-                batch: LOTTO_PREDEFINITO.into(),
+                batch: if c.batch.is_empty() {
+                    LOTTO_PREDEFINITO.into()
+                } else {
+                    c.batch.clone()
+                },
             })
             .collect(),
     };
@@ -155,6 +159,7 @@ fn push(out: &mut Vec<Avviso>, code: &'static str, severity: &'static str, name:
         severity,
         file: None,
         series: name.to_string(),
+        column: String::new(),
     };
     if !out.contains(&a) {
         out.push(a);

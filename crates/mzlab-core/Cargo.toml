@@ -17,13 +17,16 @@ estesi = []
 mappa-dad = []
 # what only the SCIEX readers module needs beyond `estesi` and the other families must not carry (their .wasm is under a size limit): the `variante` method of the `Lettore` trait and the `cv:` parameters of the mzML writer
 sciex = ["estesi"]
+# the indexed mzML (offsets and SHA-1 checksum) in the `.wasm` build too: only the readers modules turn it on, to write the same mzML as `mzlab-cli convert`; the engine (mzlab-wasm) leaves it off
+indice = []
 # the bench `raw_mzml_banco` with zlib-rs in place of miniz_oxide behind flate2 (a second build of the same bench, to compare the two on the same code)
 banco-zlib-rs = ["flate2/zlib-rs"]
 
 [dependencies]
+mzlab-picchi = { path = "../mzlab-picchi" }
 quick-xml = "0.42"
 base64 = "0.23"
-flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 opentfraw = { path = "../../vendor/opentfraw", optional = true }
 sha1 = { version = "0.11", default-features = false }
 sha2 = { version = "0.11", default-features = false }

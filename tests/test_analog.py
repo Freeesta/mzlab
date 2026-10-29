@@ -64,12 +64,12 @@ def test_course_and_reading():
 
 
 def test_pressure_unit_rule():
-    y, note = analog.pressure_to_bar([2.78e7], "pascal")
-    assert abs(y[0] - 278) < 1e-6 and note is None
-    y, note = analog.pressure_to_bar([2.78e8], "pascal")
-    assert abs(y[0] - 278) < 1e-6 and note["key"] == "analog.unit.tenfold"
-    assert abs(analog.pressure_to_bar([4000], "psi")[0][0] - 275.79) < 0.01 and abs(analog.pressure_to_bar([27.8], "MPa")[0][0] - 278) < 1e-6
-    assert analog.pressure_to_bar([250], "bar")[1] is None
+    assert abs(analog.pressure_to_bar([2.78e7], "pascal")[0] - 278) < 1e-6
+    assert abs(analog.pressure_to_bar([4000], "psi")[0] - 275.79) < 0.01 and abs(analog.pressure_to_bar([27.8], "MPa")[0] - 278) < 1e-6
+    assert analog.pressure_to_bar([250], "bar")[0] == 250 and abs(analog.pressure_to_bar([250000], "mbar")[0] - 250) < 1e-9
+    # a value is never rescaled by a guess: a unit that is not a pressure (or none) leaves the numbers alone
+    assert abs(analog.pressure_to_bar([2.78e8], "pascal")[0] - 2780.0) < 1e-6
+    assert all(analog.pressure_to_bar([2700, 6000], u) is None for u in ("number of detector counts", "", None, "unknown", "paper"))
 
 
 def test_reduce_keeps_peaks():
@@ -96,10 +96,54 @@ def test_analog_route(pressure_app):
     tr = pressure_app._item(0).analog_list()
     assert len(tr) == 1 and tr[0]["kind"] == "pressure" and tr[0]["unit"] == "pascal" and tr[0]["n"] == 6000 and tr[0]["t0"] == 0 and abs(tr[0]["t1"] - 15) < 1e-3
     code, a = _get(pressure_app, "/api/analog", k=0, i=tr[0]["i"], n=500)
-    assert code == 200 and a["unit"] == "bar" and a["unit_note"]["key"] == "analog.unit.tenfold" and len(a["t"]) <= 1000
+    assert code == 200 and a["unit"] == "bar" and "unit_note" not in a and len(a["t"]) <= 1000
     y1 = np.interp(1.0, a["t"], a["y"])
     assert abs(y1 - 278) < 12            # 270 + 8 t + wiggle, min/max envelope
     assert _get(pressure_app, "/api/analog", k=0, i=99)[1]["error_key"] == "err.analog.none"
+
+
+def _counts_app(tmp_path, mode):
+    p = tmp_path / f"{mode}.mzML"
+    ds.full_scan(p, 0, np.random.default_rng(1), pressure=mode)
+    app = App(); app.workdir = tmp_path
+    app.open_session({"samples": [{"file": p.name, "time": 0, "type": "sample"}]})
+    tr = app._item(0).analog_list()
+    return app, tr[0], lambda: _get(app, "/api/analog", k=0, i=tr[0]["i"], n=500)
+
+
+def test_counts_pressure_is_shown_as_declared(tmp_path):
+    """Pressure array declaring `number of detector counts` and no other unit (2700..6000): not converted, not rescaled, no note."""
+    _, tr, get = _counts_app(tmp_path, "counts")
+    code, a = get()
+    assert tr["unit"] == "number of detector counts" and code == 200 and a["unit"] == "number of detector counts" and "unit_note" not in a
+    assert abs(np.interp(0.5, a["t"], a["y"]) - 2700) < 30 and abs(np.interp(5.6, a["t"], a["y"]) - 2100) < 30 and abs(np.interp(15, a["t"], a["y"]) - 6000) < 1
+
+
+def test_pressure_unit_kept_by_our_writer_is_used(tmp_path):
+    """Our own mzML writer puts `number of detector counts` on the array and the real unit in the `unità` userParam: the unit is that one, converted once to bar."""
+    _, tr, get = _counts_app(tmp_path, "psi")
+    code, a = get()
+    assert tr["unit"] == "psi" and a["unit"] == "bar" and "unit_note" not in a
+    assert abs(np.interp(0.5, a["t"], a["y"]) - 2700 * 0.0689476) < 0.5 and abs(np.interp(15, a["t"], a["y"]) - 6000 * 0.0689476) < 0.01
+
+
+def _xcalibur_like(n=60000):
+    """A pump pressure like the one Xcalibur shows for a 35 min run: ~138 bar at 0.5 min, ~148 at 16-21, a dip to ~65 at 29.3, back to ~140; a pump-stroke ripple of 3 bar."""
+    t = np.linspace(0, 35, n)
+    base = np.interp(t, [0, 4, 16, 21, 22, 29.3, 32, 35], [138, 140, 148, 148, 146, 65, 140, 138])
+    return t, base + 1.5 * np.sign(np.sin(2 * np.pi * t / 0.05))
+
+
+@pytest.mark.parametrize("unit,k", [("pascal", 1e5), ("psi", 1 / 0.0689476), ("bar", 1.0)])
+def test_pressure_values_and_ripple_survive(unit, k):
+    """The displayed magnitude is the one of the instrument (~138 bar, not 14 or 1400) and the reduction for drawing keeps the envelope of the ripple."""
+    t, bar = _xcalibur_like()
+    y = analog.pressure_to_bar(bar * k, unit)
+    assert abs(np.interp(0.5, t, y) - 138) < 3 and abs(y[np.argmin(np.abs(t - 29.3))] - 65) < 3
+    tt, yy = analog.reduce_minmax(t, y, 2000)
+    assert abs(np.interp(0.5, tt, yy) - 138) < 3 and abs(yy[(tt > 28.5) & (tt < 30.5)].min() - 63.5) < 1.0
+    win = (tt > 10) & (tt < 10.5)
+    assert yy[win].max() - yy[win].min() > 2.9        # the 3 bar peak-to-peak of the pump strokes is still there
 
 
 def test_gradient_route(pressure_app):

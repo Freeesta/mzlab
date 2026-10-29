@@ -7,6 +7,7 @@ pub mod cartella;
 mod conv_coda;
 #[cfg(test)]
 mod conv_coda_tests;
+mod conv_stamp;
 #[cfg(feature = "app")]
 pub mod dialogo;
 pub mod engine;
@@ -34,8 +35,10 @@ mod ram;
 pub mod release;
 pub mod rpc;
 mod rpc_lr;
+mod rpc_msn;
 mod rpc_nat;
 pub mod scarica;
+pub mod scarica_fonti;
 pub mod store;
 pub mod update;
 

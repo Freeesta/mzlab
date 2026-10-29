@@ -46,6 +46,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000); pg.click('#nav button[data-v="flow"]'); pg.wait_for_selector("#flx-root", timeout=30000)
+        attendi(pg, "window.ATTRIBUTIO_CORE && window.PIPEQC && window.PIPET && window.PIPEV && window.FLOW && FLOW.viewFor && (FLOW.viewFor('table', { file: {}, label: 'a.mzfeat' }) || {}).id === 'feattable'")   # the scripts of Tabui and the late scripts of Flow arrive after its tab
         pg.evaluate(OPEN); attendi(pg, "window.__fo && window.__fo.extraTabs")
         def shown():
             pg.evaluate(FILL); attendi(pg, "window.__panel.querySelector('.fl-proofs button')")

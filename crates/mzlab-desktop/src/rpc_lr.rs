@@ -134,6 +134,9 @@ impl State {
                     if names.contains(&name) && !derived {
                         idx += size;
                     } else if derived || p["free"].as_bool().unwrap_or(false) {
+                        if let Some(slot) = eng.lr_slot.get(&name).copied() {
+                            eng.idx.remove(&slot);                                             // unmapped first: a mapped file cannot be deleted on Windows
+                        }
                         b.remove(&name);
                     } else {
                         gone += size;
@@ -164,6 +167,7 @@ impl State {
                 let ad = s("adduct");
                 text(mzlab_core::elements::formula_mz(s("f"), if ad.is_empty() { None } else { Some(ad) })?)
             }
+            "lr_adduct_table" => text(mzlab_core::adduct_table::table(s("f"), s("obs"), s("tol"), s("delta"))?),
             "lr_ricerca" => text(mzlab_core::ricerca::match_number(s("body"))?),
             "lr_provenance" => text(mzlab_core::provenance::build(s("ctx"))),
             "lr_kv_get" => text(json!({ "value": self.store.lock().unwrap_or_else(|e| e.into_inner()).kv_get(s("key")) }).to_string()),

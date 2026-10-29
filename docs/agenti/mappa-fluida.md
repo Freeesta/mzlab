@@ -83,7 +83,7 @@ Colore della mappa intera HRC (600 × 901, Node): algoritmo in uso 314 ms; con `
 Ogni pacchetto è autosufficiente e si consegna in una PR con la sua misura `bench_mappa.py` prima e dopo nella descrizione. «Libero» = non tocca i file di `mappa.js`/`grafici.js`, della lista dei file e pannelli, né del caricamento.
 
 ### P1 Lettura veloce dell'indice nel worker (fatta)
-- Il worker legge l'`.mzidx` da un `SyncAccessHandle` (`archivio.js` `lease`/`leaseRead`, `rust-worker.js` `readerFor`) in un buffer riusato; il handle è esclusivo, quindi si apre a ogni richiesta (`wake`) e si chiude quando il worker non ha richieste in corso (`parkAll`) e prima di scrivere, spostare o rimuovere il file (`dropLease`); se è preso o assente si legge con `FileReaderSync`.
+- Il worker legge l'`.mzidx` da un `SyncAccessHandle` (`archivio.js` `lease`/`leaseRead`, `rust-worker.js` `readerFor`) in un buffer riusato; il handle è esclusivo, quindi si apre a ogni richiesta che legge quell'indice (`wake`, con i soli file che `rust-lease-plan.js` `leasePlan` indica: nessuno per le op che non leggono indici, l'indice dello slot per le op di un file, tutti se l'op è ignota) e si chiude quando il worker non ha richieste in corso (`parkAll`) e prima di scrivere, spostare o rimuovere il file (`dropLease`); se è preso o assente si legge con `FileReaderSync`.
 - `facts_from` (`iteminfo.rs`) non legge più le polarità di tutto il file se ha scansioni e nessun SRM: i file HRP da 320 MB si aprono senza `error.memoryBudget`.
 - Prova: `tools/bench_mappa.py` riporta `first_read` e `read_ms` per gesto; `map_parity`, `e2e_mappa`, `e2e_hr_mappa`, `e2e_lr` verdi, `MZLAB_LR_MISS` vuota, `.wasm` entro i tetti. Safari/iPad non misurati.
 

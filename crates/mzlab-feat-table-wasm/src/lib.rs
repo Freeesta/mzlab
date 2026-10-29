@@ -10,6 +10,8 @@ use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 pub mod core;
+pub mod filterspec;
+pub mod pol;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-table/1";
@@ -137,6 +139,27 @@ pub fn table_check(table_read: Function, size: f64, samples_json: &str, spec: &s
 #[wasm_bindgen]
 pub fn export_table(table_read: Function, size: f64, samples_json: &str, spec: &str, table_sha256: &str, polarity: i32, kind: &str) -> std::result::Result<String, JsValue> {
     core::table_file(&mut table_reader(table_read), size as u64, samples_json, spec, table_sha256, polarity, kind).map_err(js_err)
+}
+
+/// A table file as `export_table`, written in the polarity the table and the files of its lineage give (`pol::of_table`), the one `flow run` uses; the view is the whole table.
+/// The `.mzidx` of the files are read as `index_read(k, offset, length)`, `index_sizes[k]` bytes each (none when they are not at hand).
+#[wasm_bindgen]
+pub fn export_table_auto(table_read: Function, size: f64, samples_json: &str, table_sha256: &str, kind: &str, index_read: Function, index_sizes: Vec<f64>) -> std::result::Result<String, JsValue> {
+    let mut ix = Vec::new();
+    for (k, s) in index_sizes.iter().enumerate() {
+        if let Ok(i) = Index::open(JsReader { read: index_read.clone(), k: k as u32 }, *s as u64) { ix.push(i); }
+    }
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let pol = pol::of_table(&mut table_reader(table_read.clone()), size as u64, &ix).map_err(js_err)?;
+    core::table_file(&mut table_reader(table_read), size as u64, &samples, "", table_sha256, pol, kind).map_err(js_err)
+}
+
+/// The `view/1` of the whole table under the rules a `table.filter` step spells in `params_json` (`filterspec::spec_from_json`), the one `flow run` writes; `samples_json` may be `campioni/2`.
+#[wasm_bindgen]
+pub fn table_view_auto(table_read: Function, size: f64, samples_json: &str, params_json: &str) -> std::result::Result<String, JsValue> {
+    let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
+    let spec = filterspec::spec_from_json(params_json).map_err(js_err)?;
+    core::view_json(&mut table_reader(table_read), size as u64, &samples, &spec).map_err(js_err)
 }
 
 /// An MS2 file: `kind` is `mgf` (FBMN) or `sirius` (`.ms`). The spectra are read from the `.mzidx` of the file that holds the best MS2 of each row

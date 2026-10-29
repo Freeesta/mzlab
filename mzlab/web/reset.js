@@ -9,6 +9,7 @@ const RESET = (function () {
   const wait = (p, ms = 4000) => Promise.race([p, new Promise(r => setTimeout(r, ms))]).catch(() => {});
   // what the variant "files" leaves in OPFS: the spectral libraries the user saved
   const KEEP_OPFS = ["librerie"];
+  const OPFS_RETRY_MS = 10000;
   const KEEP_IDB = ["mzlab-libs", "mzlab-libdir"];                    // ... and their databases
   const KNOWN_IDB = [NOMI.DB, typeof NOMI !== "undefined" && NOMI.DB_OLD ? NOMI.DB_OLD : "qqq_lab", "mzlab-libs", "mzlab-libdir"];
   // "cold" (the desktop app, first page of a new run): the files and the session like "files", plus the working state kept in localStorage (map, peak and list
@@ -25,7 +26,12 @@ const RESET = (function () {
     for await (const [n] of /** @type {any} */ (root).entries()) names.push(n);
     for (const n of names) {
       if (mode !== "all" && KEEP_OPFS.includes(n)) continue;
-      try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); } catch (e) { rep.errors.push("opfs " + n + ": " + (e && e.name)); }
+      // the engine worker of the page we came from may still hold a sync handle for a moment (NoModificationAllowedError): retry, then report as before
+      let e = /** @type {Lanciato | null} */ (null);
+      for (let t = 0; t <= OPFS_RETRY_MS; t += 250) {
+        try { await root.removeEntry(n, { recursive: true }); rep.opfs.push(n); e = null; break; } catch (e_) { e = /** @type {Lanciato} */ (e_); if (!e || e.name !== "NoModificationAllowedError") break; await new Promise(r => setTimeout(r, 250)); }
+      }
+      if (e) rep.errors.push("opfs " + n + ": " + e.name);
     }
   }
   const delDb = name => new Promise(r => { const q = indexedDB.deleteDatabase(name); q.onsuccess = q.onerror = () => r(true); q.onblocked = () => r(false); });
@@ -51,7 +57,7 @@ const RESET = (function () {
     try { if (window.qqEngineStop) window.qqEngineStop(); } catch (e) { /* no engine */ }
     // the development server keeps the session in memory
     if (!window.QQQ_BROWSER) await wait(fetch("api/new", { method: "POST", body: JSON.stringify({ fresh: true }) }));
-    if (navigator.storage && /** @type {any} */ (navigator.storage).getDirectory) await wait(opfs(mode, rep));
+    if (navigator.storage && /** @type {any} */ (navigator.storage).getDirectory) await wait(opfs(mode, rep), OPFS_RETRY_MS + 4000);
     if (window.indexedDB) await wait(idb(mode, rep), 12000);
     if (window.caches) await wait(caches_(mode, rep));
     if (mode === "all") {

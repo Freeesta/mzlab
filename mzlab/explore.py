@@ -441,8 +441,8 @@ class Item:
         return self._analog
 
     def analog(self, i: int, n: int = 2000) -> dict:
-        """One analog trace: time in minutes, values reduced to the lowest and highest per interval (n of them), the unit to show and, for the pressure, a note
-        when the unit written in the file had to be corrected."""
+        """One analog trace: time in minutes, values reduced to the lowest and highest per interval (n of them) and the unit to show (a pressure
+        with a declared pressure unit is in bar, otherwise as the file has it)."""
         from .analog import pressure_to_bar, reduce_minmax
         cache = self.__dict__.setdefault("_analog_cache", {})
         key = (i, n)
@@ -452,13 +452,13 @@ class Item:
         if meta is None:
             raise UserError("err.analog.none", {"i": i}, "no such analog trace")
         t, y = self.run.chromatogram(i)
-        unit, note = meta["unit"], None
+        unit = meta["unit"]
         if meta["kind"] == "pressure":
-            y, note = pressure_to_bar(y, unit); unit = "bar"
+            bar = pressure_to_bar(y, unit)
+            if bar is not None:
+                y, unit = bar, "bar"
         t, y = reduce_minmax(t, y, n)
         res = {"i": i, "kind": meta["kind"], "id": meta["id"], "unit": unit, "t": [round(float(v), 4) for v in t], "y": [round(float(v), 3) for v in y]}
-        if note:
-            res["unit_note"] = note
         if len(cache) >= 8:
             cache.pop(next(iter(cache)))
         cache[key] = res
@@ -553,6 +553,14 @@ class Item:
         return t.rt, t.xic(mz, tol)
 
     # ------------------------------------------------------------------ ion map (RT x m/z)
+    def declared_window(self, level: int) -> list:
+        """The m/z window the method declares for the survey scans of a unit-resolution file, as [lowest, highest] (empty for MS2, high resolution or none).
+        Centroids have points only where there is a peak, so the peaks alone would move the axis from file to file."""
+        if level != 1 or self.profile(level)["hr"] or not hasattr(self.run, "scan_window_ms1"):
+            return []
+        w = self.run.scan_window_ms1()
+        return [float(w[0]), float(w[1])] if w else []
+
     def data_extent(self, level: int) -> dict:
         """Where the level has data: RT of the first and the last scan that holds peaks, m/z of the lowest and the highest peak (null when empty).
         The map shows this part, not the declared run or the rounded grid."""
@@ -561,7 +569,8 @@ class Item:
             return {"rt": None, "mz": None}
         on = np.flatnonzero(t.sum_by_scan() > 0)
         rt = [float(t.rt[on[0]]), float(t.rt[on[-1]])] if len(on) else None
-        return {"rt": rt, "mz": [float(t.mz[0]), float(t.mz[-1])] if rt else None}
+        mz = [float(t.mz[0]), float(t.mz[-1])] + self.declared_window(level)
+        return {"rt": rt, "mz": [min(mz), max(mz)] if rt else None}
 
     def ionmap(self, level: int, grid: dict, agg: str = "max") -> np.ndarray:
         """Intensity per cell on a common RT x m/z grid, shape (nrt, nmz), float32.
@@ -1075,7 +1084,7 @@ class Session:
             rts += [min(x.rt for x in sc), max(x.rt for x in sc)]
             t = it._tbl(level)
             if len(t.mz):
-                mzs += [float(t.mz[0]), float(t.mz[-1])]
+                mzs += [float(t.mz[0]), float(t.mz[-1])] + it.declared_window(level)
             hr = hr or bool(it.profile(level)["hr"])
         if not rts or not mzs:
             return {"rt0": 0.0, "rt1": 1.0, "nrt": 1, "mz0": 0.0, "dmz": dmz, "nmz": 1}

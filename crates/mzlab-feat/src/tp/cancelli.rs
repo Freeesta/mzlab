@@ -3,8 +3,8 @@
 use mzlab_core::error::{Error, Result};
 
 use super::*;
-use crate::aligned::CELL_ABSENT;
-use crate::evid::match_hypotheses;
+use crate::aligned::no_peak;
+use crate::evid::match_hypotheses_for;
 use crate::hypo::{SRC_CLEAVAGE, SRC_IMPORTED, SRC_NETWORK, SRC_RULE};
 
 /// Neutral losses by which an in-source fragment can differ from an accepted product (H2O, NH3, CO, 2 H2O, CO2, CH3OH, C2H4, HCOOH), Da.
@@ -29,7 +29,7 @@ pub(super) fn parent_row(inp: &TpInputs) -> Option<usize> {
 /// The area of the cell when the file has a peak there (not absent, finite, above zero).
 fn measured(t: &Aligned, row: usize, file: usize) -> Option<f64> {
     let c = row * t.n_files + file;
-    (t.state[c] != CELL_ABSENT && t.area[c].is_finite() && t.area[c] > 0.0).then_some(t.area[c])
+    (!no_peak(t.state[c]) && t.area[c].is_finite() && t.area[c] > 0.0).then_some(t.area[c])
 }
 
 /// Largest area of a row over some files (0 where none has a peak).
@@ -208,7 +208,7 @@ pub(super) fn not_in_source(inp: &TpInputs, parent: usize, b: &mut TpBlock) {
 
 /// Gate 3: a rule, a cleavage or an imported hypothesis covers the ion, or its MS2 is related to the parent's. Notes the MS2 of low purity.
 pub(super) fn explained(inp: &TpInputs, b: &mut TpBlock) {
-    let matched = match_hypotheses(inp.hyps, inp.aligned);
+    let matched = match_hypotheses_for(inp.hyps, inp.aligned, inp.params.ppm);
     for (r, &opt_h) in matched.iter().enumerate() {
         if let Some(h) = opt_h {
             let s = inp.hyps[h].sources;

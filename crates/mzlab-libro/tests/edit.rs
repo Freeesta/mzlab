@@ -236,3 +236,25 @@ fn the_headings_check_allows_only_retitled_sections_with_their_anchors() {
     .unwrap_err()
     .contains("glossary"));
 }
+
+#[test]
+fn lines_of_a_raw_html_block_are_not_headings() {
+    let old = "# T\n\n## Sezione {#sez}\n\n```html\n<style>\n# x\n</style>\n```\n\nTesto.\n";
+    // dropping the `#` line inside the HTML block removes no section
+    let new = old.replace("# x\n", "");
+    assert_eq!(mzlab_libro::retitled(old, &new, "01-p.md"), Ok(false));
+    // a real heading after the block is still seen
+    let moved = old.replace("Testo.", "## Altra {#altra}");
+    assert!(mzlab_libro::retitled(old, &moved, "01-p.md").is_err());
+}
+
+#[test]
+fn a_reversed_line_range_is_an_unknown_block_not_a_panic() {
+    for src in ["5-2", "3-2", "qa24-23", "qa5-2"] {
+        assert_eq!(
+            edit(src, "Testo"),
+            Err("Unknown block.".to_string()),
+            "{src}"
+        );
+    }
+}

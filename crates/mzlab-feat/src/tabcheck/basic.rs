@@ -1,7 +1,7 @@
 //! The checks of `tabcheck/1` that read the cells file by file: size, blanks, contaminants, QC, RT drift, long traces, missing cells, polarity and units.
 
 use super::*;
-use crate::aligned::{CELL_ABSENT, CELL_DETECTED};
+use crate::aligned::{no_peak, CELL_DETECTED};
 
 /// A file with fewer rows than this share of the median of the samples is flagged.
 const SIZE_MIN_SHARE: f64 = 0.5;
@@ -55,7 +55,7 @@ pub(super) fn size(e: &Env) -> Check {
         .map(|&r| {
             e.live
                 .iter()
-                .filter(|&&k| e.t.state[r * e.t.n_files + k] == CELL_ABSENT)
+                .filter(|&&k| no_peak(e.t.state[r * e.t.n_files + k]))
                 .count()
         })
         .sum::<usize>();

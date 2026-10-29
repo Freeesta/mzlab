@@ -61,9 +61,9 @@ try:
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done
             assert ".D" in pg.inner_text("#drop")
-            w = pg.evaluate("({s: document.querySelector('#start').getBoundingClientRect().width, g: document.querySelector('#flist tr.grp td').getBoundingClientRect().width, t: document.querySelector('#flist table').getBoundingClientRect().width})")
-            assert w["s"] > 1000 and w["g"] >= w["t"] - 2, w                                                                             # wide panel; the group bar spans the whole table
-        step("loaded: no leftover «files to load» line, .D in the drop text, wide panel, full-width group bar", tidy)
+            w = pg.evaluate("({s: document.querySelector('#start').getBoundingClientRect().width, t: document.querySelector('#flist table').getBoundingClientRect().width})")
+            assert w["s"] > 1000 and w["t"] <= w["s"], w                                                                                   # wide panel; the table fits in it
+        step("loaded: no leftover «files to load» line, .D in the drop text, wide panel, table inside it", tidy)
         def tic():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)

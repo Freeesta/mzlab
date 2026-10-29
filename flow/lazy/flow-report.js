@@ -41,7 +41,7 @@
 
   /** the report of the last run of the app as an item for the results; rejects when the app has no such run @returns {Promise<any>} */
   F.lastRunReport = async () => {
-    const text = await F.runners.desktop.report();
+    const text = F.runners.desktop.available() ? await F.runners.desktop.report() : F.webProv && F.webProv.last ? F.webProv.last.corsa : await F.runners.desktop.report();
     return { type: "report", label: "corsa.json", text: async () => text };
   };
 })();

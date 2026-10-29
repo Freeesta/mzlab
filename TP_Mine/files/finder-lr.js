@@ -95,10 +95,11 @@ export async function run(c, a) {
   step(x, "candidates");
   let registry = "";             // a parent known only by its m/z has no transformations to apply: the Dig keeps its row and the unexpected ions
   if (p.formula) {
-    let rules = new Uint8Array(await (await fetch(c.base() + "mzfinder/regole_tp.json")).arrayBuffer());
+    let rules = new Uint8Array(await (await fetch(c.base() + "mzfinder/regole_tp_2.json")).arrayBuffer());
     const tr = (a[3] || "").trim();
     if (tr) rules = (await c.finder()).finder_transformations(rules, tr);      // the user's list of transformations: its rows become rules of the hypotheses
-    registry = (await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: "" })).registry;
+    const neg = String(JSON.parse(a[1]).adduct || "").trim().endsWith("-");      // the sign of the parent adduct is the polarity of the products
+    registry = (await pool.hypotheses({ stored, paths, rules, parent: p.formula, parentRt: NaN, recipe: neg ? JSON.stringify({ polarity: -1 }) : "" })).registry;
   }
   lap("candidates", t); t = performance.now();
   c.check(); step(x, "xic");

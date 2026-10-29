@@ -9,7 +9,7 @@ mod comune;
 use comune::*;
 use mzlab_feat_wasm::run;
 
-/// (m/z, RT) of products of one transformation of the parent (`regole_tp.json`): two near the dead volume (rt_min 0.5 min).
+/// (m/z, RT) of products of one transformation of the parent (`regole_tp_2.json`): two near the dead volume (rt_min 0.5 min).
 const TPS: [(f64, f64); 6] = [
     (273.0540, 6.0),
     (239.0485, 10.5),

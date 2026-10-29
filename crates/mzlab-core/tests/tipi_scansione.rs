@@ -102,8 +102,44 @@ fn each_type_is_read_from_the_term() {
     let (idx, _) = index_of(mzml(&sp));
     assert_eq!(
         kinds(&idx.scans),
-        vec![Some("PREC"), Some("NL"), Some("NG"), Some("EPI"), None]
+        vec![Some("PREC"), Some("NL"), Some("NG"), Some("EMC"), None]
     );
+}
+
+#[test]
+fn sciex_enhanced_modes_have_their_own_type() {
+    let term = |acc: &str| format!("<cvParam cvRef=\"MS\" accession=\"{acc}\" name=\"x\"/>");
+    let sp = vec![
+        spectrum(0, 2, 1.0, &term("MS:1000789"), "", Some(150.0)),
+        spectrum(1, 2, 2.0, &term("MS:1000790"), "", Some(150.0)),
+        spectrum(2, 2, 3.0, &term("MS:1000791"), "", Some(150.0)),
+    ];
+    let (idx, _) = index_of(mzml(&sp));
+    assert_eq!(
+        kinds(&idx.scans),
+        vec![Some("EMC"), Some("TDF"), Some("ER")]
+    );
+}
+
+#[test]
+fn ms3_spectrum_with_two_precursors_is_level_3_with_the_parent_stage() {
+    let prec = |mz: f64, r: &str| {
+        format!("<precursor spectrumRef=\"{r}\"><selectedIonList count=\"1\"><selectedIon><cvParam cvRef=\"MS\" accession=\"MS:1000744\" name=\"selected ion m/z\" value=\"{mz}\"/></selectedIon></selectedIonList></precursor>")
+    };
+    let two = format!(
+        "<precursorList count=\"2\">{}{}</precursorList><binaryDataArrayList",
+        prec(500.0, "scan=1"),
+        prec(300.0, "scan=2")
+    );
+    let ms3 = spectrum(2, 3, 1.0, "", "", None).replace("<binaryDataArrayList", &two);
+    let sp = vec![
+        spectrum(0, 1, 1.0, "", "", None),
+        spectrum(1, 2, 1.0, "", "", Some(500.0)),
+        ms3,
+    ];
+    let (idx, _) = index_of(mzml(&sp));
+    assert_eq!(idx.scans[2].level, 3);
+    assert_eq!(idx.scans[2].precursor, Some(300.0));
 }
 
 #[test]
@@ -140,7 +176,7 @@ fn thermo_filter_tokens_give_the_type() {
 
 #[test]
 fn acq_lists_the_types_over_ms2() {
-    for (term, want) in [(PREC, "PREC"), (NL, "NL"), (NG, "NG"), (EPI, "EPI")] {
+    for (term, want) in [(PREC, "PREC"), (NL, "NL"), (NG, "NG"), (EPI, "EMC")] {
         let sp: Vec<String> = (0..4)
             .map(|i| spectrum(i, 2, 1.0 + i as f64, term, "", Some(150.0 + i as f64)))
             .collect();

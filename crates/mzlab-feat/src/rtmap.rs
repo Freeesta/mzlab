@@ -62,12 +62,17 @@ pub(crate) fn nanmedian(v: impl Iterator<Item = f64>) -> f64 {
     if a.is_empty() {
         return f64::NAN;
     }
-    sortc::by(&mut a, f64::total_cmp);
     let n = a.len();
+    let (lower, mid, _) = a.select_nth_unstable_by(n / 2, f64::total_cmp);
     if n % 2 == 1 {
-        a[n / 2]
+        *mid
     } else {
-        (a[n / 2 - 1] + a[n / 2]) / 2.0
+        let below = lower
+            .iter()
+            .copied()
+            .max_by(f64::total_cmp)
+            .unwrap_or(f64::NAN);
+        (below + *mid) / 2.0
     }
 }
 
