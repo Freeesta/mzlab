@@ -30,17 +30,22 @@ def test_e2_a_load_error_takes_the_veil_down_and_shows_the_message(tmp_path):
     handler = cut("shell.js", '$("#opbtn").onclick=', "// both exits of the loading screen")
     code = """
 const calls = [], els = {};
-const el = id => els[id] || (els[id] = { innerHTML: "", disabled: false, onclick: null });
+const el = id => els[id] || (els[id] = { innerHTML: "", disabled: false, onclick: null, focus() {}, setAttribute() {}, appendChild() {}, style: {} });
 const $ = id => el(id);
 const loading = v => calls.push(v);
 const h = (s, ...v) => s.reduce((a, x, i) => a + x + (i < v.length ? v[i] : ""), "");
 let UPBUSY = 0;
-const ST = { files: [{ name: "a.mzML" }] }, usable = () => true, checkGo = () => {}, RUOLI = { roleOf: () => "x" }, darkTime = t => t;
+const ST = { files: [{ name: "a.mzML" }] }, checkGo = () => {}, RUOLI = { roleOf: () => "x" }, darkTime = t => t;
+// nothing usable at the click (files still being copied): the veil goes up; usable when the copies end, then the open fails
+let asks = 0; const usable = () => asks++ > 0;
+const S = { opening: false }, STATO = { apertura(on) { S.opening = on; } }, applyView = () => {}, ldAction = () => {}, loadingStato = () => {}, window = {};
+let WAITING = false, WAIT0 = 0;
+%s
 const I18N = { t: k => k };
 const openStaged = async () => { throw Object.assign(new Error("boom"), { key: "err.load.failed" }); };
 %s
 (async () => { await $("#opbtn").onclick(); console.log(JSON.stringify({ calls, msg: el("#gomsg").innerHTML, enabled: !el("#opbtn").disabled })) })();
-""" % handler
+""" % ((WEB / "apertura-area.js").read_text(encoding="utf-8"), handler)
     r = node(tmp_path, code)
     assert r["calls"] == [True, False] and "boom" in r["msg"] and r["enabled"] is True
 

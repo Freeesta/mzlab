@@ -113,5 +113,10 @@ I18N.add("en", {
   "load.hrmix.replace": "Close the open files and load these",
   "load.hrmix.note": "Low and high resolution cannot be opened together: choose which to load now, the others stay in the list for a second load.",
   "load.hrmix.lr": "LR only ({n})",
-  "load.hrmix.hr": "HR only ({n})"
+  "load.hrmix.hr": "HR only ({n})",
+  "open.title": "Opening {file}…",
+  "open.st.wait": "waiting",
+  "open.st.read": "reading",
+  "open.st.boot": "preparing the view",
+  "open.st.err": "not read"
 });

@@ -145,6 +145,7 @@
     "../../mzlab/web/molui.js",
     "../../mzlab/web/tpmine-loader.js",
     "../../mzlab/web/logo-piccone.js",
+    "../../mzlab/web/apertura-area.js",
     "../../mzlab/web/shell.js",
     "../../mzlab/web/an-esi.js",
     "../../mzlab/web/an-fticr.js",

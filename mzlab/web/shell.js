@@ -35,7 +35,7 @@ let _addY=/** @type {number | null} */ (null),_wasAdd=false;
 function applyView(){const v=S.view,d=v==="data";
   // the scroll of the data view, kept for the way back from the loading screen (leaveAdding)
   if(S.adding&&!_wasAdd)_addY=window.scrollY;_wasAdd=!!S.adding;
-  $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
+  const op=!!S.opening;$("#start").hidden=!(d&&!op&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&(op||(S.sess&&!S.adding)));$("#cancadd").hidden=!(S.sess&&S.adding&&!op);renderLoaded();openingView(op);
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
   // The Teoria is Italian only: in English it opens at once in Italian, with a short toast the first time the student enters it (once per session without storage)
@@ -154,7 +154,7 @@ let UPBUSY=0;const LOADFAIL=window.QQQ_LOADFAIL=new Set();
 const IDLE=/** @type {((v?: unknown) => void)[]} */ ([]);let WAITING=false;
 let WAIT0=0;      // when the click started waiting: the overlay shows the time, so it is never still
 function waitStato(){if(!WAITING)return;const s=PROGRESSO.state(),on=PROGRESSO.busy(),lab=I18N.t(on?PROG_PHASE_KEY[s.phase]||"load.ph.index":"load.ph.prep"),k=on&&s.n>1?" · "+I18N.t("load.prog.count",{done:s.done,n:s.n}):"";
-  loadingStato(`${lab}${k} · ${convElapsed(Date.now()-WAIT0)}`,on?s.pc:null)}
+  const txt=`${lab}${k} · ${convElapsed(Date.now()-WAIT0)}`;if(S.opening)openingStato(txt,on?s.pc:null);else loadingStato(txt,on?s.pc:null)}
 PROGRESSO.subscribe(waitStato);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
 function checkGo(){$("#opbtn").disabled=(UPBUSY===0&&!ST.files.some(usable))||hrMixed();$("#gomsg").textContent=""}
@@ -389,8 +389,9 @@ async function openRest(/** @type {{ file: string, label?: string | null }[]} */
   if(E.progTok===tok){if(added.length)await boot();E.pendN=0;renderFileList();uiSave()}}
 // opens the ticked files of the loading table: the first one at once, the others as they are read (E.pending); `scroll` brings the page back to the top (the button of the table)
 async function openStaged(/** @type {boolean} */ scroll){
-  const rest=await exploreList(ST.files.filter(usable).map((/** @type {FileRiga} */ f)=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find((/** @type {FileAperto} */ x)=>x.file===f.name)||{}).label})));
-  STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);applyView();if(scroll)window.scrollTo(0,0);
+  const op=S.opening,rest=await exploreList(ST.files.filter(usable).map((/** @type {FileRiga} */ f)=>({file:f.name,time:f.time,type:f.type,conc:isCal(f)?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find((/** @type {FileAperto} */ x)=>x.file===f.name)||{}).label})));
+  if(op){openMark("first read");openingFile(0,"boot")}
+  STATO.aggiunta(false,"adding");await bootSession();RUOLI.commit(ST.files);if(op){STATO.apertura(false,"opening");openMark("first shown")}applyView();if(scroll)window.scrollTo(0,0);
   await Promise.all(E.panels.map((/** @type {{ ready?: unknown }} */ p)=>p.ready).filter(Boolean)).catch(()=>{});uiSave();if(rest)rest()}
 // Files dropped on the side panel of the data view are added at once: the same upload() and the same opening as the loading table, without the loading screen (the progress is the bar of the list, E.pending);
 // files of the other resolution than the open ones stay in the loading table, unticked, and a note says so
@@ -420,18 +421,21 @@ async function directDone(){
     if(!CartCarica.fromDrop(e,done))upload(fs,"data").then(done)});
   $("#addf").addEventListener("click",()=>directNote(""))})();
 $("#hrmix-lr").onclick=()=>{hrMixPick(false);renderFiles()};$("#hrmix-hr").onclick=()=>{hrMixPick(true);renderFiles()};
-$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
-  try{if(UPBUSY>0){WAITING=true;WAIT0=Date.now();waitStato();const tk=setInterval(waitStato,1000);ldAction(I18N.t("conv.cancel"),cancelLoads);try{await idle()}finally{clearInterval(tk);ldAction("");WAITING=false;loadingStato(null)}}
-    if(!ST.files.some(usable)){checkGo();return}
+$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;OPEN.t={};openMark("click");let veil=false;const veilOn=(/** @type {boolean} */ on)=>{veil=on;loading(on)};
+  try{if(ST.files.some(usable))openingStart();else veilOn(true);
+    if(UPBUSY>0){WAITING=true;WAIT0=Date.now();waitStato();const tk=setInterval(waitStato,1000);openingCancel(cancelLoads);
+      try{await idle()}finally{clearInterval(tk);ldAction("");WAITING=false;loadingStato(null);openingStato("",null)}}
+    if(!ST.files.some(usable)){openingEnd();checkGo();return}
     // the time of a dark is negative whatever way it got here (name, table, old project)
     ST.files.forEach((/** @type {FileRiga} */ f)=>{if(RUOLI.roleOf(f)==="dark")f.time=darkTime(f.time)});
+    if(S.opening){openingFiles();openingRender()}else{openingStart();veilOn(false)}
     await openStaged(true)}
-  catch(e_){const e=/** @type {Lanciato} */(e_);
+  catch(e_){const e=/** @type {Lanciato} */(e_);openingEnd();
     if(e.key==="err.hr.mix"){
       $("#gomsg").innerHTML=`<span class="fail">${I18N.t("err.hr.mix")}</span> 
       <button id="hrmix-replace" class="btn">${I18N.t("load.hrmix.replace")}</button> 
       <button id="hrmix-cancel" class="btn">${I18N.t("common.cancel")}</button>`;
-      loading(false);
+      if(veil)veilOn(false);
       const isOpen=(/** @type {FileRiga} */ f)=>typeof E!=="undefined"&&E.files.some((/** @type {FileAperto} */ x)=>x.file===f.name||x.file.startsWith(f.name+"#"));
       $("#hrmix-cancel").onclick=()=>$("#cancadd").click();
       $("#hrmix-replace").onclick=async()=>{
@@ -444,11 +448,11 @@ $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true);
         }catch(e2_){const e2=/** @type {Lanciato} */(e2_);$("#gomsg").innerHTML=h`<span class="fail">${e2.message}</span>`;b.disabled=false}finally{loading(false)}
       };
     } else {
-      // the veil goes down with the message: the finally below leaves it up whenever #gomsg is filled
-      $("#gomsg").innerHTML=h`<span class="fail">${e.message}</span>`;loading(false);
+      // the work area (or the veil) goes down with the message: the finally below leaves the veil up whenever #gomsg is filled
+      $("#gomsg").innerHTML=h`<span class="fail">${e.message}</span>`;if(veil)veilOn(false);
     }
     b.disabled=false
-  }finally{if($("#gomsg").innerHTML==="")loading(false)}
+  }finally{if(veil&&$("#gomsg").innerHTML==="")veilOn(false)}
 };
 // both exits of the loading screen (Cancel, «Back to the data») give the page back as it was: the side panel returns through BARRA, the scroll here
 function leaveAdding(){const y=_addY;STATO.aggiunta(false,"adding");applyView();// after the charts took their size again (the tpview handler of the data view, one timeout earlier), or the page is still too short to reach y

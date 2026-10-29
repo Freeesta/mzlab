@@ -35,6 +35,7 @@
     "../../mzlab/web/tables.js",
     "../../mzlab/web/barra.js",
     "../../mzlab/web/molui.js",
+    "../../mzlab/web/apertura-area.js",
     "../../mzlab/web/shell.js",
     "../../mzlab/web/libreria-cartella.js",
     "../../mzlab/web/libreria-scarica.js",

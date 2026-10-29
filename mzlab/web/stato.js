@@ -10,7 +10,7 @@ const VIEW_HASH = { data: "data", draw: "draw", theory: "theory" }, HASH_VIEW = 
 // views that moved into another one: the old name still works (Attributio is now a step of Flow); the Teoria view is the main page while sito.js keeps it off
 const VIEW_ALIAS = { attributio: "flow", ...(window.SITO_PUBBLICO.teoria ? {} : { theory: "data" }) };
 const hashView = () => { const m = /^#\/(\w+)/.exec(location.hash); const v = m && HASH_VIEW[m[1]] || null; return v && VIEW_ALIAS[v] || v; };
-const S = { view: hashView() || "data", sess: null, adding: false, ref: { on: {}, k: "auto", factor: 1, norm: "none", istd: "", rttol: 0.1, clip: false } };
+const S = { view: hashView() || "data", sess: null, adding: false, opening: false, ref: { on: {}, k: "auto", factor: 1, norm: "none", istd: "", rttol: 0.1, clip: false } };
 const ST = { files: [], methods: [] };
 
 const STATO = (() => {
@@ -28,6 +28,8 @@ const STATO = (() => {
     rimuovi(p, motivo) { E.panels = E.panels.filter(x => x !== p); emit(motivo, { pannello: p.id }); },
     vista(v, motivo) { S.view = v; emit(motivo, { vista: v }); return v; },
     aggiunta(on, motivo) { S.adding = !!on; emit(motivo, { aggiunta: !!on }); return S.adding; },
+    /** S.opening = the work area is shown while the ticked files of the loading table are read (the skeleton #opening sits inside it). */
+    apertura(on, motivo) { S.opening = !!on; emit(motivo, { apertura: !!on }); return S.opening; },
     /** Broken invariants, as a list of sentences (empty = consistent). */
     verifica() {
       const r = [];
