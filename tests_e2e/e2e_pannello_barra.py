@@ -49,6 +49,20 @@ try:
             assert len({q["x"] for q in ps}) == 1, ("content moved with the pair bar", ps)
             if shots: pg.screenshot(path=f"{shots}/barra-pair.png", clip={"x": 0, "y": 0, "width": 1500, "height": 900})
         step("pair bars 2px, dashed highlight kept", pair)
+        def nounderline():
+            # file names in the list (they contain "_"): no underline in any state, the active row stays bold
+            drawer(pg, "file", pin=True); frames(pg, 2)
+            for theme in ("light", "dark"):
+                pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); frames(pg, 2)
+                if shots: pg.screenshot(path=f"{shots}/lista-{theme}.png", clip={"x": 0, "y": 0, "width": 500, "height": 500})
+                rows = pg.locator("#flst .fl:not(.pr) .nm"); assert rows.count() >= 2 and "_" in rows.first.inner_text(), "rows with underscores expected"
+                dec = lambda: pg.evaluate("[...document.querySelectorAll('#flst .fl .nm')].map(e=>getComputedStyle(e).textDecorationLine)")
+                assert set(dec()) == {"none"}, dec()
+                cur = pg.evaluate("[...document.querySelectorAll('#flst .fl.cur .nm')].map(e=>getComputedStyle(e).fontWeight)"); assert cur and all(int(w) >= 700 for w in cur), cur
+                for i in range(rows.count()):
+                    rows.nth(i).hover(); assert set(dec()) == {"none"}, ("hover", i, dec())
+                    rows.nth(i).focus(); assert set(dec()) == {"none"}, ("focus", i, dec())
+        step("file list names: no underline (active, hover, focus), light and dark", nounderline)
         assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
     r.close()
 except Exception as e:
