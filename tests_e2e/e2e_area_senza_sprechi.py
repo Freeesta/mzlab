@@ -37,7 +37,7 @@ try:
         pg = r.page(p)
         attendi(pg, "window.qqReady === true"); ready(pg)
         stage(pg, [f]); ready(pg)
-        assert pg.evaluate("!!MZLAB_LR.earlyTic(%r)" % f.name), "no provisional TIC from the indexing: the test would prove nothing"
+        assert pg.evaluate("!!(E.earlyTic && E.earlyTic.get(fileBase(%r)))" % f.name), "no provisional TIC from the indexing: the test would prove nothing"
         pg.evaluate(HOOK)
         pg.click("#opbtn")
         attendi(pg, "window.__held.length > 0")
