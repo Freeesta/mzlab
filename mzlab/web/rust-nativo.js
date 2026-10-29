@@ -36,6 +36,12 @@ export function reader(/** @type {Blob[]} */ files, /** @type {((i: number, end:
   return (/** @type {number} */ i, /** @type {number} */ o, /** @type {number} */ n) => { const b = rd[i](o, n); if (seen) seen(i, o + b.length); return b; };
 }
 
+/** runs `fn(read)` with the members of `st` read through read-only handles of their OPFS copies, closed when it ends (a reader kept longer goes on through the Blobs) @template T @param {Stub} st @param {Blob[]} files @param {(read: ReturnType<typeof reader>) => T} fn @returns {Promise<T>} */
+async function viaHandles(st, files, fn) {
+  const fonti = await Promise.all(files.map((f, i) => openSource("files", st.members[i].store, f)));
+  try { return fn(reader(files, undefined, fonti)); } finally { fonti.forEach(f => f.close()); }
+}
+
 /** runs in the index builder (idx-worker.js): builds the .mzidx of the sample with `build_mzidx_native` of the .wasm (given, so this module has no import of it); `write(offset, bytes)` writes it; `progress({frac, phase, done, total})` is told the overall fraction 0..1 and, in the phases that read the scans, how many of the sample's scans are done */
 export async function buildNative(/** @type {Function} */ build_mzidx_native, /** @type {{ prepara: (names: string[], known?: StubMember[]) => Promise<void> }} */ ext, /** @type {{ st: Stub, files: Blob[] }} */ j, /** @type {string} */ name, /** @type {(o: number, d: Uint8Array) => void} */ write, /** @type {(p: { frac: number, phase: string, done: number, total: number }) => void} */ progress, /** @type {number} */ budget, /** @type {{ put: (o: number, d: Uint8Array) => void, get: (o: number, n: number) => Uint8Array } | null} */ spill = null, /** @type {((o: number, d: Uint8Array) => void) | undefined} */ writeCen = undefined) {
   await ext.prepara(j.st.members.map(x => x.name), j.st.members);
@@ -69,7 +75,7 @@ async function srmDi(st, memberFiles, native_srm, ext) {
   const files = await memberFiles(st);
   await ext.prepara(st.members.map(x => x.name), st.members);
   /** @type {Uint8Array | null} */ let out = null;
-  native_srm(st.members.map(x => x.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), st.c, st.centroid, (/** @type {Uint8Array} */ b) => { out = b; });
+  await viaHandles(st, files, rd => native_srm(st.members.map(x => x.name), Float64Array.from(files.map(f => f.size)), rd, st.c, st.centroid, (/** @type {Uint8Array} */ b) => { out = b; }));
   return out;
 }
 
@@ -94,7 +100,7 @@ function registroDi(stubOf, memberFiles, ext, jerr) {
       if (!st) jerr("err.session.fileNotFound");
       const files = await memberFiles(st);
       await ext.prepara(st.members.map(m => m.name));
-      const s = ext.apri(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined));
+      const s = await viaHandles(st, files, rd => ext.apri(st.members.map(m => m.name), Float64Array.from(files.map(f => f.size)), rd));      // the session outlives the handles (idle: none held); its later reads use the Blobs
       if (!s) jerr("err.route.unavailable");
       log = { name, s, timer: 0 };
     }
@@ -220,9 +226,9 @@ export function createNativo({ ARCH, readerFor, fileOf, jerr, native_samples, na
     let written = 0, last = 0, scans = 0, scansTotal = null;
     const tick = (/** @type {boolean} */ force) => { const t = performance.now(); if (force || t - last > TICK) { last = t; post({ written, scans, scansTotal }); } };
     try {
-      native_to_mzml(/** @type {Stub} */ (st).members.map(x => x.name), Float64Array.from(files.map(f => f.size)), reader(files, undefined), /** @type {Stub} */ (st).c, /** @type {Stub} */ (st).centroid, !!m.numpress,
+      await viaHandles(/** @type {Stub} */ (st), files, rd => native_to_mzml(/** @type {Stub} */ (st).members.map(x => x.name), Float64Array.from(files.map(f => f.size)), rd, /** @type {Stub} */ (st).c, /** @type {Stub} */ (st).centroid, !!m.numpress,
         (/** @type {Uint8Array} */ piece) => { sink.write(piece); written += piece.length; tick(false); },
-        (/** @type {number} */ d, /** @type {number} */ t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); });
+        (/** @type {number} */ d, /** @type {number} */ t) => { scans = d; scansTotal = t; tick(d === 0 || d === t); }));
     } catch (e) { const q = await sink.error(); await sink.abort(); throw q || e; }
     return sink.finish();
   }

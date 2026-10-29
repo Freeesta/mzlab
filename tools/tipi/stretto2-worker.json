@@ -19,6 +19,7 @@
     "../../mzlab/web/impronta-worker.js",
     "../../mzlab/web/lettori-worker.js",
     "../../mzlab/web/lettura-sync.js",
+    "../../mzlab/web/rust-lease-plan.js",
     "../../mzlab/web/llm/llm-worker.js",
     "../../mzlab/web/esporta-dati-worker.js",
     "../../mzlab/web/peaks-worker.js",

@@ -13,6 +13,7 @@ import { createPool, poolSize, makeGate } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
+import { leasePlan } from "./rust-lease-plan.js";
 import { createPlainPut, createOpenGate } from "./rust-carica.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
@@ -93,6 +94,7 @@ const LR_BASE = 1000000;
 const lrSlot = new Map(), lrFile = new Map();
 let lrN = 0, lrPool = null;
 const slotOf = n => { if (!lrSlot.has(n)) lrSlot.set(n, LR_BASE + ++lrN); return lrSlot.get(n); };
+const lrNameOf = (/** @type {number} */ slot) => { for (const [n, k] of lrSlot) if (k === slot) return n; return undefined; };
 const SMALL = (() => { try { return /iPad|iPhone|Android/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); } catch (_) { return false; } })();
 const gate = makeGate(poolSize(SMALL, navigator.hardwareConcurrency));                // the workers of the pool count against it (2 on iPad/phone)
 const ISOLATED = !!self.crossOriginIsolated && typeof SharedArrayBuffer === "function";
@@ -386,12 +388,18 @@ function lowerBudget(/** @type {any} */ m) {                                    
   postMessage({ op: "budget-down", mb, current: m.current, strikes: m.strikes });
 }
 
+// the read handles parked while idle are reopened before the request reads: only those it will read (none for an op that reads no index)
+function wakeFor(/** @type {any} */ m) {
+  const plan = leasePlan(m, slot => tileName.get(slot) ?? (blobs.has(slot) ? "" : lrNameOf(slot)));
+  return ARCH.wake(plan ? plan.map(n => n + ".mzidx") : undefined);
+}
+
 async function handle(ev) {
   const m = ev.data;
   if (m.op === "module") { startInit(m.module); return; } startInit(null); if (m.op === "policy") { await ready; applyPolicy(m); return; }
   if (m.op === "recycle") { bufs.give(m.bufs); return; }
   await ready;
-  await ARCH.wake();                                                              // the read handles parked while idle are reopened before the request reads
+  await wakeFor(m);
   const { id } = m;
   try {
     let out = null, n = 0, info = null;

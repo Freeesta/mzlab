@@ -186,7 +186,12 @@ export async function lease(/** @type {string} */ kind, /** @type {string} */ na
 // bumped by every wake(): a parkAll() that was waiting on an opening when a request woke the leases must not close the handles that request is about to read
 let wakeGen = 0;
 export async function parkAll() { const g = wakeGen; for (const l of leases.values()) { await l.open; if (g !== wakeGen) return; park(l); } }
-export async function wake() { wakeGen++; await Promise.all([...leases.values()].map(l => (l.ah ? (l.last = performance.now(), 0) : openLease(l)))); }
+// `only`: files of idx/ the request will read (undefined = every lease); parkAll closes whatever is open, so a lease the request opens itself (lease()) is released too
+export async function wake(/** @type {string[] | undefined} */ only) {
+  wakeGen++;
+  const want = only && new Set(only.map(n => lkey("idx", n)));
+  await Promise.all([...leases.entries()].filter(([k]) => !want || want.has(k)).map(([, l]) => (l.ah ? (l.last = performance.now(), 0) : openLease(l))));
+}
 /** bytes read into `buf` at `at` (the number read), or -1 when there is no handle */
 export function leaseRead(/** @type {string} */ kind, /** @type {string} */ name, /** @type {Uint8Array} */ buf, /** @type {number} */ at) {
   const l = leases.get(lkey(kind, name));
