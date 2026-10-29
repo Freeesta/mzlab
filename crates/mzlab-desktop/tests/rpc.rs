@@ -77,3 +77,16 @@ fn molecules_of_the_user_are_a_canonical_file_that_a_session_clear_leaves_alone(
     assert_eq!(text(st2.rpc("lr_molecole_archivio", &json!({"mop": "leggi", "body": ""}), &[]).unwrap()), file, "a new run reads it back");
     assert!(st2.rpc("lr_molecole_archivio", &json!({"mop": "scrivi", "body": "{}"}), &[]).is_err(), "a document that is not molecules/1 is refused");
 }
+
+#[test]
+fn uploading_the_same_name_again_is_found_by_its_new_size() {
+    let data = tempfile::tempdir().unwrap();
+    let st = State::new();
+    st.set_data_folder(data.path().join("app"));
+    let first = st.upload_chunk("again.mzML", 0, 3, b"abc").unwrap().unwrap();
+    assert_eq!(st.find("again.mzML", 3), Some(first));
+    let second = st.upload_chunk("again.mzML", 0, 5, b"abcde").unwrap().unwrap();
+    assert_eq!(second, first, "same path, same number");
+    assert_eq!(st.find("again.mzML", 5), Some(first), "the lookup by the new size works");
+    assert_eq!(st.find("again.mzML", 3), None, "the old size is gone");
+}

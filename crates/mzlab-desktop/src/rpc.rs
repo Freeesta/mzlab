@@ -24,12 +24,16 @@ use crate::nativi::{Nativi, Src};
 pub(crate) const LR_BASE: u32 = 1_000_000;
 
 impl State {
-    /// The number of a file of the disk (the same number for the same path).
+    /// The number of a file of the disk (the same number for the same path); the size is the one the file has now, so a file rewritten at the same path
+    /// is still found by name and size.
     pub(crate) fn pick_path(&self, path: &std::path::Path) -> u32 {
         {
-            let g = self.lock_inner();
-            if let Some((id, _)) = g.picked.iter().filter(|(_, p)| p.path == path).max_by_key(|(id, _)| **id) {
-                return *id;
+            let mut g = self.lock_inner();
+            if let Some(id) = g.picked.iter().filter(|(_, p)| p.path == path).map(|(id, _)| *id).max() {
+                if let (Ok(m), Some(p)) = (std::fs::metadata(path), g.picked.get_mut(&id)) {
+                    p.size = m.len();
+                }
+                return id;
             }
         }
         self.pick(path.to_path_buf()).map(|(id, _)| id).unwrap_or(0)
