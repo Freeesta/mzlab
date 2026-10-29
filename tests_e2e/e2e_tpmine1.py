@@ -1,6 +1,5 @@
-"""Tabui (internal name TP Mine, also mzFinder) step (a): the tab exists only in the administrator mode (localStorage «mzlab.admin» = «1», QTOOLS admin:true of tpmine-loader.js).
-Without it: no tab, no section, the package of Tabui is not downloaded, QTOOLS lists nothing, and the address #/tpmine stays on the Data tab. With it: the tab is in the header
-from the start and survives a reload. Five quick clicks on the logo bring the tab up at once, without a reload; five more take it away (the page reloads).
+"""Tabui (internal name TP Mine, also mzFinder) step (a): the tab is in the header at first load, with no flag and no click (tpmine-loader.js), survives a reload.
+Five quick clicks on the logo do not change it.
 Run from the repo root: python3 tests_e2e/e2e_tpmine1.py   (needs Playwright and a built Pyodide dir or internet)"""
 import os, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
@@ -30,35 +29,15 @@ time.sleep(1); errs = []; reqs = []
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); TAB = '#nav button[data-v="tpmine"]'
-        def fresh(admin, hash_=""):
+        def fresh():
             c = b.new_context(viewport={"width": 1400, "height": 900}); pg = c.new_page()
             pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("request", lambda r: reqs.append(r.url))
-            if admin: pg.add_init_script("try{if(!sessionStorage.getItem('adm0')){sessionStorage.setItem('adm0','1');localStorage.setItem('mzlab.admin','1');}}catch(_){}")      # once per tab: a reload after leaving the mode must not switch it back on
-            pg.goto(f"http://127.0.0.1:{PORT}/" + hash_); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(1500)
+            pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000); pg.wait_for_timeout(1500)
             return pg
-        pg = fresh(False)
-        def absent():
-            assert not pg.query_selector(TAB) and not pg.query_selector("#v-tpmine"), "the tab exists without the administrator mode"
-            assert pg.evaluate("window.QTOOLS.list().length") == 0
-            assert not [u for u in reqs if "/mzfinder/" in u], [u for u in reqs if "/mzfinder/" in u][:3]      # the package is not even downloaded
-            assert pg.evaluate("[...document.querySelectorAll('#nav button')].map(b => b.dataset.v)") == ["data", "draw", "theory"]
-        step("without mzlab.admin there is no Tabui tab and nothing is downloaded", absent)
-        def hash_stays():
-            q = fresh(False, "#/tpmine")
-            assert q.evaluate("S.view") == "data" and not q.query_selector("#v-tpmine"), q.evaluate("S.view")
-            q.close()
-        step("without mzlab.admin the address #/tpmine opens the normal page", hash_stays)
-        def five_clicks():
-            pg.wait_for_selector("header img.logo[role=button]", timeout=60000)      # logo-piccone.js arms the logo when its script has run, which can be after #drop
-            pg.evaluate("for (let i = 0; i < 5; i++) document.querySelector('header img.logo').click()")      # in one task: the five hits stay inside the 3 s heal window however slow the runner
-            pg.wait_for_function("localStorage.getItem('mzlab.admin') === '1'", timeout=15000)
-            pg.wait_for_selector(TAB, timeout=30000)                            # no reload: the tab comes up at once
-            pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)
-        step("five quick clicks on the logo bring the tab up without a reload", five_clicks)
-        pg.context.close(); reqs.clear()
-        pg = fresh(True)
+        pg = fresh()
         def visible():
-            pg.wait_for_selector(TAB, timeout=30000)
+            pg.wait_for_selector(TAB, timeout=30000)                         # in the header at first load, no flag and no click
+            assert pg.evaluate("localStorage.getItem('mzlab.admin')") is None
             assert not pg.query_selector("#mzf-badge")           # no mark next to the logo
             pg.wait_for_function("window.QTOOLS.list().some(t => t.id === 'tpmine')", timeout=60000)      # the tab shows at once; the tool registers when its scripts have loaded
             txt = pg.inner_text(TAB)
@@ -68,19 +47,17 @@ try:
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
             pg.click('#nav button[data-v="data"]')                           # back to Dati: a reload on #/theory opens the standalone Teoria page
-        step("with mzlab.admin the Tabui tab is in the header at once", visible)
+        step("the Tabui tab is in the header at first load", visible)
         def reload_on():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector(TAB, timeout=30000)
         step("after a reload it is still there", reload_on)
-        def five_off():
+        def logo_normal():
             pg.wait_for_selector("header img.logo[role=button]", timeout=60000)      # logo-piccone.js arms the logo when its script has run, which can be after #drop
-            pg.evaluate("for (let i = 0; i < 5; i++) document.querySelector('header img.logo').click()")      # in one task: the five hits stay inside the 3 s heal window however slow the runner
-            pg.wait_for_function("localStorage.getItem('mzlab.admin') === null", timeout=15000)
-            pg.wait_for_function("!document.querySelector('#nav button[data-v=\"tpmine\"]')", timeout=30000)      # the page reloads once the logo is whole
-            pg.wait_for_selector("#drop", timeout=120000)
-            assert not pg.query_selector(TAB) and pg.evaluate("window.QTOOLS.list().length") == 0
-        step("five more clicks on the logo leave the mode: the tab is gone", five_off)
+            pg.evaluate("for (let i = 0; i < 5; i++) document.querySelector('header img.logo').click()")
+            pg.wait_for_function("document.querySelector('header img.logo').style.opacity !== '0'", timeout=15000)
+            assert pg.query_selector(TAB) and pg.evaluate("window.QTOOLS.list().some(t => t.id === 'tpmine')")      # the logo has nothing to do with the tab
+        step("five clicks on the logo do not touch the tab", logo_normal)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)

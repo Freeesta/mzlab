@@ -4,9 +4,9 @@
 //     is loaded, no data is read. The date cannot be computed (bad date, no clock) = expired, never open. This is a SOFT block, not security: whoever
 //     controls their own browser (clock, devtools, offline copy) can get round it. It only keeps the lab page from living on by itself.
 //  2. no examples: see below (the build deletes static/esempi and the example drawings; here their buttons go).
-//  3. only Data and Draw: Tabui and mzFlow are the administrator mode (five clicks on the logo, localStorage «admin»). Every read of that flag answers
-//     «off» and every write is dropped, so no code path loads the Tabui loader or draws its tabs; addresses of any other view go back to #/data.
-//     Nothing is deleted from the program: the build with the flag off is untouched.
+//  3. only Data and Draw: window.MZLAB_LAB tells the Tabui loader (tpmine-loader.js, which brings Tabui and mzFlow) and carica.js not to start, so no
+//     package is downloaded and no tab is drawn; addresses of any other view go back to #/data. The administrator flag (Teoria editor and the like)
+//     reads as «off» and cannot be written. Nothing is deleted from the program: the normal build is untouched.
 (function () {
   "use strict";
   var w = /** @type {any} */ (window);

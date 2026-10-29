@@ -1,4 +1,4 @@
-"""Flow, the graphical workflow page (docs/agenti/flow-grafica.md): it exists only in the administrator mode (localStorage «mzlab.admin» = «1»), the palette comes from the three lists of
+"""Flow, the graphical workflow page (docs/agenti/flow-grafica.md): its tab is in the header at first load, the palette comes from the three lists of
 descriptors, a chain is built by clicking steps (each is wired to what fits), the plan is validated after every change and leaves and returns as mzflow/2 JSON. Also the click budget of
 rule 26 (few clicks): a valid four-step chain exported in at most CEILING clicks and keys, counted by capture listeners; the five clicks of the logo are reported apart.
 Run from the repo root: python3 tests_e2e/e2e_flow.py"""
@@ -40,11 +40,10 @@ try:
             pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
             return pg
         pg = fresh(False)
-        def hidden():
-            attendi(pg, "document.readyState === 'complete' && !!document.querySelector('#nav')")
-            assert pg.locator(TAB).count() == 0 and pg.locator("#v-flow").count() == 0
-            assert not [r for r in reqs if "flow-" in r or "steps-attributio" in r], "Flow must not be downloaded for a normal user"
-        step("a normal user has no Flow tab and downloads nothing of it", hidden)
+        def shown():
+            pg.wait_for_selector(TAB, timeout=60000)
+            assert pg.evaluate("localStorage.getItem('mzlab.admin')") is None
+        step("a normal user has the Flow tab at first load", shown)
         pg.context.close()
 
         pg = fresh(True, reduced=True)

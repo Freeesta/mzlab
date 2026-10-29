@@ -88,7 +88,8 @@ try:
         pg.reload(); attendi(pg, "typeof E !== 'undefined' && E.files.length >= 1", 60000)
         pg.screenshot(path=SH + "20_restored.png")
         print("after reload", pg.evaluate("({f:E.files.length,p:E.panels.map(p=>p.type+':'+(p.traces||[]).length+':'+p.ints.length)})"))
-        step("tabs Dati, Disegno, Teoria (no Tabui without the administrator mode)", lambda: (lambda n: None if n == ["data", "draw", "theory"] else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
+        attendi(pg, "document.querySelectorAll('#nav button[data-v=tpmine], #nav button[data-v=flow]').length === 2", 60000)
+        step("tabs Dati, Disegno, Teoria, Tabui and Flow at first load", lambda: (lambda n: None if sorted(n) == sorted(["data", "draw", "theory", "tpmine", "flow"]) else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
         pg.click("text=Disegno"); attendi(pg, "!document.querySelector('#v-draw').hidden"); pg.screenshot(path=SH + "22_draw.png")
         b = None
 finally:
