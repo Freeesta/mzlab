@@ -71,4 +71,4 @@ All speed figures above are estimates from the code. Cheap native checks that wo
 
 ## Lots 3-5
 
-Lot 3: `gemini-caricamento-verifica-L3.md`. Lot 4: `gemini-caricamento-verifica-L4.md` (incomplete: H7+ missing). Lot 5: `gemini-caricamento-verifica-L5.md`. Same columns and verdict letters.
+Lot 3: `gemini-caricamento-verifica-L3.md`. Lot 4: `gemini-caricamento-verifica-L4.md` (incomplete: H7+ missing). Lot 5: `gemini-caricamento-verifica-L5.md`. Lot 6: `gemini-caricamento-verifica-L6.md`. Same columns and verdict letters.
