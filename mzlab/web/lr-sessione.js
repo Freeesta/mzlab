@@ -13,9 +13,15 @@ export function sessionFiles(items, ok, labels = []) {
     .filter(x => ok(x.file) && !seen.has(x.file) && seen.add(x.file));
 }
 
-/** True when the names are of both resolutions (a list opened file by file is judged before its first file replaces the session). */
-export async function mixesResolutions(rpc, names, ok) {
+/** True when the names are of both resolutions (a list opened file by file is judged before its first file replaces the session). A file whose entry (`lr_entry`) is not split in parts
+ *  is judged by the entry's `hr` (the same facts as its one item); only a mixed file asks the engine for its items, whose parts can differ in resolution. */
+export async function mixesResolutions(rpc, names, ok, entry = () => null) {
   const kinds = new Set();
-  for (const n of names) if (ok(n)) kinds.add(JSON.parse((await rpc({ op: "lr_items", name: n, sample: {} })).info).some(it => it.hr));
+  for (const n of names) {
+    if (!ok(n)) continue;
+    const e = entry(n);
+    if (e && typeof e.hr === "boolean" && !(Array.isArray(e.mixed) && e.mixed.length > 1)) kinds.add(e.hr);
+    else kinds.add(JSON.parse((await rpc({ op: "lr_items", name: n, sample: {} })).info).some(it => it.hr));
+  }
   return kinds.size > 1;
 }

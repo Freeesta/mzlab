@@ -99,7 +99,7 @@ fn session_like_python() {
             return;
         }
     };
-    let (mut files, mut items) = (0, 0);
+    let (mut files, mut items, mut plain) = (0, 0, 0);
     for line in listing.lines().filter(|l| !l.is_empty()) {
         let stem = PathBuf::from(line)
             .file_stem()
@@ -122,6 +122,8 @@ fn session_like_python() {
         let got =
             file_entry(&mut idx, &mut m, &name, size).unwrap_or_else(|e| panic!("{stem}: {e}"));
         let mut got: Value = serde_json::from_str(&got).unwrap();
+        let entry_hr = got["hr"].as_bool().unwrap();
+        let entry_parts = got["mixed"].as_array().unwrap().len();
         let infusion = got["kind"] == "infusion"; // one item, where Python splits MS1 and MS2
         infusion_exception(&mut got, &want["entry"]);
         same(&format!("{stem} entry"), &got, &want["entry"]);
@@ -136,6 +138,12 @@ fn session_like_python() {
         for (k, s) in [("plain", Sample::default()), ("edited", edit)] {
             let got = open_items(&mut idx, &mut m, &name, &s)
                 .unwrap_or_else(|e| panic!("{stem} {k}: {e}"));
+            // the page judges a file not split in parts by the `hr` of its entry (lr-sessione.js `mixesResolutions`): it is the `hr` of its one item
+            if entry_parts <= 1 {
+                assert_eq!(got.len(), 1, "{stem} {k}: a plain file is one item");
+                assert_eq!(got.iter().any(|it| it.hr), entry_hr, "{stem} {k}: entry hr");
+                plain += 1;
+            }
             let w = want[k].as_array().unwrap();
             if infusion {
                 assert_eq!(got.len(), 1, "{stem} {k}: infusion items");
@@ -152,5 +160,6 @@ fn session_like_python() {
         files += 1;
     }
     assert!(files >= 8 && items >= 16, "{files} files, {items} items");
+    assert!(plain >= 4, "{plain} plain files checked");
     let _ = std::fs::remove_dir_all(&out);
 }
