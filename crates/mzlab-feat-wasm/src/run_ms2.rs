@@ -15,3 +15,8 @@ pub fn flow_ms2(
     let p = Ms2Params::from_json(params_json).map_err(crate::js_err)?;
     ms2_text(&p, &[(name, mzml)], features.as_deref()).map_err(crate::js_err)
 }
+
+// `formula.ms1` (the sibling of this step, same .wasm): declared here so that lib.rs does not grow.
+#[cfg(feature = "flow_formula")]
+#[path = "run_formula.rs"]
+pub mod run_formula;

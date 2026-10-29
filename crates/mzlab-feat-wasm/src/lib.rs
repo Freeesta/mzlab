@@ -41,8 +41,6 @@ pub mod run;
 pub mod spill_js; pub mod run_evid;
 #[cfg(feature = "flow_ms2")]
 pub mod run_ms2;
-#[cfg(feature = "flow_formula")]
-pub mod run_formula;
 pub mod run_tp; pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
