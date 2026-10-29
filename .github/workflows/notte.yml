@@ -94,7 +94,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('pyproject.toml') }}
           restore-keys: playwright-${{ runner.os }}-${{ matrix.browser }}-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
-        run: rustup show
+        run: python tools/ci_toolchain.py
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
@@ -220,7 +220,7 @@ jobs:
           key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pyproject.toml') }}
           restore-keys: playwright-${{ runner.os }}-chromium-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
-        run: rustup show
+        run: python tools/ci_toolchain.py
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |

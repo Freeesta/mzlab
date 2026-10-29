@@ -384,7 +384,7 @@ def e2e(results, only, timeout, kind, jobs: int = 1, parte: tuple[int, int] | No
         results.append(("e2e", "SKIP", 0, ["Playwright/Chromium non disponibili: python3 tools/verifica.py --setup"])); return
     mz, src = data_dir()
     dam = dam_file()
-    env = dict(os.environ, MZLAB_MZML=str(mz), QQQ_MZML=str(mz), PYTHONUNBUFFERED="1")
+    env = dict(os.environ, MZLAB_MZML=str(mz), QQQ_MZML=str(mz), PYTHONUNBUFFERED="1", RUSTUP_AUTO_INSTALL="0")  # tools/prepara_sito.py installs the toolchain once; a test may not
     if dam:
         env["MZLAB_DAM"] = str(dam)
         env["QQQ_DAM"] = str(dam)
