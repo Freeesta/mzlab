@@ -138,6 +138,7 @@ fn the_synthetic_pairs_read_the_same_through_the_registry() {
         .sum();
     assert!(n > 0);
     one_sample(&out, "two");
+    mzml_of_one_sample(&out, "two");
     truncated(&out, "serie");
 }
 
@@ -194,6 +195,11 @@ fn one_sample(dir: &Path, name: &str) {
                 .map(|v| (v.id.clone(), v.rt, v.posizione))
                 .collect();
             assert_eq!(a, b, "{name}: index of sample {k} opened for {c}");
+            assert_eq!(
+                solo.campioni()[k].scansioni,
+                all.campioni()[k].scansioni,
+                "{name}: scans listed for sample {k} once its index is built"
+            );
             if let Some(s) = a.len().checked_sub(1) {
                 assert_eq!(
                     all.scansione(k, s).unwrap().mz,
@@ -201,6 +207,36 @@ fn one_sample(dir: &Path, name: &str) {
                 );
             }
         }
+    }
+}
+
+/// The mzML of sample `c` is the same bytes whether the pair was opened for all the injections or for `c` alone (the header carries the SHA-1 of the `.wiff.scan` either way).
+fn mzml_of(mut l: Box<dyn lettori::Lettore>, c: usize) -> Vec<u8> {
+    let mut out = Vec::new();
+    let conv = mzlab_core::lettori_mzml::Conversione {
+        steps: Some(&[]),
+        ..Default::default()
+    };
+    conv.scrivi(&mut *l, c, &mut out, &mut |_, _| {}).unwrap();
+    out
+}
+
+fn mzml_of_one_sample(dir: &Path, name: &str) {
+    let n = lettori::apri(set(dir, name), &Limiti::sito())
+        .unwrap()
+        .campioni()
+        .len();
+    for c in 0..n {
+        let all = mzml_of(lettori::apri(set(dir, name), &Limiti::sito()).unwrap(), c);
+        let solo = mzml_of(
+            mzlab_core::wiff::lettore::apri_solo(set(dir, name), &Limiti::sito(), Some(c)).unwrap(),
+            c,
+        );
+        assert!(!all.is_empty());
+        assert!(
+            all == solo,
+            "{name}: mzML of sample {c} opened for it alone"
+        );
     }
 }
 
