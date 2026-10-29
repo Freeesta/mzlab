@@ -19,37 +19,24 @@ pub trait Scansioni {
     fn mobilita(&mut self, _sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
         Ok(None)
     }
+    /// `spettro` and `mobilita` of the same scan; a source that reads bytes overrides it to read and decode them once.
+    fn spettro_mobilita(&mut self, sc: &Scan) -> Result<(Picchi, Option<crate::mzml::Mobility>)> {
+        Ok((self.spettro(sc)?, self.mobilita(sc)?))
+    }
 }
 
 /// An mzML read by offset: the row gives `start..end` of the `<spectrum>`. A reader that stands for a vendor file (`ReadAt::lettore`) gives, for a row
 /// of an index of version 2, the peaks of its `Lettore` and the header fields the mzML of `lettori_mzml::scrivi` would have (`testo_scansione`).
 impl<M: ReadAt> Scansioni for M {
     fn spettro(&mut self, sc: &Scan) -> Result<(Vec<f64>, Vec<f64>)> {
-        if let (Some(_), Some((l, c))) = (sc.k, self.lettore()) {
-            return SorgenteLettore { l, c }.spettro(sc);
-        }
-        let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
-        self.read_at(sc.start, &mut buf)?;
-        let mut found = None;
-        crate::mzml::parse(&buf[..], |it| {
-            if let crate::mzml::Item::Spectrum(s) = it {
-                found.get_or_insert(s);
-            }
-        })?;
-        let s = found.ok_or_else(|| Error::new("err.scan.outside"))?;
-        let n = s.mz.len().min(s.intensity.len());
-        Ok((
-            s.mz[..n].to_vec(),
-            (0..n).map(|i| s.intensity_f64(i)).collect(),
-        ))
+        Ok(self.spettro_mobilita(sc)?.0)
     }
 
     fn mobilita(&mut self, sc: &Scan) -> Result<Option<crate::mzml::Mobility>> {
         if sc.k.is_some() && self.lettore().is_some() {
             return Ok(None);
         }
-        let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
-        self.read_at(sc.start, &mut buf)?;
+        let buf = leggi_riga(self, sc)?;
         let mut found = None;
         crate::mzml::parse(&buf[..], |it| {
             if let crate::mzml::Item::Mobility(m) = it {
@@ -57,6 +44,13 @@ impl<M: ReadAt> Scansioni for M {
             }
         })?;
         Ok(found)
+    }
+
+    fn spettro_mobilita(&mut self, sc: &Scan) -> Result<(Picchi, Option<crate::mzml::Mobility>)> {
+        if let (Some(_), Some((l, c))) = (sc.k, self.lettore()) {
+            return Ok((SorgenteLettore { l, c }.spettro(sc)?, None));
+        }
+        spettro_e_mobilita(&leggi_riga(self, sc)?)
     }
 
     fn intestazione(&mut self, sc: &Scan) -> Result<Vec<Campo>> {
@@ -68,6 +62,33 @@ impl<M: ReadAt> Scansioni for M {
     }
 }
 
+type Picchi = (Vec<f64>, Vec<f64>);
+
+/// The bytes `start..end` of the `<spectrum>` of a row.
+fn leggi_riga<M: ReadAt + ?Sized>(m: &mut M, sc: &Scan) -> Result<Vec<u8>> {
+    let mut buf = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
+    m.read_at(sc.start, &mut buf)?;
+    Ok(buf)
+}
+
+/// The peaks and the ion mobility of the first spectrum in `buf`, from one parse.
+fn spettro_e_mobilita(buf: &[u8]) -> Result<(Picchi, Option<crate::mzml::Mobility>)> {
+    let (mut found, mut mob) = (None, None);
+    crate::mzml::parse(buf, |it| match it {
+        crate::mzml::Item::Spectrum(s) => {
+            found.get_or_insert(s);
+        }
+        crate::mzml::Item::Mobility(m) => {
+            mob.get_or_insert(m);
+        }
+        _ => {}
+    })?;
+    let s = found.ok_or_else(|| Error::new("err.scan.outside"))?;
+    let n = s.mz.len().min(s.intensity.len());
+    let y = (0..n).map(|i| s.intensity_f64(i)).collect();
+    Ok(((s.mz[..n].to_vec(), y), mob))
+}
+
 /// The text of the `<spectrum>` of a row up to its arrays, as the mzML has it: read by offset, or written for a scan of a `Lettore` as
 /// `lettori_mzml::scrivi` writes it (the header only, no arrays). For what is searched in the text of the scans (scan window, injection time).
 pub fn testo_scansione<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
@@ -75,9 +96,7 @@ pub fn testo_scansione<M: ReadAt>(m: &mut M, sc: &Scan) -> Result<String> {
         let s = crate::mzidx_lettore::spettro(&mut *l, c, k)?;
         return Ok(crate::mzmlwrite::spectrum_head(k, &s, &l.extra_mzml(&s)));
     }
-    let mut b = vec![0u8; sc.end.saturating_sub(sc.start) as usize];
-    m.read_at(sc.start, &mut b)?;
-    Ok(String::from_utf8_lossy(&b).into_owned())
+    crate::scaninfo::header(m, sc.start, sc.end)
 }
 
 /// The chromatograms of a file and its header.

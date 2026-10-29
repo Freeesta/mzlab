@@ -40,7 +40,10 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> BlockCache<F> {
 impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
     fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
         self.tick += 1;
-        let end = off + buf.len() as u64;
+        // a range that wraps past u64::MAX is no cache hit: the fetch refuses it
+        let Some(end) = off.checked_add(buf.len() as u64) else {
+            return (self.fetch)(off, buf);
+        };
         let (mut victim, mut oldest) = (0, u64::MAX);
         for (i, s) in self.slots.iter_mut().enumerate() {
             if off >= s.start && end <= s.start + s.data.len() as u64 {
@@ -53,7 +56,7 @@ impl<F: FnMut(u64, &mut [u8]) -> Result<()>> ReadAt for BlockCache<F> {
                 (victim, oldest) = (i, s.used);
             }
         }
-        let n = self.size.min(self.dim.saturating_sub(off) as usize);
+        let n = self.dim.saturating_sub(off).min(self.size as u64) as usize;
         if buf.len() >= self.size || n < buf.len() {
             // big (or past the end, for the fetch to refuse): as asked
             return (self.fetch)(off, buf);

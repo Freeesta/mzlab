@@ -119,7 +119,7 @@ impl<R: ReadAt> Routes<R> {
             p => p,
         };
         let d = hr_profile(scans, s.level == 1, q.get("hr") != Some("0")).dec + 1;
-        let (mz, y) = mzml.spettro(s)?;
+        let ((mz, y), mobility) = mzml.spettro_mobilita(s)?;
         let mut o = Out::default();
         o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(s.number(sid)).raw(",\"parent_no\":");
         match parent {
@@ -148,7 +148,7 @@ impl<R: ReadAt> Routes<R> {
         };
         o.raw(",\"filter\":").str(&s.filter).raw(",\"profile\":").raw(if s.profile { "true" } else { "false" });
         // ion mobility, only for a scan that has it: `mob` per peak (when the file gives an array as long as the peaks), `mob_scan` for the whole scan
-        if let Some(m) = mzml.mobilita(s)? {
+        if let Some(m) = mobility {
             if let Some(v) = m.values.as_ref().filter(|v| v.len() == mz.len()) {
                 o.raw(",\"mob_unit\":").str(m.unit).raw(",\"mob\":").rounded(v, 6);
             }

@@ -138,6 +138,10 @@ pub(crate) struct DeclaredWindow {
 impl DeclaredWindow {
     /// From the header text of a spectrum.
     pub fn note(&mut self, h: &str, level: u8) {
+        // the header is searched only for a survey that still counts
+        if level != 1 || self.surveys >= 50 {
+            return;
+        }
         let w = match (
             cv(h, "MS:1000501").and_then(float),
             cv(h, "MS:1000500").and_then(float),
@@ -766,3 +770,6 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
     let n_chrom = count_chromatograms(&mut src, last_end)?;
     Ok(rows.finish(n_chrom))
 }
+
+#[cfg(test)]
+mod tests_finestra;
