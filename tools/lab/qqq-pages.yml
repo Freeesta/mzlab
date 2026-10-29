@@ -36,6 +36,9 @@ jobs:
         run: python tools/build_site.py
       - name: Toolchain (version pinned in rust-toolchain.toml)
         run: rustup show
+      # the identity of the build for option_env! (prov/1, corsa/1): rustc, SHA-256 of Cargo.lock, target; never the commit, so the .wasm bytes do not change at every commit
+      - name: Build identity of the WASM modules
+        run: python3 -c 'import sys; sys.path.insert(0, "tools"); import prepara_sito; [print(f"{k}={v}") for k, v in prepara_sito.build_env("wasm32-unknown-unknown", commit=False).items()]' >> "$GITHUB_ENV"
       # every run restores the newest cache; a new one is saved only when the Rust sources (crates/, vendor/, Cargo.lock) changed: the 10 GB of caches of the repository are not filled by copies of the same build
       - id: rcache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -170,6 +173,8 @@ jobs:
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
+      - name: Record the .wasm modules in static/build.json (they are in place now)
+        run: python3 tools/build_site.py --build-json
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: site
