@@ -29,7 +29,7 @@ R=target/wasm32-unknown-unknown/release
 if [ -z "${MZLAB_WASM_SEPARATI:-}" ]; then
   if want a; then
     cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features detect,proofs,mrm,finder,finder_edge,finder_msn
-    wasm_pack "$out/hr" $R/mzlab_feat_wasm.wasm $limit_hr "mzFinder hr"
+    wasm_pack "$out/hr" $R/mzlab_feat_wasm.wasm $limit_hr "mzFinder hr" @motore
   fi
   group="untargeted interp"
 else
@@ -38,58 +38,58 @@ fi
 for which in $group; do
   case $which in detect|proofs|mrm|finder) want a || continue ;; *) want b || continue ;; esac
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features $which
-  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $(case $which in interp) echo $limit_interp;; untargeted) echo $limit_untargeted;; *) echo $limit;; esac) "mzFinder $which"
+  wasm_pack "$out/$([ $which = detect ] && echo feat || echo $which | tr _ -)" $R/mzlab_feat_wasm.wasm $(case $which in interp) echo $limit_interp;; untargeted) echo $limit_untargeted;; *) echo $limit;; esac) "mzFinder $which" @motore
 done
 if want a; then
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
-wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit_table "mzFinder table"
+wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit_table "mzFinder table" @motore
 # the structure graph, loaded only when the user gives a SMILES: crates/mzlab-feat-grafo-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-grafo-wasm
-wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo"
+wasm_pack "$out/grafo" $R/mzlab_feat_grafo_wasm.wasm $limit "mzFinder grafo" @motore
 # the reactivity of the parent (crates/mzlab-chem-wasm: reatt/1), loaded only in administrator mode
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-chem-wasm
-wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem"
+wasm_pack "$out/chem" $R/mzlab_chem_wasm.wasm $limit_chem "mzFinder chem" @motore
 # the Libro converter (crates/mzlab-libro-wasm: Markdown chapter -> Teoria HTML), loaded only by the administrator Teoria editor
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-libro-wasm
-wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter"
+wasm_pack "$out/libro" $R/mzlab_libro_wasm.wasm $limit_libro "Libro converter" @motore
 # the fragmentation graph of an MSn infusion (crates/mzlab-msngrafo-wasm: msngrafo/1), loaded by the worker of the engine on the first request of /api/msn_grafo
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-msngrafo-wasm
-wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo"
+wasm_pack "$out/msngrafo" $R/mzlab_msngrafo_wasm.wasm $limit_msngrafo "msngrafo" @motore
 # the structure rules of that graph (crates/mzlab-msnregole-wasm: SMILES -> attese), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-msnregole-wasm
-wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnregole"
+wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnregole" @motore
 # the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js only after the opt-in; never fused with another module
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
-wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant"
+wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant" @motore
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
-wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import"
+wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import" @motore
 fi
 if want b; then
 # Attributio (administrator mode): ONE .wasm "attributio-all" with the table of levels, the Banco 2b, the exports and the MS2 engine (the manifest keys of the four point to it; the workers load it once).
 # MZLAB_WASM_SEPARATI=1 builds the four as before: crates/mzlab-attributio-wasm without features (the table, loaded when a campaign folder is chosen) and with rev, export or ms2.
 if [ -z "${MZLAB_WASM_SEPARATI:-}" ]; then
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features all
-wasm_pack "$out/attributio-all" $R/mzlab_attributio_wasm.wasm $limit_attributio "mzFinder attributio"
+wasm_pack "$out/attributio-all" $R/mzlab_attributio_wasm.wasm $limit_attributio "mzFinder attributio" @motore
 mkdir -p "$out/attributio-all" && cp crates/mzlab-feat/data/classi-1.json "$out/attributio-all/classi-1.json"
 else
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm
-wasm_pack "$out/attributio" $R/mzlab_attributio_wasm.wasm $limit "mzFinder attributio"
+wasm_pack "$out/attributio" $R/mzlab_attributio_wasm.wasm $limit "mzFinder attributio" @motore
 # the Banco 2b of Attributio (review of one feature, saving of a decision), loaded only when the Banco opens: the same crate with the feature rev
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features rev
-wasm_pack "$out/attributio-rev" $R/mzlab_attributio_wasm.wasm $limit_rev "mzFinder attributio-rev"
+wasm_pack "$out/attributio-rev" $R/mzlab_attributio_wasm.wasm $limit_rev "mzFinder attributio-rev" @motore
 mkdir -p "$out/attributio-rev" && cp crates/mzlab-feat/data/classi-1.json "$out/attributio-rev/classi-1.json"
 # the exports of Attributio (Schymanski folder, publication table, quantification, gradient), loaded only when the Export menu is used: the same crate with the feature export
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features export
-wasm_pack "$out/attributio-export" $R/mzlab_attributio_wasm.wasm $limit_export "mzFinder attributio-export"
+wasm_pack "$out/attributio-export" $R/mzlab_attributio_wasm.wasm $limit_export "mzFinder attributio-export" @motore
 # the MS2 engine of Attributio (library search, in-silico ranking, hydrogen rearrangements, RT forest, chimeric intruders), loaded only when its panel runs: the same crate with the feature ms2
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-attributio-wasm --features ms2
-wasm_pack "$out/attributio-ms2" $R/mzlab_attributio_wasm.wasm $limit_ms2 "mzFinder attributio-ms2"
+wasm_pack "$out/attributio-ms2" $R/mzlab_attributio_wasm.wasm $limit_ms2 "mzFinder attributio-ms2" @motore
 fi
 # the low-resolution Dig of mzFinder (crates/mzlab-finder-lr-wasm), loaded by the worker of mzFinder only for a series of full-scan unit-resolution files
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-finder-lr-wasm
-wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr"
+wasm_pack "$out/finder-lr" $R/mzlab_finder_lr_wasm.wasm $limit_lr "mzFinder finder-lr" @motore
 # the readers module (crates/mzlab-lettori-wasm), loaded only when a file needs it: tools/build_lettori_wasm.sh (it has its own jobs: it overlaps with the ones above)
 # part b leaves the readers to the job of the engine in sito-rust.yml (it balances the three jobs); all (pages, release) builds them here
 [ "$part" = b ] || tools/build_lettori_wasm.sh "${1:-site/static}"
