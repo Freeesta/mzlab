@@ -51,7 +51,7 @@ def test_wiff_sample_name_from_data():
         c.wiffName("FullMass", 1, true, [], "Sample_A"),
         c.wiffName("FullMass", 1, true, [], "  Sample_A  "),
         c.wiffName("FullMass", 2, true, ["sample_a.mzml"], "Sample_A"),
-        c.wiffName("FullMass", 2, true, ["sample_a.mzml", "sample_a_s2.mzml"], "Sample_A"),
+        c.wiffName("FullMass", 2, true, ["sample_a.mzml", "sample_a.wiff.mzml"], "Sample_A"),
         c.wiffName("FullMass", 3, true, [], ""),
         c.wiffName("FullMass", 1, false, [], "A/B\\\\:C*D?E\\\"F<G>H|I"),
         c.wiffName("FullMass", 1, false, [], "x".repeat(150)),
@@ -61,8 +61,8 @@ def test_wiff_sample_name_from_data():
     assert got == [
         "Sample_A.mzML",
         "Sample_A.mzML",
-        "Sample_A_s2.mzML",
-        "Sample_A_s2.wiff.mzML",
+        "Sample_A.wiff.mzML",
+        "Sample_A_2.wiff.mzML",
         "FullMass_s3.mzML",
         "A_B__C_D_E_F_G_H_I.mzML",
         "x" * 120 + ".mzML",
@@ -83,9 +83,9 @@ def test_third_same_named_file_gets_a_counter_instead_of_overwriting_the_second(
         c.convName("blank.raw", ["blank.mzML", "blank.raw.mzML", "blank_2.raw.mzML"]),
         c.wiffName("x", 1, false, ["x.mzML", "x.wiff.mzML"]),
         c.wiffName("x", 1, true, ["x_s1.mzML", "x_s1.wiff.mzML"]),
-        c.wiffName("x", 2, true, ["s.mzml", "s_s2.mzml", "s_s2.wiff.mzML"], "S")
+        c.wiffName("x", 2, true, ["s.mzml", "s.wiff.mzml", "s_2.wiff.mzML"], "S")
     ]))""")
-    assert got == ["blank_2.raw.mzML", "blank_3.raw.mzML", "x_2.wiff.mzML", "x_s1_2.wiff.mzML", "S_s2_2.wiff.mzML"]
+    assert got == ["blank_2.raw.mzML", "blank_3.raw.mzML", "x_2.wiff.mzML", "x_s1_2.wiff.mzML", "S_3.wiff.mzML"]
 
 
 def test_bar_repaint_does_not_lose_changes_of_the_second_window():
@@ -97,3 +97,12 @@ def test_bar_repaint_does_not_lose_changes_of_the_second_window():
     setTimeout(()=>R.queue(rows[2]),150);
     setTimeout(()=>{console.log(JSON.stringify(log));process.exit(0)},400);""")
     assert got == ["a", "b", "c"]
+
+
+def test_wiff_same_sample_name_never_gets_an_unexplained_sN():
+    # two samples (or two files) with the same DATA name: the counter of the .raw files, never "_s<index>"
+    got = run("""const t=[], out=[];
+      for (const [id, nm] of [[1,"NF_t0_nospik"],[2,"NF_t0_spik_80L"],[3,"NF_t0_nospik"],[4,"NF_t0_spik_80L"],[5,"NF_t0_nospik"]]) { const n=c.wiffName("batch",id,true,t,nm); t.push(n); out.push(n); }
+      console.log(JSON.stringify(out))""")
+    assert got == ["NF_t0_nospik.mzML", "NF_t0_spik_80L.mzML", "NF_t0_nospik.wiff.mzML", "NF_t0_spik_80L.wiff.mzML", "NF_t0_nospik_2.wiff.mzML"]
+    assert not any("_s" in n.replace("_spik", "") for n in got)
