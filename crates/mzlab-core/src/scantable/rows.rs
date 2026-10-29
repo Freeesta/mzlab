@@ -13,6 +13,7 @@ use crate::mzmlwrite::{Header, SpectrumExtra};
 type PathKey = (u8, Vec<(i64, String, u64)>);
 
 /// What the file header says that the rows need: the analyzers of the instrument configurations and the default one, and `run.nce`.
+#[derive(Debug, PartialEq)]
 pub(super) struct Head {
     nce: bool,
     ic: Vec<(String, &'static str)>,

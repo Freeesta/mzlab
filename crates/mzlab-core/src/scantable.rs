@@ -10,6 +10,7 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::Posizione;
 use crate::stima;
+use head_read::read_head;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
 
@@ -542,6 +543,7 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     None
 }
 
+mod head_read;
 mod inerte;
 mod json;
 mod rows;
@@ -736,19 +738,7 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
 /// count of the spectra in the index of offsets before the first row is kept, or from the progress of the walk when the file has no index.
 pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> Result<Table> {
     let mut src = Source { r, size };
-    // header: instrument configurations and the default one
-    let head_end = {
-        let first = src.read(0, size.min(4 << 20))?;
-        find(&first, b"<run ").map(|p| p as u64)
-    };
-    let head_bytes = src.read(0, head_end.unwrap_or(200000.min(size)))?;
-    let run_tag_lo = head_end.unwrap_or(0);
-    let run_text = src.read(run_tag_lo, (run_tag_lo + 2000).min(size))?;
-    let mut rows = Rows::with(Head::parse(
-        &String::from_utf8_lossy(&head_bytes),
-        &String::from_utf8_lossy(&run_text),
-    ));
-    drop(head_bytes);
+    let mut rows = Rows::with(read_head(&mut src)?);
 
     // the spans of the spectra
     let offs = src.offsets()?;
@@ -773,3 +763,5 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
 
 #[cfg(test)]
 mod tests_finestra;
+#[cfg(test)]
+mod tests_header;
