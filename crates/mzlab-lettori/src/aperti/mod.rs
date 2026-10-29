@@ -3,8 +3,10 @@
 pub mod mzml_numpress;
 mod mzml_testata;
 pub mod mzxml;
+mod mzxml_finestra;
 mod mzxml_indice;
 mod mzxml_precursori;
 mod mzxml_scan;
 mod mzxml_testata;
+mod mzxml_voce;
 mod np_riscrivi;

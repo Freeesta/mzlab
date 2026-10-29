@@ -46,7 +46,7 @@ I18N.add("it", {
   "settings.font.dyslexic": "OpenDyslexic",
   "settings.hc.label": "Alto contrasto",
   "settings.pal.label": "Colori dei grafici",
-  "settings.pal.title": "Per file: un colore diverso per ogni file. Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.",
+  "settings.pal.title": "Per file: un colore per file. Per tempo: dal viola al verde in ordine di tempo. Accessibili: distinguibili con il daltonismo, più linee tratteggiate. Alto contrasto: aggiunge lo stile della linea. Arcobaleno: tinte ben separate.",
   "settings.pal.file": "Per file (predefinito)",
   "settings.pal.time": "Per tempo",
   "settings.pal.cb": "Accessibili",

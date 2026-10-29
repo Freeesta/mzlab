@@ -45,7 +45,8 @@ try:
         # Move mouse over map center to set sight point
         x, y = at(.5, .5)
         pg.mouse.move(x, y); pg.mouse.move(x + 2, y + 2)
-        attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+        try: attendi(pg, f"!!({M}._mz.spec && {M}._mz.xic)")
+        except TimeoutError: raise AssertionError("sight never opened its spectrum and XIC: " + pg.evaluate(f"JSON.stringify({{mir: MAPPA.st({M}).mir, hov: MAPPA.st({M}).hov, lock: MAPPA.st({M}).lock, spec: !!{M}._mz.spec, xic: !!{M}._mz.xic, a: !!{M}._a, box: {box()!r}, mouse: [{x}, {y}], panels: E.panels.map(q => q.type)}})"))
         frames(pg, 2)
 
         def check_alignment():

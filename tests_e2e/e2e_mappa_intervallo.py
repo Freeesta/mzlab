@@ -47,13 +47,13 @@ try:
         def zoom():
             v0 = view(pg); box = pg.evaluate(f"(()=>{{const c={M}.cv.getBoundingClientRect();return [c.left,c.top,c.width,c.height]}})()")
             pg.mouse.move(box[0] + box[2] * .5, box[1] + box[3] * .5)
-            for _ in range(3): pg.mouse.wheel(0, -250); pg.wait_for_timeout(80)
+            for _ in range(3): ctrl_wheel(pg, 0, -250); pg.wait_for_timeout(80)
             v1 = view(pg); assert v1["x"][1] - v1["x"][0] < v0["x"][1] - v0["x"][0]
-            for _ in range(12): pg.mouse.wheel(0, 400); pg.wait_for_timeout(60)               # zooming out never goes beyond the data (+ margin)
+            for _ in range(12): ctrl_wheel(pg, 0, 400); pg.wait_for_timeout(60)               # zooming out never goes beyond the data (+ margin)
             v2 = view(pg); assert v2["x"][0] >= v0["x"][0] - 1e-6 and v2["x"][1] <= v0["x"][1] + 1e-6, (v0, v2)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("0"); pg.wait_for_timeout(300)
             assert pg.evaluate(f"[{M}.zoom,{M}.zoomY]") == [None, None] and view(pg)["x"] == v0["x"]       # whole view = the data
-            pg.mouse.wheel(0, -300); pg.wait_for_timeout(200); pg.keyboard.press("Backspace"); pg.wait_for_timeout(200)
+            ctrl_wheel(pg, 0, -300); pg.wait_for_timeout(200); pg.keyboard.press("Backspace"); pg.wait_for_timeout(200)
             assert view(pg)["x"] == v0["x"]
         step("zoom out and pan stay within the data; 0 and Backspace come back to the whole view", zoom)
         def sight():

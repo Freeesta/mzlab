@@ -69,3 +69,93 @@ def test_cleaning_removes_old_part_files_and_week_old_orphan_indexes_never_a_sou
     feat: [{ name: "s.mzfeat.part", size: 1, lastModified: now - 3 * HOUR }, { name: "s.mzfeat", size: 1, lastModified: 0 }] };
   await out(async () => { const g = await limpia({ list: async k => lists[k], remove: async (k, n) => { gone.push(k + "/" + n); }, manifest: async () => [] }, now); return [g.sort(), gone.sort()]; });""")
     assert got[0] == ["feat/s.mzfeat.part", "files/x.mzML.part", "idx/old.mzML.mzidx"] and got[0] == got[1]
+
+
+# ---- a fake OPFS (in memory) for the lease, copy and rawSink tests: files are Uint8Arrays, sync handles obey a byte quota and an optional opening delay
+FAKE_OPFS = """
+const files = new Map(), log = [];
+let quotaLeft = Infinity, openDelay = {};
+class FileSystemFileHandle {
+  constructor(name) { this.kind = "file"; this.name = name; if (!files.has(name)) files.set(name, new Uint8Array(0)); }
+  async getFile() { const u = files.get(this.name); return Object.assign(new Blob([u]), { lastModified: Date.now() }); }
+  async createSyncAccessHandle() {
+    if (openDelay[this.name]) await new Promise(r => setTimeout(r, openDelay[this.name]));
+    const name = this.name;
+    return { closed: false,
+      read(buf, { at }) { const u = files.get(name); const n = Math.max(0, Math.min(buf.length, u.length - at)); buf.set(u.subarray(at, at + n)); return n; },
+      write(data, { at }) { const n = Math.min(data.length, quotaLeft); quotaLeft -= n; const u = files.get(name); const v = new Uint8Array(Math.max(u.length, at + n)); v.set(u); v.set(data.subarray(0, n), at); files.set(name, v); return n; },
+      truncate(n) { files.set(name, files.get(name).slice(0, n)); }, getSize() { return files.get(name).length; }, flush() {}, close() { this.closed = true; } };
+  }
+}
+class Dir {
+  async getDirectoryHandle() { return new Dir(); }
+  async getFileHandle(n, o) { if (!files.has(n) && !(o && o.create)) throw new Error("NotFound"); return new FileSystemFileHandle(n); }
+  async removeEntry(n) { files.delete(n); }
+  async *entries() { for (const n of files.keys()) yield [n, new FileSystemFileHandle(n)]; }
+}
+globalThis.FileSystemFileHandle = FileSystemFileHandle;
+nav({ storage: { getDirectory: async () => new Dir(), estimate: async () => ({ usage: 0, quota: 100 << 20 }) } });
+"""
+
+
+def test_a_wake_during_parkall_keeps_the_handles_the_request_will_read():
+    got = run(FAKE_OPFS + """
+  await out(async () => {
+    files.set("a", new Uint8Array([1, 2, 3])); files.set("b", new Uint8Array([4, 5, 6]));
+    await A.lease("idx", "a");
+    openDelay.b = 30; const opening = A.lease("idx", "b");          // b is still opening when the request ends
+    const parking = A.parkAll();                                      // a is closed, then it waits for b
+    await new Promise(r => setTimeout(r, 5));
+    const waking = A.wake();                                          // the next request arrives meanwhile
+    await Promise.all([opening, parking, waking]);
+    const buf = new Uint8Array(3);
+    return [A.leaseRead("idx", "a", buf, 0), A.leaseRead("idx", "b", buf, 0)];
+  });""")
+    assert got == [3, 3]
+
+
+def test_parkall_with_no_wake_still_closes_every_handle():
+    got = run(FAKE_OPFS + """
+  await out(async () => {
+    files.set("a", new Uint8Array([1, 2, 3]));
+    await A.lease("idx", "a"); await A.parkAll();
+    return A.leaseRead("idx", "a", new Uint8Array(3), 0);
+  });""")
+    assert got == -1
+
+
+def test_the_quota_error_of_the_raw_sink_counts_the_block_that_did_not_fit():
+    got = run(FAKE_OPFS + """
+  const { rawSink } = await import(%r);
+  await out(async () => {
+    quotaLeft = 2 << 20;
+    const s = await rawSink("c.mzML");
+    s.write(new Uint8Array(1 << 20));                                  // fits
+    let threw = false;
+    try { s.write(new Uint8Array(3 << 20)); } catch (_) { threw = true; }   // 1 MiB of it fits, 2 MiB do not
+    return [threw, JSON.parse(await s.error())];
+  });""" % (WEB / "rust-opfs.js").as_uri())
+    assert got[0] is True
+    assert got[1]["error_key"] == "error.quota" and got[1]["params"]["serve_mb"] == 4
+
+
+def test_the_copy_reads_the_next_block_while_the_previous_one_is_written_and_hashed_in_file_order():
+    got = run(FAKE_OPFS + """
+  await out(async () => {
+    const step = 8 << 20, size = 3 * step + 5, ev = [], seen = [];
+    const chunk = async (o, n) => { ev.push("read" + o / step); await new Promise(r => setTimeout(r, 10)); ev.push("got" + o / step); return new Uint8Array(n).fill(o / step + 1); };
+    const f = await A.putChunks("files", "big", size, chunk, async (b, o) => { ev.push("after" + o / step); await new Promise(r => setTimeout(r, 30)); seen.push(o); });
+    return [f.size, ev.indexOf("read1") < ev.indexOf("after0"), seen, files.get("big")[step], files.get("big")[size - 1]];
+  });""")
+    assert got == [3 * (8 << 20) + 5, True, [0, 8 << 20, 16 << 20, 24 << 20], 2, 4]
+
+
+def test_a_failed_read_of_the_prefetched_block_still_removes_the_partial_file():
+    got = run(FAKE_OPFS + """
+  await out(async () => {
+    const step = 8 << 20;
+    let err = null;
+    try { await A.putChunks("files", "big", 2 * step, async (o, n) => { if (o > 0) throw new Error("read failed"); return new Uint8Array(n); }); } catch (e) { err = e.message; }
+    return [err, files.has("big")];
+  });""")
+    assert got == ["read failed", False]

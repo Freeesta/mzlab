@@ -73,7 +73,7 @@ const QAQC = (() => {
     const out = [];
     for (const ion of st.ions) {
       try { const q = await query(ion.mz, ion.rt, false); out.push({ ion, files: q.files.map(f => f.file), roles: q.roles, r: q.r }); }
-      catch (e) { out.push({ ion, error: String(e && e.message || e) }); }
+      catch (e_) { const e = /** @type {Lanciato} */ (e_); out.push({ ion, error: String(e && e.message || e) }); }
     }
     res.ions = out;
     res.at = new Date().toISOString();
@@ -124,7 +124,7 @@ const QAQC = (() => {
     const W = 300, H = 120, L = 38, R = 6, T = 8, B = 20, n = roles.length;
     const all = lines.flatMap(l => l.vals).filter(v => v != null && isFinite(v));
     if (!all.length || n < 2) return "";
-    let lo = Math.min(...all), hi = Math.max(...all);
+    let lo = minOf(all), hi = maxOf(all);
     if (lo === hi) { lo -= 1; hi += 1; }
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
     const X = i => L + (n === 1 ? 0 : (i * (W - L - R)) / (n - 1)), Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
@@ -160,7 +160,7 @@ const QAQC = (() => {
     const col = COL[i % COL.length];
     const c1 = chart(t("qaqc.chart.rt", { ion: ion.label }), [{ label: ion.label, vals: rows.map(x => (x ? x.drt : null)), color: col }], o.roles, "ΔRT (min)");
     const c2 = chart(t("qaqc.chart.area", { ion: ion.label }), [{ label: ion.label, vals: rows.map(x => (x ? x.rel : null)), color: col }], o.roles, t("qaqc.col.rel"));
-    return `<div class="qq-ion"><div class="qq-h"><b>${eh(ion.label)}</b> <span class="sm">m/z ${eh(fmt(ion.mz, 4))} · RT ${eh(fmt(ion.rt, 2))} · ${t(ion.kind === "known" ? "qaqc.kind.known" : "qaqc.kind.is")}</span> <button type="button" data-rm="${ion.id}" aria-label="${eh(t("qaqc.remove", { n: ion.label }))}">×</button></div>${c1}${c2}<ul class="sm qq-sum">${sum.join("")}</ul><div class="qq-scroll">${table(head, body)}</div></div>`;
+    return `<div class="qq-ion"><div class="qq-h"><b>${eh(ion.label)}</b> <span class="sm">m/z ${eh(fmt(ion.mz, 4))} · RT ${eh(fmt(ion.rt, 2))} · ${t(ion.kind === "known" ? "qaqc.kind.known" : "qaqc.kind.is")}</span> <button type="button" data-rm="${ion.id}" aria-label="${eh(t("qaqc.remove", { n: ion.label }))}" title="${eh(t("qaqc.remove", { n: ion.label }))}">×</button></div>${c1}${c2}<ul class="sm qq-sum">${sum.join("")}</ul><div class="qq-scroll">${table(head, body)}</div></div>`;
   }
   function ratioBlock(rt) {
     if (!rt) return "";
@@ -203,7 +203,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   }
   async function refresh(box) {
     const msg = box.querySelector("#qq-msg");
-    try { await run(); if (msg) msg.textContent = ""; } catch (e) { if (msg) msg.textContent = String(e && e.message || e); }
+    try { await run(); if (msg) msg.textContent = ""; } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (msg) msg.textContent = String(e && e.message || e); }
     paintIons(box);
     if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("qaqc_measure", { n: st.ions.length });
   }
@@ -233,7 +233,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
           await runRatio(); paint(box); if (window.WORKFLOW && WORKFLOW.logOp) WORKFLOW.logOp("qaqc_ratio", { thr: st.thr });
         }
         msg.textContent = "";
-      } catch (err) { msg.textContent = String(err && err.message || err); }
+      } catch (err_) { const err = /** @type {Lanciato} */ (err_); msg.textContent = String(err && err.message || err); }
     };
   }
 
@@ -242,7 +242,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   function importState(s) {
     if (!s || typeof s !== "object") return;
     st = { ...blankState(), roles: { ...(s.ruoli || {}) }, ions: (s.ioni || []).map(i => ({ ...i })), thr: s.soglia === 10 ? 10 : 3, win: +s.finestra_rt > 0 ? +s.finestra_rt : 0.5, ratio: { text: "", rt: "", ...(s.rapporto || {}) } };
-    st.seq = 1 + Math.max(0, ...st.ions.map(i => i.id || 0));
+    st.seq = 1 + maxOf(st.ions.map(i => i.id || 0), 0);
     res = { ions: [], ratio: null, feat: null, at: null };
     save();
   }

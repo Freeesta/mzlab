@@ -1,4 +1,5 @@
+# WASM: SIMD128 in every module (one binary, no fallback; browsers: Chrome/Edge 91, Firefox 89, Safari 16.4, checked by simdOk() in rust-supervisor.js).
 # WASM memory: 32 MB at start, 4 GiB at most (the wasm32 maximum; it reserves nothing, it only lets memory.grow go that far: the budget of
 # `mzlab-core::budget_auto` decides how much the engine really uses).
 [target.wasm32-unknown-unknown]
-rustflags = ["-C", "link-arg=--initial-memory=33554432", "-C", "link-arg=--max-memory=4294967296"]
+rustflags = ["-C", "link-arg=--initial-memory=33554432", "-C", "link-arg=--max-memory=4294967296", "-C", "target-feature=+simd128"]

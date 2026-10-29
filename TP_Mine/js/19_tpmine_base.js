@@ -20,7 +20,7 @@
     const top = fukR.atoms.filter(a => a.heavy_index != null && Number.isFinite(+a.f_minus)).sort((a, b) => b.f_minus - a.f_minus).slice(0, 3);
     if (!top.length) return "";
     const txt = top.map(a => `${esc(a.el)}${a.heavy_index + 1} ${(+a.f_minus).toFixed(3)}`).join(" · ");
-    return `<span class="hc" data-k="fukui" tabindex="0" aria-label="Prev. Fukui f minus, highest heavy atoms: ${txt}"><span class="hl">Prev. f(−)</span> <b>${txt}</b></span>`;
+    return `<span class="hc" data-k="fukui"${/** @type {any} */ (window).TPHELP ? ' data-tt="ft.sum.fukui"' : ""} tabindex="0" aria-label="Prev. Fukui f minus, highest heavy atoms: ${txt}"><span class="hl">Prev. f(−)</span> <b>${txt}</b></span>`;
   };
   window.addEventListener("tp-reatt", (/** @type {any} */ e) => {
     const d = e.detail || {};
@@ -59,7 +59,7 @@
 .tp .hero .hc:focus-visible,.tp .hero button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.tp .hero-l{box-sizing:border-box;min-height:24px;min-width:24px;padding:0 8px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
 .tp .hero-x{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}@media(max-width:900px){.tp .hero{grid-template-columns:minmax(0,1fr)}}@media(pointer:coarse){.tp .hero-x button,.tp .hero-l{min-height:40px}}
 .tp #tp-files th{position:static}
-.tp #tp-left,.tp #tp-right{min-width:0}.tp #tp-files{max-width:100%;overflow-x:auto}.tp #tp-files table{width:100%;table-layout:auto}.tp #tp-files td:first-child{max-width:min(130px,28vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tp #tp-files select{max-width:100%}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
+.tp #tp-left,.tp #tp-right{min-width:0}.tp #tp-files,.tp #tp-cfiles{max-width:100%;overflow-x:auto}.tp #tp-files table{width:100%;table-layout:auto}.tp #tp-files td:first-child{max-width:min(130px,28vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tp #tp-files select{max-width:100%}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:24px}.tp #tp-cond>summary{box-sizing:border-box;min-height:24px;padding:3px 0}
 .tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
 
 .tp .hero-x button{min-height:24px;min-width:24px}

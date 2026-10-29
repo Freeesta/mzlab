@@ -1,6 +1,6 @@
 // @ts-check
-// Flow (administrator mode): the shell around the canvas. Top bar (templates, add an analysis, Simple | Advanced, undo, fit, checklist, run), the three views (Canvas,
-// List, Plan) over ONE plan, the inspector, the empty-state template cards and small menus. The List view is the editor of F.mount (also the accessible alternative to
+// Flow (administrator mode): the shell around the canvas. One-row top bar (Canvas | List, templates, add a step, Simple | Advanced, undo, redo, fit, status, Auto-run, Run, Terminal, more),
+// the views (Canvas, List, and Plan from the «⋯» menu) over ONE plan, the inspector, the empty-state template cards and small menus. The List view is the editor of F.mount (also the accessible alternative to
 // the canvas); both draw the same plan and redraw on `flow:changed`. Running goes through F.runners: the command line, and «This computer» in the desktop app (flow-desktop.js).
 (() => {
   "use strict";
@@ -38,7 +38,7 @@
     try { simple = localStorage.getItem("mzlab.flow.mode") !== "advanced"; } catch (_) { /* private mode */ }
     const live = el("div", { class: "flx-toast", role: "status", id: "flx-live" });
     const toast = (/** @type {string} */ msg) => { say(msg, null); setTimeout(() => { if (live.textContent === msg) live.replaceChildren(); }, 2500); };
-    const say = (/** @type {string} */ msg, /** @type {(() => void) | null} */ undo) => { live.replaceChildren(el("span", { text: msg }), undo ? btn("undo", "Undo", () => { undo(); }, "Undo") : null); };
+    const say = (/** @type {string} */ msg, /** @type {(() => void) | null} */ undo) => { live.replaceChildren(...[el("span", { text: msg }), undo ? btn("undo", "Undo", () => { undo(); }, "Undo") : null].filter(Boolean)); };
     /** a change made by the canvas: edit, then let the shared refresh redraw everything @param {() => void} fn @param {string} [focus] */
     const go = (fn, focus) => { fn(); S.refresh(focus === undefined ? null : focus); };
     const cvUi = {
@@ -75,19 +75,21 @@
       issuesHost.replaceChildren(F.issuesPanel(S, nodeOfStep, (/** @type {any} */ n) => cvUi.select(n.key), () => S.refresh()));
       const bad = S.problems.length;
       status.className = "fl-st " + (bad ? "bad" : "ok");
-      status.replaceChildren(icon(bad ? "warn" : "ok"), bad ? `${bad} to fix` : "Ready to run");
-      check.title = bad ? "Show what needs attention" : "Nothing needs attention";
+      check.replaceChildren(icon("warn"), el("span", { text: `${bad} to fix` }));
+      check.setAttribute("aria-label", `${bad} to fix: show what needs attention`);
+      status.replaceChildren(...(bad ? [check] : [icon("ok"), "Ready"]));
       run.title = bad ? "The plan has things to fix first. The runner refuses it until they are solved." : "Export the plan and run it";
       planView.textContent = F.exportText(S.plan);
       tplBox.classList.toggle("show", !F.hasAddons(S.plan) && tab === "canvas" && !dismissed);
       root.classList.toggle("flx-simple", simple);
-      const planTab = tabs[2]; planTab.hidden = simple; if (simple && tab === "plan") setTab("canvas");
+      if (simple && tab === "plan") setTab("canvas");
+      syncSplit();
       body.classList.toggle("flx-adv", !simple);
       for (const b of modeBtns) b.setAttribute("aria-pressed", String((b.dataset.mode === "simple") === simple));
     }
     let dismissed = false;
     // the node of the feature table: open from the first drawing, so its settings are at hand without choosing a template
-    const tableKey = () => { const n = nodeOfStep("features.detect"); return n ? n.key : ""; };
+    const tableKey = () => { const i = F.findStep(S.plan, "features.detect"), n = i && nodeOfStep(i.id); return n ? n.key : ""; };
     const tplCard = (/** @type {any} */ t) => el("button", { type: "button", class: "flx-tc", "data-tpl": t.id, onclick: () => applyTemplate(t) },
       el("span", { class: "flx-pre", "aria-hidden": "true", style: "--cc:" + F.CATS.input.color }, el("i"), el("b"), el("i", { style: "--cc:" + F.CATS.process.color }), ...t.addons.flatMap((/** @type {string} */ _) => [el("b"), el("i", { style: "--cc:" + F.CATS.search.color })])),
       el("strong", { text: t.name }), el("small", { text: t.good }), ...(t.help ? [el("small", { class: "flx-help", text: t.help })] : []));
@@ -101,8 +103,8 @@
 
     const modeBtns = ["simple", "advanced"].map(m => el("button", { type: "button", "data-mode": m, "aria-pressed": String((m === "simple") === simple), onclick: () => { simple = m === "simple"; try { localStorage.setItem("mzlab.flow.mode", m); } catch (_) { /* ignore */ } selected = ""; redraw(); cv.fit(); } }, el("span", { text: m === "simple" ? "Simple" : "Advanced" })));
     const tplBtn = btn("flow", "Start from a template", () => { if (tplBox.classList.contains("show")) { dismissed = true; redraw(); return; } dismissed = false; tplCards(); tplBox.classList.add("show"); const f = tplBox.querySelector("button"); if (f) /** @type {HTMLElement} */ (f).focus(); }, "Templates");
-    const addBtn = btn("plus", "Add an analysis to the base", (/** @type {Event} */ e) => F.menu(/** @type {HTMLElement} */ (e.currentTarget), F.ADDONS.map((/** @type {any} */ a) => ({ label: a.name, line: a.line, on: a.steps.every((/** @type {string} */ s) => F.findStep(S.plan, s)),
-      run: () => { let made = /** @type {any} */ (null); go(() => { made = F.addAddon(S, a); }); if (made) { const n = nodeOfStep(made.id); selected = n ? n.key : ""; redraw(); if (n) cv.reveal(n.key); } } })), root), "Add analysis");
+    const addBtn = btn("plus", "Add a step to the base", (/** @type {Event} */ e) => F.menu(/** @type {HTMLElement} */ (e.currentTarget), F.ADDONS.map((/** @type {any} */ a) => ({ label: a.name, line: a.line, on: a.steps.every((/** @type {string} */ s) => F.findStep(S.plan, s)),
+      run: () => { let made = /** @type {any} */ (null); go(() => { made = F.addAddon(S, a); }); if (made) { const n = nodeOfStep(made.id); selected = n ? n.key : ""; redraw(); if (n) cv.reveal(n.key); } } })), root), "Add step");
     addBtn.id = "flx-add";
     const undoBtn = btn("undo", "Undo the last change", () => S.undo(), "Undo");
     const redoBtn = btn("redo", "Redo the change you undid", () => S.redo(), "Redo");
@@ -110,7 +112,7 @@
     const check = btn("warn", "Show what needs attention", (/** @type {Event} */ e) => {
       const items = S.problems.map((/** @type {any} */ p) => { const f = F.friendly(S, p), n = nodeOfStep(p.instance); return { label: `${n ? n.title : p.instance}: ${f.text}`, line: "Show me", run: () => { if (n) { selected = n.key; redraw(); cv.reveal(n.key); } } }; });
       F.menu(/** @type {HTMLElement} */ (e.currentTarget), items, root);
-    }, "Checklist");
+    });
     const run = btn("run", "Start the run", () => start(), "Run");
     run.classList.add("flx-run"); run.id = "flx-run";
     // the run buttons live in flow-run-ui.js, a late module: wait here, with a small mark on the button that was pressed
@@ -120,22 +122,32 @@
       return acts || (acts = F.runActions(S, { place: (/** @type {HTMLElement} */ n) => bar.after(n), root, say: toast }));
     };
     const start = async () => { const a = await actions(run); if (a) a.start(); };
-    const cliBtn = btn("copy", "Copy the command to run the plan in a terminal", async () => { const a = await actions(cliBtn); if (a) a.copy(); }, "Run on CLI");
-    const arrow = el("button", { type: "button", class: "fl-b", id: "flx-cli-show", "aria-label": "Show the command", "aria-expanded": "false", text: "▾",
-      onclick: async () => { const a = await actions(arrow); if (a) a.toggle(arrow); } });
-    const open = btn("import", "Open a plan (mzflow/2)", () => { const f = listHost.querySelector("#fl-file"); if (f) /** @type {HTMLElement} */ (f).click(); }, "Open");
-    const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, check, open, run, cliBtn, arrow, status);
-    const tabs = ["canvas", "list", "plan"].map(t => el("button", { type: "button", "aria-pressed": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : t === "list" ? "List view" : "Plan (JSON)" })));
+    // the terminal panel comes from flow-run-ui.js (toggle); the id stays for the tests and the tour
+    const termBtn = el("button", { type: "button", class: "fl-b", id: "flx-cli-show", title: "Show the command to run the plan in a terminal", "aria-expanded": "false", onclick: async () => { const a = await actions(termBtn); if (a) a.toggle(termBtn); } },
+      el("span", { "aria-hidden": "true", text: ">_" }), el("span", { text: "Terminal" }));
+    const moreBtn = el("button", { type: "button", class: "fl-b", title: "More", "aria-label": "More", text: "⋯", onclick: (/** @type {Event} */ e) => F.menu(/** @type {HTMLElement} */ (e.currentTarget), [
+      ...(simple ? [] : [{ label: "Plan (JSON)", run: () => setTab("plan") }]), { label: "Download plan", run: () => S.download() }], root) });
+    moreBtn.id = "flx-more";
+    const tabs = ["canvas", "list"].map(t => el("button", { type: "button", "aria-pressed": String(t === tab), "data-tab": t, onclick: () => setTab(t) }, el("span", { text: t === "canvas" ? "Canvas" : "List" })));
+    const bar = el("div", { class: "flx-bar" }, el("h2", { text: "Flow" }), tplBtn, addBtn, el("span", { class: "flx-seg", role: "group", "aria-label": "Mode" }, ...modeBtns), undoBtn, redoBtn, fitBtn, status, run, termBtn, moreBtn);
+    bar.insertBefore(el("span", { class: "flx-seg flx-views", role: "group", "aria-label": "View" }, ...tabs), bar.children[1]);
     const issuesHost = el("div", { class: "flx-issues-host" });
     // the divider between the canvas and the settings: drag, or the arrow keys (the width is kept for the session of the page)
-    const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 340 });
+    const split = el("div", { class: "flx-split", role: "separator", "aria-orientation": "vertical", "aria-label": "Width of the settings panel", tabindex: 0, "aria-valuemin": 240, "aria-valuemax": 900, "aria-valuenow": 500 });
     const body = el("div", { class: "flx-body" }, palHost, cv.root, split, inspHost);
-    const setWidth = (/** @type {number} */ w) => { const v = Math.max(240, Math.min(900, Math.round(w))); body.style.setProperty("--insp", v + "px"); split.setAttribute("aria-valuenow", String(v)); };
+    // starts at half of the body (--insp: 50%), at most 70 %; the width chosen stays for the session of the page
+    const setWidth = (/** @type {number} */ w) => { const v = Math.max(240, Math.min(Math.max(240, Math.round(body.getBoundingClientRect().width * 0.7)), Math.round(w))); F.inspWidth = v; body.style.setProperty("--insp", v + "px"); syncSplit(); };
+    function syncSplit() {
+      const bw = body.getBoundingClientRect().width, w = Math.round(inspHost.getBoundingClientRect().width);
+      if (!bw || !w) return;
+      split.setAttribute("aria-valuenow", String(w)); split.setAttribute("aria-valuemax", String(Math.max(240, Math.round(bw * 0.7))));
+    }
+    if (F.inspWidth) body.style.setProperty("--insp", F.inspWidth + "px");
     split.addEventListener("pointerdown", e => { split.setPointerCapture(e.pointerId); split.classList.add("drag"); });
     split.addEventListener("pointermove", e => { if (split.classList.contains("drag")) setWidth(body.getBoundingClientRect().right - e.clientX); });
     split.addEventListener("pointerup", () => { split.classList.remove("drag"); cv.fit(); });
-    split.addEventListener("keydown", e => { const d = e.key === "ArrowLeft" ? 40 : e.key === "ArrowRight" ? -40 : 0; if (d) { e.preventDefault(); setWidth(+(split.getAttribute("aria-valuenow") || 340) + d); } });
-    const root = el("div", { class: "flw flx", id: "flx-root" }, el("div", { class: "flx-seg flx-views", role: "group", "aria-label": "Views" }, ...tabs), bar, live, body, issuesHost, planView, listHost);
+    split.addEventListener("keydown", e => { const d = e.key === "ArrowLeft" ? 40 : e.key === "ArrowRight" ? -40 : 0; if (d) { e.preventDefault(); setWidth(inspHost.getBoundingClientRect().width + d); } });
+    const root = el("div", { class: "flw flx", id: "flx-root" }, bar, live, body, issuesHost, planView, listHost);
     function setTab(/** @type {string} */ t) {
       tab = t; tabs.forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.tab === t)); });
       body.hidden = t !== "canvas"; issuesHost.hidden = t !== "canvas"; planView.hidden = t !== "plan"; listHost.hidden = t !== "list"; redraw(); if (t === "canvas") cv.fit();

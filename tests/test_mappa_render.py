@@ -23,6 +23,17 @@ def node(body, data):
 
 
 @needs_node
+def test_ref_is_the_995th_percentile_of_the_nonzero_values():
+    rng = np.random.default_rng(3)
+    for n in (50, 40000):                                   # under and over the 10 000 sample
+        v = np.where(rng.random(n) < 0.5, 0.0, -rng.lognormal(3, 1, n))
+        got = node("console.log(JSON.stringify(R.ref(Float32Array.from(d.v))))", {"v": v.tolist()})
+        a = np.sort(np.abs(v[v != 0]))
+        assert got == pytest.approx(float(a[min(len(a) - 1, int(len(a) * 0.995))]), rel=0.05 if n > 10000 else 1e-5)
+    assert node("console.log(JSON.stringify(R.ref([0,0])))", {}) == 1                            # nothing to scale: 1
+
+
+@needs_node
 def test_splat_keeps_height_and_joins_lines():
     nrt, nmz = 40, 60
     v = np.zeros((nrt, nmz)); v[10:30, 20] = 5.0; v[10:30, 27] = 3.0        # two thin lines in m/z (a centroid per scan, 7 bins apart)
@@ -79,3 +90,22 @@ def test_noise_is_local():
     res = node("console.log(JSON.stringify(R.snrOf(d.mz,d.y,0,500,{band:60}).map(c=>[c.i,c.snr])))", {"mz": mz, "y": y})
     s = dict((i, v) for i, v in res)
     assert s[120] == pytest.approx(20, rel=0.01) and s[121] == pytest.approx(0.2, rel=0.01)
+
+
+@needs_node
+def test_snr_matches_the_sorted_definition_and_is_fast_on_a_full_spectrum():
+    # the noise of a peak: median + 1.4826 MAD of the peaks within the band, those within 2.5 Da of it left out (spelled out with sorts, as the definition)
+    rng = np.random.default_rng(11)
+    n = 5000
+    mz = np.sort(rng.uniform(100, 1000, n)); y = np.exp(rng.uniform(0, 10, n)) * rng.choice([-1, 1], n)
+    lo, hi = 150.0, 900.0
+    got = node("const t=Date.now();const r=R.snrOf(d.mz,d.y,d.lo,d.hi);console.log(JSON.stringify({ms:Date.now()-t,r}))", {"mz": mz.tolist(), "y": y.tolist(), "lo": lo, "hi": hi})
+    a = np.abs(y); floor = max(a.max() * 1e-4, 1e-12); H = max(15, (hi - lo) / 4)
+
+    def level(v):
+        m = np.median(v); return m + 1.4826 * np.median(np.abs(v - m))
+    for c in got["r"][::97]:
+        k = c["i"]; w = (mz >= mz[k] - H) & (mz < mz[k] + H + 1e-9) & (np.abs(mz - mz[k]) > 2.5)
+        noise = max(level(a[w]), floor)
+        assert c["noise"] == pytest.approx(noise, rel=1e-12) and c["snr"] == pytest.approx(a[k] / noise, rel=1e-12)
+    assert got["ms"] < 250                                           # a pass over every peak of a scan stays far under the 2 s of sorting each band

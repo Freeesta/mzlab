@@ -61,7 +61,7 @@ try:
         step("B-7 Ctrl+wheel on the y axis zooms only y (the y x10 button is gone)", yz)
         def hover():
             c = chrom(pg); pg.mouse.move(c["l"] + c["w"] / 2, c["t"] + c["h"] / 2); pg.wait_for_timeout(200)
-            assert "RT" in pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').rd.textContent")
+            assert " min" in pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').rd.textContent")
             pg.mouse.move(c["l"] + c["w"] / 2, c["t"] - 120); pg.wait_for_timeout(200)
             assert pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').rd.textContent") == "", "pass-over text goes away"
             pg.mouse.click(c["l"] + c["w"] * 0.62, c["t"] + c["h"] / 2); pg.wait_for_timeout(700); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(500)

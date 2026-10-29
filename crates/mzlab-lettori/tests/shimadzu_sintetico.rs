@@ -106,3 +106,11 @@ fn qtof_and_pda_only_are_refused_with_a_key() {
 fn the_extension_alone_is_not_enough() {
     assert!(apri("x.qgd", vec![0u8; 4000]).is_err());
 }
+
+#[test]
+fn the_sample_name_has_no_folder() {
+    for p in ["dir/sub/a.qgd", "dir\\sub\\a.qgd"] {
+        let l = apri(p, qgd(6)).unwrap();
+        assert_eq!(l.campioni()[0].nome, "a.qgd", "{p}");
+    }
+}

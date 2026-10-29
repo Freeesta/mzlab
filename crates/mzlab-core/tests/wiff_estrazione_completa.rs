@@ -492,5 +492,8 @@ fn synthetic_ci_dad_mrm_gradient_and_tof_roundtrip() {
     let pts = decode_tof_block(&tof_blk).unwrap();
     assert_eq!(pts, vec![(100, 5), (112, 200)]);
     let mz0 = tof.bin_to_mz(0, pts[0].0);
-    assert!(mz0 > 0.0 && mz0.is_finite());
+    // bin 100 flies for 2.6 ns, before the t0 of 100 ns of this calibration: no m/z; a later bin has one
+    assert_eq!(mz0, 0.0);
+    let later = tof.bin_to_mz(0, 6000);
+    assert!(later > 0.0 && later.is_finite());
 }

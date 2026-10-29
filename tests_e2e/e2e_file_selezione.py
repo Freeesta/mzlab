@@ -43,6 +43,8 @@ try:
         def multi():
             ks = pg.evaluate("E.files.filter(f=>f&&f.kind==='full').map(f=>f.k)"); assert len(ks) >= 3
             pg.evaluate("renderFileList()")
+            # the first click of a hidden file rebuilds the list: let it settle, or the second click of a double click can land on the old row (slow runners)
+            pg.click(f"#flst .fl[data-k='{ks[0]}'] .nm"); attendi(pg, f"E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'"); frames(pg, 3)
             pg.dblclick(f"#flst .fl[data-k='{ks[0]}'] .nm")
             attendi(pg, f"E.files.filter(f=>f&&f.vis).length===1&&E.files[{ks[0]}].vis&&document.querySelector('#flst .fl[aria-current=true]')?.dataset.k==='{ks[0]}'")
             assert pg.evaluate("E.panels.length>0&&E.panels.every(p=>p.tab==='full')"), "double click: only this file, panels of its type"

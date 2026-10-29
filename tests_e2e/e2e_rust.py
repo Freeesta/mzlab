@@ -148,6 +148,14 @@ try:
             r = pg.evaluate(GET, "api/chrom?k=0&kind=tic&level=1"); assert r["eng"] is None and r["j"].get("error_key") in ("load.err.engineLost", "err.route.unavailable"), r
             assert pg.inner_text("#rust-note").strip(), "no message"
         step("second death within a minute: the engine stops, an error with a key, the page asks to reload", die_twice)
+        def no_simd():
+            # a browser without SIMD128 (forced by the test switch): the engine does not start and the note names the minimum versions
+            pg2 = ctx.new_page(); pg2.add_init_script("window.MZLAB_NO_SIMD = true")
+            pg2.goto(f"http://127.0.0.1:{PORT}/"); pg2.wait_for_function("window.MZLAB_RUST !== undefined", timeout=60000)
+            pg2.wait_for_function("window.MZLAB_RUST.disabled === true", timeout=30000)
+            note = pg2.inner_text("#rust-note"); assert "91" in note and "16.4" in note, note
+            pg2.close()
+        step("browser without SIMD128: the engine stays off and the note gives the minimum browser versions", no_simd)
         step("no page errors", lambda: [(_ for _ in ()).throw(AssertionError(str(errs[:3]))) for _ in [0] if errs])
         b.close()
 finally:

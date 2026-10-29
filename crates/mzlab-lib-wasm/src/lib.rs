@@ -106,9 +106,11 @@ fn scratch(read: Function, write: Function) -> JsIo {
     }
 }
 
+type SpectrumSink = Box<dyn FnMut(Spectrum)>;
+
 #[wasm_bindgen]
 pub struct Importer {
-    parser: Option<Parser<Box<dyn FnMut(Spectrum)>>>,
+    parser: Option<Parser<SpectrumSink>>,
     builder: Rc<RefCell<Option<Builder<JsIo>>>>,
     queue: Rc<RefCell<Vec<Spectrum>>>,
     failed: Option<Error>,
@@ -184,6 +186,8 @@ impl Importer {
             it: it.to_vec(),
             meta,
             rt: None,
+            ri: None,
+            ei: false,
         });
         self.drain().map_err(js_err)
     }
@@ -361,6 +365,8 @@ impl Lib {
 
     /// Best identity only, without peaks (for «Identify all MS2»): JSON object or `null`. `alt` is the best hit of another structure (another first
     /// InChIKey block, or another name when there is no key): the lead of the best over it is the «distinct» gate of the confidence levels.
+    // The parameters are the page's call signature (wasm_bindgen API).
+    #[allow(clippy::too_many_arguments)]
     pub fn best(
         &self,
         prec: f64,
@@ -406,6 +412,8 @@ impl Lib {
     }
 
     /// Analogues (modified cosine): the best `top`.
+    // The parameters are the page's call signature (wasm_bindgen API).
+    #[allow(clippy::too_many_arguments)]
     pub fn analogs(
         &self,
         prec: f64,

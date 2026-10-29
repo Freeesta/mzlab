@@ -12,6 +12,7 @@
         "required":[],
         "x-executable-native":[
           "annot.level",
+          "chrom.uv_peaks",
           "convert.mzml",
           "export.inclusion",
           "export.mztab",
@@ -70,6 +71,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.inclusion@1",
               "export.mztab@1",
@@ -164,6 +166,7 @@
               "annot.hazard@1",
               "annot.level@1",
               "annot.regulatory@1",
+              "chrom.uv_peaks@1",
               "convert.mzml@1",
               "export.inclusion@1",
               "export.mztab@1",
@@ -332,8 +335,54 @@
           },
           {
             "properties":{
+              "step":{"const":"chrom.uv_peaks@1"},
+              "name":{"enum":["wavelength_nm","band_nm","broad","broad_min_s","broad_max_s","broad_snr"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":254,
+                    "description":"The trace is the matrix at this wavelength; the nearest column when none is inside the band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":4,
+                    "description":"The columns within half of this around the wavelength are averaged"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also look for bands too wide for the narrow peak finder"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":30,
+                    "description":"Smallest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":300,
+                    "description":"Largest full width at half maximum of a band"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":8,
+                    "description":"Smallest height of a band over its bridge, in noise units"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"convert.mzml@1"},
-              "name":{"enum":["peaks","zlib_level","numpress"]},
+              "name":{"enum":["peaks","zlib_level","numpress","dad"]},
               "value":{
                 "anyOf":[
                   {
@@ -345,13 +394,18 @@
                     "type":"integer",
                     "minimum":0,
                     "maximum":9,
-                    "default":1,
+                    "default":2,
                     "description":"zlib level of the binary arrays, 0 (none) to 9 (smallest)"
                   },
                   {
                     "type":"boolean",
                     "default":false,
                     "description":"Lossy MS-Numpress linear prediction of m/z and short logged float of intensities, smaller files"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Also write the UV / PDA matrix of the sample as MS:1000804 spectra (one per instant, wavelengths in nm) after the scans; off: the file is the one written without the option"
                   }
                 ]
               }
@@ -504,6 +558,7 @@
                   "floor",
                   "min_height",
                   "axis",
+                  "rt_range",
                   "mass_defect",
                   "budget",
                   "min_points",
@@ -530,6 +585,13 @@
                   },
                   {"type":"number","minimum":0,"default":200000,"description":"Minimum height"},
                   {"enum":["ppm","Da"],"default":"ppm","description":"m/z axis"},
+                  {
+                    "type":"array",
+                    "items":{"type":"number","minimum":0},
+                    "minItems":2,
+                    "maxItems":2,
+                    "description":"Optional [min, max]: only rows eluting inside are kept, for every file; left empty, all rows"
+                  },
                   {
                     "type":"number",
                     "description":"Unit axis only: fractional part of m/z where the strong peaks pile up; measured on the file when left empty"
@@ -1255,7 +1317,18 @@
           {
             "properties":{
               "step":{"const":"spectra.ms2@1"},
-              "name":{"enum":["min_intensity","max_isolation","tol_da","rt_tol"]},
+              "name":{
+                "enum":[
+                  "min_intensity",
+                  "max_isolation",
+                  "tol_da",
+                  "rt_tol",
+                  "dia_pseudo",
+                  "dia_min_corr",
+                  "dia_min_points",
+                  "dia_frag_ppm"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {
@@ -1280,6 +1353,30 @@
                     "minimum":0,
                     "default":0.2,
                     "description":"With a feature table: largest distance between the scan and the RT of the feature"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"For data-independent runs (SWATH, MSE): one pseudo MS2 spectrum per feature of the table, made of the fragments whose trace follows that of the precursor; needs the feature table, and the DDA scans are not written"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.9,
+                    "description":"With `dia_pseudo`: least Pearson correlation between the trace of a fragment and that of the precursor"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":3,
+                    "default":5,
+                    "description":"With `dia_pseudo`: fewest cycles of the RT range of a feature; a feature with fewer has no spectrum"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"With `dia_pseudo`: window around an m/z to follow its trace"
                   }
                 ]
               }
@@ -2215,6 +2312,7 @@
                 "annot.hazard@1",
                 "annot.level@1",
                 "annot.regulatory@1",
+                "chrom.uv_peaks@1",
                 "convert.mzml@1",
                 "export.inclusion@1",
                 "export.mztab@1",

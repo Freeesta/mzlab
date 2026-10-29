@@ -52,7 +52,7 @@ try:
                 return pg.evaluate(f"(() => {{ const e = {sp}.el, l = e.querySelector('.rtl'); return [l.getBoundingClientRect().width, e.querySelector('.ctl, .bt').getBoundingClientRect().left, l.textContent]; }})()")
             a, b = meas(1.05), meas(14.30)
             assert abs(a[0] - b[0]) < 0.6 and abs(a[1] - b[1]) < 0.6, (a, b)
-            w = pg.evaluate("(() => { const l = document.querySelector('.pnl.spec .rtl'), s = l.cloneNode(); s.textContent = 'RT 88.88 min'; s.style.cssText += ';min-width:0;position:absolute;visibility:hidden'; l.parentNode.appendChild(s); const w = s.getBoundingClientRect().width; s.remove(); return w; })()")
+            w = pg.evaluate("(() => { const l = document.querySelector('.pnl.spec .rtl'), s = l.cloneNode(); s.textContent = '88.88 min'; s.style.cssText += ';min-width:0;position:absolute;visibility:hidden'; l.parentNode.appendChild(s); const w = s.getBoundingClientRect().width; s.remove(); return w; })()")
             assert w <= a[0] + 0.5, (w, a)                  # wide enough for «RT 88.88 min»
         step("A4.4: the RT label has a fixed width, the buttons do not move", rtl)
     r.close()

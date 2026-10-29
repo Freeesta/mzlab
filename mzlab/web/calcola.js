@@ -37,7 +37,7 @@ function calcEval(t, ans = 0) {
     return v;
   }
   try { const v = expr(); if (i < s.length) fail(peek() === ")" ? I18N.t("calc.err.closeParen") : ""); return isFinite(v) ? { v } : { err: I18N.t("calc.err.tooBig") }; }
-  catch (e) { return e && "err" in e ? e : { err: "" }; }
+  catch (e_) { const e = /** @type {Lanciato} */ (e_); return e && "err" in e ? e : { err: "" }; }
 }
 // 4 decimals at most, trailing zeros removed, never scientific notation for normal numbers
 function calcFmt(v) {

@@ -76,6 +76,12 @@ try:
             pg.evaluate(f"(()=>{{{TIC}.cur=11.5;cursorLine({TIC})}})()")
             assert "57.5" in pg.evaluate(f"{TIC}.ch.getAttribute('aria-valuetext')")
         step("right axis, %B at 11.5 min and in the cursor reading", reading)
+        def title_inside():
+            # the rotated axis title (baseline + ascent to the right) must lie inside the canvas, right of the tick labels
+            r = pg.evaluate(f"(()=>{{const p={TIC},a=p._a,fp=12*fz(),L=GRADIENTE.rightLayout(['0','25','50','75','100'],fp),g=p.cv.getContext('2d');g.font=fpx(12);return {{W:a.W,mr:window.MARG_R,need:GRADIENTE.needR(p),right:a.W-L.r+L.titleX+.8*fp,left:a.W-L.r+L.titleX-.2*fp,ticks:a.W-L.r+7+g.measureText('100').width}}}})()")
+            assert r["mr"] >= r["need"] and r["right"] <= r["W"], r
+            assert r["left"] >= r["ticks"], r
+        step("the right axis title lies inside the panel and clear of the tick labels", title_inside)
         def aligned():
             pg.evaluate("addPanel('chrom',{tab:'full',kind:'pda'})"); ready(pg)
             LN = "E.panels.filter(p=>p.type==='chrom'&&p.tab==='full')"

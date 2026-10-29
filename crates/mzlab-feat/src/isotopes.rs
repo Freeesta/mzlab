@@ -142,10 +142,10 @@ fn parent_of(
 ) -> Option<(usize, i32)> {
     let mut best: Option<(f64, i32, usize)> = None;
     let mut slot = 0;
+    let tol = half(f.mz[j], p.tol_ppm) + 3e-4;
     for z in 1..=p.max_charge {
         for &(k, d) in st {
             let want = f.mz[j] - d / z as f64;
-            let tol = half(f.mz[j], p.tol_ppm) + 3e-4;
             let (lo, hi) = (want - tol, want + tol);
             let (a, b) = if cur.is_empty() {
                 (

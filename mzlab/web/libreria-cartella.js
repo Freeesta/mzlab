@@ -1,6 +1,6 @@
 // @ts-check
 // @ts-strict
-// @ts-strict
+// @ts-noany
 "use strict";
 // The «Cartella delle librerie» (docs/agenti/librerie.md): ONE folder holds the spectral libraries of the user. It is read by libreria-worker.js (classic script,
 // loaded with importScripts; node loads it in tests/test_libreria_cartella.py for the pure parts).
@@ -25,7 +25,7 @@ const CARTELLA = (() => {
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]);
   class Sha256 {
     constructor() { this.h = new Uint32Array([0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19]); this.buf = new Uint8Array(64); this.fill = 0; this.len = 0; this.w = new Uint32Array(64); }
-    block(b, o) {
+    block(/** @type {Uint8Array} */ b, /** @type {number} */ o) {
       const w = this.w, h = this.h;
       for (let i = 0; i < 16; i++) w[i] = (b[o + 4 * i] << 24) | (b[o + 4 * i + 1] << 16) | (b[o + 4 * i + 2] << 8) | b[o + 4 * i + 3];
       for (let i = 16; i < 64; i++) {
@@ -40,7 +40,7 @@ const CARTELLA = (() => {
       }
       h[0] = (h[0] + a) | 0; h[1] = (h[1] + b2) | 0; h[2] = (h[2] + c) | 0; h[3] = (h[3] + d) | 0; h[4] = (h[4] + e) | 0; h[5] = (h[5] + f) | 0; h[6] = (h[6] + g) | 0; h[7] = (h[7] + hh) | 0;
     }
-    update(u8) {
+    update(/** @type {Uint8Array} */ u8) {
       this.len += u8.length; let i = 0;
       if (this.fill) { const n = Math.min(64 - this.fill, u8.length); this.buf.set(u8.subarray(0, n), this.fill); this.fill += n; i = n; if (this.fill < 64) return this; this.block(this.buf, 0); this.fill = 0; }
       for (; i + 64 <= u8.length; i += 64) this.block(u8, i);
@@ -54,7 +54,7 @@ const CARTELLA = (() => {
       return [...this.h].map(x => (x >>> 0).toString(16).padStart(8, "0")).join("");
     }
   }
-  async function sha256Of(file, onProgress) {         // a Blob-like file: read in slices of 4 MiB
+  /** @type {(file: LibFile, onProgress?: (done: number, total: number) => void) => Promise<string>} */ async function sha256Of(file, onProgress) {         // a Blob-like file: read in slices of 4 MiB
     if (file.size <= 4 << 20 && typeof crypto !== "undefined" && crypto.subtle) { const d = await crypto.subtle.digest("SHA-256", await file.slice(0, file.size).arrayBuffer()); return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, "0")).join(""); }
     const h = new Sha256(); const CH = 4 << 20;
     for (let o = 0; o < file.size; o += CH) { h.update(new Uint8Array(await file.slice(o, Math.min(file.size, o + CH)).arrayBuffer())); if (onProgress) onProgress(Math.min(file.size, o + CH), file.size); }
@@ -63,11 +63,11 @@ const CARTELLA = (() => {
 
   // ---------------------------------------------------------------- states (pure: the callbacks stand for «read the file»)
   // A source: `f` = { size, mtime } of the file, `meta` = the .idx.json (or null), `idxSize` = bytes of the index file (or null if missing), `sha()` = SHA-256 of the source.
-  async function statoSorgente(f, meta, idxSize, sha) {
+  async function statoSorgente(/** @type {{ size: number, mtime: number }} */ f, /** @type {{ origine: { size: number, mtime: number, sha256?: string }, bytes: number } | null} */ meta, /** @type {number | null | undefined} */ idxSize, /** @type {() => Promise<string>} */ sha) {
     if (!meta) return { stato: "da_indicizzare" };
     // the index is missing or not what was written
     if (idxSize == null || idxSize !== meta.bytes) return { stato: "danneggiata" };
-    const o = meta.origine || {};
+    const o = /** @type {NonNullable<typeof meta.origine>} */ (meta.origine || {});
     if (o.size === f.size && o.mtime === f.mtime) return { stato: "pronta" };
     // touched, not changed
     if (o.size === f.size && o.sha256 && (await sha()) === o.sha256) return { stato: "pronta", mtime: f.mtime };
@@ -75,7 +75,7 @@ const CARTELLA = (() => {
   }
   // A package (`.mzlib` at the top of the folder): `side` = its sidecar { id, versione, sha256, size, mtime } (or null for a file of the user), `cat` = the catalog entry
   // of that id (if the catalog is known), `headOk` = the file starts with the magic of the format, `sha()` = its SHA-256.
-  async function statoPacchetto(f, side, cat, headOk, sha) {
+  async function statoPacchetto(/** @type {{ size: number, mtime: number }} */ f, /** @type {{ size: number, mtime: number, sha256: string, versione: string } | null} */ side, /** @type {{ sha256: string, versione: string } | null | undefined} */ cat, /** @type {boolean} */ headOk, /** @type {() => Promise<string>} */ sha) {
     if (!side) return { stato: headOk ? "pronta" : "danneggiata" };
     if (f.size !== side.size) return { stato: "danneggiata" };
     let mtime;
@@ -83,12 +83,12 @@ const CARTELLA = (() => {
     const newer = cat && (cat.versione !== side.versione || cat.sha256 !== side.sha256);
     return { stato: newer ? "aggiornamento" : "pronta", mtime, nuova: newer ? cat.versione : undefined };
   }
-  const idOf = name => "f:" + name;
-  const nameOfId = id => id.slice(2);
-  const isFolderId = id => typeof id === "string" && id.startsWith("f:");
-  const stem = name => name.replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
+  const idOf = (/** @type {string} */ name) => "f:" + name;
+  const nameOfId = (/** @type {string} */ id) => id.slice(2);
+  const isFolderId = (/** @type {unknown} */ id) => typeof id === "string" && id.startsWith("f:");
+  const stem = (/** @type {string} */ name) => name.replace(/\.(msp|mgf|json|jsonl|ndjson|txt|mzlib)$/i, "");
   // only plain names inside the folder: no «..», no absolute path, no backslash; at most one level (`.mzlab/x`)
-  function safeRel(rel) {
+  function safeRel(/** @type {string} */ rel) {
     const parts = String(rel).split("/");
     if (!rel || parts.length > 2 || parts.some(p => !p || p === "." || p === ".." || /[\\\0:]/.test(p))) throw new Error("bad path");
     if (parts.length === 2 && parts[0] !== META) throw new Error("bad path");
@@ -96,22 +96,22 @@ const CARTELLA = (() => {
   }
 
   // ---------------------------------------------------------------- directories (same interface for handles and for the native folder)
-  const splitRel = rel => { const i = rel.lastIndexOf("/"); return [i < 0 ? "" : rel.slice(0, i), rel.slice(i + 1)]; };
+  const splitRel = (/** @type {string} */ rel) => { const i = rel.lastIndexOf("/"); return [i < 0 ? "" : rel.slice(0, i), rel.slice(i + 1)]; };
   // a FileSystemDirectoryHandle (OPFS `librerie/` or the folder chosen with showDirectoryPicker)
-  function handleDir(root, kind) {
-    const walk = async (sub, create) => { let d = root; for (const p of sub.split("/").filter(Boolean)) d = await d.getDirectoryHandle(p, { create }); return d; };
-    const bytes = async data => (typeof data === "string" ? new TextEncoder().encode(data) : data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data);
-    const self = {
+  function handleDir(/** @type {FileSystemDirectoryHandle} */ root, /** @type {string} */ kind) {
+    const walk = async (/** @type {string} */ sub, /** @type {boolean} */ create) => { let d = root; for (const p of sub.split("/").filter(Boolean)) d = await d.getDirectoryHandle(p, { create }); return d; };
+    const bytes = async (/** @type {string | Blob | Uint8Array} */ data) => (typeof data === "string" ? new TextEncoder().encode(data) : data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data);
+    const self = /** @type {LibDir} */ ({
       kind, name: root.name,
       async list(sub = "") {
         let d; try { d = await walk(sub, false); } catch (e) { return []; }
-        const out = []; for await (const [name, h] of d.entries()) if (h.kind === "file") { const f = await h.getFile(); out.push({ name, size: f.size, mtime: f.lastModified }); }
+        const out = []; for await (const [name, h] of d.entries()) if (h.kind === "file") { const f = await /** @type {FileSystemFileHandle} */ (h).getFile(); out.push({ name, size: f.size, mtime: f.lastModified }); }
         return out;
       },
       async file(rel) { safeRel(rel); const [sub, name] = splitRel(rel); return (await (await walk(sub, false)).getFileHandle(name)).getFile(); },
       async write(rel, data) {
         safeRel(rel); const [sub, name] = splitRel(rel), fh = await (await walk(sub, true)).getFileHandle(name, { create: true });
-        if (fh.createWritable) { const w = await fh.createWritable(); await w.write(data); await w.close(); return; }
+        if (fh.createWritable) { const w = await fh.createWritable(); await w.write(/** @type {FileSystemWriteChunkType} */ (data)); await w.close(); return; }
         const a = await fh.createSyncAccessHandle(); a.truncate(0);
         if (data instanceof Blob) { const CH = 8 << 20; for (let o = 0; o < data.size; o += CH) a.write(new Uint8Array(await data.slice(o, o + CH).arrayBuffer()), { at: o }); } else a.write(await bytes(data), { at: 0 });
         a.flush(); a.close();
@@ -121,50 +121,50 @@ const CARTELLA = (() => {
       async replace(tmp, rel) {
         safeRel(tmp); safeRel(rel); const [sub, name] = splitRel(rel);
         try { const fh = await (await walk(splitRel(tmp)[0], false)).getFileHandle(splitRel(tmp)[1]); if (fh.move) { await fh.move(await walk(sub, true), name); return; } } catch (e) { /* copy instead */ }
-        await self.write(rel, await self.file(tmp)); await self.remove(tmp);
+        await self.write(rel, /** @type {File} */ (await self.file(tmp))); await self.remove(tmp);
       },
-      reader: file => { const fr = new FileReaderSync(); return (off, len) => new Uint8Array(fr.readAsArrayBuffer(file.slice(off, off + len))); },
-    };
+      reader: file => { const fr = new FileReaderSync(); return (off, len) => new Uint8Array(fr.readAsArrayBuffer(/** @type {Blob} */ (file.slice(off, off + len)))); },
+    });
     return self;
   }
   // the folder of the desktop app, through mzlab://localhost/lib/<route> (crates/mzlab-desktop/src/librerie.rs)
-  function nativeDir(base) {
-    const url = (route, p) => base + "lib/" + route + "?" + Object.entries(p || {}).map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
-    const get = async (route, p) => { const r = await fetch(url(route, p)); if (r.status !== 200) throw new Error(await r.text()); return r; };
+  function nativeDir(/** @type {string} */ base) {
+    const url = (/** @type {string} */ route, /** @type {LibQuery} */ p) => base + "lib/" + route + "?" + Object.entries(p || {}).map(([k, v]) => k + "=" + encodeURIComponent(v)).join("&");
+    const get = async (/** @type {string} */ route, /** @type {LibQuery} */ p) => { const r = await fetch(url(route, p)); if (r.status !== 200) throw new Error(await r.text()); return r; };
     const CH = 8 << 20;
-    const syncRead = (rel, off, len) => { const x = new XMLHttpRequest(); x.open("GET", url("read", { name: rel, off, len }), false); x.responseType = "arraybuffer"; x.send(); if (x.status !== 200) throw new Error("read"); return new Uint8Array(x.response); };
-    const asyncRead = async (rel, off, len) => new Uint8Array(await (await get("read", { name: rel, off, len })).arrayBuffer());
-    const wrap = (rel, st) => ({
+    const syncRead = (/** @type {string} */ rel, /** @type {number} */ off, /** @type {number} */ len) => { const x = new XMLHttpRequest(); x.open("GET", url("read", { name: rel, off, len }), false); x.responseType = "arraybuffer"; x.send(); if (x.status !== 200) throw new Error("read"); return new Uint8Array(x.response); };
+    const asyncRead = async (/** @type {string} */ rel, /** @type {number} */ off, /** @type {number} */ len) => new Uint8Array(await (await get("read", { name: rel, off, len })).arrayBuffer());
+    const wrap = (/** @type {string} */ rel, /** @type {{ size: number, mtime: number }} */ st) => /** @type {LibNative} */ ({
       name: splitRel(rel)[1], size: st.size, lastModified: st.mtime, rel,
-      slice(a, b) { const s = Math.max(0, a), e = Math.min(st.size, b); return { size: e - s, arrayBuffer: async () => (await asyncRead(rel, s, e - s)).buffer, text: async () => new TextDecoder().decode(await asyncRead(rel, s, e - s)) }; },
+      slice(a, b) { const s = Math.max(0, a), e = Math.min(st.size, b); return { size: e - s, arrayBuffer: async () => /** @type {ArrayBuffer} */ ((await asyncRead(rel, s, e - s)).buffer), text: async () => new TextDecoder().decode(await asyncRead(rel, s, e - s)) }; },
       stream() { let off = 0; return { getReader: () => ({ read: async () => { if (off >= st.size) return { done: true }; const v = await asyncRead(rel, off, Math.min(CH, st.size - off)); off += v.length; return { done: false, value: v }; } }) }; },
       async text() { return new TextDecoder().decode(await asyncRead(rel, 0, st.size)); },
       readSync: (off, len) => syncRead(rel, off, len),
     });
-    return {
+    return /** @type {LibDir} */ ({
       kind: "native", name: "",
       async list(sub = "") { return (await (await get("list", { sub })).json()).files; },
       async file(rel) { safeRel(rel); return wrap(rel, await (await get("stat", { name: rel })).json()); },
-      async write(rel, data) {
-        safeRel(rel); const u8 = typeof data === "string" ? new TextEncoder().encode(data) : null, total = u8 ? u8.length : data.size;
+      async write(rel, /** @type {string | Blob} */ data) {
+        safeRel(rel); const u8 = typeof data === "string" ? new TextEncoder().encode(data) : null, total = u8 ? u8.length : /** @type {Blob} */ (data).size;
         for (let off = 0; off === 0 || off < total; off += CH) {
-          const part = u8 ? u8.subarray(off, off + CH) : new Uint8Array(await data.slice(off, off + CH).arrayBuffer());
+          const part = u8 ? u8.subarray(off, off + CH) : new Uint8Array(await /** @type {Blob} */ (data).slice(off, off + CH).arrayBuffer());
           const r = await fetch(url("put", { name: rel, off, total }), { method: "POST", body: part }); if (r.status !== 200) throw new Error(await r.text());
           if (total === 0) break;
         }
       },
       async remove(rel) { safeRel(rel); await get("remove", { name: rel }); },
       async replace(tmp, rel) { safeRel(tmp); safeRel(rel); await get("rename", { from: tmp, to: rel }); },
-      reader: file => (off, len) => file.readSync(off, len),
-    };
+      reader: (/** @type {LibNative} */ file) => (off, len) => file.readSync(off, len),
+    });
   }
 
   // ---------------------------------------------------------------- the inventory
   // sidecars come from a folder that may be shared: a size cap, no prototype keys, and a shape check (null = unreadable, so the entry shows as damaged instead of breaking the inventory)
-  const MAX_SIDE = 16 << 20, plain = v => !!v && typeof v === "object" && !Array.isArray(v), num = v => typeof v === "number" && Number.isFinite(v);
-  const okIdx = j => plain(j) && plain(j.origine) && num(j.origine.size) && num(j.origine.mtime) && num(j.bytes);
-  const okPkg = j => plain(j) && typeof j.id === "string";
-  const readJson = async (dir, rel, ok = plain) => {
+  const MAX_SIDE = 16 << 20, plain = (/** @type {unknown} */ v) => !!v && typeof v === "object" && !Array.isArray(v), num = (/** @type {unknown} */ v) => typeof v === "number" && Number.isFinite(v);
+  const okIdx = (/** @type {any} */ j) => plain(j) && plain(j.origine) && num(j.origine.size) && num(j.origine.mtime) && num(j.bytes);
+  const okPkg = (/** @type {any} */ j) => plain(j) && typeof j.id === "string";
+  const readJson = async (/** @type {LibDir} */ dir, /** @type {string} */ rel, /** @type {(j: any) => boolean} */ ok = plain) => {
     try {
       const f = await dir.file(rel); if (f.size > MAX_SIDE) return null;
       const j = JSON.parse(await f.text(), (k, v) => (k === "__proto__" || k === "constructor" || k === "prototype" ? undefined : v));
@@ -173,13 +173,13 @@ const CARTELLA = (() => {
   };
   const HEAD = [0x4d, 0x5a, 0x4c, 0x42];
   // the 36-byte header of a .mzlib (docs/agenti/librerie.md): null if it is not one
-  async function readHead(file) {
+  async function readHead(/** @type {LibFile} */ file) {
     try { const b = new Uint8Array(await file.slice(0, 36).arrayBuffer()); if (b.length < 36 || !HEAD.every((x, i) => b[i] === x)) return null; const dv = new DataView(b.buffer); return { n: dv.getUint32(8, true), peaks: Number(dv.getBigUint64(16, true)), minReader: dv.getUint16(6, true) }; } catch (e) { return null; }
   }
   // The state of every entry. `cat` = the catalog (or null). Returns { voci: [{ nome, tipo, id, size, mtime, stato, info, nuova }] } sorted by name.
-  async function scan(dir, cat) {
+  async function scan(/** @type {LibDir} */ dir, /** @type {{ librerie?: LibPkg[] } | null} */ cat) {
     const top = await dir.list(""), sub = await dir.list(META), subSize = new Map(sub.map(f => [f.name, f.size]));
-    const catBy = new Map(((cat && cat.librerie) || []).map(e => [e.id, e])), voci = [], seen = new Set();
+    const catBy = new Map(((cat && cat.librerie) || []).map(e => [e.id, e])), voci = /** @type {LibVoce[]} */ ([]), seen = new Set();
     for (const f of top) {
       if (f.name.startsWith(".")) continue;
       if (SRC.test(f.name)) {
@@ -205,8 +205,8 @@ const CARTELLA = (() => {
     return { voci: voci.sort((a, b) => a.nome.localeCompare(b.nome)) };
   }
   // the file the engine reads for an entry of the folder: the package itself, or the index of a source
-  const blobPath = voce => (voce.tipo === "pacchetto" ? voce.nome : META + "/" + voce.nome + ".mzlib");
-  const metaOf = (name, size, mtime, sha, info, bytes) => ({ v: 1, origine: { nome: name, size, mtime, sha256: sha }, info, bytes, date: Date.now() });
+  const blobPath = (/** @type {LibVoce} */ voce) => (voce.tipo === "pacchetto" ? voce.nome : META + "/" + voce.nome + ".mzlib");
+  const metaOf = (/** @type {string} */ name, /** @type {number} */ size, /** @type {number} */ mtime, /** @type {string} */ sha, /** @type {LibInfo | null | undefined} */ info, /** @type {number} */ bytes) => ({ v: 1, origine: { nome: name, size, mtime, sha256: sha }, info, bytes, date: Date.now() });
 
   return { Sha256, sha256Of, readHead, statoSorgente, statoPacchetto, scan, handleDir, nativeDir, idOf, nameOfId, isFolderId, stem, safeRel, blobPath, metaOf, META, SRC, STATI };
 })();

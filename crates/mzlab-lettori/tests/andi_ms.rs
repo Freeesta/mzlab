@@ -191,3 +191,20 @@ fn riconosce_ms_con_certezza_e_cromatografia_con_meno() {
         Fiducia::No
     );
 }
+
+#[test]
+fn l_intestazione_applica_scale_factor_e_add_offset() {
+    let mut l = apri_andi(andi_ms(&Corsa {
+        scala_tempo: Some((0.5, 10.0)),
+        ..PIATTA
+    }));
+    for k in 0..SCANSIONI {
+        let campi = l.intestazione(0, k).unwrap();
+        let t = campi
+            .iter()
+            .find(|c| c.nome == "scan_acquisition_time")
+            .unwrap();
+        let atteso = 60.0 + 1.5 * k as f64;
+        assert_eq!(t.valore.parse::<f64>().unwrap(), atteso, "scan {k}");
+    }
+}

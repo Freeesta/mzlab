@@ -42,8 +42,7 @@ fn feat(mz: f64, rt: f64) -> Feature {
         rt_end: rt + 0.1,
         height: 1e5,
         area: 1e4,
-        filled: false,
-        broad: false,
+        ..Feature::default()
     }
 }
 
@@ -69,8 +68,7 @@ fn rows_like_mzmine() {
                     rt_end: num(r, "rt_end"),
                     height: num(r, "height"),
                     area: num(r, "area"),
-                    filled: false,
-                    broad: false,
+                    ..Feature::default()
                 })
                 .collect()
         })

@@ -40,9 +40,9 @@ async function upload(name, blob) {
   return id;
 }
 
-/** the rules of the hypotheses: regole_tp.json with the rows of the user's list of transformations @param {string} base @param {string | undefined} list */
+/** the rules of the hypotheses: regole_tp_2.json with the rows of the user's list of transformations @param {string} base @param {string | undefined} list */
 async function rulesOf(base, list) {
-  const rules = await (await fetch(base + "mzfinder/regole_tp.json")).text(), tr = (list || "").trim();
+  const rules = await (await fetch(base + "mzfinder/regole_tp_2.json")).text(), tr = (list || "").trim();
   return tr ? rpc("finder/transformations", { rules, text: tr }) : rules;      // the user's list: its rows become rules of the hypotheses
 }
 
@@ -52,9 +52,10 @@ function timer() {
   return { t0: performance.now(), timing, lap: (/** @type {string} */ k, /** @type {number} */ t) => { timing[k] = Math.round((performance.now() - t) / 10) / 100; } };
 }
 
-/** the hypotheses of the parent over the aligned series (`feat/hypotheses`) @param {string} base @param {string[]} names @param {string | undefined} list @param {string} structure @param {string} parent */
-async function hypotheses(base, names, list, structure, parent) {
-  return JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, list), structure, parent, recipe: "" }));
+/** the hypotheses of the parent over the aligned series (`feat/hypotheses`); `adduct` is the one of the parent: its sign is the polarity of the products @param {string} base @param {string[]} names @param {string | undefined} list @param {string} structure @param {string} parent @param {string} [adduct] */
+async function hypotheses(base, names, list, structure, parent, adduct = "") {
+  const recipe = adduct.trim().endsWith("-") ? JSON.stringify({ polarity: -1 }) : "";
+  return JSON.parse(await rpc("feat/hypotheses", { names, rules: await rulesOf(base, list), structure, parent, recipe }));
 }
 
 /** the numbers of the table of the products: the roles of campioni/2 here, the table in the app ("null" after a low-resolution Dig) @param {{lc: string[], files: any[]} | null} hr @param {string} rows */
@@ -118,7 +119,7 @@ export function createDesktop(base, say, held) {
     say("Aligning the peaks of the series..."); await rpc("feat/align", { names, recipe: "" }); lap("align", t); t = performance.now();
     say("Generating candidates...");
     // a parent known only by its m/z has no transformations to apply: the Dig keeps its row and the unexpected ions
-    const registry = plan.formula ? JSON.stringify((await hypotheses(base, names, a[3], "", plan.formula)).registry) : "";
+    const registry = plan.formula ? JSON.stringify((await hypotheses(base, names, a[3], "", plan.formula, JSON.parse(parentJson).adduct || "")).registry) : "";
     lap("candidates", t); t = performance.now();
     say("Computing the tables...");
     const out = await rpc("finder/lr_dig", { files: filesJson, parent: parentJson, registry, settings: settingsJson || "{}", timing: "{}" });

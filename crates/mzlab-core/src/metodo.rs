@@ -292,7 +292,8 @@ pub fn sha1_dyn(r: &mut dyn ReadAt, size: u64) -> Result<String> {
 #[inline(always)]
 fn sha1_of<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<String> {
     let mut h = Sha1::new();
-    let mut buf = vec![0u8; 1 << 20];
+    // one block of at most 1 MB, none for an empty member: an archive of small members does not allocate 1 MB for each
+    let mut buf = vec![0u8; size.min(1 << 20) as usize];
     let mut at = 0u64;
     while at < size {
         let n = (size - at).min(buf.len() as u64) as usize;
@@ -300,7 +301,12 @@ fn sha1_of<R: ReadAt + ?Sized>(r: &mut R, size: u64) -> Result<String> {
         h.update(&buf[..n]);
         at += n as u64;
     }
-    Ok(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    let mut hex = String::with_capacity(40);
+    for b in h.finalize() {
+        hex.push(char::from(b"0123456789abcdef"[usize::from(b >> 4)]));
+        hex.push(char::from(b"0123456789abcdef"[usize::from(b & 15)]));
+    }
+    Ok(hex)
 }
 
 /// `(file name, SHA-1)` of every `<sourceFile>` of an mzML header (as ProteoWizard writes it: the SHA-1 is the cvParam MS:1000569).

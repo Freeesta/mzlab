@@ -46,8 +46,10 @@
   /** whether the assistant may exist on this page: profile «ricerca», switched on, a consent for the provider (llm-agente.js checks again) */
   F.llmOn = () => {
     const read = (/** @type {string} */ k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (_) { return {}; } };
-    let p = ""; try { p = localStorage.getItem("mzlab.profilo") || ""; } catch (_) { /* blocked */ }
-    if (p !== "corso" && p !== "ricerca") p = /** @type {any} */ (window).MZLAB_DESKTOP ? "ricerca" : "corso";
+    // the profile rule of uipProfile() in settings.js (not loaded yet when the Flow is built): administrator mode or the desktop app
+    const w = /** @type {any} */ (window), key = (/** @type {string} */ k) => (typeof NOMI !== "undefined" ? NOMI.KEY(k) : "mzlab." + k);
+    let admin = false; try { admin = localStorage.getItem(key("admin")) === "1" || localStorage.getItem(key("teoria.esteso")) === "1"; } catch (_) { /* blocked */ }
+    const p = admin || w.MZLAB_DESKTOP ? "ricerca" : "corso";
     const s = read("mzlab.llm");
     return p === "ricerca" && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
   };
@@ -80,18 +82,24 @@
       "err.flow.instance": `A step has no ${q.field}.`,
       "err.flow.input": `An input file has no ${q.field}.`,
       "err.flow.compare.sameVariant": "Two variants of the comparison are identical.",
-      "err.flow.msn.open": `Open the infusion ${q.input || "of the plan"} in the Data tab first, then run again.`,
+      "err.flow.msn.open": `The infusion ${q.input || "of the plan"} is not open. Add it with Add files on the Import card (or open it in the Data tab), then run again.`,
       "err.flow.tp.parent": `The parent compound ${q.input || ""} is empty: write its formula or SMILES in the input, then run again.`,
       "err.flow.msn.desktop": "This file is too big for this browser. Run the plan in the desktop app or with the command line.",
       "err.flow.msn.empty": "This file has no MSn spectra (MS2 or deeper). The plan needs an MSn infusion: open one in the Data tab.",
       "err.flow.msn.library": "The MSn library is empty. In the Data tab, open the Fragmentation graph card of a standard and add it to the library, then run again.",
       "err.flow.msn.molecule": "Give the ion of the root (for example C8H9NO2 [M+H]+): a molecule name needs the molecules list, which this browser does not read. Use the desktop app or the command line for a name.",
-      "err.flow.input.missing": `Open the file ${q.input} in the Data tab first, then run again.`,
+      "err.flow.input.missing": `${q.input ? `The file ${q.input} is not open` : "No data file is open"}. Add it with Add files on the input node (or open it in the Data tab), then run again.`,
       "err.flow.check": `The plan has problems: ${q.problems}.`,
       "err.flow.read.big": `${q.name} is too big to show here.`,
       "err.flow.run": "The run could not start.",
       "err.scan.outside": "The file has no scan the step can read. Open an MSn infusion (MS2 or deeper) in the Data tab, wait until it is read, then run again.",
       "err.flow.compare.few": "A comparison needs at least two variants.",
+      "error.featFailed": "The Tabui engine could not start (its rules or its structure module are missing). Reload the page and run again.",
+      "error.featWorker": "A worker of the pipeline stopped working. Run again; if it happens again, close other tabs to free memory.",
+      "error.featWasmHash": "The pipeline engine did not download correctly (its checksum is wrong). Reload the page.",
+      "error.featNoHypotheses": "The hypotheses of the parent must be searched before the proofs are built.",
+      "error.featState": "The state of the hypotheses is not valid: search the hypotheses again.",
+      "error.featMemory": `Not enough memory for the «${q.fase}» phase (about ${q.stima_mb} MB needed of ${q.budget_mb} MB).`,
     };
     return M[p.key] || p.key;
   };
@@ -117,7 +125,7 @@
 .flw .fl-ports label,.flw .fl-ports .fl-pn{display:flex;gap:5px;align-items:center}.flw select,.flw input[type=number],.flw input[type=text]{min-height:28px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;max-width:100%}
 .flw .fl-out{display:flex;flex-wrap:wrap;gap:6px;color:var(--muted);font-size:12px}.flw .fl-probs{margin:6px 0 0;padding:0;list-style:none;color:var(--bad)}.flw .fl-probs li{display:flex;gap:5px;align-items:flex-start}.flw .fl-probs svg{flex:none;margin-top:2px}
 .flw .fl-note{color:var(--muted)}.flw .fl-goal{padding:6px 10px;border-radius:8px;background:var(--sel)}.flw .fl-goal.ok{color:var(--ok)}.flw .fl-empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
-.flw .fl-form{display:grid;grid-template-columns:minmax(130px,max-content) minmax(0,1fr);gap:4px 10px;margin:6px 0;align-items:center}.flw .fl-form select,.flw .fl-form input[type=number],.flw .fl-form input[type=text]{max-width:420px}.flw .fl-form .fl-ds{grid-column:2;font-size:12px;color:var(--muted)}.flw .fl-form input[type=checkbox]{width:24px;height:24px}
+.flw .fl-form{display:grid;grid-template-columns:minmax(130px,max-content) minmax(0,1fr);gap:4px 10px;margin:6px 0;align-items:center}.flw .fl-form select,.flw .fl-form input[type=number],.flw .fl-form input[type=text]{max-width:420px}.flw .fl-form .fl-tipnote{grid-column:2;font-size:12px;color:var(--muted)}.flw .fl-form .fl-tipnote[hidden]{display:none}.flw .fl-tip{min-width:24px;min-height:24px;padding:0}@media(pointer:coarse){.flw .fl-tip{min-width:40px;min-height:40px}}.flw .fl-form input[type=checkbox]{width:24px;height:24px}
 .flw .fl-cli{border:1px solid var(--accent);border-radius:8px;padding:8px 10px;background:var(--panel)}.flw .fl-cli code{display:block;white-space:pre-wrap;word-break:break-all;background:var(--soft);padding:6px;border-radius:6px;margin:6px 0}
 .flw details>summary{cursor:pointer;color:var(--accent);margin:4px 0}.flw .fl-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 @keyframes flIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}

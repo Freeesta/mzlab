@@ -153,6 +153,46 @@ fn damaged_files_are_refused() {
     );
 }
 
+/// The same container with its meta text rewritten by `f` (the data keep their place after the padded meta).
+fn with_meta(bytes: &[u8], f: impl Fn(&str) -> String) -> Vec<u8> {
+    let n = u64::from_le_bytes(bytes[8..16].try_into().unwrap()) as usize;
+    let text = f(std::str::from_utf8(&bytes[16..16 + n]).unwrap());
+    let mut out = bytes[..8].to_vec();
+    out.extend((text.len() as u64).to_le_bytes());
+    out.extend(text.as_bytes());
+    out.resize(out.len().div_ceil(64) * 64, 0);
+    out.extend(&bytes[(16 + n).div_ceil(64) * 64..]);
+    out
+}
+
+#[test]
+fn absurd_counts_and_offsets_in_the_meta_are_errors_not_panics() {
+    let (f, _) = series();
+    let bytes = write_file(&f[0], &Recipe::default(), &origin());
+    let count = format!("\"count\":{}", f[0].len());
+    assert!(String::from_utf8_lossy(&bytes[..2000]).contains(&count));
+    for huge in [
+        "99999999999999999999",
+        "18446744073709551615",
+        "4611686018427387904",
+        "-1",
+        "1e30",
+    ] {
+        let counted = with_meta(&bytes, |m| {
+            m.replacen(&count, &format!("\"count\":{huge}"), 1)
+        });
+        assert!(read_file(&counted).is_err(), "count {huge}");
+        let offset = with_meta(&bytes, |m| {
+            m.replacen("\"offset\":0", &format!("\"offset\":{huge}"), 1)
+        });
+        assert!(read_file(&offset).is_err(), "offset {huge}");
+    }
+    // a meta longer than the file
+    let mut long = bytes.clone();
+    long[8..16].copy_from_slice(&u64::MAX.to_le_bytes());
+    assert!(read_file(&long).is_err());
+}
+
 #[test]
 fn fingerprints_follow_the_parameters() {
     let base = Recipe::default();
@@ -187,27 +227,43 @@ fn ids_are_positions_and_counts_come_from_the_states() {
     assert_eq!(t.row_of_id(0), None);
     assert_eq!(t.row_of_id(t.len() as u32 + 1), None);
     assert!((0..t.len()).all(|r| t.row_of_id(t.id(r)) == Some(r)));
-    let k = (0..t.state.len()).find(|&i| t.state[i] == CELL_DETECTED).unwrap();
+    let k = (0..t.state.len())
+        .find(|&i| t.state[i] == CELL_DETECTED)
+        .unwrap();
     let before = t.state_counts(k / t.n_files);
     t.state[k] = CELL_FILLED;
     let after = t.state_counts(k / t.n_files);
     assert_eq!((after.0 + 1, after.2), (before.0, before.2 + 1));
-    let total: usize = (0..t.len()).map(|r| t.state_counts(r)).map(|c| (c.0 + c.1 + c.2) as usize).sum();
+    let total: usize = (0..t.len())
+        .map(|r| t.state_counts(r))
+        .map(|c| (c.0 + c.1 + c.2) as usize)
+        .sum();
     assert!(total <= t.state.len());
 }
 
 #[test]
 fn sorting_the_rows_keeps_every_row_whole() {
     let (_, t) = series();
-    assert!(!t.is_id_ordered(), "the test series must start out of order");
+    assert!(
+        !t.is_id_ordered(),
+        "the test series must start out of order"
+    );
     let mut s = t.clone();
     s.sort_rows();
     assert!(s.is_id_ordered());
-    assert_eq!((s.len(), s.state.len(), s.member_mz.len()), (t.len(), t.state.len(), t.member_mz.len()));
+    assert_eq!(
+        (s.len(), s.state.len(), s.member_mz.len()),
+        (t.len(), t.state.len(), t.member_mz.len())
+    );
     // every row of the sorted table is a row of the original: its reference ion, its cells and its members
     let key = |a: &Aligned, r: usize| {
-        let ms: Vec<(u64, u32)> = a.members(r).map(|m| (a.member_mz[m].to_bits(), a.member_rt[m].to_bits())).collect();
-        let cells: Vec<(u64, u8)> = (0..a.n_files).map(|k| (a.area[a.cell(r, k)].to_bits(), a.state[a.cell(r, k)])).collect();
+        let ms: Vec<(u64, u32)> = a
+            .members(r)
+            .map(|m| (a.member_mz[m].to_bits(), a.member_rt[m].to_bits()))
+            .collect();
+        let cells: Vec<(u64, u8)> = (0..a.n_files)
+            .map(|k| (a.area[a.cell(r, k)].to_bits(), a.state[a.cell(r, k)]))
+            .collect();
         (a.mz[r].to_bits(), a.rt[r].to_bits(), cells, ms)
     };
     let mut before: Vec<_> = (0..t.len()).map(|r| key(&t, r)).collect();

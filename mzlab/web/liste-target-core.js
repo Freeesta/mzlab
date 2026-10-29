@@ -1,9 +1,10 @@
 // @ts-strict
+// @ts-noany
 // High-resolution mass spectrometry (HRMS) target screening calculation core.
 "use strict";
 
 const LISTE_TARGET_CORE = (function() {
-  const ADDUCT_DELTAS = {
+  /** @type {Record<string, number>} */ const ADDUCT_DELTAS = {
     "[M+H]+": 1.007276,
     "[M+Na]+": 22.989218,
     "[M+NH4]+": 18.033823,
@@ -12,8 +13,8 @@ const LISTE_TARGET_CORE = (function() {
     "[M+Cl]-": 34.969402
   };
 
-  function parseFormulaCounts(formula) {
-    const counts = {};
+  function parseFormulaCounts(/** @type {string} */ formula) {
+    /** @type {Record<string, number>} */ const counts = {};
     if (!formula) return counts;
     const regex = /([A-Z][a-z]*)(\d*)/g;
     let m;
@@ -26,7 +27,7 @@ const LISTE_TARGET_CORE = (function() {
     return counts;
   }
 
-  function calcTargetMz(entry, adduct) {
+  function calcTargetMz(/** @type {TgtEntry} */ entry, /** @type {string} */ adduct) {
     if (entry.mz && isFinite(entry.mz[adduct])) return entry.mz[adduct];
     if (adduct === "[M+H]+" && isFinite(entry.mz_mh)) return entry.mz_mh;
     if (adduct === "[M+Na]+" && isFinite(entry.mz_mna)) return entry.mz_mna;
@@ -36,7 +37,7 @@ const LISTE_TARGET_CORE = (function() {
     return NaN;
   }
 
-  function estimateNoise(y) {
+  function estimateNoise(/** @type {number[]} */ y) {
     if (!y || !y.length) return 1.0;
     const sorted = y.slice().sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
@@ -52,7 +53,7 @@ const LISTE_TARGET_CORE = (function() {
     return n > 1e-6 ? n : 1.0;
   }
 
-  function peakAt(rt, y, i, j, noise) {
+  function peakAt(/** @type {number[]} */ rt, /** @type {number[]} */ y, /** @type {number} */ i, /** @type {number} */ j, /** @type {number} */ noise) {
     const apexIdx = Math.floor((i + j) / 2);
     const height = y[apexIdx];
     const snRatio = height / noise;
@@ -74,11 +75,11 @@ const LISTE_TARGET_CORE = (function() {
     return { apex_idx: apexIdx, rt_apex: rt[apexIdx], rt_start: rt[left], rt_end: rt[right], height, area, sn_ratio: snRatio, right };
   }
 
-  function detectChromPeaks(rt, y, minSn, minArea, noise) {
+  function detectChromPeaks(/** @type {number[]} */ rt, /** @type {number[]} */ y, /** @type {number} */ minSn, /** @type {number} */ minArea, /** @type {number} */ noise) {
     const n = y.length;
     if (n < 3) return [];
     const threshold = minSn * noise;
-    const peaks = [];
+    /** @type {TgtPeak[]} */ const peaks = [];
     let i = 1;
     while (i < n - 1) {
       if (y[i] > y[i - 1] && y[i] >= y[i + 1] && y[i] >= threshold) {
@@ -96,8 +97,8 @@ const LISTE_TARGET_CORE = (function() {
     return peaks;
   }
 
-  function extractXic(ms1Spectra, lo, hi) {
-    const rt = [], y = [];
+  function extractXic(/** @type {TgtSpec[]} */ ms1Spectra, /** @type {number} */ lo, /** @type {number} */ hi) {
+    /** @type {number[]} */ const rt = [], y = [];
     let maxY = 0.0;
     for (let i = 0; i < ms1Spectra.length; i++) {
       const s = ms1Spectra[i];
@@ -114,7 +115,7 @@ const LISTE_TARGET_CORE = (function() {
     return { rt, y, maxY };
   }
 
-  function expectedIsotopeRatio(neutralFormula, adduct) {
+  function expectedIsotopeRatio(/** @type {string} */ neutralFormula, /** @type {string} */ adduct) {
     const counts = parseFormulaCounts(neutralFormula);
     if (adduct === "[M+H]+") counts["H"] = (counts["H"] || 0) + 1;
     else if (adduct === "[M+Na]+") counts["Na"] = (counts["Na"] || 0) + 1;
@@ -126,7 +127,7 @@ const LISTE_TARGET_CORE = (function() {
     return Math.max(0.01, nC * 0.0108 + nN * 0.0037);
   }
 
-  function computeIsotopeScore(neutralFormula, adduct, targetMz, spec, tolerancePpm) {
+  function computeIsotopeScore(/** @type {string} */ neutralFormula, /** @type {string} */ adduct, /** @type {number} */ targetMz, /** @type {TgtSpec | null | undefined} */ spec, /** @type {number} */ tolerancePpm) {
     if (!spec || !spec.mz) return null;
     const expM1Ratio = expectedIsotopeRatio(neutralFormula, adduct);
     const expM1Mz = targetMz + 1.003355;
@@ -150,7 +151,7 @@ const LISTE_TARGET_CORE = (function() {
     return null;
   }
 
-  function checkMs2Match(targetMz, rtApex, peakWidth, ms2Spectra, tolerancePpm) {
+  function checkMs2Match(/** @type {number} */ targetMz, /** @type {number} */ rtApex, /** @type {number} */ peakWidth, /** @type {TgtSpec[]} */ ms2Spectra, /** @type {number} */ tolerancePpm) {
     const windowRt = Math.max(peakWidth, 0.05);
     for (let i = 0; i < ms2Spectra.length; i++) {
       const s = ms2Spectra[i];
@@ -164,7 +165,7 @@ const LISTE_TARGET_CORE = (function() {
     return false;
   }
 
-  function formatProposalAndMotif(peak, ppmError, isotopeScore, ms2Matched, tolerancePpm) {
+  function formatProposalAndMotif(/** @type {TgtPeak} */ peak, /** @type {number} */ ppmError, /** @type {number | null} */ isotopeScore, /** @type {boolean} */ ms2Matched, /** @type {number} */ tolerancePpm) {
     const isoVal = isotopeScore != null ? isotopeScore : 0.0;
     let proposal = "";
     if (peak.sn_ratio >= 5.0 && isoVal >= 0.7 && ms2Matched) proposal = "Prev. 1";
@@ -180,7 +181,7 @@ const LISTE_TARGET_CORE = (function() {
     return { proposal, motif };
   }
 
-  function evaluatePeak(entry, adduct, targetMz, ms1Spectra, ms2Spectra, peak, opts) {
+  function evaluatePeak(/** @type {TgtEntry} */ entry, /** @type {string} */ adduct, /** @type {number} */ targetMz, /** @type {TgtSpec[]} */ ms1Spectra, /** @type {TgtSpec[]} */ ms2Spectra, /** @type {TgtPeak} */ peak, /** @type {TgtOpts} */ opts) {
     const spec = ms1Spectra[peak.apex_idx];
     const tolDa = targetMz * opts.tolerance_ppm * 1e-6;
     let observedMz = targetMz, maxApexI = 0.0;
@@ -210,21 +211,21 @@ const LISTE_TARGET_CORE = (function() {
     };
   }
 
-  function proposalRank(p) {
+  function proposalRank(/** @type {string} */ p) {
     if (p === "Prev. 1") return 1;
     if (p === "Prev. 2") return 2;
     if (p === "Prev. 3") return 3;
     return 4;
   }
 
-  function sortMatches(matches) {
+  function sortMatches(/** @type {TgtMatch[]} */ matches) {
     return matches.slice().sort((a, b) => {
       const ra = proposalRank(a.proposal), rb = proposalRank(b.proposal);
       return ra !== rb ? ra - rb : b.sn_ratio - a.sn_ratio;
     });
   }
 
-  function cercaTargets(listEntries, spectra, options = {}) {
+  function cercaTargets(/** @type {TgtEntry[]} */ listEntries, /** @type {TgtSpec[]} */ spectra, /** @type {Partial<TgtOpts>} */ options = {}) {
     const opts = {
       tolerance_ppm: options.tolerance_ppm || 5.0,
       min_sn: options.min_sn || 3.0,
@@ -234,7 +235,7 @@ const LISTE_TARGET_CORE = (function() {
     const ms1 = spectra.filter(s => s.level === 1), ms2 = spectra.filter(s => s.level === 2);
     if (!ms1.length || !listEntries.length) return [];
 
-    const matches = [];
+    /** @type {TgtMatch[]} */ const matches = [];
     for (let i = 0; i < listEntries.length; i++) {
       const entry = listEntries[i];
       for (let j = 0; j < opts.adducts.length; j++) {
@@ -256,7 +257,7 @@ const LISTE_TARGET_CORE = (function() {
     return sortMatches(matches);
   }
 
-  function csvExport(matches) {
+  function csvExport(/** @type {TgtMatch[]} */ matches) {
     const header = [
       "# mzLab Target screening export - " + new Date().toISOString().replace("T", " ").slice(0, 19),
       "id,name,neutral_formula,adduct,theoretical_mz,observed_mz,ppm_error,rt_apex,rt_start,rt_end,height,area,sn_ratio,isotope_score,ms2_matched,proposal,motif"

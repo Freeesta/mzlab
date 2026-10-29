@@ -13,8 +13,8 @@ fn feature(broad: bool) -> Feature {
         rt_end: 6.0,
         height: 1e5,
         area: 1e4,
-        filled: false,
         broad,
+        ..Feature::default()
     }
 }
 

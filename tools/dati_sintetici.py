@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*, D_DIA-t0 (DIA, fixed isolation windows), canali/K_MIRATO, K_BLOCCHI, K_DDA (targeted MS2 in LC, MSn in blocks, DDA with 70 precursors: the channel tests), Q_* (3 QC and 2 blanks in the order of injection, see qc_series)
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -49,7 +49,7 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, iso=None, filt=None) -> str:
     p = ""
     if prec is not None:
         w = ""
@@ -67,7 +67,8 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False, 
             + ('<cvParam cvRef="MS" accession="MS:1000129" name="negative scan" value=""/>' if neg else '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>') +
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
-            f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList>{p}<binaryDataArrayList count="2">'
+            f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/>' + (f'<cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="{filt}"/>' if filt else '')
+            + f'</scan></scanList>{p}<binaryDataArrayList count="2">'
             + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
 
 
@@ -486,14 +487,14 @@ def make(out: Path) -> Path:
     hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     subtraction_series(out)                           # written last: nothing else changes
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from dati_sintetici_serie import dia, qc_series
+    from dati_sintetici_serie import dia, qc_series; from dati_sintetici_canali import canali_casi
     dia(out / "D_DIA-t0.mzML", np.random.default_rng(67))      # written last: nothing else changes
     qc_series(out)                                    # written last: nothing else changes
+    canali_casi(out / "canali")                       # written last, in a folder of its own: nothing else changes
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
+    if len(sys.argv) != 2: sys.exit(__doc__)
     print(make(Path(sys.argv[1])))

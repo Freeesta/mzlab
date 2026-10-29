@@ -20,6 +20,8 @@ fn posizione(v: &Value) -> Option<Option<Posizione>> {
 /// The scan of a row of the index: `start,end` (version 1) or `[membro,offset,lunghezza] | null, k` (version 2, `nativo`) in its first two columns.
 pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
     let f = |i: usize| r.at(i).and_then(Value::f64);
+    // an offset or a scan number is never negative or NaN: such a row is a damaged index, not a scan at 0
+    let nn = |i: usize| f(i).filter(|x| *x >= 0.0);
     let s = |i: usize| r.at(i).and_then(Value::str).map(String::from);
     let iso = r.at(11).filter(|v| !v.is_null()).map(|v| {
         (
@@ -40,9 +42,9 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
             .collect()
     });
     let (start, end, pos, k) = if nativo {
-        (0, 0, posizione(r.at(0)?)?, Some(f(1)? as usize))
+        (0, 0, posizione(r.at(0)?)?, Some(nn(1)? as usize))
     } else {
-        (f(0)? as u64, f(1)? as u64, None, None)
+        (nn(0)? as u64, nn(1)? as u64, None, None)
     };
     let (mob, mob_unit) = match r.at(21).filter(|v| !v.is_null()) {
         Some(v) => {
@@ -89,3 +91,6 @@ pub(crate) fn scan_of_row(r: &Value, nativo: bool) -> Option<Scan> {
         mob_unit,
     })
 }
+
+#[cfg(test)]
+mod tests;

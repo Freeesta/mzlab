@@ -198,7 +198,7 @@ def run_measurement(port):
             pdiff34, pnote34 = diff_pixels(shot3, shot4)
 
             label = f"{w}x{h} {loc} warm={warm}"
-            print(f"[{label}] CLS={cls_val:.4f} | Diff nodes: 1->2: {len(d12)}, 2->3: {len(d23)}, 3->4: {len(d34)} | Pixels: 1->2: {pnote12}, 2->3: {pnote23}")
+            print(f"[{label}] CLS={cls_val:.6f} | Diff nodes: 1->2: {len(d12)}, 2->3: {len(d23)}, 3->4: {len(d34)} | Pixels: 1->2: {pnote12}, 2->3: {pnote23}")
 
             if cls_val > 0 or len(d12) > 0 or len(d23) > 0 or pdiff12 or pdiff23:
                 all_defects.append({
@@ -224,7 +224,9 @@ def main():
         if defects:
             first = defects[0]
             print(f"Sample configuration: {first['config']}")
-            print(f"CLS: {first['cls']:.4f}")
+            print(f"CLS: {first['cls']:.6f}")
+            print("Layout shifts (value, state, sources):", json.dumps(first["shifts"]))
+            print("Changed nodes 1->2:", first["d12_sample"], "2->3:", first["d23_sample"])
             print(f"DCL -> i18n node changes: {first['d12_count']}")
             print(f"i18n -> qqReady node changes: {first['d23_count']}")
             raise AssertionError(f"FAIL: Primo disegno non e finale: {len(defects)} configurazioni hanno salti di layout o cambi DOM")

@@ -52,7 +52,7 @@ jobs:
           fi
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
-          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 1884160 engine
+          tools/wasm_opt.sh site/static/wasm/mzlab_wasm_bg.wasm 2744320 engine
       - name: Build the libraries WASM engine (a .wasm of its own, fetched only when the libraries are opened; never committed)
         run: |
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lib-wasm
@@ -78,7 +78,7 @@ jobs:
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: site/static/librerie
-          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'tools/librerie_catalogo.json', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       # The pinned downloads (MassBank 240 MB, the suspect sources 330 MB; 10-25 minutes from Zenodo) are kept in a cache of their own,
       # keyed by their pinned SHA-256: a new builder or a new package format rebuilds from the cached files in about a minute.
       - name: Keys of the pinned downloads (their SHA-256 in tools/librerie_pacchetti.py and tools/genera_sospetti.py)
@@ -133,7 +133,7 @@ jobs:
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: site/static/librerie
-          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
+          key: librerie-${{ hashFiles('tools/librerie_pacchetti.py', 'tools/librerie_catalogo.json', 'crates/mzlab-lib/src/**', 'tests/golden/librerie/massbank_unito/**') }}
       - name: Restore the suspect index from the cache (pinned CC BY sources, never committed)
         id: suscache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0

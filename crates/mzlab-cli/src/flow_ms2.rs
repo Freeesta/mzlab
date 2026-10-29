@@ -5,6 +5,7 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::mzml::{self, Spectrum};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
+use mzlab_feat::dia::{pseudo_ms2, DiaParams, DiaScan, Prec};
 
 use crate::flow_formula::{read_table, Table};
 use crate::flow_match::Named;
@@ -40,6 +41,23 @@ pub fn ms2_step() -> Step {
                 .default_num(0.2)
                 .unit("min")
                 .doc("With a feature table: largest distance between the scan and the RT of the feature"),
+            Param::boolean("dia_pseudo", "DIA pseudo spectra")
+                .default_bool(false)
+                .doc("For data-independent runs (SWATH, MSE): one pseudo MS2 spectrum per feature of the table, made of the fragments whose trace follows that of the precursor; needs the feature table, and the DDA scans are not written"),
+            Param::number("dia_min_corr", "Fragment correlation")
+                .min(0.0)
+                .max(1.0)
+                .default_num(0.9)
+                .doc("With `dia_pseudo`: least Pearson correlation between the trace of a fragment and that of the precursor"),
+            Param::integer("dia_min_points", "Cycles per peak")
+                .min(3.0)
+                .default_num(5.0)
+                .doc("With `dia_pseudo`: fewest cycles of the RT range of a feature; a feature with fewer has no spectrum"),
+            Param::number("dia_frag_ppm", "Fragment tolerance")
+                .min(0.0)
+                .default_num(10.0)
+                .unit("ppm")
+                .doc("With `dia_pseudo`: window around an m/z to follow its trace"),
         ],
         runs_in: RunsIn {
             wasm: Some("wasip1 (mzlab-cli)"),
@@ -60,6 +78,8 @@ pub fn ms2_step() -> Step {
 struct Extra {
     charge: Option<i64>,
     width: Option<f64>,
+    /// Isolation window `(low, high)` in Da.
+    iso: Option<(f64, f64)>,
     prec_int: Option<f64>,
 }
 
@@ -79,9 +99,13 @@ fn extras(text: &str) -> Vec<Extra> {
         .map(|b| {
             let b = b.split("</spectrumList").next().unwrap_or(b);
             let width = cv_value(b, "MS:1000828").zip(cv_value(b, "MS:1000829"));
+            let iso = cv_value(b, "MS:1000827")
+                .zip(width)
+                .map(|(t, (lo, hi))| (t - lo, t + hi));
             Extra {
                 charge: cv_value(b, "MS:1000041").map(|c| c as i64),
                 width: width.map(|(lo, hi)| lo + hi),
+                iso,
                 prec_int: cv_value(b, "MS:1000042"),
             }
         })
@@ -165,6 +189,16 @@ pub fn ms2_text(job: &Job, files: &[Named], features: Option<&[u8]>) -> Result<S
         param(job, "rt_tol").unwrap_or(0.2),
     );
     let table = features.map(read_table).transpose()?;
+    if job
+        .resolved
+        .params
+        .iter()
+        .any(|(k, v)| k == "dia_pseudo" && v.bool() == Some(true))
+    {
+        let table =
+            table.ok_or_else(|| Error::new("err.flow.port.missing").with("port", "features"))?;
+        return dia_text(job, files, &table, tol.1);
+    }
     let mut out = String::new();
     for (name, bytes) in files {
         let run = mzml::read(*bytes)?;
@@ -197,6 +231,95 @@ pub fn ms2_text(job: &Job, files: &[Named], features: Option<&[u8]>) -> Result<S
             if !peaks.is_empty() {
                 record(&mut out, (&title, &id), s, e, &peaks);
             }
+        }
+    }
+    if out.is_empty() && files.is_empty() {
+        return Err(Error::new("err.flow.port.missing").with("port", "source"));
+    }
+    Ok(out)
+}
+
+/// The features of the table present in the file `file` (area above zero) as precursors with the RT range `rt ± rt_tol`, and their m/z.
+fn precursors(t: &Table, file: &str, rt_tol: f64) -> (Vec<Prec>, Vec<f64>) {
+    let num = |row: &Vec<String>, k: usize| row.get(k).and_then(|v| v.parse::<f64>().ok());
+    let area = t.areas.iter().find(|a| a.0 == file).map(|a| a.1);
+    let (mut precs, mut mzs) = (Vec::new(), Vec::new());
+    for r in &t.rows {
+        let (Some(mz), Some(rt), Some(id)) = (num(r, t.mz), num(r, t.rt), r.get(t.id)) else {
+            continue;
+        };
+        if area.is_some_and(|k| !num(r, k).is_some_and(|a| a > 0.0)) {
+            continue;
+        }
+        precs.push(Prec {
+            id: id.clone(),
+            mz,
+            rt_lo_s: (rt - rt_tol) * 60.0,
+            rt_hi_s: (rt + rt_tol) * 60.0,
+        });
+        mzs.push(mz);
+    }
+    (precs, mzs)
+}
+
+/// With `dia_pseudo`: one record per feature with a pseudo spectrum (`dia::pseudo_ms2`), `TITLE` `<file>.<id>.pseudo`, `PEPMASS` the m/z of the feature,
+/// `RTINSECONDS` the apex. A feature takes part for a file where its area is above zero.
+fn dia_text(job: &Job, files: &[Named], t: &Table, rt_tol: f64) -> Result<String> {
+    let p = DiaParams {
+        min_corr: param(job, "dia_min_corr").unwrap_or(0.9),
+        min_points: param(job, "dia_min_points").unwrap_or(5.0) as usize,
+        frag_ppm: param(job, "dia_frag_ppm").unwrap_or(10.0),
+        ..DiaParams::default()
+    };
+    let mut out = String::new();
+    for (name, bytes) in files {
+        let run = mzml::read(*bytes)?;
+        let text = String::from_utf8_lossy(bytes);
+        let extra = extras(&text);
+        let extra = if extra.len() == run.spectra.len() {
+            extra
+        } else {
+            vec![Extra::default(); run.spectra.len()]
+        };
+        let ints: Vec<Vec<f64>> = run
+            .spectra
+            .iter()
+            .map(|s| (0..s.mz.len()).map(|i| s.intensity_f64(i)).collect())
+            .collect();
+        let scans: Vec<DiaScan> = run
+            .spectra
+            .iter()
+            .zip(&extra)
+            .zip(&ints)
+            .filter(|((s, _), _)| s.level == 1 || s.level == 2)
+            .map(|((s, e), int)| DiaScan {
+                rt_s: s.rt * 60.0,
+                level: s.level,
+                iso: if s.level == 2 { e.iso } else { None },
+                mz: &s.mz,
+                int,
+            })
+            .collect();
+        let (precs, mzs) = precursors(t, stem(name), rt_tol);
+        for ps in pseudo_ms2(&scans, &precs, &p) {
+            let Some(k) = precs.iter().position(|q| q.id == ps.id) else {
+                continue;
+            };
+            let at = run
+                .spectra
+                .iter()
+                .find(|s| s.level == 2 && s.rt * 60.0 == ps.apex_rt_s);
+            let head = Spectrum {
+                index: at.map_or(0, |s| s.index),
+                level: 2,
+                rt: ps.apex_rt_s / 60.0,
+                polarity: at.map_or(0, |s| s.polarity),
+                precursor: Some(mzs[k]),
+                ..Spectrum::default()
+            };
+            let peaks: Vec<(f64, f64)> = ps.peaks.iter().map(|q| (q.0, q.1)).collect();
+            let title = format!("{}.{}.pseudo", stem(name), ps.id);
+            record(&mut out, (&title, &ps.id), &head, Extra::default(), &peaks);
         }
     }
     if out.is_empty() && files.is_empty() {

@@ -1,5 +1,5 @@
 //! Hypotheses of the targeted pass: the ions that the chemistry says could be there, each with the label of the source that proposed it.
-//! Sources: (a) the parent times the photocatalytic rules, one or two steps (`rules`, data in `TP_Mine/data/regole_tp.json`) and cleavages given as formulas;
+//! Sources: (a) the parent times the photocatalytic rules, one or two steps (`rules`, data in `TP_Mine/data/regole_tp_2.json`) and cleavages given as formulas;
 //! (b) the offline suspect index; (c) the expected members of the families already found; (d) lists imported or typed by the user.
 //! One pass, no loop to convergence: the order is fixed (mass, then label), so two runs give the same `Registry` byte for byte.
 //! A hypothesis is a place to look, never a verdict: what it finds is graded by `target`.

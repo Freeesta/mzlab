@@ -553,6 +553,14 @@ class Item:
         return t.rt, t.xic(mz, tol)
 
     # ------------------------------------------------------------------ ion map (RT x m/z)
+    def declared_window(self, level: int) -> list:
+        """The m/z window the method declares for the survey scans of a unit-resolution file, as [lowest, highest] (empty for MS2, high resolution or none).
+        Centroids have points only where there is a peak, so the peaks alone would move the axis from file to file."""
+        if level != 1 or self.profile(level)["hr"] or not hasattr(self.run, "scan_window_ms1"):
+            return []
+        w = self.run.scan_window_ms1()
+        return [float(w[0]), float(w[1])] if w else []
+
     def data_extent(self, level: int) -> dict:
         """Where the level has data: RT of the first and the last scan that holds peaks, m/z of the lowest and the highest peak (null when empty).
         The map shows this part, not the declared run or the rounded grid."""
@@ -561,7 +569,8 @@ class Item:
             return {"rt": None, "mz": None}
         on = np.flatnonzero(t.sum_by_scan() > 0)
         rt = [float(t.rt[on[0]]), float(t.rt[on[-1]])] if len(on) else None
-        return {"rt": rt, "mz": [float(t.mz[0]), float(t.mz[-1])] if rt else None}
+        mz = [float(t.mz[0]), float(t.mz[-1])] + self.declared_window(level)
+        return {"rt": rt, "mz": [min(mz), max(mz)] if rt else None}
 
     def ionmap(self, level: int, grid: dict, agg: str = "max") -> np.ndarray:
         """Intensity per cell on a common RT x m/z grid, shape (nrt, nmz), float32.
@@ -1075,7 +1084,7 @@ class Session:
             rts += [min(x.rt for x in sc), max(x.rt for x in sc)]
             t = it._tbl(level)
             if len(t.mz):
-                mzs += [float(t.mz[0]), float(t.mz[-1])]
+                mzs += [float(t.mz[0]), float(t.mz[-1])] + it.declared_window(level)
             hr = hr or bool(it.profile(level)["hr"])
         if not rts or not mzs:
             return {"rt0": 0.0, "rt1": 1.0, "nrt": 1, "mz0": 0.0, "dmz": dmz, "nmz": 1}

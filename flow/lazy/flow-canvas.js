@@ -59,12 +59,23 @@
 
     // keys already drawn: only a card that is new plays the entrance animation
     const seen = new Set();
+    /** a view card: not a step of the plan, off until the step that feeds it has a result of its type; then it opens the view @param {any} node */
+    const viewCard = node => {
+      const items = (S.results && S.results[node.of]) || [], item = items.find((/** @type {any} */ r) => r.type === node.result), on = !!item;
+      const open = () => { if (item) F.openResult(item); };
+      return el("div", { class: "fln" + (on ? "" : " off"), tabindex: 0, role: "group", "data-key": node.key, "aria-disabled": on ? null : "true", "aria-label": `${node.title}. ${on ? "Ready" : "No result yet"}`,
+        style: `left:${node.x}px;top:${node.y}px;--cc:${F.CATS[node.cat].color}` + (on ? "" : ";opacity:.6"), onclick: open, onkeydown: (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } } },
+      el("div", { class: "fln-top" }, el("span", { class: "fln-ic" }, icon("search", 20)), el("span", { class: "fln-tx" }, el("span", { class: "fln-t", text: node.title }))),
+      el("span", { class: "fln-chip" + (on ? " ok" : "") }, on ? icon("ok", 12) : null, el("span", { text: on ? "Ready" : "No result yet" })));
+    };
     /** @param {any} node */
     const card = node => {
+      if (node.kind === "view") return viewCard(node);
       const fresh = !seen.has(node.key);
       const probs = F.nodeProblems(S, node), cat = F.CATS[node.cat], sel = ui.selected() === node.key, st = F.nodeState(S, node), bad = !st.ok;
       const chip = el("span", { class: "fln-chip " + (bad ? "warn" : "ok") }, icon(bad ? "warn" : "ok", 12), el("span", { text: st.word }));
-      const c = el("div", { class: "fln" + (sel ? " sel" : "") + (bad ? " bad" : "") + (fresh ? " fl-new" : ""), tabindex: 0, role: "button", "data-key": node.key, "aria-pressed": sel,
+      // a group, not a button: the card holds buttons of its own (axe nested-interactive)
+      const c = el("div", { class: "fln" + (sel ? " sel" : "") + (bad ? " bad" : "") + (fresh ? " fl-new" : ""), tabindex: 0, role: "group", "data-key": node.key, "aria-current": sel ? "true" : null,
         "aria-label": `${node.title}. ${cat.word}. ${F.summary(S, node)}. ${probs.length ? probs[0].text : st.word}`, style: `left:${node.x}px;top:${node.y}px;--cc:${cat.color}`,
         onclick: () => ui.select(node.key),
         onkeydown: (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ui.select(node.key); } else if ((e.key === "Delete" || e.key === "Backspace") && !node.locked && node.kind !== "input") { e.preventDefault(); ui.remove(node); } } },

@@ -48,7 +48,7 @@ try:
             assert "Profilo" in t, t
         step("the card of a profile file says Profilo", card_profile)
         def convert():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-cen")
+            pg.click("#np-set"); pg.wait_for_selector("#uipset"); pg.evaluate("document.getElementById('uip-g-data').open = true"); pg.wait_for_selector("#uip-cen")
             assert "Centroidazione" in pg.get_attribute("#uip-cen", "title")
             pg.click("#uip-cen"); pg.click("#askok")
             pg.wait_for_function("typeof ST !== 'undefined' && ST.files.length === 2", timeout=60000)

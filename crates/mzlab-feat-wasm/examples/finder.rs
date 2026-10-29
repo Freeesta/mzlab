@@ -1,7 +1,7 @@
 //! The Dig of mzFinder on high-resolution files, natively: the pipeline (as `nativo`) and the adapter `mzlab_feat::legacy` that turns the series into the
 //! JSON of `api.run` and `api.detail`. Writes `run.json`, `detail.json` (the first candidates) and `inclusion.csv` in OUT_DIR.
 //!
-//!     cargo run --release -p mzlab-feat-wasm --example finder -- OUT_DIR file.mzidx... --parent FORMULA --rules regole_tp.json [--smiles S] [--parent-rt R]
+//!     cargo run --release -p mzlab-feat-wasm --example finder -- OUT_DIR file.mzidx... --parent FORMULA --rules regole_tp_2.json [--smiles S] [--parent-rt R]
 
 use std::fs::File;
 use std::path::Path;

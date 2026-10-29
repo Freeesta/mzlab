@@ -75,3 +75,25 @@ def test_the_rows_of_the_files_being_converted_have_a_text_for_each_state():
     # CONVROWS shows a sample in the list of the files from the pairing of its .wiff and .wiff.scan: one key per state, an unknown state is "queued"
     got = run("console.log(JSON.stringify(['open','wait','run','conv','index','x'].map(c.convRowKey)))")
     assert got == ["conv.row.open", "conv.row.wait", "conv.row.run", "conv.row.conv", "conv.row.index", "conv.row.wait"]
+
+
+def test_third_same_named_file_gets_a_counter_instead_of_overwriting_the_second():
+    got = run("""console.log(JSON.stringify([
+        c.convName("blank.raw", ["blank.mzML", "blank.raw.mzML"]),
+        c.convName("blank.raw", ["blank.mzML", "blank.raw.mzML", "blank_2.raw.mzML"]),
+        c.wiffName("x", 1, false, ["x.mzML", "x.wiff.mzML"]),
+        c.wiffName("x", 1, true, ["x_s1.mzML", "x_s1.wiff.mzML"]),
+        c.wiffName("x", 2, true, ["s.mzml", "s_s2.mzml", "s_s2.wiff.mzML"], "S")
+    ]))""")
+    assert got == ["blank_2.raw.mzML", "blank_3.raw.mzML", "x_2.wiff.mzML", "x_s1_2.wiff.mzML", "S_s2_2.wiff.mzML"]
+
+
+def test_bar_repaint_does_not_lose_changes_of_the_second_window():
+    # r1 flushes at once, r2 waits for the end of the first window, r3 arrives in the second window: it must be repainted at the end of that one
+    got = run("""const R=c.CONVROWS, log=[], rows=[{name:'a'},{name:'b'},{name:'c'}];
+    R.fill=r=>log.push(r.name);
+    R.queue(rows[0]);
+    setTimeout(()=>R.queue(rows[1]),30);
+    setTimeout(()=>R.queue(rows[2]),150);
+    setTimeout(()=>{console.log(JSON.stringify(log));process.exit(0)},400);""")
+    assert got == ["a", "b", "c"]

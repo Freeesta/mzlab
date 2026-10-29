@@ -51,11 +51,12 @@ try:
         def menu():
             b = grip_box(2); pg.mouse.click(b[0], b[1]); pg.wait_for_timeout(100)
             assert pg.evaluate("!!document.querySelector('.aff-menu [role=menuitem]')")
-            pg.click(".aff-menu button >> nth=-5"); pg.wait_for_timeout(300)
+            num = pg.evaluate("stackOrder().at(-2).num")      # the row of the previous panel: «N · title» in the part «Place beside»
+            pg.click(f".aff-menu button:text-matches('^{num} · ')"); pg.wait_for_timeout(300)
             assert [len(x) for x in rows()] == [1, 2], rows()
         step("menu 'Place beside' does it without dragging", menu)
         def equal_full():
-            b = grip_box(2); pg.mouse.click(b[0], b[1]); pg.click(".aff-menu button >> nth=-2"); pg.wait_for_timeout(300)
+            b = grip_box(2); pg.mouse.click(b[0], b[1]); pg.click(".aff-menu button >> nth=-3"); pg.wait_for_timeout(300)      # the menu ends with Full width, Equal widths, Reset
             assert [len(x) for x in rows()] == [1, 1, 1], rows()
         step("menu 'Full width'", equal_full)
         def keys():
@@ -110,10 +111,10 @@ try:
         step("divider: keys change the widths, Enter makes them equal", divider)
         def narrow():
             pg.set_viewport_size({"width": 860, "height": 2200}); pg.wait_for_timeout(1000)
-            g = rects(); assert g[0][3] == g[1][3] and g[0][2] != g[1][2], g
-            assert [len(x) for x in rows()] == [2, 1], rows()           # arrangement kept
+            g = rects(); assert g[1][3] == g[2][3] and g[1][2] != g[2][2], g           # the side-by-side pair is the last two (divider step)
+            assert [len(x) for x in rows()] == [1, 2], rows()           # arrangement kept
             pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(1000)
-            g = rects(); assert g[0][2] == g[1][2] and g[0][3] < 700, g
+            g = rects(); assert g[1][2] == g[2][2] and g[1][3] < 700, g
         step("narrow window shows them stacked, the arrangement is kept", narrow)
 finally:
     r.close(); r.report()
