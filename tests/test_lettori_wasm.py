@@ -44,14 +44,14 @@ def test_costruzione_chiamata_da_build_feat():
 
 
 def test_passi_estesi_una_sola_lista():
-    """The extra wasm-opt passes live in tools/wasm_opt.sh only; the readers and the engine/libraries steps of the four workflows name them as `@estesi`."""
+    """The extra wasm-opt passes live in tools/wasm_opt.sh only; the readers and the engine/libraries steps of the four workflows name them as `@motore` (the readers use `@estesi`)."""
     sh = (ROOT / "tools/wasm_opt.sh").read_text(encoding="utf-8")
     assert re.search(r'^estesi="--converge .*--low-memory-unused', sh, re.M)
     assert "@estesi" in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
     assert "--converge" not in (ROOT / "tools/build_lettori_wasm.sh").read_text(encoding="utf-8")
     for wf in ("pages", "sito-rust", "release", "notte"):
         righe = [r for r in (ROOT / f".github/workflows/{wf}.yml").read_text(encoding="utf-8").splitlines() if "tools/wasm_opt.sh site/static" in r]
-        assert len(righe) == 2 and all(r.rstrip().endswith("@estesi") for r in righe), (wf, righe)
+        assert len(righe) == 2 and all(r.rstrip().endswith("@motore") for r in righe), (wf, righe)
 
 
 def test_wasm_opt_espande_estesi(tmp_path):
@@ -74,6 +74,9 @@ def test_wasm_opt_espande_estesi(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     args = (tmp_path / "args").read_text().split()
     assert "@estesi" not in args and "--low-memory-unused" in args and "--converge" in args and args[0] == "-Oz"
+    r = subprocess.run(["bash", str(ROOT / "tools/wasm_opt.sh"), str(wasm), "1000", "t", "@motore"], env=env, capture_output=True, text=True, cwd=ROOT)
+    args = (tmp_path / "args").read_text().split()
+    assert r.returncode == 0 and "@motore" not in args and "--reorder-functions" in args and "--const-hoisting" not in args and "--converge" not in args
     r = subprocess.run(["bash", str(ROOT / "tools/wasm_opt.sh"), str(wasm), "1000", "t"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0 and "--converge" not in (tmp_path / "args").read_text()
 
