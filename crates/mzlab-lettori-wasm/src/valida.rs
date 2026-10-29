@@ -16,11 +16,15 @@ struct JsStream {
 
 impl Read for JsStream {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let n = buf.len().min(LETTURA).min(self.dim.saturating_sub(self.pos) as usize);
+        let n = buf
+            .len()
+            .min(LETTURA)
+            .min(self.dim.saturating_sub(self.pos) as usize);
         if n == 0 {
             return Ok(0);
         }
-        let a = da_js(&self.read, 0, self.pos, n).map_err(|_| std::io::Error::other("read failed"))?;
+        let a =
+            da_js(&self.read, 0, self.pos, n).map_err(|_| std::io::Error::other("read failed"))?;
         a.copy_to(&mut buf[..n]);
         self.pos += n as u64;
         Ok(n)
