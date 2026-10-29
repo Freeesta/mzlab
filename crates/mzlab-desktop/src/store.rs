@@ -152,13 +152,17 @@ impl Store {
         Ok(e)
     }
 
+    /// Forgets `name`; the files made by the app go with it unless another entry (a sibling sample of the same upload) still uses them.
     pub fn remove(&mut self, name: &str) {
         self.load();
         if let Some(e) = self.files.remove(name) {
             if let Ok(own) = self.own_dir() {
                 let paths = e.nat.iter().flat_map(|n| n.members.iter().map(|m| m.1.clone())).chain([e.path.clone()]);
                 for p in paths.filter(|p| p.starts_with(&own)) {
-                    let _ = std::fs::remove_file(p);
+                    let used = self.files.values().any(|o| o.path == p || o.nat.iter().any(|n| n.members.iter().any(|m| m.1 == p)));
+                    if !used {
+                        let _ = std::fs::remove_file(p);
+                    }
                 }
             }
             self.save_files();
@@ -335,6 +339,31 @@ mod tests {
         assert_eq!(t.molecules("leggi", "").unwrap(), back, "canonical bytes stay the same");
         assert!(t.molecules("scrivi", "{\"schema\":\"molecules/1\",\"molecole\":[{\"nome\":\"X\",\"formula\":\"Xx9\"}]}").is_err());
         assert_eq!(t.molecules("leggi", "").unwrap(), back, "a wrong document changes nothing");
+    }
+
+    #[test]
+    fn removing_one_sample_keeps_the_files_of_its_siblings() {
+        let d = tempfile::tempdir().unwrap();
+        let mut s = Store::default();
+        s.set_dir(d.path().join("data"));
+        let own = s.own_dir().unwrap();
+        let (wiff, scan) = (own.join("x.wiff"), own.join("x.wiff.scan"));
+        std::fs::write(&wiff, b"w").unwrap();
+        std::fs::write(&scan, b"s").unwrap();
+        let nat = |c: usize| Nat {
+            ds: "d".into(),
+            c,
+            id: 0,
+            centroid: false,
+            members: vec![("x.wiff".into(), wiff.clone()), ("x.wiff.scan".into(), scan.clone())],
+        };
+        s.put_nat("x#1", nat(0)).unwrap();
+        s.put_nat("x#2", nat(1)).unwrap();
+        s.remove("x#1");
+        assert!(wiff.exists() && scan.exists(), "the sibling still uses the members");
+        assert_eq!(s.list().len(), 1, "the sibling survives");
+        s.remove("x#2");
+        assert!(!wiff.exists() && !scan.exists(), "the last sample takes the files with it");
     }
 
     #[test]
