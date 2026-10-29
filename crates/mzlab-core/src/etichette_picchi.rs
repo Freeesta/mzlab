@@ -23,8 +23,23 @@ pub const SKIP_FIN_FRAC: f64 = 0.25;
 
 /// Two apexes of one label are two peaks only if the smoothed, baseline-corrected trace between them falls under this fraction of the lower apex.
 /// The detector's own merge works in samples, so a broad peak sampled finely keeps two apexes (jitter, shoulder) that must not get two labels.
-/// A valley shallower than the noise of the trace is not a valley either, whatever the fraction: on a noisy top the ripple is deeper than 15 % of the apex.
+/// A valley is also not real when the lower apex rises above it by less than `snr_min` times the noise (the S/N a label itself must have): on a noisy top the ripple is deeper than 15 % of the apex.
+/// Two peaks closer than `MIN_SEP_FWHM` times the FWHM of the taller one cannot make a valley (two equal Gaussians are bimodal only beyond 0.85 FWHM), so they are one peak.
 pub const VALLEY_FRAC: f64 = 0.85;
+pub const MIN_SEP_FWHM: f64 = 0.5;
+
+/// Width at half height (in `rt` units) of the peak whose apex is `apex` on the trace `ys`, walking down each side to the first point under half the apex.
+fn fwhm(rt: &[f64], ys: &[f64], apex: usize) -> f64 {
+    let half = ys[apex] / 2.0;
+    let (mut lo, mut hi) = (apex, apex);
+    while lo > 0 && ys[lo - 1] > half {
+        lo -= 1;
+    }
+    while hi + 1 < ys.len() && ys[hi + 1] > half {
+        hi += 1;
+    }
+    rt[hi] - rt[lo]
+}
 
 /// At most `max_n` peaks with S/N ≥ `snr_min` and height ≥ `rel_min` times the tallest candidate, by increasing RT.
 /// With `skip_ends` (`rt` in minutes) the peaks in the first and last minutes of the run are not candidates; labels only: the detector and everything else still see them.
@@ -61,7 +76,14 @@ pub fn select(
             let (a, b) = (p.apex_i.min(q.apex_i), p.apex_i.max(q.apex_i));
             let valley = ys[a..=b].iter().copied().fold(f64::INFINITY, f64::min);
             let lower = ys[p.apex_i].min(ys[q.apex_i]);
-            valley >= VALLEY_FRAC * lower || lower - valley <= noise
+            let taller = if ys[p.apex_i] >= ys[q.apex_i] {
+                p.apex_i
+            } else {
+                q.apex_i
+            };
+            valley >= VALLEY_FRAC * lower
+                || lower - valley <= snr_min * noise
+                || (rt[b] - rt[a]) < MIN_SEP_FWHM * fwhm(&rt[..n], &ys, taller)
         });
         if !same {
             cands.push(p);
