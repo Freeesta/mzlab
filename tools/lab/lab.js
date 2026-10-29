@@ -3,7 +3,8 @@
 //  1. expiry: after the date baked into the build (UTC, whole day included) the page is replaced by a short notice in English and Italian; nothing else
 //     is loaded, no data is read. The date cannot be computed (bad date, no clock) = expired, never open. This is a SOFT block, not security: whoever
 //     controls their own browser (clock, devtools, offline copy) can get round it. It only keeps the lab page from living on by itself.
-//  2. only Data and Draw: Tabui and mzFlow are the administrator mode (five clicks on the logo, localStorage «admin»). Every read of that flag answers
+//  2. no examples: see below (the build deletes static/esempi and the example drawings; here their buttons go).
+//  3. only Data and Draw: Tabui and mzFlow are the administrator mode (five clicks on the logo, localStorage «admin»). Every read of that flag answers
 //     «off» and every write is dropped, so no code path loads the Tabui loader or draws its tabs; addresses of any other view go back to #/data.
 //     Nothing is deleted from the program: the build with the flag off is untouched.
 (function () {
@@ -51,6 +52,26 @@
     P.getItem = function (k) { return HIDDEN.test(String(k)) ? null : get.call(this, k); };
     P.setItem = function (k, v) { if (!HIDDEN.test(String(k))) set.call(this, k, v); };
   } catch (e) { /* no storage: nothing to hide */ }
+
+  // no example files in the lab (the build does not ship them either): the example-set chooser of Data, the example-drawings link of Draw and the
+  // tour's example loader are hidden / inert. The elements stay in the DOM (draw.js binds #ex-link when it loads), hidden by CSS and `hidden`.
+  try {
+    var css = document.createElement("style");
+    css.textContent = "#demo,#ex-link,:has(> #ex-link){display:none!important}";
+    document.head.appendChild(css);
+    var hideExamples = function () {
+      var ids = ["demo", "ex-link"];
+      for (var i = 0; i < ids.length; i++) {
+        var el = document.getElementById(ids[i]);
+        if (el) { el.hidden = true; if (ids[i] === "ex-link" && el.parentElement) el.parentElement.hidden = true; }
+      }
+    };
+    document.addEventListener("DOMContentLoaded", hideExamples);
+    var tries = 0, wait = setInterval(function () {
+      if (w.TOUR) { w.TOUR.caricaEsempio = function () { return Promise.resolve(); }; clearInterval(wait); }
+      else if (++tries > 200) clearInterval(wait);
+    }, 100);
+  } catch (e) { /* the build already ships no examples: nothing to fetch */ }
 
   // only #/data and #/draw exist; any other address (#/flow, #/tpmine, #/attributio, #/theory, #/practice...) becomes #/data
   function route() {
