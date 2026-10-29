@@ -67,6 +67,17 @@ try:
             assert not [u for u in reqs if "carica.js" in u or "/wasm/" in u], reqs
             pg, _ = page(LAB, CLOCK % "2026-12-29T23:59:59Z"); pg.wait_for_selector("#drop", timeout=120000)      # the last day is still valid
         step("lab: expiry page after the date, no app loaded", expiry)
+        def noexamples():
+            assert not (tmp / "lab" / "static" / "esempi").exists() and not list((tmp / "lab").rglob("*.mzML")) and not list((tmp / "lab").rglob("esempio-*.png"))
+            pg, reqs = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#drop", timeout=120000)
+            assert pg.evaluate("(() => { const e = document.querySelector('#demo'); return !e || e.offsetParent === null })()"), "example chooser visible"
+            assert not pg.is_visible("#demobtn") and not pg.is_visible("#demochoice")
+            pg.evaluate("setView('draw')"); pg.wait_for_selector("#v-draw:not([hidden])", timeout=120000)
+            assert not pg.is_visible("#ex-link") and pg.evaluate("document.body.innerText.includes('example files') || document.body.innerText.includes('file di esempio')") is False
+            assert pg.evaluate("TOUR.caricaEsempio.toString().includes('esempi')") is False
+            assert not [u for u in reqs if "/esempi/" in u or "esempio-" in u], reqs
+            assert pg.evaluate("fetch('static/esempi/FullScan_t15.mzML').then(r => r.status)") == 404
+        step("lab: no example files shipped and no example entry points", noexamples)
         def normal():
             pg, reqs = page(NORMAL, ADMIN); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"

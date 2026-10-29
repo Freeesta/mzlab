@@ -184,6 +184,10 @@ def main() -> None:
         html = html.replace(head, head + '<script src="static/lab.js"></script><meta name="robots" content="noindex,nofollow">', 1)
         (static / "lab.js").write_text((ROOT / "tools" / "lab" / "lab.js").read_text(encoding="utf-8").replace("__LAB_EXPIRES__", lab), encoding="utf-8")
         (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
+        # lab: no example files at all (the demo mzML sets and the two example drawings are not shipped; lab.js hides their entry points)
+        shutil.rmtree(static / "esempi")
+        for png in static.glob("esempio-*.png"):
+            png.unlink()
     else:
         html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
