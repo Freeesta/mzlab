@@ -17,7 +17,7 @@ fn error_text(e: &mzlab_core::Error) -> String {
     let params: Vec<String> = e
         .params
         .iter()
-        .map(|(k, v)| format!("\"{}\":{}", k, serde_json::json!(v).to_string()))
+        .map(|(k, v)| format!("\"{}\":{}", k, serde_json::json!(v)))
         .collect();
     format!(
         "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
