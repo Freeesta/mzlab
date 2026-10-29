@@ -2,17 +2,51 @@
 //! every instance, the agent that ran them. The same inputs and parameters give the same text, but for `ms` and `heap_peak_bytes`.
 
 use super::canon::value_text;
+use super::check::Platform;
 use super::run::Run;
 use crate::json::{Out, Value};
 
-/// The program that ran the plan.
-#[derive(Debug, Clone, PartialEq)]
+/// The program that ran the plan. The build keys after `platform` are written only when present, so a record without them keeps its old bytes.
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Agent {
     pub name: String,
     pub version: String,
     pub commit: Option<String>,
     /// `native` or `wasm`.
     pub platform: &'static str,
+    /// Target of the build: `MZLAB_TARGET`, else `ARCH-OS`.
+    pub target: Option<String>,
+    /// `rustc -V` of the build (`MZLAB_RUSTC`).
+    pub rustc: Option<String>,
+    /// SHA-256 of `Cargo.lock` (`MZLAB_CARGO_LOCK_SHA256`).
+    pub cargo_lock_sha256: Option<String>,
+    /// Name -> SHA-256 of the code modules that ran (the CLI executable, the `.wasm` files of the page), sorted by name.
+    pub modules: Vec<(String, String)>,
+}
+
+/// The agent of this build: crate version, platform and, from the variables the build tools set (`tools/prepara_sito.py`), the full commit, `rustc`
+/// and the SHA-256 of `Cargo.lock`. The CLI, the desktop and the `.wasm` all call it, so they write the same keys; `modules` is left to the caller (it needs I/O).
+pub fn build_agent(name: &str) -> Agent {
+    let target = option_env!("MZLAB_TARGET")
+        .map(str::to_string)
+        .unwrap_or_else(|| {
+            [std::env::consts::ARCH, std::env::consts::OS]
+                .iter()
+                .filter(|p| !p.is_empty())
+                .copied()
+                .collect::<Vec<_>>()
+                .join("-")
+        });
+    Agent {
+        name: name.into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        commit: option_env!("MZLAB_COMMIT").map(str::to_string),
+        platform: Platform::current().name(),
+        target: Some(target),
+        rustc: option_env!("MZLAB_RUSTC").map(str::to_string),
+        cargo_lock_sha256: option_env!("MZLAB_CARGO_LOCK_SHA256").map(str::to_string),
+        modules: Vec::new(),
+    }
 }
 
 /// Why an activity stopped: an `err.*` key and its values.
@@ -168,7 +202,29 @@ pub fn prov_json_llm(
     if let Some(c) = &agent.commit {
         o.raw(",\"commit\":").str(c);
     }
-    o.raw(",\"platform\":").str(agent.platform).raw("}");
+    o.raw(",\"platform\":").str(agent.platform);
+    for (key, v) in [
+        ("target", &agent.target),
+        ("rustc", &agent.rustc),
+        ("cargo_lock_sha256", &agent.cargo_lock_sha256),
+    ] {
+        if let Some(v) = v {
+            o.raw(",\"").raw(key).raw("\":").str(v);
+        }
+    }
+    if !agent.modules.is_empty() {
+        let mut m: Vec<_> = agent.modules.iter().collect();
+        m.sort();
+        o.raw(",\"modules\":{");
+        for (k, (name, sha)) in m.into_iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" })
+                .str(name)
+                .raw(":")
+                .str(sha);
+        }
+        o.raw("}");
+    }
+    o.raw("}");
     if let Some(p) = plan_sha256 {
         o.raw(",\"plan_sha256\":").str(p);
     }
@@ -215,3 +271,7 @@ pub fn prov_with_llm(prov: &str, llm: &LlmRef) -> String {
     o.raw("}\n");
     o.0
 }
+
+#[cfg(test)]
+#[path = "prov_tests.rs"]
+mod tests;

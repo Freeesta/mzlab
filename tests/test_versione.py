@@ -55,3 +55,27 @@ def test_sbom_lists_what_ships_and_matches_the_vendor_readme():
     assert f"Ketcher {versions['ketcher']}" in readme and f"OpenChemLib JS {versions['openchemlib']}" in readme
     assert "pyodide" not in versions and "numpy" not in versions
     json.dumps(doc)
+
+
+def test_build_site_names_the_exact_build(tmp_path):
+    """version.js carries the full commit and static/build.json the hash of every .wasm, written again (--build-json) once the .wasm files are in place."""
+    import hashlib
+    import re
+    import subprocess
+
+    out = tmp_path / "site"
+    subprocess.run([sys.executable, str(ROOT / "tools/build_site.py"), "--out", str(out)], check=True, cwd=ROOT, capture_output=True)
+    commit = re.search(r'MZLAB_COMMIT = "([^"]+)"', (out / "static/version.js").read_text(encoding="utf-8")).group(1)
+    assert re.fullmatch(r"[0-9a-f]{40}", commit) or commit == "dev"
+    wasm = out / "static/wasm"
+    wasm.mkdir(exist_ok=True)
+    (wasm / "b_bg.wasm").write_bytes(b"\0asm-b")
+    (out / "static/wasm-lib").mkdir()
+    (out / "static/wasm-lib/a_bg.wasm").write_bytes(b"\0asm-a")
+    subprocess.run([sys.executable, str(ROOT / "tools/build_site.py"), "--out", str(out), "--build-json"], check=True, cwd=ROOT)
+    build = json.loads((out / "static/build.json").read_text(encoding="utf-8"))
+    assert build["commit"] == commit and re.fullmatch(r"\d+\.\d+\.\d+", build["version"])
+    assert build["cargo_lock_sha256"] == hashlib.sha256((ROOT / "Cargo.lock").read_bytes()).hexdigest()
+    assert list(build["modules"]) == ["wasm-lib/a_bg.wasm", "wasm/b_bg.wasm"]
+    for name, sha in build["modules"].items():
+        assert sha == hashlib.sha256((out / "static" / name).read_bytes()).hexdigest()

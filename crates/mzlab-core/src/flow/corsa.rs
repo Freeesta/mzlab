@@ -64,6 +64,8 @@ pub struct Livelli {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Corsa {
     pub engine: Vec<(String, String)>,
+    /// `engine.modules` of the record: name -> SHA-256, in the order of the record.
+    pub modules: Vec<(String, String)>,
     pub plan_sha256: Option<String>,
     pub inputs: Vec<Ingresso>,
     pub lists: Vec<Ingresso>,
@@ -148,11 +150,26 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     }
     let agent = prov.get("agent");
     let mut engine = Vec::new();
-    for k in ["name", "version", "commit", "platform"] {
+    for k in [
+        "name",
+        "version",
+        "commit",
+        "platform",
+        "target",
+        "rustc",
+        "cargo_lock_sha256",
+    ] {
         if let Some(v) = agent.and_then(|a| text(a, k)) {
             engine.push((k.to_string(), v));
         }
     }
+    let modules = match agent.and_then(|a| a.get("modules")) {
+        Some(Value::Obj(m)) => m
+            .iter()
+            .filter_map(|(k, v)| v.str().map(|v| (k.clone(), v.to_string())))
+            .collect(),
+        _ => Vec::new(),
+    };
     let (mut inputs, mut lists) = (Vec::new(), Vec::new());
     if let Some(Value::Obj(entities)) = prov.get("entity") {
         for (key, e) in entities {
@@ -206,6 +223,7 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     crate::sortc::slice_ord(&mut levels.other);
     Ok(Corsa {
         engine,
+        modules,
         plan_sha256: text(prov, "plan_sha256"),
         inputs,
         lists,
@@ -320,6 +338,17 @@ impl Corsa {
                 .str(name)
                 .raw(":")
                 .str(v);
+        }
+        if !self.modules.is_empty() {
+            o.raw(if self.engine.is_empty() { "" } else { "," })
+                .raw("\"modules\":{");
+            for (k, (name, v)) in self.modules.iter().enumerate() {
+                o.raw(if k > 0 { "," } else { "" })
+                    .str(name)
+                    .raw(":")
+                    .str(v);
+            }
+            o.raw("}");
         }
         o.raw("}");
         if let Some(p) = &self.plan_sha256 {

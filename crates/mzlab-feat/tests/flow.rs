@@ -268,6 +268,7 @@ fn agent() -> Agent {
         version: "x".into(),
         commit: None,
         platform: "native",
+        ..Default::default()
     }
 }
 

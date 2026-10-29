@@ -25,7 +25,7 @@ pub use line::{apply_set, apply_sets, line, route as line_route, sets_of};
 pub use order::{levels, plan_order};
 pub use parse::parse;
 pub use prov::{
-    prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
+    build_agent, prov_json, prov_json_llm, prov_with_llm, Activity, Agent, ErrorRecord, LlmRef, Mem,
 };
 pub use run::{
     execute, file_roots, record, record_jobs, record_route, work, Artifact, Core, Ctx, Hooks, Job,
