@@ -1,9 +1,9 @@
 // Drives createBridge (mzlab/web/rust-bridge.js) with a scripted fake Worker: D1 (a stale open must not touch a respawned slot) and V8 (xic/mrm requests overlap).
 import assert from "node:assert/strict";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workers = [];
 class FakeWorker {
   constructor(url) { this.log = []; this.terminated = false; if (String(url).endsWith("rust-worker.js")) workers.push(this); }   // the memory probe starts workers of its own
