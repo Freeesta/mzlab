@@ -126,3 +126,20 @@ fn la_testata_che_nomina_la_sorgente_non_rilegge_il_file_per_lo_sha1() {
         "with {letti_con}, without {letti_senza}, file {dim}"
     );
 }
+
+#[test]
+fn un_mzml_normale_non_e_catturato_dal_modulo_numpress() {
+    // a long first spectrum, no numpress anywhere: the scan to the end of it must still say No
+    let scan = scansioni();
+    let mut x = scan;
+    x[0].mz = (0..30_000)
+        .map(|i| 100.0 + f64::from(i as u32) * 0.011)
+        .collect();
+    x[0].intensita = x[0].mz.iter().map(|m| 50.0 + (m * 7.0) % 900.0).collect();
+    let r = mzlab_lettori::apri(
+        insieme("campione.mzML", mzml_di(&x, Cod::Piano, None)),
+        &Limiti::sito(),
+    );
+    // the family `aperti` has no reader of plain mzML (the engine of the page reads it): not this one either
+    assert!(r.is_err_and(|e| e.key == "err.file.notAccepted"));
+}
