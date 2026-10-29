@@ -191,11 +191,11 @@ async function wiffToMzml(files,box,signal){const rb=window.MZLAB_RUST_READY?awa
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
     // the module looks at every pair first: the engine reads the 3200 QTRAP only, and a file of another instrument or scan type is for the module («variante»)
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD,pr=M0&&window.LETTORI_FAM.sciex.sonda?await M0.probe("sciex",mem).catch(()=>null):null;
-      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size))});CONVROWS.drop(e.row);continue}
+      if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((x,i)=>{const nm=wiffName(e.stem,i+1,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size))});CONVROWS.drop(e.row);continue}
       const hit=await NATIVO.cached(rb,e.stem,mem,ST.files||[]);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
       const s=(await rb.nativeSamples(mem)).samples,key=NATIVO.key(e.stem);
       // the module's answer for the pair holds for its samples (moduloWants)
-      s.forEach((x,i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
+      s.forEach((x,i)=>{const nm=wiffName(e.stem,i+1,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
     catch(x){const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}

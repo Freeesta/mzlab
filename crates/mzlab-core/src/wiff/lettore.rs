@@ -278,6 +278,7 @@ pub fn apri_solo(
     let mut scan = std::mem::replace(&mut sm.dati, Box::new(Vec::<u8>::new()));
     let membro = u16::try_from(si).unwrap_or(0);
     let (mut parti, mut campioni, mut total) = (Vec::new(), Vec::new(), 0u64);
+    let mut raw_names = Vec::new();
     let sha1 = ole.sha1_hex();
     for (i, s) in samples(&ole).into_iter().enumerate() {
         let mut w = Wiff::open(&ole, &nome, Some(scan_len), s)?;
@@ -296,23 +297,24 @@ pub fn apri_solo(
         if solo.is_none_or(|c| c == i) {
             build(&mut parte, &mut scan, scan_len, membro)?;
         }
-        let nome_campione = ole
-            .read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
-            .and_then(|b| {
-                crate::metodo_wiff::counted_strings(&b)
-                    .into_iter()
-                    .next()
-                    .map(|s| s.trim().to_string())
-                    .filter(|s| !s.is_empty())
-            })
-            .unwrap_or_else(|| format!("{nome} #{s}"));
+        raw_names.push((
+            s,
+            ole.read(&format!("{SAMPLES}Sample{s}/SampleDABE/DATA"))
+                .and_then(|b| crate::metodo_wiff::counted_strings(&b).into_iter().next()),
+        ));
         campioni.push(Campione {
             id: s,
-            nome: nome_campione,
+            nome: String::new(),
             scansioni: parte.scans.len(),
             dimensione: None,
         });
         parti.push(parte);
+    }
+    for (c, n) in campioni
+        .iter_mut()
+        .zip(super::nomi::display_names(&nome, &raw_names))
+    {
+        c.nome = n;
     }
     Ok(Box::new(LettoreWiff {
         ole,
