@@ -169,10 +169,6 @@ impl Sqlite {
             .find(|t| t.nome.eq_ignore_ascii_case(nome))
     }
 
-    pub fn nomi_tabelle(&self) -> impl Iterator<Item = &str> {
-        self.tabelle.iter().map(|t| t.nome.as_str())
-    }
-
     /// Whether the database came with a log whose frames were applied.
     pub fn con_wal(&self) -> bool {
         self.wal.as_ref().is_some_and(|(_, m)| !m.is_empty())

@@ -3,11 +3,7 @@
 
 use std::cmp::Ordering;
 
-use crate::sortc::{slice_by, slice_ord};
-
-pub const N_BOOT_DEFAULT: usize = 2000;
-pub const SEME_DEFAULT: u64 = 20261012;
-pub const ALFA_DEFAULT: f64 = 0.05;
+use crate::sortc::slice_by;
 
 /// Exact two-sided McNemar test on paired 0/1 outcomes.
 ///
@@ -164,49 +160,6 @@ pub fn indici_bootstrap(n: usize, n_boot: usize, seed: u64) -> Vec<Vec<usize>> {
             row.push(rng.gen_range(n));
         }
         out.push(row);
-    }
-    out
-}
-
-/// Generates `n_boot` resamples of indices stratified by stratum labels.
-pub fn indici_bootstrap_strati(strati: &[usize], n_boot: usize, seed: u64) -> Vec<Vec<usize>> {
-    let n = strati.len();
-    if n == 0 || n_boot == 0 {
-        return Vec::new();
-    }
-    let mut distinct = strati.to_vec();
-    slice_ord(&mut distinct);
-    distinct.dedup();
-
-    let mut stratum_indices: Vec<Vec<usize>> = Vec::with_capacity(distinct.len());
-    for &s in &distinct {
-        let pos: Vec<usize> = strati
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, &val)| if val == s { Some(idx) } else { None })
-            .collect();
-        stratum_indices.push(pos);
-    }
-
-    let mut rng = SplitMix64::new(seed);
-    let mut out = vec![vec![0usize; n]; n_boot];
-    let mut col = 0usize;
-    for pos in stratum_indices {
-        let len_pos = pos.len();
-        if len_pos == 0 {
-            continue;
-        }
-        for b in 0..n_boot {
-            for j in 0..len_pos {
-                let pick = rng.gen_range(len_pos);
-                if let (Some(row), Some(&p)) = (out.get_mut(b), pos.get(pick)) {
-                    if let Some(target) = row.get_mut(col + j) {
-                        *target = p;
-                    }
-                }
-            }
-        }
-        col += len_pos;
     }
     out
 }

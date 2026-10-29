@@ -29,7 +29,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `features.ms2_link` | no | no | — | scelta: dentro `features.detect` (`flow_rule_tests.rs:13`, `BUCHI`) | — | — |
 | **Flow: tabella** | | | | | | |
 | `table.filter`, `table.drift`, `table.plausible` | sì | pannello per plausibilità (`.wasm` `table`: `table_plausible`, `table_check`) e deriva (`drift_series`, `feat-worker.js:411`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passi no | da fare: nessun esecutore in `F.liveJobs` | S | 1 |
-| `table.stats`, `table.pca`, `table.kmd` | sì | pannello (motore: `stat_post`, `kmd_post`; vista KMD/PCA) | `stat_route_parity.rs` è Rust↔Python | da fare | M | 2 |
+| `table.stats`, `table.pca`, `table.kmd` | sì | pannello (motore: `stat_post`; vista KMD/PCA) | `stat_route_parity.rs` è Rust↔Python | da fare | M | 2 |
 | `export.table_csv`, `export.inclusion`, `export.mztab` | sì | pannello (`export_table`, inclusione in mzFinder); mzTab del passo no | no | da fare | M | 1 |
 | `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
 | `meta.compare` | sì | no | no | da fare | M | 3 |

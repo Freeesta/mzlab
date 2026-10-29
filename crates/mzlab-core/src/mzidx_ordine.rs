@@ -200,6 +200,7 @@ fn in_parallelo<T: Num>(
 }
 
 // Joins every thread (the scope would anyway) and keeps the first error.
+#[cfg(not(target_arch = "wasm32"))]
 fn primo_errore(hs: Vec<std::thread::ScopedJoinHandle<'_, Result<()>>>) -> Result<()> {
     let mut res = Ok(());
     for h in hs {
