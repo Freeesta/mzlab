@@ -109,6 +109,8 @@ async function fileOf(name) {
   return lrFile.get(name);
 }
 const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker.js", import.meta.url), module: () => wasmModule });
+// size shown for a maker's sample: its own when the reader knows it, else the sum of its members (e.g. .wiff + .wiff.scan); stubs written before the sum was kept have `size` too
+const shownSize = (/** @type {{ dim?: number | null, size: number }} */ st) => st.dim != null ? st.dim : st.size;
 const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
@@ -300,7 +302,7 @@ async function lrOp(m) {
         lrFile.set(e.name, f);
         const ok = /\.mzml$/i.test(e.name) ? await safe(() => lrOpen(e.name)) : false;
         const st = /\.mzml$/i.test(e.name) ? await nativo.stubOf(e.name) : null;
-        out.push({ name: e.name, size: st ? (st.dim != null ? st.dim : null) : f.size, indexed: !!ok, nat: !!st, file: f });
+        out.push({ name: e.name, size: st ? shownSize(st) : f.size, indexed: !!ok, nat: !!st, file: f });
       }
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
@@ -318,7 +320,7 @@ async function lrOp(m) {
     case "lr_entry": {
       const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
       const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
-      return { info: st ? JSON.stringify({ ...JSON.parse(info), size: st.dim != null ? st.dim : null, nat: true }) : info };
+      return { info: st ? JSON.stringify({ ...JSON.parse(info), size: shownSize(st), nat: true }) : info };
     }
     case "lr_items": { const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index"); return { info: engine.lr_items(slotOf(m.name), m.name, f.size, readerFor(f), JSON.stringify(m.sample || {})) }; }
     case "lr_composition": return { info: composition(m.query || "") };                  // "" = Python's (it words the error)

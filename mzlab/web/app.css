@@ -406,8 +406,8 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .cvtool [data-off]{visibility:hidden}
 .cvtool .cvr2 details{margin:0}
 .ldwrap{margin-top:8px;overflow-x:auto}
-.ldtab{table-layout:fixed;width:100%;min-width:760px}
-.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:19%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:96px}
+.ldtab{table-layout:fixed;width:100%;min-width:1060px}
+.ldtab col.c-use{width:34px}.ldtab col.c-exp{width:19%}.ldtab col.c-typ{width:15%}.ldtab col.c-tim{width:110px}.ldtab col.c-con{width:130px}.ldtab col.c-siz{width:80px}.ldtab col.c-act{width:176px}
 .ldtab td,.ldtab th{overflow-wrap:anywhere}
 .ldtab tbody td{height:48px}
 .ldtab td select,.ldtab td input[type=text]{max-width:100%;box-sizing:border-box}
