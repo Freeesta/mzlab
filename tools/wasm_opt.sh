@@ -5,6 +5,16 @@
 # (under a lock, because tools/wasm_paralleli.sh runs several of these at the same time). If the tarball cannot be used it falls back to npm wasm-opt@1.4.0.
 set -u
 bg=$1; limit=$2; label=$3; shift 3
+# `@estesi` stands for the extra passes below: the ONE list of them, used by the readers (tools/build_lettori_wasm.sh) and by the engine and libraries steps of pages.yml,
+# sito-rust.yml, release.yml and notte.yml, so the site that is tested is the site that is published. `--low-memory-unused` assumes nothing reads or writes below address 1024:
+# true for every Rust .wasm of the site, since rustc links wasm32-unknown-unknown with `--stack-first` (the data starts at the 1 MiB mark; tests/test_lettori_wasm.py checks it).
+estesi="--converge --low-memory-unused --strip-producers --vacuum --dae --merge-blocks --reorder-functions --duplicate-function-elimination --const-hoisting --simplify-globals-optimizing"
+args=()
+for a in "$@"; do
+  # shellcheck disable=SC2206
+  if [ "$a" = "@estesi" ]; then args+=($estesi); else args+=("$a"); fi
+done
+set -- ${args[@]+"${args[@]}"}
 mkdir -p "$RUNNER_TEMP"
 base="https://github.com/WebAssembly/binaryen/releases/download/version_132"
 case "$(uname -s)-$(uname -m)" in

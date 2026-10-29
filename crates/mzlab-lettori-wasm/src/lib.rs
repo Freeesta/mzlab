@@ -7,6 +7,7 @@ use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
 
+mod json_testo;
 pub mod sessione;
 use sessione::Sessioni;
 
@@ -14,16 +15,13 @@ use sessione::Sessioni;
 const BLOCCO: usize = 64 << 10;
 
 fn error_text(e: &mzlab_core::Error) -> String {
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|(k, v)| format!("\"{}\":{}", k, serde_json::json!(v)))
-        .collect();
-    format!(
-        "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
-        e.key,
-        params.join(",")
-    )
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
+    for (i, (k, v)) in e.params.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
+    }
+    o.raw("}}");
+    o.0
 }
 
 fn error_json(e: &mzlab_core::Error) -> JsValue {
@@ -213,7 +211,13 @@ pub fn famiglia() -> String {
 /// The extensions the module accepts (JSON array, lower case with the dot).
 #[wasm_bindgen]
 pub fn estensioni() -> String {
-    serde_json::to_string(&mzlab_lettori::estensioni()).unwrap_or_else(|_| "[]".into())
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("[");
+    for (i, e) in mzlab_lettori::estensioni().into_iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(e);
+    }
+    o.raw("]");
+    o.0
 }
 
 /// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
@@ -234,20 +238,22 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
         }
         Err(e) => return Err(error_json(&e)),
     };
-    let campioni: Vec<serde_json::Value> = l
-        .campioni()
-        .iter()
-        .map(|c| serde_json::json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
-        .collect();
     for x in mzlab_lettori::motivi(&mut *l, 0) {
         if !motivi.contains(&x) {
             motivi.push(x);
         }
     }
-    Ok(
-        serde_json::json!({ "formato": l.formato().id(), "campioni": campioni, "motivi": motivi })
-            .to_string(),
-    )
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"formato\":")
+        .str(l.formato().id())
+        .raw(",\"campioni\":");
+    json_testo::campioni_json(&mut o, l.campioni());
+    o.raw(",\"motivi\":[");
+    for (i, m) in motivi.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(m);
+    }
+    o.raw("]}");
+    Ok(o.0)
 }
 
 /// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`apri_solo`, as the engine does), any other set opens as `apri`.
