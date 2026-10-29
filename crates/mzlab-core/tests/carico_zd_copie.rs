@@ -18,7 +18,7 @@ fn scan(i: usize) -> Spectrum {
         polarity: 1,
         profile: false,
         filter: String::new(),
-        precursor: (i % 5 == 4).then(|| 150.0 + (i % 3) as f64),
+        precursor: (i % 5 == 4).then_some(150.0 + (i % 3) as f64),
         mz: (0..6).map(|b| 100.0 + b as f64 * 7.5).collect(),
         intensity: (0..6)
             .map(|b| 10.0 + ((i * 7 + b * 3) % 50) as f32)
