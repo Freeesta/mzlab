@@ -1,12 +1,17 @@
 //! The scan table of an mzML whose fingerprints are still being taken: `prepare_late` and the pieces `upload::prepare` shares with it.
 
-use super::{fingerprint, non_mzml, source_head, Passata};
-use crate::error::{Error, Result};
-use crate::idxread::ReadAt;
+use super::source_head;
 use crate::json::Out;
 use crate::mzidx::ScanTable;
-use crate::scantable::{self, Table};
-use crate::window::Windowed;
+use crate::scantable::Table;
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    super::{fingerprint, non_mzml, Passata},
+    crate::error::{Error, Result},
+    crate::idxread::ReadAt,
+    crate::scantable,
+    crate::window::Windowed,
+};
 
 /// The `source` object of the metadata of an mzML.
 pub(super) fn source_text(name: &str, size: u64, probe: &str, sha256: &str) -> String {

@@ -8,7 +8,6 @@ const SIZE: usize = 1 << 20;
 
 pub struct Window<'a, R: ReadAt> {
     inner: &'a mut R,
-    len: u64,
     /// Where a filling read stops: the end of the part of the file the caller reads (a read beyond it goes straight through).
     stop: u64,
     start: u64,
@@ -26,7 +25,6 @@ impl<'a, R: ReadAt> Window<'a, R> {
     pub fn until(inner: &'a mut R, len: u64, stop: u64) -> Self {
         Window {
             inner,
-            len,
             stop: stop.min(len),
             start: 0,
             buf: Vec::new(),

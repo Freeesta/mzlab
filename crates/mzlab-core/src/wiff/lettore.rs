@@ -114,11 +114,6 @@ impl LettoreWiff {
     pub fn dad(&self, c: usize) -> Result<Option<&super::dad::DadData>> {
         Ok(self.parte(c)?.w.dad.as_ref())
     }
-
-    /// The member of the `FileSet` that holds the `.wiff.scan` (what `Posizione::membro` says).
-    pub fn membro_scan(&self) -> u16 {
-        self.scan_member
-    }
 }
 
 /// The injection `c` and its record `k` (the `k`-th scan).
@@ -353,7 +348,7 @@ fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) 
         .unwrap_or(0);
     let mut win = Window::until(scan, scan_len, stop);
     let (mut scans, mut indice) = (Vec::new(), Vec::new());
-    #[cfg_attr(not(feature = "sciex"), allow(unused_mut, unused_variables))]
+    #[cfg(feature = "sciex")]
     let mut other = false;
     for (i, r) in w.records.iter().enumerate() {
         if !scan::point_count(&mut win, scan_len, r.at, r.end)?.is_some_and(|c| c > 0) {

@@ -996,26 +996,6 @@ pub fn build_mzml_spill<R: std::io::Read + Seek>(
     build_mzml_late(table, src, out, budget, spill, None)
 }
 
-/// The same for a Thermo `.raw` file.
-#[cfg(feature = "thermo")]
-pub fn build_raw<R: std::io::Read + Seek>(
-    table: &ScanTable,
-    mut src: R,
-    out: &mut dyn Output,
-    budget: usize,
-) -> Result<Stats> {
-    build(
-        table,
-        &mut |on| {
-            src.seek(SeekFrom::Start(0)).map_err(io_error)?;
-            crate::raw::parse(&mut src, |s| on(s))
-        },
-        out,
-        budget,
-        false,
-    )
-}
-
 /// The same for sample `c` of a vendor file set (version 2): every pass reads the scans of `Lettore::indice(c)` in order (`mzidx_lettore`).
 pub fn build_lettore(
     table: &ScanTable,

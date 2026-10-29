@@ -78,13 +78,6 @@ pub fn tp_table(table_read: Function, size: f64, samples_json: &str, rows_json: 
     core::tp_table_json(&mut table_reader(table_read), size as u64, samples_json, rows_json).map_err(js_err)
 }
 
-/// `tp_table` with the conditions of the series: `campioni_json` = the `campioni/2` of the files, `infos_json` = `[{"row","neutral_formula","ion_formula","ppm"}]`.
-/// With two or more conditions the `tptab/1` carries `gruppi` (`gruppi/1`); with fewer it is the one of `tp_table`.
-#[wasm_bindgen]
-pub fn tp_table_cond(table_read: Function, size: f64, samples_json: &str, rows_json: &str, campioni_json: &str, infos_json: &str) -> std::result::Result<String, JsValue> {
-    core::tp_table_cond_json(&mut table_reader(table_read), size as u64, samples_json, rows_json, campioni_json, infos_json).map_err(js_err)
-}
-
 /// The network of the products (`rete/1`): `table_read` is the `.mzfeat` with the block `tp/1` (`size` bytes), `interp_read` the one with the block `interp/1`
 /// (`interp_size` bytes; the same file when it carries both), `campioni_json` the `campioni/2` of the series ("" = no time course) and `rules` the table
 /// of transformations (`regole_tp`).

@@ -5,8 +5,9 @@ use super::{scan, Wiff};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 use crate::methodinfo::{Kind, Transition};
-#[cfg_attr(feature = "estesi", allow(unused_imports))]
-use crate::mzml::{ChromKind, Chromatogram, Run, Spectrum};
+#[cfg(not(feature = "estesi"))]
+use crate::mzml::{ChromKind, Chromatogram};
+use crate::mzml::{Run, Spectrum};
 use crate::mzmlwrite::Header;
 
 impl Wiff {
@@ -247,7 +248,7 @@ impl Wiff {
 
 /// The MRM blocks of one experiment: times (min), TIC, and one column per transition.
 #[derive(Default)]
-#[cfg_attr(feature = "estesi", allow(dead_code))]
+#[cfg(not(feature = "estesi"))]
 struct Mrm {
     time: Vec<f64>,
     tic: Vec<f64>,
