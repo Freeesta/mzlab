@@ -11,6 +11,7 @@ use mzlab_core::Result;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
+use crate::conv_stamp::stamp;
 use crate::engine::State;
 use crate::rpc::{io_error, text, Answer};
 
@@ -44,9 +45,11 @@ enum Phase {
 
 /// One dataset (a `.raw`, a `.wiff` with its scan file, a `.D` folder) and the page files (samples) that come from it.
 struct Job {
+    /// never reused: a running worker finds its job by this, not by a position that other changes shift
+    id: u64,
     root: PathBuf,
     out: PathBuf,
-    /// size and date of the dataset when it was queued: a ready mzML is only good for the same bytes
+    /// size and date of all the files of the dataset when it was queued: a ready mzML is only good for the same bytes
     stamp: Option<(u64, u64)>,
     names: Vec<(String, u32)>,
     phase: Phase,
@@ -54,14 +57,84 @@ struct Job {
 }
 
 #[derive(Default)]
-struct Inner {
+pub(crate) struct Inner {
     jobs: Vec<Job>,
     threads: usize,
+    next_id: u64,
+}
+
+/// A job a worker has taken: what it needs to convert and to report back.
+struct Started {
+    id: u64,
+    root: PathBuf,
+    out: PathBuf,
+    stamp: Option<(u64, u64)>,
+}
+
+#[cfg(test)]
+impl Inner {
+    pub(crate) fn take_for_test(&mut self) -> u64 {
+        self.take().expect("a queued job").id
+    }
+
+    pub(crate) fn can_take_for_test(&self) -> bool {
+        self.jobs.iter().any(|j| {
+            j.phase == Phase::Queued
+                && !self
+                    .jobs
+                    .iter()
+                    .any(|r| r.phase == Phase::Running && r.root == j.root)
+        })
+    }
+
+    pub(crate) fn finish_for_test(
+        &mut self,
+        id: u64,
+        r: std::result::Result<Vec<PathBuf>, String>,
+    ) {
+        self.finish(id, r);
+    }
+}
+
+impl Inner {
+    /// Marks the first queued job as running; a dataset is never converted by two workers at once (they would share one output folder).
+    fn take(&mut self) -> Option<Started> {
+        let k = self.jobs.iter().position(|j| {
+            j.phase == Phase::Queued
+                && !self
+                    .jobs
+                    .iter()
+                    .any(|r| r.phase == Phase::Running && r.root == j.root)
+        })?;
+        let j = &mut self.jobs[k];
+        j.phase = Phase::Running;
+        Some(Started {
+            id: j.id,
+            root: j.root.clone(),
+            out: j.out.clone(),
+            stamp: j.stamp,
+        })
+    }
+
+    /// Records how job `id` ended; a job that was replaced meanwhile (its dataset changed) is dropped with its result.
+    fn finish(&mut self, id: u64, r: std::result::Result<Vec<PathBuf>, String>) {
+        let Some(k) = self.jobs.iter().position(|j| j.id == id) else {
+            return;
+        };
+        if self.jobs[k].names.is_empty() {
+            self.jobs.remove(k);
+            return;
+        }
+        match r {
+            Ok(files) => (self.jobs[k].phase, self.jobs[k].files) = (Phase::Done, files),
+            Err(e) => self.jobs[k].phase = Phase::Failed(e),
+        }
+    }
 }
 
 #[derive(Default)]
 pub(crate) struct Coda {
-    inner: Arc<Mutex<Inner>>,
+    pub(crate) inner: Arc<Mutex<Inner>>,
     folder: Mutex<Option<PathBuf>>,
     /// threads at most; 0 = cores - 1
     workers: usize,
@@ -104,20 +177,17 @@ fn lock(m: &Mutex<Inner>) -> std::sync::MutexGuard<'_, Inner> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-fn stamp(p: &Path) -> Option<(u64, u64)> {
-    let m = std::fs::metadata(p).ok()?;
-    let t = m
-        .modified()
-        .ok()?
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()?
-        .as_millis() as u64;
-    Some((m.len(), t))
-}
-
 impl Coda {
     /// Queues the dataset `root` for the page file `name` (sample `id`); a dataset already queued, running or ready only learns the name again.
     pub(crate) fn add(&self, name: &str, id: u32, root: &Path) {
+        if self.enqueue(name, id, root, stamp(root)) {
+            let inner = self.inner.clone();
+            std::thread::spawn(move || work(inner));
+        }
+    }
+
+    /// The queue part of `add`; true when a new worker thread is due.
+    pub(crate) fn enqueue(&self, name: &str, id: u32, root: &Path, st: Option<(u64, u64)>) -> bool {
         let key = Sha256::digest(root.to_string_lossy().as_bytes());
         let out = self.base().join(
             key[..8]
@@ -125,8 +195,7 @@ impl Coda {
                 .map(|b| format!("{b:02x}"))
                 .collect::<String>(),
         );
-        let st = stamp(root);
-        let spawn = {
+        {
             let mut g = lock(&self.inner);
             let again =
                 |j: &Job| j.root == root && j.stamp == st && !matches!(j.phase, Phase::Cancelled);
@@ -138,8 +207,17 @@ impl Coda {
                     false
                 }
                 None => {
-                    g.jobs.retain(|j| j.root != root);
+                    // a running conversion of the old bytes stays (its worker holds the output folder) but loses its names:
+                    // it is dropped when it ends and the new job waits for it
+                    g.jobs
+                        .retain(|j| j.root != root || j.phase == Phase::Running);
+                    for j in g.jobs.iter_mut().filter(|j| j.root == root) {
+                        j.names.clear();
+                    }
+                    g.next_id += 1;
+                    let job_id = g.next_id;
                     g.jobs.push(Job {
+                        id: job_id,
                         root: root.to_path_buf(),
                         out,
                         stamp: st,
@@ -153,10 +231,6 @@ impl Coda {
                     }
                 }
             }
-        };
-        if spawn {
-            let inner = self.inner.clone();
-            std::thread::spawn(move || work(inner));
         }
     }
 
@@ -265,27 +339,62 @@ fn convert(root: &Path, out: &Path) -> std::result::Result<Vec<PathBuf>, String>
     Ok(files)
 }
 
-fn work(inner: Arc<Mutex<Inner>>) {
+/// Holds back until no index of Data is being built; the short re-check catches an index that starts just after the job was queued.
+fn wait_for_indexing() {
     loop {
         while INDEXING.load(Ordering::SeqCst) > 0 {
             std::thread::sleep(Duration::from_millis(100));
         }
-        let (k, root, out) = {
+        std::thread::sleep(Duration::from_millis(50));
+        if INDEXING.load(Ordering::SeqCst) == 0 {
+            return;
+        }
+    }
+}
+
+/// The marker in the output folder that says which bytes its mzML files come from.
+fn marker(out: &Path) -> PathBuf {
+    out.join(".stamp")
+}
+
+/// `convert` for a dataset whose output folder may hold files of other bytes: they are removed only when the dataset changed,
+/// so an unchanged one keeps the cache that makes a second run free.
+pub(crate) fn convert_fresh(
+    root: &Path,
+    out: &Path,
+    stamp: Option<(u64, u64)>,
+) -> std::result::Result<Vec<PathBuf>, String> {
+    let now = stamp.map(|(a, b)| format!("{a} {b}"));
+    let same = now.is_some() && std::fs::read_to_string(marker(out)).ok() == now;
+    if !same {
+        for e in std::fs::read_dir(out).into_iter().flatten().flatten() {
+            if e.path().extension().is_some_and(|x| x == "mzML") {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+        let _ = std::fs::remove_file(marker(out));
+    }
+    let files = convert(root, out)?;
+    if let Some(now) = now {
+        let _ = std::fs::write(marker(out), now);
+    }
+    Ok(files)
+}
+
+fn work(inner: Arc<Mutex<Inner>>) {
+    loop {
+        wait_for_indexing();
+        let s = {
             let mut g = lock(&inner);
-            let Some(k) = g.jobs.iter().position(|j| j.phase == Phase::Queued) else {
+            let Some(s) = g.take() else {
                 g.threads -= 1;
                 return;
             };
-            g.jobs[k].phase = Phase::Running;
-            (k, g.jobs[k].root.clone(), g.jobs[k].out.clone())
+            s
         };
-        let r = std::panic::catch_unwind(|| convert(&root, &out))
+        let r = std::panic::catch_unwind(|| convert_fresh(&s.root, &s.out, s.stamp))
             .unwrap_or_else(|_| Err("the conversion stopped unexpectedly".into()));
-        let mut g = lock(&inner);
-        match r {
-            Ok(files) => (g.jobs[k].phase, g.jobs[k].files) = (Phase::Done, files),
-            Err(e) => g.jobs[k].phase = Phase::Failed(e),
-        }
+        lock(&inner).finish(s.id, r);
     }
 }
 

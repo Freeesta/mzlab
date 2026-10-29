@@ -7,6 +7,7 @@ pub mod cartella;
 mod conv_coda;
 #[cfg(test)]
 mod conv_coda_tests;
+mod conv_stamp;
 #[cfg(feature = "app")]
 pub mod dialogo;
 pub mod engine;
