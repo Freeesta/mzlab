@@ -22,7 +22,7 @@ mod nativi;
 mod corriere;
 mod nativi_motore;
 mod blocchi;
-pub(crate) use blocchi::{BlockReader, BLOCK};
+pub(crate) use blocchi::{js_blocks, BLOCK};
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
 #[wasm_bindgen]
@@ -141,7 +141,7 @@ impl Engine {
     /// `{"spectra": n, "levels": {"1": [scans, profile scans], ...}, "unit": bool, "chromatograms": m}`.
     pub fn open(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
         self.runs.remove(&slot);
-        let mut run = mzml::read(BlockReader::new(read, size as u64)).map_err(|e| error_json(&e))?;
+        let mut run = mzml::read(js_blocks(read, size as u64)).map_err(|e| error_json(&e))?;
         self.fits_work(&run)?;
         // No `Engine::runs` route reads the 64-bit intensities (tic/xic/spectra use the f32 `intensity`): drop them.
         for s in &mut run.spectra {
@@ -517,7 +517,7 @@ pub fn build_mzidx(
     let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
     let st = mzidx::build_mzml_corriere(
         &table,
-        BlockReader::new(read, size as u64),
+        js_blocks(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),

@@ -3,7 +3,7 @@ use js_sys::Function;
 use std::io::Write;
 use wasm_bindgen::prelude::*;
 
-use crate::{error_json, BlockReader, BlockWriter, Engine};
+use crate::{error_json, js_blocks, BlockWriter, Engine};
 
 #[wasm_bindgen]
 impl Engine {
@@ -29,7 +29,7 @@ impl Engine {
             ))
         };
         let did = mzlab_core::centroidi::mzml_to_centroids(
-            || Ok(BlockReader::new(read.clone(), size as u64)),
+            || Ok(js_blocks(read.clone(), size as u64)),
             &mut out,
             name,
             &mut tell,
