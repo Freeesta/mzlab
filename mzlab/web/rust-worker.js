@@ -13,6 +13,7 @@ import { createPool, poolSize, makeGate } from "./idxpool.js";
 import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
+import { createPlainPut, createOpenGate } from "./rust-carica.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca } from "./rust-msngrafo.js";
@@ -111,11 +112,12 @@ const impronte = createImpronte({ Passata, workerUrl: new URL("./impronta-worker
 const nativo = createNativo({ ARCH, readerFor, fileOf: async n => { try { return await fileOf(n); } catch (_) { return null; } }, jerr, native_samples, native_to_mzml, native_srm, native_external, impronte });
 const prints = (n, size) => { const p = lrPrints.get(n); lrPrints.delete(n); return p && p.size === size ? [p.sha256, p.probe] : [undefined, undefined]; };
 const lrPrints = new Map();                                              // plain mzML name -> { size, sha256, probe } taken while lrPut copied it: lr_index takes them once and does not read the file again for them
+const openGate = createOpenGate();
 async function lrOpen(name) {                                             // opens the index of a file in its slot; false when there is none
   const f = await fileOf(name), ix = await ARCH.get("idx", name + ".mzidx");
-  if (!ix) return false;
+  if (!ix) { openGate.drop(slotOf(name)); return false; }
   await ARCH.lease("idx", name + ".mzidx");
-  engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"]));
+  if (!openGate.same(slotOf(name), ix)) { openGate.drop(slotOf(name)); engine.open_index(slotOf(name), ix.size, readerFor(ix, ["idx", name + ".mzidx"])); openGate.mark(slotOf(name), ix); }      // the same index already parsed in the slot is not parsed again
   await nativo.attach(engine, name, slotOf(name));                         // a sample of a maker's file (rust-nativo.js): the routes read its reader
   return true;
 }
@@ -213,26 +215,12 @@ async function lrMigrate() {                                              // wha
 }
 const CANCELLED = new Set();                                              // names whose loading the page cancelled (lr_cancel): the copy and the index stop, a new lr_put starts afresh
 const cancelled = () => JSON.stringify({ error_key: "err.load.cancelled", params: {} });
-// the uploaded blob copied to OPFS in pieces, its SHA-256 and probe taken in the same pass (a .dam has none: the method is not indexed)
-async function copyPrints(m) {
-  const blob = m.blob, pass = /\.mzml$/i.test(m.name) ? impronte.start(blob.size) : null;
-  let tp = 0;      // the page shows the copy (bytes done / total, at most 10 times a second)
-  const put = ARCH.putChunks("files", m.name, blob.size, async (o, n) => {
-    const now = performance.now();
-    if (now - tp > 100) { tp = now; postMessage({ op: "progress", id: m.id, frac: blob.size ? Math.min(1, o / blob.size) : 0, phase: "load", done: o, total: blob.size }); }
-    return new Uint8Array(await blob.slice(o, o + n).arrayBuffer());
-  }, pass ? b => pass.add(b) : undefined);
-  let f;
-  try { f = await put; } catch (e) { if (pass) pass.end().catch(() => null); throw e; }
-  const o = pass && await pass.end().catch(() => null);
-  if (o) lrPrints.set(m.name, { size: blob.size, sha256: o[0], probe: o[2] });
-  return f;
-}
+const plain = createPlainPut({ ARCH, impronte, prints: lrPrints, cancelled, isCancelled: n => CANCELLED.has(n), post: m => postMessage(m), free: () => lrFree() });      // the copy of a plain upload (rust-carica.js)
 async function lrPut(m) {                                              // an uploaded file: into OPFS, replacing the one of the same name and its index
   CANCELLED.delete(m.name);
   if (!m.nat) await ARCH.ensureRoom(m.blob.size, m.name);                 // room first (error.quota with the MB needed and free), never write hoping; held for the file and its index until lr_index ends
   idxPool().cancel(m.name);
-  engine.close(slotOf(m.name));
+  engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name));
   for (const ix of [m.name + ".mzidx", m.name + ".cen.mzidx"]) {         // an index of a newer program stays where it is (lr_index then answers error.newerFormat)
     const cur = await ARCH.get("idx", ix);
     if (!(cur && nuovo("idx", await safe(() => infoDi("idx", cur))))) await ARCH.remove("idx", ix);
@@ -240,14 +228,14 @@ async function lrPut(m) {                                              // an upl
   await tilesDrop(m.name, null);
   let f;
   if (m.nat) {                                                        // a sample of a maker's file: its members go to OPFS (the progress is the copy), the file of the program is the stub
-    f = await nativo.put(m, frac => { if (CANCELLED.has(m.name)) throw cancelled(); postMessage({ op: "progress", id: m.id, frac, phase: "read" }); });      // «Cancel» of the page: the copy stops at the next piece
+    try { f = await nativo.put(m, frac => { if (CANCELLED.has(m.name)) throw cancelled(); postMessage({ op: "progress", id: m.id, frac, phase: "read" }); }); }      // «Cancel» of the page: the copy stops at the next piece
+    catch (e) { ARCH.release(m.name); throw e; }
     lrFile.set(m.name, f);
     await ARCH.persistOnce();
     return { info: JSON.stringify({ size: f.size }), files: [[m.name, f]] };
   }
-  lrPrints.delete(m.name);
-  try { f = await copyPrints(m); }
-  catch (e_) { const e = /** @type {Lanciato} */ (e_); if (/quota/i.test(String(e && (e.name || e.message)))) { await lrFree(); f = await copyPrints(m); } else { ARCH.release(m.name); throw e; } }
+  nativo.forget(m.name);                                               // a plain mzML of a name that held a sample of a maker's file: its stub is gone
+  f = await plain.putPlain(m);
   lrFile.set(m.name, f);
   if (/\.dam$/i.test(m.name)) ARCH.release(m.name);                    // a method has no index
   await ARCH.persistOnce();
@@ -317,7 +305,7 @@ async function lrOp(m) {
       return { info: JSON.stringify(out.map(({ file, ...r }) => r)), files: out.map(o => [o.name, o.file]) };
     }
     case "lr_put": return lrPut(m);
-    case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
+    case "lr_cancel": { for (const n of m.names || []) { CANCELLED.add(n); idxPool().cancel(n); ARCH.release(n); } return { info: "{}" }; }      // «Cancel» of the loading: the builders of these files end now
     case "lr_index": try { return await lrIndex(m); } finally { ARCH.release(m.name); }
     case "lr_index_cen": try {                                                // mzFinder works on centroids: the index of a profile sample with its scans as centroids, apart from the one of the Data tab
       const job = await nativo.indexJob(m.name), part = m.name + ".cen.mzidx.part";
@@ -346,7 +334,7 @@ async function lrOp(m) {
     case "lr_adduct_table": return { info: adduct_table(m.f || "", m.obs || "", m.tol || "", m.delta || "") };
     case "lr_formula": return { info: formula_mz(m.f || "", m.adduct || "") };
     case "lr_remove": {
-      engine.close(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
+      engine.close(slotOf(m.name)); openGate.drop(slotOf(m.name)); lrFile.delete(m.name); nativo.forget(m.name); await ARCH.remove("files", m.name); await tilesDrop(m.name, null); await safe(lrFree);      // the indexes of the file go with it
       await safe(async () => nativo.sweep((await ARCH.list("files")).filter(e => /\.mzml$/i.test(e.name)).map(e => e.name)));      // the members of a maker's file that no sample uses any more go
       return { info: "{}" };
     }
@@ -355,7 +343,7 @@ async function lrOp(m) {
     case "lr_kv_set": { await safe(() => tx("kv", "readwrite", s => s.put(m.value, m.key))); return { info: "{}" }; }
     case "lr_clear": {                                                    // «New session» with fresh = true: files, indexes, notebook
       for (const n of [...lrFile.keys()]) engine.close(slotOf(n));
-      lrFile.clear();
+      lrFile.clear(); openGate.clear(); nativo.forgetAll();
       await safe(async () => { await ARCH.clear("files"); await ARCH.clear("idx"); await tilesDrop(null, null); });
       await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000);
       return { info: "{}" };
