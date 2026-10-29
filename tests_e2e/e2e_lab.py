@@ -72,7 +72,7 @@ try:
             pg, reqs = page(LAB, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("(() => { const e = document.querySelector('#demo'); return !e || e.offsetParent === null })()"), "example chooser visible"
             assert not pg.is_visible("#demobtn") and not pg.is_visible("#demochoice")
-            pg.evaluate("setView('draw')"); pg.wait_for_selector("#v-draw:not([hidden])", timeout=120000)
+            pg.wait_for_function("typeof setView === 'function'", timeout=120000); pg.evaluate("setView('draw')"); pg.wait_for_selector("#v-draw:not([hidden])", timeout=120000)      # setView comes from a script loaded after #drop exists
             assert not pg.is_visible("#ex-link") and pg.evaluate("document.body.innerText.includes('example files') || document.body.innerText.includes('file di esempio')") is False
             assert pg.evaluate("TOUR.caricaEsempio.toString().includes('esempi')") is False
             assert not [u for u in reqs if "/esempi/" in u or "esempio-" in u], reqs
