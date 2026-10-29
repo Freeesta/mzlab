@@ -1,4 +1,4 @@
-"""Lab variant of the site (MZLAB_LAB=1): only Data and Draw, expiry page, banner, noindex; the normal build is left alone.
+"""Lab variant of the site (MZLAB_LAB=1): only Data and Draw, expiry page, no banner, noindex; the normal build is left alone.
 Builds both sites and serves them. Run from the repo root: python3 tests_e2e/e2e_lab.py  """
 import os, socket, subprocess, sys, tempfile
 from pathlib import Path
@@ -55,11 +55,10 @@ try:
             assert pg.evaluate("location.hash") == "#/draw"
         step("lab: other addresses go back to #/data, #/draw stays", routes)
         def banner():
-            pg, _ = page(LAB + "?lang=en", CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#lab-banner", timeout=120000)
-            assert pg.inner_text("#lab-banner") == "Lab version – Data and Draw only – valid until 29 Dec 2026"
-            pg, _ = page(LAB + "?lang=it", CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#lab-banner", timeout=120000)
-            assert pg.inner_text("#lab-banner") == "Versione di laboratorio – solo Dati e Disegno – valida fino al 29 dic 2026"
-        step("lab: banner in English and Italian", banner)
+            for lang in ("en", "it"):
+                pg, _ = page(LAB + "?lang=" + lang, CLOCK % "2026-10-29T12:00:00Z"); pg.wait_for_selector("#drop", timeout=120000)
+                assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("document.body.innerText.includes('29 Dec') || document.body.innerText.includes('29 dic')") is False
+        step("lab: no banner and no date shown", banner)
         def expiry():
             pg, reqs = page(LAB, CLOCK % "2026-12-30T00:00:00Z")
             pg.wait_for_selector("main[role=alert]", timeout=30000)

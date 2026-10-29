@@ -1,25 +1,16 @@
 // @ts-check
-// Lab build only (tools/build_site.py with MZLAB_LAB=1; copied to static/lab.js and loaded first in <head>). Three jobs:
+// Lab build only (tools/build_site.py with MZLAB_LAB=1; copied to static/lab.js and loaded first in <head>). Two jobs:
 //  1. expiry: after the date baked into the build (UTC, whole day included) the page is replaced by a short notice in English and Italian; nothing else
 //     is loaded, no data is read. The date cannot be computed (bad date, no clock) = expired, never open. This is a SOFT block, not security: whoever
 //     controls their own browser (clock, devtools, offline copy) can get round it. It only keeps the lab page from living on by itself.
 //  2. only Data and Draw: Tabui and mzFlow are the administrator mode (five clicks on the logo, localStorage «admin»). Every read of that flag answers
 //     «off» and every write is dropped, so no code path loads the Tabui loader or draws its tabs; addresses of any other view go back to #/data.
 //     Nothing is deleted from the program: the build with the flag off is untouched.
-//  3. a small banner under the header (texts through the I18N catalog, keys «lab.*»).
 (function () {
   "use strict";
   var w = /** @type {any} */ (window);
   var EXPIRES = "__LAB_EXPIRES__";
   var DAY = 86400000;
-  var LANG = {
-    en: { "lab.banner": "Lab version – Data and Draw only – valid until {date}" },
-    it: { "lab.banner": "Versione di laboratorio – solo Dati e Disegno – valida fino al {date}" },
-  };
-  var MONTHS = {
-    en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    it: ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"],
-  };
 
   /** true when the lab page must not run: after the last day, or when the date or the clock cannot be read */
   function expired() {
@@ -70,18 +61,4 @@
   }
   route();
   addEventListener("hashchange", route);
-
-  function banner() {
-    var I = w.I18N;
-    if (!I || !document.body) return;
-    I.add("en", LANG.en); I.add("it", LANG.it);
-    var p = EXPIRES.split("-"), L = I.lang === "it" ? "it" : "en";
-    var date = +p[2] + " " + MONTHS[L][+p[1] - 1] + " " + p[0];
-    var el = document.createElement("div");
-    el.id = "lab-banner"; el.setAttribute("role", "note");
-    el.style.cssText = "font:12px/1.4 system-ui,sans-serif;text-align:center;padding:2px 8px;background:var(--panel,#fff);color:var(--accent,#7a5c1e);border-bottom:1px solid var(--line,#ccc)";
-    el.textContent = I.t("lab.banner", { date: date });
-    document.body.insertBefore(el, document.body.firstChild);
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", banner); else banner();
 })();

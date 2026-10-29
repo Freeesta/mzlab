@@ -2,7 +2,6 @@
 normal build left alone. The browser side is tests_e2e/e2e_lab.py (CI only)."""
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -79,7 +78,7 @@ vm.runInContext(fs.readFileSync(file, "utf8").replace("__LAB_EXPIRES__", expires
 const s = new Storage();
 console.log(JSON.stringify({ calls, hash: loc.hash, lab: !!win.MZLAB_LAB, sito: win.SITO_PUBBLICO, admin: ctx.Storage.prototype.getItem.call({ getItem: Storage.prototype.getItem }, "mzlab.admin"),
   adminViaStorage: s.getItem("mzlab.admin"), legacy: s.getItem("qqq.teoria.esteso"), prefs: s.getItem("mzlab.prefs"), written: (s.setItem("mzlab.admin", "1"), s.getItem("mzlab.admin")),
-  banner: body.inserted && body.inserted.text, cat: I18N.cat }));
+  banner: body.inserted && body.inserted.text }));
 """
 
 
@@ -89,11 +88,11 @@ def guard(expires="2026-12-29", now="2026-10-29T12:00:00Z", hash="", stored=None
 
 
 @needs_node
-def test_guard_before_the_date_hides_the_admin_mode_and_shows_the_banner():
+def test_guard_before_the_date_hides_the_admin_mode_and_adds_no_banner():
     r = guard(stored={"mzlab.admin": "1", "qqq.teoria.esteso": "1", "mzlab.prefs": "{}"})
     assert r["calls"] == [] and r["lab"] and r["sito"] == {"scaricaApp": False, "teoria": False}
     assert r["adminViaStorage"] is None and r["legacy"] is None and r["prefs"] == "{}" and r["written"] is None
-    assert r["banner"] == "Lab version – Data and Draw only – valid until 29 Dec 2026"
+    assert r.get("banner") is None
 
 
 @needs_node
@@ -116,14 +115,6 @@ def test_guard_expiry_with_a_fake_clock(now, expired):
 @pytest.mark.parametrize("bad", ["", "soon", "2026-13-40", "29/12/2026"])
 def test_guard_never_fails_open(bad):
     assert guard(expires=bad)["calls"] != []
-
-
-def test_banner_keys_match_in_both_languages():
-    src = LAB_JS.read_text(encoding="utf-8")
-    keys = {l: re.search(l + r': \{(.*?)\},\n', src, re.S).group(1) for l in ("en", "it")}
-    names = {l: re.findall(r'"(lab\.[\w.]+)"', k) for l, k in keys.items()}
-    assert names["en"] == names["it"] and names["en"]
-    assert all("{date}" in k for k in keys.values())
 
 
 def test_qqq_workflow_follows_the_pages_workflow():
