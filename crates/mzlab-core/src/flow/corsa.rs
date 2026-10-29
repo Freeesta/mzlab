@@ -143,6 +143,47 @@ fn passo(name: &str, a: &Value) -> Passo {
     }
 }
 
+/// The string keys of `agent` that `engine` copies, in this order.
+const ENGINE_KEYS: [&str; 7] = [
+    "name",
+    "version",
+    "commit",
+    "platform",
+    "target",
+    "rustc",
+    "cargo_lock_sha256",
+];
+
+/// `agent.modules` of the record: name -> SHA-256.
+fn modules_of(agent: Option<&Value>) -> Vec<(String, String)> {
+    match agent.and_then(|a| a.get("modules")) {
+        Some(Value::Obj(m)) => m
+            .iter()
+            .filter_map(|(k, v)| v.str().map(|v| (k.clone(), v.to_string())))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// `"modules":{...}` inside `engine`, when there are any.
+fn modules_json(o: &mut Out, modules: &[(String, String)], comma: bool) {
+    if modules.is_empty() {
+        return;
+    }
+    o.raw(if comma {
+        ",\"modules\":{"
+    } else {
+        "\"modules\":{"
+    });
+    for (k, (name, v)) in modules.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" })
+            .str(name)
+            .raw(":")
+            .str(v);
+    }
+    o.raw("}");
+}
+
 /// Builds the report from the `prov/1` of a run and the output files that go with it; a file that is not JSON of a known format is ignored.
 pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     if prov.get("schema").and_then(|s| s.str()) != Some("prov/1") {
@@ -150,26 +191,12 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
     }
     let agent = prov.get("agent");
     let mut engine = Vec::new();
-    for k in [
-        "name",
-        "version",
-        "commit",
-        "platform",
-        "target",
-        "rustc",
-        "cargo_lock_sha256",
-    ] {
+    for k in ENGINE_KEYS {
         if let Some(v) = agent.and_then(|a| text(a, k)) {
             engine.push((k.to_string(), v));
         }
     }
-    let modules = match agent.and_then(|a| a.get("modules")) {
-        Some(Value::Obj(m)) => m
-            .iter()
-            .filter_map(|(k, v)| v.str().map(|v| (k.clone(), v.to_string())))
-            .collect(),
-        _ => Vec::new(),
-    };
+    let modules = modules_of(agent);
     let (mut inputs, mut lists) = (Vec::new(), Vec::new());
     if let Some(Value::Obj(entities)) = prov.get("entity") {
         for (key, e) in entities {
@@ -339,17 +366,7 @@ impl Corsa {
                 .raw(":")
                 .str(v);
         }
-        if !self.modules.is_empty() {
-            o.raw(if self.engine.is_empty() { "" } else { "," })
-                .raw("\"modules\":{");
-            for (k, (name, v)) in self.modules.iter().enumerate() {
-                o.raw(if k > 0 { "," } else { "" })
-                    .str(name)
-                    .raw(":")
-                    .str(v);
-            }
-            o.raw("}");
-        }
+        modules_json(&mut o, &self.modules, !self.engine.is_empty());
         o.raw("}");
         if let Some(p) = &self.plan_sha256 {
             o.raw(",\"plan_sha256\":").str(p);

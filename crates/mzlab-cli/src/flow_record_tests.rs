@@ -175,3 +175,29 @@ fn the_reports_of_the_base_chain_give_the_prov_and_the_corsa_of_flow_run() {
         Ok(Value::Obj(_))
     ));
 }
+
+#[test]
+fn prov_names_the_executable_that_ran() {
+    let (dir, _) = fixture("module");
+    let out = dir.join("out");
+    let o = flow_run(&[
+        p(&dir.join("plan.json")),
+        "--in",
+        p(&dir.join("data")),
+        "--out",
+        p(&out),
+    ]);
+    assert_eq!(o.code, 0, "{}", o.stderr);
+    let prov =
+        mzlab_core::json::parse(std::fs::read(out.join("prov.json")).unwrap().as_slice()).unwrap();
+    let exe = std::fs::read(std::env::current_exe().unwrap()).unwrap();
+    let agent = prov.get("agent").unwrap();
+    assert_eq!(
+        agent
+            .get("modules")
+            .and_then(|m| m.get("mzlab-cli"))
+            .and_then(|s| s.str()),
+        Some(mzlab_core::budget::sha256_hex(&exe).as_str())
+    );
+    assert!(agent.get("target").is_some());
+}
