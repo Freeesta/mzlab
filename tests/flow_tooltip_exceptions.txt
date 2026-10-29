@@ -8,7 +8,6 @@ docs/schemi/steps-1.json:features.align.rt_coarse_gap
 docs/schemi/steps-1.json:features.align.rt_warp
 docs/schemi/steps-1.json:features.align.weak_files
 docs/schemi/steps-1.json:features.detect.centwave.broad_peaks
-docs/schemi/steps-1.json:features.detect.masstrace.merge_overlap
 docs/schemi/steps-1.json:features.ms2_link.tol_ppm
 docs/schemi/steps-1.json:index.mzidx.budget
 docs/schemi/steps-1.json:table.drift.method
