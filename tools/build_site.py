@@ -5,12 +5,17 @@
 site/index.html + site/static/ (the web folder as is). The engine of the program, mzFinder included, is Rust (static/wasm/, static/wasm-feat/,
 built by the workflow): the site downloads nothing from the net and carries no Python. `--pyodide-dir DIR` and `--no-pyodide` are still
 accepted and do nothing (the workflows pass them). GitHub Pages serves the site as it is (.github/workflows/pages.yml).
+
+Lab variant (parallel site for a lab, tools/lab/README.md): `MZLAB_LAB=1 MZLAB_LAB_EXPIRES=YYYY-MM-DD python tools/build_site.py` adds tools/lab/lab.js
+(expiry page, only Data and Draw, banner), `noindex` and robots.txt. With MZLAB_LAB unset the output is byte for byte the normal site.
 """
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import json
+import os
 import re
 import shutil
 import sys
@@ -135,6 +140,20 @@ def theory_entry() -> str:
     )
 
 
+def lab_expiry() -> str | None:
+    """The expiry date (YYYY-MM-DD, UTC) of the lab variant, or None for the normal build. A lab build without a valid date is refused."""
+    if os.environ.get("MZLAB_LAB") != "1":
+        return None
+    d = os.environ.get("MZLAB_LAB_EXPIRES", "")
+    try:
+        datetime.date.fromisoformat(d)
+    except ValueError:
+        raise SystemExit(f"MZLAB_LAB=1 needs MZLAB_LAB_EXPIRES=YYYY-MM-DD, got {d!r}")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d):
+        raise SystemExit(f"MZLAB_LAB_EXPIRES must be YYYY-MM-DD, got {d!r}")
+    return d
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pyodide-dir", type=Path, help="accepted, no effect (the site carries no Python)")
@@ -142,6 +161,7 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "site")
     a = ap.parse_args()
     out = a.out
+    lab = lab_expiry()
     if out.exists():
         shutil.rmtree(out)
     static = out / "static"
@@ -157,14 +177,23 @@ def main() -> None:
     html = html.replace(tel, tel + '\n<script src="static/browser.js"></script>', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
     html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} • {TITLE_TAG}</title>", html, count=1)
-    html = html.replace("</head>", preview_tags() + "\n</head>", 1)
+    if lab:
+        # lab: first script of the head (before anything runs), no link preview and no canonical address pointing at the main site, not indexed
+        head = '<head><meta charset="utf-8">'
+        assert head in html
+        html = html.replace(head, head + '<script src="static/lab.js"></script><meta name="robots" content="noindex,nofollow">', 1)
+        (static / "lab.js").write_text((ROOT / "tools" / "lab" / "lab.js").read_text(encoding="utf-8").replace("__LAB_EXPIRES__", lab), encoding="utf-8")
+        (out / "robots.txt").write_text("User-agent: *\nDisallow: /\n", encoding="utf-8")
+    else:
+        html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
     html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
-    (out / "theory").mkdir()
-    (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
+    if not lab:                                                  # the lab has no Teoria entry (its address goes back to #/data)
+        (out / "theory").mkdir()
+        (out / "theory" / "index.html").write_text(theory_entry(), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
     # program version and git commit for reproducibility (.mzflow)
     try:
