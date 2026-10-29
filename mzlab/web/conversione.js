@@ -48,9 +48,10 @@ const CONVQ = {
   /** @param {string} op @param {string} [name] */ async call(op, name) {
     let j = null; try { j = await window.MZLAB_RUST.convQueue(op, name); } catch (_) { /* the queue is optional: the file loads without it */ }
     if (!j) return;
-    const before = JSON.stringify([...this.st]);
+    const prev = [...this.st];
     this.st = new Map(j.jobs.map((/** @type {Bag} */ x) => [x.name, { state: x.state, error: x.error }]));
-    if (JSON.stringify([...this.st]) !== before) CONVROWS.paint();
+    const next = [...this.st];
+    if (next.length !== prev.length || next.some(([n, v], i) => n !== prev[i][0] || v.state !== prev[i][1].state || v.error !== prev[i][1].error)) CONVROWS.paint();
   },
   // a maker's file was loaded: its mzML is made in the background
   add(/** @type {string} */ name) {
@@ -181,7 +182,7 @@ const CONVROWS = {
     const t = convElapsed(now - (r.t0 || now)), q = now - (r.seen || now);
     return q >= CONV_QUIET && r.state !== "wait" ? `${t} · ${I18N.t("conv.row.quiet", { s: Math.floor(q / 1000) })}` : t;
   },
-  cell(/** @type {string} */ name) { const q = document.getElementById("flist"); return q ? [...q.querySelectorAll("td[data-cvrow]")].find(x => x.dataset.cvrow === name) : null; },
+  cell(/** @type {string} */ name) { const q = document.getElementById("flist"); return q ? q.querySelector(`td[data-cvrow="${CSS.escape(name)}"]`) : null; },
   // the short state of a row, always the same size: a word for the phase, the percent (or the scans of a finished file) and the time. The long text (MB, scans, «no news for…») is the title and the aria-label
   short(/** @type {ConvRow} */ r) {
     const T = (/** @type {string} */ k) => I18N.t(k);

@@ -897,6 +897,12 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- global events
   function bindGlobalEvents() {
     document.addEventListener("keydown", e => {
+      // show/hide the side panel from the keyboard
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && inData()) {
+        e.preventDefault(); e.stopPropagation();
+        toggleDrawer();
+        return;
+      }
       // toolbar from the keyboard: F6 or Alt+0 (Esc goes back where the focus was)
       if (e.key === "F6" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const bar = Q1("#stbar");
@@ -924,14 +930,6 @@ const BARRA = (() => {
       if (calcin && document.activeElement === calcin && calcin.value.trim().length > 0) return;      // Esc first clears the field
       if (document.querySelector("dialog[open]") || Q1("#helppop:not([hidden])") || Q1("#uipset") || (Q1("#ctx") && !/** @type {HTMLElement} */ (Q1("#ctx")).hidden)) return;
       if (_open && sheet() && inData()) { e.preventDefault(); close(true); }       // the sheet replaces the workspace: Esc gives it back
-    }, true);
-
-    // show/hide the side panel from the keyboard
-    document.addEventListener("keydown", e => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === "KeyB") && inData()) {
-        e.preventDefault(); e.stopPropagation();
-        toggleDrawer();
-      }
     }, true);
 
     document.addEventListener("keydown", onBarKey);

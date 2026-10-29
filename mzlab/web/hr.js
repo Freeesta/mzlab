@@ -17,7 +17,7 @@ const HR = (() => {
   }
   const isHr = (f, level) => prof(f, level).hr;
   // decimals for a group of files (a graph with several files): the largest of their profiles
-  const dec = (files, level) => Math.max(1, ...(files || []).filter(Boolean).map(f => prof(f, level).dec));
+  const dec = (files, level) => maxOf((files || []).filter(Boolean).map(f => prof(f, level).dec), 1);
   const anyHr = (files, level) => (files || []).some(f => f && isHr(f, level));
   // half width (Da) of an ion window at m/z for file f: ppm for high resolution, null = "use the unit window of today"
   const tolDa = (f, mz, level) => { const q = prof(f, level); return q.hr ? mz * q.tol * 1e-6 : null; };
@@ -72,7 +72,7 @@ const HR = (() => {
       while (c > 0) { if (c & 1) res = convMass(res, base); c >>= 1; if (c) base = convMass(base, base); }
       dist = convMass(dist, res);
     }
-    const top = Math.max(...dist.map(d => d[1]));
+    const top = maxOf(dist.map(d => d[1]));
     return dist.map(([m, p]) => ({ mz: (m - z * ELECTRON) / Math.abs(z), rel: 100 * p / top })).filter(r => r.rel >= minRel).sort((a, b) => a.mz - b.mz);
   }
   // Peaks closer than their width are not resolved: at resolving power R the fine structure of the pattern fuses into one peak. R200 = resolving power at
@@ -85,7 +85,7 @@ const HR = (() => {
     for (const r of pat) {
       if (cur && r.mz - cur.last <= fw(r.mz)) { cur.s += r.mz * r.rel; cur.rel += r.rel; cur.last = r.mz; } else { cur = { s: r.mz * r.rel, rel: r.rel, last: r.mz }; out.push(cur); }
     }
-    const top = Math.max(...out.map(c => c.rel));
+    const top = maxOf(out.map(c => c.rel));
     return out.map(c => ({ mz: c.s / c.rel, rel: 100 * c.rel / top }));
   }
   const mergeRes = (pat, R200) => (R200 > 0 ? mergeBy(pat, m => m / resAt(R200, m)) : pat);
@@ -100,9 +100,9 @@ const HR = (() => {
   // the Gaussian profile of the merged peaks (points = points per FWHM): {x, y}, highest point = 100
   function isoCurve(pat, fw, pts = 10) {
     const sg = m => fw(m) / 2.3548, a = pat[0].mz - 5 * sg(pat[0].mz), b = pat[pat.length - 1].mz + 5 * sg(pat[pat.length - 1].mz);
-    const step = Math.min(...pat.map(r => fw(r.mz))) / Math.max(3, pts), n = Math.min(6000, Math.max(20, Math.ceil((b - a) / step))), x = [], y = [];
+    const step = minOf(pat.map(r => fw(r.mz))) / Math.max(3, pts), n = Math.min(6000, Math.max(20, Math.ceil((b - a) / step))), x = [], y = [];
     for (let i = 0; i <= n; i++) { const m = a + (b - a) * i / n; let v = 0; for (const r of pat) { const d = (m - r.mz) / sg(r.mz); if (Math.abs(d) < 6) v += r.rel * Math.exp(-0.5 * d * d); } x.push(m); y.push(v); }
-    const mx = Math.max(...y) || 1; return { x, y: y.map(v => 100 * v / mx) };
+    const mx = maxOf(y) || 1; return { x, y: y.map(v => 100 * v / mx) };
   }
   // ions of a simulation: one per adduct (with its concentration, %), or, with a charge distribution {z0, hw}, one per charge state (protonated / deprotonated)
   // weighted by 2^(-4 ((z - z0) / hw)^2) (hw = full width at half height, in charge units); the isotope calculation itself is the one of isoFine
@@ -127,13 +127,13 @@ const HR = (() => {
     const parts = isoSeries(iso), out = [];
     parts.forEach(sr => { let pt = isoFine(sr.ion.n, sr.ion.z); if (fw) pt = mergeBy(pt, fw); const m0 = pt[0].mz; pt.forEach(r => out.push({ ...r, rel: r.rel * sr.w, m0, tag: parts.length > 1 ? sr.tag : "" })); });
     out.sort((a, b) => a.mz - b.mz);
-    const mx = Math.max(...out.map(r => r.rel)) || 1;
+    const mx = maxOf(out.map(r => r.rel)) || 1;
     return out.map(r => ({ ...r, rel: 100 * r.rel / mx }));
   }
   // the simulation in place of the spectrum («Sostituisci»): centroids (and the Gaussian line when the style is «profilo»), height of the observed top
   function isoAsSpectrum(p, f, dObs) {
     const fw = fwhmFn(p.iso, f, p.level), pat = isoPat(p.iso, fw);
-    const top = Math.max(0, ...(dObs && dObs.y ? dObs.y : [0])) || 1e6, o = { mz: pat.map(r => r.mz), y: pat.map(r => top * r.rel / 100), mode: "centroid" };
+    const top = maxOf((dObs && dObs.y ? dObs.y : [0]), 0) || 1e6, o = { mz: pat.map(r => r.mz), y: pat.map(r => top * r.rel / 100), mode: "centroid" };
     if (p.iso.style === "profilo" && fw) { const c = isoCurve(pat, fw, p.iso.pts || 10); o.pmz = c.x; o.py = c.y.map(v => top * v / 100); o.mode = "profile"; }
     return o;
   }

@@ -249,7 +249,8 @@ const DDA = (() => {
     });
     kids.forEach((/** @type {number} */ j, /** @type {number} */ n) => {
       const m = D.tgt[j] ?? D.prec[j]; if (m == null || m < p._a.x0 || m > p._a.x1) return;
-      const px = X(m); let y0 = 0; d0.mz.forEach((/** @type {number} */ v, /** @type {number} */ i) => { if (Math.abs(v - m) <= tol(m) && d0.y[i] > y0) y0 = d0.y[i]; });
+      const px = X(m), tm = tol(m); let y0 = 0;
+      for (let i = lowerBound(d0.mz, m - tm * 1.001 - 1e-9); i < d0.mz.length && d0.mz[i] <= m + tm * 1.001 + 1e-9; i++) if (Math.abs(d0.mz[i] - m) <= tm && d0.y[i] > y0) y0 = d0.y[i];      // the peaks inside the tolerance (m/z is ascending), the exact test kept
       const py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(y0, p._a.ymax)), p._a.H - M.b)) - 4;                // above the peak, at the top edge when the peak is cut
       const chosen = j === here;
       if (seen(j) || chosen) { g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.fill(); g.fillText(String(n + 1), px, py - MARK - 6); }
@@ -393,10 +394,10 @@ const DDA = (() => {
       const G = groups(D, f, z ? z[0] : null, z ? z[1] : null), st = { col: "mz", dir: 1 };
       big(I18N.t("dda.list.head"), `<div class="sm muted" style="margin-bottom:6px">${z ? I18N.t("dda.list.zoom", { n: G.length, t0: z[0].toFixed(2), t1: z[1].toFixed(2) }) : I18N.t("dda.list.all", { n: G.length })} ${I18N.t("dda.list.click")}</div><div style="max-height:62vh;overflow:auto"><table id="ddatb"></table></div>`, () => {
         const render = () => {
-          const rows = G.slice().sort((a, b) => st.dir * ((st.col === "mz" ? a.mz - b.mz : st.col === "rt" ? a.rt0 - b.rt0 : a.n - b.n)));
+          const rows = G.map((/** @type {Bag} */ g, /** @type {number} */ k) => ({ g, k })).sort((a, b) => st.dir * ((st.col === "mz" ? a.g.mz - b.g.mz : st.col === "rt" ? a.g.rt0 - b.g.rt0 : a.g.n - b.g.n)));
           const ar = (/** @type {string} */ c2) => st.col === c2 ? (st.dir > 0 ? " ▲" : " ▼") : "";
           Q("#ddatb").innerHTML = `<tr><th data-c="mz" style="cursor:pointer">${I18N.t("dda.col.mz")}${ar("mz")}</th><th data-c="rt" style="cursor:pointer">${I18N.t("dda.col.rt")}${ar("rt")}</th><th class="num" data-c="n" style="cursor:pointer">${I18N.t("dda.col.n")}${ar("n")}</th></tr>` +
-            rows.map((g, i) => `<tr data-r="${G.indexOf(g)}" style="cursor:pointer"><td>${g.mz.toFixed(dec)}</td><td>${g.rt0.toFixed(2)}–${g.rt1.toFixed(2)} min</td><td class="num">${g.n}</td></tr>`).join("");
+            rows.map(({ g, k }) => `<tr data-r="${k}" style="cursor:pointer"><td>${g.mz.toFixed(dec)}</td><td>${g.rt0.toFixed(2)}–${g.rt1.toFixed(2)} min</td><td class="num">${g.n}</td></tr>`).join("");
           Q("#ddatb").querySelectorAll("th[data-c]").forEach((/** @type {HTMLElement} */ h) => h.onclick = () => { st.dir = st.col === h.dataset.c ? -st.dir : 1; st.col = /** @type {string} */ (h.dataset.c); render(); });
           Q("#ddatb").querySelectorAll("tr[data-r]").forEach((/** @type {HTMLElement} */ r) => r.onclick = () => { Q("#bigdlg").close(); fromList(f, G[Number(r.dataset.r)]); });
         };
@@ -406,8 +407,13 @@ const DDA = (() => {
   }
   // the Full Scan with its MS2 panel opens and the MS2 scan i of D is chosen, following the precursor ion
   async function showMs2(/** @type {Bag} */ D, /** @type {number} */ ion, /** @type {number} */ i) {
-    setTab("full", true); await new Promise(r => setTimeout(r, 700));
-    const s1 = E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.duo != null && q.el && q.tab === "full"), s2 = s1 && byId(s1.duo); if (!s2) return nearMsg(OFF);
+    setTab("full", true);
+    // the pair of panels is there once both exist and the Full Scan is drawn; a slow machine gets up to 5 s, then a message (a fixed pause was too short there and too long elsewhere)
+    const pair = () => { const a = E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.duo != null && q.el && q.tab === "full"), b = a && byId(a.duo); return a && b && a._a && b.el ? a : null; };
+    let s1 = pair();
+    for (const t0 = performance.now(); !s1 && performance.now() - t0 < 5000;) { await new Promise(r => setTimeout(r, 50)); s1 = pair(); }
+    if (!s1) return nearMsg(I18N.t("dda.slow"));
+    const s2 = byId(s1.duo);
     s2.ion = ion; s2._mixed = null; s2.avg = null;
     await selectMs2(s2, D.sid[i]);
     const c = byId(s1.link); if (c) draw(c);

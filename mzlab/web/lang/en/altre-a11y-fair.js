@@ -322,6 +322,7 @@ I18N.add("en", {
   "calc.clear": "Clear",
   "calc.eq": "Result (Enter)",
   "dda.off": "DDA function not available for this file",
+  "dda.slow": "The MS2 panel did not open in time: try again",
   "dda.none": "No MS2 of {ion}: the DDA did not choose it.",
   "dda.mixed": "It is however inside the isolation window of {n, plural, one {# MS2 of another precursor} other {# MS2 of other precursors}}: ← → to see them (mixed spectra).",
   "dda.click": "Click a flag ▼ in the Full Scan, or a small triangle on the chromatogram, to see an MS2.",

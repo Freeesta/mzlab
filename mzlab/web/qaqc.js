@@ -124,7 +124,7 @@ const QAQC = (() => {
     const W = 300, H = 120, L = 38, R = 6, T = 8, B = 20, n = roles.length;
     const all = lines.flatMap(l => l.vals).filter(v => v != null && isFinite(v));
     if (!all.length || n < 2) return "";
-    let lo = Math.min(...all), hi = Math.max(...all);
+    let lo = minOf(all), hi = maxOf(all);
     if (lo === hi) { lo -= 1; hi += 1; }
     const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
     const X = i => L + (n === 1 ? 0 : (i * (W - L - R)) / (n - 1)), Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
@@ -242,7 +242,7 @@ ${hr ? `<label>${t("qaqc.in.kind")} <select id="qq-kind"><option value="is">${t(
   function importState(s) {
     if (!s || typeof s !== "object") return;
     st = { ...blankState(), roles: { ...(s.ruoli || {}) }, ions: (s.ioni || []).map(i => ({ ...i })), thr: s.soglia === 10 ? 10 : 3, win: +s.finestra_rt > 0 ? +s.finestra_rt : 0.5, ratio: { text: "", rt: "", ...(s.rapporto || {}) } };
-    st.seq = 1 + Math.max(0, ...st.ions.map(i => i.id || 0));
+    st.seq = 1 + maxOf(st.ions.map(i => i.id || 0), 0);
     res = { ions: [], ratio: null, feat: null, at: null };
     save();
   }

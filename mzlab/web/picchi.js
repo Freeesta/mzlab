@@ -382,7 +382,7 @@ async function drawSpec(p, snapped) {
   };
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
   const wide = files.reduce((/** @type {number[]} */ r, /** @type {Bag} */ f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
-  const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [Math.min(...data.map((/** @type {Bag} */ x) => minOf(x.d.mz))) - 2, Math.max(...data.map((/** @type {Bag} */ x) => maxOf(x.d.mz))) + 2];
+  const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [minOf(data.map((/** @type {Bag} */ x) => minOf(x.d.mz))) - 2, maxOf(data.map((/** @type {Bag} */ x) => maxOf(x.d.mz))) + 2];
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)

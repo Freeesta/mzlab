@@ -1,4 +1,4 @@
-# e2e_pannelli_ciclo: opening and closing panels leaves no listener behind on document/window (closePanel aborts p._ac)
+# e2e_pannelli_ciclo: opening and closing 50 panels of three kinds leaves no listener behind on document/window (closePanel aborts p._ac)
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -18,13 +18,14 @@ try:
                 o = cdp.send("Runtime.evaluate", {"expression": expr})["result"]["objectId"]
                 n += len(cdp.send("DOMDebugger.getEventListeners", {"objectId": o})["listeners"])
             return n
-        def cycle():
-            pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1}); closePanel(E.panels[E.panels.length-1])")
+        KINDS = ["addPanel('spec',{tab:E.tab,k:E.cur,level:1})", "addPanel('chrom',{tab:E.tab,k:E.cur,kind:'tic'})", "addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"]      # the map has its own step below (it needs the engine)
+        def cycle(i=0):
+            pg.evaluate(KINDS[i % len(KINDS)] + "; closePanel(E.panels[E.panels.length-1])")
             pg.wait_for_timeout(50)
         def leak():
-            for _ in range(3): cycle()
+            for i in range(3): cycle(i)                  # one of each kind first: the lazily created listeners exist before the baseline
             base = count()
-            for _ in range(20): cycle()
+            for i in range(50): cycle(i)
             assert count() == base, (base, count())
             assert pg.evaluate("STATO.verifica()") == []
         def keyups():
@@ -37,7 +38,7 @@ try:
             map_cycle(); base = keyups()
             for _ in range(10): map_cycle()
             assert keyups() == base, (base, keyups())
-        step("20 open/close cycles: listeners do not grow", leak)
+        step("50 open/close cycles (spec, chrom, xic): listeners do not grow", leak)
         step("10 map open/close cycles: no extra keyup listener on document", map_leak)
 finally:
     r.close(); r.report()

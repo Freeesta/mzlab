@@ -52,7 +52,7 @@ const PCA = (() => {
   // ---------------------------------------------------------------- drawing
   const W = 320, H = 250, L = 46, R = 10, T = 10, B = 34;
   function frame(xs, ys, xl, yl) {
-    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    let x0 = minOf(xs), x1 = maxOf(xs), y0 = minOf(ys), y1 = maxOf(ys);
     const px = (x1 - x0 || 1) * 0.1, py = (y1 - y0 || 1) * 0.1;
     x0 -= px; x1 += px; y0 -= py; y1 += py;
     const X = v => L + (v - x0) / (x1 - x0) * (W - L - R), Y = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - B);

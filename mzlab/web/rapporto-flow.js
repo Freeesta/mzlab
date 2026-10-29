@@ -75,7 +75,7 @@ window.RAPPORTO_FLOW = (() => {
 
   /** @param {Corsa} c */
   function timing(c) {
-    const max = Math.max(1, ...c.steps.map(s => s.ms)), row = 22, left = 150, w = 520;
+    const max = maxOf(c.steps.map(s => s.ms), 1), row = 22, left = 150, w = 520;
     const bars = c.steps.map((s, i) => {
       const bw = Math.max(1, Math.round((s.ms / max) * (w - left - 70)));
       return `<text class="tx" x="${left - 6}" y="${i * row + 15}" text-anchor="end">${esc(s.instance)}</text><rect class="bk${s.status === "error" ? " err" : ""}" x="${left}" y="${i * row + 3}" width="${bw}" height="${row - 8}"/>` +

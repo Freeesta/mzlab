@@ -119,6 +119,37 @@ console.log(JSON.stringify({ same }));
     assert r["same"] is True
 
 
+def test_bufpool_best_fit_and_caps_over_200_mixed_requests():
+    src = (WEB / "bufpool.js").as_uri()
+    p = subprocess.run([NODE, "--input-type=module", "-e", f"""
+import {{ createBufPool }} from {src!r};
+let seed = 7; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+const pool = createBufPool(8, 4 << 20), held = [], out = {{ bad: 0, maxBytes: 0, maxCount: 0, served: 0, reused: 0 }};
+for (let r = 0; r < 200; r++) {{
+  const len = 1 + Math.floor(rnd() ** 3 * 400000);                       // 8 B .. 3.2 MB, mostly small
+  const before = [pool.size, pool.bytes];
+  const a = pool.take(len);
+  if (a.length !== len || a.buffer.byteLength < len * 8) out.bad++;
+  if (pool.size < before[0]) out.reused++;
+  out.served++; held.push(a.buffer);
+  if (r % 3 === 2) pool.give(held.splice(0, 3));                          // the page hands buffers back in groups
+  out.maxBytes = Math.max(out.maxBytes, pool.bytes); out.maxCount = Math.max(out.maxCount, pool.size);
+}}
+// best fit: with 100 KB, 1 MB and 200 KB buffers pooled, a request of 150 KB takes the 200 KB one
+const q = createBufPool(8, 64 << 20); q.give([new ArrayBuffer(100000), new ArrayBuffer(1000000), new ArrayBuffer(200000)]);
+out.best = q.take(18000).buffer.byteLength;                            // 144 000 B
+out.left = [q.size, q.bytes];
+const big = createBufPool(8, 1000); big.give([new ArrayBuffer(5000)]); out.bigKept = big.size;
+console.log(JSON.stringify(out));
+"""], capture_output=True, text=True, timeout=60)
+    assert p.returncode == 0, p.stderr
+    r = json.loads(p.stdout.strip().splitlines()[-1])
+    assert r["bad"] == 0 and r["served"] == 200 and r["reused"] > 0
+    assert r["maxCount"] <= 8 and r["maxBytes"] <= 4 << 20
+    assert r["best"] == 200000 and r["left"] == [2, 1100000]
+    assert r["bigKept"] == 0
+
+
 def test_map_payload_decoding_and_corrupt_payload_error():
     r = run(r"""
 global.atob = s => Buffer.from(s, 'base64').toString('latin1');
@@ -133,3 +164,32 @@ console.log(JSON.stringify(out));
 """)
     assert r["same"] is True
     assert "multiple of 4" in r["badLen"] and "expected 5" in r["badCount"] and "not base64" in r["notB64"]
+
+
+def test_spread_replacements_match_math_max_min_and_survive_200000_values():
+    r = run(r"""
+const big = Array.from({ length: 200000 }, (_, i) => Math.sin(i) * 1000), out = {};
+try { Math.max(...big); out.oldThrows = false; } catch (e) { out.oldThrows = e instanceof RangeError; }
+out.same = H.maxOf(big) === big.reduce((m, v) => v > m ? v : m, -Infinity) && H.minOf(big) === big.reduce((m, v) => v < m ? v : m, Infinity);
+// the same answer as the spread for every kind of input the page can hold: empty, NaN, undefined, null, strings, extra seed values
+const cases = [[], [3], [1, 2, 3], [-1, -5], [1, NaN, 3], [NaN], [undefined, 1], [null, -1], ['4', 2], [Infinity, 1], [-Infinity], [0, -0]];
+out.bad = [];
+for (const a of cases) for (const s of [undefined, 0, 520, -7]) {
+  const hi = s === undefined ? Math.max(...a) : Math.max(s, ...a), lo = s === undefined ? Math.min(...a) : Math.min(s, ...a);
+  const h2 = s === undefined ? H.maxOf(a) : H.maxOf(a, s), l2 = s === undefined ? H.minOf(a) : H.minOf(a, s);
+  if (!Object.is(hi, h2) && !(hi === 0 && h2 === 0)) out.bad.push(['max', a, s, hi, h2]);
+  if (!Object.is(lo, l2) && !(lo === 0 && l2 === 0)) out.bad.push(['min', a, s, lo, l2]);
+}
+console.log(JSON.stringify(out));
+""")
+    assert r["oldThrows"] is True and r["same"] is True
+    assert r["bad"] == []
+
+
+def test_no_spread_extremes_left_in_the_data_files():
+    """Math.max(...a) / Math.min(...a) overflow the call stack on a big array: only the files that node tests or stand-alone pages load without numeri.js, and bounded UI lists, may still use them."""
+    import re
+    allowed = {"calc-qui.js", "campioni.js", "fair.js", "layout.js", "msngrafo-vista.js", "xlsx.js", "draw.js", "parentesi.js", "tour.js", "infusione-grafo.js", "infusione-grafo-regole.js", "libreria-worker.js", "numeri.js"}
+    rx = re.compile(r"Math\.(?:max|min)\([^()]*\.\.\.")
+    bad = [f.name for f in WEB.glob("*.js") if f.name not in allowed and not f.name.startswith("mappa") and rx.search(f.read_text(encoding="utf-8"))]
+    assert bad == []
