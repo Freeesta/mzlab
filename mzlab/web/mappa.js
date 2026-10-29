@@ -1,6 +1,6 @@
 // @ts-strict
 // @ts-noany
-// RT x m/z map: true zoom, sight (crosshair) with the two plots at the margins, lock, keyboard, full screen (classic script, loaded after explore.js).
+// RT x m/z map: true zoom, sight (crosshair) with the two plots at the margins, lock, keyboard, in-page expand (classic script, loaded after explore.js).
 // The map itself (colours, difference, 3D) is drawn by drawMap in explore.js; this file adds what lives on top of it. Hooks in explore.js:
 // drawMap (zoomImg before the image is drawn, after at the end), attach (wheel, box zoom, click, right click, mouse move), ctl (decorate).
 // Preferences of this browser in localStorage "qqq.mappa".
@@ -67,21 +67,13 @@ window.MAPPA = (() => {
     };
     wrap(); setTimeout(wrap, 0);
   }
-  /** @type {Pannello | null} */
-  let fsByUs = null;
   function onMax(/** @type {Pannello} */ p, /** @type {boolean} */ on) {
-    // the sight follows the view again: off in the page, on in full screen
+    // the sight follows the view again: off in the page, on when expanded; the expand itself is the shared in-page one (pannelli.js `_setMax`)
     st(p).mir = null;
     layout(p);
-    if (on) {
-      // the whole page goes full screen (menus and dialogs, which live in the page, stay visible); the panel covers it
-      const de = document.documentElement;
-      if (!document.fullscreenElement && de.requestFullscreen) de.requestFullscreen().then(() => { fsByUs = p; }).catch(() => { /* iPad and others: the fixed panel is the full screen */ });
-      setTimeout(() => p.cv.focus({ preventScroll: true }), 0);
-    } else if (fsByUs === p && document.fullscreenElement) { fsByUs = null; document.exitFullscreen().catch(() => {}); }
+    if (on) setTimeout(() => p.cv.focus({ preventScroll: true }), 0);
   }
-  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsByUs) { const p = fsByUs; fsByUs = null; if (isMax(p)) p._setMax(false); } });
-  // the button shows the real state of the sight (on in full screen, off in the page, until it is clicked or M is pressed)
+  // the button shows the real state of the sight (on when expanded, off in the page, until it is clicked or M is pressed)
   function mirBtn(/** @type {Pannello} */ p) {
     const b = p.el && p.el.querySelector('[data-mz="mir"]'); if (!b) return;
     const on = !!mirOn(p); b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
@@ -583,7 +575,7 @@ window.MAPPA = (() => {
     showMenu(ad2(p, pt), { preventDefault() {}, clientX: r.left + (kbd ? r.width / 2 : 0), clientY: kbd ? r.top + r.height / 2 : r.bottom + 4, kbd: !!kbd });
   }
 
-  // ---------------------------------------------------------------- keyboard (focus on the map, or the map in full screen; never inside a text field)
+  // ---------------------------------------------------------------- keyboard (focus on the map, or the expanded map; never inside a text field)
   function key(/** @type {Pannello} */ p, /** @type {KeyboardEvent} */ e) {
     if (p.type !== "map" || /** @type {Element} */ (e.target).closest && /** @type {Element} */ (e.target).closest("input,textarea,select,[contenteditable='true']")) return;
     if (e.ctrlKey || e.metaKey) return;
