@@ -108,6 +108,8 @@ jobs:
         env:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
           PYTHONPATH: tools
+          # no incremental data: it was 3.7 of the 11.5 GB of `target` (a 3.2 GB cache) and is only useful to a rebuild on the same machine; a smaller cache restores faster and is evicted less
+          CARGO_INCREMENTAL: "0"
         run: |
           # `cargo run` holds the build-directory lock until the program ends: tools/ci_cargo/cargo builds, releases the lock and then runs the binary
           export PATH="$PWD/tools/ci_cargo:$PATH"
