@@ -43,7 +43,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `tp.generate`, `tp.link@2`, `tp.filter@2`, `tp.position`, `tp.network`, `tp.review`, `tp.dig_lr` | sì | sì | sì: `e2e_flow_tp_web.py`, `e2e_flow_tp_link.py`, `e2e_flow_tp_post.py`, `e2e_flow_tp_review.py`, `e2e_flow_dig_lr.py` contro `flow run` | — (avviso `warn.flow.link.noT0` non riportato dal sito) | S | 3 |
 | Modello «Bentazone / TP» (`flow-names.js:98`) | sì | sì (tutti i suoi passi hanno esecutore) | indiretto (passi sopra) | — | — | — |
 | `spectra.msn_graph`, `msn.library_export`, `msn.table_export` | sì | sì | sì: `test_msngrafo_wasm.py`, `e2e_flow_msn.py`, `e2e_msngrafo_nativo.py` | — | — | — |
-| `msn.figure` | sì | no come passo (figura nella scheda) | `msn_figura_parita.js` (non verificato su quale coppia) | da fare | S | 3 |
+| `msn.figure` | sì | no come passo (figura nella scheda, disegnata in JS: nessun `.wasm`, quindi niente byte per byte) | `msn_figura_parita.js` (testi Rust = disegnatore, su grafi fissi); `test_msnfigura_wasm.py` (grafo dal `.wasm`: testi di ioni e perdite del SVG nativo = disegnatore della pagina) | da fare (passo) | S | 3 |
 | `structure.render`, `structure.reactivity` | sì | pannello (`feat-worker.js`, `.wasm` `chem` `reactivity`) | `crates/mzlab-desktop/tests/reattivita.rs` (app ↔ funzione del `.wasm`) | da fare come passo | S | 3 |
 | `structure.draw` (Ketcher) | no | sì | — | limite: editor JS in iframe; un disegno non è un calcolo | — | — |
 | `chrom.uv_peaks`, `quant.calibrate` | sì | no | no | da fare | M | 3 |
@@ -64,7 +64,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | Conversione a mzML (stesso `mzmlwrite`) | sì (coda, `core − 1` fili) | sì (su richiesta, in sequenza) | parziale: `test_lettori_parita.py` confronta gli SHA-256 dell'mzML indicizzato di `mzlab-cli convert` e del `to_mzml` dei moduli per aperti, agilent, waters, shimadzu, sciex; thermo, bruker, andi senza dataset sintetico pubblico | da fare (test per le 3 famiglie) | S | 1 |
 | mzML con numpress in ingresso | non verificato nell'app (il core lo rifiuta) | sì (modulo `aperti`) | no | da fare (prova) | S | 2 |
 | `mzlab-cli validate` (mzML: struttura, PSI-MS, indice, SHA-1) | sì | no | — | da fare | M | 3 |
-| `mzlab-cli canali` | sì | sì (`api/canali`) | non verificato | da fare (test) | S | 3 |
+| `mzlab-cli canali` | sì | sì (`api/canali`) | sì: `test_canali_wasm.py` (byte per byte, `.wasm` contro CLI, su infusione MSn, SRM e SRM + prodotti) | — | — | — |
 | **Risorse** | | | | | | |
 | File oltre 4 GiB di lavoro | sì (mmap, nessun tetto) | no: tetto 4 GiB per istanza, budget ≤ 3 072 MB e spill (`memoria.md:3`) | — | limite (memory64 assente in Safari, `wasm-potenziale.md:77`) | — | — |
 | Thread dentro un file | sì (`rayon`) | no: pool di worker a messaggi (`wasm-potenziale.md:14`) | stessi byte provati dai test sopra | limite: niente COOP/COEP su GitHub Pages e niente `atomics` in Rust stabile (`wasm-potenziale.md:75`) | — | — |
