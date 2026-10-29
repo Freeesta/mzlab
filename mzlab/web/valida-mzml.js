@@ -4,7 +4,7 @@
 // `validaMzml` is the route api/mzml_valida (lr.js); `VALIDA_MZML.show(name)` opens the dialog (lista-file-menu.js). Module loaded by carica.js.
 import { get } from "./archivio.js";
 
-const W = /** @type {any} */ (window);
+const W = /** @type {any} */ (globalThis);
 /** rows shown at most: a broken file can have one finding per spectrum */
 const MAX_ROWS = 500;
 
