@@ -31,12 +31,5 @@
   var modules = L.filter(function (n) { return n.slice(0, 2) === "m:"; });
   var rest = classic.concat(["shell.js"], modules);
   var go = function () { rest.forEach(function (n) { add(n).catch(function (e) { console.error(e); }); }); };
-  // the Flow tab is what is used first, so the loader of Tabui goes first and the Dati scripts start once the tab scripts have run
-  // (event of the loader; a timer covers a loader that fails before firing it); the plain web folder and the lab build have no Tabui, so they never wait
-  if (!(window.MZLAB_BROWSER || window.MZLAB_DESKTOP) || window.MZLAB_LAB) { go(); return; }
-  var started = false;
-  var begin = function () { if (!started) { started = true; go(); } };
-  add("tpmine-loader.js").catch(function (e) { console.error(e); });
-  document.addEventListener("tpmine:early", begin, { once: true });
-  setTimeout(begin, 4000);
+  go();
 })();

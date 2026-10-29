@@ -132,8 +132,7 @@
     const files = {};
     reg.ctx = { base: BASE, meta: idx.meta || {}, files };
     const warm = [...early, ...js].map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now (early ones first); the script tags below then hit the cache
-    try { for (const n of early) await runScript(n); }             // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
-    finally { document.dispatchEvent(new Event("tpmine:early")); }   // carica.js starts the Dati scripts on this
+    for (const n of early) await runScript(n);                     // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
     if (on) showTabs();                                           // their tabs (Flow) appear now, not after the whole package
     const texts = await Promise.all(names.map(n => get(n, "text")));
     names.forEach((n, i) => { files[n] = texts[i]; });
