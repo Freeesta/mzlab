@@ -24,12 +24,16 @@ use crate::nativi::{Nativi, Src};
 pub(crate) const LR_BASE: u32 = 1_000_000;
 
 impl State {
-    /// The number of a file of the disk (the same number for the same path).
+    /// The number of a file of the disk (the same number for the same path); the size is the one the file has now, so a file rewritten at the same path
+    /// is still found by name and size.
     pub(crate) fn pick_path(&self, path: &std::path::Path) -> u32 {
         {
-            let g = self.lock_inner();
-            if let Some((id, _)) = g.picked.iter().filter(|(_, p)| p.path == path).max_by_key(|(id, _)| **id) {
-                return *id;
+            let mut g = self.lock_inner();
+            if let Some(id) = g.picked.iter().filter(|(_, p)| p.path == path).map(|(id, _)| *id).max() {
+                if let (Ok(m), Some(p)) = (std::fs::metadata(path), g.picked.get_mut(&id)) {
+                    p.size = m.len();
+                }
+                return id;
             }
         }
         self.pick(path.to_path_buf()).map(|(id, _)| id).unwrap_or(0)
@@ -121,19 +125,26 @@ impl State {
         Ok(Routes::new(Index::open(r, size)?))
     }
 
+    /// Closes the open index of the registered file `name`, if any.
+    pub(crate) fn drop_lr_index(&self, name: &str) {
+        let mut eng = self.eng.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(slot) = eng.lr_slot.get(name).copied() {
+            eng.idx.remove(&slot);
+        }
+    }
+
     /// `lr_index`: the scan table and the index of a registered mzML (both on a thread of the build pool), then the index is opened again on the next request.
     pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
+        // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
+        self.drop_lr_index(name);
         if let Some(nat) = &e.nat {
             self.indexer()?.build_nat(nat, name)?;
         } else {
             self.indexer()?.build(&e.path, name, None)?;
         }
-        let mut eng = self.eng.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(slot) = eng.lr_slot.get(name).copied() {
-            eng.idx.remove(&slot);
-        }
+        self.drop_lr_index(name);
         text(format!("{{\"ms\":{}}}", t0.elapsed().as_millis()))
     }
 

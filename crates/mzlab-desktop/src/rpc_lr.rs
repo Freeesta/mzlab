@@ -134,6 +134,9 @@ impl State {
                     if names.contains(&name) && !derived {
                         idx += size;
                     } else if derived || p["free"].as_bool().unwrap_or(false) {
+                        if let Some(slot) = eng.lr_slot.get(&name).copied() {
+                            eng.idx.remove(&slot);                                             // unmapped first: a mapped file cannot be deleted on Windows
+                        }
                         b.remove(&name);
                     } else {
                         gone += size;

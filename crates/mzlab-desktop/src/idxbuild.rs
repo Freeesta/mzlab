@@ -7,6 +7,7 @@
 use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use mzlab_core::mzidx::{self, ScanTable, Stats, DEFAULT_BUDGET};
@@ -14,10 +15,6 @@ use mzlab_core::{upload, Error};
 
 use crate::mapped::Mapped;
 use crate::rpc::MapAt;
-
-pub(crate) fn io_error(e: &std::io::Error) -> Error {
-    Error::new("err.file.index").with("detail", e)
-}
 
 /// Threads of the build pool: cores − 1, at least 1, at most 4.
 pub fn pool_size() -> usize {
@@ -125,6 +122,10 @@ pub(crate) fn clean(name: &str) -> Result<&str, Error> {
     Ok(name)
 }
 
+pub(crate) fn io_error(e: &std::io::Error) -> Error {
+    Error::new("err.file.index").with("detail", e)
+}
+
 impl IdxBuilder {
     /// Builds the index of `source` (an mzML of the disk) as `<name>.mzidx`; waits for a free thread of the pool when several files are being built.
     /// `table`: the scan table the page sent; `None` reads it here (`upload::prepare_parallelo`: the SHA-256 is taken on a second thread meanwhile).
@@ -158,8 +159,8 @@ impl IdxBuilder {
         })
     }
 
-    /// Runs `f` on a thread of the pool with the index file (`<name>.mzidx.part`, renamed `<name>.mzidx` when `f` succeeds, removed when it fails)
-    /// and the scratch file (`<name>.mzidx.sp.part`: the peaks past the budget wait there, so the scans are decoded once; always removed).
+    /// Runs `f` on a thread of the pool with the index file (`<name>.mzidx.<n>.part`, renamed `<name>.mzidx` when `f` succeeds, removed when it fails)
+    /// and the scratch file (`<name>.mzidx.<n>.sp.part`: the peaks past the budget wait there, so the scans are decoded once; always removed).
     pub(crate) fn scrivi(
         &self,
         name: &str,
@@ -167,8 +168,11 @@ impl IdxBuilder {
     ) -> Result<Stats, Error> {
         let _indexing = crate::conv_coda::Indexing::new();
         let dest = self.path(name)?;
-        let part = self.dir.join(format!("{}.mzidx.part", clean(name)?));
-        let sp = self.dir.join(format!("{}.mzidx.sp.part", clean(name)?));
+        // a suffix per build: two builds of one name must not truncate each other's files
+        static BUILD_SEQ: AtomicU64 = AtomicU64::new(0);
+        let n = BUILD_SEQ.fetch_add(1, Ordering::Relaxed);
+        let part = self.dir.join(format!("{}.mzidx.{n}.part", clean(name)?));
+        let sp = self.dir.join(format!("{}.mzidx.{n}.sp.part", clean(name)?));
         let r = self.pool.install(|| -> Result<Stats, Error> {
             let mut out = File::create(&part).map_err(|e| io_error(&e))?;
             let mut spill = File::options()
@@ -193,3 +197,7 @@ impl IdxBuilder {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "idxbuild_tests.rs"]
+mod tests;
