@@ -214,7 +214,7 @@ pub fn prov_json_llm(
     }
     if !agent.modules.is_empty() {
         let mut m: Vec<_> = agent.modules.iter().collect();
-        m.sort();
+        crate::sortc::slice_ord(&mut m);
         o.raw(",\"modules\":{");
         for (k, (name, sha)) in m.into_iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" })
