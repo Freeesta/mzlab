@@ -38,10 +38,10 @@ pub mod interp;
 pub mod msn;
 pub mod progress_js;
 pub mod run;
-pub mod spill_js;
-pub mod run_evid;
-pub mod run_tp;
-pub mod stima;
+pub mod spill_js; pub mod run_evid;
+#[cfg(feature = "flow_ms2")]
+pub mod run_ms2;
+pub mod run_tp; pub mod stima;
 #[cfg(feature = "proofs")]
 pub mod state;
 #[cfg(feature = "untargeted")]
