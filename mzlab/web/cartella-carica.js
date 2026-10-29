@@ -89,7 +89,8 @@ const CartCarica = (() => {
     const es = entriesOf(e.dataTransfer);
     if (!es) { const n = [...(e.dataTransfer?.files || [])].filter(f => LOOSE_D.test(f.name)).length; if (n) note(I18N.t("cart.loose", { n })); return false; }
     note(I18N.t("cart.reading", { n: 0 }));
-    readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files)), x => note(String(x.message || x))).then(() => { if (done) done(); });
+    // a failure of the walk or of the load shows its message; done() runs either way
+    readEntries(es, n => { if (n % 50 === 0) note(I18N.t("cart.reading", { n })); }).then(files => load(files, rootName(es, files))).catch(x => note(String(x.message || x))).then(() => { if (done) done(); });
     return true;
   }
   async function fromInput(list) { const files = [...list]; await load(files, rootName(null, files)); }
