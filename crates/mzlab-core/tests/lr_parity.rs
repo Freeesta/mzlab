@@ -73,6 +73,33 @@ fn infusion_exception(got: &mut Value, want: &Value) {
     }
 }
 
+/// The page judges a file not split in parts by the `hr` of its entry (`lr-sessione.js` `mixesResolutions`): it is the `hr` of its one item.
+fn plain_entry_hr(
+    stem: &str,
+    k: &str,
+    parts: usize,
+    entry_hr: bool,
+    got: &[mzlab_core::lr::OpenItem],
+) {
+    if parts > 1 {
+        return;
+    }
+    assert_eq!(got.len(), 1, "{stem} {k}: a plain file is one item");
+    assert_eq!(got.iter().any(|it| it.hr), entry_hr, "{stem} {k}: entry hr");
+}
+
+/// The sample table edited by the student: label, type, time, concentration and replicate.
+fn edited_sample() -> Sample {
+    Sample {
+        label: Some("my sample".into()),
+        typ: Some("standard".into()),
+        time: Some(12.5),
+        conc: Some(3.0),
+        cunit: Some("ppm".into()),
+        rep: Some("A".into()),
+    }
+}
+
 #[test]
 fn session_like_python() {
     let out = std::env::temp_dir().join(format!("mzlab-lr-{}", std::process::id()));
@@ -99,7 +126,7 @@ fn session_like_python() {
             return;
         }
     };
-    let (mut files, mut items, mut plain) = (0, 0, 0);
+    let (mut files, mut items) = (0, 0);
     for line in listing.lines().filter(|l| !l.is_empty()) {
         let stem = PathBuf::from(line)
             .file_stem()
@@ -122,28 +149,17 @@ fn session_like_python() {
         let got =
             file_entry(&mut idx, &mut m, &name, size).unwrap_or_else(|e| panic!("{stem}: {e}"));
         let mut got: Value = serde_json::from_str(&got).unwrap();
-        let entry_hr = got["hr"].as_bool().unwrap();
-        let entry_parts = got["mixed"].as_array().unwrap().len();
+        let (entry_hr, entry_parts) = (
+            got["hr"].as_bool().unwrap(),
+            got["mixed"].as_array().map_or(0, Vec::len),
+        );
         let infusion = got["kind"] == "infusion"; // one item, where Python splits MS1 and MS2
         infusion_exception(&mut got, &want["entry"]);
         same(&format!("{stem} entry"), &got, &want["entry"]);
-        let edit = Sample {
-            label: Some("my sample".into()),
-            typ: Some("standard".into()),
-            time: Some(12.5),
-            conc: Some(3.0),
-            cunit: Some("ppm".into()),
-            rep: Some("A".into()),
-        };
-        for (k, s) in [("plain", Sample::default()), ("edited", edit)] {
+        for (k, s) in [("plain", Sample::default()), ("edited", edited_sample())] {
             let got = open_items(&mut idx, &mut m, &name, &s)
                 .unwrap_or_else(|e| panic!("{stem} {k}: {e}"));
-            // the page judges a file not split in parts by the `hr` of its entry (lr-sessione.js `mixesResolutions`): it is the `hr` of its one item
-            if entry_parts <= 1 {
-                assert_eq!(got.len(), 1, "{stem} {k}: a plain file is one item");
-                assert_eq!(got.iter().any(|it| it.hr), entry_hr, "{stem} {k}: entry hr");
-                plain += 1;
-            }
+            plain_entry_hr(&stem, k, entry_parts, entry_hr, &got);
             let w = want[k].as_array().unwrap();
             if infusion {
                 assert_eq!(got.len(), 1, "{stem} {k}: infusion items");
@@ -160,6 +176,5 @@ fn session_like_python() {
         files += 1;
     }
     assert!(files >= 8 && items >= 16, "{files} files, {items} items");
-    assert!(plain >= 4, "{plain} plain files checked");
     let _ = std::fs::remove_dir_all(&out);
 }

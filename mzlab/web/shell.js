@@ -71,16 +71,14 @@ const roundc=(/** @type {number | string | null | undefined} */ v)=>v==null?null
 // concentration exists only for standards (in an MRM experiment they feed the calibration line)
 const isCal=(/** @type {FileRiga} */ f)=>f.type==="standard";
 // value from the name, in the unit of the table
-const concFrom=(/** @type {FileRiga} */ f)=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);
-// the table is repainted once per frame while files arrive from a loading (upload0 flushes at its end, with the proposals asked once for the whole batch); a merge outside a loading paints at once
-const MERGE=RUOLI.coalesce(()=>{sortFiles();renderFiles()},()=>RUOLI.propose(()=>ST.files).then((/** @type {unknown} */ c)=>{if(c){sortFiles();renderFiles()}}));
+const concFrom=(/** @type {FileRiga} */ f)=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);const FILETAB=RUOLI.coalesce(()=>{sortFiles();renderFiles()},()=>RUOLI.propose(()=>ST.files).then((/** @type {unknown} */ c)=>{if(c){sortFiles();renderFiles()}}));
 function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=false){const old=Object.fromEntries(ST.files.map((/** @type {FileRiga} */ f)=>[f.name,f]));
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed}});
   if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (campioni/2)
-  if(defer)MERGE.soon();else MERGE.flush(true)}
+  if(defer)FILETAB.soon();else FILETAB.flush(true)}
 // low- and high-resolution files cannot be opened together: a note offers the choice while both worlds are in the list, and the loading is paused while both are ticked; the most numerous world is preselected when files arrive
 const hrMixCount=()=>{const l=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD);return {lr:l.filter((/** @type {FileRiga} */ f)=>!f.hr).length,hr:l.filter((/** @type {FileRiga} */ f)=>f.hr).length,onLr:l.filter((/** @type {FileRiga} */ f)=>f.use&&!f.hr).length,onHr:l.filter((/** @type {FileRiga} */ f)=>f.use&&f.hr).length}};
 const hrMixed=()=>{const c=hrMixCount();return c.onLr>0&&c.onHr>0};
@@ -198,16 +196,13 @@ async function wiffToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} 
   // each sample (injection) is a file of the list: the .wiff and the .wiff.scan are read as they are
   for(const e of pairs){
     if(signal&&signal.aborted){CONVROWS.finish(e.row,"cancel");continue}
-    // a pair the browser storage already holds is a hit before anything is read; else the engine parses the pair while the module probes it (two workers): the engine reads the 3200 QTRAP only,
-    // and a file of another instrument or scan type is for the module («variante»), whose pair the parse is dropped for
+    // a cache hit comes before anything is read; else the engine parses the pair while the module probes it (two workers), and a «variante» pair drops the parse
     try{const mem=[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],M0=window.LETTORI_MOD;let sp=/** @type {Promise<{ samples: any[] }> | null} */ (null);const parsed=()=>sp||(sp=rb.nativeSamples(mem));
       const hit=await NATIVO.cached(rb,mem,ST.files||[],parsed);if(hit){for(const x of hit){CONVROWS.add(x.name,"open");CONVROWS.finish(x.name,"done",{scans:x.n_spectra||x.scans||0,kind:(x.mixed||[]).length>1?"mixed":x.kind,missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(x.name))||0,cached:true})}CONVROWS.drop(e.row);continue}      // the same pair again: its samples are in the list with their index, nothing is copied or read again
-      const probing=M0&&window.LETTORI_FAM.sciex.sonda,eng=probing?parsed():null;if(eng)eng.catch(()=>{});      // an engine error counts only when the module does not take the pair
-      const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;
+      const probing=M0&&window.LETTORI_FAM.sciex.sonda;if(probing)parsed().catch(()=>{});const pr=probing?await M0.probe("sciex",mem).catch(()=>null):null;      // an engine error counts only when the module does not take the pair
       if(pr&&pr.motivi.includes("variante")){const cs=pr.campioni.length?pr.campioni:[{id:1}];cs.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,x.id,cs.length>1,taken,x.name);taken.push(nm);res.files.push(M0.stand(nm,mem,i,"sciex",x.size))});CONVROWS.drop(e.row);continue}
       const s=(await parsed()).samples,key=NATIVO.key(e.stem);
-      // the module's answer for the pair holds for its samples (moduloWants)
-      s.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}
+      s.forEach((/** @type {{ id: number, name?: string, size?: number }} */ x,/** @type {number} */ i)=>{const nm=wiffName(e.stem,x.id,s.length>1,taken,x.name),f=NATIVO.sample(nm,key,mem,i,x.id,false,x.size);taken.push(nm);if(pr)f.mzlabNat.probed=pr;res.files.push(f)})}      // the module's answer for the pair holds for its samples (moduloWants)
     catch(x_){const x=/** @type {Lanciato} */(x_);const M=window.LETTORI_MOD,fam=M&&x.json?M.retriable(x.json.error||x.json.error_key):"";if(fam)res.files.push(M.stand(wiffName(e.stem,1,false,taken),[{name:e.wiff.name,blob:e.wiff},{name:e.scan.name,blob:e.scan}],0,fam));
       // the pair cannot be read: the error stays on its row, with «Details» and the trace
       else{const er=x.json?I18N.err(x.json):x;CONVROWS.finish(e.row,"fail",{msg:er.message,diag:DIAG.da(er,{name:e.scan.name,size:e.wiff.size+e.scan.size})});continue}}
@@ -317,7 +312,7 @@ async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AV
   if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
-  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{MERGE.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok())}}}
+  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok())}}}
 async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | undefined} */ into,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){
   const rep=/** @type {CaricaRep} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {FileCarica[]} */ ([]);
   const one=async (/** @type {FileCarica} */ f)=>{const isDam=isMethodFile(f.name);
@@ -355,7 +350,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   for(const f of files){PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0)}
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
-  MERGE.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
+  FILETAB.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{const go=flowOpen(e.target),p=CartCarica.fromInput(e.target.files);e.target.value="";if(go)p.then(idle).then(directDone)};
