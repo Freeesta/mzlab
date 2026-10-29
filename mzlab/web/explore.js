@@ -319,8 +319,10 @@ function uiSave(now = false) {
   if (now) run(); else uiTimer = setTimeout(run, 800);
 }
 // when the page closes (or the tab goes to the background) save at once: the last change is not lost
-addEventListener("pagehide", () => uiSave(true));
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
+// (nbSave too: with no file open uiSave has nothing to write, but the Disegno or Flow fields of NB may still be waiting in the 500 ms timer)
+const flushAll = () => { uiSave(true); nbSave(true); };
+addEventListener("pagehide", flushAll);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushAll(); });
 
 // colours of the saved images: always the light theme, whatever the page theme is (so a PNG is the same in light and dark); css() everywhere else
 const EXPORT_LIGHT = { "--panel": "#ffffff", "--line": "#e2e5ea", "--ink": "#25282c", "--muted": "#5e6676", "--accent": "#2b5c8a", "--warn": "#92400e", "--sel": "#edf2f8", "--soft": "#f0f3f6", "--bg": "#ffffff", "--diff-pos": "#D55E00", "--diff-neg": "#0072B2" };
