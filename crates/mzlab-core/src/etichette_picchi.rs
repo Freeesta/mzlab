@@ -23,6 +23,7 @@ pub const SKIP_FIN_FRAC: f64 = 0.25;
 
 /// Two apexes of one label are two peaks only if the smoothed, baseline-corrected trace between them falls under this fraction of the lower apex.
 /// The detector's own merge works in samples, so a broad peak sampled finely keeps two apexes (jitter, shoulder) that must not get two labels.
+/// A valley shallower than the noise of the trace is not a valley either, whatever the fraction: on a noisy top the ripple is deeper than 15 % of the apex.
 pub const VALLEY_FRAC: f64 = 0.85;
 
 /// At most `max_n` peaks with S/N ≥ `snr_min` and height ≥ `rel_min` times the tallest candidate, by increasing RT.
@@ -42,7 +43,7 @@ pub fn select(
     }
     // the peaks come by decreasing height; `ys` is the trace they were found on, the one the valleys are measured on
     let det = detect_full(&rt[..n], &y[..n], Params::default());
-    let (found, ys) = (det.peaks, det.ys);
+    let (found, ys, noise) = (det.peaks, det.ys, det.noise);
     let (t0, t1) = (rt[0], rt[n - 1]);
     let span = t1 - t0;
     let (lo, hi) = if skip_ends {
@@ -59,7 +60,8 @@ pub fn select(
         let same = cands.iter().any(|q| {
             let (a, b) = (p.apex_i.min(q.apex_i), p.apex_i.max(q.apex_i));
             let valley = ys[a..=b].iter().copied().fold(f64::INFINITY, f64::min);
-            valley >= VALLEY_FRAC * ys[p.apex_i].min(ys[q.apex_i])
+            let lower = ys[p.apex_i].min(ys[q.apex_i]);
+            valley >= VALLEY_FRAC * lower || lower - valley <= noise
         });
         if !same {
             cands.push(p);

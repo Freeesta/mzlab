@@ -207,3 +207,21 @@ fn two_real_peaks_keep_their_labels() {
     let l = select(&rt, &y, 12, 0.05, 5.0, true);
     assert_eq!(l.len(), 2, "{l:?}");
 }
+
+#[test]
+fn a_ripple_shallower_than_the_noise_is_not_a_second_peak() {
+    // ±20 % of the peak on the top of a +4.5e8 peak over 5e8: the ripple on the rising flank dips to 84 % of its apex, under the noise
+    let rt: Vec<f64> = (0..3571).map(|i| i as f64 * 0.0042).collect();
+    let y: Vec<f64> = rt
+        .iter()
+        .enumerate()
+        .map(|(i, &t)| 5e8 + gauss(t, 5.63, 0.06, 4.5e8) + 1e8 * noise(i + 200_000))
+        .collect();
+    let l = select(&rt, &y, 12, 0.05, 5.0, true);
+    let near: Vec<f64> = l
+        .iter()
+        .filter(|l| (l.rt - 5.63).abs() < 0.4)
+        .map(|l| l.rt)
+        .collect();
+    assert_eq!(near.len(), 1, "{near:?}");
+}
