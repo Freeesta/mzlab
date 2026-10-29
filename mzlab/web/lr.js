@@ -137,9 +137,7 @@ export function createLr({ rb }) {
       const name = String(e.file || "");
       for (const it of items) {
         if (name !== it.file && name !== it.file.split("#")[0]) continue;
-        if (["sample", "blank", "standard"].includes(e.type)) it.type = e.type;
-        // the roles of campioni/2 (role, sub, tconf) travel with the item: the page reads them back with the session
-        for (const k of ["role", "sub", "tconf"]) if (k in e) it[k] = e[k];
+        if (["sample", "blank", "standard"].includes(e.type)) it.type = e.type;      // the roles of campioni/2 (role, sub, tconf) travel with the item: the page reads them back with the session; for (const k of ["role", "sub", "tconf"]) if (k in e) it[k] = e[k];
         if ("time" in e) it.time = num(e.time);
         if ("conc" in e) it.conc = num(e.conc);
         if ("cunit" in e) it.cunit = e.cunit || null;
