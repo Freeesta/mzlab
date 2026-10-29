@@ -10,6 +10,7 @@ import { migra, rowOf } from "./migra.js";
 import { limpia } from "./pulizia.js";
 import { infoDi, nuovo } from "./manifesto.js";
 import { createPool, poolSize, makeGate } from "./idxpool.js";
+import { createBufPool } from "./bufpool.js";
 import { createLabOps } from "./rust-worker-lab.js";
 import { createNativo } from "./rust-nativo.js";
 import { createImpronte } from "./impronta.js";
@@ -18,14 +19,10 @@ import { msnGrafo, msnLibAggiungi, msnLibCerca } from "./rust-msngrafo.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
 let engine = null, wasmMem = null;
-const pool = [];                       // ArrayBuffers handed back by the page, ready to be written again
+const bufs = createBufPool();          // ArrayBuffers handed back by the page, ready to be written again
 const blobs = new Map();               // slot -> Blob (read synchronously, block by block, by the WASM reader)
 
-const take = len => {
-  const need = len * 8;
-  const i = pool.findIndex(b => b.byteLength >= need);
-  return new Float64Array(i >= 0 ? pool.splice(i, 1)[0] : new ArrayBuffer(Math.max(need, 64 << 10)), 0, len);
-};
+const take = len => bufs.take(len);
 // The page compiles the .wasm once and sends it first ({ op: "module", module }; null = compile it here); any other first message starts it too.
 let startInit = /** @type {(m: any) => void} */ (() => {}), wasmModule = null;
 const started = new Promise(res => { startInit = res; });
@@ -70,8 +67,9 @@ async function tilesDrop(/** @type {string | null} */ name, /** @type {Set<strin
 // `held` = [kind, name] of a file with a read lease in archivio.js (the index in use): read straight from its SyncAccessHandle into a buffer reused by the next read (the WASM
 // copies it at once); no handle, or a short read -> the FileReaderSync of the Blob. `rdStat` counts the time spent inside the readers (sent with every answer: tools/bench_mappa.py)
 const rdStat = { ms: 0, n: 0, bytes: 0, hand: 0 };
+const frSync = new FileReaderSync();   // one reader for every file: it holds no state between reads
 function readerFor(blob, held) {
-  const fr = new FileReaderSync();
+  const fr = frSync;
   let buf = held ? new Uint8Array(0) : null;   // grown to the block the WASM asks for (BLOCK in mzlab-wasm)
   return (offset, length) => {
     const t = performance.now();
@@ -401,7 +399,7 @@ function lowerBudget(/** @type {any} */ m) {                                    
 async function handle(ev) {
   const m = ev.data;
   if (m.op === "module") { startInit(m.module); return; } startInit(null); if (m.op === "policy") { await ready; applyPolicy(m); return; }
-  if (m.op === "recycle") { for (const b of m.bufs) if (b.byteLength) pool.push(b); if (pool.length > 8) pool.splice(0, pool.length - 8); return; }
+  if (m.op === "recycle") { bufs.give(m.bufs); return; }
   await ready;
   await ARCH.wake();                                                              // the read handles parked while idle are reopened before the request reads
   const { id } = m;

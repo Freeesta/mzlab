@@ -322,6 +322,7 @@ I18N.add("it", {
   "calc.clear": "Azzera",
   "calc.eq": "Risultato (Invio)",
   "dda.off": "Funzione DDA non disponibile per questo file",
+  "dda.slow": "Il pannello MS2 non si è aperto in tempo: riprova",
   "dda.none": "Nessuna MS2 di {ion}: il DDA non l'ha scelto.",
   "dda.mixed": "È però dentro la finestra di isolamento di {n, plural, one {# MS2 di un altro precursore} other {# MS2 di altri precursori}}: ← → per vederle (spettri misti).",
   "dda.click": "Clicca una bandierina ▼ nella Full Scan, o un triangolino sul cromatogramma, per vedere una MS2.",
