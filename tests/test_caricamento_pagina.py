@@ -145,3 +145,24 @@ def test_drop_of_a_cancelled_conversion_is_retried(tmp_path):
       process.exit(0);
     """)
     assert r == [True, "d.mzML"]
+
+
+def test_numpress_variant_looks_to_the_end_of_the_first_spectrum(tmp_path):
+    r = esm(tmp_path, ["lettori-modulo.js"], """
+      globalThis.window = globalThis; window.LETTORI_FAM = {};
+      globalThis.Worker = class { postMessage() {} terminate() {} };
+      const cv = a => `<cvParam accession="${a}"/>`;
+      const doc = (mz, inten, tail = "</spectrum>") => `<mzML><spectrum><binaryDataArrayList>${mz}<binary>${"A".repeat(100000)}</binary>${inten}<binary>AAAA</binary></binaryDataArrayList>${tail}</mzML>`;
+      const file = (txt, name = "x.mzML") => Object.assign(new Blob([txt]), { name });
+      const M = (await import("./lettori-modulo.js")).default;
+      const out = [
+        await M.variante(file(doc(cv("MS:1000523"), cv("MS:1002746")))),                          // intensity numpress after >64 KB of plain m/z
+        await M.variante(file(doc(cv("MS:1000523"), cv("MS:1000521")))),                          // plain file
+        await M.variante(file(doc(cv("MS:1002312"), cv("MS:1000521")).slice(0, 70000))),          // truncated, numpress in the head
+        await M.variante(file(doc(cv("MS:1000523"), cv("MS:1002746")).slice(0, 80000))),          // truncated before the accession
+        await M.variante(file(doc(cv("MS:1000523"), cv("MS:1002746")), "x.txt")),                 // not an mzML name
+      ];
+      console.log(JSON.stringify(out));
+      process.exit(0);
+    """)
+    assert r == ["aperti", "", "aperti", "", ""]
