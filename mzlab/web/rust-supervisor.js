@@ -17,13 +17,14 @@ export function oomSign(/** @type {{ panic?: string | null, text?: string, mem?:
   return /unreachable|rust_oom|out of memory|memory access|memoryBudget/i.test(String((info && (info.panic || info.text)) || "")) && Math.max(peak, (info && info.mem) || 0) > 64 * 1048576;
 }
 
-// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then the policy of the memory budget (what the engine decides it from),
+// Orders the messages to a worker: the compiled module goes first (null = it compiles by itself), then (once the growth probe is known) the policy of the memory budget (what the engine decides it from),
 // then the budget when the supervisor lowered it (the level of the session), then the step down after a death by lack of memory (`down()`: {current, strikes} or null,
 // asked once from Rust's `budget_down`), then everything else in the order sent. `ready` resolves when the growth probe is known, so the policy carries it.
 export function ordered(/** @type {any} */ w, /** @type {() => Promise<WebAssembly.Module | null>} */ compile, /** @type {() => number} */ budget, /** @type {() => number} */ nextId, /** @type {() => object | null} */ policy = () => null, /** @type {() => Promise<unknown>} */ ready = () => Promise.resolve(), /** @type {() => object | null} */ down = () => null) {
   let sent = false;
-  const first = Promise.all([compile(), ready()]).then(([module]) => {
-    w.postMessage({ op: "module", module }); const p = policy(); if (p) w.postMessage({ op: "policy", ...p });
+  // The module is posted as soon as it is compiled so the worker instantiates the .wasm while the probe runs; only the policy (which carries the probe) waits for `ready`.
+  const first = compile().then(module => { w.postMessage({ op: "module", module }); return ready(); }).then(() => {
+    const p = policy(); if (p) w.postMessage({ op: "policy", ...p });
     if (budget()) w.postMessage({ op: "budget", mb: budget(), id: nextId() });
     const d = down(); if (d) w.postMessage({ op: "down", ...d });
     sent = true;
