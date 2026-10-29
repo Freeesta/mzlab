@@ -2,7 +2,7 @@
 //! and the main peak of the spectrum taken at an apex (base peak m/z of an MS scan, absorbance maximum of a UV spectrum).
 //! Used by the chromatogram drawing through `mzlab-wasm`; the peaks come from `peaks::detect_peaks`, no second detector.
 
-use crate::peaks::{detect_peaks, Params};
+use crate::peaks::{detect_full, Params};
 
 /// A peak chosen for a label: index of the apex in the trace, its RT, the height of the peak and its S/N.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -21,6 +21,10 @@ pub const SKIP_FIN_MIN: f64 = 5.0;
 pub const SKIP_INI_FRAC: f64 = 0.15;
 pub const SKIP_FIN_FRAC: f64 = 0.25;
 
+/// Two apexes of one label are two peaks only if the smoothed, baseline-corrected trace between them falls under this fraction of the lower apex.
+/// The detector's own merge works in samples, so a broad peak sampled finely keeps two apexes (jitter, shoulder) that must not get two labels.
+pub const VALLEY_FRAC: f64 = 0.85;
+
 /// At most `max_n` peaks with S/N ≥ `snr_min` and height ≥ `rel_min` times the tallest candidate, by increasing RT.
 /// With `skip_ends` (`rt` in minutes) the peaks in the first and last minutes of the run are not candidates; labels only: the detector and everything else still see them.
 /// A spectrum (nm axis) is labelled with `skip_ends` false.
@@ -36,8 +40,9 @@ pub fn select(
     if n < 3 || max_n == 0 {
         return Vec::new();
     }
-    // detect_peaks returns the peaks by decreasing height
-    let found = detect_peaks(&rt[..n], &y[..n], Params::default());
+    // the peaks come by decreasing height; `ys` is the trace they were found on, the one the valleys are measured on
+    let det = detect_full(&rt[..n], &y[..n], Params::default());
+    let (found, ys) = (det.peaks, det.ys);
     let (t0, t1) = (rt[0], rt[n - 1]);
     let span = t1 - t0;
     let (lo, hi) = if skip_ends {
@@ -48,10 +53,18 @@ pub fn select(
     } else {
         (t0, t1)
     };
-    let cands: Vec<_> = found
-        .iter()
-        .filter(|p| (lo..=hi).contains(&rt[p.apex_i]))
-        .collect();
+    let mut cands: Vec<&crate::peaks::Peak> = Vec::new();
+    for p in found.iter().filter(|p| (lo..=hi).contains(&rt[p.apex_i])) {
+        // a taller peak already kept without a real valley between: same peak
+        let same = cands.iter().any(|q| {
+            let (a, b) = (p.apex_i.min(q.apex_i), p.apex_i.max(q.apex_i));
+            let valley = ys[a..=b].iter().copied().fold(f64::INFINITY, f64::min);
+            valley >= VALLEY_FRAC * ys[p.apex_i].min(ys[q.apex_i])
+        });
+        if !same {
+            cands.push(p);
+        }
+    }
     // the threshold is relative to the tallest candidate: a huge solvent peak must not hide the real ones
     let top = cands.iter().map(|p| p.height).fold(0.0, f64::max);
     let mut out: Vec<Label> = cands
