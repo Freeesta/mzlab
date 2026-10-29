@@ -1,6 +1,6 @@
 """Lab variant of the site (MZLAB_LAB=1): only Data and Draw, expiry page, banner, noindex; the normal build is left alone.
 Builds both sites and serves them. Run from the repo root: python3 tests_e2e/e2e_lab.py  """
-import os, subprocess, sys, tempfile, time
+import os, socket, subprocess, sys, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -19,7 +19,12 @@ def build(name, lab):
     port = free_port()
     procs.append(subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(port), str(tmp / name)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
     return f"http://127.0.0.1:{port}/"
-LAB = build("lab", True); NORMAL = build("normal", False); time.sleep(1)
+LAB = build("lab", True); NORMAL = build("normal", False)
+for u in (LAB, NORMAL):          # wait for the servers to listen (state, not a pause)
+    port = int(u.rsplit(":", 1)[1].strip("/"))
+    while True:
+        try: socket.create_connection(("127.0.0.1", port), timeout=1).close(); break
+        except OSError: pass
 ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode is what loads Tabui and mzFlow
 CLOCK = "(()=>{const R=Date,t=R.parse('%s');class D extends R{constructor(...a){a.length?super(...a):super(t)}static now(){return t}};window.Date=D})()"      # fake clock
 NAV = "[...document.querySelectorAll('#nav button')].map(b => b.dataset.v)"
