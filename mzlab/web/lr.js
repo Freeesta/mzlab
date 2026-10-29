@@ -115,7 +115,7 @@ export function createLr({ rb }) {
       rows.push({ file: n, label: s.label ?? null, type: s.type ?? "sample", time: num(s.time), conc: num(s.conc), cunit: s.cunit ?? null, rep: s.rep ?? null });
     }
     if (!rows.length) return fail("err.session.noFiles", {}, "add at least one file");
-    if (Array.isArray(body.all) && body.all.length > rows.length && !body.append && await mixesResolutions(rpc, body.all.map(safeName), n => n && files.has(n))) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
+    if (Array.isArray(body.all) && body.all.length > rows.length && !body.append && await mixesResolutions(rpc, body.all.map(safeName), n => n && files.has(n), n => files.get(n))) return fail("err.hr.mix", {}, "low- and high-resolution files cannot be mixed");
     const add = [], appended = !!(body.append && items);
     let h = appended ? hr : false, l = appended ? lr : false;
     for (const r of rows) {
