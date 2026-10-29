@@ -131,7 +131,9 @@ const CONVROWS = {
     this.dirty.add(r);
     if (this.tq) return;
     const go = () => { const d = [...this.dirty]; this.dirty.clear(); for (const x of d) this.fill(x); };
-    go(); this.tq = setTimeout(() => { this.tq = 0; if (this.dirty.size) { go(); this.tq = setTimeout(() => { this.tq = 0; }, 100); } }, 100);
+    // every window that ends with changes flushes them and opens the next one, so a change is never left waiting for the clock tick
+    const arm = () => { this.tq = setTimeout(() => { this.tq = 0; if (this.dirty.size) { go(); arm(); } }, 100); };
+    go(); arm();
   },
   // the part of the bar already done (the download of an example file): the next phase starts from here
   base(/** @type {string} */ name, /** @type {number} */ pc) { const r = this.find(name); if (r) { r.floor = pc; r.mono = true; } },
@@ -421,8 +423,16 @@ function convTotalPercent(/** @type {number[]} */ sizes, /** @type {number} */ i
 // name of the mzML made from a .raw: "x.raw" -> "x.mzML"; when that name is taken (a real x.mzML in the same loading or already open) the extension
 // stays in the key, "x.raw.mzML", so both files are listed. `taken`: names (any case) that are already in use.
 function convName(/** @type {string} */ rawName, /** @type {Iterable<string> | null | undefined} */ taken) {
-  const base = String(rawName).replace(/\.raw$/i, ""), used = new Set([...(taken || [])].map(n => String(n).toLowerCase()));
-  return used.has((base + ".mzML").toLowerCase()) ? base + ".raw.mzML" : base + ".mzML";
+  const base = String(rawName).replace(/\.raw$/i, "");
+  return freeMzml(base, ".raw", new Set([...(taken || [])].map(n => String(n).toLowerCase())));
+}
+// "base.mzML", else "base<ext>.mzML", else "base_2<ext>.mzML", "base_3<ext>.mzML"...: a third file with the same name never takes the name of the second
+function freeMzml(/** @type {string} */ base, /** @type {string} */ ext, /** @type {Set<string>} */ used) {
+  if (!used.has((base + ".mzML").toLowerCase())) return base + ".mzML";
+  for (let i = 1; ; i++) {
+    const name = (i === 1 ? base : base + "_" + i) + ext + ".mzML";
+    if (!used.has(name.toLowerCase())) return name;
+  }
 }
 // name of the mzML of a sample of a SCIEX .wiff: DATA name if present, else "x.mzML" or "x_s3.mzML" (sample number); "x.wiff.mzML" when taken
 function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sample, /** @type {boolean} */ several, /** @type {Iterable<string> | null | undefined} */ taken, /** @type {string | null | undefined} */ sampleName) {
@@ -435,7 +445,7 @@ function wiffName(/** @type {string} */ stem, /** @type {number | string} */ sam
   } else {
     base = several ? stem + "_s" + sample : String(stem);
   }
-  return used.has((base + ".mzML").toLowerCase()) ? base + ".wiff.mzML" : base + ".mzML";
+  return freeMzml(base, ".wiff", used);
 }
 // the short word of the state of a row (CONVROWS.short): the phase without numbers
 function convStKey(/** @type {string} */ state) { return /** @type {Record<string, string>} */ ({ open: "conv.st.open", nopen: "conv.st.open", get: "conv.st.get", load: "conv.st.load", idx: "conv.st.index", index: "conv.st.index", wait: "conv.st.wait", run: "conv.st.run", conv: "conv.st.conv", nread: "conv.st.read", nscan: "conv.st.scans", nchrom: "conv.st.chrom" })[state] || "conv.st.wait"; }
@@ -447,4 +457,4 @@ function convElapsed(/** @type {number} */ ms) {
   return (h ? h + ":" + String(m).padStart(2, "0") : String(m)) + ":" + String(r).padStart(2, "0");
 }
 
-if (typeof module !== "undefined") module.exports = { convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
+if (typeof module !== "undefined") module.exports = { CONVROWS, convName, wiffName, convRowKey, convStKey, convPhase, convFraction, convPercent, convTotalPercent, convElapsed, convMB };
