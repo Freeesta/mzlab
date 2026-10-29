@@ -342,7 +342,14 @@ pub fn apri_solo(
 /// The index of an injection: one row per non-empty scan block (the heads of the blocks are read through a window, front to back).
 fn build(p: &mut Parte, scan: &mut Box<dyn ReadAt>, scan_len: u64, member: u16) -> Result<()> {
     let w = &p.w;
-    let mut win = Window::new(scan, scan_len);
+    // only the head of each block is read here (`scan::HEAD_MAX`): the window stops after the last head, not at the end of the last block (the end of the file)
+    let stop = w
+        .records
+        .iter()
+        .map(|r| r.at.saturating_add(scan::HEAD_MAX as u64).min(r.end))
+        .max()
+        .unwrap_or(0);
+    let mut win = Window::until(scan, scan_len, stop);
     let (mut scans, mut indice) = (Vec::new(), Vec::new());
     #[cfg_attr(not(feature = "sciex"), allow(unused_mut, unused_variables))]
     let mut other = false;

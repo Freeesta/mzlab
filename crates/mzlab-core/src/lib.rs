@@ -88,6 +88,7 @@ pub mod lettori;
 pub mod trasporto;
 pub mod lettori_centroidi;
 pub mod lettori_mzml;
+pub mod lettori_sessione;
 pub mod conv;
 pub mod metodo;
 pub mod metodo_campi;

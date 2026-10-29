@@ -75,7 +75,7 @@ pub fn decode(buf: &[u8], n: usize) -> Vec<(u64, u32)> {
 }
 
 /// Longest header: marker (8) + three ranges (96) + the point count (4).
-const HEAD_MAX: usize = 108;
+pub(super) const HEAD_MAX: usize = 108;
 const TOF_START: [u8; 4] = [0xff; 4];
 
 pub(super) fn bad(detail: impl ToString) -> Error {
