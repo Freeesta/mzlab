@@ -10,6 +10,7 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::Posizione;
 use crate::stima;
+use head_read::read_head;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
 
@@ -542,6 +543,7 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     None
 }
 
+mod head_read;
 mod inerte;
 mod json;
 mod rows;
@@ -730,36 +732,6 @@ fn count_chromatograms<R: ReadAt>(src: &mut Source<'_, R>, last_end: u64) -> Res
 /// Reads the scan table of an mzML of `size` bytes.
 pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
     read_in(r, size, None)
-}
-
-/// The header of the file (instrument configurations, default one): one read of up to 4 MB, whose bytes also serve the head text and the
-/// `<run ` tag text when they lie inside it; the source is read again only for what falls outside.
-fn read_head<R: ReadAt>(src: &mut Source<'_, R>) -> Result<Head> {
-    let size = src.size;
-    let first = src.read(0, size.min(4 << 20))?;
-    let head_end = find(&first, b"<run ").map(|p| p as u64);
-    let head_hi = head_end.unwrap_or(200000.min(size));
-    let run_lo = head_end.unwrap_or(0);
-    let run_hi = (run_lo + 2000).min(size);
-    let fit = |a: u64, b: u64| b <= first.len() as u64 && a <= b;
-    let head_own;
-    let head_bytes: &[u8] = if fit(0, head_hi) {
-        &first[..head_hi as usize]
-    } else {
-        head_own = src.read(0, head_hi)?;
-        &head_own
-    };
-    let run_own;
-    let run_text: &[u8] = if fit(run_lo, run_hi) {
-        &first[run_lo as usize..run_hi as usize]
-    } else {
-        run_own = src.read(run_lo, run_hi)?;
-        &run_own
-    };
-    Ok(Head::parse(
-        &String::from_utf8_lossy(head_bytes),
-        &String::from_utf8_lossy(run_text),
-    ))
 }
 
 /// `read` that refuses in order (`error.memoryBudget`, phase `table`) when the rows would not fit in `budget`: the estimate (`stima`) is made from the
