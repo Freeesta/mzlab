@@ -93,6 +93,13 @@ const ADDUCT_ATOMS: [Adduct; 11] = [
     ("[M]+", &[], 1),
     ("[M]-", &[], -1),
 ];
+/// The atoms an adduct of the table adds to M (negative: it takes them away) and the sign of its charge.
+pub fn adduct_atoms(name: &str) -> Option<(&'static [(&'static str, i64)], i32)> {
+    ADDUCT_ATOMS
+        .iter()
+        .find(|(n, _, _)| *n == name)
+        .map(|&(_, a, z)| (a, z))
+}
 const RATIO_RULES: [(&str, &str, f64, f64); 8] = [
     ("HC", "H", 0.2, 3.1),
     ("NC", "N", 0.0, 1.3),

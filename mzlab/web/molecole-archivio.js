@@ -55,9 +55,20 @@ export const mieMolecole = () => mie.slice();
 /** The level of a molecule found by the search: the one of the user's copy when there is one, else the catalogue. */
 export const livello = (/** @type {string} */ id) => (mie.find(m => m.id === id) || { origine: { tipo: "catalogo" } }).origine.tipo;
 
-export async function cerca(/** @type {string} */ q, limite = 8, ppm = 10) {
+export async function cerca(/** @type {string} */ q, limite = 8, ppm = 10, ampia = false) {
   await pronto();
-  return /** @type {Promise<Trovata[]>} */ (json("cerca", { q, limite, ppm }));
+  return /** @type {Promise<Trovata[]>} */ (json("cerca", ampia ? { q, limite, ppm, ampia } : { q, limite, ppm }));
+}
+
+/** The names of the adduct table of the engine. */
+export const addotti = async () => /** @type {Promise<string[]>} */ (json("addotti", {}));
+
+/** What a typed formula (an ion with the atoms of `adduct` inside) or m/z is as a neutral molecule: `{kind, adduct, formula, massa, mz}`; `adduct` is `neutral` or a name of `addotti()`. Rejects with the key of the engine's error. */
+export async function ione(/** @type {string} */ q, /** @type {string} */ adduct) {
+  const r = await fetch("api/molecules/ione", { method: "POST", body: JSON.stringify({ q, adduct }) });
+  const j = await r.json();
+  if (!r.ok || j.error_key) throw Object.assign(new Error(j.error_key || "ione"), { key: j.error_key || "", params: j.params || {} });
+  return /** @type {{ kind: "formula" | "mass", adduct: string, formula: string, massa: number, mz: number | null }} */ (j);
 }
 
 export async function prendi(/** @type {string} */ id) {

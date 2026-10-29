@@ -32,6 +32,14 @@ def test_loading_helpers_of_the_worker(tmp_path):
     assert r.stdout.strip() == "ok"
 
 
+def test_native_members_are_read_through_read_only_handles_for_the_call(tmp_path):
+    """toMzml and srm of a maker's sample read the OPFS copies through read-only handles (0 FileReaderSync reads, same bytes); a reader kept after close() falls back to the Blob."""
+    _copy_modules(tmp_path)
+    r = subprocess.run(["node", str(ROOT / "tests" / "lettura_nativi_node.mjs"), str(tmp_path)], capture_output=True, text=True, check=False)
+    assert r.returncode == 0, (r.stdout + r.stderr)[-3000:]
+    assert r.stdout.strip() == "ok"
+
+
 def test_every_close_of_an_lr_slot_forgets_the_open_index_gate():
     """lrOpen skips open_index for an index it already opened: whatever closes the engine's slots must make the gate forget, or the next lrOpen finds the slot empty (badIndex, files never ready)."""
     src = (WEB / "rust-worker.js").read_text(encoding="utf-8")

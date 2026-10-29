@@ -16,7 +16,8 @@ Solo inglese. Una griglia ARIA a righe virtuali (`role=grid`, `aria-rowcount`, `
 - Ordina con l'intestazione (`aria-sort`), filtra con colonna + testo (chip rimovibili), raggruppa per matrice, gruppo o condizione (bordo e fondo alternato sui gruppi). Bersagli di almeno 28 px, colori solo da variabili CSS.
 
 ## Avvisi e Rust
-- `valida` → avvisi per cella (`colonna`, `file` = indice di riga): segno `✖`/`⚠` più bordo, `aria-invalid` sugli errori, riga con coppia mancante (`pairMissing`) con bordo tratteggiato; la cella attiva scrive il suo avviso in un `role=status` e un secondo `role=status` riassume errori, avvisi e avvisi di serie.
+- `valida` → avvisi per cella (`colonna`, `file` = indice di riga): segno `✖`/`⚠` più bordo, `aria-invalid` sugli errori, riga con coppia mancante (`pairMissing`) con bordo tratteggiato; la cella attiva scrive il suo avviso in un `role=status` e un secondo `role=status` riassume in parole («6 times guessed from file names: check them.», «N other problems to fix.», «N warnings.», «No problems found.», più gli avvisi di serie).
+- I tempi letti dai nomi (`timeUnconfirmed`) hanno il pulsante «Confirm guesses» (`mg.confirm`, visibile solo se ce ne sono): mette `tempo_confermato: true` su tutte quelle righe in un colpo e `valida` ricontrolla; la gravità in Rust non cambia.
 - «Fill from name pattern…» (`modello`, predefinito `{campione_id}`): anteprima delle prime 8 righe con le parti catturate (`posizioni`) e i nomi senza corrispondenza; «Apply» scrive. «Read file data» (`dal_file`) e «Generate metadata» da Dati; «Export CSV» (`csv_scrivi`, separatore a scelta) e «Download JSON».
 
 ## Prove
