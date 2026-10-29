@@ -2,10 +2,8 @@
 // @ts-strict
 // Safe reading of JSON files that students exchange (.mzflow, notebook, lists): size and depth caps before parsing, no key that can
 // reach the prototype, and a copy that keeps only known keys of the same type. Content is data and is never evaluated.
-const FILESICURI = (() => {
-  const MAX_BYTES = 8 * 1024 * 1024, MAX_DEPTH = 32, MAX_NODES = 500000;
-  const BAD_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-
+// Single-pass scanners over JSON text (outside strings, no recursion), used by FILESICURI.parse for its caps.
+const JSONSCAN = (() => {
   /** Deepest nesting of [] and {} outside strings, found without recursion (a deep file must not exhaust the stack).
    * @type {(text: string) => number} */
   function depthOf(text) {
@@ -35,6 +33,12 @@ const FILESICURI = (() => {
     }
     return n;
   }
+  return { depthOf, countNodes };
+})();
+
+const FILESICURI = (() => {
+  const MAX_BYTES = 8 * 1024 * 1024, MAX_DEPTH = 32, MAX_NODES = 500000;
+  const BAD_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
   /** Error whose message is the reason code and whose `key` is the i18n key of its text.
    * @type {(code: "tooBig" | "tooDeep") => Error & { key: string }} */
@@ -46,12 +50,12 @@ const FILESICURI = (() => {
   function parse(text, lim = {}) {
     const { maxBytes = MAX_BYTES, maxDepth = MAX_DEPTH, maxNodes = MAX_NODES } = lim;
     if (typeof text !== "string" || text.length > maxBytes) throw fail("tooBig");
-    if (depthOf(text) > maxDepth) throw fail("tooDeep");
+    if (JSONSCAN.depthOf(text) > maxDepth) throw fail("tooDeep");
     // Fast path: without a backslash a forbidden key can only be written literally, so a text that holds none of the names needs no reviver
     // (a JSON escape such as \u005f would hide the name from the search, hence the backslash test); the node cap is then counted by countNodes
     if (!text.includes("\\") && !/__proto__|constructor|prototype/.test(text)) {
       const v = JSON.parse(text);
-      if (countNodes(text) > maxNodes) throw fail("tooBig");
+      if (JSONSCAN.countNodes(text) > maxNodes) throw fail("tooBig");
       return v;
     }
     let n = 0;
@@ -93,5 +97,5 @@ const FILESICURI = (() => {
   /** @type {(v: any, lo: number, hi: number) => number | null} */
   const num = (v, lo, hi) => typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : null;
 
-  return { parse, readJson, readText, assignKnown, num, depthOf, countNodes };
+  return { parse, readJson, readText, assignKnown, num, depthOf: JSONSCAN.depthOf, countNodes: JSONSCAN.countNodes };
 })();
