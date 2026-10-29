@@ -56,6 +56,7 @@ declare var CartPP: any;
 declare var CartPunt: any;
 declare var CartPuntApri: any;
 declare var CartPuntDesk: any;
+declare var CartPuntScan: any;
 declare var CartPuntVista: any;
 declare var ConvUI: any;
 declare var DASHES: any;
