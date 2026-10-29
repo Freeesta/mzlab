@@ -124,7 +124,7 @@ jobs:
           python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}-${{ matrix.parte }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} "${alvo[@]}"
       - name: Cache content (sizes in MB)
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' }}
-        run: du -sm target/* target/*/* target/*/*/* ~/.cargo/registry ~/.cargo/bin 2>/dev/null | sort -rn | head -40
+        run: du -sm target/debug/* target/fam/* target/fam/*/* target/fam/*/*/* 2>/dev/null | sort -rn | head -40
       # time per test file for tools/ci_metrics.py (small, kept 3 days)
       - name: Test durations
         if: ${{ !cancelled() && hashFiles(format('junit-{0}-{1}.xml', matrix.python, matrix.parte)) != '' }}
