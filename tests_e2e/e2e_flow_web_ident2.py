@@ -95,6 +95,11 @@ F1 = (out / "f1.json").read_text()
 WEB = json.loads(json.dumps(PLAN))
 WEB["inputs"].append({"name": "f1.json", "sha256": hashlib.sha256(F1.encode()).hexdigest(), "type": "formulas"})
 WEB["steps"] = [s for s in WEB["steps"] if s["id"] != "f1"]
+# the page widens the one scan input of a plan to every file it holds
+WEB["inputs"] = [i for i in WEB["inputs"] if i["type"] != "raw" or i["name"] == NAMES[0] + ".mzML"]
+for s_ in WEB["steps"]:
+    for k, v in s_["in"].items():
+        if v == FILES: s_["in"][k] = [FILES[0]]
 for s_ in WEB["steps"]:
     for k, v in s_["in"].items():
         if v == "f1.formulas": s_["in"][k] = "file:f1.json"
