@@ -154,6 +154,7 @@ fn ciclo(
         livello: v.livello,
         numpress: false,
         thread: 1,
+        dad: false,
     };
     let uscita: Box<dyn Write> = if v.su_file {
         Box::new(BufWriter::with_capacity(
@@ -221,6 +222,7 @@ fn byte_di(l: &mut dyn Lettore, h: &Header, profilo: bool, v: Variante) -> u64 {
         livello: v.livello,
         numpress: false,
         thread: 1,
+        dad: false,
     };
     let mut w = MzmlWriter::con_opzioni(Sink::nuovo(false), h, opz).expect("writer");
     w.open_spectra(n).expect("open");
@@ -329,6 +331,7 @@ pub fn scala(
                 livello: lv,
                 numpress: false,
                 thread: t,
+                dad: false,
             };
             let conv = Conversione {
                 peaks: src.picchi(),

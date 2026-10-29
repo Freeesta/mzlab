@@ -160,3 +160,48 @@ fn the_shared_cases_of_the_comparison_give_the_written_answers() {
         std::fs::write(path, serde_json::to_string_pretty(&cases).unwrap() + "\n").unwrap();
     }
 }
+
+fn hits_of(rows: &[(&str, &str)]) -> String {
+    let items: Vec<String> = rows
+        .iter()
+        .map(|(q, id)| format!(r#"{{"query":"{q}","id":"{id}"}}"#))
+        .collect();
+    format!(r#"{{"hits":[{}]}}"#, items.join(","))
+}
+
+/// A value listed twice for a query counts once, at its best rank: the reversed order of A, B, C is a correlation of -1 whatever the repeats.
+#[test]
+fn a_value_listed_twice_for_a_query_counts_once() {
+    let a = hits_of(&[("q0", "A"), ("q0", "A"), ("q0", "B"), ("q0", "C")]);
+    let b = hits_of(&[("q0", "C"), ("q0", "B"), ("q0", "A"), ("q0", "A")]);
+    let out = crate::flow_compare::compare_text(
+        "spectra.match",
+        &["x", "y"],
+        &[a.as_bytes(), b.as_bytes()],
+    )
+    .unwrap();
+    assert!(out.contains(r#""mean_rank_corr":-1"#), "{out}");
+    assert!(out.contains(r#""best":["A","C"]"#), "{out}");
+}
+
+/// The keys come out in the order they first appear over the variants, and the counts are those of the keys each variant holds.
+#[test]
+fn keys_keep_the_order_of_first_appearance() {
+    let a = hits_of(&[("q2", "A"), ("q0", "B"), ("q2", "C")]);
+    let b = hits_of(&[("q1", "A"), ("q0", "B"), ("q3", "D")]);
+    let out = crate::flow_compare::compare_text(
+        "spectra.match",
+        &["x", "y"],
+        &[a.as_bytes(), b.as_bytes()],
+    )
+    .unwrap();
+    let keys: Vec<&str> = out
+        .match_indices(r#"{"key":""#)
+        .map(|(i, _)| &out[i + 8..i + 10])
+        .collect();
+    assert_eq!(keys, ["q2", "q0", "q1", "q3"], "{out}");
+    assert!(
+        out.contains(r#""both":1,"best_agree":1,"only_a":1,"only_b":2"#),
+        "{out}"
+    );
+}

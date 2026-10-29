@@ -61,7 +61,7 @@ try:
             pg.evaluate(f"COMANDI.fai('spec.display', {UV}, () => {{ {UV}.etpk = true }}); drawSoon({UV})"); attendi(pg, f"{LBU}.length >= 1")
         step("the wavelength labels can be hidden and shown again", uv_labels_off)
         def header_rt():
-            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?RT \d+\.\d\d min", t.strip()), t
+            t = pg.evaluate(f"{UV}.el.querySelector('.rtl').textContent"); assert __import__('re').fullmatch(r"(fermo a )?\d+\.\d\d min", t.strip()), t
         step("the header of the UV spectrum says the RT it comes from", header_rt)
         def sheet():
             s = pg.evaluate(f"plotSheets({UV})")
@@ -83,20 +83,20 @@ try:
             c = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda')"; u = f"E.panels.filter(q=>q.uv&&q.src==={c}.id).pop()"
             attendi(pg, f"!!({u}._a && {u}.link === {c}.id)")
             assert pg.evaluate(f"{u}.link === {c}.id") and pg.evaluate(f"{c}.cur != null"), "linked and the vertical line is drawn"
-            fol = pg.evaluate(f"(()=>{{const b={u}.el.querySelector('.fol'); return b && b.offsetParent ? b.textContent : null}})()"); assert fol and fol.startswith("Segue"), fol
+            fol = pg.evaluate(f"(()=>{{const b={u}.el.querySelector('.fol'); return b && b.offsetParent ? b.textContent : null}})()"); assert fol and fol.startswith("\u2190"), fol
             lg = pg.evaluate(f"{u}.leg.textContent"); assert " \u00b7 RT " in lg, lg
             assert pg.evaluate(f"{u}.el.querySelector('.rtl').getAttribute('aria-live')") == "polite"
-            assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "RT %.2f min" % pg.evaluate(f"{u}._a.uvd.rt"), "rtl"
+            assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "%.2f min" % pg.evaluate(f"{u}._a.uvd.rt"), "rtl"
             pg.evaluate("(()=>{window.__n=0; if(!window.__f){window.__f=window.fetch; window.fetch=function(u,...a){ if(/api\\/(uvspec|map)/.test(String(u))) window.__n++; return window.__f.call(this,u,...a)}}})()")
             for rt in (1.0, 1.5):
                 pg.evaluate(f"(()=>{{const c={c}; c.cur={rt}; pushLinked(c,{rt},{rt},0,true)}})()")
                 attendi(pg, f"Math.abs({u}._a.uvd.rt - {rt}) < 0.06")
-                assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "RT %.2f min" % pg.evaluate(f"{u}._a.uvd.rt")
+                assert pg.evaluate(f"{u}.el.querySelector('.rtl').textContent") == "%.2f min" % pg.evaluate(f"{u}._a.uvd.rt")
                 assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in pg.evaluate(f"{u}.leg.textContent")
                 tx = pg.evaluate(f"TDATI_P.text({u})"); assert ("RT %.2f" % pg.evaluate(f"{u}._a.uvd.rt")) in tx, tx
             assert pg.evaluate("window.__n") == 0, "no uvspec/map request while the line moves"
             pg.evaluate(f"spLinkFreeze({u})"); frames(pg, 2)
-            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a RT")
+            assert pg.evaluate(f"{u}.link") is None and pg.evaluate(f"{u}.el.querySelector('.rtl').textContent").startswith("fermo a ")
             pg.evaluate(f"(()=>{{const c={c}; c.cur=0.5; pushLinked(c,0.5,0.5,0,true)}})()"); frames(pg, 3)
             assert abs(pg.evaluate(f"{u}._a.uvd.rt") - 1.5) < 0.06, "frozen: the UV spectrum does not follow"
             pg.evaluate(f"spLinkFollow({u}, {c})"); attendi(pg, f"{u}.link === {c}.id && Math.abs({u}._a.uvd.rt - 0.5) < 0.06")

@@ -101,6 +101,10 @@ impl Walk<'_> {
     /// One job of an instance: its key text (what it reads, in the order the step declares its ports) and the jobs it waits for.
     fn job(&mut self, sh: &Shape, item: Option<&String>) {
         let mut text = sh.head.clone();
+        // the name keeps two files with the same fingerprint (an index still loading) from sharing a key, and with it the file the job's result is kept in
+        if let Some(n) = item {
+            text.push_str(&format!("item:{n}\n"));
+        }
         let mut deps: Vec<usize> = Vec::new();
         for p in &sh.step.ins {
             text.push_str(&format!("in:{}\n", p.name));

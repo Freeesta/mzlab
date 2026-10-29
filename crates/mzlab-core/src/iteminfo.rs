@@ -13,6 +13,8 @@ pub struct Facts {
     pub n_chromatograms: i64,
     pub srm: usize,
     pub pda: bool,
+    /// (first, last time, points) of the PDA trace; `None` without a PDA.
+    pub pda_rt: Option<(f64, f64, i64)>,
     /// "positive" | "negative" | "mixed" | "unknown", read from the header (used when a file has no scans).
     pub header_polarity: String,
     /// (min, max) retention time over the SRM chromatograms.
@@ -55,16 +57,18 @@ pub struct Part {
     pub mode: &'static str, // "ms1" | "ms2" | "mrm"
     pub pol: Option<i8>,
     pub tag: String,
-    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EPI`), `None` for the ordinary ones.
+    /// The scan type of the MS2 scans of this part (`PREC`, `NL`, `NG`, `EMC`, `TDF`, `ER`), `None` for the ordinary ones.
     pub kind: Option<&'static str>,
 }
 
 /// The scan types in the order they are listed, with the name shown for each.
-const KINDS: [(&str, &str); 4] = [
+const KINDS: [(&str, &str); 6] = [
     ("PREC", "Precursor ion"),
     ("NL", "Neutral loss"),
     ("NG", "Neutral gain"),
-    ("EPI", "EPI"),
+    ("EMC", "EMC"),
+    ("TDF", "TDF"),
+    ("ER", "ER"),
 ];
 
 fn kind_name(k: &str) -> &'static str {
@@ -205,12 +209,9 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
     if scans.is_empty() {
         return low("?");
     }
-    let mut counts: Vec<(String, usize)> = vec![];
+    let mut counts: Vec<(&str, usize)> = vec![];
     for s in scans {
-        let a =
-            s.an.clone()
-                .filter(|a| !a.is_empty())
-                .unwrap_or_else(|| "?".into());
+        let a = s.an.as_deref().filter(|a| !a.is_empty()).unwrap_or("?");
         match counts.iter_mut().find(|(k, _)| *k == a) {
             Some(c) => c.1 += 1,
             None => counts.push((a, 1)),
@@ -222,7 +223,7 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
             best = i;
         }
     }
-    let an = counts[best].0.clone();
+    let an = counts[best].0.to_string();
     match an.as_str() {
         "FTMS" => {
             return Profile {
@@ -253,20 +254,22 @@ fn mass_profile(scans: &[&Scan]) -> Profile {
         }
         _ => {}
     }
-    let mut res: Vec<f64> = scans
-        .iter()
-        .filter_map(|s| s.res)
-        .filter(|r| *r != 0.0)
-        .collect();
-    crate::sortc::by(&mut res, f64::total_cmp);
-    if an == "?" && !res.is_empty() && res[res.len() / 2] >= 10000.0 {
-        return Profile {
-            hr: true,
-            an,
-            dec: 4,
-            tol: 10.0,
-            unit: "ppm",
-        };
+    if an == "?" {
+        let mut res: Vec<f64> = scans
+            .iter()
+            .filter_map(|s| s.res)
+            .filter(|r| *r != 0.0)
+            .collect();
+        crate::sortc::by(&mut res, f64::total_cmp);
+        if !res.is_empty() && res[res.len() / 2] >= 10000.0 {
+            return Profile {
+                hr: true,
+                an,
+                dec: 4,
+                tol: 10.0,
+                unit: "ppm",
+            };
+        }
     }
     low(&an)
 }
@@ -326,9 +329,8 @@ fn acq(sc1: &[&Scan], sc2: &[&Scan]) -> Vec<&'static str> {
     }
     if sc1.iter().any(|s| {
         s.filter
-            .to_lowercase()
             .split_whitespace()
-            .any(|w| w == "sim")
+            .any(|w| w.eq_ignore_ascii_case("sim"))
     }) {
         out.push("SIM");
     }
@@ -736,6 +738,12 @@ pub fn facts_from<M: ReadAt>(
         pda: chroms.iter().any(|c| c.kind == "pda"),
         ..Default::default()
     };
+    if let Some(c) = chroms.iter().find(|c| c.kind == "pda") {
+        let (t, _) = m.chromatogram(c)?;
+        if let (Some(a), Some(b)) = (t.first(), t.last()) {
+            f.pda_rt = Some((round(*a, 4), round(*b, 4), t.len() as i64));
+        }
+    }
     for c in chroms
         .iter()
         .filter(|c| c.kind == "pressure" || c.kind == "analog")
@@ -761,12 +769,20 @@ pub fn facts_from<M: ReadAt>(
         f.header_polarity = m.header_polarity()?;
         let (mut lo, mut hi): (Option<f64>, Option<f64>) = (None, None);
         for c in chroms.iter().filter(|c| c.kind == "srm") {
-            let (t, _) = m.chromatogram(c)?;
+            let t = match m.chromatogram_times(c)? {
+                Some(t) => t,
+                None => m.chromatogram(c)?.0,
+            };
             if !t.is_empty() {
-                let (a, b) = (
-                    t.iter().cloned().fold(f64::INFINITY, f64::min),
-                    t.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-                );
+                // Ascending times (the norm) make the ends the extremes; anything else (descending, NaN) keeps the fold.
+                let (a, b) = if t.windows(2).all(|w| w[0] <= w[1]) {
+                    (t[0], t[t.len() - 1])
+                } else {
+                    (
+                        t.iter().cloned().fold(f64::INFINITY, f64::min),
+                        t.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
+                    )
+                };
                 lo = Some(lo.map_or(a, |x| x.min(a)));
                 hi = Some(hi.map_or(b, |x| x.max(b)));
             }

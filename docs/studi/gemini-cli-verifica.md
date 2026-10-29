@@ -1,0 +1,59 @@
+# Verifica dei lotti Gemini sulla CLI (mzlab-cli)
+
+Stato: FASE 1, solo report (nessuna modifica al codice). Base: `origin/main` 73db2dd. Misure con `cargo test --release` su sonde temporanee (non nel ramo), dati sintetici, 4 CPU.
+Legenda: VERO / FALSO / PARZIALE. Gruppi: (a) sicuri, output identico; (b) bug reali che cambiano l'output; (c) da non fare.
+
+## Lotto 18
+
+### Correttezza
+
+| # | Punto di Gemini | Esito | Prova |
+|---|---|---|---|
+| C1 | `flow_msngraph.rs:212` `molecule`: panic su `e[0]` con errori vuoti | **FALSO** | `from_csv` (`mzlab-core/src/molecules/csv.rs:275`) restituisce `Err` solo con `vec![e]` (intestazione) o con `errors` non vuoto (`if errors.is_empty() { Ok } else { Err }`): `e[0]` esiste sempre. Nessun input lo fa andare in panic. |
+| C2 | `convert.rs:187` `entries`: due input `a/test.raw` e `b/test.raw` danno lo stesso file di output | **VERO** | Sonda su `entries`: `label=0/test.raw out=test.raw.mzML` e `label=1/test.raw out=test.raw.mzML`. `place()` (`convert.rs:~259`) fa `remove_file(to)` e poi ricrea: il secondo cancella il primo, e il report dà entrambi «Done». Gemini ha ragione sul meccanismo; la correzione proposta (prefisso `k-` sull'`out` quando non `unique`) è corretta ma il suo codice lascia `out_name(name,*id,clash)` per il resto (ok). |
+| C3 | `flow_match.rs:287` `batch_fdr` usa `precursor_ppm` mentre `exact` usa `exact_ppm` per `modified_cosine` | **VERO** (solo se i due valori differiscono; di default sono entrambi 10, quindi l'output di default non cambia) | Sonda (query a 30 ppm da Alpha, `modified_cosine`, `decoys:"spectrum"`, `exact_ppm:50`): Alpha, il miglior candidato elencato, ha `decoy_q: null`; con `precursor_ppm:50` anche: `decoy_q: 0.0`. La finestra della ricerca bersaglio-esca non coincide con quella dei candidati, quindi `quantize(c.score)==f.best.target` fallisce. |
+| C4 | `flow_match.rs:~213` `matched_peaks` di `modified_cosine` usa `o.frag_da` invece di `frag` | **VERO** | Sonda (`tol_da:0.0005`, `tol_ppm:50`, `matched_peaks:true`): `shared=5` ma `matched_peaks` lungo 0 (Alpha, q0). Lo score e `shared` usano ppm, la lista usa Da: due liste diverse per lo stesso candidato. Con la sola `tol_da` (caso usuale) i due coincidono. |
+| C5 | `flow_compare.rs:309` `rank_corr` con id duplicati nella stessa query | **PARZIALE** | Reale ma serve un input con lo stesso id due volte per query (due spettri della stessa voce). Sonda: `[A,A,B,C]` contro il suo inverso `[C,B,A,A]` dà `mean_rank_corr = -0.5` (l'inverso esatto sarebbe -1). Nei casi normali (accession uniche per query) non succede. Il campo `explained`/fuori da [-1,1] non è stato riprodotto. |
+| C6 | `convert.rs:111` `scan`: ciclo infinito con symlink ciclico | **FALSO** come descritto (c'è un difetto minore) | Sonda con `a/b/up -> ..`: termina in 9 ms, il kernel ferma dopo 40 livelli di symlink (`is_dir()` torna falso). Il vero difetto: l'ordine alfabetico visita `a/b/up/b/up/…` prima di `a/s.mzML`, quindi `gather` tiene il percorso espanso (40 livelli) e scarta quello reale. Il file è lo stesso, cambia il percorso mostrato nel report. |
+| C7 | `lib.rs:332` `features_cmd` usa `mzlab-cli-<pid>` senza contatore | **VERO** (latente) | `msn_lib_cmd` (`lib.rs:296`) e `msn_graph` (`:443`) usano un contatore atomico, `features_cmd` no: due chiamate nello stesso processo condividono la cartella e una cancella i file dell'altra. Non riprodotto con un test perché nessun test oggi le lancia in parallelo. |
+
+### Velocità e peso
+
+| # | Punto di Gemini | Esito | Misura / prova |
+|---|---|---|---|
+| V1 | `flow_match.rs` `exact`: doppio `modified_cosine` con `matched_peaks`; clone di `h.pairs`; ricerca lineare dei parametri; `write_cand` decomprime i picchi per `.len()` | **PARZIALE** | Bench (4000 spettri di libreria × 60 picchi, 20 query, tutti nella finestra, 80 000 hit): `modified_cosine` 1,68 s → 2,41 s con `matched_peaks` (+43%): il doppio calcolo è reale; eliminarlo vale ≈ -30% (1,68→~1,7 s al posto di 2,41) solo in quella configurazione. `cosine`: 0,935 → 0,948 s e `entropy`: 0,906 → 0,972 s con `matched_peaks` (≤ 7%: il clone di `pairs` è quasi nulla). Ricerca parametri (`num`): ≈15 confronti di stringa per hit, <1% di 11 µs/hit. `write_cand` chiama `peaks()` solo per i `top_n` elencati (non per ogni hit come scrive Gemini): `lib.peaks` 1,3 µs, `lib.meta` 0,3 µs, `lib.rec(i).n_peaks` 0,02 µs; per 100 candidati scritti sono 0,1 ms. Il colpo di costo vero dell'intero step (≈11 µs/hit) sta in `mzlab-lib` `identity_with`, non nella CLI. |
+| V2a | `flow_base.rs:95-98` `detect_job` apre due volte il `.mzidx` | **VERO** | `.mzidx` sintetico da 8 MB, 30 000 scansioni: `Index::open` = 65 ms; `recipe_for_estimated` completo = 67 ms (quasi tutto l'open); `detect` = 12 ms, `detect_weak` = 10 ms. Il secondo `Index::open` pesa quanto 3× la detection del file (sintetica: su dati reali la detection sarà più lunga, l'open cresce con le scansioni). Riusare l'indice `Gated` per la ricetta è corretto in linea di principio. **Attenzione**: il codice di Gemini scrive `bytes` prima di `weak`; l'originale scrive `.weak` e poi `.mzfeatf` (il file «principale» per ultimo): non invertire. |
+| V2b | `flow_base.rs:224` `align_mem` rifa `align_setup` | **VERO** | `flow.rs:486` lo chiama dopo ogni job; per `features.align`/`gapfill` ripete `rebuild()` (un `Index::open` del primo `.mzidx`, ≈65 ms a 30 000 scansioni) e ricostruisce la ricetta. In più (non detto da Gemini) `slabs::rows_of(Files)` rilegge per intero tutti i `.mzfeatf` (`mzlab-feat/src/slabs.rs:132`): è il vero costo, proporzionale al numero di file. Per eliminare entrambi la stima va calcolata dentro `align_job` e passata in `Made`: tocca `flow.rs`, `Made` (dispatch). |
+| V3 | `msn_graph.rs:240-241` doppia lettura del `.mzidx` | **PARZIALE** | `read+sha256` dell'8 MB sintetico = 12,6 ms, `open` = 65 ms. Si risparmia solo la seconda lettura da disco (~3-5 ms, file in cache), non «metà dell'I/O»: `open` legge solo intestazione e tabella delle scansioni. Il codice proposto **non compila**: `std::io::Cursor<Vec<u8>>` non implementa `ReadAt` (`idxread.rs` ha `impl ReadAt for Vec<u8>` e per `File`): andrebbe `Index::open(idx_bytes, len)`. La «conversione mzML intermedia» del titolo esiste (`msn_graph.rs:233-236`) ma serve a `build_index`, non è eliminabile. |
+| V4 | `flow_compare.rs` `ranked`/`all_keys`/`find`: O(K²) | **VERO, peggio di come lo stima Gemini** | Misure (3 varianti × 5 hit per query), `compare_text`: K=1000 → 51 ms; K=5000 → **1,14 s**; K=20 000 → **17 s** (quadratico). Prototipo con `HashMap` + `Vec` d'ordine (stesso ordine di prima apparizione): 13 ms, **59 ms**, **0,33 s** (≈ 20-50×), stessa lunghezza dell'output (confronto byte per byte da fare in fase 2). |
+| V5 | `convert.rs` `gather`/`entries` O(N²) | **VERO ma irrilevante** | N = centinaia di file: i confronti costano microsecondi contro i secondi di `sample_ids` (apre ogni file) e della conversione. Non misurato, nessun guadagno percepibile. Se si fa il fix di C2 conviene usare le `HashMap` lì perché si riscrive la funzione. |
+| V6 | `msn_graph.rs` `per_livello`/`riassunto` | **VERO ma irrilevante** | Una chiamata con `--riassunto` (verità di Federico), O(nodi × alberi). Non misurato, non vale il cambio. |
+| V7 | `flow.rs:257` `first_of_series` doppio lock | **VERO ma trascurabile** | Il costo è la scansione di tutta la mappa `lineage` per ogni file di detect (O(N) per file) più un clone di `Lineage`: nanosecondi-microsecondi contro la detection. Il codice proposto è corretto e non peggiora l'ordine dei lock (rilascia `lineage` prima di prendere `made`, anzi meglio dell'originale, che li tiene entrambi). |
+| V8 | `flow_msngraph.rs` `params`: `extend(vec![..])` | **NON VERIFICATO** | Nessun codice proposto; il guadagno stimato (0,5-1 KB nel `.wasm`) non è misurato e la CLI WASI non è nel sito servito: non vale una PR. |
+
+## Raggruppamento per la fase 2 (proposta, in attesa di «VIA»)
+
+**(a) Sicuri, output identico**
+1. V4 `flow_compare`: `HashMap` per chiave + `Vec` d'ordine, `HashSet` in `all_keys` (la mappa serve solo alle ricerche, l'ordine di scrittura viene dal `Vec`): -95% a K=5000. Test: confronto byte per byte con l'output di prima su fixture grande.
+2. V1 `exact`: calcolare `modified_cosine` una sola volta (con `matched_peaks` l'output è identico se `tol_ppm == 0`; vedi B2 se `tol_ppm > 0`). Più `lib.rec(i)?.n_peaks` al posto di `peaks()` in `write_cand` (da verificare che `n_peaks` == `peaks().0.len()`).
+3. V2a `detect_job`: un solo `Index::open` (Gated) per ricetta e detection, mantenendo l'ordine di scrittura `.weak` poi `.mzfeatf`. Test: i `.mzfeatf` identici byte per byte (esiste già `flow_run_tests`).
+4. V2b `align_mem`: calcolare la stima dentro `align_job`. Costo implementativo medio (struct `Made`/dispatch). Basso guadagno per file, alto con molti file.
+5. C7 contatore atomico in `features_cmd` (robustezza, nessun effetto visibile).
+
+**(b) Bug reali (cambiano l'output «in meglio»): decide Federico se tocca contratto, formato o ordine**
+- B1 (C2) conversione di `a/test.raw` e `b/test.raw`: oggi il secondo mzML cancella il primo senza avvisare, il report dice «Done» due volte. Dopo: `0-test.raw.mzML` e `1-test.raw.mzML` (solo nel caso di collisione). Visibile: nome dei file di output e righe del report in quel caso. Test che fallisce prima: due cartelle con lo stesso nome file.
+- B2 (C4) `modified_cosine` con `matched_peaks` e `tol_ppm > 0`: oggi la lista dei picchi accoppiati usa Dalton e può avere meno (anche zero) picchi di `shared`; dopo: la lista ha esattamente `shared` coppie, le stesse dello score. Nessun cambio quando `tol_ppm = 0`. Cambia il contenuto di `matched_peaks` nel `candidates/1`.
+- B3 (C3) `batch_fdr` con `modified_cosine` quando `exact_ppm ≠ precursor_ppm`: oggi il miglior candidato elencato può ricevere `decoy_q: null`; dopo riceve il q-value calcolato sulla stessa finestra. Cambiano anche `decoy_targets_ge`/`decoy_ge`/`best_decoy` e i q-value degli altri candidati della stessa corsa (stesso insieme di bersagli). Nessun cambio con i valori di default (entrambi 10 ppm). Va stabilito se la finestra giusta è `exact_ppm` (come propone Gemini) o `precursor_ppm`: oggi `precursor_da` vince su entrambe.
+- B4 (C5) `rank_corr` con id duplicati nella stessa query: dopo, un id contato una volta (primo rango). Cambia `mean_rank_corr` (e quindi `comparison/1`) solo con id duplicati. Federico decide perché è il significato della correlazione (ranghi pari, duplicati).
+- B5 (C6) `scan` con symlink che tornano su: percorso reale al posto dell'espanso; cambia solo il percorso stampato nel report, non i file convertiti. Basso valore.
+
+**(c) Da non fare**
+- C1 (panic inesistente), V5, V6, V7 (guadagno nullo), V8 (non misurato), V3 come scritto (non compila, risparmio 3-5 ms).
+- Scrivere `.mzfeatf` prima di `.weak` (proposta implicita di V2a): rompe l'ordine che lascia il file principale per ultimo.
+- Riscrivere `exact` per intero come propone Gemini: il guadagno sta tutto nel doppio `modified_cosine`; meglio una modifica locale che non cambi il resto.
+
+## Note
+- Il collo di bottiglia vero dello step `spectra.match` (≈11 µs per hit, 0,9 s per 80 000 hit con `cosine`/`entropy`) è `mzlab-lib` `identity_with` (zona della chat «chimica»), non la CLI.
+- Con `decoys:"spectrum"` e `modified_cosine` lo stesso insieme di hit viene valutato due volte (`batch_fdr` e `exact`): potenziale -40%, non misurato né riportato da Gemini.
+- La CLI ha una build WASI (`.github/workflows/rust.yml`, `tools/wasi_run.mjs`): nessuno dei punti (a)/(b) introduce API non disponibili in WASI (solo `HashMap`/`HashSet` e un contatore atomico già usato da `msn_lib_cmd`).
+- Le sonde (non nel ramo) sono ricostruibili: `convert::entries`, `flow_compare::compare_text` con K query × 5 hit, `Index::open` su `.mzidx` da 30 000 scansioni, `spectra.match` con 4000 spettri `.mzlib` × 20 query.

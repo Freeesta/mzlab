@@ -34,7 +34,7 @@ try:
         step("the list has every scan of the file, sorted by time", listing)
         def typefilter():
             keys = pg.evaluate("[...document.querySelectorAll('.bsp [data-sp=type] option')].map(o=>o.value).filter(Boolean)")
-            g = pg.evaluate(f"J('api/filters?k='+{SPEC}.k).then(j=>j.filters.find(g=>g.key==={keys[0]!r}).n)")
+            g = pg.evaluate(f"+[...document.querySelectorAll('.bsp [data-sp=type] option')].find(o=>o.value==={keys[0]!r}).textContent.split('\u00d7').pop().replace(/\\s/g,'')")      # the menu lists the channels of the file (channelsOf), with their counts
             cnt = "+document.querySelector('.bsp [data-sp=n]').textContent.split(' ')[0].replace(/\\s/g,'')"
             pg.select_option(".bsp [data-sp=type]", keys[0]); attendi(pg, f"{cnt}==={g}")
             pg.select_option(".bsp [data-sp=type]", ""); attendi(pg, f"{cnt}!=={g}")

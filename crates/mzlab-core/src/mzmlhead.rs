@@ -3,13 +3,16 @@
 //! `metadata`, `_read_header` and `Item._header_polarity` of `mzlab/reader/mzml.py`). Text is searched as the Python regular expressions do,
 //! without a regex engine (it would cost size in the WASM). The bytes come through a `ReadAt`.
 
-use std::io::Read;
-
-use base64::Engine;
-
 use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
+use crate::mzmlarray::{decode_array, Inflate, Want};
 
+mod lettura;
+mod tags;
+use tags::{find_tag, time_in_seconds};
+
+/// Values an array may inflate to at least (see `decode`).
+const MIN_VALUES: usize = 8 << 20;
 const MAX_REGION: u64 = 256 << 20;
 /// The most `mobility_kind` reads to find the end of the first spectrum.
 const MOBILITY_PROBE: u64 = 32 << 20;
@@ -19,11 +22,25 @@ fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
 }
 
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
-    let tail = h.get(from..).filter(|_| !n.is_empty())?;
-    tail.windows(n.len()).position(|w| w == n).map(|p| p + from)
+    let tail = h.get(from..)?;
+    let (first, rest) = n.split_first()?;
+    // Scanning for the first byte beats a window compare on XML, where `<` is rare inside base64 runs.
+    let mut i = 0;
+    loop {
+        let at = i + tail.get(i..)?.iter().position(|b| b == first)?;
+        if tail.get(at + 1..at + n.len())? == rest {
+            return Some(at + from);
+        }
+        i = at + 1;
+    }
 }
 pub(crate) fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
+}
+/// Whether `head` carries `accession="<x>"`, without building the needle.
+fn has_accession(head: &str, x: &str) -> bool {
+    head.match_indices(x)
+        .any(|(i, _)| head[..i].ends_with("accession=\"") && head[i + x.len()..].starts_with('"'))
 }
 fn is_word(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
@@ -144,7 +161,7 @@ pub fn mobility_kind<R: ReadAt>(m: &mut Mzml<R>) -> Result<Option<&'static str>>
     let mut n: u64 = 1 << 16;
     loop {
         let chunk = m.read(0, n)?;
-        let span = find(&chunk, b"<spectrum ", 0)
+        let span = find_tag(&chunk, b"<spectrum", 0)
             .and_then(|a| find(&chunk, b"</spectrum>", a).map(|b| (a, b + 11)));
         if let Some(body) = span.and_then(|(a, b)| chunk.get(a..b)) {
             for (head, _) in arrays(body) {
@@ -190,7 +207,7 @@ impl<R: ReadAt> Mzml<R> {
         let region = self.read(scans_end, self.size)?;
         let mut out: Vec<Chrom> = vec![];
         let mut pos = 0usize;
-        while let Some(a) = find(&region, b"<chromatogram ", pos) {
+        while let Some(a) = find_tag(&region, b"<chromatogram", pos) {
             let Some(b) = find(&region, b"</chromatogram>", a) else {
                 break;
             };
@@ -205,7 +222,7 @@ impl<R: ReadAt> Mzml<R> {
                 kind: "other".into(),
                 ..Default::default()
             };
-            let acc = |x: &str| h.contains(&format!("accession=\"{x}\""));
+            let acc = |x: &str| has_accession(&h, x);
             if cid == "TIC" || cid.starts_with("TIC ") {
                 d.kind = "tic".into();
             } else if cid == "BPC" {
@@ -243,28 +260,28 @@ impl<R: ReadAt> Mzml<R> {
         let chunk = self.read(c.start, c.end)?;
         let (mut t, mut y): (Option<Vec<f64>>, Option<Vec<f64>>) = (None, None);
         for (head, data) in arrays(&chunk) {
-            let a = decode(&head, &data)?;
+            let a = decode(
+                &head,
+                data,
+                c.n.and_then(|n| usize::try_from(n).ok()).unwrap_or(0),
+            )?;
             if head.contains("MS:1000595") {
                 t.get_or_insert(a);
             } else {
                 y.get_or_insert(a);
             }
         }
-        let (mut t, y) = (t.unwrap_or_default(), y.unwrap_or_default());
+        let (mut t, mut y) = (t.unwrap_or_default(), y.unwrap_or_default());
         let n = t.len().min(y.len());
         let list = find(&chunk, b"<binaryDataArrayList", 0).unwrap_or(chunk.len());
-        let seconds = text(part(&chunk, 0, list)).contains("unitName=\"second\"")
-            || find(
-                &chunk,
-                b"name=\"time array\" value=\"\" unitCvRef=\"UO\" unitAccession=\"UO:0000010\"",
-                0,
-            )
-            .is_some();
+        let seconds =
+            text(part(&chunk, 0, list)).contains("unitName=\"second\"") || time_in_seconds(&chunk);
         if seconds {
             t.iter_mut().for_each(|v| *v /= 60.0);
         }
         t.truncate(n);
-        Ok((t, y.get(..n).unwrap_or_default().to_vec()))
+        y.truncate(n);
+        Ok((t, y))
     }
 
     /// The unit written on the intensity array of a chromatogram, or "".
@@ -286,7 +303,7 @@ impl<R: ReadAt> Mzml<R> {
         let mut want = (256u64 << 10).min(limit);
         loop {
             let probe = self.read(0, want)?;
-            let ok = match find(&probe, b"<run ", 0) {
+            let ok = match find_tag(&probe, b"<run", 0) {
                 Some(p) => (p as u64 + extra) <= want,
                 None => false,
             };
@@ -300,7 +317,7 @@ impl<R: ReadAt> Mzml<R> {
     /// The part of the file before `<run `, as text (the header the instrument facts come from).
     fn head(&mut self) -> Result<String> {
         let probe = self.until_run(0)?;
-        let end = find(&probe, b"<run ", 0).unwrap_or_else(|| probe.len().saturating_sub(1));
+        let end = find_tag(&probe, b"<run", 0).unwrap_or_else(|| probe.len().saturating_sub(1));
         Ok(text(part(&probe, 0, end)))
     }
 
@@ -312,35 +329,17 @@ impl<R: ReadAt> Mzml<R> {
     /// The start of the file up to `<run ` plus `extra` bytes, as text (`metodo/1` needs the whole `userParam` that follows the tag).
     pub fn run_head(&mut self, extra: u64) -> Result<String> {
         let probe = self.until_run(extra)?;
-        let run = find(&probe, b"<run ", 0);
+        let run = find_tag(&probe, b"<run", 0);
         let end = run
             .map_or(0, |p| p)
             .saturating_add(usize::try_from(extra).unwrap_or(usize::MAX));
         Ok(text(part(&probe, 0, end.min(probe.len()))))
     }
 
-    /// Polarity written in the header (used when a file has no scans, e.g. MRM): positive, negative, mixed or unknown.
-    pub fn header_polarity(&mut self) -> Result<String> {
-        let all = self.read(0, self.size.min(MAX_REGION))?;
-        let end = find(&all, b"</run>", 0).unwrap_or_else(|| all.len().saturating_sub(1));
-        let h = part(&all, 0, end);
-        let (pos, neg) = (
-            find(h, b"accession=\"MS:1000130\"", 0).is_some(),
-            find(h, b"accession=\"MS:1000129\"", 0).is_some(),
-        );
-        Ok(match (pos, neg) {
-            (true, false) => "positive",
-            (false, true) => "negative",
-            (true, true) => "mixed",
-            _ => "unknown",
-        }
-        .into())
-    }
-
     /// Thermo nativeID format in the header: the "collision energy" is relative (NCE), not eV.
     pub fn nce(&mut self) -> Result<bool> {
         let probe = self.read(0, self.size.min(200_000))?;
-        let end = match find(&probe, b"<run ", 0) {
+        let end = match find_tag(&probe, b"<run", 0) {
             Some(p) if p > 0 => p,
             _ => probe.len(),
         };
@@ -467,7 +466,7 @@ impl<R: ReadAt> Mzml<R> {
     /// (instrumentConfiguration id, analyzer code) in file order, and nothing else (`Run._read_header`).
     pub fn analyzers(&mut self) -> Result<Vec<(String, String)>> {
         let probe = self.until_run(0)?;
-        let end = match find(&probe, b"<run ", 0) {
+        let end = match find_tag(&probe, b"<run", 0) {
             Some(p) if p > 0 => p,
             _ => probe.len().min(200_000),
         };
@@ -583,10 +582,10 @@ fn named_value(h: &str, key: &str) -> Option<f64> {
 }
 
 /// Every `<binaryDataArray ...>...</binaryDataArray>`: (the head up to `<binary>`, the base64 text).
-pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
+pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, &[u8])> {
     let mut out = vec![];
     let mut pos = 0;
-    while let Some(a) = find(chunk, b"<binaryDataArray ", pos) {
+    while let Some(a) = find_tag(chunk, b"<binaryDataArray", pos) {
         let Some(b) = find(chunk, b"</binaryDataArray>", a) else {
             break;
         };
@@ -594,8 +593,8 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
         let k = find(t, b"<binary>", 0);
         let head = text(part(t, 0, k.unwrap_or(t.len())));
         let data = match (k, find(t, b"</binary>", 0)) {
-            (Some(k), Some(e)) if e >= k + 8 => part(t, k + 8, e).to_vec(),
-            _ => vec![],
+            (Some(k), Some(e)) if e >= k + 8 => part(t, k + 8, e),
+            _ => &[],
         };
         out.push((head, data));
         pos = b + 18;
@@ -603,29 +602,27 @@ pub(crate) fn arrays(chunk: &[u8]) -> Vec<(String, Vec<u8>)> {
     out
 }
 
-pub(crate) fn decode(head: &str, data: &[u8]) -> Result<Vec<f64>> {
-    let clean: Vec<u8> = data
-        .iter()
-        .copied()
-        .filter(|c| !c.is_ascii_whitespace())
-        .collect();
-    let mut raw = base64::engine::general_purpose::STANDARD
-        .decode(&clean)
-        .map_err(|e| Error::new("err.file.base64").with("detail", e))?;
-    if !raw.is_empty() && head.contains("accession=\"MS:1000574\"") {
-        let mut out = vec![];
-        flate2::read::ZlibDecoder::new(&raw[..])
-            .read_to_end(&mut out)
-            .map_err(|e| Error::new("err.file.zlib").with("detail", e))?;
-        raw = out;
-    }
+/// One chromatogram array: the same decoder as the spectra (`mzmlarray`), so a zlib bomb stops at `expected` values, never below 8M values (the
+/// declared length of a PDA matrix chromatogram is shorter than its array).
+pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64>> {
     let num = ["MS:1000521", "MS:1000519", "MS:1000522"]
         .iter()
-        .find(|a| head.contains(&format!("accession=\"{a}\"")))
+        .find(|a| has_accession(head, a))
         .and_then(|a| crate::numarray::Num::of_accession(a))
         .unwrap_or(crate::numarray::Num::F64);
-    Ok(raw
-        .chunks_exact(num.width())
-        .map(|c| num.value(c))
-        .collect())
+    let zlib = has_accession(head, "MS:1000574");
+    let text = String::from_utf8_lossy(data);
+    let (values, _) = decode_array(
+        num,
+        zlib,
+        &text,
+        expected.max(MIN_VALUES),
+        &mut Inflate::new(),
+        Want::F64,
+    )?;
+    Ok(values)
 }
+
+#[cfg(test)]
+#[path = "mzmlhead_tests.rs"]
+mod tests;

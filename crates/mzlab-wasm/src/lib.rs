@@ -14,11 +14,12 @@ use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 mod scans;
 mod cache;
-mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca;
+mod centroidi; mod panic; mod campioni; mod molecules; mod ricerca; mod adduct;
 pub mod esterno;
 mod contato;
 mod zip;
 mod nativi;
+mod corriere;
 mod nativi_motore;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
@@ -70,7 +71,7 @@ impl BlockReader {
     }
 }
 
-const BLOCK: usize = 1 << 20;
+const BLOCK: usize = 4 << 20; // 4 MiB: ~2.5x faster OPFS reads than 1 MiB in Chromium (docs/studi/wasm-potenza.md 3e); JS buffers grow to it
 
 impl Read for BlockReader {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
@@ -127,7 +128,7 @@ impl BlockWriter {
 impl Write for BlockWriter {
     fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
         self.buf.extend_from_slice(data);
-        if self.buf.len() >= 4 * BLOCK {
+        if self.buf.len() >= BLOCK {
             self.flush_block()?;
         }
         Ok(data.len())
@@ -369,9 +370,9 @@ impl Engine {
         r.xic(mz, tol, level).map_err(|e| error_json(&e))
     }
 
-    /// Number of scans of one level (the capacity a trace needs).
+    /// Number of scans of one level (the capacity a trace needs); `u32::MAX` when no run is open at `slot` (the worker answers `err.file.raw`, as the desktop engine).
     pub fn count(&self, slot: u32, level: u8) -> u32 {
-        self.runs.get(&slot).map_or(0, |r| {
+        self.runs.get(&slot).map_or(u32::MAX, |r| {
             r.spectra.iter().filter(|s| s.level == level).count() as u32
         })
     }
@@ -399,10 +400,10 @@ impl Engine {
         }
     }
 
-    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range).
+    /// Length of the array `spectra` needs for the scans `i0..=i1` of one level (0 if out of range, `u32::MAX` when no run is open at `slot`).
     pub fn spectra_len(&self, slot: u32, level: u8, i0: u32, i1: u32) -> u32 {
         let Some(r) = self.runs.get(&slot) else {
-            return 0;
+            return u32::MAX;
         };
         let mut len = 2usize;
         let mut pos = 0u32;
@@ -549,7 +550,7 @@ impl Engine {
 
 /// Builds the `.mzidx` of an mzML of `size` bytes (read through `read(offset, length)`, decoded again for every pass) and writes it with
 /// `write(offset, bytes)`. The scan table (levels, polarities as signed bytes, RT and TIC as little-endian `f64`, the JSON rows,
-/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`). Returns the statistics as JSON;
+/// the `source` and `run` objects) comes from the Python reader. `budget_mb` bounds the peaks held in memory, `cap_mb` is the budget of the instance (0 = 192), checked before the copies of the table (`error.memoryBudget`, phase `index`); `aiuti` ({send, take, window} or undefined) gives the arrays to helper workers (`corriere.rs`), same bytes. Returns the statistics as JSON;
 /// errors are JSON with a key (`error.memoryBudget` when memory cannot be reserved).
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
@@ -569,6 +570,7 @@ pub fn build_mzidx(
     spill_put: Option<Function>,
     spill_get: Option<Function>,
     cap_mb: f64,
+    aiuti: JsValue,
 ) -> Result<String, JsValue> {
     mzlab_core::stima::check_index(&MemBudget::from_request(cap_mb), levels.len(), scans_json.len(), (budget_mb as usize) << 20).map_err(|e| error_json(&e))?;
     let table = mzidx::ScanTable {
@@ -583,17 +585,15 @@ pub fn build_mzidx(
     };
     let mut out = JsOutput { write };
     // peaks that do not fit in the budget go to a scratch file (a second file of OPFS) instead of being decoded again by every round
-    let mut spill = spill_put
-        .zip(spill_get)
-        .map(|(put, get)| nativi::JsSpill { put, get });
-    let st = mzidx::build_mzml_spill(
+    let mut spill = spill_put.zip(spill_get).map(|(put, get)| nativi::JsSpill { put, get });
+    let st = mzidx::build_mzml_corriere(
         &table,
         BlockReader::new(read, size as u64),
         &mut out,
         (budget_mb as usize) << 20,
         spill.as_mut().map(|s| s as &mut dyn mzlab_core::mzidx_spill::Spill),
-    )
-    .map_err(|e| error_json(&e))?;
+        &mut corriere::JsCorriere::new(&aiuti),
+    ).map_err(|e| error_json(&e))?;
     Ok(format!(
         "{{\"scans\":{},\"peaks\":{},\"sections\":{},\"passes\":{},\"bytes\":{}}}",
         st.scans, st.peaks, st.sections, st.passes, st.bytes
@@ -667,7 +667,7 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
     let n = rt.len().min(y.len());
     let (rt, y) = (&rt[..n], &y[..n]);
     let found = if mode == 1 {
-        peakq::detect_prominence(rt, y, peakq::ProminenceParams::default())
+        peakq::detect_prominence(rt, y, peakq::ProminenceParams { local_snr: 5.0, ..Default::default() })
     } else {
         peaks::detect_peaks(rt, y, peaks::Params::default())
     };

@@ -46,7 +46,7 @@ I18N.add("en", {
   "settings.font.dyslexic": "OpenDyslexic",
   "settings.hc.label": "High contrast",
   "settings.pal.label": "Chart colors",
-  "settings.pal.title": "By file: a different colour for each file. By time: Full Scan files with a time go from dark purple to green in order of time. Accessible: colors that stay distinguishable with the common forms of color blindness, plus dashed lines. High contrast also adds the line style. Rainbow: well separated hues.",
+  "settings.pal.title": "By file: one colour per file. By time: from purple to green in order of time. Accessible: distinguishable with color blindness, plus dashed lines. High contrast: adds the line style. Rainbow: well separated hues.",
   "settings.pal.file": "By file (default)",
   "settings.pal.time": "By time",
   "settings.pal.cb": "Accessible",

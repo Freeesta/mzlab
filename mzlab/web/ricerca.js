@@ -55,7 +55,7 @@ function ricContaminants() {
 // ------------------------------------------------------------------ number
 const RIC_GO = {
   loss: (/** @type {number} */ x) => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses", { q: String(x) }); else if (window.QQQRef) QQQRef.open("ls", { q: String(x) }); },
-  adduct: () => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts"); else if (window.QQQRef) QQQRef.open("ad"); },
+  adduct: () => { if (window.BARRA && BARRA.isDataView()) BARRA.setTab("calc"); else if (window.QQQRef) QQQRef.open("ad"); },
   cont: (/** @type {number} */ x, /** @type {any} */ it) => { if (window.LISTE) LISTE.open({ mz: x, polarity: it && it.pol > 0 ? "positive" : "negative", hr: ricHrNow() }); }
 };
 
@@ -71,7 +71,7 @@ async function ricForNumber(x) {
   };
   const r = await (await fetch("api/ricerca", { method: "POST", body: JSON.stringify(body) })).json();
   if (!r || r.error || !Array.isArray(r.hits)) return [];
-  const view = window.QADD_VIEW ? window.QADD_VIEW(hr, null) : [];
+  const cat = await CALCADD.catalog();
   const lossName = (/** @type {string} */ f) => { const l = (typeof LOSSES !== "undefined" ? LOSSES : []).find((/** @type {any} */ z) => z.f === f); return l ? ricT(l.name) : ""; };
   const detail = (/** @type {any} */ h) => (hr ? ricT("pal.d.hr", { d: ricSg(h.delta_da), ppm: (h.ppm >= 0 ? "+" : "−") + Math.abs(h.ppm).toFixed(1) }) : ricT("pal.d.lr"));
   /** @type {RicRow[]} */
@@ -82,8 +82,8 @@ async function ricForNumber(x) {
       return { ic: RIC_ICON.loss, chip: ricT("pal.k.loss"), html: ricSub(h.id) + (nm ? ` <span class="pal-d">${ricEsc(nm)}</span>` : ""), detail: d, aria: `${ricT("pal.k.loss")}: ${h.id} ${nm}, ${d}`, run: () => RIC_GO.loss(x) };
     }
     if (h.kind === "adduct") {
-      const v = view.find((/** @type {any} */ a) => a.n === h.id);
-      const sh = v ? ` <span class="pal-d">${v.shift}</span>` : "";
+      const v = cat.find(a => a.n === h.id);
+      const sh = v ? ` <span class="pal-d">${CALCADD.shiftText(v)}</span>` : "";
       return { ic: RIC_ICON.adduct, chip: ricT("pal.k.adduct"), html: ricEsc(h.id) + sh, detail: d, aria: `${ricT("pal.k.adduct")}: ${h.id}, ${d}`, run: () => RIC_GO.adduct() };
     }
     const it = items[+h.id] || {};
@@ -108,8 +108,8 @@ async function ricForFormula(q) {
     return j && !j.error ? j : null;
   };
   const go = (/** @type {string} */ f) => () => {
-    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts"); else if (window.QQQRef) QQQRef.open("ad");
-    setTimeout(() => { const i = /** @type {HTMLInputElement | null} */ (document.querySelector("#ad-in")); if (i) { i.value = f; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 120);
+    RIC_GO.adduct();
+    setTimeout(() => { const i = /** @type {HTMLInputElement | null} */ (document.querySelector("#calcin")); if (i) { i.value = f; i.dispatchEvent(new Event("input", { bubbles: true })); } }, 120);
   };
   /** @type {RicRow[]} */
   const rows = [];
@@ -126,7 +126,7 @@ async function ricForFormula(q) {
   if (!j) return [];
   const M = hr ? Number(j.neutral).toFixed(4) : String(j.nominal_neutral);
   rows.push({ ic: RIC_ICON.formula, chip: ricT("pal.k.formula"), html: `${ricSub(j.formula)} <span class="pal-d">${ricEsc(ricT("pal.formula.mass", { m: M }))}</span>`, detail: "", aria: `${ricT("pal.k.formula")}: ${j.formula}, ${ricT("pal.formula.mass", { m: M })}`, run: go(j.formula) });
-  const view = window.QADD_VIEW ? window.QADD_VIEW(hr, Number(j.neutral)) : [];
+  const view = (await CALCADD.table(j.formula, "", "", "")).rows.map(a => ({ ...a, mz: hr ? String(a.mz4) : String(a.nominal) }));
   const pol = typeof E !== "undefined" && E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "negative") && !E.files.some((/** @type {any} */ f) => !f.gone && f.polarity === "positive") ? -1 : 1;
   view.filter((/** @type {any} */ a) => a.common && a.pol === pol).slice(0, RIC_MAX_ADDUCTS).forEach((/** @type {any} */ a) => {
     rows.push({ ic: RIC_ICON.adduct, chip: ricT("pal.k.ion"), html: `${ricEsc(a.n)} · m/z <b>${a.mz}</b>`, detail: "", aria: `${a.n}, m/z ${a.mz}`, run: go(j.formula) });

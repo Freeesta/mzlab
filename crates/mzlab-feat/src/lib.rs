@@ -21,6 +21,7 @@ mod channels;
 pub mod chem;
 pub mod classi;
 pub mod deconvolve;
+pub mod dia;
 pub mod evid;
 pub mod export;
 pub mod export_inclusione;
@@ -88,6 +89,7 @@ pub mod tp;
 pub mod trace;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
+pub mod uv_bands;
 pub mod view;
 pub mod weakfile;
 

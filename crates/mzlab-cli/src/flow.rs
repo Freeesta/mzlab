@@ -8,14 +8,16 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use mzlab_core::error::{Error, Result};
-use mzlab_core::flow::{Artifact, Job, Outcome, Runner};
+use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
 use mzlab_core::json::Value;
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use crate::flow_base::table_job;
 use crate::flow_cache::Cache;
+use crate::flow_digl::uv::uv_job;
 use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
+use crate::flow_insilico::insilico_job;
 use crate::flow_level::level_job;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
@@ -219,6 +221,7 @@ pub(crate) struct Made {
     pub warnings: Vec<String>,
     /// What a per-file step says of its file (`{"via": "centroided" | "passthrough", ...}`).
     pub file: Option<Value>,
+    pub mem: Option<Mem>, // the memory of an alignment, when its step already worked it out
 }
 
 impl Made {
@@ -229,6 +232,7 @@ impl Made {
             estimates: Vec::new(),
             warnings: Vec::new(),
             file: None,
+            mem: None,
         }
     }
 }
@@ -355,15 +359,13 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
-    (
-        "spectra.insilico",
-        Exec::File("candidates", crate::flow_insilico::insilico_job),
-    ),
+    ("spectra.insilico", Exec::File("candidates", insilico_job)),
     ("formula.ms1", Exec::File("formulas", formula_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
+    ("chrom.uv_peaks", Exec::File("peaks", uv_job)),
     ("annot.level", Exec::File("annot", level_job)),
     (
         "tp.network",
@@ -376,7 +378,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ),
     (
         "tp.generate",
-        Exec::File("hypotheses", crate::flow_generate::generate_job),
+        Exec::Made(crate::flow_generate::generate_job),
     ),
     (
         "tp.filter",
@@ -482,14 +484,13 @@ impl Runner for FileRunner {
                 made.as_ref().err().map(|e| e.to_string()),
             );
         }
-        let made = made?;
-        let mem = crate::flow_base::align_mem(self, job);
+        let mut made = made?;
         Ok(Outcome {
             outputs: vec![(made.port.to_string(), made.artifact)],
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
-            mem,
+            mem: crate::flow_base::align_mem(self, job, made.mem.take()),
             warnings: made.warnings,
             file: made.file,
             cached,

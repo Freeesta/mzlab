@@ -21,6 +21,7 @@ async function post(route, p, body) {
   return r;
 }
 
+const tileName = new Map();             // slot -> name of the file whose index it holds (idxopen), which `msngrafo` reads the index of
 const known = new WeakMap();            // Blob -> number (a file sent as bytes is sent once)
 async function fileId(blob, name) {
   const m = /id=(\d+)/.exec(blob.type || "");
@@ -54,7 +55,7 @@ let line = Promise.resolve();
 onmessage = ev => {
   const m = ev.data;
   if (m.op === "recycle") return;
-  if (m.op === "lr_index" || m.op === "nat2mzml") { handle(m); return; }
+  if (m.op === "lr_index" || m.op === "lr_index_cen" || m.op === "nat2mzml" || m.op === "mzml2cen") { handle(m); return; }
   line = line.then(() => handle(m));
 };
 
@@ -64,13 +65,14 @@ async function handle(m) {
     let buf = null, len = 0, n = 0, info = null, files = null;
     switch (m.op) {
       case "open": info = await (await get("open", { slot: m.slot, id: await fileId(m.blob) })).text(); break;
-      case "nat2mzml": {                                                              // «Download .mzML» of a sample of a maker's file: written on the disk by the native side, saved from there
+      case "nat2mzml": case "mzml2cen": {                                                              // «Download .mzML» of a sample of a maker's file: written on the disk by the native side, saved from there
         // one long native call: ask now and then how far it has got (`id` of the message is the number the native side keeps the progress under)
         const poll = setInterval(async () => {
           try { const p = await (await get("rawprogress", { id })).json(); if (p.scansTotal) postMessage({ id, op: "progress", written: p.written, scans: p.scans, scansTotal: p.scansTotal }); } catch (_) { /* optional */ }
         }, 300);
         let out;
         try { out = await (await post("rpc", undefined, JSON.stringify({ op: m.op, name: m.name, pid: id, numpress: !!m.numpress }))).json(); } finally { clearInterval(poll); }
+        if (out.none) { postMessage({ id, op: m.op, none: true }); return; }          // mzml2cen: no profile spectrum, nothing to reduce
         postMessage({ id, op: m.op, n: 0, parts: [], tid: out.id });
         return;
       }
@@ -92,10 +94,17 @@ async function handle(m) {
         if (m.nat) p.nat = { key: m.nat.key, c: m.nat.c, id: m.nat.id, centroid: m.nat.centroid, members: await members(m.nat.members) };      // a sample of a maker's file: its members stay on the disk
         else if (m.blob) p.fid = await fileId(m.blob, m.op === "lr_put" ? m.name : undefined);
         if (m.op === "natsamples") p.members = await members(m.members);
+        if (m.op === "idxopen") tileName.set(m.slot, m.name);
+        if (m.op === "msngrafo") p.name = tileName.get(m.slot) || "";
         const r = await post("rpc", undefined, JSON.stringify(p));
         if (m.op === "scanbin") {
           buf = await r.arrayBuffer(); len = buf.byteLength; n = len;
           postMessage({ id, op: m.op, n, info: null, buf: len ? buf : null, len }, len ? [buf] : []);
+          return;
+        }
+        if (m.op === "natsrm") {                                                      // the traces as bytes, as the worker of the site gives them
+          const b = new Uint8Array(await r.arrayBuffer());
+          postMessage({ id, op: m.op, srm: b.length ? b : null }, b.length ? [b.buffer] : []);
           return;
         }
         if (m.op === "idxxicbin") {                                                   // [rt(n), y(n)] as doubles, like the worker of the site

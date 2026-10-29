@@ -99,6 +99,9 @@ fn replace(
     }
     if let Some((a, b)) = src.split_once('-') {
         let (a, b) = (num(a)?, num(b)?);
+        if a > b {
+            return Err("Unknown block.".to_string());
+        }
         let first = at(a)?;
         let prefix = ["{.lead} ", "{.note} "]
             .into_iter()
@@ -139,6 +142,9 @@ fn replace_text(
     if let Some(r) = src.strip_prefix("qa") {
         let (a, b) = r.split_once('-').ok_or_else(unknown)?;
         let (a, b) = (num(a)?, num(b)?);
+        if a > b {
+            return Err(unknown());
+        }
         at(a)?;
         out.splice(a - 1..b.min(lines.len()), [md.to_string()]);
         return Ok((out, format!("qa{a}-{a}")));

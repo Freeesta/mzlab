@@ -63,12 +63,8 @@ I18N.add("en", {
   "ctx.uv.wlAt": "Trace at this λ ({nm} nm)",
   "ctx.uv.wlView": "Trace over the nm range in view",
   "ctx.chrom.etpk": "Main peak labels",
-  "ctx.chrom.etpk.aria": "Show or hide, on the main peaks, the retention time and the m/z or wavelength that defines them",
+  "ctx.chrom.etpk.aria": "Show or hide the retention time on the main peaks",
   "etpk.nm": "{v} nm",
-  "etpk.tip.rt": "Peak at RT {rt} min",
-  "etpk.tip.mz": "Peak at RT {rt} min · base peak m/z {v}",
-  "etpk.tip.nm": "Peak at RT {rt} min · absorbance maximum at {v} nm",
-  "etpk.tip.xic": "Peak at RT {rt} min · extracted m/z {v}",
-  "etpk.tip.mrm": "Peak at RT {rt} min · transition {v}",
+  "etpk.tip.int": "intensity <b>{y}</b>",
   "ctx.spec.generate": "Generate formula (m/z {mz})…"
 });

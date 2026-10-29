@@ -12,7 +12,7 @@ use mzlab_core::elements::{self, mass_of};
 
 use super::*;
 use crate::aligned::{Aligned, CELL_ABSENT};
-use crate::evid::match_hypotheses;
+use crate::evid::{match_hypotheses, match_hypotheses_for};
 use crate::hypo::{counts_of, HypoParams, Hypothesis, Registry, Rules, SRC_NETWORK};
 use crate::trace::filled;
 
@@ -161,7 +161,12 @@ pub fn arcs_in(
         }
         for (i, &lo) in rows.iter().enumerate() {
             let want = t.mz[lo] + dm.abs();
-            let tol = want * np.ppm * 1e-6;
+            // the unit axis (`params.ppm < 0`) takes the tolerance of the Dig in Da
+            let tol = if inp.params.ppm < 0.0 {
+                crate::axis::LR_TOL
+            } else {
+                want * np.ppm * 1e-6
+            };
             let from = i + rows[i..].partition_point(|&h| t.mz[h] < want - tol);
             for &hi in rows[from..].iter().take_while(|&&h| t.mz[h] <= want + tol) {
                 let (src, dst) = if dm > 0.0 { (lo, hi) } else { (hi, lo) };
@@ -197,7 +202,7 @@ pub fn arcs_in(
 
 /// Steps from the parent of the rows already explained: the steps of the hypothesis that covers them (at least one), 0 for the parent.
 fn anchors(inp: &TpInputs, b: &TpBlock) -> Result<Vec<u8>> {
-    let matched = match_hypotheses(inp.hyps, inp.aligned);
+    let matched = match_hypotheses_for(inp.hyps, inp.aligned, inp.params.ppm);
     let mut g = filled(inp.aligned.len(), 0u8)?;
     for (r, x) in g.iter_mut().enumerate() {
         *x = match b.status[r] {

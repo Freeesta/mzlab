@@ -32,7 +32,7 @@ const CartPP = (() => {
 
   /** @type {{ handle: any, name: string, perm: string, items: any[], opened: Set<any>, stats: Map<any, any>, busy: boolean, obs: any, timer: any, native: any, deb?: any }} */
   const S = { handle: null, name: "", perm: "none", items: [], opened: new Set(), stats: new Map(), busy: false, obs: null, timer: 0, native: null };
-  const supported = () => typeof window !== "undefined" && !!/** @type {any} */ (window).showDirectoryPicker;
+  const supported = () => typeof window !== "undefined" && !!window.CAPACITA && CAPACITA.ha("cartellaLocale") && !!/** @type {any} */ (window).showDirectoryPicker;
   return { kindOf, collect, pairScan, visible, sameList, S, supported };
 })();
 
@@ -86,7 +86,7 @@ const CartPuntApri = (() => {
       const sc = /\.wiff$/i.test(x.name) ? pairScan(S.items, x) : null;
       await upload(sc ? [f, CartCarica.setDir(await fileOf(sc), x.dir)] : [f], "data");
       S.opened.add(x.path);
-    } catch (e) { CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_); CartCarica.note(T("cartp.error", { name: x.name, message: String(e.message || e) })); }
     CartPuntVista.render();
   }
 

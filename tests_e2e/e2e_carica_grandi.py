@@ -22,24 +22,24 @@ def scenario(n_ms1, n_ms2, mb_each):
             for k in range(count):
                 f = os.path.join(d, f"grande{k + 1}.mzML"); mzml_grande.write(f, n_ms1=n_ms1, n_ms2=n_ms2, seed=k + 1); names.append(f)
             pg.evaluate("window.__seen = []; new MutationObserver(() => window.__seen.push(document.getElementById('ldmsg').textContent)).observe(document.getElementById('ldmsg'), {childList: true, characterData: true, subtree: true})")          # what the overlay says, at every change
+            pg.evaluate("addEventListener('mzlab-index', () => document.getElementById('opbtn').click(), {once: true})")     # pressed at the first sign of progress: a click from the test came too late on a fast runner, with every file already read and nothing left to show
             pg.set_input_files("#pick", names)
             pg.wait_for_function("UPBUSY > 0 || ST.files.length > 0 || QQQ_LOADFAIL.size > 0")
             t0 = time.time()
-            pg.click("#opbtn")                                              # pressed while the files are still being read
             while time.time() - t0 < 600 and pg.evaluate("UPBUSY") > 0: time.sleep(0.3)
             pg.wait_for_timeout(500)
-            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + document.getElementById('start').textContent]")
+            return count, pg.evaluate("window.__seen"), pg.evaluate("[ST.files.length, [...QQQ_LOADFAIL], document.body.innerText + ' ' + [...document.getElementById('start').querySelectorAll('*')].filter(e => !e.closest('.diagbox')).map(e => e.childNodes.length && [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ')).join(' ')]")
     finally:
         r.close()
         for f in names: os.remove(f)
         os.rmdir(d)
 def check(count, seen, got):
-    ok, failed, text = got
+    ok, failed, text = got      # the text leaves out the closed «Details» box (.diagbox): it carries the technical error on purpose, only what the student sees must be free of raw keys
     assert "error.badIndex" not in text and "badIndex" not in text, "raw key in the page"
     assert ok + len(failed) == count, f"{ok} loaded + {len(failed)} failed != {count} "
     assert len(failed) >= 1 and ok >= 1, f"the room should fit some of the {count} files and not all: {ok} loaded, {len(failed)} failed"
     assert "not enough space" in text or "abbastanza spazio" in text, "the failed files are explained as lack of space"
-    assert any("%" in m for m in seen), f"the overlay never showed a percentage while reading: {seen[:5]}"
+    assert any("%" in m for m in seen), f"the overlay never showed a percentage while reading: {len(seen)} texts, first {seen[:3]}, last {seen[-3:]}"
 def too_many():           # the start screen is hidden once the files that fit have opened: its text is read too; under 50 MB each, so no check up front: a file or an index cut short by the browser is caught after writing
     check(*scenario(600, 6000, 80))
 def room_enough():        # room for everything: pressed while reading, the button waits for the last file, then opens them ALL and the loading screen goes away

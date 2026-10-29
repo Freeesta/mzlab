@@ -23,8 +23,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
-  # Three parallel shards: 3.14 and 3.11 `rest` run every test except tools/pytest_solo_311.txt, 3.11 `solo311` runs exactly those (slow tests where Python only
-  # drives the Rust binaries and .wasm). Together the 3.11 shards cover the whole suite once. The `pytest` job below is the gate that keeps the required names.
+  # Two parallel shards on 3.11: `rest` runs every test except tools/pytest_solo_311.txt, `solo311` runs exactly those (slow tests where Python only
+  # drives the Rust binaries and .wasm). Together they cover the whole suite once. Python 3.14 runs the whole suite in notte.yml; the `pytest` job below is the gate that keeps
+  # both required names (3.14 included) and depends on the 3.11 shards.
   pytest-shard:
     name: pytest-shard (${{ matrix.python }}, ${{ matrix.parte }})
     strategy:
@@ -33,7 +34,6 @@ jobs:
         include:
           - {python: "3.11", parte: rest}
           - {python: "3.11", parte: solo311}
-          - {python: "3.14", parte: rest}
     runs-on: ubuntu-latest
     # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
     timeout-minutes: 30
@@ -67,7 +67,7 @@ jobs:
       - name: Toolchain (version pinned in rust-toolchain.toml) and wasm32 target
         if: steps.solo.outputs.solo != 'true'
         run: |
-          rustup show
+          python tools/ci_toolchain.py
           rustup target add wasm32-unknown-unknown
       # Only the 3.11 shards save a cache, one per shard (`solo311` runs the release builds of the slow tests, which 3.14 skips). The unprefixed key is the one saved before the shards existed.
       # Every run restores the newest cache; only main saves one (a pull request too, but only while the newest cache has no tree record, tools/ci_cargo_mtime.py), keyed by the Rust sources (crates/, vendor/), so a pull request finds the crates of main
@@ -81,10 +81,10 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-bindgen
             target
-          key: pytest-wasm-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py', 'tools/ci_cargo/cargo') }}-rel
+          key: pytest-wasm-v2-${{ matrix.parte }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ hashFiles('crates/**', 'vendor/**', '.cargo/**') }}-${{ hashFiles('tools/ci_cargo_mtime.py', 'tools/ci_cargo/cargo') }}-rel
           restore-keys: |
-            pytest-wasm-${{ matrix.parte }}-${{ runner.os }}-
-            pytest-wasm-${{ runner.os }}-
+            pytest-wasm-v2-${{ matrix.parte }}-${{ runner.os }}-
+            pytest-wasm-v2-${{ runner.os }}-
       # cargo rebuilds a crate whose source mtime is newer than its cached output, and a checkout touches every file: restore the old mtime of the unchanged ones
       - id: mtime
         name: Reuse the compiled crates of the cache
@@ -101,7 +101,7 @@ jobs:
         if: steps.solo.outputs.solo != 'true' || matrix.parte != 'solo311'
         run: python -m pip install -e ".[test]" pytest-xdist
       # the tests spread over the 4 CPUs of the runner; --dist loadfile keeps the tests of one file in one worker (their fixtures build the .wasm once);
-      # the slowest files go first (tools/ci_pytest_ordine.py). The 3.14 job skips tools/pytest_solo_311.txt: tests where Python only drives the Rust
+      # the slowest files go first (tools/ci_pytest_ordine.py). The `rest` shard skips tools/pytest_solo_311.txt: tests where Python only drives the Rust
       # binaries and .wasm and compares their output, identical on every Python; the 3.11 `solo311` shard runs only them, minus the files that rust-wasm runs on the same diff.
       - name: Unit tests
         if: steps.solo.outputs.solo != 'true'
@@ -200,7 +200,7 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-chromium-
       - name: Toolchain for the site of the e2e tests (rust-toolchain.toml, tools/prepara_sito.py)
         if: steps.solo.outputs.solo != 'true'
-        run: rustup show
+        run: python tools/ci_toolchain.py
       - id: rcache
         if: steps.solo.outputs.solo != 'true'
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0

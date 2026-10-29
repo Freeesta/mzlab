@@ -94,7 +94,7 @@ async function centroidAll(btn, stop, st, refresh) {
     try {
       const blob = await rb.convertCentroids(f.name, sizeOf(f), p => { if (p.scansTotal) line(p.scans / p.scansTotal); }, ctl.signal);
       if (blob) { await upload([new File([blob], name, { type: "application/xml" })], "data"); made++; }
-    } catch (e) {
+    } catch (e_) { const e = /** @type {Lanciato} */ (e_);
       if (e && e.cancelled) break;
       failed++; st.textContent = I18N.t("settings.cen.fail", { name: f.name });
     }
@@ -204,7 +204,7 @@ function uipOpen(btn) {
     if (typeof redrawAll === "function") redrawAll();
   });
   on("#uip-beside", "change", e => { uipDo(() => { UIP.beside = e.target.checked; }); uipSave(); });      // read when a spectrum is opened (newSpec): nothing to redraw
-  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (!UIP.xicLens && window.XICLENS) XICLENS.closeAll(); });
+  on("#uip-xiclens", "change", e => { uipDo(() => { UIP.xicLens = e.target.checked; }); uipSave(); if (window.XICBTN) XICBTN.setLens(UIP.xicLens); });
   uipPriv(d, on);
   on("#uip-tour", "click", () => {      // the tour of Dati lives in Dati; in Disegno the button starts the tour of Disegno
     d.remove();

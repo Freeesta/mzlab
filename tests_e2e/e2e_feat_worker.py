@@ -21,9 +21,9 @@ tmp = Path(tempfile.mkdtemp(prefix="feat_worker_"))
 data = tmp / "data"; data.mkdir()
 sh(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(data))
 idx = sorted(p.name for p in data.glob("*.mzidx"))
-shutil.copy(ROOT / "TP_Mine/data/regole_tp.json", data / "regole_tp.json")
+shutil.copy(ROOT / "TP_Mine/data/regole_tp_2.json", data / "regole_tp_2.json")
 nat = tmp / "nat"; nat.mkdir()
-PARENT = ["--parent", "C21H32N2O2", "--rules", str(data / "regole_tp.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
+PARENT = ["--parent", "C21H32N2O2", "--rules", str(data / "regole_tp_2.json"), "--parent-mz", "345.253655", "--parent-rt", "1.0"]
 native = dict(l.split(" ")[:2] for l in sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], "--recipe", '{"polarity":1,"mode":"family"}', *PARENT).splitlines() if l.endswith(tuple("0123456789abcdef")) and " " in l and "hypotheses" not in l)
 sizes = build_wasm(tmp)
 srv, URL = serve(tmp)
@@ -68,7 +68,7 @@ try:
         step("alignment and filling in one worker: the .mzfeat is the native one", align)
         def proofs():
             r = pg.evaluate("""async ([names, recipe]) => { const t0 = performance.now();
-              const rules = new Uint8Array(await (await fetch("data/regole_tp.json")).arrayBuffer());
+              const rules = new Uint8Array(await (await fetch("data/regole_tp_2.json")).arrayBuffer());
               const minutes = names.map(n => { const m = /_t(\\d+)min/.exec(n); return m ? +m[1] : null; });
               const r = await POOL.proofs({ table: TABLE, stored: STORED, paths: names.map(n => "idx/" + n), rules, parent: "C21H32N2O2", parentRt: 1.0, minutes, parentMz: 345.253655, recipe });
               return { sha: await SHA(r.table), tried: r.tried, found: r.found, ms: Math.round(performance.now() - t0) }; }""", [idx, RECIPE])
@@ -82,7 +82,8 @@ try:
         def killed():
             pg.evaluate("window.NOTES.length = 0")
             r = pg.evaluate("""async ([names, recipe]) => { const pr = POOL.detectAll(names.map(n => ({ name: n, path: "idx/" + n })), recipe);
-              await new Promise(r => setTimeout(r, 150)); POOL._killBusy();
+              const hit = await new Promise(res => { const t = setInterval(() => { const n = POOL._killBusy(); if (n) { clearInterval(t); res(n); } }, 2); pr.then(() => { clearInterval(t); res(0); }, () => { clearInterval(t); res(0); }); });
+              if (!hit) throw new Error("the jobs ended before any worker was busy");
               const out = await pr; const res = {}; for (let i = 0; i < names.length; i++) res[names[i] + ".mzfeatf"] = await SHA(out[i]); return res; }""", [idx, RECIPE])
             for k, v in r.items(): assert v == native[k], k
             assert "tpmine.feat.restarted" in pg.evaluate("window.NOTES"), pg.evaluate("window.NOTES")

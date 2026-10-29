@@ -256,7 +256,13 @@ pub fn to_mzml(
             &(total as f64).into(),
         );
     };
-    lettori_mzml::scrivi(&mut *l, c as usize, &mut out, &mut tell).map_err(|e| error_json(&e))?;
+    // indexed mzML with no processing steps: the form `mzlab-cli convert` writes (`flow_base.rs` `write_mzml_with`), byte for byte
+    let conv = lettori_mzml::Conversione {
+        steps: Some(&[]),
+        ..lettori_mzml::Conversione::default()
+    };
+    conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)
+        .map_err(|e| error_json(&e))?;
     out.flush().map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
     })

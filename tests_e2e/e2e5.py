@@ -23,7 +23,11 @@ try:
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
         def CORR(v):      # the "Correzione" drop-down: open it, click the choice
-            pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150); pg.click(f'.pnl.xic .corri[data-c="{v}"]')      # «Sottrai» (file) and «Fondo» are two menus
+            pg.click('.pnl.xic [data-o="%s"]' % ("bkg" if v in ("snip", "tract", "") else "corr")); pg.wait_for_timeout(150)      # «Sottrai» (file) and «Fondo» are two menus
+            if v.startswith("f"):      # the file entry has a chooser of the file
+                try: pg.select_option('.pnl.xic [data-o="corrf"]', v[1:], timeout=30000)
+                except Exception as e: raise AssertionError("file chooser: " + pg.evaluate("(v) => JSON.stringify({sel: [...document.querySelectorAll('.pnl.xic [data-o=corrf]')].map(s => ({vis: s.offsetParent !== null, opts: [...s.options].map(o => o.value)})), want: v, pop: [...document.querySelectorAll('.pnl.xic .cpop')].map(c => c.hidden), files: E.files.map(f => [f.k, f.type, f.vis, f.kind])})", v[1:]) + " | " + str(e).replace("\n", " ")[:300])
+            else: pg.click(f'.pnl.xic .corri[data-c="{v}"]')
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
@@ -49,7 +53,7 @@ try:
             pg.click("#xic-no")
         step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
         def blank():
-            pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+            pg.evaluate("E.files.forEach(f=>f.vis=true); syncBrowse(); redrawAll()")
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)
             base = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y)]))"); print("before:", base)
             pg.evaluate("E.files[2].type='blank'"); pg.evaluate(f"ctl(E.panels[{xi}])"); pg.wait_for_timeout(300)
@@ -80,9 +84,9 @@ try:
         step("spectrum background subtraction", spec_bg)
         def calc():
             pg.evaluate("document.querySelector('#np-calc2').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
-            t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.07" in t and "363.0665" in t and "1 decimale" not in t
+            t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "363.1" in t and "364.07" not in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
-            pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
+            pg.locator("#calcout button.cxic").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
             assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1

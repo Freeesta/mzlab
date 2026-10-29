@@ -15,9 +15,12 @@ import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
 import { indexXicBin } from "./rust-xicbin.js";
+import { ha, stato, nota, serve } from "./capacita.js";
 import { compileOnce, ordered, judgeDeath, forgetFaults, stepDown, takeDown, lowerTo, off } from "./rust-supervisor.js";
 import * as BUD from "./rust-budget.js";
 
+// plain Array from doubles (the answer is stringified next): the loop beats Array.from on a typed array
+const arr = a => { const o = new Array(a.length); for (let i = 0; i < o.length; i++) o[i] = a[i]; return o; };
 export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   const blobs = new Map();                 // file name -> Blob of every file uploaded in this page
   let slots = [];                          // k -> { name, blob, info, bad, opening }
@@ -32,8 +35,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     const w = /** @type {Worker & { send?: any }} */ (new Worker(workerUrl, { type: "module" })); peakMem = 0; w.send = ordered(w, wasmModule, () => api.budgetMb, () => ++seq, BUD.policy, BUD.whenProbed, () => takeDown(api));
     w.onmessage = ev => {
       const m = ev.data;
-      if (m.op === "ready") return; if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
-      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
+      if (m.op === "ready") { if (m.cap) { nota(m.cap); if (stato("motore") === "no") off(api, slots, notify, "cap.engine"); } return; } if (m.op === "blocked") { onBlocked(); return; }                                                     // the saved files are held by another tab
+      if (m.op === "notice") { notify(m.key); return; }  if (m.op === "cap-off") { serve(m.fn); return; }  if (m.op === "budget-choice") { BUD.chosen(api, m.choice); return; } if (m.op === "budget-down") { if (lowerTo(api, stats, m, BUD.lowered)) notify("error.engineLowered"); else { stop(worker, { dead: true }); off(api, slots, notify, "error.memoryBudget"); } return; }   // notice: e.g. error.memoryBudget from the pool of the indexes
       if (m.op === "progress") { const q = pending.get(m.id); if (q && q.onp) q.onp(m); return; }       // a conversion that is still running
       const p = pending.get(m.id);
       if (!p) { if (m.buf) recycle(m.buf); return; }
@@ -90,8 +93,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
   }
-  api.start = () => { if (!worker && !api.disabled) spawn(); }; BUD.wire(api, () => worker);
-  api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } };
+  api.start = () => { if (!worker && !api.disabled) { if (stato("motore") !== "no") spawn(); else { serve("motore"); off(api, slots, notify, ha("simd128") ? "cap.engine" : "error.noSimd"); } } }; BUD.wire(api, () => worker);
+  api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } }; api.blobOf = name => blobs.get(base(name)) || null;   // the file as the page was given it (the Export mzML of Flow)
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
   api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
@@ -128,19 +131,19 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
     const r = await rpc({ op, slot: k, level, px, ...extra });
     if (r.dead || r.error) return null;
     const a = new Float64Array(r.buf, 0, r.len), n = r.n;
-    const out = { rt: Array.from(a.subarray(0, n)), y: Array.from(a.subarray(n, 2 * n)) };
+    const out = { rt: arr(a.subarray(0, n)), y: arr(a.subarray(n, 2 * n)) };
     recycle(r.buf);
     return out;
   };
 
   async function indexRoute(s, k, path, u, t0) {
-    let r = await rpc({ op: "route", slot: k, path, query: u.search });
+    let r = await rpc(path === "/api/canali" && s.blob ? { op: "canali", slot: k, name: base(s.name).split("#")[0], blob: s.blob } : { op: "route", slot: k, path, query: u.search });      // the channels also read the chromatograms of the mzML (SRM, UV)
     if (!r.dead && !r.error && !r.info && path === "/api/spectrum" && s.blob) r = await rpc({ op: "specexact", slot: k, query: u.search, blob: s.blob });   // one scan of a centroid HR file: exact peaks from the mzML
     if (r.dead || r.error || !r.info) return null;
     stats.rust++;
     return { status: 200, text: r.info, ms: performance.now() - t0 };
   }
-  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero)$/;
+  const INDEX_ROUTES = /^\/api\/(chrom|filters|scanlist|nearest_scan|spectrum|dda|scan_axis|msn_albero|canali)$/;
   const hasRef = q => !!q.get("ref");
   // Returns { status, text } or null (the route is unavailable: browser.js answers err.route.unavailable).
   api.handle = async (method, url, init) => {
@@ -158,7 +161,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (r) { stats.rust++; return { ...r, ms: performance.now() - t0 }; }
       return null;
     }
-    if (INDEX_ROUTES.test(path) && !hasRef(q)) {
+    if ((INDEX_ROUTES.test(path) || (path === "/api/xic" && q.get("canale"))) && !hasRef(q)) {       // a trace or a list inside a channel: the engine of the index builds the channels itself
       const s = slots[k0];
       if (!s) return null;
       await s.opening;
@@ -241,7 +244,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       let w = 2;
       for (let c = 0; c < a[1]; c++) {
         const sid = a[w], rt = a[w + 1], n = a[w + 2]; w += 3;
-        scans.push({ i: i0 + c, sid, rt, mode: "centroid", mz: Array.from(a.subarray(w, w + n)), y: Array.from(a.subarray(w + n, w + 2 * n)) });
+        scans.push({ i: i0 + c, sid, rt, mode: "centroid", mz: arr(a.subarray(w, w + n)), y: arr(a.subarray(w + n, w + 2 * n)) });
         w += 2 * n;
       }
       body = { n: a[0], scans };

@@ -24,7 +24,7 @@ try:
         def listing():
             pg.wait_for_function("(()=>{const s=document.querySelector('.pnl.chrom .bfw select[data-bf=filt]');return s&&s.options.length>1})()", timeout=20000)
             t = pg.evaluate("[...document.querySelector('.pnl.chrom .bfw select[data-bf=filt]').options].map(o=>o.textContent)")
-            assert any("Full ms" in x and "×" in x for x in t), t
+            assert any("MS¹" in x and "×" in x for x in t), t
         step("the menu lists the scan types of the file with their counts", listing)
         def ms2filter():
             pg.evaluate("setTab('ms2')"); attendi(pg, "E.panels.some(p=>p.type==='chrom'&&p.tab==='ms2'&&p._a)"); pg.evaluate("ms2Switch(null)"); frames(pg, 3)
@@ -33,8 +33,12 @@ try:
             opts = pg.evaluate("[...document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
             key = [o[0] for o in opts if "ms2" in o[0]][0]
             n = int(opts[[o[0] for o in opts].index(key)][1].split("×")[1].replace(" ", ""))
-            pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key); attendi(pg, f"(()=>{{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return !!(c&&c.filt==={json.dumps(key)}&&c._a&&c._a.sr)}})()")
-            got = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {filt:c.filt,flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()")
+            GOT = "(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {filt:c.filt,flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()"
+            pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key)
+            # the previous chromatogram (all scans) stays in _a.sr until the filtered one is drawn: wait for the filtered scan count itself
+            try: attendi(pg, f"(()=>{{const g={GOT};return g.filt==={json.dumps(key)}&&g.n==={n}}})()", timeout=20000)
+            except TimeoutError: pass
+            got = pg.evaluate(GOT)
             assert got["filt"] == key and got["flv"] == 2 and got["n"] == n, (got, key, n)
         step("choosing an MS2 type: the chromatogram has exactly the scans of that type", ms2filter)
         def pin():
@@ -73,8 +77,8 @@ try:
             assert t and "NL: " in t, t
         step("the spectrum cell has a short header with the NL", head)
         def active():
-            pg.evaluate("E.panels[0].el.scrollIntoView({block:'center'})"); frames(pg, 2)
-            box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.click(box["x"] + 30, box["y"] + 30); attendi(pg, "!!document.querySelector('.pnl.act')")
+            # locator.click waits for the canvas to stop moving: the product's own smooth scrolls were still running when a measured box was clicked
+            pg.locator(".pnl.chrom canvas").first.click(position={"x": 30, "y": 30}); attendi(pg, "!!document.querySelector('.pnl.act')")
             sh = pg.evaluate("getComputedStyle(document.querySelector('.pnl.act')).boxShadow"); assert sh and sh != "none", sh
         step("the active cell has an outline", active)
     r.close()

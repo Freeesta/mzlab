@@ -194,9 +194,11 @@
       for (const inst of b.plan.steps) emitWeb(x, { passo: inst.id, stato: "waiting", via: here(inst) ? "browser" : "computer", parte: 0, di: 0, mb: null, modo: null });
       return;
     }
-    for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) await call(x, "set_identity", { name, text: id });
+    // a changed fingerprint (an index that was loading is now in OPFS) re-keys the jobs only at the next `update`, even when the plan text is the same
+    let rekey = false;
+    for (const [name, id] of Object.entries(b.ids)) if (x.ids[name] !== id) { await call(x, "set_identity", { name, text: id }); rekey = true; }
     x.ids = b.ids;
-    if (text === x.sent) return;
+    if (text === x.sent && !rekey) return;
     x.sent = text;
     for (const c of await call(x, "update", { plan: JSON.parse(text) })) {
       const key = jk(c);
@@ -297,8 +299,10 @@
     live.logFrom = live.log.length;
     const al = S.plan.steps.find((/** @type {any} */ i) => base(i) === "features.align"), key = al && live.keys.get(`${al.id}|`);
     const table = key ? await (await kit().getPool()).fs.read(F.liveJobs.DIR + key + ".mzfeat") : null;
+    // the record of the run (prov/1, corsa/1) for the plans of the base chain; a failure of it never fails the run
+    const record = F.webProv ? await F.webProv.record(live, /** @type {any[]} */ (await call(live, "jobs"))).catch((/** @type {any} */ e) => { console.warn("record of the run:", e && e.key || e && e.message || e); return null; }) : null;
     // a run launched by the assistant keeps who launched it (llm of prov/1: S.llmRef = {log_sha256, turn, provider, model, level})
-    return { steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
+    return { record, steps: S.plan.steps.map((/** @type {any} */ i) => i.id), table, files: S.plan.steps.map((/** @type {any} */ i) => live.files.get(i.id)).filter(Boolean), llm: S.llmRef || null };
   };
 
   /** the estimate of the alignment when every detection of the live session is kept in OPFS, else null @param {any} S */

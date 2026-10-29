@@ -79,6 +79,7 @@ async function ms2trSeries(p) {
 async function rawSeries(p) {
   if (p.type === "chrom" && isAnalog(p.kind)) return analogSeries(p);
   if (p.type === "chrom" && p.ranges && p.ranges.length && window.BANCO) return BANCO.rangeSeries(p);       // stacked graphs of the bench (banco.js)
+  if (window.CANALI && CANALI.on(p)) return CANALI.series(p, shownFor(p));        // the channels the student ticked (canali.js)
   if (p.type === "chrom" && (p.tab || E.tab) === "ms2" && !isAnalog(p.kind) && p.kind !== "pda") { const s = await ms2trSeries(p); if (s) return s; }
   if (p.type === "chrom") {
     let fl = shownFor(p);
@@ -91,7 +92,7 @@ async function rawSeries(p) {
   const files = shownFor(p);
   if (p.type === "xic") {
     const ts = p.traces, out = [];
-    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv).then(d => ({
+    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv, window.CANALI ? CANALI.idOf(f, t.canale) : null).then(d => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
       color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));
@@ -165,7 +166,7 @@ function syncView(p) {
   if (!isLine(p) || !p._a) return;
   p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
   const all = tabPanels(p.tab).filter(q => isLine(q) && q.el && !q._exp), z = fz();
-  const L = Math.max(Math.round(66 * z), ...all.map(q => q._needL || 0)), R = Math.max(14, ...all.map(q => q._needR || 0));
+  const L = maxOf(all.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(all.map(q => q._needR || 0), 14);
   const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
   window.MARG_L = L; window.MARG_R = R;
   all.forEach(q => { if (q === p) return; const st = q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
@@ -182,7 +183,7 @@ async function draw(p) {
     if (p._drawAt != null && t - p._drawAt < 12) { if (!p._drawQ) { p._drawQ = 1; FRAME.next(() => { p._drawQ = 0; draw(p); }); } return; }
     p._drawAt = t;
   }
-  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e) { if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
+  try { const r = p.type === "spec" && p.uv ? await (window.UVSPEC ||= await import("./uv-spettro.js")).draw(p) : p.type === "spec" ? await drawSpec(p) : p.type === "map" ? await drawMap(p) : await drawLines(p); if (r === false) return; afterDraw(p); syncView(p); if (p.tl) syncT(p); uiSave(); } catch (e_) { const e = /** @type {Lanciato} */ (e_); if (p.rd) p.rd.textContent = I18N.t("draw.error", { message: e.message }); }
 }
 const MSG = { xic: I18N.t("msg.xic"), chrom: I18N.t("msg.chrom"), mrm: I18N.t("msg.mrm") };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
@@ -259,13 +260,14 @@ function legend(p, all, note = "") {
     // one trace: the trace is in the title of the panel and the legend lists only the files; several traces: two levels, the traces in bold, then the files
     const files = scanFiles(shownFor(p)), one = p.traces.length === 1;
     const dsw = (c, d) => d && d.length ? `<i style="background:repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)"></i>` : sw(c);
-    const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}" title="${I18N.t("leg.toggle.title")}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}" title="${I18N.t("leg.rename.title")}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
-    const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}" data-h="x|${f.k}|${p.traces[0].mz}" title="${I18N.t("leg.toggle.title")}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
+    const trs = one ? "" : `<span class="lvl">` + p.traces.map(t => `<span class="tr${off(p.hid["t" + t.mz])}"><span class="tg" data-h="t${t.mz}">${sw(PAL[p.traces.indexOf(t) % PAL.length])}</span><b data-t="${t.id}">${fmtFormula(t.label)}</b> ${t.w == null ? `<span>(${t.mz} ±${p.tol})</span>` : ""}<button data-r="${t.id}" title="${I18N.t("xic.remove.title")}">&times;</button></span>`).join("") + `</span>`;
+    const fl = files.map((f, fi) => one ? `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz])}${files.length > 1 && f.k === E.cur ? " act" : ""}" data-h="x|${f.k}|${p.traces[0].mz}">${sw(f.color)}${EH(f.label)}${legPol(f)}</span>`
       : `<span class="tg${off(p.hid["x|" + f.k + "|" + p.traces[0].mz] && p.traces.every(t => p.hid["x|" + f.k + "|" + t.mz]))}" data-hf="${f.k}" title="${I18N.t("leg.fileAll.title")}">${dsw("var(--muted)", fi > 0 ? DASHES[fi % 4] : [])}${EH(f.label)}</span>`).join("");
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">${I18N.t("leg.files")}</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); COMANDI.fai("series.visibility", p, () => p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; })); draw(p); });
-  } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}" title="${I18N.t("leg.toggle.title")}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
+  } else p.leg.innerHTML = all.map(s => h`<span class="tg${raw(off(isHid(p, s)))}" data-h="${s.key}">${raw(sw(s.color))}${s.name}${raw(legPol(E.files[s.k]))}</span>`).join("");
   if ((p.corrbar || !note) && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shownFor(p)).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
+  if (window.CANALI && CANALI.on(p)) p.leg.insertAdjacentHTML("beforeend", CANALI.legend(p));      // the files that lack a channel ticked in the panel: «—»
   if (p.corrbar) p.corrbar.innerHTML = "";                   // corrections (note, background of a stretch, reference): under the x axis, not over the graph
   if (note) (p.corrbar || p.leg).insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask(I18N.t("leg.ion.prompt"), t.label); if (v) { COMANDI.fai("xic.traces", p, () => { t.label = v; }); draw(p); } });
@@ -284,14 +286,17 @@ function legCollapse(p) {
 }
 
 // the highest and the lowest value of a trace in view, leaving out the initial zone (solvent front); if nothing else is in view the scale takes it
-function traceMax(s, x0, x1) {
+function traceMax(DC, s, x0, x1) {
   let m = 1e-9, neg = 0;
   for (const za of [s.ze ?? -Infinity, -Infinity]) {
-    for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= za) { if (s.ys[i] > m) m = s.ys[i]; if (s.ys[i] < neg) neg = s.ys[i]; }
+    [m, neg] = DC.extent(s.x, s.ys, Math.max(x0, za), x1, m, neg);
     if (m > 1e-9 || neg < 0) break;
   }
   return { m, neg };
 }
+// the smoothed and the clipped copies of a trace depend on the data only: a zoom or a pan draws again with the same arrays
+const SMOOTHED = new WeakMap(), CLIPPED = new WeakMap();
+const cachedMap = (cache, a, f) => { let r = cache.get(a); if (!r) { r = f(a); cache.set(a, r); } return r; };
 // the zero line (dashed; with a background it is the background itself, labelled) and the grey band of the initial zone
 function zeroMarks(g, sr, X, Y, W, H, band) {
   const fo = sr.some(s => s.cf), y0 = Math.round(Y(0));
@@ -301,6 +306,7 @@ function zeroMarks(g, sr, X, Y, W, H, band) {
   if (xb > M.l) { g.fillStyle = "rgba(120,120,120,.22)"; g.fillRect(M.l, M.t, xb - M.l, H - M.t - M.b); }
 }
 async function drawLines(p) {
+  const DC = (/** @type {any} */ (window).DECIMA ||= await import("./decima.js"));       // loaded once; later drawings do not wait for the module system
   const all = await seriesOf(p); if (window.ETPK && !p._a) await ETPK.ready(p, all.filter(s => !isHid(p, s)));       // the first drawing of a panel waits a moment for the peak labels (drawn once)
   const { g, W, H } = setup(p.cv);
   const sr = all.filter(s => !isHid(p, s));
@@ -317,12 +323,12 @@ async function drawLines(p) {
   const flo = Math.floor(lo * 10 + 1e-6) / 10, fhi = Math.ceil(hi * 10 - 1e-6) / 10, x0 = p.zoom ? p.zoom[0] : flo, x1 = p.zoom ? p.zoom[1] : fhi;
   const so = window.SUBREF ? SUBREF.eff(p) : null, clipDraw = !!p.clipDraw || !!(so && so.clip);
   sr.forEach(s => {
-    s.ys = smooth(s.y, p.smooth ? 3 : 0);
-    if (clipDraw) s.ys = s.ys.map(v => Math.max(0, v));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
-    const { m, neg } = traceMax(s, x0, x1);
+    s.ys = p.smooth ? cachedMap(SMOOTHED, s.y, y => smooth(y, 3)) : s.y;
+    if (clipDraw) s.ys = cachedMap(CLIPPED, s.ys, ys => ys.map(v => Math.max(0, v)));          // «negativi a 0»: only the drawing; areas, heights and S/N use s.y
+    const { m, neg } = traceMax(DC, s, x0, x1);
     s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
-  const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
+  const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = maxOf(sr.map(s => s.mx));
   // rows of the stacked view: one per trace, or (stacked graphs of the bench) one per graph with the files overlaid in it
   const rowIx = new Map(); sr.forEach((s, i) => { const g = s.grp != null ? s.grp : "i" + i; if (!rowIx.has(g)) rowIx.set(g, rowIx.size); s.row = rowIx.get(g); });
   const nrow = rowIx.size, rowMax = new Array(nrow).fill(1e-9); sr.forEach(s => { rowMax[s.row] = Math.max(rowMax[s.row], s.mx); });
@@ -334,7 +340,7 @@ async function drawLines(p) {
   let ymax = stk ? nrow : (nrm ? 100 : G) * (p.ints.length ? 1.2 : window.ETPK && ETPK.on(p, sr.length) ? 1.16 : 1.08) / (1 - (p._legPad || 0));   // room above the peaks for the area labels and the peak labels
   const ymaxAuto = ymax;
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
-  if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.x[i] >= (s.ze ?? -Infinity) && s.ys[i] < ymin) ymin = s.ys[i];
+  if (!stk && !logy) for (const s of sr) ymin = DC.extent(s.x, s.ys, Math.max(x0, s.ze ?? -Infinity), x1, -Infinity, ymin)[1];
   if (ymin < 0) ymin *= 1.08;
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
@@ -374,7 +380,8 @@ async function drawLines(p) {
       const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
       g.beginPath();
       const pts = [];
-      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; });
+      const [a0, a1] = spanOf(s.x, x0, x1);                  // the window by binary search (the bounds are still tested)
+      for (let i = a0; i < a1; i++) { const r = s.x[i]; if (r < x0 || r > x1) continue; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); pts.push([px, py]); last = px; }
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = EXPORTING ? lightTint(s.color) : ecss("--panel"); g.fill();
       baseLine(g, Y(0) + sy, X(x0) + sx, X(x1) + sx);
@@ -387,14 +394,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
-    let curX = -999, minY, maxY, firstY, lastY, minFirst = true;
-    const flush = (cx) => { if (curX === -999) return; if (!st) { g.moveTo(cx, firstY); st = true; } else g.lineTo(cx, firstY); if (minFirst) { g.lineTo(cx, minY); g.lineTo(cx, maxY); } else { g.lineTo(cx, maxY); g.lineTo(cx, minY); } g.lineTo(cx, lastY); };
-    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = Math.round(X(r)), py = Y(U(s, s.ys[i]));
-      if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = py; minFirst = true; }
-      else { if (py < minY) { minY = py; if (maxY === firstY) minFirst = true; } if (py > maxY) { maxY = py; if (minY === firstY) minFirst = false; } lastY = py; }
-    });
-    flush(curX);
+    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
+    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);
@@ -433,7 +435,7 @@ async function drawLines(p) {
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
     g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = ecss("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = ecss("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area) }) }); g.font = fpx(12);
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: I18N.t("tip.area", { area: fmtFull(r.area), y: fmt(r.height) }) }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
@@ -444,7 +446,7 @@ async function drawLines(p) {
   // what to show when the mouse is over the chart: RT and intensity of each visible trace at that point
   p._a.hov = (px, py) => {
     const x = xOf(p, px), rows = sr.map(s => { const i = nearIdx(s.x, x); return { s, v: s.ys[i], raw: s.yraw ? s.yraw[i] : null }; }).sort((a, b) => b.v - a.v);
-    return { px, rt: x, html: `<b>RT ${x.toFixed(2)} min</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
+    return { px, rt: x, html: `<b>${I18N.t("hov.rt", { v: x.toFixed(2) })}</b>` + rows.slice(0, 8).map(r => `<div><i style="background:${r.s.color}"></i>${EH(r.s.name.length > 30 ? r.s.name.slice(0, 29) + "…" : r.s.name)} <b>${fmt(r.v)}</b>${r.raw != null ? ` <span class="sm">${I18N.t("tip.raw", { v: fmt(r.raw) })}</span>` : ""}</div>`).join("") + (window.GRADIENTE && p.overlay ? GRADIENTE.hover(p, x, py) : "") + (rows.length > 8 ? `<div class="sm">${I18N.t("tip.more", { n: rows.length - 8 })}</div>` : "") };
   };
   legend(p, all, (p.type === "chrom" && p.kind === "press" && sr.some(s => s.unitNote) ? I18N.t("analog.unit.tenfold", sr.find(s => s.unitNote).unitNote.params) : "") + (p.type === "chrom" && !isAnalog(p.kind) && p.kind !== "pda" && (p.mz0 != null || p.mz1 != null) ? I18N.t("leg.note.mz", { lo: p.mz0 ?? "min", hi: p.mz1 ?? "max" }) : "") + (p.type === "chrom" && p.kind !== "pda" && p.prec && shown().some(f => f.kind === "ms2") ? I18N.t("leg.note.prec", { prec: p.prec }) : "") + (all.some(x => x.corr) ? I18N.t("leg.note.corr", { corr: all.find(x => x.corr).corr }) : "") + (stk ? (p.norm ? I18N.t("leg.note.rowNorm") : I18N.t("leg.note.rowScale", { h: fmt(G / 0.92) })) : ""));
 }
@@ -489,7 +491,6 @@ function zoomYTo(p, lo, hi, quiet) {
   if (!quiet) draw(p);
 }
 function zoomTo(p, z0, z1) { const [f0, f1] = p._a.full; p.zoom = clampView(z0, z1, f0, f1); draw(p); }
-
 // ---- RT-m/z map (like Xcalibur's "Ion Map" and MZmine's 2D viewer): each pixel is the mean intensity of one ion at one instant
 const DIV = [[0, [213, 94, 0]], [0.5, [250, 250, 246]], [1, [0, 114, 178]]];       // Okabe-Ito vermilion #D55E00 <-> white <-> blue #0072B2: readable by colour-blind people
 function lut(stops) {
@@ -513,8 +514,7 @@ const mapPal = () => window.MAPPA && MAPPA.prefs.pal === "cividis" ? "cividis" :
 const mapBg = p => window.MAPPA ? MAPPA.corrQ(p) : "";                    // the request suffix of the background correction of the panel ("", "&bg=1" or a stretch)
 const palCss = (name, diff) => diff ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : `linear-gradient(90deg,${MAP_PAL[name].map(c => `rgb(${c})`).join(",")})`;
 const getMap = (k, lv, bg) => memo(`g${k}|${lv}|${bg}`, () => J(lv === "pda" ? `api/map?k=${k}&kind=pda${bg}` : `api/map?k=${k}&level=${lv}${bg}`).then(j => {
-  const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-  return { ...j, m: new Float32Array(u.buffer) };
+  return { ...j, m: b64F32(j.data, Number.isInteger(j.nrt) && Number.isInteger(j.nmz) ? j.nrt * j.nmz : null) };
 }));
 // Whether a file has a PDA matrix (RT x wavelength) for the map: a PDA trace alone is not one and the browser engine reads none, so the answer is probed once
 // from the route (a plain fetch: the error is the answer, not a message) and kept on the file (`_pdaMap`); true re-renders the controls of the map panels, which then offer the PDA choice.
@@ -535,18 +535,13 @@ function mapNorm(m, norm) {
   let t = 0; for (let i = 0; i < m.length; i++) t = norm === "max" ? Math.max(t, m[i]) : t + m[i];
   const f = t > 0 ? (norm === "max" ? 1 : 1000) / t : 1, o = new Float32Array(m.length); for (let i = 0; i < m.length; i++) o[i] = m[i] * f; return o;
 }
-function mapImage(p, A, B, scale, norm = "abs") {
+function mapImage(p, A, B, scale, norm = "abs", fix = 0) {
   const dop = window.MAPPA ? MAPPA.diffOpt(!!B) : { show: "all", thr: B ? 0.02 : 0.004, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
-  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}${scale === "gamma" ? p.gamma || 0.6 : ""}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}`;
+  const pal = mapPal(), key = `${A.k}|${B ? B.k : ""}|${scale}${scale === "gamma" ? p.gamma || 0.6 : ""}|${norm}|${pal}|${mapBg(p)}|${JSON.stringify(dop)}|${fix}`;
   if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
   const n = A.m.length, v = new Float32Array(n);
   if (B && B.d) v.set(B.d); else { const mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null; for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i]; }
-  const nz = []; for (let i = 0; i < n; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
-  let samp = nz; if (nz.length > 10000) {
-    samp = []; const s = nz.length / 10000; for (let i = 0; i < 10000; i++) samp.push(nz[Math.floor(i * s)]);
-  }
-  samp.sort((a, b) => a - b);
-  const ref = samp.length ? samp[Math.min(samp.length - 1, Math.floor(samp.length * 0.995))] : 1, floor = dop.thr;        // 99.5th percentile: one huge peak does not flatten the rest
+  const ref = fix > 0 ? fix : MAPREND.ref(v), floor = dop.thr;        // 99.5th percentile (MAPREND.ref), or the common one of the open files with the fixed scale
   const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : scale === "gamma" ? Math.pow(r, p.gamma || 0.6) : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
   const ctx = /** @type {CanvasRenderingContext2D} */ (off.getContext("2d")), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : lutSeq(pal);
@@ -558,12 +553,12 @@ function mapImage(p, A, B, scale, norm = "abs") {
   ctx.putImageData(im, 0, 0);
   return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
 }
-// The whole view of the map: the union of the stretches with data of the files shown (first to last scan with peaks; lowest to highest m/z) with a small
-// margin, inside the grid. A file without the extent (an older answer) or without data keeps the whole grid. Nothing is extrapolated.
-function mapView(A, B, rt0, rt1, mz0, mz1) {
-  const ex = [A, B].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
+// The whole view of the map: the union of the stretches with data (first to last scan with peaks; lowest to highest m/z) of the files shown and of the other open files
+// of the tab, so the axes stay put when the file changes, with a small margin, inside the grid. A file without the extent or without data keeps the whole grid.
+function mapView(A, B, rt0, rt1, mz0, mz1, others = []) {
+  const ex = [A, B, ...others].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
   if (!ex.length) return { rt: [rt0, rt1], mz: [mz0, mz1] };
-  const lo = (i, k) => Math.min(...ex.map(e => e[k][i])), hi = (i, k) => Math.max(...ex.map(e => e[k][i]));
+  const lo = (i, k) => minOf(ex.map(e => e[k][i])), hi = (i, k) => maxOf(ex.map(e => e[k][i]));
   const a = lo(0, "rt"), b = hi(1, "rt"), c = lo(0, "mz"), d = hi(1, "mz"), pr = Math.max((b - a) * 0.01, 1e-3), pm = Math.max((d - c) * 0.01, 0.5);
   return { rt: [Math.max(rt0, a - pr), Math.min(rt1, b + pr)], mz: [Math.max(mz0, c - pm), Math.min(mz1, d + pm)] };
 }
@@ -578,11 +573,12 @@ async function drawMap(p) {
   const lv = isPda ? "pda" : f.lv;
   const se = window.SUBREF ? SUBREF.eff(p) : null;
   const rf = !isPda && se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
-  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null;
+  const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null, others = await Promise.all(sf.filter(q => q.k !== f.k && (isPda || q.lv === lv) && !(rf && q.k === rf.k)).map(q => getMap(q.k, lv, mapBg(p)).catch(() => null)));      // the other files of the tab, same level: their extents fix the whole view
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
-  const im = mapImage(p, A, B, p.scale, p.norm || "abs");
+  const fix = !B && window.MAPPA && MAPPA.diffOpt(false).fix ? maxOf([A, ...others].filter(Boolean).map(o => o.m._r?.[p.norm || "abs"] ?? ((o.m._r ||= {})[p.norm || "abs"] = MAPREND.ref(mapNorm(o.m, p.norm || "abs"))))) : 0;      // fixed colour scale: the top is the same on every file
+  const im = mapImage(p, A, B, p.scale, p.norm || "abs", fix);
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
-  const ext = mapView(A, B, rt0, rt1, mzA, mzB);                     // the whole view is where the files have data (no empty bands at the sides)
+  const ext = mapView(A, B, rt0, rt1, mzA, mzB, others);                     // the whole view is where the files have data (no empty bands at the sides)
   const x0 = p.zoom ? p.zoom[0] : ext.rt[0], x1 = p.zoom ? p.zoom[1] : ext.rt[1], y0 = p.zoomY ? p.zoomY[0] : ext.mz[0], y1 = p.zoomY ? p.zoomY[1] : ext.mz[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = p.scale === "gamma" ? I18N.t("map.sc.gamma", { g: p.gamma || 0.6 }) : I18N.t(`map.sc.${p.scale}`);
@@ -600,7 +596,7 @@ async function drawMap(p) {
   p._a.hov = (px, py) => {
     const rt = xOf(p, px), mz = mzAt(py), i = Math.min(A.nrt - 1, Math.max(0, Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt))), j = Math.min(A.nmz - 1, Math.max(0, Math.floor((mz - A.mz0) / A.dmz)));
     const v = im.v[i * A.nmz + j];
-    return { px, rt, html: isPda ? `<div>${rt.toFixed(2)} min, ${mz.toFixed(1)} nm</div><div>${(B && v > 0 ? "+" : "") + fmt(v)} mAU</div>` : I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
+    return { px, rt, html: isPda ? `<b>${I18N.t("hov.rt", { v: rt.toFixed(2) })} · ${I18N.t("hov.nm", { v: mz.toFixed(1) })}</b><div>${I18N.t(B ? "map.hov.diff" : "map.hov.mean")}: <b>${I18N.t("hov.mau", { v: (B && v > 0 ? "+" : "") + fmt(v) })}</b></div>` : I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
   const rng = B ? [`<span title="${EH(I18N.t("map.leg2d.up.tip"))}">${I18N.t("map.leg2d.up")}</span>`, `<span title="${EH(I18N.t("map.leg2d.down.tip"))}">${I18N.t("map.leg2d.down")}</span>`] : ["0", fmt(im.ref)];       // the colour bar ends: the 99.5th percentile (above it the colour saturates)
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="sm">${rng[0]}</span><span class="cbar" style="background:${palCss(mapPal(), !!B)}"></span><span class="sm">${rng[1]}</span><span class="sm">${B ? "" : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span>`;
@@ -610,4 +606,3 @@ async function drawMap(p) {
 }
 
 function nearIdx(xs, v) { let lo = 0, hi = xs.length - 1; if (hi < 1) return 0; while (hi - lo > 1) { const m = (lo + hi) >> 1; xs[m] < v ? lo = m : hi = m; } return Math.abs(xs[lo] - v) < Math.abs(xs[hi] - v) ? lo : hi; }
-

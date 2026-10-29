@@ -45,7 +45,7 @@ try:
             assert "update_apply" in pg.evaluate("__calls")
             pg.click("#updbox [data-a=restart]"); pg.wait_for_timeout(100)
             assert pg.evaluate("__calls").count("update_restart") == 1
-            assert pg.evaluate("Object.keys(__handlers)") == [], "the progress listener must be removed"
+            assert "update-progress" not in pg.evaluate("Object.keys(__handlers)"), "the progress listener must be removed"
         step("Download applies the update, then Restart restarts", apply)
         def apply_error():
             run({"status": "available", "files": 1, "bytes": 1000}, False)

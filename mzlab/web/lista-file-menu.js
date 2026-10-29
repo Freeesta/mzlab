@@ -46,7 +46,7 @@ function fileMenu(btn) {
   const paint = () => {
     const gs = []; tabFiles().forEach(f => { const g = grpOf(f); let G = gs.find(x => x.g === g); if (!G) gs.push(G = { g, fs: [] }); G.fs.push(f); });
     // @ts-ignore grpLabel is a top-level const of explore.js (classic script): the page project sees it, the strict project does not
-    d.innerHTML = h`<div class="fpb"><button data-all="1">${raw(I18N.t("files.pop.all"))}</button><button data-all="0">${raw(I18N.t("files.pop.none"))}</button></div>` + gs.map(G => h`<div class="fgh"><span>${grpLabel(G.g)}</span></div>${raw(G.fs.map(f => h`<label><input type="checkbox" data-k="${f.k}" ${raw(f.vis ? "checked" : "")}><i style="background:${f.color}"></i><span class="fn" data-k="${f.k}" title="${raw(I18N.t("files.pop.only.title"))}">${f.label}</span></label>`).join(""))}`).join("");
+    d.innerHTML = h`<div class="fpb"><button data-all="1">${raw(I18N.t("files.pop.all"))}</button><button data-all="0">${raw(I18N.t("files.pop.none"))}</button></div>` + gs.map(G => h`<div class="fgh"><span>${grpLabel(G.g)}</span></div>${raw(G.fs.map(f => h`<label><input type="checkbox" data-k="${f.k}" ${raw(f.vis ? "checked" : "")}><i style="background:${f.color}"></i><span class="fn" data-k="${f.k}">${f.label}</span></label>`).join(""))}`).join("");
     const done = () => { renderFileList(); renderNav(); redrawAll(); uiSave(); };
     d.querySelectorAll("[data-all]").forEach(b => b.onclick = () => { fileViewDo(() => tabFiles().forEach(f => f.vis = b.dataset.all === "1")); if (b.dataset.all === "0") cleanupOrphanPanels(); paint(); done(); });
     d.querySelectorAll("input").forEach(i => i.onchange = () => { fileViewDo(() => { E.files[+i.dataset.k].vis = i.checked; }); if (!i.checked) cleanupOrphanPanels(); done(); });

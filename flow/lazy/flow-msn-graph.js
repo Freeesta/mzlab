@@ -30,36 +30,55 @@
     return inst && step ? { inst, step, S } : null;
   };
 
-  /** the candidates of the selected ion, each with «Use» @param {HTMLElement} box @param {any} n @param {() => void} again */
-  const candidates = (box, n, again) => {
-    const { el } = F, f = n.formula, cs = (f && f.candidati) || [];
-    box.replaceChildren(el("h4", { text: `MS${n.livello} · m/z ${Number(n.mz).toFixed(4)}` }));
-    if (!cs.length) { box.append(el("p", { class: "fl-note", text: "No candidate formula for this ion." })); return; }
-    const to = target(), rows = cs.map((/** @type {any} */ c) => [c.formula, String(Math.round(c.ppm * 100) / 100), f.scelta === c.formula ? "yes" : ""]);
-    F.drawTable(box, { caption: "Candidate formulas of the ion", head: ["Candidate", "Error (ppm)", "Chosen"], rows, label: "Candidate formulas of the ion" });
-    if (!to) return;
-    const row = el("div", { class: "fl-meta" });
-    for (const c of cs) row.append(F.btn("ok", `Use ${c.formula} for this ion (a candidate, not an identification)`, () => {
-      F.setParam(to.inst, to.step, "scelte", F.msnChoices(String((to.inst.params || {}).scelte || ""), String(n.mz), c.formula) || null);
-      to.S.refresh(null); again();
-      box.append(el("p", { class: "fl-note", role: "status", text: `${c.formula} will be used for m/z ${Number(n.mz).toFixed(4)} at the next Run.` }));
-    }, `Use ${c.formula}`));
-    box.append(row);
+  /** the state of the Fragmentation graph tab of Data (one instance, shared with the tab): the graph and the choices of the step in this plan, so its ion panel can be drawn here; `again` is called after a «Use» @param {any} g */
+  const dataState = async g => {
+    const st = await app("infusione-grafo-stato.js"), to = target();
+    st.G.j = g; st.G.ro = null; st.G.scelte = to ? String((to.inst.params || {}).scelte || "").split(",").map(x => { const [mz, f] = x.split("="); return { mz: Number(mz), formula: (f || "").trim() }; }).filter(c => c.mz && c.formula) : [];
+    return st.G;
+  };
+
+  /** the panel of the selected ion, the one of the Fragmentation graph tab; «Use» writes `scelte` of the step @param {HTMLElement} box @param {any} G0 @param {any} g @param {string | null} id */
+  const ionPanel = async (box, G0, g, id) => {
+    const node = await app("infusione-grafo-nodo.js"), n = id && g.nodi.find((/** @type {any} */ x) => x.id === id);
+    G0.j = g; G0.sel = id;
+    if (!n) { box.replaceChildren(); return; }
+    const to = target(), redo = () => {
+      if (!to) return;
+      F.setParam(to.inst, to.step, "scelte", G0.scelte.map((/** @type {any} */ c) => `${c.mz}=${c.formula}`).join(",") || null);
+      to.S.refresh(null); box.append(F.el("p", { class: "fl-note", role: "status", text: "Applied at the next Run." }));
+    };
+    node.nodePanel(box, n, { redo, again: () => ionPanel(box, G0, g, id) });
+  };
+
+  /** opens the Fragmentation graph tab of Data on the infusion and the settings of the step @param {any} G0 */
+  const openInData = async G0 => {
+    const to = target(); if (!to) throw new Error("The plan has no fragmentation graph.");
+    const p = to.inst.params || {}, text = (/** @type {string} */ n) => (typeof p[n] === "string" ? p[n].trim() : "");
+    await G.carica("m:infusione-grafo.js");
+    const k = F.webMsn.infusion(to.S);
+    Object.assign(G0, { mol: null, text: text("formula"), adduct: text("adduct"), smiles: text("smiles"), j: null, sel: null, k: -1, ro: null });
+    for (const n of ["ppm_formula", "mz_basso", "ppm_basso", "prove_min"]) if (typeof p[n] === "number") G0.o[n] = p[n];
+    G0.o.attivazione = text("attivazione"); G0.o.isotopi = p.isotopi === true;
+    STATO.file(k, "flow"); setView("data"); BARRA.show("gra");
   };
 
   /** the graph of `g` under `host`, with the candidates of the clicked ion and the downloads @param {HTMLElement} host @param {any} g @param {string} label */
   F.msnGraphView = async (host, g, label) => {
-    const { el } = F, wrap = el("div", { class: "ig-wrap" }), side = el("div", { class: "fl-meta", style: "display:block" });
-    host.append(wrap, side);
+    const { el } = F, wrap = el("div", { class: "ig-wrap" }), side = el("div", { class: "fl-meta", style: "display:block" }), bar = el("div", { class: "flx-seg" }), msg = el("p", { class: "fl-note", role: "status" });
+    host.append(bar, wrap, side, msg);
     if (!(g.nodi || []).length || !g.nodi.every((/** @type {any} */ n) => n.pos)) { wrap.replaceWith(el("p", { class: "fl-note", text: "The graph has no ions to draw." })); return; }
     try {
-      const [svg, css] = await Promise.all([app("infusione-grafo-svg.js"), app("infusione-grafo-css.js")]);
+      const [svg, css, G0] = await Promise.all([app("infusione-grafo-svg.js"), app("infusione-grafo-css.js"), dataState(g)]);
       css.addStyle();
-      /** @type {string | null} */ let sel = null;
+      /** @type {string | null} */ let sel = null; /** @type {"tree" | "radial"} */ let mode = "tree";
       const draw = () => {
-        const s = svg.drawGraph(wrap, g, { onSelect: (/** @type {string | null} */ id) => { sel = id; draw(); const n = id && g.nodi.find((/** @type {any} */ x) => x.id === id); if (n) candidates(side, n, () => {}); else side.replaceChildren(); }, onOpen: () => {} }, { t, sel });
+        const s = svg.drawGraph(wrap, g, { onSelect: (/** @type {string | null} */ id) => { sel = id; draw(); void ionPanel(side, G0, g, id); }, onOpen: () => {} }, { t, sel, mode });
         const on = sel && s.querySelector(`.ig-node[data-id="${CSS.escape(sel)}"]`); if (on) /** @type {HTMLElement} */ (on).focus({ preventScroll: true });
       };
+      for (const [name, m] of /** @type {[string, "tree" | "radial"][]} */ ([["Tree", "tree"], ["Radial", "radial"]])) bar.append(el("button", { type: "button", "aria-pressed": String(m === mode), text: name, onclick: () => {
+        mode = m; for (const b of bar.querySelectorAll("button[aria-pressed]")) b.setAttribute("aria-pressed", String(b.textContent === name)); draw();
+      } }));
+      bar.append(el("button", { type: "button", text: "Open in Data", onclick: () => { msg.textContent = ""; openInData(G0).catch(e => { msg.textContent = F.message ? F.message(e) : String(e && e.message || e); }); } }));
       draw();
       const save = (/** @type {string} */ name, /** @type {string} */ type, /** @type {string} */ body) => { const a = el("a", { href: URL.createObjectURL(new Blob([body], { type })), download: name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
       host.append(el("div", { class: "fl-meta" },

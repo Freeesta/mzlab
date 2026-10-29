@@ -10,7 +10,7 @@ Banco di misura del convertitore (`crates/mzlab-core/examples/raw_mzml_banco/`, 
 - Il generatore denso è deterministico (SplitMix64 intero, solo operazioni IEEE): stesso SHA-256 a ogni giro (`denso_test.rs`); il `Lettore` finto serve i pacchetti dal file attraverso i decoder veri (`opentfraw::pacchetto::decodifica`), rilettura al bit su 3 scansioni; la variante da 8 GB si genera e si cancella in un test `#[ignore]` (`cargo test --profile cli -p mzlab-core --example raw_mzml_banco -- --ignored`).
 
 ## Macchina e T_min
-- Macchina di questi numeri: Xeon 2,8 GHz, 4 core, 16 GB, Linux 6.18 (VM), profilo `cli`, zlib `miniz_oxide`, niente SHA-NI (SHA-1 ≈ 440 MB/s, SHA-256 ≈ 204 MB/s). Disco: scrittura sequenziale 216 MB/s (`dd conv=fdatasync`), lettura 3,0 GB/s (page cache).
+- Macchina di questi numeri: Xeon 2,8 GHz, 4 core, 16 GB, Linux 6.18 (VM), profilo `cli`, zlib `miniz_oxide` (misure prima del passaggio a zlib-rs), niente SHA-NI (SHA-1 ≈ 440 MB/s, SHA-256 ≈ 204 MB/s). Disco: scrittura sequenziale 216 MB/s (`dd conv=fdatasync`), lettura 3,0 GB/s (page cache).
 - `T_min = max(B_in/BW_lettura, B_out/BW_scrittura, W_cpu/N, W_seriale)`; `W_seriale` = SHA-1 dell'ingresso nella testata del mzML (un solo flusso), che su file grandi è già un pavimento. Micro-banchi (`--solo micro`): base64 1,87 GB/s; conversione freq→m/z 4,1 ns/punto; zeramento 63 GB/s; malloc+free 65 ns; XML 80-86 µs/spettro; decodifica FT pacchetto intero 8,4 µs (lab-a, 11 KB), 10,6 µs (lab-b, 4 KB), 4,6 ms (denso, 1,5 MB), di cui lista dei picchi 4,2 µs / 0,83 µs / 154 µs; deflate livello 0/1/6 sul denso:
   214 / 160 / 22 MB/s (rapporto compresso/originale 1,00 / 0,80 / 0,80).
 
@@ -36,7 +36,7 @@ Suddivisione di una scrittura PRIDE senza zlib (fasi, secondi sul totale 4,08 xm
 
 ## zlib: miniz_oxide contro zlib-rs
 Stesso banco, build con `--features banco-zlib-rs`, 1 thread, secondi totali (miniz → zlib-rs; byte di uscita): PRIDE livello 1 8,76 → 7,26 s (−17 %; 722 → 837 MB, +16 %), livello 6 32,8 → 17,6 s (−46 %; 718 → 717 MB); denso 0,4 GB livello 1 6,99 → 10,8 s (+54 %; 711 → 921 MB, +30 %), livello 6 32,5 → 19,1 s (−41 %; 712 → 796 MB).
-Il livello 0 oscilla di più (PRIDE 7,5 → 4,2 s, denso 6,3 → 3,1 s: il primo giro paga la cache fredda), da non leggere come guadagno. zlib-rs cambia i byte compressi: richiede una nuova versione `conv/1` con prima/dopo; guadagna dove l'ingresso è fatto di spettri a centroidi e perde sui profili densi a livello 1. Decisione (V10): resta miniz_oxide; zlib-rs è una dipendenza nuova e al livello predefinito 1 peggiora i profili densi.
+Il livello 0 oscilla di più (PRIDE 7,5 → 4,2 s, denso 6,3 → 3,1 s: il primo giro paga la cache fredda), da non leggere come guadagno. zlib-rs cambia i byte compressi: richiede una nuova versione `conv/1` con prima/dopo; guadagna dove l'ingresso è fatto di spettri a centroidi e perde sui profili densi a livello 1. Il build usa zlib-rs (lettura e scrittura) con livello predefinito 2 (`mzmlwrite::LIVELLO_ZLIB`): sul profilo denso del test DAD il livello 1 di zlib-rs scrive 16,3 MB contro 12,1 di miniz, il livello 2 12,9 MB; `conv/1` dichiara `compressore`.
 
 ## D11: le impronte di `mzlab-cli convert`
 Su PRIDE (RM-0, misura `--solo cli`, senza SHA-NI) il comando impiegava ≈ 35 s contro 20 s del solo scrittore indicizzato: non era conversione ma impronte calcolate più volte sugli stessi byte (SHA-256 dell'ingresso 8,6 s, SHA-1 dell'ingresso 5,7 s dentro la testata, SHA-256 dell'uscita 3,7 s in `keep` e di nuovo 3,7 s nel rapporto, ingresso letto 3×, uscita riletta 2×).

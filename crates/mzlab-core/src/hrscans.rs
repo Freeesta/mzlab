@@ -11,7 +11,8 @@ use crate::json::{round, Out};
 use crate::routes::{Query, Routes};
 use crate::sorgente::Scansioni;
 use crate::specpeaks::merge_unit;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+use std::hash::{BuildHasherDefault, Hasher};
 
 const MAX_SCANS: i64 = 60;
 const MAX_AVERAGE: usize = 200;
@@ -61,9 +62,20 @@ impl<R: ReadAt> Routes<R> {
     pub(crate) fn picked_scans<M: Scansioni + ?Sized>(&mut self, q: &Query, mzml: &mut M, bin: f64, raw_filt: bool) -> Result<Option<Picked>> {
         let (Some(i0), Some(i1)) = (int(q, "i0"), int(q, "i1")) else { return Ok(None) };
         let level = q.level();
-        let of_level = self.idx.scans.iter().filter(|s| s.level == level);
-        let nscans = of_level.clone().count();
-        let pool_has_profile = if nscans > 0 { of_level.clone().any(|s| s.profile) } else { self.idx.scans.iter().any(|s| s.profile) };
+        // one pass: the scans of the level and whether any of them (or, with none, any scan of the file) is profile
+        let (mut nscans, mut level_profile, mut any_profile) = (0usize, false, false);
+        for s in &self.idx.scans {
+            any_profile |= s.profile;
+            if s.level == level {
+                nscans += 1;
+                level_profile |= s.profile;
+            }
+        }
+        let pool_has_profile = if nscans > 0 {
+            level_profile
+        } else {
+            any_profile
+        };
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
         if pool_has_profile || nscans == 0 || !(hr.on || bin > 0.0) {
             return Ok(None);
@@ -164,22 +176,19 @@ impl<R: ReadAt> Routes<R> {
         let Some(&first) = sids.first() else { return Ok(None) };
         let level = self.idx.scans[first as usize].level;
         let hr = hr_profile(&self.idx.scans, level == 1, q.get("hr") != Some("0"));
-        let cell = cell_of(&hr);
+        let cell = Cell::of(&hr);
         // sums in the order of the concatenated arrays (np.bincount), the cells ordered (np.unique)
-        let mut cells: BTreeMap<i64, (f64, f64)> = BTreeMap::new();
+        let mut cells = Cells::default();
         for &sid in &sids {
             let (mz, y) = mzml.spettro(&self.idx.scans[sid as usize])?;
             for (m, v) in mz.iter().zip(&y) {
-                let e = cells.entry(cell(*m)).or_insert((0.0, 0.0));
-                e.0 += v;
-                e.1 += v * m;
+                cells.add(cell.at(*m), *v, *m);
             }
         }
         let n = sids.len() as f64;
         let rt = sids.iter().map(|&s| self.idx.scans[s as usize].rt).sum::<f64>() / n;
         let div = if self.msn.opz.somma { 1.0 } else { n };
-        let mz: Vec<f64> = cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect();
-        let y: Vec<f64> = cells.values().map(|(sy, _)| sy / div).collect();
+        let (mz, y) = cells.finish(div);
         let mut o = Out::default();
         o.raw("{\"sids\":[");
         for (k, s) in sids.iter().enumerate() {
@@ -212,12 +221,79 @@ pub(crate) struct PickedScan {
 }
 
 /// Cells of 3 ppm in high resolution, of 0.1 Da otherwise (`Item.scan_avg`).
-fn cell_of(hr: &HrProfile) -> Box<dyn Fn(f64) -> i64> {
-    if hr.on {
-        let w = (3e-6f64).ln_1p();
-        Box::new(move |m| (m.max(1e-9).ln() / w).floor() as i64)
-    } else {
-        Box::new(|m| (m / 0.1).floor() as i64)
+enum Cell {
+    Ppm(f64),
+    Da,
+}
+
+impl Cell {
+    fn of(hr: &HrProfile) -> Cell {
+        if hr.on {
+            Cell::Ppm((3e-6f64).ln_1p())
+        } else {
+            Cell::Da
+        }
+    }
+    fn at(&self, m: f64) -> i64 {
+        match self {
+            Cell::Ppm(w) => (m.max(1e-9).ln() / w).floor() as i64,
+            Cell::Da => (m / 0.1).floor() as i64,
+        }
+    }
+}
+
+/// Hashes an `i64` cell number with one multiplication: the keys are small integers and the default hasher would cost more than the sum they index.
+#[derive(Default)]
+struct CellHash(u64);
+
+impl Hasher for CellHash {
+    fn write(&mut self, bytes: &[u8]) {
+        for b in bytes {
+            self.0 = (self.0 ^ u64::from(*b)).wrapping_mul(0x100000001b3);
+        }
+    }
+    fn write_i64(&mut self, k: i64) {
+        let h = (k as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        self.0 = h ^ (h >> 32);
+    }
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
+/// The sums per cell of the peaks added one by one (intensity, intensity times m/z), each cell summed in the order its peaks come, read back with the cells ordered.
+#[derive(Default, Clone)]
+struct Cells {
+    slot: HashMap<i64, usize, BuildHasherDefault<CellHash>>,
+    keys: Vec<i64>,
+    sums: Vec<(f64, f64)>,
+}
+
+impl Cells {
+    fn add(&mut self, key: i64, v: f64, m: f64) {
+        let at = *self.slot.entry(key).or_insert_with(|| {
+            self.keys.push(key);
+            self.sums.push((0.0, 0.0));
+            self.sums.len() - 1
+        });
+        let e = &mut self.sums[at];
+        e.0 += v;
+        e.1 += v * m;
+    }
+    /// (m/z weighted by intensity, intensity divided by `div`) per cell, the cells in increasing order.
+    fn finish(mut self, div: f64) -> (Vec<f64>, Vec<f64>) {
+        let mut order: Vec<(i64, usize)> = self.keys.iter().copied().zip(0..).collect();
+        crate::sortc::slice_by_key(&mut order, |k| k.0);
+        let (mut mz, mut y) = (
+            Vec::with_capacity(order.len()),
+            Vec::with_capacity(order.len()),
+        );
+        for (_, at) in order {
+            let (sy, smy) = std::mem::take(&mut self.sums[at]);
+            mz.push(smy / sy.max(1e-12));
+            y.push(sy / div);
+        }
+        (mz, y)
     }
 }
 
@@ -227,11 +303,44 @@ fn int(q: &Query, k: &str) -> Option<i64> {
 
 /// The peaks of one scan merged per bin of `bin` Da (`Item.scans`), m/z weighted by intensity.
 fn bin_cells(mz: &[f64], y: &[f64], bin: f64) -> (Vec<f64>, Vec<f64>) {
+    let key = |m: f64| (m / bin).floor() as i64;
+    let mut out = (Vec::new(), Vec::new());
+    let mut push = |(sy, smy): (f64, f64)| {
+        out.0.push(smy / sy.max(1e-12));
+        out.1.push(sy);
+    };
+    if bin > 0.0 && mz.windows(2).all(|w| w[0] <= w[1]) {
+        // ascending m/z: the cells come in order, one after the other, each summed in the order of its peaks
+        let mut cur: Option<(i64, (f64, f64))> = None;
+        for (m, v) in mz.iter().zip(y) {
+            let k = key(*m);
+            match &mut cur {
+                Some((ck, e)) if *ck == k => {
+                    e.0 += v;
+                    e.1 += v * m;
+                }
+                _ => {
+                    if let Some((_, e)) = cur.take() {
+                        push(e);
+                    }
+                    cur = Some((k, (0.0 + v, 0.0 + v * m)));
+                }
+            }
+        }
+        if let Some((_, e)) = cur {
+            push(e);
+        }
+        return out;
+    }
     let mut cells: BTreeMap<i64, (f64, f64)> = BTreeMap::new();
     for (m, v) in mz.iter().zip(y) {
-        let e = cells.entry((m / bin).floor() as i64).or_insert((0.0, 0.0));
+        let e = cells.entry(key(*m)).or_insert((0.0, 0.0));
         e.0 += v;
         e.1 += v * m;
     }
-    (cells.values().map(|(sy, smy)| smy / sy.max(1e-12)).collect(), cells.values().map(|(sy, _)| *sy).collect())
+    cells.values().for_each(|e| push(*e));
+    out
 }
+
+#[cfg(test)]
+mod tests;

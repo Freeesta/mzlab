@@ -144,14 +144,12 @@ impl LettoreAndi {
             .ok_or_else(|| Error::new("error.badIndex").with("c", c))
     }
 
-    /// Scan `k`: its points, sorted by m/z.
-    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
-        let v = self
-            .indice
-            .get(k)
-            .cloned()
-            .ok_or_else(|| indice_cattivo(k))?;
-        let (da, n) = (self.inizi[k], self.conti[k]);
+    /// The points of scan `k` as `(m/z, intensity, whether the intensity type is wider than f32)`, sorted by m/z (stable: points with the same m/z keep the file's order).
+    fn punti_di(&mut self, k: usize) -> Result<(Vec<f64>, Vec<f64>, bool)> {
+        let (da, n) = (
+            *self.inizi.get(k).ok_or_else(|| indice_cattivo(k))?,
+            self.conti[k],
+        );
         let (m, y) = (
             self.cdf.trova("mass_values"),
             self.cdf.trova("intensity_values"),
@@ -166,12 +164,25 @@ impl LettoreAndi {
         if mz.windows(2).any(|w| w[0] > w[1]) {
             let mut p: Vec<(f64, f64)> = mz.iter().copied().zip(it.iter().copied()).collect();
             p.sort_by(|a, b| a.0.total_cmp(&b.0));
-            (mz, it) = p.into_iter().unzip();
+            for (i, (x, y)) in p.into_iter().enumerate() {
+                (mz[i], it[i]) = (x, y);
+            }
         }
         let largo = matches!(
             y.tipo,
             super::netcdf::Tipo::Double | super::netcdf::Tipo::Int
         );
+        Ok((mz, it, largo))
+    }
+
+    /// Scan `k`: its points, sorted by m/z.
+    fn spettro(&mut self, k: usize) -> Result<Spectrum> {
+        let v = self
+            .indice
+            .get(k)
+            .cloned()
+            .ok_or_else(|| indice_cattivo(k))?;
+        let (mz, it, largo) = self.punti_di(k)?;
         Ok(Spectrum {
             index: k,
             id: v.id,
@@ -182,7 +193,7 @@ impl LettoreAndi {
             filter: v.filtro,
             precursor: None,
             intensity: it.iter().map(|&x| x as f32).collect(),
-            wide: largo.then(|| it.clone()),
+            wide: largo.then_some(it),
             mz,
         })
     }
@@ -193,8 +204,12 @@ impl LettoreAndi {
             return Ok(());
         }
         for k in 0..self.indice.len() {
-            let s = self.spettro(k)?;
-            self.indice[k].tic = (0..s.mz.len()).map(|i| s.intensity_f64(i)).sum();
+            let (_, it, largo) = self.punti_di(k)?;
+            // the sum of what `Spectrum::intensity_f64` gives: the narrow types are summed as f32
+            self.indice[k].tic = it
+                .iter()
+                .map(|&x| if largo { x } else { f64::from(x as f32) })
+                .sum();
         }
         self.tic_noto = true;
         Ok(())

@@ -63,12 +63,8 @@ I18N.add("it", {
   "ctx.uv.wlAt": "Traccia a questa λ ({nm} nm)",
   "ctx.uv.wlView": "Traccia sull'intervallo di nm in vista",
   "ctx.chrom.etpk": "Etichette dei picchi principali",
-  "ctx.chrom.etpk.aria": "Mostra o nascondi, sui picchi principali, il tempo di ritenzione e l'm/z o la lunghezza d'onda che li definisce",
+  "ctx.chrom.etpk.aria": "Mostra o nascondi il tempo di ritenzione sui picchi principali",
   "etpk.nm": "{v} nm",
-  "etpk.tip.rt": "Picco a RT {rt} min",
-  "etpk.tip.mz": "Picco a RT {rt} min · picco base m/z {v}",
-  "etpk.tip.nm": "Picco a RT {rt} min · massimo di assorbanza a {v} nm",
-  "etpk.tip.xic": "Picco a RT {rt} min · m/z estratto {v}",
-  "etpk.tip.mrm": "Picco a RT {rt} min · transizione {v}",
+  "etpk.tip.int": "intensità <b>{y}</b>",
   "ctx.spec.generate": "Genera formula (m/z {mz})…"
 });

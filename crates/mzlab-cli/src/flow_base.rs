@@ -12,7 +12,6 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem};
 use mzlab_core::hashio::HashWrite;
 use mzlab_core::idxread::Index;
-use mzlab_core::json::Value;
 use mzlab_core::lettori::Limiti;
 use mzlab_core::lettori_mzml::{Conversione, Picchi};
 use mzlab_core::mzidx::DEFAULT_BUDGET;
@@ -20,14 +19,15 @@ use mzlab_core::mzmlwrite::{Opzioni, LIVELLO_ZLIB};
 use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
-use mzlab_feat::steps::recipe_map;
 use mzlab_feat_wasm::run;
+use mzlab_feat_wasm::run::meta::{recipe, written, Estimate};
+
+#[cfg(test)]
+#[path = "flow_record_tests.rs"]
+mod flow_record_tests;
 
 use crate::flow::{io, FileRunner, Lineage, Made};
 use crate::flow_pace::{Gate, Gated, Stop, Stopping};
-
-/// A value the plan leaves out: name, value, proof.
-type Estimate = (String, Value, Value);
 
 pub(crate) fn open(path: &PathBuf) -> Result<Index<File>> {
     let f = File::open(path).map_err(io)?;
@@ -44,66 +44,6 @@ pub(crate) fn out_path(r: &FileRunner, job: &Job, ext: &str) -> PathBuf {
         Some(k) => r.work.join(format!("{}-{k}.{ext}", job.instance.id)),
         None => r.work.join(format!("{}.{ext}", job.instance.id)),
     }
-}
-
-/// What the plan writes for `job`: the algorithm it chose, the values of its preset, then its own parameters (descriptor names).
-fn written(job: &Job) -> Vec<(String, Value)> {
-    let mut v: Vec<(String, Value)> = Vec::new();
-    if let Some(a) = job
-        .instance
-        .algorithm
-        .as_deref()
-        .filter(|_| job.step.id == "features.detect")
-    {
-        v.push(("algorithm".to_string(), Value::Str(a.into())));
-    }
-    let preset = job.instance.preset.as_deref();
-    let presets = job.step.presets.iter().filter(|p| Some(p.id) == preset);
-    for (k, x) in presets.flat_map(|p| p.params.iter()) {
-        v.push((k.to_string(), x.clone()));
-    }
-    for (k, x) in &job.instance.params {
-        v.retain(|(n, _)| n != k);
-        v.push((k.clone(), x.clone()));
-    }
-    v
-}
-
-/// The recipe of `job`: `base` with what the plan writes, and the values the plan leaves out that differ from the canonical ones (the estimates).
-fn recipe(job: &Job, mut base: Recipe) -> Result<(Recipe, Vec<Estimate>)> {
-    let w = written(job);
-    recipe_map::apply(&mut base, job.step.id, &w)?;
-    let resolved = &job.resolved.params;
-    let proof = Value::Str("profile of the first file of the series".into());
-    let estimates = recipe_map::values(&base, job.step.id)
-        .into_iter()
-        .filter(|(k, v)| {
-            !w.iter().any(|x| x.0 == *k)
-                && !job.resolved.noresult.contains(k)
-                && resolved.iter().find(|x| x.0 == *k).map(|x| &x.1) != Some(v)
-        })
-        .map(|(k, v)| {
-            let why = match (k.as_str(), base.min_height_basis) {
-                ("min_height", Some((mode, sigma))) => Value::Obj(vec![
-                    (
-                        "basis".into(),
-                        Value::Str(
-                            "noise lump of the intensities of the first file of the series".into(),
-                        ),
-                    ),
-                    (
-                        "factor".into(),
-                        Value::Num(mzlab_feat::params_height::MIN_HEIGHT_FACTOR),
-                    ),
-                    ("mode".into(), Value::Num(mode)),
-                    ("sigma".into(), Value::Num(sigma)),
-                ]),
-                _ => proof.clone(),
-            };
-            (k, v, why)
-        })
-        .collect();
-    Ok((base, estimates))
 }
 
 /// `index.mzidx`: the index of one file (mzML or any single file a reader takes).
@@ -152,10 +92,11 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let path = r.path(input);
     let first = r.first_of_series(input).unwrap_or_else(|| path.clone());
     // Each file takes its own base recipe, as the page does (`detect_file`): on the unit axis the mass defect and the floor come from the file.
-    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut open(&path)?)?)?;
-    let name = r.source_name(input);
+    // one open of the index serves the recipe and the detection
     let gate = r.gate(job);
     let mut index = open_gated(&path, &gate)?;
+    let (recipe, estimates) = recipe(job, run::recipe_for_estimated("", &mut index)?)?;
+    let name = r.source_name(input);
     let bytes = run::detect(&mut index, &name, &recipe)?;
     let out = out_path(r, job, "mzfeatf");
     // The weak candidates are made here, with the other files of the level at the same time, so the alignment and the gap filling do not detect again.
@@ -210,7 +151,7 @@ fn weak_path(peaks: &Path) -> PathBuf {
 
 /// Aligns the peaks of `lin` with `recipe` under the memory budget of the runner and writes the table of `job`; the table hands on `lin` with the
 /// parameters of `job`.
-fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<Made> {
+fn table(r: &FileRunner, job: &Job, recipe: &Recipe, mut lin: Lineage) -> Result<Made> {
     let budget = MemBudget::mb(r.budget_mb);
     let mut bytes = Vec::new();
     let mut src = Files(lin.peaks.clone());
@@ -219,7 +160,7 @@ fn table(r: &FileRunner, job: &Job, recipe: Recipe, mut lin: Lineage) -> Result<
     run::align_to_par_progress(
         &mut src,
         &budget,
-        &recipe,
+        recipe,
         &|k| open(&lin.index[k]),
         &mut bytes,
         &mut pace,
@@ -269,21 +210,32 @@ fn align_setup(r: &FileRunner, job: &Job) -> Result<(Recipe, Lineage, Vec<Estima
 /// table is not filled after the fact, alignment and filling run again on the peaks of that table, which gives the bytes of the page's single call).
 pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let (recipe, lin, estimates) = align_setup(r, job)?;
+    let peaks = lin.peaks.clone();
+    let made = table(r, job, &recipe, lin)?;
     Ok(Made {
         estimates,
-        ..table(r, job, recipe, lin)?
+        mem: mem_of(r, &recipe, peaks),
+        ..made
     })
 }
 
 /// The memory the alignment of `job` asks for under the budget of the runner and the way it takes (`slabs::stima`); none for another step or when the
-/// inputs cannot be read yet (the step itself reports why).
-pub(crate) fn align_mem(r: &FileRunner, job: &Job) -> Option<Mem> {
+/// inputs cannot be read yet (the step itself reports why); `known` is the figure the step worked out while it ran, kept as it is.
+pub(crate) fn align_mem(r: &FileRunner, job: &Job, known: Option<Mem>) -> Option<Mem> {
+    if known.is_some() {
+        return known;
+    }
     if !matches!(job.step.id, "features.align" | "features.gapfill") {
         return None;
     }
     let (recipe, lin, _) = align_setup(r, job).ok()?;
-    let rows = slabs::rows_of(&mut Files(lin.peaks)).ok()?;
-    let way = slabs::stima(&rows, &recipe, (r.budget_mb * 1048576.0) as usize);
+    mem_of(r, &recipe, lin.peaks)
+}
+
+/// The memory the alignment of the `.mzfeatf` files `peaks` asks for under the budget of the runner.
+fn mem_of(r: &FileRunner, recipe: &Recipe, peaks: Vec<PathBuf>) -> Option<Mem> {
+    let rows = slabs::rows_of(&mut Files(peaks)).ok()?;
+    let way = slabs::stima(&rows, recipe, (r.budget_mb * 1048576.0) as usize);
     Some(Mem {
         mb: way.bytes as f64 / 1048576.0,
         via: way.via.name(),
@@ -312,6 +264,11 @@ pub(crate) fn convert_job(r: &FileRunner, job: &Job) -> Result<Made> {
             .params
             .iter()
             .any(|(k, v)| k == "numpress" && v.bool() == Some(true)),
+        dad: job
+            .resolved
+            .params
+            .iter()
+            .any(|(k, v)| k == "dad" && v.bool() == Some(true)),
         ..Opzioni::default()
     };
     let out = r.work.join(convert_file(

@@ -21,7 +21,7 @@
     const pump = () => {
       while (running < 4 && queue.length) {
         const id = /** @type {number} */ (queue.shift()); running++;
-        session.row(id).then((/** @type {any} */ r) => { known.set(id, r && r.family ? r.family : null); }, () => { known.set(id, null); })
+        Promise.resolve().then(() => session.row(id)).then((/** @type {any} */ r) => { known.set(id, r && r.family ? r.family : null); }, () => { known.set(id, null); })
           .then(() => { running--; clearTimeout(timer); timer = window.setTimeout(redraw, 120); pump(); });
       }
     };
@@ -30,7 +30,7 @@
       /** @param {number} id @returns {number | null} */
       size: id => { want(id); const f = known.get(id); return f ? f.size : null; },
       /** @param {number} id */
-      load: id => (known.has(id) ? Promise.resolve(known.get(id)) : session.row(id).then((/** @type {any} */ r) => { known.set(id, r && r.family ? r.family : null); return known.get(id); })),
+      load: id => (known.has(id) ? Promise.resolve(known.get(id)) : Promise.resolve().then(() => session.row(id)).then((/** @type {any} */ r) => { known.set(id, r && r.family ? r.family : null); return known.get(id); })),
     };
   };
 
