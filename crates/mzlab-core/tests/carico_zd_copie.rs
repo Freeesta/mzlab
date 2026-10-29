@@ -20,13 +20,22 @@ fn scan(i: usize) -> Spectrum {
         filter: String::new(),
         precursor: (i % 5 == 4).then(|| 150.0 + (i % 3) as f64),
         mz: (0..6).map(|b| 100.0 + b as f64 * 7.5).collect(),
-        intensity: (0..6).map(|b| 10.0 + ((i * 7 + b * 3) % 50) as f32).collect(),
+        intensity: (0..6)
+            .map(|b| 10.0 + ((i * 7 + b * 3) % 50) as f32)
+            .collect(),
         wide: None,
     }
 }
 
 fn routes(total: usize) -> Routes<Vec<u8>> {
-    let mut w = MzmlWriter::new(Vec::new(), &Header { run: "zd".into(), ..Default::default() }).unwrap();
+    let mut w = MzmlWriter::new(
+        Vec::new(),
+        &Header {
+            run: "zd".into(),
+            ..Default::default()
+        },
+    )
+    .unwrap();
     w.open_spectra(total).unwrap();
     for i in 0..total {
         w.spectrum(&scan(i)).unwrap();
@@ -57,20 +66,30 @@ fn answers(r: &mut Routes<Vec<u8>>) -> String {
         .iter()
         .map(|q| {
             let (path, query) = q.split_once('?').unwrap();
-            format!("{q} => {}", r.handle(path, &Query::parse(query)).unwrap().unwrap_or_default())
+            format!(
+                "{q} => {}",
+                r.handle(path, &Query::parse(query))
+                    .unwrap()
+                    .unwrap_or_default()
+            )
         })
         .collect::<Vec<_>>()
         .join("\n")
 }
 
 fn fnv(s: &str) -> u64 {
-    s.bytes().fold(0xcbf29ce484222325, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3))
+    s.bytes().fold(0xcbf29ce484222325, |h, b| {
+        (h ^ b as u64).wrapping_mul(0x100000001b3)
+    })
 }
 
 #[test]
 fn routes_answer_as_before_without_copying_the_arrays() {
     let out = answers(&mut routes(600));
-    assert!(out.contains("\"n\":480") && out.contains("\"n\":120"), "{out}");
+    assert!(
+        out.contains("\"n\":480") && out.contains("\"n\":120"),
+        "{out}"
+    );
     assert_eq!(fnv(&out), DIGEST, "the answers changed");
 }
 
@@ -78,7 +97,11 @@ fn routes_answer_as_before_without_copying_the_arrays() {
 #[ignore]
 fn bench_scanlist_and_nearest_scan() {
     let mut r = routes(200_000);
-    for q in ["/api/scanlist?k=0&level=1", "/api/nearest_scan?k=0&level=1&rt=1000", "/api/chrom?k=0&level=1"] {
+    for q in [
+        "/api/scanlist?k=0&level=1",
+        "/api/nearest_scan?k=0&level=1&rt=1000",
+        "/api/chrom?k=0&level=1",
+    ] {
         let (path, query) = q.split_once('?').unwrap();
         let query = Query::parse(query);
         r.handle(path, &query).unwrap(); // arrays read once, as after the first click
@@ -86,7 +109,10 @@ fn bench_scanlist_and_nearest_scan() {
         for _ in 0..20 {
             r.handle(path, &query).unwrap();
         }
-        println!("{q}: {:.3} ms/call", t.elapsed().as_secs_f64() * 1000.0 / 20.0);
+        println!(
+            "{q}: {:.3} ms/call",
+            t.elapsed().as_secs_f64() * 1000.0 / 20.0
+        );
     }
 }
 
