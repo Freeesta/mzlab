@@ -50,8 +50,8 @@
   if (expired()) { showExpired(); return; }
 
   w.MZLAB_LAB = Object.freeze({ expires: EXPIRES });
-  // no Teoria and no app download in the lab, whatever ?sito= says (sito.js keeps a value that is already there)
-  if (!w.SITO_PUBBLICO) w.SITO_PUBBLICO = Object.freeze({ scaricaApp: false, teoria: false });
+  // no Teoria and no app download in the lab, whatever ?sito= says or was set before (sito.js keeps a value that is already there)
+  w.SITO_PUBBLICO = Object.freeze({ scaricaApp: false, teoria: false });
 
   // the administrator flag (and its older name) reads as off and cannot be written: one choke point for every current and future reader
   try {

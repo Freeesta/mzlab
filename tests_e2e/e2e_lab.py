@@ -33,7 +33,7 @@ try:
         b = p.chromium.launch()
         def page(url, init, hash=""):
             ctx = b.new_context(viewport={"width": 1500, "height": 1000}); pg = ctx.new_page(); pg.add_init_script(init)
-            reqs = []; pg.on("request", lambda r: reqs.append(r.url)); pg.goto(url + hash); return pg, reqs
+            reqs = []; pg.on("request", lambda r: reqs.append(r.url)); pg.goto(url + hash, wait_until="commit"); return pg, reqs
         def hidden():
             pg, reqs = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z")      # admin flag already set: the lab must not honour it
             pg.wait_for_selector("#drop", timeout=120000)
