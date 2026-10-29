@@ -1,6 +1,6 @@
 # Lab site (Freeesta/qqq)
 
-Parallel build of mzLab for a lab: only Data and Draw, a banner, `noindex`, and it stops
+Parallel build of mzLab for a lab: only Data and Draw, `noindex`, and it stops
 working after 2026-12-29 (UTC). It follows `main` of `Freeesta/mzlab` by itself.
 The expiry is a soft block (the date is checked against the visitor's clock), not security.
 
