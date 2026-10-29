@@ -147,3 +147,63 @@ fn everything_out_of_the_zones_gives_no_label() {
     let (rt, y) = run(20.0, &[(1.0, 9000.0), (19.0, 9000.0)]);
     assert!(select(&rt, &y, 8, 0.05, 5.0, true).is_empty());
 }
+
+/// A deterministic noise in [-1, 1].
+fn noise(i: usize) -> f64 {
+    let mut s = (i as u64 + 1)
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
+    s ^= s >> 29;
+    ((s >> 11) as f64 / (1u64 << 53) as f64) * 2.0 - 1.0
+}
+
+/// A TIC of 15 min sampled every 0.25 s on a high baseline with one broad peak near 5.65 min whose top is jittered (noise + a shoulder).
+fn jittered(step: f64, sigma: f64, jitter: f64) -> (Vec<f64>, Vec<f64>) {
+    let n = (15.0 / step) as usize;
+    let rt: Vec<f64> = (0..n).map(|i| i as f64 * step).collect();
+    let y = rt
+        .iter()
+        .enumerate()
+        .map(|(i, &t)| {
+            5e8 + gauss(t, 5.66, sigma, 6e8)
+                + gauss(t, 5.60, sigma * 0.5, 1.5e8)
+                + jitter * noise(i)
+        })
+        .collect();
+    (rt, y)
+}
+
+#[test]
+fn one_broad_noisy_peak_gets_one_label() {
+    for (step, sigma, jitter) in [
+        (0.0042, 0.05, 2e7),
+        (0.0042, 0.08, 4e7),
+        (0.002, 0.05, 3e7),
+        (0.0042, 0.05, 6e7),
+    ] {
+        let (rt, y) = jittered(step, sigma, jitter);
+        let l = select(&rt, &y, 12, 0.05, 5.0, true);
+        let near: Vec<f64> = l
+            .iter()
+            .filter(|l| (l.rt - 5.65).abs() < 0.3)
+            .map(|l| l.rt)
+            .collect();
+        assert_eq!(
+            near.len(),
+            1,
+            "step {step} sigma {sigma} jitter {jitter}: {near:?}"
+        );
+    }
+}
+
+#[test]
+fn two_real_peaks_keep_their_labels() {
+    let rt: Vec<f64> = (0..3571).map(|i| i as f64 * 0.0042).collect();
+    let y: Vec<f64> = rt
+        .iter()
+        .enumerate()
+        .map(|(i, &t)| 5e8 + gauss(t, 5.6, 0.03, 6e8) + gauss(t, 5.9, 0.03, 5e8) + 2e7 * noise(i))
+        .collect();
+    let l = select(&rt, &y, 12, 0.05, 5.0, true);
+    assert_eq!(l.len(), 2, "{l:?}");
+}
