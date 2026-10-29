@@ -8,7 +8,7 @@ const ASC = 0.8, DESC = 0.2;                                  // title glyph box
 const labelSets = { grad: ["0", "25", "50", "75", "100"], bar: ["0", "100", "200", "300", "400"], bar4: ["0", "500", "1000", "1500", "2000"] };
 const rows = [], bad = [];
 for (const z of [0.8, 1, 1.25, 1.5, 2]) for (const [name, labels] of Object.entries(labelSets)) {
-  const fp = 12 * z, L = G.rightLayout(labels, fp), tickEnd = 7 + Math.max(...labels.map(s => Math.ceil(s.length * 0.6 * fp)));
+  const fp = 12 * z, L = G.rightLayout(labels, fp), tickEnd = 7 + labels.reduce((m, s) => Math.max(m, Math.ceil(s.length * 0.6 * fp)), 0);
 
   const left = L.titleX - DESC * fp, right = L.titleX + ASC * fp;
   rows.push({ z, name, r: L.r, titleX: L.titleX, left: +left.toFixed(1), right: +right.toFixed(1) });

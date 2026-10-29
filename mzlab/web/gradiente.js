@@ -167,7 +167,7 @@ function colorOf(/** @type {Bag} */ p) {
 const TICK = 7, GAP = 5, PAD = 3, DIGIT = 0.6;
 /** @param {string[]} labels @param {number} fontPx @returns {{ r: number, titleX: number }} r = right margin, titleX = title baseline from the axis line */
 function rightLayout(labels, fontPx) {
-  const tw = Math.max(0, ...labels.map(s => Math.ceil(s.length * DIGIT * fontPx))), left = TICK + tw + GAP;
+  const tw = labels.reduce((m, s) => Math.max(m, Math.ceil(s.length * DIGIT * fontPx)), 0), left = TICK + tw + GAP;
   return { r: left + Math.ceil(fontPx) + PAD, titleX: left + fontPx * 0.2 };
 }
 // the rotated title never runs past the axis length: cut with an ellipsis
