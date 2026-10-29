@@ -163,7 +163,23 @@ function colorOf(/** @type {Bag} */ p) {
   const c = (dark ? OKABE_DARK : OKABE).find((/** @type {string} */ x) => !used.has(x.toLowerCase()));
   return c || css("--muted");
 }
-function needR(/** @type {Bag} */ p) { return (p.overlay === "grad" && have(p)) || (p.overlay === "press" && pressHave(p)) ? Math.round(46 * (typeof fz === "function" ? fz() : 1)) : 0; }
+// Right axis box (px from the axis line): 7 px tick + tick labels + gap + the rotated title line + pad. Estimated widths (no canvas), so needR can run before drawing.
+const TICK = 7, GAP = 5, PAD = 3, DIGIT = 0.6;
+/** @param {string[]} labels @param {number} fontPx @returns {{ r: number, titleX: number }} r = right margin, titleX = title baseline from the axis line */
+function rightLayout(labels, fontPx) {
+  const tw = labels.reduce((m, s) => Math.max(m, Math.ceil(s.length * DIGIT * fontPx)), 0), left = TICK + tw + GAP;
+  return { r: left + Math.ceil(fontPx) + PAD, titleX: left + fontPx * 0.2 };
+}
+// the rotated title never runs past the axis length: cut with an ellipsis
+/** @param {string} s @param {number} maxPx @param {number} fontPx */
+function fitTitle(s, maxPx, fontPx) { const n = Math.max(1, Math.floor(maxPx / (DIGIT * fontPx))); return s.length <= n ? s : s.slice(0, Math.max(1, n - 1)) + "\u2026"; }
+const gradTicks = ["0", "25", "50", "75", "100"];
+function needR(/** @type {Bag} */ p) {
+  const z = typeof fz === "function" ? fz() : 1;
+  if (p.overlay === "grad" && have(p)) return rightLayout(gradTicks, 12 * z).r;
+  if (p.overlay === "press" && pressHave(p)) { const cs = pressCurves(p); return rightLayout(cs.length ? nice(0, pressMax(cs), 5).map((/** @type {number} */ v) => String(+v.toFixed(1))) : ["000"], 12 * z).r; }
+  return 0;
+}
 
 // ---- the pump pressure over a chromatogram (same right axis as the gradient, one or the other); in bar, one curve per file in its colour
 const PRESS = new Map();                                     // "k|i" -> the answer of api/analog
@@ -184,7 +200,7 @@ function drawPress(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */
   g.save(); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "left";
   g.beginPath(); g.moveTo(W - M.r + .5, M.t); g.lineTo(W - M.r + .5, H - M.b); g.stroke();
   for (const v of nice(0, top, 5)) { g.beginPath(); g.moveTo(W - M.r, Math.round(Y(v)) + .5); g.lineTo(W - M.r + 4, Math.round(Y(v)) + .5); g.stroke(); g.fillText(String(+v.toFixed(1)), W - M.r + 7, Y(v) + 3.5 * z); }
-  g.save(); g.translate(W - 4, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText("bar", 0, 0); g.restore();
+  { const fp = 12 * z, ttl = rightLayout(nice(0, top, 5).map((/** @type {number} */ v) => String(+v.toFixed(1))), fp); g.save(); g.translate(W - M.r + ttl.titleX, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText(fitTitle("bar", ph, fp), 0, 0); g.restore(); }
   g.beginPath(); g.rect(M.l, M.t, W - M.l - M.r, ph); g.clip();
   cs.forEach((/** @type {{ f: FileAperto, d: Bag }} */ { f, d }) => { g.strokeStyle = /** @type {string} */ (f.color); g.lineWidth = 1.6; g.setLineDash([6, 3]); g.beginPath(); d.t.forEach((/** @type {number} */ t, /** @type {number} */ i) => (i ? g.lineTo(X(t), Y(d.y[i])) : g.moveTo(X(t), Y(d.y[i])))); g.stroke(); });
   g.restore();
@@ -207,7 +223,7 @@ function draw(/** @type {Bag} */ p, /** @type {CanvasRenderingContext2D} */ g, /
   g.beginPath(); g.moveTo(W - M.r + .5, M.t); g.lineTo(W - M.r + .5, H - M.b); g.stroke();
   g.textAlign = "left";
   for (const v of [0, 25, 50, 75, 100]) { g.beginPath(); g.moveTo(W - M.r, Math.round(Y(v)) + .5); g.lineTo(W - M.r + 4, Math.round(Y(v)) + .5); g.stroke(); g.fillText(String(v), W - M.r + 7, Y(v) + 3.5 * z); }
-  g.save(); g.translate(W - 4, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText("%B", 0, 0); g.restore();
+  { const fp = 12 * z, ttl = rightLayout(gradTicks, fp); g.save(); g.translate(W - M.r + ttl.titleX, (M.t + H - M.b) / 2); g.rotate(Math.PI / 2); g.textAlign = "center"; g.fillText(fitTitle("%B", ph, fp), 0, 0); g.restore(); }
   g.beginPath(); g.rect(M.l, M.t, W - M.l - M.r, ph); g.clip();
   const trace = (/** @type {number} */ shift, /** @type {number} */ w, /** @type {number[]} */ dash, /** @type {boolean} */ area) => {
     const pts = c.m.points.map((/** @type {GradPt} */ q) => [X(q.t + shift), Y(q.b)]);
@@ -243,4 +259,4 @@ if (typeof AZIONI !== "undefined") {
   over("press", "ctx.chrom.press", "ctx.chrom.press.aria", c => pressHave(c.p) && !isAnalog(c.p.kind));
   over("grad", "ctx.chrom.grad", "ctx.chrom.grad.aria", c => have(c.p));
 }
-window.GRADIENTE = { pressHave, get, set, html, bind, any, forget, exportState, importState, ensure, have, curve, at, reading, draw, hover, needR, cursorText, colorOf };
+window.GRADIENTE = { pressHave, get, set, html, bind, any, forget, exportState, importState, ensure, have, curve, at, reading, draw, hover, needR, rightLayout, fitTitle, cursorText, colorOf };
