@@ -441,8 +441,8 @@ class Item:
         return self._analog
 
     def analog(self, i: int, n: int = 2000) -> dict:
-        """One analog trace: time in minutes, values reduced to the lowest and highest per interval (n of them), the unit to show and, for the pressure, a note
-        when the unit written in the file had to be corrected."""
+        """One analog trace: time in minutes, values reduced to the lowest and highest per interval (n of them) and the unit to show (a pressure
+        with a declared pressure unit is in bar, otherwise as the file has it)."""
         from .analog import pressure_to_bar, reduce_minmax
         cache = self.__dict__.setdefault("_analog_cache", {})
         key = (i, n)
@@ -452,13 +452,13 @@ class Item:
         if meta is None:
             raise UserError("err.analog.none", {"i": i}, "no such analog trace")
         t, y = self.run.chromatogram(i)
-        unit, note = meta["unit"], None
+        unit = meta["unit"]
         if meta["kind"] == "pressure":
-            y, note = pressure_to_bar(y, unit); unit = "bar"
+            bar = pressure_to_bar(y, unit)
+            if bar is not None:
+                y, unit = bar, "bar"
         t, y = reduce_minmax(t, y, n)
         res = {"i": i, "kind": meta["kind"], "id": meta["id"], "unit": unit, "t": [round(float(v), 4) for v in t], "y": [round(float(v), 3) for v in y]}
-        if note:
-            res["unit_note"] = note
         if len(cache) >= 8:
             cache.pop(next(iter(cache)))
         cache[key] = res

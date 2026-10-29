@@ -155,12 +155,15 @@ fn gradient_parsers_match_python() {
 fn analog_helpers_match_python() {
     let Some((_, r)) = reference() else { return };
     for (i, c) in r["analog"]["pressure"].as_array().unwrap().iter().enumerate() {
-        let (y, fixed) = pressure_to_bar(&nums(&c["y"]), c["unit"].as_str().unwrap());
+        let got = pressure_to_bar(&nums(&c["y"]), c["unit"].as_str().unwrap());
         let want = &c["result"];
-        let w = nums(&want[0]);
+        let Some(y) = got else {
+            assert!(want.is_null(), "pressure {i}: unit not recognised");
+            continue;
+        };
+        let w = nums(want);
         assert_eq!(y.len(), w.len());
         assert!(y.iter().zip(&w).all(|(a, b)| close(*a, *b) || (a.is_nan() && b.is_nan())), "pressure {i}");
-        assert_eq!(fixed, !want[1].is_null(), "pressure {i}: note");
     }
     for (i, c) in r["analog"]["reduce"].as_array().unwrap().iter().enumerate() {
         let (t, y) = reduce_minmax(&nums(&c["t"]), &nums(&c["y"]), c["n"].as_u64().unwrap() as usize);

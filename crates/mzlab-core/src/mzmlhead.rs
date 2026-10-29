@@ -267,17 +267,17 @@ impl<R: ReadAt> Mzml<R> {
         Ok((t, y.get(..n).unwrap_or_default().to_vec()))
     }
 
-    /// The unit written on the intensity array of a chromatogram, or "".
+    /// The unit of a chromatogram, or "": see `unita_traccia::resolve`.
     pub fn chromatogram_unit(&mut self, c: &Chrom) -> Result<String> {
         let chunk = self.read(c.start, c.end)?;
-        for (head, _) in arrays(&chunk) {
-            if !head.contains("MS:1000595") {
-                if let Some(u) = attr(&head, "unitName") {
-                    return Ok(u.to_string());
-                }
-            }
-        }
-        Ok(String::new())
+        let found = arrays(&chunk)
+            .into_iter()
+            .filter(|(h, _)| !h.contains("MS:1000595"))
+            .find_map(|(h, _)| attr(&h, "unitName").map(str::to_string));
+        Ok(crate::unita_traccia::resolve(
+            found.unwrap_or_default(),
+            &chunk,
+        ))
     }
 
     /// The start of the file, read in blocks until `<run ` and `extra` more bytes are in (the whole file when there is no `<run `).

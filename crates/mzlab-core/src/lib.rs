@@ -94,6 +94,7 @@ pub mod mzml;
 mod mzmlarray;
 #[warn(clippy::unwrap_used, clippy::indexing_slicing, clippy::cast_possible_truncation)]
 pub mod mzmlhead;
+pub(crate) mod unita_traccia;
 pub mod mzmlsrm;
 #[cfg(feature = "mappa-dad")]
 mod mzml_dad;

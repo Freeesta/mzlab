@@ -27,6 +27,8 @@ def synthetic(p: Path) -> list[Path]:
     ds.hr_dda(p / "hr.mzML", np.random.default_rng(7))
     ds.full_scan_profile(p / "prof.mzML", 0, np.random.default_rng(8))
     ds.full_scan(p / "press.mzML", 0, np.random.default_rng(9), pressure=True)
+    ds.full_scan(p / "press_psi.mzML", 0, np.random.default_rng(9), pressure="psi")
+    ds.full_scan(p / "press_counts.mzML", 0, np.random.default_rng(9), pressure="counts")
     ds.mixed_mrm_epi(p / "mre.mzML", np.random.default_rng(10))
     return sorted(p.glob("*.mzML"))
 

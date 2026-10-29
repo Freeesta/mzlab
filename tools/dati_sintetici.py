@@ -77,16 +77,17 @@ def _chrom(i, cid, t, y, extra="", yunit="") -> str:
             + _arr("MS:1000515", "intensity array", y, f' unitName="{yunit}"' if yunit else "") + "</binaryDataArrayList></chromatogram>")
 
 
-def pressure_trace(rt_end: float = 15.0, n: int = 6000):
-    """Pump pressure like a Thermo file converted with msconvert: declared in pascal, values ten times too high (278 bar at 1 min really shows 2.78e8)."""
+def pressure_trace(rt_end: float = 15.0, n: int = 6000, counts: bool = False):
+    """Pump pressure: in pascal, 270 bar + 8 bar/min. `counts`: 10 x that of a real file (shape 270, 210, 180, 600), unit given by `_pressure_chrom`."""
     t = np.linspace(0, rt_end, n)
-    bar = 270 + 8 * t + 20 * _sin(t * 3)
-    return t, bar * 1e5 * 10
+    return (t, np.interp(t, [0, 0.5, 5.6, 13, 14.5, 15], [275, 270, 210, 180, 185, 600]) * 10) if counts else (t, (270 + 8 * t + 20 * _sin(t * 3)) * 1e5)
 
 
-def _pressure_chrom(i: int) -> str:
-    t, y = pressure_trace()
-    return _chrom(i, "Pump Pressure 1", t, y, '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>', "pascal")
+def _pressure_chrom(i: int, mode: str = "") -> str:
+    """mode "" = pascal; "counts" = counts, no pressure unit; "psi" = counts on the array and the unit in the `unità` userParam, as our mzML writer does."""
+    t, y = pressure_trace(counts=bool(mode))
+    cv = '<cvParam cvRef="MS" accession="MS:1003019" name="pressure chromatogram" value=""/>' + ('<userParam name="unità" value="psi"/>' if mode == "psi" else "")
+    return _chrom(i, "Pump Pressure 1", t, y, cv, "number of detector counts" if mode else "pascal")
 
 
 def _write(path: Path, specs: list[str], chroms: list[str]) -> None:
@@ -113,7 +114,7 @@ def _pda(rng, total, rt_end=22.0):
     return t, y
 
 
-def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = False, dad: bool = False) -> None:
+def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool | str = False, dad: bool = False) -> None:
     k = 0.035
     P = 2.0e7 * _exp(-k * t)
     comps = [  # (m/z observed, RT, sigma, amplitude)
@@ -138,7 +139,7 @@ def full_scan(path: Path, t: float, rng, neg: bool = False, pressure: bool = Fal
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
         specs.append(_spec(i, rt, mz, it, neg=neg)); tic.append(it.sum()); bpc.append(it.max())
     tp, yp = _pda(rng, _exp(-k * t))
-    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3)] if pressure else []))
+    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)] + ([_pressure_chrom(3, "" if pressure is True else pressure)] if pressure else []))
     if dad:                                           # opt-in: the extra array changes the bytes, so the golden answers keyed by SHA-256 keep the default
         sys.path.insert(0, str(Path(__file__).resolve().parent)); from dati_sintetici_dad import inject_dad; inject_dad(path, t)
 

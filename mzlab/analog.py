@@ -16,20 +16,15 @@ import numpy as np
 from .i18n import UserError
 
 # ---------------------------------------------------------------- pressure units
-_TO_BAR = (("megapascal", 10.0), ("mpa", 10.0), ("kilopascal", 0.01), ("kpa", 0.01), ("pascal", 1e-5), ("pa", 1e-5), ("psi", 0.0689476), ("pound", 0.0689476), ("bar", 1.0))
-BAR_MAX = 2000.0       # no HPLC pump reaches this: values above it come from a unit written ten times too small (Thermo files declare pascal and store 10x)
+_TO_BAR = {"megapascal": 10.0, "mpa": 10.0, "kilopascal": 0.01, "kpa": 0.01, "pascal": 1e-5, "pa": 1e-5, "psi": 0.0689476, "pound per square inch": 0.0689476,
+           "pounds per square inch": 0.0689476, "millibar": 0.001, "mbar": 0.001, "bar": 1.0}
 
 
 def pressure_to_bar(y, unit: str | None):
-    """(values in bar, note or None). The note is an i18n message ``{"key", "params"}`` when the unit had to be corrected."""
-    y = np.asarray(y, dtype=float)
-    u = (unit or "").strip().lower()
-    f = next((f for name, f in _TO_BAR if name == u), None) or next((f for name, f in _TO_BAR if name in u), 1.0)
-    out = y * f
-    top = float(np.nanmax(np.abs(out))) if len(out) else 0.0
-    if top > BAR_MAX:
-        return out / 10.0, {"key": "analog.unit.tenfold", "params": {"unit": unit or ""}}
-    return out, None
+    """The values in bar when the file declares a pressure unit (exact name); None when it declares none or another one (e.g. ``number of detector counts``,
+    which only says "a number"): the scale is then unknown and the values are shown as they are."""
+    f = _TO_BAR.get((unit or "").strip().lower())
+    return None if f is None else np.asarray(y, dtype=float) * f
 
 
 def reduce_minmax(t, y, n: int = 2000):
