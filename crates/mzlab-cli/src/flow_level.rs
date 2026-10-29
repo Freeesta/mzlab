@@ -6,7 +6,9 @@ use mzlab_core::error::Result;
 use mzlab_core::flow::{Artifact, Job};
 use mzlab_core::step::DataType;
 
-pub use mzlab_feat::flow_level::{assess, level_text, Analog, Cand, Evidence};
+use mzlab_feat::flow_level::level_text;
+#[cfg(test)]
+pub use mzlab_feat::flow_level::{assess, Analog, Cand, Evidence};
 
 pub(crate) fn level_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let (hits, formulas) = (

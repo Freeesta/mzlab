@@ -87,7 +87,7 @@ PLAN = {"format": "mzflow/2", "inputs": inputs(LIBSHA), "steps": BASE + [
     {"id": "mat", "step": "spectra.match@1", "in": {"query": "ms2.spectra", "library": "file:lib.msp"}, "algorithm": "spectral_entropy", "params": MATCH},
     {"id": "f1", "step": "formula.ms1@1", "in": {"features": "csv.report", "index": FILES}, "params": {"tol_ppm": 5, "max_results": 5}},
     {"id": "f2", "step": "formula.ms2@1", "in": {"spectra": "ms2.spectra", "formulas": "f1.formulas"}},
-    {"id": "lv", "step": "annot.level@1", "in": {"candidates": "mat.candidates", "formulas": "f1.formulas"}}]}
+    {"id": "lv", "step": "annot.level@1", "in": {"candidates": "mat.hits", "formulas": "f1.formulas"}}]}
 out = native(PLAN, "plan")
 OUTS = ["f2.json", "lv.json"]
 NAT = {n: (out / n).read_bytes() for n in OUTS}
