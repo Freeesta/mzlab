@@ -68,3 +68,7 @@ Phase 1: read-only. Every claim was checked against the code on `origin/main` (t
 ## Not measured
 
 All speed figures above are estimates from the code. Cheap native checks that would settle two of them: a micro-benchmark of `DeclaredWindow::note` over a 100k-scan header set (S3-2), and `scanparams::write` on a synthetic HR mzML with profile spectra (C3-2). The browser-side items (V1, V2, V3a, V4, V10) can only be timed in CI e2e.
+
+## Lots 3-5
+
+Lot 3: `gemini-caricamento-verifica-L3.md`. Lot 4: `gemini-caricamento-verifica-L4.md` (incomplete: H7+ missing). Lot 5: `gemini-caricamento-verifica-L5.md`. Same columns and verdict letters.
