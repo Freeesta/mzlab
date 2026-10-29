@@ -108,7 +108,7 @@ PRs 1-5 are page-only JS in `flow/lazy/`; 6 needs the same export in `mzlab-cli`
 
 ## 6. Decisions for Federico
 
-1. Default card names (Parent, Data, Find features, Candidate TPs, Evidence & decisions, Report).
+1. The card names.
 2. Whether guessed times count as **warnings** instead of errors (changes `valida` severity in Rust → `campioni` parity and saved documents' reading; PR 2 can instead only add «Confirm all»).
 3. Whether `tp.filter`/`tp.network`/`tp.position` stay on by default in the HR template.
 4. Whether the student (LR) world sees the Evidence card at all, and with which columns (principle 1).
