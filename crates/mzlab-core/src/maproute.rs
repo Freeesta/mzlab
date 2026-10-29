@@ -177,6 +177,13 @@ fn map<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resul
         return Ok(None);
     }
     let Some(mut a) = parse_ask(q, refk.is_some()) else { return Ok(None) };
+    if q.get("warm") == Some("1") && a.region.is_none() && !a.mean {
+        // the page asks a file to get ready for its whole-file map while it is idle: the per-scan cells are built, nothing is sent
+        let g = grid_of(items, routes, a.level)?;
+        let Some(r) = route(items, routes, k) else { return Ok(None) };
+        let built = r.warm_scan_cells(a.level, &g)?;
+        return Ok(Some(crate::jsonb::write(&Obj::new().b("warm", built).done())));
+    }
     let Some(r) = route(items, routes, k) else { return Ok(None) };
     let hr = group_is_hr(&r.idx.scans, a.level == 1);
     let (g, mz1) = match a.region {
