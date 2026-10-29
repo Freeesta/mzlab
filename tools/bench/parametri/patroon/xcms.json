@@ -1,0 +1,7 @@
+{
+ "nota": "patRoon handbook values: XCMS3 centWave feature finder (findFeatures 'xcms3') and grouping by XCMS3 peak density with obiwarp, then the same filters as openms.json; centWave numbers equal parametri/xcms/predefinita.json",
+ "findFeatures": {"algorithm": "xcms3", "ppm": 5, "peakwidth_min": 10, "peakwidth_max": 60, "snthresh": 10, "prefilter_k": 3, "prefilter_i": 10000, "mzdiff": -0.001, "noise": 0},
+ "groupFeatures": {"algorithm": "xcms3", "rtalign": true, "binSize": 0.6, "bw": 5, "pdBinSize": 0.015, "minFraction": 0.5, "minSamples": 1},
+ "filter": {"absMinIntensity": 5000, "relMinReplicateAbundance": 1, "maxReplicateIntRSD": 0.75, "blankThreshold": 5},
+ "screenSuspects": {"rtWindow": 12, "mzWindow": 0.005, "adduct": "[M+H]+"}
+}

@@ -14,6 +14,9 @@ from importlib import metadata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# patRoon runs only inside this Docker image, pulled by `corri_patroon.py`; the reference must carry a digest. `digest` is written when the image is chosen and
+# verified (`docker pull NOME && docker inspect --format '{{index .RepoDigests 0}}' NOME`): the runner refuses to run while it is None.
+PATROON = {"nome": "patroonorg/patroon", "digest": None}
 
 
 def _out(cmd: list[str], env=None) -> str:
@@ -44,6 +47,7 @@ def raccogli(mzmine: str | None = None, java_home: str | None = None) -> dict:
         v["ThermoRawFileParser"] = _out([trfp, "--version"]).splitlines()[-1]
     if shutil.which("mono"):
         v["mono"] = _out(["mono", "--version"]).splitlines()[0]
+    v["patRoon_image"] = f"{PATROON['nome']}@{PATROON['digest']}" if PATROON["digest"] else "unpinned"
     toml = (ROOT / "Cargo.toml").read_text(encoding="utf-8") if (ROOT / "Cargo.toml").exists() else ""
     m = re.search(r'^version\s*=\s*"([^"]+)"', toml, re.M)
     v["mzlab"] = m.group(1) if m else "unavailable"

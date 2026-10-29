@@ -1,0 +1,7 @@
+{
+ "nota": "patRoon handbook values: OpenMS feature finder (findFeatures 'openms'), grouping by OpenMS with RT alignment, then the filters of the NTS workflow (blank x5, replicate abundance, RSD 0.75); ppm 5 as for the other tools. RT and windows in seconds as patRoon wants them",
+ "findFeatures": {"algorithm": "openms", "noiseThrInt": 1000, "chromSNR": 3, "chromFWHM": 5, "mzPPM": 5, "minFWHM": 4, "maxFWHM": 30},
+ "groupFeatures": {"algorithm": "openms", "rtalign": true, "maxAlignRT": 12, "maxAlignMZ": 0.005, "maxGroupRT": 12, "maxGroupMZ": 0.005},
+ "filter": {"absMinIntensity": 5000, "relMinReplicateAbundance": 1, "maxReplicateIntRSD": 0.75, "blankThreshold": 5},
+ "screenSuspects": {"rtWindow": 12, "mzWindow": 0.005, "adduct": "[M+H]+"}
+}
