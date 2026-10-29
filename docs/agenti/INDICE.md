@@ -104,3 +104,4 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | misura su computer lenti (CPU rallentata 1×/4×/6×, 2/4 core: apertura demo, trascinamento della linea, mappe, XIC, memoria; `tests_e2e/misura_macchine.py`) | `docs/agenti/misure-macchine.md` |
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
 | tooltip: regola (solo se aggiungono informazione), inventario, hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
+| file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
