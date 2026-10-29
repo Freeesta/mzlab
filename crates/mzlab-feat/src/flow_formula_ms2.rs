@@ -64,8 +64,8 @@ fn run_candidate(
     let fd = parse_formula(&c.formula);
     if alg == "h_rearrangement" {
         let a = attribute(&fd, prec, pol, peaks, s)?;
-        let ppm = crate::attributio::review::explain::match_adduct(&fd, prec, pol)
-            .map_or(0.0, |m| m.ppm);
+        let ppm =
+            crate::attributio::review::explain::match_adduct(&fd, prec, pol).map_or(0.0, |m| m.ppm);
         let frags = a
             .hits
             .iter()
@@ -177,7 +177,11 @@ pub fn ms2_text(
     spectra: Named,
     formulas: &[&[u8]],
 ) -> Result<String> {
-    let alg = if algorithm.is_empty() { "subformula" } else { algorithm };
+    let alg = if algorithm.is_empty() {
+        "subformula"
+    } else {
+        algorithm
+    };
     let s = ReviewSettings {
         ppm_ion: num(params, "ppm_ion"),
         ppm_frag: num(params, "ppm_frag"),

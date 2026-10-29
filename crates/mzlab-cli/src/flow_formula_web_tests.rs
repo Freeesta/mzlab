@@ -46,13 +46,19 @@ fn formulas_and_levels_in_the_libraries_give_the_bytes_of_the_cli() {
     std::fs::write(dir.join("hits.json"), hits(&id)).unwrap();
     let (run, prov) =
         crate::flow::run_plan(PLAN.as_bytes(), &dir, &dir.join("work"), 1, None).unwrap();
-    assert!(run.skipped.is_empty() && !prov.contains("\"error\""), "{prov}");
+    assert!(
+        run.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
     let made = |n: &str| std::fs::read_to_string(dir.join("work").join(n)).unwrap();
 
     // formula.ms1: the whole text, and the rows of each file joined as the page does
     let table = std::fs::read(dir.join("work/t.csv")).unwrap();
     let p1 = json_params(&resolved(PLAN, "f1")).unwrap();
-    assert_eq!(ms1_text(&p1, &table, &[("caf.mzML", &mzml)]).unwrap(), made("f1.json"));
+    assert_eq!(
+        ms1_text(&p1, &table, &[("caf.mzML", &mzml)]).unwrap(),
+        made("f1.json")
+    );
     let rows = ms1_rows(&p1, &table, &["caf.mzML"], (0, &mzml)).unwrap();
     let joined: Vec<String> = rows.into_iter().map(|r| r.1).collect();
     assert_eq!(ms1_join(&joined), made("f1.json"));
@@ -71,6 +77,9 @@ fn formulas_and_levels_in_the_libraries_give_the_bytes_of_the_cli() {
     // annot.level: the hit and the formulas of the feature give a level other than the one without evidence
     let level = level_text(&[hits(&id).as_bytes()], &[f1_text.as_bytes()]).unwrap();
     assert_eq!(level, made("l.json"));
-    assert!(!level.contains("\"level\":\"5\"") && !level.contains("\"level\":\"0\""), "{level}");
+    assert!(
+        !level.contains("\"level\":\"5\"") && !level.contains("\"level\":\"0\""),
+        "{level}"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -41,6 +41,8 @@ mod flow_export;
 #[cfg(test)]
 mod flow_export_tests;
 mod flow_formula;
+#[cfg(test)]
+mod flow_formula_web_tests;
 mod flow_generate;
 mod flow_hash;
 #[cfg(test)]
@@ -69,8 +71,6 @@ mod flow_match;
 #[cfg(test)]
 mod flow_match_tests;
 mod flow_match_tree;
-#[cfg(test)]
-mod flow_formula_web_tests;
 mod flow_match_web_tests;
 mod flow_ms2;
 mod flow_msnfigura;
