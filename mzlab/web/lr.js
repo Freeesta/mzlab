@@ -101,7 +101,7 @@ export function createLr({ rb }) {
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
       if (key === "err.load.cancelled") { try { await rpc({ op: "lr_remove", name: n }); } catch (_) { /* nothing was kept */ } files.delete(n); }      // «Cancel»: no half file stays to be indexed at the next start
       return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
-    }
+    } finally { earlyTics.delete(n); }      // the index ends below 100%: the early TIC is not needed once the real one is served
     return json({ files: sorted(), methods: mr.list() });
   }
 
@@ -154,7 +154,7 @@ export function createLr({ rb }) {
     await rpc({ op: "lr_remove", name: n });
     files.delete(n); earlyTics.delete(n); await mr.refresh();
     if (items) {
-      items = items.filter(it => base(it.file) !== n);
+      items = items.filter(it => base(it.file.split("#")[0]) !== n);      // a mixed file's items are named `file#tag`
       if (!items.length) { items = null; hr = lr = false; }
     }
     rb.noteRemove(n); rb.noteExplore(null);
