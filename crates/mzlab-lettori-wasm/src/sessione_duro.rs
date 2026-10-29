@@ -112,7 +112,7 @@ pub fn numeri() -> Vec<f64> {
         5e-324,
         f64::MIN_POSITIVE,
         -2.5,
-        123456789.123456789,
+        123456789.123456,
         f64::NAN,
         f64::INFINITY,
         f64::NEG_INFINITY,
