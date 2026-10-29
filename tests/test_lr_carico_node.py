@@ -25,3 +25,13 @@ def test_mixes_resolutions_without_one_rpc_per_file(tmp_path):
 
 def test_table_of_a_loading_repaints_once_and_proposes_once(tmp_path):
     _run("ruoli_coalesce_node.mjs", ["ruoli-carica.js"], tmp_path)
+
+
+def test_a_wiff_pair_is_parsed_once_and_checked_in_the_cache_before_the_probe(tmp_path):
+    s = (WEB / "shell.js").read_text(encoding="utf-8")
+    a = s.index("async function wiffToMzml")
+    fn = tmp_path / "wiff.js"
+    fn.write_text(s[a:s.index("// Rule R", a)], encoding="utf-8")
+    r = subprocess.run(["node", str(ROOT / "tests" / "wiff_pair_node.cjs"), str(fn), str(WEB)], capture_output=True, text=True, check=False)
+    assert r.returncode == 0, (r.stdout + r.stderr)[-3000:]
+    assert r.stdout.strip() == "ok"
