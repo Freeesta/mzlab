@@ -18,7 +18,8 @@
       s.async = false;
       s.src = "static/" + f;
       s.onload = function () { ok(f); };
-      s.onerror = function () { ko(new Error("script not loaded: " + f)); };
+      // a failed script is forgotten, so a later carica(n) tries again
+      s.onerror = function () { delete done[f]; if (s.parentNode) s.parentNode.removeChild(s); ko(new Error("script not loaded: " + f)); };
       document.body.appendChild(s);
     });
     return done[f];
