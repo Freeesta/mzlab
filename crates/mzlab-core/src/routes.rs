@@ -202,14 +202,7 @@ impl<R: ReadAt> Routes<R> {
                 }
             }
         }
-        let pick = |v: &[f64]| -> Vec<f64> {
-            v.iter()
-                .zip(&keep)
-                .filter(|(_, k)| **k)
-                .map(|(x, _)| *x)
-                .collect()
-        };
-        Ok(Some((pick(&rt), pick(&y))))
+        Ok(Some((kept(&rt, &keep), kept(&y, &keep))))
     }
 
     pub fn filters(&mut self) -> Result<String> {
@@ -431,4 +424,13 @@ pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R
         dropped += 1;
     }
     dropped
+}
+
+/// The values of `v` whose scan is kept.
+fn kept(v: &[f64], keep: &[bool]) -> Vec<f64> {
+    v.iter()
+        .zip(keep)
+        .filter(|(_, k)| **k)
+        .map(|(x, _)| *x)
+        .collect()
 }
