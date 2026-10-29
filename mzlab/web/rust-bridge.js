@@ -61,7 +61,7 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   function respawn() {
     spawn();
-    slots.forEach((s, k) => { if (s) { s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session
+    slots.forEach((s, k) => { if (s) { s.gen = (s.gen || 0) + 1; s.bad = false; s.idx = false; s.mzml = null; s.opening = open(k, s); } });       // the files come back from the session; a bumped generation retires the opens still waiting on the dead worker
   }
   function died(w, info) {
     if (w !== worker) return;
@@ -76,7 +76,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   function openMzml(k, s) {
     stats.mzml++; (stats.mzmlOf = stats.mzmlOf || []).push(s.name);
     if (!s.blob) { s.bad = true; return Promise.resolve(); }
+    const gen = s.gen;
     return rpc({ op: "open", slot: k, blob: s.blob }).then(r => {
+      if (s.gen !== gen) return;                                              // answered for a worker that was replaced since: the new open owns the slot
       if (r.dead || r.error) {
         s.bad = true;
         let key = ""; try { key = JSON.parse(r.error).error_key; } catch (_) { /* not an engine error */ }
@@ -88,7 +90,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   }
   const needMzml = (k, s) => s.mzml || (s.mzml = s.info ? Promise.resolve() : openMzml(k, s));
   function open(k, s) {
+    const gen = s.gen;
     return rpc({ op: "idxopen", slot: k, name: s.name, pol: s.pol }).then(r => {
+      if (s.gen !== gen) return;                                              // the worker died and respawn() started a new open: this stale answer must not touch the slot
       s.idx = r.dead || r.error ? null : JSON.parse(r.info);                 // { scans, hr1 }
       if (!s.idx) { s.mzml = openMzml(k, s); return s.mzml; }
     });
@@ -173,12 +177,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return null;
       await Promise.all(ks.map(k => slots[k].opening));
       if (!ks.every(k => slots[k] && slots[k].idx && !slots[k].bad && slots[k].blob)) return null;
-      const parts = [];
-      for (const k of ks) {
-        const r = await rpc({ op: "mrm", slot: k, blob: slots[k].blob });
-        if (r.dead || r.error || !r.info) return null;
-        parts.push(`{"k":${k},"transitions":${r.info}}`);
-      }
+      const rs = await Promise.all(ks.map(k => rpc({ op: "mrm", slot: k, blob: slots[k].blob })));     // all requests in flight at once, the parts keep the order of ks
+      if (rs.some(r => r.dead || r.error || !r.info)) return null;
+      const parts = ks.map((k, i) => `{"k":${k},"transitions":${rs[i].info}}`);
       stats.rust++;
       return { status: 200, text: `{"files":[${parts.join(",")}]}`, ms: performance.now() - t0 };
     }
@@ -199,12 +200,9 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
       if (ks.length && isFinite(mz) && ks.every(k => Number.isInteger(k) && slots[k])) {
         await Promise.all(ks.map(k => slots[k].opening));
         if (ks.every(k => slots[k] && slots[k].idx && !slots[k].bad)) {
-          const parts = [];
-          for (const k of ks) {
-            const r = await rpc({ op: "idxxic", slot: k, level, mz, tol });
-            if (r.dead || r.error || !r.info) return null;
-            parts.push(`{"k":${k},${r.info.slice(1)}`);
-          }
+          const rs = await Promise.all(ks.map(k => rpc({ op: "idxxic", slot: k, level, mz, tol })));
+          if (rs.some(r => r.dead || r.error || !r.info)) return null;
+          const parts = ks.map((k, i) => `{"k":${k},${rs[i].info.slice(1)}`);
           stats.rust++;
           return { status: 200, text: `{"mz":${JSON.stringify(mz)},"tol":${JSON.stringify(tol)},"traces":[${parts.join(",")}]}`, ms: performance.now() - t0 };
         }
