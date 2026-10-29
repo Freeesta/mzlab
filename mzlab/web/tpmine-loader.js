@@ -5,9 +5,8 @@
 // static/mzfinder/indice.json = {early: [names, run first, before the data files], js: [names, run in this order], files: [names, given to the scripts as QTOOLS.ctx.files[name]], py: zip name}
 // The scripts register their tools with window.QTOOLS.register(...). A tool registered with nav:true gets its own tab in the page header
 // (next to Teoria) and a full page; others get a button in the floating bar.
-// A tool registered with admin:true exists only in the administrator mode (localStorage «qqq.admin» = «1», five clicks on the logo): without it the package is not
-// even downloaded, no tab or button is made and nothing in the page points to the tool. The five clicks (logo-piccone.js) fire "mzlab:admin" on document and the
-// tab appears at once; leaving the mode (settings.js) reloads the page, which drops the tabs, the results and the workers of the tools.
+// The tools are always on in the built site and the desktop app. The lab build (window.MZLAB_LAB, set by tools/lab/lab.js) never starts the loader: the package is
+// not even downloaded, no tab or button is made and nothing in the page points to the tools.
 (() => {
   "use strict";
   const BASE = new URL(".", document.currentScript ? /** @type {HTMLScriptElement} */ (document.currentScript).src : location.href).href;
@@ -17,13 +16,10 @@
   const tools = [];
   // true while the main scripts run: a tool registered then gets its tab when they are all done (turnOn), so its markup is drawn with the help (TPHELP) and the other later scripts in place
   let settling = false;
-  const adminOn = () => { try { return localStorage.getItem(NOMI.KEY("admin")) === "1" || localStorage.getItem(NOMI.KEY("teoria.esteso")) === "1"; } catch (_) { return false; } };
-  /** a tool with admin:true is shown only in the administrator mode */
-  const shown = t => !t.admin || adminOn();
   const reg = window.QTOOLS = {
     ctx: /** @type {any} */ (null),                                     // set before the scripts run: {base: URL of the site static folder, meta, files}
-    list: () => on ? tools.filter(shown) : [],
-    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && shown(t) && !settling) addTab(t); render(); },
+    list: () => on ? tools.slice() : [],
+    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav && on && !settling) addTab(t); render(); },
   };
 
   // scripts that are not needed at the start: TPLAZY.load("a.js", "b.js") runs them once, in this order, from static/mzfinder/lazy/ (the names are listed in indice.json under `lazy`)
@@ -70,7 +66,7 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function render() {
     if (!bar) return;
-    const floating = tools.filter(t => !t.nav && shown(t));
+    const floating = tools.filter(t => !t.nav);
     bar.hidden = !on || !floating.length;
     bar.innerHTML = floating.map(t => `<button data-t="${esc(t.id)}" title="${esc(t.desc || t.name)}">${t.icon || ""}${esc(t.name)}</button>`).join("");
     bar.querySelectorAll("button").forEach(b => b.onclick = () => openTool(tools.find(t => t.id === b.dataset.t)));
@@ -136,8 +132,7 @@
     const files = {};
     reg.ctx = { base: BASE, meta: idx.meta || {}, files };
     const warm = [...early, ...js].map(n => fetch(DIR + n).catch(() => null));     // starts all downloads now (early ones first); the script tags below then hit the cache
-    try { for (const n of early) await runScript(n); }             // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
-    finally { document.dispatchEvent(new Event("tpmine:early")); }   // carica.js starts the Dati scripts on this in administrator mode
+    for (const n of early) await runScript(n);                     // scripts that need neither the data files nor the other scripts (the Flow tab): they draw while the rest downloads
     if (on) showTabs();                                           // their tabs (Flow) appear now, not after the whole package
     const texts = await Promise.all(names.map(n => get(n, "text")));
     names.forEach((n, i) => { files[n] = texts[i]; });
@@ -146,9 +141,9 @@
     try { for (const n of js) await runScript(n); } finally { settling = false; }
   }
   // the tab appears at once with a short loading note; the real tool takes its place when its script registers
-  const PLACEHOLDER = { id: "tpmine", nav: true, admin: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
+  const PLACEHOLDER = { id: "tpmine", nav: true, ph: true, name: "Tabui", desc: "Loading…", open(/** @type {HTMLElement} */ sec) { sec.innerHTML = '<p class="muted" role="status" style="padding:14px">Loading…</p>'; } };
   function showTabs() {
-    for (const t of tools) if (t.nav && shown(t)) addTab(t);
+    for (const t of tools) if (t.nav) addTab(t);
     render();
   }
   async function turnOn() {
@@ -163,7 +158,6 @@
     if (!on) return;
     showTabs();
   }
-  const start = () => { if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !on && adminOn()) turnOn(); };      // only in the built site and the desktop app (the plain web folder has no static/mzfinder/), only for the administrator
-  document.addEventListener("mzlab:admin", start);
+  const start = () => { if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !window.MZLAB_LAB && !on) turnOn(); };      // only in the built site and the desktop app (the plain web folder has no static/mzfinder/), never in the lab build
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

@@ -25,7 +25,7 @@ for u in (LAB, NORMAL):          # wait for the servers to listen (state, not a 
     while True:
         try: socket.create_connection(("127.0.0.1", port), timeout=1).close(); break
         except OSError: pass
-ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode is what loads Tabui and mzFlow
+ADMIN = "try{localStorage.setItem('mzlab.admin','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}"      # the administrator mode stays off in the lab (Teoria editor and the like); Tabui and mzFlow no longer depend on it
 CLOCK = "(()=>{const R=Date,t=R.parse('%s');class D extends R{constructor(...a){a.length?super(...a):super(t)}static now(){return t}};window.Date=D})()"      # fake clock
 NAV = "[...document.querySelectorAll('#nav button')].map(b => b.dataset.v)"
 try:
@@ -38,7 +38,8 @@ try:
             pg, reqs = page(LAB, ADMIN + CLOCK % "2026-10-29T12:00:00Z")      # admin flag already set: the lab must not honour it
             pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("window.QTOOLS ? QTOOLS.list().length : 0") == 0 and pg.evaluate(NAV) == ["data", "draw"], pg.evaluate(NAV)
-            assert not [u for u in reqs if "mzfinder/" in u]      # the small loader script is part of the page, inert without the flag; the Tabui package is never fetched, reqs
+            assert not [u for u in reqs if "mzfinder/" in u]      # the small loader script is part of the page, inert in the lab (window.MZLAB_LAB); the Tabui and mzFlow package is never fetched, reqs
+            assert not pg.evaluate("document.querySelector('#v-tpmine, #v-flow, [data-v=tpmine], [data-v=flow]')")
             assert pg.evaluate("localStorage.getItem('mzlab.admin')") is None
             for _ in range(5): pg.click(".logo")                      # the five clicks of the administrator mode
             pg.wait_for_function("document.querySelector('.logo').style.opacity !== '0'", timeout=15000)
@@ -79,11 +80,13 @@ try:
             assert pg.evaluate("fetch('static/esempi/FullScan_t15.mzML').then(r => r.status)") == 404
         step("lab: no example files shipped and no example entry points", noexamples)
         def normal():
-            pg, reqs = page(NORMAL, ADMIN); pg.wait_for_selector("#drop", timeout=120000)
+            pg, reqs = page(NORMAL, ""); pg.wait_for_selector("#drop", timeout=120000)
             assert pg.evaluate("document.querySelector('#lab-banner')") is None and pg.evaluate("typeof MZLAB_LAB") == "undefined"
             assert not [u for u in reqs if u.split("?")[0].endswith("/lab.js")], reqs
-            pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000)      # the administrator flag still gives Tabui and mzFlow in the normal build
-        step("normal build: no lab, administrator mode unchanged", normal)
+            pg.wait_for_selector('#nav button[data-v="flow"]', timeout=60000)      # no flag, no click: Tabui and mzFlow are in the header of the normal build
+            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=60000)
+            assert pg.evaluate(NAV)[:2] == ["data", "draw"] and pg.evaluate("localStorage.getItem('mzlab.admin')") is None
+        step("normal build: no lab, Tabui and mzFlow visible at first load", normal)
         b.close()
 finally:
     for pr in procs: pr.terminate()

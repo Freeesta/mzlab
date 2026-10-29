@@ -36,7 +36,7 @@
   };
 
   T.register({
-    id: "flow", nav: true, admin: true, name: "Flow", icon: ICON, desc: "Build a chain of steps from the step descriptors and export it as an mzflow/2 plan",
+    id: "flow", nav: true, name: "Flow", icon: ICON, desc: "Build a chain of steps from the step descriptors and export it as an mzflow/2 plan",
     /** @param {HTMLElement} sec @param {any} ctx */
     async open(sec, ctx) {
       skeleton(sec);

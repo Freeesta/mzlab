@@ -1,6 +1,6 @@
 # Griglia dei metadati dei campioni (Flow, `flow/lazy/flow-meta-grid.js`)
 
-Solo amministratore e solo inglese. Una griglia ARIA a righe virtuali (`role=grid`, `aria-rowcount`, `aria-colindex`; righe di 28 px, finestra di circa 13 righe più 4 di margine, la riga attiva esiste sempre) sopra un documento `campioni/3` (`campioni.md`). Tutta la logica è Rust, raggiunto con `CDOC.post("<op>")` (`api/campioni/<op>`): il file dispone le celle e muove il fuoco.
+Solo inglese. Una griglia ARIA a righe virtuali (`role=grid`, `aria-rowcount`, `aria-colindex`; righe di 28 px, finestra di circa 13 righe più 4 di margine, la riga attiva esiste sempre) sopra un documento `campioni/3` (`campioni.md`). Tutta la logica è Rust, raggiunto con `CDOC.post("<op>")` (`api/campioni/<op>`): il file dispone le celle e muove il fuoco.
 
 ## Documento e salvataggio
 - `F.metaGrid(S, input)` (`F.samplesEditor` lo chiama): il documento sta in `S.samples[input.name]`; un `/2` si migra con `migra`. Senza documento e con file aperti in Dati si apre da sola: `F.samplesFromData` → `migra` → `dal_file` con polarità, intervalli, scansioni e strumento letti da `E.files`.
