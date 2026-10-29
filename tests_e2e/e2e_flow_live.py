@@ -176,7 +176,7 @@ try:
             st = pg.evaluate("""([c, id]) => { const was = FLOW.liveView.node(id), card = document.querySelector(c);
               FLOW.liveView.ingest([{ ...was, state: 'stale', frac: null }]);
               return new Promise(ok => requestAnimationFrame(() => requestAnimationFrame(() => { const r = [card.dataset.live, getComputedStyle(card).borderStyle, card.querySelector('.fln-lw').textContent]; FLOW.liveView.ingest([was]); ok(r); }))); }""", [card, ids["detect"]])
-            assert st == ["stale", "dashed", "Settings changed: runs again on Run"], st
+            assert st == ["stale", "dashed", "Settings changed: press Run"], st
             heads = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files thead th')].map(h => h.textContent)")
             rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody th')].map(h => h.textContent)")
             assert heads == ["File", "Mode", "State", "Share", "Time", "Memory"] and all(any(n.rsplit(".", 1)[0] in r for r in rows) for n in names), (heads, rows, names)
@@ -202,7 +202,7 @@ try:
         cen = pg.evaluate(STEP, "spectra.centroid"); det = pg.evaluate(STEP, "features.detect")
         def mixed():
             assert cen and pg.evaluate(STEP, "index.mzidx"), "the base plan holds the centroid step"
-            until(pg, "([c]) => /2 of 3 files ready \\(1 centroided earlier, 1 already centroided\\)/.test((document.querySelector(c + ' .fln-lw') || {}).textContent || '')", [CARD % cen])
+            until(pg, "([c]) => /2 of 3 files ready \\(1 centroided earlier, 1 already centroided\\)/.test((document.querySelector(c + ' .fln-lw') || {}).title || '')", [CARD % cen])
             # the profile file without a centroid index stays with the computer: its detection does not run, the other two are detected
             jobs_until(pg, det, "j.filter(x => x[1] === 'done' || x[1] === 'reused').length >= 2")
             states = dict(pg.evaluate(JOBS, det))
@@ -212,7 +212,7 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('.fl-insp .fln-files tbody tr')].map(r => [...r.children].map(c => c.textContent))")
             second = [r for r in rows if r[0] == inputs[1]]
             assert second and second[0][1] == "centroid" and "already centroided" in second[0][2], rows
-        step("a mixed series: the card says 2 of 3 files ready (1 centroided earlier, 1 already centroided), the file table says the mode, the profile file waits", mixed)
+        step("a mixed series: the card says why it waits and its tooltip says 2 of 3 files ready (1 centroided earlier, 1 already centroided), the file table says the mode, the profile file waits", mixed)
 
         def old_plan():
             # a plan from before the node (the node taken out, the index reads the files): Issues offers the two remedies, nothing is inserted, and the detection of the profile files waits

@@ -39,15 +39,17 @@
   /** the mark, the words and the look (ok, run, warn, bad, idle) of one node or job event; `title` is the full text for the tooltip @param {any} e @returns {{state: string, icon: string, word: string, title: string, tone: string, frac: number | null}} */
   const look = e => {
     const st = e.state, frac = typeof e.frac === "number" ? e.frac : null, many = (e.di || 0) > 1, files = many ? `${e.parte || 0} of ${e.di} files` : "";
-    const mk = (/** @type {string} */ icon, /** @type {string} */ word, /** @type {string} */ tone) => ({ state: st, icon, word, title: word, tone, frac });
+    // `word` is short enough for one line of a card; `title` (tooltip, aria-label) is the whole sentence
+    const mk = (/** @type {string} */ icon, /** @type {string} */ word, /** @type {string} */ tone, /** @type {string} */ title = word) => ({ state: st, icon, word, title, tone, frac });
     switch (st) {
       case "running": return mk("run", frac === null ? files || "working" : [files, percent(frac) + " %"].filter(Boolean).join(" · "), "run");
       case "done": return mk("ok", e.ms ? "done in " + seconds(e.ms) : "done", "ok");
       case "reused": return mk("again", "Up to date (nothing changed)", "ok");
-      case "stale": return mk("stale", "Settings changed: runs again on Run", "warn");
-      case "error": return mk("bad", why(e) || "This step stopped with an error", "bad");
-      case "refused": return mk("bad", why(e) || "This step was refused", "bad");
-      case "blocked": return mk("lock", e.blocked_by === "permission.memory" ? "Large files: allow more memory with Run now" : e.blocked_by === "platform.computer" ? "This step needs the desktop app (profile mzML). Use the app, or open the vendor file." : "Fix the plan first (see Issues)", "warn");
+      case "stale": return mk("stale", "Settings changed: press Run", "warn", "Settings changed: runs again on Run");
+      case "error": return mk("bad", "This step failed", "bad", why(e) || "This step failed");
+      case "refused": return mk("bad", "This step was refused", "bad", why(e) || "This step was refused");
+      case "blocked": return e.blocked_by === "permission.memory" ? mk("lock", "Allow more memory: Run now", "warn", "Large files: allow more memory with Run now")
+        : e.blocked_by === "platform.computer" ? mk("lock", "Needs the desktop app", "warn", "This step needs the desktop app (profile mzML). Use the app, or open the vendor file.") : mk("lock", "Fix the plan first", "warn", "Fix the plan first (see Issues)");
       case "skipped": return mk("skip", "skipped", "idle");
       case "paused": return mk("pause", "paused", "idle");
       case "cancelled": return mk("skip", "cancelled", "idle");
