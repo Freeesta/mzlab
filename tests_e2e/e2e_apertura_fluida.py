@@ -40,7 +40,7 @@ def measure(pg, files):
     pg.evaluate("document.querySelector('#opbtn').click()")
     pg.wait_for_selector("#start", state="hidden", timeout=90000)
     ready(pg)
-    pg.wait_for_timeout(600)
+    fermo(pg, "#dpanels .pnl"); frames(pg, 30)
     return pg.evaluate("(() => { window.__shift.stop = true; return window.__shift; })()")
 
 
@@ -64,7 +64,7 @@ def settled(frames, key, since, tol=0.6):
 def second_page(r, p, motion):
     pg = r.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion=motion, locale="it-IT")
     pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
-    pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_timeout(800)
+    pg.goto(f"http://127.0.0.1:{r.port}/")
     return pg
 
 
