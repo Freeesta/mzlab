@@ -136,7 +136,7 @@
     const main = e.iso.reduce((/** @type {number[]} */ a, /** @type {number[]} */ b) => (b[2] > a[2] ? b : a)), /** @type {Map<number, number[]>} */ d = new Map();
     for (const [A, m, pct] of e.iso) { const p = pct / 100; if (m == null || p <= 0) continue; const o = A - main[0]; d.set(o, [p, m * p]); }
     // keep only non-negative offsets relative to the lightest isotope: shift so the lightest is 0
-    const o0 = Math.min(...d.keys()), out = new Map(); for (const [o, v] of d) out.set(o - o0, v); return out;
+    const o0 = minOf([...d.keys()]), out = new Map(); for (const [o, v] of d) out.set(o - o0, v); return out;
   }
   function power(/** @type {Map<number, number[]>} */ d, /** @type {number} */ n) {
     let /** @type {Map<number, number[]>} */ res = new Map([[0, [1, 0]]]), base = d;
@@ -148,7 +148,7 @@
     let /** @type {Map<number, number[]>} */ dist = new Map([[0, [1, 0]]]);
     for (const [s, k] of Object.entries(n)) if (k > 0) dist = conv(dist, power(elementDist(s), k));
     const rows = [...dist].map(([o, [p, mp]]) => ({ off: o, p, mz: (mp / p - z * ELECTRON) / Math.abs(z) }));
-    const top = Math.max(...rows.map(r => r.p));
+    const top = maxOf(rows.map(r => r.p));
     return rows.map(r => ({ off: r.off, mz: r.mz, rel: 100 * r.p / top })).filter(r => r.rel >= 0.05).sort((a, b) => a.mz - b.mz);
   }
   // neutral formula (Hill, no parentheses) + adduct name -> element counts of the ion and its charge

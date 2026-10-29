@@ -164,3 +164,32 @@ console.log(JSON.stringify(out));
 """)
     assert r["same"] is True
     assert "multiple of 4" in r["badLen"] and "expected 5" in r["badCount"] and "not base64" in r["notB64"]
+
+
+def test_spread_replacements_match_math_max_min_and_survive_200000_values():
+    r = run(r"""
+const big = Array.from({ length: 200000 }, (_, i) => Math.sin(i) * 1000), out = {};
+try { Math.max(...big); out.oldThrows = false; } catch (e) { out.oldThrows = e instanceof RangeError; }
+out.same = H.maxOf(big) === big.reduce((m, v) => v > m ? v : m, -Infinity) && H.minOf(big) === big.reduce((m, v) => v < m ? v : m, Infinity);
+// the same answer as the spread for every kind of input the page can hold: empty, NaN, undefined, null, strings, extra seed values
+const cases = [[], [3], [1, 2, 3], [-1, -5], [1, NaN, 3], [NaN], [undefined, 1], [null, -1], ['4', 2], [Infinity, 1], [-Infinity], [0, -0]];
+out.bad = [];
+for (const a of cases) for (const s of [undefined, 0, 520, -7]) {
+  const hi = s === undefined ? Math.max(...a) : Math.max(s, ...a), lo = s === undefined ? Math.min(...a) : Math.min(s, ...a);
+  const h2 = s === undefined ? H.maxOf(a) : H.maxOf(a, s), l2 = s === undefined ? H.minOf(a) : H.minOf(a, s);
+  if (!Object.is(hi, h2) && !(hi === 0 && h2 === 0)) out.bad.push(['max', a, s, hi, h2]);
+  if (!Object.is(lo, l2) && !(lo === 0 && l2 === 0)) out.bad.push(['min', a, s, lo, l2]);
+}
+console.log(JSON.stringify(out));
+""")
+    assert r["oldThrows"] is True and r["same"] is True
+    assert r["bad"] == []
+
+
+def test_no_spread_extremes_left_in_the_data_files():
+    """Math.max(...a) / Math.min(...a) overflow the call stack on a big array: only the files that node tests or stand-alone pages load without numeri.js, and bounded UI lists, may still use them."""
+    import re
+    allowed = {"calc-qui.js", "campioni.js", "fair.js", "layout.js", "msngrafo-vista.js", "xlsx.js", "draw.js", "parentesi.js", "tour.js", "infusione-grafo.js", "infusione-grafo-regole.js", "libreria-worker.js", "numeri.js"}
+    rx = re.compile(r"Math\.(?:max|min)\([^()]*\.\.\.")
+    bad = [f.name for f in WEB.glob("*.js") if f.name not in allowed and not f.name.startswith("mappa") and rx.search(f.read_text(encoding="utf-8"))]
+    assert bad == []

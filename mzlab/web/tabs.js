@@ -58,7 +58,7 @@ function ensureBlocks() {
     STATO.conScheda(t, () => defaultLayoutTab(t), "blocks");
     const shift = () => {
       const nw = E.panels.filter((/** @type {Pannello} */ q) => !before.has(q) && q.tab === t && !q._sh); if (!nw.length) return false;
-      const top = Math.min(...nw.map((/** @type {Pannello} */ q) => q.y)), off = E.panels.filter((/** @type {Pannello} */ q) => q.tab !== t).reduce((/** @type {number} */ m, /** @type {Pannello} */ q) => Math.max(m, q.y + q.h + 24), 0) - top;
+      const top = minOf(nw.map((/** @type {Pannello} */ q) => q.y)), off = E.panels.filter((/** @type {Pannello} */ q) => q.tab !== t).reduce((/** @type {number} */ m, /** @type {Pannello} */ q) => Math.max(m, q.y + q.h + 24), 0) - top;
       nw.forEach((/** @type {Pannello} */ q) => { q._sh = 1; q.y += off; apply(q); });
       relayout(); fitHost(); renderFileList(); return true;
     };
@@ -67,15 +67,15 @@ function ensureBlocks() {
 }
 // The blocks of the types one under the other, in the order of the types. Panels of a session saved when only one type was shown at a time share the same space: if the blocks overlap they are moved down here.
 function stackBlocks() {
-  const rg = ESP.ids.map((/** @type {string} */ t) => { const ps = E.panels.filter((/** @type {Pannello} */ p) => p.tab === t); return ps.length ? [Math.min(...ps.map((/** @type {Pannello} */ p) => p.y)), Math.max(...ps.map((/** @type {Pannello} */ p) => p.y + p.h))] : null; }).filter(Boolean);
+  const rg = ESP.ids.map((/** @type {string} */ t) => { const ps = E.panels.filter((/** @type {Pannello} */ p) => p.tab === t); return ps.length ? [minOf(ps.map((/** @type {Pannello} */ p) => p.y)), maxOf(ps.map((/** @type {Pannello} */ p) => p.y + p.h))] : null; }).filter(Boolean);
   if (!rg.some((/** @type {number[]} */ r, /** @type {number} */ i) => rg.some((/** @type {number[]} */ u, /** @type {number} */ j) => j > i && r[0] < u[1] && u[0] < r[1]))) return;
   /** @type {number | null} */
   let y = null;
   ESP.ids.forEach((/** @type {string} */ t) => {
     const ps = E.panels.filter((/** @type {Pannello} */ p) => p.tab === t); if (!ps.length) return;
-    const top = Math.min(...ps.map((/** @type {Pannello} */ p) => p.y)), off = y === null ? 0 : y - top;
+    const top = minOf(ps.map((/** @type {Pannello} */ p) => p.y)), off = y === null ? 0 : y - top;
     ps.forEach((/** @type {Pannello} */ p) => { p._sh = 1; if (off) { p.y += off; apply(p); } });
-    y = Math.max(...ps.map((/** @type {Pannello} */ p) => p.y + p.h)) + 24;
+    y = maxOf(ps.map((/** @type {Pannello} */ p) => p.y + p.h)) + 24;
   });
 }
 // transitions of the MRM files and which one is the quantifier / qualifier (by the name in the method: Quant, Qual; otherwise the first and the second).

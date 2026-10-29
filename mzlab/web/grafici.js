@@ -166,7 +166,7 @@ function syncView(p) {
   if (!isLine(p) || !p._a) return;
   p._needL = p.cv._needL || 0; p._needR = p.cv._needR || 0;
   const all = tabPanels(p.tab).filter(q => isLine(q) && q.el && !q._exp), z = fz();
-  const L = Math.max(Math.round(66 * z), ...all.map(q => q._needL || 0)), R = Math.max(14, ...all.map(q => q._needR || 0));
+  const L = maxOf(all.map(q => q._needL || 0), Math.round(66 * z)), R = maxOf(all.map(q => q._needR || 0), 14);
   const marg = L !== (window.MARG_L || 0) || R !== (window.MARG_R || 0);
   window.MARG_L = L; window.MARG_R = R;
   all.forEach(q => { if (q === p) return; const st = q.tl && p.tl && q._u && p._u && (q._u[0] !== p._u[0] || q._u[1] !== p._u[1]); if (marg || st) drawSoon(q); });
@@ -328,7 +328,7 @@ async function drawLines(p) {
     const { m, neg } = traceMax(DC, s, x0, x1);
     s.mx = Math.max(m, -neg * 0.1);                       // a trace that is only below zero keeps some room above the zero line
   });
-  const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
+  const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = maxOf(sr.map(s => s.mx));
   // rows of the stacked view: one per trace, or (stacked graphs of the bench) one per graph with the files overlaid in it
   const rowIx = new Map(); sr.forEach((s, i) => { const g = s.grp != null ? s.grp : "i" + i; if (!rowIx.has(g)) rowIx.set(g, rowIx.size); s.row = rowIx.get(g); });
   const nrow = rowIx.size, rowMax = new Array(nrow).fill(1e-9); sr.forEach(s => { rowMax[s.row] = Math.max(rowMax[s.row], s.mx); });
@@ -558,7 +558,7 @@ function mapImage(p, A, B, scale, norm = "abs", fix = 0) {
 function mapView(A, B, rt0, rt1, mz0, mz1, others = []) {
   const ex = [A, B, ...others].filter(Boolean).map(q => q.extent).filter(e => e && e.rt && e.mz);
   if (!ex.length) return { rt: [rt0, rt1], mz: [mz0, mz1] };
-  const lo = (i, k) => Math.min(...ex.map(e => e[k][i])), hi = (i, k) => Math.max(...ex.map(e => e[k][i]));
+  const lo = (i, k) => minOf(ex.map(e => e[k][i])), hi = (i, k) => maxOf(ex.map(e => e[k][i]));
   const a = lo(0, "rt"), b = hi(1, "rt"), c = lo(0, "mz"), d = hi(1, "mz"), pr = Math.max((b - a) * 0.01, 1e-3), pm = Math.max((d - c) * 0.01, 0.5);
   return { rt: [Math.max(rt0, a - pr), Math.min(rt1, b + pr)], mz: [Math.max(mz0, c - pm), Math.min(mz1, d + pm)] };
 }
@@ -575,7 +575,7 @@ async function drawMap(p) {
   const rf = !isPda && se && E.files[se.k].kind !== "mrm" && E.files[se.k].lv === lv && se.k !== f.k ? E.files[se.k] : null;      // the reference: the one of the panel or the one of the session
   const A = { ...(await getMap(f.k, lv, mapBg(p))), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv, mapBg(p))), k: rf.k } : null, others = await Promise.all(sf.filter(q => q.k !== f.k && (isPda || q.lv === lv) && !(rf && q.k === rf.k)).map(q => getMap(q.k, lv, mapBg(p)).catch(() => null)));      // the other files of the tab, same level: their extents fix the whole view
   if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
-  const fix = !B && window.MAPPA && MAPPA.diffOpt(false).fix ? Math.max(...[A, ...others].filter(Boolean).map(o => o.m._r?.[p.norm || "abs"] ?? ((o.m._r ||= {})[p.norm || "abs"] = MAPREND.ref(mapNorm(o.m, p.norm || "abs"))))) : 0;      // fixed colour scale: the top is the same on every file
+  const fix = !B && window.MAPPA && MAPPA.diffOpt(false).fix ? maxOf([A, ...others].filter(Boolean).map(o => o.m._r?.[p.norm || "abs"] ?? ((o.m._r ||= {})[p.norm || "abs"] = MAPREND.ref(mapNorm(o.m, p.norm || "abs"))))) : 0;      // fixed colour scale: the top is the same on every file
   const im = mapImage(p, A, B, p.scale, p.norm || "abs", fix);
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
   const ext = mapView(A, B, rt0, rt1, mzA, mzB, others);                     // the whole view is where the files have data (no empty bands at the sides)

@@ -7,7 +7,7 @@
 function place(w, h) {
   // a new panel goes under the existing ones, as wide as the page
   const W = w || hostWidth(), H = h || 300;
-  const tp = tabPanels(), y = tp.length ? Math.max(...tp.map((/** @type {Pannello} */ p) => p.y + p.h)) + pnlGap() : 0;
+  const tp = tabPanels(), y = tp.length ? maxOf(tp.map((/** @type {Pannello} */ p) => p.y + p.h)) + pnlGap() : 0;
   return { x: 0, y, w: W, h: H, full: !w };
 }
 // fixed slots: full-width panels sit one under the other; dragging one up or down makes the others change place
@@ -78,7 +78,7 @@ document.addEventListener("keydown", e => {
   const q = tabPanels().filter((/** @type {Pannello} */ x) => x.el).sort(LAYOUT.ordine)[Number(e.key) - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
-function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = Math.max(520, ...tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16)) + "px"; pairArrows(); }
+function fitHost() { syncWorkEmpty(); if (window.DDA) DDA.sync(); numberPanels(); if (window.AFFIANCA) AFFIANCA.sync(); Q("#dpanels").style.height = maxOf(tabPanels().map((/** @type {Pannello} */ p) => p.y + p.h + 16), 520) + "px"; pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
 function pairArrows() {
   const host = Q("#dpanels"); host.querySelectorAll(".parr").forEach((/** @type {Element} */ e) => e.remove());
@@ -441,7 +441,7 @@ function ms2Near(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type {
   }
   if (!best) return null;
   const xs = best.s.x, i = best.i, gaps = [xs[i] - xs[i - 1], xs[i + 1] - xs[i]].filter(v => v > 0);
-  return { ...best, g: (gaps.length ? Math.min(...gaps) : scanStep()) * 0.9 };
+  return { ...best, g: (gaps.length ? minOf(gaps) : scanStep()) * 0.9 };
 }
 // One step along the scans of the active chromatogram (d = +-1, or +-5 with Maiusc). The cursor line moves by itself (no redraw of the whole chromatogram
 // unless the view or the selection changes) and the linked spectra are asked to redraw once per frame. Returns false at the first/last scan.
@@ -664,7 +664,7 @@ function ctl(/** @type {Pannello} */ p) {
   const lrExtra = window.BANCO && BANCO.on() ? "" :
     (p.overlay === "grad" ? `<label class="muted" title="${I18N.t("disp.gdelay.title")}">${I18N.t("disp.gdelay", { input: num("gdelay", p.gdelay || 0, 0, 10, 0.1) })}</label>` : "") +
     (p.kind === "pda" && window.DISP && DISP.pdaHere(p) ? `<label class="muted" title="${I18N.t("disp.pdaDelay.title")}">${I18N.t("disp.pdaDelay", { input: num("pdadelay", DISP.pdaDelayValue(p), -2, 2, 0.01) })}</label>${chk("pdaAlign", I18N.t("disp.pdaAlign"), false, "", I18N.t("disp.pdaAlign.title"))}` : "");
-  const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = Math.min(...sfl.map((/** @type {MzFile} */ x) => x.mz_min ?? Infinity)), mhi = Math.max(...sfl.map((/** @type {MzFile} */ x) => x.mz_max ?? -Infinity));
+  const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = minOf(sfl.map((/** @type {MzFile} */ x) => x.mz_min ?? Infinity)), mhi = maxOf(sfl.map((/** @type {MzFile} */ x) => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="${I18N.t("ctl.mz.title")}"><i>m/z</i> ${I18N.t("ctl.range.from")} <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(mzd(p)) : ""}"> ${I18N.t("ctl.range.to")} <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(mzd(p)) : ""}"></label>`;
   const rtbar = p.type === "map" ? "" : `<label class="muted" title="${I18N.t("ctl.rt.title")}"><i>RT</i> ${I18N.t("ctl.range.from")} <input data-o="rt0" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[0]) : ""}" placeholder="${I18N.t("ctl.rt.min")}"> ${I18N.t("ctl.range.to")} <input data-o="rt1" class="mzf" inputmode="decimal" autocomplete="off" value="${p.zoom ? fmt2(p.zoom[1]) : ""}" placeholder="${I18N.t("ctl.rt.max")}"> min</label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter((/** @type {MzFile} */ x) => x.kind === "ms2"), hasPda = TF.some((/** @type {MzFile} */ x) => x.pda);

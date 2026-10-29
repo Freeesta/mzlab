@@ -166,7 +166,7 @@ function namesWidth(/** @type {number} */ dflt) {
   if (!names.length) return dflt;
   const g = (_nameCtx ||= /** @type {CanvasRenderingContext2D} */ (document.createElement("canvas").getContext("2d"))), nm = document.querySelector("#flst .nm");
   g.font = nm ? getComputedStyle(nm).font : "600 13px system-ui, sans-serif";
-  return Math.ceil(Math.max(...names.map(n => g.measureText(n).width)) + 110);
+  return Math.ceil(maxOf(names.map(n => g.measureText(n).width)) + 110);
 }
 
 // index of the file opened first: the first one that is not a blank (the list order stays), the first of all when every file is a blank
