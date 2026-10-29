@@ -53,7 +53,7 @@ try:
         def exit_():
             pg.keyboard.press("Escape"); pg.wait_for_timeout(700)
             assert not pg.evaluate(f"{SPEC}.el.classList.contains('max')")
-            assert pg.evaluate("document.querySelectorAll('[inert]').length") == 0
+            assert pg.evaluate("document.querySelectorAll('[inert]:not([data-off])').length") == 0      # [data-off] = the conversion tools, inert on their own while nothing converts
             a = __import__("json").loads(snap()); b = __import__("json").loads(before)
             assert a["cz"] == b["cz"] and a["cc"] == b["cc"] and a["sr"] == b["sr"] and a["cur"] == b["cur"], (b, a)
         step("leaving restores everything as it was", exit_)
