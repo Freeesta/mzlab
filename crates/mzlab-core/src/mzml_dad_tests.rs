@@ -290,5 +290,9 @@ fn optical_routes_do_not_need_the_chromatogram_list() {
     };
     let ((with_a, with_bytes), (without_a, without_bytes)) = (run(true), run(false));
     assert_eq!(with_a, without_a);
-    assert_eq!(with_bytes - without_bytes, size, "the list read the whole tail once more");
+    assert_eq!(
+        with_bytes - without_bytes,
+        size,
+        "the list read the whole tail once more"
+    );
 }
