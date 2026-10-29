@@ -60,6 +60,7 @@ SMOKE_CHROMIUM_LINUX = ["e2e_tabui_tptab", "e2e_tour", "e2e_esporta_dati", "e2e_
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded",
+          r"cross-world service worker resource mismatch",      # Chromium notice on the features.js preload hint when a reload is served by the service worker (e2e4)
           r"IndexedDB transaction that was not yet complete has been aborted due to page navigation"]   # Firefox: notices about styles and about a reload while a write was in flight (the test reloads on purpose), not errors   # aborted requests = page reloaded or closed by the test
 
 

@@ -71,27 +71,28 @@ try:
             pg.keyboard.press("Escape"); until(pg, "document.querySelector('#calcin').value === ''"); assert pg.input_value("#calcin") == "" and not pg.evaluate("document.querySelector('#calcdlg').hidden"), "Esc clears first"
         step("keyboard: Enter = result, a new digit starts again, Ans, tape row, Esc clears", keyboard)
         def formula_hides_pad():
-            pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden && document.querySelectorAll('#calcout .cadd-wrap table').length === 1")      # the table is drawn after the pad is hidden
+            pg.fill("#calcin", "C9H10Cl2N2O"); until(pg, "document.querySelector('#calcpad').hidden && document.querySelectorAll('#calcout .cadd-wrap table').length === 1 && document.querySelector('#calcout').innerText.includes('C9H10Cl2N2O')")      # the table is drawn after the pad is hidden: wait for the one of THIS formula, not the previous one
             assert pg.evaluate("document.querySelector('#calcpad').hidden") and "C9H10Cl2N2O" in pg.inner_text("#calcout").replace(" ", "") and pg.locator("#calcout .cadd-wrap table").count() == 1
             assert pg.evaluate("document.querySelector('#calcres').hidden")
             pg.fill("#calcin", ""); until(pg, "!document.querySelector('#calcpad').hidden")
         step("a formula: adduct table as before, no keypad", formula_hides_pad)
-        TXT = "[...document.querySelectorAll('.cadd-wrap tbody tr:not(.cmore)')].map(tr=>[...tr.children].map(c=>c.textContent.replace(/\\s+/g,' ').trim()))"
+        VIS = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!w.closest('[hidden]'))"       # the sidebar calculator and the Disegno drop-down each draw a table: only the visible one is read
+        TXT = "[...document.querySelectorAll('.cadd-wrap')].filter(w=>!w.closest('[hidden]')).flatMap(w=>[...w.querySelectorAll('tbody tr:not(.cmore)')]).map(tr=>[...tr.children].map(c=>c.textContent.replace(/\\s+/g,' ').trim()))"
         def table_rows():
-            pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap tbody tr")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#calcout').innerText.includes('C13H26N4') && document.querySelector('.cadd-wrap tbody tr')")
             rows = pg.evaluate(TXT); names = [x[0] for x in rows]
             assert names[:4] == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+"], names
-            assert rows[0][1] == "+1.0073" and rows[0][2] == "239.2230" and rows[0][3] == "239", rows[0]
+            assert rows[0][1] == "+1.0073" and rows[0][2] == "239.2" and rows[0][3] == "239", rows[0]
             assert [h.split()[0] for h in pg.evaluate("[...document.querySelectorAll('.cadd-wrap thead th')].map(t=>t.textContent)")][:4], "headers"
-            assert pg.get_attribute(".cxic >> nth=0", "aria-label") == "XIC di [M+H]+ 239.2230", pg.get_attribute(".cxic >> nth=0", "aria-label")
+            assert pg.get_attribute(".cxic >> nth=0", "aria-label") == "XIC di [M+H]+ 239.2", pg.get_attribute(".cxic >> nth=0", "aria-label")
             t = pg.inner_text("#calcdlg"); assert "Clicca" not in t and "Click a row" not in t and pg.locator(".adnote").count() == 0, t[:300]
-        step("C13H26N4: [M+H]+ 239.2230, delta +1.0073, XIC button name, no descriptive text", table_rows)
+        step("C13H26N4: [M+H]+ 239.2 (unit resolution: one decimal), delta +1.0073, XIC button name, no descriptive text", table_rows)
         def polarity():
             pg.click("#calcpol button[data-p='-1']"); pg.wait_for_function("document.querySelector('.cadd-wrap tbody th').textContent.includes('[M-H]')")
             assert [x[0] for x in pg.evaluate(TXT)][:4] == ["[M-H]-", "[M+HCOO]-", "[M+CH3COO]-", "[M+Cl]-"]
             assert pg.get_attribute("#calcpol button[data-p='-1']", "aria-pressed") == "true"
-            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.calc')).pol") == -1, "polarity remembered"
-            pg.click(".cadd-more"); pg.wait_for_function("document.querySelectorAll('.cadd-wrap tbody tr').length > 6")
+            assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.calcqui')).pol") == -1, "polarity remembered"
+            pg.click(".cadd-more"); pg.wait_for_function(VIS + "[0].querySelectorAll('tbody tr').length > 6")
             assert "[2M-H]-" in [x[0] for x in pg.evaluate(TXT)]
             pg.click(".cadd-more")
             pg.click("#calcpol button[data-p='1']"); pg.wait_for_function("document.querySelector('.cadd-wrap tbody th').textContent.includes('[M+H]')")
@@ -102,12 +103,12 @@ try:
             pg.fill("#calctol", "100000"); frames(pg, 25); pg.fill("#calctol", "5")
         step("no observed m/z field, no High/Low switch; the tolerance field stays", no_observed_field)
         def typed_number():
-            pg.fill("#calcin", "239.2230"); pg.wait_for_selector(".cadd-wrap tbody tr")
-            rows = pg.evaluate(TXT); assert rows[0][0] == "[M+H]+" and rows[0][-1] == "238.2157", rows[0]
+            pg.fill("#calcin", "239.2230"); until(pg, "!document.querySelector('#calcout').innerText.includes('C13H26N4') && document.querySelector('.cadd-wrap tbody tr')")
+            rows = pg.evaluate(TXT); assert rows[0][0] == "[M+H]+" and rows[0][-1] == "238.2", rows[0]
             assert pg.locator(".cxic").count() == 0, "no XIC without a formula"
         step("a typed number is the m/z looked up: M if this adduct", typed_number)
         def diffs():
-            pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector("#cadd-diffs")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#calcout').innerText.includes('C13H26N4') && document.querySelector('#cadd-diffs')")
             assert pg.get_attribute("#cadd-diffs", "open") is None, "closed by default"
             pg.click("#cadd-diffs summary"); pg.fill("#cadd-delta", "21.9819"); pg.wait_for_function("document.querySelector('#cadd-dres').textContent.includes('Na')")
             assert "Na" in pg.inner_text("#cadd-dres")
@@ -115,14 +116,12 @@ try:
             pg.fill("#cadd-delta", ""); pg.click("#cadd-diffs summary")
         step("mass differences: closed by default, a delta between two peaks names the adduct pair", diffs)
         def menu():
-            assert pg.locator("#stbar [data-cmd=adducts]").count() == 0 and pg.locator("#np-ad").count() == 0
-            pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "BARRA.curTab === 'calc'"); assert pg.evaluate("BARRA.curTab") == "calc"
-            pg.evaluate("document.querySelector('#calcdlg').hidden || BARRA.setTab('pt')")
-            pg.evaluate("QQQRef.open('ad')"); frames(pg, 3)
-            assert pg.evaluate("!!document.querySelector('#calcin').offsetParent || !document.querySelector('#calcdlg').hidden")
-        step("the ESI adducts entry opens the calculator; no dead menu entry", menu)
+            assert pg.locator("#stbar [data-cmd=adducts]").count() == 1 and pg.locator("#np-ad").count() == 0, "one toolbar entry for the Adducts panel, no leftover old one"
+            pg.evaluate("BARRA.setTab('adducts')"); attendi(pg, "BARRA.curTab === 'adducts' && !document.querySelector('#sb-panel-adducts').hidden")
+            pg.evaluate("QQQRef.open('ad')"); attendi(pg, "BARRA.curTab === 'calc' && !!document.querySelector('#calcin').offsetParent")      # the old «adducts» request of the references opens the calculator
+        step("the Adducts entry opens its panel, the references request opens the calculator; no dead menu entry", menu)
         def xic_click():
-            pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cxic")
+            pg.fill("#calcin", "C13H26N4"); until(pg, "document.querySelector('#calcout').innerText.includes('C13H26N4') && document.querySelector('.cxic')")
             pg.click(".cadd-wrap button.cxic >> nth=1"); pg.wait_for_selector("#xic-mz", state="visible")
             assert "NH4" in pg.input_value("#xic-ad") or "NH4" in pg.inner_text("#xic-sum") or pg.input_value("#xic-mz"), "XIC window prefilled"
             pg.click("#xic-no")
@@ -134,7 +133,7 @@ try:
         def narrow():
             pg.click("#nav [data-v=draw]"); frames(pg, 3)
             pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden")        # the floating drop-down: same content as the sidebar tab
-            pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table")
+            pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table >> visible=true")
             pg.set_viewport_size({"width": 320, "height": 800}); attendi(pg, "innerWidth === 320"); frames(pg, 3)
             try:
                 assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), "no page-level horizontal scroll at 320 px"

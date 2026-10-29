@@ -60,7 +60,7 @@ const CALCQUIHTML = (() => {
   function groupsHtml(gs, o, view, ctx) {
     if (!gs.length) return `<p class="muted cq-none">${T("cq.none", { tol: o.hr ? o.tol + " ppm" : o.tol + " Da" })}</p>`;
     return gs.map(g => {
-      if (g.id === "diff" && /** @type {Bag} */ (g).catalogue) return AH.diffsHtml(g.tab, { diffs: view.open.has("diff"), delta: "" });
+      if (g.id === "diff" && /** @type {Bag} */ (g).catalogue) return AH.diffsHtml(g.tab, { diffs: view.open.has("catdiff"), delta: "" });
       const open = view.open.has(g.id) || (!view.open.has("-" + g.id) && (g.near <= 1 || (g.id === "addotti" && ctx.formula)));
       const all = view.all.has(g.id);
       const body = g.id === "addotti" ? addHtml(g, o, view) : rowsOf(g.id, g.id === "liste" ? listeRows(g, o) : g.id === "perdite" ? lossRows(g, o) : diffRows(g), all);

@@ -116,6 +116,7 @@ I18N.add("it", {
   "map.norm.max": ", normalizzata al massimo",
   "map.norm.tic": ", normalizzata al totale (per mille)",
   "hov.rt": "RT {v} min",
+  "hov.time": "{v} min",
   "hov.nm": "{v} nm",
   "hov.mau": "{v} mAU",
   "map.hov": "<b>RT {rt} min · m/z {mz}</b><div>{what}: <b>{v}</b></div>",
