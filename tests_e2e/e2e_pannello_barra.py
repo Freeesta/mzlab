@@ -31,11 +31,11 @@ try:
             def f():
                 pg.evaluate(f"document.documentElement.setAttribute('data-theme','{theme}')"); frames(pg, 3)
                 ps = pg.evaluate(PANELS); assert len(ps) >= 2, ps
-                act = [q for q in ps if q["act"]]; ina = [q for q in ps if not q["act"] and not q["pair"]]
-                assert act and ina, ps
+                act = [q for q in ps if q["act"] or q["pair"]]; ina = [q for q in ps if not q["act"] and not q["pair"]]
+                assert act, ps
                 for q in act: assert q["w"] == "2px" and q["st"] == "solid", ("bar of the active panel", q)
                 for q in ina: assert q["w"] == "1px", ("inactive panel keeps the 1px card border", q)
-                assert {q["x"] for q in ps if not q["pair"]} == {q["x"] for q in ina}, ("content moved", ps)
+                assert len({q["x"] for q in ps}) == 1, ("content moved", ps)
                 if shots: pg.screenshot(path=f"{shots}/barra-{theme}.png", clip={"x": 0, "y": 0, "width": 1500, "height": 900})
             return f
         step("light: active bar 2px, content does not move", check("light"))
