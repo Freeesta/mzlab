@@ -14,3 +14,10 @@ Documenti con valore storico, spostati fuori da `docs/agenti/` (che descrive sol
 | `studi/processo-macchina.md` | studio del processo per macchina |
 | `studi/msn-grafo-v2/` | studio del grafo MSn, seconda versione |
 | `studi/visualizzatore-veloce/` | studio del visualizzatore veloce (criteri, interfaccia T-7) |
+| `esperimenti/mirino-ui/` | immagini e prove dell'esperimento sul mirino dell'interfaccia (XIC con lente) |
+| `tools/mirino_ui_prova.py`, `tools/righello_prova.py` | script che producevano le immagini di `esperimenti/mirino-ui/` |
+| `tools/hr_velocita.py` | misura della velocità di lettura HR |
+| `tools/redirect-qqq-lab/` | pagina di rimando del vecchio indirizzo qqq-lab |
+| `docs/numeri/` | controlli numerici storici (era `docs/controlli/numeri/`) |
+| `docs/manuale/` | vecchio manuale (non più mantenuto) |
+| `docs/ospitare.md` | piano B dell'ospitalità del sito |
