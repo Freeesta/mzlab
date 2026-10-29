@@ -125,19 +125,26 @@ impl State {
         Ok(Routes::new(Index::open(r, size)?))
     }
 
+    /// Closes the open index of the registered file `name`, if any.
+    pub(crate) fn drop_lr_index(&self, name: &str) {
+        let mut eng = self.eng.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(slot) = eng.lr_slot.get(name).copied() {
+            eng.idx.remove(&slot);
+        }
+    }
+
     /// `lr_index`: the scan table and the index of a registered mzML (both on a thread of the build pool), then the index is opened again on the next request.
     pub(crate) fn lr_index(&self, name: &str) -> Result<Answer> {
         let e = self.store.lock().unwrap_or_else(|e| e.into_inner()).get(name).ok_or_else(|| Error::new("err.session.fileNotFound").with("name", name))?;
         let t0 = std::time::Instant::now();
+        // the mapped old index goes before the build replaces its file (a mapped file cannot be replaced on Windows); the next request opens the new one
+        self.drop_lr_index(name);
         if let Some(nat) = &e.nat {
             self.indexer()?.build_nat(nat, name)?;
         } else {
             self.indexer()?.build(&e.path, name, None)?;
         }
-        let mut eng = self.eng.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(slot) = eng.lr_slot.get(name).copied() {
-            eng.idx.remove(&slot);
-        }
+        self.drop_lr_index(name);
         text(format!("{{\"ms\":{}}}", t0.elapsed().as_millis()))
     }
 
