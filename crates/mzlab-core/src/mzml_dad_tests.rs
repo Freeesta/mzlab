@@ -258,3 +258,41 @@ fn size_of_a_real_sized_matrix() {
     eprintln!("raw {raw} mzML {bytes}");
     assert!(bytes < 4 * raw, "{bytes} bytes for {raw} raw");
 }
+
+/// A `Vec<u8>` that counts the bytes asked of it.
+struct Counted(Vec<u8>, std::rc::Rc<std::cell::Cell<u64>>);
+
+impl crate::idxread::ReadAt for Counted {
+    fn read_at(&mut self, off: u64, buf: &mut [u8]) -> Result<()> {
+        self.1.set(self.1.get() + buf.len() as u64);
+        self.0.read_at(off, buf)
+    }
+}
+
+/// The optical routes answer from the matrix alone: the chromatogram list the page-side wrapper used to read first (to throw it away) costs
+/// a full read of the tail of the file, and the answers do not change without it.
+#[test]
+fn optical_routes_do_not_need_the_chromatogram_list() {
+    let bytes = with_array(true);
+    let size = bytes.len() as u64;
+    let run = |with_list: bool| {
+        let seen = std::rc::Rc::new(std::cell::Cell::new(0));
+        let mut m = Mzml::new(Counted(bytes.clone(), seen.clone()), size);
+        if with_list {
+            assert_eq!(m.chromatograms(0).unwrap().len(), 1);
+        }
+        let answers = (
+            pda_map(&mut m).unwrap(),
+            pda_spectrum(&mut m, 0.0, 0.01).unwrap(),
+            pda_wavelength(&mut m, 200.0, 201.0).unwrap(),
+        );
+        (answers, seen.get())
+    };
+    let ((with_a, with_bytes), (without_a, without_bytes)) = (run(true), run(false));
+    assert_eq!(with_a, without_a);
+    assert_eq!(
+        with_bytes - without_bytes,
+        size,
+        "the list read the whole tail once more"
+    );
+}

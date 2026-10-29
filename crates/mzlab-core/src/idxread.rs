@@ -384,6 +384,13 @@ impl<R: ReadAt> Index<R> {
             .collect())
     }
 
+    /// The arrays of a section together with the scan table, so a caller can walk both without copying the arrays.
+    pub fn arrays_scans(&mut self, si: usize) -> Result<(&ScanArrays, &[Scan])> {
+        self.arrays(si)?;
+        let a = self.arrays[si].as_ref().expect("arrays read before use");
+        Ok((a, &self.scans))
+    }
+
     /// The per-scan arrays of a section, read once.
     pub fn arrays(&mut self, si: usize) -> Result<&ScanArrays> {
         if self.arrays[si].is_none() {

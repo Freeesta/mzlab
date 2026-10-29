@@ -50,9 +50,9 @@ export function avanza(box, o) {
     signal: ctl.signal,
     /** item `k` (1..n) starts @param {number} k @param {string} name */
     item(k, name) { q("item").textContent = T("av.item", { k, n: o.n, name }); seen = Date.now(); show(); },
-    /** the fraction 0..1 of the whole job (null: not known) and the numbers of the item @param {number | null} f @param {string} [detail] */
+    /** the fraction 0..1 of the whole job (null or not finite: not known) and the numbers of the item @param {number | null} f @param {string} [detail] */
     set(f, detail) {
-      if (f == null) { frac = null; bar.removeAttribute("aria-valuenow"); fill.style.width = "0%"; }
+      if (f == null || !Number.isFinite(f)) { frac = null; bar.removeAttribute("aria-valuenow"); fill.style.width = "0%"; }
       else { max = Math.max(max, Math.min(99, Math.floor(100 * f))); frac = max / 100; bar.setAttribute("aria-valuenow", String(max)); fill.style.width = max + "%"; }      // forward only, 100 % only at the end
       if (detail != null && detail !== q("detail").textContent) q("detail").textContent = detail;
       seen = Date.now(); show();

@@ -182,6 +182,9 @@ impl<R: ReadAt> Routes<R> {
                 ar.bp_inten.clone()
             }
         };
+        if filt.is_none() && !(prec.is_some() && level > 1) {
+            return Ok(Some((self.idx.arrays(si)?.rt.clone(), y)));
+        }
         let (rt, ids) = {
             let ar = self.idx.arrays(si)?;
             (ar.rt.clone(), ar.scan_ids.clone())
@@ -199,14 +202,7 @@ impl<R: ReadAt> Routes<R> {
                 }
             }
         }
-        let pick = |v: &[f64]| -> Vec<f64> {
-            v.iter()
-                .zip(&keep)
-                .filter(|(_, k)| **k)
-                .map(|(x, _)| *x)
-                .collect()
-        };
-        Ok(Some((pick(&rt), pick(&y))))
+        Ok(Some((kept(&rt, &keep), kept(&y, &keep))))
     }
 
     pub fn filters(&mut self) -> Result<String> {
@@ -278,12 +274,12 @@ impl<R: ReadAt> Routes<R> {
             o.raw(",\"n\":0,\"sid\":[],\"no\":[],\"rt\":[],\"tic\":[],\"prec\":[],\"bpmz\":[],\"bpint\":[]}");
             return Ok(Some(o.0));
         };
-        let ar = self.idx.arrays(si)?.clone();
         let fl = self.filtro(filt)?;
+        let (ar, scans) = self.idx.arrays_scans(si)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &self.idx.scans[ar.scan_ids[j] as usize])))
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
             .collect();
-        let sc = |j: usize| &self.idx.scans[ar.scan_ids[j] as usize];
+        let sc = |j: usize| &scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
             .int(level as i64)
             .raw(",\"n\":")
@@ -329,11 +325,11 @@ impl<R: ReadAt> Routes<R> {
         let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
-        let ar = self.idx.arrays(si)?.clone();
         let fl = self.filtro(filter)?;
+        let (ar, scans) = self.idx.arrays_scans(si)?;
         let mut best: Option<(f64, usize)> = None;
         for &id in &ar.scan_ids {
-            let s = &self.idx.scans[id as usize];
+            let s = &scans[id as usize];
             let ok = match (&fl, precursor) {
                 (Some(f), _) => f.passa(id as usize, s),
                 (None, Some(p)) => (s.prec(-100.0) - p).abs() <= 0.6,
@@ -428,4 +424,13 @@ pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R
         dropped += 1;
     }
     dropped
+}
+
+/// The values of `v` whose scan is kept.
+fn kept(v: &[f64], keep: &[bool]) -> Vec<f64> {
+    v.iter()
+        .zip(keep)
+        .filter(|(_, k)| **k)
+        .map(|(x, _)| *x)
+        .collect()
 }
