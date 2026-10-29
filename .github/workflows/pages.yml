@@ -13,9 +13,9 @@ permissions:
 
 # No run is ever cancelled: a running build/deploy finishes (the site always gets a new version), and of the runs waiting
 # GitHub keeps only the newest, so quick merges in a row end in one more deploy of the last commit, never in none.
-# The group is on the whole workflow: the parallel jobs of two runs never overlap.
+# The group is on the whole workflow: the parallel jobs of two runs never overlap. A branch run (workflow_dispatch) has a group of its own, so it never displaces a run of main.
 concurrency:
-  group: pages-build
+  group: ${{ github.ref == 'refs/heads/main' && 'pages-build' || format('pages-build-{0}', github.ref) }}
   cancel-in-progress: false
 
 # The site is built in parallel jobs and put together by `assemble`: `wasm-core` (engine, libraries, readers), `wasm-feat-a` and `wasm-feat-b` (mzFinder, the two halves of tools/build_feat_wasm.sh), `packages` (spectral libraries and suspect index); each hands its static/ subtree over as an artifact.
