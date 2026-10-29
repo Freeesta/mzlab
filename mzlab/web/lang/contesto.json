@@ -147,6 +147,7 @@
   "xic.interpreted": "{formula} = formula con pedici (HTML).",
   "ibk.yes": "Descrizione del fondo di un tratto (legenda, Excel, immagini); {ranges} = intervalli di tempo, {stat} = media/mediana/retta, {clip} = «, negativi a 0» oppure vuoto.",
   "hov.rt": "Intestazione dell'hover dei grafici; {v} = tempo di ritenzione in minuti.",
+  "hov.time": "Intestazione dell'hover del cromatogramma; {v} = tempo in minuti.",
   "hov.nm": "Intestazione dell'hover; {v} = lunghezza d'onda in nm.",
   "hov.mau": "Valore di assorbanza nell'hover; {v} = numero, unità mAU.",
   "ibk.and": "Due intervalli di tempo del fondo a retta: «0-1 min e 5-6 min».",

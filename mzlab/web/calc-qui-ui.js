@@ -100,7 +100,8 @@
       } else if (x && v.tab) openXicOf(v, +(x.dataset.i || 0));
     });
     out.addEventListener("toggle", ev => {
-      const d = /** @type {HTMLDetailsElement} */ (ev.target), g = d.dataset.g || (d.id === "cadd-diffs" ? "diff" : "");
+      // the catalogue of differences of a formula has its own key: the «diff» group of a number opens by itself and must not open this one
+      const d = /** @type {HTMLDetailsElement} */ (ev.target), g = d.dataset.g || (d.id === "cadd-diffs" ? "catdiff" : "");
       if (!g) return;
       if (d.open) { v.open.add(g); v.open.delete("-" + g); } else { v.open.delete(g); v.open.add("-" + g); }
     }, true);
