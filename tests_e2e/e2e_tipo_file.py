@@ -1,4 +1,4 @@
-"""Experiment menu of the start-screen table: the detected type by its plain name with the reason as tooltip, a manual type wins, is applied at once (table, group,
+"""Experiment menu of the start-screen table: a plain menu of the types with the detected one pre-selected (reason as tooltip), a picked type wins, is applied at once (table, group,
 viewer) and is remembered per file; the group select sets every file of the group."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -27,9 +27,10 @@ try:
         stage(pg, [D / "B_FullMass-t0.mzML", D / "B_FullMass-t1.mzML"]); frames(pg, 6)
         def auto():
             assert pg.locator(SEL).count() == 2
-            first = pg.evaluate(f"(() => {{ const s = document.querySelector('{SEL}'); return [s.options[0].textContent, s.value, s.title]; }})()")
-            assert first[0] == "Full Scan" and first[1] == "" and first[2] and not first[2].startswith("load."), first
-        step("the detected type is the first option, selected, with its reason", auto)
+            first = pg.evaluate(f"(() => {{ const s = document.querySelector('{SEL}'); return [s.selectedOptions[0].textContent, s.value, s.title, Array.from(s.options).map(o => o.value)]; }})()")
+            assert first[0] == "Full Scan" and first[1] == "full" and first[2] and not first[2].startswith("load."), first
+            assert first[3] == pg.evaluate("TIPOF.KINDS") and all("manual" not in o.lower() and "detected" not in o.lower() for o in pg.evaluate("Array.from(document.querySelector('%s').options).map(o => o.textContent)" % SEL)), first
+        step("the types are listed plainly, the detected one is selected, with its reason", auto)
         def one():
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 4)
             kinds = pg.evaluate("ST.files.map(f => f.kind + ':' + f.kindAuto).sort()")
@@ -37,7 +38,7 @@ try:
             assert len(set(pg.evaluate("Array.from(document.querySelectorAll('#flist tr[data-grp]')).map(tr => tr.dataset.grp)"))) == 2
             opts = pg.evaluate("Array.from(document.querySelector('%s').options).map(o => [o.value, o.textContent, o.selected])" % SEL)
             sel = [o for o in opts if o[2]]
-            assert opts[0][1].startswith("Back to detected: ") and len(sel) == 1 and sel[0][1].endswith("(manual)"), opts
+            assert len(sel) == 1 and sel[0][0] == "infusion" and not any("manual" in o[1].lower() for o in opts), opts
         step("a manual type applies at once and changes the row label, not its place", one)
         def grp():
             all_to(pg, "full")
@@ -53,6 +54,10 @@ try:
             assert pg.evaluate("E.files.some(f => f.kind === 'infusion' && f.kindAuto === 'full')"), info
             pg.evaluate("E.files.forEach(f => TIPOF.set(f.file, null)); TIPOF.viewer(E.files.map(f => f.file))"); frames(pg, 3)
             assert pg.evaluate("E.files.every(f => f.kind === 'full' && !f.manual)")
+        def same():
+            pg.locator(SEL).first.select_option("full"); frames(pg, 3)
+            assert pg.evaluate("localStorage.getItem('mzlab.filekind')") in (None, "{}") or pg.evaluate("!Object.values(JSON.parse(localStorage.getItem('mzlab.filekind') || '{}')).includes('full')")
+        step("picking the detected type stores nothing", same)
         step("manual choice reaches the viewer; back to Auto without reloading", remembered)
     r.close()
 except Exception as e:
