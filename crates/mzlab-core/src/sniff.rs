@@ -16,7 +16,7 @@ fn to_i64(x: f64) -> i64 {
 
 /// The hint the file name gives: "infusion", "mrm", "ms2" or "full" (the first rule that matches the lower-case stem).
 pub fn hint(file_name: &str) -> Option<&'static str> {
-    let base = file_name.rsplit('/').next().unwrap_or(file_name);
+    let base = file_name.rsplit(['/', '\\']).next().unwrap_or(file_name);
     let stem = match base.rfind('.') {
         Some(i) if i > 0 && i + 1 < base.len() => &base[..i],
         _ => base,

@@ -84,7 +84,7 @@ pub struct Scan {
 }
 
 /// The scan types that are not a plain full or product-ion scan, as the row of the index names them.
-pub const KINDS: [&str; 4] = ["PREC", "NL", "NG", "EPI"];
+pub const KINDS: [&str; 6] = ["PREC", "NL", "NG", "EMC", "TDF", "ER"];
 
 impl Scan {
     /// The mobility of the whole scan and its unit (`k0`, `ms`), `None` when the scan has none.
@@ -97,7 +97,7 @@ impl Scan {
         (!self.mob.is_nan()).then_some((f64::from(self.mob), unit))
     }
 
-    /// `PREC`, `NL`, `NG` or `EPI`, `None` for an ordinary scan.
+    /// `PREC`, `NL`, `NG`, `EMC`, `TDF` or `ER`, `None` for an ordinary scan.
     pub fn kind_name(&self) -> Option<&'static str> {
         usize::from(self.kind)
             .checked_sub(1)
@@ -207,7 +207,7 @@ pub struct Section {
     pub n_scans: usize,
     pub n_peaks: u64,
     pub n_fence: usize,
-    off: [u64; 10],
+    pub(crate) off: [u64; 10],
 }
 
 const NAMES: [&str; 10] = [
@@ -225,7 +225,7 @@ pub struct ScanArrays {
 }
 
 pub struct Index<R: ReadAt> {
-    r: R,
+    pub(crate) r: R,
     pub scans: Vec<Scan>,
     pub keys: Vec<(String, usize)>,
     pub sections: Vec<Section>,
@@ -234,6 +234,7 @@ pub struct Index<R: ReadAt> {
     pub(crate) cache: Vec<(usize, u8, u64, Vec<u8>, u64)>, // (section, array, block, bytes, tick of the last use)
     pub(crate) arrays: Vec<Option<ScanArrays>>,
     pub(crate) arrays_tick: Vec<u64>, // tick of the last use of each section's arrays (see idxcache.rs)
+    pub(crate) fences: Vec<Option<Vec<f64>>>, // per section, the first m/z of each block (the `fence` array), read at the first search
 }
 
 /// Whether the header is of an index of a vendor file (version 2 with `FLAG_LETTORE`) or of an mzML (version 1); `None` for any other.
@@ -317,13 +318,14 @@ impl<R: ReadAt> Index<R> {
                 off: o,
             });
         }
-        let keys = match meta.get("keys") {
+        let keys: Vec<(String, usize)> = match meta.get("keys") {
             Some(Value::Obj(o)) => o
                 .iter()
                 .filter_map(|(k, v)| v.f64().map(|i| (k.clone(), i as usize)))
                 .collect(),
             _ => return Err(bad()),
         };
+        crate::idxcheck::check(&sections, &keys, size)?;
         let n = sections.len();
         Ok(Index {
             r,
@@ -335,6 +337,7 @@ impl<R: ReadAt> Index<R> {
             cache: Vec::new(),
             arrays: vec![None; n],
             arrays_tick: vec![0; n],
+            fences: vec![None; n],
         })
     }
 
@@ -350,19 +353,42 @@ impl<R: ReadAt> Index<R> {
         self.keys.iter().find(|(n, _)| *n == k).map(|(_, i)| *i)
     }
 
+    /// The m/z window the method declares for the survey scans (`run.scan_window`); None for an index that does not say.
+    pub fn declared_window(&self) -> Option<(f64, f64)> {
+        let w = self.run.get("scan_window")?;
+        Some((w.at(0)?.f64()?, w.at(1)?.f64()?))
+    }
+
     pub fn hr1(&self) -> bool {
         self.run.get("hr1").and_then(Value::bool).unwrap_or(false)
     }
 
-    fn read_f64(&mut self, off: u64, n: usize) -> Result<Vec<f64>> {
+    /// `n` 8-byte elements at `off`, as bytes.
+    fn read_bytes(&mut self, off: u64, n: usize) -> Result<Vec<u8>> {
+        let len = n
+            .checked_mul(8)
+            .ok_or_else(|| Error::new("error.badIndex"))?;
         let mut b = Vec::new();
-        b.try_reserve_exact(n * 8)
+        b.try_reserve_exact(len)
             .map_err(|_| Error::memory_budget())?;
-        b.resize(n * 8, 0);
+        b.resize(len, 0);
         self.r.read_at(off, &mut b)?;
-        Ok(b.chunks_exact(8)
+        Ok(b)
+    }
+
+    fn read_f64(&mut self, off: u64, n: usize) -> Result<Vec<f64>> {
+        Ok(self
+            .read_bytes(off, n)?
+            .chunks_exact(8)
             .map(|c| f64::from_le_bytes(c.try_into().unwrap()))
             .collect())
+    }
+
+    /// The arrays of a section together with the scan table, so a caller can walk both without copying the arrays.
+    pub fn arrays_scans(&mut self, si: usize) -> Result<(&ScanArrays, &[Scan])> {
+        self.arrays(si)?;
+        let a = self.arrays[si].as_ref().expect("arrays read before use");
+        Ok((a, &self.scans))
     }
 
     /// The per-scan arrays of a section, read once.
@@ -371,9 +397,8 @@ impl<R: ReadAt> Index<R> {
             let s = self.sections[si].clone();
             let n = s.n_scans;
             let rt = self.read_f64(s.off[0], n)?;
-            let mut b = vec![0u8; n * 8];
-            self.r.read_at(s.off[2], &mut b)?;
-            let scan_ids = b
+            let scan_ids = self
+                .read_bytes(s.off[2], n)?
                 .chunks_exact(8)
                 .map(|c| i64::from_le_bytes(c.try_into().unwrap()))
                 .collect();
@@ -389,131 +414,5 @@ impl<R: ReadAt> Index<R> {
             });
         }
         Ok(self.touch_arrays(si))
-    }
-
-    /// Element `i` of the m/z array (as `f64`; the `f32` of a high-resolution survey is widened exactly), through the block cache.
-    fn mz_at(&mut self, si: usize, i: u64) -> Result<f64> {
-        let s = &self.sections[si];
-        let (w, off) = (if s.f4 { 4 } else { 8 }, s.off[7]);
-        let blk = i / BLOCK;
-        let n = s.n_peaks;
-        let at = self
-            .cache
-            .iter()
-            .position(|c| c.0 == si && c.1 == 7 && c.2 == blk);
-        let at = match at {
-            Some(p) => p,
-            None => {
-                let first = blk * BLOCK;
-                let cnt = (n - first).min(BLOCK) as usize;
-                let mut b = vec![0u8; cnt * w];
-                self.r.read_at(off + first * w as u64, &mut b)?;
-                if self.cache.len() >= 8 {
-                    self.cache.remove(0);
-                }
-                self.cache.push((si, 7, blk, b, 0));
-                self.cache.len() - 1
-            }
-        };
-        let b = self.touch_block(at);
-        let k = (i - blk * BLOCK) as usize * w;
-        Ok(if w == 4 {
-            f32::from_le_bytes(b[k..k + 4].try_into().unwrap()) as f64
-        } else {
-            f64::from_le_bytes(b[k..k + 8].try_into().unwrap())
-        })
-    }
-
-    /// Lowest and highest m/z of a section (`mz[0]`, `mz[-1]` of its peak table), None when it has no peaks.
-    pub fn mz_range(&mut self, si: usize) -> Result<Option<(f64, f64)>> {
-        let n = self.sections[si].n_peaks;
-        if n == 0 {
-            return Ok(None);
-        }
-        Ok(Some((self.mz_at(si, 0)?, self.mz_at(si, n - 1)?)))
-    }
-
-    /// `np.searchsorted(mz, v, side)` where `v` has the dtype of the array (a high-resolution survey compares in `f32`).
-    pub fn search(&mut self, si: usize, v: f64, right: bool) -> Result<u64> {
-        let v = if self.sections[si].f4 {
-            v as f32 as f64
-        } else {
-            v
-        };
-        let (mut lo, mut hi) = (0u64, self.sections[si].n_peaks);
-        while lo < hi {
-            let mid = lo + (hi - lo) / 2;
-            let x = self.mz_at(si, mid)?;
-            if if right { x <= v } else { x < v } {
-                lo = mid + 1;
-            } else {
-                hi = mid;
-            }
-        }
-        Ok(lo)
-    }
-
-    /// `pos` and `inten` of the peaks `a..b`, handed to `f` in pieces of at most 64 K peaks, in table order.
-    pub fn each_peak(
-        &mut self,
-        si: usize,
-        a: u64,
-        b: u64,
-        mut f: impl FnMut(usize, f64, f64),
-    ) -> Result<()> {
-        const STEP: u64 = 1 << 16;
-        let s = self.sections[si].clone();
-        let w = if s.f4 { 4 } else { 8 } as u64;
-        let mut i = a;
-        while i < b {
-            let c = (b - i).min(STEP) as usize;
-            let mut ib = vec![0u8; c * w as usize];
-            let mut mb = vec![0u8; c * w as usize];
-            let mut pb = vec![0u8; c * 4];
-            self.r.read_at(s.off[8] + i * w, &mut ib)?;
-            self.r.read_at(s.off[7] + i * w, &mut mb)?;
-            self.r.read_at(s.off[9] + i * 4, &mut pb)?;
-            for j in 0..c {
-                let (it, mz) = if w == 4 {
-                    (
-                        f32::from_le_bytes(ib[j * 4..j * 4 + 4].try_into().unwrap()) as f64,
-                        f32::from_le_bytes(mb[j * 4..j * 4 + 4].try_into().unwrap()) as f64,
-                    )
-                } else {
-                    (
-                        f64::from_le_bytes(ib[j * 8..j * 8 + 8].try_into().unwrap()),
-                        f64::from_le_bytes(mb[j * 8..j * 8 + 8].try_into().unwrap()),
-                    )
-                };
-                let pos = i32::from_le_bytes(pb[j * 4..j * 4 + 4].try_into().unwrap()) as usize;
-                f(pos, mz, it);
-            }
-            i += c as u64;
-        }
-        Ok(())
-    }
-
-    /// Summed intensity of the peaks `a..b` in every scan of the section (`np.bincount(pos, weights=inten, minlength=n)`).
-    pub fn sum_window(&mut self, si: usize, a: u64, b: u64) -> Result<Vec<f64>> {
-        let n = self.sections[si].n_scans;
-        let mut out = vec![0.0; n];
-        self.each_peak(si, a, b, |p, _mz, y| {
-            if p < n {
-                out[p] += y;
-            }
-        })?;
-        Ok(out)
-    }
-
-    /// Highest intensity of the peaks `a..b` in every scan (0 where there are none).
-    pub fn max_window(&mut self, si: usize, a: u64, b: u64) -> Result<Vec<f64>> {
-        let n = self.sections[si].n_scans;
-        let mut out = vec![0.0; n];
-        self.each_peak(si, a, b, |p, _mz, y| {
-            if p < n && y > out[p] {
-                out[p] = y;
-            }
-        })?;
-        Ok(out)
     }
 }

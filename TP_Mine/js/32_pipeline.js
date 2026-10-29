@@ -191,8 +191,8 @@
     if (!steps) throw new Error("steps-1.json (the step descriptors of the form) is missing");
     const form = /** @type {any} */ (window).PIPEFORM.html(steps);
     dlg = document.createElement("dialog"); dlg.id = "pipe"; dlg.setAttribute("aria-label", "Pipeline"); document.body.appendChild(dlg);
-    dlg.innerHTML = `<div class="top"><h3>Pipeline</h3><button type="button" id="pipe-x" aria-label="Close">&times;</button></div>
-      <div class="row"><label>File <select id="pipe-file" aria-label="Index file"></select></label><button type="button" id="pipe-ref" aria-label="Refresh the list of files">&#8635;</button>
+    dlg.innerHTML = `<div class="top"><h3>Pipeline</h3><button type="button" id="pipe-x" aria-label="Close" title="Close">&times;</button></div>
+      <div class="row"><label>File <select id="pipe-file" aria-label="Index file"></select></label><button type="button" id="pipe-ref" aria-label="Refresh the list of files" title="Refresh the list of files">&#8635;</button>
         <button type="button" id="pipe-go" class="imp">Preview</button><span id="pipe-n" class="mut"></span></div>
       <div id="pipe-msg" class="mut" role="status"></div>
       ${admin() ? `<div class="row"><label>Engine <select id="pipe-engine" aria-label="Engine of the pipeline"><option value="finder">mzFinder</option><option value="untargeted">mzmine-like (Attributio)</option></select></label></div>` : ""}

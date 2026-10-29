@@ -27,8 +27,7 @@ fn vals<M: ReadAt>(sc: &[&crate::idxread::Scan], acc: &str, mzml: &mut M) -> Res
     let mut out = Vec::new();
     for s in sc.iter().step_by((sc.len() / 300).max(1)) {
         let h = crate::sorgente::testo_scansione(mzml, s)?;
-        let cut = h.find("<binaryDataArrayList").unwrap_or(h.len().saturating_sub(1));
-        if let Some(v) = cv_value(&h[..cut], acc).and_then(|v| v.trim().parse::<f64>().ok()) {
+        if let Some(v) = cv_value(&h, acc).and_then(|v| v.trim().parse::<f64>().ok()) {
             out.push(v);
         }
     }

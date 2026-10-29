@@ -51,10 +51,10 @@ try:
         step("default adduct follows the panel's files ([M-H]- for a negative file)", adduct)
         def addotti():
             pg.evaluate("E.files.forEach(f=>f.vis=true)")
-            pg.click("#np-ad"); pg.wait_for_timeout(500)
-            h = pg.evaluate("[...document.querySelectorAll('#bigbody h4, dialog[open] h4')].map(x=>x.textContent)"); print(h)
-            pg.keyboard.press("Escape")
-        step("Addotti table opens", addotti)
+            pg.click("#np-calc2"); pg.wait_for_selector("#calcdlg", state="visible"); pg.fill("#calcin", "C13H26N4"); pg.wait_for_selector(".cadd-wrap table")
+            assert pg.locator(".cadd-wrap tbody tr").count() >= 4
+            pg.click("#np-calc2")
+        step("Adducts table opens in the calculator", addotti)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

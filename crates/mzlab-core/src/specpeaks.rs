@@ -138,10 +138,13 @@ pub fn merge_unit(mz: &[f64], y: &[f64]) -> (Vec<f64>, Vec<f64>) {
     let ra = |v: &[f64]| if v.len() > 1 { v[0] + crate::stats::psum(&v[1..]) } else { v[0] };
     let mut sy = Vec::with_capacity(starts.len());
     let mut sx = Vec::with_capacity(starts.len());
+    let mut prod = Vec::new();
     for (k, &a) in starts.iter().enumerate() {
         let b = starts.get(k + 1).copied().unwrap_or(mzs.len());
         sy.push(ra(&ys[a..b]));
-        sx.push(ra(&(a..b).map(|i| mzs[i] * ys[i]).collect::<Vec<_>>()));
+        prod.clear();
+        prod.extend((a..b).map(|i| mzs[i] * ys[i]));
+        sx.push(ra(&prod));
     }
     let smz = sx.iter().zip(&sy).map(|(a, b)| a / b.max(1e-12)).collect();
     (smz, sy)
@@ -172,3 +175,6 @@ pub fn pad_zeros(mz: &[f64], y: &[f64], step: f64) -> (Vec<f64>, Vec<f64>) {
         o.iter().map(|&i| oy[i]).collect(),
     )
 }
+
+#[cfg(test)]
+mod tests;

@@ -87,6 +87,7 @@ fn identity_and_facts_survive_the_file() {
         resolution: 60000.0,
         acquisition: "dda".into(),
         instrument: "orbitrap".into(),
+        rt_range: Some((0.0, 20.0)),
     };
     let o = Origin {
         inputs: vec![("a.mzML".into(), "ab".repeat(32)), ("b.mzML".into(), "cd".repeat(32))],

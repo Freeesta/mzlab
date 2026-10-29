@@ -1,6 +1,7 @@
 // Node check of FONDO (mzlab/web/fondo.js): the properties the background correction promises. Exits 1 on the first failure.
 const fs = require("fs"), assert = require("assert");
-const FONDO = new Function(fs.readFileSync(process.argv[2], "utf8").replace("const FONDO", "var FONDO") + ";return FONDO")();
+const NUM = fs.readFileSync(require("path").resolve(__dirname, "../mzlab/web/numeri.js"), "utf8");   // maxOf / minOf: the page loads numeri.js before fondo.js
+const FONDO = new Function(NUM + ";" + fs.readFileSync(process.argv[2], "utf8").replace("const FONDO", "var FONDO") + ";return FONDO")();
 const FONDOSP = new Function("FONDO", "COMANDI", fs.readFileSync(process.argv[3], "utf8").replace("const FONDOSP", "var FONDOSP") + ";return FONDOSP")(FONDO, { gestore() {}, fai: (_id, _p, fn) => fn() });
 let seed = 12345; const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());

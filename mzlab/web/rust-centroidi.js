@@ -5,11 +5,17 @@ import { ensureRoom } from "./archivio.js";
 // asks the bridge to stop it and start a new one (h.abort). Resolves with the File, or null when the file has no profile spectrum. Rejects with { cancelled: true } or an Error whose `json` is { error, error_key, params }.
 export function makeConvertCentroids(h) {
   return async (name, size, onProgress, signal) => {
-    const w = h.current(), cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
+    const cancelled = () => Object.assign(new Error("cancelled"), { cancelled: true });
     if (signal && signal.aborted) throw cancelled();
     try { await ensureRoom(size * 1.1); }
-    catch (q) { const j = JSON.parse(q); throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } }); }
-    const onAbort = () => { if (w && w === h.current()) h.abort(w); };
+    catch (q) {
+      // ensureRoom throws JSON strings; anything else is passed on as it is
+      let j; try { j = JSON.parse(/** @type {string} */ (q)); } catch (_) { throw q; }
+      throw Object.assign(new Error(j.error_key), { json: { error: j.error_key, ...j } });
+    }
+    if (signal && signal.aborted) throw cancelled();
+    // the worker is read when Cancel is pressed: it may have been recycled while the quota was checked
+    const onAbort = () => { const w = h.current(); if (w) h.abort(w); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
     const dest = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.mzML`;
     const drop = () => navigator.storage.getDirectory().then(d => d.getDirectoryHandle("mzlab")).then(d => d.getDirectoryHandle("conv")).then(d => d.removeEntry(dest)).catch(() => {});

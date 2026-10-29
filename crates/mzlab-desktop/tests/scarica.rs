@@ -326,6 +326,32 @@ fn a_cancelled_download_stops_between_pieces_and_a_newer_reader_is_refused() {
 }
 
 #[test]
+fn the_catalog_v2_lists_sources_with_their_mode() {
+    let src = |modo: &str| {
+        serde_json::json!({"formato": "librerie/2", "librerie": [], "fonti": [{"id": "msdial-gcms-fiehnri", "gruppo": "base", "nome": "MS-DIAL", "url": "https://zenodo.org/records/10951913",
+            "download": null, "licenza": "CC-BY-4.0", "formato": "msp", "dimensione": 23073288, "sha256": null, "kind": "experimental", "tech": "gc_ei", "pol": 0,
+            "doi": "10.5281/zenodo.10951913", "verificato": "2026-10-27", "modo": modo}]})
+            .to_string()
+    };
+    let c = parse_catalog(src("external").as_bytes()).unwrap();
+    assert_eq!(
+        (
+            c.fonti[0].modo.as_str(),
+            c.fonti[0].tech.as_str(),
+            c.fonti[0].licenza.as_deref()
+        ),
+        ("external", "gc_ei", Some("CC-BY-4.0"))
+    );
+    assert_eq!(
+        parse_catalog(src("browser").as_bytes()).unwrap_err().key,
+        "lib.dl.err.catalog"
+    );
+    // a catalog of the first version has no sources
+    let v1 = serde_json::json!({"formato": "librerie/1", "librerie": []}).to_string();
+    assert!(parse_catalog(v1.as_bytes()).unwrap().fonti.is_empty());
+}
+
+#[test]
 fn the_catalog_is_read_and_checked() {
     let (pkg, bodies) = package("1", 5);
     let cat = serde_json::json!({"formato": "librerie/1", "pezzo": 4194304, "librerie": [pkg], "esterne": [{"id": "gnps-cc0", "url": "https://external.gnps2.org/x.mgf", "formato": "mgf"}]});

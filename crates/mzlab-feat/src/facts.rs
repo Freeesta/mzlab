@@ -14,6 +14,8 @@ pub struct FileFacts {
     pub acquisition: String,
     /// Analyzer named by most MS1 scans (`an`), empty when none does.
     pub instrument: String,
+    /// RT (minutes) of the first and the last MS1 scan; `None` when the file has no MS1 scan. The gap filling reads it to tell a cell not measured from an absent one.
+    pub rt_range: Option<(f64, f64)>,
 }
 
 /// An isolation window wider than this (m/z) is a DIA window.
@@ -24,9 +26,11 @@ pub fn file_facts<R: ReadAt>(index: &Index<R>) -> FileFacts {
     let (mut sign, mut res, mut nres, mut ms1, mut ms2) = (0i64, 0.0f64, 0u32, 0u32, 0u32);
     let mut an: Vec<(&str, u32)> = Vec::new();
     let mut wide = 0u32;
+    let mut rt_range: Option<(f64, f64)> = None;
     for s in &index.scans {
         if s.level == 1 {
             ms1 += 1;
+            rt_range = Some(rt_range.map_or((s.rt, s.rt), |(a, b)| (a.min(s.rt), b.max(s.rt))));
             sign += i64::from(s.polarity.signum());
             if let Some(x) = s.res {
                 res += x;
@@ -58,6 +62,7 @@ pub fn file_facts<R: ReadAt>(index: &Index<R>) -> FileFacts {
         resolution: if nres > 0 { res / f64::from(nres) } else { 0.0 },
         acquisition: acquisition.to_string(),
         instrument: an.iter().max_by_key(|e| e.1).map_or("", |e| e.0).to_string(),
+        rt_range,
     }
 }
 
@@ -71,8 +76,11 @@ impl FileFacts {
             .raw(",\"acquisition\":")
             .str(&self.acquisition)
             .raw(",\"instrument\":")
-            .str(&self.instrument)
-            .raw("}");
+            .str(&self.instrument);
+        if let Some((a, b)) = self.rt_range {
+            j.raw(",\"rt_range\":[").num(a).raw(",").num(b).raw("]");
+        }
+        j.raw("}");
     }
 
     /// Reads back what `write` wrote (missing fields are the default).
@@ -83,6 +91,10 @@ impl FileFacts {
             resolution: v.get("resolution").and_then(Value::f64).unwrap_or(0.0),
             acquisition: text("acquisition"),
             instrument: text("instrument"),
+            rt_range: match (v.get("rt_range").and_then(|a| a.at(0)).and_then(Value::f64), v.get("rt_range").and_then(|a| a.at(1)).and_then(Value::f64)) {
+                (Some(a), Some(b)) => Some((a, b)),
+                _ => None,
+            },
         }
     }
 }

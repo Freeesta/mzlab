@@ -10,7 +10,22 @@
   // an old browser cannot run the engine: say it clearly instead of staying blank
   // OPFS keeps the files and their indexes
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response && navigator.storage && navigator.storage.getDirectory);
-  try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  try { if ("serviceWorker" in navigator && !window.QQ_RESETTING) navigator.serviceWorker.register(new URL("../sw.js", SRC)).then(isolateOnce).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  // the first visit starts not isolated (everything works as before); once the service worker (which adds COOP/COEP) is active the page reloads ONCE,
+  // at the first moment with no work going on (no open file). The session guard prevents loops; ?cap-off=isolamento turns it off.
+  function isolateOnce() {
+    try {
+      if (window.crossOriginIsolated || /[?&]cap-off=[^&]*isolamento/.test(location.search) || sessionStorage.getItem("mzlab.coiReload")) return;
+      // no open file and nothing being copied, indexed or converted (those are not in E.files until «Load data»)
+      const idle = () => (typeof E === "undefined" || !Array.isArray(E.files) || !E.files.some((/** @type {any} */ f) => f && !f.gone))
+        && !(typeof UPBUSY !== "undefined" && UPBUSY > 0)
+        && !(typeof S !== "undefined" && S.opening)
+        && !(typeof PROGRESSO !== "undefined" && PROGRESSO.busy())
+        && !(typeof CONVROWS !== "undefined" && CONVROWS.rows.some((/** @type {any} */ r) => !["done", "fail", "cancel"].includes(r.state)));
+      const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", "1"); } catch (_) { return; } location.reload(); };
+      navigator.serviceWorker.ready.then(() => { if (navigator.serviceWorker.controller) go(); else navigator.serviceWorker.addEventListener("controllerchange", go, { once: true }); });
+    } catch (_) { /* stays not isolated */ }
+  }
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
   // the phase of the start (window.qqPhaseCur = {key, pct}: a catalog key and the percentage when known) replaces the phrase in the single status line of #loading
   // (ldRefresh() in index.html); an ERROR replaces it too, clearly, in the language of the page
@@ -67,19 +82,24 @@
   const lrInit = async () => {
     if (window.QQQ_PHONE) throw new Error("phone: engine not started");
     if (!modern) { fail("load.err.oldBrowser"); throw new Error("this browser is too old"); }
+    // the module of the loading and the count of the stored files start with the engine, not after it
+    const lrModule = import(new URL("lr.js", SRC).href);
+    lrModule.catch(() => {});
+    // reopening takes about 0.15 s per stored file (an index each): the limit grows with the files in the storage, 240 samples took 36 s
+    const stored = (async () => { let n = 0; try { for await (const _ of /** @type {any} */ (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files")).keys()) n++; } catch (_) { /* nothing stored yet */ } return n; })();
     const b = await rustReady;
     if (!b || b.disabled) { fail("load.err.engineMissing"); throw new Error("the calculation engine is not available in this browser"); }
     try {
-      lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
+      lr = (await lrModule).createLr({ rb: b });
       // the browser storage held by another tab: the loading screen says so
-      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000;
-      const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), stall))]);
+      const u = new URL(location.href), stall = stored.then(n => +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * n);
+      const within = p => Promise.race([p, stall.then(ms => new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), ms)))]);
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
       window.qqStep = ""; phase(null); perfMark("motore pronto");
     }
-    catch (e) {
+    catch (e_) { const e = /** @type {Lanciato} */ (e_);
       window.MZLAB_LR_ERR = String(e && e.message || e); lr = null;
       if (window.ERRORI && window.ERRORI.segnala) window.ERRORI.segnala(e, "engine");
       // the technical text stays in MZLAB_LR_ERR and the console: the screen speaks the language of the page
@@ -89,7 +109,7 @@
   };
   const ready = lrInit();
   ready.catch(() => {});
-  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|xicbin|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|msn_grafo|msnlib\/aggiungi|msnlib\/cerca)\b/;
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|xicbin|spectra|spectrum|dda|mrm|filters|scanlist|nearest_scan|scaninfo|scan|scanavg|scanbin|scan_axis|ms2tr|fileinfo|msntree|msn_albero|canali|msn_grafo|msnlib\/aggiungi|msnlib\/cerca)\b/;
 
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });

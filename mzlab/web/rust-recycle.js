@@ -6,7 +6,7 @@ export const MIN_RECYCLE_MB = 192, IDLE_MS = 30000;
 
 export function makeRecycler({ pending, worker, recycleNow, disabled, limitMb = () => MIN_RECYCLE_MB }) {
   let mem = 0, timer = null;
-  const now = () => { if (!worker() || pending.size) return; mem = 0; recycleNow(); };
+  const now = () => { clearTimeout(timer); timer = null; if (!worker() || disabled() || pending.size) return; mem = 0; recycleNow(); };
   const check = force => {
     clearTimeout(timer); timer = null;
     if (!worker() || disabled() || mem <= Math.max(limitMb(), MIN_RECYCLE_MB) * 1048576 || pending.size) return;

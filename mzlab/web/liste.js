@@ -1,4 +1,5 @@
 // @ts-strict
+// @ts-noany
 "use strict";
 // Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists).
 // ONE engine for every list of reference: unit resolution (nominal m/z ±0.5 Da, ordered by proximity) and high resolution (ppm tolerance).
@@ -6,31 +7,32 @@
 // Principle 1 of AGENTS.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
 const LISTE = (() => {
   // ---------------------------------------------------------------- pure part
-  const tolDa = (mz, ppm) => Math.max(mz * ppm * 1e-6, mz < 200 ? 0.001 : 0);
+  const PROTON = 1.007276;                      // [M+H]+ / [M-H]- shift, the value of the adduct tables of the page (liste-target-core.js, fair.js)
+  const tolDa = (/** @type {number} */ mz, /** @type {number} */ ppm) => Math.max(mz * ppm * 1e-6, mz < 200 ? 0.001 : 0);
 
   // index: the active lists, one array per polarity sorted by m/z (a list item with pol 0 goes in both)
-  function buildIndex(lists, active) {
-    const pos = [], neg = [];
-    (lists || []).forEach(L => {
+  function buildIndex(/** @type {Bag[] | null | undefined} */ lists, /** @type {Bag | null | undefined} */ active) {
+    const /** @type {Bag[]} */ pos = [], /** @type {Bag[]} */ neg = [];
+    (lists || []).forEach((/** @type {Bag} */ L) => {
       if (!L) return;
       if (active && active[L.id] === false) return;
       // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
       const en = I18N.lang === "en";
-      (L.items || []).forEach(it => {
-        const x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
+      (L.items || []).forEach((/** @type {Bag} */ it) => {
+        const /** @type {Bag} */ x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
         if (en && it.name_en) x.name = it.name_en;
         if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
         if (it.pol !== 1) neg.push(x);
       });
     });
-    const by = (a, b) => a.mz - b.mz;
+    const by = (/** @type {Bag} */ a, /** @type {Bag} */ b) => a.mz - b.mz;
     pos.sort(by);
     neg.sort(by);
     return { pos, neg };
   }
 
-  const lower = (a, v) => {
+  const lower = (/** @type {Bag[]} */ a, /** @type {number} */ v) => {
     let lo = 0, hi = a.length;
     while (lo < hi) {
       const m = (lo + hi) >> 1;
@@ -41,14 +43,14 @@ const LISTE = (() => {
   };
 
   // polarity of a file/search: "positive" / 1, "negative" / -1, anything else = both
-  const arrays = (idx, pol) => (pol === "positive" || pol === 1 ? [idx.pos] : pol === "negative" || pol === -1 ? [idx.neg] : [idx.pos, idx.neg]);
+  const arrays = (/** @type {Bag} */ idx, /** @type {string | number | null | undefined} */ pol) => (pol === "positive" || pol === 1 ? [idx.pos] : pol === "negative" || pol === -1 ? [idx.neg] : [idx.pos, idx.neg]);
 
   // High-resolution search by ppm, or nominal search by Da if isNominal / da tolerance is passed
-  function find(idx, pol, mz, tol, isNominal = false) {
+  function find(/** @type {Bag | null} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number} */ mz, /** @type {number | Bag | null | undefined} */ tol, isNominal = false) {
     if (!idx) return [];
     const nominal = isNominal || (typeof tol === "object" && tol && tol.nominal);
     const t = nominal ? (typeof tol === "number" ? tol : (tol && tol.da) || 0.5) : tolDa(mz, typeof tol === "number" ? tol : (tol && tol.ppm) || 5);
-    const out = [], seen = new Set();
+    const /** @type {Bag[]} */ out = [], seen = new Set();
     arrays(idx, pol).forEach(a => {
       for (let i = lower(a, mz - t); i < a.length && a[i].mz <= mz + t; i++) {
         const k = a[i].list + ":" + a[i].id + ":" + a[i].adduct + ":" + a[i].mz;
@@ -62,21 +64,30 @@ const LISTE = (() => {
     return nominal ? out.sort((p, q) => Math.abs(p.diffDa) - Math.abs(q.diffDa)) : out.sort((p, q) => Math.abs(p.err) - Math.abs(q.err));
   }
 
+  // true when an entry of the list `listId` lies within the ppm window of an m/z: the same window as find(), nothing allocated
+  function hasMatch(/** @type {Bag | null} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number} */ mz, /** @type {number} */ ppm, /** @type {string} */ listId) {
+    const t = tolDa(mz, typeof ppm === "number" ? ppm : 5);
+    for (const a of idx ? arrays(idx, pol) : []) for (let i = lower(a, mz - t); i < a.length && a[i].mz <= mz + t; i++) if (a[i].list === listId) return true;
+    return false;
+  }
   // Nominal search at unit resolution (default ±0.5 Da, ordered by proximity |Δ m/z|)
-  function findNominal(idx, pol, mz, tolDaVal = 0.5) {
+  function findNominal(/** @type {Bag} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number} */ mz, tolDaVal = 0.5) {
     return find(idx, pol, mz, tolDaVal, true);
   }
 
   // series: three or more consecutive members (n, n+1, n+2...) of the same polymer and adduct among the peaks of the spectrum.
-  function seriesRuns(idx, pol, mzs, ppm, minRun = 3) {
-    const found = new Map();
-    mzs.forEach(m => find(idx, pol, m, ppm).forEach(it => {
-      if (it.series && it.series.n != null) {
+  function seriesRuns(/** @type {Bag} */ idx, /** @type {string | number | null | undefined} */ pol, /** @type {number[]} */ mzs, /** @type {number} */ ppm, minRun = 3) {
+    const found = new Map(), arrs = arrays(idx, pol), /** @type {Bag[]} */ hit = [];
+    // same entries and same order as find() would give for each peak (by |error|, ties in list order), without cloning or deduplicating what is not a series member
+    for (const m of mzs) {
+      const t = tolDa(m, typeof ppm === "number" ? ppm : 5);
+      hit.length = 0; for (const a of arrs) for (let i = lower(a, m - t); i < a.length && a[i].mz <= m + t; i++) if (a[i].series && a[i].series.n != null) hit.push(a[i]);
+      if (hit.length > 1) hit.sort((p, q) => Math.abs((m - p.mz) / p.mz * 1e6) - Math.abs((m - q.mz) / q.mz * 1e6));
+      for (const it of hit) {
         const k = it.list + ":" + it.series.id;
-        if (!found.has(k)) found.set(k, new Map());
-        found.get(k).set(it.series.n, it);
+        found.get(k)?.set(it.series.n, it) ?? found.set(k, new Map([[it.series.n, it]]));
       }
-    }));
+    }
     const out = new Map();
     found.forEach((byN, k) => {
       const ns = [...byN.keys()].sort((a, b) => a - b);
@@ -97,10 +108,11 @@ const LISTE = (() => {
 
   const MAXROWS = 3;
   // the lines of the box that opens on the peak (HR only): nothing when nothing matches
+  /** @param {Bag[] | null | undefined} matches @param {Map<string, string> | null} [runs] @param {(s: any) => string} [esc] */
   function tipHtml(matches, runs, esc) {
     if (!matches || !matches.length) return "";
-    const e = esc || (s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
-    const row = it => {
+    const e = esc || ((/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]));
+    const row = (/** @type {Bag} */ it) => {
       const ser = it.series && runs && runs.get(it.list + ":" + it.series.id + "#" + it.series.n);
       return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">${I18N.t("lst.mzOnly")}</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">${I18N.t("lst.theoMz")} ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(it.list === "keller" ? (it.source ? it.source.split(",")[0] : it.listName) : it.listName || it.list)}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
     };
@@ -109,7 +121,7 @@ const LISTE = (() => {
   }
 
   // CSV parsing: supports comma or semicolon, double quotes, Italian decimal comma (e.g. 150,5), NORMAN suspect lists
-  function csvSplit(line, sep) {
+  function csvSplit(/** @type {string} */ line, /** @type {string} */ sep) {
     const out = []; let cur = "", q = false;
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
@@ -125,14 +137,14 @@ const LISTE = (() => {
     return out.map(s => s.trim());
   }
 
-  const polOf = s => {
+  const polOf = (/** @type {string | undefined} */ s) => {
     s = String(s || "").trim().toLowerCase();
     return /^(\+|pos)/.test(s) ? 1 : /^(-|neg)/.test(s) ? -1 : 0;
   };
 
   // Find column index matching any of the candidate names (case-insensitive, normalized)
-  function matchCol(head, candidates) {
-    const clean = s => s.toLowerCase().replace(/[\s_\-\/]/g, "");
+  function matchCol(/** @type {string[]} */ head, /** @type {string[]} */ candidates) {
+    const clean = (/** @type {string} */ s) => s.toLowerCase().replace(/[\s_\-\/]/g, "");
     const clHead = head.map(clean);
     for (const cand of candidates) {
       const idx = clHead.indexOf(clean(cand));
@@ -141,11 +153,17 @@ const LISTE = (() => {
     return -1;
   }
 
-  function csvParse(text) {
+  // separator of the header line: the more frequent of ; and , outside double quotes
+  function headSep(/** @type {string} */ line) {
+    let semi = 0, comma = 0, q = false;
+    for (const c of line) { if (c === '"') q = !q; else if (!q) { if (c === ";") semi++; else if (c === ",") comma++; } }
+    return semi > comma ? ";" : ",";
+  }
+  function csvParse(/** @type {string} */ text) {
     // «# mzLab ...» = provenance line of our own exports
     const lines = String(text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim() && !l.startsWith("#"));
     if (!lines.length) return [];
-    const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ";" : ",";
+    const sep = headSep(lines[0]);
     const head = csvSplit(lines[0], sep);
 
     const cMz = matchCol(head, ["mz", "m/z", "monoisotopic_mass", "monoisotopicmass", "exact_mass", "exactmass", "mass", "massa"]);
@@ -160,7 +178,7 @@ const LISTE = (() => {
     const c = hasHead ? { mz: cMz, name: cName, formula: cForm, polarity: cPol, smiles: cSmiles, adduct: cAdduct, note: cNote }
                       : { mz: 0, name: 1, formula: 2, polarity: 3, smiles: -1, adduct: -1, note: 4 };
 
-    const rows = [];
+    const /** @type {Bag[]} */ rows = [];
     lines.slice(hasHead ? 1 : 0).forEach(l => {
       const f = csvSplit(l, sep);
       const mzRaw = c.mz >= 0 ? String(f[c.mz] || "").replace(",", ".") : "";
@@ -173,7 +191,7 @@ const LISTE = (() => {
       const polarity = c.polarity >= 0 ? polOf(f[c.polarity]) : 0;
 
       if (!(mz > 0) && !smiles && !formula) return;
-      const obj = { mz: mz > 0 ? mz : null, name, formula, polarity, note };
+      const /** @type {Bag} */ obj = { mz: mz > 0 ? mz : null, name, formula, polarity, note };
       if (smiles) obj.smiles = smiles;
       if (adduct) obj.adduct = adduct;
       rows.push(obj);
@@ -181,17 +199,17 @@ const LISTE = (() => {
     return rows;
   }
 
-  const csvCell = s => (/[",;\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s));
-  const csvOut = rows => "mz,name,formula,polarity,note\n" + rows.map(r => [r.mz, r.name, r.formula, r.polarity === 1 ? "positive" : r.polarity === -1 ? "negative" : "both", r.note].map(csvCell).join(",")).join("\n") + "\n";
+  const csvCell = (/** @type {unknown} */ s) => (/[",;\n]/.test(String(s)) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s));
+  const csvOut = (/** @type {Bag[]} */ rows) => "mz,name,formula,polarity,note\n" + rows.map((/** @type {Bag} */ r) => [r.mz, r.name, r.formula, r.polarity === 1 ? "positive" : r.polarity === -1 ? "negative" : "both", r.note].map(csvCell).join(",")).join("\n") + "\n";
 
   // Creates the list object for laboratory contaminants
-  const labList = rows => ({
+  const labList = (/** @type {Bag[] | null | undefined} */ rows) => ({
     id: "laboratorio",
     name: I18N.t("lst.lab.name"),
     source: I18N.t("lst.user.of"),
     license: I18N.t("lst.user.of"),
     builtin: false,
-    items: (rows || []).map((r, i) => ({
+    items: (rows || []).map((/** @type {Bag} */ r, /** @type {number} */ i) => ({
       id: "lab" + i,
       name: r.name || `m/z ${r.mz}`,
       cls: I18N.t("lst.lab.cls"),
@@ -207,8 +225,8 @@ const LISTE = (() => {
   });
 
   // Creates the list object for an uploaded user suspect list
-  function userList(id, name, filename, rows) {
-    const items = (rows || []).map((r, i) => {
+  function userList(/** @type {string} */ id, /** @type {string} */ name, /** @type {string} */ filename, /** @type {Bag[] | null | undefined} */ rows) {
+    const items = (rows || []).map((/** @type {Bag} */ r, /** @type {number} */ i) => {
       let mz = r.mz;
       // Default to [M+H]+ for positive or [M-H]- for negative if formula is known and adduct is not
       let adduct = r.adduct;
@@ -226,7 +244,7 @@ const LISTE = (() => {
         source: name || filename || "lista utente",
         mzonly: !r.formula
       };
-    }).filter(x => x.mz > 0);
+    }).filter((/** @type {Bag} */ x) => x.mz > 0);
 
     return {
       id: id || ("usr_" + Date.now()),
@@ -253,48 +271,48 @@ const LISTE = (() => {
     runs: new WeakMap()
   });
 
-  const rd = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
-  const wr = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode / quota */ } };
+  const rd = (/** @type {string} */ k, /** @type {unknown} */ d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
+  const wr = (/** @type {string} */ k, /** @type {unknown} */ v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode / quota */ } };
   const isOn = () => rd(KEY_ON, false) === true;
 
   // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
   const KEY_EXCL = typeof NOMI !== "undefined" ? NOMI.KEY("contaminanti.esclusi") : "qqq.contaminanti.esclusi";
   const exclKinds = ["entry", "cls", "list"];
   // names of the stored object (user data: do not rename)
-  const FLD = { entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" };
-  let exclCache = null;
+  const FLD = /** @type {Record<string, string>} */ ({ entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" });
+  let /** @type {Record<string, string[]> | null} */ exclCache = null;
   const exclRead = () => {
     if (exclCache) return exclCache;
-    const o = rd(KEY_EXCL, {}) || {}, r = {};
-    exclKinds.forEach(k => { r[k] = Array.isArray(o[FLD[k]]) ? o[FLD[k]].filter(x => typeof x === "string") : []; });
+    const o = rd(KEY_EXCL, {}) || {}, /** @type {Record<string, string[]>} */ r = {};
+    exclKinds.forEach(k => { r[k] = Array.isArray(o[FLD[k]]) ? o[FLD[k]].filter((/** @type {unknown} */ x) => typeof x === "string") : []; });
     return (exclCache = r);
   };
-  const exclSave = e => { const o = {}; exclKinds.forEach(k => { o[FLD[k]] = e[k]; }); wr(KEY_EXCL, o); if (typeof redrawAll === "function") redrawAll(); };
-  const voceKey = it => it.list + ":" + it.id + (it.series ? "#" + it.series.n : "");
-  const classKey = it => it.clsKey || it.cls || "";
-  const keyFor = (kind, it) => kind === "entry" ? voceKey(it) : kind === "cls" ? classKey(it) : it.list;
-  const isExcluded = it => { const e = exclRead(); return e.entry.includes(voceKey(it)) || (!!classKey(it) && e.cls.includes(classKey(it))) || e.list.includes(it.list); };
-  function exclSet(kind, key, on) {
+  const exclSave = (/** @type {Record<string, string[]>} */ e) => { const /** @type {Bag} */ o = {}; exclKinds.forEach(k => { o[FLD[k]] = e[k]; }); wr(KEY_EXCL, o); if (typeof redrawAll === "function") redrawAll(); };
+  const voceKey = (/** @type {Bag} */ it) => it.list + ":" + it.id + (it.series ? "#" + it.series.n : "");
+  const classKey = (/** @type {Bag} */ it) => it.clsKey || it.cls || "";
+  const keyFor = (/** @type {string} */ kind, /** @type {Bag} */ it) => kind === "entry" ? voceKey(it) : kind === "cls" ? classKey(it) : it.list;
+  const isExcluded = (/** @type {Bag} */ it) => { const e = exclRead(); return e.entry.includes(voceKey(it)) || (!!classKey(it) && e.cls.includes(classKey(it))) || e.list.includes(it.list); };
+  function exclSet(/** @type {string} */ kind, /** @type {string} */ key, /** @type {boolean} */ on) {
     if (!exclKinds.includes(kind) || !key) return;
     const e = exclRead(), a = e[kind], i = a.indexOf(key);
     if (on && i < 0) a.push(key); else if (!on && i >= 0) a.splice(i, 1); else return;
     exclSave(e);
   }
   // saved with the session: the stored object as is; restoring adds what the browser does not have yet
-  const exclExport = () => { const e = exclRead(), o = {}; exclKinds.forEach(k => { o[FLD[k]] = e[k].slice(); }); return o; };
-  function exclImport(o) {
+  const exclExport = () => { const e = exclRead(), /** @type {Bag} */ o = {}; exclKinds.forEach(k => { o[FLD[k]] = e[k].slice(); }); return o; };
+  function exclImport(/** @type {Bag | null | undefined} */ o) {
     if (!o || typeof o !== "object") return;
     const e = exclRead(); let ch = false;
-    exclKinds.forEach(k => (Array.isArray(o[FLD[k]]) ? o[FLD[k]] : []).forEach(x => { if (typeof x === "string" && !e[k].includes(x)) { e[k].push(x); ch = true; } }));
+    exclKinds.forEach(k => (Array.isArray(o[FLD[k]]) ? o[FLD[k]] : []).forEach((/** @type {unknown} */ x) => { if (typeof x === "string" && !e[k].includes(x)) { e[k].push(x); ch = true; } }));
     if (ch) exclSave(e);
   }
   function exclReset() { exclCache = { entry: [], cls: [], list: [] }; exclSave(exclCache); }
-  const exclItems = () => { const e = exclRead(); return exclKinds.flatMap(k => e[k].map(key => ({ kind: k, key }))); };
+  const exclItems = () => { const e = exclRead(); return exclKinds.flatMap(k => e[k].map((/** @type {string} */ key) => ({ kind: k, key }))); };
   // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
-  const split = ms => { const vis = ms.filter(x => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
-  function setOn(v) { wr(KEY_ON, !!v); document.querySelectorAll("#lst-cont-signs").forEach(el => { el.checked = !!v; }); if (typeof redrawAll === "function") redrawAll(); }
+  const split = (/** @type {Bag[]} */ ms) => { const vis = ms.filter((/** @type {Bag} */ x) => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
+  function setOn(/** @type {unknown} */ v) { wr(KEY_ON, !!v); document.querySelectorAll("#lst-cont-signs").forEach(el => { el.checked = !!v; }); if (typeof redrawAll === "function") redrawAll(); }
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
-  const saveRows = rows => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
+  const saveRows = (/** @type {Bag[]} */ rows) => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
 
   function idbOpen() {
     return new Promise(async res => {
@@ -324,7 +342,7 @@ const LISTE = (() => {
     });
   }
 
-  async function idbSaveUserList(list) {
+  async function idbSaveUserList(/** @type {Bag} */ list) {
     const db = await idbOpen();
     if (!db) return;
     return new Promise(/** @param {(v?: any) => void} res */ res => {
@@ -337,7 +355,7 @@ const LISTE = (() => {
     });
   }
 
-  async function idbDeleteUserList(id) {
+  async function idbDeleteUserList(/** @type {string} */ id) {
     const db = await idbOpen();
     if (!db) return;
     return new Promise(/** @param {(v?: any) => void} res */ res => {
@@ -363,7 +381,7 @@ const LISTE = (() => {
   // loads the built-in lists once; also loads persisted user suspect lists from IndexedDB
   function ensure() {
     if (ST.idx || ST.loading) return ST.idx;
-    const p1 = (typeof J === "function") ? J("api/contaminants").then(j => { ST.lists = j.lists || []; }).catch(e => { ST.err = e; }) : Promise.resolve();
+    const p1 = (typeof J === "function") ? J("api/contaminants").then((/** @type {Bag} */ j) => { ST.lists = j.lists || []; }).catch((/** @type {unknown} */ e) => { ST.err = e; }) : Promise.resolve();
     const p2 = idbGetUserLists().then(u => { ST.userLists = u || []; }).catch(() => {});
     ST.loading = Promise.all([p1, p2]).then(() => { reindex(); ST.loading = null; });
     return null;
@@ -372,28 +390,28 @@ const LISTE = (() => {
   const ready = () => { ensure(); return ST.idx ? Promise.resolve() : (ST.loading || Promise.resolve()); };
 
   // For high resolution spectra only: tooltip box on hover. null if switch is off or NOT high resolution.
-  function forSpec(mzs, ys, polarity, ppm) {
+  function forSpec(/** @type {number[]} */ mzs, /** @type {number[]} */ ys, /** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
     if (!isOn()) return null;
     return {
-      tip(m) {
+      tip(/** @type {number} */ m) {
         const idx = ensure(); if (!idx) return "";
         let runs = ST.runs.get(mzs);
         if (!runs || runs.ppm !== ppm) {
-          const top = Math.max(0, ...ys), sel = [];
-          mzs.forEach((x, i) => { if (ys[i] >= top * 0.01) sel.push(x); });
+          const top = maxOf(ys, 0), /** @type {number[]} */ sel = [];
+          mzs.forEach((/** @type {number} */ x, /** @type {number} */ i) => { if (ys[i] >= top * 0.01) sel.push(x); });
           runs = { ppm, map: seriesRuns(idx, polarity, sel, ppm) };
           ST.runs.set(mzs, runs);
         }
         return tipHtml(find(idx, polarity, m, ppm), runs.map);
       },
-      match: m => (ST.idx ? find(ST.idx, polarity, m, ppm) : []),
-      state(m) { const ms = ST.idx ? find(ST.idx, polarity, m, ppm) : []; const s = split(ms); return { vis: s.vis, hid: s.hid, all: ms }; }
+      match: (/** @type {number} */ m) => (ST.idx ? find(ST.idx, polarity, m, ppm) : []),
+      state(/** @type {number} */ m) { const ms = ST.idx ? find(ST.idx, polarity, m, ppm) : []; const s = split(ms); return { vis: s.vis, hid: s.hid, all: ms }; }
     };
   }
 
   // Entries of the lists the user uploaded (never the built-in ones) that match an m/z; null when none was uploaded (the table of the reference difference shows its list column only then)
   const hasUser = () => ST.userLists.length > 0;
-  function userMatches(mz, polarity, ppm) {
+  function userMatches(/** @type {number} */ mz, /** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
     if (!ST.userLists.length) return null;
     const idx = ST.idx || ensure(); if (!idx) return null;
     const ids = new Set(ST.userLists.map(u => u.id));
@@ -401,33 +419,33 @@ const LISTE = (() => {
   }
 
   // m => true when the m/z matches a Keller 2008 entry; null while the lists load. Independent of the global contaminant switch: it serves "remove contaminants" of a spectrum.
-  function keller(polarity, ppm) {
+  function keller(/** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
     const idx = ST.idx || ensure(); if (!idx) return null;
-    return m => find(idx, polarity, m, ppm).some(x => x.list === "keller");
+    return (/** @type {number} */ m) => hasMatch(idx, polarity, m, ppm, "keller");
   }
 
   // Peak tables (HR): compatible entries of an m/z, split into shown and hidden-by-exclusion; null if the switch is off
-  function compat(mz, polarity, ppm) {
+  function compat(/** @type {number} */ mz, /** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
     const idx = ST.idx || ensure(); if (!idx || !isOn()) return null;
     const ms = find(idx, polarity, mz, ppm), s = split(ms);
     return { vis: s.vis, hid: s.hid, all: ms };
   }
 
   // Summary text for formulas / library matches: "name (adduct, ±ppm)"
-  function textFor(mz, polarity, ppm) {
+  function textFor(/** @type {number} */ mz, /** @type {string | number | null | undefined} */ polarity, /** @type {number} */ ppm) {
     const idx = ST.idx || ensure(); if (!idx || !isOn()) return "";
     const m = find(idx, polarity, mz, ppm).filter(x => !isExcluded(x)); if (!m.length) return "";
     return m.slice(0, 2).map(x => `${x.name} (${x.adduct || I18N.t("lst.mzOnly")}${x.formula ? ", " + x.formula.replace(/x(\d+)$/, " ×$1") : ""}; ${x.err >= 0 ? "+" : ""}${x.err.toFixed(1)} ppm)`).join("; ") + (m.length > 2 ? " " + I18N.t("lst.textMore", { n: m.length - 2 }) : "");
   }
 
-  function addLab(mz, o = {}) {
+  function addLab(/** @type {number} */ mz, /** @type {Bag} */ o = {}) {
     const rows = labRows();
     rows.push({ mz: +mz, name: o.name || "", formula: o.formula || "", polarity: o.polarity || 0, note: o.note || "" });
     saveRows(rows);
   }
 
   // Quick dialog to add peak to laboratory contaminants
-  async function askAdd(mz, polarity) {
+  async function askAdd(/** @type {number} */ mz, /** @type {string | number | null | undefined} */ polarity) {
     const name = typeof ask === "function" ? await ask(I18N.t("lst.askAdd", { mz: (+mz).toFixed(4) }), `m/z ${(+mz).toFixed(4)}`) : "";
     if (name === null || name === undefined) return;
     addLab(mz, { name, polarity: polarity === "positive" ? 1 : polarity === "negative" ? -1 : 0 });
@@ -436,7 +454,7 @@ const LISTE = (() => {
 
   // Dialog for laboratory contaminants
   function openLab() {
-    const EHt = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const EHt = (/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]);
     const draw = () => {
       const rows = labRows();
       if (typeof big === "function") {
@@ -456,7 +474,7 @@ const LISTE = (() => {
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x) { if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
+            fIm.onchange = async (/** @type {Bag} */ e) => { const f = e.target.files[0]; if (!f) return; let n; try { n = csvParse(await FILESICURI.readText(f)).slice(0, 5000); } catch (x_) { const x = /** @type {Lanciato} */ (x_); if (typeof toast === "function") toast(I18N.t(x.key || "workflow.err.invalidFormat")); return; } saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
@@ -475,7 +493,7 @@ const LISTE = (() => {
   }
 
   // Process rows from CSV: derive formula and exact mass from SMILES via OpenChemLib when missing
-  async function enrichRowsWithOcl(rows) {
+  async function enrichRowsWithOcl(/** @type {Bag[]} */ rows) {
     let ocl = null;
     for (const r of rows) {
       if (r.smiles && (!r.formula || !(r.mz > 0))) {
@@ -487,7 +505,7 @@ const LISTE = (() => {
             if (!r.formula) r.formula = mf.formula;
             if (!(r.mz > 0)) {
               const exactM = mf.absoluteWeight;
-              r.mz = r.polarity === -1 ? exactM - 1.007276 : exactM + 1.007276;
+              r.mz = r.polarity === -1 ? exactM - PROTON : exactM + PROTON;
             }
           } catch (_) { /* invalid smiles */ }
         }
@@ -497,6 +515,7 @@ const LISTE = (() => {
   }
 
   // Add user list from CSV text
+  /** @param {string} filename @param {string} text @param {string} [customName] */
   async function addUserListFromCsv(filename, text, customName) {
     const rawRows = csvParse(text);
     const rows = await enrichRowsWithOcl(rawRows);
@@ -512,7 +531,7 @@ const LISTE = (() => {
   }
 
   // Delete user list
-  async function deleteUserList(id) {
+  async function deleteUserList(/** @type {string} */ id) {
     ST.userLists = ST.userLists.filter(x => x.id !== id);
     await idbDeleteUserList(id);
     reindex();
@@ -520,7 +539,7 @@ const LISTE = (() => {
   }
 
   // Toggle active list
-  function toggleListActive(id, active) {
+  function toggleListActive(/** @type {string} */ id, /** @type {boolean} */ active) {
     const act = rd(KEY_LISTS, {});
     act[id] = active;
     wr(KEY_LISTS, act);
@@ -529,13 +548,13 @@ const LISTE = (() => {
   }
 
   // ---------------------------------------------------------------- UI component: mount(container, opt) & open(opt)
-  const EH = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  const fmtSub = f => EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
+  const EH = (/** @type {unknown} */ s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]);
+  const fmtSub = (/** @type {string} */ f) => EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
 
   // the markup of the panel: search bar, active lists, user lists, exclusions and the table (the handlers are bound in mount())
   // the panel shows list names without a trailing bibliographic reference, e.g. «(Keller 2008)»
-  const noRef = n => String(n).replace(/\s*\([^)]*\d{4}\)\s*$/, "");
-  function panelHtml(state) {
+  const noRef = (/** @type {unknown} */ n) => String(n).replace(/\s*\([^)]*\d{4}\)\s*$/, "");
+  function panelHtml(/** @type {Bag} */ state) {
     return `
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
         <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
@@ -601,14 +620,14 @@ const LISTE = (() => {
   `;
   }
 
-  function setupViewSwitcher(container, opt = {}) {
+  function setupViewSwitcher(/** @type {HTMLElement} */ container, /** @type {Bag} */ opt = {}) {
     const elViewSeg = container.querySelector("#lst-view-seg");
     const elRefBox = container.querySelector("#lst-ref-box");
     const elTargetBox = container.querySelector("#lst-target-box");
-    async function switchToView(viewName) {
+    async function switchToView(/** @type {string | undefined} */ viewName) {
       const isTarget = viewName === "target";
       if (elViewSeg) {
-        elViewSeg.querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.v === "target") === isTarget));
+        elViewSeg.querySelectorAll("button").forEach((/** @type {HTMLElement} */ b) => b.classList.toggle("on", (b.dataset.v === "target") === isTarget));
       }
       if (elRefBox) elRefBox.style.display = isTarget ? "none" : "flex";
       if (elTargetBox) {
@@ -623,17 +642,17 @@ const LISTE = (() => {
       }
     }
     if (elViewSeg) {
-      elViewSeg.querySelectorAll("button").forEach(b => { b.onclick = () => switchToView(b.dataset.v); });
+      elViewSeg.querySelectorAll("button").forEach((/** @type {HTMLElement} */ b) => { b.onclick = () => switchToView(b.dataset.v); });
     }
     if (opt.targetScreening) switchToView("target");
   }
 
-  function mount(container, opt = {}) {
+  function mount(/** @type {HTMLElement} */ container, /** @type {Bag} */ opt = {}) {
     if (!container) return;
     ensure();
 
     // Initial state of controls
-    const state = {
+    const /** @type {Bag} */ state = {
       mz: opt.mz != null ? String(opt.mz) : "",
       mode: opt.hr ? "ppm" : (opt.mz != null ? "da" : (window.TBL_HR ? (TBL_HR() ? "ppm" : "da") : "ppm")),
       tolDa: 0.5,
@@ -654,16 +673,16 @@ const LISTE = (() => {
     const elChecksLbl = container.querySelector("#lst-src-lbl");
     const elUListBar = container.querySelector("#lst-userlists-bar");
     const elContSigns = container.querySelector("#lst-cont-signs");
-    if (elContSigns) elContSigns.onchange = e => { setOn(e.target.checked); };
+    if (elContSigns) elContSigns.onchange = (/** @type {Event} */ e) => { setOn(/** @type {HTMLInputElement} */ (e.target).checked); };
 
-    const KIND_LBL = { entry: () => I18N.t("cont.excl.k.entry"), cls: () => I18N.t("cont.excl.k.cls"), list: () => I18N.t("cont.excl.k.list") };
+    const /** @type {Record<string, () => string>} */ KIND_LBL = { entry: () => I18N.t("cont.excl.k.entry"), cls: () => I18N.t("cont.excl.k.cls"), list: () => I18N.t("cont.excl.k.list") };
     const elExcl = container.querySelector("#lst-excl");
     function renderExcl() {
       const ex = exclItems();
       elExcl.hidden = !ex.length;
       if (!ex.length) return;
       elExcl.innerHTML = `<b>${I18N.t("cont.excl.h")}</b> ` + ex.map((q, i) => `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--soft,#f1f5f9);padding:2px 6px;border-radius:4px;margin:2px 6px 2px 0">${KIND_LBL[q.kind]()}: <b>${EH(q.key)}</b> <button type="button" data-ex="${i}" aria-label="${EH(I18N.t("cont.excl.back"))}: ${EH(q.key)}" title="${EH(I18N.t("cont.excl.back"))}" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:0 2px">&times;</button></span>`).join("") + ` <button type="button" id="lst-excl-reset">${I18N.t("cont.excl.reset")}</button>`;
-      elExcl.querySelectorAll("[data-ex]").forEach(b => { b.onclick = () => { const q = ex[+b.dataset.ex]; exclSet(q.kind, q.key, false); renderExcl(); }; });
+      elExcl.querySelectorAll("[data-ex]").forEach((/** @type {HTMLElement} */ b) => { b.onclick = () => { const q = ex[Number(b.dataset.ex)]; exclSet(q.kind, q.key, false); renderExcl(); }; });
       elExcl.querySelector("#lst-excl-reset").onclick = () => { exclReset(); renderExcl(); };
     }
     function renderSourceChecks() {
@@ -682,8 +701,8 @@ const LISTE = (() => {
           <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(noRef((I18N.lang === "en" && L.name_en) || L.name))}</span>
         </label>`;
       }).join("");
-      elChecks.querySelectorAll("input[data-lid]").forEach(chk => {
-        chk.onchange = () => { toggleListActive(chk.dataset.lid, chk.checked); render(); };
+      elChecks.querySelectorAll("input[data-lid]").forEach((/** @type {HTMLInputElement} */ chk) => {
+        chk.onchange = () => { toggleListActive(/** @type {string} */ (chk.dataset.lid), chk.checked); render(); };
       });
       }
 
@@ -694,8 +713,8 @@ const LISTE = (() => {
             <b>${EH(u.name)}</b> <span class="muted">(${u.items.length})</span>
             <button type="button" data-del-ul="${EH(u.id)}" title="${I18N.t("lst.userDelete")}" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:0 2px">&times;</button>
           </span>`).join("");
-        elUListBar.querySelectorAll("[data-del-ul]").forEach(b => {
-          b.onclick = async () => { await deleteUserList(b.dataset.delUl); renderSourceChecks(); render(); };
+        elUListBar.querySelectorAll("[data-del-ul]").forEach((/** @type {HTMLElement} */ b) => {
+          b.onclick = async () => { await deleteUserList(/** @type {string} */ (b.dataset.delUl)); renderSourceChecks(); render(); };
         });
       } else {
         elUListBar.hidden = true;
@@ -716,7 +735,7 @@ const LISTE = (() => {
       const isNom = state.mode === "da";
       const tolVal = numIt(state.tol) || (isNom ? 0.5 : 5);
 
-      let items = [];
+      /** @type {Bag[]} */ let items = [];
       if (hasMz) {
         items = isNom ? findNominal(idx, state.pol, qMz, tolVal) : find(idx, state.pol, qMz, tolVal, false);
       } else {
@@ -725,7 +744,7 @@ const LISTE = (() => {
         const pool = arrays(idx, state.pol);
         const seen = new Set();
         pool.forEach(arr => {
-          arr.forEach(it => {
+          arr.forEach((/** @type {Bag} */ it) => {
             const k = it.list + ":" + it.id + ":" + it.adduct + ":" + it.mz;
             if (!seen.has(k)) { seen.add(k); items.push(it); }
           });
@@ -775,19 +794,19 @@ const LISTE = (() => {
     }
 
     // Bind event listeners
-    elMz.oninput = e => { state.mz = e.target.value; render(); };
-    elTxt.oninput = e => { state.text = e.target.value; render(); };
-    elTol.oninput = e => {
-      const v = parseFloat(e.target.value);
+    elMz.oninput = (/** @type {Event} */ e) => { state.mz = /** @type {HTMLInputElement} */ (e.target).value; render(); };
+    elTxt.oninput = (/** @type {Event} */ e) => { state.text = /** @type {HTMLInputElement} */ (e.target).value; render(); };
+    elTol.oninput = (/** @type {Event} */ e) => {
+      const v = parseFloat(/** @type {HTMLInputElement} */ (e.target).value);
       if (state.mode === "da") state.tolDa = v || 0.5;
       else state.tolPpm = v || 5;
       render();
     };
 
-    container.querySelectorAll("#lst-pol-seg button").forEach(b => {
+    container.querySelectorAll("#lst-pol-seg button").forEach((/** @type {HTMLElement} */ b) => {
       b.onclick = () => {
-        state.pol = +b.dataset.p;
-        container.querySelectorAll("#lst-pol-seg button").forEach(x => x.classList.toggle("on", x === b));
+        state.pol = Number(b.dataset.p);
+        container.querySelectorAll("#lst-pol-seg button").forEach((/** @type {HTMLElement} */ x) => x.classList.toggle("on", x === b));
         render();
       };
     });
@@ -801,7 +820,7 @@ const LISTE = (() => {
   }
 
   // Opens the reference lists: the Liste panel of the drawer in the Dati view, the modal dialog #listedlg elsewhere
-  function open(opt = {}) {
+  function open(/** @type {Bag} */ opt = {}) {
     ensure();
     if (window.BARRA && BARRA.isDataView()) {
       BARRA.setTab("lists", opt);
@@ -828,18 +847,19 @@ const LISTE = (() => {
   // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
   if (typeof AZIONI !== "undefined") {
     const S = ["spec"], T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, disponibile: c => c.has, nome: () => T("ctx.spec.contLists"), esegui: c => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
-    AZIONI.registra({ id: "spec.known", gruppo: "cont", viste: S, voci: c => {
+    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
+    AZIONI.registra({ id: "spec.known", gruppo: "cont", viste: S, voci: (/** @type {Bag} */ c) => {
       const kn = c.a.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
       return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, esegui: () => {} }] : [];
     } });
-    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, visibile: c => !!c.a.hrp, disponibile: c => c.has, nome: () => T("ctx.spec.addLab"), esegui: c => askAdd(c.m, c.pol) });
+    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, visibile: (/** @type {Bag} */ c) => !!c.a.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
   }
   return {
     tolDa,
     buildIndex,
     find,
     findNominal,
+    hasMatch,
     seriesRuns,
     tipHtml,
     csvSplit,
@@ -864,8 +884,8 @@ const LISTE = (() => {
     mount,
     open,
     openSearch: open,
-    openTargetScreening: (opt = {}) => open({ ...opt, targetScreening: true }),
-    target: () => (typeof window !== "undefined" && window.LISTE_TARGET) || (typeof globalThis !== "undefined" && globalThis["require"] ? globalThis["require"]("./liste-target.js") : null)
+    openTargetScreening: (/** @type {Bag} */ opt = {}) => open({ ...opt, targetScreening: true }),
+    target: () => (typeof window !== "undefined" && window.LISTE_TARGET) || (typeof globalThis !== "undefined" && /** @type {Bag} */ (globalThis)["require"] ? /** @type {Bag} */ (globalThis)["require"]("./liste-target.js") : null)
   };
 })();
 

@@ -22,7 +22,7 @@ def misura(sito: Path) -> dict[str, dict]:
     for w in sorted(sito.rglob("*.wasm")):
         # the cap of a module is the limit_<name> whose name appears in its folder or file name
         chiavi = [k for k in cap if k in (w.parent.name, w.stem) or k == w.parent.name.replace("-", "_")]
-        out[str(w.relative_to(sito))] = {"byte": w.stat().st_size, "tetto": cap[chiavi[0]] if chiavi else None}
+        out[w.relative_to(sito).as_posix()] = {"byte": w.stat().st_size, "tetto": cap[chiavi[0]] if chiavi else None}
     return out
 
 

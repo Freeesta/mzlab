@@ -365,9 +365,11 @@ fn common_mode_params<R: ReadAt>(
             &lmz, &slab.mz, &slab.it, &slab.pos, &order, 0.0, p, &mut segs,
         )?;
         for s in stitch(segs, p)? {
-            if (s.z - s.a + 1) as usize >= min_len {
+            let len = (s.z - s.a + 1) as usize;
+            // the series is built only for the traces that the bank keeps (a stride of them)
+            if len >= min_len && bank.offer(s.a as usize, len) {
                 let (y, _) = centwave::series_of(&s, &slab.mz, &slab.it, &slab.pos, p, cw)?;
-                bank.add(s.a as usize, &y)?;
+                bank.push_row(s.a as usize, &y)?;
             }
         }
         Ok(())

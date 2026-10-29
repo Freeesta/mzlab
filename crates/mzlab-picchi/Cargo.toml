@@ -1,0 +1,6 @@
+[package]
+name = "mzlab-picchi"
+description = "mzLab peak picking (peaks, signal, compact sorts): its own crate so the release profile can build it at opt-level 3"
+version.workspace = true
+edition.workspace = true
+license.workspace = true

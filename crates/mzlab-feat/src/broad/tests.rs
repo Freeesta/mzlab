@@ -119,11 +119,30 @@ fn tail_of_a_narrow_peak_is_not_a_band() {
     let narrow = [(590, 610)];
     let b = detect_broad(&rt, &vec![300.0; 1200], &y, &narrow, &on()).unwrap();
     assert!(b.is_empty(), "{b:?}");
+    // the bridge from the apex block to the end of the tail leaves the tail under the line: it has no half-height width either
     let mut off = on();
     off.front_s = -1.0;
-    assert!(!detect_broad(&rt, &vec![300.0; 1200], &y, &narrow, &off)
+    assert!(detect_broad(&rt, &vec![300.0; 1200], &y, &narrow, &off)
         .unwrap()
         .is_empty());
+}
+
+#[test]
+fn front_width_is_zero_at_the_foot_of_a_tail_and_wide_on_a_band() {
+    // blocks of 2 s: a step at block 3 (the apex block is the lower border) and a ramp of five blocks
+    let rt_d = [1.0, 3.0, 5.0, 7.0, 9.0, 11.0];
+    assert_eq!(
+        hwhm_left(
+            &rt_d,
+            &[0.0, 0.0, 0.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0],
+            2,
+            3,
+            3
+        ),
+        0.0
+    );
+    let ramp = [0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0];
+    assert_eq!(hwhm_left(&rt_d, &ramp, 2, 5, 0), 4.0);
 }
 
 #[test]
@@ -214,4 +233,136 @@ fn pointwise_blank_is_inert_without_the_option_or_the_bank_or_another_ion() {
         detect_broad(&rt, &other, &y, &[], &with_blank(&bank, false)).unwrap(),
         detect_broad(&rt, &other, &y, &[], &on()).unwrap()
     );
+}
+
+/// The response as it was computed before the taps were tabulated: `ricker` evaluated at every sample.
+fn response_direct(y: &[f64], t: usize, s: f64) -> f64 {
+    let half = libm::ceil(4.0 * s) as isize;
+    let (i0, i1) = (
+        (t as isize - half).max(0) as usize,
+        (t + half as usize + 1).min(y.len()),
+    );
+    let mut acc = 0.0;
+    for (i, v) in y.iter().enumerate().take(i1).skip(i0) {
+        acc += v * ricker((i as f64 - t as f64) / s);
+    }
+    acc / libm::sqrt(s)
+}
+
+#[test]
+fn tabulated_taps_give_the_same_bits_as_the_direct_wavelet() {
+    let mut rng = Lcg(11);
+    let mut checked = 0usize;
+    for round in 0..10_000 {
+        let n = 3 + (round * 7) % 90;
+        let y: Vec<f64> = (0..n).map(|_| rng.next(1000.0)).collect();
+        // all the scales of the pass and the ridge scales, from sub-sample to wide
+        let s = [0.8, 1.7, 3.3, 6.1, 11.9, 24.7][round % 6] * (1.0 + (round % 13) as f64 / 17.0);
+        let k = Kernel::new(s).unwrap();
+        let t = (round * 31) % n;
+        assert_eq!(
+            k.at(&y, t).to_bits(),
+            response_direct(&y, t, s).to_bits(),
+            "round {round} s {s} t {t}"
+        );
+        checked += 1;
+    }
+    assert_eq!(checked, 10_000);
+}
+
+#[test]
+fn candidates_match_a_direct_scan_of_every_scale() {
+    let (_, _, y) = trace(&[(600.0, 75.0, 1000.0), (580.0, 4.0, 8000.0)]);
+    let sig: Vec<f64> = scale_widths(&on()).iter().map(|&w| sigma(w, 8.0)).collect();
+    for &s in &sig {
+        let k = Kernel::new(s).unwrap();
+        for t in 0..y.len() {
+            assert_eq!(k.at(&y, t).to_bits(), response_direct(&y, t, s).to_bits());
+        }
+    }
+    assert!(!candidates(&y, &sig).unwrap().is_empty());
+}
+
+/// The inpainting of the first version: region by region, in the order given.
+fn inpaint_sequential(y: &mut [f64], regions: &[(usize, usize)]) {
+    let n = y.len();
+    for &(s, e) in regions {
+        if s > e || e >= n {
+            continue;
+        }
+        match (s.checked_sub(1), (e + 1 < n).then_some(e + 1)) {
+            (Some(l), Some(r)) => {
+                let (yl, yr) = (y[l], y[r]);
+                for (j, v) in y[l + 1..r].iter_mut().enumerate() {
+                    *v = yl + (yr - yl) * (j + 1) as f64 / (r - l) as f64;
+                }
+            }
+            (None, Some(r)) => {
+                let v = y[r];
+                y[..r].fill(v);
+            }
+            (Some(l), None) => {
+                let v = y[l];
+                y[l + 1..].fill(v);
+            }
+            (None, None) => {}
+        }
+    }
+}
+
+#[test]
+fn inpaint_of_disjoint_regions_is_the_sequential_one() {
+    let mut rng = Lcg(5);
+    for round in 0..500 {
+        let n = 30 + round % 40;
+        let y: Vec<f64> = (0..n).map(|_| rng.next(100.0)).collect();
+        // separated by at least one sample, some at the borders, some invalid
+        let mut regions = Vec::new();
+        let mut at = round % 3;
+        while at + 2 < n {
+            let e = (at + 1 + round % 4).min(n - 1);
+            regions.push((at, e));
+            at = e + 2 + round % 3;
+        }
+        regions.push((7, 3));
+        regions.push((n, n + 2));
+        let (mut a, mut b) = (y.clone(), y);
+        inpaint_linear(&mut a, &regions);
+        inpaint_sequential(&mut b, &regions);
+        assert_eq!(a, b, "round {round} {regions:?}");
+    }
+}
+
+#[test]
+fn inpaint_merges_contiguous_and_overlapping_regions() {
+    let base: Vec<f64> = (0..30)
+        .map(|i| if i == 9 || i == 21 { 0.0 } else { 50.0 })
+        .collect();
+    let line = |a: usize, z: usize, y: &[f64]| -> Vec<f64> {
+        (a..=z)
+            .map(|i| y[a - 1] + (y[z + 1] - y[a - 1]) * (i - a + 1) as f64 / (z - a + 2) as f64)
+            .collect()
+    };
+    for regions in [
+        vec![(10, 15), (16, 20)],
+        vec![(16, 20), (10, 15)],
+        vec![(10, 17), (14, 20)],
+        vec![(10, 20), (12, 14)],
+    ] {
+        let mut y = base.clone();
+        inpaint_linear(&mut y, &regions);
+        assert_eq!(&y[10..=20], &line(10, 20, &base)[..], "{regions:?}");
+        assert_eq!((y[9], y[21]), (0.0, 0.0));
+        assert!(y[..9].iter().chain(&y[22..]).all(|&v| v == 50.0));
+    }
+    // borders: the merged region is flat when it has one anchor only
+    let mut y = vec![9.0, 9.0, 9.0, 9.0, 1.0, 2.0];
+    inpaint_linear(&mut y, &[(0, 1), (2, 3)]);
+    assert_eq!(y, [1.0, 1.0, 1.0, 1.0, 1.0, 2.0]);
+    let mut y = vec![1.0, 2.0, 9.0, 9.0, 9.0];
+    inpaint_linear(&mut y, &[(2, 3), (4, 4)]);
+    assert_eq!(y, [1.0, 2.0, 2.0, 2.0, 2.0]);
+    let mut y = vec![5.0, 6.0, 7.0];
+    inpaint_linear(&mut y, &[(0, 2)]);
+    assert_eq!(y, [5.0, 6.0, 7.0]);
 }

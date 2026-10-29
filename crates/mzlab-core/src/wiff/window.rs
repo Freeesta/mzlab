@@ -9,6 +9,8 @@ const SIZE: usize = 1 << 20;
 pub struct Window<'a, R: ReadAt> {
     inner: &'a mut R,
     len: u64,
+    /// Where a filling read stops: the end of the part of the file the caller reads (a read beyond it goes straight through).
+    stop: u64,
     start: u64,
     buf: Vec<u8>,
 }
@@ -16,9 +18,16 @@ pub struct Window<'a, R: ReadAt> {
 impl<'a, R: ReadAt> Window<'a, R> {
     /// `len`: the size of the file (a window never reads past it).
     pub fn new(inner: &'a mut R, len: u64) -> Self {
+        Window::until(inner, len, len)
+    }
+
+    /// A window that never fills past `stop`: the heads of one injection's blocks lie in its own stretch of the file, and a window running on into the next
+    /// injection would read it once per injection (1 MB each) before it is wanted.
+    pub fn until(inner: &'a mut R, len: u64, stop: u64) -> Self {
         Window {
             inner,
             len,
+            stop: stop.min(len),
             start: 0,
             buf: Vec::new(),
         }
@@ -28,11 +37,11 @@ impl<'a, R: ReadAt> Window<'a, R> {
 impl<R: ReadAt> ReadAt for Window<'_, R> {
     fn read_at(&mut self, off: u64, out: &mut [u8]) -> Result<()> {
         let end = off.saturating_add(out.len() as u64);
-        if out.len() >= SIZE || end > self.len {
+        if out.len() >= SIZE || end > self.stop {
             return self.inner.read_at(off, out);
         }
         if off < self.start || end > self.start + self.buf.len() as u64 {
-            let n = (self.len - off).min(SIZE as u64) as usize;
+            let n = (self.stop - off).min(SIZE as u64) as usize;
             self.buf.resize(n, 0);
             self.start = off;
             if let Err(e) = self.inner.read_at(off, &mut self.buf) {

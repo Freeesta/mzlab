@@ -133,3 +133,91 @@ fn the_root_of_a_dataset_is_found_from_its_members() {
     ];
     assert_eq!(dataset_root(&w), Some(PathBuf::from("/s/x.wiff")));
 }
+
+fn queued(c: &Coda, name: &str, root: &str, stamp: (u64, u64)) {
+    c.enqueue(name, 0, Path::new(root), Some(stamp));
+}
+
+#[test]
+fn a_job_replaced_while_it_runs_cannot_corrupt_the_queue() {
+    let c = Coda::with_workers(2);
+    queued(&c, "a", "/s/a.raw", (1, 1));
+    queued(&c, "b", "/s/b.raw", (1, 1));
+    let a = c.inner.lock().unwrap().take_for_test();
+    // the dataset of `a` changes while it runs: the old job leaves the front, the list shifts
+    queued(&c, "a", "/s/a.raw", (2, 2));
+    c.inner
+        .lock()
+        .unwrap()
+        .finish_for_test(a, Ok(vec![PathBuf::from("old.mzML")]));
+    // no panic, the stale result is dropped, the others are untouched
+    let rows = c.list();
+    let rows = rows["jobs"].as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().all(|r| r["state"] == "queued"), "{rows:?}");
+    assert!(c.ready("a").is_none());
+}
+
+#[test]
+fn a_new_job_of_a_running_dataset_waits_for_it() {
+    let c = Coda::with_workers(2);
+    queued(&c, "a", "/s/a.raw", (1, 1));
+    let first = c.inner.lock().unwrap().take_for_test();
+    queued(&c, "a", "/s/a.raw", (2, 2));
+    // one output folder: the second worker must not start the same dataset
+    assert!(!c.inner.lock().unwrap().can_take_for_test());
+    c.inner.lock().unwrap().finish_for_test(first, Ok(vec![]));
+    assert!(c.inner.lock().unwrap().can_take_for_test());
+}
+
+#[test]
+fn the_stamp_covers_every_member_of_a_dataset() {
+    let d = tempfile::tempdir().unwrap();
+    let wiff = d.path().join("x.wiff");
+    std::fs::write(&wiff, b"w").unwrap();
+    std::fs::write(d.path().join("x.wiff.scan"), b"1234").unwrap();
+    let before = crate::conv_stamp::stamp(&wiff).unwrap();
+    std::fs::write(d.path().join("x.wiff.scan"), b"12345678").unwrap();
+    assert_ne!(crate::conv_stamp::stamp(&wiff), Some(before));
+    let dd = d.path().join("y.D");
+    std::fs::create_dir_all(dd.join("AcqData")).unwrap();
+    std::fs::write(dd.join("AcqData/MSScan.bin"), b"ab").unwrap();
+    let before = crate::conv_stamp::stamp(&dd).unwrap();
+    std::fs::write(dd.join("AcqData/MSScan.bin"), b"abcd").unwrap();
+    assert_ne!(crate::conv_stamp::stamp(&dd), Some(before));
+}
+
+#[test]
+fn old_samples_are_removed_only_when_the_dataset_changed() {
+    let d = tempfile::tempdir().unwrap();
+    let a = d.path().join("a.mzXML");
+    mzxml_file(&a, 4);
+    let out = d.path().join("out");
+    std::fs::create_dir_all(&out).unwrap();
+    let stray = out.join("a-7.mzML");
+    std::fs::write(&stray, b"old").unwrap();
+    let st = crate::conv_stamp::stamp(&a);
+    let files = crate::conv_coda::convert_fresh(&a, &out, st).unwrap();
+    assert_eq!(files.len(), 1, "{files:?}");
+    assert!(!stray.exists());
+    // the same bytes again keep what is there (the cache of a second run)
+    std::fs::write(&stray, b"kept").unwrap();
+    crate::conv_coda::convert_fresh(&a, &out, st).unwrap();
+    assert!(stray.exists());
+}
+
+#[test]
+fn an_index_that_starts_just_after_queueing_holds_the_job_back() {
+    let d = tempfile::tempdir().unwrap();
+    let a = d.path().join("a.mzXML");
+    mzxml_file(&a, 3);
+    let c = Coda::with_workers(1);
+    c.set_folder(d.path().join("cache"));
+    c.add("a.mzXML", 0, &a);
+    std::thread::sleep(Duration::from_millis(10));
+    let busy = Indexing::new();
+    std::thread::sleep(Duration::from_millis(300));
+    assert_eq!(c.list()["jobs"][0]["state"], "queued");
+    drop(busy);
+    wait(&c, "a.mzXML", "done");
+}

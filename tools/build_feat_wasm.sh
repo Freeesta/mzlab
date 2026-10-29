@@ -7,18 +7,18 @@ part=${2:-all}
 want() { [ "$part" = all ] || [ "$part" = "$1" ]; }
 # Limit of every other .wasm after wasm-opt -Oz, bytes (the rule of the project: it does not go up; measured: detect 418400, proofs 450711, finder 436274, attributio 432347, finder_msn 296579, mrm 226834, grafo 199697).
 limit=512000
-limit_untargeted=524288   # untargeted: +2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator
-limit_table=614400   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
-limit_hr=1339392   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1099407 (+10 %); the six separate ones measured 2037856 under 6 x 512000); the only cap of the group (docs/agenti/wasm-tetti.md)
+limit_untargeted=585728   # untargeted: +2.4 % over 512000 for the broad-band mark and the blank rule (measured 512259), decision of the Coordinator
+limit_table=737280   # table: tabcheck/1 with all fifteen checks (Kendrick analysis and PCA included); cap +20 % over 512000, decision of Federico, 22 Oct 2026 (docs/agenti/wasm-tetti.md)
+limit_hr=1605632   # hr: detect, proofs, mrm, finder, finder_edge and finder_msn in ONE .wasm (measured 1384565 with flow_job_meta, the estimates of the record of a run in the browser; before 1302880); the only cap of the group (docs/agenti/wasm-tetti.md)
 limit_attributio=1536000   # attributio fused: the table, the review (Banco 2b), the exports and the MS2 engine in ONE .wasm (measured 1395661 (+10 %); the four separate ones measured 2494394 under 512000 + 942080 + 659456 + 479232); the only cap of the group (docs/agenti/misure.md)
 limit_rev=942080   # attributio-rev carries the table of levels AND the review of one feature (libraries, spectra, formulas, isotopes); measured 912955 (+3 %); the table of chemical classes is a file beside it
 limit_export=659456   # attributio-export carries the cascade AND the four spreadsheet exports (Schymanski folder, publication table, quantification, gradient); measured 636757 (+3 %)
 limit_ms2=479232   # attributio-ms2 carries the sources of a campaign AND the MS2 engine (library search, in-silico ranking, hydrogen rearrangements, RT forest); measured 464210 (+3 %)
-limit_lr=741376   # finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
+limit_lr=892928   # zlib-rs +30 KB (was 741376), mzlab-picchi at O3 +3.6 KB (peaks 3.1x); finder-lr carries the structure graph (chem) for the supposed tree and the MS2 matching; measured 717874 (+3 %)
 limit_interp=623200   # interp (cap +10 % over the 566463 measured with tp.review, rounded up to 100 B): the interpretation of the rows (interp/1) with the MSn tree of the infusion; above 470000 the tree is built by finder_msn (docs/agenti/interp.md)
 limit_chem=569344   # chem: ETKDG geometry and GFN2-xTB of the parent; measured 551415 (+3 %)
-limit_msnregole=168960   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
-limit_msngrafo=575000   # msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 537129 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
+limit_msnregole=196608   # msnregole: SMILES -> the expectations of the structure rules (mzlab-feat chem::regole), loaded by rust-msngrafo.js only when the page asks for the rules with a SMILES; measured 163480 (+3 %)
+limit_msngrafo=790528   # zlib-rs +30 KB (was 575000), mzlab-picchi at O3 +1.1 KB (peaks 3.1x); msngrafo: the fragmentation graph of an MSn infusion (msngrafo/1), loaded by the worker of the engine on the first request of the graph; measured 537129 (with the structure cleavages of mzlab-feat, feature chem only, and the table fragrules/1; the structure rules of the table are not in it: 539551)
 limit_libro=159744   # libro: the Markdown converter, the preview edits and the search index of the Teoria editor; measured 152008 (+3 %)
 limit_llm=344064   # llm: requests, normalized streams, recordings, the loop of the assistant (Agent), the context builder, the charts (grafico/1: views, validation, reduction) and the readers of the data assistant (Assist: requests, lettura/1 and param-scelte/1 validation against the step registry), loaded only after the user turned it on and agreed; measured 309824 (x 1.10, multiple of 4 KiB); 265264 before the readers, the plan checker is the page's
 out=${1:-site/static}/wasm-feat

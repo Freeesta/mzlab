@@ -33,20 +33,28 @@ try:
             pg.evaluate(f"""() => {{ const S = {FLOWS}, inst = S.plan.steps[0];
               const box = FLOW.form(inst, FLOW.stepOf(S.reg, inst), () => {{}}); box.id = 'tmpform'; document.body.append(box); }}""")
             pg.wait_for_selector("#tmpform .molc input", timeout=30000)
-            pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000); pg.click("#tmpform .molc li >> nth=0")
+            pg.fill("#tmpform .molc input", "caffeine"); pg.wait_for_selector("#tmpform .molc li", timeout=30000)
+            # a job that ends while the box is being used keeps the focus and the list
+            pg.evaluate(f"""() => {{ const S = {FLOWS}; FLOW.webMsnAfterRun(S, [{{ id: S.plan.steps[0].id, name: 'typing.json', text: '{{"formato":"msngrafo/1","nodi":[],"archi":[],"spettri":[]}}' }}]); }}""")
+            assert pg.evaluate("document.activeElement.matches('#tmpform .molc input')") and pg.locator("#tmpform .molc li").first.is_visible(), "the graph took the focus from the box"
+            pg.evaluate(f"{FLOWS}.results = {{}}")
+            pg.click("#tmpform .molc li >> nth=0")
             pg.wait_for_function(f"(() => {{ const p = {FLOWS}.plan.steps[0].params || {{}}; return !!p.formula; }})()", timeout=30000)
             pg.evaluate("document.querySelector('#tmpform').remove()")
         step("the molecule typed in the box fills the ion, the adduct and the SMILES", prepare)
         def one_click():
             pg.click("#flx-run")
-            try: pg.wait_for_function("(document.querySelector('.fl-note[role=status]')||{}).textContent && document.querySelector('.fl-note[role=status]').textContent.startsWith('Finished')", timeout=120000)
+            try: pg.wait_for_function("(document.querySelector('.fl-note[role=status]')||{}).textContent && document.querySelector('.fl-note[role=status]').textContent.startsWith('Done')", timeout=120000)
             except Exception: raise AssertionError("note: " + pg.inner_text(".fl-note[role=status]") + " | " + pg.inner_text(".fl-slots"))
-            links = pg.evaluate("[...document.querySelectorAll('.fl-slots a[download]')].map(a => a.download)")
-            assert [n.rsplit(".", 1)[1] for n in links] == ["json", "msp", "csv"], links
-        step("one click runs graph, library and table and saves three files", one_click)
+            # the three texts are in the Results of their nodes (no link left in the rows) and the graph opened by itself
+            labels = pg.evaluate(f"Object.values({FLOWS}.results).flat().map(r => r.label)")
+            assert sorted(n.rsplit(".", 1)[1] for n in labels) == ["csv", "json", "msp"], labels
+            assert pg.locator(".fl-slots a[download]").count() == 0
+            pg.wait_for_selector(".flx-res .ig-node", timeout=30000)
+        step("one click runs graph, library and table, puts the three files in the Results and opens the graph", one_click)
         def texts():
-            got = pg.evaluate("""Promise.all([...document.querySelectorAll('.fl-slots a[download]')].map(a => fetch(a.href).then(r => r.text())))""")
-            g, msp, csv = got
+            by = pg.evaluate(f"""(async () => {{ const o = {{}}; for (const r of Object.values({FLOWS}.results).flat()) o[r.label.split('.').pop()] = await r.text(); return o }})()""")
+            g, msp, csv = by["json"], by["msp"], by["csv"]
             j = json.loads(g)
             assert j["formato"] == "msngrafo/1" and j.get("interpretazione"), list(j)[:12]
             assert "Name:" in msp and "Num Peaks:" in msp
@@ -60,9 +68,9 @@ try:
             # the scheduler runs only a plan that checks: a query file of the plan and the library of the tree
             pg.evaluate(f"""(() => {{ const S = {FLOWS}, l = S.plan.steps.find(s => s.step.startsWith('msn.library_export')); S.plan.inputs.push({{ name: 'q.mgf', type: 'spectra', sha256: '' }}); S.plan.steps.push({{ id: 'srch', step: 'spectra.match@1', algorithm: 'tree', in: {{ query: 'file:q.mgf', library: l.id + '.library' }}, params: {{}} }}) }})()""")
             pg.click('button[aria-label="Run the plan in this browser"]')
-            try: pg.wait_for_function("document.querySelectorAll('.fl-slots a[download]').length === 4", timeout=60000)
+            try: pg.wait_for_function("document.querySelectorAll('.fl-slots a[download]').length === 1", timeout=60000)
             except Exception: raise AssertionError("note: " + pg.inner_text(".fl-note[role=status]") + " | " + pg.inner_text(".fl-slots"))
-            hit = pg.evaluate("fetch(document.querySelectorAll('.fl-slots a[download]')[3].href).then(r => r.text())")
+            hit = pg.evaluate("fetch(document.querySelectorAll('.fl-slots a[download]')[0].href).then(r => r.text())")
             h = json.loads(hit)
             assert h["formato"] == "msncerca/1" and h["candidati"], hit[:200]
         step("with the library of the user in OPFS the same click adds the search: msncerca/1", search)

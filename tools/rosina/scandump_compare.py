@@ -153,15 +153,29 @@ class Comparator:
 
 
 def reactions_of(row):
-    """The reactions of a scan row. RFR gives the MS1 of a Q Exactive one reaction that is only its scan range (centre as precursor, width as isolation, HCD, energy 0):
-    it names no precursor, so it is left out on either side."""
+    """The reactions of a scan row. RFR gives an MS1 of a Q Exactive / Orbitrap one reaction that is only a scan range (centre as precursor, width as isolation,
+    HCD, energy 0): the full range [mz_low-mz_high] or one of the ranges written in the filter text. It names no precursor, so it is left out on either side."""
     rs = row.get("reactions") or []
-    lo, hi = row.get("mz_low"), row.get("mz_high")
-    if row.get("level") == 1 and len(rs) == 1 and lo is not None and hi is not None:
+    if row.get("level") == 1 and len(rs) == 1:
         r = rs[0]
-        if abs((r.get("precursor") or 0) - (lo + hi) / 2) < 0.5 and abs((r.get("iso_width") or 0) - (hi - lo)) < 0.5:
-            return []
+        for lo, hi in _ranges(row):
+            if abs((r.get("precursor") or 0) - (lo + hi) / 2) < 0.5 and abs((r.get("iso_width") or 0) - (hi - lo)) < 0.5:
+                return []
     return rs
+
+
+def _ranges(row):
+    """The scan ranges of an MS1 row: mz_low-mz_high and every `[a-b]` of the filter text."""
+    out = []
+    lo, hi = row.get("mz_low"), row.get("mz_high")
+    if lo is not None and hi is not None:
+        out.append((lo, hi))
+    for a, b in re.findall(r"([\d.]+)-([\d.]+)", row.get("filter") or ""):
+        try:
+            out.append((float(a), float(b)))
+        except ValueError:
+            pass
+    return out
 
 
 class ScanComparator(Comparator):

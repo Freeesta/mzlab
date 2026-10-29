@@ -164,6 +164,20 @@ fn the_mzml_of_the_module_names_the_instrument_and_the_spectrum_types() {
     );
 }
 
+/// A 3200 QTRAP whose product-ion scan blocks are version 3 is a variant (the engine's reader decodes version 2 only and would list it with no scans); a 3200 file
+/// with version 2 blocks only is not.
+#[test]
+fn a_3200_with_version_3_blocks_is_a_variant() {
+    let Some((dir, _)) = reference() else {
+        return;
+    };
+    let mut l = lettori::apri(set(&dir, "epi3200"), &Limiti::sito()).unwrap();
+    assert!(l.variante(0));
+    assert_eq!(l.campioni()[0].scansioni, 2);
+    let mut l = lettori::apri(set(&dir, "prodotto"), &Limiti::sito()).unwrap();
+    assert!(!l.variante(0));
+}
+
 #[test]
 fn what_the_reader_does_not_know_is_refused_never_read_as_a_full_scan() {
     let Some((dir, want)) = reference() else {

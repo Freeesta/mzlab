@@ -96,15 +96,22 @@ fn apri(mut fs: FileSet, limiti: &Limiti) -> Result<Box<dyn Lettore>> {
             d.illeggibili, d.records
         ));
     }
+    // the file name without its folder, as the other readers keep it
+    let nome = m
+        .nome
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(&m.nome)
+        .to_string();
     Ok(Box::new(LettoreShimadzu {
         campioni: vec![Campione {
             id: 0,
-            nome: m.nome.clone(),
+            nome: nome.clone(),
             scansioni: d.indice.len(),
             dimensione: None,
         }],
         sha1: ole.sha1_hex(),
-        nome: m.nome,
+        nome,
         dim: m.dim,
         fam,
         d,

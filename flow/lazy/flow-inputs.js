@@ -26,11 +26,13 @@
     if (!refs.length) delete inst.in[port.name]; else inst.in[port.name] = port.many ? refs : refs[0];
   };
 
-  /** the values an instance resolves to without what the file says: step defaults, algorithm defaults, then the preset @param {any} inst @param {any} step */
-  F.defaults = (inst, step) => {
+  /** the values an instance resolves to without what the file says: step defaults, algorithm defaults, then the preset, then (unless `plain`) what the open files say
+   * of the polarity and the unit resolution, so the form shows them and a value kept at the default follows the files @param {any} inst @param {any} step @param {boolean} [plain] */
+  F.defaults = (inst, step, plain) => {
     const e = F.effective(inst, step), out = /** @type {Record<string, any>} */ ({});
     for (const [name, p] of F.declared(step, e.algorithm)) if (p.default !== undefined) out[name] = p.default;
     if (e.preset) Object.assign(out, e.preset.params || {});
+    if (!plain && F.fromFiles) Object.assign(out, F.fromFiles(step));
     return out;
   };
   /** sets a parameter; a value equal to the default (or null) removes it, so the file keeps only the differences @param {any} inst @param {any} step @param {string} name @param {any} value */

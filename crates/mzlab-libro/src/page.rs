@@ -54,6 +54,10 @@ pub fn convert(text: &str, nome: &str, opt: &Options) -> Result<String, LibroErr
         .to_string();
     let mut p = Parser::new(nome, &prefix, opt);
     let lines = splitlines(text);
+    // NUL delimits the inline placeholders, so a literal one in the source would be swapped for unrelated HTML
+    if let Some(n) = lines.iter().position(|l| l.contains('\0')) {
+        return Err(LibroError::new(nome, n + 1, "NUL character in the source"));
+    }
     let mut body = p.blocks(&lines, 1)?;
     if opt.pubblico && p.ctx.ipotesi > 0 {
         return Err(LibroError::new(

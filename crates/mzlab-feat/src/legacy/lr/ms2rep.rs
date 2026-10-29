@@ -166,9 +166,10 @@ pub fn rep_json<R: ReadAt>(
             formula: None,
         })
         .collect();
-    let found = ms2frag::find(
+    let found = ms2frag::find_ion(
         prec,
         neutral,
+        &d.parent.adduct,
         &ions,
         d.settings.frag_min_rel,
         ms2frag::LOSS_TOL_LR,

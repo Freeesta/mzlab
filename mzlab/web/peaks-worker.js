@@ -5,12 +5,15 @@
 import init, { detect_peaks, peak_quality, label_peaks, main_peak, flat_window } from "./wasm/mzlab_wasm.js";
 
 const FIELDS = 10;                                      // PEAK_FIELDS of mzlab-wasm
-const ready = init();
+// The page sends the compiled engine first ({ op: "module", module }; module null = compile it here); an operation that arrives first starts init() by itself.
+let ready = null;
+const start = module => ready || (ready = module ? init({ module_or_path: module }) : init());
 
 onmessage = async ev => {
   const m = ev.data;
+  if (m.op === "module") { start(m.module); return; }
   try {
-    await ready;
+    await start(null);
     if (m.op === "quality") {
       const out = new Float64Array(3);
       const ok = peak_quality(m.rt, m.y, m.lo, m.hi, out);
@@ -35,7 +38,7 @@ onmessage = async ev => {
       const out = new Float64Array(2);
       postMessage({ id: m.id, v: main_peak(m.x, m.y, m.refine, out) ? { x: out[0], y: out[1] } : null });
     } else postMessage({ id: m.id, error: "unknown operation" });
-  } catch (e) {
+  } catch (e_) { const e = /** @type {Lanciato} */ (e_);
     postMessage({ id: m.id, error: String((e && e.message) || e) });
   }
 };

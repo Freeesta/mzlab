@@ -91,6 +91,10 @@ fn generate() -> Step {
                 optional: true,
                 ..Port::new("features", DataType::Table, "Feature table (families already found)")
             },
+            Port {
+                optional: true,
+                ..Port::new("index", DataType::Mzidx, "Scan index of each file: gives the polarity and the unit resolution the plan leaves unwritten").many()
+            },
         ],
         outs: vec![Port::new("hypotheses", DataType::Transform, "Hypotheses: formula, m/z, adduct, source and weakest prediction level")],
         params: vec![
@@ -145,7 +149,7 @@ fn rule_chain() -> Algorithm {
         ..algorithm(
             "rule_chain",
             "Rules, suspects, families and lists",
-            "Parent times the rules of TP_Mine/data/regole_tp.json (profile of the campaign), merged with the other sources by net formula change; ids follow the order of m/z (crates/mzlab-feat/src/hypo/sources.rs). Prediction level 2 literature, 3 class, 4 generic.",
+            "Parent times the rules of TP_Mine/data/regole_tp_2.json (profile of the campaign), merged with the other sources by net formula change; ids follow the order of m/z (crates/mzlab-feat/src/hypo/sources.rs). Prediction level 2 literature, 3 class, 4 generic.",
             Status::Available,
         )
     }

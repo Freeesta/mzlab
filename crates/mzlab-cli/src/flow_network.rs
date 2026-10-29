@@ -8,7 +8,7 @@ use mzlab_core::step::DataType;
 use mzlab_feat::rete::{network_text, ReteParams};
 use mzlab_feat::store::Slice;
 
-const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp.json");
+const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
 fn param(job: &Job, name: &str) -> Option<f64> {
     let found = job.resolved.params.iter().find(|(k, _)| k == name);

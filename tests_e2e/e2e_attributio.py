@@ -63,7 +63,7 @@ try:
         b = p.chromium.launch()
         pg0 = new_page(b, False)
         lib.attendi(pg0, "typeof uipAdminOn === 'function' && typeof QTOOLS !== 'undefined'")
-        step("without the administrator mode there is no entry", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio, [data-v=flow]").count() else None)
+        step("without the administrator mode there is no Attributio entry of its own", lambda: (_ for _ in ()).throw(AssertionError("entry found")) if pg0.locator("[data-v=attributio], #v-attributio").count() else None)
         pg0.close()
 
         pg = new_page(b, True)

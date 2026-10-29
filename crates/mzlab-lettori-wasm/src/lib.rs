@@ -7,23 +7,38 @@ use mzlab_core::lettori::{FileSet, Limiti, Membro};
 use mzlab_core::lettori_mzml;
 use wasm_bindgen::prelude::*;
 
+mod json_testo;
 pub mod sessione;
 use sessione::Sessioni;
 
 /// Bytes sent to `sink` at a time.
 const BLOCCO: usize = 64 << 10;
 
+fn error_text(e: &mzlab_core::Error) -> String {
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
+    for (i, (k, v)) in e.params.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
+    }
+    o.raw("}}");
+    o.0
+}
+
 fn error_json(e: &mzlab_core::Error) -> JsValue {
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|(k, v)| format!("\"{}\":{:?}", k, v))
-        .collect();
-    JsValue::from_str(&format!(
-        "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
-        e.key,
-        params.join(",")
-    ))
+    JsValue::from_str(&error_text(e))
+}
+
+#[cfg(test)]
+mod prove {
+    use super::*;
+
+    /// A parameter taken from a corrupt file may hold control characters: the error must still be JSON (`{:?}` writes `\0` and `\u{..}`, which are not).
+    #[test]
+    fn error_text_is_valid_json_for_control_characters() {
+        let e = mzlab_core::Error::new("err.file.wiff").with("detail", "a\0b\u{7f}\u{1}\"\\'é");
+        let v: serde_json::Value = serde_json::from_str(&error_text(&e)).expect("valid JSON");
+        assert_eq!(v["params"]["detail"], "a\0b\u{7f}\u{1}\"\\'é");
+    }
 }
 
 /// Bytes fetched from JS at once for a small read: a reader like `opentfraw` asks for a few bytes at a time (4 for a length), and every call of `read` is a slice of a `File` read
@@ -95,7 +110,7 @@ impl mzlab_core::idxread::ReadAt for JsMember {
         let fine = off + buf.len() as u64;
         let dentro = off >= self.inizio && fine <= self.inizio + self.blocco.len() as u64;
         if !dentro {
-            let n = LETTURA.min(self.dim.saturating_sub(off) as usize);
+            let n = self.dim.saturating_sub(off).min(LETTURA as u64) as usize;
             if buf.len() >= LETTURA || n < buf.len() {
                 da_js(&self.read, self.i, off, buf.len())?.copy_to(buf); // big (or past the end, for JS to refuse): as asked
                 return Ok(());
@@ -196,7 +211,13 @@ pub fn famiglia() -> String {
 /// The extensions the module accepts (JSON array, lower case with the dot).
 #[wasm_bindgen]
 pub fn estensioni() -> String {
-    serde_json::to_string(&mzlab_lettori::estensioni()).unwrap_or_else(|_| "[]".into())
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("[");
+    for (i, e) in mzlab_lettori::estensioni().into_iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(e);
+    }
+    o.raw("]");
+    o.0
 }
 
 /// What the module sees in a dataset: `{formato, campioni:[{id,name,scans}], motivi:[...]}`. The `motivi` say what the engine's reader would not give: `"srm"` (SRM only
@@ -217,20 +238,37 @@ pub fn probe(names: js_sys::Array, sizes: &[f64], read: Function) -> Result<Stri
         }
         Err(e) => return Err(error_json(&e)),
     };
-    let campioni: Vec<serde_json::Value> = l
-        .campioni()
-        .iter()
-        .map(|c| serde_json::json!({ "id": c.id, "name": c.nome, "scans": c.scansioni }))
-        .collect();
     for x in mzlab_lettori::motivi(&mut *l, 0) {
         if !motivi.contains(&x) {
             motivi.push(x);
         }
     }
-    Ok(
-        serde_json::json!({ "formato": l.formato().id(), "campioni": campioni, "motivi": motivi })
-            .to_string(),
-    )
+    let mut o = mzlab_core::json::Out::default();
+    o.raw("{\"formato\":")
+        .str(l.formato().id())
+        .raw(",\"campioni\":");
+    json_testo::campioni_json(&mut o, l.campioni());
+    o.raw(",\"motivi\":[");
+    for (i, m) in motivi.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" }).str(m);
+    }
+    o.raw("]}");
+    Ok(o.0)
+}
+
+/// The reader of `fs` for the mzML of sample `c`: a SCIEX pair reads the heads of the blocks of that injection only (`apri_solo`, as the engine does), any other set opens as `apri`.
+fn apri_campione(
+    #[cfg_attr(not(any(feature = "sciex", feature = "tutte")), allow(unused_mut))] mut fs: FileSet,
+    c: usize,
+) -> mzlab_core::Result<Box<dyn mzlab_core::lettori::Lettore>> {
+    #[cfg(any(feature = "sciex", feature = "tutte"))]
+    if mzlab_lettori::riconosci(&mut fs).is_some_and(|v| v.id == mzlab_core::wiff::lettore::VOCE.id)
+    {
+        let l = mzlab_core::wiff::lettore::apri_solo(fs, &Limiti::sito(), Some(c))?;
+        return Ok(Box::new(mzlab_lettori::srm::SrmDaScansioni::new(l)));
+    }
+    let _ = c;
+    mzlab_lettori::apri(fs, &Limiti::sito())
 }
 
 /// Sample `c` of a dataset as mzML, sent to `sink(Uint8Array)` in pieces of about 64 KB; `progress(done, total)` counts the spectra written.
@@ -244,7 +282,7 @@ pub fn to_mzml(
     progress: Function,
 ) -> Result<(), JsValue> {
     let m = Membri::new(names, sizes, read)?;
-    let mut l = mzlab_lettori::apri(m.fileset(), &Limiti::sito()).map_err(|e| error_json(&e))?;
+    let mut l = apri_campione(m.fileset(), c as usize).map_err(|e| error_json(&e))?;
     let mut out = BlockWriter {
         sink,
         buf: Vec::new(),
@@ -256,7 +294,13 @@ pub fn to_mzml(
             &(total as f64).into(),
         );
     };
-    lettori_mzml::scrivi(&mut *l, c as usize, &mut out, &mut tell).map_err(|e| error_json(&e))?;
+    // indexed mzML with no processing steps: the form `mzlab-cli convert` writes (`flow_base.rs` `write_mzml_with`), byte for byte
+    let conv = lettori_mzml::Conversione {
+        steps: Some(&[]),
+        ..lettori_mzml::Conversione::default()
+    };
+    conv.scrivi(&mut *l, c as usize, &mut out, &mut tell)
+        .map_err(|e| error_json(&e))?;
     out.flush().map_err(|_| {
         error_json(&mzlab_core::Error::new("err.file.notAccepted").with("detail", "write"))
     })

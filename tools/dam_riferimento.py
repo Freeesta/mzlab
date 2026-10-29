@@ -251,7 +251,7 @@ def main(argv) -> int:
         ref["gradients"].append({"fmt": "model", "model": m, "result": grad(lambda m: analog.gradient_model(m.get("source", "manual"), m.get("points", []), m.get("run_time"), m.get("solvents")), m)})
     ref["gradients"].append({"fmt": "course", "result": grad(analog.course_gradient)})
     rs = np.random.RandomState(3)
-    ref["analog"]["pressure"] = [{"y": list(map(float, y)), "unit": u, "result": [list(map(float, analog.pressure_to_bar(y, u)[0])), analog.pressure_to_bar(y, u)[1]]}
+    ref["analog"]["pressure"] = [{"y": list(map(float, y)), "unit": u, "result": None if analog.pressure_to_bar(y, u) is None else list(map(float, analog.pressure_to_bar(y, u)))}
                                  for y, u in ((rs.uniform(0, 300, 20), "bar"), (rs.uniform(0, 30, 20), "megapascal"), (rs.uniform(1e5, 3e7, 20), "pascal"), (rs.uniform(1e6, 9e8, 20), "Pascal"),
                                               (rs.uniform(0, 4000, 20), "psi"), (rs.uniform(0, 100, 20), ""), (rs.uniform(0, 100, 20), "kPa [x]"))]
     red = []

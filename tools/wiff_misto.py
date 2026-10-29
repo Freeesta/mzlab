@@ -4,8 +4,8 @@
 
 Writes OUT/misto.wiff(.scan): s1 Full Scan, s2 Product Ion (one precursor, 12 cycles), s3 MRM (3 transitions), s4 Full Scan, s5 Product Ion (one scan),
 s6 Product Ion without a method of its own, s7 Product Ion whose scan blocks do not start with the scan marker (unreadable: not an MRM). Each sample has its own method with the header code of its experiment (15 full, 11 product ion);
-OUT/tipi.json: the type the list must show for each sample (full | ms2 | mrm | infusion | empty). Today s2 (12 cycles of one precursor, no column) is an
-infusion by the rule of infusione.rs and s6 (no method) a full scan. Built with the Writer of wiff_riferimento.py. No laboratory data is used.
+OUT/tipi.json: the type the list must show for each sample (full | ms2 | mrm | infusion | empty). Today s2 (12 cycles of one precursor, no column) is a
+targeted MS2 by the rule of infusione.rs (one key over the whole run is not an infusion) and s6 (no method) a full scan. Built with the Writer of wiff_riferimento.py. No laboratory data is used.
 """
 import json
 import sys
@@ -34,7 +34,7 @@ def main():
     w.sample(7, [("scan", PRODUCT, 1000.0 * (k + 1), 1.0e4) for k in range(12)], pi_m)
     wiff_riferimento.scan_block = scan_block
     w.save(out, "misto")
-    (out / "tipi.json").write_text(json.dumps({"1": "full", "2": "infusion", "3": "mrm", "4": "full", "5": "ms2", "6": "full", "7": "empty"}))
+    (out / "tipi.json").write_text(json.dumps({"1": "full", "2": "ms2", "3": "mrm", "4": "full", "5": "ms2", "6": "full", "7": "empty"}))
 
 
 if __name__ == "__main__":

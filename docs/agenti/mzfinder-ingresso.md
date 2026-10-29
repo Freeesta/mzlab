@@ -17,7 +17,7 @@ Aree vicine: `mzfeat-wasm.md` (i `.wasm` e il pool), `mzidx.md` (formato).
 - Il worker tiene i file ricevuti in `held`: sono la sorgente dei `.mzidx` e dei byte MRM.
 
 ## Lista di trasformazioni dell'utente (`legacy/transf.rs`, `finder_transformations`)
-- Il testo della lista (righe `nome;variazione[;nota]`, `#` commenti, `lit:` = livello 2) lo legge `crates/mzlab-feat/src/legacy/transf.rs` (un vettore uguale tiene il primo nome). `finder_transformations(regole, testo)` in `crates/mzlab-feat-wasm/src/finder.rs` fonde il testo nel `regole_tp.json` e restituisce il JSON fuso; una riga sbagliata dà un errore con la riga sbagliata.
+- Il testo della lista (righe `nome;variazione[;nota]`, `#` commenti, `lit:` = livello previsto 2 della regola, scala della previsione e non livello di identificazione di Schymanski) lo legge `crates/mzlab-feat/src/legacy/transf.rs` (un vettore uguale tiene il primo nome). `finder_transformations(regole, testo)` in `crates/mzlab-feat-wasm/src/finder.rs` fonde il testo nel `regole_tp_2.json` e restituisce il JSON fuso; una riga sbagliata dà un errore con la riga sbagliata.
 - `tpmine-worker.js` (`runRust`) lo applica solo se il testo non è vuoto e passa le regole fuse a `hypotheses`: il testo di default non cambia le regole, quindi il Dig è identico. Parità: `tests/golden/finder_transf.json` (risposte congelate), `crates/mzlab-feat/tests/legacy_transf.rs`, `tests_e2e/e2e_tpmine_transf.py`.
 
 ## Tabella delle trasformazioni (`TP_Mine/js/43_trasformazioni.js`, `window.TPTR`)

@@ -1,6 +1,9 @@
 //! `mzlab-cli features` writes the same table as the page: the CSV of the CLI on three synthetic mzML files is compared, character by character, with the one
 //! the pipeline of the app gives on indexes built in memory (`run::recipe_for` -> `run::detect` -> `run::align` -> the export "full" of the table). Synthetic data only.
 
+#[path = "flow_parita_dati_tests.rs"]
+mod flow_parita_dati_tests;
+
 use std::path::Path;
 
 use mzlab_core::budget::sha256_hex;
@@ -187,6 +190,31 @@ fn the_convert_step_writes_an_indexed_mzml_the_table_step_reads() {
 fn cli(args: &[&str]) -> crate::Outcome {
     let a: Vec<String> = args.iter().map(|x| x.to_string()).collect();
     crate::execute(&a)
+}
+
+/// Two `features` runs of one process (threads of a test, a library caller) keep their indexes apart: each gets the CSV it would get alone.
+#[test]
+fn concurrent_features_runs_do_not_share_their_index_folder() {
+    let dir = std::env::temp_dir().join(format!("mzlab_cli_conc_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let paths: Vec<String> = [0.0, 10.0, 30.0]
+        .iter()
+        .map(|&t| {
+            let p = dir.join(format!("std_t{:03}min.mzML", t as u32));
+            std::fs::write(&p, mzml(t)).unwrap();
+            p.to_string_lossy().into_owned()
+        })
+        .collect();
+    let mut args: Vec<&str> = vec!["features"];
+    args.extend(paths.iter().map(String::as_str));
+    let alone = cli(&args).stdout;
+    let runs: Vec<Vec<u8>> = std::thread::scope(|s| {
+        let hs: Vec<_> = (0..4).map(|_| s.spawn(|| cli(&args).stdout)).collect();
+        hs.into_iter().map(|h| h.join().unwrap()).collect()
+    });
+    assert!(!alone.is_empty());
+    assert!(runs.iter().all(|r| *r == alone));
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]

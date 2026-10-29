@@ -165,7 +165,7 @@ try:
             assert "XIC from the map" in pg.inner_text("#pal-l"), pg.inner_text("#pal-l")
             n0 = npan("xic"); pg.keyboard.press("Enter"); attendi(pg, "document.getElementById('paletta').hidden")
             assert npan("xic") == n0 + 1 or pg.evaluate("!document.getElementById('paletta').hidden") is False
-            for q in ["unlock", "gestures", "reset zoom", "copy the coord"]:
+            for q in ["unlock", "gestures", "reset zoom", "copy coord"]:
                 pg.keyboard.press("Control+k"); attendi(pg, "!document.getElementById('paletta').hidden && document.activeElement.id === 'pal-in'"); pg.keyboard.type(q); attendi(pg, "document.querySelectorAll('#pal-l li').length >= 1"); assert pg.evaluate("document.querySelectorAll('#pal-l li').length") >= 1, q
                 pg.keyboard.press("Escape"); attendi(pg, "document.getElementById('paletta').hidden")
         step("palette Ctrl/⌘ K finds the commands of the map", palette)

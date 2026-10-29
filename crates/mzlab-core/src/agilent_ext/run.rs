@@ -260,19 +260,9 @@ pub(crate) fn add_sic(
     }
 }
 
-/// SHA-1 (hex) of the first `len` bytes of a reader, read in blocks of 1 MB.
+/// SHA-1 (hex) of the first `len` bytes of a reader (`metodo::sha1_hex`).
 pub(crate) fn sha1_of<R: ReadAt>(r: &mut R, len: u64) -> Result<String> {
-    use sha1::{Digest as _, Sha1};
-    let mut h = Sha1::new();
-    let mut buf = vec![0u8; 1 << 20];
-    let mut at = 0u64;
-    while at < len {
-        let n = (len - at).min(buf.len() as u64) as usize;
-        r.read_at(at, &mut buf[..n])?;
-        h.update(&buf[..n]);
-        at += n as u64;
-    }
-    Ok(h.finalize().iter().map(|x| format!("{x:02x}")).collect())
+    crate::metodo::sha1_hex(r, len)
 }
 
 impl AgilentD {

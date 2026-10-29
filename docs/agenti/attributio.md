@@ -1,6 +1,6 @@
 # Attributio in Rust (cascata dei livelli, Banco 2b) e binario MZ
 
-Studio e piano: `docs/studi/ATTRIBUTIO.md`. Tutto ciò che si vede nella pagina sta dietro la modalità amministratore: Attributio vive dentro Flow (scheda di amministratore, `flow/`), che si registra in `QTOOLS` con `admin: true`: il loader la mostra solo se `uipAdminOn()` (`mzlab/web/settings.js:100`) è vero (meccanismo in `docs/agenti/mzfinder.md`).
+Studio e piano: `docs/studi/ATTRIBUTIO.md`. Attributio vive dentro Flow (`flow/`), che si registra in `QTOOLS` senza condizioni (meccanismo in `docs/agenti/mzfinder.md`); i pannelli interni di ricerca restano dietro `uipAdminOn()` (`mzlab/web/settings.js`).
 
 ## Binario AT: passaggio di Attributio
 - **Scopo**: portare Attributio 1.12.0 (repository privato `Freeesta/attributio`) in Rust con parità sulla campagna sintetica. Il livello 2b è una decisione del chimico: il programma propone e mostra le prove; solo con `[levels] auto_2b = true` (spento di default) il programma scrive da sé il 2b delle proposte `2b-strong`, sempre marcato «auto-2b».

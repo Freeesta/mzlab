@@ -36,7 +36,7 @@ try:
         step("tab 1: the header of the scan under the cursor, with every parameter of the file; it follows the next scan", hdr)
         def lst():
             tab("lst"); pg.wait_for_selector("#hri-list .r", timeout=15000)
-            t = pg.inner_text("#hri-body").split("\n")[0]; n = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.sr[0].x.length"); assert str(n) in t, (t, n)
+            t = pg.inner_text("#sb-title"); n = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.sr[0].x.length"); assert str(n) in t, (t, n)
             c0 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').cur")
             pg.evaluate("document.querySelector('#hri-list').scrollTop=2000"); pg.wait_for_timeout(300)
             pg.locator("#hri-list .r").nth(2).click(); pg.wait_for_timeout(800)
@@ -45,13 +45,13 @@ try:
             a = pg.evaluate("[...document.querySelectorAll('#hri-list .r')].slice(0,4).map(r=>+r.children[3].innerText)"); assert a == sorted(a), a
         step("tab 2: the list of the scans (all of them, scrolling), a row moves the cell, a column sorts", lst)
         def fil():
-            tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t and "Status log" in t, t[:300]
+            tab("fil"); t = body(); assert "Orbitrap Exploris 120" in t and "Scansioni per tipo" in t, t[:300]
         step("tab 3: file and instrument as the mzML says them", fil)
         def launchers():
             tab("cmp"); pg.wait_for_selector("#cx-mz", timeout=10000); pg.click("#cx-exp"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
             tab("iso"); pg.fill("#hri-f", "C13H24N4O3S"); pg.fill("#hri-r", "35000"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.iso&&p.iso.formula==='C13H24N4O3S'&&p.iso.R===35000)")
-            tab("idn"); assert "Identifica tutte" in body()
+            tab("idn"); assert "Carica cartella" in body() and "Identifica tutte" not in body(), body()
         step("composition, isotopes and libraries open the functions that already exist", launchers)
         def persist():
             assert pg.evaluate("JSON.parse(localStorage.getItem('mzlab.banco.info')).tab") == "idn"

@@ -67,13 +67,13 @@ fn decode(s: &str) -> String {
 /// The index of one whole file (not a part of a mixed file) and the routes it answers.
 pub struct Routes<R: ReadAt> {
     pub idx: Index<R>,
-    /// The last whole-file maps of the session grid (the grid, the cells): a difference asks for the same map of a file up to three times.
-    /// Each map carries the tick of its last use (`next_tick`), so that the engine can drop the least recently used one of all the files.
+    /// The last whole-file maps of the session grid (the grid, the cells), each with the tick of its last use (`next_tick`): a difference asks for the same map up to three times.
     pub(crate) maps: Vec<(String, std::sync::Arc<Vec<f32>>, u64)>,
     /// The spacing of the points of a profile level, worked out once (`Item._step`).
     pub(crate) steps: Vec<(u8, Option<f64>)>,
     /// The pyramid of map tiles of each level (`maptiles`), built on first use; `None` = the level has none.
     pub(crate) tiles: Vec<(u8, Option<std::sync::Arc<crate::maptiles::Pyramid>>, u64)>,
+    pub(crate) cells: crate::mapscan::CellStore,
     /// The polarity part of a mixed file this item stands for (`Some(1)` / `Some(-1)`); `None` = the whole file. Its routes read the sections of that polarity.
     pub pol: Option<i8>,
     /// The MSn trees already built and the options of the request being answered (`msnroute::Msn`).
@@ -82,7 +82,7 @@ pub struct Routes<R: ReadAt> {
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), pol: None, msn: Default::default() }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), cells: Default::default(), pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -92,11 +92,11 @@ impl<R: ReadAt> Routes<R> {
 
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        if !self.has_scans() {
-            return Ok(crate::mrmroutes::no_scans(path, q));
-        }
+        if let Some(r) = self.canali_route(path, q) { return r; }
+        if !self.has_scans() { return Ok(crate::mrmroutes::no_scans(path, q)); }
         self.con_opz(q, |r| match path {
             "/api/chrom" => r.chrom(q),
+            "/api/xic" => r.xic_route(q),
             "/api/filters" => r.filters().map(Some),
             "/api/scanlist" => r.scanlist(q),
             "/api/nearest_scan" => r.nearest_scan(q),
@@ -182,6 +182,9 @@ impl<R: ReadAt> Routes<R> {
                 ar.bp_inten.clone()
             }
         };
+        if filt.is_none() && !(prec.is_some() && level > 1) {
+            return Ok(Some((self.idx.arrays(si)?.rt.clone(), y)));
+        }
         let (rt, ids) = {
             let ar = self.idx.arrays(si)?;
             (ar.rt.clone(), ar.scan_ids.clone())
@@ -199,14 +202,7 @@ impl<R: ReadAt> Routes<R> {
                 }
             }
         }
-        let pick = |v: &[f64]| -> Vec<f64> {
-            v.iter()
-                .zip(&keep)
-                .filter(|(_, k)| **k)
-                .map(|(x, _)| *x)
-                .collect()
-        };
-        Ok(Some((pick(&rt), pick(&y))))
+        Ok(Some((kept(&rt, &keep), kept(&y, &keep))))
     }
 
     pub fn filters(&mut self) -> Result<String> {
@@ -278,12 +274,12 @@ impl<R: ReadAt> Routes<R> {
             o.raw(",\"n\":0,\"sid\":[],\"no\":[],\"rt\":[],\"tic\":[],\"prec\":[],\"bpmz\":[],\"bpint\":[]}");
             return Ok(Some(o.0));
         };
-        let ar = self.idx.arrays(si)?.clone();
         let fl = self.filtro(filt)?;
+        let (ar, scans) = self.idx.arrays_scans(si)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &self.idx.scans[ar.scan_ids[j] as usize])))
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
             .collect();
-        let sc = |j: usize| &self.idx.scans[ar.scan_ids[j] as usize];
+        let sc = |j: usize| &scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
             .int(level as i64)
             .raw(",\"n\":")
@@ -329,11 +325,11 @@ impl<R: ReadAt> Routes<R> {
         let Some(si) = self.idx.section_of(level, self.pol) else {
             return Ok(None);
         };
-        let ar = self.idx.arrays(si)?.clone();
         let fl = self.filtro(filter)?;
+        let (ar, scans) = self.idx.arrays_scans(si)?;
         let mut best: Option<(f64, usize)> = None;
         for &id in &ar.scan_ids {
-            let s = &self.idx.scans[id as usize];
+            let s = &scans[id as usize];
             let ok = match (&fl, precursor) {
                 (Some(f), _) => f.passa(id as usize, s),
                 (None, Some(p)) => (s.prec(-100.0) - p).abs() <= 0.6,
@@ -360,7 +356,7 @@ impl<R: ReadAt> Routes<R> {
     }
 }
 
-fn trace(rt: &[f64], y: &[f64]) -> String {
+pub(crate) fn trace(rt: &[f64], y: &[f64]) -> String {
     let mut o = Out::default();
     o.raw("{\"rt\":")
         .rounded(rt, 4)
@@ -384,7 +380,7 @@ pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<
 
 /// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
 pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    map_cache_bytes(files) + tiles_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+    map_cache_bytes(files) + tiles_cache_bytes(files) + crate::mapscan::cells_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
 }
 
 /// Bytes of the pyramids of map tiles (`maptiles`) of all the files; they go in the same LRU as the maps.
@@ -409,32 +405,32 @@ pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Rout
 /// The one LRU of the engine: maps, per-scan arrays and cached blocks of ALL the files go, least recently used first, until the cache holds at most
 /// `cap` bytes (every entry is read again from the index when asked: the answers do not change). Returns how many entries were dropped.
 pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
+    // (clock, order in a tie: map, tile pyramid, scan cells, index block; file; index in its list)
     let mut dropped = 0;
     while cache_bytes(files) > cap {
-        let map = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
-        let tile = files.iter().flat_map(|(k, r)| r.tiles.iter().enumerate().filter(|(_, t)| t.1.is_some()).map(move |(i, t)| (t.2, *k, i))).min();
-        let idx = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, *k))).min();
-        let older = |t: u64, other: Option<u64>| other.is_none_or(|o| t <= o);
-        let (tm, tt, ti) = (map.map(|m| m.0), tile.map(|t| t.0), idx.map(|i| i.0));
-        match (map, tile, idx) {
-            (Some((t, k, i)), _, _) if older(t, tt) && older(t, ti) => {
-                if let Some(r) = files.get_mut(&k) {
-                    r.maps.remove(i);
-                }
+        let maps = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, 0u8, *k, i)));
+        let tiles = files.iter().flat_map(|(k, r)| r.tiles.iter().enumerate().filter(|(_, t)| t.1.is_some()).map(move |(i, t)| (t.2, 1u8, *k, i)));
+        let cells = files.iter().flat_map(|(k, r)| r.cells.tables.iter().enumerate().map(move |(i, c)| (c.3, 2u8, *k, i)));
+        let blocks = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, 3u8, *k, 0)));
+        let Some((_, kind, k, i)) = maps.chain(tiles).chain(cells).chain(blocks).min_by_key(|e| (e.0, e.1)) else { break };
+        if let Some(r) = files.get_mut(&k) {
+            match kind {
+                0 => drop(r.maps.remove(i)),
+                1 => drop(r.tiles.remove(i)),
+                2 => drop(r.cells.tables.remove(i)),
+                _ => drop(r.idx.evict_oldest()),
             }
-            (_, Some((t, k, i)), _) if older(t, tm) && older(t, ti) => {
-                if let Some(r) = files.get_mut(&k) {
-                    r.tiles.remove(i);
-                }
-            }
-            (_, _, Some((_, k))) => {
-                if let Some(r) = files.get_mut(&k) {
-                    r.idx.evict_oldest();
-                }
-            }
-            _ => break,
         }
         dropped += 1;
     }
     dropped
+}
+
+/// The values of `v` whose scan is kept.
+fn kept(v: &[f64], keep: &[bool]) -> Vec<f64> {
+    v.iter()
+        .zip(keep)
+        .filter(|(_, k)| **k)
+        .map(|(x, _)| *x)
+        .collect()
 }

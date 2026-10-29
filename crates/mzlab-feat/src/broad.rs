@@ -13,6 +13,9 @@ use crate::broad_gt::{detrend, median, CommonMode};
 use crate::centwave::ricker;
 use crate::trace::{filled, reserve};
 
+mod scale;
+use scale::{candidates, Kernel};
+
 /// Standard deviation of a Gaussian over its full width at half maximum.
 const FWHM: f64 = 2.354_820_045_030_949_3;
 /// Number of scales of the multiscale pass.
@@ -113,25 +116,13 @@ pub struct BroadPeak {
     pub area_s: f64,
     pub snr: f64,
     pub scale_s: f64,
+    /// Half-height width above the local bridge, in scans (blocks x `decimate`).
+    pub fwhm_scans: f64,
 }
 
 /// Standard deviation (in samples) of the Ricker wavelet whose full width at half maximum is `fwhm_s`.
 fn sigma(fwhm_s: f64, dt_s: f64) -> f64 {
     (fwhm_s / dt_s / FWHM).max(0.8)
-}
-
-/// Response of the Ricker wavelet of standard deviation `s` samples centred on sample `t` (taps outside the series are dropped).
-fn response_at(y: &[f64], t: usize, s: f64) -> f64 {
-    let half = libm::ceil(4.0 * s) as isize;
-    let (i0, i1) = (
-        (t as isize - half).max(0) as usize,
-        (t + half as usize + 1).min(y.len()),
-    );
-    let mut acc = 0.0;
-    for (i, v) in y.iter().enumerate().take(i1).skip(i0) {
-        acc += v * ricker((i as f64 - t as f64) / s);
-    }
-    acc / libm::sqrt(s)
 }
 
 fn argmax(y: &[f64], lo: usize, hi: usize) -> usize {
@@ -152,17 +143,31 @@ pub fn is_broad_ridge(y: &[f64], lo: usize, hi: usize, dt_s: f64) -> Result<bool
         return Ok(false);
     }
     let t = argmax(y, lo, hi);
-    let r = RIDGE_S.map(|w| response_at(y, t, sigma(w, dt_s)));
+    let mut r = [0.0; 3];
+    for (out, w) in r.iter_mut().zip(RIDGE_S) {
+        *out = Kernel::new(sigma(w, dt_s))?.at(y, t);
+    }
     Ok(r[2] > 0.0 && r[2] >= r[1] && r[1] >= r[0])
 }
 
 /// Replaces every `(s, e)` (both included) by the straight line between the points just outside it (flat at an edge, unchanged without anchors).
+/// Regions that touch or overlap are merged first, so an anchor never falls inside another region; ranges with `s > e` or `e >= len` are skipped.
 pub fn inpaint_linear(y: &mut [f64], regions: &[(usize, usize)]) {
     let n = y.len();
-    for &(s, e) in regions {
-        if s > e || e >= n {
-            continue;
+    let mut sorted: Vec<(usize, usize)> = regions
+        .iter()
+        .copied()
+        .filter(|&(s, e)| s <= e && e < n)
+        .collect();
+    sorted.sort_unstable();
+    let mut merged: Vec<(usize, usize)> = Vec::with_capacity(sorted.len());
+    for (s, e) in sorted {
+        match merged.last_mut() {
+            Some(last) if s <= last.1 + 1 => last.1 = last.1.max(e),
+            _ => merged.push((s, e)),
         }
+    }
+    for (s, e) in merged {
         match (s.checked_sub(1), (e + 1 < n).then_some(e + 1)) {
             (Some(l), Some(r)) => {
                 let (yl, yr) = (y[l], y[r]);
@@ -215,46 +220,6 @@ pub fn decimate(
     Ok((r, v, z))
 }
 
-/// One candidate: the sample, the scale (index) and the response that found it.
-struct Cand {
-    t: usize,
-    s: usize,
-    r: f64,
-}
-
-/// The candidates: local maxima of the response at every scale, strongest first kept when two lie within the larger standard deviation.
-fn candidates(y: &[f64], sig: &[f64]) -> Result<Vec<Cand>> {
-    let n = y.len();
-    let mut all: Vec<Cand> = Vec::new();
-    for (si, &s) in sig.iter().enumerate() {
-        let mut r = filled(n, 0.0f64)?;
-        for (t, out) in r.iter_mut().enumerate() {
-            *out = response_at(y, t, s);
-        }
-        for (t, &v) in r.iter().enumerate() {
-            let left = t == 0 || v >= r[t - 1];
-            let right = t + 1 == n || v > r[t + 1];
-            if v > 0.0 && left && right {
-                reserve(&mut all, 1)?;
-                all.push(Cand { t, s: si, r: v });
-            }
-        }
-    }
-    all.sort_by(|a, b| b.r.total_cmp(&a.r).then(a.t.cmp(&b.t)));
-    let mut kept: Vec<Cand> = Vec::new();
-    for c in all {
-        let near = kept
-            .iter()
-            .any(|k| (k.t as f64 - c.t as f64).abs() <= sig[k.s].max(sig[c.s]).ceil());
-        if !near {
-            reserve(&mut kept, 1)?;
-            kept.push(c);
-        }
-    }
-    kept.sort_by_key(|c| c.t);
-    Ok(kept)
-}
-
 /// Walks from `t` towards `limit` (included) and stops where the smoothed signal falls to `thr`, or rises again by more than `rise` over its running minimum.
 fn walk(sm: &[f64], t: usize, thr: f64, rise: f64, limit: usize, up: bool) -> usize {
     let (mut at, mut low) = (t, sm[t]);
@@ -272,14 +237,21 @@ fn walk(sm: &[f64], t: usize, thr: f64, rise: f64, limit: usize, up: bool) -> us
     at
 }
 
-/// Half-height width of the band around `t`, in samples.
-fn half_width(sm: &[f64], t: usize, base: f64) -> usize {
-    let half = base + (sm[t] - base) / 2.0;
+/// Half-height width of the band around `t`, in blocks: the run of blocks inside `lo_d..=hi_d` around `t` whose smoothed signal stands at least half
+/// way between the local bridge (`bridge` at the centre scan of the block) and the smoothed apex.
+fn half_width(
+    sm: &[f64],
+    t: usize,
+    (lo_d, hi_d): (usize, usize),
+    bridge: impl Fn(usize) -> f64,
+) -> usize {
+    let over = |i: usize| sm[i] - bridge(i);
+    let half = over(t) / 2.0;
     let (mut a, mut z) = (t, t);
-    while a > 0 && sm[a - 1] >= half {
+    while a > lo_d && over(a - 1) >= half {
         a -= 1;
     }
-    while z + 1 < sm.len() && sm[z + 1] >= half {
+    while z < hi_d && over(z + 1) >= half {
         z += 1;
     }
     z - a + 1
@@ -463,7 +435,9 @@ fn band(r: &Residue, t: usize, lo_d: usize, hi_d: usize, scale_s: f64) -> Option
     } else {
         f64::INFINITY
     };
-    let wide = half_width(&r.y_d, t, r.base) as f64 * r.dt_d >= MIN_HALF_WIDTH * r.p.width_s.0;
+    let block_bridge = |i: usize| bridge((i * k + k / 2).min(len - 1).clamp(lo, hi));
+    let blocks = half_width(&r.sm, t, (lo_d, hi_d), block_bridge);
+    let wide = blocks as f64 * r.dt_d >= MIN_HALF_WIDTH * r.p.width_s.0;
     if !(wide && snr >= r.p.snr && height >= r.p.noise) {
         return None;
     }
@@ -490,6 +464,7 @@ fn band(r: &Residue, t: usize, lo_d: usize, hi_d: usize, scale_s: f64) -> Option
         area_s,
         snr,
         scale_s,
+        fwhm_scans: (blocks * k) as f64,
     })
 }
 

@@ -1,8 +1,6 @@
 //! The encoder of the binary arrays of `MzmlWriter` (little-endian floats or numpress, zlib, base64) with the scratch buffers it keeps from one array
 //! to the next, and the text of a whole spectrum built with it. The writer owns one; each thread of the encoding pool (`pool.rs`) owns its own.
 
-use std::borrow::Cow;
-
 use flate2::{Compress, Compression, FlushCompress};
 
 use super::{io, Opzioni};
@@ -14,7 +12,9 @@ pub(super) enum Data<'a> {
     F64(&'a [f64]),
     F32(&'a [f32]),
     /// 64-bit values written with a numpress codec (`Np::Linear` or `Np::Slof`).
-    Np(Np, Cow<'a, [f64]>),
+    Np(Np, &'a [f64]),
+    /// 32-bit values written with the numpress codec `Np::Slof` (widened while they are encoded).
+    NpF32(&'a [f32]),
 }
 
 pub(super) struct Codifica {
@@ -23,8 +23,6 @@ pub(super) struct Codifica {
     pub(super) z: Compress,
     pub(super) raw: Vec<u8>,
     pub(super) packed: Vec<u8>,
-    /// The numpress bytes of the array being written.
-    pub(super) np: Vec<u8>,
     /// The fixed-size output chunk of zlib.
     pub(super) blocco: Vec<u8>,
 }
@@ -36,7 +34,6 @@ impl Codifica {
             z: Compress::new(Compression::new(opz.livello.min(9)), true),
             raw: Vec::new(),
             packed: Vec::new(),
-            np: Vec::new(),
             blocco: vec![0; 32 * 1024],
         }
     }

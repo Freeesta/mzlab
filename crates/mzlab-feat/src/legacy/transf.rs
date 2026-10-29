@@ -154,15 +154,32 @@ fn emit(v: &Value, o: &mut Out) {
     };
 }
 
-/// The `regole_tp/1` file `base` with the rows of `text` as rules.
+/// The mutable member `key` of an object value.
+fn member<'a>(v: &'a mut Value, key: &str) -> Option<&'a mut Value> {
+    match v {
+        Value::Obj(o) => o.iter_mut().find(|(k, _)| k == key).map(|(_, v)| v),
+        _ => None,
+    }
+}
+
+/// The `regole_tp` file `base` (`/1` list or the default profile of `/2`) with the rows of `text` as rules.
 pub fn merge(base: &[u8], text: &str) -> Res<Vec<u8>> {
     let rows = crate::liste::from_legacy_text(text)?.transformation_rows();
     let unreadable = || "the rules of Tabui cannot be read".to_string();
     let mut file = json::parse(base).map_err(|_| unreadable())?;
-    let Value::Obj(top) = &mut file else {
-        return Err(unreadable());
+    let default = file
+        .get("predefinito")
+        .and_then(Value::str)
+        .map(String::from);
+    let flat = file.get("regole").is_some();
+    let holder = if flat {
+        Some(&mut file)
+    } else {
+        default
+            .as_deref()
+            .and_then(|d| member(&mut file, "profili").and_then(|p| member(p, d)))
     };
-    let Some(Value::Arr(list)) = top.iter_mut().find(|(k, _)| k == "regole").map(|(_, v)| v) else {
+    let Some(Value::Arr(list)) = holder.and_then(|h| member(h, "regole")) else {
         return Err(unreadable());
     };
     let mut known: Vec<Delta> = list

@@ -48,7 +48,7 @@ fn register(state: &State, paths: Vec<PathBuf>) -> Vec<PickedFile> {
         .collect()
 }
 
-/// System file dialog (`dam`: only `.dam` files; otherwise mzML and Thermo `.raw`).
+/// System file dialog (`dam`: only `.dam` files; otherwise mzML, Thermo `.raw` and SCIEX `.wiff` with its `.wiff.scan`).
 #[tauri::command]
 async fn pick_files(
     app: tauri::AppHandle,
@@ -59,7 +59,10 @@ async fn pick_files(
     let dlg = if dam {
         dlg.add_filter("DAM", &["dam", "DAM"])
     } else {
-        dlg.add_filter("mzML / RAW", &["mzML", "mzml", "raw", "RAW"])
+        dlg.add_filter(
+            "Data files (mzML, RAW, WIFF)",
+            &["mzML", "mzml", "raw", "RAW", "wiff", "wiff.scan"],
+        )
     };
     let picked = tauri::async_runtime::spawn_blocking(move || dlg.blocking_pick_files())
         .await

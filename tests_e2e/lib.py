@@ -277,13 +277,14 @@ class Run:
     def page(s, p, tour=False, qaqc=False):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
+        pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');}catch(_){}")          # the one reload of the first visit (browser.js isolateOnce) would cut a test short: e2e_isolamento is the one that wants it
         if not tour:
             pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         else:          # the tour tests want the invitation of the tour, but not the hint of the side-by-side panels: it shows up after a few seconds (later under load) over the spectrum and takes the clicks of the test
             pg.add_init_script("try{localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         if qaqc:       # QA/QC is dormant: only this switch (as ?qaqc=1) makes it visible
             pg.add_init_script("try{localStorage.setItem('mzlab.dev.qaqc','1');}catch(_){}")
-        pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
+        pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e) + " @ " + " | ".join((getattr(e, "stack", "") or "").split("\n")[1:5]))))          # diagnostics: the first stack frames say which script threw
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") and "GL Driver Message" not in m.text else None)       # software-GL performance hints of the 3D viewer are not page errors
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)

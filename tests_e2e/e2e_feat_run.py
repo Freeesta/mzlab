@@ -25,10 +25,10 @@ else:
     sh(sys.executable, "tools/feat_mirato.py", "--seme", "2", "--profilo", "piccolo", "--scala", "1.0", "--out", str(data))
     fm, mz, rt = "C21H32N2O2", "345.253655", "1.0"
 idx = sorted(p.name for p in data.glob("*.mzidx"))
-shutil.copy(ROOT / "TP_Mine/data/regole_tp.json", data / "regole_tp.json")
+shutil.copy(ROOT / "TP_Mine/data/regole_tp_2.json", data / "regole_tp_2.json")
 nat = tmp / "nat"; nat.mkdir()
 RECIPE = os.environ.get("MZLAB_FEAT_RECIPE") or '{"polarity":1,"mode":"family"}'
-args = ["--recipe", RECIPE] + (["--parent", fm, "--rules", str(data / "regole_tp.json"), "--parent-mz", mz, "--parent-rt", rt] if fm else [])
+args = ["--recipe", RECIPE] + (["--parent", fm, "--rules", str(data / "regole_tp_2.json"), "--parent-mz", mz, "--parent-rt", rt] if fm else [])
 out = sh("cargo", "run", "--release", "-q", "-p", "mzlab-feat-wasm", "--example", "nativo", "--", str(nat), *[str(data / n) for n in idx], *args)
 native = dict(l.split(" ")[:2] for l in out.splitlines() if len(l.split(" ")) == 2 and len(l.split(" ")[1]) == 64)
 ION = '{"polarity":1,"mode":"ion"}'
@@ -54,7 +54,7 @@ RUN = """async ([names, recipe, parent]) => {
   const files = names.map(n => ({ name: n, path: "idx/" + n }));
   let par = null;
   if (parent.formula) {
-    const rules = new Uint8Array(await (await fetch("data/regole_tp.json")).arrayBuffer());
+    const rules = new Uint8Array(await (await fetch("data/regole_tp_2.json")).arrayBuffer());
     const minutes = names.map(n => { const m = /_t(\\d+)min/.exec(n); return m ? +m[1] : null; });
     par = { rules, parent: parent.formula, parentRt: parent.rt, parentMz: parent.mz, minutes };
   }

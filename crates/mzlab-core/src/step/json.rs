@@ -178,6 +178,12 @@ fn param(o: &mut Out, p: &Param) {
         key(o, "description");
         o.str(d);
     }
+    for (text, k) in [(p.label, "x-label"), (p.tip, "x-tip")] {
+        if let Some(t) = text {
+            key(o, k);
+            o.str(t);
+        }
+    }
 }
 
 fn params(o: &mut Out, ps: &[Param]) {

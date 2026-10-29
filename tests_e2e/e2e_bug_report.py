@@ -24,7 +24,14 @@ try:
             g = pg.locator("#uip-g-bug"); assert g.count() == 1 and g.locator("summary svg").count() == 2, "group with the bug icon (and the chevron)"
             if not pg.evaluate("document.querySelector('#uip-g-bug').open"): pg.click("#uip-g-bug summary")
             pg.wait_for_selector("#bug-what", timeout=10000)
-        def closepanel(): pg.keyboard.press("Escape"); pg.wait_for_selector("#uipset", state="detached")
+        def closepanel():
+            pg.focus("#uip-g-bug summary")      # Esc goes to the focused document: in the drawing view the sketcher iframe can take the focus while the panel opens
+            pg.keyboard.press("Escape")
+            try: pg.wait_for_selector("#uipset", state="detached", timeout=5000)
+            except TimeoutError:
+                st = pg.evaluate("JSON.stringify({n: document.querySelectorAll('#uipset').length, ae: document.activeElement && (document.activeElement.id || document.activeElement.tagName), view: S.view, dlg: !!document.querySelector('dialog[open]'), pal: !!document.querySelector('#paletta:not([hidden])')})")
+                pg.keyboard.press("Escape"); late = pg.evaluate("document.querySelectorAll('#uipset').length")
+                raise AssertionError(f"Escape did not close the settings: {st}; after a second Escape: {late}")
         def icon():
             assert pg.locator("#bug-btn").count() == 0, "no bug button in the header"
             assert pg.evaluate("typeof window.BUGREP") == "undefined", "the form is lazy: not loaded before the group is opened"
@@ -95,7 +102,8 @@ try:
         step("English", english)
         def narrow():
             pg.set_viewport_size({"width": 390, "height": 800}); attendi(pg, "innerWidth === 390")
-            assert pg.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), "no horizontal scroll"
+            try: attendi(pg, "document.documentElement.scrollWidth <= innerWidth + 1", 5000)      # the header relayouts on the resize event
+            except TimeoutError: raise AssertionError("no horizontal scroll: " + pg.evaluate("JSON.stringify({sw: document.documentElement.scrollWidth, iw: innerWidth, wide: [...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 5).map(e => e.id || e.className || e.tagName)})"))
             pg.set_viewport_size({"width": 1500, "height": 2200})
         step("narrow window: the header does not overflow", narrow)
 finally:

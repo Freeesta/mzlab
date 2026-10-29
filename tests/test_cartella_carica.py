@@ -51,3 +51,29 @@ def test_dropped_folder_is_read_recursively_in_batches():
             "return [fs.map(f=>c.dir(f)+f.name),seen.length,!!c.entriesOf(dt),c.entriesOf(no)]})()")
     assert r[0] == ["lab/a.mzML", "lab/b.txt", "lab/sub/c.mzML", "lab/sub/d.dam", "lab/sub/e.wiff", "lab/f.mzML"]
     assert r[1] == 6 and r[2] is True and r[3] is None
+
+
+SLOW = """
+let live=0,peak=0;
+const slow=(n,ms)=>({isFile:true,isDirectory:false,name:n,file:ok=>{live++;peak=Math.max(peak,live);setTimeout(()=>{live--;ok(new File(['x'],n))},ms)}});
+"""
+
+
+def test_parallel_reading_keeps_the_walk_order_and_caps_the_calls_in_flight():
+    # the first files answer last: the result must still be in walk order (uniqueNames gives the plain name to the first of two equal names)
+    r = run("(async()=>{" + SLOW + "const kids=[];for(let i=0;i<60;i++)kids.push(slow('f'+String(i).padStart(2,'0')+'.mzML',60-i));"
+            "const sub=(n,k)=>({isFile:false,isDirectory:true,name:n,createReader(){let i=0;return{readEntries(ok){ok(i++?[]:k)}}}});"
+            "const root=sub('lab',[sub('a',[slow('s.mzML',30)]),sub('b',[slow('s.mzML',1)]),...kids]);"
+            "const t=Date.now();const fs=await c.readEntries([root]);"
+            "return [fs.map(f=>c.dir(f)+f.name),peak,Date.now()-t]})()")
+    want = ["lab/a/s.mzML", "lab/b/s.mzML"] + [f"lab/f{i:02d}.mzML" for i in range(60)]
+    assert r[0] == want
+    assert 2 < r[1] <= 16
+    assert r[2] < 60 * 31 / 2        # sequential would take ~1.9 s
+
+
+def test_one_unreadable_entry_still_rejects_the_whole_walk():
+    r = run("(async()=>{const bad={isFile:true,isDirectory:false,name:'bad.mzML',file:(ok,ko)=>ko(new Error('boom'))};"
+            "const root={isFile:false,isDirectory:true,name:'lab',createReader(){let i=0;return{readEntries(ok){ok(i++?[]:[{isFile:true,isDirectory:false,name:'a.mzML',file:ok=>ok(new File(['x'],'a.mzML'))},bad])}}}};"
+            "try{await c.readEntries([root]);return 'ok'}catch(x){return x.message}})()")
+    assert r == "boom"

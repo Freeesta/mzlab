@@ -10,6 +10,7 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::lettori::Posizione;
 use crate::stima;
+use head_read::read_head;
 
 const ANALYZERS: [&str; 5] = ["FTMS", "ITMS", "TOFMS", "TQMS", "SQMS"];
 
@@ -98,7 +99,7 @@ pub struct Row {
     pub an: &'static str,
     /// The native id, the same allocation as the key of `Rows::level_of`.
     pub native: Arc<str>,
-    /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EPI`): see `kind_of`.
+    /// Scan type that is not a plain full or product-ion scan (`PREC`, `NL`, `NG`, `EMC`, `TDF`, `ER`): see `kind_of`.
     pub kind: Option<&'static str>,
     /// The mobility of the whole scan (a scan attribute) and its unit (`k0` or `ms`).
     pub mob: Option<(f64, &'static str)>,
@@ -124,21 +125,73 @@ pub struct Table {
     pub nce: bool,
     pub hr1: bool,
     pub n_chromatograms: usize,
+    /// Lowest and highest m/z of the scan windows the method declares for the first 50 survey scans (`Run.scan_window_ms1`).
+    pub window: Option<(f64, f64)>,
+}
+
+/// The scan windows of the first 50 survey scans, as their union.
+#[derive(Default)]
+pub(crate) struct DeclaredWindow {
+    pub span: Option<(f64, f64)>,
+    surveys: usize,
+}
+
+impl DeclaredWindow {
+    /// From the header text of a spectrum.
+    pub fn note(&mut self, h: &str, level: u8) {
+        // the header is searched only for a survey that still counts
+        if level != 1 || self.surveys >= 50 {
+            return;
+        }
+        let w = match (
+            cv(h, "MS:1000501").and_then(float),
+            cv(h, "MS:1000500").and_then(float),
+        ) {
+            (Some(a), Some(z)) => Some((a, z)),
+            _ => None,
+        };
+        self.note_span(w, level);
+    }
+
+    /// From the window a reader gives (the one the header would say).
+    pub fn note_span(&mut self, w: Option<(f64, f64)>, level: u8) {
+        if level != 1 || self.surveys >= 50 {
+            return;
+        }
+        self.surveys += 1;
+        if let Some((a, z)) = w {
+            self.span = Some(self.span.map_or((a, z), |(lo, hi)| (lo.min(a), hi.max(z))));
+        }
+    }
+}
+
+impl Table {
+    /// The `run` object of the index metadata (`scan_window` only when the scans declare one).
+    pub fn run_json(&self) -> String {
+        let w = self.window.map_or(String::new(), |(a, b)| {
+            format!(",\"scan_window\":[{a:?},{b:?}]")
+        });
+        format!(
+            "{{\"nce\":{},\"hr1\":{},\"n_chromatograms\":{}{w}}}",
+            self.nce, self.hr1, self.n_chromatograms
+        )
+    }
 }
 
 /// The scan type of a spectrum, from the CV term of its header (`MS:1000341` precursor ion, `MS:1000326` constant neutral loss, `MS:1000325`
-/// constant neutral gain, `MS:1000789` enhanced multiply charged and `MS:1000790` time-delayed fragmentation, both shown as `EPI`) or, when the
+/// constant neutral gain, `MS:1000789` enhanced multiply charged `EMC`, `MS:1000790` time-delayed fragmentation `TDF`, `MS:1000791` enhanced resolution `ER`) or, when the
 /// header says nothing, from a Thermo filter token (`pr`, `cnl`, `cng`). Never from a name.
 pub(crate) fn kind_of(h: &str, filter: &str) -> Option<&'static str> {
-    const TERMS: [(&str, &str); 5] = [
-        ("MS:1000341", "PREC"),
-        ("MS:1000326", "NL"),
-        ("MS:1000325", "NG"),
-        ("MS:1000789", "EPI"),
-        ("MS:1000790", "EPI"),
+    const TERMS: [(&str, &str); 6] = [
+        ("accession=\"MS:1000341\"", "PREC"),
+        ("accession=\"MS:1000326\"", "NL"),
+        ("accession=\"MS:1000325\"", "NG"),
+        ("accession=\"MS:1000789\"", "EMC"),
+        ("accession=\"MS:1000790\"", "TDF"),
+        ("accession=\"MS:1000791\"", "ER"),
     ];
-    for (acc, k) in TERMS {
-        if h.contains(&format!("accession=\"{acc}\"")) {
+    for (pat, k) in TERMS {
+        if h.contains(pat) {
             return Some(k);
         }
     }
@@ -220,15 +273,7 @@ fn precursor_element(e: &str, refer: Option<Arc<str>>) -> Prec {
         selected: get("744"),
         charge: ch.filter(|c| *c != 0.0).map(|c| c as i64),
         refer,
-        act: if e.contains("accession=\"MS:1000422\"") {
-            Some("HCD")
-        } else if e.contains("accession=\"MS:1000133\"") {
-            Some("CID")
-        } else if e.contains("accession=\"MS:1000598\"") {
-            Some("ETD")
-        } else {
-            None
-        },
+        act: crate::attivazioni::nome_in(e),
         ce: get("045"),
         pint: get("042"),
     }
@@ -498,9 +543,12 @@ fn find(h: &[u8], pat: &[u8]) -> Option<usize> {
     None
 }
 
+mod head_read;
 mod inerte;
 mod json;
 mod rows;
+#[cfg(test)]
+mod tests_attivazioni;
 
 pub use json::Columns;
 use rows::Head;
@@ -543,10 +591,21 @@ fn read_listed<R: ReadAt>(
             .copied()
             .chain(std::iter::once(last + 11 + 1))
             .collect();
-        for (&a, &limit) in offs.iter().zip(&limits) {
+        // the start of the next header, read together with the tail of the spectrum before it (each read is a call into OPFS on the site)
+        let mut ahead: Vec<u8> = Vec::new();
+        for (i, (&a, &limit)) in offs.iter().zip(&limits).enumerate() {
             let mut n: u64 = 4096;
+            let mut pre = Some(std::mem::take(&mut ahead));
             let (chunk, c) = loop {
-                let chunk = src.read(a, (a + n).min(limit))?;
+                let end = (a + n).min(limit);
+                let want = (end.min(size) - a) as usize;
+                let chunk = match pre.take() {
+                    Some(mut p) if !p.is_empty() && p.len() >= want => {
+                        p.truncate(want);
+                        p
+                    }
+                    _ => src.read(a, end)?,
+                };
                 let c = find(&chunk, b"<binaryDataArrayList");
                 if c.is_some() || a + n >= limit {
                     break (chunk, c);
@@ -560,8 +619,14 @@ fn read_listed<R: ReadAt>(
                 }
                 Some(_) => {
                     let from = limit.saturating_sub(64).max(a);
-                    let tail = src.read(from, limit)?;
-                    match tail.windows(11).rposition(|w| w == b"</spectrum>") {
+                    // `limit` is where the next spectrum starts
+                    let more = offs
+                        .get(i + 1)
+                        .map_or(0, |_| 4096.min(limits[i + 1] - limit));
+                    let mut blk = src.read(from, limit + more)?;
+                    let cut = blk.len().min((limit - from) as usize);
+                    ahead = blk.split_off(cut);
+                    match blk.windows(11).rposition(|w| w == b"</spectrum>") {
                         Some(e) => from + e as u64 + 11,
                         None => limit,
                     }
@@ -673,19 +738,7 @@ pub fn read<R: ReadAt>(r: &mut R, size: u64) -> Result<Table> {
 /// count of the spectra in the index of offsets before the first row is kept, or from the progress of the walk when the file has no index.
 pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> Result<Table> {
     let mut src = Source { r, size };
-    // header: instrument configurations and the default one
-    let head_end = {
-        let first = src.read(0, size.min(4 << 20))?;
-        find(&first, b"<run ").map(|p| p as u64)
-    };
-    let head_bytes = src.read(0, head_end.unwrap_or(200000.min(size)))?;
-    let run_tag_lo = head_end.unwrap_or(0);
-    let run_text = src.read(run_tag_lo, (run_tag_lo + 2000).min(size))?;
-    let mut rows = Rows::with(Head::parse(
-        &String::from_utf8_lossy(&head_bytes),
-        &String::from_utf8_lossy(&run_text),
-    ));
-    drop(head_bytes);
+    let mut rows = Rows::with(read_head(&mut src)?);
 
     // the spans of the spectra
     let offs = src.offsets()?;
@@ -707,3 +760,8 @@ pub fn read_in<R: ReadAt>(r: &mut R, size: u64, budget: Option<&MemBudget>) -> R
     let n_chrom = count_chromatograms(&mut src, last_end)?;
     Ok(rows.finish(n_chrom))
 }
+
+#[cfg(test)]
+mod tests_finestra;
+#[cfg(test)]
+mod tests_header;

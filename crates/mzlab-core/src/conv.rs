@@ -1,4 +1,4 @@
-//! `conv/1`: what a conversion carried into the mzML and what it left out, written in the `<run>` by `lettori_mzml::Conversione`.
+//! `conv/1`: what a conversion carried into the mzML and what it left out (and the zlib implementation that wrote the arrays), written in the `<run>` by `lettori_mzml::Conversione`.
 //! Each reader declares what its format holds and the mzML does not (`Lettore::non_portati`), always with the reason.
 
 use crate::error::Result;
@@ -70,7 +70,7 @@ pub(crate) fn resoconto(l: &mut dyn Lettore, c: usize) -> Result<String> {
     s += l.formato().id();
     s += "\",\"versione\":\"";
     s += env!("CARGO_PKG_VERSION");
-    s += "\",\"campi_cv\":";
+    s += "\",\"compressore\":\"zlib-rs\",\"campi_cv\":";
     s += &cv.to_string();
     s += ",\"campi_user\":";
     s += &(nomi.len() - cv).to_string();

@@ -629,16 +629,23 @@ class Run:
         return t[:n], y[:n]
 
     def chromatogram_unit(self, i: int) -> str:
-        """The unit written on the intensity array of chromatogram i (unitName), or ''."""
+        """The unit of chromatogram i: the unitName of its intensity array or, when that is missing or only the generic ``number of detector counts``
+        (what our own mzML writer puts on every trace but the TIC), the unit kept in the userParam ``unità`` of the chromatogram; '' when there is none."""
         d = self.chromatograms()[i]
         chunk = bytes(self._mm[d["start"]:d["end"]])
+        unit = ""
         for blk in re.finditer(rb"<binaryDataArray .*?</binaryDataArray>", chunk, re.S):
             t = blk.group(0)
             head = t[:t.find(b"<binary>")].decode("utf-8", "replace")
             m = re.search(r'unitName="([^"]*)"', head)
             if "MS:1000595" not in head and m:
-                return m.group(1)
-        return ""
+                unit = m.group(1)
+                break
+        if unit in ("", "number of detector counts"):
+            m = re.search(r'<userParam name="unità" value="([^"]*)"', chunk[:chunk.find(b"<binaryDataArrayList")].decode("utf-8", "replace"))
+            if m:
+                return m.group(1).replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&")
+        return unit
 
     def metadata(self) -> dict:
         """Instrument, software and source file names from the mzML header."""
@@ -666,6 +673,17 @@ class Run:
         model = pool[0] if pool else ""
         return {"instrument": model, "serial": ser.group(1) if ser else "", "components": comp, "analyzers": sorted(set(self._ic.values())),
                 "source_files": src, "software": [f"{n} {v}".strip() for v, n in soft]}
+
+    def scan_window_ms1(self):
+        """(lowest, highest) m/z of the scan windows of the first 50 survey scans, or None (what the index keeps as `run.scan_window`)."""
+        lo = hi = None
+        for s in [x for x in self.scans if x.level == 1][:50]:
+            h = self._mm[s.start:s.end].decode("utf-8", "replace")
+            a, b = _cv(h, "MS:1000501"), _cv(h, "MS:1000500")
+            if a and b:
+                lo = _float(a) if lo is None else min(lo, _float(a))
+                hi = _float(b) if hi is None else max(hi, _float(b))
+        return (lo, hi) if lo is not None else None
 
     def scan_window(self):
         """(lowest, highest) m/z of the scan windows, or None."""

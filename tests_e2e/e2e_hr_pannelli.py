@@ -13,7 +13,7 @@ TABS = ("lists", "hdr", "lst", "fil", "cmp", "iso", "idn")
 # text clipped by its own box (overflow hidden or ellipsis) or sticking out of the drawer, outside the containers that scroll on purpose
 CLIP = """() => { const root = document.querySelector('#dfiles'), R = root.getBoundingClientRect(), out = [];
   root.querySelectorAll('*').forEach(e => {
-    if (!e.offsetParent || e.closest('[hidden]') || e.closest('#lst-table-wrap,#hri-list')) return;
+    if (!e.offsetParent || e.closest('[hidden]') || e.closest('#lst-table-wrap,#hri-list,.sr-only')) return;      // .sr-only is hidden from the eye on purpose (text for screen readers)
     const own = [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()); if (!own) return;
     const cs = getComputedStyle(e);
     if (e.scrollWidth > e.clientWidth + 1 && (cs.overflowX !== 'visible' || cs.textOverflow === 'ellipsis')) out.push(['clip', e.id || e.className || e.tagName, e.textContent.trim().slice(0, 30)]);
