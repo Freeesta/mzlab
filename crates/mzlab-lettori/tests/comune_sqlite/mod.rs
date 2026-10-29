@@ -136,3 +136,65 @@ pub fn apri_db(b: Vec<u8>, wal: Option<Vec<u8>>) -> mzlab_core::error::Result<Sq
     });
     Sqlite::apri(Box::new(b), dim, w, &limiti())
 }
+
+// ---- a whole `.d` folder ----
+
+pub fn zstd_grezzo(d: &[u8]) -> Vec<u8> {
+    let mut z = vec![0x28, 0xb5, 0x2f, 0xfd, 0xa0];
+    z.extend((d.len() as u32).to_le_bytes());
+    z.extend((((d.len() as u32) << 3) | 1).to_le_bytes()[..3].iter());
+    z.extend(d);
+    z
+}
+
+/// A codec-2 block of 2 scans: scan 0 has TOF 100 and 150, scan 1 has TOF 100.
+pub fn blocco2() -> Vec<u8> {
+    let parole: [u32; 8] = [0, 4, 101, 10, 50, 20, 101, 5];
+    let mut piani = Vec::new();
+    for k in 0..4 {
+        piani.extend(parole.iter().map(|w| (w >> (8 * k)) as u8));
+    }
+    let z = zstd_grezzo(&piani);
+    let mut b = ((z.len() + 8) as u32).to_le_bytes().to_vec();
+    b.extend(2u32.to_le_bytes());
+    b.extend(z);
+    b
+}
+
+pub fn tdf_minimo(num_peaks: i64) -> Vec<u8> {
+    let frames = foglia(&[vec![
+        V::N,
+        V::R(1.0),
+        V::T("+"),
+        V::I(0),
+        V::I(0),
+        V::I(0),
+        V::I(100),
+        V::I(50),
+        V::I(2),
+        V::I(num_peaks),
+        V::I(1),
+        V::R(25.0),
+        V::R(30.0),
+        V::R(100.0),
+    ]]);
+    let cal = foglia(&[vec![
+        V::N,
+        V::I(1),
+        V::R(0.125),
+        V::R(18502.75),
+        V::R(280.6435408329972),
+        V::R(150581.44261048065),
+        V::R(0.0),
+        V::R(0.0),
+        V::R(0.0),
+        V::R(25.0),
+        V::R(30.0),
+        V::R(0.0),
+        V::R(0.0),
+    ]]);
+    db(&[
+        ("Frames", "CREATE TABLE Frames (Id INTEGER PRIMARY KEY, Time REAL, Polarity TEXT, ScanMode INTEGER, MsMsType INTEGER, TimsId INTEGER, SummedIntensities INTEGER, MaxIntensity INTEGER, NumScans INTEGER, NumPeaks INTEGER, MzCalibration INTEGER, T1 REAL, T2 REAL, AccumulationTime REAL)", frames),
+        ("MzCalibration", "CREATE TABLE MzCalibration (Id INTEGER PRIMARY KEY, ModelType INTEGER, DigitizerTimebase REAL, DigitizerDelay REAL, C0 REAL, C1 REAL, C2 REAL, C3 REAL, C4 REAL, T1 REAL, T2 REAL, dC1 REAL, dC2 REAL)", cal),
+    ])
+}
