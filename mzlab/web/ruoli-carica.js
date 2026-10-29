@@ -56,5 +56,20 @@ const RUOLI = /** @type {any} */ ((() => {
   function commit(/** @type {Voce[]} */ F) {
     CAMPIONI.apply(F.filter(f => f.use).map(f => { const r = roleOf(f), e = /** @type {any} */ ({ file: f.name, role: r }); if (TIMED.has(r)) { e.time = f.time ?? null; e.tconf = true; } return e; }), true);
   }
-  return { commit, t, eh, post, OPTS, BASE, TIMED, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
+  /** Repaints and proposals for a table fed by many merges. `soon()` asks one repaint per animation frame (a hidden tab has no frame: `flush()` paints it); `flush(force)` paints now and asks
+   *  the proposals once for every entry merged since (only when something was merged, unless `force`). `raf`/`caf` stand for requestAnimationFrame/cancelAnimationFrame. */
+  function coalesce(/** @type {() => void} */ paint, /** @type {() => unknown} */ propose, /** @type {any} */ raf, /** @type {any} */ caf) {
+    const ask = raf || ((/** @type {() => void} */ f) => requestAnimationFrame(f)), drop = caf || ((/** @type {any} */ h) => cancelAnimationFrame(h));
+    let h = /** @type {any} */ (null), dirty = false;
+    return {
+      soon() { dirty = true; if (h == null) h = ask(() => { h = null; paint(); }); },
+      flush(/** @type {boolean} */ force = false) {
+        if (h != null) { drop(h); h = null; }
+        if (!dirty && !force) return undefined;
+        dirty = false; paint();
+        return propose();
+      },
+    };
+  }
+  return { commit, coalesce, t, eh, post, OPTS, BASE, TIMED, val, roleOf, timed, label, cellLabel, setRole, propose, busy: () => busy };
 })());

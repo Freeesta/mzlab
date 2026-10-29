@@ -72,13 +72,15 @@ const roundc=(/** @type {number | string | null | undefined} */ v)=>v==null?null
 const isCal=(/** @type {FileRiga} */ f)=>f.type==="standard";
 // value from the name, in the unit of the table
 const concFrom=(/** @type {FileRiga} */ f)=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);
-function mergeFiles(/** @type {FileRiga[]} */ list){const old=Object.fromEntries(ST.files.map((/** @type {FileRiga} */ f)=>[f.name,f]));
+// the table is repainted once per frame while files arrive from a loading (upload0 flushes at its end, with the proposals asked once for the whole batch); a merge outside a loading paints at once
+const MERGE=RUOLI.coalesce(()=>{sortFiles();renderFiles()},()=>RUOLI.propose(()=>ST.files).then((/** @type {unknown} */ c)=>{if(c){sortFiles();renderFiles()}}));
+function mergeFiles(/** @type {FileRiga[]} */ list,/** @type {boolean} */ defer=false){const old=Object.fromEntries(ST.files.map((/** @type {FileRiga} */ f)=>[f.name,f]));
   ST.files=list.map(f=>{const o=old[f.name],type=o?o.type:f.type,conc=o?o.conc:concFrom(f),time=type==="blank"?null:o?o.time:f.time;return {...TIPOF.apply(f,f.name),time,type,conc,use:o?o.use:true,
     // gC: concentration read from the name (yellow in the table until the student edits or confirms them)
     gC:o?o.gC:conc!=null,role:o&&o.role,prop:o&&o.prop,ed:o&&o.ed}});
   if(list.some(f=>!old[f.name]))hrMixPreselect();
   // roles and times proposed from the names by the engine (campioni/2)
-  sortFiles();renderFiles();RUOLI.propose(()=>ST.files).then((/** @type {unknown} */ c)=>{if(c){sortFiles();renderFiles()}})}
+  if(defer)MERGE.soon();else MERGE.flush(true)}
 // low- and high-resolution files cannot be opened together: a note offers the choice while both worlds are in the list, and the loading is paused while both are ticked; the most numerous world is preselected when files arrive
 const hrMixCount=()=>{const l=ST.files.filter((/** @type {FileRiga} */ f)=>f.kind in GORD);return {lr:l.filter((/** @type {FileRiga} */ f)=>!f.hr).length,hr:l.filter((/** @type {FileRiga} */ f)=>f.hr).length,onLr:l.filter((/** @type {FileRiga} */ f)=>f.use&&!f.hr).length,onHr:l.filter((/** @type {FileRiga} */ f)=>f.use&&f.hr).length}};
 const hrMixed=()=>{const c=hrMixCount();return c.onLr>0&&c.onHr>0};
@@ -312,7 +314,7 @@ async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AV
   if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;checkGo();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
-  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok())}}}
+  try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{MERGE.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;checkGo();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok())}}}
 async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | undefined} */ into,/** @type {unknown} */ box,/** @type {AbortSignal} */ signal){
   const rep=/** @type {CaricaRep} */ ({unopen:[],other:[],errs:{},moved:{dam:[],data:[]},notes:[]}),rejected=/** @type {FileCarica[]} */ ([]);
   const one=async (/** @type {FileCarica} */ f)=>{const isDam=isMethodFile(f.name);
@@ -332,7 +334,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
       put(d.frac,d.phase,d.total?{done:d.done,total:d.total}:!f.mzlabNat&&tot?{done:Math.round(tot*Math.max(0,Math.min(1,(d.frac-0.4)/0.585))),total:tot}:null)};
     addEventListener("mzlab-index",onIdx);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(/** @type {number} */ a,/** @type {number} */ b)=>{if(QQQ_NET)PROGRESSO.set(f.name,PROG_NET.send*a/b,"send");const pc=Math.min(99,mono());CONVROWS.set(f.name,"index",pc);if(pn)pn.index(f.name,pc)});
-      if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();
+      if(j.error)throw I18N.err(j);const x=(j.files||[]).find((/** @type {FileRiga} */ y)=>y.name===f.name);if(f.mzlabNat||x){CONVROWS.finish(f.name,"done",{scans:x?x.n_spectra||x.scans||0:0,kind:x?(x.mixed||[]).length>1?"mixed":x.kind:"",missing:(/** @type {any} */ (window).MZLAB_LR?.missing?.get(f.name))||0})}else CONVROWS.drop(f.name);if(pn)pn.index(f.name,100);mergeFiles(j.files,true);ST.methods=j.methods||ST.methods;renderMethods();
       LOADFAIL.delete(f.name)}
     catch(e_){const e=/** @type {Lanciato} */(e_);LOADFAIL.add(f.name);if(e.key==="err.load.cancelled"){CONVROWS.finish(f.name,"cancel");return}
       const d=DIAG.da(e,{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f));
@@ -350,7 +352,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   for(const f of files){PROGRESSO.begin(f.name,NATIVO.size(f));CONVROWS.add(f.name,"wait",f.mzlabNat?memDesc(f.mzlabNat.members.map(m=>({name:m.name,size:m.blob.size}))):"");CONVROWS.base(f.name,0)}
   // in the browser the engine builds the indexes of several files at once (pool of workers)
   if(window.QQQ_BROWSER&&files.length>1)await Promise.all(files.map(one));else for(const f of files)await one(f);
-  await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
+  MERGE.flush();await loneWiffs(wr,rep);if(panel)panel.end();reportLoad(rep)}
 function showStart(/** @type {{ files?: FileRiga[], methods?: unknown[] }} */ d){if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#pickdam").click()}};$("#pickdam").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{upload([...e.target.files],"dam");e.target.value=""};
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{const go=flowOpen(e.target),p=CartCarica.fromInput(e.target.files);e.target.value="";if(go)p.then(idle).then(directDone)};

@@ -21,3 +21,7 @@ def _run(script: str, modules: list[str], tmp_path: Path) -> None:
 
 def test_mixes_resolutions_without_one_rpc_per_file(tmp_path):
     _run("lr_sessione_node.mjs", ["lr-sessione.js"], tmp_path)
+
+
+def test_table_of_a_loading_repaints_once_and_proposes_once(tmp_path):
+    _run("ruoli_coalesce_node.mjs", ["ruoli-carica.js"], tmp_path)
