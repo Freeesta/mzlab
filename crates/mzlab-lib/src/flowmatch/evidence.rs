@@ -1,8 +1,8 @@
 //! The matched peaks of a library candidate (`matched_peaks`): for each pair the m/z and relative intensity on both sides, the difference and whether the
-//! precursor shift was needed. They are the evidence behind a score, listed by query m/z; used by `flow_match`.
+//! precursor shift was needed. They are the evidence behind a score, listed by query m/z; used by `flowmatch`.
 
+use crate::scores::{ModCosine, Spec};
 use mzlab_core::json::{round, Out};
-use mzlab_lib::scores::{ModCosine, Spec};
 
 pub(crate) struct Pair {
     query_mz: f64,

@@ -29,14 +29,16 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `features.ms2_link` | no | no | — | scelta: dentro `features.detect` (`flow_rule_tests.rs:13`, `BUCHI`) | — | — |
 | **Flow: tabella** | | | | | | |
 | `table.filter`, `table.drift`, `table.plausible` | sì | pannello per plausibilità (`.wasm` `table`: `table_plausible`, `table_check`) e deriva (`drift_series`, `feat-worker.js:411`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passi no | da fare: nessun esecutore in `F.liveJobs` | S | 1 |
-| `table.stats`, `table.pca`, `table.kmd` | sì | pannello (motore: `stat_post`, `kmd_post`; vista KMD/PCA) | `stat_route_parity.rs` è Rust↔Python | da fare | M | 2 |
+| `table.stats`, `table.pca`, `table.kmd` | sì | pannello (motore: `stat_post`; vista KMD/PCA) | `stat_route_parity.rs` è Rust↔Python | da fare | M | 2 |
 | `export.table_csv`, `export.inclusion`, `export.mztab` | sì | pannello (`export_table`, inclusione in mzFinder); mzTab del passo no | no | da fare | M | 1 |
-| `table.match`, `meta.compare` | sì | no | no | da fare | M | 3 |
+| `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
+| `meta.compare` | sì | no | no | da fare | M | 3 |
 | **Flow: identificazione (Attributio)** | | | | | | |
 | `formula.ms1` | sì | pannello (`untargeted_formula_id`) | `untargeted_wasm.rs` + `test_feat_wasm_untargeted.py` (detect/align), formula no | da fare | M | 2 |
-| `formula.ms2`, `spectra.chimeric`, `spectra.insilico`, `spectra.ms2` | sì | pannello (`.wasm` `attributio-all`: `ms2_to`) | `parita_attributio_ms2.json` (non verificato se sito↔app) | da fare | M | 2 |
+| `spectra.ms2` | sì | sì (`F.webIdent.ms2`: `.wasm` `hr`, `flow_ms2`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
+| `formula.ms2`, `spectra.chimeric`, `spectra.insilico` | sì | pannello (`.wasm` `attributio-all`: `ms2_to`) | `parita_attributio_ms2.json` (non verificato se sito↔app) | da fare | M | 2 |
 | `rt.predict`, `annot.level` | sì | pannello (`rt_descriptors`, `annotate_to`) | `test_attributio_descr_wasm.py` (descrittori a 1e-9) | da fare | M | 2 |
-| `spectra.match` | sì (tutti gli algoritmi) | parziale: solo `tree` (`flow-live-jobs.js:142`); libreria spettrale nel pannello (`mzlab-lib-wasm`) | `test_librerie_fdr_wasm.py`; `e2e_flow_msn.py` per `tree` | da fare | M | 2 |
+| `spectra.match` | sì (tutti gli algoritmi) | sì: `tree` in `msn`, gli altri in `F.webIdent.match` (`.wasm` `lib`, `flow_match`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs`; `e2e_flow_msn.py` per `tree` | fatto | | |
 | `spectra.lookup` | sì | no | no | da fare | M | 3 |
 | `annot.regulatory`, `annot.hazard` | no | no | — | da fare in entrambi (solo descrittore, `BUCHI`) | M | 3 |
 | **Flow: TP e MSn** | | | | | | |
@@ -61,7 +63,7 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | **Lettura e conversione** | | | | | | |
 | Lettura diretta senza mzML intermedio | sì (8 famiglie) | parziale: motore (3200, Agilent GC/MS, mzML) e Thermo; 6 famiglie via mzML in OPFS | — | da fare (`formati-matrice.md`, punto 6) | L | 2 |
 | `.wiff` → mzML con DAD (`opz.dad`) | sì | no (DAD solo come mappa/spettro) | no | da fare; tetto del modulo da misurare | M | 3 |
-| Conversione a mzML (stesso `mzmlwrite`) | sì (coda, `core − 1` fili) | sì (su richiesta, in sequenza) | parziale: `test_lettori_parita.py` confronta gli SHA-256 dell'mzML indicizzato di `mzlab-cli convert` e del `to_mzml` dei moduli per aperti, agilent, waters, shimadzu, sciex; thermo, bruker, andi senza dataset sintetico pubblico | da fare (test per le 3 famiglie) | S | 1 |
+| Conversione a mzML (stesso `mzmlwrite`) | sì (coda, `core − 1` fili) | sì (su richiesta, in sequenza) | sì (8 famiglie): `test_lettori_parita.py` confronta gli SHA-256 dell'mzML indicizzato di `mzlab-cli convert` e del `to_mzml` dei moduli, con dataset sintetici (Python per 5 famiglie, esempio `sintetici.rs` per thermo, bruker, andi) | — | — | — |
 | mzML con numpress in ingresso | sì: il percorso nativo dell'app (`natsamples` + `lr_put` con `nat`) usa il registro dei lettori con `aperti`; il percorso mzML semplice lo rifiuta (`err.file.numpress`) come il motore del sito | sì (modulo `aperti`) | sì: `numpress_mzml.rs` (app nativa = mzML riscritto come fa il sito; entrambi = gemello senza numpress entro la precisione dei codec). Non provato: che la pagina dell'app mandi davvero l'mzML numpress al percorso nativo (`moduloWants`, serve il browser) | da verificare nel browser | S | 2 |
 | `mzlab-cli validate` (mzML: struttura, PSI-MS, indice, SHA-1) | sì | no | — | da fare | M | 3 |
 | `mzlab-cli canali` | sì | sì (`api/canali`) | sì: `test_canali_wasm.py` (byte per byte, `.wasm` contro CLI, su infusione MSn, SRM e SRM + prodotti) | — | — | — |

@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
-mzlab-lib = { path = "../mzlab-lib" }
+mzlab-lib = { path = "../mzlab-lib", features = ["flow"] }
 mzlab-chem = { path = "../mzlab-chem" }
 mzlab-llm = { path = "../mzlab-llm" }
 mzlab-tutor = { path = "../mzlab-tutor" }

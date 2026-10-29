@@ -66,11 +66,11 @@ mod flow_lr_bench_tests;
 #[cfg(test)]
 mod flow_lr_tests;
 mod flow_match;
-mod flow_match_evidence;
-mod flow_match_filter;
 #[cfg(test)]
 mod flow_match_tests;
 mod flow_match_tree;
+#[cfg(test)]
+mod flow_match_web_tests;
 mod flow_ms2;
 mod flow_msnfigura;
 mod flow_msngraph;

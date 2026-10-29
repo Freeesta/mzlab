@@ -26,6 +26,17 @@ pub fn of_table<R: ReadAt, I: ReadAt>(r: &mut R, size: u64, indexes: &[Index<I>]
     Ok(if sum < 0 { -1 } else { 1 })
 }
 
+/// The polarity the recipe of the table says (`-1` or `1`; positive when it names none): what `table.match` writes its MGF in.
+pub fn recipe_polarity<R: ReadAt>(r: &mut R, size: u64) -> Result<i32> {
+    let (_, meta) = read_table_from(r, size)?;
+    let recipe = meta.get("recipe").and_then(|v| v.str()).unwrap_or("");
+    Ok(if recipe.contains("polarity: Some(-1)") {
+        -1
+    } else {
+        1
+    })
+}
+
 /// The samples as `campioni/1` text, whichever of the two schemas the file has.
 pub fn samples_v1(bytes: &[u8]) -> Result<String> {
     let doc = parse(bytes)?;

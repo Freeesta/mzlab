@@ -162,7 +162,7 @@ def test_qqq_workflow_follows_the_pages_workflow():
     main = cut((ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8"))
     qqq = cut((ROOT / "tools" / "lab" / "qqq-pages.yml").read_text(encoding="utf-8"))
     co = "          repository: Freeesta/mzlab\n          ref: main\n"
-    assert co in qqq and qqq.replace("        with:\n" + co, "", 1) == main
+    assert co in qqq and qqq.replace("        with:\n" + co, "") == main
     head = (ROOT / "tools" / "lab" / "qqq-pages.yml").read_text(encoding="utf-8").split("# No run is ever cancelled")[0]
     assert "schedule:" in head and "workflow_dispatch:" in head and 'MZLAB_LAB: "1"' in head and 'MZLAB_LAB_EXPIRES: "2026-12-29"' in head
     assert "secrets." not in qqq and "PAT" not in qqq

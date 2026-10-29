@@ -1,8 +1,7 @@
-//! The candidate filters of `spectra.match`: text filters on the library metadata and the retention-time window (`rt_tol`); used by `flow_match`.
+//! The candidate filters of `spectra.match`: text filters on the library metadata and the retention-time window (`rt_tol`); used by `flowmatch`.
 
-use crate::flow_match::{num, text_param, Cand, Lib};
-use mzlab_core::flow::Job;
-use mzlab_lib::spec::Meta;
+use super::{num, text_param, Cand, Lib, MatchJob};
+use crate::spec::Meta;
 use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
@@ -20,7 +19,7 @@ pub(crate) struct Filters {
 }
 
 impl Filters {
-    pub(crate) fn from_job(job: &Job) -> Filters {
+    pub(crate) fn from_job(job: &MatchJob) -> Filters {
         let t = |k: &str| text_param(job, k).to_lowercase();
         Filters {
             meta: [

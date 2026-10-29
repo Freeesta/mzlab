@@ -46,3 +46,7 @@ required-features = ["thermo"]
 [[example]]
 name = "thermo_diagnosi"
 required-features = ["thermo"]
+
+[[example]]
+name = "sintetici"
+required-features = ["tutte"]

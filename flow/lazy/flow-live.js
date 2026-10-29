@@ -11,7 +11,7 @@
   const kit = () => F.runners.web.kit;
   const base = (/** @type {any} */ inst) => String(inst.step).split("@")[0];
   /** true when this browser does the step (the MSn search in a library is for the `tree` algorithm only) */
-  const here = (/** @type {any} */ inst) => kit().KNOWN.includes(base(inst)) && (base(inst) !== "spectra.match" || inst.algorithm === "tree");
+  const here = (/** @type {any} */ inst) => kit().KNOWN.includes(base(inst)) && (base(inst) !== "spectra.match" || inst.algorithm === "tree" || !!F.webIdent);
   const budgetMb = () => Number(G.MZLAB_RUST && G.MZLAB_RUST.budgetMb) || 0;
   /** @type {any} */ let x = null;
   // the two switches of the bar: Live (the plan is followed and its jobs start by themselves, on by default) and the user's Pause
