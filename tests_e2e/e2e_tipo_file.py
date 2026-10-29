@@ -1,4 +1,4 @@
-"""Experiment menu of the start-screen table: "Auto: <type>" with the reason as tooltip, a manual type wins, is applied at once (table, group,
+"""Experiment menu of the start-screen table: the detected type by its plain name with the reason as tooltip, a manual type wins, is applied at once (table, group,
 viewer) and is remembered per file; the group select sets every file of the group."""
 import sys, os, shutil; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -28,13 +28,16 @@ try:
         def auto():
             assert pg.locator(SEL).count() == 2
             first = pg.evaluate(f"(() => {{ const s = document.querySelector('{SEL}'); return [s.options[0].textContent, s.value, s.title]; }})()")
-            assert first[0] == "Auto: Full Scan" and first[1] == "" and first[2] and not first[2].startswith("load."), first
-        step("Auto is the first option, selected, with its reason", auto)
+            assert first[0] == "Full Scan" and first[1] == "" and first[2] and not first[2].startswith("load."), first
+        step("the detected type is the first option, selected, with its reason", auto)
         def one():
             pg.locator(SEL).first.select_option("infusion"); frames(pg, 4)
             kinds = pg.evaluate("ST.files.map(f => f.kind + ':' + f.kindAuto).sort()")
             assert kinds == ["full:full", "infusion:full"], kinds
             assert len(set(pg.evaluate("Array.from(document.querySelectorAll('#flist tr[data-grp]')).map(tr => tr.dataset.grp)"))) == 2
+            opts = pg.evaluate("Array.from(document.querySelector('%s').options).map(o => [o.value, o.textContent, o.selected])" % SEL)
+            sel = [o for o in opts if o[2]]
+            assert opts[0][1].startswith("Back to detected: ") and len(sel) == 1 and sel[0][1].endswith("(manual)"), opts
         step("a manual type applies at once and changes the row label, not its place", one)
         def grp():
             all_to(pg, "full")
