@@ -27,7 +27,7 @@ while read -r fam limit; do
   esac
   cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-lettori-wasm --no-default-features --features "$fam" </dev/null
   # cargo writes the same file for every family: wasm_pack copies it at once
-  wasm_pack "$out/$fam" target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$limit" "lettori $fam" --converge --low-memory-unused --strip-producers --vacuum --dae --merge-blocks --reorder-functions --duplicate-function-elimination --const-hoisting --simplify-globals-optimizing
+  wasm_pack "$out/$fam" target/wasm32-unknown-unknown/release/mzlab_lettori_wasm.wasm "$limit" "lettori $fam" @estesi
 done <<EOF
 $tetti
 EOF
