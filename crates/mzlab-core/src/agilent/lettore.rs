@@ -204,7 +204,7 @@ fn trace(l: &mut LettoreAgilent, id: &str) -> Result<Chromatogram> {
         .position(|&k| k == key)
         .ok_or_else(bad)?;
     if l.sic.is_none() {
-        let mut sic: BTreeMap<i64, (Vec<f64>, Vec<f64>)> = BTreeMap::new();
+        let mut sic = SicTraces::new();
         for i in l.scans.clone() {
             let r = l.d.records[i].clone();
             if r.scan_type == SCAN_SIM {
@@ -283,6 +283,9 @@ pub const VOCE: VoceLettore = VoceLettore {
     apri,
 };
 
+/// The time and intensity of the SIC of each ion (key: m/z x 100).
+type SicTraces = BTreeMap<i64, (Vec<f64>, Vec<f64>)>;
+
 pub struct LettoreAgilent {
     d: AgilentD,
     peak: Option<Box<dyn ReadAt>>,
@@ -292,7 +295,7 @@ pub struct LettoreAgilent {
     campioni: Vec<Campione>,
     indice: Vec<VoceScansione>,
     /// The SIC of every ion found in the SIM scans, built on the first request so the data are read once.
-    sic: Option<BTreeMap<i64, (Vec<f64>, Vec<f64>)>>,
+    sic: Option<SicTraces>,
 }
 
 impl LettoreAgilent {
