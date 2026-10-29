@@ -117,7 +117,7 @@ header #newrun[hidden]{display:inline-flex!important;visibility:hidden}
 html.i18n-wait body>:not(header){visibility:hidden}html.i18n-wait header{visibility:hidden}html.i18n-wait header :is(.logo,#np-set,#sb-toggle,#fs-btn,.hq){visibility:visible}header .ib .ic{min-width:16px;min-height:16px}
 /* toolbar of the header */
 #stbar{flex:1 1 0;min-width:0;height:30px;min-height:30px;display:flex;align-items:center;justify-content:flex-end;gap:3px;overflow:hidden;white-space:nowrap}
-@media (max-width:760px){header{flex-wrap:wrap}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
+@media (max-width:760px){header{flex-wrap:wrap}#nav{flex-wrap:wrap;min-width:0}#stbar{flex:1 1 100%;order:20;justify-content:flex-start}}
 #stbar .tb{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:30px;flex:none;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);cursor:pointer;font-size:13px}
 #stbar .tb:hover{background:var(--soft)}
 #stbar .tb .ti{display:inline-flex;color:var(--accent)}
