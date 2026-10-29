@@ -84,3 +84,80 @@ pub fn cerca(ms: &[Molecola], q: &str, limite: usize, ppm: f64) -> Vec<(usize, f
     hits.truncate(limite);
     hits
 }
+
+/// True when `a` and `b` differ by at most one inserted, deleted or replaced character.
+fn within_one(a: &[char], b: &[char]) -> bool {
+    let (short, long) = if a.len() <= b.len() { (a, b) } else { (b, a) };
+    if long.len() - short.len() > 1 {
+        return false;
+    }
+    let i = short.iter().zip(long).take_while(|(x, y)| x == y).count();
+    if short.len() == long.len() {
+        short[i + 1..] == long[i + 1..] || i == short.len()
+    } else {
+        short[i..] == long[i + 1..]
+    }
+}
+
+/// Molecules whose name or synonym is one typing slip away from `w` (lower case), as a whole name (4) or as the start of one (5): "bentazan" finds "bentazone".
+fn by_typo(ms: &[Molecola], w: &str) -> Vec<(usize, u8)> {
+    let q: Vec<char> = w.chars().collect();
+    let mut hits: Vec<(usize, u8, usize)> = Vec::new();
+    for (k, m) in ms.iter().enumerate() {
+        let best = std::iter::once(&m.nome)
+            .chain(&m.sinonimi)
+            .filter_map(|n| {
+                let c: Vec<char> = n.to_lowercase().chars().collect();
+                if within_one(&q, &c) {
+                    return Some(4);
+                }
+                (q.len().saturating_sub(1)..=q.len() + 1)
+                    .any(|l| l <= c.len() && l < c.len() && within_one(&q, &c[..l]))
+                    .then_some(5)
+            })
+            .min();
+        if let Some(b) = best {
+            hits.push((k, b, m.nome.encode_utf16().count()));
+        }
+    }
+    crate::sortc::slice_by_key(&mut hits, |h| (h.1, h.2));
+    hits.into_iter().map(|h| (h.0, h.1)).collect()
+}
+
+/// Molecules whose InChIKey is `q` (27 characters) or starts with it when `q` is the 14-character first block, in any case.
+fn by_inchikey(ms: &[Molecola], q: &str) -> Vec<usize> {
+    let q = q.to_ascii_uppercase();
+    let full = q.len() == 27 && q.as_bytes()[14] == b'-';
+    if !(full || q.len() == 14) || !q.bytes().all(|b| b.is_ascii_uppercase() || b == b'-') {
+        return Vec::new();
+    }
+    (0..ms.len())
+        .filter(|&k| {
+            ms[k]
+                .inchikey
+                .as_deref()
+                .is_some_and(|i| if full { i == q } else { i.starts_with(&q) })
+        })
+        .collect()
+}
+
+/// `cerca` for a box that picks a molecule: the same hits first, then the molecules of an InChIKey (score 0), and, only when nothing was found, the names one
+/// typing slip away (score 4 whole name, 5 start of a name, from four characters on).
+pub fn cerca_ampia(ms: &[Molecola], q: &str, limite: usize, ppm: f64) -> Vec<(usize, f64)> {
+    let q = q.trim();
+    let mut hits = cerca(ms, q, usize::MAX, ppm);
+    for k in by_inchikey(ms, q) {
+        if !hits.iter().any(|h| h.0 == k) {
+            hits.insert(0, (k, 0.0));
+        }
+    }
+    let w = q.to_lowercase();
+    if hits.is_empty() && w.chars().count() >= 4 && q.parse::<f64>().is_err() {
+        hits = by_typo(ms, &w)
+            .into_iter()
+            .map(|(k, s)| (k, f64::from(s)))
+            .collect();
+    }
+    hits.truncate(limite);
+    hits
+}

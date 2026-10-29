@@ -8,7 +8,7 @@ import { cerca } from "./molecole-archivio.js";
 /** @typedef {import("./molecole-archivio.js").Trovata} Trovata */
 /**
  * @typedef {{ label: string, placeholder?: string, none: string, count: (n: number) => string, manage?: string }} TestiCampo
- * @typedef {{ testi: TestiCampo, onScegli: (m: Trovata) => void, limite?: number, ppm?: number, gestisci?: (() => void) | null, valore?: string, etichetta?: (nome: string) => string }} OpzioniCampo
+ * @typedef {{ testi: TestiCampo, onScegli: (m: Trovata) => void, limite?: number, ppm?: number, ampia?: boolean, interroga?: (t: string) => Promise<string>, gestisci?: (() => void) | null, valore?: string, etichetta?: (nome: string) => string }} OpzioniCampo
  */
 
 const STYLE_ID = "molc-style";
@@ -104,7 +104,7 @@ export function campo(host, opz) {
     const mio = ++token, t = input.value.trim();
     if (t.length < 2) { trovate = []; apre(false); stato.textContent = ""; return; }
     /** @type {Trovata[]} */ let r;
-    try { r = await cerca(t, opz.limite || 8, opz.ppm || 10); } catch (_) { r = []; }
+    try { r = await cerca(opz.interroga ? await opz.interroga(t) : t, opz.limite || 8, opz.ppm || 10, !!opz.ampia); } catch (_) { r = []; }
     if (mio !== token) return;
     trovate = r;
     disegna();
