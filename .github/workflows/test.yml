@@ -126,9 +126,6 @@ jobs:
       - name: Drop the incremental data before the cache is saved
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' }}
         run: find target -maxdepth 4 -type d -name incremental -prune -exec rm -rf {} +
-      - name: Cache content (sizes in MB)
-        if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' }}
-        run: du -m --max-depth=3 target | sort -rn | head -25
       # time per test file for tools/ci_metrics.py (small, kept 3 days)
       - name: Test durations
         if: ${{ !cancelled() && hashFiles(format('junit-{0}-{1}.xml', matrix.python, matrix.parte)) != '' }}
