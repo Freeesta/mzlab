@@ -27,7 +27,7 @@ fn concurrent_builds_of_one_name_write_their_own_part_files() {
     };
     let seen = std::sync::Mutex::new(Vec::new());
     std::thread::scope(|s| {
-        for tag in [b'a', b'b'] {
+        for tag in *b"ab" {
             let (b, barrier, seen) = (&b, &barrier, &seen);
             s.spawn(move || {
                 b.scrivi("same.mzML", |out, _| {
@@ -48,5 +48,5 @@ fn concurrent_builds_of_one_name_write_their_own_part_files() {
         "each build has its own .part file"
     );
     let body = std::fs::read(b.path("same.mzML").unwrap()).unwrap();
-    assert!(body == [b'a'; 8] || body == [b'b'; 8], "{body:?}");
+    assert!(body == b"aaaaaaaa" || body == b"bbbbbbbb", "{body:?}");
 }
