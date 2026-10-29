@@ -105,11 +105,11 @@ try:
         step("MS2 tab of a DDA file: list of the precursors (4 decimals, sortable); a row shows its most intense MS2 next to the Full Scan", plist)
         def slow_list(delay, expect_ok):                 # the panels of the Full Scan appear `delay` ms after the click: showMs2 waits for them (5 s at most)
             pg.evaluate("setTab('ms2',true)"); attendi(pg, "!!document.querySelector('#ddalist') || !!E.panels.find(p=>p.tab==='ms2')")
-            pg.evaluate("E.panels.filter(p=>p.tab==='full').forEach(p=>closePanel(p))")
+            pg.evaluate("E.panels.filter(p=>p.tab==='full').forEach(p=>closePanel(p)); setTab('ms2',true)")
             pg.evaluate("window.__tab0 = window.setTab; window.__slow = " + str(delay) + "; window.setTab = (...a) => window.__slow && a[0] === 'full' ? void setTimeout(() => window.__tab0(...a), window.__slow) : window.__tab0(...a)")
             try:
                 pg.evaluate("document.querySelector('#qnote') && (document.querySelector('#qnote').hidden = true)")
-                drawer(pg); pg.click("#ddalist"); attendi(pg, "!!document.querySelector('#ddatb tr[data-r]')"); pg.click("#ddatb tr[data-r]:has-text('346.12')")
+                pg.evaluate("DDA.openList()"); attendi(pg, "!!document.querySelector('#ddatb tr[data-r]')"); pg.click("#ddatb tr[data-r]:has-text('346.12')")
                 if expect_ok:
                     attendi(pg, "(()=>{const s=E.panels.find(p=>p.dda!=null);return !!(s && s.sid != null)})()", 15000)
                     v = pg.evaluate("(()=>{const s=E.panels.find(p=>p.dda!=null);return {sid:s&&s.sid,ion:s&&s.ion}})()")
