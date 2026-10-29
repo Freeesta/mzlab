@@ -82,11 +82,25 @@ impl Ms2Params {
 impl Ms2Params {
     /// From the object the page sends: the parameters of the step merged with the defaults of its descriptor.
     pub fn from_json(text: &str) -> Result<Ms2Params> {
-        match mzlab_core::json::parse(text.as_bytes())? {
-            Value::Obj(o) => Ok(Ms2Params::from_params(&o)),
-            _ => Ok(Ms2Params::from_params(&[])),
-        }
+        Ok(Ms2Params::from_params(&json_params(text)?))
     }
+}
+
+/// The parameters of a step as the object the page sends (the parameters merged with the defaults of the descriptor); anything else is no parameter.
+pub fn json_params(text: &str) -> Result<Vec<(String, Value)>> {
+    match mzlab_core::json::parse(text.as_bytes())? {
+        Value::Obj(o) => Ok(o),
+        _ => Ok(Vec::new()),
+    }
+}
+
+/// A number parameter of a step; 0 when it is absent (the descriptor gives every one a default).
+pub fn num(params: &[(String, Value)], name: &str) -> f64 {
+    params
+        .iter()
+        .find(|(k, _)| k == name)
+        .and_then(|(_, v)| v.f64())
+        .unwrap_or(0.0)
 }
 
 fn stem(name: &str) -> &str {

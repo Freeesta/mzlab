@@ -11,7 +11,7 @@ use mzlab_feat::store::Slice;
 use crate::flow_ident_tests::{fixture, mix_fixture};
 
 /// The resolved parameters of the instance `id` of the plan as the canonical JSON the page sends to the `.wasm`.
-fn resolved(plan: &str, id: &str) -> String {
+pub(crate) fn resolved(plan: &str, id: &str) -> String {
     let plan = mzlab_core::flow::parse(plan.as_bytes()).unwrap();
     let inst = plan.instance(id).unwrap();
     let steps = crate::flow::steps();
