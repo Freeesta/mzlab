@@ -27,6 +27,7 @@ const run = s => {
     case "specexact": return { s: e.spectrum_exact(s.slot, s.query || "", rdMzml) };
     case "map": return { s: e.map_route(s.path, s.items, s.query || "") };
     case "diff": return { s: e.diff_traces(s.path, s.query || "") };
+    case "flow_command": return { s: wasm.flow_command(s.body) };
     case "lr_stat": return { s: wasm.stat_post(s.path, s.body) };
     case "open": return { s: e.open(s.slot, mzml.length, rdMzml) };
     case "tic": { const out = new Float64Array(2 * runCount(s)); return trace(2 * e.tic(s.slot, s.level, s.px || 0, out), out); }
