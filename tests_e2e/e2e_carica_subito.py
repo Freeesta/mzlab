@@ -29,9 +29,16 @@ try:
         step("the times 0/5/10/15/30 are in the rows (editable)", times_in_rows)
         def starts_at_once():
             assert pg.eval_on_selector("#flist", "e => e.querySelectorAll('input[aria-invalid=true]').length") == 0, "no cell marked invalid"
+            # the work area is drawn at once and the loading state is inside it: the full-screen veil never shows in this path
+            pg.evaluate("window.__veil = false; new MutationObserver(() => { if (!document.querySelector('#loading').hidden) window.__veil = true; }).observe(document.querySelector('#loading'), { attributes: true, attributeFilter: ['hidden'] })")
             pg.click("#opbtn")
             pg.wait_for_selector("#start", state="hidden", timeout=90000)
             ready(pg)
+            marks = pg.evaluate("MZLAB_OPEN.t")
+            assert list(marks) == ["click", "area", "first read", "first shown"] and list(marks.values()) == sorted(marks.values()), marks
+            assert pg.evaluate("window.__veil") is False, "the veil was shown while the files were opened"
+            assert pg.is_hidden("#opening") and pg.evaluate("!document.querySelector('#tools').inert && !S.opening")
+            print("open marks (ms from the click): " + ", ".join(f"{k} {v - marks['click']:.0f}" for k, v in marks.items()))
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 5
             assert pg.inner_text("#gomsg").strip() == "", "no message under the button"
         step("Load data starts at once, no message", starts_at_once)

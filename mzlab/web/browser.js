@@ -19,6 +19,7 @@
       // no open file and nothing being copied, indexed or converted (those are not in E.files until «Load data»)
       const idle = () => (typeof E === "undefined" || !Array.isArray(E.files) || !E.files.some((/** @type {any} */ f) => f && !f.gone))
         && !(typeof UPBUSY !== "undefined" && UPBUSY > 0)
+        && !(typeof S !== "undefined" && S.opening)
         && !(typeof PROGRESSO !== "undefined" && PROGRESSO.busy())
         && !(typeof CONVROWS !== "undefined" && CONVROWS.rows.some((/** @type {any} */ r) => !["done", "fail", "cancel"].includes(r.state)));
       const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", "1"); } catch (_) { return; } location.reload(); };

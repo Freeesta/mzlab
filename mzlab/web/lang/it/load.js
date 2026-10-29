@@ -113,5 +113,10 @@ I18N.add("it", {
   "load.hrmix.replace": "Chiudi i file aperti e carica questi",
   "load.hrmix.note": "Bassa e alta risoluzione non si aprono insieme: scegli quali caricare ora, gli altri restano in elenco per un secondo caricamento.",
   "load.hrmix.lr": "Solo LR ({n})",
-  "load.hrmix.hr": "Solo HR ({n})"
+  "load.hrmix.hr": "Solo HR ({n})",
+  "open.title": "Apertura di {file}…",
+  "open.st.wait": "in attesa",
+  "open.st.read": "lettura in corso",
+  "open.st.boot": "preparo la vista",
+  "open.st.err": "non letto"
 });

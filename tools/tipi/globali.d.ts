@@ -75,6 +75,7 @@ declare var MZLAB_LLM_AGENT: any;
 declare var MZLAB_LR: any;
 declare var MZLAB_LR_ERR: any;
 declare var MZLAB_LR_MISS: any;
+declare var MZLAB_OPEN: any;
 declare var MZLAB_RUST: any;
 declare var MZLAB_RUST_ERR: any;
 declare var MZLAB_RUST_READY: any;
