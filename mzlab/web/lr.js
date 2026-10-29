@@ -101,7 +101,7 @@ export function createLr({ rb }) {
       const raw = String(e && (e.raw || e.message || e) || "").slice(0, 600);      // the original text for the diagnosis (the page cuts paths out)
       if (key === "err.load.cancelled") { try { await rpc({ op: "lr_remove", name: n }); } catch (_) { /* nothing was kept */ } files.delete(n); }      // «Cancel»: no half file stays to be indexed at the next start
       return fail(key, { name: n, ...params, fase, raw }, `cannot read the file: ${n}`);
-    }
+    } finally { earlyTics.delete(n); }      // the index ends below 100%: the early TIC is not needed once the real one is served
     return json({ files: sorted(), methods: mr.list() });
   }
 
@@ -137,7 +137,9 @@ export function createLr({ rb }) {
       const name = String(e.file || "");
       for (const it of items) {
         if (name !== it.file && name !== it.file.split("#")[0]) continue;
-        if (["sample", "blank", "standard"].includes(e.type)) it.type = e.type;      // the roles of campioni/2 (role, sub, tconf) travel with the item: the page reads them back with the session; for (const k of ["role", "sub", "tconf"]) if (k in e) it[k] = e[k];
+        if (["sample", "blank", "standard"].includes(e.type)) it.type = e.type;
+        // the roles of campioni/2 (role, sub, tconf) travel with the item: the page reads them back with the session
+        for (const k of ["role", "sub", "tconf"]) if (k in e) it[k] = e[k];
         if ("time" in e) it.time = num(e.time);
         if ("conc" in e) it.conc = num(e.conc);
         if ("cunit" in e) it.cunit = e.cunit || null;
@@ -154,7 +156,7 @@ export function createLr({ rb }) {
     await rpc({ op: "lr_remove", name: n });
     files.delete(n); earlyTics.delete(n); await mr.refresh();
     if (items) {
-      items = items.filter(it => base(it.file) !== n);
+      items = items.filter(it => base(it.file.split("#")[0]) !== n);      // a mixed file's items are named `file#tag`
       if (!items.length) { items = null; hr = lr = false; }
     }
     rb.noteRemove(n); rb.noteExplore(null);
