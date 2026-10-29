@@ -485,7 +485,7 @@ window.MAPPA = (() => {
       const y0 = Y(0); g.beginPath(); g.moveTo(ml, y0 + .5); g.lineTo(mr, y0 + .5); g.stroke();
       // TIC A − B: thin dashed line with its own scale (written beside the label)
       if (tic) {
-        const tm = Math.max(...tic.y.map(Math.abs)) || 1; g.strokeStyle = ink; g.setLineDash([2, 3]); g.beginPath(); let f1 = true;
+        const tm = maxOf(tic.y.map(Math.abs)) || 1; g.strokeStyle = ink; g.setLineDash([2, 3]); g.beginPath(); let f1 = true;
         for (let i = 0; i < tic.rt.length; i++) { if (tic.rt[i] < a.x0 || tic.rt[i] > a.x1) continue; const x = X(tic.rt[i]), y = y0 - tic.y[i] / tm * (y0 - mt); if (f1) { g.moveTo(x, y); f1 = false; } else g.lineTo(x, y); }
         g.stroke(); g.setLineDash([]);
       }
