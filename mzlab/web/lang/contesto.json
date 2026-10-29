@@ -747,5 +747,10 @@
   "etpk.tip.nm": "Tooltip dell'etichetta di un picco del PDA/UV; {rt} = RT (min), {v} = lunghezza d'onda del massimo (nm).",
   "etpk.tip.xic": "Tooltip dell'etichetta di un picco di XIC; {rt} = RT (min), {v} = m/z estratto.",
   "etpk.tip.mrm": "Tooltip dell'etichetta di un picco di MRM; {rt} = RT (min), {v} = transizione Q1>Q3.",
-  "tdati.etpk": "Riga della tabella per un picco con etichetta (RT e grandezza che lo definisce); {v} = testo dell'etichetta, es. «14.26 · 254 nm»."
+  "tdati.etpk": "Riga della tabella per un picco con etichetta (RT e grandezza che lo definisce); {v} = testo dell'etichetta, es. «14.26 · 254 nm».",
+  "valida.title": "Titolo della finestra «Valida mzML»; {name} = nome del file (già protetto).",
+  "valida.caption": "Didascalia e nome accessibile della tabella dei problemi trovati; {name} = nome del file.",
+  "valida.counts": "Riga di riepilogo della validazione; {spectra}, {chroms} = numero di spettri e cromatogrammi del file; {errors}, {warnings} = numero di errori e di avvisi.",
+  "valida.more": "Nota sotto la tabella quando i problemi sono più delle righe mostrate; {n} = righe mostrate, {total} = problemi trovati.",
+  "valida.fail": "Messaggio quando la validazione non è riuscita; {detail} = causa tecnica (testo dell'errore)."
 }

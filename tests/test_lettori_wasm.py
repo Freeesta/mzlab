@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TETTI = {"aperti": 416768, "andi": 263936, "thermo": 626688, "agilent": 438272, "sciex": 364544, "waters": 303104, "shimadzu": 290816, "bruker": 434176}
+TETTI = {"aperti": 416768, "andi": 263936, "thermo": 626688, "agilent": 438272, "sciex": 364544, "waters": 303104, "shimadzu": 290816, "bruker": 434176, "valida": 443392}
 
 
 def tabella():
@@ -29,6 +29,8 @@ def test_ogni_famiglia_ha_la_sua_feature():
     for crate in ("mzlab-lettori", "mzlab-lettori-wasm"):
         c = (ROOT / "crates" / crate / "Cargo.toml").read_text(encoding="utf-8")
         for f in TETTI:
+            if f == "valida" and crate == "mzlab-lettori":    # the validator reads no maker's format
+                continue
             assert re.search(rf"^{f} = ", c, re.M), (crate, f)
 
 
