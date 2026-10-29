@@ -75,18 +75,35 @@ impl Search<'_> {
 
     /// Equitable refinement: classes split by the multiset of (neighbour class, bond order) until no class splits any more.
     fn refine(&self, mut cls: Vec<usize>) -> Vec<usize> {
+        let n = cls.len();
         let mut count = cls.iter().collect::<std::collections::BTreeSet<_>>().len();
+        // Neighbour keys live in one flat buffer (one slice per atom) and the ranking sorts atom
+        // indices, so a round allocates nothing per atom.
+        let mut start = vec![0usize; n + 1];
+        for i in 0..n {
+            start[i + 1] = start[i] + self.adj[i].len();
+        }
+        let mut near = vec![(0usize, 0u8); start[n]];
+        let mut order: Vec<usize> = (0..n).collect();
         loop {
-            let keys: Vec<(usize, Vec<(usize, u8)>)> = (0..cls.len())
-                .map(|i| {
-                    let mut near: Vec<(usize, u8)> =
-                        self.adj[i].iter().map(|&(j, o)| (cls[j], o)).collect();
-                    near.sort_unstable();
-                    (cls[i], near)
-                })
-                .collect();
-            let next = rank(&keys);
-            let now = next.iter().max().map_or(0, |m| m + 1);
+            for i in 0..n {
+                let slot = &mut near[start[i]..start[i + 1]];
+                for (s, &(j, o)) in slot.iter_mut().zip(&self.adj[i]) {
+                    *s = (cls[j], o);
+                }
+                slot.sort_unstable();
+            }
+            let key = |i: usize| (cls[i], &near[start[i]..start[i + 1]]);
+            order.sort_unstable_by(|&x, &y| key(x).cmp(&key(y)));
+            let mut next = vec![0usize; n];
+            let mut now = 0;
+            for w in 0..n {
+                if w > 0 && key(order[w - 1]) != key(order[w]) {
+                    now += 1;
+                }
+                next[order[w]] = now;
+            }
+            let now = if n == 0 { 0 } else { now + 1 };
             cls = next;
             if now == count {
                 return cls;

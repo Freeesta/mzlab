@@ -74,7 +74,7 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
         if entry.neutral_formula.trim().is_empty() {
             entry_errors.push("Missing required Neutral formula".to_string());
         }
-        if entry.monoisotopic_mass <= 0.0 {
+        if !entry.monoisotopic_mass.is_finite() || entry.monoisotopic_mass <= 0.0 {
             entry_errors.push(format!(
                 "Invalid monoisotopic mass {} <= 0",
                 entry.monoisotopic_mass
@@ -89,7 +89,8 @@ pub fn validate_entries(entries: &[TargetEntry]) -> ValidationReport {
         ];
         for (adduct, label, got) in given {
             let expected = entry.monoisotopic_mass + adduct.delta_mass();
-            if (got - expected).abs() > 0.001 {
+            let gap = (got - expected).abs();
+            if gap.is_nan() || gap > 0.001 {
                 entry_errors.push(format!(
                     "Incoherent {label} m/z: got {got}, expected theoretical {expected}"
                 ));
