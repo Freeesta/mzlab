@@ -16,7 +16,11 @@
   function isolateOnce() {
     try {
       if (window.crossOriginIsolated || /[?&]cap-off=[^&]*isolamento/.test(location.search) || sessionStorage.getItem("mzlab.coiReload")) return;
-      const idle = () => typeof E === "undefined" || !Array.isArray(E.files) || !E.files.some((/** @type {any} */ f) => f && !f.gone);
+      // no open file and nothing being copied, indexed or converted (those are not in E.files until «Load data»)
+      const idle = () => (typeof E === "undefined" || !Array.isArray(E.files) || !E.files.some((/** @type {any} */ f) => f && !f.gone))
+        && !(typeof UPBUSY !== "undefined" && UPBUSY > 0)
+        && !(typeof PROGRESSO !== "undefined" && PROGRESSO.busy())
+        && !(typeof CONVROWS !== "undefined" && CONVROWS.rows.some((/** @type {any} */ r) => !["done", "fail", "cancel"].includes(r.state)));
       const go = () => { if (window.crossOriginIsolated) return; if (!idle()) { setTimeout(go, 1000); return; } try { sessionStorage.setItem("mzlab.coiReload", "1"); } catch (_) { return; } location.reload(); };
       navigator.serviceWorker.ready.then(() => { if (navigator.serviceWorker.controller) go(); else navigator.serviceWorker.addEventListener("controllerchange", go, { once: true }); });
     } catch (_) { /* stays not isolated */ }
@@ -77,15 +81,18 @@
   const lrInit = async () => {
     if (window.QQQ_PHONE) throw new Error("phone: engine not started");
     if (!modern) { fail("load.err.oldBrowser"); throw new Error("this browser is too old"); }
+    // the module of the loading and the count of the stored files start with the engine, not after it
+    const lrModule = import(new URL("lr.js", SRC).href);
+    lrModule.catch(() => {});
+    // reopening takes about 0.15 s per stored file (an index each): the limit grows with the files in the storage, 240 samples took 36 s
+    const stored = (async () => { let n = 0; try { for await (const _ of /** @type {any} */ (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files")).keys()) n++; } catch (_) { /* nothing stored yet */ } return n; })();
     const b = await rustReady;
     if (!b || b.disabled) { fail("load.err.engineMissing"); throw new Error("the calculation engine is not available in this browser"); }
     try {
-      lr = (await import(new URL("lr.js", SRC).href)).createLr({ rb: b });
+      lr = (await lrModule).createLr({ rb: b });
       // the browser storage held by another tab: the loading screen says so
-      // reopening takes about 0.15 s per stored file (an index each): the limit grows with the files in the storage, 240 samples took 36 s
-      const stored = await (async () => { let n = 0; try { for await (const _ of /** @type {any} */ (await (await (await navigator.storage.getDirectory()).getDirectoryHandle("mzlab")).getDirectoryHandle("files")).keys()) n++; } catch (_) { /* nothing stored yet */ } return n; })();
-      const u = new URL(location.href), stall = +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * stored;
-      const within = p => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), stall))]);
+      const u = new URL(location.href), stall = stored.then(n => +(u.searchParams.get("ripresa") || 0) || 30000 + 1000 * n);
+      const within = p => Promise.race([p, stall.then(ms => new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("reopening the saved files timed out"), { key: "load.err.resumeTimeout" })), ms)))]);
       const fresh = u.searchParams.get("riparti") === "1";
       if (fresh) { await within(lr.reset()); u.searchParams.delete("riparti"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
       await within(lr.boot(fresh)); window.MZLAB_LR = lr;
