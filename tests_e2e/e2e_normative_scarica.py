@@ -2,7 +2,7 @@
 them. First use downloads the pieces into the Cache Storage `mzlab-libs` and hands the raw `.mzsus` over; a reload with the network cut is served from the cache;
 a corrupted piece is refused (SHA-256) and installs nothing; «check for updates» only compares catalogues. Nothing leaves the machine.
 Needs the site: python tools/build_site.py (and cargo, to build mzlab-cli once); delete site/ afterwards."""
-import hashlib, json, os, shutil, subprocess, sys, time
+import socket, hashlib, json, os, shutil, subprocess, sys, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
@@ -30,7 +30,12 @@ CAT = json.loads((OUT / "catalogo.json").read_text(encoding="utf-8"))
 (OUT / "normative.mzsus").unlink()          # the raw file is not served: the pieces are the package
 
 srv = subprocess.Popen([sys.executable, str(Path(__file__).resolve().with_name("servi.py")), str(PORT), str(ROOT / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-time.sleep(1)
+for _ in range(100):                          # wait on the state: the port accepts connections
+    try:
+        socket.create_connection(("127.0.0.1", PORT), timeout=0.2).close()
+        break
+    except OSError:
+        pass
 URL = f"http://127.0.0.1:{PORT}/"
 BASE = "/static/normative/"
 hits, corrupt = {}, [False]

@@ -36,6 +36,11 @@ pub struct Listings {
 }
 
 impl Listings {
+    /// The whole extension as one JSON text (rows in order, each with its memberships): the text the `.wasm` and the native reader must give byte for byte.
+    pub fn to_json(&self, rows: &[Hit]) -> String {
+        listings_text(self, rows)
+    }
+
     /// Number of lists the memberships index (the manifest names them).
     pub fn list_count(&self) -> usize {
         self.lists
@@ -63,39 +68,6 @@ impl Listings {
 
     pub fn entry_count(&self) -> usize {
         self.entries.len()
-    }
-
-    /// The whole extension as one JSON text (rows in order, each with its memberships): the text the `.wasm` and the native reader must give byte for byte.
-    pub fn to_json(&self, rows: &[Hit]) -> String {
-        let mut o = Out::default();
-        o.raw("{\"lists\":")
-            .int(self.lists as i64)
-            .raw(",\"rows\":[");
-        for (i, h) in rows.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" })
-                .raw("{\"key\":")
-                .str(std::str::from_utf8(&h.key).unwrap_or(""))
-                .raw(",\"full_key\":")
-                .str(self.full_key(i))
-                .raw(",\"name\":")
-                .str(self.name(i))
-                .raw(",\"in\":[");
-            for (j, m) in self.memberships(i).iter().enumerate() {
-                o.raw(if j > 0 { "," } else { "" })
-                    .raw("{\"list\":")
-                    .int(m.list as i64)
-                    .raw(",\"form\":")
-                    .str(FORM_NAMES.get(m.form as usize).copied().unwrap_or(""))
-                    .raw(",\"bits\":")
-                    .int(m.bits as i64)
-                    .raw(",\"entry\":")
-                    .raw(self.entry(m.entry))
-                    .raw("}");
-            }
-            o.raw("]}");
-        }
-        o.raw("]}");
-        o.0
     }
 }
 
@@ -161,4 +133,39 @@ pub(crate) fn parse_listings(c: &mut Cur, n: usize) -> Result<Listings, Suspects
         members,
         entries,
     })
+}
+
+fn memberships_json(l: &Listings, o: &mut Out, row: usize) {
+    for (j, m) in l.memberships(row).iter().enumerate() {
+        o.raw(if j > 0 { "," } else { "" })
+            .raw("{\"list\":")
+            .int(m.list as i64)
+            .raw(",\"form\":")
+            .str(FORM_NAMES.get(m.form as usize).copied().unwrap_or(""))
+            .raw(",\"bits\":")
+            .int(m.bits as i64)
+            .raw(",\"entry\":")
+            .raw(l.entry(m.entry))
+            .raw("}");
+    }
+}
+
+/// The whole extension as one JSON text (rows in order, each with its memberships): the text the `.wasm` and the native reader must give byte for byte.
+fn listings_text(l: &Listings, rows: &[Hit]) -> String {
+    let mut o = Out::default();
+    o.raw("{\"lists\":").int(l.lists as i64).raw(",\"rows\":[");
+    for (i, h) in rows.iter().enumerate() {
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"key\":")
+            .str(std::str::from_utf8(&h.key).unwrap_or(""))
+            .raw(",\"full_key\":")
+            .str(l.full_key(i))
+            .raw(",\"name\":")
+            .str(l.name(i))
+            .raw(",\"in\":[");
+        memberships_json(l, &mut o, i);
+        o.raw("]}");
+    }
+    o.raw("]}");
+    o.0
 }
