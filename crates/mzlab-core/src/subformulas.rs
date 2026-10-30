@@ -3,7 +3,7 @@
 use crate::elements::{mass_of, parse_formula, Formula};
 use crate::error::{Error, Result};
 
-const ELECTRON: f64 = 0.00054858;
+const ELECTRON: f64 = crate::elements::ELECTRON;
 pub const MAX_COMBINATIONS: u64 = 300_000;
 
 fn total(f: &Formula) -> Result<u64> {

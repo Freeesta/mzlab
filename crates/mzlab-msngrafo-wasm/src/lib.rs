@@ -43,13 +43,7 @@ impl ReadAt for JsReader {
 }
 
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 /// `mzlab-msngrafo/1`: the page checks that the loaded `.wasm` is the one it was built with.

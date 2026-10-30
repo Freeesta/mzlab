@@ -13,6 +13,7 @@ use mzlab_core::mzidx::DEFAULT_BUDGET;
 use mzlab_feat_table_wasm::core::{samples_json, table_file};
 use mzlab_feat_wasm::run;
 
+mod campioni_cmd;
 mod canali_cmd;
 pub mod convert;
 mod convert_report;
@@ -134,6 +135,7 @@ pub mod msn_uscite;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
+mod peaks_edges_cmd;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -152,6 +154,8 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli llm context RUNDIR [--budget N] [--hide-names]   the contesto/1 of a run folder; llm eval CASES_DIR --replay DIR scores the cases
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli canali FILE [--out PATH]   the channels of a file as JSON (canali --help)
+       mzlab-cli campioni variabili|nome-gruppo ...   how the file names split the files, as JSON (campioni --help)
+       mzlab-cli peaks-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peaks-edges --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
@@ -305,25 +309,6 @@ fn emit(t: String, out: &Option<PathBuf>) -> Outcome {
     }
 }
 
-/// `mzlab-cli msn-lib ...`: the library of MSn trees; the data on stdout, the notices on stderr.
-fn msn_lib_cmd(args: Vec<String>) -> Outcome {
-    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-lib{k}", std::process::id()));
-    let r = std::fs::create_dir_all(&tmp)
-        .map_err(io)
-        .and_then(|_| msn_lib::run(args, &tmp));
-    let _ = std::fs::remove_dir_all(&tmp);
-    match r {
-        Ok((data, note)) => Outcome {
-            code: 0,
-            stdout: data,
-            stderr: note,
-        },
-        Err(e) => Outcome::fail(&e.to_string()),
-    }
-}
-
 /// `mzlab-cli flow command PLAN.json`: the script that reruns the plan, on stdout.
 fn flow_command(args: Vec<String>) -> Outcome {
     let [path] = args.as_slice() else {
@@ -382,13 +367,15 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 6] = [
+const PLAIN: [&str; 8] = [
     "llm",
     "steps",
     "tutor",
     "explain-missing",
     "msn-rules",
     "canali",
+    "campioni",
+    "peaks-edges",
 ];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
@@ -398,6 +385,8 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
         "explain-missing" => flow_explain::run(args),
         "msn-rules" => msn_rules::run(args),
         "canali" => canali_cmd::run(args),
+        "campioni" => campioni_cmd::run(args),
+        "peaks-edges" => peaks_edges_cmd::run(args),
         _ => tutor::run(args),
     }
 }
@@ -425,7 +414,7 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("flow") => return flow_cmd(args),
         Some(c) if PLAIN.contains(&c) => return run_plain(c, args.collect()),
         Some("msn-graph") => return msn_graph::cmd(args),
-        Some("msn-lib") => return msn_lib_cmd(args.collect()),
+        Some("msn-lib") => return msn_lib::cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
         Some(c @ ("normative" | "insilico" | "validate")) => return native_cmd(c, args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),

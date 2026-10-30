@@ -290,6 +290,16 @@ fn lists_json(o: &mut Out, lists: &[&Value]) {
                 json::write_value(o, v);
             }
         }
+        // the latest retrieval date of the inputs: the report quotes it beside the version date
+        let retrieved = l
+            .get("inputs")
+            .map_or(&[][..], Value::arr)
+            .iter()
+            .filter_map(|i| i.get("retrieved").and_then(Value::str))
+            .max();
+        if let Some(r) = retrieved {
+            o.raw(",\"retrieved\":").str(r);
+        }
         o.raw("}");
     }
     o.raw("]");

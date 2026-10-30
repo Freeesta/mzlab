@@ -57,6 +57,8 @@
     "../../mzlab/web/bufpool.js",
     "../../mzlab/web/ident-catalogo.js",
     "../../mzlab/web/ident-pannello.js",
+    "../../mzlab/web/libreria-finestra.js",
+    "../../mzlab/web/mol-svg.js",
     "../../mzlab/web/infusione-grafo.js",
     "../../mzlab/web/banco-file.js",
     "../../mzlab/web/infusione-grafo-campo.js",

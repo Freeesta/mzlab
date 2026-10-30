@@ -419,7 +419,7 @@ function wire(/** @type {SVGSVGElement} */ svg, /** @type {Layout} */ L, /** @ty
     const id = /** @type {string} */ (b.getAttribute("data-id"));
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cb.onSelect(null); return; }
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cb.onSelect(id); cb.onOpen(id); return; }
-    if (!e.key.startsWith("Arrow")) return;
+    if (!(e.key || "").startsWith("Arrow")) return;
     e.preventDefault(); const to = neighbour(L, id, e.key); if (to) focus(to);
   });
 }

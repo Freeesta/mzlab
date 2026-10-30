@@ -15,30 +15,11 @@ use sessione::Sessioni;
 const BLOCCO: usize = 64 << 10;
 
 fn error_text(e: &mzlab_core::Error) -> String {
-    let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    o.0
+    e.to_json()
 }
 
 fn error_json(e: &mzlab_core::Error) -> JsValue {
     JsValue::from_str(&error_text(e))
-}
-
-#[cfg(test)]
-mod prove {
-    use super::*;
-
-    /// A parameter taken from a corrupt file may hold control characters: the error must still be JSON (`{:?}` writes `\0` and `\u{..}`, which are not).
-    #[test]
-    fn error_text_is_valid_json_for_control_characters() {
-        let e = mzlab_core::Error::new("err.file.wiff").with("detail", "a\0b\u{7f}\u{1}\"\\'é");
-        let v: serde_json::Value = serde_json::from_str(&error_text(&e)).expect("valid JSON");
-        assert_eq!(v["params"]["detail"], "a\0b\u{7f}\u{1}\"\\'é");
-    }
 }
 
 /// Bytes fetched from JS at once for a small read: a reader like `opentfraw` asks for a few bytes at a time (4 for a length), and every call of `read` is a slice of a `File` read

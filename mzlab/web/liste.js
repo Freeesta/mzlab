@@ -559,8 +559,8 @@ const LISTE = (() => {
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
         <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
           <span class="seg" id="lst-view-seg">
-            <button type="button" data-v="ref" class="on">Reference Lists</button>
-            <button type="button" data-v="target">HRMS Target Screening</button>
+            <button type="button" data-v="ref" class="on">${I18N.t("lst.view.ref")}</button>
+            <button type="button" data-v="target">${I18N.t("lst.view.target")}</button>
           </span>
         </div>
         <div id="lst-ref-box" style="display:flex;flex-direction:column;gap:6px;flex:1">
@@ -635,7 +635,7 @@ const LISTE = (() => {
         if (isTarget && !elTargetBox.dataset.mounted) {
           elTargetBox.dataset.mounted = "1";
           try {
-            const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
+            await import("./liste-target-core.js"); const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
             if (mod && typeof mod.mount === "function") mod.mount(elTargetBox);
           } catch (_) {}
         }
@@ -847,12 +847,12 @@ const LISTE = (() => {
   // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
   if (typeof AZIONI !== "undefined") {
     const S = ["spec"], T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
+    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, menu: false, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
     AZIONI.registra({ id: "spec.known", gruppo: "cont", viste: S, voci: (/** @type {Bag} */ c) => {
       const kn = c.a.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
-      return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, esegui: () => {} }] : [];
+      return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, info: true, esegui: () => {} }] : [];
     } });
-    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, visibile: (/** @type {Bag} */ c) => !!c.a.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
+    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, menu: false, visibile: (/** @type {Bag} */ c) => !!c.a.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
   }
   return {
     tolDa,

@@ -12,9 +12,22 @@
  *   scorciatoia?: Scorciatoia, esegui?: (c: Contesto) => any, ordine?: number, doppio?: (c: Contesto) => boolean, doppioOrd?: number, voci?: (c: Contesto) => Riga[], [k: string]: any }} Azione
  * @typedef {{ tasto?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, dove: "chart" | "view", et?: string }} Scorciatoia
  *   tasto = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; dove = "chart": only with the focus on a chart, "view": anywhere in the view; et = i18n key of the short label
- * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, icon?: string, esegui: () => any }} Riga
- * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, fn: () => any, fila?: string, soloIcona?: boolean }} VoceAzione
+ * @typedef {{ nome: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, info?: boolean, icon?: string, esegui: () => any }} Riga
+ * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean }} VoceAzione
  */
+// an entry not available now (`off`, set by AZIONI.per) is not shown at all; a separator left first, last or doubled by that goes too
+/** @param {any[]} items */
+const pulisciMenu = items => {
+  const out = /** @type {any[]} */ ([]);
+  for (let it of items) {
+    if (it !== "-" && it.fila) { const f = it.fila.filter((x) => !x.off); if (!f.length) continue; it = { ...it, fila: f }; }
+    else if (it !== "-" && it.off) continue;
+    if (it === "-" && (!out.length || out[out.length - 1] === "-")) continue;
+    out.push(it);
+  }
+  if (out[out.length - 1] === "-") out.pop();
+  return out;
+};
 const AZIONI = (() => {
   // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
   const GRUPPI = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "disp", "learn", "copy", "help", "ann"];
@@ -56,14 +69,14 @@ const AZIONI = (() => {
         const ok = pronta(a, c), rs = a.voci(c);
         if (rs.length && last && a.gruppo !== last) items.push("-");
         if (rs.length) last = a.gruppo;
-        rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, icon: r.icon || icona(a, c), check: r.check ?? null, dim: !ok || !!r.dim, fn: r.esegui }));
+        rs.forEach(r => items.push({ id: a.id, label: r.nome, aria: r.aria || r.nome, tip: r.tip, icon: r.icon || icona(a, c), check: r.check ?? null, dim: !ok || !!r.dim, off: !ok || (!!r.dim && !r.info), fn: r.esegui }));
         continue;
       }
       if (last && a.gruppo !== last) items.push("-");
       last = a.gruppo;
       const nome = a.nome ? a.nome(c) : a.id;
       items.push({ id: a.id, label: a.voce ? a.voce(c) : nome, aria: a.aria ? a.aria(c) : nome, tip: a.tip && a.tip(c), icon: icona(a, c),
-        check: a.attiva ? a.attiva(c) : null, dim: !pronta(a, c), fn: () => esegui(a.id, c), fila: a.fila, soloIcona: !!a.fila });
+        check: a.attiva ? a.attiva(c) : null, dim: !pronta(a, c), off: !pronta(a, c), fn: () => esegui(a.id, c), fila: a.fila, soloIcona: !!a.fila });
     }
     // consecutive entries of the same `fila` share one row of the menu
     return items.reduce((/** @type {any[]} */ out, it) => {
@@ -74,6 +87,9 @@ const AZIONI = (() => {
       return out;
     }, []);
   }
+  // the downloads of a view (`scarico: true`, never in the right-click menu): rows of the download button of the panel, only the available ones
+  /** @param {Contesto} c */
+  const scarichi = c => elenco(c, "tutte").filter(a => a.scarico && pronta(a, c)).map(a => ({ label: a.nome ? a.nome(c) : a.id, icon: icona(a, c), fn: () => esegui(a.id, c) }));
   /** @param {string} id @param {Contesto} c */
   function esegui(id, c) {
     const a = voce(id);
@@ -87,7 +103,7 @@ const AZIONI = (() => {
     esegui(l[0].id, c);
     return true;
   }
-  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, esegui, mostra, pronta, doppio, icona };
+  return { formato: "azioni/1", GRUPPI, voci, registra, voce, elenco, per, scarichi, pulisci: pulisciMenu, esegui, mostra, pronta, doppio, icona };
 })();
 // ---- shortcuts: the field `scorciatoia` of an action, ONE keydown for all of them (the functions are also added to AZIONI)
 const TASTI = (() => {
@@ -105,7 +121,7 @@ const TASTI = (() => {
     if (s.code) return e.code === s.code && !!s.shift === e.shiftKey;
     const k = String(s.tasto || "");
     if (k === "?") return e.key === "?";
-    return !e.shiftKey === !s.shift && e.key.toLowerCase() === k.toLowerCase();
+    return !e.shiftKey === !s.shift && (e.key || "").toLowerCase() === k.toLowerCase();
   }
   /** The actions with a shortcut for this view, in the order of registration. @param {string} vista */
   const conTasto = vista => voci.filter(a => a.scorciatoia && (a.viste.includes(vista) || a.viste.includes("*")));
