@@ -63,6 +63,25 @@ function measCtx(p, px, py) {
   if (l) dmOpen(l.dm, l.hr, specPol(p));
   return !!l;
 }
+// theoretical isotope pattern of a unit-resolution spectrum (red circles aligned on the nearest observed peak); pat = the peaks of api/ion_pattern; returns the legend note
+function drawIsoUnit(/** @type {any} */ p, /** @type {any} */ g, /** @type {any} */ X, /** @type {any} */ Y, /** @type {any} */ d0, /** @type {number} */ ymax, /** @type {number} */ W, /** @type {any} */ M, /** @type {Bag[]} */ pat) {
+  const top = pat.reduce((/** @type {Bag} */ a, /** @type {Bag} */ b) => (b.rel > a.rel ? b : a));
+  /** @type {any} */ let obs = null; d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
+  if (obs) {                                         // profile data: several points per peak -> use the centroid of the peak (+-0.5 Da)
+    let sw = 0, sm = 0; d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (Math.abs(m - obs.m) <= 0.5 && d0.y[j] > 0) { sw += d0.y[j]; sm += m * d0.y[j]; } });
+    if (sw > 0) obs.c = sm / sw;
+  }
+  const shift = obs ? (obs.c ?? obs.m) - top.mz : 0, h = obs ? obs.y : ymax / 1.12 * 0.9;
+  g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
+  for (const r of pat) {
+    const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
+    g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
+    g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
+    if (r.rel >= 1) { g.font = fpx(12); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
+  }
+  g.restore(); g.font = fpx(12);
+  return `<span><i style="background:#d62728"></i>${I18N.t("iso.note", { formula: fmtFormula(p.iso.formula), adduct: fmtAdduct(p.iso.ad), align: obs ? I18N.t("iso.align", { mz: (obs.c ?? obs.m).toFixed(mzd(p, p.level)), shift: Math.abs(shift) >= 0.05 ? I18N.t("iso.shift", { v: (shift > 0 ? "+" : "") + shift.toFixed(1) }) : "" }) : I18N.t("iso.noPeak", { mz: top.mz.toFixed(mzd(p)) }) })}</span>`;
+}
 function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   // zoom or scan changed: the measure is cancelled
@@ -232,10 +251,10 @@ async function isoAsk(p) {
   // a formula written with its charge (C10H14N+, as copied from the drawing): the ion as it is, no proton added
   const chg = ftxt.match(/^(.+?)([+\-−])$/);
   if (chg) { ftxt = chg[1]; if (!adt) adt = chg[2] === "+" ? "[M]+" : "[M]-"; }
-  try { const r = await getFormula(ftxt, "");
+  try { const r = await getFormula(ftxt, ""), ad = (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim();
+    const pat = (await QQQRef.unitIon(r.formula, ad)).peaks;
     COMANDI.fai("spec.isotopes", p, () => {
-      p.iso = { formula: r.formula, ad: (adt || defAdduct(a.data.map(/** @param {any} x */ x => x.f))).trim() };
-      const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
+      p.iso = { formula: r.formula, ad };
       // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
       p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom);
     });

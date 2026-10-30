@@ -423,6 +423,7 @@ declare var dockedP: any;
 declare var dprNow: any;
 declare var draw: any;
 declare var drawAnn: any;
+declare var drawIsoUnit: any;
 declare var drawLines: any;
 declare var drawMap: any;
 declare var drawMeas: any;

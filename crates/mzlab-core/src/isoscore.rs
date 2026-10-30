@@ -4,50 +4,11 @@
 use crate::composition::Counts;
 use crate::elements::{mass_of, parse_formula, ELECTRON};
 use crate::error::{Error, Result};
+pub use crate::isotab::isotopes_of;
+use crate::isotab::ISO;
 use crate::pysum::pysum;
 use crate::subformulas::submasses;
 
-const ISO: [(&str, &[(f64, f64)]); 13] = [
-    ("H", &[(1.00782503223, 0.999885), (2.01410177812, 0.000115)]),
-    ("C", &[(12.0, 0.9893), (13.00335483507, 0.0107)]),
-    ("N", &[(14.00307400443, 0.99636), (15.00010889888, 0.00364)]),
-    (
-        "O",
-        &[
-            (15.99491461957, 0.99757),
-            (16.99913175650, 0.00038),
-            (17.99915961286, 0.00205),
-        ],
-    ),
-    ("F", &[(18.99840316273, 1.0)]),
-    ("Na", &[(22.989769282, 1.0)]),
-    (
-        "Si",
-        &[
-            (27.9769265350, 0.92223),
-            (28.9764946653, 0.04685),
-            (29.973770136, 0.03092),
-        ],
-    ),
-    ("P", &[(30.97376199842, 1.0)]),
-    (
-        "S",
-        &[
-            (31.9720711744, 0.9499),
-            (32.9714589098, 0.0075),
-            (33.967867004, 0.0425),
-            (35.96708071, 0.0001),
-        ],
-    ),
-    ("Cl", &[(34.968852682, 0.7576), (36.965902602, 0.2424)]),
-    ("K", &[(38.9637064864, 0.932581), (40.9618252579, 0.067302)]),
-    ("Br", &[(78.9183376, 0.5069), (80.9162897, 0.4931)]),
-    ("I", &[(126.9044719, 1.0)]),
-];
-/// Natural isotopes of an element as `(exact mass, abundance)`, the most abundant NOT necessarily first; `None` for an element outside the table.
-pub fn isotopes_of(el: &str) -> Option<&'static [(f64, f64)]> {
-    ISO.iter().find(|(e, _)| *e == el).map(|(_, p)| *p)
-}
 const MERGE_TOL: f64 = 0.0005;
 const MAX_SHIFT: f64 = 6.0;
 

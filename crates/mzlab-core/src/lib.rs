@@ -48,6 +48,8 @@ mod idxcheck;
 pub mod idxread;
 pub mod idxsearch;
 pub mod idxwalk;
+pub mod ionpattern;
+mod isotab;
 pub mod isoscore;
 pub mod itemroutes;
 pub mod infusione;

@@ -348,6 +348,9 @@ async function drawSpec(p, snapped) {
     if (!snapped && !isDda && files.length === 1 && p.r0 != null && await snapNearest(p, files[0])) return drawSpec(p, true);      // the cursor fell between two scans of this kind: the nearest one is shown
     return say(I18N.t("spec.noScan"));
   }
+  // the simulated pattern of a unit-resolution file comes from the engine: asked before the canvas is touched
+  /** @type {Bag | null} */ let isoUnit = null, isoErr = "";
+  if (p.iso && !p.iso.only && window.QQQRef && !hrp) { try { isoUnit = await QQQRef.unitIon(p.iso.formula, p.iso.ad); } catch (e_) { isoErr = /** @type {Lanciato} */ (e_).message; } }
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
   const { g, W, H: HF } = setup(p.cv);
   const H = HF;
@@ -453,22 +456,8 @@ async function drawSpec(p, snapped) {
     try {
       if (hrp) isoNote = HR.drawIso(p, g, X, Y, d0, ymax, W, files[0]);          // high resolution: fine structure, error in ppm (hr.js)
       else {
-      const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z), top = pat.reduce((/** @type {Bag} */ a, /** @type {Bag} */ b) => (b.rel > a.rel ? b : a));
-      /** @type {any} */ let obs = null; d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
-      if (obs) {                                         // profile data: several points per peak -> use the centroid of the peak (+-0.5 Da)
-        let sw = 0, sm = 0; d0.mz.forEach((/** @type {number} */ m, /** @type {number} */ j) => { if (Math.abs(m - obs.m) <= 0.5 && d0.y[j] > 0) { sw += d0.y[j]; sm += m * d0.y[j]; } });
-        if (sw > 0) obs.c = sm / sw;
-      }
-      const shift = obs ? (obs.c ?? obs.m) - top.mz : 0, h = obs ? obs.y : ymax / 1.12 * 0.9;
-      g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
-      for (const r of pat) {
-        const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
-        g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
-        g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
-        if (r.rel >= 1) { g.font = fpx(12); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
-      }
-      g.restore(); g.font = fpx(12);
-      isoNote = `<span><i style="background:#d62728"></i>${I18N.t("iso.note", { formula: fmtFormula(p.iso.formula), adduct: fmtAdduct(p.iso.ad), align: obs ? I18N.t("iso.align", { mz: (obs.c ?? obs.m).toFixed(mzd(p, p.level)), shift: Math.abs(shift) >= 0.05 ? I18N.t("iso.shift", { v: (shift > 0 ? "+" : "") + shift.toFixed(1) }) : "" }) : I18N.t("iso.noPeak", { mz: top.mz.toFixed(mzd(p)) }) })}</span>`;
+      if (!isoUnit) throw new Error(isoErr);
+      isoNote = drawIsoUnit(p, g, X, Y, d0, ymax, W, M, isoUnit.peaks);
       }
     } catch (e_) { const e = /** @type {Lanciato} */ (e_); isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
