@@ -140,7 +140,15 @@ class _PersistentWebKit:
 def stage(pg, files, timeout=90000):
     """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
     pg.set_input_files("#pick", [str(f) for f in files])
-    pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
+    try:
+        pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
+    except Exception:
+        # what the start screen and the engine say when the list stays empty (printed in the log of the failed test)
+        try:
+            print("STAGE TIMEOUT state:", pg.evaluate("({lr: !!window.MZLAB_LR, lrErr: String(window.MZLAB_LR_ERR || ''), rustErr: String(window.MZLAB_RUST_ERR || ''), miss: (window.MZLAB_LR_MISS || []).length, btnDisabled: !!(document.getElementById('opbtn') || {}).disabled, rows: document.querySelectorAll('#flist input').length, flist: ((document.getElementById('flist') || {}).textContent || '').slice(0, 300)})"))
+        except Exception as e:
+            print("STAGE TIMEOUT state unreadable:", str(e)[:200])
+        raise
 
 
 def attendi(pg, expr, timeout=30000):
