@@ -88,9 +88,10 @@ if __name__ == "__main__":
             print("CLS %.4f" % res["cls"], [(round(a["t"]), round(a["v"], 4), a["src"]) for a in res["all"]])
             def cls_small():
                 assert res["cls"] < CLS_MAX, f"cumulative layout shift {res['cls']:.4f} >= {CLS_MAX}: {res['all']}"
-                # the one move allowed: the side panel takes the width of the names when the first file is shown (barra.js effW), the work area follows it (from the click to the first panel)
+                # the one move allowed: the side panel takes the width of the names when the first file is shown (barra.js effW), the work area follows it (from the click to the first panel);
+                # the entry may also name buttons of the side panel header that move with it
                 shown = next(f["t"] for f in fr if f.get("#dpanels .pnl"))
-                late = [a for a in res["all"] if a["t"] > 60 and a["v"] > 0.0005 and not (a["src"] == ["#v-workspace"] and a["t"] <= shown + 50)]
+                late = [a for a in res["all"] if a["t"] > 60 and a["v"] > 0.0005 and not (a["src"][:1] == ["#v-workspace"] and set(a["src"]) <= {"#v-workspace", "#addf", "#sb-x"} and a["t"] <= shown + 50)]
                 assert not late, f"layout shifts after the work area was drawn: {late}"
             step("cumulative layout shift of the opening is below the threshold", cls_small)
             def same_boxes():
