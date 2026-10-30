@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::sortc::SortC;
 use crate::suspects::{Suspects, BIT_ANION_CAS, FLAG_LISTINGS, FORM_NAMES, SRC_NORMATIVE};
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::json::{self, Out, Value};
@@ -225,7 +226,7 @@ fn write_listings(
 
 fn write_mzsus(rows: &[(&String, &Row)], n_lists: usize, manifest: &str) -> Vec<u8> {
     let mut formulas: Vec<&str> = rows.iter().map(|(_, r)| r.formula.as_str()).collect();
-    formulas.sort_unstable();
+    formulas.sortc();
     formulas.dedup();
     let (entries, member_offs, members) = intern(rows);
     let n = rows.len();
@@ -301,7 +302,7 @@ pub fn build_rows(lists: &[(&str, &str)]) -> Result<(BTreeMap<String, Row>, usiz
     }
     for r in rows.values_mut() {
         r.members
-            .sort_by(|a, b| (a.list, &a.entry_ref, a.form).cmp(&(b.list, &b.entry_ref, b.form)));
+            .sortc_by(|a, b| (a.list, &a.entry_ref, a.form).cmp(&(b.list, &b.entry_ref, b.form)));
         r.members
             .dedup_by(|a, b| (a.list, a.form, &a.entry) == (b.list, b.form, &b.entry));
     }
@@ -311,7 +312,7 @@ pub fn build_rows(lists: &[(&str, &str)]) -> Result<(BTreeMap<String, Row>, usiz
 /// The rows sorted by mass and key, as they are written.
 pub fn sorted(rows: &BTreeMap<String, Row>) -> Vec<(&String, &Row)> {
     let mut v: Vec<(&String, &Row)> = rows.iter().collect();
-    v.sort_by(|a, b| a.1.mass.total_cmp(&b.1.mass).then_with(|| a.0.cmp(b.0)));
+    v.sortc_by(|a, b| a.1.mass.total_cmp(&b.1.mass).then_with(|| a.0.cmp(b.0)));
     v
 }
 
