@@ -64,18 +64,18 @@ def test_wasm_opt_espande_estesi(tmp_path):
     if not shutil.which("flock") or not shutil.which("bash"):
         return
     rt = tmp_path / "rt"
-    (rt / "binaryen-132/bin").mkdir(parents=True)
-    fake = rt / "binaryen-132/bin/wasm-opt"
+    (rt / "binaryen-133/bin").mkdir(parents=True)
+    fake = rt / "binaryen-133/bin/wasm-opt"
     fake.write_text(f'#!/usr/bin/env bash\necho "$@" > {tmp_path}/args\n')
     fake.chmod(0o755)
-    (rt / "binaryen-132/installato").write_text("")
+    (rt / "binaryen-133/installato").write_text("")
     wasm = tmp_path / "m_bg.wasm"
     wasm.write_bytes(b"\0asm\1\0\0\0")
     env = {"PATH": "/usr/bin:/bin:/usr/local/bin", "RUNNER_TEMP": str(rt)}
     r = subprocess.run(["bash", str(ROOT / "tools/wasm_opt.sh"), str(wasm), "1000", "t", "@estesi"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stdout + r.stderr
     args = (tmp_path / "args").read_text().split()
-    assert "@estesi" not in args and "--low-memory-unused" in args and "--converge" in args and args[0] == "-Oz"
+    assert "@estesi" not in args and "--low-memory-unused" in args and "--converge" in args and args[0] == "-O3"
     r = subprocess.run(["bash", str(ROOT / "tools/wasm_opt.sh"), str(wasm), "1000", "t", "@motore"], env=env, capture_output=True, text=True, cwd=ROOT)
     args = (tmp_path / "args").read_text().split()
     assert r.returncode == 0 and "@motore" not in args and "--reorder-functions" in args and "--const-hoisting" not in args and "--converge" not in args
