@@ -45,7 +45,7 @@
 
   /** the parameters of a tp.generate the plan leaves unwritten that the indexes decide (polarity, unit mass: `series_estimates` of the proofs .wasm, the rule of `flow run`)
    * @param {any} pool @param {any} inst @param {string[]} paths @returns {Promise<{ name: string, value: any, proof: any }[]>} */
-  const estimates = async (pool, inst, paths) => (paths.length ? JSON.parse(await pool.seriesEstimates({ written: Object.keys(inst.params || {}), paths })) : []);
+  const estimates = async (pool, inst, paths) => (paths.length ? JSON.parse(await pool.ident("proofs", "series_estimates", { written: Object.keys(inst.params || {}), paths })) : []);
 
   /** tp.generate: the registry of the hypotheses of the parent the plan holds, under the parameters of the step and the ones the files decide (`est`)
    * @param {any} S @param {any} inst @param {{ name: string, value: any }[]} [est] @returns {Promise<{ name: string, text: string }>} */
