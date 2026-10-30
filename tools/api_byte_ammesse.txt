@@ -14,3 +14,5 @@ lettura.rs::scansione
 # W2: the export/import ZIP is built in one pass and handed to the worker once; the old size+write pair parsed it twice and copied it in and out
 zip.rs::zip
 zip.rs::unzip
+# qc.mass_accuracy: the corrected feature table is the input table with one column rewritten, so it is no larger than the file the page already holds (flow-web-qc.js keeps it in OPFS at once)
+run_massacc.rs::table

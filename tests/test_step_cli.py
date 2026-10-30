@@ -22,4 +22,4 @@ def test_ms2_step_turns_mzml_into_spectra():
 
 
 def test_every_step_of_the_crate_is_exported():
-    assert [s["id"] for s in STEPS] == ["features.table", "spectra.centroid", "spectra.ms2", "spectra.msn_graph", "msn.library_export", "msn.table_export", "msn.figure", "meta.compare", "tp.dig_lr", "chrom.uv_peaks", "quant.calibrate", "spectra.lookup", "table.match"]
+    assert [s["id"] for s in STEPS] == ["features.table", "spectra.centroid", "spectra.ms2", "spectra.msn_graph", "msn.library_export", "msn.table_export", "msn.figure", "meta.compare", "tp.dig_lr", "chrom.uv_peaks", "quant.calibrate", "qc.mass_accuracy", "spectra.lookup", "table.match"]

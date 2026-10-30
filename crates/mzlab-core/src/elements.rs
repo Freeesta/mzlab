@@ -270,6 +270,22 @@ pub(crate) fn embedded_adduct(text: &str) -> (String, Option<&'static str>) {
     (t, None)
 }
 
+/// The m/z and the polarity of an ion written as text: a neutral formula with its adduct (`C8H10N4O2+H`, `C9H10Cl2N2O [M+Na]+`) or the formula of the ion with its charge sign (`C8H11N4O2+`, `C7H5O2-`).
+/// A formula with neither is refused (`err.formula.noIon`): the charge decides the mass of an electron.
+pub fn ion_text_mz(text: &str) -> Result<(f64, i8)> {
+    let (head, adduct) = embedded_adduct(text);
+    if let Some(a) = adduct {
+        let mz = ion_mz(mass(&parse_formula(&head)?), a).expect("an adduct of the table");
+        return Ok((mz, if a.ends_with('-') { -1 } else { 1 }));
+    }
+    let t = head.trim();
+    match t.chars().last() {
+        Some('+') => Ok((mass(&parse_formula(&t[..t.len() - 1])?) - ELECTRON, 1)),
+        Some('-') => Ok((mass(&parse_formula(&t[..t.len() - 1])?) + ELECTRON, -1)),
+        _ => Err(Error::new("err.formula.noIon").with("formula", t)),
+    }
+}
+
 /// `/api/formula`: neutral mass and ion m/z of every adduct, exact, at 1 decimal and nominal. With the adduct `none` the text is an ion: an adduct written in it (`+H`, `[M+H]+`) is the one used, otherwise the mass of the formula is the m/z.
 pub fn formula_mz(formula: &str, adduct: Option<&str>) -> Result<String> {
     let (text, inner) = if adduct == Some(NO_ADDUCT) {
