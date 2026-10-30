@@ -1,6 +1,6 @@
-"""C29 diagnosis: what happens between the first click on a file of the side list and its panels (#dpanels), and how much memory the tab holds.
+"""C29 diagnosis: what happens between the opening of the first file (by itself at the end of the loading: soloFile, or a click on the side list) and its panels (#dpanels), and how much memory the tab holds.
 Measures, for a small and a large synthetic mzML: the instants of (a) work area visible, (b) first chromatogram drawn, (c) map drawn (opened right after),
-the calls that run between the click and (a) (functions wrapped with start/end, api calls, long tasks, nodes and canvases created), and the memory of the tab
+the calls that run between that start and (a) (functions wrapped with start/end, api calls, long tasks, nodes and canvases created), and the memory of the tab
 at four instants (page opened, engine ready, area prepared in advance by a throw-away prototype, after the small file).
 It waits for STATES, never for clocks, and asserts no time: it prints a report (MZLAB_E2E_JSON=<file> also writes it as JSON).
 """
@@ -43,6 +43,8 @@ INSTR = """
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  // the first file opens by itself (OPENNOW.first): the clock starts there too
+  const so = window.soloFile; window.soloFile = function (...a) { if (window.__t0 == null) { window.__t0 = performance.now(); window.__ev.length = 0; } return so.apply(this, a); };
 }
 """ % json.dumps(WRAP)
 
@@ -150,10 +152,10 @@ def scenario(r, p, name, f):
     res["start_ms"] = pg.evaluate("(() => { const m = {}; for (const x of PERF.rows) if (x.kind === 'start') m[x.what] = Math.round(x.ms); return m; })()")
     res["memory"]["2_engine_ready"] = memory(pg, b, cdp)
     res["proto"] = prototype(pg); res["memory"]["3_area_in_advance"] = memory(pg, b, cdp); prototype_undo(pg)
-    stage(pg, [f]); ready(pg)
     pg.evaluate(INSTR)
     pg.evaluate("window.__perf0 = PERF.rows.length")
     cdp.send("Profiler.enable"); cdp.send("Profiler.setSamplingInterval", {"interval": 200}); cdp.send("Profiler.start")
+    stage(pg, [f])
     open_first(pg)
     attendi(pg, "window.__tA != null")
     prof = cdp.send("Profiler.stop")["profile"]; ready(pg)

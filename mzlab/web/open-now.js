@@ -103,15 +103,18 @@ const OPENNOW = /** @type {any} */ ((() => {
   /** every file read is open and nothing is shown: the first file opens, as a click on it would (no panel is built before the end of the loading) */
   function first() {
     if (UPBUSY > 0 || busy || q.length || S.table || E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone) || E.panels.some((/** @type {Pannello} */ p) => p.el)) return;
-    const fs = E.files.filter((/** @type {FileAperto} */ f) => !f.gone);
+    // the first of the sample table, not the first read (the files are read in any order)
+    const at = (/** @type {FileAperto} */ f) => ST.files.findIndex((/** @type {FileRiga} */ r) => r.name === src(f.file));
+    const fs = E.files.filter((/** @type {FileAperto} */ f) => !f.gone).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => at(a) - at(b));
     if (fs.length) soloFile(fs[firstOpenK(fs)]);
   }
-  /** a batch has ended: the side list says what was added and what was set aside (only with files already shown), else the first file opens */
+  /** a batch has ended: with no file shown the first one opens; the side list says what was set aside, and what was added to files already shown */
   async function note() {
     await idle();
     const { n, m } = tally; tally.n = tally.m = 0;
-    if (!E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { first(); return; }
-    if (n || m) directNote(m ? "files.drop.mixed" : "files.drop.done", { n, m });
+    const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
+    if (!shown) first();
+    if (m || (n && shown)) directNote(m ? "files.drop.mixed" : "files.drop.done", { n, m });
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   function many(/** @type {number} */ n) {

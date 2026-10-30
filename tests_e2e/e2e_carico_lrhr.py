@@ -20,6 +20,8 @@ try:
         world = lambda: pg.evaluate("OPENNOW.world()")
         def note():
             attendi(pg, "OPENNOW.busy() === 0 && UPBUSY === 0 && document.querySelector('#hrmix') && !document.querySelector('#hrmix').hidden")
+            attendi(pg, "!document.querySelector('#fl-note').hidden && /«(Switch|Passa)/.test(document.querySelector('#fl-note').textContent)")      # the side list says where the other world is
+            show_table(pg)
             w = world(); assert w is not None
             assert pg.get_attribute("#hrmix", "role") == "status" and pg.locator("#flist input[data-k=use]").count() == 3, "nothing lost from the list"
             assert ticked().count(True) == (1 if w else 2), ticked()           # the world of the first file read is open, the other is set aside
@@ -34,7 +36,7 @@ try:
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
         step("«Switch» closes the open world and opens the other one", switch)
         def retick():
-            w = world(); i = ticked().index(False)
+            show_table(pg); w = world(); i = ticked().index(False)
             pg.locator("#flist input[data-k=use]").nth(i).click()
             attendi(pg, f"!document.querySelectorAll('#flist input[data-k=use]')[{i}].checked")
             assert world() == w, "a file of the other world does not join the open one"

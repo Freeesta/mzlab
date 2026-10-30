@@ -23,6 +23,7 @@ try:
         pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         stage(pg, paths)
         pg.wait_for_function("RUOLI.busy() === 0 && ST.files.length >= 6 && ST.files.every(f => f.prop)", timeout=30000)
+        lib.show_table(pg)
         row = lambda n: f"#flist tr:has(:text-is('{n}.mzML'))"
         def role(n): return pg.eval_on_selector(f"{row(n)} select[data-k=type]", "e => e.value")
         def tval(n): return pg.eval_on_selector(f"{row(n)} input[data-k=time]", "e => e.value")

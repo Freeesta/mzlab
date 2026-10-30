@@ -11,6 +11,7 @@ try:
         pg = r.page(p)
         reqs = []; pg.on("request", lambda q: reqs.append(q.url) if "/esempi/" in q.url else None)
         pg.wait_for_timeout(1500); assert not reqs, ("nothing is downloaded before the click", reqs)
+        assert pg.evaluate("(()=>{const b=document.querySelector('#demobtn').getBoundingClientRect(),d=document.querySelector('#drop').getBoundingClientRect(),c=document.querySelector('#drop').closest('.card').getBoundingClientRect();return b.top>=d.bottom&&b.bottom<=c.bottom&&b.left>=c.left})()"), "button inside box 1, under the drop zone"
         pg.click("#demobtn"); pg.wait_for_timeout(300); assert pg.is_visible("#demochoice") and pg.locator("#demochoice [data-demo]").count() == 4 and not reqs, "the button only opens the choice"
         # LOAD-UX: the rows of the whole set are in the side list at once, in the order of the set, and keep it until each file is open; one system of progress (no panel under the button, no card bar)
         pg.evaluate("""() => { window.__ord = []; window.__bars = 0; new MutationObserver(() => { const l = [...document.querySelectorAll('#fl-up [data-up]')].map(x => x.dataset.up); if (l.length) window.__ord.push(l.join('|'));
@@ -28,7 +29,6 @@ try:
         tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [0, 5, 10, 15, 30], tm
         assert pg.locator("#demo a").count() == 0, "no download links any more"
         pg.wait_for_function("document.querySelectorAll('#demo .avanza').length===0", timeout=3000)          # a clean load leaves no «5 of 5 done» bar behind
-        assert pg.evaluate("(()=>{const b=document.querySelector('#demobtn').getBoundingClientRect(),d=document.querySelector('#drop').getBoundingClientRect(),c=document.querySelector('#drop').closest('.card').getBoundingClientRect();return b.top>=d.bottom&&b.bottom<=c.bottom&&b.left>=c.left})()"), "button inside box 1, under the drop zone"
         assert "flufenacet" not in pg.inner_text("body").lower() and "flufenacet" not in (pg.get_attribute("#demobtn", "title") or "").lower()
         pg.click("text=Carica dati"); ready(pg)
         assert pg.evaluate("tabFiles('full').length") == 5 and pg.evaluate("E.panels.some(p=>p.type==='spec'&&p._a)")

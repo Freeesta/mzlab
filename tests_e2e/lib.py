@@ -90,12 +90,24 @@ def open_first(pg, timeout=120000):
     if row.count() and row.first.is_visible(): _real_click(pg, f"#flst .fl .nm[data-k='{k}']")
     else: pg.evaluate("k => soloFile(E.files[k])", k)
     pg.wait_for_function("E.files.some(f => f.vis && !f.gone)", timeout=timeout)
+def show_table(pg):
+    """The sample table in place of the panels («Sample table», #samptab): the first file opens by itself at the end of the loading and hides it."""
+    open_first(pg)
+    if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
+    pg.wait_for_selector("#wtable", state="visible", timeout=10000)
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
     # «Load data» is gone: the files are open already, the click is the first click on a file
     if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
+_real_wfs = _Page.wait_for_selector
+def _wfs(self, selector, *a, **k):
+    # waiting for «Load data» = waiting for the end of the loading (the button is gone)
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector):
+        return self.wait_for_function("typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", timeout=k.get("timeout", 120000))
+    return _real_wfs(self, selector, *a, **k)
+_Page.wait_for_selector = _wfs
 _real_ast = _Page.add_script_tag
 def _add_script_tag(self, *a, **k):
     """The page forbids inline scripts (CSP script-src without 'unsafe-inline'): a file or a text is run with evaluate, as from the console, not as a <script> tag."""

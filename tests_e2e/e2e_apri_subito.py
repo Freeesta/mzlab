@@ -48,7 +48,7 @@ try:
             assert pg.evaluate("window.__moved") == [], f"the drop area moved: {pg.evaluate('window.__moved')}"
             assert pg.evaluate("window.__early") == [], f"shown while reading: {pg.evaluate('[...new Set(window.__early)]')}"
             pg.wait_for_selector(".pnl.chrom canvas", timeout=60000)
-            assert pg.evaluate("E.files.filter(f => f.vis && !f.gone).map(f => f.file).join()") == "S_t000min.mzML", "the first file opened by itself"
+            assert pg.evaluate("E.files.filter(f => f.vis && !f.gone).map(f => f.file).join()") == "S_t000min.mzML", "the first file opened by itself: " + pg.evaluate("E.files.map(f => f.file + (f.vis ? '*' : '') + (f.gone ? '-' : '')).join()")
             assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels"
             assert pg.locator(".convprog, .cp-spin, #fl-up .fl").count() == 0, "nothing of the loading is left"
             txt = pg.inner_text("body")
