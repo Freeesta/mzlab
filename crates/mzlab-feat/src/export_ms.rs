@@ -44,11 +44,23 @@ fn mgf_with(c: &Ctx, spectra: &[Option<Ms2>], note: Option<&str>) -> String {
     let mut out = c.header();
     out.extend(note.map(str::to_string));
     for (&r, s) in c.rows().iter().zip(spectra) {
-        let Some(s) = s.as_ref().filter(|s| !s.mz.is_empty()) else { continue };
+        let Some(s) = s.as_ref().filter(|s| !s.mz.is_empty()) else {
+            continue;
+        };
         let id = c.table.id(r);
         let prec = if s.prec > 0.0 { s.prec } else { c.table.mz[r] };
-        out.extend(["BEGIN IONS".to_string(), format!("FEATURE_ID={id}"), format!("PEPMASS={prec:.4}"), format!("SCANS={id}")]);
-        out.extend([format!("RTINSECONDS={:.2}", c.table.rt[r] * 60.0), format!("CHARGE={charge}"), "MSLEVEL=2".to_string(), format!("IONMODE={ionmode}")]);
+        out.extend([
+            "BEGIN IONS".to_string(),
+            format!("FEATURE_ID={id}"),
+            format!("PEPMASS={prec:.4}"),
+            format!("SCANS={id}"),
+        ]);
+        out.extend([
+            format!("RTINSECONDS={:.2}", c.table.rt[r] * 60.0),
+            format!("CHARGE={charge}"),
+            "MSLEVEL=2".to_string(),
+            format!("IONMODE={ionmode}"),
+        ]);
         if s.files > 0 {
             out.push(format!("MERGED_ACROSS_N_SAMPLES={}", s.files));
         }
@@ -61,13 +73,26 @@ fn mgf_with(c: &Ctx, spectra: &[Option<Ms2>], note: Option<&str>) -> String {
 /// SIRIUS 6 `.ms`: one compound per row with a spectrum, named after the row (`feature_<id>`), no formula (SIRIUS finds it).
 pub fn sirius(c: &Ctx, spectra: &[Option<Ms2>]) -> String {
     let ion = if c.polarity < 0 { "[M-H]-" } else { "[M+H]+" };
-    let mut out = vec!["# mzLab export for SIRIUS 6 (.ms). Spectra only; nothing here is an identification.".to_string()];
+    let mut out = vec![
+        "# mzLab export for SIRIUS 6 (.ms). Spectra only; nothing here is an identification."
+            .to_string(),
+    ];
     out.extend(c.header());
     for (&r, s) in c.rows().iter().zip(spectra) {
-        let Some(s) = s.as_ref().filter(|s| !s.mz.is_empty()) else { continue };
+        let Some(s) = s.as_ref().filter(|s| !s.mz.is_empty()) else {
+            continue;
+        };
         let mass = if s.prec > 0.0 { s.prec } else { c.table.mz[r] };
-        out.extend([String::new(), format!(">compound feature_{}", c.table.id(r)), format!(">parentmass {}", fix(mass, 5)), format!(">ionization {ion}")]);
-        out.extend([format!(">rt {}s", fix(c.table.rt[r] * 60.0, 1)), ">ms2".to_string()]);
+        out.extend([
+            String::new(),
+            format!(">compound feature_{}", c.table.id(r)),
+            format!(">parentmass {}", fix(mass, 5)),
+            format!(">ionization {ion}"),
+        ]);
+        out.extend([
+            format!(">rt {}s", fix(c.table.rt[r] * 60.0, 1)),
+            ">ms2".to_string(),
+        ]);
         peaks(&mut out, s);
     }
     out.join("\n") + "\n"

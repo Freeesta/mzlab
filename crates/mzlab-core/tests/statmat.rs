@@ -6,7 +6,9 @@
 use mzlab_core::statmat::{eigh, singular_values, svd};
 
 fn lcg(seed: &mut u64) -> f64 {
-    *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    *seed = seed
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     ((*seed >> 11) as f64 / (1u64 << 53) as f64) - 0.5
 }
 
@@ -21,8 +23,14 @@ fn check(a: &[f64], m: usize, n: usize) {
     assert!(r.s.windows(2).all(|w| w[0] >= w[1]), "descending");
     for i in 0..m {
         for j in 0..n {
-            let v: f64 = (0..r.k).map(|t| r.u[i * r.k + t] * r.s[t] * r.vt[t * n + j]).sum();
-            assert!((v - a[i * n + j]).abs() < 1e-10, "reconstruction {m}x{n} at {i},{j}: {v} vs {}", a[i * n + j]);
+            let v: f64 = (0..r.k)
+                .map(|t| r.u[i * r.k + t] * r.s[t] * r.vt[t * n + j])
+                .sum();
+            assert!(
+                (v - a[i * n + j]).abs() < 1e-10,
+                "reconstruction {m}x{n} at {i},{j}: {v} vs {}",
+                a[i * n + j]
+            );
         }
     }
     for p in 0..r.k {
@@ -30,14 +38,26 @@ fn check(a: &[f64], m: usize, n: usize) {
             let want = if p == q { 1.0 } else { 0.0 };
             let u: f64 = (0..m).map(|i| r.u[i * r.k + p] * r.u[i * r.k + q]).sum();
             let v: f64 = (0..n).map(|j| r.vt[p * n + j] * r.vt[q * n + j]).sum();
-            assert!((u - want).abs() < 1e-10 && (v - want).abs() < 1e-10, "orthonormal {m}x{n} {p},{q}: {u} {v}");
+            assert!(
+                (u - want).abs() < 1e-10 && (v - want).abs() < 1e-10,
+                "orthonormal {m}x{n} {p},{q}: {u} {v}"
+            );
         }
     }
 }
 
 #[test]
 fn svd_reconstructs() {
-    for (m, n) in [(1, 1), (3, 3), (8, 3), (3, 8), (6, 40), (40, 6), (1, 5), (5, 1)] {
+    for (m, n) in [
+        (1, 1),
+        (3, 3),
+        (8, 3),
+        (3, 8),
+        (6, 40),
+        (40, 6),
+        (1, 5),
+        (5, 1),
+    ] {
         check(&matrix(m, n, (m * 100 + n) as u64), m, n);
     }
 }
@@ -74,16 +94,37 @@ fn eigh_symmetric() {
 
 #[test]
 fn singular_values_are_those_of_svd_bit_for_bit() {
-    for (m, n, seed) in [(1, 1, 1), (9, 4, 2), (4, 9, 3), (30, 30, 4), (60, 12, 5), (12, 60, 6)] {
+    for (m, n, seed) in [
+        (1, 1, 1),
+        (9, 4, 2),
+        (4, 9, 3),
+        (30, 30, 4),
+        (60, 12, 5),
+        (12, 60, 6),
+    ] {
         let a = matrix(m, n, seed);
         let (want, got) = (svd(&a, m, n).s, singular_values(&a, m, n));
-        assert_eq!(got.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), want.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), "{m}x{n}");
+        assert_eq!(
+            got.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+            want.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+            "{m}x{n}"
+        );
     }
     // a rank-deficient matrix: the null values are zero in both
     let mut a = matrix(8, 5, 7);
     for i in 0..8 {
         a[i * 5 + 4] = 2.0 * a[i * 5];
     }
-    assert_eq!(singular_values(&a, 8, 5).iter().map(|x| x.to_bits()).collect::<Vec<_>>(), svd(&a, 8, 5).s.iter().map(|x| x.to_bits()).collect::<Vec<_>>());
+    assert_eq!(
+        singular_values(&a, 8, 5)
+            .iter()
+            .map(|x| x.to_bits())
+            .collect::<Vec<_>>(),
+        svd(&a, 8, 5)
+            .s
+            .iter()
+            .map(|x| x.to_bits())
+            .collect::<Vec<_>>()
+    );
     assert!(singular_values(&[], 0, 3).is_empty());
 }

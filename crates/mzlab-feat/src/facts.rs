@@ -61,7 +61,11 @@ pub fn file_facts<R: ReadAt>(index: &Index<R>) -> FileFacts {
         polarity: sign.signum() as i8,
         resolution: if nres > 0 { res / f64::from(nres) } else { 0.0 },
         acquisition: acquisition.to_string(),
-        instrument: an.iter().max_by_key(|e| e.1).map_or("", |e| e.0).to_string(),
+        instrument: an
+            .iter()
+            .max_by_key(|e| e.1)
+            .map_or("", |e| e.0)
+            .to_string(),
         rt_range,
     }
 }
@@ -91,7 +95,10 @@ impl FileFacts {
             resolution: v.get("resolution").and_then(Value::f64).unwrap_or(0.0),
             acquisition: text("acquisition"),
             instrument: text("instrument"),
-            rt_range: match (v.get("rt_range").and_then(|a| a.at(0)).and_then(Value::f64), v.get("rt_range").and_then(|a| a.at(1)).and_then(Value::f64)) {
+            rt_range: match (
+                v.get("rt_range").and_then(|a| a.at(0)).and_then(Value::f64),
+                v.get("rt_range").and_then(|a| a.at(1)).and_then(Value::f64),
+            ) {
                 (Some(a), Some(b)) => Some((a, b)),
                 _ => None,
             },

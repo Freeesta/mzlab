@@ -30,7 +30,12 @@ pub struct Opzioni {
 
 impl Default for Opzioni {
     fn default() -> Self {
-        Opzioni { livello: LIVELLO_ZLIB, numpress: false, thread: thread_predefinito(), dad: false }
+        Opzioni {
+            livello: LIVELLO_ZLIB,
+            numpress: false,
+            thread: thread_predefinito(),
+            dad: false,
+        }
     }
 }
 
@@ -48,13 +53,26 @@ impl<W: Write> MzmlWriter<W> {
     fn avvia(out: W, h: &Header, opz: Opzioni, indexed: bool) -> Result<Self> {
         let indexed = indexed && cfg!(any(not(target_family = "wasm"), feature = "indice"));
         let mut s = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-        if indexed { s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n"; }
+        if indexed {
+            s += "<indexedmzML xmlns=\"http://psi.hupo.org/ms/mzml\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://psi.hupo.org/ms/mzml http://psi.hupo.org/ms/mzml/mzML1.1.2_idx.xsd\">\n";
+        }
         s += "<mzML xmlns=\"http://psi.hupo.org/ms/mzml\" version=\"1.1.0\" id=\"mzlab\">\n";
         s += &format!("<cvList count=\"2\"><cv id=\"MS\" fullName=\"Proteomics Standards Initiative Mass Spectrometry Ontology\" version=\"{CV_VERSION}\" URI=\"https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo\"/><cv id=\"UO\" fullName=\"Unit Ontology\" version=\"09:04:2014\" URI=\"https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo\"/></cvList>\n");
-        let content = cv("MS:1000579", "MS1 spectrum", "") + &h.content.iter().map(|(a, n)| cv(a, n, "")).collect::<String>();
-        s += &format!("<fileDescription><fileContent>{content}</fileContent>{}</fileDescription>\n", source_list(h));
+        let content = cv("MS:1000579", "MS1 spectrum", "")
+            + &h.content
+                .iter()
+                .map(|(a, n)| cv(a, n, ""))
+                .collect::<String>();
+        s += &format!(
+            "<fileDescription><fileContent>{content}</fileContent>{}</fileDescription>\n",
+            source_list(h)
+        );
         if let Some((id, name)) = &h.sample {
-            s += &format!("<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n", esc(id), esc(name));
+            s += &format!(
+                "<sampleList count=\"1\"><sample id=\"{}\" name=\"{}\"/></sampleList>\n",
+                esc(id),
+                esc(name)
+            );
         }
         s += &format!("<softwareList count=\"{}\"><software id=\"mzlab\" version=\"{}\">{}</software>{}</softwareList>\n", 1 + h.centroided as usize + h.extra_software.len() + h.steps.len(), esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", esc(&h.software.0)),
             h.extra_software.iter().enumerate().map(|(i, (a, n, v))| format!("<software id=\"acq{}\" version=\"{}\">{}</software>", i + 1, esc(v), cv(a, n, ""))).collect::<String>() + &if h.centroided { format!("<software id=\"mzlab-centroidi\" version=\"{}\">{}</software>", esc(&h.software.1), cv("MS:1000799", "custom unreleased software tool", "mzLab centroidi")) } else { String::new() } + &step_software(&h.steps));
@@ -77,11 +95,18 @@ impl<W: Write> MzmlWriter<W> {
         for (k, v) in &h.run_params {
             s += &format!("<userParam name=\"{}\" value=\"{}\"/>\n", esc(k), esc(v));
         }
-        let mut w = MzmlWriter { out, spectra: 0, chroms: 0, opz, enc: Codifica::new(opz), text: String::new(), idx: indexed.then(indice::Indice::new) };
+        let mut w = MzmlWriter {
+            out,
+            spectra: 0,
+            chroms: 0,
+            opz,
+            enc: Codifica::new(opz),
+            text: String::new(),
+            idx: indexed.then(indice::Indice::new),
+        };
         w.put(s.as_bytes())?;
         Ok(w)
     }
-
 
     /// The number of threads the writer encodes with (`Opzioni::thread`).
     pub fn thread(&self) -> usize {
@@ -89,7 +114,10 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     pub fn open_spectra(&mut self, count: usize) -> Result<()> {
-        self.put(format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes())
+        self.put(
+            format!("<spectrumList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n")
+                .as_bytes(),
+        )
     }
 
     pub fn close_spectra(&mut self) -> Result<()> {
@@ -97,7 +125,12 @@ impl<W: Write> MzmlWriter<W> {
     }
 
     pub fn open_chromatograms(&mut self, count: usize) -> Result<()> {
-        self.put(format!("<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n").as_bytes())
+        self.put(
+            format!(
+                "<chromatogramList count=\"{count}\" defaultDataProcessingRef=\"conversion\">\n"
+            )
+            .as_bytes(),
+        )
     }
 
     pub fn close_chromatograms(&mut self) -> Result<()> {
@@ -122,8 +155,18 @@ impl<W: Write> MzmlWriter<W> {
 
     /// Every trace of a reader: the mass-spectrometer kinds with their term, the other ones (pressure, detector, device) as `chromatogram type` with the unit in a userParam.
     pub fn chromatogram(&mut self, c: &Chromatogram) -> Result<()> {
-        let mut s = format!("<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}", self.chroms, esc(&c.id), c.time.len(), chromatogram_kind(c));
-        if matches!(c.kind, ChromKind::Pressure | ChromKind::Analog | ChromKind::Other) && !c.unit.is_empty() {
+        let mut s = format!(
+            "<chromatogram index=\"{}\" id=\"{}\" defaultArrayLength=\"{}\">{}",
+            self.chroms,
+            esc(&c.id),
+            c.time.len(),
+            chromatogram_kind(c)
+        );
+        if matches!(
+            c.kind,
+            ChromKind::Pressure | ChromKind::Analog | ChromKind::Other
+        ) && !c.unit.is_empty()
+        {
             s += &format!("<userParam name=\"unità\" value=\"{}\"/>", esc(&c.unit));
         }
         if let (Some(q1), Some(q3)) = (c.q1, c.q3) {
@@ -131,7 +174,8 @@ impl<W: Write> MzmlWriter<W> {
         }
         s += "<binaryDataArrayList count=\"2\">\n";
         self.enc.array(&mut s, "time", "time", Data::F64(&c.time))?;
-        self.enc.array(&mut s, "intensity", "counts", Data::F64(&c.intensity))?;
+        self.enc
+            .array(&mut s, "intensity", "counts", Data::F64(&c.intensity))?;
         s += "</binaryDataArrayList></chromatogram>\n";
         self.chroms += 1;
         self.mark(false, &c.id);
@@ -196,7 +240,18 @@ pub struct ProcStep {
 /// The `software` elements of the steps, `step1`, `step2`, ... (the first id the methods refer to).
 #[cfg(not(target_family = "wasm"))]
 fn step_software(steps: &[ProcStep]) -> String {
-    let one = |(i, p): (usize, &ProcStep)| format!("<software id=\"step{}\" version=\"{}\">{}</software>", i + 1, esc(&p.version), cv("MS:1000799", "custom unreleased software tool", esc(&p.software)));
+    let one = |(i, p): (usize, &ProcStep)| {
+        format!(
+            "<software id=\"step{}\" version=\"{}\">{}</software>",
+            i + 1,
+            esc(&p.version),
+            cv(
+                "MS:1000799",
+                "custom unreleased software tool",
+                esc(&p.software)
+            )
+        )
+    };
     steps.iter().enumerate().map(one).collect()
 }
 
@@ -206,8 +261,17 @@ fn step_methods(h: &Header) -> String {
     let first = 1 + h.centroided as usize;
     let mut s = String::new();
     for (i, p) in h.steps.iter().enumerate() {
-        s += &format!("</processingMethod><processingMethod order=\"{}\" softwareRef=\"step{}\">{}", first + i, i + 1, cv(&p.accession, &p.name, ""));
-        s += &p.params.iter().map(|(k, v)| format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v))).collect::<String>();
+        s += &format!(
+            "</processingMethod><processingMethod order=\"{}\" softwareRef=\"step{}\">{}",
+            first + i,
+            i + 1,
+            cv(&p.accession, &p.name, "")
+        );
+        s += &p
+            .params
+            .iter()
+            .map(|(k, v)| format!("<userParam name=\"{}\" value=\"{}\"/>", esc(k), esc(v)))
+            .collect::<String>();
     }
     s
 }
@@ -316,7 +380,11 @@ pub(crate) fn chromatogram_kind(c: &Chromatogram) -> String {
     match c.kind {
         ChromKind::Tic => cv("MS:1000235", "total ion current chromatogram", ""),
         ChromKind::Bpc => cv("MS:1000628", "basepeak chromatogram", ""),
-        ChromKind::Srm => cv("MS:1001473", "selected reaction monitoring chromatogram", ""),
+        ChromKind::Srm => cv(
+            "MS:1001473",
+            "selected reaction monitoring chromatogram",
+            "",
+        ),
         ChromKind::Sic => cv("MS:1000627", "selected ion current chromatogram", ""),
         ChromKind::Pda => cv("MS:1000812", "absorption chromatogram", ""),
         ChromKind::Pressure => cv("MS:1003019", "pressure chromatogram", ""),
@@ -413,7 +481,11 @@ fn source_list(h: &Header) -> String {
         if let Some(x) = h.source_sha1.get(i) {
             inner += &cv("MS:1000569", "SHA-1", x);
         }
-        s += &format!("<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>", i + 1, esc(f));
+        s += &format!(
+            "<sourceFile id=\"SRC{}\" name=\"{}\" location=\"file:///\">{inner}</sourceFile>",
+            i + 1,
+            esc(f)
+        );
     }
     s + "</sourceFileList>"
 }
@@ -432,11 +504,11 @@ fn component_list(h: &Header) -> String {
 
 mod codifica;
 mod matrice;
+mod thread;
 #[cfg(not(target_family = "wasm"))]
 mod uv;
-mod thread;
-pub use thread::thread_predefinito;
 use codifica::{Codifica, Data};
+pub use thread::thread_predefinito;
 #[cfg(not(target_family = "wasm"))]
 mod pool;
 mod testa;
@@ -464,9 +536,9 @@ mod indice;
 mod tests;
 #[cfg(test)]
 mod tests_indice;
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests_pool;
 #[cfg(all(test, feature = "precursori"))]
 mod tests_precursori;
 #[cfg(test)]
 mod tests_xsd;
-#[cfg(all(test, not(target_family = "wasm")))]
-mod tests_pool;

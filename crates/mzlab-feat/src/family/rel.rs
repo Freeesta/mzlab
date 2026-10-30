@@ -8,30 +8,20 @@ use crate::legacy::edge::{Iimn, ISOTOPES};
 
 impl Tables {
     pub fn new(pol: i8) -> Self {
-        let t = Iimn::new();
+        let mut t = Iimn::new();
         let positive = pol >= 0;
         Tables {
             pol: if positive { 1 } else { -1 },
-            adducts: t
-                .adducts_of(if positive { 1 } else { -1 })
-                .iter()
-                .map(|&(n, d)| (n.to_string(), d))
-                .collect(),
-            losses: t.losses.iter().map(|&(n, d)| (n.to_string(), d)).collect(),
+            adducts: std::mem::take(&mut t.adducts[usize::from(!positive)]),
+            losses: std::mem::take(&mut t.losses),
             proton: t.proton,
         }
     }
 
     /// Positive steps (Y minus X) that an adduct or a loss can give, with their names, in the order of the tables.
     pub fn steps(&self) -> impl Iterator<Item = (&str, RKind, f64)> + '_ {
-        let a = self
-            .adducts
-            .iter()
-            .map(|(n, d)| (n.as_str(), RKind::Adduct, *d));
-        let l = self
-            .losses
-            .iter()
-            .map(|(n, d)| (n.as_str(), RKind::Loss, *d));
+        let a = self.adducts.iter().map(|(n, d)| (*n, RKind::Adduct, *d));
+        let l = self.losses.iter().map(|(n, d)| (*n, RKind::Loss, *d));
         a.chain(l)
     }
 
@@ -139,8 +129,8 @@ pub struct Reading {
 pub struct Tables {
     /// +1 or -1: sign of the proton in the base ion.
     pub pol: i8,
-    adducts: Vec<(String, f64)>,
-    losses: Vec<(String, f64)>,
+    adducts: Vec<(&'static str, f64)>,
+    losses: Vec<(&'static str, f64)>,
     pub proton: f64,
 }
 

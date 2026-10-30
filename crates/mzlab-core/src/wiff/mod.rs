@@ -4,6 +4,8 @@
 //! were decoded against ProteoWizard mzML of the same files. The code here is written anew.
 //! The scans are PROFILE data as the file holds them (no peak picking): `Spectrum::profile` is true.
 
+#[cfg(feature = "estesi")]
+mod bpc;
 pub mod dad;
 #[cfg(feature = "mappa-dad")]
 pub mod dad_map;
@@ -13,8 +15,6 @@ pub mod idx;
 pub mod lettore;
 pub mod modi;
 pub mod nomi;
-#[cfg(feature = "estesi")]
-mod bpc;
 mod run;
 #[cfg(not(feature = "estesi"))]
 pub mod scan;
@@ -35,7 +35,10 @@ impl Wiff {
     /// The method says experiment `e` acquires scans: a block of it that is not a readable scan is not an MRM block.
     pub(crate) fn scan_experiment(&self, e: usize) -> bool {
         let code = self.experiments.get(e).and_then(|x| x.code);
-        modi::nativo(code) && code.and_then(modi::modo).is_some_and(|m| m.uscita == Uscita::Spettro)
+        modi::nativo(code)
+            && code
+                .and_then(modi::modo)
+                .is_some_and(|m| m.uscita == Uscita::Spettro)
     }
 }
 
@@ -152,9 +155,15 @@ fn experiments(ole: &Ole, sample: u32) -> Vec<Experiment> {
 /// The collision energy and the isolation window of the MS2 experiments: the method lists the energies of each scan experiment, and one value is the energy.
 fn activation(experiments: &mut [Experiment], method: &Option<Method>) {
     let Some(m) = method else { return };
-    for (i, e) in experiments.iter_mut().enumerate().filter(|(_, e)| e.level == 2) {
+    for (i, e) in experiments
+        .iter_mut()
+        .enumerate()
+        .filter(|(_, e)| e.level == 2)
+    {
         e.iso_half = Some(UNIT_HALF_WIDTH);
-        if let Some(methodinfo::Kind::Scan { ce, .. }) = m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind) {
+        if let Some(methodinfo::Kind::Scan { ce, .. }) =
+            m.experiments.iter().find(|x| x.index == i).map(|x| &x.kind)
+        {
             e.ce = match ce[..] {
                 [v] => Some(v),
                 _ => None,

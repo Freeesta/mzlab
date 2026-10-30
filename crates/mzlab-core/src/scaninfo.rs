@@ -49,7 +49,10 @@ fn attrs(body: &str) -> Vec<(String, String)> {
         }
         if j + 1 < s.len() && s[j] == '=' && s[j + 1] == '"' {
             if let Some(k) = s[j + 2..].iter().position(|&c| c == '"') {
-                out.push((s[i..j].iter().collect(), s[j + 2..j + 2 + k].iter().collect()));
+                out.push((
+                    s[i..j].iter().collect(),
+                    s[j + 2..j + 2 + k].iter().collect(),
+                ));
                 i = j + 2 + k + 1;
                 continue;
             }
@@ -65,7 +68,9 @@ pub(crate) fn campi(head: &str) -> Vec<Campo> {
     let mut rest = head;
     while let Some(p) = rest.find('<') {
         let tail = &rest[p + 1..];
-        let tag = ["cvParam", "userParam"].into_iter().find(|t| tail.starts_with(t));
+        let tag = ["cvParam", "userParam"]
+            .into_iter()
+            .find(|t| tail.starts_with(t));
         let boundary = tag.is_some_and(|t| !tail[t.len()..].chars().next().is_some_and(is_word));
         let Some(end) = tail.find('>').filter(|_| boundary) else {
             rest = tail;
@@ -90,17 +95,28 @@ pub(crate) fn campi(head: &str) -> Vec<Campo> {
 
 /// The JSON of `/api/scaninfo` for scan `sid` of `scans` (the rows of the index); the header fields come from the source (the mzML by offset).
 pub fn scaninfo<M: Scansioni + ?Sized>(scans: &[Scan], sid: usize, mzml: &mut M) -> Result<String> {
-    let sc = scans.get(sid).ok_or_else(|| Error::new("err.scan.outside"))?;
+    let sc = scans
+        .get(sid)
+        .ok_or_else(|| Error::new("err.scan.outside"))?;
     let fields = mzml.intestazione(sc)?;
     let mut o = Out::default();
-    o.raw("{\"sid\":").int(sid as i64).raw(",\"no\":").int(sc.number(sid)).raw(",\"filter\":").str(&sc.filter);
-    o.raw(",\"rt\":").num(round(sc.rt, 4)).raw(",\"level\":").int(sc.level as i64);
+    o.raw("{\"sid\":")
+        .int(sid as i64)
+        .raw(",\"no\":")
+        .int(sc.number(sid))
+        .raw(",\"filter\":")
+        .str(&sc.filter);
+    o.raw(",\"rt\":")
+        .num(round(sc.rt, 4))
+        .raw(",\"level\":")
+        .int(sc.level as i64);
     o.raw(",\"polarity\":").str(match sc.polarity {
         1 => "positive",
         -1 => "negative",
         _ => "?",
     });
-    o.raw(",\"profile\":").raw(if sc.profile { "true" } else { "false" });
+    o.raw(",\"profile\":")
+        .raw(if sc.profile { "true" } else { "false" });
     let prec = match (sc.iso, sc.precursor) {
         (Some((a, b)), _) => Some((a + b) / 2.0),
         (None, Some(p)) if p != 0.0 => Some(p),
@@ -108,7 +124,12 @@ pub fn scaninfo<M: Scansioni + ?Sized>(scans: &[Scan], sid: usize, mzml: &mut M)
     };
     o.raw(",\"prec\":").opt(prec.map(|p| round(p, 5)));
     match sc.iso {
-        Some((a, b)) => o.raw(",\"iso\":[").num(round(a, 4)).raw(",").num(round(b, 4)).raw("]"),
+        Some((a, b)) => o
+            .raw(",\"iso\":[")
+            .num(round(a, 4))
+            .raw(",")
+            .num(round(b, 4))
+            .raw("]"),
         None => o.raw(",\"iso\":null"),
     };
     o.raw(",\"act\":");
@@ -116,15 +137,30 @@ pub fn scaninfo<M: Scansioni + ?Sized>(scans: &[Scan], sid: usize, mzml: &mut M)
         Some(a) => o.str(a),
         None => o.raw("null"),
     };
-    o.raw(",\"ce\":").opt(sc.collision_energy).raw(",\"res\":").opt(sc.res).raw(",\"analyzer\":");
+    o.raw(",\"ce\":")
+        .opt(sc.collision_energy)
+        .raw(",\"res\":")
+        .opt(sc.res)
+        .raw(",\"analyzer\":");
     match &sc.an {
         Some(a) => o.str(a),
         None => o.raw("null"),
     };
-    o.raw(",\"tic\":").num(sc.tic).raw(",\"key\":").str(&sc.key()).raw(",\"pairs\":[");
+    o.raw(",\"tic\":")
+        .num(sc.tic)
+        .raw(",\"key\":")
+        .str(&sc.key())
+        .raw(",\"pairs\":[");
     for (i, f) in fields.iter().enumerate() {
         let unit = f.unita.as_deref().unwrap_or("");
-        o.raw(if i > 0 { "," } else { "" }).raw("{\"name\":").str(&f.nome).raw(",\"value\":").str(&f.valore).raw(",\"unit\":").str(unit).raw("}");
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"name\":")
+            .str(&f.nome)
+            .raw(",\"value\":")
+            .str(&f.valore)
+            .raw(",\"unit\":")
+            .str(unit)
+            .raw("}");
     }
     o.raw("]}");
     Ok(o.0)
@@ -137,12 +173,24 @@ mod tests {
     #[test]
     fn reads_pairs() {
         let h = r#"<spectrum><cvParam cvRef="MS" accession="MS:1" name="ms level" value="1"/><userParam name="x" value="a" unitName="s" /><cvParamX name="no"/><cvParam name=""/></spectrum>"#;
-        let p: Vec<_> = campi(h).into_iter().map(|c| (c.nome, c.valore, c.unita, c.cv)).collect();
-        assert_eq!(p, vec![("ms level".into(), "1".into(), None, Some("MS:1".into())), ("x".into(), "a".into(), Some("s".into()), None)]);
+        let p: Vec<_> = campi(h)
+            .into_iter()
+            .map(|c| (c.nome, c.valore, c.unita, c.cv))
+            .collect();
+        assert_eq!(
+            p,
+            vec![
+                ("ms level".into(), "1".into(), None, Some("MS:1".into())),
+                ("x".into(), "a".into(), Some("s".into()), None)
+            ]
+        );
     }
 
     #[test]
     fn outside() {
-        assert_eq!(scaninfo(&[], 0, &mut Vec::<u8>::new()).unwrap_err().key, "err.scan.outside");
+        assert_eq!(
+            scaninfo(&[], 0, &mut Vec::<u8>::new()).unwrap_err().key,
+            "err.scan.outside"
+        );
     }
 }

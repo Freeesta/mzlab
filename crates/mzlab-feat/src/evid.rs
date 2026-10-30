@@ -6,10 +6,10 @@
 
 mod arcs;
 mod graph;
+mod identities;
 pub mod msntree;
 mod out;
 pub mod points;
-mod identities;
 mod prepared;
 pub mod producers;
 mod proofs;
@@ -18,8 +18,8 @@ pub mod rowproofs;
 
 pub use arcs::{arcs_from_families, FileFamilies, RowArc};
 pub use graph::{
-    build_graph, match_hypotheses, match_hypotheses_in, sort_graph, Edge, EdgeKind,
-    ExternalHit, Facts, Identity, Inputs, Kinetics, LibHit, Member, Node, HYPOTHESIS_PPM,
+    build_graph, match_hypotheses, match_hypotheses_in, sort_graph, Edge, EdgeKind, ExternalHit,
+    Facts, Identity, Inputs, Kinetics, LibHit, Member, Node, HYPOTHESIS_PPM,
 };
 pub use identities::identities;
 pub use out::{graph_json, GraphStream, EVID_GRAPH_FORMAT};

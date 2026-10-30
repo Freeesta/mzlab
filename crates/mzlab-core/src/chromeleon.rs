@@ -23,7 +23,11 @@ impl Cur<'_> {
     /// A word, ignoring case (`re.I`).
     fn word(&mut self, w: &str) -> bool {
         let n = w.chars().count();
-        if !self.c.get(self.i..self.i + n).is_some_and(|s| s.iter().zip(w.chars()).all(|(a, b)| a.to_lowercase().eq(b.to_lowercase()))) {
+        if !self.c.get(self.i..self.i + n).is_some_and(|s| {
+            s.iter()
+                .zip(w.chars())
+                .all(|(a, b)| a.to_lowercase().eq(b.to_lowercase()))
+        }) {
             return false;
         }
         self.i += n;
@@ -125,7 +129,10 @@ fn equate(line: &[char], from: usize) -> Option<(char, String, usize)> {
         let mut c = Cur { c: line, i };
         c.eat('%').then_some(())?;
         c.ws();
-        let l = line.get(c.i).copied().filter(|l| matches!(l.to_ascii_lowercase(), 'a' | 'b'))?;
+        let l = line
+            .get(c.i)
+            .copied()
+            .filter(|l| matches!(l.to_ascii_lowercase(), 'a' | 'b'))?;
         c.i += 1;
         c.digits();
         c.ws();
@@ -135,7 +142,10 @@ fn equate(line: &[char], from: usize) -> Option<(char, String, usize)> {
         c.assign().then_some(())?;
         c.eat('"');
         let a = c.i;
-        while line.get(c.i).is_some_and(|ch| !matches!(ch, '"' | '\n' | ';')) {
+        while line
+            .get(c.i)
+            .is_some_and(|ch| !matches!(ch, '"' | '\n' | ';'))
+        {
             c.i += 1;
         }
         (c.i > a).then(|| (l.to_ascii_lowercase(), span(line, a, c.i), c.i))
@@ -159,7 +169,8 @@ fn row_time(line: &[char]) -> Option<f64> {
     ends.push(after_int);
     let look = |mut c: Cur| {
         c.ws();
-        c.c.get(c.i).is_none_or(|ch| ch.is_ascii_alphabetic() || *ch == '%' || *ch == '(')
+        c.c.get(c.i)
+            .is_none_or(|ch| ch.is_ascii_alphabetic() || *ch == '%' || *ch == '(')
     };
     let tail_ok = |e: usize| {
         let mut d = Cur { c: line, i: e };
@@ -186,7 +197,19 @@ struct Slot {
 
 fn clean_lines(text: &str) -> Vec<Vec<char>> {
     let t = text.replace('\r', "\n");
-    t.split('\n').map(|l| l.chars().map(|c| if (c == '\t' || c >= ' ') && c != '\x7f' && c != '\u{fffd}' { c } else { ' ' }).collect()).collect()
+    t.split('\n')
+        .map(|l| {
+            l.chars()
+                .map(|c| {
+                    if (c == '\t' || c >= ' ') && c != '\x7f' && c != '\u{fffd}' {
+                        c
+                    } else {
+                        ' '
+                    }
+                })
+                .collect()
+        })
+        .collect()
 }
 
 fn has_word(line: &[char], words: &[&str]) -> bool {
@@ -214,7 +237,9 @@ pub fn parse(text: &str) -> Result<Gradient> {
             from = end.max(from + 1);
         }
         let (b, fl, cv) = (search(&ln, pct_b), search(&ln, flow), search(&ln, curve));
-        if let Some(t) = row_time(&ln).filter(|_| b.is_some() || fl.is_some() || !has_word(&ln, &["Run", "Time", ":"])) {
+        if let Some(t) = row_time(&ln)
+            .filter(|_| b.is_some() || fl.is_some() || !has_word(&ln, &["Run", "Time", ":"]))
+        {
             t_cur = Some(t);
         }
         let slot = match t_cur {
@@ -238,9 +263,18 @@ pub fn parse(text: &str) -> Result<Gradient> {
             slot.curve = Some(v as i64);
         }
     }
-    let mut rows: Vec<(f64, Slot)> = rows.into_iter().filter(|(_, s)| s.b.is_some() || s.flow.is_some()).collect();
+    let mut rows: Vec<(f64, Slot)> = rows
+        .into_iter()
+        .filter(|(_, s)| s.b.is_some() || s.flow.is_some())
+        .collect();
     crate::sortc::slice_by(&mut rows, |a, b| a.0.total_cmp(&b.0));
-    let pt = |t: f64, b: f64, flow: Option<f64>, curve: Option<i64>| Raw { t: Some(t), b: Some(b), flow, curve, shown: (t.to_string(), b.to_string()) };
+    let pt = |t: f64, b: f64, flow: Option<f64>, curve: Option<i64>| Raw {
+        t: Some(t),
+        b: Some(b),
+        flow,
+        curve,
+        shown: (t.to_string(), b.to_string()),
+    };
     let (mut b, mut flow_v) = (initial.b, initial.flow);
     let mut pts = Vec::new();
     if let (Some(first), Some(b0)) = (rows.first(), b) {
@@ -259,5 +293,10 @@ pub fn parse(text: &str) -> Result<Gradient> {
         return Err(Error::new("gradient.err.noScript"));
     }
     let get = |k: char| solv.iter().find(|(c, _)| *c == k).map(|(_, v)| v.clone());
-    model("raw", &pts, run, (!solv.is_empty()).then(|| (get('a'), get('b'))))
+    model(
+        "raw",
+        &pts,
+        run,
+        (!solv.is_empty()).then(|| (get('a'), get('b'))),
+    )
 }

@@ -55,7 +55,7 @@ pub fn element_fit(parent: &[(String, u64)], cand: &[(String, u64)]) -> f64 {
 
 /// Sorted m/z of the ion of every sub-formula of `ion` (a formula without charge, ion charge `z`); None past the combination cap or on a bad formula.
 fn sub_masses(ion: &str, z: i32) -> Option<Vec<f64>> {
-    mzlab_core::subformulas::submasses(ion, z, 0.0).ok()
+    mzlab_core::subformulas::submasses_opt(ion, z, 0.0)
 }
 
 /// Share of the intensity of the peaks of an MS2 (`mz`, `it`), the precursor `mz0` excluded, that a sub-formula of the ion explains.
