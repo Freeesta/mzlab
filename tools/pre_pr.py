@@ -53,7 +53,8 @@ def files_cambiati() -> list[str]:
 
 def passi_solo_doc() -> list[tuple[str, list[str]]]:
     """The checks a documents-only diff needs."""
-    p = [("mappa del codice", [PY, "tools/indice.py", "--controlla"]), ("soglie di dimensione", [PY, "tools/controlla.py"])]
+    p = [("mappa del codice", [PY, "tools/indice.py", "--controlla"]), ("soglie di dimensione", [PY, "tools/controlla.py"]),
+         ("percorsi nei documenti", [PY, "tools/controlla_link_docs.py"])]
     if cambiato("mzlab/web/teoria/"):
         p.append(("Teoria", [PY, "tools/controlla_teoria.py"]))
     return p
@@ -67,6 +68,7 @@ def passi(con_e2e: bool, veloce: bool = False) -> list[tuple[str, list[str]]]:
     p = [
         ("mappa del codice", [PY, "tools/indice.py", "--controlla"]),
         ("soglie di dimensione", [PY, "tools/controlla.py"]),
+        ("percorsi nei documenti", [PY, "tools/controlla_link_docs.py"]),
         ("lingue (i18n)", [PY, "tools/controlla_i18n.py"]),
         ("Teoria", [PY, "tools/controlla_teoria.py"]),
     ]

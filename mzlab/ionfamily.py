@@ -20,13 +20,11 @@ Contents
                 CV of the per-scan ratio, constancy of r between samples (Cochran Q)        -> `ratio_fit`, `ratio_constancy`
   5. kinetics   areas vs time, Spearman, Kendall tau, first-order decay, consecutive A->B->C, bootstrap CI -> `kinetics`
   6. families   hierarchical clustering with profile + apex + kinetics distance, roles (isotope, adduct, fragment candidate,
-                dimer) with formula constraints and isotope envelope check                  -> `ion_families`, `annotate_roles`
-  7. MCR        MCR-ALS (non-negativity + unimodality, SIMPLISMA init, SVD/EFA components), NMF-NNDSVD, stability -> `mcr_als`
+                dimer) with formula constraints and isotope envelope check                  -> `annotate_roles`
+  7. MCR        MCR-ALS (non-negativity + unimodality, SIMPLISMA init, SVD/EFA components) -> `mcr_als`
   8. ramp       source-voltage (DP) ramp: breakdown sigmoid, appearance DP, ISF vs TP slope  -> `source_ramp`
   9. MS2        cosine, modified cosine, "X among the products of P", subset score          -> `ms2_similarity`
  10. report     `origin_report`: everything above for one ion, nothing concluded (used by /api/origin)
-
-Calibration of the thresholds: see `tests/test_ionfamily.py` (synthetic truth, ROC/AUC) and the notes in `calibrate_thresholds`.
 """
 from __future__ import annotations
 
@@ -1135,65 +1133,8 @@ def _average_linkage(D: np.ndarray, cut: float):
     return labels, heights
 
 
-def ion_families(w: Window, min_snr: float = 10.0, kin: np.ndarray | None = None, weights=(1.0, 0.6, 0.6), cut: float = 0.3,
-                 max_ions: int = 400) -> dict:
-    """Group the ROIs of a window into families (ions that look like one species: same profile, same apex, same kinetics).
-
-    Distance between ions i, j = weighted mean of  d_profile = (1 - r_window)/2  (Pearson over the shared peak region),
-    d_apex = min(|apex_i - apex_j| / 4 scans, 1)  and, if `kin` (ROI x sample matrix of areas, same row order as w.mz) is given,
-    d_kin = (1 - Spearman)/2 between the kinetic profiles. Average linkage, cut at `cut`. Only ROIs with signal >= min_snr times
-    the noise are used. Returns {"ions": [...], "clusters": [{"members": [...], "core": index, "apex_rt": ...}], "dist": matrix}.
-    A family is a hypothesis of common origin, not a proof: coeluting different compounds can look alike at unit resolution."""
-    m0, n = w.X.shape
-    out = {"ions": [], "clusters": [], "dist": None}
-    if m0 == 0:
-        return out
-    ys, apex, snr = np.zeros((m0, n)), np.zeros(m0, dtype=int), np.zeros(m0)
-    for j in range(m0):
-        yc, sm, nz = _prep(w.rt, w.X[j])
-        ys[j] = sm
-        apex[j] = int(np.argmax(sm))
-        snr[j] = sm.max() / max(nz, 1e-9)
-        seg = w.X[j, max(apex[j] - 3, 0):apex[j] + 4]
-        if (seg > 0).sum() < min(5, len(seg)):          # isolated spikes (chemical noise), not an elution profile
-            snr[j] = 0.0
-    keep = np.flatnonzero(snr >= min_snr)
-    if len(keep) > max_ions:
-        keep = keep[np.argsort(-ys[keep].max(1))[:max_ions]]
-        keep.sort()
-    if len(keep) == 0:
-        return out
-    Y = ys[keep]
-    R = _pairwise_windowed_corr(Y)
-    dprof = np.where(np.isfinite(R), (1 - R) / 2.0, 1.0)
-    ap = apex[keep].astype(float)
-    dapex = np.minimum(np.abs(ap[:, None] - ap[None, :]) / 4.0, 1.0)
-    wc, wa, wk = weights
-    D = wc * dprof + wa * dapex
-    wsum = wc + wa
-    if kin is not None:
-        kk = np.asarray(kin, float)[keep]
-        rk = np.array([[wspearman(kk[i], kk[j]) if i != j else 1.0 for j in range(len(kk))] for i in range(len(kk))])
-        D = D + wk * np.where(np.isfinite(rk), (1 - rk) / 2.0, 0.5)
-        wsum += wk
-    D = D / wsum
-    np.fill_diagonal(D, 0.0)
-    labels, heights = _average_linkage(D, cut)
-    for c in range(labels.max() + 1):
-        idx = np.flatnonzero(labels == c)
-        core = int(idx[np.argmax(Y[idx].max(1))])
-        out["clusters"].append({"members": [int(keep[i]) for i in idx], "core": int(keep[core]), "apex_rt": float(w.rt[int(ap[core])]),
-                                 "mz": [float(w.mz[keep[i]]) for i in idx], "height": float(Y[core].max())})
-    out["clusters"].sort(key=lambda d: -d["height"])
-    out["ions"] = [{"roi": int(keep[i]), "mz": float(w.mz[keep[i]]), "apex_rt": float(w.rt[int(ap[i])]), "snr": float(snr[keep[i]]),
-                    "cluster": int(labels[i])} for i in range(len(keep))]
-    out["dist"] = D
-    out["cut"] = cut
-    return out
-
-
 # ----------------------------------------------------------------------------------------------------------------------
-# 7. deconvolution: MCR-ALS and NMF
+# 7. deconvolution: MCR-ALS
 # ----------------------------------------------------------------------------------------------------------------------
 def estimate_components(D: np.ndarray, max_k: int = 4, min_var: float = 0.002) -> dict:
     """Number of chemical components of the matrix D (scans x channels) from the singular values against the noise: the noise sigma
@@ -1267,27 +1208,6 @@ def simplisma(D: np.ndarray, k: int, offset: float = 0.05) -> list[int]:
     return sel
 
 
-def nndsvd(D: np.ndarray, k: int):
-    """NNDSVD initialisation of non-negative factors D ~ W H (Boutsidis & Gallopoulos): W (scans x k), H (k x channels)."""
-    U, s, Vt = np.linalg.svd(D, full_matrices=False)
-    W = np.zeros((D.shape[0], k))
-    H = np.zeros((k, D.shape[1]))
-    W[:, 0] = math.sqrt(s[0]) * np.abs(U[:, 0])
-    H[0] = math.sqrt(s[0]) * np.abs(Vt[0])
-    for j in range(1, k):
-        u, v = U[:, j], Vt[j]
-        up, un, vp, vn = np.maximum(u, 0), np.maximum(-u, 0), np.maximum(v, 0), np.maximum(-v, 0)
-        nup, nun, nvp, nvn = map(np.linalg.norm, (up, un, vp, vn))
-        mp, mn = nup * nvp, nun * nvn
-        if mp >= mn:
-            uu, vv, sg = up / max(nup, 1e-300), vp / max(nvp, 1e-300), mp
-        else:
-            uu, vv, sg = un / max(nun, 1e-300), vn / max(nvn, 1e-300), mn
-        W[:, j] = math.sqrt(s[j] * sg) * uu
-        H[j] = math.sqrt(s[j] * sg) * vv
-    return W, H
-
-
 def _lof(D, C, S) -> float:
     r = D - C @ S.T
     return float(100.0 * math.sqrt((r * r).sum() / max((D * D).sum(), 1e-300)))
@@ -1299,7 +1219,7 @@ def mcr_als(D: np.ndarray, k: int | None = None, init: str = "simplisma", max_it
 
     C: elution profiles (one column per component); S: pure spectra (channels x k, each normalised to its maximum; the scale is
     carried by C); unimodal=True forces every elution profile to have one maximum (isotonic regression on both sides of the apex).
-    Initial spectra: SIMPLISMA pure variables ('simplisma'), NNDSVD ('nndsvd'), random ('random') or given (`S0`).
+    Initial spectra: SIMPLISMA pure variables ('simplisma'), random ('random') or given (`S0`).
     k=None: from `estimate_components`. Returns C, S, lof (lack of fit, % of the norm of D), r2, n_iter, k."""
     D = np.asarray(D, float)
     n, m = D.shape
@@ -1313,8 +1233,6 @@ def mcr_als(D: np.ndarray, k: int | None = None, init: str = "simplisma", max_it
         idx = simplisma(D, k)
         # spectra of the pure variables: the rows of D at the scan where each pure variable peaks
         S = np.column_stack([D[int(np.argmax(D[:, j]))] for j in idx])
-    elif init == "nndsvd" and k <= min(n, m):
-        S = nndsvd(D, k)[1].T
     else:
         S = rng.random((m, k)) * D.max()
     S = np.maximum(S, 1e-12)
@@ -1343,51 +1261,6 @@ def mcr_als(D: np.ndarray, k: int | None = None, init: str = "simplisma", max_it
     C = c_step(S)            # the elution profiles carry the scale of the unit-maximum spectra
     cur = _lof(D, C, S)
     return {"C": C, "S": S, "lof": cur, "r2": float(1 - (cur / 100) ** 2), "n_iter": it, "k": k}
-
-
-def mcr_stability(D: np.ndarray, k: int, n_starts: int = 8, seed: int = 0) -> dict:
-    """Rotational ambiguity / stability: repeat MCR-ALS from `n_starts` random starts and compare each solution with the SIMPLISMA
-    reference component by component (best cosine of the pure spectra, greedy matching). Returns the cosine per component
-    (min, mean) and the spread of lack of fit. Low cosine = the decomposition is not unique: do not trust the clean spectra."""
-    ref = mcr_als(D, k, "simplisma")
-    cos_all, lofs = [], []
-    for s in range(n_starts):
-        r = mcr_als(D, k, "random", seed=seed + s)
-        lofs.append(r["lof"])
-        used, cs = set(), []
-        for j in range(ref["k"]):
-            c = [cosine(ref["S"][:, j], r["S"][:, q]) if q not in used else -1 for q in range(r["k"])]
-            q = int(np.argmax(c))
-            used.add(q)
-            cs.append(c[q])
-        cos_all.append(cs)
-    cos_all = np.array(cos_all)
-    return {"cos_min": cos_all.min(0).tolist(), "cos_mean": cos_all.mean(0).tolist(), "lof_ref": ref["lof"],
-            "lof_sd": float(np.std(lofs)), "lof_range": [float(min(lofs)), float(max(lofs))], "n_starts": n_starts}
-
-
-def deconvolve_window(w: Window, i0: int, i1: int, k: int | None = None, mz_range=None, min_snr: float = 5.0, stability: bool = True,
-                      min_rel: float = 0.02) -> dict:
-    """MCR-ALS on the ROI x scan window [i0, i1]: each component = a chromatogram + a clean spectrum (the spectrum of the parent with
-    its in-source fragments separates from that of a coeluting product when their elution profiles differ even a little)."""
-    X = w.X[:, i0:i1 + 1]
-    ok = np.flatnonzero(X.max(1) > 0)
-    if mz_range is not None:
-        ok = ok[(w.mz[ok] >= mz_range[0]) & (w.mz[ok] <= mz_range[1])]
-    snr = np.array([X[j].max() / max(noise_level(w.X[j]), 1e-9) for j in ok])
-    ok = ok[snr >= min_snr]
-    if len(ok):                                       # only the channels that matter in this window (chemical background is left out)
-        mx = X[ok].max(1)
-        ok = ok[mx >= min_rel * mx.max()]
-    if len(ok) < 2 or X.shape[1] < 6:
-        return {"ok": False}
-    D = X[ok].T
-    res = mcr_als(D, k)
-    out = {"ok": True, "k": res["k"], "lof": res["lof"], "r2": res["r2"], "rt": w.rt[i0:i1 + 1].tolist(), "mz": w.mz[ok].tolist(),
-           "C": res["C"].T.tolist(), "S": res["S"].T.tolist(), "n_iter": res["n_iter"], "components": estimate_components(D)}
-    if stability and res["k"] >= 1:
-        out["stability"] = mcr_stability(D, res["k"])
-    return out
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1549,72 +1422,6 @@ def ms2_membership(mz_x: float, mz_p: float, spec_p, tol: float = 0.5, mz_cut: f
     j = int(np.argmin(np.abs(ap - mz_x)))
     return {"x_in_p": bool(abs(ap[j] - mz_x) <= tol), "nearest_product": float(ap[j]), "delta": float(ap[j] - mz_x),
             "rel_intensity": float(100 * ip[j] / max(ip.max(), 1e-300)), "n_p": int(len(ap))}
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# 11. calibration helpers (ROC, thresholds by cross-validation)
-# ----------------------------------------------------------------------------------------------------------------------
-def roc_curve(scores, labels):
-    """(fpr, tpr, thresholds) of a score where a HIGHER value means label 1; ties handled by threshold steps."""
-    s, y = np.asarray(scores, float), np.asarray(labels, int)
-    ok = np.isfinite(s)
-    s, y = s[ok], y[ok]
-    order = np.argsort(-s, kind="mergesort")
-    s, y = s[order], y[order]
-    tps, fps = np.cumsum(y), np.cumsum(1 - y)
-    last = np.r_[np.diff(s) != 0, True]
-    tpr = np.r_[0.0, tps[last] / max(y.sum(), 1)]
-    fpr = np.r_[0.0, fps[last] / max((1 - y).sum(), 1)]
-    return fpr, tpr, np.r_[np.inf, s[last]]
-
-
-def auc(scores, labels) -> float:
-    """Area under the ROC curve (Mann-Whitney form with average ranks): 0.5 = no information, 1 = perfect."""
-    s, y = np.asarray(scores, float), np.asarray(labels, int)
-    ok = np.isfinite(s)
-    s, y = s[ok], y[ok]
-    n1, n0 = int(y.sum()), int((1 - y).sum())
-    if n1 == 0 or n0 == 0:
-        return float("nan")
-    r = rankdata(s)
-    return float((r[y == 1].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0))
-
-
-def youden_threshold(scores, labels) -> dict:
-    """Threshold maximising TPR - FPR (Youden J); {thr, tpr, fpr, j}."""
-    fpr, tpr, thr = roc_curve(scores, labels)
-    j = tpr - fpr
-    k = int(np.argmax(j))
-    return {"thr": float(thr[k]), "tpr": float(tpr[k]), "fpr": float(fpr[k]), "j": float(j[k])}
-
-
-def cv_threshold(scores, labels, k: int = 5, seed: int = 0) -> dict:
-    """k-fold cross-validation of the Youden threshold: threshold chosen on k-1 folds, accuracy measured on the held-out fold.
-    Returns the thresholds per fold (their spread tells how stable it is) and the held-out balanced accuracy."""
-    s, y = np.asarray(scores, float), np.asarray(labels, int)
-    ok = np.isfinite(s)
-    s, y = s[ok], y[ok]
-    rng = np.random.default_rng(seed)
-    folds = np.array_split(rng.permutation(len(s)), k)
-    thr, acc = [], []
-    for f in folds:
-        tr = np.setdiff1d(np.arange(len(s)), f)
-        t = youden_threshold(s[tr], y[tr])["thr"]
-        pred = s[f] >= t
-        tp = ((pred == 1) & (y[f] == 1)).sum() / max((y[f] == 1).sum(), 1)
-        tn = ((pred == 0) & (y[f] == 0)).sum() / max((y[f] == 0).sum(), 1)
-        thr.append(t)
-        acc.append(0.5 * (tp + tn))
-    return {"thresholds": [float(t) for t in thr], "thr_mean": float(np.mean(thr)), "thr_sd": float(np.std(thr)),
-            "balanced_accuracy": float(np.mean(acc))}
-
-
-def calibrate_thresholds(scores: dict, labels, k: int = 5) -> dict:
-    """For each metric (name -> scores, higher = more 'inherits the profile of P'): AUC, Youden threshold on all data and its
-    cross-validated spread/balanced accuracy. The thresholds are indications, never rules: the student tool shows the numbers and
-    only the private TP Mine module combines them (with these calibrations as likelihoods)."""
-    y = np.asarray(labels, int)
-    return {name: {"auc": auc(sc, y), **youden_threshold(sc, y), "cv": cv_threshold(sc, y, k)} for name, sc in scores.items()}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
