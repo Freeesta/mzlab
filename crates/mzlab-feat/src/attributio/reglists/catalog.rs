@@ -1,7 +1,8 @@
-use crate::sortc::SortC;
 // Ported from Attributio reglists/catalog.py.
 //! Which regulatory and priority lists exist, in which group, built by which source reader. The catalogue is the same for every campaign; what changes with each
 //! version of a list (act, version, dates, URL, licence) is data that lives next to the list's primary source.
+
+use crate::sortc::SortC;
 
 /// Groups of lists, in the order of every table, with their English names.
 pub const GROUPS: [(&str, &str); 8] = [

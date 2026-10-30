@@ -1,8 +1,9 @@
-use crate::sortc::SortC;
 // Ported from Attributio plugins/chimeric.py.
 //! Chimeric MS/MS detection: the features of the same polarity that fall inside the isolation window around a feature's m/z and within a retention-time distance
 //! were co-isolated, so their fragments may be in the spectrum. The window is the instrument's (`isolation_window` of the campaign, otherwise 3.0 for a Fusion
 //! and 1.5 for the others). The intruders are shown to the chemist; nothing is removed from the spectrum.
+
+use crate::sortc::SortC;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FeaturePoint {
