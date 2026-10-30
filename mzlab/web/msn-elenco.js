@@ -85,7 +85,7 @@ function openTic(/** @type {Vista} */ V, /** @type {Gruppo} */ g) {
   const { f, D, lev, dec } = V;
   closeDlg();
   const v = g.idx.filter(i => lev[i] === 2).map(i => D.tgt[i] ?? D.prec[i]).filter(x => x != null); if (!v.length) return;
-  const lo = Math.min(...v), hi = Math.max(...v), mid = (lo + hi) / 2, t = HR.tolDa(f, mid, 2);
+  const lo = v.reduce((a, b) => Math.min(a, b), Infinity), hi = v.reduce((a, b) => Math.max(a, b), -Infinity), mid = (lo + hi) / 2, t = HR.tolDa(f, mid, 2);
   const ptol = t == null ? null : +(Math.max(t, 1e-3) + (hi - lo) / 2).toPrecision(4);
   setTab(ESP.ms2, true);
   const y = tabPanels(ESP.ms2).reduce((/** @type {number} */ m, /** @type {Pannello} */ q) => Math.max(m, q.y + q.h + pnlGap()), 0);
