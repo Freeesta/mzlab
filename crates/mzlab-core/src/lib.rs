@@ -50,6 +50,7 @@ pub mod idxsearch;
 pub mod idxwalk;
 pub mod isofine;
 pub mod isoscore;
+#[cfg(feature = "isotopi-estesi")]
 pub mod isotable;
 pub mod itemroutes;
 pub mod infusione;
