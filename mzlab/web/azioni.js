@@ -105,7 +105,7 @@ const TASTI = (() => {
     if (s.code) return e.code === s.code && !!s.shift === e.shiftKey;
     const k = String(s.tasto || "");
     if (k === "?") return e.key === "?";
-    return !e.shiftKey === !s.shift && e.key.toLowerCase() === k.toLowerCase();
+    return !e.shiftKey === !s.shift && (e.key || "").toLowerCase() === k.toLowerCase();
   }
   /** The actions with a shortcut for this view, in the order of registration. @param {string} vista */
   const conTasto = vista => voci.filter(a => a.scorciatoia && (a.viste.includes(vista) || a.viste.includes("*")));

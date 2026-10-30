@@ -366,7 +366,7 @@ function wire() {
   document.addEventListener("keydown", (ev) => {
     const el = /** @type {HTMLElement} */ (ev.target);
     if (!(ev.ctrlKey || ev.metaKey) || (el.tagName === "INPUT" && el.id !== "source")) return;
-    const k = ev.key.toLowerCase();
+    const k = (ev.key || "").toLowerCase();
     if (k === "z" && !ev.shiftKey) undo();
     else if ((k === "z" && ev.shiftKey) || k === "y") redo();
     else return;

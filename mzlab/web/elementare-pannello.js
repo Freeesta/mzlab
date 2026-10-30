@@ -74,7 +74,7 @@ function cxBindTable(/** @type {HTMLElement} */ o, /** @type {{ res: any, sel: n
     tr.onclick = ev => { pick(i); const c = cellOf(ev.target, "td[data-copy]"), v = c ? c.dataset.copy : st.res.results[i].formula; if (v) copied(v); };
     tr.onkeydown = ev => {
       const c = cellOf(ev.target, "td[tabindex]"), cs = cellsOf(tr), k = c ? cs.indexOf(c) : -1;
-      if (((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "c") || ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(i); const v = c ? c.dataset.copy : st.res.results[i].formula; if (v) copied(v); }
+      if (((ev.ctrlKey || ev.metaKey) && (ev.key || "").toLowerCase() === "c") || ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(i); const v = c ? c.dataset.copy : st.res.results[i].formula; if (v) copied(v); }
       else if (ev.key === "ArrowDown" && rows[i + 1]) { ev.preventDefault(); (k >= 0 ? cellsOf(rows[i + 1])[k] : rows[i + 1]).focus(); pick(i + 1); }
       else if (ev.key === "ArrowUp" && rows[i - 1]) { ev.preventDefault(); (k >= 0 ? cellsOf(rows[i - 1])[k] : rows[i - 1]).focus(); pick(i - 1); }
       else if (ev.key === "ArrowRight" && k < cs.length - 1) { ev.preventDefault(); cs[k + 1].focus(); }

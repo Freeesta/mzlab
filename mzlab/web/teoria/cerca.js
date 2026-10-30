@@ -165,6 +165,6 @@
   TEORIA.cerca.aperta = () => open;
 
   document.addEventListener("keydown", e => {
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") { e.preventDefault(); open ? close() : openDialog(""); }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key || "").toLowerCase() === "k") { e.preventDefault(); open ? close() : openDialog(""); }
   });
 })();
