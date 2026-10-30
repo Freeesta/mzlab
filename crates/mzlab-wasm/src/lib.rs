@@ -556,10 +556,11 @@ pub fn prepare_upload(size: f64, read: Function, name: &str, sha256: Option<Stri
     // the scan table is estimated before it is kept: a file that does not fit is refused in order (`error.memoryBudget`, phase `table`)
     let p = mzlab_core::upload::prepare_in(&mut r, size as u64, name, known, Some(&MemBudget::from_request(budget_mb))).map_err(|e| error_json(&e))?;
     let t = &p.table;
-    let f8 = |v: &[f64]| Uint8Array::from(&v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>()[..]);
+    // copied straight from the wasm memory into JS typed arrays, seen as bytes (little-endian, as wasm is): no byte copy in the wasm memory
+    let f8 = |v: &[f64]| Uint8Array::new(&js_sys::Float64Array::from(v).buffer());
     let out = js_sys::Array::new();
     out.push(&Uint8Array::from(&t.level[..]));
-    out.push(&Uint8Array::from(&t.polarity.iter().map(|&v| v as u8).collect::<Vec<u8>>()[..]));
+    out.push(&Uint8Array::new(&js_sys::Int8Array::from(&t.polarity[..]).buffer()));
     out.push(&f8(&t.rt));
     out.push(&f8(&t.tic));
     out.push(&Uint8Array::from(&t.scans_json[..]));

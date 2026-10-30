@@ -7,6 +7,7 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzmlarray::{decode_array, Inflate, Want};
 
+mod finestre;
 mod lettura;
 mod tags;
 use tags::{find_tag, time_in_seconds};
@@ -204,21 +205,21 @@ impl<R: ReadAt> Mzml<R> {
 
     /// The header of every `<chromatogram>`; they follow the spectra, so the search starts where the last scan ends (0 without scans).
     pub fn chromatograms(&mut self, scans_end: u64) -> Result<Vec<Chrom>> {
-        let region = self.read(scans_end, self.size)?;
+        let mut w = finestre::Finestre::new();
         let mut out: Vec<Chrom> = vec![];
-        let mut pos = 0usize;
-        while let Some(a) = find_tag(&region, b"<chromatogram", pos) {
-            let Some(b) = find(&region, b"</chromatogram>", a) else {
+        let mut pos = scans_end;
+        while let Some(a) = w.find(self, b"<chromatogram", pos, u64::MAX, true)? {
+            let Some(b) = w.find(self, b"</chromatogram>", a, u64::MAX, false)? else {
                 break;
             };
-            let c = find(part(&region, 0, b), b"<binaryDataArrayList", a);
-            let h = text(part(&region, a, c.unwrap_or(b)));
+            let c = w.find(self, b"<binaryDataArrayList", a, b, false)?;
+            let h = text(&w.bytes(self, a, c.unwrap_or(b))?);
             let cid = attr_id(&h).unwrap_or_default();
             let mut d = Chrom {
                 index: out.len(),
                 id: cid.clone(),
-                start: scans_end + a as u64,
-                end: scans_end + (b + 15) as u64,
+                start: a,
+                end: b + 15,
                 kind: "other".into(),
                 ..Default::default()
             };

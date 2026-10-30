@@ -35,43 +35,54 @@ pub fn reduce(m: &[f32], nt: usize, nl: usize, ft: usize, fl: usize) -> (Vec<f32
     (out, rt, rl)
 }
 
-/// The values to send and their shape: the matrix as read, or averaged into at most `MAP_MAX_RT` x `MAP_MAX_NM` bins. Also the block size along the wavelengths and whether it was reduced.
-fn map_values(dad: &DadData) -> (Vec<f32>, usize, usize, usize, bool) {
+/// The values to send and their shape: the matrix as read (borrowed), or averaged into at most `MAP_MAX_RT` x `MAP_MAX_NM` bins. Also the block size along the wavelengths and whether it was reduced.
+fn map_values(dad: &DadData) -> (std::borrow::Cow<'_, [f32]>, usize, usize, usize, bool) {
     let (nt, nl) = (dad.points(), dad.channels());
     let (ft, fl) = (nt.div_ceil(MAP_MAX_RT), nl.div_ceil(MAP_MAX_NM));
     if ft > 1 || fl > 1 {
         let (v, rt, rl) = reduce(&dad.matrix_mau, nt, nl, ft, fl);
-        (v, rt, rl, fl, true)
+        (v.into(), rt, rl, fl, true)
     } else {
-        (dad.matrix_mau.clone(), nt, nl, 1, false)
+        (dad.matrix_mau.as_slice().into(), nt, nl, 1, false)
     }
 }
 
-/// The values as little-endian `f32`, base64.
-fn encode_f32(vals: &[f32]) -> String {
+/// Appends the values as little-endian `f32`, base64, to `out`: in pieces of a multiple of 3 bytes, so no padding falls inside and no copy of the
+/// whole array is made.
+fn encode_f32(vals: &[f32], out: &mut String) {
     use base64::Engine;
-    let mut bytes = Vec::with_capacity(vals.len().saturating_mul(4));
-    for &val in vals {
-        bytes.extend_from_slice(&val.to_le_bytes());
+    // 3 values = 12 bytes, a multiple of 3
+    const PIECE: usize = 3 * 1024;
+    let mut bytes = Vec::with_capacity(PIECE * 4);
+    out.reserve(vals.len().saturating_mul(4).div_ceil(3) * 4);
+    for piece in vals.chunks(PIECE) {
+        bytes.clear();
+        for &val in piece {
+            bytes.extend_from_slice(&val.to_le_bytes());
+        }
+        base64::engine::general_purpose::STANDARD.encode_string(&bytes, out);
     }
-    base64::engine::general_purpose::STANDARD.encode(&bytes)
 }
 
 /// Encodes the 2D absorbance matrix of `dad` as JSON for `/api/map?kind=pda`; `agg` says whether it was reduced (`mean`) or sent as read (`none`).
 pub fn dad_to_map_json(dad: &DadData) -> String {
+    use std::fmt::Write;
     let (rt0, rt1) = (
         dad.time_min.first().copied().unwrap_or(0.0),
         dad.time_min.last().copied().unwrap_or(dad.duration_min),
     );
     let (vals, nrt, nmz, fl, reduced) = map_values(dad);
-    let b64_data = encode_f32(&vals);
-    format!(
-        "{{\"data\":\"{b64_data}\",\"rt0\":{rt0},\"rt1\":{rt1},\"nrt\":{nrt},\"mz0\":{},\"mz1\":{},\"nmz\":{nmz},\"dmz\":{},\"level\":1,\"region\":false,\"agg\":\"{}\",\"log\":false,\"bg\":false,\"hr\":false,\"kind\":\"pda\"}}",
+    let mut out = String::from("{\"data\":\"");
+    encode_f32(&vals, &mut out);
+    let _ = write!(
+        out,
+        "\",\"rt0\":{rt0},\"rt1\":{rt1},\"nrt\":{nrt},\"mz0\":{},\"mz1\":{},\"nmz\":{nmz},\"dmz\":{},\"level\":1,\"region\":false,\"agg\":\"{}\",\"log\":false,\"bg\":false,\"hr\":false,\"kind\":\"pda\"}}",
         dad.wl_start_nm,
         dad.wl_stop_nm,
         dad.wl_step_nm * fl as f64,
         if reduced { "mean" } else { "none" }
-    )
+    );
+    out
 }
 
 #[cfg(test)]
@@ -117,6 +128,27 @@ mod tests {
                 && j.contains("\"agg\":\"mean\"")
                 && j.contains(&format!("\"dmz\":{fl},"))
         );
+    }
+
+    #[test]
+    fn the_map_is_the_one_shot_encoding_to_the_byte() {
+        use base64::Engine;
+        for (nt, nl) in [(1, 1), (2, 1), (40, 21), (1024, 3), (1025, 3), (3, 1025), (2000, 500), (5500, 1201)] {
+            let d = dad(nt, nl);
+            let (vals, nrt, nmz, fl, reduced) = map_values(&d);
+            let bytes: Vec<u8> = vals.iter().flat_map(|v| v.to_le_bytes()).collect();
+            let want = format!(
+                "{{\"data\":\"{}\",\"rt0\":{},\"rt1\":{},\"nrt\":{nrt},\"mz0\":{},\"mz1\":{},\"nmz\":{nmz},\"dmz\":{},\"level\":1,\"region\":false,\"agg\":\"{}\",\"log\":false,\"bg\":false,\"hr\":false,\"kind\":\"pda\"}}",
+                base64::engine::general_purpose::STANDARD.encode(&bytes),
+                d.time_min[0],
+                d.time_min[nt - 1],
+                d.wl_start_nm,
+                d.wl_stop_nm,
+                d.wl_step_nm * fl as f64,
+                if reduced { "mean" } else { "none" }
+            );
+            assert_eq!(dad_to_map_json(&d), want, "{nt} x {nl}");
+        }
     }
 
     #[test]
