@@ -17,7 +17,7 @@ r = Run(port=8975, wd="/tmp/wd_promote")
 res = None
 try:
     with sync_playwright() as p:
-        pg = r.page(p); pg.wait_for_timeout(1500)
+        pg = r.page(p)
         res = pg.evaluate("""async src => {
           const url = location.origin + '/static/archivio.js';
           const blob = new Blob([`self.onmessage = async () => { try { ${src.replace('%r', JSON.stringify('__URL__'))} } catch (e) { postMessage({ error: String(e && e.message || e) }); } };`.replace('__URL__', url)], { type: 'text/javascript' });
