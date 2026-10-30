@@ -52,6 +52,12 @@ try:
             key(f"{mod}+z"); until("/Niente|Nothing/.test(document.getElementById('sb-live').textContent)"); t = pg.inner_text("#sb-live"); assert "Niente da annullare" in t or "Nothing to undo" in t, t
             assert pg.evaluate("document.getElementById('np-undo').disabled") is True
         step("empty stack: short notice, button disabled", empty)
+        def nokey():
+            # autofill and synthetic events can fire keydown/keyup with key undefined: no handler may throw
+            n = len(r.errs)
+            pg.evaluate("for (const t of ['keydown','keyup']) for (const el of [document, document.body]) el.dispatchEvent(new Event(t, {bubbles: true}))")
+            assert not [e for e in r.errs[n:] if e[0] == "pageerror"], r.errs[n:]
+        step("keydown without key does not throw", nokey)
 finally:
     r.close(); r.report()
 print("\nSTEPS"); [print(" ", s) for s in steps]
