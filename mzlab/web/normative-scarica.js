@@ -102,6 +102,12 @@ export async function ensure(/** @type {Options} */ o = {}) {
   return { raw, catalog: cat, cached: fromCache };
 }
 
+/** The installed catalogue, or null; nothing is fetched. */
+export async function installed(/** @type {Options} */ o = {}) {
+  const { base, cs } = where(o);
+  return cachedCatalog(await cs.open(CACHE), base);
+}
+
 /**
  * «Check for updates»: compares the installed catalogue with the one the site serves. `state`: `none` (nothing installed), `current`, `update` or `offline`.
  * Nothing is downloaded.
