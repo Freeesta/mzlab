@@ -113,6 +113,30 @@ def _new_context(self, *a, **k):
     if _sito(): c.add_init_script(_sito())
     return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
+
+
+class _PersistentWebKit:
+    """Stand-in for a WebKit Browser: every context is a persistent one (temporary profile directory, removed on close).
+    The ephemeral context of Browser.new_page() has no website data store on disk and OPFS (the engine's file store) throws there (macOS)."""
+    def __init__(self, bt, kw):
+        self._bt, self._kw, self._open = bt, kw, []
+    def new_context(self, **k):
+        import tempfile
+        k.setdefault("locale", "it-IT")
+        d = tempfile.mkdtemp(prefix="mzlab-wkprofile-")
+        c = self._bt.launch_persistent_context(d, **self._kw, **k)
+        self._open.append((c, d)); c.add_init_script(_TRACK)
+        if _sito(): c.add_init_script(_sito())
+        return c
+    def new_page(self, **k):
+        c = self.new_context(**k)
+        return c.pages[0] if c.pages else c.new_page()
+    def close(self):
+        for c, d in self._open:
+            try: c.close()
+            except Exception: pass
+            shutil.rmtree(d, ignore_errors=True)
+        self._open = []
 def stage(pg, files, timeout=90000):
     """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
     pg.set_input_files("#pick", [str(f) for f in files])
@@ -187,6 +211,10 @@ BROWSER = get_env("BROWSER", "chromium")
 if BROWSER != "chromium":
     from playwright.sync_api import Playwright as _PW
     _PW.chromium = property(lambda self: getattr(self, BROWSER))
+    if BROWSER == "webkit":
+        from playwright.sync_api import BrowserType as _BT
+        _launch = _BT.launch
+        _BT.launch = lambda self, **kw: _PersistentWebKit(self, kw) if self.name == "webkit" else _launch(self, **kw)
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
 # Paths are relative to this folder: code = parent of tests_e2e; the lab files come from the private data repository
 # (tools/dati_percorsi.py finds it), or from $MZLAB_MZML / $MZLAB_DAM (QQQ_* aliases)
