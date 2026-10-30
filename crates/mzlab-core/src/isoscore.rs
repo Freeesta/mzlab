@@ -4,8 +4,8 @@
 use crate::composition::Counts;
 use crate::elements::{mass_of, parse_formula, ELECTRON};
 use crate::error::{Error, Result};
-use crate::pysum::pysum;
 use crate::isotable::EXTRA;
+use crate::pysum::pysum;
 use crate::subformulas::submasses;
 
 const ISO: [(&str, &[(f64, f64)]); 13] = [
@@ -47,7 +47,10 @@ const ISO: [(&str, &[(f64, f64)]); 13] = [
 ];
 /// Natural isotopes of an element as `(exact mass, abundance)`, the most abundant NOT necessarily first; `None` for an element outside the table.
 pub fn isotopes_of(el: &str) -> Option<&'static [(f64, f64)]> {
-    ISO.iter().chain(EXTRA.iter()).find(|(e, _)| *e == el).map(|(_, p)| *p)
+    ISO.iter()
+        .chain(EXTRA.iter())
+        .find(|(e, _)| *e == el)
+        .map(|(_, p)| *p)
 }
 const MERGE_TOL: f64 = 0.0005;
 const MAX_SHIFT: f64 = 6.0;
@@ -115,10 +118,7 @@ fn conv(a: &[(f64, f64)], b: &[(f64, f64)], floor: f64, cut: f64) -> Vec<(f64, f
             }
         }
     }
-    join(r)
-        .into_iter()
-        .filter(|(m, _)| *m <= cut)
-        .collect()
+    join(r).into_iter().filter(|(m, _)| *m <= cut).collect()
 }
 
 /// Fine isotope structure of an ion formula: (m/z, % of the most intense isotopologue), sorted by m/z.
