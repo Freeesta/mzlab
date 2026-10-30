@@ -2,8 +2,8 @@
 // @ts-noany
 "use strict";
 // Part D: compare a MS2 spectrum with the spectral libraries (MSP, MGF) the user has loaded. Classic script, loaded after settings.js/explore.js.
-// The reading, the archive (OPFS) and the search live in libreria-worker.js (no Pyodide); here: the «Librerie» window (gear), the window with the
-// results and the mirror plot (experimental on top, library below). Nothing here touches drawSpec: the mirror is a canvas of its own.
+// The reading, the archive (OPFS) and the search live in libreria-worker.js (no Pyodide); here: the «Librerie» window (gear), the low-resolution
+// results window and the mirror plot (experimental on top, library below); «What is it?» and «Identify all the MS2» are libreria-finestra.js. Nothing here touches drawSpec: the mirror is a canvas of its own.
 const LIB = (() => {
   // Supervisor: if the worker dies (a trap of the WebAssembly engine, a lost memory) it is replaced and the request is tried once more; a second death within a
   // minute sends the page to the JavaScript path for the rest of the session. `?libjs=1` starts there (tests, browsers where the engine does not load).
@@ -262,16 +262,6 @@ const LIB = (() => {
     return { peaks, prec, pol, f, rt, title: `${(f && f.label) || ""}${rt != null ? " · RT " + rt.toFixed(2) + " min" : ""}` };
   }
 
-  // the peak pairs behind the score of the selected candidate (query peak, library peak, difference); `an` adds the column of the precursor shift
-  function pairsTable(/** @type {any[][]} */ ps, /** @type {Bag} */ q, /** @type {Bag} */ l, /** @type {boolean} */ an) {
-    if (!ps.length) return `<p class="muted">${I18N.t("lib.pairs.none")}</p>`;
-    const rows = ps.slice().sort((/** @type {any[]} */ a, /** @type {any[]} */ b) => q.mz[a[0]] - q.mz[b[0]]).map((/** @type {any[]} */ pr) => {
-      const dm = l.mz[pr[1]] - q.mz[pr[0]];
-      return `<tr><td class="num">${q.mz[pr[0]].toFixed(4)}</td><td class="num">${l.mz[pr[1]].toFixed(4)}</td><td class="num">${(dm >= 0 ? "+" : "\u2212") + Math.abs(dm).toFixed(4)}</td><td class="num">${q.it[pr[0]].toFixed(3)}</td><td class="num">${l.it[pr[1]].toFixed(3)}</td>${an ? `<td>${pr[2] ? I18N.t("lib.pairs.yes") : ""}</td>` : ""}</tr>`;
-    }).join("");
-    return `<div class="tbl"><table class="lib-pairs"><caption>${I18N.t("lib.pairs.title", { n: ps.length })}</caption><tr><th scope="col" class="num">${I18N.t("lib.pairs.q")}</th><th scope="col" class="num">${I18N.t("lib.pairs.l")}</th><th scope="col" class="num">&Delta;m/z</th><th scope="col" class="num">${I18N.t("lib.pairs.qi")}</th><th scope="col" class="num">${I18N.t("lib.pairs.li")}</th>${an ? `<th scope="col">${I18N.t("lib.pairs.shift")}</th>` : ""}</tr>${rows}</table></div>`;
-  }
-
   // ------------------------------------------------------------ the results window
   function mirror(/** @type {HTMLCanvasElement} */ cv, /** @type {Bag} */ q, /** @type {Bag} */ r) {
     // description and table: the experimental peaks above, the library ones below
@@ -314,29 +304,11 @@ const LIB = (() => {
     g.fillStyle = ink; g.textAlign = "left"; g.fillText(I18N.t("lib.plot.exp"), ml + 4, mt + 10); g.fillText(r.name || I18N.t("lib.plot.lib"), ml + 4, H - mb - 6);
     g.save(); g.fillStyle = mut; g.textAlign = "center"; g.translate(14, mid); g.rotate(-Math.PI / 2); g.fillText(I18N.t("lib.plot.rel"), 0, 0); g.restore();
     g.fillStyle = acc; g.textAlign = "right"; g.fillText(I18N.t("lib.plot.shared", { n: r.shared }), W - mr - 4, mt + 10);
+    // geometry and peaks of the last drawing: the hover of libreria-finestra.js finds the peak under the pointer
+    /** @type {Bag} */ (cv)._mg = { X, mid, half, q, r, shq, shl, nlq, nll };
   }
   // confidence levels: livelli.js (rules and thresholds in the data file livelli-1.js, the user's thresholds in qqq.lib.soglie). The candidates carry ik, ent, cos, shared, dprec (ppm), nlib
   const assess = (/** @type {Bag[]} */ cands, /** @type {Bag} */ o = {}) => LIVELLI.assess({ cands, analogs: o.analogs, nScans: o.nScans, std: o.std || null, formulaUnique: !!o.formulaUnique });
-  const THR_KEYS = ["entropia_min", "picchi_min", "precursore_ppm_max", "scansioni_min", "margine_min", "entropia_provvisorio", "analogo_mcos_min"];
-  // «candidate, level N, evidence»: the badge, the evidence (one line per gate), the decisive sentence, the proposed and the decided level
-  function levelHtml(/** @type {Bag} */ res) {
-    const lv = LIVELLI.shown(res), b = res.best || res.nearest || res.analog;
-    return `<div class="vd" style="margin:6px 0;padding:6px 10px;border-radius:6px;border:1px solid var(--line)"><span class="lvb ${LIVELLI.cls(lv)}">${EHt(LIVELLI.sentence(lv))}</span>${b && res.proposed !== "5" && res.proposed !== "0" ? ` <b>${EHt(b.name || "")}</b>` : ""}
-      <div class="sm" style="margin-top:4px"><b>${I18N.t("lv.evidence")}</b>: ${res.lines.length ? res.lines.map((/** @type {string} */ x) => EHt(x)).join(" · ") : "–"}</div><div class="sm">${EHt(res.decisive)}</div>
-      <div class="sm" style="margin-top:4px">${I18N.t("lv.proposed")}: <b>${EHt(LIVELLI.tag(res.proposed))}</b> · <label>${I18N.t("lv.decided")} <select id="lv-dec"><option value="">${I18N.t("lv.decided.none")}</option>${LIVELLI.ORDER.map((/** @type {string} */ x) => `<option value="${x}"${res.decided === x ? " selected" : ""}>${LIVELLI.tag(x)}</option>`).join("")}</select></label> <span class="sm err" id="lv-msg" role="status"></span></div></div>`;
-  }
-  function levelBind(/** @type {HTMLElement} */ root, /** @type {Bag} */ res, /** @type {() => void} */ again) {                       // the chemist's decision: 2b is only written here
-    const sel = root.querySelector("#lv-dec"); if (!sel) return;
-    sel.onchange = () => { const r = LIVELLI.decide(res, sel.value); if (!r.ok) { sel.value = res.decided || ""; root.querySelector("#lv-msg").textContent = r.msg; } else if (again) again(); };
-  }
-  function thresholdsHtml() {
-    const T = LIVELLI.thresholds();
-    return `<details id="lr-sog" style="margin-left:auto"><summary class="sm">${I18N.t("lv.thr.title")}</summary><div class="sm" style="padding:4px 0;display:flex;flex-wrap:wrap;gap:6px 14px">${THR_KEYS.map(k => `<label>${I18N.t(`lv.thr.${k}`)} <input data-thr="${k}" style="width:56px" value="${String(T[k])}"></label>`).join("")}<button type="button" id="lr-sog-reset">${I18N.t("lv.thr.reset")}</button></div></details>`;
-  }
-  function thresholdsBind(/** @type {HTMLElement} */ root, /** @type {() => void} */ again) {
-    root.querySelectorAll("[data-thr]").forEach((/** @type {HTMLInputElement} */ el) => el.onchange = () => { const v = numIt(el.value); if (v >= 0) { LIVELLI.setThreshold(el.dataset.thr, v); again(); } });
-    const rs = root.querySelector("#lr-sog-reset"); if (rs) rs.onclick = () => { LIVELLI.reset(); const T = LIVELLI.thresholds(); root.querySelectorAll("[data-thr]").forEach((/** @type {HTMLInputElement} */ el) => { el.value = String(T[/** @type {string} */ (el.dataset.thr)]); }); again(); };
-  }
   // MS2 scans of the same precursor (10 ppm) and the same peak (RT gaps up to 0.2 min), as «Identify all» groups them; 1 where the file is not DDA
   async function scansOf(/** @type {Bag} */ p) {
     try {
@@ -348,18 +320,6 @@ const LIB = (() => {
       for (let a = j; a < rts.length - 1 && rts[a + 1] - rts[a] <= 0.2; a++) n++;
       return n;
     } catch (e) { return 1; }
-  }
-  // neutral change between a query and an analogue: the usual transformations first, then the simplest formula within 3 mDa (the composition of the server)
-  const TRANSF = [[15.9949146, I18N.t("lib.tr.hydroxylation")], [-2.01565, I18N.t("lib.tr.dehydrogenation")], [13.97926, "+O −2H"], [-26.01565, "−C₂H₂"], [1.97926, "−CH₂ +O"], [-56.0626, I18N.t("lib.tr.dealkylation")],
-    [18.010565, "+H₂O"], [-18.010565, "−H₂O"], [-27.9949146, "−CO"], [2.01565, "+2H"], [-14.01565, I18N.t("lib.tr.demethylation")], [14.01565, I18N.t("lib.tr.methylation")], [-43.98983, "−CO₂"], [31.98983, "+O₂"]];
-  const sgnTxt = (/** @type {number} */ v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(4);
-  function deltaKnown(/** @type {number} */ dm) { const t = TRANSF.find(([m]) => Math.abs(m - dm) <= 0.003); return t ? t[1] : null; }
-  async function deltaFormula(/** @type {number} */ dm) {
-    try {
-      const j = await J(`api/composition?mz=${Math.abs(dm) - 0.000548579909}&ion=${encodeURIComponent("M+.")}&tol=3&unit=mda&max=30&elements=${encodeURIComponent("C:0-12,H:0-24,N:0-4,O:0-6,S:0-2")}`);
-      const atoms = (/** @type {string} */ f) => [...f.matchAll(/([A-Z][a-z]?)(\d*)/g)].reduce((n, m) => n + (+m[2] || 1), 0), best = j.results.map((/** @type {Bag} */ r) => [atoms(r.formula), r.formula]).sort((/** @type {[number, string]} */ a, /** @type {[number, string]} */ b) => a[0] - b[0])[0];
-      return best ? (dm < 0 ? "−" : "+") + best[1] + " " + I18N.t("lib.simplest") : null;
-    } catch (e) { return null; }
   }
   async function searchFrom(/** @type {Pannello} */ p) {
     ensureCss();
@@ -418,7 +378,6 @@ const LIB = (() => {
     d.showModal(); window.addEventListener("resize", draw, { once: true });
     if (st.prec) run(); else msg(I18N.t("lib.typePrec"));
   }
-  // ------------------------------------------------------------ «Cos'è?» (high resolution only): identity (Flash entropy) and analogues (hybrid) of ONE MS2 spectrum together, with level and evidence
   // the voice of the menu exists only for high-resolution spectra (low resolution gives no answers)
   const isHr = (/** @type {Bag} */ p) => { const q = queryOf(p); return !!(q && profOf(q.f).hr); };
   // cosine on the visible peaks (cos_vis of Attributio): the reference peaks below the lower limit of the MS2 scan window are removed; null when nothing is cut
@@ -429,102 +388,7 @@ const LIB = (() => {
     for (const pr of r.pairs || []) if (r.mz[pr[1]] >= lo) dot += Math.sqrt(q.it[pr[0]] * r.it[pr[1]]);
     return na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0;
   }
-  const polTxt = (/** @type {number} */ v) => I18N.t(v > 0 ? "lib.what.pol.pos" : v < 0 ? "lib.what.pol.neg" : "lib.what.pol.unk");
-  // the same first InChIKey block (or name) = one structure: the best entry heads the group
-  function groupsOf(/** @type {Bag[]} */ rs) {
-    const m = new Map(); rs.forEach((/** @type {Bag} */ r, /** @type {number} */ i) => { r._i = i; const k = LIVELLI.ikKey(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
-    return [...m.values()];
-  }
-  async function whatIs(/** @type {Pannello} */ p) {
-    ensureCss();
-    const q = queryOf(p); if (!q || !q.peaks.length) return info(I18N.t("lib.pickMs2"));
-    let d = /** @type {any} */ (document.getElementById("libres"));
-    if (!d) { d = document.createElement("dialog"); d.id = "libres"; document.body.appendChild(d); }
-    const prof = profOf(q.f), top = q.peaks.reduce((/** @type {number} */ x, /** @type {number[]} */ y) => Math.max(x, y[0]), 0);
-    /** @type {any} */
-    const st = { prec: q.prec != null ? +q.prec.toFixed(4) : null, v: prof.v, frag: Math.max(0.005, +(10e-6 * top).toFixed(4)), res: null, an: null, sel: { k: "id", i: 0 }, n: 1, lo: null, decided: "", open: new Set() };
-    d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.what.title")}</h3><button class="x" id="lr-x" title="${I18N.t("common.close")}">&times;</button></div>
-      <div class="sm muted" id="lr-q" style="margin-top:4px">${EHt(q.title)}</div>
-      <div class="qbar"><label>${I18N.t("lib.search.prec")} <input id="lr-prec" value="${st.prec ?? ""}"></label><label>${I18N.t("lib.search.tol")} <input id="lr-tol" value="${st.v}"> ppm</label>
-        <label>${I18N.t("lib.search.peaksWithin")} <input id="lr-frag" value="${st.frag}"> Da</label><button id="lr-go">${I18N.t("lib.search.go")}</button><button id="lr-copy" title="${I18N.t("lib.copy.title")}">${I18N.t("lib.copy")}</button><button id="lr-xlsx">Excel</button><button id="lr-libs">${I18N.t("lib.libs")}</button><span class="sm muted" id="lr-msg"></span></div>
-      <div class="qbar">${thresholdsHtml()}</div><div id="lr-verdict"></div><div id="lr-body"></div><canvas id="lr-cv" hidden></canvas><div id="lr-detail" class="sm"></div>`;
-    d.querySelector("#lr-x").onclick = () => d.close(); d.querySelector("#lr-libs").onclick = () => { open(); };
-    const msg = (/** @type {string | undefined} */ t) => { d.querySelector("#lr-msg").textContent = t || ""; };
-    const sel = () => { const A = st.sel.k === "an" ? st.an : st.res; return A && A.results[st.sel.i] ? A.results[st.sel.i] : null; };
-    const dp = (/** @type {Bag} */ r) => (r.dprec >= 0 ? "+" : "") + r.dprec.toFixed(1) + " ppm";
-    const pct = (/** @type {number | null | undefined} */ v) => (v == null ? "" : Math.round(v * 100) + "%");
-    const idRow = (/** @type {Bag} */ r, /** @type {number} */ g, /** @type {number} */ k) => `<tr class="row${st.sel.k === "id" && st.sel.i === r._i ? " sel" : ""}${k ? " mem" : ""}" data-k="id" data-i="${r._i}"${k && !st.open.has(g) ? " hidden" : ""}><td class="num">${k ? "" : r._i + 1}</td>
-      <td>${k ? "&nbsp;&nbsp;↳ " : ""}${EHt(r.name)}${!k && st.groups[g].length > 1 ? ` <button type="button" class="sm" data-grp="${g}" aria-expanded="${st.open.has(g)}" title="${EHt(I18N.t("lib.what.group", { n: st.groups[g].length - 1 }))}">${st.open.has(g) ? "▾" : "▸"} ${I18N.t("lib.what.group", { n: st.groups[g].length - 1 })}</button>` : ""}</td>
-      <td class="num">${r.ent.toFixed(3)}</td><td class="num">${r.reverse != null ? r.reverse.toFixed(3) : ""}</td><td class="num">${r.shared}</td><td class="num">${pct(r.explained)}</td><td class="num">${dp(r)}</td><td>${EHt(r.type)}</td><td>${polTxt(r.polarity)}</td><td>${EHt(r.ce)}</td><td>${EHt(r.inst)}</td><td>${EHt(r.lib)}</td><td>${EHt(r.license || "")}</td></tr>`;
-    const show = () => {
-      const R = st.res, A = st.an, body = d.querySelector("#lr-body"), cv = d.querySelector("#lr-cv"), vd = d.querySelector("#lr-verdict");
-      vd.innerHTML = "";
-      if (!R) { body.innerHTML = ""; cv.hidden = true; d.querySelector("#lr-detail").innerHTML = ""; return; }
-      if (!R.libs) { body.innerHTML = `<p>${I18N.t("lib.loadFirst")}</p><p><button id="lr-open">${I18N.t("lib.openLibs")}</button></p>`; body.querySelector("#lr-open").onclick = () => open(); cv.hidden = true; return; }
-      st.groups = groupsOf(R.results);
-      st.lv = assess(R.results, { nScans: st.n, analogs: A && A.results }); if (st.decided) LIVELLI.decide(st.lv, st.decided);
-      const cvs = st.sel.k === "id" && R.results[st.sel.i] && st.lo != null ? cosVis({ it: R.query.it }, R.results[st.sel.i], st.lo) : null;
-      // a proof only: it never changes the level
-      if (cvs != null) st.lv.lines = st.lv.lines.concat([I18N.t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2) })]);
-      window.RAPPORTO && RAPPORTO.note(st.lv, q); vd.innerHTML = levelHtml(st.lv); levelBind(vd, st.lv, () => { st.decided = st.lv.decided || ""; show(); });
-      body.innerHTML = `<h4 style="margin:8px 0 2px">${I18N.t("lib.what.cand")}</h4>` + (R.results.length ? `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.col.name")}</th><th class="num">${I18N.t("lib.col.entropy")}</th><th class="num">${I18N.t("lib.col.reverse")}</th><th class="num">${I18N.t("lib.col.shared")}</th><th class="num">${I18N.t("lib.col.explained")}</th><th class="num">${I18N.t("lib.col.dprecHtml")}</th><th>${I18N.t("lib.col.adduct")}</th><th>${I18N.t("lib.col.pol")}</th><th>CE</th><th>${I18N.t("lib.col.instrument")}</th><th>${I18N.t("lib.col.library")}</th><th>${I18N.t("lib.col.license")}</th></tr>
-        ${st.groups.map((/** @type {any[]} */ g, /** @type {number} */ gi) => g.map((/** @type {Bag} */ r, /** @type {number} */ k) => idRow(r, gi, k)).join("")).join("")}</table></div>` : `<p>${I18N.t("lib.what.none")}</p>`)
-        + `<h4 style="margin:10px 0 2px">${I18N.t("lib.what.an")}</h4>` + (!A ? `<p class="muted">${I18N.t("lib.an.searching")}</p>` : !A.results.length ? `<p>${I18N.t("lib.an.none")}</p>` : `<div class="tbl"><table><tr><th class="num">#</th><th>${I18N.t("lib.an.name")}</th><th class="num">&Delta;m</th><th>${I18N.t("lib.an.interp")}</th><th class="num">${I18N.t("lib.an.mcos")}</th><th class="num">${I18N.t("lib.an.matched")}</th><th>${I18N.t("lib.col.library")}</th></tr>
-        ${A.results.map((/** @type {Bag} */ r, /** @type {number} */ i) => `<tr class="row${st.sel.k === "an" && st.sel.i === i ? " sel" : ""}" data-k="an" data-i="${i}"><td class="num">${i + 1}</td><td>${EHt(r.name)}</td><td class="num">${sgnTxt(r.delta)}</td><td data-dm="${i}">${EHt(deltaKnown(r.delta) || "…")}</td><td class="num">${r.mcos.toFixed(2)}</td><td class="num">${I18N.t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</td><td>${EHt(r.lib)}</td></tr>`).join("")}</table></div><div class="sm muted" style="margin-top:4px">${I18N.t("lib.an.note")}</div>`);
-      body.querySelectorAll("tr.row").forEach((/** @type {HTMLElement} */ tr) => tr.onclick = (/** @type {PointerEvent} */ e) => { if (/** @type {HTMLElement} */ (e.target).closest("[data-grp]")) return; st.sel = { k: tr.dataset.k, i: Number(tr.dataset.i) }; body.querySelectorAll("tr.row").forEach((/** @type {Bag} */ x) => x.classList.toggle("sel", x === tr)); draw(); });
-      body.querySelectorAll("[data-grp]").forEach((/** @type {HTMLElement} */ b) => b.onclick = () => { const g = Number(b.dataset.grp); if (st.open.has(g)) st.open.delete(g); else st.open.add(g); show(); });
-      if (A) A.results.forEach(async (/** @type {Bag} */ r, /** @type {number} */ i) => { if (!deltaKnown(r.delta)) { const t = await deltaFormula(r.delta); const c = body.querySelector(`[data-dm="${i}"]`); if (c) c.textContent = t || I18N.t("lib.an.noFormula"); } });
-      cv.hidden = !sel(); draw();
-    };
-    const draw = () => {
-      const r = sel(), cv = d.querySelector("#lr-cv"), det = d.querySelector("#lr-detail"); if (!r) { det.innerHTML = ""; return; }
-      const q2 = st.sel.k === "an" ? { mz: r.qa.mz, it: r.qa.it } : { mz: st.res.query.mz, it: st.res.query.it };
-      mirror(cv, { ...q2, hr: true, prec: st.prec, frag: st.frag }, st.sel.k === "an" ? { mz: r.la.mz, it: r.la.it, prec: r.prec, name: r.name, shared: r.matched, pairs: r.pairs } : r);
-      const /** @type {number[]} */ nls = [], ps = st.sel.k === "an" ? r.pairs : (r.pairs || []), lm = st.sel.k === "an" ? r.la.mz : r.mz;
-      JSON.parse(cv.dataset.nl || "[]").forEach((/** @type {[number]} */ [i]) => nls.push(+(st.prec - q2.mz[i]).toFixed(4)));
-      ps.forEach((/** @type {any[]} */ pr) => { const v = +(st.prec - q2.mz[pr[0]]).toFixed(4); if (v > 0.5 && !nls.includes(v)) nls.push(v); });
-      const attr = [r.authors, r.accession, r.license].some(x => x) ? `<div>${I18N.t("lib.what.attr", { authors: EHt(r.authors || "–"), accession: EHt(r.accession || "–"), license: EHt(r.license || "–") })}</div>` : "";
-      det.innerHTML = `<div class="muted">${I18N.t("lib.what.legend")}</div><div>${nls.length ? I18N.t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : I18N.t("lib.what.nlNone")}</div>${attr}${pairsTable(ps, q2, st.sel.k === "an" ? r.la : r, st.sel.k === "an")}`;
-    };
-    const run = async () => {
-      const num = (/** @type {string} */ id) => numIt(String(d.querySelector(id).value));
-      st.prec = num("#lr-prec"); st.v = num("#lr-tol"); st.frag = num("#lr-frag");
-      if (!(st.prec > 0) || !(st.v > 0) || !(st.frag > 0)) return msg(I18N.t("lib.checkTol"));
-      msg(I18N.t("lib.searching")); const t0 = performance.now(); st.an = null; st.res = null; st.sel = { k: "id", i: 0 };
-      try {
-        const [a, b] = await Promise.all([call("search", { peaks: q.peaks, prec: st.prec, pol: q.pol, tol: { v: st.v, unit: "ppm" }, frag: st.frag }), call("analogs", { peaks: q.peaks, prec: st.prec, pol: q.pol, frag: st.frag, maxDelta: 200, max: 10 })]);
-        st.res = a; st.an = b; msg(a.libs ? I18N.t("lib.results", { n: a.results.length, ms: Math.round(performance.now() - t0) }) : "");
-      } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.res = null; msg(I18N.t("lib.error", { message: e.message })); }
-      show();
-    };
-    thresholdsBind(d, show);
-    d.querySelector("#lr-go").onclick = run;
-    d.querySelectorAll(".qbar input").forEach((/** @type {HTMLInputElement} */ i) => i.onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") run(); });
-    const lvTxt = () => (st.lv ? [st.lv.proposed, st.lv.decided || ""] : ["", ""]);
-    const head = [ "#", I18N.t("lib.col.name"), I18N.t("lib.col.entropy"), I18N.t("lib.col.reverse"), I18N.t("lib.col.shared"), I18N.t("lib.col.explained"), I18N.t("lib.col.dprec") + " (ppm)", I18N.t("lib.col.adduct"), I18N.t("lib.col.pol"), "CE", I18N.t("lib.col.instrument"), I18N.t("lib.col.library"), I18N.t("lib.col.license"), "InChIKey", I18N.t("lv.proposed"), I18N.t("lv.decided")];
-    const rowsOf = () => { const [pr, de] = lvTxt(); return st.res ? st.res.results.map((/** @type {Bag} */ r, /** @type {number} */ i) => [i + 1, r.name, r.ent, r.reverse ?? "", r.shared, r.explained ?? "", r.dprec, r.type, polTxt(r.polarity), r.ce, r.inst, r.lib, r.license || "", r.ik || "", i === 0 ? pr : "", i === 0 ? de : ""]) : []; };
-    d.querySelector("#lr-copy").onclick = async () => {
-      const rs = rowsOf(); if (!rs.length) return msg(I18N.t("lib.nothingCopy"));
-      const f = (/** @type {unknown} */ v) => typeof v === "number" ? String(+v.toFixed(3)) : String(v ?? "");
-      const tsv = await PROV.tsv(head.join("\t") + "\n" + rs.map((/** @type {Bag} */ r) => r.map(f).join("\t")).join("\n"), { p, table: "library-analogs" });
-      const html = `<table><tr>${head.map(x => `<th>${EHt(x)}</th>`).join("")}</tr>${rs.map((/** @type {Bag} */ r) => `<tr>${r.map((/** @type {Bag} */ v) => `<td>${EHt(f(v))}</td>`).join("")}</tr>`).join("")}</table>`;
-      try { if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]); else await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); }
-      catch (e) { try { await navigator.clipboard.writeText(tsv); msg(I18N.t("lib.copied", { n: rs.length })); } catch (e2) { msg(I18N.t("lib.noCopy")); } }
-    };
-    d.querySelector("#lr-xlsx").onclick = () => {
-      const rs = rowsOf(); if (!rs.length) return msg(I18N.t("lib.nothingSave"));
-      const an = st.an ? st.an.results.map((/** @type {Bag} */ r, /** @type {number} */ i) => [i + 1, r.name, +r.delta.toFixed(4), deltaKnown(r.delta) || "", r.mcos, r.matched, r.shifted, r.lib]) : [];
-      dlx((typeof plotName === "function" ? plotName(p) : I18N.t("lib.xlsx.fallback")) + I18N.t("lib.xlsx.suffix"), [{ name: I18N.t("lib.xlsx.sheet"), head, rows: rs, widths: [5, 30, 10, 10, 10, 12, 14, 12, 10, 8, 14, 20, 14, 28, 10, 10] },
-        { name: I18N.t("lib.what.sheetAn"), head: ["#", I18N.t("lib.an.name"), "Δm", I18N.t("lib.an.interp"), I18N.t("lib.an.mcos"), I18N.t("lib.an.matched"), I18N.t("lib.an.shifted", { matched: "", shifted: "" }).replace(/[()]/g, "").trim() || "shifted", I18N.t("lib.col.library")], rows: an, widths: [5, 30, 10, 24, 12, 12, 10, 20] }], { p, table: "library-analogs" });
-    };
-    d.showModal(); window.addEventListener("resize", draw, { once: true });
-    scansOf(p).then(n => { if (n !== st.n) { st.n = n; if (st.res) show(); } });
-    if (p.k != null) J(`api/method?k=${p.k}`).then((/** @type {Bag} */ f) => { const sp = f && f.scan_params, lo = sp && sp.ms2 && sp.ms2.window_lo; if (lo > 0) { st.lo = lo; if (st.res) show(); } }).catch(() => {});
-    if (st.prec) run(); else msg(I18N.t("lib.typePrec"));
-  }
-  // ------------------------------------------------------------ «Identifica tutte le MS2 del file» (WP-H8): every MS2 of a high-resolution file against the libraries
-  // the MS2 of each scan are read in blocks of 60 (api/scanbin); the worker answers with the best library entry of each; the scans of one precursor (10 ppm) and one peak (RT within 0.2 min) are grouped
-  const phys = (/** @type {Bag} */ f) => (f && f.file ? f.file.split("#")[0] : "");
+  // «Identify all the MS2»: the scans of one precursor (10 ppm) and one peak (RT within 0.2 min) are grouped
   function groupRows(/** @type {Bag[]} */ rows, ppm = 10, dRt = 0.2) {
     const R = rows.filter((/** @type {Bag} */ r) => r.prec).sort((/** @type {Bag} */ a, /** @type {Bag} */ b) => a.prec - b.prec), byPrec = [];
     for (const r of R) { const g = byPrec[byPrec.length - 1]; if (g && Math.abs(r.prec - g[g.length - 1].prec) <= r.prec * ppm * 1e-6) g.push(r); else byPrec.push([r]); }
@@ -545,71 +409,16 @@ const LIB = (() => {
     const b = g.best && g.best.name ? g.best : null;
     return assess(b ? [b, b.alt].filter(Boolean) : [], { nScans: g.n });
   }
-  const lvCell = (/** @type {Bag} */ res) => { const lv = LIVELLI.shown(res); return `<span class="lvb ${LIVELLI.cls(lv)}" title="${EHt(LIVELLI.sentence(lv) + " · " + res.decisive)}">${EHt(LIVELLI.tag(lv))}</span>`; };
-  async function identifyAll(/** @type {number} */ k) {
-    ensureCss(); await carica("m:libreria-risultati.js");
-    const f = E.files[k]; if (!f) return;
-    const k2 = (E.files.find((/** @type {Bag} */ x) => phys(x) === phys(f) && x.kind === "ms2" && !x.gone) || {}).k;
-    if (k2 == null) return info(I18N.t("lib.noMs2"));
-    let d = /** @type {any} */ (document.getElementById("libid"));
-    if (!d) { d = document.createElement("dialog"); d.id = "libid"; document.body.appendChild(d); }
-    d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.all.title")}</h3><button class="x" id="li-x" title="${I18N.t("common.close")}">&times;</button></div>
-      <div class="sm muted" style="margin-top:4px">${EHt(f.label || f.file)} · ${I18N.t("lib.all.sub", { ppm: profOf(f).v })}</div>
-      <div id="li-st" style="margin:8px 0"></div><div id="li-body"></div>`;
-    d.querySelector("#li-x").onclick = () => d.close(); LIBR.frame(d, { max: I18N.t("lib.all.max"), restore: I18N.t("lib.all.restore") }); d.showModal();
-    const st = d.querySelector("#li-st"), say = (/** @type {string} */ t, /** @type {number} */ v, /** @type {number} */ m) => { st.innerHTML = `<div class="sm">${EHt(t)}</div>${m ? `<progress max="${m}" value="${v}"></progress>` : ""}`; };
-    try {
-      const libs = await call("list"); if (!libs.libs.length) { st.innerHTML = `<p>${I18N.t("lib.loadFirst")}</p><p><button id="li-open">${I18N.t("lib.openLibs")}</button></p>`; d.querySelector("#li-open").onclick = () => { d.close(); open(); }; return; }
-      say(I18N.t("lib.all.reading"), 0, 1);
-      const dda = await J(`api/dda?k=${k2}`), tgt = new Map(dda.sid.map((/** @type {string | number} */ s, /** @type {number} */ i) => [s, dda.tgt[i]])), pol = f.polarity === "negative" ? -1 : 1, /** @type {Bag[]} */ queries = [];
-      let n = 1, i0 = 0;
-      for (; i0 < n; i0 += 60) {
-        const b = typeof scBin === "function" ? await scBin(`api/scanbin?k=${k2}&i0=${i0}&i1=${i0 + 59}&level=2`) : await J(`api/spectra?k=${k2}&i0=${i0}&i1=${i0 + 59}&level=2`); n = b.n;
-        for (const s of b.scans) { const pr = tgt.get(s.sid); if (pr && s.mz.length) queries.push({ key: s.sid, rt: s.rt, prec: pr, pol, peaks: s.mz.map((/** @type {number} */ m, /** @type {number} */ j) => [m, s.y[j]]) }); }
-        say(I18N.t("lib.all.readingN", { i: Math.min(i0 + 60, n), n }), Math.min(i0 + 60, n), n);
-      }
-      const t0 = performance.now();
-      say(I18N.t("lib.all.comparing"), 0, queries.length);
-      const r = await call("searchAll", { queries, tol: { v: profOf(f).v, unit: "ppm" }, frag: 0.01 }, (/** @type {Bag} */ m) => say(I18N.t("lib.all.comparingN", { i: m.read, n: m.total }), m.read, m.total));
-      if (window.LISTE) await LISTE.ready();
-      // contaminant exclusions (liste.js): candidates whose precursor is a contaminant the student excluded stay out of the list, counted, until «Mostra»
-      let showHid = false;
-      const groups = groupRows(r.rows), show = (/** @type {boolean} */ all) => {
-        const hidOf = (/** @type {Bag} */ g) => { const c = window.LISTE ? LISTE.compat(g.prec, f.polarity, UIP.hrPpm) : null; return !!(c && c.hid); };
-        const base = groups.map(g => ({ g, v: groupAssess(g), k: window.LISTE ? LISTE.textFor(g.prec, f.polarity, UIP.hrPpm) : "", hid: hidOf(g) })).filter(x => all || (x.v.proposed !== "5" && x.v.proposed !== "0"));
-        const nHid = base.filter(x => x.hid).length, rows = showHid ? base : base.filter(x => !x.hid), hasK = rows.some(x => x.k);
-        d.querySelector("#li-body").innerHTML = (nHid ? `<div class="sm cont-cnt" role="status">${I18N.t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid })} · <button type="button" id="li-chid">${I18N.t(showHid ? "cont.hide" : "cont.show")}</button></div>` : "") + `<div class="bar"><button id="li-xlsx" type="button">${typeof IC_DL !== "undefined" ? IC_DL : ""}Excel</button><button id="li-mgf" type="button">${I18N.t("lib.all.exportMgf")}</button><button id="li-msp" type="button">${I18N.t("lib.all.exportMsp")}</button></div><label class="sm"><input type="checkbox" id="li-all"${all ? " checked" : ""}> ${I18N.t("lib.all.showAll", { n: groups.length })}</label>
-          <div id="li-tbl" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column"></div>`;
-        LIBR.fill(d.querySelector("#li-tbl"), [{ h: "RT", w: "7ch", num: true }, { h: "<i>m/z</i>", w: "11ch", num: true }, { h: I18N.t("lib.col.name"), nm: true }, { h: I18N.t("lst.col.formula"), w: "15ch" }, { h: I18N.t("lib.all.bestEntropy"), w: "15ch", num: true }, { h: I18N.t("lib.all.scans"), w: "14ch", num: true }, { h: I18N.t("lv.proposed"), w: "17ch" }, ...(hasK ? [{ h: I18N.t("lib.all.contaminant"), w: "18ch" }] : [])],
-          rows.map((x, i) => ({ i, cells: [x.g.rt.toFixed(2), x.g.prec.toFixed(4), EHt(x.g.best.name || ""), x.g.best.formula ? fmtFormula(x.g.best.formula) : "", x.g.best.ent != null ? x.g.best.ent.toFixed(2) : "", `${x.g.n}${x.g.n < 2 ? " " + I18N.t("lib.all.oneScan") : ""}`, lvCell(x.v), ...(hasK ? [EHt(x.k || "")] : [])] })), I18N.t("lib.all.noMatch"), I18N.t("lib.all.openBest"));
-        d.querySelector("#li-all").onchange = (/** @type {Event} */ e) => show(/** @type {HTMLInputElement} */ (e.target).checked);
-        const chid = d.querySelector("#li-chid"); if (chid) chid.onclick = () => { showHid = !showHid; show(all); };
-        const btnMgf = d.querySelector("#li-mgf");
-        if (btnMgf) btnMgf.onclick = () => { if (window.WORKFLOW) WORKFLOW.exportQueriesMgf(queries, f); };
-        const btnMsp = d.querySelector("#li-msp");
-        if (btnMsp) btnMsp.onclick = () => { if (window.WORKFLOW) WORKFLOW.exportQueriesMsp(queries, f); };
-        d.querySelector("#li-xlsx").onclick = () => dlx(I18N.t("lib.all.xlsxPrefix") + String(f.label || f.file || "file").replace(/[^\w.-]+/g, "_") + ".xlsx", [
-          { name: I18N.t("lib.all.sheetCand"), head: ["RT (min)", I18N.t("lib.all.precMz"), I18N.t("lib.col.name"), I18N.t("lst.col.formula"), I18N.t("lib.all.bestEntropy"), I18N.t("lib.all.scans"), I18N.t("lv.proposed"), I18N.t("lv.decided"), I18N.t("lv.evidence")].concat(hasK ? [I18N.t("lib.all.contaminant")] : []), rows: rows.map(x => [+x.g.rt.toFixed(3), +x.g.prec.toFixed(5), x.g.best.name || "", x.g.best.formula || "", x.g.best.ent != null ? +x.g.best.ent.toFixed(3) : "", x.g.n, x.v.proposed, x.v.decided || "", x.v.lines.concat([x.v.decisive]).join(" | ")].concat(hasK ? [x.k || ""] : [])), widths: [10, 14, 40, 20, 14, 10, 12, 12, 60] },
-          { name: I18N.t("lib.all.sheetPar"), head: [I18N.t("lib.all.parameter"), I18N.t("lib.all.value")], rows: [[I18N.t("lib.table.file"), f.label || f.file || ""], [I18N.t("lib.all.precTol"), `${profOf(f).v} ppm`], [I18N.t("lib.all.peakTol"), I18N.t("lib.all.peakTolVal")], [I18N.t("lib.all.shown"), I18N.t("lib.all.shownVal", { n: rows.length, total: groups.length })], [I18N.t("lib.all.level"), I18N.t("lib.all.levelVal")]], widths: [28, 70] }], { table: "library-all", file: String(f.label || f.file || "") });
-        d.querySelector("#li-tbl").onclick = (/** @type {MouseEvent} */ e) => { const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("tr.lr")); if (tr) gotoScan(rows[Number(tr.dataset.i)].g.best.key, d); };
-        st.innerHTML = `<div class="sm">${I18N.t("lib.all.summary", { q: queries.length, ms: Math.round(performance.now() - t0), g: groups.length, r: rows.length })}</div>`;
-      };
-      show(false);
-    } catch (e_) { const e = /** @type {Lanciato} */ (e_); st.innerHTML = h`<p class="err">${e.message}</p>`; }
-  }
-  function gotoScan(/** @type {string | number} */ sid, /** @type {HTMLDialogElement} */ d) {                         // the MS2 panel of the DDA trio shows that scan
-    try {
-      const s1 = E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.duo != null && q.el), s2 = s1 && E.panels.find((/** @type {Bag} */ q) => q.id === s1.duo && q.el);
-      if (!s2 || !window.DDA) return toast(I18N.t("lib.all.needDda"));
-      d.close(); DDA.selectMs2(s2, sid); s2.el.scrollIntoView({ block: "center", behavior: "smooth" });
-    } catch (e) { toast(I18N.t("lib.all.cantOpen")); }
-  }
+  // «What is it?» and «Identify all the MS2»: the master/detail window of libreria-finestra.js, loaded on first use
+  const win = async () => { await carica("m:libreria-finestra.js"); return /** @type {Bag} */ (window).LIBWIN; };
+  const whatIs = async (/** @type {Pannello} */ p) => (await win()).whatIs(p);
+  const identifyAll = async (/** @type {number} */ k) => (await win()).identifyAll(k);
   // the action of the spectrum menu (registry azioni/1): «What is it?» (high resolution) or «Search the libraries» of an MS2 spectrum
   if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "spec.lib", gruppo: "lib", ordine: 1, viste: ["spec"], visibile: (/** @type {Bag} */ c) => c.p.level === 2,
     nome: (/** @type {Bag} */ c) => I18N.t(isHr(c.p) ? "ctx.libWhat" : "ctx.libSearch"), esegui: (/** @type {Bag} */ c) => isHr(c.p) ? whatIs(c.p) : searchFrom(c.p) });
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
   if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.identAll", gruppo: "lib", viste: ["chrom"], nome: () => I18N.t("ctx.chrom.identAll"),
     visibile: (/** @type {Bag} */ c) => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some((/** @type {Bag} */ x) => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), esegui: (/** @type {Bag} */ c) => identifyAll(c.k) });
-  return { open, addFiles, queryOf, profOf, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine };
+  return { open, addFiles, queryOf, profOf, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine, ensureCss };
 })();
 window.LIB = LIB;
