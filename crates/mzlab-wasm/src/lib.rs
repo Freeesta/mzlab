@@ -625,6 +625,25 @@ pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr:
     found.len().min(room) as u32
 }
 
+/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 11 numbers
+/// of `LrParams::from_slice`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
+#[wasm_bindgen]
+pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, reference: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
+    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_slice(params) else { return 0 };
+    let n = rt.len().min(y.len());
+    if out.len() < 2 || n == 0 {
+        return 0;
+    }
+    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, reference, mrm, &pk) {
+        Some((a, b)) => {
+            out[0] = a;
+            out[1] = b;
+            2
+        }
+        None => 0,
+    }
+}
+
 /// Quality of the peak between the indices `lo` and `hi` of a trace: `[gaussian, asymmetry (NaN = not measurable), noise score]` into `out`;
 /// the noise of the whole trace is worked out here. Returns 3, or 0 if the arguments do not fit.
 #[wasm_bindgen]
