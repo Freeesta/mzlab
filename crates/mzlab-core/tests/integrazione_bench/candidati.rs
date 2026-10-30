@@ -5,6 +5,7 @@ use mzlab_core::peakq::{detect_prominence, ProminenceParams};
 use mzlab_core::peakq_auto::{auto_integrate, AutoParams};
 use mzlab_core::peaks::{detect_peaks, Params};
 use mzlab_core::signal::asls_baseline;
+use mzlab_core::sortc::by;
 
 /// `integ()` of picchi.js: trapezoid of the raw trace minus the straight line between the 3-point means at the two limits.
 pub fn integ_page(rt: &[f64], y: &[f64], i0: usize, i1: usize) -> f64 {
@@ -90,12 +91,7 @@ pub fn auto_edges(xs: &[f64], ys: &[f64], x: f64) -> (usize, usize) {
     let co = sg_filter(y, m_coarse, false);
     let lo = near_idx(xs, x - 0.25) - a0;
     let hi = (near_idx(xs, x + 0.25) - a0).min(nn - 1);
-    let mut m0 = lo;
-    for j in lo..=hi {
-        if co[j] > co[m0] {
-            m0 = j;
-        }
-    }
+    let m0 = (lo..=hi).fold(lo, |b, j| if co[j] > co[b] { j } else { b });
     let cmin = co.iter().cloned().fold(f64::INFINITY, f64::min);
     let half = cmin + (co[m0] - cmin) / 2.0;
     let (mut hl, mut hr) = (m0, m0);
@@ -108,13 +104,8 @@ pub fn auto_edges(xs: &[f64], ys: &[f64], x: f64) -> (usize, usize) {
     let m = (((hr - hl) as f64 * 0.3).round() as usize).clamp(min_half, 60);
     let sm = sg_filter(y, m, false);
     let d = sg_filter(y, m, true);
-    let mut k = m0.saturating_sub(m);
-    let k1 = (m0 + m).min(nn - 1);
-    for j in k..=k1 {
-        if sm[j] > sm[k] {
-            k = j;
-        }
-    }
+    let k0 = m0.saturating_sub(m);
+    let k = (k0..=(m0 + m).min(nn - 1)).fold(k0, |b, j| if sm[j] > sm[b] { j } else { b });
     let (l, r) = edges_from(y, &sm, &d, k, m, dt);
     (a0 + l, a0 + r)
 }
@@ -126,10 +117,10 @@ fn edges_from(y: &[f64], sm: &[f64], d: &[f64], k: usize, m: usize, dt: f64) -> 
     let wn = (win / dt).round() as usize;
     let (w0, w1) = (k.saturating_sub(wn), (k + wn).min(nn - 1));
     let mut res: Vec<f64> = (w0..=w1).map(|j| (y[j] - sm[j]).abs()).collect();
-    res.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    by(&mut res, |a, b| a.total_cmp(b));
     let noise = (1.4826 * res[res.len() >> 1]).max(1e-12);
     let mut low: Vec<f64> = (w0..=w1).map(|j| sm[j]).collect();
-    low.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    by(&mut low, |a, b| a.total_cmp(b));
     let base = low[(low.len() as f64 * 0.1).floor() as usize];
     let hh = (sm[k] - base).max(0.0);
     let frac = if noise > 0.0 && hh / noise > 800.0 {
@@ -188,7 +179,7 @@ fn auto_limits(
         .iter()
         .map(|k| (k.lo, k.hi))
         .collect();
-    w.sort();
+    by(&mut w, |a, b| a.cmp(b));
     w
 }
 
@@ -250,8 +241,8 @@ pub fn m_prom_drop(rt: &[f64], y: &[f64], _clicks: &[f64]) -> Vec<(usize, usize,
         let line: Vec<f64> = (0..y.len())
             .map(|k| y0 + (y1 - y0) * (rt[k] - rt[c0]) / (rt[c1] - rt[c0]).max(1e-12))
             .collect();
-        for k in i..=j {
-            out.push((w[k].0, w[k].1, integ_over(rt, y, &line, w[k].0, w[k].1)));
+        for &(l, h) in &w[i..=j] {
+            out.push((l, h, integ_over(rt, y, &line, l, h)));
         }
         i = j + 1;
     }
@@ -279,7 +270,7 @@ fn integrate_f(rt: &[f64], y: &[f64], k: f64) -> Vec<(usize, usize, f64)> {
         .map(|i| y[i] - b[i])
         .filter(|r| *r < 3.0 * noise)
         .collect();
-    bg.sort_by(|a, c| a.partial_cmp(c).unwrap());
+    by(&mut bg, |a, c| a.total_cmp(c));
     let off = if bg.is_empty() { 0.0 } else { bg[bg.len() / 2] };
     b.iter_mut().for_each(|v| *v += off);
     let yc: Vec<f64> = (0..n).map(|i| y[i] - b[i]).collect();
@@ -304,7 +295,7 @@ fn integrate_f(rt: &[f64], y: &[f64], k: f64) -> Vec<(usize, usize, f64)> {
         .iter()
         .map(|p| p.apex_i)
         .collect();
-    apex.sort();
+    by(&mut apex, |a, b| a.cmp(b));
     let valley = |a: usize, c: usize| {
         (a + 1..c)
             .min_by(|&i, &j| sc[i].partial_cmp(&sc[j]).unwrap())
