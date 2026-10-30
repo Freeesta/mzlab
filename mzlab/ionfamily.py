@@ -34,6 +34,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from .chem.isoscore import ISO as _ISO_SCORE
 from .i18n import message
 
 _trapz = getattr(np, "trapezoid", None) or np.trapz     # numpy 1.x / 2.x
@@ -50,7 +51,8 @@ _ISO = {   # element -> [(mass shift (nominal) relative to the lightest isotope,
     "C": [(0, 0.9893), (1, 0.0107)], "H": [(0, 0.999885), (1, 0.000115)], "N": [(0, 0.99636), (1, 0.00364)],
     "O": [(0, 0.99757), (1, 0.00038), (2, 0.00205)], "S": [(0, 0.9499), (1, 0.0075), (2, 0.0425), (4, 0.0001)],
     "Cl": [(0, 0.7576), (2, 0.2424)], "Br": [(0, 0.5069), (2, 0.4931)], "F": [(0, 1.0)], "P": [(0, 1.0)], "I": [(0, 1.0)],
-    "Na": [(0, 1.0)], "K": [(0, 0.932581), (2, 0.067302)], "Si": [(0, 0.9223), (1, 0.0468), (2, 0.0309)],
+    "Na": [(0, 1.0)], "K": [(0, 0.932581), (2, 0.067302)],
+    "Si": [(k, p) for k, (_, p) in enumerate(_ISO_SCORE["Si"])],   # the IUPAC abundances of the isotope score
 }
 # common neutral losses (same list as the "Perdite neutre" table of the program: web/tables.js), formula -> note
 NEUTRAL_LOSSES = ["H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF", "HCl", "HBr",
