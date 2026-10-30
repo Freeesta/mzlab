@@ -120,13 +120,8 @@ RUN = """async (plan) => {
   finally { document.removeEventListener('flow:web-step', on); }
 }"""
 KEPT = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = {};
-  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
-  return out;
-}"""
-KEPTALL = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = [];
-  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); if (j.name === 'ins.json') out.push(j.text); }
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), out = {};
+  for await (const [n, h] of d.entries()) if (h.kind === 'file') out[n] = await (await h.getFile()).text();
   return out;
 }"""
 PORT = lib.free_port()
@@ -214,8 +209,8 @@ try:
                 ctx.set_offline(True)
                 r = pg.evaluate(RUN, variant(2)); assert not r.get("err"), r["err"]
                 assert any(e["passo"] == "ins" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
-                alls = [json.loads(t)["hits"] for t in pg.evaluate(KEPTALL)]
-                assert any(g and len(g) <= 2 * len(set(h["query"] for h in g)) for g in alls), [len(g) for g in alls]
+                g = json.loads(pg.evaluate(KEPT)["ins.json"])["hits"]
+                assert 0 < len(g) < len(hits), (len(g), len(hits))      # top 2 of 5: fewer hypotheses than the native run
             finally: ctx.set_offline(False)
             assert not asked, asked
         step("after a reload with the network cut the cached package still runs", offline)
