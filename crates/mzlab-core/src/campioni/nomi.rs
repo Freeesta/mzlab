@@ -289,19 +289,25 @@ fn assign_matrix(out: &mut [Campione]) {
     }
 }
 
-/// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
-pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
+/// The role (`proponi` names) and the time of one name as `(minutes, start, end)`, the span in characters of the file stem: what `variabili` needs.
+pub(crate) fn ruolo_e_tempo(name: &str) -> (&'static str, Option<(f64, usize, usize)>) {
     let (stem, _, guess) = guess_sample(name);
     let lowc: Vec<char> = stem.to_lowercase().chars().collect();
     let mut c = Campione::new(name, "", 1);
-    if let Some(t) = (guess == "sample").then(|| time_of(&lowc)).flatten() {
+    let time = (guess == "sample").then(|| time_of(&lowc)).flatten();
+    if let Some(t) = &time {
         c.set_time(Some(t.value), t.unit);
     }
     let kind = kind_of(&name.to_lowercase(), guess, c.time_min, false);
-    let time = (kind != "infusion" && kind != "qc")
-        .then_some(c.time_min)
-        .flatten();
-    (kind, time)
+    let keep = kind != "infusion" && kind != "qc";
+    let span = time.filter(|_| keep).zip(c.time_min);
+    (kind, span.map(|(t, m)| (m, t.start, t.end)))
+}
+
+/// The role (`proponi` names) and the minutes of one name, without the series, replicates and positions: what a caller that only classifies a name needs.
+pub fn ruolo_e_minuti(name: &str) -> (&'static str, Option<f64>) {
+    let (kind, time) = ruolo_e_tempo(name);
+    (kind, time.map(|t| t.0))
 }
 
 /// The metadata proposed for `files` (`(name, SHA-256, kind of the file)`, in the order of injection; kind `msn` = an infusion); an infusion and a QC have no time.

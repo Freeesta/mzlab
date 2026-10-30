@@ -226,6 +226,8 @@ I18N.add("it", {
   "lst.lab.newName": "nuovo fondo",
   "lst.lab.imported": "{n, plural, one {# riga importata} other {# righe importate}}",
   "lst.mzPh": "es. 445.1 o 279",
+  "lst.view.ref": "Liste di riferimento",
+  "lst.view.target": "Screening target HRMS",
   "lst.tolAria": "Tolleranza",
   "lst.search": "Cerca",
   "lst.searchPh": "nome, formula o classe…",

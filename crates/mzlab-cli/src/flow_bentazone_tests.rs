@@ -141,7 +141,11 @@ pub(crate) fn fixture(tag: &str, pol: i8, hr: bool) -> PathBuf {
     d
 }
 
-/// The chain of the page: base chain, hypotheses, link, filters, positions, network (and the Dig at unit resolution). `params` sets a step's parameters.
+/// The tp.position step of the plans, for high-resolution files only.
+pub(crate) const POS: &str =
+    r#",{"id":"pos","step":"tp.position@1","in":{"tp":"lnk.tp","parent":"file:parent.json"}}"#;
+
+/// The chain of the page: base chain, hypotheses, link, filters, network, and the positions (high resolution) or the Dig (unit resolution). `params` sets a step's parameters.
 pub(crate) fn plan(params: &dyn Fn(&str) -> String, lr: bool) -> String {
     let raw: Vec<String> = NAMES
         .iter()
@@ -159,10 +163,11 @@ pub(crate) fn plan(params: &dyn Fn(&str) -> String, lr: bool) -> String {
             format!(r#","params":{v}"#)
         }
     };
+    // tp.dig_lr reads unit-resolution data only, tp.position high-resolution data only (fragments at 5 ppm)
     let dig = if lr {
         r#",{"id":"dig","step":"tp.dig_lr@1","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"]}}"#
     } else {
-        ""
+        POS
     };
     format!(
         r#"{{"format":"mzflow/2","inputs":[{},{{"name":"samples.json","type":"samples"}},{{"name":"parent.json","type":"structure"}}],"steps":[
@@ -173,7 +178,6 @@ pub(crate) fn plan(params: &dyn Fn(&str) -> String, lr: bool) -> String {
         {{"id":"gen","step":"tp.generate@1","in":{{"parent":"file:parent.json","index":["idx.index"]}}{}}},
         {{"id":"lnk","step":"tp.link@2","in":{{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"],"hypotheses":"gen.hypotheses"}}{}}},
         {{"id":"flt","step":"tp.filter@2","in":{{"tp":"lnk.tp","hypotheses":"gen.hypotheses"}}}},
-        {{"id":"pos","step":"tp.position@1","in":{{"tp":"lnk.tp","parent":"file:parent.json"}}}},
         {{"id":"net","step":"tp.network@1","in":{{"tp":"lnk.tp","table":"lnk.tp","samples":"file:samples.json"}}}}{dig}]}}"#,
         raw.join(","),
         src.join(","),
