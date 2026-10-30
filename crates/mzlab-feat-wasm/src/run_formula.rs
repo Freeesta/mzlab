@@ -6,7 +6,7 @@ use mzlab_feat::flow_ms2::json_params;
 use wasm_bindgen::prelude::*;
 
 /// The rows of the features whose largest area is in `mzml` (the `index`-th of the `names_json` array of file names), one per line as `position TAB object`. `features` is the CSV of
-/// `export.table_csv`; the parameters are the ones of the step as JSON merged with its defaults. Errors are JSON `{"error_key","params"}` texts.
+/// `export.table_csv`; the parameters are the ones of the step as JSON merged with its defaults, without `ion` when the plan does not write it (each file then gives its own). Errors are JSON `{"error_key","params"}` texts.
 #[wasm_bindgen]
 pub fn flow_ms1_rows(
     params_json: &str,

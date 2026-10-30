@@ -1,7 +1,8 @@
 """Flow «This browser» formula.ms1, formula.ms2 and annot.level (flow/lazy/flow-web-ident.js: `flow_ms1_rows` and `flow_ms1_join` of the lazy `formula` .wasm, `flow_formula_ms2` and `flow_level` of
 the `attributio-all` .wasm: docs/agenti/flow-web.md):
 over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the sub-formulas that explain
-the MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. One feature has a library
+the MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. The same files written as
+negative scans give formula.ms1 with no ion written the ion [M-H]- in both, byte for byte (in a fresh page: OPFS holds no index of them). One feature has a library
 match (a level above the one without evidence), another has none. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_ident2.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -104,6 +105,18 @@ assert any("name" not in r for r in levels), "every feature has a match: the cas
 data = site / "static" / "dati_flow_ident"; data.mkdir()
 for n in NAMES:
     shutil.copy2(out / ("idx-" + n + ".mzidx"), data / (n + ".mzidx")); shutil.copy2(run / (n + ".mzML"), data / (n + ".mzML"))
+# 3. the negative series: the scans of the same files written negative (same length, so the offsets hold) and formula.ms1 over the CSV of the table, no ion written
+NEG = ["neg_" + n for n in NAMES]
+for n, m in zip(NAMES, NEG):
+    t = (run / (n + ".mzML")).read_text().replace('MS:1000130" name="positive scan"', 'MS:1000129" name="negative scan"').replace("FTMS + p", "FTMS - p")
+    (run / (m + ".mzML")).write_text(t); shutil.copy2(run / (m + ".mzML"), data / (m + ".mzML"))
+CSV = next(out.glob("csv*.csv")).read_text()
+(run / "feat.csv").write_text(CSV)
+NEG_FILES = ["file:" + m + ".mzML" for m in NEG]
+PLAN_NEG = {"format": "mzflow/2", "inputs": [{"name": m + ".mzML", "sha256": "", "type": "raw"} for m in NEG] + [{"name": "feat.csv", "sha256": "", "type": "report"}],
+            "steps": [{"id": "fn", "step": "formula.ms1@1", "in": {"features": "file:feat.csv", "index": NEG_FILES}, "params": {"tol_ppm": 5, "max_results": 5}}]}
+NAT_NEG = (native(PLAN_NEG, "plan_neg") / "fn.json").read_bytes()
+assert b'"ion":"[M-H]-"' in NAT_NEG and b"err.flow.formula.scan" not in NAT_NEG, NAT_NEG[:400]
 
 PUT = """async (names) => {
   let d = await navigator.storage.getDirectory();
@@ -112,10 +125,10 @@ PUT = """async (names) => {
 }"""
 # the mzML the page has "open" for the steps that read it (the engine keeps the blob of every file it was given)
 HOLD = """async (name) => { const b = await (await fetch("static/dati_flow_ident/" + name + ".mzML")).blob(); window.MZLAB_RUST.noteUpload(name + ".mzML", b); return b.size; }"""
-RUN = """async ([plan, samples, lib]) => {
+RUN = """async ([plan, files]) => {
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
-  S.samplesJson = S.samplesJson || {}; S.samplesJson['samples.json'] = samples; S.samplesJson['lib.msp'] = lib;
+  S.samplesJson = Object.assign(S.samplesJson || {}, files);
   document.addEventListener('flow:web-step', on);
   try { await FLOW.runners.web.run(S); return { ev }; }
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
@@ -134,42 +147,57 @@ for _ in range(100):
     try: urllib.request.urlopen(URL, timeout=2); break
     except OSError: threading.Event().wait(0.2)
 sha = lambda b: hashlib.sha256(b if isinstance(b, bytes) else b.encode()).hexdigest()
+def open_page(b, held, put):
+    """A fresh page (its own OPFS) that holds the mzML `held` and the indexes `put`, on the Flow view."""
+    pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
+    pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
+    pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
+    pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
+    pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
+    pg.wait_for_function("window.QTOOLS", timeout=120000)
+    try: pg.wait_for_function("!!(window.MZLAB_RUST && window.MZLAB_RUST.noteUpload)", timeout=120000)
+    except TimeoutError: raise TimeoutError("engine bridge missing: %s %s" % (pg.evaluate("window.MZLAB_RUST_ERR || ''"), errs[:3]))
+    for n in held: pg.evaluate(HOLD, n)
+    if put: pg.evaluate(PUT, put)
+    pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
+    pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
+    return pg
+
+def check(r, ids, expect):
+    assert not r.get("err"), (r.get("err"), r["ev"][-4:])
+    for i in ids:
+        assert any(e["passo"] == i and e["stato"] == expect and e["via"] == "browser" for e in r["ev"]), (i, expect, [e for e in r["ev"] if e["passo"] == i][-3:])
+
+def same(name, web, nat):
+    at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
+    assert sha(web) == sha(nat) and len(nat) > 40, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
+
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce").new_page()
-        pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
-        pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
-        pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
-        pg.goto(URL); pg.wait_for_selector("#drop", timeout=120000)
-        pg.wait_for_function("window.QTOOLS", timeout=120000)
-        try: pg.wait_for_function("!!(window.MZLAB_RUST && window.MZLAB_RUST.noteUpload)", timeout=120000)
-        except TimeoutError: raise TimeoutError("engine bridge missing: %s %s" % (pg.evaluate("window.MZLAB_RUST_ERR || ''"), errs[:3]))
-        for n in NAMES: pg.evaluate(HOLD, n)
-        pg.evaluate(PUT, NAMES)
-        pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
-        pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
-
-        def check(r, ids, expect):
-            assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            for i in ids:
-                assert any(e["passo"] == i and e["stato"] == expect and e["via"] == "browser" for e in r["ev"]), (i, expect, [e for e in r["ev"] if e["passo"] == i][-3:])
+        b = p.chromium.launch(); pg = open_page(b, NAMES, NAMES)
         IDS = ["ms2", "f1", "f2", "lv"]
+        FILES_WEB = {"samples.json": SAMPLES, "lib.msp": LIB}
         def first():
-            r = pg.evaluate(RUN, [WEB, SAMPLES, LIB]); check(r, IDS, "done")
+            r = pg.evaluate(RUN, [WEB, FILES_WEB]); check(r, IDS, "done")
             kept = pg.evaluate(KEPT)
             if os.environ.get("DUMP"): Path(os.environ["DUMP"]).write_text(kept.get("ms2.mgf", "")); Path(os.environ["DUMP"] + ".nat").write_bytes(NAT["ms2.mgf"])
             for name in OUTS:
                 assert name in kept, (name, list(kept))
-                web, nat = kept[name].encode(), NAT[name]
-                at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
-                assert sha(web) == sha(nat) and len(nat) > 40, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
+                same(name, kept[name].encode(), NAT[name])
         step("formula.ms1, formula.ms2 and annot.level write the files of the native flow run", first)
         def again():
-            r = pg.evaluate(RUN, [WEB, SAMPLES, LIB]); check(r, IDS, "reused")
+            r = pg.evaluate(RUN, [WEB, FILES_WEB]); check(r, IDS, "reused")
         step("a second run takes them from OPFS", again)
         def no_miss():
             miss = pg.evaluate("(window.MZLAB_LR_MISS || []).length"); assert miss == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("the engine had no route it could not serve", no_miss)
+        def negative():
+            pn = open_page(b, NEG, [])
+            r = pn.evaluate(RUN, [PLAN_NEG, {"feat.csv": CSV}]); check(r, ["fn"], "done")
+            kept = pn.evaluate(KEPT)
+            assert "fn.json" in kept, list(kept)
+            same("fn.json", kept["fn.json"].encode(), NAT_NEG)
+        step("formula.ms1 on negative files with no ion written takes [M-H]- as flow run does", negative)
         b.close()
 finally:
     srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
