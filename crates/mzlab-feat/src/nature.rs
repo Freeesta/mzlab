@@ -94,7 +94,8 @@ pub fn estimates_json(list: &[(String, Value, Value)]) -> String {
 /// analyzer or declares a resolving power and the index is not high resolution (an mzML that says nothing is not taken for unit resolution).
 pub fn index_facts<R: ReadAt>(index: &Index<R>) -> (i8, Option<bool>) {
     let said = index.scans.iter().any(|s| {
-        s.level == 1 && (s.an.as_deref().is_some_and(|a| a != "?") || s.res.is_some_and(|r| r > 0.0))
+        s.level == 1
+            && (s.an.as_deref().is_some_and(|a| a != "?") || s.res.is_some_and(|r| r > 0.0))
     });
     let hr = index.hr1();
     (file_facts(index).polarity, (hr || said).then_some(hr))

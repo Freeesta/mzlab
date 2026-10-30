@@ -289,7 +289,12 @@ fn facets(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
         let want = &port.requires;
         // the refusal names the step, what it needs and what the data are
         let mut refuse = |facet: &str, want: String, have: String| {
-            let p = [("facet", facet), ("step", step.id), ("want", &want), ("have", &have)];
+            let p = [
+                ("facet", facet),
+                ("step", step.id),
+                ("want", &want),
+                ("have", &have),
+            ];
             add(c, i, port.name, "err.flow.facet", &p);
         };
         if misses(&want.ms_levels, &have.ms_levels, |w, h| h.contains(w)) {

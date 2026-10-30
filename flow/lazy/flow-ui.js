@@ -54,8 +54,8 @@
     return p === "ricerca" && s.on === true && !!s.provider && !!read("mzlab.llm.consenso")[s.provider];
   };
 
-  /** the refusal of a facet: the step, its input, what it needs and what the files are (`want` and `have` are lists joined by «|») @param {any} q @param {string} port */
-  const facetText = (q, port) => {
+  /** the refusal of a facet: the step, its input, what it needs and what the files are (`want` and `have` are lists joined by «|») */
+  F.facetText = (/** @type {any} */ q, /** @type {string} */ port) => {
     const word = (/** @type {string} */ v) => q.facet === "resolution" ? ({ hr: "high resolution", lr: "unit resolution" })[v] || v
       : q.facet === "polarity" ? ({ "1": "positive", "-1": "negative", "0": "either polarity" })[v] || v : "MS" + v;
     const words = (/** @type {string} */ t) => String(t || "").split("|").filter(Boolean).map(word).join(" or ");
@@ -83,7 +83,7 @@
       "err.flow.ref.unknown": `No step ${q.ref}.`,
       "err.flow.type": `A ${q.from} cannot go into a ${q.to} input.`,
       "err.flow.cardinality": q.count === "many" ? `Input ${q.port} takes one item, the source gives a list.` : `Input ${q.port} takes one source, ${q.count} are connected.`,
-      "err.flow.facet": facetText(q, p.port || ""),
+      "err.flow.facet": F.facetText(q, p.port || ""),
       "err.flow.cycle": "The steps depend on each other in a circle.",
       "err.flow.json": "The file is not valid JSON.",
       "err.flow.format": `Unknown file format ${q.format}; Flow reads mzflow/2.`,

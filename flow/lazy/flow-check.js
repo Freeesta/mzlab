@@ -171,24 +171,22 @@
       facets(i, declared, seen);
     };
     const facets = (/** @type {any} */ i, /** @type {FlowPort[]} */ declared, /** @type {any[]} */ seen) => {
-      const have = observedBy(plan, i, seen);
-      /** known and not all of what is required is in it (unknown = checked when the step starts) */
-      const misses = (/** @type {any[]} */ want, /** @type {any[]} */ h, /** @type {(w: any) => boolean} */ has) => h.length > 0 && !want.every(has);
-      // each value once, in the order the sources give them
-      const list = (/** @type {any[]} */ v) => [...new Set(v.map(String))].join("|");
-      for (const port of declared) {
-        const w = port.requires;
-        // the refusal names the step, what it needs and what the data are
-        const refuse = (/** @type {string} */ facet, /** @type {any[]} */ want, /** @type {any[]} */ h) => add(i, port.name, "err.flow.facet", { facet, step: i.step, want: list(want), have: list(h) });
-        if (misses(w.ms_levels || [], have.ms_levels, x => have.ms_levels.includes(x))) refuse("ms_levels", w.ms_levels, have.ms_levels);
-        if (misses(w.polarity || [], have.polarity, x => x === 0 || have.polarity.includes(x))) refuse("polarity", w.polarity, have.polarity);
-        // a port takes data of any of the resolutions it lists: every resolution of the data must be one of them
-        const res = w.resolution || [];
-        if (res.length && have.resolution.some((/** @type {string} */ x) => !res.includes(x))) refuse("resolution", res, have.resolution);
-      }
+      for (const port of declared) for (const [facet, want, h] of F.facetMisses(port.requires, observedBy(plan, i, seen))) add(i, port.name, "err.flow.facet", { facet, step: i.step, want, have: h });
     };
 
     return { st, add, stepLevel, paramsOf, portsOf };
+  };
+
+  /** the facets the data miss for a port, [facet, wanted, what the data have] with the values joined by «|» (unknown = checked when the step starts):
+   * `ms_levels` and `polarity` must all be in the data; `resolution` lists what the port takes, every resolution of the data must be one of them @param {any} w @param {any} have */
+  F.facetMisses = (w, have) => {
+    const list = (/** @type {any[]} */ v) => [...new Set(v.map(String))].join("|"), out = /** @type {string[][]} */ ([]);
+    const misses = (/** @type {any[]} */ want, /** @type {any[]} */ h, /** @type {(w: any) => boolean} */ has) => h.length > 0 && !want.every(has);
+    if (misses(w.ms_levels || [], have.ms_levels, x => have.ms_levels.includes(x))) out.push(["ms_levels", list(w.ms_levels), list(have.ms_levels)]);
+    if (misses(w.polarity || [], have.polarity, x => x === 0 || have.polarity.includes(x))) out.push(["polarity", list(w.polarity), list(have.polarity)]);
+    const res = w.resolution || [];
+    if (res.length && have.resolution.some((/** @type {string} */ x) => !res.includes(x))) out.push(["resolution", list(res), list(have.resolution)]);
+    return out;
   };
 
   /** the check of a plan for a platform; returns every problem in file order, cycles last

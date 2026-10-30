@@ -6,8 +6,8 @@
   const F = /** @type {any} */ (globalThis).FLOW;
   const LISTS = ["steps-1.json", "steps-attributio-1.json", "steps-tabui-1.json", "steps-cli-1.json"];
 
-  /** the plan with the facets of the files (`F.fileFacets`) on each scan input that does not write them, as `flow run` fills them (`mzlab_feat::nature::fill_facets`) @param {any} plan */
-  const withFileFacets = plan => {
+  /** the plan with the facets of the files (`F.fileFacets`) on each scan input that does not write them, as `flow run` fills them (`mzlab_feat::nature::fill_facets`) */
+  F.withFileFacets = (/** @type {any} */ plan) => {
     const got = F.fileFacets, scan = (/** @type {any} */ f) => ["raw", "mzml", "mzidx"].includes(f.type);
     return got ? { ...plan, inputs: (plan.inputs || []).map((/** @type {any} */ f) => (scan(f) ? { ...f, facets: { ...got, ...(f.facets || {}) } } : f)) } : plan;
   };
@@ -28,7 +28,7 @@
 
   /** every problem of the plan as the Rust checker would report it (F.validateExtra adds the checks of what the checker does not know yet) @param {any} plan @param {any} reg */
   F.validate = (plan, reg) => {
-    try { return [...F.check(F.normalize(F.cleanRefs(F.withoutCompare ? F.withoutCompare(withFileFacets(plan)) : withFileFacets(plan))), reg, "native"), ...(F.validateExtra ? F.validateExtra(plan, reg) : [])]; }
+    try { return [...F.check(F.normalize(F.cleanRefs(F.withoutCompare ? F.withoutCompare(F.withFileFacets(plan)) : F.withFileFacets(plan))), reg, "native"), ...(F.validateExtra ? F.validateExtra(plan, reg) : [])]; }
     catch (e) { const x = /** @type {any} */ (e); return [{ instance: "", port: "", key: x.key || "err.flow.json", params: x.params || {} }]; }
   };
 

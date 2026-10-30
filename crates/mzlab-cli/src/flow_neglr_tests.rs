@@ -1,6 +1,5 @@
-//! The steps of mzFlow in both polarities and both resolutions (`docs/studi/MATRICE_NEG_LR.md`) on the invented bentazone series of
-//! `flow_bentazone_tests.rs`: what runs in HR+, HR-, LR+ and LR- and follows the files. The open `gap_*` tests are ignored: each states what a gap of the
-//! matrix should do and fails today; the chat that closes the gap removes its `#[ignore]`.
+//! The steps of mzFlow in both polarities and both resolutions (`docs/studi/MATRICE_NEG_LR.md`) on the invented bentazone series of `flow_bentazone_tests.rs`:
+//! what runs in HR+, HR-, LR+ and LR- and follows the files. Each ignored `gap_*` test states what an open gap should do; closing it removes the `#[ignore]`.
 
 use std::path::{Path, PathBuf};
 
@@ -63,15 +62,14 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
     for (tag, pol, hr) in CASES {
         let d = fixture(&format!("nl_{tag}"), pol, hr);
         let full = with(&format!("{DIG}{EXTRA}"));
-        let prov = if hr {
-            // the facets of the files: the unit-resolution Dig is refused before anything runs, the rest runs
+        if hr {
+            // the facets of the files: the unit-resolution Dig is refused before anything runs; without it the rest runs
             let e = crate::flow::run_plan(full.as_bytes(), &d, &d.join("work"), 2, None)
                 .expect_err("tp.dig_lr on high-resolution files");
-            assert_eq!(e.params, vec![("problems".into(), "dig.table:err.flow.facet dig.index:err.flow.facet".into())], "{tag}");
-            run(&d, &with(EXTRA))
-        } else {
-            run(&d, &full)
-        };
+            let want = "dig.table:err.flow.facet dig.index:err.flow.facet";
+            assert_eq!(e.params, vec![("problems".into(), want.into())], "{tag}");
+        }
+        let prov = run(&d, &if hr { with(EXTRA) } else { full });
         for id in [
             "det", "ali", "gap", "gen", "lnk", "flt", "pos", "net", "est", "fil", "plz", "kmd",
             "csv", "mzt", "qc", "rx",
@@ -390,39 +388,38 @@ fn gap_a_unit_resolution_plan_that_says_so_passes_the_check() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
-/// The problems of the check of `text` once its inputs are the files of `d`, as `flow run` sees them: `instance.port:key` and the parameters.
-fn problems(d: &Path, text: &str) -> Vec<(String, Vec<(&'static str, String)>)> {
-    let mut plan = mzlab_core::flow::parse(text.as_bytes()).unwrap();
+/// The problems of the check of `text` once its inputs are the files of `d`, as `flow run` sees them: `instance.port:key k=v,…`.
+fn problems(d: &Path, text: &str) -> Vec<String> {
+    use mzlab_core::flow::{check, parse, Platform};
+    let mut plan = parse(text.as_bytes()).unwrap();
     crate::flow_run::fill_inputs(&mut plan, |n| d.join(n)).unwrap();
-    mzlab_core::flow::check(&plan, &crate::flow::steps(), mzlab_core::flow::Platform::Native)
-        .into_iter()
-        .map(|p| (crate::flow_run::problem_text(&p), p.params))
-        .collect()
+    let mut out = vec![];
+    for p in check(&plan, &crate::flow::steps(), Platform::Native) {
+        let kv: Vec<_> = p.params.iter().map(|(k, v)| format!("{k}={v}")).collect();
+        out.push(format!(
+            "{} {}",
+            crate::flow_run::problem_text(&p),
+            kv.join(",")
+        ));
+    }
+    out
 }
 
 #[test]
 fn formula_ms1_on_unit_resolution_files_is_refused_by_the_check() {
     let d = fixture("nl_f1lr", -1, false);
-    let got = problems(&d, &formula_plan(None));
-    let want = vec![(
-        "f1.features:err.flow.facet".to_string(),
-        vec![
-            ("facet", "resolution".to_string()),
-            ("step", "formula.ms1".to_string()),
-            ("want", "hr".to_string()),
-            ("have", "lr".to_string()),
-        ],
-    )];
-    assert_eq!(got, want);
+    let want = "f1.features:err.flow.facet facet=resolution,step=formula.ms1,want=hr,have=lr";
+    assert_eq!(problems(&d, &formula_plan(None)), [want]);
     let e = crate::flow::run_plan(formula_plan(None).as_bytes(), &d, &d.join("work"), 2, None)
         .expect_err("formula.ms1 on unit-resolution files");
     assert_eq!(e.key, "err.flow.check");
     // a plan that writes its facets by hand keeps them
-    let hand = formula_plan(None).replace(r#""type":"raw"}"#, r#""type":"raw","facets":{"resolution":["hr"]}}"#);
-    assert_eq!(problems(&d, &hand), vec![]);
+    let facets = r#""type":"raw","facets":{"resolution":["hr"]}}"#;
+    let hand = formula_plan(None).replace(r#""type":"raw"}"#, facets);
+    assert_eq!(problems(&d, &hand), Vec::<String>::new());
     // high-resolution files of the same series pass
     let hr = fixture("nl_f1hr", -1, true);
-    assert_eq!(problems(&hr, &formula_plan(None)), vec![]);
+    assert_eq!(problems(&hr, &formula_plan(None)), Vec::<String>::new());
     let _ = std::fs::remove_dir_all(&d);
     let _ = std::fs::remove_dir_all(&hr);
 }
