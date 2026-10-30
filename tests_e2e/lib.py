@@ -145,7 +145,7 @@ def stage(pg, files, timeout=90000):
     except Exception:
         # what the start screen and the engine say when the list stays empty (printed in the log of the failed test)
         try:
-            print("STAGE TIMEOUT state:", pg.evaluate("({lr: !!window.MZLAB_LR, lrErr: String(window.MZLAB_LR_ERR || ''), rustErr: String(window.MZLAB_RUST_ERR || ''), miss: (window.MZLAB_LR_MISS || []).length, avvio: typeof AVVIO !== 'undefined' ? AVVIO.stato + '/' + String(AVVIO.errore || '') + '/' + AVVIO.inAttesa : 'none', btnDisabled: !!(document.getElementById('opbtn') || {}).disabled, rows: document.querySelectorAll('#flist input').length, flist: ((document.getElementById('flist') || {}).textContent || '').slice(0, 300)})"))
+            print("STAGE TIMEOUT state:", pg.evaluate("({lr: !!window.MZLAB_LR, lrErr: String(window.MZLAB_LR_ERR || ''), rustErr: String(window.MZLAB_RUST_ERR || ''), miss: (window.MZLAB_LR_MISS || []).length, avvio: typeof AVVIO !== 'undefined' ? AVVIO.stato + '/' + String(AVVIO.errore || '') + '/' + AVVIO.inAttesa : 'none', pick: ((document.getElementById('pick') || {}).files || []).length, upbusy: typeof UPBUSY !== 'undefined' ? UPBUSY : 'none', inflight: typeof INFLIGHT !== 'undefined' ? INFLIGHT.size : 'none', stFiles: typeof ST !== 'undefined' && ST.files ? ST.files.length : 'none', up: ((document.getElementById('up') || {}).textContent || '').slice(0, 200), btnDisabled: !!(document.getElementById('opbtn') || {}).disabled, rows: document.querySelectorAll('#flist input').length, flist: ((document.getElementById('flist') || {}).textContent || '').slice(0, 300)})"))
         except Exception as e:
             print("STAGE TIMEOUT state unreadable:", str(e)[:200])
         raise
