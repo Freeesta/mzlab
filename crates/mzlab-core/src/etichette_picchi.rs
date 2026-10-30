@@ -30,15 +30,7 @@ pub const MIN_SEP_FWHM: f64 = 0.5;
 
 /// Width at half height (in `rt` units) of the peak whose apex is `apex` on the trace `ys`, walking down each side to the first point under half the apex.
 fn fwhm(rt: &[f64], ys: &[f64], apex: usize) -> f64 {
-    let half = ys[apex] / 2.0;
-    let (mut lo, mut hi) = (apex, apex);
-    while lo > 0 && ys[lo - 1] > half {
-        lo -= 1;
-    }
-    while hi + 1 < ys.len() && ys[hi + 1] > half {
-        hi += 1;
-    }
-    rt[hi] - rt[lo]
+    crate::signal::fwhm_walk(rt, ys, apex)
 }
 
 /// At most `max_n` peaks with S/N ≥ `snr_min` and height ≥ `rel_min` times the tallest candidate, by increasing RT.

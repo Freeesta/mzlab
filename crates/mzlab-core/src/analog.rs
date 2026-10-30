@@ -115,15 +115,7 @@ fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
 }
 
 fn median(v: &[f64]) -> f64 {
-    let mut s = v.to_vec();
-    crate::sortc::by(&mut s, f64::total_cmp);
-    let n = s.len();
-    let at = |i: usize| s.get(i).copied().unwrap_or(f64::NAN);
-    if n % 2 == 1 {
-        at(n / 2)
-    } else {
-        (at((n / 2).saturating_sub(1)) + at(n / 2)) / 2.0
-    }
+    crate::signal::median_or(v, f64::NAN)
 }
 
 /// `np.interp(np.arange(t0, t1, dt), t, y)`.
