@@ -311,7 +311,7 @@ pub(super) fn natural(a: &str, b: &str) -> std::cmp::Ordering {
             let (p, q) = (&x[si..i], &y[sj..j]);
             let zeros = |d: &[char]| d.iter().take_while(|c| **c == '0').count();
             let (p0, q0) = (&p[zeros(p)..], &q[zeros(q)..]);
-            let o = p0.len().cmp(&q0.len()).then_with(|| p0.cmp(&q0));
+            let o = p0.len().cmp(&q0.len()).then_with(|| p0.cmp(q0));
             if o.is_ne() {
                 return o;
             }
