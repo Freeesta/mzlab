@@ -1,7 +1,7 @@
 //! `screen.suspects@1` through the plan runner and the registry: the cached second run, the plan check on a unit-resolution table and the defaults of the descriptor.
-//! The invented list, table and MGF are those of `flow_screen_suspects_tests`.
+//! The invented list, table and MGF are those of `tests`.
 
-use super::flow_screen_suspects_tests::{csv, mgf, table_bytes};
+use super::tests::{csv, mgf, table_bytes};
 use mzlab_core::json::Value;
 use mzlab_feat::flow_screen_suspects::Params;
 

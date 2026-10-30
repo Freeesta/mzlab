@@ -31,3 +31,10 @@ pub(crate) fn screen_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     )?;
     write_made(r, job, text, DataType::Candidates)
 }
+
+#[cfg(test)]
+#[path = "flow_screen_suspects_plan_tests.rs"]
+mod plan_tests;
+#[cfg(test)]
+#[path = "flow_screen_suspects_tests.rs"]
+mod tests;
