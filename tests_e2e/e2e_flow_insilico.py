@@ -187,10 +187,11 @@ try:
             assert keys == sorted(["/static/insilico/catalogo.json"] + ["/static/insilico/" + x["file"] for x in CAT["pieces"]]), keys
         step("the second click stores the pieces in the Cache Storage", install)
         def first():
+            pg.evaluate("document.dispatchEvent(new Event('flow:changed'))"); pg.wait_for_timeout(2000)    # the debounce of the live session
             r = pg.evaluate(RUN, WEB); assert not r.get("err"), (r["err"], r["ev"][-4:])
             for i in ("ms2", "ins"):
                 assert any(e["passo"] == i and (e["stato"] == "done" or e.get("modo") == "reused") and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
-            kept = pg.evaluate(KEPT); assert "ins.json" in kept, list(kept)
+            kept = pg.evaluate(KEPT); assert "ins.json" in kept, (list(kept), [e for e in r["ev"] if e["passo"] == "ins"])
             web = kept["ins.json"].encode(); at = next((i for i, (x, y) in enumerate(zip(NAT, web)) if x != y), min(len(NAT), len(web)))
             assert sha(web) == sha(NAT), ("first difference at", at, len(NAT), len(web), NAT[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
         step("ms2 -> insilico in this browser is the candidates/1 of mzlab-cli flow run, byte for byte", first)
