@@ -162,7 +162,7 @@ try:
         step("the stylesheet of Flow leaves the rows of the file list alone (class «fl»)", file_list_untouched)
         def template():
             ids = pg.evaluate("[...document.querySelectorAll('.flx-tc')].map(b => b.dataset.tpl)")
-            assert ids == ["tp", "table", "identify", "msn", "bentazone", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
+            assert ids == ["tp", "table", "lrtable", "identify", "msn", "bentazone", "targeted", "tpseries", "standards", "blankfree"], ids; pg.click(".flx-more summary"); assert pg.locator(".flx-more .flx-tc").first.is_visible()
             assert pg.evaluate("[...document.querySelectorAll('.flx-tc small:not(.flx-help)')].every(s => s.textContent.startsWith('Good for:'))")
             pg.click('.flx-tc[data-tpl="identify"]')
             attendi(pg, "document.querySelectorAll('.fln').length === 7")
