@@ -7,7 +7,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the steps this runner knows, and the ones that need a computer */
-  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : []), ...(F.webIdent ? F.webIdent.STEPS : []), ...(F.webQc ? F.webQc.STEPS : []), ...(F.webSuspects ? F.webSuspects.STEPS : []), ...(F.webInsilico ? F.webInsilico.STEPS : []), "export.table_csv", "export.mztab", "table.filter"];
+  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : []), ...(F.webIdent ? F.webIdent.STEPS : []), ...(F.webQc ? F.webQc.STEPS : []), ...(F.webSuspects ? F.webSuspects.STEPS : []), ...(F.webInsilico ? F.webInsilico.STEPS : []), ...(F.webDrift ? F.webDrift.STEPS : []), "export.table_csv", "export.mztab", "table.filter"];
   const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;
@@ -61,7 +61,7 @@
     const url = URL.createObjectURL(new Blob([c.files["feat-worker.js"]], { type: "text/javascript" }));
     const mod = await import(/* webpackIgnore: true */ url);
     const w = (/** @type {any} */ m) => ({ jsUrl: u(m.js), wasmUrl: u(m.wasm), sha256: m.sha256 });
-    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}), ...(man.finder_lr ? { finder_lr: w(man.finder_lr) } : {}), ...(man.attributio_ms2 ? { attributio_ms2: w(man.attributio_ms2) } : {}), ...(man.formula ? { formula: w(man.formula) } : {}) } });
+    pool = mod.createFeatPool({ workerUrl: url, size: mod.poolSize(false, navigator.hardwareConcurrency), wasm: { feat: w(man.feat), proofs: w(man.proofs), ...(man.interp ? { interp: w(man.interp) } : {}), ...(man.table ? { table: w(man.table) } : {}), ...(man.finder_lr ? { finder_lr: w(man.finder_lr) } : {}), ...(man.attributio_ms2 ? { attributio_ms2: w(man.attributio_ms2) } : {}), ...(man.formula ? { formula: w(man.formula) } : {}), ...(man.flowtab ? { flowtab: w(man.flowtab) } : {}) } });
     pool.featWasm = w(man.feat);
     pool.limit = Math.max(1, mod.poolSize(false, navigator.hardwareConcurrency));
     return pool;
