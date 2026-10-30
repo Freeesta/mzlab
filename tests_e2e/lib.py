@@ -79,8 +79,8 @@ def _tempi(self):
           if (e.length) CAMPIONI.apply(e, true); renderFiles(); }""")
     except Exception: pass
 def open_first(pg, timeout=120000):
-    """The student's first click: the files open as soon as they are read and none is shown until a click. Waits until nothing is read or opened any more, then clicks the row
-    of the first file that is not a blank in the side list (the file the old «Load data» showed), unless a file is already shown."""
+    """The first file shown: the files open as soon as they are read and, at the end of the loading, the first one that is not a blank opens by itself (OPENNOW.first).
+    Waits until nothing is read or opened any more, then clicks the row of that file in the side list unless a file is already shown (a session where none opened by itself)."""
     pg.wait_for_function("typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", timeout=timeout)
     _tempi(pg)
     k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const fs = E.files.filter(f => !f.gone); if (!fs.length) return -1;

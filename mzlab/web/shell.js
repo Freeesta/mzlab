@@ -111,18 +111,17 @@ function renderFiles(){const F=ST.files,el=$("#flist");
   // GUESS: concentration cells
   const ncol=7+(hasCal?1:0),GUESS=` title="${I18N.t("load.guess.title")}"`;
   let rows="";
-  // the rows keep the order of arrival (CONVROWS.rank) from the first moment on: no group lines, no reorder when the loading ends; the group of a file is the experiment cell and the HR tag
-  const R=/** @type {string[]} */ ([]);F.map((/** @type {FileRiga} */ f,/** @type {number} */ i)=>({f,i})).sort((/** @type {{ f: FileRiga }} */ a,/** @type {{ f: FileRiga }} */ b)=>CONVROWS.rank(a.f.name)-CONVROWS.rank(b.f.name)).forEach((/** @type {{ f: FileRiga, i: number }} */ {f,i})=>{if(CONVROWS.holds(f.name))return;
+  // the rows keep the order of arrival (CONVROWS.rank): no group lines, no reorder when the loading ends (the files still being read are rows of the side list, upload-rows.js); the group of a file is the experiment cell and the HR tag
+  const R=/** @type {string[]} */ ([]);F.map((/** @type {FileRiga} */ f,/** @type {number} */ i)=>({f,i})).sort((/** @type {{ f: FileRiga }} */ a,/** @type {{ f: FileRiga }} */ b)=>CONVROWS.rank(a.f.name)-CONVROWS.rank(b.f.name)).forEach((/** @type {{ f: FileRiga, i: number }} */ {f,i})=>{
     R.push(`<tr data-grp="${loadGrp(f).key}"><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${OPENNOW.isOpen(f.name)?`<button type="button" class="lnk" data-open="${esc(f.name)}" aria-label="${esc(I18N.t("load.table.open",{name:f.name}))}">${esc(f.name)}</button>`:esc(f.name)}${f.hr?` <span class="muted sm">${I18N.t("load.row.hr")}</span>`:""}${CONVQ.label(f.name)?` <span class="muted sm" data-cvq="${esc(f.name)}">${esc(CONVQ.label(f.name))}</span>`:""} ${typeof polSign==="function"?polSign(f,F):""}</td><td>${expCell(f)}</td>`+
    RUOLI.roleCell(f,i)+RUOLI.timeCell(f,i,tu)+
    (hasCal?(isCal(f)?`<td class="num"><input type="text" inputmode="decimal" autocomplete="off" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:`title="${I18N.t("load.table.concStd.title")}"`}></td>`:f.type==="blank"?`<td class="num"><input type="text" disabled aria-label="${I18N.t("load.table.conc")}" style="width:90px" data-i="${i}" data-k="conc" value=""></td>`:"<td></td>"):"")+
    `<td class="num muted">${sz(f.size)}</td><td style="white-space:nowrap">${CONV.has(f.name)?`<button type="button" class="sec sm" data-dl="${esc(f.name)}" title="${I18N.t("conv.dl.title")}">${I18N.t("conv.dl")}</button> `:""}<button data-rm="${i}" title="${I18N.t("load.table.remove")}">&times;</button></td></tr>`)});
-  R.push(CONVROWS.html());
   // above 500 rows the body comes in chunks of 200 per frame (1000 rows in one go cost 150 ms); the handlers are wired once the last chunk is in
   const tok=FILECHUNK.t={},big=R.length>500;rows=(big?R.slice(0,200):R).join("");
   const head=F.length?`<p class="sm samphead"><b>${I18N.t("load.samples.head",{n:F.length})}</b>${S.sess?" · "+I18N.t("load.samples.click"):""}</p>`:"";
   // the columns, the unit menus and the buttons over the table are there from the first row (CONVROWS.table, tools): the phases of the loading move nothing
-  el.innerHTML=(F.length||CONVROWS.running().length?head+CONVROWS.tools()+CONVROWS.table(`<tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")} ${tuSel}</th><th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th><th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`,rows):"")+CONVROWS.summary();
+  el.innerHTML=(F.length?head+CONVROWS.tools()+CONVROWS.table(`<tr><th></th><th scope="col">${I18N.t("load.table.file")}</th><th scope="col">${I18N.t("load.table.experiment")}</th><th scope="col">${I18N.t("load.table.type")}</th><th scope="col" class="num">${I18N.t("load.table.time.col")} ${tuSel}</th><th scope="col" class="num">${I18N.t("load.table.conc")} ${unitSel}</th><th scope="col" class="num">${I18N.t("load.table.size")}</th><th></th></tr>`,rows):"")+CONVROWS.summary();
   if(big){let at=200;const more=()=>{if(FILECHUNK.t!==tok)return;const tb=el.querySelector("tbody");if(tb)tb.insertAdjacentHTML("beforeend",R.slice(at,at+200).join(""));at+=200;if(at<R.length)FRAME.next(more);else wireFiles(el,F)};FRAME.next(more)}else wireFiles(el,F);
   UPROWS.paint();syncWork()}
 const FILECHUNK={t:{}};
@@ -228,16 +227,16 @@ async function moduloWants(/** @type {typeof LETTORI_MOD} */ M,/** @type {FileCa
 async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box,/** @type {CaricaRep} */ rep){
   const M=window.LETTORI_MOD;if(!M||!files.length)return files;
   const jobs=new Map();for(const f of files){const fam=await moduloWants(M,f);if(fam)jobs.set(f,fam)}if(!jobs.size)return files;
-  const g=ConvUI.group(box,[...jobs.keys()].map(f=>NATIVO.size(f))),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
+  const g=ConvUI.group(null,[...jobs.keys()].map(f=>NATIVO.size(f))),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
   // every file of the batch has its row (Queued) from the start, so the count over the table is the count of the headline
   const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name,taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
   let i=0;
   for(const f of files){
     if(!jobs.has(f)){out.push(f);continue}
     i++;const lot=f.mzlabModulo||f.mzlabNat,mem=lot?lot.members:[{name:f.name,blob:f}],nm=names.get(f);
-    if(g.signal.aborted)continue;
+    if(g.signal.aborted||OPENNOW.held(nm))continue;
     CONVROWS.set(nm,"open");const ui=g.start(i,nm),dest=`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.mzML`;
-    try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},g.signal);
+    try{const blob=await M.toMzml(jobs.get(f),mem,lot?lot.c:0,dest,(/** @type {{ scans: number, scansTotal: number }} */ p)=>{ui.update(p);CONVROWS.set(nm,"run",p.scansTotal?Math.floor(100*p.scans/p.scansTotal):0)},ui.signal);
       ui.done();CONV.add(nm,blob);out.push(new File([blob],nm))}
     catch(e_){const e=/** @type {Lanciato} */(e_);ui.done();if(!e.cancelled){const x=e.json?I18N.err(e.json):e,m=x.message;(rep.errs[m]=rep.errs[m]||[]).push(f.name);if(!(rep.diag||(rep.diag={}))[m])rep.diag[m]=DIAG.da(Object.assign(x,{fase:x.fase||"decode"}),{name:f.name,size:NATIVO.size(f)},await DIAG.leggiTesta(f.mzlabNat||f.mzlabModulo?new Blob([]):f))}}
     finally{CONVROWS.drop(nm)}}

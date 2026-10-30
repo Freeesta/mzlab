@@ -42,7 +42,7 @@ def follow(pg, cdp, bcdp, until, limit=1500):
     """polls every 500 ms: peak MB of the processes, peak JS heap of the page, peak idx builders (workers), longest time the visible text stayed the same"""
     peak = dict(mb=0.0, heap=0.0, builders=0, still=0.0); last, since, t0 = None, time.time(), time.time(); s = {}
     while time.time() - t0 < limit:
-        s = json.loads(pg.evaluate("JSON.stringify({see: [...document.querySelectorAll('#flist [data-cvrow]')].map(e => e.innerText).slice(0, 8).join('|'), busy: UPBUSY, files: ST.files.map(f => f.name)})"))
+        s = json.loads(pg.evaluate("JSON.stringify({see: [...document.querySelectorAll('#fl-up [data-up]')].map(e => e.innerText).slice(0, 8).join('|'), busy: UPBUSY, files: ST.files.map(f => f.name)})"))
         peak["mb"] = max(peak["mb"], rss_mb())
         m = {x["name"]: x["value"] for x in cdp.send("Performance.getMetrics")["metrics"]}; peak["heap"] = max(peak["heap"], m.get("JSHeapUsedSize", 0) / 1e6)
         peak["builders"] = max(peak["builders"], sum(1 for t in bcdp.send("Target.getTargets")["targetInfos"] if "idx-worker" in t.get("url", "")))
@@ -107,7 +107,7 @@ try:
             half = FILES[: len(NAMES) // 2] + FILES[len(NAMES): len(NAMES) + len(NAMES) // 2]
             pg.set_input_files("#pick", half)
             pg.wait_for_function("CONVROWS.rows.some(r => r.state === 'done')", timeout=300000)
-            pg.evaluate("document.querySelector('#flist [data-cvact=cancel]').click()"); t0 = time.time()      # the button is drawn again at every row: a JS click
+            pg.evaluate("document.querySelector('#fl-up [data-up-all]').click()"); t0 = time.time()      # «Cancel» of the side list, drawn again at every row: a JS click
             pg.wait_for_function("UPBUSY === 0", timeout=60000)
             end = pg.evaluate("CONVROWS.rows.map(r => r.state)")
             assert "cancel" in end and set(end) <= {"cancel", "done"}, {k: end.count(k) for k in set(end)}

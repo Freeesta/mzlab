@@ -97,6 +97,7 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #sb-toggle{display:inline-flex;align-items:center;gap:5px;flex:none;padding:4px 10px 4px 8px;min-height:30px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font-size:13px;cursor:pointer}
 #sb-toggle[hidden]{display:none}#sb-toggle:hover{background:var(--soft)}#sb-toggle .ti{display:inline-flex;color:var(--accent)}
 #sb-toggle[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
+#samptab{margin:6px 8px;min-height:32px}#samptab[aria-pressed=true]{background:var(--sel);border-color:var(--accent);color:var(--accent)}
 #sb-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 #sidebar-resize-handle:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent);opacity:.6}
 #bar-hint{position:fixed;z-index:6000;display:flex;gap:8px;align-items:flex-start;max-width:min(340px,calc(100vw - 16px));box-sizing:border-box;padding:9px 10px 9px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:13px;line-height:1.4}#bar-hint::before{content:"";position:absolute;top:-6px;left:var(--ha,18px);width:10px;height:10px;background:var(--panel);border-left:1px solid var(--accent);border-top:1px solid var(--accent);transform:rotate(45deg)}#bar-hint button{flex:none;border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;cursor:pointer}#bar-hint button:hover{color:var(--ink)}#bar-hint button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media (prefers-reduced-motion:no-preference){#bar-hint{animation:hint-in .25s ease}@keyframes hint-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}}
@@ -401,6 +402,7 @@ html:not(.phone) #avvio-copia,html:not(.phone) #avvio-reset,html:not(.phone) #de
 .pk-row>span:last-child{grid-column:1/-1}}
 td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cvrow] .prog{height:4px}
 /* loading table: fixed columns and fixed blocks from the first row, so no phase of the loading moves anything */
+.fl-uphead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px;padding:2px 8px}
 .cvtool{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;min-height:36px;margin-top:8px}
 .cvtool .cvl,.cvtool .cvr2{display:flex;align-items:center;gap:8px;min-height:32px}
 .cvtool [data-off]{visibility:hidden}
@@ -415,7 +417,6 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 .ldtab .cvst>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ldtab .cvst>span+span{text-align:right}
 .ldtab tr.cvr[data-st=fail] [data-cvtxt]{color:var(--bad)}
 .ldtab tr.cvr .prog i,.convprog .prog i{width:100%;transform-origin:left center;transform:scaleX(0)}
-.convprog[data-idle]{visibility:hidden}
 .convprog .cp-head{min-height:34px}.convprog .cp-phase{min-height:1.6em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.convprog [data-r=detail]{min-height:1.5em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(prefers-reduced-motion:no-preference){.ldtab tr.cvr .prog i,.convprog .prog i{transition:transform .35s linear}}
 

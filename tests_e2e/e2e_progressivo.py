@@ -24,9 +24,9 @@ try:
         attendi(pg, "E.files.filter(f => !f.gone).length === 1 && window.__appends >= 1", 60000)
         def first_open():
             assert pg.evaluate("OPENNOW.busy()") >= 2, pg.evaluate("OPENNOW.busy()")
-            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "table", "no file shown: the sample table"
-            assert pg.locator("#dpanels .pnl").count() == 0, "no panel before the first click"
-        step("the first file is open, the others wait, no panel until a click", first_open)
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "landing", "files still being read: the landing stays"
+            assert pg.locator("#dpanels .pnl").count() == 0, "no panel while the files are read"
+        step("the first file is open, the others wait, the landing stays and no panel is drawn", first_open)
         names = [os.path.basename(f) for f in FILES]
         state = lambda: pg.evaluate("[E.files.filter(f => !f.gone).map(f => f.file), window.__sent]")
         def grey_rows():

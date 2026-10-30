@@ -55,7 +55,7 @@ try:
             assert names(pg) == ["one.mzML"], names(pg)
         step("its .wiff.scan arrives in another loading: the pair is converted into one.mzML", late_scan)
         def several():
-            pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#flist tr[aria-busy=true]').forEach(tr => window.__rows.add(tr.children[1].textContent.trim()))).observe(document.getElementById('flist'), { childList: true, subtree: true })")
+            pg.evaluate("window.__rows = new Set(); new MutationObserver(() => document.querySelectorAll('#fl-up [aria-busy=true]').forEach(r => window.__rows.add(r.dataset.up))).observe(document.getElementById('flst'), { childList: true, subtree: true })")
             pg.set_input_files("#pick", [str(D / "two.wiff.scan"), str(D / "two.wiff"), str(D / "serie.wiff"), str(D / "serie.wiff.scan")])
             shown(pg, 4)
             assert sorted(names(pg)) == ["one.mzML", "serie.mzML", "two_s1.mzML", "two_s2.mzML"], names(pg)
@@ -63,19 +63,19 @@ try:
         def rows_while_converting():                     # each pair is in the list as soon as it is paired, then each sample, until its mzML is in the list
             seen = set(pg.evaluate("Array.from(window.__rows)"))
             assert {"two.wiff", "serie.wiff"} <= seen, seen
-            assert pg.locator("#flist tr[aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0
+            assert pg.locator("#fl-up [aria-busy=true]").count() == 0 and pg.evaluate("CONVROWS.running().length") == 0
         step("the pairs and the samples are listed (in conversion) before their mzML is ready", rows_while_converting)
         def rows_progress():                             # the bar of a row moves without drawing the list again
             pg.evaluate("CONVROWS.add('x_s1.mzML', 'wait'); CONVROWS.add('x_s2.mzML', 'wait'); CONVROWS.set('x_s1.mzML', 'run', 0)")
             try:
                 pg.evaluate("CONVROWS.set('x_s1.mzML', 'run', 40)")
                 # the bars are repainted at most every 100 ms (CONVROWS.queue), so the new value is polled for, not read at once
-                pg.wait_for_function("""() => { const c = document.querySelector("#flist [data-cvrow='x_s1.mzML']"), b = c && c.querySelector('[role=progressbar]'), t = c && c.querySelector('[data-cvtxt]');
+                pg.wait_for_function("""() => { const c = document.querySelector("#fl-up [data-up='x_s1.mzML']"), b = c && c.querySelector('[role=progressbar]'), t = c && c.querySelector('[data-uptxt]');
                     return !!b && b.getAttribute('aria-valuenow') === '40' && !!t && c.textContent.includes('40'); }""", timeout=10000)
-                assert pg.locator("#flist [data-cvrow='x_s2.mzML'] [data-cvtxt]").inner_text().strip() != ""
+                assert pg.evaluate("document.querySelector(\"#fl-up [data-up='x_s2.mzML'] [data-uptxt]\").textContent").strip() != ""
             finally:                                     # also when a check fails: a row left behind would break the steps after this one
                 pg.evaluate("CONVROWS.drop('x_s1.mzML'); CONVROWS.drop('x_s2.mzML')")
-            assert pg.locator("#flist tr[aria-busy=true]").count() == 0
+            assert pg.locator("#fl-up [aria-busy=true]").count() == 0
         step("a row of the list shows its state and a bar that moves", rows_progress)
         def downloads():
             assert pg.locator("#flist [data-dl]").count() == 4 and pg.locator("#dlall").count() == 1

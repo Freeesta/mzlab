@@ -1,6 +1,8 @@
-"""Files open as soon as they are read (OPENNOW, open-now.js; upload-rows.js): the first progress row of the side list shows within 100 ms of the drop; no panel is drawn
-until the first click on a file; a proposal of roles and times that lands after the files opened still reaches the open files; a high-resolution file dropped on a
-low-resolution session is set aside with «Switch»; a folder of more than 50 data files asks «Open all / Choose» and «Choose» leaves them unticked. Synthetic files."""
+"""Files open as soon as they are read (OPENNOW, open-now.js; upload-rows.js): the first progress row of the side list shows within 100 ms of the drop; while the files are
+read the landing stays as it is (no card, no table, the drop area does not move) and no panel is drawn; at the end the first file opens by itself and nothing of the loading
+is left («Loading finished», spinner, card); «Sample table» of the side panel shows the table and a click on a file goes back to the panels; a proposal of roles and times
+that lands after the files opened still reaches the open files; a high-resolution file dropped on a low-resolution session is set aside with «Switch»; a folder of more than
+50 data files asks «Open all / Choose» and «Choose» leaves them unticked. Synthetic files."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 from lib import *
@@ -21,7 +23,12 @@ MANY = tmp / "many"; MANY.mkdir()
 for k in range(51): shutil.copy(LR[0], MANY / f"M_{k:02d}.mzML")
 # the proposals of roles and times answer 1 s late; the time of the first progress row is taken at the change of #pick
 HOLD = """(() => { const f = window.fetch; window.fetch = function (u, o) { if (typeof u === 'string' && u.includes('api/campioni/proponi')) return new Promise(r => setTimeout(r, 1000)).then(() => f.call(this, u, o)); return f.call(this, u, o); };
-  window.__up = null; window.__pick = null; document.querySelector('#pick').addEventListener('change', () => { window.__pick = performance.now(); }, true);
+  window.__up = null; window.__pick = null; window.__moved = []; window.__early = []; const d0 = document.querySelector('#drop').getBoundingClientRect().top;
+  document.querySelector('#pick').addEventListener('change', () => { window.__pick = performance.now(); }, true);
+  // while the files are read: the drop area never moves and no panel, card or loading table shows
+  const look = () => { if (!(UPBUSY > 0 || OPENNOW.busy() > 0)) return; const t = document.querySelector('#drop').getBoundingClientRect().top; if (Math.abs(t - d0) > 1) window.__moved.push(t - d0);
+    if (document.querySelector('#dpanels .pnl')) window.__early.push('panel'); if (document.querySelector('.convprog')) window.__early.push('card'); if (!document.querySelector('#wtable').hidden) window.__early.push('table'); };
+  new MutationObserver(look).observe(document.body, { childList: true, subtree: true, attributes: true });
   new MutationObserver(() => { if (window.__up == null && document.querySelector('#flst .fl.up')) window.__up = performance.now(); }).observe(document.getElementById('flst'), { childList: true, subtree: true }); })()"""
 r = Run(port=8962, wd="/tmp/wd_apri_subito")
 try:
@@ -36,20 +43,31 @@ try:
             dt = pg.evaluate("window.__up - window.__pick")
             assert dt < 100, f"first progress row after {dt:.0f} ms"
         step("the first progress row shows within 100 ms of the drop", first_row)
-        def no_panel():
+        def landing_then_first():
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === 3", 60000)
-            assert pg.locator("#dpanels .pnl").count() == 0, "no panel before the first click"
-            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "table"
-            assert pg.is_visible("#wtable .samphead"), "the header line of the sample table"
-        step("the files open without a click and no panel is drawn until one", no_panel)
+            assert pg.evaluate("window.__moved") == [], f"the drop area moved: {pg.evaluate('window.__moved')}"
+            assert pg.evaluate("window.__early") == [], f"shown while reading: {pg.evaluate('[...new Set(window.__early)]')}"
+            pg.wait_for_selector(".pnl.chrom canvas", timeout=60000)
+            assert pg.evaluate("E.files.filter(f => f.vis && !f.gone).map(f => f.file).join()") == "S_t000min.mzML", "the first file opened by itself"
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels"
+            assert pg.locator(".convprog, .cp-spin, #fl-up .fl").count() == 0, "nothing of the loading is left"
+            txt = pg.inner_text("body")
+            assert "Loading finished" not in txt and "Caricamento finito" not in txt and "Loading the files" not in txt, "no end-of-loading text"
+        step("the landing stays while the files are read, then the first file opens by itself", landing_then_first)
         def late_proposal():
             attendi(pg, "RUOLI.busy() === 0 && ST.files.every(f => f.prop)", 30000)
             attendi(pg, "E.files.filter(f => !f.gone).map(f => f.time).sort((a, b) => a - b).join() === '0,10,30'", 10000)
             assert pg.locator("#flist input[data-k=time].guess").count() >= 2, "the proposed times carry the guess class"
         step("a proposal that lands after the files opened reaches the open files", late_proposal)
-        def first_click():
-            open_first(pg); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000)
-        step("the first click on a file draws its panels", first_click)
+        def table_button():
+            assert pg.is_visible("#samptab") and pg.get_attribute("#samptab", "aria-pressed") == "false"
+            pg.click("#samptab")
+            pg.wait_for_selector("#wtable .samphead", state="visible", timeout=10000)
+            assert pg.get_attribute("#samptab", "aria-pressed") == "true" and not pg.is_visible("#dpanels .pnl"), "the table in place of the panels"
+            pg.click("#flst .fl .nm >> nth=1")
+            attendi(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 10000)
+            assert pg.get_attribute("#samptab", "aria-pressed") == "false"
+        step("«Sample table» shows the table; a click on a file goes back to the panels", table_button)
         def hr_aside():
             pg.set_input_files("#pick", [str(HR)])
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && ST.files.length === 4 && !document.querySelector('#hrmix').hidden", 60000)

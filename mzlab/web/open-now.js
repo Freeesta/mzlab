@@ -1,7 +1,7 @@
 // @ts-check
 // Files open as soon as they are read: upload0 (shell.js) calls OPENNOW.add(name) when a file is in the loading table. The first file of a session starts it (api/explore),
-// the others are appended (api/explore append) in order of arrival, with one bootSession at most every 200 ms; a new file starts hidden (bootSession0), so the work area shows
-// the sample table until the first click. The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
+// the others are appended (api/explore append) in order of arrival, with one bootSession at most every 200 ms; a new file starts hidden (bootSession0) and, when the whole
+// loading is over and no file is shown, the first one (not a blank) opens by itself (first). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
 // offers the switch. Also the write-through of the sample table to the open files (roles, times, concentrations: CAMPIONI.apply). Used by shell.js and ruoli-carica.js.
 "use strict";
 
@@ -94,17 +94,23 @@ const OPENNOW = /** @type {any} */ ((() => {
         await bootSession();
         fs.filter((/** @type {FileRiga} */ f) => f.use).forEach((/** @type {FileRiga} */ f) => q.push(f.name));
         await drain();
-      } catch (e_) { fail(e_); } finally { loading(false); renderFiles(); }
+      } catch (e_) { fail(e_); } finally { loading(false); renderFiles(); first(); }
     };
     const n = E.files.filter((/** @type {FileAperto} */ g) => !g.gone).length;
     await go(hr);
     if (typeof STORIA !== "undefined" && STORIA) STORIA.tolto({ what: I18N.t("files.removeAll.what", { n }), dati: String(n), undo: () => go(!hr), redo: () => go(hr) });
   }
-  /** a batch has ended: the side list says what was added and what was set aside (only with files already shown: else the sample table says it) */
+  /** every file read is open and nothing is shown: the first file opens, as a click on it would (no panel is built before the end of the loading) */
+  function first() {
+    if (UPBUSY > 0 || busy || q.length || S.table || E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone) || E.panels.some((/** @type {Pannello} */ p) => p.el)) return;
+    const fs = E.files.filter((/** @type {FileAperto} */ f) => !f.gone);
+    if (fs.length) soloFile(fs[firstOpenK(fs)]);
+  }
+  /** a batch has ended: the side list says what was added and what was set aside (only with files already shown), else the first file opens */
   async function note() {
     await idle();
     const { n, m } = tally; tally.n = tally.m = 0;
-    if (!E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) return;
+    if (!E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { first(); return; }
     if (n || m) directNote(m ? "files.drop.mixed" : "files.drop.done", { n, m });
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
@@ -119,5 +125,5 @@ const OPENNOW = /** @type {any} */ ((() => {
       d.showModal(); ok.focus();
     });
   }
-  return { add, hold, idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length };
+  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length };
 })());
