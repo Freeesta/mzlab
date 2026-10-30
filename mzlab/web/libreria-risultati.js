@@ -28,19 +28,20 @@ function frame(d, tx) {
   const b = document.createElement("button"); b.type = "button"; b.className = "li-mx"; b.setAttribute("aria-pressed", "false"); b.textContent = "⤢"; b.title = b.ariaLabel = tx.max;
   b.onclick = () => { const on = d.classList.toggle("max"); b.setAttribute("aria-pressed", String(on)); b.title = b.ariaLabel = on ? tx.restore : tx.max; };
   top.insertBefore(b, x);
-  let t = 0; new ResizeObserver(() => { if (d.classList.contains("max") || !d.open) return; clearTimeout(t); t = setTimeout(() => save(d.offsetWidth, d.offsetHeight), 300); }).observe(d);
+  let t = 0; FRAME.ro(d, () => { if (d.classList.contains("max") || !d.open) return; clearTimeout(t); t = setTimeout(() => save(d.offsetWidth, d.offsetHeight), 300); });
 }
 
 /** The table in `host`: the first rows now, the next ones when the scroll gets near the end. `rows` = [{i, cells}] (cells = HTML of each cell in the order of `cols`).
  * @param {HTMLElement} host @param {Col[]} cols @param {{i: number, cells: string[]}[]} rows @param {string} empty @param {string} tip title of every row */
 function fill(host, cols, rows, empty, tip) {
-  const th = cols.map(c => `<th scope="col"${c.num ? ' class="num"' : ""}>${c.h}</th>`).join("");
-  const cg = cols.map(c => `<col${c.w ? ` style="width:${c.w}"` : ""}>`).join("");
-  host.innerHTML = `<div class="li-sc" tabindex="0"><table class="li-t"><colgroup>${cg}</colgroup><thead><tr>${th}</tr></thead><tbody></tbody></table></div>`;
+  const th = cols.map(c => h`<th scope="col" class="${c.num ? "num" : ""}">${raw(c.h)}</th>`).join("");
+  const cg = cols.map(c => h`<col style="${c.w ? "width:" + c.w : ""}">`).join("");
+  host.innerHTML = h`<div class="li-sc" tabindex="0"><table class="li-t"><colgroup>${raw(cg)}</colgroup><thead><tr>${raw(th)}</tr></thead><tbody></tbody></table></div>`;
   const sc = /** @type {HTMLElement} */ (host.firstElementChild), tb = /** @type {HTMLElement} */ (host.querySelector("tbody")); let n = 0;
   const more = () => {
-    if (!rows.length) { tb.innerHTML = `<tr><td colspan="${cols.length}" class="muted">${empty}</td></tr>`; return; }
-    tb.insertAdjacentHTML("beforeend", rows.slice(n, n + CHUNK).map(r => `<tr class="lr" data-i="${r.i}" title="${tip}">${r.cells.map((c, j) => `<td class="${cols[j].num ? "num" : cols[j].nm ? "nm" : ""}">${c}</td>`).join("")}</tr>`).join("")); n += CHUNK;
+    if (!rows.length) { tb.innerHTML = h`<tr><td colspan="${cols.length}" class="muted">${raw(empty)}</td></tr>`; return; }
+    const html = rows.slice(n, n + CHUNK).map(r => h`<tr class="lr" data-i="${r.i}" title="${tip}">${raw(r.cells.map((c, j) => h`<td class="${cols[j].num ? "num" : cols[j].nm ? "nm" : ""}">${raw(c)}</td>`).join(""))}</tr>`).join("");
+    tb.insertAdjacentHTML("beforeend", h`${raw(html)}`); n += CHUNK;
   };
   more();
   sc.onscroll = () => { if (n < rows.length && sc.scrollTop + sc.clientHeight > sc.scrollHeight - 200) more(); };
