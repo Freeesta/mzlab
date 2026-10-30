@@ -1,5 +1,5 @@
 """Files open one by one as soon as they are read: the first file starts the session, the others are appended in order; while one is still being opened its grey row
-(.fl.pend.up, aria-busy) waits at the bottom of the side list; no panel is drawn until the first click on a file; × on a waiting row leaves that file unticked and unread;
+(.fl.pend.up, aria-busy) waits at the bottom of the side list; the first file opens by itself as soon as it is read, the others open when read and are shown by a click; × on a waiting row leaves that file unticked and unread;
 a file with no data stays in the table unopened and the others go on. The appends are held back by a wrapper of fetch, so there is time to look."""
 import sys, os, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -24,9 +24,10 @@ try:
         attendi(pg, "E.files.filter(f => !f.gone).length === 1 && window.__appends >= 1", 60000)
         def first_open():
             assert pg.evaluate("OPENNOW.busy()") >= 2, pg.evaluate("OPENNOW.busy()")
-            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "landing", "files still being read: the landing stays"
-            assert pg.locator("#dpanels .pnl").count() == 0, "no panel while the files are read"
-        step("the first file is open, the others wait, the landing stays and no panel is drawn", first_open)
+            attendi(pg, "document.getElementById('v-workspace').dataset.work === 'panels'", 30000)
+            assert pg.evaluate("E.files.filter(f => f.vis && !f.gone).length") == 1, "only the first file is shown while the others are read"
+            pg.wait_for_selector("#dpanels .pnl canvas", timeout=60000)
+        step("the first file is open and shown by itself, the others wait", first_open)
         names = [os.path.basename(f) for f in FILES]
         state = lambda: pg.evaluate("[E.files.filter(f => !f.gone).map(f => f.file), window.__sent]")
         def grey_rows():

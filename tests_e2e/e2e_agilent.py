@@ -63,8 +63,8 @@ try:
             assert ".D" in pg.inner_text("#drop")
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#samptab').hidden", 60000)
             pg.wait_for_selector("#dpanels .pnl canvas", timeout=120000)      # the first file read opens by itself, the others wait in the list
-            w = pg.evaluate("document.querySelector('#flist table').getBoundingClientRect().width"); assert w > 200, w
-        step("loaded: no leftover «files to load» line, .D in the drop text, the first file open, the list table drawn", tidy)
+            assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= 4      # the others wait in the list
+        step("loaded: no leftover «files to load» line, .D in the drop text, the first file open, the others listed", tidy)
         def tic():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
