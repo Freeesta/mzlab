@@ -19,7 +19,7 @@ if __name__ == "__main__":
             for w, h, loc in ((400, 800, "en-US"), (400, 800, "it-IT"), (800, 700, "en-US"), (1400, 900, "it-IT")):
                 b = p.chromium.launch(); ctx = b.new_context(viewport={"width": w, "height": h}, locale=loc)
                 pg = ctx.new_page(); pg.add_init_script(SKIP_TOUR); pg.add_init_script(LOG)
-                pg.goto(f"http://127.0.0.1:{r.port}/"); pg.wait_for_selector("#drop"); pg.wait_for_timeout(3000)
+                pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "window.qqReady || document.querySelector('#fl-hint')"); frames(pg, 30)
                 seen = pg.evaluate("window.__h")
                 print(f"{w}x{h} {loc}: {seen}")
                 if len(seen) != 1: bad.append((w, loc, seen))
