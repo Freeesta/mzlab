@@ -368,11 +368,11 @@ function ctxFor(p, e, x, px, py) {
   const V = ["chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
   const reg = o => AZIONI.registra({ viste: V, ...o });
-  // the spectra of a trace: not for the MRM (it has no scans to average)
+  // the spectra of a trace: not for the MRM (it has no scans to average); not in the menu: a click or drag, the double click and Enter already do it
   /** @param {any} c */
   const spettri = c => ESP.spettri(c.p);
-  reg({ id: "chrom.avgSel", gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
-  reg({ id: "chrom.specAtRt", gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
+  reg({ id: "chrom.avgSel", menu: false, gruppo: "extract", visibile: spettri, disponibile: /** @param {any} c */ c => !!c.p.sel, nome: () => T("ctx.spec.avgSel"), esegui: /** @param {any} c */ c => newSpec(c.p, c.p.sel[0], c.p.sel[1], c.k) });
+  reg({ id: "chrom.specAtRt", menu: false, gruppo: "extract", visibile: spettri, scorciatoia: { tasto: "Enter", dove: "chart", et: "scorc.spettro" }, nome: () => T("ctx.spec.atRt"),
     doppio: /** @param {any} c */ c => !!c.p._a && !!E.files[c.k] && E.files[c.k].kind !== "mrm" && !c.p.el.classList.contains("max"),      // a MRM file has no spectra; full screen: nobody would see the new panel
     esegui: /** @param {any} c */ async c => {
       const { p, x, k } = c, dt = scanStep(), sn = ESP.di(p) === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null;
