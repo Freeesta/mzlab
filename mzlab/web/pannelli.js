@@ -341,6 +341,7 @@ function addPanel(type, o, after) {
       ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.csv"), icon: IC_DL, fn: () => {
         const t = plotSheets(p); if (t) dlc(plotName(p) + ".xlsx", t, { p, table: "plot" }); else info(I18N.t("panel.dl.nodata"));
       }}]),
+      ...(p.type === "spec" ? AZIONI.scarichi({ vista: "spec", p, a: p._a }) : []),
       ...(window.BANCO && BANCO.on() ? [{ label: I18N.t("panel.dl.copyPng"), fn: () => BANCO.copyPng(p) }, ...(p.type === "map" ? [] : [{ label: I18N.t("panel.dl.copyData"), fn: () => BANCO.copyText(p) }])] : [])
     ]);
   };
