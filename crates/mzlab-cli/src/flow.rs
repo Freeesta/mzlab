@@ -73,6 +73,15 @@ pub fn table_step() -> Step {
     }
 }
 
+// The two steps of `docs/agenti/flow-web.md` (qc.run_order, report.methods) live in files of their own, declared here so that lib.rs stays within its limit.
+#[path = "flow_methods.rs"]
+mod flow_methods;
+#[cfg(test)]
+#[path = "flow_qcreport_tests.rs"]
+mod flow_qcreport_tests;
+#[path = "flow_runorder.rs"]
+mod flow_runorder;
+
 /// The steps a plan can use here, every family of descriptors: the registry of the flagship chain, `features.table`, Attributio, the whole Tabui
 /// family, `spectra.ms2` and `meta.compare`. Whether a step also runs here is `executable`.
 pub fn steps() -> Vec<Step> {
@@ -86,6 +95,7 @@ pub fn steps() -> Vec<Step> {
         crate::flow_quant::quant_step(),
         crate::flow_massacc::massacc_step(),
     ]);
+    all.extend([mzlab_feat::steps::run_order(), mzlab_feat::steps::methods()]);
     all
 }
 
@@ -407,6 +417,8 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(rtpredict::EXECUTORS)
         .chain(plausible::EXECUTORS)
         .chain(crate::flow_massacc::EXECUTORS)
+        .chain(flow_runorder::EXECUTORS)
+        .chain(flow_methods::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?

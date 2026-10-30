@@ -1,0 +1,54 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "runorder/1",
+ "title": "runorder/1: the injection sequence of the sample table, per batch",
+ "description": "Format «runorder/1» (crates/mzlab-feat/src/runorder.rs), the output of the Flow step qc.run_order@1: per batch the number of files of each role, the first and last injection, the largest gap between two QC injections (the difference of their injection positions), the blank files and the distinct standard levels, plus warnings with the files involved. Facts only, no verdict. Batches are sorted by name, files by injection order, warnings by batch, key and files. Native command and browser write the same bytes.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "params", "batches", "warnings"],
+ "properties": {
+  "schema": {"const": "runorder/1"},
+  "params": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["qc_every_max", "std_levels_min", "blank_per_batch"],
+   "properties": {
+    "qc_every_max": {"type": "integer", "minimum": 0},
+    "std_levels_min": {"type": "integer", "minimum": 0},
+    "blank_per_batch": {"type": "boolean"}
+   }
+  },
+  "batches": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["batch", "files", "roles", "first", "last", "qc_gap_max", "blanks", "std_levels"],
+    "properties": {
+     "batch": {"type": "string"},
+     "files": {"type": "integer", "minimum": 0},
+     "roles": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
+     "first": {"type": ["integer", "null"]},
+     "last": {"type": ["integer", "null"]},
+     "qc_gap_max": {"type": ["integer", "null"], "description": "null with fewer than two QC files in the batch"},
+     "blanks": {"type": "array", "items": {"type": "string"}},
+     "std_levels": {"type": "array", "items": {"type": "number"}}
+    }
+   }
+  },
+  "warnings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["key", "batch", "value", "files"],
+    "properties": {
+     "key": {"enum": ["warn.qc.runorder.qc_gap", "warn.qc.runorder.no_qc", "warn.qc.runorder.no_blank_batch", "warn.qc.runorder.std_levels", "warn.qc.runorder.order_missing", "warn.qc.runorder.order_duplicate"]},
+     "batch": {"type": "string", "description": "empty for a warning about the whole table (order_missing, order_duplicate)"},
+     "value": {"type": ["integer", "null"], "description": "qc_gap: the gap; std_levels: the levels found; order_missing: the files without order; order_duplicate: the repeated position"},
+     "files": {"type": "array", "items": {"type": "string"}}
+    }
+   }
+  }
+ }
+}
