@@ -12,9 +12,10 @@ use crate::trace::Params;
 /// Noise floor and minimum height of the unit profile (counts per second of a triple quadrupole); the preview proposes the ones of each file.
 pub const LR_FLOOR: f64 = 3e3;
 pub const LR_MIN_HEIGHT: f64 = 7e3;
-/// Noise gates of the unit recipe of a file (`lrnoise`): the narrowest row kept, as a share of the typical peak width of the file, and the lowest apex over
-/// the noise of the flanks (the usual limit of detection).
-pub const LR_MIN_WIDTH: f64 = 0.5;
+/// Noise gates of the unit recipe of a file (`lrnoise`): the lowest apex over the noise of the flanks (the usual limit of detection) and the narrowest row
+/// kept, as a share of the typical peak width of the file. The width gate is off: on the real series of the demo it drops a documented product whose
+/// peak is sharp, so it is a choice of the user (`min_width` of `features.detect`).
+pub const LR_MIN_WIDTH: f64 = 0.0;
 pub const LR_MIN_SNR: f64 = 3.0;
 /// Width of the bins of the comparison of two MS2 spectra at unit resolution, m/z.
 const LR_MS2_BIN: f64 = 0.5;

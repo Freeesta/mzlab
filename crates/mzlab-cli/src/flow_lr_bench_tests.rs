@@ -319,12 +319,12 @@ fn bench(tag: &str, jitter: f64) -> Option<Bench> {
     })
 }
 
-/// The floors are today's numbers minus 10 % (ceilings plus 10 % for split rate, mean |dm| and the blank rows). Both paths drop the noise rows of the unit
-/// recipe (`lrnoise`: narrower than half the typical peak or under 3 times the noise of the flanks), and the profile floor is the mode of the noise lump
-/// instead of the 3 sigma floor made for centroid areas (`recipe_lr::profile_floor`): precision 0.19 -> 0.50 (A) and 0.38 -> 0.49 (B), recall 0.91 -> 0.98 (B),
-/// blank rows 461 -> 140 (A) and 127 -> 91 (B). The mean |dm| ceiling of B goes up because the weaker compounds it now finds are less accurate in mass.
-/// What is left on the blank is the constant background, which only the blank rule removes. Raising a floor is the proof of a fix; lowering one needs a
-/// reason in the PR.
+/// The floors are today's numbers minus 10 % (ceilings plus 10 % for split rate, mean |dm| and the blank rows). Both paths drop the rows under 3 times the
+/// noise of their flanks (`lrnoise`), and the profile floor is the mode of the noise lump instead of the 3 sigma floor made for centroid areas
+/// (`recipe_lr::profile_floor`): precision 0.19 -> 0.35 (A) and 0.38 -> 0.38 (B), recall 0.91 -> 0.98 (B), blank rows 461 -> 140 (A) and 127 -> 91 (B), split
+/// of B 0.66 -> 0.55. The mean |dm| ceiling of B is higher because the weaker compounds it now finds are less accurate in mass. What is left on the blank is
+/// the constant background, which only the blank rule removes. The width gate (`min_width`) is off in the recipe: it lifts precision further on this data
+/// but drops a documented sharp product of the demo series. Raising a floor is the proof of a fix; lowering one needs a reason in the PR.
 #[test]
 fn the_lr_profile_bench_at_the_nominal_jitter() {
     let Some(Bench {
@@ -347,7 +347,7 @@ fn the_lr_profile_bench_at_the_nominal_jitter() {
     );
     assert!(a.recall >= 0.90 && b.recall >= 0.88, "recall {a:?} {b:?}");
     assert!(
-        a.precision >= 0.45 && b.precision >= 0.43,
+        a.precision >= 0.33 && b.precision >= 0.36,
         "precision {a:?} {b:?}"
     );
     assert!(a.pairs_both >= 6 && b.pairs_both >= 11, "pairs {a:?} {b:?}");
@@ -357,7 +357,7 @@ fn the_lr_profile_bench_at_the_nominal_jitter() {
         "mean |dm| {a:?} {b:?}"
     );
     // merged pairs: rows between the two members of a decoy pair that sit on no true ion
-    assert!(a.merged <= 5 && b.merged <= 5, "merged {a:?} {b:?}");
+    assert!(a.merged <= 6 && b.merged <= 6, "merged {a:?} {b:?}");
     assert!(blank.0 <= 154 && blank.1 <= 100, "blank rows {blank:?}");
     // the blank rule of the table (sample against blank on the heights) keeps fewer rows and a larger share of them on true ions; compounds that sit under
     // the background of the blank at their m/z go with it

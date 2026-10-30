@@ -1,6 +1,7 @@
 //! The text of `trace::Params` in the recipe (its fingerprint). Used by `recipe` for the name of a `.mzfeatf`.
 
-use crate::trace::{Params, Peak};
+use crate::centwave::Peak;
+use crate::trace::Params;
 
 // The text of the recipe is built from this: the default peak model adds nothing, so the fingerprints of the files made before it exist keep their name.
 impl std::fmt::Debug for Params {

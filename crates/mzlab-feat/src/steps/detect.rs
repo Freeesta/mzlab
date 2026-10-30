@@ -173,7 +173,7 @@ fn preset_lr() -> Preset {
             ("axis", text("Da")),
             ("floor", num(3_000.0)),
             ("min_height", num(7_000.0)),
-            ("min_width", num(0.5)),
+            ("min_width", num(0.0)),
             ("min_snr", num(3.0)),
         ],
         evidence: "LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_WIDTH and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
