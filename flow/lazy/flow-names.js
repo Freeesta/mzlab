@@ -48,6 +48,7 @@
     "chrom.uv_peaks": ["Find UV peaks", "process", "Integrates the peaks of the UV trace of each file."],
     "features.table": ["Feature table", "process", "Detects and aligns the features of the files and writes the table."],
     "quant.calibrate": ["Apply calibration curves", "process", "Turns the signal of each compound into a concentration with the curves you imported."],
+    "qc.mass_accuracy": ["Check mass accuracy", "process", "Measures the mass error of each file on known ions and, if you choose a model, corrects the m/z of the feature table."],
     "spectra.ms2": ["Read MS2 spectra", "input", "Reads the MS2 scans of data-dependent runs as spectra."],
     "table.drift": ["Correct drift", "process", "Brings each batch to the level of the QC files along the injection order."],
     "table.kmd": ["Kendrick mass defect", "search", "Lists the series of ions that share the same mass defect."],

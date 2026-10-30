@@ -947,18 +947,8 @@
                   },
                   {"type":"number","minimum":0,"default":3,"description":"Offset above which the file is flagged"},
                   {"type":"number","minimum":0,"default":2,"description":"Spread above which the file is flagged"},
-                  {
-                    "type":"number",
-                    "minimum":0,
-                    "default":0.1,
-                    "description":"RT shift of an internal standard above which the file is flagged"
-                  },
-                  {
-                    "type":"number",
-                    "minimum":0,
-                    "default":0.2,
-                    "description":"Spread of the area of an internal standard above which the batch is flagged"
-                  }
+                  {"type":"number","minimum":0,"default":0.1,"description":"RT shift limit of internal standards"},
+                  {"type":"number","minimum":0,"default":0.2,"description":"Area spread limit of internal standards"}
                 ]
               }
             },

@@ -41,8 +41,8 @@ pub fn massacc_step() -> Step {
             Param::choice("model", "Correction of the table m/z", &["none", "offset", "linear_mz", "linear_mz_rt"]).default_str(d.model.name()),
             Param::number("warn_offset_ppm", "Offset above which the file is flagged").default_num(d.warn_offset_ppm).min(0.0).unit("ppm").advanced(),
             Param::number("warn_spread_ppm", "Spread above which the file is flagged").default_num(d.warn_spread_ppm).min(0.0).unit("ppm").advanced(),
-            Param::number("warn_is_rt_min", "RT shift of an internal standard above which the file is flagged").default_num(d.warn_is_rt_min).min(0.0).unit("min").advanced(),
-            Param::number("warn_is_area_rsd", "Spread of the area of an internal standard above which the batch is flagged").default_num(d.warn_is_area_rsd).min(0.0).advanced(),
+            Param::number("warn_is_rt_min", "RT shift limit of internal standards").default_num(d.warn_is_rt_min).min(0.0).unit("min").advanced(),
+            Param::number("warn_is_area_rsd", "Area spread limit of internal standards").default_num(d.warn_is_area_rsd).min(0.0).advanced(),
         ],
         runs_in: RunsIn {
             wasm: Some("table"),
