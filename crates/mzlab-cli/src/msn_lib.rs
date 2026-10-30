@@ -229,3 +229,22 @@ pub fn run(args: Vec<String>, tmp: &Path) -> Result<(Vec<u8>, String)> {
             .with("detail", "usage: mzlab-cli msn-lib add|build|export|search")),
     }
 }
+
+/// `mzlab-cli msn-lib ...`: the library of MSn trees; the data on stdout, the notices on stderr.
+pub(crate) fn cmd(args: Vec<String>) -> crate::Outcome {
+    static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let k = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("mzlab-cli-{}-lib{k}", std::process::id()));
+    let r = std::fs::create_dir_all(&tmp)
+        .map_err(io)
+        .and_then(|_| run(args, &tmp));
+    let _ = std::fs::remove_dir_all(&tmp);
+    match r {
+        Ok((data, note)) => crate::Outcome {
+            code: 0,
+            stdout: data,
+            stderr: note,
+        },
+        Err(e) => crate::Outcome::fail(&e.to_string()),
+    }
+}

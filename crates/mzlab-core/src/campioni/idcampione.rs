@@ -3,9 +3,9 @@
 
 use super::Campione;
 
-const MATRICES: [&str; 2] = ["TW", "MQ"];
-const IRRADIATED: [&str; 6] = ["C", "N2", "O2", "AIR", "H2O2", "PMS"];
-const DARK: [&str; 3] = ["H2O2D", "PMSD", "BLKD"];
+pub(super) const MATRICES: [&str; 2] = ["TW", "MQ"];
+pub(super) const IRRADIATED: [&str; 6] = ["C", "N2", "O2", "AIR", "H2O2", "PMS"];
+pub(super) const DARK: [&str; 3] = ["H2O2D", "PMSD", "BLKD"];
 const BLANK: [&str; 3] = ["BLK", "BLKP", "SB"];
 
 /// What an ID says: the role, the matrix, the condition, the time in minutes and the standard concentration.
