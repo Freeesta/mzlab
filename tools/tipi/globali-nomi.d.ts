@@ -233,7 +233,6 @@ declare var TYPORD: any;
 declare var UIP: any;
 declare var UIP_GROUP_KEY: any;
 declare var UIP_KEY: any;
-declare var UNOPEN_RE: any;
 declare var UPBUSY: any;
 declare var UPROWS: any;
 declare var VIEW_ALIAS: any;
