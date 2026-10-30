@@ -15,8 +15,10 @@
   /** the facets of the indexes of OPFS (`series_facets` of the proofs .wasm: the Rust rule of `flow run`) into `F.fileFacets`; `changed` runs when they differ @param {() => void} changed */
   F.learnFacets = async changed => {
     const kit = F.runners && F.runners.web && F.runners.web.kit;
+    // the runner of the web comes with the late modules: ask again until it is there
+    if (!kit) { if ((F.facetTries = (F.facetTries || 0) + 1) < 120) setTimeout(() => F.learnFacets(changed), 1000); return; }
     try {
-      const files = kit ? await kit.listIdx() : [], key = files.map((/** @type {any} */ f) => f.name + f.key).join();
+      const files = await kit.listIdx(), key = files.map((/** @type {any} */ f) => f.name + f.key).join();
       if (key === F.facetKey) return;
       F.facetKey = key;
       const got = files.length ? JSON.parse(await (await kit.getPool()).ident("proofs", "series_facets", { paths: files.map((/** @type {any} */ f) => f.path) })) : null;

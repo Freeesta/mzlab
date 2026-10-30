@@ -169,7 +169,7 @@ try:
 
             def facets(run=run, pol=pol, hr=hr):
                 cp = check_plan(pol, hr); (run / "check.json").write_text(json.dumps(cp))
-                nat = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "check.json"), "--in", str(run), "--dry", "--json"], cwd=ROOT, capture_output=True, text=True)
+                nat = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "check.json"), "--in", str(run), "--dry-run", "--json"], cwd=ROOT, capture_output=True, text=True)
                 native = [{"at": p["instance"] + "." + p["port"] + ":" + p["error_key"], "params": p["params"]} for p in json.loads(nat.stdout).get("problems", [])]
                 r = pg.evaluate(CHECK, [cp]); res = "hr" if hr else "lr"
                 assert r["facets"] == {"resolution": [res], "polarity": [pol]}, r["facets"]
