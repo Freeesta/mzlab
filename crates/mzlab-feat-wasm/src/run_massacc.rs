@@ -8,7 +8,7 @@ use mzlab_core::json::{parse, Value};
 use mzlab_feat::massacc::{self, Params};
 use wasm_bindgen::prelude::*;
 
-use crate::{js_err, table_reader, JsReader};
+use crate::{js_err, JsReader};
 
 fn non_empty(b: &[u8]) -> Option<&[u8]> {
     (!b.is_empty()).then_some(b)
@@ -87,7 +87,10 @@ pub fn mass_accuracy(
             size as u64,
         )
     };
-    let mut reader = table_reader(table_read);
+    let mut reader = JsReader {
+        read: table_read,
+        k: 0,
+    };
     let table_in = (table_size > 0.0).then_some((&mut reader, table_size as u64));
     let out = massacc::check(
         &mut open,

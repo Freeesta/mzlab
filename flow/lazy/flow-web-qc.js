@@ -1,5 +1,5 @@
 // @ts-check
-// Flow (administrator mode): qc.mass_accuracy in this browser. The check of the mass error of every file (and, with a model, the feature table with its m/z corrected) is `mass_accuracy` of the `table` .wasm,
+// Flow (administrator mode): qc.mass_accuracy in this browser. The check of the mass error of every file (and, with a model, the feature table with its m/z corrected) is `mass_accuracy` of the `hr` .wasm,
 // one call to the pool that reads the .mzidx of the files from OPFS: the Rust function is the one `flow run` calls, so the massacc/1 text and the corrected .mzfeat are the same bytes. The lab list of background ions is the
 // file the site serves (contaminanti.json), the sample list and the CSV of reference ions are files of the plan (their text in S.samplesJson). The result is kept like the other texts, under the key of the job; the corrected table
 // is kept beside it in OPFS under the SHA-256 of the massacc/1 text (the view offers it). Raw data and indexes are never written. English only.
@@ -56,7 +56,7 @@
       const params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
       let out;
       try {
-        out = await p.ident("table", "mass_accuracy", { paths: files.map((/** @type {any} */ f) => f.src.path), names: JSON.stringify(files.map((/** @type {any} */ f) => [f.name, ""])), samples: samples === null ? null : enc(samples), csv: csv === null ? null : enc(csv),
+        out = await p.ident("proofs", "mass_accuracy", { paths: files.map((/** @type {any} */ f) => f.src.path), names: JSON.stringify(files.map((/** @type {any} */ f) => [f.name, ""])), samples: samples === null ? null : enc(samples), csv: csv === null ? null : enc(csv),
           contaminants: await contaminants(), table: wired ? await p.fs.read(J().DIR + alKey + ".mzfeat") : null, params }, true);
       } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text: out.text };

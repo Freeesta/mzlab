@@ -15,4 +15,4 @@ lettura.rs::scansione
 zip.rs::zip
 zip.rs::unzip
 # qc.mass_accuracy: the corrected feature table is the input table with one column rewritten, so it is no larger than the file the page already holds (flow-web-qc.js keeps it in OPFS at once)
-massacc.rs::table
+run_massacc.rs::table

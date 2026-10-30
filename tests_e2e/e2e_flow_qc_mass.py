@@ -1,4 +1,4 @@
-"""Flow «This browser» qc.mass_accuracy (flow-web-qc.js, `mass_accuracy` of the `table` .wasm): over the five demo full-scan files the browser writes the massacc/1 report (before the alignment, from the indexes alone, and after it, with the
+"""Flow «This browser» qc.mass_accuracy (flow-web-qc.js, `mass_accuracy` of the `hr` .wasm): over the five demo full-scan files the browser writes the massacc/1 report (before the alignment, from the indexes alone, and after it, with the
 offset model correcting the feature table) and the corrected .mzfeat that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes them from OPFS; the view draws the table and the two charts without axe violations.
 Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen and python3: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_qc_mass.py"""
 

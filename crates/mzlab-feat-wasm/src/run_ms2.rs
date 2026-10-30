@@ -22,3 +22,8 @@ pub fn flow_ms2(
 #[cfg(feature = "flow_formula")]
 #[path = "run_formula.rs"]
 pub mod run_formula;
+
+// `qc.mass_accuracy` (same .wasm, same feature): declared here so that lib.rs does not grow.
+#[cfg(feature = "flow_ms2")]
+#[path = "run_massacc.rs"]
+pub mod run_massacc;

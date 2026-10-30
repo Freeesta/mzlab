@@ -11,7 +11,6 @@ use wasm_bindgen::prelude::*;
 
 pub mod core;
 pub mod filterspec;
-pub mod massacc;
 pub mod pol;
 pub mod rows_mgf;
 
