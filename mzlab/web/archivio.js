@@ -142,7 +142,10 @@ export async function promote(/** @type {string} */ kind, /** @type {string} */ 
     if (nuovo(kind, info)) { try { await d.removeEntry(from); } catch (_) { /* optional */ } throw fail("error.newerFormat", { file: to, version: /** @type {import("./manifesto.js").Info} */ (info).versione_formato }); }
   }
   try { await d.removeEntry(to); } catch (_) { /* nothing to replace */ }
-  if (typeof fh.move === "function") { await fh.move(to); const f = await (await d.getFileHandle(to)).getFile(); told("put", kind, to, f.size); return f; }
+  // move(directory, name) is the form every engine that has move() takes (WebKit rejects move(name) with "Not enough arguments"); a move that fails falls back to the copy
+  if (typeof fh.move === "function") {
+    try { await fh.move(d, to); const f = await (await d.getFileHandle(to)).getFile(); told("put", kind, to, f.size); return f; } catch (_) { /* copied below */ }
+  }
   const f = await put(kind, to, await fh.getFile());          // no move() in this browser: a copy
   try { await d.removeEntry(from); } catch (_) { /* optional */ }
   return f;
