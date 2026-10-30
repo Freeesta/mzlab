@@ -29,21 +29,78 @@ pub fn radice() -> Option<PathBuf> {
 
 // The data repository was tidied (reorganize-step1): folders moved. (old prefix, new prefix, name test); `percorso`
 // tries the path as asked, then the moved/unmoved twin, so code and data can merge in any order.
-const MOVES: [(&str, &str, fn(&str) -> bool); 4] = [
-    ("esperimenti/", "esperimenti/2026-10/", |n| n.starts_with("loc_") || n.starts_with("coo_")),
-    ("esperimenti/", "esperimenti/altro/", |n| ["Computazio", "Sostanze psicoattive", "motore_wasm"].contains(&n)),
-    ("coordinamento/", "coordinamento/documenti/", |n| ["studi", "proposte", "consegne", "riferimenti", "gemini_esiti"].contains(&n)),
+type Move = (&'static str, &'static str, fn(&str) -> bool);
+const MOVES: &[Move] = &[
+    ("esperimenti/", "esperimenti/2026-10/", |n| {
+        n.starts_with("loc_") || n.starts_with("coo_")
+    }),
+    ("esperimenti/", "esperimenti/altro/", |n| {
+        ["Computazio", "Sostanze psicoattive", "motore_wasm"].contains(&n)
+    }),
+    ("coordinamento/", "coordinamento/documenti/", |n| {
+        [
+            "studi",
+            "proposte",
+            "consegne",
+            "riferimenti",
+            "gemini_esiti",
+        ]
+        .contains(&n)
+    }),
     ("coordinamento/prompt/raw", "prompt/raw", |_| true),
+    // step 2: book, validation and study folders
+    ("Libro_Untargeted", "libro/testo", |_| true),
+    ("coordinamento/libro_untargeted", "libro/piano", |_| true),
+    ("corso/untargeted", "libro/lezioni", |_| true),
+    ("studio/benchmark", "validazione/benchmark", |_| true),
+    ("studio/validazione/", "validazione/", |n| {
+        [
+            "DATI_REALI_dam.md",
+            "DATI_REALI_mzfinder_pipeline.md",
+            "DATI_REALI_parita_pr320_pr319.md",
+            "DATI_REALI_raw_thermo.md",
+            "DATI_REALI_rotte_lr_hr.md",
+            "DATI_REALI_wiff.md",
+            "G1",
+            "H1_K1_timololo.md",
+            "RUOLI_TEMPI.md",
+            "V0_timololo.md",
+            "V1_sintetici.md",
+            "VERITA_TP_schema.md",
+        ]
+        .contains(&n)
+    }),
+    (
+        "studio/nts-validazione",
+        "validazione/nts-validazione",
+        |_| true,
+    ),
+    ("studio/", "coordinamento/documenti/studi/", |n| {
+        [
+            "AUDIT_USO_LIMITI.md",
+            "MZMINE_FATTIBILITA.md",
+            "PIPELINE_IDENTITA.md",
+            "PIPELINE_IDENTITA_PACCHETTI.md",
+            "CD",
+        ]
+        .contains(&n)
+    }),
+    ("studio/paper", "coordinamento/documenti/paper", |_| true),
+    ("studio/degdma", "esperimenti/altro/degdma", |_| true),
 ];
 
 fn first_name(rest: &str, prefix: &str) -> String {
-    if prefix.ends_with('/') { rest.split('/').next().unwrap_or("").to_string() } else { String::new() }
+    if prefix.ends_with('/') {
+        rest.split('/').next().unwrap_or("").to_string()
+    } else {
+        String::new()
+    }
 }
 
 /// The other spellings of `rel` (old layout <-> new layout).
 fn gemelli(rel: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for (old, new, ok) in MOVES {
+    for &(old, new, ok) in MOVES {
         if let Some(rest) = rel.strip_prefix(old) {
             if ok(&first_name(rest, old)) {
                 out.push(format!("{new}{rest}"));

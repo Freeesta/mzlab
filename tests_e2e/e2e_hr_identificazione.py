@@ -41,6 +41,16 @@ try:
             assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
             assert pg.is_visible("#libwhat") and "Livello" in pg.inner_text("#li-list thead")
             assert pg.evaluate("(() => { const L = document.querySelector('#li-list'); return L.scrollWidth - L.clientWidth; })()") <= 1, "no horizontal overflow"
+            xs = pg.evaluate("[...document.querySelectorAll('#li-list tr')].map(tr=>[...tr.children].map(c=>Math.round(c.getBoundingClientRect().x)))")
+            assert len(xs) > 10 and all(len(x) == len(xs[0]) for x in xs), "header and rows have the same columns"
+            assert all(all(abs(a - b) <= 1 for a, b in zip(x, xs[0])) for x in xs), ("the column x positions are the same in every row", xs[:3])
+            assert pg.evaluate("(()=>{const h=document.querySelector('#li-list th'),sc=document.querySelector('#li-list');sc.scrollTop=200;return getComputedStyle(h).position==='sticky'&&Math.abs(h.getBoundingClientRect().top-sc.getBoundingClientRect().top)<=2&&getComputedStyle(document.querySelector('#li-list td.num')).textAlign==='right'})()"), "sticky header, numbers on the right"
+            w0 = pg.evaluate("document.querySelector('#libwhat').offsetWidth")
+            pg.click("#libwhat .lw-mx"); assert pg.evaluate("document.querySelector('#libwhat').offsetWidth") > w0 or w0 >= pg.evaluate("innerWidth*0.95"), "maximised"
+            assert pg.get_attribute("#libwhat .lw-mx", "aria-pressed") == "true"
+            pg.click("#libwhat .lw-mx"); assert pg.get_attribute("#libwhat .lw-mx", "aria-pressed") == "false"
+            pg.evaluate("(()=>{const d=document.querySelector('#libwhat');d.style.width='900px';d.style.height='600px'})()"); pg.wait_for_function("(JSON.parse(localStorage.getItem('mzlab.libwhat.size')||'null')||{}).w===900", timeout=5000)
+            pg.evaluate("(()=>{const d=document.querySelector('#libwhat');d.style.width='';d.style.height='';localStorage.removeItem('mzlab.libwhat.size')})()")
             pg.click("#lw-dl summary")
             with pg.expect_download() as dl: pg.click("#li-xlsx")
             assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500

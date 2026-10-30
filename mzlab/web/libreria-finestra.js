@@ -35,7 +35,7 @@ function groupsOf(/** @type {any[]} */ rs) {
 }
 
 const CSS = `#libwhat{width:96vw;height:92vh;max-width:none;max-height:none;min-width:min(640px,96vw);min-height:420px;resize:both;overflow:hidden;padding:12px 14px;box-sizing:border-box}
-#libwhat[open]{display:flex;flex-direction:column;gap:6px}#libwhat .lw-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}#libwhat h3{margin:0;font-size:16px}
+#libwhat[open]{display:flex;flex-direction:column;gap:6px}#libwhat.max{width:98vw!important;height:96vh!important;resize:none}#libwhat .lw-mx{min-width:24px;min-height:24px}#libwhat .lw-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}#libwhat h3{margin:0;font-size:16px}
 #libwhat .lw-q{flex:1;min-width:120px}#libwhat .lw-prec input{width:96px}#libwhat button,#libwhat summary,#libwhat select,#libwhat input{min-height:24px}#libwhat input{margin:0}#libwhat input[type=checkbox]{width:auto}
 #libwhat .lw-pop{position:relative}#libwhat .lw-pop>summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:2px 8px;display:inline-flex;align-items:center;min-width:24px;background:var(--panel)}
 #libwhat .lw-pop>summary::-webkit-details-marker{display:none}#libwhat .lw-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:5;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;min-width:260px;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 18%,transparent);display:flex;flex-direction:column;gap:6px;font-size:12px}
@@ -59,13 +59,22 @@ function ensureCss() {
   const s = document.createElement("style"); s.id = "lwcss"; s.textContent = CSS; document.head.appendChild(s);
 }
 
+const SIZE = "mzlab.libwhat.size", CHUNK = 120;
+const sizeRead = () => { try { return JSON.parse(localStorage.getItem(SIZE) || "null"); } catch (_) { return null; } };
+const sizeSave = (/** @type {number} */ w, /** @type {number} */ hh) => { try { localStorage.setItem(SIZE, JSON.stringify({ w, h: hh })); } catch (_) { /* no storage */ } };
+const mxSet = (/** @type {Element} */ b, /** @type {boolean} */ on) => { b.setAttribute("aria-pressed", String(on)); b.setAttribute("title", t(on ? "lib.all.restore" : "lib.all.max")); b.setAttribute("aria-label", t(on ? "lib.all.restore" : "lib.all.max")); };
+
 /** The window (created once), emptied for a new use; Esc closes an open popup before the window. */
 function dialog() {
   ensureCss();
   let d = /** @type {HTMLDialogElement | null} */ (document.getElementById("libwhat"));
   if (!d) {
     d = document.createElement("dialog"); d.id = "libwhat"; d.setAttribute("aria-labelledby", "lw-t"); document.body.appendChild(d);
-    const dd = d;
+    const dd = d, sz = sizeRead();
+    if (sz && sz.w > 0 && sz.h > 0) { d.style.width = Math.min(sz.w, innerWidth * 0.98) + "px"; d.style.height = Math.min(sz.h, innerHeight * 0.98) + "px"; }
+    // the size the user drags to is remembered (not the default, not the maximised one)
+    let tm = 0; FRAME.ro(d, () => { if (!dd.open || !dd.style.width || dd.classList.contains("max")) return; clearTimeout(tm); tm = setTimeout(() => sizeSave(dd.offsetWidth, dd.offsetHeight), 300); });
+    d.addEventListener("click", e => { const b = /** @type {HTMLElement} */ (e.target).closest(".lw-mx"); if (!b) return; const on = dd.classList.toggle("max"); mxSet(b, on); });
     d.addEventListener("cancel", e => { const o = dd.querySelector(".lw-pop[open]"); if (o) { e.preventDefault(); o.removeAttribute("open"); /** @type {HTMLElement} */ (o.querySelector("summary")).focus(); } });
     // one popup at a time; a click outside closes it
     d.addEventListener("toggle", e => { const x = /** @type {HTMLDetailsElement} */ (e.target); if (x.classList && x.classList.contains("lw-pop") && x.open) dd.querySelectorAll(".lw-pop[open]").forEach(o => { if (o !== x) o.removeAttribute("open"); }); }, true);
@@ -77,7 +86,7 @@ const dlIcon = () => (typeof IC_DL === "string" ? IC_DL.replace(";margin-right:4
 const pop = (/** @type {string} */ id, /** @type {string} */ face, /** @type {string} */ label, /** @type {string} */ body) =>
   `<details class="lw-pop" id="${id}"><summary title="${EHt(label)}" aria-label="${EHt(label)}">${face}</summary><div class="lw-menu">${body}</div></details>`;
 const head = (/** @type {string} */ title, /** @type {string} */ sub, /** @type {string} */ mid, /** @type {string} */ opts, /** @type {string} */ dls) => `<div class="lw-head"><h3 id="lw-t">${title}</h3><span class="lw-q sm muted" id="lw-q">${sub}</span>${mid}
-  ${pop("lw-opt", `⚙ ${t("lw.opt")}`, t("lw.opt.title"), opts)}${pop("lw-dl", dlIcon(), t("lw.dl"), dls)}<button type="button" class="x" id="lw-x" title="${t("common.close")}" aria-label="${t("common.close")}">&times;</button></div>`;
+  ${pop("lw-opt", `⚙ ${t("lw.opt")}`, t("lw.opt.title"), opts)}${pop("lw-dl", dlIcon(), t("lw.dl"), dls)}<button type="button" class="lw-mx" aria-pressed="false">⤢</button><button type="button" class="x" id="lw-x" title="${t("common.close")}" aria-label="${t("common.close")}">&times;</button></div>`;
 const thrHtml = () => { const T = LV().thresholds(); return `<b>${t("lv.thr.title")}</b>${THR_KEYS.map(k => `<label>${t(`lv.thr.${k}`)} <input data-thr="${k}" inputmode="decimal" value="${String(T[k])}"></label>`).join("")}<button type="button" id="lw-thr-reset">${t("lv.thr.reset")}</button>`; };
 function thrBind(/** @type {HTMLElement} */ root, /** @type {() => void} */ again) {
   root.querySelectorAll("[data-thr]").forEach(el => { const i = /** @type {HTMLInputElement} */ (el); i.onchange = () => { const v = numIt(i.value); if (v >= 0) { LV().setThreshold(i.dataset.thr, v); again(); } }; });
@@ -276,7 +285,7 @@ function showQuery(q, ctx) {
     <section class="lw-right" id="lw-detail" aria-live="polite"></section></div>`;
   const $ = (/** @type {string} */ s) => /** @type {any} */ (d.querySelector(s));
   const msg = (/** @type {string | undefined} */ x) => { $("#lw-msg").textContent = x || ""; };
-  $("#lw-x").onclick = () => d.close(); $("#lw-libs").onclick = () => { d.close(); L.open(); };
+  $("#lw-x").onclick = () => d.close(); $("#lw-libs").onclick = () => { d.close(); L.open(); }; mxSet($(".lw-mx"), d.classList.contains("max"));
   if (ctx.back) { $("#lw-back").onclick = ctx.back; $("#lw-goto").onclick = ctx.show; }
   /** @type {View} */ const V = { q, ctx, d, L, st, $, msg, pics: new Map() };
   d.querySelectorAll("[role=tab]").forEach((/** @type {HTMLElement} */ b) => {
@@ -334,7 +343,7 @@ async function identifyAll(/** @type {number} */ k) {
     d.innerHTML = head(t("lib.all.title"), EHt(f.label || f.file) + " · " + t("lib.all.sub", { ppm: L.profOf(f).v }), `<span class="sm" id="li-st" role="status"></span>`,
       `<label style="justify-content:flex-start"><input type="checkbox" id="li-all"> ${t("lib.all.showAll", { n: 0 })}</label><hr>${thrHtml()}<hr><button type="button" id="lw-libs">${t("lib.libs")}</button>`,
       `<button type="button" id="li-xlsx">Excel</button><button type="button" id="li-mgf">${t("lib.all.exportMgf")}</button><button type="button" id="li-msp">${t("lib.all.exportMsp")}</button>`) + `<div id="li-body" class="lw-left" style="flex:1;min-height:0"></div>`;
-    $("#lw-x").onclick = () => d.close(); $("#lw-libs").onclick = () => { d.close(); L.open(); };
+    $("#lw-x").onclick = () => d.close(); $("#lw-libs").onclick = () => { d.close(); L.open(); }; mxSet($(".lw-mx"), d.classList.contains("max"));
   };
   shell(); if (!d.open) d.showModal();
   const say = (/** @type {string} */ x, /** @type {number} */ v, /** @type {number} */ m) => { $("#li-st").innerHTML = h`${x}${m ? raw(h` <progress max="${m}" value="${v}"></progress>`) : ""}`; };
@@ -365,7 +374,10 @@ async function identifyAll(/** @type {number} */ k) {
       rows.sort((a, b) => so.dir * cmp(val(a), val(b)));
       const cnt = nHid ? h`<div class="sm cont-cnt" role="status">${raw(t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid }))} · <button type="button" id="li-chid">${raw(t(showHid ? "cont.hide" : "cont.show"))}</button></div>` : "";
       const head = thSort("rt", "RT", so, "num") + thSort("prec", "<i>m/z</i>", so, "num") + thSort("name", t("lib.col.name"), so) + h`<th scope="col">${raw(t("lst.col.formula"))}</th>` + thSort("ent", t("lib.all.bestEntropy"), so, "num") + thSort("n", t("lib.all.scans"), so, "num") + thSort("lv", t("lw.col.level"), so) + (hasK ? h`<th scope="col">${raw(t("lib.all.contaminant"))}</th>` : "");
-      const body = rows.map((x, i) => h`<tr class="row${i === sel ? " sel" : ""}" tabindex="0" data-i="${i}" title="${raw(t("lib.all.openBest"))}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td class="nm">${x.g.best.name || ""}</td><td>${raw(x.g.best.formula ? fmtFormula(x.g.best.formula) : "")}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}</td><td>${raw(lvCell(x.v))}</td>${raw(hasK ? h`<td title="${x.k || ""}">${x.k || ""}</td>` : "")}</tr>`).join("") || h`<tr><td colspan="7" class="muted">${raw(t("lib.all.noMatch"))}</td></tr>`;
+      const trs = rows.map((x, i) => h`<tr class="row${i === sel ? " sel" : ""}" tabindex="0" data-i="${i}" title="${raw(t("lib.all.openBest"))}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td class="nm">${x.g.best.name || ""}</td><td>${raw(x.g.best.formula ? fmtFormula(x.g.best.formula) : "")}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}</td><td>${raw(lvCell(x.v))}</td>${raw(hasK ? h`<td title="${x.k || ""}">${x.k || ""}</td>` : "")}</tr>`);
+      // hundreds of precursors: the rows arrive in chunks while scrolling (always up to the selected one)
+      let n = Math.max(CHUNK, Math.ceil((sel + 1) / CHUNK) * CHUNK);
+      const body = trs.slice(0, n).join("") || h`<tr><td colspan="7" class="muted">${raw(t("lib.all.noMatch"))}</td></tr>`;
       $("#li-body").innerHTML = h`${raw(cnt)}<div class="lw-tbl" id="li-list"><table><colgroup><col style="width:5em"><col style="width:7.5em"><col><col style="width:9em"><col style="width:6em"><col style="width:5em"><col style="width:5em">${raw(hasK ? "<col style=\"width:10em\">" : "")}</colgroup>
         <thead><tr>${raw(head)}</tr></thead><tbody>${raw(body)}</tbody></table></div>`;
       $("#li-st").textContent = t("lib.all.summary", { q: queries.length, ms, g: groups.length, r: rows.length });
@@ -378,12 +390,14 @@ async function identifyAll(/** @type {number} */ k) {
         { name: t("lib.all.sheetPar"), head: [t("lib.all.parameter"), t("lib.all.value")], rows: [[t("lib.table.file"), f.label || f.file || ""], [t("lib.all.precTol"), `${L.profOf(f).v} ppm`], [t("lib.all.peakTol"), t("lib.all.peakTolVal")], [t("lib.all.shown"), t("lib.all.shownVal", { n: rows.length, total: groups.length })], [t("lib.all.level"), t("lib.all.levelVal")]], widths: [28, 70] }], { table: "library-all", file: String(f.label || f.file || "") }); };
       const box = $("#li-list");
       sortBind(box, so, show); rowKeys(box);
-      box.querySelectorAll("tr.row").forEach((/** @type {HTMLElement} */ tr) => tr.onclick = () => {
+      box.onscroll = () => { if (n < trs.length && box.scrollTop + box.clientHeight > box.scrollHeight - 200) { box.querySelector("tbody").insertAdjacentHTML("beforeend", h`${raw(trs.slice(n, n + CHUNK).join(""))}`); n += CHUNK; } };
+      box.onclick = (/** @type {MouseEvent} */ e) => {
+        const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("tr.row")); if (!tr) return;
         sel = Number(tr.dataset.i); const g = rows[sel].g, b = g.best, qq = queries.find(x => x.key === b.key);
         if (!qq) return;
         const back = () => { shell(); show(); const x = /** @type {HTMLElement | null} */ (d.querySelector(`#li-list tr.row[data-i="${sel}"]`)); if (x) x.focus(); };
         showQuery({ peaks: qq.peaks, prec: qq.prec, pol: qq.pol, f, rt: qq.rt, title: `${f.label || ""} · RT ${Number(qq.rt).toFixed(2)} min` }, { k: k2, nScans: g.n, back, show: () => gotoScan(b.key, d) });
-      });
+      };
     };
     show();
   } catch (e) { $("#li-st").innerHTML = h`<span class="err">${/** @type {Error} */ (e).message}</span>`; }

@@ -133,6 +133,8 @@ I18N.add("it", {
   "lib.typePrec": "Scrivi il precursore e premi Cerca.",
   "lib.noMs2": "Questo file non ha scansioni MS2.",
   "lib.all.title": "Identifica tutte le MS2 del file",
+  "lib.all.max": "Ingrandisci la finestra",
+  "lib.all.restore": "Ripristina la dimensione della finestra",
   "lib.all.sub": "tolleranze: precursore {ppm} ppm, picchi 0.01 Da · candidati con il livello proposto e le prove (Schymanski), mai un'identificazione certa",
   "lib.all.reading": "Leggo le MS2 del file…",
   "lib.all.readingN": "Leggo le MS2 del file: {i} di {n}",
