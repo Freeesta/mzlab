@@ -25,8 +25,8 @@ pub(super) fn suspects() -> Step {
         params: vec![
             Param::number("ppm", "Mass tolerance").min(0.0).default_num(5.0).unit("ppm"),
             Param::text("adducts", "Adducts").default_str("[M+H]+,[M+NH4]+,[M+Na]+,[M-H]-,[M+Cl]-").doc("Comma-separated; the ones of the polarity of the table are searched"),
-            Param::number("rt_window_min", "RT window").min(0.0).unit("min").doc("Off when empty; a candidate whose listed RT is farther from the feature is dropped (only rows that list an RT)"),
-            Param::integer("min_fragments", "Fragments needed").min(0.0).doc("Off when empty; keeps the candidates with at least this many of their listed fragments found in the MS2 of the feature"),
+            Param::number("rt_window_min", "RT window").min(0.0).unit("min").doc("Drops a candidate whose listed RT is farther than this from the feature; off when empty"),
+            Param::integer("min_fragments", "Fragments needed").min(0.0).doc("Keeps a candidate only if this many of its listed fragments are in the MS2; off when empty"),
             Param::integer("max_hits_per_feature", "Formulas per feature").min(1.0).default_num(10.0).doc("Most formula groups kept per feature, the closest in mass first"),
             Param::number("ms2_rt_min", "MS2 RT tolerance").min(0.0).default_num(0.2).unit("min").doc("Without feature ids in the spectra: largest RT distance between a scan and the feature").advanced(),
         ],

@@ -1074,12 +1074,12 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "description":"Off when empty; a candidate whose listed RT is farther from the feature is dropped (only rows that list an RT)"
+                    "description":"Drops a candidate whose listed RT is farther than this from the feature; off when empty"
                   },
                   {
                     "type":"integer",
                     "minimum":0,
-                    "description":"Off when empty; keeps the candidates with at least this many of their listed fragments found in the MS2 of the feature"
+                    "description":"Keeps a candidate only if this many of its listed fragments are in the MS2; off when empty"
                   },
                   {
                     "type":"integer",
