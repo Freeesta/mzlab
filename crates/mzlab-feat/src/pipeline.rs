@@ -51,7 +51,7 @@ pub fn analyse_with<R: ReadAt>(
     progress: &mut dyn FnMut(usize, usize),
 ) -> Result<(FileFeatures, Ms2Links)> {
     let mut f = time("detect: traces", || detect_with(index, p, progress))?;
-    let multi = time("detect: quality + resolve", || {
+    let mut multi = time("detect: quality + resolve", || {
         if s.split {
             Ok(assess_and_resolve(index, &mut f, p, &s.quality, &s.resolve)?.multi)
         } else {
@@ -59,6 +59,9 @@ pub fn analyse_with<R: ReadAt>(
             Ok::<_, mzlab_core::error::Error>(Vec::new())
         }
     })?;
+    if p.min_width > 0.0 || p.min_snr > 0.0 {
+        crate::lrnoise::reject(&mut f, &mut multi, p);
+    }
     time("detect: isotopes", || group(&mut f, &s.iso))?;
     let links = time("detect: ms2 links", || link(index, &mut f, p, &s.ms2))?;
     time("detect: mixtures", || {

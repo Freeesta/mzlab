@@ -240,9 +240,10 @@
    "params": {
     "axis": "Da",
     "floor": 3000,
-    "min_height": 7000
+    "min_height": 7000,
+    "min_snr": 3
    },
-   "evidence": "LR_FLOOR and LR_MIN_HEIGHT of recipe_lr.rs; the preview proposes the values of each file",
+   "evidence": "LR_FLOOR, LR_MIN_HEIGHT and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file",
    "algorithm": "masstrace"
   }
  },

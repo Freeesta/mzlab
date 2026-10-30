@@ -27,10 +27,38 @@ fn sha(files: &[(String, Vec<u8>)], name: &str) -> String {
 }
 
 /// The default run (the algorithm `masstrace`, every parameter at its default) writes these bytes; moving a parameter between the descriptor of the
-/// step and that of an algorithm must not change them, nor the name of the file.
+/// step and that of an algorithm must not change them, nor the name of the file. The fixture is a unit-resolution file, so its recipe text carries the
+/// noise gate of the unit recipe (`min_snr`).
 #[test]
 fn the_default_detection_is_byte_identical_to_the_one_before_the_scope_moved() {
     let files = run("default", &[]);
+    for (name, expected) in [
+        (
+            "det-s_t000.mzfeatf",
+            "ff058e59e3f2c26aafc5814762964760818dfaf4feb01ff7cb26dc2ae27ef1b3",
+        ),
+        (
+            "det-s_t010.mzfeatf",
+            "3d297c50185165352e3931b5ee583600301babb5136249c835e04334b5f33ff6",
+        ),
+        (
+            "det-s_t030.mzfeatf",
+            "497f7699cedf24bd0e67991d8c7b4dd62849b36ddd3768bfe162f0af1479861a",
+        ),
+        (
+            "gap.mzfeat",
+            "1f728c9100c3281b0b8b58547537722543cc663bca1d6c58c45d6e7432f6511f",
+        ),
+    ] {
+        assert_eq!(sha(&files, name), expected, "{name}");
+    }
+}
+
+/// With the two noise gates set to 0 the unit recipe writes the bytes it wrote before them: the gates drop no row of this fixture and the recipe text
+/// has no field for a gate that is off.
+#[test]
+fn the_noise_gates_off_write_the_bytes_of_the_recipe_without_them() {
+    let files = run("gates_off", &["det.min_width=0", "det.min_snr=0"]);
     for (name, expected) in [
         (
             "det-s_t000.mzfeatf",
