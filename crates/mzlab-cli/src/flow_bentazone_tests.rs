@@ -41,7 +41,7 @@ fn b64(data: &[u8]) -> String {
     s
 }
 
-fn array(acc: &str, v: &[f64]) -> String {
+pub(crate) fn array(acc: &str, v: &[f64]) -> String {
     let raw: Vec<u8> = v.iter().flat_map(|x| x.to_le_bytes()).collect();
     format!(
         r#"<binaryDataArray encodedLength="0"><cvParam cvRef="MS" accession="MS:1000523" name="64-bit float"/><cvParam cvRef="MS" accession="MS:1000576" name="no compression"/><cvParam cvRef="MS" accession="{acc}" name=""/><binary>{}</binary></binaryDataArray>"#,
