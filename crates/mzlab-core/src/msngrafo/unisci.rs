@@ -9,7 +9,7 @@ use super::{
 };
 
 /// 13C - 12C.
-const C13: f64 = 1.003355;
+const C13: f64 = crate::elements::C13_STEP;
 /// The isolated precursor is the most intense peak of the parent within this many Da of the m/z of the filter (as `msntree.rs`).
 const FINESTRA: f64 = 0.5;
 /// A second peak in the isolation window above this fraction of the first one: the window took both.
