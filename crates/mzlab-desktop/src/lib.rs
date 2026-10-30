@@ -30,6 +30,7 @@ mod llm;
 pub mod mapped;
 mod nativi;
 mod nativi_slots;
+pub mod normative;
 pub mod protocol;
 mod ram;
 pub mod release;

@@ -9,6 +9,9 @@ pub mod csvrd;
 pub mod entry;
 pub mod fetch;
 pub mod markup;
+pub mod pack;
+#[cfg(test)]
+mod pack_tests;
 pub mod readers;
 pub mod resolve;
 pub mod resolve_src;
@@ -68,7 +71,9 @@ impl NormError {
 
 pub const HELP: &str = "mzlab-cli normative: the regulatory lists built from the official sources.
 
-usage: mzlab-cli normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
+usage: mzlab-cli normative pack IN OUT       the data release of the committed lists: OUT/normative.mzsus, zlib pieces and catalogo.json (no network)
+       mzlab-cli normative listings PATH     the listings JSON of a package folder or a .mzsus file
+       mzlab-cli normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
                                  [--sources FILE] [--overrides FILE]
 
   --cache DIR     where downloads are kept (one file per URL with its SHA-256 and date); a warm cache makes the build offline and byte-identical
@@ -171,8 +176,38 @@ pub fn run(args: Vec<String>) -> Outcome {
     run_with(args, fetch::Http::default())
 }
 
+/// `pack` and `listings`: no network, no cache.
+fn run_package(args: &[String]) -> Option<Outcome> {
+    let paths: Vec<&Path> = args[1..]
+        .iter()
+        .filter(|a| !a.starts_with("--"))
+        .map(Path::new)
+        .collect();
+    let r = match (args.first().map(String::as_str), paths.as_slice()) {
+        (Some("pack"), [i, o]) => pack::pack(i, o).map(|l| l.join("\n") + "\n"),
+        (Some("listings"), [p]) => pack::listings(p),
+        (Some("pack" | "listings"), _) => Err(NormError::usage("wrong number of paths")),
+        _ => return None,
+    };
+    Some(match r {
+        Ok(t) => Outcome {
+            code: 0,
+            stdout: t.into_bytes(),
+            stderr: String::new(),
+        },
+        Err(e) => Outcome {
+            code: e.code,
+            stdout: Vec::new(),
+            stderr: format!("error: {e}\n{HELP}\n"),
+        },
+    })
+}
+
 /// The same with any `Fetch` (the tests give a fake one).
 pub fn run_with<F: fetch::Fetch>(args: Vec<String>, net: F) -> Outcome {
+    if let Some(o) = run_package(&args) {
+        return o;
+    }
     match parse(args) {
         Ok(None) => Outcome {
             code: 0,

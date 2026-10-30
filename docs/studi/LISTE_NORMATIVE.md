@@ -279,7 +279,7 @@ Words never used: "detected", "present", "non-compliant", "exceeds", "violation"
 
 | # | Question | Recommendation |
 |---|---|---|
-| D1 | Commit the per-list CSVs built from public law texts (EU OJ, US federal, CC BY sources) to the **public** repository under `normative/`, with the package built by CI? | **Yes** (reviewable diffs, deterministic deploy; no lab data) |
+| D1 | Commit the per-list CSVs built from public law texts (EU OJ, US federal, CC BY sources) to the **public** repository under `normative/`, with the package built by CI? | **Yes** (reviewable diffs, deterministic deploy; no lab data). **Decided: yes (Federico, 30 Oct 2026)** |
 | D2 | Build the lists with native Rust in `mzlab-cli` (RG-04 / RG-06 as already decided in Q5) instead of a Python script in `tools/`? | **Yes** |
 | D3 | Regulatory screening visible to every user in the NTS area (not only behind `uipAdminOn()`), HR data only? | **Yes** |
 | D4 | ECHA Candidate List: write to ECHA for permission to redistribute; meanwhile offer "Import ECHA's official file" (built locally, never uploaded)? | **Yes** to both |

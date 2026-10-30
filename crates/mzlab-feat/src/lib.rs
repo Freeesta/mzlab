@@ -89,6 +89,7 @@ pub mod steps;
 pub mod store;
 mod store_read;
 pub mod suspects;
+pub mod suspects_listings;
 mod sweep;
 pub mod tabcheck;
 pub mod table;

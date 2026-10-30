@@ -28,8 +28,16 @@ Ordine: `law` (InChIKey dato dall'atto), `susdat` (StdInChIKey e MS_Ready), `pub
 - `lists/<ID>.csv`: schema A1 più `entry_ref;ec;dtxsid;form;status`, separatore `;`, righe ordinate per (`entry_ref`, scheletro, nome), leggibile da `reglists::schema::read_list`. `status` è il tipo di riga: `screenable`, `group`, `uvcb`, `inorganic`, `unresolved`. Formula e massa vengono da SusDat se la forma registrata è lo scheletro MS-ready, altrimenti si calcolano dallo SMILES MS-ready (`mzlab_feat::chem`).
 - `provenance.json` (`normative-prov/1`): per lista etichette, URL con SHA-256 e data, copertura `{entries, screenable, groups, uvcb, inorganic, unresolved}`, `csv_sha256`, `stale`.
 - `unresolved.tsv`: `list_id, entry_ref, name, cas, reason`; le liste non ricostruite (`--only`) tengono le loro righe.
-- `normative/lists/` non si versa nel repository da questo costruttore: lo fa il pacchetto B dopo la decisione D1.
+- `lists/`, `provenance.json` e `unresolved.tsv` sono versati in `normative/` (decisione D1 di Federico, 30/10/2026: i CSV derivati da testi di legge pubblici stanno nel repository pubblico); `normative/README.md` ha licenze, attribuzioni e il comando per ricostruirli. ECHA Candidate List e Proposition 65 non si versano mai.
 
 ## Liste di `sources.json`
 EU_PS_2013_39, EU_PS_2026_805, EU_WL_2025_439, EU_DWD_WL, EU_GWD, EU_POPS_2019_1021, EU_FCM_10_2011, EU_TOYS, EU_PPP, US_CWA_PP, US_CWA_TOXIC, US_SDWA_MCL, US_UCMR5, US_CERCLA, US_UCMR6_PROP, EPA_CCL5, EPA_CCL6_DRAFT. Nel catalogo (`reglists/catalog.rs`) anche `CA_PROP65` (gruppo «US state») e `SVHC`, che si costruiscono dal file dell'utente.
 Fase 2 (non costruite): REACH XIV/XVII e CLP Annex VI da Cellar, COSM, RoHS, bisfenoli dei FCM, 37/2010 Tab. 1, TSCA, CosIng.
+
+## Pacchetto (`pack.rs`)
+- `mzlab-cli normative pack IN OUT` (nessuna rete): legge `IN/lists/*.csv` e `IN/provenance.json` e scrive `OUT/normative.mzsus` (un `.mzsus` con l'estensione `listings`, `docs/agenti/sospetti.md`: una riga per scheletro delle righe `screenable` con massa e formula, appartenenze ordinate per ordine di catalogo e `entry_ref`, righe per massa e chiave), i pezzi zlib da 4 MiB `NNN.bin` e `catalogo.json`.
+- `catalogo.json` (`normative/1`: formato, byte grezzi e compressi, SHA-256 del grezzo, `skipped_no_mass`, liste con `tags`, `coverage`, `csv_sha256`, attribuzioni, pezzi con SHA-256). Stessi ingressi, stessi byte; le righe `screenable` senza massa o formula (metalli e sali inorganici) non entrano e sono contate.
+- `mzlab-cli normative listings PATH`: il JSON di `listings` di una cartella pacchetto (con `normative.mzsus`) o di un `.mzsus`.
+- Sito: `pages.yml` (job `packages`) costruisce `mzlab-cli` e lancia `pack` su `normative/` verso `site/static/normative/`, con cache sulla chiave dei CSV.
+- `mzlab/web/normative-scarica.js` (modulo ES, caricato solo al primo uso) scarica il catalogo e i pezzi nella Cache Storage `mzlab-libs`, controlla ogni SHA-256 e il totale, decomprime con `DecompressionStream("deflate")` e dà i byte grezzi; `ensure()` usa la cache se il catalogo è uguale (o il sito non risponde), `check()` confronta i cataloghi e non scarica; testi `normative.dl.*` in `lang/{it,en}/normative.js`. Test: `tests_e2e/e2e_normative_scarica.py`.
+- Lettore nel `.wasm`: `normative_listings(raw)` in `crates/mzlab-feat-wasm/src/finder.rs` (feature `finder`, gruppo `hr`); parità con il nativo in `tests/test_normative_wasm.py`.

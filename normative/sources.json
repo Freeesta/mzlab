@@ -22,7 +22,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/02008L0105-20130913",
-          "sha256": null
+          "sha256": "2ed233725970fbba328d509afb90dbe2bbbc04a19d5757960172bdd1c2eaa79a"
         }
       ],
       "params": {
@@ -83,7 +83,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/02008L0105-20260510",
-          "sha256": null
+          "sha256": "63874ec5c4c20c949c338121acf295831c1d7862dfb7240aa065158ef0175081"
         }
       ],
       "params": {
@@ -144,7 +144,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/32025D0439",
-          "sha256": null
+          "sha256": "e3e4600935ae90411fc92f5d8f430470f3e42f7e68fa7d6868d9fcbe429c8081"
         }
       ],
       "params": {
@@ -186,7 +186,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/32022D0679",
-          "sha256": null
+          "sha256": "86c70f0271e5f3fbcd4e089c45ac621b5c51dd84aaa557481aac2887bae4e274"
         }
       ],
       "params": {
@@ -228,7 +228,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/02006L0118-20260510",
-          "sha256": null
+          "sha256": "8b4b75b107b98ad0f4dae8e0cd7143c2c76250665e49bbbd335b0321fdf5257e"
         }
       ],
       "params": {
@@ -281,7 +281,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/02019R1021-20260930",
-          "sha256": null
+          "sha256": "779996051079f5602a67af95c2b63caaacf75cc19c11bc704472d9719d669f21"
         }
       ],
       "params": {
@@ -321,7 +321,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/02011R0010-20260714",
-          "sha256": null
+          "sha256": "57fc47b42d80754ac1c81c472a8ab43ca9c050318572a958f732d63510f77c52"
         }
       ],
       "params": {
@@ -366,7 +366,7 @@
       "urls": [
         {
           "url": "https://publications.europa.eu/resource/celex/02009L0048-20260829",
-          "sha256": null
+          "sha256": "345027f096e89b0cb50bb3df85e9d9a6ed5a16b20aef924dd1d52332a3f4c482"
         }
       ],
       "params": {
@@ -408,7 +408,7 @@
       "urls": [
         {
           "url": "https://api.datalake.sante.service.ec.europa.eu/sante/pesticides/active-substances?format=json&api-version=v3.0",
-          "sha256": null
+          "sha256": "732e9b5e103239b7a3a9f5cc40f1cb91837d88c53d8a383c82abb942a7c36374"
         }
       ],
       "params": {},
@@ -431,7 +431,7 @@
       "urls": [
         {
           "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=423",
-          "sha256": null
+          "sha256": "60cadc14b8fc25c39238a9d55cede55743d6b349ca20c8f8158b0f7e5d98fd64"
         }
       ],
       "params": {
@@ -458,7 +458,7 @@
       "urls": [
         {
           "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=401&section=401.15",
-          "sha256": null
+          "sha256": "4cfa3fe359808a7cc5ee6996566833adae8431df0a9b2cff0ef2834bb6c46a96"
         }
       ],
       "params": {
@@ -485,7 +485,7 @@
       "urls": [
         {
           "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=141&section=141.61",
-          "sha256": null
+          "sha256": "e26060ce11962fc042bb24cfa36762b98d9e8bb72ed2a83db506d64ee36de8dd"
         }
       ],
       "params": {
@@ -524,7 +524,7 @@
       "urls": [
         {
           "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=141&section=141.40",
-          "sha256": null
+          "sha256": "0fd3fc444293ccd0f6891b23385560c0de5a9897ab318a09fc1e846b760020c7"
         }
       ],
       "params": {
@@ -557,7 +557,7 @@
       "urls": [
         {
           "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-01/title-40.xml?part=302&section=302.4",
-          "sha256": null
+          "sha256": "654689b50cbf2e96916bb060fe2a35a4823429ac2d6a0046cb97c40e43884047"
         }
       ],
       "params": {
@@ -590,7 +590,7 @@
       "urls": [
         {
           "url": "https://www.epa.gov/dwucmr/proposed-sixth-unregulated-contaminant-monitoring-rule",
-          "sha256": null
+          "sha256": "29976a8b7b2d15250641949de6ccdd5c1a91fb162bfb9ae03449781bcbfbeb45"
         }
       ],
       "params": {
@@ -629,7 +629,7 @@
       "urls": [
         {
           "url": "https://www.epa.gov/ccl/ccl-5-chemical-contaminants",
-          "sha256": null
+          "sha256": "e67a138703d569e7af2b4b36fd7a83d4ea6b89b2eddf49a57218a3616fac7f72"
         }
       ],
       "params": {
@@ -665,7 +665,7 @@
       "urls": [
         {
           "url": "https://www.epa.gov/ccl/draft-ccl-6-chemical-contaminants",
-          "sha256": null
+          "sha256": "5ef31da80e65ddccdaa5df3384484968489430bd81e2b91e17d7605cf0d34af0"
         }
       ],
       "params": {
