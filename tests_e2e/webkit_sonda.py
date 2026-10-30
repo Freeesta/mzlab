@@ -5,7 +5,7 @@
 Environment: WK_CORES=N overrides navigator.hardwareConcurrency (the index pool is min(cores - 1, 4): WK_CORES=2 forces one worker).
 Not named e2e*: tools/verifica.py does not collect it.
 """
-import json, os, subprocess, sys, time
+import json, os, subprocess, sys, threading, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -14,12 +14,16 @@ ROOT = HERE.parent
 PORT = 8833
 
 
+def pause(seconds):
+    threading.Event().wait(seconds)
+
+
 def serve(root):
     p = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(root)], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     import urllib.request
     for _ in range(100):
         try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1).read(); break
-        except Exception: time.sleep(0.1)
+        except Exception: pause(0.1)
     return p
 
 
@@ -37,7 +41,7 @@ def probe():
             pg.goto(f"http://127.0.0.1:{PORT}/webkit_sonda.html")
             for _ in range(200):
                 if pg.evaluate("!!window.PROBE"): break
-                time.sleep(100 / 1000)
+                pause(0.1)
             rec = pg.evaluate("window.PROBE") or []
             b.close()
     finally:
@@ -71,7 +75,7 @@ def site():
                     const r = await Promise.race([window.MZLAB_RUST_READY, new Promise(x => setTimeout(() => x('timeout'), 40000))]);
                     return { ready: r === 'timeout' ? 'timeout' : !!r, err: window.MZLAB_RUST_ERR || null, miss: (window.MZLAB_LR_MISS || []).length, isolated: self.crossOriginIsolated };
                 }""")
-                time.sleep(3000 / 1000)         # a worker that dies at the first allocation is replaced; two deaths in a minute turn the engine off
+                pause(3)         # a worker that dies at the first allocation is replaced; two deaths in a minute turn the engine off
                 res["errAfter"] = pg.evaluate("window.MZLAB_RUST_ERR || null")
             except Exception as e:
                 res = {"exception": str(e)[:300]}
