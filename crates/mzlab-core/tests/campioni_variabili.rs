@@ -372,7 +372,7 @@ fn ten_thousand_names_stay_linear() {
     );
     let ms = t0.elapsed().as_millis();
     assert!(ra.contains("\"id\":\"matrix\"") && rb.contains("\"id\":\"time\""));
-    // about 0.2 s in release, over half of it in the name parser of `proponi`; the bound only catches a quadratic step
-    let bound = if cfg!(debug_assertions) { 10_000 } else { 1000 };
+    // about 85 ms in release for the 10 000 names (0.25 s before the time parser stopped allocating per name): the bound catches a return of that cost
+    let bound = if cfg!(debug_assertions) { 10_000 } else { 200 };
     assert!(ms < bound, "{ms} ms");
 }

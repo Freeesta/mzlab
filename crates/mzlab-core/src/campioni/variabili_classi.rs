@@ -62,16 +62,17 @@ pub(super) const UNITS: [(&str, Option<f64>); 14] = [
 
 /// Lower case with the micro sign as `u` and the digits after a letter kept (`T00` stays `t00`).
 pub(super) fn fold(s: &str) -> String {
-    s.chars()
-        .map(|c| {
-            if c == '\u{b5}' || c == '\u{3bc}' {
-                'u'
-            } else {
-                c
-            }
-        })
-        .flat_map(char::to_lowercase)
-        .collect()
+    s.chars().flat_map(fold_char).collect()
+}
+
+/// One character folded: `µ` is `u`, the rest lower case (may be several characters).
+fn fold_char(c: char) -> impl Iterator<Item = char> {
+    let c = if c == '\u{b5}' || c == '\u{3bc}' {
+        'u'
+    } else {
+        c
+    };
+    c.to_lowercase()
 }
 
 pub(super) fn is_role_word(low: &str) -> bool {
@@ -79,6 +80,13 @@ pub(super) fn is_role_word(low: &str) -> bool {
 }
 
 pub(super) fn is_cond_word(tok: &str) -> bool {
+    // the lists are upper case ASCII: for an ASCII token the comparison needs no new string
+    if tok.is_ascii() {
+        return IRRADIATED
+            .iter()
+            .chain(&DARK)
+            .any(|c| c.eq_ignore_ascii_case(tok));
+    }
     let up = tok.to_uppercase();
     IRRADIATED.contains(&up.as_str()) || DARK.contains(&up.as_str())
 }
@@ -180,13 +188,15 @@ fn time_end(t: &[char], i: usize) -> Option<usize> {
             j += 1;
         }
     }
-    let rest: String = t[j..].iter().collect::<String>().to_lowercase();
-    for u in ["min", "sec", "h", "d", "s"] {
-        if rest.starts_with(u) && rest.len() == u.len() {
-            return Some(j + u.len());
-        }
-    }
-    Some(j)
+    // the rest of the token is a unit, in any case
+    let unit = ["min", "sec", "h", "d", "s"].into_iter().find(|u| {
+        t.len() - j == u.len()
+            && t[j..]
+                .iter()
+                .zip(u.bytes())
+                .all(|(c, b)| c.to_ascii_lowercase() == char::from(b))
+    });
+    Some(j + unit.map_or(0, str::len))
 }
 
 /// The minutes of a token that is only a time (`T00`, `t2p5`, `T30min`), for the names the parser finds no time in (`MQH2O2T00`).
@@ -213,6 +223,18 @@ pub(super) fn time_token(tok: &str) -> Option<f64> {
 
 /// End of a known word (matrix, condition, role) at `i`, the longest.
 fn word_end(t: &[char], i: usize) -> Option<usize> {
+    if t[i..].iter().all(char::is_ascii) {
+        // ASCII: one lower-case copy of the first 12 characters, the candidates are slices of it
+        let m = (t.len() - i).min(12);
+        let tok: String = t[i..i + m].iter().collect();
+        let low = tok.to_ascii_lowercase();
+        return (2..=m)
+            .rev()
+            .find(|&n| {
+                is_matrix_word(&tok[..n]) || is_cond_word(&tok[..n]) || is_role_word(&low[..n])
+            })
+            .map(|n| i + n);
+    }
     let low: String = fold(&t[i..].iter().collect::<String>());
     let mut best = None;
     for n in (2..=low.chars().count().min(12)).rev() {
@@ -287,18 +309,16 @@ pub(super) fn natural(a: &str, b: &str) -> std::cmp::Ordering {
                 j += 1;
             }
             let (p, q) = (&x[si..i], &y[sj..j]);
-            let (p0, q0) = (
-                p.iter().skip_while(|c| **c == '0').collect::<Vec<_>>(),
-                q.iter().skip_while(|c| **c == '0').collect::<Vec<_>>(),
-            );
+            let zeros = |d: &[char]| d.iter().take_while(|c| **c == '0').count();
+            let (p0, q0) = (&p[zeros(p)..], &q[zeros(q)..]);
             let o = p0.len().cmp(&q0.len()).then_with(|| p0.cmp(&q0));
             if o.is_ne() {
                 return o;
             }
         } else {
-            let (c, d) = (fold(&x[i].to_string()), fold(&y[j].to_string()));
-            if c != d {
-                return c.cmp(&d);
+            let o = fold_char(x[i]).cmp(fold_char(y[j]));
+            if o.is_ne() {
+                return o;
             }
             i += 1;
             j += 1;

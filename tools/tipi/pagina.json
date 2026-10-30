@@ -65,6 +65,8 @@
     "../../mzlab/web/open-now.js",
     "../../mzlab/web/upload-rows.js",
     "../../mzlab/web/lista-file-menu.js",
+    "../../mzlab/web/gruppi.js",
+    "../../mzlab/web/gruppi-per.js",
     "../../mzlab/web/layout.js",
     "../../mzlab/web/fondo.js",
     "../../mzlab/web/fondo-spettro.js",

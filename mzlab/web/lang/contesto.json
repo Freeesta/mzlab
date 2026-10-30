@@ -294,6 +294,8 @@
   "iso.shift": "Parte di una frase sul profilo isotopico: spostamento in m/z del profilo; il segnaposto è il valore già formattato.",
   "spec.scanLine.avg": "Riga sopra lo spettro quando si mostra la media di più scansioni; {n} = numero di scansioni.",
   "spec.scanLine.prec": "Riga sopra lo spettro: precursore isolato; {prec} = m/z del precursore.",
+  "groups.common": "Muted line at the top of the Group by menu: the part every file name has in common ({text}, e.g. «MQ*T00»).",
+  "groups.has.multi": "Warning under the preview of «Contains…»: {n} files contain more than one of the words and are put in the group of the first.",
   "files.ugrp.name": "Name given at once to a new user group of the side file list (renamed later by the user); {n} = 1, 2, ... the first number not in use.",
   "files.ugrp.toggle": "Accessible name of the fold button of a user group header in the side file list; {g} = the group name.",
   "spec.scanLine.ce": "Riga sopra lo spettro: energia di collisione; {ce} = valore in eV.",
