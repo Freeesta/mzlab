@@ -26,8 +26,15 @@ jobs:
           python -m pip install playwright
           python -m playwright install --with-deps webkit
           sysctl hw.memsize hw.ncpu; vm_stat | head -5
-      - name: Probe page (memories, workers, grow)
+      - name: Probe page (memories, workers, grow, OPFS) in the ephemeral context of new_page()
         run: python tests_e2e/webkit_sonda.py probe 2>&1 | tee probe.txt
+      - name: Same probe in a persistent context (profile directory on disk)
+        env:
+          WK_PERSISTENT: "1"
+        run: python tests_e2e/webkit_sonda.py probe 2>&1 | tee -a probe.txt
+      - name: Summary
+        if: always()
+        run: grep -h 'PROBE context\|NO \|first failing' probe.txt
       - name: System log and crash reports
         if: always()
         run: |
@@ -86,6 +93,12 @@ jobs:
         env:
           WK_CORES: ${{ matrix.cores }}
         run: python tests_e2e/webkit_sonda.py site 2>&1 | tee site.txt
+      - name: Engine start on WebKit in a persistent context
+        if: always()
+        env:
+          WK_CORES: ${{ matrix.cores }}
+          WK_PERSISTENT: "1"
+        run: python tests_e2e/webkit_sonda.py site 2>&1 | tee site-persistent.txt
       - name: One smoke test (the real one, as the nightly runs it)
         if: always()
         run: python tools/verifica.py --browser webkit --fumo --solo e2e3 2>&1 | tee smoke.txt
@@ -93,7 +106,7 @@ jobs:
         if: always()
         run: |
           mkdir -p diag
-          cp site.txt smoke.txt diag/ || true
+          cp site.txt site-persistent.txt smoke.txt diag/ || true
           cp .verifica/log/*.log diag/ 2>/dev/null || true
           cp ~/Library/Logs/DiagnosticReports/* diag/ 2>/dev/null || true
           log show --last 30m --predicate 'process CONTAINS "WebContent" OR process CONTAINS "Playwright" OR eventMessage CONTAINS "memory"' --style compact 2>/dev/null | tail -n 400 > diag/system-log.txt || true
@@ -107,6 +120,6 @@ jobs:
         if: always()
         run: |
           echo "=== SUMMARY ${{ matrix.variant }}"
-          grep -h '^SITE' site.txt 2>/dev/null || echo "SITE: no output (build failed?)"
+          grep -h '^SITE' site.txt site-persistent.txt 2>/dev/null || echo "SITE: no output (build failed?)"
           grep -h 'FAIL\|engine start failed\|unknown transient' smoke.txt 2>/dev/null | cut -c1-400 || true
           ls ~/Library/Logs/DiagnosticReports 2>/dev/null | head

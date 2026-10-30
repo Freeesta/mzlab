@@ -27,6 +27,16 @@ def serve(root):
     return p
 
 
+def open_page(pw, **kw):
+    """(closer, page). WK_PERSISTENT=1: a persistent context (a profile directory on disk) instead of browser.new_page(), whose context is ephemeral (no website data store on disk)."""
+    if os.environ.get("WK_PERSISTENT") == "1":
+        import tempfile
+        ctx = getattr(pw, os.environ.get("WK_BROWSER", "webkit")).launch_persistent_context(tempfile.mkdtemp(prefix="wkprofile"), **kw)
+        return ctx.close, ctx.pages[0] if ctx.pages else ctx.new_page()
+    b = launch(pw)
+    return b.close, b.new_page(**kw)
+
+
 def launch(pw):
     # the stderr of the WebKit process (crash reports, "unknown transient reason") goes to the job log
     return getattr(pw, os.environ.get("WK_BROWSER", "webkit")).launch(**({"executable_path": os.environ["WK_EXE"], "args": ["--no-sandbox"]} if os.environ.get("WK_EXE") else {}))
@@ -36,17 +46,17 @@ def probe():
     srv = serve(HERE)
     try:
         with sync_playwright() as pw:
-            b = launch(pw)
-            pg = b.new_page()
+            close, pg = open_page(pw)
             pg.goto(f"http://127.0.0.1:{PORT}/webkit_sonda.html")
             for _ in range(200):
                 if pg.evaluate("!!window.PROBE"): break
                 pause(0.1)
             rec = pg.evaluate("window.PROBE") or []
-            b.close()
+            close()
     finally:
         srv.terminate()
     first = next((r for r in rec if not r["ok"]), None)
+    print("PROBE context:", "persistent" if os.environ.get("WK_PERSISTENT") == "1" else "ephemeral (new_page)")
     print("PROBE | step | ok | detail")
     for r in rec: print("PROBE |", r["name"], "|", "yes" if r["ok"] else "NO", "|", r.get("v", r.get("err", "")))
     print("PROBE first failing step:", first["name"] if first else "none")
@@ -60,8 +70,7 @@ def site():
     log, errs, workers = [], [], []
     try:
         with sync_playwright() as pw:
-            b = launch(pw)
-            pg = b.new_page(viewport={"width": 1500, "height": 1000})
+            close, pg = open_page(pw, viewport={"width": 1500, "height": 1000})
             pg.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
             if cores: pg.add_init_script(f"Object.defineProperty(navigator,'hardwareConcurrency',{{get:()=>{int(cores)}}})")
             pg.on("console", lambda m: log.append(f"{m.type}: {m.text}"[:300]) if m.type in ("error", "warning", "debug") else None)
@@ -81,9 +90,10 @@ def site():
                 res["bootErrAfter"] = pg.evaluate("window.MZLAB_LR_ERR || null")
             except Exception as e:
                 res = {"exception": str(e)[:300]}
-            b.close()
+            close()
     finally:
         srv.terminate()
+    print("SITE context:", "persistent" if os.environ.get("WK_PERSISTENT") == "1" else "ephemeral (new_page)")
     print("SITE cores override:", cores or "none")
     print("SITE result:", json.dumps(res))
     print("SITE workers:", len(workers), sorted(set(workers)))
