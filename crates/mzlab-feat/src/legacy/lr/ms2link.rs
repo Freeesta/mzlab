@@ -29,7 +29,7 @@ pub const SN_DRIFT: f64 = 10.0;
 /// An experiment with fewer scans than this outside the window of a row was acquired only around the row.
 pub const FEW_OUTSIDE: usize = 10;
 /// Mass differences of the first isotope peaks, Da.
-pub const ISO: [f64; 2] = [1.00335, 2.0067];
+pub const ISO: [f64; 2] = [mzlab_core::elements::C13_STEP, 2.0067];
 
 /// How a row got the peak.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -119,7 +119,9 @@ try:
         step("the table is the CSV of the modifications", table)
         def graph_view():
             g = json.loads(got["r"]["files"][0]["text"])
-            # Run in the page opens the graph by itself under the canvas, and the three texts join the Results of their nodes
+            # Run in the page opens the graph by itself under the canvas, and the three texts join the Results of their nodes;
+            # an earlier run left its view open, and counting its boxes (or the new view half drawn) raced the new run
+            pg.evaluate("document.querySelectorAll('.flx-res').forEach(n => n.remove())")
             pg.click("#flx-run")
             pg.wait_for_selector(".flx-res .ig-node", timeout=60000)
             assert pg.locator(".flx-res .ig-node").count() == len(g["nodi"]), "one box per ion"

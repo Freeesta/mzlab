@@ -44,7 +44,7 @@ pub(super) fn apex_ms1_many<R: ReadAt>(
         .map(|&r| (reqs[r].0 - tol[r], reqs[r].0 + 2.2))
         .collect();
     let mut out = vec![([0.0; 3], f64::NAN); reqs.len()];
-    let c13 = 1.003355;
+    let c13 = mzlab_core::elements::C13_STEP;
     windows(ix, si, &ranges, 1 << 20, |j, a, b, slab| {
         let r = order[j];
         let o = &mut out[r];

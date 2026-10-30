@@ -843,7 +843,6 @@ declare var setTab: any;
 declare var setView: any;
 declare var setVisOf: any;
 declare var setup: any;
-declare var sgFilter: any;
 declare var shortHelp: any;
 declare var showHeldMethods: any;
 declare var showHover: any;

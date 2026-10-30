@@ -108,7 +108,7 @@ try:
             pg = r2.page(p)
             pg.set_input_files("#pick", [str(D / "pda.wiff"), str(D / "pda.wiff.scan")]); pg.click("text=Carica dati"); ready(pg)
             def pda():
-                pg.evaluate(f"(()=>{{const c={CH}; const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
+                pick_kind(pg, "pda", CH)
                 attendi(pg, f"{CH}.kind==='pda' && {CH}._a")
                 attendi(pg, f"{LB}.filter(l => l.etpk && /^\\d+\\.\\d{{2}}$/.test(l.text)).length >= 2")
                 ls = labels(pg, 2); txt = sorted(l[0] for l in ls)
