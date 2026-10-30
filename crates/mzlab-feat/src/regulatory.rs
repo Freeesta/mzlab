@@ -19,6 +19,23 @@ pub struct ListInfo {
     pub manifest: Value,
 }
 
+impl ListInfo {
+    fn of(v: Value) -> ListInfo {
+        let text = |k: &str| v.get(k).and_then(Value::str).unwrap_or("").to_string();
+        let status = v.get("tags").map_or(String::new(), |t| {
+            t.get("status")
+                .and_then(Value::str)
+                .unwrap_or("")
+                .to_string()
+        });
+        ListInfo {
+            id: text("id"),
+            status,
+            manifest: v,
+        }
+    }
+}
+
 /// One law naming a row, after the mask.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Member {
@@ -30,18 +47,47 @@ pub struct Member {
     pub attr: String,
 }
 
+impl Member {
+    fn of(list: &str, entry: &str, form: u8, bits: u8) -> Member {
+        let e = json::parse(entry.as_bytes()).unwrap_or(Value::Null);
+        let text = |k: &str| e.get(k).and_then(Value::str).unwrap_or("").to_string();
+        Member {
+            list: list.to_string(),
+            entry_ref: text("ref"),
+            form: FORM_NAMES
+                .get(usize::from(form))
+                .copied()
+                .unwrap_or("")
+                .to_string(),
+            group: bits & BIT_GROUP != 0,
+            attr: text("attr"),
+        }
+    }
+}
+
+/// Which lists pass the mask, in the order of the package; an unknown id or status is an error.
+fn mask(infos: &[ListInfo], lists: &str, include: &str) -> Result<Vec<bool>> {
+    let wanted = words(lists);
+    let extra = words(include);
+    if let Some(bad) = extra.iter().find(|w| !INCLUDE.contains(&w.as_str())) {
+        return Err(Error::new("err.flow.regulatory.include").with("status", bad));
+    }
+    if let Some(bad) = wanted.iter().find(|w| !infos.iter().any(|i| &i.id == *w)) {
+        return Err(Error::new("err.flow.regulatory.list").with("list", bad));
+    }
+    Ok(infos
+        .iter()
+        .map(|i| {
+            let status = DEFAULT_STATUS.contains(&i.status.as_str()) || extra.contains(&i.status);
+            status && (wanted.is_empty() || wanted.contains(&i.id))
+        })
+        .collect())
+}
+
 /// The lists of a package and the ones the mask keeps.
 pub struct Package {
     pub lists: Vec<ListInfo>,
     pub on: Vec<bool>,
-}
-
-fn words(text: &str) -> Vec<String> {
-    text.split([',', ';'])
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(String::from)
-        .collect()
 }
 
 impl Package {
@@ -57,38 +103,9 @@ impl Package {
             .map(Value::arr)
             .unwrap_or(&[]);
         let infos: Vec<ListInfo> = (0..l.list_count())
-            .map(|i| {
-                let v = given.get(i).cloned().unwrap_or(Value::Null);
-                let text = |k: &str| v.get(k).and_then(Value::str).unwrap_or("").to_string();
-                let status = v
-                    .get("tags")
-                    .and_then(|t| t.get("status"))
-                    .and_then(Value::str)
-                    .unwrap_or("")
-                    .to_string();
-                ListInfo {
-                    id: text("id"),
-                    status,
-                    manifest: v,
-                }
-            })
+            .map(|i| ListInfo::of(given.get(i).cloned().unwrap_or(Value::Null)))
             .collect();
-        let wanted = words(lists);
-        let extra = words(include);
-        if let Some(bad) = extra.iter().find(|w| !INCLUDE.contains(&w.as_str())) {
-            return Err(Error::new("err.flow.regulatory.include").with("status", bad));
-        }
-        if let Some(bad) = wanted.iter().find(|w| !infos.iter().any(|i| &i.id == *w)) {
-            return Err(Error::new("err.flow.regulatory.list").with("list", bad));
-        }
-        let on = infos
-            .iter()
-            .map(|i| {
-                let status =
-                    DEFAULT_STATUS.contains(&i.status.as_str()) || extra.contains(&i.status);
-                status && (wanted.is_empty() || wanted.contains(&i.id))
-            })
-            .collect();
+        let on = mask(&infos, lists, include)?;
         Ok(Some(Package { lists: infos, on }))
     }
 
@@ -101,19 +118,12 @@ impl Package {
             .iter()
             .filter(|m| self.on.get(usize::from(m.list)).copied().unwrap_or(false))
             .map(|m| {
-                let e = json::parse(l.entry(m.entry).as_bytes()).unwrap_or(Value::Null);
-                let text = |k: &str| e.get(k).and_then(Value::str).unwrap_or("").to_string();
-                Member {
-                    list: self.lists[usize::from(m.list)].id.clone(),
-                    entry_ref: text("ref"),
-                    form: FORM_NAMES
-                        .get(usize::from(m.form))
-                        .copied()
-                        .unwrap_or("")
-                        .to_string(),
-                    group: m.bits & BIT_GROUP != 0,
-                    attr: text("attr"),
-                }
+                Member::of(
+                    &self.lists[usize::from(m.list)].id,
+                    l.entry(m.entry),
+                    m.form,
+                    m.bits,
+                )
             })
             .collect()
     }
@@ -163,4 +173,12 @@ pub fn write_words(o: &mut Out, text: &str) {
         o.raw(if i > 0 { "," } else { "" }).str(w);
     }
     o.raw("]");
+}
+
+fn words(text: &str) -> Vec<String> {
+    text.split([',', ';'])
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect()
 }

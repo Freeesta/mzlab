@@ -41,6 +41,166 @@ fn label(l: &Value) -> &str {
         .unwrap_or("")
 }
 
+/// The membership line: "<instrument>, <entry> (<the list's own text>), version of <date>".
+fn line(lists: &[Value], m: &Value) -> String {
+    let id = text(m, "list");
+    let l = lists.iter().find(|l| text(l, "id") == id);
+    let name = l.map_or(id, |l| {
+        [tag(l, "instrument"), id]
+            .into_iter()
+            .find(|s| !s.is_empty())
+            .unwrap_or(id)
+    });
+    let mut s = format!("{name}, {}", text(m, "entry_ref"));
+    if !text(m, "attr").is_empty() {
+        s.push_str(&format!(" ({})", text(m, "attr")));
+    }
+    if let Some(d) = l.map(|l| tag(l, "version_date")).filter(|d| !d.is_empty()) {
+        s.push_str(&format!(", version of {d}"));
+    }
+    s
+}
+
+fn screen_row(lists: &[Value], h: &Value) -> Option<String> {
+    let cands: Vec<&Value> = h
+        .get("candidates")
+        .map_or(&[][..], Value::arr)
+        .iter()
+        .filter(|c| !c.get("memberships").map_or(&[][..], Value::arr).is_empty())
+        .collect();
+    if cands.is_empty() {
+        return None;
+    }
+    let n = cands.len();
+    let cell = format!(
+        "Candidate formula {} matches {n} listed substance{}",
+        text(h, "formula"),
+        if n == 1 { "" } else { "s" }
+    );
+    let mut o = Out::default();
+    o.raw("{\"path\":\"mass\",\"feature\":");
+    write_value(&mut o, h.get("feature").unwrap_or(&Value::Null));
+    o.raw(",\"adduct\":")
+        .str(text(h, "adduct"))
+        .raw(",\"formula\":")
+        .str(text(h, "formula"));
+    o.raw(",\"delta_ppm\":");
+    write_value(&mut o, h.get("delta_ppm").unwrap_or(&Value::Null));
+    o.raw(",\"level\":");
+    write_value(&mut o, h.get("level").unwrap_or(&Value::Null));
+    o.raw(",\"listed_in\":").str(&cell).raw(",\"candidates\":[");
+    for (k, c) in cands.iter().enumerate() {
+        let lines: Vec<String> = c
+            .get("memberships")
+            .map_or(&[][..], Value::arr)
+            .iter()
+            .map(|m| line(lists, m))
+            .collect();
+        candidate(&mut o, k, text(c, "name"), text(c, "inchikey"), &lines);
+    }
+    o.raw("]}");
+    Some(o.0)
+}
+
+fn annot_row(lists: &[Value], r: &Value) -> Option<String> {
+    let found = r.get("regulatory").map_or(&[][..], Value::arr);
+    if found.is_empty() {
+        return None;
+    }
+    let full = found.iter().any(|f| text(f, "match") == "InChIKey");
+    let cell = if full {
+        "Candidate structure matches a listed substance (InChIKey)"
+    } else {
+        "Candidate structure matches a listed substance (first block: stereo, charge or isotope may differ)"
+    };
+    let mut o = Out::default();
+    o.raw("{\"path\":\"structure\",\"feature\":");
+    write_value(&mut o, r.get("id").unwrap_or(&Value::Null));
+    o.raw(",\"level\":");
+    write_value(&mut o, r.get("level").unwrap_or(&Value::Null));
+    o.raw(",\"listed_in\":").str(cell).raw(",\"candidates\":[");
+    let lines: Vec<String> = found
+        .iter()
+        .filter_map(|f| f.get("membership"))
+        .map(|m| line(lists, m))
+        .collect();
+    candidate(&mut o, 0, text(r, "name"), text(r, "entry"), &lines);
+    o.raw("]}");
+    Some(o.0)
+}
+
+fn candidate(o: &mut Out, k: usize, name: &str, key: &str, lines: &[String]) {
+    o.raw(if k > 0 { ",{\"name\":" } else { "{\"name\":" })
+        .str(name)
+        .raw(",\"inchikey\":")
+        .str(key)
+        .raw(",\"memberships\":[");
+    for (j, l) in lines.iter().enumerate() {
+        o.raw(if j > 0 { "," } else { "" }).str(l);
+    }
+    o.raw("]}");
+}
+
+/// "Screened against: <list> (version <date>, retrieved <date>, SHA-256 <8 hex>…); … N lists in force, M proposals."
+fn header(lists: &[Value]) -> String {
+    let one = |l: &Value| {
+        let mut bits = Vec::new();
+        for (word, v) in [
+            ("version", tag(l, "version_date")),
+            ("retrieved", text(l, "retrieved")),
+        ] {
+            if !v.is_empty() {
+                bits.push(format!("{word} {v}"));
+            }
+        }
+        let sha = text(l, "csv_sha256");
+        if !sha.is_empty() {
+            bits.push(format!("SHA-256 {}…", &sha[..sha.len().min(8)]));
+        }
+        format!("{} ({})", label(l), bits.join(", "))
+    };
+    let parts: Vec<String> = lists.iter().map(one).collect();
+    let status = |s: &[&str]| {
+        lists
+            .iter()
+            .filter(|l| s.contains(&tag(l, "status")))
+            .count()
+    };
+    let (force, prop) = (
+        status(&["in_force", "adopted_not_applicable"]),
+        status(&["proposal", "draft"]),
+    );
+    let plural = |n: usize, w: &str| format!("{n} {w}{}", if n == 1 { "" } else { "s" });
+    format!(
+        "Screened against: {}. {} in force, {}.",
+        parts.join("; "),
+        plural(force, "list"),
+        plural(prop, "proposal")
+    )
+}
+
+/// One coverage line per list.
+fn coverage(lists: &[Value]) -> Vec<String> {
+    lists
+        .iter()
+        .map(|l| {
+            let mut s = format!(
+                "{}: This list has {} entries: {} screened by structure, {} groups defined by structure or as mixtures, {} inorganic",
+                label(l),
+                count(l, "entries"),
+                count(l, "screenable"),
+                count(l, "groups") + count(l, "uvcb"),
+                count(l, "inorganic")
+            );
+            if count(l, "unresolved") > 0 {
+                s.push_str(&format!(", {} without a structure", count(l, "unresolved")));
+            }
+            s.push_str("; not screened by mass.");
+            s
+        })
+        .collect()
+}
+
 impl Regulatory {
     /// Reads one output file of the run.
     pub fn read(&mut self, v: &Value) {
@@ -57,174 +217,14 @@ impl Regulatory {
         }
         if text(v, "format") == "screen/1" {
             for h in v.get("hits").map_or(&[][..], Value::arr) {
-                self.screen_row(h);
+                self.rows.extend(screen_row(&self.lists, h));
             }
         }
         if text(v, "format") == "annot/1" && v.get("regulatory").is_some() {
             for r in v.get("rows").map_or(&[][..], Value::arr) {
-                self.annot_row(r);
+                self.rows.extend(annot_row(&self.lists, r));
             }
         }
-    }
-
-    /// The membership line: "<instrument>, <entry> (<the list's own text>), version of <date>".
-    fn line(&self, m: &Value) -> String {
-        let id = text(m, "list");
-        let l = self.lists.iter().find(|l| text(l, "id") == id);
-        let name = l.map_or(id, |l| {
-            [tag(l, "instrument"), id]
-                .into_iter()
-                .find(|s| !s.is_empty())
-                .unwrap_or(id)
-        });
-        let mut s = format!("{name}, {}", text(m, "entry_ref"));
-        if !text(m, "attr").is_empty() {
-            s.push_str(&format!(" ({})", text(m, "attr")));
-        }
-        if let Some(d) = l.map(|l| tag(l, "version_date")).filter(|d| !d.is_empty()) {
-            s.push_str(&format!(", version of {d}"));
-        }
-        s
-    }
-
-    fn screen_row(&mut self, h: &Value) {
-        let cands: Vec<&Value> = h
-            .get("candidates")
-            .map_or(&[][..], Value::arr)
-            .iter()
-            .filter(|c| !c.get("memberships").map_or(&[][..], Value::arr).is_empty())
-            .collect();
-        if cands.is_empty() {
-            return;
-        }
-        let n = cands.len();
-        let cell = format!(
-            "Candidate formula {} matches {n} listed substance{}",
-            text(h, "formula"),
-            if n == 1 { "" } else { "s" }
-        );
-        let mut o = Out::default();
-        o.raw("{\"path\":\"mass\",\"feature\":");
-        write_value(&mut o, h.get("feature").unwrap_or(&Value::Null));
-        o.raw(",\"adduct\":")
-            .str(text(h, "adduct"))
-            .raw(",\"formula\":")
-            .str(text(h, "formula"));
-        o.raw(",\"delta_ppm\":");
-        write_value(&mut o, h.get("delta_ppm").unwrap_or(&Value::Null));
-        o.raw(",\"level\":");
-        write_value(&mut o, h.get("level").unwrap_or(&Value::Null));
-        o.raw(",\"listed_in\":").str(&cell).raw(",\"candidates\":[");
-        for (k, c) in cands.iter().enumerate() {
-            let lines: Vec<String> = c
-                .get("memberships")
-                .map_or(&[][..], Value::arr)
-                .iter()
-                .map(|m| self.line(m))
-                .collect();
-            self.candidate(&mut o, k, text(c, "name"), text(c, "inchikey"), &lines);
-        }
-        o.raw("]}");
-        self.rows.push(o.0);
-    }
-
-    fn annot_row(&mut self, r: &Value) {
-        let found = r.get("regulatory").map_or(&[][..], Value::arr);
-        if found.is_empty() {
-            return;
-        }
-        let full = found.iter().any(|f| text(f, "match") == "InChIKey");
-        let cell = if full {
-            "Candidate structure matches a listed substance (InChIKey)"
-        } else {
-            "Candidate structure matches a listed substance (first block: stereo, charge or isotope may differ)"
-        };
-        let mut o = Out::default();
-        o.raw("{\"path\":\"structure\",\"feature\":");
-        write_value(&mut o, r.get("id").unwrap_or(&Value::Null));
-        o.raw(",\"level\":");
-        write_value(&mut o, r.get("level").unwrap_or(&Value::Null));
-        o.raw(",\"listed_in\":").str(cell).raw(",\"candidates\":[");
-        let lines: Vec<String> = found
-            .iter()
-            .filter_map(|f| f.get("membership"))
-            .map(|m| self.line(m))
-            .collect();
-        self.candidate(&mut o, 0, text(r, "name"), text(r, "entry"), &lines);
-        o.raw("]}");
-        self.rows.push(o.0);
-    }
-
-    fn candidate(&self, o: &mut Out, k: usize, name: &str, key: &str, lines: &[String]) {
-        o.raw(if k > 0 { ",{\"name\":" } else { "{\"name\":" })
-            .str(name)
-            .raw(",\"inchikey\":")
-            .str(key)
-            .raw(",\"memberships\":[");
-        for (j, l) in lines.iter().enumerate() {
-            o.raw(if j > 0 { "," } else { "" }).str(l);
-        }
-        o.raw("]}");
-    }
-
-    /// "Screened against: <list> (version <date>, retrieved <date>, SHA-256 <8 hex>…); … N lists in force, M proposals."
-    pub fn header(&self) -> String {
-        let one = |l: &Value| {
-            let mut bits = Vec::new();
-            for (word, v) in [
-                ("version", tag(l, "version_date")),
-                ("retrieved", text(l, "retrieved")),
-            ] {
-                if !v.is_empty() {
-                    bits.push(format!("{word} {v}"));
-                }
-            }
-            let sha = text(l, "csv_sha256");
-            if !sha.is_empty() {
-                bits.push(format!("SHA-256 {}…", &sha[..sha.len().min(8)]));
-            }
-            format!("{} ({})", label(l), bits.join(", "))
-        };
-        let parts: Vec<String> = self.lists.iter().map(one).collect();
-        let status = |s: &[&str]| {
-            self.lists
-                .iter()
-                .filter(|l| s.contains(&tag(l, "status")))
-                .count()
-        };
-        let (force, prop) = (
-            status(&["in_force", "adopted_not_applicable"]),
-            status(&["proposal", "draft"]),
-        );
-        let plural = |n: usize, w: &str| format!("{n} {w}{}", if n == 1 { "" } else { "s" });
-        format!(
-            "Screened against: {}. {} in force, {}.",
-            parts.join("; "),
-            plural(force, "list"),
-            plural(prop, "proposal")
-        )
-    }
-
-    /// One coverage line per list.
-    pub fn coverage(&self) -> Vec<String> {
-        self.lists
-            .iter()
-            .map(|l| {
-                let mut s = format!(
-                    "{}: This list has {} entries: {} screened by structure, {} groups defined by structure or as mixtures, {} inorganic",
-                    label(l),
-                    count(l, "entries"),
-                    count(l, "screenable"),
-                    count(l, "groups") + count(l, "uvcb"),
-                    count(l, "inorganic")
-                );
-                if count(l, "unresolved") > 0 {
-                    s.push_str(&format!(", {} without a structure", count(l, "unresolved")));
-                }
-                s.push_str("; not screened by mass.");
-                s
-            })
-            .collect()
     }
 
     /// The section as `corsa/1` writes it; nothing when the run used no regulatory list.
@@ -233,14 +233,14 @@ impl Regulatory {
             return;
         }
         o.raw(",\"regulatory\":{\"title\":\"Regulatory lists\",\"header\":")
-            .str(&self.header())
+            .str(&header(&self.lists))
             .raw(",\"lists\":[");
         for (k, l) in self.lists.iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" });
             write_value(o, l);
         }
         o.raw("],\"coverage\":[");
-        for (k, c) in self.coverage().iter().enumerate() {
+        for (k, c) in coverage(&self.lists).iter().enumerate() {
             o.raw(if k > 0 { "," } else { "" }).str(c);
         }
         o.raw("],\"column\":")
