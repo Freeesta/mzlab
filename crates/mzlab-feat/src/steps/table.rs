@@ -164,11 +164,16 @@ pub(super) fn gapfill() -> Step {
 
 /// `table.filter`: the rules of `filters::Rule` and the normalisation of `norm::Method` as a view over the table; the table is not changed.
 pub(super) fn filter() -> Step {
-    let params = vec![
+    let mut params = vec![
         Param::integer("min_detected", "Minimum files")
             .min(0.0)
             .unit("files")
             .doc("Peaks found by the detection in at least this many files that are not blanks; left empty, the rule is off"),
+        Param::number("min_replicate_fraction", "Minimum replicate fraction")
+            .min(0.0)
+            .max(1.0)
+            .unit("fraction")
+            .doc("A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off"),
         Param::number("min_area", "Minimum area")
             .min(0.0)
             .unit("counts")
@@ -192,6 +197,11 @@ pub(super) fn filter() -> Step {
             .doc("max_feature judges the row by its best sample; each_feature keeps it only if every sample with a peak reaches the threshold"),
         Param::boolean("blank_subtract", "Subtract the blank")
             .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
+        Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
+            .default_str("all")
+            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"),
+        Param::boolean("blank_keep_istd", "Keep the internal standard")
+            .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),
         Param::boolean("qc_zero", "Count missing QC as 0")
             .doc("The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"),
         Param::number("qc_cv_max", "Maximum QC CV")
@@ -203,20 +213,8 @@ pub(super) fn filter() -> Step {
             .default_num(3.0)
             .unit("files")
             .doc("QC files with a peak that the row needs for the QC rule, and QC files that the series needs"),
-        Param::number("dup_ppm", "Duplicate m/z window")
-            .min(0.0)
-            .unit("ppm")
-            .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
-        Param::number("dup_rt", "Duplicate RT window")
-            .min(0.0)
-            .default_num(0.1)
-            .unit("min")
-            .doc("RT distance under which two rows may be duplicates; used with the duplicate m/z window only"),
-        Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
-        Param::choice("normalize", "Normalisation", &["none", "sum", "median"])
-            .default_str("none")
-            .doc("Scale of the areas of each file: total area or median area"),
     ];
+    params.extend(filter_tail_params());
     Step {
         ins: vec![
             Port::new("table", DataType::Table, "Feature table"),
@@ -236,6 +234,35 @@ pub(super) fn filter() -> Step {
             "Keeps the rows that pass an ordered list of rules over the samples (campioni/2); blanks and dark files never count as samples, and a rule that cannot be evaluated is an error.",
         )
     }
+}
+
+/// The last parameters of `table.filter`: duplicates, MS2, normalisation and its internal standard.
+fn filter_tail_params() -> Vec<Param> {
+    vec![
+        Param::number("dup_ppm", "Duplicate m/z window")
+            .min(0.0)
+            .unit("ppm")
+            .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
+        Param::number("dup_rt", "Duplicate RT window")
+            .min(0.0)
+            .default_num(0.1)
+            .unit("min")
+            .doc("RT distance under which two rows may be duplicates; used with the duplicate m/z window only"),
+        Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
+        Param::choice("normalize", "Normalisation", &["none", "sum", "median", "istd"])
+            .default_str("none")
+            .doc("Scale of the areas of each file: total area, median area or the area of the internal standard (the row istd_id, or the row nearest to istd_mz and istd_rt)"),
+        Param::integer("istd_id", "Internal standard row")
+            .min(0.0)
+            .doc("Id of the row of the internal standard; used with the normalisation istd"),
+        Param::number("istd_mz", "Internal standard m/z")
+            .min(0.0)
+            .doc("m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set"),
+        Param::number("istd_rt", "Internal standard RT")
+            .min(0.0)
+            .unit("min")
+            .doc("RT of the internal standard; used with its m/z"),
+    ]
 }
 
 /// `table.drift`: the correction of the drift of the areas along the order of injection (`drift::correct`), a view over the table.

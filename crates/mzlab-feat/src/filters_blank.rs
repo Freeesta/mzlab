@@ -32,6 +32,17 @@ pub enum Scope {
     EachFeature,
 }
 
+/// Which blank files a sample file is compared with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Matching {
+    /// All the blank files (one level for every sample).
+    All,
+    /// Only the blanks of the same batch; a sample with none falls back to all blanks.
+    Batch,
+    /// Only the blanks of the same matrix; the same fallback.
+    Matrix,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BlankOpts {
     pub quantity: Quantity,
@@ -39,6 +50,9 @@ pub struct BlankOpts {
     pub scope: Scope,
     /// The view shows `max(0, value - fold * blank)` for the files that are not blanks (needs `Area` or `NormArea`).
     pub subtract: bool,
+    pub matching: Matching,
+    /// The internal-standard row of the view's normalisation passes the rule (it is spiked in the blanks too).
+    pub keep_istd: bool,
 }
 
 impl Default for BlankOpts {
@@ -48,6 +62,8 @@ impl Default for BlankOpts {
             stat: Stat::Mean,
             scope: Scope::MaxFeature,
             subtract: false,
+            matching: Matching::All,
+            keep_istd: false,
         }
     }
 }
@@ -115,6 +131,165 @@ pub fn passes(
     })
 }
 
+/// Per-file labels of the series (batch, matrix, series, group) that the matched blank rule and the replicate rule read; empty when no rule needs them. They travel in
+/// the spec of the view (`etichette`), so the digest covers them.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Labels {
+    pub batch: Vec<String>,
+    pub matrix: Vec<String>,
+    pub series: Vec<String>,
+    pub group: Vec<String>,
+}
+
+impl Labels {
+    pub fn is_empty(&self) -> bool {
+        self.batch.is_empty()
+            && self.matrix.is_empty()
+            && self.series.is_empty()
+            && self.group.is_empty()
+    }
+
+    fn of(list: &[String], k: usize) -> &str {
+        list.get(k).map_or("", String::as_str)
+    }
+
+    pub fn series_of(&self, k: usize) -> &str {
+        Self::of(&self.series, k)
+    }
+
+    pub fn group_of(&self, k: usize) -> &str {
+        Self::of(&self.group, k)
+    }
+
+    pub fn to_json(&self) -> String {
+        let mut j = Out::default();
+        j.raw("{");
+        for (i, (key, list)) in [
+            ("lotto", &self.batch),
+            ("matrice", &self.matrix),
+            ("serie", &self.series),
+            ("gruppo", &self.group),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            j.raw(if i > 0 { "," } else { "" }).str(key).raw(":[");
+            for (n, x) in list.iter().enumerate() {
+                j.raw(if n > 0 { "," } else { "" }).str(x);
+            }
+            j.raw("]");
+        }
+        j.raw("}");
+        j.0
+    }
+
+    /// The `etichette` object; every list is empty or has one entry per file.
+    pub fn from_json(v: &Value, n_files: usize) -> Result<Labels> {
+        let list = |k: &str| -> Result<Vec<String>> {
+            let Some(a) = v.get(k) else {
+                return Ok(Vec::new());
+            };
+            let out: Vec<String> = a
+                .arr()
+                .iter()
+                .map(|x| x.str().map(str::to_string).ok_or_else(bad))
+                .collect::<Result<_>>()?;
+            if !out.is_empty() && out.len() != n_files {
+                return Err(bad());
+            }
+            Ok(out)
+        };
+        Ok(Labels {
+            batch: list("lotto")?,
+            matrix: list("matrice")?,
+            series: list("serie")?,
+            group: list("gruppo")?,
+        })
+    }
+}
+
+/// The sample files that share one set of blank files, and that set.
+pub type Group = (Vec<usize>, Vec<usize>);
+
+/// The comparison groups of a blank rule: with `Matching::All` one group of all `samples` and all `blank` files; else the samples of each batch (or matrix)
+/// with the blanks that carry the same label. A sample with no label or no blank of its label joins the last group, with all the blanks. The second value
+/// is true per file (sized `n_files`) for the samples that took that fallback.
+pub fn blank_groups(
+    m: Matching,
+    labels: &Labels,
+    samples: &[usize],
+    blank: &[usize],
+    n_files: usize,
+) -> (Vec<Group>, Vec<bool>) {
+    let list = match m {
+        Matching::All => {
+            return (
+                vec![(samples.to_vec(), blank.to_vec())],
+                vec![false; n_files],
+            )
+        }
+        Matching::Batch => &labels.batch,
+        Matching::Matrix => &labels.matrix,
+    };
+    let label = |k: usize| Labels::of(list, k);
+    let mut groups: Vec<(String, Group)> = Vec::new();
+    let mut fallback = vec![false; n_files];
+    let mut rest: Vec<usize> = Vec::new();
+    for &k in samples {
+        let key = label(k);
+        let mine: Vec<usize> = blank.iter().copied().filter(|&b| label(b) == key).collect();
+        if key.is_empty() || mine.is_empty() {
+            fallback[k] = true;
+            rest.push(k);
+        } else if let Some(g) = groups.iter_mut().find(|(g, _)| g == key) {
+            g.1 .0.push(k);
+        } else {
+            groups.push((key.to_string(), (vec![k], mine)));
+        }
+    }
+    let mut out: Vec<Group> = groups.into_iter().map(|(_, g)| g).collect();
+    if !rest.is_empty() {
+        out.push((rest, blank.to_vec()));
+    }
+    (out, fallback)
+}
+
+/// `passes` over several comparison groups: a row is kept when a group with a peak clears its own limit (`MaxFeature`) or when every sample with a peak clears the limit
+/// of its group (`EachFeature`). With one group it is `passes`.
+pub fn passes_groups(
+    t: &Aligned,
+    factors: Option<&[f64]>,
+    o: &BlankOpts,
+    fold: f64,
+    row: usize,
+    groups: &[Group],
+) -> Result<bool> {
+    if let [(s, b)] = groups {
+        return passes(t, factors, o, fold, row, (s, b));
+    }
+    let mut any = false;
+    let mut seen = false;
+    let mut all = true;
+    let mut limits_zero = true;
+    for (s, b) in groups {
+        let limit = fold.max(1.0) * blank_level(t, factors, o, row, b)?;
+        limits_zero &= limit <= 0.0;
+        let mut top: Option<f64> = None;
+        for &k in s {
+            if let Some(x) = value(t, factors, o.quantity, row, k)? {
+                seen = true;
+                top = Some(top.map_or(x, |m| m.max(x)));
+                all &= x >= limit;
+            }
+        }
+        any |= top.is_some_and(|m| m >= limit);
+    }
+    Ok(match o.scope {
+        Scope::MaxFeature => any || (!seen && limits_zero),
+        Scope::EachFeature => all && (seen || limits_zero),
+    })
+}
+
 /// The blank subtraction of a view: the level of every row and the files that are blanks (left as they are).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Subtraction {
@@ -153,7 +328,7 @@ pub fn subtraction(
     }) else {
         return Ok(None);
     };
-    if o.quantity == Quantity::Height {
+    if o.quantity == Quantity::Height || o.matching != Matching::All {
         return Err(bad());
     }
     let blank: Vec<usize> = (0..t.n_files).filter(|&k| is_blank[k]).collect();
@@ -190,6 +365,11 @@ const QUANTITY: [(&str, Quantity); 3] = [
     ("area_norm", Quantity::NormArea),
 ];
 const STAT: [(&str, Stat); 2] = [("media", Stat::Mean), ("massimo", Stat::Max)];
+const MATCHING: [(&str, Matching); 3] = [
+    ("tutti", Matching::All),
+    ("lotto", Matching::Batch),
+    ("matrice", Matching::Matrix),
+];
 const SCOPE: [(&str, Scope); 2] = [("max", Scope::MaxFeature), ("ciascuna", Scope::EachFeature)];
 
 fn name<T: PartialEq + Copy>(table: &[(&'static str, T)], x: T) -> &'static str {
@@ -220,6 +400,12 @@ pub fn write_json(j: &mut Out, o: &BlankOpts) {
     } else {
         ",\"sottrai\":false"
     });
+    if o.matching != Matching::All {
+        j.raw(",\"abbinamento\":").str(name(&MATCHING, o.matching));
+    }
+    if o.keep_istd {
+        j.raw(",\"istd_esente\":true");
+    }
 }
 
 /// The options of a `bianco` rule (absent fields keep the defaults).
@@ -231,6 +417,10 @@ pub fn read_json(v: &Value) -> Result<BlankOpts> {
         scope: pick(&SCOPE, v, "ambito", d.scope)?,
         subtract: v
             .get("sottrai")
+            .map_or(Ok(false), |b| b.bool().ok_or_else(bad))?,
+        matching: pick(&MATCHING, v, "abbinamento", d.matching)?,
+        keep_istd: v
+            .get("istd_esente")
             .map_or(Ok(false), |b| b.bool().ok_or_else(bad))?,
     })
 }

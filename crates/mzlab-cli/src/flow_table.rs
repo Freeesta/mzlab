@@ -22,8 +22,8 @@ pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
 
 /// The `view` text of the table under the rules of the job.
 pub fn filter_text(job: &Job, table: &[u8], samples: &[u8]) -> Result<String> {
+    let spec = filterspec::spec_with_samples(&job.resolved.params, samples);
     let samples = samples_text(samples)?;
-    let spec = spec_text(job);
     view_json(&mut Slice(table), table.len() as u64, &samples, &spec)
 }
 

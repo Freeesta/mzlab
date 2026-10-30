@@ -37,10 +37,13 @@ pub fn recipe_polarity<R: ReadAt>(r: &mut R, size: u64) -> Result<i32> {
     })
 }
 
-/// The samples as `campioni/1` text, whichever of the two schemas the file has.
+/// The samples as `campioni/1` text, whichever of the schemas the file has (`campioni/3` too: its batch and matrix are read by `filterspec`).
 pub fn samples_v1(bytes: &[u8]) -> Result<String> {
     let doc = parse(bytes)?;
-    if doc.get("schema").and_then(|v| v.str()) != Some("campioni/2") {
+    if !matches!(
+        doc.get("schema").and_then(|v| v.str()),
+        Some("campioni/2") | Some(campioni::SCHEMA3)
+    ) {
         return Ok(String::from_utf8_lossy(bytes).into_owned());
     }
     let mut out: Vec<Sample> = Vec::new();
