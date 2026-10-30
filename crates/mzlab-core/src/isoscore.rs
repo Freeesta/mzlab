@@ -5,8 +5,8 @@ use crate::composition::Counts;
 use crate::elements::{mass_of, parse_formula, ELECTRON};
 use crate::error::{Error, Result};
 pub use crate::isotab::isotopes_of;
-pub(crate) use crate::isotab::SI;
 use crate::isotab::ISO;
+pub(crate) use crate::isotab::SI;
 use crate::pysum::pysum;
 use crate::subformulas::submasses;
 
