@@ -343,10 +343,41 @@ jobs:
         with:
           path: site/static/normative
           key: normative-${{ hashFiles('normative/lists/**', 'normative/provenance.json', 'crates/mzlab-cli/src/normative/**', 'crates/mzlab-feat/src/suspects.rs', 'Cargo.lock') }}
+      # the in-silico candidates are the PubChemLite structures in mass-range pieces, packed natively; downloaded by the user on a click, never code in a .wasm
+      - name: Restore the in-silico candidate package from the cache
+        id: inscache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: site/static/insilico
+          key: insilico-${{ steps.pin.outputs.fonti }}-${{ hashFiles('crates/mzlab-cli/src/insilico_pack.rs', 'crates/mzlab-feat/src/flow_insilico.rs', 'crates/mzlab-feat/src/attributio/ms2_engine/insilico.rs', 'tools/pubchemlite_pacchetto.py', 'Cargo.lock') }}
+      - name: Restore the PubChemLite CSV
+        if: steps.inscache.outputs.cache-hit != 'true'
+        id: inscsv
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .insilico-fonti
+          key: insilico-fonti-${{ steps.pin.outputs.fonti }}
+      - name: Pack the in-silico candidates (mzlab-cli insilico pack; a network failure only warns)
+        if: steps.inscache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --locked --release -p mzlab-cli
+          python tools/pubchemlite_pacchetto.py --fonte .insilico-fonti --cli target/release/mzlab-cli --out site/static/insilico
+      - name: Save the PubChemLite CSV
+        if: steps.inscache.outputs.cache-hit != 'true' && steps.inscsv.outputs.cache-hit != 'true' && hashFiles('site/static/insilico/catalogo.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .insilico-fonti
+          key: insilico-fonti-${{ steps.pin.outputs.fonti }}
+      - name: Save the in-silico candidate package in the cache
+        if: steps.inscache.outputs.cache-hit != 'true' && hashFiles('site/static/insilico/catalogo.json') != ''
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: site/static/insilico
+          key: insilico-${{ steps.pin.outputs.fonti }}-${{ hashFiles('crates/mzlab-cli/src/insilico_pack.rs', 'crates/mzlab-feat/src/flow_insilico.rs', 'crates/mzlab-feat/src/attributio/ms2_engine/insilico.rs', 'tools/pubchemlite_pacchetto.py', 'Cargo.lock') }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pages-packages
-          # site/static holds only librerie and mzfinder/sospetti here, so the prefix stays
+          # site/static holds only librerie, normative, insilico and mzfinder/sospetti here, so the prefix stays
           path: site/static
           if-no-files-found: ignore
           retention-days: 1
