@@ -49,7 +49,7 @@
       case "error": return mk("bad", "This step failed", "bad", why(e) || "This step failed");
       case "refused": return mk("bad", "This step was refused", "bad", why(e) || "This step was refused");
       case "blocked": return e.blocked_by === "permission.memory" ? mk("lock", "Allow more memory: Run now", "warn", "Large files: allow more memory with Run now")
-        : e.blocked_by === "platform.computer" ? mk("lock", "Needs the desktop app", "warn", "This step needs the desktop app (profile mzML). Use the app, or open the vendor file.") : mk("lock", "Fix the plan first", "warn", "Fix the plan first (see Issues)");
+        : e.blocked_by === "platform.computer" ? mk("lock", "Needs the desktop app", "warn", "This step needs the desktop app (high-resolution profile mzML, or centroid parameters set by hand). Use the app.") : mk("lock", "Fix the plan first", "warn", "Fix the plan first (see Issues)");
       case "skipped": return mk("skip", "skipped", "idle");
       case "paused": return mk("pause", "paused", "idle");
       case "cancelled": return mk("skip", "cancelled", "idle");

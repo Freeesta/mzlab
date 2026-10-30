@@ -104,7 +104,10 @@ fn table_match_in_the_libraries_gives_the_bytes_of_the_cli() {
             _ => unreachable!(),
         }
     };
-    let open = |k: usize| crate::flow_base::open(&w.join(format!("idx-{}.mzidx", NAMES[k])));
+    let open = |k: usize| match NAMES.get(k) {
+        Some(n) => crate::flow_base::open(&w.join(format!("idx-{n}.mzidx"))),
+        None => Err(mzlab_core::error::Error::new("err.flow.tablematch.files")),
+    };
     let all = resolved(&plan(step), "tm");
     let mgf = mzlab_feat_table_wasm::rows_mgf::rows_mgf(
         &mut Slice(&table),

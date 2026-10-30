@@ -10,7 +10,7 @@
 import { infoRoute } from "./rust-bridge-info.js";
 import { hasScan, scanRoutes } from "./rust-scans.js";
 import { diffRoute } from "./rust-diff.js";
-import { makeConvertCentroids } from "./rust-centroidi.js";
+import { makeConvertCentroids, makeFlowCentroid } from "./rust-centroidi.js";
 import { wiffApi } from "./rust-convert.js";
 import { makeNativo } from "./rust-nativo-pagina.js";
 import { makeRecycler } from "./rust-recycle.js";
@@ -117,7 +117,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   };
   // a worker busy in one long call cannot hear a message: cancelling stops it and starts a new one (not a fault). the files of a maker are read as they are, in the browser and in the desktop app (rust-nativo-pagina.js)
   const cancelable = { rpc, base, current: () => worker, abort: (/** @type {any} */ w) => { stop(w, { dead: true, cancelled: true }); if (!api.disabled) respawn(); } };
-  Object.assign(api, wiffApi(rpc, base), { convertCentroids: makeConvertCentroids(cancelable) }, makeNativo(cancelable));
+  const convertCentroids = makeConvertCentroids(cancelable);
+  Object.assign(api, wiffApi(rpc, base), { convertCentroids, flowCentroid: makeFlowCentroid(cancelable, convertCentroids) }, makeNativo(cancelable));
   // true when the files at these slots have their index open (a part of a mixed file or a file without index: false)
   api.ready = async ks => {
     if (!ks.length || !ks.every(k => Number.isInteger(k) && slots[k])) return false;

@@ -87,8 +87,10 @@
     const stemOf = (/** @type {string} */ n) => n.replace(/\.[^.]+$/, "");
     // `mode`: how Data classed the file (profile | centroid | mixed), the base of the choice of the centroid step; `cen`: the index of its centroids, when Data holds one
     const modeOf = (/** @type {string} */ n) => { const f = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).find((/** @type {any} */ g) => g.name === n); return f && f.spectrum_mode ? String(f.spectrum_mode) : ""; };
-    const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input) }; });
-    for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML") });
+    // `hr`: a high-resolution profile file (heavy: stays with the desktop app); `size`: its bytes, for the room the centroid copy needs
+    const sizeOf = (/** @type {string} */ n) => { const f = (typeof ST !== "undefined" && Array.isArray(ST.files) ? ST.files : []).find((/** @type {any} */ g) => g.name === n); return { hr: !!(f && f.hr_profile), size: f && f.size || 0 }; };
+    const items = files.map((/** @type {any} */ f) => { const stem = f.name.replace(/\.mzidx$/, ""), input = open.find((/** @type {string} */ n) => n && (n === stem || stemOf(n) === stem)) || stem + ".mzML"; return { input, stem, idx: f, cen: f.cen || null, mode: modeOf(input), ...sizeOf(input) }; });
+    for (const stem of x.loading.keys()) if (!items.some((/** @type {any} */ i) => i.stem === stem)) items.push({ input: stem + ".mzML", stem, idx: null, cen: null, mode: modeOf(stem + ".mzML"), ...sizeOf(stem + ".mzML") });
     // the files in the order of the plan's scan inputs, the order `flow run` aligns them in (a file the plan does not name follows, by name: the sort is stable)
     const named = plan.inputs.filter((/** @type {any} */ i) => i.type === "raw" || i.type === "mzml").map((/** @type {any} */ i) => stemOf(i.name));
     const rank = (/** @type {any} */ i) => { const k = named.indexOf(i.stem); return k < 0 ? named.length : k; };

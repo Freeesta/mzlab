@@ -7,7 +7,7 @@ use mzlab_core::step::{DataType, Kind};
 use mzlab_feat::steps::records::{records, records_json};
 use mzlab_feat::steps::{attributio, registry};
 
-const IDS: [&str; 9] = [
+const IDS: [&str; 10] = [
     "spectra.chimeric",
     "formula.ms1",
     "formula.ms2",
@@ -15,6 +15,7 @@ const IDS: [&str; 9] = [
     "spectra.insilico",
     "rt.predict",
     "annot.level",
+    "screen.suspects",
     "annot.regulatory",
     "annot.hazard",
 ];
@@ -32,7 +33,7 @@ fn committed(name: &str, text: &str) {
 }
 
 #[test]
-fn registry_lists_the_nine_steps_in_the_order_of_the_chain() {
+fn registry_lists_the_ten_steps_in_the_order_of_the_chain() {
     let ids: Vec<_> = attributio().iter().map(|s| s.id).collect();
     assert_eq!(ids, IDS);
     let core: Vec<_> = registry().iter().map(|s| s.id).collect();
@@ -52,10 +53,12 @@ fn every_port_requires_high_resolution_and_the_package_is_attributio() {
             "{} has no hr input",
             s.id
         );
+        // a step with a single way to compute (screen.suspects) has no algorithm to choose
         assert!(
-            s.algorithms
-                .iter()
-                .any(|a| Some(a.id) == s.default_algorithm),
+            s.algorithms.is_empty()
+                || s.algorithms
+                    .iter()
+                    .any(|a| Some(a.id) == s.default_algorithm),
             "{} default algorithm",
             s.id
         );

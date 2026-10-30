@@ -250,6 +250,15 @@ pub fn read_meta_mz(bytes: &[u8]) -> Result<(Value, Vec<f64>)> {
     Ok((o.meta, mz))
 }
 
+/// The meta of a `.mzfeat` with its m/z and RT columns, without the rest of the table.
+pub fn read_meta_mz_rt(bytes: &[u8]) -> Result<(Value, Vec<f64>, Vec<f64>)> {
+    let (mut r, size) = (Slice(bytes), bytes.len() as u64);
+    let o = open(&mut r, size, "table")?;
+    let mz = o.col(&mut r, size, "mz", "f64", None, f64::from_le_bytes)?;
+    let rt = o.col(&mut r, size, "rt", "f64", None, f64::from_le_bytes)?;
+    Ok((o.meta, mz, rt))
+}
+
 /// Reads a `.mzfeatf`: the table and its meta.
 pub fn read_file(bytes: &[u8]) -> Result<(FileFeatures, Value)> {
     read_file_from(&mut Slice(bytes), bytes.len() as u64, Want::ALL)

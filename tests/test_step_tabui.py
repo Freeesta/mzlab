@@ -14,7 +14,7 @@ IDS = ["tp.generate", "tp.filter", "tp.link", "tp.position", "tp.network", "tp.r
 
 
 def refs(step):
-    return step.get("references", []) + [r for a in step["algorithms"] for r in a.get("references", [])]
+    return step.get("references", []) + [r for a in step.get("algorithms", []) for r in a.get("references", [])]
 
 
 @pytest.mark.parametrize("step", STEPS, ids=IDS)

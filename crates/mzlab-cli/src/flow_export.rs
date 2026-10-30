@@ -13,12 +13,6 @@ use mzlab_feat::store::Slice;
 use mzlab_feat_table_wasm::core::table_file;
 use mzlab_feat_table_wasm::pol;
 
-/// Polarity the detection of the table ran in (`pol::recipe_polarity`, which `table.match` writes its MGF with); read by the tests that rebuild that MGF.
-#[cfg(test)]
-pub(crate) fn polarity(table: &[u8]) -> Result<i32> {
-    pol::recipe_polarity(&mut Slice(table), table.len() as u64)
-}
-
 /// Polarity of the table: the rule of `mzlab_feat_table_wasm::pol` (the recipe, else the files of its lineage), the one the browser applies.
 pub(crate) fn polarity_of(table: &[u8], files: &[PathBuf]) -> Result<i32> {
     let ix: Vec<_> = files.iter().filter_map(|p| open(p).ok()).collect();

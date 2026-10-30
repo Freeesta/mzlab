@@ -219,10 +219,47 @@ fn gap_formula_ms1_takes_the_ion_of_the_polarity_of_the_files() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// Adds to every mzML of `d` five MS2 scans of the hydroxylated product (precursor [M-H]-, 255.0444) around its peak.
+fn add_ms2(d: &Path, pol: i8) {
+    let prec = 256.0517 + f64::from(pol) * 1.007276;
+    let (acc, sign) = if pol < 0 {
+        ("MS:1000129", "-")
+    } else {
+        ("MS:1000130", "+")
+    };
+    let frag = [80.0, 119.0, 148.0, 191.0, 211.0];
+    for n in NAMES {
+        let f = d.join(format!("{n}.mzML"));
+        let mut x = std::fs::read_to_string(&f).unwrap();
+        let mut ms2 = String::new();
+        for i in 400..405 {
+            let rt = 4.32 + (i - 399) as f64 * 0.003;
+            let y: Vec<f64> = frag
+                .iter()
+                .enumerate()
+                .map(|(k, _)| 1e4 / (k + 1) as f64)
+                .collect();
+            ms2.push_str(&format!(
+                r#"<spectrum index="{i}" id="scan={}" defaultArrayLength="5"><cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="2"/><cvParam cvRef="MS" accession="MS:1000127" name="centroid spectrum"/><cvParam cvRef="MS" accession="{acc}" name="scan"/><cvParam cvRef="MS" accession="MS:1000512" name="filter string" value="ITMS {sign} c ESI d Full ms2 {prec:.2}@cid35.00 [50.00-300.00]"/><scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt}" unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList><precursorList count="1"><precursor><isolationWindow><cvParam cvRef="MS" accession="MS:1000827" name="isolation window target m/z" value="{prec:.4}"/><cvParam cvRef="MS" accession="MS:1000828" name="isolation window lower offset" value="0.5"/><cvParam cvRef="MS" accession="MS:1000829" name="isolation window upper offset" value="0.5"/></isolationWindow><selectedIonList count="1"><selectedIon><cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="{prec:.4}"/></selectedIon></selectedIonList><activation><cvParam cvRef="MS" accession="MS:1000133" name="collision-induced dissociation"/></activation></precursor></precursorList><binaryDataArrayList count="2">{}{}</binaryDataArrayList></spectrum>"#,
+                i + 1,
+                crate::flow_bentazone_tests::array("MS:1000514", &frag),
+                crate::flow_bentazone_tests::array("MS:1000515", &y)
+            ));
+        }
+        // in time order: the scans go between the MS1 scans 216 and 217
+        x = x.replace(
+            r#"<spectrum index="217""#,
+            &format!("{ms2}<spectrum index=\"217\""),
+        );
+        x = x.replace(r#"spectrumList count="400""#, r#"spectrumList count="405""#);
+        std::fs::write(&f, x).unwrap();
+    }
+}
+
 #[test]
-#[ignore = "gap NL-3: table.match writes the MGF of a negative table as positive when the plan does not write the polarity (MATRICE_NEG_LR.md)"]
-fn gap_the_polarity_of_the_mgf_of_table_match_is_the_one_of_the_files() {
+fn a_negative_table_is_searched_as_negative_by_table_match() {
     let d = fixture("nl_g3", -1, true);
+    add_ms2(&d, -1);
     run(&d, &with("]}"));
     let table = std::fs::read(d.join("work/gap.mzfeat")).unwrap();
     let idx: Vec<PathBuf> = NAMES
@@ -230,7 +267,71 @@ fn gap_the_polarity_of_the_mgf_of_table_match_is_the_one_of_the_files() {
         .map(|n| d.join(format!("work/idx-{n}.mzidx")))
         .collect();
     assert_eq!(crate::flow_export::polarity_of(&table, &idx).unwrap(), -1);
-    assert_eq!(crate::flow_export::polarity(&table).unwrap(), -1);
+    // the bytes the browser calls (`rows_mgf` of the table .wasm) with the indexes of the files
+    let samples = std::fs::read(d.join("samples.json")).unwrap();
+    let open = |k: usize| match idx.get(k) {
+        Some(p) => crate::flow_base::open(p),
+        None => Err(mzlab_core::error::Error::new("err.flow.tablematch.files")),
+    };
+    let mgf = mzlab_feat_table_wasm::rows_mgf::rows_mgf(
+        &mut mzlab_feat::store::Slice(&table),
+        table.len() as u64,
+        &samples,
+        &[],
+        &mzlab_core::budget::sha256_hex(&table),
+        open,
+    )
+    .unwrap();
+    assert!(mgf.contains("ACCESSION="), "{mgf}");
+    assert!(mgf.contains("IONMODE=Negative"), "{mgf}");
+    assert!(!mgf.contains("IONMODE=Positive"), "{mgf}");
+    // a library of the same spectrum in both polarities: only the negative entry is found, in `flow run` too
+    let entry = mgf
+        .split("BEGIN IONS")
+        .nth(1)
+        .unwrap()
+        .split("END IONS")
+        .next()
+        .unwrap();
+    let body: String = entry
+        .lines()
+        .filter(|l| {
+            !l.starts_with("ACCESSION=")
+                && !l.starts_with("FEATURE_ID=")
+                && !l.starts_with("SCANS=")
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let lib = |name: &str, mode: &str| {
+        format!(
+            "BEGIN IONS\nNAME={name}\n{}\nEND IONS\n",
+            body.replace("IONMODE=Negative", &format!("IONMODE={mode}"))
+                .replace(
+                    "CHARGE=1-",
+                    if mode == "Negative" {
+                        "CHARGE=1-"
+                    } else {
+                        "CHARGE=1+"
+                    }
+                )
+        )
+    };
+    std::fs::write(
+        d.join("lib.mgf"),
+        format!("{}{}", lib("PosRef", "Positive"), lib("NegRef", "Negative")),
+    )
+    .unwrap();
+    let tail = r#",{"id":"tm","step":"table.match@1","in":{"table":"gap.table","samples":"file:samples.json","index":["idx.index"],"library":"file:lib.mgf"},"params":{"tol_da":0.02,"precursor_ppm":10,"top_n":50,"min_shared":1,"min_score":0.5}}]}"#;
+    let text = with(tail).replacen(
+        r#""inputs":["#,
+        r#""inputs":[{"name":"lib.mgf","type":"library"},"#,
+        1,
+    );
+    let prov = run(&d, &text);
+    assert_eq!(error_of(&prov, "tm"), None);
+    let hits = read(&d, "tm.json");
+    assert!(hits.contains("NegRef"), "{hits}");
+    assert!(!hits.contains("PosRef"), "{hits}");
     let _ = std::fs::remove_dir_all(&d);
 }
 

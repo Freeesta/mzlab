@@ -12,11 +12,11 @@ CONTRACT = json.loads((ROOT / "docs/studi/workflow/contract.schema.json").read_t
 STEPS = json.loads((ROOT / "docs/schemi/steps-attributio-1.json").read_text())
 RECORDS = json.loads((ROOT / "docs/schemi/records-1.json").read_text())
 IDS = ["spectra.chimeric", "formula.ms1", "formula.ms2", "spectra.match", "spectra.insilico", "rt.predict",
-       "annot.level", "annot.regulatory", "annot.hazard"]
+       "annot.level", "screen.suspects", "annot.regulatory", "annot.hazard"]
 
 
 def refs(step):
-    return step.get("references", []) + [r for a in step["algorithms"] for r in a.get("references", [])]
+    return step.get("references", []) + [r for a in step.get("algorithms", []) for r in a.get("references", [])]
 
 
 @pytest.mark.parametrize("step", STEPS, ids=IDS)
@@ -26,7 +26,7 @@ def test_descriptor_validates_against_the_contract(step):
     assert not errors, [f"{list(e.path)}: {e.message}" for e in errors]
 
 
-def test_the_nine_steps_in_order_and_all_need_high_resolution():
+def test_the_ten_steps_in_order_and_all_need_high_resolution():
     assert [s["id"] for s in STEPS] == IDS
     for s in STEPS:
         assert s["package"] == "attributio" and s["schema"] == "step/1"
@@ -38,7 +38,8 @@ def test_the_nine_steps_in_order_and_all_need_high_resolution():
 
 def test_the_default_algorithm_exists():
     for s in STEPS:
-        assert s["default_algorithm"] in [a["id"] for a in s["algorithms"]], s["id"]
+        if s.get("algorithms"):  # screen.suspects has one method and no algorithm choice
+            assert s["default_algorithm"] in [a["id"] for a in s["algorithms"]], s["id"]
 
 
 def test_references_have_the_shape_of_the_study():
@@ -52,7 +53,7 @@ def test_references_have_the_shape_of_the_study():
 
 
 def test_every_algorithm_of_the_chain_is_written():
-    status = {a["id"]: a["status"] for s in STEPS for a in s["algorithms"]}
+    status = {a["id"]: a["status"] for s in STEPS for a in s.get("algorithms", [])}
     assert status["library_deconvolution"] == "available"
     assert [k for k, v in status.items() if v == "planned"] == []
 
