@@ -243,19 +243,41 @@ fn push_group(files: &[&FileFeatures], items: &[Item], out: &mut Aligned, adj: O
         out.area[base + k] = out.area[base + k].max(f.area[i]);
         out.height[base + k] = out.height[base + k].max(f.height[i]);
     }
-    let (mut w, mut sm, mut sr) = (0.0f64, 0.0f64, 0.0f64);
+    let (mut mz, mut rt) = (AreaMean::default(), AreaMean::default());
     for (k, b) in best.iter().enumerate() {
         let Some(b) = *b else { continue };
         let (f, b) = (files[k], b as usize);
         out.apex_rt[base + k] = f.rt[b];
         out.width[base + k] = f.right[b] - f.left[b];
         out.state[base + k] = CELL_DETECTED;
-        w += f.area[b];
-        sm += f.mz[b] * f.area[b];
-        sr += rt_of(files, adj, &(k as u32, b as u32)) * f.area[b];
+        mz.add(f.mz[b], f.area[b]);
+        rt.add(rt_of(files, adj, &(k as u32, b as u32)), f.area[b]);
     }
-    out.mz.push(sm / w);
-    out.rt.push(sr / w);
+    out.mz.push(mz.mean());
+    out.rt.push(rt.mean());
+}
+
+/// The m/z or the RT of a row: the mean of its features weighted by their areas, summed in the order of the files. `massacc::correct` recomputes a row with it.
+#[derive(Default)]
+pub struct AreaMean {
+    sum: f64,
+    weight: f64,
+}
+
+impl AreaMean {
+    pub fn add(&mut self, value: f64, area: f64) {
+        self.sum += value * area;
+        self.weight += area;
+    }
+
+    pub fn mean(&self) -> f64 {
+        self.sum / self.weight
+    }
+
+    /// Whether any area was added.
+    pub fn is_empty(&self) -> bool {
+        self.weight <= 0.0
+    }
 }
 
 /// Aligns the files in "per ion" mode. Cells without a feature have area 0, NaN apex and width, state `CELL_ABSENT`.

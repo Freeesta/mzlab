@@ -30,6 +30,7 @@
           "msn.figure",
           "msn.library_export",
           "msn.table_export",
+          "qc.mass_accuracy",
           "quant.calibrate",
           "rt.predict",
           "spectra.centroid",
@@ -90,6 +91,7 @@
               "msn.figure@1",
               "msn.library_export@1",
               "msn.table_export@1",
+              "qc.mass_accuracy@1",
               "quant.calibrate@1",
               "rt.predict@1",
               "spectra.centroid@1",
@@ -185,6 +187,7 @@
               "msn.figure@1",
               "msn.library_export@1",
               "msn.table_export@1",
+              "qc.mass_accuracy@1",
               "quant.calibrate@1",
               "rt.predict@1",
               "spectra.centroid@1",
@@ -900,6 +903,61 @@
                     "type":"boolean",
                     "default":false,
                     "description":"peaks table only: keep the peaks a node of the graph explains"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"qc.mass_accuracy@1"},
+              "name":{
+                "enum":[
+                  "search_ppm",
+                  "min_intensity",
+                  "min_refs",
+                  "robust",
+                  "model",
+                  "warn_offset_ppm",
+                  "warn_spread_ppm",
+                  "warn_is_rt_min",
+                  "warn_is_area_rsd"
+                ]
+              },
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":1,"default":20,"description":"Search window around each reference ion"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10000,
+                    "description":"Lowest peak intensity taken for a reference"
+                  },
+                  {"type":"integer","minimum":1,"default":5,"description":"References a file needs to be assessed"},
+                  {
+                    "enum":["huber","ransac","none"],
+                    "default":"huber",
+                    "description":"How outlying references are handled"
+                  },
+                  {
+                    "enum":["none","offset","linear_mz","linear_mz_rt"],
+                    "default":"none",
+                    "description":"Correction of the table m/z"
+                  },
+                  {"type":"number","minimum":0,"default":3,"description":"Offset above which the file is flagged"},
+                  {"type":"number","minimum":0,"default":2,"description":"Spread above which the file is flagged"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"RT shift of an internal standard above which the file is flagged"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Spread of the area of an internal standard above which the batch is flagged"
                   }
                 ]
               }
@@ -2331,6 +2389,7 @@
                 "msn.figure@1",
                 "msn.library_export@1",
                 "msn.table_export@1",
+                "qc.mass_accuracy@1",
                 "quant.calibrate@1",
                 "rt.predict@1",
                 "spectra.centroid@1",

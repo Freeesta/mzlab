@@ -332,6 +332,22 @@ pub fn origin_from_meta(meta: &Value) -> Origin {
     }
 }
 
+/// Where the values of the `f64` array `name` of a `.mzfeat` lie in `bytes`, for a copy of the file that replaces them in place (same length, same meta: the format does not change).
+pub fn f64_column_span(bytes: &[u8], name: &str) -> Result<std::ops::Range<usize>> {
+    let size = bytes.len() as u64;
+    let o = open(&mut Slice(bytes), size, "table")?;
+    let (count, off) = o.entry(name, "f64")?;
+    let (a, len) = (
+        usize::try_from(off).map_err(|_| bad())?,
+        count.checked_mul(8).ok_or_else(bad)?,
+    );
+    let end = a
+        .checked_add(len)
+        .filter(|&e| e <= bytes.len())
+        .ok_or_else(bad)?;
+    Ok(a..end)
+}
+
 /// Reads a `.mzfeat`: the table and its meta.
 pub fn read_table(bytes: &[u8]) -> Result<(Aligned, Value)> {
     read_table_from(&mut Slice(bytes), bytes.len() as u64)

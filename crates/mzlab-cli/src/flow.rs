@@ -19,6 +19,7 @@ use crate::flow_drift::drift_job;
 use crate::flow_estimate::estimate_job;
 use crate::flow_insilico::insilico_job;
 use crate::flow_level::level_job;
+pub(crate) use crate::flow_made::Made;
 use crate::flow_msngraph::job as msn_graph_job;
 pub use crate::flow_out::{probe_plan, run_plan_cached, run_plan_notify};
 use crate::flow_pace::Watch;
@@ -78,7 +79,10 @@ pub fn steps() -> Vec<Step> {
     all.extend(mzlab_chem::step::tabui());
     all.push(crate::flow_centroid::centroid_step());
     all.extend(crate::flow_digl::cli_steps());
-    all.push(crate::flow_quant::quant_step());
+    all.extend([
+        crate::flow_quant::quant_step(),
+        crate::flow_massacc::massacc_step(),
+    ]);
     all
 }
 
@@ -211,30 +215,6 @@ pub(crate) struct Lineage {
     pub layers: Vec<(String, Vec<(String, Value)>)>,
     pub index: Vec<PathBuf>,
     pub peaks: Vec<PathBuf>,
-}
-
-/// What an executor made: the output port, its file and the values it measured (name, value, proof).
-pub(crate) struct Made {
-    pub port: &'static str,
-    pub artifact: Artifact,
-    pub estimates: Vec<(String, Value, Value)>,
-    pub warnings: Vec<String>,
-    /// What a per-file step says of its file (`{"via": "centroided" | "passthrough", ...}`).
-    pub file: Option<Value>,
-    pub mem: Option<Mem>, // the memory of an alignment, when its step already worked it out
-}
-
-impl Made {
-    pub fn new(port: &'static str, artifact: Artifact) -> Made {
-        Made {
-            port,
-            artifact,
-            estimates: Vec::new(),
-            warnings: Vec::new(),
-            file: None,
-            mem: None,
-        }
-    }
 }
 
 /// The lineage of the files the run makes (what the feature steps hand on).
@@ -427,6 +407,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(crate::flow_lookup::EXECUTORS)
         .chain(rtpredict::EXECUTORS)
         .chain(plausible::EXECUTORS)
+        .chain(crate::flow_massacc::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?
@@ -485,8 +466,10 @@ impl Runner for FileRunner {
             );
         }
         let mut made = made?;
+        let mut outputs = vec![(made.port.to_string(), made.artifact)];
+        outputs.extend(made.extra.take().map(|(p, a)| (p.to_string(), a)));
         Ok(Outcome {
-            outputs: vec![(made.port.to_string(), made.artifact)],
+            outputs,
             estimates: made.estimates,
             ms,
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),

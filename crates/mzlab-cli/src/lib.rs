@@ -69,6 +69,10 @@ mod flow_lookup_tests;
 mod flow_lr_bench_tests;
 #[cfg(test)]
 mod flow_lr_tests;
+mod flow_made;
+mod flow_massacc;
+#[cfg(test)]
+mod flow_massacc_tests;
 mod flow_match;
 #[cfg(test)]
 mod flow_match_tests;
