@@ -73,7 +73,7 @@ try:
         step("the keyboard zoom works on the UV spectrum", zoom_keys)
         def chrom_dbl():
             n0 = pg.evaluate("E.panels.filter(q=>q.uv).length")
-            pg.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{bubbles:true}))})()")
+            pick_kind(pg, "pda")
             ready(pg); attendi(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 0.5)
             attendi(pg, f"E.panels.filter(q=>q.uv&&q._a).length === {n0 + 1}")
@@ -197,7 +197,7 @@ try:
         stage(pg, [T0]); pg.click("text=Carica dati"); ready(pg)
         def no_matrix():
             assert pg.evaluate("E.files[0].pda") is True
-            pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
+            pick_kind(pg, "pda"); ready(pg)
             attendi(pg, "E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'")
             dbl(pg, "E.panels.find(q=>q.type==='chrom')", 10)
             attendi(pg, "/DAD/.test(document.body.innerText)")
@@ -218,7 +218,7 @@ try:
             a = pg.evaluate(f"(()=>{{const u={AT}[0]._a.uvd; return {{n: u.nm.length, nm0: u.nm[0], nm1: u.nm[u.nm.length-1], rt: u.rt, mx: u.nm[u.y.indexOf(Math.max(...u.y))]}}}})()")
             assert a["n"] == 201 and a["nm0"] == 200 and a["nm1"] == 400 and abs(a["rt"] - rt) < 0.1 and abs(a["mx"] - nm) <= 4, a
         def demo_open():
-            pg.select_option("body select[data-o=kind]", "pda"); ready(pg)
+            pick_kind(pg, "pda"); ready(pg)
             attendi(pg, f"{CH}._a && {CH}.kind==='pda'")
             demo_uv_at(14.30, 224)
         step("FullScan_t10 demo: double click on the PDA trace at 14.30 min opens the UV spectrum, maximum near 224 nm", demo_open)

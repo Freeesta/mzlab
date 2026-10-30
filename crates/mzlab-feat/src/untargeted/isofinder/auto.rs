@@ -13,7 +13,7 @@ use mzlab_core::isoscore::isotopes_of;
 pub const DEFAULT_CANDIDATES: [&str; 4] = ["Cl", "Br", "S", "Si"];
 
 /// Distance between 13C and 12C as mzmine writes it in `IsotopePatternUtils.C13_MZ_DELTA`.
-const C13_MZ_DELTA: f64 = 1.003355;
+const C13_MZ_DELTA: f64 = mzlab_core::elements::C13_STEP;
 const WINDOW_PAD_DA: f64 = 2.5;
 const MIN_PEAK_REL: f64 = 0.01;
 const STRONG_ABUNDANCE: f64 = 0.5;

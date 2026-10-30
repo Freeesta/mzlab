@@ -9,7 +9,7 @@ use super::settings::ReviewSettings;
 use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
-pub const C13: f64 = 1.003355;
+pub const C13: f64 = mzlab_core::elements::C13_STEP;
 
 /// Elements of the review (`ATOM` of the reference tool), in the order they are listed there.
 const ATOMS: [&str; 16] = [
