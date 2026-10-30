@@ -1,7 +1,7 @@
 // @ts-check
 // Files open as soon as they are read: upload0 (shell.js) calls OPENNOW.add(name) when a file is in the loading table. The first file of a session starts it (api/explore),
-// the others are appended (api/explore append) in the order of the drop (a file read early waits for the ones dropped before it), with one bootSession at most every 200 ms; a new file starts hidden (bootSession0) and, when the whole
-// loading is over and no file is shown, the first one (not a blank) opens by itself (first). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
+// the others are appended (api/explore append) in the order of the drop (a file read early waits for the ones dropped before it), with one bootSession at most every 200 ms; a new file starts hidden (bootSession0):
+// nothing opens by itself, the student's first click on a file shows it (area-lavoro.js). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
 // offers the switch. Also the write-through of the sample table to the open files (roles, times, concentrations: CAMPIONI.apply). Used by shell.js and ruoli-carica.js.
 "use strict";
 
@@ -92,7 +92,7 @@ const OPENNOW = /** @type {any} */ ((() => {
     const go = async (/** @type {boolean} */ to) => {
       loading(true);
       try {
-        // the panels of the closed world point at its files: they go first (no late draw asks for a file that is gone), and the first file of the new world opens (first)
+        // the panels of the closed world point at its files: they go first (no late draw asks for a file that is gone)
         if (E.panels.length) closeAllPanels();
         await post("api/new", {});      // closes the open files, the uploaded ones stay
         sent.clear();
@@ -101,25 +101,13 @@ const OPENNOW = /** @type {any} */ ((() => {
         await bootSession();
         fs.filter((/** @type {FileRiga} */ f) => f.use).forEach((/** @type {FileRiga} */ f) => q.push(f.name));
         await drain();
-      } catch (e_) { fail(e_); } finally { loading(false); renderFiles(); first(); }
+      } catch (e_) { fail(e_); } finally { loading(false); renderFiles(); }
     };
     const n = E.files.filter((/** @type {FileAperto} */ g) => !g.gone).length;
     await go(hr);
     if (typeof STORIA !== "undefined" && STORIA) STORIA.tolto({ what: I18N.t("files.removeAll.what", { n }), dati: String(n), undo: () => go(!hr), redo: () => go(hr) });
   }
-  /** every file read is open and nothing is shown: the first file opens, as a click on it would (no panel is built before the end of the loading) */
-  function first() {
-    if (UPBUSY > 0 || busy || q.length || S.table || E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone) || E.panels.some((/** @type {Pannello} */ p) => p.el)) return;
-    // the first of the sample table, not the first read (the files are read in any order)
-    const at = (/** @type {FileAperto} */ f) => ST.files.findIndex((/** @type {FileRiga} */ r) => r.name === src(f.file));
-    const fs = E.files.filter((/** @type {FileAperto} */ f) => !f.gone).sort((/** @type {FileAperto} */ a, /** @type {FileAperto} */ b) => at(a) - at(b));
-    if (!fs.length) return;
-    // the content fades in once in place of the landing (opacity only, transizioni.css)
-    const v = /** @type {HTMLElement} */ (document.querySelector("#v-data"));
-    v.classList.add("opn-rev"); setTimeout(() => v.classList.remove("opn-rev"), 400);
-    soloFile(fs[firstOpenK(fs)]);
-  }
-  /** a batch has ended: with no file shown the first one opens; the side list says what was set aside, and what was added to files already shown */
+  /** a batch has ended: the side list says what was set aside, and what was added to files already shown */
   async function note() {
     drain();      // a file held back by one dropped before it that then failed or never ended
     await idle();
@@ -127,7 +115,6 @@ const OPENNOW = /** @type {any} */ ((() => {
     const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
     // a veil raised for this loading (the example of the tour) drops with it
     if (UPBUSY === 0 && !(/** @type {HTMLElement} */ (document.querySelector("#loading")).hidden)) loading(false);
-    if (!shown) first();
     if (m || (n && shown)) directNote(m ? "files.drop.mixed" : "files.drop.done", { n, m });
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */

@@ -1,4 +1,4 @@
-"""C29 diagnosis: what happens between the opening of the first file (by itself at the end of the loading: soloFile, or a click on the side list) and its panels (#dpanels), and how much memory the tab holds.
+"""C29 diagnosis: what happens between the opening of the first file (a click on the side list: soloFile) and its panels (#dpanels), and how much memory the tab holds.
 Measures, for a small and a large synthetic mzML: the instants of (a) work area visible, (b) first chromatogram drawn, (c) map drawn (opened right after),
 the calls that run between that start and (a) (functions wrapped with start/end, api calls, long tasks, nodes and canvases created), and the memory of the tab
 at four instants (page opened, engine ready, area prepared in advance by a throw-away prototype, after the small file).
@@ -43,7 +43,7 @@ INSTR = """
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
-  // the first file opens by itself (OPENNOW.first): the clock starts there too
+  // the first file opens with a click on the side list (soloFile): the clock starts there
   const so = window.soloFile; window.soloFile = function (...a) { if (window.__t0 == null) { window.__t0 = performance.now(); window.__ev.length = 0; } return so.apply(this, a); };
 }
 """ % json.dumps(WRAP)

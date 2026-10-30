@@ -1,11 +1,13 @@
 // @ts-check
-// Work area of the Dati view: shows one thing, decided from the state: the panels (a file shown or a panel open), the sample table (files open
-// or set aside, none shown, or «Sample table» of the side panel pressed: S.table) or the landing (no file, or files still being read: their
-// progress is the side list's, the landing does not move). The landing is the only empty state: first visit, all files removed, «+».
+// Work area of the Dati view, decided from the state: the panels (a file shown or a panel open), the sample table (no file shown after the first one
+// was, or «Sample table» of the side panel pressed: S.table) or the landing: the drop area, with the sample table under it once it has rows, until the
+// student shows a file for the first time (files being read keep their progress in the side list). The landing is the only empty state: first visit, all files removed, «+».
 // Called by applyView, renderFiles and upload (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
 "use strict";
 
 const workQ = (/** @type {string} */ s) => /** @type {HTMLElement & { disabled: boolean }} */ (document.querySelector(s));
+// a file was shown since the landing was last empty: from then on no file shown = the sample table alone
+let workShown = false;
 /** @returns {"opening" | "add" | "panels" | "table" | "landing"} */
 function workState() {
   if (S.opening) return "opening";
@@ -13,8 +15,7 @@ function workState() {
   const fs = typeof E !== "undefined" ? E.files : [], left = workRows(fs);
   if (S.sess && S.table && left) return "table";
   if (S.sess && (fs.some((/** @type {FileAperto} */ f) => f.vis && !f.gone) || E.panels.some((/** @type {Pannello} */ p) => p.el))) return "panels";
-  if (UPBUSY > 0 || OPENNOW.busy() > 0) return "landing";
-  return fs.some((/** @type {FileAperto} */ f) => !f.gone) || left ? "table" : "landing";
+  return workShown && left ? "table" : "landing";
 }
 // rows of the sample table that are not removed files (a removed file keeps its row unticked until its notice closes: all removed = the landing)
 function workRows(/** @type {FileAperto[]} */ fs) {
@@ -29,21 +30,27 @@ let _workSig = "";
 /** Shows the part of the work area that the state asks for; nothing is written when nothing changed (`force` writes anyway). */
 function syncWork(/** @type {boolean} */ force = false) {
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
-  const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab].join();
+  const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab, workRows(typeof E !== "undefined" ? E.files : [])].join();
   if (sig === _workSig && !force) return;
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;
-  // the empty landing forgets «Sample table»: the next loading opens its first file again
+  // the landing forgets «Sample table»; once empty it waits again for the first file to be shown
+  const rows = workRows(typeof E !== "undefined" ? E.files : []), land = w === "landing" && rows;
   if (w === "landing") S.table = false;
+  if (w === "landing" && !rows) workShown = false;
+  if (w === "panels") workShown = true;
   workQ("#wdata").hidden = w === "panels" || w === "opening";
   workQ("#start").hidden = !(w === "landing" || w === "add" || (w === "table" && !S.sess));
-  workQ("#wtable").hidden = !(w === "table" || w === "add");
-  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table"));
+  workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
+  // on the landing the table is already in view under the drop area: the button stays in place, pressed and inert
+  const sb = workQ("#samptab"); sb.hidden = !tab; sb.setAttribute("aria-pressed", String(w === "table" || land)); sb.disabled = land;
   TOOLS_OFF.forEach(q => { const b = workQ(q); b.disabled = none; b.setAttribute("aria-disabled", String(none)); });
   NAV_OFF.forEach(q => { const b = workQ(q); if (none) b.disabled = true; b.setAttribute("aria-disabled", String(b.disabled)); });
   // the empty side list shows a plain hint (it still takes a drop: the dashed box of #fl-dz appears only while a drag is over it)
   workQ("#fl-hint").hidden = !(none && !up);
   if (!workQ("#sb-pane").classList.contains("dz-over")) workQ("#fl-dz").hidden = true;
+  // the content fades in once in place of the landing (opacity only, transizioni.css)
+  if (was === "landing" && w === "panels") { const v = workQ("#v-data"); v.classList.add("opn-rev"); setTimeout(() => v.classList.remove("opn-rev"), 400); }
   // the side panel takes the width of the names once a file is shown (barra.js)
   if (was !== w && window.BARRA) BARRA.fitNames();
 }

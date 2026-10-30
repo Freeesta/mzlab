@@ -86,8 +86,8 @@ def loaded(pg, timeout=120000):
         st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
         raise TimeoutError(f"{e} | still busy: {st}") from None
 def open_first(pg, timeout=120000):
-    """The first file shown: the files open as soon as they are read and, at the end of the loading, the first one that is not a blank opens by itself (OPENNOW.first).
-    Waits until nothing is read or opened any more, then clicks the row of that file in the side list unless a file is already shown (a session where none opened by itself)."""
+    """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
+    Waits until nothing is read or opened any more, then clicks the row of the first file that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
     loaded(pg, timeout)
     _tempi(pg)
     k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const fs = E.files.filter(f => !f.gone); if (!fs.length) return -1;
@@ -98,7 +98,7 @@ def open_first(pg, timeout=120000):
     else: pg.evaluate("k => soloFile(E.files[k])", k)
     pg.wait_for_function("E.files.some(f => f.vis && !f.gone)", timeout=timeout)
 def show_table(pg):
-    """The sample table in place of the panels («Sample table», #samptab): the first file opens by itself at the end of the loading and hides it."""
+    """The sample table in place of the panels («Sample table», #samptab), after the first file is shown (open_first)."""
     open_first(pg)
     if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
     pg.wait_for_selector("#wtable", state="visible", timeout=10000)

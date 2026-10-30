@@ -1,4 +1,4 @@
-"""Opening is smooth: from the opening of the first file (by itself at the end of the loading, soloFile) to the settled work area nothing jumps. Records the layout shifts (PerformanceObserver) and the boxes of the main regions at every
+"""Opening is smooth: from the opening of the first file (the first click on it in the side list, soloFile) to the settled work area nothing jumps. Records the layout shifts (PerformanceObserver) and the boxes of the main regions at every
 frame of the opening (synthetic mzML only), then asserts a cumulative layout shift under the threshold, the same boxes from the landing to the settled area, and the fade-in."""
 import json, os, sys, tempfile
 from pathlib import Path
@@ -24,7 +24,7 @@ PROBE = """
   const tick = () => { if (S.t0 != null) { const f = {t: performance.now() - S.t0, op: getComputedStyle(document.querySelector('#v-data')).opacity}; for (const s of R) f[s] = box(s); S.frames.push(f); }
     if (S.t0 == null || !S.stop) requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
-  // the clock starts when the first file opens (by itself, OPENNOW.first)
+  // the clock starts when the first file opens (the click on it, soloFile)
   const so = window.soloFile; window.soloFile = function (...a) { if (S.t0 == null) S.t0 = performance.now(); return so.apply(this, a); };
 }
 """ % json.dumps(REGIONS)
