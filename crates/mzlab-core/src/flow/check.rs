@@ -275,26 +275,49 @@ fn ports(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
 
 fn facets(c: &mut Ctx, i: &Instance, step: &Step, seen: &[Observed]) {
     let have = observed(c, i, seen);
+    // each value once, in the order the sources give them
+    let list = |v: Vec<String>| {
+        let mut once: Vec<String> = Vec::new();
+        for x in v {
+            if !once.contains(&x) {
+                once.push(x);
+            }
+        }
+        once.join("|")
+    };
     for port in &step.ins {
         let want = &port.requires;
+        // the refusal names the step, what it needs and what the data are
+        let mut refuse = |facet: &str, want: String, have: String| {
+            let p = [
+                ("facet", facet),
+                ("step", step.id),
+                ("want", &want),
+                ("have", &have),
+            ];
+            add(c, i, port.name, "err.flow.facet", &p);
+        };
         if misses(&want.ms_levels, &have.ms_levels, |w, h| h.contains(w)) {
-            add(c, i, port.name, "err.flow.facet", &[("facet", "ms_levels")]);
+            let w = want.ms_levels.iter().map(u32::to_string).collect();
+            let h = have.ms_levels.iter().map(u32::to_string).collect();
+            refuse("ms_levels", list(w), list(h));
         }
         if misses(&want.polarity, &have.polarity, |w, h| {
             *w == 0 || h.contains(w)
         }) {
-            add(c, i, port.name, "err.flow.facet", &[("facet", "polarity")]);
+            let w = want.polarity.iter().map(i8::to_string).collect();
+            let h = have.polarity.iter().map(i8::to_string).collect();
+            refuse("polarity", list(w), list(h));
         }
-        if misses(&want.resolution, &have.resolution, |w, h| {
-            h.iter().any(|x| x == w)
-        }) {
-            add(
-                c,
-                i,
-                port.name,
-                "err.flow.facet",
-                &[("facet", "resolution")],
-            );
+        // a port takes data of any of the resolutions it lists: every resolution of the data must be one of them
+        if !want.resolution.is_empty()
+            && have
+                .resolution
+                .iter()
+                .any(|h| !want.resolution.contains(&h.as_str()))
+        {
+            let w = want.resolution.iter().map(|x| x.to_string()).collect();
+            refuse("resolution", list(w), list(have.resolution.clone()));
         }
     }
 }
@@ -343,14 +366,16 @@ pub fn check(plan: &Plan, registry: &[Step], platform: Platform) -> Vec<Problem>
         if let Some(step) = step_level(&mut c, i) {
             params(&mut c, i, &step);
             ports(&mut c, i, &step, &seen);
-            // the facets of the data pass through an instance unchanged, to the outputs that still are the scans
-            if step
+            // the resolution and the polarity of the series pass to everything made from it; the MS levels only to the outputs that still are scans
+            let mut o = observed(&c, i, &seen);
+            if !step
                 .outs
                 .iter()
                 .any(|o| matches!(o.ty, DataType::Raw | DataType::Mzml | DataType::Mzidx))
             {
-                seen[k] = observed(&c, i, &seen);
+                o.ms_levels.clear();
             }
+            seen[k] = o;
         }
         by_instance[k] = c.problems.split_off(before);
     }

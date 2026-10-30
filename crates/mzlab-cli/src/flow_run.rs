@@ -401,7 +401,8 @@ pub fn run(args: Vec<String>, meter: Option<Meter>) -> Outcome {
     crate::flow_out::write_run(&plan, &ready, found, out, a.workers, meter, opts)
 }
 
-/// The inputs of the plan that name no hash get it from the file `locate` gives; one that names a hash must match it.
+/// The inputs of the plan that name no hash get it from the file `locate` gives (one that names a hash must match it), and the scan inputs the facets
+/// their file gives where the plan writes none (`mzlab_feat::nature::fill_facets`).
 pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_core::Result<()> {
     for f in &mut plan.inputs {
         let (bytes, sha) =
@@ -412,7 +413,25 @@ pub fn fill_inputs(plan: &mut Plan, locate: impl Fn(&str) -> PathBuf) -> mzlab_c
         f.sha256 = sha;
         f.bytes = Some(bytes);
     }
+    mzlab_feat::nature::fill_facets(plan, |n| scan_facts(&locate(n)));
     Ok(())
+}
+
+/// The (polarity, high resolution) of a scan file, from its index or from the scan headers of an mzML; None for a file read by another reader or
+/// that does not open (its facets stay unknown and the step checks them when it starts).
+fn scan_facts(path: &Path) -> Option<(i8, Option<bool>)> {
+    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
+    let mut f = std::fs::File::open(path).ok()?;
+    let size = f.metadata().ok()?.len();
+    match ext.as_str() {
+        "mzidx" => mzlab_core::idxread::Index::open(f, size)
+            .ok()
+            .map(|ix| mzlab_feat::nature::index_facts(&ix)),
+        "mzml" => mzlab_core::scantable::read(&mut f, size)
+            .ok()
+            .map(|t| mzlab_feat::nature::table_facts(&t)),
+        _ => None,
+    }
 }
 
 /// Reads, checks and runs a workflow file; returns the run and its `prov/1` text. Files of the plan are read from `dir`, outputs written to `work`.
