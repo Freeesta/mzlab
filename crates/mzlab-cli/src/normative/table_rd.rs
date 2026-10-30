@@ -87,7 +87,7 @@ fn positions(row: &Row) -> Vec<usize> {
         .collect()
 }
 
-fn cell_at<'a>(row: &'a Row, pos: usize) -> Option<&'a markup::Cell> {
+fn cell_at(row: &Row, pos: usize) -> Option<&markup::Cell> {
     positions(row)
         .iter()
         .position(|&p| p == pos)

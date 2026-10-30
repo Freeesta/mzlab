@@ -36,10 +36,12 @@ pub struct Report {
     pub stale: usize,
 }
 
+type Read = Vec<(usize, Vec<Entry>, Vec<Input>)>;
+
 fn read_all<F: Fetch>(
     cache: &Cache<F>,
     lists: &[&ListSrc],
-) -> Result<(Vec<(usize, Vec<Entry>, Vec<Input>)>, Vec<Failed>), NormError> {
+) -> Result<(Read, Vec<Failed>), NormError> {
     let (mut ok, mut failed) = (Vec::new(), Vec::new());
     for (i, l) in lists.iter().enumerate() {
         let mut ctx = Ctx {
@@ -57,8 +59,6 @@ fn read_all<F: Fetch>(
     }
     Ok((ok, failed))
 }
-
-type Read = Vec<(usize, Vec<Entry>, Vec<Input>)>;
 
 /// The resolver loaded for the CAS numbers and DTXSIDs of what was read, with the inputs it used.
 fn make_resolver<F: Fetch>(

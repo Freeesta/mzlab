@@ -221,6 +221,7 @@ impl Fetch for Http {
             return Ok(());
         }
         let mut last = NormError::fetch(url, "no attempt");
+        #[allow(clippy::needless_range_loop)]
         for attempt in 0..=RETRY_WAITS.len() {
             let wait = self.throttle.reserve(host_of(url), Instant::now());
             std::thread::sleep(wait);

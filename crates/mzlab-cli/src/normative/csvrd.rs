@@ -78,8 +78,9 @@ impl<R: Read> Iterator for Records<R> {
 
 /// The separator of a text: the most frequent of `;`, tab and `,` in its first line.
 pub fn guess_sep(first_line: &str) -> u8 {
-    [b';', b'\t', b',']
-        .into_iter()
+    b";\t,"
+        .iter()
+        .copied()
         .max_by_key(|s| first_line.bytes().filter(|b| b == s).count())
         .unwrap_or(b',')
 }

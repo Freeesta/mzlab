@@ -293,7 +293,7 @@ fn normative_output_is_read_by_read_list() {
     for id in ["T_EU_WATER", "T_EU_PPP", "T_US_ECFR", "T_US_EPA", "T_VOCI"] {
         let list = read_list(&w.out(&format!("lists/{id}.csv"))).expect("readable");
         assert!(!list.is_empty(), "{id}");
-        assert!(list.iter().all(|r| r.get("name").len() > 0));
+        assert!(list.iter().all(|r| !r.get("name").is_empty()));
     }
     let prov = w.out("provenance.json");
     assert!(prov.starts_with("{\"schema\":\"normative-prov/1\""));

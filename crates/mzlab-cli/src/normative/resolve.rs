@@ -63,7 +63,7 @@ impl Resolver {
         Ok(r)
     }
 
-    fn from_susdat(&self, recs: &[Sus]) -> Res {
+    fn pick_susdat(&self, recs: &[Sus]) -> Res {
         let mut skel: BTreeMap<String, &Sus> = BTreeMap::new();
         for r in recs {
             let k = if r.ms_key.is_empty() {
@@ -120,7 +120,7 @@ impl Resolver {
         }
     }
 
-    fn from_pubchem(&self, cas: &str) -> Option<Res> {
+    fn pick_pubchem(&self, cas: &str) -> Option<Res> {
         let cids = self.ids.get(cas)?;
         let mut skel: BTreeMap<String, (&String, &String)> = BTreeMap::new();
         for cid in cids {
@@ -182,19 +182,19 @@ impl Resolver {
         let mut why: Vec<String> = Vec::new();
         if !cas.is_empty() {
             match self.susdat.get(cas) {
-                Some(recs) => match self.from_susdat(recs) {
+                Some(recs) => match self.pick_susdat(recs) {
                     Res::Found(f) => return Res::Found(f),
                     Res::Unresolved(w) => why.push(w),
                 },
                 None => why.push("not in SusDat".into()),
             }
-            match self.from_pubchem(cas) {
+            match self.pick_pubchem(cas) {
                 Some(Res::Found(f)) => return Res::Found(f),
                 Some(Res::Unresolved(w)) => why.push(w),
                 None => why.push("not in PubChem".into()),
             }
         } else if let Some(recs) = self.sus_dtx.get(dtxsid) {
-            if let Res::Found(f) = self.from_susdat(recs) {
+            if let Res::Found(f) = self.pick_susdat(recs) {
                 return Res::Found(f);
             }
         }
