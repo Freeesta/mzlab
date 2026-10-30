@@ -31,7 +31,9 @@
           "msn.library_export",
           "msn.table_export",
           "qc.mass_accuracy",
+          "qc.run_order",
           "quant.calibrate",
+          "report.methods",
           "rt.predict",
           "screen.suspects",
           "spectra.centroid",
@@ -93,7 +95,9 @@
               "msn.library_export@1",
               "msn.table_export@1",
               "qc.mass_accuracy@1",
+              "qc.run_order@1",
               "quant.calibrate@1",
+              "report.methods@1",
               "rt.predict@1",
               "screen.suspects@1",
               "spectra.centroid@1",
@@ -190,7 +194,9 @@
               "msn.library_export@1",
               "msn.table_export@1",
               "qc.mass_accuracy@1",
+              "qc.run_order@1",
               "quant.calibrate@1",
+              "report.methods@1",
               "rt.predict@1",
               "screen.suspects@1",
               "spectra.centroid@1",
@@ -1021,6 +1027,30 @@
           },
           {
             "properties":{
+              "step":{"const":"qc.run_order@1"},
+              "name":{"enum":["qc_every_max","std_levels_min","blank_per_batch"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"A gap of more injections between two QC files of the same batch is reported; the gap is the difference of their injection positions"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "default":2,
+                    "description":"A batch whose standards and calibration files have fewer distinct concentrations is reported; 0 turns the check off"
+                  },
+                  {"type":"boolean","default":true,"description":"Report a batch without a blank file"}
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
               "step":{"const":"quant.calibrate@1"},
               "name":{"enum":["mz_tol","rt_tol","signal","kinds"]},
               "value":{
@@ -1030,6 +1060,18 @@
                   {"enum":["area","height"],"default":"area","description":"Signal the curve was made with"},
                   {"type":"string","default":"sample","description":"Sample types to quantify, comma separated"}
                 ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"report.methods@1"},
+              "name":{"enum":["style"]},
+              "value":{
+                "enum":["paragraph","list"],
+                "default":"paragraph",
+                "description":"paragraph: one English paragraph per step; list: one bullet per step with every parameter"
               }
             },
             "required":["step","name","value"]
@@ -2523,7 +2565,9 @@
                 "msn.library_export@1",
                 "msn.table_export@1",
                 "qc.mass_accuracy@1",
+                "qc.run_order@1",
                 "quant.calibrate@1",
+                "report.methods@1",
                 "rt.predict@1",
                 "screen.suspects@1",
                 "spectra.centroid@1",
