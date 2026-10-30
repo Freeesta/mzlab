@@ -119,13 +119,7 @@ pub fn kendall_tau(x: &[f64], y: &[f64]) -> f64 {
 }
 
 fn median(v: &mut [f64]) -> f64 {
-    crate::sortc::by(v, f64::total_cmp);
-    let n = v.len();
-    if n % 2 == 1 {
-        v[n / 2]
-    } else {
-        (v[n / 2 - 1] + v[n / 2]) / 2.0
-    }
+    crate::signal::median_or_in(v, f64::NAN)
 }
 
 /// Theil-Sen line (median of pairwise slopes, median intercept): (slope, intercept). Thinned deterministically above `max_pts`.

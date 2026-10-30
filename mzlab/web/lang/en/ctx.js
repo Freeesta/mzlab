@@ -35,6 +35,8 @@ I18N.add("en", {
   "ctx.chrom.where": "RT {rt} min · {file}",
   "ctx.chrom.xic": "Extract an ion (XIC)…",
   "ctx.chrom.identAll": "Identify all the MS2 of the file…",
+  "ctx.chrom.ms2AtRt": "MS2 at this RT…",
+  "ctx.chrom.ms2AtRt.tip": "Opens the MS2 scan closest to this retention time. To choose a precursor yourself, click its triangle on the chromatogram or its flag ▼ in the Full Scan.",
   "ctx.chrom.tree": "MSn tree of the file…",
   "ctx.chrom.addIon": "Add another ion…",
   "ctx.annotate.point": "Annotate this point…",
