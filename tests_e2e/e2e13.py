@@ -71,6 +71,12 @@ try:
             c2 = b.new_context(); q = c2.new_page(); q.goto(f"http://127.0.0.1:{PORT}/{BASE + '/' if BASE else ''}"); q.wait_for_selector("#drop", timeout=120000)
             q.evaluate("navigator.serviceWorker.ready.then(()=>1)")
             q.reload(); q.wait_for_selector("#drop", timeout=120000); q.wait_for_timeout(2000)      # now served through the service worker: fills the cache
+            assert q.evaluate("""async () => { const t0 = Date.now();      // the background fill leaves its marker in the app cache once every app file is stored
+                while (Date.now() - t0 < 90000) {
+                    for (const k of await caches.keys()) if (k.startsWith('mzlab-app-') && await (await caches.open(k)).match('.fill-done')) return true;
+                    await fetch('static/version.js'); await new Promise(r => setTimeout(r, 300));      // nudges an idle worker to resume the fill
+                }
+                return false; }"""), "fill did not finish"
             n = q.evaluate("caches.keys().then(async ks=>{let n=0;for(const k of ks){n+=(await (await caches.open(k)).keys()).length}return n})"); assert n > 10, n
             c2.set_offline(True)
             q.reload(); q.wait_for_selector("#drop", timeout=120000)

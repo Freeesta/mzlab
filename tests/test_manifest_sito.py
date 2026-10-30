@@ -43,3 +43,20 @@ def test_every_path_is_plain_relative(tmp_path):
     m = json.loads((tmp_path / "static" / "manifest.json").read_text(encoding="utf-8"))
     for rel in m["files"]:
         assert not rel.startswith("/") and ".." not in rel.split("/") and "\\" not in rel
+
+
+def test_seal_sw_names_the_cache_after_the_site_and_stays_out_of_the_desktop_manifest(tmp_path):
+    out = fake_site(tmp_path)
+    (out / "sw.js").write_text('const APPV = "__APP__";', encoding="utf-8")
+    (out / "static" / "esempi").mkdir()
+    (out / "static" / "esempi" / "x.mzML").write_bytes(b"mz")
+    bs.seal_sw(out)
+    m = json.loads((out / "static" / "sw-manifest.json").read_text(encoding="utf-8"))
+    app = re.search(r'APPV = "(\w{10})"', (out / "sw.js").read_text(encoding="utf-8")).group(1)
+    assert m["app"] == app and m["nofill"] == ["static/esempi/x.mzML"]
+    assert m["files"]["static/a.js"] == hashlib.sha256(b"var a;").hexdigest()
+    (out / "static" / "a.js").write_bytes(b"var b;")       # a changed file (a .wasm added later) is a new cache name
+    bs.seal_sw(out)
+    assert json.loads((out / "static" / "sw-manifest.json").read_text(encoding="utf-8"))["app"] != app
+    bs.write_manifest(out, "x")
+    assert "static/sw-manifest.json" not in json.loads((out / "static" / "manifest.json").read_text(encoding="utf-8"))["files"]
