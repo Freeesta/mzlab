@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepares the web folder of the desktop app: `python3 tools/build_site.py` first, then `python3 crates/mzlab-desktop/prepare.py`.
 Copies site/ (the page as published) to crates/mzlab-desktop/dist/ and changes only a few things there: the CSP of index.html allows the
-mzlab:// protocol, static/rust-worker.js is the native one and static/desktop-shim.js is loaded before browser.js.
+mzlab:// protocol, static/rust-worker.js is the native one and static/desktop-shim.js is loaded before browser.js, desktop-titlebar.css after app.css.
 Nothing of mzlab/web or tools/ is touched. Stdlib only."""
 import re
 import shutil
@@ -31,10 +31,12 @@ def prepare(site: Path = SITE, dist: Path = DIST) -> None:
     if tag not in html:
         sys.exit("browser.js script tag not found in index.html")
     html = html.replace(tag, '<script src="static/desktop-shim.js"></script>\n' + tag, 1)
+    html = html.replace('<link rel="stylesheet" href="static/app.css">', '<link rel="stylesheet" href="static/app.css"><link rel="stylesheet" href="static/desktop-titlebar.css">', 1)
     index.write_text(html, encoding="utf-8")
     static = dist / "static"
     shutil.copy(HERE / "shim" / "desktop-worker.js", static / "rust-worker.js")
     shutil.copy(HERE / "shim" / "desktop-shim.js", static / "desktop-shim.js")
+    shutil.copy(HERE / "shim" / "desktop-titlebar.css", static / "desktop-titlebar.css")
     (static / "sw.js").unlink(missing_ok=True)   # the app is on disk: no service worker (it cannot register on a custom scheme)
     print(f"desktop dist ready: {dist}")
 

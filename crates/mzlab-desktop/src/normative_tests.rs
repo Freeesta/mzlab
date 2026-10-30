@@ -136,3 +136,80 @@ fn import_takes_a_mzsus_or_a_package_folder() {
     assert!(import(&f, &dir).is_err());
     drop(d);
 }
+
+const OFFICIAL_CSV: &str = include_str!("../../mzlab-feat/tests/data/official/candidate-list.csv");
+const OFFICIAL_CAS: &str = include_str!("../../mzlab-feat/tests/data/official/cas.tsv");
+
+/// The site with the CAS sidecar only (`static/mzfinder/sospetti/cas/`).
+fn cas_site() -> Site {
+    let raw = OFFICIAL_CAS.as_bytes();
+    let mut e = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::new(9));
+    e.write_all(raw).expect("zlib");
+    let z = e.finish().expect("zlib");
+    let cat = Catalog {
+        format: CAS_FORMAT.into(),
+        size: raw.len() as u64,
+        size_compressed: z.len() as u64,
+        sha256: hex(raw),
+        rows: 2,
+        pieces: vec![Piece {
+            file: "000.bin".into(),
+            size: z.len() as u64,
+            sha256: hex(&z),
+        }],
+    };
+    let mut m = HashMap::new();
+    m.insert(
+        CAS_CATALOG.to_string(),
+        serde_json::to_vec(&cat).expect("json"),
+    );
+    m.insert(format!("{CAS_PIECES}000.bin"), z);
+    Site(m)
+}
+
+#[test]
+fn an_official_file_is_imported_with_the_sidecar_of_the_site_and_kept_private() {
+    let (_d, f) = folder();
+    let summary = import_official(
+        &f,
+        &cas_site(),
+        ("svhc", "candidate-list.csv", "2026-10-30"),
+        OFFICIAL_CSV.as_bytes(),
+    )
+    .expect("import");
+    assert!(summary.contains("\"unresolved\":1") && summary.contains("candidate-list.csv"));
+    // the same bytes as the function the CLI and the .wasm run
+    let label = r#"{"date":"2026-10-30","file":"candidate-list.csv"}"#;
+    let want = mzlab_feat::normative::official::import_official(
+        "svhc",
+        OFFICIAL_CSV.as_bytes(),
+        OFFICIAL_CAS,
+        label,
+    )
+    .expect("direct");
+    let n = u32::from_le_bytes([want[0], want[1], want[2], want[3]]) as usize;
+    let st = f.stat("normative-imported-SVHC.mzsus").expect("stored");
+    assert_eq!(
+        f.read("normative-imported-SVHC.mzsus", 0, st.size)
+            .expect("read"),
+        &want[4 + n..]
+    );
+    // the sidecar stays for the next import, offline
+    assert!(f.stat(CAS_FILE).is_ok());
+    let lists: serde_json::Value = serde_json::from_str(&imported(&f)).expect("json");
+    assert_eq!(lists["lists"][0]["id"], "SVHC");
+    assert_eq!(lists["lists"][0]["coverage"]["screenable"], 2);
+}
+
+#[test]
+fn an_import_without_the_sidecar_offline_says_so() {
+    let (_d, f) = folder();
+    let e = import_official(
+        &f,
+        &Site(HashMap::new()),
+        ("svhc", "a.csv", "2026-10-30"),
+        b"x",
+    )
+    .unwrap_err();
+    assert_eq!(e.key, "normative.dl.err.http");
+}

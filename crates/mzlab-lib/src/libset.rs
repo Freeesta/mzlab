@@ -7,8 +7,8 @@ use crate::frag_tol::FragTol;
 use crate::io::Source;
 use crate::read::Library;
 use crate::search::{analogs_with, identity_with, AnalogHit, AnalogOpts, Hit, IdentityOpts, Query};
-use crate::sortutil;
 use crate::util::{crc32c, le_u16, le_u32};
+use mzlab_picchi::sortc;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -219,9 +219,9 @@ impl<S: Source> LibSet<S> {
 
 fn top_peaks_hash(mz: &[u32], it: &[u16]) -> u64 {
     let mut idx: Vec<usize> = (0..mz.len()).collect();
-    sortutil::sort_by(&mut idx, |&a, &b| it[b].cmp(&it[a]).then(mz[a].cmp(&mz[b])));
+    sortc::by(&mut idx, |&a, &b| it[b].cmp(&it[a]).then(mz[a].cmp(&mz[b])));
     idx.truncate(KEY_PEAKS);
-    sortutil::sort_by(&mut idx, |&a, &b| mz[a].cmp(&mz[b]));
+    sortc::by(&mut idx, |&a, &b| mz[a].cmp(&mz[b]));
     let mut h = 0xcbf2_9ce4_8422_2325u64;
     for i in idx {
         fnv(&mut h, ((mz[i] as u64) + 500) / 1000);

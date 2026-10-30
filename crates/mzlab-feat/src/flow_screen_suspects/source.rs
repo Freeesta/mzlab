@@ -3,6 +3,7 @@
 //! package) also has the full key, a name and the laws naming the row, cut to the lists of the mask.
 
 use crate::regulatory::{Member, Package};
+use crate::sortc::SortC;
 use crate::suspects::Suspects;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::elements;
@@ -266,7 +267,7 @@ fn read_csv(name: &str, bytes: &[u8]) -> Result<(Vec<Entry>, usize)> {
             memberships: Vec::new(),
         });
     }
-    rows.sort_unstable_by(|a, b| {
+    rows.sortc_by(|a, b| {
         a.mass
             .total_cmp(&b.mass)
             .then_with(|| a.skeleton.cmp(&b.skeleton))

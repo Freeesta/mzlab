@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}   # main: every commit keeps its own result
 
 jobs:
-  # Two parallel shards on 3.11: `rest` runs every test except tools/pytest_solo_311.txt, `solo311` runs exactly those (slow tests where Python only
+  # Three parallel shards on 3.11: `rest-a` and `rest-b` (the two halves of `rest`) run every test except tools/pytest_solo_311.txt, `solo311` runs exactly those (slow tests where Python only
   # drives the Rust binaries and .wasm). Together they cover the whole suite once. Python 3.14 runs the whole suite in notte.yml; the `pytest` job below is the gate that keeps
   # both required names (3.14 included) and depends on the 3.11 shards.
   pytest-shard:
@@ -32,7 +32,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {python: "3.11", parte: rest}
+          - {python: "3.11", parte: rest-a}
+          - {python: "3.11", parte: rest-b}
           - {python: "3.11", parte: solo311}
     runs-on: ubuntu-latest
     # safety net only: the run lasts far less since the crates of the cache are reused (tools/ci_cargo_mtime.py)
@@ -110,6 +111,7 @@ jobs:
         env:
           MZLAB_NOMI_VIETATI: ${{ secrets.MZLAB_NOMI_VIETATI }}
           PYTHONPATH: tools
+          PARTE: ${{ matrix.parte }}
         run: |
           # `cargo run` holds the build-directory lock until the program ends: tools/ci_cargo/cargo builds, releases the lock and then runs the binary
           export PATH="$PWD/tools/ci_cargo:$PATH"
@@ -123,7 +125,9 @@ jobs:
           else
             while read -r t; do skip+=(--deselect "$t"); done < tools/pytest_solo_311.txt
           fi
-          python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}-${{ matrix.parte }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} "${alvo[@]}"
+          # the `rest` shard runs in two halves (rest-a, rest-b: tools/ci_pytest_meta.py); solo311 runs whole
+          if [ "$PARTE" != solo311 ]; then export CI_PYTEST_MITA="${PARTE#rest-}"; fi
+          python -m pytest -q -n auto --dist loadfile -p ci_pytest_ordine -p ci_pytest_meta -p ci_pytest_tempi --durations=50 --junitxml="junit-${{ matrix.python }}-${{ matrix.parte }}.xml" "${skip[@]}" ${{ steps.doppi.outputs.ignore }} "${alvo[@]}"
       # incremental data was 3.7 of the 11.5 GB of `target` (a 3.2 GB cache that takes 40-90 s to restore and pushes the other caches out of the 10 GB limit); a crate that changed is compiled in full instead
       - name: Drop the incremental data before the cache is saved
         if: ${{ !cancelled() && steps.solo.outputs.solo != 'true' && matrix.python == '3.11' }}

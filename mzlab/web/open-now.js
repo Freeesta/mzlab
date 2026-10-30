@@ -1,7 +1,7 @@
 // @ts-check
 // Files open as soon as they are read: upload0 (shell.js) calls OPENNOW.add(name) when a file is in the loading table. The first file of a session starts it (api/explore),
 // the others are appended (api/explore append) in the order of the drop (a file read early waits for the ones dropped before it), with one bootSession at most every 200 ms; a new file starts hidden (bootSession0):
-// nothing opens by itself, the student's first click on a file shows it (area-lavoro.js). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
+// the first file read of an upload (not a blank) is then shown by showFirst (starting layout, once per session); the others open on the student's click (area-lavoro.js). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
 // offers the switch. Also the write-through of the sample table to the open files (roles, times, concentrations: CAMPIONI.apply). Used by shell.js and ruoli-carica.js.
 "use strict";
 
@@ -12,7 +12,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   const held = new Set();      // «Choose» of a large folder: these files stay unticked until the student ticks them
   const sent = new Set();      // files whose roles and times went to the open files once
   const tally = { n: 0, m: 0 };      // files opened and set aside since the last note of the side list
-  let busy = 0, last = 0, late = false, cur = "", t0 = 0;      // cur = the file being opened now, since t0
+  let busy = 0, last = 0, late = false, autoShown = false, batchShown = false, cur = "", t0 = 0;      // cur = the file being opened now, since t0
   /** @type {(() => void)[]} */ let calm = [];
   const src = (/** @type {string} */ n) => String(n).split("#")[0];
   const openOf = (/** @type {string} */ name) => E.files.filter((/** @type {FileAperto} */ x) => !x.gone && src(x.file) === name);
@@ -35,7 +35,20 @@ const OPENNOW = /** @type {any} */ ((() => {
     const fresh = ST.files.filter((/** @type {FileRiga} */ f) => !sent.has(f.name) && isOpen(f.name));
     fresh.forEach((/** @type {FileRiga} */ f) => sent.add(f.name));
     if (fresh.length) RUOLI.commit(fresh);
+    showFirst();
     applyView(); FILETAB.soon(); uiSave();
+  }
+  /** the first file read of an upload opens by itself (its starting layout, as the first click on the list would); once the student has a file or a panel, or after the first show, nothing opens by itself */
+  function showFirst() {
+    if (!E.files.some((/** @type {FileAperto} */ f) => !f.gone)) autoShown = false;
+    if (E.panels.length || E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) autoShown = true;
+    if (autoShown) return;
+    const f = E.files[firstOpenK(S.sess)];
+    if (!f || f.gone || isBlankFile(f)) return;
+    autoShown = batchShown = true; soloFile(f);
+    // until the student acts, the files that arrive do not move the view to their tab (bootSession0)
+    const done = () => { batchShown = false; ["pointerdown", "keydown"].forEach(t => document.removeEventListener(t, done, true)); };
+    ["pointerdown", "keydown"].forEach(t => document.addEventListener(t, done, true));
   }
   const rank = (/** @type {string} */ n) => CONVROWS.rank(n);
   /** a file dropped before `name` is still being read: the session keeps the order of the drop (k), whatever file is read first; with no loading running nothing is still coming */
@@ -104,7 +117,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);
-  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length,
+  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length, batchShown: () => batchShown, noAuto: () => { autoShown = true; },
     /** what the queue waits on (the message of a test that timed out) */
     state: () => ({ busy, q: q.slice(), cur, ms: cur ? Date.now() - t0 : 0, ahead: q.filter(ahead) }) };
 })());

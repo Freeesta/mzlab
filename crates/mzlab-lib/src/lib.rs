@@ -36,9 +36,9 @@ pub mod read;
 pub mod scores;
 pub mod search;
 pub mod sha256;
-pub mod sortutil;
 pub mod spec;
 pub mod stein;
+pub mod topk;
 pub mod util;
 
 pub use error::{Error, Result};

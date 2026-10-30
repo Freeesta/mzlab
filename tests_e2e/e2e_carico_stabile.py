@@ -1,7 +1,7 @@
 """The loading of many files moves nothing: 24 synthetic .mzML are loaded and, from the first progress row of the side list to the end of the loading, every frame shows the same
 landing (drop area, its box, the box of the notices #up: no card, no bar over it; the sample table grows under it) and every file has its row in the side list from the first frame; the
-layout-shift entries of the work area in that window add up to ~0 (the rows of the side list go one by one as their files open). At the end nothing opened by itself, the drop area
-and the sample table are shown and no loading row is left. Needs the
+layout-shift entries of the work area in that window add up to ~0 (the rows of the side list go one by one as their files open). The first file read opens by itself (once): the landing frames come first, then only
+the frames of the open panels, never back; at the end the other files wait in the list and no loading row is left. Needs the
 site and the .wasm (python tools/build_site.py + the CI build). Run: python3 tests_e2e/e2e_carico_stabile.py"""
 import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
@@ -58,15 +58,21 @@ try:
             first = json.loads(snaps[0][1]); assert first["rows"] == N, ("rows at the first frame", first["rows"])
         step("every file has its row in the side list from the first frame", skeleton)
         def still():
-            kinds = {}
+            kinds = {}; seen_panels = False
             for fr in snaps:
                 # the sample table appears under the drop area once it has rows: the boxes above it stay
-                d = json.loads(fr[1]); d.pop("rows"); d.pop("table"); kinds.setdefault(json.dumps(d, sort_keys=True), []).append(fr[0])
-            assert len(kinds) == 1, f"{len(kinds)} different layouts of the landing: {list(kinds)[:2]}"
-            d = json.loads(list(kinds)[0]); assert d["work"] == "landing" and not d["card"], d
-        step("the landing (drop area, its box, the notices) never moves while the files are read: no card", still)
+                d = json.loads(fr[1]); d.pop("rows"); d.pop("table")
+                if d["work"] != "landing": seen_panels = True
+                else: assert not seen_panels, "the landing came back after the first file opened"
+                if d["work"] == "landing": kinds.setdefault(json.dumps(d, sort_keys=True), []).append(fr[0])
+            assert len(kinds) <= 1, f"{len(kinds)} different layouts of the landing: {list(kinds)[:2]}"
+            for k in kinds: assert not json.loads(k)["card"], k
+        step("the landing (drop area, its box, the notices) never moves until the first file opens by itself: no card, never back", still)
         def shifts():
-            start, end = snaps[0][0], snaps[-1][0]; print('   window', round(start), round(end))
+            first_open = next((fr[0] for fr in snaps if json.loads(fr[1])["work"] != "landing"), snaps[-1][0])
+            start, end = snaps[0][0], first_open
+        def shifts():
+            print('   window', round(start), round(end))
             tot = sum(e[1] for e in ls if start + 40 <= e[0] <= end and e[2])
             for e in ls:
                 if start + 40 <= e[0] <= end and e[2]: print('   shift', round(e[0]), round(e[1], 4), e[3][:3])
@@ -75,10 +81,10 @@ try:
         step("no layout-shift of the work area from the first row to the end", shifts)
         def done():
             attendi(pg, "document.querySelectorAll('#fl-up [data-up]').length === 0", 30000)
-            assert pg.evaluate("document.getElementById('v-workspace').dataset.work === 'landing' && !E.files.some(f => f.vis && !f.gone)"), "nothing opened by itself"
-            assert pg.is_visible("#drop") and pg.is_visible("#wtable"), "drop area and sample table"
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work === 'panels' && E.files.filter(f => f.vis && !f.gone).length === 1"), "only the first file opened by itself"
+            assert not pg.is_visible("#drop"), "drop area gone with the open panels"
             assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= N
-        step("at the end the drop area and the sample table are shown, nothing opened and no loading row is left", done)
+        step("at the end only the first file is open, the others wait in the list and no loading row is left", done)
         assert not errs, errs
         b.close()
 finally:

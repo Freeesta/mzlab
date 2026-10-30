@@ -50,6 +50,8 @@ pub mod flow_level;
 pub mod flow_ms2;
 #[cfg(feature = "attributio")]
 pub mod flow_regulatory;
+#[cfg(feature = "attributio")]
+pub mod normative;
 pub mod flow_screen_suspects;
 pub mod gapfill;
 pub mod gruppi;

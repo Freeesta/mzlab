@@ -340,7 +340,7 @@ try:
         assert pg.is_visible("#uip-tour") and "Fai il tour con un file di esempio" in pg.inner_text("#uip-tour")
         pg.click("#uip-tour")
 
-        # Wait for the file and the tour at step 1: nothing opens by itself, so the tour starts on the sample table and the first file (PASSI_INIZIALI, 7 + 2 steps)
+        # Wait for the file and the tour at step 1: the tour example does not open by itself (the tour opens the file at its step), so the tour starts on the sample table and the first file (PASSI_INIZIALI, 7 + 2 steps)
         pg.wait_for_selector("#tour-dialog", timeout=35000)
         hd = pg.inner_text("#tour-dialog .tour-hd")
         ttl = pg.inner_text("#tour-dialog h3")
