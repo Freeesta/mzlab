@@ -3,7 +3,8 @@ the `attributio-all` .wasm: docs/agenti/flow-web.md):
 over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the sub-formulas that explain
 the MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. The same files written as
 negative scans give formula.ms1 with no ion written the ion [M-H]- in both, byte for byte (in a fresh page whose OPFS holds only their indexes). One feature has a library
-match (a level above the one without evidence), another has none. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
+match (a level above the one without evidence), another has none. A second annot.level of the same plan reads a standards CSV (the library match is on it, 0.05 min from its RT: Level 1) and a screen/1 file whose suspect has two listed fragments found
+in the MS2 of a feature without a library match (3a, suspect fragments); the browser writes the same bytes as the native run for it too. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_ident2.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
@@ -40,8 +41,9 @@ def mgf_blocks(text):
         out.append((head, peaks))
     return out
 
+IK = "RYYVLZVUVIJVGH-UHFFFAOYSA-N"
 def msp(name, prec, peaks):
-    return f"Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f}\t{i:.1f}" for m, i in peaks) + "\n\n"
+    return f"Name: {name}\nInChIKey: {IK}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f}\t{i:.1f}" for m, i in peaks) + "\n\n"
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_web_ident2_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
@@ -65,6 +67,7 @@ def native(plan, name):
     subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / (name + ".json")), "--in", str(run), "--out", str(out)], cwd=ROOT, check=True, capture_output=True)
     return out
 
+sha_ = lambda t: hashlib.sha256(t.encode()).hexdigest()
 FILES = ["file:" + n + ".mzML" for n in NAMES]
 def inputs(lib_sha):
     return [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in NAMES] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "lib.msp", "sha256": lib_sha, "type": "library"}]
@@ -83,14 +86,25 @@ assert len(blocks) >= 2, "the series has no MS2 spectrum for its features"
 LIB = msp("TruePair", float(h0["PEPMASS"].split()[0]), p0)
 LIBSHA = hashlib.sha256(LIB.encode()).hexdigest()
 (run / "lib.msp").write_text(LIB)
+# the standard is the library compound, 0.05 min from the RT of its feature; the suspect is listed with two fragments of another feature
+other = next(h for h, _ in blocks[1:] if h["SPECTRUMID"] != h0["SPECTRUMID"])
+frag = [m for m, _ in next(pk for h, pk in blocks if h["SPECTRUMID"] == other["SPECTRUMID"])][:2]
+assert len(frag) == 2, frag
+STD = f"name,inchikey,rt\nTruePairStd,{IK},{float(h0['RTINSECONDS']) / 60 + 0.05:.4f}\n"
+SCREEN = json.dumps({"format": "screen/1", "polarity": 1, "hits": [{"feature": int(other["SPECTRUMID"]), "mz": 1.0, "adduct": "[M+H]+", "delta_ppm": 0.1, "formula": "C1", "level": 5, "candidates": [
+    {"skeleton": "SSSSSSSSSSSSSS", "inchikey": "SSSSSSSSSSSSSS-UHFFFAOYSA-N", "name": "TwoFragments", "smiles": "", "neutral_mass": 1.0, "rt_diff_min": None, "fragments_listed": 3, "fragments_matched": 2, "fragment_mz": frag, "files": [0], "memberships": []}]}]}, separators=(",", ":"))
+EXTRA = {"std.csv": STD, "screen.json": SCREEN}
+for n_, t_ in EXTRA.items(): (run / n_).write_text(t_)
 # 2. the plan: the base chain, the MS2 of the features, the match against the library, the formulas and the level
 PLAN = {"format": "mzflow/2", "inputs": inputs(LIBSHA), "steps": BASE + [
     {"id": "mat", "step": "spectra.match@1", "in": {"query": "ms2.spectra", "library": "file:lib.msp"}, "algorithm": "spectral_entropy", "params": MATCH},
     {"id": "f1", "step": "formula.ms1@1", "in": {"features": "csv.report", "index": FILES}, "params": {"tol_ppm": 5, "max_results": 5}},
     {"id": "f2", "step": "formula.ms2@1", "in": {"spectra": "ms2.spectra", "formulas": "f1.formulas"}},
-    {"id": "lv", "step": "annot.level@1", "in": {"candidates": "mat.hits", "formulas": "f1.formulas"}}]}
+    {"id": "lv", "step": "annot.level@1", "in": {"candidates": "mat.hits", "formulas": "f1.formulas"}},
+    {"id": "lv2", "step": "annot.level@1", "in": {"candidates": ["mat.hits", "file:screen.json"], "formulas": "f1.formulas", "standards": "file:std.csv", "spectra": "ms2.spectra"}}]}
+PLAN["inputs"] += [{"name": "std.csv", "sha256": sha_(STD), "type": "library"}, {"name": "screen.json", "sha256": sha_(SCREEN), "type": "candidates"}]
 out = native(PLAN, "plan")
-OUTS = ["ms2.mgf", "f1.json", "f2.json", "lv.json"]
+OUTS = ["ms2.mgf", "f1.json", "f2.json", "lv.json", "lv2.json"]
 NAT = {n: (out / n).read_bytes() for n in OUTS}
 WEB = json.loads(json.dumps(PLAN))
 # the page widens the one scan input of a plan to every file it holds
@@ -102,6 +116,9 @@ print("native sizes:", {k: len(v) for k, v in NAT.items()})
 levels = json.loads(NAT["lv.json"])["rows"]
 assert any(r.get("name") == "TruePair" and r["level"] not in ("0", "5") for r in levels), levels
 assert any("name" not in r for r in levels), "every feature has a match: the case without one is missing"
+lv2 = {r["id"]: r for r in json.loads(NAT["lv2.json"])["rows"]}
+assert (lv2[h0["SPECTRUMID"]]["level"], lv2[h0["SPECTRUMID"]]["why"]) == ("1", "standard"), lv2[h0["SPECTRUMID"]]
+assert (lv2[other["SPECTRUMID"]]["level"], lv2[other["SPECTRUMID"]]["why"]) == ("3a", "suspect_fragments"), lv2[other["SPECTRUMID"]]
 data = site / "static" / "dati_flow_ident"; data.mkdir()
 for n in NAMES:
     shutil.copy2(out / ("idx-" + n + ".mzidx"), data / (n + ".mzidx")); shutil.copy2(run / (n + ".mzML"), data / (n + ".mzML"))
@@ -179,8 +196,8 @@ def same(name, web, nat):
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = open_page(b, NAMES, NAMES)
-        IDS = ["ms2", "f1", "f2", "lv"]
-        FILES_WEB = {"samples.json": SAMPLES, "lib.msp": LIB}
+        IDS = ["ms2", "f1", "f2", "lv", "lv2"]
+        FILES_WEB = {"samples.json": SAMPLES, "lib.msp": LIB, **EXTRA}
         def first():
             r = pg.evaluate(RUN, [WEB, FILES_WEB]); check(r, IDS, "done")
             kept = pg.evaluate(KEPT)

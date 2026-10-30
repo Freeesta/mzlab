@@ -1,12 +1,19 @@
 //! The text of `annot.level@1`: the identification level of each query from its library hits (`candidates/1`) and its candidate formulas (`formulas/1`). The rule is
 //! `mzlab/web/livelli.js` (`assess`) read from the same data (`data/livelli-1.json`, profile `mzlab`), so the thresholds are never typed twice; `tests/livelli_casi.json` runs the
 //! same cases through both. Level 2b is never given: the chemist decides it. Takes bytes and returns the text: `flow run` (`mzlab-cli`) and the browser (`mzlab-attributio-wasm`) run this one function.
+//! Level 1 comes only from a standards file of the user (`extra`), and suspect fragments of a `screen/1` give 3a; without them every output is unchanged.
+
+mod extra;
+mod text;
+
+pub use extra::{Params, Std, Suspect};
+pub use text::{level_text, level_text_json, level_text_with, Inputs};
 
 use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
-use mzlab_core::json::{self, round, Out, Value};
+use mzlab_core::json::{self, Value};
 
-const DATA: &str = include_str!("../data/livelli-1.json");
+const DATA: &str = include_str!("../../data/livelli-1.json");
 
 /// A hit of a library on one query: the fields of `assess` (`ent` and `cos` are scores of different algorithms and are never mixed).
 #[derive(Clone, Debug, Default)]
@@ -35,6 +42,10 @@ pub struct Evidence {
     pub analogs: Vec<Analog>,
     pub n_scans: f64,
     pub formula_unique: bool,
+    /// The best hit on a standard of the user, when a standards file was given.
+    pub std: Option<Std>,
+    /// The suspect of `screen/1` with the most listed fragments found in the MS2 of the feature.
+    pub suspect: Option<Suspect>,
 }
 
 /// A gate of the data file with its outcome.
@@ -55,17 +66,33 @@ pub struct Assessment {
     pub best: Option<Cand>,
     pub analog: Option<Analog>,
     pub gates: Vec<GateResult>,
+    /// The gates of the standard, when one was matched.
+    pub std_gates: Vec<GateResult>,
+    pub std: Option<Std>,
+    pub suspect: Option<Suspect>,
 }
 
-fn profile(name: &str) -> Result<Value> {
-    json::parse(DATA.as_bytes())?
+/// The profile `name` of the data file with the thresholds of `over` (key of `soglie`, value) set on top.
+fn profile(name: &str, over: &[(&str, f64)]) -> Result<Value> {
+    let mut p = json::parse(DATA.as_bytes())?
         .get("profili")
         .and_then(|p| p.get(name))
         .cloned()
-        .ok_or_else(|| Error::new("err.flow.level.profile").with("profile", name))
+        .ok_or_else(|| Error::new("err.flow.level.profile").with("profile", name))?;
+    if let Value::Obj(o) = &mut p {
+        if let Some((_, Value::Obj(s))) = o.iter_mut().find(|(k, _)| k == "soglie") {
+            for (k, v) in over {
+                match s.iter_mut().find(|(n, _)| n == k) {
+                    Some((_, slot)) => *slot = Value::Num(*v),
+                    None => s.push(((*k).to_string(), Value::Num(*v))),
+                }
+            }
+        }
+    }
+    Ok(p)
 }
 
-fn field(c: &Cand, campo: &str) -> Option<f64> {
+pub(super) fn field(c: &Cand, campo: &str) -> Option<f64> {
     match campo {
         "ent" => c.ent,
         "cos" => c.cos,
@@ -77,7 +104,7 @@ fn field(c: &Cand, campo: &str) -> Option<f64> {
 }
 
 /// The first block of the InChIKey, else the name without punctuation: two hits with the same key are one structure.
-fn key(c: &Cand) -> String {
+pub(super) fn key(c: &Cand) -> String {
     let k: String = c.ik.chars().take(14).collect::<String>().to_uppercase();
     if !k.is_empty() {
         return k;
@@ -101,14 +128,14 @@ fn margin(list: &[Cand], campo: &str) -> Option<f64> {
     })
 }
 
-fn threshold(p: &Value, name: &str) -> f64 {
+pub(super) fn threshold(p: &Value, name: &str) -> f64 {
     p.get("soglie")
         .and_then(|s| s.get(name))
         .and_then(Value::f64)
         .unwrap_or(f64::NAN)
 }
 
-fn gate(p: &Value, g: &Value, vals: &dyn Fn(&str) -> Option<f64>) -> GateResult {
+pub(super) fn gate(p: &Value, g: &Value, vals: &dyn Fn(&str) -> Option<f64>) -> GateResult {
     let text = |k: &str| g.get(k).and_then(Value::str).unwrap_or("");
     let mut thr = threshold(p, text("soglia"));
     if let Some(r) = g.get("ridotta") {
@@ -144,7 +171,12 @@ fn gate(p: &Value, g: &Value, vals: &dyn Fn(&str) -> Option<f64>) -> GateResult 
 
 /// The level that the evidence of one query reaches in `profile` (`mzlab`, or `lr` for unit resolution).
 pub fn assess(e: &Evidence, name: &str) -> Result<Assessment> {
-    let p = profile(name)?;
+    assess_with(e, name, &[])
+}
+
+/// `assess` with thresholds of the profile replaced (`soglie` keys, as the Flow parameters do).
+pub fn assess_with(e: &Evidence, name: &str, over: &[(&str, f64)]) -> Result<Assessment> {
+    let p = profile(name, over)?;
     let score = p
         .get("cancelli")
         .map(Value::arr)
@@ -172,8 +204,20 @@ pub fn assess(e: &Evidence, name: &str) -> Result<Assessment> {
         best: list.first().cloned(),
         analog: None,
         gates: Vec::new(),
+        std_gates: Vec::new(),
+        std: None,
+        suspect: None,
     };
+    if let Some(s) = &e.std {
+        if extra::by_standard(&p, s, &mut res) {
+            return Ok(res);
+        }
+    }
     if by_best(&p, e, &list, &score, &mut res) {
+        return Ok(res);
+    }
+    // a suspect never lifts a level above 3 and is out of the capped (unit resolution) profile
+    if p.get("tetto").is_none() && extra::by_suspect(&p, e, &mut res) {
         return Ok(res);
     }
     let min = threshold(&p, "analogo_mcos_min");
@@ -244,10 +288,9 @@ fn text(v: &Value, k: &str) -> String {
 }
 
 /// The evidence of every query named by a `candidates/1` file, by query id in file order; replicate spectra whose best hit is the same entry count as scans.
-fn from_hits(files: &[&[u8]]) -> Result<Vec<(String, Evidence)>> {
+pub(super) fn from_hits(docs: &[Value]) -> Vec<(String, Evidence)> {
     let mut all: Vec<(String, Evidence)> = Vec::new();
-    for f in files {
-        let doc = json::parse(f)?;
+    for doc in docs {
         for h in doc.get("hits").map(Value::arr).unwrap_or(&[]) {
             // an in silico hit is a hypothesis, never library evidence
             if text(h, "source") == "insilico" {
@@ -287,11 +330,11 @@ fn from_hits(files: &[&[u8]]) -> Result<Vec<(String, Evidence)>> {
             });
         }
     }
-    Ok(all)
+    all
 }
 
 /// How many candidate formulas each feature or spectrum has in a `formulas/1` file.
-fn formula_counts(files: &[&[u8]]) -> Result<Vec<(String, usize)>> {
+pub(super) fn formula_counts(files: &[&[u8]]) -> Result<Vec<(String, usize)>> {
     let mut out: Vec<(String, usize)> = Vec::new();
     for f in files {
         let doc = json::parse(f)?;
@@ -315,7 +358,7 @@ fn formula_counts(files: &[&[u8]]) -> Result<Vec<(String, usize)>> {
     Ok(out)
 }
 
-fn scans_of(rows: &[(String, Evidence)], e: &Evidence) -> f64 {
+pub(super) fn scans_of(rows: &[(String, Evidence)], e: &Evidence) -> f64 {
     let key_of = |e: &Evidence| {
         e.cands
             .iter()
@@ -328,60 +371,6 @@ fn scans_of(rows: &[(String, Evidence)], e: &Evidence) -> f64 {
         .filter(|(_, o)| mine.is_some() && key_of(o) == mine)
         .count()
         .max(1) as f64
-}
-
-/// `annot.level`: one row per query of the hits and per feature or spectrum of the formulas, with the level, why and the gates of the best hit.
-pub fn level_text(hits: &[&[u8]], formulas: &[&[u8]]) -> Result<String> {
-    let mut rows = from_hits(hits)?;
-    let counts = formula_counts(formulas)?;
-    for (id, _) in &counts {
-        if !rows.iter().any(|(q, _)| q == id) {
-            rows.push((id.clone(), Evidence::default()));
-        }
-    }
-    let snapshot = rows.clone();
-    let mut out = Out::default();
-    out.raw("{\"format\":\"annot/1\",\"step\":\"annot.level@1\",\"algorithm\":\"cascade\",\"profile\":\"mzlab\",\"rows\":[");
-    for (k, (id, e)) in rows.iter_mut().enumerate() {
-        e.n_scans = scans_of(&snapshot, e);
-        e.formula_unique = counts.iter().any(|(q, n)| q == id && *n == 1);
-        let a = assess(e, "mzlab")?;
-        out.raw(if k > 0 { "," } else { "" })
-            .raw("{\"id\":")
-            .str(id)
-            .raw(",\"level\":")
-            .str(&a.level)
-            .raw(",\"why\":")
-            .str(a.why);
-        if let Some(b) = &a.best {
-            out.raw(",\"name\":")
-                .str(&b.name)
-                .raw(",\"entry\":")
-                .str(&b.ik);
-        }
-        if let Some(n) = &a.analog {
-            out.raw(",\"analog\":")
-                .str(&n.name)
-                .raw(",\"analog_delta\":")
-                .num(round(n.delta, 4));
-        }
-        out.raw(",\"gates\":[");
-        for (i, g) in a.gates.iter().enumerate() {
-            out.raw(if i > 0 { "," } else { "" })
-                .raw("{\"id\":")
-                .str(&g.id)
-                .raw(",\"ok\":")
-                .raw(if g.ok { "true" } else { "false" })
-                .raw(",\"value\":")
-                .opt(g.value.filter(|v| v.is_finite()).map(|v| round(v, 4)))
-                .raw(",\"threshold\":")
-                .num(round(g.threshold, 4))
-                .raw("}");
-        }
-        out.raw("]}");
-    }
-    out.raw("]}");
-    Ok(out.0)
 }
 
 fn cmp_opt(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {

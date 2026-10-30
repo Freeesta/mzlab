@@ -218,6 +218,8 @@ ${tb ? `<div id="ref-chooser">${chooser()}</div>` : `<p class="sm">${t("blank.er
   document.addEventListener("tabella", again);
   document.addEventListener("campioni", again);
   if (typeof STAT !== "undefined") STAT.add({ id: "reference", title: "ref.title", hr: true, visible: () => true, mount });
+  // the PCA section keeps its place; pca.js is fetched when the section is first shown (it registers the same id, which STAT ignores)
+  if (typeof STAT !== "undefined") STAT.add({ id: "pca", title: "pca.title", hr: true, visible: () => true, mount: box => { carica("pca.js").then(() => PCA.mount(box)).catch(console.error); } });
   return { mount, run, inspect, tsv, get params() { return st; }, get result() { return res; } };
 })();
 window.RIFERIMENTO = RIFERIMENTO;
