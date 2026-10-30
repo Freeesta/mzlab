@@ -254,6 +254,7 @@ jobs:
         run: |
           cp -r wasm-artifacts/. site/static/
           tools/build_feat_wasm.sh site/static manifest
+          python3 tools/build_site.py --build-json      # the service worker's manifest must list the .wasm now in place
       - name: e2e on the built site
         run: |
           ls -l site/static/wasm/*.wasm | awk '{print "motore .wasm:", $5, "bytes"}'

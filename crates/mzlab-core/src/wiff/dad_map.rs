@@ -35,96 +35,56 @@ pub fn reduce(m: &[f32], nt: usize, nl: usize, ft: usize, fl: usize) -> (Vec<f32
     (out, rt, rl)
 }
 
-/// The values to send and their shape: the matrix as read, or averaged into at most `MAP_MAX_RT` x `MAP_MAX_NM` bins. Also the block size along the wavelengths and whether it was reduced.
-fn map_values(dad: &DadData) -> (Vec<f32>, usize, usize, usize, bool) {
+/// The values to send and their shape: the matrix as read (borrowed), or averaged into at most `MAP_MAX_RT` x `MAP_MAX_NM` bins. Also the block size along the wavelengths and whether it was reduced.
+fn map_values(dad: &DadData) -> (std::borrow::Cow<'_, [f32]>, usize, usize, usize, bool) {
     let (nt, nl) = (dad.points(), dad.channels());
     let (ft, fl) = (nt.div_ceil(MAP_MAX_RT), nl.div_ceil(MAP_MAX_NM));
     if ft > 1 || fl > 1 {
         let (v, rt, rl) = reduce(&dad.matrix_mau, nt, nl, ft, fl);
-        (v, rt, rl, fl, true)
+        (v.into(), rt, rl, fl, true)
     } else {
-        (dad.matrix_mau.clone(), nt, nl, 1, false)
+        (dad.matrix_mau.as_slice().into(), nt, nl, 1, false)
     }
 }
 
-/// The values as little-endian `f32`, base64.
-fn encode_f32(vals: &[f32]) -> String {
+/// Appends the values as little-endian `f32`, base64, to `out`: in pieces of a multiple of 3 bytes, so no padding falls inside and no copy of the
+/// whole array is made.
+fn encode_f32(vals: &[f32], out: &mut String) {
     use base64::Engine;
-    let mut bytes = Vec::with_capacity(vals.len().saturating_mul(4));
-    for &val in vals {
-        bytes.extend_from_slice(&val.to_le_bytes());
+    // 3 values = 12 bytes, a multiple of 3
+    const PIECE: usize = 3 * 1024;
+    let mut bytes = Vec::with_capacity(PIECE * 4);
+    out.reserve(vals.len().saturating_mul(4).div_ceil(3) * 4);
+    for piece in vals.chunks(PIECE) {
+        bytes.clear();
+        for &val in piece {
+            bytes.extend_from_slice(&val.to_le_bytes());
+        }
+        base64::engine::general_purpose::STANDARD.encode_string(&bytes, out);
     }
-    base64::engine::general_purpose::STANDARD.encode(&bytes)
 }
 
 /// Encodes the 2D absorbance matrix of `dad` as JSON for `/api/map?kind=pda`; `agg` says whether it was reduced (`mean`) or sent as read (`none`).
 pub fn dad_to_map_json(dad: &DadData) -> String {
+    use std::fmt::Write;
     let (rt0, rt1) = (
         dad.time_min.first().copied().unwrap_or(0.0),
         dad.time_min.last().copied().unwrap_or(dad.duration_min),
     );
     let (vals, nrt, nmz, fl, reduced) = map_values(dad);
-    let b64_data = encode_f32(&vals);
-    format!(
-        "{{\"data\":\"{b64_data}\",\"rt0\":{rt0},\"rt1\":{rt1},\"nrt\":{nrt},\"mz0\":{},\"mz1\":{},\"nmz\":{nmz},\"dmz\":{},\"level\":1,\"region\":false,\"agg\":\"{}\",\"log\":false,\"bg\":false,\"hr\":false,\"kind\":\"pda\"}}",
+    let mut out = String::from("{\"data\":\"");
+    encode_f32(&vals, &mut out);
+    let _ = write!(
+        out,
+        "\",\"rt0\":{rt0},\"rt1\":{rt1},\"nrt\":{nrt},\"mz0\":{},\"mz1\":{},\"nmz\":{nmz},\"dmz\":{},\"level\":1,\"region\":false,\"agg\":\"{}\",\"log\":false,\"bg\":false,\"hr\":false,\"kind\":\"pda\"}}",
         dad.wl_start_nm,
         dad.wl_stop_nm,
         dad.wl_step_nm * fl as f64,
         if reduced { "mean" } else { "none" }
-    )
+    );
+    out
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn dad(nt: usize, nl: usize) -> DadData {
-        DadData {
-            time_min: (0..nt).map(|i| i as f64 * 0.01).collect(),
-            twc_mau: vec![0.0; nt],
-            wavelengths_nm: (0..nl).map(|j| 200.0 + j as f64).collect(),
-            wl_start_nm: 200.0,
-            wl_stop_nm: 200.0 + (nl - 1) as f64,
-            wl_step_nm: 1.0,
-            duration_min: nt as f64 * 0.01,
-            matrix_mau: (0..nt * nl).map(|k| (k % 97) as f32).collect(),
-        }
-    }
-
-    #[test]
-    fn small_matrix_is_sent_as_read() {
-        let j = dad_to_map_json(&dad(40, 21));
-        assert!(
-            j.contains("\"nrt\":40")
-                && j.contains("\"nmz\":21")
-                && j.contains("\"agg\":\"none\"")
-                && j.contains("\"dmz\":1,")
-        );
-    }
-
-    #[test]
-    fn large_matrix_is_averaged_within_the_caps() {
-        let (nt, nl) = (5500, 1201);
-        let j = dad_to_map_json(&dad(nt, nl));
-        let (ft, fl) = (nt.div_ceil(MAP_MAX_RT), nl.div_ceil(MAP_MAX_NM));
-        assert!(
-            j.contains(&format!("\"nrt\":{}", nt.div_ceil(ft)))
-                && j.contains(&format!("\"nmz\":{}", nl.div_ceil(fl)))
-        );
-        assert!(
-            nt.div_ceil(ft) <= MAP_MAX_RT
-                && nl.div_ceil(fl) <= MAP_MAX_NM
-                && j.contains("\"agg\":\"mean\"")
-                && j.contains(&format!("\"dmz\":{fl},"))
-        );
-    }
-
-    #[test]
-    fn reduce_averages_blocks_and_keeps_the_edge() {
-        // 3 x 3 in blocks of 2 x 2: the last row and column are blocks of one
-        let m: Vec<f32> = (1..=9).map(|v| v as f32).collect();
-        let (r, rt, rl) = reduce(&m, 3, 3, 2, 2);
-        assert_eq!((rt, rl), (2, 2));
-        assert_eq!(r, vec![3.0, 4.5, 7.5, 9.0]);
-    }
-}
+#[path = "dad_map_tests.rs"]
+mod tests;

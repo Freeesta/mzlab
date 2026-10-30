@@ -70,18 +70,53 @@ def _sif(self, selector, files, **k):
         _tempi(self)
 AUTO_TEMPI = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
 def _tempi(self):
-    """Two or more samples: «Open» wants every time written and confirmed (roles and times of the loading table). The tests that are not about it do it here, before they open."""
+    """Two or more samples: the tests that are not about roles and times write the missing times here (in the table, then quietly in the open files, as the old opening did)."""
     if not AUTO_TEMPI: return
     try:
-        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && !document.getElementById('start').hidden && ST.files.length >= 2"): return
+        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && ST.files.length >= 2"): return
         self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
-        self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } } }); renderFiles(); }""")
+        self.evaluate("""() => { let t = 0; const e = []; ST.files.forEach(f => { if (RUOLI.timed(f) && f.time == null) { t += 10; f.time = t; if (OPENNOW.isOpen(f.name)) e.push({ file: f.name, role: RUOLI.roleOf(f), time: t, tconf: true }); } });
+          if (e.length) CAMPIONI.apply(e, true); renderFiles(); }""")
     except Exception: pass
+LOADED = "typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')"
+def loaded(pg, timeout=120000):
+    """Waits until nothing is read or opened any more; on a timeout the message says what is still busy."""
+    try: pg.wait_for_function(LOADED, timeout=timeout)
+    except Exception as e:
+        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
+        raise TimeoutError(f"{e} | still busy: {st}") from None
+def open_first(pg, timeout=120000):
+    """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
+    Waits until nothing is read or opened any more, then clicks the row of the first file of the sample table that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
+    loaded(pg, timeout)
+    _tempi(pg)
+    # in the order of the sample table (by time), not the order the files were read
+    k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const at = f => ST.files.findIndex(r => r.name === f.file.split('#')[0]);
+      const fs = E.files.filter(f => !f.gone).sort((a, b) => at(a) - at(b)); if (!fs.length) return -1;
+      return fs[firstOpenK(fs.map(f => ({ file: f.file, type: f.type })))].k; }""")
+    if k < 0: return
+    row = pg.locator(f"#flst .fl .nm[data-k='{k}']")
+    if row.count() and row.first.is_visible(): _real_click(pg, f"#flst .fl .nm[data-k='{k}']")
+    else: pg.evaluate("k => soloFile(E.files[k])", k)
+    pg.wait_for_function("E.files.some(f => f.vis && !f.gone)", timeout=timeout)
+def show_table(pg):
+    """The sample table in place of the panels («Sample table», #samptab), after the first file is shown (open_first)."""
+    open_first(pg)
+    if pg.is_hidden("#wtable"): _real_click(pg, "#samptab")
+    pg.wait_for_selector("#wtable", state="visible", timeout=10000)
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): _tempi(self)
+    # «Load data» is gone: the files are open already, the click is the first click on a file
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
+_real_wfs = _Page.wait_for_selector
+def _wfs(self, selector, *a, **k):
+    # waiting for «Load data» = waiting for the end of the loading (the button is gone)
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector):
+        return loaded(self, k.get("timeout", 120000))
+    return _real_wfs(self, selector, *a, **k)
+_Page.wait_for_selector = _wfs
 _real_ast = _Page.add_script_tag
 def _add_script_tag(self, *a, **k):
     """The page forbids inline scripts (CSP script-src without 'unsafe-inline'): a file or a text is run with evaluate, as from the console, not as a <script> tag."""
@@ -138,7 +173,7 @@ class _PersistentWebKit:
             shutil.rmtree(d, ignore_errors=True)
         self._open = []
 def stage(pg, files, timeout=90000):
-    """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
+    """Give the files to the start screen and wait until ALL of them are in the sample table (they open as soon as they are read)."""
     pg.set_input_files("#pick", [str(f) for f in files])
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 

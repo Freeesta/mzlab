@@ -146,7 +146,7 @@ impl<R: ReadAt> Routes<R> {
         Ok(self.chrom_raw(q)?.map(|(rt, y)| trace(&rt, &y)))
     }
 
-    /// The TIC or base peak chromatogram of one file (the window, the scan type and the precursor of the query applied), not rounded;
+    /// The TIC or base peak chromatogram of one file (the window, the scan type and the precursor `prec` within `ptol` of the query applied), not rounded;
     /// `None` = another kind of trace (Python's).
     pub fn chrom_raw(&mut self, q: &Query) -> Result<Option<(Vec<f64>, Vec<f64>)>> {
         let kind = q.get("kind").unwrap_or("tic");
@@ -196,8 +196,10 @@ impl<R: ReadAt> Routes<R> {
             }
         }
         if let (Some(p), true) = (prec, level > 1) {
+            // `ptol`: the precursor window of a high-resolution file (the page sends the file's tolerance); 0.6 Da otherwise
+            let tol = q.num("ptol")?.filter(|t| *t > 0.0).unwrap_or(0.6);
             for (j, &id) in ids.iter().enumerate() {
-                if keep[j] && (self.idx.scans[id as usize].prec(-1.0) - p).abs() > 0.6 {
+                if keep[j] && (self.idx.scans[id as usize].prec(-1.0) - p).abs() > tol {
                     keep[j] = false;
                 }
             }

@@ -5,7 +5,7 @@ Needs the site and the .wasm: python tools/build_site.py; the .wasm is built her
 import os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from lib import ROOT
+from lib import ROOT, attendi
 sys.path.insert(0, str(ROOT / "tools"))
 import agilent_sintetico
 sys.path.insert(0, str(ROOT / "tests_e2e"))
@@ -61,13 +61,17 @@ try:
         def tidy():
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done
             assert ".D" in pg.inner_text("#drop")
+            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#samptab').hidden", 60000)
+            pg.wait_for_selector("#wtable", state="visible")      # nothing opens by itself: the sample table is under the drop area
             w = pg.evaluate("({s: document.querySelector('#wtable').getBoundingClientRect().width, t: document.querySelector('#flist table').getBoundingClientRect().width})")
             assert w["s"] > 1000 and w["t"] <= w["s"], w                                                                                   # wide table box; the table fits in it
         step("loaded: no leftover «files to load» line, .D in the drop text, wide table box, table inside it", tidy)
         def tic():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
-            r = pg.evaluate("""async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }""", "api/chrom?k=0&level=1")
+            # the files open in the order they are read: the converted run is found by its name
+            k = pg.evaluate("E.files.find(f => !f.gone && (f.file === 'uno.mzML' || f.file === 'due.mzML')).k")
+            r = pg.evaluate("""async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }""", f"api/chrom?k={k}&level=1")
             j = r["j"]; assert r["status"] == 200, r
             y = j["y"]; t = j["rt"]
             assert len(y) in (90, 120) and max(y) > 5 * min(y), (len(y), min(y), max(y))

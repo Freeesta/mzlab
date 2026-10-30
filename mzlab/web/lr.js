@@ -166,7 +166,7 @@ export function createLr({ rb }) {
     items = null; hr = lr = false;
     earlyTics.clear();
     if (body.fresh) { await rpc({ op: "lr_clear" }); files.clear(); mr.clear(); if (rb.clearNative) rb.clearNative(); }
-    rb.noteNew();
+    rb.noteNew(!!body.fresh);
     return json(state());
   }
 

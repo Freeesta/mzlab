@@ -128,5 +128,12 @@ fn hr_routes_like_python() {
         bad[before..].iter_mut().for_each(|b| *b = format!("k={k} {path}?{query}: {b}"));
     }
     assert!(compared > 20_000, "only {compared} values compared");
+    // `ptol` narrows the precursor TIC to the file's tolerance: 305.0702 and 305.1066 lie within the default 0.6 Da, not within 2 mDa
+    let n_rt = |r: &mut Routes<std::fs::File>, q: &str| -> usize {
+        let v: Value = serde_json::from_str(&r.handle("/api/chrom", &Query::parse(q)).unwrap().unwrap()).unwrap();
+        v["rt"].as_array().map_or(0, |a| a.len())
+    };
+    let (wide, narrow) = (n_rt(&mut routes[0], "kind=tic&level=2&prec=305.0702"), n_rt(&mut routes[0], "kind=tic&level=2&prec=305.0702&ptol=0.002"));
+    assert!(narrow > 0 && narrow < wide, "ptol: {narrow} scans against {wide}");
     assert!(bad.is_empty(), "{} differences:\n{}", bad.len(), bad.iter().take(20).cloned().collect::<Vec<_>>().join("\n"));
 }

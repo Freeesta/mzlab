@@ -190,6 +190,7 @@
     "../../mzlab/web/lr-sessione.js",
     "../../mzlab/web/lr.js",
     "../../mzlab/web/uv-spettro.js",
+    "../../mzlab/web/msn-elenco.js",
     "../../mzlab/web/decima.js",
     "../../mzlab/web/migra.js",
     "../../mzlab/web/export-pezzi.js",
