@@ -89,6 +89,10 @@ WEB["inputs"] = [i for i in WEB["inputs"] if i["type"] != "raw" or i["name"] == 
 for s_ in WEB["steps"]:
     for k, v in s_["in"].items():
         if v == FILES: s_["in"][k] = [FILES[0]]
+# before the download the catalogue has no checksum: keeping the package changes the plan, which is what lets the scheduler offer the blocked step again
+NOSHA = json.loads(json.dumps(WEB))
+for i_ in NOSHA["inputs"]:
+    if i_["name"] == "catalogo.json": i_["sha256"] = ""
 print("native hits:", len(hits), "pieces:", len(CAT["pieces"]))
 data = site / "static" / "dati_flow_ident"; data.mkdir()
 for n in NAMES:
@@ -153,12 +157,12 @@ try:
             pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
             pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && FLOW.webInsilico && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
         open_flow()
-        pg.evaluate(MOUNT, [WEB, SAMPLES])
+        pg.evaluate(MOUNT, [NOSHA, SAMPLES])
         def silent():
             assert not asked, asked
         step("nothing of the package is requested before the click", silent)
         def blocked():
-            r = pg.evaluate(RUN, WEB); assert not r.get("err"), r["err"]
+            r = pg.evaluate(RUN, NOSHA); assert not r.get("err"), r["err"]
             assert any(e["passo"] == "ins" and e["stato"] in ("blocked", "skipped") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
             assert not asked, asked
         step("without the package the step is blocked and tells so", blocked)
