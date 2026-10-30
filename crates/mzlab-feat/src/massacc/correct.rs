@@ -57,7 +57,7 @@ pub(super) fn correct<T: ReadAt>(
         let (mut mean, mut any) = (AreaMean::default(), false);
         for (k, fr) in cols.iter().enumerate() {
             let c = t.cell(row, k);
-            if t.state[c] != CELL_DETECTED || !(t.area[c] > 0.0) {
+            if t.state[c] != CELL_DETECTED || t.area[c].is_nan() || t.area[c] <= 0.0 {
                 continue;
             }
             any |= fr.is_some();
@@ -74,8 +74,8 @@ pub(super) fn correct<T: ReadAt>(
         }
     }
     let mut members = t.member_mz.clone();
-    for row in 0..t.len() {
-        let factor = mz[row] / t.mz[row];
+    for (row, (new, old)) in mz.iter().zip(&t.mz).enumerate() {
+        let factor = new / old;
         for j in t.members(row) {
             members[j] *= factor;
         }

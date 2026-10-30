@@ -54,6 +54,7 @@ impl MassAcc {
 /// The check of the files whose `.mzidx` `index_read(k, offset, length)` serves. `names_json`: `[[name, sha256], ...]` in the order of the indexes; `samples` and `csv` are empty when
 /// the port is not connected (`table_read(0, offset, length)` serves the `.mzfeat`, `table_size` 0 for none); `contaminants` is `contaminanti.json`; `params_json` is the object of the resolved parameters.
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn mass_accuracy(
     index_read: Function,
     index_sizes: Vec<f64>,

@@ -53,8 +53,9 @@ pub(super) fn wls(model: Model, obs: &[Obs], w: &[f64]) -> Option<[f64; 3]> {
         b.swap(c, pivot);
         for r in c + 1..p {
             let f = a[r][c] / a[c][c];
-            for k in c..p {
-                a[r][k] -= f * a[c][k];
+            let top = a[c];
+            for (cell, above) in a[r][c..p].iter_mut().zip(&top[c..p]) {
+                *cell -= f * above;
             }
             b[r] -= f * b[c];
         }
