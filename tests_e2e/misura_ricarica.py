@@ -190,11 +190,12 @@ def t_wall() -> int:
 class Run:
     """One browser context through the steps; every step leaves its marks, requests and page snapshots in `out`."""
 
-    def __init__(self, b, thr, base: str, out_path: str):
+    def __init__(self, b, thr, base: str, out_path: str, no_sw: bool = False):
         self.thr, self.base, self.out_path = thr, base, out_path
         self.out = {"base": base, "steps": {}}
         self.navs, self.reqs, self.t_step = [], [], 0
-        c = b.new_context(viewport={"width": 1400, "height": 900})
+        c = b.new_context(viewport={"width": 1400, "height": 900}, service_workers="block" if no_sw else "allow")
+        self.usable = USABLE_ANY if no_sw else USABLE
         c.set_default_timeout(300000)
         c.add_init_script(PROBE)
         c.on("request", lambda r: self.reqs.append([t_wall(), r.url.replace(base, ""), r.resource_type, r.is_navigation_request()]))
@@ -228,7 +229,8 @@ class Run:
         # only the pages of this step (the page left by the previous step writes its snapshot when it goes away)
         return [x for x in prev if x.get("t0", 0) >= self.t_step - 5 and str(x.get("url", "")).startswith("http")] + [cur]
 
-    def step(self, name: str, act, until: str = USABLE) -> None:
+    def step(self, name: str, act, until: str = "") -> None:
+        until = until or self.usable
         n0, r0, sw0 = len(self.navs), len(self.reqs), len(self.thr.sw)
         t0 = self.t_step = t_wall()
         if self.pg.url.startswith("http"):
@@ -291,6 +293,7 @@ def args():
     ap.add_argument("--profile", default="none", choices=sorted(PROFILES))
     ap.add_argument("--rtt", type=int, default=0, help="latency added by the network profiles, ms")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--no-sw", action="store_true", help="block the service worker (no offline copy, no cross-origin isolation): the cost of the worker itself")
     ap.add_argument("--example", default="FullScan_t15.mzML")
     return ap.parse_args()
 
@@ -310,7 +313,7 @@ def main():
     proxy = {"server": os.environ["HTTPS_PROXY"]} if os.environ.get("HTTPS_PROXY") and not a.mirror else None
     with sync_playwright() as p:
         b = p.chromium.launch(proxy=proxy, **({"executable_path": exe} if os.path.isfile(exe) else {}))
-        r = Run(b, Throttle(b, a.profile, a.rtt), base, a.out)
+        r = Run(b, Throttle(b, a.profile, a.rtt), base, a.out, a.no_sw)
         r.out["profile"] = a.profile
         r.step("cold", lambda: r.pg.goto(base + "#/data"))
         r.step("warm", lambda: r.pg.reload())
