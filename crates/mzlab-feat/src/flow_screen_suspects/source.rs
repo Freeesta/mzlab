@@ -55,27 +55,6 @@ fn hill(formula: &str) -> String {
     }
 }
 
-fn manifest_json(text: &str) -> String {
-    let Ok(v) = json::parse(text.as_bytes()) else {
-        return "null".into();
-    };
-    let mut o = Out::default();
-    let s = |v: &Value, k: &str| v.get(k).and_then(Value::str).unwrap_or("").to_string();
-    o.raw("{\"sources\":[");
-    for (i, f) in v.get("fonti").map(Value::arr).unwrap_or(&[]).iter().enumerate() {
-        if i > 0 {
-            o.raw(",");
-        }
-        o.raw("{\"id\":").str(&s(f, "id"));
-        for (key, from) in [("name", "nome"), ("version", "versione"), ("licence", "licenza"), ("doi", "doi")] {
-            o.raw(&format!(",\"{key}\":")).str(&s(f, from));
-        }
-        o.raw("}");
-    }
-    o.raw("],\"attribution\":").str(&s(&v, "attribuzione")).raw("}");
-    o.0
-}
-
 impl Source {
     /// A file of the plan: a `.mzsus` when it starts with the magic, else a CSV.
     pub fn open(name: &str, bytes: &[u8]) -> Result<Source> {
@@ -136,6 +115,27 @@ impl Source {
             }
         }
     }
+}
+
+fn manifest_json(text: &str) -> String {
+    let Ok(v) = json::parse(text.as_bytes()) else {
+        return "null".into();
+    };
+    let mut o = Out::default();
+    let s = |v: &Value, k: &str| v.get(k).and_then(Value::str).unwrap_or("").to_string();
+    o.raw("{\"sources\":[");
+    for (i, f) in v.get("fonti").map(Value::arr).unwrap_or(&[]).iter().enumerate() {
+        if i > 0 {
+            o.raw(",");
+        }
+        o.raw("{\"id\":").str(&s(f, "id"));
+        for (key, from) in [("name", "nome"), ("version", "versione"), ("licence", "licenza"), ("doi", "doi")] {
+            o.raw(&format!(",\"{key}\":")).str(&s(f, from));
+        }
+        o.raw("}");
+    }
+    o.raw("],\"attribution\":").str(&s(&v, "attribuzione")).raw("}");
+    o.0
 }
 
 /// A CSV line split at `,`; a field in double quotes may hold commas and `""`.
