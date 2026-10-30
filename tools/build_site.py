@@ -114,11 +114,11 @@ def pack_mzfinder(static: Path) -> None:
 
 
 def file_hashes(out: Path) -> dict:
-    """SHA-256 and size of every file of the site, by path under `out` (sw.js and the manifest itself left out)."""
+    """SHA-256 and size of every file of the site, by path under `out` (sw.js, the manifest itself and the service worker's manifest left out)."""
     files = {}
     for f in sorted(out.rglob("*")):
         rel = f.relative_to(out).as_posix()
-        if f.is_file() and rel not in ("sw.js", "static/manifest.json"):
+        if f.is_file() and rel not in ("sw.js", "static/manifest.json", "static/sw-manifest.json"):
             data = f.read_bytes()
             files[rel] = {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
     return files
@@ -131,6 +131,23 @@ def write_manifest(out: Path, version: str) -> None:
     desktop_min = (ROOT / "crates" / "mzlab-desktop" / "DESKTOP_MIN").read_text(encoding="utf-8").strip()
     doc = {"version": version, "desktop_min": desktop_min, "files": file_hashes(out)}
     (out / "static" / "manifest.json").write_text(json.dumps(doc, indent=1, sort_keys=True), encoding="utf-8")
+
+
+def seal_sw(out: Path) -> None:
+    """Names the service worker's cache after the site as it will be published: writes `static/sw-manifest.json` ({app, files: path -> SHA-256,
+    nofill: the big ones, fetched only when used} of every file the worker may cache) and puts `app`, a hash of those paths and hashes, into sw.js. Runs again after the parts (.wasm,
+    packages) are in place (`--build-json`), so a change in any of them is a new cache and a cached file is always the right version."""
+    skip = ("sw.js", "static/manifest.json", "static/build.json", "static/sw-manifest.json")
+    found = {p: h for p, h in file_hashes(out).items() if p not in skip and not p.startswith(("static/vendor/", "static/librerie/"))}
+    files = {p: h["sha256"] for p, h in found.items()}
+    nofill = sorted(p for p, h in found.items() if p.startswith("static/esempi/") or h["size"] > 6_000_000)   # cached when used, not fetched ahead
+    app = hashlib.sha1("".join(f"{p}\0{h}\n" for p, h in sorted(files.items())).encode()).hexdigest()[:10]
+    (out / "static" / "sw-manifest.json").write_text(json.dumps({"app": app, "files": files, "nofill": nofill}, indent=0, sort_keys=True), encoding="utf-8")
+    text = (out / "sw.js").read_text(encoding="utf-8")
+    sealed, n = re.subn(r'const APPV = "[^"]*";', f'const APPV = "{app}";', text)
+    if n != 1:
+        raise SystemExit("sw.js: no APPV to seal")
+    (out / "sw.js").write_text(sealed, encoding="utf-8")
 
 
 def git_commit() -> str:
@@ -199,12 +216,13 @@ def main() -> None:
     ap.add_argument("--pyodide-dir", type=Path, help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--no-pyodide", action="store_true", help="accepted, no effect (the site carries no Python)")
     ap.add_argument("--out", type=Path, default=ROOT / "site")
-    ap.add_argument("--build-json", action="store_true", help="only write static/build.json again, once the .wasm files are in the site")
+    ap.add_argument("--build-json", action="store_true", help="only write static/build.json and seal the service worker again, once the .wasm files are in the site")
     a = ap.parse_args()
     out = a.out
     if a.build_json:
         ver = json.loads((out / "static" / "build.json").read_text(encoding="utf-8"))["version"]
         write_build_json(out, ver)
+        seal_sw(out)
         return
     lab = lab_expiry()
     if out.exists():
@@ -260,12 +278,9 @@ def main() -> None:
     # service worker at the site root (scope = the whole site): offline use after the first visit
     sw = (static / "sw.js").read_text(encoding="utf-8")
     (static / "sw.js").unlink()
-    h = hashlib.sha1()
-    for f in sorted(out.rglob("*")):
-        if f.is_file() and "vendor" not in f.parts:
-            h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
     big = "v-" + hashlib.sha1(b"".join(f.name.encode() + f.read_bytes() for f in sorted((static / "vendor").rglob("*")) if f.is_file())).hexdigest()[:8]   # the content, not the size: a same-size change must not be served from the old cache
-    (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
+    (out / "sw.js").write_text(sw.replace("__BIG__", big), encoding="utf-8")
+    seal_sw(out)
     write_build_json(out, ver, commit)
     write_manifest(out, commit)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())

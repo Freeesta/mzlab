@@ -246,6 +246,7 @@ jobs:
           python tools/build_site.py
           cp -r wasm-artifacts/. site/static/
           tools/build_feat_wasm.sh site/static manifest
+          python3 tools/build_site.py --build-json      # the service worker's manifest must list the .wasm now in place
       # The layout tests are measured with Inter (the font system-ui resolves to on the development machines); the runner would fall back to the wider DejaVu Sans
       - name: Fonts of the layout tests (Inter as system-ui)
         run: |
