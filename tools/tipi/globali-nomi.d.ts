@@ -532,6 +532,8 @@ declare var iHi: any;
 declare var iLo: any;
 declare var ibOf: any;
 declare var ibkChip: any;
+declare var ibkLegend: any;
+declare var ibkLevelShort: any;
 declare var ibkLevels: any;
 declare var ibkMenuItems: any;
 declare var ibkPick: any;
