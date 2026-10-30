@@ -19,6 +19,10 @@
   const oops = e => (e && e.key ? F.message({ key: e.key, params: e.params }) : String(e && e.message || e));
   /** true when the text is the catalogue of a package @param {string} t */
   const isCatalogue = t => t.trimStart().startsWith("{") && /"format"\s*:\s*"insilico\/1"/.test(t.slice(0, 200));
+  /** the jobs this module blocked for want of candidates, by instance: keeping a package or a list releases them (the scheduler holds a block until it is told) @type {Map<string, any>} */
+  const waiting = new Map();
+  const wait = async (/** @type {any} */ x, /** @type {any} */ j, /** @type {any} */ inst) => { waiting.set(inst.id, { x, j }); await x.call("block", { job: j, by: "input.insilico" }); };
+  const release = async () => { for (const [id, w] of [...waiting]) { waiting.delete(id); try { await w.x.call("unblock", { job: w.j }); } catch (_) { /* the job ended meanwhile */ } } };
   const paramsOf = (/** @type {any} */ x, /** @type {any} */ inst) => JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
 
   /** spectra.insilico: the MGF of a spectra.ms2 of this plan against the structures of the suspects file @param {any} x @param {any} spec @param {any} inst */
@@ -27,7 +31,7 @@
     const spectra = await ident.textOf(x, p, inst, "spectra"), suspects = await ident.textOf(x, p, inst, "suspects");
     if (!spectra) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     // no list and no package: the user is told to download the package or choose a list (flow-live-view.js shows the chip)
-    if (!suspects) { await x.call("block", { job: j, by: "input.insilico" }); return {}; }
+    if (!suspects) { await wait(x, j, inst); return {}; }
     const key = await J().sha(spec.key + "\n" + await J().sha(suspects.text) + "\n" + await J().sha(spectra.text)), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     const pack = isCatalogue(suspects.text);
@@ -35,7 +39,7 @@
     if (pack) {
       const m = await dl(), got = await m.installed();
       // the catalogue of the plan must be the one installed (same bytes), or the pieces would not match its checksums
-      if (!got || got.text !== suspects.text) { await x.call("block", { job: j, by: "input.insilico" }); return {}; }
+      if (!got || got.text !== suspects.text) { await wait(x, j, inst); return {}; }
       cat = got.catalog; read = m.reader(cat);
     }
     await x.call("started", { job: j });
@@ -72,6 +76,7 @@
       S.samplesJson = S.samplesJson || {}; S.samplesJson[inp.name] = text; inp.sha256 = await hex(text);
       say.textContent = `${what} kept as ${inp.name}.`;
       if (S.redraw) S.redraw();
+      await release();
       if (F.live && F.live.change) F.live.change();
     };
     const pick = /** @type {HTMLInputElement} */ (el("input", { type: "file", hidden: true, accept: ".csv,.tsv,.txt,.json", "aria-label": "Choose a candidate structures file", onchange: async (/** @type {any} */ e) => {
