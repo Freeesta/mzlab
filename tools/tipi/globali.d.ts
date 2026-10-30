@@ -84,6 +84,7 @@ declare var MZRESET: any;
 declare var NATIVO: any;
 declare var NOMI: any;
 declare var OCL: any;
+declare var OPENRARO: any;
 declare var PASSI_INIZIALI: any;
 declare var PERF: any;
 declare var PERF_EARLY: any;
