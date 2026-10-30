@@ -1,5 +1,5 @@
 """Phase 3 of the progressive start: a failed engine start shows a banner (role=alert) and leaves the page usable.
-Node with a fake DOM: banner text == AVVIO.errore, «Copy details» without file names, «Full reset», skeleton removed,
+Node with a fake DOM: banner text == AVVIO.errore, «Copy details» without file names, «Full reset», restoring box removed,
 a real message with a full stop is not taken for a catalog key, a failure that happened before the module loaded is replayed."""
 import json
 import subprocess
@@ -20,8 +20,8 @@ function makeEl(id) {
   return el;
 }
 const reg = {};
-['drop', 'drop-skeleton', 'avvio-fase', 'avvio-drop-info'].forEach(i => { reg[i] = makeEl(i); });
-reg['drop-skeleton'].hidden = false; reg['drop'].hidden = true;
+['opening', 'wdata', 'v-data', 'opn-msg', 'avvio-fase', 'avvio-drop-info'].forEach(i => { reg[i] = makeEl(i); });
+reg['opening'].hidden = false; const cl = set => ({ add: c => set.add(c), remove: c => set.delete(c), contains: c => set.has(c) }); reg['opening'].classList = cl(new Set(['restoring'])); reg['wdata'].hidden = true; reg['v-data'].classList = cl(new Set(['opn']));
 const body = makeEl('body'); body.insertBefore = (el) => { reg[el.id] = el; body.kids = (body.kids || 0) + 1; };
 global.document = { body, readyState: 'complete', addEventListener() {}, getElementById: id => reg[id] || null, createElement: () => makeEl('') };
 global.window = global;
@@ -37,7 +37,7 @@ def run_node(code: str) -> dict:
     return json.loads([ln for ln in r.stdout.strip().splitlines() if ln.strip()][-1])
 
 
-def test_banner_alert_same_text_as_errore_and_skeleton_removed():
+def test_banner_alert_same_text_as_errore_and_restoring_box_removed():
     res = run_node(f"""
     {DOM}
     const AVVIO = require('{(WEB / "avvio-progressivo.js").as_posix()}');
@@ -48,14 +48,14 @@ def test_banner_alert_same_text_as_errore_and_skeleton_removed():
     const b = reg['avvio-errore'];
     console.log(JSON.stringify({{ role: b.getAttribute('role'), msg: reg['avvio-errore-msg'].textContent, errore: AVVIO.errore,
       shown: body.kids, copia: reg['avvio-copia'].textContent, reset: reg['avvio-reset'].textContent,
-      skelHidden: reg['drop-skeleton'].hidden, dropHidden: reg['drop'].hidden, faseHidden: reg['avvio-fase'].hidden,
+      openingHidden: reg['opening'].hidden, wdataHidden: reg['wdata'].hidden, faseHidden: reg['avvio-fase'].hidden,
       waiting: await pA, after: await AVVIO.pronto() }}));
     """)
     assert res["role"] == "alert"
     assert res["msg"] == res["errore"] == "Impossibile avviare il motore"
     assert res["shown"] == 1
     assert res["copia"] == "Copia dettagli" and res["reset"] == "Reset completo"
-    assert res["skelHidden"] is True and res["dropHidden"] is False and res["faseHidden"] is True
+    assert res["openingHidden"] is True and res["wdataHidden"] is False and res["faseHidden"] is True
     assert res["waiting"] is False and res["after"] is False
 
 
