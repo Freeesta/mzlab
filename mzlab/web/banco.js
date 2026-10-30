@@ -296,7 +296,6 @@ const BANCO = (() => {
   // ---------------------------------------------------------------- the toolbar of the bench (WP-H3b, master-prompt §3.3): in the place of the tabs of the experiments
   const svg = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICON = {
-    zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
     add: svg('<path d="M8 3v10M3 8h10"/>'), type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
   };
   const act = () => (E.active && E.panels.includes(E.active) ? E.active : E.panels[0] || null);
@@ -331,8 +330,6 @@ const BANCO = (() => {
     o.el.querySelector(".x").click(); setActive(n); relayout(); fitHost(); uiSave();
   }
   const FN = {
-    zall: () => { E.panels.forEach(q => { pushZh(q); q.zoom = null; q.zoomY = null; if (q.type === "spec") q.lock = null; draw(q); }); uiSave(); },
-    lib: () => { let a = act(); if (a && a.type !== "spec") a = E.panels.find(q => q.type === "spec" && q.link === a.id); if (a && window.LIB && a.level === 2) LIB.searchFrom(a); else info(I18N.t("bn.pickMs2")); },
     tree: () => { const f = tabFiles("ms2")[0]; if (f && window.COMP) COMP.tree(f.k); else info(I18N.t("bn.treeOnly")); },
   };
   function sync2() {
@@ -544,13 +541,16 @@ const BANCO = (() => {
     renderInfo();
   }
   // one row: when the bench buttons do not fit, first the words go, then the last buttons move into «⋯», each with its name
-  const DROP = ["tree", "lib", "type", "add", "zall"];
+  const DROP = ["tree", "type", "add"];
+  // the MSn tree is one tool for every file with MS2 or higher scans (infusion or chromatographic); an MS1-only file has none, so the button is not there
+  const hasMsn = () => tabFiles("ms2").length > 0;
+  const noTree = x => x.dataset.hb === "tree" && !hasMsn();
   const nameOf = x => { const l = x.querySelector(".hl"); return l ? l.textContent : (x.getAttribute("aria-label") || x.title); };
   function fitRow() {
     const t = Q("#tools"), b = Q("#hrbar"); if (!t || !b || b.hidden) return;
     t.classList.add("one"); t.classList.remove("nolab");
     const btns = [...b.querySelectorAll("button[data-hb]")], mg = b.querySelector("#hr-moreg"), groups = [...b.querySelectorAll(".hg:not(#hr-moreg)")];
-    btns.forEach(x => { x.hidden = false; }); mg.hidden = true; groups.forEach(g => { g.hidden = false; });
+    btns.forEach(x => { x.hidden = noTree(x); }); mg.hidden = true; groups.forEach(g => { g.hidden = [...g.querySelectorAll("button")].every(y => y.hidden); });
     const over = () => t.scrollWidth > t.clientWidth + 1;
     if (!over()) return;
     t.classList.add("nolab"); if (!over()) return;
@@ -559,7 +559,7 @@ const BANCO = (() => {
   }
   function moreMenu(e, mb) {
     const r = mb.getBoundingClientRect();
-    const items = [...Q("#hrbar").querySelectorAll("button[data-hb]")].filter(x => x.hidden && !x.disabled).map(x => ({ label: nameOf(x), fn: () => x.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: r.left, clientY: r.bottom })) }));
+    const items = [...Q("#hrbar").querySelectorAll("button[data-hb]")].filter(x => x.hidden && !x.disabled && !noTree(x)).map(x => ({ label: nameOf(x), fn: () => x.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: r.left, clientY: r.bottom })) }));
     if (items.length) menu(e, items);
   }
   function bar() {
@@ -570,9 +570,9 @@ const BANCO = (() => {
       b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", I18N.t("bn.toolbar"));
       // one row: the buttons of the bench sit in #tools, between the file arrows and «Method»
       const sp = host.querySelector(":scope > .sp"); host.insertBefore(b, sp);
-      b.innerHTML = h`${raw(`<span class="hg">${barBtn("zall", I18N.t("bn.bar.zall"), ICON.zall, null, I18N.t("bn.lab.zall"))}</span>` +
+      b.innerHTML = h`${raw(
         `<span class="hg">${barBtn("add", I18N.t("bn.bar.addcell"), ICON.add, null, I18N.t("bn.cell"))}${barBtn("type", I18N.t("bn.bar.type"), ICON.type, null, I18N.t("bn.lab.type"))}</span>` +
-        `<span class="hg">${barBtn("lib", I18N.t("bn.bar.lib"), ICON.lib, null, I18N.t("bn.lab.lib"))}${barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree, null, I18N.t("bn.lab.tree"))}</span>` +
+        `<span class="hg">${barBtn("tree", I18N.t("bn.bar.tree"), ICON.tree, null, I18N.t("bn.lab.tree"))}</span>` +
         `<span class="hg" id="hr-moreg" hidden><button type="button" id="hr-more" aria-haspopup="menu" title="${EH(I18N.t("bn.more"))}" aria-label="${EH(I18N.t("bn.more"))}">\u22EF</button></span>`)}`;
       b.querySelectorAll("button[data-hb]").forEach(x => {
         const id = x.dataset.hb;

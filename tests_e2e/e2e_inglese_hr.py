@@ -37,7 +37,7 @@ try:
         pg.click("#opbtn"); pg.wait_for_function("E.files.length>=2", timeout=90000); pg.wait_for_timeout(3000)
         def bench():
             it = italian(pg); assert not it, it
-            assert "Automatic zoom" in pg.get_attribute("#hrbar [data-hb=zall]", "title"), pg.get_attribute("#hrbar [data-hb=zall]", "title")
+            assert pg.evaluate("!document.querySelector('#hrbar [data-hb=zall]') && !document.querySelector('#hrbar [data-hb=lib]')"), "no «Full view» and «Libraries» buttons in the bar"
         step("bench toolbar and cells", bench)
         def info_tabs():
             labs = pg.evaluate("[...document.querySelectorAll('#stbar button.tb')].filter(b=>!b.hidden&&b.offsetParent).map(b=>b.getAttribute('aria-label'))")
