@@ -476,7 +476,7 @@ async function bootSession0() {
     renderFileList();
     // @ts-ignore toolbar() below is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll();
-    const added = E.files.filter((/** @type {FileAperto} */ f) => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    const added = E.files.filter((/** @type {FileAperto} */ f) => !oldNames.includes(f.file)); if (added.length && window.setTab && !seq && !(typeof OPENNOW !== "undefined" && OPENNOW.batchShown()) && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
     if (added.length && window.INF && INF.autoOpen) INF.autoOpen(added);
     return;
   }

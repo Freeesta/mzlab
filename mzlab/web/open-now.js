@@ -12,7 +12,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   const held = new Set();      // «Choose» of a large folder: these files stay unticked until the student ticks them
   const sent = new Set();      // files whose roles and times went to the open files once
   const tally = { n: 0, m: 0 };      // files opened and set aside since the last note of the side list
-  let busy = 0, last = 0, late = false, autoShown = false, cur = "", t0 = 0;      // cur = the file being opened now, since t0
+  let busy = 0, last = 0, late = false, autoShown = false, batchShown = false, cur = "", t0 = 0;      // cur = the file being opened now, since t0
   /** @type {(() => void)[]} */ let calm = [];
   const src = (/** @type {string} */ n) => String(n).split("#")[0];
   const openOf = (/** @type {string} */ name) => E.files.filter((/** @type {FileAperto} */ x) => !x.gone && src(x.file) === name);
@@ -45,7 +45,10 @@ const OPENNOW = /** @type {any} */ ((() => {
     if (autoShown) return;
     const f = E.files[firstOpenK(S.sess)];
     if (!f || f.gone || isBlankFile(f)) return;
-    autoShown = true; soloFile(f);
+    autoShown = batchShown = true; soloFile(f);
+    // until the student acts, the files that arrive do not move the view to their tab (bootSession0)
+    const done = () => { batchShown = false; ["pointerdown", "keydown"].forEach(t => document.removeEventListener(t, done, true)); };
+    ["pointerdown", "keydown"].forEach(t => document.addEventListener(t, done, true));
   }
   const rank = (/** @type {string} */ n) => CONVROWS.rank(n);
   /** a file dropped before `name` is still being read: the session keeps the order of the drop (k), whatever file is read first; with no loading running nothing is still coming */
@@ -114,7 +117,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   }
   /** a folder of more than 50 data files asks once: true = open all, false = choose (all unticked) */
   const many = async (/** @type {number} */ n) => (await rare()).many(n);
-  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length,
+  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length, batchShown: () => batchShown, noAuto: () => { autoShown = true; },
     /** what the queue waits on (the message of a test that timed out) */
     state: () => ({ busy, q: q.slice(), cur, ms: cur ? Date.now() - t0 : 0, ahead: q.filter(ahead) }) };
 })());
