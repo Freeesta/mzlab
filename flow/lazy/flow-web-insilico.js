@@ -14,7 +14,7 @@
   /** an error of a .wasm ({error_key, params} as text) as the page's {key, params} @param {any} e */
   const asError = e => { let j = null; try { j = JSON.parse(String(e)); } catch (_) { /* not JSON */ } return j && j.error_key ? fail(j.error_key, j.params || {}) : e; };
   /** the module that downloads and reads the package, loaded on first use */
-  const dl = () => import(/* webpackIgnore: true */ new URL("insilico-scarica.js", G.QTOOLS && G.QTOOLS.ctx ? G.QTOOLS.ctx.base : document.baseURI).href);
+  const dl = () => { const where = "../../insilico-scarica.js"; return import(/* webpackIgnore: true */ where); };
   /** the text of a failed download or read @param {any} e */
   const oops = e => (e && e.key ? F.message({ key: e.key, params: e.params }) : String(e && e.message || e));
   /** true when the text is the catalogue of a package @param {string} t */
