@@ -1,4 +1,4 @@
-"""«Back to the data» and «Cancel» of the loading screen give the page back exactly as it was: same panels (position, size, zoom), same side panel (open or shut, side), same scroll."""
+"""«Back to work!» and Esc of the landing reopened by «+» give the page back exactly as it was: same panels (position, size, zoom), same side panel (open or shut, side), same scroll."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -26,16 +26,16 @@ try:
                 pg.evaluate("window.scrollTo(0, 400)"); frames(pg, 3)
                 before = pg.evaluate(SNAP)
                 # not pg.click: Playwright would first scroll the button into view and move the page
-                pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector("#backdata", state="visible"); frames(pg, 4)
+                pg.evaluate("document.querySelector('#addf').click()"); pg.wait_for_selector("#backwork", state="visible"); frames(pg, 4)
                 assert not pg.evaluate("!document.querySelector('#v-data').hidden"), "the loading screen is not showing"
-                pg.click(leave); frames(pg, 6); fermo(pg, "#dpanels"); frames(pg, 4)
+                (pg.keyboard.press("Escape") if leave == "Escape" else pg.click(leave)); frames(pg, 6); fermo(pg, "#dpanels"); frames(pg, 4)
                 after = pg.evaluate(SNAP)
                 assert before == after, f"\nbefore {before}\nafter  {after}"
             step(name, go)
-        roundtrip("Back to the data, side panel open", "#backdata")
-        roundtrip("Cancel, side panel open", "#cancadd")
-        roundtrip("Back to the data, side panel shut", "#backdata", bar=False)
-        roundtrip("Cancel, side panel shut", "#cancadd", bar=False)
+        roundtrip("Back to the data, side panel open", "#backwork")
+        roundtrip("Esc, side panel open", "Escape")
+        roundtrip("Back to the data, side panel shut", "#backwork", bar=False)
+        roundtrip("Esc, side panel shut", "Escape", bar=False)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

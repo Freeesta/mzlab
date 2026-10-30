@@ -14,6 +14,13 @@ pub(crate) struct Made {
     pub mem: Option<Mem>, // the memory of an alignment, when its step already worked it out
     /// A second output of a step that has two (port, file), made and kept like the first.
     pub extra: Option<(&'static str, Artifact)>,
+    /// The preset the files decided (`lr` for a detection on unit-resolution files); the record names it.
+    pub preset: Option<&'static str>,
+}
+
+/// The preset ids a step can decide from its files, as the static text `Made` holds.
+pub(crate) fn preset_id(id: &str) -> Option<&'static str> {
+    ["lr"].into_iter().find(|p| *p == id)
 }
 
 impl Made {
@@ -26,6 +33,7 @@ impl Made {
             file: None,
             mem: None,
             extra: None,
+            preset: None,
         }
     }
 }

@@ -47,9 +47,9 @@ struct EdgeOut {
 fn edge_head(fs: &[Feat], a: usize, b: usize, kind: &str, label: &str, source: &str) -> Out {
     let mut o = Out::default();
     o.raw("{\"a\":");
-    write_value(fs[a].v.get("k").unwrap_or(&Value::Null), &mut o);
+    json::write_value(&mut o, fs[a].v.get("k").unwrap_or(&Value::Null));
     o.raw(",\"b\":");
-    write_value(fs[b].v.get("k").unwrap_or(&Value::Null), &mut o);
+    json::write_value(&mut o, fs[b].v.get("k").unwrap_or(&Value::Null));
     o.raw(",\"kind\":").str(kind).raw(",\"label\":").str(label);
     o.raw(",\"source\":")
         .str(source)
@@ -126,7 +126,7 @@ fn iin_groups(fs: &[Feat], g: &mut Graph) {
                     .filter(|v| !v.is_null())
             }) {
                 o.raw(",\"neutral\":");
-                write_value(n, &mut o);
+                json::write_value(&mut o, n);
             }
             g.push(i, j, o.0, String::new());
             g.n_iin += 1;
@@ -182,7 +182,7 @@ fn mzmine_edges(fs: &[Feat], payload: &Value, g: &mut Graph) {
         );
         if let Some(s) = e.get("score").filter(|v| !v.is_null()) {
             o.raw(",\"score\":");
-            write_value(s, &mut o);
+            json::write_value(&mut o, s);
         }
         g.push(a, b, o.0, String::new());
         g.n_iin += 1;
@@ -291,7 +291,7 @@ fn computed_edge(
         .raw(",\"samples\":[");
     for (k, &s) in common.iter().take(12).enumerate() {
         o.raw(if k > 0 { "," } else { "" });
-        write_value(c.samples.get(s).unwrap_or(&Value::Null), &mut o);
+        json::write_value(&mut o, c.samples.get(s).unwrap_or(&Value::Null));
     }
     o.raw("],\"relations\":[");
     for (k, x) in rels.iter().enumerate() {
@@ -431,7 +431,7 @@ fn identities(c: &Ctx, fs: &[Feat], g: &mut Graph, out: &mut Out) -> (usize, usi
             .raw(",\"members\":[");
         for (q, &i) in ms.iter().enumerate() {
             out.raw(if q > 0 { "," } else { "" });
-            write_value(fs[i].v.get("k").unwrap_or(&Value::Null), out);
+            json::write_value(out, fs[i].v.get("k").unwrap_or(&Value::Null));
         }
         out.raw("],\"rt\":").num(*rt).raw(",\"neutral\":");
         hyp_out(hyp.first(), fs, out);

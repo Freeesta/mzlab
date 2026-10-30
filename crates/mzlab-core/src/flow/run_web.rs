@@ -69,6 +69,7 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
             x.get("proof").cloned().unwrap_or(Value::Null),
         ));
     }
+    o.preset = text(r, "preset").map(str::to_string);
     o.ms = r.get("ms").and_then(Value::f64).unwrap_or(0.0);
     o.mem = r.get("mem").and_then(mem);
     o.cached = r.get("cached").and_then(Value::bool).unwrap_or(false);

@@ -38,6 +38,34 @@ fn precursor_da_matches_a_unit_resolution_query() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A query that carries the note of the unit-resolution MGF takes the Da windows (fragment 0.5, precursor 0.7) when the plan writes none; the same query without the note keeps ppm.
+#[test]
+fn a_unit_resolution_query_follows_its_resolution_by_default() {
+    let dir = fixture("lrdef");
+    let mgf = std::fs::read_to_string(dir.join("q.mgf"))
+        .unwrap()
+        .replace("PEPMASS=300.1235", "PEPMASS=300.4");
+    let found = |dir: &std::path::Path| {
+        hits(dir).get("hits").unwrap().arr().iter().any(|x| {
+            x.get("query").unwrap().str() == Some("q0")
+                && x.get("name").unwrap().str() == Some("Alpha")
+        })
+    };
+    std::fs::write(dir.join("q.mgf"), &mgf).unwrap();
+    run(&dir, "spectral_entropy", "{}");
+    assert!(!found(&dir), "no note: the 10 ppm window stays");
+    std::fs::write(
+        dir.join("q.mgf"),
+        format!("# unit resolution, tolerance 0.5 Da\n{mgf}"),
+    )
+    .unwrap();
+    run(&dir, "spectral_entropy", "{}");
+    assert!(found(&dir), "the note: 0.7 Da around the precursor");
+    run(&dir, "spectral_entropy", r#"{"precursor_da":0.1}"#);
+    assert!(!found(&dir), "a window the plan writes is kept");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A `.mzlib` library takes decoys too: it is read back to spectra, so the q-values exist and no decoy is listed.
 #[test]
 fn decoys_work_on_an_mzlib_library() {

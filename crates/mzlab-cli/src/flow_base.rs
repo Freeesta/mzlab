@@ -116,6 +116,7 @@ pub(crate) fn detect_job(r: &FileRunner, job: &Job) -> Result<Made> {
     );
     Ok(Made {
         estimates,
+        preset: recipe.detect.axis.is_da().then_some("lr"),
         ..Made::new("peaks", a)
     })
 }

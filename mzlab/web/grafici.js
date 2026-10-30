@@ -213,6 +213,7 @@ function setFondo(p, v) {
 const ibOf = p => (p.fondo && p.fondo.mode === "tract" ? p.fondo.ib : null);       // the stretch chosen by the student, if the background is «tratto»
 const ibkLevels = l => fmtA(l.lvl) + (l.lvl2 != null ? " " + I18N.t("ibk.andShort") + " " + fmtA(l.lvl2) : "") + " cps";
 function ibkChip(p) {
+  const slot = p.el && p.el.querySelector(".ibkslot"); if (slot) slot.replaceChildren();
   const fo = p.fondo, ib = ibOf(p), auto = !!fo && fo.mode === "auto"; if (!ib && !auto) return;
   const s0 = p._a && p._a.sr && p._a.sr[0], l0 = s0 && s0.ibl, bl = s0 && s0.bl, zd = fo.zd != null ? fo.zd : FONDO.ZD;
   const chip = document.createElement("span"); chip.className = "ibk"; const flat = ib && ib.flat ? FONDOP.chip(p, ib, l0 ? ibkLevels(l0) : "", chip) : null;
@@ -226,6 +227,7 @@ function ibkChip(p) {
   const sp = chip.querySelector("[data-ib=spec]"); if (sp) sp.onclick = () => ibkSpectra(p);
   chip.querySelector("[data-ib=off]").onclick = () => { setFondo(p, ""); };
   (p.corrbar || p.leg).appendChild(chip); if (flat) FONDOP.wire(p, chip);
+  if (ib && !p._exp) ibkLegend(p, ib, l0);
 }
 // hiding or showing a series from the legend (and the contaminants of a spectrum) is one undoable action (comandi.js)
 COMANDI.gestore("series.visibility", { leggi: p => JSON.stringify([p.hid || {}, !!p.showHid]), applica: (p, snap) => { const [h, s] = JSON.parse(snap); p.hid = h; p.showHid = s; } });
@@ -359,10 +361,8 @@ async function drawLines(p) {
   const withFondo = sr.some(s => s.cf);
   if ((ymin < 0 || withFondo) && !stk && !logy) zeroMarks(g, sr, X, Y, W, H, withFondo && !p._exp);
   if (ibOf(p) && !p._exp) {                                    // grey band(s) of the internal blank, always visible
-    const ib = ibOf(p), bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
+    const ib = ibOf(p), bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []);      // the text of the blank is a chip outside the plot (ibkLegend), never drawn over the trace
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }); if (ib.flat) FONDOP.drawGrip(g, ib, X, W);
-    g.font = fpx(12); g.textAlign = "left"; g.fillStyle = ecss("--muted");
-    g.fillText(I18N.t("ibk.band", { ranges: ibkRanges(ib), levels: l0 ? ibkLevels(l0) : "", extra: sr.length > 1 ? I18N.t("ibk.firstTrace") : "" }), Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }
   if (p.band && !p._exp) { g.save(); g.globalAlpha = .14; g.fillStyle = ecss("--accent"); g.fillRect(X(p.band[0]), M.t, Math.max(2, X(p.band[1]) - X(p.band[0])), H - M.t - M.b); g.restore(); }      // scans averaged by the spectrum under this XIC (xic-spettro.js)
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
@@ -394,8 +394,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
-    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    const V = (/** @type {number} */ val) => Y(U(s, val));
+    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
+    g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }

@@ -513,7 +513,7 @@ html.in-draw #sb-toggle{display:none}
 /* the drop box is as wide as the sample table below it (#start fills #wdata); its icon is static, on its own line above the text */
 #drop .drop-tx{display:contents}#drop .drop-ic{flex:0 0 100%;margin:0 auto 10px;color:var(--muted)}
 /* empty side panel: a still drawing above the text, no motion */
-#fl-hint .leaf{display:block;margin:0 auto 6px;color:var(--muted)}
+#fl-hint .leaf{display:block;margin:0 auto 6px;color:var(--muted)}#fl-hint .leaf .lf{fill:var(--accent);fill-opacity:.1}
 #sb-by{display:inline-flex;align-items:center;gap:4px;flex:none;width:92px;padding:2px 6px;min-height:24px;overflow:hidden;white-space:nowrap}#sb-by span{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .gby-menu{position:fixed;z-index:10000;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,45,10,.18);padding:3px;width:272px;max-height:70vh;overflow:auto}
 .gby-menu [role=menuitemradio]{display:flex;flex-direction:column;padding:4px 10px 4px 26px;border-radius:4px;cursor:pointer;min-height:24px;position:relative}.gby-menu [role=menuitemradio] small{color:var(--muted)}
