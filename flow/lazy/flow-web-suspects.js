@@ -44,8 +44,8 @@
       for (const b of bytes) { view.setBigUint64(at, BigInt(b.length), true); packed.set(b, at + 8); at += 8 + b.length; }
       let text;
       try {
-        text = (await p.ident("table", "flow_screen_suspects", { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat"), names: JSON.stringify(files.map(f => f.name)), lists: packed,
-          mgf: spectra ? enc(spectra.text) : null, formulas: formulas ? enc(formulas.text) : null })).text;
+        text = await p.ident("table", "flow_screen_suspects", { params, table: await p.fs.read(J().DIR + alKey + ".mzfeat"), names: JSON.stringify(files.map(f => f.name)), lists: packed,
+          mgf: spectra ? enc(spectra.text) : null, formulas: formulas ? enc(formulas.text) : null });
       } catch (e) { throw asError(e); }
       const r = { name: inst.id + ".json", text };
       await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);

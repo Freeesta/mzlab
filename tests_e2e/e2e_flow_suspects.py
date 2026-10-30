@@ -105,9 +105,8 @@ RUN = """async ([plan, list]) => {
   finally { document.removeEventListener('flow:web-step', on); }
 }"""
 KEPT = """async () => {
-  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = {};
-  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
-  return out;
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow');
+  return await (await (await d.getFileHandle('scr.json')).getFile()).text();
 }"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -138,7 +137,7 @@ try:
             r = pg.evaluate(RUN, [PLAN, LIST]); check(r, "done")
             for i in ("det", "ali", "ms2"):   # gap fill runs inside the alignment call of the pool
                 assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
-            web = pg.evaluate(KEPT).get("scr.json", "").encode()
+            web = pg.evaluate(KEPT).encode()
             at = next((i for i, (x, y) in enumerate(zip(NAT, web)) if x != y), min(len(NAT), len(web)))
             assert sha(web) == sha(NAT) and len(NAT) > 100, ("first difference at", at, len(NAT), len(web), NAT[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
         step("screen.suspects writes the screen/1 text of the native flow run (same SHA-256), every job done in the browser", first)
