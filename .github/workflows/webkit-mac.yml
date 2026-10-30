@@ -76,10 +76,11 @@ jobs:
           python -m playwright install --with-deps webkit
           sysctl hw.memsize hw.ncpu
       - name: Build the site (variant flags)
+        # target-specific variable: it replaces the wasm32 rustflags of .cargo/config.toml and leaves the host builds (cargo install wasm-bindgen-cli) alone
         env:
-          RUSTFLAGS: ${{ matrix.rustflags }}
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: ${{ matrix.rustflags }}
         run: |
-          [ -n "$RUSTFLAGS" ] || unset RUSTFLAGS
+          [ -n "$CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS" ] || unset CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS
           python tools/prepara_sito.py
       - name: Engine start on WebKit
         env:
@@ -102,3 +103,10 @@ jobs:
           name: webkit-site-${{ matrix.variant }}
           path: diag/
           if-no-files-found: ignore
+      - name: Summary (variant, engine starts, first failure)
+        if: always()
+        run: |
+          echo "=== SUMMARY ${{ matrix.variant }}"
+          grep -h '^SITE' site.txt 2>/dev/null || echo "SITE: no output (build failed?)"
+          grep -h 'FAIL\|engine start failed\|unknown transient' smoke.txt 2>/dev/null | cut -c1-400 || true
+          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | head
