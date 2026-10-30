@@ -14,6 +14,9 @@ use mzlab_feat::attributio::table::{self, Run};
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "all")]
+mod insilico_web;
+
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
 /// `.wasm` `attributio-rev`: it exports the review, the decision and the evidence export; the build with `export` is the `.wasm` `attributio-export`: the four spreadsheet exports only; the one without them exports the table only.
 #[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]

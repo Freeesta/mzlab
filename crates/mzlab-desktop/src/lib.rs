@@ -25,6 +25,7 @@ mod flow_run;
 mod flow_stage;
 pub mod idxbuild;
 mod idxbuild_nat;
+pub mod insilico;
 pub mod librerie;
 mod llm;
 pub mod mapped;

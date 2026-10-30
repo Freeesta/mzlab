@@ -16,6 +16,7 @@
     "manuale.d.ts",
     "../../mzlab/web/archivio.js",
     "../../mzlab/web/normative-scarica.js",
+    "../../mzlab/web/insilico-scarica.js",
     "../../mzlab/web/llm/llm-consenso.js",
     "../../mzlab/web/llm/llm-clienti.js",
     "../../mzlab/web/llm/llm-agente.js",

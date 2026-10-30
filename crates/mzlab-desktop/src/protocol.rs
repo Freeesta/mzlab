@@ -196,12 +196,50 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
         "lr/upload" => upload_route(state, &q, body).unwrap_or_else(bad),
         r if r.starts_with("lib/") => lib_route(state, &r[4..], &q, body),
         r if r.starts_with("normative/") => normative_route(state, &r[10..], &q),
+        r if r.starts_with("insilico/") => insilico_route(state, &r[9..]),
         _ => json(404, "{}".into()),
     }
 }
 
 /// Set by `normative/cancel`, cleared when an install starts.
 static NORM_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Set by `insilico/cancel`, cleared when an install starts.
+static INSILICO_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The in-silico candidate package in the folder of the libraries (`insilico.rs`): `insilico/status`, `insilico/install` (from the site), `insilico/check` (none|current|update),
+/// `insilico/cancel`.
+fn insilico_route(state: &State, route: &str) -> Response {
+    use crate::insilico as ins;
+    use std::sync::atomic::Ordering;
+    let lib = &state.libs;
+    let fail = |e: ins::InsilicoError| json(400, e.to_json());
+    let status = |s: ins::Status| json(200, serde_json::to_string(&s).unwrap_or_default());
+    match route {
+        "status" => status(ins::status(lib)),
+        "install" => {
+            INSILICO_CANCEL.store(false, Ordering::Relaxed);
+            match ins::install(
+                lib,
+                &crate::update::Http::new(),
+                &INSILICO_CANCEL,
+                &mut |_, _| {},
+            ) {
+                Ok(s) => status(s),
+                Err(e) => fail(e),
+            }
+        }
+        "check" => match ins::check(lib, &crate::update::Http::new()) {
+            Ok(c) => json(200, serde_json::json!({ "state": c }).to_string()),
+            Err(e) => fail(e),
+        },
+        "cancel" => {
+            INSILICO_CANCEL.store(true, Ordering::Relaxed);
+            json(200, "{}".into())
+        }
+        _ => json(404, "{}".into()),
+    }
+}
 
 /// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/listings` (the `listings` JSON),
 /// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder).
