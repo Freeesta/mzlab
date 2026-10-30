@@ -1,3 +1,4 @@
+use crate::sortc::SortC;
 // Ported from Attributio plugins/chimeric.py.
 //! Chimeric MS/MS detection: the features of the same polarity that fall inside the isolation window around a feature's m/z and within a retention-time distance
 //! were co-isolated, so their fragments may be in the spectrum. The window is the instrument's (`isolation_window` of the campaign, otherwise 3.0 for a Fusion
@@ -58,7 +59,7 @@ pub fn intruders(
             delta_rt: round(f.rt - target.rt, 2),
         })
         .collect();
-    out.sort_by(|a, b| a.delta_mz.abs().total_cmp(&b.delta_mz.abs()));
+    out.sortc_by(|a, b| a.delta_mz.abs().total_cmp(&b.delta_mz.abs()));
     out
 }
 

@@ -3,6 +3,7 @@
 //! variants of both sides are matched against the experimental MS/MS peaks within a ppm tolerance. Built on the molecular graph of mzLab (`chem::grafo`), no
 //! RDKit; the drawing of a fragment is not made here (the page draws the atoms listed in `atoms`).
 
+use crate::sortc::SortC;
 use super::grafo::Mol;
 use mzlab_core::elements::{self, Formula};
 
@@ -261,6 +262,6 @@ pub fn fragment_molecule(
         });
     }
     out.explained
-        .sort_by(|x, y| x.peak.partial_cmp(&y.peak).unwrap());
+        .sortc_by(|x, y| x.peak.partial_cmp(&y.peak).unwrap());
     Ok(out)
 }

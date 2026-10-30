@@ -18,6 +18,7 @@
 //! then the order of the features in the list, then the order of the base rows (m/z ascending): the same input always gives the same rows. Not carried
 //! over: the optional checks of charge, identity, isotope pattern, spectra and mobility (all off in the default batch).
 
+use crate::sortc::SortC;
 use super::Feature;
 
 /// Parameters of the join (defaults of the batch of the gold data: 0.0015 Da or 5 ppm, weights 3 and 1, 0.2 min).
@@ -159,7 +160,7 @@ fn score_all(
             }
         }
     }
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         b.score
             .total_cmp(&a.score)
             .then(a.wait.cmp(&b.wait))
@@ -209,7 +210,7 @@ pub fn align(lists: &[Vec<Feature>], p: &JoinParams) -> Rows {
         })
         .collect();
     while !waiting.is_empty() {
-        waiting.sort_by_key(|w| std::cmp::Reverse(w.feats.len()));
+        waiting.sortc_by_key(|w| std::cmp::Reverse(w.feats.len()));
         let base = waiting.remove(0);
         if base.feats.is_empty() {
             break;
@@ -225,13 +226,13 @@ pub fn align(lists: &[Vec<Feature>], p: &JoinParams) -> Rows {
                 Row { mz, rt, cells }
             })
             .collect();
-        rows.sort_by(|a, b| a.key_mz().total_cmp(&b.key_mz()));
+        rows.sortc_by(|a, b| a.key_mz().total_cmp(&b.key_mz()));
         place(lists, &mut waiting, &mut rows, p);
         out.rows.extend(rows);
     }
     for r in &mut out.rows {
         r.refresh();
     }
-    out.rows.sort_by(|a, b| a.key_rt().total_cmp(&b.key_rt()));
+    out.rows.sortc_by(|a, b| a.key_rt().total_cmp(&b.key_rt()));
     out
 }

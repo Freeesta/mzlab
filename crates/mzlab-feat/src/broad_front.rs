@@ -1,6 +1,7 @@
 //! Measures of a broad candidate taken before the common mode G(t) is subtracted: the half-height width of its left front (the tail of a
 //! narrow peak rises fast and is dropped) and its area over the local linear bridge, plus the noise and base of a short series. Used by `broad`.
 
+use crate::sortc::SortC;
 use crate::broad_gt::median;
 use mzlab_core::error::Result;
 
@@ -52,6 +53,6 @@ pub(crate) fn base_of(y: &[f64]) -> Result<f64> {
     let mut v = Vec::new();
     reserve(&mut v, y.len())?;
     v.extend_from_slice(y);
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sortc_by(|a, b| a.total_cmp(b));
     Ok(v.get(v.len() / 4).copied().unwrap_or(0.0))
 }

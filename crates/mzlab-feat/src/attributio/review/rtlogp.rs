@@ -4,6 +4,7 @@
 //! robust Level 2a ones of one polarity; ONE logP source per fit (the one most calibrants have). The logP values come from the sources of the campaign (no
 //! network): a missing value is "not available" (`None`), never mixed in from another source.
 
+use crate::sortc::SortC;
 use super::isotopes::round_to;
 use std::collections::BTreeMap;
 
@@ -33,7 +34,7 @@ pub fn organic_fraction(rt: f64, gradient: &[Vec<f64>], dwell: f64) -> f64 {
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    s.sortc_by(|a, b| a.partial_cmp(b).unwrap());
     let n = s.len();
     if n % 2 == 1 {
         s[n / 2]

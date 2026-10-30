@@ -5,6 +5,7 @@
 //! candidate is recorded in `status`: `confirmed`, `confirmed_manual` (Level 1); `review`, `no_ms2`, `no_reference_ion` (evidence below Level 1);
 //! `mismatch`, `unobserved_ion`, `rejected_manual` (the name is NOT given to the feature). The spectral similarity is supplied by the caller.
 
+use crate::sortc::SortC;
 use super::ms2::{RefLibrary, Spectrum};
 pub use super::standards_cfg::*;
 use super::{num_at, text_at};
@@ -414,7 +415,7 @@ pub fn match_reference_standards(
         check_ms2(c, mz, ms2);
     }
     apply_decisions(&mut cand, features, pol, decisions, warnings);
-    cand.sort_by(|a, b| {
+    cand.sortc_by(|a, b| {
         let ord = |x: f64, y: f64| x.partial_cmp(&y).unwrap_or(std::cmp::Ordering::Equal);
         rank(&a.status)
             .cmp(&rank(&b.status))

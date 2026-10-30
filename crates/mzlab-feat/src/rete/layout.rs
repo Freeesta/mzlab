@@ -1,6 +1,7 @@
 //! The columns of the network: the step of a node is its distance in arcs from the parent (arcs read both ways); a group of nodes that no arc joins to
 //! the parent starts at step 1 from its earliest node (by time of the maximum, m/z, RT, id). Inside a column the nodes go by m/z, then RT, then id.
 
+use crate::sortc::SortC;
 use std::collections::VecDeque;
 
 use super::{Node, ReteRow};
@@ -55,7 +56,7 @@ pub(super) fn nodes(all: &[&ReteRow], arcs: &[(usize, usize)], tp: &TpBlock) -> 
             pos: 0,
         })
         .collect();
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         a.step
             .cmp(&b.step)
             .then(a.row.mz.total_cmp(&b.row.mz))

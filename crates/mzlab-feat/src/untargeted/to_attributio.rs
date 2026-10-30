@@ -8,6 +8,7 @@
 //! row is the spectrum of its most intense scan (`most_intense_ms2`). The sources that need other programs (SIRIUS, GNPS2, mzmine libraries, standards,
 //! the chemist's decisions) are empty, which is the case of a campaign without those folders.
 
+use crate::sortc::SortC;
 use super::ident::Idents;
 use super::isotopes::IsoGroups;
 use crate::attributio::campaign::Env;
@@ -169,7 +170,7 @@ pub fn most_intense_ms2<R: ReadAt>(
         let mut by_rt: Vec<u32> = (0..ix.scans.len() as u32)
             .filter(|&g| ix.scans[g as usize].level == 2)
             .collect();
-        by_rt.sort_by(|&a, &b| ix.scans[a as usize].rt.total_cmp(&ix.scans[b as usize].rt));
+        by_rt.sortc_by(|&a, &b| ix.scans[a as usize].rt.total_cmp(&ix.scans[b as usize].rt));
         let chosen: Vec<(usize, u32)> = mine
             .iter()
             .filter_map(|&r| {

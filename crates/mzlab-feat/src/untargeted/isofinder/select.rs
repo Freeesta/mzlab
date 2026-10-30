@@ -1,6 +1,7 @@
 //! Choice among the charges of the isotope finder: every charge that scores is ranked, the best one is the pattern of the feature and the close ones
 //! are kept as alternatives, each with a probability. After `IsotopeFinderEngine.detect` (mzmine 4.10.90); the automatic detection of the elements is not done.
 
+use crate::sortc::SortC;
 use super::auto::{self, Composition};
 use super::envelope::m1_bounds;
 use super::{ChargeEval, ElementMode, Engine, Pt};
@@ -47,7 +48,7 @@ fn ranked(engine: &Engine, mz: &[f64], y: &[f64], feature_mz: f64, sign: i32) ->
             (eval.raw > 0.0).then_some(Scored { eval, cands })
         })
         .collect();
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         b.eval
             .raw
             .total_cmp(&a.eval.raw)

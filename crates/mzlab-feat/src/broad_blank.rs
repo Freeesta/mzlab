@@ -2,6 +2,7 @@
 //! removes the blank trace of the same ion from the sample trace before the wavelet. Used by `broad::detect_broad_at`; the bank is filled by
 //! `trace::blank_bank`. Sums run in a fixed order: native and WASM give the same bits.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::broad::decimate;
@@ -48,7 +49,7 @@ impl BlankBank {
 
     fn trim(&mut self) {
         self.items
-            .sort_by(|a, b| b.top.total_cmp(&a.top).then(a.mz.total_cmp(&b.mz)));
+            .sortc_by(|a, b| b.top.total_cmp(&a.top).then(a.mz.total_cmp(&b.mz)));
         self.items.truncate(MAX_ITEMS);
     }
 
@@ -56,7 +57,7 @@ impl BlankBank {
     pub fn finish(mut self) -> Option<Self> {
         self.trim();
         self.items
-            .sort_by(|a, b| a.mz.total_cmp(&b.mz).then(b.top.total_cmp(&a.top)));
+            .sortc_by(|a, b| a.mz.total_cmp(&b.mz).then(b.top.total_cmp(&a.top)));
         (!self.items.is_empty()).then_some(self)
     }
 

@@ -1,6 +1,7 @@
 //! The text of `formula.ms2@1`: sub-formulas of the candidate formulas (`formulas/1`) that explain the peaks of the MS2 spectra of an MGF (`review::explain`, `ms2_engine::rearrange`).
 //! Takes names, bytes and the parameters and returns the text: `flow run` (`mzlab-cli`) and the browser (`mzlab-attributio-wasm`) run this one function.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 use mzlab_core::json::{self, round, Out, Value};
 use mzlab_lib::flowmatch::{query_id, read_spectra, Named};
@@ -201,7 +202,7 @@ pub fn ms2_text(
             .filter(|_| !m.is_empty())
             .filter_map(|c| run_candidate(alg, c, sp.prec, pol, (&m, &y), &s).map(|x| (c, x)))
             .collect();
-        found.sort_by(|a, b| {
+        found.sortc_by(|a, b| {
             b.1.score
                 .total_cmp(&a.1.score)
                 .then(a.0.formula.cmp(&b.0.formula))

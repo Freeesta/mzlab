@@ -2,6 +2,7 @@
 //! The mzmine Development Team; rewritten, no code copied). From the spacings between pairs of signals near the M+2 defect of each candidate element and
 //! the intensity of those signals it lists the elements that cannot be ruled out, best first. Atom counts are only a rough hint. Used by `select`.
 
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 use super::envelope::jround;
@@ -150,7 +151,7 @@ fn strongest_m1_heavy(
 /// Median as mzmine takes it: the mean of the two middle values; 0 for none.
 fn median(values: &[f64]) -> f64 {
     let mut v = values.to_vec();
-    v.sort_by(f64::total_cmp);
+    v.sortc_by(f64::total_cmp);
     match v.len() {
         0 => 0.0,
         n => (v[(n - 1) / 2] + v[n / 2]) / 2.0,
@@ -204,7 +205,7 @@ pub fn detect(signals: &[Pt], charge: i32, tol: &Tol, candidates: &[&str]) -> Co
     }
     let z = charge.max(1);
     let mut sorted = signals.to_vec();
-    sorted.sort_by(|a, b| a.0.total_cmp(&b.0));
+    sorted.sortc_by(|a, b| a.0.total_cmp(&b.0));
     let base = sorted.iter().fold(0.0f64, |m, p| m.max(p.1));
     let el = element_isotopes(candidates);
     if base <= 0.0 || el.is_empty() {
@@ -283,6 +284,6 @@ fn classify(el: &[ElementIsotopes], matched: &BTreeSet<usize>, ev: &Evidence) ->
         }
     }
     // stable, so equal scores keep the order of the candidates; ranked on the raw score, the confidence is that score capped at 1
-    scored.sort_by(|a, b| b.0.total_cmp(&a.0));
+    scored.sortc_by(|a, b| b.0.total_cmp(&a.0));
     scored.into_iter().map(|p| p.1).collect()
 }

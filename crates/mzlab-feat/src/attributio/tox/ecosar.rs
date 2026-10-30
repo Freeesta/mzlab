@@ -2,6 +2,7 @@
 //! The ECOSAR taxon values of one structure after the rules of use: excess-toxicity classes first, else the baseline (neutral organics), out-of-domain
 //! endpoints dropped. Used by `hazard` for the T4 prediction.
 
+use crate::sortc::SortC;
 use super::hazard::fmt_gn;
 use super::snapshot::EcosarEndpoint;
 use std::collections::BTreeSet;
@@ -149,7 +150,7 @@ pub(super) fn as_pairs(t: &Taxa) -> Vec<(&str, f64)> {
 
 pub(super) fn sorted_values(t: &Taxa) -> String {
     let mut v: Vec<&(String, f64)> = t.iter().collect();
-    v.sort_by(|a, b| a.0.cmp(&b.0));
+    v.sortc_by(|a, b| a.0.cmp(&b.0));
     v.iter()
         .map(|(k, x)| format!("{k} {} mg/L", fmt_gn(*x, 3)))
         .collect::<Vec<_>>()

@@ -1,3 +1,4 @@
+use crate::sortc::SortC;
 // Ported from Attributio reglists/catalog.py.
 //! Which regulatory and priority lists exist, in which group, built by which source reader. The catalogue is the same for every campaign; what changes with each
 //! version of a list (act, version, dates, URL, licence) is data that lives next to the list's primary source.
@@ -111,7 +112,7 @@ pub fn ordered(ids: &[&str]) -> Vec<String> {
         .map(|s| s.id.to_string())
         .collect();
     let mut rest: Vec<&str> = seen.into_iter().filter(|i| order_of(i).is_none()).collect();
-    rest.sort();
+    rest.sortc();
     out.extend(rest.into_iter().map(str::to_string));
     out
 }

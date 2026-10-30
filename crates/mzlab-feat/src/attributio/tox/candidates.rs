@@ -2,6 +2,7 @@
 //! The per-tier hazard candidates of one identity (curated, measured, notified, predicted) and the choice of the best one: first tier with a category wins,
 //! within the tier the most severe category. Used by `hazard::record`.
 
+use crate::sortc::SortC;
 use super::ecosar::{as_pairs, sorted_values, taxon_values, Taxa};
 use super::ghs;
 use super::hazard::{fmt_gn, Curated, HazardData, NOT_ASSESSABLE};
@@ -73,7 +74,7 @@ pub(super) fn measured(d: &HazardData, blocks: &[String]) -> (Taxa, Taxa, String
                 .filter(|v| v.kind == kind && v.taxon == t)
                 .collect();
             // stable sort, NaN last (pandas): the first of the lowest values
-            h.sort_by(|a, b| {
+            h.sortc_by(|a, b| {
                 a.value_mg_l
                     .unwrap_or(f64::INFINITY)
                     .total_cmp(&b.value_mg_l.unwrap_or(f64::INFINITY))

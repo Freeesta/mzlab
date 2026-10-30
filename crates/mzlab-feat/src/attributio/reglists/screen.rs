@@ -6,6 +6,7 @@
 //! isolated adduct and goes one class down. The inputs are plain rows (suspects, features, evidence): where they come from is the caller's business.
 //! A suspect with a SMILES but no XLogP gets `LogPValues::from_smiles` (features `record`/`crippen`); without them its logP and RT stay «n.a.».
 
+use crate::sortc::SortC;
 use super::b1::{in_window, StructRow};
 use super::catalog;
 use crate::attributio::annotate::text::fmt_g;
@@ -47,7 +48,7 @@ pub fn suspects(
         .filter(|m| lists.contains(&m.list_id) && AMENABLE.contains(&m.lc_esi_amenable.as_str()))
         .filter(|m| in_window(&m.mono_mass, window))
         .collect();
-    d.sort_by(|a, b| (&a.first_block, rank(&a.list_id)).cmp(&(&b.first_block, rank(&b.list_id))));
+    d.sortc_by(|a, b| (&a.first_block, rank(&a.list_id)).cmp(&(&b.first_block, rank(&b.list_id))));
     let mut out: Vec<Suspect> = Vec::new();
     let mut i = 0;
     while i < d.len() {
@@ -132,7 +133,7 @@ fn own_crippen(_: &str) -> (Option<f64>, String) {
 
 fn median(v: &[f64]) -> f64 {
     let mut s = v.to_vec();
-    s.sort_by(f64::total_cmp);
+    s.sortc_by(f64::total_cmp);
     let n = s.len();
     if n % 2 == 1 {
         s[n / 2]
@@ -331,7 +332,7 @@ fn hits_in_polarity(
 ) -> Vec<Hit> {
     let f: Vec<&FeatureRow> = feat.iter().filter(|r| r.pol == pol).collect();
     let mut order: Vec<usize> = (0..f.len()).collect();
-    order.sort_by(|a, b| f[*a].mz.total_cmp(&f[*b].mz));
+    order.sortc_by(|a, b| f[*a].mz.total_cmp(&f[*b].mz));
     let smz: Vec<f64> = order.iter().map(|i| f[*i].mz).collect();
     let mut hits = Vec::new();
     for s in todo {
@@ -341,7 +342,7 @@ fn hits_in_polarity(
             let lo = smz.partition_point(|v| *v < theo - tol * 1.0000001);
             let hi = smz.partition_point(|v| *v <= theo + tol * 1.0000001);
             let mut js: Vec<usize> = order[lo..hi].to_vec();
-            js.sort_unstable();
+            js.sortc();
             for j in js {
                 let ppm = (f[j].mz - theo) / theo * 1e6;
                 if ppm.abs() <= PPM {
@@ -380,7 +381,7 @@ fn finish_hits(hits: &mut [Hit]) {
             h.class = "X".into();
         }
     }
-    hits.sort_by(|a, b| {
+    hits.sortc_by(|a, b| {
         class_rank(&a.class)
             .cmp(&class_rank(&b.class))
             .then_with(|| a.lists.cmp(&b.lists))

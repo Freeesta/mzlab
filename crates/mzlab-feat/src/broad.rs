@@ -3,6 +3,7 @@
 //! multiscale Ricker pass on the residue decimated by `decimate`. Used by `centwave::refine` and `untargeted::resolve`; off by default.
 //! Sums run in a fixed order and `exp` comes from `libm`: native and WASM give the same bits.
 
+use crate::sortc::SortC;
 use std::sync::Arc;
 
 use mzlab_core::error::Result;
@@ -159,7 +160,7 @@ pub fn inpaint_linear(y: &mut [f64], regions: &[(usize, usize)]) {
         .copied()
         .filter(|&(s, e)| s <= e && e < n)
         .collect();
-    sorted.sort_unstable();
+    sorted.sortc();
     let mut merged: Vec<(usize, usize)> = Vec::with_capacity(sorted.len());
     for (s, e) in sorted {
         match merged.last_mut() {

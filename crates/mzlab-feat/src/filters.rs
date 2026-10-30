@@ -4,6 +4,7 @@
 //! Files that are blanks or dark are never counted as samples. A rule that cannot be evaluated (no blank in the series, no summaries in the table) is
 //! an error, never a silent pass.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 
@@ -194,13 +195,13 @@ fn duplicates(t: &Aligned, samples: &[Sample], ppm: f64, rt_min: f64) -> Vec<boo
     };
     let strength: Vec<f64> = (0..n).map(peak).collect();
     let mut by_mz: Vec<usize> = (0..n).collect();
-    by_mz.sort_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]).then(a.cmp(&b)));
+    by_mz.sortc_by(|&a, &b| t.mz[a].total_cmp(&t.mz[b]).then(a.cmp(&b)));
     let mut pos = vec![0usize; n];
     for (i, &r) in by_mz.iter().enumerate() {
         pos[r] = i;
     }
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&a, &b| strength[b].total_cmp(&strength[a]).then(a.cmp(&b)));
+    order.sortc_by(|&a, &b| strength[b].total_cmp(&strength[a]).then(a.cmp(&b)));
     let (mut kept, mut dropped) = (vec![false; n], vec![false; n]);
     for &row in &order {
         let tol = t.mz[row].abs() * ppm * 1e-6;

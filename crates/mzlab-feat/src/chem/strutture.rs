@@ -2,6 +2,7 @@
 //! node's m/z and on the peaks of its own spectrum, the cuts whose piece gives the m/z of the node grouped by that m/z. Used by `mzlab-cli msn-graph
 //! --strutture` and the `.wasm` `msngrafo` (`strutture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Candidates, never identifications.
 
+use crate::sortc::SortC;
 use super::fragmenter::{fragment_molecule, FragMatch, FragmentSide};
 use super::grafo::Mol;
 use mzlab_core::error::{Error, Result as CoreResult};
@@ -138,7 +139,7 @@ pub fn strutture(smiles: &str, ing: &IngressoStrutture, ppm: f64) -> Result<Stru
     }
     for c in &mut out.candidati {
         c.tagli
-            .sort_by_key(|t| (t.legame, t.lato, t.variante.clone()));
+            .sortc_by_key(|t| (t.legame, t.lato, t.variante.clone()));
         c.ppm = c
             .tagli
             .iter()
@@ -146,7 +147,7 @@ pub fn strutture(smiles: &str, ing: &IngressoStrutture, ppm: f64) -> Result<Stru
             .min_by(|a, b| a.abs().total_cmp(&b.abs()))
             .unwrap_or(c.ppm);
     }
-    out.candidati.sort_by(|a, b| {
+    out.candidati.sortc_by(|a, b| {
         a.ppm
             .abs()
             .total_cmp(&b.ppm.abs())

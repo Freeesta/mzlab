@@ -2,6 +2,7 @@
 //! rebuilt as an intensity series per scan and cut into peaks with a continuous wavelet transform (Ricker wavelet) over the expected widths.
 //! Sums run in a fixed order and `exp` comes from `libm`: native and WASM give the same bits.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::broad::{detect_broad_at, BroadParams};
@@ -171,7 +172,7 @@ fn apexes(y: &[f64], wavelets: &[Wavelet], r: &mut Vec<f64>) -> Result<Vec<(usiz
             }
         }
     }
-    found.sort_by_key(|f| f.0);
+    found.sortc_by_key(|f| f.0);
     Ok(found)
 }
 

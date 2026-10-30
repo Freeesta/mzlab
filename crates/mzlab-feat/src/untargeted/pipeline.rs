@@ -9,6 +9,7 @@
 //! m/z, RT, limits, area in counts x seconds, height); to make that round trip exact the features of `run_file` are already rounded to what the store keeps
 //! (RT and height as `f32`), and are sorted by m/z as the store wants.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{self, Value};
@@ -357,7 +358,7 @@ pub fn run_file<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<Vec<Featu
     if let Some(e) = failed {
         return Err(e);
     }
-    out.sort_by(|a, b| a.mz.total_cmp(&b.mz).then(a.rt.total_cmp(&b.rt)));
+    out.sortc_by(|a, b| a.mz.total_cmp(&b.mz).then(a.rt.total_cmp(&b.rt)));
     Ok(out)
 }
 

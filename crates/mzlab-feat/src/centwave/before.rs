@@ -1,5 +1,6 @@
 //! Verbatim copy of the pre-optimisation Ricker response and peak picking, kept only so the unit tests can prove the new code is bit-identical.
 
+use crate::sortc::SortC;
 use super::{filled, resolve, valley, Result, Wavelet, REACH};
 /// Responses of the Ricker wavelet `w` over `y`.
 pub(super) fn response(y: &[f64], w: &Wavelet) -> Result<Vec<f64>> {
@@ -48,7 +49,7 @@ fn apexes(y: &[f64], wavelets: &[Wavelet]) -> Result<Vec<(usize, f64)>> {
             }
         }
     }
-    found.sort_by_key(|f| f.0);
+    found.sortc_by_key(|f| f.0);
     Ok(found)
 }
 

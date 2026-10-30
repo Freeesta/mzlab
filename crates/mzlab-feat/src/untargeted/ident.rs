@@ -14,6 +14,7 @@
 //! data has no networking output, so there is no external value to test a correlation criterion against and no parity with mzmine is claimed for this
 //! step (it is claimed for ADAP, resolver, join, gap filling and isotopes). The correlation across common samples lives in `legacy/identity.rs`.
 
+use crate::sortc::SortC;
 use super::isotopes::{items_of, IsoGroups};
 use crate::axis::half;
 use crate::evid::HYPOTHESIS_PPM;
@@ -128,10 +129,10 @@ pub fn ident(t: &Aligned, iso: &IsoGroups, polarity: i8, p: &IdentParams) -> Ide
     }
     let mut free: Vec<bool> = follows.iter().map(|&f| f == usize::MAX).collect();
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&a, &b| t.rt[a].total_cmp(&t.rt[b]));
+    order.sortc_by(|&a, &b| t.rt[a].total_cmp(&t.rt[b]));
     let mut by_height: Vec<usize> = (0..n).collect();
     let height = items_of(t);
-    by_height.sort_by(|&a, &b| height[b].height.total_cmp(&height[a].height));
+    by_height.sortc_by(|&a, &b| height[b].height.total_cmp(&height[a].height));
     let (mut family, mut hyps) = (vec![0u32; n], Vec::new());
     let mut next = 0u32;
     for a in by_height {

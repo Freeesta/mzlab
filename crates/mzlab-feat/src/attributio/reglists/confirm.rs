@@ -5,6 +5,7 @@
 //! A decision of the chemist applies only to candidates that pass the formal rules; the formal verdict stays in `rules`. The inputs are plain rows.
 //! Not ported here: `prepare` (the input files for SIRIUS and MetFrag are builders, see the native builders package).
 
+use crate::sortc::SortC;
 use super::screen::Hit;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::tox::vocab::canon;
@@ -170,13 +171,13 @@ fn gather(h: &Hit, sir: &SiriusIn) -> Evidence3 {
         .iter()
         .filter(|x| x.id == h.feature_id)
         .collect();
-    s.sort_by_key(|x| rank_of(x.rank));
+    s.sortc_by_key(|x| rank_of(x.rank));
     let mut f: Vec<&FormulaIn> = sir
         .formulas
         .iter()
         .filter(|x| x.id == h.feature_id)
         .collect();
-    f.sort_by_key(|x| rank_of(x.rank));
+    f.sortc_by_key(|x| rank_of(x.rank));
     let want = parse_formula(&h.formula);
     let mut lib: Option<(f64, i64)> = None;
     let matches = sir.matches.iter().filter(|m| {
@@ -339,7 +340,7 @@ pub fn evaluate(
             decisions,
         ));
     }
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         (order_of(&a.verdict), &a.suspect, a.feature_id).cmp(&(
             order_of(&b.verdict),
             &b.suspect,

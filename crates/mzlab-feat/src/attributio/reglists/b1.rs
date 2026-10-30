@@ -3,6 +3,7 @@
 //! flagged fallback. Never by name, never by formula. The inputs are plain rows (identities, their structures, list entries): where they come from is the
 //! caller's business.
 
+use crate::sortc::SortC;
 use super::catalog;
 use crate::attributio::tox::snapshot::MembershipRow;
 use std::collections::{BTreeMap, BTreeSet};
@@ -366,7 +367,7 @@ pub fn match_campaign(
         })
         .collect();
     fill_labels(&mut ident, &lists, &long);
-    ident.sort_by(|a, b| {
+    ident.sortc_by(|a, b| {
         b.n_lists
             .cmp(&a.n_lists)
             .then_with(|| a.group.cmp(&b.group))
