@@ -73,7 +73,7 @@ fn from_mzfeat(bytes: &[u8]) -> Result<(Vec<Expected>, bool)> {
             .and_then(|c| c.get("neutral_formula"))
             .and_then(Value::str)
             .filter(|f| !f.is_empty());
-        let rt = f64::from(table.rt[row]);
+        let rt = table.rt[row];
         let seen = table.mz[row];
         list.push(match neutral {
             Some(f) => {
