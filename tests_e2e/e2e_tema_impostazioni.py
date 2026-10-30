@@ -13,7 +13,7 @@ try:
         boxes = [pg.locator("input[name=uip-th]").nth(i).locator("xpath=..").bounding_box() for i in range(3)]
         for i in range(6):          # raw mouse clicks: Playwright's own click waits for the view transition to end, a hand does not
             b = boxes[i % 3]; pg.mouse.click(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2)
-        pg.wait_for_timeout(150)
+        attendi(pg, "!TEMASOFT.busy()")          # the fade is over
         assert pg.evaluate("!!document.querySelector('input[name=uip-th]')"), "the settings panel closed during the theme fade"
         steps.append(("6 quick clicks on the theme buttons keep the panel open", "ok"))
 finally:
