@@ -4,6 +4,7 @@
 // cross-fade, so the canvases fade too) and a CSS colour transition (transizioni.css, .tema-tr) where it is missing. Nothing moves with reduced motion.
 const TEMASOFT = (() => {
   const R = document.documentElement;
+  let running = 0;
   const fadeMs = () => (parseFloat(getComputedStyle(R).getPropertyValue("--tema-durata")) || 700) + 100;
   const still = () => R.classList.contains("no-tr") || R.hasAttribute("data-a11y-reduce") || !!(typeof window.matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
   /** Applies `change` (sets the theme and redraws) with a short fade. @param {() => void} change */
@@ -11,12 +12,14 @@ const TEMASOFT = (() => {
     if (still()) { change(); return; }
     if (typeof document.startViewTransition === "function") {
       const t = document.startViewTransition(change);
-      t.finished.catch(() => { /* skipped: the change still ran */ });
+      running++;
+      t.finished.catch(() => { /* skipped: the change still ran */ }).then(() => { running--; });
       return;
     }
     R.classList.add("tema-tr");
     change();
     setTimeout(() => R.classList.remove("tema-tr"), fadeMs());
   }
-  return { run };
+  // while a transition runs, the pointer hits the transition pseudo-elements, so clicks report the page root as their target (settings.js must not read them as clicks outside)
+  return { run, busy: () => running > 0 };
 })();
