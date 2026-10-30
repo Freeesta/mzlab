@@ -10,7 +10,7 @@ name = "mzlab-cli"
 path = "src/main.rs"
 
 [dependencies]
-mzlab-core = { path = "../mzlab-core", features = ["isotopi-estesi"] }
+mzlab-core = { path = "../mzlab-core", features = ["isotopi-tutti"] }
 mzlab-lib = { path = "../mzlab-lib", features = ["flow"] }
 mzlab-chem = { path = "../mzlab-chem" }
 mzlab-llm = { path = "../mzlab-llm" }

@@ -44,11 +44,11 @@ const ISO: [(&str, &[(f64, f64)]); 13] = [
     ("Br", &[(78.9183376, 0.5069), (80.9162897, 0.4931)]),
     ("I", &[(126.9044719, 1.0)]),
 ];
-#[cfg(feature = "isotopi-estesi")]
+#[cfg(feature = "isotopi-tutti")]
 fn extra() -> std::slice::Iter<'static, (&'static str, &'static [(f64, f64)])> {
     crate::isotable::EXTRA.iter()
 }
-#[cfg(not(feature = "isotopi-estesi"))]
+#[cfg(not(feature = "isotopi-tutti"))]
 fn extra() -> std::slice::Iter<'static, (&'static str, &'static [(f64, f64)])> {
     [].iter()
 }

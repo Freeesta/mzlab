@@ -25,7 +25,7 @@ indice = []
 banco-zlib-rs = ["flate2/zlib-rs"]
 
 # the isotopes of the 44 elements beyond the core 13 of `isoscore` (`isotable.rs`): the engine (mzlab-wasm), the app and the CLI serve `api/isotope_fine` with them; the mzFinder modules (under a size limit) leave them off
-isotopi-estesi = []
+isotopi-tutti = []
 
 [dependencies]
 mzlab-picchi = { path = "../mzlab-picchi" }
@@ -42,7 +42,7 @@ serde_json = { version = "1", features = ["raw_value", "float_roundtrip"] }
 
 [[test]]
 name = "isofine_parity"
-required-features = ["isotopi-estesi"]
+required-features = ["isotopi-tutti"]
 
 [[example]]
 name = "raw2mzml"
