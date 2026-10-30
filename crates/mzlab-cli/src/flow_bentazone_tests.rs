@@ -11,7 +11,7 @@ use mzlab_feat::tp::{ST_PARENT, ST_TP};
 pub(crate) const FORMULA: &str = "C10H12N2O3S";
 pub(crate) const SMILES: &str = "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O";
 const PROTON: f64 = 1.007_276;
-const NAMES: [&str; 5] = ["BEN_blank", "BEN_T00", "BEN_T2p5", "BEN_T5", "BEN_T10p25"];
+pub(crate) const NAMES: [&str; 5] = ["BEN_blank", "BEN_T00", "BEN_T2p5", "BEN_T5", "BEN_T10p25"];
 /// Heights of (parent, +O, -C3H6) in each file.
 const HEIGHTS: [[f64; 3]; 5] = [
     [0.0, 0.0, 0.0],
@@ -58,7 +58,7 @@ fn rnd(seed: &mut u64) -> f64 {
 }
 
 /// One centroid mzML: `file` is the column of `HEIGHTS`, `pol` ±1, `hr` the analyzer written in the scan filter (the instrument decides the recipe).
-fn mzml(file: usize, pol: i8, hr: bool) -> String {
+pub(crate) fn mzml(file: usize, pol: i8, hr: bool) -> String {
     let mut x = String::from(
         r#"<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.ms.info/ms/mzml"><run id="r"><spectrumList count="400">"#,
     );

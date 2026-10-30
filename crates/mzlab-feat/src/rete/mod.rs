@@ -17,6 +17,7 @@ pub use json::SCHEMA;
 pub use run::network_text;
 
 use crate::hypo::Rules;
+use crate::sortc::SortC;
 use crate::tp::{TpBlock, ST_TP};
 use arcs::{best_pairs, counts, neutral_mass};
 
@@ -125,7 +126,7 @@ pub fn build(
             r.row != parent.row && !r.ion_formula.is_empty() && tp.status.get(r.row) == Some(&ST_TP)
         })
         .collect();
-    prods.sort_by(|a, b| {
+    prods.sortc_by(|a, b| {
         a.mz.total_cmp(&b.mz)
             .then(a.rt.total_cmp(&b.rt))
             .then(a.id.cmp(&b.id))
@@ -144,7 +145,7 @@ pub fn build(
     let kept: Vec<(usize, usize)> = found.iter().map(|f| (f.0, f.1)).collect();
     let nodes = layout::nodes(&all, &kept, tp);
     let mut arcs: Vec<Arc> = found.into_iter().map(|f| f.2).collect();
-    arcs.sort_by_key(|a| (a.from, a.to));
+    arcs.sortc_by_key(|a| (a.from, a.to));
     Rete {
         params: params.clone(),
         parent: parent.id,

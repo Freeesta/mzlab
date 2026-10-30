@@ -7,7 +7,7 @@
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
-  const STEPS = ["spectra.ms2", "spectra.match", "table.match", "formula.ms2", "annot.level"];
+  const STEPS = ["spectra.ms2", "spectra.match", "table.match", "formula.ms1", "formula.ms2", "annot.level"];
   /** the largest mzML the page reads into memory for the step (bytes); a bigger file stays with the computer */
   const MAX_MZML = 256 * 1024 * 1024;
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
@@ -132,6 +132,36 @@
     });
   };
 
+  /** formula.ms1: the candidate formulas of each feature of the CSV of a table export of this plan (or a file of the plan) from the MS1 scan at its apex, in the mzML where the feature is largest.
+   * The `formula` .wasm is loaded here only; one mzML per call to `flow_ms1_rows`, then `flow_ms1_join` in the order of the table @param {any} x @param {any} spec @param {any} inst */
+  const ms1Formula = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), feat = await textOf(x, p, inst, "features");
+    const names = F.refs(inst, "index").map(String), blobOf = G.MZLAB_RUST && G.MZLAB_RUST.blobOf;
+    const blobs = blobOf && names.length && names.every((/** @type {string} */ r) => r.startsWith("file:")) ? names.map((/** @type {string} */ r) => blobOf(r.slice(5))) : [];
+    if (!feat || !blobs.length || blobs.some((/** @type {any} */ b) => !b) || blobs.reduce((/** @type {number} */ n, /** @type {any} */ b) => n + b.size, 0) > MAX_MZML) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha(spec.key + "\n" + await J().sha(feat.text)), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = paramsOf(x, inst), features = enc(feat.text), fileNames = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
+    return J().detached(x, spec, inst, async () => {
+      /** @type {string[]} */ const rows = [];
+      for (let k = 0; k < blobs.length; k++) {
+        const mzml = new Uint8Array(await blobs[k].arrayBuffer());
+        let part;
+        try { part = await p.ident("formula", "flow_ms1_rows", { params, features, names: fileNames, index: k, mzml }); } catch (e) { throw asError(e); }
+        for (const line of part.split("\n")) { if (!line) continue; const t = line.indexOf("\t"); rows[Number(line.slice(0, t))] = line.slice(t + 1); }
+        x.call("progress", { job: j, frac: (k + 1) / blobs.length }).catch(() => {});
+      }
+      let text;
+      try { text = await p.ident("formula", "flow_ms1_join", { rows: Array.from(rows, r => r || "").join("\n") }); } catch (e) { throw asError(e); }
+      await keep(x, spec, inst, key, t0, text);
+    });
+  };
+
+  // flow-live-jobs.js is loaded after this file: its table of executors takes formula.ms1 when it is set
+  /** @type {any} */ let jobs;
+  Object.defineProperty(F, "liveJobs", { configurable: true, get: () => jobs, set: v => { jobs = v && Object.assign(v, { "formula.ms1": (/** @type {any[]} */ ...a) => F.webIdent.ms1Formula(...a) }); } });
+
   /** annot.level: the level of each query from the hits of a spectra.match of this plan and the candidate formulas @param {any} x @param {any} spec @param {any} inst */
   const level = async (x, spec, inst) => {
     const j = J().job(spec), p = await kit().getPool(), hits = await textOf(x, p, inst, "candidates"), formulas = await textOf(x, p, inst, "formulas");
@@ -165,5 +195,5 @@
     return el("div", { class: "fl-results" }, pick, F.btn("import", "Choose the library file", () => pick.click(), "Library file…"), say);
   });
 
-  F.webIdent = { ms2, match, tableMatch, ms2Formula, level, textOf, STEPS };
+  F.webIdent = { ms2, match, tableMatch, ms1Formula, ms2Formula, level, textOf, STEPS };
 })();

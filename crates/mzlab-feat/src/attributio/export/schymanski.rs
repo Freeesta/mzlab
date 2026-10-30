@@ -203,7 +203,7 @@ fn attach_quant(
         return Ok(());
     }
     let mut q: Vec<&QuantRow> = q.iter().collect();
-    q.sort_by(|a, b| {
+    q.sortc_by(|a, b| {
         a.area
             .partial_cmp(&b.area)
             .unwrap_or(std::cmp::Ordering::Equal)

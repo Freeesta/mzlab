@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Permanent bench of the mzlab-core jobs compiled to wasm in several build variants (docs/agenti/wasm-potenziale.md §9).
 
-    python3 tools/banco_wasm.py --varianti base,o3 [--chromium] [--giri 5] [--raw] [--lavoro CARTELLA]
+    python3 tools/banco_wasm.py --varianti base,o3 [--chromium] [--firefox] [--webkit] [--giri 5] [--raw] [--lavoro CARTELLA]
 
 Builds the crate `tools/banco_wasm/` once per variant (own CARGO_TARGET_DIR, wasm-bindgen --target web, wasm-opt through
-tools/wasm_opt.sh, so the binary and the flags are the site's), runs `js/suite.js` in Node and with --chromium in Chromium,
+tools/wasm_opt.sh, so the binary and the flags are the site's), runs `js/suite.js` in Node and with --chromium/--firefox/--webkit in that browser,
 prints one JSON line per variant and the table base -> variant. Every job returns a check value: the run fails when two
 variants (or Node and Chromium) differ. Python only orchestrates; the numbers come from the wasm. All the work files live in
 a temporary folder (or --lavoro), never in the repository.
@@ -42,9 +42,18 @@ VARIANTI = {
     "sol_xml": ("sol_xml", "", "", "-Oz"),
     "sol_b64": ("sol_b64", "", "", "-Oz"),
     "sol_deps": ("sol_deps", "", "", "-Oz"),
+    "sol_zrs": ("sol_zrs", "", "zlibrs", "-Oz"),
     # the site as built (z + mzlab-core at 3; picchi is not in the bench crate) with -Oz, and the same rustc output with -O3 (tools/wasm_opt.sh)
     "site": ("sol_core", "", "", "-Oz"),
     "site_o3": ("sol_core", "", "", "-O3"),
+    # the site with zlib-rs (as shipped) before and after the parsing crates at 3, both with the site's -O3
+    "site_z": ("sol_core", "", "zlibrs", "-O3"),
+    "site_d": ("site_d", "", "zlibrs", "-O3"),
+    # the site (site_z) plus ONE parsing crate at 3: the per-crate choice of the profile
+    "d_xml": ("d_xml", "", "zlibrs", "-O3"),
+    "d_b64": ("d_base64", "", "zlibrs", "-O3"),
+    "d_zrs": ("d_zrs", "", "zlibrs", "-O3"),
+    "d_miniz": ("d_miniz", "", "zlibrs", "-O3"),
 }
 HR_SCANS, HR_PEAKS = 1200, 400   # the 87 MB profile mzML of the study
 # jobs in the order of the table; the label is the row of §3 of the study
@@ -130,8 +139,8 @@ def in_node(nome: str, lav: Path, giri: int) -> dict:
     return json.loads(run(["node", str(lav / "node_bench.mjs"), str(lav / "v" / nome), str(giri), str(lav / "data")]).strip().splitlines()[-1])
 
 
-def in_chromium(nomi: list[str], lav: Path, giri: int) -> dict:
-    """Run the suite of every variant in Chromium (compileStreaming) from a local server; its PID is saved and it is stopped by that PID."""
+def in_browser(motore: str, nomi: list[str], lav: Path, giri: int) -> dict:
+    """Run the suite of every variant in Chromium, Firefox or WebKit (compileStreaming) from a local server; its PID is saved and it is stopped by that PID."""
     from playwright.sync_api import sync_playwright
     for f in ("suite.js", "run.html"):
         shutil.copy(BANCO / "js" / f, lav / f)
@@ -147,8 +156,10 @@ def in_chromium(nomi: list[str], lav: Path, giri: int) -> dict:
         time.sleep(1)
         with sync_playwright() as p:
             try:
-                br = p.chromium.launch()
-            except Exception:   # Playwright of another build than the installed browsers: use the system Chromium if there is one
+                br = getattr(p, motore).launch()
+            except Exception:
+                if motore != "chromium":
+                    raise   # Playwright of another build than the installed browsers: use the system Chromium if there is one
                 br = p.chromium.launch(executable_path=os.environ.get("CHROMIUM_PATH", "/opt/pw-browsers/chromium"))
             for n in nomi:
                 pg = br.new_page()
@@ -194,6 +205,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--varianti", default="base,o3", help="comma list among: " + ", ".join(VARIANTI) + " (the first is the base of the table)")
     ap.add_argument("--chromium", action="store_true", help="also run the suite in Chromium (Playwright)")
+    ap.add_argument("--firefox", action="store_true", help="also run the suite in Firefox (Playwright)")
+    ap.add_argument("--webkit", action="store_true", help="also run the suite in WebKit (Playwright)")
     ap.add_argument("--giri", type=int, default=5, help="repetitions per job, median kept")
     ap.add_argument("--raw", action="store_true", help="also the .raw jobs, with a file of the private data repository (skipped without it)")
     ap.add_argument("--lavoro", help="work folder kept between runs (default: a temporary one, removed at the end)")
@@ -215,23 +228,24 @@ def main():
             r = costruisci(n, lav, raw is not None)
             r["node"] = in_node(n, lav, a.giri)
             righe.append(r)
-        if a.chromium:
-            ch = in_chromium(nomi, lav, a.giri)
+        motori = [m for m in ("chromium", "firefox", "webkit") if getattr(a, m)]
+        for m in motori:
+            br = in_browser(m, nomi, lav, a.giri)
             for r in righe:
-                r["chromium"] = ch[r["variant"]]
-                if "error" in r["chromium"]:
-                    sys.exit(f"chromium {r['variant']}: {r['chromium']['error']}")
-            print(f"chromium {ch['_versione']}", file=sys.stderr)
+                r[m] = br[r["variant"]]
+                if "error" in r[m]:
+                    sys.exit(f"{m} {r['variant']}: {r[m]['error']}")
+            print(f"{m} {br['_versione']}", file=sys.stderr)
         for r in righe:
             print(json.dumps(r))
         errori = confronta(righe, "node")
-        if a.chromium:
-            errori += confronta(righe, "chromium")
+        for m in motori:
+            errori += confronta(righe, m)
             for r in righe:
                 for k, v in r["node"]["check"].items():
-                    if r["chromium"]["check"].get(k) != v:
-                        errori.append(f"{r['variant']}: {k} differs between Node ({v!r}) and Chromium ({r['chromium']['check'].get(k)!r})")
-        for m in ("node", "chromium") if a.chromium else ("node",):
+                    if r[m]["check"].get(k) != v:
+                        errori.append(f"{r['variant']}: {k} differs between Node ({v!r}) and {m} ({r[m]['check'].get(k)!r})")
+        for m in ["node"] + motori:
             tabella(righe, m)
         if errori:
             sys.exit("CHECK VALUES DIFFER:\n" + "\n".join(errori))

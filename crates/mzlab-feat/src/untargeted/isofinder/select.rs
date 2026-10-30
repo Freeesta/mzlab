@@ -4,6 +4,7 @@
 use super::auto::{self, Composition};
 use super::envelope::m1_bounds;
 use super::{ChargeEval, ElementMode, Engine, Pt};
+use crate::sortc::SortC;
 
 /// An alternative is kept if its quality is within this of the best one...
 pub const ALT_MARGIN: f64 = 0.15;
@@ -47,7 +48,7 @@ fn ranked(engine: &Engine, mz: &[f64], y: &[f64], feature_mz: f64, sign: i32) ->
             (eval.raw > 0.0).then_some(Scored { eval, cands })
         })
         .collect();
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         b.eval
             .raw
             .total_cmp(&a.eval.raw)

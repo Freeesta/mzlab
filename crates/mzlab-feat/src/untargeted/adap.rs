@@ -19,6 +19,7 @@
 //! time (`docs/agenti/memoria.md`); the result equals `build`. `SlabStream` does the same cuts on points that arrive already in m/z order (the peak table of
 //! the `.mzidx`), so a caller never holds more than one slab of points.
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 /// One MS1 scan of the mass list (points above the noise of the mass detection), m/z ascending.
@@ -203,7 +204,7 @@ fn gather(scans: &[Ms1Scan], range: Option<(f64, f64)>) -> Vec<Pt> {
 
 /// The intervals and chromatograms of the points, in the order of the intervals.
 fn assemble(mut pts: Vec<Pt>, p: &AdapParams) -> Vec<Building> {
-    pts.sort_by(|a, b| {
+    pts.sortc_by(|a, b| {
         (b.int as f64)
             .total_cmp(&(a.int as f64))
             .then(b.mz.total_cmp(&a.mz))
@@ -295,7 +296,7 @@ fn finish(c: Building, nscans: usize, p: &AdapParams) -> Option<Chrom> {
     let extra = zeros(&c, nscans);
     let mut rows: Vec<(u32, f32, f64)> = c.pts.iter().map(|(s, (i, m))| (*s, *i, *m)).collect();
     rows.extend(extra.into_iter().map(|s| (s, 0.0, 0.0)));
-    rows.sort_by_key(|r| r.0);
+    rows.sortc_by_key(|r| r.0);
     let wsum: f64 = c.pts.values().map(|(i, _)| *i as f64).sum();
     let weighted = c.pts.values().map(|(i, m)| *i as f64 * m).sum::<f64>() / wsum;
     Some(Chrom {
@@ -334,7 +335,7 @@ fn cuts(scans: &[Ms1Scan], p: &AdapParams, per_slab: usize) -> Vec<f64> {
         .flat_map(|s| s.mz.iter().copied())
         .filter(|m| !m.is_nan())
         .collect();
-    all.sort_by(|a, b| a.total_cmp(b));
+    all.sortc_by(|a, b| a.total_cmp(b));
     let (mut cuts, mut since) = (vec![f64::NEG_INFINITY], 0usize);
     for i in 1..all.len() {
         since += 1;

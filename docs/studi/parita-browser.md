@@ -34,7 +34,6 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
 | `meta.compare` | sì | no | no | da fare | M | 3 |
 | **Flow: identificazione (Attributio)** | | | | | | |
-| `formula.ms1` | sì | pannello (`untargeted_formula_id`); nel Flow no: `hr` +145 166 B (76 490 B oltre il tetto), `untargeted` +134 405 B (91 588 B oltre il tetto) (testo in libreria, `flow_formula_web_tests.rs`) | `flow_formula_web_tests.rs` | eccezione di parità richiesta | M | 2 |
 | `spectra.ms2` | sì | sì (`F.webIdent.ms2`: `.wasm` `hr`, `flow_ms2`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
 | `qc.mass_accuracy` | sì | sì (`F.webQc.run`: `.wasm` `hr`, `mass_accuracy`) | `e2e_flow_qc_mass.py`, `flow_massacc_tests.rs` | fatto | | |
 | `screen.suspects` | sì | sì (`F.webSuspects.run`: `.wasm` `attributio-all`, `flow_screen_suspects`) | `e2e_flow_suspects.py`, `flow_screen_suspects_tests.rs` | fatto | | |

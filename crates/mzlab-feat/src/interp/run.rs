@@ -1,6 +1,7 @@
 //! The pass over a stored table from outside the crate: reads the `.mzfeat` by offsets, the parent and the registry from their JSON, runs `build` and
 //! writes the `.mzfeat` with the block `interp`. Used by the `.wasm` `interp`, the desktop engine and the tests, so all three write the same bytes.
 
+use crate::sortc::SortC;
 use mzlab_core::budget::WriteAt;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
@@ -57,7 +58,7 @@ pub fn run_to_with<R: ReadAt, I: ReadAt, W: WriteAt>(
     let parent = series::parent(parent_json).map_err(user)?;
     let (hyps, _, _) = series::registry(registry).map_err(user)?;
     let mut hyps: Vec<_> = hyps.into_iter().collect();
-    hyps.sort_by_key(|h| h.0);
+    hyps.sortc_by_key(|h| h.0);
     let hyps: Vec<_> = hyps.into_iter().map(|h| h.1).collect();
     let inp = Inputs {
         table: &t,

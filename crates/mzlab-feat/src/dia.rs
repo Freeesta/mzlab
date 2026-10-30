@@ -1,5 +1,6 @@
 //! Pseudo MS2 spectra from a DIA run (SWATH, MSE): for every precursor, the fragments whose ion trace follows the trace of the precursor.
 //! Pure functions on slices (no files, no threads, sums in a fixed order); used by `spectra.ms2` of the CLI with `dia_pseudo`. `docs/agenti/dia.md`.
+use crate::sortc::SortC;
 
 /// One scan of the run. `iso` is the isolation window `(low, high)` of an MS2; `None` on an MS2 means all ions (MSE). Peaks sorted by m/z.
 pub struct DiaScan<'a> {
@@ -114,7 +115,7 @@ fn precursor_trace(scans: &[DiaScan], mz: f64, ppm: f64, times: &[f64]) -> Vec<f
         .filter(|s| s.level == 1)
         .map(|s| (s.rt_s, max_near(s, mz, ppm)))
         .collect();
-    ms1.sort_by(|a, b| a.0.total_cmp(&b.0));
+    ms1.sortc_by(|a, b| a.0.total_cmp(&b.0));
     times
         .iter()
         .map(|t| {
@@ -139,7 +140,7 @@ fn one(scans: &[DiaScan], prec: &Prec, p: &DiaParams) -> Option<Pseudo> {
     if cycles.len() < p.min_points.max(2) {
         return None;
     }
-    cycles.sort_by(|a, b| a.rt_s.total_cmp(&b.rt_s));
+    cycles.sortc_by(|a, b| a.rt_s.total_cmp(&b.rt_s));
     let times: Vec<f64> = cycles.iter().map(|s| s.rt_s).collect();
     let xic = precursor_trace(scans, prec.mz, p.frag_ppm, &times);
     let top = apex(&xic);

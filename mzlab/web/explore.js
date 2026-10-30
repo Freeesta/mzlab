@@ -408,7 +408,6 @@ const polAll = () => polKnown(E.files.filter((/** @type {FileAperto} */ f) => !f
 const polLabel = (/** @type {Bag | null | undefined} */ f) => (/** @type {Record<string, string>} */ ({ positive: "ESI+", negative: "ESI\u2212", mixed: "ESI\u00b1" })[f && f.polarity] || "ESI?");
 const polSign = /** @type {(f: Bag | null | undefined, list?: FileAperto[] | null) => string} */ ((f, list) => { const q = POLS[f && f.polarity] || POLS.unknown; if ((list ? polKnown(list) : polAll()).size < 2) return ""; return `<span class="pol" title="${I18N.t(q[1])}">${polLabel(f)}</span>`; });
 // the polarity written once in the heading of a group when all its files share it: " · ESI+"
-const polHead = (/** @type {FileAperto[]} */ list) => { const s = polKnown(list); return s.size === 1 && list.every((/** @type {FileAperto} */ f) => f.polarity && f.polarity !== "unknown") ? " \u00b7 " + polLabel(list[0]) : ""; };
 const polMixed = () => new Set(shown().map((/** @type {FileAperto} */ f) => f.polarity).filter((/** @type {unknown} */ x) => x && x !== "unknown")).size > 1;
 // the legend shows the sign only when positive and negative files are drawn together
 const legPol = (/** @type {FileAperto | null | undefined} */ f) => polMixed() && f ? " " + polSign(f, shown()) : "";

@@ -11,6 +11,7 @@
 //! `group_items` works on a plain list (the rows of one file, which is what mzmine groups); `group` takes the rows of an aligned table, whose height is
 //! the mean over the files where the ion was detected.
 
+use crate::sortc::SortC;
 use crate::table::{no_peak, Aligned};
 
 /// Distance between isotopologues of mzmine (`isotopeDistance`), Da.
@@ -152,7 +153,7 @@ fn fit(items: &[Item], free: &[bool], start: usize, z: u8, p: &IsoParams) -> Vec
 /// Groups the ions of a list as the isotope grouper of mzmine 3.9.0 does, without removing any row.
 pub fn group_items(items: &[Item], p: &IsoParams) -> IsoGroups {
     let mut order: Vec<usize> = (0..items.len()).collect();
-    order.sort_by(|&a, &b| items[b].height.total_cmp(&items[a].height));
+    order.sortc_by(|&a, &b| items[b].height.total_cmp(&items[a].height));
     let mut free = vec![true; items.len()];
     let mut out = IsoGroups::default();
     for start in order {
@@ -175,7 +176,7 @@ pub fn group_items(items: &[Item], p: &IsoParams) -> IsoGroups {
         }
         let representative = match p.representative {
             Representative::MostIntense => {
-                rows.sort_by(|&a, &b| items[b].height.total_cmp(&items[a].height));
+                rows.sortc_by(|&a, &b| items[b].height.total_cmp(&items[a].height));
                 rows[0]
             }
             Representative::LowestMz => *rows
@@ -183,7 +184,7 @@ pub fn group_items(items: &[Item], p: &IsoParams) -> IsoGroups {
                 .min_by(|&&a, &&b| items[a].mz.total_cmp(&items[b].mz))
                 .expect("two rows"),
         };
-        rows.sort_by(|&a, &b| items[a].mz.total_cmp(&items[b].mz));
+        rows.sortc_by(|&a, &b| items[a].mz.total_cmp(&items[b].mz));
         out.groups.push(IsoGroup {
             representative,
             members: rows,

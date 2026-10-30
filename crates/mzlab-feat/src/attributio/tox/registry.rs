@@ -3,6 +3,7 @@
 //! answer, PubChemLite categories, the predicted acute category of a NORMAN SusDat row and the registry summary. The downloads that feed them live outside.
 
 use super::snapshot::RegistryRow;
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 /// PubChemLite annotation categories, in file order.
@@ -35,7 +36,7 @@ pub fn representative_cid(
 ) -> Option<i64> {
     let mut cand: Vec<&(i64, String)> =
         props.iter().filter(|(_, k)| k.starts_with(block)).collect();
-    cand.sort_by_key(|(c, _)| *c);
+    cand.sortc_by_key(|(c, _)| *c);
     let tests: [&dyn Fn(&str) -> bool; 3] = [
         &|k| prefer_key.is_some_and(|p| !p.is_empty() && k == p),
         &|k| k.ends_with("-UHFFFAOYSA-N"),

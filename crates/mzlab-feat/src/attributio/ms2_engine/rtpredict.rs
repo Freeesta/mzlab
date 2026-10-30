@@ -5,6 +5,7 @@
 //! not equality. A predicted RT supports or doubts a candidate; it never makes an identity.
 
 use crate::chem::grafo::Mol;
+use crate::sortc::SortC;
 
 pub const N_BITS: usize = 2048;
 pub const N_TREES: usize = 100;
@@ -60,14 +61,14 @@ pub fn morgan(smiles: &str) -> Option<Vec<u16>> {
         let next: Vec<u64> = (0..n)
             .map(|i| {
                 let mut around: Vec<u64> = nb[i].iter().map(|&(j, c)| mix(id[j], c)).collect();
-                around.sort_unstable();
+                around.sortc();
                 around.iter().fold(mix(id[i], 0xA5), |h, v| mix(h, *v))
             })
             .collect();
         id = next;
         bits.extend(id.iter().map(|h| (h % N_BITS as u64) as u16));
     }
-    bits.sort_unstable();
+    bits.sortc();
     bits.dedup();
     Some(bits)
 }

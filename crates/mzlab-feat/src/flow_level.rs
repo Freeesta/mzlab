@@ -2,6 +2,7 @@
 //! `mzlab/web/livelli.js` (`assess`) read from the same data (`data/livelli-1.json`, profile `mzlab`), so the thresholds are never typed twice; `tests/livelli_casi.json` runs the
 //! same cases through both. Level 2b is never given: the chemist decides it. Takes bytes and returns the text: `flow run` (`mzlab-cli`) and the browser (`mzlab-attributio-wasm`) run this one function.
 
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Out, Value};
 
@@ -159,7 +160,7 @@ pub fn assess(e: &Evidence, name: &str) -> Result<Assessment> {
         .filter(|c| field(c, &score).is_some())
         .cloned()
         .collect();
-    list.sort_by(|a, b| cmp_opt(field(b, &score), field(a, &score)));
+    list.sortc_by(|a, b| cmp_opt(field(b, &score), field(a, &score)));
     let without = p
         .get("senza_prove")
         .and_then(Value::str)

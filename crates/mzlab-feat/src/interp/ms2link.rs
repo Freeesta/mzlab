@@ -2,6 +2,7 @@
 //! precursor was (MS1 before and after, interpolated to the time of the MS2), the consensus spectrum and the separation of isomers by the traces of
 //! the main fragments. Used by `interp::build_row`.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -180,7 +181,7 @@ pub fn fill_purity_with<R: ReadAt>(
             asks.push((s.iso.0, s.iso.1, i, false, after as u32));
         }
     }
-    asks.sort_by(|a, b| a.0.total_cmp(&b.0));
+    asks.sortc_by(|a, b| a.0.total_cmp(&b.0));
     let ranges: Vec<(f64, f64)> = asks.iter().map(|a| (a.0, a.1)).collect();
     // purity before / after each scan; the first window found for a scan stays
     let mut before_v: Vec<Option<f64>> = vec![None; scans.len()];
@@ -276,7 +277,7 @@ pub fn separate_with(scans: &[&Ms2Scan], cons: &Consensus, p: &LinkParams) -> Is
         return Isomers::Single;
     }
     let mut order: Vec<usize> = (0..cons.mz.len()).collect();
-    order.sort_by(|&a, &b| cons.rel[b].total_cmp(&cons.rel[a]));
+    order.sortc_by(|&a, &b| cons.rel[b].total_cmp(&cons.rel[a]));
     order.truncate(p.iso_fragments);
     let traces: Vec<Vec<f64>> = order
         .iter()
@@ -344,7 +345,7 @@ pub fn pool(scans: &[Ms2Scan]) -> Pooled {
 /// `pool` with the thresholds of `p`.
 pub fn pool_with(scans: &[Ms2Scan], p: &LinkParams) -> Pooled {
     let mut clean: Vec<&Ms2Scan> = scans.iter().filter(|s| !s.chimeric).collect();
-    clean.sort_by_key(|s| (s.file, s.rt.to_bits()));
+    clean.sortc_by_key(|s| (s.file, s.rt.to_bits()));
     let spectra: Vec<(Vec<f64>, Vec<f64>)> =
         clean.iter().map(|s| (s.mz.clone(), s.it.clone())).collect();
     let cons = consensus(&spectra);
@@ -385,7 +386,7 @@ pub fn ms1_window_metrics<R: ReadAt>(
             asks.push((s.iso.0, s.iso.1, i, pos as u32));
         }
     }
-    asks.sort_by(|a, b| a.0.total_cmp(&b.0));
+    asks.sortc_by(|a, b| a.0.total_cmp(&b.0));
     let ranges: Vec<(f64, f64)> = asks.iter().map(|a| (a.0, a.1)).collect();
     let settings = ReviewSettings {
         chim_rel,

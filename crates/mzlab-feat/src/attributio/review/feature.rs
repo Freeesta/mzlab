@@ -109,7 +109,7 @@ fn candidates<R: RawSource, S: Structures>(
             key: (false, false, 0.0),
         });
     }
-    c.sort_by(|a, b| {
+    c.sortc_by(|a, b| {
         b.key.0.cmp(&a.key.0).then(b.key.1.cmp(&a.key.1)).then(
             b.key
                 .2

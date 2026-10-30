@@ -2,6 +2,7 @@
 //! with an RT window around the expected RT, in the columns of the list of mzFinder (`legacy::out::inclusion_row`), sorted by RT. Used by the
 //! `export.inclusion` step; it never raises a level and adds no verdict.
 
+use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::error::Result;
 
@@ -96,7 +97,7 @@ pub fn inclusion_expected_by(
             ));
         }
     }
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         a.0.total_cmp(&b.0)
             .then(a.1.total_cmp(&b.1))
             .then_with(|| a.2.cmp(&b.2))

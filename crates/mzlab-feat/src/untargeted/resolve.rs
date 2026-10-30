@@ -13,6 +13,7 @@
 //! pass the shape filter on both edges, otherwise it is dropped and the walk goes on from the minimum.
 
 use crate::broad::{detect_broad, BroadParams};
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 /// Parameters of the resolver (mzmine names in the comments; values of `tools/bench/parametri/mzmine/predefinita.json`).
@@ -109,7 +110,7 @@ pub fn quantile(values: &[f64], q: f64) -> f64 {
         _ => {}
     }
     let mut v = values.to_vec();
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sortc_by(|a, b| a.total_cmp(b));
     let pos = (v.len() - 1) as f64 * q.clamp(0.0, 1.0);
     (v[pos.floor() as usize] + v[pos.ceil() as usize]) / 2.0
 }

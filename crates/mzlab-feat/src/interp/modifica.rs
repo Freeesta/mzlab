@@ -1,6 +1,7 @@
 //! The modification of a row: the difference of neutral formula from the parent given by its best hypothesis (`ipotesi/1`), the alternatives within
 //! the tolerance and the isotope check of the MS1 at the apex (M+1/M, M+2/M, sulfur count). Used by `interp::build_row`.
 
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 use mzlab_core::composition::isotope_ratios;
@@ -46,7 +47,7 @@ fn rank(e: &str) -> (usize, String) {
 /// `+O`, `−2H`, `+O−2H`: gains first, then losses.
 pub fn label(d: &BTreeMap<String, i64>) -> String {
     let mut items: Vec<(&String, &i64)> = d.iter().collect();
-    items.sort_by_key(|(e, _)| rank(e));
+    items.sortc_by_key(|(e, _)| rank(e));
     let mut out = String::new();
     for sign in [1i64, -1] {
         for (e, &n) in items.iter().filter(|(_, n)| n.signum() == sign) {
@@ -122,7 +123,7 @@ pub fn candidates_with(mz: f64, parent: &Formula, hyps: &[&Hyp], match_ppm: f64)
             out.push(c);
         }
     }
-    out.sort_by(|a, b| {
+    out.sortc_by(|a, b| {
         a.ppm
             .abs()
             .total_cmp(&b.ppm.abs())

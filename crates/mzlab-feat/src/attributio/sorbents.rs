@@ -250,7 +250,7 @@ fn candidate_pairs(
             }
         }
     }
-    cand.sort_by(|a, b| {
+    cand.sortc_by(|a, b| {
         a.0.partial_cmp(&b.0)
             .unwrap_or(std::cmp::Ordering::Equal)
             .then(a.1.cmp(&b.1))
@@ -379,7 +379,7 @@ pub fn remap_ids<T>(
     }
     let mut order: Vec<usize> = (0..rows.len()).collect();
     let keys: Vec<Vec<Option<f64>>> = rows.iter().map(&score).collect();
-    order.sort_by(|&x, &y| {
+    order.sortc_by(|&x, &y| {
         for (a, b) in keys[x].iter().zip(&keys[y]) {
             let o = match (a, b) {
                 (Some(p), Some(q)) => {

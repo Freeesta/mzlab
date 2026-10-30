@@ -98,7 +98,7 @@ Banco (scratch, non committato): libreria sintetica deterministica di `identity_
 |---|---|---|---|
 | a | `.mzlib` v2 (RI, `SEC_LIBINFO`, `inchikey14`), rilevamento, `libset` + dedup + maschera, accumulatori piatti, banco | – | `crates/mzlab-lib/src/{format,build,parse,read,search,libset}.rs` |
 | b | `stein_cosine`, `hybrid_entropy` esposto, `matchres` → `libmatch/1` compound-centric, test sintetici | a | `scores.rs`, `matchres.rs` |
-| c | nodo Attribution: `table.match` multi-libreria + `table.attribute@1` + CLI | b | `crates/mzlab-cli/src/flow_attribute.rs`, `mzlab-feat/src/steps/` |
+| c | nodo Attribution: `table.match` multi-libreria + `table.attribute@1` + CLI | b | `flow_attribute.rs` in `crates/mzlab-cli/src/`, `mzlab-feat/src/steps/` |
 | d | wasm `LibSet.search` + pannello laterale (su IDENT-LIBRERIE-UI) | b, pannello IDENT | `crates/mzlab-lib-wasm`, `libreria-worker.js` |
 | e | analoghi: `modifiche-1.json`, ΔFormula vincolata, kit proprietà | b (c, d per le colonne) | `mzlab-core`, `matching.rs` |
 | f | catalogo `librerie/2`, verifica URL/licenze, preset | a | `tools/librerie_*`, `libreria-scarica.js`, `scarica.rs` |

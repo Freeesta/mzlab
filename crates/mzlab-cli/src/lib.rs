@@ -88,6 +88,8 @@ mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
 mod flow_nature;
+#[cfg(test)]
+mod flow_neglr_tests;
 mod flow_network;
 mod flow_out;
 mod flow_pace;
@@ -131,6 +133,8 @@ mod msn_lib;
 mod msn_png;
 mod msn_rules;
 pub mod msn_uscite;
+#[cfg(not(target_family = "wasm"))]
+pub mod normative;
 mod par;
 mod steps_cmd;
 mod tutor;
@@ -155,6 +159,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help)
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -399,6 +404,20 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
     }
 }
 
+/// The commands that exist only in the native build (they read the disk or the network).
+#[cfg(not(target_family = "wasm"))]
+fn native_cmd(name: &str, args: impl Iterator<Item = String>) -> Outcome {
+    match name {
+        "normative" => normative::run(args.collect()),
+        _ => validate::run(args),
+    }
+}
+
+#[cfg(target_family = "wasm")]
+fn native_cmd(name: &str, _args: impl Iterator<Item = String>) -> Outcome {
+    Outcome::fail(&format!("unknown command {name}"))
+}
+
 /// `mzlab-cli <args>`: `args` without the program name.
 pub fn execute(args: &[String]) -> Outcome {
     let mut args = args.iter().cloned();
@@ -409,8 +428,7 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("msn-graph") => return msn_graph::cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
-        #[cfg(not(target_family = "wasm"))]
-        Some("validate") => return validate::run(args),
+        Some(c @ ("normative" | "validate")) => return native_cmd(c, args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
