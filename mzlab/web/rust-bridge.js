@@ -100,7 +100,8 @@ export function createBridge({ workerUrl, notify, onBlocked = () => {} }) {
   api.start = () => { if (!worker && !api.disabled) { if (stato("motore") !== "no") spawn(); else { serve("motore"); off(api, slots, notify, ha("simd128") ? "cap.engine" : "error.noSimd"); } } }; BUD.wire(api, () => worker);
   api.noteUpload = (name, body) => { try { blobs.set(base(name), body instanceof Blob ? body : new Blob([body])); } catch (_) { /* optional */ } }; api.blobOf = name => blobs.get(base(name)) || null;   // the file as the page was given it (the Export mzML of Flow)
   api.noteRemove = name => { blobs.delete(base(name)); if (api.unmarkNative) api.unmarkNative(name); };
-  api.noteNew = () => { blobs.clear(); api.noteExplore(null); };
+  // a new session keeps the uploaded files (and their blobs) unless it starts afresh
+  api.noteNew = (/** @type {boolean} */ fresh) => { if (fresh) blobs.clear(); api.noteExplore(null); };
   // the session: samples[k].file is the file of item k; a part of a mixed file ("name.mzML#tag") shares the index of its file, the MRM part and a polarity part have their own slot on the same file (a polarity part reads the sections of its polarity)
   api.noteExplore = body => {
     const more = !!(body && body.append);                           // a file added to the session that is open: the others stay where they are

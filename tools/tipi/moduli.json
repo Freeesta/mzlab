@@ -58,6 +58,8 @@
     "../../mzlab/web/bufpool.js",
     "../../mzlab/web/ident-catalogo.js",
     "../../mzlab/web/ident-pannello.js",
+    "../../mzlab/web/open-now-raro.js",
+    "../../mzlab/web/conversione-carta.js",
     "../../mzlab/web/libreria-finestra.js",
     "../../mzlab/web/mol-svg.js",
     "../../mzlab/web/infusione-grafo.js",

@@ -211,7 +211,8 @@ let ldSlow = 0;
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out"); ldMsg = null;
-      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
+      // the button of a stuck start goes with its veil (it would come back with the next one)
+      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); ldAction(""); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
     }, wait);
   }
 }
@@ -456,20 +457,9 @@ async function bootSession0() {
   E._seq = waiting; E._mem = waiting ? mem : null;
   // while a list is opened file by file the new ones follow the rules of the first load
   const isFirstLoad = !oldNames.length || seq || waiting, first = firstOpenK(j.session);
-  const isHr = j.session.some((/** @type {Bag} */ s) => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
-  // a low-resolution IDA file is not high resolution
-  const trueHr = j.session.some((/** @type {Bag} */ s) => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
-    let vis = true;
-    if (oldVis[s.file]) {
-      vis = oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file));
-    } else if (isFirstLoad && trueHr && new Set(j.session.map((/** @type {Bag} */ x) => fileBase(x.file))).size > 1) {
-      // high resolution: only the first file (in the order of the list) is open, a click opens the others
-      vis = fileBase(s.file) === fileBase(j.session[first].file);
-    } else if (isFirstLoad && !isHr && j.session.length > 1) {
-      // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
-      vis = (k === first);
-    }
+    // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
+    const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
     const t = TIPOF.apply(s, s.file);
     return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: t.kind === "ms2" ? 2 : 1 };
   });
@@ -650,7 +640,10 @@ function bindFileRows() {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = (/** @type {PointerEvent} */ e) => {
       if (/** @type {HTMLElement} */ (e.target).closest("input") || /** @type {HTMLElement} */ (e.target).closest(".pr-tog")) return;
-      const f0 = E.files[+nm.dataset.k]; if (f0 && f0.kind !== "mrm") followSpectra(f0);
+      const f0 = E.files[+nm.dataset.k];
+      // the first click (nothing shown yet, the work area holds the sample table): only this file, with the starting layout of its type
+      if (f0 && !E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { soloFile(f0); return; }
+      if (f0 && f0.kind !== "mrm") followSpectra(f0);
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
@@ -814,15 +807,11 @@ function renderFileList() {
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
-  // the files still being read (E.pending): a bar that stays while one is missing, then their rows (grey and not selectable; red with the message if one failed)
-  const pend = E.pending || [], waiting = pend.filter((/** @type {Bag} */ x) => x.state === "wait").length;
-  const pendBar = waiting ? `<div class="pendbar" role="progressbar" aria-label="${EH(I18N.t("files.pendingBar", { done: E.pendN - waiting, n: E.pendN }))}" aria-valuemin="0" aria-valuemax="${E.pendN}" aria-valuenow="${E.pendN - waiting}"><i style="width:${Math.round(100 * (E.pendN - waiting) / E.pendN)}%"></i></div>` : "";
-  const pendRows = pend.map((/** @type {Pendiente} */ x, /** @type {number} */ i) => `<div class="fl pend ${x.state === "err" ? "err" : ""}" data-pend="${i}" ${x.state === "wait" ? 'aria-busy="true"' : ""}><input type="checkbox" disabled aria-label="${EH(x.label)}"><i></i><div class="fi"><b class="nm">${EH(x.label)}</b><small>${EH(x.state === "err" ? x.msg : I18N.t("files.pending"))}</small></div><button type="button" class="sec sm" data-pend-rm="${i}" aria-label="${EH(I18N.t("files.pendingRemove", { name: x.label }))}" title="${EH(I18N.t("files.pendingRemove", { name: x.label }))}">×</button></div>`).join("");
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
-  Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
-  Q("#flst").innerHTML = pendBar + pre + body + pendRows;
+  // the files still being read or converted: one progress row each, under the open ones (upload-rows.js)
+  Q("#flst").innerHTML = pre + body + UPROWS.html();
+  UPROWS.wire(Q("#fl-up")); UPROWS.paint();
   if (window.BARRA) BARRA.fitNames();
-  Q("#flst").querySelectorAll("[data-pend-rm]").forEach((/** @type {ElementoDati} */ b) => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
   Q("#flst").querySelectorAll("[data-pg]").forEach((/** @type {ElementoDati} */ x) => { x.onclick = () => ms2Goto(x.dataset.pg); x.ondblclick = () => ms2Spectrum(x.dataset.pg); });
