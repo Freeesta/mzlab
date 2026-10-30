@@ -88,6 +88,8 @@ mod flow_msnlib_tests;
 #[cfg(test)]
 mod flow_msnraw_tests;
 mod flow_nature;
+#[cfg(test)]
+mod flow_neglr_tests;
 mod flow_network;
 mod flow_out;
 mod flow_pace;
