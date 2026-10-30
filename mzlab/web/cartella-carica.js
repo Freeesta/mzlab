@@ -34,6 +34,8 @@ async function cartWalkEntries(entries, onFile, HIDDEN, setDir) {
 const CartCarica = (() => {
   const OK = /\.(mzml|mzxml|cdf|nc|dam|raw|wiff|wiff\.scan)$/i;
   const HIDDEN = n => n[0] === "." || n === "__MACOSX";
+  // by-products of the tools (msconvert logs, notes, temp files): skipped silently, never counted or reported
+  const BYPRODUCT = /\.(log|txt|tmp|bak|ini|lnk)$|^(thumbs\.db|desktop\.ini)$/i;
 
   // folder of a file: «a/b/» (empty for a file chosen alone); webkitRelativePath starts with the chosen folder, a dropped entry sets `_dir` itself
   function dir(f) {
@@ -47,7 +49,7 @@ const CartCarica = (() => {
   // compatible files go on, the others are counted
   function split(files) {
     const ok = [], ignored = [];
-    for (const f of files) (OK.test(f.name) && !hiddenIn(f) ? ok : ignored).push(f);
+    for (const f of files) if (!BYPRODUCT.test(f.name)) (OK.test(f.name) && !hiddenIn(f) ? ok : ignored).push(f);
     return { ok, ignored };
   }
 
@@ -94,6 +96,6 @@ const CartCarica = (() => {
     return true;
   }
   async function fromInput(list) { const files = [...list]; await load(files, rootName(null, files)); }
-  return { dir, setDir, pairKey, split, uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
+  return { dir, setDir, pairKey, split, byproduct: n => BYPRODUCT.test(n), uniqueNames, entriesOf, readEntries, fromDrop, fromInput, note, load };
 })();
 if (typeof module !== "undefined") module.exports = CartCarica;

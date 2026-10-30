@@ -12,7 +12,7 @@ def step(name, fn):
 D = Path(tempfile.mkdtemp(prefix="cartella_e2e_")); top = D / "serie"
 for rel, seed in (("a.mzML", 1), ("sub/b.mzML", 2), ("sub/deeper/c.mzML", 3), ("altra/a.mzML", 4)):
     (top / rel).parent.mkdir(parents=True, exist_ok=True); synth.write_full(top / rel, 5 * seed, seed=seed)
-for rel in ("note.txt", "sub/figura.pdf", ".nascosto.mzML"): (top / rel).write_text("x")
+for rel in ("note.txt", "msconvert.log", "sub/x.log", "sub/figura.pdf", ".nascosto.mzML"): (top / rel).write_text("x")   # .log/.txt are tool by-products: skipped silently
 src = (top / "a.mzML").read_bytes()
 import re
 def names(pg): return [re.match(r"(.+?\.mzML)", t.strip()).group(1) for t in pg.evaluate("Array.from(document.querySelectorAll('#flist tr:not(.grp)')).slice(1).map(tr=>tr.children[1].textContent)")]
@@ -28,9 +28,9 @@ try:
             pg.set_input_files("#pickdir", str(top))
             pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=90000)
             n = sorted(names(pg)); assert n in (["a (altra).mzML", "a.mzML", "b.mzML", "c.mzML"], ["a (serie).mzML", "a.mzML", "b.mzML", "c.mzML"]), n
-            t = pg.inner_text("#cartinfo"); assert "serie" in t and "4" in t and "3 file ignorati" in t, t
+            t = pg.inner_text("#cartinfo"); assert "serie" in t and "4" in t and "2 file ignorati" in t, t
             assert pg.is_visible("#cartinfo") and pg.get_attribute("#cartinfo", "role") == "status"
-        step("folder input: subfolders read, 3 unknown files ignored with a summary", folder)
+        step("folder input: subfolders read, 2 unknown files ignored with a summary, .log/.txt by-products not counted", folder)
         def dup():
             n = names(pg); assert len(set(x.lower() for x in n)) == 4, n
             assert sum(1 for x in n if x.startswith("a")) == 2 and any("(" in x for x in n), n
@@ -41,7 +41,7 @@ try:
             pg.evaluate("""b64 => { const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
               const file = n => ({ isFile: true, isDirectory: false, name: n, file: ok => ok(new File([bytes], n)) });
               const dir = (n, kids) => ({ isFile: false, isDirectory: true, name: n, createReader() { let i = 0; return { readEntries(ok) { const b = kids.slice(i, i + 1); i += 1; ok(b); } }; } });
-              const root = dir('caduta', [file('drop-A.mzML'), file('leggimi.txt'), dir('dentro', [file('drop-B.mzML')])]);
+              const root = dir('caduta', [file('drop-A.mzML'), file('leggimi.pdf'), file('caduta.log'), dir('dentro', [file('drop-B.mzML')])]);
               const ev = new Event('drop', { bubbles: true, cancelable: true });
               Object.defineProperty(ev, 'dataTransfer', { value: { files: [], items: [{ kind: 'file', webkitGetAsEntry: () => root }] } });
               document.getElementById('drop').dispatchEvent(ev); }""", b64)
@@ -50,7 +50,7 @@ try:
             t = pg.inner_text("#cartinfo"); assert "caduta" in t and "1 file ignorato" in t, t
         step("dropped folder: read recursively through the drop handler", drop)
         def empty():
-            pg.evaluate("CartCarica.load([new File(['x'],'solo.txt')],'vuota')"); pg.wait_for_timeout(300)
+            pg.evaluate("CartCarica.load([new File(['x'],'solo.pdf')],'vuota')"); pg.wait_for_timeout(300)
             t = pg.inner_text("#cartinfo"); assert "vuota" in t and "nessun file compatibile" in t, t
         step("a folder without compatible files says so", empty)
         def empty_d():
