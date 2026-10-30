@@ -3,6 +3,7 @@
 
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
+use super::tabui::{INTERP_CEILING, INTERP_WASM};
 use super::{FEAT_CEILING, FEAT_WASM};
 
 /// The steps that run in the `feat (detect)` module.
@@ -360,8 +361,7 @@ pub(super) fn export_inclusion() -> Step {
             list: Some("adducts"),
             ..Param::text("adducts", "Adducts")
         }
-        .default_str("[M+H]+")
-            .doc("Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"),
+            .doc("Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct; left empty it is [M-H]- for products linked in negative mode and [M+H]+ otherwise"),
         Param::number("rt_window", "RT half window")
             .min(0.0)
             .default_num(0.5)
@@ -369,15 +369,15 @@ pub(super) fn export_inclusion() -> Step {
             .doc("Each row spans the expected RT of the product plus and minus this; the start is never below 0"),
     ];
     Step {
-        ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT")],
+        ins: vec![Port::new("tp", DataType::Tp, "Expected products with their RT (a JSON list, or the table of tp.link)")],
         outs: vec![Port::new("report", DataType::Report, "Inclusion list as CSV")],
         params,
         runs_in: RunsIn {
-            wasm: Some("table"),
-            wasm_ceiling_bytes: Some(FEAT_CEILING),
+            wasm: Some(INTERP_WASM),
+            wasm_ceiling_bytes: Some(INTERP_CEILING),
             native: true,
         },
-        errors: vec!["error.export.adduct", "error.newerFormat"],
+        errors: vec!["error.export.adduct", "error.newerFormat", "error.tpNoBlock", "error.rete.noInterp"],
         ..Step::core(
             "export.inclusion",
             "Export inclusion list",

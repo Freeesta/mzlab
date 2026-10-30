@@ -356,7 +356,8 @@ def test_duplicate_file_while_waiting_real_upload_drop_dups():
     let UPBUSY = 0;
     const CONVROWS = {{ clearDone: () => {{}}, paint: () => {{}}, onCancel: null }};
     const FILETAB = {{ flush: () => {{}} }};
-    function checkGo() {{}}
+    function syncWork() {{}}
+    const OPENNOW = {{ note: () => {{}} }};
     function fail() {{}}
     const IDLE = [];
     const processed = [];
