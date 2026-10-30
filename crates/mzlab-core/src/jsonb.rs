@@ -26,7 +26,16 @@ pub fn opt(v: Option<f64>) -> Value {
 
 /// `message(key, **params)`: `{"key": ..., "params": {...}}`.
 pub fn msg(key: &str, params: &[(&str, Value)]) -> Value {
-    Obj::new().put("key", text(key)).put("params", params.iter().fold(Obj::new(), |o, (k, v)| o.put(k, v.clone())).done()).done()
+    Obj::new()
+        .put("key", text(key))
+        .put(
+            "params",
+            params
+                .iter()
+                .fold(Obj::new(), |o, (k, v)| o.put(k, v.clone()))
+                .done(),
+        )
+        .done()
 }
 
 /// An object under construction (keys in insertion order, like a Python dict).
@@ -61,47 +70,9 @@ impl Obj {
     }
 }
 
-fn write_into(o: &mut Out, v: &Value) {
-    match v {
-        Value::Null => {
-            o.raw("null");
-        }
-        Value::Bool(b) => {
-            o.raw(if *b { "true" } else { "false" });
-        }
-        Value::Num(n) => {
-            o.num(*n);
-        }
-        Value::Str(s) => {
-            o.str(s);
-        }
-        Value::Arr(a) => {
-            o.raw("[");
-            for (i, x) in a.iter().enumerate() {
-                if i > 0 {
-                    o.raw(",");
-                }
-                write_into(o, x);
-            }
-            o.raw("]");
-        }
-        Value::Obj(m) => {
-            o.raw("{");
-            for (i, (k, x)) in m.iter().enumerate() {
-                if i > 0 {
-                    o.raw(",");
-                }
-                o.str(k).raw(":");
-                write_into(o, x);
-            }
-            o.raw("}");
-        }
-    }
-}
-
 /// The JSON text of a value.
 pub fn write(v: &Value) -> String {
     let mut o = Out::default();
-    write_into(&mut o, v);
+    crate::json::write_value(&mut o, v);
     o.0
 }

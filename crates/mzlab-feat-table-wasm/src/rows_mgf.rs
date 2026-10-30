@@ -38,6 +38,12 @@ pub fn rows_mgf<R: ReadAt, I: ReadAt>(
     let samples = pol::samples_v1(samples)?;
     // the recipe, else the sign of the files (`pol::of_table`, the rule of the exports): a negative series is searched as negative
     let files: Vec<_> = (0..MAX_FILES).map_while(|k| open(k).ok()).collect();
+    // unit-resolution files: the MGF carries the note that tells the matcher to use its Da windows
+    let kind = if files.first().is_some_and(|f| !f.hr1()) {
+        "mgf_unit"
+    } else {
+        "mgf"
+    };
     let polarity = pol::of_table(r, size, &files)?;
     drop(files);
     let mgf = core::ms2_file(
@@ -47,7 +53,7 @@ pub fn rows_mgf<R: ReadAt, I: ReadAt>(
         &spec_text(params),
         table_sha256,
         polarity,
-        "mgf",
+        kind,
         open,
     )?;
     Ok(mgf.replace("\nFEATURE_ID=", "\nACCESSION="))

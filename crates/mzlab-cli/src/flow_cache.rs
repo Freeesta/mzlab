@@ -22,6 +22,7 @@ struct Entry {
     ty: DataType,
     estimates: Vec<(String, Value, Value)>,
     warnings: Vec<String>,
+    preset: Option<String>,
     said: Option<Value>,
     lineage: Option<Lineage>,
     /// The second output, when the step has one: (port, file, SHA-256, type).
@@ -123,15 +124,14 @@ impl Cache {
             r.trace(&a, l);
         }
         let port = job.step.outs.iter().find(|p| p.name == e.port)?.name;
-        self.now
-            .lock()
-            .unwrap_or_else(|p| p.into_inner())
-            .push((key.to_string(), e.clone()));
+        let mut now = self.now.lock().unwrap_or_else(|p| p.into_inner());
+        now.push((key.to_string(), e.clone()));
         Some(Made {
             port,
             artifact: a,
             estimates: e.estimates.clone(),
             warnings: e.warnings.clone(),
+            preset: e.preset.as_deref().and_then(crate::flow_made::preset_id),
             file: e.said.clone(),
             mem: None,
             extra: take_extra(r, job, &self.work, &e.extra)?,
@@ -155,6 +155,7 @@ impl Cache {
             ty: made.artifact.ty,
             estimates: made.estimates.clone(),
             warnings: made.warnings.clone(),
+            preset: made.preset.map(str::to_string),
             said: made.file.clone(),
             lineage,
             extra: made.extra.as_ref().map(|(p, a)| {
@@ -275,6 +276,7 @@ fn write_entry(work: &Path, key: &str, e: &Entry) -> Value {
             "warnings".into(),
             Value::Arr(e.warnings.iter().map(|w| s(w)).collect()),
         ),
+        ("preset".into(), e.preset.as_deref().map_or(Value::Null, s)),
         ("file_info".into(), e.said.clone().unwrap_or(Value::Null)),
         (
             "extra".into(),
@@ -323,6 +325,7 @@ fn read_entry(work: &Path, v: &Value) -> Option<(String, Entry)> {
             .iter()
             .filter_map(|w| w.str().map(str::to_string))
             .collect(),
+        preset: text("preset"),
         said: v.get("file_info").filter(|f| !f.is_null()).cloned(),
         lineage,
         extra: v.get("extra").filter(|x| !x.is_null()).and_then(|x| {
