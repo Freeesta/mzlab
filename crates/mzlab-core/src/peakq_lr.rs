@@ -175,40 +175,17 @@ fn sorted(v: impl Iterator<Item = f64>) -> Vec<f64> {
     o
 }
 
-/// Limits (min) of the peak at time `x` on the trace `xs`/`ys`, or `None` when its S/N is under `sn_min`. `reference` is the base width of the
-/// peaks already integrated (0 = none); `mrm` marks a transition trace (a lower edge fraction on strong peaks, as for a very tall one).
-pub fn lr_edges(
+/// Coarse apex `m0` near the click and the half window `m` of the final smoothing: 30 % of the width at half height (so the window is about 60 % of it).
+fn apex_and_window(
+    y: &[f64],
     xs: &[f64],
-    ys: &[f64],
+    a0: usize,
     x: f64,
-    reference: f64,
-    mrm: bool,
+    dt: f64,
     pk: &LrParams,
-) -> Option<(f64, f64)> {
-    let n = xs.len().min(ys.len());
-    let ic = near_idx(&xs[..n], x);
-    if n < 9 {
-        return Some((xs[ic], xs[ic]));
-    }
-    let xs = &xs[..n];
-    let (hi_i, lo_i) = ((n - 1).min(ic + 50), ic.saturating_sub(50));
-    let step = (xs[hi_i] - xs[lo_i])
-        / (if hi_i == lo_i {
-            1.0
-        } else {
-            (hi_i - lo_i) as f64
-        });
-    let dt = if step == 0.0 || step.is_nan() {
-        0.01
-    } else {
-        step
-    };
-    let a0 = near_idx(xs, x - 2.0);
-    let a1 = (n - 1).min(near_idx(xs, x + 2.0));
-    let y = &ys[a0..=a1];
+) -> (usize, usize) {
     let nn = y.len();
-    let m_coarse = round(0.03 / dt / 2.0).max(2.0) as usize;
-    let co = sg_filter(y, m_coarse, false);
+    let co = sg_filter(y, round(0.03 / dt / 2.0).max(2.0) as usize, false);
     let lo = near_idx(xs, x - 0.25).saturating_sub(a0).min(nn - 1);
     let hi = near_idx(xs, x + 0.25).saturating_sub(a0).min(nn - 1);
     let mut m0 = lo;
@@ -232,26 +209,20 @@ pub fn lr_edges(
     while hr < nn - 1 && co[hr] > half {
         hr += 1;
     }
-    let m = pk.min_half.max(round((hr - hl) as f64 * 0.3).min(60.0)) as usize;
-    let sm = sg_filter(y, m, false);
-    let d = sg_filter(y, m, true);
-    let from = m0.saturating_sub(m);
-    let mut k = from;
-    let k1 = (nn - 1).min(m0 + m);
-    for j in from..=k1 {
-        if sm[j] > sm[k] {
-            k = j;
-        }
-    }
-    let span = round(pk.win / dt).max(0.0) as usize;
-    let (w0, w1) = (k.saturating_sub(span), (nn - 1).min(k + span));
-    let res = sorted((w0..=w1).map(|j| (y[j] - sm[j]).abs()));
+    (
+        m0,
+        pk.min_half.max(round((hr - hl) as f64 * 0.3).min(60.0)) as usize,
+    )
+}
+
+/// Noise sigma: the region chosen by the student when set, else MAD or RMS of the sorted residual `res`.
+fn noise_of(res: &[f64], xs: &[f64], ys: &[f64], pk: &LrParams) -> f64 {
     let manual = if pk.noise == NoiseMode::Manual && pk.nr1 > pk.nr0 {
-        noise_sd(xs, &ys[..n], pk.nr0, pk.nr1)
+        noise_sd(xs, ys, pk.nr0, pk.nr1)
     } else {
         None
     };
-    let noise = match manual {
+    match manual {
         Some(v) if v > 0.0 => v,
         _ => {
             let v = if pk.noise == NoiseMode::Rms {
@@ -261,7 +232,87 @@ pub fn lr_edges(
             };
             v.max(1e-12)
         }
+    }
+}
+
+/// Where the edge on one side of the apex `k` stops: under `lim`, or where the smoothed trace turns up again for `need` points, or after `maxw` points.
+#[allow(clippy::too_many_arguments)]
+fn walk(
+    sm: &[f64],
+    d: &[f64],
+    k: usize,
+    dir: i64,
+    lim: f64,
+    need: i64,
+    dth: f64,
+    maxw: f64,
+) -> i64 {
+    let (mut j, mut bad, n) = (k as i64, 0i64, sm.len() as i64);
+    while j + dir >= 0 && j + dir < n && ((j - k as i64).abs() as f64) < maxw {
+        let nx = j + dir;
+        j = nx;
+        if sm[nx as usize] <= lim {
+            break;
+        }
+        let rising = if dir < 0 {
+            d[nx as usize] < -dth
+        } else {
+            d[nx as usize] > dth
+        };
+        bad = if rising { bad + 1 } else { 0 };
+        if bad >= need {
+            j = nx - dir * need;
+            break;
+        }
+    }
+    j
+}
+
+/// Limits (min) of the peak at time `x` on the trace `xs`/`ys`, or `None` when its S/N is under `sn_min`. `reference` is the base width of the
+/// peaks already integrated (0 = none); `mrm` marks a transition trace (a lower edge fraction on strong peaks, as for a very tall one).
+pub fn lr_edges(
+    xs: &[f64],
+    ys: &[f64],
+    x: f64,
+    reference: f64,
+    mrm: bool,
+    pk: &LrParams,
+) -> Option<(f64, f64)> {
+    let n = xs.len().min(ys.len());
+    let (xs, ys) = (&xs[..n], &ys[..n]);
+    let ic = near_idx(xs, x);
+    if n < 9 {
+        return Some((xs[ic], xs[ic]));
+    }
+    let (hi_i, lo_i) = ((n - 1).min(ic + 50), ic.saturating_sub(50));
+    let step = (xs[hi_i] - xs[lo_i])
+        / (if hi_i == lo_i {
+            1.0
+        } else {
+            (hi_i - lo_i) as f64
+        });
+    let dt = if step == 0.0 || step.is_nan() {
+        0.01
+    } else {
+        step
     };
+    let a0 = near_idx(xs, x - 2.0);
+    let y = &ys[a0..=(n - 1).min(near_idx(xs, x + 2.0))];
+    let nn = y.len();
+    let (m0, m) = apex_and_window(y, xs, a0, x, dt, pk);
+    let sm = sg_filter(y, m, false);
+    let d = sg_filter(y, m, true);
+    let from = m0.saturating_sub(m);
+    let mut k = from;
+    for j in from..=(nn - 1).min(m0 + m) {
+        if sm[j] > sm[k] {
+            k = j;
+        }
+    }
+    let span = round(pk.win / dt).max(0.0) as usize;
+    let (w0, w1) = (k.saturating_sub(span), (nn - 1).min(k + span));
+    let res = sorted((w0..=w1).map(|j| (y[j] - sm[j]).abs()));
+    let noise = noise_of(&res, xs, ys, pk);
     let low = sorted(sm[w0..=w1].iter().copied());
     let base = low[(low.len() as f64 * 0.1).floor() as usize];
     let h = (sm[k] - base).max(0.0);
@@ -277,43 +328,31 @@ pub fn lr_edges(
     let need = round(m as f64 * pk.multi / 100.0).max(2.0) as i64;
     let dth = noise / (m as f64).max(1.0) * 0.3;
     let maxw = round(pk.tail / dt);
-    let walk = |dir: i64| -> i64 {
-        let (mut j, mut bad) = (k as i64, 0i64);
-        let nn = nn as i64;
-        while j + dir >= 0 && j + dir < nn && ((j - k as i64).abs() as f64) < maxw {
-            let nx = j + dir;
-            j = nx;
-            if sm[nx as usize] <= lim {
-                break;
-            }
-            let rising = if dir < 0 {
-                d[nx as usize] < -dth
-            } else {
-                d[nx as usize] > dth
-            };
-            bad = if rising { bad + 1 } else { 0 };
-            if bad >= need {
-                j = nx - dir * need;
-                break;
-            }
-        }
-        j
-    };
-    let mut e0 = xs[a0 + walk(-1).min(k as i64).max(0) as usize];
-    let mut e1 = xs[a0 + walk(1).max(k as i64).min(nn as i64 - 1) as usize];
-    if pk.constrain > 0.0 && reference > 0.0 {
-        let tp = xs[a0 + k];
-        let w = e1 - e0;
-        let (lo, hi) = (
-            reference * (1.0 - pk.constrain / 100.0),
-            reference * (1.0 + pk.constrain / 100.0),
-        );
-        let w2 = hi.min(lo.max(w));
-        if w > 0.0 && w2 != w {
-            let q = (tp - e0) / w;
-            e0 = tp - q * w2;
-            e1 = e0 + w2;
-        }
+    let e0 = xs[a0
+        + walk(&sm, &d, k, -1, lim, need, dth, maxw)
+            .min(k as i64)
+            .max(0) as usize];
+    let e1 = xs[a0
+        + walk(&sm, &d, k, 1, lim, need, dth, maxw)
+            .max(k as i64)
+            .min(nn as i64 - 1) as usize];
+    Some(constrain(e0, e1, xs[a0 + k], reference, pk))
+}
+
+/// «Constrain the width»: the base width stays within +- `constrain` % of the reference peak, keeping the apex at the same relative position.
+fn constrain(e0: f64, e1: f64, apex: f64, reference: f64, pk: &LrParams) -> (f64, f64) {
+    if !(pk.constrain > 0.0 && reference > 0.0) {
+        return (e0, e1);
     }
-    Some((e0, e1))
+    let w = e1 - e0;
+    let (lo, hi) = (
+        reference * (1.0 - pk.constrain / 100.0),
+        reference * (1.0 + pk.constrain / 100.0),
+    );
+    let w2 = hi.min(lo.max(w));
+    if w > 0.0 && w2 != w {
+        let a = apex - (apex - e0) / w * w2;
+        return (a, a + w2);
+    }
+    (e0, e1)
 }
