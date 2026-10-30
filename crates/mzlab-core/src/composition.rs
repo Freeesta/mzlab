@@ -8,6 +8,7 @@
 
 use crate::elements::{mass_of, parse_formula, Formula, ELECTRON};
 use crate::error::{Error, Result};
+use crate::isoscore::SI;
 use crate::isoscore::{combined, fragment_constraint, isotope_score, Frag, IsoOpts, IsoScore};
 use crate::json::{round, Out};
 
@@ -113,6 +114,7 @@ const RATIO_RULES: [(&str, &str, f64, f64); 8] = [
 const RULES: [&str; 10] = [
     "HC", "NC", "OC", "PC", "SC", "FC", "ClC", "BrC", "LEWIS", "SENIOR",
 ];
+const SI_PATTERN: [(usize, f64); 3] = [(0, SI[0].1), (1, SI[1].1), (2, SI[2].1)];
 const ISO_PATTERN: [(&str, &[(usize, f64)]); 13] = [
     ("C", &[(0, 0.9893), (1, 0.0107)]),
     ("H", &[(0, 0.999885), (1, 0.000115)]),
@@ -126,7 +128,7 @@ const ISO_PATTERN: [(&str, &[(usize, f64)]); 13] = [
     ("I", &[(0, 1.0)]),
     ("Na", &[(0, 1.0)]),
     ("K", &[(0, 0.932581), (2, 0.067302)]),
-    ("Si", &[(0, 0.9223), (1, 0.0468), (2, 0.0309)]),
+    ("Si", &SI_PATTERN),
 ];
 const MAX_GRID: u64 = 3_000_000;
 
