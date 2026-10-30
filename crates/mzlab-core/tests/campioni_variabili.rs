@@ -54,7 +54,7 @@ fn view(r: &Value, names: &[String]) -> BTreeMap<String, String> {
             .iter()
             .map(|i| names[i.as_u64().unwrap() as usize].clone())
             .collect();
-        x.sort();
+        mzlab_core::sortc::slice_ord(&mut x);
         x
     };
     let mut out = BTreeMap::new();
@@ -255,7 +255,7 @@ fn a_position_with_chosen_separators() {
 fn names_without_separators_read_like_the_separated_ones() {
     let sep = federico();
     let glued: Vec<String> = sep[6..].iter().map(|n| n.replace('_', "")).collect();
-    let a = ask(&sep[6..].to_vec());
+    let a = ask(&sep[6..]);
     let b = ask(&glued);
     for id in ["matrix", "cond", "time", "matcond"] {
         assert_eq!(counts(&a, id), counts(&b, id), "{id}");
