@@ -362,6 +362,7 @@ declare var calcPretty: any;
 declare var calcRun: any;
 declare var calcTape: any;
 declare var campioniEdit: any;
+declare var canInt: any;
 declare var cancelLoads: any;
 declare var cartCall: any;
 declare var cartWalkEntries: any;
