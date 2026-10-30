@@ -2,7 +2,8 @@
 // @ts-noany
 // Peak integration and mass spectra drawing. Split from explore.js: classic script, loaded after grafici.js.
 // ------------------------------------------------------------------ peak integration
-function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b) {
+// base = [t0, y0, t1, y1]: the baseline of an HR automatic integration (autoAll), a straight line through those two points, still valid when an edge is dragged
+function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number} */ b, base = /** @type {number[] | null} */ (null)) {
   const xs = s.x, ys = s.y;
   let i0 = nearIdx(xs, Math.min(a, b)), i1 = nearIdx(xs, Math.max(a, b));
   if (i1 - i0 < 1) return { area: 0, height: 0, rt: xs[i0] };
@@ -10,10 +11,11 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   for (let j = i0 + 1; j <= i1; j++) ar += (ys[j] + ys[j - 1]) / 2 * (xs[j] - xs[j - 1]) * 60;
   for (let j = i0; j <= i1; j++) if (ys[j] > mx) { mx = ys[j]; at = j; }
   const e3 = (/** @type {number} */ i) => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };   // end points of the baseline: mean of 3 points
-  const ya = e3(i0), yb = e3(i1), base = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
+  const ya = base ? baseAt(base, xs[i0]) : e3(i0), yb = base ? baseAt(base, xs[i1]) : e3(i1), area = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
   const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
-  return { area: Math.max(ar - base, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
+  return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
+const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
 // Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
 // moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
 // (found with a coarse smoothing first), so noisy MRM traces sampled every 0.05 s and sparse TIC traces both work. The apex is where the derivative
@@ -31,7 +33,8 @@ function sgFilter(/** @type {number[]} */ y, /** @type {number} */ m, /** @type 
   return out;
 }
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
-const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0 };
+// hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
+const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0, hrSmooth: 5, hrSn: 5, hrProm: 1, hrScans: 3, hrHalf: 0, hrSlope: 3 };
 const PK = (() => { const o = lsObj(NOMI.KEY("picchi")); const { method: _old, ...rest } = o; return { ...PK_DEF, ...rest }; })();
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 /** @param {Bag} s @param {number} x @param {number} [ref] */
@@ -127,12 +130,30 @@ function addInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} *
     if (intClash(p, s.key, lo, hi)) { nearMsg(I18N.t("int.clash")); return false; }
   }
   if (p.type !== "mrm") pushIh(p);
-  const f = E.files[s.k];
-  p.ints.push({ id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
+  p.ints.push(intRec(p, s, lo, hi));
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
   if (p.type === "mrm" && mirror) tabPanels().filter((/** @type {Bag} */ q) => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach((/** @type {Bag} */ q) => { const s2 = q._a.sr.find((/** @type {Bag} */ x) => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false); });
   return true;
+}
+function intRec(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ lo, /** @type {number} */ hi, base = /** @type {number[] | null} */ (null)) {
+  const f = E.files[s.k];
+  return { id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title, ...(base ? { base } : {}) };
+}
+// a trace of a high-resolution file: the automatic tool integrates all its peaks at once (low resolution keeps one peak per click)
+const hrTrace = (/** @type {Bag} */ s) => { const f = E.files[s.k]; return !!f && !!window.HR && HR.isHr(f, f.lv); };
+// every peak of the stretch shown, found and given its baseline by the Rust engine (auto_integrate, peakq_auto.rs), in one undoable step;
+// windows that would overlap an integration already there are left out
+async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
+  const a = p._a; if (!a) return;
+  const o = { smooth: PK.hrSmooth, snr: PK.hrSn, rel: PK.hrProm / 100, scans: PK.hrScans, half: PK.hrHalf, slope: PK.hrSlope / 100 };
+  const lim = window.QUALITA ? await QUALITA.autoIntegrate(s.x, s.y, a.x0, a.x1, o) : null;
+  if (!lim) { nearMsg(I18N.t("int.autoOff")); return; }
+  const add = lim.map((/** @type {Bag} */ w) => [s.x[w.lo], s.x[w.hi], w.b0, w.b1]).filter((/** @type {number[]} */ w) => w[1] - w[0] > INT_EPS && !intClash(p, s.key, w[0], w[1]));
+  if (!add.length) { nearMsg(I18N.t(lim.length ? "int.clash" : "int.autoNone")); return; }
+  pushIh(p);
+  add.forEach((/** @type {number[]} */ w) => p.ints.push(intRec(p, s, w[0], w[1], [w[0], w[2], w[1], w[3]])));
+  draw(p);
 }
 // automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
 async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x) {
@@ -168,6 +189,7 @@ function peakParams() {
     ${sec("noise", f("win") + f("areaNoise"))}
     ${sec("edges", f("edgeFrac") + f("snMin") + f("tail"))}
     ${sec("multi", f("multi"))}
+    ${sec("hr", f("hrSmooth") + f("hrSn") + f("hrProm") + f("hrScans") + f("hrHalf") + f("hrSlope"))}
     <details id="pk-adv"><summary>${I18N.t("pk.sec.adv")}</summary><fieldset class="pk-sec"><legend class="sr-only">${I18N.t("pk.sec.adv")}</legend>
       <label class="pk-row"><span>${I18N.t("pk.noise")}</span><select data-pk="noise" style="grid-column:2/4;justify-self:start">${["mad", "rms", "manual"].map(opt).join("")}</select></label>
       ${f("nr0")}${f("nr1", false)}${f("constrain")}${f("minHalf")}</fieldset></details>
@@ -177,7 +199,7 @@ function peakParams() {
     Q("#pk-ok").onclick = () => {
       COMANDI.fai("peaks.settings", COMANDI.GLOBALE, () => {
         document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = numIt(i.value); if (v >= 0) PK[k] = v; } });
-        PK.minHalf = Math.max(1, Math.round(PK.minHalf));
+        PK.minHalf = Math.max(1, Math.round(PK.minHalf)); PK.hrSmooth = Math.max(3, Math.round(PK.hrSmooth) | 1); PK.hrScans = Math.max(2, Math.round(PK.hrScans)); PK.hrHalf = Math.min(30, Math.round(PK.hrHalf));
       });
       pkSave(); Q("#bigdlg").close();
     };
