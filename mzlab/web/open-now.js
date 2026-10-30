@@ -113,6 +113,8 @@ const OPENNOW = /** @type {any} */ ((() => {
     await idle();
     const { n, m } = tally; tally.n = tally.m = 0;
     const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
+    // a veil raised for this loading (the example of the tour) drops with it
+    if (UPBUSY === 0 && !(/** @type {HTMLElement} */ (document.querySelector("#loading")).hidden)) loading(false);
     if (!shown) first();
     if (m || (n && shown)) directNote(m ? "files.drop.mixed" : "files.drop.done", { n, m });
   }
