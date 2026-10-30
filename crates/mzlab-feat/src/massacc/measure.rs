@@ -58,6 +58,87 @@ fn lock_mass<R: ReadAt>(index: &Index<R>) -> Option<Value> {
     })
 }
 
+/// The trace of one reference in the group `si` of `n_scans` scans (`rt` = their times), if it has enough scans over the intensity floor.
+fn trace_of<R: ReadAt>(
+    index: &mut Index<R>,
+    si: usize,
+    reference: &RefIon,
+    rt: &mut Option<Vec<f64>>,
+    r: usize,
+    p: &Params,
+) -> Result<Option<Trace>> {
+    let n_scans = index.sections[si].n_scans;
+    let (lo, hi) = (
+        reference.mz * (1.0 - p.search_ppm * 1e-6),
+        reference.mz * (1.0 + p.search_ppm * 1e-6),
+    );
+    let (a, b) = (index.search(si, lo, false)?, index.search(si, hi, true)?);
+    if b <= a {
+        return Ok(None);
+    }
+    let mut peaks: Vec<(u32, f64, f64)> = Vec::new();
+    index.each_peak(si, a, b, |scan, mz, y| {
+        if y >= p.min_intensity {
+            peaks.push((scan as u32, mz, y));
+        }
+    })?;
+    if peaks.len() < MIN_SCANS {
+        return Ok(None);
+    }
+    if rt.is_none() {
+        *rt = Some(index.arrays(si)?.rt.clone());
+    }
+    let rt = rt.as_deref().unwrap_or_default();
+    // by scan, the most intense peak first (the lower m/z on a tie)
+    crate::sortc::by(&mut peaks, |x, y| {
+        x.0.cmp(&y.0)
+            .then(y.2.total_cmp(&x.2))
+            .then(x.1.total_cmp(&y.1))
+    });
+    let mut t = Trace {
+        r,
+        ..Trace::default()
+    };
+    let mut i = 0;
+    while i < peaks.len() {
+        let j = peaks[i..]
+            .iter()
+            .position(|q| q.0 != peaks[i].0)
+            .map_or(peaks.len(), |k| i + k);
+        let scan_rt = rt.get(peaks[i].0 as usize).copied().unwrap_or(f64::NAN);
+        let inside = reference
+            .window
+            .is_none_or(|(w0, w1)| scan_rt >= w0 && scan_rt <= w1);
+        if inside && scan_rt.is_finite() {
+            t.rt.push(scan_rt);
+            t.mz.push(peaks[i].1);
+            t.inten.push(peaks[i].2);
+            t.sum.push(peaks[i..j].iter().map(|q| q.2).sum());
+        }
+        i = j;
+    }
+    let needed = if reference.background {
+        ((BACKGROUND_SHARE * n_scans as f64).ceil() as usize).max(MIN_SCANS)
+    } else {
+        MIN_SCANS
+    };
+    Ok((t.rt.len() >= needed).then_some(t))
+}
+
+/// The main MS1 group of the file with its polarity: the larger of the two polarities, else the group the index does not split.
+fn main_group(
+    pos: Option<(usize, usize)>,
+    neg: Option<(usize, usize)>,
+    all: Option<(usize, usize)>,
+) -> Option<((usize, usize), i8)> {
+    match (pos, neg) {
+        (Some(a), Some(b)) => Some(if b.1 > a.1 { (b, -1) } else { (a, 1) }),
+        (Some(a), None) => Some((a, 1)),
+        (None, Some(b)) => Some((b, -1)),
+        (None, None) => all.map(|a| (a, 0)),
+    }
+}
+
 /// The traces of `refs` in `index`.
 pub fn measure<R: ReadAt>(
     index: &mut Index<R>,
@@ -69,12 +150,7 @@ pub fn measure<R: ReadAt>(
         group(index, Some(-1)),
         group(index, None),
     );
-    let main = match (pos, neg) {
-        (Some(a), Some(b)) => Some(if b.1 > a.1 { (b, -1) } else { (a, 1) }),
-        (Some(a), None) => Some((a, 1)),
-        (None, Some(b)) => Some((b, -1)),
-        (None, None) => all.map(|a| (a, 0)),
-    };
+    let main = main_group(pos, neg, all);
     let mut out = FileMeasure {
         sha256: crate::series::source_sha256(index),
         lock_mass: lock_mass(index),
@@ -91,67 +167,12 @@ pub fn measure<R: ReadAt>(
             -1 => (1, neg),
             _ => (2, main.map(|(g, _)| g)),
         };
-        let Some((si, n_scans)) = found else {
+        let Some((si, _)) = found else {
             continue;
         };
         out.searched += 1;
-        let (lo, hi) = (
-            reference.mz * (1.0 - p.search_ppm * 1e-6),
-            reference.mz * (1.0 + p.search_ppm * 1e-6),
-        );
-        let (a, b) = (index.search(si, lo, false)?, index.search(si, hi, true)?);
-        if b <= a {
-            continue;
-        }
-        let mut peaks: Vec<(u32, f64, f64)> = Vec::new();
-        index.each_peak(si, a, b, |scan, mz, y| {
-            if y >= p.min_intensity {
-                peaks.push((scan as u32, mz, y));
-            }
-        })?;
-        if peaks.len() < MIN_SCANS {
-            continue;
-        }
-        if rts[slot].is_none() {
-            rts[slot] = Some(index.arrays(si)?.rt.clone());
-        }
-        let rt = rts[slot].as_deref().unwrap_or_default();
-        // by scan, the most intense peak first (the lower m/z on a tie)
-        crate::sortc::by(&mut peaks, |x, y| {
-            x.0.cmp(&y.0)
-                .then(y.2.total_cmp(&x.2))
-                .then(x.1.total_cmp(&y.1))
-        });
-        let mut t = Trace {
-            r,
-            ..Trace::default()
-        };
-        let mut i = 0;
-        while i < peaks.len() {
-            let j = peaks[i..]
-                .iter()
-                .position(|q| q.0 != peaks[i].0)
-                .map_or(peaks.len(), |k| i + k);
-            let scan_rt = rt.get(peaks[i].0 as usize).copied().unwrap_or(f64::NAN);
-            let inside = reference
-                .window
-                .is_none_or(|(w0, w1)| scan_rt >= w0 && scan_rt <= w1);
-            if inside && scan_rt.is_finite() {
-                t.rt.push(scan_rt);
-                t.mz.push(peaks[i].1);
-                t.inten.push(peaks[i].2);
-                t.sum.push(peaks[i..j].iter().map(|q| q.2).sum());
-            }
-            i = j;
-        }
-        let needed = if reference.background {
-            ((BACKGROUND_SHARE * n_scans as f64).ceil() as usize).max(MIN_SCANS)
-        } else {
-            MIN_SCANS
-        };
-        if t.rt.len() >= needed {
-            out.traces.push(t);
-        }
+        out.traces
+            .extend(trace_of(index, si, reference, &mut rts[slot], r, p)?);
     }
     Ok(out)
 }

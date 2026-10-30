@@ -101,6 +101,32 @@ fn fields(line: &str, d: char) -> Vec<String> {
     out.into_iter().map(|f| f.trim().to_string()).collect()
 }
 
+/// The RT window of a row: the given one, half a minute either side of a declared RT, or none.
+fn window_of(
+    lo: Option<f64>,
+    hi: Option<f64>,
+    rt: Option<f64>,
+    line: usize,
+) -> Result<Option<(f64, f64)>> {
+    match (lo, hi, rt) {
+        (Some(a), Some(b), _) if a <= b => Ok(Some((a, b))),
+        (Some(_), Some(_), _) => Err(bad(line, "rt_min is above rt_max")),
+        (None, None, Some(r)) => Ok(Some((r - 0.5, r + 0.5))),
+        (None, None, None) => Ok(None),
+        _ => Err(bad(line, "rt_min and rt_max go together")),
+    }
+}
+
+/// The role named in a row (empty = reference).
+fn role_of(text: &str, line: usize) -> Result<Role> {
+    match text.to_lowercase().as_str() {
+        "" | "reference" => Ok(Role::Reference),
+        "istd" => Ok(Role::Istd),
+        "standard" => Ok(Role::Standard),
+        _ => Err(bad(line, "the role is reference, istd or standard")),
+    }
+}
+
 /// The ions of the CSV of the user. Header (any order, any case): `name`, `ion` (an m/z, an ion formula with its charge sign, or a formula with its adduct), and optionally `rt`
 /// (declared, minutes), `rt_min`, `rt_max` (the window), `role` (`reference`, `istd`, `standard`). A declared RT with no window looks half a minute either side.
 pub fn from_csv(text: &str) -> Result<Vec<RefIon>> {
@@ -155,19 +181,8 @@ pub fn from_csv(text: &str) -> Result<Vec<RefIon>> {
                 .map_err(|_| bad(i + 1, "the ion needs its charge sign or its adduct"))?,
         };
         let (rt, lo, hi) = (num(c_rt)?, num(c_lo)?, num(c_hi)?);
-        let window = match (lo, hi, rt) {
-            (Some(a), Some(b), _) if a <= b => Some((a, b)),
-            (Some(_), Some(_), _) => return Err(bad(i + 1, "rt_min is above rt_max")),
-            (None, None, Some(r)) => Some((r - 0.5, r + 0.5)),
-            (None, None, None) => None,
-            _ => return Err(bad(i + 1, "rt_min and rt_max go together")),
-        };
-        let role = match cell(c_role).to_lowercase().as_str() {
-            "" | "reference" => Role::Reference,
-            "istd" => Role::Istd,
-            "standard" => Role::Standard,
-            _ => return Err(bad(i + 1, "the role is reference, istd or standard")),
-        };
+        let window = window_of(lo, hi, rt, i + 1)?;
+        let role = role_of(cell(c_role), i + 1)?;
         let rt = rt.or_else(|| window.map(|(a, b)| (a + b) / 2.0));
         out.push(RefIon {
             name: name.to_string(),

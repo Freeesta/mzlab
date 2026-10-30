@@ -37,6 +37,54 @@ fn params(o: &mut Out, p: &Params) {
     o.raw("}");
 }
 
+/// The points of the charts of one file.
+fn points(o: &mut Out, f: &FileResult, refs: &[RefIon]) {
+    o.raw(",\"points\":[");
+    for (i, pt) in f.points.iter().enumerate() {
+        let r = &refs[pt.r];
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"name\":")
+            .str(&r.name);
+        o.raw(",\"role\":")
+            .str(r.role.name())
+            .raw(",\"source\":")
+            .str(if r.background { "background" } else { "user" });
+        o.raw(",\"mz\":")
+            .num(round(r.mz, 6))
+            .raw(",\"rt\":")
+            .num(round(pt.rt, 4));
+        o.raw(",\"err_ppm\":")
+            .num(round(pt.err_ppm, 4))
+            .raw(",\"intensity\":")
+            .num(round(pt.intensity, 0));
+        o.raw(",\"outlier\":")
+            .raw(if pt.outlier { "true" } else { "false" })
+            .raw("}");
+    }
+}
+
+/// The standards found in one file.
+fn standards(o: &mut Out, f: &FileResult, refs: &[RefIon]) {
+    o.raw("],\"istd\":[");
+    for (i, s) in f.istds.iter().enumerate() {
+        let r = &refs[s.r];
+        o.raw(if i > 0 { "," } else { "" })
+            .raw("{\"name\":")
+            .str(&r.name)
+            .raw(",\"role\":")
+            .str(r.role.name());
+        o.raw(",\"rt\":")
+            .num(round(s.rt, 4))
+            .raw(",\"declared_rt\":");
+        opt(o, r.rt, 4);
+        o.raw(",\"rt_shift\":");
+        opt(o, r.rt.map(|d| s.rt - d), 4);
+        o.raw(",\"area\":").num(round(s.area, 0)).raw(",\"fwhm\":");
+        opt(o, s.fwhm, 4);
+        o.raw("}");
+    }
+}
+
 fn file(o: &mut Out, f: &FileResult, refs: &[RefIon], corrected: bool) {
     o.raw("{\"file\":")
         .str(&f.name)
@@ -86,46 +134,8 @@ fn file(o: &mut Out, f: &FileResult, refs: &[RefIon], corrected: bool) {
             o.raw("null");
         }
     }
-    o.raw(",\"points\":[");
-    for (i, pt) in f.points.iter().enumerate() {
-        let r = &refs[pt.r];
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"name\":")
-            .str(&r.name);
-        o.raw(",\"role\":")
-            .str(r.role.name())
-            .raw(",\"source\":")
-            .str(if r.background { "background" } else { "user" });
-        o.raw(",\"mz\":")
-            .num(round(r.mz, 6))
-            .raw(",\"rt\":")
-            .num(round(pt.rt, 4));
-        o.raw(",\"err_ppm\":")
-            .num(round(pt.err_ppm, 4))
-            .raw(",\"intensity\":")
-            .num(round(pt.intensity, 0));
-        o.raw(",\"outlier\":")
-            .raw(if pt.outlier { "true" } else { "false" })
-            .raw("}");
-    }
-    o.raw("],\"istd\":[");
-    for (i, s) in f.istds.iter().enumerate() {
-        let r = &refs[s.r];
-        o.raw(if i > 0 { "," } else { "" })
-            .raw("{\"name\":")
-            .str(&r.name)
-            .raw(",\"role\":")
-            .str(r.role.name());
-        o.raw(",\"rt\":")
-            .num(round(s.rt, 4))
-            .raw(",\"declared_rt\":");
-        opt(o, r.rt, 4);
-        o.raw(",\"rt_shift\":");
-        opt(o, r.rt.map(|d| s.rt - d), 4);
-        o.raw(",\"area\":").num(round(s.area, 0)).raw(",\"fwhm\":");
-        opt(o, s.fwhm, 4);
-        o.raw("}");
-    }
+    points(o, f, refs);
+    standards(o, f, refs);
     o.raw("]}");
 }
 
