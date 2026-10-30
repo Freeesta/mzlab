@@ -155,95 +155,95 @@ impl<'a> Batch<'a> {
                 .collect(),
         )
     }
+}
 
-    /// The warnings of the batch under the limits.
-    fn warnings(&self, lim: &Limits) -> Vec<Warning> {
-        let mut out = Vec::new();
-        let warn = |key, value, files| Warning {
-            key,
-            batch: self.name.clone(),
-            value,
-            files,
-        };
-        if self.of_role(&["qc"]).is_empty() {
-            out.push(warn(NO_QC, None, self.all_files()));
-        }
-        if let Some((gap, from, to)) = self
-            .qc_gaps()
-            .into_iter()
-            .max_by_key(|g| g.0)
-            .filter(|g| g.0 > lim.qc_every_max)
-        {
-            out.push(warn(
-                QC_GAP,
-                Some(gap),
-                vec![from.to_string(), to.to_string()],
-            ));
-        }
-        if lim.blank_per_batch && self.of_role(&["blank"]).is_empty() {
-            out.push(warn(NO_BLANK, None, self.all_files()));
-        }
-        let levels = self.std_levels().len() as u32;
-        if levels < lim.std_levels_min {
-            let std = self.of_role(&["std", "calibration"]);
-            out.push(warn(
-                STD_LEVELS,
-                Some(levels),
-                sorted_names(std.iter().map(|(_, c)| c.file.clone())),
-            ));
-        }
-        out
+/// The warnings of the batch under the limits.
+fn batch_warnings(batch: &Batch, lim: &Limits) -> Vec<Warning> {
+    let mut out = Vec::new();
+    let warn = |key, value, files| Warning {
+        key,
+        batch: batch.name.clone(),
+        value,
+        files,
+    };
+    if batch.of_role(&["qc"]).is_empty() {
+        out.push(warn(NO_QC, None, batch.all_files()));
     }
+    if let Some((gap, from, to)) = batch
+        .qc_gaps()
+        .into_iter()
+        .max_by_key(|g| g.0)
+        .filter(|g| g.0 > lim.qc_every_max)
+    {
+        out.push(warn(
+            QC_GAP,
+            Some(gap),
+            vec![from.to_string(), to.to_string()],
+        ));
+    }
+    if lim.blank_per_batch && batch.of_role(&["blank"]).is_empty() {
+        out.push(warn(NO_BLANK, None, batch.all_files()));
+    }
+    let levels = batch.std_levels().len() as u32;
+    if levels < lim.std_levels_min {
+        let std = batch.of_role(&["std", "calibration"]);
+        out.push(warn(
+            STD_LEVELS,
+            Some(levels),
+            sorted_names(std.iter().map(|(_, c)| c.file.clone())),
+        ));
+    }
+    out
+}
 
-    /// The batch as a JSON object.
-    fn write(&self, o: &mut Out) {
-        let n_files = self.files.len() + self.unordered.len();
-        o.raw("{\"batch\":")
-            .str(&self.name)
-            .raw(",\"files\":")
-            .int(n_files as i64)
-            .raw(",\"roles\":{");
-        let mut roles: Vec<(&str, i64)> = Vec::new();
-        for c in self
-            .files
-            .iter()
-            .map(|(_, c)| *c)
-            .chain(self.unordered.iter().copied())
-        {
-            match roles.iter_mut().find(|(r, _)| *r == c.role()) {
-                Some(e) => e.1 += 1,
-                None => roles.push((c.role(), 1)),
-            }
+/// The batch as a JSON object.
+fn write_batch(batch: &Batch, o: &mut Out) {
+    let n_files = batch.files.len() + batch.unordered.len();
+    o.raw("{\"batch\":")
+        .str(&batch.name)
+        .raw(",\"files\":")
+        .int(n_files as i64)
+        .raw(",\"roles\":{");
+    let mut roles: Vec<(&str, i64)> = Vec::new();
+    for c in batch
+        .files
+        .iter()
+        .map(|(_, c)| *c)
+        .chain(batch.unordered.iter().copied())
+    {
+        match roles.iter_mut().find(|(r, _)| *r == c.role()) {
+            Some(e) => e.1 += 1,
+            None => roles.push((c.role(), 1)),
         }
-        roles.sort_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
-        for (k, (role, count)) in roles.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" })
-                .str(role)
-                .raw(":")
-                .int(*count);
-        }
-        let end = |o: &mut Out, key: &str, v: Option<u32>| {
-            o.raw(key);
-            match v {
-                Some(x) => o.int(x as i64),
-                None => o.raw("null"),
-            };
-        };
-        end(o, "},\"first\":", self.files.first().map(|f| f.0));
-        end(o, ",\"last\":", self.files.last().map(|f| f.0));
-        end(
-            o,
-            ",\"qc_gap_max\":",
-            self.qc_gaps().iter().map(|g| g.0).max(),
-        );
-        o.raw(",\"blanks\":");
-        strings(o, &names(&self.of_role(&["blank"])));
-        o.raw(",\"std_levels\":[");
-        for (k, level) in self.std_levels().iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" }).num(*level);
-        }
-        o.raw("]}");
     }
+    roles.sort_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
+    for (k, (role, count)) in roles.iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" })
+            .str(role)
+            .raw(":")
+            .int(*count);
+    }
+    let end = |o: &mut Out, key: &str, v: Option<u32>| {
+        o.raw(key);
+        match v {
+            Some(x) => o.int(x as i64),
+            None => o.raw("null"),
+        };
+    };
+    end(o, "},\"first\":", batch.files.first().map(|f| f.0));
+    end(o, ",\"last\":", batch.files.last().map(|f| f.0));
+    end(
+        o,
+        ",\"qc_gap_max\":",
+        batch.qc_gaps().iter().map(|g| g.0).max(),
+    );
+    o.raw(",\"blanks\":");
+    strings(o, &names(&batch.of_role(&["blank"])));
+    o.raw(",\"std_levels\":[");
+    for (k, level) in batch.std_levels().iter().enumerate() {
+        o.raw(if k > 0 { "," } else { "" }).num(*level);
+    }
+    o.raw("]}");
 }
 
 /// The warnings about the injection order of the whole table: files without an order, and orders shared by several files.
@@ -343,8 +343,8 @@ pub fn runorder_text(
         .raw("},\"batches\":[");
     for (n, b) in batches.iter().enumerate() {
         o.raw(if n > 0 { "," } else { "" });
-        b.write(&mut o);
-        warnings.extend(b.warnings(&lim));
+        write_batch(b, &mut o);
+        warnings.extend(batch_warnings(b, &lim));
     }
     o.raw("],\"warnings\":[");
     warnings.sort_by(|a, b| {
