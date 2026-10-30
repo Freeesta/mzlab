@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use crate::flow_screen_suspects::screen_job;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
 use mzlab_core::json::Value;
@@ -347,7 +348,7 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("tp.dig_lr", Exec::File("dig", crate::flow_digl::dig_job)),
     ("chrom.uv_peaks", Exec::File("peaks", uv_job)),
     ("annot.level", Exec::File("annot", level_job)),
-    ("screen.suspects", Exec::File("screen", crate::flow_screen_suspects::screen_job)),
+    ("screen.suspects", Exec::File("screen", screen_job)),
     (
         "tp.network",
         Exec::File("network", crate::flow_network::network_job),

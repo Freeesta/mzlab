@@ -48,24 +48,33 @@ pub struct Source {
     pub skipped: usize,
 }
 
-fn hill(formula: &str) -> String {
-    match elements::parse_formula(formula) {
-        Ok(f) => elements::fmt(&f),
-        Err(_) => formula.trim().to_string(),
-    }
-}
-
 impl Source {
     /// A file of the plan: a `.mzsus` when it starts with the magic, else a CSV.
     pub fn open(name: &str, bytes: &[u8]) -> Result<Source> {
         let sha256 = sha256_hex(bytes);
         if bytes.starts_with(b"MZSU") {
-            let s = Suspects::open(bytes).map_err(|e| Error::new("err.flow.screen.mzsus").with("file", name).with("reason", &format!("{e:?}")))?;
+            let s = Suspects::open(bytes).map_err(|e| {
+                Error::new("err.flow.screen.mzsus")
+                    .with("file", name)
+                    .with("reason", &format!("{e:?}"))
+            })?;
             let provenance = manifest_json(s.manifest());
-            return Ok(Source { name: name.into(), sha256, rows: Rows::Mzsus(s), provenance, skipped: 0 });
+            return Ok(Source {
+                name: name.into(),
+                sha256,
+                rows: Rows::Mzsus(s),
+                provenance,
+                skipped: 0,
+            });
         }
         let (rows, skipped) = read_csv(name, bytes)?;
-        Ok(Source { name: name.into(), sha256, rows: Rows::Csv(rows), provenance: "null".into(), skipped })
+        Ok(Source {
+            name: name.into(),
+            sha256,
+            rows: Rows::Csv(rows),
+            provenance: "null".into(),
+            skipped,
+        })
     }
 
     pub fn kind(&self) -> &'static str {
@@ -85,7 +94,16 @@ impl Source {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+}
 
+fn hill(formula: &str) -> String {
+    match elements::parse_formula(formula) {
+        Ok(f) => elements::fmt(&f),
+        Err(_) => formula.trim().to_string(),
+    }
+}
+
+impl Source {
     /// The entries with `|m - mass| <= mass * ppm * 1e-6` (the window of `Suspects::search`).
     pub fn search(&self, mass: f64, ppm: f64) -> Vec<Entry> {
         match &self.rows {
@@ -124,17 +142,30 @@ fn manifest_json(text: &str) -> String {
     let mut o = Out::default();
     let s = |v: &Value, k: &str| v.get(k).and_then(Value::str).unwrap_or("").to_string();
     o.raw("{\"sources\":[");
-    for (i, f) in v.get("fonti").map(Value::arr).unwrap_or(&[]).iter().enumerate() {
+    for (i, f) in v
+        .get("fonti")
+        .map(Value::arr)
+        .unwrap_or(&[])
+        .iter()
+        .enumerate()
+    {
         if i > 0 {
             o.raw(",");
         }
         o.raw("{\"id\":").str(&s(f, "id"));
-        for (key, from) in [("name", "nome"), ("version", "versione"), ("licence", "licenza"), ("doi", "doi")] {
+        for (key, from) in [
+            ("name", "nome"),
+            ("version", "versione"),
+            ("licence", "licenza"),
+            ("doi", "doi"),
+        ] {
             o.raw(&format!(",\"{key}\":")).str(&s(f, from));
         }
         o.raw("}");
     }
-    o.raw("],\"attribution\":").str(&s(&v, "attribuzione")).raw("}");
+    o.raw("],\"attribution\":")
+        .str(&s(&v, "attribuzione"))
+        .raw("}");
     o.0
 }
 
@@ -166,10 +197,20 @@ fn is_key(s: &str) -> bool {
 fn read_csv(name: &str, bytes: &[u8]) -> Result<(Vec<Entry>, usize)> {
     let text = String::from_utf8_lossy(bytes);
     let mut lines = text.lines().filter(|l| !l.trim().is_empty());
-    let head: Vec<String> = split(lines.next().unwrap_or("").trim_start_matches('\u{feff}')).iter().map(|h| h.to_ascii_lowercase()).collect();
+    let head: Vec<String> = split(lines.next().unwrap_or("").trim_start_matches('\u{feff}'))
+        .iter()
+        .map(|h| h.to_ascii_lowercase())
+        .collect();
     let col = |names: &[&str]| head.iter().position(|h| names.contains(&h.as_str()));
-    let (cname, ckey, csmiles) = (col(&["name"]), col(&["inchikey", "inchi_key"]), col(&["smiles"]));
-    let (cform, cmass) = (col(&["formula", "neutral_formula"]), col(&["mass", "neutral_mass", "monoisotopic_mass"]));
+    let (cname, ckey, csmiles) = (
+        col(&["name"]),
+        col(&["inchikey", "inchi_key"]),
+        col(&["smiles"]),
+    );
+    let (cform, cmass) = (
+        col(&["formula", "neutral_formula"]),
+        col(&["mass", "neutral_mass", "monoisotopic_mass"]),
+    );
     let (crt, cfrag) = (col(&["rt", "rt_min"]), col(&["fragments", "fragment_mz"]));
     if (ckey.is_none() && csmiles.is_none()) || (cform.is_none() && cmass.is_none()) {
         return Err(Error::new("err.flow.screen.csv").with("file", name));
@@ -181,24 +222,46 @@ fn read_csv(name: &str, bytes: &[u8]) -> Result<(Vec<Entry>, usize)> {
         let get = |c: Option<usize>| c.and_then(|i| r.get(i)).map(String::as_str).unwrap_or("");
         let number = |c: Option<usize>| get(c).parse::<f64>().ok().filter(|v| v.is_finite());
         let formula = get(cform);
-        let mass = number(cmass).or_else(|| elements::parse_formula(formula).ok().map(|f| elements::mass(&f)));
+        let mass = number(cmass).or_else(|| {
+            elements::parse_formula(formula)
+                .ok()
+                .map(|f| elements::mass(&f))
+        });
         let key = get(ckey).to_ascii_uppercase();
         let Some(mass) = mass.filter(|m| *m > 0.0) else {
             skipped += 1;
             continue;
         };
         rows.push(Entry {
-            skeleton: if is_key(&key) { key[..14].to_string() } else { String::new() },
+            skeleton: if is_key(&key) {
+                key[..14].to_string()
+            } else {
+                String::new()
+            },
             inchikey: if is_key(&key) { key } else { String::new() },
             name: get(cname).to_string(),
             smiles: get(csmiles).to_string(),
-            formula: if formula.is_empty() { String::new() } else { hill(formula) },
+            formula: if formula.is_empty() {
+                String::new()
+            } else {
+                hill(formula)
+            },
             mass,
             rt: number(crt),
-            fragments: get(cfrag).split(';').filter_map(|v| v.trim().parse().ok()).collect(),
+            fragments: get(cfrag)
+                .split(';')
+                .filter_map(|v| v.trim().parse().ok())
+                .collect(),
             memberships: Vec::new(),
         });
     }
-    rows.sort_unstable_by(|a, b| a.mass.total_cmp(&b.mass).then_with(|| a.skeleton.cmp(&b.skeleton)).then_with(|| a.name.cmp(&b.name)).then_with(|| a.smiles.cmp(&b.smiles)).then_with(|| a.formula.cmp(&b.formula)));
+    rows.sort_unstable_by(|a, b| {
+        a.mass
+            .total_cmp(&b.mass)
+            .then_with(|| a.skeleton.cmp(&b.skeleton))
+            .then_with(|| a.name.cmp(&b.name))
+            .then_with(|| a.smiles.cmp(&b.smiles))
+            .then_with(|| a.formula.cmp(&b.formula))
+    });
     Ok((rows, skipped))
 }

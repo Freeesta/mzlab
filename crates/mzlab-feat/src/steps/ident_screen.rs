@@ -10,7 +10,10 @@ const TABLE_CEILING: u64 = 737_280;
 
 /// `screen.suspects`: mass and formula candidates from the lists of the user, with isomer groups and optional RT and MS2 fragment evidence.
 pub(super) fn suspects() -> Step {
-    let optional = |p: Port| Port { optional: true, ..p };
+    let optional = |p: Port| Port {
+        optional: true,
+        ..p
+    };
     Step {
         ins: vec![
             Port::new("table", DataType::Table, "Aligned feature table (.mzfeat)").requires(hr()),

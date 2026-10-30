@@ -114,6 +114,8 @@ pub mod flow_report;
 mod flow_run;
 mod flow_screen_suspects;
 #[cfg(test)]
+mod flow_screen_suspects_plan_tests;
+#[cfg(test)]
 mod flow_screen_suspects_tests;
 mod flow_set;
 mod flow_stats;

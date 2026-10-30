@@ -12,8 +12,22 @@ pub(crate) fn screen_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let has = |port: &str| job.inputs.iter().any(|(n, v)| n == port && !v.is_empty());
     let table = read_one(r, job, "table")?.1;
     let lists = read_all(r, job, "suspects")?;
-    let spectra = if has("spectra") { Some(read_one(r, job, "spectra")?.1) } else { None };
-    let formulas = if has("formulas") { read_all(r, job, "formulas")? } else { Vec::new() };
-    let text = screen_text(&params, &table, &named(&lists), spectra.as_deref(), &blobs(&formulas))?;
+    let spectra = if has("spectra") {
+        Some(read_one(r, job, "spectra")?.1)
+    } else {
+        None
+    };
+    let formulas = if has("formulas") {
+        read_all(r, job, "formulas")?
+    } else {
+        Vec::new()
+    };
+    let text = screen_text(
+        &params,
+        &table,
+        &named(&lists),
+        spectra.as_deref(),
+        &blobs(&formulas),
+    )?;
     write_made(r, job, text, DataType::Candidates)
 }
