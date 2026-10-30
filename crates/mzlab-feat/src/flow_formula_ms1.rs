@@ -18,9 +18,11 @@ fn param<'a>(params: &'a [(String, Value)], name: &str) -> Option<&'a Value> {
 pub const WARN_ION: &str = "warn.flow.formula.ion";
 
 fn opts(params: &[(String, Value)]) -> Opts {
-    let mut o = Opts::default();
-    o.z = param(params, "z").and_then(Value::f64).map(|z| z as i32);
-    o.tol_ppm = num(params, "tol_ppm");
+    let mut o = Opts {
+        z: param(params, "z").and_then(Value::f64).map(|z| z as i32),
+        tol_ppm: num(params, "tol_ppm"),
+        ..Opts::default()
+    };
     o.elements = param(params, "elements")
         .and_then(Value::str)
         .map(String::from);

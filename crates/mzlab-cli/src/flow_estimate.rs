@@ -54,12 +54,12 @@ pub fn estimate_text(recipe: &Recipe, name: &str, preview: &str) -> Result<Strin
     Ok(value_text(&Value::Obj(doc)))
 }
 
+/// What the file decided: name, value and proof.
+type Estimates = Vec<(String, Value, Value)>;
+
 /// The recipe a file is measured with: the profile and the polarity of the file (`nature`), then the parameters the plan writes. A value the descriptor
 /// fills in is not a choice of the plan: a negative or unit-resolution file is measured as one. With the estimates of what the file decided.
-fn recipe_of<R: ReadAt>(
-    job: &Job,
-    index: &mut Index<R>,
-) -> Result<(Recipe, Vec<(String, Value, Value)>)> {
+fn recipe_of<R: ReadAt>(job: &Job, index: &mut Index<R>) -> Result<(Recipe, Estimates)> {
     let nature = of_indexes(std::slice::from_ref(index));
     let mut estimates = Vec::new();
     let polarity = match nature.polarity.filter(|_| !written(job, "polarity")) {
