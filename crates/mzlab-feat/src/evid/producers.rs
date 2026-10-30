@@ -6,7 +6,7 @@ use mzlab_core::composition::isotope_ratios;
 use mzlab_core::elements::parse_formula;
 use mzlab_core::roles::PROTON;
 
-const D_13C: f64 = 1.003_355;
+const D_13C: f64 = mzlab_core::elements::C13_STEP;
 /// Windows to find the ions of a row in a file: m/z (ppm), RT (min) of the ion, RT (min) of the isotopologue from the apex of its light ion.
 const FIND_PPM: f64 = 5.0;
 const FIND_RT: f64 = 0.3;

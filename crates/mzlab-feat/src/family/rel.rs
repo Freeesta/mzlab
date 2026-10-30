@@ -129,7 +129,11 @@ impl Tables {
 }
 
 /// Isotope steps of `iimn.ISOTOPES` (only read by `readings`; the isotopologues of the file come from `isotopes`).
-const ISOTOPES: [(&str, f64); 3] = [("13C", 1.003355), ("34S/13C2", 1.99580), ("13C2", 2.00671)];
+const ISOTOPES: [(&str, f64); 3] = [
+    ("13C", mzlab_core::elements::C13_STEP),
+    ("34S/13C2", 1.99580),
+    ("13C2", 2.00671),
+];
 /// `ionfamily.NEUTRAL_LOSSES`, then the alkene losses of `iimn.EXTRA_LOSSES` that are not already there, in the order of `iimn.LOSSES`.
 const LOSSES: [&str; 23] = [
     "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF",

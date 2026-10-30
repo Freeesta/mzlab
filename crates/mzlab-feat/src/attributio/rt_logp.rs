@@ -34,17 +34,7 @@ pub struct Fitted {
 
 /// Median (the mean of the two middle values for an even count); NaN for none.
 pub fn median(v: &[f64]) -> f64 {
-    if v.is_empty() {
-        return f64::NAN;
-    }
-    let mut s = v.to_vec();
-    s.sortc_by(f64::total_cmp);
-    let n = s.len();
-    if n % 2 == 1 {
-        s[n / 2]
-    } else {
-        (s[n / 2 - 1] + s[n / 2]) / 2.0
-    }
+    mzlab_core::signal::median_or(v, f64::NAN)
 }
 
 /// Non-decreasing monotonic fit y ~ x (the expected y of each point, in the input order).

@@ -25,8 +25,7 @@
   "draw.export.filePrefix": "Prefisso del nome dei file scaricati (disegno_AAAA-MM-GG_HHMM.png): solo lettere minuscole senza accento.",
   "draw.export.transparentSuffix": "Suffisso del nome dei file con sfondo trasparente: solo lettere minuscole senza accento.",
   "app.title": "Titolo della scheda del browser; {app} = nome del programma (da appname.js). Le anteprime dei link usano il titolo scritto da tools/build_site.py.",
-  "help.header.app": "Paragrafo nel riquadro (i) con il link per scaricare l'app desktop (nascosto nell'app desktop).",
-  "help.header.body": "Riquadro del pulsante (i) dell'intestazione: gratuito, open source, nessun dato caricato, versione in lavorazione, indirizzo per suggerimenti; {app} = nome del programma.",
+  "help.header.body": "Riquadro del pulsante (i) dell'intestazione: gratuito, open source, nessun dato caricato, versione in lavorazione, indirizzo per suggerimenti (tre paragrafi, solo questi); {app} = nome del programma.",
   "header.about": "Titolo e testo alternativo del pulsante «i» in alto a destra; {app} = nome del programma.",
   "phone.about.title": "Titolo della scheda «i» sullo smartphone; {app} = nome del programma.",
   "bt.copied": "Nota nella finestra di aiuto di BioTransformer: lo SMILES del disegno è stato copiato negli appunti; {smiles} = SMILES (abbreviato).",
@@ -376,6 +375,8 @@
   "lw.hover.lib": "Etichetta al passaggio del puntatore su un picco di libreria dello specchio; {mz} = m/z, {it} = intensità relativa in %.",
   "lw.hover.pair": "Seguito dell'etichetta del picco: il picco appaiato dall'altra parte; {mz} = suo m/z, {d} = differenza con segno.",
   "lw.mol.aria": "Etichetta accessibile del disegno della struttura; {name} = nome del candidato.",
+  "lw.th.aria": "Etichetta accessibile del pulsante che ingrandisce la miniatura della struttura di una riga; {name} = nome del candidato.",
+  "lw.th.bigAria": "Etichetta accessibile della struttura ingrandita; {name} = nome del candidato.",
   "lw.sort": "Suggerimento di un'intestazione ordinabile; {col} = nome della colonna.",
   "lw.tab.an": "Scheda degli analoghi; {n} = numero.",
   "lw.tab.cand": "Scheda dei candidati; {n} = numero.",
@@ -774,7 +775,9 @@
   "bn.idn.dl": "Nome accessibile e tooltip dell'icona di scarico; {name} = nome e versione della libreria.",
   "bn.idn.site": "Nome accessibile e tooltip dell'icona del globo; {name} = nome e versione della libreria.",
   "canali.btn.aria": "Nome accessibile del pulsante dei canali; {n} = numero di canali tracciati.",
-  "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di scansioni, {a} e {b} = RT iniziale e finale in minuti.",
+  "canali.row": "Descrizione letta da screen reader di una riga dell'albero dei canali; {et} = etichetta del canale, {n} = numero di punti (scansioni), {a} e {b} = tempo iniziale e finale in minuti.",
+  "canali.kind.aria": "Nome accessibile del pulsante che sceglie cosa traccia il cromatogramma; {v} = testo del pulsante (per esempio TIC o TIC + 1).",
+  "canali.tip.time": "Riga del suggerimento di un canale con il suo intervallo di tempo; {a} e {b} = tempo iniziale e finale in minuti.",
   "cap.missing": "Avviso accanto a un comando disattivato perché il browser non ha la funzione; {funzione} = nome della funzione (es. Mappa 3D); segue il link all'app.",
   "calc.add.hitDa": "Riga sopra la tabella degli addotti in bassa risoluzione quando l'm/z osservata combacia; {adduct} con apici (HTML), {ppm} scarto in Da con segno e due decimali.",
   "calc.add.noneDa": "Riga sopra la tabella in bassa risoluzione quando nessun addotto combacia; {tol} = tolleranza in Da.",
@@ -790,5 +793,6 @@
   "normative.dl.err.catalog": "Errore di download delle liste normative: il catalogo non è valido; {detail} = dettaglio tecnico.",
   "normative.dl.err.http": "Errore di download delle liste normative: risposta HTTP del sito; {status} = codice (es. 404).",
   "normative.dl.err.hash": "Errore di download delle liste normative: un pezzo o il file intero non ha l'impronta SHA-256 attesa; {what} = quale.",
-  "normative.dl.progress": "Avanzamento dello scaricamento delle liste normative; {piece} = pezzo in corso, {pieces} = pezzi in tutto."
+  "normative.dl.progress": "Avanzamento dello scaricamento delle liste normative; {piece} = pezzo in corso, {pieces} = pezzi in tutto.",
+  "normative.lib.coverage": "Copertura di una lista nella finestra Librerie; {entries} = voci della lista, {screenable} = voci con struttura cercate, {groups} = gruppi e miscele, {inorganic} = voci inorganiche."
 }

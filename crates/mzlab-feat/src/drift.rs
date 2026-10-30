@@ -116,12 +116,7 @@ pub fn batches_of(samples: &[Sample], d: &Disegno) -> Vec<String> {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    crate::sortc::by(&mut v, f64::total_cmp);
-    match v.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => v[n / 2],
-        n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
-    }
+    mzlab_core::signal::median_or_in(&mut v, f64::NAN)
 }
 
 impl Drift {

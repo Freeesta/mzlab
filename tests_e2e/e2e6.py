@@ -33,7 +33,7 @@ try:
         def helpq():
             assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); shown("#helppop")
-            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "federico.cristaudo@unito.it" in tx, tx[:200]
+            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "fedecrista@gmail.com" in tx, tx[:200]
             tg = r.teoria(pg); assert "MRM" in tg and len(tg) > 1000, tg[:200]      # a real chapter of the Teoria opens
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); gone("#helppop"); assert not pg.is_visible("#helppop")

@@ -15,7 +15,7 @@ pub fn round_to(x: f64, nd: i32) -> f64 {
     format!("{:.*}", nd as usize, x).parse().unwrap_or(x)
 }
 
-const ION_H: f64 = 1.00727646677;
+const ION_H: f64 = mzlab_core::elements::PROTON;
 const LOSS_H2O: f64 = 18.010564684;
 const LOSS_CO: f64 = 27.994914622;
 const LOSS_CO2: f64 = 43.989829244;
