@@ -198,6 +198,26 @@ fn method_and_span_reach_the_engine() {
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// The library function the browser module calls (`mzlab_feat::flow_drift::drift_text`, bytes in, text out) writes the bytes of the file the plan writes.
+#[test]
+fn the_library_text_is_the_file_of_the_plan() {
+    let (files, areas) = series();
+    let d = dir("lib", &files, &areas);
+    let (table, samples, design) = (
+        std::fs::read(d.join("table.mzfeat")).unwrap(),
+        std::fs::read(d.join("samples.json")).unwrap(),
+        std::fs::read(d.join("design.json")).unwrap(),
+    );
+    for given in ["{}", r#"{"method":"loess","span":0.8}"#] {
+        let from_plan = run(&d, given);
+        let params = mzlab_feat::flow_ms2::json_params(given).unwrap();
+        let from_lib =
+            mzlab_feat::flow_drift::drift_text(&params, &table, &samples, &design).unwrap();
+        assert_eq!(from_plan.as_bytes(), from_lib.as_bytes());
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
 /// The error key the provenance records for the step when the correction is refused, and no output file.
 fn refused(tag: &str, edit: impl Fn(&mut Vec<File>)) -> String {
     let (mut files, areas) = series();

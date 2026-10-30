@@ -80,6 +80,11 @@
       if (m && m[1] !== "data" && m[1] !== "draw") history.replaceState(null, "", location.pathname + location.search + "#/data");
     } catch (e) { /* old browser */ }
   }
+  // the Tabui and Flow tabs written in index.html have nothing behind them here
+  document.addEventListener("DOMContentLoaded", function () {
+    var late = document.querySelectorAll("#nav [data-late]");
+    for (var i = 0; i < late.length; i++) late[i].remove();
+  });
   route();
   addEventListener("hashchange", route);
 })();

@@ -63,3 +63,4 @@ fuzz/artifacts/
 
 # Libro editor bundle: build-only dependencies
 tools/libro/editor/node_modules/
+.insilico-fonti/

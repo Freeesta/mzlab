@@ -310,7 +310,7 @@ pub(super) fn drift() -> Step {
         outs: vec![Port::new("table", DataType::Table, "Table view with a factor for every cell")],
         params,
         runs_in: RunsIn {
-            wasm: Some("table"),
+            wasm: Some("flowtab"),
             wasm_ceiling_bytes: Some(FEAT_CEILING),
             native: true,
         },
