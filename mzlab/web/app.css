@@ -490,3 +490,12 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #fsel:empty{width:16ch}
 /* first paint: the side panel is open next to the landing, except below 900 px where it would replace it (barra.js takes over at once) */
 @media (max-width:899.98px){#v-data.sb-first{grid-template-columns:minmax(0,1fr)}#v-data.sb-first #dfiles{display:none}}
+
+/* landing: a big central drop zone; the empty side list says a plain sentence; the toolbar buttons that wait for data are plainly grey */
+#start{max-width:900px}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
+#fl-hint{margin:14px 12px;min-height:4.5em;width:0;min-width:calc(100% - 24px);box-sizing:border-box;text-align:center;line-height:1.5}#fl-hint[hidden]{display:none}#sb-pane.dz-over #fl-hint{display:none}
+#tools :is(button,select):disabled{color:var(--muted);background:var(--soft);border-color:var(--line);cursor:not-allowed;opacity:1;box-shadow:none}#tools :is(button,select):disabled:hover{border-color:var(--line);background:var(--soft)}
+/* landing: the progress box floats over the gap above the drop zone, so the zone never moves or resizes when it appears */
+#v-workspace[data-work=landing] #wdata{position:relative}#v-workspace[data-work=landing] #up{position:absolute;left:0;right:0;top:0;z-index:2}
+/* side list: the m/z child rows of an MS2 (or MRM) file are as compact as the Full scan rows; the checkbox and the m/z label stay clickable at 20 px rows (inline styles of explore.js need !important) */
+#flst .fl:has(>.pr-container){row-gap:0}#flst .pr-container{margin-top:0!important}#flst .pr-container .fl.pr{padding-top:0;padding-bottom:0;margin-bottom:0!important;min-height:20px!important;align-items:center}#flst .pr-container .fl.pr input[type=checkbox]{margin-top:0;margin-bottom:0}
