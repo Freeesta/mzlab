@@ -231,3 +231,31 @@ fn the_synthetic_variants_that_are_broken_are_caught() {
         );
     }
 }
+
+#[test]
+fn scan_start_time_in_seconds_by_unit_name_or_accession() {
+    let minute = "unitAccession=\"UO:0000031\" unitName=\"minute\"";
+    let rts = |unit: &str| -> Vec<Option<f64>> {
+        let b = String::from_utf8(written(false, Opzioni::default(), true))
+            .unwrap()
+            .replace(minute, unit);
+        let mut got = Vec::new();
+        analizza(b.as_bytes(), &mut |i| {
+            if let Item::Spectrum(s) = i {
+                got.push(s.rt)
+            }
+        })
+        .unwrap();
+        got
+    };
+    let minutes = rts(minute);
+    assert_eq!(minutes[1], Some(1.5));
+    let in_min = |v: &[Option<f64>]| v.iter().map(|r| r.map(|x| x * 60.0)).collect::<Vec<_>>();
+    for unit in [
+        "unitAccession=\"UO:0000010\"",
+        "unitName=\"second\"",
+        "unitAccession=\"UO:0000010\" unitName=\"second\"",
+    ] {
+        assert_eq!(in_min(&rts(unit)), minutes, "{unit}");
+    }
+}

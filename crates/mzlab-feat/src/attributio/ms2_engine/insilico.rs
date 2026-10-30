@@ -11,7 +11,7 @@ use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::score_terms::ScoreTerms;
 
-const PROTON: f64 = 1.00727646677;
+const PROTON: f64 = mzlab_core::elements::PROTON;
 const W_MASS: f64 = 0.421;
 const W_INT: f64 = 0.1307;
 

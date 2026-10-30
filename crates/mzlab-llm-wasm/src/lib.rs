@@ -61,18 +61,8 @@ pub fn chart_presets(sources_json: &str) -> Result<String, String> {
 
 pub(crate) fn fail(e: Error) -> String {
     let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"error\":")
-        .str(e.key)
-        .raw(",\"error_key\":")
-        .str(e.key)
-        .raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        if i > 0 {
-            o.raw(",");
-        }
-        o.str(k).raw(":").str(v);
-    }
-    o.raw("}}");
+    o.raw("{\"error\":").str(e.key).raw(",");
+    o.raw(&e.to_json()[1..]);
     o.0
 }
 

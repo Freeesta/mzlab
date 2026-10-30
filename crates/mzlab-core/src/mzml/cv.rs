@@ -38,7 +38,7 @@ impl Cur {
         if self.in_analyzer {
             out.item(Item::Analyzer(name.to_string()), f)?;
         }
-        let seconds = unit.starts_with("second") || unit_acc == "UO:0000010";
+        let seconds = super::is_seconds(Some(unit), Some(unit_acc));
         if let (Scope::Chromatogram, Some(c)) = (self.scope, self.chrom.as_mut()) {
             match acc {
                 "MS:1000812" | "MS:1000813" => c.pda = true,

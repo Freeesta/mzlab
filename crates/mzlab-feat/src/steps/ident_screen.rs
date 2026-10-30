@@ -28,14 +28,16 @@ pub(super) fn suspects() -> Step {
             Param::number("rt_window_min", "RT window").min(0.0).unit("min").doc("Drops a candidate whose listed RT is farther than this from the feature; off when empty"),
             Param::integer("min_fragments", "Fragments needed").min(0.0).doc("Keeps a candidate only if this many of its listed fragments are in the MS2; off when empty"),
             Param::integer("max_hits_per_feature", "Formulas per feature").min(1.0).default_num(10.0).doc("Most formula groups kept per feature, the closest in mass first"),
+            Param::text("lists", "Regulatory lists").doc("Ids of the lists of a regulatory package to screen, comma-separated; empty: every list in force"),
+            Param::text("include", "Also screen").doc("Statuses added to the lists in force: proposal, draft, reference; empty: none"),
             Param::number("ms2_rt_min", "MS2 RT tolerance").min(0.0).default_num(0.2).unit("min").doc("Without feature ids in the spectra: largest RT distance between a scan and the feature").advanced(),
         ],
         runs_in: RunsIn { wasm: Some(TABLE_WASM), wasm_ceiling_bytes: Some(TABLE_CEILING), native: true },
-        errors: vec!["err.flow.screen.mzsus", "err.flow.screen.csv", "err.flow.screen.adduct", "err.flow.screen.polarity", "err.flow.port.missing", "error.badMzfeat"],
+        errors: vec!["err.flow.screen.mzsus", "err.flow.screen.csv", "err.flow.screen.adduct", "err.flow.screen.polarity", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.port.missing", "error.badMzfeat"],
         ..attributio_step(
             "screen.suspects",
             "Find suspects",
-            "Searches the aligned feature table in the suspect lists you give by neutral mass for each adduct. Listed structures with the same formula are one isomer group, never one name. Candidates with their evidence, Level 5 (mass and formula) or 4 (also a candidate formula); no verdict.",
+            "Searches the aligned feature table in the suspect lists you give by neutral mass for each adduct. Listed structures with the same formula are one isomer group, never one name. A regulatory package adds the lists naming each candidate. Candidates with their evidence, Level 5 (mass and formula) or 4 (also a candidate formula); no verdict.",
         )
     }
 }

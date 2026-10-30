@@ -6,7 +6,6 @@
 use js_sys::{Function, Uint8Array};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
-use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 pub mod core;
@@ -18,13 +17,7 @@ pub mod rows_mgf;
 const BRIDGE: &str = "mzfeat-table/1";
 
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 #[wasm_bindgen]
