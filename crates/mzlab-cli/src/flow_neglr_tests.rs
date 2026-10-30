@@ -290,7 +290,6 @@ fn cells(csv: &str) -> std::collections::BTreeMap<(String, String), String> {
 }
 
 #[test]
-#[ignore = "gap NL-8: the samples file is read by position, so a list in another order than the files of the table moves the values under other files (MATRICE_NEG_LR.md)"]
 fn gap_the_samples_are_matched_to_the_files_of_the_table_by_name() {
     let tail = r#",{"id":"csv","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}}]}"#;
     let mut got = Vec::new();
@@ -311,4 +310,38 @@ fn gap_the_samples_are_matched_to_the_files_of_the_table_by_name() {
         let _ = std::fs::remove_dir_all(&d);
     }
     assert_eq!(got[0], got[1]);
+}
+
+#[test]
+fn a_sample_naming_a_file_the_table_lacks_is_refused_with_its_name() {
+    let tail = r#",{"id":"csv","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}}]}"#;
+    let d = fixture("nl_ghost", 1, true);
+    let files: Vec<_> = NAMES
+        .iter()
+        .enumerate()
+        .map(|(i, n)| {
+            (
+                if i == 0 {
+                    "ghost.mzML".to_string()
+                } else {
+                    format!("{n}.mzML")
+                },
+                String::new(),
+                String::new(),
+            )
+        })
+        .collect();
+    let text = mzlab_core::campioni::to_json(&mzlab_core::campioni::proponi(&files));
+    std::fs::write(d.join("samples.json"), text).unwrap();
+    let prov = run(&d, &with(tail));
+    assert_eq!(error_of(&prov, "csv").as_deref(), Some("error.badCampioni"));
+    let params = activity(&prov, "csv")
+        .get("error")
+        .and_then(|e| e.get("params"))
+        .map(|p| format!("{p:?}"));
+    assert!(
+        params.as_deref().is_some_and(|p| p.contains(NAMES[0])),
+        "{params:?}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
 }

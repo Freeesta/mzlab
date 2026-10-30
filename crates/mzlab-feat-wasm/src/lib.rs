@@ -409,12 +409,14 @@ pub fn run_hypotheses(
 }
 
 #[cfg(feature = "proofs")]
-/// The roles of the files from a `campioni/2` (None or empty = only the minutes, as before).
+/// The roles of the files from a `campioni/2` put in the order of the files of the table `names` (None or empty = only the minutes, as before).
 fn roles_of(
     campioni: Option<&str>,
+    names: &[String],
 ) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
     match campioni.filter(|c| !c.is_empty()) {
-        Some(c) => mzlab_feat::tp::TpRoles::from_json(c)
+        Some(c) => mzlab_core::campioni::order_like(c, names)
+            .and_then(|c| mzlab_feat::tp::TpRoles::from_json(&c))
             .map(Some)
             .map_err(js_err),
         None => Ok(None),
@@ -445,13 +447,14 @@ pub fn build_evidence_to(
     mzidx_sizes: Option<Vec<f64>>,
 ) -> std::result::Result<String, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let roles = roles_of(campioni.as_deref())?;
-    let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
-    let budget = MemBudget::from_request(budget_mb);
     let mut table = JsReader {
         read: table_read,
         k: 0,
     };
+    let names = mzlab_feat::store::table_names(&mut table, table_size as u64).map_err(js_err)?;
+    let roles = roles_of(campioni.as_deref(), &names)?;
+    let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
+    let budget = MemBudget::from_request(budget_mb);
     to_sink(write, |sink| {
         let size = table_size as u64;
         let mut files = stored.map(|files| JsStored { files });
@@ -492,7 +495,8 @@ pub fn build_evidence(
     campioni: Option<String>,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let roles = roles_of(campioni.as_deref())?;
+    let names = mzlab_feat::store::table_names(&mut mzlab_feat::store::Slice(table), table.len() as u64).map_err(js_err)?;
+    let roles = roles_of(campioni.as_deref(), &names)?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();

@@ -34,7 +34,7 @@ Native = `flow run` (and the desktop app); Browser = «This browser». Columns: 
 | table.pca | D / D / D / D | — | needs more samples than the fixture (`err.stat.pca.few`), polarity-free |
 | table.kmd, table.plausible | R / R / R / R | — | `every_table_step…`; `flow_kmd_tests` and `flow_plausible_tests` read the unit axis |
 | features.ms2_link | — | ? / ? / ? / ? | page only; LR tolerance: LR-TOL |
-| export.table_csv | P / P / P / P | P / P / P / P | `e2e_flow_neg_lr`; samples by position: B-8 |
+| export.table_csv | P / P / P / P | P / P / P / P | `e2e_flow_neg_lr` (series in injection order), `gap_the_samples_are_matched_to_the_files_of_the_table_by_name` |
 | export.mztab | P / P / P / P | P / P / P / P | `every_table_step…` (polarity word), `export_mztab.rs::same_bytes_every_time_and_negative_polarity`, `e2e_flow_neg_lr` |
 | export.inclusion | P / B-10 / W / B-10 | — | `the_inclusion_list_takes_a_negative_adduct` (adduct written); default adduct and wiring: NL-10 |
 | features.table | R / R / R / R | — | `formula_plan` of `flow_neglr_tests` |
@@ -63,8 +63,8 @@ Native = `flow run` (and the desktop app); Browser = «This browser». Columns: 
 
 ## 4. Gaps ranked by user impact
 
-1. **NL-8 — samples matched by position, files ordered by name in the browser (broken, both sides; worst in the browser).** `mzlab_feat_table_wasm::core::load` checks only that the samples file has as many rows as the table has files (`core.rs:21`), then pairs them by position. The browser runner lists the OPFS indexes in name order (`flow/lazy/flow-web-run.js:38`) and replaces the plan's scan inputs with them (`flow-live.js:86-107`), while the samples grid keeps the order of the files open in Data.
-   With injection-order names such as T2p5 and T10p25 (name order T00, T10p25, T2p5, T5, blank), every CSV and mzTab column is labelled with another file's name and tp.link reads the wrong blank and t0: tp.filter hid ids [1,3,4] in the browser and [4] natively, tp.position lost every row. Silent. Evidence: `gap_the_samples_are_matched_to_the_files_of_the_table_by_name` (native, reversed samples file) and the first runs of `e2e_flow_neg_lr` before its series was put in name order.
+1. **NL-8 — samples matched to the files of the table by name (closed, both sides).** Every step that holds a table puts the samples document in the order of the table's files first: `mzlab_core::campioni::order_like` on the names the `.mzfeat` records (meta `inputs`), matched with or without folders and file extensions; a table file with no sample, or a sample naming no file of the table, is `error.badCampioni` with the name in `file`. Callers: `core::load` and `tp_table_cond_json` of the table `.wasm` (export.table_csv, export.mztab, table.filter, table.match and the views), `TpRoles::for_table` (tp.link native and browser), tp.network, tp.dig_lr (the names of its indexes), the proofs of the feat `.wasm`; table.stats, quant.calibrate and qc.mass_accuracy already matched by name.
+   Evidence: `gap_the_samples_are_matched_to_the_files_of_the_table_by_name` (reversed samples file, same CSV), `a_sample_naming_a_file_the_table_lacks_is_refused_with_its_name`, `e2e_flow_neg_lr` with the series in injection order (T00, T2p5, T5, T10p25 against the OPFS name order).
 2. **NL-7 — the browser does not read the polarity or the unit mass of the files (broken, browser).** `flow run` takes them from the indexes (`flow_nature.rs`); the browser runner passes `polarity: NaN` when the plan does not write it (`flow-live-jobs.js:272-273`).
    The page writes them from the files open in Data (`inheritNature`, `flow-samples.js`), so an imported or hand-built plan, or a plan run with the Data tab empty, runs negative files as positive: `err.flow.link.parent` (mz 241.064) in HR- and LR-, and in LR+ tp.generate keeps the HR masses (92 native hypotheses, 145 in the browser). Evidence: `NEG_LR_UNWRITTEN=1 python3 tests_e2e/e2e_flow_neg_lr.py`.
 3. **NL-2 — formula.ms1 keeps [M+H]+ on negative files (broken, native).** The sign comes only from the `ion` parameter (`crates/mzlab-feat/src/flow_formula_ms1.rs:95`, default [M+H]+): every row of a negative series ends in `err.flow.formula.scan`. Evidence: `gap_formula_ms1_takes_the_ion_of_the_polarity_of_the_files`. The browser executor (`flow/lazy/flow-web-ident.js`, formula `.wasm`) runs the same Rust: not run in negative here.
@@ -86,4 +86,3 @@ Native = `flow run` (and the desktop app); Browser = «This browser». Columns: 
 - `screen.suspects` (not in the registry).
 - Real 3200 QTRAP files (negative or positive) and real HR negative files: only synthetic data were used in this public audit.
 - The desktop app itself: `flow run` was used as the native side (the app calls the same `FileRunner`); no test drove the Tauri window.
-- The ordering of the samples grid of the page against the OPFS order in a real session (NL-8 is proven on the engines; the page path is read from the code).

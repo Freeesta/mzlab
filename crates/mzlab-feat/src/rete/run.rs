@@ -72,14 +72,17 @@ pub fn network_text<T: ReadAt, P: ReadAt>(
     rules: &[u8],
     params: &ReteParams,
 ) -> Result<String> {
-    let (aligned, _) = read_table_from(table.0, table.1)?;
+    let (aligned, table_meta) = read_table_from(table.0, table.1)?;
     if aligned.tp.is_empty() || aligned.tp.parent_row == NO_PARENT {
         return Err(Error::new("error.tpNoBlock"));
     }
     let roles = if campioni.trim().is_empty() {
         None
     } else {
-        Some(TpRoles::from_json(campioni)?)
+        let names = crate::store::input_names(&table_meta);
+        Some(TpRoles::from_json(&mzlab_core::campioni::order_like(
+            campioni, &names,
+        )?)?)
     };
     let tmax = strongest_times(&aligned, roles.as_ref());
     let (meta, ids) =

@@ -37,6 +37,12 @@ pub fn recipe_polarity<R: ReadAt>(r: &mut R, size: u64) -> Result<i32> {
     })
 }
 
+/// The samples text with its files in the order of the files of the table (`campioni::order_like` on the names its meta records): the readers pair them by position.
+pub fn samples_like<R: ReadAt>(r: &mut R, size: u64, bytes: &[u8]) -> Result<String> {
+    let names = mzlab_feat::store::table_names(r, size)?;
+    campioni::order_like(&String::from_utf8_lossy(bytes), &names)
+}
+
 /// The samples as `campioni/1` text, whichever of the schemas the file has (`campioni/3` too: its batch and matrix are read by `filterspec`).
 pub fn samples_v1(bytes: &[u8]) -> Result<String> {
     let doc = parse(bytes)?;

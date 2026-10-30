@@ -332,6 +332,25 @@ pub fn origin_from_meta(meta: &Value) -> Origin {
     }
 }
 
+/// The names of the files of a table, in the order of its columns, from its meta; empty when the meta does not record one name per file.
+pub fn input_names(meta: &Value) -> Vec<String> {
+    let names: Vec<String> = origin_from_meta(meta)
+        .inputs
+        .into_iter()
+        .map(|(n, _)| n)
+        .collect();
+    if meta.get("files").and_then(|v| v.f64()) == Some(names.len() as f64) {
+        names
+    } else {
+        Vec::new()
+    }
+}
+
+/// `input_names` of a `.mzfeat` read by offsets: only its meta is read.
+pub fn table_names<R: ReadAt>(r: &mut R, size: u64) -> Result<Vec<String>> {
+    Ok(input_names(&open(r, size, "table")?.meta))
+}
+
 /// Where the values of the `f64` array `name` of a `.mzfeat` lie in `bytes`, for a copy of the file that replaces them in place (same length, same meta: the format does not change).
 pub fn f64_column_span(bytes: &[u8], name: &str) -> Result<std::ops::Range<usize>> {
     let size = bytes.len() as u64;
