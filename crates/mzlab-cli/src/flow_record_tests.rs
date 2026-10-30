@@ -54,6 +54,10 @@ fn report(
     o.raw(",\"bytes\":")
         .int(bytes.len() as i64)
         .raw("}],\"ms\":1");
+    // the series is unit resolution: the page tells the record so, as `flow run` does
+    if instance == "det" {
+        o.raw(",\"preset\":\"lr\"");
+    }
     if let Some(m) = meta {
         let v = mzlab_core::json::parse(m.as_bytes()).unwrap();
         o.raw(",\"estimates\":")
