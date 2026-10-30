@@ -116,7 +116,7 @@ async function load(/** @type {PannelloMappa} */ p) {
     const m = MAPPA.st(p);
     // a feature was chosen: the RT window goes to the edges of its peak, then the plots are asked again
     if (s.fresh && m.fq && tr) {
-      s.fresh = false; const ed = autoEdges({ x: tr.rt, y: tr.y }, m.fq.rt); m.fedges = ed ? { rt0: ed[0], rt1: ed[1], auto: true } : null;
+      s.fresh = false; const ed = await autoEdges({ x: tr.rt, y: tr.y }, m.fq.rt); m.fedges = ed ? { rt0: ed[0], rt1: ed[1], auto: true } : null;
       if (ed) { s.box.rt0 = ed[0]; s.box.rt1 = Math.max(ed[1], ed[0] + MIN_RT); clampBox(p, s.box); changed(p); return; }
     }
     s.spec = { mz: sj.mz, y: sj.y, rt0: b.rt0, rt1: b.rt1, n: sj.n }; s.win = b; s.num = measure(s.xic, s.spec, b);
