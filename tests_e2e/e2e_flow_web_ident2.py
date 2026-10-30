@@ -110,7 +110,8 @@ NEG = ["neg_" + n for n in NAMES]
 for n, m in zip(NAMES, NEG):
     t = (run / (n + ".mzML")).read_text().replace('MS:1000130" name="positive scan"', 'MS:1000129" name="negative scan"').replace("FTMS + p", "FTMS - p")
     (run / (m + ".mzML")).write_text(t); shutil.copy2(run / (m + ".mzML"), data / (m + ".mzML"))
-CSV = next(out.glob("csv*.csv")).read_text()
+# the file columns of the table name the negative files
+CSV = next(out.glob("csv*.csv")).read_text().replace("datafile:SIN_", "datafile:neg_SIN_")
 (run / "feat.csv").write_text(CSV)
 NEG_FILES = ["file:" + m + ".mzML" for m in NEG]
 PLAN_NEG = {"format": "mzflow/2", "inputs": [{"name": m + ".mzML", "sha256": "", "type": "raw"} for m in NEG] + [{"name": "feat.csv", "sha256": "", "type": "report"}],
