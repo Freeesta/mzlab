@@ -2,6 +2,7 @@
 //! with the level and the evidence `annot.level` decided. Bytes in, text out: `flow run` (`mzlab-cli`) and the browser module `flowtab` (`mzlab-feat-wasm`) both call it, so they write the same bytes.
 //! It adds no identity and raises no level. A candidate joins its feature by id, the rule of `annot.level` (query id = feature id as text); a row that cannot be joined keeps an empty `feature_id`.
 
+use crate::aligned::Aligned;
 use crate::store::read_table;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Value};
@@ -342,6 +343,36 @@ fn best_first(a: &Row, b: &Row) -> std::cmp::Ordering {
     s(b).total_cmp(&s(a))
 }
 
+/// The 18 cells of one row, in the order of `HEADER`.
+fn cells_of(r: &Row, d: Option<&Decision>, rank: usize, table: &Aligned) -> [String; 18] {
+    let at = r.feature.checked_sub(1);
+    let (mz, rt) = (at.map(|i| table.mz[i]), at.map(|i| table.rt[i]));
+    [
+        if r.feature > 0 {
+            r.feature.to_string()
+        } else {
+            String::new()
+        },
+        fmt(mz, 6),
+        fmt(rt, 4),
+        d.map_or(String::new(), |d| d.level.clone()),
+        d.map_or(String::new(), |d| d.why.clone()),
+        METHODS[r.method].to_string(),
+        rank.to_string(),
+        r.name.clone(),
+        r.inchikey.clone(),
+        r.formula.clone(),
+        r.adduct.clone(),
+        fmt(r.score, 6),
+        r.score_name.clone(),
+        fmt(r.delta_ppm, 3),
+        fmt(r.delta_rt, 3),
+        fmt(r.fragments, 0),
+        r.listed_in.clone(),
+        r.source.clone(),
+    ]
+}
+
 /// `export.annotations`: the CSV of the inputs under `p`.
 pub fn export_made(p: &Params, inp: &Inputs) -> Result<Made> {
     let min =
@@ -407,35 +438,7 @@ pub fn export_made(p: &Params, inp: &Inputs) -> Result<Made> {
         if r.feature == 0 {
             unjoined += 1;
         }
-        let (mz, rt) = if r.feature > 0 {
-            (Some(table.mz[r.feature - 1]), Some(table.rt[r.feature - 1]))
-        } else {
-            (None, None)
-        };
-        let cells = [
-            if r.feature > 0 {
-                r.feature.to_string()
-            } else {
-                String::new()
-            },
-            fmt(mz, 6),
-            fmt(rt, 4),
-            d.map_or(String::new(), |d| d.level.clone()),
-            d.map_or(String::new(), |d| d.why.clone()),
-            METHODS[r.method].to_string(),
-            rank.to_string(),
-            r.name.clone(),
-            r.inchikey.clone(),
-            r.formula.clone(),
-            r.adduct.clone(),
-            fmt(r.score, 6),
-            r.score_name.clone(),
-            fmt(r.delta_ppm, 3),
-            fmt(r.delta_rt, 3),
-            fmt(r.fragments, 0),
-            r.listed_in.clone(),
-            r.source.clone(),
-        ];
+        let cells = cells_of(r, d, rank, &table);
         let line: Vec<String> = cells.iter().map(|c| quote(c, sep)).collect();
         csv.push_str(&line.join(&sep.to_string()));
         csv.push('\n');
