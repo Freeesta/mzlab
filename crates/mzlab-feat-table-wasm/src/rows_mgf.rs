@@ -23,6 +23,9 @@ pub fn spec_text(params: &[(String, Value)]) -> String {
     o.0
 }
 
+/// Upper bound of the files whose indexes are read for the polarity.
+const MAX_FILES: usize = 4096;
+
 /// The MGF of the rows with a spectrum. `samples` is the samples file as it is (either schema), `params` the resolved parameters of the step, `open(k)` the index of file `k`.
 pub fn rows_mgf<R: ReadAt, I: ReadAt>(
     r: &mut R,
@@ -30,10 +33,13 @@ pub fn rows_mgf<R: ReadAt, I: ReadAt>(
     samples: &[u8],
     params: &[(String, Value)],
     table_sha256: &str,
-    open: impl FnMut(usize) -> Result<Index<I>>,
+    mut open: impl FnMut(usize) -> Result<Index<I>>,
 ) -> Result<String> {
     let samples = pol::samples_v1(samples)?;
-    let polarity = pol::recipe_polarity(r, size)?;
+    // the recipe, else the sign of the files (`pol::of_table`, the rule of the exports): a negative series is searched as negative
+    let files: Vec<_> = (0..MAX_FILES).map_while(|k| open(k).ok()).collect();
+    let polarity = pol::of_table(r, size, &files)?;
+    drop(files);
     let mgf = core::ms2_file(
         r,
         size,

@@ -26,7 +26,7 @@ pub fn of_table<R: ReadAt, I: ReadAt>(r: &mut R, size: u64, indexes: &[Index<I>]
     Ok(if sum < 0 { -1 } else { 1 })
 }
 
-/// The polarity the recipe of the table says (`-1` or `1`; positive when it names none): what `table.match` writes its MGF in.
+/// The polarity the recipe of the table says (`-1` or `1`; positive when it names none), for callers that hold no file indexes.
 pub fn recipe_polarity<R: ReadAt>(r: &mut R, size: u64) -> Result<i32> {
     let (_, meta) = read_table_from(r, size)?;
     let recipe = meta.get("recipe").and_then(|v| v.str()).unwrap_or("");
