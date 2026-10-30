@@ -266,6 +266,7 @@
     "../../flow/lazy/flow-web-ident.js",
     "../../flow/lazy/flow-web-insilico.js",
     "../../flow/lazy/flow-web-drift.js",
+    "../../flow/lazy/flow-web-inclusion.js",
     "../../flow/lazy/flow-web-qc.js",
     "../../flow/lazy/flow-web-suspects.js",
     "../../flow/lazy/flow-msn-molecule.js",

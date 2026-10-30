@@ -455,8 +455,7 @@
                 "anyOf":[
                   {
                     "type":"string",
-                    "default":"[M+H]+",
-                    "description":"Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct"
+                    "description":"Adducts of the ion table separated by commas, or a list of your own as a CSV with the header name;delta;charge;comment; one row per product and adduct; left empty it is [M-H]- for products linked in negative mode and [M+H]+ otherwise"
                   },
                   {
                     "type":"number",
