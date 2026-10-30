@@ -61,7 +61,8 @@ const OPENNOW = /** @type {any} */ ((() => {
         } catch (e_) { f.use = false; fail(e_); } finally { cur = ""; }
       }
       if (late) await boot();
-    } finally { busy = 0; FILETAB.soon(); calm.splice(0).forEach(ok => ok()); }
+    // stopped behind a file dropped earlier that is still read: try again soon (its end may come with no other call to drain)
+    } finally { busy = 0; FILETAB.soon(); if (q.length) setTimeout(drain, 150); else calm.splice(0).forEach(ok => ok()); }
   }
   /** the file `name` (a row of ST.files) is read: open it, unless the student set it aside */
   function add(/** @type {string} */ name) { q.push(name); drain(); }
