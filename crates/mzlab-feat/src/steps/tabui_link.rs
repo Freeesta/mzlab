@@ -112,7 +112,8 @@ fn isomer_traces() -> Algorithm {
 pub(super) fn position() -> Step {
     Step {
         ins: vec![
-            Port::new("tp", DataType::Tp, "Product row with its consensus MS2").requires(any_resolution()),
+            // HR only: the fragments are matched at 5 ppm (`interp::sito`), so unit-resolution data would find no site instead of being refused
+            Port::new("tp", DataType::Tp, "Product row with its consensus MS2").requires(Facets { resolution: vec!["hr"], ..Facets::default() }),
             Port::new("parent", DataType::Structure, "Parent compound with its structure"),
         ],
         outs: vec![Port::new("sites", DataType::Transform, "Classes of sites with their support and the declared confidence")],

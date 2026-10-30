@@ -45,7 +45,7 @@ fn formula_ms1_on_unit_resolution_files_is_refused_by_the_check() {
 fn a_unit_resolution_plan_without_facets_takes_them_from_the_files() {
     let d = fixture("nl_g6f", -1, false);
     let prov = run(&d, &with(&format!("{DIG}]}}")));
-    for id in ["gen", "lnk", "flt", "pos", "net", "dig"] {
+    for id in ["gen", "lnk", "flt", "net", "dig"] {
         assert_eq!(error_of(&prov, id), None, "{id}");
     }
     let _ = std::fs::remove_dir_all(&d);

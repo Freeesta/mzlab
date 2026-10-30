@@ -1,7 +1,7 @@
 """Flow «This browser» against `mzlab-cli flow run` in both polarities and both resolutions (docs/studi/MATRICE_NEG_LR.md): a small invented bentazone series (the fixture of
 crates/mzlab-cli/src/flow_bentazone_tests.rs, ported here: a parent that fades, two products that grow) in HR+, HR-, LR+ and LR-, through the base chain, tp.generate, tp.link, tp.filter,
-tp.position, tp.network, table.filter, export.table_csv, export.mztab and, at unit resolution, tp.dig_lr. Every text the browser keeps equals the file of the native run, byte for byte;
-the check of the page and of `flow run` take the facets from the files and refuse the same steps (formula.ms1 at unit resolution, tp.dig_lr at high resolution).
+tp.network, table.filter, export.table_csv, export.mztab, tp.position at high resolution and tp.dig_lr at unit resolution. Every text the browser keeps equals the file of the native
+run, byte for byte; the check of the page and of `flow run` take the facets from the files and refuse the same steps (formula.ms1 and tp.position at unit resolution, tp.dig_lr at high).
 A series that mixes polarities (mix-pol) or resolutions (mix-res) is refused by features.align with the same error key and parameters on both sides.
 Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_neg_lr.py [hr+|hr-|lr+|lr-|mix-pol|mix-res]...
 NEG_LR_KEEP=<dir> keeps both sides' files there; the plan leaves the polarity and the unit mass to the files (both sides read them from the indexes); NEG_LR_WRITTEN=1 writes them."""
@@ -85,13 +85,11 @@ def plan(pol, hr):
          {"id": "gen", "step": "tp.generate@1", "in": {"parent": "file:parent.json", "index": ["idx.index"]}},
          {"id": "lnk", "step": "tp.link@2", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"], "hypotheses": "gen.hypotheses"}},
          {"id": "flt", "step": "tp.filter@2", "in": {"tp": "lnk.tp", "hypotheses": "gen.hypotheses"}},
-         {"id": "pos", "step": "tp.position@1", "in": {"tp": "lnk.tp", "parent": "file:parent.json"}},
          {"id": "net", "step": "tp.network@1", "in": {"tp": "lnk.tp", "table": "lnk.tp", "samples": "file:samples.json"}},
          {"id": "fil", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
          {"id": "csv", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
          {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}}]
-    if not hr:
-        s.append({"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
+    s.append(POS if hr else {"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
     for x in s:
         if x["id"] in nat: x["params"] = nat[x["id"]]
     return {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in ORDER] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "parent.json", "sha256": "", "type": "structure"}], "steps": s}
@@ -103,14 +101,14 @@ def refusal(v):
     if isinstance(v, list):
         return next((r for r in map(refusal, v) if r), None)
     return None
+POS = {"id": "pos", "step": "tp.position@1", "in": {"tp": "lnk.tp", "parent": "file:parent.json"}}   # high resolution only: fragments at 5 ppm
 TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "csv", "mzt", "dig"]
 
 def check_plan(pol, hr):
-    """The plan of `plan` with the steps the facets of the files refuse: formula.ms1 (high resolution only) and, on high-resolution files, tp.dig_lr."""
+    """The plan of `plan` with the steps the facets of the files refuse: formula.ms1 and tp.position (high resolution only) or, on high-resolution files, tp.dig_lr."""
     pl = plan(pol, hr); src = ["file:" + n + ".mzML" for n in ORDER]
     pl["steps"] += [{"id": "t", "step": "features.table@1", "in": {"source": src}}, {"id": "f1", "step": "formula.ms1@1", "in": {"features": "t.report", "index": src}}]
-    if hr:
-        pl["steps"].append({"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
+    pl["steps"].append(POS if not hr else {"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
     return pl
 # the check of the page once it has the facets of the indexes of OPFS (`series_estimates` of the proofs .wasm asked for `?facets`): the facet problems with their text
 CHECK = """async ([plan]) => {
@@ -198,10 +196,11 @@ try:
                 assert r["facets"] == {"resolution": [res], "polarity": [pol]}, r["facets"]
                 web = [{"at": p["at"], "params": p["params"]} for p in r["problems"]]
                 assert web == native, (web, native)
-                want = ["dig.table:err.flow.facet", "dig.index:err.flow.facet"] if hr else ["f1.features:err.flow.facet"]
+                want = ["dig.table:err.flow.facet", "dig.index:err.flow.facet"] if hr else ["f1.features:err.flow.facet", "pos.tp:err.flow.facet"]
                 assert [p["at"] for p in web] == want, web
-                step_name = "tp.dig_lr" if hr else "formula.ms1"
-                assert all(p["params"]["step"] == step_name and p["params"]["have"] == res for p in web), web
+                names = {"dig": "tp.dig_lr", "f1": "formula.ms1", "pos": "tp.position"}
+                assert all(p["params"]["step"] == names[p["at"].split(".")[0]] and p["params"]["have"] == res for p in web), web
+                step_name = names[web[0]["at"].split(".")[0]]
                 text = r["problems"][0]["text"]
                 assert step_name in text and ("high resolution" if hr else "unit resolution") in text, text
             step(case + ": the page and flow run refuse the same steps on the facets of the files", facets)
