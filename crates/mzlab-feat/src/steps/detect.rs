@@ -55,7 +55,7 @@ pub(super) fn estimate() -> Step {
 }
 
 pub(super) fn detect() -> Step {
-    let params = vec![
+    let mut params = vec![
         polarity(),
         Param::number("floor", "Noise floor")
             .min(0.0)
@@ -104,6 +104,7 @@ pub(super) fn detect() -> Step {
             .noresult()
             .advanced(),
     ];
+    params.extend(noise_gates());
     Step {
         cv: Some("MS:1000035"),
         ins: vec![Port::new("index", DataType::Mzidx, "Scan index")
@@ -124,6 +125,22 @@ pub(super) fn detect() -> Step {
             "Finds the chromatographic peaks of the MS1 scans of each file, with their quality, isotopologues and families. The parameters are common to every algorithm; each algorithm adds its own.",
         )
     }
+}
+
+/// The two gates against noise rows (`lrnoise`), on by default only in the unit profile.
+fn noise_gates() -> Vec<Param> {
+    vec![
+        Param::number("min_width", "Minimum width")
+            .min(0.0)
+            .default_num(0.0)
+            .doc("A feature narrower than this share of the typical peak width of its file (median FWHM of its strongest features) is dropped as noise; 0 = off")
+            .advanced(),
+        Param::number("min_snr", "Minimum S/N")
+            .min(0.0)
+            .default_num(0.0)
+            .doc("A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off")
+            .advanced(),
+    ]
 }
 
 fn preset_hr() -> Preset {
@@ -156,8 +173,10 @@ fn preset_lr() -> Preset {
             ("axis", text("Da")),
             ("floor", num(3_000.0)),
             ("min_height", num(7_000.0)),
+            ("min_width", num(0.5)),
+            ("min_snr", num(3.0)),
         ],
-        evidence: "LR_FLOOR and LR_MIN_HEIGHT of recipe_lr.rs; the preview proposes the values of each file",
+        evidence: "LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_WIDTH and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
         algorithm: Some("masstrace"),
     }
 }

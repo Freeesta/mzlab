@@ -58,7 +58,7 @@ pub fn registry() -> Vec<Step> {
 mod tests {
     use super::*;
     use crate::recipe::Recipe;
-    use crate::recipe_lr::{LR_FLOOR, LR_MIN_HEIGHT};
+    use crate::recipe_lr::{LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_SNR, LR_MIN_WIDTH};
     use mzlab_core::step::find;
 
     /// The two presets of `features.detect` hold the constants of the two profiles (`Params::default`, `LR_FLOOR`, `LR_MIN_HEIGHT`).
@@ -78,6 +78,8 @@ mod tests {
         assert_eq!(preset("lr", "floor").f64(), Some(lr.floor));
         assert_eq!(preset("lr", "min_height").f64(), Some(lr.min_height));
         assert!(lr.axis.is_da());
+        assert_eq!(preset("lr", "min_width").f64(), Some(LR_MIN_WIDTH));
+        assert_eq!(preset("lr", "min_snr").f64(), Some(LR_MIN_SNR));
         assert_eq!(preset("lr", "axis").str(), Some("Da"));
         assert_eq!(detect.default_preset, Some("hr"));
     }

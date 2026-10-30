@@ -51,6 +51,7 @@ pub mod isotopes;
 pub mod kinetic;
 pub mod legacy;
 pub mod liste;
+mod lrnoise;
 pub mod massacc;
 pub mod mrm;
 pub mod ms2;
@@ -95,6 +96,7 @@ pub mod table;
 pub mod target;
 pub mod tp;
 pub mod trace;
+mod trace_text;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod uv_bands;

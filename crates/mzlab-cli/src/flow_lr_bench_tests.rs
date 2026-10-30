@@ -134,6 +134,73 @@ fn rows(d: &Path, file: &str, centroid: bool, tag: &str) -> Rows {
         .collect()
 }
 
+/// The rows of the aligned table of the sample and the blank; with `rule`, only those the blank rule keeps (`table.filter`, `blank_ratio` 3 on the heights).
+fn aligned(d: &Path, centroid: bool, rule: bool, tag: &str) -> Rows {
+    let names = ["LR_bench-s1.mzML", "LR_bench-blank-s1.mzML"];
+    let files: Vec<_> = names
+        .iter()
+        .map(|n| (n.to_string(), String::new(), String::new()))
+        .collect();
+    let samples = mzlab_core::campioni::to_json(&mzlab_core::campioni::proponi(&files));
+    std::fs::write(d.join("samples.json"), samples).unwrap();
+    let raw: Vec<String> = names
+        .iter()
+        .map(|n| format!(r#"{{"name":"{n}","type":"raw"}}"#))
+        .collect();
+    let src: Vec<String> = names.iter().map(|n| format!(r#""file:{n}""#)).collect();
+    let (first, source) = if centroid {
+        (
+            format!(
+                r#"{{"id":"cen","step":"spectra.centroid@1","in":{{"source":[{}]}}}},"#,
+                src.join(",")
+            ),
+            r#""cen.mzml""#.to_string(),
+        )
+    } else {
+        (String::new(), src.join(","))
+    };
+    let filter = if rule {
+        r#",{"id":"flt","step":"table.filter@1","in":{"table":"ali.table","samples":"file:samples.json"},"params":{"blank_ratio":3,"blank_quantity":"height"}}"#
+    } else {
+        ""
+    };
+    let plan = format!(
+        r#"{{"format":"mzflow/2","inputs":[{},{{"name":"samples.json","type":"samples"}}],"steps":[{first}
+        {{"id":"idx","step":"index.mzidx@1","in":{{"source":[{source}]}}}},
+        {{"id":"det","step":"features.detect@1","in":{{"index":["idx.index"]}}}},
+        {{"id":"ali","step":"features.align@1","in":{{"peaks":["det.peaks"]}}}}{filter}]}}"#,
+        raw.join(",")
+    );
+    let w = d.join(tag);
+    std::fs::create_dir_all(&w).unwrap();
+    let (run_, prov) = crate::flow::run_plan(plan.as_bytes(), d, &w, 2, None).unwrap();
+    assert!(
+        run_.skipped.is_empty() && !prov.contains("\"error\""),
+        "{prov}"
+    );
+    let (t, _) =
+        mzlab_feat::store::read_table(&std::fs::read(w.join("ali.mzfeat")).unwrap()).unwrap();
+    let kept: Vec<usize> = if rule {
+        let view = mzlab_core::json::parse(&std::fs::read(w.join("flt.json")).unwrap()).unwrap();
+        // the view names the rows by their ids
+        let ids: Vec<u32> = view
+            .get("righe")
+            .unwrap()
+            .arr()
+            .iter()
+            .map(|k| k.f64().unwrap() as u32)
+            .collect();
+        (0..t.mz.len())
+            .filter(|&k| ids.contains(&t.id(k)))
+            .collect()
+    } else {
+        (0..t.mz.len()).collect()
+    };
+    kept.into_iter()
+        .map(|k| (t.mz[k], t.rt[k] * 60.0))
+        .collect()
+}
+
 fn near(r: (f64, f64), i: &Ion) -> bool {
     (r.0 - i.mz).abs() <= TOL_DA && (r.1 - i.rt).abs() <= TOL_S
 }
@@ -199,7 +266,17 @@ fn score(t: &Truth, rows: &Rows) -> Score {
     s
 }
 
-fn bench(tag: &str, jitter: f64) -> Option<(Score, Score, usize, usize)> {
+/// Scores of both paths, the rows on the blank of each, the rows of the blank rule (sample against blank) and the rows on a blank of only noise.
+struct Bench {
+    a: Score,
+    b: Score,
+    blank: (usize, usize),
+    table: (Score, Score),
+    ruled: (Score, Score),
+    noise: (usize, usize),
+}
+
+fn bench(tag: &str, jitter: f64) -> Option<Bench> {
     let d = generate(tag, jitter)?;
     let t = truth(&d);
     let f = "LR_bench-s1.mzML";
@@ -210,20 +287,55 @@ fn bench(tag: &str, jitter: f64) -> Option<(Score, Score, usize, usize)> {
         rows(&d, blank, true, "ba").len(),
         rows(&d, blank, false, "bb").len(),
     );
+    let noise = "LR_bench-noise-s1.mzML";
+    let (na, nb) = (
+        rows(&d, noise, true, "na").len(),
+        rows(&d, noise, false, "nb").len(),
+    );
+    let (ta, tb) = (
+        score(&t, &aligned(&d, true, false, "ta")),
+        score(&t, &aligned(&d, false, false, "tb")),
+    );
+    let (ra, rb) = (
+        score(&t, &aligned(&d, true, true, "fa")),
+        score(&t, &aligned(&d, false, true, "fb")),
+    );
     let (sa, sb) = (score(&t, &a), score(&t, &b));
-    println!("jitter {jitter}: blank rows A {ba}, B {bb}");
+    println!("jitter {jitter}: blank rows A {ba}, B {bb}; noise-only blank A {na}, B {nb}");
     println!("jitter {jitter}  A (centroid): {sa:?}");
     println!("jitter {jitter}  B (profile):  {sb:?}");
+    println!("jitter {jitter}  A aligned: {ta:?}");
+    println!("jitter {jitter}  B aligned: {tb:?}");
+    println!("jitter {jitter}  A + blank rule: {ra:?}");
+    println!("jitter {jitter}  B + blank rule: {rb:?}");
     let _ = std::fs::remove_dir_all(&d);
-    Some((sa, sb, ba, bb))
+    Some(Bench {
+        a: sa,
+        b: sb,
+        blank: (ba, bb),
+        table: (ta, tb),
+        ruled: (ra, rb),
+        noise: (na, nb),
+    })
 }
 
-/// The floors are today's numbers minus 10 % (ceilings plus 10 % for split rate and mean |dm|). Today path A (centroids) finds every compound but a third
-/// of its rows are on no true ion (centroided noise; the blank gives 461 rows against 127 of path B), and path B loses some compounds to the per-point floor
-/// of `trace.rs` on the profile points. Raising a floor is the proof of a fix; lowering one needs a reason in the PR.
+/// The floors are today's numbers minus 10 % (ceilings plus 10 % for split rate, mean |dm| and the blank rows). Both paths drop the noise rows of the unit
+/// recipe (`lrnoise`: narrower than half the typical peak or under 3 times the noise of the flanks), and the profile floor is the mode of the noise lump
+/// instead of the 3 sigma floor made for centroid areas (`recipe_lr::profile_floor`): precision 0.19 -> 0.50 (A) and 0.38 -> 0.49 (B), recall 0.91 -> 0.98 (B),
+/// blank rows 461 -> 140 (A) and 127 -> 91 (B). The mean |dm| ceiling of B goes up because the weaker compounds it now finds are less accurate in mass.
+/// What is left on the blank is the constant background, which only the blank rule removes. Raising a floor is the proof of a fix; lowering one needs a
+/// reason in the PR.
 #[test]
 fn the_lr_profile_bench_at_the_nominal_jitter() {
-    let Some((a, b, _, _)) = bench("n", 0.05) else {
+    let Some(Bench {
+        a,
+        b,
+        blank,
+        table,
+        ruled,
+        noise,
+    }) = bench("n", 0.05)
+    else {
         return;
     };
     assert!(a.rows > 0 && b.rows > 0);
@@ -233,19 +345,35 @@ fn the_lr_profile_bench_at_the_nominal_jitter() {
         a.recall,
         b.recall
     );
-    assert!(a.recall >= 0.90 && b.recall >= 0.82, "recall {a:?} {b:?}");
+    assert!(a.recall >= 0.90 && b.recall >= 0.88, "recall {a:?} {b:?}");
     assert!(
-        a.precision >= 0.16 && b.precision >= 0.33,
+        a.precision >= 0.45 && b.precision >= 0.43,
         "precision {a:?} {b:?}"
     );
-    assert!(a.pairs_both >= 6 && b.pairs_both >= 9, "pairs {a:?} {b:?}");
-    assert!(a.split <= 0.076 && b.split <= 0.72, "split {a:?} {b:?}");
+    assert!(a.pairs_both >= 6 && b.pairs_both >= 11, "pairs {a:?} {b:?}");
+    assert!(a.split <= 0.076 && b.split <= 0.61, "split {a:?} {b:?}");
     assert!(
-        a.mean_dm <= 0.024 && b.mean_dm <= 0.053,
+        a.mean_dm <= 0.024 && b.mean_dm <= 0.061,
         "mean |dm| {a:?} {b:?}"
     );
     // merged pairs: rows between the two members of a decoy pair that sit on no true ion
-    assert!(a.merged <= 6 && b.merged <= 7, "merged {a:?} {b:?}");
+    assert!(a.merged <= 5 && b.merged <= 5, "merged {a:?} {b:?}");
+    assert!(blank.0 <= 154 && blank.1 <= 100, "blank rows {blank:?}");
+    // the blank rule of the table (sample against blank on the heights) keeps fewer rows and a larger share of them on true ions; compounds that sit under
+    // the background of the blank at their m/z go with it
+    assert!(
+        ruled.0.rows < table.0.rows && ruled.0.precision > table.0.precision,
+        "blank rule A {:?} {:?}",
+        table.0,
+        ruled.0
+    );
+    assert!(
+        ruled.1.rows < table.1.rows && ruled.1.precision > table.1.precision,
+        "blank rule B {:?} {:?}",
+        table.1,
+        ruled.1
+    );
+    assert_eq!(noise, (0, 0), "a blank of only noise gives no row");
 }
 
 /// The 0.35 Da recipe against a jitter three times larger: numbers only, nothing asserted.
