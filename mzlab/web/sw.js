@@ -25,6 +25,8 @@ const isolata = res => {
   if (res.status === 0 || res.type === "opaqueredirect") return res;
   const h = new Headers(res.headers);
   h.set("Cross-Origin-Embedder-Policy", "require-corp"); h.set("Cross-Origin-Opener-Policy", "same-origin"); h.set("Cross-Origin-Resource-Policy", "same-origin");
+  // the worker is the cache: without this the browser's memory cache (max-age=600 of the origin) would hand a file of the previous version to the next page without asking us
+  h.set("Cache-Control", "no-cache");
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 };
 /** SHA-256 (hex) of the body of a response, which stays readable. */

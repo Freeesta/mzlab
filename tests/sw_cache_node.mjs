@@ -48,6 +48,7 @@ function mondo(net = { ...FILES }, man = manifest()) {
     if (!out) return null;
     const res = await out;
     assert.equal(res.headers.get("Cross-Origin-Embedder-Policy"), "require-corp");
+    assert.equal(res.headers.get("Cache-Control"), "no-cache", "the browser must ask the worker every time");
     return res;
   };
   const netCount = p => st.fetches.filter(f => f === p).length;

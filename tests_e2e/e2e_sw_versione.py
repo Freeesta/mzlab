@@ -7,7 +7,7 @@ import hashlib, re, shutil, socket, subprocess, sys, tempfile, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
-from playwright.sync_api import TimeoutError as PWTimeout, sync_playwright
+from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
 
 def serve(port: int, wd: Path):
@@ -75,6 +75,7 @@ class Root:
 
 
 errs = []
+V0: list = []
 def step(name, fn):
     try: fn(); print("  ", (name, "ok"))
     except Exception as e: print("  ", (name, "FAIL " + repr(e)[-700:].replace("\\n", " "))); errs.append(name)
@@ -87,12 +88,14 @@ def wait_cache(pg, app, timeout=150):
     """Waits for the background fill of the cache `app`; a page request now and then wakes a worker the browser stopped (the fill resumes where it was)."""
     t0 = time.time()
     while time.time() - t0 < timeout:
-        try:
-            pg.wait_for_function("""async app => { const k = await caches.keys(); if (!k.includes('mzlab-app-' + app)) return false;
-                return !!(await (await caches.open('mzlab-app-' + app)).match('.fill-done')); }""", arg=app, timeout=3000)
-            return
-        except PWTimeout:
-            pg.evaluate("fetch('static/version.js').then(r => r.text())")
+        if pg.evaluate("""async app => {
+            for (let i = 0; i < 6; i++) {
+                const k = await caches.keys();
+                if (k.includes('mzlab-app-' + app) && await (await caches.open('mzlab-app-' + app)).match('.fill-done')) return true;
+                await new Promise(r => setTimeout(r, 500));
+            }
+            fetch('static/version.js').then(r => r.text());
+            return false; }""", app): return
     raise AssertionError("the cache of " + app + " was not filled in time")
 
 
@@ -117,7 +120,7 @@ try:
         def first():
             pg.goto(URL); pg.wait_for_function("navigator.serviceWorker.controller !== null", timeout=30000)
             wait_cache(pg, app["n0"])
-            global V0; V0 = ver()
+            V0.append(ver())
         step("build 0: the worker takes control and fills its cache", first)
         def reload_new():
             state["root"]["x"] = work / "n1"; state["hits"].clear()
@@ -159,7 +162,7 @@ try:
             state["hits"].clear()
             pg.goto(URL + "?riparti=1"); pg.wait_for_load_state("load")
             pg.wait_for_function("window.MZLAB_VERSION !== undefined")
-            assert ver() == V0, ("Full reset kept a file of a newer or older build than the server's", ver())
+            assert ver() == V0[0], ("Full reset kept a file of a newer or older build than the server's", ver())
             state["root"]["x"] = work / "n1"
             pg.evaluate("QQRESET.wipe('all')")
             pg.goto(URL + "?riparti=1"); pg.wait_for_load_state("load")
