@@ -37,7 +37,7 @@ def probe():
             pg.goto(f"http://127.0.0.1:{PORT}/webkit_sonda.html")
             for _ in range(200):
                 if pg.evaluate("!!window.PROBE"): break
-                pg.wait_for_timeout(100)
+                time.sleep(100 / 1000)
             rec = pg.evaluate("window.PROBE") or []
             b.close()
     finally:
@@ -71,7 +71,7 @@ def site():
                     const r = await Promise.race([window.MZLAB_RUST_READY, new Promise(x => setTimeout(() => x('timeout'), 40000))]);
                     return { ready: r === 'timeout' ? 'timeout' : !!r, err: window.MZLAB_RUST_ERR || null, miss: (window.MZLAB_LR_MISS || []).length, isolated: self.crossOriginIsolated };
                 }""")
-                pg.wait_for_timeout(3000)         # a worker that dies at the first allocation is replaced; two deaths in a minute turn the engine off
+                time.sleep(3000 / 1000)         # a worker that dies at the first allocation is replaced; two deaths in a minute turn the engine off
                 res["errAfter"] = pg.evaluate("window.MZLAB_RUST_ERR || null")
             except Exception as e:
                 res = {"exception": str(e)[:300]}
