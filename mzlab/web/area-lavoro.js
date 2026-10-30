@@ -29,7 +29,7 @@ let _workSig = "";
 /** Shows the part of the work area that the state asks for; nothing is written when nothing changed (`force` writes anyway). */
 function syncWork(/** @type {boolean} */ force = false) {
   const w = workState(), ws = workQ("#v-workspace"), up = UPBUSY > 0 || OPENNOW.busy() > 0;
-  const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = !!S.sess && w === "panels" || w === "table" && !!S.table, sig = [w, none, up, !!S.sess, tab].join();
+  const none = typeof E === "undefined" || !E.files.some((/** @type {FileAperto} */ f) => !f.gone), tab = w !== "add" && (up || !none), sig = [w, none, up, !!S.sess, tab].join();
   if (sig === _workSig && !force) return;
   const was = ws.dataset.work;
   _workSig = sig; ws.dataset.work = w;

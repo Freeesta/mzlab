@@ -1,5 +1,5 @@
-"""Opening is smooth: from the first click on a file to the settled work area nothing jumps. Records the layout shifts (PerformanceObserver) and the boxes of the main regions at every
-frame of the opening (synthetic mzML only), then asserts a cumulative layout shift under the threshold, the same boxes in the skeleton and in the settled area, and the fade-in."""
+"""Opening is smooth: from the opening of the first file (by itself at the end of the loading, soloFile) to the settled work area nothing jumps. Records the layout shifts (PerformanceObserver) and the boxes of the main regions at every
+frame of the opening (synthetic mzML only), then asserts a cumulative layout shift under the threshold, the same boxes from the landing to the settled area, and the fade-in."""
 import json, os, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -11,18 +11,21 @@ import numpy as np
 import dati_sintetici as ds
 
 CLS_MAX = 0.01
-REGIONS = ["#v-data", "#dfiles", "#tools", "#opening", "#dpanels", "#sb-pane", "#dpanels .pnl", "#dpanels .pnl canvas", "#sb-panels"]
+REGIONS = ["#v-data", "#dfiles", "#tools", "#dpanels", "#sb-pane", "#dpanels .pnl", "#dpanels .pnl canvas", "#sb-panels"]
 PROBE = """
 () => {
   const R = %s, S = window.__shift = {cls: 0, all: [], frames: [], t0: null, anims: []};
   document.addEventListener('animationstart', e => { if (e.animationName === 'tr-fade') S.anims.push({el: e.target.id, dur: getComputedStyle(e.target).animationDuration, t: performance.now() - S.t0}); }, true);
-  try { new PerformanceObserver(l => { for (const e of l.getEntries()) { S.cls += e.value; S.all.push({t: e.startTime - S.t0, v: e.value, input: e.hadRecentInput,
+  try { new PerformanceObserver(l => { for (const e of l.getEntries()) { if (S.t0 == null || e.startTime < S.t0) continue; S.cls += e.value; S.all.push({t: e.startTime - S.t0, v: e.value, input: e.hadRecentInput,
     src: (e.sources || []).map(s => { const n = s.node; return n && n.nodeType === 1 ? (n.id ? '#' + n.id : n.tagName.toLowerCase() + (n.className && n.className.baseVal === undefined ? '.' + String(n.className).split(' ')[0] : '')) : '?'; }) }); } })
     .observe({type: 'layout-shift', buffered: false}); } catch (_) {}
-  const box = s => { const e = document.querySelector(s); if (!e || e.hidden) return null; const r = e.getBoundingClientRect(); return r.width * r.height ? [r.x, r.y, r.width, r.height].map(v => Math.round(v * 10) / 10) : null; };
+  // page coordinates: a scroll (scrollToBlock of the first file) is not a move of the layout
+  const box = s => { const e = document.querySelector(s); if (!e || e.hidden) return null; const r = e.getBoundingClientRect(); return r.width * r.height ? [r.x + scrollX, r.y + scrollY, r.width, r.height].map(v => Math.round(v * 10) / 10) : null; };
   const tick = () => { if (S.t0 != null) { const f = {t: performance.now() - S.t0, op: getComputedStyle(document.querySelector('#v-data')).opacity}; for (const s of R) f[s] = box(s); S.frames.push(f); }
     if (S.t0 == null || !S.stop) requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
+  // the clock starts when the first file opens (by itself, OPENNOW.first)
+  const so = window.soloFile; window.soloFile = function (...a) { if (S.t0 == null) S.t0 = performance.now(); return so.apply(this, a); };
 }
 """ % json.dumps(REGIONS)
 
@@ -35,8 +38,8 @@ def synth(d):
 
 def measure(pg, files):
     pg.wait_for_selector("#start:not([hidden])", timeout=60000)
+    pg.evaluate(PROBE)
     stage(pg, files)
-    pg.evaluate(PROBE); pg.evaluate("window.__shift.t0 = performance.now()")
     open_first(pg)
     ready(pg)
     fermo(pg, "#dpanels .pnl"); frames(pg, 30)
@@ -86,20 +89,18 @@ if __name__ == "__main__":
             def cls_small():
                 assert res["cls"] < CLS_MAX, f"cumulative layout shift {res['cls']:.4f} >= {CLS_MAX}: {res['all']}"
                 # the one move allowed: the side panel takes the width of the names when the first file is shown (barra.js effW), the work area follows it
-                shown, area = next(f["t"] for f in fr if f.get("#dpanels .pnl")), next(f["t"] for f in fr if f.get("#opening"))
+                shown, area = next(f["t"] for f in fr if f.get("#dpanels .pnl")), fr[0]["t"]
                 late = [a for a in res["all"] if a["t"] > 60 and a["v"] > 0.0005 and not (a["src"] == ["#v-workspace"] and area <= a["t"] <= shown + 50)]
                 assert not late, f"layout shifts after the work area was drawn: {late}"
             step("cumulative layout shift of the opening is below the threshold", cls_small)
             def same_boxes():
-                area = next(f["t"] for f in fr if f.get("#opening"))                     # the first frame with the skeleton on screen
+                area = fr[0]["t"]                     # the first frame of the opening
                 shown = next(f["t"] for f in fr if f.get("#dpanels .pnl"))               # the first file shown: the side panel takes the width of the names, under the fade
                 sp = settled(fr, "#v-data", area); assert max(sp) <= 0.6, f"#v-data moved or changed size after the first paint: {sp}"
                 for k in ("#dfiles", "#sb-pane", "#tools", "#sb-panels"):
                     sp = settled(fr, k, shown); assert max(sp) <= 0.6, f"{k} moved or changed size after the first file was shown: {sp}"
                 sp = settled(fr, "#dpanels", shown); assert max(sp[:3]) <= 0.6, f"#dpanels moved or changed width: {sp}"
-                f0 = next(f for f in fr if f.get("#opening"))
-                assert f0["#dpanels"][1] == f0["#opening"][1] or abs(f0["#dpanels"][1] - f0["#opening"][1]) <= 0.6, "the skeleton does not start where the panels start"
-                sp = settled(fr, "#dpanels .pnl", 0); assert max(sp) <= 0.6, f"the first panel moved or was resized after it appeared: {sp}"
+                sp = settled(fr, "#dpanels .pnl", 0); assert max(sp) <= 0.6, f"the first panel moved or was resized after it appeared: {sp} {moves(fr, '#dpanels .pnl')} {moves(fr, '#dfiles')}"
                 sp = settled(fr, "#dpanels .pnl canvas", 0); assert max(sp) <= 0.6, f"the first plot canvas was resized after it appeared: {sp}"
             step("work area regions keep their boxes from the first paint to the settled state", same_boxes)
             def reduced_no_fade():
@@ -113,7 +114,7 @@ if __name__ == "__main__":
                 assert {x["el"] for x in a} == {"dpanels", "tools", "sb-panels"}, res2["anims"]
                 assert all(0.12 <= float(x["dur"][:-1]) <= 0.18 for x in a), a
                 assert res2["cls"] < CLS_MAX, res2["cls"]
-            step("the content fades in (120-180 ms, opacity only) when it replaces the skeleton", fade)
+            step("the content fades in (120-180 ms, opacity only) when it replaces the landing", fade)
             def opacity_only():
                 kf = pg2.evaluate("""() => { const a = document.getAnimations(); return a.length; }""")
                 css = (ROOT / "mzlab" / "web" / "transizioni.css").read_text(encoding="utf-8")
