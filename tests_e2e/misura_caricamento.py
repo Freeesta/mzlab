@@ -17,14 +17,14 @@ from lib import free_port      # noqa: E402
 WATCH = ["#nav", "#stbar", "#avvio-fase", "#dfiles", "#sb-pane", "#flst", "#fl-up", "#samptab", "#v-workspace", "#tools", "#opening", "#wdata", "#unopen", "#up",
          "#start", "#drop", "#demo", "#wtable", "#flist", "#hrmix", "#opbtn", "#dpanels", "#dpanels .pnl", "#dpanels .pnl canvas", "#loading", "#err", "#fl-note"]
 PROBE = """(() => { if (window.__m) return; const W = %s, T0 = performance.timeOrigin; const now = () => Math.round(T0 + performance.now());
-  window.__m = { boxes: {}, ls: [], rows: [], marks: [], state: [] }; try { performance.setResourceTimingBufferSize(20000); } catch (_) {}
+  window.__m = { boxes: {}, ls: [], rows: [], marks: [], state: [], last: now() }; try { performance.setResourceTimingBufferSize(20000); } catch (_) {}
   const box = s => { const e = document.querySelector(s); if (!e) return null; const cs = getComputedStyle(e); if (e.hidden || cs.display === 'none') return 'hidden';
     const b = e.getBoundingClientRect(); if (!b.width && !b.height) return 'empty'; return [Math.round(b.left), Math.round(b.top + scrollY), Math.round(b.width), Math.round(b.height), cs.visibility === 'hidden' || +cs.opacity < 0.05 ? 'inv' : ''].join(','); };
   const last = {}, seen = new Set();
   const state = () => [typeof UPBUSY !== 'undefined' ? UPBUSY : '-', typeof OPENNOW !== 'undefined' ? OPENNOW.busy() : '-', (document.getElementById('v-workspace') || {dataset: {}}).dataset.work || '-',
     document.querySelector('#loading') && !document.querySelector('#loading').hidden ? 'veil' : '', 'y' + Math.round(scrollY)].join('|');
-  const tick = () => { const t = now(); for (const s of W) { const b = box(s); if (b !== last[s]) { (window.__m.boxes[s] = window.__m.boxes[s] || []).push([t, b]); last[s] = b; } }
-    const st = state(); if (st !== last.__st) { window.__m.state.push([t, st]); last.__st = st; }
+  const tick = () => { const t = now(); for (const s of W) { const b = box(s); if (b !== last[s]) { (window.__m.boxes[s] = window.__m.boxes[s] || []).push([t, b]); last[s] = b; window.__m.last = t; } }
+    const st = state(); if (st !== last.__st) { window.__m.state.push([t, st]); last.__st = st; window.__m.last = t; }
     document.querySelectorAll('#flst .fl').forEach(r => { const k = (r.classList.contains('up') ? 'up:' : 'file:') + (r.dataset.up || (r.querySelector('.nm') || r).textContent.trim().slice(0, 40)); if (!seen.has(k)) { seen.add(k); window.__m.rows.push([t, k]); } });
     requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
@@ -39,12 +39,17 @@ DROP = """async (names) => { const inp = document.getElementById('__probein'); c
 IDLE = "(typeof UPBUSY === 'undefined' || UPBUSY === 0) && (typeof OPENNOW === 'undefined' || OPENNOW.busy() === 0) && (typeof PROGRESSO === 'undefined' || !PROGRESSO.busy())"
 
 
+def quiet(pg, ms):
+    """The settle window of a step: no watched box and no state changed for `ms` (a frame loop that never calms down ends after 30 s)."""
+    pg.wait_for_function(f"(() => {{ const t = performance.timeOrigin + performance.now(); window.__q = window.__q || t; const ok = t - window.__m.last > {ms} || t - window.__q > 30000; if (ok) window.__q = 0; return ok; }})()", timeout=40000)
+
+
 def run(a):
     port = free_port()
     srv = subprocess.Popen([sys.executable, str(ROOT / "tests_e2e" / "servi.py"), str(port), str(Path(a.site).resolve())], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(50):
         try: urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1); break
-        except Exception: time.sleep(0.2)
+        except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
     site, reqs, marks, navs = Path(a.site).resolve(), [], [], []
     mark = lambda name: marks.append([round(time.time() * 1000), name])
     def size(url):
@@ -68,33 +73,33 @@ def run(a):
             mark("goto"); pg.goto(f"http://127.0.0.1:{port}/")
             pg.wait_for_selector("#drop"); mark("drop-visible")
             pg.wait_for_function("window.qqReady === true", timeout=120000); mark("engine-ready")
-            pg.wait_for_timeout(a.settle if not a.cold else 8000); mark("open-settled")
+            quiet(pg, a.settle if not a.cold else 4000); mark("open-settled")
             pg.evaluate("() => { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.id = '__probein'; i.style.display = 'none'; document.body.appendChild(i); }")
             pg.set_input_files("#__probein", a.files)
             pg.evaluate(DROP, [Path(f).name for f in a.files]); mark("dragover+drop")
             pg.wait_for_function(f"({IDLE}) && (document.querySelectorAll('#flst .fl').length > 0 || !!document.querySelector('#opbtn:not([disabled])') && !!document.querySelector('#opbtn').offsetParent)", timeout=600000); mark("batch-end")
             if pg.locator("#opbtn").count() and pg.is_visible("#opbtn"):
-                pg.wait_for_timeout(500); mark("opbtn-click"); pg.click("#opbtn")
+                quiet(pg, 500); mark("opbtn-click"); pg.click("#opbtn")
             try: pg.wait_for_selector("#dpanels .pnl canvas", timeout=120000); mark("first-plot")
             except Exception: mark("no-plot")
-            pg.wait_for_timeout(a.settle); mark("plot-settled")
+            quiet(pg, a.settle); mark("plot-settled")
             if pg.locator("#samptab").count() and pg.is_visible("#samptab"):
-                mark("samptab-click"); pg.click("#samptab"); pg.wait_for_timeout(a.settle)
+                mark("samptab-click"); pg.click("#samptab"); quiet(pg, a.settle)
                 if pg.locator("#flst .fl .nm").count() > 1:
-                    mark("file-click"); pg.click("#flst .fl .nm >> nth=1"); pg.wait_for_selector("#dpanels .pnl canvas"); pg.wait_for_timeout(a.settle)
+                    mark("file-click"); pg.click("#flst .fl .nm >> nth=1"); pg.wait_for_selector("#dpanels .pnl canvas"); quiet(pg, a.settle)
             if pg.evaluate("E.files.filter(f => !f.gone).length") > 1:
-                mark("remove-hidden"); pg.evaluate("removeFile(E.files.find(f => !f.gone && !f.vis) || E.files.filter(f => !f.gone).pop())"); pg.wait_for_timeout(a.settle)
-            mark("remove-shown"); pg.evaluate("removeFile(E.files.find(f => !f.gone && f.vis) || E.files.find(f => !f.gone))"); pg.wait_for_timeout(a.settle)
-            mark("undo"); pg.evaluate("typeof STORIA !== 'undefined' && STORIA.annulla ? STORIA.annulla() : null"); pg.wait_for_timeout(a.settle)
+                mark("remove-hidden"); pg.evaluate("removeFile(E.files.find(f => !f.gone && !f.vis) || E.files.filter(f => !f.gone).pop())"); quiet(pg, a.settle)
+            mark("remove-shown"); pg.evaluate("removeFile(E.files.find(f => !f.gone && f.vis) || E.files.find(f => !f.gone))"); quiet(pg, a.settle)
+            mark("undo"); pg.evaluate("typeof STORIA !== 'undefined' && STORIA.annulla ? STORIA.annulla() : null"); quiet(pg, a.settle)
             if pg.locator("#addf").count() and pg.is_visible("#addf"):
-                mark("addf-click"); pg.click("#addf"); pg.wait_for_timeout(a.settle)
-                if pg.is_visible("#cancadd"): mark("cancadd-click"); pg.click("#cancadd"); pg.wait_for_timeout(a.settle)
+                mark("addf-click"); pg.click("#addf"); quiet(pg, a.settle)
+                if pg.is_visible("#cancadd"): mark("cancadd-click"); pg.click("#cancadd"); quiet(pg, a.settle)
             before = pg.evaluate("window.__m")
             before["res"] = pg.evaluate("performance.getEntriesByType('resource').map(e => [Math.round(performance.timeOrigin + e.startTime), e.name.split('/').slice(3).join('/'), e.initiatorType, e.renderBlockingStatus || '', e.decodedBodySize])")
             mark("reload"); pg.reload(); pg.wait_for_selector("#v-data")
             try: pg.wait_for_selector("#dpanels .pnl canvas", timeout=120000); mark("restored-plot")
             except Exception: mark("no-restored-plot")
-            pg.wait_for_timeout(a.settle); mark("end")
+            quiet(pg, a.settle); mark("end")
             after = pg.evaluate("window.__m")
             b.close()
     finally:
