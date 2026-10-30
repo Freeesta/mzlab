@@ -6,7 +6,24 @@
 // Every CSV/TSV and .xlsx goes through dl()/dlx() and gets it by default; an export adds the fields it knows ({table, file, p = panel}); the files of mzFinder, made for other programs, pass false.
 const PROV = (() => {
   /** the fields of the line, in this order; anything else the page collects is left out */
-  const ORDER = ["file", "background", "snip", "smooth", "tolerance", "polarity", "table", "date", "note"];
+  const ORDER = ["file", "background", "snip", "smooth", "tolerance", "polarity", "precursor", "charge", "activation", "ce", "rt", "scan", "table", "date", "note"];
+  /** what the page knows of the scan behind an MS2/MSn spectrum; unknown fields are left out (an average or several precursors give no single scan) @param {any} p @returns {Record<string, string>} */
+  const ofScan = p => {
+    /** @type {Record<string, string>} */
+    const o = {}, j = p._scan, d = p._a && p._a.data || [], avg = p.avg && p.avg.length > 1;
+    const precs = [...new Set(d.map(/** @param {any} x */ x => x.prec).filter(/** @param {any} v */ v => v > 0))], f = E.files[p.k];
+    const prec = !avg && j && j.prec > 0 ? j.prec : precs.length === 1 ? precs[0] : p.prec > 0 && !p.all ? p.prec : null;
+    if (prec != null) o.precursor = String(+(+prec).toFixed(4));
+    if (j && !avg) {
+      const z = j.charge ?? j.z; if (z) o.charge = String(z);
+      if (j.act) o.activation = j.act;
+      if (j.ce != null) o.ce = j.nce ? `NCE ${+(+j.ce).toFixed(2)}` : `${+(+j.ce).toFixed(2)} eV`;
+      if (j.rt != null) o.rt = `${(+j.rt).toFixed(3)} min`;
+      if (j.no != null) o.scan = String(j.no);
+    } else if (!avg && p.r0 != null && p.r1 != null && p.r1 - p.r0 < 0.01) o.rt = `${((p.r0 + p.r1) / 2).toFixed(3)} min`;
+    if (f && (f.polarity === "positive" || f.polarity === "negative")) o.polarity = f.polarity;
+    return o;
+  };
   /** @param {any} p panel @returns {Record<string, string>} */
   const ofPanel = p => {
     /** @type {Record<string, string>} */
@@ -17,6 +34,7 @@ const PROV = (() => {
     if (fo.mode === "auto") o.snip = `${fo.w} min`;
     if (p.smooth != null) o.smooth = p.smooth ? "on" : "off";
     if (p.tol != null && p.type === "xic") o.tolerance = `${p.tol} Da`;
+    if (p.type === "spec" && p.level >= 2) Object.assign(o, ofScan(p));
     return o;
   };
   /** @param {any} [over] fields to set (or {p: panel}); the page state fills the rest @returns {Record<string, string>} */
