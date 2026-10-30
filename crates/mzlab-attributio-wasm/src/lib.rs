@@ -264,13 +264,7 @@ pub fn render_to(run: &Run, kind: &str, write: &mut dyn FnMut(u64, &[u8]) -> boo
 }
 
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 fn js_fetch(read: &Function, k: usize, off: u64, len: u64) -> Option<Vec<u8>> {
