@@ -270,6 +270,7 @@
     "../../flow/lazy/flow-web-insilico.js",
     "../../flow/lazy/flow-web-drift.js",
     "../../flow/lazy/flow-web-qcreport.js",
+    "../../flow/lazy/flow-web-export-annot.js",
     "../../flow/lazy/flow-web-inclusion.js",
     "../../flow/lazy/flow-web-qc.js",
     "../../flow/lazy/flow-web-suspects.js",

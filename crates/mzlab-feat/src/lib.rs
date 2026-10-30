@@ -39,6 +39,7 @@ pub mod filters;
 pub mod filters_blank;
 pub mod filters_nts;
 pub mod flow_drift;
+pub mod flow_export_annot;
 #[cfg(feature = "untargeted")]
 pub mod flow_formula_ms1;
 #[cfg(feature = "flow_formula")]
