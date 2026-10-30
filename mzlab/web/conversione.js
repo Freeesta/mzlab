@@ -276,6 +276,8 @@ const ConvUI = {
         ctl.signal.addEventListener("abort", () => c.abort()); stops.set(name, c);
         return { signal: c.signal, update(/** @type {Bag} */ p) { void p; }, done: off, fail: off };
       },
+      // the indexing of a converted file (shell.js upload) and the end of the loading: nothing to draw
+      index(/** @type {string} */ name, /** @type {number} */ pc) { void name; void pc; },
       end() {},
     };
   },
