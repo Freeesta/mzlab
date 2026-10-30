@@ -58,7 +58,7 @@ impl<R: ReadAt> Routes<R> {
         self.binned_cells(level, lo, hi, (precursor, tol), filt, |m| (m.max(1e-9).ln() / cell).floor() as i64)
     }
 
-    /// `/api/dda`: every MS2 of the file with its parent, isolation window and activation, in columns, plus the survey scans.
+    /// `/api/dda`: every MS2 (and MSn) of the file with its parent, isolation window, activation, level and charge, in columns, plus the survey scans.
     pub(crate) fn dda(&self, q: &Query) -> Result<Option<String>> {
         let scans = &self.idx.scans;
         let d = hr_profile(scans, false, q.get("hr") != Some("0")).dec + 1;
@@ -109,7 +109,13 @@ impl<R: ReadAt> Routes<R> {
                 None => o.raw("null"),
             };
         }
+        o.raw("],\"lev\":[");
+        for (n, &i) in ms2.iter().enumerate() {
+            o.raw(if n > 0 { "," } else { "" }).int(scans[i].level as i64);
+        }
         o.raw("],");
+        col(&mut o, "\"z\":", &|i| scans[i].charge.map(|z| z as f64), None);
+        o.raw(",");
         col(&mut o, "\"ce\":", &|i| scans[i].collision_energy, None);
         o.raw(",");
         col(&mut o, "\"pint\":", &|i| scans[i].pint, None);
