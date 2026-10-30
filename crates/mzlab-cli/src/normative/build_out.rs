@@ -76,25 +76,20 @@ fn stale_json(o: &mut Out, prev: Option<&Value>, id: &str, why: &str) {
     json::write_value(o, &v);
 }
 
-pub fn write_outputs(
-    o: &Opts,
+fn write_file(p: &PathBuf, t: &str) -> Result<(), NormError> {
+    std::fs::write(p, t).map_err(|e| NormError::io(p, &e))
+}
+
+/// `provenance.json`: this run's lists, the stale ones from their previous object, the untouched ones as they were.
+fn provenance_text(
     all: &[ListSrc],
     built: &[Built],
     failed: &[Failed],
     resolver_inputs: &[Input],
-) -> Result<(), NormError> {
-    let lists_dir = o.out.join("lists");
-    std::fs::create_dir_all(&lists_dir).map_err(|e| NormError::io(&lists_dir, &e))?;
-    let write = |p: &PathBuf, t: &str| std::fs::write(p, t).map_err(|e| NormError::io(p, &e));
-    for b in built {
-        write(&lists_dir.join(format!("{}.csv", b.id)), &b.csv)?;
-    }
-    let prov_path = o.out.join("provenance.json");
-    let prev = std::fs::read(&prov_path)
-        .ok()
-        .and_then(|b| json::parse(&b).ok());
+    prev: Option<&Value>,
+) -> String {
     let prev_list = |id: &str| {
-        prev.as_ref().and_then(|p| p.get("lists")).and_then(|l| {
+        prev.and_then(|p| p.get("lists")).and_then(|l| {
             l.arr()
                 .iter()
                 .find(|x| x.get("id").and_then(Value::str) == Some(id))
@@ -129,7 +124,7 @@ pub fn write_outputs(
         .collect();
     ri.dedup_by(|a, b| a.url == b.url);
     if resolver_inputs.is_empty() {
-        if let Some(Value::Arr(a)) = prev.as_ref().and_then(|p| p.get("resolvers")).cloned() {
+        if let Some(Value::Arr(a)) = prev.and_then(|p| p.get("resolvers")).cloned() {
             for (i, v) in a.iter().enumerate() {
                 o_json.raw(if i > 0 { "," } else { "" });
                 json::write_value(&mut o_json, v);
@@ -148,9 +143,11 @@ pub fn write_outputs(
         .raw("],\"pubchem_property_requests\":")
         .int(props as i64)
         .raw("}\n");
-    write(&prov_path, &o_json.0)?;
+    o_json.0
+}
 
-    // unresolved.tsv: this run's lists replace their old rows, the other lists keep theirs
+/// `unresolved.tsv`: this run's lists replace their old rows, the other lists keep theirs.
+fn unresolved_text(o: &Opts, built: &[Built]) -> String {
     let rebuilt: BTreeSet<&str> = built.iter().map(|b| b.id.as_str()).collect();
     let mut rows: Vec<[String; 5]> = Vec::new();
     if let Ok(old) = std::fs::read_to_string(o.out.join("unresolved.tsv")) {
@@ -172,7 +169,7 @@ pub fn write_outputs(
     rows.sort_by(|a, b| {
         (order(&a[0]), &a[0], &a[1], &a[3]).cmp(&(order(&b[0]), &b[0], &b[1], &b[3]))
     });
-    let tsv: String = std::iter::once("list_id\tentry_ref\tname\tcas\treason\n".to_string())
+    std::iter::once("list_id\tentry_ref\tname\tcas\treason\n".to_string())
         .chain(rows.iter().map(|r| {
             format!(
                 "{}\n",
@@ -182,7 +179,28 @@ pub fn write_outputs(
                     .join("\t")
             )
         }))
-        .collect();
-    write(&o.out.join("unresolved.tsv"), &tsv)?;
-    Ok(())
+        .collect()
+}
+
+pub fn write_outputs(
+    o: &Opts,
+    all: &[ListSrc],
+    built: &[Built],
+    failed: &[Failed],
+    resolver_inputs: &[Input],
+) -> Result<(), NormError> {
+    let lists_dir = o.out.join("lists");
+    std::fs::create_dir_all(&lists_dir).map_err(|e| NormError::io(&lists_dir, &e))?;
+    for b in built {
+        write_file(&lists_dir.join(format!("{}.csv", b.id)), &b.csv)?;
+    }
+    let prov_path = o.out.join("provenance.json");
+    let prev = std::fs::read(&prov_path)
+        .ok()
+        .and_then(|b| json::parse(&b).ok());
+    write_file(
+        &prov_path,
+        &provenance_text(all, built, failed, resolver_inputs, prev.as_ref()),
+    )?;
+    write_file(&o.out.join("unresolved.tsv"), &unresolved_text(o, built))
 }

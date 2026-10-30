@@ -30,6 +30,65 @@ pub struct Built {
     pub unresolved: Vec<[String; 5]>,
 }
 
+/// Where an entry comes from, for the columns that do not depend on the structure.
+struct RowCtx<'a> {
+    src: &'a ListSrc,
+    e: &'a Entry,
+    version: &'a str,
+    access: &'a str,
+}
+
+fn make_row(c: &RowCtx, cas: &str, f: Option<&Found>, status: &str, group: &str) -> Vec<String> {
+    let (src, e, list_version, access) = (c.src, c.e, c.version, c.access);
+    let tag = |t: &str| {
+        src.tags
+            .iter()
+            .find(|(k, _)| k == t)
+            .map(|(_, v)| v.as_str())
+            .unwrap_or("")
+    };
+
+    let mut r = vec![String::new(); SCHEMA.len() + EXTRA.len()];
+    let mut set = |c: &str, v: &str| {
+        let i = SCHEMA
+            .iter()
+            .chain(EXTRA.iter())
+            .position(|x| *x == c)
+            .expect("column");
+        r[i] = v.to_string();
+    };
+    set("list_id", &src.id);
+    set("list_version", list_version);
+    set("access_date", access);
+    set("source", tag("citation"));
+    set("name", &e.name);
+    set("cas", cas);
+    set("list_attribute", &e.attr);
+    set("resolved_by", f.map_or("unresolved", |f| f.by));
+    set("entry_ref", &e.entry_ref);
+    set("ec", &e.ec);
+    set("dtxsid", &e.dtxsid);
+    set("status", status);
+    if let Some(f) = f {
+        for (c, v) in [
+            ("pubchem_cid", f.cid.as_str()),
+            ("inchikey", &f.inchikey),
+            ("inchikey_skeleton", &f.skeleton),
+            ("smiles", &f.smiles),
+            ("formula", &f.formula),
+            ("mono_mass", &f.mono_mass),
+            ("form", f.form),
+        ] {
+            set(c, v);
+        }
+    }
+    if !group.is_empty() {
+        set("parent", "");
+        set("tp_reference", group);
+    }
+    r
+}
+
 pub fn rows_of(
     src: &ListSrc,
     e: &Entry,
@@ -38,49 +97,14 @@ pub fn rows_of(
     access: &str,
     resolve: bool,
 ) -> Vec<(Vec<String>, Option<String>)> {
-    let tag = |t: &str| {
-        src.tags
-            .iter()
-            .find(|(k, _)| k == t)
-            .map(|(_, v)| v.as_str())
-            .unwrap_or("")
+    let ctx = RowCtx {
+        src,
+        e,
+        version: list_version,
+        access,
     };
-    let row = |cas: &str, f: Option<&Found>, status: &str, group: &str| -> Vec<String> {
-        let mut r = vec![String::new(); SCHEMA.len() + EXTRA.len()];
-        let mut set = |c: &str, v: &str| {
-            let i = SCHEMA
-                .iter()
-                .chain(EXTRA.iter())
-                .position(|x| *x == c)
-                .expect("column");
-            r[i] = v.to_string();
-        };
-        set("list_id", &src.id);
-        set("list_version", list_version);
-        set("access_date", access);
-        set("source", tag("citation"));
-        set("name", &e.name);
-        set("cas", cas);
-        set("list_attribute", &e.attr);
-        set("resolved_by", f.map_or("unresolved", |f| f.by));
-        set("entry_ref", &e.entry_ref);
-        set("ec", &e.ec);
-        set("dtxsid", &e.dtxsid);
-        set("status", status);
-        if let Some(f) = f {
-            set("pubchem_cid", &f.cid);
-            set("inchikey", &f.inchikey);
-            set("inchikey_skeleton", &f.skeleton);
-            set("smiles", &f.smiles);
-            set("formula", &f.formula);
-            set("mono_mass", &f.mono_mass);
-            set("form", f.form);
-        }
-        if !group.is_empty() {
-            set("parent", "");
-            set("tp_reference", group);
-        }
-        r
+    let row = |cas: &str, f: Option<&Found>, status: &str, group: &str| {
+        make_row(&ctx, cas, f, status, group)
     };
     let tokens = cas_tokens(&e.cas);
     let structure_rows = matches!(e.kind, Kind::Structure | Kind::Group)
