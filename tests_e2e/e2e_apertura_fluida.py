@@ -126,10 +126,12 @@ if __name__ == "__main__":
             pg3.goto(f"http://127.0.0.1:{r.port}/")
             def landing_first_paint():
                 pg3.wait_for_selector("#start:not([hidden])", timeout=60000); attendi(pg3, "window.qqReady === true", 60000)
-                st = pg3.evaluate("""() => ({open: document.querySelector('#v-data').classList.contains('sb-open'), dz: !document.querySelector('#fl-dz').hidden,
+                st = pg3.evaluate("""() => ({open: document.querySelector('#v-data').classList.contains('sb-open'), hint: !document.querySelector('#fl-hint').hidden, dz: !document.querySelector('#fl-dz').hidden,
+                  grey: getComputedStyle(document.querySelector('#np-chrom')).cursor === 'not-allowed',
+                  big: document.querySelector('#drop').getBoundingClientRect().height >= innerHeight * 0.4,
                   off: ['#np-chrom', '#np-closeall', '#np-method', '#fsel'].every(s => document.querySelector(s).disabled && document.querySelector(s).getAttribute('aria-disabled') === 'true'),
                   calc: !!document.querySelector('#stbar [data-cmd=calc]:not([disabled])'), dpanels: getComputedStyle(document.querySelector('#dpanels')).display})""")
-                assert st == {"open": True, "dz": True, "off": True, "calc": True, "dpanels": "none"}, st
+                assert st == {"open": True, "hint": True, "dz": False, "grey": True, "big": True, "off": True, "calc": True, "dpanels": "none"}, st
             step("first paint: side panel open with its drop hint, data buttons disabled, calculators usable, landing in the work area", landing_first_paint)
             def drop_by_keyboard():
                 pg3.evaluate("document.activeElement && document.activeElement.blur()")
