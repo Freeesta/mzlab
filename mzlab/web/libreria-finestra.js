@@ -252,7 +252,8 @@ function showDetail(/** @type {View} */ V) {
 // Copy and Excel of the download button
 function dlBind(/** @type {View} */ V) {
   const { q, ctx, st, $, msg } = V;
-  const meta = ctx.p ? { p: ctx.p, table: "library-analogs" } : { table: "library-analogs", file: String((q.f && (q.f.label || q.f.file)) || "") };
+  // with a panel the provenance takes the file from it; otherwise from the query
+  const p = ctx.p, file = p ? undefined : String((q.f && (q.f.label || q.f.file)) || ""), meta = { p, table: "library-analogs", file };
   const hd = ["#", t("lib.col.name"), t("lib.col.entropy"), t("lib.col.reverse"), t("lib.col.shared"), t("lib.col.explained"), t("lib.col.dprec") + " (ppm)", t("lib.col.adduct"), t("lib.col.pol"), "CE", t("lib.col.instrument"), t("lib.col.library"), t("lib.col.license"), "InChIKey", t("lv.proposed"), t("lv.decided")];
   const rowsOf = () => { const [pr, de] = st.lv ? [st.lv.proposed, st.lv.decided || ""] : ["", ""]; return st.res && st.res.libs ? st.res.results.map((/** @type {any} */ r, /** @type {number} */ i) => [i + 1, r.name, r.ent, r.reverse ?? "", r.shared, r.explained ?? "", r.dprec, r.type, polTxt(r.polarity), r.ce, r.inst, r.lib, r.license || "", r.ik || "", i === 0 ? pr : "", i === 0 ? de : ""]) : []; };
   $("#lw-copy").onclick = () => { $("#lw-dl").removeAttribute("open"); copyTable(hd, rowsOf(), meta, msg); };
@@ -261,7 +262,7 @@ function dlBind(/** @type {View} */ V) {
     const rs = rowsOf(); if (!rs.length) return msg(t("lib.nothingSave"));
     const an = st.an ? st.an.results.map((/** @type {any} */ r, /** @type {number} */ i) => [i + 1, r.name, +r.delta.toFixed(4), deltaKnown(r.delta) || "", r.mcos, r.matched, r.shifted, r.lib]) : [];
     dlx((ctx.p && typeof plotName === "function" ? plotName(ctx.p) : t("lib.xlsx.fallback")) + t("lib.xlsx.suffix"), [{ name: t("lib.xlsx.sheet"), head: hd, rows: rs, widths: [5, 30, 10, 10, 10, 12, 14, 12, 10, 8, 14, 20, 14, 28, 10, 10] },
-      { name: t("lib.what.sheetAn"), head: ["#", t("lib.an.name"), "Δm", t("lib.an.interp"), t("lib.an.mcos"), t("lib.an.matched"), t("lw.col.shifted"), t("lib.col.library")], rows: an, widths: [5, 30, 10, 24, 12, 12, 10, 20] }], meta);
+      { name: t("lib.what.sheetAn"), head: ["#", t("lib.an.name"), "Δm", t("lib.an.interp"), t("lib.an.mcos"), t("lib.an.matched"), t("lw.col.shifted"), t("lib.col.library")], rows: an, widths: [5, 30, 10, 24, 12, 12, 10, 20] }], { p, table: "library-analogs", file });
   };
 }
 
