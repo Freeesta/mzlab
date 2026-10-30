@@ -107,6 +107,7 @@ const LIB = (() => {
           <div class="sm muted">${I18N.t("lib.avail.intro")}</div>
           <div class="sm" style="margin-top:6px"><button id="lib-avail-load">${I18N.t("lib.avail.load")}</button> <button id="lib-avail-go" hidden>${I18N.t("lib.avail.go")}</button> <button id="lib-avail-cancel" hidden>${I18N.t("lib.avail.cancel")}</button></div>
           <div id="lib-avail-list" aria-live="polite"></div><div id="lib-avail-st" class="sm" aria-live="polite"></div></fieldset>
+        <fieldset class="lib-reg" id="lib-reg" aria-label="${I18N.t("normative.lib.title")}"></fieldset>
         <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button> <button id="lib-pickdir">${I18N.t("lib.pickDir")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.json,.jsonl,.ndjson,.txt,.mzlib" multiple hidden><input type="file" id="lib-dirin" webkitdirectory multiple hidden></div>
         <div id="lib-st"></div><div id="lib-list"></div><div class="sm muted" id="lib-space" style="margin-top:6px"></div>`;
       d.querySelector("#lib-x").onclick = () => d.close();
@@ -126,6 +127,8 @@ const LIB = (() => {
       drop.ondragover = (/** @type {DragEvent} */ e) => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
       drop.ondrop = (/** @type {DragEvent} */ e) => { e.preventDefault(); drop.classList.remove("over"); addFiles([.../** @type {DataTransfer} */ (e.dataTransfer).files]); };
       listeners.push(() => { if (d.open) refresh(); });
+      // the regulatory lists: a module of its own, loaded with the window
+      import("./libreria-normative.js").then(m => m.mount(d.querySelector("#lib-reg"))).catch(e => { d.querySelector("#lib-reg").textContent = String(e && e.message || e); });
     }
     if (!d.open) d.showModal();
     refresh();

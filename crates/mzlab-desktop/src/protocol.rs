@@ -241,7 +241,7 @@ fn insilico_route(state: &State, route: &str) -> Response {
     }
 }
 
-/// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/listings` (the `listings` JSON),
+/// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/catalog` (the installed `catalogo.json`), `normative/listings` (the `listings` JSON),
 /// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder).
 fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Response {
     use crate::normative as nm;
@@ -251,6 +251,10 @@ fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Respo
     let status = |s: nm::Status| json(200, serde_json::to_string(&s).unwrap_or_default());
     match route {
         "status" => status(nm::status(lib)),
+        "catalog" => match nm::catalog_text(lib) {
+            Ok(t) => json(200, t),
+            Err(e) => fail(e),
+        },
         "listings" => match nm::listings_json(lib) {
             Ok(t) => json(200, t),
             Err(e) => fail(e),

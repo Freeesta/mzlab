@@ -64,6 +64,10 @@ fn install_reads_back_listings_and_check_compares_catalogues() {
     let site = Site::new(&mini(), 200);
     assert!(site.0.len() > 3, "several pieces");
     assert_eq!(check(&f, &site), Ok(Check::None));
+    assert_eq!(
+        catalog_text(&f).unwrap_err().key,
+        "normative.dl.err.missing"
+    );
     let cancel = AtomicBool::new(false);
     let mut seen = 0;
     let st = install(&f, &site, &cancel, &mut |_, _| seen += 1).expect("install");
@@ -71,6 +75,8 @@ fn install_reads_back_listings_and_check_compares_catalogues() {
     assert_eq!(check(&f, &site), Ok(Check::Current));
     let want = Suspects::open(&mini()).unwrap().listings_json().unwrap();
     assert_eq!(listings_json(&f).unwrap(), want);
+    // the Library window reads the site's catalogue bytes back unchanged
+    assert_eq!(catalog_text(&f).unwrap().as_bytes(), &site.0[CATALOG][..]);
     // another version on the site: an update is offered, the installed file is untouched
     let mut other = mini();
     other.extend_from_slice(&[0u8; 8]);
