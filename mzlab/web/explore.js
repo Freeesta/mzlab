@@ -211,7 +211,8 @@ let ldSlow = 0;
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out"); ldMsg = null;
-      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
+      // the button of a stuck start goes with its veil (it would come back with the next one)
+      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); ldAction(""); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
     }, wait);
   }
 }

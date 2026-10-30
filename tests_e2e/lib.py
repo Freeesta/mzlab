@@ -83,7 +83,7 @@ def loaded(pg, timeout=120000):
     """Waits until nothing is read or opened any more; on a timeout the message says what is still busy."""
     try: pg.wait_for_function(LOADED, timeout=timeout)
     except Exception as e:
-        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
+        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), queue: OPENNOW.state(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
         raise TimeoutError(f"{e} | still busy: {st}") from None
 def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read and, at the end of the loading, the first one that is not a blank opens by itself (OPENNOW.first).

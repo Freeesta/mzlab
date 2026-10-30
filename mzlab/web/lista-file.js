@@ -34,7 +34,7 @@ const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
 function soloFile(/** @type {any} */ f0) {
   if (!f0) return;
   fileViewDo(() => { E.files.forEach(f => { f.vis = false; }); sibsOf(f0).forEach(f => { f.vis = true; }); });
-  STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind);
+  STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
 // The three steps of taking one file out: take (hide it), back (undo) and free (release its copy in OPFS and its indexes, only in the browser, when the notice closes without an undo).
@@ -135,7 +135,7 @@ function activeFile(k) {
   const alone = E.browse; if (alone) tabFiles(f.kind).forEach(g => { g.vis = false; });
   sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file");
   followSpectra(f);
-  if (f.kind !== E.tab) setTab(f.kind);
+  if (f.kind !== E.tab) setTab(f.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave();
 }
 /** ‹ ›: the next file of the tab, among the ticked ones when several are shown. */

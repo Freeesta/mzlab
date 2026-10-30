@@ -2,7 +2,8 @@
 read the landing stays as it is (no card, no table, the drop area does not move) and no panel is drawn; at the end the first file opens by itself and nothing of the loading
 is left («Loading finished», spinner, card); «Sample table» of the side panel shows the table and a click on a file goes back to the panels; a proposal of roles and times
 that lands after the files opened still reaches the open files; a high-resolution file dropped on a low-resolution session is set aside with «Switch»; a folder of more than
-50 data files asks «Open all / Choose» and «Choose» leaves them unticked. Synthetic files."""
+50 data files asks «Open all / Choose» and «Choose» leaves them unticked; from the drop on there is no full-page veil and no «Full reset», also when the first
+file is of another tab (MRM, MS2). Synthetic files."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 from lib import *
@@ -21,12 +22,16 @@ for k, n in enumerate(["S_t000min", "S_t010min", "S_t030min"]):
 HR = tmp / "HR_DDA-Exploris-t0.mzML"; ds.hr_dda(HR, np.random.default_rng(3))
 MANY = tmp / "many"; MANY.mkdir()
 for k in range(51): shutil.copy(LR[0], MANY / f"M_{k:02d}.mzML")
+KINDS = [tmp / "K_mrm.mzML", tmp / "K_ms2.mzML"]; ds.mrm(KINDS[0], 1.0, np.random.default_rng(5), 1); ds.ms2(KINDS[1], np.random.default_rng(6))
 # the proposals of roles and times answer 1 s late; the time of the first progress row is taken at the change of #pick
 HOLD = """(() => { const f = window.fetch; window.fetch = function (u, o) { if (typeof u === 'string' && u.includes('api/campioni/proponi')) return new Promise(r => setTimeout(r, 1000)).then(() => f.call(this, u, o)); return f.call(this, u, o); };
   window.__up = null; window.__pick = null; window.__moved = []; window.__early = []; const d0 = document.querySelector('#drop').getBoundingClientRect().top;
   document.querySelector('#pick').addEventListener('change', () => { window.__pick = performance.now(); }, true);
   // while the files are read: the drop area never moves and no panel, card or loading table shows
-  const look = () => { if (!(UPBUSY > 0 || OPENNOW.busy() > 0)) return; const t = document.querySelector('#drop').getBoundingClientRect().top; if (Math.abs(t - d0) > 1) window.__moved.push(t - d0);
+  // from the drop on: no full-page veil and no «Full reset» (a stuck start) either, also when the first file opens
+  const look = () => { const vis = (q) => [...document.querySelectorAll(q)].some(e => e.getClientRects().length);
+    if (window.__pick != null) { if (vis('#loading')) window.__early.push('veil'); if (vis('#ldreset, #avvio-fase-reset')) window.__early.push('reset'); }
+    if (!(UPBUSY > 0 || OPENNOW.busy() > 0)) return; const t = document.querySelector('#drop').getBoundingClientRect().top; if (Math.abs(t - d0) > 1) window.__moved.push(t - d0);
     if (document.querySelector('#dpanels .pnl')) window.__early.push('panel'); if (document.querySelector('.convprog')) window.__early.push('card'); if (!document.querySelector('#wtable').hidden) window.__early.push('table'); };
   new MutationObserver(look).observe(document.body, { childList: true, subtree: true, attributes: true });
   new MutationObserver(() => { if (window.__up == null && document.querySelector('#flst .fl.up')) window.__up = performance.now(); }).observe(document.getElementById('flst'), { childList: true, subtree: true }); })()"""
@@ -86,6 +91,18 @@ try:
             assert pg.evaluate("ST.files.filter(f => f.name.startsWith('M_') && f.use).length") == 0, "«Choose»: all unticked"
             assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('M_'))"), "none of them opened"
         step("more than 50 files ask once; «Choose» leaves them unticked", many)
+        def other_kind():
+            # a fresh visit whose first file is not of the starting tab (Full scan): the tab changes with the first file, under no veil
+            q = r.b.new_page(viewport={"width": 1500, "height": 1400}, reduced_motion="reduce")
+            q.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
+            q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop"); attendi(q, "window.qqReady === true", 60000)
+            q.evaluate(HOLD); q.set_input_files("#pick", [str(f) for f in KINDS])
+            attendi(q, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length >= 2", 60000)
+            q.wait_for_selector("#dpanels .pnl canvas", timeout=60000)
+            assert q.evaluate("E.tab") != "full", "the first file is of another tab"
+            assert q.evaluate("window.__early") == [], f"shown while opening: {q.evaluate('[...new Set(window.__early)]')}"
+            q.close()
+        step("a first file of another tab opens with no full-page veil and no «Full reset»", other_kind)
 finally:
     r.close(); shutil.rmtree(tmp, ignore_errors=True)
 bad = [s for s in steps if s[1] != "ok"]

@@ -12,7 +12,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   const held = new Set();      // «Choose» of a large folder: these files stay unticked until the student ticks them
   const sent = new Set();      // files whose roles and times went to the open files once
   const tally = { n: 0, m: 0 };      // files opened and set aside since the last note of the side list
-  let busy = 0, last = 0, late = false, cur = "";      // cur = the file being opened now
+  let busy = 0, last = 0, late = false, cur = "", t0 = 0;      // cur = the file being opened now, since t0
   /** @type {(() => void)[]} */ let calm = [];
   const src = (/** @type {string} */ n) => String(n).split("#")[0];
   const openOf = (/** @type {string} */ name) => E.files.filter((/** @type {FileAperto} */ x) => !x.gone && src(x.file) === name);
@@ -53,7 +53,7 @@ const OPENNOW = /** @type {any} */ ((() => {
         if (held.has(name)) { f.use = false; continue; }
         const w = world();
         if (w !== null && !!f.hr !== w) { f.use = false; tally.m++; continue; }
-        f.use = true; cur = name;
+        f.use = true; cur = name; t0 = Date.now();
         try {
           if (w === null) { await post("api/explore", { samples: [sample(f)] }); await boot(); }
           else { await post("api/explore", { samples: [sample(f)], append: true }); if (Date.now() - last >= 200 || !q.length) await boot(); else late = true; }
@@ -142,5 +142,7 @@ const OPENNOW = /** @type {any} */ ((() => {
       d.showModal(); ok.focus();
     });
   }
-  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length };
+  return { add, hold, held: (/** @type {string} */ n) => held.has(n), idle, tick, edit, sync, toWorld, note, many, isOpen, world, busy: () => busy + q.length,
+    /** what the queue waits on (the message of a test that timed out) */
+    state: () => ({ busy, q: q.slice(), cur, ms: cur ? Date.now() - t0 : 0, ahead: q.filter(ahead) }) };
 })());
