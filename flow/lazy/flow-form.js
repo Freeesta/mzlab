@@ -87,6 +87,12 @@
       if (tip) box.append(el("span"), tip.note);
     }
     if (F.msnMolecule && inst.step.startsWith("spectra.msn_graph@")) box.append(F.msnMolecule(inst, step, done));
+    // the regulatory lists ticked in the Library window (libreria-normative.js keeps them as `lists` and `include`) become this step's own parameters
+    if (/^(screen\.suspects|annot\.regulatory)@/.test(inst.step)) box.append(el("span"), F.btn("ok", "Use the regulatory lists ticked in the Library window", () => {
+      let sel = null; try { sel = JSON.parse(localStorage.getItem("mzlab.normative.sel") || "null"); } catch (_) { /* no storage */ }
+      if (!sel || !sel.lists) return;
+      F.setParam(inst, step, "lists", sel.lists); F.setParam(inst, step, "include", sel.include || null); done();
+    }, "Use Library lists"));
     const presets = F.presetList(step);
     if (presets.length) {
       const id = `fl-pre-${inst.id}`;

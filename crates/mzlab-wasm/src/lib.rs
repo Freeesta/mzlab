@@ -63,18 +63,9 @@ impl Write for BlockWriter {
     }
 }
 
-/// The error as the JSON text the page parses; strings go through `json::Out::str`, so control characters are valid `\u0001`.
+/// The error as the JSON text the page parses.
 fn error_text(e: &mzlab_core::Error) -> String {
-    let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        if i > 0 {
-            o.raw(",");
-        }
-        o.str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    o.0
+    e.to_json()
 }
 
 pub(crate) fn error_json(e: &mzlab_core::Error) -> JsValue {
@@ -436,17 +427,7 @@ fn f64s(b: &[u8]) -> Vec<f64> {
 
 /// The files of the session as the page describes them: `[{slot, label, time, full}]`, in session order.
 pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
-    use mzlab_core::json::{self, Value};
-    let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
-    Ok(v.arr()
-        .iter()
-        .map(|i| mzlab_core::originroute::ItemMeta {
-            slot: i.get("slot").and_then(Value::f64).unwrap_or(-1.0) as u32,
-            label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
-            time: i.get("time").and_then(Value::f64),
-            full: matches!(i.get("full"), Some(Value::Bool(true))),
-        })
-        .collect())
+    mzlab_core::originroute::session_items(items).map_err(|e| error_json(&e))
 }
 
 /// The routes over the files of the session (evidence of origin, maps).
@@ -625,6 +606,25 @@ pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr:
     found.len().min(room) as u32
 }
 
+/// Limits (min) of the peak at time `at` on a low-resolution trace into `out[0..2]` (`peakq_lr`, the page's `autoEdges`): `params` = the 11 numbers
+/// of `LrParams::from_slice`. Returns 2, or 0 when the peak is under the S/N threshold or the arguments do not fit.
+#[wasm_bindgen]
+pub fn lr_edges(rt: &[f64], y: &[f64], at: f64, reference: f64, mrm: bool, params: &[f64], out: &mut [f64]) -> u32 {
+    let Some(pk) = mzlab_core::peakq_lr::LrParams::from_slice(params) else { return 0 };
+    let n = rt.len().min(y.len());
+    if out.len() < 2 || n == 0 {
+        return 0;
+    }
+    match mzlab_core::peakq_lr::lr_edges(&rt[..n], &y[..n], at, reference, mrm, &pk) {
+        Some((a, b)) => {
+            out[0] = a;
+            out[1] = b;
+            2
+        }
+        None => 0,
+    }
+}
+
 /// Quality of the peak between the indices `lo` and `hi` of a trace: `[gaussian, asymmetry (NaN = not measurable), noise score]` into `out`;
 /// the noise of the whole trace is worked out here. Returns 3, or 0 if the arguments do not fit.
 #[wasm_bindgen]
@@ -659,13 +659,6 @@ fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn error_text_is_valid_json_for_control_characters() {
-        let e = mzlab_core::Error::new("error.x").with("name", "a\u{1}b\"c\\d\u{200b}");
-        let v = mzlab_core::json::parse(super::error_text(&e).as_bytes()).expect("valid JSON");
-        assert_eq!(v.get("params").and_then(|p| p.get("name")).and_then(|n| n.str()), Some("a\u{1}b\"c\\d\u{200b}"));
-    }
-
     #[test]
     fn auto_integrate_is_the_core_result() {
         // three Gaussians on a flat baseline; the rows written are those of mzlab-core, and a short buffer keeps the first ones

@@ -134,7 +134,7 @@ fn neighbors(w: &Window, xw: &[f64], mz: f64, a: usize, b: usize) -> Vec<Value> 
         if w.mz.is_empty() {
             continue;
         }
-        let target = mz - kk as f64 * 1.003355;
+        let target = mz - kk as f64 * crate::elements::C13_STEP;
         let jn = argmin(&w.mz.iter().map(|v| (v - target).abs()).collect::<Vec<_>>());
         if (w.mz[jn] - target).abs() > 0.5 {
             continue;

@@ -240,13 +240,7 @@ fn snap<R: ReadAt>(items: &[ItemMeta], routes: &mut Table<R>, q: &Query) -> Resu
 }
 
 fn median(v: &[f64]) -> f64 {
-    let mut s = v.to_vec();
-    crate::sortc::by(&mut s, f64::total_cmp);
-    match s.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => s[n / 2],
-        n => (s[n / 2 - 1] + s[n / 2]) / 2.0,
-    }
+    crate::signal::median_or(v, f64::NAN)
 }
 
 /// The marked points "rt,mz;rt,mz;..."; None when one is not two numbers.

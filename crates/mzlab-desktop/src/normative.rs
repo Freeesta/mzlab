@@ -146,6 +146,14 @@ pub fn installed(folder: &Folder) -> Option<Catalog> {
     parse_catalog(&b).ok()
 }
 
+/// The installed catalogue as the site serves it (the same bytes), for the «Regulatory lists» section of the Library window.
+pub fn catalog_text(folder: &Folder) -> Result<String, NormError> {
+    installed(folder).ok_or_else(|| NormError::new("normative.dl.err.missing", ""))?;
+    let st = folder.stat(META_FILE).map_err(NormError::io)?;
+    let b = folder.read(META_FILE, 0, st.size).map_err(NormError::io)?;
+    String::from_utf8(b).map_err(NormError::io)
+}
+
 pub fn status(folder: &Folder) -> Status {
     match installed(folder).zip(folder.stat(FILE).ok()) {
         Some((c, f)) => Status {

@@ -209,14 +209,13 @@ impl Rows {
 }
 
 /// The retention time of a spectrum header, in minutes.
-fn rt_minutes(h: &str) -> f64 {
+pub(super) fn rt_minutes(h: &str) -> f64 {
     let mut rt = cv(h, "MS:1000016").and_then(float).unwrap_or(0.0);
     if let Some(p) = h.find("accession=\"MS:1000016\"") {
         let tag_end = h[p..].find('>').map_or(h.len(), |g| p + g);
-        if let Some(u) = attr(&h[p..tag_end], "unitName") {
-            if u.starts_with("second") {
-                rt /= 60.0;
-            }
+        let tag = &h[p..tag_end];
+        if crate::mzml::is_seconds(attr(tag, "unitName"), attr(tag, "unitAccession")) {
+            rt /= 60.0;
         }
     }
     rt
