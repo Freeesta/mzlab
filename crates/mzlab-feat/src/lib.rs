@@ -36,13 +36,13 @@ pub mod famrecord;
 pub mod filters;
 pub mod filters_blank;
 pub mod filters_nts;
-pub mod flow_drift;
 #[cfg(feature = "untargeted")]
 pub mod flow_formula_ms1;
 #[cfg(feature = "flow_formula")]
 pub mod flow_formula_ms2;
 #[cfg(feature = "flow_formula")]
 pub mod flow_insilico;
+pub mod flow_drift;
 pub mod flow_level;
 pub mod flow_ms2;
 #[cfg(feature = "attributio")]

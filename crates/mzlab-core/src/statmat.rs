@@ -21,10 +21,7 @@ const EPS: f64 = 1e-15;
 
 /// Hestenes' one-sided Jacobi sweeps on the columns of a tall matrix (`m >= n`, column-major as `Vec<Vec<f64>>`): `c` is rotated in place and
 /// `on_rotate(p, q, cs, sn)` is called for every rotation so that a caller can accumulate the right vectors. Returns the norms of the columns.
-fn jacobi_sweeps(
-    c: &mut [Vec<f64>],
-    mut on_rotate: impl FnMut(usize, usize, f64, f64),
-) -> Vec<f64> {
+fn jacobi_sweeps(c: &mut [Vec<f64>], mut on_rotate: impl FnMut(usize, usize, f64, f64)) -> Vec<f64> {
     let n = c.len();
     for _sweep in 0..60 {
         let mut rotated = false;
@@ -52,17 +49,13 @@ fn jacobi_sweeps(
             break;
         }
     }
-    c.iter()
-        .map(|x| x.iter().map(|y| y * y).sum::<f64>().sqrt())
-        .collect()
+    c.iter().map(|x| x.iter().map(|y| y * y).sum::<f64>().sqrt()).collect()
 }
 
 /// Returns (columns scaled to unit norm, norms, right vectors as columns of an n×n matrix).
 fn jacobi_columns(mut c: Vec<Vec<f64>>) -> (Vec<Vec<f64>>, Vec<f64>, Vec<Vec<f64>>) {
     let n = c.len();
-    let mut v: Vec<Vec<f64>> = (0..n)
-        .map(|j| (0..n).map(|i| if i == j { 1.0 } else { 0.0 }).collect())
-        .collect();
+    let mut v: Vec<Vec<f64>> = (0..n).map(|j| (0..n).map(|i| if i == j { 1.0 } else { 0.0 }).collect()).collect();
     let norms = jacobi_sweeps(&mut c, |p, q, cs, sn| rotate(&mut v, p, q, cs, sn));
     (c, norms, v)
 }
@@ -110,9 +103,7 @@ fn complete(cols: &mut [Vec<f64>], null: &[bool]) {
 /// The columns of the tall form of `a` (`a` itself, or its transpose when it has more columns than rows), one `Vec` per column.
 fn columns(a: &[f64], (m, n): (usize, usize)) -> Vec<Vec<f64>> {
     if m >= n {
-        (0..n)
-            .map(|j| a.iter().skip(j).step_by(n).copied().collect())
-            .collect()
+        (0..n).map(|j| a.iter().skip(j).step_by(n).copied().collect()).collect()
     } else {
         a.chunks_exact(n).map(<[f64]>::to_vec).collect()
     }
@@ -129,36 +120,16 @@ pub fn singular_values(a: &[f64], m: usize, n: usize) -> Vec<f64> {
     let mut order: Vec<usize> = (0..norms.len()).collect();
     // std on purpose: see `svd`
     #[allow(clippy::disallowed_methods)]
-    order.sort_by(|&x, &y| {
-        norms[y]
-            .partial_cmp(&norms[x])
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    order.sort_by(|&x, &y| norms[y].partial_cmp(&norms[x]).unwrap_or(std::cmp::Ordering::Equal));
     let top = norms[order[0]];
-    order
-        .iter()
-        .map(|&j| {
-            if norms[j] <= top * 1e-14 {
-                0.0
-            } else {
-                norms[j]
-            }
-        })
-        .collect()
+    order.iter().map(|&j| if norms[j] <= top * 1e-14 { 0.0 } else { norms[j] }).collect()
 }
 
 /// Thin SVD of the row-major `m × n` matrix `a`.
 pub fn svd(a: &[f64], m: usize, n: usize) -> Svd {
     let k = m.min(n);
     if k == 0 {
-        return Svd {
-            u: Vec::new(),
-            s: Vec::new(),
-            vt: Vec::new(),
-            m,
-            n,
-            k,
-        };
+        return Svd { u: Vec::new(), s: Vec::new(), vt: Vec::new(), m, n, k };
     }
     let tall = m >= n;
     // work on a matrix with at least as many rows as columns: a itself, or its transpose
@@ -168,34 +139,14 @@ pub fn svd(a: &[f64], m: usize, n: usize) -> Svd {
     let mut order: Vec<usize> = (0..cols).collect();
     // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
     #[allow(clippy::disallowed_methods)]
-    order.sort_by(|&x, &y| {
-        norms[y]
-            .partial_cmp(&norms[x])
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    order.sort_by(|&x, &y| norms[y].partial_cmp(&norms[x]).unwrap_or(std::cmp::Ordering::Equal));
     let top = norms[order[0]];
     let null: Vec<bool> = order.iter().map(|&j| norms[j] <= top * 1e-14).collect();
-    let mut l: Vec<Vec<f64>> = order
-        .iter()
-        .map(|&j| {
-            if norms[j] > 0.0 {
-                left[j].iter().map(|x| x / norms[j]).collect()
-            } else {
-                vec![0.0; rows]
-            }
-        })
-        .collect();
-    let mut r: Vec<Vec<f64>> = order
-        .iter()
-        .map(|&j| std::mem::take(&mut right[j]))
-        .collect();
+    let mut l: Vec<Vec<f64>> = order.iter().map(|&j| if norms[j] > 0.0 { left[j].iter().map(|x| x / norms[j]).collect() } else { vec![0.0; rows] }).collect();
+    let mut r: Vec<Vec<f64>> = order.iter().map(|&j| std::mem::take(&mut right[j])).collect();
     complete(&mut l, &null);
     complete(&mut r, &vec![false; cols]);
-    let s: Vec<f64> = order
-        .iter()
-        .zip(&null)
-        .map(|(&j, &z)| if z { 0.0 } else { norms[j] })
-        .collect();
+    let s: Vec<f64> = order.iter().zip(&null).map(|(&j, &z)| if z { 0.0 } else { norms[j] }).collect();
     // a = l · s · rᵀ (tall) or a = r · s · lᵀ (wide)
     let (uc, vc) = if tall { (&l, &r) } else { (&r, &l) };
     let u: Vec<f64> = (0..m).flat_map(|i| uc.iter().map(move |c| c[i])).collect();
@@ -210,14 +161,9 @@ pub fn eigh(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
         return eigh2(a[0], a[2], a[3]);
     }
     let mut m = a.to_vec();
-    let mut v: Vec<f64> = (0..n * n)
-        .map(|i| if i / n == i % n { 1.0 } else { 0.0 })
-        .collect();
+    let mut v: Vec<f64> = (0..n * n).map(|i| if i / n == i % n { 1.0 } else { 0.0 }).collect();
     for _sweep in 0..60 {
-        let off: f64 = (0..n)
-            .flat_map(|i| (0..i).map(move |j| (i, j)))
-            .map(|(i, j)| m[i * n + j] * m[i * n + j])
-            .sum();
+        let off: f64 = (0..n).flat_map(|i| (0..i).map(move |j| (i, j))).map(|(i, j)| m[i * n + j] * m[i * n + j]).sum();
         let diag: f64 = (0..n).map(|i| m[i * n + i] * m[i * n + i]).sum();
         if off <= 1e-32 * diag.max(1e-300) {
             break;
@@ -231,11 +177,7 @@ pub fn eigh(a: &[f64], n: usize) -> (Vec<f64>, Vec<f64>) {
     let mut order: Vec<usize> = (0..n).collect();
     // std on purpose: partial_cmp(..).unwrap_or(Equal) is not a total order if a NaN arrives, and sortc could order those rows differently
     #[allow(clippy::disallowed_methods)]
-    order.sort_by(|&x, &y| {
-        m[x * n + x]
-            .partial_cmp(&m[y * n + y])
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    order.sort_by(|&x, &y| m[x * n + x].partial_cmp(&m[y * n + y]).unwrap_or(std::cmp::Ordering::Equal));
     let w = order.iter().map(|&i| m[i * n + i]).collect();
     let vec = (0..n * n).map(|x| v[(x / n) * n + order[x % n]]).collect();
     (w, vec)
@@ -271,30 +213,16 @@ fn jacobi_step(m: &mut [f64], v: &mut [f64], n: usize, p: usize, q: usize) {
 /// `[[a, b], [b, c]]`: eigenvalues ascending and the eigenvectors as numpy returns them (columns; row-major result).
 fn eigh2(a: f64, b: f64, c: f64) -> (Vec<f64>, Vec<f64>) {
     if b == 0.0 {
-        return if a > c {
-            (vec![c, a], vec![0.0, 1.0, 1.0, 0.0])
-        } else {
-            (vec![a, c], vec![1.0, 0.0, 0.0, 1.0])
-        };
+        return if a > c { (vec![c, a], vec![0.0, 1.0, 1.0, 0.0]) } else { (vec![a, c], vec![1.0, 0.0, 0.0, 1.0]) };
     }
     let (mean, half) = ((a + c) / 2.0, ((a - c) / 2.0).hypot(b));
     let (lo, hi) = (mean - half, mean + half);
     // eigenvector of the larger eigenvalue ∝ (b, hi − a) (or (hi − c, b)); take the better conditioned one
-    let (mut x, mut y) = if (hi - a).abs() >= (hi - c).abs() {
-        (b, hi - a)
-    } else {
-        (hi - c, b)
-    };
+    let (mut x, mut y) = if (hi - a).abs() >= (hi - c).abs() { (b, hi - a) } else { (hi - c, b) };
     let nrm = x.hypot(y);
     (x, y) = (x / nrm, y / nrm);
     // numpy (LAPACK, lower triangle): b < 0 → (−, +); b > 0 → (+, +) when a <= c, (−, −) when a > c
-    let flip = if b < 0.0 {
-        x > 0.0
-    } else if a <= c {
-        x < 0.0
-    } else {
-        x > 0.0
-    };
+    let flip = if b < 0.0 { x > 0.0 } else if a <= c { x < 0.0 } else { x > 0.0 };
     if flip {
         (x, y) = (-x, -y);
     }

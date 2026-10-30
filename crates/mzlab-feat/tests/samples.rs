@@ -3,11 +3,7 @@
 use mzlab_feat::samples::{digest, from_json, propose, to_json, to_tsv, KINDS};
 
 fn files(names: &[&str]) -> Vec<(String, String)> {
-    names
-        .iter()
-        .enumerate()
-        .map(|(i, n)| (n.to_string(), format!("{i:064x}")))
-        .collect()
+    names.iter().enumerate().map(|(i, n)| (n.to_string(), format!("{i:064x}"))).collect()
 }
 
 const SERIES: [&str; 8] = [
@@ -25,19 +21,13 @@ const SERIES: [&str; 8] = [
 fn types_times_and_replicates_come_from_the_names() {
     let s = propose(&files(&SERIES));
     let kinds: Vec<&str> = s.iter().map(|x| x.kind.as_str()).collect();
-    assert_eq!(
-        kinds,
-        ["dark", "t0", "sample", "sample", "sample", "blank", "qc", "std"]
-    );
+    assert_eq!(kinds, ["dark", "t0", "sample", "sample", "sample", "blank", "qc", "std"]);
     assert_eq!(s[1].time_min, Some(0.0));
     assert_eq!(s[2].time_min, Some(5.0));
     assert_eq!((s[2].replicate, s[3].replicate, s[4].replicate), (1, 2, 1));
     assert_eq!(s[7].conc, Some(5.0));
     assert_eq!(s[7].unit.as_deref(), Some("ppm"));
-    assert!(s
-        .iter()
-        .enumerate()
-        .all(|(i, x)| x.order == i as u32 + 1 && !x.istd));
+    assert!(s.iter().enumerate().all(|(i, x)| x.order == i as u32 + 1 && !x.istd));
     assert!(s.iter().all(|x| KINDS.contains(&x.kind.as_str())));
     assert_eq!(s[5].group, "blank");
 }
@@ -58,11 +48,7 @@ fn json_roundtrip_digest_and_edits() {
 fn reader_refuses_wrong_documents() {
     let ok = to_json(&propose(&files(&SERIES[..2])));
     assert!(from_json(ok.replace("campioni/1", "campioni/9").as_bytes()).is_err());
-    assert!(from_json(
-        ok.replace("\"tipo\":\"t0\"", "\"tipo\":\"unknown\"")
-            .as_bytes()
-    )
-    .is_err());
+    assert!(from_json(ok.replace("\"tipo\":\"t0\"", "\"tipo\":\"unknown\"").as_bytes()).is_err());
     assert!(from_json(ok.replace("\"replica\":1", "\"replica\":0").as_bytes()).is_err());
     assert!(from_json(b"not json").is_err());
 }

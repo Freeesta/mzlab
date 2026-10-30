@@ -27,11 +27,7 @@ fn same(what: &str, got: &Value, want: &Value) {
     match (got, want) {
         (Value::Object(a), Value::Object(b)) => {
             for k in a.keys().chain(b.keys()) {
-                same(
-                    &format!("{what}.{k}"),
-                    a.get(k).unwrap_or(&Value::Null),
-                    b.get(k).unwrap_or(&Value::Null),
-                );
+                same(&format!("{what}.{k}"), a.get(k).unwrap_or(&Value::Null), b.get(k).unwrap_or(&Value::Null));
             }
         }
         (Value::Array(a), Value::Array(b)) => {
@@ -40,10 +36,7 @@ fn same(what: &str, got: &Value, want: &Value) {
                 same(&format!("{what}[{i}]"), x, y);
             }
         }
-        (Value::Number(a), Value::Number(b)) => assert!(
-            close(a.as_f64().unwrap(), b.as_f64().unwrap()),
-            "{what}: {a} against {b}"
-        ),
+        (Value::Number(a), Value::Number(b)) => assert!(close(a.as_f64().unwrap(), b.as_f64().unwrap()), "{what}: {a} against {b}"),
         _ => assert_eq!(got, want, "{what}"),
     }
 }
@@ -54,17 +47,8 @@ fn parsed(text: &str) -> Value {
 
 fn reference() -> Option<(PathBuf, Value)> {
     static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    let out = std::env::temp_dir().join(format!(
-        "mzlab-dam-{}-{}",
-        std::process::id(),
-        N.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
-    ));
-    match Command::new("python3")
-        .current_dir(root())
-        .arg("tools/dam_riferimento.py")
-        .arg(&out)
-        .output()
-    {
+    let out = std::env::temp_dir().join(format!("mzlab-dam-{}-{}", std::process::id(), N.fetch_add(1, std::sync::atomic::Ordering::SeqCst)));
+    match Command::new("python3").current_dir(root()).arg("tools/dam_riferimento.py").arg(&out).output() {
         Ok(o) if o.status.success() => {}
         other => {
             if std::env::var("MZLAB_GOLDEN_STRICT").is_ok() {
@@ -89,11 +73,7 @@ fn text(g: &Gradient) -> Value {
 }
 
 fn nums(v: &Value) -> Vec<f64> {
-    v.as_array()
-        .unwrap()
-        .iter()
-        .map(|x| x.as_f64().unwrap_or(f64::NAN))
-        .collect()
+    v.as_array().unwrap().iter().map(|x| x.as_f64().unwrap_or(f64::NAN)).collect()
 }
 
 /// A gradient result of the reference (`{"ok": model}` or `{"error_key", "params"}`) against ours.
@@ -105,11 +85,7 @@ fn gradient_case(what: &str, got: mzlab_core::Result<Option<Gradient>>, want: &V
             assert_eq!(e.key, want["error_key"].as_str().unwrap(), "{what}");
             for (k, v) in &e.params {
                 let w = &want["params"][*k];
-                let eq = v == w.as_str().unwrap_or("")
-                    || v.parse::<f64>()
-                        .ok()
-                        .zip(w.as_str().and_then(|s| s.parse::<f64>().ok()))
-                        .is_some_and(|(a, b)| a == b);
+                let eq = v == w.as_str().unwrap_or("") || v.parse::<f64>().ok().zip(w.as_str().and_then(|s| s.parse::<f64>().ok())).is_some_and(|(a, b)| a == b);
                 assert!(eq, "{what}: parameter {k}: {v} against {w}");
             }
         }
@@ -125,28 +101,16 @@ fn methods_match_python() {
         let l = lab(&dir, name);
         let mut o = Out::default();
         l.write_listed(std::fs::metadata(dir.join(name)).unwrap().len(), &mut o);
-        same(
-            &format!("{name} summary"),
-            &parsed(&o.0)["info"],
-            &f["summary"],
-        );
+        same(&format!("{name} summary"), &parsed(&o.0)["info"], &f["summary"]);
         let Ok(m) = &l.res else {
-            assert!(
-                f.get("method").is_none(),
-                "{name}: Python reads it, Rust does not: {:?}",
-                l.res.as_ref().err()
-            );
+            assert!(f.get("method").is_none(), "{name}: Python reads it, Rust does not: {:?}", l.res.as_ref().err());
             continue;
         };
         let mut o = Out::default();
         m.write_json(&mut o);
         same(&format!("{name} method"), &parsed(&o.0), &f["method"]);
         assert_eq!(method_kind(m), f["kind"].as_str(), "{name}: kind");
-        gradient_case(
-            &format!("{name} gradient"),
-            from_dam(m.lc.as_ref()),
-            &f["gradient"],
-        );
+        gradient_case(&format!("{name} gradient"), from_dam(m.lc.as_ref()), &f["gradient"]);
         for (i, d) in r["data"].as_array().unwrap().iter().enumerate() {
             let data = json::parse(d.to_string().as_bytes()).unwrap();
             let mut o = Out::default();
@@ -161,37 +125,14 @@ fn method_route_and_warnings_match_python() {
     let Some((dir, r)) = reference() else { return };
     for (i, c) in r["methods"].as_array().unwrap().iter().enumerate() {
         if let Some(have) = c.get("warn") {
-            let all: Vec<Lab> = r["files"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|f| lab(&dir, f["file"].as_str().unwrap()))
-                .collect();
-            let have: Vec<String> = have
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|x| x.as_str().unwrap().to_string())
-                .collect();
-            same(
-                &format!("warnings {i}"),
-                &parsed(&warnings_json(&all, &have)),
-                &c["result"],
-            );
+            let all: Vec<Lab> = r["files"].as_array().unwrap().iter().map(|f| lab(&dir, f["file"].as_str().unwrap())).collect();
+            let have: Vec<String> = have.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect();
+            same(&format!("warnings {i}"), &parsed(&warnings_json(&all, &have)), &c["result"]);
             continue;
         }
-        let labs: Vec<Lab> = c["labs"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|n| lab(&dir, n.as_str().unwrap()))
-            .collect();
+        let labs: Vec<Lab> = c["labs"].as_array().unwrap().iter().map(|n| lab(&dir, n.as_str().unwrap())).collect();
         let got = method_json(&c["data"].to_string(), &labs, c["file"].as_str().unwrap()).unwrap();
-        same(
-            &format!("method {i} ({})", c["file"]),
-            &parsed(&got),
-            &c["result"],
-        );
+        same(&format!("method {i} ({})", c["file"]), &parsed(&got), &c["result"]);
     }
 }
 
@@ -213,12 +154,7 @@ fn gradient_parsers_match_python() {
 #[test]
 fn analog_helpers_match_python() {
     let Some((_, r)) = reference() else { return };
-    for (i, c) in r["analog"]["pressure"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .enumerate()
-    {
+    for (i, c) in r["analog"]["pressure"].as_array().unwrap().iter().enumerate() {
         let got = pressure_to_bar(&nums(&c["y"]), c["unit"].as_str().unwrap());
         let want = &c["result"];
         let Some(y) = got else {
@@ -227,46 +163,20 @@ fn analog_helpers_match_python() {
         };
         let w = nums(want);
         assert_eq!(y.len(), w.len());
-        assert!(
-            y.iter()
-                .zip(&w)
-                .all(|(a, b)| close(*a, *b) || (a.is_nan() && b.is_nan())),
-            "pressure {i}"
-        );
+        assert!(y.iter().zip(&w).all(|(a, b)| close(*a, *b) || (a.is_nan() && b.is_nan())), "pressure {i}");
     }
     for (i, c) in r["analog"]["reduce"].as_array().unwrap().iter().enumerate() {
-        let (t, y) = reduce_minmax(
-            &nums(&c["t"]),
-            &nums(&c["y"]),
-            c["n"].as_u64().unwrap() as usize,
-        );
-        same(
-            &format!("reduce {i} t"),
-            &serde_json::json!(t),
-            &c["result"][0],
-        );
-        same(
-            &format!("reduce {i} y"),
-            &serde_json::json!(y),
-            &c["result"][1],
-        );
+        let (t, y) = reduce_minmax(&nums(&c["t"]), &nums(&c["y"]), c["n"].as_u64().unwrap() as usize);
+        same(&format!("reduce {i} t"), &serde_json::json!(t), &c["result"][0]);
+        same(&format!("reduce {i} y"), &serde_json::json!(y), &c["result"][1]);
     }
     for (i, c) in r["analog"]["delay"].as_array().unwrap().iter().enumerate() {
-        let got = detector_delay(
-            &nums(&c["ta"]),
-            &nums(&c["ya"]),
-            &nums(&c["tb"]),
-            &nums(&c["yb"]),
-        );
+        let got = detector_delay(&nums(&c["ta"]), &nums(&c["ya"]), &nums(&c["tb"]), &nums(&c["yb"]));
         let want = &c["result"];
         match got {
             None => assert!(want.is_null(), "delay {i}: none against {want}"),
             Some(d) => {
-                same(
-                    &format!("delay {i}"),
-                    &serde_json::json!({"delay": d.delay, "peaks": d.peaks, "corr": d.corr}),
-                    want,
-                );
+                same(&format!("delay {i}"), &serde_json::json!({"delay": d.delay, "peaks": d.peaks, "corr": d.corr}), want);
             }
         }
     }

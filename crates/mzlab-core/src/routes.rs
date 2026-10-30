@@ -82,15 +82,7 @@ pub struct Routes<R: ReadAt> {
 
 impl<R: ReadAt> Routes<R> {
     pub fn new(idx: Index<R>) -> Self {
-        Routes {
-            idx,
-            maps: Vec::new(),
-            steps: Vec::new(),
-            tiles: Vec::new(),
-            cells: Default::default(),
-            pol: None,
-            msn: Default::default(),
-        }
+        Routes { idx, maps: Vec::new(), steps: Vec::new(), tiles: Vec::new(), cells: Default::default(), pol: None, msn: Default::default() }
     }
 
     /// True when the file has scans (an MRM file has only chromatograms: its routes are Python's).
@@ -100,12 +92,8 @@ impl<R: ReadAt> Routes<R> {
 
     /// Answer for a path such as `/api/filters` and its query; `None` = not answered here.
     pub fn handle(&mut self, path: &str, q: &Query) -> Result<Option<String>> {
-        if let Some(r) = self.canali_route(path, q) {
-            return r;
-        }
-        if !self.has_scans() {
-            return Ok(crate::mrmroutes::no_scans(path, q));
-        }
+        if let Some(r) = self.canali_route(path, q) { return r; }
+        if !self.has_scans() { return Ok(crate::mrmroutes::no_scans(path, q)); }
         self.con_opz(q, |r| match path {
             "/api/chrom" => r.chrom(q),
             "/api/xic" => r.xic_route(q),
@@ -289,11 +277,7 @@ impl<R: ReadAt> Routes<R> {
         let fl = self.filtro(filt)?;
         let (ar, scans) = self.idx.arrays_scans(si)?;
         let sel: Vec<usize> = (0..ar.scan_ids.len())
-            .filter(|&j| {
-                fl.as_ref().is_none_or(|f| {
-                    f.passa(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])
-                })
-            })
+            .filter(|&j| fl.as_ref().is_none_or(|f| f.passa(ar.scan_ids[j] as usize, &scans[ar.scan_ids[j] as usize])))
             .collect();
         let sc = |j: usize| &scans[ar.scan_ids[j] as usize];
         o.raw("{\"level\":")
@@ -391,42 +375,24 @@ pub(crate) fn next_tick() -> u64 {
 
 /// Total bytes of the cached maps of the files.
 pub fn map_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    files
-        .values()
-        .flat_map(|r| r.maps.iter())
-        .map(|m| m.1.len() * 4)
-        .sum()
+    files.values().flat_map(|r| r.maps.iter()).map(|m| m.1.len() * 4).sum()
 }
 
 /// Bytes of the whole cache of the engine: the maps plus the arrays and blocks of the indexes (one LRU, see `trim_cache`).
 pub fn cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    map_cache_bytes(files)
-        + tiles_cache_bytes(files)
-        + crate::mapscan::cells_cache_bytes(files)
-        + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
+    map_cache_bytes(files) + tiles_cache_bytes(files) + crate::mapscan::cells_cache_bytes(files) + files.values().map(|r| r.idx.cache_bytes()).sum::<usize>()
 }
 
 /// Bytes of the pyramids of map tiles (`maptiles`) of all the files; they go in the same LRU as the maps.
 pub fn tiles_cache_bytes<R: ReadAt>(files: &std::collections::HashMap<u32, Routes<R>>) -> usize {
-    files
-        .values()
-        .flat_map(|r| r.tiles.iter())
-        .filter_map(|t| t.1.as_ref())
-        .map(|p| p.bytes())
-        .sum()
+    files.values().flat_map(|r| r.tiles.iter()).filter_map(|t| t.1.as_ref()).map(|p| p.bytes()).sum()
 }
 
 /// Drops maps, oldest use first, until the maps hold at most `cap` bytes. Returns how many were dropped.
-pub fn trim_map_cache<R: ReadAt>(
-    files: &mut std::collections::HashMap<u32, Routes<R>>,
-    cap: usize,
-) -> usize {
+pub fn trim_map_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
     let mut dropped = 0;
     while map_cache_bytes(files) > cap {
-        let oldest = files
-            .iter()
-            .flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i)))
-            .min();
+        let oldest = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, *k, i))).min();
         let Some((_, k, i)) = oldest else { break };
         if let Some(r) = files.get_mut(&k) {
             r.maps.remove(i);
@@ -438,44 +404,15 @@ pub fn trim_map_cache<R: ReadAt>(
 
 /// The one LRU of the engine: maps, per-scan arrays and cached blocks of ALL the files go, least recently used first, until the cache holds at most
 /// `cap` bytes (every entry is read again from the index when asked: the answers do not change). Returns how many entries were dropped.
-pub fn trim_cache<R: ReadAt>(
-    files: &mut std::collections::HashMap<u32, Routes<R>>,
-    cap: usize,
-) -> usize {
+pub fn trim_cache<R: ReadAt>(files: &mut std::collections::HashMap<u32, Routes<R>>, cap: usize) -> usize {
     // (clock, order in a tie: map, tile pyramid, scan cells, index block; file; index in its list)
     let mut dropped = 0;
     while cache_bytes(files) > cap {
-        let maps = files.iter().flat_map(|(k, r)| {
-            r.maps
-                .iter()
-                .enumerate()
-                .map(move |(i, m)| (m.2, 0u8, *k, i))
-        });
-        let tiles = files.iter().flat_map(|(k, r)| {
-            r.tiles
-                .iter()
-                .enumerate()
-                .filter(|(_, t)| t.1.is_some())
-                .map(move |(i, t)| (t.2, 1u8, *k, i))
-        });
-        let cells = files.iter().flat_map(|(k, r)| {
-            r.cells
-                .tables
-                .iter()
-                .enumerate()
-                .map(move |(i, c)| (c.3, 2u8, *k, i))
-        });
-        let blocks = files
-            .iter()
-            .filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, 3u8, *k, 0)));
-        let Some((_, kind, k, i)) = maps
-            .chain(tiles)
-            .chain(cells)
-            .chain(blocks)
-            .min_by_key(|e| (e.0, e.1))
-        else {
-            break;
-        };
+        let maps = files.iter().flat_map(|(k, r)| r.maps.iter().enumerate().map(move |(i, m)| (m.2, 0u8, *k, i)));
+        let tiles = files.iter().flat_map(|(k, r)| r.tiles.iter().enumerate().filter(|(_, t)| t.1.is_some()).map(move |(i, t)| (t.2, 1u8, *k, i)));
+        let cells = files.iter().flat_map(|(k, r)| r.cells.tables.iter().enumerate().map(move |(i, c)| (c.3, 2u8, *k, i)));
+        let blocks = files.iter().filter_map(|(k, r)| r.idx.oldest_tick().map(|t| (t, 3u8, *k, 0)));
+        let Some((_, kind, k, i)) = maps.chain(tiles).chain(cells).chain(blocks).min_by_key(|e| (e.0, e.1)) else { break };
         if let Some(r) = files.get_mut(&k) {
             match kind {
                 0 => drop(r.maps.remove(i)),

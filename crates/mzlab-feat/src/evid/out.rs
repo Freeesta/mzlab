@@ -3,10 +3,10 @@
 
 use super::graph::{Edge, Identity, Inputs, Node};
 use super::prepared::{order as graph_order, Key, Prepared};
-use super::{breakdown_fields, evidence_json, PointsTable};
 use crate::store::Section;
-use crate::table::*;
 use mzlab_core::error::Result;
+use super::{breakdown_fields, evidence_json, PointsTable};
+use crate::table::*;
 use mzlab_core::json::{round, Out};
 
 pub const EVID_GRAPH_FORMAT: &str = super::FORMAT;
@@ -130,9 +130,7 @@ impl<'a, 'b> GraphStream<'a, 'b> {
             body += o.0.len();
         }
         let mut order: Vec<u32> = (0..n as u32).collect();
-        crate::sortc::by(&mut order, |&a, &b| {
-            graph_order(&keys[a as usize], &keys[b as usize])
-        });
+        crate::sortc::by(&mut order, |&a, &b| graph_order(&keys[a as usize], &keys[b as usize]));
         let commas = n.saturating_sub(1);
         GraphStream {
             inp,
