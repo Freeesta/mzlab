@@ -295,6 +295,8 @@
   "iso.shift": "Parte di una frase sul profilo isotopico: spostamento in m/z del profilo; il segnaposto è il valore già formattato.",
   "spec.scanLine.avg": "Riga sopra lo spettro quando si mostra la media di più scansioni; {n} = numero di scansioni.",
   "spec.scanLine.prec": "Riga sopra lo spettro: precursore isolato; {prec} = m/z del precursore.",
+  "files.ugrp.name": "Name given at once to a new user group of the side file list (renamed later by the user); {n} = 1, 2, ... the first number not in use.",
+  "files.ugrp.toggle": "Accessible name of the fold button of a user group header in the side file list; {g} = the group name.",
   "spec.scanLine.ce": "Riga sopra lo spettro: energia di collisione; {ce} = valore in eV.",
   "el.H": "Nome di un elemento nella tavola periodica (el.<simbolo>).",
   "tbl.pt.avgWeight": "Riga nella casella della tavola periodica; {w} = peso atomico (numero).",

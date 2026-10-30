@@ -165,9 +165,9 @@ const tabFiles = (t = E.tab) => E.files.filter((/** @type {FileAperto} */ f) => 
 // tabPanels() without an argument is all the panels. A panel still holds ONE experiment type; E.tab is the type of the current file.
 const lrTog = () => !(window.BANCO && BANCO.on());
 /** @param {string} [t] */ const tabPanels = t => (t === undefined ? E.panels : E.panels.filter((/** @type {Bag} */ p) => p.tab === (t ?? E.tab)));
-// group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
-const grpOf = (/** @type {FileAperto} */ f) => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
-const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("hr.u:") ? g.slice(5) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
+// group of a file in the list: a user group (lista-file.js) first; otherwise in LR strictly the experiment name (Full Scan, MS2, MRM), in HR bench sub-groups
+const grpOf = (/** @type {FileAperto} */ f) => f.ugrp ? "u:" + f.ugrp : (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : "hr." + hrGroup(f)) : kindOf(f);
+const GRP_HR = /** @type {Record<string, () => string>} */ ({ "hr.full": () => I18N.t("files.group.full"), "hr.ms2": () => I18N.t("files.group.ms2"), "hr.infusion": () => I18N.t("files.group.infusion") }); const grpLabel = (/** @type {string} */ g) => g.startsWith("u:") ? g.slice(2) : GRP_HR[g] ? GRP_HR[g]() : ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 // the entries of a physical file that is open together (the Full Scan and the MS2 part of a DDA file)
 const sibsOf = (/** @type {FileAperto} */ f) => E.files.filter((/** @type {FileAperto} */ x) => fileBase(x.file) === fileBase(f.file));
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
@@ -794,13 +794,14 @@ function renderFileList() {
   };
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
   E._grpOpen = E._grpOpen || {};
-  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog());
+  const isExpOpen = (/** @type {string} */ t) => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog() || t.startsWith("u:"));
   // the open/closed state of a group: one per experiment type in the low-resolution list (its files are of one type), one for the whole list in the bench
-  const gkOf = (/** @type {{ g: string, fs: FileAperto[] }} */ G) => lrTog() ? G.fs[0].kind : E.tab;
+  const gkOf = (/** @type {{ g: string, fs: FileAperto[] }} */ G) => G.g.startsWith("u:") ? G.g : lrTog() ? G.fs[0].kind : E.tab;
   // compact list (iPad, narrow window), high resolution: lower rows and groups that fold, remembered in qqq.flgrp
   const compact = !!(window.BANCO && BANCO.on() && flCompact());
   const grpClosed = (/** @type {string} */ g) => compact && flGrpGet()[g] === 1;
   const gh = (/** @type {{ g: string, fs: FileAperto[] }} */ G, /** @type {string} */ label) => {
+    if (G.g.startsWith("u:")) return ugHead(G, isExpOpen(G.g));
     const gk = gkOf(G), open = isExpOpen(gk), tip = lrTog() && window.modeSchema ? ` data-tiph="${EH(modeSchema(gk))}"` : "";
     if (compact && G.g.startsWith("hr.")) return `<div class="fgh" data-gg="${EH(G.g)}" style="cursor:pointer"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${grpClosed(G.g) ? "" : " on"}" role="button" tabindex="0" aria-expanded="${!grpClosed(G.g)}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
