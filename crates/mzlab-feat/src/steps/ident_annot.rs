@@ -104,7 +104,7 @@ fn standard_params() -> Vec<Param> {
         Param::integer("suspect_fragments_min", "Suspect fragments")
             .min(1.0)
             .default_num(2.0)
-            .doc("Level 3a when no library hit reaches 2a: this many listed fragments of a suspect of screen.suspects are in the MS2"),
+            .doc("Level 3a: at least this many fragments listed for a suspect are found in the feature MS2"),
     ]
 }
 
