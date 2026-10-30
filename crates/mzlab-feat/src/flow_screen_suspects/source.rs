@@ -56,7 +56,7 @@ impl Source {
             let s = Suspects::open(bytes).map_err(|e| {
                 Error::new("err.flow.screen.mzsus")
                     .with("file", name)
-                    .with("reason", &format!("{e:?}"))
+                    .with("reason", format!("{e:?}"))
             })?;
             let provenance = manifest_json(s.manifest());
             return Ok(Source {

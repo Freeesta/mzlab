@@ -192,12 +192,13 @@ pub fn screen_text(
         &sources,
         &mzs,
         (&groups, dropped),
-        scans.as_ref().map(Vec::len),
-        supported.as_deref(),
+        (scans.as_ref().map(Vec::len), supported.as_deref()),
     ))
 }
 
 type Feature = (usize, f64, f64);
+/// The `(feature id, formula)` pairs `formulas/1` supports, sorted.
+type Support<'a> = Option<&'a [(String, String)]>;
 
 /// The isomer groups of one feature over the adducts and the files.
 fn feature_groups(
@@ -408,8 +409,7 @@ fn write(
     sources: &[Source],
     mz: &[f64],
     (groups, dropped): (&[Group], usize),
-    ms2: Option<usize>,
-    supported: Option<&[(String, String)]>,
+    (ms2, supported): (Option<usize>, Support),
 ) -> String {
     let mut o = Out::default();
     head(&mut o, p, polarity, adducts, sources);
