@@ -88,8 +88,6 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
   L.ondblclick = e => {
-    const ug = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".fgh[data-ug]"));
-    if (ug && !/** @type {Element} */ (e.target).closest("input")) { renameGroup(ug.dataset.ug || ""); return; }
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");
     if (sw) { e.stopPropagation(); const g = fileOf(sw.parentElement?.querySelector(".nm"), ".nm"); if (g) pickFileColor(g); return; }
@@ -110,7 +108,12 @@ function bindListaFile() {
     if (hd) groupCtx(ev, hd.dataset.ug || ""); else fileCtx(ev, fileOf(row?.querySelector(".nm") || null, ".nm"));
   });
   L.dataset.cap = "1";
-  L.querySelectorAll(".fgh[data-ug]").forEach(el => { /** @type {HTMLElement} */ (el).oncontextmenu = e => groupCtx(e, /** @type {HTMLElement} */ (el).dataset.ug || ""); });
+  // a user group header: its menu; a double click renames it (the first click folds and redraws the list, so the second click, not dblclick, carries it)
+  L.querySelectorAll(".fgh[data-ug]").forEach(x => {
+    const el = /** @type {HTMLElement} */ (x), fold = el.onclick, n = el.dataset.ug || "";
+    el.oncontextmenu = e => groupCtx(e, n);
+    el.onclick = e => { fold?.call(el, e); if (e.detail === 2 && !/** @type {Element} */ (e.target).closest("input")) renameGroup(n); };
+  });
   L.querySelectorAll(".fl:not(.pr) > input[data-k]").forEach(x => { x.onclick = e => { if (boxRange(/** @type {HTMLInputElement} */ (x), e)) e.stopPropagation(); }; });
 }
 
