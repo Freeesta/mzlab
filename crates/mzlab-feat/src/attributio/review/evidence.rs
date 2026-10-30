@@ -13,7 +13,6 @@ use super::settings::ReviewSettings;
 use crate::attributio::annotate::{AnnotationSettings, Feature};
 use crate::attributio::error::Result;
 use crate::attributio::export::pyfmt::py_float;
-use crate::attributio::export::sha1::sha1_hex;
 use crate::attributio::frame::to_csv;
 use crate::attributio::io::Io;
 use crate::attributio::readers::feature_decisions::{same_feature, DecisionTable};
@@ -67,7 +66,10 @@ pub fn settings_digest(s: &ReviewSettings, a: &AnnotationSettings) -> (String, S
     .map(|(k, v)| format!("{k}={v}"))
     .collect::<Vec<_>>()
     .join(";");
-    (sha1_hex(&kv)[..12].to_string(), kv)
+    (
+        mzlab_core::metodo::sha1_hex_bytes(kv.as_bytes())[..12].to_string(),
+        kv,
+    )
 }
 
 /// A decided feature: its index among the features, the decision row with the level and the note of the last row.
