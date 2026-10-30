@@ -309,6 +309,24 @@ jobs:
         with:
           path: site/static/mzfinder/sospetti
           key: sospetti-${{ hashFiles('tools/genera_sospetti.py') }}
+      # the regulatory lists are committed text (normative/): packed natively, no network; the package is data downloaded on a click, never code in a .wasm
+      - name: Restore the regulatory-list package from the cache
+        id: normcache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: site/static/normative
+          key: normative-${{ hashFiles('normative/lists/**', 'normative/provenance.json', 'crates/mzlab-cli/src/normative/**', 'crates/mzlab-feat/src/suspects.rs', 'Cargo.lock') }}
+      - name: Pack the regulatory lists (mzlab-cli normative pack, no network)
+        if: steps.normcache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --locked --release -p mzlab-cli
+          target/release/mzlab-cli normative pack normative/ site/static/normative/
+      - name: Save the regulatory-list package in the cache
+        if: steps.normcache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: site/static/normative
+          key: normative-${{ hashFiles('normative/lists/**', 'normative/provenance.json', 'crates/mzlab-cli/src/normative/**', 'crates/mzlab-feat/src/suspects.rs', 'Cargo.lock') }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pages-packages

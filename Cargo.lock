@@ -2357,6 +2357,7 @@ dependencies = [
 name = "mzlab-desktop"
 version = "1.0.0"
 dependencies = [
+ "flate2",
  "memmap2",
  "mzlab-chem",
  "mzlab-cli",
