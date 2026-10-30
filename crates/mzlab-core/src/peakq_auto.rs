@@ -119,6 +119,60 @@ impl Walk<'_> {
     }
 }
 
+/// What every peak of one trace shares: the trace, its background, the smoothed trace above it and the edge rules.
+struct Ctx<'a> {
+    rt: &'a [f64],
+    y: &'a [f64],
+    b: &'a [f64],
+    sc: &'a [f64],
+    thr: f64,
+    m: usize,
+    slope: f64,
+}
+
+impl Ctx<'_> {
+    /// The peak at apex `a`, its edges kept between `left` and `right` (the valleys shared with the neighbours).
+    fn peak(&self, a: usize, left: usize, right: usize) -> Option<AutoPeak> {
+        let (l2, r2) = half_span(self.sc, a, self.sc[a] / 2.0);
+        let fw = (r2 - l2).max(2);
+        let mut w = Walk {
+            sc: self.sc,
+            a,
+            thr: self.thr,
+            half: self.sc[a] / 2.0,
+            cap: 5 * fw,
+            m: self.m,
+            flat_slope: 0.0,
+        };
+        let steep = (a.saturating_sub(fw)..=(a + fw).min(self.sc.len() - 1))
+            .map(|i| w.slope(i).abs())
+            .fold(0.0, f64::max);
+        w.flat_slope = self.slope * steep;
+        let ((lo, lo_bg), (hi, hi_bg)) = (w.edge(-1, left), w.edge(1, right));
+        if hi < lo + 2 {
+            return None;
+        }
+        let end = |i: usize, on_bg: bool| {
+            if on_bg {
+                self.b[i]
+            } else {
+                self.b[i] + self.sc[i]
+            }
+        };
+        let (base_lo, base_hi) = (end(lo, lo_bg), end(hi, hi_bg));
+        let raw: f64 = (lo + 1..=hi)
+            .map(|j| (self.y[j] + self.y[j - 1]) / 2.0 * (self.rt[j] - self.rt[j - 1]))
+            .sum();
+        Some(AutoPeak {
+            lo,
+            hi,
+            base_lo,
+            base_hi,
+            area: raw - (base_lo + base_hi) / 2.0 * (self.rt[hi] - self.rt[lo]),
+        })
+    }
+}
+
 /// Every peak whose apex is between `x0` and `x1` (minutes), by RT. Neighbours share at most their valley point, so the windows never
 /// overlap. At a background or valley edge the baseline end is the background; at a slope stop it is the smoothed level of the trace.
 pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, p: AutoParams) -> Vec<AutoPeak> {
@@ -158,6 +212,15 @@ pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, p: AutoParams) ->
             .min_by(|&i, &j| sc[i].total_cmp(&sc[j]))
             .unwrap_or(a)
     };
+    let ctx = Ctx {
+        rt,
+        y,
+        b: &b,
+        sc: &sc,
+        thr,
+        m,
+        slope: p.slope,
+    };
     let (lo_t, hi_t) = (x0.min(x1), x0.max(x1));
     let mut out = Vec::new();
     for (q, &a) in apex.iter().enumerate() {
@@ -170,37 +233,7 @@ pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, p: AutoParams) ->
         } else {
             n - 1
         };
-        let (l2, r2) = half_span(&sc, a, sc[a] / 2.0);
-        let fw = (r2 - l2).max(2);
-        let mut w = Walk {
-            sc: &sc,
-            a,
-            thr,
-            half: sc[a] / 2.0,
-            cap: 5 * fw,
-            m,
-            flat_slope: 0.0,
-        };
-        let steep = (a.saturating_sub(fw)..=(a + fw).min(n - 1))
-            .map(|i| w.slope(i).abs())
-            .fold(0.0, f64::max);
-        w.flat_slope = p.slope * steep;
-        let ((lo, lo_bg), (hi, hi_bg)) = (w.edge(-1, left), w.edge(1, right));
-        if hi < lo + 2 {
-            continue;
-        }
-        let end = |i: usize, on_bg: bool| if on_bg { b[i] } else { b[i] + sc[i] };
-        let (base_lo, base_hi) = (end(lo, lo_bg), end(hi, hi_bg));
-        let raw: f64 = (lo + 1..=hi)
-            .map(|j| (y[j] + y[j - 1]) / 2.0 * (rt[j] - rt[j - 1]))
-            .sum();
-        out.push(AutoPeak {
-            lo,
-            hi,
-            base_lo,
-            base_hi,
-            area: raw - (base_lo + base_hi) / 2.0 * (rt[hi] - rt[lo]),
-        });
+        out.extend(ctx.peak(a, left, right));
     }
     out
 }
