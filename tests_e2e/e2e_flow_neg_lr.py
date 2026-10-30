@@ -112,7 +112,7 @@ def check_plan(pol, hr):
     if hr:
         pl["steps"].append({"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
     return pl
-# the check of the page once it has the facets of the indexes of OPFS (`series_facets` of the proofs .wasm): the facet problems with their text
+# the check of the page once it has the facets of the indexes of OPFS (`series_estimates` of the proofs .wasm asked for `?facets`): the facet problems with their text
 CHECK = """async ([plan]) => {
   for (let i = 0; i < 600 && !FLOW.fileFacets; i++) await new Promise(r => setTimeout(r, 100));
   const S = document.querySelector('.flx-list').__flow;

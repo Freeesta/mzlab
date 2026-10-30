@@ -12,7 +12,7 @@
     return got ? { ...plan, inputs: (plan.inputs || []).map((/** @type {any} */ f) => (scan(f) ? { ...f, facets: { ...got, ...(f.facets || {}) } } : f)) } : plan;
   };
 
-  /** the facets of the indexes of OPFS (`series_facets` of the proofs .wasm: the Rust rule of `flow run`) into `F.fileFacets`; `changed` runs when they differ @param {() => void} changed */
+  /** the facets of the indexes of OPFS (op `series_facets` of feat-worker.js: `series_estimates` of the proofs .wasm asked for `?facets`, the Rust rule of `flow run`) into `F.fileFacets`; `changed` runs when they differ @param {() => void} changed */
   F.learnFacets = async changed => {
     const kit = F.runners && F.runners.web && F.runners.web.kit;
     // the runner of the web comes with the late modules: ask again until it is there

@@ -79,7 +79,7 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
             let e = crate::flow::run_plan(full.as_bytes(), &d, &d.join("work"), 2, None)
                 .expect_err("tp.dig_lr on high-resolution files");
             let want = "dig.table:err.flow.facet dig.index:err.flow.facet";
-            assert_eq!(e.params, vec![("problems".into(), want.into())], "{tag}");
+            assert_eq!(e.params, vec![("problems", want.into())], "{tag}");
         }
         let prov = run(&d, &if hr { with(&extra) } else { full });
         for id in [
