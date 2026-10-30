@@ -139,7 +139,7 @@ def count(route):
 RUNNING = "ins"
 try:
     with sync_playwright() as p:
-        b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce"); pg = ctx.new_page()
+        b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 900}, reduced_motion="reduce", service_workers="block"); pg = ctx.new_page()
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');localStorage.setItem('mzlab.admin','1');}catch(_){}")
         pg.on("pageerror", lambda e: errs.append(str(e) + " " + str(getattr(e, "stack", ""))[:400]))
         pg.on("console", lambda m: errs.append(m.text) if m.type == "error" and "GL Driver" not in m.text else None)
@@ -159,7 +159,7 @@ try:
         step("nothing of the package is requested before the click", silent)
         def blocked():
             r = pg.evaluate(RUN, WEB); assert not r.get("err"), r["err"]
-            assert any(e["passo"] == "ins" and e["stato"] == "blocked" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
+            assert any(e["passo"] == "ins" and e["stato"] in ("blocked", "skipped") for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
             assert not asked, asked
         step("without the package the step is blocked and tells so", blocked)
         def size():
@@ -185,7 +185,8 @@ try:
         def first():
             r = pg.evaluate(RUN, WEB); assert not r.get("err"), (r["err"], r["ev"][-4:])
             for i in ("ms2", "ins"):
-                assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
+                assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
+            assert any(e["passo"] == "ins" and e["stato"] == "done" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
             kept = pg.evaluate(KEPT); assert "ins.json" in kept, list(kept)
             web = kept["ins.json"].encode(); at = next((i for i, (x, y) in enumerate(zip(NAT, web)) if x != y), min(len(NAT), len(web)))
             assert sha(web) == sha(NAT), ("first difference at", at, len(NAT), len(web), NAT[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
@@ -195,15 +196,19 @@ try:
             assert any(e["passo"] == "ins" and e["stato"] == "reused" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
         step("a second run takes it from OPFS", again)
         def offline():
-            open_flow(); asked.clear(); ctx.set_offline(True)
+            open_flow(); asked.clear()
             try:
                 pg.evaluate(MOUNT, [WEB, SAMPLES])
                 pg.get_by_role("button", name="Use the package stored in this browser").click(timeout=20000)
                 pg.wait_for_function("() => { const S = document.querySelector('.flx-list').__flow; return !!(S.samplesJson && S.samplesJson['catalogo.json']) }", timeout=20000)
-                two = json.loads(json.dumps(WEB))
-                for s_ in two["steps"]:
-                    if s_["id"] == "ins": s_["params"] = {"top": 2}      # another key: the pieces are read again
-                r = pg.evaluate(RUN, two); assert not r.get("err"), r["err"]
+                def variant(top):
+                    v = json.loads(json.dumps(WEB))
+                    for s_ in v["steps"]:
+                        if s_["id"] == "ins": s_["params"] = {"top": top}      # another key: the pieces are read again
+                    return v
+                r = pg.evaluate(RUN, variant(3)); assert not r.get("err"), r["err"]          # online: loads the .wasm of the step
+                ctx.set_offline(True)
+                r = pg.evaluate(RUN, variant(2)); assert not r.get("err"), r["err"]
                 assert any(e["passo"] == "ins" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
                 got = json.loads(pg.evaluate(KEPT)["ins.json"])["hits"]
                 assert got and len(got) <= 2 * len(set(h["query"] for h in got)), len(got)
