@@ -54,7 +54,7 @@ function applyView(){const v=S.view,d=v==="data";
 window.hdrH=()=>document.querySelector("header").offsetHeight;
 // Back and Forward walk through the views
 /** @param {boolean} [fromHistory] */ function setView(/** @type {string} */ v,fromHistory){v=VIEW_ALIAS[v]||v;STATO.vista(v,"view");applyView();if(!fromHistory&&VIEW_HASH[v]&&location.hash!=="#/"+VIEW_HASH[v])history.pushState(null,"","#/"+VIEW_HASH[v]);}
-document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
+document.querySelectorAll("#nav button:not([data-late])").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 // Back/Forward and typed addresses: the view follows the hash (a cold #/theory never gets here: the head script leaves the page)
 addEventListener("popstate",()=>{const v=hashView()||"data";if(v!==S.view)setView(v,true)});
 // a direct address shows its view at once, without waiting for the engine (the loading veil stays until the program is ready)

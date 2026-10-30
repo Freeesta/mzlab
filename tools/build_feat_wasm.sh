@@ -44,6 +44,9 @@ if want a; then
 # formula.ms1 of the Flow (flow_ms1_rows, flow_ms1_join), loaded only by its executor in flow-web-ident.js; a module of its own, with the standard limit
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features flow_formula
 wasm_pack "$out/formula" $R/mzlab_feat_wasm.wasm $limit "mzFinder formula" @motore
+# table.drift of the Flow (flow_drift), loaded only by its executor in flow-web-drift.js; the home of the table steps that no longer fit `table`, with the standard limit
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-wasm --no-default-features --features flow_tab
+wasm_pack "$out/flowtab" $R/mzlab_feat_wasm.wasm $limit "mzFinder flowtab" @motore
 # the third one, loaded only when a table is shown or exported (views, report, CSV, MGF, .ms): crates/mzlab-feat-table-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-table-wasm
 wasm_pack "$out/table" $R/mzlab_feat_table_wasm.wasm $limit_table "mzFinder table" @motore
@@ -116,6 +119,7 @@ m["finder"] = hr["finder"]
 m["finder_edge"] = hr["finder_edge"]
 m["finder_msn"] = hr["finder_msn"]
 m["formula"] = {"js": "formula/mzlab_feat_wasm.js", "wasm": "formula/mzlab_feat_wasm_bg.wasm", "sha256": sha("formula")}
+m["flowtab"] = {"js": "flowtab/mzlab_feat_wasm.js", "wasm": "flowtab/mzlab_feat_wasm_bg.wasm", "sha256": sha("flowtab")}
 m["interp"] = {"js": "interp/mzlab_feat_wasm.js", "wasm": "interp/mzlab_feat_wasm_bg.wasm", "sha256": sha("interp")}
 m["untargeted"] = {"js": "untargeted/mzlab_feat_wasm.js", "wasm": "untargeted/mzlab_feat_wasm_bg.wasm", "sha256": sha("untargeted")}
 m["grafo"] = {"js": "grafo/mzlab_feat_grafo_wasm.js", "wasm": "grafo/mzlab_feat_grafo_wasm_bg.wasm",

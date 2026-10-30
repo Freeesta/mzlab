@@ -168,3 +168,54 @@ pub fn from_json(bytes: &[u8]) -> Result<Vec<Sample>> {
     }
     Ok(out)
 }
+
+/// The samples of the file in whichever schema it has, as the engine of the statistics reads them: the role in `kind`, the condition (`serie`) in `group`.
+pub fn samples_of(bytes: &[u8]) -> Result<Vec<Sample>> {
+    let doc = parse(bytes)?;
+    if doc.get("schema").and_then(|v| v.str()) != Some("campioni/2") {
+        return from_json(bytes);
+    }
+    Ok(campioni::from_json(bytes)?
+        .into_iter()
+        .map(|c| Sample {
+            kind: c.role().to_string(),
+            group: c.series.clone(),
+            file: c.file,
+            sha256: c.sha256,
+            time_min: c.time_min,
+            replicate: c.replicate,
+            conc: c.conc,
+            unit: c.unit,
+            order: c.order,
+            istd: c.istd,
+            note: c.note,
+        })
+        .collect())
+}
+
+/// The sample of each column of the table (`inputs` of its meta), by name else by SHA-256; a column the samples do not know is no condition and no blank.
+pub fn columns(inputs: &[(String, String)], all: &[Sample]) -> Vec<Sample> {
+    let unknown = |file: &str, sha256: &str| Sample {
+        file: file.to_string(),
+        sha256: sha256.to_string(),
+        kind: "other".into(),
+        time_min: None,
+        replicate: 1,
+        group: String::new(),
+        conc: None,
+        unit: None,
+        order: 1,
+        istd: false,
+        note: String::new(),
+    };
+    inputs
+        .iter()
+        .map(|(name, sha)| {
+            let found = all
+                .iter()
+                .find(|s| s.file == *name)
+                .or_else(|| all.iter().find(|s| !sha.is_empty() && s.sha256 == *sha));
+            found.cloned().unwrap_or_else(|| unknown(name, sha))
+        })
+        .collect()
+}
