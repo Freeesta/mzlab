@@ -92,6 +92,11 @@ fn pack_is_deterministic_and_complete() {
         );
     }
     let raw = std::fs::read(o1.join("normative.mzsus")).unwrap();
+    assert_eq!(
+        sha256_hex(&raw),
+        "e0c2bf73a26d310124fb64ebe52fffbfc22e88777b281f69999db29a22fe61d2",
+        "the bytes of `normative pack` do not change"
+    );
     let s = Suspects::open(&raw).unwrap();
     // three skeletons: the two screenable ones of the golden list (the group and the unresolved rows stay out) and Fenwick; Zorbamide is on both lists
     assert_eq!(s.len(), 3);

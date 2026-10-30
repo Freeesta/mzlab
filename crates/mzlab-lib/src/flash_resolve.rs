@@ -1,7 +1,7 @@
 //! One-to-one resolution of the Flash candidates of the spectra whose pairs are not already one-to-one (used by `flash`).
 
 use crate::flash::FlashScore;
-use crate::sortutil;
+use mzlab_picchi::sortc;
 
 /// Best one-to-one score per spectrum from the `(spectrum, query peak, library peak, contribution)` candidates (unsorted result).
 /// The candidates are grouped by spectrum with a counting sort, then each small group is ordered and resolved on its own.
@@ -40,7 +40,7 @@ pub(crate) fn score_pairs(pairs: Vec<(u32, u16, u32, f64)>) -> Vec<FlashScore> {
             continue;
         }
         let g = &mut grouped[a..e];
-        sortutil::sort_by(g, |x, y| (x.1, x.2).cmp(&(y.1, y.2)));
+        sortc::by(g, |x, y| (x.1, x.2).cmp(&(y.1, y.2)));
         // drop repeated (query peak, library peak) candidates
         let mut m = 1;
         for k in 1..g.len() {
@@ -53,7 +53,7 @@ pub(crate) fn score_pairs(pairs: Vec<(u32, u16, u32, f64)>) -> Vec<FlashScore> {
         let clean_group = g.windows(2).all(|w| w[0].1 != w[1].1) && {
             js.clear();
             js.extend(g.iter().map(|x| x.2));
-            sortutil::sort_by(&mut js, |a, b| a.cmp(b));
+            sortc::by(&mut js, |a, b| a.cmp(b));
             js.windows(2).all(|w| w[0] != w[1])
         };
         let (score, n) = if clean_group {
@@ -61,7 +61,7 @@ pub(crate) fn score_pairs(pairs: Vec<(u32, u16, u32, f64)>) -> Vec<FlashScore> {
         } else {
             order.clear();
             order.extend(0..g.len());
-            sortutil::sort_by(&mut order, |&a, &b| {
+            sortc::by(&mut order, |&a, &b| {
                 g[b].3.total_cmp(&g[a].3).then(a.cmp(&b))
             });
             ui.clear();

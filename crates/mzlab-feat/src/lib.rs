@@ -49,6 +49,8 @@ pub mod flow_level;
 pub mod flow_ms2;
 #[cfg(feature = "attributio")]
 pub mod flow_regulatory;
+#[cfg(feature = "attributio")]
+pub mod normative;
 pub mod flow_screen_suspects;
 pub mod gapfill;
 pub mod gruppi;
@@ -62,6 +64,7 @@ pub mod legacy;
 pub mod liste;
 mod lrnoise;
 pub mod massacc;
+pub mod methods;
 pub mod mrm;
 pub mod ms2;
 pub mod ms2spec;
@@ -89,6 +92,7 @@ pub mod rowident;
 pub mod rowmeta;
 pub mod rtmap;
 pub mod rtwarp;
+pub mod runorder;
 pub mod samples;
 pub mod series;
 pub mod slabs;

@@ -179,8 +179,24 @@ function ms2Show(/** @type {number | string} */ prec) {
 }
 const ms2PairOf = (/** @type {unknown} */ prec) => E.panels.find((/** @type {Pannello} */ p) => p.tab === "ms2" && p.type === "chrom" && String(p.prec) === String(prec));
 // sidebar of the MS2 tab: tick a precursor to show its chromatogram (created if missing; its spectrum comes on a double click on the name or on the chromatogram), untick to close its graphs, click the name to go to them
-function ms2Toggle(/** @type {number | string} */ prec, /** @type {boolean} */ on) {
-  const c = ms2PairOf(prec);
+// a row of the sidebar is one (file, precursor) pair: ticked when the precursor chromatogram exists and draws that file
+const ms2RowOn = (/** @type {number | string} */ prec, /** @type {number} */ k) => { const c = ms2PairOf(prec); return !!c && (!c.ks || c.ks.includes(k)); };
+// the MS2 files that hold a precursor
+const ms2Holders = (/** @type {number | string} */ prec) => tabFiles("ms2").filter((/** @type {MzFile} */ f) => (f.precursors || []).some((/** @type {number} */ v) => Math.abs(v - /** @type {number} */ (prec)) < 0.6)).map((/** @type {MzFile} */ f) => f.k);
+function ms2Toggle(/** @type {number | string} */ prec, /** @type {boolean} */ on, /** @type {number | undefined} */ k = undefined) {
+  let c = ms2PairOf(prec);
+  if (k != null) {
+    // one file only: the other rows of the same precursor keep their own state
+    const cur = c ? (c.ks || ms2Holders(prec)) : [];
+    const ks = on ? [...new Set([...cur, k])] : cur.filter((/** @type {number} */ q) => q !== k);
+    if (on) tabFiles("ms2").filter((/** @type {MzFile} */ f) => f.k === k).forEach((/** @type {MzFile} */ f) => sibsOf(f).forEach((/** @type {MzFile} */ g) => { g.vis = true; }));
+    if (c) c.ks = ks;
+    if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { c = addMs2Chrom(e, tabPanels().reduce((/** @type {number} */ m, /** @type {Pannello} */ q) => Math.max(m, q.y + q.h + pnlGap()), 0)); c.ks = ks; relayout(); fitHost(); } }
+    if (on) redrawAll();
+    if (!on && c && !ks.length) { [...E.panels.filter((/** @type {Pannello} */ q) => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
+    else if (c) draw(c);
+    renderFileList(); uiSave(); return;
+  }
   if (on) ms2Show(prec);
   if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Chrom(e, tabPanels().reduce((/** @type {number} */ m, /** @type {Pannello} */ q) => Math.max(m, q.y + q.h + pnlGap()), 0)); relayout(); fitHost(); } }
   if (on) redrawAll();

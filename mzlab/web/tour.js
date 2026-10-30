@@ -747,6 +747,8 @@ const TOUR = (() => {
         if (!res.ok) throw new Error("FullScan_t15.mzML: " + res.status);
         const blob = await res.blob();
         const file = new File([blob], "Esempio_FullScan_t15.mzML");
+        // the tour points at the sample table first and at the file after: the example does not open by itself
+        if (typeof OPENNOW !== "undefined") OPENNOW.noAuto();
         if (typeof upload === "function") {
           await upload([file], "data");
         }
