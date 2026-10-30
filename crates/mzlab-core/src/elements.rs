@@ -21,6 +21,12 @@ pub const MASS: [(&str, f64); 14] = [
     ("Se", 79.9165218),
 ];
 pub const ELECTRON: f64 = 0.000548579909;
+/// Proton mass (CODATA); the neutral-to-ion shift of `[M+H]+` is this, not H.
+pub const PROTON: f64 = 1.00727646688;
+/// Proton mass rounded to 6 decimals: the value the Python reference and the pinned goldens use.
+pub const PROTON_6DP: f64 = 1.007276;
+/// Mass step of one 13C isotopologue (13C - 12C, rounded to 6 decimals).
+pub const C13_STEP: f64 = 1.003355;
 const COMMON2: [&str; 16] = [
     "Cl", "Br", "Si", "Na", "Se", "Li", "Mg", "Ca", "Al", "Fe", "Zn", "Cu", "Mn", "As", "Hg", "Cd",
 ];

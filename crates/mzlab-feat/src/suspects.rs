@@ -95,11 +95,20 @@ impl Suspects {
 
     /// Rows with `|m - mass| <= mass * ppm * 1e-6`, in order of mass then InChIKey-14.
     pub fn search(&self, mass: f64, ppm: f64) -> &[Hit] {
+        &self.rows[self.search_range(mass, ppm)]
+    }
+
+    /// The row indexes of `search` (the rows of the `listings` extension are indexed the same way).
+    pub fn search_range(&self, mass: f64, ppm: f64) -> std::ops::Range<usize> {
         let d = mass * ppm * 1e-6;
         let (lo, hi) = (mass - d, mass + d);
         let a = self.rows.partition_point(|h| h.mass < lo);
         let b = self.rows.partition_point(|h| h.mass <= hi);
-        &self.rows[a..b.max(a)]
+        a..b.max(a)
+    }
+
+    pub fn row(&self, i: usize) -> &Hit {
+        &self.rows[i]
     }
 }
 

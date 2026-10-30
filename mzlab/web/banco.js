@@ -279,7 +279,7 @@ const BANCO = (() => {
       const add = document.createElement("button"); add.type = "button"; add.dataset.bf = "range"; add.textContent = "+"; add.title = I18N.t("bn.addBtn.title"); add.setAttribute("aria-label", I18N.t("bn.addBtn.title"));
       add.onclick = e => { e.stopPropagation(); addRange(p); }; wrap.appendChild(add);
       if (p.ranges && p.ranges.length) {
-        const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = I18N.t("bn.stack"); t.title = I18N.t("bn.stack.title"); ks.replaceWith(t); }
+        const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = I18N.t("bn.stack"); t.title = I18N.t("bn.stack.title"); (ks.closest(".can") || ks).replaceWith(t); }
         const n = document.createElement("label"); n.className = "muted"; n.title = I18N.t("bn.norm.title");
         n.innerHTML = `<input type="checkbox" data-bf="norm"${p.norm100 ? " checked" : ""}> 0-100`; n.querySelector("input").onchange = e => { p.norm100 = e.target.checked; draw(p); uiSave(); }; wrap.appendChild(n);
         p.ranges.forEach(r => { const b = document.createElement("button"); b.type = "button"; b.className = "bt"; b.dataset.bf = "drop"; b.dataset.id = r.id; b.textContent = "\u00d7 " + (rangeLabel(r).length > 18 ? rangeLabel(r).slice(0, 17) + "…" : rangeLabel(r)); b.title = I18N.t("bn.drop", { name: rangeLabel(r) }); b.onclick = e => { e.stopPropagation(); dropRange(p, r.id); }; wrap.appendChild(b); });

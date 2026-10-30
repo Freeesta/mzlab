@@ -20,7 +20,7 @@ if not (ROOT / "site" / "index.html").exists():
 mf = ROOT / "site" / "static" / "mzfinder"
 for f in (ROOT / "TP_Mine" / "js").glob("*.js"): lib_copia(f, mf / f.name)
 idx = json.loads((mf / "indice.json").read_text()); idx["js"] = sorted(f.name for f in (ROOT / "TP_Mine" / "js").glob("*.js")); lib_scrivi(mf / "indice.json", json.dumps(idx))
-for f in ("libreria-worker.js", "libreria.js", "livelli.js", "livelli-1.js"): lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
+for f in ("libreria-worker.js", "libreria.js", "libreria-finestra.js", "mol-svg.js", "livelli.js", "livelli-1.js"): lib_copia(ROOT / "mzlab" / "web" / f, ROOT / "site" / "static" / f)
 
 A = [(85.0284, 40), (105.0699, 120), (130.0651, 300), (158.0964, 1000), (186.0913, 600), (212.1070, 250), (240.1019, 180), (283.1441, 90)]
 ALPHA = "Name: Alpha\nPrecursorMZ: 301.1547\nIon_mode: Positive\nPrecursor_type: [M+H]+\nCollision_energy: 30\nInstrument_type: Orbitrap\nInChIKey: AAAAAAAAAAAAAA-UHFFFAOYSA-N\nNum Peaks: %d\n%s\n" % (len(A), "\n".join(f"{m:.4f}\t{i}" for m, i in A))
@@ -90,8 +90,8 @@ try:
             assert "Decided" in pg.inner_text("#unt-det") and "entropy" in pg.inner_text("#unt-det").lower()
             assert pg.evaluate("document.querySelector('#unt-t tr.clk + tr.tpt-exp #unt-det') !== null"), "the panel is not under its row"          # the row opens under itself
             pg.click("#unt-det button[role=tab][data-tab=identity]")
-            pg.click("#unt-what"); pg.wait_for_selector("#libres[open]", timeout=20000); pg.wait_for_function("document.querySelector('#libres #lr-body').textContent.includes('Alpha')", timeout=20000)
-            pg.click("#lr-x")
+            pg.click("#unt-what"); pg.wait_for_selector("#libwhat[open]", timeout=20000); pg.wait_for_function("document.querySelector('#libwhat #lw-list').textContent.includes('Alpha')", timeout=20000)
+            pg.click("#lw-x")
         step("click → the row opens under itself: mirror plot, and «What is it?» in the tab Identity", detail)
         def one():
             assert pg.evaluate("document.querySelectorAll('#unt-t tr.tpt-exp').length") == 1

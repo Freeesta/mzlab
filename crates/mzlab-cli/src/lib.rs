@@ -135,6 +135,7 @@ pub mod msn_uscite;
 #[cfg(not(target_family = "wasm"))]
 pub mod normative;
 mod par;
+mod peaks_edges_cmd;
 mod steps_cmd;
 mod tutor;
 #[cfg(not(target_family = "wasm"))]
@@ -154,6 +155,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli msn-graph FILE.mzML [--formula ION] [...]   the fragmentation graph of an MSn infusion (msn-graph --help)
        mzlab-cli canali FILE [--out PATH]   the channels of a file as JSON (canali --help)
        mzlab-cli campioni variabili|nome-gruppo ...   how the file names split the files, as JSON (campioni --help)
+       mzlab-cli peaks-edges TRACE.csv --at MIN [--set NAME=VALUE...]   the limits of a low-resolution peak on a trace (peaks-edges --help)
        mzlab-cli explain-missing TABLE.mzfeat EXPECTED.csv   where a table loses each expected product (explain-missing --help)
        mzlab-cli msn-lib add|build|export|search ...                the library of MSn trees (msn-lib --help)
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
@@ -365,7 +367,7 @@ fn flow_cmd(mut args: impl Iterator<Item = String>) -> Outcome {
 }
 
 /// The subcommands that take their arguments as a plain list.
-const PLAIN: [&str; 7] = [
+const PLAIN: [&str; 8] = [
     "llm",
     "steps",
     "tutor",
@@ -373,6 +375,7 @@ const PLAIN: [&str; 7] = [
     "msn-rules",
     "canali",
     "campioni",
+    "peaks-edges",
 ];
 
 fn run_plain(command: &str, args: Vec<String>) -> Outcome {
@@ -383,6 +386,7 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
         "msn-rules" => msn_rules::run(args),
         "canali" => canali_cmd::run(args),
         "campioni" => campioni_cmd::run(args),
+        "peaks-edges" => peaks_edges_cmd::run(args),
         _ => tutor::run(args),
     }
 }

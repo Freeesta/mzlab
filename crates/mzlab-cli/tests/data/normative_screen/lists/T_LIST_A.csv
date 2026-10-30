@@ -1,0 +1,4 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by;entry_ref;ec;dtxsid;form;status
+T_LIST_A;2000-01-01;2000-01-02;Act A;Isomerone A;9100-21-5;;ISOMERONEAXXAA-UHFFFAOYSA-N;ISOMERONEAXXAA;;C14H20N2O4;280.142307;AA-EQS 0.1 ug/L;;;;;;;law;Annex I, no. 1;;;parent;screenable
+T_LIST_A;2000-01-01;2000-01-02;Act A;Quillic acid;9100-23-7;;QUILLICACIDXAA-UHFFFAOYSA-N;QUILLICACIDXAA;;C10H12N2O3;208.084792;;;;;;;;law;Annex I, no. 2;;;parent;screenable
+T_LIST_A;2000-01-01;2000-01-02;Act A;Trilistol;9100-25-9;;TRILISTOLXXXAA-UHFFFAOYSA-N;TRILISTOLXXXAA;;C12H15NO4;237.100108;;;;;;;;law;Annex I, no. 3;;;as_listed;screenable

@@ -220,6 +220,12 @@ def ready(pg, timeout=90000, settle=400):
 def drawer(pg, tab="file", pin=True):
     """Open a tool of the toolbar drawer (the file list by default). Docked next to the charts. `pin` is kept for old callers."""
     pg.evaluate(f"(()=>{{BARRA.setTab('{tab}',{{noFocus:true,instant:true}})}})()"); pg.wait_for_timeout(300)
+def pick_kind(pg, value, panel="E.panels.find(q=>q.type==='chrom')"):
+    """Chooses what a chromatogram panel plots (pda, press, an:<id>, reg) with the picker, as a user does."""
+    pg.evaluate(f"{panel}.el.querySelector('[data-o=kind]').click()")
+    pg.wait_for_function(f"!!{panel}.el.querySelector('.can-pop:not([hidden]) [data-kind=\"{value}\"]')")
+    pg.evaluate(f"{panel}.el.querySelector('.can-pop [data-kind=\"{value}\"]').click()")
+
 def open_kind(pg, kind):
     """As a student does: click, in the file list, the first file of an experiment type ('full', 'ms2', 'mrm'): that type becomes the current one."""
     k = pg.evaluate("kind => (E.files.find(f => f.kind === kind && !f.gone) || {}).k", kind)

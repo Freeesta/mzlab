@@ -356,7 +356,7 @@ I18N.add("it", {
   "dda.add": "Aggiungi un pannello MS2 accanto",
   "dda.add.tip": "Affianca un altro pannello MS2 sotto la stessa Full Scan: la prossima scelta (▼ o clic su una barra) va nel pannello attivo",
   "avviso.close": "Chiudi l'avviso",
-  "disp.menu": "Opzioni di visualizzazione…",
+  "disp.menu": "Opzioni…",
   "disp.none": "Scegli un cromatogramma o uno spettro: un clic destro sul grafico apre qui le sue opzioni.",
   "disp.for": "Opzioni: {type}",
   "disp.type.spec": "spettro",
