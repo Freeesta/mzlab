@@ -1,5 +1,5 @@
 //! What the readers module (feature `estesi`) adds to the `.wiff` reader: the scan types of the other QTRAPs and the check that nothing
-//! the reader does not know is read as a full scan. Known: Q1 full scan (0), MRM (4), precursor-ion scan (5), neutral-loss scan (7), product-ion / EPI (11) and
+//! the reader does not know is read as a full scan. Known: Q1 full scan (0), MRM (4), precursor-ion scan (5), product-ion scan (6), neutral-loss scan (7), product-ion / EPI (11) and
 //! survey / full scan (15). The TOF codes, any other code and a method with more than one period are `err.file.wiff` with the cause in `detail`.
 
 use super::{bad, Experiment, Wiff, HEADER_PRECURSOR};
@@ -9,7 +9,8 @@ use crate::mzmlwrite::Header;
 use crate::ole::Ole;
 
 pub use super::modi::{
-    spectrum_term, CODE_FULL, CODE_MRM, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_Q1,
+    spectrum_term, CODE_FULL, CODE_MRM, CODE_NEUTRAL_LOSS, CODE_PRECURSOR_ION, CODE_PRODUCT_ION,
+    CODE_Q1,
 };
 
 /// The detection window of each scheduled MRM experiment (`Experiment::window_s`).
@@ -58,7 +59,7 @@ fn periods(ole: &Ole, sample: u32) -> usize {
 }
 
 /// The experiments of `sample` checked: a method of several periods or a scan type this reader does not know is an error; the precursor-ion and
-/// neutral-loss scans are MS2 whose selected ion is the fixed mass of the header (as ProteoWizard writes them).
+/// product-ion (6) and neutral-loss scans are MS2 whose selected ion is the fixed mass of the header (as ProteoWizard writes them).
 pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<Vec<Experiment>> {
     let m = method_no(ole, sample);
     if ex.is_empty() && m != sample {
@@ -71,7 +72,7 @@ pub(super) fn refine(ole: &Ole, sample: u32, mut ex: Vec<Experiment>) -> Result<
     for (i, e) in ex.iter_mut().enumerate() {
         match e.code {
             Some(c) if super::modi::nativo(Some(c)) => {}
-            Some(CODE_PRECURSOR_ION | CODE_NEUTRAL_LOSS) => {
+            Some(CODE_PRECURSOR_ION | CODE_PRODUCT_ION | CODE_NEUTRAL_LOSS) => {
                 let header = ole.read(&format!("MethodSubtree/Method{m}/DeviceMethod0/Period0/Experiment{i}/ExperimentHeader")).unwrap_or_default();
                 e.level = 2;
                 e.precursor = header

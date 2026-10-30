@@ -71,11 +71,16 @@ try:
             pg.evaluate("window.__r0 = document.querySelector('#hri-list .r'); document.querySelector('#hri-list').scrollTop += 3")
             pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
             assert pg.evaluate("window.__r0 === document.querySelector('#hri-list .r') && window.__r0.isConnected"), "rows rebuilt although the visible interval did not change"
+            # the table itself is the scroller (not the side panel), so only the rows in view are in the DOM, however far the thumb is dragged
+            assert pg.evaluate("(() => { const L = document.querySelector('#hri-list'); return L.scrollHeight > L.clientHeight + 2 && L.querySelectorAll('.r').length < 100; })()"), "the table must scroll itself and render a window of rows"
             far = pg.evaluate("(() => { const L = document.querySelector('#hri-list'); return L.scrollHeight - L.clientHeight > 2 * L.clientHeight; })()")
             if far:
                 pg.evaluate("(() => { const L = document.querySelector('#hri-list'); L.scrollTop = L.scrollHeight; })()")
                 pg.wait_for_function("window.__r0 && !window.__r0.isConnected", timeout=5000)
-            row = pg.locator("#hri-list .r").nth(2); i = row.get_attribute("data-i"); row.click()
+                # dragged far: rows of that place are inside the table, not blank
+                pg.wait_for_function("(() => { const L = document.querySelector('#hri-list'), b = L.getBoundingClientRect(); return [...L.querySelectorAll('.r')].some(r => { const q = r.getBoundingClientRect(); return q.top >= b.top + 24 && q.bottom <= b.bottom; }); })()", timeout=5000)
+            row = pg.locator("#hri-list .r").nth(10); i = row.get_attribute("data-i"); row.click()
+            pg.wait_for_function(f"(() => {{ const c = document.querySelectorAll('#hri-list .r.cur'); return c.length === 1 && c[0].dataset.i === '{i}'; }})()", timeout=5000)
             assert pg.evaluate("document.querySelectorAll('#hri-list .r.cur').length") == 1 and pg.evaluate(f"document.querySelector('#hri-list .r.cur').dataset.i") == i, "the click on a row (delegated) marks it"
         step("list of the scans: rows rebuilt only when the interval changes, the click works through the delegated handler", lst_scroll)
         assert not [e for e in r.errs if e[0] != "console.warning"], r.errs[:5]

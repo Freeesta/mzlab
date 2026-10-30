@@ -559,8 +559,8 @@ const LISTE = (() => {
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:6px;padding:6px 8px;height:100%;box-sizing:border-box;overflow:auto">
         <div style="display:${state.mode === "da" ? "none" : "flex"};align-items:center;gap:6px;border-bottom:1px solid var(--line,#cbd5e1);padding-bottom:4px;margin-bottom:2px">
           <span class="seg" id="lst-view-seg">
-            <button type="button" data-v="ref" class="on">Reference Lists</button>
-            <button type="button" data-v="target">HRMS Target Screening</button>
+            <button type="button" data-v="ref" class="on">${I18N.t("lst.view.ref")}</button>
+            <button type="button" data-v="target">${I18N.t("lst.view.target")}</button>
           </span>
         </div>
         <div id="lst-ref-box" style="display:flex;flex-direction:column;gap:6px;flex:1">
@@ -635,7 +635,7 @@ const LISTE = (() => {
         if (isTarget && !elTargetBox.dataset.mounted) {
           elTargetBox.dataset.mounted = "1";
           try {
-            const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
+            await import("./liste-target-core.js"); const mod = (typeof window !== "undefined" && window.LISTE_TARGET) || (await import("./liste-target.js")).default || (await import("./liste-target.js"));
             if (mod && typeof mod.mount === "function") mod.mount(elTargetBox);
           } catch (_) {}
         }

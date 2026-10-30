@@ -107,6 +107,10 @@ pub struct Row {
 }
 
 impl Row {
+    /// The resolving power the scan declares, if any.
+    pub fn resolving_power(&self) -> Option<f64> {
+        self.res
+    }
     fn d(&self) -> &Detail {
         static NONE: Detail = Detail::EMPTY;
         self.detail.as_deref().unwrap_or(&NONE)

@@ -1,10 +1,12 @@
-//! The steps of mzFlow in both polarities and both resolutions (`docs/studi/MATRICE_NEG_LR.md`) on the invented bentazone series of
-//! `flow_bentazone_tests.rs`: what runs in HR+, HR-, LR+ and LR- and follows the files. The `gap_*` tests are ignored: each states what a gap of the
-//! matrix should do and fails today; the chat that closes the gap removes its `#[ignore]`.
+//! The steps of mzFlow in both polarities and both resolutions (`docs/studi/MATRICE_NEG_LR.md`) on the invented bentazone series of `flow_bentazone_tests.rs`:
+//! what runs in HR+, HR-, LR+ and LR- and follows the files. Each ignored `gap_*` test states what an open gap should do; closing it removes the `#[ignore]`.
 
 use std::path::{Path, PathBuf};
 
-use crate::flow_bentazone_tests::{fixture, mzml, plan, NAMES};
+use crate::flow_bentazone_tests::{fixture, mzml, plan, NAMES, POS};
+
+#[path = "flow_neglr_facets_tests.rs"]
+mod facets;
 
 const CASES: [(&str, i8, bool); 4] = [
     ("hrp", 1, true),
@@ -15,7 +17,6 @@ const CASES: [(&str, i8, bool); 4] = [
 
 /// The table steps after the chain of `plan`: every one reads only what a full-scan series gives.
 const EXTRA: &str = r#",{"id":"est","step":"features.estimate@1","in":{"index":["idx.index"]}},
-    {"id":"dig","step":"tp.dig_lr@1","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"]}},
     {"id":"fil","step":"table.filter@1","in":{"table":"gap.table","samples":"file:samples.json"},"params":{DUP}},
     {"id":"plz","step":"table.plausible@1","in":{"table":"gap.table"}},
     {"id":"kmd","step":"table.kmd@1","in":{"table":"gap.table"}},
@@ -24,9 +25,16 @@ const EXTRA: &str = r#",{"id":"est","step":"features.estimate@1","in":{"index":[
     {"id":"qc","step":"qc.mass_accuracy@1","in":{"raw":["idx.index"]}},
     {"id":"rx","step":"structure.reactivity@1","in":{"parent":"file:parent.json"}}]}"#;
 
-/// The plan of `plan` (base chain and Tabui) with `tail` (a JSON list of more steps, starting with a comma) before its end.
+/// The duplicate window of `table.filter`: in Da on the unit axis, in ppm at high resolution.
+const DUP_DA: &str = r#""dup_da":0.3"#;
+const DUP_PPM: &str = r#""dup_ppm":10"#;
+
+/// The unit-resolution Dig: its ports take lr only, so the check refuses it on high-resolution files.
+const DIG: &str = r#",{"id":"dig","step":"tp.dig_lr@1","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"]}}"#;
+
+/// The plan of `plan` (base chain and Tabui, without tp.position) with `tail` (a JSON list of more steps, starting with a comma) before its end.
 fn with(tail: &str) -> String {
-    let base = plan(&|_| String::new(), false);
+    let base = plan(&|_| String::new(), false).replace(POS, "");
     format!("{}{tail}", base.strip_suffix("]}").unwrap())
 }
 
@@ -60,16 +68,20 @@ fn read(d: &Path, f: &str) -> String {
 fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
     for (tag, pol, hr) in CASES {
         let d = fixture(&format!("nl_{tag}"), pol, hr);
-        // the duplicate window is in Da on the unit axis and in ppm at high resolution
-        let dup = if hr {
-            r#""dup_ppm":10"#
-        } else {
-            r#""dup_da":0.3"#
-        };
-        let prov = run(&d, &with(&EXTRA.replace("DUP", dup)));
+        let extra = EXTRA.replace("DUP", [DUP_DA, DUP_PPM][usize::from(hr)]);
+        // the facets of the files: the step of the other resolution is refused before anything runs; without it the rest runs
+        let dig_refused = "dig.table:err.flow.facet dig.index:err.flow.facet";
+        let (own, other, refused) =
+            [(DIG, POS, "pos.tp:err.flow.facet"), (POS, DIG, dig_refused)][usize::from(hr)];
+        let both = with(&format!("{own}{other}{extra}"));
+        let e = crate::flow::run_plan(both.as_bytes(), &d, &d.join("work"), 2, None)
+            .expect_err("a step of the other resolution");
+        assert_eq!(e.params, vec![("problems", refused.into())], "{tag}");
+        let prov = run(&d, &with(&format!("{own}{extra}")));
+        let own_id = if hr { "pos" } else { "dig" };
         for id in [
-            "det", "ali", "gap", "gen", "lnk", "flt", "pos", "net", "est", "dig", "fil", "plz",
-            "kmd", "csv", "mzt", "qc", "rx",
+            "det", "ali", "gap", "gen", "lnk", "flt", "net", "est", "fil", "plz", "kmd", "csv",
+            "mzt", "qc", "rx", own_id,
         ] {
             assert_eq!(error_of(&prov, id), None, "{tag} {id}");
         }
@@ -93,7 +105,7 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
         );
         let adduct = if pol < 0 { "[M-H]-" } else { "[M+H]+" };
         assert!(
-            read(&d, "dig.json").contains(&format!("\"adduct\":\"{adduct}\"")),
+            hr || read(&d, "dig.json").contains(&format!("\"adduct\":\"{adduct}\"")),
             "{tag}"
         );
         // the unit axis of the detection reaches the alignment: its tolerance is `tol_da` (Da), the ppm one is for high resolution
@@ -396,7 +408,6 @@ fn gap_a_series_of_mixed_resolution_is_refused_or_warned() {
 }
 
 #[test]
-#[ignore = "gap NL-6: the tp.* steps declare resolution hr, so a plan whose files say lr is refused although they run on it (MATRICE_NEG_LR.md)"]
 fn gap_a_unit_resolution_plan_that_says_so_passes_the_check() {
     let d = fixture("nl_g6", -1, false);
     let text = with("]}").replace(

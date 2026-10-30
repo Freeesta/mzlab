@@ -75,15 +75,18 @@ export function makeClient({ token, fetchFn = (...a) => fetch(...a), repo = REPO
 
   /** @param {string} p */
   const enc = (p) => p.split("/").map(encodeURIComponent).join("/");
-  const fp = (/** @type {string} */ p) => enc(`${repo.dir}/${p}`);
+  // The data repository moved the book from Libro_Untargeted/ to libro/testo/: sections() looks at the tree and keeps whichever exists.
+  let dir = repo.dir;
+  const fp = (/** @type {string} */ p) => enc(`${dir}/${p}`);
 
   return {
     /** Paths of the section files under the Libro folder (relative to it), sorted. */
     async sections() {
       const t = await call(`${base}/git/trees/${encodeURIComponent(repo.branch)}?recursive=1`);
-      const pre = `${repo.dir}/`;
-      return /** @type {{path: string}[]} */ (t.tree)
-        .map((n) => n.path)
+      const paths = /** @type {{path: string}[]} */ (t.tree).map((n) => n.path);
+      if (paths.some((p) => p.startsWith("libro/testo/"))) dir = "libro/testo";
+      const pre = `${dir}/`;
+      return paths
         .filter((p) => p.startsWith(pre))
         .map((p) => p.slice(pre.length))
         .filter(isSection)

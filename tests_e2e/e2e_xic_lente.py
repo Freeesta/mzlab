@@ -28,6 +28,7 @@ try:
         stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15")])
         pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         K = pg.evaluate("E.files[0].k")
+        pg.evaluate("window.__ok = XICBTN.lens.ok; XICBTN.lens.ok = () => true; 0")          # the lens belongs to HR MS1 spectra only: these steps check the lens itself on the low-resolution synthetic file, which has many peaks; the gate is checked apart
         pg.evaluate(TRACK)
         def pk(): return pg.evaluate(PEAKS % SPEC)
         def hover_lr():
@@ -121,6 +122,14 @@ try:
             pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 5); assert not pg.query_selector(LENS)
             pg.evaluate("XICBTN.setLens(true)")
         step("the preference switches the lens off", pref)
+        pg.evaluate("XICBTN.lens.ok = window.__ok; E.panels.forEach(p => { if (p.type === 'spec' && p.el) XICBTN.sync(p) }); 0")          # the real resolution test again
+        def gate():
+            # the lens and its switch exist only on the MS1 spectrum of a high-resolution file: none on MS2 or low resolution
+            assert pg.evaluate("E.panels.filter(p=>p.type==='spec'&&p.el).every(p=>p.el.querySelector('[data-a=xicp]').hidden&&!XICBTN.lens.ok(p))"), "a low-resolution spectrum shows the lens switch"
+            ps = pk(); t = ps[1]; pg.mouse.move(2, 2); pg.mouse.move(t["x"], t["y"], steps=3); frames(pg, 6)
+            assert not pg.query_selector(LENS), "the lens opened on a low-resolution spectrum"
+        step("LR: no lens switch, no lens on hover", gate)
+        pg.evaluate("XICBTN.lens.ok = () => true; E.panels.forEach(p => { if (p.type === 'spec' && p.el) XICBTN.sync(p) }); 0")
         def toggle():
             B = ".pnl [data-a=xicp]"; v = [pg.get_attribute(B, "aria-pressed"), pg.get_attribute(B, "title")]; assert v == ["true", pg.evaluate("I18N.t('xiclens.toggle')")], v
             pg.evaluate(f"document.querySelector('{B}').click()"); frames(pg, 2); assert pg.get_attribute(B, "aria-pressed") == "false" and not pg.evaluate("UIP.xicLens")
@@ -157,6 +166,10 @@ try:
         load(pg2, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2); pg2.evaluate("setTab('full')"); ready(pg2)
         S1 = "E.panels.find(p=>p.type==='spec'&&p.level===1)"
         KH = pg2.evaluate("E.files.find(f=>f.file.endsWith('#MS1')).k")
+        def hr_gate():
+            assert pg2.evaluate("XICBTN.lens.ok(E.panels.find(p=>p.type==='spec'&&p.level===1))") is True and pg2.evaluate("!E.panels.find(p=>p.type==='spec'&&p.level===1).el.querySelector('[data-a=xicp]').hidden")
+            assert pg2.evaluate("XICBTN.lens.ok({...E.panels.find(p=>p.type==='spec'&&p.level===1),level:2})") is False, "an MS2 spectrum has no lens"
+        step("HR MS1 keeps the lens switch; an MS2 spectrum has none", hr_gate)
         def hr_lens():
             ps = pg2.evaluate(PEAKS % S1); assert ps, "no labelled peak"
             t = max(ps, key=lambda o: -o["y"]); pg2.mouse.move(t["x"] - 30, t["y"]); pg2.mouse.move(t["x"], t["y"], steps=3)

@@ -506,3 +506,5 @@ html.in-draw #sb-toggle{display:none}
 
 /* the drop box is as wide as the sample table below it (#start fills #wdata); its icon is static, on its own line above the text */
 #drop .drop-tx{display:contents}#drop .drop-ic{flex:0 0 100%;margin:0 auto 10px;color:var(--muted)}
+/* empty side panel: a still drawing above the text, no motion */
+#fl-hint .leaf{display:block;margin:0 auto 6px;color:var(--muted)}

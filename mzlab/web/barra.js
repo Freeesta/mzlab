@@ -98,10 +98,10 @@ const BARRA = (() => {
   /** @type {any[]} */
   const CMD = [
     { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
-    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inData() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },
-    { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => (inData() ? toggle("adducts") : typeof CALCQUI !== "undefined" && CALCQUI.apriAddotti()) },
-    { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
-    { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => (inData() ? toggle("lists") : window.LISTE && LISTE.open()) },
+    { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => toggle("calc") },
+    { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => toggle("adducts") },
+    { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => toggle("losses") },
+    { id: "lists", dom: "np-liste", ic: () => QI("liste"), panel: "lists", run: () => toggle("lists") },
     { id: "qaqc", feature: "qaqc", dom: "np-qaqc", ic: () => ICONS.qaqc, panel: "qaqc", visible: () => inData(), run: () => toggle("qaqc") },
     
     { id: "ptable", dom: "np-pt", ic: () => QI("pt"), run: () => window.QQQRef && QQQRef.open("pt") },
@@ -377,7 +377,7 @@ const BARRA = (() => {
   function show(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
     hintClose(true);
     if (id === "ptable") { if (window.QQQRef) QQQRef.open("pt"); return false; }
-    if (!inData() || !validTab(id)) return false;
+    if (!(inData() || landing()) || !validTab(id)) return false;
     const wasOpen = _open;
     _tab = id;
     _open = true; _restore = false; _forced = innerWidth < AUTO_W;
@@ -399,7 +399,7 @@ const BARRA = (() => {
   }
 
   function toggle(/** @type {string} */ id) {
-    if (_open && _tab === id) close(true);
+    if (_open && _tab === id) { if (id !== "file" && landing() && !inData()) show("file"); else close(true); }      // the empty landing keeps its panel: closing a tool gives the file list back
     else show(id);
   }
 
@@ -1107,7 +1107,7 @@ const BARRA = (() => {
     get labelLevel() { return _lvl; },
     get fitStats() { return _fitStats; },
     focusToolbar,
-    isDataView: inData,
+    isDataView: () => inData() || landing(),      // the tools dock in the side panel also in the empty landing
     /** @param {string} [id] */
     isOpen: id => _open && inData() && (id == null || _tab === id),
     get curTab() { return _tab; },
