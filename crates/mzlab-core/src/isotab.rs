@@ -1,6 +1,13 @@
 //! Natural isotopes of the elements the isotope patterns know: `(exact mass, abundance)` per element, lightest isotope first.
 //! The one table of `isoscore` (fine structure, scores) and `ionpattern` (unit resolution).
 
+/// Silicon `(exact mass, IUPAC abundance)`: also the pattern of `composition::isotope_ratios`.
+pub(crate) const SI: [(f64, f64); 3] = [
+    (27.9769265350, 0.92223),
+    (28.9764946653, 0.04685),
+    (29.973770136, 0.03092),
+];
+
 pub(crate) const ISO: [(&str, &[(f64, f64)]); 56] = [
     ("H", &[(1.00782503223, 0.999885), (2.01410177812, 0.000115)]),
     ("C", &[(12.0, 0.9893), (13.00335483507, 0.0107)]),
@@ -15,14 +22,7 @@ pub(crate) const ISO: [(&str, &[(f64, f64)]); 56] = [
     ),
     ("F", &[(18.99840316273, 1.0)]),
     ("Na", &[(22.989769282, 1.0)]),
-    (
-        "Si",
-        &[
-            (27.9769265350, 0.92223),
-            (28.9764946653, 0.04685),
-            (29.973770136, 0.03092),
-        ],
-    ),
+    ("Si", &SI),
     ("P", &[(30.97376199842, 1.0)]),
     (
         "S",

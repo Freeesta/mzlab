@@ -82,7 +82,7 @@ pub fn unit_pattern(counts: &BTreeMap<String, i64>, z: i32) -> Result<Vec<UnitPe
         })
         .filter(|r| r.rel >= MIN_REL)
         .collect();
-    out.sort_by(|a, b| a.mz.total_cmp(&b.mz));
+    crate::sortc::slice_by(&mut out, |a, b| a.mz.total_cmp(&b.mz));
     Ok(out)
 }
 

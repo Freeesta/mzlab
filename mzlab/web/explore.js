@@ -532,8 +532,10 @@ function restoreUi() {
   if (u && u.msn && window.INF) INF.restore(u.msn);
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map((/** @type {FileAperto} */ f) => f.file));
-  if (!u.files.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
-  u.files.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
+  // removed files are not in the restored session (their entry only records the removal): they must not make the whole restore fail
+  const saved = u.files.filter((/** @type {Bag} */ sf) => !sf.gone || names.has(sf.file));
+  if (!saved.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
+  saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
