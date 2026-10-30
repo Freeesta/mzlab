@@ -63,18 +63,9 @@ impl Write for BlockWriter {
     }
 }
 
-/// The error as the JSON text the page parses; strings go through `json::Out::str`, so control characters are valid `\u0001`.
+/// The error as the JSON text the page parses.
 fn error_text(e: &mzlab_core::Error) -> String {
-    let mut o = mzlab_core::json::Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        if i > 0 {
-            o.raw(",");
-        }
-        o.str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    o.0
+    e.to_json()
 }
 
 pub(crate) fn error_json(e: &mzlab_core::Error) -> JsValue {
@@ -659,13 +650,6 @@ fn write_trace(rt: &[f64], y: &[f64], px: u32, out: &mut [f64]) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn error_text_is_valid_json_for_control_characters() {
-        let e = mzlab_core::Error::new("error.x").with("name", "a\u{1}b\"c\\d\u{200b}");
-        let v = mzlab_core::json::parse(super::error_text(&e).as_bytes()).expect("valid JSON");
-        assert_eq!(v.get("params").and_then(|p| p.get("name")).and_then(|n| n.str()), Some("a\u{1}b\"c\\d\u{200b}"));
-    }
-
     #[test]
     fn auto_integrate_is_the_core_result() {
         // three Gaussians on a flat baseline; the rows written are those of mzlab-core, and a short buffer keeps the first ones
