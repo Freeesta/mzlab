@@ -1,0 +1,48 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>WebKit memory probe</title>
+<pre id="out">running</pre>
+<script>
+// Memory probe for the macOS WebKit diagnosis (webkit_sonda.py): which WebAssembly.Memory shapes the engine of the page can reserve.
+// The result is window.PROBE (steps in order, first failure named). Same shape as the engine: initial 32 MB, maximum 4 GiB, no shared memory.
+const MB = 65536, PAGES = n => n * 16;      // 1 MiB = 16 wasm pages
+const rec = [];
+function step(name, fn) {
+  try { const v = fn(); rec.push({ name, ok: true, v }); return true; }
+  catch (e) { rec.push({ name, ok: false, err: String(e && e.message || e) }); return false; }
+}
+function mem(initialMb, maxMb) { return new WebAssembly.Memory({ initial: PAGES(initialMb), maximum: PAGES(maxMb) }); }
+const keep = [];
+// (1) many memories in the page, as the pool and the engine would reserve
+for (const [n, init, max] of [[4, 32, 4096], [16, 32, 4096], [64, 32, 4096], [64, 16, 2048], [64, 16, 1024]]) {
+  keep.length = 0;
+  let made = 0;
+  step(`page x${n} initial ${init}M max ${max}M`, () => { for (let i = 0; i < n; i++) { keep.push(mem(init, max)); made++; } return made; });
+}
+// (2) grow of one memory in steps of 256 MB until the first failure (or 4 GiB)
+keep.length = 0;
+step("grow 256M steps (max 4096M)", () => {
+  const m = mem(32, 4096); let mb = 32;
+  try { while (mb < 4096) { const d = Math.min(256, 4096 - mb); m.grow(PAGES(d)); mb += d; } } catch (e) { throw new Error(`failed at ${mb}M -> next: ${e.message}`); }
+  return mb;
+});
+// (3) workers, one memory each, then a grow in each
+async function workers(n, growMb) {
+  const src = `onmessage=e=>{try{const m=new WebAssembly.Memory({initial:${PAGES(32)},maximum:${PAGES(4096)}});${growMb ? `m.grow(${PAGES(growMb)});` : ""}postMessage('ok')}catch(x){postMessage('ERR '+x.message)}}`;
+  const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  const ws = [], rs = [];
+  for (let i = 0; i < n; i++) { const w = new Worker(url); ws.push(w); rs.push(new Promise(r => { w.onmessage = e => r(e.data); w.onerror = e => r("onerror " + e.message); setTimeout(() => r("timeout"), 8000); })); w.postMessage(0); }
+  const out = await Promise.all(rs); ws.forEach(w => w.terminate());
+  const bad = out.filter(x => x !== "ok");
+  if (bad.length) throw new Error(`${bad.length}/${n} failed: ${bad[0]}`);
+  return n;
+}
+(async () => {
+  for (const [n, g] of [[1, 0], [4, 0], [12, 0], [4, 512], [12, 256]]) {
+    try { rec.push({ name: `workers x${n} grow ${g}M`, ok: true, v: await workers(n, g) }); }
+    catch (e) { rec.push({ name: `workers x${n} grow ${g}M`, ok: false, err: String(e.message || e) }); }
+  }
+  window.PROBE = rec;
+  document.getElementById("out").textContent = JSON.stringify(rec, null, 1);
+})();
+</script>
