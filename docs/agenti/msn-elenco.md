@@ -1,0 +1,10 @@
+# Elenco degli esperimenti MSn di un file DDA
+
+Codice: `mzlab/web/msn-elenco.js` (modulo ES caricato al primo uso da `COMP.tree` in `composizione.js`), `DDA.get`/`DDA.showMs2` (`dda.js`). Nota di progetto: `docs/studi/msn-elenco-esperimenti.md`. Prova: `tests_e2e/e2e_hr_msnelenco.py`.
+
+- **Quando**: la finestra «Albero MSn» di un file con un elemento `dda` si apre sulla scheda «Experiments»; la scheda «Tree» c'è solo se il file ha MS3 o oltre (l'albero di `/api/msntree` rifiuta i DDA con soli MS2) e si calcola alla prima apertura. Le frecce passano da una scheda all'altra.
+- **Dati**: `/api/dda` (Rust `hrroutes.rs`, riferimento `explore.dda`, parità `hr_parity`) con le colonne `lev` (livello MS) e `z` (carica, null se manca); l'intensità del picco base da `/api/scanlist?level=N`. `groups(D, tol)` raggruppa le scansioni per il precursore del loro antenato MS2 (moda dei m/z entro la tolleranza del file).
+- **Tabella**: `role=grid`, righe di 24 px, solo quelle visibili nel DOM (50 000 scansioni in meno di 0,2 s). Intestazioni ordinabili (`aria-sort`; la colonna dell'attivazione ordina i gruppi per numero di scansioni), filtri m/z, RT, livello e «espandi tutto» (acceso fino a 200 gruppi). Tastiera: frecce, Pag, Home/Fine, Invio/Spazio, Sinistra/Destra chiudono e aprono un gruppo (`aria-activedescendant`).
+- **Azioni**: clic o Invio su una scansione chiude la finestra e la mostra nel trio DDA (`DDA.showMs2`). Per gruppo: «TIC» = cromatogramma della scheda MS2 con `prec` e `ptol` (metà della dispersione dei precursori + `HR.tolDa`) e il suo spettro collegato (`addMs2Spec`); «XIC» = `xicDirect` del m/z sulla scheda Full con la finestra ppm del file e uno spettro collegato.
+- **`ptol`** di `/api/chrom` (Rust `chrom_raw`): finestra del precursore in Da, predefinita 0,6; è una proprietà del solo pannello (`getChrom`, salvata nel taccuino), perché `ms2_exps` arrotonda i precursori a 0,1.
+- **Trappola**: i filtri ascoltano solo `input`, non `change` (il `change` al blur ricostruiva le righe a metà di un clic).

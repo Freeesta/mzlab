@@ -28,7 +28,7 @@ try:
         pg.add_init_script("try{localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}")
         pg.on("pageerror", lambda e: r.errs.append(("pageerror", str(e))))
         pg.goto(f"http://127.0.0.1:{r.port}/"); attendi(pg, "!!document.querySelector('#pick')")
-        pg.set_input_files("#pick", [str(f) for f in files]); attendi(pg, "!!document.querySelector('#opbtn')")
+        pg.set_input_files("#pick", [str(f) for f in files])
         pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, "!!E.panels.find(q=>q.type==='map')")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         nxt, prv = ".pnl.map [data-a=mapnav][data-d='1']", ".pnl.map [data-a=mapnav][data-d='-1']"

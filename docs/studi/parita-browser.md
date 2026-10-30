@@ -31,7 +31,8 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `table.drift` | sì | `.wasm` `flowtab` (`flow_drift`, `mzlab-feat::flow_drift`): esecutore `F.webDrift` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_web_drift.py` (SHA-256 uguale al nativo, lineare e loess) | fatto | S | 1 |
 | `table.filter`, `table.plausible` | sì | pannello per plausibilità (`.wasm` `table`: `table_plausible`, `table_check`); filtro non verificato | `test_feat_table_wasm.py` per `check.json`; passi no | da fare: nessun esecutore in `F.liveJobs` | S | 1 |
 | `table.stats`, `table.pca`, `table.kmd` | sì | pannello (motore: `stat_post`; vista KMD/PCA) | `stat_route_parity.rs` è Rust↔Python | da fare | M | 2 |
-| `export.table_csv`, `export.inclusion`, `export.mztab` | sì | pannello (`export_table`, inclusione in mzFinder); mzTab del passo no | no | da fare | M | 1 |
+| `export.table_csv`, `export.mztab` | sì | pannello (`export_table`); mzTab del passo no | no | da fare | M | 1 |
+| `export.inclusion` | sì | `.wasm` `interp` (`flow_inclusion`, `mzlab-feat::export_inclusione_tp`): esecutore `F.webInclusion` in `F.liveJobs`, stessi byte di `flow run` | `e2e_flow_neg_lr.py` | fatto | S | 1 |
 | `table.match` | sì | sì (`F.webIdent.tableMatch`: `.wasm` `table` + `lib`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs` | fatto | | |
 | `meta.compare` | sì | no | no | da fare | M | 3 |
 | **Flow: identificazione (Attributio)** | | | | | | |
