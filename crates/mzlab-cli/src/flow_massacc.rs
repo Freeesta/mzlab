@@ -49,7 +49,7 @@ pub fn massacc_step() -> Step {
             wasm_ceiling_bytes: Some(CEILING),
             native: true,
         },
-        errors: vec!["err.flow.massacc.references", "err.flow.massacc.mrm", "err.flow.param.type", "error.badMzfeat"],
+        errors: vec!["err.flow.massacc.references", "err.flow.massacc.mrm", "err.flow.massacc.unit", "err.flow.param.type", "error.badMzfeat"],
         ..Step::core(
             "qc.mass_accuracy",
             "Mass accuracy",

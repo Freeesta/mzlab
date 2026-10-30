@@ -7,6 +7,8 @@ use crate::flow_bentazone_tests::{fixture, mzml, plan, NAMES, POS};
 
 #[path = "flow_neglr_facets_tests.rs"]
 mod facets;
+#[path = "flow_neglr_ms2tol_tests.rs"]
+mod ms2tol;
 
 const CASES: [(&str, i8, bool); 4] = [
     ("hrp", 1, true),
@@ -81,10 +83,12 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
         let own_id = if hr { "pos" } else { "dig" };
         for id in [
             "det", "ali", "gap", "gen", "lnk", "flt", "net", "est", "fil", "plz", "kmd", "csv",
-            "mzt", "qc", "rx", own_id,
+            "mzt", "rx", own_id,
         ] {
             assert_eq!(error_of(&prov, id), None, "{tag} {id}");
         }
+        let refused = (!hr).then_some("err.flow.massacc.unit");
+        assert_eq!(error_of(&prov, "qc").as_deref(), refused, "{tag} qc");
         // the files decide the polarity of the hypotheses, of the link and of the Dig, and the unit mass of the hypotheses
         let gen = activity(&prov, "gen").get("params").unwrap();
         assert_eq!(

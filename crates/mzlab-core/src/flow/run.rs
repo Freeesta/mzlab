@@ -59,6 +59,8 @@ pub struct Outcome {
     pub mem: Option<Mem>,
     /// `warn.*` keys of what the step noticed and went on with.
     pub warnings: Vec<String>,
+    /// The preset the step ran with when the files decided it (`features.detect` on unit-resolution files runs the `lr` preset); the record names it instead of the default one.
+    pub preset: Option<String>,
     /// The output came from the cache key (`cache_key`), the step did not run.
     pub cached: bool,
     /// What a per-file step says of its file for the record of the run (`{"via": "centroided"|"passthrough", ...}`).
@@ -241,6 +243,9 @@ fn settle(
     for o in &outcomes {
         act.ms += o.ms;
         act.cached &= o.cached;
+        if o.preset.is_some() {
+            act.preset = o.preset.clone();
+        }
         act.heap_peak_bytes = act.heap_peak_bytes.max(o.heap_peak_bytes);
         act.mem = merged(act.mem.take(), o.mem.clone());
         for w in &o.warnings {

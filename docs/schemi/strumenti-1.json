@@ -1348,8 +1348,8 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "default":0.02,
-                    "description":"Fragment matching between spectra, the GNPS convention"
+                    "default":0,
+                    "description":"Fragment matching between spectra; 0 follows the query: 0.02 Da, the GNPS convention, and 0.5 Da for a unit-resolution query (the note of the unit MGF, which table.match writes for unit-resolution files)"
                   },
                   {
                     "type":"number",
@@ -1367,7 +1367,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window, except for a unit-resolution query, which takes 0.7 Da (the peak width of the 3200 QTRAP)"
                   },
                   {
                     "type":"string",
@@ -1943,8 +1943,8 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "default":0.02,
-                    "description":"Fragment matching between spectra, the GNPS convention"
+                    "default":0,
+                    "description":"Fragment matching between spectra; 0 follows the query: 0.02 Da, the GNPS convention, and 0.5 Da for a unit-resolution query (the note of the unit MGF, which table.match writes for unit-resolution files)"
                   },
                   {
                     "type":"number",
@@ -1962,7 +1962,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"
+                    "description":"Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window, except for a unit-resolution query, which takes 0.7 Da (the peak width of the 3200 QTRAP)"
                   },
                   {
                     "type":"string",

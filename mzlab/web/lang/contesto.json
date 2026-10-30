@@ -84,6 +84,7 @@
   "err.file.notWiff": "{name} = nome del file.",
   "err.file.wiffNoScan": "{name} = nome del file .wiff.",
   "err.flow.param.axis": "Errore del motore di Flow: una tolleranza di m/z è scritta nell'unità dell'altro asse. {param} = nome del parametro, {axis} = asse del file (Da = risoluzione unitaria, ppm = alta risoluzione).",
+  "err.flow.massacc.unit": "Errore del motore di Flow: il controllo dell'errore di massa (ppm) è chiesto per un file a risoluzione unitaria. {file} = nome del file.",
   "err.flow.align.polarity": "Errore del motore di Flow: l'allineamento riceve file di polarità diverse. {positive}, {negative} = nomi dei file positivi e negativi, separati da virgole.",
   "err.flow.align.resolution": "Errore del motore di Flow: l'allineamento riceve file a risoluzione unitaria e ad alta risoluzione. {unit}, {high} = nomi dei file dei due gruppi, separati da virgole.",
   "err.file.index": "{detail} = motivo tecnico (testo inglese del motore).",

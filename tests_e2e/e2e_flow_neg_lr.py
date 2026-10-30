@@ -87,6 +87,7 @@ def plan(pol, hr):
          {"id": "flt", "step": "tp.filter@2", "in": {"tp": "lnk.tp", "hypotheses": "gen.hypotheses"}},
          {"id": "net", "step": "tp.network@1", "in": {"tp": "lnk.tp", "table": "lnk.tp", "samples": "file:samples.json"}},
          {"id": "fil", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
+         {"id": "fdu", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"dup_ppm": 10} if hr else {"dup_da": 0.3}},
          {"id": "csv", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
          {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}}]
     s.append(POS if hr else {"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
@@ -102,7 +103,7 @@ def refusal(v):
         return next((r for r in map(refusal, v) if r), None)
     return None
 POS = {"id": "pos", "step": "tp.position@1", "in": {"tp": "lnk.tp", "parent": "file:parent.json"}}   # high resolution only: fragments at 5 ppm
-TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "csv", "mzt", "dig"]
+TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "fdu", "csv", "mzt", "dig"]
 
 def check_plan(pol, hr):
     """The plan of `plan` with the steps the facets of the files refuse: formula.ms1 and tp.position (high resolution only) or, on high-resolution files, tp.dig_lr."""

@@ -20,6 +20,7 @@ I18N.add("it", {
   "err.upload.network": "upload fallito",
   "err.hr.mix": "Impossibile mescolare file a bassa e alta risoluzione.",
   "err.flow.param.axis": "{param} non vale per un file con asse {axis}: sull'asse a risoluzione unitaria la tolleranza di m/z si scrive in Da (tol_da, dup_da), su quello ad alta risoluzione in ppm (ppm, tol_ppm, max_ppm_span, dup_ppm).",
+  "err.flow.massacc.unit": "L'errore di massa si misura in ppm sui file ad alta risoluzione; {file} è a risoluzione unitaria (l'asse di m/z è di 0,1 Da), quindi qc.mass_accuracy non si applica.",
   "err.flow.align.polarity": "Una tabella contiene una sola polarità: nella stessa serie ci sono file positivi ({positive}) e file negativi ({negative}). Dividi la serie, oppure rileva e allinea ogni polarità in un ramo suo.",
   "err.flow.align.resolution": "Una tabella contiene una sola risoluzione: nella stessa serie ci sono file a risoluzione unitaria ({unit}) e file ad alta risoluzione ({high}). Dividi la serie, oppure rileva e allinea ogni risoluzione in un ramo suo.",
   "err.file.notAccepted": "Tipo di file non accettato: {name}. Usa un .mzML, oppure un metodo .dam; converti prima un .wiff in .mzML.",
