@@ -6,9 +6,6 @@ name: webkit-mac
 
 on:
   workflow_dispatch:
-  # while the diagnosis branch is open (a workflow runs by hand only once it is on main); removed with the branch
-  push:
-    branches: [claude/webkit-mac-diagnosi]
 
 permissions:
   contents: read
