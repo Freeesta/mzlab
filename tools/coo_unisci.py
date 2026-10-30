@@ -17,6 +17,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import ci_metrics
+
 RISCHI = ["Cargo.toml", "*/Cargo.toml", "Cargo.lock", ".github/workflows/*", "*.wasm", "crates/mzlab-desktop/*"]
 CSP = "mzlab/web/index.html"
 OK = ("success", "skipped", "neutral")
@@ -82,7 +84,7 @@ def valuta(repo: Path, pr: int, sha: str) -> dict:
     if testa != sha:
         res["motivo"] = f"head SHA differs: PR is at {testa}"
         return res
-    eventi = [json.loads(r) for r in git(repo, "show", "origin/stat-ci:eventi.jsonl", check=False).stdout.splitlines() if r.strip()]
+    eventi = ci_metrics.eventi_ramo(repo=str(repo))
     res["verde"], job = ci_verde(eventi, sha)
     if not res["verde"]:
         res["motivo"] = f"CI non verde: {job}"

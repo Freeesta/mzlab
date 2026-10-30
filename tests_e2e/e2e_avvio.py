@@ -70,7 +70,7 @@ try:
             pg.wait_for_selector("#start")
             assert pg.locator("#loading").is_hidden(), "loading veil must be hidden on boot"
             assert pg.locator("#drop").is_visible(), "drop zone must be visible immediately"
-            assert pg.locator("#drop-skeleton").is_hidden(), "skeleton must be hidden without session"
+            assert pg.locator("#opening").is_hidden(), "restoring box must be hidden without session"
             assert pg.get_attribute("#avvio-fase", "role") == "status"
             pg.wait_for_function("window.qqReady === true", timeout=120000)
             assert pg.locator("#avvio-fase").is_hidden(), "avvio-fase must be hidden once ready"
@@ -82,12 +82,12 @@ try:
             c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900})
             c.add_init_script("try { localStorage.setItem('mzlab.sessione', '1'); } catch (e) {}")
             pg = c.new_page(); pg.goto(URL, wait_until="domcontentloaded")
-            assert pg.evaluate("document.getElementById('drop-skeleton') && !document.getElementById('drop-skeleton').hidden"), "skeleton visible with session clue"
-            assert pg.evaluate("document.getElementById('drop') && document.getElementById('drop').hidden"), "drop hidden with session clue"
-            pg.wait_for_function("document.getElementById('drop') && !document.getElementById('drop').hidden", timeout=120000)
-            assert pg.locator("#drop-skeleton").is_hidden()
+            assert pg.evaluate("!document.getElementById('opening').hidden && document.getElementById('opening').classList.contains('restoring')"), "restoring box visible with session clue"
+            assert pg.evaluate("document.getElementById('wdata').hidden"), "landing hidden with session clue"
+            pg.wait_for_function("document.getElementById('drop') && !document.getElementById('wdata').hidden", timeout=120000)
+            assert pg.locator("#opening").is_hidden()
             c.close()
-        step("session clue shows skeleton on boot and clears when ready", session_skeleton_when_clue_present)
+        step("session clue shows the restoring box on boot and clears when ready", session_skeleton_when_clue_present)
         def wasm_fails():
             holder.evaluate(GONE)
             c = b.new_context(locale="it-IT", viewport={"width": 1300, "height": 900}, service_workers="block")
@@ -115,14 +115,14 @@ try:
             pg = c.new_page(); perr = []; pg.on("pageerror", lambda e: perr.append(str(e)))
             pg.goto(URL, wait_until="domcontentloaded")
             pg.wait_for_selector("#avvio-errore", timeout=120000)
-            assert pg.locator("#drop").is_visible() and pg.locator("#drop-skeleton").is_hidden(), "skeleton must go away after a failure"
+            assert pg.locator("#drop").is_visible() and pg.locator("#opening").is_hidden(), "restoring box must go away after a failure"
             Path("/tmp/avvio_f3.mzML").write_text("<mzML></mzML>")
             n0 = len(perr)
             pg.set_input_files("#pick", ["/tmp/avvio_f3.mzML"])
             pg.wait_for_function("typeof ST !== 'undefined'")
             assert pg.evaluate("ST.files.length") == 0 and pg.locator("#avvio-errore").count() == 1 and len(perr) == n0, perr
             c.close()
-        step("failed engine with a saved session: drop visible, skeleton gone; a dropped file gives no error and no load", wasm_fails_with_session)
+        step("failed engine with a saved session: drop visible, restoring box gone; a dropped file gives no error and no load", wasm_fails_with_session)
         b.close()
 finally:
     srv.terminate()

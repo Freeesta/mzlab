@@ -51,5 +51,6 @@ def test_shared_cases_agree_with_the_rust_rule():
     """`livelli_casi.json` is also run by the native rule (`crates/mzlab-cli`, `flow_ident_tests.rs`): both must give these levels."""
     cases = json.loads((Path(__file__).parent / "livelli_casi.json").read_text(encoding="utf-8"))["cases"]
     for c in cases:
-        r = run(f"const r = L.assess({json.dumps(c['input'])}, {c['profile']!r}); console.log(JSON.stringify([r.proposed, r.why]))")
+        over = json.dumps(c.get("thresholds", {}))
+        r = run(f"const r = L.assess({json.dumps(c['input'])}, {c['profile']!r}, Object.assign({{}}, L.thresholds({c['profile']!r}), {over})); console.log(JSON.stringify([r.proposed, r.why]))")
         assert r == [c["level"], c["why"]], c["name"]

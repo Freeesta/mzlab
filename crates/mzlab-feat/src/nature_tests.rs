@@ -61,3 +61,24 @@ fn the_plan_wins_and_the_detection_closes_the_polarity() {
         r#"[{"name":"polarity","value":-1,"proof":"scan polarity of the files"},{"name":"nominal","value":true,"proof":"unit resolution of the files"}]"#
     );
 }
+
+#[test]
+fn one_table_holds_one_polarity_and_one_resolution() {
+    let f = |n: &str, p: i8, hr: bool| (n.to_string(), p, hr);
+    assert!(one_kind(&[f("a", -1, true), f("b", -1, true), f("c", 0, true)]).is_ok());
+    let e = one_kind(&[f("a", -1, true), f("b", 1, true), f("c", 1, true)]).unwrap_err();
+    assert_eq!(e.key, "err.flow.align.polarity");
+    assert_eq!(
+        e.params,
+        vec![
+            ("positive", "b, c".to_string()),
+            ("negative", "a".to_string())
+        ]
+    );
+    let e = one_kind(&[f("a", 1, false), f("b", 1, true)]).unwrap_err();
+    assert_eq!(e.key, "err.flow.align.resolution");
+    assert_eq!(
+        e.params,
+        vec![("unit", "a".to_string()), ("high", "b".to_string())]
+    );
+}

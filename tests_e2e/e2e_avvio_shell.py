@@ -46,7 +46,7 @@ try:
 
         def shell_before_engine():
             pg.wait_for_selector("#start", state="visible", timeout=30000)
-            assert pg.is_visible("#drop") or pg.is_visible("#drop-skeleton"), "no drop area in the shell"
+            assert pg.is_visible("#drop") or pg.is_visible("#opening"), "no drop area in the shell"
             deadline = time.time() + 30
             while not held and time.time() < deadline: hold(pg, 50)
             assert held, "the engine never asked for the .wasm"
