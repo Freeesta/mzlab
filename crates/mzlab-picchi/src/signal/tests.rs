@@ -316,3 +316,29 @@ fn noise_level_keeps_its_bits_also_with_nan_and_infinity() {
         );
     }
 }
+
+#[test]
+fn median_or_covers_empty_odd_even_and_nan() {
+    assert!(median_or(&[], f64::NAN).is_nan());
+    assert_eq!(median_or(&[], 0.0), 0.0);
+    assert_eq!(median_or(&[3.0, 1.0, 2.0], 0.0), 2.0);
+    assert_eq!(median_or(&[4.0, 1.0, 2.0, 3.0], 0.0), 2.5);
+    // NaN sorts last under total_cmp and never panics
+    assert_eq!(median_or(&[f64::NAN, 1.0, 2.0], 0.0), 2.0);
+}
+
+#[test]
+fn interp_clamps_and_is_exact_at_nodes() {
+    let (xp, fp) = ([0.0, 1.0, 3.0], [0.0, 10.0, 30.0]);
+    assert_eq!(interp(-1.0, &xp, &fp), 0.0);
+    assert_eq!(interp(5.0, &xp, &fp), 30.0);
+    assert_eq!(interp(1.0, &xp, &fp), 10.0);
+    assert_eq!(interp(2.0, &xp, &fp), 20.0);
+}
+
+#[test]
+fn fwhm_walk_stops_at_the_first_point_not_above_half() {
+    let x = [0.0, 1.0, 2.0, 3.0, 4.0];
+    assert_eq!(fwhm_walk(&x, &[0.0, 6.0, 10.0, 6.0, 0.0], 2), 2.0);
+    assert_eq!(fwhm_walk(&x, &[10.0, 10.0, 10.0, 10.0, 10.0], 2), 4.0);
+}

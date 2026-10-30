@@ -1,0 +1,3 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by;entry_ref;ec;dtxsid;form;status
+T_LIST_B;2000-01-01;2000-01-02;Act B;Isomerone B;9100-22-6;;ISOMERONEBXXAA-UHFFFAOYSA-N;ISOMERONEBXXAA;;C14H20N2O4;280.142307;;;;;;;;law;Table 1, no. 2;;;as_listed;screenable
+T_LIST_B;2000-01-01;2000-01-02;Act B;Trilistol;9100-25-9;;TRILISTOLXXXAA-UHFFFAOYSA-N;TRILISTOLXXXAA;;C12H15NO4;237.100108;;;;;;;;law;Table 1, no. 5;;;as_listed;screenable

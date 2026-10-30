@@ -75,7 +75,7 @@ for kind in ("hr", "lr"):
                     pg.locator(".pnl.xic [data-a=iauto]").first.click(); click_at(pg, 14.3)
                     attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length>=1")
                     w = pg.evaluate(WINS); assert len(w) == 1, w
-                    ed = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='xic'),i=p.ints[0];const e=autoEdges(p._a.sr[0],14.3);return [Math.abs(e[0]-i.a),Math.abs(e[1]-i.b)]})()")
+                    ed = pg.evaluate("(async()=>{const p=E.panels.find(q=>q.type==='xic'),i=p.ints[0];const e=await autoEdges(p._a.sr[0],14.3);return [Math.abs(e[0]-i.a),Math.abs(e[1]-i.b)]})()")
                     assert max(ed) < 0.02, ed
                     click_at(pg, 5.0)
                     assert pg.evaluate("E.panels.find(q=>q.type==='xic').ints.length") <= 2          # one click = at most one peak, as always

@@ -16,68 +16,22 @@ function integ(/** @type {Bag} */ s, /** @type {number} */ a, /** @type {number}
   return { area: Math.max(ar - area, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
 const baseAt = (/** @type {number[]} */ b, /** @type {number} */ t) => b[1] + (b[3] - b[1]) * (t - b[0]) / ((b[2] - b[0]) || 1);
-// Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
-// moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
-// (found with a coarse smoothing first), so noisy MRM traces sampled every 0.05 s and sparse TIC traces both work. The apex is where the derivative
-// goes from + to -. Each edge is where the signal falls below (local baseline + 3% of the peak height, and at least 3 times the noise), or where
-// the derivative changes sign again (a valley before the next peak) for a sustained stretch. Baseline = straight line between the two edges (integ()).
-function sgFilter(/** @type {number[]} */ y, /** @type {number} */ m, /** @type {boolean} */ deriv) {                         // half window m (window 2m+1), edges replicated
-  const n = y.length, out = new Array(n), mm = m * (m + 1) * (2 * m + 1) / 3;
-  const w = []; for (let j = -m; j <= m; j++) w.push(deriv ? j / mm : 3 * (3 * m * m + 3 * m - 1 - 5 * j * j) / ((2 * m - 1) * (2 * m + 1) * (2 * m + 3)));
-  for (let i = 0; i < n; i++) {
-    let v = 0;
-    if (i >= m && i + m < n) for (let j = -m; j <= m; j++) v += w[j + m] * y[i + j];
-    else for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))];
-    out[i] = v;
-  }
-  return out;
-}
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
 // hr* = the one-click integration of every peak of a high-resolution trace (autoAll).
 const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0, hrSmooth: 5, hrSn: 5, hrProm: 1, hrScans: 3, hrHalf: 0, hrSlope: 3 };
 const PK = (() => { const o = lsObj(NOMI.KEY("picchi")); const { method: _old, ...rest } = o; return { ...PK_DEF, ...rest }; })();
 function pkSave() { try { localStorage.setItem(NOMI.KEY("picchi"), JSON.stringify(PK)); } catch (e) { /* no storage */ } }
-/** @param {Bag} s @param {number} x @param {number} [ref] */
-function autoEdges(s, x, ref = 0) {
-  const xs = s.x, n = xs.length, ic = nearIdx(xs, x);
-  if (n < 9) return [xs[ic], xs[ic]];
-  const dt = (xs[Math.min(n - 1, ic + 50)] - xs[Math.max(0, ic - 50)]) / (Math.min(n - 1, ic + 50) - Math.max(0, ic - 50) || 1) || 0.01;
-  const a0 = Math.max(0, nearIdx(xs, x - 2)), a1 = Math.min(n - 1, nearIdx(xs, x + 2)), y = s.y.slice(a0, a1 + 1), N = y.length, c0 = ic - a0;
-  const mCoarse = Math.max(2, Math.round(0.03 / dt / 2)), co = sgFilter(y, mCoarse, false);
-  const lo = Math.max(0, nearIdx(xs, x - 0.25) - a0), hi = Math.min(N - 1, nearIdx(xs, x + 0.25) - a0);
-  let m0 = lo; for (let j = lo; j <= hi; j++) if (co[j] > co[m0]) m0 = j;
-  const cmin = minOf(co), half = cmin + (co[m0] - cmin) / 2;
-  let hl = m0, hr = m0; while (hl > 0 && co[hl] > half) hl--; while (hr < N - 1 && co[hr] > half) hr++;
-  const m = Math.max(PK.minHalf, Math.min(60, Math.round((hr - hl) * 0.3)));                         // half window = 30% of FWHM -> window about 60% of FWHM
-  const sm = sgFilter(y, m, false), d = sgFilter(y, m, true);
-  let k = Math.max(0, m0 - m); const k1 = Math.min(N - 1, m0 + m); for (let j = k; j <= k1; j++) if (sm[j] > sm[k]) k = j;   // apex of the smoothed trace
-  const w0 = Math.max(0, k - Math.round(PK.win / dt)), w1 = Math.min(N - 1, k + Math.round(PK.win / dt));          // baseline window (min)
-  const res = new Float64Array(w1 - w0 + 1); for (let j = w0; j <= w1; j++) res[j - w0] = Math.abs(y[j] - sm[j]); res.sort(); 
-  const nman = PK.noise === "manual" && PK.nr1 > PK.nr0 ? noiseSD(xs, s.y, PK.nr0, PK.nr1) : null;                    // noise from the region the student chose (no peaks there)
-  const noise = nman != null && nman > 0 ? nman : Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((/** @type {number} */ a, /** @type {number} */ v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
-  const low = new Float64Array(w1 - w0 + 1); for (let j = w0; j <= w1; j++) low[j - w0] = sm[j]; low.sort();
-  const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0);
+// Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
+// moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
+// (found with a coarse smoothing first), so noisy MRM traces sampled every 0.05 s and sparse TIC traces both work. The apex is where the derivative
+// goes from + to -. Each edge is where the signal falls below (local baseline + 3% of the peak height, and at least 3 times the noise), or where
+// the derivative changes sign again (a valley before the next peak) for a sustained stretch. Baseline = straight line between the two edges (integ()).
+// The detector is Rust (crates/mzlab-core/src/peakq_lr.rs through QUALITA.edges); this asks it with the parameters of the dialog.
+/** Limits [t0, t1] (min) of the peak at time x on the trace s; null below the S/N threshold or without the engine. @param {Bag} s @param {number} x @param {number} [ref] */
+async function autoEdges(s, x, ref = 0) {
   const isMrm = (s.key && s.key.startsWith("m|")) || s.tr != null;
-  const frac = (isMrm || (noise > 0 && H / noise > 800)) ? Math.min(PK.edgeFrac / 100, Math.max(0.005, 5 * noise / Math.max(H, 1))) : PK.edgeFrac / 100;
-  const lim = base + Math.max(frac * H, PK.areaNoise * noise);
-  if (PK.snMin > 0 && H < PK.snMin * noise) return null;                                  // signal/noise below the threshold: not a peak
-  const need = Math.max(2, Math.round(m * PK.multi / 100)), dth = noise / Math.max(m, 1) * 0.3, maxw = Math.round(PK.tail / dt);
-  const walk = (/** @type {number} */ dir) => {
-    let j = k, bad = 0;
-    while (j + dir >= 0 && j + dir < N && Math.abs(j - k) < maxw) {
-      const nx = j + dir; j = nx;
-      if (sm[nx] <= lim) break;
-      bad = (dir < 0 ? d[nx] < -dth : d[nx] > dth) ? bad + 1 : 0;                         // rising again while moving away from the apex
-      if (bad >= need) { j = nx - dir * need; break; }
-    }
-    return j;
-  };
-  let e0 = xs[a0 + Math.min(walk(-1), k)], e1 = xs[a0 + Math.max(walk(1), k)];
-  if (PK.constrain > 0 && ref > 0) {                                                       // «Vincola la larghezza»: the base width stays within +-constrain % of the reference peak
-    const tp = xs[a0 + k], w = e1 - e0, lo = ref * (1 - PK.constrain / 100), hi = ref * (1 + PK.constrain / 100), w2 = Math.min(hi, Math.max(lo, w));
-    if (w > 0 && w2 !== w) { const q = (tp - e0) / w; e0 = tp - q * w2; e1 = e0 + w2; }
-  }
-  return [e0, e1];
+  const r = window.QUALITA ? await QUALITA.edges(s.x, s.y, x, ref, isMrm, PK) : null;
+  return r && r.length ? r : null;
 }
 // trace to integrate at time x: the clicked row when stacked, otherwise the most intense one
 function intSeries(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {number | null | undefined} */ py) {
@@ -159,7 +113,8 @@ async function autoAll(/** @type {Bag} */ p, /** @type {Bag} */ s) {
 // automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
 async function autoInt(/** @type {Bag} */ p, /** @type {Bag} */ s, /** @type {number} */ x) {
   const same = p.ints.filter((/** @type {Bag} */ i) => i.key === s.key).map((/** @type {Bag} */ i) => iHi(i) - iLo(i)).sort((/** @type {number} */ u, /** @type {number} */ v) => u - v);
-  const ed = autoEdges(s, x, same.length ? same[same.length >> 1] : 0);
+  if (!window.QUALITA) { nearMsg(I18N.t("int.autoOff")); return; }
+  const ed = await autoEdges(s, x, same.length ? same[same.length >> 1] : 0);
   if (!ed) { nearMsg(I18N.t("int.belowSn")); return; }
   let [l, r] = ed;
   if (p.type !== "mrm") {
@@ -406,6 +361,10 @@ async function drawSpec(p, snapped) {
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
   const wide = files.reduce((/** @type {number[]} */ r, /** @type {Bag} */ f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
   const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [minOf(data.map((/** @type {Bag} */ x) => minOf(x.d.mz))) - 2, maxOf(data.map((/** @type {Bag} */ x) => maxOf(x.d.mz))) + 2];
+  // an MS2 spectrum fits its own peaks (the range of the file also holds the fragments of other precursors): +5%, and at least the precursor + 5; MS1 keeps the range of the file
+  // an MS2 spectrum fits its own peaks (the range of the file also holds the fragments of other precursors): +5%, at least the precursor + 5; MS1 keeps the range of the file
+  const own = p.level === 2 ? data.flatMap((/** @type {Bag} */ x) => { const m = lineOf(x) ? x.d.pmz : x.d.mz; return m && m.length ? [m[0], m[m.length - 1], ...(x.prec > 0 ? [+x.prec + 5] : [])] : []; }) : [];
+  const lo = own.reduce((a, v) => Math.min(a, v), Infinity), hi = own.reduce((a, v) => Math.max(a, v), -Infinity);   if (own.length > 1 && lo < hi) { const w = (hi - lo) * 0.05; full[0] = Math.max(0, lo - w - 1); full[1] = hi + w + 1; }
   const x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let ymax = inRange(x0, x1) * 1.12 / (1 - (p._legPad || 0));
   const yfull = ymax;                                     // automatic top of the intensity axis (y zoom is relative to it)

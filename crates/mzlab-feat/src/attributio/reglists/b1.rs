@@ -8,7 +8,7 @@ use crate::attributio::tox::snapshot::MembershipRow;
 use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
-const PROTON: f64 = 1.007276;
+const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 pub const MATCH_FULL: &str = "InChIKey";
 pub const MATCH_BLOCK: &str = "first block";
 

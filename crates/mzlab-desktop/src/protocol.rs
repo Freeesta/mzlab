@@ -36,19 +36,7 @@ fn json(status: u16, text: String) -> Response {
 }
 
 fn error(e: &Error) -> Response {
-    let params: Vec<String> = e
-        .params
-        .iter()
-        .map(|(k, v)| format!("\"{}\":{:?}", k, v))
-        .collect();
-    json(
-        400,
-        format!(
-            "{{\"error_key\":\"{}\",\"params\":{{{}}}}}",
-            e.key,
-            params.join(",")
-        ),
-    )
+    json(400, e.to_json())
 }
 
 fn query(q: &str) -> HashMap<&str, &str> {
@@ -241,7 +229,7 @@ fn insilico_route(state: &State, route: &str) -> Response {
     }
 }
 
-/// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/listings` (the `listings` JSON),
+/// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/catalog` (the installed `catalogo.json`), `normative/listings` (the `listings` JSON),
 /// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder).
 fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Response {
     use crate::normative as nm;
@@ -251,6 +239,10 @@ fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Respo
     let status = |s: nm::Status| json(200, serde_json::to_string(&s).unwrap_or_default());
     match route {
         "status" => status(nm::status(lib)),
+        "catalog" => match nm::catalog_text(lib) {
+            Ok(t) => json(200, t),
+            Err(e) => fail(e),
+        },
         "listings" => match nm::listings_json(lib) {
             Ok(t) => json(200, t),
             Err(e) => fail(e),
@@ -368,4 +360,20 @@ fn upload_route(state: &State, q: &HashMap<&str, &str>, body: &[u8]) -> Option<R
         Ok(None) => json(200, "{}".into()),
         Err(e) => error(&e),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A parameter with quotes, a backslash, a newline, a control character and non-ASCII text must still reach the page as valid JSON.
+    #[test]
+    fn error_body_is_valid_json_for_awkward_params() {
+        let text = "a\"b\\c\nd\u{1}e\u{200b}é";
+        let r = error(&Error::new("err.file.raw").with("detail", text));
+        assert_eq!(r.status, 400);
+        let v: serde_json::Value = serde_json::from_slice(&r.body).expect("valid JSON");
+        assert_eq!(v["error_key"], "err.file.raw");
+        assert_eq!(v["params"]["detail"], text);
+    }
 }

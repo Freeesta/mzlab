@@ -35,6 +35,8 @@ I18N.add("it", {
   "ctx.chrom.where": "RT {rt} min · {file}",
   "ctx.chrom.xic": "Estrai uno ione (XIC)…",
   "ctx.chrom.identAll": "Identifica tutte le MS2 del file…",
+  "ctx.chrom.ms2AtRt": "MS2 a questo RT…",
+  "ctx.chrom.ms2AtRt.tip": "Apre la scansione MS2 più vicina a questo tempo di ritenzione. Per scegliere tu il precursore, clicca il suo triangolino sul cromatogramma o la bandierina ▼ nella Full Scan.",
   "ctx.chrom.tree": "Albero MSn del file…",
   "ctx.chrom.addIon": "Aggiungi un altro ione…",
   "ctx.annotate.point": "Annota questo punto…",

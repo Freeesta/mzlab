@@ -57,7 +57,7 @@ fn isotopes_of(el: &str) -> Option<Iso> {
     })
 }
 
-pub const C13_SHIFT: f64 = 1.0033548;
+pub const C13_SHIFT: f64 = mzlab_core::elements::C13_STEP;
 const PRUNE: f64 = 1e-7;
 const MAX_SHIFT: f64 = 6.5;
 

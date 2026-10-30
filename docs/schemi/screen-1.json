@@ -17,7 +17,9 @@
     "rt_window_min": {"type": ["number", "null"], "description": "null = off"},
     "min_fragments": {"type": ["integer", "null"], "description": "null = off"},
     "max_hits_per_feature": {"type": "integer", "minimum": 1},
-    "ms2_rt_min": {"type": "number"}
+    "ms2_rt_min": {"type": "number"},
+    "lists": {"type": "array", "items": {"type": "string"}, "description": "the regulatory list ids asked for; [] = every list of the package"},
+    "include": {"type": "array", "items": {"enum": ["proposal", "draft", "reference"]}, "description": "the statuses screened besides in_force and adopted_not_applicable"}
    }
   },
   "suspect_files": {
@@ -32,6 +34,7 @@
      "kind": {"enum": ["mzsus", "csv"]},
      "rows": {"type": "integer", "minimum": 0},
      "skipped_rows": {"type": "integer", "minimum": 0, "description": "CSV rows without a usable mass or formula"},
+     "lists": {"type": ["array", "null"], "items": {"type": "object"}, "description": "a regulatory package: the manifest object (normative/1) of each list the mask keeps (id, tags with status, version_date, citation, coverage, csv_sha256, retrieved); null for a file without the listings extension"},
      "provenance": {
       "type": ["object", "null"],
       "description": "the manifest of a .mzsus; null for a CSV of the user",
@@ -79,8 +82,8 @@
         "files": {"type": "array", "items": {"type": "integer", "minimum": 0}, "description": "indexes into suspect_files of the lists that name this structure"},
         "memberships": {
          "type": "array",
-         "description": "the lists of a regulatory package that name the structure; [] for a list without the listings extension",
-         "items": {"type": "object", "required": ["list", "entry_ref", "form", "group"], "properties": {"list": {"type": "string"}, "entry_ref": {"type": "string"}, "form": {"type": "string"}, "group": {"type": "boolean"}}}
+         "description": "the lists of a regulatory package that name the structure, after the mask (params.lists, params.include); a package row no kept list names is not a candidate; [] for a list without the listings extension",
+         "items": {"type": "object", "required": ["list", "entry_ref", "form", "group", "attr"], "properties": {"list": {"type": "string"}, "entry_ref": {"type": "string"}, "form": {"type": "string"}, "group": {"type": "boolean"}, "attr": {"type": "string", "description": "the list's own text for the entry (a limit, a note), quoted, never compared with a measured value"}}}
         }
        }
       }

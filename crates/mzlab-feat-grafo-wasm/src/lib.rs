@@ -2,20 +2,13 @@
 //! preconditions of `regole_tp/2`) and the formulas of the products of its cleavages (the `fragments` of the hypotheses). A `.wasm` of its own, so the engine of
 //! the proofs (`mzlab-feat-wasm`) does not carry it: the page loads it when the user gives a SMILES. Errors are JSON `{"error_key", "params"}` strings.
 use mzlab_core::error::Error;
-use mzlab_core::json::Out;
 use wasm_bindgen::prelude::*;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
 const BRIDGE: &str = "mzfeat-grafo/5";
 
 fn js_err(e: Error) -> JsValue {
-    let mut o = Out::default();
-    o.raw("{\"error_key\":").str(e.key).raw(",\"params\":{");
-    for (i, (k, v)) in e.params.iter().enumerate() {
-        o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
-    }
-    o.raw("}}");
-    JsValue::from_str(&o.0)
+    JsValue::from_str(&e.to_json())
 }
 
 #[wasm_bindgen]

@@ -24,8 +24,8 @@ try:
         def menu_spec():
             assert pg.evaluate("getComputedStyle(document.querySelector('.pnl.spec [data-a=par]')).display") == "none", "the ▾ button is gone in HR"
             xy = at("spec"); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            assert "Opzioni di visualizzazione" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Opzioni di visualizzazione"); pg.wait_for_selector(".dsp", timeout=5000)
+            assert "Opzioni…" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Opzioni…"); pg.wait_for_selector(".dsp", timeout=5000)
             t = pg.inner_text(".dsp"); assert "Decimali" in t and "Etichette" in t and "al massimo" in t, t
             assert pg.evaluate("BARRA.curTab") == "disp" and pg.evaluate("document.querySelector('#sb-title').textContent") == "Opzioni di visualizzazione"
         step("right click on a spectrum → Opzioni di visualizzazione: decimals, labels (threshold, maximum)", menu_spec)
@@ -36,7 +36,7 @@ try:
         step("changing an option redraws the chart", change)
         def menu_chrom():
             xy = at("chrom"); pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(300)
-            pg.click("#ctx >> text=Opzioni di visualizzazione"); pg.wait_for_selector(".dsp", timeout=5000)
+            pg.click("#ctx >> text=Opzioni…"); pg.wait_for_selector(".dsp", timeout=5000)
             assert "cromatogramma" in pg.inner_text(".dsp") and "Normalizza" in pg.inner_text(".dsp")
         step("right click on a chromatogram → its own list", menu_chrom)
         def extend():
