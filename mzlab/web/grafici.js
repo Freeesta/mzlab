@@ -394,8 +394,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
-    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    const V = (/** @type {number} */ val) => Y(U(s, val));
+    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
+    g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }
