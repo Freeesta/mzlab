@@ -479,6 +479,12 @@ fn parse_loop<R: Read>(reader: R, f: &mut dyn FnMut(Item), out: &mut dyn Decode)
     Ok(())
 }
 
+/// Whether a time cvParam is in seconds: its `unitName` starts with "second" or its `unitAccession` is UO:0000010 (either alone is enough).
+/// The one rule of every mzML reader of the engine.
+pub(crate) fn is_seconds(unit_name: Option<&str>, unit_acc: Option<&str>) -> bool {
+    unit_name.is_some_and(|u| u.starts_with("second")) || unit_acc == Some("UO:0000010")
+}
+
 #[cfg(test)]
 #[path = "mzml_tests.rs"]
 mod tests;
