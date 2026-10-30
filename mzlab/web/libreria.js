@@ -544,7 +544,7 @@ const LIB = (() => {
   }
   const lvCell = (/** @type {Bag} */ res) => { const lv = LIVELLI.shown(res); return `<span class="lvb ${LIVELLI.cls(lv)}" title="${EHt(LIVELLI.sentence(lv) + " · " + res.decisive)}">${EHt(LIVELLI.tag(lv))}</span>`; };
   async function identifyAll(/** @type {number} */ k) {
-    ensureCss();
+    ensureCss(); await carica("m:libreria-risultati.js");
     const f = E.files[k]; if (!f) return;
     const k2 = (E.files.find((/** @type {Bag} */ x) => phys(x) === phys(f) && x.kind === "ms2" && !x.gone) || {}).k;
     if (k2 == null) return info(I18N.t("lib.noMs2"));
@@ -553,7 +553,7 @@ const LIB = (() => {
     d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.all.title")}</h3><button class="x" id="li-x" title="${I18N.t("common.close")}">&times;</button></div>
       <div class="sm muted" style="margin-top:4px">${EHt(f.label || f.file)} · ${I18N.t("lib.all.sub", { ppm: profOf(f).v })}</div>
       <div id="li-st" style="margin:8px 0"></div><div id="li-body"></div>`;
-    d.querySelector("#li-x").onclick = () => d.close(); d.showModal();
+    d.querySelector("#li-x").onclick = () => d.close(); LIBR.frame(d, { max: I18N.t("lib.all.max"), restore: I18N.t("lib.all.restore") }); d.showModal();
     const st = d.querySelector("#li-st"), say = (/** @type {string} */ t, /** @type {number} */ v, /** @type {number} */ m) => { st.innerHTML = `<div class="sm">${EHt(t)}</div>${m ? `<progress max="${m}" value="${v}"></progress>` : ""}`; };
     try {
       const libs = await call("list"); if (!libs.libs.length) { st.innerHTML = `<p>${I18N.t("lib.loadFirst")}</p><p><button id="li-open">${I18N.t("lib.openLibs")}</button></p>`; d.querySelector("#li-open").onclick = () => { d.close(); open(); }; return; }
@@ -576,8 +576,9 @@ const LIB = (() => {
         const base = groups.map(g => ({ g, v: groupAssess(g), k: window.LISTE ? LISTE.textFor(g.prec, f.polarity, UIP.hrPpm) : "", hid: hidOf(g) })).filter(x => all || (x.v.proposed !== "5" && x.v.proposed !== "0"));
         const nHid = base.filter(x => x.hid).length, rows = showHid ? base : base.filter(x => !x.hid), hasK = rows.some(x => x.k);
         d.querySelector("#li-body").innerHTML = (nHid ? `<div class="sm cont-cnt" role="status">${I18N.t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid })} · <button type="button" id="li-chid">${I18N.t(showHid ? "cont.hide" : "cont.show")}</button></div>` : "") + `<div class="bar"><button id="li-xlsx" type="button">${typeof IC_DL !== "undefined" ? IC_DL : ""}Excel</button><button id="li-mgf" type="button">${I18N.t("lib.all.exportMgf")}</button><button id="li-msp" type="button">${I18N.t("lib.all.exportMsp")}</button></div><label class="sm"><input type="checkbox" id="li-all"${all ? " checked" : ""}> ${I18N.t("lib.all.showAll", { n: groups.length })}</label>
-          <div class="tbl" style="max-height:60vh"><table><tr><th class="num">RT</th><th class="num"><i>m/z</i></th><th>${I18N.t("lib.col.name")}</th><th>${I18N.t("lst.col.formula")}</th><th class="num">${I18N.t("lib.all.bestEntropy")}</th><th class="num">${I18N.t("lib.all.scans")}</th><th>${I18N.t("lv.proposed")}</th>${hasK ? "<th>" + I18N.t("lib.all.contaminant") + "</th>" : ""}</tr>
-          ${rows.map((x, i) => `<tr class="row" data-i="${i}" title="${I18N.t("lib.all.openBest")}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td>${EHt(x.g.best.name || "")}</td><td>${x.g.best.formula ? fmtFormula(x.g.best.formula) : ""}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}${x.g.n < 2 ? " " + I18N.t("lib.all.oneScan") : ""}</td><td>${lvCell(x.v)}</td>${hasK ? `<td class="sm">${EHt(x.k || "")}</td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="muted">${I18N.t("lib.all.noMatch")}</td></tr>`}</table></div>`;
+          <div id="li-tbl" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column"></div>`;
+        LIBR.fill(d.querySelector("#li-tbl"), [{ h: "RT", w: "7ch", num: true }, { h: "<i>m/z</i>", w: "11ch", num: true }, { h: I18N.t("lib.col.name"), nm: true }, { h: I18N.t("lst.col.formula"), w: "15ch" }, { h: I18N.t("lib.all.bestEntropy"), w: "15ch", num: true }, { h: I18N.t("lib.all.scans"), w: "14ch", num: true }, { h: I18N.t("lv.proposed"), w: "17ch" }, ...(hasK ? [{ h: I18N.t("lib.all.contaminant"), w: "18ch" }] : [])],
+          rows.map((x, i) => ({ i, cells: [x.g.rt.toFixed(2), x.g.prec.toFixed(4), EHt(x.g.best.name || ""), x.g.best.formula ? fmtFormula(x.g.best.formula) : "", x.g.best.ent != null ? x.g.best.ent.toFixed(2) : "", `${x.g.n}${x.g.n < 2 ? " " + I18N.t("lib.all.oneScan") : ""}`, lvCell(x.v), ...(hasK ? [EHt(x.k || "")] : [])] })), I18N.t("lib.all.noMatch"), EHt(I18N.t("lib.all.openBest")));
         d.querySelector("#li-all").onchange = (/** @type {Event} */ e) => show(/** @type {HTMLInputElement} */ (e.target).checked);
         const chid = d.querySelector("#li-chid"); if (chid) chid.onclick = () => { showHid = !showHid; show(all); };
         const btnMgf = d.querySelector("#li-mgf");
@@ -587,7 +588,7 @@ const LIB = (() => {
         d.querySelector("#li-xlsx").onclick = () => dlx(I18N.t("lib.all.xlsxPrefix") + String(f.label || f.file || "file").replace(/[^\w.-]+/g, "_") + ".xlsx", [
           { name: I18N.t("lib.all.sheetCand"), head: ["RT (min)", I18N.t("lib.all.precMz"), I18N.t("lib.col.name"), I18N.t("lst.col.formula"), I18N.t("lib.all.bestEntropy"), I18N.t("lib.all.scans"), I18N.t("lv.proposed"), I18N.t("lv.decided"), I18N.t("lv.evidence")].concat(hasK ? [I18N.t("lib.all.contaminant")] : []), rows: rows.map(x => [+x.g.rt.toFixed(3), +x.g.prec.toFixed(5), x.g.best.name || "", x.g.best.formula || "", x.g.best.ent != null ? +x.g.best.ent.toFixed(3) : "", x.g.n, x.v.proposed, x.v.decided || "", x.v.lines.concat([x.v.decisive]).join(" | ")].concat(hasK ? [x.k || ""] : [])), widths: [10, 14, 40, 20, 14, 10, 12, 12, 60] },
           { name: I18N.t("lib.all.sheetPar"), head: [I18N.t("lib.all.parameter"), I18N.t("lib.all.value")], rows: [[I18N.t("lib.table.file"), f.label || f.file || ""], [I18N.t("lib.all.precTol"), `${profOf(f).v} ppm`], [I18N.t("lib.all.peakTol"), I18N.t("lib.all.peakTolVal")], [I18N.t("lib.all.shown"), I18N.t("lib.all.shownVal", { n: rows.length, total: groups.length })], [I18N.t("lib.all.level"), I18N.t("lib.all.levelVal")]], widths: [28, 70] }], { table: "library-all", file: String(f.label || f.file || "") });
-        d.querySelectorAll("#li-body tr.row").forEach((/** @type {HTMLElement} */ tr) => tr.onclick = () => gotoScan(rows[Number(tr.dataset.i)].g.best.key, d));
+        d.querySelector("#li-tbl").onclick = (/** @type {MouseEvent} */ e) => { const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("tr.lr")); if (tr) gotoScan(rows[Number(tr.dataset.i)].g.best.key, d); };
         st.innerHTML = `<div class="sm">${I18N.t("lib.all.summary", { q: queries.length, ms: Math.round(performance.now() - t0), g: groups.length, r: rows.length })}</div>`;
       };
       show(false);
