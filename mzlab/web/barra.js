@@ -34,6 +34,8 @@ const BARRA = (() => {
   let _w = 260;
   // false = the width follows the longest file name (never wider than the default); true = set by hand
   let _wUser = false, _appliedW = 0;
+  // until a file is shown (landing, loading table) the panel is open from the first paint at >= SHEET px with the default width; the saved choice stays (_landOpen)
+  let _seen = false, /** @type {boolean | undefined} */ _landOpen;
   let /** @type {Record<string, string>} */ _last = { scan: "hdr", form: "cmp" };
   let /** @type {string | null} */ _mode = null;
   let _mounted = false;
@@ -60,8 +62,12 @@ const BARRA = (() => {
   const inTheory = () => typeof S !== "undefined" && S.view === "theory";
   const tcmd = () => { try { const f = /** @type {HTMLIFrameElement | null} */ (Q1("#tframe")); return (f && f.contentWindow && /** @type {Bag} */ (f.contentWindow).TCMD) || null; } catch (_) { return null; } };
   const sheet = () => window.innerWidth < SHEET;
+  const seen = () => (_seen = typeof S !== "undefined" && !S.sess ? false
+    : _seen || (typeof E !== "undefined" && E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)));
+  const landing = () => (typeof S === "undefined" ? !document.documentElement.classList.contains("in-draw") : S.view === "data" && !(S.sess && S.adding)) && !seen();
+  const byNames = () => typeof namesWidth === "function" && seen();                 // the names set the width once a file is shown
   const maxW = () => Math.max(MIN_W, Math.min(MAX_W, Math.floor(window.innerWidth / 2)));
-  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : Math.min(defaultW(), typeof namesWidth === "function" ? namesWidth(defaultW()) : defaultW())));
+  const effW = () => Math.max(MIN_W, Math.min(maxW(), _wUser ? _w : byNames() ? Math.min(defaultW(), namesWidth(defaultW())) : defaultW()));
   const validTab = (/** @type {string} */ id) => ["file", "calc", "adducts", "losses", "lists", "stat"].includes(id) || (id === "qaqc" && FEATURES.qaqc) || (HR_PANELS.includes(id) && isHrMode());
 
   // ---------------------------------------------------------------- icons
@@ -91,7 +97,7 @@ const BARRA = (() => {
   // button opens (its state is aria-pressed); items: ids of the commands in its menu; run: what it does; visible: when it exists.
   /** @type {any[]} */
   const CMD = [
-    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening(), run: () => toggle("file") },
+    { id: "file", ic: () => ICONS.file, panel: "file", visible: () => inDataOrOpening() || landing(), run: () => (landing() && !inData() ? toggleDrawer() : toggle("file")) },
     { id: "calc", dom: "np-calc2", ic: () => QI("calc"), panel: "calc", run: () => (inData() ? toggle("calc") : window.calcToggleFloat && window.calcToggleFloat()) },
     { id: "adducts", dom: "np-add", ic: () => QI("ad"), panel: "adducts", run: () => (inData() ? toggle("adducts") : typeof CALCQUI !== "undefined" && CALCQUI.apriAddotti()) },
     { id: "losses", dom: "np-nl", ic: () => QI("nl"), panel: "losses", run: () => (inData() ? toggle("losses") : window.QQQRef && QQQRef.open("ls")) },
@@ -172,6 +178,8 @@ const BARRA = (() => {
     if (!_wUser) _w = defaultW();
     _tab = validTab(s.tab) ? s.tab : "file";
     _open = s.open === undefined ? innerWidth >= AUTO_W : s.open === true;      // first visit: the panel (File list) is open, except on a narrow screen where it would replace the workspace
+    _landOpen = typeof s.open === "boolean" ? s.open : undefined;
+    if (landing()) _open = !sheet();
     if (s.last && typeof s.last === "object") {
       if (["hdr", "lst", "fil", "alb", "gra"].includes(s.last.scan)) _last.scan = s.last.scan;
       if (["cmp", "iso"].includes(s.last.form)) _last.form = s.last.form;
@@ -184,13 +192,13 @@ const BARRA = (() => {
 
   // the narrow window hides the panel before anything else; widening gives it back (the saved state never changes)
   function autoNarrow() {
-    if (window.innerWidth < AUTO_W) { if (_open && !_forced) { _open = false; _restore = true; } }
+    if (window.innerWidth < (landing() ? SHEET : AUTO_W)) { if (_open && !_forced) { _open = false; _restore = true; } }
     else { _forced = false; if (_restore) { _open = true; _restore = false; } }
   }
 
   function saveState() {
     try {
-      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: _open || _restore, w: _w, u: _wUser, last: _last }));
+      localStorage.setItem(storageKey(), JSON.stringify({ tab: _tab, open: landing() ? _landOpen : _open || _restore, w: _w, u: _wUser, last: _last }));
       localStorage.setItem(K_SIDE, _side);
     } catch (_) { /* no storage */ }
   }
@@ -242,12 +250,13 @@ const BARRA = (() => {
   function applyLayout() {
     const v = Q1("#v-data"), aside = Q1("#dfiles");
     if (!v || !aside) return;
-    const shown = _open && inDataOrOpening();
+    const shown = _open && (inDataOrOpening() || landing());
     const was = v.classList.contains("sb-open");
     const moved = shown && was && (_side === "right") !== v.classList.contains("sb-right");
     const change = shown !== was || shown && sheet() !== v.classList.contains("sb-sheet") || moved;
     if (change) snapFull();
     const apply = () => {
+      v.classList.remove("sb-first");
       v.classList.toggle("sb-right", _side === "right");
       v.classList.toggle("sb-open", shown);
       v.classList.toggle("sb-sheet", shown && sheet());
@@ -258,7 +267,7 @@ const BARRA = (() => {
     if (change && inData() && window.TRANS) TRANS.layout({ aside, was, shown, moved }, apply); else apply();
     const tg = Q1("#sb-toggle");
     if (tg) {
-      tg.hidden = !inDataOrOpening();
+      tg.hidden = !(inDataOrOpening() || landing());
       tg.setAttribute("aria-pressed", shown ? "true" : "false");
       tg.classList.toggle("on", shown);
       const tl = tg.querySelector(".tl"); if (tl) { tl.dataset.i18n = shown ? "cmd.panel.hide" : "cmd.panel.show"; tl.textContent = I18N.t(tl.dataset.i18n); }
@@ -273,19 +282,14 @@ const BARRA = (() => {
     Object.values(map).forEach(sel => { const p = Q1(sel); if (p) p.hidden = true; });
     const hr = Q1("#hrinfo");
     if (hr) hr.hidden = true;
-    if (map[id]) {
-      const p = Q1(map[id]);
-      if (p) p.hidden = false;
-    } else if (HR_PANELS.includes(id) && hr) {
-      hr.hidden = false;
-    }
+    const p = map[id] ? Q1(map[id]) : HR_PANELS.includes(id) ? hr : null;
+    if (p) p.hidden = false;
   }
 
   let /** @type {string | null} */ _painted = null;                 // the tool whose body was last built (a state restored as open paints it when the data arrive)
   function renderPane(/** @type {string} */ id, /** @type {Bag} */ opt = {}) {
     _painted = id;
-    const c = byId(id);
-    const ttl = Q1("#sb-title");
+    const c = byId(id), ttl = Q1("#sb-title");
     if (ttl && c) ttl.textContent = name(c);
     const sbHelp = Q1("#sb-help");
     if (sbHelp) {
@@ -424,7 +428,8 @@ const BARRA = (() => {
 
   // the header button: show the last tool used (first start: File) or hide the panel
   function toggleDrawer() {
-    if (_open && inData()) close(true);
+    if (_open && (inData() || landing())) close(true);
+    else if (landing() && !inData()) { _open = true; applyLayout(); updateButtons(); }
     else show(validTab(_tab) ? _tab : "file", { opener: Q1("#sb-toggle") });
   }
 
@@ -1066,7 +1071,7 @@ const BARRA = (() => {
     updateButtons();
   }
 
-  // first paint: the toolbar of the start screen (no session) and the header icons are drawn by index.html, before the engine is up, so
+  // first paint: the toolbar of the landing (no session), the header icons and the open side panel are drawn here, before the engine is up, so
   // nothing appears or moves when it is ready; init() later rebuilds the same bar
   function primo() {
     document.querySelectorAll("header [data-ic]").forEach(e => {
@@ -1077,6 +1082,7 @@ const BARRA = (() => {
     loadState();
     window.CMD = CMD;
     buildBar();
+    applyLayout();
   }
 
   return {

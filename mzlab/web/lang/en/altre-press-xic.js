@@ -55,7 +55,6 @@ I18N.add("en", {
   "prov.field": "Field",
   "prov.value": "Value",
   "prov.fail": "The provenance could not be added to the table: the file was saved without it.",
-  "work.empty": "Tick a file: ions are waiting!",
   "spec.follow.menu.none": "None (fixed spectrum)",
   "spec.follow.item": "Panel {n} · {title}",
   "spec.follow.none.aria": "Fixed spectrum: pick a chromatogram to follow",

@@ -55,7 +55,6 @@ I18N.add("it", {
   "prov.field": "Campo",
   "prov.value": "Valore",
   "prov.fail": "Non riesco a scrivere la provenienza nella tabella: il file è stato salvato senza.",
-  "work.empty": "Spunta un file: gli ioni aspettano!",
   "spec.follow.menu.none": "Nessuno (spettro fisso)",
   "spec.follow.item": "Pannello {n} · {title}",
   "spec.follow.none.aria": "Spettro fisso: scegli un cromatogramma da seguire",
