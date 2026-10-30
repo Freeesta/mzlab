@@ -2,6 +2,7 @@
 //! S/N of every transition in every file around the time of the quantifier, and the ratio of every qualifier to the quantifier checked against the
 //! median of the standards. The program gives no concentrations.
 
+use crate::sortc::SortC;
 use mzlab_core::idxread::ReadAt;
 use mzlab_core::json::{round, Out};
 use mzlab_core::mzmlhead::Mzml;
@@ -119,7 +120,7 @@ fn plan(files: &[MrmFile], rt_tol: f64) -> Option<(Vec<Trace>, Option<f64>)> {
         return None;
     }
     let quant = |t: &Trace| t.name.trim().to_lowercase().starts_with("quant");
-    head.sort_by(|a, b| {
+    head.sortc_by(|a, b| {
         (!quant(a), a.q1, a.q3)
             .partial_cmp(&(!quant(b), b.q1, b.q3))
             .unwrap_or(std::cmp::Ordering::Equal)

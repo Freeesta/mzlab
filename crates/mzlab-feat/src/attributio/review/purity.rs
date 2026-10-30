@@ -6,6 +6,7 @@
 use super::explain::atom_mass;
 use super::isotopes::round_to;
 use super::matching::{match_spectra, Ms2};
+use crate::sortc::SortC;
 use std::sync::OnceLock;
 
 const C13: f64 = 1.0033548;
@@ -131,7 +132,7 @@ pub fn isolation_purity(
             kind,
         });
     }
-    co.sort_by(|a, b| {
+    co.sortc_by(|a, b| {
         b.rel
             .partial_cmp(&a.rel)
             .unwrap_or(std::cmp::Ordering::Equal)
@@ -183,7 +184,7 @@ fn loss_table() -> Vec<f64> {
             out.push(m + h as f64 * h_mass);
         }
     }
-    out.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    out.sortc_by(|a, b| a.partial_cmp(b).unwrap());
     out
 }
 

@@ -2,6 +2,7 @@
 //! narrow peak rises fast and is dropped) and its area over the local linear bridge, plus the noise and base of a short series. Used by `broad`.
 
 use crate::broad_gt::median;
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::trace::reserve;
@@ -52,6 +53,6 @@ pub(crate) fn base_of(y: &[f64]) -> Result<f64> {
     let mut v = Vec::new();
     reserve(&mut v, y.len())?;
     v.extend_from_slice(y);
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sortc_by(|a, b| a.total_cmp(b));
     Ok(v.get(v.len() / 4).copied().unwrap_or(0.0))
 }

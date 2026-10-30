@@ -19,6 +19,7 @@ use crate::attributio::readers::sirius::SiriusTables;
 use crate::attributio::sources::{PolSources, Sources};
 use crate::attributio::Campaign;
 use crate::ms2spec::{pick, read_peaks};
+use crate::sortc::SortC;
 use crate::table::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED};
 use mzlab_core::error::Result as CoreResult;
 use mzlab_core::idxread::{Index, ReadAt};
@@ -169,7 +170,7 @@ pub fn most_intense_ms2<R: ReadAt>(
         let mut by_rt: Vec<u32> = (0..ix.scans.len() as u32)
             .filter(|&g| ix.scans[g as usize].level == 2)
             .collect();
-        by_rt.sort_by(|&a, &b| ix.scans[a as usize].rt.total_cmp(&ix.scans[b as usize].rt));
+        by_rt.sortc_by(|&a, &b| ix.scans[a as usize].rt.total_cmp(&ix.scans[b as usize].rt));
         let chosen: Vec<(usize, u32)> = mine
             .iter()
             .filter_map(|&r| {

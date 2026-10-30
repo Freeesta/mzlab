@@ -4,6 +4,7 @@
 
 use super::hazard::fmt_gn;
 use super::snapshot::EcosarEndpoint;
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 pub(super) const BASELINE: &str = "Neutral Organics";
@@ -149,7 +150,7 @@ pub(super) fn as_pairs(t: &Taxa) -> Vec<(&str, f64)> {
 
 pub(super) fn sorted_values(t: &Taxa) -> String {
     let mut v: Vec<&(String, f64)> = t.iter().collect();
-    v.sort_by(|a, b| a.0.cmp(&b.0));
+    v.sortc_by(|a, b| a.0.cmp(&b.0));
     v.iter()
         .map(|(k, x)| format!("{k} {} mg/L", fmt_gn(*x, 3)))
         .collect::<Vec<_>>()

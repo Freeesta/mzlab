@@ -3,6 +3,7 @@
 
 use super::b1::{LongRow, B1, MATCH_FULL};
 use super::catalog;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// What one campaign has for a (list, first block).
@@ -184,7 +185,7 @@ pub fn cross_table(results: &[(&str, &B1)]) -> (Vec<CrossRow>, Vec<CrossSummary>
         .map(|k| cross_row(k, &sides.iter().map(|s| s.get(k)).collect(), &names))
         .collect();
     // NaN (unknown list) sorts last in pandas; the three keys are applied one after the other with a stable sort, so an unknown list is a tie on the first key
-    rows.sort_by(|a, b| {
+    rows.sortc_by(|a, b| {
         let ord = |r: &CrossRow| catalog::order_of(&r.list_id).unwrap_or(usize::MAX);
         ord(a)
             .cmp(&ord(b))

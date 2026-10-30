@@ -10,6 +10,7 @@ pub use super::standards_cfg::*;
 use super::{num_at, text_at};
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::frame::{to_num, Cell, Frame, Record};
+use crate::sortc::SortC;
 use std::collections::{BTreeSet, HashMap};
 
 pub const DEFAULT_POS_ADDUCTS: [&str; 4] =
@@ -414,7 +415,7 @@ pub fn match_reference_standards(
         check_ms2(c, mz, ms2);
     }
     apply_decisions(&mut cand, features, pol, decisions, warnings);
-    cand.sort_by(|a, b| {
+    cand.sortc_by(|a, b| {
         let ord = |x: f64, y: f64| x.partial_cmp(&y).unwrap_or(std::cmp::Ordering::Equal);
         rank(&a.status)
             .cmp(&rank(&b.status))

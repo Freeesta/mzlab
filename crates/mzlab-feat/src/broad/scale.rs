@@ -1,5 +1,6 @@
 //! Multiscale Ricker response of `broad.rs`: the taps of each scale tabulated once (`Kernel`) and the candidate maxima of the response (`candidates`).
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::centwave::ricker;
@@ -65,7 +66,7 @@ pub(super) fn candidates(y: &[f64], sig: &[f64]) -> Result<Vec<Cand>> {
             }
         }
     }
-    all.sort_by(|a, b| b.r.total_cmp(&a.r).then(a.t.cmp(&b.t)));
+    all.sortc_by(|a, b| b.r.total_cmp(&a.r).then(a.t.cmp(&b.t)));
     let mut kept: Vec<Cand> = Vec::new();
     for c in all {
         let near = kept
@@ -76,6 +77,6 @@ pub(super) fn candidates(y: &[f64], sig: &[f64]) -> Result<Vec<Cand>> {
             kept.push(c);
         }
     }
-    kept.sort_by_key(|c| c.t);
+    kept.sortc_by_key(|c| c.t);
     Ok(kept)
 }

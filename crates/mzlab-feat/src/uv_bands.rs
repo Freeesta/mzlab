@@ -2,6 +2,7 @@
 //! CWT scales and its AsLS baseline lose. The bands come from `broad::detect_broad` run on the single trace. Used by the step `chrom.uv_peaks`.
 //! Pure functions, fixed order of sums.
 
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 use mzlab_core::peaks::{detect_peaks, Params, Peak};
 
@@ -64,7 +65,7 @@ pub fn uv_peaks(rt_min: &[f64], y: &[f64], p: &UvParams) -> Result<Vec<UvPeak>> 
         .collect();
     if p.broad {
         let mut d: Vec<f64> = rt_s.windows(2).map(|w| w[1] - w[0]).collect();
-        d.sort_by(f64::total_cmp);
+        d.sortc_by(f64::total_cmp);
         let dt = d[d.len() / 2];
         if dt.is_nan() || dt <= 0.0 {
             return Ok(out);
@@ -86,7 +87,7 @@ pub fn uv_peaks(rt_min: &[f64], y: &[f64], p: &UvParams) -> Result<Vec<UvPeak>> 
         let sm = smooth_without_narrow(&flat, &ranges, k, dt)?;
         out.extend(measure_bands(&rt_s, &sm, &found));
     }
-    out.sort_by(|a, b| a.rt_apex.total_cmp(&b.rt_apex));
+    out.sortc_by(|a, b| a.rt_apex.total_cmp(&b.rt_apex));
     Ok(out)
 }
 
@@ -100,7 +101,7 @@ fn merged(r: Vec<(usize, usize)>, len: usize) -> Vec<(usize, usize)> {
             (lo.saturating_sub(m), (hi + m).min(len - 1))
         })
         .collect();
-    r.sort_unstable();
+    r.sortc();
     let mut out: Vec<(usize, usize)> = Vec::new();
     for (lo, hi) in r {
         match out.last_mut() {

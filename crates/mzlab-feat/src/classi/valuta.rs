@@ -1,6 +1,7 @@
 //! Matching of the rules of a `Table` against one MS/MS spectrum, and the `classi/1` answer.
 
 use super::{Kind, Polarity, Role, Rule, Table, FORMAT, MIN_REL, SCORE_3A, SCORE_MIN};
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 
@@ -101,7 +102,7 @@ fn evidence_of(c: &Ctx, r: &Rule, pi: usize) -> Evidence {
         .filter(|o| o.class != r.class && applies(c, o) && hit_of(c, o) == Some(pi))
         .map(|o| c.table.classes[o.class].0.clone())
         .collect();
-    also.sort();
+    also.sortc();
     also.dedup();
     Evidence {
         rule: r.id.clone(),
@@ -161,7 +162,7 @@ fn class_hit(c: &Ctx, ci: usize) -> Option<ClassHit> {
         return None;
     }
     let mut ambiguous_with: Vec<String> = diagnostic().flat_map(|e| e.also.clone()).collect();
-    ambiguous_with.sort();
+    ambiguous_with.sortc();
     ambiguous_with.dedup();
     let level = if diag >= 2 && score >= SCORE_3A && ambiguous_with.is_empty() {
         "3a"
@@ -206,7 +207,7 @@ pub fn evaluate(
     let mut classes: Vec<ClassHit> = (0..table.classes.len())
         .filter_map(|ci| class_hit(&ctx, ci))
         .collect();
-    classes.sort_by(|a, b| b.score.total_cmp(&a.score).then_with(|| a.id.cmp(&b.id)));
+    classes.sortc_by(|a, b| b.score.total_cmp(&a.score).then_with(|| a.id.cmp(&b.id)));
     Ok(Report {
         polarity,
         precursor_mz,

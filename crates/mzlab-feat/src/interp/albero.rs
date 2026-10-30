@@ -2,6 +2,7 @@
 //! (`same`), moved by the modification (`shifted`), missing (`absent`) or cannot be told because its m/z lies outside the scan range (`not_checkable`).
 //! The nodes (`LibNode`) are kept in the meta of the `.mzfeat` (`msnlib`) so the tree is built once, not for every row.
 
+use crate::sortc::SortC;
 use mzlab_core::elements::{self, parse_formula};
 use mzlab_core::idxread::{Index, ReadAt};
 
@@ -203,7 +204,7 @@ pub fn null_margins(
         }
         if let Some(v) = tree_votes(ctx, cand, parent, change, cons, mz, 1) {
             let mut ll = v.ll;
-            ll.sort_by(|a, b| b.total_cmp(a));
+            ll.sortc_by(|a, b| b.total_cmp(a));
             if ll.len() >= 2 {
                 out.push(ll[0] - ll[1]);
             }

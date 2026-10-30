@@ -3,6 +3,7 @@
 //! [1, t, t^2, G(t)] from one trace by asymmetric least squares. Used by `broad::detect_broad` and by the collectors of `trace` and `untargeted`.
 //! Sums run in a fixed order and no transcendental is used: native and WASM give the same bits.
 
+use crate::sortc::SortC;
 use std::fmt;
 use std::sync::Arc;
 
@@ -211,7 +212,7 @@ pub(crate) fn median(v: &mut [f64]) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
-    v.sort_by(|a, b| a.total_cmp(b));
+    v.sortc_by(|a, b| a.total_cmp(b));
     let m = v.len() / 2;
     if v.len() % 2 == 1 {
         v[m]
