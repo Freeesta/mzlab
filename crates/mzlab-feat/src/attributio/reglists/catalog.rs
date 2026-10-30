@@ -3,13 +3,15 @@
 //! version of a list (act, version, dates, URL, licence) is data that lives next to the list's primary source.
 
 /// Groups of lists, in the order of every table, with their English names.
-pub const GROUPS: [(&str, &str); 6] = [
+pub const GROUPS: [(&str, &str); 8] = [
     ("acque_UE", "EU water legislation"),
     ("chimici_UE", "EU chemicals legislation"),
     ("pesticidi_HHP", "Pesticides and HHPs"),
     ("internazionali", "International conventions and lists"),
     ("thailandia", "Thailand"),
     ("italia", "Italy"),
+    ("usa_federale", "US federal"),
+    ("usa_stati", "US state"),
 ];
 
 /// One list of the catalogue.
@@ -29,7 +31,7 @@ pub struct ListSpec {
     pub note: &'static str,
 }
 
-pub const LISTS: [ListSpec; 28] = [
+pub const LISTS: [ListSpec; 38] = [
     ListSpec { id: "EU_PS_2013_39", group: "acque_UE", label: "EU priority substances (Dir. 2013/39/EU)", title: "Priority and priority hazardous substances, Directive 2008/105/EC Annex I as amended by Directive 2013/39/EU (in force until transposition of 2026/805)", reader: Some("eu_water"), question: "chemical status of surface waters", note: "" },
     ListSpec { id: "EU_PS_2026_805", group: "acque_UE", label: "EU priority substances (Dir. (EU) 2026/805)", title: "Priority substances after revision: Directive (EU) 2026/805 (amending 2000/60/EC, 2006/118/EC and 2008/105/EC)", reader: Some("eu_water"), question: "chemical status of surface waters", note: "" },
     ListSpec { id: "EU_WL_2022_1307", group: "acque_UE", label: "EU surface water Watch List 2022", title: "Fourth Watch List, Implementing Decision (EU) 2022/1307", reader: Some("eu_water"), question: "", note: "" },
@@ -58,6 +60,16 @@ pub const LISTS: [ListSpec; 28] = [
     ListSpec { id: "TH_PCD_SW", group: "thailandia", label: "Thai surface water quality standards", title: "Surface water quality standards (NEB Notif. No. 8, B.E. 2537), PCD", reader: Some("voci"), question: "", note: "" },
     ListSpec { id: "TH_DOF_AQUA", group: "thailandia", label: "Thai substances banned in animal and aquatic feed", title: "Substances prohibited as ingredients of animal feed, aquatic feed included (MOAC Notif. B.E. 2559, Animal Feed Quality Control Act B.E. 2558)", reader: Some("voci"), question: "", note: "historical ID: no readable DOF list of drugs banned in aquaculture exists online" },
     ListSpec { id: "IT_DLGS172_TAB1B", group: "italia", label: "Italy: specific pollutants (D.Lgs. 172/2015, Tab. 1/B)", title: "Specific pollutants (Tab. 1/B), Annex 1 to Part III of D.Lgs. 152/2006 as amended by D.Lgs. 172/2015", reader: Some("voci"), question: "", note: "official GU text still to be saved in fonte/ (Tab. 1/A = EU_PS_2013_39)" },
+    ListSpec { id: "EU_POPS_2019_1021", group: "chimici_UE", label: "EU POPs Regulation (2019/1021)", title: "Persistent organic pollutants, Regulation (EU) 2019/1021, Annexes I and IV", reader: Some("eu_chem"), question: "", note: "" },
+    ListSpec { id: "EU_FCM_10_2011", group: "chimici_UE", label: "EU plastic food contact materials (10/2011)", title: "Union list of authorised monomers and additives, Regulation (EU) No 10/2011, Annex I Table 1", reader: Some("eu_chem"), question: "", note: "" },
+    ListSpec { id: "EU_TOYS", group: "chimici_UE", label: "EU Toy Safety Directive (2009/48/EC)", title: "Chemical substances with specific limits in toys, Directive 2009/48/EC, Annex II Part III Appendix C", reader: Some("eu_chem"), question: "", note: "" },
+    ListSpec { id: "US_CWA_PP", group: "usa_federale", label: "US Clean Water Act priority pollutants", title: "126 priority pollutants, Clean Water Act section 307(a), 40 CFR 423 Appendix A", reader: Some("us_ecfr"), question: "", note: "" },
+    ListSpec { id: "US_CWA_TOXIC", group: "usa_federale", label: "US Clean Water Act toxic pollutants", title: "Toxic pollutants, 40 CFR 401.15", reader: Some("us_ecfr"), question: "", note: "" },
+    ListSpec { id: "US_SDWA_MCL", group: "usa_federale", label: "US SDWA maximum contaminant levels (organic)", title: "National primary drinking water regulations, organic contaminants, 40 CFR 141.61", reader: Some("us_ecfr"), question: "", note: "" },
+    ListSpec { id: "US_UCMR5", group: "usa_federale", label: "US EPA UCMR 5", title: "Fifth Unregulated Contaminant Monitoring Rule, 40 CFR 141.40", reader: Some("us_ecfr"), question: "", note: "" },
+    ListSpec { id: "US_CERCLA", group: "usa_federale", label: "US CERCLA hazardous substances", title: "List of hazardous substances, 40 CFR 302.4", reader: Some("us_ecfr"), question: "", note: "" },
+    ListSpec { id: "US_UCMR6_PROP", group: "usa_federale", label: "US EPA proposed UCMR 6", title: "EPA proposed Sixth Unregulated Contaminant Monitoring Rule", reader: Some("us_epa_html"), question: "", note: "proposal" },
+    ListSpec { id: "CA_PROP65", group: "usa_stati", label: "California Proposition 65", title: "Chemicals known to the State of California to cause cancer or reproductive toxicity (OEHHA), read from the user's own download", reader: Some("ca_prop65"), question: "", note: "" },
 ];
 
 /// The catalogue entry of a list; an unknown id gets an entry with no group whose label is the id.

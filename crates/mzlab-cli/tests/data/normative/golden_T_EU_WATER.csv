@@ -1,0 +1,5 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by;entry_ref;ec;dtxsid;form;status
+T_EU_WATER;2000-01-01;DATE;Act 1;Zorbamide;9100-11-3;8001;ZORBAMIDEXXXAA-UHFFFAOYSA-N;ZORBAMIDEXXXAA;CC(=O)N;C2H5NO;59.037114;AA-EQS inland=0,5;;;;;;;susdat;Act 1, Annex I, no. 1;901-001-1;;parent;screenable
+T_EU_WATER;2000-01-01;DATE;Act 1;Quillate;9100-12-4;8002;QUILLATEANIONA-UHFFFAOYSA-M;QUILLICACIDXAA;CC(=O)O;C2H4O2;60.021129;AA-EQS inland=1,2;;;;;;;susdat;Act 1, Annex I, no. 2;901-002-2;;anion;screenable
+T_EU_WATER;2000-01-01;DATE;Act 1;Ambiguol;9100-13-5;;;;;;;AA-EQS inland=0,1;;;;;;;unresolved;Act 1, Annex I, no. 3;901-003-3;;;unresolved
+T_EU_WATER;2000-01-01;DATE;Act 1;Sum of zorb group (a, b, c);;;;;;;;AA-EQS inland=0,01;;;;;;;unresolved;Act 1, Annex I, no. 4;;;;group
