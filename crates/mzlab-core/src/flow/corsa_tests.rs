@@ -108,3 +108,32 @@ fn engine_copies_the_build_keys_of_the_agent() {
         .contains(r#""cargo_lock_sha256":"ab","modules":{"mzlab-cli":"cd"}}"#));
     assert!(corsa().modules.is_empty());
 }
+
+#[test]
+fn names_each_regulatory_list_once() {
+    let prov = parse(PROV.as_bytes()).unwrap();
+    let list = r#"{"id":"T_A","tags":{"status":"in_force","version_date":"2000-01-01"},"csv_sha256":"c1"}"#;
+    let screen = format!(
+        r#"{{"format":"screen/1","suspect_files":[{{"name":"n.mzsus","lists":[{list}]}},{{"name":"u.csv","lists":null}}],"hits":[]}}"#
+    );
+    let annot = format!(r#"{{"format":"annot/1","regulatory":{{"lists":[{list}]}},"rows":[]}}"#);
+    let u = [
+        Uscita {
+            name: "s.json",
+            bytes: screen.as_bytes(),
+        },
+        Uscita {
+            name: "r.json",
+            bytes: annot.as_bytes(),
+        },
+    ];
+    let c = build(&prov, &u).unwrap();
+    assert_eq!(c.regulatory.lists.len(), 1);
+    let j = c.json();
+    assert!(j.contains("\"title\":\"Regulatory lists\""));
+    assert!(j.contains(
+        "Screened against: T_A (version 2000-01-01, SHA-256 c1…). 1 list in force, 0 proposals."
+    ));
+    assert!(j.contains(crate::flow::corsa_reg::DISCLAIMER));
+    assert!(!corsa().json().contains("\"regulatory\""));
+}

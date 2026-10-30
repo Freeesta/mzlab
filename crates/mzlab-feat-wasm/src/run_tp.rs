@@ -182,7 +182,8 @@ pub fn tp_generate(
 }
 
 /// The parameters of `tp.generate` the files decide when the plan does not write them (`mzlab_feat::nature`, the rule of `flow run`): the names the plan writes
-/// and the `.mzidx` of the series read as `index_read(k, offset, length)`; `[{"name","value","proof"}]`.
+/// and the `.mzidx` of the series read as `index_read(k, offset, length)`; `[{"name","value","proof"}]`. The name `?facets` asks the facets of the
+/// files for the check of the Flow page instead: `{"resolution":[...],"polarity":[...]}` (one export for both keeps the hr `.wasm` under its cap).
 #[cfg(feature = "proofs")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn series_estimates(
@@ -194,6 +195,13 @@ pub fn series_estimates(
         let indexes = (0..index_sizes.len())
             .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
             .collect::<Result<Vec<_>>>()?;
+        // the rule `flow run` puts on the scan inputs before the check
+        if written.iter().any(|w| w == "?facets") {
+            let files = indexes.iter().map(mzlab_feat::nature::index_facts);
+            return Ok(mzlab_feat::nature::facets_json(
+                &mzlab_feat::nature::facets(files),
+            ));
+        }
         let nature = mzlab_feat::nature::of_indexes(&indexes);
         let list = mzlab_feat::nature::estimates(&|n| written.iter().any(|w| w == n), &nature);
         Ok(mzlab_feat::nature::estimates_json(&list))

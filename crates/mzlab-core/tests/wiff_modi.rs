@@ -162,7 +162,7 @@ fn every_mode_is_read_or_refused_exactly_as_the_matrix_says() {
         .map(|(s, _)| s.as_str())
         .collect();
     assert_eq!(confirmed, read);
-    assert_eq!(read, ["EMS", "EPI", "MRM", "NL", "PREC", "Q1"]);
+    assert_eq!(read, ["EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1"]);
 }
 
 /// The refused modes are refused through the registry too (the page's path), with the same detail.

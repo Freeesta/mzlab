@@ -33,6 +33,7 @@ const DISP = (() => {
   register("spec", { id: "dots", label: "disp.dots", title: "disp.dots.title", kind: "check", get: p => !!p.dots, set: (p, v) => { p.dots = !!v; redraw(p); } });
   register("spec", { id: "marker", label: "disp.marker", title: "disp.marker.title", kind: "check", when: p => !!(p._a && p._a.markN != null), get: p => markOn(p), set: (p, v) => { p.mk = !!v; redraw(p); } });
   register("spec", { id: "nocont", label: "disp.noCont", title: "disp.noCont.title", kind: "check", when: p => !!p._a && !!p._a.hrp, get: p => !!p.noCont, set: (p, v) => { p.noCont = !!v; redraw(p); } });
+  register("spec", { id: "contlists", label: "ctx.spec.contLists", kind: "button", get: () => null, when: p => !!p._a && !!p._a.hrp && !!window.LISTE, set: p => LISTE.open({ hr: true }) });
   register("spec", { id: "rel", label: "disp.rel", kind: "check", get: p => !!specRel(p), set: (p, v) => { p.rel = !!v; redraw(p); } });
   // ---- chromatogram and XIC
   register("chrom", { id: "norm100", label: "disp.norm100", kind: "check", get: p => !!p.norm100, set: (p, v) => { p.norm100 = !!v; redraw(p); } });
@@ -114,9 +115,9 @@ const DISP = (() => {
   // the actions of the spectrum menu (registry azioni/1, the high-resolution bench): peak marks, contaminants hidden, the display options
   if (typeof AZIONI !== "undefined") {
     const bench = () => !!window.BANCO && BANCO.on(), T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.marker", gruppo: "gen", ordine: 3, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => markOn(c.p), nome: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
+    AZIONI.registra({ id: "spec.marker", gruppo: "gen", ordine: 3, viste: ["spec"], menu: false, visibile: c => !!c.a.hrp && bench(), attiva: c => markOn(c.p), nome: () => T("ctx.spec.marker"), aria: () => T("ctx.spec.marker.aria"),
       esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.mk = !markOn(c.p); }); draw(c.p); uiSave(); } });
-    AZIONI.registra({ id: "spec.noCont", gruppo: "gen", ordine: 4, viste: ["spec"], visibile: c => !!c.a.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
+    AZIONI.registra({ id: "spec.noCont", gruppo: "gen", ordine: 4, viste: ["spec"], menu: false, visibile: c => !!c.a.hrp && bench(), attiva: c => !!c.p.noCont, nome: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
       esegui: c => { COMANDI.fai("spec.display", c.p, () => { c.p.noCont = !c.p.noCont; }); draw(c.p); uiSave(); } });
     AZIONI.registra({ id: "spec.disp", gruppo: "gen", ordine: 5, viste: ["spec"], visibile: bench, nome: () => T("disp.menu"), aria: () => T("disp.menu.aria"), esegui: c => open(c.p) });
     AZIONI.registra({ id: "chrom.disp", gruppo: "gen", ordine: 5, viste: ["chrom", "xic"], visibile: bench, nome: () => T("disp.menu"), esegui: c => open(c.p) });

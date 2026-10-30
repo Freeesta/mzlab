@@ -1,6 +1,8 @@
 //! The suspect lists of `screen.suspects`: a `.mzsus` (`suspects.rs`) or a CSV of the user, both read into one `Source` that answers a mass search with `Entry` rows.
-//! Names, RT and fragments exist only in a CSV; a `.mzsus` v1 has the first block, the formula and the mass.
+//! Names, RT and fragments exist only in a CSV; a `.mzsus` v1 has the first block, the formula and the mass; one with the `listings` extension (the regulatory
+//! package) also has the full key, a name and the laws naming the row, cut to the lists of the mask.
 
+use crate::regulatory::{Member, Package};
 use crate::suspects::Suspects;
 use mzlab_core::budget::sha256_hex;
 use mzlab_core::elements;
@@ -19,17 +21,8 @@ pub struct Entry {
     pub mass: f64,
     pub rt: Option<f64>,
     pub fragments: Vec<f64>,
-    /// Lists of the regulatory package that name the structure (`[]` until a `.mzsus` carries the `listings` extension).
-    pub memberships: Vec<Membership>,
-}
-
-/// One law or list naming a structure (the `listings` extension of the `.mzsus`).
-#[derive(Clone, Debug, PartialEq)]
-pub struct Membership {
-    pub list: String,
-    pub entry_ref: String,
-    pub form: String,
-    pub group: bool,
+    /// Lists of the regulatory package that name the structure and pass the mask (`[]` for a file without the `listings` extension).
+    pub memberships: Vec<Member>,
 }
 
 enum Rows {
@@ -46,11 +39,13 @@ pub struct Source {
     /// The manifest of the `.mzsus` (sources, licence, attribution) as the JSON of the output header; `null` for a CSV.
     pub provenance: String,
     pub skipped: usize,
+    /// The lists of a regulatory package and the mask; `None` for any other file.
+    pub package: Option<Package>,
 }
 
 impl Source {
-    /// A file of the plan: a `.mzsus` when it starts with the magic, else a CSV.
-    pub fn open(name: &str, bytes: &[u8]) -> Result<Source> {
+    /// A file of the plan: a `.mzsus` when it starts with the magic, else a CSV. `lists` and `include` are the mask of a regulatory package.
+    pub fn open(name: &str, bytes: &[u8], (lists, include): (&str, &str)) -> Result<Source> {
         let sha256 = sha256_hex(bytes);
         if bytes.starts_with(b"MZSU") {
             let s = Suspects::open(bytes).map_err(|e| {
@@ -59,12 +54,14 @@ impl Source {
                     .with("reason", format!("{e:?}"))
             })?;
             let provenance = manifest_json(s.manifest());
+            let package = Package::open(&s, lists, include)?;
             return Ok(Source {
                 name: name.into(),
                 sha256,
                 rows: Rows::Mzsus(s),
                 provenance,
                 skipped: 0,
+                package,
             });
         }
         let (rows, skipped) = read_csv(name, bytes)?;
@@ -74,6 +71,7 @@ impl Source {
             rows: Rows::Csv(rows),
             provenance: "null".into(),
             skipped,
+            package: None,
         })
     }
 
@@ -108,21 +106,34 @@ impl Source {
     pub fn search(&self, mass: f64, ppm: f64) -> Vec<Entry> {
         match &self.rows {
             Rows::Mzsus(s) => s
-                .search(mass, ppm)
-                .iter()
-                .map(|h| {
+                .search_range(mass, ppm)
+                .filter_map(|i| {
+                    let h = s.row(i);
                     let key = String::from_utf8_lossy(&h.key).into_owned();
-                    Entry {
-                        inchikey: key.clone(),
+                    let (mut inchikey, mut name, mut memberships) =
+                        (key.clone(), String::new(), Vec::new());
+                    if let (Some(pk), Some(l)) = (&self.package, s.listings()) {
+                        memberships = pk.members(s, i);
+                        // a row named only by lists outside the mask is not a suspect of this run
+                        if memberships.is_empty() {
+                            return None;
+                        }
+                        if !l.full_key(i).is_empty() {
+                            inchikey = l.full_key(i).to_string();
+                        }
+                        name = l.name(i).to_string();
+                    }
+                    Some(Entry {
+                        inchikey,
                         skeleton: key,
-                        name: String::new(),
+                        name,
                         smiles: String::new(),
                         formula: hill(s.formula(h)),
                         mass: h.mass,
                         rt: None,
                         fragments: Vec::new(),
-                        memberships: Vec::new(),
-                    }
+                        memberships,
+                    })
                 })
                 .collect(),
             Rows::Csv(rows) => {

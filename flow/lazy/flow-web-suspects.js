@@ -1,11 +1,14 @@
 // @ts-check
-// Flow (administrator mode): screen.suspects in this browser. The alignment is read from OPFS and, with the suspect lists of the plan (a .mzsus or a CSV the user gave; nothing is bundled or fetched) and the optional
+// Flow (administrator mode): screen.suspects and annot.regulatory in this browser. The alignment is read from OPFS and, with the suspect lists of the plan (a .mzsus or a CSV the user gave; nothing is bundled or fetched) and the optional
 // MGF and candidate formulas of steps of this plan, handed to `flow_screen_suspects` of the `table` .wasm: the Rust function is the one `flow run` calls, so the screen/1 text is the same byte for byte.
-// A .mzsus is binary; the page keeps it in S.samplesJson as "b64:" + base64, a CSV as its text. Results are kept in OPFS under the key of the job (flow-live-jobs.js). English only.
+// annot.regulatory hands the annot/1 text of a step of this plan and the regulatory package (a .mzsus with the listings extension the user gave) to `flow_regulatory` of the `attributio` .wasm, the function
+// `flow run` calls. A .mzsus is binary; the page keeps it in S.samplesJson as "b64:" + base64, a CSV as its text. Results are kept in OPFS under the key of the job (flow-live-jobs.js). English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const STEPS = ["screen.suspects"];
+  const STEPS = ["screen.suspects", "annot.regulatory"];
+  /** the file port of each step that takes a suspect list or a regulatory package */
+  const PORTS = /** @type {Record<string, string>} */ ({ "screen.suspects": "suspects", "annot.regulatory": "lists" });
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
   const enc = (/** @type {string} */ s) => new TextEncoder().encode(s);
   const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -18,9 +21,9 @@
   /** a binary file as the text the page keeps @param {Uint8Array} b */
   const asText = b => "b64:" + btoa(Array.from(b, c => String.fromCharCode(c)).join(""));
 
-  /** the lists in the order of the port, as `[name, bytes]`; null when the browser does not hold one of them @param {any} x @param {any} inst */
-  const lists = (x, inst) => {
-    const refs = F.refs(inst, "suspects").map(String);
+  /** the lists in the order of the port, as `[name, bytes]`; null when the browser does not hold one of them @param {any} x @param {any} inst @param {string} [port] */
+  const lists = (x, inst, port = "suspects") => {
+    const refs = F.refs(inst, port).map(String);
     const got = refs.map((/** @type {string} */ r) => { const n = r.slice(5), t = r.startsWith("file:") && x.S.samplesJson && x.S.samplesJson[n]; return typeof t === "string" ? { name: n, text: t } : null; });
     return refs.length && got.every(Boolean) ? got : null;
   };
@@ -54,10 +57,29 @@
     });
   };
 
+  /** annot.regulatory (list_membership): the annot/1 text of a step of this plan against the regulatory package @param {any} x @param {any} spec @param {any} inst */
+  const regulatory = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), pkg = lists(x, inst, "lists"), annot = await F.webIdent.textOf(x, p, inst, "annot");
+    if (!pkg || pkg.length !== 1 || !annot) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha([spec.key, await J().sha(annot.text), await J().sha(pkg[0].text)].join("\n")), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now();
+    return J().detached(x, spec, inst, async () => {
+      const params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
+      let text;
+      try { text = await p.ident("attributio_ms2", "flow_regulatory", { params, annot: enc(annot.text), package: bytesOf(pkg[0].text) }); } catch (e) { throw asError(e); }
+      const r = { name: inst.id + ".json", text };
+      await F.webMsn.keep(r.name, r.text); await J().remember(p, key, r);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: J().job(spec), result: { ms: performance.now() - t0 } });
+    });
+  };
+
   // a suspect list per file input of the plan: a .mzsus or a CSV (name, InChIKey or SMILES, formula or neutral mass, optional RT and fragments), kept in S.samplesJson with the SHA-256 of its bytes
   F.extraResults.push((/** @type {any} */ S, /** @type {any} */ node) => {
-    const insts = (node.ids || []).map((/** @type {string} */ id) => F.instanceOf(S.plan, id)).filter((/** @type {any} */ i) => i && base(i) === "screen.suspects");
-    const refs = [...new Set(insts.flatMap((/** @type {any} */ i) => F.refs(i, "suspects")).filter((/** @type {string} */ r) => r.startsWith("file:")))];
+    const insts = (node.ids || []).map((/** @type {string} */ id) => F.instanceOf(S.plan, id)).filter((/** @type {any} */ i) => i && PORTS[base(i)]);
+    const refs = [...new Set(insts.flatMap((/** @type {any} */ i) => F.refs(i, PORTS[base(i)])).filter((/** @type {string} */ r) => r.startsWith("file:")))];
     if (!refs.length) return null;
     const { el } = F, say = el("p", { class: "fl-note", role: "status" });
     const row = refs.map((/** @type {string} */ ref) => {
@@ -74,5 +96,5 @@
     return el("div", { class: "fl-results" }, ...row, say);
   });
 
-  F.webSuspects = { run, STEPS, bytesOf };
+  F.webSuspects = { run, regulatory, STEPS, bytesOf };
 })();

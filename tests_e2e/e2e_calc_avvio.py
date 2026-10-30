@@ -17,9 +17,9 @@ try:
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
         step("loading screen: the Calculator button opens the window", opens)
         def closes():
-            pg.click("#np-calc2"); attendi(pg, "document.querySelector('#calcdlg').hidden")
-            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#calcdlg').hidden"); assert pg.is_visible("#calcdlg")
-        step("a second press closes it, a third opens it again", closes)
+            pg.click("#np-calc2"); attendi(pg, "document.querySelector('#sb-panel-calc').hidden && !document.querySelector('#sb-panel-file').hidden")
+            pg.click("#np-calc2"); attendi(pg, "!document.querySelector('#sb-panel-calc').hidden"); assert pg.is_visible("#calcdlg")
+        step("a second press gives the file list back, a third opens it again", closes)
 finally:
     r.close()
 r.report()

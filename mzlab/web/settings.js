@@ -230,7 +230,7 @@ function uipOpen(btn) {
   const close = () => { d.remove(); if (btn.isConnected) btn.focus(); };
   on("#uip-x", "click", close);
   document.addEventListener("keydown", function esc(e) { if (!d.isConnected) return document.removeEventListener("keydown", esc); if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); } });       // Esc closes the settings and gives the focus back to the gear
-  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.isConnected) return document.removeEventListener("mousedown", h); if (!d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target) && !/** @type {Element} */ (e.target).closest("dialog")) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.isConnected) return document.removeEventListener("mousedown", h); if (!TEMASOFT.busy() && !d.contains(/** @type {Node} */ (e.target)) && e.target !== btn && !btn.contains(e.target) && !/** @type {Element} */ (e.target).closest("dialog")) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
   (d.querySelector("input:checked") || d.querySelector("input,button")).focus();
 }
 

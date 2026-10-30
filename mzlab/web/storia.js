@@ -128,7 +128,7 @@ const STORIA = typeof document === "undefined" ? null : (() => {
   // the panels container is hidden when every file was removed, but the key must still undo that removal
   const inDati = () => { const d = document.getElementById("dpanels"); return !!(d && d.offsetParent) || !!(window.BARRA && BARRA.isDataView()); };
   document.addEventListener("keydown", e => {
-    const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+    const k = (e.key || "").toLowerCase(), mod = e.ctrlKey || e.metaKey;
     if (!mod || e.altKey || (k !== "z" && k !== "y") || (k === "y" && (e.shiftKey || e.metaKey))) return;
     // the browser undoes its own text
     if (idle(/** @type {Element | null} */ (e.target))) return;

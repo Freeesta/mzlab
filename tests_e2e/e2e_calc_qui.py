@@ -100,16 +100,15 @@ try:
         step("Adducts panel opens and answers a number", adducts)
         def to_loss():
             pg.click("#reftitle ~ *", timeout=1000) if False else None
-            pg.evaluate("document.querySelector('#refdlg').close()")
-            pg.click("#np-nl"); attendi(pg, "document.querySelector('#refdlg').open && document.querySelector('#nl-q')")
+            pg.click("#np-nl"); attendi(pg, "!document.querySelector('#sb-panel-losses').hidden && document.querySelector('#nl-q')")
             pg.fill("#nl-q", "30"); frames(pg, 25)
             t = pg.inner_text("#nl-res"); assert "CH2O" in t or "CH₂O" in t, t[:300]
             assert pg.locator("#nl-ctl [data-r]").count() == 0 and "bassa" in pg.inner_text("#nl-ctl .cq-mode")
         step("Neutral losses panel: shared groups for 30", to_loss)
         def link():
             pg.click("#nl-to-ad"); frames(pg, 25)
-            assert pg.evaluate("document.querySelector('#refdlg').open")
-            assert pg.input_value("[id$='-q']") in ("30", "30.0"), pg.input_value("[id$='-q']")
+            assert pg.evaluate("!document.querySelector('#sb-panel-adducts').hidden")
+            assert pg.input_value("#sb-panel-adducts [id$='-q']") in ("30", "30.0"), pg.input_value("[id$='-q']")
         step("Perdite -> Addotti link carries the number", link)
         def nolr():
             assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")

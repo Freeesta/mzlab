@@ -50,9 +50,9 @@ try:
             assert pg.evaluate("(() => { const m = document.querySelector('#ctx'), r = m.getBoundingClientRect(); const e = document.elementFromPoint(r.left + 10, r.top + 10); return m.contains(e) })()"), "the menu is under the modal backdrop"
             pg.keyboard.press("Escape")
             pg.focus("#mincl tr[data-i='1'] button[data-ia=xic]"); pg.keyboard.press("Shift+F10")
-            assert pg.evaluate("document.querySelector('#ctx [data-azione=\"metodo.ms2\"]').getAttribute('aria-disabled')") == "true"
+            assert pg.evaluate("document.querySelector('#ctx [data-azione=\"metodo.ms2\"]')") is None
             pg.keyboard.press("Escape")
-        step("right click and Shift+F10 give the same actions (the MS2 one grey where nothing fits)", menu)
+        step("right click and Shift+F10 give the same actions (the MS2 one absent where nothing fits)", menu)
         def tab():
             pg.click("#mincl ~ div button[data-ia=tab]"); pg.wait_for_selector("#tdati table")
             assert pg.evaluate("document.querySelectorAll('#tdati tbody tr').length") == 3
