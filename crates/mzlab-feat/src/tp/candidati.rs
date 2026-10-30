@@ -26,7 +26,7 @@ const EXTRA_H: i64 = 8;
 const FRAG_TOL: f64 = 0.01;
 /// Most sub-formulas listed for one candidate, and the mass of the electron.
 const MAX_SUBS: usize = 300_000;
-const ELECTRON: f64 = 0.00054858;
+const ELECTRON: f64 = mzlab_core::elements::ELECTRON;
 
 /// A formula candidate of a row.
 #[derive(Debug, Clone, PartialEq)]

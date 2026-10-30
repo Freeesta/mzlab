@@ -7,7 +7,7 @@ use super::io::{file_name, join};
 use super::toml::Table;
 
 pub const POLARITIES: [&str; 2] = ["POS", "NEG"];
-pub const PROTON: f64 = 1.007276;
+pub const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 pub const CAMPAIGN_FILE: &str = "campaign.toml";
 pub(super) const DEFAULT_SAMPLE_COLUMN: &str = "datafile:{prefix}_{sorbent}_{tag}.mzML:{field}";
 pub(super) const DEFAULT_NSTAT: &str = "[n = 1 per site · exploratory · no statistical test]";

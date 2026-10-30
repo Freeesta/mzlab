@@ -219,7 +219,7 @@ pub fn parent(parent_json: &str) -> Res<ParentLr> {
         .filter(|a| ion_mz(0.0, a).is_some())
         .unwrap_or("[M+H]+")
         .to_string();
-    let shift = ion_mz(0.0, &adduct).unwrap_or(1.007276);
+    let shift = ion_mz(0.0, &adduct).unwrap_or(mzlab_core::elements::PROTON_6DP);
     Ok(ParentLr {
         formula: String::new(),
         neutral_mass: mz - shift,

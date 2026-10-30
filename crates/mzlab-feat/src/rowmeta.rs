@@ -13,7 +13,7 @@ pub const WINDOW_PPM: f64 = 15.0;
 /// Distance of the M+1 peak from the position expected for an isotopologue (ppm).
 const ISO_PPM: f64 = 10.0;
 /// Mass of the extra neutron between isotopologues (Da).
-const NEUTRON: f64 = 1.003355;
+const NEUTRON: f64 = mzlab_core::elements::C13_STEP;
 /// Scratch of a block (five values per cell), bytes.
 const SCRATCH: usize = 16_000_000;
 

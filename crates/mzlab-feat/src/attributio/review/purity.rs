@@ -9,7 +9,7 @@ use super::matching::{match_spectra, Ms2};
 use crate::sortc::SortC;
 use std::sync::OnceLock;
 
-const C13: f64 = 1.0033548;
+const C13: f64 = mzlab_core::elements::C13_STEP;
 const POS_STEPS: [(&str, f64); 6] = [
     ("Na-H", 21.981944),
     ("NH4-H", 17.026549),

@@ -11,7 +11,7 @@ use mzlab_core::msngrafo::{
     con_rotture, Grafo, Ipotesi, RotturaArco, RotturaNodo, RotturaSpettro, Rotture,
 };
 
-const ION_H: f64 = 1.00727646677;
+const ION_H: f64 = mzlab_core::elements::PROTON;
 const MASSA_H: f64 = 1.00782503207;
 /// Single bonds cut at most (as the one-bond cleavages of `strutture`).
 const MAX_LEGAMI: usize = 400;

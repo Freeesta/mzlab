@@ -197,7 +197,7 @@ fn compute_isotope_score(
         .map(|(_, k)| *k as f64)
         .unwrap_or(0.0);
     let exp_m1_ratio = (n_c * 0.0108 + n_n * 0.0037).max(0.01);
-    let exp_m1_mz = target_mz + 1.003355;
+    let exp_m1_mz = target_mz + mzlab_core::elements::C13_STEP;
     let tol = exp_m1_mz * tolerance_ppm * 1e-6;
 
     let m0_tol = target_mz * tolerance_ppm * 1e-6;
