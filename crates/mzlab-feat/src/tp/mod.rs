@@ -157,6 +157,21 @@ impl TpRoles {
         Ok(TpRoles::of(&mzlab_core::campioni::from_json(campioni.as_bytes())?))
     }
 
+    /// `from_json` with the files put in the order of the files of the `.mzfeat` `table`, by name (`campioni::order_like`).
+    pub fn for_table(campioni: &str, table: &[u8]) -> Result<TpRoles> {
+        let names = crate::store::table_names(&mut crate::store::Slice(table), table.len() as u64)?;
+        TpRoles::from_json(&mzlab_core::campioni::order_like(campioni, &names)?)
+    }
+
+    /// `for_table` on a `.mzfeat` read by offsets; None or an empty text is no roles.
+    pub fn opt_for_table<R: mzlab_core::idxread::ReadAt>(campioni: Option<&str>, table: &mut R, size: u64) -> Result<Option<TpRoles>> {
+        let Some(c) = campioni.filter(|c| !c.is_empty()) else {
+            return Ok(None);
+        };
+        let names = crate::store::table_names(table, size)?;
+        TpRoles::from_json(&mzlab_core::campioni::order_like(c, &names)?).map(Some)
+    }
+
     /// The files the kinetics reads: the timed ones (the t0 and the treated) and the controls. With the roles the controls are the blanks and the
     /// dark only (never the infusion, a standard or a QC); without, every file with no time in `minutes` is a control.
     pub fn kinetic_files(minutes: &[f64], roles: Option<&TpRoles>) -> (Vec<usize>, Vec<usize>) {

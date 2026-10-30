@@ -7,6 +7,7 @@ use mzlab_core::json::Value;
 
 use crate::axis::MassAxis;
 use crate::centwave::{CentWave, Peak};
+use crate::lrnoise::set_gate;
 use crate::recipe::{Mode, Recipe};
 
 fn bad(step: &str, name: &str) -> Error {
@@ -122,6 +123,7 @@ fn set(r: &mut Recipe, step: &str, k: &str, v: &Value) -> Result<()> {
         ("features.detect", "max_gap") => r.detect.max_gap = num()? as u32,
         ("features.detect", "long_trace") => r.detect.long_trace = num()? as u32,
         ("features.detect", "merge_overlap") => r.detect.merge_overlap = num()?,
+        ("features.detect", "min_width" | "min_snr") => set_gate(&mut r.detect, k, num()?),
         ("features.detect", _) if PEAK_KEYS.contains(&k) => set_peak(r, step, k, v)?,
         ("features.align", "mode") => {
             r.mode = match v.str() {
@@ -182,6 +184,8 @@ pub fn values(r: &Recipe, step: &str) -> Vec<(String, Value)> {
                 ("max_gap", n(f64::from(r.detect.max_gap))),
                 ("long_trace", n(f64::from(r.detect.long_trace))),
                 ("merge_overlap", n(r.detect.merge_overlap)),
+                ("min_width", n(r.detect.min_width)),
+                ("min_snr", n(r.detect.min_snr)),
             ];
             if let Peak::CentWave(c) = &r.detect.peak {
                 let (a, b) = c.width_s;

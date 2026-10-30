@@ -12,6 +12,11 @@ use crate::trace::Params;
 /// Noise floor and minimum height of the unit profile (counts per second of a triple quadrupole); the preview proposes the ones of each file.
 pub const LR_FLOOR: f64 = 3e3;
 pub const LR_MIN_HEIGHT: f64 = 7e3;
+/// Noise gates of the unit recipe of a file (`lrnoise`): the lowest apex over the noise of the flanks (the usual limit of detection) and the narrowest row
+/// kept, as a share of the typical peak width of the file. The width gate is off: on the real series of the demo it drops a documented product whose
+/// peak is sharp, so it is a choice of the user (`min_width` of `features.detect`).
+pub const LR_MIN_WIDTH: f64 = 0.0;
+pub const LR_MIN_SNR: f64 = 3.0;
 /// Width of the bins of the comparison of two MS2 spectra at unit resolution, m/z.
 const LR_MS2_BIN: f64 = 0.5;
 
@@ -67,7 +72,11 @@ impl Recipe {
             return Ok(base);
         }
         let defect = estimate_defect(index, si, LR_FLOOR)?.unwrap_or(0.0);
-        Ok(Recipe::lr(defect, LR_FLOOR, LR_MIN_HEIGHT))
+        let floor = profile_floor(index, si)?.unwrap_or(LR_FLOOR);
+        let mut r = Recipe::lr(defect, floor, LR_MIN_HEIGHT);
+        r.detect.min_width = LR_MIN_WIDTH;
+        r.detect.min_snr = LR_MIN_SNR;
+        Ok(r)
     }
 
     /// `for_index` with the minimum height of a high-resolution file estimated from its noise (10 times the mode of the noise lump, to two figures, never
@@ -86,4 +95,29 @@ impl Recipe {
         }
         Ok(r)
     }
+}
+
+/// Scans looked at to tell a profile file from a centroided one.
+const PROBE_SCANS: usize = 50;
+
+/// The per-point floor of a file of profile scans: the mode of its noise lump. A peak is then many points, and the 3 sigma floor made for one centroid
+/// per peak cuts its flanks (rows split or lost); the intensity of a centroid is an area and keeps `LR_FLOOR`. `None` for a centroided file, a lump
+/// that is not found, or one above `LR_FLOOR`.
+fn profile_floor<R: ReadAt>(index: &mut Index<R>, si: usize) -> Result<Option<f64>> {
+    let level = index.sections[si].level;
+    let mut seen = index
+        .scans
+        .iter()
+        .filter(|s| s.level == level)
+        .take(PROBE_SCANS);
+    let (n, profile) = seen
+        .by_ref()
+        .fold((0, 0), |(n, p), s| (n + 1, p + usize::from(s.profile)));
+    if n == 0 || 2 * profile < n {
+        return Ok(None);
+    }
+    let hist = crate::params::intensity_hist(index, si)?;
+    Ok(crate::params::noise_from_hist(&hist)
+        .map(|n| n.mode)
+        .filter(|&m| m < LR_FLOOR))
 }

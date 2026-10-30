@@ -33,6 +33,7 @@
           "qc.mass_accuracy",
           "quant.calibrate",
           "rt.predict",
+          "screen.suspects",
           "spectra.centroid",
           "spectra.chimeric",
           "spectra.insilico",
@@ -94,6 +95,7 @@
               "qc.mass_accuracy@1",
               "quant.calibrate@1",
               "rt.predict@1",
+              "screen.suspects@1",
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
@@ -190,6 +192,7 @@
               "qc.mass_accuracy@1",
               "quant.calibrate@1",
               "rt.predict@1",
+              "screen.suspects@1",
               "spectra.centroid@1",
               "spectra.chimeric@1",
               "spectra.insilico@1",
@@ -568,6 +571,8 @@
                   "long_trace",
                   "merge_overlap",
                   "budget",
+                  "min_width",
+                  "min_snr",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -615,6 +620,18 @@
                     "description":"Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace"
                   },
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Drops features narrower than this share of the typical peak width of the file; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                  },
                   {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
                   {
                     "type":"array",
@@ -1050,6 +1067,45 @@
                     "minimum":0,
                     "default":42,
                     "description":"Seed of the bootstrap; 100 trees over a 2048-bit fingerprint of radius 2 (N_TREES, N_BITS)"
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"screen.suspects@1"},
+              "name":{"enum":["ppm","adducts","rt_window_min","min_fragments","max_hits_per_feature","ms2_rt_min"]},
+              "value":{
+                "anyOf":[
+                  {"type":"number","minimum":0,"default":5,"description":"Mass tolerance"},
+                  {
+                    "type":"string",
+                    "default":"[M+H]+,[M+NH4]+,[M+Na]+,[M-H]-,[M+Cl]-",
+                    "description":"Comma-separated; the ones of the polarity of the table are searched"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Drops a candidate whose listed RT is farther than this from the feature; off when empty"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Keeps a candidate only if this many of its listed fragments are in the MS2; off when empty"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":10,
+                    "description":"Most formula groups kept per feature, the closest in mass first"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Without feature ids in the spectra: largest RT distance between a scan and the feature"
                   }
                 ]
               }
@@ -2414,6 +2470,7 @@
                 "qc.mass_accuracy@1",
                 "quant.calibrate@1",
                 "rt.predict@1",
+                "screen.suspects@1",
                 "spectra.centroid@1",
                 "spectra.chimeric@1",
                 "spectra.insilico@1",

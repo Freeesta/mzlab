@@ -77,7 +77,7 @@ Other TP add-ons: `tp.filter` (decoys, HR), `tp.position`, `tp.network`, `tp.rev
 | mode not known yet | reused · 0 of 7 files centroided, 0 already… | Reading 7 files… |
 | any step, nothing changed | reused | Up to date (nothing changed) |
 | stale | out of date | Settings changed: runs again on Run |
-| blocked platform.computer | needs a computer | This step needs the desktop app (profile mzML). Use the app, or open the vendor file. |
+| blocked platform.computer | needs a computer | This step needs the desktop app (high-resolution profile mzML, or centroid parameters set by hand). Use the app. |
 | blocked permission.memory | needs your OK for memory | Large files: allow more memory. [Allow] |
 | error | error: <engine text> | One plain sentence from `F.message` + one action button (`fixFor`) |
 | grid summary | 6 errors, 1 warnings, 2 notes. | 6 times guessed from file names: check them. [Confirm all] · No blank in this series (optional) |

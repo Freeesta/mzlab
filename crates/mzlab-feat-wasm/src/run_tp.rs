@@ -412,7 +412,7 @@ pub fn tp_link_evidence(
             structure,
             rt: file.rt,
         };
-        let roles = TpRoles::from_json(samples)?;
+        let roles = TpRoles::for_table(samples, table)?;
         let mut indexes = (0..index_sizes.len())
             .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
             .collect::<Result<Vec<_>>>()?;

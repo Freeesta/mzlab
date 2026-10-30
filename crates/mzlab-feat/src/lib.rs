@@ -4,6 +4,7 @@
 //! `pipeline::analyse` adds the quality of every peak (`quality`), the isotopologues (`isotopes`) and the MS2 with purity (`ms2`).
 
 #![forbid(unsafe_code)]
+pub mod adducts;
 pub mod align;
 mod aligned;
 mod aligned_meta;
@@ -41,6 +42,7 @@ pub mod flow_formula_ms1;
 pub mod flow_formula_ms2;
 pub mod flow_level;
 pub mod flow_ms2;
+pub mod flow_screen_suspects;
 pub mod gapfill;
 pub mod gruppi;
 pub mod hypo;
@@ -51,6 +53,7 @@ pub mod isotopes;
 pub mod kinetic;
 pub mod legacy;
 pub mod liste;
+mod lrnoise;
 pub mod massacc;
 pub mod mrm;
 pub mod ms2;
@@ -96,6 +99,7 @@ pub mod table;
 pub mod target;
 pub mod tp;
 pub mod trace;
+mod trace_text;
 #[cfg(feature = "untargeted")]
 pub mod untargeted;
 pub mod uv_bands;

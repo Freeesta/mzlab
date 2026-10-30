@@ -263,7 +263,8 @@ fn a_series_without_t0_is_flagged_in_the_report() {
             )
         })
         .collect();
-    let untimed = to_json(&proponi(&files));
+    // the roles read from untimed names, under the names of the files of the table (the samples are matched to them by name)
+    let untimed = to_json(&proponi(&files)).replace("_untimed", "_t0");
     assert!(crate::flow_link::no_t0(
         &TpRoles::from_json(&untimed).unwrap()
     ));

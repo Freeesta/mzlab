@@ -162,7 +162,7 @@ pub fn link_bytes(
     check_series(series_of)?;
     let mut recipe = rebuild(lin)?;
     let p = parent_of(parent)?;
-    let roles = TpRoles::from_json(&String::from_utf8_lossy(samples))?;
+    let roles = TpRoles::for_table(&String::from_utf8_lossy(samples), table)?;
     let mut ix = series_of
         .indexes
         .iter()
@@ -236,7 +236,7 @@ pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Made> {
         &parent.1[..],
         &hypotheses.1[..],
     ];
-    let roles = TpRoles::from_json(&String::from_utf8_lossy(files[1]))?;
+    let roles = TpRoles::for_table(&String::from_utf8_lossy(files[1]), files[0])?;
     let bytes = link_bytes(r, job, &series, files)?;
     let out = r.work.join(format!("{}.mzfeat", job.instance.id));
     std::fs::write(&out, bytes).map_err(io)?;

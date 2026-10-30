@@ -32,3 +32,17 @@ export function makeConvertCentroids(h) {
     return r.file || new Blob(r.parts, { type: "application/xml" });
   };
 }
+
+/** `spectra.centroid` of the Flow in this browser: the index of the centroid copy of a profile mzML, kept as `<name>.cen.mzidx` (what features.detect reads for a profile file). Reuses what is there for the same
+ * source, parameters and engine; else makes the copy with `convert` (the call of Settings) and indexes it. `params` is "" for the estimated values. Resolves "flow" | "settings" (reused), "made", or "none" (no profile spectrum). */
+export function makeFlowCentroid(h, convert) {
+  return async (name, size, params, onProgress, signal) => {
+    const n = h.base(name), have = JSON.parse((await h.rpc({ op: "lr_cen_have", name: n, params })).info || "{}");
+    if (have.have) return have.have;
+    const blob = await convert(name, size, onProgress, signal);
+    if (!blob) return "none";
+    const r = await h.rpc({ op: "lr_cen_adopt", name: n, params, blob: blob instanceof Blob ? blob : new Blob([blob]) });
+    if (r.dead || r.error) throw Object.assign(new Error("err.engine.index"), { json: { error: "err.engine.index", error_key: "err.engine.index", params: {} } });
+    return "made";
+  };
+}

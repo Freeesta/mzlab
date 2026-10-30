@@ -250,6 +250,15 @@ pub fn read_meta_mz(bytes: &[u8]) -> Result<(Value, Vec<f64>)> {
     Ok((o.meta, mz))
 }
 
+/// The meta of a `.mzfeat` with its m/z and RT columns, without the rest of the table.
+pub fn read_meta_mz_rt(bytes: &[u8]) -> Result<(Value, Vec<f64>, Vec<f64>)> {
+    let (mut r, size) = (Slice(bytes), bytes.len() as u64);
+    let o = open(&mut r, size, "table")?;
+    let mz = o.col(&mut r, size, "mz", "f64", None, f64::from_le_bytes)?;
+    let rt = o.col(&mut r, size, "rt", "f64", None, f64::from_le_bytes)?;
+    Ok((o.meta, mz, rt))
+}
+
 /// Reads a `.mzfeatf`: the table and its meta.
 pub fn read_file(bytes: &[u8]) -> Result<(FileFeatures, Value)> {
     read_file_from(&mut Slice(bytes), bytes.len() as u64, Want::ALL)
@@ -330,6 +339,25 @@ pub fn origin_from_meta(meta: &Value) -> Origin {
         samples: meta.get("samples").and_then(|v| v.str()).map(String::from),
         times: Vec::new(),
     }
+}
+
+/// The names of the files of a table, in the order of its columns, from its meta; empty when the meta does not record one name per file.
+pub fn input_names(meta: &Value) -> Vec<String> {
+    let names: Vec<String> = origin_from_meta(meta)
+        .inputs
+        .into_iter()
+        .map(|(n, _)| n)
+        .collect();
+    if meta.get("files").and_then(|v| v.f64()) == Some(names.len() as f64) {
+        names
+    } else {
+        Vec::new()
+    }
+}
+
+/// `input_names` of a `.mzfeat` read by offsets: only its meta is read.
+pub fn table_names<R: ReadAt>(r: &mut R, size: u64) -> Result<Vec<String>> {
+    Ok(input_names(&open(r, size, "table")?.meta))
 }
 
 /// Where the values of the `f64` array `name` of a `.mzfeat` lie in `bytes`, for a copy of the file that replaces them in place (same length, same meta: the format does not change).
