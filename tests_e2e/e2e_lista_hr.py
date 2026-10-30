@@ -1,6 +1,7 @@
 """HR file list: only the first file (in list order) is open, groups DDA / Full Scan / MS2 / Infusion, a click opens another file, compact list folds groups."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import re
 from lib_hr import synth, load, hr_variants
 steps = []
 def step(name, fn):
@@ -53,11 +54,11 @@ try:
         step("narrow list: groups fold with memory; wide window unchanged", compact)
         def own_group():
             pg.evaluate("renderFileList()")
-            pg.evaluate("window.ask = async () => 'Mia'; groupFiles(E.files.find(f => f.file.startsWith('HR_DDA')))"); pg.wait_for_function("E.files.some(f => f.ugrp)")
-            g = pg.evaluate(GROUPS); assert any(x.startswith("Mia|") for x in g) and not any(x.startswith("DDA") for x in g), g
-            assert pg.evaluate("E.files.filter(f => f.ugrp === 'Mia').every(f => f.file.startsWith('HR_DDA')||f.vis)")
-            pg.evaluate("groupFiles(E.files.find(f => f.ugrp), true)"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
-            assert not any(x.startswith("Mia") for x in pg.evaluate(GROUPS))
+            pg.evaluate("E.files.filter(f => f.file.startsWith('HR_DDA')).forEach(f => { f.vis = true; }); groupFiles()"); pg.wait_for_function("E.files.some(f => f.ugrp)")
+            g = pg.evaluate(GROUPS); assert any(re.match(r"(Group|Gruppo) 1\|", x) for x in g) and not any(x.startswith("DDA") for x in g), g
+            assert pg.evaluate("E.files.filter(f => f.ugrp).every(f => f.vis)")
+            pg.evaluate("ugSet(ugFiles(E.files.find(f => f.ugrp).ugrp), '')"); pg.wait_for_function("!E.files.some(f => f.ugrp)")
+            assert not any(re.match(r"(Group|Gruppo) 1", x) for x in pg.evaluate(GROUPS))
         step("the user groups the shown files and dissolves the group", own_group)
 finally:
     r.close()
