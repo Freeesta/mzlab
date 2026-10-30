@@ -31,7 +31,7 @@ try:
           return {k, t, n:cnt[t], mz:s.mz, y:s.y}})()""")
         pk = [(m, y) for m, y in zip(info["mz"], info["y"]) if m < info["t"] - 1.5 and y > 0]
         def msp(name, prec, peaks):
-            return f"Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f} {y:.1f}" for m, y in peaks) + "\n\n"
+            return f"Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nSMILES: CC(=O)Oc1ccccc1C(=O)O\nInChIKey: BSYNRYMUTXBXSQ-UHFFFAOYSA-N\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f} {y:.1f}" for m, y in peaks) + "\n\n"
         text = msp("Voce di prova", info["t"], pk) + msp("Analogo di prova", info["t"] - 15.9949, pk)
         pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'prova.msp')})})(%s)" % __import__("json").dumps(text)); pg.wait_for_timeout(500)
         def identify():
@@ -77,6 +77,33 @@ try:
             assert r and r[0]["name"] == "Analogo di prova" and abs(r[0]["delta"] - 15.9949) < 1e-3 and r[0]["matched"] >= 4 and r[0]["mcos"] > 0.9, r
             assert all(x["name"] != "Voce di prova" for x in r), "the identity (same precursor) is not an analogue"
         step("the analogue search finds the entry 16 Da lighter, with its delta and a modified cosine, not the identity", analogs)
+        def extras():
+            pg.set_viewport_size({"width": 1280, "height": 900})
+            text = pg.evaluate("""(async()=>{const k=E.files.find(f=>f.kind==='ms2').k, d=await J('api/dda?k='+k), seen=new Set(); let out='', n=0;
+              for (let i=0;i<d.sid.length&&n<40;i++){const t=d.tgt[i]; if(!t||seen.has(t))continue; seen.add(t); const s=await J('api/scan?k='+k+'&sid='+d.sid[i]); if(s.mz.length<3)continue;
+                out+='Name: Fila '+(n+1)+'\\nPrecursorMZ: '+t+'\\nPrecursor_type: [M+H]+\\nIon_mode: Positive\\nFormula: C10H10\\n'+(n%5===4?'':'SMILES: '+(n%2?'CCO':'c1ccccc1O')+'\\n')+'Num Peaks: '+s.mz.length+'\\n'+s.mz.map((m,j)=>m.toFixed(5)+' '+s.y[j].toFixed(1)).join('\\n')+'\\n\\n'; n++;}
+              return out})()""")
+            pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'molte.msp')})})(%s)" % __import__("json").dumps(text)); pg.wait_for_timeout(800)
+            pg.evaluate("LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-list tr.row", timeout=60000)
+            pg.evaluate("document.querySelector('#li-list').style.maxHeight='190px'")
+            heads = pg.inner_text("#li-list thead")
+            for w in ("Struttura", "Nome", "Addotto", "Libreria", "InChIKey", "Entropia migliore", "Picchi in comune", "Δ ppm"): assert w in heads, (w, heads)
+            geo = pg.evaluate("""(()=>{const L=document.querySelector('#li-list'),r=L.getBoundingClientRect(); const th=[...L.querySelectorAll('th')]; const by=t=>th.find(x=>x.innerText.includes(t)).getBoundingClientRect();
+              return {over:L.scrollWidth-L.clientWidth, name:by('Nome').width, right:Math.max(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).left))}})()""")
+            assert geo["over"] <= 1 and geo["name"] >= 100 and geo["right"] <= 1, ("columns fit at 1280 px", geo)
+            tot = pg.locator("#li-list .lw-th").count(); assert tot >= 8, tot
+            pg.wait_for_function("document.querySelectorAll('#li-list .lw-th svg').length > 0", timeout=20000); pg.wait_for_timeout(500)
+            drawn = pg.locator("#li-list .lw-th svg").count(); assert 0 < drawn < tot, ("only the rows in view are drawn", drawn, tot)
+            assert pg.locator("#li-list tr.row td.st", has_text="–").count() >= 1, "rows without a SMILES show a dash"
+            pg.evaluate("document.querySelector('#li-list').scrollTop = 1e6"); pg.wait_for_function(f"document.querySelectorAll('#li-list .lw-th svg').length > {drawn}", timeout=20000)
+            pg.evaluate("document.querySelector('#li-list').scrollTop = 0"); pg.wait_for_timeout(300)
+            btn = pg.locator("#li-list .lw-th").first; smi = btn.get_attribute("data-smi"); btn.click()
+            pg.wait_for_selector("#li-big .lw-bigsvg svg", timeout=20000)
+            assert pg.is_visible("#li-list tr.row") and pg.inner_text("#li-big code") == smi, "the SMILES is shown with the enlarged structure"
+            assert pg.evaluate("getComputedStyle(document.querySelector('#li-big code')).userSelect") == "text" and not pg.is_visible("#lw-back"), "selectable; the row did not open"
+            pg.keyboard.press("Escape"); assert pg.locator("#li-big").count() == 0 and pg.evaluate("document.querySelector('#libwhat').open"), "Esc closes the structure before the window"
+            pg.evaluate("document.querySelector('#libwhat').close()")
+        step("Identify all: the structure thumbnails are drawn for the rows in view only, the new columns fit at 1280 px, a click enlarges the structure with its SMILES", extras)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
