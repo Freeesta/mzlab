@@ -183,7 +183,7 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
         "rpc" => rpc_route(state, body).unwrap_or_else(bad),
         "lr/upload" => upload_route(state, &q, body).unwrap_or_else(bad),
         r if r.starts_with("lib/") => lib_route(state, &r[4..], &q, body),
-        r if r.starts_with("normative/") => normative_route(state, &r[10..], &q),
+        r if r.starts_with("normative/") => normative_route(state, &r[10..], &q, body),
         r if r.starts_with("insilico/") => insilico_route(state, &r[9..]),
         _ => json(404, "{}".into()),
     }
@@ -230,8 +230,9 @@ fn insilico_route(state: &State, route: &str) -> Response {
 }
 
 /// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/catalog` (the installed `catalogo.json`), `normative/listings` (the `listings` JSON),
-/// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder).
-fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Response {
+/// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder),
+/// `normative/import-official?reader&file&date` (POST, the CSV as body: the private `.mzsus` of the user's own official file) and `normative/imported` (the lists imported so far).
+fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -> Response {
     use crate::normative as nm;
     use std::sync::atomic::Ordering;
     let lib = &state.libs;
@@ -267,6 +268,21 @@ fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Respo
             NORM_CANCEL.store(true, Ordering::Relaxed);
             json(200, "{}".into())
         }
+        "imported" => json(200, nm::imported(lib)),
+        "import-official" => match (q.get("reader"), q.get("file"), q.get("date")) {
+            (Some(r), Some(f), Some(d)) => {
+                match nm::import_official(
+                    lib,
+                    &crate::update::Http::new(),
+                    (&decode(r), &decode(f), &decode(d)),
+                    body,
+                ) {
+                    Ok(t) => json(200, t),
+                    Err(e) => fail(e),
+                }
+            }
+            _ => error(&Error::new("lib.err.io").with("detail", "bad request")),
+        },
         "import" => match q.get("path") {
             Some(p) => match nm::import(lib, std::path::Path::new(&decode(p))) {
                 Ok(s) => status(s),

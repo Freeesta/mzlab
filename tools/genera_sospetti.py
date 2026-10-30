@@ -16,6 +16,7 @@ import bisect
 import csv
 import hashlib
 import json
+import re
 import struct
 import sys
 import tempfile
@@ -28,6 +29,8 @@ from librerie_pacchetti import PIECE, download, sha256_file  # noqa: E402
 
 FORMAT = "mzsus/1"
 CATALOG_FORMAT = "sospetti/1"
+CAS_FORMAT = "mzlab-cas/1"                            # the CAS sidecar read by mzlab_feat::normative::sidecar (the import of official lists)
+CAS_RE = re.compile(r"(?<![0-9A-Za-z-])[0-9]{2,7}-[0-9]{2}-[0-9](?![0-9-])")
 VERSION = 1
 MAGIC = b"MZSU"
 HEAD = struct.Struct("<4sHHIIIIII")          # magic, version, reader_min, n_rows, n_formulas, n_reactions, manifest_len, flags, reserved
@@ -272,6 +275,50 @@ def pacchetto(raw: bytes, out_dir: Path, fonti: list[dict] | None = None) -> dic
     return cat
 
 
+def _form(smiles: str) -> str:
+    """The `form_of` of the Rust resolver: a dot or a lone cation is a salt, a lone anion an anion."""
+    if "." in smiles:
+        return "salt"
+    if "-]" in smiles and "+]" not in smiles:
+        return "anion"
+    return "salt" if "+]" in smiles else "parent"
+
+
+def cas_sidecar(susdat: Path) -> bytes:
+    """The records of SusDat that carry a CAS number (CAS_RN, CAS_RN_Dashboard or CAS_RN_PubChem), one line per CAS and record, sorted:
+    `cas key ms_key formula mass form ms_smiles` (tab separated; `ms_key` and `ms_smiles` only where the MS-ready skeleton differs from the one listed).
+    The Rust resolver decides which record wins and refuses a CAS with two skeletons."""
+    out = set()
+    for r in _rows(susdat):
+        key = (r.get("StdInChIKey") or "").strip()
+        msk = (r.get("MS_Ready_StdInChIKey") or "").strip()
+        if len(key) != 27 or key[14] != "-":
+            continue
+        diff = len(msk) == 27 and msk[:14] != key[:14]
+        for col in ("CAS_RN", "CAS_RN_Dashboard", "CAS_RN_PubChem"):
+            for cas in CAS_RE.findall((r.get(col) or "").replace("\u2010", "-")):
+                out.add("\t".join((cas, key, msk if diff else "", (r.get("Molecular_Formula") or "").strip(), (r.get("Monoiso_Mass") or "").strip(),
+                                   _form(r.get("SMILES") or ""), (r.get("MS_Ready_SMILES") or "").strip() if diff else "")))
+    return ("# " + CAS_FORMAT + "\n" + "\n".join(sorted(out)) + "\n").encode("utf-8")
+
+
+def pacchetto_cas(raw: bytes, out_dir: Path) -> dict:
+    """The sidecar as zlib pieces + `catalogo.json` (the keys of `normative/1`, so the Library window downloads and checks it with the same code)."""
+    z = zlib.compress(raw, 9)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pieces = []
+    for i in range(0, len(z), PIECE):
+        b = z[i:i + PIECE]
+        name = f"{i // PIECE:03d}.bin"
+        (out_dir / name).write_bytes(b)
+        pieces.append({"file": name, "size": len(b), "sha256": hashlib.sha256(b).hexdigest()})
+    cat = {"format": CAS_FORMAT, "piece": PIECE, "compression": "zlib", "raw": "cas.tsv", "size": len(raw), "size_compressed": len(z),
+           "sha256": hashlib.sha256(raw).hexdigest(), "rows": raw.count(b"\n") - 1, "notice": "CAS to structure records of NORMAN SusDat (CC BY 4.0), used only to resolve the files you import.",
+           "pieces": pieces}
+    (out_dir / "catalogo.json").write_text(json.dumps(cat, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return cat
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--fonte", type=Path, help="folder with the source files (downloaded there if missing); default: a temporary folder")
@@ -282,7 +329,9 @@ def main() -> None:
         ap.error("give --out and/or --pacchetto")
     with tempfile.TemporaryDirectory(prefix="mzlab-sus-") as tmp:
         try:
-            raw = genera(SOURCES, a.fonte or Path(tmp))
+            folder = a.fonte or Path(tmp)
+            raw = genera(SOURCES, folder)
+            cas_raw = cas_sidecar(prepara_fonti(SOURCES, folder, False)["susdat"][0]) if a.pacchetto else b""
         except ConnectionError as e:
             print(f"::warning::suspect index not built: the download failed ({e})")
             return
@@ -292,6 +341,8 @@ def main() -> None:
     if a.pacchetto:
         cat = pacchetto(raw, a.pacchetto)
         print(f"package: {cat['dimensione_compressa'] / 1e6:.1f} MB compressed in {len(cat['pezzi'])} pieces")
+        cas = pacchetto_cas(cas_raw, a.pacchetto / "cas")
+        print(f"CAS sidecar: {cas['rows']} rows, {cas['size_compressed'] / 1e6:.1f} MB compressed")
 
 
 if __name__ == "__main__":
