@@ -132,19 +132,26 @@ fn cascade() -> Algorithm {
 /// `annot.regulatory`: membership of the identities in the regulatory and priority lists, and the screening of the lists as suspects.
 pub(super) fn regulatory() -> Step {
     Step {
-        ins: vec![Port::new("annot", DataType::Annot, "Annotated rows").requires(hr())],
+        ins: vec![
+            Port::new("annot", DataType::Annot, "Annotated rows").requires(hr()),
+            Port::new("lists", DataType::Library, "Regulatory package: a .mzsus with the listings extension (normative.mzsus)"),
+        ],
         outs: vec![Port::new("annot", DataType::Annot, "Rows with the list memberships")],
-        params: vec![Param::pair("window", "Mass window", 0.0)
-            .unit("Da")
-            .doc("Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries")],
+        params: vec![
+            Param::pair("window", "Mass window", 0.0)
+                .unit("Da")
+                .doc("Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries"),
+            Param::text("lists", "Regulatory lists").doc("Ids of the lists to compare, comma-separated; empty: every list in force"),
+            Param::text("include", "Also compare").doc("Statuses added to the lists in force: proposal, draft, reference; empty: none"),
+        ],
         algorithms: vec![list_membership(), suspect_screen(), ms2_confirm()],
         default_algorithm: Some("list_membership"),
         per_item: true,
-        errors: Vec::new(),
+        errors: vec!["err.flow.regulatory.package", "err.flow.regulatory.annot", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.regulatory.algorithm"],
         ..attributio_step(
             "annot.regulatory",
             "Regulatory lists",
-            "Compares the identities (and the suspects) with versioned snapshots of regulatory and priority lists. A list entry says what a compound is on a list, nothing about this sample; the snapshots are read from the campaign folder with their hash, no network.",
+            "Compares the identities with the regulatory package by InChIKey: the same full key is a match, the same first block a flagged match, a name or a formula never. A list entry says what a compound is on a list, nothing about this sample; no network.",
         )
     }
 }

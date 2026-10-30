@@ -88,6 +88,7 @@ const ELEM = (() => {
   // ---------------------------------------------------------------- the compact panel of the drawer
   let pending = null;
   const takeCtx = () => { const c = pending; pending = null; return c; };
+  const hasCtx = () => !!pending;
   // right click on a peak of a high-resolution spectrum → «Genera formula»: the panel opens with that m/z and the last parameters
   function generate(o) {
     pending = { mz: o.mz, sp: o.sp, spec: o.spec, polarity: o.polarity };
@@ -100,6 +101,6 @@ const ELEM = (() => {
       esegui: c => generate({ mz: c.m, sp: c.p, spec: c.a.data[0].d, polarity: c.pol }) });
     AZIONI.registra({ id: "spec.fmClear", gruppo: "gen", ordine: 2, viste: ["spec"], visibile: c => !!c.a.hrp, disponibile: c => !!(c.p.fm && c.p.fm.length), nome: () => I18N.t("cx.clear"), esegui: c => { c.p.fm = []; draw(c.p); } });
   }
-  return { generate, takeCtx, copyText, bindEls, bindPeriodic, DEFAULT_ELS, parse, ser, applyTo, peakFor };
+  return { generate, takeCtx, hasCtx, copyText, bindEls, bindPeriodic, DEFAULT_ELS, parse, ser, applyTo, peakFor };
 })();
 window.ELEM = ELEM;

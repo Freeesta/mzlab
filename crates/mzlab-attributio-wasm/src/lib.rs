@@ -17,6 +17,8 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "all")]
 mod flow_level;
 #[cfg(feature = "all")]
+mod flow_regulatory;
+#[cfg(feature = "all")]
 mod insilico_web;
 
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
