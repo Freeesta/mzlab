@@ -15,15 +15,15 @@ use mzlab_feat::chem::grafo::analyse_json;
 use mzlab_feat::hypo::Structure;
 use mzlab_feat::interp::ms2link::LinkParams;
 use mzlab_feat::interp::run::run_to_with;
-use mzlab_feat::recipe::Recipe;
 use mzlab_feat::store::Slice;
 use mzlab_feat::tp::TpRoles;
 use mzlab_feat_wasm::run_tp::{link_evidence, LinkParent, Series as LinkSeries};
 
 use crate::flow::{all_inputs, io, read_one, FileRunner, Lineage, Made};
 use crate::flow_base::{open, rebuild, Files};
-use crate::flow_nature::{estimate, of_files};
+use crate::flow_nature::of_files;
 use mzlab_core::step::DataType;
+use mzlab_feat::nature::{open_polarity, polarity_estimate};
 
 const RULES: &[u8] = include_bytes!("../../../TP_Mine/data/regole_tp_2.json");
 
@@ -121,18 +121,6 @@ fn given_polarity(job: &Job) -> Option<f64> {
     param(job, "polarity").filter(|_| given)
 }
 
-/// The polarity of the files when the detection took both (or no) polarities and the plan writes none: a negative series is not read as positive.
-fn detected_polarity(recipe: &Recipe, indexes: &[PathBuf]) -> Option<f64> {
-    let open_ended = recipe.detect.polarity.is_none_or(|p| p == 0);
-    let found = open_ended.then(|| of_files(indexes).polarity).flatten();
-    found.map(f64::from)
-}
-
-/// The polarity the link runs with when the plan or the files decide it (None: the recipe of the detection does).
-fn effective_polarity(job: &Job, recipe: &Recipe, indexes: &[PathBuf]) -> Option<f64> {
-    given_polarity(job).or_else(|| detected_polarity(recipe, indexes))
-}
-
 /// What `link` needs of the job, read from the files.
 pub struct Series {
     pub lineage: Lineage,
@@ -174,13 +162,13 @@ pub fn link_bytes(
     check_series(series_of)?;
     let mut recipe = rebuild(lin)?;
     let p = parent_of(parent)?;
-    let roles = TpRoles::from_json(&String::from_utf8_lossy(samples))?;
+    let roles = TpRoles::for_table(&String::from_utf8_lossy(samples), table)?;
     let mut ix = series_of
         .indexes
         .iter()
         .map(open)
         .collect::<Result<Vec<_>>>()?;
-    let polarity = effective_polarity(job, &recipe, &series_of.indexes);
+    let polarity = given_polarity(job);
     let clock = Instant::now();
     let (mut stored, mut again) = (Files(lin.peaks.clone()), Files(lin.peaks.clone()));
     let mut reopen = |k: usize| open(&series_of.indexes[k]);
@@ -248,16 +236,15 @@ pub(crate) fn link_job(r: &FileRunner, job: &Job) -> Result<Made> {
         &parent.1[..],
         &hypotheses.1[..],
     ];
-    let roles = TpRoles::from_json(&String::from_utf8_lossy(files[1]))?;
+    let roles = TpRoles::for_table(&String::from_utf8_lossy(files[1]), files[0])?;
     let bytes = link_bytes(r, job, &series, files)?;
     let out = r.work.join(format!("{}.mzfeat", job.instance.id));
     std::fs::write(&out, bytes).map_err(io)?;
     let mut made = Made::new("tp", r.keep(out, DataType::Tp)?);
     if given_polarity(job).is_none() {
-        let from_files = detected_polarity(&rebuild(&series.lineage)?, &series.indexes);
-        made.estimates.extend(
-            from_files.map(|p| estimate("polarity", Value::Num(p), "scan polarity of the files")),
-        );
+        let detect = rebuild(&series.lineage)?.detect.polarity;
+        made.estimates
+            .extend(open_polarity(detect, &of_files(&series.indexes)).map(polarity_estimate));
     }
     if no_t0(&roles) {
         made.warnings.push(WARN_NO_T0.into());

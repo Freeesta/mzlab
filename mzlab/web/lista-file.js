@@ -185,12 +185,5 @@ function followSpectra(/** @type {any} */ f) {
   E.panels.forEach(q => { if (q.type === "spec" && q.link != null && q.dda == null && !q.all && !q.kSet && q.tab === f.kind && q.k !== f.k) { q.k = f.k; if (q.el && f.vis) { ctl(q); draw(q); } } });
 }
 
-// Work area with no ticked file and no panel: a muted, centered hint (the box fills the area and ignores the pointer, so nothing moves when the text comes or goes)
-function syncWorkEmpty() {
-  const host = document.getElementById("dpanels"); if (!host) return;
-  let el = document.getElementById("work-empty");
-  if (!el) { el = document.createElement("div"); el.id = "work-empty"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); host.prepend(el); }
-  const empty = !E.files.some(f => f.vis && !f.gone) && !E.panels.some(p => p.el);
-  const t = empty ? I18N.t("work.empty") : "";
-  if (el.textContent !== t) el.textContent = t;
-}
+// the work area follows the files shown and the panels open: panels, loading table or landing (area-lavoro.js, syncWork)
+function syncWorkEmpty() { if (typeof syncWork === "function") syncWork(); }

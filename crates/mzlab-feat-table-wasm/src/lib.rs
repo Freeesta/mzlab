@@ -275,8 +275,15 @@ pub fn table_view_auto(
     samples_json: &str,
     params_json: &str,
 ) -> std::result::Result<String, JsValue> {
+    let samples_json = pol::samples_like(
+        &mut table_reader(table_read.clone()),
+        size as u64,
+        samples_json.as_bytes(),
+    )
+    .map_err(js_err)?;
     let samples = pol::samples_v1(samples_json.as_bytes()).map_err(js_err)?;
-    let spec = filterspec::spec_from_json_with_samples(params_json, samples_json.as_bytes()).map_err(js_err)?;
+    let spec = filterspec::spec_from_json_with_samples(params_json, samples_json.as_bytes())
+        .map_err(js_err)?;
     core::view_json(&mut table_reader(table_read), size as u64, &samples, &spec).map_err(js_err)
 }
 

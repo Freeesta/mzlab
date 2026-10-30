@@ -5,7 +5,7 @@
 //!
 //! Routes (all GET): `open?slot&id`, `close?slot`, `reset`, `tic?slot&level&px`, `xic?slot&level&mz&tol&px`,
 //! `spectra?slot&level&i0&i1&bin`, `lookup?name&size` (the number of a file known by name and size),
-//! `rawprogress?id` (how far an mzML being written has got), `file?id&off&len` (also an mzML written by `nat2mzml`), and the folder of the libraries under `lib/` (see `lib_route`).
+//! `rawprogress?id` (how far an mzML being written has got), `file?id&off&len` (also an mzML written by `nat2mzml`), and the folder of the libraries under `lib/` (see `lib_route`), and the regulatory-lists package under `normative/` (see `normative_route`).
 
 use std::collections::HashMap;
 
@@ -195,6 +195,55 @@ pub fn handle_body(state: &State, path: &str, q: &str, body: &[u8]) -> Response 
         "rpc" => rpc_route(state, body).unwrap_or_else(bad),
         "lr/upload" => upload_route(state, &q, body).unwrap_or_else(bad),
         r if r.starts_with("lib/") => lib_route(state, &r[4..], &q, body),
+        r if r.starts_with("normative/") => normative_route(state, &r[10..], &q),
+        _ => json(404, "{}".into()),
+    }
+}
+
+/// Set by `normative/cancel`, cleared when an install starts.
+static NORM_CANCEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The regulatory-lists package in the folder of the libraries: `normative/status`, `normative/listings` (the `listings` JSON),
+/// `normative/install` (from the site), `normative/check` (none|current|update), `normative/cancel`, `normative/import?path` (a `.mzsus` or a package folder).
+fn normative_route(state: &State, route: &str, q: &HashMap<&str, &str>) -> Response {
+    use crate::normative as nm;
+    use std::sync::atomic::Ordering;
+    let lib = &state.libs;
+    let fail = |e: nm::NormError| json(400, e.to_json());
+    let status = |s: nm::Status| json(200, serde_json::to_string(&s).unwrap_or_default());
+    match route {
+        "status" => status(nm::status(lib)),
+        "listings" => match nm::listings_json(lib) {
+            Ok(t) => json(200, t),
+            Err(e) => fail(e),
+        },
+        "install" => {
+            NORM_CANCEL.store(false, Ordering::Relaxed);
+            match nm::install(
+                lib,
+                &crate::update::Http::new(),
+                &NORM_CANCEL,
+                &mut |_, _| {},
+            ) {
+                Ok(s) => status(s),
+                Err(e) => fail(e),
+            }
+        }
+        "check" => match nm::check(lib, &crate::update::Http::new()) {
+            Ok(c) => json(200, serde_json::json!({ "state": c }).to_string()),
+            Err(e) => fail(e),
+        },
+        "cancel" => {
+            NORM_CANCEL.store(true, Ordering::Relaxed);
+            json(200, "{}".into())
+        }
+        "import" => match q.get("path") {
+            Some(p) => match nm::import(lib, std::path::Path::new(&decode(p))) {
+                Ok(s) => status(s),
+                Err(e) => fail(e),
+            },
+            None => error(&Error::new("lib.err.io").with("detail", "bad request")),
+        },
         _ => json(404, "{}".into()),
     }
 }
@@ -255,15 +304,27 @@ fn lib_route(state: &State, route: &str, q: &HashMap<&str, &str>, body: &[u8]) -
 fn rpc_route(state: &State, body: &[u8]) -> Option<Response> {
     let v: serde_json::Value = serde_json::from_slice(body).ok()?;
     Some(match state.rpc(v["op"].as_str()?, &v, body) {
-        Ok(crate::rpc::Answer::Text(t)) => Response { status: 200, content_type: "text/plain; charset=utf-8", body: t.into_bytes() },
-        Ok(crate::rpc::Answer::Bytes(b)) => Response { status: 200, content_type: "application/octet-stream", body: b },
+        Ok(crate::rpc::Answer::Text(t)) => Response {
+            status: 200,
+            content_type: "text/plain; charset=utf-8",
+            body: t.into_bytes(),
+        },
+        Ok(crate::rpc::Answer::Bytes(b)) => Response {
+            status: 200,
+            content_type: "application/octet-stream",
+            body: b,
+        },
         Err(e) => error(&e),
     })
 }
 
 /// `lr/upload?name&off&total`: a piece of a file that reaches the app as bytes; the answer holds the number of the file once the last piece is in.
 fn upload_route(state: &State, q: &HashMap<&str, &str>, body: &[u8]) -> Option<Response> {
-    let (name, off, total) = (q.get("name")?, q.get("off")?.parse().ok()?, q.get("total")?.parse().ok()?);
+    let (name, off, total) = (
+        q.get("name")?,
+        q.get("off")?.parse().ok()?,
+        q.get("total")?.parse().ok()?,
+    );
     Some(match state.upload_chunk(&decode(name), off, total, body) {
         Ok(Some(id)) => json(200, format!("{{\"id\":{id}}}")),
         Ok(None) => json(200, "{}".into()),

@@ -600,6 +600,8 @@
                   "long_trace",
                   "merge_overlap",
                   "budget",
+                  "min_width",
+                  "min_snr",
                   "ppm",
                   "peak_width_s",
                   "snr",
@@ -647,6 +649,18 @@
                     "description":"Rows within the mass tolerance are one ion when their scans overlap by this share of the shorter trace"
                   },
                   {"type":"integer","minimum":1,"default":96000000,"description":"Working memory"},
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Drops features narrower than this share of the typical peak width of the file; 0 = off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"A feature whose apex is below this many times the noise of its flanks is dropped; 0 = off"
+                  },
                   {"type":"number","minimum":0,"default":25,"description":"m/z deviation"},
                   {
                     "type":"array",

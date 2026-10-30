@@ -1,6 +1,12 @@
 //! Reader of the offline suspect index `.mzsus` v1 (format: `docs/agenti/sospetti.md`; reference reader: `tools/genera_sospetti.py::leggi_sospetti`).
 //! `Suspects::open` parses the whole file into rows ordered by mass; `search` is a binary search of the window `|m - mass| <= mass * ppm * 1e-6`.
 //! A hit of mass is a candidate with its evidence, never a name for a feature.
+//! Flag bit 0 (`FLAG_LISTINGS`) marks the regulatory extension read by `Suspects::listings` (layout: `docs/agenti/sospetti.md`); `reader_min` stays 1.
+
+use crate::suspects_listings::parse_listings;
+pub use crate::suspects_listings::{
+    Listings, Membership, BIT_ANION_CAS, BIT_GROUP, BIT_ISOMER, FLAG_LISTINGS, FORM_NAMES,
+};
 
 const MAGIC: &[u8; 4] = b"MZSU";
 const HEAD: usize = 32;
@@ -10,6 +16,7 @@ const VERSION: u16 = 1;
 pub const SRC_SUSDAT: u8 = 1;
 pub const SRC_PUBCHEMLITE: u8 = 2;
 pub const SRC_TRANSPUBCHEM: u8 = 4;
+pub const SRC_NORMATIVE: u8 = 8;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hit {
@@ -34,19 +41,20 @@ pub enum SuspectsError {
 }
 
 pub struct Suspects {
-    rows: Vec<Hit>,
+    pub(crate) rows: Vec<Hit>,
     formulas: Vec<String>,
     manifest: String,
+    pub(crate) listings: Option<Listings>,
 }
 
-struct Cur<'a> {
-    b: &'a [u8],
-    p: usize,
+pub(crate) struct Cur<'a> {
+    pub(crate) b: &'a [u8],
+    pub(crate) p: usize,
 }
 
 impl<'a> Cur<'a> {
     /// The next `size` bytes; the cursor then moves to the next multiple of 8.
-    fn take(&mut self, size: usize) -> Result<&'a [u8], SuspectsError> {
+    pub(crate) fn take(&mut self, size: usize) -> Result<&'a [u8], SuspectsError> {
         let end = self
             .p
             .checked_add(size)
@@ -76,6 +84,11 @@ impl Suspects {
         &self.manifest
     }
 
+    /// The regulatory extension, `None` for a file without flag bit 0.
+    pub fn listings(&self) -> Option<&Listings> {
+        self.listings.as_ref()
+    }
+
     pub fn formula(&self, h: &Hit) -> &str {
         &self.formulas[h.formula as usize]
     }
@@ -94,12 +107,12 @@ fn u16s(b: &[u8]) -> impl Iterator<Item = u16> + '_ {
     b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]]))
 }
 
-fn u32s(b: &[u8]) -> impl Iterator<Item = u32> + '_ {
+pub(crate) fn u32s(b: &[u8]) -> impl Iterator<Item = u32> + '_ {
     b.chunks_exact(4)
         .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
 }
 
-fn le32(b: &[u8], at: usize) -> u32 {
+pub(crate) fn le32(b: &[u8], at: usize) -> u32 {
     u32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]])
 }
 
@@ -139,6 +152,11 @@ fn parse(data: &[u8]) -> Result<Suspects, SuspectsError> {
         }
         formulas.push(String::from_utf8_lossy(&blob[a..b]).into_owned());
     }
+    let listings = if le32(data, 24) & FLAG_LISTINGS != 0 {
+        Some(parse_listings(&mut c, n)?)
+    } else {
+        None
+    };
     let mut rows: Vec<Hit> = Vec::with_capacity(n);
     let (mut lit, mut pat, mut fidx) = (u16s(lit), u16s(pat), u32s(fidx));
     for i in 0..n {
@@ -169,5 +187,6 @@ fn parse(data: &[u8]) -> Result<Suspects, SuspectsError> {
         rows,
         formulas,
         manifest,
+        listings,
     })
 }

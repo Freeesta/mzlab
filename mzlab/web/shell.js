@@ -27,7 +27,7 @@ const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and 
 async function init(){try{await bootSession();await Promise.all(E.panels.map((/** @type {{ ready?: unknown }} */ p)=>p.ready).filter(Boolean)).catch(()=>{});
   const d=await api("api/state");fail();window.qqReady=true;if(typeof AVVIO!=="undefined")AVVIO.segnaPronto();if(window.ldClearBootTimer)window.ldClearBootTimer();setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);if(typeof AVVIO!=="undefined")AVVIO.segnaSessione(!!S.sess);$("#newrun").hidden=!hasSess;if(!S.sess)showStart(d);else{if(typeof AVVIO!=="undefined")AVVIO.rimuoviScheletro();applyView();if(window.QQRESET)QQRESET.remind()}if(window.BARRA)BARRA.init()}catch(e){fail(e);if(typeof AVVIO!=="undefined")AVVIO.segnaFallito(e)}finally{if(!$("#loading").hidden)loading(false)}}
 
-// ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
+// ------------------------------------------------------------------ views: Dati (landing, loading table or panels), Disegno
 let _lastV="",_itNoted=false;
 // true only the first time: remembered in localStorage (the reset of the settings of the Teoria clears it), per session when there is no storage
 function itNoteOnce(){const k="mzlab.teoria.itnote";try{if(localStorage.getItem(k))return false;localStorage.setItem(k,"1");return true}catch(e){const r=!_itNoted;_itNoted=true;return r}}
@@ -35,7 +35,7 @@ let _addY=/** @type {number | null} */ (null),_wasAdd=false;
 function applyView(){const v=S.view,d=v==="data";
   // the scroll of the data view, kept for the way back from the loading screen (leaveAdding)
   if(S.adding&&!_wasAdd)_addY=window.scrollY;_wasAdd=!!S.adding;
-  const op=!!S.opening;$("#start").hidden=!(d&&!op&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&(op||(S.sess&&!S.adding)));$("#cancadd").hidden=!(S.sess&&S.adding&&!op);renderLoaded();openingView(op);
+  const op=!!S.opening;$("#v-data").hidden=!d;$("#cancadd").hidden=!(S.sess&&S.adding&&!op);syncWork();renderLoaded();openingView(op);
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
   // The Teoria is Italian only: in English it opens at once in Italian, with a short toast the first time the student enters it (once per session without storage)
@@ -157,7 +157,7 @@ function waitStato(){if(!WAITING)return;const s=PROGRESSO.state(),on=PROGRESSO.b
   const txt=`${lab}${k} · ${convElapsed(Date.now()-WAIT0)}`;if(S.opening)openingStato(txt,on?s.pc:null);else loadingStato(txt,on?s.pc:null)}
 PROGRESSO.subscribe(waitStato);
 const idle=()=>UPBUSY>0?new Promise(ok=>IDLE.push(ok)):Promise.resolve();
-function checkGo(){$("#opbtn").disabled=(UPBUSY===0&&!ST.files.some(usable))||hrMixed();$("#gomsg").textContent=""}
+function checkGo(){$("#opbtn").disabled=(UPBUSY===0&&!ST.files.some(usable))||hrMixed();$("#gomsg").textContent="";syncWork()}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(/** @type {string} */ url,/** @type {Blob} */ f,/** @type {(loaded: number, total: number) => void} */ onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error(I18N.t("err.upload.network")));x.send(f)});
@@ -356,7 +356,7 @@ $("#dropdam").onclick=()=>$("#pickdam").click();$("#dropdam").onkeydown=(/** @ty
 $("#cartpick").onclick=()=>{if(typeof CartPunt!=="undefined"&&(CartPP.supported()||CartPP.S.native))CartPunt.choose();else $("#pickdir").click()};$("#pickdir").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{const go=flowOpen(e.target),p=CartCarica.fromInput(e.target.files);e.target.value="";if(go)p.then(idle).then(directDone)};
 // Flow's «Add files» and «Add a folder» set data-flow-open on the input: the files read are then opened at once, as dropped ones are (Flow reads the open files, not the loading table)
 const flowOpen=(/** @type {HTMLElement} */ el)=>{const on=el.dataset.flowOpen==="1";delete el.dataset.flowOpen;return on};
-$("#drop").onclick=()=>{delete $("#pick").dataset.flowOpen;$("#pick").click()};$("#pick").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{const go=flowOpen(e.target),p=upload([...e.target.files],"data");e.target.value="";if(go)p.then(idle).then(directDone)};
+$("#drop").onclick=()=>{delete $("#pick").dataset.flowOpen;$("#pick").click()};$("#drop").onkeydown=(/** @type {KeyboardEvent} */ e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("#drop").click()}};$("#pick").onchange=(/** @type {Event & { target: HTMLInputElement & { files: FileList } }} */ e)=>{const go=flowOpen(e.target),p=upload([...e.target.files],"data");e.target.value="";if(go)p.then(idle).then(directDone)};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,(/** @type {Event} */ e)=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,(/** @type {Event} */ e)=>{e.preventDefault();$("#drop").classList.remove("over")}));
 // a dropped folder is read by cartella-carica.js
@@ -401,7 +401,7 @@ const dropHasFiles=(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)
 // a clean «added» is only announced and then fades away; warnings and failures stay 9 s
 /** @param {unknown} [p] */ function directNote(/** @type {string} */ key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;n.style.opacity="";
   if(key==="files.drop.done"){DIRECT.tm=setTimeout(()=>{n.style.opacity="0";DIRECT.tm=setTimeout(()=>directNote(""),600)},900)}else if(key)DIRECT.tm=setTimeout(()=>directNote(""),9000)}
-function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-over",on);$("#fl-dz").hidden=!on}
+function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-over",on);if(on)$("#fl-dz").hidden=false;else syncWork(true)}
 async function directDone(){
   const open=(/** @type {FileRiga} */ f)=>E.files.some((/** @type {FileAperto} */ x)=>!x.gone&&(x.file===f.name||x.file.startsWith(f.name+"#")));
   ST.files.forEach((/** @type {FileRiga} */ f)=>{if(open(f))f.use=true});

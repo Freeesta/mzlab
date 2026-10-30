@@ -1,5 +1,6 @@
 //! `suspects::Suspects` answers like `leggi_sospetti().cerca` of Python on a synthetic mini index (`tools/sospetti_riferimento.py`; skipped without
 //! python3, `MZLAB_GOLDEN_STRICT=1` fails instead), rejects bad files, and searches 10^6 synthetic rows in well under a millisecond.
+//! The `listings` extension (flag bit 0) gives the same JSON as the reference reader; a v1 file without the flag has none.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -145,5 +146,44 @@ fn parity_with_python_reader() {
         hits += got.len();
     }
     assert!(hits > 100);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn v1_file_has_no_listings() {
+    let s = Suspects::open(&synth(10)).unwrap();
+    assert!(s.listings().is_none() && s.listings_json().is_none());
+    assert_eq!(s.len(), 10);
+}
+
+#[test]
+fn listings_match_python_reference() {
+    let dir = std::env::temp_dir().join(format!("mzsus-ext-{}", std::process::id()));
+    let ok = Command::new("python3")
+        .arg(root().join("tools/sospetti_riferimento.py"))
+        .arg(&dir)
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if !ok {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "reference script failed"
+        );
+        eprintln!("skipped: python3 reference not available");
+        return;
+    }
+    let raw = std::fs::read(dir.join("listings.mzsus")).unwrap();
+    let s = Suspects::open(&raw).unwrap();
+    let l = s.listings().expect("flag bit 0");
+    assert_eq!((s.len(), l.list_count(), l.entry_count()), (4, 2, 5));
+    assert_eq!(s.search(59.037114, 1.0).len(), 1);
+    let want = std::fs::read_to_string(dir.join("listings.json")).unwrap();
+    assert_eq!(s.listings_json().unwrap(), want);
+    // a truncated extension is refused, never read past the end
+    assert!(matches!(
+        Suspects::open(&raw[..raw.len() - 24]),
+        Err(SuspectsError::Corrupt(_))
+    ));
     let _ = std::fs::remove_dir_all(dir);
 }

@@ -19,16 +19,12 @@ pub struct DigInputs {
 
 /// The polarity the Dig looks in: the recipe's, else the sign of the parent adduct, else what the MS1 scans of the files say (a mix or no scans read as positive).
 fn dig_polarity<I: ReadAt>(adduct: &str, recipe: &Recipe, indexes: &[Index<I>]) -> i8 {
-    let sum: i64 = indexes
-        .iter()
-        .map(|ix| i64::from(mzlab_feat::facts::file_facts(ix).polarity))
-        .sum();
     recipe
         .detect
         .polarity
         .filter(|&p| p != 0)
         .or_else(|| adduct.ends_with('-').then_some(-1))
-        .or_else(|| (sum != 0).then(|| sum.signum() as i8))
+        .or_else(|| mzlab_feat::nature::of_indexes(indexes).polarity)
         .unwrap_or(1)
 }
 
@@ -57,7 +53,8 @@ pub fn dig_inputs<I: ReadAt>(
             .str(n)
             .raw(",\"kind\":\"full\"}");
     }
-    files.raw("],\"campioni\":").raw(samples.trim()).raw("}");
+    let samples = mzlab_core::campioni::order_like(samples.trim(), names)?;
+    files.raw("],\"campioni\":").raw(&samples).raw("}");
     let adduct = if adduct == "[M+H]+" && polarity < 0 {
         "[M-H]-"
     } else {
