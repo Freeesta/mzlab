@@ -149,8 +149,10 @@ fn a_sample_with_no_blank_of_its_batch_falls_back_to_all_blanks_and_says_so() {
 
 #[test]
 fn matching_by_matrix_reads_the_matrix_labels() {
-    let mut l = Labels::default();
-    l.matrix = labels(true).batch;
+    let l = Labels {
+        matrix: labels(true).batch,
+        ..Labels::default()
+    };
     let got = kept(&spec(&blank(r#","abbinamento":"matrice""#), NONE, &l));
     assert!(!got.contains(&CONTAM));
     // a rule that matches batches with no batch label compares with all blanks
@@ -179,16 +181,18 @@ fn a_replicate_fraction_keeps_two_of_three_in_one_group_and_drops_one_of_three_e
         "present in all: {got:?}"
     );
     // a group set in the labels splits the files differently: all six samples in one group, 3 of 6 is below 0.67
-    let mut l = Labels::default();
-    l.group = (0..N)
-        .map(|k| {
-            if k < 4 {
-                String::new()
-            } else {
-                "all".to_string()
-            }
-        })
-        .collect();
+    let l = Labels {
+        group: (0..N)
+            .map(|k| {
+                if k < 4 {
+                    String::new()
+                } else {
+                    "all".to_string()
+                }
+            })
+            .collect(),
+        ..Labels::default()
+    };
     let one = kept(&spec(rule, NONE, &l));
     assert!(!one.contains(&TWO));
     // a fraction outside 0..1 is refused
