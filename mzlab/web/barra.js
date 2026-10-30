@@ -467,16 +467,15 @@ const BARRA = (() => {
   // ---------------------------------------------------------------- toolbar
   function btnHtml(/** @type {Bag} */ c, /** @type {string} */ extra = "") {
     const dom = c.dom ? ` id="${c.dom}"` : "";
-    return `<button type="button" class="tb ${extra}"${dom}${MAIN.has(c.id) ? " data-main" : ""} data-cmd="${c.id}" title="${EHs(tip(c))}" aria-label="${EHs(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>`;
+    return `<button type="button" class="tb ${extra}"${dom}${MAIN.has(c.id) ? " data-main" : ""} data-cmd="${c.id}" title="${EH(tip(c))}" aria-label="${EH(name(c))}"><span class="ti">${c.ic()}</span><span class="tl">${EH(lab(c))}</span></button>`;
   }
-  const EHs = (/** @type {unknown} */ s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
   function splitHtml(/** @type {Bag} */ c) {
     const last = byId(_last[c.id]);
     const full = `${name(c)}: ${name(last)}`;
-    return `<span class="tb-split" data-cmd="${c.id}" role="group" aria-label="${EHs(name(c))}">` +
-      `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EHs(full)}" aria-label="${EHs(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EHs(lab(c))}</span></button>` +
-      `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EHs(name(c))}" aria-label="${EHs(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
+    return `<span class="tb-split" data-cmd="${c.id}" role="group" aria-label="${EH(name(c))}">` +
+      `<button type="button" class="tb tb-main"${MAIN.has(c.id) ? " data-main" : ""} data-cmd-main="${c.id}" title="${EH(full)}" aria-label="${EH(full)}"><span class="ti">${last.ic()}</span><span class="tl">${EH(lab(c))}</span></button>` +
+      `<button type="button" class="tb tb-car" data-cmd-car="${c.id}" aria-haspopup="menu" aria-expanded="false" title="${EH(name(c))}" aria-label="${EH(name(c))}"><span class="ti">${ICONS.caret}</span></button></span>`;
   }
 
   // the commands of the Teoria as the bar and the palette use them: {id, teo, etichetta, ic, run, items}
@@ -494,7 +493,7 @@ const BARRA = (() => {
     const sep = '<span class="tb-sep" role="separator"></span>';
     const cs = theoryCmds().filter(c => !c.end && !c.lat && !c.hide);
     const gear = theoryCmds().find(c => c.end);
-    const one = (/** @type {Bag} */ c) => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EHs(c.titolo)}" aria-label="${EHs(c.testo ? c.titolo : c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}>${c.after ? `<span class="tl">${EHs(c.testo || c.etichetta)}</span><span class="ti">${c.ic()}</span>` : `<span class="ti">${c.ic()}</span><span class="tl">${EHs(c.testo || c.etichetta)}</span>`}</button>`;
+    const one = (/** @type {Bag} */ c) => `<button type="button" class="tb" data-tcmd="${c.id}"${c.off ? ' aria-disabled="true"' : ""}${c.premuto ? ` aria-pressed="${c.premuto()}"` : ""} title="${EH(c.titolo)}" aria-label="${EH(c.testo ? c.titolo : c.etichetta + (c.chiave ? " (" + c.chiave + ")" : ""))}"${c.items ? ' aria-haspopup="menu" aria-expanded="false"' : ""}>${c.after ? `<span class="tl">${EH(c.testo || c.etichetta)}</span><span class="ti">${c.ic()}</span>` : `<span class="ti">${c.ic()}</span><span class="tl">${EH(c.testo || c.etichetta)}</span>`}</button>`;
     bar.innerHTML = cs.filter(c => c.id === "indice" || c.id === "prec" || c.id === "succ").map(one).join("") + [cs.filter(c => c.id !== "indice" && c.id !== "prec" && c.id !== "succ").map(one).join(""), gear ? one(gear) : ""].filter(Boolean).map(g => sep + g).join("");   // one separator between groups, none at the ends or doubled
     bar.querySelectorAll("button[data-tcmd]").forEach((/** @type {HTMLElement} */ b) => {
       const c = cs.concat(gear || []).find(x => x.id === b.dataset.tcmd);
@@ -529,7 +528,7 @@ const BARRA = (() => {
     h += `<span class="tb-sep" role="separator" data-hrgrp="1"></span>`;
     h += hr.map(c => (c.items ? splitHtml(c) : btnHtml(c, "hrb"))).join("");
     h += `<span class="tb-sep" role="separator" data-sep2="1"></span>`;
-    h += `<button type="button" class="tb" id="tb-more" data-cmd="more" aria-haspopup="menu" aria-expanded="false" title="${EHs(t("cmd.more.name"))}" aria-label="${EHs(t("cmd.more.name"))}"><span class="ti">${ICONS.more}</span><span class="tl">${EHs(t("cmd.more.lab"))}</span></button>`;
+    h += `<button type="button" class="tb" id="tb-more" data-cmd="more" aria-haspopup="menu" aria-expanded="false" title="${EH(t("cmd.more.name"))}" aria-label="${EH(t("cmd.more.name"))}"><span class="ti">${ICONS.more}</span><span class="tl">${EH(t("cmd.more.lab"))}</span></button>`;
     h += CMD.filter(c => c.bar === "end").map(c => btnHtml(c)).join("");
     bar.innerHTML = h;
     bar.querySelectorAll("button[data-cmd]").forEach((/** @type {HTMLElement} */ b) => {
@@ -727,7 +726,7 @@ const BARRA = (() => {
       if (r.checked != null) b.setAttribute("aria-checked", r.checked ? "true" : "false");
       if (r.dom) b.id = r.dom;
       b.tabIndex = -1;
-      b.innerHTML = `<span class="mi">${r.ic || ""}</span><span>${EHs(r.label)}</span>`;
+      b.innerHTML = `<span class="mi">${r.ic || ""}</span><span>${EH(r.label)}</span>`;
       if (r.title) b.title = r.title;
       b.onclick = () => { closeMenu(false); r.fn(); };
       m.appendChild(b);

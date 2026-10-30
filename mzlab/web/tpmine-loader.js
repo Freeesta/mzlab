@@ -63,12 +63,11 @@
     bar = document.createElement("div"); bar.id = "qt-bar"; bar.hidden = true; document.body.appendChild(bar);
     host = document.createElement("div"); host.id = "qt-host"; document.body.appendChild(host);
   }
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function render() {
     if (!bar) return;
     const floating = tools.filter(t => !t.nav);
     bar.hidden = !on || !floating.length;
-    bar.innerHTML = floating.map(t => `<button data-t="${esc(t.id)}" title="${esc(t.desc || t.name)}">${t.icon || ""}${esc(t.name)}</button>`).join("");
+    bar.innerHTML = floating.map(t => `<button data-t="${EH(t.id)}" title="${EH(t.desc || t.name)}">${t.icon || ""}${EH(t.name)}</button>`).join("");
     bar.querySelectorAll("button").forEach(b => b.onclick = () => openTool(tools.find(t => t.id === b.dataset.t)));
   }
   // a tab can be clicked before the page shell (shell.js) has run: the view is then shown here, and told to the shell as soon as it exists
@@ -92,7 +91,7 @@
   // tool with its own tab: button in #nav + full page section after the other views; opened lazily on the first visit
   const tabs = new Map();         // id -> {b, sec, fn}
   /** the text of the tab button: icon and name */
-  const label = t => (t.icon ? t.icon + " " : "") + esc(t.name);
+  const label = t => (t.icon ? t.icon + " " : "") + EH(t.name);
   function addTab(t) {
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
     const old = tabs.get(t.id);
@@ -119,7 +118,7 @@
   }
   function openIn(x) { try { x.t.open(x.sec, reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); x.sec.textContent = "Tabui failed: " + (e && e.message || e); } }
   function openTool(t) {
-    host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x">Close</button></div><div class="qt-bd"></div>`;
+    host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${EH(t.name)}</b><span class="muted sm">${EH(t.desc || "")}</span><button class="qt-x">Close</button></div><div class="qt-bd"></div>`;
     host.querySelector(".qt-x").onclick = () => { host.classList.remove("on"); if (t.close) try { t.close(); } catch (_) { /* ignore */ } host.innerHTML = ""; };
     host.classList.add("on");
     try { t.open(host.querySelector(".qt-bd"), reg.ctx); } catch (e_) { const e = /** @type {Lanciato} */ (e_); host.querySelector(".qt-bd").textContent = "Tabui failed: " + (e && e.message || e); }
