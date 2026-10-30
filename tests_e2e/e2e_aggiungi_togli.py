@@ -61,7 +61,7 @@ try:
             ks = pg.evaluate("E.files.filter(f => !f.gone).map(f => f.k)")
             pg.evaluate(f"E.files[{ks[-1]}].vis = false; E.files[{ks[0]}].vis = true; renderFileList()")
             pg.evaluate(f"removeFile(E.files[{ks[-1]}])"); pg.evaluate(f"removeFile(E.files[{ks[0]}])")
-            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files[{ks[0]}].gone === false"); pg.wait_for_timeout(1500)
+            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files[{ks[0]}].gone === false"); attendi(pg, f"NB.ui.files.some(f => f.file === E.files[{ks[0]}].file && f.vis && !f.gone)"); ready(pg, settle=1200)
             pg.reload(); attendi(pg, "window.qqReady === true", 60000)
             attendi(pg, "E.files.some(f => f.vis && !f.gone)", 30000)
         step("reload after remove + Undo shows the file", f8)
