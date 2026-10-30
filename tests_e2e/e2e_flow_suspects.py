@@ -1,5 +1,5 @@
 """Flow «This browser» screen.suspects (flow/lazy/flow-web-suspects.js, `flow_screen_suspects` of the `table` .wasm): over the synthetic identity series (tools/feat_sintetici.py) and a suspect list made here from the
-precursors of its MS2 scans (two true suspects, one with the fragments of its spectrum, and a decoy 20 mDa away) the plan detect → align → gap-fill, spectra.ms2 → screen.suspects runs in the browser and writes the screen/1
+precursors of its MS2 scans (two true suspects, one with the fragments of its spectrum, a decoy 20 mDa away and an absent mass) the plan detect → align → gap-fill, spectra.ms2 → screen.suspects runs in the browser and writes the screen/1
 text that `mzlab-cli flow run` writes of the same plan, byte for byte; a second run takes it from OPFS; the engine had no route it could not serve. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen,
 python3 and numpy: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_suspects.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -78,7 +78,9 @@ nat = json.loads(NAT)
 print("native:", len(NAT), "bytes,", len(nat["hits"]), "hits")
 assert nat["format"] == "screen/1" and nat["suspect_files"][0]["sha256"] == LISTSHA
 assert any(c["name"] == "Suspect one" for h in nat["hits"] for c in h["candidates"]), "the true suspect is not found: " + NAT[:600].decode()
-assert not any(c["name"] in ("Decoy", "Absent") for h in nat["hits"] for c in h["candidates"]), "a decoy or the absent suspect is listed"
+# the decoy may hit another feature of the 930 through an adduct by chance; it must not hit the feature of the true suspect, and the absent one must hit nothing
+assert not any(c["name"] == "Absent" for h in nat["hits"] for c in h["candidates"]), "the absent suspect is listed"
+assert not any(c["name"] == "Decoy" for h in nat["hits"] if h["adduct"] == "[M+H]+" for c in h["candidates"]), "the decoy is listed as [M+H]+"
 data = site / "static" / "dati_flow_suspects"; data.mkdir()
 for n in NAMES: shutil.copy2(out / ("idx-" + n + ".mzidx"), data / (n + ".mzidx"))
 shutil.copy2(run / (MS2 + ".mzML"), data / (MS2 + ".mzML"))
