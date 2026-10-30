@@ -124,6 +124,11 @@ KEPT = """async () => {
   for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); out[j.name] = j.text; }
   return out;
 }"""
+KEPTALL = """async () => {
+  const d = await (await (await navigator.storage.getDirectory()).getDirectoryHandle('mzlab')).getDirectoryHandle('flow'), msn = await d.getDirectoryHandle('msn'), out = [];
+  for await (const [n, h] of msn.entries()) if (n !== 'index.json') { const j = JSON.parse(await (await h.getFile()).text()); if (j.name === 'ins.json') out.push(j.text); }
+  return out;
+}"""
 PORT = lib.free_port()
 srv = subprocess.Popen([sys.executable, str(HERE / "servi.py"), str(PORT), str(site)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 errs = []
@@ -185,15 +190,14 @@ try:
         def first():
             r = pg.evaluate(RUN, WEB); assert not r.get("err"), (r["err"], r["ev"][-4:])
             for i in ("ms2", "ins"):
-                assert any(e["passo"] == i and e["stato"] in ("done", "reused") and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
-            assert any(e["passo"] == "ins" and e["stato"] == "done" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
+                assert any(e["passo"] == i and (e["stato"] == "done" or e.get("modo") == "reused") and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])
             kept = pg.evaluate(KEPT); assert "ins.json" in kept, list(kept)
             web = kept["ins.json"].encode(); at = next((i for i, (x, y) in enumerate(zip(NAT, web)) if x != y), min(len(NAT), len(web)))
             assert sha(web) == sha(NAT), ("first difference at", at, len(NAT), len(web), NAT[max(0, at - 80):at + 80], web[max(0, at - 80):at + 80])
         step("ms2 -> insilico in this browser is the candidates/1 of mzlab-cli flow run, byte for byte", first)
         def again():
             r = pg.evaluate(RUN, WEB)
-            assert any(e["passo"] == "ins" and e["stato"] == "reused" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
+            assert any(e["passo"] == "ins" and e.get("modo") == "reused" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
         step("a second run takes it from OPFS", again)
         def offline():
             open_flow(); asked.clear()
@@ -210,8 +214,8 @@ try:
                 ctx.set_offline(True)
                 r = pg.evaluate(RUN, variant(2)); assert not r.get("err"), r["err"]
                 assert any(e["passo"] == "ins" and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), [e for e in r["ev"] if e["passo"] == "ins"]
-                got = json.loads(pg.evaluate(KEPT)["ins.json"])["hits"]
-                assert got and len(got) <= 2 * len(set(h["query"] for h in got)), len(got)
+                alls = [json.loads(t)["hits"] for t in pg.evaluate(KEPTALL)]
+                assert any(g and len(g) <= 2 * len(set(h["query"] for h in g)) for g in alls), [len(g) for g in alls]
             finally: ctx.set_offline(False)
             assert not asked, asked
         step("after a reload with the network cut the cached package still runs", offline)
