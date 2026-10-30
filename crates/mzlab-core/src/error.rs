@@ -22,21 +22,11 @@ impl Error {
     }
 
     /// The error as the JSON text every bridge sends (`{"error_key":..,"params":{..}}`); strings go through `json::Out::str`, so control characters become valid `\u0001`.
-    /// The core builds at opt-level 3 and the bridges at "z": one out-of-line string writer keeps this from growing every `.wasm`.
     pub fn to_json(&self) -> String {
-        #[inline(never)]
-        fn quoted(o: &mut crate::json::Out, s: &str) {
-            o.str(s);
-        }
         let mut o = crate::json::Out::default();
-        o.raw("{\"error_key\":");
-        quoted(&mut o, self.key);
-        o.raw(",\"params\":{");
+        o.raw("{\"error_key\":").str(self.key).raw(",\"params\":{");
         for (i, (k, v)) in self.params.iter().enumerate() {
-            o.raw(if i > 0 { "," } else { "" });
-            quoted(&mut o, k);
-            o.raw(":");
-            quoted(&mut o, v);
+            o.raw(if i > 0 { "," } else { "" }).str(k).raw(":").str(v);
         }
         o.raw("}}");
         o.0

@@ -243,6 +243,8 @@ impl Out {
         self.0.push_str(s);
         self
     }
+    // One out-of-line copy: the core builds at opt-level 3 and the size-capped `.wasm` crates at "z", so inlining it into every writer grows them.
+    #[inline(never)]
     pub fn str(&mut self, s: &str) -> &mut Self {
         self.0.push('"');
         for c in s.chars() {
