@@ -93,9 +93,12 @@ PUT = """async (names) => {
 # the mzML the page has "open" for spectra.ms2 (the engine keeps the blob of every file it was given)
 HOLD = """async (name) => { const b = await (await fetch("static/dati_flow_suspects/" + name + ".mzML")).blob(); window.MZLAB_RUST.noteUpload(name + ".mzML", b); return b.size; }"""
 RUN = """async ([plan, list]) => {
+  const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
   const S = document.querySelector('.flx-list').__flow, ev = [], on = e => ev.push(e.detail);
   S.plan.inputs = JSON.parse(JSON.stringify(plan.inputs)); S.plan.steps = JSON.parse(JSON.stringify(plan.steps));
   S.samplesJson = S.samplesJson || {}; S.samplesJson['list.csv'] = list;
+  // the picker of the page records the SHA-256 of the file in the input, which is what tells the runner the list changed
+  S.plan.inputs.find(i => i.name === 'list.csv').sha256 = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(list)));
   document.addEventListener('flow:web-step', on);
   try { await FLOW.runners.web.run(S); return { ev }; }
   catch (e) { return { ev, err: { key: e.key, params: e.params, msg: String(e && e.message || e) } }; }
@@ -133,7 +136,7 @@ try:
             assert any(e["passo"] == "scr" and e["stato"] == expect and e["via"] == "browser" for e in r["ev"]), (expect, [e for e in r["ev"] if e["passo"] == "scr"][-3:])
         def first():
             r = pg.evaluate(RUN, [PLAN, LIST]); check(r, "done")
-            for i in ("det", "ali", "gap", "ms2"):
+            for i in ("det", "ali", "ms2"):   # gap fill runs inside the alignment call of the pool
                 assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             web = pg.evaluate(KEPT).get("scr.json", "").encode()
             at = next((i for i, (x, y) in enumerate(zip(NAT, web)) if x != y), min(len(NAT), len(web)))
