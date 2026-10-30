@@ -3,25 +3,19 @@
 // `molfile`, and the SVG of the molecule or of the parent of a fragment with the atoms of the cut piece highlighted (vermillion fill and dashed ring: the
 // colour is never the only cue). A fragment drawing is a hypothesis of the cleavage candidates, never a result. Used by infusione-grafo*.js.
 import { G } from "./infusione-grafo-stato.js";
+import { ocl } from "./mol-svg.js";
 
 /** @type {any} */ let OCL = null;
 let doneFor = "";
 /** @type {Map<string, string>} */
 const pics = new Map();
 
-/** OpenChemLib, once; null when the file cannot be loaded (no drawings then). */
-async function lib() {
-  if (OCL) return OCL;
-  try { const m = await import("./vendor/openchemlib.js"); OCL = m.default || m; } catch (_) { OCL = null; }
-  return OCL;
-}
-
 /** Makes `G.molfile` from `G.smiles` (empty when there is no SMILES, it cannot be read or OpenChemLib is missing). Call before asking for the graph. */
 export async function prepareMolfile() {
   if (doneFor === G.smiles && (G.molfile || !G.smiles)) return;
   G.molfile = ""; pics.clear(); doneFor = G.smiles;
   if (!G.smiles) return;
-  const o = await lib();
+  const o = OCL = await ocl();
   if (!o) return;
   try { const m = o.Molecule.fromSmiles(G.smiles); m.inventCoordinates(); G.molfile = m.toMolfile(); } catch (_) { G.molfile = ""; }
 }
