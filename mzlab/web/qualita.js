@@ -44,9 +44,9 @@ window.QUALITA = {
   },
   /** Peaks of the trace: mode 0 = CWT, 1 = prominence + local minimum. Each: { apex, lo, hi, area, height, snr, n, gaussian, asymmetry, noise } (indices into the trace), or null. */
   detect(x, y, mode) { return call({ op: "detect", rt: f64(x), y: f64(y), mode }); },
-  /** Limits [lo, hi] (indices into the trace) of every peak with its apex between the times x0 and x1, by RT: the one-click integration of HR traces.
-   * o = { smooth (points), snr, rel (fraction of the highest point), scans }; null without the engine. */
-  autoLimits(x, y, x0, x1, o) { return call({ op: "auto", rt: f64(x), y: f64(y), x0, x1, ...o }); },
+  /** Every peak with its apex between the times x0 and x1, by RT, as { lo, hi (indices into the trace), b0, b1 (baseline at lo and hi), area }: the one-click integration of HR traces.
+   * o = { smooth (points), snr, rel (fraction of the highest point), scans, half (edge smoothing, 0 = auto), slope }; null without the engine. */
+  autoIntegrate(x, y, x0, x1, o) { return call({ op: "auto", rt: f64(x), y: f64(y), x0, x1, ...o }); },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */

@@ -113,6 +113,7 @@ pub mod mzmlwrite;
 pub mod mzmlvalida;
 pub mod pace;
 pub mod peakq;
+pub mod peakq_auto;
 #[cfg(test)]
 mod peakq_reach_test;
 #[cfg(test)]

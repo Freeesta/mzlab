@@ -608,19 +608,19 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
     found.len().min(room) as u32
 }
 
-/// Limits of every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as index pairs `[lo, hi]`: the one-click integration of
-/// high-resolution traces. `smooth` = Savitzky-Golay window (points), `snr` = prominence over the noise, `rel` = prominence over the highest
-/// point (fraction), `min_scans` = narrowest peak; the rest as `detect_peaks` mode 1. Returns the number of pairs written.
+/// Every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as `[lo, hi, baseline at lo, baseline at hi, area]` (indices,
+/// counts, counts x min): the one-click integration of high-resolution traces (`peakq_auto`). `smooth` = Savitzky-Golay window of the apex
+/// picking (points), `snr` = prominence over the noise, `rel` = prominence over the highest point (fraction), `min_scans` = narrowest peak,
+/// `half_window` = smoothing of the edges (0 = from the peak width), `slope` = flat-flank stop (fraction). Returns the number of peaks written.
 #[wasm_bindgen]
 #[allow(clippy::too_many_arguments)]
-pub fn auto_limits(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, rel: f64, min_scans: u32, out: &mut [f64]) -> u32 {
-    let n = rt.len().min(y.len());
-    let p = peakq::ProminenceParams { snr, rel_prominence: rel, min_scans: min_scans as usize, smooth: smooth as usize, local_snr: 5.0, ..Default::default() };
-    let found = peakq::auto_limits(&rt[..n], &y[..n], x0, x1, p);
-    let room = out.len() / 2;
-    for (i, &(lo, hi)) in found.iter().take(room).enumerate() {
-        out[2 * i] = lo as f64;
-        out[2 * i + 1] = hi as f64;
+pub fn auto_integrate(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, rel: f64, min_scans: u32, half_window: u32, slope: f64, out: &mut [f64]) -> u32 {
+    let pick = peakq::ProminenceParams { snr, rel_prominence: rel, min_scans: min_scans as usize, smooth: smooth as usize, local_snr: 5.0, ..Default::default() };
+    let p = mzlab_core::peakq_auto::AutoParams { pick, half_window: half_window as usize, slope, ..Default::default() };
+    let found = mzlab_core::peakq_auto::auto_integrate(rt, y, x0, x1, p);
+    let room = out.len() / 5;
+    for (i, k) in found.iter().take(room).enumerate() {
+        out[5 * i..5 * i + 5].copy_from_slice(&[k.lo as f64, k.hi as f64, k.base_lo, k.base_hi, k.area]);
     }
     found.len().min(room) as u32
 }
@@ -667,20 +667,21 @@ mod tests {
     }
 
     #[test]
-    fn auto_limits_are_the_core_windows() {
-        // three Gaussians on a flat baseline; the pairs written are the windows of mzlab-core, and a short buffer keeps the first ones
+    fn auto_integrate_is_the_core_result() {
+        // three Gaussians on a flat baseline; the rows written are those of mzlab-core, and a short buffer keeps the first ones
+        use mzlab_core::peakq_auto::{auto_integrate, AutoParams};
         let rt: Vec<f64> = (0..400).map(|i| f64::from(i) * 0.015).collect();
         let g = |t: f64, c: f64, h: f64| h * (-((t - c) / 0.05).powi(2) / 2.0).exp();
         let y: Vec<f64> = rt.iter().enumerate().map(|(i, &t)| g(t, 1.0, 8.0e4) + g(t, 2.5, 2.0e4) + g(t, 4.5, 1.0e5) + 500.0 + f64::from(i as u32 % 7) * 20.0).collect();
-        let core = mzlab_core::peakq::auto_limits(&rt, &y, 0.0, 6.0, mzlab_core::peakq::ProminenceParams { local_snr: 5.0, ..Default::default() });
+        let core = auto_integrate(&rt, &y, 0.0, 6.0, AutoParams::default());
         assert_eq!(core.len(), 3);
-        let mut out = vec![0.0; 128];
-        let n = super::auto_limits(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, &mut out) as usize;
-        let got: Vec<(usize, usize)> = (0..n).map(|i| (out[2 * i] as usize, out[2 * i + 1] as usize)).collect();
-        assert_eq!(got, core);
-        let mut short = vec![0.0; 4];
-        assert_eq!(super::auto_limits(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, &mut short), 2);
-        assert_eq!(short, vec![core[0].0 as f64, core[0].1 as f64, core[1].0 as f64, core[1].1 as f64]);
+        let row = |k: &mzlab_core::peakq_auto::AutoPeak| vec![k.lo as f64, k.hi as f64, k.base_lo, k.base_hi, k.area];
+        let mut out = vec![0.0; 5 * 64];
+        let n = super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut out) as usize;
+        assert_eq!(out[..5 * n].to_vec(), core.iter().flat_map(row).collect::<Vec<f64>>());
+        let mut short = vec![0.0; 10];
+        assert_eq!(super::auto_integrate(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, 0, 0.03, &mut short), 2);
+        assert_eq!(short, core[..2].iter().flat_map(row).collect::<Vec<f64>>());
     }
 
     #[test]

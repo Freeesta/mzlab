@@ -1,4 +1,4 @@
-"""One click of the automatic integration tool on a high-resolution XIC integrates every peak of the stretch shown (Rust auto_limits, peakq.rs),
+"""One click of the automatic integration tool on a high-resolution XIC integrates every peak of the stretch shown (Rust auto_integrate, peakq_auto.rs),
 in one undoable step; on a low-resolution XIC the same click still integrates only the peak under the cursor, with the edges of autoEdges."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -43,6 +43,14 @@ for kind in ("hr", "lr"):
                     w = pg.evaluate(WINS); assert len(w) == 2, w
                     assert w[0][0] < 9.0 < w[0][1] and w[1][0] < 11.5 < w[1][1] and w[0][1] <= w[1][0], w
                 step("one click on an empty stretch integrates both peaks of the HR trace", all_peaks)
+                def parity():
+                    v = pg.evaluate("""(async()=>{const p=E.panels.find(q=>q.type==='xic'),s=p._a.sr[0],a=p._a;
+                      const r=await QUALITA.autoIntegrate(s.x,s.y,a.x0,a.x1,{smooth:PK.hrSmooth,snr:PK.hrSn,rel:PK.hrProm/100,scans:PK.hrScans,half:PK.hrHalf,slope:PK.hrSlope/100});
+                      const it=[...p.ints].sort((u,w)=>u.a-w.a);return it.map((i,k)=>[i.area,r[k].area*60,!!i.base,integ(s,i.a,i.b).area])})()""")
+                    for page, rust, has_base, chord in v:
+                        assert has_base and abs(page - rust) <= 1e-6 * rust, v       # the page area over the Rust baseline is the Rust area
+                        assert chord > 0, v
+                step("the area shown is the one of the Rust engine, over its own baseline", parity)
                 def undo_redo():
                     pg.evaluate("STORIA.annulla()"); attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length===0")
                     click_at(pg, 10.2); attendi(pg, "E.panels.find(q=>q.type==='xic').ints.length===2")
