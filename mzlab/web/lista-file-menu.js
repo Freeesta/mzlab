@@ -38,7 +38,10 @@ function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
   // «Group files» with two or more ticked files, the right-clicked one among them; «Ungroup» dissolves the user group of this file
   const grp = f.vis && ugBases().size > 1, own = f.ugrp;
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(grp ? [{ label: I18N.t("files.ctx.group"), fn: groupFiles }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(own), "") }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, ...(/\.mzml$/i.test(f.file) ? [{ label: I18N.t("files.ctx.validate"), fn: () => /** @type {any} */ (window).VALIDA_MZML.show(f.file) }] : []), "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) }]);
+  const live = E.files.filter(g => !g.gone), shown = live.filter(g => g.vis);
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(grp ? [{ label: I18N.t("files.ctx.group"), fn: groupFiles }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(own), "") }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, ...(/\.mzml$/i.test(f.file) ? [{ label: I18N.t("files.ctx.validate"), fn: () => /** @type {any} */ (window).VALIDA_MZML.show(f.file) }] : []), "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) },
+    ...(f.vis && shown.length > 1 ? [{ label: I18N.t("files.ctx.removeShown", { n: shown.length }), fn: () => removeAllFiles(shown) }] : []),
+    ...(live.length > 1 ? [{ label: I18N.t("files.ctx.removeAll"), fn: () => removeAllFiles() }] : [])]);
 }
 // quick file chooser opened from a graph header: tick/untick files (same switch as the list on the left), click a name to show only that file
 function fileMenu(btn) {

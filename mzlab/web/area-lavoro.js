@@ -84,3 +84,17 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
     if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
   }, true);
 })();
+
+// files dragged over the work area while panels or the sample table show: an overlay over the whole area takes the drop (the landing has its own box)
+(() => {
+  const ws = workQ("#v-workspace"), on = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files") && S.sess && S.view === "data" && ["panels", "table"].includes(ws.dataset.work || "");
+  const off = () => ws.classList.remove("ws-drop");
+  ["dragenter", "dragover"].forEach(t => ws.addEventListener(t, (/** @type {DragEvent} */ e) => { if (!on(e)) return; e.preventDefault(); ws.dataset.dz = I18N.t("files.drop.zone"); ws.classList.add("ws-drop"); }));
+  ws.addEventListener("dragleave", (/** @type {DragEvent} */ e) => { if (!ws.contains(/** @type {Node | null} */ (e.relatedTarget))) off(); });
+  ws.addEventListener("drop", (/** @type {DragEvent} */ e) => {
+    const was = ws.classList.contains("ws-drop"); off();
+    if (!was || !e.dataTransfer || !on(e)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
+  }, true);
+})();
