@@ -304,6 +304,7 @@ I18N.add("en", {
   "cont.col": "Contam.",
   "bar.prev": "Previous file (left arrow)",
   "bar.next": "Next file (right arrow)",
+  "bar.fsel": "File shown",
   "bar.addChrom": "+ Chromatogram",
   "bar.addSpec": "+ Spectrum",
   "bar.addMap.title": "Map of all the ions over time: each pixel is an m/z at a certain RT",
