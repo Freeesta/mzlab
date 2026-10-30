@@ -23,7 +23,12 @@ def test_dir_of_a_file_chosen_alone_and_of_a_folder():
 
 def test_split_keeps_compatible_files_and_counts_the_others():
     r = run("(()=>{const s=c.split([F('a.mzML','t/'),F('b.dam','t/'),F('c.wiff','t/'),F('c.wiff.scan','t/'),F('d.raw','t/'),F('notes.txt','t/'),F('e.d','t/'),F('.hid.mzML','t/'),F('x.mzML','t/.cache/')]);return [s.ok.map(f=>f.name),s.ignored.length]})()")
-    assert r == [["a.mzML", "b.dam", "c.wiff", "c.wiff.scan", "d.raw"], 4]
+    assert r == [["a.mzML", "b.dam", "c.wiff", "c.wiff.scan", "d.raw"], 3]   # notes.txt is a tool by-product: not counted
+
+
+def test_tool_byproducts_are_skipped_silently():
+    r = run("(()=>{const s=c.split([F('a.mzML','t/'),F('x.log','t/'),F('x.txt','t/'),F('f.pdf','t/')]);return [s.ok.map(f=>f.name),s.ignored.map(f=>f.name)]})()")
+    assert r == [["a.mzML"], ["f.pdf"]]
 
 
 def test_wiff_pairs_only_inside_the_same_folder():

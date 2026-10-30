@@ -93,7 +93,7 @@ def run(a):
             mark("undo"); pg.evaluate("typeof STORIA !== 'undefined' && STORIA.annulla ? STORIA.annulla() : null"); quiet(pg, a.settle)
             if pg.locator("#addf").count() and pg.is_visible("#addf"):
                 mark("addf-click"); pg.click("#addf"); quiet(pg, a.settle)
-                if pg.is_visible("#cancadd"): mark("cancadd-click"); pg.click("#cancadd"); quiet(pg, a.settle)
+                if pg.is_visible("#backwork"): mark("backwork-click"); pg.click("#backwork"); quiet(pg, a.settle)
             before = pg.evaluate("window.__m")
             before["res"] = pg.evaluate("performance.getEntriesByType('resource').map(e => [Math.round(performance.timeOrigin + e.startTime), e.name.split('/').slice(3).join('/'), e.initiatorType, e.renderBlockingStatus || '', e.decodedBodySize])")
             mark("reload"); pg.reload(); pg.wait_for_selector("#v-data")

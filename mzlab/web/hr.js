@@ -39,10 +39,7 @@ const HR = (() => {
     const bad = (files || []).filter(f => f && f.hr_err && !told.has(f.file));
     if (!bad.length) return;
     bad.forEach(f => { told.add(f.file); console.info("HR", f.file, f.hr_err); });
-    let d = document.querySelector("#hrerr");
-    if (!d) { d = document.createElement("div"); d.id = "hrerr"; d.style.cssText = "position:fixed;z-index:20000;left:50%;bottom:18px;transform:translateX(-50%);max-width:520px;padding:8px 14px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35)"; document.body.appendChild(d); }
-    d.textContent = I18N.t("hr.notice", { files: bad.map(f => f.label || f.file).join(", ") }); d.hidden = false;
-    clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 7000);
+    nearMsg(I18N.t("hr.notice", { files: bad.map(f => f.label || f.file).join(", ") }));
   }
   // ---------------------------------------------------------------- isotope pattern with the fine structure (high resolution)
   // isoPattern() of tables.js groups isotopologues by nominal mass (right for unit resolution). Here every different exact mass stays a peak
