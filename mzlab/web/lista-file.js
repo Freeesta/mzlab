@@ -34,6 +34,8 @@ const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
 function soloFile(/** @type {any} */ f0) {
   if (!f0) return;
   fileViewDo(() => { E.files.forEach(f => { f.vis = false; }); sibsOf(f0).forEach(f => { f.vis = true; }); });
+  // the panels area shows before the layout is built, so the panels take its real width (not the estimate of hostWidth)
+  syncWork();
   STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
@@ -133,7 +135,7 @@ function pickTrace(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type
 function activeFile(k) {
   const f = E.files[k]; if (!f) return;
   const alone = E.browse; if (alone) tabFiles(f.kind).forEach(g => { g.vis = false; });
-  sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file");
+  sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file"); syncWork();
   followSpectra(f);
   if (f.kind !== E.tab) setTab(f.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave();

@@ -87,10 +87,12 @@ def loaded(pg, timeout=120000):
         raise TimeoutError(f"{e} | still busy: {st}") from None
 def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read, hidden, and the landing stays until the student shows one.
-    Waits until nothing is read or opened any more, then clicks the row of the first file that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
+    Waits until nothing is read or opened any more, then clicks the row of the first file of the sample table that is not a blank (firstOpenK) in the side list, unless a file is already shown."""
     loaded(pg, timeout)
     _tempi(pg)
-    k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const fs = E.files.filter(f => !f.gone); if (!fs.length) return -1;
+    # in the order of the sample table (by time), not the order the files were read
+    k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const at = f => ST.files.findIndex(r => r.name === f.file.split('#')[0]);
+      const fs = E.files.filter(f => !f.gone).sort((a, b) => at(a) - at(b)); if (!fs.length) return -1;
       return fs[firstOpenK(fs.map(f => ({ file: f.file, type: f.type })))].k; }""")
     if k < 0: return
     row = pg.locator(f"#flst .fl .nm[data-k='{k}']")
