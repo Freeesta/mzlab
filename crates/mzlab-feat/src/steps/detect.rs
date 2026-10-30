@@ -127,13 +127,13 @@ pub(super) fn detect() -> Step {
     }
 }
 
-/// The two gates against noise rows (`lrnoise`), on by default only in the unit profile.
+/// The two gates against noise rows (`lrnoise`): the S/N gate is on by default only in the unit profile, the width gate is a choice.
 fn noise_gates() -> Vec<Param> {
     vec![
         Param::number("min_width", "Minimum width")
             .min(0.0)
             .default_num(0.0)
-            .doc("A feature narrower than this share of the typical peak width of its file (median FWHM of its strongest features) is dropped as noise; 0 = off")
+            .doc("Drops features narrower than this share of the typical peak width of the file; 0 = off")
             .advanced(),
         Param::number("min_snr", "Minimum S/N")
             .min(0.0)
@@ -173,10 +173,9 @@ fn preset_lr() -> Preset {
             ("axis", text("Da")),
             ("floor", num(3_000.0)),
             ("min_height", num(7_000.0)),
-            ("min_width", num(0.0)),
             ("min_snr", num(3.0)),
         ],
-        evidence: "LR_FLOOR, LR_MIN_HEIGHT, LR_MIN_WIDTH and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
+        evidence: "LR_FLOOR, LR_MIN_HEIGHT and LR_MIN_SNR of recipe_lr.rs; the preview proposes the values of each file; on profile scans the floor is the mode of the noise lump",
         algorithm: Some("masstrace"),
     }
 }

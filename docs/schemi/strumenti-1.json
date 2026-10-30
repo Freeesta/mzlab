@@ -621,7 +621,7 @@
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"A feature narrower than this share of the typical peak width of its file (median FWHM of its strongest features) is dropped as noise; 0 = off"
+                    "description":"Drops features narrower than this share of the typical peak width of the file; 0 = off"
                   },
                   {
                     "type":"number",
