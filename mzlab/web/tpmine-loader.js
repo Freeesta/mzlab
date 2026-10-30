@@ -159,6 +159,9 @@
     if (!on) return;
     showTabs();
   }
-  const start = () => { if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !window.MZLAB_LAB && !on) turnOn(); };      // only in the built site and the desktop app (the plain web folder has no static/mzfinder/), never in the lab build
+  const start = () => {
+    if ((window.MZLAB_BROWSER || window.MZLAB_DESKTOP) && !window.MZLAB_LAB) { if (!on) turnOn(); }
+    else document.querySelectorAll("#nav [data-late]").forEach(b => b.remove());      // the tabs written in index.html have nothing behind them here
+  };      // only in the built site and the desktop app (the plain web folder has no static/mzfinder/), never in the lab build
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
