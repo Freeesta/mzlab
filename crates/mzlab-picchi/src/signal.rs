@@ -295,15 +295,60 @@ pub fn snip_baseline(y: &[f64], iters: usize) -> Vec<f64> {
         .collect()
 }
 
-fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
+/// Median (even length: the mean of the middle pair) found by selection; `empty` for no values. A NaN falls back to a `total_cmp` sort (NaN last), never panics.
+/// Copies of `fn median` in core/feat that sort with `total_cmp` are this function.
+pub fn median_or(v: &[f64], empty: f64) -> f64 {
+    if v.is_empty() {
+        return empty;
+    }
+    let mut s = v.to_vec();
+    median_or_in(&mut s, empty)
+}
+
+/// `median_or` that reorders `v` instead of copying it.
+pub fn median_or_in(v: &mut [f64], empty: f64) -> f64 {
+    if v.is_empty() {
+        return empty;
+    }
+    if let Some(m) = crate::sortc::select_median(v) {
+        return m;
+    }
+    crate::sortc::by(v, f64::total_cmp);
+    let n = v.len();
+    if n % 2 == 1 {
+        v[n / 2]
+    } else {
+        (v[n / 2 - 1] + v[n / 2]) / 2.0
+    }
+}
+
+/// `np.interp(x, xp, fp)` for a non-empty ascending `xp`: clamped outside the grid, exact at a node.
+pub fn interp(x: f64, xp: &[f64], fp: &[f64]) -> f64 {
+    let n = xp.len();
     if x <= xp[0] {
         return fp[0];
     }
-    if x >= xp[xp.len() - 1] {
-        return fp[fp.len() - 1];
+    if x >= xp[n - 1] {
+        return fp[n - 1];
     }
     let j = xp.partition_point(|&v| v <= x) - 1;
-    fp[j] + (x - xp[j]) * (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j])
+    if x == xp[j] {
+        return fp[j];
+    }
+    (fp[j + 1] - fp[j]) / (xp[j + 1] - xp[j]) * (x - xp[j]) + fp[j]
+}
+
+/// Width at half height (in `x` units) of the peak at `apex` of `y`, walking down each side to the first point not above half the apex (no interpolation).
+pub fn fwhm_walk(x: &[f64], y: &[f64], apex: usize) -> f64 {
+    let half = y[apex] / 2.0;
+    let (mut lo, mut hi) = (apex, apex);
+    while lo > 0 && y[lo - 1] > half {
+        lo -= 1;
+    }
+    while hi + 1 < y.len() && y[hi + 1] > half {
+        hi += 1;
+    }
+    x[hi] - x[lo]
 }
 
 /// Asymmetric least squares baseline: `iters` weighted smoothing solves of a pentadiagonal system. More than `max_n` points are averaged down first.
