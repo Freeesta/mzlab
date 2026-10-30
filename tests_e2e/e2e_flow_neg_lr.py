@@ -1,6 +1,7 @@
 """Flow «This browser» against `mzlab-cli flow run` in both polarities and both resolutions (docs/studi/MATRICE_NEG_LR.md): a small invented bentazone series (the fixture of
 crates/mzlab-cli/src/flow_bentazone_tests.rs, ported here: a parent that fades, two products that grow) in HR+, HR-, LR+ and LR-, through the base chain, tp.generate, tp.link, tp.filter,
-tp.position, tp.network, table.filter, export.table_csv, export.mztab and, at unit resolution, tp.dig_lr. Every text the browser keeps equals the file of the native run, byte for byte.
+tp.position, tp.network, table.filter, export.table_csv, export.mztab and, at unit resolution, tp.dig_lr. Every text the browser keeps equals the file of the native run, byte for byte;
+the check of the page and of `flow run` take the facets from the files and refuse the same steps (formula.ms1 at unit resolution, tp.dig_lr at high resolution).
 Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_neg_lr.py [hr+|hr-|lr+|lr-]...
 NEG_LR_KEEP=<dir> keeps both sides' files there; the plan leaves the polarity and the unit mass to the files (both sides read them from the indexes); NEG_LR_WRITTEN=1 writes them."""
 import base64, json, math, os, shutil, struct, subprocess, sys, tempfile, threading, urllib.request
@@ -93,6 +94,20 @@ def plan(pol, hr):
     return {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in ORDER] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "parent.json", "sha256": "", "type": "structure"}], "steps": s}
 TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "csv", "mzt", "dig"]
 
+def check_plan(pol, hr):
+    """The plan of `plan` with the steps the facets of the files refuse: formula.ms1 (high resolution only) and, on high-resolution files, tp.dig_lr."""
+    pl = plan(pol, hr); src = ["file:" + n + ".mzML" for n in ORDER]
+    pl["steps"] += [{"id": "t", "step": "features.table@1", "in": {"source": src}}, {"id": "f1", "step": "formula.ms1@1", "in": {"features": "t.report", "index": src}}]
+    if hr:
+        pl["steps"].append({"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
+    return pl
+# the check of the page once it has the facets of the indexes of OPFS (`series_facets` of the proofs .wasm): the facet problems with their text
+CHECK = """async ([plan]) => {
+  for (let i = 0; i < 600 && !FLOW.fileFacets; i++) await new Promise(r => setTimeout(r, 100));
+  const S = document.querySelector('.flx-list').__flow;
+  return { facets: FLOW.fileFacets, problems: FLOW.validate(plan, S.reg).map(p => ({ at: p.instance + '.' + p.port + ':' + p.key, params: p.params, text: FLOW.message(p) })) };
+}"""
+
 tmp = Path(tempfile.mkdtemp(prefix="flow_neg_lr_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(site)], check=True)
@@ -151,6 +166,22 @@ try:
             pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
             pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
             ids = [s["id"] for s in pl["steps"] if s["id"] in TEXT_IDS]
+
+            def facets(run=run, pol=pol, hr=hr):
+                cp = check_plan(pol, hr); (run / "check.json").write_text(json.dumps(cp))
+                nat = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "check.json"), "--in", str(run), "--dry", "--json"], cwd=ROOT, capture_output=True, text=True)
+                native = [{"at": p["instance"] + "." + p["port"] + ":" + p["error_key"], "params": p["params"]} for p in json.loads(nat.stdout).get("problems", [])]
+                r = pg.evaluate(CHECK, [cp]); res = "hr" if hr else "lr"
+                assert r["facets"] == {"resolution": [res], "polarity": [pol]}, r["facets"]
+                web = [{"at": p["at"], "params": p["params"]} for p in r["problems"]]
+                assert web == native, (web, native)
+                want = ["dig.table:err.flow.facet", "dig.index:err.flow.facet"] if hr else ["f1.features:err.flow.facet"]
+                assert [p["at"] for p in web] == want, web
+                step_name = "tp.dig_lr" if hr else "formula.ms1"
+                assert all(p["params"]["step"] == step_name and p["params"]["have"] == res for p in web), web
+                text = r["problems"][0]["text"]
+                assert step_name in text and ("high resolution" if hr else "unit resolution") in text, text
+            step(case + ": the page and flow run refuse the same steps on the facets of the files", facets)
 
             def same(run=run, ids=ids, pl=pl, case=case):
                 r = pg.evaluate(RUN, [pl, SAMPLES, PARENT]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])

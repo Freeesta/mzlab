@@ -54,10 +54,10 @@ pub(super) fn tabui_step(
     }
 }
 
-/// High resolution data (Tabui names every product by a formula, so unit resolution has no hypothesis to prove).
-pub(super) fn hr() -> Facets {
+/// Scan data of either resolution: the tp.* steps read nominal masses at unit resolution (`nominal`, `mzlab_feat::nature`) and are proven on both.
+pub(super) fn any_resolution() -> Facets {
     Facets {
-        resolution: vec!["hr"],
+        resolution: vec!["hr", "lr"],
         ..Facets::default()
     }
 }
@@ -162,7 +162,7 @@ fn filter() -> Step {
     Step {
         version: 2,
         ins: vec![
-            Port::new("tp", DataType::Tp, "Table of the products with the interpretation of its rows (tp.link)").requires(hr()),
+            Port::new("tp", DataType::Tp, "Table of the products with the interpretation of its rows (tp.link)").requires(any_resolution()),
             Port::new("hypotheses", DataType::Transform, "Hypotheses of the parent (tp.generate): the rule masses of the decoys and the masses F5 compares with"),
         ],
         outs: vec![Port::new("table", DataType::Table, "Registry filtri/1: the rows hidden by each of F1-F5 and the decoys that passed")],

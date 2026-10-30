@@ -201,6 +201,27 @@ pub fn series_estimates(
     run().map_err(crate::js_err)
 }
 
+/// The facets of the `.mzidx` of a series read as `index_read(k, offset, length)` (`mzlab_feat::nature::facets`, the rule `flow run` puts on the scan
+/// inputs before the check): `{"resolution":[...],"polarity":[...]}`.
+#[cfg(feature = "proofs")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn series_facets(
+    index_read: js_sys::Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, wasm_bindgen::JsValue> {
+    let run = || -> Result<String> {
+        let mut files = Vec::new();
+        for (k, size) in index_sizes.iter().enumerate() {
+            let ix = crate::open_one(&index_read, k, *size)?;
+            files.push(mzlab_feat::nature::index_facts(&ix));
+        }
+        Ok(mzlab_feat::nature::facets_json(
+            &mzlab_feat::nature::facets(files),
+        ))
+    };
+    run().map_err(crate::js_err)
+}
+
 /// The parent of a link: neutral formula, SMILES (empty for a formula), the structure text of the SMILES and the time the parent file gives.
 pub struct LinkParent<'a> {
     pub formula: &'a str,
