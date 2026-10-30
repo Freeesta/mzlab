@@ -91,7 +91,7 @@ fn make_resolver<F: Fetch>(
         cas: &cas,
         dtxsid: &dtx,
     };
-    Resolver::load(cache, &plan, &curated, inputs)
+    super::resolve::load(cache, &plan, &curated, inputs)
 }
 
 /// Every input whose URL is pinned must hash to its pin; `--update-pins` writes what was read instead.

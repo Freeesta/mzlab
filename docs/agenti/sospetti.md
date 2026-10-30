@@ -8,7 +8,7 @@ Elenco di composti noti ordinato per massa monoisotopica, per le ipotesi H1 di m
 - Un file diverso dall'impronta fissata ferma la costruzione. BioTransformer, enviPath e CTS non entrano mai nell'indice (solo liste importate).
 
 ## Costruzione
-`python3 tools/genera_sospetti.py [--fonte DIR] --out FILE [--pacchetto DIR]`. Righe fuse per InChIKey-14 (solo A-Z): massa e formula della prima fonte (SusDat, PubChemLite, Transformations), fonti in unione, conteggi al massimo, id di reazione il più basso. Scartate le righe senza chiave valida, massa o formula (conteggiate nel manifest: `letti` / `usati`). Ordine stabile (massa, InChIKey-14): stesse fonti = stesso file byte per byte.
+`python3 tools/genera_sospetti.py [--fonte DIR] --out FILE [--pacchetto DIR]`. Righe fuse per InChIKey-14 (solo A-Z): massa e formula della prima fonte (SusDat, PubChemLite, Transformations), fonti in unione, conteggi al massimo, id di reazione il più basso. Scartate le righe senza chiave valida, massa o formula (conteggiate nel manifest: `letti` / `usati`). Ordine stabile (massa, InChIKey-14): stesse fonti = stesso file byte per byte. Con `--pacchetto` scrive anche `DIR/cas/` (sidecar `mzlab-cas/1` dei CAS di SusDat e `catalogo.json`; formato in `docs/agenti/normative.md`).
 `--pacchetto`: il file grezzo compresso con zlib (livello 9) a pezzi di 4 MiB, ciascuno con SHA-256, più `catalogo.json` (formato `sospetti/1`: dimensioni, SHA-256 del file grezzo, fonti con licenza e DOI, attribuzione). Il browser decomprime con `DecompressionStream("deflate")` e passa i byte grezzi al lettore. La CI di Pages lo mette in `static/mzfinder/sospetti/`.
 
 ## File grezzo (little-endian, ogni sezione comincia a un multiplo di 8)
