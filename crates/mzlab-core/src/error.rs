@@ -22,6 +22,8 @@ impl Error {
     }
 
     /// The error as the JSON text every bridge sends (`{"error_key":..,"params":{..}}`); strings go through `json::Out::str`, so control characters become valid `\u0001`.
+    // `#[inline]` so each bridge compiles it at its own opt-level ("z" for the size-capped `.wasm`), not the core's 3.
+    #[inline]
     pub fn to_json(&self) -> String {
         let mut o = crate::json::Out::default();
         o.raw("{\"error_key\":").str(self.key).raw(",\"params\":{");
