@@ -25,18 +25,22 @@
   /** @param {any} x @param {any} spec @param {any} inst @param {() => Promise<void>} body the work after the claim */
   const detached = (x, spec, inst, body) => ({ done: body().catch((/** @type {any} */ e) => fail(x, spec, inst, e)) });
 
-  /** spectra.centroid: a file of centroids is reused as it is («already centroided»); a profile file has the index of its centroids that Data builds (`<name>.cen.mzidx`, the existing route of the engine, nothing is
-   * computed here): reused when it is there, else asked for. The browser builds it for the files it reads as a maker's file; an mzML in profile stays with the computer (blocked by platform.computer) */
+  /** spectra.centroid: a file of centroids is reused as it is («already centroided»). A profile file has the index of its centroids (`<name>.cen.mzidx`, where features.detect reads its peaks). A maker's file gets it from
+   * the engine (nothing is computed here). A low-resolution profile mzML gets it from the centroid copy of the engine, the call of Settings (`rb.flowCentroid`), reused when its source, parameters and engine are the same.
+   * Still with the desktop app: a high-resolution profile mzML (memory) and a plan that sets `fwhm` or `threshold` (the engine call has no parameters) */
   const centroid = async (/** @type {any} */ x, /** @type {any} */ spec, /** @type {any} */ inst) => {
     const it = x.item(spec.item), j = job(spec);
     if (!it || !it.idx) { await x.call("block", { job: j, by: "input.missing" }); x.waitingInput.add(x.jk(spec)); return {}; }
-    if (!x.profile(it) || it.cen) { await x.call("cached", { job: j }); return {}; }
-    const rb = await G.MZLAB_RUST_READY;
-    if (!rb || !rb.nativeCentroidIndex || !rb.isNative || !rb.isNative(it.input)) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    if (!x.profile(it)) { await x.call("cached", { job: j }); return {}; }
+    const rb = await G.MZLAB_RUST_READY, native = !!(rb && rb.isNative && rb.isNative(it.input));
+    if (native && it.cen) { await x.call("cached", { job: j }); return {}; }
+    const given = inst.params || {}, custom = given.fwhm != null || given.threshold != null;
+    if (native ? !rb.nativeCentroidIndex : !rb || !rb.flowCentroid || it.hr || custom) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      await rb.nativeCentroidIndex(it.input);
+      if (native) await rb.nativeCentroidIndex(it.input);
+      else await rb.flowCentroid(it.input, it.size || 0, "");
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
       F.live.change();
     });

@@ -14,7 +14,7 @@ assert.strictEqual(w({ state: "reused" }), "Up to date (nothing changed)");
 assert.strictEqual(w({ state: "stale" }), "Settings changed: press Run");
 assert.strictEqual(t({ state: "stale" }), "Settings changed: runs again on Run");
 assert.strictEqual(w({ state: "blocked", blocked_by: "platform.computer" }), "Needs the desktop app");
-assert.strictEqual(t({ state: "blocked", blocked_by: "platform.computer" }), "This step needs the desktop app (profile mzML). Use the app, or open the vendor file.");
+assert.strictEqual(t({ state: "blocked", blocked_by: "platform.computer" }), "This step needs the desktop app (high-resolution profile mzML, or centroid parameters set by hand). Use the app.");
 assert.strictEqual(w({ state: "blocked", blocked_by: "permission.memory" }), "Allow more memory: Run now");
 assert.strictEqual(t({ state: "blocked", blocked_by: "permission.memory" }), "Large files: allow more memory with Run now");
 assert.strictEqual(w({ state: "blocked" }), "Fix the plan first");

@@ -17,6 +17,7 @@ import { leasePlan } from "./rust-lease-plan.js";
 import { createPlainPut, createOpenGate } from "./rust-carica.js";
 import { createImpronte } from "./impronta.js";
 import { rawSink } from "./rust-opfs.js";
+import { createFlowCentroid } from "./rust-flow-centroid.js";
 import { msnGrafo, msnLibAggiungi, msnLibCerca } from "./rust-msngrafo.js";
 import { createDerivata, conAvanzamento, fraz } from "./rust-msngrafo-nativo.js";
 
@@ -294,6 +295,8 @@ async function lrIndex(m) {
   if (!opened) jerr("err.engine.index");
   return { info: JSON.stringify({ ms: Math.round(performance.now() - t0), missing: (res.stats && res.stats.missing) || 0 }) };      // missing: scans the index lists beyond the end of a truncated data file
 }
+let flowCenOps;
+const flowCen = () => flowCenOps || (flowCenOps = createFlowCentroid({ ARCH, infoDi, nuovo, safe, version, lrPut, lrIndex, lrFile, release: n => ARCH.release(n), close: n => { engine.close(slotOf(n)); openGate.drop(slotOf(n)); } }));
 async function lrOp(m) {
   switch (m.op) {
     case "lr_boot": {                                                     // every file in OPFS, with its size, whether it has an index, and the File itself for the bridge
@@ -319,6 +322,8 @@ async function lrOp(m) {
       await ARCH.promote("idx", part, m.name + ".cen.mzidx");
       return { info: "{}" };
     } finally { ARCH.release(m.name); }
+    case "lr_cen_have": return { info: JSON.stringify(await flowCen().have(m)) };      // the Flow's centroid copy of a profile mzML (rust-flow-centroid.js)
+    case "lr_cen_adopt": await flowCen().adopt(m); return { info: "{}" };
     case "lr_entry": {
       const f = await fileOf(m.name); if (!(await lrOpen(m.name))) jerr("err.engine.index");
       const info = engine.lr_entry(slotOf(m.name), m.name, f.size, readerFor(f)), st = await nativo.stubOf(m.name);
