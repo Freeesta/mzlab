@@ -608,6 +608,23 @@ pub fn detect_peaks(rt: &[f64], y: &[f64], mode: u8, out: &mut [f64]) -> u32 {
     found.len().min(room) as u32
 }
 
+/// Limits of every peak whose apex is between `x0` and `x1` (minutes), by RT, into `out` as index pairs `[lo, hi]`: the one-click integration of
+/// high-resolution traces. `smooth` = Savitzky-Golay window (points), `snr` = prominence over the noise, `rel` = prominence over the highest
+/// point (fraction), `min_scans` = narrowest peak; the rest as `detect_peaks` mode 1. Returns the number of pairs written.
+#[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
+pub fn auto_limits(rt: &[f64], y: &[f64], x0: f64, x1: f64, smooth: u32, snr: f64, rel: f64, min_scans: u32, out: &mut [f64]) -> u32 {
+    let n = rt.len().min(y.len());
+    let p = peakq::ProminenceParams { snr, rel_prominence: rel, min_scans: min_scans as usize, smooth: smooth as usize, local_snr: 5.0, ..Default::default() };
+    let found = peakq::auto_limits(&rt[..n], &y[..n], x0, x1, p);
+    let room = out.len() / 2;
+    for (i, &(lo, hi)) in found.iter().take(room).enumerate() {
+        out[2 * i] = lo as f64;
+        out[2 * i + 1] = hi as f64;
+    }
+    found.len().min(room) as u32
+}
+
 /// Quality of the peak between the indices `lo` and `hi` of a trace: `[gaussian, asymmetry (NaN = not measurable), noise score]` into `out`;
 /// the noise of the whole trace is worked out here. Returns 3, or 0 if the arguments do not fit.
 #[wasm_bindgen]
@@ -647,6 +664,23 @@ mod tests {
         let e = mzlab_core::Error::new("error.x").with("name", "a\u{1}b\"c\\d\u{200b}");
         let v = mzlab_core::json::parse(super::error_text(&e).as_bytes()).expect("valid JSON");
         assert_eq!(v.get("params").and_then(|p| p.get("name")).and_then(|n| n.str()), Some("a\u{1}b\"c\\d\u{200b}"));
+    }
+
+    #[test]
+    fn auto_limits_are_the_core_windows() {
+        // three Gaussians on a flat baseline; the pairs written are the windows of mzlab-core, and a short buffer keeps the first ones
+        let rt: Vec<f64> = (0..400).map(|i| f64::from(i) * 0.015).collect();
+        let g = |t: f64, c: f64, h: f64| h * (-((t - c) / 0.05).powi(2) / 2.0).exp();
+        let y: Vec<f64> = rt.iter().enumerate().map(|(i, &t)| g(t, 1.0, 8.0e4) + g(t, 2.5, 2.0e4) + g(t, 4.5, 1.0e5) + 500.0 + f64::from(i as u32 % 7) * 20.0).collect();
+        let core = mzlab_core::peakq::auto_limits(&rt, &y, 0.0, 6.0, mzlab_core::peakq::ProminenceParams { local_snr: 5.0, ..Default::default() });
+        assert_eq!(core.len(), 3);
+        let mut out = vec![0.0; 128];
+        let n = super::auto_limits(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, &mut out) as usize;
+        let got: Vec<(usize, usize)> = (0..n).map(|i| (out[2 * i] as usize, out[2 * i + 1] as usize)).collect();
+        assert_eq!(got, core);
+        let mut short = vec![0.0; 4];
+        assert_eq!(super::auto_limits(&rt, &y, 0.0, 6.0, 5, 5.0, 0.01, 3, &mut short), 2);
+        assert_eq!(short, vec![core[0].0 as f64, core[0].1 as f64, core[1].0 as f64, core[1].1 as f64]);
     }
 
     #[test]

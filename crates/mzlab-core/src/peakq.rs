@@ -233,6 +233,20 @@ pub fn detect_prominence(rt: &[f64], y: &[f64], p: ProminenceParams) -> Vec<Peak
     out
 }
 
+/// Limits (indices into the trace, inclusive) of every peak whose apex lies between the times `x0` and `x1`, sorted by RT: the one-click integration
+/// of high-resolution traces in the Dati view (`auto_limits` of mzlab-wasm). Neighbours share at most their valley point, so the windows never overlap.
+pub fn auto_limits(rt: &[f64], y: &[f64], x0: f64, x1: f64, p: ProminenceParams) -> Vec<(usize, usize)> {
+    let (a, b) = (x0.min(x1), x0.max(x1));
+    let p = ProminenceParams { smooth: p.smooth.max(3) | 1, min_scans: p.min_scans.max(2), ..p };
+    let mut out: Vec<(usize, usize)> = detect_prominence(rt, y, p)
+        .into_iter()
+        .filter(|k| rt[k.apex_i] >= a && rt[k.apex_i] <= b)
+        .map(|k| (k.lo, k.hi))
+        .collect();
+    crate::sortc::by(&mut out, |u, v| u.cmp(v));
+    out
+}
+
 /// Index of the lowest point of `ys` strictly between the apexes `a` and `b` (the first one on a tie).
 fn valley(ys: &[f64], a: usize, b: usize) -> usize {
     let mut v = a + 1;
