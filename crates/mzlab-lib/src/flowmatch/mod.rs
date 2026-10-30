@@ -24,6 +24,7 @@ use crate::spec::Spectrum;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out, Value};
 use mzlab_core::score_terms::ScoreTerms;
+use mzlab_picchi::sortc::SortC;
 
 pub(crate) type Lib = Library<Vec<u8>>;
 
@@ -166,7 +167,7 @@ fn mod_terms(m: &crate::scores::ModCosine) -> ScoreTerms {
 }
 
 fn by_score(c: &mut Vec<Cand>, top: usize) {
-    c.sort_by(|a, b| b.score.total_cmp(&a.score).then(a.index.cmp(&b.index)));
+    c.sortc_by(|a, b| b.score.total_cmp(&a.score).then(a.index.cmp(&b.index)));
     c.truncate(top);
 }
 

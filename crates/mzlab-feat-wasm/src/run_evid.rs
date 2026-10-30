@@ -23,6 +23,7 @@ use mzlab_feat::target::join::JoinParams;
 use mzlab_feat::tp::{build as build_tp, build_by_role, TpBlock, TpInputs, TpParams, TpRoles};
 
 use crate::run::{is_unit, points_and_identity, HypoRun, IDENTITY_BYTES};
+use mzlab_feat::sortc::SortC;
 
 /// `evidence_to` with the roles of the files (`campioni/2`): gate 1 of the view of the products reads them (`tp::build_by_role`).
 #[allow(clippy::too_many_arguments)]
@@ -158,7 +159,7 @@ fn infusion_ions(feats: &[FileFeatures], files: &[usize], floor: f64, unit: bool
                 .map(|i| f.mz[i])
         })
         .collect();
-    mz.sort_by(f64::total_cmp);
+    mz.sortc_by(f64::total_cmp);
     mz.dedup_by(|b, a| (*b - *a).abs() <= mzlab_feat::axis::half(*a, ppm));
     mz
 }

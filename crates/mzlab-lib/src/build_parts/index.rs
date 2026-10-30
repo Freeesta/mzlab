@@ -127,7 +127,7 @@ pub(super) fn write_index<T: Scratch, K: Sink>(
             es.push((le_u32(c, 0), le_u32(c, 4), le_u16(c, 8)));
         }
         drop(raw);
-        sortutil::sort_by(&mut es, |a, b| a.cmp(b));
+        sortc::by(&mut es, |a, b| a.cmp(b));
         for e in es {
             page.push(e);
             written += 1;
