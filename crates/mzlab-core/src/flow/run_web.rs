@@ -10,11 +10,6 @@ use crate::flow::{check, corsa_build, parse, plan_json, prov_json, Agent, Mem, P
 use crate::json::{parse as parse_json, Value};
 use crate::step::{registry_from_value, DataType, Step};
 
-/// A `&'static str` for an error key or a value that comes from the report (a handful per run).
-fn leak(s: &str) -> &'static str {
-    Box::leak(s.to_string().into_boxed_str())
-}
-
 fn text<'a>(v: &'a Value, key: &str) -> Option<&'a str> {
     v.get(key).and_then(Value::str)
 }
@@ -59,7 +54,7 @@ fn mem(v: &Value) -> Option<Mem> {
 /// The outcome of one job from its report; a report with `error_key` is a failure.
 fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
     if let Some(key) = text(r, "error_key") {
-        return Err(Error::new(leak(key)));
+        return Err(Error::new(crate::error::intern(key)));
     }
     let mut o = Outcome::default();
     for x in r.get("outputs").map_or(&[][..], Value::arr) {
@@ -74,6 +69,7 @@ fn outcome(ctx: &Ctx, id: &JobId, r: &Value) -> Result<Outcome> {
             x.get("proof").cloned().unwrap_or(Value::Null),
         ));
     }
+    o.preset = text(r, "preset").map(str::to_string);
     o.ms = r.get("ms").and_then(Value::f64).unwrap_or(0.0);
     o.mem = r.get("mem").and_then(mem);
     o.cached = r.get("cached").and_then(Value::bool).unwrap_or(false);

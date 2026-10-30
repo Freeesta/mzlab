@@ -232,13 +232,7 @@ async function importaFileOra() {
 
 async function scarica(/** @type {"csv" | "json"} */ formato) {
   const f = await A.esporta(formato);
-  const url = URL.createObjectURL(new Blob([f.testo], { type: f.tipo }));
-  const a = document.createElement("a");
-  a.href = url; a.download = f.nome;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  saveBlob(new Blob([f.testo], { type: f.tipo }), f.nome, 1000);
   stato(t("mol.exported", { file: f.nome }));
 }
 

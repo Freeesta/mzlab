@@ -38,7 +38,7 @@ try:
         step("gear: «Masse» row (ppm, decimals) changes the profile and is saved", gear)
         def notice():
             pg.evaluate("HR.notice([{file:'prova.mzML',label:'prova',hr_err:'ValueError: prova'}])"); pg.wait_for_timeout(200)
-            t = pg.inner_text("#hrerr"); print(t)
+            t = pg.inner_text("#qnote"); print(t)
             assert "Alta risoluzione non disponibile per prova: aperto come bassa risoluzione" in t
         step("fallback notice (once per file)", notice)
         def reload():
@@ -51,14 +51,14 @@ try:
             drawer(pg); pg.click("#addf"); pg.wait_for_timeout(500)
             pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
-            pg.wait_for_selector("#hrmix:not([hidden])", timeout=30000)          # LR and HR in the table: a note with the two worlds, the one of the open files chosen
-            assert pg.get_attribute("#hrmix-hr", "aria-pressed") == "true" and pg.get_attribute("#hrmix-lr", "aria-pressed") == "false"
-            pg.click("#hrmix-lr"); assert pg.get_attribute("#hrmix-lr", "aria-pressed") == "true"
-            pg.click("#opbtn")                                                    # the chosen world replaces the open files: no refusal, no second dialog
-            pg.wait_for_function("E.files.length === 1 && E.files[0].file.includes('B_FullMass-t0.mzML')", timeout=60000); ready(pg)
-            v = pg.evaluate("E.files.map(f=>f.file)")
+            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#hrmix').hidden", 30000)          # LR and HR in the table: the open world (HR) stays, the LR file is set aside
+            assert pg.evaluate("ST.files.find(f => f.name === 'B_FullMass-t0.mzML').use") is False and pg.evaluate("OPENNOW.world()") is True
+            assert pg.get_attribute("#hrmix-lr", "hidden") is None and pg.get_attribute("#hrmix-hr", "hidden") is not None, "one «Switch» button"
+            pg.evaluate("document.querySelector('#hrmix-lr').click()")             # «Switch to low resolution» replaces the open files: no refusal, no second dialog
+            pg.wait_for_function("E.files.filter(f => !f.gone).length === 1 && E.files.find(f => !f.gone).file.includes('B_FullMass-t0.mzML')", timeout=60000); ready(pg)
+            v = pg.evaluate("E.files.filter(f => !f.gone).map(f=>f.file)")
             assert len(v) == 1 and "B_FullMass-t0.mzML" in v[0]
-        step("mix LR and HR: the note offers the two worlds and the chosen one replaces the open files", test_mix)
+        step("mix LR and HR: the LR file is set aside and «Switch» replaces the open files", test_mix)
     r.close()
     cuts = real_cuttings()
     if cuts:                                                  # the real Orbitrap cuttings (private data repository), in a clean session

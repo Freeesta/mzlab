@@ -34,11 +34,10 @@ try:
         base = f"http://127.0.0.1:{r.port}/"
         def load_files():
             pg.goto(base); pg.wait_for_function("typeof S !== 'undefined' && window.qqReady", timeout=60000)
-            if pg.evaluate("!!S.sess"): attendi(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files; staging over it hides #opbtn behind the loading screen
+            if pg.evaluate("!!S.sess"): attendi(pg, "E.files.length >= 2", 60000)          # a session left by the previous step resumes its files
             pg.evaluate("document.querySelectorAll('#tour-invito button').forEach(b => b.textContent.trim() === 'Not now' && b.click())")
             if not pg.evaluate("typeof E !== 'undefined' && E.files.length >= 2"):          # a page that resumed its session already has them
                 stage(pg, [EX / "FullScan_t0.mzML", EX / "FullScan_t30.mzML"])
-                attendi(pg, "!document.querySelector('#opbtn').disabled", timeout=60000)           # enabled once the staged files are checked (slow runner)
                 pg.click("#opbtn"); ready(pg)
             assert pg.evaluate("E.files.length") >= 2
             pg.evaluate(SEED)
@@ -70,7 +69,8 @@ try:
             assert s["files"] == 0 and not s["sess"], s
             assert [n for n in s["opfs"] if n != "mzlab"] == [] and s["mzlab"] == [], (s["opfs"], s["mzlab"])       # the engine may create its folder again, empty, at start
             assert set(s["idb"]) <= {"mzlab_lab", "qqq_lab"}, s["idb"]
-            assert s["caches"] == [] or all(c.startswith("mzlab-app") for c in s["caches"]) and "other-cache" not in s["caches"], s["caches"]
+            # the fresh page may fill its own caches again (the app, and the idle prefetch of OpenChemLib in the big cache): the seeded ones are gone
+            assert all(c.startswith("mzlab-app") or c.startswith("mzlab-big-") and c != "mzlab-big-x" for c in s["caches"]), s["caches"]
             assert "mzlab.lang" not in s["ls"] and "mzlab.invented" not in s["ls"] and "mzlab.mappa" not in s["ls"], s["ls"]
         step("Header «New session» → Full reset: dialog, then nothing left (OPFS, IndexedDB, caches, preferences)", full_cmd)
         def gear():
@@ -102,17 +102,15 @@ try:
         step("«Remove from the session» also frees the file and its indexes in OPFS", remove_one)
         def clear_all():
             pg.goto(base + "?reset=files"); pg.wait_for_function("!location.search.includes('reset')", timeout=30000); ready_start(pg)
-            load_files(); pg.evaluate("STATO.aggiunta(true, 'adding'); applyView()"); pg.wait_for_selector("#clearall")
-            assert pg.inner_text("#clearall") == "Clear loaded data" and pg.inner_text("#loaded").startswith("Files already loaded ("), pg.inner_text("#loaded")
+            load_files()
             pg.evaluate("location.hash = '#/data'")                                               # a hash in the address must not stop the reload
-            pg.click("#clearall"); assert "Clear the" in pg.inner_text("#clearall") and pg.evaluate("E.files.length") >= 2, "the first press only asks"
-            pg.click("#clearall"); pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
+            pg.evaluate("QQRESET.run('files')"); pg.wait_for_function("location.search === '' && window.qqReady && typeof E !== 'undefined' && E.files.length === 0", timeout=60000)
             attendi(pg, "(async () => { const n = []; for await (const [k] of (await navigator.storage.getDirectory()).entries()) n.push(k); return n.includes('librerie') && !S.sess; })()", 30000)   # settled: the reset finished writing
             s = pg.evaluate(STATE)
             assert s["files"] == 0 and not s["sess"] and s["mzlab"] == [], s                     # memory released: the files and their indexes are gone
             assert "librerie" in s["opfs"] and "mzlab.lang" in s["ls"], s                         # the same as «Files and session only»
             stage(pg, [EX / "FullScan_t0.mzML"]); pg.click("#opbtn"); ready(pg); assert pg.evaluate("E.files.length") >= 1, "loading again works"
-        step("«Clear loaded data» of the card of the loaded files: two presses, empty list, memory released, loading again works", clear_all)
+        step("«Files and session only»: empty list, memory released, loading again works", clear_all)
         b.close()
     r.close()
 except Exception as e:

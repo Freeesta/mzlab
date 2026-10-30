@@ -1,4 +1,4 @@
-"""mzlab/web/sw.js with a mocked scope: an app file revalidated with the same ETag is not rewritten into Cache Storage; the first-paint scripts are preloaded."""
+"""mzlab/web/sw.js with a mocked scope: app files are cache-first by site version, checked against the manifest, navigations network-first; the first-paint scripts are preloaded."""
 import re
 import shutil
 import subprocess
@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-def test_sw_skips_put_for_unchanged_resource():
+def test_sw_cache_first_by_version():
     r = subprocess.run(["node", str(ROOT / "tests" / "sw_cache_node.mjs")], capture_output=True, text=True, check=False)
     assert r.returncode == 0, (r.stdout + r.stderr)[-2000:]
 

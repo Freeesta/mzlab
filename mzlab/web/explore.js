@@ -211,7 +211,8 @@ let ldSlow = 0;
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out"); ldMsg = null;
-      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
+      // the button of a stuck start goes with its veil (it would come back with the next one)
+      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); ldAction(""); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
     }, wait);
   }
 }
@@ -297,7 +298,7 @@ function panelRec(p) {
     type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, riga: p.full ? p.riga : undefined, quota: p.quota ?? undefined, kind: p.kind, smooth: p.smooth, tol: p.tol,
     traces: (p.traces || []).map((/** @type {Bag} */ t) => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined, canale: t.canale || undefined })),
     canali: p.canali && p.canali.length ? p.canali : undefined,
-    k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
+    k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, ptol: p.ptol ?? undefined, filt: p.filt || undefined, flv: p.flv ?? undefined, pin: p.pin || undefined, ranges: p.ranges || undefined, norm100: p.norm100 || undefined, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
     link: p.link ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.link) : -1, src: p.src ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.src) : -1,
     dda: p.dda != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dda) : undefined, dock: p.dock != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.dock) : undefined, duo: p.duo != null ? E.panels.findIndex((/** @type {Bag} */ q) => q.id === p.duo) : undefined, extra: p.extra || undefined, sid: p.sid ?? undefined, ion: p.ion ?? undefined, avg: p.avg || undefined, imode: p.imode || null, intf: p.intf || "",
     uv: p.uv || undefined, lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, dots: p.type === "spec" && p.dots ? true : undefined, mk: p.type === "spec" && p.mk != null ? !!p.mk : undefined, noCont: p.type === "spec" && p.noCont ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl === undefined ? undefined : !!p.tl, overlay: p.overlay || undefined, etpk: typeof p.etpk === "boolean" ? p.etpk : undefined, pdaAlign: p.pdaAlign || undefined, pdaDelay: p.pdaDelay ?? undefined, gdelay: p.gdelay || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, fondo: p.fondo && p.fondo.mode !== "none" ? p.fondo : undefined, clipDraw: p.clipDraw || undefined, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" || p.bg === "x" ? p.bg : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, bwi: p.bwi || undefined, scale: p.scale, gamma: p.scale === "gamma" ? p.gamma : undefined, norm: p.norm, corr: p.type === "map" ? p.corr : undefined, bgr: p.type === "map" && p.bgr ? p.bgr : undefined, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
@@ -366,11 +367,11 @@ const getMs2Tr = (/** @type {string | number} */ k) => memo(`m2t${k}`, () => J(`
 // the provisional TIC is the MS1 one: only a level 1 TIC of the whole file may show it
 const earlyTicFor = (/** @type {string | null} */ name, /** @type {number} */ lv, /** @type {Map<string, any> | undefined} */ local, /** @type {((n: string) => any) | undefined} */ lr) =>
   lv === 1 && name ? (local && local.get(fileBase(name))) || (lr && lr(fileBase(name))) : null;
-/** @param {string | number} k @param {string} kind @param {number} lv @param {number | string} [mz0] @param {number | string} [mz1] @param {unknown} [prec] @param {string} [filt] */ const getChrom = (k, kind, lv, mz0, mz1, prec, filt) => {
-  const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}`;
+/** @param {string | number} k @param {string} kind @param {number} lv @param {number | string} [mz0] @param {number | string} [mz1] @param {unknown} [prec] @param {string} [filt] @param {number | null} [ptol] the precursor window in Da (default 0.6) */ const getChrom = (k, kind, lv, mz0, mz1, prec, filt, ptol) => {
+  const key = `c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}|${filt ?? ""}|${ptol ?? ""}`;
   const f = E.files[k], name = f ? f.file : null;
   const early = (kind === "tic" && mz0 == null && mz1 == null && prec == null && !filt && name) ? earlyTicFor(name, lv, E.earlyTic, (/** @type {any} */ (window).MZLAB_LR)?.earlyTic) : null;
-  const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "") + FT(filt);
+  const url = `api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` + (ptol ? `&ptol=${ptol}` : "") : "") + FT(filt);
   if (early && !CACHE.has(key)) {
     CHROM1.once(key, () => J(url).then(res => {
       if (f) delete f._provisional;
@@ -456,20 +457,9 @@ async function bootSession0() {
   E._seq = waiting; E._mem = waiting ? mem : null;
   // while a list is opened file by file the new ones follow the rules of the first load
   const isFirstLoad = !oldNames.length || seq || waiting, first = firstOpenK(j.session);
-  const isHr = j.session.some((/** @type {Bag} */ s) => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
-  // a low-resolution IDA file is not high resolution
-  const trueHr = j.session.some((/** @type {Bag} */ s) => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr));
   E.files = j.session.map((/** @type {Bag} */ s, /** @type {number} */ k) => {
-    let vis = true;
-    if (oldVis[s.file]) {
-      vis = oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file));
-    } else if (isFirstLoad && trueHr && new Set(j.session.map((/** @type {Bag} */ x) => fileBase(x.file))).size > 1) {
-      // high resolution: only the first file (in the order of the list) is open, a click opens the others
-      vis = fileBase(s.file) === fileBase(j.session[first].file);
-    } else if (isFirstLoad && !isHr && j.session.length > 1) {
-      // low resolution: only the first file of the list is open (also with mixed Full Scan / MS2 / MRM), the others wait in the list and a click opens them
-      vis = (k === first);
-    }
+    // a file new to the session starts hidden, LR and HR alike (first load and additions): until a click the work area shows the sample table; a restore gives the saved visibility back (restoreUi)
+    const vis = oldVis[s.file] ? oldVis[s.file].vis && !(isFirstLoad && isBlankFile(s) && fileBase(s.file) !== fileBase(j.session[first].file)) : false;
     const t = TIPOF.apply(s, s.file);
     return { ...t, ...CAMPIONI.keep(oldVis[s.file]), k, vis, label: noFullScan(oldVis[s.file] ? oldVis[s.file].label : s.label, s.dda), lv: t.kind === "ms2" ? 2 : 1 };
   });
@@ -542,8 +532,10 @@ function restoreUi() {
   if (u && u.msn && window.INF) INF.restore(u.msn);
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map((/** @type {FileAperto} */ f) => f.file));
-  if (!u.files.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
-  u.files.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
+  // removed files are not in the restored session (their entry only records the removal): they must not make the whole restore fail
+  const saved = u.files.filter((/** @type {Bag} */ sf) => !sf.gone || names.has(sf.file));
+  if (!saved.every((/** @type {FileAperto} */ f) => names.has(f.file))) return false;
+  saved.forEach((/** @type {Bag} */ sf) => { const f = E.files.find((/** @type {FileAperto} */ x) => x.file === sf.file); f.label = sf.label || f.label; if (sf.ugrp) f.ugrp = sf.ugrp; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
   STATO.file(Math.min(u.cur || 0, E.files.length - 1), "notebook"); migrateBrowse(u); STATO.scheda(pickTab(u.tab), "notebook");
   const kof = (/** @type {string} */ n) => { const i = E.files.findIndex((/** @type {FileAperto} */ f) => f.file === n); return i < 0 ? 0 : i; };
   if (u.ref) { const r = u.ref, i = r.k === "auto" ? -1 : E.files.findIndex((/** @type {FileAperto} */ f) => f.file === r.k); S.ref = { ...S.ref, ...r, k: i < 0 ? "auto" : i, on: { ...(r.on || {}) } }; }
@@ -650,7 +642,10 @@ function bindFileRows() {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = (/** @type {PointerEvent} */ e) => {
       if (/** @type {HTMLElement} */ (e.target).closest("input") || /** @type {HTMLElement} */ (e.target).closest(".pr-tog")) return;
-      const f0 = E.files[+nm.dataset.k]; if (f0 && f0.kind !== "mrm") followSpectra(f0);
+      const f0 = E.files[+nm.dataset.k];
+      // the first click (nothing shown yet, the work area holds the sample table): only this file, with the starting layout of its type
+      if (f0 && !E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)) { soloFile(f0); return; }
+      if (f0 && f0.kind !== "mrm") followSpectra(f0);
       // high resolution: a click on a file of the list that is not open opens it (it joins the open ones)
       if (window.BANCO && BANCO.on() && f0 && !f0.vis && f0.kind !== "mrm") {
         sibsOf(f0).forEach((/** @type {FileAperto} */ f) => { f.vis = true; }); STATO.file(f0.k, "file"); renderFileList(); renderNav(); redrawAll(); uiSave(); return;
@@ -814,15 +809,11 @@ function renderFileList() {
     return `<div class="fgh" data-gt="${gk}" style="cursor:pointer"${tip}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every((/** @type {FileAperto} */ f) => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}"><span class="chv${open ? " on" : ""}" role="button" tabindex="0" aria-expanded="${open}" aria-label="${I18N.t("files.grp.toggle")}"></span><span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
   // files grouped strictly by experiment type
-  // the files still being read (E.pending): a bar that stays while one is missing, then their rows (grey and not selectable; red with the message if one failed)
-  const pend = E.pending || [], waiting = pend.filter((/** @type {Bag} */ x) => x.state === "wait").length;
-  const pendBar = waiting ? `<div class="pendbar" role="progressbar" aria-label="${EH(I18N.t("files.pendingBar", { done: E.pendN - waiting, n: E.pendN }))}" aria-valuemin="0" aria-valuemax="${E.pendN}" aria-valuenow="${E.pendN - waiting}"><i style="width:${Math.round(100 * (E.pendN - waiting) / E.pendN)}%"></i></div>` : "";
-  const pendRows = pend.map((/** @type {Pendiente} */ x, /** @type {number} */ i) => `<div class="fl pend ${x.state === "err" ? "err" : ""}" data-pend="${i}" ${x.state === "wait" ? 'aria-busy="true"' : ""}><input type="checkbox" disabled aria-label="${EH(x.label)}"><i></i><div class="fi"><b class="nm">${EH(x.label)}</b><small>${EH(x.state === "err" ? x.msg : I18N.t("files.pending"))}</small></div><button type="button" class="sec sm" data-pend-rm="${i}" aria-label="${EH(I18N.t("files.pendingRemove", { name: x.label }))}" title="${EH(I18N.t("files.pendingRemove", { name: x.label }))}">×</button></div>`).join("");
   const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isExpOpen(gkOf(G)) && !grpClosed(G.g) ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
-  Q("#flst").setAttribute("aria-busy", waiting ? "true" : "false");
-  Q("#flst").innerHTML = pendBar + pre + body + pendRows;
+  // the files still being read or converted: one progress row each, under the open ones (upload-rows.js)
+  Q("#flst").innerHTML = pre + body + UPROWS.html();
+  UPROWS.wire(Q("#fl-up")); UPROWS.paint();
   if (window.BARRA) BARRA.fitNames();
-  Q("#flst").querySelectorAll("[data-pend-rm]").forEach((/** @type {ElementoDati} */ b) => b.onclick = () => { E.pending.splice(+b.dataset.pendRm, 1); renderFileList(); });
   Q("#flst").querySelectorAll("input[data-pr]").forEach((/** @type {CampoDati} */ x) => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
   Q("#flst").querySelectorAll("[data-pg]").forEach((/** @type {ElementoDati} */ x) => { x.onclick = () => ms2Goto(x.dataset.pg); x.ondblclick = () => ms2Spectrum(x.dataset.pg); });

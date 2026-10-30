@@ -34,7 +34,9 @@ const setVisOf = (/** @type {any[]} */ fs, /** @type {boolean} */ on) => {
 function soloFile(/** @type {any} */ f0) {
   if (!f0) return;
   fileViewDo(() => { E.files.forEach(f => { f.vis = false; }); sibsOf(f0).forEach(f => { f.vis = true; }); });
-  STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind);
+  // the panels area shows before the layout is built, so the panels take its real width (not the estimate of hostWidth)
+  syncWork();
+  STATO.file(f0.k, "file"); if (f0.kind !== E.tab) setTab(f0.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave(); scrollToBlock(f0.kind);
 }
 // The three steps of taking one file out: take (hide it), back (undo) and free (release its copy in OPFS and its indexes, only in the browser, when the notice closes without an undo).
@@ -46,15 +48,23 @@ function fileRemoval(/** @type {any} */ f) {
     // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
   };
+  /** @type {any[]} */ let closed = [];
   const take = () => {
+    const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
+    // a panel left with no file of its tab closes (the undo opens it again)
+    cleanupOrphanPanels();
+    closed = before.filter(([q]) => !E.panels.includes(q)).map(([, rec]) => rec);
+    if (closed.length) { relayout(); fitHost(); }
     show();
   };
   const back = () => {
     f.gone = false; f.vis = was.vis; was.ks.forEach(([q, k]) => { if (E.panels.includes(q)) q.k = k; });
     if (was.cur === f.k) STATO.file(f.k, "file-restored");
+    closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
+    closed = [];
     show();
   };
   const free = () => {
@@ -148,9 +158,9 @@ function pickTrace(/** @type {Pannello} */ p, /** @type {number} */ x, /** @type
 function activeFile(k) {
   const f = E.files[k]; if (!f) return;
   const alone = E.browse; if (alone) tabFiles(f.kind).forEach(g => { g.vis = false; });
-  sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file");
+  sibsOf(f).forEach(g => { g.vis = true; }); STATO.file(f.k, "file"); syncWork();
   followSpectra(f);
-  if (f.kind !== E.tab) setTab(f.kind);
+  if (f.kind !== E.tab) setTab(f.kind, false, "file");
   cleanupOrphanPanels(); ensureLayout(); renderFileList(); renderNav(); redrawAll(); uiSave();
 }
 /** ‹ ›: the next file of the tab, among the ticked ones when several are shown. */

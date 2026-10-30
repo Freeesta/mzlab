@@ -180,6 +180,7 @@ function closeAllPanels() {
   uiSave();
   if (tabFiles("ms2").length) renderFileList();
   redrawAll();
+  workClosedAll();
 }
 
 function cleanupOrphanPanels() {
@@ -233,7 +234,7 @@ function addPanel(type, o, after) {
   const p = /** @type {Pannello} */ (/** @type {unknown} */ ({ id: E.seq++, type, anns: [], ints: [], ...o }));
   if (!p.tab) { p.tab = type === "mrm" ? "mrm" : E.tab === "mrm" ? (tabFiles("full").length || !tabFiles("ms2").length ? "full" : "ms2") : E.tab; if (p.tab !== E.tab && window.setTab) window.setTab(p.tab, true, "new-panel"); }
   const lv0 = (E.files[o?.k ?? 0] || {}).lv || 1;
-  if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: ptNorm(o.title) || PT.chrom });
+  if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, ptol: o.ptol ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: ptNorm(o.title) || PT.chrom });
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.spec });
   if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? TOL0, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.xic });
   if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: ptNorm(o.title) || PT.mrm, _trs: [] });
@@ -687,7 +688,7 @@ function ctl(/** @type {Pannello} */ p) {
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>${I18N.t("ctl.ms2scans")}</option></select>` : null;
   const trSel = ms2c && (p._trs || []).length ? `<select data-o="tr" title="${I18N.t("ctl.ms2tr.title")}"><option value="" ${!p.tr ? "selected" : ""}>${I18N.t("ctl.ms2tr.none")}</option><option value="__all" ${p.tr === "__all" ? "selected" : ""}>${I18N.t("ctl.ms2tr.all")}</option>${p._trs.map((/** @type {Bag} */ t) => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(I18N.t("ctl.ms2tr.opt", { q1: t.q1, q3: t.q3 }))}</option>`).join("")}</select>` : "";
   const canBtn = p.type === "chrom" ? "" : window.CANALI?.html(p) ?? "";
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `${CANALI.html(p, { hasScan, hasPda, an: anKinds, reg: !!(window.REGISTRO && REGISTRO.has(TF)) })}${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some((/** @type {MzFile} */ x) => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `${CANALI.html(p, { hasScan, hasPda, an: anKinds, reg: !!(window.REGISTRO && REGISTRO.has(TF)) })}${p.kind === "reg" && window.REGISTRO ? REGISTRO.picker(p, TF) : ""}`}${trSel}${view}${corr}<span class="ibkslot"></span>${parBox(`${p.kind === "pda" ? wl : isAnalog(p.kind) ? "" : precSel + (hasScan ? mzbar : "")}${rtbar}${p.type === "chrom" && p.tab === "full" && E.files.some((/** @type {MzFile} */ x) => x.ms2_events) ? chk("ms2tri", I18N.t("ctl.ms2tri"), false, "", I18N.t("ctl.ms2tri.title")) : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;  // xed: lower / upper m/z of an ion read in high resolution (ppm window)

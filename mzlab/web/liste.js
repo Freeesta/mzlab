@@ -454,16 +454,15 @@ const LISTE = (() => {
 
   // Dialog for laboratory contaminants
   function openLab() {
-    const EHt = (/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]);
     const draw = () => {
       const rows = labRows();
       if (typeof big === "function") {
         big(I18N.t("lst.lab.name"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("lst.lab.intro")}</div>
           <div class="bar"><button id="lab-xl" type="button">${I18N.t("lst.lab.export")}</button><button id="lab-im" type="button">${I18N.t("lst.lab.import")}</button><button id="lab-add" type="button" class="go">${I18N.t("lst.lab.add")}</button><input type="file" id="lab-f" accept=".csv,.txt" hidden></div>
           <table class="lct"><tr><th class="num"><i>m/z</i></th><th>${I18N.t("lst.col.name")}</th><th>${I18N.t("lst.col.formula")}</th><th>${I18N.t("lst.col.polarity")}</th><th>${I18N.t("lst.col.note")}</th><th></th></tr>
-          ${rows.map((r, i) => `<tr><td><input data-i="${i}" data-c="mz" value="${r.mz}" style="width:84px"></td><td><input data-i="${i}" data-c="name" value="${EHt(r.name)}"></td><td><input data-i="${i}" data-c="formula" value="${EHt(r.formula)}" style="width:110px"></td>
+          ${rows.map((r, i) => `<tr><td><input data-i="${i}" data-c="mz" value="${r.mz}" style="width:84px"></td><td><input data-i="${i}" data-c="name" value="${EH(r.name)}"></td><td><input data-i="${i}" data-c="formula" value="${EH(r.formula)}" style="width:110px"></td>
             <td><select data-i="${i}" data-c="polarity"><option value="0"${!r.polarity ? " selected" : ""}>${I18N.t("lst.pol.both")}</option><option value="1"${r.polarity === 1 ? " selected" : ""}>${I18N.t("lst.pol.pos")}</option><option value="-1"${r.polarity === -1 ? " selected" : ""}>${I18N.t("lst.pol.neg")}</option></select></td>
-            <td><input data-i="${i}" data-c="note" value="${EHt(r.note)}"></td><td><button data-del="${i}" type="button" title="${I18N.t("lst.lab.removeRow")}">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">${I18N.t("lst.lab.empty")}</td></tr>`}</table>`, () => {
+            <td><input data-i="${i}" data-c="note" value="${EH(r.note)}"></td><td><button data-del="${i}" type="button" title="${I18N.t("lst.lab.removeRow")}">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">${I18N.t("lst.lab.empty")}</td></tr>`}</table>`, () => {
           document.querySelectorAll("#bigbody [data-c]").forEach(inp => inp.onchange = () => {
             const r = labRows(), x = r[+inp.dataset.i]; if (!x) return;
             const c = inp.dataset.c; x[c] = c === "mz" ? numIt(inp.value) || x.mz : c === "polarity" ? +inp.value : inp.value; saveRows(r);

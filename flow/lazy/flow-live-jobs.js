@@ -67,7 +67,10 @@
     return detached(x, spec, inst, async () => {
       const out = (await p.detectAll([{ name: it.input || src.name, path: src.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
       await p.fs.write(path, out.slice());
-      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+      // the record names the preset the files decided (unit resolution runs `lr`), as `flow run` does
+      const seen = ((x.plan.inputs || []).find((/** @type {any} */ i) => i.name === (it.input || src.name)) || {}).observed;
+      const unit = !!seen && seen.resolution.length === 1 && seen.resolution[0] === "lr";
+      await x.call("finished", { job: j, result: unit ? { ms: performance.now() - t0, preset: "lr" } : { ms: performance.now() - t0 } });
     });
   };
 
@@ -281,5 +284,5 @@
     });
   };
 
-  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
+  F.liveJobs = { msnKey, "tp.generate": tpGenerate, "tp.link": tpLink, "tp.filter": tpPost, "tp.position": tpPost, "tp.network": tpPost, "tp.review": tpPost, "tp.dig_lr": tpDig, "export.table_csv": tableExport, "export.mztab": tableExport, "table.filter": tableFilter, "table.drift": (...a) => F.webDrift.run(...a), "export.inclusion": (...a) => F.webInclusion.run(...a), "spectra.msn_graph": msn, "msn.library_export": msn, "msn.table_export": msn, "spectra.match": (x, spec, inst) => (inst.algorithm === "tree" ? msn : F.webIdent.match)(x, spec, inst), "spectra.ms2": (...a) => F.webIdent.ms2(...a), "table.match": (...a) => F.webIdent.tableMatch(...a), "formula.ms2": (...a) => F.webIdent.ms2Formula(...a), "annot.level": (...a) => F.webIdent.level(...a), "qc.mass_accuracy": (...a) => F.webQc.run(...a), "screen.suspects": (...a) => F.webSuspects.run(...a), "annot.regulatory": (...a) => F.webSuspects.regulatory(...a), "spectra.insilico": (...a) => F.webInsilico.run(...a), job, sha, recall, remember, detached, has, "spectra.centroid": centroid, "index.mzidx": index, "features.detect": detect, "features.align": align, "features.gapfill": align, DIR, fresh, strings };
 })();

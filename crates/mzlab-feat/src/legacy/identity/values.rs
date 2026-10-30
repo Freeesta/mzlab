@@ -22,40 +22,6 @@ pub(super) fn cmp_value(a: &Value, b: &Value) -> std::cmp::Ordering {
     }
 }
 
-/// A JSON value written back as it came.
-pub(crate) fn write_value(v: &Value, o: &mut Out) {
-    match v {
-        Value::Null => {
-            o.raw("null");
-        }
-        Value::Bool(b) => {
-            o.raw(if *b { "true" } else { "false" });
-        }
-        Value::Num(x) => {
-            o.num(*x);
-        }
-        Value::Str(s) => {
-            o.str(s);
-        }
-        Value::Arr(a) => {
-            o.raw("[");
-            for (i, x) in a.iter().enumerate() {
-                o.raw(if i > 0 { "," } else { "" });
-                write_value(x, o);
-            }
-            o.raw("]");
-        }
-        Value::Obj(m) => {
-            o.raw("{");
-            for (i, (k, x)) in m.iter().enumerate() {
-                o.raw(if i > 0 { "," } else { "" }).str(k).raw(":");
-                write_value(x, o);
-            }
-            o.raw("}");
-        }
-    }
-}
-
 /// The options of `build` (`DEFAULTS` updated by `opt`).
 pub(super) struct Opt {
     pub(super) ppm: f64,

@@ -45,7 +45,7 @@ interface PannelloBase {
   _a?: any;                 // axes and geometry of the last draw
   [campo: string]: any;
 }
-interface PannelloChrom extends PannelloBase { type: "chrom"; kind: string; prec: number | null; smooth: boolean; traces: Traccia[] }
+interface PannelloChrom extends PannelloBase { type: "chrom"; kind: string; prec: number | null; ptol?: number | null; smooth: boolean; traces: Traccia[] }
 interface PannelloXic extends PannelloBase { type: "xic"; traces: Traccia[]; tol: number; smooth: boolean; adduct: any }
 interface PannelloMrm extends PannelloBase { type: "mrm"; tr: string; smooth: false; _trs: any[] }
 interface PannelloSpec extends PannelloBase { type: "spec"; k: number; all: boolean; r0: number | null; r1: number | null; level: number; prec: number | null; lock: any; rel: boolean | null }
