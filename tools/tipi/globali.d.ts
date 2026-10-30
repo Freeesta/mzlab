@@ -215,6 +215,8 @@ declare var qqReady: any;
 declare var qqStep: any;
 declare var rowPc: any;
 declare var saveBlob: any;
+declare var stdGate: any;
+declare var suspectFragments: any;
 declare var timeShown: any;
 declare var timeStored: any;
 declare var toast: any;
