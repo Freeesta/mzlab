@@ -63,6 +63,9 @@ mod tests {
         let a = super::intern(&String::from("err.test.interned"));
         let b = super::intern(&String::from("err.test.interned"));
         assert_eq!(a, "err.test.interned");
-        assert!(std::ptr::eq(a, b), "the second call must not leak a new copy");
+        assert!(
+            std::ptr::eq(a, b),
+            "the second call must not leak a new copy"
+        );
     }
 }

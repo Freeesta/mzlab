@@ -55,7 +55,11 @@ fn ports(v: Option<&Value>) -> Result<Vec<Port>> {
     entries(v)
         .iter()
         .map(|(name, p)| {
-            let mut port = Port::new(crate::error::intern(name), data_type(p.get("type").ok_or_else(bad)?)?, "");
+            let mut port = Port::new(
+                crate::error::intern(name),
+                data_type(p.get("type").ok_or_else(bad)?)?,
+                "",
+            );
             port.many = p.get("many").and_then(Value::bool) == Some(true);
             port.optional = p.get("optional").and_then(Value::bool) == Some(true);
             port.accepts = p

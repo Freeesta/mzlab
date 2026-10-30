@@ -17,7 +17,10 @@ pub(super) struct Finestre {
 
 impl Finestre {
     pub(super) fn new() -> Self {
-        Finestre { at: 0, buf: Vec::new() }
+        Finestre {
+            at: 0,
+            buf: Vec::new(),
+        }
     }
 
     /// The window holds `from..` up to `from + want` (or the end of the file); otherwise a new window starts at `from`.
@@ -31,16 +34,27 @@ impl Finestre {
     }
 
     /// The first `pat` that starts at or after `from` and ends by `to`; with `tag`, followed by white space or `>` (`find_tag`).
-    pub(super) fn find<R: ReadAt>(&mut self, m: &mut Mzml<R>, pat: &[u8], mut from: u64, to: u64, tag: bool) -> Result<Option<u64>> {
+    pub(super) fn find<R: ReadAt>(
+        &mut self,
+        m: &mut Mzml<R>,
+        pat: &[u8],
+        mut from: u64,
+        to: u64,
+        tag: bool,
+    ) -> Result<Option<u64>> {
         let to = to.min(m.size);
         // a match cut by the end of a window is found again in the next one, which starts this far back
         let back = pat.len() as u64 + 1;
         while from < to {
             self.load(m, from, back)?;
             let hi = (self.at + self.buf.len() as u64).min(to);
-            let slice = self.buf.get(..(hi - self.at) as usize).unwrap_or_default();
-            let lo = (from - self.at) as usize;
-            let got = if tag { find_tag(slice, pat, lo) } else { find(slice, pat, lo) };
+            let slice = self.buf.get(..self.off(hi)).unwrap_or_default();
+            let lo = self.off(from);
+            let got = if tag {
+                find_tag(slice, pat, lo)
+            } else {
+                find(slice, pat, lo)
+            };
             if let Some(p) = got {
                 return Ok(Some(self.at + p as u64));
             }
@@ -52,11 +66,20 @@ impl Finestre {
         Ok(None)
     }
 
+    /// The place of file offset `x` (not before the window) in the window.
+    fn off(&self, x: u64) -> usize {
+        usize::try_from(x.saturating_sub(self.at)).unwrap_or(usize::MAX)
+    }
+
     /// The bytes `a..b`, from the window when it holds them.
     pub(super) fn bytes<R: ReadAt>(&mut self, m: &mut Mzml<R>, a: u64, b: u64) -> Result<Vec<u8>> {
         let end = self.at + self.buf.len() as u64;
         if a >= self.at && b <= end {
-            return Ok(self.buf.get((a - self.at) as usize..(b - self.at) as usize).unwrap_or_default().to_vec());
+            return Ok(self
+                .buf
+                .get(self.off(a)..self.off(b))
+                .unwrap_or_default()
+                .to_vec());
         }
         m.read(a, b)
     }

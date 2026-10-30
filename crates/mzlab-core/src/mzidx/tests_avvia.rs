@@ -1,8 +1,12 @@
 //! The run-wise merge of `avvia` against the merge one peak at a time.
+#![allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    clippy::explicit_counter_loop
+)]
 use super::*;
 
 /// `avvia` one peak at a time: the reference of the run-wise merge.
-#[allow(clippy::indexing_slicing)]
 fn per_peak(gruppi: &mut [Gruppo], sp: &mut dyn Spill) -> Result<Parti> {
     let mut counts = vec![0u64; NB];
     for g in gruppi.iter() {
