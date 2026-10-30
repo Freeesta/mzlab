@@ -54,7 +54,7 @@ const TOURDOPO = (() => {
   // the sample table and the first file open the chapter «Your data» only when they are on screen as the tour starts (files waiting for the first click)
   const iniziali = [
     { id: "campioni", opt: true, target: () => document.getElementById("wtable") },
-    { id: "primo", opt: true, target: () => document.querySelector("#flst .fl[data-k]") }
+    { id: "primo", opt: true, target: () => document.getElementById("wtable")?.offsetParent ? document.querySelector("#flst .fl[data-k]") : null }
   ];
   /** The steps of the chapter without the optional ones whose target is not visible now. @template {{ opt?: boolean, target: () => any }} T @param {T[]} lista @returns {T[]} */
   const passi = lista => lista.filter(st => !st.opt || (el => !!el && /** @type {HTMLElement} */ (el).offsetParent !== null && el.getBoundingClientRect().width > 0)(st.target()));
