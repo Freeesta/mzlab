@@ -264,6 +264,7 @@
     "../../flow/lazy/flow-web-msn.js",
     "../../flow/lazy/flow-web-ident.js",
     "../../flow/lazy/flow-web-qc.js",
+    "../../flow/lazy/flow-web-suspects.js",
     "../../flow/lazy/flow-msn-molecule.js",
     "../../flow/lazy/flow-llm.js",
     "../../flow/lazy/flow-llm-chart.js",

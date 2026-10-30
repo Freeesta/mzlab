@@ -165,5 +165,5 @@
     return el("div", { class: "fl-results" }, pick, F.btn("import", "Choose the library file", () => pick.click(), "Library file…"), say);
   });
 
-  F.webIdent = { ms2, match, tableMatch, ms2Formula, level, STEPS };
+  F.webIdent = { ms2, match, tableMatch, ms2Formula, level, textOf, STEPS };
 })();

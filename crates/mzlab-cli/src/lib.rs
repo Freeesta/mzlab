@@ -112,6 +112,7 @@ mod flow_render;
 mod flow_render_tests;
 pub mod flow_report;
 mod flow_run;
+mod flow_screen_suspects;
 mod flow_set;
 mod flow_stats;
 mod flow_table;
@@ -457,6 +458,8 @@ mod flow_report_tests;
 mod flow_rule_tests;
 #[cfg(test)]
 mod flow_run_tests;
+#[cfg(test)]
+mod flow_screen_suspects_tests;
 #[cfg(test)]
 mod flow_stats_tests;
 #[cfg(test)]
