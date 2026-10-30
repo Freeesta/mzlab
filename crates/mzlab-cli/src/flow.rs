@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use crate::flow_screen_suspects::screen_job;
+use self::screen_suspects::screen_job;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::{Artifact, Job, Mem, Outcome, Runner};
 use mzlab_core::json::Value;
@@ -35,6 +35,8 @@ pub mod live;
 mod plausible;
 #[path = "flow_rtpredict.rs"]
 mod rtpredict;
+#[path = "flow_screen_suspects.rs"]
+mod screen_suspects;
 
 pub(crate) fn io(e: std::io::Error) -> Error {
     Error::new("err.flow.io").with("detail", e)

@@ -114,7 +114,6 @@ mod flow_render;
 mod flow_render_tests;
 pub mod flow_report;
 mod flow_run;
-mod flow_screen_suspects;
 mod flow_set;
 mod flow_stats;
 mod flow_table;
