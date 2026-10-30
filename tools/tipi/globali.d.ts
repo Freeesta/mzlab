@@ -50,6 +50,7 @@ declare var INFGAPRI: any;
 declare var KMDCALC: any;
 declare var LETTORI_FAM: any;
 declare var LETTORI_MOD: any;
+declare var LIBR: any;
 declare var LISTE: any;
 declare var LISTE_TARGET: any;
 declare var LISTE_TARGET_CORE: any;

@@ -3,8 +3,10 @@
 //! `features.align` refuses a series that mixes them (`one_kind_of`).
 
 use mzlab_core::error::{Error, Result};
+use mzlab_core::flow::{Observed, Plan};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{write_value, Out, Value};
+use mzlab_core::scantable::Table;
 
 use crate::facts::file_facts;
 
@@ -126,6 +128,75 @@ pub fn estimates_json(list: &[(String, Value, Value)]) -> String {
     }
     o.raw("]");
     o.0
+}
+
+/// The (polarity of the MS1 scans, high resolution) of one file from its index, for the check: the resolution is None when no MS1 scan names its
+/// analyzer or declares a resolving power and the index is not high resolution (an mzML that says nothing is not taken for unit resolution).
+pub fn index_facts<R: ReadAt>(index: &Index<R>) -> (i8, Option<bool>) {
+    let said = index.scans.iter().any(|s| {
+        s.level == 1
+            && (s.an.as_deref().is_some_and(|a| a != "?") || s.res.is_some_and(|r| r > 0.0))
+    });
+    let hr = index.hr1();
+    (file_facts(index).polarity, (hr || said).then_some(hr))
+}
+
+/// The same facts from the scan table of an mzML (what its index will hold), read before any index is built.
+pub fn table_facts(table: &Table) -> (i8, Option<bool>) {
+    let ms1 = || table.rows.iter().filter(|r| r.level == 1);
+    let sum: i64 = ms1().map(|r| i64::from(r.polarity.signum())).sum();
+    let said = ms1().any(|r| r.an != "?" || r.resolving_power().is_some_and(|x| x > 0.0));
+    (sum.signum() as i8, (table.hr1 || said).then_some(table.hr1))
+}
+
+/// The facets of scan data for the check of a plan (`err.flow.facet`): every resolution (`hr`, `lr`) and polarity some file has; a file with no
+/// polarity or no known resolution adds none of it.
+pub fn facets(files: impl IntoIterator<Item = (i8, Option<bool>)>) -> Observed {
+    let mut o = Observed::default();
+    for (polarity, hr) in files {
+        let r = hr.map(|h| if h { "hr" } else { "lr" });
+        if let Some(r) = r.filter(|r| !o.resolution.iter().any(|x| x == r)) {
+            o.resolution.push(r.to_string());
+        }
+        if polarity != 0 && !o.polarity.contains(&polarity) {
+            o.polarity.push(polarity);
+        }
+    }
+    o
+}
+
+/// `{"resolution":[...],"polarity":[...]}`, the facets as the page puts them on a scan input.
+pub fn facets_json(o: &Observed) -> String {
+    let mut out = Out::default();
+    out.raw("{\"resolution\":[");
+    for (k, r) in o.resolution.iter().enumerate() {
+        out.raw(if k > 0 { "," } else { "" }).str(r);
+    }
+    out.raw("],\"polarity\":[");
+    for (k, p) in o.polarity.iter().enumerate() {
+        out.raw(if k > 0 { "," } else { "" }).int(i64::from(*p));
+    }
+    out.raw("]}");
+    out.0
+}
+
+/// The scan inputs of `plan` (`raw`, `mzml`, `mzidx`) take the facets their file gives (`facts`, None = not read) for the ones the plan does not
+/// write: a resolution or a polarity written by hand is kept.
+pub fn fill_facets(plan: &mut Plan, facts: impl Fn(&str) -> Option<(i8, Option<bool>)>) {
+    for f in &mut plan.inputs {
+        let scan = matches!(f.ty.as_deref(), Some("raw" | "mzml" | "mzidx"));
+        if !scan || (!f.observed.resolution.is_empty() && !f.observed.polarity.is_empty()) {
+            continue;
+        }
+        let Some(one) = facts(&f.name) else { continue };
+        let o = facets([one]);
+        if f.observed.resolution.is_empty() {
+            f.observed.resolution = o.resolution;
+        }
+        if f.observed.polarity.is_empty() {
+            f.observed.polarity = o.polarity;
+        }
+    }
 }
 
 #[cfg(test)]

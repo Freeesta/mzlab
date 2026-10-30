@@ -1,2 +1,3 @@
 # Known red or unstable e2e on main (read by tools/verifica.py): `name | reason`. A FAIL listed here is shown as NOTO and does not
 # fail the run; any other FAIL is shown as NUOVO. Remove a line when the test is fixed. Measured on origin/main with synthetic data, Chromium.
+e2e_primo_disegno | pixel diff i18n->qqReady: the «m/z» italic wrap (shell.js:473 MutationObserver) lands after the i18n instant on the header add-buttons, plus a 1 px card border at the bottom edge (y~893); fix belongs to the landing/header chat

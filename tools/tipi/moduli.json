@@ -60,6 +60,7 @@
     "../../mzlab/web/open-now-raro.js",
     "../../mzlab/web/infusione-grafo.js",
     "../../mzlab/web/banco-file.js",
+    "../../mzlab/web/libreria-risultati.js",
     "../../mzlab/web/infusione-grafo-campo.js",
     "../../mzlab/web/infusione-grafo-css.js",
     "../../mzlab/web/infusione-grafo-cerca.js",

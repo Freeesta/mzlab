@@ -40,6 +40,15 @@ try:
             assert "Voce di prova" in t and pg.locator("#li-body .lvb").count() >= 1, t
             assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
             assert pg.is_visible("#libid") and "Livello proposto" in pg.inner_text("#libid")
+            xs = pg.evaluate("[...document.querySelectorAll('#li-body tr')].map(tr=>[...tr.children].map(c=>Math.round(c.getBoundingClientRect().x)))")
+            assert len(xs) > 10 and all(len(x) == len(xs[0]) for x in xs), "header and rows have the same columns"
+            assert all(all(abs(a - b) <= 1 for a, b in zip(x, xs[0])) for x in xs), ("the column x positions are the same in every row", xs[:3])
+            assert pg.evaluate("(()=>{const t=document.querySelector('#li-body .li-t'),h=document.querySelector('#li-body th'),sc=document.querySelector('#li-body .li-sc');sc.scrollTop=200;return getComputedStyle(h).position==='sticky'&&Math.abs(h.getBoundingClientRect().top-sc.getBoundingClientRect().top)<=2&&getComputedStyle(document.querySelector('#li-body td.num')).textAlign==='right'})()"), "sticky header, numbers on the right"
+            w0 = pg.evaluate("document.querySelector('#libid').offsetWidth")
+            pg.click("#libid .li-mx"); assert pg.evaluate("document.querySelector('#libid').offsetWidth") > w0 or w0 >= pg.evaluate("innerWidth*0.97"), "maximised"
+            assert pg.get_attribute("#libid .li-mx", "aria-pressed") == "true"
+            pg.click("#libid .li-mx")
+            pg.evaluate("(()=>{const d=document.querySelector('#libid');d.style.width='700px';d.style.height='500px'})()"); pg.wait_for_function("(JSON.parse(localStorage.getItem('mzlab.libid.size')||'null')||{}).w===700", timeout=5000)
             with pg.expect_download() as dl: pg.click("#li-xlsx")
             assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500
             pg.evaluate("document.querySelector('#libid').close()")

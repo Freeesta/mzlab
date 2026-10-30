@@ -24,6 +24,9 @@ mod regex;
 mod ricollega;
 mod valida;
 mod valida3;
+mod variabili;
+mod variabili_classi;
+mod variabili_uscita;
 
 pub use colonne::{Cell, Colonna, DatiFile, Tabella, TipoColonna};
 pub use csv::{csv_leggi, csv_scrivi};
@@ -289,6 +292,8 @@ pub fn route_tutto(op: &str, input: &str) -> Result<String> {
         "modello" => applica_modello(input),
         "csv_leggi" => csv_leggi(input),
         "csv_scrivi" => csv_scrivi(input),
+        "variabili" => variabili::route_variabili(input),
+        "nome_gruppo" => variabili::route_nome_gruppo(input),
         _ => route(op, input),
     }
 }

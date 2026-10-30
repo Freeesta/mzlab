@@ -19,6 +19,8 @@
   const specFile = p => p._a && p._a.data && p._a.data[0] ? p._a.data[0].f : null;
   /** an infusion has no real chromatogram: the XIC button and the lens of its spectrum are off (the kind of the engine, infusione.rs, or the same words in the file name) @param {any} p */
   const infusion = p => { const f = specFile(p); return !!f && (f.kind === "infusion" || !f.manual && /infus|fia|direct|syringe/i.test(String(f.label || f.name || "").split(/[\\/]/).pop() || "") || (!!window.CANALI && ESP.predefinito(CANALI.tipo(f)).lente === false)); };      // the table of the types of experiment (esperimenti.js) says whether the lens is proposed
+  /** the XIC lens (the preview on peak hover and its switch) exists only on the MS1 spectrum of a high-resolution file: not on MS2, not at low resolution, not on infusion @param {any} p */
+  const lens = { ok: (/** @type {any} */ p) => { const f = specFile(p); return !!f && !infusion(p) && p.level === 1 && !!window.HR && HR.isHr(f, 1); } };       // an object so that a test can lift the condition
   /** the high-resolution file among those the XIC reads, if any @param {any} p */
   const hrFile = p => (window.HR ? HR.xicFiles(p.tab).find((/** @type {any} */ f) => HR.isHr(f, f.lv)) : null) || null;
   const num = (/** @type {number} */ v) => String(+v.toFixed(5));
@@ -74,9 +76,9 @@
       if (bt.title !== tip) bt.title = tip;
     }
     if (pv) {
-      const on = !!UIP.xicLens && !off;
+      const ok = lens.ok(p), on = !!UIP.xicLens && ok;
       pv.classList.toggle("on", on); pv.setAttribute("aria-pressed", String(on));
-      if (pv.disabled !== off) pv.disabled = off;
+      if (pv.hidden === ok) pv.hidden = !ok;
     }
     if (l) {
       l.hidden = !s.sel;
@@ -149,7 +151,7 @@
   /** called after every drawing of the spectrum @param {any} p */
   function sync(p) {
     if (window.XICLENS) XICLENS.sync(p);
-    const s = ST.get(p), xb = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]')); if (s && (infusion(p) !== xb?.disabled || (xb && xb.title !== tipOf(p, infusion(p))) || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && !infusion(p)))) refresh(p);
+    const s = ST.get(p), xb = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicb"]')); if (s && (infusion(p) !== xb?.disabled || (xb && xb.title !== tipOf(p, infusion(p))) || (p.el.querySelector('[data-a="xicp"]')?.getAttribute("aria-pressed") === "true") !== (!!UIP.xicLens && lens.ok(p)))) refresh(p);
     if (!s || !live(p)) return;
     FRAME.cancel(s.raf); s.raf = FRAME.next(() => follow(p));
   }
@@ -275,7 +277,7 @@
   }
   /** what the lens asks the engine for the ion m of this spectrum: the file of the spectrum, the (m/z, tolerance) of the XIC button, the label @param {any} p @param {number} m */
   function lensArgs(p, m) {
-    const f = specFile(p); if (!f || infusion(p)) return null;
+    const f = specFile(p); if (!f || !lens.ok(p)) return null;
     const sel = { m, obs: true, tol: null }, tr = traceFor(p, sel);
     return { f, args: tr.ion && window.HR ? HR.xicArgs(f, tr, { tab: p.tab, tol: TOL0 }) : [tr.mz, tr.w ?? TOL0], text: ionText(p, sel), canale: window.CANALI ? CANALI.idOf(f, tr.canale) : null };
   }
@@ -326,6 +328,6 @@
     } catch (e) { /* draw() asks again */ }
   }
 
-  /** @type {any} */ (window).XICBTN = { wire, prefetch, setLens, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** @type {any} */ (window).XICBTN = { wire, prefetch, setLens, lens, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();

@@ -58,3 +58,29 @@ def test_only_the_resolver_reads_the_data_env_and_legacy_names():
             if cattivi.search(p.read_text(encoding="utf-8", errors="ignore")):
                 trovati.append(str(p.relative_to(ROOT)))
     assert not trovati, trovati
+
+
+def test_moved_folders_are_found_in_both_layouts(repo):
+    """The data repository was tidied: the old and the new spelling of a moved folder reach the same file."""
+    _tocca(repo, "dati/INDICE.md")
+    pairs = [
+        ("esperimenti/2026-10/loc_2026-10-22_x/RISULTATI.md", "esperimenti/loc_2026-10-22_x/RISULTATI.md"),
+        ("esperimenti/altro/Computazio/a.md", "esperimenti/Computazio/a.md"),
+        ("coordinamento/documenti/studi/s.md", "coordinamento/studi/s.md"),
+        ("prompt/raw/r.md", "coordinamento/prompt/raw/r.md"),
+        ("libro/testo/c.md", "Libro_Untargeted/c.md"),
+        ("libro/piano/p.md", "coordinamento/libro_untargeted/p.md"),
+        ("libro/lezioni/lezioni/L01.md", "corso/untargeted/lezioni/L01.md"),
+        ("validazione/benchmark/b.md", "studio/benchmark/b.md"),
+        ("validazione/V0_timololo.md", "studio/validazione/V0_timololo.md"),
+        ("validazione/G1/x.md", "studio/validazione/G1/x.md"),
+        ("validazione/nts-validazione/PROTOCOLLO.md", "studio/nts-validazione/PROTOCOLLO.md"),
+        ("coordinamento/documenti/studi/CD/a.md", "studio/CD/a.md"),
+        ("coordinamento/documenti/paper/p.md", "studio/paper/p.md"),
+        ("esperimenti/altro/degdma/FILE.md", "studio/degdma/FILE.md"),
+    ]
+    for novo, vecchio in pairs:
+        _tocca(repo, novo)
+        assert dp.percorso(vecchio) == repo / novo and dp.percorso(novo) == repo / novo
+    assert dp.percorso("esperimenti/loc_2026-10-22_x/manca.md") is None
+    assert dp.percorso("coordinamento/CODA.md") is None
