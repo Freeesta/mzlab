@@ -33,6 +33,10 @@ for _ in range(50):
     try: urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=1); break
     except Exception: __import__("threading").Event().wait(0.2)      # the server is starting
 
+# more than 50 data files ask «Open all / Choose» once: «Choose» lists them unticked (the test measures the loading, not the opening)
+def drop(pg, files):
+    pg.set_input_files("#pick", files)
+    if len(files) > 50: pg.wait_for_selector("#askdlg[open]", timeout=60000); pg.click("#askno")
 def rss_mb():
     """sum of the resident memory of every chromium process (the pages, the workers and the browser)"""
     out = subprocess.run(["ps", "-eo", "rss,args"], capture_output=True, text=True).stdout
@@ -65,7 +69,7 @@ try:
         base = len(loads)
         opfs = lambda: pg.evaluate("navigator.storage.estimate().then(e => e.usage)") / 1e9
 
-        pg.set_input_files("#pick", FILES)
+        drop(pg, FILES)
         s, peak = follow(pg, cdp, bcdp, lambda s: s["busy"] == 0 and len(s["files"]) >= len(SAMPLES))
         print(f"   measure: {len(NAMES)} pairs, {len(SAMPLES)} samples, {peak['s']:.0f} s total, {peak['s'] / len(NAMES):.2f} s/pair, peak {peak['mb']:.0f} MB (all chromium processes), page heap {peak['heap']:.0f} MB, builders {peak['builders']}, OPFS {opfs():.2f} GB")
         if os.environ.get("MZLAB_CARICO_SOLO"): c.close(); shutil.rmtree(prof, ignore_errors=True); sys.exit(0)      # only the measure of the first drop
@@ -82,7 +86,7 @@ try:
         step("the list is in the order of the rule, not of the arrival", order)
         def again():
             some = [f for f in FILES if any(f.startswith(str(D / n)) for n in NAMES[:24])]          # 24 of the pairs again (all 240 take 70 s from the cache)
-            pg.set_input_files("#pick", some)
+            drop(pg, some)
             t0 = time.time(); pg.wait_for_function("UPBUSY === 0 && CONVROWS.rows.length > 0", timeout=300000)
             assert len([n for n in pg.evaluate("ST.files.map(f => f.name)") if n in set(SAMPLES)]) == len(SAMPLES), "duplicates or losses"
             print(f"   measure: second drop {time.time() - t0:.1f} s")
@@ -98,14 +102,14 @@ try:
             pg.goto(FRESH); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             half = [n for n in NAMES[::2]]; mine = [f for n in half for f in (str(D / n), str(D / (n + ".scan")))][::-1]
             want = [s for s in order1 if any(s.startswith(n[:-5]) for n in half)]
-            pg.set_input_files("#pick", mine)
+            drop(pg, mine)
             pg.wait_for_function(f"UPBUSY === 0 && ST.files.length >= {len(want)}", timeout=900000)
             assert [n for n in pg.evaluate("ST.files.map(f => f.name)") if n in set(want)] == want
         step("dropped in the opposite order the list has the same order", reverse)
         def cancel():
             pg.goto(FRESH); pg.wait_for_selector("#drop"); pg.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000)
             half = FILES[: len(NAMES) // 2] + FILES[len(NAMES): len(NAMES) + len(NAMES) // 2]
-            pg.set_input_files("#pick", half)
+            drop(pg, half)
             pg.wait_for_function("CONVROWS.rows.some(r => r.state === 'done')", timeout=300000)
             pg.evaluate("document.querySelector('#fl-up [data-up-all]').click()"); t0 = time.time()      # «Cancel» of the side list, drawn again at every row: a JS click
             pg.wait_for_function("UPBUSY === 0", timeout=60000)

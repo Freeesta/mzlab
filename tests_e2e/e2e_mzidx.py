@@ -103,7 +103,10 @@ try:
           for await (const [n, h] of d.entries()) put.push([n, await (await h.getFile()).arrayBuffer()]);
           const db = await new Promise((res, rej) => { const dbName = typeof NOMI !== 'undefined' ? NOMI.DB : 'mzlab_lab'; const r = indexedDB.open(dbName); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
           await new Promise(res => { const t = db.transaction('files', 'readwrite'); for (const [n, b] of put) t.objectStore('files').put(b, n); t.oncomplete = () => res(); });
-          db.close(); await top.removeEntry('files', { recursive: true }); await top.removeEntry('idx', { recursive: true }); return put.length; }"""
+          db.close();
+          // the worker of the page left behind lets the files go a moment after the navigation
+          for (const n of ['files', 'idx']) for (let i = 0; ; i++) try { await top.removeEntry(n, { recursive: true }); break; } catch (e) { if (i > 40) throw e; await new Promise(ok => setTimeout(ok, 250)); }
+          return put.length; }"""
         def old_way():
             q.set_input_files("#pick", FILES[:2])
             q.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 2", timeout=120000)
