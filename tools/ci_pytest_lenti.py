@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Rewrites tools/pytest_lenti.txt (the files ci_pytest_ordine.py collects first) from the real times of the 3.11 job recorded by stat-ci.
 
-    python3 tools/ci_pytest_lenti.py [--dati eventi.jsonl] [--ultimi 8] [--minimo 5] [--scrivi]   # default data: git show origin/stat-ci:eventi.jsonl; without --scrivi it only prints
+    python3 tools/ci_pytest_lenti.py [--dati eventi.jsonl] [--ultimi 8] [--minimo 5] [--scrivi]   # default data: every events file of origin/stat-ci; without --scrivi it only prints
 
 A file enters the list when its mean time (setup + call + teardown, last runs) is at least `--minimo` seconds; the list is sorted slowest first.
 """
 from __future__ import annotations
 
 import argparse
-import json
-import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+import ci_metrics
 
 LISTA = Path(__file__).with_name("pytest_lenti.txt")
 
@@ -40,8 +40,7 @@ def main() -> int:
     ap.add_argument("--minimo", type=float, default=5.0)
     ap.add_argument("--scrivi", action="store_true")
     a = ap.parse_args()
-    txt = Path(a.dati).read_text(encoding="utf-8") if a.dati else subprocess.run(["git", "show", "origin/stat-ci:eventi.jsonl"], capture_output=True, text=True).stdout
-    ev = [json.loads(x) for x in txt.splitlines() if x.strip()]
+    ev = ci_metrics.leggi_tutti(a.dati) if a.dati else ci_metrics.eventi_ramo()
     elenco = lenti(ev, a.ultimi, a.minimo)
     if not elenco:
         sys.exit("no 3.11 run with phase data: the list is left as it is")

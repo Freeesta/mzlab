@@ -16,7 +16,7 @@ const CASES: [(&str, i8, bool); 4] = [
 /// The table steps after the chain of `plan`: every one reads only what a full-scan series gives.
 const EXTRA: &str = r#",{"id":"est","step":"features.estimate@1","in":{"index":["idx.index"]}},
     {"id":"dig","step":"tp.dig_lr@1","in":{"table":"gap.table","samples":"file:samples.json","parent":"file:parent.json","index":["idx.index"]}},
-    {"id":"fil","step":"table.filter@1","in":{"table":"gap.table","samples":"file:samples.json"},"params":{"dup_ppm":10}},
+    {"id":"fil","step":"table.filter@1","in":{"table":"gap.table","samples":"file:samples.json"},"params":{DUP}},
     {"id":"plz","step":"table.plausible@1","in":{"table":"gap.table"}},
     {"id":"kmd","step":"table.kmd@1","in":{"table":"gap.table"}},
     {"id":"csv","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}},
@@ -60,7 +60,13 @@ fn read(d: &Path, f: &str) -> String {
 fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
     for (tag, pol, hr) in CASES {
         let d = fixture(&format!("nl_{tag}"), pol, hr);
-        let prov = run(&d, &with(EXTRA));
+        // the duplicate window is in Da on the unit axis and in ppm at high resolution
+        let dup = if hr {
+            r#""dup_ppm":10"#
+        } else {
+            r#""dup_da":0.3"#
+        };
+        let prov = run(&d, &with(&EXTRA.replace("DUP", dup)));
         for id in [
             "det", "ali", "gap", "gen", "lnk", "flt", "pos", "net", "est", "dig", "fil", "plz",
             "kmd", "csv", "mzt", "qc", "rx",
@@ -90,10 +96,10 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
             read(&d, "dig.json").contains(&format!("\"adduct\":\"{adduct}\"")),
             "{tag}"
         );
-        // the unit axis of the detection reaches the alignment and the gap filling (a negative tolerance is Da)
+        // the unit axis of the detection reaches the alignment: its tolerance is `tol_da` (Da), the ppm one is for high resolution
         let ali = activity(&prov, "ali").get("params").unwrap();
-        let ppm = ali.get("ppm").and_then(|v| v.f64()).unwrap();
-        assert_eq!(ppm < 0.0, !hr, "{tag} align ppm {ppm}");
+        let tol_da = ali.get("tol_da").and_then(|v| v.f64());
+        assert_eq!(tol_da.is_some(), !hr, "{tag} align tol_da {tol_da:?}");
         // the exports name the polarity of the files
         let word = if pol < 0 {
             "negative scan"
@@ -336,7 +342,6 @@ fn a_negative_table_is_searched_as_negative_by_table_match() {
 }
 
 #[test]
-#[ignore = "gap NL-4: a series that mixes polarities is aligned in silence (MATRICE_NEG_LR.md)"]
 fn gap_a_series_of_mixed_polarity_is_refused_or_warned() {
     let d = mixed("nl_g4", |k| (if k < 2 { -1 } else { 1 }, true));
     let prov = run(&d, &with("]}"));
@@ -344,17 +349,24 @@ fn gap_a_series_of_mixed_polarity_is_refused_or_warned() {
         flagged(&prov, "ali", "polarity"),
         "the alignment of + and - files says nothing"
     );
+    assert_eq!(
+        error_of(&prov, "ali").as_deref(),
+        Some("err.flow.align.polarity")
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
 
 #[test]
-#[ignore = "gap NL-5: a series that mixes unit and high resolution is aligned on the axis of its first file in silence (MATRICE_NEG_LR.md)"]
 fn gap_a_series_of_mixed_resolution_is_refused_or_warned() {
     let d = mixed("nl_g5", |k| (1, k >= 2));
     let prov = run(&d, &with("]}"));
     assert!(
         flagged(&prov, "ali", "resolution"),
         "the alignment of Da and ppm files says nothing"
+    );
+    assert_eq!(
+        error_of(&prov, "ali").as_deref(),
+        Some("err.flow.align.resolution")
     );
     let _ = std::fs::remove_dir_all(&d);
 }

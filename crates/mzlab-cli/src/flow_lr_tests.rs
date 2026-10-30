@@ -1,6 +1,9 @@
 //! mzFlow against the Dig of mzFinder on the five demo full-scan files of the site (`mzlab/web/esempi/FullScan_t*.mzML`, unit resolution): the base
 //! chain gives the table of the page byte for byte and `tp.dig_lr` the JSON of `lr::dig` over it. `tp.link@2` reads the same table through the gates of `tp/1` in Da.
 
+#[path = "flow_lr_tol_tests.rs"]
+mod tol;
+
 use std::path::{Path, PathBuf};
 
 use mzlab_core::idxread::Index;

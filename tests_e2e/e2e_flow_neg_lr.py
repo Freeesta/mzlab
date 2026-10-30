@@ -1,8 +1,9 @@
 """Flow «This browser» against `mzlab-cli flow run` in both polarities and both resolutions (docs/studi/MATRICE_NEG_LR.md): a small invented bentazone series (the fixture of
 crates/mzlab-cli/src/flow_bentazone_tests.rs, ported here: a parent that fades, two products that grow) in HR+, HR-, LR+ and LR-, through the base chain, tp.generate, tp.link, tp.filter,
 tp.position, tp.network, table.filter, export.table_csv, export.mztab and, at unit resolution, tp.dig_lr. Every text the browser keeps equals the file of the native run, byte for byte.
-Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_neg_lr.py [hr+|hr-|lr+|lr-]...
-NEG_LR_KEEP=<dir> keeps both sides' files there; NEG_LR_UNWRITTEN=1 leaves the polarity and the unit mass out of the plan (gap NL-7: fails today)."""
+A series that mixes polarities (mix-pol) or resolutions (mix-res) is refused by features.align with the same error key and parameters on both sides.
+Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_neg_lr.py [hr+|hr-|lr+|lr-|mix-pol|mix-res]...
+NEG_LR_KEEP=<dir> keeps both sides' files there; the plan leaves the polarity and the unit mass to the files (both sides read them from the indexes); NEG_LR_WRITTEN=1 writes them."""
 import base64, json, math, os, shutil, struct, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -18,7 +19,9 @@ if not (shutil.which("cargo") and shutil.which("wasm-bindgen")):
     print("SKIP cargo and wasm-bindgen are needed to build crates/mzlab-feat-wasm"); sys.exit(0)
 
 CASES = {"hr+": (1, True), "hr-": (-1, True), "lr+": (1, False), "lr-": (-1, False)}
-CHOSEN = [a for a in sys.argv[1:] if a in CASES] or list(CASES)
+# (polarity, high resolution) of file k: two negative and three positive files, two unit and three high-resolution ones
+MIXED = {"mix-pol": lambda k: (-1 if k < 2 else 1, True), "mix-res": lambda k: (1, k >= 2)}
+CHOSEN = [a for a in sys.argv[1:] if a in CASES or a in MIXED] or list(CASES) + list(MIXED)
 PROTON = 1.007276
 NAMES = ["BEN_blank", "BEN_T00", "BEN_T2p5", "BEN_T5", "BEN_T10p25"]
 TIMES = [None, 0, 2.5, 5, 10.25]
@@ -69,11 +72,11 @@ def sample(n, t):
 ORDER = NAMES
 SAMPLES = json.dumps({"campioni": [sample(n, TIMES[NAMES.index(n)]) for n in ORDER], "schema": "campioni/2"}, separators=(",", ":"))
 
-# the page writes in the plan it runs the polarity and the unit mass of the files it has open (`inheritNature`); the browser runner does not read them from the
-# indexes as `flow run` does (gap NL-7 of the matrix): NEG_LR_UNWRITTEN=1 runs the plan without them to show it
-UNWRITTEN = os.environ.get("NEG_LR_UNWRITTEN") == "1"
+# the plan leaves the polarity and the unit mass unwritten: the browser runner and `flow run` take them from the indexes (`mzlab_feat::nature`);
+# NEG_LR_WRITTEN=1 runs the variant that writes them, as the page does from the files open in Data (`inheritNature`)
+WRITTEN = os.environ.get("NEG_LR_WRITTEN") == "1"
 def plan(pol, hr):
-    nat = {} if UNWRITTEN else {"gen": {"polarity": pol, "nominal": not hr}, "lnk": {"polarity": pol}}
+    nat = {"gen": {"polarity": pol, "nominal": not hr}, "lnk": {"polarity": pol}} if WRITTEN else {}
     s = [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in ORDER]}},
          {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
          {"id": "ali", "step": "features.align@1", "in": {"peaks": ["det.peaks"]}},
@@ -91,6 +94,14 @@ def plan(pol, hr):
     for x in s:
         if x["id"] in nat: x["params"] = nat[x["id"]]
     return {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "type": "raw"} for n in ORDER] + [{"name": "samples.json", "sha256": "", "type": "samples"}, {"name": "parent.json", "sha256": "", "type": "structure"}], "steps": s}
+def refusal(v):
+    """The first {error_key, params} of the native prov/1 whose key is a refusal of the alignment."""
+    if isinstance(v, dict):
+        if str(v.get("error_key", "")).startswith("err.flow.align."): return {"key": v["error_key"], "params": v.get("params", {})}
+        v = list(v.values())
+    if isinstance(v, list):
+        return next((r for r in map(refusal, v) if r), None)
+    return None
 TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "csv", "mzt", "dig"]
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_neg_lr_"))
@@ -130,13 +141,20 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch()
         for case in CHOSEN:
-            pol, hr = CASES[case]; tag = case.replace("+", "p").replace("-", "n")
+            of = MIXED.get(case) or (lambda k, c=CASES[case]: c)
+            pol, hr = of(len(NAMES) - 1); tag = case.replace("+", "p").replace("-", "n")
             run = tmp / ("run_" + tag); run.mkdir()
-            for k, n in enumerate(NAMES): (run / (n + ".mzML")).write_text(mzml(k, pol, hr))
+            for k, n in enumerate(NAMES): (run / (n + ".mzML")).write_text(mzml(k, *of(k)))
             pl = plan(pol, hr)
+            if case in MIXED: pl["steps"] = pl["steps"][:4]
             (run / "plan.json").write_text(json.dumps(pl)); (run / "samples.json").write_text(SAMPLES); (run / "parent.json").write_text(PARENT)
             nat_run = subprocess.run(["cargo", "run", "--release", "-q", "-p", "mzlab-cli", "--", "flow", "run", str(run / "plan.json"), "--in", str(run), "--out", str(run / "out")], cwd=ROOT, capture_output=True, text=True)
-            if nat_run.returncode != 0:
+            nat_err = None
+            if case in MIXED:
+                nat_err = refusal(json.loads((run / "out" / "prov.json").read_text())) if (run / "out" / "prov.json").exists() else None
+                if not nat_err:
+                    steps.append((case + ": native flow run", "FAIL no err.flow.align.* " + nat_run.stderr[-900:])); continue
+            elif nat_run.returncode != 0:
                 steps.append((case + ": native flow run", "FAIL " + nat_run.stderr[-900:])); continue
             data = site / "static" / ("dati_neg_lr_" + tag); data.mkdir()
             for n in NAMES: shutil.copy2(run / "out" / ("idx-" + n + ".mzidx"), data / (n + ".mzidx"))
@@ -151,6 +169,12 @@ try:
             pg.wait_for_selector('#nav button[data-v="flow"]', timeout=120000); pg.click('#nav button[data-v="flow"]')
             pg.wait_for_function("window.FLOW && FLOW.runners && FLOW.runners.web && document.querySelector('.flx-list') && document.querySelector('.flx-list').__flow", timeout=120000)
             ids = [s["id"] for s in pl["steps"] if s["id"] in TEXT_IDS]
+
+            def refused(pl=pl, nat_err=nat_err):
+                r = pg.evaluate(RUN, [pl, SAMPLES, PARENT]); e = r.get("err") or {}
+                assert {"key": e.get("key"), "params": e.get("params")} == nat_err, (e, nat_err, r["ev"][-4:])
+            if case in MIXED:
+                step(case + ": the browser refuses the alignment as the native flow run does", refused); pg.context.close(); continue
 
             def same(run=run, ids=ids, pl=pl, case=case):
                 r = pg.evaluate(RUN, [pl, SAMPLES, PARENT]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])

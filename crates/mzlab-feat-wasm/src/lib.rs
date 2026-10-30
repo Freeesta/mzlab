@@ -40,7 +40,7 @@ pub mod interp;
 pub mod msn;
 pub mod progress_js;
 pub mod run;
-pub mod spill_js; pub mod run_evid;
+pub mod spill_js; pub mod run_evid; pub mod series_js;
 #[cfg(any(feature = "flow_ms2", feature = "flow_formula"))]
 pub mod run_ms2;
 pub mod run_tp; pub mod stima;
@@ -253,8 +253,7 @@ pub fn align_series_to(
     budget_mb: f64,
     spill: Option<js_sys::Object>,
 ) -> std::result::Result<String, JsValue> {
-    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
-        .map_err(js_err)?;
+    let r = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(budget_mb);
     let mut src = JsStored { files };
     let (open, mut spill) = (|k| open_one(&read, k, sizes[k]), spill_js::of(spill.as_ref())?);
@@ -270,8 +269,7 @@ pub fn align_series(
     sizes: Vec<f64>,
     recipe: &str,
 ) -> std::result::Result<Vec<u8>, JsValue> {
-    let r = run::recipe_for(recipe, &mut open_one(&read, 0, sizes[0]).map_err(js_err)?)
-        .map_err(js_err)?;
+    let r = series_js::series_recipe(&read, &sizes, recipe).map_err(js_err)?;
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();
     let mut src = JsStored { files };
