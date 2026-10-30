@@ -30,10 +30,20 @@ fn matches(
     tol: f64,
 ) -> Vec<(usize, usize)> {
     let mut cand: Vec<(usize, usize, f64)> = Vec::new();
+    // b sorted (the callers sort by m/z): only the run of b within tol of a[i] is looked at; same pairs in the same order as the full scan
+    let sorted = b_mz.windows(2).all(|w| w[0] <= w[1]);
     for i in 0..a_mz.len() {
-        for j in 0..b_mz.len() {
-            if (a_mz[i] - b_mz[j]).abs() <= tol {
+        let x = a_mz[i];
+        let from = if sorted {
+            b_mz.partition_point(|&y| x - y > tol)
+        } else {
+            0
+        };
+        for j in from..b_mz.len() {
+            if (x - b_mz[j]).abs() <= tol {
                 cand.push((i, j, a_it[i] * b_it[j]));
+            } else if sorted && b_mz[j] > x {
+                break;
             }
         }
     }
@@ -81,3 +91,7 @@ pub fn entropy_similarity(a_mz: &[f64], a_it: &[f64], b_mz: &[f64], b_it: &[f64]
     let s = 1.0 - (2.0 * entropy(&m) - entropy(&pa) - entropy(&pb)) / 4f64.ln();
     s.clamp(0.0, 1.0)
 }
+
+#[cfg(test)]
+#[path = "entropy_tests.rs"]
+mod tests;

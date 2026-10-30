@@ -303,35 +303,15 @@ fn int(q: &Query, k: &str) -> Option<i64> {
 
 /// The peaks of one scan merged per bin of `bin` Da (`Item.scans`), m/z weighted by intensity.
 fn bin_cells(mz: &[f64], y: &[f64], bin: f64) -> (Vec<f64>, Vec<f64>) {
+    if let Some(out) = crate::analysis::bin_ascending(mz, y, bin) {
+        return out;
+    }
     let key = |m: f64| (m / bin).floor() as i64;
     let mut out = (Vec::new(), Vec::new());
     let mut push = |(sy, smy): (f64, f64)| {
         out.0.push(smy / sy.max(1e-12));
         out.1.push(sy);
     };
-    if bin > 0.0 && mz.windows(2).all(|w| w[0] <= w[1]) {
-        // ascending m/z: the cells come in order, one after the other, each summed in the order of its peaks
-        let mut cur: Option<(i64, (f64, f64))> = None;
-        for (m, v) in mz.iter().zip(y) {
-            let k = key(*m);
-            match &mut cur {
-                Some((ck, e)) if *ck == k => {
-                    e.0 += v;
-                    e.1 += v * m;
-                }
-                _ => {
-                    if let Some((_, e)) = cur.take() {
-                        push(e);
-                    }
-                    cur = Some((k, (0.0 + v, 0.0 + v * m)));
-                }
-            }
-        }
-        if let Some((_, e)) = cur {
-            push(e);
-        }
-        return out;
-    }
     let mut cells: BTreeMap<i64, (f64, f64)> = BTreeMap::new();
     for (m, v) in mz.iter().zip(y) {
         let e = cells.entry(key(*m)).or_insert((0.0, 0.0));

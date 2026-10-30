@@ -84,7 +84,7 @@ async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shownFor(p);
     if (p.kind !== "pda" && p.prec != null) fl = fl.filter(f => f.kind !== "ms2" || (f.precursors || []).some(v => Math.abs(v - p.prec) < 0.6));   // an MS2 experiment is a precursor: only the files that have it
-    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
+    const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, p.flv ?? f.lv, p.mz0, p.mz1, p.kind !== "pda" && f.kind === "ms2" ? p.prec : null, p.filt, p.ptol).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: fdash(f), name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
     const sh = p.kind === "pda" && window.DISP ? DISP.pdaShift(p) : 0;       // «Allinea PDA e massa»: the PDA trace is shown later by the delay of the detector in series (display only)
     if (sh) r.forEach(s => { s.x = Array.from(s.x, v => v + sh); });
     return r.filter(s => s.x.length);
@@ -394,8 +394,9 @@ async function drawLines(p) {
     for (const t of tags) { const txt = t.f.time != null ? `t = ${t.f.time} min` : t.s.name; g.strokeStyle = ecss("--panel"); g.strokeText(txt, t.px + 4, t.py - 4); g.fillStyle = t.s.color; g.fillText(txt, t.px + 4, t.py - 4); }
     g.font = fpx(12);
   } else for (const s of sr) {
-    g.strokeStyle = s.color; g.lineWidth = TRACE_LW + LWX(); g.setLineDash(s.dash); g.beginPath();
-    const v = DC.polyline(s.x, s.ys, x0, x1, X, val => Y(U(s, val)));       // the window by binary search, four vertices per pixel column (decima.js)
+    const V = (/** @type {number} */ val) => Y(U(s, val));
+    const { v, thin } = p.smooth ? { v: DC.polyline(s.x, s.ys, x0, x1, X, V), thin: false } : DC.rawLine(s.x, s.ys, x0, x1, X, V);       // the window by binary search (decima.js): smoothed, four vertices per pixel column; raw and dense, one per column, 1 px
+    g.strokeStyle = s.color; g.lineWidth = (thin ? 1 : TRACE_LW) + LWX(); g.setLineDash(s.dash); g.beginPath();
     for (let k = 0; k < v.length; k += 2) if (k) g.lineTo(v[k], v[k + 1]); else g.moveTo(v[0], v[1]);
     g.stroke();
   }

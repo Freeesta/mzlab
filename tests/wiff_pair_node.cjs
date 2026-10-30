@@ -8,6 +8,8 @@ global.wiffName = (stem, id, several) => several ? `${stem}_${id}.mzML` : `${ste
 global.I18N = { t: k => k, err: j => ({ message: j.error }) };
 global.DIAG = { da: () => ({}) };
 global.memDesc = () => "";
+const held = new Set();      // × on a row of the side list (OPENNOW.hold)
+global.OPENNOW = { held: n => held.has(n) };
 const rows = [];
 global.CONVROWS = { add: (...a) => rows.push(["add", ...a]), finish: (...a) => rows.push(["finish", ...a]), drop: (...a) => rows.push(["drop", ...a]) };
 const src = fs.readFileSync(process.argv[2], "utf8");
@@ -62,5 +64,8 @@ async function go({ listed = [], same = [], samples = samples2, nativeError = nu
   // an engine error nobody retries stays on the row
   r = await go({ probe: { motivi: [], campioni: [] }, nativeError: Object.assign(new Error("x"), { json: { error: "err.bad" } }), retriable: "" });
   assert.ok(r.rows.some(x => x[0] === "finish" && x[2] === "fail"));
+  // × on the row of the pair while it is parsed: no sample is made, the row ends as cancelled
+  held.add("S.wiff"); r = await go({}); held.clear();
+  assert.equal(r.res.files.length, 0); assert.ok(r.rows.some(x => x[0] === "finish" && x[1] === "S.wiff" && x[2] === "cancel"));
   console.log("ok");
 })().catch(e => { console.error(e); process.exit(1); });

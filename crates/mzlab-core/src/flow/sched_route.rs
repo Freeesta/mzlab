@@ -17,10 +17,6 @@ fn no_sched() -> Error {
     Error::new("err.flow.sched")
 }
 
-fn leak(s: &str) -> &'static str {
-    Box::leak(s.to_string().into_boxed_str())
-}
-
 /// `plan` is an `mzflow/2` object or its text.
 fn read_plan(body: &Value) -> Result<Plan> {
     match body.get("plan") {
@@ -81,10 +77,10 @@ fn result_of(r: &Value) -> std::result::Result<Done, Error> {
             ms: r.get("ms").and_then(Value::f64).unwrap_or(0.0),
         });
     };
-    let mut e = Error::new(leak(k));
+    let mut e = Error::new(crate::error::intern(k));
     if let Some(Value::Obj(kv)) = r.get("params") {
         for (name, v) in kv {
-            e = e.with(leak(name), v.str().unwrap_or(""));
+            e = e.with(crate::error::intern(name), v.str().unwrap_or(""));
         }
     }
     Err(e)

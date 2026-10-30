@@ -1,6 +1,6 @@
-"""C29 diagnosis: what happens between the click on «Carica dati» and the work area (#v-data), and how much memory the tab holds.
+"""C29 diagnosis: what happens between the opening of the first file (a click on the side list: soloFile) and its panels (#dpanels), and how much memory the tab holds.
 Measures, for a small and a large synthetic mzML: the instants of (a) work area visible, (b) first chromatogram drawn, (c) map drawn (opened right after),
-the calls that run between the click and (a) (functions wrapped with start/end, api calls, long tasks, nodes and canvases created), and the memory of the tab
+the calls that run between that start and (a) (functions wrapped with start/end, api calls, long tasks, nodes and canvases created), and the memory of the tab
 at four instants (page opened, engine ready, area prepared in advance by a throw-away prototype, after the small file).
 It waits for STATES, never for clocks, and asserts no time: it prints a report (MZLAB_E2E_JSON=<file> also writes it as JSON).
 """
@@ -13,13 +13,13 @@ import numpy as np
 import dati_sintetici as ds
 
 # functions of the click -> work area path that are wrapped to log (start, end) relative to the click
-WRAP = ["loading", "exploreList", "bootSession", "bootSession0", "paintFiles", "renderFileList", "nbLoad", "restoreUi", "ensureLayout", "ensureBlocks",
+WRAP = ["loading", "soloFile", "bootSession", "bootSession0", "paintFiles", "renderFileList", "nbLoad", "restoreUi", "ensureLayout", "ensureBlocks",
         "defaultLayoutTab", "addPanel", "toolbar", "applyView", "relayout", "fitHost", "uiSave", "ctl", "draw", "setup", "rawSeries", "apexSpectrum", "methodWarn"]
 INSTR = """
 () => {
   window.__ev = []; window.__t0 = null; window.__tA = null; window.__lt = [];
   const rel = () => performance.now() - window.__t0;
-  document.querySelector('#opbtn').addEventListener('click', () => { window.__t0 = performance.now(); window.__ev.length = 0; }, true);
+  document.querySelector('#flst').addEventListener('click', () => { window.__t0 = performance.now(); window.__ev.length = 0; }, true);
   let depth = 0;
   for (const n of %s) {
     const f = window[n]; if (typeof f !== 'function' || f.__m) continue;
@@ -34,15 +34,17 @@ INSTR = """
     w.__m = 1; window[n] = w;
   }
   try { new PerformanceObserver(l => { for (const e of l.getEntries()) window.__lt.push({ s: e.startTime - window.__t0, d: e.duration }); }).observe({ entryTypes: ['longtask'] }); } catch (_) {}
-  const v = document.querySelector('#v-data');
+  const v = document.querySelector('#dpanels');
   const tick = () => {
-    if (window.__t0 != null && window.__tA == null && !v.hidden && v.getBoundingClientRect().height > 0) {
+    if (window.__t0 != null && window.__tA == null && v.querySelector('.pnl') && v.getBoundingClientRect().height > 0) {
       window.__tA = rel();
       window.__nodesA = document.querySelectorAll('#v-data *').length; window.__canvasA = document.querySelectorAll('#v-data canvas').length;
     }
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  // the first file opens with a click on the side list (soloFile): the clock starts there
+  const so = window.soloFile; window.soloFile = function (...a) { if (window.__t0 == null) { window.__t0 = performance.now(); window.__ev.length = 0; } return so.apply(this, a); };
 }
 """ % json.dumps(WRAP)
 
@@ -150,11 +152,11 @@ def scenario(r, p, name, f):
     res["start_ms"] = pg.evaluate("(() => { const m = {}; for (const x of PERF.rows) if (x.kind === 'start') m[x.what] = Math.round(x.ms); return m; })()")
     res["memory"]["2_engine_ready"] = memory(pg, b, cdp)
     res["proto"] = prototype(pg); res["memory"]["3_area_in_advance"] = memory(pg, b, cdp); prototype_undo(pg)
-    stage(pg, [f]); ready(pg)
     pg.evaluate(INSTR)
     pg.evaluate("window.__perf0 = PERF.rows.length")
     cdp.send("Profiler.enable"); cdp.send("Profiler.setSamplingInterval", {"interval": 200}); cdp.send("Profiler.start")
-    pg.click("#opbtn")
+    stage(pg, [f])
+    open_first(pg)
     attendi(pg, "window.__tA != null")
     prof = cdp.send("Profiler.stop")["profile"]; ready(pg)
     res["cpu_top"] = self_time(prof)
