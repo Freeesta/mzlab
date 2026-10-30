@@ -49,15 +49,7 @@ const TOUR = (() => {
   const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
 
   const STEPS_CAP1 = [
-    // the sample table and the first file: present while the files wait for the first click, skipped by renderStep otherwise
-    {
-      id: "campioni",
-      target: () => document.getElementById("wtable")
-    },
-    {
-      id: "primo",
-      target: () => document.querySelector("#flst .fl[data-k]")
-    },
+    ...TOURDOPO.iniziali,
     {
       id: "file",
       prep: openFileDrawer,
@@ -178,7 +170,8 @@ const TOUR = (() => {
     { id: "d_parziali", target: () => document.getElementById("kframe") },
     { id: "d_export", prep: showSidePanels, target: () => card("#ex-png") }
   ];
-  const stepsOf = (/** @type {number} */ cap) => cap === 1 ? STEPS_CAP1 : cap === 3 ? STEPS_D : STEPS_CAP2;
+  let cap1 = STEPS_CAP1.filter(st => !st.opt);
+  const stepsOf = (/** @type {number} */ cap) => cap === 1 ? cap1 : cap === 3 ? STEPS_D : STEPS_CAP2;
 
   let active = false;
   let curCap = 1;
@@ -654,6 +647,7 @@ const TOUR = (() => {
       active = true;
       curCap = cap;
       curStep = step;
+      if (cap === 1) cap1 = TOURDOPO.passi(STEPS_CAP1);
 
       window.addEventListener("scroll", onScrollOrResize, { passive: true });
       window.addEventListener("resize", onScrollOrResize, { passive: true });
@@ -693,7 +687,7 @@ const TOUR = (() => {
         renderStep();
       } else if (curCap === 2) {
         curCap = 1;
-        curStep = STEPS_CAP1.length - 1;
+        curStep = cap1.length - 1;
         renderStep();
       }
     },
