@@ -8,7 +8,6 @@
 //! row is the spectrum of its most intense scan (`most_intense_ms2`). The sources that need other programs (SIRIUS, GNPS2, mzmine libraries, standards,
 //! the chemist's decisions) are empty, which is the case of a campaign without those folders.
 
-use crate::sortc::SortC;
 use super::ident::Idents;
 use super::isotopes::IsoGroups;
 use crate::attributio::campaign::Env;
@@ -20,6 +19,7 @@ use crate::attributio::readers::sirius::SiriusTables;
 use crate::attributio::sources::{PolSources, Sources};
 use crate::attributio::Campaign;
 use crate::ms2spec::{pick, read_peaks};
+use crate::sortc::SortC;
 use crate::table::{Aligned, CELL_ABSENT, CELL_DETECTED, CELL_FILLED};
 use mzlab_core::error::Result as CoreResult;
 use mzlab_core::idxread::{Index, ReadAt};

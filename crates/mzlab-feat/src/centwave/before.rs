@@ -1,7 +1,7 @@
 //! Verbatim copy of the pre-optimisation Ricker response and peak picking, kept only so the unit tests can prove the new code is bit-identical.
 
-use crate::sortc::SortC;
 use super::{filled, resolve, valley, Result, Wavelet, REACH};
+use crate::sortc::SortC;
 /// Responses of the Ricker wavelet `w` over `y`.
 pub(super) fn response(y: &[f64], w: &Wavelet) -> Result<Vec<f64>> {
     let n = y.len();

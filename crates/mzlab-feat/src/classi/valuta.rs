@@ -1,7 +1,7 @@
 //! Matching of the rules of a `Table` against one MS/MS spectrum, and the `classi/1` answer.
 
-use crate::sortc::SortC;
 use super::{Kind, Polarity, Role, Rule, Table, FORMAT, MIN_REL, SCORE_3A, SCORE_MIN};
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::Out;
 

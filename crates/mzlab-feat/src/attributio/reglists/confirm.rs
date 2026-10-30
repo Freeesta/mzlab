@@ -5,10 +5,10 @@
 //! A decision of the chemist applies only to candidates that pass the formal rules; the formal verdict stays in `rules`. The inputs are plain rows.
 //! Not ported here: `prepare` (the input files for SIRIUS and MetFrag are builders, see the native builders package).
 
-use crate::sortc::SortC;
 use super::screen::Hit;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::tox::vocab::canon;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, HashMap};
 
 pub const COSMIC_HIGH: f64 = 0.64;

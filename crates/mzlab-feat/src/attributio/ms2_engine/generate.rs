@@ -3,10 +3,10 @@
 //! library and the best hit becomes a row of `engine_<pol>.csv`. Reading a campaign never calls this; the caller decides where the text goes (the page offers it as
 //! a download, the desktop app may write it into the campaign folder).
 
-use crate::sortc::SortC;
 use super::hits::EngineHitRow;
 use super::matcher::{Ms2Library, Query, SearchOpts};
 use crate::attributio::sources::Sources;
+use crate::sortc::SortC;
 
 /// The rows of a polarity (`"POS"` / `"NEG"`), by feature id; features without a spectrum, without a precursor or without a hit are left out.
 pub fn generate_hits(

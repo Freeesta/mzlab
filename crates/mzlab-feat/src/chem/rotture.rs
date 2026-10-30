@@ -3,8 +3,8 @@
 //! an arc is explained when a hypothesis of the child lies inside one of the parent. Used by `mzlab-cli msn-graph --rotture` and the `.wasm`
 //! `msngrafo` (`rotture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Hypotheses, never identifications.
 
-use crate::sortc::SortC;
 use super::grafo::Mol;
+use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{

@@ -2,9 +2,9 @@
 //! node's m/z and on the peaks of its own spectrum, the cuts whose piece gives the m/z of the node grouped by that m/z. Used by `mzlab-cli msn-graph
 //! --strutture` and the `.wasm` `msngrafo` (`strutture_testo`, the same bytes); the types of the answer are in `mzlab_core::msngrafo`. Candidates, never identifications.
 
-use crate::sortc::SortC;
 use super::fragmenter::{fragment_molecule, FragMatch, FragmentSide};
 use super::grafo::Mol;
+use crate::sortc::SortC;
 use mzlab_core::error::{Error, Result as CoreResult};
 use mzlab_core::msngrafo::{
     con_strutture, con_strutture_tutti, CandidatoStruttura, Grafo, IngressoStrutture,

@@ -2,11 +2,11 @@
 //! The one format of every regulatory list (schema A1, one row per InChIKey first block inside a list) and the membership tables built from the lists: the
 //! long join table (one row per list and first block) and its wide form (one 0/1 column per list). Text in, text out: where the files live is the caller's business.
 
-use crate::sortc::SortC;
 use crate::attributio::error::Result;
 use crate::attributio::frame::Frame;
 use crate::attributio::tox::snapshot::MembershipRow;
 use crate::attributio::tox::vocab::canon;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Columns of a list file (schema A1), in order.

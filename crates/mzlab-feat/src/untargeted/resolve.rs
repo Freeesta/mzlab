@@ -12,8 +12,8 @@
 //! the start of the region, no point within ± `search_rt` is lower, and the apex is at least `min_ratio` times that minimum; the closed region must then
 //! pass the shape filter on both edges, otherwise it is dropped and the walk goes on from the minimum.
 
-use crate::sortc::SortC;
 use crate::broad::{detect_broad, BroadParams};
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 /// Parameters of the resolver (mzmine names in the comments; values of `tools/bench/parametri/mzmine/predefinita.json`).

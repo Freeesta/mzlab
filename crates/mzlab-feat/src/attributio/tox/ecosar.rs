@@ -2,9 +2,9 @@
 //! The ECOSAR taxon values of one structure after the rules of use: excess-toxicity classes first, else the baseline (neutral organics), out-of-domain
 //! endpoints dropped. Used by `hazard` for the T4 prediction.
 
-use crate::sortc::SortC;
 use super::hazard::fmt_gn;
 use super::snapshot::EcosarEndpoint;
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 pub(super) const BASELINE: &str = "Neutral Organics";

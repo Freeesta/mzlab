@@ -16,8 +16,8 @@ pub use json::SCHEMA;
 #[cfg(feature = "interp")]
 pub use run::network_text;
 
-use crate::sortc::SortC;
 use crate::hypo::Rules;
+use crate::sortc::SortC;
 use crate::tp::{TpBlock, ST_TP};
 use arcs::{best_pairs, counts, neutral_mass};
 

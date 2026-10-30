@@ -18,8 +18,8 @@
 //! then the order of the features in the list, then the order of the base rows (m/z ascending): the same input always gives the same rows. Not carried
 //! over: the optional checks of charge, identity, isotope pattern, spectra and mobility (all off in the default batch).
 
-use crate::sortc::SortC;
 use super::Feature;
+use crate::sortc::SortC;
 
 /// Parameters of the join (defaults of the batch of the gold data: 0.0015 Da or 5 ppm, weights 3 and 1, 0.2 min).
 #[derive(Debug, Clone, Copy)]

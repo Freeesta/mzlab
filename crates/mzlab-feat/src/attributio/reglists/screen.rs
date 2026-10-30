@@ -6,17 +6,16 @@
 //! isolated adduct and goes one class down. The inputs are plain rows (suspects, features, evidence): where they come from is the caller's business.
 //! A suspect with a SMILES but no XLogP gets `LogPValues::from_smiles` (features `record`/`crippen`); without them its logP and RT stay «n.a.».
 
-use crate::sortc::SortC;
 use super::b1::{in_window, StructRow};
 use super::catalog;
+pub use super::screen_types::*;
 use crate::attributio::annotate::text::fmt_g;
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::frame::to_num;
 use crate::attributio::tox::snapshot::MembershipRow;
 use crate::attributio::tox::vocab::{AMENABLE, FALSE, TRUE};
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-
-pub use super::screen_types::*;
 
 /// `round(x, n)` of Python: the correctly rounded decimal, ties on the exact value to even.
 pub fn round_py(x: f64, n: usize) -> f64 {

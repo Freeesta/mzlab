@@ -2,8 +2,8 @@
 //! The pure rules of the compound registry: the representative CID of an InChIKey first block, CAS/DTXSID from PubChem synonyms, aquatic H-codes from a PUG-View
 //! answer, PubChemLite categories, the predicted acute category of a NORMAN SusDat row and the registry summary. The downloads that feed them live outside.
 
-use crate::sortc::SortC;
 use super::snapshot::RegistryRow;
+use crate::sortc::SortC;
 use std::collections::BTreeSet;
 
 /// PubChemLite annotation categories, in file order.

@@ -1,8 +1,8 @@
 //! Measures of a broad candidate taken before the common mode G(t) is subtracted: the half-height width of its left front (the tail of a
 //! narrow peak rises fast and is dropped) and its area over the local linear bridge, plus the noise and base of a short series. Used by `broad`.
 
-use crate::sortc::SortC;
 use crate::broad_gt::median;
+use crate::sortc::SortC;
 use mzlab_core::error::Result;
 
 use crate::trace::reserve;

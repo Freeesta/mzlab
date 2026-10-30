@@ -3,8 +3,8 @@
 //! follow the original; the score is the entropy similarity of `mzlab-lib` (held equal to `ms_entropy` by its own parity tests). A hit also needs a minimum of shared
 //! ions (the original had no such gate: two peaks can score high on a sparse spectrum).
 
-use crate::sortc::SortC;
 use super::compile::EngineEntry;
+use crate::sortc::SortC;
 use mzlab_lib::clean::{clean, CleanOpts};
 use mzlab_lib::scores::{pair_scores, Spec};
 

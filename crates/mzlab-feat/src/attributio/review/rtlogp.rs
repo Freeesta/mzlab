@@ -4,8 +4,8 @@
 //! robust Level 2a ones of one polarity; ONE logP source per fit (the one most calibrants have). The logP values come from the sources of the campaign (no
 //! network): a missing value is "not available" (`None`), never mixed in from another source.
 
-use crate::sortc::SortC;
 use super::isotopes::round_to;
+use crate::sortc::SortC;
 use std::collections::BTreeMap;
 
 /// Minimum calibrants per polarity to trust a fit.

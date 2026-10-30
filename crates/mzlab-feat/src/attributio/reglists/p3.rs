@@ -1,9 +1,9 @@
 // Ported from Attributio reglists/compare.py.
 //! P3: for each list, the compounds found in one campaign, in the other or in both, by InChIKey first block only.
 
-use crate::sortc::SortC;
 use super::b1::{LongRow, B1, MATCH_FULL};
 use super::catalog;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// What one campaign has for a (list, first block).

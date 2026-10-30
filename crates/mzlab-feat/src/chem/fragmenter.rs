@@ -3,8 +3,8 @@
 //! variants of both sides are matched against the experimental MS/MS peaks within a ppm tolerance. Built on the molecular graph of mzLab (`chem::grafo`), no
 //! RDKit; the drawing of a fragment is not made here (the page draws the atoms listed in `atoms`).
 
-use crate::sortc::SortC;
 use super::grafo::Mol;
+use crate::sortc::SortC;
 use mzlab_core::elements::{self, Formula};
 
 /// Python-like `round(x, nd)`: correctly rounded on the exact binary value, ties to even (the decimal formatting of Rust does the same).

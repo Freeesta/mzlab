@@ -2,8 +2,8 @@
 //! the formula against the calibration of the file. A filter hides a row with a reason, it never deletes one; each row carries the first filter that
 //! hid it. Used by `interp::build`.
 
-use crate::sortc::SortC;
 use crate::legacy::series::Hyp;
+use crate::sortc::SortC;
 use crate::tp::{ST_CONTROL, ST_ISF, ST_PARENT};
 
 pub const SCHEMA: &str = "filtri/1";

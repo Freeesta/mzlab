@@ -4,10 +4,10 @@
 //! fragmenter score: the weight `mz^0.421 · intensity^0.1307` of the explained peaks over the weight of all the peaks. The bond-energy term of MetFrag and its
 //! tolerance `0.005 Da + 10 ppm` are not reproduced (a plain 10 ppm window is used). The result is a hypothesis with its proofs, never an identity.
 
-use crate::sortc::SortC;
 use crate::attributio::frame::Frame;
 use crate::attributio::review::fragmenter::fragment_molecule;
 use crate::chem::grafo::Mol;
+use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::score_terms::ScoreTerms;
 

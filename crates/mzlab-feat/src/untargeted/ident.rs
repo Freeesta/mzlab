@@ -14,12 +14,12 @@
 //! data has no networking output, so there is no external value to test a correlation criterion against and no parity with mzmine is claimed for this
 //! step (it is claimed for ADAP, resolver, join, gap filling and isotopes). The correlation across common samples lives in `legacy/identity.rs`.
 
-use crate::sortc::SortC;
 use super::isotopes::{items_of, IsoGroups};
 use crate::axis::half;
 use crate::evid::HYPOTHESIS_PPM;
 use crate::hypo::{Dir, Hypothesis, SRC_NETWORK};
 use crate::rowident::RowIdent;
+use crate::sortc::SortC;
 use crate::table::Aligned;
 use mzlab_core::elements::{adducts, ion_mz};
 

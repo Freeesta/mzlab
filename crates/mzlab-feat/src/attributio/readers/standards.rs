@@ -5,12 +5,12 @@
 //! candidate is recorded in `status`: `confirmed`, `confirmed_manual` (Level 1); `review`, `no_ms2`, `no_reference_ion` (evidence below Level 1);
 //! `mismatch`, `unobserved_ion`, `rejected_manual` (the name is NOT given to the feature). The spectral similarity is supplied by the caller.
 
-use crate::sortc::SortC;
 use super::ms2::{RefLibrary, Spectrum};
 pub use super::standards_cfg::*;
 use super::{num_at, text_at};
 use crate::attributio::error::{CampaignError, Result};
 use crate::attributio::frame::{to_num, Cell, Frame, Record};
+use crate::sortc::SortC;
 use std::collections::{BTreeSet, HashMap};
 
 pub const DEFAULT_POS_ADDUCTS: [&str; 4] =

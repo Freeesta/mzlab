@@ -4,8 +4,8 @@
 //! column and gradient. Without RDKit and scikit-learn the bits and the trees are not those of the original: the parity is a measured error bar (see the test),
 //! not equality. A predicted RT supports or doubts a candidate; it never makes an identity.
 
-use crate::sortc::SortC;
 use crate::chem::grafo::Mol;
+use crate::sortc::SortC;
 
 pub const N_BITS: usize = 2048;
 pub const N_TREES: usize = 100;

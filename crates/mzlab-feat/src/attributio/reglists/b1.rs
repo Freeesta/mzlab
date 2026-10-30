@@ -3,9 +3,9 @@
 //! flagged fallback. Never by name, never by formula. The inputs are plain rows (identities, their structures, list entries): where they come from is the
 //! caller's business.
 
-use crate::sortc::SortC;
 use super::catalog;
 use crate::attributio::tox::snapshot::MembershipRow;
+use crate::sortc::SortC;
 use std::collections::{BTreeMap, BTreeSet};
 
 const PROTON: f64 = 1.007276;

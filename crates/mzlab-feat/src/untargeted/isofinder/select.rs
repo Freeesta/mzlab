@@ -1,10 +1,10 @@
 //! Choice among the charges of the isotope finder: every charge that scores is ranked, the best one is the pattern of the feature and the close ones
 //! are kept as alternatives, each with a probability. After `IsotopeFinderEngine.detect` (mzmine 4.10.90); the automatic detection of the elements is not done.
 
-use crate::sortc::SortC;
 use super::auto::{self, Composition};
 use super::envelope::m1_bounds;
 use super::{ChargeEval, ElementMode, Engine, Pt};
+use crate::sortc::SortC;
 
 /// An alternative is kept if its quality is within this of the best one...
 pub const ALT_MARGIN: f64 = 0.15;
