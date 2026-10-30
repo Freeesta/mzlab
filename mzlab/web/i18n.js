@@ -96,6 +96,9 @@
   function add(lg, dict) { Object.assign(cat[lg] || (cat[lg] = {}), dict); }
   // fixed decimals, always with the point (file sizes inside prose: "1.5 MB"); data values use num()
   const fix = (x, dec) => NF(dec).format(+x);
+  // table cells: "–" for a missing or non-finite value, else fixed decimals; sci() switches to 2-digit scientific notation for >= 1e4 or < 0.01
+  const dash = (v, d) => (v == null || !isFinite(v) ? "–" : Number(v).toFixed(d));
+  const sci = (v, d = 2) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : Number(v).toFixed(d));
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
 
   // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
@@ -141,7 +144,7 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
   }
 
-  const I18N = { add, t, apply, set, num, fix, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
+  const I18N = { add, t, apply, set, num, fix, dash, sci, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
   /** @type {any} */ (root).I18N = I18N;
   if (typeof module !== "undefined" && module.exports) module.exports = I18N;
 })(typeof window !== "undefined" ? window : globalThis);

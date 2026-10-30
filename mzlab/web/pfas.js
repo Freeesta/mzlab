@@ -10,7 +10,7 @@ const KEY = typeof NOMI !== "undefined" ? NOMI.KEY("pfas") : "qqq.pfas";
 const MAX_FEATURES = 300, MAX_ROWS = 200, POOL = 4;
 const t = (/** @type {string} */ k, /** @type {any} */ p = undefined) => I18N.t(k, p);
 const eh = (/** @type {any} */ s) => EH(s == null ? "" : s);
-const fmt = (/** @type {any} */ v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+const fmt = (/** @type {any} */ v, d = 3) => I18N.dash(v, d);
 const ELEMENTS = "C:1-30,H:0-10,F:3-40,O:0-6,N:0-1,S:0-1";
 const st = Object.assign({ ion: "[M-H]-", tol: 3, ms2tol: 5, minRel: 1 }, lsObj(KEY));
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };

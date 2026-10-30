@@ -108,7 +108,7 @@ const QAQC = (() => {
   }
 
   // ---------------------------------------------------------------- drawing
-  const fmt = (v, d = 2) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(d));
+  const fmt = (v, d = 2) => I18N.sci(v, d);
   function mark(kind, x, y, col, lab) {
     const s = 3.6;
     const a = `fill="${col}" stroke="var(--ink)" stroke-width=".6"`;
