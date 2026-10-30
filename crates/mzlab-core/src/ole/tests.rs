@@ -128,3 +128,14 @@ fn a_directory_that_is_one_long_chain_or_a_loop_is_walked_without_recursion() {
         ["a", "b"]
     );
 }
+
+#[test]
+fn sector_numbers_at_the_top_of_the_range_read_nothing() {
+    let mut big = entry("big", 2, NONE, NONE, NONE);
+    big[0x74..0x78].copy_from_slice(&0xFFFF_FFFDu32.to_le_bytes());
+    big[0x78..0x7C].copy_from_slice(&0x10000u32.to_le_bytes());
+    let o = Ole::open(file(9, &[entry("Root Entry", 5, NONE, NONE, 1), big]), "x").unwrap();
+    assert_eq!(o.read("big"), Some(vec![]));
+    // `sector` alone, whatever its caller checks: `sid + 1` must not wrap to sector 0 on a 32-bit target
+    assert!(o.sector(u32::MAX).is_empty() && o.sector(0xFFFF_FFFE).is_empty());
+}

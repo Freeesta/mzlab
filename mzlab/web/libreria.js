@@ -107,6 +107,7 @@ const LIB = (() => {
           <div class="sm muted">${I18N.t("lib.avail.intro")}</div>
           <div class="sm" style="margin-top:6px"><button id="lib-avail-load">${I18N.t("lib.avail.load")}</button> <button id="lib-avail-go" hidden>${I18N.t("lib.avail.go")}</button> <button id="lib-avail-cancel" hidden>${I18N.t("lib.avail.cancel")}</button></div>
           <div id="lib-avail-list" aria-live="polite"></div><div id="lib-avail-st" class="sm" aria-live="polite"></div></fieldset>
+        <fieldset class="lib-reg" id="lib-reg" aria-label="${I18N.t("normative.lib.title")}"></fieldset>
         <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button> <button id="lib-pickdir">${I18N.t("lib.pickDir")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.json,.jsonl,.ndjson,.txt,.mzlib" multiple hidden><input type="file" id="lib-dirin" webkitdirectory multiple hidden></div>
         <div id="lib-st"></div><div id="lib-list"></div><div class="sm muted" id="lib-space" style="margin-top:6px"></div>`;
       d.querySelector("#lib-x").onclick = () => d.close();
@@ -126,6 +127,8 @@ const LIB = (() => {
       drop.ondragover = (/** @type {DragEvent} */ e) => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
       drop.ondrop = (/** @type {DragEvent} */ e) => { e.preventDefault(); drop.classList.remove("over"); addFiles([.../** @type {DataTransfer} */ (e.dataTransfer).files]); };
       listeners.push(() => { if (d.open) refresh(); });
+      // the regulatory lists: a module of its own, loaded with the window
+      import("./libreria-normative.js").then(m => m.mount(d.querySelector("#lib-reg"))).catch(e => { d.querySelector("#lib-reg").textContent = String(e && e.message || e); });
     }
     if (!d.open) d.showModal();
     refresh();
@@ -416,6 +419,15 @@ const LIB = (() => {
   // the chromatogram menu: the MS2 spectra of a high-resolution file against the libraries
   if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.identAll", gruppo: "lib", viste: ["chrom"], nome: () => I18N.t("ctx.chrom.identAll"),
     visibile: (/** @type {Bag} */ c) => !!window.HR && HR.isHr(E.files[c.k], 2) && E.files.some((/** @type {Bag} */ x) => x.file.split("#")[0] === E.files[c.k].file.split("#")[0] && x.kind === ESP.ms2), esegui: (/** @type {Bag} */ c) => identifyAll(c.k) });
+  // «MS2 at this RT…» on a total trace of a DDA file: the MS2 scan nearest in time goes to the MS2 panel (hidden when the file has no MS2)
+  if (typeof AZIONI !== "undefined") AZIONI.registra({ id: "chrom.ms2AtRt", gruppo: "extract", ordine: 2, viste: ["chrom"], voci: (/** @type {Bag} */ c) => {
+    const f = E.files[c.k]; if (!f || !f.dda || !window.DDA || !DDA.ms2Item(f) || c.x == null) return [];
+    return [{ nome: I18N.t("ctx.chrom.ms2AtRt"), tip: I18N.t("ctx.chrom.ms2AtRt.tip"), esegui: async () => {
+      DDA.ensure(c.p); const s1 = E.panels.find((/** @type {Bag} */ q) => q.type === "spec" && q.link === c.p.id && q.el), s2 = s1 && E.panels.find((/** @type {Bag} */ q) => q.id === s1.duo && q.el); if (!s2) return;
+      const D = await DDA.get(f.k), i = DDA.nearest(D.rt, c.x); if (i < 0) return;
+      await DDA.selectMs2(s2, D.sid[i]); s2.el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } }];
+  } });
   return { open, addFiles, queryOf, profOf, searchFrom, whatIs, isHr, mirror, cosVis, call, identifyAll, groupRows, groupAssess, assess, scansOf, engine, ensureCss };
 })();
 window.LIB = LIB;

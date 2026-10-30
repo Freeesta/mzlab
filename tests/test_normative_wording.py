@@ -22,7 +22,7 @@ def _page_section():
 
 def _lang_texts():
     out = []
-    for f in ("it.js", "en.js"):
+    for f in ("it.js", "en.js", "it/normative.js", "en/normative.js"):
         for line in (ROOT / "mzlab/web/lang" / f).read_text(encoding="utf-8").splitlines():
             if re.search(r'["\']?(normative|regulatory)\.', line):
                 out.append(line)
@@ -35,6 +35,7 @@ def test_regulatory_wording_has_no_verdict_word():
         "flow_regulatory.rs": _rust_strings("crates/mzlab-feat/src/flow_regulatory.rs"),
         "regulatory.rs": _rust_strings("crates/mzlab-feat/src/regulatory.rs"),
         "rapporto-flow.js": _page_section(),
+        "libreria-normative.js": [(ROOT / "mzlab/web/libreria-normative.js").read_text(encoding="utf-8")],
         "lang": _lang_texts(),
     }
     bad = [(k, m.group(0), t[:80]) for k, ts in texts.items() for t in ts for m in [FORBIDDEN.search(t)] if m]
@@ -45,3 +46,9 @@ def test_report_carries_the_study_disclaimer():
     s = (ROOT / "crates/mzlab-core/src/flow/corsa_reg.rs").read_text(encoding="utf-8")
     assert "it is not an assessment of compliance with any law" in s
     assert "Confirm candidates with reference standards before any regulatory use." in s
+
+
+def test_library_panel_shows_the_report_disclaimer():
+    rust = re.search(r'pub const DISCLAIMER: &str = "(.*?)";', (ROOT / "crates/mzlab-core/src/flow/corsa_reg.rs").read_text(encoding="utf-8")).group(1)
+    en = (ROOT / "mzlab/web/lang/en/normative.js").read_text(encoding="utf-8")
+    assert f'"normative.lib.disclaimer": "{rust}"' in en

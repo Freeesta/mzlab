@@ -309,16 +309,7 @@ pub fn hr_profile(scans: &[Scan], survey: bool, hr: bool) -> HrProfile {
 }
 
 fn median(v: &mut [f64]) -> Option<f64> {
-    if v.is_empty() {
-        return None;
-    }
-    crate::sortc::by(v, f64::total_cmp);
-    let n = v.len();
-    Some(if n % 2 == 1 {
-        v[n / 2]
-    } else {
-        (v[n / 2 - 1] + v[n / 2]) / 2.0
-    })
+    (!v.is_empty()).then(|| crate::signal::median_or_in(v, f64::NAN))
 }
 
 /// What the file is, from its scans: MS1, SIM, DDA / DIA / AIF / PRM, MSn.

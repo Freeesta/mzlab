@@ -53,6 +53,8 @@ const CSS = `#libwhat{width:96vw;height:92vh;max-width:none;max-height:none;min-
 #libwhat .lw-plot{position:relative}#libwhat canvas{width:100%;height:300px;display:block;border:1px solid var(--line);border-radius:6px}#libwhat .lw-tip{position:absolute;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 6px;font-size:12px;white-space:nowrap;z-index:2}
 #libwhat .lw-more table{width:auto}#libwhat .lw-more dl{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;margin:4px 0}#libwhat .lw-more dt{color:var(--muted)}#libwhat .lw-more dd{margin:0;overflow-wrap:anywhere}
 #libwhat .lw-more summary{cursor:pointer}@media (max-width:900px){#libwhat .lw-main{grid-template-columns:minmax(0,1fr);overflow:auto}#libwhat .lw-tbl{max-height:45vh}}
+#libwhat .lw-th{display:block;width:56px;height:40px;padding:0;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--muted);cursor:zoom-in;overflow:hidden}#libwhat .lw-th svg{width:100%;height:100%;display:block}#libwhat td.st{padding:2px 4px}
+#libwhat .lw-big{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;display:flex;flex-direction:column;gap:6px;align-items:flex-end;padding:10px;max-width:min(92vw,400px);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35)}#libwhat .lw-big .lw-bigsvg{width:360px;max-width:100%;height:260px;display:grid;place-items:center}#libwhat .lw-big svg{width:100%;height:100%}#libwhat .lw-big code{align-self:stretch;user-select:text;overflow-wrap:anywhere;font-size:12px}
 @media (pointer:coarse){#libwhat button,#libwhat summary,#libwhat select,#libwhat input,#libwhat tr.row td{min-height:40px}}`;
 function ensureCss() {
   if (document.getElementById("lwcss")) return;
@@ -75,7 +77,7 @@ function dialog() {
     // the size the user drags to is remembered (not the default, not the maximised one)
     let tm = 0; FRAME.ro(d, () => { if (!dd.open || !dd.style.width || dd.classList.contains("max")) return; clearTimeout(tm); tm = setTimeout(() => sizeSave(dd.offsetWidth, dd.offsetHeight), 300); });
     d.addEventListener("click", e => { const b = /** @type {HTMLElement} */ (e.target).closest(".lw-mx"); if (!b) return; const on = dd.classList.toggle("max"); mxSet(b, on); });
-    d.addEventListener("cancel", e => { const o = dd.querySelector(".lw-pop[open]"); if (o) { e.preventDefault(); o.removeAttribute("open"); /** @type {HTMLElement} */ (o.querySelector("summary")).focus(); } });
+    d.addEventListener("cancel", e => { if (dd.querySelector("#li-big")) { e.preventDefault(); closeBig(dd); return; } const o = dd.querySelector(".lw-pop[open]"); if (o) { e.preventDefault(); o.removeAttribute("open"); /** @type {HTMLElement} */ (o.querySelector("summary")).focus(); } });
     // one popup at a time; a click outside closes it
     d.addEventListener("toggle", e => { const x = /** @type {HTMLDetailsElement} */ (e.target); if (x.classList && x.classList.contains("lw-pop") && x.open) dd.querySelectorAll(".lw-pop[open]").forEach(o => { if (o !== x) o.removeAttribute("open"); }); }, true);
     d.addEventListener("click", e => { const tg = /** @type {HTMLElement} */ (e.target); dd.querySelectorAll(".lw-pop[open]").forEach(o => { if (!o.contains(tg)) o.removeAttribute("open"); }); });
@@ -107,7 +109,7 @@ async function copyTable(/** @type {string[]} */ h, /** @type {any[][]} */ rs, /
 /** Rows of a table move with the arrows and are chosen with Enter or Space. */
 function rowKeys(/** @type {HTMLElement} */ box) {
   box.onkeydown = e => {
-    const tr = /** @type {HTMLElement} */ (e.target).closest("tr.row"); if (!tr) return;
+    const tr = /** @type {HTMLElement} */ (e.target).closest("tr.row"); if (!tr || /** @type {HTMLElement} */ (e.target).closest(".lw-th")) return;
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); /** @type {HTMLElement} */ (tr).click(); return; }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
     e.preventDefault();
@@ -249,6 +251,40 @@ function showDetail(/** @type {View} */ V) {
   /** @type {Promise<string | null>} */ (pics.get(smi)).then(svg => { if (tok !== st.tok) return; mol.innerHTML = svg || none; });
 }
 
+// structures of the «Identify all» rows: drawn once per SMILES and size, only for the rows in view; a click enlarges one (the SMILES stays selectable)
+/** @type {Map<string, Promise<string | null>>} */ const thumbs = new Map();
+const thumb = (/** @type {string} */ smi, /** @type {number} */ w, /** @type {number} */ hh, /** @type {string} */ id) => {
+  const key = `${w}x${hh}:${smi}`; if (!thumbs.has(key)) thumbs.set(key, smilesSvg(smi, w, hh, id));
+  return /** @type {Promise<string | null>} */ (thumbs.get(key));
+};
+/** Draws the thumbnails of `box` when they scroll into view; returns the hooks to watch rows added later and to stop. */
+function lazyThumbs(/** @type {HTMLElement} */ box) {
+  const draw = (/** @type {Element} */ el0) => {
+    const el = /** @type {HTMLElement} */ (el0), smi = el.dataset.smi; if (!smi || el.dataset.done) return; el.dataset.done = "1";
+    thumb(smi, 54, 38, "lwt").then(svg => { if (!el.isConnected) return; if (svg) el.innerHTML = h`${raw(svg)}`; else el.textContent = "–"; });
+  };
+  const watch = (/** @type {ParentNode} */ root) => root.querySelectorAll(".lw-th").forEach(el => (io ? io.observe(el) : draw(el)));
+  const io = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { /** @type {IntersectionObserver} */ (io).unobserve(e.target); draw(e.target); } }), { root: box, rootMargin: "80px" });
+  watch(box);
+  return { watch, stop: () => { if (io) io.disconnect(); } };
+}
+function closeBig(/** @type {HTMLElement} */ d, back = true) {
+  const w = d.querySelector("#li-big"); if (!w) return;
+  const from = /** @type {HTMLElement | null} */ (d.querySelector(".lw-th[data-big]")); w.remove();
+  if (from) { from.removeAttribute("data-big"); if (back) from.focus(); }
+}
+function bigStructure(/** @type {HTMLElement} */ d, /** @type {HTMLElement} */ from, /** @type {string} */ name) {
+  closeBig(d, false); const smi = from.dataset.smi || ""; from.setAttribute("data-big", "1");
+  const w = document.createElement("div"); w.className = "lw-big"; w.id = "li-big"; w.setAttribute("role", "dialog");
+  w.innerHTML = h`<div class="lw-bigsvg" role="img" aria-label="${t("lw.th.bigAria", { name })}"><span class="sm muted">…</span></div><code tabindex="0">${smi}</code><button type="button" id="li-big-x">${raw(t("common.close"))}</button>`;
+  d.appendChild(w);
+  /** @type {HTMLElement} */ (w.querySelector("#li-big-x")).onclick = () => closeBig(d);
+  /** @type {HTMLElement} */ (w.querySelector("#li-big-x")).focus();
+  thumb(smi, 360, 260, "lwb").then(svg => { const slot = w.querySelector(".lw-bigsvg"); if (slot && w.isConnected) slot.innerHTML = svg ? h`${raw(svg)}` : h`<span class="sm muted">${raw(t("lw.noStruct"))}</span>`; });
+  const away = (/** @type {Event} */ e) => { if (!w.isConnected) { d.removeEventListener("click", away, true); return; } const tg = /** @type {Node} */ (e.target); if (!w.contains(tg) && !(/** @type {HTMLElement} */ (tg)).closest?.(".lw-th")) { closeBig(d, false); d.removeEventListener("click", away, true); } };
+  setTimeout(() => d.addEventListener("click", away, true), 0);
+}
+
 // Copy and Excel of the download button
 function dlBind(/** @type {View} */ V) {
   const { q, ctx, st, $, msg } = V;
@@ -365,21 +401,22 @@ async function identifyAll(/** @type {number} */ k) {
     const ms = Math.round(performance.now() - t0);
     if (W_.LISTE) await W_.LISTE.ready();
     // contaminant exclusions (liste.js): candidates whose precursor is a contaminant the student excluded stay out of the list, counted, until «Show»
-    let showHid = false, all = false, sel = -1;
+    let showHid = false, all = false, sel = -1, /** @type {{ watch: (r: ParentNode) => void, stop: () => void } | null} */ lazy = null;
     const so = { key: "rt", dir: 1 }, groups = L.groupRows(r.rows);
     const show = () => {
       const hidOf = (/** @type {any} */ g) => { const c = W_.LISTE ? W_.LISTE.compat(g.prec, f.polarity, UIP.hrPpm) : null; return !!(c && c.hid); };
       const base = groups.map((/** @type {any} */ g) => ({ g, v: L.groupAssess(g), k: W_.LISTE ? W_.LISTE.textFor(g.prec, f.polarity, UIP.hrPpm) : "", hid: hidOf(g) })).filter((/** @type {any} */ x) => all || (x.v.proposed !== "5" && x.v.proposed !== "0"));
       const nHid = base.filter((/** @type {any} */ x) => x.hid).length, rows = (showHid ? base : base.filter((/** @type {any} */ x) => !x.hid)), hasK = rows.some((/** @type {any} */ x) => x.k);
-      const val = (/** @type {any} */ x) => (so.key === "rt" ? x.g.rt : so.key === "prec" ? x.g.prec : so.key === "name" ? x.g.best.name || "" : so.key === "ent" ? x.g.best.ent : so.key === "n" ? x.g.n : LV().rank(LV().shown(x.v)));
+      const val = (/** @type {any} */ x) => (so.key === "rt" ? x.g.rt : so.key === "prec" ? x.g.prec : so.key === "name" ? x.g.best.name || "" : so.key === "ent" ? x.g.best.ent : so.key === "shared" ? x.g.best.shared : so.key === "dprec" ? Math.abs(x.g.best.dprec) : so.key === "n" ? x.g.n : LV().rank(LV().shown(x.v)));
       rows.sort((a, b) => so.dir * cmp(val(a), val(b)));
       const cnt = nHid ? h`<div class="sm cont-cnt" role="status">${raw(t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid }))} · <button type="button" id="li-chid">${raw(t(showHid ? "cont.hide" : "cont.show"))}</button></div>` : "";
-      const head = thSort("rt", "RT", so, "num") + thSort("prec", "<i>m/z</i>", so, "num") + thSort("name", t("lib.col.name"), so) + h`<th scope="col">${raw(t("lst.col.formula"))}</th>` + thSort("ent", t("lib.all.bestEntropy"), so, "num") + thSort("n", t("lib.all.scans"), so, "num") + thSort("lv", t("lw.col.level"), so) + (hasK ? h`<th scope="col">${raw(t("lib.all.contaminant"))}</th>` : "");
-      const trs = rows.map((x, i) => h`<tr class="row${i === sel ? " sel" : ""}" tabindex="0" data-i="${i}" title="${raw(t("lib.all.openBest"))}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td class="nm">${x.g.best.name || ""}</td><td>${raw(x.g.best.formula ? fmtFormula(x.g.best.formula) : "")}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}</td><td>${raw(lvCell(x.v))}</td>${raw(hasK ? h`<td title="${x.k || ""}">${x.k || ""}</td>` : "")}</tr>`);
+      const head = thSort("rt", "RT", so, "num") + thSort("prec", "<i>m/z</i>", so, "num") + h`<th scope="col">${raw(t("lw.col.struct"))}</th>` + thSort("name", t("lib.col.name"), so) + h`<th scope="col">${raw(t("lst.col.formula"))}</th><th scope="col">${raw(t("lib.col.adduct"))}</th><th scope="col">${raw(t("lib.col.library"))}</th><th scope="col">InChIKey</th>` + thSort("ent", t("lib.all.bestEntropy"), so, "num") + thSort("shared", t("lib.col.shared"), so, "num") + thSort("dprec", t("lw.col.dppm"), so, "num") + thSort("n", t("lib.all.scans"), so, "num") + thSort("lv", t("lw.col.level"), so) + (hasK ? h`<th scope="col">${raw(t("lib.all.contaminant"))}</th>` : "");
+      const cell = (/** @type {any} */ x) => { const b = x.g.best, smi = String(b.smiles || ""); return smi ? h`<td class="st"><button type="button" class="lw-th" data-smi="${smi}" aria-label="${t("lw.th.aria", { name: b.name || "" })}"><span aria-hidden="true">…</span></button></td>` : h`<td class="st">–</td>`; };
+      const trs = rows.map((x, i) => h`<tr class="row${i === sel ? " sel" : ""}" tabindex="0" data-i="${i}" title="${raw(t("lib.all.openBest"))}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td>${raw(cell(x))}<td class="nm">${x.g.best.name || ""}</td><td>${raw(x.g.best.formula ? fmtFormula(x.g.best.formula) : "")}</td><td title="${x.g.best.type || ""}">${x.g.best.type || ""}</td><td title="${x.g.best.lib || ""}">${x.g.best.lib || ""}</td><td title="${x.g.best.ik || ""}">${x.g.best.ik || ""}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.best.shared != null ? x.g.best.shared : ""}</td><td class="num">${x.g.best.dprec != null ? x.g.best.dprec.toFixed(1) : ""}</td><td class="num">${x.g.n}</td><td>${raw(lvCell(x.v))}</td>${raw(hasK ? h`<td title="${x.k || ""}">${x.k || ""}</td>` : "")}</tr>`);
       // hundreds of precursors: the rows arrive in chunks while scrolling (always up to the selected one)
       let n = Math.max(CHUNK, Math.ceil((sel + 1) / CHUNK) * CHUNK);
-      const body = trs.slice(0, n).join("") || h`<tr><td colspan="7" class="muted">${raw(t("lib.all.noMatch"))}</td></tr>`;
-      $("#li-body").innerHTML = h`${raw(cnt)}<div class="lw-tbl" id="li-list"><table><colgroup><col style="width:5em"><col style="width:7.5em"><col><col style="width:9em"><col style="width:6em"><col style="width:5em"><col style="width:5em">${raw(hasK ? "<col style=\"width:10em\">" : "")}</colgroup>
+      const body = trs.slice(0, n).join("") || h`<tr><td colspan="14" class="muted">${raw(t("lib.all.noMatch"))}</td></tr>`;
+      $("#li-body").innerHTML = h`${raw(cnt)}<div class="lw-tbl" id="li-list"><table><colgroup><col style="width:52px"><col style="width:72px"><col style="width:64px"><col><col style="width:96px"><col style="width:64px"><col style="width:84px"><col style="width:104px"><col style="width:58px"><col style="width:58px"><col style="width:56px"><col style="width:58px"><col style="width:58px">${raw(hasK ? "<col style=\"width:120px\">" : "")}</colgroup>
         <thead><tr>${raw(head)}</tr></thead><tbody>${raw(body)}</tbody></table></div>`;
       $("#li-st").textContent = t("lib.all.summary", { q: queries.length, ms, g: groups.length, r: rows.length });
       const ab = $("#li-all"); ab.checked = all; ab.parentElement.lastChild.textContent = " " + t("lib.all.showAll", { n: groups.length }); ab.onchange = () => { all = ab.checked; show(); };
@@ -387,12 +424,16 @@ async function identifyAll(/** @type {number} */ k) {
       $("#li-mgf").onclick = () => { $("#lw-dl").removeAttribute("open"); if (W_.WORKFLOW) W_.WORKFLOW.exportQueriesMgf(queries, f); };
       $("#li-msp").onclick = () => { $("#lw-dl").removeAttribute("open"); if (W_.WORKFLOW) W_.WORKFLOW.exportQueriesMsp(queries, f); };
       $("#li-xlsx").onclick = () => { $("#lw-dl").removeAttribute("open"); dlx(t("lib.all.xlsxPrefix") + String(f.label || f.file || "file").replace(/[^\w.-]+/g, "_") + ".xlsx", [
-        { name: t("lib.all.sheetCand"), head: ["RT (min)", t("lib.all.precMz"), t("lib.col.name"), t("lst.col.formula"), t("lib.all.bestEntropy"), t("lib.all.scans"), t("lv.proposed"), t("lv.decided"), t("lv.evidence")].concat(hasK ? [t("lib.all.contaminant")] : []), rows: rows.map((/** @type {any} */ x) => [+x.g.rt.toFixed(3), +x.g.prec.toFixed(5), x.g.best.name || "", x.g.best.formula || "", x.g.best.ent != null ? +x.g.best.ent.toFixed(3) : "", x.g.n, x.v.proposed, x.v.decided || "", x.v.lines.concat([x.v.decisive]).join(" | ")].concat(hasK ? [x.k || ""] : [])), widths: [10, 14, 40, 20, 14, 10, 12, 12, 60] },
+        { name: t("lib.all.sheetCand"), head: ["RT (min)", t("lib.all.precMz"), t("lib.col.name"), t("lst.col.formula"), t("lib.all.bestEntropy"), t("lib.all.scans"), t("lv.proposed"), t("lv.decided"), t("lv.evidence"), t("lib.col.adduct"), t("lib.col.library"), "InChIKey", "SMILES"].concat(hasK ? [t("lib.all.contaminant")] : []), rows: rows.map((/** @type {any} */ x) => [+x.g.rt.toFixed(3), +x.g.prec.toFixed(5), x.g.best.name || "", x.g.best.formula || "", x.g.best.ent != null ? +x.g.best.ent.toFixed(3) : "", x.g.n, x.v.proposed, x.v.decided || "", x.v.lines.concat([x.v.decisive]).join(" | "), x.g.best.type || "", x.g.best.lib || "", x.g.best.ik || "", x.g.best.smiles || ""].concat(hasK ? [x.k || ""] : [])), widths: [10, 14, 40, 20, 14, 10, 12, 12, 60, 12, 20, 28, 30] },
         { name: t("lib.all.sheetPar"), head: [t("lib.all.parameter"), t("lib.all.value")], rows: [[t("lib.table.file"), f.label || f.file || ""], [t("lib.all.precTol"), `${L.profOf(f).v} ppm`], [t("lib.all.peakTol"), t("lib.all.peakTolVal")], [t("lib.all.shown"), t("lib.all.shownVal", { n: rows.length, total: groups.length })], [t("lib.all.level"), t("lib.all.levelVal")]], widths: [28, 70] }], { table: "library-all", file: String(f.label || f.file || "") }); };
       const box = $("#li-list");
       sortBind(box, so, show); rowKeys(box);
-      box.onscroll = () => { if (n < trs.length && box.scrollTop + box.clientHeight > box.scrollHeight - 200) { box.querySelector("tbody").insertAdjacentHTML("beforeend", h`${raw(trs.slice(n, n + CHUNK).join(""))}`); n += CHUNK; } };
+      if (lazy) lazy.stop();
+      lazy = lazyThumbs(box);
+      box.onscroll = () => { if (n < trs.length && box.scrollTop + box.clientHeight > box.scrollHeight - 200) { const tb = box.querySelector("tbody"), n0 = tb.rows.length; tb.insertAdjacentHTML("beforeend", h`${raw(trs.slice(n, n + CHUNK).join(""))}`); n += CHUNK; for (let j = n0; j < tb.rows.length; j++) lazy.watch(tb.rows[j]); } };
       box.onclick = (/** @type {MouseEvent} */ e) => {
+        const th = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest(".lw-th"));
+        if (th) { e.stopPropagation(); const rw = /** @type {HTMLElement} */ (th.closest("tr.row")); bigStructure(d, th, rw ? String(rows[Number(rw.dataset.i)].g.best.name || "") : ""); return; }
         const tr = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest("tr.row")); if (!tr) return;
         sel = Number(tr.dataset.i); const g = rows[sel].g, b = g.best, qq = queries.find(x => x.key === b.key);
         if (!qq) return;

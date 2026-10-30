@@ -447,6 +447,6 @@ const DDA = (() => {
     AZIONI.registra({ id: "chrom.ddaShow", gruppo: "link", ordine: 1, viste: ["chrom"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
     AZIONI.registra({ id: "spec.ddaShow", gruppo: "link", ordine: 1, viste: ["spec"], voci: (/** @type {Bag} */ c) => { const q = menuShow(c.p); return q ? [{ nome: q.label, tip: q.tip, esegui: q.fn }] : []; } });
   }
-  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, openEntry, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
+  return { NEAR_MIN, NEAR_MAX, addMs2, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, nearest, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, ms2For, openMs2, menuShow, openEntry, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;
