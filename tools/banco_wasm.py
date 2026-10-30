@@ -29,19 +29,22 @@ import dati_percorsi  # noqa: E402
 
 MEM = "-C link-arg=--initial-memory=33554432 -C link-arg=--max-memory=4294967296"
 SIMD = "-C target-feature=+simd128"
-# name -> (cargo profile, extra rustflags, features)
+# name -> (cargo profile, extra rustflags, features, wasm-opt level)
 VARIANTI = {
-    "base": ("release", "", ""),
-    "o3": ("o3", "", ""),
-    "o3simd": ("o3", SIMD, ""),
-    "o3simd_zrs": ("o3", SIMD, "zlibrs"),
-    "mix": ("mix", "", ""),
-    "mix_zrs": ("mix", "", "zlibrs"),
-    "sol_core": ("sol_core", "", ""),
-    "sol_miniz": ("sol_miniz", "", ""),
-    "sol_xml": ("sol_xml", "", ""),
-    "sol_b64": ("sol_b64", "", ""),
-    "sol_deps": ("sol_deps", "", ""),
+    "base": ("release", "", "", "-Oz"),
+    "o3": ("o3", "", "", "-Oz"),
+    "o3simd": ("o3", SIMD, "", "-Oz"),
+    "o3simd_zrs": ("o3", SIMD, "zlibrs", "-Oz"),
+    "mix": ("mix", "", "", "-Oz"),
+    "mix_zrs": ("mix", "", "zlibrs", "-Oz"),
+    "sol_core": ("sol_core", "", "", "-Oz"),
+    "sol_miniz": ("sol_miniz", "", "", "-Oz"),
+    "sol_xml": ("sol_xml", "", "", "-Oz"),
+    "sol_b64": ("sol_b64", "", "", "-Oz"),
+    "sol_deps": ("sol_deps", "", "", "-Oz"),
+    # the site as built (z + mzlab-core at 3; picchi is not in the bench crate) with -Oz, and the same rustc output with -O3 (tools/wasm_opt.sh)
+    "site": ("sol_core", "", "", "-Oz"),
+    "site_o3": ("sol_core", "", "", "-O3"),
 }
 HR_SCANS, HR_PEAKS = 1200, 400   # the 87 MB profile mzML of the study
 # jobs in the order of the table; the label is the row of §3 of the study
@@ -103,7 +106,7 @@ def prepara_dati(lav: Path, raw: Path | None) -> Path:
 
 
 def costruisci(nome: str, lav: Path, thermo: bool) -> dict:
-    profilo, rf, feat = VARIANTI[nome]
+    profilo, rf, feat, livello = VARIANTI[nome]
     feat = ",".join(f for f in (feat, "thermo" if thermo else "") if f)
     env = {**os.environ, "CARGO_TARGET_DIR": str(lav / "tgt" / nome), "RUSTFLAGS": f"{MEM} {rf}".strip()}
     cmd = ["cargo", "build", "-q", "--profile", profilo, "--target", "wasm32-unknown-unknown"] + (["--features", feat] if feat else [])
@@ -116,7 +119,7 @@ def costruisci(nome: str, lav: Path, thermo: bool) -> dict:
     bg = out / "wbench_bg.wasm"
     crudo = bg.stat().st_size
     # the site's own wasm-opt (npm wasm-opt, flags of tools/wasm_opt.sh); the size gate is set out of reach
-    run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(bg), str(2**40), nome], env={**os.environ, "RUNNER_TEMP": str(lav / "tmp")})
+    run(["bash", str(ROOT / "tools" / "wasm_opt.sh"), str(bg), str(2**40), nome], env={**os.environ, "RUNNER_TEMP": str(lav / "tmp"), "MZLAB_WASM_OPT_LEVEL": livello})
     dati = bg.read_bytes()
     return {"variant": nome, "raw_bytes": crudo, "opt_bytes": len(dati), "gzip_bytes": len(gzip.compress(dati, 9))}
 

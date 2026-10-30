@@ -178,3 +178,15 @@ def test_guardia_tabui_formula_mai_da_sola():
     assert not violations, (
         "Bare 'formula' found in Tabui UI/table definitions:\n" + "\n".join(violations)
     )
+
+
+def test_guardia_nessun_relaxed_simd_nei_file_di_build():
+    """Relaxed SIMD gives CPU-dependent results: the site and the app must stay byte for byte equal, so it never enters a build file."""
+    files = [ROOT / ".cargo/config.toml", ROOT / "Cargo.toml", ROOT / "rust-toolchain.toml"]
+    files += sorted((ROOT / "tools").glob("*.sh")) + sorted((ROOT / ".github/workflows").glob("*.yml"))
+    files += sorted(ROOT.glob("crates/*/Cargo.toml")) + sorted(ROOT.glob("crates/*/.cargo/config.toml"))
+    trovati = []
+    for f in files:
+        if f.exists() and re.search(r"relaxed[-_]simd", f.read_text(encoding="utf-8"), re.IGNORECASE):
+            trovati.append(str(f.relative_to(ROOT)))
+    assert not trovati, f"relaxed SIMD in build files: {trovati}"

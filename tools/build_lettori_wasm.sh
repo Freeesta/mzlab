@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # The .wasm modules of the readers, one per family of formats (and `valida`, the mzML validator: no reader, its own module) (crates/mzlab-lettori-wasm; each loaded only when a file of its family arrives, never committed), each under its limit after
-# wasm-opt -Oz, and site/static/wasm-lettori/manifest.json with {family: {sha256, byte}} (the worker checks it): tools/build_lettori_wasm.sh <site/static>
+# wasm-opt, and site/static/wasm-lettori/manifest.json with {family: {sha256, byte}} (the worker checks it): tools/build_lettori_wasm.sh <site/static>
 # Called by tools/build_feat_wasm.sh, which pages.yml, release.yml and sito-rust.yml already run.
 set -eu
-# family limit (bytes after wasm-opt -Oz; tests/test_lettori_wasm.py checks the table: no value goes up)
+# family limit (bytes after wasm-opt; tests/test_lettori_wasm.py checks the table: no value goes up)
 # mzlab-picchi at opt-level 3 (peaks 3.1x) moved agilent, sciex and bruker up by 79-228 B, rounded to 256 B
 # zlib-rs (flate2: inflate x2.1 in wasm) weighs +30 KB per family that converts: andi, agilent, sciex, waters, shimadzu and bruker moved up by that, measured value rounded to 256 B
 # every family carries the indexed-mzML writer (feature `indice` of mzlab-core, +1.9 to +3.2 KB) so that to_mzml is byte for byte the mzML of `mzlab-cli convert` (tests/test_lettori_parita.py): the limits of the line above moved up to the size measured by the CI, rounded to 256 B
