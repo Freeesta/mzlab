@@ -85,7 +85,7 @@ impl Ole {
     }
 
     fn sector(&self, sid: u32) -> Vec<u8> {
-        let off = (sid as usize + 1).saturating_mul(self.ss);
+        let off = (sid as usize).saturating_add(1).saturating_mul(self.ss);
         let a = off.min(self.data.len());
         self.data
             .get(a..off.saturating_add(self.ss).min(self.data.len()))

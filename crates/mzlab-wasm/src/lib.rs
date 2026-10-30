@@ -436,17 +436,7 @@ fn f64s(b: &[u8]) -> Vec<f64> {
 
 /// The files of the session as the page describes them: `[{slot, label, time, full}]`, in session order.
 pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>, JsValue> {
-    use mzlab_core::json::{self, Value};
-    let v = json::parse(items.as_bytes()).map_err(|e| error_json(&e))?;
-    Ok(v.arr()
-        .iter()
-        .map(|i| mzlab_core::originroute::ItemMeta {
-            slot: i.get("slot").and_then(Value::f64).unwrap_or(-1.0) as u32,
-            label: i.get("label").and_then(Value::str).unwrap_or("").to_string(),
-            time: i.get("time").and_then(Value::f64),
-            full: matches!(i.get("full"), Some(Value::Bool(true))),
-        })
-        .collect())
+    mzlab_core::originroute::session_items(items).map_err(|e| error_json(&e))
 }
 
 /// The routes over the files of the session (evidence of origin, maps).

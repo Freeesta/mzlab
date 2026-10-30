@@ -71,3 +71,17 @@ fn slice_sorts_like_the_standard_stable_sort() {
         assert_eq!(s, u);
     }
 }
+
+#[test]
+fn one_nan_no_longer_leaves_the_numbers_unsorted() {
+    let mut old = [1.0, f64::NAN, 3.0, 2.0];
+    by(&mut old, |a, b| b.partial_cmp(a).unwrap_or(Ordering::Equal));
+    assert_eq!(old[0], 1.0, "the comparator this replaces: 3 is not first");
+    let mut v = [1.0, f64::NAN, 3.0, 2.0, f64::NAN, 0.0, -0.0];
+    by(&mut v, |a, b| desc_nan_last(*a, *b));
+    assert_eq!(v[..5].iter().map(|x| x.to_bits()).collect::<Vec<_>>(), [3.0f64, 2.0, 1.0, 0.0, -0.0].map(f64::to_bits));
+    assert!(v[5].is_nan() && v[6].is_nan());
+    by(&mut v, |a, b| asc_nan_last(*a, *b));
+    assert_eq!(v[..5].iter().map(|x| x.to_bits()).collect::<Vec<_>>(), [0.0f64, -0.0, 1.0, 2.0, 3.0].map(f64::to_bits));
+    assert!(v[5].is_nan() && v[6].is_nan());
+}

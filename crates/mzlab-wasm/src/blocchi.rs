@@ -53,7 +53,7 @@ impl<F: Fetch> BlockReader<F> {
     }
 
     fn fill(&mut self) -> std::io::Result<()> {
-        let want = (BLOCK as u64).min(self.size - self.pos);
+        let want = (BLOCK as u64).min(self.size.saturating_sub(self.pos));
         self.src.fetch(self.pos, want, &mut self.block)?;
         self.block_start = self.pos;
         Ok(())
