@@ -31,7 +31,7 @@ try:
           return {k, t, n:cnt[t], mz:s.mz, y:s.y}})()""")
         pk = [(m, y) for m, y in zip(info["mz"], info["y"]) if m < info["t"] - 1.5 and y > 0]
         def msp(name, prec, peaks):
-            return f"Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f} {y:.1f}" for m, y in peaks) + "\n\n"
+            return f"Name: {name}\nPrecursorMZ: {prec}\nPrecursor_type: [M+H]+\nIon_mode: Positive\nFormula: C10H10\nSMILES: c1ccc(cc1)C=C\nInChIKey: PPBRXRYQALVLMV-UHFFFAOYSA-N\nNum Peaks: {len(peaks)}\n" + "\n".join(f"{m:.5f} {y:.1f}" for m, y in peaks) + "\n\n"
         text = msp("Voce di prova", info["t"], pk) + msp("Analogo di prova", info["t"] - 15.9949, pk)
         pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'prova.msp')})})(%s)" % __import__("json").dumps(text)); pg.wait_for_timeout(500)
         def identify():
@@ -44,6 +44,13 @@ try:
             assert len(xs) > 10 and all(len(x) == len(xs[0]) for x in xs), "header and rows have the same columns"
             assert all(all(abs(a - b) <= 1 for a, b in zip(x, xs[0])) for x in xs), ("the column x positions are the same in every row", xs[:3])
             assert pg.evaluate("(()=>{const t=document.querySelector('#li-body .li-t'),h=document.querySelector('#li-body th'),sc=document.querySelector('#li-body .li-sc');sc.scrollTop=200;return getComputedStyle(h).position==='sticky'&&Math.abs(h.getBoundingClientRect().top-sc.getBoundingClientRect().top)<=2&&getComputedStyle(document.querySelector('#li-body td.num')).textAlign==='right'})()"), "sticky header, numbers on the right"
+            pg.wait_for_selector("#li-body .li-st svg", timeout=20000)
+            n_all, n_svg = pg.evaluate("[document.querySelectorAll('#li-body .li-st').length, document.querySelectorAll('#li-body .li-st svg').length]")
+            assert 0 < n_svg < n_all, ("only the structures in view are drawn", n_svg, n_all)
+            assert "PPBRXRYQALVLMV" in pg.inner_text("#li-body"), "InChIKey column"
+            pg.click("#li-body .li-st svg"); pg.wait_for_selector("#li-big[open] svg", timeout=5000)
+            assert "c1ccc(cc1)C=C" in pg.inner_text("#li-big"), "enlarged structure with its SMILES"
+            pg.evaluate("document.querySelector('#li-big').close()")
             w0 = pg.evaluate("document.querySelector('#libid').offsetWidth")
             pg.click("#libid .li-mx"); assert pg.evaluate("document.querySelector('#libid').offsetWidth") > w0 or w0 >= pg.evaluate("innerWidth*0.97"), "maximised"
             assert pg.get_attribute("#libid .li-mx", "aria-pressed") == "true"
