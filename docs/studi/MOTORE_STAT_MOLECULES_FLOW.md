@@ -24,3 +24,6 @@ Schema già in uso (`flowtab` 146 846 B, `formula` 403 567 B: crate `mzlab-feat-
 - `flow` + `campioni`: tolti 348 KB → modulo ~380-430 KB, sotto 512 000 (ma il Flow è subito usato alla prima apertura del tab: il caricamento va coperto dallo stato di attesa che c'è già per `flowtab`).
 - Tutti e quattro in un solo modulo: ~600 KB, OLTRE 512 000: servono due moduli (o un tetto di gruppo, decisione di Federico). Il motore scenderebbe a ~1,97 MB (−22 %): ~165 KB di brotli in meno da scaricare alla prima visita e a ogni invalidazione di cache, ~0,6 ms-1,5 ms di validazione in meno su desktop.
 - Contro: parità sito/app (il nativo non ha il problema: il costo è solo del `.wasm`), una rotta per modulo da instradare in `lr-map.js`, `campioni` serve al caricamento dei file (un salto di rete in più al primo file) e il motore deve poter chiamare `flow::run_web` senza `campioni`: l'A/B mostra che il resto di `flow` (esecutore) resta nel motore se raggiunto da altre rotte, quindi il numero sopra è un minimo sicuro.
+
+## Decisione
+Decided not to split: no measurable gain (compilazione V8 ≈ 1,4 ms, nessuna chiamata prima di `qqReady`, motore sotto il tetto).
