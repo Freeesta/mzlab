@@ -45,6 +45,14 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
   return { top: Math.max(8, rect.top - MARGIN - dialogHeight), left: Math.max(8, Math.min(rect.left, vw - dialogWidth - 8)), side: "top" };
 }
 
+// Opening steps of «Your data», kept only when on screen as the tour starts (files waiting for the first click).
+const PASSI_INIZIALI = [
+  { id: "campioni", opt: true, target: () => document.getElementById("wtable") },
+  { id: "primo", opt: true, target: () => document.getElementById("wtable")?.offsetParent ? document.querySelector("#flst .fl[data-k]") : null }
+];
+/** Drops the optional steps whose target is not visible now. @template {{ opt?: boolean, target: () => any }} T @param {T[]} lista @returns {T[]} */
+const passiVisibili = lista => lista.filter(st => !st.opt || (el => !!el && el.offsetParent !== null && el.getBoundingClientRect().width > 0)(st.target()));
+
 const TOUR = (() => {
   const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
 
@@ -169,7 +177,8 @@ const TOUR = (() => {
     { id: "d_parziali", target: () => document.getElementById("kframe") },
     { id: "d_export", prep: showSidePanels, target: () => card("#ex-png") }
   ];
-  const stepsOf = (/** @type {number} */ cap) => cap === 1 ? STEPS_CAP1 : cap === 3 ? STEPS_D : STEPS_CAP2;
+  let cap1 = STEPS_CAP1;
+  const stepsOf = (/** @type {number} */ cap) => cap === 1 ? cap1 : cap === 3 ? STEPS_D : STEPS_CAP2;
 
   let active = false;
   let curCap = 1;
@@ -645,6 +654,7 @@ const TOUR = (() => {
       active = true;
       curCap = cap;
       curStep = step;
+      if (cap === 1) cap1 = passiVisibili([...PASSI_INIZIALI, ...STEPS_CAP1]);
 
       window.addEventListener("scroll", onScrollOrResize, { passive: true });
       window.addEventListener("resize", onScrollOrResize, { passive: true });
@@ -684,7 +694,7 @@ const TOUR = (() => {
         renderStep();
       } else if (curCap === 2) {
         curCap = 1;
-        curStep = STEPS_CAP1.length - 1;
+        curStep = cap1.length - 1;
         renderStep();
       }
     },
@@ -740,13 +750,13 @@ const TOUR = (() => {
         if (typeof upload === "function") {
           await upload([file], "data");
         }
+        // until the files open at once the staged example still needs the button; without it (landing D) nothing is clicked
         const op = /** @type {HTMLButtonElement | null} */ (document.getElementById("opbtn"));
-        if (op && !op.disabled) {
-          op.click();
-        }
+        if (op && !op.disabled) op.click();
+        // the example opens at once: wait for its row in the side list, then point at the sample table and at the first file
         const poll = setInterval(() => {
           const l = document.getElementById("loading");
-          if ((!l || l.hidden) && typeof E !== "undefined" && E.panels && E.panels.length > 0) {
+          if ((!l || l.hidden) && document.querySelector("#flst .fl[data-k]")) {
             clearInterval(poll);
             TOUR.inizia(1, 0);
           }

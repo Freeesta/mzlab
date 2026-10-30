@@ -258,7 +258,11 @@
                   "cosmic_min",
                   "canopus_min",
                   "rt_group_tol_min",
-                  "putative_library_level3"
+                  "putative_library_level3",
+                  "std_rt_max",
+                  "std_score_min",
+                  "std_ppm_max",
+                  "suspect_fragments_min"
                 ]
               },
               "value":{
@@ -314,6 +318,31 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Library entries named Spectral Match to ... (propagated annotations) are taken to Level 3"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Level 1: the feature RT is within this of the RT of the standard you gave"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.7,
+                    "description":"Level 1: the MS2 score (entropy similarity, or cosine for a cosine hit) of the hit on the standard"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Level 1: the precursor of the hit on the standard"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":2,
+                    "description":"Level 3a: at least this many fragments listed for a suspect are found in the feature MS2"
                   }
                 ]
               }
@@ -459,6 +488,7 @@
                 "enum":[
                   "mode",
                   "ppm",
+                  "tol_da",
                   "rt_gap",
                   "max_ppm_span",
                   "drop_artefacts",
@@ -485,6 +515,12 @@
                     "minimum":0,
                     "default":5,
                     "description":"At unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
                   },
                   {
                     "type":"number",
@@ -669,7 +705,7 @@
           {
             "properties":{
               "step":{"const":"features.gapfill@1"},
-              "name":{"enum":["floor","ppm","rt_tol","min_points","max_gap","long_trace"]},
+              "name":{"enum":["floor","ppm","tol_da","rt_tol","min_points","max_gap","long_trace"]},
               "value":{
                 "anyOf":[
                   {"type":"number","minimum":0,"default":20000,"description":"Noise floor"},
@@ -678,6 +714,12 @@
                     "minimum":0,
                     "default":5,
                     "description":"At unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
                   },
                   {"type":"number","minimum":0,"default":0.1,"description":"Half width added to the window of RT"},
                   {"type":"integer","minimum":2,"default":5,"description":"Minimum points"},
@@ -696,7 +738,7 @@
           {
             "properties":{
               "step":{"const":"features.ms2_link@1"},
-              "name":{"enum":["default_half_window","tol_ppm","weak"]},
+              "name":{"enum":["default_half_window","tol_ppm","tol_da","weak"]},
               "value":{
                 "anyOf":[
                   {
@@ -710,6 +752,12 @@
                     "minimum":0,
                     "default":6,
                     "description":"Window of the peak in the MS1 scan of the precursor; at unit resolution the engine reads a negative value as Da"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)"
                   },
                   {
                     "type":"number",
@@ -1721,6 +1769,7 @@
                   "qc_cv_max",
                   "qc_min_files",
                   "dup_ppm",
+                  "dup_da",
                   "dup_rt",
                   "require_ms2",
                   "normalize",
@@ -1804,6 +1853,12 @@
                     "type":"number",
                     "minimum":0,
                     "description":"Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0.05,
+                    "maximum":1,
+                    "description":"Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off"
                   },
                   {
                     "type":"number",

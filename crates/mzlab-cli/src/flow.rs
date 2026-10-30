@@ -295,13 +295,8 @@ pub(crate) fn all_inputs(r: &FileRunner, job: &Job, port: &str) -> Vec<PathBuf> 
 }
 
 fn formula_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
-    let text = if job.step.id == "formula.ms1" {
-        let (table, index) = (read_one(r, job, "features")?, read_all(r, job, "index")?);
-        crate::flow_formula::ms1_text(job, &table.1, &named(&index))?
-    } else {
-        let (spectra, formulas) = (read_one(r, job, "spectra")?, read_all(r, job, "formulas")?);
-        crate::flow_formula::ms2_text(job, (&spectra.0, &spectra.1), &blobs(&formulas))?
-    };
+    let (spectra, formulas) = (read_one(r, job, "spectra")?, read_all(r, job, "formulas")?);
+    let text = crate::flow_formula::ms2_text(job, (&spectra.0, &spectra.1), &blobs(&formulas))?;
     write_made(r, job, text, DataType::Formulas)
 }
 
@@ -336,14 +331,14 @@ const EXECUTORS: &[(&str, Exec)] = &[
     ("features.align", Exec::Made(crate::flow_base::align_job)),
     ("features.gapfill", Exec::Made(crate::flow_base::align_job)),
     ("features.table", Exec::File("report", table_job)),
-    ("features.estimate", Exec::File("estimates", estimate_job)),
+    ("features.estimate", Exec::Made(estimate_job)),
     ("table.stats", Exec::File("report", stats_job)),
     ("table.kmd", Exec::File("report", crate::flow_kmd::kmd_job)),
     ("table.pca", Exec::File("report", crate::flow_pca::pca_job)),
     ("table.drift", Exec::File("table", drift_job)),
     ("spectra.match", Exec::File("hits", match_job)),
     ("spectra.insilico", Exec::File("candidates", insilico_job)),
-    ("formula.ms1", Exec::File("formulas", formula_job)),
+    ("formula.ms1", Exec::Made(crate::flow_formula::ms1_job)),
     ("formula.ms2", Exec::File("formulas", formula_job)),
     ("spectra.ms2", Exec::File("spectra", ms2_job)),
     ("spectra.msn_graph", Exec::File("graph", msn_graph_job)),

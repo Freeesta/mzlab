@@ -5,6 +5,9 @@ use std::path::{Path, PathBuf};
 
 use crate::flow_bentazone_tests::{fixture, mzml, plan, NAMES};
 
+#[path = "flow_neglr_facets_tests.rs"]
+mod facets;
+
 const CASES: [(&str, i8, bool); 4] = [
     ("hrp", 1, true),
     ("hrn", -1, true),
@@ -14,7 +17,7 @@ const CASES: [(&str, i8, bool); 4] = [
 
 /// The table steps after the chain of `plan`: every one reads only what a full-scan series gives.
 const EXTRA: &str = r#",{"id":"est","step":"features.estimate@1","in":{"index":["idx.index"]}},
-    {"id":"fil","step":"table.filter@1","in":{"table":"gap.table","samples":"file:samples.json"},"params":{"dup_ppm":10}},
+    {"id":"fil","step":"table.filter@1","in":{"table":"gap.table","samples":"file:samples.json"},"params":{DUP}},
     {"id":"plz","step":"table.plausible@1","in":{"table":"gap.table"}},
     {"id":"kmd","step":"table.kmd@1","in":{"table":"gap.table"}},
     {"id":"csv","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}},
@@ -61,7 +64,16 @@ fn read(d: &Path, f: &str) -> String {
 fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
     for (tag, pol, hr) in CASES {
         let d = fixture(&format!("nl_{tag}"), pol, hr);
-        let full = with(&format!("{DIG}{EXTRA}"));
+        // the duplicate window is in Da on the unit axis and in ppm at high resolution
+        let extra = EXTRA.replace(
+            "DUP",
+            if hr {
+                r#""dup_ppm":10"#
+            } else {
+                r#""dup_da":0.3"#
+            },
+        );
+        let full = with(&format!("{DIG}{extra}"));
         if hr {
             // the facets of the files: the unit-resolution Dig is refused before anything runs; without it the rest runs
             let e = crate::flow::run_plan(full.as_bytes(), &d, &d.join("work"), 2, None)
@@ -69,7 +81,7 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
             let want = "dig.table:err.flow.facet dig.index:err.flow.facet";
             assert_eq!(e.params, vec![("problems".into(), want.into())], "{tag}");
         }
-        let prov = run(&d, &if hr { with(EXTRA) } else { full });
+        let prov = run(&d, &if hr { with(&extra) } else { full });
         for id in [
             "det", "ali", "gap", "gen", "lnk", "flt", "pos", "net", "est", "fil", "plz", "kmd",
             "csv", "mzt", "qc", "rx",
@@ -99,10 +111,10 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
             hr || read(&d, "dig.json").contains(&format!("\"adduct\":\"{adduct}\"")),
             "{tag}"
         );
-        // the unit axis of the detection reaches the alignment and the gap filling (a negative tolerance is Da)
+        // the unit axis of the detection reaches the alignment: its tolerance is `tol_da` (Da), the ppm one is for high resolution
         let ali = activity(&prov, "ali").get("params").unwrap();
-        let ppm = ali.get("ppm").and_then(|v| v.f64()).unwrap();
-        assert_eq!(ppm < 0.0, !hr, "{tag} align ppm {ppm}");
+        let tol_da = ali.get("tol_da").and_then(|v| v.f64());
+        assert_eq!(tol_da.is_some(), !hr, "{tag} align tol_da {tol_da:?}");
         // the exports name the polarity of the files
         let word = if pol < 0 {
             "negative scan"
@@ -198,7 +210,6 @@ fn flagged(prov: &mzlab_core::json::Value, id: &str, word: &str) -> bool {
 }
 
 #[test]
-#[ignore = "gap NL-1: features.estimate applies the default polarity +1 and axis ppm instead of the files' (MATRICE_NEG_LR.md)"]
 fn gap_the_estimate_follows_the_polarity_and_the_resolution_of_the_files() {
     for (tag, pol, hr) in [("nl_g1n", -1i8, true), ("nl_g1l", 1, false)] {
         let d = fixture(tag, pol, hr);
@@ -209,19 +220,44 @@ fn gap_the_estimate_follows_the_polarity_and_the_resolution_of_the_files() {
         assert!(est.contains(&format!("\"polarity\":{pol}")), "{tag}: {est}");
         if !hr {
             assert!(est.contains("\"axis\":\"Da\""), "{tag}: {est}");
+            assert!(!est.contains("\"min_height\":200000"), "{tag}: {est}");
         }
         let _ = std::fs::remove_dir_all(&d);
     }
 }
 
 #[test]
-#[ignore = "gap NL-2: formula.ms1 keeps [M+H]+ on negative files and finds no scan (MATRICE_NEG_LR.md)"]
 fn gap_formula_ms1_takes_the_ion_of_the_polarity_of_the_files() {
     let d = fixture("nl_g2", -1, true);
-    run(&d, &formula_plan(None));
+    let prov = run(&d, &formula_plan(None));
     let f1 = read(&d, "f1.json");
     assert!(
-        !f1.contains("err.flow.formula.scan"),
+        !f1.contains("err.flow.formula.scan") && f1.contains("\"ion\":\"[M-H]-\""),
+        "{}",
+        &f1[..f1.len().min(600)]
+    );
+    // the record says the ion came from the files
+    let f1_rec = activity(&prov, "f1");
+    assert!(f1_rec.get("estimates").and_then(|e| e.get("ion")).is_some());
+    assert_eq!(
+        f1_rec
+            .get("params")
+            .and_then(|p| p.get("ion"))
+            .and_then(|v| v.str()),
+        Some("[M-H]-")
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_written_ion_of_the_other_polarity_wins_with_a_warning() {
+    let d = fixture("nl_g2w", -1, true);
+    let prov = run(&d, &formula_plan(Some("[M+H]+")));
+    assert_eq!(error_of(&prov, "f1"), None);
+    assert!(flagged(&prov, "f1", "formula.ion"));
+    let f1 = read(&d, "f1.json");
+    assert!(
+        f1.contains("\"ion\":\"[M+H]+\""),
         "{}",
         &f1[..f1.len().min(600)]
     );
@@ -345,7 +381,6 @@ fn a_negative_table_is_searched_as_negative_by_table_match() {
 }
 
 #[test]
-#[ignore = "gap NL-4: a series that mixes polarities is aligned in silence (MATRICE_NEG_LR.md)"]
 fn gap_a_series_of_mixed_polarity_is_refused_or_warned() {
     let d = mixed("nl_g4", |k| (if k < 2 { -1 } else { 1 }, true));
     let prov = run(&d, &with("]}"));
@@ -353,17 +388,24 @@ fn gap_a_series_of_mixed_polarity_is_refused_or_warned() {
         flagged(&prov, "ali", "polarity"),
         "the alignment of + and - files says nothing"
     );
+    assert_eq!(
+        error_of(&prov, "ali").as_deref(),
+        Some("err.flow.align.polarity")
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
 
 #[test]
-#[ignore = "gap NL-5: a series that mixes unit and high resolution is aligned on the axis of its first file in silence (MATRICE_NEG_LR.md)"]
 fn gap_a_series_of_mixed_resolution_is_refused_or_warned() {
     let d = mixed("nl_g5", |k| (1, k >= 2));
     let prov = run(&d, &with("]}"));
     assert!(
         flagged(&prov, "ali", "resolution"),
         "the alignment of Da and ppm files says nothing"
+    );
+    assert_eq!(
+        error_of(&prov, "ali").as_deref(),
+        Some("err.flow.align.resolution")
     );
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -378,50 +420,7 @@ fn gap_a_unit_resolution_plan_that_says_so_passes_the_check() {
     if let Err(e) = crate::flow::run_plan(text.as_bytes(), &d, &d.join("work"), 2, None) {
         panic!("{} {:?}", e.key, e.params);
     }
-    // the same plan with no facets written takes them from the files, and every tp.* step runs
     let _ = std::fs::remove_dir_all(&d);
-    let d = fixture("nl_g6f", -1, false);
-    let prov = run(&d, &with(&format!("{DIG}]}}")));
-    for id in ["gen", "lnk", "flt", "pos", "net", "dig"] {
-        assert_eq!(error_of(&prov, id), None, "{id}");
-    }
-    let _ = std::fs::remove_dir_all(&d);
-}
-
-/// The problems of the check of `text` once its inputs are the files of `d`, as `flow run` sees them: `instance.port:key k=v,…`.
-fn problems(d: &Path, text: &str) -> Vec<String> {
-    use mzlab_core::flow::{check, parse, Platform};
-    let mut plan = parse(text.as_bytes()).unwrap();
-    crate::flow_run::fill_inputs(&mut plan, |n| d.join(n)).unwrap();
-    let mut out = vec![];
-    for p in check(&plan, &crate::flow::steps(), Platform::Native) {
-        let kv: Vec<_> = p.params.iter().map(|(k, v)| format!("{k}={v}")).collect();
-        out.push(format!(
-            "{} {}",
-            crate::flow_run::problem_text(&p),
-            kv.join(",")
-        ));
-    }
-    out
-}
-
-#[test]
-fn formula_ms1_on_unit_resolution_files_is_refused_by_the_check() {
-    let d = fixture("nl_f1lr", -1, false);
-    let want = "f1.features:err.flow.facet facet=resolution,step=formula.ms1,want=hr,have=lr";
-    assert_eq!(problems(&d, &formula_plan(None)), [want]);
-    let e = crate::flow::run_plan(formula_plan(None).as_bytes(), &d, &d.join("work"), 2, None)
-        .expect_err("formula.ms1 on unit-resolution files");
-    assert_eq!(e.key, "err.flow.check");
-    // a plan that writes its facets by hand keeps them
-    let facets = r#""type":"raw","facets":{"resolution":["hr"]}}"#;
-    let hand = formula_plan(None).replace(r#""type":"raw"}"#, facets);
-    assert_eq!(problems(&d, &hand), Vec::<String>::new());
-    // high-resolution files of the same series pass
-    let hr = fixture("nl_f1hr", -1, true);
-    assert_eq!(problems(&hr, &formula_plan(None)), Vec::<String>::new());
-    let _ = std::fs::remove_dir_all(&d);
-    let _ = std::fs::remove_dir_all(&hr);
 }
 
 /// The cells of a CSV of `export.table_csv` by (row id, column name).

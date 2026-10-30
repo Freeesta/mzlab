@@ -31,9 +31,9 @@
   const algorithmOf = (x, inst) => { const a = F.effective(inst, F.stepOf(x.S.reg, inst)).algorithm; return (a && a.id) || ""; };
 
   /** the text an input port holds: a file of the plan (its content in S.samplesJson) or the result of a step of this plan made in this page; null when the browser does not have it
-   * @param {any} x @param {any} p the pool @param {any} inst @param {string} port @returns {Promise<{ name: string, text: string } | null>} */
-  const textOf = async (x, p, inst, port) => {
-    const ref = String(F.refs(inst, port)[0] || "");
+   * @param {any} x @param {any} p the pool @param {any} inst @param {string} port @param {number} [k] which file of a port that takes several @returns {Promise<{ name: string, text: string } | null>} */
+  const textOf = async (x, p, inst, port, k = 0) => {
+    const ref = String(F.refs(inst, port)[k] || "");
     if (!ref) return null;
     if (ref.startsWith("file:")) { const n = ref.slice(5), t = x.S.samplesJson && x.S.samplesJson[n]; return typeof t === "string" ? { name: n, text: t } : null; }
     const id = ref.split(".")[0], made = x.files.get(id);
@@ -142,7 +142,10 @@
     const key = await J().sha(spec.key + "\n" + await J().sha(feat.text)), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
-    const t0 = performance.now(), params = paramsOf(x, inst), features = enc(feat.text), fileNames = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
+    // an ion the plan does not write is left to each file (its MS1 polarity), as in `flow run`
+    const own = JSON.parse(paramsOf(x, inst));
+    if (!("ion" in (inst.params || {}))) delete own.ion;
+    const t0 = performance.now(), params = JSON.stringify(own), features = enc(feat.text), fileNames = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
     return J().detached(x, spec, inst, async () => {
       /** @type {string[]} */ const rows = [];
       for (let k = 0; k < blobs.length; k++) {
@@ -162,17 +165,24 @@
   /** @type {any} */ let jobs;
   Object.defineProperty(F, "liveJobs", { configurable: true, get: () => jobs, set: v => { jobs = v && Object.assign(v, { "formula.ms1": (/** @type {any[]} */ ...a) => F.webIdent.ms1Formula(...a) }); } });
 
-  /** annot.level: the level of each query from the hits of a spectra.match of this plan and the candidate formulas @param {any} x @param {any} spec @param {any} inst */
+  /** annot.level: the level of each query from the hits of a spectra.match of this plan (and the screen/1 of a screen.suspects, the same port), the candidate formulas, and the optional standards file and MS2 spectra (the RT of each query)
+   * @param {any} x @param {any} spec @param {any} inst */
   const level = async (x, spec, inst) => {
-    const j = J().job(spec), p = await kit().getPool(), hits = await textOf(x, p, inst, "candidates"), formulas = await textOf(x, p, inst, "formulas");
-    if (!hits || !formulas) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
-    const key = await J().sha(spec.key + "\n" + await J().sha(hits.text) + "\n" + await J().sha(formulas.text)), hit = await J().recall(p, key);
+    const j = J().job(spec), p = await kit().getPool(), formulas = await textOf(x, p, inst, "formulas");
+    const wired = (/** @type {string} */ port) => F.refs(inst, port).length > 0;
+    const files = await Promise.all(F.refs(inst, "candidates").map((/** @type {any} */ _, /** @type {number} */ k) => textOf(x, p, inst, "candidates", k)));
+    const standards = wired("standards") ? await textOf(x, p, inst, "standards") : null, spectra = wired("spectra") ? await textOf(x, p, inst, "spectra") : null;
+    if (!files.length || files.some((/** @type {any} */ f) => !f) || !formulas || (wired("standards") && !standards) || (wired("spectra") && !spectra)) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const isScreen = (/** @type {any} */ f) => f.text.startsWith('{"format":"screen/1"');
+    const hits = files.find((/** @type {any} */ f) => !isScreen(f)), screen = files.find(isScreen), sha = (/** @type {any} */ f) => f ? J().sha(f.text) : "";
+    if (!hits) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha([spec.key, await sha(hits), await sha(formulas), await sha(screen), await sha(standards), await sha(spectra)].join("\n")), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
-    const t0 = performance.now();
+    const t0 = performance.now(), params = paramsOf(x, inst), bytes = (/** @type {any} */ f) => enc(f ? f.text : "");
     return J().detached(x, spec, inst, async () => {
       let text;
-      try { text = await p.ident("attributio_ms2", "flow_level", { hits: enc(hits.text), formulas: enc(formulas.text) }); } catch (e) { throw asError(e); }
+      try { text = await p.ident("attributio_ms2", "flow_level", { params, hits: bytes(hits), screen: bytes(screen), formulas: bytes(formulas), standards: bytes(standards), spectra: bytes(spectra) }); } catch (e) { throw asError(e); }
       await keep(x, spec, inst, key, t0, text);
     });
   };

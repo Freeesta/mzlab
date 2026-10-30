@@ -137,6 +137,10 @@ fn recipe_map_reads_back_what_it_writes() {
     for id in FEATURE_STEPS {
         let s = find(&reg, id).unwrap();
         let mut r = perturbed();
+        // the ppm tolerances are for the ppm axis; the unit axis has `tol_da` (own test below)
+        if id != "features.detect" {
+            r.detect.axis = MassAxis::Ppm;
+        }
         apply_defaults(&mut r, s);
         let mut want = defaults(s);
         mzlab_core::sortc::slice_by(&mut want, |a, b| a.0.cmp(&b.0));
@@ -215,4 +219,45 @@ fn the_family_link_parameters_reach_the_recipe() {
     assert_eq!(r.align.link_rt, 0.1);
     assert_eq!(r.align.max_span, 0.3);
     assert_eq!(r.align.min_dependent, 3);
+}
+
+/// An m/z tolerance in ppm never overwrites one in Da: each axis takes its own unit and the other is `err.flow.param.axis`.
+#[test]
+fn a_tolerance_takes_the_unit_of_its_axis_only() {
+    let n = |x: f64| Value::Num(x);
+    let lr = || Recipe::lr(0.1, 3e3, 7e3);
+    for (step, ppm) in [
+        ("features.align", "ppm"),
+        ("features.align", "max_ppm_span"),
+        ("features.gapfill", "ppm"),
+        ("features.ms2_link", "tol_ppm"),
+    ] {
+        let mut r = lr();
+        let e = recipe_map::apply(&mut r, step, &[(ppm.into(), n(5.0))]).unwrap_err();
+        assert_eq!(e.key, "err.flow.param.axis", "{step} {ppm}");
+        assert!(
+            e.params.contains(&("param", ppm.to_string()))
+                && e.params.contains(&("axis", "Da".to_string()))
+        );
+        let mut h = Recipe::default();
+        let e = recipe_map::apply(&mut h, step, &[("tol_da".into(), n(0.3))]).unwrap_err();
+        assert_eq!(e.key, "err.flow.param.axis", "{step} tol_da");
+        recipe_map::apply(&mut h, step, &[(ppm.into(), n(5.0))]).unwrap();
+    }
+    let mut r = lr();
+    recipe_map::apply(&mut r, "features.align", &[("tol_da".into(), n(0.2))]).unwrap();
+    assert_eq!((r.align.ion.ppm, r.align.ion.max_ppm_span), (-0.2, -0.4));
+    recipe_map::apply(&mut r, "features.gapfill", &[("tol_da".into(), n(0.25))]).unwrap();
+    recipe_map::apply(&mut r, "features.ms2_link", &[("tol_da".into(), n(0.4))]).unwrap();
+    let get = |id: &str, k: &str| {
+        recipe_map::values(&r, id)
+            .into_iter()
+            .find(|x| x.0 == k)
+            .map(|x| x.1)
+    };
+    assert_eq!(get("features.align", "tol_da"), Some(n(0.2)));
+    assert_eq!(get("features.gapfill", "tol_da"), Some(n(0.25)));
+    assert_eq!(get("features.ms2_link", "tol_da"), Some(n(0.4)));
+    assert_eq!(get("features.align", "ppm"), None);
+    assert_eq!(get("features.align", "max_ppm_span"), None);
 }

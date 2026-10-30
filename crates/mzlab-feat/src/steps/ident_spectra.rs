@@ -349,12 +349,12 @@ fn modified_cosine() -> Algorithm {
     }
 }
 
-/// `spectra.insilico`: ranks the candidate structures of a local list by the fragments they explain (`ms2_engine::insilico`).
+/// `spectra.insilico`: ranks the candidate structures of a list or of the downloadable PubChemLite package by the fragments they explain (`ms2_engine::insilico`).
 pub(super) fn insilico() -> Step {
     Step {
         ins: vec![
             Port::new("spectra", DataType::Spectra, "MS2 spectra").requires(hr_ms2()),
-            Port::new("suspects", DataType::Candidates, "Candidate structures (local list)"),
+            Port::new("suspects", DataType::Candidates, "Candidate structures (CSV list, screen.suspects result or in-silico package)"),
         ],
         outs: vec![Port::new("candidates", DataType::Candidates, "Structures ranked by the fragments they explain")],
         params: vec![
@@ -385,7 +385,7 @@ pub(super) fn insilico() -> Step {
         ..attributio_step(
             "spectra.insilico",
             "In silico fragmentation",
-            "Breaks each candidate structure of a local list bond by bond and ranks it by the weight of the peaks its fragments explain. The result is a hypothesis with its proofs (peaks explained, mass error), never an identity. No network: the list is read from the campaign folder.",
+            "Breaks each candidate structure of a local list bond by bond and ranks it by the weight of the peaks its fragments explain. The candidates are a CSV list with PubChemLite columns, the structures of a screen.suspects result, or the in-silico package (PubChemLite, CC BY 4.0) downloaded once on a click and read by mass window. The result is a hypothesis with its proofs (peaks explained, mass error), never an identity. No network at analysis time.",
         )
     }
 }

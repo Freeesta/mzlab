@@ -14,6 +14,11 @@ use mzlab_feat::attributio::table::{self, Run};
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "all")]
+mod flow_level;
+#[cfg(feature = "all")]
+mod insilico_web;
+
 /// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with. The build with the feature `rev` (the Banco 2b) is the
 /// `.wasm` `attributio-rev`: it exports the review, the decision and the evidence export; the build with `export` is the `.wasm` `attributio-export`: the four spreadsheet exports only; the one without them exports the table only.
 #[cfg(not(any(feature = "rev", feature = "export", feature = "ms2")))]
@@ -485,11 +490,4 @@ pub fn flow_formula_ms2(
     let params = mzlab_feat::flow_ms2::json_params(params_json).map_err(js_err)?;
     mzlab_feat::flow_formula_ms2::ms2_text(algorithm, &params, (name, mgf), &[formulas])
         .map_err(js_err)
-}
-
-/// `annot.level` in the browser: the text `flow run` writes (`mzlab_feat::flow_level::level_text`) from the `candidates/1` and `formulas/1` texts.
-#[cfg(feature = "all")]
-#[wasm_bindgen]
-pub fn flow_level(hits: &[u8], formulas: &[u8]) -> Result<String, JsValue> {
-    mzlab_feat::flow_level::level_text(&[hits], &[formulas]).map_err(js_err)
 }

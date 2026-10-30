@@ -38,7 +38,7 @@ td{padding:var(--row-py) 6px;border-bottom:1px solid var(--line);vertical-align:
 canvas{display:block;width:100%}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}.chips span{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}.chips i:empty{width:10px;height:10px;border-radius:2px;display:inline-block}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.bar label{display:flex;gap:4px;align-items:center;color:var(--muted)}
-#err{color:var(--bad);padding:6px 14px}#avvio-errore{position:sticky;top:0;z-index:9000;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;background:var(--panel,#fff);color:var(--bad);border-bottom:2px solid var(--bad);font-size:14px}#avvio-errore-msg{flex:1 1 280px}#avvio-fase{padding:6px 14px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}#drop-skeleton{display:flex;align-items:center;justify-content:center;min-height:120px;border:2px dashed var(--line);border-radius:8px;padding:20px;text-align:center;color:var(--muted);background:var(--soft);font-size:inherit}#tbl{max-height:62vh;overflow:auto}
+#err{color:var(--bad);padding:6px 14px}#avvio-errore{position:sticky;top:0;z-index:9000;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:8px 14px;background:var(--panel,#fff);color:var(--bad);border-bottom:2px solid var(--bad);font-size:14px}#avvio-errore-msg{flex:1 1 280px}#avvio-fase{padding:6px 14px;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}#opening.restoring{min-height:360px}#tbl{max-height:62vh;overflow:auto}
 .alt{color:var(--muted);font-size:12px}
 
 .hq{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;margin:0 4px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);background:var(--panel);font-size:11px;font-weight:700;line-height:1;cursor:help;vertical-align:middle;flex:none}.hq:hover{background:var(--accent);color:var(--on-accent)}
@@ -490,3 +490,12 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #fsel:empty{width:16ch}
 /* first paint: the side panel is open next to the landing, except below 900 px where it would replace it (barra.js takes over at once) */
 @media (max-width:899.98px){#v-data.sb-first{grid-template-columns:minmax(0,1fr)}#v-data.sb-first #dfiles{display:none}}
+
+/* landing: a big central drop zone; the empty side list says a plain sentence; the toolbar buttons that wait for data are plainly grey */
+#start{max-width:900px}#start #drop{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;align-items:baseline;gap:6px .35em;min-height:clamp(220px,48vh,520px);box-sizing:border-box;padding:32px 14px}#start #drop b{font-size:calc(1.25em + 2px)}#start #drop .fmts{flex:0 0 100%;margin-top:14px}
+#fl-hint{margin:14px 12px;min-height:4.5em;width:0;min-width:calc(100% - 24px);box-sizing:border-box;text-align:center;line-height:1.5}#fl-hint[hidden]{display:none}#sb-pane.dz-over #fl-hint{display:none}
+#tools :is(button,select):disabled{color:var(--muted);background:var(--soft);border-color:var(--line);cursor:not-allowed;opacity:1;box-shadow:none}#tools :is(button,select):disabled:hover{border-color:var(--line);background:var(--soft)}
+/* landing: the progress box floats over the gap above the drop zone, so the zone never moves or resizes when it appears */
+#v-workspace[data-work=landing] #wdata{position:relative}#v-workspace[data-work=landing] #up{position:absolute;left:0;right:0;top:0;z-index:2}
+/* side list: the m/z child rows of an MS2 (or MRM) file are as compact as the Full scan rows; the checkbox and the m/z label stay clickable at 20 px rows (inline styles of explore.js need !important) */
+#flst .fl:has(>.pr-container){row-gap:0}#flst .pr-container{margin-top:0!important}#flst .pr-container .fl.pr{padding-top:0;padding-bottom:0;margin-bottom:0!important;min-height:20px!important;align-items:center}#flst .pr-container .fl.pr input[type=checkbox]{margin-top:0;margin-bottom:0}

@@ -54,8 +54,6 @@ mod flow_import;
 mod flow_import_tests;
 mod flow_inclusion;
 mod flow_insilico;
-#[cfg(test)]
-mod flow_insilico_tests;
 mod flow_json;
 mod flow_kmd;
 mod flow_level;
@@ -122,6 +120,7 @@ mod flow_table_tests;
 mod flow_tablematch;
 #[cfg(test)]
 mod flow_tablematch_tests;
+pub mod insilico_pack;
 pub mod llm;
 mod llm_ctx;
 pub mod msn_figura;
@@ -158,7 +157,7 @@ usage: mzlab-cli features FILE... [--out PATH] [--preset auto|pos|neg | --params
        mzlab-cli msn-rules RECORD... | somma LINES...   the fragmentation rules judged on library spectra (msn-rules --help)
        mzlab-cli convert INPUT... --out FOLDER [...]   vendor files and folders to indexed mzML (convert --help)
        mzlab-cli validate FILE.mzML... [--json]   is the mzML valid: structure, PSI-MS vocabulary, index and SHA-1 (validate --help)
-       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help)
+       mzlab-cli normative build --cache DIR --out DIR   build the EU and US regulatory lists from the official sources (native only; normative --help); insilico pack CSV OUT   the spectra.insilico candidate package
 
   FILE...            mzML, or any single file the app reads (.raw, mzXML, .cdf, ...); several files form one series, in the order given
   --out PATH         a .csv file, or a folder (then features.csv is written in it); default: standard output
@@ -408,6 +407,7 @@ fn run_plain(command: &str, args: Vec<String>) -> Outcome {
 fn native_cmd(name: &str, args: impl Iterator<Item = String>) -> Outcome {
     match name {
         "normative" => normative::run(args.collect()),
+        "insilico" => insilico_pack::run(args.collect()),
         _ => validate::run(args),
     }
 }
@@ -427,7 +427,7 @@ pub fn execute(args: &[String]) -> Outcome {
         Some("msn-graph") => return msn_graph::cmd(args),
         Some("msn-lib") => return msn_lib_cmd(args.collect()),
         Some("convert") => return convert::run(args.collect()),
-        Some(c @ ("normative" | "validate")) => return native_cmd(c, args),
+        Some(c @ ("normative" | "insilico" | "validate")) => return native_cmd(c, args),
         Some("--help" | "-h") | None => return Outcome::ok(format!("{HELP}\n").into_bytes()),
         Some(c) => return Outcome::fail(&format!("unknown command {c}")),
     }
