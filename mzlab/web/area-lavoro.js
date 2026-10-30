@@ -1,7 +1,7 @@
 // @ts-check
 // Work area of the Dati view: shows one thing, decided from the state alone (no flag): the panels (a file shown or a panel open), the loading
 // table (files open, being read or set aside, none shown) or the landing (no file at all); while files are added the landing and the table
-// stand in for the panels. Called by applyView and checkGo (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
+// stand in for the panels. Called by applyView, renderFiles and upload (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
 "use strict";
 
 const workQ = (/** @type {string} */ s) => /** @type {HTMLElement & { disabled: boolean }} */ (document.querySelector(s));
@@ -36,7 +36,7 @@ function syncWork(/** @type {boolean} */ force = false) {
   if (was !== w && window.BARRA) BARRA.fitNames();
 }
 
-// before a session the side panel takes a drop as the landing does: into the loading table (with a session shell.js adds the files at once)
+// before a session the side panel takes a drop as the landing does (with a session shell.js takes it): the files open as soon as they are read
 (() => {
   const dz = workQ("#dfiles"), early = () => S.view === "data" && !S.sess && !S.opening;
   const files = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files");

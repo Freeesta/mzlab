@@ -1,5 +1,5 @@
-"""Low- and high-resolution files together in the loading table: a gentle note (no error) offers «LR only» / «HR only»; the choice ticks one world and unticks the other,
-the loading is paused while both are ticked, the other files stay in the list for a second load."""
+"""Low- and high-resolution files together in the loading table: the world of the first file read opens, the files of the other world stay unticked in the list and a gentle note
+(no error) offers «Switch»; the switch closes one world and opens the other; ticking a file of the other world leaves it aside."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import pathlib
@@ -17,25 +17,34 @@ try:
         pg = r.page(p)
         stage(pg, [D / "B_FullMass-t0.mzML", D / "B_FullMass-t5.mzML", D / "HR_DDA-Exploris-t0.mzML"])
         ticked = lambda: pg.evaluate("[...document.querySelectorAll('#flist input[data-k=use]')].map(x=>x.checked)")
+        world = lambda: pg.evaluate("OPENNOW.world()")
         def note():
-            attendi(pg, "document.querySelector('#hrmix') && !document.querySelector('#hrmix').hidden")
-            assert pg.get_attribute("#hrmix", "role") == "status" and "LR (2)" in pg.inner_text("#hrmix-lr") and "HR (1)" in pg.inner_text("#hrmix-hr")
-            assert ticked().count(True) == 2 and pg.get_attribute("#hrmix-lr", "aria-pressed") == "true"      # the most numerous world is preselected
-            assert pg.locator("#flist input[data-k=use]").count() == 3 and not pg.is_disabled("#opbtn")
-        step("mixed files: a note with the counts, the most numerous world preselected, nothing lost from the list", note)
-        def tick_hr():
-            pg.click("#hrmix-hr"); assert ticked().count(True) == 1 and pg.get_attribute("#hrmix-hr", "aria-pressed") == "true" and not pg.is_disabled("#opbtn")
-        step("«HR only» ticks the high-resolution file alone", tick_hr)
+            attendi(pg, "OPENNOW.busy() === 0 && UPBUSY === 0 && document.querySelector('#hrmix') && !document.querySelector('#hrmix').hidden")
+            w = world(); assert w is not None
+            assert pg.get_attribute("#hrmix", "role") == "status" and pg.locator("#flist input[data-k=use]").count() == 3, "nothing lost from the list"
+            assert ticked().count(True) == (1 if w else 2), ticked()           # the world of the first file read is open, the other is set aside
+            assert pg.is_visible("#hrmix-lr" if w else "#hrmix-hr") and pg.is_hidden("#hrmix-hr" if w else "#hrmix-lr"), "one «Switch» button, to the other world"
+            assert pg.evaluate("E.files.filter(f => !f.gone).length") >= (1 if w else 2)
+            assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
+        step("mixed files: the first world read opens, the other is set aside with «Switch»", note)
+        def switch():
+            w = world(); pg.click("#hrmix-lr" if w else "#hrmix-hr")
+            attendi(pg, f"OPENNOW.busy() === 0 && OPENNOW.world() === {'false' if w else 'true'}", 60000)
+            assert ticked().count(True) == (2 if w else 1), ticked()
+            assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
+        step("«Switch» closes the open world and opens the other one", switch)
         def retick():
-            pg.locator("#flist input[data-k=use]").first.check()
-            attendi(pg, "document.querySelector('#opbtn').disabled"); assert pg.get_attribute("#hrmix-lr", "aria-pressed") == "false"
-            pg.click("#hrmix-lr"); assert ticked().count(True) == 2 and not pg.is_disabled("#opbtn")
-        step("ticking both worlds pauses the loading; «LR only» resolves it", retick)
+            w = world(); i = ticked().index(False)
+            pg.locator("#flist input[data-k=use]").nth(i).click()
+            attendi(pg, f"!document.querySelectorAll('#flist input[data-k=use]')[{i}].checked")
+            assert world() == w, "a file of the other world does not join the open one"
+            assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
+        step("ticking a file of the other world leaves it aside", retick)
         def load():
-            pg.click("#opbtn"); ready(pg)
+            open_first(pg); ready(pg)
             assert pg.locator("#gomsg .fail").count() == 0, pg.inner_text("#gomsg")
-            assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length")
-        step("loading the chosen world gives no error", load)
+            assert not pg.evaluate("window.MZLAB_LR_MISS && window.MZLAB_LR_MISS.length"), pg.evaluate("JSON.stringify(window.MZLAB_LR_MISS)")
+        step("the open world gives no error", load)
 finally:
     r.close()
 r.report()

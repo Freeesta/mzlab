@@ -490,3 +490,7 @@ td[data-cvrow] .sm{min-height:1.4em;font-variant-numeric:tabular-nums}td[data-cv
 #fsel:empty{width:16ch}
 /* first paint: the side panel is open next to the landing, except below 900 px where it would replace it (barra.js takes over at once) */
 @media (max-width:899.98px){#v-data.sb-first{grid-template-columns:minmax(0,1fr)}#v-data.sb-first #dfiles{display:none}}
+/* sample table: the name of an open file opens it; side list: one progress row per file being read (upload-rows.js) */
+.ldtab button.lnk{background:none;border:0;padding:0;min-height:24px;font:inherit;color:var(--accent);text-align:left;text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
+.samphead{margin:0 0 6px}
+.fl.up .fi{flex:1;min-width:0}.fl.up .prog{margin-top:2px}.fl.up .diag{display:block}

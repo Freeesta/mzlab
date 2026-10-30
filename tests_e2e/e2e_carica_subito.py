@@ -1,5 +1,5 @@
-"""«Load data» is never held back by the times: the five example Full Scan files go in with the times 0/5/10/15/30 read from the names,
-the program starts at once with no message under the button; the t0 is the sample at time 0 (no role of its own) and the dark has a negative time that stays out of the gradient."""
+"""The opening is never held back by the times: the five example Full Scan files go in with the times 0/5/10/15/30 read from the names,
+the files open at once with no message under the table; the t0 is the sample at time 0 (no role of its own) and the dark has a negative time that stays out of the gradient."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 lib.AUTO_TEMPI = False
@@ -18,7 +18,7 @@ try:
         pg = r.page(p)
         pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         stage(pg, [str(EX / f"{n}.mzML") for n in NAMES])
-        row = lambda n: f"#flist tr:has(td:text-is('{n}.mzML'))"
+        row = lambda n: f"#flist tr:has(:text-is('{n}.mzML'))"
         def tval(n): return pg.eval_on_selector(f"{row(n)} input[data-k=time]", "e => e.value")
         def times_in_rows():
             pg.wait_for_function("[...document.querySelectorAll('#flist input[data-k=time]')].filter(x => x.value).length >= 4", timeout=30000)
@@ -29,19 +29,15 @@ try:
         step("the times 0/5/10/15/30 are in the rows (editable)", times_in_rows)
         def starts_at_once():
             assert pg.eval_on_selector("#flist", "e => e.querySelectorAll('input[aria-invalid=true]').length") == 0, "no cell marked invalid"
-            # the work area is drawn at once and the loading state is inside it: the full-screen veil never shows in this path
+            # the files open as soon as they are read, without any veil; the first click on a file shows it
             pg.evaluate("window.__veil = false; new MutationObserver(() => { if (!document.querySelector('#loading').hidden) window.__veil = true; }).observe(document.querySelector('#loading'), { attributes: true, attributeFilter: ['hidden'] })")
-            pg.click("#opbtn")
-            pg.wait_for_selector("#start", state="hidden", timeout=90000)
+            open_first(pg)
             ready(pg)
-            marks = pg.evaluate("MZLAB_OPEN.t")
-            assert list(marks) == ["click", "area", "first read", "first shown"] and list(marks.values()) == sorted(marks.values()), marks
             assert pg.evaluate("window.__veil") is False, "the veil was shown while the files were opened"
-            assert pg.is_hidden("#opening") and pg.evaluate("!document.querySelector('#tools').inert && !S.opening")
-            print("open marks (ms from the click): " + ", ".join(f"{k} {v - marks['click']:.0f}" for k, v in marks.items()))
+            assert pg.is_hidden("#start") and pg.evaluate("!document.querySelector('#tools').inert && !S.opening")
             assert pg.evaluate("E.files.filter(f => !f.gone).length") == 5
-            assert pg.inner_text("#gomsg").strip() == "", "no message under the button"
-        step("Load data starts at once, no message", starts_at_once)
+            assert pg.inner_text("#gomsg").strip() == "", "no message under the table"
+        step("the files open at once, no veil, no message", starts_at_once)
         def t0_and_dark():
             got = pg.evaluate("E.files.filter(f => !f.gone).map(f => [f.label, CAMPIONI.kindOf(f), f.time])")
             assert all(g[1] == "sample" for g in got) and sorted(g[2] for g in got) == [0, 5, 10, 15, 30], got

@@ -128,18 +128,18 @@ try:
             assert "phase:" in txt and "rotto" not in txt and str(D) not in txt, txt
             assert "loading:" in txt and ".wiff.scan" in txt and "phases:" in txt, txt
         step("a damaged pair leaves the error with «Details» and «Copy diagnosis» (trace of the loading, no file name)", broken)
-        def overlay():                                  # «Load data» while the samples are still loading: the overlay says the phase and the time, and has its «Cancel»
+        def side_row():                                 # while the samples are read: a progress row in the side list with the phase, and its × stops the loading
             pg.locator("#flist .cvsum [data-cvact=close]").click()
             pg.set_input_files("#pick", [str(D / "ferma.wiff"), str(D / "ferma.wiff.scan")])
-            pg.wait_for_function("UPBUSY > 0"); pg.locator("#opbtn").click()
-            pg.wait_for_function("document.querySelector('#ldact button') && /\\d:\\d\\d/.test(document.querySelector('#ldmsg').textContent)")
-            t1 = pg.inner_text("#ldmsg")
-            pg.wait_for_function("t => document.querySelector('#ldmsg').textContent !== t", arg=t1, timeout=3000)       # the elapsed time moves every second
-            assert "Indexing 0%" not in t1, t1
-            pg.locator("#ldact button").click()
+            pg.wait_for_function("UPBUSY > 0")
+            pg.wait_for_selector("#flst .fl.up [data-up-x]", timeout=10000)
+            t1 = pg.inner_text("#flst .fl.up [data-uptxt]")
+            assert t1.strip() and "Indexing 0%" not in t1, t1
+            pg.locator("#flst .fl.up [data-up-x]").first.click()
             pg.wait_for_function("UPBUSY === 0", timeout=30000)
             assert pg.locator("#ldact").is_hidden()
-        step("the overlay of «Load data» shows the phase and the time, and «Cancel» stops the loading", overlay)
+            assert pg.evaluate("!E.files.some(f => !f.gone && f.file.startsWith('ferma'))"), "a cancelled file is not opened"
+        step("a progress row in the side list shows the phase, and its × stops the loading", side_row)
         assert not errs, errs
         b.close()
 finally:

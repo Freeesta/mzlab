@@ -70,16 +70,30 @@ def _sif(self, selector, files, **k):
         _tempi(self)
 AUTO_TEMPI = True       # False: the test looks at the raw proposals (e2e_ruoli_tempi)
 def _tempi(self):
-    """Two or more samples: «Open» wants every time written and confirmed (roles and times of the loading table). The tests that are not about it do it here, before they open."""
+    """Two or more samples: the tests that are not about roles and times write the missing times here (in the table, then quietly in the open files, as the old opening did)."""
     if not AUTO_TEMPI: return
     try:
-        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && !document.getElementById('start').hidden && ST.files.length >= 2"): return
+        if not self.evaluate("typeof RUOLI !== 'undefined' && typeof ST !== 'undefined' && ST.files.length >= 2"): return
         self.wait_for_function("RUOLI.busy() === 0 && ST.files.every(f => f.prop)", timeout=20000)
-        self.evaluate("""() => { let t = 0; ST.files.forEach(f => { if (RUOLI.timed(f)) { if (f.time == null) { t += 10; f.time = t; } } }); renderFiles(); }""")
+        self.evaluate("""() => { let t = 0; const e = []; ST.files.forEach(f => { if (RUOLI.timed(f) && f.time == null) { t += 10; f.time = t; if (OPENNOW.isOpen(f.name)) e.push({ file: f.name, role: RUOLI.roleOf(f), time: t, tconf: true }); } });
+          if (e.length) CAMPIONI.apply(e, true); renderFiles(); }""")
     except Exception: pass
+def open_first(pg, timeout=120000):
+    """The student's first click: the files open as soon as they are read and none is shown until a click. Waits until nothing is read or opened any more, then clicks the row
+    of the first file that is not a blank in the side list (the file the old «Load data» showed), unless a file is already shown."""
+    pg.wait_for_function("typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", timeout=timeout)
+    _tempi(pg)
+    k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const fs = E.files.filter(f => !f.gone); if (!fs.length) return -1;
+      return fs[firstOpenK(fs.map(f => ({ file: f.file, type: f.type })))].k; }""")
+    if k < 0: return
+    row = pg.locator(f"#flst .fl .nm[data-k='{k}']")
+    if row.count() and row.first.is_visible(): _real_click(pg, f"#flst .fl .nm[data-k='{k}']")
+    else: pg.evaluate("k => soloFile(E.files[k])", k)
+    pg.wait_for_function("E.files.some(f => f.vis && !f.gone)", timeout=timeout)
 _real_click = _Page.click
 def _click(self, selector, *a, **k):
-    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): _tempi(self)
+    # «Load data» is gone: the files are open already, the click is the first click on a file
+    if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector): return open_first(self)
     return _real_click(self, selector, *a, **k)
 _Page.click = _click
 _real_ast = _Page.add_script_tag
@@ -138,7 +152,7 @@ class _PersistentWebKit:
             shutil.rmtree(d, ignore_errors=True)
         self._open = []
 def stage(pg, files, timeout=90000):
-    """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
+    """Give the files to the start screen and wait until ALL of them are in the sample table (they open as soon as they are read)."""
     pg.set_input_files("#pick", [str(f) for f in files])
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 
