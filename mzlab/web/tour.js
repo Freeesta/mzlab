@@ -45,6 +45,14 @@ function computePosition(rect, dialogWidth, dialogHeight, vw, vh) {
   return { top: Math.max(8, rect.top - MARGIN - dialogHeight), left: Math.max(8, Math.min(rect.left, vw - dialogWidth - 8)), side: "top" };
 }
 
+// Opening steps of «Your data», kept only when on screen as the tour starts (files waiting for the first click).
+const PASSI_INIZIALI = [
+  { id: "campioni", opt: true, target: () => document.getElementById("wtable") },
+  { id: "primo", opt: true, target: () => document.getElementById("wtable")?.offsetParent ? document.querySelector("#flst .fl[data-k]") : null }
+];
+/** Drops the optional steps whose target is not visible now. @template {{ opt?: boolean, target: () => any }} T @param {T[]} lista @returns {T[]} */
+const passiVisibili = lista => lista.filter(st => !st.opt || (el => !!el && el.offsetParent !== null && el.getBoundingClientRect().width > 0)(st.target()));
+
 const TOUR = (() => {
   const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
 
@@ -646,7 +654,7 @@ const TOUR = (() => {
       active = true;
       curCap = cap;
       curStep = step;
-      if (cap === 1) cap1 = TOURDOPO.passi([...TOURDOPO.iniziali, ...STEPS_CAP1]);
+      if (cap === 1) cap1 = passiVisibili([...PASSI_INIZIALI, ...STEPS_CAP1]);
 
       window.addEventListener("scroll", onScrollOrResize, { passive: true });
       window.addEventListener("resize", onScrollOrResize, { passive: true });
