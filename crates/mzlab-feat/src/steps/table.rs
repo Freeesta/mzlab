@@ -173,7 +173,8 @@ pub(super) fn filter() -> Step {
             .min(0.0)
             .max(1.0)
             .unit("fraction")
-            .doc("A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off"),
+            .doc("A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off")
+            .tip("Kept if some replicate group has the row detected in at least this fraction of its files."),
         Param::number("min_area", "Minimum area")
             .min(0.0)
             .unit("counts")
@@ -199,7 +200,8 @@ pub(super) fn filter() -> Step {
             .doc("The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"),
         Param::choice("blank_match", "Blank matching", &["all", "batch", "matrix"])
             .default_str("all")
-            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"),
+            .doc("all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction")
+            .tip("Compare each sample only with the blanks of its batch or matrix; others use all blanks."),
         Param::boolean("blank_keep_istd", "Keep the internal standard")
             .doc("The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"),
         Param::boolean("qc_zero", "Count missing QC as 0")
@@ -251,13 +253,15 @@ fn filter_tail_params() -> Vec<Param> {
         Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
         Param::choice("normalize", "Normalisation", &["none", "sum", "median", "istd"])
             .default_str("none")
-            .doc("Scale of the areas of each file: total area, median area or the area of the internal standard (the row istd_id, or the row nearest to istd_mz and istd_rt)"),
+            .doc("Scale of the areas of each file: total area or median area")
+            .tip("Scale each file by its total area, its median area or the area of the internal standard."),
         Param::integer("istd_id", "Internal standard row")
             .min(0.0)
             .doc("Id of the row of the internal standard; used with the normalisation istd"),
         Param::number("istd_mz", "Internal standard m/z")
             .min(0.0)
-            .doc("m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set"),
+            .doc("m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set")
+            .tip("m/z of the internal standard; with its RT, the nearest row is the standard."),
         Param::number("istd_rt", "Internal standard RT")
             .min(0.0)
             .unit("min")

@@ -1711,7 +1711,7 @@
                   {
                     "enum":["none","sum","median","istd"],
                     "default":"none",
-                    "description":"Scale of the areas of each file: total area, median area or the area of the internal standard (the row istd_id, or the row nearest to istd_mz and istd_rt)"
+                    "description":"Scale of the areas of each file: total area or median area"
                   },
                   {
                     "type":"integer",
