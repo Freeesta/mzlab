@@ -24,6 +24,8 @@ def kind(path: str) -> str:
 
 def row(name: str, st: dict) -> str:
     pages = st["pages"]
+    if not pages:
+        return f"| {name} | 0 | | | | | | {st['usable'] - st['t0']} | | | {len(st.get('sw', []))} | |"
     last = pages[-1]
     m, t0 = last["marks"], st["t0"]
     rel = lambda x: str(x - t0) if x else "-"

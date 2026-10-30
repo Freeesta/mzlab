@@ -226,7 +226,7 @@ class Run:
         cur = pg.evaluate("__v.snap()")
         pg.evaluate("localStorage.removeItem('__probe')")
         # only the pages of this step (the page left by the previous step writes its snapshot when it goes away)
-        return [x for x in prev + [cur] if x.get("t0", 0) >= self.t_step - 5 and str(x.get("url", "")).startswith("http")]
+        return [x for x in prev if x.get("t0", 0) >= self.t_step - 5 and str(x.get("url", "")).startswith("http")] + [cur]
 
     def step(self, name: str, act, until: str = USABLE) -> None:
         n0, r0, sw0 = len(self.navs), len(self.reqs), len(self.thr.sw)
