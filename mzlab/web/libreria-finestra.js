@@ -145,6 +145,117 @@ function hover(/** @type {HTMLCanvasElement} */ cv, /** @type {HTMLElement} */ t
 }
 
 /** @typedef {{ peaks: number[][], prec: number | null, pol: number, f: any, rt: number | null, title: string }} Query */
+/** @typedef {{ q: Query, ctx: any, d: HTMLDialogElement, L: any, st: any, $: (s: string) => any, msg: (x?: string) => void, pics: Map<string, Promise<string | null>> }} View */
+const selOf = (/** @type {any} */ st) => { const A = st.sel.k === "an" ? st.an : st.res; return A && A.results[st.sel.i] ? A.results[st.sel.i] : null; };
+
+// the headline (badge + best candidate) and, behind «Details», the evidence and the chemist's decision
+function showVerdict(/** @type {View} */ V) {
+  const { L, st, q, $ } = V;
+  const R = st.res, vd = $("#lw-verdict");
+  if (!R || !R.libs) { vd.innerHTML = ""; return; }
+  const lv0 = L.assess(R.results, { nScans: st.n, analogs: st.an && st.an.results }); if (st.decided) LV().decide(lv0, st.decided);
+  const r0 = st.sel.k === "id" ? R.results[st.sel.i] : null, cvs = r0 && st.lo != null ? L.cosVis({ it: R.query.it }, r0, st.lo) : null;
+  // a proof only: it never changes the level
+  if (cvs != null) lv0.lines = lv0.lines.concat([t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2) })]);
+  st.lv = lv0; if (W_.RAPPORTO) W_.RAPPORTO.note(lv0, q);
+  const lv = LV().shown(lv0), b = lv0.best || lv0.nearest || lv0.analog, has = b && lv0.proposed !== "5" && lv0.proposed !== "0";
+  vd.innerHTML = h`<div class="vd lw-vd"><span class="lvb ${LV().cls(lv)}" title="${LV().sentence(lv)}">${LV().tag(lv)}</span> <span class="lw-hl">${raw(has ? t("lw.best", { name: h`<b>${b.name || ""}</b>` }) : t("lw.noBest"))}</span> <span class="muted">· ${LV().name(lv)}</span>
+    <details class="lw-why"${raw(st.why ? " open" : "")}><summary>${raw(t("lw.details"))}</summary><div class="sm"><b>${raw(t("lv.evidence"))}</b><ul>${lv0.lines.length ? lv0.lines.map((/** @type {string} */ x) => raw(h`<li>${x}</li>`)) : raw("<li>–</li>")}</ul><div>${lv0.decisive}</div>
+    <div style="margin-top:4px">${raw(t("lv.proposed"))}: <b>${LV().tag(lv0.proposed)}</b> · <label>${raw(t("lv.decided"))} <select id="lv-dec"><option value="">${raw(t("lv.decided.none"))}</option>${LV().ORDER.map((/** @type {string} */ x) => raw(h`<option value="${x}"${raw(lv0.decided === x ? " selected" : "")}>${LV().tag(x)}</option>`))}</select></label> <span class="err" id="lv-msg" role="status"></span></div></div></details></div>`;
+  $(".lw-why").ontoggle = () => { st.why = $(".lw-why").open; };
+  const s = $("#lv-dec");
+  // the chemist's decision: 2b is only written here
+  s.onchange = () => { const r = LV().decide(lv0, s.value); if (!r.ok) { s.value = lv0.decided || ""; $("#lv-msg").textContent = r.msg; } else { st.decided = lv0.decided || ""; showVerdict(V); $("#lv-dec").focus(); } };
+}
+
+const dp = (/** @type {any} */ r) => sgn(r.dprec, 1);
+const idRow = (/** @type {any} */ st, /** @type {any} */ r, /** @type {number} */ g, /** @type {number} */ k, /** @type {number} */ n) => `<tr class="row${st.sel.k === "id" && st.sel.i === r._i ? " sel" : ""}${k ? " mem" : ""}" tabindex="0" data-k="id" data-i="${r._i}"${st.sel.k === "id" && st.sel.i === r._i ? ' aria-current="true"' : ""}${k && !st.open.has(g) ? " hidden" : ""}>
+  <td class="nm" title="${EHt(r.name)}">${k ? "↳ " : ""}${EHt(r.name)}${!k && n > 1 ? `<button type="button" class="sm" data-grp="${g}" aria-expanded="${st.open.has(g)}" title="${EHt(t("lib.what.group", { n: n - 1 }))}" aria-label="${EHt(t("lib.what.group", { n: n - 1 }))}">${st.open.has(g) ? "▾" : "▸"} +${n - 1}</button>` : ""}</td>
+  <td class="num">${r.ent.toFixed(3)}</td><td class="num">${r.shared}</td><td class="num">${dp(r)}</td><td title="${EHt(r.type)}">${EHt(r.type)}</td><td title="${EHt(r.lib)}">${EHt(r.lib)}</td></tr>`;
+const anRow = (/** @type {any} */ st, /** @type {any} */ r, /** @type {number} */ i) => `<tr class="row${st.sel.k === "an" && st.sel.i === i ? " sel" : ""}" tabindex="0" data-k="an" data-i="${i}"${st.sel.k === "an" && st.sel.i === i ? ' aria-current="true"' : ""}><td class="nm" title="${EHt(r.name)}">${EHt(r.name)}</td><td class="num">${sgn(r.delta)}</td>
+  <td data-dm="${i}" title="${EHt(deltaKnown(r.delta) || "")}">${EHt(deltaKnown(r.delta) || "…")}</td><td class="num">${r.mcos.toFixed(2)}</td><td class="num">${t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</td></tr>`;
+
+// the left pane: the candidates (isomers grouped) or the analogs, sortable
+function showList(/** @type {View} */ V) {
+  const { d, L, st, $ } = V;
+  const R = st.res, A = st.an, box = $("#lw-list"), note = $("#lw-note");
+  $("#lw-tab-id").textContent = t("lw.tab.cand", { n: R && R.libs ? R.results.length : 0 }); $("#lw-tab-an").textContent = t("lw.tab.an", { n: A ? A.results.length : 0 });
+  d.querySelectorAll("[role=tab]").forEach(b => { const on = /** @type {HTMLElement} */ (b).dataset.tab === st.tab; b.setAttribute("aria-selected", String(on)); b.setAttribute("tabindex", on ? "0" : "-1"); });
+  box.setAttribute("aria-labelledby", st.tab === "an" ? "lw-tab-an" : "lw-tab-id"); note.textContent = "";
+  if (!R) { box.innerHTML = ""; return; }
+  if (!R.libs) { box.innerHTML = h`<p style="padding:8px">${raw(t("lib.loadFirst"))}</p><p style="padding:0 8px"><button type="button" id="lw-open">${raw(t("lib.openLibs"))}</button></p>`; $("#lw-open").onclick = () => { d.close(); L.open(); }; return; }
+  if (st.tab === "id") {
+    if (!R.results.length) { box.innerHTML = h`<p style="padding:8px">${raw(t("lib.what.none"))}</p>`; return; }
+    const so = st.sortId, key = (/** @type {any} */ r) => (so.key === "dprec" ? Math.abs(r.dprec) : r[so.key]);
+    st.groups = groupsOf(R.results).sort((a, b) => so.dir * cmp(key(a[0]), key(b[0])));
+    box.innerHTML = h`<table><colgroup><col><col style="width:5.5em"><col style="width:5.5em"><col style="width:6.5em"><col style="width:6em"><col style="width:7em"></colgroup><thead><tr>${raw(thSort("name", t("lib.col.name"), so) + thSort("ent", t("lib.col.entropy"), so, "num") + thSort("shared", t("lib.col.shared"), so, "num") + thSort("dprec", t("lw.col.dppm"), so, "num") + thSort("type", t("lib.col.adduct"), so) + thSort("lib", t("lib.col.library"), so))}</tr></thead>
+      <tbody>${raw(st.groups.map((g, gi) => g.map((r, k) => idRow(st, r, gi, k, g.length)).join("")).join(""))}</tbody></table>`;
+    box.querySelectorAll("[data-grp]").forEach((/** @type {HTMLElement} */ b) => b.onclick = e => { e.stopPropagation(); const g = Number(b.dataset.grp); if (st.open.has(g)) st.open.delete(g); else st.open.add(g); showList(V); const n = box.querySelector(`[data-grp="${g}"]`); if (n) n.focus(); });
+    sortBind(box, so, () => showList(V));
+  } else {
+    if (!A) { box.innerHTML = h`<p class="muted" style="padding:8px">${raw(t("lib.an.searching"))}</p>`; return; }
+    if (!A.results.length) { box.innerHTML = h`<p style="padding:8px">${raw(t("lib.an.none"))}</p>`; return; }
+    const so = st.sortAn, idx = A.results.map((/** @type {any} */ _, /** @type {number} */ i) => i).sort((/** @type {number} */ a, /** @type {number} */ b) => so.dir * cmp(A.results[a][so.key], A.results[b][so.key]));
+    box.innerHTML = h`<table><colgroup><col><col style="width:7em"><col style="width:9em"><col style="width:6em"><col style="width:7em"></colgroup><thead><tr>${raw(thSort("name", t("lib.an.name"), so) + thSort("delta", "&Delta;m", so, "num"))}<th scope="col">${raw(t("lib.an.interp"))}</th>${raw(thSort("mcos", t("lib.an.mcos"), so, "num") + thSort("matched", t("lib.an.matched"), so, "num"))}</tr></thead>
+      <tbody>${raw(idx.map((/** @type {number} */ i) => anRow(st, A.results[i], i)).join(""))}</tbody></table>`;
+    note.textContent = t("lib.an.note");
+    A.results.forEach(async (/** @type {any} */ r, /** @type {number} */ i) => { if (!deltaKnown(r.delta)) { const x = await deltaFormula(r.delta), c = box.querySelector(`[data-dm="${i}"]`); if (c) { c.textContent = x || t("lib.an.noFormula"); c.title = c.textContent; } } });
+    sortBind(box, so, () => showList(V));
+  }
+  box.querySelectorAll("tr.row").forEach((/** @type {HTMLElement} */ tr) => tr.onclick = () => {
+    st.sel = { k: tr.dataset.k, i: Number(tr.dataset.i) };
+    box.querySelectorAll("tr.row").forEach((/** @type {HTMLElement} */ x) => { x.classList.toggle("sel", x === tr); if (x === tr) x.setAttribute("aria-current", "true"); else x.removeAttribute("aria-current"); });
+    showDetail(V); if (st.sel.k === "id" && st.lo != null) showVerdict(V);
+  });
+}
+
+// the right pane: structure, mirror and, behind «Details», the rare fields
+function showDetail(/** @type {View} */ V) {
+  const { st, L, $, pics } = V;
+  const box = $("#lw-detail"), r = selOf(st), an = st.sel.k === "an", tok = ++st.tok;
+  if (!r) { box.innerHTML = ""; return; }
+  const q2 = an ? { mz: r.qa.mz, it: r.qa.it } : { mz: st.res.query.mz, it: st.res.query.it }, lib = an ? r.la : r;
+  const facts = an ? `<div>&Delta;m ${sgn(r.delta)} · <span data-dmd>${EHt(deltaKnown(r.delta) || "…")}</span></div><div>${t("lib.an.mcos")} ${r.mcos.toFixed(2)} · ${t("lib.an.matched")} ${t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</div>`
+    : `<div>${t("lib.col.entropy")} ${r.ent.toFixed(3)} · ${t("lib.col.shared")} ${r.shared} · ${t("lw.col.dppm")} ${dp(r)}</div>`;
+  box.innerHTML = h`<div class="lw-id"><div class="lw-mol" id="lw-mol" role="img" aria-label="${t("lw.mol.aria", { name: r.name || "" })}"><span class="sm muted">…</span></div>
+    <div class="lw-meta"><h4>${r.name || ""}</h4>${raw(r.formula ? h`<div>${typeof fmtFormula === "function" ? raw(fmtFormula(r.formula)) : r.formula}${r.type ? " · " + r.type : ""}</div>` : r.type ? h`<div>${r.type}</div>` : "")}${raw(facts)}<div class="muted">${r.lib || ""}</div></div></div>
+    <div class="lw-plot"><canvas id="lw-cv"></canvas><div class="lw-tip" hidden></div></div><div class="sm muted">${raw(t("lib.what.legend"))}</div>
+    <details class="lw-more" id="lw-more"${raw(st.more ? " open" : "")}><summary class="sm">${raw(t("lw.details"))}</summary><div class="sm" id="lw-more-in"></div></details>`;
+  $("#lw-more").ontoggle = () => { st.more = $("#lw-more").open; };
+  const cv = $("#lw-cv");
+  L.mirror(cv, { ...q2, hr: true, prec: st.prec, frag: st.frag }, an ? { mz: r.la.mz, it: r.la.it, prec: r.prec, name: r.name, shared: r.matched, pairs: r.pairs } : r);
+  hover(cv, $(".lw-tip"));
+  if (an && !deltaKnown(r.delta)) deltaFormula(r.delta).then(x => { const c = box.querySelector("[data-dmd]"); if (c && tok === st.tok) c.textContent = x || t("lib.an.noFormula"); });
+  // behind «Details»: the rare fields, the shared neutral losses, the attribution and the peak pairs
+  /** @type {number[]} */ const nls = [];
+  JSON.parse(cv.dataset.nl || "[]").forEach((/** @type {[number]} */ [i]) => nls.push(+(/** @type {number} */ (st.prec) - q2.mz[i]).toFixed(4)));
+  (r.pairs || []).forEach((/** @type {number[]} */ pr) => { const v = +(/** @type {number} */ (st.prec) - q2.mz[pr[0]]).toFixed(4); if (v > 0.5 && !nls.includes(v)) nls.push(v); });
+  const kv = /** @type {[string, unknown][]} */ (an ? [] : [[t("lib.col.reverse"), r.reverse != null ? r.reverse.toFixed(3) : ""], [t("lib.col.explained"), r.explained != null ? Math.round(r.explained * 100) + "%" : ""], [t("lib.col.pol"), polTxt(r.polarity)], ["CE", r.ce], [t("lib.col.instrument"), r.inst], [t("lib.col.license"), r.license]]).concat([["InChIKey", r.ik]]);
+  const attr = [r.authors, r.accession, r.license].some(x => x) ? `<div>${t("lib.what.attr", { authors: EHt(r.authors || "–"), accession: EHt(r.accession || "–"), license: EHt(r.license || "–") })}</div>` : "";
+  $("#lw-more-in").innerHTML = h`<dl>${kv.filter(([, v]) => v != null && v !== "").map(([k, v]) => raw(h`<dt>${k}</dt><dd>${v}</dd>`))}</dl><div>${raw(nls.length ? t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : t("lib.what.nlNone"))}</div>${raw(attr + pairsTable(r.pairs || [], q2, lib, an))}`;
+  const smi = String(r.smiles || ""), mol = $("#lw-mol");
+  const none = h`<span class="sm muted" style="padding:8px;text-align:center">${raw(t("lw.noStruct"))}</span>`;
+  if (!smi) { mol.innerHTML = none; return; }
+  if (!pics.has(smi)) pics.set(smi, smilesSvg(smi, 240, 170, "lwm"));
+  /** @type {Promise<string | null>} */ (pics.get(smi)).then(svg => { if (tok !== st.tok) return; mol.innerHTML = svg || none; });
+}
+
+// Copy and Excel of the download button
+function dlBind(/** @type {View} */ V) {
+  const { q, ctx, st, $, msg } = V;
+  const meta = ctx.p ? { p: ctx.p, table: "library-analogs" } : { table: "library-analogs", file: String((q.f && (q.f.label || q.f.file)) || "") };
+  const hd = ["#", t("lib.col.name"), t("lib.col.entropy"), t("lib.col.reverse"), t("lib.col.shared"), t("lib.col.explained"), t("lib.col.dprec") + " (ppm)", t("lib.col.adduct"), t("lib.col.pol"), "CE", t("lib.col.instrument"), t("lib.col.library"), t("lib.col.license"), "InChIKey", t("lv.proposed"), t("lv.decided")];
+  const rowsOf = () => { const [pr, de] = st.lv ? [st.lv.proposed, st.lv.decided || ""] : ["", ""]; return st.res && st.res.libs ? st.res.results.map((/** @type {any} */ r, /** @type {number} */ i) => [i + 1, r.name, r.ent, r.reverse ?? "", r.shared, r.explained ?? "", r.dprec, r.type, polTxt(r.polarity), r.ce, r.inst, r.lib, r.license || "", r.ik || "", i === 0 ? pr : "", i === 0 ? de : ""]) : []; };
+  $("#lw-copy").onclick = () => { $("#lw-dl").removeAttribute("open"); copyTable(hd, rowsOf(), meta, msg); };
+  $("#lw-xlsx").onclick = () => {
+    $("#lw-dl").removeAttribute("open");
+    const rs = rowsOf(); if (!rs.length) return msg(t("lib.nothingSave"));
+    const an = st.an ? st.an.results.map((/** @type {any} */ r, /** @type {number} */ i) => [i + 1, r.name, +r.delta.toFixed(4), deltaKnown(r.delta) || "", r.mcos, r.matched, r.shifted, r.lib]) : [];
+    dlx((ctx.p && typeof plotName === "function" ? plotName(ctx.p) : t("lib.xlsx.fallback")) + t("lib.xlsx.suffix"), [{ name: t("lib.xlsx.sheet"), head: hd, rows: rs, widths: [5, 30, 10, 10, 10, 12, 14, 12, 10, 8, 14, 20, 14, 28, 10, 10] },
+      { name: t("lib.what.sheetAn"), head: ["#", t("lib.an.name"), "Δm", t("lib.an.interp"), t("lib.an.mcos"), t("lib.an.matched"), t("lw.col.shifted"), t("lib.col.library")], rows: an, widths: [5, 30, 10, 24, 12, 12, 10, 20] }], meta);
+  };
+}
+
 /**
  * The «What is it?» view of one MS2 spectrum in the window: identity and analogs together, level and evidence.
  * `ctx.p` the spectrum panel (provenance, number of scans, scan window); `ctx.nScans` when known; `ctx.back` adds «← All MS²».
@@ -167,97 +278,12 @@ function showQuery(q, ctx) {
   const msg = (/** @type {string | undefined} */ x) => { $("#lw-msg").textContent = x || ""; };
   $("#lw-x").onclick = () => d.close(); $("#lw-libs").onclick = () => { d.close(); L.open(); };
   if (ctx.back) { $("#lw-back").onclick = ctx.back; $("#lw-goto").onclick = ctx.show; }
-  const sel = () => { const A = st.sel.k === "an" ? st.an : st.res; return A && A.results[st.sel.i] ? A.results[st.sel.i] : null; };
-
-  const verdict = () => {
-    const R = st.res, vd = $("#lw-verdict");
-    if (!R || !R.libs) { vd.innerHTML = ""; return; }
-    const lv0 = L.assess(R.results, { nScans: st.n, analogs: st.an && st.an.results }); if (st.decided) LV().decide(lv0, st.decided);
-    const r0 = st.sel.k === "id" ? R.results[st.sel.i] : null, cvs = r0 && st.lo != null ? L.cosVis({ it: R.query.it }, r0, st.lo) : null;
-    // a proof only: it never changes the level
-    if (cvs != null) lv0.lines = lv0.lines.concat([t("lib.what.cosVis", { lo: st.lo, cos: cvs.toFixed(2) })]);
-    st.lv = lv0; if (W_.RAPPORTO) W_.RAPPORTO.note(lv0, q);
-    const lv = LV().shown(lv0), b = lv0.best || lv0.nearest || lv0.analog, has = b && lv0.proposed !== "5" && lv0.proposed !== "0";
-    vd.innerHTML = `<div class="vd lw-vd"><span class="lvb ${LV().cls(lv)}" title="${EHt(LV().sentence(lv))}">${EHt(LV().tag(lv))}</span> <span class="lw-hl">${has ? t("lw.best", { name: `<b>${EHt(b.name || "")}</b>` }) : t("lw.noBest")}</span> <span class="muted">· ${EHt(LV().name(lv))}</span>
-      <details class="lw-why"${st.why ? " open" : ""}><summary>${t("lw.details")}</summary><div class="sm"><b>${t("lv.evidence")}</b><ul>${lv0.lines.length ? lv0.lines.map((/** @type {string} */ x) => `<li>${EHt(x)}</li>`).join("") : "<li>–</li>"}</ul><div>${EHt(lv0.decisive)}</div>
-      <div style="margin-top:4px">${t("lv.proposed")}: <b>${EHt(LV().tag(lv0.proposed))}</b> · <label>${t("lv.decided")} <select id="lv-dec"><option value="">${t("lv.decided.none")}</option>${LV().ORDER.map((/** @type {string} */ x) => `<option value="${x}"${lv0.decided === x ? " selected" : ""}>${LV().tag(x)}</option>`).join("")}</select></label> <span class="err" id="lv-msg" role="status"></span></div></div></details></div>`;
-    $(".lw-why").ontoggle = () => { st.why = $(".lw-why").open; };
-    const s = $("#lv-dec");
-    // the chemist's decision: 2b is only written here
-    s.onchange = () => { const r = LV().decide(lv0, s.value); if (!r.ok) { s.value = lv0.decided || ""; $("#lv-msg").textContent = r.msg; } else { st.decided = lv0.decided || ""; verdict(); $("#lv-dec").focus(); } };
-  };
-
-  const dp = (/** @type {any} */ r) => sgn(r.dprec, 1);
-  const idRow = (/** @type {any} */ r, /** @type {number} */ g, /** @type {number} */ k, /** @type {number} */ n) => `<tr class="row${st.sel.k === "id" && st.sel.i === r._i ? " sel" : ""}${k ? " mem" : ""}" tabindex="0" data-k="id" data-i="${r._i}"${st.sel.k === "id" && st.sel.i === r._i ? ' aria-current="true"' : ""}${k && !st.open.has(g) ? " hidden" : ""}>
-    <td class="nm" title="${EHt(r.name)}">${k ? "↳ " : ""}${EHt(r.name)}${!k && n > 1 ? `<button type="button" class="sm" data-grp="${g}" aria-expanded="${st.open.has(g)}" title="${EHt(t("lib.what.group", { n: n - 1 }))}" aria-label="${EHt(t("lib.what.group", { n: n - 1 }))}">${st.open.has(g) ? "▾" : "▸"} +${n - 1}</button>` : ""}</td>
-    <td class="num">${r.ent.toFixed(3)}</td><td class="num">${r.shared}</td><td class="num">${dp(r)}</td><td title="${EHt(r.type)}">${EHt(r.type)}</td><td title="${EHt(r.lib)}">${EHt(r.lib)}</td></tr>`;
-  const anRow = (/** @type {any} */ r, /** @type {number} */ i) => `<tr class="row${st.sel.k === "an" && st.sel.i === i ? " sel" : ""}" tabindex="0" data-k="an" data-i="${i}"${st.sel.k === "an" && st.sel.i === i ? ' aria-current="true"' : ""}><td class="nm" title="${EHt(r.name)}">${EHt(r.name)}</td><td class="num">${sgn(r.delta)}</td>
-    <td data-dm="${i}" title="${EHt(deltaKnown(r.delta) || "")}">${EHt(deltaKnown(r.delta) || "…")}</td><td class="num">${r.mcos.toFixed(2)}</td><td class="num">${t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</td></tr>`;
-  const list = () => {
-    const R = st.res, A = st.an, box = $("#lw-list"), note = $("#lw-note");
-    $("#lw-tab-id").textContent = t("lw.tab.cand", { n: R && R.libs ? R.results.length : 0 }); $("#lw-tab-an").textContent = t("lw.tab.an", { n: A ? A.results.length : 0 });
-    d.querySelectorAll("[role=tab]").forEach(b => { const on = /** @type {HTMLElement} */ (b).dataset.tab === st.tab; b.setAttribute("aria-selected", String(on)); b.setAttribute("tabindex", on ? "0" : "-1"); });
-    box.setAttribute("aria-labelledby", st.tab === "an" ? "lw-tab-an" : "lw-tab-id"); note.textContent = "";
-    if (!R) { box.innerHTML = ""; return; }
-    if (!R.libs) { box.innerHTML = `<p style="padding:8px">${t("lib.loadFirst")}</p><p style="padding:0 8px"><button type="button" id="lw-open">${t("lib.openLibs")}</button></p>`; $("#lw-open").onclick = () => { d.close(); L.open(); }; return; }
-    if (st.tab === "id") {
-      if (!R.results.length) { box.innerHTML = `<p style="padding:8px">${t("lib.what.none")}</p>`; return; }
-      const so = st.sortId, key = (/** @type {any} */ r) => (so.key === "dprec" ? Math.abs(r.dprec) : r[so.key]);
-      st.groups = groupsOf(R.results).sort((a, b) => so.dir * cmp(key(a[0]), key(b[0])));
-      box.innerHTML = `<table><colgroup><col><col style="width:5.5em"><col style="width:5.5em"><col style="width:6.5em"><col style="width:6em"><col style="width:7em"></colgroup><thead><tr>${thSort("name", t("lib.col.name"), so)}${thSort("ent", t("lib.col.entropy"), so, "num")}${thSort("shared", t("lib.col.shared"), so, "num")}${thSort("dprec", t("lw.col.dppm"), so, "num")}${thSort("type", t("lib.col.adduct"), so)}${thSort("lib", t("lib.col.library"), so)}</tr></thead>
-        <tbody>${st.groups.map((g, gi) => g.map((r, k) => idRow(r, gi, k, g.length)).join("")).join("")}</tbody></table>`;
-      box.querySelectorAll("[data-grp]").forEach((/** @type {HTMLElement} */ b) => b.onclick = e => { e.stopPropagation(); const g = Number(b.dataset.grp); if (st.open.has(g)) st.open.delete(g); else st.open.add(g); list(); const n = box.querySelector(`[data-grp="${g}"]`); if (n) n.focus(); });
-      sortBind(box, so, list);
-    } else {
-      if (!A) { box.innerHTML = `<p class="muted" style="padding:8px">${t("lib.an.searching")}</p>`; return; }
-      if (!A.results.length) { box.innerHTML = `<p style="padding:8px">${t("lib.an.none")}</p>`; return; }
-      const so = st.sortAn, idx = A.results.map((/** @type {any} */ _, /** @type {number} */ i) => i).sort((/** @type {number} */ a, /** @type {number} */ b) => so.dir * cmp(A.results[a][so.key], A.results[b][so.key]));
-      box.innerHTML = `<table><colgroup><col><col style="width:7em"><col style="width:9em"><col style="width:6em"><col style="width:7em"></colgroup><thead><tr>${thSort("name", t("lib.an.name"), so)}${thSort("delta", "&Delta;m", so, "num")}<th scope="col">${t("lib.an.interp")}</th>${thSort("mcos", t("lib.an.mcos"), so, "num")}${thSort("matched", t("lib.an.matched"), so, "num")}</tr></thead>
-        <tbody>${idx.map((/** @type {number} */ i) => anRow(A.results[i], i)).join("")}</tbody></table>`;
-      note.textContent = t("lib.an.note");
-      A.results.forEach(async (/** @type {any} */ r, /** @type {number} */ i) => { if (!deltaKnown(r.delta)) { const x = await deltaFormula(r.delta), c = box.querySelector(`[data-dm="${i}"]`); if (c) { c.textContent = x || t("lib.an.noFormula"); c.title = c.textContent; } } });
-      sortBind(box, so, list);
-    }
-    box.querySelectorAll("tr.row").forEach((/** @type {HTMLElement} */ tr) => tr.onclick = () => {
-      st.sel = { k: tr.dataset.k, i: Number(tr.dataset.i) };
-      box.querySelectorAll("tr.row").forEach((/** @type {HTMLElement} */ x) => { x.classList.toggle("sel", x === tr); if (x === tr) x.setAttribute("aria-current", "true"); else x.removeAttribute("aria-current"); });
-      detail(); if (st.sel.k === "id" && st.lo != null) verdict();
-    });
-  };
+  /** @type {View} */ const V = { q, ctx, d, L, st, $, msg, pics: new Map() };
   d.querySelectorAll("[role=tab]").forEach((/** @type {HTMLElement} */ b) => {
-    b.onclick = () => { st.tab = String(b.dataset.tab); const A = st.tab === "an" ? st.an : st.res; if (A && A.results && A.results.length && st.sel.k !== st.tab) st.sel = { k: st.tab, i: st.tab === "id" ? (st.groups && st.groups[0] ? st.groups[0][0]._i : 0) : 0 }; list(); detail(); };
+    b.onclick = () => { st.tab = String(b.dataset.tab); const A = st.tab === "an" ? st.an : st.res; if (A && A.results && A.results.length && st.sel.k !== st.tab) st.sel = { k: st.tab, i: st.tab === "id" ? (st.groups && st.groups[0] ? st.groups[0][0]._i : 0) : 0 }; showList(V); showDetail(V); };
     b.onkeydown = e => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); const o = /** @type {HTMLElement} */ (d.querySelector(`[data-tab="${b.dataset.tab === "id" ? "an" : "id"}"]`)); o.click(); o.focus(); } };
   });
   rowKeys($("#lw-list"));
-
-  /** @type {Map<string, Promise<string | null>>} */ const pics = new Map();
-  const detail = () => {
-    const box = $("#lw-detail"), r = sel(), an = st.sel.k === "an", tok = ++st.tok;
-    if (!r) { box.innerHTML = ""; return; }
-    const q2 = an ? { mz: r.qa.mz, it: r.qa.it } : { mz: st.res.query.mz, it: st.res.query.it }, lib = an ? r.la : r;
-    const facts = an ? `<div>&Delta;m ${sgn(r.delta)} · <span data-dmd>${EHt(deltaKnown(r.delta) || "…")}</span></div><div>${t("lib.an.mcos")} ${r.mcos.toFixed(2)} · ${t("lib.an.matched")} ${t("lib.an.shifted", { matched: r.matched, shifted: r.shifted })}</div>`
-      : `<div>${t("lib.col.entropy")} ${r.ent.toFixed(3)} · ${t("lib.col.shared")} ${r.shared} · ${t("lw.col.dppm")} ${dp(r)}</div>`;
-    box.innerHTML = `<div class="lw-id"><div class="lw-mol" id="lw-mol" role="img" aria-label="${EHt(t("lw.mol.aria", { name: r.name || "" }))}"><span class="sm muted">…</span></div>
-      <div class="lw-meta"><h4>${EHt(r.name || "")}</h4>${r.formula ? `<div>${typeof fmtFormula === "function" ? fmtFormula(r.formula) : EHt(r.formula)}${r.type ? " · " + EHt(r.type) : ""}</div>` : r.type ? `<div>${EHt(r.type)}</div>` : ""}${facts}<div class="muted">${EHt(r.lib || "")}</div></div></div>
-      <div class="lw-plot"><canvas id="lw-cv"></canvas><div class="lw-tip" hidden></div></div><div class="sm muted">${t("lib.what.legend")}</div>
-      <details class="lw-more" id="lw-more"${st.more ? " open" : ""}><summary class="sm">${t("lw.details")}</summary><div class="sm" id="lw-more-in"></div></details>`;
-    $("#lw-more").ontoggle = () => { st.more = $("#lw-more").open; };
-    const cv = $("#lw-cv");
-    L.mirror(cv, { ...q2, hr: true, prec: st.prec, frag: st.frag }, an ? { mz: r.la.mz, it: r.la.it, prec: r.prec, name: r.name, shared: r.matched, pairs: r.pairs } : r);
-    hover(cv, $(".lw-tip"));
-    if (an && !deltaKnown(r.delta)) deltaFormula(r.delta).then(x => { const c = box.querySelector("[data-dmd]"); if (c && tok === st.tok) c.textContent = x || t("lib.an.noFormula"); });
-    // behind «Details»: the rare fields, the shared neutral losses, the attribution and the peak pairs
-    /** @type {number[]} */ const nls = [];
-    JSON.parse(cv.dataset.nl || "[]").forEach((/** @type {[number]} */ [i]) => nls.push(+(/** @type {number} */ (st.prec) - q2.mz[i]).toFixed(4)));
-    (r.pairs || []).forEach((/** @type {number[]} */ pr) => { const v = +(/** @type {number} */ (st.prec) - q2.mz[pr[0]]).toFixed(4); if (v > 0.5 && !nls.includes(v)) nls.push(v); });
-    const kv = /** @type {[string, unknown][]} */ (an ? [] : [[t("lib.col.reverse"), r.reverse != null ? r.reverse.toFixed(3) : ""], [t("lib.col.explained"), r.explained != null ? Math.round(r.explained * 100) + "%" : ""], [t("lib.col.pol"), polTxt(r.polarity)], ["CE", r.ce], [t("lib.col.instrument"), r.inst], [t("lib.col.license"), r.license]]).concat([["InChIKey", r.ik]]);
-    const attr = [r.authors, r.accession, r.license].some(x => x) ? `<div>${t("lib.what.attr", { authors: EHt(r.authors || "–"), accession: EHt(r.accession || "–"), license: EHt(r.license || "–") })}</div>` : "";
-    $("#lw-more-in").innerHTML = `<dl>${kv.filter(([, v]) => v != null && v !== "").map(([k, v]) => `<dt>${EHt(k)}</dt><dd>${EHt(v)}</dd>`).join("")}</dl><div>${nls.length ? t("lib.what.nl", { list: nls.sort((a, b) => a - b).map(v => v.toFixed(4)).join(", ") }) : t("lib.what.nlNone")}</div>${attr}${pairsTable(r.pairs || [], q2, lib, an)}`;
-    const smi = String(r.smiles || ""), mol = $("#lw-mol");
-    if (!smi) { mol.innerHTML = `<span class="sm muted" style="padding:8px;text-align:center">${t("lw.noStruct")}</span>`; return; }
-    if (!pics.has(smi)) pics.set(smi, smilesSvg(smi, 240, 170, "lwm"));
-    /** @type {Promise<string | null>} */ (pics.get(smi)).then(svg => { if (tok !== st.tok) return; mol.innerHTML = svg || `<span class="sm muted" style="padding:8px;text-align:center">${t("lw.noStruct")}</span>`; });
-  };
 
   const run = async () => {
     const num = (/** @type {string} */ id) => numIt(String($(id).value));
@@ -270,31 +296,21 @@ function showQuery(q, ctx) {
       // no identity candidate: the analogs open first
       if (a.libs && !a.results.length && b && b.results.length) { st.tab = "an"; st.sel = { k: "an", i: 0 }; }
     } catch (e) { st.res = null; msg(t("lib.error", { message: /** @type {Error} */ (e).message })); }
-    verdict(); list(); detail();
+    showVerdict(V); showList(V); showDetail(V);
   };
-  thrBind(d, () => { verdict(); });
+  thrBind(d, () => { showVerdict(V); });
   $("#lw-go").onclick = run;
   ["#lw-prec", "#lw-tol", "#lw-frag"].forEach(id => { $(id).onkeydown = (/** @type {KeyboardEvent} */ e) => { if (e.key === "Enter") run(); }; });
   ["#lw-tol", "#lw-frag"].forEach(id => { $(id).onchange = () => { if (st.res) run(); }; });
-  const meta = ctx.p ? { p: ctx.p, table: "library-analogs" } : { table: "library-analogs", file: String((q.f && (q.f.label || q.f.file)) || "") };
-  const hd = ["#", t("lib.col.name"), t("lib.col.entropy"), t("lib.col.reverse"), t("lib.col.shared"), t("lib.col.explained"), t("lib.col.dprec") + " (ppm)", t("lib.col.adduct"), t("lib.col.pol"), "CE", t("lib.col.instrument"), t("lib.col.library"), t("lib.col.license"), "InChIKey", t("lv.proposed"), t("lv.decided")];
-  const rowsOf = () => { const [pr, de] = st.lv ? [st.lv.proposed, st.lv.decided || ""] : ["", ""]; return st.res && st.res.libs ? st.res.results.map((/** @type {any} */ r, /** @type {number} */ i) => [i + 1, r.name, r.ent, r.reverse ?? "", r.shared, r.explained ?? "", r.dprec, r.type, polTxt(r.polarity), r.ce, r.inst, r.lib, r.license || "", r.ik || "", i === 0 ? pr : "", i === 0 ? de : ""]) : []; };
-  $("#lw-copy").onclick = () => { $("#lw-dl").removeAttribute("open"); copyTable(hd, rowsOf(), meta, msg); };
-  $("#lw-xlsx").onclick = () => {
-    $("#lw-dl").removeAttribute("open");
-    const rs = rowsOf(); if (!rs.length) return msg(t("lib.nothingSave"));
-    const an = st.an ? st.an.results.map((/** @type {any} */ r, /** @type {number} */ i) => [i + 1, r.name, +r.delta.toFixed(4), deltaKnown(r.delta) || "", r.mcos, r.matched, r.shifted, r.lib]) : [];
-    dlx((ctx.p && typeof plotName === "function" ? plotName(ctx.p) : t("lib.xlsx.fallback")) + t("lib.xlsx.suffix"), [{ name: t("lib.xlsx.sheet"), head: hd, rows: rs, widths: [5, 30, 10, 10, 10, 12, 14, 12, 10, 8, 14, 20, 14, 28, 10, 10] },
-      { name: t("lib.what.sheetAn"), head: ["#", t("lib.an.name"), "Δm", t("lib.an.interp"), t("lib.an.mcos"), t("lib.an.matched"), t("lw.col.shifted"), t("lib.col.library")], rows: an, widths: [5, 30, 10, 24, 12, 12, 10, 20] }], meta);
-  };
+  dlBind(V);
   if (!d.open) d.showModal();
-  list();
-  const redraw = () => { if (d.open && sel()) detail(); };
-  if (W_.ResizeObserver && !(/** @type {any} */ (d))._ro) { /** @type {any} */ (d)._ro = new ResizeObserver(() => { if (/** @type {any} */ (d)._redraw) /** @type {any} */ (d)._redraw(); }); /** @type {any} */ (d)._ro.observe(d); }
+  showList(V);
+  const redraw = () => { if (d.open && selOf(st)) showDetail(V); };
+  if (!(/** @type {any} */ (d))._ro) /** @type {any} */ (d)._ro = FRAME.ro(d, () => { if (/** @type {any} */ (d)._redraw) /** @type {any} */ (d)._redraw(); });
   /** @type {any} */ (d)._redraw = redraw;
-  if (ctx.p) L.scansOf(ctx.p).then((/** @type {number} */ n) => { if (n !== st.n) { st.n = n; if (st.res) verdict(); } });
+  if (ctx.p) L.scansOf(ctx.p).then((/** @type {number} */ n) => { if (n !== st.n) { st.n = n; if (st.res) showVerdict(V); } });
   const k = ctx.p ? ctx.p.k : ctx.k;
-  if (k != null) J(`api/method?k=${k}`).then((/** @type {any} */ f) => { const sp = f && f.scan_params, lo = sp && sp.ms2 && sp.ms2.window_lo; if (lo > 0) { st.lo = lo; if (st.res) verdict(); } }).catch(() => {});
+  if (k != null) J(`api/method?k=${k}`).then((/** @type {any} */ f) => { const sp = f && f.scan_params, lo = sp && sp.ms2 && sp.ms2.window_lo; if (lo > 0) { st.lo = lo; if (st.res) showVerdict(V); } }).catch(() => {});
   if (st.prec) run(); else msg(t("lib.typePrec"));
 }
 
@@ -311,7 +327,7 @@ const phys = (/** @type {any} */ f) => (f && f.file ? f.file.split("#")[0] : "")
 const lvCell = (/** @type {any} */ res) => { const lv = LV().shown(res); return `<span class="lvb ${LV().cls(lv)}" title="${EHt(LV().sentence(lv) + " · " + res.decisive)}">${EHt(LV().tag(lv))}</span>`; };
 async function identifyAll(/** @type {number} */ k) {
   const L = LIB(), f = E.files[k]; if (!f) return;
-  const k2 = (E.files.find((/** @type {any} */ x) => phys(x) === phys(f) && x.kind === "ms2" && !x.gone) || {}).k;
+  const k2 = (E.files.find((/** @type {any} */ x) => phys(x) === phys(f) && x.kind === ESP.ms2 && !x.gone) || {}).k;
   if (k2 == null) return info(t("lib.noMs2"));
   const d = dialog(), $ = (/** @type {string} */ s) => /** @type {any} */ (d.querySelector(s));
   const shell = () => {
@@ -321,10 +337,10 @@ async function identifyAll(/** @type {number} */ k) {
     $("#lw-x").onclick = () => d.close(); $("#lw-libs").onclick = () => { d.close(); L.open(); };
   };
   shell(); if (!d.open) d.showModal();
-  const say = (/** @type {string} */ x, /** @type {number} */ v, /** @type {number} */ m) => { $("#li-st").innerHTML = `${EHt(x)}${m ? ` <progress max="${m}" value="${v}"></progress>` : ""}`; };
+  const say = (/** @type {string} */ x, /** @type {number} */ v, /** @type {number} */ m) => { $("#li-st").innerHTML = h`${x}${m ? raw(h` <progress max="${m}" value="${v}"></progress>`) : ""}`; };
   try {
     const libs = await L.call("list");
-    if (!libs.libs.length) { $("#li-body").innerHTML = `<p>${t("lib.loadFirst")}</p><p><button type="button" id="li-open">${t("lib.openLibs")}</button></p>`; $("#li-open").onclick = () => { d.close(); L.open(); }; return; }
+    if (!libs.libs.length) { $("#li-body").innerHTML = h`<p>${raw(t("lib.loadFirst"))}</p><p><button type="button" id="li-open">${raw(t("lib.openLibs"))}</button></p>`; $("#li-open").onclick = () => { d.close(); L.open(); }; return; }
     say(t("lib.all.reading"), 0, 1);
     const dda = await J(`api/dda?k=${k2}`), tgt = new Map(dda.sid.map((/** @type {any} */ s, /** @type {number} */ i) => [s, dda.tgt[i]])), pol = f.polarity === "negative" ? -1 : 1, /** @type {any[]} */ queries = [];
     let n = 1, i0 = 0;
@@ -347,10 +363,11 @@ async function identifyAll(/** @type {number} */ k) {
       const nHid = base.filter((/** @type {any} */ x) => x.hid).length, rows = (showHid ? base : base.filter((/** @type {any} */ x) => !x.hid)), hasK = rows.some((/** @type {any} */ x) => x.k);
       const val = (/** @type {any} */ x) => (so.key === "rt" ? x.g.rt : so.key === "prec" ? x.g.prec : so.key === "name" ? x.g.best.name || "" : so.key === "ent" ? x.g.best.ent : so.key === "n" ? x.g.n : LV().rank(LV().shown(x.v)));
       rows.sort((a, b) => so.dir * cmp(val(a), val(b)));
-      $("#li-body").innerHTML = (nHid ? `<div class="sm cont-cnt" role="status">${t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid })} · <button type="button" id="li-chid">${t(showHid ? "cont.hide" : "cont.show")}</button></div>` : "")
-        + `<div class="lw-tbl" id="li-list"><table><colgroup><col style="width:5em"><col style="width:7.5em"><col><col style="width:9em"><col style="width:6em"><col style="width:5em"><col style="width:5em">${hasK ? "<col style=\"width:10em\">" : ""}</colgroup>
-        <thead><tr>${thSort("rt", "RT", so, "num")}${thSort("prec", "<i>m/z</i>", so, "num")}${thSort("name", t("lib.col.name"), so)}<th scope="col">${t("lst.col.formula")}</th>${thSort("ent", t("lib.all.bestEntropy"), so, "num")}${thSort("n", t("lib.all.scans"), so, "num")}${thSort("lv", t("lw.col.level"), so)}${hasK ? `<th scope="col">${t("lib.all.contaminant")}</th>` : ""}</tr></thead><tbody>
-        ${rows.map((x, i) => `<tr class="row${i === sel ? " sel" : ""}" tabindex="0" data-i="${i}" title="${t("lib.all.openBest")}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td class="nm">${EHt(x.g.best.name || "")}</td><td>${x.g.best.formula ? fmtFormula(x.g.best.formula) : ""}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}</td><td>${lvCell(x.v)}</td>${hasK ? `<td title="${EHt(x.k || "")}">${EHt(x.k || "")}</td>` : ""}</tr>`).join("") || `<tr><td colspan="7" class="muted">${t("lib.all.noMatch")}</td></tr>`}</tbody></table></div>`;
+      const cnt = nHid ? h`<div class="sm cont-cnt" role="status">${raw(t(showHid ? "cont.cnt.shown" : "cont.cnt", { n: nHid }))} · <button type="button" id="li-chid">${raw(t(showHid ? "cont.hide" : "cont.show"))}</button></div>` : "";
+      const head = thSort("rt", "RT", so, "num") + thSort("prec", "<i>m/z</i>", so, "num") + thSort("name", t("lib.col.name"), so) + h`<th scope="col">${raw(t("lst.col.formula"))}</th>` + thSort("ent", t("lib.all.bestEntropy"), so, "num") + thSort("n", t("lib.all.scans"), so, "num") + thSort("lv", t("lw.col.level"), so) + (hasK ? h`<th scope="col">${raw(t("lib.all.contaminant"))}</th>` : "");
+      const body = rows.map((x, i) => h`<tr class="row${i === sel ? " sel" : ""}" tabindex="0" data-i="${i}" title="${raw(t("lib.all.openBest"))}"><td class="num">${x.g.rt.toFixed(2)}</td><td class="num">${x.g.prec.toFixed(4)}</td><td class="nm">${x.g.best.name || ""}</td><td>${raw(x.g.best.formula ? fmtFormula(x.g.best.formula) : "")}</td><td class="num">${x.g.best.ent != null ? x.g.best.ent.toFixed(2) : ""}</td><td class="num">${x.g.n}</td><td>${raw(lvCell(x.v))}</td>${raw(hasK ? h`<td title="${x.k || ""}">${x.k || ""}</td>` : "")}</tr>`).join("") || h`<tr><td colspan="7" class="muted">${raw(t("lib.all.noMatch"))}</td></tr>`;
+      $("#li-body").innerHTML = h`${raw(cnt)}<div class="lw-tbl" id="li-list"><table><colgroup><col style="width:5em"><col style="width:7.5em"><col><col style="width:9em"><col style="width:6em"><col style="width:5em"><col style="width:5em">${raw(hasK ? "<col style=\"width:10em\">" : "")}</colgroup>
+        <thead><tr>${raw(head)}</tr></thead><tbody>${raw(body)}</tbody></table></div>`;
       $("#li-st").textContent = t("lib.all.summary", { q: queries.length, ms, g: groups.length, r: rows.length });
       const ab = $("#li-all"); ab.checked = all; ab.parentElement.lastChild.textContent = " " + t("lib.all.showAll", { n: groups.length }); ab.onchange = () => { all = ab.checked; show(); };
       const chid = $("#li-chid"); if (chid) chid.onclick = () => { showHid = !showHid; show(); };
@@ -369,7 +386,7 @@ async function identifyAll(/** @type {number} */ k) {
       });
     };
     show();
-  } catch (e) { $("#li-st").innerHTML = `<span class="err">${EHt(/** @type {Error} */ (e).message)}</span>`; }
+  } catch (e) { $("#li-st").innerHTML = h`<span class="err">${/** @type {Error} */ (e).message}</span>`; }
 }
 function gotoScan(/** @type {string | number} */ sid, /** @type {HTMLDialogElement} */ d) {   // the MS2 panel of the DDA trio shows that scan
   try {
