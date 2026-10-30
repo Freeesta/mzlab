@@ -139,17 +139,8 @@ class _PersistentWebKit:
         self._open = []
 def stage(pg, files, timeout=90000):
     """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
-    pg.evaluate("window.__chg=0;window.__up=[];const f0=window.fetch;window.fetch=async function(u,...a){const r=await f0.call(this,u,...a);try{if(String(u).includes('api/upload'))r.clone().text().then(t=>window.__up.push(t.slice(0,300)))}catch(_){}return r};document.getElementById('pick').addEventListener('change',()=>{window.__chg++})")
     pg.set_input_files("#pick", [str(f) for f in files])
-    try:
-        pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
-    except Exception:
-        # what the start screen and the engine say when the list stays empty (printed in the log of the failed test)
-        try:
-            print("STAGE TIMEOUT state:", pg.evaluate("({chg: window.__chg, up0: (window.__up || []).slice(0, 2).join(' ## '), loadfail: typeof LOADFAIL !== 'undefined' ? [...LOADFAIL].join() : 'none', alerts: [...document.querySelectorAll('[role=alert],#err,.err')].map(e => e.textContent.slice(0, 200)).join('|'), lr: !!window.MZLAB_LR, lrErr: String(window.MZLAB_LR_ERR || ''), rustErr: String(window.MZLAB_RUST_ERR || ''), miss: (window.MZLAB_LR_MISS || []).length, avvio: typeof AVVIO !== 'undefined' ? AVVIO.stato + '/' + String(AVVIO.errore || '') + '/' + AVVIO.inAttesa : 'none', pick: ((document.getElementById('pick') || {}).files || []).length, upbusy: typeof UPBUSY !== 'undefined' ? UPBUSY : 'none', inflight: typeof INFLIGHT !== 'undefined' ? INFLIGHT.size : 'none', stFiles: typeof ST !== 'undefined' && ST.files ? ST.files.length : 'none', up: ((document.getElementById('up') || {}).textContent || '').slice(0, 200), btnDisabled: !!(document.getElementById('opbtn') || {}).disabled, rows: document.querySelectorAll('#flist input').length, flist: ((document.getElementById('flist') || {}).textContent || '').slice(0, 300)})"))
-        except Exception as e:
-            print("STAGE TIMEOUT state unreadable:", str(e)[:200])
-        raise
+    pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
 
 
 def attendi(pg, expr, timeout=30000):
