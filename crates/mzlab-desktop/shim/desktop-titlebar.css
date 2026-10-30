@@ -1,0 +1,3 @@
+/* Desktop app only (prepare.py links it after app.css). macOS: the title bar is an overlay, the header sits on the line of the traffic lights. */
+html.desk-mac header{padding-left:78px;min-height:38px;box-sizing:border-box;-webkit-user-select:none;user-select:none}
+html.desk-mac.desk-fs header{padding-left:12px}
