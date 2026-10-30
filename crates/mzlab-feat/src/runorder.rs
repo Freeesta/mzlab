@@ -112,16 +112,178 @@ fn names(files: &[(u32, &Campione)]) -> Vec<String> {
     files.iter().map(|(_, c)| c.file.clone()).collect()
 }
 
-/// The `runorder/1` text for the sample table `samples` (`campioni/2` or `/3`); the batches come from `design` (`disegno/1`) when it is given, else from the batch of each file, else one batch.
-/// `params` are the parameters of the step.
-pub fn runorder_text(
-    params: &[(String, Value)],
-    samples: &[u8],
-    design: Option<&[u8]>,
-) -> Result<String> {
-    let lim = limits_of(params);
-    let (cs, missing) = read_samples(samples)?;
-    let batch: Vec<String> = match design {
+/// The facts of one batch.
+struct Batch<'a> {
+    name: String,
+    /// The files with an injection order, in injection order.
+    files: Vec<(u32, &'a Campione)>,
+    /// The files without a usable order.
+    unordered: Vec<&'a Campione>,
+}
+
+impl<'a> Batch<'a> {
+    fn of_role(&self, roles: &[&str]) -> Vec<(u32, &'a Campione)> {
+        self.files
+            .iter()
+            .filter(|(_, c)| roles.contains(&c.role()))
+            .copied()
+            .collect()
+    }
+
+    fn all_files(&self) -> Vec<String> {
+        sorted_names(
+            self.files
+                .iter()
+                .map(|(_, c)| c.file.clone())
+                .chain(self.unordered.iter().map(|c| c.file.clone())),
+        )
+    }
+
+    /// The consecutive QC pairs as (gap, first file, second file).
+    fn qc_gaps(&self) -> Vec<(u32, &'a str, &'a str)> {
+        let qc = self.of_role(&["qc"]);
+        qc.windows(2)
+            .map(|w| (w[1].0 - w[0].0, w[0].1.file.as_str(), w[1].1.file.as_str()))
+            .collect()
+    }
+
+    fn std_levels(&self) -> Vec<f64> {
+        distinct(
+            self.of_role(&["std", "calibration"])
+                .iter()
+                .filter_map(|(_, c)| c.conc)
+                .collect(),
+        )
+    }
+
+    /// The warnings of the batch under the limits.
+    fn warnings(&self, lim: &Limits) -> Vec<Warning> {
+        let mut out = Vec::new();
+        let warn = |key, value, files| Warning {
+            key,
+            batch: self.name.clone(),
+            value,
+            files,
+        };
+        if self.of_role(&["qc"]).is_empty() {
+            out.push(warn(NO_QC, None, self.all_files()));
+        }
+        if let Some((gap, from, to)) = self
+            .qc_gaps()
+            .into_iter()
+            .max_by_key(|g| g.0)
+            .filter(|g| g.0 > lim.qc_every_max)
+        {
+            out.push(warn(
+                QC_GAP,
+                Some(gap),
+                vec![from.to_string(), to.to_string()],
+            ));
+        }
+        if lim.blank_per_batch && self.of_role(&["blank"]).is_empty() {
+            out.push(warn(NO_BLANK, None, self.all_files()));
+        }
+        let levels = self.std_levels().len() as u32;
+        if levels < lim.std_levels_min {
+            let std = self.of_role(&["std", "calibration"]);
+            out.push(warn(
+                STD_LEVELS,
+                Some(levels),
+                sorted_names(std.iter().map(|(_, c)| c.file.clone())),
+            ));
+        }
+        out
+    }
+
+    /// The batch as a JSON object.
+    fn write(&self, o: &mut Out) {
+        let n_files = self.files.len() + self.unordered.len();
+        o.raw("{\"batch\":")
+            .str(&self.name)
+            .raw(",\"files\":")
+            .int(n_files as i64)
+            .raw(",\"roles\":{");
+        let mut roles: Vec<(&str, i64)> = Vec::new();
+        for c in self
+            .files
+            .iter()
+            .map(|(_, c)| *c)
+            .chain(self.unordered.iter().copied())
+        {
+            match roles.iter_mut().find(|(r, _)| *r == c.role()) {
+                Some(e) => e.1 += 1,
+                None => roles.push((c.role(), 1)),
+            }
+        }
+        roles.sort_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
+        for (k, (role, count)) in roles.iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" })
+                .str(role)
+                .raw(":")
+                .int(*count);
+        }
+        let end = |o: &mut Out, key: &str, v: Option<u32>| {
+            o.raw(key);
+            match v {
+                Some(x) => o.int(x as i64),
+                None => o.raw("null"),
+            };
+        };
+        end(o, "},\"first\":", self.files.first().map(|f| f.0));
+        end(o, ",\"last\":", self.files.last().map(|f| f.0));
+        end(
+            o,
+            ",\"qc_gap_max\":",
+            self.qc_gaps().iter().map(|g| g.0).max(),
+        );
+        o.raw(",\"blanks\":");
+        strings(o, &names(&self.of_role(&["blank"])));
+        o.raw(",\"std_levels\":[");
+        for (k, level) in self.std_levels().iter().enumerate() {
+            o.raw(if k > 0 { "," } else { "" }).num(*level);
+        }
+        o.raw("]}");
+    }
+}
+
+/// The warnings about the injection order of the whole table: files without an order, and orders shared by several files.
+fn order_warnings(cs: &[Campione], missing: &[bool]) -> Vec<Warning> {
+    let mut out = Vec::new();
+    let lost = sorted_names(
+        cs.iter()
+            .zip(missing)
+            .filter(|(_, m)| **m)
+            .map(|(c, _)| c.file.clone()),
+    );
+    if !lost.is_empty() {
+        out.push(Warning {
+            key: ORDER_MISSING,
+            batch: String::new(),
+            value: Some(lost.len() as u32),
+            files: lost,
+        });
+    }
+    let mut by_order: Vec<(u32, &str)> = cs
+        .iter()
+        .zip(missing)
+        .filter(|(_, m)| !**m)
+        .map(|(c, _)| (c.order, c.file.as_str()))
+        .collect();
+    by_order.sort();
+    for run in by_order.chunk_by(|a, b| a.0 == b.0).filter(|r| r.len() > 1) {
+        out.push(Warning {
+            key: ORDER_DUPLICATE,
+            batch: String::new(),
+            value: Some(run[0].0),
+            files: run.iter().map(|(_, f)| f.to_string()).collect(),
+        });
+    }
+    out
+}
+
+/// The batch of every file: the design's when given, else the batch of the sample table, else the default one.
+fn batches_for(cs: &[Campione], design: Option<&[u8]>) -> Result<Vec<String>> {
+    Ok(match design {
         Some(d) => {
             let named: Vec<Sample> = cs.iter().map(sample_of).collect();
             batches_of(&named, &disegno::from_json(d)?)
@@ -136,170 +298,53 @@ pub fn runorder_text(
                 }
             })
             .collect(),
-    };
-    let mut warnings: Vec<Warning> = Vec::new();
+    })
+}
 
-    let lost: Vec<String> = sorted_names(
-        cs.iter()
-            .zip(&missing)
-            .filter(|(_, m)| **m)
-            .map(|(c, _)| c.file.clone()),
-    );
-    if !lost.is_empty() {
-        warnings.push(Warning {
-            key: ORDER_MISSING,
-            batch: String::new(),
-            value: Some(lost.len() as u32),
-            files: lost,
-        });
-    }
-    let mut by_order: Vec<(u32, &str)> = cs
-        .iter()
-        .zip(&missing)
-        .filter(|(_, m)| !**m)
-        .map(|(c, _)| (c.order, c.file.as_str()))
+/// The `runorder/1` text for the sample table `samples` (`campioni/2` or `/3`); the batches come from `design` (`disegno/1`) when it is given, else from the batch of each file, else one batch.
+/// `params` are the parameters of the step.
+pub fn runorder_text(
+    params: &[(String, Value)],
+    samples: &[u8],
+    design: Option<&[u8]>,
+) -> Result<String> {
+    let lim = limits_of(params);
+    let (cs, missing) = read_samples(samples)?;
+    let batch = batches_for(&cs, design)?;
+    let mut warnings = order_warnings(&cs, &missing);
+    let mut names: Vec<&String> = batch.iter().collect();
+    names.sort();
+    names.dedup();
+    let batches: Vec<Batch> = names
+        .into_iter()
+        .map(|name| {
+            let mine = |want: bool| {
+                cs.iter()
+                    .zip(&missing)
+                    .zip(&batch)
+                    .filter(move |((_, m), b)| *b == name && **m == want)
+            };
+            let mut files: Vec<(u32, &Campione)> =
+                mine(false).map(|((c, _), _)| (c.order, c)).collect();
+            files.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.file.cmp(&b.1.file)));
+            Batch {
+                name: name.clone(),
+                files,
+                unordered: mine(true).map(|((c, _), _)| c).collect(),
+            }
+        })
         .collect();
-    by_order.sort();
-    for run in by_order.chunk_by(|a, b| a.0 == b.0).filter(|r| r.len() > 1) {
-        warnings.push(Warning {
-            key: ORDER_DUPLICATE,
-            batch: String::new(),
-            value: Some(run[0].0),
-            files: run.iter().map(|(_, f)| f.to_string()).collect(),
-        });
-    }
-
-    let mut batches: Vec<String> = batch.clone();
-    batches.sort();
-    batches.dedup();
     let mut o = Out::default();
     o.raw("{\"schema\":\"runorder/1\",\"params\":{\"qc_every_max\":")
-        .int(lim.qc_every_max as i64)
-        .raw(",\"std_levels_min\":")
-        .int(lim.std_levels_min as i64)
-        .raw(",\"blank_per_batch\":")
+        .int(lim.qc_every_max as i64);
+    o.raw(",\"std_levels_min\":").int(lim.std_levels_min as i64);
+    o.raw(",\"blank_per_batch\":")
         .raw(if lim.blank_per_batch { "true" } else { "false" })
         .raw("},\"batches\":[");
-    for (n, name) in batches.iter().enumerate() {
-        let mut files: Vec<(u32, &Campione)> = cs
-            .iter()
-            .zip(&missing)
-            .zip(&batch)
-            .filter(|((_, m), b)| *b == name && !**m)
-            .map(|((c, _), _)| (c.order, c))
-            .collect();
-        files.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.file.cmp(&b.1.file)));
-        let unordered: Vec<&Campione> = cs
-            .iter()
-            .zip(&missing)
-            .zip(&batch)
-            .filter(|((_, m), b)| *b == name && **m)
-            .map(|((c, _), _)| c)
-            .collect();
-        let of_role = |roles: &[&str]| -> Vec<(u32, &Campione)> {
-            files
-                .iter()
-                .filter(|(_, c)| roles.contains(&c.role()))
-                .copied()
-                .collect()
-        };
-        let all_files = sorted_names(
-            files
-                .iter()
-                .map(|(_, c)| c.file.clone())
-                .chain(unordered.iter().map(|c| c.file.clone())),
-        );
-        let (qc, blank, std) = (
-            of_role(&["qc"]),
-            of_role(&["blank"]),
-            of_role(&["std", "calibration"]),
-        );
-        let gaps: Vec<(u32, &str, &str)> = qc
-            .windows(2)
-            .map(|w| (w[1].0 - w[0].0, w[0].1.file.as_str(), w[1].1.file.as_str()))
-            .collect();
-        let widest = gaps.iter().max_by_key(|g| g.0).copied();
-        let levels = distinct(std.iter().filter_map(|(_, c)| c.conc).collect());
-
-        let n_files = files.len() + unordered.len();
-        if qc.is_empty() {
-            warnings.push(Warning {
-                key: NO_QC,
-                batch: name.clone(),
-                value: None,
-                files: all_files.clone(),
-            });
-        }
-        if let Some((gap, from, to)) = widest.filter(|g| g.0 > lim.qc_every_max) {
-            warnings.push(Warning {
-                key: QC_GAP,
-                batch: name.clone(),
-                value: Some(gap),
-                files: vec![from.to_string(), to.to_string()],
-            });
-        }
-        if lim.blank_per_batch && blank.is_empty() {
-            warnings.push(Warning {
-                key: NO_BLANK,
-                batch: name.clone(),
-                value: None,
-                files: all_files,
-            });
-        }
-        if (levels.len() as u32) < lim.std_levels_min {
-            warnings.push(Warning {
-                key: STD_LEVELS,
-                batch: name.clone(),
-                value: Some(levels.len() as u32),
-                files: sorted_names(std.iter().map(|(_, c)| c.file.clone())),
-            });
-        }
-
-        o.raw(if n > 0 { ",{\"batch\":" } else { "{\"batch\":" })
-            .str(name)
-            .raw(",\"files\":")
-            .int(n_files as i64)
-            .raw(",\"roles\":{");
-        let mut roles: Vec<(&str, i64)> = Vec::new();
-        for c in files
-            .iter()
-            .map(|(_, c)| *c)
-            .chain(unordered.iter().copied())
-        {
-            match roles.iter_mut().find(|(r, _)| *r == c.role()) {
-                Some(e) => e.1 += 1,
-                None => roles.push((c.role(), 1)),
-            }
-        }
-        roles.sort_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
-        for (k, (role, count)) in roles.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" })
-                .str(role)
-                .raw(":")
-                .int(*count);
-        }
-        o.raw("},\"first\":");
-        match files.first() {
-            Some((order, _)) => o.int(*order as i64),
-            None => o.raw("null"),
-        };
-        o.raw(",\"last\":");
-        match files.last() {
-            Some((order, _)) => o.int(*order as i64),
-            None => o.raw("null"),
-        };
-        o.raw(",\"qc_gap_max\":");
-        match widest {
-            Some((gap, ..)) => o.int(gap as i64),
-            None => o.raw("null"),
-        };
-        o.raw(",\"blanks\":");
-        strings(&mut o, &names(&blank));
-        o.raw(",\"std_levels\":[");
-        for (k, level) in levels.iter().enumerate() {
-            o.raw(if k > 0 { "," } else { "" }).num(*level);
-        }
-        o.raw("]}");
+    for (n, b) in batches.iter().enumerate() {
+        o.raw(if n > 0 { "," } else { "" });
+        b.write(&mut o);
+        warnings.extend(b.warnings(&lim));
     }
     o.raw("],\"warnings\":[");
     warnings.sort_by(|a, b| {
