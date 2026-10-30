@@ -30,8 +30,9 @@ function syncWork(/** @type {boolean} */ force = false) {
   workQ("#wtable").hidden = !(w === "table" || w === "add");
   TOOLS_OFF.forEach(q => { const b = workQ(q); b.disabled = none; b.setAttribute("aria-disabled", String(none)); });
   NAV_OFF.forEach(q => { const b = workQ(q); if (none) b.disabled = true; b.setAttribute("aria-disabled", String(b.disabled)); });
-  // the empty side list is itself a drop zone, said once in its place
-  if (!workQ("#sb-pane").classList.contains("dz-over")) workQ("#fl-dz").hidden = !(none && !pend);
+  // the empty side list shows a plain hint (it still takes a drop: the dashed box of #fl-dz appears only while a drag is over it)
+  workQ("#fl-hint").hidden = !(none && !pend);
+  if (!workQ("#sb-pane").classList.contains("dz-over")) workQ("#fl-dz").hidden = true;
   // the side panel takes the width of the names once a file is shown (barra.js)
   if (was !== w && window.BARRA) BARRA.fitNames();
 }
