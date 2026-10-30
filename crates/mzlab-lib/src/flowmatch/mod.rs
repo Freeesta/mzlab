@@ -5,6 +5,7 @@
 mod evidence;
 mod filter;
 mod json;
+mod resolution;
 
 use self::evidence::{self as ev, Pair};
 use self::filter::Filters;
@@ -406,6 +407,11 @@ fn flag(job: &MatchJob, name: &str, is: fn(&Value) -> bool) -> bool {
 /// Runs the step of `job` on the query and library files and returns the text of the `candidates` file: one object per candidate, queries in file order,
 /// each query's candidates best score first, at most `top_n` of them.
 pub fn match_text(job: &MatchJob, query: Named, library: Named) -> Result<String> {
+    let params = resolution::follow(job.params, resolution::is_unit_query(query.1));
+    let job = &MatchJob {
+        params: &params,
+        ..*job
+    };
     let alg = job.algorithm.unwrap_or("spectral_entropy").to_string();
     let decoys = flag(job, "decoys", |v| v.str() == Some("spectrum"));
     if decoys && alg == "tree" {

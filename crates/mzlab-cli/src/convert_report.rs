@@ -27,13 +27,6 @@ pub(crate) enum Item {
     },
 }
 
-fn unescape(s: &str) -> String {
-    s.replace("&quot;", "\"")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
-}
-
 /// Number of spectra and the `conv/1` document of the mzML at `path`.
 pub(crate) fn head_of(path: &Path) -> (usize, Option<String>) {
     let mut text = Vec::new();
@@ -49,7 +42,7 @@ pub(crate) fn head_of(path: &Path) -> (usize, Option<String>) {
     let conv = text
         .split_once("name=\"mzLab conv/1\" value=\"")
         .and_then(|(_, r)| r.split_once('"'))
-        .map(|(v, _)| unescape(v));
+        .map(|(v, _)| mzlab_core::metodo::xml_unescape(v));
     (spectra, conv)
 }
 

@@ -164,9 +164,10 @@ fn match_params() -> Vec<Param> {
     vec![
             Param::number("tol_da", "Fragment tolerance")
                 .min(0.0)
-                .default_num(0.02)
+                .default_num(0.0)
                 .unit("Da")
-                .doc("Fragment matching between spectra, the GNPS convention"),
+                .doc("Fragment matching between spectra, the GNPS convention")
+                .tip("Fragment window in Da; 0 follows the query: 0.02 Da, or 0.5 Da for a unit-resolution file."),
             Param::number("tol_ppm", "Fragment tolerance (ppm)")
                 .min(0.0)
                 .default_num(0.0)
@@ -181,7 +182,8 @@ fn match_params() -> Vec<Param> {
                 .min(0.0)
                 .default_num(0.0)
                 .unit("Da")
-                .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window"),
+                .doc("Above 0 the precursor window is this many Da either side instead of precursor_ppm, for unit-resolution data (use a fragment tolerance of 0.3 to 0.5 Da); 0 keeps the ppm window")
+                .tip("Precursor window in Da for unit-resolution data; 0 keeps the ppm window, or 0.7 Da for a unit-resolution file."),
             Param::text("name_contains", "Library name contains")
                 .doc("Only library entries whose name contains this text (any case) are candidates; empty keeps all. The spectra still decide the score"),
             Param::number("rt_tol", "RT tolerance")

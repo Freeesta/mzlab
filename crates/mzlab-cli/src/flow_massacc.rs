@@ -5,7 +5,7 @@ use crate::flow::{all_inputs, io, read_one, Exec, FileRunner, Made};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::flow::Job;
 use mzlab_core::json::Value;
-use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
+use mzlab_core::step::{DataType, Facets, Param, Port, RunsIn, Step};
 use mzlab_feat::massacc::{self, Params};
 use mzlab_feat::store::Slice;
 
@@ -24,7 +24,8 @@ pub fn massacc_step() -> Step {
     };
     Step {
         ins: vec![
-            Port::new("raw", DataType::Mzidx, "Scan index of each file (.mzidx)").many(),
+            // a mass error in ppm means nothing on a unit-resolution file (0.1 Da axis): the plan is refused before anything runs
+            Port::new("raw", DataType::Mzidx, "Scan index of each file (.mzidx)").many().requires(Facets { resolution: vec!["hr"], ..Facets::default() }),
             optional(Port::new("table", DataType::Table, "Feature table (.mzfeat) whose m/z is corrected when a model is chosen")),
             optional(Port::new("samples", DataType::Samples, "Roles of the files; the files marked as internal standard files are checked for their standards")),
             optional(Port::new("references", DataType::Report, "CSV of reference ions: name, ion (formula with its charge or adduct, or m/z), optional RT window, role (reference, istd or standard)")),

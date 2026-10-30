@@ -33,9 +33,9 @@ let _lastV="",_itNoted=false;
 function itNoteOnce(){const k="mzlab.teoria.itnote";try{if(localStorage.getItem(k))return false;localStorage.setItem(k,"1");return true}catch(e){const r=!_itNoted;_itNoted=true;return r}}
 let _addY=/** @type {number | null} */ (null),_wasAdd=false;
 function applyView(){const v=S.view,d=v==="data";
-  // the scroll of the data view, kept for the way back from the loading screen (leaveAdding)
+  // the scroll of the data view, kept for the way back to the work (backToWork)
   if(S.adding&&!_wasAdd)_addY=window.scrollY;_wasAdd=!!S.adding;
-  const op=!!S.opening;$("#v-data").hidden=!d;$("#cancadd").hidden=!(S.sess&&S.adding&&!op);syncWork();renderLoaded();openingView(op);
+  const op=!!S.opening;$("#v-data").hidden=!d;syncWork();openingView(op);
   if(window.BARRA){if(d&&S.sess&&!S.adding)BARRA.dockCalc(true);else BARRA.dockCalc(false);}
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
   // The Teoria is Italian only: in English it opens at once in Italian, with a short toast the first time the student enters it (once per session without storage)
@@ -312,7 +312,7 @@ async function fetchDemo(/** @type {string[]} */ names,/** @type {AbortSignal} *
 /** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */
 async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
   if(demo){demo=demo.filter(n=>!ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)&&!INFLIGHT.has(n));if(!demo.length)return;files=[];demo.forEach(n=>INFLIGHT.add(n))}else{files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)))}
-  if(!UPBUSY)CONVROWS.clearDone();UPBUSY++;syncWork();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
+  if(!UPBUSY)CONVROWS.clearDone();if(typeof S!=="undefined"&&S.adding)STATO.aggiunta(false,"upload");UPBUSY++;syncWork();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
   try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
@@ -346,6 +346,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   if(files.some(f=>/\.json$/i.test(f.name))){await carica("m:infusione-grafo-apri.js");files=await INFGAPRI.take(files,rep)}
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
   const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=/** @type {FileCarica[] & { panel?: typeof panel }} */ (files).panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  files=files.filter(f=>!CartCarica.byproduct(f.name));
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k});return false});
   // the same group dropped again: no second notice
   if(rep.unopen.length){const h=groupHash(/** @type {FileCarica[]} */ (rep.unopen.map(x=>rejected.find(f=>f.name===x.name))));if(groupSeen(h)){rep.unopen=[];rep.other=[]}else groupMark(h)}
@@ -371,7 +372,7 @@ $("#dropdam").addEventListener("drop",(/** @type {DragEvent & { dataTransfer: Da
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());
 // Files dropped on the side panel of the data view open as any other (OPENNOW): a progress row each in the list (UPROWS), a note at the end of the batch
 const DIRECT={tm:0};
-const dropReady=()=>!!(S.sess&&!S.adding&&!$("#v-data").hidden);
+const dropReady=()=>!!(S.sess&&!$("#v-data").hidden);
 const dropHasFiles=(/** @type {DragEvent & { dataTransfer: DataTransfer }} */ e)=>[...((e.dataTransfer&&e.dataTransfer.types)||[])].includes("Files");
 // a clean «added» is only announced and then fades away; warnings and failures stay 9 s
 /** @param {unknown} [p] */ function directNote(/** @type {string} */ key,p){const n=$("#fl-note");clearTimeout(DIRECT.tm);n.textContent=key?I18N.t(key,p):"";n.hidden=!key;n.style.opacity="";
@@ -385,20 +386,14 @@ function dropZone(/** @type {boolean} */ on){$("#sb-pane").classList.toggle("dz-
   $("#addf").addEventListener("click",()=>directNote(""))})();
 // with a world open the button switches to the other one (OPENNOW.toWorld); before, it picks the world to open
 $("#hrmix-lr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(false);else{hrMixPick(false);renderFiles()}};$("#hrmix-hr").onclick=()=>{if(OPENNOW.world()!==null)OPENNOW.toWorld(true);else{hrMixPick(true);renderFiles()}};
-// both exits of the loading screen (Cancel, «Back to the data») give the page back as it was: the side panel returns through BARRA, the scroll here
-function leaveAdding(){const y=_addY;STATO.aggiunta(false,"adding");applyView();// after the charts took their size again (the tpview handler of the data view, one timeout earlier), or the page is still too short to reach y
-  if(y!=null)setTimeout(()=>window.scrollTo(0,y),0)}
-$("#cancadd").onclick=leaveAdding;
-// while adding files the ones already in the session stay visible, with a way back to the data
-function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=="undefined"&&E.files.some((/** @type {FileAperto} */ f)=>!f.gone));el.hidden=!on;if(!on)return;
-  const fs=E.files.filter((/** @type {FileAperto} */ f)=>!f.gone);
-  el.innerHTML=`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>${I18N.t("load.loaded.title",{n:fs.length})}</b><span class="sp" style="flex:1"></span><button class="sec" id="clearall" type="button" title="${I18N.t("load.loaded.clearTip")}">${I18N.t("load.loaded.clear")}</button><button class="go" id="backdata">${I18N.t("load.loaded.back")}</button></div><div class="muted sm" style="margin-top:6px">${fs.map((/** @type {FileAperto} */ f)=>`<span style="white-space:nowrap;margin-right:12px"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.color||"#888"};margin-right:4px"></span>${esc(f.label||f.file)}</span>`).join("")}</div>`;
-  $("#backdata").onclick=leaveAdding;
-  // two presses (the first asks): the same clean slate as «Files and session only» of «Start a new session?» (reset.js)
-  const ca=$("#clearall");let armed=0;ca.onclick=()=>{if(!armed){armed=setTimeout(()=>{armed=0;ca.textContent=I18N.t("load.loaded.clear")},6000);ca.textContent=I18N.t("load.loaded.clearSure",{n:fs.length});return}
-    clearTimeout(armed);ca.disabled=true;ca.textContent=I18N.t("load.loaded.clearBusy");
-    // a failure gives the button back with a clear message: it is never left busy
-    Promise.resolve(QQRESET.run("files")).catch(()=>{ca.disabled=false;ca.textContent=I18N.t("load.loaded.clearFail")})}}
+// «Back to work!» (and Esc) leave the landing reopened by «+» or left by closing every panel: the panels come back as they were, the scroll too; with no panel left the first file is shown
+function backToWork(){if(!WORKBACK.on())return;const y=_addY;STATO.aggiunta(false,"back-to-work");
+  workClosedAll(false);if(!E.panels.some((/** @type {Pannello} */ p)=>p.el)){const f=E.files.find((/** @type {FileAperto} */ g)=>!g.gone&&g.k===E.cur)||E.files.find((/** @type {FileAperto} */ g)=>!g.gone);if(f)soloFile(f)}
+  applyView();if(y!=null)setTimeout(()=>window.scrollTo(0,y),0)}
+const WORKBACK={on:()=>!!(S.sess&&S.view==="data"&&!S.opening&&typeof E!=="undefined"&&E.files.some((/** @type {FileAperto} */ f)=>!f.gone)&&["add","landing"].includes($("#v-workspace").dataset.work||""))};
+$("#backwork").onclick=backToWork;
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||e.defaultPrevented||!WORKBACK.on())return;const a=document.activeElement;
+  if(a&&a!==document.body&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;if(document.querySelector("dialog[open],#colpop,#fpop,#ctx:not([hidden])"))return;e.preventDefault();backToWork()});
 // New session: QQRESET.ask (reset.js) asks once, then clears everything the app keeps in this browser and reloads
 $("#newrun").onclick=()=>QQRESET.ask();
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)

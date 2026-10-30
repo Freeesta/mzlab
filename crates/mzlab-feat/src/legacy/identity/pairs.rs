@@ -182,9 +182,9 @@ pub fn polarity_pairs(payload_json: &str) -> Res<String> {
                 let ppm_v = json::round((mn - m) / m * 1e6, 2);
                 let mut o = Out::default();
                 o.raw("{\"pos\":");
-                write_value(fe.get("k").unwrap_or(&Value::Null), &mut o);
+                json::write_value(&mut o, fe.get("k").unwrap_or(&Value::Null));
                 o.raw(",\"neg\":");
-                write_value(nf.get("k").unwrap_or(&Value::Null), &mut o);
+                json::write_value(&mut o, nf.get("k").unwrap_or(&Value::Null));
                 o.raw(",\"pos_form\":")
                     .str(name)
                     .raw(",\"neg_form\":")

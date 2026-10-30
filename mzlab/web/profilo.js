@@ -18,7 +18,7 @@ const PROFILO = (() => {
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
   const series = () => (window.CAMPIONI ? CAMPIONI.files() : []).filter(f => f.kind !== "mrm");
-  const fmt = (v, d = 2) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(d));
+  const fmt = (v, d = 2) => I18N.sci(v, d);
 
   async function resolveMz(text) {
     const s = String(text || "").trim().replace(",", ".");

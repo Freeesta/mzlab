@@ -105,7 +105,7 @@ const TABELLA = (() => {
   const matrix = () => (tb ? toMatrix(tb.features, tb.files) : []);
 
   // ---------------------------------------------------------------- the section
-  const fmt = (/** @type {number | null | undefined} */ v, d = 4) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+  const fmt = (/** @type {number | null | undefined} */ v, d = 4) => I18N.dash(v, d);
   function summary() {
     if (!tb) return `<p class="sm">${t("feat.none")}</p>`;
     const tbl = tb;
