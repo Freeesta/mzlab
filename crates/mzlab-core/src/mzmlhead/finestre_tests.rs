@@ -1,11 +1,10 @@
-//! `Mzml::chromatograms` read in windows against the search over the whole file in one buffer.
+//! `Mzml::chromatograms` searched in windows against the search over the whole file in one buffer.
 #![allow(
     clippy::unwrap_used,
     clippy::indexing_slicing,
     clippy::cast_possible_truncation
 )]
-use super::super::{attr_id, find, find_tag, Mzml};
-use super::WINDOW;
+use super::{attr_id, find, find_tag, Mzml, WINDOW};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 
