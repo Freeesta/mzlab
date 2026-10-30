@@ -9,9 +9,10 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 
 use crate::aligned::{Aligned, CELL_DETECTED, NO_FILE};
+use crate::axis::{da, half};
 use crate::filters_blank::{self as fb, BlankOpts, Labels};
-pub use crate::filters_nts::{blank_fallback, replicate_groups, Extra};
 use crate::filters_nts::{blank_and_samples, needed};
+pub use crate::filters_nts::{blank_fallback, replicate_groups, Extra};
 use crate::norm::{bad, decides, measured};
 use crate::quality::REASON_BROAD;
 use crate::samples::Sample;
@@ -40,7 +41,7 @@ pub enum Rule {
     QcCv(f64, usize),
     /// Like `QcCv`, but the files without a peak count as 0 and the row needs no minimum of them (`filters_blank::qc_cv_percent`).
     QcCvZero(f64, usize),
-    /// Among rows within `.0` ppm in m/z and `.1` minutes in RT of each other only the one with the largest area is kept (ties: the first row);
+    /// Among rows within `.0` ppm in m/z (negative: minus the window in Da, `axis::da`) and `.1` minutes in RT of each other only the one with the largest area is kept (ties: the first row);
     /// a row is judged against the rows kept before it, strongest first, so a chain of near rows does not drop the ones in the middle.
     Duplicates(f64, f64),
     /// A row with a broad-band peak (`REASON_BROAD`) needs the largest area of a sample to be at least `ratio` times the largest area of the blanks;
@@ -204,7 +205,7 @@ fn duplicates(t: &Aligned, samples: &[Sample], ppm: f64, rt_min: f64) -> Vec<boo
     order.sortc_by(|&a, &b| strength[b].total_cmp(&strength[a]).then(a.cmp(&b)));
     let (mut kept, mut dropped) = (vec![false; n], vec![false; n]);
     for &row in &order {
-        let tol = t.mz[row].abs() * ppm * 1e-6;
+        let tol = half(t.mz[row].abs(), ppm);
         let near = |j: usize| {
             let o = by_mz[j];
             kept[o] && (t.mz[o] - t.mz[row]).abs() <= tol && (t.rt[o] - t.rt[row]).abs() <= rt_min
@@ -241,7 +242,13 @@ pub fn apply_with(
 }
 
 /// The errors a list of rules can raise before any row is judged: no blank, too few QC files, no summaries, missing factors or standard, a bad fraction.
-fn check_rules(t: &Aligned, rules: &[Rule], factors: Option<&[f64]>, extra: &Extra, (blank, qc): (&[usize], &[usize])) -> Result<()> {
+fn check_rules(
+    t: &Aligned,
+    rules: &[Rule],
+    factors: Option<&[f64]>,
+    extra: &Extra,
+    (blank, qc): (&[usize], &[usize]),
+) -> Result<()> {
     if rules
         .iter()
         .any(|r| matches!(r, Rule::Blank(_) | Rule::BlankWith(..)))
@@ -374,6 +381,9 @@ pub fn to_json(rules: &[Rule]) -> String {
                 .raw(",\"qc_min_files\":")
                 .int(n as i64)
                 .raw(",\"qc_zero\":true"),
+            Rule::Duplicates(tol, rt) if tol < 0.0 => {
+                j.raw(",\"da\":").num(-tol).raw(",\"rt_min\":").num(rt)
+            }
             Rule::Duplicates(ppm, rt) => j.raw(",\"ppm\":").num(ppm).raw(",\"rt_min\":").num(rt),
         };
         j.raw("}");
@@ -423,7 +433,12 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                     }
                 }
                 Some("duplicati") => {
-                    Rule::Duplicates(num(o, "ppm")?.max(0.0), num(o, "rt_min")?.max(0.0))
+                    // the unit axis spells the window in Da (`da`), the other in ppm
+                    let tol = match o.get("da") {
+                        Some(_) => da(num(o, "da")?.max(0.0)),
+                        None => num(o, "ppm")?.max(0.0),
+                    };
+                    Rule::Duplicates(tol, num(o, "rt_min")?.max(0.0))
                 }
                 _ => return Err(bad()),
             })

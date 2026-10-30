@@ -2,7 +2,7 @@
 crates/mzlab-cli/src/flow_bentazone_tests.rs, ported here: a parent that fades, two products that grow) in HR+, HR-, LR+ and LR-, through the base chain, tp.generate, tp.link, tp.filter,
 tp.position, tp.network, table.filter, export.table_csv, export.mztab and, at unit resolution, tp.dig_lr. Every text the browser keeps equals the file of the native run, byte for byte.
 Builds the site and the .wasm of mzFinder (needs cargo and wasm-bindgen: SKIP without). Run from the repo root: python3 tests_e2e/e2e_flow_neg_lr.py [hr+|hr-|lr+|lr-]...
-NEG_LR_KEEP=<dir> keeps both sides' files there; NEG_LR_UNWRITTEN=1 leaves the polarity and the unit mass out of the plan (gap NL-7: fails today)."""
+NEG_LR_KEEP=<dir> keeps both sides' files there; the plan leaves the polarity and the unit mass to the files (both sides read them from the indexes); NEG_LR_WRITTEN=1 writes them."""
 import base64, json, math, os, shutil, struct, subprocess, sys, tempfile, threading, urllib.request
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -69,11 +69,11 @@ def sample(n, t):
 ORDER = NAMES
 SAMPLES = json.dumps({"campioni": [sample(n, TIMES[NAMES.index(n)]) for n in ORDER], "schema": "campioni/2"}, separators=(",", ":"))
 
-# the page writes in the plan it runs the polarity and the unit mass of the files it has open (`inheritNature`); the browser runner does not read them from the
-# indexes as `flow run` does (gap NL-7 of the matrix): NEG_LR_UNWRITTEN=1 runs the plan without them to show it
-UNWRITTEN = os.environ.get("NEG_LR_UNWRITTEN") == "1"
+# the plan leaves the polarity and the unit mass unwritten: the browser runner and `flow run` take them from the indexes (`mzlab_feat::nature`);
+# NEG_LR_WRITTEN=1 runs the variant that writes them, as the page does from the files open in Data (`inheritNature`)
+WRITTEN = os.environ.get("NEG_LR_WRITTEN") == "1"
 def plan(pol, hr):
-    nat = {} if UNWRITTEN else {"gen": {"polarity": pol, "nominal": not hr}, "lnk": {"polarity": pol}}
+    nat = {"gen": {"polarity": pol, "nominal": not hr}, "lnk": {"polarity": pol}} if WRITTEN else {}
     s = [{"id": "idx", "step": "index.mzidx@1", "in": {"source": ["file:" + n + ".mzML" for n in ORDER]}},
          {"id": "det", "step": "features.detect@1", "in": {"index": ["idx.index"]}},
          {"id": "ali", "step": "features.align@1", "in": {"peaks": ["det.peaks"]}},

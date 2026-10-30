@@ -26,6 +26,27 @@ fn load<R: ReadAt>(r: &mut R, size: u64, samples_json: &str) -> Result<(Aligned,
     Ok((t, s))
 }
 
+/// The duplicate window of the rules in `spec` is in Da on a unit-resolution table (`dup_da`) and in ppm on the other (`dup_ppm`); the wrong one is `err.flow.param.axis`.
+fn duplicate_axis(spec: &str, unit: bool) -> Result<()> {
+    let Ok(v) = mzlab_core::json::parse(spec.as_bytes()) else {
+        return Ok(());
+    };
+    let rules = v.get("filtra").map_or(&[][..], |f| f.arr());
+    for rule in rules
+        .iter()
+        .filter(|r| r.get("regola").and_then(|x| x.str()) == Some("duplicati"))
+    {
+        let (wrong, axis) = if unit { ("ppm", "Da") } else { ("da", "ppm") };
+        if rule.get(wrong).is_some() {
+            let param = if unit { "dup_ppm" } else { "dup_da" };
+            return Err(Error::new("err.flow.param.axis")
+                .with("param", param)
+                .with("axis", axis));
+        }
+    }
+    Ok(())
+}
+
 /// The view of the parameters `spec` (`{"normalizza":..., "filtra":[...]}`); an empty text is no view.
 fn view_of(t: &Aligned, s: &[Sample], spec: &str) -> Result<Option<View>> {
     if spec.trim().is_empty() {
@@ -57,6 +78,12 @@ pub fn view_json<R: ReadAt>(
     samples_json: &str,
     spec: &str,
 ) -> Result<String> {
+    let (_, meta) = read_table_from(r, size)?;
+    let unit = meta
+        .get("recipe")
+        .and_then(|v| v.str())
+        .is_some_and(mzlab_feat::recipe::is_unit_text);
+    duplicate_axis(spec, unit)?;
     let (t, s) = load(r, size, samples_json)?;
     let spec = if spec.trim().is_empty() { "{}" } else { spec };
     let v = view::from_spec(&t, &s, spec.as_bytes())?;

@@ -36,7 +36,7 @@ Il sito esegue una parte dei passi con l'esecutore web (`F.runners.web`, «This 
 | Viste dei risultati (tabella dei prodotti `tptab/1`, gruppi, UpSet, rete, 3D) | Viste registrate con `F.registerView` | Coperta (sito e app) per file già prodotti | Nulla; senza passi eseguibili i file vengono ancora da Tabui |
 
 ## Polarità e risoluzione
-- `tp.generate` (porta opzionale `index`), `tp.link@2` e `tp.dig_lr` leggono polarità e risoluzione unitaria dai file (`flow_nature.rs`) quando il piano non scrive `polarity`/`nominal`; il valore usato finisce in `estimates` della provenienza. Un set negativo è cercato come [M−H]⁻, uno LR fonde le ipotesi per m/z nominale (come l'Scavo). Collega `index` a `tp.generate` nei piani LR e negativi.
+- `tp.generate` (porta opzionale `index`), `tp.link@2` e `tp.dig_lr` leggono polarità e risoluzione unitaria dai file (`mzlab_feat::nature`, la stessa regola in `flow run` e nel browser) quando il piano non scrive `polarity`/`nominal`; il valore usato finisce in `estimates` della provenienza. Un set negativo è cercato come [M−H]⁻, uno LR fonde le ipotesi per m/z nominale (come l'Scavo). Collega `index` a `tp.generate` nei piani LR e negativi.
 - A risoluzione unitaria i cancelli di `tp/1` e gli archi di `tp.network` usano finestre in Da (`LR_TOL`); il Dig LR legge l'addotto del genitore. Prova: `flow_bentazone_tests.rs` (bentazone C10H12N2O3S, sintetico, ±, HR e LR).
 - Tempi nei nomi: `T2p5` = 2.5 (anche `T0p5`, `T10p25`).
 
