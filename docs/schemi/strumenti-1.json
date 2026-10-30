@@ -1603,6 +1603,7 @@
               "name":{
                 "enum":[
                   "min_detected",
+                  "min_replicate_fraction",
                   "min_area",
                   "min_height",
                   "blank_ratio",
@@ -1610,13 +1611,18 @@
                   "blank_stat",
                   "blank_scope",
                   "blank_subtract",
+                  "blank_match",
+                  "blank_keep_istd",
                   "qc_zero",
                   "qc_cv_max",
                   "qc_min_files",
                   "dup_ppm",
                   "dup_rt",
                   "require_ms2",
-                  "normalize"
+                  "normalize",
+                  "istd_id",
+                  "istd_mz",
+                  "istd_rt"
                 ]
               },
               "value":{
@@ -1625,6 +1631,12 @@
                     "type":"integer",
                     "minimum":0,
                     "description":"Peaks found by the detection in at least this many files that are not blanks; left empty, the rule is off"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "description":"A row is kept if, in at least one group of replicates (same series, role, time and concentration, or the same group when it is set), it is detected in at least this fraction of the files, rounded to a whole file and at least one; left empty, the rule is off"
                   },
                   {
                     "type":"number",
@@ -1661,6 +1673,15 @@
                     "description":"The view shows sample minus ratio times the blank level, not below 0, instead of only filtering; area or normalised area only; the ratio is at least 1 when any blank option is set"
                   },
                   {
+                    "enum":["all","batch","matrix"],
+                    "default":"all",
+                    "description":"all compares every sample with all blanks; batch or matrix compares each sample only with the blanks of its batch or matrix (campioni/2 or /3), and a sample with none falls back to all blanks, listed per file in the counts as bianco_ripiego; not with the subtraction"
+                  },
+                  {
+                    "type":"boolean",
+                    "description":"The internal-standard row skips the blank rule, because it is spiked in the blanks too; needs the normalisation istd"
+                  },
+                  {
                     "type":"boolean",
                     "description":"The QC CV counts the QC files without a peak as 0 and the row needs no minimum of them; the series still needs the minimum number of qc files"
                   },
@@ -1688,10 +1709,21 @@
                   },
                   {"type":"boolean","description":"An MS2 is linked to the peak; left empty, the rule is off"},
                   {
-                    "enum":["none","sum","median"],
+                    "enum":["none","sum","median","istd"],
                     "default":"none",
                     "description":"Scale of the areas of each file: total area or median area"
-                  }
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":0,
+                    "description":"Id of the row of the internal standard; used with the normalisation istd"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"m/z of the internal standard, with its RT: the nearest row (5 ppm, 0.2 min) is the standard; used with the normalisation istd when no row id is set"
+                  },
+                  {"type":"number","minimum":0,"description":"RT of the internal standard; used with its m/z"}
                 ]
               }
             },

@@ -30,7 +30,8 @@ PLAN = {"format": "mzflow/2", "inputs": [{"name": n + ".mzML", "sha256": "", "ty
                   {"id": "csv", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
                   {"id": "quant", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"kind": "quant"}},
                   {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
-                  {"id": "flt", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 3, "normalize": "sum"}}]}
+                  {"id": "flt", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_detected": 3, "normalize": "sum"}},
+                  {"id": "flt2", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"min_replicate_fraction": 0.5, "normalize": "istd", "istd_id": 1}}]}
 
 tmp = Path(tempfile.mkdtemp(prefix="flow_web_export_"))
 site = tmp / "site"; env = dict(os.environ, RUNNER_TEMP=str(tmp / "rt"))
@@ -86,19 +87,19 @@ try:
 
         def first():
             r = pg.evaluate(RUN, [PLAN, SAMPLES]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            for i in ("csv", "quant", "mzt", "flt"):
+            for i in ("csv", "quant", "mzt", "flt", "flt2"):
                 assert any(e["passo"] == i and e["stato"] == "done" and e["via"] == "browser" for e in r["ev"]), (i, r["ev"][-6:])
             kept = pg.evaluate(KEPT)
-            for name, nat_name in (("csv.csv", "csv.csv"), ("quant.csv", "quant.csv"), ("mzt.mzTab", "mzt.mzTab"), ("flt.json", "flt.json")):
+            for name, nat_name in (("csv.csv", "csv.csv"), ("quant.csv", "quant.csv"), ("mzt.mzTab", "mzt.mzTab"), ("flt.json", "flt.json"), ("flt2.json", "flt2.json")):
                 assert name in kept, (name, list(kept))
                 nat = (run / "out" / nat_name).read_text(); web = kept[name]
                 at = next((i for i, (x, y) in enumerate(zip(nat, web)) if x != y), min(len(nat), len(web)))
                 assert nat == web and len(nat) > 100, (name, "first difference at", at, len(nat), len(web), nat[max(0, at - 100):at + 100], web[max(0, at - 100):at + 100])
-        step("the CSV, the quant CSV, the mzTab-M and the filter view of the browser are the files of the native flow run", first)
+        step("the CSV, the quant CSV, the mzTab-M and the filter views (the second with the replicate fraction and the internal standard) of the browser are the files of the native flow run", first)
 
         def again():
             r = pg.evaluate(RUN, [PLAN, SAMPLES]); assert not r.get("err"), r
-            assert not [e for e in r["ev"] if e["passo"] in ("csv", "quant", "mzt", "flt") and e["stato"] == "running"], r["ev"]
+            assert not [e for e in r["ev"] if e["passo"] in ("csv", "quant", "mzt", "flt", "flt2") and e["stato"] == "running"], r["ev"]
         step("a second run takes the files from OPFS", again)
         b.close()
 finally:

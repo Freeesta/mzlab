@@ -7,7 +7,7 @@ use mzlab_core::json::{parse, Out, Value};
 
 use crate::aligned::Aligned;
 use crate::filters::{self, Rule};
-use crate::filters_blank::{self, Subtraction};
+use crate::filters_blank::{self, Labels, Subtraction};
 use crate::norm::{self, Method};
 use crate::samples::Sample;
 
@@ -23,16 +23,31 @@ pub struct View {
     pub rows: Vec<u32>,
     /// The blank subtraction of a `Rule::BlankWith` that asks for it.
     pub sub: Option<Subtraction>,
+    /// The labels of the files the matched blank and replicate rules read (empty when no rule does).
+    pub labels: Labels,
+    /// Per file, the samples that had no blank of their batch or matrix and were compared with all blanks; `None` when no rule matches blanks.
+    pub fallback: Option<Vec<bool>>,
 }
 
 /// The view of `t` under a method and a list of rules.
 pub fn build(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rule]) -> Result<View> {
+    build_with(t, samples, method, rules, Labels::default())
+}
+
+/// `build` with the labels of the files (batch, matrix, series, group) that the matched blank and the replicate rules read.
+pub fn build_with(t: &Aligned, samples: &[Sample], method: &Method, rules: &[Rule], labels: Labels) -> Result<View> {
     let factors = norm::factors(t, samples, method)?;
-    let why = filters::apply_with(t, samples, rules, Some(&factors))?;
+    let istd_row = match method {
+        Method::Istd(r) => Some(norm::standard(t, r)?),
+        _ => None,
+    };
+    let extra = filters::Extra { labels: Some(&labels), istd_row };
+    let why = filters::apply_extra(t, samples, rules, Some(&factors), &extra)?;
     let rows = (0..why.len() as u32).filter(|&r| why[r as usize] == 0).collect();
     let is_blank: Vec<bool> = samples.iter().map(|s| s.kind == "blank").collect();
     let sub = filters_blank::subtraction(t, &factors, rules, &is_blank)?;
-    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub })
+    let fallback = filters::blank_fallback(samples, rules, &labels);
+    Ok(View { method: method.clone(), rules: rules.to_vec(), factors, why, rows, sub, labels, fallback })
 }
 
 impl View {
@@ -59,7 +74,8 @@ impl View {
 
     /// The parameters of both operations: `{"normalizza": ..., "filtra": [...]}` (what the `.mzflow` records).
     pub fn spec_json(&self) -> String {
-        format!("{{\"normalizza\":{},\"filtra\":{}}}", self.method.to_json(), filters::to_json(&self.rules))
+        let labels = if self.labels.is_empty() { String::new() } else { format!(",\"etichette\":{}", self.labels.to_json()) };
+        format!("{{\"normalizza\":{},\"filtra\":{}{labels}}}", self.method.to_json(), filters::to_json(&self.rules))
     }
 
     /// SHA-256 of the parameters and of the ids of the rows kept: two equal views have the same digest.
@@ -79,7 +95,15 @@ impl View {
             let n = self.why.iter().filter(|&&w| w as usize == i + 1).count();
             j.raw(if i > 0 { "," } else { "" }).int(n as i64);
         }
-        j.raw("]}");
+        j.raw("]");
+        if let Some(f) = &self.fallback {
+            j.raw(",\"bianco_ripiego\":[");
+            for (i, &b) in f.iter().enumerate() {
+                j.raw(if i > 0 { "," } else { "" }).raw(if b { "true" } else { "false" });
+            }
+            j.raw("]");
+        }
+        j.raw("}");
         j.0
     }
 }
@@ -92,5 +116,9 @@ pub fn from_spec(t: &Aligned, samples: &[Sample], spec: &[u8]) -> Result<View> {
         None => Method::None,
     };
     let rules = v.get("filtra").map_or(Ok(Vec::new()), |f: &Value| filters::from_json(f))?;
-    build(t, samples, &method, &rules)
+    let labels = match v.get("etichette") {
+        Some(l) => Labels::from_json(l, t.n_files)?,
+        None => Labels::default(),
+    };
+    build_with(t, samples, &method, &rules, labels)
 }

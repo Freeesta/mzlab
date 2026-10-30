@@ -39,6 +39,7 @@ fn opts(quantity: Quantity, stat: Stat, scope: Scope, subtract: bool) -> BlankOp
         stat,
         scope,
         subtract,
+        ..BlankOpts::default()
     }
 }
 

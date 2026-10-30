@@ -8,9 +8,11 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
 
 use crate::aligned::{Aligned, CELL_DETECTED, NO_FILE};
-use crate::quality::REASON_BROAD;
-use crate::filters_blank::{self as fb, BlankOpts};
+use crate::filters_blank::{self as fb, BlankOpts, Labels};
+pub use crate::filters_nts::{blank_fallback, replicate_groups, Extra};
+use crate::filters_nts::{blank_and_samples, needed};
 use crate::norm::{bad, decides, measured};
+use crate::quality::REASON_BROAD;
 use crate::samples::Sample;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,13 +45,16 @@ pub enum Rule {
     /// A row with a broad-band peak (`REASON_BROAD`) needs the largest area of a sample to be at least `ratio` times the largest area of the blanks;
     /// every other row, and any series with no blank or no summaries, passes (the rule never errors).
     BroadBlank(f64),
+    /// In at least one group of replicates (`replicate_groups`) the row is detected in at least this fraction of the files, rounded to a whole file and at
+    /// least one.
+    MinReplicates(f64),
 }
 
 /// QC files needed when the rule does not say.
 pub const QC_MIN_FILES: usize = 3;
 
 /// Names of the rules in the `filtra` operation, in the order of `Rule`.
-const NAMES: [&str; 10] = [
+const NAMES: [&str; 11] = [
     "min_rilevati",
     "min_area",
     "min_altezza",
@@ -60,6 +65,7 @@ const NAMES: [&str; 10] = [
     "qc_cv_max",
     "duplicati",
     "bianco_larga",
+    "repliche_min",
 ];
 
 impl Rule {
@@ -75,8 +81,21 @@ impl Rule {
             Rule::QcCv(..) | Rule::QcCvZero(..) => 7,
             Rule::Duplicates(..) => 8,
             Rule::BroadBlank(_) => 9,
+            Rule::MinReplicates(_) => 10,
         }]
     }
+}
+
+/// What the rules share, computed once per table: the blank, QC and sample files, the duplicates, the comparison groups of each blank rule, the groups of
+/// replicates and the row of the internal standard.
+struct Ctx {
+    blank: Vec<usize>,
+    qc: Vec<usize>,
+    dup: Vec<bool>,
+    /// For each `BlankWith` rule, in order, its comparison groups.
+    blank_groups: Vec<Vec<fb::Group>>,
+    replicates: Vec<Vec<usize>>,
+    istd_row: Option<usize>,
 }
 
 /// Whether `row` passes the rule (the blank mean is computed once by the caller).
@@ -85,9 +104,11 @@ fn passes(
     samples: &[Sample],
     row: usize,
     rule: &Rule,
-    (blank, qc, dup): (&[usize], &[usize], &[bool]),
+    cx: &Ctx,
+    nth_blank: usize,
     factors: Option<&[f64]>,
 ) -> bool {
+    let (blank, qc, dup) = (&cx.blank[..], &cx.qc[..], &cx.dup[..]);
     let files = || (0..t.n_files).filter(|&k| decides(&samples[k]));
     match *rule {
         Rule::MinDetected(n) => {
@@ -121,9 +142,17 @@ fn passes(
                 >= ratio * b
         }
         Rule::BlankWith(fold, ref o) => {
-            let sample: Vec<usize> = files().collect();
-            fb::passes(t, factors, o, fold, row, (&sample, blank)).unwrap_or(false)
+            (o.keep_istd && cx.istd_row == Some(row))
+                || fb::passes_groups(t, factors, o, fold, row, &cx.blank_groups[nth_blank])
+                    .unwrap_or(false)
         }
+        Rule::MinReplicates(f) => cx.replicates.iter().any(|g| {
+            let seen = g
+                .iter()
+                .filter(|&&k| t.state[row * t.n_files + k] == CELL_DETECTED)
+                .count();
+            seen >= needed(f, g.len())
+        }),
         Rule::QcCvZero(max, _) => fb::qc_cv_percent(t, row, qc).is_some_and(|cv| cv <= max),
         Rule::Mz(lo, hi) => (lo..=hi).contains(&t.mz[row]),
         Rule::Rt(lo, hi) => (lo..=hi).contains(&t.rt[row]),
@@ -135,7 +164,9 @@ fn passes(
             if !broad || blank.is_empty() {
                 return true;
             }
-            let top = |ks: &mut dyn Iterator<Item = usize>| ks.filter_map(|k| measured(t, row, k)).fold(0.0, f64::max);
+            let top = |ks: &mut dyn Iterator<Item = usize>| {
+                ks.filter_map(|k| measured(t, row, k)).fold(0.0, f64::max)
+            };
             top(&mut files()) >= ratio * top(&mut blank.iter().copied())
         }
     }
@@ -199,19 +230,24 @@ pub fn apply(t: &Aligned, samples: &[Sample], rules: &[Rule]) -> Result<Vec<u8>>
 }
 
 /// `apply` with the factors of the file normalisation, which the blank rule needs when it compares normalised areas.
-pub fn apply_with(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: Option<&[f64]>) -> Result<Vec<u8>> {
-    if samples.len() != t.n_files || rules.len() > 250 {
-        return Err(bad());
-    }
-    let blank: Vec<usize> = (0..t.n_files)
-        .filter(|&k| samples[k].kind == "blank")
-        .collect();
-    if rules.iter().any(|r| matches!(r, Rule::Blank(_) | Rule::BlankWith(..))) && blank.is_empty() {
+pub fn apply_with(
+    t: &Aligned,
+    samples: &[Sample],
+    rules: &[Rule],
+    factors: Option<&[f64]>,
+) -> Result<Vec<u8>> {
+    apply_extra(t, samples, rules, factors, &Extra::default())
+}
+
+/// The errors a list of rules can raise before any row is judged: no blank, too few QC files, no summaries, missing factors or standard, a bad fraction.
+fn check_rules(t: &Aligned, rules: &[Rule], factors: Option<&[f64]>, extra: &Extra, (blank, qc): (&[usize], &[usize])) -> Result<()> {
+    if rules
+        .iter()
+        .any(|r| matches!(r, Rule::Blank(_) | Rule::BlankWith(..)))
+        && blank.is_empty()
+    {
         return Err(Error::new("error.filterNoBlank"));
     }
-    let qc: Vec<usize> = (0..t.n_files)
-        .filter(|&k| samples[k].kind == "qc")
-        .collect();
     if rules
         .iter()
         .any(|r| matches!(r, Rule::QcCv(_, n) | Rule::QcCvZero(_, n) if qc.len() < (*n).max(2)))
@@ -228,16 +264,74 @@ pub fn apply_with(t: &Aligned, samples: &[Sample], rules: &[Rule], factors: Opti
     {
         return Err(bad());
     }
+    if rules
+        .iter()
+        .any(|r| matches!(r, Rule::BlankWith(_, o) if o.keep_istd))
+        && extra.istd_row.is_none()
+    {
+        return Err(bad());
+    }
+    if rules
+        .iter()
+        .any(|r| matches!(r, Rule::MinReplicates(f) if !(0.0..=1.0).contains(f)))
+    {
+        return Err(bad());
+    }
+    Ok(())
+}
+
+/// `apply_with` with the labels and the internal standard that the matched blank, replicate and standard-keeping options read.
+pub fn apply_extra(
+    t: &Aligned,
+    samples: &[Sample],
+    rules: &[Rule],
+    factors: Option<&[f64]>,
+    extra: &Extra,
+) -> Result<Vec<u8>> {
+    if samples.len() != t.n_files || rules.len() > 250 {
+        return Err(bad());
+    }
+    let empty = Labels::default();
+    let labels = extra.labels.unwrap_or(&empty);
+    let (blank, sample) = blank_and_samples(samples);
+    let qc: Vec<usize> = (0..t.n_files)
+        .filter(|&k| samples[k].kind == "qc")
+        .collect();
+    check_rules(t, rules, factors, extra, (&blank, &qc))?;
     let dup = rules.iter().find_map(|r| match *r {
         Rule::Duplicates(ppm, rt) => Some(duplicates(t, samples, ppm, rt)),
         _ => None,
     });
-    let dup = dup.unwrap_or_default();
+    let cx = Ctx {
+        blank_groups: rules
+            .iter()
+            .filter_map(|r| match r {
+                Rule::BlankWith(_, o) => {
+                    Some(fb::blank_groups(o.matching, labels, &sample, &blank, t.n_files).0)
+                }
+                _ => None,
+            })
+            .collect(),
+        replicates: replicate_groups(samples, labels),
+        dup: dup.unwrap_or_default(),
+        blank,
+        qc,
+        istd_row: extra.istd_row,
+    };
+    let nth: Vec<usize> = rules
+        .iter()
+        .scan(0usize, |n, r| {
+            let here = *n;
+            *n += usize::from(matches!(r, Rule::BlankWith(..)));
+            Some(here)
+        })
+        .collect();
     Ok((0..t.len())
         .map(|row| {
             rules
                 .iter()
-                .position(|r| !passes(t, samples, row, r, (&blank, &qc, &dup), factors))
+                .enumerate()
+                .position(|(i, r)| !passes(t, samples, row, r, &cx, nth[i], factors))
                 .map_or(0, |i| i as u8 + 1)
         })
         .collect())
@@ -256,7 +350,11 @@ pub fn to_json(rules: &[Rule]) -> String {
         .str(r.name());
         match *r {
             Rule::MinDetected(n) => j.raw(",\"valore\":").int(n as i64),
-            Rule::MinArea(x) | Rule::MinHeight(x) | Rule::Blank(x) | Rule::BroadBlank(x) => j.raw(",\"valore\":").num(x),
+            Rule::MinArea(x)
+            | Rule::MinHeight(x)
+            | Rule::Blank(x)
+            | Rule::BroadBlank(x)
+            | Rule::MinReplicates(x) => j.raw(",\"valore\":").num(x),
             Rule::Mz(a, b) | Rule::Rt(a, b) => j.raw(",\"da\":").num(a).raw(",\"a\":").num(b),
             Rule::BlankWith(x, ref o) => {
                 j.raw(",\"valore\":").num(x);
@@ -307,6 +405,7 @@ pub fn from_json(v: &Value) -> Result<Vec<Rule>> {
                     }
                 }
                 Some("bianco_larga") => Rule::BroadBlank(num(o, "valore")?),
+                Some("repliche_min") => Rule::MinReplicates(num(o, "valore")?),
                 Some("mz") => Rule::Mz(num(o, "da")?, num(o, "a")?),
                 Some("rt") => Rule::Rt(num(o, "da")?, num(o, "a")?),
                 Some("ms2") => Rule::Ms2,
