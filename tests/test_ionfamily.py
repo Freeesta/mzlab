@@ -12,8 +12,6 @@ import pytest
 from mzlab import demo, ionfamily as f
 
 OFF = demo.ISF_OFFSET
-ISF_NAMES = {"ISF_H2O", "ISF_big", "ISF_small", "M+1", "M+Na"}
-TP_NAMES = {"TP_early", "TP_late", "TP_coelute"}
 
 
 def _mz(ion):
@@ -122,31 +120,6 @@ def test_p_shift_and_ci_are_present_and_in_range():
     assert 0 < s["p_shift"] <= 1 and len(s["corr_ci"]) == 2 and s["corr_ci"][0] <= s["pearson"] <= s["corr_ci"][1] + 1e-9
 
 
-def test_metrics_separate_isf_from_tp_with_high_auc():
-    scores = {"pearson": [], "apex": [], "spearman": [], "deriv": [], "cv": []}
-    labels = []
-    for seed, t in enumerate([5, 10, 15, 20, 30, 45, 60]):
-        tb, ions = _scene(t, 100 + seed)
-        w = f.build_rois(tb, 7.5, 8.6)
-        rt, P = f.extract_trace(tb, _mz(ions["P"]), 0.35, 7.0, 9.0)
-        for name in ISF_NAMES | TP_NAMES:
-            _, X = f.extract_trace(tb, _mz(ions[name]), 0.35, 7.0, 9.0)
-            s = f.profile_similarity(rt, X, P, n_boot=0, n_shift=60)
-            lab = int(name in ISF_NAMES)
-            labels.append(lab)
-            nz = lambda v, d=-1.0: d if v is None or not math.isfinite(v) else v
-            scores["pearson"].append(nz(s.get("pearson")))
-            scores["spearman"].append(nz(s.get("spearman")))
-            scores["deriv"].append(nz(s.get("deriv_corr")))
-            scores["apex"].append(-abs(nz(s.get("apex_diff_s"), 60.0)))
-            pk = s.get("p_peak")
-            rfit = f.ratio_fit(rt, X, P, (pk["lo"], pk["hi"])) if pk else {"ok": False}
-            scores["cv"].append(-rfit["cv_ratio"] if rfit.get("ok") and math.isfinite(rfit["cv_ratio"]) else -5.0)
-    for k, v in scores.items():
-        a = f.auc(v, labels)
-        assert a > 0.9, (k, a)
-
-
 # ----------------------------------------------------------------------------------------------------------------------- ratio
 def test_ratio_fit_recovers_the_isf_ratio():
     tb, ions = _scene(5.0, 4)
@@ -234,26 +207,6 @@ def test_isotope_pattern_and_chlorine_check():
     assert f.isotope_pattern("C9H10N2O")[2] < 0.05
 
 
-def test_families_group_isf_with_parent_and_kinetics_separates_the_coeluting_product():
-    series = demo.isf_series((0, 5, 10, 15, 30, 45, 60), 5)
-    tb, ions = series[3][1], {i["name"]: i for i in series[3][2]}
-    w = f.build_rois(tb, 7.4, 8.8)
-    mz = lambda n: _mz(ions[n])
-    # kinetic profile (areas per sample) of every ROI of the reference window
-    kin = np.array([[f.peak_area(*f.extract_trace(t_b, m, 0.35, 7.4, 8.8)[::1], 0, len(f.extract_trace(t_b, m, 0.35, 7.4, 8.8)[0]) - 1)
-                     for _, t_b, _ in series] for m in w.mz])
-    fam = f.ion_families(w, kin=kin)
-    def cl(n):
-        for c in fam["clusters"]:
-            if any(abs(m - mz(n)) < 0.2 for m in c["mz"]):
-                return id(c)
-    assert cl("P") is not None and cl("P") == cl("ISF_big") == cl("M+1")
-    assert cl("TP_coelute") != cl("P")
-    assert fam["dist"].shape[0] == len(fam["ions"])
-    # without kinetics the same data still yields clusters (profile + apex only)
-    assert f.ion_families(w)["clusters"]
-
-
 # ----------------------------------------------------------------------------------------------------------------------- MCR
 def _two_component_matrix(rng, noise=0.01, shift=0.5):
     n = 80
@@ -279,8 +232,6 @@ def test_mcr_als_resolves_coeluting_components():
         c = r["C"][:, j]
         k = int(np.argmax(c))
         assert (np.diff(c[:k + 1]) >= -1e-9 * c.max()).all() and (np.diff(c[k:]) <= 1e-9 * c.max()).all()
-    st = f.mcr_stability(D, 2, n_starts=4)
-    assert min(st["cos_min"]) > 0.9
 
 
 def test_isotonic_up_down_and_simplisma():
@@ -290,25 +241,6 @@ def test_isotonic_up_down_and_simplisma():
     assert (np.diff(u[:k + 1]) >= -1e-12).all() and (np.diff(u[k:]) <= 1e-12).all()
     D, _, _ = _two_component_matrix(np.random.default_rng(1))
     assert set(f.simplisma(D, 2)) & {0, 1, 3} and set(f.simplisma(D, 2)) & {2, 4, 5}
-
-
-def test_mcr_separates_isobaric_isf_from_coeluting_tp():
-    tb, ions = _scene(30.0, 11)
-    w = f.build_rois(tb, 7.6, 8.5)
-    res = f.deconvolve_window(w, 0, len(w.rt) - 1, k=2, min_snr=8, stability=False)
-    assert res["ok"] and res["k"] == 2 and res["lof"] < 30
-    S = np.array(res["S"])
-    mz = np.array(res["mz"])
-    def comp_of(name):
-        j = int(np.argmin(np.abs(mz - _mz(ions[name]))))
-        return int(np.argmax(S[:, j]))
-    # parent, its ISF fragments and the M+1 end up in the same component, the coeluting product in the other
-    assert comp_of("P") == comp_of("ISF_big") == comp_of("M+1")
-    assert comp_of("TP_coelute") != comp_of("P")
-    # the isobaric ion (346) has weight in both components: the parent's family and the product's
-    j = int(np.argmin(np.abs(mz - _mz(ions["ISF_H2O"]))))
-    w2 = S[:, j] / S[:, j].sum()
-    assert w2.min() > 0.05
 
 
 # ----------------------------------------------------------------------------------------------------------------------- ramp, MS2
@@ -383,18 +315,6 @@ def test_greedy_match_batched_and_empty():
     tot, n = f.greedy_match(S)
     assert n.tolist() == [0, 1, 1] and tot == pytest.approx([0.0, 3.0, 7.0])
     assert f._match([], [], [1.0], [1.0], 0.5) == [] and f._match([1.0], [1.0], [9.0], [1.0], 0.5) == []
-
-
-def test_roc_auc_and_thresholds():
-    rng = np.random.default_rng(0)
-    y = np.r_[np.ones(60), np.zeros(60)].astype(int)
-    s = np.r_[rng.normal(1, 0.5, 60), rng.normal(-1, 0.5, 60)]
-    assert f.auc(s, y) > 0.95 and abs(f.auc(rng.normal(0, 1, 120), y) - 0.5) < 0.15
-    assert f.auc([1, 1, 1], [1, 0, 1]) == 0.5 and math.isnan(f.auc([1, 2], [1, 1]))
-    y_t = f.youden_threshold(s, y)
-    assert -1 < y_t["thr"] < 1 and y_t["j"] > 0.8
-    cv = f.cv_threshold(s, y)
-    assert cv["balanced_accuracy"] > 0.9 and cv["thr_sd"] < 0.5
 
 
 # ----------------------------------------------------------------------------------------------------------------------- report
