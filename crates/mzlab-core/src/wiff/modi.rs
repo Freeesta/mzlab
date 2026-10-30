@@ -1,5 +1,5 @@
 //! Table of the scan-type codes of `ExperimentHeader` (+122) of a `.wiff`: Analyst abbreviation, MS level, CV term of the spectrum and the output kind
-//! of each. Read by `mod.rs`, `estesi.rs` and `lettore.rs`; the page shows the abbreviation as the exact type of an experiment. Codes 0, 4, 5, 7, 11, 15 are
+//! of each. Read by `mod.rs`, `estesi.rs` and `lettore.rs`; the page shows the abbreviation as the exact type of an experiment. Codes 0, 4, 5, 6, 7, 11, 15 are
 //! seen in real files (0 is the Q1 MS full scan of a 3200 QTRAP: level-1 profile scans like EMS, its meaning inferred from the method name and the
 //! spectra); the others follow the `ScanType` enum of Analyst and stay `confermato: false` until a file shows them.
 
@@ -7,6 +7,7 @@
 pub const CODE_Q1: u32 = 0;
 pub const CODE_MRM: u32 = 4;
 pub const CODE_PRECURSOR_ION: u32 = 5;
+pub const CODE_PRODUCT_ION: u32 = 6;
 pub const CODE_NEUTRAL_LOSS: u32 = 7;
 pub const CODE_PRODUCT: u32 = 11;
 pub const CODE_FULL: u32 = 15;
@@ -49,7 +50,7 @@ pub const MODI: [Modo; 17] = [
     m(3, "Q3MI", 1, None, Sim, false),
     m(CODE_MRM, "MRM", 2, None, Srm, true),
     m(CODE_PRECURSOR_ION, "Prec", 2, Some(("MS:1000341", "precursor ion spectrum")), Spettro, true),
-    m(6, "PI", 2, None, Spettro, false),
+    m(CODE_PRODUCT_ION, "PI", 2, None, Spettro, true),
     m(CODE_NEUTRAL_LOSS, "NL", 2, Some(("MS:1000326", "constant neutral loss spectrum")), Spettro, true),
     m(8, "TOF MS", 1, None, Spettro, false),
     m(9, "TOF MS/MS", 2, None, Spettro, false),
@@ -99,7 +100,11 @@ mod tests {
         assert_eq!(sigla(Some(11)), Some("EPI"));
         assert_eq!(sigla(Some(15)), Some("EMS"));
         assert!(
-            confermato(Some(5)) && confermato(Some(0)) && !confermato(Some(1)) && !confermato(None)
+            confermato(Some(5))
+                && confermato(Some(6))
+                && confermato(Some(0))
+                && !confermato(Some(1))
+                && !confermato(None)
         );
         assert!(nativo(Some(4)) && nativo(Some(0)) && !nativo(Some(5)));
         assert_eq!(sigla(Some(0)), Some("Q1"));

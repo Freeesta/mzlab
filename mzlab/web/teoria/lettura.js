@@ -142,7 +142,7 @@
       else if (e.key === "+" || e.key === "=") { e.preventDefault(); zoomAt(1.25, innerWidth / 2, innerHeight / 2); }
       else if (e.key === "-" || e.key === "_") { e.preventDefault(); zoomAt(0.8, innerWidth / 2, innerHeight / 2); }
       else if (e.key === "0") { e.preventDefault(); reset(); }
-      else if (e.key.startsWith("Arrow")) { e.preventDefault(); const d = 60; if (e.key === "ArrowLeft") tx += d; else if (e.key === "ArrowRight") tx -= d; else if (e.key === "ArrowUp") ty += d; else ty -= d; apply(); }
+      else if ((e.key || "").startsWith("Arrow")) { e.preventDefault(); const d = 60; if (e.key === "ArrowLeft") tx += d; else if (e.key === "ArrowRight") tx -= d; else if (e.key === "ArrowUp") ty += d; else ty -= d; apply(); }
       else if (e.key === "Tab") {
         const f = [...box.querySelectorAll("button")]; const a = f[0], z = f[f.length - 1];
         if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }

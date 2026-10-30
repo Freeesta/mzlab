@@ -103,8 +103,9 @@ function refreshIntf(/** @type {Bag} */ p) {
   sel.value = p.intf || "";
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
+const canInt = (/** @type {Bag} */ p) => p.type !== "chrom" || p.tab === "ms2";
 function guardInt(/** @type {Bag} */ p) {
-  if (p.type !== "chrom" || p.tab === "ms2") return true;
+  if (canInt(p)) return true;
   yesno(I18N.t("int.guard")).then((/** @type {boolean} */ v) => { if (v) openXic(null); });
   return false;
 }
@@ -212,7 +213,7 @@ function intMenuItems(/** @type {Bag} */ p, /** @type {number} */ x, /** @type {
   if (p.ints.length) items.push({ label: I18N.t("int.menu.delAll"), icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
   items.push({ label: I18N.t("int.menu.params"), icon: AZIONI_ICONE.svg("sliders"), fn: peakParams });
-  items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } });
+  if (canInt(p)) items.push({ label: I18N.t("int.menu.auto"), icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach((/** @type {Bag} */ s) => autoInt(p, s, x)); } });
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: I18N.t("int.menu.zoomSel"), icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }

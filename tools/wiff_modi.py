@@ -25,11 +25,11 @@ TRS = [(364.5, 176.0, 50.0, "tpA", 40.0, 10.0, 25.0, 5.0), (364.5, 159.0, 25.5, 
 MODES = {
     "EMS": (15, True, "scan", 1, None), "EMC": (16, False, "scan", 1, "MS:1000789"), "EPI": (11, True, "scan", 2, None),
     "ER": (12, False, "scan", 1, "MS:1000791"), "MRM": (4, True, "mrm", None, None), "MS3": (13, False, "scan", 3, None),
-    "NL": (7, True, "scan", 2, "MS:1000326"), "PREC": (5, True, "scan", 2, "MS:1000341"), "PI": (6, False, "scan", 2, None),
+    "NL": (7, True, "scan", 2, "MS:1000326"), "PREC": (5, True, "scan", 2, "MS:1000341"), "PI": (6, True, "scan", 2, None),
     "Q1": (0, True, "scan", 1, None), "Q1MI": (1, False, "ions", None, None), "Q3": (2, False, "scan", 1, None),
     "Q3MI": (3, False, "ions", None, None), "TDF": (14, False, "scan", 2, None),
 }
-READ = {"EMS", "EPI", "MRM", "NL", "PREC", "Q1"}
+READ = {"EMS", "EPI", "MRM", "NL", "PI", "PREC", "Q1"}
 
 
 def pts(k):

@@ -72,8 +72,20 @@ try:
                 assert r["n"] >= 2 and not r["free"] and not r["bad"] and not r["noic"], (vista, r)
                 assert "chrom.annotate" in r["ids"] and "chrom.int" in r["ids"] and "view.resetZoom" in r["ids"], r["ids"]
                 assert "ann.edit" not in r["ids"], r["ids"]      # the annotation entries need an annotation under the pointer (none here: p.anns is empty)
-                assert (vista == "mrm") == ("chrom.specAtRt" not in r["ids"]), r["ids"]
+                assert "chrom.specAtRt" not in r["ids"] and "chrom.avgSel" not in r["ids"], r["ids"]      # the spectrum comes from a click, a drag, the double click and Enter
         step("chromatogram and MRM: every entry of the menu is an action of the registry (data-azione)", trace_ids)
+        def tic_vs_xic():
+            T = "I18N.t('int.menu.auto')"
+            def labels(sel):
+                pg.evaluate(f"(()=>{{const p={sel};p.zoom=null;p.zoomY=null;p.anns=[];draw(p)}})()")
+                keyboard(sel); l = pg.evaluate(LABELS); close(); return l
+            tic = labels("E.panels.find(q=>q.type==='chrom'&&q.tab==='full')"); auto = pg.evaluate(T)
+            assert auto not in tic, ("a total chromatogram has no single peak to integrate", tic)
+            assert not any(t in " ".join(tic) for t in (pg.evaluate("I18N.t('ctx.spec.avgSel')"), pg.evaluate("I18N.t('ctx.spec.atRt')"))), tic
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})")
+            XP = "E.panels.find(q=>q.type==='xic')"; attendi(pg, f"!!({XP}&&{XP}._a&&{XP}._a.sr&&{XP}._a.sr.length)")
+            assert auto in labels(XP), "an XIC keeps «Integrate the peak»"
+        step("TIC: no «Integrate the peak», no spectrum entries; XIC keeps the integration", tic_vs_xic)
         def every_action():
             r = pg.evaluate("""(()=>{const none=AZIONI.voci.filter(a=>!a.svg&&!(a.icona&&AZIONI_ICONE.DISEGNI[a.icona])).map(a=>a.id);
               const bad=AZIONI.voci.filter(a=>a.icona&&!AZIONI_ICONE.DISEGNI[a.icona]).map(a=>a.id);

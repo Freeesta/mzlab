@@ -82,7 +82,10 @@ try:
         def no_dup():
             # a button of the bar above must not repeat a button of the header of a cell: the bar keeps global actions or actions on several cells
             bar = set(pg.evaluate("[...document.querySelectorAll('#hrbar [data-hb]')].map(b=>b.dataset.hb)"))
-            assert bar == {"zall", "add", "type", "lib", "tree"}, bar
+            assert bar - {"tree"} == {"add", "type"}, bar
+            # the MSn tree belongs to every file with MS2 or higher scans (infusion or DDA), not to an MS1-only file
+            assert ("tree" in bar) == pg.evaluate("tabFiles('ms2').length>0"), bar
+            assert pg.evaluate("!!document.querySelector('#hrbar [data-hb=tree]') && !document.querySelector('#hrbar [data-hb=tree]').hidden") == ("tree" in bar), bar
             same = {"pin": "pin", "del": "x", "norm": "disp", "peaks": "iauto", "copy": "dl", "xls": "dl", "zundo": "undo", "zredo": "redo", "zoom": "fit"}
             hd = set(pg.evaluate("[...document.querySelectorAll('.pnl .hd [data-a],.pnl .hd [data-bf]')].map(b=>b.dataset.a||b.dataset.bf)")) | {"x"}
             assert not [k for k in same if k in bar and same[k] in hd], bar
