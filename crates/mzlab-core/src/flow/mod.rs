@@ -6,6 +6,7 @@ mod canon;
 mod check;
 mod command;
 mod corsa;
+mod corsa_reg;
 mod line;
 #[cfg(test)]
 mod line_tests;

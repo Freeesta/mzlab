@@ -356,7 +356,7 @@ I18N.add("en", {
   "dda.add": "Add an MS2 panel beside",
   "dda.add.tip": "Puts another MS2 panel next to the others under the same Full Scan: the next choice (▼ or a click on a flag) goes to the active panel",
   "avviso.close": "Close the notice",
-  "disp.menu": "Display options…",
+  "disp.menu": "Options…",
   "disp.none": "Pick a chromatogram or a spectrum: a right click on the chart opens its options here.",
   "disp.for": "Options: {type}",
   "disp.type.spec": "spectrum",

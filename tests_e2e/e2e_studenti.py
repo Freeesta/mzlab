@@ -73,9 +73,9 @@ try:
             assert d, "an empty spot in the spectrum"
             pg.mouse.click(d["x"], d["y"], button="right"); pg.wait_for_timeout(300)
             t = pg.inner_text("#ctx"); assert "nessun picco qui" in t, t
-            assert pg.evaluate("[...document.querySelectorAll('#ctx div')].filter(d=>/XIC/.test(d.textContent)).every(d=>d.className==='dim')")
+            assert pg.evaluate("[...document.querySelectorAll('#ctx div')].filter(d=>/XIC/.test(d.textContent)).length===0")
             pg.keyboard.press("Escape"); pg.mouse.click(5, 5); pg.wait_for_timeout(200)
-        step("B-10 right click on empty space of the spectrum: m/z entries grey", emptyclick)
+        step("B-10 right click on empty space of the spectrum: m/z entries not shown", emptyclick)
         def frozen():
             c = chrom(pg); pg.mouse.dblclick(c["l"] + c["w"] * 0.3, c["t"] + c["h"] / 2); pg.wait_for_timeout(1500)
             ts = pg.evaluate("E.panels.filter(p=>p.type==='spec').map(p=>p.el.querySelector('.ttl').textContent+'|'+p.el.querySelector('.rtl').textContent)"); print("   spectrum titles:", ts)

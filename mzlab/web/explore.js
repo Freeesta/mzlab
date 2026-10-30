@@ -934,7 +934,7 @@ function info(/** @type {string} */ html) {
   const d = Q("#bigdlg"); Q("#bigx").onclick = () => d.close(); d.showModal(); if (onopen) onopen();
 }
 function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
-  ev.preventDefault();
+  ev.preventDefault(); items = AZIONI.pulisci(items);
   const m = Q("#ctx");
   m.innerHTML = "";
   // one entry; `fila` groups two or more entries in a single row (icons only, split in equal columns)

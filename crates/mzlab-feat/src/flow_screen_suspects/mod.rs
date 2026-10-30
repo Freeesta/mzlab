@@ -1,16 +1,18 @@
 //! The text of `screen.suspects@1`: the aligned feature table of a high-resolution run searched, per adduct, in the suspect lists of the user (`.mzsus` or CSV) by neutral
 //! mass; hits with the same formula are one isomer group, never one name. Optional RT and MS2 fragment evidence; Level 5 (mass and formula), 4 when `formulas/1` supports the
-//! formula. Takes bytes and returns the text (`screen/1`): `flow run` (`mzlab-cli`) and the browser (`mzlab-attributio-wasm`) run this one function. Candidates, never a verdict.
+//! formula. A regulatory package (`.mzsus` with `listings`) adds the full key, the name and the laws naming each candidate, cut to the lists of the mask (`lists`,
+//! `include`). Takes bytes and returns the text (`screen/1`): `flow run` (`mzlab-cli`) and the browser (the `table` .wasm) run this one function. Candidates, never a verdict.
 
 mod evidence;
 mod source;
 
 use crate::adducts::{NEG_ADDUCTS, POS_ADDUCTS, PPM};
+use crate::regulatory::{write_member, write_words};
 use crate::store::{origin_from_meta, read_meta_mz_rt};
 use evidence::{formula_set, fragments_of, matched, read_scans, supports};
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{round, Out, Value};
-pub use source::{Entry, Membership, Source};
+pub use source::{Entry, Source};
 
 /// A file the step reads: its name and its bytes.
 pub type Named<'a> = (&'a str, &'a [u8]);
@@ -26,6 +28,10 @@ pub struct Params {
     pub min_fragments: Option<usize>,
     pub max_hits_per_feature: usize,
     pub ms2_rt_min: f64,
+    /// Ids of the regulatory lists to screen (empty: every list of the default statuses).
+    pub lists: String,
+    /// Statuses added to the default ones (`proposal`, `draft`, `reference`).
+    pub include: String,
 }
 
 impl Params {
@@ -33,6 +39,7 @@ impl Params {
     pub fn from_params(p: &[(String, Value)]) -> Params {
         let get = |n: &str| p.iter().find(|(k, _)| k == n).map(|(_, v)| v);
         let num = |n: &str| get(n).and_then(Value::f64).filter(|v| v.is_finite());
+        let text = |n: &str| get(n).and_then(Value::str).unwrap_or("").to_string();
         Params {
             ppm: num("ppm").unwrap_or(PPM),
             adducts: get("adducts")
@@ -44,6 +51,8 @@ impl Params {
             min_fragments: num("min_fragments").map(|v| v.max(0.0) as usize),
             max_hits_per_feature: num("max_hits_per_feature").map_or(10, |v| v.max(1.0) as usize),
             ms2_rt_min: num("ms2_rt_min").unwrap_or(0.2),
+            lists: text("lists"),
+            include: text("include"),
         }
     }
 }
@@ -136,7 +145,7 @@ pub fn screen_text(
     }
     let sources: Vec<Source> = suspects
         .iter()
-        .map(|(n, b)| Source::open(n, b))
+        .map(|(n, b)| Source::open(n, b, (&p.lists, &p.include)))
         .collect::<Result<_>>()?;
     let (meta, mzs, rts) = read_meta_mz_rt(table)?;
     let sign: i32 = origin_from_meta(&meta)
@@ -322,7 +331,11 @@ fn head(o: &mut Out, p: &Params, polarity: i8, adducts: &[(&str, f64)], sources:
         .int(p.max_hits_per_feature as i64)
         .raw(",\"ms2_rt_min\":")
         .num(p.ms2_rt_min)
-        .raw("},\"suspect_files\":[");
+        .raw(",\"lists\":");
+    write_words(o, &p.lists);
+    o.raw(",\"include\":");
+    write_words(o, &p.include);
+    o.raw("},\"suspect_files\":[");
     for (i, s) in sources.iter().enumerate() {
         o.raw(if i > 0 { "," } else { "" })
             .raw("{\"name\":")
@@ -335,7 +348,16 @@ fn head(o: &mut Out, p: &Params, polarity: i8, adducts: &[(&str, f64)], sources:
             .int(s.len() as i64)
             .raw(",\"skipped_rows\":")
             .int(s.skipped as i64);
-        o.raw(",\"provenance\":").raw(&s.provenance).raw("}");
+        o.raw(",\"provenance\":")
+            .raw(&s.provenance)
+            .raw(",\"lists\":");
+        match &s.package {
+            Some(pk) => pk.write_lists(o),
+            None => {
+                o.raw("null");
+            }
+        }
+        o.raw("}");
     }
 }
 
@@ -366,16 +388,8 @@ fn cand(o: &mut Out, c: &Cand) {
     }
     o.raw("],\"memberships\":[");
     for (j, m) in e.memberships.iter().enumerate() {
-        o.raw(if j > 0 { "," } else { "" })
-            .raw("{\"list\":")
-            .str(&m.list)
-            .raw(",\"entry_ref\":")
-            .str(&m.entry_ref)
-            .raw(",\"form\":")
-            .str(&m.form)
-            .raw(",\"group\":")
-            .raw(if m.group { "true" } else { "false" })
-            .raw("}");
+        o.raw(if j > 0 { "," } else { "" });
+        write_member(o, m);
     }
     o.raw("]}");
 }
