@@ -20,8 +20,11 @@ const MAX_PEAKS: usize = 40;
 const NO_FRAG_ADDUCTS: [&str; 3] = ["[M+Na]+", "[M+K]+", "[M+Na-2H]-"];
 
 /// `iimn.ISOTOPES`.
-pub const ISOTOPES: [(&str, f64); 3] =
-    [("13C", mzlab_core::elements::C13_STEP), ("34S/13C2", 1.99580), ("13C2", 2.00671)];
+pub const ISOTOPES: [(&str, f64); 3] = [
+    ("13C", mzlab_core::elements::C13_STEP),
+    ("34S/13C2", 1.99580),
+    ("13C2", 2.00671),
+];
 /// `iimn.LOSSES`: `ionfamily.NEUTRAL_LOSSES`, then the `EXTRA_LOSSES` not already there.
 const LOSS_NAMES: [&str; 23] = [
     "H2O", "NH3", "CO", "CO2", "CH2O", "CH4O", "C2H2O", "HCOOH", "C2H4", "C3H6", "HCN", "HF",
