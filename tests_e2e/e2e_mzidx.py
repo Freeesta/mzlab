@@ -110,17 +110,20 @@ try:
             for _ in range(120):
                 if len(q.evaluate(LIST, "idx")) == 2: break
                 q.wait_for_timeout(500)
-            # the read files open at once and the engine holds them: the old store is written from a page without the engine (the Teoria)
+            # the read files open at once and the engine holds them: the old store is written from a page without the engine (the Teoria), once both are open
+            q.wait_for_function("UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === 2", timeout=120000)
             q.goto(URL + "static/teoria/index.html"); q.wait_for_load_state("load")
             assert q.evaluate(TO_IDB) == 2
             assert q.evaluate(IDBCOUNT) == 2 and q.evaluate(LIST, "files") == []
         step("an older visit left the files in IndexedDB", old_way)
         def migrate():
-            # the files of that visit opened, so the session comes back in place of the landing
+            # the files of that visit were open, so its session comes back in place of the landing
             q.goto(URL); q.wait_for_selector("#drop", state="attached", timeout=120000); q.wait_for_function("window.MZLAB_LR !== undefined", timeout=60000); q.wait_for_timeout(3000)
             assert q.evaluate(IDBCOUNT) == 0, q.evaluate(IDBCOUNT)
             assert len(q.evaluate(LIST, "files")) == 2, q.evaluate(LIST, "files")
-            q.wait_for_function("ST.files.length === 2", timeout=30000)
+            # the session of that visit comes back with both files, read from OPFS
+            try: q.wait_for_function("E.files.filter(f => !f.gone).length === 2 && document.querySelectorAll('#flst .fl').length >= 2", timeout=60000)
+            except Exception: raise AssertionError(q.evaluate("[E.files.map(f => f.file), document.querySelectorAll('#flst .fl').length]"))
         step("the files of an older visit pass from IndexedDB to OPFS", migrate)
         ctx2.close(); b.close()
 finally:

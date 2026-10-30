@@ -13,6 +13,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   const sent = new Set();      // files whose roles and times went to the open files once
   const tally = { n: 0, m: 0 };      // files opened and set aside since the last note of the side list
   let busy = 0, last = 0, late = false, cur = "";      // cur = the file being opened now
+  let flush = false;      // the loading is over: nothing dropped before is still coming, the order no longer waits
   /** @type {(() => void)[]} */ let calm = [];
   const src = (/** @type {string} */ n) => String(n).split("#")[0];
   const openOf = (/** @type {string} */ name) => E.files.filter((/** @type {FileAperto} */ x) => !x.gone && src(x.file) === name);
@@ -47,7 +48,7 @@ const OPENNOW = /** @type {any} */ ((() => {
     try {
       while (q.length) {
         q.sort((a, b) => rank(a) - rank(b));
-        if (ahead(q[0])) break;
+        if (!flush && ahead(q[0])) break;
         const name = /** @type {string} */ (q.shift()), f = rowOf(name);
         if (!f || !(f.kind in GORD) || isOpen(name)) continue;
         if (held.has(name)) { f.use = false; continue; }
@@ -61,7 +62,7 @@ const OPENNOW = /** @type {any} */ ((() => {
         } catch (e_) { f.use = false; fail(e_); } finally { cur = ""; }
       }
       if (late) await boot();
-    } finally { busy = 0; FILETAB.soon(); calm.splice(0).forEach(ok => ok()); }
+    } finally { busy = 0; if (!q.length) flush = false; FILETAB.soon(); calm.splice(0).forEach(ok => ok()); }
   }
   /** the file `name` (a row of ST.files) is read: open it, unless the student set it aside */
   function add(/** @type {string} */ name) { q.push(name); drain(); }
@@ -121,7 +122,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   }
   /** a batch has ended: with no file shown the first one opens; the side list says what was set aside, and what was added to files already shown */
   async function note() {
-    drain();      // a file held back by one dropped before it that then failed
+    flush = true; drain();      // a file held back by one dropped before it that then failed or never ended
     await idle();
     const { n, m } = tally; tally.n = tally.m = 0;
     const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
