@@ -226,6 +226,8 @@ I18N.add("en", {
   "lst.lab.newName": "new background",
   "lst.lab.imported": "{n, plural, one {# row imported} other {# rows imported}}",
   "lst.mzPh": "e.g. 445.1 or 279",
+  "lst.view.ref": "Reference Lists",
+  "lst.view.target": "HRMS Target Screening",
   "lst.tolAria": "Tolerance",
   "lst.search": "Search",
   "lst.searchPh": "name, formula or class…",

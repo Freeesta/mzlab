@@ -25,7 +25,30 @@ def radice() -> Path | None:
     return next((c for c in _candidati() if any((c / m).exists() for m in MARKERS)), None)
 
 
+# The data repository was tidied (reorganize-step1): folders moved. Each rule is (old prefix, new prefix, name test);
+# `percorso` tries the path as asked, then the moved/unmoved twin, so code and data can merge in any order.
+MOVES = (
+    ("esperimenti/", "esperimenti/2026-10/", lambda n: n.startswith(("loc_", "coo_"))),
+    ("esperimenti/", "esperimenti/altro/", lambda n: n in ("Computazio", "Sostanze psicoattive", "motore_wasm")),
+    ("coordinamento/", "coordinamento/documenti/", lambda n: n in ("studi", "proposte", "consegne", "riferimenti", "gemini_esiti")),
+    ("coordinamento/prompt/raw", "prompt/raw", lambda n: True),
+)
+
+
+def _gemelli(rel: str) -> list[str]:
+    """The other spellings of `rel` (old layout <-> new layout)."""
+    out = []
+    for old, new, ok in MOVES:
+        if rel.startswith(old) and ok(rel[len(old):].split("/", 1)[0] if old.endswith("/") else ""):
+            out.append(new + rel[len(old):])
+        elif rel.startswith(new) and ok(rel[len(new):].split("/", 1)[0] if new.endswith("/") else ""):
+            out.append(old + rel[len(new):])
+    return out
+
+
 def percorso(rel: str) -> Path | None:
-    """Existing path for `rel`, or None when there is no data repository or no such path."""
+    """Existing path for `rel` (or its moved/unmoved twin), or None when there is no data repository or no such path."""
     r = radice()
-    return r / rel if r is not None and (r / rel).exists() else None
+    if r is None:
+        return None
+    return next((r / c for c in [rel, *_gemelli(rel)] if (r / c).exists()), None)

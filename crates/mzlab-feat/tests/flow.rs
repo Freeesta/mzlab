@@ -141,7 +141,7 @@ fn types_cardinality_facets_cycles_and_ranges() {
         "det||err.flow.param.range|param=axis",
         "det||err.flow.param.range|param=polarity",
         // the file only has MS2 scans: detection needs MS1
-        "det|index|err.flow.facet|facet=ms_levels",
+        "det|index|err.flow.facet|facet=ms_levels,step=features.detect,want=1,have=2",
         "bad|table|err.flow.cardinality|port=table,count=2",
         "bad|samples|err.flow.cardinality|port=samples,count=many",
         "bad|samples|err.flow.type|from=peaks,to=samples",
