@@ -68,6 +68,16 @@ def test_moved_folders_are_found_in_both_layouts(repo):
         ("esperimenti/altro/Computazio/a.md", "esperimenti/Computazio/a.md"),
         ("coordinamento/documenti/studi/s.md", "coordinamento/studi/s.md"),
         ("prompt/raw/r.md", "coordinamento/prompt/raw/r.md"),
+        ("libro/testo/c.md", "Libro_Untargeted/c.md"),
+        ("libro/piano/p.md", "coordinamento/libro_untargeted/p.md"),
+        ("libro/lezioni/lezioni/L01.md", "corso/untargeted/lezioni/L01.md"),
+        ("validazione/benchmark/b.md", "studio/benchmark/b.md"),
+        ("validazione/V0_timololo.md", "studio/validazione/V0_timololo.md"),
+        ("validazione/G1/x.md", "studio/validazione/G1/x.md"),
+        ("validazione/nts-validazione/PROTOCOLLO.md", "studio/nts-validazione/PROTOCOLLO.md"),
+        ("coordinamento/documenti/studi/CD/a.md", "studio/CD/a.md"),
+        ("coordinamento/documenti/paper/p.md", "studio/paper/p.md"),
+        ("esperimenti/altro/degdma/FILE.md", "studio/degdma/FILE.md"),
     ]
     for novo, vecchio in pairs:
         _tocca(repo, novo)

@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::json::{parse, write_value, Out, Value};
 
 /// The name of a file without its folders (`/` or `\`).
-fn base(path: &str) -> &str {
+pub(super) fn base(path: &str) -> &str {
     path.rsplit(['/', '\\']).next().unwrap_or(path)
 }
 
@@ -16,7 +16,7 @@ const EXT: [&str; 13] = [
     "mzfeatf",
 ];
 
-fn stem(name: &str) -> &str {
+pub(super) fn stem(name: &str) -> &str {
     let mut s = base(name);
     while let Some((head, ext)) = s.rsplit_once('.') {
         if head.is_empty() || !EXT.iter().any(|e| e.eq_ignore_ascii_case(ext)) {

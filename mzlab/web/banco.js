@@ -435,8 +435,11 @@ const BANCO = (() => {
   // the spectra already drawn by the cell: m/z of its highest peak, for the launchers
   const topMz = p => { const d = p && p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!d || !d.y || !d.y.length) return null; let j = 0; d.y.forEach((v, i) => { if (v > d.y[j]) j = i; }); return d.mz[j]; };
   const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
+  // what the composition panel was built from: a click that leaves it unchanged must not rebuild the panel (the typed mass and the results stay)
+  const cmpKey = p => { const sp = specOf(p), d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d; return `${sp && sp.id}|${topMz(sp)}|${d ? d.mz.length : 0}|${(cFile(p) || {}).polarity}`; };
   function tCmp(b, p) {
     const g = window.ELEM && ELEM.takeCtx(), sp0 = specOf(p), sp = (g && g.sp) || sp0, d = sp && sp._a && sp._a.data && sp._a.data[0] && sp._a.data[0].d;
+    b._cmpKey = g ? null : cmpKey(p);
     ELEMP.panel(b, { mz: g ? g.mz : topMz(sp0), spec: (g && g.spec) || d, polarity: g ? g.polarity : (cFile(p) || {}).polarity, sp });
   }
   const ISO_AD = ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"];
@@ -506,6 +509,7 @@ const BANCO = (() => {
       const p = act(), b = Q("#hri-body"); if (!b) return;
       Q("#hri-ttl").textContent = (I9.find(x => x[0] === ist.tab) || [])[1] + (p ? "" : "");
       if (!p) return void (b.innerHTML = `<div class="muted">${I18N.t("bn.noCellText")}</div>`);
+      if (ist.tab === "cmp" && b._cmpKey && b._cmpKey === cmpKey(p) && b.querySelector(".cx") && !(window.ELEM && ELEM.hasCtx())) return;
       const tok = ist.tok = (ist.tok || 0) + 1; if (ist.tab !== "alb") b.innerHTML = `<div class="muted">…</div>`;       // the tree tab keeps its controls and rows while it refreshes (infusione-albero.js)
       Promise.resolve(BODY[ist.tab](b, p, tok)).catch(e => { if (tok === ist.tok) b.innerHTML = `<span class="fail">${esc(e.message)}</span>`; });
     });
