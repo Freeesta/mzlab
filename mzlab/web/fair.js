@@ -183,7 +183,7 @@ if (typeof window !== "undefined") window.FAIR = FAIR;
 if (typeof AZIONI !== "undefined") {
   /** @param {any} c */
   const ok = c => c.p.level === 2, can = c => FAIR.available(c.p);
-  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => FAIR.massbank(c.p) });
-  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => FAIR.sirius(c.p) });
+  AZIONI.registra({ id: "spec.exportMassbank", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportMassbank"), esegui: /** @param {any} c */ c => FAIR.massbank(c.p) });
+  AZIONI.registra({ id: "spec.exportSirius", gruppo: "lib", ordine: 3, viste: ["spec"], menu: false, scarico: true, visibile: ok, disponibile: can, nome: () => I18N.t("ctx.spec.exportSirius"), esegui: /** @param {any} c */ c => FAIR.sirius(c.p) });
 }
 if (typeof module !== "undefined") module.exports = FAIR;
