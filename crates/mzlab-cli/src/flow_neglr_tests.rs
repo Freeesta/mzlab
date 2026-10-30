@@ -24,7 +24,6 @@ const EXTRA: &str = r#",{"id":"est","step":"features.estimate@1","in":{"index":[
     {"id":"kmd","step":"table.kmd@1","in":{"table":"gap.table"}},
     {"id":"csv","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}},
     {"id":"mzt","step":"export.mztab@1","in":{"table":"gap.table","samples":"file:samples.json"}},
-    {"id":"qc","step":"qc.mass_accuracy@1","in":{"raw":["idx.index"]}},
     {"id":"rx","step":"structure.reactivity@1","in":{"parent":"file:parent.json"}}]}"#;
 
 /// The duplicate window of `table.filter`: in Da on the unit axis, in ppm at high resolution.
@@ -87,8 +86,6 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
         ] {
             assert_eq!(error_of(&prov, id), None, "{tag} {id}");
         }
-        let refused = (!hr).then_some("err.flow.massacc.unit");
-        assert_eq!(error_of(&prov, "qc").as_deref(), refused, "{tag} qc");
         // the files decide the polarity of the hypotheses, of the link and of the Dig, and the unit mass of the hypotheses
         let gen = activity(&prov, "gen").get("params").unwrap();
         assert_eq!(

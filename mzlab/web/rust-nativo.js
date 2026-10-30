@@ -11,7 +11,6 @@ import { createEsterno } from "./lettore-esterno.js";
 export const MAGIC = "mzlab/nat1";
 export const INDEX_ERROR = "err.file.index";              // the key the engines give when the index of a file cannot be built (idxbuild.rs of crates/mzlab-desktop)
 export const AXIS_ERROR = "err.flow.param.axis";          // the key the engines give for an m/z tolerance written in the unit of the other axis (ppm on a unit-resolution file, tol_da/dup_da at high resolution)
-export const UNIT_QC_ERROR = "err.flow.massacc.unit";      // the key the engines give when qc.mass_accuracy reads a unit-resolution file (a mass error in ppm means nothing there)
 export const MIX_ERRORS = ["err.flow.align.polarity", "err.flow.align.resolution"];  // the keys the engines give for a series to align that mixes polarities or resolutions (mzlab_feat::nature::one_kind_of)
 export const PREFIX = "nat~";                              // the members of a dataset in files/: nat~<key>~<path with ~ for />
 const TICK = 200;                                         // ms between two progress messages

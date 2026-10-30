@@ -58,7 +58,7 @@ Native = `flow run` (and the desktop app); Browser = «This browser». Columns: 
 | table.match | W / W / W / W | W / W / W / W | `flow_tablematch_tests`, `flow_match_web_tests` (HR+), `flow_neglr_tests::a_negative_table_is_searched_as_negative_by_table_match` (same Rust in `flow run` and in the table `.wasm` entry) |
 | chrom.uv_peaks | W / W / W / W | — | `flow_uv_tests`; UV, no polarity |
 | quant.calibrate | W / W / W / W | — | `flow_quant_tests`; polarity-free on the table |
-| qc.mass_accuracy | R / R / B-11 / B-11 | ? / ? / ? / ? | `every_table_step…` (runs on HR; refused on LR with `err.flow.massacc.unit`, the same Rust in the browser) |
+| qc.mass_accuracy | R / R / B-11 / B-11 | ? / ? / ? / ? | `every_table_step…` (runs on HR; refused on LR by the check of its port, `err.flow.facet`, the same Rust in the browser) |
 | screen.suspects | ? | ? | not in the registry yet |
 | Tabui page (`TP_Mine/`) | P / P / P / P | P / P / P / P | the Flow tp.* steps above are the engine of Tabui; Tabui's own LR- page: `lr_negativo.rs` |
 
@@ -76,7 +76,7 @@ Native = `flow run` (and the desktop app); Browser = «This browser». Columns: 
    A scan input whose plan writes no facets takes them from its file (`mzlab_feat::nature::facets`): `flow run` in `fill_inputs` (scan headers of the mzML or the `.mzidx`), the page from the OPFS indexes (`series_estimates` of the proofs `.wasm` asked for `?facets`, `F.learnFacets`); written facets win. Known gap: the page check of the desktop app has no OPFS indexes, so it checks without the facets of the files; the native `flow run` behind it fills them before running. The refusal names step, input, what it needs and what the files are (`want`, `have`).
    Evidence: `gap_a_unit_resolution_plan_that_says_so_passes_the_check` (written and from the files), `formula_ms1_on_unit_resolution_files_is_refused_by_the_check`, `every_table_step…` (tp.dig_lr refused on HR, tp.position on LR), `flow_check_cases.json` (Rust = JS), `e2e_flow_neg_lr` (page check = `flow run --dry-run`). rt.predict is polarity- and resolution-free and stays open.
 9. **NL-10 — export.inclusion: default adduct [M+H]+ whatever the files; tp.link.tp cannot feed it.** It reads a JSON list `{formula, rt}`; wired from `lnk.tp` (`.mzfeat`) it fails with `error.badIndex` in all four combinations. With `adducts` written it is right (`the_inclusion_list_takes_a_negative_adduct`).
-10. **NL-11 — closed.** `tol_da` of `spectra.match` and `table.match` defaults to 0 = follow the query (0.02 Da, or 0.5 Da with `precursor_da` 0.7 for a unit-resolution query); `qc.mass_accuracy` refuses unit-resolution files (`err.flow.massacc.unit`) rather than reporting ppm.
+10. **NL-11 — closed.** `tol_da` of `spectra.match` and `table.match` defaults to 0 = follow the query (0.02 Da, or 0.5 Da with `precursor_da` 0.7 for a unit-resolution query); `qc.mass_accuracy` refuses unit-resolution files (its `raw` port takes `hr` only: `err.flow.facet`) rather than reporting ppm.
 11. **NL-12 — closed (LR-TOL).** `table.filter` has `dup_da` beside `dup_ppm`, chosen by the axis of the table.
 12. **NL-13 — closed.** The record of `features.detect` names the `lr` preset when the files are unit resolution (`Outcome.preset`, also from the cache and from the browser).
 

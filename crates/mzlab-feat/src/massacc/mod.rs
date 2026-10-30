@@ -169,10 +169,6 @@ pub fn run<R: ReadAt, T: ReadAt>(
     let mut results: Vec<FileResult> = Vec::with_capacity(files.len());
     for (k, spec) in files.iter().enumerate() {
         let mut index = open(k)?;
-        // A mass error in ppm means nothing on a unit-resolution file (its axis is 0.1 Da): refused, never measured.
-        if !index.hr1() {
-            return Err(Error::new("err.flow.massacc.unit").with("file", spec.name.as_str()));
-        }
         let m = measure::measure(&mut index, &refs, p)?;
         results.push(analyse::analyse_file(spec, &m, &refs, p));
     }

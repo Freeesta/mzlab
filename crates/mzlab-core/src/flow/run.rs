@@ -243,9 +243,7 @@ fn settle(
     for o in &outcomes {
         act.ms += o.ms;
         act.cached &= o.cached;
-        if o.preset.is_some() {
-            act.preset = o.preset.clone();
-        }
+        act.preset = o.preset.clone().or(act.preset.take());
         act.heap_peak_bytes = act.heap_peak_bytes.max(o.heap_peak_bytes);
         act.mem = merged(act.mem.take(), o.mem.clone());
         for w in &o.warnings {

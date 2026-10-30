@@ -20,7 +20,6 @@ I18N.add("en", {
   "err.upload.network": "upload failed",
   "err.hr.mix": "Low- and high-resolution files cannot be mixed.",
   "err.flow.param.axis": "{param} does not apply to a file on the {axis} axis: on the unit resolution axis set the m/z tolerance in Da (tol_da, dup_da), on the high-resolution axis in ppm (ppm, tol_ppm, max_ppm_span, dup_ppm).",
-  "err.flow.massacc.unit": "The mass error is measured in ppm on high-resolution files; {file} is at unit resolution (its m/z axis is 0.1 Da), so qc.mass_accuracy does not run on it.",
   "err.flow.align.polarity": "One table holds one polarity: positive files ({positive}) and negative files ({negative}) are in the same series. Split the series, or detect and align each polarity on its own branch.",
   "err.flow.align.resolution": "One table holds one resolution: unit resolution files ({unit}) and high-resolution files ({high}) are in the same series. Split the series, or detect and align each resolution on its own branch.",
   "err.file.notAccepted": "File type not accepted: {name}. Use an .mzML file, or a .dam method; convert a .wiff to .mzML first.",
