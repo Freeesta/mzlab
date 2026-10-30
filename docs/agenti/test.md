@@ -38,7 +38,7 @@
 
 `python3 tools/pre_pr.py`: controlli della CI in ordine, si ferma al primo rosso. Locale (browser presente) = giro completo (clippy se cambia Rust, e2e dei file cambiati); cloud (`CLAUDE_CODE_REMOTE` o Playwright assente) = giro `--veloce` (mappa, soglie, i18n, Teoria, globali, tsc, import e2e, hash CSP, fmt se cambia Rust, sintassi JS se cambia `mzlab/web/`), uscita 0 e avviso che clippy ed e2e li fa la CI; `--completo` forza tutto (e2e senza browser: uscita 2). 
 
-Se il diff di `pre_pr.py` contro `origin/main` tocca solo documenti (lista di `tools/ci_solo_doc.py`) fa solo mappa, soglie ed eventuale Teoria e stampa «solo documenti». Prova: `tests/test_pre_pr.py`.
+Se il diff di `pre_pr.py` contro `origin/main` tocca solo documenti (lista di `tools/ci_solo_doc.py`) fa solo mappa, soglie, percorsi dei documenti ed eventuale Teoria e stampa «solo documenti». Prova: `tests/test_pre_pr.py`. `tools/controlla_link_docs.py` (in entrambi i giri) rifiuta in un `.md` un percorso tra apici o un link a un file che non esiste; salta `docs/studi/`, `docs/archivio/`, `tests/data/`, `vendor/` e i file generati non tracciati (`GENERATED` nello script); un segnaposto si scrive con `<...>` o `*` per non essere letto come percorso.
 
 Hook pre-push: `python3 tools/installa_hook.py` mette `tools/hook_pre_push.sh` in `.git/hooks/pre-push` (lo fa già lo SessionStart di `.claude/settings.json`; non tocca un hook altrui, `--togli` lo rimuove): lancia `pre_pr.py --veloce` e rifiuta il push se esce con errore (salta con `git push --no-verify`). `controlla.py` avvisa dal 90 % del tetto (450 righe, 22,5 KB) i file toccati da più di 5 degli ultimi 50 merge di `origin/main`. Il modello di PR è `.github/pull_request_template.md`. Prova: `tests/test_hook_pre_push.py`.
 

@@ -67,7 +67,7 @@ La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parit
 | `mzlab/analog.py` | `parse_gradient_csv` | Parsing di file CSV utente time;%B[;flow] con gestione virgola o punto decimale | sì (`crates/mzlab-core/src/gradient.rs::parse_csv`) | UI (upload gradiente custom), CLI, pytest | media | basso | `tests/routes_parity.rs` |
 | `mzlab/analog.py` | `course_gradient` | Generatore gradiente predefinito della simulazione didattica | sì (`crates/mzlab-core/src/gradient.rs::course`) | UI (Teoria e Pratica), CLI | bassa | trascurabile | `tests/routes_parity.rs` |
 | `mzlab/analog.py` | `detector_delay` | Stima del ritardo temporale (dead volume) tra DAD/UV e spettrometro di massa tramite cross-correlazione | sì (`crates/mzlab-core/src/analog.rs::detector_delay`) | UI, CLI, `/api/delay`, pytest | media | medio (interpolazione e cross-correlazione) | `tests/routes_parity.rs` |
-| `mzlab/ionfamily.py` | `build_rois` | Costruzione centWave-style delle regioni di interesse (ROI) bidimensionali m/z-RT lungo le scansioni | sì (`crates/mzlab-core/src/rois.rs::build_rois`) | UI (analisi ROI), CLI, `ion_families`, pytest `test_ionfamily.py` | alta (fondamento peak detection LR/HR) | alto (gestione salti e continuità m/z) | `tests/rois_parity.rs` con `tools/roi_riferimento.py` |
+| `mzlab/ionfamily.py` | `build_rois` | Costruzione centWave-style delle regioni di interesse (ROI) bidimensionali m/z-RT lungo le scansioni | sì (`crates/mzlab-core/src/rois.rs::build_rois`) | UI (analisi ROI), CLI, pytest `test_ionfamily.py` | alta (fondamento peak detection LR/HR) | alto (gestione salti e continuità m/z) | `tests/rois_parity.rs` con `tools/roi_riferimento.py` |
 | `mzlab/ionfamily.py` | `extract_trace` | Estrazione traccia intensità vs RT per un dato m/z +/- tolleranza | sì (`crates/mzlab-core/src/rois.rs::extract_trace`, `subxic.rs`) | UI, CLI, `/api/subxic`, `ionfamily.py`, pytest | alta | basso | `tests/subxic_parity.rs` |
 | `mzlab/ionfamily.py` | `savgol_coeffs` | Calcolo dei coefficienti polinomiali della convoluzione Savitzky-Golay con derivate | sì (`crates/mzlab-core/src/signal.rs::savgol_coeffs`) | `savgol`, peak picking, pytest | media | basso | `tests/golden.rs` |
 | `mzlab/ionfamily.py` | `savgol` | Lisciamento del segnale e calcolo derivate con padding per riflessione ai bordi | sì (`crates/mzlab-core/src/signal.rs::savgol`) | UI, `detect_peaks`, `profile_similarity`, pytest `test_ionfamily.py` | alta | basso | `tests/stats_parity.rs`, `tests/origin_parity.rs` |
@@ -79,7 +79,7 @@ La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parit
 | `mzlab/ionfamily.py` | `_parabola_apex` | Stima analitica dell'apice con fit quadratico su 3 punti e calcolo incertezza con delta method | sì (`crates/mzlab-core/src/peakext.rs::parabola_apex`) | `detect_peaks`, pytest | alta | medio (stabilità numerica del delta method) | `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `detect_peaks` | Peak picking completo (CWT, local minima per bordi, area corretta per baseline, S/N, FWHM) | sì (`crates/mzlab-core/src/peaks.rs::detect_peaks`, `detect_full`, `mzlab-wasm`) | UI (integrazione interattiva Dati, `peaks-worker.js`), CLI, `/api/peaks`, pytest | alta (sul percorso critico del rendering e integrazione) | alto | `tests/golden.rs`, `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `peak_area` | Integrazione numerica trapezoidale baseline-corrected nell'intervallo [i0, i1] | sì (`crates/mzlab-core/src/peaks.rs::peak_area`) | UI, `ratio_fit`, `kinetics`, pytest | alta | basso | `tests/origin_parity.rs` |
-| `mzlab/ionfamily.py` | `rankdata` | Calcolo dei ranghi medi per statistiche non parametriche (gestione parità deterministica) | sì (`crates/mzlab-core/src/stats.rs::rankdata`) | `wspearman`, `kendall_tau`, `auc`, pytest | alta | basso | `tests/stats_parity.rs` con `tools/stats_riferimento.py` |
+| `mzlab/ionfamily.py` | `rankdata` | Calcolo dei ranghi medi per statistiche non parametriche (gestione parità deterministica) | sì (`crates/mzlab-core/src/stats.rs::rankdata`) | `wspearman`, `kendall_tau`, pytest | alta | basso | `tests/stats_parity.rs` con `tools/stats_riferimento.py` |
 | `mzlab/ionfamily.py` | `wpearson` | Coefficiente di correlazione di Pearson pesato per covarianza cromatografica | sì (`crates/mzlab-core/src/stats.rs::wpearson`) | UI, `profile_similarity`, `identity_links`, pytest | alta | basso | `tests/stats_parity.rs` |
 | `mzlab/ionfamily.py` | `wspearman` | Correlazione di Spearman pesata sui ranghi | sì (`crates/mzlab-core/src/stats.rs::wspearman`) | `profile_similarity`, pytest | media | basso | `tests/stats_parity.rs` |
 | `mzlab/ionfamily.py` | `cosine` | Similarità coseno vettoriale standard | sì (`crates/mzlab-core/src/stats.rs::cosine`, `crates/mzlab-lib/src/scores.rs`) | UI, `similarity`, `ms2_similarity`, pytest | alta | basso | `tests/stats_parity.rs` |
@@ -101,23 +101,14 @@ La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parit
 | `mzlab/ionfamily.py` | `isotope_check` | Confronto dei rapporti M+1 e M+2 osservati dalle aree delle ROI rispetto al pattern teorico dell'averagina | sì (`crates/mzlab-core/src/roles.rs::isotope_check`) | UI, `origin_report`, pytest | alta | basso | `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `estimate_components` | Stima del numero di specie chimiche indipendenti k tramite SVD contro bordo di rumore Marchenko-Pastur ed EFA | sì (`crates/mzlab-core/src/components.rs::estimate_components`, `statmat.rs`) | UI, analisi spettri co-eluiti, pytest `test_ionfamily.py` | media | alto (SVD Jacobi one-sided e autovalori) | `tests/components_parity.rs` con `tools/componenti_riferimento.py` |
 | `mzlab/ionfamily.py` | `_isotonic_up_down` | Regressione isotonica con vincolo di unimodalità (curva non decrescente prima dell'apice, non crescente dopo) | sì (`crates/mzlab-feat/src/deconvolve.rs`) | `mcr_als`, deconvoluzione chemiometrica | bassa (già migrato) | medio (algoritmo pool adjacent violators PAVA) | Test di parità con profili sintetici cromatografici vs scipy/numpy |
-| `mzlab/ionfamily.py` | `simplisma` | Algoritmo SIMPLISMA per identificazione automatica di k variabili pure (canali non sovrapposti) | sì (`crates/mzlab-feat/src/deconvolve/mcr.rs::simplisma`) | `deconvolve_window`, `mcr_als` | bassa (già migrato) | alto (determinante matrice correlazione e purezza) | Test di parità su matrici D scans x canali sintetiche e reali |
-| `mzlab/ionfamily.py` | `nndsvd` | Inizializzazione deterministica Non-Negative Double SVD per fattorizzazione matriciale non negativa (NMF) | NO (mancante in `crates/mzlab-core`) | `mcr_als`, deconvoluzione | media | alto (richiede SVD rank-1 positivo/negativo) | Test di parità vs sklearn.decomposition._nndsvd |
-| `mzlab/ionfamily.py` | `mcr_als` | Multivariate Curve Resolution - Alternating Least Squares con vincoli di non-negatività e unimodalità | sì (`crates/mzlab-feat/src/deconvolve/mcr.rs::mcr_als`) | `deconvolve_window`, `mcr_stability` | bassa (già migrato) | alto (minimi quadrati vincolati NNLS e convergenza) | Confronto matrici C (profili) ed S (spettri) su dataset co-eluizione |
-| `mzlab/ionfamily.py` | `mcr_stability` | Analisi dell'ambiguità rotazionale e stabilità delle soluzioni MCR-ALS da ripartenze multiple casuali | NO (mancante in `crates/mzlab-core`) | `deconvolve_window` | bassa | alto | Confronto indici di sovrapposizione e deviazioni standard soluzioni |
-| `mzlab/ionfamily.py` | `deconvolve_window` | Deconvoluzione chemiometrica automatica di una finestra cromatografica co-eluita in cromatogrammi e spettri puri | NO (mancante in `crates/mzlab-core`) | UI (strumenti avanzati spettrometria), CLI | media | alto (pipeline completa SIMPLISMA + MCR-ALS) | Dati d'oro da corse co-eluenti con standard di miscela |
+| `mzlab/ionfamily.py` | `simplisma` | Algoritmo SIMPLISMA per identificazione automatica di k variabili pure (canali non sovrapposti) | sì (`crates/mzlab-feat/src/deconvolve/mcr.rs::simplisma`) | `mcr_als` | bassa (già migrato) | alto (determinante matrice correlazione e purezza) | Test di parità su matrici D scans x canali sintetiche e reali |
+| `mzlab/ionfamily.py` | `mcr_als` | Multivariate Curve Resolution - Alternating Least Squares con vincoli di non-negatività e unimodalità | sì (`crates/mzlab-feat/src/deconvolve/mcr.rs::mcr_als`) | — | bassa (già migrato) | alto (minimi quadrati vincolati NNLS e convergenza) | Confronto matrici C (profili) ed S (spettri) su dataset co-eluizione |
 | `mzlab/ionfamily.py` | `source_ramp` | Analisi delle curve di breakdown da potenziale di declustering (DP) per conferma sperimentale di frammenti in sorgente | sì (`crates/mzlab-core/src/source_ramp.rs`) | UI, analisi standard DP | bassa (già migrato) | medio | Test di regressione sigmoide/lineare su serie a DP crescente |
-| `mzlab/ionfamily.py` | `_pairwise_windowed_corr` | Calcolo matrice di correlazione Pearson a coppie su finestre temporali locali | sì (`crates/mzlab-core/src/roi_cluster.rs::pairwise_windowed_corr`) | `ion_families`, clustering | bassa (già migrato) | basso | `tests/family_parity.rs` |
-| `mzlab/ionfamily.py` | `_average_linkage` | Clustering gerarchico agglomerativo con criterio average-linkage fino a soglia di taglio | sì (`crates/mzlab-core/src/roi_cluster.rs::average_linkage`) | `ion_families` | bassa (già migrato) | medio | Test di parità dendrogramma vs scipy.cluster.hierarchy |
-| `mzlab/ionfamily.py` | `ion_families` | Raggruppamento delle ROI di una finestra in famiglie di ioni co-eluiti a bassa risoluzione | parziale (`crates/mzlab-feat/src/family.rs` per HR; mancante per ROI 1 Da in `mzlab-core`) | UI, CLI, pytest `test_ionfamily.py` | media | medio | `tests/test_ionfamily.py` |
+| `mzlab/ionfamily.py` | `_pairwise_windowed_corr` | Calcolo matrice di correlazione Pearson a coppie su finestre temporali locali | sì (`crates/mzlab-core/src/roi_cluster.rs::pairwise_windowed_corr`) | clustering | bassa (già migrato) | basso | `tests/family_parity.rs` |
+| `mzlab/ionfamily.py` | `_average_linkage` | Clustering gerarchico agglomerativo con criterio average-linkage fino a soglia di taglio | sì (`crates/mzlab-core/src/roi_cluster.rs::average_linkage`) | — | bassa (già migrato) | medio | Test di parità dendrogramma vs scipy.cluster.hierarchy |
 | `mzlab/ionfamily.py` | `greedy_match` / `_greedy_pairs` | Matching bipartito greedy globale ponderato per accoppiamento picchi spettrali | sì (`crates/mzlab-core/src/ms2sim.rs::greedy_match`, `crates/mzlab-lib/src/scores.rs`) | `ms2_similarity`, librerie, pytest | alta | medio | `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `ms2_similarity` | Similarità spettrale tra spettro frammentazione MS2 di X e precursore P (coseno, frammenti e perdite neutre) | sì (`crates/mzlab-core/src/ms2sim.rs::ms2_similarity`, `crates/mzlab-lib/src/scores.rs`) | UI, `/api/origin`, `origin_report`, pytest | alta | medio | `tests/origin_parity.rs` |
 | `mzlab/ionfamily.py` | `ms2_membership` | Verifica se l'm/z di X corrisponde a un picco osservato nello spettro frammentazione del precursore | sì (`crates/mzlab-core/src/ms2sim.rs::ms2_membership`) | UI, `origin_report`, pytest | alta | basso | `tests/origin_parity.rs` |
-| `mzlab/ionfamily.py` | `roc_curve` | Calcolo curva ROC (False Positive Rate, True Positive Rate e soglie) | NO (mancante in Rust) | `calibrate_thresholds`, validazione modelli | bassa | medio (stabilità ordinamento e soglie di parità) | Confronto con sklearn.metrics.roc_curve su score sintetici |
-| `mzlab/ionfamily.py` | `auc` | Calcolo dell'Area Under the Curve (AUC) ROC tramite formula Mann-Whitney con ranghi medi | NO (mancante in Rust) | `calibrate_thresholds`, `cv_threshold` | bassa | basso | Confronto con sklearn.metrics.roc_auc_score |
-| `mzlab/ionfamily.py` | `youden_threshold` | Ottimizzazione della soglia decisionale tramite indice J di Youden (massimizzazione TPR - FPR) | NO (mancante in Rust) | `calibrate_thresholds`, `cv_threshold` | bassa | basso | Confronto con calcolo numpy |
-| `mzlab/ionfamily.py` | `cv_threshold` | Cross-validation k-fold della soglia di Youden con misura accuratezza su fold esclusi | NO (mancante in Rust) | `calibrate_thresholds` | bassa | medio | Confronto con script di validazione incrociata Python |
-| `mzlab/ionfamily.py` | `calibrate_thresholds` | Calibrazione automatica delle soglie ottimali su serie di punteggi di eredità del profilo | NO (mancante in Rust) | Script di calibrazione parametri offline | bassa | medio | Confronto soglie calibrate |
 | `mzlab/ionfamily.py` | `origin_report` | Aggregazione complessiva delle evidenze analitiche sull'origine di un ione (co-eluizione, rapporto costante, cinetica, MS2) | sì (`crates/mzlab-core/src/origin.rs::origin_report`, `originroute.rs`) | UI (scheda Origine), CLI, `/api/origin`, pytest `test_ionfamily.py` | alta (sul percorso critico del report di attribuzione) | alto | `tests/origin_parity.rs` e `tests/origin_route_parity.rs` con `tools/origin_riferimento.py` |
 | `mzlab/statistica.py` | `time_profile` | Estrazione e ordinamento del profilo temporale di intensità o area lungo i campioni | sì (`crates/mzlab-core/src/statistica.rs::time_profile`) | UI (`stat.js`), CLI, `/api/stat/profile`, pytest `test_statistica.py` | alta | basso | `tests/stat_route_parity.rs` con `tools/statistica_riferimento.py` |
 | `mzlab/statistica.py` | `blank_filter` | Filtraggio delle feature con rapporto campione/bianco inferiore alla soglia fold-change | sì (`crates/mzlab-core/src/statistica.rs::blank_filter`) | UI, CLI, `/api/stat/blank`, pytest `test_statistica.py` | alta | basso | `tests/stat_route_parity.rs` |
@@ -155,10 +146,10 @@ La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parit
 ## 3. Riepilogo
 
 ### 3.1 Conteggi
-- Funzioni/classi censite: **127**
+- Funzioni/classi censite: **118**
 - Equivalente Rust presente (sì): **108**
-- Parziale: **1**
-- Mancante (no): **18**
+- Parziale: **0**
+- Mancante (no): **10**
 
 ### 3.2 Distribuzione nei crate
 - `crates/mzlab-core`: nucleo chimico (`elements.rs`, `composition.rs`, `isoscore.rs`, `subformulas.rs`, `msntree.rs`),
@@ -173,15 +164,6 @@ La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parit
 ### 3.3 Voci non ancora complete in Rust
 - `mzlab/chem/contaminants.py` `ion_shift`: no (nessun modulo in `crates/`; dati in `mzlab/chem/contaminants.json`)
 - `mzlab/chem/contaminants.py` `expand`: no (nessun modulo in `crates/`)
-- `mzlab/ionfamily.py` `nndsvd`: NO (mancante in `crates/mzlab-core`)
-- `mzlab/ionfamily.py` `mcr_stability`: NO (mancante in `crates/mzlab-core`)
-- `mzlab/ionfamily.py` `deconvolve_window`: NO (mancante in `crates/mzlab-core`)
-- `mzlab/ionfamily.py` `ion_families`: parziale (`crates/mzlab-feat/src/family.rs` per HR; mancante per ROI 1 Da in `mzlab-core`)
-- `mzlab/ionfamily.py` `roc_curve`: NO (mancante in Rust)
-- `mzlab/ionfamily.py` `auc`: NO (mancante in Rust)
-- `mzlab/ionfamily.py` `youden_threshold`: NO (mancante in Rust)
-- `mzlab/ionfamily.py` `cv_threshold`: NO (mancante in Rust)
-- `mzlab/ionfamily.py` `calibrate_thresholds`: NO (mancante in Rust)
 - `tools/valida/metriche.py` `tp_veri`: NO (mancante in Rust)
 - `tools/valida/metriche.py` `rapporto_isotopico`: NO (mancante in Rust)
 - `tools/valida/metriche.py` `jaccard`: NO (mancante in Rust)
@@ -192,8 +174,5 @@ La parità di ogni riga con sì è verificata da un test `crates/*/tests/*_parit
 - `tools/bench/metriche.py` `p1`...`p5` (endpoint benchmark): NO (mancante in Rust; pipeline benchmark Python)
 
 ### 3.4 Priorità tra le voci mancanti
-1. Deconvoluzione: `nndsvd`, `mcr_stability`, `deconvolve_window` (profili e spettri puri da finestre co-eluite). Parità: matrici C ed S su serie sintetiche di co-eluizione a 2 e 3 analiti.
-2. Soglie diagnostiche: `roc_curve`, `auc`, `youden_threshold`, `cv_threshold`, `calibrate_thresholds`. Parità: curve e soglie su punteggi sintetici con seme fisso.
-3. Famiglie di ioni a bassa risoluzione: `ion_families` per ROI a 1 Da in `mzlab-core`.
-4. Gate di validazione in `tools/valida/` (`tp_veri`, `jaccard`, `richiamo`, `r2_loglog`, `valle`, `picchi_da_verita`) e endpoint `p1`...`p5` di `tools/bench/metriche.py`: restano Python finché i cancelli girano da `tools/valida_feat.py` e `tools/bench/`.
-5. Contaminanti: `ion_shift` ed `expand` di `mzlab/chem/contaminants.py` (catalogo in `mzlab/chem/contaminants.json`).
+1. Gate di validazione in `tools/valida/` (`tp_veri`, `jaccard`, `richiamo`, `r2_loglog`, `valle`, `picchi_da_verita`) e endpoint `p1`...`p5` di `tools/bench/metriche.py`: restano Python finché i cancelli girano da `tools/valida_feat.py` e `tools/bench/`.
+2. Contaminanti: `ion_shift` ed `expand` di `mzlab/chem/contaminants.py` (catalogo in `mzlab/chem/contaminants.json`).
