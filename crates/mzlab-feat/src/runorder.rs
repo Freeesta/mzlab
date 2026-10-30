@@ -4,6 +4,7 @@
 
 use crate::drift::batches_of;
 use crate::samples::Sample;
+use crate::sortc::SortC;
 use mzlab_core::campioni::{self, Campione};
 use mzlab_core::disegno::{self, LOTTO_PREDEFINITO};
 use mzlab_core::error::Result;
@@ -103,7 +104,7 @@ fn sample_of(c: &Campione) -> Sample {
 
 /// The distinct values of `v`, ascending.
 fn distinct(mut v: Vec<f64>) -> Vec<f64> {
-    v.sort_by(f64::total_cmp);
+    v.sortc_by(f64::total_cmp);
     v.dedup();
     v
 }
@@ -216,7 +217,7 @@ fn write_batch(batch: &Batch, o: &mut Out) {
             None => roles.push((c.role(), 1)),
         }
     }
-    roles.sort_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
+    roles.sortc_by_key(|(r, _)| campioni::TIPI.iter().position(|t| t == r));
     for (k, (role, count)) in roles.iter().enumerate() {
         o.raw(if k > 0 { "," } else { "" })
             .str(role)
@@ -269,7 +270,7 @@ fn order_warnings(cs: &[Campione], missing: &[bool]) -> Vec<Warning> {
         .filter(|(_, m)| !**m)
         .map(|(c, _)| (c.order, c.file.as_str()))
         .collect();
-    by_order.sort();
+    by_order.sortc();
     for run in by_order.chunk_by(|a, b| a.0 == b.0).filter(|r| r.len() > 1) {
         out.push(Warning {
             key: ORDER_DUPLICATE,
@@ -313,7 +314,7 @@ pub fn runorder_text(
     let batch = batches_for(&cs, design)?;
     let mut warnings = order_warnings(&cs, &missing);
     let mut names: Vec<&String> = batch.iter().collect();
-    names.sort();
+    names.sortc();
     names.dedup();
     let batches: Vec<Batch> = names
         .into_iter()
@@ -326,7 +327,7 @@ pub fn runorder_text(
             };
             let mut files: Vec<(u32, &Campione)> =
                 mine(false).map(|((c, _), _)| (c.order, c)).collect();
-            files.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.file.cmp(&b.1.file)));
+            files.sortc_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.file.cmp(&b.1.file)));
             Batch {
                 name: name.clone(),
                 files,
@@ -347,7 +348,7 @@ pub fn runorder_text(
         warnings.extend(batch_warnings(b, &lim));
     }
     o.raw("],\"warnings\":[");
-    warnings.sort_by(|a, b| {
+    warnings.sortc_by(|a, b| {
         a.batch
             .cmp(&b.batch)
             .then_with(|| rank(a.key).cmp(&rank(b.key)))
@@ -380,7 +381,7 @@ fn rank(key: &str) -> usize {
 
 fn sorted_names(it: impl Iterator<Item = String>) -> Vec<String> {
     let mut v: Vec<String> = it.collect();
-    v.sort();
+    v.sortc();
     v
 }
 
