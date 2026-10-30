@@ -1,6 +1,6 @@
 // @ts-check
 // Files open as soon as they are read: upload0 (shell.js) calls OPENNOW.add(name) when a file is in the loading table. The first file of a session starts it (api/explore),
-// the others are appended (api/explore append) in order of arrival, with one bootSession at most every 200 ms; a new file starts hidden (bootSession0) and, when the whole
+// the others are appended (api/explore append) in the order of the drop (a file read early waits for the ones dropped before it), with one bootSession at most every 200 ms; a new file starts hidden (bootSession0) and, when the whole
 // loading is over and no file is shown, the first one (not a blank) opens by itself (first). The world of the session (low or high resolution) is the world of the first file read: the other world stays unticked and #hrmix
 // offers the switch. Also the write-through of the sample table to the open files (roles, times, concentrations: CAMPIONI.apply). Used by shell.js and ruoli-carica.js.
 "use strict";
@@ -37,12 +37,17 @@ const OPENNOW = /** @type {any} */ ((() => {
     if (fresh.length) RUOLI.commit(fresh);
     applyView(); FILETAB.soon(); uiSave();
   }
-  // one file at a time, in the order the files were read
+  const rank = (/** @type {string} */ n) => CONVROWS.rank(n);
+  /** a file dropped before `name` is still being read: the session keeps the order of the drop (k), whatever file is read first */
+  const ahead = (/** @type {string} */ name) => CONVROWS.running().some((/** @type {ConvRow} */ r) => r.name !== name && rank(r.name) >= 0 && rank(r.name) < rank(name));
+  // one file at a time, in the order of the drop
   async function drain() {
     if (busy) return;
     busy = 1;
     try {
       while (q.length) {
+        q.sort((a, b) => rank(a) - rank(b));
+        if (ahead(q[0])) break;
         const name = /** @type {string} */ (q.shift()), f = rowOf(name);
         if (!f || !(f.kind in GORD) || isOpen(name)) continue;
         if (held.has(name)) { f.use = false; continue; }
@@ -116,6 +121,7 @@ const OPENNOW = /** @type {any} */ ((() => {
   }
   /** a batch has ended: with no file shown the first one opens; the side list says what was set aside, and what was added to files already shown */
   async function note() {
+    drain();      // a file held back by one dropped before it that then failed
     await idle();
     const { n, m } = tally; tally.n = tally.m = 0;
     const shown = E.files.some((/** @type {FileAperto} */ f) => f.vis && !f.gone);
