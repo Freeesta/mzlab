@@ -5,6 +5,7 @@ use crate::composition::Counts;
 use crate::elements::{mass_of, parse_formula, ELECTRON};
 use crate::error::{Error, Result};
 use crate::pysum::pysum;
+use crate::isotable::EXTRA;
 use crate::subformulas::submasses;
 
 const ISO: [(&str, &[(f64, f64)]); 13] = [
@@ -46,7 +47,7 @@ const ISO: [(&str, &[(f64, f64)]); 13] = [
 ];
 /// Natural isotopes of an element as `(exact mass, abundance)`, the most abundant NOT necessarily first; `None` for an element outside the table.
 pub fn isotopes_of(el: &str) -> Option<&'static [(f64, f64)]> {
-    ISO.iter().find(|(e, _)| *e == el).map(|(_, p)| *p)
+    ISO.iter().chain(EXTRA.iter()).find(|(e, _)| *e == el).map(|(_, p)| *p)
 }
 const MERGE_TOL: f64 = 0.0005;
 const MAX_SHIFT: f64 = 6.0;
@@ -105,7 +106,7 @@ fn join(mut items: Vec<(f64, f64)>) -> Vec<(f64, f64)> {
     out.into_iter().map(|[s, p, _]| (s / p, p)).collect()
 }
 
-fn conv(a: &[(f64, f64)], b: &[(f64, f64)], floor: f64) -> Vec<(f64, f64)> {
+fn conv(a: &[(f64, f64)], b: &[(f64, f64)], floor: f64, cut: f64) -> Vec<(f64, f64)> {
     let mut r = vec![];
     for &(ma, pa) in a {
         for &(mb, pb) in b {
@@ -116,39 +117,44 @@ fn conv(a: &[(f64, f64)], b: &[(f64, f64)], floor: f64) -> Vec<(f64, f64)> {
     }
     join(r)
         .into_iter()
-        .filter(|(m, _)| *m <= MAX_SHIFT + 0.5)
+        .filter(|(m, _)| *m <= cut)
         .collect()
 }
 
 /// Fine isotope structure of an ion formula: (m/z, % of the most intense isotopologue), sorted by m/z.
 pub fn fine_pattern(counts: &Counts, z: i32, min_rel: f64) -> Result<Vec<Peak>> {
+    fine_pattern_cut(counts, z, min_rel, MAX_SHIFT + 0.5)
+}
+
+/// [`fine_pattern`] keeping the isotopologues up to `cut` Da above the lightest one (infinity keeps them all: macromolecules).
+pub fn fine_pattern_cut(counts: &Counts, z: i32, min_rel: f64, cut: f64) -> Result<Vec<Peak>> {
     let mut dist = vec![(0.0, 1.0)];
     let floor = 1e-12;
     for (el, k) in counts {
         if *k <= 0 {
             continue;
         }
-        let Some(iso) = ISO.iter().find(|(e, _)| e == el).map(|(_, p)| *p) else {
+        let Some(iso) = isotopes_of(el) else {
             return Err(Error::new("err.iso.element").with("symbol", el));
         };
         let mut base: Vec<(f64, f64)> = iso.iter().map(|(m, p)| (m - iso[0].0, *p)).collect();
         let (mut res, mut c) = (vec![(0.0, 1.0)], *k);
         while c > 0 {
             if c & 1 == 1 {
-                res = conv(&res, &base, floor);
+                res = conv(&res, &base, floor, cut);
             }
             c >>= 1;
             if c > 0 {
-                base = conv(&base, &base, floor);
+                base = conv(&base, &base, floor, cut);
             }
         }
-        dist = conv(&dist, &res, floor);
+        dist = conv(&dist, &res, floor, cut);
     }
     let mono = pysum(
         counts
             .iter()
             .filter(|(_, k)| *k > 0)
-            .map(|(el, k)| ISO.iter().find(|(e, _)| e == el).unwrap().1[0].0 * *k as f64),
+            .map(|(el, k)| isotopes_of(el).unwrap()[0].0 * *k as f64),
     );
     let top = dist.iter().map(|d| d.1).fold(f64::MIN, f64::max);
     Ok(dist
