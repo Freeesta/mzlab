@@ -44,6 +44,8 @@ pub mod flow_formula_ms2;
 pub mod flow_insilico;
 pub mod flow_level;
 pub mod flow_ms2;
+#[cfg(feature = "attributio")]
+pub mod flow_regulatory;
 pub mod flow_screen_suspects;
 pub mod gapfill;
 pub mod gruppi;
@@ -75,6 +77,7 @@ pub mod qc;
 pub mod quality;
 pub mod recipe;
 mod recipe_lr;
+pub mod regulatory;
 pub mod report;
 pub mod resolve;
 pub mod rete;
