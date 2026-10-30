@@ -47,6 +47,8 @@ PROBE = r"""(() => {
 })();"""
 
 USABLE = "!!(window.__v && __v.marks.ready && __v.marks.drop && window.crossOriginIsolated)"
+# after «Full reset» the page may stay without cross-origin isolation (the reload of browser.js isolateOnce does not come): usable without it
+USABLE_ANY = "!!(window.__v && __v.marks.ready && __v.marks.drop)"
 
 
 class Mirror(BaseHTTPRequestHandler):
@@ -233,7 +235,7 @@ class Run:
             self.pg.evaluate("localStorage.removeItem('__probe')")
         act()
         # the page of this step only (a reload or a reset navigates)
-        self.until_true(f"!!window.__v && __v.t0 >= {t0 - 5} && ({until})" if until == USABLE else until)
+        self.until_true(f"!!window.__v && __v.t0 >= {t0 - 5} && ({until})" if until in (USABLE, USABLE_ANY) else until)
         t1 = t_wall()
         self.quiet()
         st = {"t0": t0, "usable": t1, "navs": self.navs[n0:], "reqs": self.reqs[r0:], "pages": self.snaps(), "settled": t_wall()}
@@ -317,8 +319,8 @@ def main():
         except TimeoutError:
             print("file: no plot", flush=True)
         clicks(r)
-        r.step("reset", lambda: reset(r))
-        r.step("warm-after-reset", lambda: r.pg.reload())
+        r.step("reset", lambda: reset(r), USABLE_ANY)
+        r.step("warm-after-reset", lambda: r.pg.reload(), USABLE_ANY)
         r.save()
         b.close()
 
