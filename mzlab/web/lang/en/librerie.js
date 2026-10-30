@@ -133,6 +133,8 @@ I18N.add("en", {
   "lib.typePrec": "Type the precursor and press Search.",
   "lib.noMs2": "This file has no MS2 scans.",
   "lib.all.title": "Identify all the MS2 of the file",
+  "lib.all.max": "Maximise the window",
+  "lib.all.restore": "Restore the window size",
   "lib.all.sub": "tolerances: precursor {ppm} ppm, peaks 0.01 Da · candidates with the proposed level and the evidence (Schymanski), never a certain identification",
   "lib.all.reading": "Reading the MS2 of the file…",
   "lib.all.readingN": "Reading the MS2 of the file: {i} of {n}",

@@ -10,8 +10,8 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_xic_infusione.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 D = synth("xic_infusione")
-shutil.copy(D / "B_FullMass-t0.mzML", D / "Infusion_syringe_t0.mzML")
-SPEC = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
+shutil.copy(D / "HR_DDA-Exploris-t30.mzML", D / "Infusion_syringe_t0.mzML")      # the lens exists on high-resolution MS1 spectra only
+SPEC = "E.panels.find(p=>p.type==='spec'&&p.level===1)"
 def open_file(pg, name):
     stage(pg, [D / name])
     pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
@@ -20,14 +20,14 @@ def hover_peak(pg):
     pos = pg.evaluate(f"""(() => {{ const p = {SPEC}, q = p.cv.getBoundingClientRect(); return {{ q: [q.left, q.top, q.width, q.height], id: p.id }}; }})()""")
     left, top, w, h = pos["q"]
     # scan the plot width at mid height for the first place where the lens opens (control) or never does
-    for k in range(30):
-        pg.mouse.move(left + w * (0.12 + 0.03 * k), top + h * 0.35); frames(pg, 2)
+    for k in range(80):
+        pg.mouse.move(left + w * (0.12 + 0.01 * k), top + h * 0.35); frames(pg, 2)
         if pg.evaluate("[...document.querySelectorAll('.xl')].some(e => !e.hidden)"): return True
     return False
 r = Run(port=8867, wd="/tmp/wd_xic_infusione")
 try:
     with sync_playwright() as p:
-        pg = r.page(p); open_file(pg, "B_FullMass-t0.mzML")
+        pg = r.page(p); open_file(pg, "HR_DDA-Exploris-t30.mzML")
         def control():
             b = pg.evaluate("(() => { const e = document.querySelector('[data-a=xicb]'); return [e.disabled, e.title]; })()")
             assert b[0] is False, b
@@ -37,7 +37,7 @@ try:
         def off():
             b = pg2.evaluate("(() => { const e = document.querySelector('[data-a=xicb]'); return [e.disabled, e.title]; })()")
             assert b[0] is True and b[1] == pg2.evaluate("I18N.t('xicbtn.infusion')") and b[1] != "xicbtn.infusion", b
-            pv = pg2.evaluate("(() => { const e = document.querySelector('[data-a=xicp]'); return [e.disabled, e.getAttribute('aria-pressed')]; })()"); assert pv == [True, "false"], pv
+            pv = pg2.evaluate("(() => { const e = document.querySelector('[data-a=xicp]'); return [e.hidden, e.getAttribute('aria-pressed')]; })()"); assert pv == [True, "false"], pv
             assert not hover_peak(pg2), "the lens opened on an infusion"
         step("infusion: XIC button disabled with its tooltip, no lens", off)
     r.close()

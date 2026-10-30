@@ -32,6 +32,16 @@ MOVES = (
     ("esperimenti/", "esperimenti/altro/", lambda n: n in ("Computazio", "Sostanze psicoattive", "motore_wasm")),
     ("coordinamento/", "coordinamento/documenti/", lambda n: n in ("studi", "proposte", "consegne", "riferimenti", "gemini_esiti")),
     ("coordinamento/prompt/raw", "prompt/raw", lambda n: True),
+    # step 2: book, validation and study folders
+    ("Libro_Untargeted", "libro/testo", lambda n: True),
+    ("coordinamento/libro_untargeted", "libro/piano", lambda n: True),
+    ("corso/untargeted", "libro/lezioni", lambda n: True),
+    ("studio/benchmark", "validazione/benchmark", lambda n: True),
+    ("studio/validazione/", "validazione/", lambda n: n in ("DATI_REALI_dam.md", "DATI_REALI_mzfinder_pipeline.md", "DATI_REALI_parita_pr320_pr319.md", "DATI_REALI_raw_thermo.md", "DATI_REALI_rotte_lr_hr.md", "DATI_REALI_wiff.md", "G1", "H1_K1_timololo.md", "RUOLI_TEMPI.md", "V0_timololo.md", "V1_sintetici.md", "VERITA_TP_schema.md")),
+    ("studio/nts-validazione", "validazione/nts-validazione", lambda n: True),
+    ("studio/", "coordinamento/documenti/studi/", lambda n: n in ("AUDIT_USO_LIMITI.md", "MZMINE_FATTIBILITA.md", "PIPELINE_IDENTITA.md", "PIPELINE_IDENTITA_PACCHETTI.md", "CD")),
+    ("studio/paper", "coordinamento/documenti/paper", lambda n: True),
+    ("studio/degdma", "esperimenti/altro/degdma", lambda n: True),
 )
 
 
