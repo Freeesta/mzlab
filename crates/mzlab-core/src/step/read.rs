@@ -9,8 +9,13 @@ fn bad() -> Error {
     Error::new("err.flow.registry")
 }
 
+/// Descriptor strings live as long as the program: the registry is read once per plan session.
+fn leak(s: &str) -> &'static str {
+    Box::leak(s.to_string().into_boxed_str())
+}
+
 fn text(v: &Value, k: &str) -> Option<&'static str> {
-    v.get(k).and_then(Value::str).map(crate::error::intern)
+    v.get(k).and_then(Value::str).map(leak)
 }
 
 fn entries(v: Option<&Value>) -> &[(String, Value)] {
@@ -34,7 +39,7 @@ fn strs(v: Option<&Value>) -> Vec<&'static str> {
         .unwrap_or_default()
         .iter()
         .filter_map(Value::str)
-        .map(crate::error::intern)
+        .map(leak)
         .collect()
 }
 
@@ -55,11 +60,7 @@ fn ports(v: Option<&Value>) -> Result<Vec<Port>> {
     entries(v)
         .iter()
         .map(|(name, p)| {
-            let mut port = Port::new(
-                crate::error::intern(name),
-                data_type(p.get("type").ok_or_else(bad)?)?,
-                "",
-            );
+            let mut port = Port::new(leak(name), data_type(p.get("type").ok_or_else(bad)?)?, "");
             port.many = p.get("many").and_then(Value::bool) == Some(true);
             port.optional = p.get("optional").and_then(Value::bool) == Some(true);
             port.accepts = p
@@ -98,7 +99,7 @@ fn params(v: Option<&Value>) -> Vec<Param> {
     entries(v.and_then(|s| s.get("properties")))
         .iter()
         .map(|(name, p)| {
-            let mut out = Param::number(crate::error::intern(name), "");
+            let mut out = Param::number(leak(name), "");
             out.kind = kind(p);
             out.default = p.get("default").cloned();
             out.min = p.get("minimum").and_then(Value::f64);
@@ -132,12 +133,12 @@ fn algorithm(a: &Value) -> Result<Algorithm> {
 
 fn preset((id, p): &(String, Value)) -> Preset {
     Preset {
-        id: crate::error::intern(id),
+        id: leak(id),
         title: "",
         when: facets(p.get("when")),
         params: entries(p.get("params"))
             .iter()
-            .map(|(k, v)| (crate::error::intern(k), v.clone()))
+            .map(|(k, v)| (leak(k), v.clone()))
             .collect(),
         evidence: "",
         algorithm: text(p, "algorithm"),

@@ -50,7 +50,7 @@ pub fn intern(s: &str) -> &'static str {
     if let Some(&k) = seen.iter().find(|&&k| k == s) {
         return k;
     }
-    let k: &'static str = Box::leak(s.to_string().into_boxed_str());
+    let k: &'static str = String::leak(s.to_owned());
     seen.push(k);
     k
 }
