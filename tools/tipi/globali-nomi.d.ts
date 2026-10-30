@@ -921,6 +921,7 @@ declare var wlCtl: any;
 declare var wlOpen: any;
 declare var workQ: any;
 declare var workRows: any;
+declare var workShown: any;
 declare var workState: any;
 declare var xOf: any;
 declare var xicBin: any;
