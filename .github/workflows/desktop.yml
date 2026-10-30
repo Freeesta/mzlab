@@ -1,6 +1,7 @@
 # Desktop app (crates/mzlab-desktop, Tauri v2): builds the installers on macOS (universal), Windows and Linux (AppImage, deb) and keeps them as artifacts of the run.
 # The installers are never committed and never published in the site. Unsigned: no Apple/Microsoft account is used here.
-# Runs by hand (workflow_dispatch) and when crates/mzlab-desktop/** changes. Not a required check of the protected main branch.
+# Runs by hand (workflow_dispatch), when crates/mzlab-desktop/** changes and every night (a Cargo.lock change alone is caught by the nightly run).
+# Pull requests build the Linux installer only; macOS and Windows run on main, nightly and releases. Not a required check of the protected main branch.
 name: desktop
 
 on:
@@ -8,9 +9,11 @@ on:
   workflow_call:                      # release.yml builds the installers of a tag by calling this workflow
   push:
     branches: [main]
-    paths: ["crates/mzlab-desktop/**", "Cargo.lock", ".github/workflows/desktop.yml"]
+    paths: ["crates/mzlab-desktop/**", ".github/workflows/desktop.yml"]
   pull_request:
-    paths: ["crates/mzlab-desktop/**", "Cargo.lock", ".github/workflows/desktop.yml"]
+    paths: ["crates/mzlab-desktop/**", ".github/workflows/desktop.yml"]
+  schedule:
+    - cron: "43 3 * * *"              # 03:43 UTC, after notte.yml
 
 permissions:
   contents: read
@@ -71,26 +74,31 @@ jobs:
       - name: mzFinder in the page of the desktop (native routes, no Pyodide, no wasm-feat/)
         run: python crates/mzlab-desktop/tests/e2e_shim_finder.py
 
+  # Pull requests build the Linux installer only (macOS universal ~43 min and Windows ~27 min run on main, nightly and releases).
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          linux='{"name":"Linux","os":"ubuntu-22.04","args":"--bundles appimage,deb","artifact":"target/desktop/bundle/appimage/*.AppImage\ntarget/desktop/bundle/deb/*.deb"}'
+          mac='{"name":"macOS universal","os":"macos-latest","args":"--target universal-apple-darwin --bundles app,dmg","artifact":"target/universal-apple-darwin/desktop/bundle/dmg/*.dmg"}'
+          win='{"name":"Windows","os":"windows-latest","args":"--bundles nsis","artifact":"target/desktop/bundle/nsis/*.exe"}'
+          if [ "$EVENT" = pull_request ]; then list="$linux"; else list="$mac,$win,$linux"; fi
+          echo "matrix={\"include\":[$list]}" >> "$GITHUB_OUTPUT"
+
   build:
     name: build (${{ matrix.name }})
+    needs: plan
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: macOS universal
-            os: macos-latest
-            args: --target universal-apple-darwin --bundles app,dmg
-            artifact: "target/universal-apple-darwin/desktop/bundle/dmg/*.dmg"
-          - name: Windows
-            os: windows-latest
-            args: --bundles nsis
-            artifact: "target/desktop/bundle/nsis/*.exe"
-          - name: Linux
-            os: ubuntu-22.04                  # the oldest glibc of the runners: the AppImage runs on older systems too
-            args: --bundles appimage,deb
-            artifact: |
-              target/desktop/bundle/appimage/*.AppImage
-              target/desktop/bundle/deb/*.deb
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:

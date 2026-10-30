@@ -41,6 +41,13 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
         .title("mzlab")
         .inner_size(1400.0, 900.0)
         .min_inner_size(900.0, 600.0);
+    // macOS: the toolbar of the page sits on the title bar line, next to the traffic lights (desktop-titlebar.css); elsewhere the native bar stays
+    #[cfg(target_os = "macos")]
+    {
+        win = win
+            .title_bar_style(tauri::TitleBarStyle::Overlay)
+            .hidden_title(true);
+    }
     if let Ok(web) = web {
         win = win.on_web_resource_request(move |request, response| {
             if let Some((body, ctype)) = update::serve_override(&web, request.uri().path()) {

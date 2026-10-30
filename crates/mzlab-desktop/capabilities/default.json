@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window: the system file dialog, the window title and the events of file drops. No file system access, no network.",
+  "description": "The main window: the system file dialog, the window title, dragging and zooming by the toolbar, and the events of file drops. No file system access, no network.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-set-title", "dialog:allow-open", "dialog:allow-save"]
+  "permissions": ["core:default", "core:window:allow-set-title", "core:window:allow-start-dragging", "core:window:allow-toggle-maximize", "core:window:allow-is-fullscreen", "dialog:allow-open", "dialog:allow-save"]
 }
