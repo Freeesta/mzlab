@@ -312,7 +312,7 @@ async function fetchDemo(/** @type {string[]} */ names,/** @type {AbortSignal} *
 /** @param {FileCarica[]} files @param {string} into @param {string[]} [demo] */
 async function upload(files,into,demo){if(typeof AVVIO!=="undefined"&&!(await AVVIO.pronto()))return;const box=$("#up");fail();
   if(demo){demo=demo.filter(n=>!ST.files.some((/** @type {FileRiga} */ g)=>g.name===n)&&!INFLIGHT.has(n));if(!demo.length)return;files=[];demo.forEach(n=>INFLIGHT.add(n))}else{files=dropDups(files);if(!files.length)return;files.forEach(f=>INFLIGHT.add(fkey(f)))}
-  if(!UPBUSY)CONVROWS.clearDone();if(S.adding)STATO.aggiunta(false,"upload");UPBUSY++;syncWork();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
+  if(!UPBUSY)CONVROWS.clearDone();if(typeof S!=="undefined"&&S.adding)STATO.aggiunta(false,"upload");UPBUSY++;syncWork();let mine=files;const ctl=new AbortController();LOADS.add(ctl);CONVROWS.onCancel=cancelLoads;if(demo)demo.forEach(n=>{CONVROWS.add(n,"wait");CONVROWS.base(n,0)});
   // for the diagnosis of the loading
   try{navigator.storage.estimate().then(e=>{window.MZLAB_STIMA=`${Math.round((e.usage||0)/1e6)} of ${Math.round((e.quota||0)/1e6)} MB`}).catch(()=>{})}catch(_){}
   try{if(demo){files=await fetchDemo(demo,ctl.signal);files.forEach(f=>INFLIGHT.add(fkey(f)));mine=files}await upload0(files,into,box,ctl.signal)}finally{FILETAB.flush();LOADS.delete(ctl);mine.forEach(f=>INFLIGHT.delete(fkey(f)));(demo||[]).forEach(n=>INFLIGHT.delete(n));UPBUSY--;syncWork();if(!UPBUSY){CONVROWS.onCancel=null;CONVROWS.paint();IDLE.splice(0).forEach(ok=>ok());OPENNOW.note()}}}
