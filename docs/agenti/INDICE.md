@@ -109,3 +109,4 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | capacità del browser, feature detection, avviso «non disponibile in questo browser: usa l'app» (`capacita.js`, `?cap-off=`) | `docs/agenti/capacita.md` |
 | tooltip: regola (solo se aggiungono informazione), inventario, hover dei grafici, icone senza tooltip | `docs/inventari/TOOLTIP.md` |
 | file `mzrun/1` (`*.mzrun.json`: record e preset di un'analisi, impronta `self_sha256`, regole di applicazione, schema `docs/schemi/mzrun-1.json`) | `docs/agenti/mzrun.md` |
+| elenco degli esperimenti MSn di un file DDA nella finestra «Albero MSn» (schede Experiments/Tree, TIC e XIC di un precursore, `msn-elenco.js`, colonne `lev`/`z` di `/api/dda`, `ptol` di `/api/chrom`) | `docs/agenti/msn-elenco.md` |
