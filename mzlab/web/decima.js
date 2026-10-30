@@ -114,3 +114,24 @@ export function polylineScan(x, y, x0, x1, X, V) {
   flush(curX);
   return out;
 }
+
+/**
+ * Raw (unsmoothed) traces with more than `ppx` points per pixel: the highest value of each pixel column, joined by a thin line (peak envelope: no apex is lost, and the
+ * line stays a line where first/lowest/highest/last per column fills the whole plot with a solid band). Fewer points per pixel (a zoom) or an unsorted x: polyline().
+ * @param {Vec} x @param {Vec} y @param {number} x0 @param {number} x1 @param {(v: number) => number} X @param {(v: number) => number} V @param {number} [ppx]
+ * @returns {{ v: number[], thin: boolean }}
+ */
+export function rawLine(x, y, x0, x1, X, V, ppx = 1.5) {
+  if (!isSorted(x)) return { v: polylineScan(x, y, x0, x1, X, V), thin: false };
+  const [i0, i1] = windowIdx(x, x0, x1), cols = Math.abs(X(x1) - X(x0));
+  if (i1 - i0 <= cols * ppx) return { v: m4(x, y, i0, i1, X, V), thin: false };
+  /** @type {number[]} */
+  const out = [];
+  let cx = Math.round(X(x[i0])), top = y[i0];
+  for (let i = i0 + 1; i < i1; i++) {
+    const c = Math.round(X(x[i])), v = y[i];
+    if (c !== cx) { out.push(cx, V(top)); cx = c; top = v; } else if (v > top) top = v;
+  }
+  out.push(cx, V(top));
+  return { v: out, thin: true };
+}
