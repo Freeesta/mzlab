@@ -20,6 +20,7 @@
     "../../mzlab/web/rust-lease-plan.js",
     "../../mzlab/web/llm/llm-worker.js",
     "../../mzlab/web/libreria-worker.js",
+    "../../mzlab/web/normative-importa-worker.js",
     "../../mzlab/web/esporta-dati-worker.js",
     "../../mzlab/web/peaks-worker.js",
     "../../mzlab/web/rust-carica.js",

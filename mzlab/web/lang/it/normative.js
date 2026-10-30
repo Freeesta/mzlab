@@ -28,5 +28,14 @@ I18N.add("it", {
   "normative.lib.status.proposal": "proposta",
   "normative.lib.status.draft": "bozza",
   "normative.lib.status.reference": "riferimento",
+  "normative.lib.import": "Importa un file ufficiale…",
+  "normative.lib.import.kind": "Tipo di file",
+  "normative.lib.import.svhc": "Candidate List dell'ECHA (CSV)",
+  "normative.lib.import.ca_prop65": "Proposition 65 della California (CSV)",
+  "normative.lib.import.working": "Lettura del file in corso…",
+  "normative.lib.import.done": "Importata {id}: {screenable} voci su {entries} hanno una struttura, {unresolved} sono elencate senza. Il file resta su questo computer.",
+  "normative.lib.import.mine": "il tuo file",
+  "normative.import.err.parse": "Non è stato possibile leggere questo file ({detail}).",
+  "normative.import.err.worker": "L'importatore non è partito: ricarica la pagina e riprova.",
   "normative.lib.disclaimer": "Una corrispondenza significa che un candidato per questa feature ha la massa, la formula o la struttura di una sostanza nominata in una lista normativa. Non è un'identificazione, non dice nulla sulla concentrazione e non è una valutazione di conformità ad alcuna legge. Le liste sono riprodotte dai testi ufficiali citati; fanno fede solo le pubblicazioni ufficiali. Conferma i candidati con standard di riferimento prima di qualsiasi uso normativo."
 });
