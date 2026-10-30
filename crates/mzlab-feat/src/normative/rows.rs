@@ -3,7 +3,6 @@
 
 use crate::attributio::frame::to_csv;
 use crate::attributio::reglists::schema::SCHEMA;
-use crate::sortc::SortC;
 
 use super::entry::{cas_tokens, Entry, Kind};
 use super::resolve::{Found, Res, Resolver};
@@ -190,9 +189,9 @@ pub fn build_list(
             r[5].clone(),
         )
     };
-    rows.sortc_by_key(key);
+    rows.sort_by_key(key);
     rows.dedup();
-    unresolved.sortc();
+    unresolved.sort();
     unresolved.dedup();
     let cols: Vec<String> = SCHEMA
         .iter()
