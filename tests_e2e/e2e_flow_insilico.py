@@ -187,7 +187,7 @@ try:
             assert keys == sorted(["/static/insilico/catalogo.json"] + ["/static/insilico/" + x["file"] for x in CAT["pieces"]]), keys
         step("the second click stores the pieces in the Cache Storage", install)
         def first():
-            pg.evaluate("document.dispatchEvent(new Event('flow:changed'))"); pg.wait_for_timeout(2000)    # the debounce of the live session
+            pg.evaluate("document.dispatchEvent(new Event('flow:changed'))")
             r = pg.evaluate(RUN, WEB); assert not r.get("err"), (r["err"], r["ev"][-4:])
             for i in ("ins",):
                 assert any(e["passo"] == i and (e["stato"] == "done" or e.get("modo") == "reused") and e["via"] == "browser" for e in r["ev"]), (i, [e for e in r["ev"] if e["passo"] == i][-3:])

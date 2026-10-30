@@ -64,7 +64,7 @@
   };
 
   // the candidates of the plan: the download of the package (two clicks: the size is shown before anything is fetched) or a list of the user's own
-  F.extraResults.push((/** @type {any} */ S, /** @type {any} */ node) => {
+  const card = (/** @type {any} */ S, /** @type {any} */ node) => {
     const insts = (node.ids || []).map((/** @type {string} */ id) => F.instanceOf(S.plan, id)).filter((/** @type {any} */ i) => i && String(i.step).split("@")[0] === "spectra.insilico");
     const refs = insts.flatMap((/** @type {any} */ i) => F.refs(i, "suspects")).filter((/** @type {string} */ r) => r.startsWith("file:"));
     if (!refs.length) return null;
@@ -118,7 +118,8 @@
     dl().then(m => m.installed()).then(got => { if (got) { say.textContent = `The in-silico candidate package is stored in this browser (${got.catalog.rows} structures).`; stage1("Update the package"); wrap.append(F.btn("ok", "Use the package stored in this browser", () => keepText(got.text, "The stored package"), "Use stored package")); } }).catch(() => {});
     wrap.append(F.btn("import", "Choose a candidate structures file", () => pick.click(), "Own list…"), cancel, pick, say);
     return wrap;
-  });
+  };
+  F.extraResults.push(card);
 
   F.webInsilico = { run, STEPS };
 })();
