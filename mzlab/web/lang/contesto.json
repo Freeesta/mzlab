@@ -159,7 +159,7 @@
   "ibk.chip.title": "Il nome «linea di base automatica» è corr.snip.",
   "ibk.chip": "Etichetta accanto al grafico; {ranges} = intervalli, {levels} = livello/i in cps, {stat} = media/mediana/retta.",
   "ibk.first": "Il nome tra virgolette è la voce di menu del clic destro (ctx.ibk.line).",
-  "ibk.band": "Scritta nella banda grigia del grafico; {extra} = «(prima traccia)» oppure vuoto.",
+  "ibk.leg": "Chip nella legenda sopra il grafico che dice quale tratto è il bianco interno e il suo livello; {ranges} = intervallo/i in min, {level} = livello con unità (per esempio 2.70e8 cps).",
   "tip.area": "Riquadro sull'etichetta di un'area integrata; {area} = valore, {y} = intensità dell'apice.",
   "tip.more": "Riquadro del mouse sul cromatogramma: tracce non elencate.",
   "map.height3d": "Scritta sulla mappa 3D; {scale} = scala dei colori.",

@@ -17,3 +17,4 @@
 .can-sg,.can-n,.can-rt,.can-fl{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .can-n,.can-fl{text-align:right}
 @media(pointer:coarse){.can-row{min-height:40px}}
+.ibkc{display:inline-flex;align-items:center;gap:2px}.ibkc button{min-height:24px;min-width:24px;background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0 4px}.ibkc button:focus-visible{outline:2px solid var(--accent)}
