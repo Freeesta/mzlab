@@ -236,8 +236,8 @@ fn a_tolerance_takes_the_unit_of_its_axis_only() {
         let e = recipe_map::apply(&mut r, step, &[(ppm.into(), n(5.0))]).unwrap_err();
         assert_eq!(e.key, "err.flow.param.axis", "{step} {ppm}");
         assert!(
-            e.params.contains(&("param".into(), ppm.into()))
-                && e.params.contains(&("axis".into(), "Da".into()))
+            e.params.contains(&("param", ppm.to_string()))
+                && e.params.contains(&("axis", "Da".to_string()))
         );
         let mut h = Recipe::default();
         let e = recipe_map::apply(&mut h, step, &[("tol_da".into(), n(0.3))]).unwrap_err();
