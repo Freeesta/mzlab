@@ -97,16 +97,17 @@
     const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
     const old = tabs.get(t.id);
     if (old && old.ph && !t.ph) {                                    // the real tool replaces the placeholder shown while loading
-      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.dataset.tname = t.name; old.b.innerHTML = label(t);
+      old.t = t; old.ph = false; old.b.title = t.desc || t.name; old.b.dataset.tname = t.name; if (!old.late) old.b.innerHTML = label(t);
       if (old.opened) { old.sec.textContent = ""; openIn(old); }
       return;
     }
     if (!nav || !anchor || old || document.getElementById("v-" + t.id)) return;
-    const b = document.createElement("button"); b.dataset.v = t.id; b.dataset.tname = t.name; b.title = t.desc || t.name;
-    b.innerHTML = label(t); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px";
-    nav.appendChild(b);
+    const pre = /** @type {HTMLElement | null} */ (nav.querySelector(`[data-late][data-v="${t.id}"]`));
+    const b = pre || document.createElement("button"); b.dataset.v = t.id; b.dataset.tname = t.name; b.title = t.desc || t.name;
+    if (pre) pre.removeAttribute("data-late");
+    else { b.innerHTML = label(t); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px"; nav.appendChild(b); }
     const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
-    /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false };
+    /** @type {any} */ const x = { b, sec, fn: null, t, ph: !!t.ph, opened: false, late: !!pre };
     b.onclick = () => openView(t.id);
     x.fn = ev => {
       const show = ev.detail.view === t.id; sec.hidden = !show;
