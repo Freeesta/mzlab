@@ -199,7 +199,7 @@ pub(super) fn hyp_out(h: Option<&Hyp>, fs: &[Feat], o: &mut Out) {
         .raw(",\"explained\":")
         .int(h.roles.len() as i64);
     o.raw(",\"anchor\":");
-    write_value(fs[h.anchor].v.get("k").unwrap_or(&Value::Null), o);
+    json::write_value(o, fs[h.anchor].v.get("k").unwrap_or(&Value::Null));
     o.raw(",\"form\":")
         .str(first)
         .raw(",\"from_mzmine\":")
