@@ -24,48 +24,6 @@ pub(super) fn time_in_seconds(chunk: &[u8]) -> bool {
     })
 }
 
-/// `name="..."` as the LAST `name="` of a tag head (the regex `<cvParam [^>]*name="([^"]*)"` is greedy), for every `<cvParam ` of `block`.
-pub(super) fn names(block: &str) -> Vec<String> {
-    let mut out = vec![];
-    let mut rest = block;
-    while let Some(p) = rest.find("<cvParam ") {
-        let tag = &rest[p + 9..];
-        let end = tag.find('>').unwrap_or(tag.len());
-        let head = &tag[..end];
-        match head.rfind("name=\"") {
-            Some(q) => {
-                let v = &head[q + 6..];
-                match v.find('"') {
-                    Some(e) => {
-                        out.push(v[..e].to_string());
-                        rest = &tag[q + 6 + e + 1..];
-                    }
-                    None => rest = &tag[end..],
-                }
-            }
-            None => rest = &tag[end..],
-        }
-    }
-    out
-}
-
-/// The text of every `<kind ...>...</kind>` block in `s` (the regex `<kind .*?</kind>` with DOTALL).
-pub(super) fn blocks<'a>(s: &'a str, kind: &str) -> Vec<&'a str> {
-    let (open, close) = (format!("<{kind} "), format!("</{kind}>"));
-    let mut out = vec![];
-    let mut rest = s;
-    while let Some(a) = rest.find(&open) {
-        match rest[a..].find(&close) {
-            Some(b) => {
-                out.push(&rest[a..a + b + close.len()]);
-                rest = &rest[a + b + close.len()..];
-            }
-            None => break,
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     #[test]

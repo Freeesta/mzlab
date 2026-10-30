@@ -7,9 +7,10 @@ use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::mzmlarray::{decode_array, Inflate, Want};
 
+mod finestre;
 mod lettura;
 mod tags;
-use tags::{blocks, find_tag, names, time_in_seconds};
+use tags::{find_tag, time_in_seconds};
 
 /// Values an array may inflate to at least (see `decode`).
 const MIN_VALUES: usize = 8 << 20;
@@ -17,11 +18,49 @@ const MAX_REGION: u64 = 256 << 20;
 /// The most `mobility_kind` reads to find the end of the first spectrum.
 const MOBILITY_PROBE: u64 = 32 << 20;
 
-/// Bytes of a window of `Mzml::chromatograms`.
-const WINDOW: u64 = 4 << 20;
-
 fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
     h.get(a..b).unwrap_or_default()
+}
+
+/// The `Chrom` of one `<chromatogram>` header `h` (the text before its arrays) at `start..end` of the file.
+fn chrom_of(h: &str, index: usize, start: u64, end: u64) -> Chrom {
+    let cid = attr_id(h).unwrap_or_default();
+    let mut d = Chrom {
+        index,
+        id: cid.clone(),
+        start,
+        end,
+        kind: "other".into(),
+        ..Default::default()
+    };
+    let acc = |x: &str| has_accession(h, x);
+    if cid == "TIC" || cid.starts_with("TIC ") {
+        d.kind = "tic".into();
+    } else if cid == "BPC" {
+        d.kind = "bpc".into();
+    } else if cid == "TWC" || acc("MS:1000812") || acc("MS:1000813") {
+        d.kind = "pda".into();
+    } else if acc("MS:1003019") || cid.starts_with("Pump Pressure") {
+        d.kind = "pressure".into();
+    } else if cid.starts_with("SRM") {
+        d.kind = "srm".into();
+        (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
+        d.dwell = named_value(h, "MS_dwell_time");
+        d.ce = d.ce.or_else(|| named_value(h, "collision energy"));
+    } else if ![
+        "MS:1000235",
+        "MS:1000627",
+        "MS:1000628",
+        "MS:1001473",
+        "MS:1001472",
+    ]
+    .iter()
+    .any(|x| acc(x))
+    {
+        d.kind = "analog".into();
+    }
+    d.n = attr(h, "defaultArrayLength").and_then(|v| v.parse().ok());
+    d
 }
 
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
@@ -47,6 +86,48 @@ fn has_accession(head: &str, x: &str) -> bool {
 }
 fn is_word(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
+}
+
+/// `name="..."` as the LAST `name="` of a tag head (the regex `<cvParam [^>]*name="([^"]*)"` is greedy), for every `<cvParam ` of `block`.
+fn names(block: &str) -> Vec<String> {
+    let mut out = vec![];
+    let mut rest = block;
+    while let Some(p) = rest.find("<cvParam ") {
+        let tag = &rest[p + 9..];
+        let end = tag.find('>').unwrap_or(tag.len());
+        let head = &tag[..end];
+        match head.rfind("name=\"") {
+            Some(q) => {
+                let v = &head[q + 6..];
+                match v.find('"') {
+                    Some(e) => {
+                        out.push(v[..e].to_string());
+                        rest = &tag[q + 6 + e + 1..];
+                    }
+                    None => rest = &tag[end..],
+                }
+            }
+            None => rest = &tag[end..],
+        }
+    }
+    out
+}
+
+/// The text of every `<kind ...>...</kind>` block in `s` (the regex `<kind .*?</kind>` with DOTALL).
+fn blocks<'a>(s: &'a str, kind: &str) -> Vec<&'a str> {
+    let (open, close) = (format!("<{kind} "), format!("</{kind}>"));
+    let mut out = vec![];
+    let mut rest = s;
+    while let Some(a) = rest.find(&open) {
+        match rest[a..].find(&close) {
+            Some(b) => {
+                out.push(&rest[a..a + b + close.len()]);
+                rest = &rest[a + b + close.len()..];
+            }
+            None => break,
+        }
+    }
+    out
 }
 
 /// `attr="value"` of the first occurrence in `s` (value up to the next quote).
@@ -164,71 +245,8 @@ impl<R: ReadAt> Mzml<R> {
     }
 
     /// The header of every `<chromatogram>`; they follow the spectra, so the search starts where the last scan ends (0 without scans).
-    /// The chromatograms of an MRM file are the whole file: they are searched in windows of `WINDOW` bytes, not in one buffer as large
-    /// as the file; a window grows (doubling) only while one chromatogram does not fit in it.
     pub fn chromatograms(&mut self, scans_end: u64) -> Result<Vec<Chrom>> {
-        let mut out: Vec<Chrom> = vec![];
-        let (mut at, mut len) = (scans_end, WINDOW);
-        while at < self.size {
-            let end = at.saturating_add(len).min(self.size);
-            let region = self.read(at, end)?;
-            let (mut pos, mut cut) = (0usize, None);
-            while let Some(a) = find_tag(&region, b"<chromatogram", pos) {
-                let Some(b) = find(&region, b"</chromatogram>", a) else {
-                    cut = Some(a);
-                    break;
-                };
-                let c = find(part(&region, 0, b), b"<binaryDataArrayList", a);
-                let h = text(part(&region, a, c.unwrap_or(b)));
-                let cid = attr_id(&h).unwrap_or_default();
-                let mut d = Chrom {
-                    index: out.len(),
-                    id: cid.clone(),
-                    start: at + a as u64,
-                    end: at + (b + 15) as u64,
-                    kind: "other".into(),
-                    ..Default::default()
-                };
-                let acc = |x: &str| has_accession(&h, x);
-                if cid == "TIC" || cid.starts_with("TIC ") {
-                    d.kind = "tic".into();
-                } else if cid == "BPC" {
-                    d.kind = "bpc".into();
-                } else if cid == "TWC" || acc("MS:1000812") || acc("MS:1000813") {
-                    d.kind = "pda".into();
-                } else if acc("MS:1003019") || cid.starts_with("Pump Pressure") {
-                    d.kind = "pressure".into();
-                } else if cid.starts_with("SRM") {
-                    d.kind = "srm".into();
-                    (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
-                    d.dwell = named_value(&h, "MS_dwell_time");
-                    d.ce = d.ce.or_else(|| named_value(&h, "collision energy"));
-                } else if ![
-                    "MS:1000235",
-                    "MS:1000627",
-                    "MS:1000628",
-                    "MS:1001473",
-                    "MS:1001472",
-                ]
-                .iter()
-                .any(|x| acc(x))
-                {
-                    d.kind = "analog".into();
-                }
-                d.n = attr(&h, "defaultArrayLength").and_then(|v| v.parse().ok());
-                out.push(d);
-                pos = b + 1;
-            }
-            match cut {
-                _ if end >= self.size => break,
-                // one chromatogram longer than the window: the same start, a window twice as long
-                Some(0) => len = len.saturating_mul(2),
-                Some(a) => (at, len) = (at + a as u64, WINDOW),
-                // far enough back that an opening tag cut by the end of this window is seen whole in the next
-                None => (at, len) = ((at + pos as u64).max(end - 13), WINDOW),
-            }
-        }
-        Ok(out)
+        finestre::chromatograms(self, scans_end)
     }
 
     /// (time in minutes, intensity) of a chromatogram.
@@ -602,7 +620,3 @@ pub(crate) fn decode(head: &str, data: &[u8], expected: usize) -> Result<Vec<f64
 #[cfg(test)]
 #[path = "mzmlhead_tests.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "mzmlhead/finestre_tests.rs"]
-mod finestre_tests;
