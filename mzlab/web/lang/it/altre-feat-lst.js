@@ -92,6 +92,8 @@ I18N.add("it", {
   "int.guard": "<b>Si integra su uno XIC, non sul TIC.</b><br>Il cromatogramma totale (TIC/BPC/PDA) somma tutti gli ioni: la sua area non appartiene a nessun composto. Estrai prima lo ione (XIC).<br><br>Estrarre uno XIC ora?",
   "int.clash": "Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)",
   "int.belowSn": "Sotto la soglia segnale/rumore dei parametri di rilevamento: nessun picco",
+  "int.autoNone": "Nessun picco nel tratto mostrato con i parametri di rilevamento",
+  "int.autoOff": "Il motore dei picchi non è disponibile: integra i picchi uno alla volta dal menu o a mano",
   "int.menu.del": "Elimina questa integrazione",
   "int.menu.delAll": "Elimina tutte le integrazioni di questo pannello",
   "int.menu.params": "Parametri di rilevamento dei picchi…",

@@ -19,6 +19,7 @@ I18N.add("en", {
   "err.http": "error {status}",
   "err.upload.network": "upload failed",
   "err.hr.mix": "Low- and high-resolution files cannot be mixed.",
+  "err.flow.param.axis": "{param} does not apply to a file on the {axis} axis: on the unit resolution axis set the m/z tolerance in Da (tol_da, dup_da), on the high-resolution axis in ppm (ppm, tol_ppm, max_ppm_span, dup_ppm).",
   "err.file.notAccepted": "File type not accepted: {name}. Use an .mzML file, or a .dam method; convert a .wiff to .mzML first.",
   "err.file.notMzml": "{name} does not look like an mzML file.",
   "err.file.netcdf4": "This is a netCDF-4 (HDF5) file: export it as netCDF-3/AIA (.cdf) from the instrument software.",

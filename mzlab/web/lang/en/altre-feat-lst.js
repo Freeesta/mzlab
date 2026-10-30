@@ -92,6 +92,8 @@ I18N.add("en", {
   "int.guard": "<b>Integrate an XIC, not the TIC.</b><br>The total chromatogram (TIC/BPC/PDA) adds up all the ions, so its area belongs to no compound. Extract the ion first (XIC).<br><br>Extract an XIC now?",
   "int.clash": "There is already an integrated peak here: remove it first (right-click → Delete)",
   "int.belowSn": "Below the signal/noise threshold of the detection parameters: no peak",
+  "int.autoNone": "No peak in the stretch shown with the detection parameters",
+  "int.autoOff": "The peak engine is not available: integrate the peaks one at a time from the menu or by hand",
   "int.menu.del": "Delete this integration",
   "int.menu.delAll": "Delete all the integrations of this panel",
   "int.menu.params": "Peak detection parameters…",

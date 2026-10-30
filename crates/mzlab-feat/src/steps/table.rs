@@ -38,6 +38,17 @@ fn family_link_params() -> Vec<Param> {
     ]
 }
 
+/// `tol_da` of the steps that match m/z (`features.align`, `features.gapfill`, `features.ms2_link`): the tolerance on the unit axis, in Da.
+pub(super) fn tol_da() -> Param {
+    Param::number("tol_da", "m/z tolerance (Da)")
+        .min(0.05)
+        .max(1.0)
+        .unit("Da")
+        .doc("Unit axis only; left empty, the recipe of the file (measured window or 0.35 Da)")
+        .estimate()
+        .advanced()
+}
+
 /// `features.align`: joins the features of the files into the rows of the table (`famalign::align_families`, `align::align`).
 pub(super) fn align() -> Step {
     let mut params = vec![
@@ -49,6 +60,7 @@ pub(super) fn align() -> Step {
             .default_num(5.0)
             .unit("ppm")
             .doc("At unit resolution the engine reads a negative value as Da"),
+        tol_da(),
         Param::number("rt_gap", "RT gap")
             .min(0.0)
             .default_num(0.1)
@@ -124,6 +136,7 @@ pub(super) fn gapfill() -> Step {
             .default_num(5.0)
             .unit("ppm")
             .doc("At unit resolution the engine reads a negative value as Da"),
+        tol_da(),
         Param::number("rt_tol", "RT tolerance")
             .min(0.0)
             .default_num(0.1)
@@ -245,6 +258,12 @@ fn filter_tail_params() -> Vec<Param> {
             .min(0.0)
             .unit("ppm")
             .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
+        Param::number("dup_da", "Duplicate m/z window (Da)")
+            .min(0.05)
+            .max(1.0)
+            .unit("Da")
+            .doc("Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off")
+            .tip("Of rows this many Da apart in m/z and close in RT, only the strongest is kept."),
         Param::number("dup_rt", "Duplicate RT window")
             .min(0.0)
             .default_num(0.1)
