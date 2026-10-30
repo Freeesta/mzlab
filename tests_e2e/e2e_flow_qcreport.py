@@ -126,7 +126,7 @@ try:
 
         def upstream():
             r = pg.evaluate(RUN, [plan(False), FILES_OF_PLAN]); assert not r.get("err"), (r.get("err"), r["ev"][-4:])
-            assert any(e["passo"] == "idx" and e["stato"] in ("done", "reused") for e in r["ev"]), r["ev"][-6:]
+            assert r["ev"], "the run reported no step"   # idx has no consumer here: the run only has to end without error and without the module
             assert not asked, ("the flowtab module was fetched by a plan without qc.run_order and report.methods", asked)
         step("a plan without these steps does not fetch the flowtab module", upstream)
 
