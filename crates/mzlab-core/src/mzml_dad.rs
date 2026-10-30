@@ -133,7 +133,7 @@ fn uv_row(block: &[u8]) -> Option<(f64, Vec<f64>, Vec<f64>)> {
     let p = h.find("accession=\"MS:1000016\"")?;
     let tag = &h[h[..p].rfind('<')?..p + h[p..].find('>')?];
     let mut rt: f64 = attr(tag, "value")?.parse().ok()?;
-    if attr(tag, "unitName").is_some_and(|u| u.starts_with("second")) {
+    if crate::mzml::is_seconds(attr(tag, "unitName"), attr(tag, "unitAccession")) {
         rt /= 60.0;
     }
     let (mut wl, mut ab) = (None, None);

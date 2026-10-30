@@ -128,3 +128,23 @@ def test_arrangement_actions_show_in_every_view_and_have_texts_in_both_languages
         for k in keys | {f"cmd.disp.{i}.{f}" for i in ("affianca", "su", "giu", "intera", "uguali", "ripristina") for f in ("lab", "name", "tip", "kw")}:
             assert f'"{k}"' in cat, (lang, k)
     assert not re.search(r"""["'](?:full|ms2|mrm|spec|chrom)["']""", (WEB / "layout.js").read_text(encoding="utf-8"))
+
+
+def test_unavailable_entries_are_hidden_and_separators_stay_clean():
+    """Every menu hides what is not available now (`off`); no separator is left first, last or doubled; info rows stay."""
+    r = run("""const reg=(id,gruppo,o)=>AZIONI.registra({id,gruppo,viste:['v'],nome:()=>id,esegui:()=>0,...o});
+      reg('a','reset',{disponibile:c=>c.ok});reg('b','value',{voci:()=>[{nome:'info',dim:true,info:true,esegui:()=>0}]});reg('c','xic',{disponibile:c=>c.ok});
+      reg('d','cont',{disponibile:c=>c.ok});reg('e','help');reg('f','ann',{disponibile:c=>c.ok});
+      const names=l=>AZIONI.pulisci(l).map(i=>i==='-'?'-':i.id);
+      console.log(JSON.stringify({off:names(AZIONI.per({vista:'v',ok:false})),on:names(AZIONI.per({vista:'v',ok:true})),
+        fila:AZIONI.pulisci([{fila:[{id:'x',off:true}]},{label:'m'},'-','-',{label:'n'},'-']).map(i=>i==='-'?'-':i.label||i.fila)}))""")
+    assert r["off"] == ["b", "-", "e"], r
+    assert r["on"] == ["a", "-", "b", "-", "c", "-", "d", "-", "e", "-", "f"], r
+    assert r["fila"] == ["m", "-", "n"], r
+
+
+def test_downloads_of_a_view_come_from_the_registry_not_from_the_menu():
+    r = run("""const reg=(id,o)=>AZIONI.registra({id,gruppo:'lib',viste:['v'],nome:()=>id,esegui:()=>0,...o});
+      reg('d1',{menu:false,scarico:true});reg('d2',{menu:false,scarico:true,disponibile:c=>c.ok});reg('m');
+      console.log(JSON.stringify({menu:AZIONI.per({vista:'v',ok:true}).map(i=>i.id),dl:AZIONI.scarichi({vista:'v',ok:false}).map(i=>i.label),dl2:AZIONI.scarichi({vista:'v',ok:true}).map(i=>i.label)}))""")
+    assert r == {"menu": ["m"], "dl": ["d1"], "dl2": ["d1", "d2"]}

@@ -222,7 +222,7 @@ pub struct SpettroG {
 }
 
 /// A window narrower than this does not take the M+1 of a singly charged ion (±1.00336 Da around its centre).
-pub const STRETTA: f64 = 2.0 * 1.003355;
+pub const STRETTA: f64 = 2.0 * crate::elements::C13_STEP;
 
 /// A sub-formula of the ion of the root that explains a node.
 #[derive(Debug, Clone, PartialEq)]

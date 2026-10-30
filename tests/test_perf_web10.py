@@ -1,4 +1,4 @@
-"""PERF-WEB10: the array helpers of grafici.js, the allocation-free paths of liste.js and the sgFilter of picchi.js give the numbers they always gave.
+"""PERF-WEB10: the array helpers of grafici.js, the allocation-free paths of liste.js give the numbers they always gave (the Savitzky-Golay filter now lives in Rust: crates/mzlab-core/tests/peakq_lr_parity.rs).
 
 The old code (Math.max(...a), find().some(), clamp in the inner loop, regex count of ; and ,) is copied below as the reference."""
 import json
@@ -95,28 +95,6 @@ console.log(JSON.stringify(out));
 """)
     assert r["runsEq"] and r["hasEq"] and r["nonEmpty"]
     assert r["head"] == [1, 1, 1]
-
-
-def test_sgfilter_same_numbers_as_the_clamped_loop():
-    r = run(r"""
-const psrc = fs.readFileSync(web + '/picchi.js', 'utf8');
-const a = psrc.indexOf('function sgFilter'), b = psrc.indexOf('// Parameters of the automatic integration');
-const sg = new Function(psrc.slice(a, b) + '; return sgFilter;')();
-function old(y, m, deriv) {
-  const n = y.length, out = new Array(n), mm = m * (m + 1) * (2 * m + 1) / 3;
-  const w = []; for (let j = -m; j <= m; j++) w.push(deriv ? j / mm : 3 * (3 * m * m + 3 * m - 1 - 5 * j * j) / ((2 * m - 1) * (2 * m + 1) * (2 * m + 3)));
-  for (let i = 0; i < n; i++) { let v = 0; for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))]; out[i] = v; }
-  return out;
-}
-let same = true;
-for (const n of [1, 5, 40, 500]) for (const m of [2, 3, 7, 30]) for (const d of [false, true]) {
-  const y = Array.from({ length: n }, () => rnd() * 1000);
-  const p = sg(y, m, d), q = old(y, m, d);
-  for (let i = 0; i < n; i++) if (!Object.is(p[i], q[i])) same = false;
-}
-console.log(JSON.stringify({ same }));
-""")
-    assert r["same"] is True
 
 
 def test_bufpool_best_fit_and_caps_over_200_mixed_requests():

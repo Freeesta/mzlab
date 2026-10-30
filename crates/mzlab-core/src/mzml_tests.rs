@@ -176,3 +176,13 @@ fn base64_split_by_white_space_and_character_references_reads_the_same() {
         assert_eq!(a.spectra, b.spectra, "{gap:?}");
     }
 }
+
+#[test]
+fn seconds_by_unit_name_or_accession_alone() {
+    use super::is_seconds;
+    assert!(is_seconds(Some("second"), None));
+    assert!(is_seconds(None, Some("UO:0000010")));
+    assert!(is_seconds(Some("second"), Some("UO:0000010")));
+    assert!(!is_seconds(Some("minute"), Some("UO:0000031")));
+    assert!(!is_seconds(None, None));
+}

@@ -47,6 +47,12 @@ window.QUALITA = {
   /** Every peak with its apex between the times x0 and x1, by RT, as { lo, hi (indices into the trace), b0, b1 (baseline at lo and hi), area }: the one-click integration of HR traces.
    * o = { smooth (points), snr, rel (fraction of the highest point), scans, half (edge smoothing, 0 = auto), slope }; null without the engine. */
   autoIntegrate(x, y, x0, x1, o) { return call({ op: "auto", rt: f64(x), y: f64(y), x0, x1, ...o }); },
+  /** Limits [t0, t1] (min) of the low-resolution peak at time `at` (the click), with the detector parameters `pk` (PK of picchi.js) and the base width `ref` of the peaks already integrated (0 = none);
+   * [] below the S/N threshold, null without the engine. */
+  edges(x, y, at, ref, mrm, pk) {
+    const params = [pk.win, pk.areaNoise, pk.edgeFrac, pk.snMin, pk.noise === "rms" ? 1 : pk.noise === "manual" ? 2 : 0, pk.minHalf, pk.multi, pk.tail, pk.constrain, pk.nr0, pk.nr1];
+    return call({ op: "edges", rt: f64(x), y: f64(y), at, ref, mrm: !!mrm, params: f64(params) });
+  },
   /** The peaks worth a label (at most maxN, height >= rel of the tallest, S/N >= snr), by RT: [{ apex, rt, height, snr }] (apex = index into the trace), or null. */
   labels(x, y, maxN, rel, snr, ends) { return call({ op: "labels", rt: f64(x), y: f64(y), maxN, rel, snr, ends: !!ends }); },
   /** The tallest point of a spectrum { x, y } (m/z or nm; refine = parabola through the apex), null when none or without the engine. */

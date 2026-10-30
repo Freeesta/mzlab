@@ -49,11 +49,11 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         TIC = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"       # the first chromatogram of the tab, whatever its kind becomes
         def option():
-            pg.wait_for_function(f"!!{TIC}.el.querySelector('select[data-o=kind] option[value=reg]')")
-            t = pg.evaluate(f"{TIC}.el.querySelector('select[data-o=kind] option[value=reg]').textContent"); assert t == "Registro dello strumento", t
+            pg.wait_for_function(f"!!{TIC}.el.querySelector('.can-row[data-kind=reg]')")
+            t = pg.evaluate(f"{TIC}.el.querySelector('.can-row[data-kind=reg]').getAttribute('aria-label')"); assert t == "Registro dello strumento", t
         step("the selector offers «Registro dello strumento» when a file has series", option)
         def pick():
-            pg.evaluate(f"(() => {{const s={TIC}.el.querySelector('select[data-o=kind]'); s.value='reg'; s.dispatchEvent(new Event('change',{{bubbles:true}}))}})()")
+            pick_kind(pg, "reg", TIC)
             pg.wait_for_function(f"!!{TIC}.el.querySelector('select[data-o=reg]')")
             g = pg.evaluate(f"[...{TIC}.el.querySelectorAll('select[data-o=reg] optgroup')].map(o=>[o.label,o.children.length])")
             assert g == [["Ion Source", 2], ["Vacuum", 1], ["Per scansione", 1]], g

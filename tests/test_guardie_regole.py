@@ -210,3 +210,17 @@ def test_guardia_ordinamenti_std_solo_sortc_nei_crate_wasm():
                 if SORT_STD.search(riga) and not riga.lstrip().startswith("//"):
                     trovati.append(f"{rel}:{n}")
     assert not trovati, f"use sortc (SortC::sortc_by...) instead of std sorts: {trovati}"
+
+
+def test_guardia_costanti_di_massa_solo_in_elements():
+    """Proton, electron and 13C step are written once (mzlab-core elements.rs); crates import them by name."""
+    pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")
+    trovati = []
+    for f in sorted(ROOT.glob("crates/*/src/**/*.rs")):
+        rel = str(f.relative_to(ROOT))
+        if rel.endswith("mzlab-core/src/elements.rs") or "tests" in f.name or "/tests" in rel:
+            continue
+        for n, riga in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            if pat.search(riga) and not riga.lstrip().startswith("//"):
+                trovati.append(f"{rel}:{n}")
+    assert not trovati, f"mass constant literals outside elements.rs: {trovati}"

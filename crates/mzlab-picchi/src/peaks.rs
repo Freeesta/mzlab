@@ -275,7 +275,7 @@ fn ridge_apexes(
     }
     crate::sortc::by(&mut found, |a, b| {
         a.0.cmp(&b.0)
-            .then(a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+            .then(crate::sortc::asc_nan_last(a.1, b.1))
     });
     found
 }
@@ -318,11 +318,7 @@ fn peaks_of(
             snr: rsn,
         });
     }
-    crate::sortc::by(&mut peaks, |a, b| {
-        b.height
-            .partial_cmp(&a.height)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    crate::sortc::by(&mut peaks, |a, b| crate::sortc::desc_nan_last(a.height, b.height));
     peaks
 }
 

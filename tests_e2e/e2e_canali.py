@@ -47,7 +47,7 @@ try:
         step("DAD file opens", dad)
         pg.evaluate("setTab('full')"); ready(pg)
         def tree():
-            pg.click("[data-o=canali]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
+            pg.click("[data-o=kind]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
             n = pg.evaluate("document.querySelectorAll('.can-pop [role=treeitem]').length"); assert n >= 5, n
             assert pg.evaluate("document.querySelector('.can-pop [role=tree]').getAttribute('aria-label')")
             lv = pg.evaluate("[...document.querySelectorAll('.can-pop [role=treeitem]')].map(e => e.getAttribute('aria-level'))"); assert "2" in lv, lv
@@ -71,9 +71,9 @@ try:
             pg.keyboard.press("Escape"); assert pg.evaluate("document.querySelector('.can-pop').hidden")
         step("keyboard: arrows, space, Escape", keys)
         def size():
-            pg.click("[data-o=canali]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
+            pg.click("[data-o=kind]"); attendi(pg, "document.querySelector('.can-pop [role=treeitem]')")
             h = pg.evaluate("Math.min(...[...document.querySelectorAll('.can-pop .can-row')].filter(e => e.offsetParent).map(e => e.getBoundingClientRect().height))"); assert h >= 24, h
-            b = pg.evaluate("document.querySelector('[data-o=canali]').getBoundingClientRect().height"); assert b >= 24, b
+            b = pg.evaluate("document.querySelector('[data-o=kind]').getBoundingClientRect().height"); assert b >= 24, b
             pg.keyboard.press("Escape")
         step("targets of at least 24 px", size)
         def miss():

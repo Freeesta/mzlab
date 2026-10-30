@@ -847,12 +847,12 @@ const LISTE = (() => {
   // the actions of the spectrum menu (registry azioni/1): the lists of contaminants, the known ones at this m/z (high resolution), add a laboratory contaminant
   if (typeof AZIONI !== "undefined") {
     const S = ["spec"], T = I18N.t.bind(I18N);
-    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
+    AZIONI.registra({ id: "spec.contLists", gruppo: "cont", viste: S, menu: false, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.contLists"), esegui: (/** @type {Bag} */ c) => open({ mz: c.m, polarity: c.pol, hr: !!c.a.hrp }) });
     AZIONI.registra({ id: "spec.known", gruppo: "cont", viste: S, voci: (/** @type {Bag} */ c) => {
       const kn = c.a.hrp && c.has && isOn() && c.a.cont ? c.a.cont.match(c.m) : [];
-      return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, esegui: () => {} }] : [];
+      return kn.length ? [{ nome: T("ctx.spec.known", { name: kn[0].name, adduct: kn[0].adduct || T("ctx.spec.knownOnlyMz"), err: (kn[0].err >= 0 ? "+" : "") + kn[0].err.toFixed(1), more: kn.length > 1 ? T("ctx.spec.knownMore", { n: kn.length - 1 }) : "" }), dim: true, info: true, esegui: () => {} }] : [];
     } });
-    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, visibile: (/** @type {Bag} */ c) => !!c.a.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
+    AZIONI.registra({ id: "spec.addLab", gruppo: "cont", viste: S, menu: false, visibile: (/** @type {Bag} */ c) => !!c.a.hrp, disponibile: (/** @type {Bag} */ c) => c.has, nome: () => T("ctx.spec.addLab"), esegui: (/** @type {Bag} */ c) => askAdd(c.m, c.pol) });
   }
   return {
     tolDa,

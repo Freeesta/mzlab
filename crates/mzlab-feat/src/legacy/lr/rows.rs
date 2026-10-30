@@ -22,7 +22,7 @@ const ISOMER_MAX: usize = 4;
 pub const ISOTOPE: &str = "not an isotope peak";
 
 pub const ISOTOPE_SHIFTS: [(f64, &str); 3] = [
-    (1.00335, "13C (M+1)"),
+    (mzlab_core::elements::C13_STEP, "13C (M+1)"),
     (2.0067, "M+2"),
     (1.99580, "34S (M+2)"),
 ];
