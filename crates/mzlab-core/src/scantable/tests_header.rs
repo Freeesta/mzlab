@@ -95,9 +95,20 @@ fn head_is_unchanged_and_the_first_read_is_reused() {
 
 #[test]
 fn scan_start_time_in_seconds_by_unit_name_or_accession() {
-    let h = |u: &str| format!("<cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"90\" {u}/>");
+    let h = |u: &str| {
+        format!("<cvParam cvRef=\"MS\" accession=\"MS:1000016\" name=\"scan start time\" value=\"90\" {u}/>")
+    };
     assert_eq!(super::rows::rt_minutes(&h("unitName=\"second\"")), 1.5);
-    assert_eq!(super::rows::rt_minutes(&h("unitAccession=\"UO:0000010\"")), 1.5);
-    assert_eq!(super::rows::rt_minutes(&h("unitAccession=\"UO:0000010\" unitName=\"second\"")), 1.5);
-    assert_eq!(super::rows::rt_minutes(&h("unitAccession=\"UO:0000031\" unitName=\"minute\"")), 90.0);
+    assert_eq!(
+        super::rows::rt_minutes(&h("unitAccession=\"UO:0000010\"")),
+        1.5
+    );
+    assert_eq!(
+        super::rows::rt_minutes(&h("unitAccession=\"UO:0000010\" unitName=\"second\"")),
+        1.5
+    );
+    assert_eq!(
+        super::rows::rt_minutes(&h("unitAccession=\"UO:0000031\" unitName=\"minute\"")),
+        90.0
+    );
 }

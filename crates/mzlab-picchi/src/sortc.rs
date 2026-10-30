@@ -7,12 +7,14 @@ use std::cmp::Ordering;
 /// Ascending order of two floats with NaN after every number. Unlike `total_cmp`, -0 and +0 are equal, so data without NaN sort exactly as
 /// with `partial_cmp`; unlike `partial_cmp(..).unwrap_or(Equal)` it is a total order, so one NaN cannot leave the numbers unsorted.
 pub fn asc_nan_last(a: f64, b: f64) -> Ordering {
-    a.partial_cmp(&b).unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
+    a.partial_cmp(&b)
+        .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
 }
 
 /// Descending order of two floats, NaN still after every number (see `asc_nan_last`).
 pub fn desc_nan_last(a: f64, b: f64) -> Ordering {
-    b.partial_cmp(&a).unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
+    b.partial_cmp(&a)
+        .unwrap_or_else(|| a.is_nan().cmp(&b.is_nan()))
 }
 
 /// Stable bottom-up merge sort for plain data: insertion sort of runs of 16, then merges of doubling width between `v` and a buffer.

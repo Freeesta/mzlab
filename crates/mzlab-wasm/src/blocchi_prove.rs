@@ -4,7 +4,11 @@ impl super::Fetch for Mem {
     fn fetch(&mut self, pos: u64, want: u64, into: &mut Vec<u8>) -> std::io::Result<()> {
         self.1 += 1;
         into.clear();
-        into.extend_from_slice(self.0.get(pos as usize..(pos + want) as usize).unwrap_or_default());
+        into.extend_from_slice(
+            self.0
+                .get(pos as usize..(pos + want) as usize)
+                .unwrap_or_default(),
+        );
         Ok(())
     }
 }
