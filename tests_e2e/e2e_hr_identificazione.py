@@ -83,7 +83,7 @@ try:
               for (let i=0;i<d.sid.length&&n<40;i++){const t=d.tgt[i]; if(!t||seen.has(t))continue; seen.add(t); const s=await J('api/scan?k='+k+'&sid='+d.sid[i]); if(s.mz.length<3)continue;
                 out+='Name: Fila '+(n+1)+'\\nPrecursorMZ: '+t+'\\nPrecursor_type: [M+H]+\\nIon_mode: Positive\\nFormula: C10H10\\n'+(n%5===4?'':'SMILES: '+(n%2?'CCO':'c1ccccc1O')+'\\n')+'Num Peaks: '+s.mz.length+'\\n'+s.mz.map((m,j)=>m.toFixed(5)+' '+s.y[j].toFixed(1)).join('\\n')+'\\n\\n'; n++;}
               return out})()""")
-            pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'molte.msp')})})(%s)" % __import__("json").dumps(text)); pg.wait_for_timeout(800)
+            pg.evaluate("(async t=>{await LIB.call('add',{file:new File([t],'molte.msp')})})(%s)" % __import__("json").dumps(text))
             pg.evaluate("LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-list tr.row", timeout=60000)
             pg.evaluate("document.querySelector('#li-list').style.maxHeight='190px'")
             heads = pg.inner_text("#li-list thead")
@@ -92,11 +92,11 @@ try:
               return {over:L.scrollWidth-L.clientWidth, name:by('Nome').width, right:Math.max(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).right))-r.right, left:Math.min(...['Entropia','Picchi','Δ ppm'].map(t=>by(t).left))}})()""")
             assert geo["over"] <= 1 and geo["name"] >= 100 and geo["right"] <= 1, ("columns fit at 1280 px", geo)
             tot = pg.locator("#li-list .lw-th").count(); assert tot >= 8, tot
-            pg.wait_for_function("document.querySelectorAll('#li-list .lw-th svg').length > 0", timeout=20000); pg.wait_for_timeout(500)
+            attendi(pg, "document.querySelectorAll('#li-list .lw-th svg').length > 0"); frames(pg, 3)
             drawn = pg.locator("#li-list .lw-th svg").count(); assert 0 < drawn < tot, ("only the rows in view are drawn", drawn, tot)
             assert pg.locator("#li-list tr.row td.st", has_text="–").count() >= 1, "rows without a SMILES show a dash"
-            pg.evaluate("document.querySelector('#li-list').scrollTop = 1e6"); pg.wait_for_function(f"document.querySelectorAll('#li-list .lw-th svg').length > {drawn}", timeout=20000)
-            pg.evaluate("document.querySelector('#li-list').scrollTop = 0"); pg.wait_for_timeout(300)
+            pg.evaluate("document.querySelector('#li-list').scrollTop = 1e6"); attendi(pg, f"document.querySelectorAll('#li-list .lw-th svg').length > {drawn}")
+            pg.evaluate("document.querySelector('#li-list').scrollTop = 0"); frames(pg)
             btn = pg.locator("#li-list .lw-th").first; smi = btn.get_attribute("data-smi"); btn.click()
             pg.wait_for_selector("#li-big .lw-bigsvg svg", timeout=20000)
             assert pg.is_visible("#li-list tr.row") and pg.inner_text("#li-big code") == smi, "the SMILES is shown with the enlarged structure"
