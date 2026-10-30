@@ -97,7 +97,7 @@ Una riga per area: se tocchi la zona a sinistra, leggi il file a destra (solo qu
 | rilascio: tag `vX.Y.Z`, `release.yml`, `CHANGELOG.md`, versione unica, SBOM, cancello (`cancello_rilascio.py`) | `docs/agenti/rilascio.md` |
 | Flow grafico (scheda: palette dei passi `step/1`, catena, moduli dei parametri, confronto `meta.compare`, esportazione/importazione `mzflow/2`; `flow/`) | `docs/agenti/flow-grafica.md` (corrispondenza con i passi di mzmine: `flow-mzmine.md`; copertura di Tabui: `flow-copertura-tabui.md`, `flow-pacchetto-tabui.md`; griglia dei metadati dei campioni: `flow-meta-griglia.md`) |
 | esecutore web del Flow («This browser»: `flow/lazy/flow-web-{run,ui,worker}.js`, eventi `flow:web-step`, stima `stima_series`, avviso su telefono/tablet, Run spento oltre il livello alto) | `docs/agenti/flow-web.md` |
-| `qc.mass_accuracy` (accuratezza di massa, correzione della tabella: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-massa.md` |
+| `qc.mass_accuracy` (accuratezza di massa, correzione della tabella, controllo della calibrazione dal tasto destro del TIC `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-massa.md` |
 | usabilità del Flow (modello MSn infusione: grafo dopo la corsa, suggerimenti dei campi, Raw files, nomi, barra, terminale; prompt dei lavori) | `docs/agenti/flow-ux.md` |
 | Libro: convertitore (`tools/libro/`, dialetto Markdown, fixture CC0, `--pubblico`) e pagina editor admin (`mzlab/web/libro/`, token, salvataggio nel repository privato) | `docs/agenti/libro.md` |
 | tutor sulla Teoria (`mzlab-tutor`: blocchi, BM25) | `docs/agenti/tutor.md` |

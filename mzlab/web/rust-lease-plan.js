@@ -11,7 +11,7 @@ export const READ_FREE = new Set([
 ]);
 
 /** ops that read the index of ONE file: the one at `m.slot` (an lr_ op names its file) */
-const OF_SLOT = new Set(["tic", "xic", "spectra", "route", "idxxic", "idxxicbin", "scaninfo", "mzmlroute", "scanbin", "specexact", "mrm", "mrmchrom", "fileinfo", "canali"]);
+const OF_SLOT = new Set(["tic", "xic", "spectra", "route", "idxxic", "idxxicbin", "scaninfo", "mzmlroute", "scanbin", "specexact", "mrm", "mrmchrom", "fileinfo", "masscal", "canali"]);
 const OF_NAME = new Set(["lr_entry", "lr_items", "idxopen"]);
 
 /**

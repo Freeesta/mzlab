@@ -1,4 +1,12 @@
 {
+  "masscal.title": "Titolo del pannello del controllo di calibrazione; {file} = nome del file.",
+  "masscal.sum": "Riga di sintesi; {n} = ioni contaminanti trovati, {off} = scarto robusto in ppm con segno, {spread} = dispersione in ppm.",
+  "masscal.sum.few": "Sintesi quando gli ioni sono pochi; {n} = ioni trovati, {min} = minimo per stimare l'errore.",
+  "masscal.trend": "Andamento dell'errore; {mz} = ppm ogni 100 m/z, {rt} = ppm al minuto (con segno), {model} = nome del modello adattato.",
+  "masscal.trend.mz": "Andamento dell'errore con m/z; {mz} = ppm ogni 100 m/z (con segno), {model} = nome del modello adattato.",
+  "masscal.thr": "Etichetta del campo soglia; {input} = campo numerico in ppm.",
+  "masscal.minint": "Etichetta del campo intensità minima; {input} = campo numerico.",
+  "masscal.plot.desc": "Descrizione breve di un grafico; {title} = titolo, {n} = numero di ioni, {a} e {b} = errore minimo e massimo in ppm.",
   "storia.tolto": "Avviso 6 s dopo aver tolto un file, chiuso un pannello o svuotato le marcature, con il pulsante Annulla; {what} = nome del file, del pannello o «marcature».",
   "storia.undone": "Annuncio dopo Ctrl/Cmd+Z; {what} = nome breve dell'azione annullata (zoom, integrazione, fondo...).",
   "storia.redone": "Annuncio dopo Ripeti; {what} = nome breve dell'azione ripetuta.",
