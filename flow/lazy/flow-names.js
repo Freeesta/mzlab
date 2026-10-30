@@ -99,10 +99,12 @@
     { id: "reactivity", name: "Where it reacts", line: "Estimate which parts of the parent are most reactive.", steps: ["structure.reactivity"] },
   ];
   // `steps`: a plan of its own (no feature-table base), the steps in order, each wired to what fits
+  // `presets`: {stepId: preset} written in the plan; `tail`: steps added after the add-ons; `note`: the card carries F.UNIT_NOTE
   // `more`: kept under «More templates» instead of on the first row
   F.TEMPLATES = [
     { id: "tp", name: "Find transformation products", good: "Good for: degradation or metabolism studies.", addons: ["tp"] },
     { id: "table", name: "Feature table", good: "Good for: a first look at your data.", addons: [] },
+    { id: "lrtable", name: "Unit-resolution feature table", good: "Good for: full-scan files from a triple quadrupole or an ion trap (unit resolution): a table of nominal-mass candidates, no accurate-mass formulas.", note: true, addons: ["reliable"], presets: { "features.detect": "lr" }, params: { "table.filter": { blank_ratio: 3, dup_da: 0.3 } }, tail: ["features.estimate", "export.table_csv"] },
     { id: "identify", name: "Untargeted analysis", good: "Good for: unknown compounds in real samples, with formulas and library matches.", addons: ["formulas", "match", "level"] },
     { id: "msn", name: "Fragmentation tree of a standard", good: "Good for: an MSn infusion of a known compound: its fragments, neutral losses and sub-formulas, as a library and a table.", help: "Fragmentation rules: CID vs HCD (see the MSn manual).", steps: ["spectra.msn_graph", "msn.library_export", "msn.table_export"], params: { "spectra.msn_graph": { interpreta: true } }, addons: [] },
     { id: "bentazone", name: "Bentazone / transformation products", good: "Good for: a parent degraded over time (bentazone or any other), positive or negative, unit or high resolution: the files decide the polarity and the resolution.", addons: ["tp", "tpfilter", "position", "network"], more: true },
@@ -111,6 +113,8 @@
     { id: "standards", name: "Standards check", good: "Good for: checking that the standards and the blanks behave before you trust a table (needs a sample list).", addons: ["reliable"], params: { "table.filter": { qc_cv_max: 30 } }, more: true },
     { id: "blankfree", name: "Blank-corrected table", good: "Good for: a table without what the blanks also show (needs a sample list with blanks).", addons: ["reliable"], params: { "table.filter": { blank_ratio: 3 } }, more: true },
   ];
+  /** the honest label of the unit-resolution template: shown in its card and in the issues panel */
+  F.UNIT_NOTE = "Unit resolution: m/z values are nominal (± the measured window); a row is a candidate, at most level 4 from MS1 alone (level 3 with an MS2 match, level 1 only with a standard).";
   /** @param {string} id */
   F.nameOf = id => (F.NAMES[id] || [id, "process", ""]);
 })();
