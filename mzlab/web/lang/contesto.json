@@ -497,7 +497,6 @@
   "conv.row.readn": "Riga di un file nell'elenco durante la lettura delle scansioni: {done} scansioni lette su {total}.",
   "conv.row.ready": "Riassunto in testa all'elenco in caricamento: {done} file pronti su {n}, {time} = tempo trascorso (m:ss).",
   "conv.row.scans": "Aggiunta alla riga di un campione durante l'indice: {done} scansioni lette su {total} del campione.",
-  "conv.row.quiet": "Aggiunta al tempo di una riga in caricamento quando il lavoro non dà notizie da più di 5 s; {s} = secondi senza notizie.",
   "conv.row.done": "Esito che resta sulla riga di un campione caricato; {scans} = scansioni del campione, {secs} = secondi impiegati.",
   "conv.row.cached": "Esito sulla riga di un campione già caricato con lo stesso .wiff e .wiff.scan (stessi nomi, dimensioni e date): non si copia né si rilegge nulla; {scans} = scansioni del campione.",
   "conv.row.missing": "Avviso sulla riga di un campione caricato da una copia troncata del .wiff.scan; {n} = scansioni elencate dal .wiff ma oltre la fine del .wiff.scan.",

@@ -19,7 +19,7 @@ const CONV = {
   async make(/** @type {string} */ name) {
     const rb = window.MZLAB_RUST, box = document.getElementById("up");
     if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
-    const f = (typeof ST !== "undefined" && ST.files || []).find((/** @type {Bag} */ x) => x.name === name), g = ConvUI.group(box, [1]), ui = g.start(1, name);
+    const f = (typeof ST !== "undefined" && ST.files || []).find((/** @type {Bag} */ x) => x.name === name), g = await ConvUI.card(box, [1]), ui = g.start(1, name);
     try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.numpress); ui.done(); g.end(); this.made.set(this.key(name), blob); return blob; }
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
   },
@@ -84,9 +84,8 @@ const CONVQ = {
 // they are known until the user closes them (the running ones in the table, the ended ones in a list under it): { name, state, pc, sub, t0, seen, ... }. Running states: "open" (pair found, reading its .wiff), "wait" (queued), "run" (converting, pc),
 // "conv" (converted, waits for the index), "index" / "nread" / "nopen" / "nscan" / "nchrom" (indexing, pc; sub = {done, total} scans). Final states, which stay: "done" (scans, secs),
 // "fail" (msg, diag: DIAG with the trace of the loading, «Details» and «Copy diagnosis»), "cancel". A change of state draws the list again; a new percentage only moves the bar of its
-// row; while a row runs, a clock of 1 s writes its time and, after CONV_QUIET ms without news, how long it has been quiet (never a still screen). The rows are drawn in the side list
+// row. The rows are drawn in the side list
 // (upload-rows.js); the work area has no heading nor row of the loading.
-const CONV_QUIET = 5000;
 const CONV_FINAL = ["done", "fail", "cancel"];
 // what the summary counts apart, in this order: the kinds of file (`kind` of the file entry, "mixed" for a file of more parts), then the rows that did not load
 const CONV_SUM = /** @type {Record<string, string>} */ ({ full: "conv.sum.full", ms2: "conv.sum.ms2", mrm: "conv.sum.mrm", infusion: "conv.sum.infusion", mixed: "conv.sum.mixed", other: "conv.sum.other", fail: "conv.sum.fail", cancel: "conv.sum.cancel" });
@@ -174,12 +173,6 @@ const CONVROWS = {
     const lab = T(convRowKey(r.state), { pc: r.pc == null ? 0 : r.pc });
     return r.sub ? `${lab} · ${T("conv.row.scans", { done: I18N.fix(r.sub.done, 0), total: I18N.fix(r.sub.total, 0) })}` : lab;
   },
-  // the time of a running row and, when it has been quiet for CONV_QUIET ms, for how long (not for a queued row: it waits for a free builder); "" for an ended row
-  when(/** @type {ConvRow} */ r, now = Date.now()) {
-    if (CONV_FINAL.includes(r.state)) return "";
-    const t = convElapsed(now - (r.t0 || now)), q = now - (r.seen || now);
-    return q >= CONV_QUIET && r.state !== "wait" ? `${t} · ${I18N.t("conv.row.quiet", { s: Math.floor(q / 1000) })}` : t;
-  },
   // the short state of a row, always the same size: a word for the phase, the percent (or the scans of a finished file) and the time. The long text (MB, scans, «no news for…») is the title and the aria-label
   short(/** @type {ConvRow} */ r) {
     const T = (/** @type {string} */ k) => I18N.t(k);
@@ -188,8 +181,6 @@ const CONVROWS = {
     if (r.state === "cancel") return { txt: T("conv.st.cancel"), num: "" };
     return { txt: T(convStKey(r.state)), num: r.pc == null ? "" : r.pc + "%" };
   },
-  // the time of a row: the clock while it runs, the total once it is done
-  clockOf(/** @type {ConvRow} */ r) { return r.state === "done" ? convElapsed(1000 * (r.secs || 0)) : this.when(r).split(" · ")[0]; },
   // a new percent of `r`: the side list redraws its row (upload-rows.js wraps this), here only the count and the buttons
   fill(/** @type {ConvRow} */ r) { void r; this.head(); },
   // the count and clock of the side list (upload-rows.js) and the buttons that appear while the loading goes on: they only change what they show, the space is always there
@@ -268,91 +259,28 @@ const CONVROWS = {
   },
 };
 
-// the panel of a conversion asked from the table («Download .mzML» of a maker's sample, CONV.make), inside `box`: "File 1 of 2: name", a button to cancel, the phase as text
-// ("Converting to mzML", then "Indexing": g.index), ONE progress bar (role=progressbar) over the whole job (the conversion counts 3/4 of it, the indexing 1/4), and the numbers (scans,
-// MB written, time elapsed: no estimate of the time left). With `box` null (the conversions of a loading, moduloToMzml) nothing is drawn: their progress is the side list's
-// (CONVROWS, upload-rows.js). Each file has its own stop (ConvUI.stop, × on its side row). The digits are tabular and padded; after 2 s without news it says it is still
-// working (animated dot, still under reduced motion), after 30 s it adds advice; the panel goes when the job ends.
-const CONV_W = 0.75;         // share of the bar taken by the conversion; the rest is the indexing
-const FIG = "\u2007";        // figure space: as wide as a digit
-const convPad = (/** @type {string | number | null} */ s, /** @type {number} */ w) => String(s).padStart(w, FIG);
-const CONV_CARD = `<div class="cp-head"><b data-r="file"></b> <button type="button" class="sec sm" data-r="cancel"></button></div>
-      <div class="cp-phase"><span data-r="phase" role="status" aria-live="polite"></span> <span class="cp-beat muted" data-r="beat" role="status" aria-live="polite"></span></div>
-      <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-r="bar"><i></i></div><div class="muted sm cp-num" data-r="detail"></div>`;
+// the stops of the conversions (CONVROWS rows, × on a side row cancels one file). The panel of a conversion asked from the table («Download .mzML» of a maker's
+// sample, CONV.make) is conversione-carta.js, loaded on first use; the conversions of a loading (moduloToMzml) draw nothing here: their progress is the side list's.
 const ConvUI = {
   /** @type {Map<string, AbortController>} */
   stops: new Map(),
   /** stops the conversion of `name` if one runs (× on its row of the side list); true if there was one */
   stop(/** @type {string} */ name) { const c = this.stops.get(name); if (c) c.abort(); return !!c; },
-  group(/** @type {HTMLElement | null} */ box, /** @type {number[]} */ sizes) {
-    /** @param {string} k @param {Bag} [p] */ const T = (k, p) => I18N.t(k, p), n = sizes.length, ctl = new AbortController(), t0 = Date.now(), stops = this.stops;
-    const el = document.createElement("div"); el.className = "convprog"; el.setAttribute("role", "group"); el.setAttribute("aria-label", T("conv.aria"));
-    el.innerHTML = CONV_CARD;
-    const q = (/** @type {string} */ s) => el.querySelector(`[data-r=${s}]`);
-    const cancel = q("cancel"); cancel.textContent = T("conv.cancel"); cancel.title = cancel.ariaLabel = T("conv.cancel.title");
-    cancel.onclick = () => { cancel.disabled = true; q("phase").textContent = T("conv.cancelling"); ctl.abort(); };
-    if (box) box.appendChild(el);
-    const bar = q("bar"), fill = bar.querySelector("i");
-    const setBar = (/** @type {number | null | undefined} */ pc) => { if (pc == null) { bar.removeAttribute("aria-valuenow"); fill.style.transform = "scaleX(0)"; } else { bar.setAttribute("aria-valuenow", String(pc)); fill.style.transform = `scaleX(${pc / 100})`; } };
-    let beatStage = "", cur = -1, /** @type {Bag | null} */ last = null, doneFrac = 0, stage = "converting", beat = "", changed = t0, key = "", phaseKey = "", indexed = new Map(), nIdx = 0, /** @type {any} */ timer = null, maxPc = 0;
-    const idxMean = () => nIdx ? [...indexed.values()].reduce((a, b) => a + b, 0) / (100 * nIdx) : 0;
-    const show = () => {
-      const now = Date.now(), elapsed = convElapsed(now - t0), conv = stage === "indexing" ? 100 : convTotalPercent(sizes, Math.max(0, cur), convFraction(last));
-      const known = last && (last.copied != null || last.scansTotal); let pc = (conv == null || !known && cur <= 0) && stage === "converting" ? null : Math.min(100, Math.floor(CONV_W * (conv || 0) + (1 - CONV_W) * 100 * idxMean()));
-      // forward only and never 100 % before `end()`: the same rules as PROGRESSO
-      if (pc != null) { maxPc = Math.max(maxPc, Math.min(99, pc)); pc = maxPc; }
-      const lab = T(stage === "indexing" ? "conv.phase.indexing" : "conv.phase.converting");
-      if (lab !== phaseKey && !cancel.disabled) { phaseKey = lab; q("phase").textContent = lab; }
-      bar.setAttribute("aria-label", lab); setBar(pc);
-      let d;
-      // one count and one clock for the whole loading: the same line as the group over the table
-      if (stage === "indexing") d = CONVROWS.rows.length ? T("conv.detail.elapsed", { elapsed }) : T("conv.detail.indexed", { done: [...indexed.values()].filter(v => v >= 100).length, total: nIdx, elapsed });
-      else if (last && last.copied != null) d = T("conv.detail.handover", { done: convMB(last.copied), total: convMB(last.size), elapsed });
-      else if (last && last.scansTotal) {
-        const w = String(Math.round(last.scansTotal)).length, fp = convPercent(last);
-        const parts = [convPad(fp, 3) + "%", ...(last.several ? [] : [T("conv.detail.scans", { done: convPad(I18N.fix(last.scans, 0), w + Math.floor((w - 1) / 3)), total: I18N.fix(last.scansTotal, 0) })]),
-          T("conv.detail.written", { mb: convPad(convMB(last.written), 6) }), T("conv.detail.elapsed", { elapsed: convPad(elapsed, 5) })];
-        d = parts.join(" · ");
-      } else d = T("conv.detail.wait", { elapsed });
-      q("detail").textContent = d;
-      const quiet = now - changed, b = quiet >= 30000 ? "stall" : quiet >= 2000 ? "beat" : "";
-      if (b !== beat || b === "beat" && beatStage !== stage) { beatStage = stage; beat = b; q("beat").innerHTML = b ? `<span class="cp-spin" aria-hidden="true"></span> <span data-r="beattxt"></span>` : ""; if (b) q("beattxt").textContent = T(b === "stall" ? "conv.stall" : stage === "indexing" ? "conv.beat.indexing" : "conv.beat"); }
-    };
-    // a late index() or update() after end() starts no clock again
-    let ended = false;
-    const tick = () => { if (!timer && !ended) timer = setInterval(show, 1000); };
-    const touch = (/** @type {string} */ k) => { if (k !== key) { key = k; changed = Date.now(); } };
-    show();
+  /** one stop for the whole loading and one for each file, with nothing drawn */
+  group() {
+    const ctl = new AbortController(), stops = this.stops;
     return {
       signal: ctl.signal,
       start(/** @type {number} */ i, /** @type {string} */ name) {
-        cur = i - 1; last = null; stage = "converting";
-        q("file").textContent = T("conv.file", { i, n, name });
-        tick(); show();
-        const c = new AbortController(), off = () => { if (stops.get(name) === c) stops.delete(name); };
+        void i; const c = new AbortController(), off = () => { if (stops.get(name) === c) stops.delete(name); };
         ctl.signal.addEventListener("abort", () => c.abort()); stops.set(name, c);
-        return {
-          signal: c.signal,
-          update(/** @type {Bag} */ p) { touch([p.scans, p.read, p.written, p.copied].join(",")); last = p; show(); },
-          // replaces "File i of n: name" (conversions running together: "Samples converted: 3 of 23")
-          title(/** @type {string} */ text) { q("file").textContent = text; },
-          done() { off(); doneFrac = (cur + 1) / n; },
-          fail(/** @type {string} */ msg) { off(); clearInterval(timer); timer = null; el.remove(); if (!box) return; const f = document.createElement("div"); f.className = "fail"; f.textContent = name + ": " + msg; box.appendChild(f); },
-        };
+        return { signal: c.signal, update(/** @type {Bag} */ p) { void p; }, done: off, fail: off };
       },
-      // the page builds the index of each converted file (index.html upload): `pc` 0..100 of `name`; the bar goes on from where the conversion left it
-      index(/** @type {string} */ name, /** @type {number} */ pc) {
-        if (!indexed.has(name)) nIdx++;
-        // never backwards: the builder reads the file more than once
-        indexed.set(name, Math.max(indexed.get(name) || 0, pc));
-        if (stage !== "indexing") { stage = "indexing"; q("file").textContent = ""; cancel.style.visibility = "hidden"; }
-        touch("idx" + [...indexed.values()].join(","));
-        tick(); show();
-      },
-      // nothing stays on screen when the job is over
-      end() { ended = true; clearInterval(timer); timer = null; el.remove(); },
+      end() {},
     };
   },
+  /** the panel of one conversion inside `box` (conversione-carta.js) */
+  async card(/** @type {HTMLElement} */ box, /** @type {number[]} */ sizes) { await carica("m:conversione-carta.js"); return /** @type {any} */ (window).CONVCARD(box, sizes, this.stops); },
 };
 
 const convMB = (/** @type {number} */ b) => (b / 1048576).toFixed(b >= 1.048576e7 ? 0 : 1);

@@ -229,7 +229,7 @@ async function moduloWants(/** @type {typeof LETTORI_MOD} */ M,/** @type {FileCa
 async function moduloToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box,/** @type {CaricaRep} */ rep){
   const M=window.LETTORI_MOD;if(!M||!files.length)return files;
   const jobs=new Map();for(const f of files){const fam=await moduloWants(M,f);if(fam)jobs.set(f,fam)}if(!jobs.size)return files;
-  const g=ConvUI.group(null,[...jobs.keys()].map(f=>NATIVO.size(f))),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
+  const g=ConvUI.group(),out=/** @type {any} */ ([]),taken=[...(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name),...files.filter(f=>!jobs.has(f)).map(f=>f.name)];
   // every file of the batch has its row (Queued) from the start, so the count over the table is the count of the headline
   const names=new Map();for(const f of jobs.keys()){const lot=f.mzlabModulo||f.mzlabNat,nm=lot?f.name:M.mzmlName(f.name,taken);taken.push(nm);names.set(f,nm);CONVROWS.add(nm,"wait")}
   let i=0;

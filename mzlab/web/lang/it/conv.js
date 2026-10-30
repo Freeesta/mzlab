@@ -47,7 +47,6 @@ I18N.add("it", {
   "conv.row.nchrom": "Cromatogrammi {pc}%",
   "conv.row.nopen": "Apertura del file {pc}%",
   "conv.row.scans": "scansioni {done} di {total}",
-  "conv.row.quiet": "nessuna notizia da {s} s, ancora al lavoro",
   "conv.row.done": "Caricato ✓ ({scans} scansioni, {secs} s)",
   "conv.row.cancel": "Annullato",
   "conv.row.cached": "Caricato dalla cache ✓ ({scans} scansioni)",
