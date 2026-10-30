@@ -78,10 +78,17 @@ def _tempi(self):
         self.evaluate("""() => { let t = 0; const e = []; ST.files.forEach(f => { if (RUOLI.timed(f) && f.time == null) { t += 10; f.time = t; if (OPENNOW.isOpen(f.name)) e.push({ file: f.name, role: RUOLI.roleOf(f), time: t, tconf: true }); } });
           if (e.length) CAMPIONI.apply(e, true); renderFiles(); }""")
     except Exception: pass
+LOADED = "typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')"
+def loaded(pg, timeout=120000):
+    """Waits until nothing is read or opened any more; on a timeout the message says what is still busy."""
+    try: pg.wait_for_function(LOADED, timeout=timeout)
+    except Exception as e:
+        st = pg.evaluate("() => ({ up: UPBUSY, busy: OPENNOW.busy(), rows: Array.from(document.querySelectorAll('#flst .fl.up')).map(r => (r.dataset.up || '') + ':' + r.className), conv: CONVROWS.rows.map(r => r.name + ':' + r.state) })")
+        raise TimeoutError(f"{e} | still busy: {st}") from None
 def open_first(pg, timeout=120000):
     """The first file shown: the files open as soon as they are read and, at the end of the loading, the first one that is not a blank opens by itself (OPENNOW.first).
     Waits until nothing is read or opened any more, then clicks the row of that file in the side list unless a file is already shown (a session where none opened by itself)."""
-    pg.wait_for_function("typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", timeout=timeout)
+    loaded(pg, timeout)
     _tempi(pg)
     k = pg.evaluate("""() => { if (E.files.some(f => f.vis && !f.gone)) return -1; const fs = E.files.filter(f => !f.gone); if (!fs.length) return -1;
       return fs[firstOpenK(fs.map(f => ({ file: f.file, type: f.type })))].k; }""")
@@ -105,7 +112,7 @@ _real_wfs = _Page.wait_for_selector
 def _wfs(self, selector, *a, **k):
     # waiting for «Load data» = waiting for the end of the loading (the button is gone)
     if isinstance(selector, str) and (selector == "#opbtn" or "Carica dati" in selector or "Load data" in selector):
-        return self.wait_for_function("typeof UPBUSY !== 'undefined' && UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#flst .fl.up')", timeout=k.get("timeout", 120000))
+        return loaded(self, k.get("timeout", 120000))
     return _real_wfs(self, selector, *a, **k)
 _Page.wait_for_selector = _wfs
 _real_ast = _Page.add_script_tag
