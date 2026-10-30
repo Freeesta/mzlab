@@ -285,10 +285,12 @@ pub fn ion_text_mz(text: &str) -> Result<(f64, i8)> {
         return Ok((mz, if a.ends_with('-') { -1 } else { 1 }));
     }
     let t = head.trim();
-    match t.chars().last() {
-        Some('+') => Ok((mass(&parse_formula(&t[..t.len() - 1])?) - ELECTRON, 1)),
-        Some('-') => Ok((mass(&parse_formula(&t[..t.len() - 1])?) + ELECTRON, -1)),
-        _ => Err(Error::new("err.formula.noIon").with("formula", t)),
+    if let Some(f) = t.strip_suffix('+') {
+        Ok((mass(&parse_formula(f)?) - ELECTRON, 1))
+    } else if let Some(f) = t.strip_suffix('-') {
+        Ok((mass(&parse_formula(f)?) + ELECTRON, -1))
+    } else {
+        Err(Error::new("err.formula.noIon").with("formula", t))
     }
 }
 
