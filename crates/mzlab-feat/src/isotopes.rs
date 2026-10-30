@@ -16,8 +16,8 @@ use crate::table::{FileFeatures, FLAG_ISOTOPE};
 use crate::trace::filled;
 use mzlab_core::error::Result;
 
-const ELECTRON_PROTON: f64 = 1.007_276;
-const D_13C: f64 = 1.003_355;
+const ELECTRON_PROTON: f64 = mzlab_core::elements::PROTON_6DP;
+const D_13C: f64 = mzlab_core::elements::C13_STEP;
 /// +2 steps: 13C2, 34S, 37Cl, 81Br.
 const D_PLUS2: [f64; 4] = [2.006_710, 1.995_796, 1.997_050, 1.997_954];
 const AVERAGINE_DA: f64 = 111.1254;

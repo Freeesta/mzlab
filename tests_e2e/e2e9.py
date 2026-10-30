@@ -15,7 +15,7 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
         def pda():
-            pg.locator('.pnl.chrom [data-o="kind"]').first.select_option("pda"); pg.wait_for_timeout(2500)
+            pick_kind(pg, "pda"); pg.wait_for_timeout(2500)
             n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 3, n          # one trace per Full Scan file (other types live in their own tab)
             apex = pg.evaluate("(()=>{const s=E.panels[0]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return s.x[m]})()")
             print("PDA apex of first file", apex); assert 13 < apex < 19

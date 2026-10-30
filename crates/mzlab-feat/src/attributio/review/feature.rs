@@ -526,7 +526,8 @@ fn without_precursor_isotopes(mz: &[f64], it: &[f64], prec: f64) -> (Vec<f64>, V
     let keep: Vec<usize> = (0..mz.len())
         .filter(|&i| {
             (1..=3).all(|k| {
-                (mz[i] - (prec + k as f64 * 1.0033548)).abs() > f64::max(0.005, prec * 1e-5)
+                (mz[i] - (prec + k as f64 * mzlab_core::elements::C13_STEP)).abs()
+                    > f64::max(0.005, prec * 1e-5)
             })
         })
         .collect();

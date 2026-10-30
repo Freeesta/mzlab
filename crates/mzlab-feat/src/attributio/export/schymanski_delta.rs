@@ -4,7 +4,7 @@
 pub(super) const DELTA_TOL: f64 = 0.01;
 pub(super) const CH2: f64 = 14.01565;
 pub(super) const DELTA_ARTIFACTS: [(f64, &str); 4] = [
-    (1.003355, "13C isotopologue"),
+    (mzlab_core::elements::C13_STEP, "13C isotopologue"),
     (0.984016, "deamidation (NH->OH)"),
     (21.981943, "Na/H adduct swap"),
     (37.955882, "K/H adduct swap"),

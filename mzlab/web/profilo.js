@@ -32,7 +32,7 @@ const PROFILO = (() => {
     const d = await getXic(f.k, c, w, f.lv || 1);
     const s = { x: d.rt, y: d.y, k: f.k, key: `x|${f.k}|${mz}` };
     if (!s.x || s.x.length < 9) return null;
-    const ed = autoEdges(s, rt, 0);
+    const ed = await autoEdges(s, rt, 0);
     if (!ed) return null;
     const m = integ(s, ed[0], ed[1]);
     return m.area > 0 ? { rt: m.rt, area: m.area, height: m.height } : null;

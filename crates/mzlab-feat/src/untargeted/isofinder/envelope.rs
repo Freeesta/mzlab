@@ -12,9 +12,9 @@ const MAX_HEAVY_ATOMS: i64 = 8;
 const CAP: usize = 30;
 /// Offsets whose expected relative height is under this are not counted as support.
 pub const SUPPORT_CUTOFF: f64 = 0.02;
-pub const PROTON_MASS: f64 = 1.007276466;
+pub const PROTON_MASS: f64 = mzlab_core::elements::PROTON;
 /// Distance between 13C and 12C.
-pub const C13_DISTANCE: f64 = 1.003354831;
+pub const C13_DISTANCE: f64 = mzlab_core::elements::C13_STEP;
 
 /// Java `Math.round` for the values of this module: half up.
 pub fn jround(x: f64) -> i64 {
