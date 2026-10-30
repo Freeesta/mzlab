@@ -46,6 +46,8 @@
       if (port && ref) F.setPort(net, port, [].concat(ref));
     }
     wireReliable(S.plan, reg);
+    for (const id of tpl.tail || []) if (!F.findStep(S.plan, id)) F.addStep(S.plan, reg, id);
+    for (const [stepId, preset] of Object.entries(tpl.presets || {})) { const inst = F.findStep(S.plan, stepId); if (inst) F.setPreset(inst, preset); }
     // the settings a template starts with, by step id: {"table.filter": {blank_ratio: 3}}
     for (const [stepId, values] of Object.entries(tpl.params || {})) {
       const inst = F.findStep(S.plan, stepId), step = inst && reg.byId.get(stepId);

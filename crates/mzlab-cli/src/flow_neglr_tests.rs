@@ -366,7 +366,6 @@ fn a_negative_table_is_searched_as_negative_by_table_match() {
 }
 
 #[test]
-#[ignore = "gap NL-4: a series that mixes polarities is aligned in silence (MATRICE_NEG_LR.md)"]
 fn gap_a_series_of_mixed_polarity_is_refused_or_warned() {
     let d = mixed("nl_g4", |k| (if k < 2 { -1 } else { 1 }, true));
     let prov = run(&d, &with("]}"));
@@ -374,17 +373,24 @@ fn gap_a_series_of_mixed_polarity_is_refused_or_warned() {
         flagged(&prov, "ali", "polarity"),
         "the alignment of + and - files says nothing"
     );
+    assert_eq!(
+        error_of(&prov, "ali").as_deref(),
+        Some("err.flow.align.polarity")
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
 
 #[test]
-#[ignore = "gap NL-5: a series that mixes unit and high resolution is aligned on the axis of its first file in silence (MATRICE_NEG_LR.md)"]
 fn gap_a_series_of_mixed_resolution_is_refused_or_warned() {
     let d = mixed("nl_g5", |k| (1, k >= 2));
     let prov = run(&d, &with("]}"));
     assert!(
         flagged(&prov, "ali", "resolution"),
         "the alignment of Da and ppm files says nothing"
+    );
+    assert_eq!(
+        error_of(&prov, "ali").as_deref(),
+        Some("err.flow.align.resolution")
     );
     let _ = std::fs::remove_dir_all(&d);
 }
