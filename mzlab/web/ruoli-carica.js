@@ -1,8 +1,8 @@
 // @ts-strict
 "use strict";
 // Roles and times in the loading table (`campioni/2`, the Rust of mzlab-core). The proposals from the file names (`proponi`) come from the engine through `api/campioni/<op>`;
-// nothing is decided here. The time is optional and written in the table: nothing holds back «Load data», which is the confirmation.
-// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
+// nothing is decided here. The time is optional and written in the table: the files open as soon as they are read, and the table writes through to them (OPENNOW).
+// An entry of ST.files keeps `type` (the base type the other routes know: sample | blank | standard) and, for this table, `role` (campioni/2 `tipo`), `prop` (the proposal was asked), `ed` (the student chose the role: a late proposal does not overwrite it), `gR` / `gT` (role / time from a proposal, untouched: yellow `guess` cells). The time `f.time` is in minutes. A sample at time 0 is the t0 (no role of its own); the time of a dark is negative (minutes before the time zero).
 // The cells are in ruoli-celle.js (it adds its functions to RUOLI).
 const RUOLI = /** @type {any} */ ((() => {
   /** @type {(k: string, p?: any) => string} */
@@ -46,8 +46,8 @@ const RUOLI = /** @type {any} */ ((() => {
       const f = get().find(x => x.name === c.file);
       if (!f || f.ed) continue;
       const r = c.tipo === "calibration" ? "std" : c.tipo === "t0" ? "sample" : c.tipo;
-      setRole(f, r);
-      if (TIMED.has(r) && c.tempo_min != null) f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min;
+      setRole(f, r); f.gR = true;
+      if (TIMED.has(r) && c.tempo_min != null) { f.time = r === "dark" ? darkTime(c.tempo_min) : c.tempo_min; f.gT = true; }
       changed = true;
     }
     return changed;

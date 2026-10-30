@@ -1,5 +1,5 @@
 """Roles and times in the loading table (campioni/2): the role select (no t0 role: a sample at time 0 is the t0; one Blank only), the times read from the names (plain editable values,
-no strip, no warning, nothing to confirm: «Load data» is the confirmation) and the negative time of the dark. Synthetic files with invented names."""
+no strip, no warning, nothing to confirm: the files open as soon as they are read; a proposed cell carries the guess class until edited) and the negative time of the dark. Synthetic files with invented names."""
 import sys, os, shutil, tempfile; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 lib.AUTO_TEMPI = False
@@ -23,7 +23,8 @@ try:
         pg.wait_for_selector("#start:not([hidden])", timeout=60000)
         stage(pg, paths)
         pg.wait_for_function("RUOLI.busy() === 0 && ST.files.length >= 6 && ST.files.every(f => f.prop)", timeout=30000)
-        row = lambda n: f"#flist tr:has(td:text-is('{n}.mzML'))"
+        lib.show_table(pg)
+        row = lambda n: f"#flist tr:has(:text-is('{n}.mzML'))"
         def role(n): return pg.eval_on_selector(f"{row(n)} select[data-k=type]", "e => e.value")
         def tval(n): return pg.eval_on_selector(f"{row(n)} input[data-k=time]", "e => e.value")
         def proposals():
@@ -36,14 +37,13 @@ try:
             assert role("X_standard_direct-infusion_MSn") == "infusion", role("X_standard_direct-infusion_MSn")
             assert tval("X_t000min") == "0" and tval("X_t005min") == "5" and tval("X_t030min") == "30", (tval("X_t005min"), tval("X_t030min"))
             assert role("X_blank") == "blank"
-            assert not pg.eval_on_selector(f"{row('X_t005min')} input[data-k=time]", "e => e.classList.contains('guess')"), "a time from the name is a normal cell"
+            assert pg.eval_on_selector(f"{row('X_t005min')} input[data-k=time]", "e => e.classList.contains('guess')"), "a time from the name is a proposal"
             assert not pg.is_disabled(f"{row('X_t000min')} input[data-k=time]"), "the time of the first sample is a normal cell"
         step("roles and times proposed from the names", proposals)
         def never_blocks():
-            # times read from the names, two samples: «Load data» needs no confirmation, no message under the button, no cell marked invalid
+            # times read from the names, two samples: nothing to confirm, no message under the table, no cell marked invalid
             assert pg.eval_on_selector("#flist", "e => e.querySelectorAll('input[aria-invalid=true]').length") == 0
             assert pg.inner_text("#gomsg").strip() == "", pg.inner_text("#gomsg")
-            assert pg.evaluate("ST.files.every(f => !f.use || !RUOLI.timed(f) || f.time == null || !('gT' in f))")
         step("times from the names are plain values, nothing to confirm", never_blocks)
         def dark_negative():
             sel = f"{row('X_dark-adsorption')} input[data-k=time]"
@@ -57,6 +57,8 @@ try:
             pg.fill(f"{row('X_t005min')} input[data-k=time]", "5"); pg.keyboard.press("Tab")
             pg.wait_for_function("!document.querySelector('#flist input.bad')", timeout=10000)
             assert tval("X_t005min") == "5" and tval("X_dark-adsorption") == "-45"
+            assert not pg.eval_on_selector(f"{row('X_t005min')} input[data-k=time]", "e => e.classList.contains('guess')"), "an edited time is no longer a proposal"
+            assert pg.evaluate("E.files.find(f => f.file === 'X_dark-adsorption.mzML').time") == -45, "the edit reaches the open file"
         step("the dark takes a negative time", dark_negative)
         def no_t0():
             sel = f"{row('X_t000min')} input[data-k=time]"
@@ -70,9 +72,10 @@ try:
             pg.fill(sel, "0"); pg.keyboard.press("Tab")
         step("no time 0 or a role changed: nothing blocks, no warning", no_t0)
         def opens():
-            pg.click("#opbtn")
-            pg.wait_for_selector("#start", state="hidden", timeout=90000)
-        step("Load data starts", opens)
+            assert pg.evaluate("E.files.filter(f => !f.gone).length") >= 5, "the files are open before any click"
+            open_first(pg)
+            assert pg.evaluate("E.files.some(f => f.vis && !f.gone)")
+        step("the first click opens a file", opens)
 finally:
     r.close(); shutil.rmtree(tmp, ignore_errors=True)
 bad = [s for s in steps if s[1] != "ok"]

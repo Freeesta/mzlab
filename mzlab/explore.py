@@ -771,7 +771,7 @@ class Item:
                 "tgt": [round(float(sum(s.iso) / 2), d) if s.iso else None for s in ms2],
                 "parent": [s.parent for s in ms2], "prt": [rt(by[s.parent]) if s.parent in by else None for s in ms2],
                 "lo": [round(float(s.iso[0]), d) if s.iso else None for s in ms2], "hi": [round(float(s.iso[1]), d) if s.iso else None for s in ms2],
-                "act": [s.act for s in ms2], "ce": [s.collision_energy for s in ms2], "pint": [s.pint for s in ms2],
+                "act": [s.act for s in ms2], "lev": [s.level for s in ms2], "z": [s.charge for s in ms2], "ce": [s.collision_energy for s in ms2], "pint": [s.pint for s in ms2],
                 "ms1": {"sid": [s.index for s in ms1], "rt": [rt(s) for s in ms1]}, "nce": bool(r.nce)}
 
     def scan(self, sid: int, hr: bool = True) -> dict:

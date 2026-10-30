@@ -24,6 +24,6 @@ def test_rows_registered_before_the_first_conversion():
 
 
 def test_indexing_detail_does_not_repeat_the_count():
-    src = (W / "conversione.js").read_text(encoding="utf-8")
+    src = (W / "conversione-carta.js").read_text(encoding="utf-8")
     i = src.index('if (stage === "indexing") d =')
     assert "CONVROWS.ready()" not in src[i:i + 200]

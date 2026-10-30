@@ -32,7 +32,8 @@ function setTab(t, quiet, motivo) {
   // changing tab: the axes of the spectra are free again
   E.panels.forEach((/** @type {Pannello} */ q) => { if (q.type === "spec") q.lock = null; });
   const firstLayout = tabFiles().length && !tabPanels(t).length;
-  if (firstLayout) loading(true);                       // same funny loading screen as everywhere else
+  // same funny loading screen as everywhere else, but not when a file opens (its panels fade in where they stay)
+  if (firstLayout && motivo !== "file") loading(true);
   ensureLayout();
   if (firstLayout) Promise.all(tabPanels(t).map((/** @type {Pannello} */ p) => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
   fitWidth(); relayout(); fitHost(); renderFileList(); renderNav();

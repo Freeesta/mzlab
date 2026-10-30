@@ -12,6 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         stage(pg, [mz(f) for f in FILES[:3]])
+        show_table(pg)                                       # the times are edited in the sample table, after the first file is shown
         def click_other():
             name = pg.locator(T).nth(1).evaluate("x => ST.files[+x.dataset.i].name")      # the row clicked below
             pg.locator(T).nth(0).fill("7")

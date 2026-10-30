@@ -122,35 +122,7 @@ pub struct Verdict {
     pub sirius_input: String,
 }
 
-/// Element counts of a molecular formula (`C9H10N2O` and `N2OC9H10` are equal); anything that is not an element symbol is skipped.
-pub fn parse_formula(f: &str) -> BTreeMap<String, u64> {
-    let c: Vec<char> = f.chars().collect();
-    let mut d = BTreeMap::new();
-    let mut i = 0;
-    while i < c.len() {
-        if !c[i].is_ascii_uppercase() {
-            i += 1;
-            continue;
-        }
-        let mut el = c[i].to_string();
-        i += 1;
-        if i < c.len() && c[i].is_ascii_lowercase() {
-            el.push(c[i]);
-            i += 1;
-        }
-        let start = i;
-        while i < c.len() && c[i].is_ascii_digit() {
-            i += 1;
-        }
-        let n = if i > start {
-            c[start..i].iter().collect::<String>().parse().unwrap_or(0)
-        } else {
-            1
-        };
-        *d.entry(el).or_insert(0) += n;
-    }
-    d
-}
+pub use mzlab_core::elements::parse_formula_lenient as parse_formula;
 
 fn rank_of(r: Option<i64>) -> i64 {
     r.unwrap_or(1)

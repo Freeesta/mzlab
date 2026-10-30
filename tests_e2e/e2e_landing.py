@@ -82,8 +82,8 @@ def first_screen(pg):
 
 def first_panel(pg):
     pg.evaluate(TIMELINE)
-    if visible(pg, "#opbtn"): pg.evaluate("document.querySelector('#opbtn').click()"); how = "opbtn"
-    else: pg.evaluate("document.querySelector('#flst .fl .nm').click()"); how = "first_row"
+    pg.wait_for_selector("#flst .fl .nm", timeout=90000)
+    pg.evaluate("document.querySelector('#flst .fl .nm').click()"); how = "first_row"
     try: pg.wait_for_selector(".pnl", timeout=90000)
     except Exception: pass
     ready(pg); frames(pg, 4)
@@ -132,8 +132,7 @@ def w820(r, p, files):
     sel = "#drop" if visible(pg, "#drop") else "#dfiles"
     drop_files(pg, files[:2], sel)
     pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use], #flst .fl:not(.pr)').length >= 2", timeout=60000)
-    if visible(pg, "#opbtn"): pg.evaluate("document.querySelector('#opbtn').click()")
-    else: pg.evaluate("document.querySelector('#flst .fl .nm') && document.querySelector('#flst .fl .nm').click()")
+    open_first(pg)
     try: pg.wait_for_selector(".pnl", timeout=90000)
     except Exception: pass
     ready(pg); frames(pg, 4)
@@ -148,8 +147,7 @@ def return_visit(r, p, files):
     sel = "#drop" if visible(pg, "#drop") else "#dfiles"
     drop_files(pg, files[:2], sel)
     pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use], #flst .fl:not(.pr)').length >= 2", timeout=60000)
-    if visible(pg, "#opbtn"): pg.evaluate("document.querySelector('#opbtn').click()")
-    else: pg.evaluate("document.querySelector('#flst .fl .nm') && document.querySelector('#flst .fl .nm').click()")
+    open_first(pg)
     pg.wait_for_selector(".pnl", timeout=90000); ready(pg); saved(pg)
     pg.add_init_script("""window.__ret = {t0: null, start_seen: false, t_pnl: null, frames: 0};
       (function tick() { const R = window.__ret; if (R.t0 === null) R.t0 = performance.now(); R.frames++;

@@ -14,9 +14,9 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         def empty():
-            b = pg.locator("#opbtn"); assert b.inner_text().strip() == "Carica dati" and b.is_disabled()
+            assert pg.locator("#opbtn").count() == 0, "no «Load data»: the files open as soon as they are read"
             assert "Carica almeno" not in pg.inner_text("#start")
-        step("button 'Carica dati' disabled with no file, no message", empty)
+        step("no load button with no file, no message", empty)
         pg.set_input_files("#pick", [str(MDAM)] + [str(tmp / f) for f in sorted(os.listdir(tmp))]); pg.wait_for_timeout(1800)
         pg.screenshot(path=SH + "151_start.png")
         def layout():
@@ -52,8 +52,7 @@ try:
         step("concentration and unit only for MRM standards", conc_rules)
         def size():
             fs = pg.evaluate("parseFloat(getComputedStyle(document.querySelector('#start')).fontSize)"); assert fs >= 15, fs
-            w = pg.evaluate("[document.querySelector('#opbtn').getBoundingClientRect().width, document.querySelector('#drop').getBoundingClientRect().width]"); assert abs(w[0] - w[1]) < 40, w
-        step("font +2pt and button as wide as the boxes", size)
+        step("font +2pt", size)
         def unit_change():
             pg.select_option("#cunit", "ugl"); pg.wait_for_timeout(200)
             v = pg.evaluate("ST.files.find(f=>f.name==='Std_5.mzML').conc"); assert v == 5000, v
