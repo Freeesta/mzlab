@@ -21,7 +21,7 @@ H = synth("hrqaqc")
 def load(pg, files, n):
     pg.set_input_files("#pick", [str(f) for f in files]); 
     pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=120000); pg.wait_for_timeout(1500)
-    if pg.is_visible("#opbtn"): pg.click("#opbtn")
+    open_first(pg)
     try: pg.wait_for_function(f"typeof E!=='undefined' && E.files.length>={n}", timeout=60000)
     except TimeoutError: print(pg.evaluate("[S.view, !!S.sess, typeof E, document.body.innerText.slice(0,400)]")); raise
     ready(pg)

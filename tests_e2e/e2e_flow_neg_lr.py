@@ -89,7 +89,8 @@ def plan(pol, hr):
          {"id": "fil", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
          {"id": "fdu", "step": "table.filter@1", "in": {"table": "gap.table", "samples": "file:samples.json"}, "params": {"dup_ppm": 10} if hr else {"dup_da": 0.3}},
          {"id": "csv", "step": "export.table_csv@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
-         {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}}]
+         {"id": "mzt", "step": "export.mztab@1", "in": {"table": "gap.table", "samples": "file:samples.json"}},
+         {"id": "inc", "step": "export.inclusion@1", "in": {"tp": "lnk.tp"}}]
     s.append(POS if hr else {"id": "dig", "step": "tp.dig_lr@1", "in": {"table": "gap.table", "samples": "file:samples.json", "parent": "file:parent.json", "index": ["idx.index"]}})
     for x in s:
         if x["id"] in nat: x["params"] = nat[x["id"]]
@@ -103,7 +104,7 @@ def refusal(v):
         return next((r for r in map(refusal, v) if r), None)
     return None
 POS = {"id": "pos", "step": "tp.position@1", "in": {"tp": "lnk.tp", "parent": "file:parent.json"}}   # high resolution only: fragments at 5 ppm
-TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "fdu", "csv", "mzt", "dig"]
+TEXT_IDS = ["gen", "flt", "pos", "net", "fil", "fdu", "csv", "mzt", "dig", "inc"]
 
 def check_plan(pol, hr):
     """The plan of `plan` with the steps the facets of the files refuse: formula.ms1 and tp.position (high resolution only) or, on high-resolution files, tp.dig_lr."""
@@ -227,6 +228,9 @@ try:
                 assert not bad, bad
                 ion = "[M-H]-" if pol < 0 else "[M+H]+"
                 assert ion in kept[next(k for k in kept if k.startswith("gen."))], "the hypotheses are not " + ion
+                # the inclusion list wrote no adduct: its ions follow the polarity of the series (the +O product, 4.3 min)
+                mz = [float(l.split(",")[0]) for l in kept[next(k for k in kept if k.startswith("inc."))].splitlines()[1:]]
+                assert any(abs(m - (ION[1][0] + pol * PROTON)) < (0.01 if hr else 0.6) for m in mz), ("the inclusion list is not " + ion, mz)
             step(case + ": every text of the browser is the file of the native flow run", same)
             pg.context.close()
         b.close()

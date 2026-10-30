@@ -20,7 +20,7 @@ STRIPE = """(() => { const c = %s.cv, d = c.width / c.getBoundingClientRect().wi
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")]); attendi(pg, "document.querySelector('#opbtn') && !document.querySelector('#opbtn').disabled")
+        pg.set_input_files("#pick", [str(EX / "FullScan_t0.mzML")])
         pg.click("#opbtn"); ready(pg); pg.click("#np-map"); ready(pg); attendi(pg, f"!!{M}._a")
         pg.evaluate(M + ".el.scrollIntoView({block:'center'})")
         def zoom(rt, dr, mz, dm):

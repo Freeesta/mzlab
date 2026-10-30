@@ -164,10 +164,10 @@ const COMP = (() => {
   }
   // ---------------------------------------------------------------- «Albero MSn» (WP-H4): the fragmentation paths of an MSn file (server: mzlab/chem/msntree.py, /api/msntree)
   async function tree(k, formula) {
-    const f = E.files[k];
-    big(I18N.t("tree.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("tree.note")}</div>
+    const f = E.files[k], ph = (/** @type {any} */ x) => String(x && x.file).split("#")[0], dda = !formula && E.files.some(x => x && x.dda && ph(x) === ph(f));
+    big(I18N.t("tree.title"), `${dda ? '<div id="mt-tabs"></div><div id="mt-pexp" role="tabpanel" aria-labelledby="mt-texp"></div><div id="mt-ptree" role="tabpanel" aria-labelledby="mt-ttree" hidden>' : "<div>"}<div class="muted sm" style="margin-bottom:6px">${I18N.t("tree.note")}</div>
       <div class="cmp-grid"><label>${I18N.t("tree.formula")} <input id="mt-f" value="${EH(formula || "")}" placeholder="${I18N.t("tree.formula.ph")}" style="width:200px"></label>
-        <button id="mt-go" type="button" class="go">${I18N.t("comp.go")}</button></div><div id="mt-out" style="margin-top:8px"></div>`, () => {
+        <button id="mt-go" type="button" class="go">${I18N.t("comp.go")}</button></div><div id="mt-out" style="margin-top:8px"></div></div>`, () => {
       const go = async () => {
         const fm = Q("#mt-f").value.replace(/\s+/g, "");
         Q("#mt-out").textContent = I18N.t("comp.calculating");
@@ -199,7 +199,8 @@ const COMP = (() => {
         } catch (e_) { const e = /** @type {Lanciato} */ (e_); Q("#mt-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
       };
       Q("#mt-go").onclick = go;
-      go();
+      // a data-dependent file opens on the list of its MSn experiments (msn-elenco.js, loaded on first use); the tree is one tab away
+      if (dda) import("./msn-elenco.js").then(m => m.tabs(f, go)).catch(() => { Q("#mt-ptree").hidden = false; go(); }); else go();
     });
   }
   // the chromatogram menu: the fragmentation tree of a high-resolution MS2 file

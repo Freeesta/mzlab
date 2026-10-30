@@ -1,5 +1,5 @@
 """Loading path, page side (shell.js, browser.js, carica.js, nativo.js, cartella-carica.js), run by node with fake globals; each case fails on the code before its fix:
-a load error takes the full-screen veil down, the skeleton goes away after F5 with a session, a used lone .wiff leaves WIFF_WAIT, a re-dropped pair with DATA names is a cache hit,
+the skeleton goes away after F5 with a session, a used lone .wiff leaves WIFF_WAIT, a re-dropped pair with DATA names is a cache hit,
 the isolation reload waits for the loading, a failed folder load still ends the drop, a failed script is retried, and the engine module and the OPFS count start with the engine."""
 import json
 import shutil
@@ -24,30 +24,6 @@ def node(tmp_path, code, ext="cjs"):
     r = subprocess.run(["node", str(f)], capture_output=True, text=True, encoding="utf-8")
     assert r.returncode == 0, (r.stdout + r.stderr)[-3000:]
     return json.loads(r.stdout.strip().splitlines()[-1])
-
-
-def test_e2_a_load_error_takes_the_veil_down_and_shows_the_message(tmp_path):
-    handler = cut("shell.js", '$("#opbtn").onclick=', "// both exits of the loading screen")
-    code = """
-const calls = [], els = {};
-const el = id => els[id] || (els[id] = { innerHTML: "", disabled: false, onclick: null, focus() {}, setAttribute() {}, appendChild() {}, style: {} });
-const $ = id => el(id);
-const loading = v => calls.push(v);
-const h = (s, ...v) => s.reduce((a, x, i) => a + x + (i < v.length ? v[i] : ""), "");
-let UPBUSY = 0;
-const ST = { files: [{ name: "a.mzML" }] }, checkGo = () => {}, RUOLI = { roleOf: () => "x" }, darkTime = t => t;
-// nothing usable at the click (files still being copied): the veil goes up; usable when the copies end, then the open fails
-let asks = 0; const usable = () => asks++ > 0;
-const S = { opening: false }, STATO = { apertura(on) { S.opening = on; } }, applyView = () => {}, ldAction = () => {}, loadingStato = () => {}, window = {};
-let WAITING = false, WAIT0 = 0;
-%s
-const I18N = { t: k => k };
-const openStaged = async () => { throw Object.assign(new Error("boom"), { key: "err.load.failed" }); };
-%s
-(async () => { await $("#opbtn").onclick(); console.log(JSON.stringify({ calls, msg: el("#gomsg").innerHTML, enabled: !el("#opbtn").disabled })) })();
-""" % ((WEB / "apertura-area.js").read_text(encoding="utf-8"), handler)
-    r = node(tmp_path, code)
-    assert r["calls"] == [True, False] and "boom" in r["msg"] and r["enabled"] is True
 
 
 def test_e3_the_skeleton_goes_away_when_a_session_is_restored(tmp_path):

@@ -20,11 +20,11 @@ r = Run(port=8995, wd="/tmp/wdnuovo")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [str(F)]); attendi(pg, "document.body.innerText.includes('Carica dati')")
+        pg.set_input_files("#pick", [str(F)])
         pg.click("text=Carica dati"); ready(pg); pg.evaluate("setTab('full')"); ready(pg)
         def again():
             pg.goto(pg.url); attendi(pg, "document.querySelector('#pick')")
-            pg.set_input_files("#pick", [str(F)]); attendi(pg, "(document.querySelector('#opbtn') && !document.querySelector('#opbtn').disabled) || /formato 3/.test(document.body.innerText)", timeout=60000)
+            pg.set_input_files("#pick", [str(F)]); attendi(pg, "(UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)) || /formato 3/.test(document.body.innerText)", timeout=60000)
         def newer():
             before = pg.evaluate(HASH); pg.evaluate(VERSION, 3); patched = pg.evaluate(HASH); assert patched != before
             again()
@@ -34,7 +34,7 @@ try:
         step("a newer index: warning, index untouched", newer)
         def known():
             pg.evaluate(VERSION, 1); again()
-            attendi(pg, "document.querySelector('#opbtn') && !document.querySelector('#opbtn').disabled", timeout=60000)
+            attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.some(f => !f.gone)", timeout=60000)
             assert "formato 3" not in pg.evaluate("document.body.innerText"), "no warning for a known version"
         step("a known version: no warning", known)
     r.close()

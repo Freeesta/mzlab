@@ -13,7 +13,7 @@ try:
         def only_first():
             v = pg.evaluate("E.files.map(f=>[f.file,f.kind,f.vis])")
             assert len(v) == 5 and len({x[1] for x in v}) == 3, v
-            assert [x[0] for x in v if x[2]] == [v[0][0]], v
+            assert [x[0] for x in v if x[2]] == [FILES[0] + ".mzML"], v      # the first of the drop, whatever file was read first
             attendi(pg, "E.panels.length > 0"); assert pg.evaluate("E.panels.every(p=>p.tab==='full')"), pg.evaluate("E.panels.map(p=>p.tab)")      # no block for the closed types
         step("Full Scan + MS2 + MRM: only the first file is open", only_first)
         def click_opens():
