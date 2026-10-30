@@ -44,3 +44,7 @@ Le figure dei capitoli di Teoria sono disegnate dal programma stesso (SVG e simu
 ## Spettri EI della Teoria e della Pratica
 
 Gli spettri di ionizzazione elettronica in `mzlab/web/teoria/pratica/ei-dati.js` vengono da **MassBank Europe** (https://massbank.eu), ognuno con il proprio codice di record, autori e licenza indicati nel file e sotto ogni grafico; tutti con licenza **Creative Commons Attribution-NonCommercial-ShareAlike** (CC BY-NC-SA). Per questa licenza gli spettri si usano solo a scopo didattico e non commerciale, con attribuzione, e chi li redistribuisce modificati deve usare la stessa licenza. Le note didattiche sugli ioni sono originali. Nessuno spettro proviene dalla libreria NIST.
+
+## Pacchetto dei candidati in silico (PubChemLite)
+
+Il pacchetto `static/insilico/` (scaricato dall'utente con un clic, usato da `spectra.insilico`) contiene le strutture di **PubChemLite for Exposomics** (Schymanski, Bolton et al., Università del Lussemburgo, LCSB; Zenodo, DOI 10.5281/zenodo.22953038), versione 3.3.0 del 25/09/2026, SHA-256 `6a258459e1ccf29a5d08e82fcf5240a2fc8afbabe5ba9c678e39aa0801dd89cd`, licenza **CC-BY-4.0** (i dati vengono da PubChem, dominio pubblico). Per ogni struttura: identificativo, nome, SMILES, formula e massa monoisotopica, senza modifiche. Costruito da `mzlab-cli insilico pack` nella CI di Pages, mai nel repository; l'attribuzione è anche nel catalogo del pacchetto. https://doi.org/10.5281/zenodo.22953038

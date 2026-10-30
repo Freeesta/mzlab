@@ -3,8 +3,10 @@
 
 use mzlab_core::error::Result;
 use mzlab_core::flow::Job;
+#[cfg(test)]
+pub use mzlab_lib::flowmatch::read_spectra;
 use mzlab_lib::flowmatch::MatchJob;
-pub use mzlab_lib::flowmatch::{library_spectra, query_id, read_spectra, Named};
+pub use mzlab_lib::flowmatch::{library_spectra, Named};
 
 pub(crate) fn num(job: &Job, name: &str) -> f64 {
     job.resolved

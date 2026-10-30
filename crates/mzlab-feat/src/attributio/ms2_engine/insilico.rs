@@ -59,13 +59,18 @@ pub struct Ranked {
 /// Candidates of a CSV list (`,` or `;`): `Identifier`, `CompoundName`/`Name`, `SMILES`, `MolecularFormula`/`Formula`, `MonoisotopicMass`/`ExactMass`.
 /// Rows without a SMILES are left out.
 pub fn read_candidates(text: &str) -> Vec<Candidate> {
+    read_candidates_counted(text).0
+}
+
+/// `read_candidates` and the number of data rows of the table (the rows left out are the difference).
+pub fn read_candidates_counted(text: &str) -> (Vec<Candidate>, usize) {
     let sep = if text.lines().next().is_some_and(|l| l.contains(';')) {
         ';'
     } else {
         ','
     };
     let Ok(f) = Frame::parse(text, sep) else {
-        return Vec::new();
+        return (Vec::new(), 0);
     };
     let pick = |names: &[&str]| names.iter().find_map(|n| f.col(n));
     let (c_id, c_name, c_smi, c_for, c_mass) = (
@@ -76,7 +81,7 @@ pub fn read_candidates(text: &str) -> Vec<Candidate> {
         pick(&["MonoisotopicMass", "ExactMass", "mass"]),
     );
     let Some(c_smi) = c_smi else {
-        return Vec::new();
+        return (Vec::new(), f.len());
     };
     let text_of = |r: usize, c: Option<usize>| {
         c.map(|k| f.cell(r, k).trim().to_string())
@@ -106,7 +111,7 @@ pub fn read_candidates(text: &str) -> Vec<Candidate> {
             mass,
         });
     }
-    out
+    (out, f.len())
 }
 
 fn smiles_mass(smiles: &str) -> Option<f64> {

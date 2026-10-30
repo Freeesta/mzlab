@@ -38,7 +38,8 @@ Regola: ogni funzione esiste sia nel sito (`.wasm` + OPFS) sia nell'app installa
 | `qc.mass_accuracy` | sì | sì (`F.webQc.run`: `.wasm` `hr`, `mass_accuracy`) | `e2e_flow_qc_mass.py`, `flow_massacc_tests.rs` | fatto | | |
 | `screen.suspects` | sì | sì (`F.webSuspects.run`: `.wasm` `attributio-all`, `flow_screen_suspects`) | `e2e_flow_suspects.py`, `flow_screen_suspects_tests.rs` | fatto | | |
 | `formula.ms2` | sì | sì (`F.webIdent.ms2Formula`: `.wasm` `attributio-all`, `flow_formula_ms2`) | `e2e_flow_web_ident2.py` (formule da file), `flow_formula_web_tests.rs` | fatto | | |
-| `spectra.chimeric`, `spectra.insilico` | sì | pannello (`.wasm` `attributio-all`: `ms2_to`) | `parita_attributio_ms2.json` (non verificato se sito↔app) | da fare | M | 2 |
+| `spectra.insilico` | sì | sito e app (`flow-web-insilico.js` + `flow_insilico` del `.wasm` `attributio-all`; app: `mzlab-cli flow run` con `insilico.rs`); pacchetto PubChemLite scaricato a un clic | `e2e_flow_insilico.py` (stesso SHA-256 di `candidates/1` nel browser e in `flow run`) | — | — | — |
+| `spectra.chimeric` | sì | pannello (`.wasm` `attributio-all`: `ms2_to`) | `parita_attributio_ms2.json` (non verificato se sito↔app) | da fare | M | 2 |
 | `annot.level` | sì | sì (`F.webIdent.level`: `.wasm` `attributio-all`, `flow_level`) | `e2e_flow_web_ident2.py`, `flow_formula_web_tests.rs`, `flow_level_tests.rs` (`livelli_casi.json`) | fatto | | |
 | `rt.predict` | sì | pannello (`rt_descriptors`) | `test_attributio_descr_wasm.py` (descrittori a 1e-9) | da fare | M | 2 |
 | `spectra.match` | sì (tutti gli algoritmi) | sì: `tree` in `msn`, gli altri in `F.webIdent.match` (`.wasm` `lib`, `flow_match`) | `e2e_flow_web_ident.py`, `flow_match_web_tests.rs`; `e2e_flow_msn.py` per `tree` | fatto | | |

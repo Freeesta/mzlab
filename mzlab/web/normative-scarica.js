@@ -13,13 +13,13 @@ const TRIES = 2;
 
 const err = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ params = {}) => Object.assign(new Error(key), { key, params });
 const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
-const sha256 = async (/** @type {Uint8Array<ArrayBuffer>} */ u8) => hex(await crypto.subtle.digest("SHA-256", u8));
+export const sha256 = async (/** @type {Uint8Array<ArrayBuffer>} */ u8) => hex(await crypto.subtle.digest("SHA-256", u8));
 
-/** The catalogue text checked the way the Rust packer writes it: format, plain piece names, sizes that add up. */
-export function parseCatalog(/** @type {string} */ text) {
+/** The catalogue text checked the way the Rust packer writes it: format (`normative/1` unless another package, such as `insilico/1`, asks for its own), plain piece names, sizes that add up. */
+export function parseCatalog(/** @type {string} */ text, /** @type {string} */ format = FORMAT) {
   /** @type {Catalog} */ let c;
   try { c = JSON.parse(text); } catch (_) { throw err("normative.dl.err.catalog", { detail: "json" }); }
-  if (!c || c.format !== FORMAT || !Array.isArray(c.pieces) || !/^[0-9a-f]{64}$/.test(c.sha256 || "")) throw err("normative.dl.err.catalog", { detail: String(c && c.format) });
+  if (!c || c.format !== format || !Array.isArray(c.pieces) || !/^[0-9a-f]{64}$/.test(c.sha256 || "")) throw err("normative.dl.err.catalog", { detail: String(c && c.format) });
   for (const p of c.pieces) if (!/^\d{3}\.bin$/.test(p.file) || !/^[0-9a-f]{64}$/.test(p.sha256) || !(p.size > 0)) throw err("normative.dl.err.catalog", { detail: String(p.file) });
   if (c.pieces.reduce((s, p) => s + p.size, 0) !== c.size_compressed) throw err("normative.dl.err.catalog", { detail: "size" });
   return c;
@@ -28,7 +28,7 @@ export function parseCatalog(/** @type {string} */ text) {
 const where = (/** @type {Options} */ o) => ({ base: o.base ?? "normative/", fetchFn: o.fetchFn ?? ((u, i) => fetch(u, i)), cs: o.caches ?? caches });
 
 /** One piece, fetched and checked; fetched once more when it is wrong. An aborted request is a cancel, a refused connection is «offline». */
-async function fetchPiece(/** @type {typeof fetch} */ fetchFn, /** @type {string} */ url, /** @type {Piece} */ pc, /** @type {AbortSignal | undefined} */ signal) {
+export async function fetchPiece(/** @type {typeof fetch} */ fetchFn, /** @type {string} */ url, /** @type {Piece} */ pc, /** @type {AbortSignal | undefined} */ signal) {
   for (let t = 1; ; t++) {
     let b;
     try {
