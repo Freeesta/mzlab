@@ -376,6 +376,8 @@
   "lw.hover.lib": "Etichetta al passaggio del puntatore su un picco di libreria dello specchio; {mz} = m/z, {it} = intensità relativa in %.",
   "lw.hover.pair": "Seguito dell'etichetta del picco: il picco appaiato dall'altra parte; {mz} = suo m/z, {d} = differenza con segno.",
   "lw.mol.aria": "Etichetta accessibile del disegno della struttura; {name} = nome del candidato.",
+  "lw.th.aria": "Etichetta accessibile del pulsante che ingrandisce la miniatura della struttura di una riga; {name} = nome del candidato.",
+  "lw.th.bigAria": "Etichetta accessibile della struttura ingrandita; {name} = nome del candidato.",
   "lw.sort": "Suggerimento di un'intestazione ordinabile; {col} = nome della colonna.",
   "lw.tab.an": "Scheda degli analoghi; {n} = numero.",
   "lw.tab.cand": "Scheda dei candidati; {n} = numero.",
