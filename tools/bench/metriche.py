@@ -156,6 +156,50 @@ def secondarie(verita: list[dict], t: dict, ppm: float = PPM, rt_tol: float = RT
             "righe_per_composto": float(np.mean(trovati)) if trovati else None, "isomeri_separati": int((ir >= 0).sum()), "isomeri": len(iso)}
 
 
+# ---------------------------------------------------------------------------------------------------------------- suspect screening (identification endpoints)
+# Declared in docs/agenti/mzfinder-benchmark.md before the first real run. `strutture` maps a true compound id to the name its suspect list carries.
+# Levels are the tool's own strings: they are listed side by side per tool and never converted into each other.
+def colpi_di(t: dict) -> dict[int, list[dict]]:
+    """The suspect hits of each row of a table (empty when the tool did not screen suspects)."""
+    return {int(x["riga"]): x["hits"] for x in t.get("identificazioni", [])}
+
+
+def identificazione(verita: list[dict], t: dict, strutture: dict[str, str], ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+    """Per standard (a true compound with a name in `strutture`): `colpo` 1 if its matched row has a hit with the true name; `rango` of that hit among the hits of
+    the row (1 = best, None if absent); `livello` the tool's level of that hit. Per decoy (`esca` by m/z, `isf_finto` by m/z and RT): `falso` 1 if any row
+    on it carries a hit. Summary: hit recall, false-positive rate on decoys, mean reciprocal rank of the true structure (0 when absent), and `livelli` =
+    number of standards per level reached (key `none` = no hit with the true name)."""
+    colpi = colpi_di(t)
+    std = [c for c in feature_vere(verita) if c["id"] in strutture]
+    riga = riga_di(std, t, ppm, rt_tol)
+    colpo, rango, livello = [], [], []
+    for c, r in zip(std, riga.tolist()):
+        h = next((x for x in colpi.get(r, []) if x["nome"] == strutture[c["id"]]), None) if r >= 0 else None
+        colpo.append(int(h is not None))
+        rango.append(h["rango"] if h else None)
+        livello.append(h["livello"] if h else None)
+    dec = esche(verita)
+    mz, rt, _ = matrici(t) if t["righe"] else (np.zeros(0), np.zeros(0), None)
+    con_colpo = np.array([bool(colpi.get(i)) for i in range(len(mz))], bool)
+    falso = []
+    for c in dec:
+        dm = np.abs(mz - c["mz"]) <= c["mz"] * ppm * 1e-6
+        if c["rt"] is not None:
+            dm &= np.abs(rt - c["rt"]) <= rt_tol
+        falso.append(int(bool((dm & con_colpo).any())))
+    livelli: dict[str, int] = {}
+    for lv in livello:
+        livelli[lv or "none"] = livelli.get(lv or "none", 0) + 1
+    return {"standard": [c["id"] for c in std], "colpo": colpo, "rango": rango, "livello": livello, "n": len(std),
+            "richiamo_colpi": sum(colpo) / len(colpo) if colpo else None, "mrr": sum(1 / r for r in rango if r) / len(rango) if rango else None,
+            "esche": [c["id"] for c in dec], "falso": falso, "falsi": sum(falso) / len(falso) if falso else None, "livelli": dict(sorted(livelli.items()))}
+
+
+def endpoint_nts(verita: list[dict], t: dict, strutture: dict[str, str], gruppi: dict | None = None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
+    """The endpoints of the comparison with patRoon: feature recall (P1), area accuracy (P2) and the identification endpoints above."""
+    return {"P1": p1(verita, t, ppm, rt_tol), "P2": p2(verita, t, gruppi, ppm, rt_tol), "ID": identificazione(verita, t, strutture, ppm, rt_tol)}
+
+
 def tutte(verita: list[dict], t: dict, gruppi: dict | None = None, ppm: float = PPM, rt_tol: float = RT_TOL) -> dict:
     return {"P1": p1(verita, t, ppm, rt_tol), "P2": p2(verita, t, gruppi, ppm, rt_tol), "P3": p3(verita, t, ppm, rt_tol), "P4": p4(verita, t, ppm, rt_tol),
             "P5": p5(verita, t, ppm, rt_tol), "secondarie": secondarie(verita, t, ppm, rt_tol)}
