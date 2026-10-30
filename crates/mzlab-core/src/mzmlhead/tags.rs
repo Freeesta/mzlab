@@ -19,7 +19,8 @@ pub(super) fn find_tag(h: &[u8], tag: &[u8], from: usize) -> Option<usize> {
 /// Whether a cvParam of the chromatogram names the time array in seconds, whatever the order of its attributes and whether `value` is there.
 pub(super) fn time_in_seconds(chunk: &[u8]) -> bool {
     text(chunk).split('<').any(|tag| {
-        attr(tag, "name") == Some("time array") && attr(tag, "unitAccession") == Some("UO:0000010")
+        attr(tag, "name") == Some("time array")
+            && crate::mzml::is_seconds(attr(tag, "unitName"), attr(tag, "unitAccession"))
     })
 }
 
@@ -63,4 +64,22 @@ pub(super) fn blocks<'a>(s: &'a str, kind: &str) -> Vec<&'a str> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn time_array_in_seconds_by_unit_name_or_accession() {
+        let t = |u: &str| {
+            super::time_in_seconds(
+                format!("<cvParam accession=\"MS:1000595\" name=\"time array\" {u}/>").as_bytes(),
+            )
+        };
+        assert!(t("unitName=\"second\""));
+        assert!(t("unitAccession=\"UO:0000010\""));
+        assert!(t(
+            "unitCvRef=\"UO\" unitAccession=\"UO:0000010\" unitName=\"second\""
+        ));
+        assert!(!t("unitAccession=\"UO:0000031\" unitName=\"minute\""));
+    }
 }

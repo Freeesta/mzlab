@@ -165,7 +165,7 @@ impl<'a> Walk<'a> {
                 cur.terms.push(acc);
             }
             ("scan", _, "MS:1000016") => {
-                let seconds = a.get("unitAccession") == Some("UO:0000010");
+                let seconds = crate::mzml::is_seconds(a.get("unitName"), a.get("unitAccession"));
                 cur.spec.rt = value.map(|v| if seconds { v / 60.0 } else { v });
             }
             ("selectedIon", _, "MS:1000744") => {
