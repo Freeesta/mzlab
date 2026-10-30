@@ -103,13 +103,18 @@ fn spec_labelled(job: &[(String, Value)], labels: &Labels) -> String {
         extra
     };
     rule("qc_cv_max", number(job, "qc_cv_max"), &extra);
-    if let Some(ppm) = number(job, "dup_ppm") {
+    let (ppm, da) = (number(job, "dup_ppm"), number(job, "dup_da"));
+    if ppm.is_some() || da.is_some() {
         let rt = number(job, "dup_rt").unwrap_or(0.1);
         let mut o = Out::default();
-        o.raw("{\"regola\":\"duplicati\",\"ppm\":")
-            .num(ppm)
-            .raw(",\"rt_min\":")
-            .num(rt);
+        o.raw("{\"regola\":\"duplicati\"");
+        if let Some(x) = ppm {
+            o.raw(",\"ppm\":").num(x);
+        }
+        if let Some(x) = da {
+            o.raw(",\"da\":").num(x);
+        }
+        o.raw(",\"rt_min\":").num(rt);
         rules.push(format!("{}}}", o.0));
     }
     if param(job, "require_ms2").and_then(|v| v.bool()) == Some(true) {
