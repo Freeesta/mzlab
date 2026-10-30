@@ -466,3 +466,18 @@ fn events_grow_in_seq_and_carry_the_revision() {
 
 #[path = "sched_cases.rs"]
 mod cases;
+
+#[test]
+fn the_log_keeps_the_last_events_up_to_its_cap() {
+    let mut s = sched(&["a.mzML"]);
+    let base = s.seq;
+    let n = super::LOG_CAP as u64 + 100;
+    for _ in 0..n {
+        s.push(|q, _| format!("{{\"seq\":{q}}}"));
+    }
+    let kept = s.event_texts(0);
+    assert_eq!(kept.len(), super::LOG_CAP);
+    assert_eq!(kept[0].0, base + 101);
+    assert_eq!(kept.last().unwrap().0, base + n);
+    assert!(kept.windows(2).all(|w| w[1].0 == w[0].0 + 1));
+}

@@ -1,6 +1,8 @@
 //! Errors carry an i18n key and parameters, never a text: the page translates them (as the Python engine does).
 
+use std::collections::BTreeSet;
 use std::fmt;
+use std::sync::{Mutex, PoisonError};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Error {
@@ -27,6 +29,19 @@ impl Error {
     }
 }
 
+/// `s` as a `&'static str`, leaked once per distinct text: the error keys, parameter names and descriptor texts read at run time (job reports,
+/// step registries) come from a small vocabulary, so the memory kept is bounded by it, not by how many reports or registry reads arrive.
+pub fn intern(s: &str) -> &'static str {
+    static SEEN: Mutex<BTreeSet<&'static str>> = Mutex::new(BTreeSet::new());
+    let mut seen = SEEN.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(&k) = seen.get(s) {
+        return k;
+    }
+    let k: &'static str = Box::leak(s.to_string().into_boxed_str());
+    seen.insert(k);
+    k
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.key)?;
@@ -40,3 +55,14 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn interned_texts_are_kept_once() {
+        let a = super::intern(&String::from("err.test.interned"));
+        let b = super::intern(&String::from("err.test.interned"));
+        assert_eq!(a, "err.test.interned");
+        assert!(std::ptr::eq(a, b), "the second call must not leak a new copy");
+    }
+}

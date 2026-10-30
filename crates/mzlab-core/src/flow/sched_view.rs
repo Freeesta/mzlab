@@ -76,9 +76,9 @@ impl Sched {
 
     pub(super) fn push<F: FnOnce(u64, u64) -> String>(&mut self, make: F) {
         self.seq += 1;
-        self.log.push((self.seq, make(self.seq, self.rev)));
+        self.log.push_back((self.seq, make(self.seq, self.rev)));
         if self.log.len() > LOG_CAP {
-            self.log.remove(0);
+            self.log.pop_front();
         }
     }
 

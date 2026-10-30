@@ -58,6 +58,9 @@ pub fn is_unit_resolution<'a>(
 /// (summed intensity, intensity-weighted m/z), in increasing cell order.
 pub fn bin_centroids(mz: &[f64], inten: &[f32], bin_da: f64) -> (Vec<f64>, Vec<f64>) {
     use std::collections::BTreeMap;
+    if let Some(out) = bin_ascending(mz, inten, bin_da) {
+        return out;
+    }
     let mut cells: BTreeMap<i64, (f64, f64)> = BTreeMap::new();
     for (&m, &i) in mz.iter().zip(inten) {
         let c = cells
@@ -70,6 +73,40 @@ pub fn bin_centroids(mz: &[f64], inten: &[f32], bin_da: f64) -> (Vec<f64>, Vec<f
         .values()
         .map(|&(sy, smy)| (smy / sy.max(1e-12), sy))
         .unzip()
+}
+
+/// The cells of `bin_centroids` when `mz` is ascending and `bin > 0` (else `None`): the cells come one after the other, each summed in the
+/// order of its peaks, so the result is the map's to the bit without one. `hrscans` bins its scans with it too.
+pub(crate) fn bin_ascending<T: Copy + Into<f64>>(mz: &[f64], y: &[T], bin: f64) -> Option<(Vec<f64>, Vec<f64>)> {
+    if !(bin > 0.0 && mz.windows(2).all(|w| w[0] <= w[1])) {
+        return None;
+    }
+    let key = |m: f64| (m / bin).floor() as i64;
+    let mut out = (Vec::new(), Vec::new());
+    let mut push = |(sy, smy): (f64, f64)| {
+        out.0.push(smy / sy.max(1e-12));
+        out.1.push(sy);
+    };
+    let mut cur: Option<(i64, (f64, f64))> = None;
+    for (m, v) in mz.iter().zip(y) {
+        let (k, v) = (key(*m), (*v).into());
+        match &mut cur {
+            Some((ck, e)) if *ck == k => {
+                e.0 += v;
+                e.1 += v * m;
+            }
+            _ => {
+                if let Some((_, e)) = cur.take() {
+                    push(e);
+                }
+                cur = Some((k, (0.0 + v, 0.0 + v * m)));
+            }
+        }
+    }
+    if let Some((_, e)) = cur {
+        push(e);
+    }
+    Some(out)
 }
 
 /// At most two points per pixel column (the lowest and the highest y of the column, in x order) for drawing; `x` is increasing.
@@ -129,6 +166,33 @@ mod tests {
         assert_eq!(y, vec![4.0, 2.0]);
         assert!((m[0] - (100.01 + 3.0 * 100.05) / 4.0).abs() < 1e-9);
         assert!((m[1] - 100.31).abs() < 1e-9);
+    }
+
+    #[test]
+    fn the_ascending_path_is_the_map_to_the_bit() {
+        let mut seed = 99u64;
+        let mut r = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let mut mz: Vec<f64> = (0..3000).map(|_| 50.0 + (r() % 95_000_000) as f64 / 100_000.0).collect();
+        mz.sort_by(f64::total_cmp);
+        let it: Vec<f32> = (0..mz.len()).map(|_| (r() % 100_000) as f32 * 0.37).collect();
+        for bin in [0.01, 0.1, 1.0] {
+            let fast = bin_ascending(&mz, &it, bin).unwrap();
+            let mut cells: std::collections::BTreeMap<i64, (f64, f64)> = Default::default();
+            for (&m, &i) in mz.iter().zip(&it) {
+                let c = cells.entry((m / bin).floor() as i64).or_insert((0.0, 0.0));
+                c.0 += i as f64;
+                c.1 += i as f64 * m;
+            }
+            let (wm, wy): (Vec<f64>, Vec<f64>) = cells.values().map(|&(sy, smy)| (smy / sy.max(1e-12), sy)).unzip();
+            let bits = |v: &[f64]| v.iter().map(|x| x.to_bits()).collect::<Vec<_>>();
+            assert_eq!((bits(&fast.0), bits(&fast.1)), (bits(&wm), bits(&wy)), "bin {bin}");
+        }
+        assert!(bin_ascending(&[2.0, 1.0], &[1.0f32, 1.0], 0.1).is_none() && bin_ascending(&[1.0], &[1.0f32], 0.0).is_none());
     }
 
     #[test]
