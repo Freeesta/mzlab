@@ -629,7 +629,7 @@ Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev
 Q("#calcin").onkeydown = ev => {
   if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
   if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
-  if (ev.key.length === 1 || ev.key === "Backspace") CALC.fresh = false;
+  if ((ev.key || "").length === 1 || ev.key === "Backspace") CALC.fresh = false;
 };
 // the groups under the calculator («what can this number be?», calc-qui*.js) follow the field
 function calcRun() {
