@@ -1,0 +1,2 @@
+list_id;list_version;access_date;source;name;cas;pubchem_cid;inchikey;inchikey_skeleton;smiles;formula;mono_mass;list_attribute;is_tp;parent;tp_reference;lc_esi_amenable;amenability_rule;xlogp;resolved_by;entry_ref;ec;dtxsid;form;status
+T_LIST_P;2000-01-01;2000-01-02;Act P;Proposalide;9100-26-0;;PROPOSALIDEXAA-UHFFFAOYSA-N;PROPOSALIDEXAA;;C9H11NO3S;213.045964;;;;;;;;law;Proposal annex, no. 1;;;as_listed;screenable
