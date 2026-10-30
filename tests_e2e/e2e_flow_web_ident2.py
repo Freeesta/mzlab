@@ -2,7 +2,7 @@
 the `attributio-all` .wasm: docs/agenti/flow-web.md):
 over the synthetic identity series (tools/feat_sintetici.py) and a small MSP library made here (the first MS2 spectrum of the series is in it, the others are not) the browser writes the sub-formulas that explain
 the MS2 and the level of each query as `mzlab-cli flow run` writes them for the same plan, byte for byte; a second run takes them from OPFS. The same files written as
-negative scans give formula.ms1 with no ion written the ion [M-H]- in both, byte for byte (in a fresh page: OPFS holds no index of them). One feature has a library
+negative scans give formula.ms1 with no ion written the ion [M-H]- in both, byte for byte (in a fresh page whose OPFS holds only their indexes). One feature has a library
 match (a level above the one without evidence), another has none. Builds the site and the .wasm of mzFinder (needs cargo, wasm-bindgen, python3 and numpy: SKIP without).
 Run from the repo root: python3 tests_e2e/e2e_flow_web_ident2.py"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, threading, urllib.request
@@ -115,8 +115,11 @@ CSV = next(out.glob("csv*.csv")).read_text().replace("datafile:SIN_", "datafile:
 (run / "feat.csv").write_text(CSV)
 NEG_FILES = ["file:" + m + ".mzML" for m in NEG]
 PLAN_NEG = {"format": "mzflow/2", "inputs": [{"name": m + ".mzML", "sha256": "", "type": "raw"} for m in NEG] + [{"name": "feat.csv", "sha256": "", "type": "report"}],
-            "steps": [{"id": "fn", "step": "formula.ms1@1", "in": {"features": "file:feat.csv", "index": NEG_FILES}, "params": {"tol_ppm": 5, "max_results": 5}}]}
-NAT_NEG = (native(PLAN_NEG, "plan_neg") / "fn.json").read_bytes()
+            "steps": [{"id": "idx", "step": "index.mzidx@1", "in": {"source": NEG_FILES}},
+                      {"id": "fn", "step": "formula.ms1@1", "in": {"features": "file:feat.csv", "index": NEG_FILES}, "params": {"tol_ppm": 5, "max_results": 5}}]}
+out_neg = native(PLAN_NEG, "plan_neg")
+NAT_NEG = (out_neg / "fn.json").read_bytes()
+for m in NEG: shutil.copy2(out_neg / ("idx-" + m + ".mzidx"), data / (m + ".mzidx"))
 assert b'"ion":"[M-H]-"' in NAT_NEG and b"err.flow.formula.scan" not in NAT_NEG, NAT_NEG[:400]
 
 PUT = """async (names) => {
@@ -193,7 +196,7 @@ try:
             miss = pg.evaluate("(window.MZLAB_LR_MISS || []).length"); assert miss == 0, pg.evaluate("window.MZLAB_LR_MISS")
         step("the engine had no route it could not serve", no_miss)
         def negative():
-            pn = open_page(b, NEG, [])
+            pn = open_page(b, NEG, NEG)
             r = pn.evaluate(RUN, [PLAN_NEG, {"feat.csv": CSV}]); check(r, ["fn"], "done")
             kept = pn.evaluate(KEPT)
             assert "fn.json" in kept, list(kept)
