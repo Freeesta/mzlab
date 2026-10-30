@@ -180,6 +180,7 @@ function closeAllPanels() {
   uiSave();
   if (tabFiles("ms2").length) renderFileList();
   redrawAll();
+  workClosedAll();
 }
 
 function cleanupOrphanPanels() {
