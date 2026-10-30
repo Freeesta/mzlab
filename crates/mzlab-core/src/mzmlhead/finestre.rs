@@ -1,88 +1,45 @@
-//! A search over the file in windows, for `Mzml::chromatograms`: the chromatograms of an MRM file are the whole file, so the list is read
-//! window by window instead of in one buffer as large as the file (which also capped such files at `MAX_REGION`).
+//! `Mzml::chromatograms` read in windows: the chromatograms of an MRM file are the whole file, so the list is searched window by window
+//! instead of in one buffer as large as the file (which also capped such files at `MAX_REGION`).
 
 use super::tags::find_tag;
-use super::{find, Mzml};
+use super::{chrom_of, find, part, text, Chrom, Mzml};
 use crate::error::Result;
 use crate::idxread::ReadAt;
 
-/// Bytes read at a time.
+/// Bytes read at a time; a window grows (doubling) only while one chromatogram does not fit in it.
 pub(super) const WINDOW: u64 = 4 << 20;
 
-/// The last window read and where it starts.
-pub(super) struct Finestre {
-    at: u64,
-    buf: Vec<u8>,
-}
-
-impl Finestre {
-    pub(super) fn new() -> Self {
-        Finestre {
-            at: 0,
-            buf: Vec::new(),
-        }
-    }
-
-    /// The window holds `from..` up to `from + want` (or the end of the file); otherwise a new window starts at `from`.
-    fn load<R: ReadAt>(&mut self, m: &mut Mzml<R>, from: u64, want: u64) -> Result<()> {
-        let end = self.at + self.buf.len() as u64;
-        if from < self.at || from.saturating_add(want).min(m.size) > end {
-            self.buf = m.read(from, from.saturating_add(WINDOW.max(want)))?;
-            self.at = from;
-        }
-        Ok(())
-    }
-
-    /// The first `pat` that starts at or after `from` and ends by `to`; with `tag`, followed by white space or `>` (`find_tag`).
-    pub(super) fn find<R: ReadAt>(
-        &mut self,
-        m: &mut Mzml<R>,
-        pat: &[u8],
-        mut from: u64,
-        to: u64,
-        tag: bool,
-    ) -> Result<Option<u64>> {
-        let to = to.min(m.size);
-        // a match cut by the end of a window is found again in the next one, which starts this far back
-        let back = pat.len() as u64 + 1;
-        while from < to {
-            self.load(m, from, back)?;
-            let hi = (self.at + self.buf.len() as u64).min(to);
-            let slice = self.buf.get(..self.off(hi)).unwrap_or_default();
-            let lo = self.off(from);
-            let got = if tag {
-                find_tag(slice, pat, lo)
-            } else {
-                find(slice, pat, lo)
-            };
-            if let Some(p) = got {
-                return Ok(Some(self.at + p as u64));
-            }
-            if hi >= to {
+/// The header of every `<chromatogram>` from `scans_end` on, as the search over `scans_end..size` in one buffer finds them.
+pub(super) fn chromatograms<R: ReadAt>(m: &mut Mzml<R>, scans_end: u64) -> Result<Vec<Chrom>> {
+    let mut out: Vec<Chrom> = vec![];
+    let (mut at, mut len) = (scans_end, WINDOW);
+    while at < m.size {
+        let end = at.saturating_add(len).min(m.size);
+        let region = m.read(at, end)?;
+        let mut pos = 0usize;
+        let mut cut = None;
+        while let Some(a) = find_tag(&region, b"<chromatogram", pos) {
+            let Some(b) = find(&region, b"</chromatogram>", a) else {
+                cut = Some(a);
                 break;
-            }
-            from = from.max(hi.saturating_sub(back) + 1);
+            };
+            let c = find(part(&region, 0, b), b"<binaryDataArrayList", a);
+            let h = text(part(&region, a, c.unwrap_or(b)));
+            out.push(chrom_of(&h, out.len(), at + a as u64, at + (b + 15) as u64));
+            pos = b + 1;
         }
-        Ok(None)
-    }
-
-    /// The place of file offset `x` (not before the window) in the window.
-    fn off(&self, x: u64) -> usize {
-        usize::try_from(x.saturating_sub(self.at)).unwrap_or(usize::MAX)
-    }
-
-    /// The bytes `a..b`, from the window when it holds them.
-    pub(super) fn bytes<R: ReadAt>(&mut self, m: &mut Mzml<R>, a: u64, b: u64) -> Result<Vec<u8>> {
-        let end = self.at + self.buf.len() as u64;
-        if a >= self.at && b <= end {
-            return Ok(self
-                .buf
-                .get(self.off(a)..self.off(b))
-                .unwrap_or_default()
-                .to_vec());
+        if end >= m.size {
+            break;
         }
-        m.read(a, b)
+        match cut {
+            // one chromatogram longer than the window: the same start, a window twice as long
+            Some(0) => len = len.saturating_mul(2),
+            Some(a) => (at, len) = (at + a as u64, WINDOW),
+            // far enough back that an opening tag cut by the end of this window is seen whole in the next
+            None => (at, len) = ((at + pos as u64).max(end - 13), WINDOW),
+        }
     }
+    Ok(out)
 }
 
 #[cfg(test)]

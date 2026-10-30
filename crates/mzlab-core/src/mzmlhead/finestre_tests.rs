@@ -97,8 +97,9 @@ fn the_windowed_list_is_the_whole_file_list_across_window_edges() {
             .map(|c| (c.id, c.start, c.end))
             .collect();
         assert_eq!(got, want, "pad {pad}");
+        // the one chromatogram longer than a window is read in a window twice as long
         assert!(
-            m.r.longest <= w,
+            m.r.longest <= 2 * w,
             "pad {pad}: a read of {} bytes",
             m.r.longest
         );
@@ -113,4 +114,38 @@ fn the_windowed_list_is_the_whole_file_list_across_window_edges() {
             .collect();
         assert_eq!(got, whole(&m.r.data, from), "pad {pad} from {from}");
     }
+}
+
+#[test]
+fn small_chromatograms_are_read_one_window_at_a_time() {
+    let w = WINDOW as usize;
+    let mut f = b"<mzML><run><chromatogramList>".to_vec();
+    let mut i = 0;
+    while f.len() < 3 * w {
+        f.extend(chrom(i, 5000 + 37 * (i % 100)));
+        i += 1;
+    }
+    let want = whole(&f, 0);
+    let size = f.len() as u64;
+    let mut m = Mzml::new(
+        Counting {
+            data: f,
+            calls: 0,
+            longest: 0,
+        },
+        size,
+    );
+    let got: Vec<(String, u64, u64)> = m
+        .chromatograms(0)
+        .unwrap()
+        .into_iter()
+        .map(|c| (c.id, c.start, c.end))
+        .collect();
+    assert_eq!(got, want);
+    assert!(
+        m.r.longest <= w && m.r.calls <= 4,
+        "{} reads, longest {}",
+        m.r.calls,
+        m.r.longest
+    );
 }

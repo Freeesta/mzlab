@@ -7,7 +7,7 @@ use crate::flow::{check, Plan, Platform};
 use crate::step::Step;
 use events::plan_event;
 use graph::{build, Node};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 #[path = "sched_events.rs"]
 mod events;
@@ -39,7 +39,7 @@ impl Sched {
             gone: Vec::new(),
             rev: 0,
             seq: 0,
-            log: VecDeque::new(),
+            log: Vec::new(),
             paused: false,
             shown_nodes: Vec::new(),
         };
@@ -463,7 +463,7 @@ pub struct Sched {
     gone: Vec<(JobId, String)>,
     rev: u64,
     seq: u64,
-    log: VecDeque<(u64, String)>,
+    log: Vec<(u64, String)>,
     paused: bool,
     shown_nodes: Vec<NodeView>,
 }

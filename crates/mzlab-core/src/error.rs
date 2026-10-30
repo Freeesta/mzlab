@@ -1,6 +1,5 @@
 //! Errors carry an i18n key and parameters, never a text: the page translates them (as the Python engine does).
 
-use std::collections::BTreeSet;
 use std::fmt;
 use std::sync::{Mutex, PoisonError};
 
@@ -31,14 +30,15 @@ impl Error {
 
 /// `s` as a `&'static str`, leaked once per distinct text: the error keys, parameter names and descriptor texts read at run time (job reports,
 /// step registries) come from a small vocabulary, so the memory kept is bounded by it, not by how many reports or registry reads arrive.
+/// A plain list: the vocabulary is small, and a set map would add ~3 KB to every .wasm that links the engine.
 pub fn intern(s: &str) -> &'static str {
-    static SEEN: Mutex<BTreeSet<&'static str>> = Mutex::new(BTreeSet::new());
+    static SEEN: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
     let mut seen = SEEN.lock().unwrap_or_else(PoisonError::into_inner);
-    if let Some(&k) = seen.get(s) {
+    if let Some(&k) = seen.iter().find(|&&k| k == s) {
         return k;
     }
     let k: &'static str = Box::leak(s.to_string().into_boxed_str());
-    seen.insert(k);
+    seen.push(k);
     k
 }
 

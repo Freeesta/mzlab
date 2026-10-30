@@ -22,6 +22,47 @@ fn part(h: &[u8], a: usize, b: usize) -> &[u8] {
     h.get(a..b).unwrap_or_default()
 }
 
+/// The `Chrom` of one `<chromatogram>` header `h` (the text before its arrays) at `start..end` of the file.
+fn chrom_of(h: &str, index: usize, start: u64, end: u64) -> Chrom {
+    let cid = attr_id(h).unwrap_or_default();
+    let mut d = Chrom {
+        index,
+        id: cid.clone(),
+        start,
+        end,
+        kind: "other".into(),
+        ..Default::default()
+    };
+    let acc = |x: &str| has_accession(h, x);
+    if cid == "TIC" || cid.starts_with("TIC ") {
+        d.kind = "tic".into();
+    } else if cid == "BPC" {
+        d.kind = "bpc".into();
+    } else if cid == "TWC" || acc("MS:1000812") || acc("MS:1000813") {
+        d.kind = "pda".into();
+    } else if acc("MS:1003019") || cid.starts_with("Pump Pressure") {
+        d.kind = "pressure".into();
+    } else if cid.starts_with("SRM") {
+        d.kind = "srm".into();
+        (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
+        d.dwell = named_value(h, "MS_dwell_time");
+        d.ce = d.ce.or_else(|| named_value(h, "collision energy"));
+    } else if ![
+        "MS:1000235",
+        "MS:1000627",
+        "MS:1000628",
+        "MS:1001473",
+        "MS:1001472",
+    ]
+    .iter()
+    .any(|x| acc(x))
+    {
+        d.kind = "analog".into();
+    }
+    d.n = attr(h, "defaultArrayLength").and_then(|v| v.parse().ok());
+    d
+}
+
 pub(crate) fn find(h: &[u8], n: &[u8], from: usize) -> Option<usize> {
     let tail = h.get(from..)?;
     let (first, rest) = n.split_first()?;
@@ -205,55 +246,7 @@ impl<R: ReadAt> Mzml<R> {
 
     /// The header of every `<chromatogram>`; they follow the spectra, so the search starts where the last scan ends (0 without scans).
     pub fn chromatograms(&mut self, scans_end: u64) -> Result<Vec<Chrom>> {
-        let mut w = finestre::Finestre::new();
-        let mut out: Vec<Chrom> = vec![];
-        let mut pos = scans_end;
-        while let Some(a) = w.find(self, b"<chromatogram", pos, u64::MAX, true)? {
-            let Some(b) = w.find(self, b"</chromatogram>", a, u64::MAX, false)? else {
-                break;
-            };
-            let c = w.find(self, b"<binaryDataArrayList", a, b, false)?;
-            let h = text(&w.bytes(self, a, c.unwrap_or(b))?);
-            let cid = attr_id(&h).unwrap_or_default();
-            let mut d = Chrom {
-                index: out.len(),
-                id: cid.clone(),
-                start: a,
-                end: b + 15,
-                kind: "other".into(),
-                ..Default::default()
-            };
-            let acc = |x: &str| has_accession(&h, x);
-            if cid == "TIC" || cid.starts_with("TIC ") {
-                d.kind = "tic".into();
-            } else if cid == "BPC" {
-                d.kind = "bpc".into();
-            } else if cid == "TWC" || acc("MS:1000812") || acc("MS:1000813") {
-                d.kind = "pda".into();
-            } else if acc("MS:1003019") || cid.starts_with("Pump Pressure") {
-                d.kind = "pressure".into();
-            } else if cid.starts_with("SRM") {
-                d.kind = "srm".into();
-                (d.q1, d.q3, d.ce, d.name) = srm_id(&cid);
-                d.dwell = named_value(&h, "MS_dwell_time");
-                d.ce = d.ce.or_else(|| named_value(&h, "collision energy"));
-            } else if ![
-                "MS:1000235",
-                "MS:1000627",
-                "MS:1000628",
-                "MS:1001473",
-                "MS:1001472",
-            ]
-            .iter()
-            .any(|x| acc(x))
-            {
-                d.kind = "analog".into();
-            }
-            d.n = attr(&h, "defaultArrayLength").and_then(|v| v.parse().ok());
-            out.push(d);
-            pos = b + 1;
-        }
-        Ok(out)
+        finestre::chromatograms(self, scans_end)
     }
 
     /// (time in minutes, intensity) of a chromatogram.
