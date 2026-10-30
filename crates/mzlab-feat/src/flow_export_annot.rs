@@ -3,6 +3,7 @@
 //! It adds no identity and raises no level. A candidate joins its feature by id, the rule of `annot.level` (query id = feature id as text); a row that cannot be joined keeps an empty `feature_id`.
 
 use crate::aligned::Aligned;
+use crate::sortc;
 use crate::store::read_table;
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{self, round, Value};
@@ -391,24 +392,19 @@ pub fn export_made(p: &Params, inp: &Inputs) -> Result<Made> {
     read_screen(inp.screen, n, &mut rows)?;
     read_formulas(inp.formulas, n, &mut rows)?;
     // stable sort: feature, method, then the score; rank counts inside (feature, method)
-    rows.sort_by(|a, b| {
-        let key = |r: &Row| {
-            (
-                if r.feature == 0 {
-                    usize::MAX
-                } else {
-                    r.feature
-                },
-                r.method,
-            )
-        };
-        key(a).cmp(&key(b)).then_with(|| best_first(a, b))
+    // sortc::by needs Copy data: sort the indices, then walk the rows in that order
+    let key = |r: &Row| (r.feature.wrapping_sub(1), r.method);
+    let mut order: Vec<usize> = (0..rows.len()).collect();
+    sortc::by(&mut order, |&a, &b| {
+        let (x, y) = (&rows[a], &rows[b]);
+        key(x).cmp(&key(y)).then_with(|| best_first(x, y))
     });
     let sep = p.separator;
     let mut csv = HEADER.join(&sep.to_string());
     csv.push('\n');
     let (mut unjoined, mut last, mut rank) = (0, (usize::MAX, usize::MAX, ""), 0);
-    for r in &rows {
+    for &i in &order {
+        let r = &rows[i];
         let d = (r.feature > 0)
             .then(|| decisions[r.feature - 1].as_ref())
             .flatten();
