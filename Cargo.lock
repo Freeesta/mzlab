@@ -2473,6 +2473,7 @@ name = "mzlab-lib"
 version = "1.0.0"
 dependencies = [
  "mzlab-core",
+ "mzlab-picchi",
  "ruzstd",
  "serde_json",
 ]
