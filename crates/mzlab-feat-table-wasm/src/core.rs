@@ -14,10 +14,12 @@ use mzlab_feat::tabcheck;
 use mzlab_feat::table::Aligned;
 use mzlab_feat::view::{self, View};
 
-/// The table and the samples; the samples must be one per file.
+/// The table and the samples, put in the order of its files by name; the samples must be one per file.
 fn load<R: ReadAt>(r: &mut R, size: u64, samples_json: &str) -> Result<(Aligned, Vec<Sample>)> {
-    let (t, _) = read_table_from(r, size)?;
-    let s = samples::from_json(samples_json.as_bytes())?;
+    let (t, meta) = read_table_from(r, size)?;
+    let text =
+        mzlab_core::campioni::order_like(samples_json, &mzlab_feat::store::input_names(&meta))?;
+    let s = samples::from_json(text.as_bytes())?;
     if s.len() != t.n_files {
         return Err(Error::new("error.badView"));
     }
@@ -155,6 +157,8 @@ pub fn tp_table_cond_json<R: ReadAt>(
                 .collect(),
         )
     };
+    let names = mzlab_feat::store::table_names(r, size)?;
+    let campioni_json = mzlab_core::campioni::order_like(campioni_json, &names)?;
     let cs = mzlab_core::campioni::from_json(campioni_json.as_bytes())?;
     let infos = mzlab_feat::tp::infos_from_json(infos_json)?;
     mzlab_feat::tp::table_json_cond(&t, &s, rows.as_deref(), Some((&cs, &infos)))

@@ -22,6 +22,9 @@ pub(crate) fn samples_text(bytes: &[u8]) -> Result<String> {
 
 /// The `view` text of the table under the rules of the job.
 pub fn filter_text(job: &Job, table: &[u8], samples: &[u8]) -> Result<String> {
+    let samples =
+        &mzlab_feat_table_wasm::pol::samples_like(&mut Slice(table), table.len() as u64, samples)?;
+    let samples = samples.as_bytes();
     let spec = filterspec::spec_with_samples(&job.resolved.params, samples);
     let samples = samples_text(samples)?;
     view_json(&mut Slice(table), table.len() as u64, &samples, &spec)

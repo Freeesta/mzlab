@@ -15,6 +15,9 @@ mod json;
 mod json3;
 mod modello;
 mod nomi;
+mod ordine;
+#[cfg(test)]
+mod ordine_prove;
 mod parole_bianco;
 mod posizioni;
 mod regex;
@@ -29,6 +32,7 @@ pub use json::{da_legacy, digest, from_json, from_value, to_json};
 pub use json3::{digest3, tabella_da_json, tabella_da_value, to_json3, SCHEMA3};
 pub use modello::{applica_modello, Applicato};
 pub use nomi::{proponi, proponi_spiegato, ruolo_e_minuti, tipo_v1};
+pub use ordine::order_like;
 pub use posizioni::{proposte_json, Posizione, Proposta};
 pub use ricollega::{ricollega, ricollega_json, Abbinamento};
 pub use valida::{per_tp, per_tp_json, valida, valida_json, Avviso, PerTp};

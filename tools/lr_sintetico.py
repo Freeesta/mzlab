@@ -5,7 +5,7 @@
     python3 tools/lr_sintetico.py OUT_DIR [--seed N] [--jitter DA]
 
 Writes `LR_bench-s<N>.mzML` (60 compounds + 12 decoy pairs + background), `LR_bench-blank-s<N>.mzML` (same background, no compounds, other noise draw)
-and the truth. Same seed and jitter = same bytes (structure from the seed, noise from separate streams; scalar libm exp as in `dati_sintetici`).
+`LR_bench-noise-s<N>.mzML` (no compounds and no background: only the Poisson counts and the single-scan spikes) and the truth. Same seed and jitter = same bytes (structure from the seed, noise from separate streams; scalar libm exp as in `dati_sintetici`).
 Intensity = ion counts x GAIN (counts per second at a 50 ms dwell); heights in the truth are in counts.
 """
 from __future__ import annotations
@@ -75,13 +75,14 @@ def _chrom(rt_s: float, apex: float):
     return _exp(-0.5 * (x / SIG_RT) ** 2) * np.where(x > 0, _exp(-x / TAIL_S * 0.15), 1.0)
 
 
-def _write_run(path: Path, st: dict, noise_seed: int, jitter: float, compounds: bool) -> None:
+def _write_run(path: Path, st: dict, noise_seed: int, jitter: float, compounds: bool, background: bool = True) -> None:
     rng = np.random.default_rng(noise_seed)
     ions = st["ions"] if compounds else []
-    mzs = np.array([i["mz"] for i in ions] + [b["mz"] for b in st["background"]])
-    rts = np.array([i["rt_s"] for i in ions] + [0.0] * len(st["background"]))
-    hts = np.array([i["height"] for i in ions] + [b["height"] for b in st["background"]])
-    const = np.array([False] * len(ions) + [True] * len(st["background"]))
+    bg = st["background"] if background else []
+    mzs = np.array([i["mz"] for i in ions] + [b["mz"] for b in bg])
+    rts = np.array([i["rt_s"] for i in ions] + [0.0] * len(bg))
+    hts = np.array([i["height"] for i in ions] + [b["height"] for b in bg])
+    const = np.array([False] * len(ions) + [True] * len(bg))
     # spikes: one scan, one position (electronic or chemical bursts), other draw in each file
     sp_scan = rng.integers(0, N_SCANS, N_SPIKES)
     sp_mz = rng.uniform(100.0, 400.0, N_SPIKES)
@@ -114,9 +115,11 @@ def make(out: Path, seed: int = 1, jitter: float = 0.05) -> list[Path]:
     a, b, tr = out / f"LR_bench-s{seed}.mzML", out / f"LR_bench-blank-s{seed}.mzML", out / f"LR_bench-s{seed}_truth.json"
     _write_run(a, st, seed + 1000, jitter, True)
     _write_run(b, st, seed + 2000, jitter, False)
+    nz = out / f"LR_bench-noise-s{seed}.mzML"
+    _write_run(nz, st, seed + 3000, jitter, False, background=False)
     tr.write_text(json.dumps({"seed": seed, "jitter": jitter, "offset": OFFSET, "fwhm_mz": FWHM_MZ, "fwhm_rt_s": FWHM_RT, "gain": GAIN, **st},
                              indent=1), encoding="utf-8")
-    return [a, b, tr]
+    return [a, b, nz, tr]
 
 
 if __name__ == "__main__":
