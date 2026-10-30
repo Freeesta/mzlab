@@ -66,6 +66,13 @@ fn kid<'a>(n: &'a Node, k: &str) -> Option<&'a str> {
         .map(|c| c.text.trim())
         .filter(|t| !t.is_empty())
 }
+/// Missing values first (as `Option`'s order), then the numbers ascending, NaN after them.
+fn opt_asc(a: Option<f64>, b: Option<f64>) -> std::cmp::Ordering {
+    match (a, b) {
+        (Some(x), Some(y)) => crate::sortc::asc_nan_last(x, y),
+        _ => a.is_some().cmp(&b.is_some()),
+    }
+}
 fn f(n: &Node, k: &str) -> Option<f64> {
     kid(n, k).and_then(|t| t.parse().ok())
 }
@@ -109,9 +116,7 @@ fn compound(c: &Node, root: &Node) -> Option<V> {
         .filter(|q| q.name == "TargetQualifier" && same_compound(q, id))
         .collect();
     crate::sortc::slice_by(&mut ions, |a, b| {
-        f(a, "QualifierID")
-            .partial_cmp(&f(b, "QualifierID"))
-            .unwrap_or(std::cmp::Ordering::Equal)
+        opt_asc(f(a, "QualifierID"), f(b, "QualifierID"))
     });
     let mut levels: Vec<&Node> = root
         .kids
@@ -119,9 +124,7 @@ fn compound(c: &Node, root: &Node) -> Option<V> {
         .filter(|l| l.name == "Calibration" && same_compound(l, id))
         .collect();
     crate::sortc::slice_by(&mut levels, |a, b| {
-        f(a, "LevelConcentration")
-            .partial_cmp(&f(b, "LevelConcentration"))
-            .unwrap_or(std::cmp::Ordering::Equal)
+        opt_asc(f(a, "LevelConcentration"), f(b, "LevelConcentration"))
     });
     obj(vec![
         ("id", num(id)),

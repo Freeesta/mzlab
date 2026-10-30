@@ -29,7 +29,7 @@ pub struct Imported {
     pub mass: Option<f64>,
 }
 
-const D13C: f64 = 1.003355;
+const D13C: f64 = mzlab_core::elements::C13_STEP;
 const DPLUS2: f64 = 2.00671;
 
 struct Path {

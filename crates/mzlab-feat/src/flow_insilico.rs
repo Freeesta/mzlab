@@ -11,7 +11,7 @@ use mzlab_lib::flowmatch::{query_id, read_spectra, Named};
 
 /// Format of the catalogue of the candidate package (`docs/schemi/insilico-1.json`).
 pub const FORMAT: &str = "insilico/1";
-const PROTON: f64 = 1.00727646677;
+const PROTON: f64 = mzlab_core::elements::PROTON;
 /// The window is widened by this fraction so a piece whose edge lies on it is never missed; `rank` applies the exact `db_ppm` anyway.
 const SLACK: f64 = 1e-9;
 

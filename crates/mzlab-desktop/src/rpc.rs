@@ -428,17 +428,7 @@ pub(crate) fn tx(g: &Gradient) -> String {
 
 /// `[{slot, label, time, full}]` of the session as the page describes it.
 pub(crate) fn session_items(items: &str) -> Result<Vec<mzlab_core::originroute::ItemMeta>> {
-    use mzlab_core::json::Value as J;
-    let v = json::parse(items.as_bytes())?;
-    Ok(v.arr()
-        .iter()
-        .map(|i| mzlab_core::originroute::ItemMeta {
-            slot: i.get("slot").and_then(J::f64).unwrap_or(-1.0) as u32,
-            label: i.get("label").and_then(J::str).unwrap_or("").to_string(),
-            time: i.get("time").and_then(J::f64),
-            full: matches!(i.get("full"), Some(J::Bool(true))),
-        })
-        .collect())
+    mzlab_core::originroute::session_items(items)
 }
 
 /// A `ReadAt` over a map of the disk.
