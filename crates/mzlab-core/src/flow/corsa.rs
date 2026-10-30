@@ -73,10 +73,12 @@ pub struct Corsa {
     pub levels: Livelli,
     /// The `report/1` text of the table, as the table wrote it.
     pub report: Option<String>,
+    /// The lists the run screened against and the candidates they name (`screen/1`, `annot/1`).
+    pub regulatory: super::corsa_reg::Regulatory,
 }
 
 /// Types of file that are lists the run used (libraries, transformation and structure lists), reported apart from the data files.
-const LIST_TYPES: [&str; 3] = ["library", "transform", "structure"];
+const LIST_TYPES: [&str; 4] = ["library", "transform", "structure", "regulatory"];
 
 fn text(v: &Value, key: &str) -> Option<String> {
     v.get(key).and_then(|x| x.str()).map(str::to_string)
@@ -221,9 +223,10 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
         _ => Vec::new(),
     };
     let mut levels = Livelli::default();
-    let mut report = None;
+    let (mut report, mut regulatory) = (None, super::corsa_reg::Regulatory::default());
     for u in uscite {
         let Ok(v) = parse(u.bytes) else { continue };
+        regulatory.read(&v);
         if v.get("schema").and_then(|s| s.str()) == Some("report/1") {
             report = Some(String::from_utf8_lossy(u.bytes).trim_end().to_string());
         }
@@ -257,6 +260,7 @@ pub fn build(prov: &Value, uscite: &[Uscita]) -> Result<Corsa> {
         steps,
         levels,
         report,
+        regulatory,
     })
 }
 
@@ -395,6 +399,7 @@ impl Corsa {
         if let Some(r) = &self.report {
             o.raw(",\"report\":").raw(r);
         }
+        self.regulatory.write(&mut o);
         o.raw("}\n");
         o.0
     }

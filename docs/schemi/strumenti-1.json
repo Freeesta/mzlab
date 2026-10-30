@@ -12,6 +12,7 @@
         "required":[],
         "x-executable-native":[
           "annot.level",
+          "annot.regulatory",
           "chrom.uv_peaks",
           "convert.mzml",
           "export.inclusion",
@@ -352,7 +353,7 @@
           {
             "properties":{
               "step":{"const":"annot.regulatory@1"},
-              "name":{"enum":["algorithm","window"]},
+              "name":{"enum":["algorithm","window","lists","include"]},
               "value":{
                 "anyOf":[
                   {"enum":["list_membership","suspect_screen","ms2_confirm"]},
@@ -362,6 +363,14 @@
                     "minItems":2,
                     "maxItems":2,
                     "description":"Entries of the lists outside this range of monoisotopic mass are left out; absent: all the entries"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Ids of the lists to compare, comma-separated; empty: every list in force"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Statuses added to the lists in force: proposal, draft, reference; empty: none"
                   }
                 ]
               }
@@ -1124,7 +1133,18 @@
           {
             "properties":{
               "step":{"const":"screen.suspects@1"},
-              "name":{"enum":["ppm","adducts","rt_window_min","min_fragments","max_hits_per_feature","ms2_rt_min"]},
+              "name":{
+                "enum":[
+                  "ppm",
+                  "adducts",
+                  "rt_window_min",
+                  "min_fragments",
+                  "max_hits_per_feature",
+                  "lists",
+                  "include",
+                  "ms2_rt_min"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {"type":"number","minimum":0,"default":5,"description":"Mass tolerance"},
@@ -1148,6 +1168,14 @@
                     "minimum":1,
                     "default":10,
                     "description":"Most formula groups kept per feature, the closest in mass first"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Ids of the lists of a regulatory package to screen, comma-separated; empty: every list in force"
+                  },
+                  {
+                    "type":"string",
+                    "description":"Statuses added to the lists in force: proposal, draft, reference; empty: none"
                   },
                   {
                     "type":"number",
