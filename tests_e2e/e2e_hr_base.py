@@ -38,7 +38,7 @@ try:
         step("gear: «Masse» row (ppm, decimals) changes the profile and is saved", gear)
         def notice():
             pg.evaluate("HR.notice([{file:'prova.mzML',label:'prova',hr_err:'ValueError: prova'}])"); pg.wait_for_timeout(200)
-            t = pg.inner_text("#hrerr"); print(t)
+            t = pg.inner_text("#qnote"); print(t)
             assert "Alta risoluzione non disponibile per prova: aperto come bassa risoluzione" in t
         step("fallback notice (once per file)", notice)
         def reload():

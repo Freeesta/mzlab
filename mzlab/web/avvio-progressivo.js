@@ -70,7 +70,9 @@ const AVVIO = (function () {
       return;
     }
     const ph = typeof window !== "undefined" && window.qqPhaseCur ? window.qqPhaseCur : null;
-    if (!ph && !timedOut) {
+    // the way out of a stuck start shows only when files are actually waiting for the engine
+    const stuck = timedOut && attesa.length > 0;
+    if (!ph && !stuck) {
       el.hidden = true;
       el.textContent = "";
       return;
@@ -85,7 +87,7 @@ const AVVIO = (function () {
     span.textContent = txt;
     el.appendChild(span);
 
-    if (timedOut) {
+    if (stuck) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "btn sec sm";
@@ -152,6 +154,7 @@ const AVVIO = (function () {
     return new Promise(resolve => {
       attesa.push(resolve);
       renderDropStato();
+      renderFase();
     });
   }
 

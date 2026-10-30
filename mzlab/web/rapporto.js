@@ -65,7 +65,7 @@ const RAPPORTO = (() => {
 body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,sans-serif;max-width:980px;margin:0 auto;padding:16px}h1{font-size:22px}h2{font-size:17px;border-bottom:2px solid var(--accent);padding-bottom:3px;margin-top:26px;color:var(--accent)}h3{font-size:14px;margin:14px 0 4px}
 table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}th,td{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums}.m{color:var(--muted)}code,pre{font:11px/1.35 ui-monospace,monospace;word-break:break-all;white-space:pre-wrap}
 @media print{body{max-width:none;padding:0}h2{break-after:avoid}table{break-inside:auto}tr{break-inside:avoid}}`;
-  const num = (v, d = 2) => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? Number(v).toExponential(2) : Number(v).toFixed(d));
+  const num = (v, d = 2) => I18N.sci(v, d);
   const tab = (head, rows) => `<table><thead><tr>${head.map(h => `<th scope="col">${eh(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td${typeof c === "number" ? ' class="n"' : ""}>${eh(typeof c === "number" ? num(c, 3) : c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   const roleTxt = r => (window.QAQC ? QAQC.roleName(r) : r);
   const kv = o => Object.entries(o || {}).map(([k, v]) => [k, typeof v === "object" && v !== null ? JSON.stringify(v) : String(v)]);
