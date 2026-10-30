@@ -1,14 +1,13 @@
 //! `mzlab-cli normative build` against invented fixtures served by a fake `Fetch`: canonical bytes, resolution steps, pins, stale lists and warm-cache
-//! rebuilds. No network; the fixtures in `tests/data/normative/` are invented (CAS-shaped numbers that fail the checksum, InChIKey-shaped strings).
-#![cfg(not(target_family = "wasm"))]
+//! rebuilds. No network; the fixtures in `tests/data/normative/` (next to the crate) are invented (CAS-shaped numbers that fail the checksum, InChIKey-shaped strings).
 
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use mzlab_cli::normative::fetch::Fetch;
-use mzlab_cli::normative::{run_with, NormError};
+use crate::normative::fetch::Fetch;
+use crate::normative::{run_with, NormError};
 use mzlab_feat::attributio::reglists::schema::read_list;
 
 fn data(name: &str) -> Vec<u8> {
@@ -120,7 +119,7 @@ impl Drop for Work {
 
 fn rows(w: &Work, id: &str) -> Vec<Vec<String>> {
     let text = w.out(&format!("lists/{id}.csv"));
-    mzlab_cli::normative::csvrd::Records::new(text.as_bytes(), b';')
+    crate::normative::csvrd::Records::new(text.as_bytes(), b';')
         .skip(1)
         .collect()
 }
@@ -437,7 +436,7 @@ fn normative_a_file_url_reads_the_users_own_download() {
     std::fs::write(w.dir.join("out/sources.json"), src).expect("write");
     let r = run_with(
         w.args(&["--only", "T_PROP", "--update-pins", "--no-resolve"]),
-        mzlab_cli::normative::fetch::Http::default(),
+        crate::normative::fetch::Http::default(),
     );
     assert_eq!(r.code, 0, "{}", r.stderr);
     let rs = rows(&w, "T_PROP");
@@ -450,7 +449,7 @@ fn normative_a_file_url_reads_the_users_own_download() {
 
 #[test]
 fn normative_cas_numbers_are_found_by_shape_and_checked_apart() {
-    use mzlab_cli::normative::entry::{cas_check_ok, cas_tokens};
+    use crate::normative::entry::{cas_check_ok, cas_tokens};
     assert_eq!(
         cas_tokens("a 9100-11-3 and 9100-12-4; 9100-11-3 again, v2-34-5x"),
         ["9100-11-3", "9100-12-4"]
@@ -463,7 +462,7 @@ fn normative_cas_numbers_are_found_by_shape_and_checked_apart() {
 
 #[test]
 fn normative_markup_rows_carry_rowspans_and_decode_entities() {
-    use mzlab_cli::normative::markup::{parse, rows};
+    use crate::normative::markup::{parse, rows};
     let root = parse(
         "<table><tr><td rowspan=\"2\">7</td><td>A &amp; B</td></tr><tr><td>C</td></tr></table>",
     );
@@ -479,7 +478,7 @@ fn normative_markup_rows_carry_rowspans_and_decode_entities() {
 
 #[test]
 fn normative_csv_records_keep_quotes_and_line_breaks() {
-    use mzlab_cli::normative::csvrd::Records;
+    use crate::normative::csvrd::Records;
     let text = "a,b\n\"x, \"\"y\"\"\",\"two\nlines\"\n";
     let r: Vec<Vec<String>> = Records::new(text.as_bytes(), b',').collect();
     assert_eq!(r[1], ["x, \"y\"", "two\nlines"]);

@@ -14,6 +14,8 @@ pub mod resolve;
 pub mod resolve_src;
 pub mod sources;
 pub mod table_rd;
+#[cfg(test)]
+mod tests;
 
 use std::fmt;
 use std::path::{Path, PathBuf};

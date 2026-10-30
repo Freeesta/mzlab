@@ -1,6 +1,6 @@
 # Liste normative UE e USA: costruttore (`mzlab-cli normative build`)
 
-Area: `crates/mzlab-cli/src/normative/` (solo nativo, `#[cfg(not(target_family = "wasm"))]`), dati in `normative/` (`sources.json`, `overrides.tsv`; `lists/`, `provenance.json` e `unresolved.tsv` sono l'uscita), prove in `crates/mzlab-cli/tests/normative_build.rs` con fixture inventate in `tests/data/normative/`. Studio: `docs/studi/LISTE_NORMATIVE.md`. Le liste sono DATI scaricati su clic (pacchetto B), mai codice nei `.wasm`.
+Area: `crates/mzlab-cli/src/normative/` (solo nativo, `#[cfg(not(target_family = "wasm"))]`), dati in `normative/` (`sources.json`, `overrides.tsv`; `lists/`, `provenance.json` e `unresolved.tsv` sono l'uscita), prove in `crates/mzlab-cli/src/normative/tests.rs` (test unitari: un file `tests/*.rs` farebbe costruire a cargo anche il binario con `panic=abort` e romperebbe `cargo test --workspace --release`) con fixture inventate in `crates/mzlab-cli/tests/data/normative/`. Studio: `docs/studi/LISTE_NORMATIVE.md`. Le liste sono DATI scaricati su clic (pacchetto B), mai codice nei `.wasm`.
 
 ## Uso
 - `mzlab-cli normative build --cache DIR --out normative/ [--only ID...] [--update-pins] [--no-resolve] [--allow-large] [--sources FILE] [--overrides FILE]`. `--cache` tiene un file per URL (`DIR/<sha256 URL>` più `.json` con URL, data, SHA-256, byte); con la cache calda non c'è nessuna richiesta e l'uscita è identica byte per byte (l'orologio si legge solo al primo scarico).
