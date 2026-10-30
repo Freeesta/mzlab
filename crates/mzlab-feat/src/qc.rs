@@ -56,12 +56,7 @@ fn cv(v: &[f64]) -> f64 {
 }
 
 fn median(mut v: Vec<f64>) -> f64 {
-    crate::sortc::by(&mut v, f64::total_cmp);
-    match v.len() {
-        0 => f64::NAN,
-        n if n % 2 == 1 => v[n / 2],
-        n => (v[n / 2 - 1] + v[n / 2]) / 2.0,
-    }
+    mzlab_core::signal::median_or_in(&mut v, f64::NAN)
 }
 
 /// Conditions with at least two replicates, in the order of their first file. Areas are the ones of the view (normalised) when there is one.

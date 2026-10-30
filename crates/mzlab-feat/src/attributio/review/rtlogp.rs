@@ -33,14 +33,7 @@ pub fn organic_fraction(rt: f64, gradient: &[Vec<f64>], dwell: f64) -> f64 {
 }
 
 fn median(v: &[f64]) -> f64 {
-    let mut s = v.to_vec();
-    s.sortc_by(|a, b| a.partial_cmp(b).unwrap());
-    let n = s.len();
-    if n % 2 == 1 {
-        s[n / 2]
-    } else {
-        (s[n / 2 - 1] + s[n / 2]) / 2.0
-    }
+    mzlab_core::signal::median_or(v, f64::NAN)
 }
 
 fn mad_of(res: &[f64]) -> f64 {
