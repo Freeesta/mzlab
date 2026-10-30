@@ -11,7 +11,7 @@ use crate::gruppi::{self, GroupTable, RowMeta};
 use crate::table::CELL_ABSENT;
 
 /// Mass of the proton (u): the neutral mass of a row is its m/z minus it in ESI+ and plus it in ESI-.
-const PROTON: f64 = 1.007_276;
+const PROTON: f64 = mzlab_core::elements::PROTON_6DP;
 
 /// A column of the Dig as a sample of `campioni/2` (role from the kind and the time, condition and replicate as the page gave them).
 pub fn campione(f: &FileIn, rank: usize) -> Campione {
