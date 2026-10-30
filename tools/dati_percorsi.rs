@@ -30,14 +30,31 @@ pub fn radice() -> Option<PathBuf> {
 // The data repository was tidied (reorganize-step1): folders moved. (old prefix, new prefix, name test); `percorso`
 // tries the path as asked, then the moved/unmoved twin, so code and data can merge in any order.
 const MOVES: [(&str, &str, fn(&str) -> bool); 4] = [
-    ("esperimenti/", "esperimenti/2026-10/", |n| n.starts_with("loc_") || n.starts_with("coo_")),
-    ("esperimenti/", "esperimenti/altro/", |n| ["Computazio", "Sostanze psicoattive", "motore_wasm"].contains(&n)),
-    ("coordinamento/", "coordinamento/documenti/", |n| ["studi", "proposte", "consegne", "riferimenti", "gemini_esiti"].contains(&n)),
+    ("esperimenti/", "esperimenti/2026-10/", |n| {
+        n.starts_with("loc_") || n.starts_with("coo_")
+    }),
+    ("esperimenti/", "esperimenti/altro/", |n| {
+        ["Computazio", "Sostanze psicoattive", "motore_wasm"].contains(&n)
+    }),
+    ("coordinamento/", "coordinamento/documenti/", |n| {
+        [
+            "studi",
+            "proposte",
+            "consegne",
+            "riferimenti",
+            "gemini_esiti",
+        ]
+        .contains(&n)
+    }),
     ("coordinamento/prompt/raw", "prompt/raw", |_| true),
 ];
 
 fn first_name(rest: &str, prefix: &str) -> String {
-    if prefix.ends_with('/') { rest.split('/').next().unwrap_or("").to_string() } else { String::new() }
+    if prefix.ends_with('/') {
+        rest.split('/').next().unwrap_or("").to_string()
+    } else {
+        String::new()
+    }
 }
 
 /// The other spellings of `rel` (old layout <-> new layout).
