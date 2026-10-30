@@ -21,6 +21,8 @@ use mzlab_core::error::{Error, Result};
 #[cfg(any(feature = "detect", feature = "proofs", feature = "untargeted"))]
 use mzlab_core::idxread::Index;
 use mzlab_core::idxread::ReadAt;
+#[cfg(feature = "proofs")]
+use mzlab_feat::{store::Slice, tp::TpRoles};
 use mzlab_core::json::Out;
 use mzlab_feat::slabs::Stored;
 use wasm_bindgen::prelude::*;
@@ -409,21 +411,6 @@ pub fn run_hypotheses(
 }
 
 #[cfg(feature = "proofs")]
-/// The roles of the files from a `campioni/2` put in the order of the files of the table `names` (None or empty = only the minutes, as before).
-fn roles_of(
-    campioni: Option<&str>,
-    names: &[String],
-) -> std::result::Result<Option<mzlab_feat::tp::TpRoles>, JsValue> {
-    match campioni.filter(|c| !c.is_empty()) {
-        Some(c) => mzlab_core::campioni::order_like(c, names)
-            .and_then(|c| mzlab_feat::tp::TpRoles::from_json(&c))
-            .map(Some)
-            .map_err(js_err),
-        None => Ok(None),
-    }
-}
-
-#[cfg(feature = "proofs")]
 /// L8-L9: the graph of the proofs on the `.mzfeat` of the series, read by offsets with `table_read(offset, length)`, written to `write(offset, bytes)`:
 /// `{"bytes", "sha256"}` of the `.mzfeat` with the `evid` section. `minutes[k]` is the treatment time of file `k` (NaN = a control); `parent_mz` NaN = no
 /// parent in the table. `campioni` (optional) is a `campioni/2`: gate 1 of the products then reads the roles of the files. `stored` (the `.mzfeatf` of the series, in the order of
@@ -447,14 +434,14 @@ pub fn build_evidence_to(
     mzidx_sizes: Option<Vec<f64>>,
 ) -> std::result::Result<String, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
+    let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
+    let budget = MemBudget::from_request(budget_mb);
     let mut table = JsReader {
         read: table_read,
         k: 0,
     };
-    let names = mzlab_feat::store::table_names(&mut table, table_size as u64).map_err(js_err)?;
-    let roles = roles_of(campioni.as_deref(), &names)?;
-    let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
-    let budget = MemBudget::from_request(budget_mb);
+    let roles = TpRoles::opt_for_table(campioni.as_deref(), &mut table, table_size as u64);
+    let roles = roles.map_err(js_err)?;
     to_sink(write, |sink| {
         let size = table_size as u64;
         let mut files = stored.map(|files| JsStored { files });
@@ -495,8 +482,8 @@ pub fn build_evidence(
     campioni: Option<String>,
 ) -> std::result::Result<Vec<u8>, JsValue> {
     let r = run::recipe_from_json(recipe).map_err(js_err)?;
-    let names = mzlab_feat::store::table_names(&mut mzlab_feat::store::Slice(table), table.len() as u64).map_err(js_err)?;
-    let roles = roles_of(campioni.as_deref(), &names)?;
+    let roles = TpRoles::opt_for_table(campioni.as_deref(), &mut Slice(table), table.len() as u64);
+    let roles = roles.map_err(js_err)?;
     let parent = (parent_mz.is_finite() && parent_rt.is_finite()).then_some((parent_mz, parent_rt));
     let budget = MemBudget::from_request(f64::NAN);
     let mut out = Vec::new();

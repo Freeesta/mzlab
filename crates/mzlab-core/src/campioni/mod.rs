@@ -16,6 +16,8 @@ mod json3;
 mod modello;
 mod nomi;
 mod ordine;
+#[cfg(test)]
+mod ordine_prove;
 mod parole_bianco;
 mod posizioni;
 mod regex;
