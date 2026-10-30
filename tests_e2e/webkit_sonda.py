@@ -71,12 +71,14 @@ def site():
             pg.goto(f"http://127.0.0.1:{PORT}/")
             res = None
             try:
+                # MZLAB_RUST_READY resolves before the boot of the engine (browser.js: lr.boot) ends: the verdict is MZLAB_LR (booted) or MZLAB_LR_ERR (boot failed)
                 res = pg.evaluate("""async () => {
-                    const r = await Promise.race([window.MZLAB_RUST_READY, new Promise(x => setTimeout(() => x('timeout'), 40000))]);
-                    return { ready: r === 'timeout' ? 'timeout' : !!r, err: window.MZLAB_RUST_ERR || null, miss: (window.MZLAB_LR_MISS || []).length, isolated: self.crossOriginIsolated };
+                    await Promise.race([window.MZLAB_RUST_READY, new Promise(x => setTimeout(x, 40000))]);
+                    for (let i = 0; i < 400 && !window.MZLAB_LR && !window.MZLAB_LR_ERR; i++) await new Promise(x => setTimeout(x, 100));
+                    return { booted: !!window.MZLAB_LR, bootErr: window.MZLAB_LR_ERR || null, rustErr: window.MZLAB_RUST_ERR || null, miss: (window.MZLAB_LR_MISS || []).length, isolated: self.crossOriginIsolated };
                 }""")
                 pause(3)         # a worker that dies at the first allocation is replaced; two deaths in a minute turn the engine off
-                res["errAfter"] = pg.evaluate("window.MZLAB_RUST_ERR || null")
+                res["bootErrAfter"] = pg.evaluate("window.MZLAB_LR_ERR || null")
             except Exception as e:
                 res = {"exception": str(e)[:300]}
             b.close()
@@ -87,7 +89,7 @@ def site():
     print("SITE workers:", len(workers), sorted(set(workers)))
     for l in log[:15]: print("SITE console:", l)
     for e in errs[:10]: print("SITE pageerror:", e)
-    started = bool(res and res.get("ready") is True and not res.get("err") and not res.get("errAfter") and not errs)
+    started = bool(res and res.get("booted") and not res.get("bootErr") and not res.get("bootErrAfter") and not errs and not any("engine start failed" in l for l in log))
     print("SITE engine starts:", "yes" if started else "NO")
 
 

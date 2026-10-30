@@ -37,7 +37,30 @@ async function workers(n, growMb) {
   if (bad.length) throw new Error(`${bad.length}/${n} failed: ${bad[0]}`);
   return n;
 }
+// (4) OPFS, the storage of the engine (boot opens mzlab/ in OPFS): each call separately, in the page and in a worker (sync access handle only exists there)
+async function opfsSteps(rec, where) {
+  const t = async (name, fn) => { try { rec.push({ name: `${where} ${name}`, ok: true, v: String(await fn()) }); return true; } catch (e) { rec.push({ name: `${where} ${name}`, ok: false, err: `${e && e.name}: ${e && e.message}` }); return false; } };
+  let root, dir, fh, ah;
+  if (!await t("storage.getDirectory", async () => (root = await navigator.storage.getDirectory(), "ok"))) return;
+  if (!await t("getDirectoryHandle create", async () => (dir = await root.getDirectoryHandle("probe", { create: true }), "ok"))) return;
+  if (!await t("getFileHandle create", async () => (fh = await dir.getFileHandle("p.bin", { create: true }), "ok"))) return;
+  if (where !== "worker") return;
+  if (!await t("createSyncAccessHandle", async () => (ah = await fh.createSyncAccessHandle(), "ok"))) return;
+  await t("write 1 MiB + flush", async () => { ah.truncate(0); ah.write(new Uint8Array(1 << 20), { at: 0 }); ah.flush(); return ah.getSize(); });
+  await t("close", async () => ah.close());
+  await t("removeEntry", async () => dir.removeEntry("p.bin"));
+}
+async function opfsWorker() {
+  const src = `${opfsSteps.toString()} onmessage=async()=>{const rec=[];await opfsSteps(rec,'worker');postMessage(rec)}`;
+  const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  const w = new Worker(url);
+  const r = await new Promise(res => { w.onmessage = e => res(e.data); w.onerror = e => res([{ name: "worker OPFS", ok: false, err: "onerror " + e.message }]); setTimeout(() => res([{ name: "worker OPFS", ok: false, err: "timeout" }]), 10000); w.postMessage(0); });
+  w.terminate();
+  return r;
+}
 (async () => {
+  await opfsSteps(rec, "page");
+  rec.push(...await opfsWorker());
   for (const [n, g] of [[1, 0], [4, 0], [12, 0], [4, 512], [12, 256]]) {
     try { rec.push({ name: `workers x${n} grow ${g}M`, ok: true, v: await workers(n, g) }); }
     catch (e) { rec.push({ name: `workers x${n} grow ${g}M`, ok: false, err: String(e.message || e) }); }
