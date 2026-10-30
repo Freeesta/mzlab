@@ -95,10 +95,12 @@ try:
                 pg.evaluate("n => Array.from(document.querySelectorAll('#flist tr:not(.grp)')).find(tr => tr.children[1].textContent.trim().startsWith(n)).querySelector('input[data-k=use]').click()", n)
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
-            tic = pg.evaluate(JSON, "api/chrom?k=0&level=1")["j"]
+            k = pg.evaluate("E.files.find(f => !f.gone && f.file === 'serie.mzML').k")      # the one left open, whatever its place in the session
+            tic = pg.evaluate(JSON, f"api/chrom?k={k}&level=1")["j"]
             assert len(tic["rt"]) == 80 and max(tic["y"]) > 10 * min(tic["y"]), tic["rt"][:3]
-            ses = pg.evaluate(JSON, "api/session")["j"]["session"]
-            assert len(ses) == 1, ses
+            # an unticked open file is removed with «Undo»: the engine keeps it until the undo expires, the list shows only the one left
+            shown_ = pg.evaluate("E.files.filter(f => !f.gone).map(f => f.file)")
+            assert shown_ == ["serie.mzML"], shown_
         step("the files open as a session with their chromatograms", opens)
         def lonely():
             pg.set_input_files("#pick", [str(D / "lonely.wiff")])

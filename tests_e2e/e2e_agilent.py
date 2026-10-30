@@ -70,7 +70,9 @@ try:
         def tic():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)
-            r = pg.evaluate("""async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }""", "api/chrom?k=0&level=1")
+            # the files open in the order they are read: the converted run is found by its name
+            k = pg.evaluate("E.files.find(f => !f.gone && (f.file === 'uno.mzML' || f.file === 'due.mzML')).k")
+            r = pg.evaluate("""async u => { const r = await fetch(u); return { status: r.status, j: await r.json() }; }""", f"api/chrom?k={k}&level=1")
             j = r["j"]; assert r["status"] == 200, r
             y = j["y"]; t = j["rt"]
             assert len(y) in (90, 120) and max(y) > 5 * min(y), (len(y), min(y), max(y))
