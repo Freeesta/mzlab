@@ -163,7 +163,10 @@ fn read_list(
 
 /// The raw `.mzsus` of the rows, with `manifest` as its manifest JSON.
 /// The distinct entries (in first-seen order), the per-row membership offsets and the memberships `(list, form, bits, entry)`.
-fn intern(rows: &[(&String, &Row)]) -> (Vec<String>, Vec<u32>, Vec<(u16, u8, u8, u32)>) {
+/// `(list, form, bits, entry)` of one membership.
+type Packed = (u16, u8, u8, u32);
+
+fn intern(rows: &[(&String, &Row)]) -> (Vec<String>, Vec<u32>, Vec<Packed>) {
     let mut entries: Vec<String> = Vec::new();
     let mut entry_ix: BTreeMap<String, u32> = BTreeMap::new();
     let (mut member_offs, mut members) = (vec![0u32], Vec::new());
@@ -187,9 +190,8 @@ fn write_listings(
     n_lists: usize,
     entries: &[String],
     member_offs: &[u32],
-    members: &[(u16, u8, u8, u32)],
+    members: &[Packed],
 ) {
-    let n = rows.len();
     let blob: usize = entries.iter().map(String::len).sum();
     section(
         v,
@@ -374,7 +376,7 @@ fn catalog_json(
         .raw(",\"size_compressed\":")
         .int(z_len as i64)
         .raw(",\"sha256\":")
-        .str(&sha256_hex(&raw))
+        .str(&sha256_hex(raw))
         .raw(",\"rows\":")
         .int(rows as i64)
         .raw(",\"skipped_no_mass\":")
