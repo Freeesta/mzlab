@@ -13,7 +13,7 @@ Standard library only. The data file `eventi.jsonl` lives on the orphan branch `
     python3 tools/ci_metrics.py compatta --dati D.jsonl [--giorni 14]          # drop the heavy fields of old rows
     python3 tools/ci_metrics.py esporta [--dati D.jsonl] [--out DIR]           # one CSV per row type
     python3 tools/ci_metrics.py percorso [--dati D.jsonl] [--da YYYY-MM-DD]    # push -> last required check of merged PRs, by PR type
-    python3 tools/ci_metrics.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: git show origin/stat-ci:eventi.jsonl
+    python3 tools/ci_metrics.py riepilogo [--dati D.jsonl] [--da YYYY-MM-DD]   # default data: every events file of origin/stat-ci
 """
 from __future__ import annotations
 
@@ -24,12 +24,15 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import ci_metrics_data as dati_ci
+import ci_metrics_file as file_ci
+from ci_metrics_file import attivo, eventi_ramo, leggi, leggi_tutti, segmenti  # noqa: F401
 
 # Estimated minutes lost for the events that have no measured duration (printed with the summary).
 CONFLITTO_S = 900
@@ -210,7 +213,7 @@ def riempi_verde(righe: list[dict], api=api_get, massimo: int = 30) -> int:
 
 def stato_conflitti(dati: str) -> dict[int, bool]:
     stato: dict[int, bool] = {}
-    for r in leggi(dati):
+    for r in leggi_tutti(dati):
         if r["tipo"] in ("conflitto", "conflitto_risolto"):
             stato[r["pr"]] = r["tipo"] == "conflitto"
     return stato
@@ -268,21 +271,14 @@ def righe_conflitti(evento: dict, dati: str, api=api_get, attesa=time.sleep, pro
     return out
 
 
-def leggi(path: str) -> list[dict]:
-    if not os.path.exists(path):
-        return []
-    with open(path, encoding="utf-8") as f:
-        return [json.loads(riga) for riga in f if riga.strip()]
-
-
 def chiave(r: dict) -> tuple:
     return tuple(r.get(k) for k in CHIAVE)
 
 
 def accoda(righe: list[dict], dati: str) -> int:
-    visti = {chiave(r) for r in leggi(dati)}
+    visti = {chiave(r) for r in leggi_tutti(dati)}
     nuove = [{"v": VERSIONE, **r} for r in righe if chiave(r) not in visti]
-    with open(dati, "a", encoding="utf-8") as f:
+    with open(attivo(dati), "a", encoding="utf-8") as f:
         for r in nuove:
             f.write(json.dumps(r, ensure_ascii=False, separators=(",", ":")) + "\n")
     return len(nuove)
@@ -413,7 +409,7 @@ def main() -> int:
     ap.add_argument("comando", choices=["registra-run", "registra-pr", "registra-conflitti", "registra-recenti", "accoda", "compatta", "riempi-verde", "esporta", "riepilogo", "percorso"])
     ap.add_argument("file", nargs="?", help="accoda: JSONL with the new lines")
     ap.add_argument("--evento", default=os.environ.get("GITHUB_EVENT_PATH"))
-    ap.add_argument("--dati", help="events file (default: eventi.jsonl; riepilogo and esporta: origin/stat-ci)")
+    ap.add_argument("--dati", help="events file (default: eventi.jsonl, plus its eventi-YYYY-MM[-N].jsonl parts; riepilogo and esporta: origin/stat-ci)")
     ap.add_argument("--nuovi", help="write the new lines here instead of appending to --dati")
     ap.add_argument("--cursore", help="registra-recenti: write the new cursor here; accoda: copy this cursor next to --dati")
     ap.add_argument("--out", default="stat-ci-csv", help="esporta: folder of the CSV files")
@@ -422,11 +418,7 @@ def main() -> int:
     ap.add_argument("--massimo", type=int, default=30, help="riempi-verde: rows tried per call")
     a = ap.parse_args()
     if a.comando in ("riepilogo", "esporta", "percorso"):
-        if a.dati:
-            ev = leggi(a.dati)
-        else:
-            txt = subprocess.run(["git", "show", "origin/stat-ci:eventi.jsonl"], capture_output=True, text=True).stdout
-            ev = [json.loads(x) for x in txt.splitlines() if x.strip()]
+        ev = leggi_tutti(a.dati) if a.dati else eventi_ramo()
         if a.comando == "esporta":
             print("\n".join(dati_ci.esporta(ev, a.out)))
         elif a.comando == "percorso":
@@ -442,12 +434,19 @@ def main() -> int:
             avanza_cursore(a.cursore, os.path.join(os.path.dirname(dati) or ".", "cursore.json"))
         return 0
     if a.comando == "compatta":
-        scrivi_righe(dati, dati_ci.compatta(leggi(dati), dati_ci.adesso_dt(), a.giorni))
+        for p in segmenti(dati):
+            if os.path.getsize(p) < file_ci.LIMITE_B:
+                scrivi_righe(p, dati_ci.compatta(leggi(p), dati_ci.adesso_dt(), a.giorni))
         return 0
     if a.comando == "riempi-verde":
-        righe = leggi(dati)
-        print(f"{riempi_verde(righe, massimo=a.massimo)} rows tried")
-        scrivi_righe(dati, righe)
+        restano = a.massimo
+        for p in reversed(segmenti(dati)):
+            if restano <= 0 or os.path.getsize(p) >= file_ci.LIMITE_B:
+                continue
+            righe = leggi(p)
+            restano -= riempi_verde(righe, massimo=restano)
+            scrivi_righe(p, righe)
+        print(f"{a.massimo - restano} rows tried")
         return 0
     if a.comando == "registra-recenti":
         righe, cursore = righe_recenti(dati)

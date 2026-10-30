@@ -60,16 +60,20 @@ jobs:
             python3 tools/ci_metrics.py registra-recenti --dati dati/eventi.jsonl --nuovi nuovi-recenti.jsonl --cursore cursore-nuovo.json
             cat nuovi-recenti.jsonl >> nuovi.jsonl
           fi
+      # metrics are best effort: a failed publish must never turn a pull request red
       - name: Publish on stat-ci
+        continue-on-error: true
         working-directory: dati
         run: |
           for i in 1 2 3 4 5; do
             python3 ../tools/ci_metrics.py accoda ../nuovi.jsonl --dati eventi.jsonl --cursore ../cursore-nuovo.json
-            [ "$(stat -c%s eventi.jsonl)" -gt 4000000 ] && python3 ../tools/ci_metrics.py compatta --dati eventi.jsonl
+            # new rows go to eventi-YYYY-MM.jsonl; files of 50 MB or more are never rewritten (GitHub refuses 100 MB)
+            [ "$(cat eventi*.jsonl | wc -c)" -gt 4000000 ] && python3 ../tools/ci_metrics.py compatta --dati eventi.jsonl
             git add -A
             git diff --cached --quiet && exit 0
             git commit -qm "stat-ci: events"
             git push origin HEAD:stat-ci && exit 0
             git fetch --depth=1 origin stat-ci && git reset -q --hard FETCH_HEAD
           done
-          exit 1
+          echo "::warning::stat-ci: events not published"
+          exit 0
