@@ -13,8 +13,8 @@ const BIANCO = (() => {
   let res = null;
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
-  const fmt = (v, d = 4) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
-  const num = v => (v == null || !isFinite(v) ? "–" : Math.abs(v) >= 1e4 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(2) : v.toFixed(1));
+  const fmt = (v, d = 4) => I18N.dash(v, d);
+  const num = v => I18N.sci(v, 1);
 
   async function run() {
     const tb = TABELLA.table;

@@ -9,7 +9,6 @@
 //   t(key, params): the texts (keys tbl.pt.*, tbl.na; the program passes I18N.t, the Teoria its Italian table); nome(element): its name.
 /** @typedef {{ z: number, s: string, w: number | null, r: number, c: number, iso: number[][] }} TavEl */
 window.TAVOLA = (() => {
-  const H = (/** @type {unknown} */ s) => String(s).replace(/[&<>"]/g, c => (/** @type {Record<string, string>} */ ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }))[c]);
   // layout: fixed row heights, so the table never changes size; the info box scrolls if needed. Colours only from the page variables
   // (light, dark, high contrast); the focus ring is drawn inside the cell, so no scrolling parent can cut it.
   const CSS = `.pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));grid-template-rows:repeat(7,46px) 12px repeat(2,46px);gap:3px;margin:8px 0;padding:2px;position:relative}
@@ -28,28 +27,28 @@ window.TAVOLA = (() => {
   const ORGANIC = new Set(["H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "Na", "K", "Si"]);
   function info(/** @type {TavEl} */ e) {
     const main = e.iso.length ? e.iso.reduce((a, b) => (b[2] > a[2] ? b : a)) : null;
-    let h = `<div class="pt-big"><span>${e.z}</span><b>${H(e.s)}</b></div><div><b style="font-size:15px">${H(nome(e))}</b></div>
+    let h = `<div class="pt-big"><span>${e.z}</span><b>${EH(e.s)}</b></div><div><b style="font-size:15px">${EH(nome(e))}</b></div>
       <div>${t("tbl.pt.avgWeight", { w: e.w != null ? e.w : t("tbl.na") })}</div>`;
     if (main) {
-      h += `<div>${t("tbl.pt.mono", { m: main[1].toFixed(5), a: main[0], s: H(e.s) })}</div>
+      h += `<div>${t("tbl.pt.mono", { m: main[1].toFixed(5), a: main[0], s: EH(e.s) })}</div>
         <table class="sm" style="margin-top:6px"><tr><th>${t("tbl.pt.col.iso")}</th><th class="num">${t("tbl.pt.col.mass")}</th><th class="num">${t("tbl.pt.col.abund")}</th><th class="num">${t("tbl.pt.col.delta")}</th><th></th></tr>` +
-        e.iso.map(i => `<tr><td><sup>${i[0]}</sup>${H(e.s)}</td><td class="num">${i[1] != null ? i[1].toFixed(5) : ""}</td><td class="num">${i[2]}</td>` +
+        e.iso.map(i => `<tr><td><sup>${i[0]}</sup>${EH(e.s)}</td><td class="num">${i[1] != null ? i[1].toFixed(5) : ""}</td><td class="num">${i[2]}</td>` +
           `<td class="num">${i === main || i[1] == null ? "" : (i[1] - main[1] > 0 ? "+" : "") + (i[1] - main[1]).toFixed(4)}</td>` +
           `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(i[2] * 0.8))}px"></i></td></tr>`).join("") + "</table>";
       if (e.iso.length > 1) {
         const sec = e.iso.filter(i => i !== main).reduce((a, b) => (b[2] > a[2] ? b : a));
-        h += `<div class="muted sm" style="margin-top:4px">${t("tbl.pt.peak", { s: H(e.s), off: (sec[0] - main[0] > 0 ? "+" : "") + (sec[0] - main[0]), pct: (100 * sec[2] / main[2]).toFixed(sec[2] / main[2] < 0.1 ? 1 : 0) })}</div>`;
+        h += `<div class="muted sm" style="margin-top:4px">${t("tbl.pt.peak", { s: EH(e.s), off: (sec[0] - main[0] > 0 ? "+" : "") + (sec[0] - main[0]), pct: (100 * sec[2] / main[2]).toFixed(sec[2] / main[2] < 0.1 ? 1 : 0) })}</div>`;
       }
     } else h += `<div class="muted sm" style="margin-top:6px">${t("tbl.pt.rare")}</div>`;
     return h;
   }
   function periodic() {
-    const cells = elements.map(e => `<button type="button" class="pt-c${ORGANIC.has(e.s) ? " org" : ""}${e.iso.length ? "" : " nd"}" data-s="${e.s}" aria-label="${H(nome(e))}, ${e.s}, ${e.z}" style="grid-row:${e.r};grid-column:${e.c}">` +
+    const cells = elements.map(e => `<button type="button" class="pt-c${ORGANIC.has(e.s) ? " org" : ""}${e.iso.length ? "" : " nd"}" data-s="${e.s}" aria-label="${EH(nome(e))}, ${e.s}, ${e.z}" style="grid-row:${e.r};grid-column:${e.c}">` +
       `<span>${e.z}</span><b>${e.s}</b><small>${e.w != null ? (e.w < 100 ? e.w.toFixed(3) : e.w.toFixed(2)) : ""}</small></button>`).join("");
     // Data sources (kept here, not shown in the page): exact masses = isotope table of OpenChemLib; abundances = representative
     // isotopic compositions, IUPAC (CIAAW); average atomic weight = Ketcher element list. Hovering an element shows masses and isotopes
     // (click pins it); the most common elements of organic molecules are highlighted.
-    return `<div class="pt">${cells}<div class="pt-info" id="pt-info" tabindex="0" role="region" aria-label="${H(t("tbl.pt.info"))}" aria-live="polite">${info(EL.C)}</div><div class="pt-gap">${t("tbl.pt.gap")}</div></div>`;
+    return `<div class="pt">${cells}<div class="pt-info" id="pt-info" tabindex="0" role="region" aria-label="${EH(t("tbl.pt.info"))}" aria-live="polite">${info(EL.C)}</div><div class="pt-gap">${t("tbl.pt.gap")}</div></div>`;
   }
   function bindPeriodic(/** @type {HTMLElement} */ root) {
     /** @type {string | null | undefined} */ let pinned = null; const box = /** @type {HTMLElement} */ (root.querySelector("#pt-info"));

@@ -334,7 +334,7 @@ try:
             q.wait_for_function(f"!!({UV} && {UV}._a && {UV}._a.uvd)", timeout=60000)
             a = q.evaluate(f"({{n: {UV}._a.uvd.nm.length, mx: {UV}._a.uvd.nm[{UV}._a.uvd.y.indexOf(Math.max(...{UV}._a.uvd.y))]}})")
             assert a["n"] == 201 and abs(a["mx"] - 260) <= 1, a
-            q.evaluate("(()=>{const c=E.panels.find(q=>q.type==='chrom'); const s=c.el.querySelector('select[data-o=kind]'); s.value='pda'; s.dispatchEvent(new Event('change',{bubbles:true}))})()")
+            q.click("[data-o=kind]"); q.click(".can-pop [role=treeitem][data-kind=pda]")                                  # the channel picker: the PDA row
             q.wait_for_function("E.panels.find(q=>q.type==='chrom')._a && E.panels.find(q=>q.type==='chrom').kind==='pda'", timeout=60000)
             q.evaluate("wlOpen(E.panels.find(q=>q.type==='chrom'), 258, 262, E.files[0].k)")                  # the λ trace: 258-262 nm
             q.wait_for_function("E.panels.some(q=>q.type==='chrom'&&q.kind==='pda'&&q.mz0===258&&q._a)", timeout=60000)

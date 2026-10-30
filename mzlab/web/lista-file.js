@@ -97,6 +97,11 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
 }
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
+  // the × of a row: removes the file (Undo within 6 s)
+  if (!L.dataset.cap) L.addEventListener("click", e => {
+    const x = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".fl-x")); if (!x) return;
+    e.stopPropagation(); e.preventDefault(); const g = E.files[+(x.dataset.rm || -1)]; if (g && !g.gone) removeFile(g);
+  }, true);
   L.ondblclick = e => {
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");

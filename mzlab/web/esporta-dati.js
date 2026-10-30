@@ -145,9 +145,7 @@ export async function run() {
   const all = [{ name: "manifesto.json", bytes: manifest(files, left, when) }, ...files];
   const zip = await zipIt(pack(all));
   const name = `mzlab-dati-${when.toISOString().slice(0, 10)}.zip`;
-  const url = URL.createObjectURL(new Blob([/** @type {BlobPart} */ (zip)], { type: "application/zip" }));
-  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  saveBlob(new Blob([/** @type {BlobPart} */ (zip)], { type: "application/zip" }), name, 30000);
   return { name, n: all.length };
 }
 

@@ -9,6 +9,8 @@ function maxAbs(a, init = 0) { let m = init; for (let i = 0; i < a.length; i++) 
 function minOf(a, init = Infinity) { let m = init; for (let i = 0; i < a.length; i++) { const v = +a[i]; if (v < m) m = v; else if (v !== v) return NaN; } return m; }
 // First index with a[i] >= v in an ascending array.
 function lowerIdx(a, v) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < v) lo = m + 1; else hi = m; } return lo; }
+// Index of the value of an ascending array nearest to v (ties go to the upper one).
+function nearIdx(xs, v) { let lo = 0, hi = xs.length - 1; if (hi < 1) return 0; while (hi - lo > 1) { const m = (lo + hi) >> 1; xs[m] < v ? lo = m : hi = m; } return Math.abs(xs[lo] - v) < Math.abs(xs[hi] - v) ? lo : hi; }
 const _ASC = new WeakMap();
 // [i0, i1) that holds every index with lo <= a[i] <= hi: a binary search when `a` is ascending (checked once per array), else the whole array (the caller still tests the bounds).
 function spanOf(a, lo, hi) {
@@ -27,3 +29,4 @@ function b64F32(str, n) {
   if (n != null && m.length !== n) throw new Error("corrupt map payload: " + m.length + " values, expected " + n);
   return m;
 }
+if (typeof module !== "undefined") module.exports = { nearIdx };
