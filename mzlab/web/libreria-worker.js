@@ -11,7 +11,7 @@
 //   <id>.peaks      the packed peaks, in file order: Float32 pairs (m/z, intensity), at most 100 per spectrum, intensity normalised to 1
 //   <id>.meta.json  name, type (adduct), CE, instrument, formula, InChIKey of every spectrum (file order)
 //   <id>.info.json  the summary shown in the list (name, spectra, polarities, discarded, date)
-// A spectrum is: { prec, pol (+1 / -1 / 0), mz: Float32Array, it: Float32Array, meta: [name, type, ce, inst, formula, inchikey] }.
+// A spectrum is: { prec, pol (+1 / -1 / 0), mz: Float32Array, it: Float32Array, meta: [name, type, ce, inst, formula, inchikey, accession, authors, license, smiles] }.
 
 const TOP_PEAKS = 100;
 const MAGIC = 0x4d5a4c31;                       // "MZL1"
@@ -88,7 +88,7 @@ class LibParser {
     const p = topPeaks(c.mz, c.it), type = f.precursortype ?? f.adduct ?? "";
     this.stats.read++;
     this.cb({ prec, pol: polFrom(f.ionmode ?? f.polarity, type, f.charge), mz: p.mz, it: p.it,
-      meta: [f.name ?? f.title ?? "", type, f.collisionenergy ?? f.ce ?? "", f.instrumenttype ?? f.instrument ?? "", f.formula ?? "", f.inchikey ?? "", f.db ?? f.accession ?? f.accessionnumber ?? "", f.authors ?? f.author ?? f.datacollector ?? "", f.license ?? f.licence ?? ""] });
+      meta: [f.name ?? f.title ?? "", type, f.collisionenergy ?? f.ce ?? "", f.instrumenttype ?? f.instrument ?? "", f.formula ?? "", f.inchikey ?? "", f.db ?? f.accession ?? f.accessionnumber ?? "", f.authors ?? f.author ?? f.datacollector ?? "", f.license ?? f.licence ?? "", f.smiles ?? f.isomericsmiles ?? ""] });
   }
 }
 function formatOf(/** @type {string} */ name, /** @type {string} */ head) {                 // by extension, otherwise by the first lines
@@ -152,7 +152,7 @@ function searchIndex(/** @type {LibIdx} */ idx, /** @type {LibQ} */ q, /** @type
     // same polarity (a library entry without polarity is kept)
     if (opts.pol && lp && lp !== opts.pol) continue;
     const s = getSpec(pos), sc = score(q, s, opts.frag), m = meta ? meta[pos] : null;
-    out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "",
+    out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "", smiles: m ? m[9] || "" : "",
       cos: sc.cos, ent: sc.ent, shared: sc.shared, reverse: sc.reverse, explained: sc.explained, polarity: lp, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
   }
   return out;
@@ -209,7 +209,7 @@ function analogIndex(/** @type {LibIdx} */ idx, /** @type {LibQ} */ q, /** @type
     const lib = { mz: c.s.mz, it: c.s.it, prec: idx.prec[c.k] }, r = modCosine({ mz: q.mz, it: q.it, prec: q.prec }, lib, frag);
     if (r.matched < 4) continue;
     const m = meta ? meta[c.pos] : null;
-    out.push({ pos: c.pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "", mcos: r.cos, matched: r.matched, shifted: r.shifted,
+    out.push({ pos: c.pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", accession: m ? m[6] || "" : "", authors: m ? m[7] || "" : "", license: m ? m[8] || "" : "", smiles: m ? m[9] || "" : "", mcos: r.cos, matched: r.matched, shifted: r.shifted,
       delta: r.delta, prec: idx.prec[c.k], coinc: c.n, mz: Array.from(c.s.mz), it: Array.from(c.s.it), pairs: r.pairs.map(p => [p[0], p[1], p[2]]), qa: { mz: Array.from(r.a.mz), it: Array.from(r.a.it) }, la: { mz: Array.from(r.b.mz), it: Array.from(r.b.it) } });
   }
   out.sort((x, y) => y.mcos - x.mcos);

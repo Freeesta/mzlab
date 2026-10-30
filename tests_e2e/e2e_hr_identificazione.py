@@ -39,11 +39,16 @@ try:
             t = pg.inner_text("#li-body"); print(t[:300])
             assert "Voce di prova" in t and pg.locator("#li-body .lvb").count() >= 1, t
             assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
-            assert pg.is_visible("#libid") and "Livello proposto" in pg.inner_text("#libid")
+            assert pg.is_visible("#libwhat") and "Livello" in pg.inner_text("#li-list thead")
+            assert pg.evaluate("(() => { const L = document.querySelector('#li-list'); return L.scrollWidth - L.clientWidth; })()") <= 1, "no horizontal overflow"
+            pg.click("#lw-dl summary")
             with pg.expect_download() as dl: pg.click("#li-xlsx")
             assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500
-            pg.evaluate("document.querySelector('#libid').close()")
-        step("identify all the MS2 of the file: the library entry is found, with a verdict and the level", identify)
+            pg.locator("#li-list tr.row", has_text="Voce di prova").first.click(); pg.wait_for_selector("#libwhat #lw-list tr.row[data-k=id]", timeout=60000)
+            assert "Voce di prova" in pg.inner_text("#lw-list") and pg.is_visible("#lw-cv") and pg.is_visible("#lw-goto")
+            pg.click("#lw-back"); pg.wait_for_selector("#li-list tr.row", timeout=10000)
+            pg.evaluate("document.querySelector('#libwhat').close()")
+        step("identify all the MS2 of the file: one row per precursor with the level; a row opens «Cos'è?» of its scan in the same window, «Tutte le MS2» comes back", identify)
         def excluded():
             pol = pg.evaluate("E.files.find(f=>f.kind==='ms2').polarity")
             pg.evaluate("LISTE.setOn(true)"); pg.evaluate("LISTE.ready()"); assert pg.evaluate("LISTE.isOn()"), "the contaminant lists are on"      # off by default
@@ -55,7 +60,7 @@ try:
             assert "Voce di prova" not in t and "nascosti" in pg.inner_text("#li-body .cont-cnt"), t[:300]
             pg.click("#li-chid"); pg.wait_for_function("document.querySelector('#li-body').innerText.includes('Voce di prova')", timeout=10000)
             pg.click("#li-chid"); assert "Voce di prova" not in pg.inner_text("#li-body")
-            pg.evaluate("document.querySelector('#libid').close(); LISTE.exclReset(); LISTE.setOn(false)")
+            pg.evaluate("document.querySelector('#libwhat').close(); LISTE.exclReset(); LISTE.setOn(false)")
         step("a candidate whose precursor is an excluded contaminant stays out of the list, counted, until «Mostra»", excluded)
         def analogs():
             r = pg.evaluate("""(async()=>{const q=%s;const j=await LIB.call('analogs',{peaks:q.mz.map((m,i)=>[m,q.y[i]]),prec:q.t,pol:1,frag:0.01,maxDelta:200,max:10});return j.results.map(x=>({name:x.name,delta:x.delta,matched:x.matched,mcos:x.mcos}))})()""" % __import__("json").dumps(info))
