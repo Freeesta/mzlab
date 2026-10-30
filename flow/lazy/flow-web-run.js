@@ -7,7 +7,7 @@
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW, G = /** @type {any} */ (window);
   /** the steps this runner knows, and the ones that need a computer */
-  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : []), ...(F.webIdent ? F.webIdent.STEPS : []), ...(F.webQc ? F.webQc.STEPS : []), ...(F.webSuspects ? F.webSuspects.STEPS : []), ...(F.webInsilico ? F.webInsilico.STEPS : []), ...(F.webDrift ? F.webDrift.STEPS : []), ...(F.webInclusion ? F.webInclusion.STEPS : []), "export.table_csv", "export.mztab", "table.filter"];
+  const KNOWN = ["spectra.centroid", "index.mzidx", "features.detect", "features.align", "features.gapfill", ...(F.webMsn ? F.webMsn.STEPS : []), ...(F.webTp ? F.webTp.STEPS : []), ...(F.webIdent ? F.webIdent.STEPS : []), ...(F.webQc ? F.webQc.STEPS : []), ...(F.webSuspects ? F.webSuspects.STEPS : []), ...(F.webInsilico ? F.webInsilico.STEPS : []), ...(F.webDrift ? F.webDrift.STEPS : []), ...(F.webInclusion ? F.webInclusion.STEPS : []), ...(F.webQcReport ? F.webQcReport.STEPS : []), "export.table_csv", "export.mztab", "table.filter"];
   const LAYERED = ["features.detect", "features.align", "features.gapfill"];
   /** @type {any} */ let pool = null;
   /** @type {any} */ let estimator = null;

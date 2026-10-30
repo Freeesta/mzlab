@@ -1,6 +1,7 @@
 //! The searches of a `LibSet`: identity, analogs and open search over the libraries of a mask, fused into one ranked list.
 
 use super::*;
+use mzlab_picchi::sortc::SortC;
 
 impl<S: Source> LibSet<S> {
     fn tag<T>(&self, lib: usize, hit: T, index: u32, mask: u16) -> SetHit<T> {
@@ -28,7 +29,7 @@ impl<S: Source> LibSet<S> {
         top: usize,
         cmp: impl Fn(&T, &T) -> Ordering,
     ) -> Vec<SetHit<T>> {
-        all.sort_by(|a, b| {
+        all.sortc_by(|a, b| {
             cmp(&a.hit, &b.hit)
                 .then(a.lib.cmp(&b.lib))
                 .then(a.index.cmp(&b.index))

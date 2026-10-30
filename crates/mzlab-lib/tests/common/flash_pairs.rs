@@ -4,7 +4,7 @@ use mzlab_lib::io::Source;
 use mzlab_lib::read::Library;
 use mzlab_lib::scores::pair_term;
 use mzlab_lib::search::{FlashMode, FlashScore, Query};
-use mzlab_lib::sortutil;
+use mzlab_picchi::sortc;
 use std::ops::Range;
 
 /// The search as it was before the accumulators: all candidate pairs in a vector, sorted, one group per spectrum. Returns the number of competing groups too.
@@ -50,7 +50,7 @@ pub fn reference<S: Source>(
             }
         }
     }
-    sortutil::sort_by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
+    sortc::by(&mut pairs, |a, b| (a.0, a.1, a.2).cmp(&(b.0, b.1, b.2)));
     pairs.dedup_by(|b, a| (a.0, a.1, a.2) == (b.0, b.1, b.2));
     groups(&pairs)
 }
@@ -77,7 +77,7 @@ fn groups(pairs: &[(u32, u16, u32, f64)]) -> (Vec<FlashScore>, usize) {
         } else {
             competing += 1;
             let mut order: Vec<usize> = (0..g.len()).collect();
-            sortutil::sort_by(&mut order, |&a, &b| {
+            sortc::by(&mut order, |&a, &b| {
                 g[b].3.total_cmp(&g[a].3).then(a.cmp(&b))
             });
             let (mut ui, mut uj) = (Vec::new(), Vec::new());
@@ -99,7 +99,7 @@ fn groups(pairs: &[(u32, u16, u32, f64)]) -> (Vec<FlashScore>, usize) {
         });
         k = e;
     }
-    sortutil::sort_by(&mut out, |a, b| {
+    sortc::by(&mut out, |a, b| {
         b.score.total_cmp(&a.score).then(a.index.cmp(&b.index))
     });
     (out, competing)

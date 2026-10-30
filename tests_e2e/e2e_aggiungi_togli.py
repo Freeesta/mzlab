@@ -1,7 +1,7 @@
 """Adding and removing data in the single landing: «+» reopens the landing with «Back to work!» (Esc and the button give the work back as it was), the X of the toolbar
 leaves the landing (a click on a file brings its panel back), removing every file shows the landing and Undo brings files and panels back, and a reload after
 remove + Undo still shows the file (F8 of CARICAMENTO_STABILITA)."""
-import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys, os, re; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 EX = ROOT / "mzlab" / "web" / "esempi"
 FILES = [str(EX / "FullScan_t0.mzML"), str(EX / "FullScan_t30.mzML")]
@@ -57,6 +57,34 @@ try:
             pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files.filter(f => !f.gone).length === {k}")
             attendi(pg, f"{WORK} === 'panels'"); assert panels() == n, f"panels back: {panels()} of {n}"
         step("Remove all: landing, toolbar off, no empty panel; Undo brings files and panels back", remove_all)
+        def row_x():
+            k = pg.evaluate("E.files.filter(f => !f.gone)[0].k"); n = pg.evaluate("E.files.filter(f => !f.gone).length")
+            x = pg.locator(f'#flst .fl-x[data-rm="{k}"]'); assert re.search(r"Remove|Togli", x.get_attribute("aria-label")), x.get_attribute("aria-label")
+            pg.hover(f'#flst .fl[data-k="{k}"]'); assert float(x.evaluate("e => getComputedStyle(e).opacity")) == 1, "the × shows on hover"
+            box = x.bounding_box(); assert box["width"] >= 24 and box["height"] >= 24, box
+            x.click(); attendi(pg, f"E.files[{k}].gone === true"); assert pg.evaluate("E.files.filter(f => !f.gone).length") == n - 1
+            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files[{k}].gone === false")
+        step("× on a row removes the file, Ctrl+Z brings it back", row_x)
+        def menu_entries():
+            pg.click("#flst .fl .nm >> nth=0", button="right"); txt = pg.inner_text("#ctx")
+            assert re.search(r"Remove all files|Rimuovi tutti i file", txt), txt
+            pg.evaluate("document.getElementById('ctx').hidden = true")
+            n = pg.evaluate("E.files.filter(f => !f.gone).length")
+            pg.evaluate("E.files.forEach(f => { if (!f.gone) f.vis = true; })")
+            pg.click("#flst .fl .nm >> nth=0", button="right"); assert re.search(r"Remove the \d+ shown files|Rimuovi i \d+ file mostrati", pg.inner_text("#ctx"))
+            pg.evaluate("document.getElementById('ctx').hidden = true")
+            pg.evaluate("removeAllFiles(E.files.filter(f => !f.gone && f.vis))"); attendi(pg, f"{WORK} === 'landing'")
+            pg.keyboard.press(f"{mod}+z"); attendi(pg, f"E.files.filter(f => !f.gone).length === {n}"); attendi(pg, f"{WORK} === 'panels'")
+        step("the row menu offers «Remove the N shown files» and «Remove all files»", menu_entries)
+        def drop_overlay():
+            pg.evaluate("() => { window.__up = []; window.upload = (f, into) => { window.__up.push([f.length, into]); }; }")
+            pg.evaluate("""() => { const dt = new DataTransfer(); dt.items.add(new File(['x'], 'new.mzML'));
+                window.__dt = dt; document.getElementById('v-workspace').dispatchEvent(new DragEvent('dragenter', { dataTransfer: dt, bubbles: true, cancelable: true })); }""")
+            assert pg.evaluate("document.getElementById('v-workspace').classList.contains('ws-drop')"), "overlay over the work area"
+            pg.evaluate("document.getElementById('v-workspace').dispatchEvent(new DragEvent('drop', { dataTransfer: window.__dt, bubbles: true, cancelable: true }))")
+            assert not pg.evaluate("document.getElementById('v-workspace').classList.contains('ws-drop')")
+            assert pg.evaluate("window.__up") == [[1, "data"]], pg.evaluate("window.__up")
+        step("a drop anywhere on the work area shows an overlay and uploads", drop_overlay)
         def f8():
             ks = pg.evaluate("E.files.filter(f => !f.gone).map(f => f.k)")
             pg.evaluate(f"E.files[{ks[-1]}].vis = false; E.files[{ks[0]}].vis = true; renderFileList()")

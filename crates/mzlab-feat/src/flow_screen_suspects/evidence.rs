@@ -1,5 +1,6 @@
 //! What `screen.suspects` reads beside the table: the MS2 spectra of the MGF of `spectra.ms2` (fragment evidence) and the candidate formulas of `formulas/1` (Level 4).
 
+use crate::sortc::SortC;
 use mzlab_core::elements;
 use mzlab_core::error::Result;
 use mzlab_core::json::{self, Value};
@@ -116,7 +117,7 @@ pub fn formula_set(files: &[&[u8]]) -> Result<Vec<(String, String)>> {
             }
         }
     }
-    set.sort_unstable();
+    set.sortc();
     set.dedup();
     Ok(set)
 }

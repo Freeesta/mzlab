@@ -62,10 +62,9 @@ try:
             pg.wait_for_function("document.querySelector('#cartinfo').hidden || !document.querySelector('#cartinfo').textContent", timeout=60000)       # «Folder …: n files to load» goes away when the load is done
             assert ".D" in pg.inner_text("#drop")
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && !document.querySelector('#samptab').hidden", 60000)
-            pg.wait_for_selector("#wtable", state="visible")      # nothing opens by itself: the sample table is under the drop area
-            w = pg.evaluate("({s: document.querySelector('#wtable').getBoundingClientRect().width, t: document.querySelector('#flist table').getBoundingClientRect().width})")
-            assert w["s"] > 1000 and w["t"] <= w["s"], w                                                                                   # wide table box; the table fits in it
-        step("loaded: no leftover «files to load» line, .D in the drop text, wide table box, table inside it", tidy)
+            pg.wait_for_selector("#dpanels .pnl canvas", timeout=120000)      # the first file read opens by itself, the others wait in the list
+            assert pg.evaluate("document.querySelectorAll('#flist input[data-k=use]').length") >= 4      # the others wait in the list
+        step("loaded: no leftover «files to load» line, .D in the drop text, the first file open, the others listed", tidy)
         def tic():
             pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
             pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000)

@@ -3,6 +3,7 @@
 
 use crate::scores::{ModCosine, Spec};
 use mzlab_core::json::{round, Out};
+use mzlab_picchi::sortc::SortC;
 
 pub(crate) struct Pair {
     query_mz: f64,
@@ -37,7 +38,7 @@ fn collect<'a>(it: impl Iterator<Item = (&'a Spec, usize, &'a Spec, usize, bool)
             shifted,
         })
         .collect();
-    v.sort_by(|a, b| a.query_mz.total_cmp(&b.query_mz));
+    v.sortc_by(|a, b| a.query_mz.total_cmp(&b.query_mz));
     v
 }
 
