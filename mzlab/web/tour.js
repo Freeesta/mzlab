@@ -49,7 +49,6 @@ const TOUR = (() => {
   const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
 
   const STEPS_CAP1 = [
-    ...TOURDOPO.iniziali,
     {
       id: "file",
       prep: openFileDrawer,
@@ -170,7 +169,7 @@ const TOUR = (() => {
     { id: "d_parziali", target: () => document.getElementById("kframe") },
     { id: "d_export", prep: showSidePanels, target: () => card("#ex-png") }
   ];
-  let cap1 = STEPS_CAP1.filter(st => !st.opt);
+  let cap1 = STEPS_CAP1;
   const stepsOf = (/** @type {number} */ cap) => cap === 1 ? cap1 : cap === 3 ? STEPS_D : STEPS_CAP2;
 
   let active = false;
@@ -647,7 +646,7 @@ const TOUR = (() => {
       active = true;
       curCap = cap;
       curStep = step;
-      if (cap === 1) cap1 = TOURDOPO.passi(STEPS_CAP1);
+      if (cap === 1) cap1 = TOURDOPO.passi([...TOURDOPO.iniziali, ...STEPS_CAP1]);
 
       window.addEventListener("scroll", onScrollOrResize, { passive: true });
       window.addEventListener("resize", onScrollOrResize, { passive: true });
