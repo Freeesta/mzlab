@@ -69,3 +69,45 @@ opt-level = 3
 opt-level = 3
 [profile.sol_deps.package.base64]
 opt-level = 3
+
+# zlib-rs alone, and the parsing crates together (the dependency block of the site profile)
+[profile.sol_zrs]
+inherits = "release"
+[profile.sol_zrs.package.zlib-rs]
+opt-level = 3
+[profile.site_d]
+inherits = "release"
+[profile.site_d.package.mzlab-core]
+opt-level = 3
+[profile.site_d.package.quick-xml]
+opt-level = 3
+[profile.site_d.package.base64]
+opt-level = 3
+[profile.site_d.package.zlib-rs]
+opt-level = 3
+[profile.site_d.package.miniz_oxide]
+opt-level = 3
+[profile.d_xml]
+inherits = "release"
+[profile.d_xml.package.mzlab-core]
+opt-level = 3
+[profile.d_xml.package.quick-xml]
+opt-level = 3
+[profile.d_base64]
+inherits = "release"
+[profile.d_base64.package.mzlab-core]
+opt-level = 3
+[profile.d_base64.package.base64]
+opt-level = 3
+[profile.d_zrs]
+inherits = "release"
+[profile.d_zrs.package.mzlab-core]
+opt-level = 3
+[profile.d_zrs.package.zlib-rs]
+opt-level = 3
+[profile.d_miniz]
+inherits = "release"
+[profile.d_miniz.package.mzlab-core]
+opt-level = 3
+[profile.d_miniz.package.miniz_oxide]
+opt-level = 3
