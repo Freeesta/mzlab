@@ -1,21 +1,23 @@
 // @ts-check
-// Work area of the Dati view, decided from the state: the panels (a file shown or a panel open), the sample table (no file shown after the first one
-// was, or «Sample table» of the side panel pressed: S.table) or the landing: the drop area, with the sample table under it once it has rows, until the
-// student shows a file for the first time (files being read keep their progress in the side list). The landing is the only empty state: first visit, all files removed, «+».
+// Work area of the Dati view, decided from the state: the panels (a file shown or a panel open), the sample table («Sample table» of the side panel pressed:
+// S.table) or the landing: the drop area, with the sample table under it once it has rows (files being read keep their progress in the side list). The landing
+// is the only empty state: first visit, all files removed, every panel closed, «+» (S.adding); «Back to work!» (shell.js) leaves it.
 // Called by applyView, renderFiles and upload (shell.js) and by every refit of the panels (syncWorkEmpty, lista-file.js).
 "use strict";
 
 const workQ = (/** @type {string} */ s) => /** @type {HTMLElement & { disabled: boolean }} */ (document.querySelector(s));
-// a file was shown since the landing was last empty: from then on no file shown = the sample table alone
-let workShown = false;
+// every panel was closed with the X of the toolbar: the files stay ticked but the landing shows until a panel or a file is opened again
+let closedAll = false;
 /** @returns {"opening" | "add" | "panels" | "table" | "landing"} */
 function workState() {
   if (S.opening) return "opening";
   if (S.sess && S.adding) return "add";
   const fs = typeof E !== "undefined" ? E.files : [], left = workRows(fs);
   if (S.sess && S.table && left) return "table";
-  if (S.sess && (fs.some((/** @type {FileAperto} */ f) => f.vis && !f.gone) || E.panels.some((/** @type {Pannello} */ p) => p.el))) return "panels";
-  return workShown && left ? "table" : "landing";
+  const built = E.panels.some((/** @type {Pannello} */ p) => p.el);
+  if (built) closedAll = false;
+  if (S.sess && (built || (!closedAll && fs.some((/** @type {FileAperto} */ f) => f.vis && !f.gone)))) return "panels";
+  return "landing";
 }
 // rows of the sample table that are not removed files (a removed file keeps its row unticked until its notice closes: all removed = the landing)
 function workRows(/** @type {FileAperto[]} */ fs) {
@@ -37,9 +39,9 @@ function syncWork(/** @type {boolean} */ force = false) {
   // the landing forgets «Sample table»; once empty it waits again for the first file to be shown
   const rows = workRows(typeof E !== "undefined" ? E.files : []), land = w === "landing" && rows;
   if (w === "landing") S.table = false;
-  if (w === "landing" && !rows) workShown = false;
-  if (w === "panels") workShown = true;
   workQ("#wdata").hidden = w === "panels" || w === "opening";
+  // «Back to work!» waits for a file to go back to
+  workQ("#backwork").hidden = !(S.sess && !none && (w === "add" || w === "landing"));
   workQ("#start").hidden = !(w === "landing" || w === "add" || (w === "table" && !S.sess));
   workQ("#wtable").hidden = !(w === "table" || w === "add" || land);
   // on the landing the table is already in view under the drop area: the button stays in place, pressed and inert
@@ -55,6 +57,15 @@ function syncWork(/** @type {boolean} */ force = false) {
   if (was !== w && window.BARRA) BARRA.fitNames();
 }
 
+/** The X of the toolbar closed every panel (pannelli.js): the landing takes the work area; `false` gives it back to the panels. */
+function workClosedAll(/** @type {boolean} */ on = true) { closedAll = on; syncWork(); }
+// a click on a file row after the X: the file's panel comes back (a click on its tick box goes through setVisOf, which builds the layout)
+workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
+  const t = /** @type {HTMLElement} */ (e.target), nm = closedAll && t.closest(".fl:not(.up):not(.pr)") ? t.closest(".fl")?.querySelector(".nm") : null;
+  if (!nm) return;
+  closedAll = false;
+  if (!t.closest("input")) queueMicrotask(() => { if (!E.panels.some((/** @type {Pannello} */ p) => p.el)) soloFile(E.files[+((/** @type {HTMLElement} */ (nm)).dataset.k || 0)]); });
+}, true);
 // «Sample table» of the side panel: the table in place of the panels and back; a click on a file of the side list goes back to the panels
 workQ("#samptab").onclick = () => { S.table = !S.table; syncWork(); };
 workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
@@ -70,6 +81,20 @@ workQ("#flst").addEventListener("click", (/** @type {MouseEvent} */ e) => {
   dz.addEventListener("drop", (/** @type {DragEvent} */ e) => {
     if (!early() || !files(e) || !e.dataTransfer) return;
     e.preventDefault(); e.stopPropagation(); dropZone(false);
+    if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
+  }, true);
+})();
+
+// files dragged over the work area while panels or the sample table show: an overlay over the whole area takes the drop (the landing has its own box)
+(() => {
+  const ws = workQ("#v-workspace"), on = (/** @type {DragEvent} */ e) => [...((e.dataTransfer && e.dataTransfer.types) || [])].includes("Files") && S.sess && S.view === "data" && ["panels", "table"].includes(ws.dataset.work || "");
+  const off = () => ws.classList.remove("ws-drop");
+  ["dragenter", "dragover"].forEach(t => ws.addEventListener(t, (/** @type {DragEvent} */ e) => { if (!on(e)) return; e.preventDefault(); ws.dataset.dz = I18N.t("files.drop.zone"); ws.classList.add("ws-drop"); }));
+  ws.addEventListener("dragleave", (/** @type {DragEvent} */ e) => { if (!ws.contains(/** @type {Node | null} */ (e.relatedTarget))) off(); });
+  ws.addEventListener("drop", (/** @type {DragEvent} */ e) => {
+    const was = ws.classList.contains("ws-drop"); off();
+    if (!was || !e.dataTransfer || !on(e)) return;
+    e.preventDefault(); e.stopPropagation();
     if (!CartCarica.fromDrop(e)) upload([...e.dataTransfer.files], "data");
   }, true);
 })();

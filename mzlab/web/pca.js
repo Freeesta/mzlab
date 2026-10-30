@@ -15,7 +15,7 @@ const PCA = (() => {
   let res = null, sel = null;
   Object.assign(st, lsObj(KEY));
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* no storage */ } };
-  const fmt = (v, d = 3) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+  const fmt = (v, d = 3) => I18N.dash(v, d);
   const pct = v => (v * 100).toFixed(1);
   const nSamples = () => TABELLA.roles().filter(r => r !== "blank" && r !== "dark").length;
 

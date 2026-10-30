@@ -48,15 +48,23 @@ function fileRemoval(/** @type {any} */ f) {
     // @ts-ignore toolbar() is also window.toolbar (a BarProp) for lib.dom
     toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
   };
+  /** @type {any[]} */ let closed = [];
   const take = () => {
+    const before = E.panels.map(q => /** @type {[any, any]} */ ([q, panelRec(q)]));
     f.gone = true; f.vis = false; if (window.MAPPA) MAPPA.dropFile(f.k);
     E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
     if (E.cur === f.k) STATO.file((tabFiles()[0] || { k: 0 }).k, "file-removed");
+    // a panel left with no file of its tab closes (the undo opens it again)
+    cleanupOrphanPanels();
+    closed = before.filter(([q]) => !E.panels.includes(q)).map(([, rec]) => rec);
+    if (closed.length) { relayout(); fitHost(); }
     show();
   };
   const back = () => {
     f.gone = false; f.vis = was.vis; was.ks.forEach(([q, k]) => { if (E.panels.includes(q)) q.k = k; });
     if (was.cur === f.k) STATO.file(f.k, "file-restored");
+    closed.forEach(rec => riapriPannello(rec)); if (closed.length) { relayout(); fitHost(); }
+    closed = [];
     show();
   };
   const free = () => {
@@ -89,6 +97,11 @@ function boxRange(/** @type {HTMLInputElement} */ x, /** @type {MouseEvent} */ e
 }
 function bindListaFile() {
   const L = Q("#flst"), fileOf = (/** @type {EventTarget | null} */ t, /** @type {string} */ sel) => { const nm = /** @type {HTMLElement | null} */ (/** @type {Element} */ (t).closest(sel)); return nm ? E.files[+(nm.dataset.k || 0)] : null; };
+  // the × of a row: removes the file (Undo within 6 s)
+  if (!L.dataset.cap) L.addEventListener("click", e => {
+    const x = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest(".fl-x")); if (!x) return;
+    e.stopPropagation(); e.preventDefault(); const g = E.files[+(x.dataset.rm || -1)]; if (g && !g.gone) removeFile(g);
+  }, true);
   L.ondblclick = e => {
     // the colour square: the first click of a file that is not the active one rebuilds the list, so the handler lives here and not on the square
     const sw = /** @type {Element} */ (e.target).closest(".fl:not(.pr) > i");

@@ -669,9 +669,11 @@ Q("#calcin").oninput = calcRun;
     const txt = t.dataset.tip, html = t.dataset.tiph;
     if (html) tip.innerHTML = html; else tip.textContent = /** @type {string} */ (txt);
     tip.hidden = false;
-    const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6, below = r.bottom + m + h + m <= innerHeight, above = r.top - m - h >= m;
-    let x = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2)), y = below ? r.bottom + m : r.top - m - h;
-    if (!below && !above) { y = Math.max(m, Math.min(innerHeight - h - m, r.top)); x = r.right + m + w + m <= innerWidth ? r.right + m : Math.max(m, r.left - m - w); }
+    // a control of a toolbar keeps the tooltip clear of the whole toolbar (the outermost one), not only of itself: it must not hide the neighbouring buttons
+    let zone = /** @type {HTMLElement} */ (t); for (let e = t.parentElement; e; e = e.parentElement) if (e.matches("#stbar, #tools, [role=toolbar]")) zone = e;
+    const r = t.getBoundingClientRect(), z = zone.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, m = 6, below = z.bottom + m + h + m <= innerHeight, above = z.top - m - h >= m;
+    let x = Math.max(m, Math.min(innerWidth - w - m, r.left + r.width / 2 - w / 2)), y = below ? z.bottom + m : z.top - m - h;
+    if (!below && !above) { y = Math.max(m, Math.min(innerHeight - h - m, r.top)); x = z.right + m + w + m <= innerWidth ? z.right + m : Math.max(m, z.left - m - w); }
     tip.style.left = x + "px"; tip.style.top = y + "px";
   };
   document.addEventListener("mouseover", e => {

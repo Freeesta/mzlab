@@ -514,3 +514,10 @@ html.in-draw #sb-toggle{display:none}
 #drop .drop-tx{display:contents}#drop .drop-ic{flex:0 0 100%;margin:0 auto 10px;color:var(--muted)}
 /* empty side panel: a still drawing above the text, no motion */
 #fl-hint .leaf{display:block;margin:0 auto 6px;color:var(--muted)}#fl-hint .leaf .lf{fill:var(--accent);fill-opacity:.1}
+
+/* × of a file row: shown on hover and focus, always on touch; the row keeps its height */
+.fl-x{margin-left:auto;flex:none;min-width:24px;min-height:24px;padding:0 4px;border:0;border-radius:4px;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;opacity:0}
+.fl:hover>.fl-x,.fl:focus-within>.fl-x,.fl-x:focus-visible{opacity:1}.fl-x:hover{background:var(--sel);color:var(--ink)}
+@media (pointer:coarse){.fl-x{opacity:1;min-width:40px;min-height:40px}}
+/* drop anywhere on the work area while files are open */
+#v-workspace{position:relative}#v-workspace.ws-drop::after{content:attr(data-dz);position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;border:3px dashed var(--accent);border-radius:8px;background:color-mix(in srgb,var(--sel) 88%,transparent);color:var(--ink);font-weight:600;pointer-events:none}

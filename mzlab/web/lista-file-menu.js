@@ -2,8 +2,6 @@
 // Context menu of a file row (rename, colour, remove) and the quick file chooser of a graph header.
 // Used by renderFileList (explore.js) and the graph headers; classic script, shares the page globals.
 // right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session
-// Okabe-Ito + 2: distinguishable with colour-blindness
-const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];
 async function renameFile(f) { const v = await ask(I18N.t("files.rename.prompt"), f.label); if (v) { fileViewDo(() => { f.label = v; }); renderFileList(); renderNav(); redrawAll(); uiSave(); } }
 // double click on the colour square: the colour picker opens straight away. The browser's own picker hangs from the (invisible) input: the input sits at the square,
 // moved so that the picker (about COLOR_BOX) keeps COLOR_MARGIN px from every edge of the window
@@ -26,7 +24,7 @@ function colorFile(f, ev) {
   d.setAttribute("role", "dialog"); d.setAttribute("aria-label", I18N.t("files.color.of", { label: f.label }));
   const cur = String(f.color).toLowerCase();
   // the swatches are real buttons: h`` returns a plain string, so a nested h`` would be escaped as text; wrap it in raw()
-  d.innerHTML = h`<div class="sm" style="margin-bottom:4px">${raw(I18N.t("files.color.of", { label: EH(f.label) }))}</div><div class="sw">${raw(FILE_COLORS.map(c => h`<button type="button" data-c="${c}" style="background:${c}" title="${c}" aria-label="${I18N.t("files.color.swatch", { c })}" aria-pressed="${c.toLowerCase() === cur}"></button>`).join(""))}</div><label class="sm">${raw(I18N.t("files.color.custom"))} <input type="color" value="${/^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#1f77b4"}"></label>`;
+  d.innerHTML = h`<div class="sm" style="margin-bottom:4px">${raw(I18N.t("files.color.of", { label: EH(f.label) }))}</div><div class="sw">${raw(OKABE.map(c => h`<button type="button" data-c="${c}" style="background:${c}" title="${c}" aria-label="${I18N.t("files.color.swatch", { c })}" aria-pressed="${c.toLowerCase() === cur}"></button>`).join(""))}</div><label class="sm">${raw(I18N.t("files.color.custom"))} <input type="color" value="${/^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#1f77b4"}"></label>`;
   const set = c => { fileViewDo(() => { f.color = c; f.colorSet = true; }); d.remove(); renderFileList(); redrawAll(); uiSave(); };
   d.querySelectorAll("[data-c]").forEach(b => b.onclick = () => set(b.dataset.c));
   d.querySelector("input").onchange = e => set(e.target.value);
@@ -38,7 +36,10 @@ function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
   // «Group files» with two or more ticked files, the right-clicked one among them; «Ungroup» dissolves the user group of this file
   const grp = f.vis && ugBases().size > 1, own = f.ugrp;
-  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(grp ? [{ label: I18N.t("files.ctx.group"), fn: groupFiles }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(own), "") }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, ...(/\.mzml$/i.test(f.file) ? [{ label: I18N.t("files.ctx.validate"), fn: () => /** @type {any} */ (window).VALIDA_MZML.show(f.file) }] : []), "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) }]);
+  const live = E.files.filter(g => !g.gone), shown = live.filter(g => g.vis);
+  menu(e, [{ label: I18N.t("files.ctx.rename"), fn: () => renameFile(f) }, ...(grp ? [{ label: I18N.t("files.ctx.group"), fn: groupFiles }] : []), ...(own ? [{ label: I18N.t("files.ctx.ungroup"), fn: () => ugSet(ugFiles(own), "") }] : []), { label: I18N.t("files.ctx.color"), fn: () => colorFile(f, e) }, { label: I18N.t("files.ctx.resetColors"), fn: resetColors }, ...(/\.mzml$/i.test(f.file) ? [{ label: I18N.t("files.ctx.validate"), fn: () => /** @type {any} */ (window).VALIDA_MZML.show(f.file) }] : []), "-", { label: I18N.t("files.ctx.remove"), fn: () => removeFile(f) },
+    ...(f.vis && shown.length > 1 ? [{ label: I18N.t("files.ctx.removeShown", { n: shown.length }), fn: () => removeAllFiles(shown) }] : []),
+    ...(live.length > 1 ? [{ label: I18N.t("files.ctx.removeAll"), fn: () => removeAllFiles() }] : [])]);
 }
 // quick file chooser opened from a graph header: tick/untick files (same switch as the list on the left), click a name to show only that file
 function fileMenu(btn) {

@@ -3,7 +3,8 @@
 "use strict";
 // Chromatographic figures of a peak (block H): S/N, width at half height, plates, tailing. Pure functions (also run by node in tests/test_cromato.py):
 // the program computes, the student reads. Same baseline as the integration (straight line between the two edges, ends = mean of 3 points).
-const cpNear = (xs, v) => { let lo = 0, hi = xs.length - 1; if (hi < 1) return 0; while (hi - lo > 1) { const m = (lo + hi) >> 1; xs[m] < v ? lo = m : hi = m; } return Math.abs(xs[lo] - v) < Math.abs(xs[hi] - v) ? lo : hi; };
+// shared helper of numeri.js (a classic script in the page, required under node)
+const cpNear = typeof nearIdx === "function" ? nearIdx : require("./numeri.js").nearIdx;
 
 // x (time) where the baseline-corrected signal crosses `level` going away from the apex; dir = -1 (front) or +1 (back); null if it never does inside [i0, i1]
 function cpCross(xs, c, ap, i0, i1, level, dir) {
