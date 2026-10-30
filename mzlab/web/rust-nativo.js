@@ -10,6 +10,7 @@ import { createEsterno } from "./lettore-esterno.js";
 
 export const MAGIC = "mzlab/nat1";
 export const INDEX_ERROR = "err.file.index";              // the key the engines give when the index of a file cannot be built (idxbuild.rs of crates/mzlab-desktop)
+export const AXIS_ERROR = "err.flow.param.axis";          // the key the engines give for an m/z tolerance written in the unit of the other axis (ppm on a unit-resolution file, tol_da/dup_da at high resolution)
 export const UPLOAD_ERROR = "err.file.unknown";              // the key the desktop engine gives for a file that did not reach it (the engine is in crates/mzlab-desktop)
 export const PREFIX = "nat~";                              // the members of a dataset in files/: nat~<key>~<path with ~ for />
 const TICK = 200;                                         // ms between two progress messages

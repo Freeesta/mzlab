@@ -83,6 +83,7 @@
   "files.pendingRemove": "{name} = nome del file.",
   "err.file.notWiff": "{name} = nome del file.",
   "err.file.wiffNoScan": "{name} = nome del file .wiff.",
+  "err.flow.param.axis": "Errore del motore di Flow: una tolleranza di m/z è scritta nell'unità dell'altro asse. {param} = nome del parametro, {axis} = asse del file (Da = risoluzione unitaria, ppm = alta risoluzione).",
   "err.file.index": "{detail} = motivo tecnico (testo inglese del motore).",
   "err.file.wiff": "{detail} = motivo tecnico (testo inglese della libreria).",
   "err.file.shimadzu": "{detail} = motivo tecnico (testo inglese del lettore).",
