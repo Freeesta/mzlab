@@ -7,6 +7,8 @@ use crate::flow_bentazone_tests::{fixture, mzml, plan, NAMES, POS};
 
 #[path = "flow_neglr_facets_tests.rs"]
 mod facets;
+#[path = "flow_neglr_ms2tol_tests.rs"]
+mod ms2tol;
 
 const CASES: [(&str, i8, bool); 4] = [
     ("hrp", 1, true),
@@ -22,7 +24,6 @@ const EXTRA: &str = r#",{"id":"est","step":"features.estimate@1","in":{"index":[
     {"id":"kmd","step":"table.kmd@1","in":{"table":"gap.table"}},
     {"id":"csv","step":"export.table_csv@1","in":{"table":"gap.table","samples":"file:samples.json"}},
     {"id":"mzt","step":"export.mztab@1","in":{"table":"gap.table","samples":"file:samples.json"}},
-    {"id":"qc","step":"qc.mass_accuracy@1","in":{"raw":["idx.index"]}},
     {"id":"rx","step":"structure.reactivity@1","in":{"parent":"file:parent.json"}}]}"#;
 
 /// The duplicate window of `table.filter`: in Da on the unit axis, in ppm at high resolution.
@@ -81,7 +82,7 @@ fn every_table_step_runs_in_both_polarities_and_both_resolutions() {
         let own_id = if hr { "pos" } else { "dig" };
         for id in [
             "det", "ali", "gap", "gen", "lnk", "flt", "net", "est", "fil", "plz", "kmd", "csv",
-            "mzt", "qc", "rx", own_id,
+            "mzt", "rx", own_id,
         ] {
             assert_eq!(error_of(&prov, id), None, "{tag} {id}");
         }

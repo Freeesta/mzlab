@@ -1417,7 +1417,7 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "default":0.02,
+                    "default":0,
                     "description":"Fragment matching between spectra, the GNPS convention"
                   },
                   {
@@ -2012,7 +2012,7 @@
                   {
                     "type":"number",
                     "minimum":0,
-                    "default":0.02,
+                    "default":0,
                     "description":"Fragment matching between spectra, the GNPS convention"
                   },
                   {

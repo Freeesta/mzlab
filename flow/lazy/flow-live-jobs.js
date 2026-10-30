@@ -67,7 +67,10 @@
     return detached(x, spec, inst, async () => {
       const out = (await p.detectAll([{ name: it.input || src.name, path: src.path, id: x.jk(spec) }], k.recipeOf(x.plan, inst)))[0];
       await p.fs.write(path, out.slice());
-      await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
+      // the record names the preset the files decided (unit resolution runs `lr`), as `flow run` does
+      const seen = ((x.plan.inputs || []).find((/** @type {any} */ i) => i.name === (it.input || src.name)) || {}).observed;
+      const unit = !!seen && seen.resolution.length === 1 && seen.resolution[0] === "lr";
+      await x.call("finished", { job: j, result: unit ? { ms: performance.now() - t0, preset: "lr" } : { ms: performance.now() - t0 } });
     });
   };
 

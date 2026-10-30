@@ -39,7 +39,6 @@ docs/schemi/steps-attributio-1.json:spectra.match.decoys
 docs/schemi/steps-attributio-1.json:spectra.match.instrument_contains
 docs/schemi/steps-attributio-1.json:spectra.match.matched_peaks
 docs/schemi/steps-attributio-1.json:spectra.match.name_contains
-docs/schemi/steps-attributio-1.json:spectra.match.precursor_da
 docs/schemi/steps-attributio-1.json:spectra.match.rt_tol
 docs/schemi/steps-attributio-1.json:spectra.match.score_terms
 docs/schemi/steps-attributio-1.json:spectra.match.tol_ppm
@@ -63,7 +62,6 @@ docs/schemi/steps-cli-1.json:table.match.matched_peaks
 docs/schemi/steps-cli-1.json:table.match.ms2_background
 docs/schemi/steps-cli-1.json:table.match.ms2_spectrum
 docs/schemi/steps-cli-1.json:table.match.name_contains
-docs/schemi/steps-cli-1.json:table.match.precursor_da
 docs/schemi/steps-cli-1.json:table.match.rt_tol
 docs/schemi/steps-cli-1.json:table.match.score_terms
 docs/schemi/steps-cli-1.json:table.match.tol_ppm

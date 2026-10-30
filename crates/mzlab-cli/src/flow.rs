@@ -487,6 +487,7 @@ impl Runner for FileRunner {
             heap_peak_bytes: self.meter.map(|m| (m.peak)()),
             mem: crate::flow_base::align_mem(self, job, made.mem.take()),
             warnings: made.warnings,
+            preset: made.preset.map(str::to_string),
             file: made.file,
             cached,
         })
