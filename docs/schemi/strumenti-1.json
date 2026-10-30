@@ -258,7 +258,11 @@
                   "cosmic_min",
                   "canopus_min",
                   "rt_group_tol_min",
-                  "putative_library_level3"
+                  "putative_library_level3",
+                  "std_rt_max",
+                  "std_score_min",
+                  "std_ppm_max",
+                  "suspect_fragments_min"
                 ]
               },
               "value":{
@@ -314,6 +318,31 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Library entries named Spectral Match to ... (propagated annotations) are taken to Level 3"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"Level 1: the feature RT is within this of the RT of the standard you gave"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1,
+                    "default":0.7,
+                    "description":"Level 1: the MS2 score (entropy similarity, or cosine for a cosine hit) of the hit on the standard"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":5,
+                    "description":"Level 1: the precursor of the hit on the standard"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "default":2,
+                    "description":"Level 3a: at least this many fragments listed for a suspect are found in the feature MS2"
                   }
                 ]
               }
