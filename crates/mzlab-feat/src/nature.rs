@@ -1,6 +1,8 @@
 //! What the files of a series say of themselves: the polarity of their MS1 scans and whether they are unit resolution. `tp.generate`, `tp.link@2` and
-//! `tp.dig_lr` use it for what the plan leaves unwritten (`polarity`, `nominal`), the same rule in `flow run` (`mzlab-cli`) and in the browser (the proofs .wasm).
+//! `tp.dig_lr` use it for what the plan leaves unwritten (`polarity`, `nominal`), the same rule in `flow run` (`mzlab-cli`) and in the browser (the proofs .wasm);
+//! `features.align` refuses a series that mixes them (`one_kind_of`).
 
+use mzlab_core::error::{Error, Result};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{write_value, Out, Value};
 
@@ -30,6 +32,44 @@ pub fn of_facts(files: impl IntoIterator<Item = (i8, bool)>) -> Nature {
 /// The nature of the series of `indexes`.
 pub fn of_indexes<R: ReadAt>(indexes: &[Index<R>]) -> Nature {
     of_facts(indexes.iter().map(|ix| (file_facts(ix).polarity, ix.hr1())))
+}
+
+/// One table holds one polarity and one resolution: `err.flow.align.polarity` names the positive and the negative files, `err.flow.align.resolution`
+/// the unit and the high-resolution ones (a file of tied or unknown polarity takes no side). `files` = (name, polarity of the MS1 scans, high resolution).
+pub fn one_kind(files: &[(String, i8, bool)]) -> Result<()> {
+    let names = |keep: &dyn Fn(i8, bool) -> bool| {
+        let v: Vec<&str> = files
+            .iter()
+            .filter(|f| keep(f.1, f.2))
+            .map(|f| f.0.as_str())
+            .collect();
+        v.join(", ")
+    };
+    let (pos, neg) = (names(&|p, _| p > 0), names(&|p, _| p < 0));
+    if !pos.is_empty() && !neg.is_empty() {
+        return Err(Error::new("err.flow.align.polarity")
+            .with("positive", pos)
+            .with("negative", neg));
+    }
+    let (unit, high) = (names(&|_, hr| !hr), names(&|_, hr| hr));
+    if !unit.is_empty() && !high.is_empty() {
+        return Err(Error::new("err.flow.align.resolution")
+            .with("unit", unit)
+            .with("high", high));
+    }
+    Ok(())
+}
+
+/// `one_kind` of the series of `indexes`, each named after the file it was made from; `features.align` of `flow run` and of the browser call it.
+pub fn one_kind_of<R: ReadAt>(indexes: &[Index<R>]) -> Result<()> {
+    let files: Vec<(String, i8, bool)> = indexes
+        .iter()
+        .map(|ix| {
+            let name = ix.source.get("name").and_then(Value::str).unwrap_or("");
+            (name.to_string(), file_facts(ix).polarity, ix.hr1())
+        })
+        .collect();
+    one_kind(&files)
 }
 
 /// The polarity of the link or the Dig when the detection took both (or no) polarities: the files', so a negative series is not read as positive.
