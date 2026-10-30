@@ -311,3 +311,57 @@ fn a_mixed_series_centroids_the_profile_files_only_and_the_record_says_which() {
 fn run_cached(d: &Path, plan: &str) -> String {
     run(d, plan, "w").1
 }
+
+/// The profile files of `tools/dati_sintetici.py` (`P_FullMass-t*.mzML`) in a new folder; `None` without python3 and numpy.
+fn sintetici_profilo() -> Option<PathBuf> {
+    let d = std::env::temp_dir().join(format!("mzlab_centroid_p_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tools");
+    let script = "import sys; from pathlib import Path; import numpy as np; sys.path.insert(0, sys.argv[1]); import dati_sintetici as d; o = Path(sys.argv[2]); \
+                  r = np.random.default_rng(5); [d.full_scan_profile(o / f'P_FullMass-t{t}.mzML', t, r) for t in (0, 15, 60)]";
+    let ok = std::process::Command::new("python3")
+        .args(["-c", script])
+        .arg(&tools)
+        .arg(&d)
+        .status()
+        .is_ok_and(|s| s.success());
+    if !ok {
+        assert!(
+            std::env::var("MZLAB_GOLDEN_STRICT").is_err(),
+            "python3 or numpy missing"
+        );
+        eprintln!("skipped: python3/numpy not available");
+        return None;
+    }
+    Some(d)
+}
+
+/// The browser calls `mzml_to_centroids` (engine of Settings, no parameters) and the CLI step runs `mzml_to_centroids_with` with none left out: the bytes of every low-resolution profile file are the same.
+#[test]
+fn the_step_and_the_engine_call_of_the_browser_give_the_same_bytes_on_the_synthetic_profile_files()
+{
+    let Some(d) = sintetici_profilo() else { return };
+    for t in [0, 15, 60] {
+        let name = format!("P_FullMass-t{t}.mzML");
+        let src = std::fs::read(d.join(&name)).unwrap();
+        let plan = plan("{}").replace("p.mzML", &name);
+        let (run, prov) = run(&d, &plan, &format!("w{t}"));
+        assert!(
+            run.skipped.is_empty() && !prov.contains("\"error\""),
+            "{prov}"
+        );
+        let got = std::fs::read(d.join(format!("w{t}/c-{name}"))).unwrap();
+        let mut want = Vec::new();
+        let did = mzlab_core::centroidi::mzml_to_centroids(
+            || Ok(src.as_slice()),
+            &mut want,
+            &name,
+            &mut |_, _| {},
+        )
+        .unwrap();
+        assert!(did, "{name} is a profile file");
+        assert_eq!(got, want, "{name}");
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
