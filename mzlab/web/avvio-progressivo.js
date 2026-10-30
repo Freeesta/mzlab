@@ -120,26 +120,33 @@ const AVVIO = (function () {
     } catch (_) { return false; }
   }
 
+  // With a saved session the landing is never painted: #opening shows «restoring» in the box of the panels (side panel as saved),
+  // reserved at the landing height so an empty session swaps to the landing without a shift. applyView takes over once the engine answers.
   function applicaIndizioSessione() {
     if (typeof document === "undefined") return;
-    const d = document.getElementById("drop");
-    const s = document.getElementById("drop-skeleton");
     const ha = haSessione();
-    // the skeleton takes the height of the drop box it replaces: when the session turns out not to exist, nothing moves
-    if (d && ha && !d.hidden && d.getBoundingClientRect().height > 0 && s) s.style.minHeight = d.getBoundingClientRect().height + "px";
-    if (d) d.hidden = ha;
-    if (s) {
-      s.hidden = !ha;
-      if (ha && !s.textContent) s.textContent = typeof window !== "undefined" && window.I18N ? window.I18N.t("load.session.restoring") : "Restoring session…";
-    }
+    const o = document.getElementById("opening"), w = document.getElementById("wdata"), v = document.getElementById("v-data");
+    if (!ha || !o || !w) return;
+    const ws = document.getElementById("v-workspace");
+    if (ws && ws.dataset) ws.dataset.work = "opening";
+    w.hidden = true;
+    o.hidden = false;
+    o.classList.add("restoring");
+    if (v && v.classList) v.classList.add("opn");
+    const m = document.getElementById("opn-msg");
+    if (m && !m.textContent) m.textContent = typeof window !== "undefined" && window.I18N ? window.I18N.t("load.session.restoring") : "Restoring session…";
   }
 
   function rimuoviScheletro() {
     if (typeof document === "undefined") return;
-    const d = document.getElementById("drop");
-    const s = document.getElementById("drop-skeleton");
-    if (d) d.hidden = false;
-    if (s) s.hidden = true;
+    const o = document.getElementById("opening"), w = document.getElementById("wdata"), v = document.getElementById("v-data");
+    if (!o || !o.classList || !o.classList.contains("restoring")) return;
+    o.classList.remove("restoring");
+    o.hidden = true;
+    if (w) w.hidden = false;
+    if (v && v.classList) v.classList.remove("opn");
+    const m = document.getElementById("opn-msg");
+    if (m) m.textContent = "";
   }
 
   /**

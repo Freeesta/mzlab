@@ -49,6 +49,15 @@ const TOUR = (() => {
   const STORAGE_KEY = typeof NOMI !== "undefined" ? NOMI.KEY("tour.lr") : "qqq.tour.lr";
 
   const STEPS_CAP1 = [
+    // the sample table and the first file: present while the files wait for the first click, skipped by renderStep otherwise
+    {
+      id: "campioni",
+      target: () => document.getElementById("wtable")
+    },
+    {
+      id: "primo",
+      target: () => document.querySelector("#flst .fl[data-k]")
+    },
     {
       id: "file",
       prep: openFileDrawer,
@@ -740,13 +749,13 @@ const TOUR = (() => {
         if (typeof upload === "function") {
           await upload([file], "data");
         }
+        // until the files open at once the staged example still needs the button; without it (landing D) nothing is clicked
         const op = /** @type {HTMLButtonElement | null} */ (document.getElementById("opbtn"));
-        if (op && !op.disabled) {
-          op.click();
-        }
+        if (op && !op.disabled) op.click();
+        // the example opens at once: wait for its row in the side list, then point at the sample table and at the first file
         const poll = setInterval(() => {
           const l = document.getElementById("loading");
-          if ((!l || l.hidden) && typeof E !== "undefined" && E.panels && E.panels.length > 0) {
+          if ((!l || l.hidden) && document.querySelector("#flst .fl[data-k]")) {
             clearInterval(poll);
             TOUR.inizia(1, 0);
           }
