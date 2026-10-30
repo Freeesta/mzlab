@@ -7,7 +7,7 @@ import hashlib, re, shutil, socket, subprocess, sys, tempfile, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import TimeoutError as PWTimeout, sync_playwright
 from lib import ROOT, free_port
 
 def serve(port: int, wd: Path):
@@ -87,10 +87,12 @@ def wait_cache(pg, app, timeout=150):
     """Waits for the background fill of the cache `app`; a page request now and then wakes a worker the browser stopped (the fill resumes where it was)."""
     t0 = time.time()
     while time.time() - t0 < timeout:
-        if pg.evaluate("""async app => { const k = await caches.keys(); if (!k.includes('mzlab-app-' + app)) return false;
-            return !!(await (await caches.open('mzlab-app-' + app)).match('.fill-done')); }""", app): return
-        pg.evaluate("fetch('static/version.js').then(r => r.text())")
-        pg.wait_for_timeout(2000)
+        try:
+            pg.wait_for_function("""async app => { const k = await caches.keys(); if (!k.includes('mzlab-app-' + app)) return false;
+                return !!(await (await caches.open('mzlab-app-' + app)).match('.fill-done')); }""", arg=app, timeout=3000)
+            return
+        except PWTimeout:
+            pg.evaluate("fetch('static/version.js').then(r => r.text())")
     raise AssertionError("the cache of " + app + " was not filled in time")
 
 
@@ -104,9 +106,9 @@ try:
     port = free_port()
     state["root"] = Root(work / "root.txt"); state["root"]["x"] = work / "n0"; state["hits"] = Hits(work / "hits.log"); state["hits"].clear()
     srv = subprocess.Popen([sys.executable, __file__, "--serve", str(port), str(work)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(100):
+    for _ in range(200000):         # connect until the server listens (refused connections return at once)
         try: socket.create_connection(("127.0.0.1", port), timeout=1).close(); break
-        except OSError: time.sleep(0.1)
+        except OSError: pass
     URL = f"http://127.0.0.1:{port}/"
     with sync_playwright() as p:
         b = p.chromium.launch(); ctx = b.new_context(); ctx.add_init_script(SKIP)
