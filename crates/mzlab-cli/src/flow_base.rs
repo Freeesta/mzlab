@@ -200,6 +200,9 @@ fn align_setup(r: &FileRunner, job: &Job) -> Result<(Recipe, Lineage, Vec<Estima
             lin.peaks.push(r.path(p));
         }
     }
+    // one table holds one polarity and one resolution, as in the browser (`align_series_to`)
+    let indexes = lin.index.iter().map(open).collect::<Result<Vec<_>>>()?;
+    mzlab_feat::nature::one_kind_of(&indexes)?;
     let base = rebuild(&lin).map_err(|e| e.with("step", job.step.id))?;
     let (mut recipe, estimates) = recipe(job, base)?;
     recipe.fill_gaps = fill;
