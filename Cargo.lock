@@ -2319,6 +2319,7 @@ dependencies = [
 name = "mzlab-cli"
 version = "1.0.0"
 dependencies = [
+ "flate2",
  "mzlab-chem",
  "mzlab-core",
  "mzlab-feat",
@@ -2330,7 +2331,11 @@ dependencies = [
  "mzlab-mol",
  "mzlab-tutor",
  "resvg",
+ "rustls",
  "serde_json",
+ "sha2 0.11.1",
+ "ureq",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
