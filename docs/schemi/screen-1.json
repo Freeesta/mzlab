@@ -1,0 +1,92 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "screen/1",
+ "title": "screen/1: suspect screening of an aligned feature table by mass and formula",
+ "description": "The text of screen.suspects@1 (crates/mzlab-feat/src/flow_screen_suspects). Each hit is a feature, an adduct and a formula with the listed structures that share it (an isomer group, never one name). A candidate is a mass and formula coincidence with the evidence found (RT difference, listed fragments found in the MS2), never an identification: level 5 = mass and formula only, 4 = the formula is also a candidate of formulas/1. The match key is the InChIKey first block (skeleton); a name or a formula alone never makes a match. Native flow run and the browser (attributio .wasm) write the same bytes.",
+ "type": "object",
+ "required": ["format", "polarity", "params", "suspect_files", "features", "ms2_scans", "dropped_groups", "hits"],
+ "properties": {
+  "format": {"const": "screen/1"},
+  "polarity": {"enum": [1, -1], "description": "of the table; only its adducts are searched"},
+  "params": {
+   "type": "object",
+   "required": ["ppm", "adducts", "rt_window_min", "min_fragments", "max_hits_per_feature", "ms2_rt_min"],
+   "properties": {
+    "ppm": {"type": "number"},
+    "adducts": {"type": "array", "items": {"type": "string"}, "description": "the adducts searched, after the filter by polarity"},
+    "rt_window_min": {"type": ["number", "null"], "description": "null = off"},
+    "min_fragments": {"type": ["integer", "null"], "description": "null = off"},
+    "max_hits_per_feature": {"type": "integer", "minimum": 1},
+    "ms2_rt_min": {"type": "number"}
+   }
+  },
+  "suspect_files": {
+   "type": "array", "minItems": 1,
+   "description": "the provenance of every list used, in the order of the port; a candidate names its files by index",
+   "items": {
+    "type": "object",
+    "required": ["name", "sha256", "kind", "rows", "skipped_rows", "provenance"],
+    "properties": {
+     "name": {"type": "string"},
+     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "of the bytes read"},
+     "kind": {"enum": ["mzsus", "csv"]},
+     "rows": {"type": "integer", "minimum": 0},
+     "skipped_rows": {"type": "integer", "minimum": 0, "description": "CSV rows without a usable mass or formula"},
+     "provenance": {
+      "type": ["object", "null"],
+      "description": "the manifest of a .mzsus; null for a CSV of the user",
+      "required": ["sources", "attribution"],
+      "properties": {
+       "sources": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}, "version": {"type": "string"}, "licence": {"type": "string"}, "doi": {"type": "string"}}}},
+       "attribution": {"type": "string"}
+      }
+     }
+    }
+   }
+  },
+  "features": {"type": "integer", "minimum": 0, "description": "rows of the table"},
+  "ms2_scans": {"type": ["integer", "null"], "description": "MS2 scans read from the spectra; null when the port is not wired"},
+  "dropped_groups": {"type": "integer", "minimum": 0, "description": "formula groups left out by max_hits_per_feature (the farthest in mass go first)"},
+  "hits": {
+   "type": "array",
+   "description": "sorted by feature, adduct, delta_ppm, formula",
+   "items": {
+    "type": "object",
+    "required": ["feature", "mz", "adduct", "delta_ppm", "formula", "level", "candidates"],
+    "properties": {
+     "feature": {"type": "integer", "minimum": 1, "description": "id of the row of the table (1-based)"},
+     "mz": {"type": "number"},
+     "adduct": {"type": "string"},
+     "delta_ppm": {"type": "number", "description": "(observed - theoretical) / theoretical of the closest candidate"},
+     "formula": {"type": "string", "description": "neutral formula (Hill); empty for a CSV row that gives only a mass: such a row is a group of its own"},
+     "level": {"enum": [4, 5]},
+     "candidates": {
+      "type": "array", "minItems": 1,
+      "description": "every listed structure with this formula that falls in the window, sorted by skeleton",
+      "items": {
+       "type": "object",
+       "required": ["skeleton", "inchikey", "name", "smiles", "neutral_mass", "rt_diff_min", "fragments_listed", "fragments_matched", "fragment_mz", "files", "memberships"],
+       "properties": {
+        "skeleton": {"type": "string", "description": "InChIKey first block, the match key; empty for a CSV row without a key"},
+        "inchikey": {"type": "string", "description": "the full key when the list gives it, else the first block"},
+        "name": {"type": "string"},
+        "smiles": {"type": "string"},
+        "neutral_mass": {"type": "number"},
+        "rt_diff_min": {"type": ["number", "null"], "description": "feature RT - listed RT; null when the list has no RT"},
+        "fragments_listed": {"type": "integer", "minimum": 0},
+        "fragments_matched": {"type": "integer", "minimum": 0},
+        "fragment_mz": {"type": "array", "items": {"type": "number"}, "description": "the listed fragments found in the MS2 of the feature, within ppm"},
+        "files": {"type": "array", "items": {"type": "integer", "minimum": 0}, "description": "indexes into suspect_files of the lists that name this structure"},
+        "memberships": {
+         "type": "array",
+         "description": "the lists of a regulatory package that name the structure; [] for a list without the listings extension",
+         "items": {"type": "object", "required": ["list", "entry_ref", "form", "group"], "properties": {"list": {"type": "string"}, "entry_ref": {"type": "string"}, "form": {"type": "string"}, "group": {"type": "boolean"}}}
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

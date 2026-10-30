@@ -6,6 +6,7 @@ mod detect;
 mod ident;
 mod ident_annot;
 mod ident_formula;
+mod ident_screen;
 mod ident_spectra;
 pub use ident_spectra::table_match;
 pub mod recipe_map;

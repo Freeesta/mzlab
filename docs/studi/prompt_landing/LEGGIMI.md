@@ -1,5 +1,7 @@
 # Build prompts: landing on the work area
 
+**Superseded by option D** (`docs/studi/LANDING_AREA_LAVORO_D.md`, prompts `docs/studi/prompt_landing_d/`): L1 and L3 are not to be run; L2, L4, L5 live on as D2, D4, D6.
+
 Study: `docs/studi/LANDING_AREA_LAVORO.md` (option C). Start only after Federico's yes to decisions 1, 2, 5 (L1, L2) and 3, 6 (L3) of §8 of the study.
 
 | Wave | Prompt | Branch | Zone (owned files) | Depends on |

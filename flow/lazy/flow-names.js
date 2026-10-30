@@ -32,6 +32,7 @@
     "spectra.insilico": ["Predicted fragments", "search", "Predicts how a candidate should break and compares it with the measured spectrum."],
     "rt.predict": ["Check retention time", "search", "Asks whether the time a compound came out is plausible for its structure."],
     "annot.level": ["Confidence level", "search", "Says how sure each identification is, from a guess to a confirmed standard."],
+    "screen.suspects": ["Find suspects", "search", "Looks for the compounds of your suspect lists in the feature table, by mass and formula."],
     "annot.regulatory": ["Regulatory lists", "search", "Checks whether a compound is on a list of regulated or suspected substances."],
     "annot.hazard": ["Aquatic hazard", "search", "Estimates the hazard of a compound to water life."],
     "tp.generate": ["Predict transformation products", "search", "Lists the products a parent compound could turn into."],
