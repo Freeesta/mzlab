@@ -116,6 +116,34 @@ fn num_at(c: &[char], i: &mut usize) -> Option<u64> {
     })
 }
 
+/// Lenient element counts of a formula text, for reading what other tools wrote (`C9H10N2O` and `N2OC9H10` are equal).
+/// Anything that is not an element symbol (charge signs, brackets, spaces) is skipped, a missing or unreadable count (too many
+/// digits for `u64`) is 1, repeated symbols add up, and symbols are not checked against the element table.
+pub fn parse_formula_lenient(s: &str) -> std::collections::BTreeMap<String, u64> {
+    let b = s.as_bytes();
+    let mut d = std::collections::BTreeMap::new();
+    let mut i = 0;
+    while i < b.len() {
+        if !b[i].is_ascii_uppercase() {
+            i += 1;
+            continue;
+        }
+        let mut j = i + 1;
+        if j < b.len() && b[j].is_ascii_lowercase() {
+            j += 1;
+        }
+        let k = j;
+        while j < b.len() && b[j].is_ascii_digit() {
+            j += 1;
+        }
+        let n = s[k..j].parse().unwrap_or(1);
+        let c = d.entry(s[i..k].to_string()).or_insert(0u64);
+        *c = c.saturating_add(n);
+        i = j;
+    }
+    d
+}
+
 /// 'C15H12N2O' -> [("C",15),("H",12),("N",2),("O",1)]. Parentheses are allowed: 'C(OH)2'.
 pub fn parse_formula(s: &str) -> Result<Formula> {
     let s = normalize_formula(s);
