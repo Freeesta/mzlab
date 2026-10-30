@@ -192,6 +192,26 @@ def test_guardia_nessun_relaxed_simd_nei_file_di_build():
     assert not trovati, f"relaxed SIMD in build files: {trovati}"
 
 
+# Std sorts cost 2-10 KB of .wasm per instance: the wasm crates use `mzlab_picchi::sortc` (docs/agenti/wasm-tetti.md, «Ordinamenti»).
+SORT_STD = re.compile(r"\.sort(_unstable)?(_by(_key)?|_by_cached_key)?\(")
+# folders that keep std sorts (raw-data detection, legacy reference)
+SORT_STD_AMMESSI = ("crates/mzlab-feat/src/untargeted/", "crates/mzlab-feat/src/legacy/")
+
+
+def test_guardia_ordinamenti_std_solo_sortc_nei_crate_wasm():
+    trovati = []
+    for crate in ("mzlab-lib", "mzlab-feat", "mzlab-feat-wasm"):
+        for f in sorted((ROOT / "crates" / crate / "src").rglob("*.rs")):
+            rel = f.relative_to(ROOT).as_posix()
+            if rel.startswith(SORT_STD_AMMESSI) or f.stem.endswith("tests") or f.parent.name == "tests":
+                continue
+            testo = f.read_text(encoding="utf-8").split("#[cfg(test)]")[0]
+            for n, riga in enumerate(testo.splitlines(), 1):
+                if SORT_STD.search(riga) and not riga.lstrip().startswith("//"):
+                    trovati.append(f"{rel}:{n}")
+    assert not trovati, f"use sortc (SortC::sortc_by...) instead of std sorts: {trovati}"
+
+
 def test_guardia_costanti_di_massa_solo_in_elements():
     """Proton, electron and 13C step are written once (mzlab-core elements.rs); crates import them by name."""
     pat = re.compile(r"1\.00727|1\.007_276|0\.00054858|1\.00335|1\.003_35")

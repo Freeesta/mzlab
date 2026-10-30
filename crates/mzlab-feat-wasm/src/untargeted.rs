@@ -11,6 +11,7 @@ use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_feat::recipe::{Mode, Recipe};
 use mzlab_feat::series::source_sha256;
 use mzlab_feat::slabs::Stored;
+use mzlab_feat::sortc::SortC;
 use mzlab_feat::store::{read_file, write_file_to, write_table_to, Origin};
 use mzlab_feat::untargeted::pipeline::{
     from_file_features, run_file, run_series, to_file_features, UntParams,
@@ -61,7 +62,7 @@ fn scan_interval<R: ReadAt>(ix: &mut Index<R>, p: &UntParams) -> Result<f64> {
     };
     let rt = &ix.arrays(si)?.rt;
     let mut d: Vec<f64> = rt.windows(2).map(|w| w[1] - w[0]).collect();
-    d.sort_by(|a, b| a.total_cmp(b));
+    d.sortc_by(|a, b| a.total_cmp(b));
     Ok(d.get(d.len() / 2).map_or(1.0, |m| m * 60.0))
 }
 

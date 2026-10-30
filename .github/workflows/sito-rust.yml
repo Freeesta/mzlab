@@ -7,9 +7,9 @@
 name: sito-rust
 
 on:
-  push:
-    branches: [main]
-    paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "TP_Mine/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
+  # not on every push to main (the pull request already ran it, ~9 merges an hour): once a night on main instead
+  schedule:
+    - cron: "11 3 * * *"
   pull_request:
     paths: ["crates/**", "Cargo.*", "mzlab/**", "flow/**", "TP_Mine/**", "tools/build_site.py", "tests_e2e/**", "tests/golden/**", "tools/dati_sintetici.py", "tools/verifica.py", "tools/wasm_opt.sh", "tools/wasm_paralleli.sh", "tools/build_feat_wasm.sh", "tools/build_lettori_wasm.sh", ".github/workflows/sito-rust.yml"]
   workflow_dispatch:

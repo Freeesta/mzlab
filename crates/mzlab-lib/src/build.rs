@@ -8,9 +8,9 @@ use crate::error::{Error, Result};
 use crate::format::*;
 use crate::io::{ExtentStore, Scratch, Sink};
 use crate::libinfo::{Declared, Detect};
-use crate::sortutil;
 use crate::spec::{Meta, Spectrum, META_FIELDS};
 use crate::util::{crc32c, le_f32, le_f64, le_u16, le_u32};
+use mzlab_picchi::sortc;
 
 #[path = "build_parts/index.rs"]
 mod index;
@@ -152,7 +152,7 @@ impl<T: Scratch> Builder<T> {
                 .try_reserve_exact(self.keys.len())
                 .map_err(|_| Error::memory_budget())?;
         }
-        sortutil::sort_by(&mut self.keys, |a, b| {
+        sortc::by(&mut self.keys, |a, b| {
             a.pol_key
                 .cmp(&b.pol_key)
                 .then(a.prec.total_cmp(&b.prec))

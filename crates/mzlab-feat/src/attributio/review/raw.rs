@@ -7,6 +7,7 @@ use super::explain::{iso_pattern, Formula, C13};
 use super::isotopes::round_to;
 use super::purity::sig4;
 use super::settings::ReviewSettings;
+use crate::sortc::SortC;
 
 /// Scan window, isolation window and the MS1 peaks around the precursor of one MS2 scan.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -288,7 +289,7 @@ pub fn ms1_metrics(
             co.push((m, it[i] / m_int));
         }
     }
-    co.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    co.sortc_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     Some(Ms1Metrics {
         obs1,
         obs2,

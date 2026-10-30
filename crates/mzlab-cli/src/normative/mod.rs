@@ -2,12 +2,15 @@
 //! turns CAS numbers into structures, and the result is one A1+ CSV per list plus `provenance.json`. Native only; nothing here runs at analysis time.
 //! Area file: `docs/agenti/normative.md`.
 
+pub use mzlab_feat::normative::{csvrd, entry};
+
 pub mod build;
 pub mod build_out;
 pub mod build_rows;
-pub mod csvrd;
-pub mod entry;
 pub mod fetch;
+pub mod import_official;
+#[cfg(test)]
+mod import_official_tests;
 pub mod markup;
 pub mod pack;
 #[cfg(test)]
@@ -73,6 +76,8 @@ pub const HELP: &str = "mzlab-cli normative: the regulatory lists built from the
 
 usage: mzlab-cli normative pack IN OUT       the data release of the committed lists: OUT/normative.mzsus, zlib pieces and catalogo.json (no network)
        mzlab-cli normative listings PATH     the listings JSON of a package folder or a .mzsus file
+       mzlab-cli normative import-official READER CSV SIDECAR OUT [--file NAME] [--date YYYY-MM-DD]
+                                             your own copy of the ECHA Candidate List (svhc) or Proposition 65 (ca_prop65) as a private .mzsus (no network)
        mzlab-cli normative build --cache DIR --out DIR [--only ID...] [--update-pins] [--no-resolve] [--allow-large]
                                  [--sources FILE] [--overrides FILE]
 
@@ -186,6 +191,7 @@ fn run_package(args: &[String]) -> Option<Outcome> {
     let r = match (args.first().map(String::as_str), paths.as_slice()) {
         (Some("pack"), [i, o]) => pack::pack(i, o).map(|l| l.join("\n") + "\n"),
         (Some("listings"), [p]) => pack::listings(p),
+        (Some("import-official"), _) => import_official::run(&args[1..]),
         (Some("pack" | "listings"), _) => Err(NormError::usage("wrong number of paths")),
         _ => return None,
     };

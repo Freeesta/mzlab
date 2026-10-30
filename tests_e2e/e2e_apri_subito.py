@@ -1,6 +1,6 @@
 """Files open as soon as they are read (OPENNOW, open-now.js; upload-rows.js): the first progress row of the side list shows within 100 ms of the drop; while the files are
-read the landing stays (no card, the drop area does not move, the sample table grows under it) and no panel is drawn; nothing opens by itself: at the end the landing shows the
-drop area and the table, nothing of the loading is left («Loading finished», spinner, card), and the first click on a file shows it in place of the landing; «Sample table» of the side panel shows the table and a click on a file goes back to the panels; a proposal of roles and times
+read the landing stays until the first file is read (no card, the drop area does not move); that file opens by itself (OPENNOW.showFirst: only it is shown, with its starting layout) and
+the others wait in the list; at the end nothing of the loading is left («Loading finished», spinner, card); «Sample table» of the side panel shows the table and a click on a file goes back to the panels; a proposal of roles and times
 that lands after the files opened still reaches the open files; a high-resolution file dropped on a low-resolution session is set aside with «Switch»; a folder of more than
 50 data files asks «Open all / Choose» and «Choose» leaves them unticked; from the drop on there is no full-page veil and no «Full reset», also when the first
 file is of another tab (MRM, MS2). Synthetic files."""
@@ -27,12 +27,12 @@ KINDS = [tmp / "K_mrm.mzML", tmp / "K_ms2.mzML"]; ds.mrm(KINDS[0], 1.0, np.rando
 HOLD = """(() => { const f = window.fetch; window.fetch = function (u, o) { if (typeof u === 'string' && u.includes('api/campioni/proponi')) return new Promise(r => setTimeout(r, 1000)).then(() => f.call(this, u, o)); return f.call(this, u, o); };
   window.__up = null; window.__pick = null; window.__moved = []; window.__early = []; const d0 = document.querySelector('#drop').getBoundingClientRect().top;
   document.querySelector('#pick').addEventListener('change', () => { window.__pick = performance.now(); }, true);
-  // while the files are read: the drop area never moves and no panel, card or loading table shows
+  // while the files are read and before the first one opens: the drop area never moves; no card shows
   // from the drop on: no full-page veil and no «Full reset» (a stuck start) either, also when the first file opens
   const look = () => { const vis = (q) => [...document.querySelectorAll(q)].some(e => e.getClientRects().length);
     if (window.__pick != null) { if (vis('#loading')) window.__early.push('veil'); if (vis('#ldreset, #avvio-fase-reset')) window.__early.push('reset'); }
-    if (!(UPBUSY > 0 || OPENNOW.busy() > 0)) return; const t = document.querySelector('#drop').getBoundingClientRect().top; if (Math.abs(t - d0) > 1) window.__moved.push(t - d0);
-    if (document.querySelector('#dpanels .pnl')) window.__early.push('panel'); if (document.querySelector('.convprog')) window.__early.push('card'); if (!document.querySelector('#wtable').hidden && !document.querySelector('#start').hidden) window.__both = true; };
+    if (!(UPBUSY > 0 || OPENNOW.busy() > 0) || document.querySelector('#dpanels .pnl')) return; const t = document.querySelector('#drop').getBoundingClientRect().top; if (Math.abs(t - d0) > 1) window.__moved.push(t - d0);
+    if (document.querySelector('.convprog')) window.__early.push('card'); };
   new MutationObserver(look).observe(document.body, { childList: true, subtree: true, attributes: true });
   new MutationObserver(() => { if (window.__up == null && document.querySelector('#flst .fl.up')) window.__up = performance.now(); }).observe(document.getElementById('flst'), { childList: true, subtree: true }); })()"""
 r = Run(port=8962, wd="/tmp/wd_apri_subito")
@@ -52,20 +52,15 @@ try:
             attendi(pg, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length === 3", 60000)
             assert pg.evaluate("window.__moved") == [], f"the drop area moved: {pg.evaluate('window.__moved')}"
             assert pg.evaluate("window.__early") == [], f"shown while reading: {pg.evaluate('[...new Set(window.__early)]')}"
-            assert pg.evaluate("window.__both === true"), "the sample table showed under the drop area while the files were read"
             frames(pg, 3)
-            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "landing", "nothing opened by itself"
-            assert pg.is_visible("#drop") and pg.is_visible("#wtable .samphead"), "drop area and sample table"
-            assert pg.evaluate("!E.files.some(f => f.vis && !f.gone) && !document.querySelector('#dpanels .pnl')"), "no file shown, no panel"
+            pg.wait_for_selector("#dpanels .pnl.chrom canvas", timeout=60000)
+            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels", "the first file opened by itself"
+            assert pg.evaluate("E.files.filter(f => f.vis && !f.gone).length") == 1 and pg.evaluate("E.files.find(f => f.vis && !f.gone).k") == pg.evaluate("firstOpenK(S.sess)"), "only the first file is shown"
+            assert not pg.is_visible("#drop") and not pg.is_visible("#wtable"), "the landing is gone"
             assert pg.locator(".convprog, .cp-spin, #fl-up .fl").count() == 0, "nothing of the loading is left"
             txt = pg.inner_text("body")
             assert "Loading finished" not in txt and "Caricamento finito" not in txt and "Loading the files" not in txt, "no end-of-loading text"
-            assert pg.get_attribute("#samptab", "aria-pressed") == "true" and pg.is_disabled("#samptab"), "«Sample table» pressed and inert: the table is in view"
-            pg.click("#flst .fl .nm >> nth=0")
-            pg.wait_for_selector(".pnl.chrom canvas", timeout=60000)
-            assert pg.evaluate("document.getElementById('v-workspace').dataset.work") == "panels"
-            assert not pg.is_visible("#drop") and not pg.is_visible("#wtable"), "the drop area goes with the first click"
-        step("the landing and the sample table stay after the loading; the first click on a file shows it", landing_then_click)
+        step("the first file opens by itself, the others wait in the list", landing_then_click)
         def late_proposal():
             attendi(pg, "RUOLI.busy() === 0 && ST.files.every(f => f.prop)", 30000)
             attendi(pg, "E.files.filter(f => !f.gone).map(f => f.time).sort((a, b) => a - b).join() === '0,10,30'", 10000)
@@ -105,7 +100,6 @@ try:
             q.goto(f"http://127.0.0.1:{r.port}/"); q.wait_for_selector("#drop"); attendi(q, "window.qqReady === true", 60000)
             q.evaluate(HOLD); q.set_input_files("#pick", [str(f) for f in KINDS])
             attendi(q, "UPBUSY === 0 && OPENNOW.busy() === 0 && E.files.filter(f => !f.gone).length >= 2", 60000)
-            q.click("#flst .fl .nm >> nth=0")
             q.wait_for_selector("#dpanels .pnl canvas", timeout=60000)
             assert q.evaluate("E.tab") != "full", "the first file is of another tab"
             assert q.evaluate("window.__early") == [], f"shown while opening: {q.evaluate('[...new Set(window.__early)]')}"
