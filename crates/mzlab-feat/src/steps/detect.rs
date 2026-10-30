@@ -258,7 +258,7 @@ pub(super) fn ms2_link() -> Step {
                 .min(0.0)
                 .default_num(6.0)
                 .unit("ppm")
-                .doc("Window of the peak in the MS1 scan of the precursor; high-resolution axis only, on the unit axis it is an error, set tol_da"),
+                .doc("Window of the peak in the MS1 scan of the precursor; at unit resolution the engine reads a negative value as Da"),
             super::table::tol_da(),
             Param::number("weak", "Weak purity")
                 .min(0.0)

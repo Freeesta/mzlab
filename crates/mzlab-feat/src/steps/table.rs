@@ -59,7 +59,7 @@ pub(super) fn align() -> Step {
             .min(0.0)
             .default_num(5.0)
             .unit("ppm")
-            .doc("High-resolution axis only; on the unit axis (low resolution) it is an error, set tol_da"),
+            .doc("At unit resolution the engine reads a negative value as Da"),
         tol_da(),
         Param::number("rt_gap", "RT gap")
             .min(0.0)
@@ -70,7 +70,6 @@ pub(super) fn align() -> Step {
             .min(0.0)
             .default_num(10.0)
             .unit("ppm")
-            .doc("High-resolution axis only; on the unit axis it is an error, the span follows tol_da")
             .advanced(),
         Param::boolean("drop_artefacts", "Drop artefacts")
             .default_bool(true)
@@ -136,7 +135,7 @@ pub(super) fn gapfill() -> Step {
             .min(0.0)
             .default_num(5.0)
             .unit("ppm")
-            .doc("High-resolution axis only; on the unit axis (low resolution) it is an error, set tol_da"),
+            .doc("At unit resolution the engine reads a negative value as Da"),
         tol_da(),
         Param::number("rt_tol", "RT tolerance")
             .min(0.0)
@@ -258,17 +257,18 @@ fn filter_tail_params() -> Vec<Param> {
         Param::number("dup_ppm", "Duplicate m/z window")
             .min(0.0)
             .unit("ppm")
-            .doc("High-resolution axis only: of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_da on a high-resolution table is an error; left empty, the rule is off"),
+            .doc("Of the rows within this many ppm in m/z and the duplicate RT window of each other only the one with the largest area is kept; left empty, the rule is off"),
         Param::number("dup_da", "Duplicate m/z window (Da)")
             .min(0.05)
             .max(1.0)
             .unit("Da")
-            .doc("Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off"),
+            .doc("Unit axis only: of the rows within this many Da in m/z and the duplicate RT window of each other only the one with the largest area is kept; dup_ppm on a unit-resolution table is an error; left empty, the rule is off")
+            .tip("Of rows this many Da apart in m/z and close in RT, only the strongest is kept."),
         Param::number("dup_rt", "Duplicate RT window")
             .min(0.0)
             .default_num(0.1)
             .unit("min")
-            .doc("RT distance under which two rows may be duplicates; used with dup_ppm or dup_da only"),
+            .doc("RT distance under which two rows may be duplicates; used with the duplicate m/z window only"),
         Param::boolean("require_ms2", "Require MS2").doc("An MS2 is linked to the peak; left empty, the rule is off"),
         Param::choice("normalize", "Normalisation", &["none", "sum", "median", "istd"])
             .default_str("none")
