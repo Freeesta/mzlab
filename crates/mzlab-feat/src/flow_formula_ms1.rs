@@ -1,6 +1,7 @@
 //! The text of `formula.ms1@1`: candidate formulas of each feature from the MS1 scan at the apex, in the file where the feature is largest (`untargeted::formula_id`). Takes names,
 //! bytes and the parameters and returns the text: `flow run` (`mzlab-cli`) and the browser (`mzlab-feat-wasm`) run these functions. The browser reads one mzML per call (`ms1_rows`) and
-//! joins the rows in the order of the table (`ms1_join`); `ms1_text` does the same over all the files.
+//! joins the rows in the order of the table (`ms1_join`); `ms1_text` does the same over all the files. An `ion` the parameters leave out is the one of the polarity of the
+//! MS1 scans of each file (`[M+H]+` or `[M-H]-`); a written `ion` of the other polarity is kept and its rows carry `warn.flow.formula.ion`.
 
 use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{Out, Value};
@@ -13,13 +14,15 @@ fn param<'a>(params: &'a [(String, Value)], name: &str) -> Option<&'a Value> {
     params.iter().find(|(k, _)| k == name).map(|(_, v)| v)
 }
 
+/// The warning of the rows of a file whose MS1 scans lean to the other polarity than the written `ion`.
+pub const WARN_ION: &str = "warn.flow.formula.ion";
+
 fn opts(params: &[(String, Value)]) -> Opts {
-    let mut o = Opts::default();
-    if let Some(s) = param(params, "ion").and_then(Value::str) {
-        o.ion = s.to_string();
-    }
-    o.z = param(params, "z").and_then(Value::f64).map(|z| z as i32);
-    o.tol_ppm = num(params, "tol_ppm");
+    let mut o = Opts {
+        z: param(params, "z").and_then(Value::f64).map(|z| z as i32),
+        tol_ppm: num(params, "tol_ppm"),
+        ..Opts::default()
+    };
     o.elements = param(params, "elements")
         .and_then(Value::str)
         .map(String::from);
@@ -33,6 +36,39 @@ fn opts(params: &[(String, Value)]) -> Opts {
         .and_then(Value::bool)
         .unwrap_or(true);
     o
+}
+
+fn written_ion(params: &[(String, Value)]) -> Option<&str> {
+    param(params, "ion").and_then(Value::str)
+}
+
+fn sign_of(ion: &str) -> i8 {
+    if ion.ends_with('-') {
+        -1
+    } else {
+        1
+    }
+}
+
+/// The polarity the MS1 scans of `run` lean to, 0 for an even mix or none said.
+fn lean(run: &Run) -> i8 {
+    let sum: i64 = run
+        .spectra
+        .iter()
+        .filter(|s| s.level == 1)
+        .map(|s| i64::from(s.polarity))
+        .sum();
+    sum.signum() as i8
+}
+
+/// The ion the rows of `run` are searched as, and whether they carry `WARN_ION`: the written one, else `[M-H]-` for a negative file and `[M+H]+` otherwise.
+fn ion_of_file(params: &[(String, Value)], run: &Run) -> (String, bool) {
+    let p = lean(run);
+    match written_ion(params) {
+        Some(i) => (i.to_string(), p != 0 && p != sign_of(i)),
+        None if p < 0 => ("[M-H]-".to_string(), false),
+        None => ("[M+H]+".to_string(), false),
+    }
 }
 
 fn stem(name: &str) -> &str {
@@ -85,14 +121,14 @@ fn file_of_rows(t: &Table, names: &[&str]) -> Result<Vec<usize>> {
 }
 
 /// The object of one feature of the output, from the MS1 scan of its file.
-fn row_text(o: &Opts, t: &Table, n: usize, name: &str, run: &Run) -> Result<String> {
+fn row_text(o: &Opts, warn: bool, t: &Table, n: usize, name: &str, run: &Run) -> Result<String> {
     let row = &t.rows[n];
     let cell = |k: usize| row.get(k).map(String::as_str).unwrap_or("");
     let (mz, rt) = (
         cell(t.mz).parse::<f64>().unwrap_or(f64::NAN),
         cell(t.rt).parse::<f64>().unwrap_or(f64::NAN),
     );
-    let sign = if o.ion.ends_with('-') { -1 } else { 1 };
+    let sign = sign_of(&o.ion);
     let mut out = Out::default();
     out.raw("{\"id\":")
         .str(cell(t.id))
@@ -101,6 +137,10 @@ fn row_text(o: &Opts, t: &Table, n: usize, name: &str, run: &Run) -> Result<Stri
         .raw(",\"rt\":")
         .num(rt);
     out.raw(",\"file\":").str(stem(name));
+    out.raw(",\"ion\":").str(&o.ion);
+    if warn {
+        out.raw(",\"warning\":").str(WARN_ION);
+    }
     match nearest_ms1(run, rt, sign) {
         None => {
             out.raw(",\"error\":\"err.flow.formula.scan\"}");
@@ -132,14 +172,16 @@ pub fn ms1_rows(
     file: (usize, &[u8]),
 ) -> Result<Vec<(usize, String)>> {
     let t = read_table(features)?;
-    let (o, mine) = (opts(params), file_of_rows(&t, names)?);
+    let (mut o, mine) = (opts(params), file_of_rows(&t, names)?);
     let rows: Vec<usize> = (0..mine.len()).filter(|n| mine[*n] == file.0).collect();
     if rows.is_empty() {
         return Ok(Vec::new());
     }
     let run = mzlab_core::mzml::read(file.1)?;
+    let warn;
+    (o.ion, warn) = ion_of_file(params, &run);
     rows.into_iter()
-        .map(|n| Ok((n, row_text(&o, &t, n, names[file.0], &run)?)))
+        .map(|n| Ok((n, row_text(&o, warn, &t, n, names[file.0], &run)?)))
         .collect()
 }
 

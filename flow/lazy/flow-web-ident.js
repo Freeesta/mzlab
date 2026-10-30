@@ -142,7 +142,10 @@
     const key = await J().sha(spec.key + "\n" + await J().sha(feat.text)), hit = await J().recall(p, key);
     if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
     await x.call("started", { job: j });
-    const t0 = performance.now(), params = paramsOf(x, inst), features = enc(feat.text), fileNames = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
+    // an ion the plan does not write is left to each file (its MS1 polarity), as in `flow run`
+    const own = JSON.parse(paramsOf(x, inst));
+    if (!("ion" in (inst.params || {}))) delete own.ion;
+    const t0 = performance.now(), params = JSON.stringify(own), features = enc(feat.text), fileNames = JSON.stringify(names.map((/** @type {string} */ r) => r.slice(5)));
     return J().detached(x, spec, inst, async () => {
       /** @type {string[]} */ const rows = [];
       for (let k = 0; k < blobs.length; k++) {

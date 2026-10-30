@@ -64,8 +64,14 @@ impl Recipe {
 
     /// The recipe the data of an index need: the default one at high resolution, the unit profile (mass defect measured here) otherwise.
     pub fn for_index<R: ReadAt>(index: &mut Index<R>) -> Result<Recipe> {
-        let base = Recipe::default();
-        let Some(si) = index.section_of(1, base.detect.polarity) else {
+        Recipe::for_index_in(index, Recipe::default().detect.polarity)
+    }
+
+    /// `for_index` on the MS1 scans of `polarity` (None = all), the polarity the recipe then detects in.
+    pub fn for_index_in<R: ReadAt>(index: &mut Index<R>, polarity: Option<i8>) -> Result<Recipe> {
+        let mut base = Recipe::default();
+        base.detect.polarity = polarity;
+        let Some(si) = index.section_of(1, polarity) else {
             return Ok(base);
         };
         if index.hr1() {
@@ -74,6 +80,7 @@ impl Recipe {
         let defect = estimate_defect(index, si, LR_FLOOR)?.unwrap_or(0.0);
         let floor = profile_floor(index, si)?.unwrap_or(LR_FLOOR);
         let mut r = Recipe::lr(defect, floor, LR_MIN_HEIGHT);
+        r.detect.polarity = polarity;
         r.detect.min_width = LR_MIN_WIDTH;
         r.detect.min_snr = LR_MIN_SNR;
         Ok(r)
@@ -82,7 +89,15 @@ impl Recipe {
     /// `for_index` with the minimum height of a high-resolution file estimated from its noise (10 times the mode of the noise lump, to two figures, never
     /// below the default; `min_height_basis` keeps the lump). Used by the Flow steps; an explicit value of the plan replaces it afterwards.
     pub fn for_index_estimated<R: ReadAt>(index: &mut Index<R>) -> Result<Recipe> {
-        let mut r = Recipe::for_index(index)?;
+        Recipe::for_index_estimated_in(index, Recipe::default().detect.polarity)
+    }
+
+    /// `for_index_estimated` on the MS1 scans of `polarity` (`features.estimate` on a negative file).
+    pub fn for_index_estimated_in<R: ReadAt>(
+        index: &mut Index<R>,
+        polarity: Option<i8>,
+    ) -> Result<Recipe> {
+        let mut r = Recipe::for_index_in(index, polarity)?;
         if index.hr1() {
             if let Some(si) = index.section_of(1, r.detect.polarity) {
                 if let Some((h, n)) = crate::params_height::estimated_min_height(index, si)? {

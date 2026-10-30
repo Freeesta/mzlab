@@ -195,7 +195,6 @@ fn flagged(prov: &mzlab_core::json::Value, id: &str, word: &str) -> bool {
 }
 
 #[test]
-#[ignore = "gap NL-1: features.estimate applies the default polarity +1 and axis ppm instead of the files' (MATRICE_NEG_LR.md)"]
 fn gap_the_estimate_follows_the_polarity_and_the_resolution_of_the_files() {
     for (tag, pol, hr) in [("nl_g1n", -1i8, true), ("nl_g1l", 1, false)] {
         let d = fixture(tag, pol, hr);
@@ -206,19 +205,44 @@ fn gap_the_estimate_follows_the_polarity_and_the_resolution_of_the_files() {
         assert!(est.contains(&format!("\"polarity\":{pol}")), "{tag}: {est}");
         if !hr {
             assert!(est.contains("\"axis\":\"Da\""), "{tag}: {est}");
+            assert!(!est.contains("\"min_height\":200000"), "{tag}: {est}");
         }
         let _ = std::fs::remove_dir_all(&d);
     }
 }
 
 #[test]
-#[ignore = "gap NL-2: formula.ms1 keeps [M+H]+ on negative files and finds no scan (MATRICE_NEG_LR.md)"]
 fn gap_formula_ms1_takes_the_ion_of_the_polarity_of_the_files() {
     let d = fixture("nl_g2", -1, true);
-    run(&d, &formula_plan(None));
+    let prov = run(&d, &formula_plan(None));
     let f1 = read(&d, "f1.json");
     assert!(
-        !f1.contains("err.flow.formula.scan"),
+        !f1.contains("err.flow.formula.scan") && f1.contains("\"ion\":\"[M-H]-\""),
+        "{}",
+        &f1[..f1.len().min(600)]
+    );
+    // the record says the ion came from the files
+    let f1_rec = activity(&prov, "f1");
+    assert!(f1_rec.get("estimates").and_then(|e| e.get("ion")).is_some());
+    assert_eq!(
+        f1_rec
+            .get("params")
+            .and_then(|p| p.get("ion"))
+            .and_then(|v| v.str()),
+        Some("[M-H]-")
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn a_written_ion_of_the_other_polarity_wins_with_a_warning() {
+    let d = fixture("nl_g2w", -1, true);
+    let prov = run(&d, &formula_plan(Some("[M+H]+")));
+    assert_eq!(error_of(&prov, "f1"), None);
+    assert!(flagged(&prov, "f1", "formula.ion"));
+    let f1 = read(&d, "f1.json");
+    assert!(
+        f1.contains("\"ion\":\"[M+H]+\""),
         "{}",
         &f1[..f1.len().min(600)]
     );
