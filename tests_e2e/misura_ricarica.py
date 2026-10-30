@@ -157,7 +157,8 @@ class Throttle:
             self._send(sid, "Network.enable", {})
         if self.net:
             rtt, down, up = self.net
-            self._send(sid, "Network.enable", {})
+            if kind != "service_worker":
+                self._send(sid, "Network.enable", {})
             self._send(sid, "Network.emulateNetworkConditions", {"offline": False, "latency": rtt, "downloadThroughput": down, "uploadThroughput": up})
         if self.cpu > 1 and kind in ("page", "worker"):
             self._send(sid, "Emulation.setCPUThrottlingRate", {"rate": self.cpu})
