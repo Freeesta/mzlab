@@ -39,12 +39,12 @@ def open_file(pg, f):
     pg.set_input_files("#pick", [str(f)])
     pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=120000)
     pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=120000)
-    pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000); pg.wait_for_timeout(1500)
+    pg.wait_for_function("E.files.length >= 1 && E.pending.length === 0", timeout=120000); lib.frames(pg, 3)
 
 def menu(pg):
-    pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom');p.el.scrollIntoView({block:'center'})})()"); pg.wait_for_timeout(300)
+    pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom');p.el.scrollIntoView({block:'center'})})()"); lib.frames(pg)
     xy = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom'),r=p.cv.getBoundingClientRect();return {x:r.left+r.width*0.5,y:r.top+r.height*0.5}})()")
-    pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(400)
+    pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_selector("#ctx", state="visible")
     return pg.locator('#ctx [data-azione="chrom.masscal"]')
 
 def num(s): return float(s.replace("−", "-"))
@@ -81,7 +81,7 @@ try:
             assert "beyond the threshold" in pg.inner_text("#mc-out tbody tr:first-child td:nth-child(4)")
         step("the threshold only colours the numbers (and marks them with a shape and a hidden word)", threshold)
         def charts():
-            pg.evaluate("document.activeElement.blur()"); pg.wait_for_timeout(500)   # a pending change of the threshold redraws the charts
+            pg.evaluate("document.activeElement.blur()"); lib.frames(pg, 3)   # a pending change of the threshold redraws the charts
             assert pg.locator("#mc-out svg.mc-plot").count() == 2
             assert pg.locator("#mc-out svg.mc-out, #mc-out .mc-out").count() >= 1
             for i in range(2):

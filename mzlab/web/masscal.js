@@ -60,15 +60,15 @@ export async function open(k) {
   const old = document.getElementById("masscal"); if (old) old.remove();
   const set = saved();
   const d = document.createElement("dialog"); d.id = "masscal"; d.className = "tdati masscal"; d.setAttribute("aria-labelledby", "masscal-h");
-  d.innerHTML = `<div class="td-hd"><h3 id="masscal-h">${EH(T("masscal.title", { file: file.label }))}</h3><button type="button" class="bt" data-mc="x" aria-label="${EH(T("masscal.close"))}" title="${EH(T("masscal.close"))}">&times;</button></div>
-    <p class="sm muted">${EH(T("masscal.intro"))}</p>
-    <div class="mc-ctl"><label>${T("masscal.thr", { input: `<input type="number" id="mc-thr" min="0.1" step="0.5" value="${set.thr}" aria-label="${EH(T("masscal.thr", { input: "" }))}">` })}</label>
-      <label>${T("masscal.minint", { input: `<input type="number" id="mc-int" min="0" step="1000" value="${set.minInt}" aria-label="${EH(T("masscal.minint", { input: "" }))}">` })}</label>
-      <button type="button" class="go" data-mc="run">${EH(T("masscal.run"))}</button></div>
+  d.innerHTML = h`<div class="td-hd"><h3 id="masscal-h">${T("masscal.title", { file: file.label })}</h3><button type="button" class="bt" data-mc="x" aria-label="${T("masscal.close")}" title="${T("masscal.close")}">&times;</button></div>
+    <p class="sm muted">${T("masscal.intro")}</p>
+    <div class="mc-ctl"><label>${raw(T("masscal.thr", { input: `<input type="number" id="mc-thr" min="0.1" step="0.5" value="${set.thr}" aria-label="${EH(T("masscal.thr", { input: "" }))}">` }))}</label>
+      <label>${raw(T("masscal.minint", { input: `<input type="number" id="mc-int" min="0" step="1000" value="${set.minInt}" aria-label="${EH(T("masscal.minint", { input: "" }))}">` }))}</label>
+      <button type="button" class="go" data-mc="run">${T("masscal.run")}</button></div>
     <p id="mc-sum" class="mc-sum" role="status" aria-live="polite"></p><p id="mc-trend" class="sm muted"></p>
     <div id="mc-out"></div>
-    <p class="sm muted">${EH(T("masscal.limits"))}</p>
-    <div class="td-ft"><button type="button" class="go" data-mc="csv" disabled>${EH(T("masscal.csv"))}</button><button type="button" class="go" data-mc="x">${EH(T("masscal.close"))}</button></div>`;
+    <p class="sm muted">${T("masscal.limits")}</p>
+    <div class="td-ft"><button type="button" class="go" data-mc="csv" disabled>${T("masscal.csv")}</button><button type="button" class="go" data-mc="x">${T("masscal.close")}</button></div>`;
   document.body.appendChild(d);
   const $ = (/** @type {string} */ s) => /** @type {HTMLElement} */ (d.querySelector(s));
   const close = () => { d.close(); d.remove(); if (opener && document.contains(opener)) opener.focus(); };
@@ -93,9 +93,9 @@ export async function open(k) {
       <td>${p.scans}</td><td>${p.intensity.toExponential(2)}</td><td>${fx(p.rt, 2)}</td></tr>`).join("");
     const errs = pts.map(p => p.err_ppm), names = pts.map(p => p.name);
     const plots = [["masscal.plot.mz", pts.map(p => p.mz), "m/z"], ["masscal.plot.rt", pts.map(p => p.rt), T("masscal.col.rt")]].map(([key, xs, xl]) => ({ key: String(key), xs: /** @type {number[]} */ (xs), xl: String(xl) }));
-    out.innerHTML = `<div class="mc-plots">${plots.map((p, i) => `<figure><figcaption>${EH(T(p.key))}</figcaption><div data-plot="${i}">${plot({ xs: p.xs, ys: errs, names, thr, xl: p.xl, title: T(p.key) })}</div></figure>`).join("")}</div>
-      <div class="td-sc" tabindex="0" role="region" aria-label="${EH(T("masscal.title", { file: file.label }))}"><table><caption class="sr-only">${EH(T("masscal.title", { file: file.label }))}</caption>
-      <thead><tr>${COLS.map(c => `<th scope="col">${EH(T(c))}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    out.innerHTML = h`<div class="mc-plots">${raw(plots.map((p, i) => `<figure><figcaption>${EH(T(p.key))}</figcaption><div data-plot="${i}">${plot({ xs: p.xs, ys: errs, names, thr, xl: p.xl, title: T(p.key) })}</div></figure>`).join(""))}</div>
+      <div class="td-sc" tabindex="0" role="region" aria-label="${T("masscal.title", { file: file.label })}"><table><caption class="sr-only">${T("masscal.title", { file: file.label })}</caption>
+      <thead><tr>${raw(COLS.map(c => `<th scope="col">${EH(T(c))}</th>`).join(""))}</tr></thead><tbody>${raw(rows)}</tbody></table></div>`;
     plots.forEach((p, i) => {
       const svg = out.querySelector(`[data-plot="${i}"] svg`);
       if (!svg || !window.TDATI) return;
@@ -113,7 +113,7 @@ export async function open(k) {
       const r = await fetch(`api/masscal?k=${k}&min_intensity=${s.minInt}`), j = await r.json();
       if (!r.ok) throw I18N.err(j);
       rep = j.files && j.files[0];
-    } catch (e_) { const e = /** @type {Error} */ (e_); $("#mc-sum").innerHTML = `<span class="fail">${EH(e.message)}</span>`; $('[data-mc="csv"]').setAttribute("disabled", ""); return; }
+    } catch (e_) { const e = /** @type {Error} */ (e_); $("#mc-sum").innerHTML = h`<span class="fail">${e.message}</span>`; $('[data-mc="csv"]').setAttribute("disabled", ""); return; }
     draw();
   }
   $('[data-mc="run"]').onclick = run;
