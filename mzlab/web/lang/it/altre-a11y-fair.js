@@ -304,6 +304,7 @@ I18N.add("it", {
   "cont.col": "Contam.",
   "bar.prev": "File precedente (freccia sinistra)",
   "bar.next": "File successivo (freccia destra)",
+  "bar.fsel": "File mostrato",
   "bar.addChrom": "+ Cromatogramma",
   "bar.addSpec": "+ Spettro",
   "bar.addMap.title": "Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT",

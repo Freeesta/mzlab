@@ -1,4 +1,4 @@
-"""Panel toolbars and menus: the empty work area shows a muted status hint (and loses it as soon as a file is ticked or a panel opens), no visible table button
+"""Panel toolbars and menus: with no ticked file the work area shows the loading table (the panels come back as soon as a file is ticked), no visible table button
 (T on the focused chart still opens the table), a CSV next to every Excel of a panel (UTF-8 with BOM, comma, provenance line first), the range button keeps its note
 as a tooltip, the correction menu has no subtitle under «None» and «Subtract file».
 Run from the repo root: python3 tests_e2e/e2e_pannelli_vuoto_csv.py"""
@@ -20,13 +20,13 @@ try:
         pg.click("#opbtn"); ready(pg)
         def empty():
             assert pg.locator("#rmall").count() == 0, "no remove-all icon"
-            assert pg.evaluate("document.getElementById('work-empty').textContent") == "", "a file is ticked: no hint"
-            pg.evaluate("setVisOf(E.files, false)"); attendi(pg, "document.getElementById('work-empty').textContent !== ''")
-            el = pg.locator("#work-empty"); t = el.inner_text()
-            assert t == pg.evaluate("I18N.t('work.empty')") and el.get_attribute("role") == "status" and el.get_attribute("aria-live") == "polite", t
-            assert pg.evaluate("(()=>{const e=document.getElementById('work-empty'),d=document.getElementById('dpanels');return getComputedStyle(e).position === 'absolute' && Math.abs(e.getBoundingClientRect().height - d.getBoundingClientRect().height) < 2})()"), "the hint overlays the area: it takes no room"
-            pg.evaluate("setVisOf([E.files[0]], true)"); attendi(pg, "document.getElementById('work-empty').textContent === ''")
-        step("empty work area: hint shown with no ticked file, gone when one is ticked, no shift", empty)
+            W = "document.getElementById('v-workspace').dataset.work"
+            assert pg.evaluate(W) == "panels", "a file is ticked: the panels"
+            pg.evaluate("setVisOf(E.files, false)"); attendi(pg, W + " === 'table'")
+            assert pg.is_visible("#wtable") and pg.is_hidden("#start") and pg.is_hidden("#dpanels"), "no file shown: the loading table in place of the panels"
+            pg.evaluate("setVisOf([E.files[0]], true)"); attendi(pg, W + " === 'panels'")
+            assert pg.is_hidden("#wtable") and pg.is_visible("#dpanels")
+        step("no ticked file: the loading table stands in for the panels, back when one is ticked", empty)
         def buttons():
             assert pg.locator(".pnl [data-a=tab]").count() == 0, "no table button"
             pg.evaluate("document.querySelector('.pnl.chrom canvas').focus()"); pg.keyboard.press("t"); pg.wait_for_selector("#tdati[open]"); pg.keyboard.press("Escape")

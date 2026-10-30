@@ -86,14 +86,18 @@ if __name__ == "__main__":
             print("CLS %.4f" % res["cls"], [(round(a["t"]), round(a["v"], 4), a["src"]) for a in res["all"]])
             def cls_small():
                 assert res["cls"] < CLS_MAX, f"cumulative layout shift {res['cls']:.4f} >= {CLS_MAX}: {res['all']}"
-                late = [a for a in res["all"] if a["t"] > 60 and a["v"] > 0.0005]
+                # the one move allowed: the side panel takes the width of the names when the first file is shown (barra.js effW), the work area follows it
+                shown, area = next(f["t"] for f in fr if f.get("#dpanels .pnl")), next(f["t"] for f in fr if f.get("#opening"))
+                late = [a for a in res["all"] if a["t"] > 60 and a["v"] > 0.0005 and not (a["src"] == ["#v-workspace"] and area <= a["t"] <= shown + 50)]
                 assert not late, f"layout shifts after the work area was drawn: {late}"
             step("cumulative layout shift of the opening is below the threshold", cls_small)
             def same_boxes():
                 area = next(f["t"] for f in fr if f.get("#opening"))                     # the first frame with the skeleton on screen
-                for k in ("#v-data", "#dfiles", "#sb-pane", "#tools", "#sb-panels"):
-                    sp = settled(fr, k, area); assert max(sp) <= 0.6, f"{k} moved or changed size after the first paint: {sp}"
-                sp = settled(fr, "#dpanels", area); assert max(sp[:3]) <= 0.6, f"#dpanels moved or changed width: {sp}"
+                shown = next(f["t"] for f in fr if f.get("#dpanels .pnl"))               # the first file shown: the side panel takes the width of the names, under the fade
+                sp = settled(fr, "#v-data", area); assert max(sp) <= 0.6, f"#v-data moved or changed size after the first paint: {sp}"
+                for k in ("#dfiles", "#sb-pane", "#tools", "#sb-panels"):
+                    sp = settled(fr, k, shown); assert max(sp) <= 0.6, f"{k} moved or changed size after the first file was shown: {sp}"
+                sp = settled(fr, "#dpanels", shown); assert max(sp[:3]) <= 0.6, f"#dpanels moved or changed width: {sp}"
                 f0 = next(f for f in fr if f.get("#opening"))
                 assert f0["#dpanels"][1] == f0["#opening"][1] or abs(f0["#dpanels"][1] - f0["#opening"][1]) <= 0.6, "the skeleton does not start where the panels start"
                 sp = settled(fr, "#dpanels .pnl", 0); assert max(sp) <= 0.6, f"the first panel moved or was resized after it appeared: {sp}"
@@ -116,6 +120,35 @@ if __name__ == "__main__":
                 css = (ROOT / "mzlab" / "web" / "transizioni.css").read_text(encoding="utf-8")
                 assert "@keyframes tr-fade{from{opacity:0}}" in css
             step("the fade animates opacity only", opacity_only)
+            # first visit: from the navigation (landing painted with the side panel open) through the files and «Load data» to the settled first panel
+            pg3 = r.b.new_page(viewport={"width": 1500, "height": 1000}, reduced_motion="reduce", locale="it-IT")
+            pg3.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({stato:'saltato'}));localStorage.setItem('mzlab.barra.hint','1');localStorage.setItem('mzlab.pannelli.affianca.hint','1');}catch(_){}"
+                                "window.__nav={cls:0,all:[]};try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput){window.__nav.cls+=e.value;window.__nav.all.push([Math.round(e.startTime),+e.value.toFixed(4),(e.sources||[]).map(x=>{const n=x.node;return n&&n.nodeType===1?(n.id?'#'+n.id:n.tagName.toLowerCase()+'.'+String(n.className).split(' ')[0]):'?'}).join(' ')])}}).observe({type:'layout-shift',buffered:true})}catch(_){}")
+            pg3.goto(f"http://127.0.0.1:{r.port}/")
+            def landing_first_paint():
+                pg3.wait_for_selector("#start:not([hidden])", timeout=60000); attendi(pg3, "window.qqReady === true", 60000)
+                st = pg3.evaluate("""() => ({open: document.querySelector('#v-data').classList.contains('sb-open'), dz: !document.querySelector('#fl-dz').hidden,
+                  off: ['#np-chrom', '#np-closeall', '#np-method', '#fsel'].every(s => document.querySelector(s).disabled && document.querySelector(s).getAttribute('aria-disabled') === 'true'),
+                  calc: !!document.querySelector('#stbar [data-cmd=calc]:not([disabled])'), dpanels: getComputedStyle(document.querySelector('#dpanels')).display})""")
+                assert st == {"open": True, "dz": True, "off": True, "calc": True, "dpanels": "none"}, st
+            step("first paint: side panel open with its drop hint, data buttons disabled, calculators usable, landing in the work area", landing_first_paint)
+            def drop_by_keyboard():
+                pg3.evaluate("document.activeElement && document.activeElement.blur()")
+                for _ in range(80):
+                    pg3.keyboard.press("Tab")
+                    if pg3.evaluate("document.activeElement && document.activeElement.id") == "drop": break
+                assert pg3.evaluate("document.activeElement.id") == "drop", pg3.evaluate("document.activeElement.outerHTML.slice(0, 120)")
+                assert pg3.evaluate("document.activeElement.getAttribute('role') === 'button' && document.activeElement.getAttribute('aria-label').length > 10")
+                assert pg3.evaluate("[...document.querySelectorAll('#start button, #start [tabindex], #start a, #start input:not([hidden]), #start summary')].filter(e => e.offsetParent)[0].id") == "drop"
+                pg3.evaluate("document.querySelector('#pick').addEventListener('click', () => { window.__picked = (window.__picked || 0) + 1 })")
+                pg3.keyboard.press("Enter"); pg3.keyboard.press("Space")
+                attendi(pg3, "window.__picked === 2", 5000)
+            step("#drop is reached with Tab, first in the landing, and Enter opens the picker", drop_by_keyboard)
+            def cls_from_navigation():
+                measure(pg3, files)
+                nav = pg3.evaluate("window.__nav")
+                assert nav["cls"] < CLS_MAX, f"layout shift from the navigation {nav['cls']:.4f} >= {CLS_MAX}: {nav['all']}"
+            step("first visit: layout shift from the navigation to the settled first panel is below the threshold", cls_from_navigation)
     finally:
         r.close()
     bad = [s_ for s_ in steps if s_[1] != "ok"]
