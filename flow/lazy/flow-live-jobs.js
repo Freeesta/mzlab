@@ -171,9 +171,9 @@
     await x.call("started", { job: j });
     const t0 = performance.now();
     return detached(x, spec, inst, async () => {
-      const r = await F.webTp.generate(x.S, inst);
+      const est = await F.webTp.estimates(p, inst, F.webTp.indexPaths(x)), r = await F.webTp.generate(x.S, inst, est);
       await F.webMsn.keep(r.name, r.text); await remember(p, key, r);
-      x.files.set(inst.id, { id: inst.id, ...r });
+      x.files.set(inst.id, { id: inst.id, ...r, estimates: est });
       await x.call("finished", { job: j, result: { ms: performance.now() - t0 } });
     });
   };
@@ -261,7 +261,7 @@
     const j = job(spec), k = kit(), p = await k.getPool(), path = DIR + spec.key + ".tp.mzfeat";
     if (await has(p, path)) { await x.call("cached", { job: j }); return {}; }
     const al = x.alignOf(x.inst(String(F.refs(inst, "table")[0] || "").split(".")[0]) || inst), alKey = x.keys.get(x.jk({ instance: al.id, item: null })), up = x.upstream(al);
-    const inp = F.webTp ? await F.webTp.linkInputs(x.S, inst, x.inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
+    const inp = F.webTp ? await F.webTp.linkInputs(x, p, inst).catch(/** @param {any} e */ e => { x.errors.set(inst.id, e); return e; }) : null;
     if (inp instanceof Error) { await x.call("started", { job: j }); await fail(x, spec, inst, inp); return {}; }
     if (!inp || !alKey || !up.length) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
     await x.call("started", { job: j });

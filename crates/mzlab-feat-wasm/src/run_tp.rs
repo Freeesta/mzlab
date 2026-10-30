@@ -181,6 +181,26 @@ pub fn tp_generate(
     run().map_err(crate::js_err)
 }
 
+/// The parameters of `tp.generate` the files decide when the plan does not write them (`mzlab_feat::nature`, the rule of `flow run`): the names the plan writes
+/// and the `.mzidx` of the series read as `index_read(k, offset, length)`; `[{"name","value","proof"}]`.
+#[cfg(feature = "proofs")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn series_estimates(
+    written: Vec<String>,
+    index_read: js_sys::Function,
+    index_sizes: Vec<f64>,
+) -> std::result::Result<String, wasm_bindgen::JsValue> {
+    let run = || -> Result<String> {
+        let indexes = (0..index_sizes.len())
+            .map(|k| crate::open_one(&index_read, k, index_sizes[k]))
+            .collect::<Result<Vec<_>>>()?;
+        let nature = mzlab_feat::nature::of_indexes(&indexes);
+        let list = mzlab_feat::nature::estimates(&|n| written.iter().any(|w| w == n), &nature);
+        Ok(mzlab_feat::nature::estimates_json(&list))
+    };
+    run().map_err(crate::js_err)
+}
+
 /// The parent of a link: neutral formula, SMILES (empty for a formula), the structure text of the SMILES and the time the parent file gives.
 pub struct LinkParent<'a> {
     pub formula: &'a str,
@@ -259,7 +279,7 @@ fn parent_rt(table: &[u8], mz: f64) -> Result<f64> {
 }
 
 /// The hypotheses, the search in the series and the proofs on `table` for the parent `p`; `hypotheses` has to be the `ipotesi/1` of `tp.generate` for this
-/// parent in this polarity. `given` is the polarity the plan sets, if it does; the recipe takes the polarity that results. `lap(name)` is called after each phase.
+/// parent in this polarity. `given` is the polarity the plan sets, if it does, else the files' when the detection took both; the recipe takes the polarity that results. `lap(name)` is called after each phase.
 #[allow(clippy::too_many_arguments)]
 pub fn link_evidence<I: ReadAt>(
     rules: &[u8],
@@ -273,7 +293,12 @@ pub fn link_evidence<I: ReadAt>(
     budget: &MemBudget,
     lap: &mut dyn FnMut(&str),
 ) -> Result<LinkRun> {
-    let polarity = polarity_of(given, recipe);
+    // a plan that does not write the polarity over a detection that took both: the files decide (`mzlab_feat::nature`, as `flow run`)
+    let open = mzlab_feat::nature::open_polarity(
+        recipe.detect.polarity,
+        &mzlab_feat::nature::of_indexes(series_of.indexes),
+    );
+    let polarity = polarity_of(given.or(open.map(f64::from)), recipe);
     recipe.detect.polarity = Some(polarity);
     // the engine searches the hypotheses of the recipe (merged by nominal m/z at unit resolution): the registry of `tp.generate` has to be that one
     // (`nominal` taken from the files) or, as before the step read the files, the exact-mass one

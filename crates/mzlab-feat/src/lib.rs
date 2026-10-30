@@ -55,6 +55,7 @@ pub mod massacc;
 pub mod mrm;
 pub mod ms2;
 pub mod ms2spec;
+pub mod nature;
 pub mod norm;
 pub mod params;
 pub mod params_drift;
