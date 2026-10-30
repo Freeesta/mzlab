@@ -100,7 +100,11 @@ mod tests {
         assert_eq!(sigla(Some(11)), Some("EPI"));
         assert_eq!(sigla(Some(15)), Some("EMS"));
         assert!(
-            confermato(Some(5)) && confermato(Some(6)) && confermato(Some(0)) && !confermato(Some(1)) && !confermato(None)
+            confermato(Some(5))
+                && confermato(Some(6))
+                && confermato(Some(0))
+                && !confermato(Some(1))
+                && !confermato(None)
         );
         assert!(nativo(Some(4)) && nativo(Some(0)) && !nativo(Some(5)));
         assert_eq!(sigla(Some(0)), Some("Q1"));
