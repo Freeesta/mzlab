@@ -13,7 +13,7 @@ def step(name, fn):
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:1500]))
 
 tmp = Path(tempfile.mkdtemp(prefix="np_"))
-for f in ("libreria-normative.js", "normative-scarica.js"): shutil.copy(ROOT / "mzlab/web" / f, tmp / f)
+for f in ("libreria-normative.js", "normative-scarica.js", "normative-importa.js"): shutil.copy(ROOT / "mzlab/web" / f, tmp / f)
 shutil.copy(ROOT / "flow/lazy/flow-form.js", tmp / "flow-form.js")
 (tmp / "lang").mkdir(); shutil.copy(ROOT / "mzlab/web/lang/en/normative.js", tmp / "lang/normative.js")
 # an invented package: the panel reads only the catalogue; the raw bytes stand in for the .mzsus
@@ -84,6 +84,17 @@ try:
         def check():
             pg.click("#lib-reg-check"); pg.wait_for_function("document.getElementById('lib-reg').innerText.includes('up to date')")
         step("«Check for updates» compares the catalogues", check)
+        def mine():
+            # an imported file is a `.json` of lists in OPFS `normative-imported/` (the worker writes it); the window lists it, unticked and without a checkbox
+            pg.evaluate("""async () => { const d = await (await navigator.storage.getDirectory()).getDirectoryHandle('normative-imported', { create: true });
+              const w = await (await d.getFileHandle('SVHC.json', { create: true })).createWritable();
+              await w.write(JSON.stringify([{ id: 'SVHC', tags: { status: 'in_force', jurisdiction: 'EU', instrument: 'x', citation: 'imported by you', version_date: '2000-01-03' }, coverage: { entries: 3, screenable: 2, groups: 0, uvcb: 0, inorganic: 0, unresolved: 1 } }])); await w.close(); await NP.mount(document.getElementById('lib-reg')); }""")
+            t = pg.inner_text("#lib-reg table")
+            assert "SVHC (your file)" in t and "3 entries: 2 screened" in t, t
+            assert pg.locator("input[data-reg=SVHC]").count() == 0 and pg.locator("input[data-reg]").count() == 4
+            assert pg.is_visible("#lib-reg-import") and pg.get_attribute("#lib-reg-kind", "aria-label") == "Kind of file"
+            assert pg.eval_on_selector_all("#lib-reg-kind option", "o => o.map(x => x.value)") == ["svhc", "ca_prop65"]
+        step("your own imported lists are listed unticked, with the kind selector and the import button", mine)
         def disclaimer():
             assert pg.inner_text("#lib-reg-disclaimer") == DISC
         step("the footer is the report's disclaimer", disclaimer)

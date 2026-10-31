@@ -9,7 +9,7 @@ const TRIES = 2;
 
 /** @typedef {{ file: string, size: number, sha256: string }} Piece */
 /** @typedef {{ format: string, piece: number, size: number, size_compressed: number, sha256: string, rows: number, lists: Array<Record<string, any>>, attributions: string[], pieces: Piece[] }} Catalog */
-/** @typedef {{ base?: string, fetchFn?: typeof fetch, caches?: CacheStorage, signal?: AbortSignal, onProgress?: (p: { piece: number, pieces: number, bytes: number, total: number }) => void }} Options */
+/** @typedef {{ base?: string, format?: string, fetchFn?: typeof fetch, caches?: CacheStorage, signal?: AbortSignal, onProgress?: (p: { piece: number, pieces: number, bytes: number, total: number }) => void }} Options */
 
 const err = (/** @type {string} */ key, /** @type {Record<string, unknown>} */ params = {}) => Object.assign(new Error(key), { key, params });
 const hex = (/** @type {ArrayBuffer} */ b) => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -25,7 +25,7 @@ export function parseCatalog(/** @type {string} */ text, /** @type {string} */ f
   return c;
 }
 
-const where = (/** @type {Options} */ o) => ({ base: o.base ?? "normative/", fetchFn: o.fetchFn ?? ((u, i) => fetch(u, i)), cs: o.caches ?? caches });
+const where = (/** @type {Options} */ o) => ({ base: o.base ?? "normative/", format: o.format ?? FORMAT, fetchFn: o.fetchFn ?? ((u, i) => fetch(u, i)), cs: o.caches ?? caches });
 
 /** One piece, fetched and checked; fetched once more when it is wrong. An aborted request is a cancel, a refused connection is «offline». */
 export async function fetchPiece(/** @type {typeof fetch} */ fetchFn, /** @type {string} */ url, /** @type {Piece} */ pc, /** @type {AbortSignal | undefined} */ signal) {
@@ -46,10 +46,10 @@ export async function fetchPiece(/** @type {typeof fetch} */ fetchFn, /** @type 
 }
 
 /** The catalogue stored in the cache, or null. */
-async function cachedCatalog(/** @type {Cache} */ cache, /** @type {string} */ base) {
+async function cachedCatalog(/** @type {Cache} */ cache, /** @type {string} */ base, /** @type {string} */ format) {
   const r = await cache.match(base + "catalogo.json");
   if (!r) return null;
-  try { return parseCatalog(await r.text()); } catch (_) { return null; }
+  try { return parseCatalog(await r.text(), format); } catch (_) { return null; }
 }
 
 /** The raw bytes of the pieces of `cat` inflated and checked as a whole. */
@@ -65,15 +65,15 @@ async function inflate(/** @type {Catalog} */ cat, /** @type {Uint8Array<ArrayBu
  * Returns `{ raw, catalog, cached }`; the cache is written only after everything checked out.
  */
 export async function ensure(/** @type {Options} */ o = {}) {
-  const { base, fetchFn, cs } = where(o);
+  const { base, format, fetchFn, cs } = where(o);
   const cache = await cs.open(CACHE);
-  const have = await cachedCatalog(cache, base);
+  const have = await cachedCatalog(cache, base, format);
   /** @type {Catalog | null} */ let live = null, liveText = "";
   try {
     const res = await fetchFn(base + "catalogo.json", { cache: "no-store", signal: o.signal });
     if (!res.ok) throw err("normative.dl.err.http", { status: res.status });
     liveText = await res.text();
-    live = parseCatalog(liveText);
+    live = parseCatalog(liveText, format);
   } catch (e_) {
     const e = /** @type {any} */ (e_);
     if (o.signal && o.signal.aborted) throw err("normative.dl.err.cancelled");
@@ -104,8 +104,8 @@ export async function ensure(/** @type {Options} */ o = {}) {
 
 /** The installed catalogue, or null; nothing is fetched. */
 export async function installed(/** @type {Options} */ o = {}) {
-  const { base, cs } = where(o);
-  return cachedCatalog(await cs.open(CACHE), base);
+  const { base, format, cs } = where(o);
+  return cachedCatalog(await cs.open(CACHE), base, format);
 }
 
 /**
@@ -113,12 +113,12 @@ export async function installed(/** @type {Options} */ o = {}) {
  * Nothing is downloaded.
  */
 export async function check(/** @type {Options} */ o = {}) {
-  const { base, fetchFn, cs } = where(o);
-  const installed = await cachedCatalog(await cs.open(CACHE), base);
+  const { base, format, fetchFn, cs } = where(o);
+  const installed = await cachedCatalog(await cs.open(CACHE), base, format);
   try {
     const res = await fetchFn(base + "catalogo.json", { cache: "no-store", signal: o.signal });
     if (!res.ok) throw err("normative.dl.err.http", { status: res.status });
-    const available = parseCatalog(await res.text());
+    const available = parseCatalog(await res.text(), format);
     const state = !installed ? "none" : installed.sha256 === available.sha256 ? "current" : "update";
     return { state, installed, available };
   } catch (_) {

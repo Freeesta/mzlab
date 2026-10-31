@@ -1,6 +1,6 @@
 //! The pure part of the regulatory lists (no network, no disk): the readers of the user's own CSV (`svhc`, `ca_prop65`), the `resolve` core, the rows of a list,
 //! the writer of the `listings` package and `import_official`, which turns an official file into a private `.mzsus`. `mzlab-cli normative build` and `pack`
-//! (native only) call it for the sources it fetches; the app (route `normative/import-official`) and the `attributio-all` .wasm call `official`.
+//! (native only) call it for the sources it fetches; the app (route `normative/import-official`) and the lazy `normative` .wasm (`mzlab-normative-wasm`) call `official`.
 //! Area file: `docs/agenti/normative.md`.
 
 pub mod csvrd;

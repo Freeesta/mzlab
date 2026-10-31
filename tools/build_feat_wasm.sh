@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, untargeted (the pipeline after mzmine 3.9.0, loaded only when the admin mode picks the mzmine-like engine in the panel Pipeline), mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series, and finder_msn, loaded only when a file of the series is MSn (tree, library, localisation), and attributio, the table of levels of a campaign folder in administrator mode; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt,
+# The .wasm of mzFinder (crates/mzlab-feat-wasm: detect, proofs, untargeted (the pipeline after mzmine 3.9.0, loaded only when the admin mode picks the mzmine-like engine in the panel Pipeline), mrm, loaded only for a series of MRM files, and finder, loaded by the worker of mzFinder for classify, formula_info, identity_graph, polarity_pairs and the Dig of a high-resolution series, and finder_msn, loaded only when a file of the series is MSn (tree, library, localisation), and normative, the import of an official regulatory file, and attributio, the table of levels of a campaign folder in administrator mode; fetched only when a series is analysed, never committed), each under 500 KB after wasm-opt,
 # and site/static/wasm-feat/manifest.json with their SHA-256 (the worker checks it): tools/build_feat_wasm.sh <site/static> [all|a|b|manifest]
 # The optional part lets CI build the modules in two parallel jobs (a, b) and write the manifest afterwards (manifest, once both outputs are in place); no part = all, what pages.yml and release.yml run.
 set -eu
@@ -68,6 +68,9 @@ wasm_pack "$out/msnregole" $R/mzlab_msnregole_wasm.wasm $limit_msnregole "msnreg
 # the assistant (crates/mzlab-llm-wasm: llm-provider/1 requests, answer streams, recordings), loaded by mzlab/web/llm/llm-worker.js only after the opt-in; never fused with another module
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-llm-wasm
 wasm_pack "$out/llm" $R/mzlab_llm_wasm.wasm $limit_llm "assistant" @motore
+# the import of an official regulatory file (ECHA Candidate List, Proposition 65) into a private .mzsus, loaded only by the Library window when the user imports one: crates/mzlab-normative-wasm
+cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-normative-wasm
+wasm_pack "$out/normative" $R/mzlab_normative_wasm.wasm $limit "normative import" @motore
 # the readers of the tables of other programs (mzMine, FBMN/GNPS2, MS-DIAL), loaded only when the user opens one: crates/mzlab-feat-import-wasm
 cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-feat-import-wasm
 wasm_pack "$out/import" $R/mzlab_feat_import_wasm.wasm $limit "mzFinder import" @motore
@@ -134,6 +137,8 @@ m["msngrafo"] = {"js": "msngrafo/mzlab_msngrafo_wasm.js", "wasm": "msngrafo/mzla
               "sha256": hashlib.sha256(open(f"{o}/msngrafo/mzlab_msngrafo_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["msnregole"] = {"js": "msnregole/mzlab_msnregole_wasm.js", "wasm": "msnregole/mzlab_msnregole_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/msnregole/mzlab_msnregole_wasm_bg.wasm", "rb").read()).hexdigest()}
+m["normative"] = {"js": "normative/mzlab_normative_wasm.js", "wasm": "normative/mzlab_normative_wasm_bg.wasm",
+              "sha256": hashlib.sha256(open(f"{o}/normative/mzlab_normative_wasm_bg.wasm", "rb").read()).hexdigest()}
 m["import"] = {"js": "import/mzlab_feat_import_wasm.js", "wasm": "import/mzlab_feat_import_wasm_bg.wasm",
               "sha256": hashlib.sha256(open(f"{o}/import/mzlab_feat_import_wasm_bg.wasm", "rb").read()).hexdigest()}
 def attributio(dirname):

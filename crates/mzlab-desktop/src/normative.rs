@@ -343,9 +343,9 @@ pub fn import_official(
     String::from_utf8(summary.to_vec()).map_err(NormError::io)
 }
 
-/// `normative/imported`: `{"lists": [...]}` with the list objects of the manifests of the imported files, in the shape of the catalogue of the package.
+/// `normative/imported`: `{"lists": [...]}` with the lists of the imported files, in the shape of the catalogue of the package (`official::lists_of`, as in the browser).
 pub fn imported(folder: &Folder) -> String {
-    let mut lists: Vec<serde_json::Value> = Vec::new();
+    let mut parts: Vec<String> = Vec::new();
     for e in folder.list("").unwrap_or_default() {
         if !e.name.starts_with(IMPORT_PREFIX) || !e.name.ends_with(".mzsus") {
             continue;
@@ -353,16 +353,14 @@ pub fn imported(folder: &Folder) -> String {
         let Ok(raw) = folder.read(&e.name, 0, e.size) else {
             continue;
         };
-        let Ok(s) = Suspects::open(&raw) else {
-            continue;
-        };
-        if let Ok(m) = serde_json::from_str::<serde_json::Value>(s.manifest()) {
-            if let Some(l) = m["normative/1"]["lists"].as_array() {
-                lists.extend(l.iter().cloned());
+        if let Some(l) = mzlab_feat::normative::official::lists_of(&raw) {
+            let inner = l.trim_start_matches('[').trim_end_matches(']');
+            if !inner.is_empty() {
+                parts.push(inner.to_string());
             }
         }
     }
-    serde_json::json!({ "lists": lists }).to_string()
+    format!("{{\"lists\":[{}]}}", parts.join(","))
 }
 
 #[cfg(test)]

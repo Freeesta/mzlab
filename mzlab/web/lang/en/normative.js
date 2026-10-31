@@ -28,5 +28,14 @@ I18N.add("en", {
   "normative.lib.status.proposal": "proposal",
   "normative.lib.status.draft": "draft",
   "normative.lib.status.reference": "reference",
+  "normative.lib.import": "Import an official file…",
+  "normative.lib.import.kind": "Kind of file",
+  "normative.lib.import.svhc": "ECHA Candidate List (CSV)",
+  "normative.lib.import.ca_prop65": "California Proposition 65 (CSV)",
+  "normative.lib.import.working": "Reading your file…",
+  "normative.lib.import.done": "Imported {id}: {screenable} of {entries} entries have a structure, {unresolved} are listed without one. The file stays on this computer.",
+  "normative.lib.import.mine": "your file",
+  "normative.import.err.parse": "This file could not be read ({detail}).",
+  "normative.import.err.worker": "The importer could not start: reload the page and try again.",
   "normative.lib.disclaimer": "A match means that a candidate for this feature has the mass, formula or structure of a substance named in a regulatory list. It is not an identification, it says nothing about concentration, and it is not an assessment of compliance with any law. Lists are reproduced from the official texts named above; only the official publications are authentic. Confirm candidates with reference standards before any regulatory use."
 });

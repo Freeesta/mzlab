@@ -795,6 +795,8 @@
   "valida.counts": "Riga di riepilogo della validazione; {spectra}, {chroms} = numero di spettri e cromatogrammi del file; {errors}, {warnings} = numero di errori e di avvisi.",
   "valida.more": "Nota sotto la tabella quando i problemi sono più delle righe mostrate; {n} = righe mostrate, {total} = problemi trovati.",
   "valida.fail": "Messaggio quando la validazione non è riuscita; {detail} = causa tecnica (testo dell'errore).",
+  "normative.import.err.parse": "Errore dell'importazione di un file ufficiale della Libreria: il file non si legge; {detail} = dettaglio tecnico.",
+  "normative.lib.import.done": "Messaggio dopo l'importazione di un file ufficiale nella Libreria; {id} = sigla della lista, {entries} = voci lette, {screenable} = voci con una struttura, {unresolved} = voci senza.",
   "normative.dl.err.catalog": "Errore di download delle liste normative: il catalogo non è valido; {detail} = dettaglio tecnico.",
   "normative.dl.err.http": "Errore di download delle liste normative: risposta HTTP del sito; {status} = codice (es. 404).",
   "normative.dl.err.hash": "Errore di download delle liste normative: un pezzo o il file intero non ha l'impronta SHA-256 attesa; {what} = quale.",
