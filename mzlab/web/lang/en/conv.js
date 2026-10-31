@@ -76,6 +76,8 @@ I18N.add("en", {
   "conv.comp.standard": "Standard",
   "conv.comp.smallest": "Smallest",
   "conv.comp.none": "Uncompressed",
+  "help.compressione.title": "mzML compression",
+  "help.compressione.body": "<b>Standard</b> (recommended): zlib, lossless, read by every program. <b>Smallest</b>: zlib plus MS-Numpress, about half the space of Standard (estimate ≈ 0.55×); Numpress rounds m/z and intensity, so the values change very slightly (relative difference below 10<sup>-3</sup> on the TIC) and cannot be recovered; some programs cannot read it. On a very large file (about 1 GB) writing is a little faster (35 s against 43 s) and reopening a little slower (27 s against 21 s). <b>Uncompressed</b>: lossless and no compression work, but the file is about 1.6× Standard; useful when the disk is fast and space does not matter. For centroid files the difference between Standard and Uncompressed is a few percent (about 5% on a 113 MB file). From the command line: <code>--compression standard|smallest|none</code> (the app and the site write the same bytes).",
   "conv.adv": "Advanced",
   "conv.dl.needsApp": "Update the desktop app to save the mzML",
   "conv.help.summary": "Don't have mzML files?",

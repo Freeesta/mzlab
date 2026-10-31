@@ -4,6 +4,7 @@
 // Texts for students, in the catalogs (keys help.<key>.title / .body). To add one: a key here and a "?" button where it is needed. Classic script.
 const HELP = {
   "start": [I18N.t("help.start.title"), I18N.t("help.start.body")],
+  "compressione": [I18N.t("help.compressione.title"), I18N.t("help.compressione.body")],
   "filegrandi": [I18N.t("help.filegrandi.title"), I18N.t("help.filegrandi.body")],
   "files": [I18N.t("help.files.title"), I18N.t("help.files.body")],
   "toolbar": [I18N.t("help.toolbar.title"), I18N.t("help.toolbar.body")],
