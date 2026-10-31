@@ -30,9 +30,10 @@ export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot }
   };
   // the oldest warm files go until `need` bytes are free (a real load always wins over a guess)
   async function makeRoom(/** @type {number} */ need) {
+    const ws = await all(); if (!ws.length) return;
     const e = await ARCH.estimate(); if (!e.quota) return;
     let free = e.quota - e.usage;
-    for (const w of await all()) { if (free >= need) break; await drop(w.name); free += w.m.bytes; }
+    for (const w of ws) { if (free >= need) break; await drop(w.name); free += w.m.bytes; }
   }
   /** @param {{ name: string, blob: Blob & { lastModified?: number }, mtime?: number, id?: number }} m */
   async function warm(m) {
@@ -62,5 +63,5 @@ export function createScalda({ ARCH, lrPut, lrIndex, lrOpen, lrFile, closeSlot }
     const f = await ARCH.get("files", m.name); if (f) lrFile.set(m.name, f);
     return { info: JSON.stringify({ hit: true, size, missing: mk.missing || 0 }), files: f ? [[m.name, f]] : [] };
   }
-  return { warm, claim, makeRoom, names: async () => new Set((await all()).map(w => w.name)), clear: async () => { for (const w of await all()) await drop(w.name); await ARCH.clear("warm"); } };
+  return { lr_warm: (/** @type {any} */ m) => warm({ ...m, warm: true }), lr_warm_claim: claim, makeRoom, names: async () => new Set((await all()).map(w => w.name)), clear: async () => { for (const w of await all()) await drop(w.name); await ARCH.clear("warm"); } };
 }
