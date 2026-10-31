@@ -17,6 +17,10 @@ const CONV = {
     const total = todo.reduce((/** @type {number} */ a, /** @type {Bag} */ x) => a + (x.size || 0), 0) * (this.RATIO[this.compression] || 1);
     return total ? "≈ " + (total > 1e6 ? (total / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(total / 1e3)) + " kB") : "";
   },
+  // the label of each «Download mzML» button of the table with the real size of the file written for the compression now selected (in place: the table is not drawn again)
+  paintSizes() {
+    document.querySelectorAll("#flist [data-dl]").forEach((/** @type {Element} */ b) => { const s = this.realSize(/** @type {HTMLElement} */ (b).dataset.dl || ""); b.textContent = I18N.t("conv.dl") + (s ? " (" + s + ")" : ""); });
+  },
   // the real size of the mzML already written for `name` ("" if unknown: in the desktop app the file stays on the disk)
   realSize(/** @type {string} */ name) {
     const b = this.files.get(name) || this.made.get(this.key(name));
@@ -33,7 +37,7 @@ const CONV = {
     const rb = window.MZLAB_RUST, box = document.getElementById("up");
     if (!rb || !rb.nativeToMzml || !rb.isNative(name) || !box) return null;
     const f = (typeof ST !== "undefined" && ST.files || []).find((/** @type {Bag} */ x) => x.name === name), g = await ConvUI.card(box, [1]), ui = g.start(1, name);
-    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.compression); ui.done(); g.end(); this.made.set(this.key(name), blob); return blob; }
+    try { const blob = await rb.nativeToMzml(name, f ? f.size : 0, (/** @type {Bag} */ p) => ui.update(p), g.signal, this.compression); ui.done(); g.end(); this.made.set(this.key(name), blob); this.paintSizes(); return blob; }
     catch (e_) { const e = /** @type {Lanciato} */ (e_); if (e.cancelled) { ui.done(); g.end(); } else { ui.fail(e.json ? I18N.err(e.json).message : e.message); g.end(); } return null; }
   },
   // saves one: the system dialog in the desktop app, a normal download in the browser; resolves to false if the user cancelled or could not save
