@@ -273,7 +273,7 @@ dialog.tdati::backdrop{background:rgba(0,0,0,.35)}
 dialog.masscal{max-width:min(96vw,860px)}dialog.masscal .bt{min-width:24px;min-height:24px}@media (pointer:coarse){dialog.masscal .bt{min-width:40px;min-height:40px}}.mc-ctl{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:6px 0}.mc-ctl input{width:6.5em}
 .mc-sum{font-weight:600;margin:6px 0}.mc-plots{display:flex;flex-wrap:wrap;gap:8px 16px}.mc-plots figure{margin:0}.mc-plots figcaption{font-size:12px;color:var(--muted)}
 .mc-plot{max-width:100%;height:auto}.mc-box{fill:none;stroke:var(--line)}.mc-zero{stroke:var(--muted);stroke-width:1}.mc-thr{stroke:var(--lv3b);stroke-width:1;stroke-dasharray:4 3}
-.mc-tk,.mc-ax{fill:var(--muted);font-size:11px}.mc-in{fill:var(--lv1)}.mc-out{fill:var(--lv3b)}.mc-hi{color:var(--lv3b);font-weight:700}
+.mc-tk,.mc-ax{fill:var(--muted);font-size:11px}.mc-in{fill:var(--lv1)}.mc-out{fill:var(--lv3b)}.mc-hi{color:var(--bad);font-weight:700}
 .pnl .bt,.pnl .lk,.pnl .cpar>.bt,.pnl .chip,.pnl .x{min-width:24px;min-height:24px}
 .pnl label{min-height:24px;display:inline-flex;align-items:center}
 /* spectrum header: controls keep their width (the overflow ones go into «⋯» through fitHd) instead of shrinking over their neighbours */
