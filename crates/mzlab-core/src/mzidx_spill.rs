@@ -52,7 +52,7 @@ impl Spill for Meta<'_, '_> {
 }
 
 /// Bytes of one slot of the scratch file.
-const CHUNK: usize = 128 << 10;
+const CHUNK: usize = 64 << 10;
 /// One peak, little endian: m/z, intensity, number of the scan (u32). Two kinds, kept in separate partitions: 64-bit values (20 B) and the 32-bit
 /// values of an MS1 section of high resolution (12 B, already rounded as the section writes them). A scan only has one kind, so the order of the
 /// scans is kept within each kind.
