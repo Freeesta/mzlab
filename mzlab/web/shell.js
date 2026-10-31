@@ -170,6 +170,8 @@ const DEMO_SETS=/** @type {Record<string, string[]>} */ ({full:[0,5,10,15,30].ma
 // a Thermo .raw is read as it is by the Rust engine (rust-nativo.js): each file is a sample `x.mzML` and no mzML is written; without the engine the recipe is shown
 async function rawToMzml(/** @type {FileCarica[]} */ files,/** @type {unknown} */ box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.nativo||!files.some(f=>/\.raw$/i.test(f.name)))return files;
   return NATIVO.raws(files,(ST.files||[]).map((/** @type {FileRiga} */ x)=>x.name))}
+// an mzML with MS-Numpress arrays is read as it is by the engine through the `aperti` module (nativo.js numpress): no mzML is written, «Download .mzML» writes it on request
+async function numpressToNat(/** @type {FileCarica[]} */ files){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null,M=window.LETTORI_MOD;if(!rb||rb.disabled||!rb.nativo||window.MZLAB_DESKTOP||!M)return files;return NATIVO.numpress(files,async(/** @type {FileCarica} */ f)=>(await M.variante(f))==="aperti")}
 // stem (lower case) -> {stem,wiff,scan}: a file of a SCIEX pair that came without the other, kept for a later loading
 const WIFF_WAIT=new Map();
 // SCIEX .wiff + .wiff.scan, paired by name (also when they come in different loadings): the Rust engine reads them as they are and each sample (injection) is a file of the list. Gives the files to go on with and the notices [message, name]
@@ -212,7 +214,7 @@ async function moduloWants(/** @type {typeof LETTORI_MOD} */ M,/** @type {FileCa
   if(M.extensions().some((/** @type {string} */ e)=>n.endsWith(e)))return M.famigliaDi([n]);
   // an mzML with numpress arrays: the engine refuses it (err.file.numpress), the module writes it again with zlib
   if(n.endsWith(".mzml")&&!f.mzlabNat){const v=await M.variante(f);if(v)return v}
-  const nat=f.mzlabNat;if(!nat)return "";const fam=M.famigliaDi(nat.members.map((/** @type {{ name: string }} */ m)=>m.name));if(!fam)return "";
+  const nat=f.mzlabNat;if(!nat)return "";if(nat.members.length===1&&/\.mzml$/i.test(nat.members[0].name))return "";const fam=M.famigliaDi(nat.members.map((/** @type {{ name: string }} */ m)=>m.name));if(!fam)return "";
   if(LETT_FORCE&&nat.members.some((/** @type {{ name: string }} */ m)=>/\.d\//i.test(m.name)))return fam;
   if(!M.loaded)return "";
   // a sample of a .wiff: the pair was probed once (wiffToMzml); a full read of the .wiff.scan per sample made the loading wait minutes
@@ -337,7 +339,7 @@ async function upload0(/** @type {FileCarica[]} */ files,/** @type {string | und
   // a saved fragmentation graph (g.json) opens by itself, without raw data: infusione-grafo-apri.js
   if(files.some(f=>/\.json$/i.test(f.name))){await carica("m:infusione-grafo-apri.js");files=await INFGAPRI.take(files,rep)}
   let panel=/** @type {{ index(name: string, pc: number): void, end(): void } | null} */ (null);
-  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await moduloToMzml(files,box,rep);panel=/** @type {FileCarica[] & { panel?: typeof panel }} */ (files).panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
+  const wr=await wiffToMzml(files,box,signal);files=await rawToMzml(wr.files,box);files=await numpressToNat(files);files=await moduloToMzml(files,box,rep);panel=/** @type {FileCarica[] & { panel?: typeof panel }} */ (files).panel||null;for(const [m,n] of wr.errs)(rep.errs[m]=rep.errs[m]||[]).push(n);
   files=files.filter(f=>!CartCarica.byproduct(f.name));
   if(files.some(f=>!/\.(mzml|dam)$/i.test(f.name)))await carica("m:formati-noti.js");
   files=files.filter(f=>{const k=fileKind(f.name);if(!k)return true;rejected.push(f);if(k==="other")rep.other.push(f.name);else rep.unopen.push({name:f.name,ext:k.ext,label:k.label,st:k.st});return false});

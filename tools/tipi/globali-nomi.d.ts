@@ -687,6 +687,7 @@ declare var numIt: any;
 declare var numMz: any;
 declare var numMz1: any;
 declare var numberPanels: any;
+declare var numpressToNat: any;
 declare var openBT: any;
 declare var openConvHelp: any;
 declare var openMark: any;

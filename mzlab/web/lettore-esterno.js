@@ -8,6 +8,7 @@ import { loadModulo } from "./carica-modulo.js";
 
 /** the family whose module reads a dataset, by the name of its members (the same rule as `LETTORI_FAM` in lettori-famiglie.js, for the families the engine reads through a module); "" when none does */
 export function famigliaEsterna(/** @type {string[]} */ names) {
+  if (names.length === 1 && /\.mzml$/i.test(names[0])) return "aperti";      // the engine refuses an mzML with numpress arrays; the page makes a dataset of one only for those
   return names.some(n => /\.raw$/i.test(n)) ? "thermo" : "";
 }
 
