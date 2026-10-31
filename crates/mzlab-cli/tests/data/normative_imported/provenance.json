@@ -1,0 +1,33 @@
+{
+ "schema": "normative-prov/1",
+ "lists": [
+  {
+   "id": "T_IMP",
+   "tags": {
+    "jurisdiction": "US state",
+    "instrument": "Invented imported list",
+    "citation": "imported by you on 2000-02-02 from imp.csv, SHA-256 abcdef0123456789",
+    "status": "in_force",
+    "version_date": "2000-02-01",
+    "attribution": "Invented"
+   },
+   "inputs": [
+    {
+     "url": "file:invented",
+     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+     "retrieved": "2000-02-02"
+    }
+   ],
+   "coverage": {
+    "entries": 2,
+    "screenable": 2,
+    "groups": 0,
+    "uvcb": 0,
+    "inorganic": 0,
+    "unresolved": 0
+   },
+   "csv_sha256": "abcdef0123456789000000000000000000000000000000000000000000000000",
+   "stale": false
+  }
+ ]
+}

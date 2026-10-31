@@ -434,13 +434,16 @@ pub fn campioni(op: &str, input: &str) -> std::result::Result<String, JsValue> {
 
 /// `screen.suspects` in the browser: the `screen/1` text `flow run` writes (`mzlab_feat::flow_screen_suspects::screen_text`). `params_json` is the parameters of the step merged with its
 /// defaults, `table` the alignment `.mzfeat`, `names_json` the names of the suspect files (a JSON list) and `lists` their bytes joined as `u64 length (little-endian) + bytes` per file,
-/// `mgf` the spectra (empty: none) and `formulas` a `formulas/1` text (empty: none). Errors are JSON `{"error_key","params"}` texts.
+/// `imported_names_json` and `imported` the same for the imported lists (`.mzsus` files, empty: none), `mgf` the spectra (empty: none) and `formulas` a `formulas/1` text (empty: none).
+/// Errors are JSON `{"error_key","params"}` texts.
 #[wasm_bindgen]
 pub fn flow_screen_suspects(
     params_json: &str,
     table: &[u8],
     names_json: &str,
     lists: &[u8],
+    imported_names_json: &str,
+    imported: &[u8],
     mgf: &[u8],
     formulas: &[u8],
 ) -> std::result::Result<String, JsValue> {
@@ -452,23 +455,19 @@ pub fn flow_screen_suspects(
         Value::Obj(o) => o,
         _ => Vec::new(),
     };
-    let names: Vec<String> = match json::parse(names_json.as_bytes()).map_err(js_err)? {
-        Value::Arr(a) => a.iter().filter_map(|v| v.str().map(String::from)).collect(),
-        _ => Vec::new(),
-    };
-    let (mut files, mut at) = (Vec::new(), 0usize);
-    while at + 8 <= lists.len() {
-        let n = u64::from_le_bytes(lists[at..at + 8].try_into().unwrap_or([0; 8])) as usize;
-        let end = (at + 8).saturating_add(n).min(lists.len());
-        files.push(&lists[at + 8..end]);
-        at = end;
+    use mzlab_feat::flow_screen_suspects::unpack;
+    let (named, imp) = (
+        unpack(names_json, lists).map_err(js_err)?,
+        unpack(imported_names_json, imported).map_err(js_err)?,
+    );
+    fn view<'a>(v: &'a [(String, &'a [u8])]) -> Vec<(&'a str, &'a [u8])> {
+        v.iter().map(|(n, b)| (n.as_str(), *b)).collect()
     }
-    let named: Vec<(&str, &[u8])> = names.iter().map(String::as_str).zip(files).collect();
     let formulas: Vec<&[u8]> = opt(formulas).into_iter().collect();
     mzlab_feat::flow_screen_suspects::screen_text(
         &mzlab_feat::flow_screen_suspects::Params::from_params(&params),
         table,
-        &named,
+        (&view(&named), &view(&imp)),
         opt(mgf),
         &formulas,
     )

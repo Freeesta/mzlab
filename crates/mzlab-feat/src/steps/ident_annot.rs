@@ -135,6 +135,10 @@ pub(super) fn regulatory() -> Step {
         ins: vec![
             Port::new("annot", DataType::Annot, "Annotated rows").requires(hr()),
             Port::new("lists", DataType::Library, "Regulatory package: a .mzsus with the listings extension (normative.mzsus)"),
+            Port {
+                optional: true,
+                ..Port::new("imported_lists", DataType::Library, "Regulatory lists you imported from an official file: .mzsus files (Library, Import an official file); each is compared whole, apart from the package, and a list never raises a level by itself").many()
+            },
         ],
         outs: vec![Port::new("annot", DataType::Annot, "Rows with the list memberships")],
         params: vec![
@@ -147,7 +151,7 @@ pub(super) fn regulatory() -> Step {
         algorithms: vec![list_membership(), suspect_screen(), ms2_confirm()],
         default_algorithm: Some("list_membership"),
         per_item: true,
-        errors: vec!["err.flow.regulatory.package", "err.flow.regulatory.annot", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.regulatory.algorithm"],
+        errors: vec!["err.flow.regulatory.package", "err.flow.regulatory.annot", "err.flow.regulatory.list", "err.flow.regulatory.include", "err.flow.regulatory.imported", "err.flow.regulatory.algorithm"],
         ..attributio_step(
             "annot.regulatory",
             "Regulatory lists",

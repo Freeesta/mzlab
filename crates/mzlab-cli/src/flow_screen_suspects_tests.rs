@@ -157,7 +157,7 @@ fn run(p: &str, list: &[(&str, &[u8])], mgf: Option<&str>, formulas: bool) -> Va
     let text = screen_text(
         &params(p),
         &table_bytes(1),
-        list,
+        (list, &[]),
         mgf.map(str::as_bytes),
         if formulas { &f } else { &[] },
     )
@@ -396,7 +396,7 @@ fn a_negative_table_searches_the_negative_adducts_only() {
     let text = screen_text(
         &params("{}"),
         &table_bytes(-1),
-        &[("list.csv", list.as_bytes())],
+        (&[("list.csv", list.as_bytes())], &[]),
         None,
         &[],
     )
@@ -410,7 +410,7 @@ fn a_negative_table_searches_the_negative_adducts_only() {
     assert!(screen_text(
         &params(r#"{"adducts":"[M+H]+"}"#),
         &table_bytes(-1),
-        &[("list.csv", list.as_bytes())],
+        (&[("list.csv", list.as_bytes())], &[]),
         None,
         &[]
     )

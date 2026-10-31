@@ -19,6 +19,11 @@ pub(crate) fn screen_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     } else {
         None
     };
+    let imported = if has("imported_lists") {
+        read_all(r, job, "imported_lists")?
+    } else {
+        Vec::new()
+    };
     let formulas = if has("formulas") {
         read_all(r, job, "formulas")?
     } else {
@@ -27,7 +32,7 @@ pub(crate) fn screen_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     let text = screen_text(
         &params,
         &table,
-        &named(&lists),
+        (&named(&lists), &named(&imported)),
         spectra.as_deref(),
         &blobs(&formulas),
     )?;
@@ -46,14 +51,27 @@ pub(crate) fn regulatory_job(r: &FileRunner, job: &Job) -> Result<Artifact> {
     }
     let annot = read_one(r, job, "annot")?.1;
     let package = read_one(r, job, "lists")?.1;
+    let imported = if job
+        .inputs
+        .iter()
+        .any(|(n, v)| n == "imported_lists" && !v.is_empty())
+    {
+        read_all(r, job, "imported_lists")?
+    } else {
+        Vec::new()
+    };
     let text = regulatory_text(
         &RegParams::from_params(&job.resolved.params),
         &annot,
         &package,
+        &named(&imported),
     )?;
     write_made(r, job, text, DataType::Annot)
 }
 
+#[cfg(test)]
+#[path = "flow_screen_suspects_imported_tests.rs"]
+mod imported_tests;
 #[cfg(test)]
 #[path = "flow_screen_suspects_plan_tests.rs"]
 mod plan_tests;
